@@ -1,0 +1,10 @@
+# infrastructure/llm/openai_sdk_compat.py
+"""Reexport — la implementación canónica vive en ruesma-albaranes-comun.
+
+Este módulo se conserva como reexport para que TODOS los imports del
+servicio sigan funcionando sin tocar más ficheros, eliminando a la vez
+la copia local divergente. Requiere: pip install -e ../comun
+"""
+from ruesma_comun.llm.openai_sdk_compat import patch_openai_pydantic_compat
+
+__all__ = ["patch_openai_pydantic_compat"]
