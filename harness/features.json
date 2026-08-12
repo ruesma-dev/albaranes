@@ -1,7 +1,7 @@
 {
   "$schema_doc": "Estados: pending -> spec_ready (aprueba humano) -> in_progress -> done. 'blocked' = parada con motivo en progress/current.md. Máximo UNA in_progress (lo valida init.sh). sdd=false salta la spec: 'acceptance' hace de mini-spec y el reviewer valida contra ella.",
   "$rigor_doc": "El campo 'rigor' de cada feature declara cuanta evidencia se le exige: documental, estandar o critico (ver CHECKPOINTS.md y harness/rigor.json). Si una feature NO lo declara se le aplica el mas exigente: omitirlo no relaja nada.",
-  "$adaptar": "Sustituye la feature de ejemplo por el backlog real del proyecto. Deja una primera feature trivial de calentamiento: sirve para validar el circuito completo del arnés antes de jugarse nada. 'priority' ordena el backlog; el líder coge la primera no terminada.",
+  "$backlog_doc": "F-001 es la feature de calentamiento del circuito. El backlog real lo define el humano; el líder coge la primera no terminada por 'priority'.",
   "rules": {
     "one_feature_at_a_time": true,
     "require_init_green_to_close": true,
@@ -10,18 +10,20 @@
   "features": [
     {
       "id": "F-001",
-      "title": "[ADAPTAR] Feature de calentamiento",
-      "description": "Una tarea trivial (un comando version, un endpoint /health...) para validar el circuito completo del arnés en este proyecto: rama, spec o acceptance, implementer, reviewer y cierre.",
+      "title": "Test de estructura del monorepo",
+      "description": "Feature trivial de calentamiento para validar el circuito completo del arnés (rama, acceptance, implementer, reviewer, cierre) sin tocar ningún servicio: un test en tests/ raíz que valida la coherencia de harness/servicios.json contra el árbol real.",
       "acceptance": [
-        "[ADAPTAR] criterio observable 1",
-        "[ADAPTAR] criterio observable 2 (test sin red ni BBDD)",
+        "Existe tests/test_estructura_monorepo.py con primera línea de comentario de ruta",
+        "El test valida que cada 'ruta' declarada en harness/servicios.json existe como directorio del repo",
+        "El test valida que cada servicio python declarado contiene un pyproject.toml o un main.py",
+        "El test pasa sin red ni BBDD (solo filesystem y json de la stdlib)",
         "bash harness/init.sh en verde"
       ],
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
       "priority": 1,
-      "branch": "feature/F-001-calentamiento"
+      "branch": "feature/F-001-test-estructura"
     }
   ]
 }

@@ -1,5 +1,5 @@
 <!-- CLAUDE.md -->
-# Arnés · [ADAPTAR: nombre-del-proyecto]
+# Arnés · albaranes (monorepo del pipeline de albaranes)
 
 Eres parte de un sistema de agentes (arnés) de este repositorio. Tu punto de
 entrada es el rol **líder**: lee `.claude/agents/leader.md` y actúa según su
@@ -60,17 +60,37 @@ confirmación cubre el plan que se enseñó, no lo que apareció después.
 
 ## Mapa del repositorio (no leas todo el proyecto, ve a lo que necesites)
 
-[ADAPTAR: lista de carpetas/ficheros clave del proyecto y qué contiene cada
-uno. Objetivo: que un agente encuentre lo que necesita sin leer todo el repo.
-Ejemplo de formato:]
+Monorepo de 6 servicios + 1 librería + infra. El flujo del pipeline por
+colas es: **sv1 → `q-extraccion` → sv2 → `q-persistencia` → sv3 →
+`q-valoracion` → sv6 → (HTTP) → sv5**; sv4 es el front humano y publica
+`q-persistencia` (re-fetch), `q-valoracion` (revalorar) y `q-feedback`
+(aprobar). Detalle completo en `docs/ARCHITECTURE.md`.
 
-- `main.py` — punto de entrada / CLI.
-- `config/` — settings (pydantic-settings sobre `.env`) y YAML de
-  parametrización.
-- `<paquete>/domain/` — entidades puras (sin dependencias externas).
-- `<paquete>/application/` — orquestador + steps (patrón pipeline).
-- `<paquete>/infrastructure/` — adaptadores (BBDD, HTTP, colas...).
-- `tests/` — los unit tests NO tocan red ni BBDD.
+- `services/albaranes-email/` (**sv1**) — daemon que vigila el buzón M365
+  vía Graph, sube el PDF a Blob `input/` y publica `q-extraccion`.
+- `services/albaranes-api/` (**sv2**) — extracción multi-IA (OpenAI, Gemini,
+  Claude, Document AI, Document Intelligence). API FastAPI :8000 + worker.
+- `services/albaranes-persistencia/` (**sv3**) — dueño del schema
+  PostgreSQL: persiste raw+merge, sube a SharePoint, enriquece con
+  contratos de sigrid-api. API :8001 + worker.
+- `services/albaranes-front/` (**sv4**) — front de revisión/aprobación
+  (FastAPI + Jinja2, :8004). Lee/escribe el merge, publica a 3 colas.
+- `services/albaran-valoracion-api/` (**sv5**) — motor IA de valoración.
+  Solo HTTP (:8002), BBDD en solo lectura, NO persiste.
+- `services/albaran-valoracion-persist/` (**sv6**) — valorador: consume
+  `q-valoracion`, llama a sv5, aplica reglas deterministas y persiste
+  (replace transaccional). API :8003 + worker.
+- `services/albaranes-comun/` — librería `ruesma_comun` compartida (colas,
+  blobs, Graph/SharePoint, clientes LLM, workflows). `pip install -e`; los
+  nombres canónicos de colas y los contratos de mensajes viven aquí.
+- `infra/` — scripts az CLI de provisión y despliegue (Container Apps).
+  `infra/docs/levantar-pipeline-local.md` = cómo levantar todo en local
+  con Azurite. Los `infra/*.local.ps1` (no versionados) llevan los IDs
+  reales; los versionados van redactados.
+- Estructura interna de cada servicio: hexagonal (`domain/`,
+  `application/`, `infrastructure/`, `interface_adapters/`).
+- `tests/` (raíz) — tests del monorepo como conjunto; los de cada servicio
+  viven en su carpeta. Los unit tests NO tocan red ni BBDD.
 - `specs/` — especificaciones SDD (una carpeta por feature).
 - `progress/` — memoria externa del arnés (`current.md`, `history.md`,
   informes `impl_*.md` / `review_*.md` / `explore_*.md` por subagente).
@@ -110,9 +130,15 @@ original NO se versiona: al repositorio entra solo el Markdown.
   contra `CHECKPOINTS.md`.
 - PROHIBIDO tocar `.env` o subirlo a git. Los secretos no se escriben en
   ningún fichero del repo ni en specs ni en progress.
-- [ADAPTAR: prohibiciones de escritura contra sistemas reales. Ejemplos:
-  "solo lectura contra el ERP", "nunca contra BBDD de producción",
-  "las colas se simulan con Azurite en local".]
+- Sigrid (ERP) SOLO se consulta vía sigrid-api y SOLO lectura. Nadie se
+  conecta por SQL directo al SQL Server de Sigrid.
+- Desde local, contra los recursos reales de Azure (BBDD `albaranes`,
+  buzón M365, SharePoint, colas de producción): **solo lectura**. Las
+  colas y blobs se simulan con Azurite en local
+  (`infra/docs/levantar-pipeline-local.md`); la escritura real solo
+  ocurre desplegado o con autorización expresa del humano.
+- Desplegar (`infra/deploy.ps1`, `az acr build`, `az containerapp ...`)
+  lo pide el humano; los agentes no lo lanzan por su cuenta.
 - Cada feature se desarrolla en su rama `feature/F-XXX-slug`. Nunca commits
   directos a `dev` ni a `main`.
 - ANTI TELÉFONO-DESCOMPUESTO: por el chat no circula código ni informes
@@ -126,11 +152,13 @@ original NO se versiona: al repositorio entra solo el Markdown.
   variables ni decoración (la allowlist de permisos cubre el comando limpio).
 - Convenciones de código: `docs/CONVENTIONS.md`. Arquitectura:
   `docs/ARCHITECTURE.md`. Léelos antes de diseñar o implementar.
-- LÍMITE DE MICROSERVICIO: este repo es UN microservicio con una
-  responsabilidad acotada. Si una feature exige lógica que se sale de ese
-  límite (otra responsabilidad, otro dominio, integración que merece vida
-  propia), NO se implementa aquí: se marca `blocked` y se propone al humano
-  extraerla a otro microservicio.
+- LÍMITE DE SERVICIO (adaptación monorepo): este repo contiene LOS
+  servicios del pipeline de albaranes, pero cada servicio conserva UNA
+  responsabilidad acotada. Toda feature declara qué servicio(s) toca; la
+  lógica compartida va a `services/albaranes-comun`, nunca copiada entre
+  servicios. Si una feature exige una responsabilidad nueva (otro dominio,
+  integración con vida propia), se marca `blocked` y se propone al humano:
+  servicio nuevo aquí o proyecto aparte.
 - Los agentes NO hacen `git push` ni crean PRs salvo petición explícita del
   humano. Commits locales sí, según protocolo del implementer.
 

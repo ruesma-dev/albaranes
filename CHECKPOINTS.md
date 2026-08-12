@@ -73,10 +73,14 @@ medición automática, no la disciplina.
       relativa.
 - [ ] Sin `print()` de debug, sin TODOs sin contexto, sin secretos
       hardcodeados, sin dependencias nuevas no previstas en la spec.
-- [ ] [ADAPTAR] Reglas de dominio propias del proyecto respetadas según
-      `docs/ARCHITECTURE.md` (añadir aquí las 2-3 trampas típicas del
-      dominio que el reviewer debe vigilar siempre: campos ambiguos,
-      invariantes de negocio, qué no se puede sumar o mezclar).
+- [ ] Reglas de dominio de `docs/ARCHITECTURE.md` respetadas. Las tres
+      trampas que el reviewer vigila SIEMPRE en este monorepo:
+      (1) la lógica se construye sobre las tablas **merge**, nunca sobre las
+      raw; (2) un cambio de schema lista sus lectores — sv5 lee con SQL
+      crudo y `albaran_contrato_lines_merge` tiene DDL duplicado en sv3 y
+      sv4; (3) importes y cantidades: no mezclar unidades sin pasar por el
+      conversor de sv6, y decidir explícitamente si las líneas sintéticas
+      entran en cada agregado.
 
 ## C3 bis — Los documentos que entran de fuera son seguros
 

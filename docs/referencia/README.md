@@ -20,12 +20,16 @@ está en el código sino en una norma de negocio.
 
 ## Índice
 
-[ADAPTAR: una fila por documento incorporado. Mantenerlo al día es parte de
-añadir un documento, no una tarea posterior.]
+Una fila por documento incorporado. Mantenerlo al día es parte de añadir un
+documento, no una tarea posterior.
 
 | Fichero | Qué es |
 |---|---|
-| `01_<tema>.md` | [ADAPTAR: qué es, de qué fecha, y si es una versión redactada.] |
+| *(aún no hay documentos de referencia incorporados)* | |
+
+Nota: la guía operativa para levantar el pipeline en local no está aquí sino
+en `infra/docs/levantar-pipeline-local.md`, porque describe este propio
+sistema, no un sistema origen.
 
 ## Formato
 

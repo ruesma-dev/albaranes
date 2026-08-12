@@ -22,7 +22,7 @@
 # node o jq. Si no hay ninguno, la validación DEGRADA a una comprobación por
 # texto (avisa de ello) en vez de fallar.
 
-# --- [ADAPTAR] Configuración por proyecto -----------------------------------
+# --- Configuración por proyecto (adaptada al monorepo albaranes) ------------
 PROYECTO_PYTHON=auto     # auto (detecta) | 1 (forzar sí) | 0 (forzar no)
 REQUIERE_ENV=0           # el monorepo no usa .env global; cada servicio
                          # recibe su entorno vía Container Apps / Key Vault
@@ -370,15 +370,17 @@ if [ "$ES_PYTHON" -eq 1 ] && [ -n "$PY" ]; then
     fi
 fi
 
-# --- 8. Marcas [ADAPTAR] sin resolver ---------------------------------------
+# --- 8. Marcas de adaptación sin resolver -----------------------------------
 # Un arnés recién instalado y sin adaptar engaña: parece configurado y no lo
 # está. Esto no bloquea, pero lo dice en cada arranque hasta que se resuelva.
-PENDIENTES=$(grep -rl 'ADAPTAR' CLAUDE.md CHECKPOINTS.md docs harness specs 2>/dev/null | tr '\n' ' ')
+# La marca se construye partida para que esta sección no se señale a sí misma.
+MARCA='ADAP''TAR'
+PENDIENTES=$(grep -rl "$MARCA" CLAUDE.md CHECKPOINTS.md docs harness specs 2>/dev/null | tr '\n' ' ')
 if [ -n "$PENDIENTES" ]; then
-    warn "Marcas [ADAPTAR] sin resolver en: $PENDIENTES"
+    warn "Marcas [$MARCA] sin resolver en: $PENDIENTES"
 fi
 
-# --- 9. [ADAPTAR] Comprobaciones específicas del proyecto -------------------
+# --- 9. Comprobaciones específicas del proyecto (ninguna activa) ------------
 # Ejemplos según proyecto:
 #   - Azurite levantado y colas creadas (proyectos con colas):
 #       curl -s http://127.0.0.1:10001/devstoreaccount1 >/dev/null || ko "Azurite no responde"

@@ -1,6 +1,6 @@
 {
   "$schema_comment": "Hooks: la verificación la ejecuta el arnés, no el agente, así que no se puede saltar. Adaptado a Git Bash en Windows.",
-  "$adaptar": "El hook PostToolUse ejecuta pytest. En un proyecto que no sea Python, cambia ese comando por la suite del proyecto (npm test, dotnet test...) o borra el bloque PostToolUse entero: un hook que falla siempre acaba desactivado y con él se pierde también el Stop.",
+  "$nota_monorepo": "PostToolUse corre solo la suite rapida de la raiz (tests/). Las suites por servicio (incluidos los tests de humo de comun, ~2 min) las ejecuta init.sh en el hook Stop y en cada arranque: correrlas en cada Edit/Write haria inutilizable la sesion.",
   "hooks": {
     "SessionStart": [
       {
@@ -32,8 +32,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python -m pytest -q --tb=line 2>&1 | tail -5",
-            "description": "Tras editar o escribir ficheros, corre los tests y muestra el resumen."
+            "command": "if [ -d tests ]; then python -m pytest tests -q --tb=line 2>&1 | tail -5; else echo '[arnes] sin tests/ en la raiz todavia'; fi",
+            "description": "Tras editar o escribir ficheros, corre la suite rápida de la raíz (las suites por servicio van en init.sh)."
           }
         ]
       }

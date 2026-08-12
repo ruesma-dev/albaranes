@@ -18,7 +18,7 @@
   producción; permitido en scripts puntuales.
 - Errores transitorios de red: reintentos con backoff, nunca bucle desnudo.
 
-### Python (borrar si el proyecto no es Python)
+### Python
 
 - Python 3.12, PEP8, type hints en firmas públicas.
 - Pydantic v2. `default=` solo en la firma, nunca duplicado dentro de
@@ -27,12 +27,17 @@
 - Logging con structlog. Reintentos con tenacity.
 - PDF en servidor: ReportLab (no HTML/CSS print).
 
-## SQL (borrar si el proyecto no lleva SQL)
+## SQL / DDL
 
-- Un fichero por unidad lógica, numerado `NN_nombre.sql` dentro de su capa.
-- Idempotente: `CREATE ... IF NOT EXISTS` / `CREATE OR REPLACE VIEW`.
-- Comentario de cabecera explicando qué construye y de qué capa lee.
-- Palabras reservadas siempre entre comillas si se usan como identificador.
+No hay ficheros `.sql` en el repositorio: el DDL vive inline en Python
+(sv3 crea el schema al arrancar; sv6 re-aplica el suyo; sv4 aplica ALTERs).
+Reglas para ese DDL embebido:
+
+- Siempre idempotente: `CREATE ... IF NOT EXISTS` /
+  `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
+- Un cambio de schema se hace en el servicio DUEÑO de la tabla (ver
+  `docs/ARCHITECTURE.md`) y se avisa de los lectores acoplados (sv5 lee
+  con SQL crudo: un rename lo rompe sin aviso).
 
 ## Tests
 
