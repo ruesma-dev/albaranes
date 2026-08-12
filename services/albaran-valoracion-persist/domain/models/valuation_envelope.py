@@ -1,0 +1,148 @@
+# domain/models/valuation_envelope.py
+from __future__ import annotations
+
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from domain.models.contexto_linea import ContextoLinea
+
+
+class _StrictModel(BaseModel):
+    # Aceptamos extra en el envelope del svc 5 para no romper si
+    # añaden campos nuevos (ej. un nuevo proveedor como bloque top).
+    model_config = ConfigDict(extra="ignore")
+
+
+class ValuationEnvelopeMeta(_StrictModel):
+    document_id: str
+    codigo_contrato: Optional[str] = None
+    # (jul 2026) Cabecera del albarán, para la red determinista de
+    # incrementos por año (M1) del builder. Optional: sobres antiguos
+    # en cola siguen validando.
+    fecha_albaran: Optional[str] = None
+    numero_albaran: Optional[str] = None
+    pdf_relative_path: Optional[str] = None
+    pdf_filename: Optional[str] = None
+    pdf_sha256: Optional[str] = None
+    prompt_key: Optional[str] = None
+    schema_name: Optional[str] = Field(default=None, alias="schema")
+    primary_provider: Optional[str] = None
+    model: Optional[str] = None
+    processed_at_utc: Optional[str] = None
+    service: Optional[str] = None
+    service_version: Optional[str] = None
+    providers_used: List[str] = Field(default_factory=list)
+
+
+class LineValuationDto(_StrictModel):
+    """Réplica del schema de salida de la IA (ver svc 5).
+
+    V3 (sub-tanda 2D): soporte para líneas sintéticas (modificadores
+    implícitos identificados por el valorador en hormigón). Cuando
+    ``line_kind == 'synthetic_modifier'``:
+      - merge_line_id es null
+      - parent_merge_line_id apunta a la línea base
+      - descripcion_linea contiene el texto que verá el revisor
+    """
+
+    merge_line_id: Optional[int] = None
+    line_kind: Literal["from_albaran", "synthetic_modifier"] = "from_albaran"
+    parent_merge_line_id: Optional[int] = None
+    modifier_source: Optional[str] = None
+    modifier_reason: Optional[str] = None
+    descripcion_linea: Optional[str] = None
+    # Sub-tanda 2D (ampliación): cantidad que emite el LLM para
+    # sintéticas de tipo TIEMPO (minutos de exceso). Solo relevante
+    # cuando modifier_source='tiempo_exceso'. Puede ser 0.
+    cantidad_override: Optional[float] = None
+    rol_linea: Optional[str] = None
+    match_method: Literal["exact_concept", "semantic", "price_only", "no_match"]
+    matched_contrato_line_id: Optional[int] = None
+    match_confidence_pct: float = 0.0
+    unidad_categoria_albaran: str = "unknown"
+    unidad_category_match: bool = False
+    precio_unitario_contrato_db: Optional[float] = None
+    precio_unitario_pdf_inferido: Optional[float] = None
+    pdf_inference_reasoning: Optional[str] = None
+    # Residuos: m³ por contenedor que eligió la IA leyendo el contrato.
+    contenedor_m3: Optional[float] = None
+    razon_corta: str = ""
+
+
+class DocumentoValoracionDto(_StrictModel):
+    lineas: List[LineValuationDto]
+
+
+class AlbaranLineContextDto(_StrictModel):
+    """Una línea del contexto que el svc 5 nos devuelve bajo ``context``.
+
+    Permite que el svc 6 conozca los datos originales del albarán
+    (unidad, partida, cantidad) sin necesidad de re-leer la BBDD.
+    """
+
+    merge_line_id: int
+    line_index: int
+    codigo: Optional[str] = None
+    descripcion: Optional[str] = None
+    unidad_medida: Optional[str] = None
+    unidad_categoria: str = "unknown"
+    cantidad: Optional[float] = None
+    precio_unitario_albaran: Optional[float] = None
+    importe_albaran: Optional[float] = None
+    codigo_partida_albaran: Optional[str] = None
+    # -----------------------------------------------------------------
+    # Contexto estructural de la línea (familia hormigón / combustible /
+    # alquiler_maquinaria / otro). Llega del svc5 ya deserializado como
+    # dict (convertido desde ContextoLinea con model_dump). Pydantic
+    # lo vuelve a construir como ContextoLinea al deserializar el
+    # envelope.
+    #
+    # Null si la línea no es de familia compleja o si el albarán es
+    # anterior a la sub-tanda 2A.
+    # -----------------------------------------------------------------
+    contexto_linea: Optional[ContextoLinea] = None
+
+    # -----------------------------------------------------------------
+    # Tanda descuento — abr 2026
+    #
+    # Descuento porcentual de la línea (ej. 40 = 40%) y precio neto
+    # unitario tras descuento, ambos venidos de albaran_lines_merge
+    # vía svc5.
+    #
+    # Se usan en el ImporteCalculator para calcular el importe valorado
+    # como cantidad × precio_contrato × (1 - descuento/100).
+    #
+    # Las líneas sintéticas (M1-M7) heredan el descuento de su línea
+    # base padre (decisión de negocio Construcciones Ruesma).
+    #
+    # Compatibilidad retroactiva: ambos opcionales con default None.
+    # Envelopes antiguos sin estos campos siguen funcionando: el
+    # builder interpreta None como "sin descuento" → fórmula clásica.
+    # -----------------------------------------------------------------
+    descuento_albaran: Optional[float] = None
+    precio_neto_albaran: Optional[float] = None
+
+
+class ContratoLineContextDto(_StrictModel):
+    contrato_line_id: int
+    codigo_contrato: str
+    codigo_producto: Optional[str] = None
+    descripcion: Optional[str] = None
+    unidad_medida: Optional[str] = None
+    unidad_categoria: str = "unknown"
+    precio_unitario: Optional[float] = None
+    codigo_partida: Optional[str] = None
+
+
+class ValuationContextDto(_StrictModel):
+    lineas_albaran: List[AlbaranLineContextDto] = Field(default_factory=list)
+    lineas_contrato: List[ContratoLineContextDto] = Field(default_factory=list)
+
+
+class ValuationEnvelope(_StrictModel):
+    status: Literal["ok", "no_contract"]
+    meta: ValuationEnvelopeMeta
+    data: DocumentoValoracionDto
+    context: ValuationContextDto
+    debug: Optional[dict] = None
