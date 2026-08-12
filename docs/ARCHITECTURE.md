@@ -17,7 +17,11 @@ un front web. La IA trabaja en **cuatro fases secuenciales** (una detrás de
 otra, no en paralelo): **IA1** extracción genérica (3 proveedores LLM sobre
 material idéntico) → **IA2** refinado por tipología (`contexto_linea`), ambas
 en sv2 → **IA3** valoración contra contrato + sintéticas M1–M7 (sv5) →
-**IA4** conciliación de líneas sin match (sv5, orquestada por sv6).
+**IA4** conciliación de líneas sin match (sv5, orquestada por sv6, que muta
+el envelope antes del build). Incluso los 3 proveedores de IA1 se llaman uno
+detrás de otro. El pipeline es **estrictamente secuencial por documento**; el
+paralelismo real del sistema está a nivel de documentos: réplicas KEDA
+compitiendo por la cola.
 
 Hay **dos despliegues**: el de **Azure es el real** (6 Container Apps en
 Spain Central, colas de Azure Storage, workers KEDA; se gestiona con
@@ -40,7 +44,12 @@ Spain Central, colas de Azure Storage, workers KEDA; se gestiona con
 Los nombres canónicos de colas (`q-emails`, `q-extraccion`, `q-persistencia`,
 `q-valoracion`, `q-feedback`), los contratos Pydantic de mensajes y el runtime
 de colas/blobs viven en **`services/albaranes-comun`** (`ruesma_comun`), que
-cada servicio instala como paquete. sv7 (orquestador antiguo) está disuelto.
+cada servicio instala como paquete. Dos colas especiales: **`q-feedback`**
+está reservada para el futuro servicio de entrada al ERP (aprobado → alta en
+Sigrid vía sigrid-api `sql/write`; el consumidor NO está construido) y
+**`q-emails`** es una huérfana del diseño original, pendiente de limpieza
+(F-009). El encadenado HTTP directo sv1→sv2→sv3 está **muerto**: en local
+también se trabaja con colas (Azurite).
 
 **Nivel servicio** — hexagonal: `domain/` (modelos y puertos, sin
 dependencias externas), `application/` (pipelines y servicios),

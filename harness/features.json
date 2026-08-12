@@ -1,7 +1,7 @@
 {
   "$schema_doc": "Estados: pending -> spec_ready (aprueba humano) -> in_progress -> done. 'blocked' = parada con motivo en progress/current.md. Máximo UNA in_progress (lo valida init.sh). sdd=false salta la spec: 'acceptance' hace de mini-spec y el reviewer valida contra ella.",
   "$rigor_doc": "El campo 'rigor' de cada feature declara cuanta evidencia se le exige: documental, estandar o critico (ver CHECKPOINTS.md y harness/rigor.json). Si una feature NO lo declara se le aplica el mas exigente: omitirlo no relaja nada.",
-  "$backlog_doc": "F-001 es la feature de calentamiento del circuito. El backlog real lo define el humano; el líder coge la primera no terminada por 'priority'.",
+  "$backlog_doc": "F-002..F-007 son las tandas del feedback de negocio de JMV (27-29/07, 16 albaranes), vigentes a 2026-08-12 y ordenadas por impacto; el detalle normativo de cada regla esta en docs/referencia/dominio_negocio_albaranes.md §10 (marcas 🔶 = decidido, pendiente de implementar). La tanda 4 va partida en dos (F-005 bombeo, F-006 residuos-pago): tocan prompts y servicios distintos.",
   "rules": {
     "one_feature_at_a_time": true,
     "require_init_green_to_close": true,
@@ -24,6 +24,107 @@
       "rigor": "estandar",
       "priority": 1,
       "branch": "feature/F-001-test-estructura"
+    },
+    {
+      "id": "F-002",
+      "title": "Tanda 1 — Identificación de obra y proveedor (G1+G2)",
+      "description": "La mayor fuente de albaranes inválidos del feedback (6 de 16). Obras activas de Sigrid inyectadas en el prompt de IA1 (la IA elige SOLO de esa lista) + red determinista en sv3: obra extraída inexistente => sin obra + revisión. Proveedor = razón social del bloque fiscal resuelta por CIF contra Sigrid, nunca la marca del logotipo; si el CIF no casa pero el nombre contiene un proveedor con contrato en la obra => propuesta a revisión. Guard de año: fecha_albaran a más de 1 año de la recepción del email => revisión. Casos de referencia: obra 0937 inventada, MACOTRAN en 4 obras erróneas, GRUPO OTTO HORPRESOL vs HORPRESOL S.L. Toca sv2 (prompt IA1) y sv3 (redes).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 2,
+      "branch": "feature/F-002-obra-proveedor"
+    },
+    {
+      "id": "F-003",
+      "title": "Tanda 2 — Albaranes valorados, match estricto y coherencia (G3+G4+G5)",
+      "description": "Albaranes que VIENEN valorados: transcribir, no recomponer (precio, TODOS los descuentos e importe se copian tal cual por su etiqueta de columna; prohibido derivar precio=importe×algo — caso ×120). El dto del albarán no se aplica sobre el precio de contrato. Guard aritmético: precio×cantidad(−dtos)≈importe leído y Σimportes=total albarán; si no cuadra => revisión, nunca inventar. Matching estricto: atributo sustantivo distinto (tamaño, modelo, tipo) => NO casar; mejor línea nueva sin precio a revisión (casos CETOSA, elemento base 0,5 mm, bolsa de cuñas). Toca sv5 (prompts) y sv6 (redes deterministas).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 3,
+      "branch": "feature/F-003-valorados-match-estricto"
+    },
+    {
+      "id": "F-004",
+      "title": "Tanda 3 — Hormigón fino y veto de mortero",
+      "description": "Re-apuntado determinista de incrementos al recurso del contrato en la partida de la línea base (solo derivar si de verdad no existe). Familia mortero (códigos D-*) separada del hormigón con veto determinista: solo arena; prohibidas sintéticas de árido, aditivo, plastificante, fibras y fratasado; el tercer campo del código es resistencia, no árido. M6/M7 (exceso de tiempo, carga incompleta) solo con señal explícita en el documento. La partida de un incremento debe existir en el contrato (o ALM/None), jamás un literal nuevo. Toca sv5 (prompts/schema) y sv6 (builder y redes).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 4,
+      "branch": "feature/F-004-hormigon-fino"
+    },
+    {
+      "id": "F-005",
+      "title": "Tanda 4a — Tipología bombeo",
+      "description": "Valoración por rendimiento mínimo contractual (caso PUMPING TEAM): m³ a facturar = horas de bombeo × rendimiento mínimo del contrato (ej. 20 m³/h × 5 h = 100 m³ aunque se bombeara menos). La línea de horas NO se factura aparte (embebida en el mínimo); el desplazamiento sí. Requiere prompt de familia nuevo y leer el rendimiento del contrato. Toca sv2 (contexto_linea), sv5 (prompt) y sv6 (reglas).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 5,
+      "branch": "feature/F-005-bombeo"
+    },
+    {
+      "id": "F-006",
+      "title": "Tanda 4b — Residuos: lógica de pago LLEVAR/RETIRAR y canon",
+      "description": "Solo LLEVAR => no se paga y no entra en Sigrid. RETIRAR => se paga el porte + línea de CANON DE VERTEDERO obligatoria. Ambos en el mismo albarán => solo cuenta RETIRAR. Partida del recurso del contrato, jamás inventada (caso 16.01 vs 15.01). La lectura (LER, volumen/peso por etiqueta, llevadas/retiradas separadas, cálculo de contenedores) ya está entregada; esta feature es solo la lógica de pago. Toca sv5 (prompt) y sv6 (reglas).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 6,
+      "branch": "feature/F-006-residuos-pago"
+    },
+    {
+      "id": "F-007",
+      "title": "Tanda 5 — Partida ALM por defecto y selector de candidatas en sv4",
+      "description": "Suministros NO se destinan: partida ALM (almacén) con imputación parcial mensual; indirectos SÍ se destinan a la entrada. Cuando el mismo recurso existe en varias partidas (contratos de hormigón con clones), la elección es humana: selector de partidas candidatas en sv4 + memoria por obra+producto para prerrellenar (la información de a qué tajo va el camión no está en el documento). Toca sv6 (regla ALM) y sv4 (selector + memoria).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 7,
+      "branch": "feature/F-007-partida-alm-selector"
+    },
+    {
+      "id": "F-008",
+      "title": "Lifecycle de blobs de hand-off",
+      "description": "Los workers no borran input/ ni envelopes/ (semántica at-least-once); la limpieza es una lifecycle policy del storage que está escrita (infra/blob_lifecycle.ps1) pero sin ejecutar. Aplicarla (14 días) y verificar que queda activa.",
+      "acceptance": [
+        "blob_lifecycle.ps1 revisado y ejecutado contra el storage stalbaranesrs9k2 (MANUAL humano: requiere Azure)",
+        "az storage account management-policy show confirma la policy activa con los 14 días (MANUAL humano, salida pegada en progress/)",
+        "El README de infra documenta la policy como aplicada, con fecha"
+      ],
+      "status": "pending",
+      "sdd": false,
+      "rigor": "estandar",
+      "priority": 8,
+      "branch": "feature/F-008-blob-lifecycle"
+    },
+    {
+      "id": "F-009",
+      "title": "Limpieza de la cola huérfana q-emails",
+      "description": "q-emails es un resto del diseño original (intake partido en receptor+worker, colapsado en sv1): nadie la publica ni consume. Retirarla de la lista canónica de ruesma_comun.colas. Antes: grep en infra/ por si algún script la crea o referencia (create_capps, scale rules, fase1), y decisión del humano sobre borrarla del storage o dejarla morir.",
+      "acceptance": [
+        "grep de q-emails en todo el monorepo: solo aparece en docs históricos, no en código ni scripts activos",
+        "ruesma_comun.colas ya no declara q-emails y los tests de humo de comun siguen en verde",
+        "Decisión sobre la cola física en el storage anotada en progress/ (MANUAL humano)",
+        "bash harness/init.sh en verde"
+      ],
+      "status": "pending",
+      "sdd": false,
+      "rigor": "estandar",
+      "priority": 9,
+      "branch": "feature/F-009-limpieza-q-emails"
+    },
+    {
+      "id": "F-010",
+      "title": "Easy Auth en el portal sv4",
+      "description": "sv4 es el único ingress externo y está sin autenticación (pendiente desde el despliegue). Configurar Easy Auth con Entra ID: app registration, redirect URIs, y verificación con usuarios reales del portal. Delicada: afecta a los usuarios y a las redirect URIs de Entra; verificación manual obligatoria.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 10,
+      "branch": "feature/F-010-easy-auth-sv4"
     }
   ]
 }

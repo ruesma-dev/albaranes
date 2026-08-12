@@ -11,6 +11,26 @@
 > El detalle está en el original, fuera del repositorio, y en
 > `infra/*.local.ps1` (no versionado).
 
+> **Erratas y vigencia (anotado 2026-08-13, validado con el humano):**
+> - **§7 desactualizado**: el modo HTTP directo en local está **muerto**. El
+>   local actual usa colas con Azurite (`infra/docs/levantar-pipeline-local.md`).
+>   En sv1, `service2_http_client.py`/`service3_http_client.py` son código
+>   muerto (nadie los importa) y las `SERVICE*_BASE_URL` de settings son
+>   config zombi sin consumidor.
+> - **sv1 ya es idempotente**: dedup por BBDD (`workflow_runs` vía
+>   `ruesma_comun.workflows`, clave de idempotencia persistida). La
+>   limitación #1 del `sv1.md` original está resuelta.
+> - El «en paralelo» de los 3 proveedores de IA1 significa «la misma
+>   extracción por N proveedores», no concurrencia: las llamadas son
+>   **secuenciales** (limitación conocida en `sv2.md`, mejora propuesta
+>   ThreadPoolExecutor). Todo el pipeline es secuencial por documento; el
+>   paralelismo real son las réplicas KEDA compitiendo por la cola.
+> - **§5.2**: `q-feedback` está **reservada** para el futuro servicio de
+>   entrada al ERP (aprobado en sv4 → alta en Sigrid vía `sql/write`); el
+>   consumidor no está construido y nada externo la consume. `q-emails` es
+>   una cola huérfana del diseño original (intake partido en receptor+worker,
+>   luego colapsado en sv1): candidata a limpieza.
+
 > Construcciones Ruesma S.A. · Ecosistema de microservicios para la digitalización,
 > extracción con IA, valoración contra contrato y revisión humana de albaranes de
 > proveedor recibidos por email.
