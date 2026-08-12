@@ -25,7 +25,7 @@ documento, no una tarea posterior.
 
 | Fichero | Qué es |
 |---|---|
-| *(aún no hay documentos de referencia incorporados)* | |
+| `dominio_negocio_albaranes.md` | Documento de referencia v2 del pipeline (2026-08-05): visión, flujo, modelo de datos, Sigrid, despliegue Azure y local, **tipologías de albarán** y **reglas de negocio** (§9–§10, normativo de dominio). Redactados tenant/suscripción e IP interna de Sigrid. |
 
 Nota: la guía operativa para levantar el pipeline en local no está aquí sino
 en `infra/docs/levantar-pipeline-local.md`, porque describe este propio

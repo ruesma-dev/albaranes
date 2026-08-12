@@ -10,12 +10,19 @@
 ## Qué hace este proyecto
 
 Pipeline que automatiza el ciclo de vida de los **albaranes de proveedor**
-de Construcciones Ruesma: llegan por email, se extraen con varias IAs en
-paralelo, se persisten y enriquecen con los contratos del ERP (Sigrid), se
-**valoran** contra esos contratos (matching de líneas y precios) y un humano
-los revisa y aprueba en un front web. Corre como 6 Azure Container Apps en
-Spain Central; la comunicación entre etapas es por **colas de Azure Storage**
-(Azurite en local).
+de Construcciones Ruesma: llegan por email, se extraen, se persisten y
+enriquecen con los contratos del ERP (Sigrid), se **valoran** contra esos
+contratos (matching de líneas y precios) y un humano los revisa y aprueba en
+un front web. La IA trabaja en **cuatro fases secuenciales** (una detrás de
+otra, no en paralelo): **IA1** extracción genérica (3 proveedores LLM sobre
+material idéntico) → **IA2** refinado por tipología (`contexto_linea`), ambas
+en sv2 → **IA3** valoración contra contrato + sintéticas M1–M7 (sv5) →
+**IA4** conciliación de líneas sin match (sv5, orquestada por sv6).
+
+Hay **dos despliegues**: el de **Azure es el real** (6 Container Apps en
+Spain Central, colas de Azure Storage, workers KEDA; se gestiona con
+`infra/`) y el **local es solo para pruebas** (usa Azurite;
+`infra/docs/levantar-pipeline-local.md`).
 
 ## Capas y estructura
 
@@ -48,9 +55,10 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
 
 ## Semántica de dominio imprescindible
 
-> **BORRADOR deducido del código y de `azure-apps/albaranes.md`; el humano
-> debe validarlo antes del primer uso real.** Lo que esté mal aquí producirá
-> bugs con confianza de reviewer.
+> Este es el RESUMEN operativo. El detalle normativo completo —tipologías de
+> albarán y reglas de negocio con su estado ✅ implementada / 🔶 decidida
+> pendiente— vive en `docs/referencia/dominio_negocio_albaranes.md` (§9–§10)
+> y **prevalece sobre este resumen** en caso de conflicto.
 
 1. **El merge es la fuente de verdad.** `albaran_documents_merge` (UQ por
    `source_sha256`) y sus líneas. Las tablas raw (`albaran_documents`,
@@ -82,6 +90,17 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
 9. **Dedup de ingesta**: sv1 deduplica por `correlation_key` contra
    `workflow_runs` (PG). Reprocesar un email no debe crear un documento
    nuevo; el sha256 del PDF es la identidad del documento aguas abajo.
+   1 página = 1 albarán (sv1 trocea los PDF multipágina).
+10. **Añadir un `modifier_source` nuevo (sintéticas) toca 5 sitios**: prompt
+    YAML de sv5, schema Pydantic de sv5, DTO del envelope de sv6, record de
+    sv6 y builder de sv6. Hacerlo a medias rompe la valoración.
+11. **Aditivos de hormigón: jamás** (Ruesma no los usa; ninguna sintética de
+    aditivo). Y en albaranes que ya vienen valorados: **transcribir, no
+    recomponer** (precios, descuentos e importes se copian tal cual; nunca
+    derivar unos de otros).
+12. **Matching estricto**: un atributo sustantivo distinto (tamaño, modelo,
+    tipo) ⇒ NO casar; mejor línea nueva sin precio a revisión que un precio
+    equivocado con apariencia de bueno.
 
 ## Acceso a datos y sistemas externos
 
@@ -102,9 +121,17 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
 
 ## Infra y despliegue
 
+`infra/` gestiona SOLO el despliegue de Azure (el real); el local de pruebas
+no usa estos scripts. Detalle completo del despliegue, troubleshooting y
+rollback: `docs/referencia/dominio_negocio_albaranes.md` §6–§7.
+
 - Azure Container Apps (Spain Central), registro `acralbaranesdev` (admin
   deshabilitado: acceso por managed identity), secretos en Key Vault
   referenciados desde cada Container App.
+- **Modo single de revisiones** (dos revisiones activas = dos consumidores
+  de la misma cola con imágenes distintas) y **`comun` horneado en cada
+  imagen**: tocar `ruesma_comun` obliga a reconstruir sv2, sv3, sv5 y sv6
+  — un fix en comun sin rebuild no existe en Azure.
 - Scripts en `infra/`: `fase1_infra.ps1` (provisión), `add_secrets.ps1`,
   `create_capps*.ps1`, `build_images.ps1` + `deploy.ps1` (redespliegue).
   `build_images.ps1` espera los repos como hermanos: desde el monorepo,
