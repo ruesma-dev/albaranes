@@ -38,14 +38,15 @@ def test_claude_tool_parametrizado_y_texto_puro() -> None:
     assert cliente._tool_name == "emit_valuation_result"
 
     # Modo texto puro: un único bloque de texto, sin documento.
-    bloques = cliente._build_content_block(attachment=None, user_text="hola")
+    # (jul 2026) _build_content_block pasó de attachment único a N adjuntos.
+    bloques = cliente._build_content_block(adjuntos=[], user_text="hola")
     assert bloques == [{"type": "text", "text": "hola"}]
 
     # Modo documento: bloque document + bloque text.
     adjunto = LlmAttachment(
         kind="pdf", filename="a.pdf", mime_type="application/pdf", data=b"%PDF-1.4"
     )
-    bloques = cliente._build_content_block(attachment=adjunto, user_text="hola")
+    bloques = cliente._build_content_block(adjuntos=[adjunto], user_text="hola")
     assert [b["type"] for b in bloques] == ["document", "text"]
 
 

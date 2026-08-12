@@ -24,7 +24,8 @@
 
 # --- [ADAPTAR] Configuración por proyecto -----------------------------------
 PROYECTO_PYTHON=auto     # auto (detecta) | 1 (forzar sí) | 0 (forzar no)
-REQUIERE_ENV=1           # 1 si el proyecto usa .env; 0 si no
+REQUIERE_ENV=0           # el monorepo no usa .env global; cada servicio
+                         # recibe su entorno vía Container Apps / Key Vault
 RUTAS_PYTHON=""          # rutas a compilar; vacío = todo el árbol. Si lo
                          # rellenas, incluye `harness` (las herramientas del
                          # arnés también son código que debe compilar).
