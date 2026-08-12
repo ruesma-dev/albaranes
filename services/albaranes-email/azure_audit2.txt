@@ -1,0 +1,114 @@
+﻿VERIFICACION - 07/25/2026 18:49:44
+
+========== FIREWALL SKU ==========
+Nombre               SkuTier    SkuName
+-------------------  ---------  ---------
+fw-hub-spaincentral  Basic      AZFW_VNet
+
+
+========== VPN GATEWAY SKU ==========
+Nombre                    Sku       ActiveActive    Tipo
+------------------------  --------  --------------  ----------
+vgw-hub-vpn-spaincentral  VpnGw1AZ  True            RouteBased
+
+
+========== RUTAS rt-spoke-std ==========
+AddressPrefix    HasBgpOverride    Name               NextHopIpAddress    NextHopType       ProvisioningState    ResourceGroup
+---------------  ----------------  -----------------  ------------------  ----------------  -------------------  -------------------
+0.0.0.0/0        False             primary-0.0.0.0-0  10.0.0.4            VirtualAppliance  Succeeded            rg-hub-spaincentral
+
+
+========== RUTAS rt-hub-vpn ==========
+AddressPrefix    HasBgpOverride    Name               NextHopIpAddress    NextHopType       ProvisioningState    ResourceGroup
+---------------  ----------------  -----------------  ------------------  ----------------  -------------------  -------------------
+10.0.128.0/18    False             vpn-to-spoke-prod  10.0.0.4            VirtualAppliance  Succeeded            rg-hub-spaincentral
+10.0.192.0/18    False             vpn-to-spoke-dev   10.0.0.4            VirtualAppliance  Succeeded            rg-hub-spaincentral
+10.0.0.128/27    False             primary-default    10.0.0.4            VirtualAppliance  Succeeded            rg-hub-spaincentral
+
+
+========== RUTAS rt-hub-fw ==========
+AddressPrefix    HasBgpOverride    Name      NextHopType    ProvisioningState    ResourceGroup
+---------------  ----------------  --------  -------------  -------------------  -------------------
+0.0.0.0/0        False             internet  Internet       Succeeded            rg-hub-spaincentral
+
+
+========== RUTAS rt-hub-std ==========
+AddressPrefix    HasBgpOverride    Name                         NextHopIpAddress    NextHopType       ProvisioningState    ResourceGroup
+---------------  ----------------  ---------------------------  ------------------  ----------------  -------------------  -------------------
+0.0.0.0/0        False             primary-0.0.0.0-0            10.0.0.4            VirtualAppliance  Succeeded            rg-hub-spaincentral
+10.0.0.0/16      False             primary-primary-10.0.0.0-16  10.0.0.4            VirtualAppliance  Succeeded            rg-hub-spaincentral
+
+
+========== PEERINGS HUB ==========
+AllowForwardedTraffic    AllowGatewayTransit    AllowVirtualNetworkAccess    DoNotVerifyRemoteGateways    Name                                 PeerCompleteVnets    PeeringState    PeeringSyncLevel    ProvisioningState    ResourceGroup        ResourceGuid                          UseRemoteGateways
+-----------------------  ---------------------  ---------------------------  ---------------------------  -----------------------------------  -------------------  --------------  ------------------  -------------------  -------------------  ------------------------------------  -------------------
+False                    True                   True                         False                        peer-hub-to-spoke-prod-spaincentral  True                 Connected       FullyInSync         Succeeded            rg-hub-spaincentral  7b0d14d1-fac6-0509-19ea-f98f4c549ef1  False
+False                    True                   True                         False                        peer-hub-to-spoke-dev-spaincentral   True                 Connected       FullyInSync         Succeeded            rg-hub-spaincentral  cdd8baa4-50f4-0420-32e5-d3a6904a3db7  False
+
+
+========== PEERINGS SPOKE DEV ==========
+AllowForwardedTraffic    AllowGatewayTransit    AllowVirtualNetworkAccess    DoNotVerifyRemoteGateways    Name                                PeerCompleteVnets    PeeringState    PeeringSyncLevel    ProvisioningState    ResourceGroup              ResourceGuid                          UseRemoteGateways
+-----------------------  ---------------------  ---------------------------  ---------------------------  ----------------------------------  -------------------  --------------  ------------------  -------------------  -------------------------  ------------------------------------  -------------------
+True                     False                  True                         False                        peer-spoke-dev-spaincentral-to-hub  True                 Connected       FullyInSync         Succeeded            rg-spoke-dev-spaincentral  cdd8baa4-50f4-0420-32e5-d3a6904a3db7  True
+
+
+========== SUBNETS SPOKE DEV ==========
+Nombre                       Prefijo        RouteTable
+---------------------------  -------------  --------------------------------------------------------------------------------------------------------------------------------------------------------
+snet-spoke-dev-spaincentral  10.0.192.0/24  /subscriptions/863dfedd-d208-467f-9e8b-415e9cb59c5d/resourceGroups/rg-hub-spaincentral/providers/Microsoft.Network/routeTables/rt-spoke-std-spaincentral
+snet-func-sigrid-dev         10.0.193.0/27  /subscriptions/863dfedd-d208-467f-9e8b-415e9cb59c5d/resourceGroups/rg-hub-spaincentral/providers/Microsoft.Network/routeTables/rt-spoke-std-spaincentral
+
+
+========== SIGRIDAPI VNET INTEGRATION ==========
+{
+  "Nombre": "func-sigridapi-dev-huyke",
+  "OutboundVnet": null,
+  "VnetSubnet": null
+}
+
+
+========== SQL ETL AUTOPAUSE ==========
+Nombre                   Estado    AutoPauseMin    MinCap    MaxCap
+-----------------------  --------  --------------  --------  --------
+sqldb-sigrid-ruesma-etl  Paused    60              0.5       1
+
+
+========== RSV BACKUP ITEMS ==========
+
+
+
+========== FLOW LOGS ==========
+[
+  {
+    "enabled": true,
+    "etag": "W/\"e03a6f2e-b576-458d-8dd9-ecb9dd45bb6f\"",
+    "flowAnalyticsConfiguration": {
+      "networkWatcherFlowAnalyticsConfiguration": {
+        "enabled": true,
+        "trafficAnalyticsInterval": 10,
+        "workspaceId": "c16072af-f41a-457d-b8a5-0472ba519f16",
+        "workspaceRegion": "spaincentral",
+        "workspaceResourceId": "/subscriptions/863dfedd-d208-467f-9e8b-415e9cb59c5d/resourceGroups/rg-management-spaincentral/providers/Microsoft.OperationalInsights/workspaces/law-management-spaincentral"
+      }
+    },
+    "format": {
+      "type": "JSON",
+      "version": 2
+    },
+    "id": "/subscriptions/863dfedd-d208-467f-9e8b-415e9cb59c5d/resourceGroups/NetworkWatcherRG/providers/Microsoft.Network/networkWatchers/NetworkWatcher_spaincentral/flowLogs/GatewaySubnet-rg-hub-spaincentral-flowlog",
+    "location": "spaincentral",
+    "name": "GatewaySubnet-rg-hub-spaincentral-flowlog",
+    "provisioningState": "Succeeded",
+    "resourceGroup": "NetworkWatcherRG",
+    "retentionPolicy": {
+      "days": 2,
+      "enabled": true
+    },
+    "storageId": "/subscriptions/863dfedd-d208-467f-9e8b-415e9cb59c5d/resourceGroups/rg-alz-mgmt-state-spaincentral-001/providers/Microsoft.Storage/storageAccounts/stoalzmgmspa001owvp",
+    "tags": {},
+    "targetResourceGuid": "8a613e8e-aa83-47cc-be36-651ec4ff26b7",
+    "targetResourceId": "/subscriptions/863dfedd-d208-467f-9e8b-415e9cb59c5d/resourceGroups/rg-hub-spaincentral/providers/Microsoft.Network/virtualNetworks/vnet-hub-spaincentral/subnets/GatewaySubnet",
+    "type": "Microsoft.Network/networkWatchers/flowLogs"
+  }
+]
+

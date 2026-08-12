@@ -1,0 +1,293 @@
+﻿AUDITORIA AZURE - 07/25/2026 17:45:46
+
+========== SUSCRIPCION ==========
+EnvironmentName    HomeTenantId                          IsDefault    Name    State    TenantDefaultDomain    TenantDisplayName    TenantId
+-----------------  ------------------------------------  -----------  ------  -------  ---------------------  -------------------  ------------------------------------
+AzureCloud         12d28010-1dd7-4689-9d16-7af8fc5519b8  True         Ruesma  Enabled  ruesma.es              Ruesma               12d28010-1dd7-4689-9d16-7af8fc5519b8
+
+
+========== GRUPOS DE RECURSOS ==========
+Name                                                 Location      Status
+---------------------------------------------------  ------------  ---------
+VisualStudioOnline-0A21AC2EC29241B4AAD0DF67EEB8F571  northeurope   Succeeded
+rg-alz-mgmt-state-spaincentral-001                   spaincentral  Succeeded
+rg-alz-mgmt-identity-spaincentral-001                spaincentral  Succeeded
+rg-management-spaincentral                           spaincentral  Succeeded
+rg-rsv-spaincentral                                  spaincentral  Succeeded
+rg-hub-spaincentral                                  spaincentral  Succeeded
+NetworkWatcherRG                                     spaincentral  Succeeded
+rg-asc-export-spaincentral                           spaincentral  Succeeded
+rg-health-manual                                     spaincentral  Succeeded
+rg-spoke-dev-spaincentral                            spaincentral  Succeeded
+rg-spoke-prod-spaincentral                           spaincentral  Succeeded
+rg-sigrid-dev-data-api                               spaincentral  Succeeded
+rg-sigridetl-dev-data                                spaincentral  Succeeded
+DefaultResourceGroup-ESC                             spaincentral  Succeeded
+rg-albaranes-dev                                     spaincentral  Succeeded
+rg-partes-dev                                        spaincentral  Succeeded
+
+
+========== TODOS LOS RECURSOS (detalle) ==========
+Nombre                                                                 Tipo                                              RG                                                   Loc           Sku            Kind
+---------------------------------------------------------------------  ------------------------------------------------  ---------------------------------------------------  ------------  -------------  ---------------------------
+ruesma                                                                 microsoft.visualstudio/account                    VisualStudioOnline-0A21AC2EC29241B4AAD0DF67EEB8F571  northeurope
+id-alz-mgmt-spaincentral-plan-001                                      Microsoft.ManagedIdentity/userAssignedIdentities  rg-alz-mgmt-identity-spaincentral-001                spaincentral
+id-alz-mgmt-spaincentral-apply-001                                     Microsoft.ManagedIdentity/userAssignedIdentities  rg-alz-mgmt-identity-spaincentral-001                spaincentral
+stoalzmgmspa001owvp                                                    Microsoft.Storage/storageAccounts                 rg-alz-mgmt-state-spaincentral-001                   spaincentral  Standard_ZRS   StorageV2
+uami-management-ama-spaincentral                                       Microsoft.ManagedIdentity/userAssignedIdentities  rg-management-spaincentral                           spaincentral
+rg-rsv-spaincentral                                                    Microsoft.RecoveryServices/vaults                 rg-rsv-spaincentral                                  spaincentral  Standard
+law-management-spaincentral                                            Microsoft.OperationalInsights/workspaces          rg-management-spaincentral                           spaincentral
+pip-bastion-hub-spaincentral                                           Microsoft.Network/publicIPAddresses               rg-hub-spaincentral                                  spaincentral  Standard
+fwp-hub-spaincentral                                                   Microsoft.Network/firewallPolicies                rg-hub-spaincentral                                  spaincentral
+rt-hub-std-spaincentral                                                Microsoft.Network/routeTables                     rg-hub-spaincentral                                  spaincentral
+rt-hub-fw-spaincentral                                                 Microsoft.Network/routeTables                     rg-hub-spaincentral                                  spaincentral
+pip-fw-hub-mgmt-spaincentral                                           Microsoft.Network/publicIPAddresses               rg-hub-spaincentral                                  spaincentral  Standard
+pip-fw-hub-spaincentral                                                Microsoft.Network/publicIPAddresses               rg-hub-spaincentral                                  spaincentral  Standard
+vnet-hub-spaincentral                                                  Microsoft.Network/virtualNetworks                 rg-hub-spaincentral                                  spaincentral
+NetworkWatcher_spaincentral                                            Microsoft.Network/networkWatchers                 NetworkWatcherRG                                     spaincentral
+ContainerInsights(law-management-spaincentral)                         Microsoft.OperationsManagement/solutions          rg-management-spaincentral                           spaincentral
+dcr-change-tracking                                                    Microsoft.Insights/dataCollectionRules            rg-management-spaincentral                           spaincentral
+dcr-vm-insights                                                        Microsoft.Insights/dataCollectionRules            rg-management-spaincentral                           spaincentral
+dcr-defender-sql                                                       Microsoft.Insights/dataCollectionRules            rg-management-spaincentral                           spaincentral
+VMInsights(law-management-spaincentral)                                Microsoft.OperationsManagement/solutions          rg-management-spaincentral                           spaincentral
+fw-hub-spaincentral                                                    Microsoft.Network/azureFirewalls                  rg-hub-spaincentral                                  spaincentral
+bas-hub-spaincentral                                                   Microsoft.Network/bastionHosts                    rg-hub-spaincentral                                  spaincentral  Standard
+pip-vgw-hub-vpn-spaincentral-002                                       Microsoft.Network/publicIPAddresses               rg-hub-spaincentral                                  spaincentral  Standard
+pip-vgw-hub-vpn-spaincentral-001                                       Microsoft.Network/publicIPAddresses               rg-hub-spaincentral                                  spaincentral  Standard
+vgw-hub-vpn-spaincentral                                               Microsoft.Network/virtualNetworkGateways          rg-hub-spaincentral                                  spaincentral
+ExportToWorkspace                                                      Microsoft.Security/automations                    rg-asc-export-spaincentral                           spaincentral
+ag-ServiceHealthAlertActionGroup                                       Microsoft.Insights/actiongroups                   rg-health-manual                                     global
+ServiceHealthSubscriptionAlertRule                                     Microsoft.Insights/activityLogAlerts              rg-health-manual                                     global
+80.28.223.30-remota                                                    Microsoft.Network/localNetworkGateways            rg-hub-spaincentral                                  spaincentral
+cn-80.28.223.30-remota                                                 Microsoft.Network/connections                     rg-hub-spaincentral                                  spaincentral
+vnet-spoke-prod-spaincentral                                           Microsoft.Network/virtualNetworks                 rg-spoke-prod-spaincentral                           spaincentral
+vnet-spoke-dev-spaincentral                                            Microsoft.Network/virtualNetworks                 rg-spoke-dev-spaincentral                            spaincentral
+rt-hub-vpn-spaincentral                                                Microsoft.Network/routeTables                     rg-hub-spaincentral                                  spaincentral
+vm-sql-test-dev-02_key                                                 Microsoft.Compute/sshPublicKeys                   rg-spoke-dev-spaincentral                            spaincentral
+rg-spoke-prod-spaincentral_key                                         Microsoft.Compute/sshPublicKeys                   rg-spoke-prod-spaincentral                           spaincentral
+rt-spoke-std-spaincentral                                              Microsoft.Network/routeTables                     rg-hub-spaincentral                                  spaincentral
+prueba-windows806                                                      Microsoft.Network/networkInterfaces               rg-spoke-prod-spaincentral                           spaincentral
+testSQL-nsg                                                            Microsoft.Network/networkSecurityGroups           rg-spoke-dev-spaincentral                            spaincentral
+NetworkWatcher_spaincentral/GatewaySubnet-rg-hub-spaincentral-flowlog  microsoft.network/networkWatchers/flowLogs        NetworkWatcherRG                                     spaincentral
+NWTA-c16072af-f41a-457d-b8a5-0472baG05QMO                              Microsoft.Insights/dataCollectionEndpoints        rg-management-spaincentral                           spaincentral
+NWTA-c16072af-f41a-457d-b8a5-0472ba519f16R7V9A6                        Microsoft.Insights/dataCollectionRules            rg-management-spaincentral                           spaincentral
+prueba-ping_key                                                        Microsoft.Compute/sshPublicKeys                   rg-spoke-dev-spaincentral                            spaincentral
+prueba-ping-nsg                                                        Microsoft.Network/networkSecurityGroups           rg-spoke-dev-spaincentral                            spaincentral
+prueba-ping-ip                                                         Microsoft.Network/publicIPAddresses               rg-spoke-dev-spaincentral                            spaincentral  Standard
+prueba-ping746                                                         Microsoft.Network/networkInterfaces               rg-spoke-dev-spaincentral                            spaincentral
+prueba-ping                                                            Microsoft.Compute/virtualMachines                 rg-spoke-dev-spaincentral                            spaincentral
+prueba-ping_OsDisk_1_ee7808751762465aa8244188b9e3f674                  Microsoft.Compute/disks                           RG-SPOKE-DEV-SPAINCENTRAL                            spaincentral  Premium_LRS
+prueba-ping/AzurePolicyforLinux                                        Microsoft.Compute/virtualMachines/extensions      rg-spoke-dev-spaincentral                            spaincentral
+asp-sigridapi-dev-huyke                                                Microsoft.Web/serverFarms                         rg-sigrid-dev-data-api                               spaincentral  FC1            functionapp
+kv-sigridapi-dev-huyke                                                 Microsoft.KeyVault/vaults                         rg-sigrid-dev-data-api                               spaincentral
+stsigridapidevhuyke                                                    Microsoft.Storage/storageAccounts                 rg-sigrid-dev-data-api                               spaincentral  Standard_LRS   StorageV2
+func-sigridapi-dev-huyke                                               Microsoft.Web/sites                               rg-sigrid-dev-data-api                               spaincentral                 functionapp,linux
+stsigridetldev8yv7pj                                                   Microsoft.Storage/storageAccounts                 rg-sigridetl-dev-data                                spaincentral  Standard_LRS   StorageV2
+sql-sigridetl-dev-8yv7pj                                               Microsoft.Sql/servers                             rg-sigridetl-dev-data                                spaincentral                 v12.0
+plan-sigridetl-dev-8yv7pj                                              Microsoft.Web/serverFarms                         rg-sigridetl-dev-data                                spaincentral  FC1            functionapp
+log-sigridetl-dev-8yv7pj                                               Microsoft.OperationalInsights/workspaces          rg-sigridetl-dev-data                                spaincentral
+kv-sigridetl-dev-8yv7pj                                                Microsoft.KeyVault/vaults                         rg-sigridetl-dev-data                                spaincentral
+appi-sigridetl-dev-8yv7pj                                              Microsoft.Insights/components                     rg-sigridetl-dev-data                                spaincentral                 web
+sql-sigridetl-dev-8yv7pj/master                                        Microsoft.Sql/servers/databases                   rg-sigridetl-dev-data                                spaincentral  GP_SYSTEM      v12.0,system,serverless
+sql-sigridetl-dev-8yv7pj/sqldb-sigrid-ruesma-etl                       Microsoft.Sql/servers/databases                   rg-sigridetl-dev-data                                spaincentral  GP_S_Gen5      v12.0,user,vcore,serverless
+func-sigridetl-dev-8yv7pj                                              Microsoft.Web/sites                               rg-sigridetl-dev-data                                spaincentral                 functionapp,linux
+Application Insights Smart Detection                                   microsoft.insights/actiongroups                   rg-sigridetl-dev-data                                global
+stnominasextrasruesma                                                  Microsoft.Storage/storageAccounts                 rg-sigrid-dev-data-api                               spaincentral  Standard_LRS   StorageV2
+func-nominas-extras-ruesma                                             Microsoft.Web/sites                               rg-sigrid-dev-data-api                               spaincentral                 functionapp,linux
+ASP-rgsigriddevdataapi-065d                                            Microsoft.Web/serverFarms                         rg-sigrid-dev-data-api                               spaincentral  FC1            functionapp
+DefaultWorkspace-863dfedd-d208-467f-9e8b-415e9cb59c5d-ESC              Microsoft.OperationalInsights/workspaces          DefaultResourceGroup-ESC                             spaincentral
+func-nominas-extras-ruesma                                             Microsoft.Insights/components                     rg-sigrid-dev-data-api                               spaincentral                 web
+swa-nominas-extras-ruesma                                              Microsoft.Web/staticSites                         rg-sigrid-dev-data-api                               westeurope    Standard
+swa-portal-ruesma                                                      Microsoft.Web/staticSites                         rg-sigrid-dev-data-api                               westeurope    Standard
+stretflexruesma                                                        Microsoft.Storage/storageAccounts                 rg-sigrid-dev-data-api                               spaincentral  Standard_LRS   StorageV2
+func-retribucion-flexible-ruesma                                       Microsoft.Web/sites                               rg-sigrid-dev-data-api                               spaincentral                 functionapp,linux
+func-retribucion-flexible-ruesma                                       Microsoft.Insights/components                     rg-sigrid-dev-data-api                               spaincentral                 web
+ASP-rgsigriddevdataapi-8321                                            Microsoft.Web/serverFarms                         rg-sigrid-dev-data-api                               spaincentral  FC1            functionapp
+swa-retribucion-flexible-ruesma                                        Microsoft.Web/staticSites                         rg-sigrid-dev-data-api                               westeurope    Standard
+id-albaranes-dev                                                       Microsoft.ManagedIdentity/userAssignedIdentities  rg-albaranes-dev                                     spaincentral
+acralbaranesdev                                                        Microsoft.ContainerRegistry/registries            rg-albaranes-dev                                     spaincentral  Basic
+log-albaranes-dev                                                      Microsoft.OperationalInsights/workspaces          rg-albaranes-dev                                     spaincentral
+stalbaranesrs9k2                                                       Microsoft.Storage/storageAccounts                 rg-albaranes-dev                                     spaincentral  Standard_LRS   StorageV2
+kv-albaranes-rs9k2                                                     Microsoft.KeyVault/vaults                         rg-albaranes-dev                                     spaincentral
+cae-albaranes-dev                                                      Microsoft.App/managedEnvironments                 rg-albaranes-dev                                     spaincentral
+psql-albaranes-rs9k2                                                   Microsoft.DBforPostgreSQL/flexibleServers         rg-albaranes-dev                                     spaincentral  Standard_B1ms
+ca-sv5-valuation                                                       Microsoft.App/containerApps                       rg-albaranes-dev                                     spaincentral
+ca-sv6-valorador                                                       Microsoft.App/containerApps                       rg-albaranes-dev                                     spaincentral
+ca-sv2-extraccion                                                      Microsoft.App/containerApps                       rg-albaranes-dev                                     spaincentral
+ca-sv3-persistencia                                                    Microsoft.App/containerApps                       rg-albaranes-dev                                     spaincentral
+ca-sv1-intake                                                          Microsoft.App/containerApps                       rg-albaranes-dev                                     spaincentral
+ca-sv4-front                                                           Microsoft.App/containerApps                       rg-albaranes-dev                                     spaincentral
+id-partes-dev                                                          Microsoft.ManagedIdentity/userAssignedIdentities  rg-partes-dev                                        spaincentral
+log-partes-dev                                                         Microsoft.OperationalInsights/workspaces          rg-partes-dev                                        spaincentral
+stpartespt7m3                                                          Microsoft.Storage/storageAccounts                 rg-partes-dev                                        spaincentral  Standard_LRS   StorageV2
+kv-partes-pt7m3                                                        Microsoft.KeyVault/vaults                         rg-partes-dev                                        spaincentral
+cae-partes-dev                                                         Microsoft.App/managedEnvironments                 rg-partes-dev                                        spaincentral
+ca-sv2-extraccion                                                      Microsoft.App/containerApps                       rg-partes-dev                                        spaincentral
+ca-sv3-persistencia                                                    Microsoft.App/containerApps                       rg-partes-dev                                        spaincentral
+ca-sv1-poller                                                          Microsoft.App/containerApps                       rg-partes-dev                                        spaincentral
+ca-sv4-front                                                           Microsoft.App/containerApps                       rg-partes-dev                                        spaincentral
+ca-finanzas-remesas                                                    Microsoft.App/containerApps                       rg-partes-dev                                        spaincentral
+ca-finanzas-remesas-front                                              Microsoft.App/containerApps                       rg-partes-dev                                        spaincentral
+
+
+========== FIREWALLS ==========
+Name                 ResourceGroup        Location      Type                              Status
+-------------------  -------------------  ------------  --------------------------------  ---------
+fw-hub-spaincentral  rg-hub-spaincentral  spaincentral  Microsoft.Network/azureFirewalls  Succeeded
+
+
+========== FIREWALL POLICIES ==========
+Name                  ResourceGroup        Location      Type                                Status
+--------------------  -------------------  ------------  ----------------------------------  ---------
+fwp-hub-spaincentral  rg-hub-spaincentral  spaincentral  Microsoft.Network/firewallPolicies  Succeeded
+
+
+========== VPN / VNET GATEWAYS ==========
+Name                      ResourceGroup        Location      Type                                      Status
+------------------------  -------------------  ------------  ----------------------------------------  ---------
+vgw-hub-vpn-spaincentral  rg-hub-spaincentral  spaincentral  Microsoft.Network/virtualNetworkGateways  Succeeded
+
+
+========== BASTION ==========
+Name                  ResourceGroup        Location      Type                            Status
+--------------------  -------------------  ------------  ------------------------------  ---------
+bas-hub-spaincentral  rg-hub-spaincentral  spaincentral  Microsoft.Network/bastionHosts  Succeeded
+
+
+========== IPs PUBLICAS ==========
+Nombre                            RG                         IP              Metodo    Sku       AsociadaA
+--------------------------------  -------------------------  --------------  --------  --------  ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+pip-bastion-hub-spaincentral      rg-hub-spaincentral        158.158.68.8    Static    Standard  /subscriptions/863dfedd-d208-467f-9e8b-415e9cb59c5d/resourceGroups/rg-hub-spaincentral/providers/Microsoft.Network/bastionHosts/bas-hub-spaincentral/bastionHostIpConfigurations/bastion-ip-config
+pip-fw-hub-mgmt-spaincentral      rg-hub-spaincentral        70.156.184.69   Static    Standard  /subscriptions/863dfedd-d208-467f-9e8b-415e9cb59c5d/resourceGroups/rg-hub-spaincentral/providers/Microsoft.Network/azureFirewalls/fw-hub-spaincentral/azureFirewallIpConfigurations/defaultMgmt
+pip-fw-hub-spaincentral           rg-hub-spaincentral        70.156.162.94   Static    Standard  /subscriptions/863dfedd-d208-467f-9e8b-415e9cb59c5d/resourceGroups/rg-hub-spaincentral/providers/Microsoft.Network/azureFirewalls/fw-hub-spaincentral/azureFirewallIpConfigurations/default
+pip-vgw-hub-vpn-spaincentral-001  rg-hub-spaincentral        70.156.234.193  Static    Standard  /subscriptions/863dfedd-d208-467f-9e8b-415e9cb59c5d/resourceGroups/rg-hub-spaincentral/providers/Microsoft.Network/virtualNetworkGateways/vgw-hub-vpn-spaincentral/ipConfigurations/ipcfg-vgw-hub-vpn-spaincentral-001
+pip-vgw-hub-vpn-spaincentral-002  rg-hub-spaincentral        158.158.89.171  Static    Standard  /subscriptions/863dfedd-d208-467f-9e8b-415e9cb59c5d/resourceGroups/rg-hub-spaincentral/providers/Microsoft.Network/virtualNetworkGateways/vgw-hub-vpn-spaincentral/ipConfigurations/ActiveActive
+prueba-ping-ip                    rg-spoke-dev-spaincentral  158.158.35.191  Static    Standard  /subscriptions/863dfedd-d208-467f-9e8b-415e9cb59c5d/resourceGroups/rg-spoke-dev-spaincentral/providers/Microsoft.Network/networkInterfaces/prueba-ping746/ipConfigurations/ipconfig1
+
+
+========== NAT GATEWAYS ==========
+
+
+
+========== DDOS PLANS ==========
+
+
+
+========== VNETS Y PEERINGS ==========
+
+
+========== LOG ANALYTICS WORKSPACES ==========
+Nombre                                                     RG                          Sku        RetencionDias    CapGB
+---------------------------------------------------------  --------------------------  ---------  ---------------  -------
+law-management-spaincentral                                rg-management-spaincentral  PerGB2018  30               -1.0
+log-sigridetl-dev-8yv7pj                                   rg-sigridetl-dev-data       PerGB2018  30               -1.0
+DefaultWorkspace-863dfedd-d208-467f-9e8b-415e9cb59c5d-ESC  DefaultResourceGroup-ESC    PerGB2018  30               -1.0
+log-albaranes-dev                                          rg-albaranes-dev            PerGB2018  30               -1.0
+log-partes-dev                                             rg-partes-dev               PerGB2018  30               -1.0
+
+
+========== APP INSIGHTS ==========
+Name                              ResourceGroup           Location      Type                           Status
+--------------------------------  ----------------------  ------------  -----------------------------  ---------
+appi-sigridetl-dev-8yv7pj         rg-sigridetl-dev-data   spaincentral  Microsoft.Insights/components  Succeeded
+func-nominas-extras-ruesma        rg-sigrid-dev-data-api  spaincentral  Microsoft.Insights/components  Succeeded
+func-retribucion-flexible-ruesma  rg-sigrid-dev-data-api  spaincentral  Microsoft.Insights/components  Succeeded
+
+
+========== MAQUINAS VIRTUALES ==========
+Nombre       RG                         Tamano            Estado
+-----------  -------------------------  ----------------  --------------
+prueba-ping  RG-SPOKE-DEV-SPAINCENTRAL  Standard_D2ls_v5  VM deallocated
+
+
+========== DISCOS ==========
+
+
+========== CONTAINER APPS ==========
+Nombre                     RG                MinRep    MaxRep    CPU    Mem
+-------------------------  ----------------  --------  --------  -----  -----
+ca-sv5-valuation           rg-albaranes-dev  1         3         0.5    1Gi
+ca-sv6-valorador           rg-albaranes-dev  1         5         0.5    1Gi
+ca-sv2-extraccion          rg-albaranes-dev  0         5         0.5    1Gi
+ca-sv3-persistencia        rg-albaranes-dev  1         5         0.5    1Gi
+ca-sv1-intake              rg-albaranes-dev  1         1         0.5    1Gi
+ca-sv4-front               rg-albaranes-dev  1         2         0.5    1Gi
+ca-sv2-extraccion          rg-partes-dev     0         5         0.5    1Gi
+ca-sv3-persistencia        rg-partes-dev     0         5         0.5    1Gi
+ca-sv1-poller              rg-partes-dev     1         1         0.5    1Gi
+ca-sv4-front               rg-partes-dev     1         2         0.5    1Gi
+ca-finanzas-remesas        rg-partes-dev     1         3         0.5    1Gi
+ca-finanzas-remesas-front  rg-partes-dev     1         2         0.25   0.5Gi
+
+
+========== CONTAINER APPS ENV ==========
+Nombre             RG                Tipo
+-----------------  ----------------  -----------
+cae-albaranes-dev  rg-albaranes-dev  Consumption
+cae-partes-dev     rg-partes-dev     Consumption
+
+
+========== FUNCTION APPS ==========
+Nombre                            RG                      Estado
+--------------------------------  ----------------------  --------
+func-sigridapi-dev-huyke          rg-sigrid-dev-data-api  Running
+func-sigridetl-dev-8yv7pj         rg-sigridetl-dev-data   Running
+func-nominas-extras-ruesma        rg-sigrid-dev-data-api  Running
+func-retribucion-flexible-ruesma  rg-sigrid-dev-data-api  Running
+
+
+========== APP SERVICE PLANS ==========
+Nombre                       RG                      Sku    Tier             Workers
+---------------------------  ----------------------  -----  ---------------  ---------
+asp-sigridapi-dev-huyke      rg-sigrid-dev-data-api  FC1    FlexConsumption  0
+plan-sigridetl-dev-8yv7pj    rg-sigridetl-dev-data   FC1    FlexConsumption  0
+ASP-rgsigriddevdataapi-065d  rg-sigrid-dev-data-api  FC1    FlexConsumption  0
+ASP-rgsigriddevdataapi-8321  rg-sigrid-dev-data-api  FC1    FlexConsumption  0
+
+
+========== STATIC WEB APPS ==========
+Nombre                           RG                      Sku
+-------------------------------  ----------------------  --------
+swa-portal-ruesma                rg-sigrid-dev-data-api  Standard
+swa-nominas-extras-ruesma        rg-sigrid-dev-data-api  Standard
+swa-retribucion-flexible-ruesma  rg-sigrid-dev-data-api  Standard
+
+
+========== ACR ==========
+Nombre           RG                Sku
+---------------  ----------------  -----
+acralbaranesdev  rg-albaranes-dev  Basic
+
+
+========== POSTGRESQL FLEXIBLE ==========
+Nombre                RG                Sku            Tier       GB    HA        Version
+--------------------  ----------------  -------------  ---------  ----  --------  ---------
+psql-albaranes-rs9k2  rg-albaranes-dev  Standard_B1ms  Burstable  32    Disabled  16
+
+
+========== STORAGE ACCOUNTS ==========
+Nombre                 RG                                  Sku           Kind       Acceso
+---------------------  ----------------------------------  ------------  ---------  --------
+stalbaranesrs9k2       rg-albaranes-dev                    Standard_LRS  StorageV2  Hot
+stnominasextrasruesma  rg-sigrid-dev-data-api              Standard_LRS  StorageV2  Hot
+stoalzmgmspa001owvp    rg-alz-mgmt-state-spaincentral-001  Standard_ZRS  StorageV2  Hot
+stpartespt7m3          rg-partes-dev                       Standard_LRS  StorageV2  Hot
+stretflexruesma        rg-sigrid-dev-data-api              Standard_LRS  StorageV2  Hot
+stsigridapidevhuyke    rg-sigrid-dev-data-api              Standard_LRS  StorageV2  Hot
+stsigridetldev8yv7pj   rg-sigridetl-dev-data               Standard_LRS  StorageV2  Hot
+
+
+========== KEY VAULTS ==========
+Location      Name                     ResourceGroup
+------------  -----------------------  ----------------------
+spaincentral  kv-sigridapi-dev-huyke   rg-sigrid-dev-data-api
+spaincentral  kv-sigridetl-dev-8yv7pj  rg-sigridetl-dev-data
+spaincentral  kv-albaranes-rs9k2       rg-albaranes-dev
+spaincentral  kv-partes-pt7m3          rg-partes-dev
+
+
+========== BUDGETS ==========
+Amount    Category    ETag               Name         TimeGrain
+--------  ----------  -----------------  -----------  -----------
+500.0     Cost        "1dcafdde20b6efc"  Budget-9c5d  Monthly
+

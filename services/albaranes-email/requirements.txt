@@ -1,0 +1,9 @@
+# requirements.txt — sv1 (email-albaranes-ingestor)
+# El paquete común se instala aparte:
+#   local : pip install -e ../comun
+#   docker: lo instala el Dockerfile desde el contexto de build
+pydantic>=2.7
+pydantic-settings>=2.2
+python-dotenv>=1.0
+httpx>=0.27
+pypdf>=4.2
