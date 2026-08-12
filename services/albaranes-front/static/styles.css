@@ -1,0 +1,1733 @@
+/* static/styles.css */
+/* =========================================================================
+   Revisión de Albaranes (sv4) — identidad corporativa Ruesma
+   Burdeos #9f2842 (marca) · Gris acero #7b868c (estructura) · Blanco
+   Estética: industrial / plano arquitectónico, sobria y moderna.
+   Alineado con portal.ruesma.es (mismas variables, tipografías y fondo).
+
+   IMPORTANTE: este archivo es un re-skin VISUAL. Todos los selectores
+   originales se conservan (combo-*, concilia-*, js-*, sticky-col,
+   pdf-collapsed, valued, readonly-cell, nth-child de #lines-table…)
+   porque app.js y las plantillas dependen de ellos.
+   ========================================================================= */
+
+:root {
+    /* Marca (idéntico al portal) */
+    --brand: #9f2842;
+    --brand-strong: #7a1e33;
+    --brand-soft: #f7eaee;
+    --steel: #7b868c;
+    --steel-300: #aab1b6;
+    --steel-100: #dfe2e4;
+
+    /* Neutros */
+    --ink: #1d2024;
+    --ink-soft: #4a4f55;
+    --paper: #ffffff;
+    --paper-soft: #fafbfb;
+    --canvas: #f3f4f5;
+    --line: rgba(123, 134, 140, 0.22);
+    --line-strong: rgba(123, 134, 140, 0.4);
+
+    /* Semánticos (armonizados con la paleta) */
+    --ok: #2d6a4f;
+    --ok-soft: #e1f0ea;
+    --ok-border: #bcd9c7;
+    --warn: #8a6d12;
+    --warn-strong: #7a5a10;
+    --warn-soft: #f6efd6;
+    --warn-border: #e7d39a;
+    --danger: #b42318;
+    --danger-strong: #962017;
+    --danger-soft: #fbe9e7;
+    --danger-border: #efb8b0;
+    --info-ink: #3f4a50;
+    --info-soft: #eef1f2;
+    --info-border: #c8ced1;
+
+    /* Sombras */
+    --shadow-sm: 0 1px 2px rgba(29, 32, 36, 0.05);
+    --shadow-md: 0 18px 40px -22px rgba(29, 32, 36, 0.35);
+    --shadow-brand: 0 18px 38px -20px rgba(159, 40, 66, 0.55);
+
+    /* Tipografía */
+    --font-display: 'Bricolage Grotesque', Georgia, serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+
+    /* Geometría */
+    --radius: 16px;
+    --radius-sm: 10px;
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    /* Compatibilidad con reglas antiguas que usaban estos nombres */
+    --bg: var(--canvas);
+    --panel: var(--paper);
+    --border: var(--line);
+    --text: var(--ink);
+    --muted: var(--steel);
+    --primary: var(--brand);
+    --success: var(--ok);
+    --warning: var(--warn);
+    --shadow: var(--shadow-sm);
+    --accent: var(--brand);
+}
+
+* { box-sizing: border-box; }
+
+/* El UA stylesheet declara [hidden]{display:none} pero las reglas de autor
+   (p.ej. .valuate-status{display:inline-block}) ganan en la cascada y el
+   atributo hidden dejaría de funcionar. Forzamos que hidden mande SIEMPRE
+   (mismo patrón que el portal). app.js alterna hidden por atributo en
+   combo-panel, valuate-status, refetch-status, undo-btn, concilia-select… */
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--font-body);
+    color: var(--ink);
+    background-color: var(--canvas);
+    /* Trama de plano: cuadrícula muy sutil en gris acero + halo burdeos. */
+    background-image:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px),
+        radial-gradient(140% 120% at 85% -10%, rgba(159, 40, 66, 0.06), transparent 55%);
+    background-size: 34px 34px, 34px 34px, 100% 100%;
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+::selection { background: var(--brand-soft); color: var(--brand-strong); }
+
+img { display: block; max-width: 100%; }
+code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.88em;
+    background: var(--steel-100);
+    color: #43494d;
+    padding: 1px 6px;
+    border-radius: 6px;
+}
+
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.container { width: min(1760px, calc(100% - 32px)); margin: 0 auto; }
+
+/* ---------- Barra superior (estilo portal) -------------------------------- */
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(255, 255, 255, 0.84);
+    backdrop-filter: saturate(160%) blur(10px);
+    -webkit-backdrop-filter: saturate(160%) blur(10px);
+    border-bottom: 1px solid var(--line);
+}
+
+.topbar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 60px;
+    padding: 0.55rem 0;
+}
+
+.topbar__brand {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    text-decoration: none;
+    color: inherit;
+}
+.topbar__logo { height: 30px; width: auto; }
+.topbar__sep { width: 1px; height: 24px; background: var(--line-strong); }
+.topbar__tag {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.92rem;
+    letter-spacing: 0.04em;
+    color: var(--steel);
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.topnav { display: flex; align-items: center; gap: 0.35rem; }
+.topnav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.42rem 0.95rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+.topnav a:hover { background: var(--brand-soft); color: var(--brand); }
+.topnav a.topnav__portal { border-color: var(--line-strong); color: var(--steel); }
+.topnav a.topnav__portal:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
+
+.page-shell { padding: clamp(22px, 3vw, 34px) 0 48px; }
+
+/* ---------- Cabeceras de página ------------------------------------------- */
+.page-header { display: flex; justify-content: space-between; align-items: stretch; gap: 24px; margin-bottom: 24px; }
+.page-header h1, .panel-header h2, .subsection-header h3 { margin: 0; }
+
+.page-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.7rem;
+    padding: 0.3rem 0.85rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--steel);
+    background: var(--paper);
+}
+
+h1 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(1.7rem, 3vw, 2.15rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+}
+.panel-header h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.18rem;
+    letter-spacing: -0.01em;
+}
+.subsection-header h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.02rem;
+    letter-spacing: 0.01em;
+}
+
+.muted { color: var(--steel); }
+.small { font-size: 0.85rem; }
+
+/* ---------- Alertas -------------------------------------------------------- */
+.alert {
+    border-radius: 12px;
+    padding: 14px 16px 14px 18px;
+    margin-bottom: 20px;
+    border: 1px solid var(--line);
+    line-height: 1.5;
+}
+.alert.success {
+    background: var(--ok-soft);
+    color: #245741;
+    border-color: var(--ok-border);
+    box-shadow: inset 3px 0 0 var(--ok);
+}
+.alert.warning {
+    background: var(--warn-soft);
+    color: var(--warn-strong);
+    border-color: var(--warn-border);
+    box-shadow: inset 3px 0 0 #c9a227;
+}
+.alert.info {
+    background: var(--info-soft);
+    color: var(--info-ink);
+    border-color: var(--info-border);
+    box-shadow: inset 3px 0 0 var(--steel);
+}
+.alert code { background: rgba(255, 255, 255, 0.7); color: inherit; }
+
+/* ---------- Paneles / tarjetas --------------------------------------------- */
+.panel {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 24px;
+}
+
+.stats-grid { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 14px; width: min(900px, 100%); align-items: stretch; }
+.stat-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 18px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+.stat-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    height: 3px;
+    background: var(--steel-100);
+}
+.stat-card:first-child::before { background: var(--brand); }
+.stat-label {
+    display: block;
+    color: var(--steel);
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0;
+}
+.stat-card strong {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.95rem;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+}
+/* La tarjeta de importe lleva un número largo (€): fuente algo menor para
+   que quepa sin desbordar. */
+.stat-importe strong { font-size: 1.3rem; white-space: nowrap; }
+.stat-importe::before { background: var(--brand); }
+
+/* ---------- Formularios ----------------------------------------------------- */
+.filters-grid { display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)); gap: 16px; align-items: end; }
+.filters-grid label, .form-grid label { display: flex; flex-direction: column; gap: 8px; font-size: 0.92rem; }
+.filters-grid label > span, .form-grid label > span { color: var(--ink-soft); font-weight: 500; }
+
+input, select, textarea, button { font: inherit; }
+
+input, select, textarea {
+    width: 100%;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    background: var(--paper);
+    color: var(--ink);
+    transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
+}
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(159, 40, 66, 0.14);
+}
+input::placeholder, textarea::placeholder { color: var(--steel-300); }
+select { cursor: pointer; }
+
+textarea { resize: vertical; }
+
+/* Inputs cuyo valor procede de la VALORACIÓN (class="valued" en plantilla/JS):
+   leve tono verdoso para distinguirlos de lo extraído del albarán. */
+.editable-table input.valued,
+.editable-table textarea.valued {
+    background: #f4faf6;
+    border-color: var(--ok-border);
+}
+
+/* Celdas readonly generadas por plantilla/JS (descuento y código en
+   líneas sintéticas). */
+input.readonly-cell,
+input[readonly].readonly-cell {
+    background: var(--canvas);
+    color: var(--ink-soft);
+    border-style: dashed;
+}
+
+.filters-actions, .header-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+
+/* ---------- Botones (píldora, estilo portal) ------------------------------- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 9px 18px;
+    font-weight: 600;
+    font-size: 0.93rem;
+    text-decoration: none;
+    cursor: pointer;
+    background: var(--steel-100);
+    color: var(--ink);
+    transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease),
+                background 0.2s var(--ease), border-color 0.2s var(--ease),
+                color 0.2s var(--ease);
+}
+.btn:active { transform: translateY(0); }
+
+.btn[disabled] { opacity: 0.55; cursor: progress; transform: none !important; box-shadow: none; }
+
+.btn.small { padding: 7px 13px; font-size: 0.85rem; }
+
+.btn.primary {
+    background: var(--brand);
+    color: #fff;
+    box-shadow: var(--shadow-brand);
+}
+.btn.primary:hover { background: var(--brand-strong); transform: translateY(-1px); }
+
+.btn.secondary {
+    background: var(--paper);
+    border-color: var(--line-strong);
+    color: var(--ink-soft);
+}
+.btn.secondary:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
+
+.btn.success { background: var(--ok); color: #fff; }
+.btn.success:hover { background: #245741; transform: translateY(-1px); }
+
+.btn.danger { background: var(--danger); color: #fff; }
+.btn.danger:hover { background: var(--danger-strong); }
+
+/* ---------- Tablas ----------------------------------------------------------- */
+.table-scroll { overflow-x: auto; }
+
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { border-bottom: 1px solid var(--line); padding: 12px 10px; vertical-align: top; text-align: left; }
+.table thead th {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--steel);
+    border-bottom: 1px solid var(--line-strong);
+    padding-top: 8px;
+    padding-bottom: 10px;
+    white-space: nowrap;
+}
+.table th a { color: var(--steel); text-decoration: none; transition: color 0.15s var(--ease); }
+.table th a:hover { color: var(--brand); }
+
+/* Hover de fila SOLO en la bandeja (la tabla de líneas tiene inputs y
+   filas de conciliación con fondo propio). Color sólido para que la
+   columna sticky no desentone al solaparse. */
+.docs-table th, .docs-table td { border-right: 1px solid var(--line); }
+.docs-table th:last-child, .docs-table td:last-child { border-right: none; }
+.docs-table tbody tr:hover td { background: #f8f4f5; }
+
+/* Lista de documentos: la columna "Acciones" queda fija a la izquierda
+   al hacer scroll horizontal de la tabla (.table-scroll). Sin sombra/borde
+   (quedaba como un recuadro feo). */
+.docs-table th.sticky-col,
+.docs-table td.sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--paper);
+}
+.docs-table thead th.sticky-col { z-index: 2; }
+/* El hover de fila también tiñe la columna sticky, a toda la altura. */
+.docs-table tbody tr:hover td.sticky-col { background: #f8f4f5; }
+
+/* La celda <td> de acciones es una celda normal (estira a la altura de
+   fila); el flex va en el div interior, no en el <td> — si el <td> es
+   flex pierde la altura de celda y el fondo/hover queda más corto. */
+.actions-td { vertical-align: top; }
+.actions-cell { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
+
+.empty-cell, .empty-state { text-align: center; color: var(--steel); padding: 32px 16px; }
+
+/* ---------- Pills de estado / confianza ------------------------------------ */
+.status-pill, .confidence-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.status-pill.approved, .confidence-badge.ok { background: var(--ok-soft); color: var(--ok); }
+.status-pill.pending { background: var(--steel-100); color: #565d62; }
+.confidence-badge.low { background: var(--warn-soft); color: var(--warn); }
+
+.link-strong { color: var(--brand); text-decoration: none; font-weight: 600; }
+.link-strong:hover { color: var(--brand-strong); text-decoration: underline; }
+
+.pagination { display: flex; justify-content: center; align-items: center; gap: 16px; padding-top: 16px; color: var(--steel); font-size: 0.92rem; }
+
+/* ==============================================================
+   SPLIT LAYOUT (detalle)
+   --------------------------------------------------------------
+   Visor a la izquierda, editor a la derecha. Con navpanes=0 en el
+   iframe el visor PDF del navegador ya no pinta el panel de
+   miniaturas interno, así que el panel puede volver a un ancho
+   razonable para leer el albarán cómodamente.
+   ============================================================== */
+.split-layout {
+    display: grid;
+    grid-template-columns: minmax(560px, 1.2fr) minmax(520px, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.viewer-panel, .editor-panel { min-height: 880px; }
+.viewer-panel { position: sticky; top: 88px; }
+
+.panel-header, .subsection-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+/* Separa el bloque de Líneas (y demás subsecciones) de la parte inferior del
+   bloque de revisión que tiene encima, y le da aire por arriba. */
+.subsection-header { margin-top: 40px; padding-top: 28px; border-top: 1px solid var(--line); }
+
+.document-frame {
+    width: 100%;
+    height: min(82vh, 1120px);
+    min-height: 860px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--paper);
+}
+
+.viewer-meta { display: grid; gap: 8px; margin-top: 16px; color: var(--steel); font-size: 0.9rem; }
+.viewer-meta strong { color: var(--ink-soft); font-weight: 600; }
+
+.form-grid.two-columns { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 16px; }
+.full-width { grid-column: 1 / -1; }
+
+.provider-section { margin-top: 28px; }
+
+.provider-card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    background: var(--paper-soft);
+}
+
+.provider-card summary { cursor: pointer; display: flex; justify-content: space-between; gap: 12px; }
+.provider-card summary:hover { color: var(--brand); }
+.provider-grid { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 12px; margin: 12px 0; }
+.provider-json-grid { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 16px; }
+.provider-json-grid h4 {
+    margin: 12px 0 6px;
+    font-family: var(--font-display);
+    font-size: 0.86rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--steel);
+}
+.provider-json-grid pre {
+    margin: 0;
+    max-height: 320px;
+    overflow: auto;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    background: var(--ink);
+    color: #e8eaec;
+    font-size: 0.82rem;
+}
+
+.meta-inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+.editor-form .table input { min-width: 90px; }
+.editor-form .table textarea { min-width: 220px; min-height: 60px; }
+/* Inputs dentro de la tabla de líneas: más compactos que los del formulario. */
+.editor-form .table input,
+.editor-form .table textarea {
+    padding: 7px 9px;
+    border-radius: 8px;
+    border-color: var(--line);
+}
+
+.detail-header { align-items: flex-start; }
+.viewer-panel { padding-bottom: 24px; }
+.viewer-panel .document-frame { box-shadow: inset 0 0 0 1px rgba(29, 32, 36, 0.02); }
+
+/* ============================================================== */
+/*  Selector de fuente (merge / openai / gemini / claude)         */
+/* ============================================================== */
+.view-switcher { display: inline-flex; align-items: flex-end; margin: 0; }
+.view-switcher label { display: flex; flex-direction: column; gap: 4px; font-size: 0.92rem; }
+.view-switcher select {
+    min-width: 220px;
+    padding: 10px 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+}
+
+.readonly-grid { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 12px 16px; margin: 0 0 24px; }
+.readonly-grid > div {
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--paper-soft);
+}
+.readonly-grid dt { margin: 0; font-size: 0.74rem; color: var(--steel); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+.readonly-grid dd { margin: 0; font-weight: 500; word-break: break-word; }
+
+/* ============================================================== */
+/*  Bloque de CONTRATO en la cabecera del detalle                 */
+/* ============================================================== */
+.contrato-section {
+    margin-top: 24px;
+    margin-bottom: 28px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    border-top: 2px solid var(--line);
+    border-bottom: 2px solid var(--line);
+}
+
+.contrato-empty { margin-top: 0; }
+
+.contrato-empty-text { margin-bottom: 10px; }
+
+.contrato-empty-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding-top: 8px;
+    border-top: 1px dashed var(--warn-border);
+}
+
+.contrato-empty-hint {
+    color: var(--warn-strong);
+    font-style: italic;
+    margin-left: 4px;
+}
+
+.contrato-empty-actions .btn.success {
+    box-shadow: 0 1px 0 rgba(29, 32, 36, 0.12);
+}
+.contrato-empty-actions .btn.secondary {
+    border-color: var(--warn-border);
+    color: var(--warn-strong);
+    background: rgba(255, 255, 255, 0.7);
+}
+.contrato-empty-actions .btn.secondary:hover {
+    border-color: var(--warn);
+    background: #fff;
+    color: var(--warn-strong);
+}
+
+.refetch-status {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 0.92rem;
+    line-height: 1.4;
+}
+
+.refetch-status.refetch-info {
+    background: var(--info-soft);
+    color: var(--info-ink);
+    border: 1px solid var(--info-border);
+}
+.refetch-status.refetch-success {
+    background: var(--ok-soft);
+    color: var(--ok);
+    border: 1px solid var(--ok-border);
+}
+.refetch-status.refetch-warning {
+    background: var(--warn-soft);
+    color: var(--warn-strong);
+    border: 1px solid var(--warn-border);
+}
+.refetch-status.refetch-error {
+    background: var(--danger-soft);
+    color: var(--danger);
+    border: 1px solid var(--danger-border);
+}
+
+/* --------------------------------------------------------------- */
+/* Estilo del mensaje del botón "Valorar ahora" (#valuate-status). */
+/* Inline en la cabecera del panel — más compacto que refetch-status. */
+/* --------------------------------------------------------------- */
+.valuate-status {
+    margin-left: 10px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    line-height: 1.3;
+    display: inline-block;
+    vertical-align: middle;
+}
+.valuate-status.valuate-loading {
+    background: var(--info-soft);
+    color: var(--info-ink);
+    border: 1px solid var(--info-border);
+}
+.valuate-status.valuate-ok {
+    background: var(--ok-soft);
+    color: var(--ok);
+    border: 1px solid var(--ok-border);
+}
+.valuate-status.valuate-error {
+    background: var(--danger-soft);
+    color: var(--danger);
+    border: 1px solid var(--danger-border);
+}
+
+/* Fila contenedora del botón "Valorar ahora" (bajo el panel de contrato). */
+.valuate-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+}
+.valuate-hint {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.contrato-card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px;
+    background: var(--paper-soft);
+    margin-top: 8px;
+    box-shadow: inset 3px 0 0 var(--brand);
+}
+
+.contrato-scroll {
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+.contrato-grid {
+    display: grid;
+    grid-template-columns:
+        minmax(140px, max-content)
+        minmax(280px, 1.6fr)
+        minmax(140px, max-content)
+        minmax(170px, max-content);
+    gap: 16px 28px;
+    align-items: start;
+    min-width: 760px;
+}
+
+.contrato-grid > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.contrato-grid dt {
+    margin: 0;
+    font-size: 0.74rem;
+    color: var(--steel);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+}
+
+.contrato-grid dd {
+    margin: 0;
+    font-weight: 500;
+    word-break: break-word;
+    white-space: normal;
+}
+
+.contrato-grid dd code {
+    background: var(--steel-100);
+    color: #43494d;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.92em;
+}
+
+.contrato-grid .contrato-nombre dd { font-weight: 600; }
+
+.contrato-multi { display: flex; flex-direction: column; gap: 12px; }
+.contrato-select { background: var(--paper); cursor: pointer; }
+/* Desplegables de cabecera (elegir proveedor / obra con contrato). */
+.header-select { width: 100%; background: var(--paper); cursor: pointer; }
+
+/* Comboboxes de cabecera con busqueda (elegir proveedor / obra). */
+.combo { position: relative; width: 100%; }
+.combo-input { width: 100%; background: var(--paper); }
+.combo-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    margin-top: 4px;
+    max-height: 280px;
+    overflow-y: auto;
+    background: var(--paper);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+}
+.combo-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.92rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.combo-item:hover, .combo-item.active { background: var(--brand-soft); color: var(--brand-strong); }
+.combo-msg { padding: 8px 12px; font-size: 0.88rem; color: var(--steel); }
+.combo-error { color: var(--danger); }
+/* Combo de UNA pieza para elegir/cambiar la linea de contrato en las filas
+   destacadas: casilla que al enfocar abre la lista y filtra al escribir. El
+   panel va FIXED (posicionado por JS) porque la tabla de lineas tiene
+   scroll y un panel absoluto se recortaria. */
+.combo-lines { width: 100%; min-width: 220px; }
+.combo-lines .combo-input {
+    padding: 6px 10px;
+    font-size: 0.9rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    background: var(--paper);
+    box-shadow: inset 2px 0 0 var(--brand);
+}
+.combo-lines .combo-input::placeholder { color: var(--steel-300); }
+.combo-lines .combo-panel {
+    position: fixed;   /* JS fija top/left/min-width al abrir */
+    right: auto;
+    z-index: 1000;
+    max-height: 340px;
+}
+.combo-lines .combo-item { white-space: normal; }
+/* Sugerencia automatica por coincidencia de texto (la IA no fijo el
+   codigo/CIF): realce ambar para que el revisor sepa que debe verificar. */
+.combo-suggested .combo-input {
+    background: #fdf8ea;
+    border-color: #d9b13b;
+    box-shadow: inset 3px 0 0 #d9b13b;
+}
+
+.contrato-scroll::-webkit-scrollbar { height: 8px; }
+.contrato-scroll::-webkit-scrollbar-track { background: var(--steel-100); border-radius: 4px; }
+.contrato-scroll::-webkit-scrollbar-thumb { background: var(--steel-300); border-radius: 4px; }
+.contrato-scroll::-webkit-scrollbar-thumb:hover { background: var(--steel); }
+
+/* Aviso de 'sin PDF' dentro de la tarjeta del contrato.
+   El botón de abrir PDF ahora vive en la cabecera del detalle, no
+   dentro de esta tarjeta — solo mantenemos aquí el aviso cuando
+   el contrato no tiene PDF asociado para no confundir al usuario. */
+.contrato-actions {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.contrato-no-pdf {
+    font-style: italic;
+}
+
+/* ============================================================== */
+/*  Pie de página (estilo portal)                                  */
+/* ============================================================== */
+.footer {
+    margin: 0 auto;
+    padding: 1.4rem 0 2.4rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.8rem;
+    color: var(--steel);
+    border-top: 1px solid var(--line);
+}
+.footer__dot { color: var(--steel-300); }
+
+/* ============================================================== */
+/*  Responsive                                                     */
+/* ============================================================== */
+@media (max-width: 1400px) {
+    .split-layout { grid-template-columns: 1fr; }
+    .viewer-panel { position: static; }
+    .stats-grid, .filters-grid, .form-grid.two-columns,
+    .provider-grid, .provider-json-grid, .readonly-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 820px) {
+    .page-header, .panel-header, .subsection-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .stats-grid, .filters-grid, .form-grid.two-columns,
+    .provider-grid, .provider-json-grid, .readonly-grid {
+        grid-template-columns: 1fr;
+    }
+    .container { width: min(100% - 20px, 1440px); }
+    .view-switcher select { min-width: 100%; }
+    .contrato-empty-actions { flex-direction: column; align-items: stretch; }
+    .contrato-empty-actions .btn { width: 100%; }
+    .contrato-empty-hint { margin-left: 0; text-align: center; }
+}
+
+@media (max-width: 560px) {
+    .topbar__tag { display: none; }
+}
+
+/* =========================================================== */
+/*  TABLA DE LÍNEAS — columnas numéricas bien dimensionadas     */
+/* =========================================================== */
+
+/*
+ * Reglas por columna.
+ *
+ * Usamos selector :nth-child() sobre la fila para dimensionar cada
+ * input según su columna. La cabecera tiene 11 columnas en la vista
+ * editable:
+ *   1 #         | 2 Código imput.  | 3 Concepto
+ *   4 Cantidad  | 5 Unidad         | 6 Precio unit.
+ *   7 Precio    | 8 Descuento      | 9 Importe
+ *  10 Código    | 11 (acción)
+ *
+ * En la vista readonly hay 11 también (última columna = Confianza).
+ */
+
+/* Alineación derecha + fuente tabular en los inputs numéricos.
+ * tabular-nums hace que cada dígito ocupe el mismo ancho: los
+ * números "se alinean" visualmente columna a columna. Es el
+ * estándar de cualquier tabla de contabilidad moderna. */
+#lines-table td input[type="number"] {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    min-width: 90px;
+}
+
+/* Cantidad: hasta 5 dígitos (99.999) */
+#lines-table td:nth-child(4) input { min-width: 80px; }
+
+/* Unidad: texto corto, 'UD', 'kg', 'm2', etc. */
+#lines-table td:nth-child(5) input { min-width: 60px; max-width: 80px; }
+
+/* Precio unitario: precios de catálogo, 4–6 dígitos con decimales */
+#lines-table td:nth-child(6) input { min-width: 100px; }
+
+/* Precio (del albarán): igual */
+#lines-table td:nth-child(7) input { min-width: 100px; }
+
+/* Descuento: valores pequeños */
+#lines-table td:nth-child(8) input { min-width: 80px; }
+
+/* Importe: puede llegar a importes grandes (99.999,99).
+ * Es la columna que te reventaba. Le damos espacio de sobra. */
+#lines-table td:nth-child(9) input {
+    min-width: 120px;
+}
+
+/* Alineación derecha también en los <td> de la vista readonly,
+ * donde no hay inputs sino texto plano. */
+.table td.num-cell,
+.table th.num-cell {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* ================================================================
+ * Bloque de CONCILIACIÓN INLINE (sv4)
+ * Se muestra como una fila expandible bajo cada línea del albarán
+ * cuando el motor de valoración casó esa línea con una línea de
+ * Sigrid (assigned) o creó una línea derivada (derived).
+ *
+ * Paleta re-entonada al tema: fondo gris-burdeos muy claro, acento
+ * verde (assigned) / ámbar (derived) / burdeos (add = traer línea).
+ * ================================================================ */
+
+/* Celda # con el chevron + número */
+#lines-table td.line-index-cell {
+    white-space: nowrap;
+    text-align: left;
+    padding-left: 6px;
+}
+.js-toggle-concilia.chev {
+    background: transparent;
+    border: 0;
+    padding: 0 4px 0 0;
+    cursor: pointer;
+    color: var(--steel);
+    font-size: 13px;
+    line-height: 1;
+    transition: transform 120ms ease, color 120ms ease;
+    user-select: none;
+}
+.js-toggle-concilia.chev:hover { color: var(--ink); }
+.js-toggle-concilia.chev.expanded { color: var(--ink); }
+.line-num { font-variant-numeric: tabular-nums; color: var(--steel); }
+
+/* Fila expandible con la conciliación */
+tr.conciliacion-row.hidden { display: none !important; }
+tr.conciliacion-row > td.conciliacion-cell {
+    padding: 0;
+    background: #f7f4f5;
+    border-top: 0;
+}
+
+/* Bloque 2 (may 2026): fila de conciliación ALINEADA POR COLUMNAS.
+   Cada celda cae bajo su columna de la línea de arriba, de modo que el
+   precio del contrato de Sigrid queda justo debajo del precio valorado. */
+tr.conciliacion-row > td.concilia-td {
+    background: #f7f4f5;
+    border-top: 0;
+    vertical-align: top;
+    font-size: 12.5px;
+    color: var(--ink);
+    padding: 8px 10px;
+}
+tr.conciliacion-row.concilia-assigned > td.concilia-td:first-child {
+    box-shadow: inset 3px 0 0 var(--ok);
+}
+tr.conciliacion-row.concilia-derived > td.concilia-td:first-child {
+    box-shadow: inset 3px 0 0 #b07c2a;
+}
+/* "Traer linea de contrato" en lineas NO casadas: boton + y fila en
+   burdeos suave (acción pendiente del revisor). */
+.add-concilia-btn {
+    background: var(--paper);
+    border: 1px solid #d9a8b4;
+    color: var(--brand);
+    border-radius: 6px;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    margin-right: 2px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    font-weight: 700;
+}
+.add-concilia-btn:hover { background: var(--brand-soft); }
+tr.conciliacion-row.concilia-add > td.concilia-td { background: var(--brand-soft); }
+tr.conciliacion-row.concilia-add > td.concilia-td:first-child {
+    box-shadow: inset 3px 0 0 var(--brand);
+}
+.concilia-td .concilia-val {
+    display: block;
+    font-weight: 500;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+.concilia-td .concilia-sub {
+    display: block;
+    margin-left: 0;
+    color: var(--steel);
+    font-size: 11px;
+    line-height: 1.3;
+}
+.concilia-td.concilia-muted { color: var(--steel-300); text-align: right; }
+.concilia-td .concilia-price-ok,
+.concilia-td .concilia-price-warn { display: inline-block; }
+
+.concilia-box {
+    padding: 12px 16px 14px 36px;
+    border-left: 3px solid transparent;
+    background: #f7f4f5;
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.4;
+}
+.concilia-assigned { border-left-color: var(--ok); }
+.concilia-derived  { border-left-color: #b07c2a; }
+
+/* Encabezado: badge + descripción */
+.concilia-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+.concilia-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+.concilia-badge-assigned {
+    background: var(--ok-soft);
+    color: var(--ok);
+}
+.concilia-badge-derived {
+    background: var(--warn-soft);
+    color: var(--warn-strong);
+}
+button.concilia-badge.concilia-badge-remove {
+    margin-left: 6px;
+    background: var(--danger-soft);
+    color: var(--danger);
+    border: 1px solid var(--danger-border);
+    cursor: pointer;
+}
+button.concilia-badge.concilia-badge-remove:hover {
+    background: var(--danger);
+    color: #fff;
+    border-color: var(--danger);
+}
+.concilia-desc {
+    font-weight: 500;
+    color: var(--ink);
+}
+
+/* Sub-bloque hermana (futuro: discrepancia de precio) */
+.concilia-sibling {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--ink-soft);
+    font-size: 12px;
+}
+.concilia-sibling-label {
+    font-weight: 600;
+    color: var(--brand);
+    margin-right: 4px;
+}
+
+/* Grid de campos (Partida / Unitario / Medición / Pendiente) */
+.concilia-grid {
+    display: grid;
+    grid-template-columns: 1.6fr 1.4fr 1fr 1fr;
+    gap: 14px 24px;
+    align-items: start;
+}
+.concilia-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.concilia-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--steel);
+}
+.concilia-value {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+.concilia-sub {
+    color: var(--steel);
+    font-weight: 400;
+    margin-left: 2px;
+    font-size: 12px;
+}
+
+/* Indicador verde (precio cuadra) */
+.concilia-price-ok {
+    color: var(--ok);
+    font-weight: 600;
+}
+.concilia-price-ok .concilia-icon {
+    color: var(--ok);
+    margin-right: 4px;
+    font-weight: 700;
+}
+
+/* Indicador rojo (precio NO cuadra) */
+.concilia-price-warn {
+    color: #b3401f;
+    font-weight: 600;
+}
+.concilia-price-warn .concilia-icon {
+    color: #b3401f;
+    margin-right: 4px;
+    font-weight: 700;
+}
+.concilia-price-vs {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 6px;
+    background: #f9e8e2;
+    color: #b3401f;
+    border-radius: 4px;
+    font-size: 11.5px;
+    font-weight: 500;
+}
+
+/* Responsive ligero (escritorio estrecho ~1100px) */
+@media (max-width: 1200px) {
+    .concilia-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+
+/* ================================================================
+ * VISOR PDF colapsable
+ *
+ * Patrón:
+ *   - El split-layout es un CSS Grid de 2 columnas (viewer | editor).
+ *   - Cuando se pulsa "« Ocultar PDF", se añade la clase
+ *     "pdf-collapsed" al split-layout. Eso hace dos cosas:
+ *       1) la columna del viewer (.viewer-panel) se oculta con
+ *          display:none (lo que en grid colapsa esa columna).
+ *       2) el grid pasa a 1fr (sin ancho fijo para viewer).
+ *   - El botón "Mostrar PDF" vive FUERA del grid (justo encima de
+ *     él), oculto por defecto via [hidden]. El JS lo muestra cuando
+ *     el grid está en pdf-collapsed.
+ *
+ * Estado persistido en localStorage (clave global, ver JS).
+ * ================================================================ */
+
+/* Botón "Mostrar PDF" — flotante encima del split-layout.
+   Por defecto oculto (HTML lleva attr "hidden"). El JS le quita el
+   "hidden" cuando el visor está colapsado. */
+.pdf-show-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 12px 0;
+    padding: 7px 15px;
+    background: var(--paper);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    cursor: pointer;
+    color: var(--ink-soft);
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.pdf-show-btn:hover { background: var(--brand-soft); color: var(--brand); border-color: var(--brand); }
+.pdf-show-btn[hidden] { display: none !important; }
+
+/* Botón ocultar dentro del header del visor */
+.pdf-hide-btn { margin-left: 8px; }
+
+/* Estado colapsado:
+   - .viewer-panel desaparece del grid.
+   - El grid colapsa naturalmente a 1 columna porque el grid usa
+     "minmax(560px, 1.2fr) minmax(520px, 1fr)" y ambas columnas son
+     fr; cuando .viewer-panel tiene display:none, la otra columna
+     ocupa todo el espacio. */
+.split-layout.pdf-collapsed > .viewer-panel {
+    display: none !important;
+}
+.split-layout.pdf-collapsed {
+    grid-template-columns: 1fr !important;
+}
+
+
+/* ---- Conciliacion editable ---- */
+button.concilia-badge.js-concilia-edit {
+    cursor: pointer;
+    border: none;
+    font: inherit;
+    line-height: 1;
+}
+button.concilia-badge.js-concilia-edit:hover {
+    filter: brightness(0.95);
+}
+.concilia-select {
+    display: block;
+    margin-top: 6px;
+    max-width: 360px;
+    width: 100%;
+    font-size: 0.85em;
+    padding: 3px 6px;
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    background: var(--paper);
+}
+
+/* ---------- Accesibilidad: respeta prefers-reduced-motion ----------------- */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* ---- Edición de la fila salmon (jun 2026) ---- */
+.conciliacion-row .cell-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 3px 6px;
+    font-size: 12px;
+    border: 1px solid #d6cfc4;
+    border-radius: 6px;
+    background: #fffdf9;
+    color: inherit;
+}
+.conciliacion-row .cell-input:focus {
+    outline: none;
+    border-color: #9f2842;
+    background: #fff;
+}
+.conciliacion-row .cell-num { text-align: right; max-width: 110px; }
+.conciliacion-row .cell-short { max-width: 80px; }
+.conciliacion-row .cell-input.cedit-ok { border-color: #6fae7f; }
+.conciliacion-row .cell-input.cedit-warn { border-color: #d9a13b; }
+.conciliacion-row .cell-input.cedit-dirty {
+    border-color: #9f2842;
+    background: #fff6f1;
+}
+
+/* ---- Listado de líneas salmón en la bandeja (vista rápida, jun 2026) ---- */
+/* Solo lectura: sustituye al nombre de archivo para revisar de un vistazo
+   los valores de valoración aplicados. Columnas internas de ANCHO FIJO para
+   que partida / cantidad-ud / importe queden alineadas en vertical entre
+   líneas; la descripción ocupa el resto (ancha). */
+.lineas-cell, .lineas-col { min-width: 510px; }
+.linea-rev {
+    display: grid;
+    /* partida | descripción | cantidad | unidad | unitario | importe —
+       TODAS de ancho fijo, con la misma separación entre ellas
+       (column-gap), para que queden alineadas en vertical entre líneas y
+       sin huecos grandes. */
+    grid-template-columns: 54px 176px 38px 30px 74px 84px;
+    column-gap: 8px;
+    align-items: baseline;
+    padding: 1px 0 1px 7px;
+    border-left: 2px solid #e3a98f;          /* salmón */
+    font-size: 0.72rem;
+    line-height: 1.3;
+}
+.linea-rev + .linea-rev { margin-top: 2px; }
+.linea-rev.is-mod { border-left-color: #d9a13b; }  /* modificador: ámbar */
+.linea-rev .lr-part {
+    color: var(--steel);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.linea-rev .lr-desc {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink-soft);
+}
+.linea-rev .lr-cant {
+    text-align: right;
+    white-space: nowrap;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+}
+.linea-rev .lr-ud {
+    text-align: left;
+    white-space: nowrap;
+    color: var(--steel);
+}
+.linea-rev .lr-uni {
+    text-align: right;
+    white-space: nowrap;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+.linea-rev .lr-imp {
+    text-align: right;
+    white-space: nowrap;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+}
+.lineas-empty { color: var(--steel-300); font-size: 0.72rem; }
+
+/* ---- Fila de filtros por columna (jun 2026) ---- */
+/* Cabecera de títulos (primera fila) en rojo Ruesma con texto blanco.
+   La fila de filtros (segunda) se queda en blanco para los campos. */
+.docs-table thead tr:first-child th {
+    background: var(--brand);
+    color: #fff;
+    border-bottom-color: var(--brand-strong);
+    border-right-color: rgba(255, 255, 255, 0.22);
+}
+.docs-table thead tr:first-child th:last-child { border-right: none; }
+.docs-table thead tr:first-child th a { color: #fff; }
+.docs-table thead tr:first-child th a:hover { color: rgba(255, 255, 255, 0.78); }
+/* La columna fija de la cabecera roja también debe ir en rojo (vence al
+   fondo blanco del sticky). */
+.docs-table thead tr:first-child th.sticky-col { background: var(--brand); }
+.filter-row th {
+    padding: 6px 10px 10px;
+    border-bottom: 1px solid var(--line-strong);
+    vertical-align: top;
+    background: var(--paper);
+}
+.filter-row input,
+.filter-row select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 5px 8px;
+    font-size: 0.8rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    background: var(--paper);
+    color: var(--ink);
+    /* la cabecera va en mayúsculas/espaciada; los campos NO deben heredarlo */
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 400;
+}
+.filter-row input::placeholder { color: var(--steel-300); text-transform: none; }
+.filter-acciones { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.filter-acciones .btn { text-align: center; }
+.filter-confianza { display: flex; gap: 4px; flex-wrap: wrap; }
+.filter-confianza input[type="number"] { width: 52px; flex: 0 0 auto; }
+.filter-confianza select { flex: 1 1 auto; min-width: 96px; }
+.filter-importe { display: flex; gap: 4px; justify-content: flex-end; }
+.filter-importe input[type="number"] { width: 64px; flex: 0 0 auto; text-align: right; }
+.papelera-ico { font-size: 1.3em; vertical-align: -0.12em; line-height: 1; }
+.filter-submit-hidden { position: absolute; left: -9999px; width: 1px; height: 1px; padding: 0; border: 0; }
+
+/* ===================================================================== */
+/*  Navegacion anterior/siguiente del detalle (jun 2026 — features 1/2)   */
+/* ===================================================================== */
+.detail-nav {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 18px;
+    padding: 10px 14px;
+    background: var(--paper, #ffffff);
+    border: 1px solid var(--line, rgba(123, 134, 140, 0.22));
+    border-radius: var(--radius-sm, 10px);
+    box-shadow: var(--shadow-md, 0 18px 40px -22px rgba(29, 32, 36, 0.35));
+    z-index: 20;
+}
+.detail-nav .detail-nav-back {
+    margin: 0 auto;
+    opacity: 0.85;
+}
+.detail-nav .detail-nav-prev { margin-right: auto; }
+.detail-nav .detail-nav-next { margin-left: auto; }
+.detail-nav .is-disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: default;
+    box-shadow: none;
+}
+
+/* Campos de cabecera bloqueados: proveedor / obra solo se cambian con su
+   desplegable de busqueda (Sigrid). El input muestra el valor vigente, en
+   gris y no editable, para evitar ediciones a mano que descuadren el
+   enriquecimiento. */
+input.locked-field {
+    background: var(--canvas, #f3f4f5);
+    color: var(--ink-soft, #4a4f55);
+    cursor: not-allowed;
+    border-style: dashed;
+}
+input.locked-field:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+
+/* ===================================================================== */
+/*  TANDA 2A — Líneas: blancas colapsables (lectura) + grid salmón.       */
+/* ===================================================================== */
+
+/* Bloque colapsable de líneas blancas (lo que leyó la IA), solo lectura. */
+.albaran-lines {
+    margin: 8px 0 14px;
+    border: 1px solid var(--line, rgba(123,134,140,0.22));
+    border-radius: var(--radius-sm, 10px);
+    background: var(--paper-soft, #fafbfb);
+}
+.albaran-lines > summary {
+    cursor: pointer;
+    padding: 9px 12px;
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    list-style: none;
+}
+.albaran-lines > summary::-webkit-details-marker { display: none; }
+.albaran-lines > summary::before {
+    content: "▸";
+    color: var(--steel, #7b868c);
+    transition: transform 0.12s var(--ease, ease);
+}
+.albaran-lines[open] > summary::before { content: "▾"; }
+.albaran-lines > summary .al-summary-title { font-weight: 600; }
+.albaran-lines[open] > summary { border-bottom: 1px solid var(--line, rgba(123,134,140,0.22)); }
+.albaran-lines .table-scroll { margin: 0; padding: 0 8px 8px; }
+.albaran-lines-table th, .albaran-lines-table td { font-size: 0.84rem; }
+.albaran-lines-table .al-concepto {
+    max-width: 360px; white-space: normal;
+}
+.al-salmon-cell { text-align: center; }
+.al-salmon-cell .al-matched { color: var(--ok, #2d6a4f); font-weight: 700; }
+.add-concilia-btn {
+    font-size: 0.78rem;
+    padding: 2px 9px;
+    border-radius: 8px;
+    border: 1px solid var(--line-strong, rgba(123,134,140,0.4));
+    background: var(--paper, #fff);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.add-concilia-btn:hover {
+    background: var(--brand-soft, #f7eaee);
+    border-color: var(--brand, #9f2842);
+    color: var(--brand-strong, #7a1e33);
+}
+
+/* Grid salmón: ancho fijo por columna, reordenable y redimensionable. */
+.salmon-scroll { overflow-x: auto; }
+.salmon-table { table-layout: fixed; width: max-content; min-width: 100%; }
+.salmon-table thead th.salmon-head,
+.salmon-table thead tr.salmon-head th {
+    position: relative;
+    user-select: none;
+    cursor: grab;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.salmon-table thead th.col-dragging { opacity: 0.45; cursor: grabbing; }
+.salmon-table thead th.col-drop-target { box-shadow: inset 3px 0 0 var(--brand, #9f2842); }
+.salmon-table .col-resizer {
+    position: absolute;
+    top: 0; right: 0;
+    width: 8px; height: 100%;
+    cursor: col-resize;
+    user-select: none;
+}
+.salmon-table .col-resizer:hover { background: var(--brand-soft, #f7eaee); }
+body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-select: none; }
+.salmon-table td.concilia-td { overflow: hidden; }
+.salmon-table .cell-input { width: 100%; box-sizing: border-box; }
+.salmon-table .combo.combo-partida { width: 100%; }
+.salmon-table .salmon-empty td { color: var(--steel, #7b868c); }
+
+/* Botón fantasma (restablecer columnas). */
+.btn.ghost {
+    background: transparent;
+    border: 1px solid var(--line-strong, rgba(123,134,140,0.4));
+    color: var(--ink-soft, #4a4f55);
+    box-shadow: none;
+}
+.btn.ghost:hover { background: var(--paper-soft, #fafbfb); }
+
+/* ===================================================================== */
+/*  TANDA 2B — Formato TABLA del grid de líneas + ordenación (▲▼).        */
+/* ===================================================================== */
+
+/* Cabecera ROJA con texto BLANCO en el grid salmón. */
+.salmon-table thead th {
+    background: var(--brand, #9f2842);
+    color: #fff;
+    border: 1px solid var(--brand-strong, #7a1e33);
+    position: relative;
+    user-select: none;
+    cursor: grab;
+    white-space: nowrap;
+    vertical-align: middle;
+    padding: 7px 10px;
+    text-align: left;
+}
+.salmon-table thead th .th-label { font-weight: 700; }
+.salmon-table thead th .th-sub {
+    display: block;
+    font-weight: 400;
+    font-size: 0.66rem;
+    opacity: 0.82;
+    margin-top: 1px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.salmon-table thead th .th-sort { margin-left: 5px; font-size: 0.7rem; }
+.salmon-table thead th.sorted-asc .th-sort::after { content: "▲"; }
+.salmon-table thead th.sorted-desc .th-sort::after { content: "▼"; }
+.salmon-table thead th.col-dragging { opacity: 0.5; cursor: grabbing; }
+.salmon-table thead th.col-drop-target { box-shadow: inset 3px 0 0 #fff; }
+.salmon-table .col-resizer {
+    position: absolute; top: 0; right: 0; width: 8px; height: 100%;
+    cursor: col-resize; user-select: none;
+}
+.salmon-table .col-resizer:hover { background: rgba(255, 255, 255, 0.35); }
+
+/* Rejilla: bordes de celda + cebra. */
+.salmon-table td.concilia-td {
+    border: 1px solid var(--line, rgba(123, 134, 140, 0.25));
+    vertical-align: middle;
+    overflow: hidden;
+}
+.salmon-table tbody tr:nth-child(even) td.concilia-td { background: var(--paper-soft, #fafbfb); }
+.salmon-table tbody tr:hover td.concilia-td { background: var(--brand-soft, #f7eaee); }
+
+/* Celdas a UNA línea (texto no editable con elipsis). */
+.salmon-table .concilia-val,
+.salmon-table .concilia-price-ok,
+.salmon-table .concilia-price-warn {
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
+}
+.salmon-table .cell-input { width: 100%; box-sizing: border-box; }
+.salmon-table .combo.combo-partida { width: 100%; }
+
+/* Origen: solo el badge. */
+.salmon-table td.td-origen { text-align: center; }
+
+/* Acciones: Borrar + Guardar a la DERECHA. */
+.salmon-table td.td-acciones { white-space: nowrap; text-align: right; }
+.salmon-table td.td-acciones .btn { margin-left: 4px; }
+
+/* Selector de línea de contrato OCULTO por defecto (concepto = 1 línea);
+   el ✎ de Origen lo abre/cierra. */
+.salmon-table .js-concilia-combo { display: none; }
+.salmon-table .js-concilia-combo.is-open { display: block; margin-top: 5px; }
+
+/* ---- Bandeja (lista): flechita de orden de servidor + reordenar ------ */
+.docs-table thead tr:first-child th { cursor: grab; user-select: none; position: relative; }
+.docs-table thead tr:first-child th.sticky-col { cursor: default; }
+.docs-table .sort-arrow { margin-left: 5px; font-size: 0.72rem; }
+.docs-table thead th.col-dragging { opacity: 0.5; cursor: grabbing; }
+.docs-table thead th.col-drop-target { box-shadow: inset 3px 0 0 var(--brand, #9f2842); }
+
+/* Combo de concepto (type-ahead sobre líneas de contrato): ocupa la celda. */
+.salmon-table .combo.combo-concepto { width: 100%; }
+
+/* Sub-fila de campos: agrupa varios campos en UNA sola línea dentro del
+   form-grid de cabecera (menos scroll). Colapsa a 1 columna en móvil. */
+.form-grid .form-subrow {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 16px;
+    align-items: end;
+}
+.form-grid .form-subrow.cols-3 { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+.form-grid .form-subrow.cols-2 { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+@media (max-width: 820px) {
+    .form-grid .form-subrow { grid-template-columns: 1fr; }
+}
+
+/* Botón de valoración: rojo Ruesma (marca). */
+.btn.brand {
+    background: var(--brand, #9f2842);
+    color: #fff;
+    border: 1px solid var(--brand-strong, #7a1e33);
+}
+.btn.brand:hover { background: var(--brand-strong, #7a1e33); }
+.btn.brand:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Traer líneas contrato (jul 2026): panel multiselección del detalle. */
+.traer-contrato-wrap { position: relative; display: inline-block; }
+.traer-contrato-panel {
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 60;
+    width: 640px; max-width: 92vw;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #d8d4cc);
+    border-radius: 10px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .16);
+    padding: 10px;
+}
+.traer-contrato-buscar {
+    width: 100%; box-sizing: border-box; margin-bottom: 8px;
+    padding: 6px 9px; border: 1px solid var(--border, #d8d4cc);
+    border-radius: 7px; font: inherit;
+}
+.traer-contrato-lista {
+    max-height: 300px; overflow-y: auto; overflow-x: hidden;
+    border: 1px solid var(--border, #eee); border-radius: 7px;
+}
+.traer-contrato-item {
+    display: flex; gap: 8px; align-items: flex-start;
+    padding: 6px 9px; cursor: pointer; font-size: .86rem; line-height: 1.3;
+}
+.traer-contrato-item:nth-child(even) { background: rgba(0, 0, 0, .025); }
+.traer-contrato-item:hover { background: rgba(0, 0, 0, .06); }
+/* (jul 2026) El input global lleva width:100% + padding: sin este override
+   el checkbox ocupaba media fila y estrujaba el texto a una columna. */
+.traer-contrato-item input[type="checkbox"] {
+    width: 16px; height: 16px; flex: 0 0 16px;
+    padding: 0; margin: 2px 0 0; accent-color: var(--brand);
+}
+.traer-contrato-item span {
+    flex: 1 1 auto; min-width: 0; white-space: normal;
+    overflow-wrap: anywhere;
+}
+.traer-contrato-vacio { padding: 10px; }
+.traer-contrato-pie {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 8px;
+}
+
+/* ================= DESHACER global (jul 2026, portado de partes) ==== */
+.undo-widget { position: fixed; right: 18px; bottom: 18px; z-index: 150; display: flex; align-items: flex-end; }
+.undo-widget[hidden] { display: none; }
+.undo-btn-main {
+    background: var(--brand); color: #fff; border: none; border-radius: 10px 0 0 10px;
+    padding: 10px 14px; font: inherit; font-weight: 700; cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .20); display: flex; align-items: center; gap: 6px;
+}
+.undo-btn-main:hover { background: var(--brand-strong); }
+.undo-btn-main:disabled { opacity: .6; cursor: default; }
+.undo-ico { font-size: 1.1rem; line-height: 1; }
+.undo-toggle {
+    background: var(--brand-strong); color: #fff; border: none; border-radius: 0 10px 10px 0;
+    padding: 10px 9px; cursor: pointer; box-shadow: 0 6px 18px rgba(0, 0, 0, .20);
+    border-left: 1px solid rgba(255, 255, 255, .25); font: inherit;
+}
+.undo-toggle:hover { background: #5e1626; }
+.undo-panel {
+    position: absolute; right: 0; bottom: calc(100% + 8px); width: 380px; max-width: 86vw;
+    max-height: 50vh; overflow-y: auto; background: var(--paper);
+    border: 1px solid var(--line-strong); border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .22); padding: 8px;
+}
+.undo-panel[hidden] { display: none; }
+.undo-panel-head { font-weight: 700; font-size: .8rem; color: var(--steel); padding: 4px 8px 8px; }
+.undo-list { list-style: none; margin: 0; padding: 0; }
+.undo-item { padding: 7px 8px; border-top: 1px solid var(--line); font-size: .84rem; }
+.undo-item:first-child { border-top: none; }
+.undo-next { background: var(--brand-soft); border-radius: 7px; }
+.undo-tag {
+    display: inline-block; font-size: .72rem; font-weight: 700; color: var(--brand);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 20px;
+    padding: 1px 7px; margin-right: 6px;
+}
+.undo-panel-foot { font-size: .74rem; color: var(--steel); padding: 8px 8px 4px; }
+
+/* Borrado en bloque (jul 2026): columna de casillas de la bandeja. */
+.docs-table th.sel-col,
+.docs-table td.sel-col {
+    width: 44px;
+    min-width: 44px;
+    text-align: center;
+    vertical-align: middle;
+}
+.docs-table .sel-col input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--brand, #8d1f2d);
+    cursor: pointer;
+}
+.bulk-delete-btn { white-space: nowrap; }
+.bulk-delete-btn:disabled { opacity: 0.45; cursor: default; }

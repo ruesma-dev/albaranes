@@ -1,0 +1,976 @@
+<!-- templates/document_detail.html -->
+{% extends "base.html" %}
+
+{#
+    Pre-cálculo: si hay exactamente 1 contrato usamos su PDF. Si hay
+    varios, usamos el PDF del contrato actualmente seleccionado. Si
+    ninguno cumple, contrato_pdf_url queda None y el botón no se pinta.
+
+    Importante (Jinja2): las asignaciones con ``{% set %}`` DENTRO de
+    un ``{% for %}`` tienen scope LOCAL al bloque y se pierden al
+    salir. Por eso usamos un ``namespace``: las asignaciones a sus
+    atributos sí persisten fuera del bucle.
+#}
+{# El boton del contrato apunta a /documents/<id>/contrato-pdf, que resuelve la URL en el servidor y redirige. #}
+
+{#
+    Helper para buscar la valoración de una línea (por merge_line_id).
+    Pydantic serializa las keys int del dict como str en JSON, pero en
+    Python sigue siendo int. Jinja2 accede como atributo `.lines_by_merge_line_id`.
+#}
+{% set valuation = document.valuation %}
+{% set val_lines = valuation.lines_by_merge_line_id if valuation else {} %}
+
+{% block content %}
+<section class="page-header detail-header">
+    <div>
+        <p class="page-eyebrow">Construcciones Ruesma · Albaranes</p>
+        <h1>Revisión de documento</h1>
+        <p class="muted">
+            {% if document.is_editable %}
+                Edita la extracción final y aprueba cuando quede validada.
+            {% else %}
+                Vista de trazabilidad por proveedor. Solo lectura.
+            {% endif %}
+        </p>
+    </div>
+    <div class="header-actions">
+        <form method="get" class="view-switcher" action="/documents/{{ document.id }}">
+            <label>
+                <span class="muted small">Fuente de datos</span>
+                <select name="view" onchange="this.form.submit()">
+                    {% for option in available_views %}
+                        <option value="{{ option }}" {% if option == current_view %}selected{% endif %}>
+                            {{ view_label(option) }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+            <noscript>
+                <button type="submit" class="btn secondary small">Cambiar vista</button>
+            </noscript>
+        </form>
+        <a href="{{ back_to_list_url or '/documents' }}" class="btn secondary">← Volver</a>
+        {% if document.document_url %}
+            <a href="{{ document.document_url }}" target="_blank" rel="noreferrer" class="btn secondary">
+                Abrir albarán en SharePoint
+            </a>
+        {% endif %}
+        {% if document.contratos or document.selected_contrato_codigo %}
+            <a href="/documents/{{ document.id }}/contrato-pdf"
+               target="_blank"
+               rel="noreferrer"
+               class="btn secondary"
+               title="Abrir el PDF del contrato en SharePoint">
+                Abrir contrato en SharePoint
+            </a>
+        {% endif %}
+    </div>
+</section>
+
+{% if not document.is_editable %}
+    <div class="alert warning">
+        Mostrando la extracción cruda de <strong>{{ view_label(document.view_mode) }}</strong>
+        {% if document.model_name %} (modelo <code>{{ document.model_name }}</code>){% endif %}.
+        Esta vista es de trazabilidad, solo lectura. Para editar o aprobar, cambia a
+        <strong>{{ view_label('merge') }}</strong>.
+    </div>
+{% endif %}
+
+{# =========================================================== #}
+{#  Banner de VALORACIÓN                                        #}
+{# =========================================================== #}
+{% if valuation %}
+    <div class="alert info">
+        <strong>Albarán valorado</strong>
+        · Contrato aplicado: <code>{{ valuation.contrato_codigo or '—' }}</code>
+        · Total valorado: <strong>{{ valuation.total_valorado | importe_eur }}</strong>
+        · Líneas: {{ valuation.total_lines }}
+        (exacto: {{ valuation.lines_matched_exact }},
+         semántico: {{ valuation.lines_matched_semantic }},
+         precio-solo: {{ valuation.lines_matched_price_only }},
+         sin match: {{ valuation.lines_unmatched }})
+        {% if valuation.review_required %}
+            · <strong>Requiere revisión</strong>
+        {% endif %}
+    </div>
+{% endif %}
+
+{# Botón "Mostrar PDF" — visible SOLO cuando el visor está colapsado.
+   Va fuera del split-layout (que es CSS Grid de 2 columnas) para no
+   romper la rejilla. Estado persistido en localStorage. #}
+<button type="button"
+        id="pdfShowBtn"
+        class="pdf-show-btn"
+        title="Mostrar visor de PDF"
+        aria-label="Mostrar visor de PDF"
+        hidden>
+    <span aria-hidden="true">▶</span>
+    Mostrar PDF
+</button>
+
+<section class="split-layout" id="splitLayout">
+    <aside class="panel viewer-panel" id="viewerPanel">
+        <div class="panel-header">
+            <h2>Documento</h2>
+            <div class="meta-inline">
+                <span class="status-pill {{ 'approved' if document.approved else 'pending' }}">
+                    {{ 'Aprobado' if document.approved else 'Pendiente' }}
+                </span>
+                {% if document.confidence_pct_calc is not none %}
+                    <span class="confidence-badge {{ 'low' if document.confidence_pct_calc < 80 else 'ok' }}">
+                        {{ '%.1f'|format(document.confidence_pct_calc) }}%
+                    </span>
+                {% endif %}
+                <button type="button"
+                        id="pdfHideBtn"
+                        class="btn secondary small pdf-hide-btn"
+                        title="Ocultar visor de PDF">« Ocultar PDF</button>
+            </div>
+        </div>
+        {% if preview_enabled %}
+            <iframe class="document-frame"
+                    src="{{ document_preview_url }}#toolbar=1&navpanes=0&scrollbar=1&pagemode=none&view=FitH"></iframe>
+        {% elif document.document_url %}
+            <div class="empty-state">
+                La vista previa embebida no está configurada. Usa el botón “Abrir albarán en SharePoint”.
+            </div>
+        {% else %}
+            <div class="empty-state">No hay documento disponible para vista previa.</div>
+        {% endif %}
+        <div class="viewer-meta">
+            <div><strong>Archivo:</strong> {{ document.source_filename }}</div>
+            <div><strong>ID documento:</strong> {{ document.source_document_id or '—' }}</div>
+            <div><strong>Ref. almacenamiento:</strong> {{ document.document_storage_ref or '—' }}</div>
+            {% if document.provider_document_id %}
+                <div><strong>ID registro {{ view_label(document.view_mode) }}:</strong> <code>{{ document.provider_document_id }}</code></div>
+            {% endif %}
+        </div>
+    </aside>
+
+    <section class="panel editor-panel">
+
+        {% if document.is_editable %}
+            <form id="document-form" class="editor-form">
+                <div class="panel-header">
+                    <h2>Campos extraídos · {{ view_label(document.view_mode) }}</h2>
+                    <div class="header-actions">
+                        <button type="button" class="btn secondary" id="save-btn">Guardar</button>
+                        <button type="button" class="btn success" id="approve-btn">Guardar y aprobar</button>
+                    </div>
+                </div>
+
+                <div class="form-grid two-columns">
+                    {% if document.is_editable %}
+                    <label class="full-width">
+                        <span>Elegir proveedor (con contrato en la obra · Sigrid) — escribe para buscar</span>
+                        <div class="combo" data-kind="proveedor"
+                             data-endpoint="/api/sigrid/proveedores"
+                             data-obra-input="obra_codigo"
+                             data-val-input="proveedor_cif"
+                             data-nombre-input="proveedor_nombre"
+                             data-label="{{ document.proveedor_nombre or '' }}{% if document.proveedor_cif %} — {{ document.proveedor_cif }}{% endif %}">
+                            <input type="text" class="combo-input" id="proveedor_combo"
+                                   autocomplete="off" placeholder="Escribe para buscar (p.ej. cera)…"
+                                   value="{{ document.proveedor_nombre or '' }}{% if document.proveedor_cif %} — {{ document.proveedor_cif }}{% endif %}">
+                            <div class="combo-panel" hidden></div>
+                        </div>
+                    </label>
+                    {% endif %}
+                    <label>
+                        <span>Proveedor</span>
+                        <input type="text" id="proveedor_nombre" value="{{ document.proveedor_nombre or '' }}" readonly class="locked-field" title="Se cambia con el desplegable «Elegir proveedor» de arriba">
+                    </label>
+                    <label>
+                        <span>CIF proveedor</span>
+                        <input type="text" id="proveedor_cif" value="{{ document.proveedor_cif or '' }}" readonly class="locked-field" title="Se cambia con el desplegable «Elegir proveedor» de arriba">
+                    </label>
+                    <div class="full-width form-subrow cols-3">
+                        <label>
+                            <span>Fecha</span>
+                            <input type="text" id="fecha" value="{{ document.fecha or '' }}">
+                        </label>
+                        <label>
+                            <span>Número albarán</span>
+                            <input type="text" id="numero_albaran" value="{{ document.numero_albaran or '' }}">
+                        </label>
+                        <label>
+                            <span>Forma de pago</span>
+                            <input type="text" id="forma_pago" value="{{ document.forma_pago or '' }}">
+                        </label>
+                    </div>
+                    {% if document.is_editable %}
+                    <label class="full-width">
+                        <span>Elegir obra (Sigrid) — escribe para buscar</span>
+                        <div class="combo" data-kind="obra"
+                             data-endpoint="/api/sigrid/obras"
+                             data-val-input="obra_codigo"
+                             data-nombre-input="obra_nombre"
+                             data-label="{{ document.obra_codigo or '' }}{% if document.obra_nombre %} — {{ document.obra_nombre }}{% endif %}">
+                            <input type="text" class="combo-input" id="obra_combo"
+                                   autocomplete="off" placeholder="Escribe para buscar (codigo o nombre)…"
+                                   value="{{ document.obra_codigo or '' }}{% if document.obra_nombre %} — {{ document.obra_nombre }}{% endif %}">
+                            <div class="combo-panel" hidden></div>
+                        </div>
+                    </label>
+                    {% endif %}
+                    <div class="full-width form-subrow cols-3">
+                        <label>
+                            <span>Código obra/proyecto</span>
+                            <input type="text" id="obra_codigo" value="{{ document.obra_codigo or '' }}" readonly class="locked-field" title="Se cambia con el desplegable «Elegir obra» de arriba">
+                        </label>
+                        <label>
+                            <span>Nombre obra</span>
+                            <input type="text" id="obra_nombre" value="{{ document.obra_nombre or '' }}" readonly class="locked-field" title="Se cambia con el desplegable «Elegir obra» de arriba">
+                        </label>
+                        <label>
+                            <span>Dirección obra</span>
+                            <input type="text" id="obra_direccion" value="{{ document.obra_direccion or '' }}" readonly class="locked-field" title="Dato de obra (Sigrid); se actualiza al cambiar la obra">
+                        </label>
+                    </div>
+                    <label class="full-width">
+                        <span>Notas de revisión</span>
+                        <textarea id="review_notes" rows="3">{{ document.review_notes or '' }}</textarea>
+                    </label>
+                </div>
+
+                <section class="contrato-section">
+                    <div class="subsection-header">
+                        <h3>Contrato asociado</h3>
+                        <span class="muted small">
+                            {% if document.contratos|length == 0 %}
+                                0 contratos encontrados
+                            {% elif document.contratos|length == 1 %}
+                                1 contrato encontrado
+                            {% else %}
+                                {{ document.contratos|length }} contratos encontrados
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    {# ----------------------------------------------------------------
+                       Selector de contrato (jun 2026): combo único con autocompletar
+                       (mismo patrón que los desplegables de obra/proveedor) que lista
+                       los contratos detectados por CIF+obra MÁS la opción «Sin
+                       contrato». Sustituye a los tres bloques anteriores (0 / 1 /
+                       varios). El JS (wireContratoCombo) monta el combo sobre
+                       #contrato-combo-mount, escribe el código elegido en el hidden
+                       #selected_contrato_codigo, muestra la tarjeta del contrato y, al
+                       cambiar, GUARDA y RE-VALORA automáticamente (o solo guarda si se
+                       elige «Sin contrato»). Cuando el proceso no detectó contrato,
+                       el combo arranca en «Sin contrato».
+                       ---------------------------------------------------------------- #}
+                    {% if document.is_editable %}
+                        <div class="contrato-combo-block">
+                            <label class="full-width">
+                                <span>Contrato aplicado · escribe para buscar (incluye «Sin contrato»)</span>
+                                <div id="contrato-combo-mount" class="contrato-combo-mount"></div>
+                            </label>
+                            <input type="hidden" id="selected_contrato_codigo"
+                                   value="{{ document.selected_contrato_codigo or '' }}">
+                            <span id="contrato-combo-status" class="valuate-status" hidden></span>
+                        </div>
+
+                        {# Datos del combo: contratos detectados (código + etiqueta). #}
+                        <script id="contratos-combo-data" type="application/json">[
+                        {%- for c in document.contratos -%}
+                        {"codigo": {{ c.codigo_contrato | tojson }}, "label": {{ (c.codigo_contrato ~ ' — ' ~ (c.nombre_contrato or c.codigo_contrato)) | tojson }}}{{ "," if not loop.last else "" }}
+                        {%- endfor -%}
+                        ]</script>
+
+                        {# Tarjeta(s) de detalle: una por contrato; visible solo la
+                           elegida (lo gestiona el JS al cambiar el combo). #}
+                        {% for c in document.contratos %}
+                            {% set is_selected = c.codigo_contrato == document.selected_contrato_codigo %}
+                            <div class="contrato-card js-contrato-card"
+                                 data-codigo="{{ c.codigo_contrato }}"
+                                 style="{% if not is_selected %}display:none;{% endif %}">
+                                <div class="contrato-scroll">
+                                    <div class="contrato-grid">
+                                        <div>
+                                            <dt>Código</dt>
+                                            <dd><code>{{ c.codigo_contrato }}</code></dd>
+                                        </div>
+                                        <div class="contrato-nombre">
+                                            <dt>Nombre</dt>
+                                            <dd>{{ c.nombre_contrato or '—' }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Fecha alta</dt>
+                                            <dd>{{ c.fecha_alta_contrato | fecha_int_iso }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Importe total</dt>
+                                            <dd>{{ c.importe_total | importe_eur }}</dd>
+                                        </div>
+                                    </div>
+                                    {% if not c.pdf_sharepoint_web_url %}
+                                        <div class="contrato-actions">
+                                            <span class="contrato-no-pdf muted small">
+                                                Sin PDF del contrato disponible
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+
+                        {# Sin contrato detectado: avisamos y ofrecemos re-buscar tras
+                           corregir CIF/obra. El combo queda en «Sin contrato». #}
+                        {% if document.contratos|length == 0 %}
+                            <div class="alert warning contrato-empty">
+                                <div class="contrato-empty-text">
+                                    No se encontró ningún contrato en el ERP para la combinación
+                                    CIF <code>{{ document.proveedor_cif or '—' }}</code> +
+                                    obra <code>{{ document.obra_codigo or '—' }}</code>.
+                                    Este albarán queda <strong>sin contrato</strong>. Si crees que
+                                    debería tener uno, corrige CIF u obra más abajo y vuelve a buscar.
+                                </div>
+                                <div class="contrato-empty-actions">
+                                    <button type="button"
+                                            class="btn success small"
+                                            id="save-and-refetch-btn"
+                                            title="Guarda los campos editados y vuelve a consultar el ERP">
+                                        Guardar y volver a buscar
+                                    </button>
+                                    <button type="button"
+                                            class="btn secondary small"
+                                            id="refetch-only-btn"
+                                            title="Solo re-consulta el ERP sin guardar nada">
+                                        Solo volver a buscar
+                                    </button>
+                                </div>
+                                <div id="refetch-status" class="refetch-status" hidden></div>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        {# Vista read-only (proveedor): contrato aplicado, sin editar. #}
+                        {% if document.selected_contrato_codigo %}
+                            {% for c in document.contratos %}
+                                {% if c.codigo_contrato == document.selected_contrato_codigo %}
+                                    <div class="contrato-card" data-codigo="{{ c.codigo_contrato }}">
+                                        <div class="contrato-scroll">
+                                            <div class="contrato-grid">
+                                                <div><dt>Código</dt><dd><code>{{ c.codigo_contrato }}</code></dd></div>
+                                                <div class="contrato-nombre"><dt>Nombre</dt><dd>{{ c.nombre_contrato or '—' }}</dd></div>
+                                                <div><dt>Fecha alta</dt><dd>{{ c.fecha_alta_contrato | fecha_int_iso }}</dd></div>
+                                                <div><dt>Importe total</dt><dd>{{ c.importe_total | importe_eur }}</dd></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <div class="muted small">Sin contrato aplicado.</div>
+                        {% endif %}
+                    {% endif %}
+
+                    {# Botón "Valorar ahora": tras localizar/seleccionar el contrato
+                       (p.ej. después de corregir CIF/obra y "volver a buscar"),
+                       lanza la valoración completa (sv7 → sv6 → sv5: líneas
+                       sintéticas, conciliación, etc.). El JS guarda primero la
+                       selección (PUT sin redirigir) y luego dispara la valoración,
+                       así no hace falta pulsar "Guardar" aparte. Solo se pinta si
+                       hay al menos un contrato y la vista es editable. #}
+                    {% if document.is_editable %}
+                        <div class="valuate-row">
+                            <button type="button"
+                                    class="btn brand"
+                                    id="valuate-btn"
+                                    data-current-val-id="{{ valuation.valuation_id if valuation else '' }}"
+                                    data-current-val-ts="{{ valuation.created_at_utc if valuation else '' }}"
+                                    title="Guarda el contrato seleccionado y lanza la valoración (líneas sintéticas, conciliación…)">
+                                Valorar ahora
+                            </button>
+                            <span class="valuate-hint muted small">
+                                Genera la valoración contra el contrato seleccionado arriba.
+                            </span>
+                            <span id="valuate-status" class="valuate-status" hidden></span>
+                        </div>
+                    {% endif %}
+                </section>
+
+                <div class="subsection-header lines-subheader">
+                    <h3>
+                        Líneas a Sigrid
+                        {% if valuation %}
+                            <span class="muted small">· valoración aplicada</span>
+                        {% endif %}
+                    </h3>
+                    <button type="button" class="btn secondary small" id="undo-btn" title="Deshacer los cambios no guardados" hidden>Deshacer</button>
+                    <button type="button" class="btn ghost small" id="reset-cols-btn" title="Restablecer el orden y el ancho de las columnas a los valores por defecto">↺ Columnas</button>
+                    {% if valuation %}
+                        <button type="button" class="btn secondary small" id="bulk-copy-btn"
+                                title="Para cada línea del albarán SIN casar, crea su salmón «Nueva» copiando la línea blanca leída por la IA">
+                            Copiar sin casar → Nueva
+                        </button>
+                        <button type="button" class="btn danger small" id="bulk-delete-btn"
+                                title="Borra TODAS las líneas salmón (Sigrid y Nueva). Dejarán de contar en el total">
+                            Borrar todas
+                        </button>
+                    {% endif %}
+                    <button type="button" class="btn secondary small" id="add-line-btn" title="Añade una línea salmón suelta (a llevar a Sigrid), en blanco. No toca las líneas blancas leídas por la IA.">Añadir línea</button>
+                    {# Traer líneas contrato (jul 2026): multiselección de líneas
+                       del contrato → una salmón YA casada (badge Sigrid) por cada
+                       una, con partida/descripción/unidad/precio prefijados y la
+                       cantidad en blanco. El JS (wireTraerContrato) monta el panel
+                       con los datos de #contrato-lines-json. #}
+                    <div class="traer-contrato-wrap">
+                        <button type="button" class="btn secondary small" id="traer-contrato-btn"
+                                title="Elige líneas del contrato seleccionado y créalas como salmón ya casadas (Sigrid), con su partida, descripción, unidad y precio. Solo tendrás que poner la cantidad.">
+                            Traer líneas contrato ▾
+                        </button>
+                        <div class="traer-contrato-panel" id="traer-contrato-panel" hidden>
+                            <input type="text" class="traer-contrato-buscar" id="traer-contrato-buscar"
+                                   placeholder="Filtrar por partida o descripción…" autocomplete="off">
+                            <div class="traer-contrato-lista" id="traer-contrato-lista"></div>
+                            <div class="traer-contrato-pie">
+                                <span class="muted small" id="traer-contrato-contador">0 seleccionadas</span>
+                                <button type="button" class="btn success small" id="traer-contrato-aplicar" disabled>Incorporar</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn success small" id="save-all-lines-btn" title="Guarda de una vez todas las líneas salmón que hayas modificado.">Guardar todas</button>
+                </div>
+
+                {#
+                    TANDA 2A — Líneas blancas del albarán (lo que leyó la IA).
+                    Pasan a un bloque COLAPSABLE de SOLO LECTURA: son la
+                    referencia, no se editan. Las que aún no tienen línea
+                    salmón muestran un botón «+ a Sigrid» para traerlas (a una
+                    línea de contrato o como «Nueva»). Las que ya tienen salmón
+                    se marcan con ✓. El JS del «+» (js-add-concilia) vive aquí.
+                #}
+                <details class="albaran-lines" {% if not valuation %}open{% endif %}>
+                    <summary>
+                        <span class="al-summary-title">Líneas leídas del albarán (IA)</span>
+                        <span class="muted small">{{ document.lines|length }} línea(s) · solo lectura</span>
+                    </summary>
+                    <div class="table-scroll">
+                        <table class="table albaran-lines-table" id="albaran-lines-table">
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Código imputación</th>
+                                <th>Concepto</th>
+                                <th>Cantidad</th>
+                                <th>Precio</th>
+                                <th>Importe</th>
+                                <th>Descuento (%)</th>
+                                <th>Código</th>
+                                <th>Salmón</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for ml in document.lines %}
+                                {% set v = val_lines.get(ml.id) if ml.id is not none else none %}
+                                <tr data-line-id="{{ ml.id if ml.id is not none else '' }}">
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ ml.codigo_imputacion or '—' }}</td>
+                                    <td class="al-concepto">{{ ml.concepto or '—' }}</td>
+                                    <td>{{ ml.cantidad if ml.cantidad is not none else '—' }}</td>
+                                    <td>{{ ml.precio if ml.precio is not none else '—' }}</td>
+                                    <td>{{ ml.precio_neto if ml.precio_neto is not none else '—' }}</td>
+                                    <td>{{ ml.descuento if ml.descuento is not none else '—' }}</td>
+                                    <td>{{ ml.codigo or '—' }}</td>
+                                    <td class="al-salmon-cell">
+                                        {% if v %}
+                                            <span class="al-matched" title="Ya tiene línea salmón">✓</span>
+                                        {% elif document.is_editable and ml.id is not none %}
+                                            <button type="button"
+                                                    class="js-add-concilia add-concilia-btn"
+                                                    data-line-id="{{ ml.id }}"
+                                                    title="Traer esta línea a las líneas Sigrid (elige línea de contrato o «Nueva»)">+ a Sigrid</button>
+                                        {% else %}—{% endif %}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="9" class="empty-cell">Sin líneas leídas.</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+
+                {#
+                    TANDA 2A — GRID de líneas salmón (las que van a Sigrid).
+                    Es UNA tabla única con TODAS las líneas salmón: casadas con
+                    Sigrid, «Nueva» y sintéticas. Columnas REORDENABLES (arrastra
+                    la cabecera) y REDIMENSIONABLES (tira del borde derecho de la
+                    cabecera); el orden/ancho se guarda por usuario en
+                    localStorage (botón «↺ Columnas» restablece). Cada <th> y cada
+                    <td> llevan data-col para que el JS pueda reordenarlos.
+                    Se conservan TODOS los hooks de edición (js-cedit,
+                    js-cedit-save, js-partida-combo, js-concilia-select,
+                    js-concilia-edit, js-concilia-remove, conciliacion-row,
+                    concilia-editable, data-for-valuation-line-id) para no
+                    romper la maquinaria de guardado salmón existente.
+                #}
+                <div class="table-scroll salmon-scroll">
+                    <table class="table editable-table salmon-table" id="lines-table"
+                           data-cols-store="sv4.salmonCols" data-resizable="1" data-sortable="1">
+                        <colgroup id="salmon-colgroup">
+                            <col data-col="origen" data-w="96">
+                            <col data-col="partida" data-w="150">
+                            <col data-col="concepto" data-w="300">
+                            <col data-col="cantidad" data-w="92">
+                            <col data-col="unidad" data-w="76">
+                            <col data-col="precio" data-w="116">
+                            <col data-col="importe" data-w="128">
+                            <col data-col="descuento" data-w="80">
+                            <col data-col="codigo" data-w="110">
+                            <col data-col="acciones" data-w="156">
+                        </colgroup>
+                        <thead>
+                        <tr class="salmon-head">
+                            <th data-col="origen" draggable="true"><span class="th-label">Origen</span><span class="th-sort"></span><span class="col-resizer"></span></th>
+                            <th data-col="partida" draggable="true"><span class="th-label">Partida</span><span class="th-sort"></span><span class="col-resizer"></span></th>
+                            <th data-col="concepto" draggable="true"><span class="th-label">Concepto</span><span class="th-sort"></span><span class="col-resizer"></span></th>
+                            <th data-col="cantidad" data-sort-type="num" draggable="true"><span class="th-label">Cantidad</span><span class="th-sort"></span><span class="col-resizer"></span></th>
+                            <th data-col="unidad" draggable="true"><span class="th-label">Unidad</span><span class="th-sort"></span><span class="col-resizer"></span></th>
+                            <th data-col="precio" data-sort-type="num" draggable="true"><span class="th-label">Precio unit.</span><span class="th-sub">precio aplicado</span><span class="th-sort"></span><span class="col-resizer"></span></th>
+                            <th data-col="importe" data-sort-type="num" draggable="true"><span class="th-label">Importe</span><span class="th-sub">cant × precio − dto%</span><span class="th-sort"></span><span class="col-resizer"></span></th>
+                            <th data-col="descuento" data-sort-type="num" draggable="true"><span class="th-label">Dto (%)</span><span class="th-sort"></span><span class="col-resizer"></span></th>
+                            <th data-col="codigo" draggable="true"><span class="th-label">Cód. externo</span><span class="th-sort"></span><span class="col-resizer"></span></th>
+                            <th data-col="acciones" draggable="true"><span class="th-label">Acciones</span><span class="col-resizer"></span></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for dline in document.display_lines %}
+                            {% if dline.concilia %}
+                                {% set c = dline.concilia %}
+                                {% set cedit = document.is_editable and dline.valuation_line_id is not none %}
+                                <tr class="conciliacion-row salmon-row concilia-{{ c.kind }}{% if cedit %} concilia-editable{% endif %}"
+                                    data-line-kind="{{ dline.line_kind }}"
+                                    data-for-line-id="{{ dline.merge_line_id if dline.merge_line_id is not none else '' }}"
+                                    data-for-valuation-line-id="{{ dline.valuation_line_id if dline.valuation_line_id is not none else '' }}">
+                                    {# Origen — SOLO badge Sigrid/Nueva. El ✎ abre/cierra el selector de línea de contrato (oculto por defecto). #}
+                                    <td class="concilia-td td-origen" data-col="origen" data-sort-value="{{ 'Sigrid' if c.kind == 'assigned' else 'Nueva' }}">
+                                        {% if cedit %}
+                                            {% if c.kind == 'assigned' %}
+                                            <button type="button" class="concilia-badge concilia-badge-assigned js-concilia-edit" title="Cambiar la línea de contrato a la que se imputa">Sigrid ✎</button>
+                                            {% else %}
+                                            <button type="button" class="concilia-badge concilia-badge-derived js-concilia-edit" title="Cambiar la línea de contrato a la que se imputa">Nueva ✎</button>
+                                            {% endif %}
+                                        {% else %}
+                                            {% if c.kind == 'assigned' %}<span class="concilia-badge concilia-badge-assigned">Sigrid</span>{% else %}<span class="concilia-badge concilia-badge-derived">Nueva</span>{% endif %}
+                                        {% endif %}
+                                    </td>
+                                    {# Partida — combo de partidas (cambiarla convierte SIGRID→NUEVA). Descripción de partida → tooltip. #}
+                                    <td class="concilia-td" data-col="partida" data-sort-value="{{ c.codigo_partida or '' }}">
+                                        {% if cedit %}
+                                            <input type="text" class="cell-input js-cedit js-partida-combo{% if c.agree_partida == true %} cedit-ok{% elif c.agree_partida == false %} cedit-warn{% endif %}"
+                                                   data-field="codigo_partida" data-identity="1"
+                                                   value="{{ c.codigo_partida or '' }}" placeholder="—" autocomplete="off"
+                                                   title="{{ c.descripcion_partida or '' }}">
+                                        {% elif c.agree_partida == false %}
+                                            <span class="concilia-price-warn" title="{{ c.descripcion_partida or '' }}"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ c.codigo_partida or '—' }}</span>
+                                        {% else %}
+                                            <span class="concilia-val" title="{{ c.descripcion_partida or '' }}">{{ c.codigo_partida or '—' }}</span>
+                                        {% endif %}
+                                    </td>
+                                    {# Concepto — UNA sola línea: el input de descripción. Medición → tooltip. Selector de línea de contrato oculto (lo abre el ✎). #}
+                                    <td class="concilia-td" data-col="concepto" data-sort-value="{{ c.descripcion or '' }}">
+                                        {% set _med = ('Medición ' ~ ('%.2f'|format(c.medicion_total)) ~ (' ' ~ c.unidad if c.unidad else '')) if c.medicion_total is not none else '' %}
+                                        {% if cedit %}
+                                            <input type="text" class="cell-input js-cedit js-concepto-combo" data-field="descripcion"
+                                                   value="{{ c.descripcion or '' }}" placeholder="—" title="{{ _med }}" autocomplete="off">
+                                            <select class="concilia-select js-concilia-select" data-vid="{{ dline.valuation_line_id }}" hidden>
+                                                <option value="" disabled selected>— elegir línea de contrato —</option>
+                                                <option value="nueva">➕ Nueva — derivar a {{ dline.codigo_imputacion or c.codigo_partida or 'la partida' }}</option>
+                                                {% for cl in document.contrato_lines %}
+                                                <option value="{{ cl.id }}">{{ cl.codigo_partida or '—' }} · {{ cl.descripcion or '' }} · {{ '%.2f'|format(cl.precio_unitario) if cl.precio_unitario is not none else '—' }} €</option>
+                                                {% endfor %}
+                                            </select>
+                                        {% else %}
+                                            <span class="concilia-val" title="{{ _med }}">{{ c.descripcion or '—' }}</span>
+                                        {% endif %}
+                                    </td>
+                                    {# Cantidad — la leída del albarán (recepciones parciales). Editable. #}
+                                    <td class="concilia-td td-num" data-col="cantidad" data-sort-value="{{ dline.cantidad if dline.cantidad is not none else '' }}">
+                                        {% if cedit %}
+                                            <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit{% if c.agree_cantidad == true %} cedit-ok{% elif c.agree_cantidad == false %} cedit-warn{% endif %}"
+                                                   data-field="cantidad" data-numeric="1"
+                                                   value="{{ dline.cantidad if dline.cantidad is not none else '' }}" placeholder="—">
+                                        {% elif dline.cantidad is not none %}
+                                            {% if c.agree_cantidad == false %}<span class="concilia-price-warn"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ dline.cantidad }}</span>{% else %}<span class="concilia-val">{{ dline.cantidad }}</span>{% endif %}
+                                        {% else %}—{% endif %}
+                                    </td>
+                                    {# Unidad — editable; cambiarla convierte SIGRID→NUEVA. #}
+                                    <td class="concilia-td" data-col="unidad" data-sort-value="{{ c.unidad or '' }}">
+                                        {% if cedit %}
+                                            <input type="text" class="cell-input cell-short js-cedit" data-field="unidad" data-identity="1"
+                                                   value="{{ c.unidad or '' }}" placeholder="—">
+                                        {% else %}{{ c.unidad or '—' }}{% endif %}
+                                    </td>
+                                    {# Precio unitario — precio del contrato de Sigrid. Verde si cuadra, rojo si difiere. #}
+                                    <td class="concilia-td td-num" data-col="precio" data-sort-value="{{ c.unitario if c.unitario is not none else '' }}">
+                                        {% if cedit %}
+                                            <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit{% if c.agree_unitario == true %} cedit-ok{% elif c.agree_unitario == false %} cedit-warn{% endif %}"
+                                                   data-field="precio_unitario" data-identity="1" data-numeric="1"
+                                                   value="{{ '%.4f'|format(c.unitario) if c.unitario is not none else '' }}" placeholder="—">
+                                        {% elif c.agree_unitario == false %}
+                                            <span class="concilia-price-warn"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ c.unitario | importe_eur }}</span>
+                                        {% else %}
+                                            <span class="concilia-val">{{ c.unitario | importe_eur if c.unitario is not none else '—' }}</span>
+                                        {% endif %}
+                                    </td>
+                                    {# Importe — editable: importe = cantidad × precio × (1 − dto%). #}
+                                    <td class="concilia-td td-num" data-col="importe" data-sort-value="{{ (dline.cantidad * c.unitario * (1 - (c.descuento or 0) / 100)) if (dline.cantidad is not none and c.unitario is not none) else '' }}">
+                                        {% if dline.cantidad is not none and c.unitario is not none %}
+                                            {% set _imp = dline.cantidad * c.unitario * (1 - (c.descuento or 0) / 100) %}
+                                            {% if cedit %}
+                                                <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit" data-field="importe" data-numeric="1" value="{{ '%.2f'|format(_imp) }}" placeholder="—">
+                                            {% elif c.agree_importe == false %}
+                                                <span class="concilia-price-warn"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ _imp | importe_eur }}</span>
+                                            {% else %}
+                                                <span class="concilia-val">{{ _imp | importe_eur }}</span>
+                                            {% endif %}
+                                        {% elif cedit %}
+                                            <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit" data-field="importe" data-numeric="1" value="" placeholder="—">
+                                        {% else %}<span class="concilia-val">—</span>{% endif %}
+                                    </td>
+                                    {# Descuento — campo propio de sv4 (no existe en Sigrid). #}
+                                    <td class="concilia-td td-num" data-col="descuento" data-sort-value="{{ c.descuento if c.descuento is not none else '' }}">
+                                        {% if cedit %}
+                                            <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit" data-field="descuento" data-numeric="1" value="{{ c.descuento if c.descuento is not none else '' }}" placeholder="—">
+                                        {% else %}{{ c.descuento if c.descuento is not none else '—' }}{% endif %}
+                                    </td>
+                                    {# Código externo — campo propio de sv4. #}
+                                    <td class="concilia-td" data-col="codigo" data-sort-value="{{ c.codigo_externo or '' }}">
+                                        {% if cedit %}
+                                            <input type="text" class="cell-input cell-short js-cedit" data-field="codigo_externo" value="{{ c.codigo_externo or '' }}" placeholder="—">
+                                        {% else %}{{ c.codigo_externo or '' }}{% endif %}
+                                    </td>
+                                    {# Acciones — Borrar + Guardar (a la derecha). #}
+                                    <td class="concilia-td td-acciones" data-col="acciones">
+                                        {% if cedit %}
+                                            <button type="button" class="btn small danger js-concilia-remove" title="Borrar esta línea salmón (no se llevará a Sigrid; deja de sumar al total)">Borrar ✕</button>
+                                            <button type="button" class="btn small success js-cedit-save" title="Guardar los cambios de esta línea. Si cambias imputación, unidad o precio, pasará de Sigrid a Nueva conservando el resto.">Guardar</button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% else %}
+                            <tr class="salmon-empty"><td colspan="10" class="empty-cell">Aún no hay líneas salmón. Usa «+ a Sigrid» en una línea del albarán, o «Añadir línea».</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {# Líneas de contrato disponibles para el desplegable del «+». #}
+                    <script type="application/json" id="contrato-lines-json">[{% for cl in document.contrato_lines %}{"id": {{ cl.id }}, "label": {{ ((cl.codigo_partida or '—') ~ ' · ' ~ (cl.descripcion or '') ~ ' · ' ~ (('%.2f'|format(cl.precio_unitario) ~ ' €') if cl.precio_unitario is not none else '—')) | tojson }}, "desc": {{ (cl.descripcion or '') | tojson }}, "part": {{ (cl.codigo_partida or '') | tojson }}, "unidad": {{ (cl.unidad_medida or '') | tojson }}, "precio": {{ cl.precio_unitario if cl.precio_unitario is not none else 'null' }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
+                    {# Partidas DISTINTAS del contrato, para el combo de partida. #}
+                    {%- set _pns = namespace(parts=[]) -%}
+                    {%- for cl in document.contrato_lines -%}
+                      {%- if cl.codigo_partida and cl.codigo_partida not in _pns.parts -%}
+                        {%- set _pns.parts = _pns.parts + [cl.codigo_partida] -%}
+                      {%- endif -%}
+                    {%- endfor -%}
+                    <script type="application/json" id="partidas-json">{{ _pns.parts | sort | tojson }}</script>
+                </div>
+            </form>
+        {% else %}
+            <div class="panel-header">
+                <h2>Campos extraídos · {{ view_label(document.view_mode) }}</h2>
+                <span class="status-pill pending">Solo lectura</span>
+            </div>
+
+            <dl class="readonly-grid two-columns">
+                <div><dt>Proveedor</dt><dd>{{ document.proveedor_nombre or '—' }}</dd></div>
+                <div><dt>CIF proveedor</dt><dd class="muted small">No disponible en {{ view_label(document.view_mode) }}</dd></div>
+                <div><dt>Fecha</dt><dd>{{ document.fecha or '—' }}</dd></div>
+                <div><dt>Número albarán</dt><dd>{{ document.numero_albaran or '—' }}</dd></div>
+                <div><dt>Forma de pago</dt><dd class="muted small">No disponible en {{ view_label(document.view_mode) }}</dd></div>
+                <div><dt>Código obra/proyecto</dt><dd>{{ document.obra_codigo or '—' }}</dd></div>
+                <div class="full-width"><dt>Nombre obra</dt><dd class="muted small">No disponible en {{ view_label(document.view_mode) }} (consúltese en JSON)</dd></div>
+                <div class="full-width"><dt>Dirección obra</dt><dd class="muted small">No disponible en {{ view_label(document.view_mode) }} (consúltese en JSON)</dd></div>
+            </dl>
+
+            <div class="subsection-header"><h3>Contrato aplicado</h3></div>
+            {% if document.selected_contrato_codigo %}
+                {% for c in document.contratos %}
+                    {% if c.codigo_contrato == document.selected_contrato_codigo %}
+                        <div class="contrato-card" data-codigo="{{ c.codigo_contrato }}">
+                            <div class="contrato-scroll">
+                                <div class="contrato-grid">
+                                    <div><dt>Código</dt><dd><code>{{ c.codigo_contrato }}</code></dd></div>
+                                    <div class="contrato-nombre"><dt>Nombre</dt><dd>{{ c.nombre_contrato or '—' }}</dd></div>
+                                    <div><dt>Fecha alta</dt><dd>{{ c.fecha_alta_contrato | fecha_int_iso }}</dd></div>
+                                    <div><dt>Importe total</dt><dd>{{ c.importe_total | importe_eur }}</dd></div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <div class="muted small">Sin contrato aplicado.</div>
+            {% endif %}
+
+            <div class="subsection-header">
+                <h3>Líneas · {{ view_label(document.view_mode) }} ({{ document.lines|length }})</h3>
+            </div>
+            <div class="table-scroll">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Código imputación</th>
+                        <th>Concepto</th>
+                        <th>Cantidad</th>
+                        <th>Unidad</th>
+                        <th>Precio unitario</th>
+                        <th>Importe</th>
+                        <th>Descuento (%)</th>
+                        <th>Código</th>
+                        <th>Confianza</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for line in document.lines %}
+                        {% set v = val_lines.get(line.id) if line.id is not none else none %}
+                        {% set eff_codimp = (v.codigo_partida_final if v and v.codigo_partida_final) or line.codigo_imputacion %}
+                        {% set eff_cantidad = (v.cantidad_convertida if v and v.cantidad_convertida is not none else line.cantidad) %}
+                        {% set eff_unidad = (v.unidad_contrato if v and v.unidad_contrato) or (v.unidad_albaran if v else '') %}
+                        {% set eff_precio_unit = (v.precio_unitario_final if v else none) %}
+                        {% set eff_importe = (v.importe_calculado if v and v.importe_calculado is not none else line.precio_neto) %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ eff_codimp or '—' }}</td>
+                            <td>{{ line.concepto or '—' }}</td>
+                            <td>{{ eff_cantidad if eff_cantidad is not none else '—' }}</td>
+                            <td>{{ eff_unidad or '—' }}</td>
+                            <td>{{ eff_precio_unit if eff_precio_unit is not none else '—' }}</td>
+                            <td>{{ eff_importe if eff_importe is not none else '—' }}</td>
+                            <td>{{ line.descuento if line.descuento is not none else '—' }}</td>
+                            <td>{{ line.codigo or '—' }}</td>
+                            <td>
+                                {% if line.confianza_pct is not none %}
+                                    {{ '%.1f'|format(line.confianza_pct) }}%
+                                {% else %}—{% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="10" class="empty-cell">Sin líneas para este proveedor.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if document.raw_extraction_json %}
+                <details class="provider-card" style="margin-top: 20px;" open>
+                    <summary><strong>Extracción en crudo (JSON)</strong></summary>
+                    <div class="provider-json-grid">
+                        <div>
+                            <h4>raw_extraction_json</h4>
+                            <pre>{{ document.raw_extraction_json }}</pre>
+                        </div>
+                        {% if document.ia_output_json %}
+                            <div>
+                                <h4>ia_output_json</h4>
+                                <pre>{{ document.ia_output_json }}</pre>
+                            </div>
+                        {% endif %}
+                    </div>
+                </details>
+            {% endif %}
+        {% endif %}
+
+        <section class="provider-section">
+            <div class="subsection-header">
+                <h3>Trazabilidad por proveedor</h3>
+            </div>
+            {% for item in document.provider_snapshots %}
+                <details class="provider-card">
+                    <summary>
+                        <strong>{{ item.provider_origin }}</strong>
+                        <span class="muted">{{ item.model_name }}</span>
+                    </summary>
+                    <div class="provider-grid">
+                        <div><strong>Proveedor:</strong> {{ item.proveedor_nombre or '—' }}</div>
+                        <div><strong>Fecha:</strong> {{ item.fecha or '—' }}</div>
+                        <div><strong>Número:</strong> {{ item.numero_albaran or '—' }}</div>
+                        <div><strong>Obra:</strong> {{ item.obra_codigo or '—' }}</div>
+                    </div>
+                    <div class="provider-json-grid">
+                        <div>
+                            <h4>JSON extraído</h4>
+                            <pre>{{ item.raw_extraction_json or '—' }}</pre>
+                        </div>
+                        <div>
+                            <h4>Respuesta IA</h4>
+                            <pre>{{ item.ia_output_json or '—' }}</pre>
+                        </div>
+                    </div>
+                </details>
+            {% endfor %}
+        </section>
+    </section>
+</section>
+
+{# Navegacion anterior/siguiente (jun 2026): recorre el conjunto
+   ordenado+filtrado de la bandeja, cruzando paginas. En los extremos el
+   boton queda deshabilitado. Solo en la vista editable (merge); en la
+   traza por proveedor no aplica. #}
+{% if document.is_editable %}
+<nav class="detail-nav" aria-label="Navegación entre albaranes">
+    {% if nav_prev_url %}
+        <a class="btn secondary detail-nav-prev" href="{{ nav_prev_url }}"
+           title="Albarán anterior según el orden y filtros de la bandeja">← Anterior</a>
+    {% else %}
+        <span class="btn secondary detail-nav-prev is-disabled" aria-disabled="true">← Anterior</span>
+    {% endif %}
+    <a class="btn secondary detail-nav-back" href="{{ back_to_list_url or '/documents' }}"
+       title="Volver a la bandeja conservando los filtros">Bandeja</a>
+    {% if nav_next_url %}
+        <a class="btn secondary detail-nav-next" href="{{ nav_next_url }}"
+           title="Albarán siguiente según el orden y filtros de la bandeja">Siguiente →</a>
+    {% else %}
+        <span class="btn secondary detail-nav-next is-disabled" aria-disabled="true">Siguiente →</span>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% if document.contratos|length > 1 %}
+    {% set ns = namespace(pairs=[]) %}
+    {% for c in document.contratos %}
+        {% set _ = ns.pairs.append([c.codigo_contrato, c.pdf_sharepoint_web_url]) %}
+    {% endfor %}
+    <script id="contratos-pdf-map" type="application/json">
+        {{ ns.pairs | tojson }}
+    </script>
+{% endif %}
+
+{% if document.is_editable %}
+    <script id="document-data" data-document-id="{{ document.id }}" type="application/json">{{ document_json | safe }}</script>
+{% endif %}
+
+{# DESHACER por albarán (jul 2026): el pill flotante vive SOLO aquí.
+   El historial que lista/deshace está filtrado por este document_id
+   (lo hecho en otro albarán solo se deshace entrando en el suyo).
+   Ids undo-global-* para no chocar con el #undo-btn local. #}
+<div id="undo-global-widget" class="undo-widget" data-document-id="{{ document.id }}" hidden>
+    <button type="button" id="undo-global-btn" class="undo-btn-main" title="Deshacer la última acción de ESTE albarán">
+        <span class="undo-ico">↶</span> Deshacer<span class="undo-count" id="undo-global-count"></span>
+    </button>
+    <button type="button" id="undo-global-toggle" class="undo-toggle" title="Ver cambios recientes de este albarán">▾</button>
+    <div class="undo-panel" id="undo-global-panel" hidden>
+        <div class="undo-panel-head">Cambios de este albarán (lo más nuevo primero)</div>
+        <ul class="undo-list" id="undo-global-list"></ul>
+        <div class="undo-panel-foot">Pulsa "Deshacer" para revertir el más reciente. Puedes repetir.</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if document.is_editable %}
+    <script>
+        window.reviewDocumentId = {{ document.id | tojson }};
+    </script>
+{% endif %}
+<script>
+    // ----------------------------------------------------------------- //
+    // DIAGNÓSTICO de carga de CSS.
+    //
+    // Si las reglas .concilia-box / .conciliacion-row no están en el
+    // CSS cargado, las clases van pero el navegador no las pinta. Eso
+    // indica caché agresiva. El diagnóstico avisa por consola.
+    // ----------------------------------------------------------------- //
+    (function () {
+        var hasRule = false;
+        try {
+            for (var i = 0; i < document.styleSheets.length; i++) {
+                var sheet = document.styleSheets[i];
+                var rules;
+                try { rules = sheet.cssRules || sheet.rules; }
+                catch (e) { continue; /* CORS u otro */ }
+                if (!rules) continue;
+                for (var j = 0; j < rules.length; j++) {
+                    if (rules[j].selectorText &&
+                        rules[j].selectorText.indexOf("concilia-td") !== -1) {
+                        hasRule = true;
+                        break;
+                    }
+                }
+                if (hasRule) break;
+            }
+        } catch (e) { /* ignorar */ }
+        if (!hasRule) {
+            console.warn(
+                "[sv4] AVISO: las reglas CSS de .concilia-td no están " +
+                "cargadas. Probablemente el navegador tiene caché del " +
+                "styles.css antiguo. Haz Ctrl+F5 para forzar recarga, " +
+                "o reinicia sv4 (cache-buster nuevo)."
+            );
+        } else {
+            console.log("[sv4] CSS de conciliación detectado OK.");
+        }
+    })();
+
+    // ----------------------------------------------------------------- //
+    // Toggle de filas de conciliación (chevron en la columna #).
+    // Cada chevron de fila controla la fila inmediatamente siguiente
+    // (tr.conciliacion-row). Al click alterna la clase "hidden" en la
+    // fila siguiente y "expanded" en el botón.
+    // ----------------------------------------------------------------- //
+    (function () {
+        document.addEventListener("click", function (ev) {
+            var btn = ev.target.closest(".js-toggle-concilia");
+            if (!btn) return;
+            var tr = btn.closest("tr");
+            if (!tr) return;
+            var next = tr.nextElementSibling;
+            if (!next || !next.classList.contains("conciliacion-row")) return;
+            var isHidden = next.classList.toggle("hidden");
+            btn.setAttribute("aria-expanded", String(!isHidden));
+            btn.classList.toggle("expanded", !isHidden);
+            btn.textContent = isHidden ? "▸" : "▾";
+        });
+    })();
+
+    // ----------------------------------------------------------------- //
+    // Colapsar / expandir el visor de PDF.
+    // Estado persistente en localStorage por usuario (clave global, no
+    // por documento — el revisor habitualmente prefiere mantener su
+    // ajuste durante toda la sesión). Si en el futuro queremos
+    // recordarlo por documento, basta con cambiar la clave a
+    // 'pdfCollapsed:' + documentId.
+    //
+    // Patrón: el botón "Mostrar PDF" vive fuera del grid (split-layout),
+    // como elemento hermano antes. Por defecto tiene attr "hidden". El
+    // JS lo hace visible cuando se colapsa, y le pone "hidden" otra vez
+    // cuando se expande. El visor (.viewer-panel) se oculta vía CSS
+    // cuando el grid lleva la clase ".pdf-collapsed".
+    // ----------------------------------------------------------------- //
+    (function () {
+        var STORAGE_KEY = "sv4.pdfCollapsed";
+        var layout = document.getElementById("splitLayout");
+        var hideBtn = document.getElementById("pdfHideBtn");
+        var showBtn = document.getElementById("pdfShowBtn");
+        if (!layout || !hideBtn || !showBtn) return;
+
+        function setCollapsed(collapsed) {
+            layout.classList.toggle("pdf-collapsed", collapsed);
+            // Mostrar/ocultar el botón "Mostrar PDF" via attr hidden.
+            if (collapsed) {
+                showBtn.removeAttribute("hidden");
+            } else {
+                showBtn.setAttribute("hidden", "");
+            }
+            try {
+                localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
+            } catch (e) {
+                // ignorar — privado, modo incógnito, etc.
+            }
+        }
+
+        // Estado inicial: leer de localStorage.
+        var saved = null;
+        try {
+            saved = localStorage.getItem(STORAGE_KEY);
+        } catch (e) { /* idem */ }
+        if (saved === "1") setCollapsed(true);
+
+        hideBtn.addEventListener("click", function () { setCollapsed(true); });
+        showBtn.addEventListener("click", function () { setCollapsed(false); });
+    })();
+</script>
+{% endblock %}
