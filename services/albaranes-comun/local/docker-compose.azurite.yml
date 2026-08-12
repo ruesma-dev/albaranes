@@ -1,0 +1,21 @@
+# local/docker-compose.azurite.yml
+#
+# Entorno local de colas: Azurite (emulador oficial de Azure Storage).
+#   docker compose -f local/docker-compose.azurite.yml up -d
+#
+# Alternativa sin Docker (npm):  npm i -g azurite && azurite-queue
+#
+# Cadena de conexión para los .env locales (cuenta de desarrollo
+# well-known de Azurite, NO es un secreto real):
+#
+# COLAS_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1;
+services:
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    command: azurite-queue --queueHost 0.0.0.0 --queuePort 10001 --location /data --silent --skipApiVersionCheck
+    ports:
+      - "10001:10001"
+    volumes:
+      - azurite_data:/data
+volumes:
+  azurite_data:
