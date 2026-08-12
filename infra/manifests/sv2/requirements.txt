@@ -1,0 +1,15 @@
+# sv2 — directas (httpx, pydantic y Gemini/Anthropic/OpenAI vienen de comun[azure,llm])
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic-settings>=2.2
+PyYAML>=6.0
+python-multipart>=0.0.9
+# Extracción vía Google Document AI (google_document_ai_client.py):
+google-cloud-documentai>=2.20
+# Preprocesado de imagen (jul 2026, ruesma_comun.imaging.preprocess):
+# render de PDF escaneado + realce (iluminacion/deskew/estirado). Sin
+# esto el preproceso cae en silencio a 'PDF crudo' (best-effort) y la
+# mejora de lectura NO se aplica en Azure. headless: sin libGL.
+PyMuPDF>=1.24
+opencv-python-headless>=4.9
+numpy>=1.26

@@ -1,0 +1,4 @@
+# sv1 — directas (httpx, pydantic, sqlalchemy vienen de comun[azure])
+pydantic-settings>=2.2
+pypdf>=4.2
+psycopg[binary]>=3.1
