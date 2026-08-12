@@ -1,0 +1,12 @@
+{
+  "servicios": [
+    { "nombre": "sv1-email",              "ruta": "services/albaranes-email",            "lenguaje": "python" },
+    { "nombre": "sv2-api",                "ruta": "services/albaranes-api",              "lenguaje": "python" },
+    { "nombre": "sv3-persistencia",       "ruta": "services/albaranes-persistencia",     "lenguaje": "python" },
+    { "nombre": "sv4-front",              "ruta": "services/albaranes-front",            "lenguaje": "python" },
+    { "nombre": "sv5-valoracion-api",     "ruta": "services/albaran-valoracion-api",     "lenguaje": "python" },
+    { "nombre": "sv6-valoracion-persist", "ruta": "services/albaran-valoracion-persist", "lenguaje": "python" },
+    { "nombre": "comun",                  "ruta": "services/albaranes-comun",            "lenguaje": "python" },
+    { "nombre": "infra",                  "ruta": "infra",                               "lenguaje": "otro" }
+  ]
+}
