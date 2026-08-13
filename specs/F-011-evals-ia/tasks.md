@@ -18,7 +18,7 @@ empezar.
       defecto crítico/laxo, ajuste por campo, campo sin clasificar =
       crítico con aviso).
       | Verificación: `tests/test_f011_r7_r8_criticidad.py`.
-- [ ] T3: `evals/conversor.py`: los 6 libros (incluido `RESULTADO_FINAL` →
+- [x] T3: `evals/conversor.py`: los 6 libros (incluido `RESULTADO_FINAL` →
       `fixtures/final/`), localización de tablas, convenios de celda
       (incluido el literal `REVISIÓN`), salida determinista, fallos por
       libro/pestaña ausente y aborto por barrido sin escritura parcial.
