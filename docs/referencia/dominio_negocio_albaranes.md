@@ -25,6 +25,9 @@
 >   **secuenciales** (limitación conocida en `sv2.md`, mejora propuesta
 >   ThreadPoolExecutor). Todo el pipeline es secuencial por documento; el
 >   paralelismo real son las réplicas KEDA compitiendo por la cola.
+> - **§10.7 (bombeo)**: el ejemplo «20 m³/h → 5 h = 210 m³» tiene las horas
+>   mal: el caso real son **10,5 h** de bombeo (210/20). La regla es la
+>   misma: m³ a facturar = horas × rendimiento mínimo del contrato.
 > - **§5.2**: `q-feedback` está **reservada** para el futuro servicio de
 >   entrada al ERP (aprobado en sv4 → alta en Sigrid vía `sql/write`); el
 >   consumidor no está construido y nada externo la consume. `q-emails` es
