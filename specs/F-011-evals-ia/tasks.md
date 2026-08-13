@@ -29,7 +29,7 @@ empezar.
       `evals/fixtures/` (hoy sin casos: estructura + metadatos).
       | Verificación: `python -m evals.conversor` exit 0; `git status`
       muestra solo JSON bajo `evals/fixtures/`; ningún xlsx en el commit.
-- [ ] T5: `evals/comparador.py` (convenios R2 + criticidad + sentinela
+- [x] T5: `evals/comparador.py` (convenios R2 + criticidad + sentinela
       `ESPERA_REVISION`) + `evals/informe.py` (render, `parsear_veredicto`,
       `es_pasada_completa`).
       | Verificación: `tests/test_f011_r2_comparador.py`,
