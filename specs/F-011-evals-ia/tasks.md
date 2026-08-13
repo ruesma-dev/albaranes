@@ -8,7 +8,7 @@ mutación. Las preguntas abiertas están resueltas (Decisiones D1–D7 en
 `requirements.md`, 2026-08-13): no hay nada pendiente del humano para
 empezar.
 
-- [ ] T1: `evals/requirements.txt` + instalación en el venv raíz, y
+- [x] T1: `evals/requirements.txt` + instalación en el venv raíz, y
       `evals/modelos.py` + `evals/barrido.py` (patrones C3 bis; precios,
       razones sociales y CIF fuera del barrido por D1).
       | Verificación: `tests/test_f011_r4_barrido.py` en RED y luego verde
