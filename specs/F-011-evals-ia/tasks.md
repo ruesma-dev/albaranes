@@ -49,7 +49,7 @@ empezar.
       | Verificación: `tests/test_f011_r11_ia12.py`,
       `tests/test_f011_r14_e2e_real.py` (clientes LLM falsos inyectados,
       hand-off de envelope verificado), `tests/test_f011_r12_omitidos.py`.
-- [ ] T8: `evals/runner.py`: CLI de las dos corridas (pasada completa con
+- [x] T8: `evals/runner.py`: CLI de las dos corridas (pasada completa con
       `--con-llm`, determinista por defecto; rechazo de IA1/IA2 sin
       `--con-llm`), subprocesos por servicio, agregación, informe en
       `progress/`, exit codes y NO_EVALUABLE sin casos.

@@ -412,3 +412,38 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":  # pragma: no cover - lo ejerce el subproceso
     raise SystemExit(main())
+
+
+def conciliaciones_desde_ground_truth(ia4: dict, envelope: dict) -> list[dict]:
+    """Traduce el libro IA4 a la respuesta que habría dado la IA4 real.
+
+    Es el estímulo del modo determinista para la conciliación: se aplica al
+    envelope igual que lo haría el orquestador y se mira su efecto en el build.
+    """
+    id_por_codigo = {
+        str(linea.get("codigo_producto")): linea.get("contrato_line_id")
+        for linea in envelope.get("context", {}).get("lineas_contrato", [])
+        if linea.get("codigo_producto") is not None
+    }
+    conciliaciones = []
+    for fila in _tablas(ia4, "conciliacion"):
+        numero = _entero(valor(fila, "num_linea"))
+        if numero is None:
+            continue
+        concilia = str(valor(fila, "concilia") or "").strip().upper() in {"SI", "SÍ"}
+        contrato = valor(fila, "linea_contrato_esperada")
+        conciliaciones.append(
+            {
+                "line_ref": numero,
+                "matched_contrato_line_id": (
+                    id_por_codigo.get(str(contrato)) if concilia else None
+                ),
+                "precio_unitario_contrato_db": _decimal(
+                    valor(fila, "precio_unitario_esperado")
+                ),
+                "match_method": "semantic" if concilia else "no_match",
+                "match_confidence_pct": 90.0 if concilia else 0.0,
+                "razon_corta": str(valor(fila, "motivo") or "ground truth IA4"),
+            }
+        )
+    return conciliaciones
