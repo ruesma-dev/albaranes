@@ -309,7 +309,10 @@ class EjecutorPytest:
 
 
 def ejecutor_para(
-    fichero: str, servicios: list[Servicio], raiz: str = "."
+    fichero: str,
+    servicios: list[Servicio],
+    raiz: str = ".",
+    raiz_venvs: str | None = None,
 ) -> EjecutorPytest:
     """Ejecutor con el que se juzga un mutante, según a qué servicio pertenece.
 
@@ -317,13 +320,19 @@ def ejecutor_para(
     su directorio y con su intérprete. Todo lo demás —código de la raíz, o un
     `.py` suelto dentro de un servicio de otro lenguaje— con la suite de la
     raíz, como en un repositorio de un solo proyecto.
+
+    `raiz_venvs` separa DÓNDE se ejecuta la suite de DÓNDE vive el entorno
+    virtual: la campaña paralela lanza los tests dentro de un `git worktree`
+    —que no trae venvs, porque no están versionados— con el intérprete del
+    árbol principal. Sin él, ambas cosas son `raiz` y el comportamiento es
+    exactamente el de siempre.
     """
     servicio = servicio_de_ruta(fichero, servicios)
     if servicio is None or servicio.lenguaje != "python":
         return EjecutorPytest(raiz=raiz)
     return EjecutorPytest(
         raiz=str(Path(raiz) / servicio.ruta),
-        ejecutable=interprete(servicio, raiz),
+        ejecutable=interprete(servicio, raiz_venvs or raiz),
     )
 
 

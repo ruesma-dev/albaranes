@@ -50,7 +50,7 @@ def test_f012_r3_reparto_ni_repite_ni_omite_ningun_mutante() -> None:
     repartidos = [mutante for particion in particiones for mutante in particion]
     assert len(repartidos) == 7
     assert sorted(repartidos, key=clave_estable) == sorted(mutantes, key=clave_estable)
-    assert len(set(id(m) for m in repartidos)) == 7
+    assert len({id(mutante) for mutante in repartidos}) == 7
 
 
 def test_f012_r3_reparto_es_determinista() -> None:

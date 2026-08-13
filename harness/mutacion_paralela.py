@@ -37,14 +37,36 @@ Todo con biblioteca estándar, como el resto del arnés.
 
 from __future__ import annotations
 
+import random
 import shutil
 import subprocess
 import tempfile
+import threading
+import time
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from types import TracebackType
 
 from harness.alcance import Alcance
-from harness.mutacion import InformeMutacion, Mutante
+from harness.mutacion import (
+    TIMEOUT_POR_DEFECTO,
+    EjecutorPytest,
+    InformeMutacion,
+    Mutante,
+    ejecutar_campania,
+    ejecutor_para,
+    generar_mutantes,
+)
+from harness.mutacion import (
+    # privado de `harness.mutacion` a sabiendas: la campaña paralela tiene que
+    # leer los fuentes EXACTAMENTE igual que la campaña en serie (sin traducir
+    # saltos de línea) o los mutantes generados no serían los mismos.
+    _leer as _leer_fuente,
+)
+from harness.servicios import Servicio, interprete, servicio_de_ruta
+
+#: Fábrica de ejecutores: `(fichero, raíz del worker) -> ejecutor`.
+Fabrica = Callable[[str, str], object]
 
 #: Clave con la que la campaña en serie ordena sus mutantes. El informe
 #: paralelo tiene que salir en ESTE orden para ser indistinguible del suyo.
@@ -199,3 +221,233 @@ class Worktrees:
         if self._temporal is not None:
             shutil.rmtree(self._temporal, ignore_errors=True)
             self._temporal = None
+
+
+# --- Piezas del coordinador --------------------------------------------------
+
+
+def fabrica_de_ejecutores(servicios: list[Servicio], raiz_venvs: str) -> Fabrica:
+    """Fábrica que juzga cada fichero con la suite de SU servicio en el worker.
+
+    La suite se ejecuta DENTRO del worktree del worker (ahí está el código
+    mutado) y con el intérprete resuelto contra el árbol principal (ahí están
+    los venvs, que no se versionan y por tanto no existen en un worktree).
+    """
+
+    def fabrica(fichero: str, raiz_worker: str) -> object:
+        return ejecutor_para(
+            fichero, servicios, raiz=raiz_worker, raiz_venvs=raiz_venvs
+        )
+
+    return fabrica
+
+
+def resolver_interpretes(
+    alcance: Alcance, servicios: list[Servicio], raiz: str = "."
+) -> dict[str, str]:
+    """Resuelve por adelantado el intérprete de cada servicio del alcance.
+
+    Se hace ANTES de crear ningún worktree: un venv declarado que no existe es
+    un `ValueError` de `harness.servicios`, y descubrirlo con dieciséis
+    checkouts ya en el temp del sistema sería tirar minutos a la basura.
+    """
+    resueltos: dict[str, str] = {}
+    for fichero in alcance.ficheros():
+        servicio = servicio_de_ruta(fichero, servicios)
+        if servicio is None or servicio.lenguaje != "python":
+            continue
+        if servicio.nombre not in resueltos:
+            resueltos[servicio.nombre] = interprete(servicio, raiz)
+    return resueltos
+
+
+def generar_y_muestrear(
+    alcance: Alcance,
+    raiz: str = ".",
+    max_mutantes: int | None = None,
+    semilla: int | None = None,
+) -> tuple[list[Mutante], int, bool]:
+    """Genera los mutantes del alcance y aplica el muestreo UNA sola vez.
+
+    Devuelve `(mutantes a evaluar, generados, muestreado)`. Reproduce paso por
+    paso lo que hace `ejecutar_campania` en serie —mismo orden de ficheros,
+    misma lectura sin traducir saltos de línea, mismo `random.Random(semilla)`
+    sobre la misma lista— porque de esa igualdad depende que el muestreo elija
+    exactamente los mismos mutantes que la campaña en serie.
+    """
+    base = Path(raiz)
+    mutantes: list[Mutante] = []
+    for fichero in alcance.ficheros():
+        ruta = base / fichero
+        if ruta.is_file():
+            mutantes.extend(
+                generar_mutantes(_leer_fuente(ruta), alcance.lineas[fichero], fichero)
+            )
+
+    generados = len(mutantes)
+    if max_mutantes is not None and generados > max_mutantes:
+        sorteo = random.Random(semilla)
+        return (
+            sorted(sorteo.sample(mutantes, max_mutantes), key=clave_estable),
+            generados,
+            True,
+        )
+    return (mutantes, generados, False)
+
+
+def renumerar(linea: str, indice: int, total: int) -> str:
+    """Cambia el `[i/n]` que numera un worker por el `[i/n]` de la campaña.
+
+    Cada worker numera su propia partición; por pantalla lo que interesa es
+    cuánto queda de campaña. El orden de las líneas NO es contractual: el
+    informe sí.
+    """
+    resto = linea.split("] ", 1)[1] if linea.startswith("[") and "] " in linea else linea
+    return f"[{indice}/{total}] {resto}"
+
+
+class _ParticionCancelable:
+    """Partición que deja de rendir mutantes en cuanto se pide cancelar.
+
+    Se pasa tal cual como `mutantes=` a `ejecutar_campania`, que solo le pide
+    `len()` e iteración. Así la cancelación cooperativa no cuesta ni una línea
+    dentro de la campaña en serie, que es la parte delicada del módulo.
+    """
+
+    def __init__(self, mutantes: list[Mutante], evento: threading.Event) -> None:
+        self._mutantes = mutantes
+        self._evento = evento
+
+    def __len__(self) -> int:
+        return len(self._mutantes)
+
+    def __iter__(self) -> Iterator[Mutante]:
+        for mutante in self._mutantes:
+            if self._evento.is_set():
+                return
+            yield mutante
+
+
+# --- Coordinador -------------------------------------------------------------
+
+
+def ejecutar_campania_paralela(
+    alcance: Alcance,
+    servicios: list[Servicio],
+    timeout_s: int = TIMEOUT_POR_DEFECTO,
+    raiz: str = ".",
+    workers: int = 2,
+    max_mutantes: int | None = None,
+    semilla: int | None = None,
+    eco: Callable[[str], None] | None = None,
+    fabrica: Fabrica | None = None,
+) -> InformeMutacion:
+    """Evalúa los mutantes del alcance repartidos entre varios worktrees.
+
+    Devuelve el mismo `InformeMutacion` que produciría la campaña en serie
+    sobre el mismo commit: mismos totales y mismas listas en el mismo orden.
+    Solo cambian el reloj y en qué worker cayó cada mutante, que no se cuenta.
+
+    Lanza `ValueError` si el árbol principal tiene cambios sin commitear o si
+    un servicio del alcance declara un venv sin intérprete. En ambos casos, sin
+    haber creado ningún worktree ni tocado ningún fichero.
+    """
+    inicio = time.monotonic()
+    resolver_interpretes(alcance, servicios, raiz)  # R11: revienta aquí o nunca
+
+    mutantes, generados, muestreado = generar_y_muestrear(
+        alcance, raiz, max_mutantes, semilla
+    )
+    fabrica = fabrica or fabrica_de_ejecutores(servicios, raiz_venvs=raiz)
+    efectivo = max(1, min(workers, len(mutantes)))
+    total = len(mutantes)
+
+    cerrojo = threading.Lock()
+    hechos = 0
+
+    def eco_compartido(linea: str) -> None:
+        nonlocal hechos
+        if eco is None:
+            return
+        with cerrojo:
+            hechos += 1
+            indice = hechos
+        eco(renumerar(linea, indice, total))
+
+    def correr(raiz_worker: str, particion: object) -> InformeMutacion:
+        return ejecutar_campania(
+            alcance,
+            EjecutorPytest(raiz=raiz_worker),
+            timeout_s=timeout_s,
+            raiz=raiz_worker,
+            mutantes=particion,  # type: ignore[arg-type]
+            eco=eco_compartido if eco is not None else None,
+            ejecutor_de=lambda fichero: fabrica(fichero, raiz_worker),
+        )
+
+    def informe_final(parciales: list[InformeMutacion]) -> InformeMutacion:
+        return fusionar(
+            alcance,
+            parciales,
+            generados=generados,
+            segundos=time.monotonic() - inicio,
+            muestreado=muestreado,
+            max_mutantes=max_mutantes,
+            semilla=semilla,
+        )
+
+    # R8: con menos de dos mutantes que evaluar, paralelizar solo cuesta. Se
+    # muta in situ, como toda la vida, y no se crea ni un worktree.
+    if efectivo < 2:
+        parciales = [correr(raiz, mutantes)] if mutantes else []
+        return informe_final(parciales)
+
+    if not arbol_limpio(raiz):
+        raise ValueError(
+            "El árbol principal tiene cambios sin commitear y la campaña "
+            "paralela crea sus worktrees desde HEAD: evaluaría un código "
+            "distinto del que ves en disco. Commitea los cambios o lanza la "
+            "campaña con --workers 1."
+        )
+
+    particiones = repartir(mutantes, efectivo)
+    resultados: list[InformeMutacion | None] = [None] * efectivo
+    fallos: list[BaseException] = []
+    evento = threading.Event()
+
+    def trabajo(indice: int, raiz_worker: str) -> None:
+        particion = _ParticionCancelable(particiones[indice], evento)
+        try:
+            resultados[indice] = correr(raiz_worker, particion)
+        except BaseException as error:  # noqa: BLE001  (se relanza en el hilo principal)
+            # Un worker reventado cancela a los demás: seguir gastando minutos
+            # para dar después un informe incompleto sería lo peor de ambos.
+            evento.set()
+            with cerrojo:
+                fallos.append(error)
+
+    with Worktrees(raiz, efectivo, etiqueta=alcance.feature) as rutas:
+        hilos = [
+            threading.Thread(
+                target=trabajo, args=(indice, ruta), name=f"mutacion-{indice}"
+            )
+            for indice, ruta in enumerate(rutas)
+        ]
+        for hilo in hilos:
+            hilo.start()
+        try:
+            for hilo in hilos:
+                hilo.join()
+        except KeyboardInterrupt:
+            # Los workers dejan de coger mutantes; el que tenga una suite en
+            # vuelo la termina o agota su timeout. La limpieza la garantiza el
+            # `with` de Worktrees, pase lo que pase.
+            evento.set()
+            for hilo in hilos:
+                hilo.join()
+            raise
+
+    if fallos:
+        raise fallos[0]
+
+    return informe_final([parcial for parcial in resultados if parcial is not None])

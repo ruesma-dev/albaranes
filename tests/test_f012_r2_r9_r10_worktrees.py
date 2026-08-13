@@ -108,10 +108,9 @@ def test_f012_r10_los_worktrees_se_retiran_al_salir(repo: Path) -> None:
 def test_f012_r10_los_worktrees_se_retiran_con_una_excepcion_en_vuelo(repo: Path) -> None:
     creadas: list[str] = []
 
-    with pytest.raises(RuntimeError, match="campaña rota"):
-        with Worktrees(str(repo), 2) as rutas:
-            creadas = list(rutas)
-            raise RuntimeError("campaña rota")
+    with pytest.raises(RuntimeError, match="campaña rota"), Worktrees(str(repo), 2) as rutas:
+        creadas = list(rutas)
+        raise RuntimeError("campaña rota")
 
     listado = _git(repo, "worktree", "list")
     assert creadas
@@ -123,10 +122,9 @@ def test_f012_r10_los_worktrees_se_retiran_con_una_excepcion_en_vuelo(repo: Path
 def test_f012_r10_los_worktrees_se_retiran_con_ctrl_c(repo: Path) -> None:
     creadas: list[str] = []
 
-    with pytest.raises(KeyboardInterrupt):
-        with Worktrees(str(repo), 1) as rutas:
-            creadas = list(rutas)
-            raise KeyboardInterrupt
+    with pytest.raises(KeyboardInterrupt), Worktrees(str(repo), 1) as rutas:
+        creadas = list(rutas)
+        raise KeyboardInterrupt
 
     assert creadas and not Path(creadas[0]).exists()
     assert Path(creadas[0]).name not in _git(repo, "worktree", "list")
