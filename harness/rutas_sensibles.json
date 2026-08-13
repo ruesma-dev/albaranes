@@ -1,0 +1,32 @@
+{
+  "_descripcion": "Rutas del monorepo cuyo cambio NO lo cubren los tests unitarios: prompts, schemas que rellena la IA, clientes LLM y redes deterministas de valoración. Tocarlas obliga a una pasada completa de evals (specs/F-011-evals-ia).",
+  "_exigencia": "Arranca en 'aviso' (decisión D5 de F-011). Se sube a 'bloqueo' cuando los libros de evals/ground_truth/ tengan casos: hasta entonces la pasada completa no puede dar VERDE porque no hay nada que evaluar.",
+  "verificaciones": [
+    {
+      "nombre": "evals",
+      "comando": "python -m evals.runner --con-llm --feature {feature}",
+      "informe": "progress/evals_{feature}.md",
+      "exigencia": "aviso",
+      "exige_lineas": [
+        "MODO: completa",
+        "FASES: IA1,IA2,IA3,IA4,E2E",
+        "VEREDICTO: VERDE"
+      ],
+      "rutas": [
+        { "patron": "services/albaranes-api/config/prompts/**", "motivo": "prompts YAML de extracción (IA1/IA2)" },
+        { "patron": "services/albaranes-api/config/prompts.yaml", "motivo": "índice de prompts sv2" },
+        { "patron": "services/albaranes-api/config/revision_rules.yaml", "motivo": "reglas de revisión de fase 2" },
+        { "patron": "services/albaranes-api/domain/models/**", "motivo": "schemas Pydantic de extracción" },
+        { "patron": "services/albaranes-api/infrastructure/llm/**", "motivo": "clientes LLM de sv2" },
+        { "patron": "services/albaran-valoracion-api/config/prompts/**", "motivo": "prompt de valoración (IA3)" },
+        { "patron": "services/albaran-valoracion-api/config/prompts.yaml", "motivo": "índice de prompts sv5 (incluye conciliación IA4)" },
+        { "patron": "services/albaran-valoracion-api/domain/models/**", "motivo": "schemas Pydantic de valoración y conciliación" },
+        { "patron": "services/albaran-valoracion-api/infrastructure/llm/**", "motivo": "clientes LLM de sv5" },
+        { "patron": "services/albaran-valoracion-persist/application/services/**", "motivo": "redes deterministas de sv6" },
+        { "patron": "services/albaran-valoracion-persist/domain/models/**", "motivo": "envelope DTO y records finales de sv6" },
+        { "patron": "services/albaran-valoracion-persist/config/unit_registry.yaml", "motivo": "registro de unidades" },
+        { "patron": "services/albaranes-comun/ruesma_comun/llm/**", "motivo": "clientes LLM y json_coercion compartidos" }
+      ]
+    }
+  ]
+}

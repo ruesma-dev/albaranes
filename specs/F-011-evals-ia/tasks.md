@@ -56,7 +56,7 @@ empezar.
       | Verificación: `tests/test_f011_r9_r10_cli.py`,
       `tests/test_f011_r16_exit_codes.py`,
       `tests/test_f011_r18_sin_casos.py`.
-- [ ] T9: `harness/rutas_sensibles.py` (genérico) +
+- [x] T9: `harness/rutas_sensibles.py` (genérico) +
       `harness/rutas_sensibles.json` (declaración de albaranes, exigencia
       `aviso` — D5, sin campo de fases — D2).
       | Verificación: `tests/test_f011_r19_r20_declaracion.py`,
