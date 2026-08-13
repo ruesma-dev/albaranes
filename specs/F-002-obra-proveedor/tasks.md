@@ -52,14 +52,16 @@ ejecutarlo).
       payload roto → contexto como hoy (best-effort).
       | Verificación: pytest sv3 en verde (tests `test_f002_r12_*`).
 
-- [ ] T7: sv2 — `config/settings.py` (bloque SIGRID_* + OBRAS_ACTIVAS_*),
-      puerto `obras_activas_provider.py`, cliente
-      `sigrid_api_obras_client.py` y caché `obras_activas_cache.py` +
-      `tests/` (`conftest.py`, `test_f002_obras_cache.py`): R3 (dentro del
-      TTL, 1 sola llamada), expiración → refresco, error → None y stale si
-      lo hay.
+- [ ] T7: sv2 — `config/settings.py` (bloque SIGRID_* + OBRAS_ACTIVAS_*,
+      incluido `OBRAS_ACTIVAS_COD_MIN`), puerto `obras_activas_provider.py`,
+      cliente `sigrid_api_obras_client.py` (con `max_rows=10000` y el filtro
+      provisional de R1-bis) y caché `obras_activas_cache.py` + `tests/`
+      (`conftest.py`, `test_f002_obras_cache.py`): R3 (dentro del TTL, 1
+      sola llamada), expiración → refresco, error → None y stale si lo hay;
+      R1-bis (se descartan códigos no numéricos, de longitud != 4 y
+      <= cod_min; con cod_min=0 no se descarta ninguno por valor).
       | Verificación: `pytest services/albaranes-api/tests -q` en verde
-      (tests `test_f002_r3_*`).
+      (tests `test_f002_r3_*`, `test_f002_r1bis_*`).
 
 - [ ] T8: sv2 — prompt `albaran_factura_es` en `config/prompts.yaml`
       (placeholder `{obras_activas}` + regla de elección SOLO de la lista +
@@ -97,6 +99,8 @@ ejecutarlo).
       3) albarán con fecha antigua (caso 2023) → motivo
          `fecha_albaran_fuera_de_rango`;
       4) confirmar que `email_received_datetime` se rellena en el merge;
-      5) anotar el nº real de obras devueltas por la query (pregunta P2).
+      5) anotar el nº real de obras devueltas por la query tras el filtro
+         provisional `>0450` (dato operativo para calibrar
+         `OBRAS_ACTIVAS_MAX`; la decisión P2 ya está resuelta).
       | Verificación: MANUAL (humano), resultados pegados en
       `progress/impl_F-002.md`.

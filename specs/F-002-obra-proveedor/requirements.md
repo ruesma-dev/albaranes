@@ -20,6 +20,14 @@ Normativa de referencia: `docs/referencia/dominio_negocio_albaranes.md` §10.1
   *(El orden y formato fijos hacen el prompt determinista: compatible con las
   evals de ground truth de F-011.)*
 
+- **R1-bis.** El proveedor de obras activas debe filtrar la lista con la
+  regla PROVISIONAL confirmada por el humano (2026-08-13): se incluyen SOLO
+  las obras cuyo código sea de **4 dígitos numéricos** Y **mayor que 0450**.
+  El corte numérico debe ser configurable (`OBRAS_ACTIVAS_COD_MIN`, default
+  450) para poder retirarlo (valor 0) cuando negocio defina el criterio real
+  de «obra activa». *(Provisional: NO es la definición de negocio de obra
+  activa; ver decisión D2 en design.md.)*
+
 - **R2.** SI la lista de obras no está disponible (funcionalidad
   deshabilitada, credenciales ausentes, error de sigrid-api o lista vacía),
   ENTONCES el sistema debe construir el prompt de fase 1 con una nota de

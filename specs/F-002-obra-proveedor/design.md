@@ -53,13 +53,18 @@ schema de BBDD: todas las columnas necesarias existen ya
 - `services/albaranes-api/infrastructure/sigrid/sigrid_api_obras_client.py`
   — capa infrastructure. `class SigridApiObrasClient` con
   `__init__(*, base_url, function_key, database, timeout_s=30.0,
-  max_rows=1000)` y `obtener() -> list[ObraActiva] | None`. POST a
-  `/api/sql/read` con la MISMA query de obras que usa sv3
+  max_rows=10000, cod_min=450)` y `obtener() -> list[ObraActiva] | None`.
+  POST a `/api/sql/read` con la MISMA query de obras que usa sv3
   (`SELECT con.cod, obr.res ... FROM obr JOIN con ...`), cabecera
-  `x-functions-key`, httpx con `HTTPTransport(retries=1)`. `max_rows=1000`
-  (límite duro de sigrid-api por petición); si llegan 1000 filas exactas se
-  loguea aviso de posible truncado. Ante error: loguea y devuelve `None`
-  (nunca propaga).
+  `x-functions-key`, httpx con `HTTPTransport(retries=1)`. `max_rows=10000`
+  (configuración actual de sigrid-api por petición, dato corregido por el
+  humano el 2026-08-13); si llegan `max_rows` filas exactas se loguea aviso
+  de posible truncado. **Filtro provisional de «obra activa» (R1-bis)**:
+  tras el fetch se descartan los códigos que no sean 4 dígitos numéricos o
+  cuyo valor numérico sea `<= cod_min` (`OBRAS_ACTIVAS_COD_MIN`, default
+  450; con 0 el corte queda desactivado). El filtro se aplica en Python (no
+  en SQL) para que retirar el corte sea un cambio de configuración, no de
+  query. Ante error: loguea y devuelve `None` (nunca propaga).
 - `services/albaranes-api/infrastructure/sigrid/obras_activas_cache.py` —
   capa infrastructure. `class ObrasActivasCacheTTL(ObrasActivasProvider)`
   con `__init__(provider, *, ttl_s: float, clock=time.monotonic)`. Dentro
@@ -77,7 +82,9 @@ schema de BBDD: todas las columnas necesarias existen ya
   `SIGRID_API_BASE_URL`, `SIGRID_API_FUNCTION_KEY`, `SIGRID_API_DATABASE`
   (opcionales, mismo esquema que sv3), `SIGRID_API_TIMEOUT_S` (30.0),
   `OBRAS_ACTIVAS_ENABLED` (true), `OBRAS_ACTIVAS_TTL_S` (21600 = 6 h),
-  `OBRAS_ACTIVAS_MAX` (300, mismo tope que el grounding). Property
+  `OBRAS_ACTIVAS_MAX` (300, mismo tope que el grounding; SOLO controla el
+  tamaño del prompt) y `OBRAS_ACTIVAS_COD_MIN` (450, corte provisional de
+  «obra activa»; 0 = sin corte). Property
   `sigrid_credentials_present` como en sv3. Si `OBRAS_ACTIVAS_ENABLED=true`
   pero faltan credenciales: WARN en wiring y funcionalidad desactivada (no
   se rompe el arranque — best-effort, igual que sv3).
@@ -258,20 +265,29 @@ el merge con SQL crudo pero NO lee ninguna de estas columnas de revisión
 
 ## Riesgos y decisiones
 
-- **D1** (sv2 → sigrid-api directo): ver sección sv2. Requiere secret nuevo
-  en `ca-sv2-extraccion` y actualización de `azure-apps/albaranes.md`.
-- **D2 — criterio de «obra activa»**: ver Pregunta abierta P1. Provisional:
-  la misma población que ya usa el grounding/resolver (todas las obras
-  `obr JOIN con` con `con.cod` no nulo), capada a `OBRAS_ACTIVAS_MAX`.
+- **D1** (sv2 → sigrid-api directo): ver sección sv2. **ACEPTADA por el
+  humano (2026-08-13).** Requiere secret nuevo en `ca-sv2-extraccion` y
+  actualización de `azure-apps/albaranes.md` (tareas T9/T10).
+- **D2 — criterio de «obra activa» PROVISIONAL (2026-08-13)**: el criterio
+  de negocio queda PENDIENTE de definir. Regla provisional confirmada por el
+  humano para arrancar: solo obras con código de 4 dígitos numéricos y
+  mayor que 0450, implementada como filtro configurable
+  (`OBRAS_ACTIVAS_COD_MIN`, R1-bis). El corte `>0450` se retirará (poniendo
+  el valor a 0 o sustituyéndolo por el filtro real) cuando negocio defina
+  «obra activa». `OBRAS_ACTIVAS_MAX` es independiente: solo controla el
+  tamaño del prompt.
 - **D3** — la red de proveedor con CIF que no casa PROPONE y marca revisión;
   no sobrescribe (lo decide el humano en sv4). Coherente con §10.1.
 - **D4** — la canonicalización por CIF (R8) SÍ sobrescribe
   `proveedor_nombre` (dato determinista del maestro, no una conjetura). El
   literal leído queda en las tablas raw.
 - **D5** — guard de año sin fecha de email: referencia = now(UTC) (R14).
-- **D6** — límite 1.000 filas/petición de sigrid-api: la lista de obras se
-  pide en UNA petición con `max_rows=1000`; con 1000 filas exactas se avisa
-  de truncado. (El `search_obras` de sv3 ya vive con este mismo límite.)
+- **D6** — límite de filas de sigrid-api: dato CORREGIDO por el humano
+  (2026-08-13): la configuración actual de sigrid-api es de **10.000 filas
+  por petición** (no 1.000 como decía `docs/ARCHITECTURE.md`). La lista de
+  obras se pide en UNA petición con `max_rows=10000`; si llegan `max_rows`
+  filas exactas se avisa de posible truncado. `OBRAS_ACTIVAS_MAX` se
+  mantiene únicamente como control del tamaño del prompt.
 - **D7** — `retirar_revision_obra` limpia nota+motivos pero no baja
   `review_required`: puede haber otros motivos vivos y el cierre es del
   revisor.
@@ -296,17 +312,24 @@ Dentro del límite: sv2 solo toca SU prompt y una consulta de solo lectura;
 sv3 solo toca la identificación del documento que ya le pertenece (dueño del
 merge). Nada de esto pertenece a otro servicio ni merece servicio propio.
 
-## Preguntas abiertas (validar el humano antes de implementar)
+## Decisiones tomadas (2026-08-13, respondidas por el humano)
 
-- **P1 — ¿Qué es una obra «activa» en Sigrid?** El código actual
-  (`search_obras`) devuelve TODAS las obras con `con.cod` no nulo, sin
-  filtro de estado. Si existe un criterio de vigencia (columna de estado o
-  fecha en `obr`/`con`), hay que añadirlo a la query de sv2 (y valorar
-  alinear la de sv3). Si no se define, arrancamos con la lista completa
-  capada (D2). Necesito el criterio o el visto bueno al provisional.
-- **P2 — Volumen real de obras**: confirmar cuántas filas devuelve la query
-  (¿<300? ¿>1000?) para calibrar `OBRAS_ACTIVAS_MAX` y el aviso de truncado.
-  Verificación MANUAL del humano contra sigrid-api.
-- **P3 — Umbral de la propuesta de proveedor (R9)**: se reutiliza
-  `HEADER_RESOLVER_MIN_SCORE` (0.5) como umbral de «el nombre contiene un
-  proveedor». ¿Vale, o quiere el humano un umbral propio?
+Ninguna pregunta queda abierta.
+
+- **P1 → resuelta (provisional).** El criterio de negocio de «obra activa»
+  queda pendiente de definir por negocio; mientras tanto rige la regla
+  provisional confirmada: **solo obras con código de 4 dígitos numéricos y
+  mayor que 0450**, implementada como filtro configurable
+  (`OBRAS_ACTIVAS_COD_MIN`, default 450; 0 = sin corte). Ver R1-bis y D2.
+  El corte se retirará cuando negocio defina el criterio real.
+- **P2 → resuelta (corrección de dato).** sigrid-api está configurado a
+  **10.000 filas por petición**, no 1.000. Actualizado D6 y el cliente
+  (`max_rows=10000`). `OBRAS_ACTIVAS_MAX` se mantiene solo como control del
+  tamaño del prompt. (T12 sigue anotando el nº real de obras devueltas,
+  como dato operativo, no como decisión pendiente.)
+- **P3 → resuelta.** Aceptado reutilizar `HEADER_RESOLVER_MIN_SCORE` (0.5)
+  como umbral de la propuesta de proveedor (R9); retocable por
+  configuración si los datos reales lo piden.
+- **D1 → aceptada.** sv2 llama a sigrid-api directamente. La actualización
+  de `azure-apps/albaranes.md` y el secret nuevo de `ca-sv2-extraccion`
+  forman parte de la feature (T9/T10).
