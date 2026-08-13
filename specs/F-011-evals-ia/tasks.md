@@ -25,7 +25,7 @@ empezar.
       | Verificación: `tests/test_f011_r1_r2_r3_conversor.py`,
       `tests/test_f011_r5_determinismo.py`, `tests/test_f011_r6_ausencias.py`
       (libros sintéticos construidos con openpyxl en el propio test).
-- [ ] T4: ejecutar el conversor real sobre los 6 libros y versionar
+- [x] T4: ejecutar el conversor real sobre los 6 libros y versionar
       `evals/fixtures/` (hoy sin casos: estructura + metadatos).
       | Verificación: `python -m evals.conversor` exit 0; `git status`
       muestra solo JSON bajo `evals/fixtures/`; ningún xlsx en el commit.
