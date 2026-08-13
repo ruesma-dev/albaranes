@@ -370,6 +370,26 @@ if [ "$ES_PYTHON" -eq 1 ] && [ -n "$PY" ]; then
     fi
 fi
 
+# --- 7 ter. Puerta de RUTAS SENSIBLES (solo si hay declaración) -------------
+# Hay ficheros cuyo cambio no lo cubre ningún test unitario: un prompt de IA,
+# un schema que la IA rellena, la red determinista que decide un precio. Si el
+# diff de la feature los toca, esta puerta exige la evidencia declarada (en
+# este repositorio, una pasada completa de evals) y, si no está, lo dice.
+#
+# Como en la sección 7 bis: SIN harness/rutas_sensibles.json no se ejecuta ni
+# una línea, y con el fichero roto el arnés cae en KO (no degrada a "sin
+# puerta" en silencio). La puerta NUNCA lanza la verificación: solo lee su
+# informe. Ejecutarla aquí encarecería cada arranque del arnés.
+if [ -f "harness/rutas_sensibles.json" ] && [ "$ES_PYTHON" -eq 1 ] && [ -n "$PY" ]; then
+    SALIDA_SENSIBLES=$($PY -m harness.rutas_sensibles --puerta --base "$RAMA_BASE" 2>&1)
+    CODIGO_SENSIBLES=$?
+    case "$CODIGO_SENSIBLES" in
+        0) ok "$SALIDA_SENSIBLES" ;;
+        3) warn "$SALIDA_SENSIBLES" ;;
+        *) ko "$SALIDA_SENSIBLES" ;;
+    esac
+fi
+
 # --- 8. Marcas de adaptación sin resolver -----------------------------------
 # Un arnés recién instalado y sin adaptar engaña: parece configurado y no lo
 # está. Esto no bloquea, pero lo dice en cada arranque hasta que se resuelva.

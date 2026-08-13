@@ -132,19 +132,6 @@ def _decimal(dato: object | None) -> float | None:
         return None
 
 
-def _si_no(dato: object | None) -> bool | None:
-    if isinstance(dato, bool):
-        return dato
-    if dato is None:
-        return None
-    texto = str(dato).strip().upper()
-    if texto in {"SI", "SÍ", "TRUE", "1"}:
-        return True
-    if texto in {"NO", "FALSE", "0"}:
-        return False
-    return None
-
-
 def _tablas(fixture: dict, nombre: str) -> list[dict]:
     return list(fixture.get("tablas", {}).get(nombre, []))
 
@@ -529,7 +516,7 @@ def evaluar_caso_determinista(
 # --- Subproceso: aquí y solo aquí se importa sv6 ----------------------------
 
 
-def _construir_builder():
+def _construir_builder():  # pragma: no cover - solo corre dentro del subproceso
     """Compone `ValuationBuilder` con las redes reales y el registro de unidades."""
     from application.services.importe_calculator import ImporteCalculator
     from application.services.partida_matcher import PartidaMatcher
@@ -549,7 +536,7 @@ def _construir_builder():
     )
 
 
-def _a_diccionario(registro: object) -> dict:
+def _a_diccionario(registro: object) -> dict:  # pragma: no cover - subproceso
     from dataclasses import asdict, is_dataclass
 
     if is_dataclass(registro):
@@ -557,7 +544,7 @@ def _a_diccionario(registro: object) -> dict:
     return dict(registro)  # pragma: no cover - los records de sv6 son dataclasses
 
 
-def ejecutar_trabajo(trabajo: dict) -> dict:
+def ejecutar_trabajo(trabajo: dict) -> dict:  # pragma: no cover - subproceso
     """Ejecuta el build de cada caso EN SECUENCIA (R17). Requiere sv6 en path."""
     from domain.models.valuation_envelope import ValuationEnvelope
 
@@ -603,7 +590,7 @@ def ejecutar_en_subproceso(
     return json.loads(proceso.stdout)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:  # pragma: no cover - subproceso
     """Punto de entrada del subproceso: stdin → build de sv6 → stdout."""
     del argv
     sys.path.insert(0, str(RAIZ_SV6))

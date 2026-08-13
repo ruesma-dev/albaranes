@@ -137,7 +137,7 @@ def proyectar_ia2(documento: dict, caso_id: str) -> dict[str, list[dict]]:
 # --- Subproceso: aquí y solo aquí se importa sv2 ----------------------------
 
 
-def _especificacion(proveedor: str):
+def _especificacion(proveedor: str):  # pragma: no cover - subproceso
     """`ProviderClientSpec` de sv2 con el cliente real del proveedor."""
     from application.services.albaran_extraction_service import ProviderClientSpec
     from ruesma_comun.llm.claude_messages_client import ClaudeMessagesVisionClient
@@ -159,7 +159,7 @@ def _especificacion(proveedor: str):
     return ProviderClientSpec(provider=proveedor, model_name=modelo, client=cliente)
 
 
-def _adjuntos(ruta: Path) -> list:
+def _adjuntos(ruta: Path) -> list:  # pragma: no cover - subproceso
     """Preprocesa el albarán exactamente como el pipeline de producción."""
     import mimetypes
 
@@ -171,7 +171,7 @@ def _adjuntos(ruta: Path) -> list:
     )
 
 
-def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:
+def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:  # pragma: no cover - subproceso
     """IA1 e IA2 caso a caso, EN SECUENCIA. Requiere sv2 en path."""
     from application.services.albaran_extraction_service import (
         AlbaranExtractionService,
@@ -220,7 +220,7 @@ def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:
     return {"resultados": resultados, "proveedores": proveedores}
 
 
-def ejecutar_en_subproceso(trabajo: dict, interprete: str | None = None) -> dict:
+def ejecutar_en_subproceso(trabajo: dict, interprete: str | None = None) -> dict:  # pragma: no cover - subproceso
     """Lanza este módulo en otro intérprete: sv2 no cabe con sv5 ni con sv6."""
     proceso = subprocess.run(
         [interprete or sys.executable, "-m", "evals.procesos.sv2_extraccion"],
@@ -239,7 +239,7 @@ def ejecutar_en_subproceso(trabajo: dict, interprete: str | None = None) -> dict
     return json.loads(proceso.stdout)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:  # pragma: no cover - subproceso
     """Punto de entrada del subproceso: stdin → IA1 + IA2 → stdout."""
     del argv
     sys.path.insert(0, str(RAIZ_SV2))

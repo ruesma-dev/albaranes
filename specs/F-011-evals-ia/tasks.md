@@ -63,14 +63,14 @@ empezar.
       `tests/test_f011_r21_r22_ausente_o_rota.py`,
       `tests/test_f011_r23_r24_r25_puerta.py` (EjecutorGit falso; sin git
       real), y `python -m harness.rutas_sensibles --validar` exit 0.
-- [ ] T10: sección 7 ter en `harness/init.sh` + bloque C4 ter en
+- [x] T10: sección 7 ter en `harness/init.sh` + bloque C4 ter en
       `CHECKPOINTS.md` + actualización de `evals/README.md` (6º libro,
       dos corridas, criticidad).
       | Verificación: `bash harness/init.sh` imprime la línea de la puerta
       ([OK] N/A con motivo en esta rama, que no toca rutas sensibles);
       borrar temporalmente `rutas_sensibles.json` en el árbol de trabajo y
       comprobar que la sección desaparece (R21), restaurar.
-- [ ] T11: portar a `C:\Users\pgris\PycharmProjects\arnes-base`:
+- [x] T11: portar a `C:\Users\pgris\PycharmProjects\arnes-base`:
       `harness/rutas_sensibles.py`, `harness/rutas_sensibles.ejemplo.json`,
       sección 7 ter de su `init.sh`, párrafo genérico de su `CHECKPOINTS.md`
       y registro en su versionado. Commit local en arnes-base; SIN push.

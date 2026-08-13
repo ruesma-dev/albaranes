@@ -136,6 +136,42 @@ recorre estos puntos **contra ese nivel**.
       cambiadas, mutantes generados y supervivientes, y tiempo de la suite.
 - [ ] Ningún punto de este bloque marcado N/A sin justificación escrita.
 
+## C4 ter — Las verificaciones extra por rutas sensibles están hechas
+
+<!-- ==== GENÉRICO: este bloque se porta tal cual a arnes-base ============ -->
+
+Hay ficheros cuyo cambio no lo cubre ningún test unitario por bien escrito que
+esté. Un repositorio puede declararlos en `harness/rutas_sensibles.json` junto
+con la verificación que exigen. Si no existe esa declaración, este bloque es
+N/A y no hay nada que justificar.
+
+Con declaración presente, y **solo si la puerta de `bash harness/init.sh`
+señaló rutas tocadas** por el diff de la feature:
+
+- [ ] Existe el informe declarado para esta feature (el `informe` de la
+      verificación, con `{feature}` resuelto).
+- [ ] El informe cumple TODAS las líneas que la declaración exige en
+      `exige_lineas` (el reviewer las comprueba leyendo el fichero, no
+      fiándose del resumen del implementer).
+- [ ] El informe es **FRESCO**: su commit pertenece a la rama de la feature y
+      es POSTERIOR al último commit que tocó una ruta sensible. Un informe
+      verde de antes del cambio no demuestra nada; esto no lo automatiza la
+      puerta y es responsabilidad del reviewer.
+- [ ] Si la exigencia declarada es `aviso` y la evidencia falta, el motivo
+      consta por escrito en el informe de review. `aviso` no significa
+      «ignorable»: significa «no bloquea el arnés todavía».
+
+<!-- ==== FIN GENÉRICO ==================================================== -->
+
+En **este** repositorio la verificación declarada es la **pasada completa de
+evals** (`python -m evals.runner --con-llm --feature F-XXX`), que ejecuta las
+cuatro fases de IA más el extremo-a-extremo y deja
+`progress/evals_F-XXX.md`. Las rutas protegidas son los prompts YAML, los
+schemas Pydantic que rellena la IA, los clientes LLM y las redes deterministas
+de sv6. Mientras los libros de `evals/ground_truth/` no tengan casos, esa
+pasada da NO_EVALUABLE: por eso la exigencia arranca en `aviso` (decisión D5
+de F-011) y se sube a `bloqueo` cuando el ground truth esté relleno.
+
 ## C5 — La sesión se cerró bien
 
 - [ ] `tasks.md` de la spec con todas las tareas `[x]` y un commit

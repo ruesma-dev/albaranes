@@ -236,7 +236,7 @@ def proyectar_ia4(conciliaciones: list[dict], envelope: dict) -> list[dict]:
 # --- Subproceso: aquí y solo aquí se importa sv5 ----------------------------
 
 
-def _clientes_reales(proveedor: str):
+def _clientes_reales(proveedor: str):  # pragma: no cover - subproceso
     """Un `ProviderClientSpec` de sv5 con el cliente real del proveedor."""
     from application.services.valuation_extraction_service import ProviderClientSpec
     from ruesma_comun.llm.claude_messages_client import ClaudeMessagesVisionClient
@@ -258,7 +258,7 @@ def _clientes_reales(proveedor: str):
     return ProviderClientSpec(provider=proveedor, model_name=modelo, client=cliente)
 
 
-def _contexto_de_dict(datos: dict):
+def _contexto_de_dict(datos: dict):  # pragma: no cover - subproceso
     """Reconstruye `ContextoValoracion` desde el diccionario del fixture."""
     from domain.models.contexto_linea import ContextoLinea
     from domain.models.valuation_context import (
@@ -317,7 +317,7 @@ def _contexto_de_dict(datos: dict):
     )
 
 
-def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:
+def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:  # pragma: no cover - subproceso
     """IA3 + IA4 reales caso a caso, EN SECUENCIA. Requiere sv5 en path."""
     from application.services.conciliacion_service import ConciliacionService
     from application.services.schema_registry import SchemaRegistry
@@ -376,7 +376,7 @@ def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:
     return {"resultados": resultados, "proveedor": proveedor}
 
 
-def ejecutar_en_subproceso(trabajo: dict, interprete: str | None = None) -> dict:
+def ejecutar_en_subproceso(trabajo: dict, interprete: str | None = None) -> dict:  # pragma: no cover - subproceso
     """Lanza este módulo en otro intérprete: sv5 no cabe con sv2 ni con sv6."""
     proceso = subprocess.run(
         [interprete or sys.executable, "-m", "evals.procesos.sv5_valoracion"],
@@ -395,7 +395,7 @@ def ejecutar_en_subproceso(trabajo: dict, interprete: str | None = None) -> dict
     return json.loads(proceso.stdout)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:  # pragma: no cover - subproceso
     """Punto de entrada del subproceso: stdin → IA3 + IA4 → stdout."""
     del argv
     sys.path.insert(0, str(RAIZ_SV5))
