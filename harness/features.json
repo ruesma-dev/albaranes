@@ -19,7 +19,7 @@
         "El test pasa sin red ni BBDD (solo filesystem y json de la stdlib)",
         "bash harness/init.sh en verde"
       ],
-      "status": "pending",
+      "status": "done",
       "sdd": false,
       "rigor": "estandar",
       "priority": 1,
