@@ -34,6 +34,11 @@ _ETIQUETA_FASES = "FASES:"
 _ETIQUETA_PROVEEDORES = "PROVEEDORES:"
 _ETIQUETA_VEREDICTO = "VEREDICTO:"
 
+_AVISO_SIN_CLASIFICAR = (
+    "Se han tratado como críticos (R8). Clasifícalos en evals/criticidad.json "
+    "para que el informe deje de avisar:"
+)
+
 _NOMBRE_LARGO = {
     "IA1": "IA1 · extracción genérica (sv2)",
     "IA2": "IA2 · contexto por tipología (sv2)",
@@ -118,8 +123,7 @@ def render(pasada: ResultadoPasada, sin_clasificar: list[str] | None = None) -> 
         lineas += [
             "## Campos sin clasificar en evals/criticidad.json",
             "",
-            "Se han tratado como críticos (R8). Clasifícalos para que el "
-            "informe deje de avisar:",
+            _AVISO_SIN_CLASIFICAR,
             "",
             *[f"- `{campo}`" for campo in sin_clasificar],
             "",
