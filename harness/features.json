@@ -36,13 +36,23 @@
       "branch": "feature/F-011-evals-ia"
     },
     {
+      "id": "F-012",
+      "title": "Campaña de mutación en paralelo",
+      "description": "python -m harness.mutacion tarda minutos porque evalúa cada mutante en serie relanzando la suite. Paralelizarla: N workers, cada uno en su git worktree aislado, repartiéndose los mutantes; agregación de resultados en un único progress/mutacion_F-XXX.md idéntico al actual; restauración del árbol garantizada POR WORKER incluso ante excepción o Ctrl-C (la garantía actual, multiplicada); número de workers configurable en harness/rigor.json o parámetro --workers con default sensato (nº de núcleos - 2). La mejora es genérica del arnés: se porta a arnes-base en la misma feature. Criterio de éxito: mismo informe y mismos totales que la campaña en serie sobre la misma feature, en una fracción del tiempo.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 3,
+      "branch": "feature/F-012-mutacion-paralela"
+    },
+    {
       "id": "F-002",
       "title": "Tanda 1 — Identificación de obra y proveedor (G1+G2)",
       "description": "La mayor fuente de albaranes inválidos del feedback (6 de 16). Obras activas de Sigrid inyectadas en el prompt de IA1 (la IA elige SOLO de esa lista) + red determinista en sv3: obra extraída inexistente => sin obra + revisión. Proveedor = razón social del bloque fiscal resuelta por CIF contra Sigrid, nunca la marca del logotipo; si el CIF no casa pero el nombre contiene un proveedor con contrato en la obra => propuesta a revisión. Guard de año: fecha_albaran a más de 1 año de la recepción del email => revisión. Casos de referencia: obra 0937 inventada, MACOTRAN en 4 obras erróneas, GRUPO OTTO HORPRESOL vs HORPRESOL S.L. Toca sv2 (prompt IA1) y sv3 (redes).",
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 3,
+      "priority": 4,
       "branch": "feature/F-002-obra-proveedor"
     },
     {
@@ -52,7 +62,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 4,
+      "priority": 5,
       "branch": "feature/F-003-valorados-match-estricto"
     },
     {
@@ -62,7 +72,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 5,
+      "priority": 6,
       "branch": "feature/F-004-hormigon-fino"
     },
     {
@@ -72,7 +82,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 6,
+      "priority": 7,
       "branch": "feature/F-005-bombeo"
     },
     {
@@ -82,7 +92,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 7,
+      "priority": 8,
       "branch": "feature/F-006-residuos-pago"
     },
     {
@@ -92,7 +102,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 8,
+      "priority": 9,
       "branch": "feature/F-007-partida-alm-selector"
     },
     {
@@ -107,7 +117,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 9,
+      "priority": 10,
       "branch": "feature/F-008-blob-lifecycle"
     },
     {
@@ -123,7 +133,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 10,
+      "priority": 11,
       "branch": "feature/F-009-limpieza-q-emails"
     },
     {
@@ -133,7 +143,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 11,
+      "priority": 12,
       "branch": "feature/F-010-easy-auth-sv4"
     }
   ]

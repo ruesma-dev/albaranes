@@ -10,6 +10,7 @@ coverage.json
 .coverage
 services/*/coverage.json
 infra/*.local.ps1
+.arnes_cache/
 
 # >>> ARNES-BASE: reglas anadidas por el instalador del arnes. >>>
 *.pdf
