@@ -31,9 +31,9 @@ una.
 - `harness/rutas_sensibles.py` — **genérico**: carga y validación de la
   declaración, cotejo del diff (reutiliza `harness/alcance.py` sin su filtro
   de solo-Python) y evaluación de la puerta. CLI `--validar` / `--puerta`.
-- `harness/rutas_sensibles.json` — declaración de este repositorio: 13 rutas
-  (prompts YAML, schemas Pydantic, clientes LLM, redes de sv6, unit registry),
-  exigencia `aviso` (D5).
+- `harness/rutas_sensibles.json` — declaración de este repositorio: 14 rutas
+  (prompts YAML, reglas de revisión de sv2 y sv5, schemas Pydantic, clientes
+  LLM, redes de sv6, unit registry), exigencia `aviso` (D5).
 
 ### Modificado
 
@@ -307,7 +307,7 @@ Puerta, con la declaración real:
 
 ```
 $ .venv/Scripts/python.exe -m harness.rutas_sensibles --validar
-    1 verificación(es), 13 ruta(s) sensible(s) declaradas: evals (aviso)
+    1 verificación(es), 14 ruta(s) sensible(s) declaradas: evals (aviso)
 EXIT=0
 
 $ bash harness/init.sh    (línea de la sección 7 ter)
@@ -329,8 +329,8 @@ declaración se restauró inmediatamente después.)
 ## Cierre: `bash harness/init.sh` en verde (T14)
 
 ```
-185 passed, 3 skipped in 155.65s
-[OK] pytest en verde (con medición de cobertura)
+$ bash harness/init.sh
+19 passed, 3 skipped in 132.08s (0:02:12)
 [OK] servicio comun (services/albaranes-comun): pytest en verde
 [OK] PUERTA COBERTURA: 88.8% de 1254 líneas cambiadas cubiertas (1113/1254, umbral 80%, nivel estandar)
 [OK] PUERTA RUTAS SENSIBLES [evals]: N/A (F-011 no toca ninguna ruta sensible declarada)
@@ -344,10 +344,10 @@ EXIT=0
 
 | Evidencia | Valor |
 |---|---|
-| **Tests ejecutados y resultado** | `169 passed` (suite de `tests/`, la que estrena esta feature: 0 antes, 169 ahora). Con la suite completa que lanza `init.sh` (raíz + servicio `comun`): `185 passed, 3 skipped` |
+| **Tests ejecutados y resultado** | `171 passed` (suite de `tests/`, la que estrena esta feature: 0 antes, 171 ahora — 169 al cerrar la implementación más los 2 del review). Con la suite completa que lanza `init.sh` (raíz + servicio `comun`): `190 passed, 3 skipped` |
 | **Cobertura de las líneas cambiadas** | `PUERTA COBERTURA: 88.8% de 1254 líneas cambiadas cubiertas (1113/1254, umbral 80%, nivel estandar)` → `[OK]` |
 | **Mutantes generados y supervivientes** | 305 generados, 305 evaluados, **172 muertos, 133 supervivientes**, 0 timeouts, 3694,1 s. Índice de mutación 56,4 %. Campaña completa (sin muestreo). Los 133 supervivientes están analizados uno a uno en `progress/mutacion_F-011.md`: ninguna sección se quedó sin completar |
-| **Tiempo de ejecución de la suite** | `169 passed in 16.68s` (`tests/`); `185 passed, 3 skipped in 158.01s` la suite completa de `init.sh` |
+| **Tiempo de ejecución de la suite** | `171 passed in 12.08s` (`tests/`); `190 passed, 3 skipped in 130.25s` la suite completa de `init.sh` |
 
 Lo que queda sin medir por cobertura y por qué: la composición de clientes LLM
 reales y los `ejecutar_trabajo` de sv2 y sv5 llevan `# pragma: no cover` porque
@@ -393,3 +393,119 @@ Un primer intento de campaña quedó interrumpido a mitad y dejó
 `harness/rutas_sensibles.py` mutado en el árbol de trabajo; se restauró con
 `git checkout --` y se relanzó la campaña entera desde cero. La que consta
 arriba es la completa, y al terminar el árbol quedó limpio.
+
+---
+
+# Correcciones del review (2026-08-13)
+
+El reviewer devolvió CHANGES_REQUESTED con **un** motivo bloqueante
+(`progress/review_F-011.md` §1.1): la declaración de rutas sensibles se había
+quedado **una ruta corta** respecto a la spec aprobada. Resuelto por la opción
+(a) del review, que es lo que dice la spec.
+
+## 1. Falta la ruta de las reglas de revisión de sv5
+
+`requirements.md` R19 pide «prompts YAML **y reglas de revisión de sv2 y
+sv5**», y el esquema literal de `design.md` (línea 102) declara
+`services/albaran-valoracion-api/config/revision_rules.yaml`. La
+implementación traía la de sv2 y no la de sv5: 13 rutas donde la spec pide 14.
+No fue una decisión, fue una omisión, y por eso se corrige en vez de
+justificarse.
+
+Añadida a `harness/rutas_sensibles.json`, entre las demás de sv5:
+
+```json
+{ "patron": "services/albaran-valoracion-api/config/revision_rules.yaml",
+  "motivo": "reglas de revisión de sv5" }
+```
+
+```
+$ .venv/Scripts/python.exe -m harness.rutas_sensibles --validar
+    1 verificación(es), 14 ruta(s) sensible(s) declaradas: evals (aviso)
+EXIT=0
+```
+
+El validador exige que cada patrón case con al menos un fichero real, así que
+esa salida confirma también que
+`services/albaran-valoracion-api/config/revision_rules.yaml` existe en el
+árbol y que el patrón no nace muerto.
+
+## 2. Test que fija el CONJUNTO declarado (con su fase RED)
+
+La lección del fallo es que **ningún test miraba qué rutas hay**: los que
+había comprobaban que la declaración fuera sintácticamente sana y que cada
+patrón casara con algo, y una declaración a la que le falta una ruta cumple
+las dos cosas. Dos tests nuevos en `tests/test_f011_r19_r20_declaracion.py`
+cierran ese hueco fijando la lista de los 14 patrones de la spec y exigiendo
+que cada uno traiga su motivo.
+
+**Fase RED**, ejecutada ANTES de añadir la ruta al JSON. El test no solo
+falla: dice exactamente cuál falta.
+
+```
+$ .venv/Scripts/python.exe -m pytest tests/test_f011_r19_r20_declaracion.py \
+      -q --tb=short -k "cubre_las_rutas or explica_por_que"
+FF                                                                       [100%]
+___________ test_f011_r19_la_declaracion_cubre_las_rutas_de_la_spec ___________
+tests\test_f011_r19_r20_declaracion.py:184: in test_f011_r19_la_declaracion_cubre_las_rutas_de_la_spec
+    assert declaradas == RUTAS_DE_LA_SPEC, (
+E   AssertionError: faltan: ['services/albaran-valoracion-api/config/revision_rules.yaml'] · sobran: []
+E   assert {'services/al...ry.yaml', ...} == frozenset({'s...ces/**', ...})
+E     Extra items in the right set:
+E     'services/albaran-valoracion-api/config/revision_rules.yaml'
+________ test_f011_r19_cada_ruta_declarada_explica_por_que_es_sensible ________
+tests\test_f011_r19_r20_declaracion.py:194: in test_f011_r19_cada_ruta_declarada_explica_por_que_es_sensible
+    assert len(verificacion.rutas) == 14
+E   AssertionError: assert 13 == 14
+2 failed, 14 deselected in 0.14s
+```
+
+Tras añadir la ruta, en verde:
+
+```
+$ .venv/Scripts/python.exe -m pytest tests/test_f011_r19_r20_declaracion.py -q
+................                                                         [100%]
+16 passed in 4.83s
+```
+
+A partir de ahora, quitar o añadir una ruta sensible obliga a tocar
+`RUTAS_DE_LA_SPEC` en el test: deja de ser un descuido posible y pasa a ser una
+decisión escrita.
+
+## 3. `bash harness/init.sh` relanzado en solitario
+
+Con el árbol limpio y sin ninguna campaña ni suite corriendo en paralelo (el
+reviewer avisó de que su primer `0.0 %` de cobertura fue un artefacto de dos
+corridas simultáneas pisándose el `coverage.json`):
+
+```
+$ bash harness/init.sh
+190 passed, 3 skipped in 130.25s (0:02:10)
+[OK] pytest en verde (con medición de cobertura)
+19 passed, 3 skipped in 109.35s (0:01:49)
+[OK] servicio comun (services/albaranes-comun): pytest en verde
+[OK] PUERTA COBERTURA: 88.8% de 1254 líneas cambiadas cubiertas (1113/1254, umbral 80%, nivel estandar)
+[OK] PUERTA RUTAS SENSIBLES [evals]: N/A (F-011 no toca ninguna ruta sensible declarada)
+[OK] Rama actual: feature/F-011-evals-ia
+----------------------------------------
+ENTORNO LISTO. Puedes trabajar.
+EXIT=0
+```
+
+Antes de lanzarla se comprobó que no hubiera otra suite en marcha: había una
+corrida ajena de `init.sh` arrancada a las 16:25 y se esperó a que terminara
+en vez de solaparse con ella, que es justo el artefacto que el reviewer
+señaló. La cobertura queda en el mismo 88,8 % que en el cierre anterior: los
+dos ficheros tocados por esta corrección son un JSON y un fichero de tests,
+así que no mueven ni el numerador ni el denominador de líneas de producción.
+
+## 4. Qué NO se ha rehecho, y por qué
+
+- **La campaña de mutación**: el reviewer la exime expresamente (§8). El cambio
+  es una entrada de JSON y dos tests; `harness/rutas_sensibles.json` no es
+  código de producción Python y queda fuera del alcance de mutación. Los
+  totales de la sección «Evidencias» siguen siendo los de la campaña completa.
+- **Las dos decisiones abiertas** de la sección «Desviaciones» (las sintéticas
+  prohibidas que sv6 no descarta y los campos no observables del
+  extremo-a-extremo) siguen siendo del humano y el review confirma que no
+  bloquean.

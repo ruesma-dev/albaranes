@@ -148,3 +148,48 @@ def test_f011_r19_la_declaracion_de_este_repositorio_arranca_en_aviso():
 
     assert verificacion.exigencia == "aviso"
     assert verificacion.informe == "progress/evals_{feature}.md"
+
+
+#: Las 14 rutas que la spec aprobada de F-011 manda declarar (R19 de
+#: `requirements.md` y el esquema literal de `design.md`). Se fija el CONJUNTO,
+#: no solo que la declaración sea sintácticamente sana: la primera versión
+#: implementada se dejó fuera las reglas de revisión de sv5 y ningún test lo
+#: notó, porque una declaración a la que le falta una ruta sigue siendo válida.
+#: Quitar o añadir una ruta es una decisión, y una decisión se escribe aquí.
+RUTAS_DE_LA_SPEC: frozenset[str] = frozenset(
+    {
+        "services/albaranes-api/config/prompts/**",
+        "services/albaranes-api/config/prompts.yaml",
+        "services/albaranes-api/config/revision_rules.yaml",
+        "services/albaranes-api/domain/models/**",
+        "services/albaranes-api/infrastructure/llm/**",
+        "services/albaran-valoracion-api/config/prompts/**",
+        "services/albaran-valoracion-api/config/prompts.yaml",
+        "services/albaran-valoracion-api/config/revision_rules.yaml",
+        "services/albaran-valoracion-api/domain/models/**",
+        "services/albaran-valoracion-api/infrastructure/llm/**",
+        "services/albaran-valoracion-persist/application/services/**",
+        "services/albaran-valoracion-persist/domain/models/**",
+        "services/albaran-valoracion-persist/config/unit_registry.yaml",
+        "services/albaranes-comun/ruesma_comun/llm/**",
+    }
+)
+
+
+def test_f011_r19_la_declaracion_cubre_las_rutas_de_la_spec():
+    """El conjunto declarado es exactamente el de la spec: ni una menos."""
+    verificacion = cargar_declaracion(RUTA_DECLARACION)[0]
+    declaradas = {ruta.patron for ruta in verificacion.rutas}
+
+    assert declaradas == RUTAS_DE_LA_SPEC, (
+        f"faltan: {sorted(RUTAS_DE_LA_SPEC - declaradas)} · "
+        f"sobran: {sorted(declaradas - RUTAS_DE_LA_SPEC)}"
+    )
+
+
+def test_f011_r19_cada_ruta_declarada_explica_por_que_es_sensible():
+    """Sin motivo, el KO de la puerta no le dice nada a quien lo lee."""
+    verificacion = cargar_declaracion(RUTA_DECLARACION)[0]
+
+    assert len(verificacion.rutas) == 14
+    assert all(len(ruta.motivo) > 10 for ruta in verificacion.rutas)

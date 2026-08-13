@@ -20,6 +20,7 @@
         { "patron": "services/albaranes-api/infrastructure/llm/**", "motivo": "clientes LLM de sv2" },
         { "patron": "services/albaran-valoracion-api/config/prompts/**", "motivo": "prompt de valoración (IA3)" },
         { "patron": "services/albaran-valoracion-api/config/prompts.yaml", "motivo": "índice de prompts sv5 (incluye conciliación IA4)" },
+        { "patron": "services/albaran-valoracion-api/config/revision_rules.yaml", "motivo": "reglas de revisión de sv5" },
         { "patron": "services/albaran-valoracion-api/domain/models/**", "motivo": "schemas Pydantic de valoración y conciliación" },
         { "patron": "services/albaran-valoracion-api/infrastructure/llm/**", "motivo": "clientes LLM de sv5" },
         { "patron": "services/albaran-valoracion-persist/application/services/**", "motivo": "redes deterministas de sv6" },
