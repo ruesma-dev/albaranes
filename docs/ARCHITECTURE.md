@@ -119,7 +119,8 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
   solo `workflow_runs`. Cambios a nivel de servidor afectan a otros
   proyectos: prohibidos desde aquí.
 - **Sigrid (ERP)**: SOLO vía `sigrid-api` (function key), SOLO lectura.
-  Máximo 1.000 filas por petición; el balanceador corta a los 230 s.
+  Configurado a 10.000 filas por petición (2026-08-13; el dato de 1.000 de
+  `azure-apps` está desactualizado); el balanceador corta a los 230 s.
 - **Microsoft Graph**: buzón M365 (sv1) y SharePoint (sv3/sv4/sv5) con
   `GRAPH_KEY`. SharePoint es el almacén durable de documentos.
 - **APIs LLM**: Anthropic/OpenAI/Gemini (sv2 y sv5, flags `ENABLE_*`).
