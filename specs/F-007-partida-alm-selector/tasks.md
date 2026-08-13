@@ -3,9 +3,11 @@
 
 Rama: `feature/F-007-partida-alm-selector`. Un commit por tarea
 (`F-007 Tn: ...`). Los tests van junto a su implementación y NO tocan red
-ni BBDD (mocks/fakes). Antes de T1: resolver con el humano las preguntas
-abiertas P1–P3 del design. Al crear `tests/` en sv6/sv4, comprobar que
-`pytest` está disponible en el entorno del arnés (aviso heredado de F-002).
+ni BBDD (mocks/fakes). Las preguntas P1–P3 están RESUELTAS por el humano
+(2026-08-13, ver «Decisiones tomadas» del design; en particular: almacén =
+partida NULL, jamás un literal «ALM» persistido). Al crear `tests/` en
+sv6/sv4, comprobar que `pytest` está disponible en el entorno del arnés
+(aviso heredado de F-002).
 
 - [ ] T1: sv6 — settings nuevos (`ALM_DEFAULT_ENABLED`,
       `FAMILIAS_DESTINADAS` con helper a `set[str]`) + esqueleto
@@ -15,20 +17,22 @@ abiertas P1–P3 del design. Al crear `tests/` en sv6/sv4, comprobar que
       en verde (test de parseo del CSV de familias y defaults).
 
 - [ ] T2: sv6 — `PartidaAction` += `"alm_default"` y rama nueva en
-      `PartidaMatcher.match()` (kwarg `aplicar_alm_por_defecto`, literal
-      ALM como `codigo_partida_final`, match IA conservado, razón
-      `alm_default_suministro_no_destinado`)
+      `PartidaMatcher.match()` (kwarg `aplicar_alm_por_defecto`,
+      `codigo_partida_final=None` — almacén es partida en blanco —, match
+      IA conservado, razón `alm_default_suministro_no_destinado`)
       | Verificación: pytest sv6 en verde (tests `test_f007_r1_*`,
       `_r2_*`, `_r3_*` sobre el matcher puro; R1 cubre la no-regresión del
       ALM impreso y de la partida impresa).
 
 - [ ] T3: sv6 — `ValuationBuilder`: helper de familia
-      (`_es_suministro_no_destinado`), paso del flag a `match()`, fallback
-      «LINEA NUEVA» prefiriendo `partida_result.codigo_partida_final`, y
-      cableado de los settings en `composition.py`
+      (`_es_suministro_no_destinado`), paso del flag a `match()` y
+      cableado de los settings en `composition.py`; test de que el
+      fallback «LINEA NUEVA» conserva `partida_action="alm_default"` (sin
+      tocar el fallback)
       | Verificación: pytest sv6 en verde (tests `test_f007_r4_*`,
       `_r5_*`, `_r6_*`, `_r7_*`; R6 con
-      `resolve_partida_for_complementaria(codigo_partida_base="ALM")`).
+      `resolve_partida_for_complementaria(codigo_partida_base=None)` desde
+      una base alm_default).
 
 - [ ] T4: sv4 — `domain/services/producto_clave.py` (normalizador puro) +
       esqueleto `services/albaranes-front/tests/`
@@ -38,40 +42,50 @@ abiertas P1–P3 del design. Al crear `tests/` en sv6/sv4, comprobar que
 
 - [ ] T5: sv4 — DDL `partida_memoria` en `initialize()` + métodos
       `obtener_partida_memoria` / `upsert_partida_memoria` en
-      `review_repository.py` + setting `ALM_CODIGO_PARTIDA` en sv4
+      `review_repository.py`
       | Verificación: pytest sv4 en verde (test `test_f007_r14_*`: el DDL
       declarado contiene `IF NOT EXISTS` y el PK compuesto). Idempotencia
       real: MANUAL (humano) — arrancar sv4 dos veces contra el PG local y
       comprobar que la segunda no falla
       (`docker compose` local o `solo-front`).
 
-- [ ] T6: sv4 — hooks de ESCRITURA de memoria (best-effort, try/except con
-      log) en `update_line_conciliacion` y en `set_line_conciliacion`
-      (modo `contract_line`): clave desde la descripción de la línea del
-      albarán (fallback descripción salmón), exclusión de vacío y del
-      literal ALM, no-op sin `obra_codigo`
-      | Verificación: pytest sv4 en verde (tests `test_f007_r10_*`,
-      `_r11_*`, `_r12_*` sobre la lógica de decisión con repositorio
-      fake).
+- [ ] T6: sv4 — hooks de ESCRITURA de memoria (helper común
+      `_memorizar_partida`, best-effort, try/except con log) en los CUATRO
+      caminos: (a) `update_line_conciliacion`, (b) `set_line_conciliacion`
+      (modo `contract_line`), (c) `add_conciliacion_for_merge_line`
+      («+ a Sigrid», modo `contract_line`), (d)
+      `add_valuation_lines_from_contrato` («Traer líneas de contrato»).
+      Clave desde la descripción de la línea del albarán (fallback
+      descripción salmón/línea de contrato), exclusión de partida vacía,
+      no-op sin `obra_codigo`
+      | Verificación: pytest sv4 en verde (tests `test_f007_r10_*` con los
+      cuatro caminos, `_r11_*`, `_r12_*` sobre la lógica de decisión con
+      repositorio fake).
 
-- [ ] T7: sv4 — LECTURA de memoria en el detalle del documento: campo
-      `partida_sugerida` en el modelo de conciliación
-      (`review_models.py`), relleno solo cuando la partida efectiva está
-      vacía o es ALM, best-effort
+- [ ] T7: sv4 — LECTURA en el detalle del documento: leer
+      `lv.partida_action` en las queries, campos `partida_sugerida` y
+      `es_almacen` en el modelo de conciliación (`review_models.py`),
+      supresión del fallback a la partida del contrato para líneas en
+      estado almacén (R15) y relleno de la sugerencia solo cuando la
+      partida efectiva está vacía/NULL, best-effort
       | Verificación: pytest sv4 en verde (tests `test_f007_r9_*`: con
       memoria ⇒ sugerencia expuesta; sin obra ⇒ nada; fallo del repo ⇒ el
-      detalle carga igual).
+      detalle carga igual; `test_f007_r15_*`: línea alm_default ⇒
+      `es_almacen=True` y sin partida del contrato resucitada).
 
-- [ ] T8: sv4 — front: `data-partida-sugerida` y `data-descripcion` en el
-      input de partida (`document_detail.html`) + `app.js`: grupo
-      «Candidatas (mismo recurso)» calculado de `#contrato-lines-json`
-      (R8) y sugerencia de memoria preseleccionada con marca visual, sin
-      autoaplicar (R9)
-      | Verificación: MANUAL (humano) — en el pipeline local, abrir un
-      documento de hormigón con contrato de clones: el combo muestra
-      candidatas primero; elegir una partida, guardar, abrir otro albarán
-      del mismo producto y obra: aparece prerrellenada como sugerencia y
-      NO se persiste sin guardar.
+- [ ] T8: sv4 — front: etiqueta «Almacén» (placeholder/solo-lectura, R15),
+      `data-partida-sugerida` y `data-descripcion` en el input de partida
+      (`document_detail.html`) + `app.js`: grupo «Candidatas (mismo
+      recurso)» calculado de `#contrato-lines-json` (R8) y sugerencia de
+      memoria preseleccionada con marca visual, sin autoaplicar (R9)
+      | Verificación: MANUAL (humano) — en el pipeline local: (1) albarán
+      genérico sin partida ⇒ la fila muestra «Almacén», no la partida del
+      contrato; (2) documento de hormigón con contrato de clones: el combo
+      muestra candidatas primero; (3) elegir una partida, guardar, abrir
+      otro albarán del mismo producto y obra: aparece prerrellenada como
+      sugerencia y NO se persiste sin guardar; (4) traer una línea con
+      «Traer líneas de contrato» y otra con «+ a Sigrid» y comprobar en
+      `partida_memoria` que ambas memorizan.
 
 - [ ] T9: docs — `docs/ARCHITECTURE.md` (sv4 dueño de `undo_log` y
       `partida_memoria`; regla ALM por defecto en semántica de dominio) y
@@ -86,6 +100,7 @@ abiertas P1–P3 del design. Al crear `tests/` en sv6/sv4, comprobar que
 
 Verificación E2E adicional (MANUAL, humano, requiere BBDD/pipeline local):
 valorar un albarán genérico SIN partida impresa → la línea sale con
-partida «ALM», `partida_action='alm_default'` en
-`albaran_line_valuations`, y el precio del contrato intacto; con
-`ALM_DEFAULT_ENABLED=false` el mismo albarán sale como hoy.
+`codigo_partida_final` NULL y `partida_action='alm_default'` en
+`albaran_line_valuations`, el precio del contrato intacto, y la vista
+muestra «Almacén»; con `ALM_DEFAULT_ENABLED=false` el mismo albarán sale
+como hoy.

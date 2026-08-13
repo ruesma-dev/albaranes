@@ -63,10 +63,13 @@ No toca schema de BBDD: los datos nuevos viajan dentro de
 ## Ficheros a modificar
 
 1. `services/albaranes-comun/ruesma_comun/contratos/contexto_linea.py`
-   — añadir `"bombeo"` al Literal `TipoFamilia` y dos campos opcionales
+   — añadir `"bombeo"` al Literal `TipoFamilia` y tres campos opcionales
    con description: `horas_bombeo: Optional[float]` (horas de servicio de
-   bombeo declaradas) y `m3_bombeados: Optional[float]` (m³ realmente
-   bombeados si constan). Capa: contrato compartido (domain).
+   bombeo declaradas), `m3_bombeados: Optional[float]` (m³ realmente
+   bombeados si constan) y `rendimiento_m3h_albaran: Optional[float]`
+   (rendimiento en m³/h si el albarán lo imprime — decisión D1: la
+   extracción caza todo dato visible en el papel). Capa: contrato
+   compartido (domain).
 2. `services/albaranes-api/domain/models/tipologia.py` — `Tipologia.BOMBEO
    = "bombeo"`; `texto_contiene_bombeo(texto) -> bool` (palabras «bombeo»,
    «bombeado» NO — ver D2 —, «bomba» con frontera de palabra; regex
@@ -85,8 +88,9 @@ No toca schema de BBDD: los datos nuevos viajan dentro de
    system/task/placeholders (`{prompt_fase_1}`) que
    `albaran_revision_fase2_hormigon`. Contenido mínimo: qué es un albarán
    de servicio de bombeo, `tipo_familia='bombeo'`, `horas_bombeo` en la
-   línea base, `m3_bombeados` si constan, desplazamiento con
-   `rol_linea='desplazamiento'`, prohibido calcular m³ a facturar.
+   línea base, `m3_bombeados` y `rendimiento_m3h_albaran` si constan,
+   desplazamiento con `rol_linea='desplazamiento'`, prohibido calcular
+   m³ a facturar.
 5. `services/albaran-valoracion-api/domain/models/valuation_models.py` —
    campo `rendimiento_minimo_m3h: Optional[float] = Field(default=None,
    description=...)` en `LineValuation` (patrón `contenedor_m3`). Capa:
@@ -128,7 +132,10 @@ No toca schema de BBDD: los datos nuevos viajan dentro de
   `forzar_revision: bool`). Lógica: horas por prioridad R9; rendimiento
   por R10 con regex sobre `contrato_line.descripcion` tipo
   `(\d+(?:[.,]\d+)?)\s*m\s*[3³c]\s*(?:/|por\s+)?\s*h(?:ora)?` (afinable
-  con textos reales, como `_M3_REGEX` de residuos); plausibilidad R12
+  con textos reales, como `_M3_REGEX` de residuos); contraste informativo
+  con `contexto_linea.rendimiento_m3h_albaran` cuando exista (razón
+  `bombeo_rendimiento_albaran_distinto`, sin alterar el cálculo — el
+  mínimo del contrato manda, R10); plausibilidad R12
   (constantes `_RENDIMIENTO_MIN_M3H = 5.0`, `_RENDIMIENTO_MAX_M3H =
   150.0`, `_HORAS_MAX_PLAUSIBLES = 24.0`); faltantes R11. Capa:
   application. Cabecera con la regla de negocio y el caso 10,5 × 20 =
@@ -164,29 +171,30 @@ No toca schema de BBDD: los datos nuevos viajan dentro de
 
 ## Riesgos y decisiones
 
-- **D1 — Fuente del «rendimiento mínimo del contrato» (PREGUNTA ABIERTA
-  para el humano).** Hoy NO existe ninguna fuente estructurada: a sv5
-  solo llegan las líneas de contrato (descripcion, unidad, precio,
-  partida) y el PDF/markdown del contrato; no hay tabla de condiciones.
-  Opciones:
-    - **A (elegida, híbrida)**: la IA lo lee del contrato (línea o PDF)
-      y lo emite estructurado (`rendimiento_minimo_m3h`), y sv6 lo
-      verifica/prefiere deterministamente con regex sobre la descripción
-      de la línea casada; sin verificación determinista → revisión
-      (R10). Es el patrón `contenedor_m3` de residuos y no exige tocar
-      sv3 ni Sigrid.
-    - B: solo regex determinista en sv6 — descartada como única vía: si
-      el rendimiento consta solo en el cuerpo del PDF, no hay dato.
-    - C: traer condiciones estructuradas del contrato desde Sigrid
-      (ampliar el enriquecimiento de sv3 + columna nueva) — descartada
-      aquí: cambio de schema con lectores acoplados y sin evidencia de
-      que Sigrid tenga el dato estructurado; si el humano confirma que
-      existe, es feature aparte.
-    **El humano debe confirmar antes de implementar**: ¿dónde consta el
-    rendimiento mínimo en el contrato real de PUMPING TEAM — descripción
-    de la línea, cláusula del PDF, o en ningún sitio (acuerdo no
-    escrito)? Si no consta en el contrato, la opción A degrada a
-    «siempre revisión» (R11) y habría que decidir C o un dato manual.
+- **D1 — Fuente del «rendimiento mínimo del contrato» — DECISIÓN TOMADA
+  (2026-08-13, humano).** Hoy NO existe fuente estructurada: a sv5 solo
+  llegan las líneas de contrato (descripcion, unidad, precio, partida) y
+  el PDF/markdown del contrato; no hay tabla de condiciones. El humano
+  resolvió con la vía A híbrida y este reparto de responsabilidades:
+    - **Extracción (IA1/IA2, sv2)**: «en las IA1 y 2 deben cazar el
+      rendimiento» — todo dato de horas/m³/rendimiento que aparezca
+      impreso en el ALBARÁN se captura en `contexto_linea`
+      (`horas_bombeo`, `m3_bombeados`, `rendimiento_m3h_albaran`).
+    - **Valoración**: «si hay un mínimo en el contrato se calcula el
+      importe en la valoración» — sv5 lee el rendimiento mínimo del
+      CONTRATO (línea o PDF) y lo emite estructurado
+      (`rendimiento_minimo_m3h`); sv6 lo verifica/prefiere
+      deterministamente con regex sobre la descripción de la línea
+      casada y aplica m³ = horas × rendimiento mínimo (R9/R10). El
+      rendimiento del albarán es metadato de contraste, nunca sustituye
+      al contractual.
+  Alternativas descartadas: B (solo regex determinista en sv6 — si el
+  rendimiento consta solo en el cuerpo del PDF, no hay dato) y C (traer
+  condiciones estructuradas desde Sigrid — cambio de schema con
+  lectores acoplados y sin evidencia de que Sigrid tenga el dato; si
+  algún contrato futuro lo exigiera, sería feature aparte). Si en un
+  contrato concreto no consta el mínimo, aplica R11 (sin transformación
+  + revisión).
 - **D2 — Prioridad bombeo vs hormigón (R3/R4).** La designación
   posicional (`HA-25`...) identifica SUMINISTRO de central y gana sobre
   la señal de bombeo; la palabra «hormig» sola no gana (un albarán de

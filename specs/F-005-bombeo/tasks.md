@@ -3,13 +3,12 @@
 
 Rama: `feature/F-005-bombeo`. Un commit por tarea (`F-005 Tn: ...`).
 Los tests van junto a su implementación y NO tocan red ni BBDD.
-**Bloqueante previo**: la pregunta abierta D1 de design.md (fuente del
-rendimiento mínimo en el contrato real de PUMPING TEAM) debe estar
-respondida por el humano antes de T5.
+La decisión D1 (fuente del rendimiento mínimo) está TOMADA por el humano
+(2026-08-13; ver design.md): no queda ningún bloqueante previo.
 
 - [ ] T1: comun — `ruesma_comun/contratos/contexto_linea.py`:
-      `"bombeo"` en `TipoFamilia` + campos `horas_bombeo` y
-      `m3_bombeados`; test `test_f005_contexto_linea_bombeo.py` en
+      `"bombeo"` en `TipoFamilia` + campos `horas_bombeo`, `m3_bombeados`
+      y `rendimiento_m3h_albaran`; test `test_f005_contexto_linea_bombeo.py` en
       `services/albaranes-comun/tests/`: R1 (construcción con familia
       bombeo y campos nuevos; deserialización de un JSON antiguo sin
       ellos valida con None).
@@ -31,8 +30,9 @@ respondida por el humano antes de T5.
 - [ ] T3: sv2 — prompt `albaran_revision_fase2_bombeo` en
       `config/prompts.yaml` + `tests/test_f005_prompt_fase2_bombeo.py`:
       R5 (la clave existe, y su texto contiene las instrucciones
-      (a)–(e): tipo_familia, horas_bombeo, m3_bombeados, rol
-      desplazamiento, prohibición de calcular m³).
+      (a)–(e): tipo_familia, horas_bombeo, m3_bombeados,
+      rendimiento_m3h_albaran, rol desplazamiento, prohibición de
+      calcular m³).
       | Verificación: pytest sv2 en verde (tests `test_f005_r5_*`).
 
 - [ ] T4: sv5 — `_derivar_tipologia_valoracion` con `'bombeo'` y campo
@@ -44,10 +44,10 @@ respondida por el humano antes de T5.
       | Verificación: `pytest services/albaran-valoracion-api/tests -q`
       en verde (tests `test_f005_r6_*`, `_r7_*`).
 
-- [ ] T5: sv5 — prompt `valuation_bombeo` en `config/prompts.yaml`
-      (requiere D1 respondida) + `tests/test_f005_prompt_bombeo.py`:
-      R8 (la clave existe con `schema: documento_valoracion` y su texto
-      contiene las instrucciones (a)–(g)).
+- [ ] T5: sv5 — prompt `valuation_bombeo` en `config/prompts.yaml` +
+      `tests/test_f005_prompt_bombeo.py`: R8 (la clave existe con
+      `schema: documento_valoracion` y su texto contiene las
+      instrucciones (a)–(g)).
       | Verificación: pytest sv5 en verde (tests `test_f005_r8_*`).
 
 - [ ] T6: sv6 — `rendimiento_minimo_m3h` en
@@ -58,7 +58,9 @@ respondida por el humano antes de T5.
       campo), R9 (10,5 h × 20 m³/h = 210.0 exacto; horas desde
       `horas_bombeo` y, en su defecto, desde cantidad+unidad `time`),
       R10 (regex sobre descripción de contrato; discrepancia IA vs
-      contrato → determinista + revisión; solo-IA → revisión), R11
+      contrato → determinista + revisión; solo-IA → revisión; rendimiento
+      del albarán distinto del efectivo → razón informativa sin alterar
+      el cálculo), R11
       (sin horas / sin rendimiento → None + razón), R12 (rendimiento
       implausible u horas > 24 → calcula + revisión).
       | Verificación: `pytest services/albaran-valoracion-persist/tests
@@ -98,7 +100,8 @@ respondida por el humano antes de T5.
       en el contexto; valoración con cantidad 210 m³ e importe = 210 ×
       precio del contrato; desplazamiento valorado; línea de horas (si
       existe separada) a 0 con `bombeo_horas_embebidas`; los reasons de
-      revisión según la fuente real del rendimiento (D1). Si la
+      revisión según de dónde salga el rendimiento en el contrato real
+      (verificado por regex → línea limpia; solo-IA → revisión, R10). Si la
       selección de contrato fallara (`no_contract`), anotar para el
       follow-up D6 (familia bombeo en `familia_detector` de sv3).
       | Verificación: MANUAL (humano), resultados pegados en

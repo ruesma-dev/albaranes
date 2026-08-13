@@ -25,12 +25,13 @@ sv2, sv3 ni sv5 (ningún prompt ni schema de extracción cambia).
   NO pasan por `match()`: heredan vía
   `resolve_partida_for_complementaria/_synthetic(codigo_partida_base=...)`
   — la herencia de un ALM base sale gratis (R6).
-- **Trampa detectada** en el builder (~línea 964): si el matcher no devuelve
-  ni match ni derivada, el fallback «LINEA NUEVA» crea la derivada
-  `origen="nueva_no_match"` con `codigo_partida =
-  albaran_line.codigo_partida_albaran` — que en el caso ALM-por-defecto es
-  `None` y perdería el ALM. R4 obliga a preferir
-  `partida_result.codigo_partida_final` en ese fallback.
+- Fallback «LINEA NUEVA» del builder (~línea 964): si el matcher no
+  devuelve ni match ni derivada, crea la derivada `origen="nueva_no_match"`
+  con `codigo_partida = albaran_line.codigo_partida_albaran` (que en el
+  caso alm_default es `None`: correcto, almacén = sin partida) y el record
+  final conserva `partida_action=partida_result.partida_action` (~línea
+  1173). Es decir, `alm_default` sobrevive al fallback SIN tocar código;
+  R4 lo fija con test para que nadie lo rompa.
 - `PartidaAction` es un `Literal` en `domain/models/valuation_records.py`;
   la columna `partida_action` de `albaran_line_valuations` es VARCHAR
   (DDL en `infrastructure/database/schema_contribution.py`): añadir el
@@ -68,7 +69,7 @@ sv2, sv3 ni sv5 (ningún prompt ni schema de extracción cambia).
 
 | Familia (`contexto_linea.tipo_familia`) | Política de partida |
 |---|---|
-| `None` u `"otro"` (Genérico / Suministros §9.1) | **ALM por defecto** (R2): no se destina; imputación parcial mensual la hace administración en Sigrid, fuera de este sistema |
+| `None` u `"otro"` (Genérico / Suministros §9.1) | **Almacén por defecto** (R2): no se destina (partida NULL + `partida_action="alm_default"`); imputación parcial mensual la hace administración en Sigrid, fuera de este sistema |
 | `hormigon`, `mortero` | Se destinan; con clones la elección es humana → selector + memoria en sv4 (R8–R10). sv6 no cambia |
 | `combustible`, `alquiler_maquinaria` (indirectos §9.6/§9.7) | SÍ se destinan a la entrada → matching actual sin cambios (R5) |
 | `residuos` | Regla propia §10.6 (partida del recurso del contrato, F-006) → sin cambios (R5) |
@@ -100,16 +101,16 @@ poder corregir la política sin redeploy de código.
               ia_line.contrato_line_id if ia_line is not None else None
           ),
           derived_line=None,
-          codigo_partida_final=self._alm_literal,
+          codigo_partida_final=None,
           reasons=["alm_default_suministro_no_destinado"],
       )
   ```
 
   Con partida impresa (`partida_norm is not None`) el flujo actual sigue
-  intacto (R1). Nota: a diferencia del ALM impreso, aquí
-  `codigo_partida_final` lleva el **literal ALM**, no `None` — ver D2.
+  intacto (R1). `codigo_partida_final` queda `None` — almacén ES no tener
+  código de partida (D2); la marca distinguible es el `partida_action`.
 - `services/albaran-valoracion-persist/application/services/valuation_builder.py`
-  — tres cambios:
+  — dos cambios:
   1. Constructor: dos parámetros nuevos `alm_default_enabled: bool` y
      `familias_destinadas: set[str]` (guardados en `self`).
   2. En el paso «3. Partida matching» (~línea 938): calcular
@@ -120,12 +121,9 @@ poder corregir la política sin redeploy de código.
      `self._familias_destinadas` ⇒ no aplicar (R5). Solo líneas
      `from_albaran` sin `partida_override` ni `ref_linea_base_merge_id`
      (las heredadas no pasan por aquí).
-  3. Fallback «LINEA NUEVA» (~líneas 976–1006): en ambas ramas, el
-     `codigo_partida` de la derivada pasa a ser
-     `partida_result.codigo_partida_final or albaran_line.codigo_partida_albaran`
-     (R4; para el resto de casos es equivalente al actual porque cuando no
-     hay ALM default `codigo_partida_final` ya es la partida del albarán o
-     `None`).
+
+  El fallback «LINEA NUEVA» NO se toca: ya conserva
+  `partida_result.partida_action` en el record (R4 solo añade test).
 - `services/albaran-valoracion-persist/interface_adapters/composition.py`
   — pasar los dos settings nuevos al `ValuationBuilder` (~línea 91).
 
@@ -154,10 +152,14 @@ poder corregir la política sin redeploy de código.
 
 ## sv4 — ficheros a modificar
 
-- `services/albaranes-front/config/settings.py` — campo
-  `alm_codigo_partida: str = Field("ALM", alias="ALM_CODIGO_PARTIDA")`
-  (mismo alias y default que sv6) para reconocer el literal ALM en R9/R10.
 - `services/albaranes-front/infrastructure/database/review_repository.py`:
+  - **Estado «almacén» visible (R15)**: las queries del detalle que hoy
+    leen `lv.codigo_partida_final` pasan a leer también
+    `lv.partida_action`; cuando `partida_action ∈ {'alm_default',
+    'alm_new_line_created'}` la línea NO aplica el fallback actual «si
+    `codigo_partida_final` es NULL, usa la partida de la línea de contrato
+    casada» (~línea 1658) y el modelo de vista marca la línea como
+    almacén.
   - `initialize()`: DDL nuevo (ver sección SQL) junto al de `undo_log`.
   - Métodos nuevos:
     - `obtener_partida_memoria(*, obra_codigo: str, claves: list[str])
@@ -167,32 +169,55 @@ poder corregir la política sin redeploy de código.
       codigo_partida: str, contrato_codigo: str | None,
       updated_by: str | None) -> None` — `INSERT ... ON CONFLICT
       (obra_codigo, producto_clave) DO UPDATE`.
-  - Hook R10 en `update_line_conciliacion` (~línea 1567): tras el commit
-    del guardado, si `new_codigo_partida` no es vacío, difiere de
-    `cur_codigo_partida` y no es el literal ALM ⇒ upsert best-effort
-    (try/except con log, R11). La clave sale de la descripción de la línea
-    del ALBARÁN (`albaran_lines_merge.descripcion` vía `lv.merge_line_id`;
-    si la línea salmón no tiene `merge_line_id` — sintéticas, manuales —
-    se usa la descripción de la propia salmón como fallback; sin ninguna ⇒
-    no-op R12). `obra_codigo` con un SELECT a `albaran_documents_merge`.
-  - Mismo hook en `set_line_conciliacion` (modo `contract_line`): la
-    partida memorizada es la de la línea de contrato elegida.
+  - Hooks R10 de ESCRITURA de memoria, best-effort (try/except con log,
+    R11), en los CUATRO caminos por los que un humano destina una partida
+    (decisión P2 confirmada — los cuatro llaman al MISMO helper privado
+    `_memorizar_partida(session, document_id, merge_line_id,
+    descripcion_fallback, codigo_partida, updated_by)`):
+    - (a) `update_line_conciliacion` (~línea 1567): si
+      `new_codigo_partida` no es vacío y difiere de `cur_codigo_partida`.
+    - (b) `set_line_conciliacion` (modo `contract_line`): la partida de la
+      línea de contrato elegida.
+    - (c) `add_conciliacion_for_merge_line` (modo `contract_line`, botón
+      «+ a Sigrid», endpoint
+      `POST /api/documents/{id}/lines/by-merge/{merge_line_id}/conciliacion`):
+      la partida de la línea de contrato elegida, clave desde la línea del
+      albarán (`merge_line_id`).
+    - (d) `add_valuation_lines_from_contrato` («Traer líneas de contrato»,
+      endpoint `POST /api/documents/{id}/lines/from-contrato`): por cada
+      línea creada con partida, clave desde la descripción de la línea de
+      contrato (no hay línea de albarán).
+    Regla de clave común: descripción de la línea del ALBARÁN
+    (`albaran_lines_merge.descripcion` vía `merge_line_id`) y, si la línea
+    salmón no tiene `merge_line_id` (sintéticas, manuales, from-contrato),
+    la descripción de la propia salmón/línea de contrato como fallback;
+    sin ninguna ⇒ no-op (R12). No se memorizan partidas vacías (el estado
+    almacén no se memoriza: es la ausencia de elección). `obra_codigo` con
+    un SELECT a `albaran_documents_merge`.
   - Lectura R9: en la construcción del detalle (donde se montan las líneas
     de conciliación con `codigo_partida`/`descripcion_partida`), recolectar
     las `producto_clave` de las líneas, una llamada a
     `obtener_partida_memoria` y rellenar el campo nuevo del modelo de
-    vista SOLO cuando la partida efectiva de la línea está vacía o es el
-    literal ALM. Best-effort (R11).
-- `services/albaranes-front/domain/models/review_models.py` — campo
-  `partida_sugerida: str | None = None` en el modelo de conciliación que
-  consume la plantilla (el que hoy lleva `codigo_partida`,
-  `descripcion_partida`, `agree_partida`).
-- `services/albaranes-front/templates/document_detail.html` — en el input
-  `.js-partida-combo` (~línea 562): atributos
-  `data-partida-sugerida="{{ c.partida_sugerida or '' }}"` y
-  `data-descripcion="{{ c.descripcion or '' }}"` (esta última para calcular
-  candidatas en cliente). Sin bloques nuevos de plantilla: `#contrato-lines-json`
-  y `#partidas-json` ya existen.
+    vista SOLO cuando la partida efectiva de la línea está vacía/NULL
+    (incluido el estado almacén). Best-effort (R11).
+- `services/albaranes-front/domain/models/review_models.py` — campos
+  nuevos en el modelo de conciliación que consume la plantilla (el que hoy
+  lleva `codigo_partida`, `descripcion_partida`, `agree_partida`):
+  `partida_sugerida: str | None = None` y
+  `es_almacen: bool = False` (derivado del `partida_action`, R15).
+- `services/albaranes-front/templates/document_detail.html`:
+  - Input `.js-partida-combo` (~línea 562): atributos
+    `data-partida-sugerida="{{ c.partida_sugerida or '' }}"` y
+    `data-descripcion="{{ c.descripcion or '' }}"` (esta última para
+    calcular candidatas en cliente).
+  - Columna partida (R15): cuando `c.es_almacen` y el campo está vacío,
+    mostrar la etiqueta «Almacén» (placeholder del input en filas
+    editables — el VALUE sigue vacío para que guardar sin tocar no
+    persista nada —, texto plano en filas de solo lectura, con tooltip
+    «Suministro sin destinar: se imputa a almacén; en Sigrid la partida va
+    en blanco»).
+  Sin bloques nuevos de plantilla: `#contrato-lines-json` y
+  `#partidas-json` ya existen.
 - `services/albaranes-front/static/app.js` — en `wirePartidaCombos()` y el
   render del combo (~640–830):
   1. **Candidatas (R8)**: al abrir el combo de una fila, normalizar
@@ -200,12 +225,12 @@ poder corregir la política sin redeploy de código.
      las líneas con la misma descripción normalizada; si sus `part`
      distintos son ≥ 2, render de un grupo «Candidatas (mismo recurso)»
      encima de la lista general de partidas.
-  2. **Sugerencia (R9)**: si el input está vacío o vale el literal ALM y
-     `data-partida-sugerida` no está vacío, preseleccionar esa opción en
-     el combo con marca visual «memoria» (p. ej. sufijo «· usada antes en
-     esta obra»). NUNCA se escribe en el input sin interacción: solo al
-     elegirla el usuario (y el guardado sigue siendo el botón Guardar de
-     la fila).
+  2. **Sugerencia (R9)**: si el input está vacío (incluidas las líneas en
+     estado almacén, cuyo value es vacío) y `data-partida-sugerida` no
+     está vacío, preseleccionar esa opción en el combo con marca visual
+     «memoria» (p. ej. sufijo «· usada antes en esta obra»). NUNCA se
+     escribe en el input sin interacción: solo al elegirla el usuario (y
+     el guardado sigue siendo el botón Guardar de la fila).
 
 ## Ficheros que NO se tocan (colindantes que tientan)
 
@@ -245,23 +270,35 @@ El PK compuesto ya indexa las lecturas por obra.)
 
 ## Riesgos y decisiones
 
-- **D1 — Distinguir suministro de indirecto por `tipo_familia`.** El código
-  no tiene hoy ningún campo «naturaleza del contrato»; la única señal
-  disponible sin tocar sv2/sv5 es `contexto_linea.tipo_familia`.
-  Alternativas descartadas: (a) naturaleza desde Sigrid — el dato no está
-  en `albaran_contratos_merge` ni en la query de contratos, exigiría tocar
-  sv3 y sigrid-api; (b) lista de proveedores — frágil y de mantenimiento
-  manual. Ver Pregunta abierta P1.
-- **D2 — `codigo_partida_final = "ALM"` (literal), no `None`.** El ALM
-  impreso hoy resuelve a `None` + derivada `alm_acopio`. Para el ALM por
-  defecto se usa el literal explícito porque: (i) `None` es indistinguible
-  de «sin partida» y el front lo enmascara (el detalle hace fallback a la
-  partida de la línea de contrato casada cuando `codigo_partida_final` es
-  NULL — `review_repository.py:1658` — con lo que el ALM ni se vería);
-  (ii) el revisor debe VER «ALM» y poder cambiarla con el selector; (iii)
-  §10.2 admite explícitamente ALM como valor de partida («o ALM/None»).
-  Alternativa descartada: replicar la derivada `alm_acopio` — perdería el
-  `matched_contrato_line_id` y con él el precio del contrato (rompería R3).
+- **D1 — Distinguir suministro de indirecto por `tipo_familia`**
+  (confirmada por el humano, 2026-08-13). El código no tiene hoy ningún
+  campo «naturaleza del contrato»; la única señal disponible sin tocar
+  sv2/sv5 es `contexto_linea.tipo_familia`. Suministro no destinado =
+  `tipo_familia` nulo u `"otro"`; familias destinadas configurables
+  (`FAMILIAS_DESTINADAS`). Alternativas descartadas: (a) naturaleza desde
+  Sigrid — el dato no está en `albaran_contratos_merge` ni en la query de
+  contratos, exigiría tocar sv3 y sigrid-api; (b) lista de proveedores —
+  frágil y de mantenimiento manual.
+- **D2 — ALM no es un código de partida: `codigo_partida_final = NULL` +
+  `partida_action` como marca** (aclaración semántica del humano,
+  2026-08-13: «ir a ALM» y «no tener código de partida» son lo mismo; al
+  escribir en Sigrid la partida va EN BLANCO; la app muestra «partida
+  asignada: Almacén»). Consecuencias de diseño: (i) NO se persiste ningún
+  literal «ALM» en `codigo_partida_final` — ni aquí ni, en el futuro,
+  hacia Sigrid (coordinar con F-013, registro en Sigrid: una línea con
+  `partida_action` de almacén se registra con partida en blanco); (ii) la
+  marca distinguible es `partida_action="alm_default"` (y el ya existente
+  `alm_new_line_created` para el ALM impreso), que sv4 pasa a leer para
+  pintar «Almacén» (R15); (iii) hay que DESACTIVAR para esas líneas el
+  fallback del detalle que resucita la partida de la línea de contrato
+  casada cuando `codigo_partida_final` es NULL
+  (`review_repository.py:1658`) — sin eso el almacén ni se vería.
+  Alternativas descartadas: persistir el literal «ALM» (inventa un código
+  de partida que no existe en Sigrid y obligaría a F-013 a des-traducirlo);
+  replicar la derivada `alm_acopio` del ALM impreso (perdería el
+  `matched_contrato_line_id` y con él el precio del contrato, rompería
+  R3). El literal `ALM_CODIGO_PARTIDA` queda solo para RECONOCER el papel
+  impreso (R1).
 - **D3 — `partida_memoria` la crea sv4.** ARCHITECTURE dice «sv3 dueño del
   schema; sv4 solo ALTERs», pero sv4 ya es dueño de `undo_log` (misma
   naturaleza: estado privado del front de revisión, ningún otro lector).
@@ -285,7 +322,7 @@ El PK compuesto ya indexa las lecturas por obra.)
   decisión automática sin revisión, contra la regla de negocio.
 - **Riesgo — cambio de comportamiento visible.** Albaranes genéricos sin
   partida impresa que hoy salen `existing_matched` con la partida (quizá
-  arbitraria) del match de IA pasarán a mostrar «ALM». Es exactamente lo
+  arbitraria) del match de IA pasarán a mostrar «Almacén». Es exactamente lo
   que pide negocio, pero cambia lo que ve el revisor: el kill-switch R7
   permite volver atrás sin redeploy de código (variable de entorno).
 - **Riesgo — crear `tests/` en sv6 y sv4** activa la sección de tests de
@@ -296,39 +333,39 @@ El PK compuesto ya indexa las lecturas por obra.)
   optimista, ARCHITECTURE §5): la memoria es last-writer-wins a
   propósito; no se «arregla» aquí.
 
-## Preguntas abiertas (validar el humano antes de implementar)
+## Decisiones tomadas (2026-08-13, respuestas del humano)
 
-- **P1 — ¿Qué es exactamente «suministro» a efectos de ALM?** Propuesta
-  (columna 1 de la tabla de políticas): `tipo_familia` nulo u `"otro"`.
-  Opciones alternativas: (a) incluir también `hormigon`/`mortero` cuando el
-  recurso NO tiene clones (¿hormigón sin partida impresa y una sola partida
-  → esa partida o ALM?); (b) decidir por naturaleza del contrato Sigrid
-  (exige tocar sv3 y la query de contratos: fuera del alcance propuesto).
-  La spec asume la propuesta; si el humano prefiere (a) o (b), el design
-  cambia.
-- **P2 — ¿Memorizar también la elección hecha vía «Traer líneas de
-  contrato» y el «+ a Sigrid»?** La spec cubre los dos caminos de guardado
-  de línea existentes (edición de partida y selección de línea de
-  contrato). Ampliar a los flujos de creación es trivial pero suma
-  superficie; se deja fuera salvo que el humano lo pida.
-- **P3 — Retención de `partida_memoria`.** Sin límite ni caducidad en esta
-  feature (una fila por obra+producto, volumen ínfimo). ¿Correcto?
+- **P1 — Qué es «suministro» a efectos de ALM: CONFIRMADA la propuesta**
+  (`tipo_familia` nulo u `"otro"`; familias destinadas configurables), con
+  la aclaración semántica incorporada en D2: ALM no es un código de
+  partida real — almacén = partida en blanco; en Sigrid la partida va EN
+  BLANCO y la app muestra «Almacén».
+- **P2 — Memorizar también «Traer líneas de contrato» y «+ a Sigrid»:
+  SÍ.** Los cuatro caminos de destino alimentan la memoria con el mismo
+  upsert (ver hooks (a)–(d) en «sv4 — ficheros a modificar» y R10).
+- **P3 — Retención de `partida_memoria`: CONFIRMADA** sin límite ni
+  caducidad (una fila por obra+producto, last-writer-wins, solo
+  prerrellena UI).
 
 ## Límite de microservicio
 
-- La **imputación parcial mensual** del almacén (repartir ALM entre
+- La **imputación parcial mensual** del almacén (repartir el almacén entre
   partidas a fin de mes) es un proceso de administración EN SIGRID: no se
   implementa aquí ni en el futuro consumidor de `q-feedback`. Esta feature
-  solo deja la partida en ALM y audita la decisión.
-- La escritura del albarán aprobado en Sigrid (donde `codigo_partida_final`
-  acabará viajando) sigue siendo del futuro servicio de entrada al ERP
-  (`q-feedback`); nada que hacer aquí.
+  solo deja la línea en estado almacén y audita la decisión.
+- La escritura del albarán aprobado en Sigrid es de **F-013** («Registro
+  del albarán aprobado en Sigrid», ya en el backlog): esta feature le fija
+  el contrato semántico — una línea con `partida_action` de almacén
+  (`alm_default` / `alm_new_line_created`) se registra con la **partida EN
+  BLANCO** (nunca un literal «ALM»). Anotar esa regla en la spec de F-013
+  cuando se escriba; aquí no se implementa nada de ese registro.
 
 ## Actualización de documentación (mismo trabajo)
 
 - `docs/ARCHITECTURE.md`: sv4 dueño de `undo_log` **y** `partida_memoria`
-  (acceso a datos), y nota en semántica de dominio: suministros → ALM por
-  defecto con `partida_action="alm_default"`.
+  (acceso a datos), y nota en semántica de dominio: suministros → almacén
+  por defecto (`partida_action="alm_default"`, partida NULL; en Sigrid irá
+  en blanco — regla que hereda F-013).
 - `docs/referencia/dominio_negocio_albaranes.md` §10.8: pasar las dos
   marcas 🔶 a ✅ al cerrar la feature (lo valida el reviewer).
 - `azure-apps/albaranes.md`: solo si el humano considera la tabla nueva

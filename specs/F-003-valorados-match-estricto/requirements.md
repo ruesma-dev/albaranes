@@ -32,16 +32,21 @@ precio_neto`) como fallback de compatibilidad.
 - **R2.** El schema de extracción de sv2 (`domain/models/albaran_models.py`)
   debe ganar: `LineaAlbaran.importe` (float opcional, importe de línea
   leído), `LineaAlbaran.descuentos` (lista opcional de porcentajes, en el
-  orden de las columnas del documento) y `CabeceraAlbaran.importe_total`
-  (float opcional: total del albarán SIN IVA — base imponible si el
-  documento la distingue; si el único total impreso incluye IVA, null).
-  `descuento` (existente) lo rellena la IA solo cuando hay UN único
-  descuento; con varios lo deja null (lo deriva sv3, R3).
+  orden de las columnas del documento), `CabeceraAlbaran.importe_total`
+  (float opcional: total del albarán transcrito — la base imponible si el
+  documento la distingue; si el único total impreso incluye IVA, se
+  transcribe ESE total) y `CabeceraAlbaran.importe_total_incluye_iva` (bool
+  opcional: false si el total transcrito es base sin IVA, true si incluye
+  IVA, null si no hay total). `descuento` (existente) lo rellena la IA solo
+  cuando hay UN único descuento; con varios lo deja null (lo deriva sv3,
+  R3). *(Decisión del humano 2026-08-13: el total con IVA se transcribe y
+  se marca, no se descarta.)*
 
 - **R3.** CUANDO sv3 persiste una extracción (raw y merge), el sistema debe
   guardar los campos nuevos en columnas propias (`importe` y
   `descuentos_json` en `albaran_lines`/`albaran_lines_merge`;
-  `importe_total` en `albaran_documents`/`albaran_documents_merge`, DDL
+  `importe_total` e `importe_total_incluye_iva` en
+  `albaran_documents`/`albaran_documents_merge`, DDL
   idempotente `ADD COLUMN IF NOT EXISTS`); y SI una línea trae `descuentos`
   con más de un valor y `descuento` nulo, ENTONCES sv3 debe derivar de forma
   DETERMINISTA el descuento efectivo en cascada
@@ -52,8 +57,9 @@ precio_neto`) como fallback de compatibilidad.
   exponer por línea `importe_leido` (transcrito, null si el documento no lo
   imprime) además del `importe_albaran` efectivo (el leído si existe; si no,
   la derivación actual `cantidad × precio_neto` como fallback), y debe
-  incluir `importe_total_albaran` en el `meta` del envelope (misma vía que
-  `fecha_albaran`). SI el documento es anterior a esta feature (columnas
+  incluir `importe_total_albaran` e `importe_total_incluye_iva` en el
+  `meta` del envelope (misma vía que `fecha_albaran`). SI el documento es
+  anterior a esta feature (columnas
   NULL) o el sobre es antiguo, ENTONCES todo debe comportarse exactamente
   como hoy (campos null → guards no-op).
 
@@ -65,8 +71,9 @@ precio_neto`) como fallback de compatibilidad.
   `descuento_albaran_no_aplicado_a_precio_contrato` en `review_reasons`.
   CUANDO el precio procede del albarán (`albaran_declared` /
   `albaran_calculated`), la fórmula actual con descuento se mantiene
-  (regresión). *(Las sintéticas M1–M7 mantienen la herencia del descuento
-  del padre salvo que el humano decida lo contrario — pregunta abierta P1.)*
+  (regresión). *(Decisión del humano 2026-08-13: las sintéticas M1–M7
+  MANTIENEN la herencia del descuento del padre; este requisito se limita a
+  líneas `from_albaran`.)*
 
 ## G4 — Guard aritmético
 
@@ -81,20 +88,29 @@ precio_neto`) como fallback de compatibilidad.
   1,5877 e importe leído 191,40 → se persiste 191,40 con
   `importe_source='declared_albaran'`, nunca 23.073,60.)*
 
-- **R7.** CUANDO el `meta` del envelope trae `importe_total_albaran`, el
-  sistema (sv6) debe comparar la suma de los importes finales de las líneas
-  `from_albaran` (las sintéticas NO suman: no están impresas) con ese total;
-  SI difieren más de `IMPORTE_TOLERANCE_PCT`, ENTONCES la cabecera de la
-  valoración debe quedar `review_required = true` con motivo
-  `guard_aritmetico_total:<suma>!=<total>`. SI `importe_total_albaran` es
-  null, el guard no actúa.
+- **R7.** CUANDO el `meta` del envelope trae `importe_total_albaran` con
+  `importe_total_incluye_iva = false`, el sistema (sv6) debe comparar la
+  suma de los importes finales de las líneas `from_albaran` (las sintéticas
+  NO suman: no están impresas) con ese total; SI difieren más de
+  `IMPORTE_TOLERANCE_PCT`, ENTONCES la cabecera de la valoración debe
+  quedar `review_required = true` con motivo
+  `guard_aritmetico_total:<suma>!=<total>`. CUANDO el total transcrito
+  incluye IVA (`importe_total_incluye_iva = true`, o desconocido con total
+  presente), el sistema debe dejar SOLO el aviso de auditoría
+  `guard_aritmetico_total_con_iva:<suma>!=<total>` si la suma no cuadra,
+  SIN forzar revisión (los importes de línea son base imponible: el
+  descuadre con un total con IVA es esperado). SI `importe_total_albaran`
+  es null, el guard no actúa.
 
 - **R8.** CUANDO el documento tiene exactamente UNA línea `from_albaran`,
-  `importe_total_albaran` presente y la línea SIN `importe_leido`, el
-  sistema debe usar el total como importe leído efectivo de esa línea, con
-  motivo `importe_desde_total_documento`. *(Caso ORE OIL: una línea →
-  importe = total.)* SI la línea única SÍ trae importe leído y difiere del
-  total más allá de la tolerancia, aplica R7.
+  `importe_total_albaran` presente con `importe_total_incluye_iva = false`
+  y la línea SIN `importe_leido`, el sistema debe usar el total como
+  importe leído efectivo de esa línea, con motivo
+  `importe_desde_total_documento`. *(Caso ORE OIL: una línea → importe =
+  total.)* SI el total transcrito incluye IVA, ENTONCES no se inyecta nada
+  (los importes de línea son base; queda solo el aviso de R7). SI la línea
+  única SÍ trae importe leído y difiere del total más allá de la
+  tolerancia, aplica R7.
 
 ## G5 — Matching estricto
 

@@ -6,7 +6,8 @@ estudio del código demuestra que G3 no es implementable sin sv2 y sv3 (ver
 «Contexto del código real» y decisión D1): el alcance propuesto es **sv2**
 (prompt IA1 + schema), **sv3** (columnas nuevas del schema del que es
 dueño), **sv5** (contexto + prompts IA3/IA4) y **sv6** (redes
-deterministas). Lo valida el humano al aprobar esta spec (pregunta P2).
+deterministas). Ampliación CONFIRMADA por el humano (2026-08-13): «sí, hay
+que extraer el importe y persistirlo» (decisión D1).
 
 ## Contexto del código real (leído, no supuesto)
 
@@ -69,7 +70,8 @@ deterministas). Lo valida el humano al aprobar esta spec (pregunta P2).
 - `services/albaranes-api/domain/models/albaran_models.py` —
   `LineaAlbaran` += `importe: Optional[float] = None` y
   `descuentos: Optional[List[float]] = None`; `CabeceraAlbaran` +=
-  `importe_total: Optional[float] = None`. (StrictSchemaModel con
+  `importe_total: Optional[float] = None` e
+  `importe_total_incluye_iva: Optional[bool] = None`. (StrictSchemaModel con
   `extra='forbid'`: campos declarados, sin efecto sobre lo demás. El
   saneador `json_coercion` de sv2 no necesita cambios: extras a None ya es
   su comportamiento.)
@@ -79,8 +81,10 @@ deterministas). Lo valida el humano al aprobar esta spec (pregunta P2).
   por su etiqueta de columna; null si no figura; PROHIBIDO derivar) y
   reescritura de las reglas `precio` / `descuento` / `precio_neto`
   (eliminar la instrucción de calcular `precio_neto`). En «Reglas para la
-  cabecera»: regla `importe_total` (base imponible / total sin IVA; si el
-  único total incluye IVA → null). La fase 2
+  cabecera»: regla `importe_total` (transcribir la base imponible si el
+  documento la distingue, con `importe_total_incluye_iva=false`; si el
+  único total impreso incluye IVA, transcribir ESE total con
+  `importe_total_incluye_iva=true`; sin total → ambos null). La fase 2
   (`albaran_revision_fase2_es`) embebe la fase 1 por placeholder
   `{prompt_fase_1}`: hereda las reglas sin tocarla.
 - `services/albaranes-api/tests/` — `test_f003_schema_extraccion.py` y
@@ -93,18 +97,20 @@ deterministas). Lo valida el humano al aprobar esta spec (pregunta P2).
 
 - `services/albaranes-persistencia/infrastructure/database/orm_models.py` —
   `_LineColumnsMixin` += `importe` (Float) y `descuentos_json` (Text);
-  `_DocumentColumnsMixin` += `importe_total` (Float). Aplican a raw y merge
-  a la vez (mixins compartidos, mismo patrón que el resto).
+  `_DocumentColumnsMixin` += `importe_total` (Float) e
+  `importe_total_incluye_iva` (Boolean). Aplican a raw y merge a la vez
+  (mixins compartidos, mismo patrón que el resto).
 - `services/albaranes-persistencia/infrastructure/database/schema_contribution.py`
   (y/o el DDL idempotente de `sqlalchemy_albaran_repository.
-  _ensure_compatible_schema`, donde viva el ALTER de líneas) — 3 × `ALTER
-  TABLE ... ADD COLUMN IF NOT EXISTS` por tabla afectada (raw + merge).
+  _ensure_compatible_schema`, donde viva el ALTER de líneas) — `ALTER
+  TABLE ... ADD COLUMN IF NOT EXISTS` de las 4 columnas nuevas en sus
+  tablas (raw + merge).
 - `services/albaranes-persistencia/application/services/` — función pura
   nueva `descuento_efectivo(descuentos: list[float]) -> float`
   (`(1 − Π(1 − di/100)) × 100`, redondeo a 4 decimales) en un módulo nuevo
   `descuento_cascada.py`; el servicio de merge/persistencia la aplica
   cuando `descuento` es null y `descuentos` trae > 1 valor (localizar el
-  punto donde hoy se mapea `LineaAlbaran` → ORM y añadir el mapeo de los 3
+  punto donde hoy se mapea `LineaAlbaran` → ORM y añadir el mapeo de los
   campos nuevos + la derivación).
 - `services/albaranes-persistencia/tests/` —
   `test_f003_descuento_cascada.py`, `test_f003_mapeo_campos_leidos.py`.
@@ -114,7 +120,8 @@ deterministas). Lo valida el humano al aprobar esta spec (pregunta P2).
 DDL inline idempotente (convención del repo, sin ficheros `.sql`), en el
 servicio DUEÑO del schema (sv3). Columnas NUEVAS, ningún rename: los
 lectores acoplados no se rompen. Lectores avisados: **sv5** (SQL crudo,
-empieza a leer `importe` e `importe_total` en esta misma feature → orden de
+empieza a leer `importe`, `importe_total` e `importe_total_incluye_iva` en
+esta misma feature → orden de
 despliegue obligatorio sv3 antes que sv5, ver riesgos), sv4 (no lee las
 columnas nuevas; podrá mostrarlas en una feature futura).
 
@@ -126,14 +133,15 @@ columnas nuevas; podrá mostrarlas en una feature futura).
   SELECT de líneas: `importe AS importe_leido` y `COALESCE(importe,
   <derivación actual>) AS importe_albaran` (la derivación
   `cantidad × precio_neto…` queda SOLO como fallback para filas antiguas);
-  SELECT de cabecera: añadir `importe_total`.
+  SELECT de cabecera: añadir `importe_total` e `importe_total_incluye_iva`.
 - `domain/models/valuation_context.py` — el modelo de línea +=
   `importe_leido: Optional[float]`; `ValuationContext` +=
-  `importe_total_albaran: Optional[float]` (junto a `fecha_albaran`).
+  `importe_total_albaran: Optional[float]` e
+  `importe_total_incluye_iva: Optional[bool]` (junto a `fecha_albaran`).
 - `application/pipelines/value_albaran_pipeline.py` — propagar
   `importe_leido` en el dict de `context.lineas_albaran` y
-  `importe_total_albaran` en los dos puntos donde se construye `meta`
-  (mismo tratamiento que `fecha_albaran`).
+  `importe_total_albaran` + `importe_total_incluye_iva` en los dos puntos
+  donde se construye `meta` (mismo tratamiento que `fecha_albaran`).
 - `config/prompts.yaml` —
   - `valuation_es`: ampliar «No cases productos diferentes aunque se
     parezcan» con la regla de atributo sustantivo, los tres casos de
@@ -159,11 +167,17 @@ columnas nuevas; podrá mostrarlas en una feature futura).
     importe_leido, tolerance_pct) -> list[str]` → `[]` si cuadra o no es
     computable; `["guard_aritmetico_linea:<calc>!=<leido>"]` si no cuadra
     (R6).
-  - `verificar_total(*, suma_from_albaran, importe_total, tolerance_pct)
-    -> list[str]` (R7).
-  - `importe_efectivo_linea_unica(*, lineas_albaran, importe_total) ->
-    tuple[merge_line_id, float] | None` — caso ORE OIL (R8): exactamente
-    una línea `from_albaran`, total presente, línea sin `importe_leido`.
+  - `verificar_total(*, suma_from_albaran, importe_total, incluye_iva,
+    tolerance_pct) -> tuple[list[str], bool]` — reasons + si fuerzan
+    revisión (R7): con total base (`incluye_iva=false`) el descuadre exige
+    `review_required`; con total con IVA (o `incluye_iva` desconocido) el
+    descuadre deja solo el aviso `guard_aritmetico_total_con_iva` sin
+    revisión.
+  - `importe_efectivo_linea_unica(*, lineas_albaran, importe_total,
+    incluye_iva) -> tuple[merge_line_id, float] | None` — caso ORE OIL
+    (R8): exactamente una línea `from_albaran`, total BASE
+    (`incluye_iva=false`) presente, línea sin `importe_leido`. Con total
+    con IVA no inyecta nada.
 - `application/services/atributo_sustantivo_guard.py` — capa application,
   puro: `sanear_matches_atributo_sustantivo(*, lineas, albaran_by_id,
   contrato_by_id) -> list[str]` (muta DTOs, devuelve reasons por
@@ -179,7 +193,8 @@ columnas nuevas; podrá mostrarlas en una feature futura).
 
 - `domain/models/valuation_envelope.py` — `AlbaranLineContextDto` +=
   `importe_leido: Optional[float] = None`; `ValuationEnvelopeMeta` +=
-  `importe_total_albaran: Optional[float] = None`.
+  `importe_total_albaran: Optional[float] = None` e
+  `importe_total_incluye_iva: Optional[bool] = None`.
 - `config/settings.py` — `GUARD_ARITMETICO_ENABLED` (true),
   `RED_ATRIBUTO_SUSTANTIVO_ENABLED` (true) (R13).
 - `application/services/valuation_builder.py` —
@@ -198,7 +213,8 @@ columnas nuevas; podrá mostrarlas en una feature futura).
      reasons de cabecera + `review_required`.
   4. Constructor: recibe los dos flags (wiring en
      `interface_adapters/composition.py`).
-  `_build_synthetic_line` NO cambia (herencia de descuento intacta, P1).
+  `_build_synthetic_line` NO cambia (herencia de descuento intacta,
+  decisión P1 confirmada).
 - `interface_adapters/composition.py` — wiring de flags.
 - `services/albaran-valoracion-persist/tests/` — crear (`conftest.py`) +
   `test_f003_guard_aritmetico.py` (caso ×120, ORE OIL, tolerancia, nunca
@@ -232,20 +248,24 @@ columnas nuevas; podrá mostrarlas en una feature futura).
   `cantidad × precio_neto` y el guard aritmético no tendría contra qué
   comparar. Alternativa descartada: implementar solo guards en sv6 sobre el
   importe derivado (tautológico: el derivado siempre «cuadra» con la
-  fórmula que lo creó). Pendiente de validación del humano (P2).
-- **D2 — `importe_total` es el total SIN IVA legible** (base imponible); si
-  el único total impreso incluye IVA → null y el guard R7 no actúa. Evita
-  falsos positivos de revisión por comparar bases con totales con IVA
-  (los precios de línea del pipeline son sin IVA). Confirmar con negocio
-  (P3).
+  fórmula que lo creó). CONFIRMADA por el humano (2026-08-13): «sí, hay que
+  extraer el importe y persistirlo».
+- **D2 — `importe_total` se transcribe SIEMPRE, con marca de IVA**
+  (decisión del humano 2026-08-13, que CAMBIA la propuesta inicial de dejar
+  null los totales con IVA): base imponible si el documento la distingue
+  (`importe_total_incluye_iva=false`); si solo imprime total con IVA, se
+  transcribe ESE total con `importe_total_incluye_iva=true` y el guard R7
+  se degrada a AVISO sin revisión (comparar Σ de bases con un total con
+  IVA daría falsos positivos; los precios de línea del pipeline son sin
+  IVA).
 - **D3 — descuentos múltiples**: transcripción fiel en `descuentos`
   (lista) + efectivo en cascada derivado DETERMINISTA por sv3 en el campo
   `descuento` existente. Aguas abajo (sv5/sv6) nada cambia de forma: un
   solo porcentaje efectivo. La IA jamás combina (R1/R3).
 - **D4 — las sintéticas M1–M7 siguen heredando el descuento del padre**
   (decisión de negocio abr 2026) aunque se valoren a precio de contrato; la
-  regla nueva R5 se limita a líneas `from_albaran`. Contradicción aparente
-  con «el dto no se aplica sobre precio de contrato» → pregunta abierta P1.
+  regla nueva R5 se limita a líneas `from_albaran`. CONFIRMADA por el
+  humano (2026-08-13).
 - **D5 — límites de la red de atributo sustantivo**: solo detecta
   atributos NUMÉRICOS con unidad (0,5 mm, ø12). Modelos/nombres no
   numéricos (ladrillos CETOSA, bolsa de cuñas) los cubren los prompts
@@ -279,17 +299,17 @@ schema de salida, sv3 el schema de BBDD del que es dueño, sv5 su SELECT de
 contexto y sus prompts, sv6 sus redes deterministas de valoración. Ninguna
 responsabilidad nueva cruza fronteras ni merece servicio propio.
 
-## Preguntas abiertas (validar el humano antes de implementar)
+## Decisiones tomadas (2026-08-13, respondidas por el humano)
 
-- **P1 — sintéticas y descuento**: ¿mantienen las M1–M7 la herencia del
-  descuento del padre (decisión abr 2026) aunque se valoren a precio de
-  contrato, o la regla nueva «el dto del albarán no se aplica sobre precio
-  de contrato» las alcanza también? La spec propone MANTENER la herencia
-  (D4) y limitar R5 a `from_albaran`.
-- **P2 — alcance sv2/sv3**: confirmar la ampliación de alcance de D1
-  (features.json decía sv5+sv6). Implica reconstruir 4 imágenes (sv2, sv3,
-  sv5, sv6) y el orden de arranque sv3 → sv5.
-- **P3 — semántica de `importe_total`**: confirmar D2 (sin IVA; si solo hay
-  total con IVA → null). Alternativa: transcribir ambos (base y total) y
-  que el guard pruebe contra los dos; se descartó por añadir dos campos
-  más para un caso que el revisor resuelve igual.
+Ninguna pregunta queda abierta.
+
+- **P1 → resuelta.** Las sintéticas M1–M7 MANTIENEN la herencia del
+  descuento del padre (D4 confirmada); R5 se limita a líneas
+  `from_albaran`.
+- **P2 → resuelta.** Ampliación de alcance a sv2 y sv3 CONFIRMADA: «sí,
+  hay que extraer el importe y persistirlo» (D1). Implica reconstruir 4
+  imágenes (sv2, sv3, sv5, sv6) y el orden de arranque sv3 → sv5.
+- **P3 → resuelta (con cambio sobre la propuesta).** El total con IVA NO
+  se descarta: se transcribe y se marca con `importe_total_incluye_iva`;
+  el guard de total avisa (`guard_aritmetico_total_con_iva`) en vez de
+  exigir cuadre con revisión (D2 reescrita, R2/R7/R8 ajustados).

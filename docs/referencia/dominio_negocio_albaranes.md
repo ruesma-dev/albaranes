@@ -28,6 +28,11 @@
 > - **§10.7 (bombeo)**: el ejemplo «20 m³/h → 5 h = 210 m³» tiene las horas
 >   mal: el caso real son **10,5 h** de bombeo (210/20). La regla es la
 >   misma: m³ a facturar = horas × rendimiento mínimo del contrato.
+> - **§10.6 (residuos)**: la resta de la prioridad 2 está escrita al revés.
+>   La dirección correcta —validada por el humano el 2026-08-13— es
+>   **entregados − retirados**, que es lo que el código implementa
+>   (`residuos_container_calc.py`); la regla «ambos ⇒ solo cuenta RETIRAR»
+>   no deroga esa resta.
 > - **§5.2**: `q-feedback` está **reservada** para el futuro servicio de
 >   entrada al ERP (aprobado en sv4 → alta en Sigrid vía `sql/write`); el
 >   consumidor no está construido y nada externo la consume. `q-emails` es

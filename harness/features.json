@@ -117,7 +117,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 10,
+      "priority": 11,
       "branch": "feature/F-008-blob-lifecycle"
     },
     {
@@ -133,7 +133,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 11,
+      "priority": 12,
       "branch": "feature/F-009-limpieza-q-emails"
     },
     {
@@ -143,8 +143,18 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 12,
+      "priority": 13,
       "branch": "feature/F-010-easy-auth-sv4"
+    },
+    {
+      "id": "F-013",
+      "title": "Registro del albarán aprobado en Sigrid (consumidor de q-feedback)",
+      "description": "Marcada como MUY IMPORTANTE por el humano (2026-08-13). Servicio nuevo del monorepo (la responsabilidad no cabe en ninguno existente; q-feedback está reservada para esto desde el diseño): consume q-feedback y da de alta el albarán valorado y aprobado en Sigrid vía sigrid-api sql/write (única base escribible: ruesma; el guard semántico de sigrid-api existe y la escritura está off por defecto). Excluye las líneas marcadas no_registrar_sigrid (F-006). Diseño pendiente y delicado: qué tablas de Sigrid, MAX(ide)+1 con lock, idempotencia del alta (un albarán aprobado dos veces no puede duplicarse en el ERP), y autorización expresa del humano para activar la escritura. Escribe en el ERP de producción => rigor critico y verificaciones MANUAL obligatorias.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 10,
+      "branch": "feature/F-013-registro-sigrid"
     }
   ]
 }

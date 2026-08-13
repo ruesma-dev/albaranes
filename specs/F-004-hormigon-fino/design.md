@@ -39,8 +39,8 @@ BBDD ni `ruesma_comun`. El schema Pydantic de sv5 NO cambia (R22): no hay
 - Las redes deterministas existentes (`_sinteticas_m1_faltantes`,
   `_sinteticas_codigo_faltantes`, `_sanear_matches_incremento_year`) corren
   en `build()` ANTES de las tres pasadas y filtran por
-  `tipo_familia='hormigon'`: no generan nada para mortero (R12 es fijarlo
-  con test).
+  `tipo_familia='hormigon'`. La red de CÓDIGO se queda así (R12); la red
+  M1 de años se AFLOJA a `{'hormigon', 'mortero'}` (R24, decisión P1).
 - El parser `designacion_hormigon.py` solo reconoce HM/HA/HP: un código
   D-* de mortero no dispara la red de código. Correcto: no se toca.
 
@@ -69,8 +69,9 @@ BBDD ni `ruesma_comun`. El schema Pydantic de sv5 NO cambia (R22): no hay
   rootdir; el venv del servicio debe tener pytest, ver riesgos),
   `test_f004_reapuntado_incrementos.py`, `test_f004_veto_partida.py`,
   `test_f004_veto_mortero.py`, `test_f004_guard_m6m7.py`,
-  `test_f004_regresiones.py` (R5, R8, R12, R22). Helpers de fixture:
-  construcción de `ValuationEnvelope` mínimo en Python puro.
+  `test_f004_consistencia_cero.py` (R23), `test_f004_m1_mortero.py`
+  (R24), `test_f004_regresiones.py` (R5, R8, R12, R22). Helpers de
+  fixture: construcción de `ValuationEnvelope` mínimo en Python puro.
 
 ### Ficheros a modificar
 
@@ -124,6 +125,24 @@ BBDD ni `ruesma_comun`. El schema Pydantic de sv5 NO cambia (R22): no hay
        `codigo_partida=None`, `review_required=True`, reason
        `modifier_partida_not_in_contract:<partida>`. El caso base-ALM
        (heredada None) no pasa por aquí (R8).
+  5. `_build_synthetic_line()` — consistencia a precio cero (R23,
+     decisión P3): tras la reconciliación, si
+     `rol_linea='incremento_consistencia'` y `precio_final is None` →
+     `precio_final=0.0` (importe = cantidad × 0 = 0,
+     `importe_source='calculated'`), SIN añadir
+     `modifier_identified_no_tariff` ni `review_required` por tarifa
+     ausente. Cubre a la vez las sintéticas emitidas por la IA (Forma C
+     vieja) y las de la red de código (su rama consistencia no necesita
+     cambio propio).
+  6. `_sinteticas_m1_faltantes()` — extensión a mortero (R24, decisión
+     P1): el filtro de familia pasa de `== 'hormigon'` a
+     `in ('hormigon', 'mortero')`; para bases mortero, la
+     `descripcion_linea` es «INCREMENTO POR AÑO {año} EN MORTERO» y la
+     búsqueda de tarifa (`_tarifa_incremento_anio`) se hace sobre las
+     líneas de contrato cuya descripción normalizada contenga `MORTERO`
+     (mismo criterio conservador que el matcher, R14); sin tarifa →
+     Forma C como en hormigón. Dedupe y guard de año sin cambios (ya
+     operan por parent y por año).
 - `services/albaran-valoracion-persist/config/settings.py` — flags nuevos
   `VETO_MORTERO_ENABLED` (default `true`) y `M6M7_SENAL_GUARD_ENABLED`
   (default `true`). `MODIFIER_TABLE_MATCH_ENABLED` ya existe.
@@ -149,11 +168,15 @@ BBDD ni `ruesma_comun`. El schema Pydantic de sv5 NO cambia (R22): no hay
        M6.0 (declarado prima) y el anti-duplicado se conservan.
      - M7: mantener condiciones A/B/C y el caso especial con texto
        (cantidad 0 CON texto se emite); añadir la frase normativa
-       «cantidad 0 sin texto → no emitir» (R17).
+       «cantidad 0 sin texto → no emitir» (R17). La Condición B queda
+       confirmada como señal explícita (decisión P2).
+     - M2 (consistencia): sin tarifa se EMITE igualmente con precio null
+       y se indica que sv6 la valorará a precio cero (R23); desaparece la
+       Forma C para consistencia.
      - Paso 0/Paso 7: nota para documentos mixtos (R13): si
        `tipo_familia='mortero'`, NO aplicar la nomenclatura posicional ni
        emitir sintéticas de árido/aditivo/plastificante/fibras/fratasado.
-     - `schema_hint`: actualizar las líneas de M6/M7 a las nuevas
+     - `schema_hint`: actualizar las líneas de M2/M6/M7 a las nuevas
        condiciones.
   2. Nueva clave `valuation_mortero` (R10) — mismo `schema:
      documento_valoracion`. Estructura calcada de `valuation_es` (pasos
@@ -162,19 +185,21 @@ BBDD ni `ruesma_comun`. El schema Pydantic de sv5 NO cambia (R22): no hay
        lleva ARENA.
      - PROHIBIDO emitir: árido (M3), aditivo/plastificante/fibras (M4),
        fratasado (M8).
-     - Admisibles: consistencia SOLO con tarifa real (sin tarifa NO se
-       emite; sin Forma C — P3), cemento especial si aparece en el
-       documento (mismas reglas M9), M5 si el contrato la tarifa (P4),
-       M6/M7 con señal explícita (mismas reglas nuevas que en
-       `valuation_es`). M1 de años queda FUERA salvo que P1 se responda
-       que sí.
+     - Admisibles: incrementos por año M1 (mismas reglas que en
+       `valuation_es`, con descripcion «INCREMENTO POR AÑO {año} EN
+       MORTERO» — R24, decisión P1); consistencia SIEMPRE que la
+       designación la lleve, sin tarifa a precio cero (R23, decisión P3);
+       cemento especial si aparece en el documento (mismas reglas M9);
+       M5 si el contrato la tarifa (decisión P4); M6/M7 con señal
+       explícita (mismas reglas nuevas que en `valuation_es`).
 - `services/albaran-valoracion-api/tests/` (crear) — `conftest.py`,
   `test_f004_tipologia_mortero.py` (R9, R13: derivación pura),
-  `test_f004_prompts_yaml.py` (R10, R16, R17: carga el YAML real con
-  `YamlPromptRepository` y hace asserts de presencia/ausencia de las
-  frases normativas clave — p. ej. que `valuation_mortero` existe, que
-  contiene «resistencia» y las prohibiciones, que `valuation_es` ya no
-  contiene «franquicia» asumida ni el «SIEMPRE, incluso con exceso=0»).
+  `test_f004_prompts_yaml.py` (R10, R16, R17 y la parte de prompt de
+  R23/R24: carga el YAML real con `YamlPromptRepository` y hace asserts
+  de presencia/ausencia de las frases normativas clave — p. ej. que
+  `valuation_mortero` existe, que contiene «resistencia», las
+  prohibiciones y las reglas M1 de año, que `valuation_es` ya no contiene
+  «franquicia» asumida ni el «SIEMPRE, incluso con exceso=0»).
 
 ## Ficheros que NO se tocan (colindantes que tentarían)
 
@@ -235,6 +260,19 @@ lee las tablas de valoración.
   base conservan su comportamiento (derivar en la partida del albarán es
   legítimo para una base con `codigo_imputacion` impreso); la regla 🔶 de
   §10.2 habla de los incrementos.
+- **D7 — Consistencia a precio cero en el builder, no en el prompt.** La
+  decisión P3 (emitir siempre, sin tarifa → 0) se implementa como
+  normalización determinista en `_build_synthetic_line`: así cubre
+  sintéticas de la IA, de la red de código y envelopes antiguos en cola,
+  y el prompt solo necesita decir «emite igualmente con precio null».
+  Alternativa descartada: pedir al LLM que ponga precio 0 (un 0 inventado
+  por la IA sería indistinguible de una tarifa real de 0).
+- **D8 — M1 de mortero con token MORTERO.** Para bases mortero, tanto el
+  re-apuntado (R14) como la búsqueda de tarifa de año de la red M1 (R24)
+  exigen `MORTERO` en la descripción de la candidata. Conservador: en un
+  contrato mixto evita cobrar el incremento de año del hormigón a un
+  mortero; en un contrato de mortero cuyas tarifas no digan «mortero», la
+  sintética queda en Forma C (a revisión), nunca mal casada.
 - **Riesgo — rutas sensibles de F-011**: esta feature toca prompts de sv5
   y redes deterministas de sv6 (rutas sensibles declaradas por F-011).
   F-011 está `pending` (sin runner aún): la puerta se cumple actualizando
@@ -259,3 +297,14 @@ lee las tablas de valoración.
 Dentro del límite: sv5 solo toca SUS prompts y SU derivación de tipología;
 sv6 solo toca SUS reglas deterministas de valoración. Nada exige
 responsabilidades de otro servicio ni servicio nuevo.
+
+## Decisiones tomadas (2026-08-13, respondidas por el humano)
+
+Ninguna pregunta queda abierta (detalle en `requirements.md`):
+
+- **P1 → SÍ**: M1 de años también en mortero, DENTRO de esta feature
+  (R24; red M1 aflojada + reglas M1 en `valuation_mortero`).
+- **P2 → SÍ**: la Condición B de M7 es señal explícita (R17 confirmada).
+- **P3 → CAMBIO**: consistencia se emite en AMBAS familias; sin tarifa,
+  precio CERO (ni revisión ni omisión). R23 y D7.
+- **P4 → SÍ**: M5 en mortero si el contrato la tarifa (R10(c)).

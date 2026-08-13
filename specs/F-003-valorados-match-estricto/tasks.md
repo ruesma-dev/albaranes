@@ -5,12 +5,15 @@ Rama: `feature/F-003-valorados-match-estricto`. Un commit por tarea
 (`F-003 Tn: ...`). Los tests van junto a su implementación y NO tocan red
 ni BBDD. Antes de la primera tarea con tests de cada servicio: comprobar
 que su venv tiene `pytest` (crear `tests/` activa la sección 7 bis de
-init.sh). Prerrequisito: preguntas P1–P3 de design.md respondidas por el
-humano al aprobar la spec.
+init.sh). Las decisiones P1–P3 están respondidas por el humano
+(2026-08-13; ver «Decisiones tomadas» en design.md): no queda ningún
+prerrequisito abierto.
 
 - [ ] T1: sv2 — schema de extracción (`domain/models/albaran_models.py`):
       `LineaAlbaran.importe`, `LineaAlbaran.descuentos`,
-      `CabeceraAlbaran.importe_total` + `test_f003_schema_extraccion.py`
+      `CabeceraAlbaran.importe_total`,
+      `CabeceraAlbaran.importe_total_incluye_iva` +
+      `test_f003_schema_extraccion.py`
       (R2: campos opcionales, default null, el schema sigue validando
       extracciones antiguas).
       | Verificación: `pytest services/albaranes-api/tests -q` en verde
@@ -19,14 +22,16 @@ humano al aprobar la spec.
 - [ ] T2: sv2 — prompt `albaran_factura_es` (R1): bloque «transcribir, no
       recomponer», reescritura de `precio`/`descuento`/`precio_neto`
       (eliminar el «calcula cantidad*precio*(1 - descuento/100)»), regla de
-      `importe_total` en cabecera + `test_f003_prompt_transcripcion.py`
+      `importe_total` en cabecera (total con IVA → se transcribe y se marca
+      `importe_total_incluye_iva=true`, nunca null por incluir IVA) +
+      `test_f003_prompt_transcripcion.py`
       (las reglas nuevas presentes en el YAML cargado; la instrucción de
       calcular ha desaparecido).
       | Verificación: pytest sv2 en verde (tests `test_f003_r1_*`).
 
 - [ ] T3: sv3 — columnas nuevas (ORM mixins + DDL idempotente
-      `ADD COLUMN IF NOT EXISTS` en raw y merge), mapeo
-      extracción→ORM de los 3 campos y `descuento_cascada.py`
+      `ADD COLUMN IF NOT EXISTS` en raw y merge, 4 columnas), mapeo
+      extracción→ORM de los campos nuevos y `descuento_cascada.py`
       (`descuento_efectivo`) + `test_f003_descuento_cascada.py` +
       `test_f003_mapeo_campos_leidos.py` (R3: transcritos tal cual;
       efectivo solo con >1 descuento y `descuento` null).
@@ -36,7 +41,8 @@ humano al aprobar la spec.
 
 - [ ] T4: sv5 — contexto de valoración (R4): SELECT de líneas
       (`importe_leido` + `importe_albaran` con COALESCE), SELECT de
-      cabecera (`importe_total`), `valuation_context.py` y propagación en
+      cabecera (`importe_total`, `importe_total_incluye_iva`),
+      `valuation_context.py` y propagación en
       `value_albaran_pipeline.py` (context + los dos `meta`) + crear
       `services/albaran-valoracion-api/tests/` con
       `test_f003_contexto_importe.py` (mapeo fila→DTO: leído presente →
@@ -44,7 +50,8 @@ humano al aprobar la spec.
       | Verificación: pytest sv5 en verde (tests `test_f003_r4_*`).
 
 - [ ] T5: sv6 — DTOs del envelope (`importe_leido`,
-      `meta.importe_total_albaran`) + flags en `config/settings.py` +
+      `meta.importe_total_albaran`, `meta.importe_total_incluye_iva`) +
+      flags en `config/settings.py` +
       wiring en `composition.py` + crear
       `services/albaran-valoracion-persist/tests/` con
       `test_f003_sobres_antiguos.py` (R14: envelope sin campos nuevos
@@ -63,9 +70,11 @@ humano al aprobar la spec.
       total, ORE OIL) + `test_f003_guard_aritmetico.py`: R6 (caso ×120:
       cantidad 120,55 / precio 1,5877 / importe leído 191,40 → se
       persiste 191,40, mismatch → revisión; jamás 23.073,60), R7 (Σ
-      from_albaran vs total, sintéticas fuera, total null → no-op), R8
-      (ORE OIL: línea única sin importe + total → importe = total con
-      reason), R13 (flag a false → comportamiento previo).
+      from_albaran vs total BASE → revisión si descuadra; total CON IVA o
+      desconocido → solo aviso `guard_aritmetico_total_con_iva`, sin
+      revisión; sintéticas fuera; total null → no-op), R8 (ORE OIL: línea
+      única sin importe + total base → importe = total con reason; total
+      con IVA → no se inyecta), R13 (flag a false → comportamiento previo).
       | Verificación: pytest sv6 en verde (tests `test_f003_r6_*`,
       `_r7_*`, `_r8_*`, `_r13_*`).
 

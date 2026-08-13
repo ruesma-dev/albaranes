@@ -13,16 +13,23 @@ caso real PUMPING TEAM es **10,5 h × 20 m³/h = 210 m³** (el «5 h» del
 > aunque se bombeara menos. La línea de horas NO se factura aparte
 > (queda embebida en el mínimo). El desplazamiento SÍ se factura.
 
+Reparto de responsabilidades decidido por el humano (2026-08-13, D1 de
+design.md): la EXTRACCIÓN (IA1/IA2, sv2) caza las horas de bombeo y los
+m³/rendimiento que aparezcan impresos en el albarán; la VALORACIÓN lee
+el rendimiento mínimo del CONTRATO (sv5, línea o PDF) y calcula el
+importe (sv6, determinista).
+
 ## Modelo compartido (`ruesma_comun`)
 
 - **R1.** El sistema debe admitir `'bombeo'` como valor de
-  `ContextoLinea.tipo_familia` y dos campos opcionales nuevos en
+  `ContextoLinea.tipo_familia` y tres campos opcionales nuevos en
   `ContextoLinea`: `horas_bombeo: float | None` (horas de servicio de
-  bombeo declaradas por el albarán) y `m3_bombeados: float | None` (m³
-  realmente bombeados si el documento los declara). Un `ContextoLinea`
-  serializado ANTES de esta feature (sin esos campos) debe seguir
-  validando (compatibilidad retroactiva; el modelo ya es
-  `extra="ignore"`).
+  bombeo declaradas por el albarán), `m3_bombeados: float | None` (m³
+  realmente bombeados si el documento los declara) y
+  `rendimiento_m3h_albaran: float | None` (rendimiento en m³/h si el
+  propio albarán lo imprime). Un `ContextoLinea` serializado ANTES de
+  esta feature (sin esos campos) debe seguir validando (compatibilidad
+  retroactiva; el modelo ya es `extra="ignore"`).
 
 ## sv2 — tipología a nivel documento
 
@@ -53,9 +60,12 @@ caso real PUMPING TEAM es **10,5 h × 20 m³/h = 210 m³** (el «5 h» del
   literal comprobable: (a) `tipo_familia='bombeo'` en todas las líneas
   del servicio de bombeo; (b) `horas_bombeo` con las horas totales de
   bombeo del documento en la línea base; (c) `m3_bombeados` si el
-  documento declara m³ realmente bombeados; (d) el desplazamiento como
-  línea con `rol_linea='desplazamiento'`; (e) prohibido calcular m³ a
-  facturar (eso es de la valoración). *(El mecanismo de fallback
+  documento declara m³ realmente bombeados y `rendimiento_m3h_albaran`
+  si el albarán imprime un rendimiento en m³/h (decisión D1: «en las
+  IA1 y 2 deben cazar el rendimiento» — todo dato de horas/m³/rendimiento
+  visible en el papel se captura en extracción); (d) el desplazamiento
+  como línea con `rol_linea='desplazamiento'`; (e) prohibido calcular
+  m³ a facturar (eso es de la valoración). *(El mecanismo de fallback
   existente —si el prompt no existe, cae al genérico— no se toca.)*
 
 ## sv5 — routing y contrato de salida
@@ -106,7 +116,11 @@ caso real PUMPING TEAM es **10,5 h × 20 m³/h = 210 m³** (el «5 h» del
   IA emitió `rendimiento_minimo_m3h`, el sistema debe usar el valor de
   la IA y forzar `review_required=true` con razón
   `bombeo_rendimiento_sin_verificacion_determinista` (el dato viene del
-  PDF y no es contrastable de forma determinista).
+  PDF y no es contrastable de forma determinista). CUANDO el albarán
+  declara su propio rendimiento (`contexto_linea.rendimiento_m3h_albaran`)
+  y difiere del rendimiento efectivo, debe añadirse la razón informativa
+  `bombeo_rendimiento_albaran_distinto:<albaran>!=<efectivo>` sin alterar
+  el cálculo (el mínimo del CONTRATO manda siempre — decisión D1).
 
 - **R11.** SI la línea base de bombeo no dispone de horas o no dispone de
   ningún rendimiento (ni determinista ni de la IA), ENTONCES la línea

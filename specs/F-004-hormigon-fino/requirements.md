@@ -87,11 +87,12 @@ base; «tarifa en tabla» = línea de `lineas_contrato` del envelope.
   hormigón y su tercer campo es RESISTENCIA, no árido; (b) el mortero solo
   lleva ARENA: está PROHIBIDO emitir sintéticas de árido, aditivo,
   plastificante, fibras o fratasado; (c) son admisibles el incremento de
-  consistencia SOLO si el contrato lo tarifa de verdad (con tarifa real en
-  tabla o PDF; sin tarifa NO se emite, a diferencia de la Forma C del
-  hormigón) y el cemento especial si aparece en el documento; (d) M6/M7
-  solo con señal explícita (mismas reglas D de abajo). *(Test: asserts de
-  contenido sobre el YAML cargado con `YamlPromptRepository`.)*
+  consistencia (regla R23: se emite siempre que la designación la lleve;
+  sin tarifa, a precio cero), el cemento especial si aparece en el
+  documento, M5 si el contrato la tarifa y los incrementos por año M1
+  (regla R24); (d) M6/M7 solo con señal explícita (mismas reglas D de
+  abajo). *(Test: asserts de contenido sobre el YAML cargado con
+  `YamlPromptRepository`.)*
 
 - **R11.** CUANDO el builder de sv6 recibe sintéticas cuyo parent es una
   base con `contexto_linea.tipo_familia='mortero'`, el sistema debe
@@ -103,9 +104,10 @@ base; «tarifa en tabla» = línea de `lineas_contrato` del envelope.
   §9.3).
 
 - **R12.** La red determinista de código de sv6
-  (`_sinteticas_codigo_faltantes`) y la red M1 de años NO deben generar
-  sintéticas para bases de familia `mortero` (hoy ya están limitadas a
-  `tipo_familia='hormigon'`): test de regresión que lo fije.
+  (`_sinteticas_codigo_faltantes`) NO debe generar para bases de familia
+  `mortero` las sintéticas prohibidas (árido, fibras, fratasado): sigue
+  limitada a `tipo_familia='hormigon'` (test de regresión que lo fije).
+  La red M1 de años, en cambio, SÍ se extiende a mortero (ver R24).
 
 - **R13.** CUANDO un documento mixto trae bases de hormigón Y de mortero
   (tipología derivada `hormigon`, prompt `valuation_es`), el prompt
@@ -123,6 +125,32 @@ base; «tarifa en tabla» = línea de `lineas_contrato` del envelope.
 
 - **R15.** DONDE `VETO_MORTERO_ENABLED=false` (flag nuevo, default `true`),
   el veto de R11 no debe actuar (comportamiento previo exacto).
+
+- **R23 — Consistencia a precio cero (AMBAS familias).** CUANDO la
+  designación de una base de hormigón O de mortero lleva consistencia con
+  incremento (F/L/S), el sistema debe emitir la sintética de consistencia
+  SIEMPRE; y SI el contrato no la tarifa (ni tabla ni PDF), ENTONCES debe
+  valorarse con precio unitario 0 e importe 0, SIN marcar revisión por
+  tarifa ausente (ni Forma C ni omisión). Se aplica en tres puntos:
+  (a) prompts de sv5 (M2 de `valuation_es` y `valuation_mortero`: sin
+  tarifa se emite igualmente, con precio null — sv6 fija el cero);
+  (b) builder de sv6: una sintética `rol_linea='incremento_consistencia'`
+  con precio final nulo se normaliza a precio 0, importe 0, sin el motivo
+  `modifier_identified_no_tariff`; (c) la red determinista de código
+  (rama consistencia) queda cubierta por (b) sin cambio propio.
+  *(Decisión del humano 2026-08-13, sustituye a la Forma C del hormigón y
+  a la omisión propuesta para mortero.)*
+
+- **R24 — Incrementos por año (M1) también en mortero.** CUANDO la base es
+  de familia `mortero`, los incrementos por año aplican igual que en
+  hormigón: el prompt `valuation_mortero` debe incluir las reglas M1 (con
+  `descripcion_linea` «INCREMENTO POR AÑO {año} EN MORTERO») y la red
+  determinista M1 de sv6 (`_sinteticas_m1_faltantes`) debe generar los
+  años que falten también para bases `tipo_familia='mortero'`, buscando la
+  tarifa del año entre las líneas de contrato cuya descripción contenga
+  `MORTERO` (mismo criterio conservador que R14); sin tarifa → Forma C
+  (precio null, a revisión). El guard de año (R5) y el dedupe de años ya
+  emitidos cubren igualmente estas sintéticas.
 
 ## D — M6 (exceso de tiempo) y M7 (carga incompleta) solo con señal explícita
 
@@ -172,24 +200,20 @@ base; «tarifa en tabla» = línea de `lineas_contrato` del envelope.
   de los 5 sitios de `docs/ARCHITECTURE.md` §10 no se dispara). Test de
   regresión: un envelope válido de antes de la feature sigue validando.
 
-## Preguntas abiertas (validar por el humano ANTES de implementar)
+## Decisiones tomadas (2026-08-13, respondidas por el humano)
 
-- **P1 — M1 de años en mortero.** ¿Los incrementos por año aplican también
-  a los contratos de mortero? Propuesta: sí (el incremento de año es del
-  contrato, no del producto) y extender la red determinista M1 a bases
-  `mortero`; pero §10.3 no lo dice y esta spec lo deja FUERA del alcance
-  (la red M1 sigue solo-hormigón, R12) hasta respuesta. Si la respuesta es
-  sí, se añade en esta misma feature (cambio pequeño: aflojar el filtro de
-  familia de `_sinteticas_m1_faltantes` y permitir `incremento_year` en el
-  prompt de mortero).
-- **P2 — Condición B de M7 como «señal explícita».** La cantidad impresa
-  menor que el umbral tarifado, ¿cuenta como señal del documento aunque no
-  haya texto «CARGA INCOMPLETA»? La spec asume que SÍ (R17): la cantidad
-  está impresa en el albarán y el contrato tarifa el mínimo. Confirmar.
-- **P3 — Consistencia de mortero sin tarifa.** Se asume que en mortero la
-  consistencia sin tarifa NO se emite (ni Forma C), R10(c). En hormigón la
-  consistencia sin tarifa sigue emitiéndose a revisión (Forma C). Confirmar
-  la asimetría.
-- **P4 — M5 (gestión de residuos) en mortero.** ¿Se emite si el contrato
-  de mortero la tarifa? La spec asume que sí (no está en la lista de vetos
-  de §10.3). Confirmar.
+Ninguna pregunta queda abierta.
+
+- **P1 → resuelta: SÍ.** Los incrementos por año aplican también a los
+  contratos de mortero y ENTRAN en esta feature: red M1 de sv6 extendida a
+  bases `mortero` y reglas M1 en el prompt `valuation_mortero`. Ver R24 y
+  el ajuste de R12.
+- **P2 → resuelta: SÍ.** La cantidad impresa menor que el umbral tarifado
+  cuenta como señal explícita de M7 aunque no haya texto «CARGA
+  INCOMPLETA» (Condición B confirmada tal como está en R17).
+- **P3 → resuelta con CAMBIO.** La sintética de consistencia se emite en
+  AMBAS familias (hormigón y mortero); si el contrato no la tarifa, se
+  emite con precio a CERO — ni a revisión (Forma C) ni omitida. Eliminada
+  la asimetría propuesta. Ver R23 (y R10(c) ajustado).
+- **P4 → resuelta: SÍ.** M5 (gestión de residuos) se emite en mortero si
+  el contrato la tarifa (recogido en R10(c)).
