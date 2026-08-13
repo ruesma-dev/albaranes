@@ -105,8 +105,8 @@ sistema, que el `git worktree prune` del siguiente arranque desregistra.
      del informe manda sobre la publicidad del flag.
 - **`harness/rigor.py`** — helper `workers_mutacion(rigor) -> int | None`
   que lee la clave opcional `mutacion.workers` (simétrico a
-  `timeout_mutacion`, pero SIN reventar si falta: `None` ⇒ el default de
-  núcleos−2 lo pone `mutacion.py`).
+  `timeout_mutacion`, pero SIN reventar si falta: `None` ⇒ el default
+  `min(max(1, núcleos − 2), 16)` lo pone `mutacion.py`).
 - **`harness/rigor.json`** — solo el texto `$doc` del bloque `mutacion`,
   documentando la clave opcional `workers`. NO se añade la clave con valor:
   el default por núcleos es mejor que un número cableado que viaja de
@@ -168,11 +168,11 @@ No hay frontera de microservicio que evaluar; su «casa» natural es
 ## Coste y beneficio (números)
 
 - Beneficio: F-011 = 305 mutantes × ~12,1 s = 3.694 s en serie. Con la
-  máquina actual (22 núcleos ⇒ default 20 workers), techo teórico ~185 s de
-  evaluación; realista < 10 min contando setup y desbalanceo. Una fracción
-  clara del tiempo, que es el criterio de éxito.
+  máquina actual (22 núcleos lógicos, default con tope ⇒ 16 workers), techo
+  teórico ~230 s de evaluación; realista < 10 min contando setup y
+  desbalanceo. Una fracción clara del tiempo, que es el criterio de éxito.
 - Coste: `git worktree add` de este monorepo son segundos por worker
-  (checkout de ficheros versionados, sin venvs ni node_modules); con 20
+  (checkout de ficheros versionados, sin venvs ni node_modules); con 16
   workers, en el orden del minuto, que se paga una vez por campaña. Con
   pocos mutantes no compensa: por eso el efectivo es
   `min(workers, nº mutantes)` y con efectivo ≤ 1 ni se crean worktrees.
@@ -224,16 +224,19 @@ humano, como siempre). Los tests `test_f012_*` se quedan en albaranes:
 arnes-base no versiona suites de tests hoy, y cambiar eso no es de esta
 feature.
 
-## Preguntas abiertas (para el humano, antes de implementar)
+## Decisiones tomadas (2026-08-13)
 
-1. **Comparación serie-vs-paralelo de T5.** Propuesta: comparar con muestreo
-   fijo (`--max-mutantes 60 --semilla 20260813`, ~12 min la pasada en serie)
-   y, aparte, campaña completa de F-011 SOLO en paralelo, contrastando
-   totales con el `progress/mutacion_F-011.md` histórico a título
-   informativo (la suite ha cambiado desde entonces: no tiene por qué
-   clavar los 133 supervivientes). ¿Vale, o quieres también la serie
-   completa (~1 h) para una comparación total-contra-total en el mismo
-   árbol?
-2. **`nucleos - 2`** se lee de `os.cpu_count()` (lógicos; aquí 22 ⇒ 20
-   workers). ¿De acuerdo con usar núcleos lógicos, o prefieres un tope
-   adicional (p. ej. máximo 16)?
+Preguntas abiertas de la spec resueltas por el humano al aprobarla:
+
+1. **Comparación serie-vs-paralelo de T5 — CONFIRMADA la propuesta.** El
+   criterio de éxito es la comparación exacta con muestreo fijo
+   (`--max-mutantes 60 --semilla 20260813`): mismo conjunto muestreado en
+   serie y en paralelo, diff de informes limpio salvo fecha y «Tiempo
+   total». La campaña completa de F-011 se ejecuta SOLO en paralelo y sus
+   totales se contrastan con el `progress/mutacion_F-011.md` histórico a
+   título informativo (la suite ha cambiado desde entonces: no tiene por
+   qué clavar los 133 supervivientes). No se repite la serie completa.
+2. **Default de workers = `min(max(1, os.cpu_count() - 2), 16)`.** Núcleos
+   lógicos menos 2, con TOPE de 16 workers. En esta máquina: 22 lógicos ⇒
+   16 workers. `--workers` y `mutacion.workers` en `rigor.json` pueden
+   superar el tope explícitamente: el tope aplica solo al default.

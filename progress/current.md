@@ -1,17 +1,30 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-## Estado tras el cierre de F-011 (2026-08-13)
+## F-012 — Campaña de mutación en paralelo (in_progress, 2026-08-13)
 
-- **F-011 done** (APPROVED tras un ciclo de corrección). Resumen en
-  `progress/history.md`; decisiones de dominio abiertas del humano en las
-  desviaciones 1 y 2 de `progress/impl_F-011.md`.
-- Siguiente por prioridad: **F-012** (mutación en paralelo, pending, sdd) →
-  spec-author y PARAR en spec_ready.
-- Después: F-002 (spec_ready aprobada con decisiones), F-003..F-007
-  (spec_ready con decisiones cerradas), F-013 (registro en Sigrid, critico).
-- Verificaciones MANUAL pendientes del humano (de F-011): pasada completa de
-  evals con LLM cuando los libros de ground truth tengan casos
-  (`python -m evals.runner --con-llm`), y push de arnes-base
-  (`git -C C:/Users/pgris/PycharmProjects/arnes-base push origin main`) ya
-  con la 1.4.0 revisada.
+- Rama: `feature/F-012-mutacion-paralela`. Spec aprobada por el humano
+  («F-012 aprobada, como recomiendas»), con las dos decisiones en la
+  sección «Decisiones tomadas» de `design.md`:
+  1. T5: comparación exacta serie-vs-paralelo con muestreo fijo
+     (`--max-mutantes 60 --semilla 20260813`); campaña completa de F-011
+     solo en paralelo, contrastada con el informe histórico a título
+     informativo. No se repite la serie completa.
+  2. Default de workers = `min(max(1, núcleos − 2), 16)`; aquí 22 lógicos
+     ⇒ 16 workers.
+- Diseño: coordinador que reutiliza `ejecutar_campania` por worker sobre
+  `git worktree` detached en temp; reparto round-robin determinista;
+  informe fusionado idéntico al de serie salvo fecha y tiempo;
+  `--workers 1` = camino actual; portado a arnes-base (R12).
+- Implementer lanzado sobre `specs/F-012-mutacion-paralela/`.
+- Después: F-002 (spec_ready aprobada) → F-003..F-007 → F-013.
+
+## Pendientes del humano (heredados)
+
+- Push: `git push origin dev` (albaranes) y `git push origin main`
+  (arnes-base, 1.4.0 revisada).
+- Decisión de dominio de F-011 (desviación 1): ¿sv6 debe DESCARTAR las
+  sintéticas prohibidas o basta precio null + revisión? (Si descarte:
+  feature pequeña de sv6.)
+- Rellenar los libros de evals/ground_truth/ y lanzar la primera pasada
+  real: `python -m evals.runner --con-llm`.

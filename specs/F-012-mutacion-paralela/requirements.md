@@ -55,7 +55,9 @@ el código actual.
 
 - **R7.** CUANDO no se pasa `--workers`, el sistema debe tomar el número de
   workers de la clave opcional `mutacion.workers` de `harness/rigor.json` y,
-  si no existe, de `max(1, núcleos_de_la_máquina - 2)`.
+  si no existe, de `min(max(1, núcleos_de_la_máquina - 2), 16)` (decisión
+  del humano 2026-08-13: tope de 16 workers; en esta máquina, 22 núcleos
+  lógicos ⇒ 16).
 
 - **R8.** CUANDO el número efectivo de workers es `<= 1` —porque se pidió
   `--workers 1`, porque la máquina no da para más o porque hay menos de 2

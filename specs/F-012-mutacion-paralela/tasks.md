@@ -26,7 +26,8 @@ fallo previo de los tests centrales va pegada en `progress/impl_F-012.md`.
 
 - [ ] **T4**: CLI: `--workers` en `_analizar_argumentos`, helper
       `workers_mutacion` en `harness/rigor.py`, `$doc` de `rigor.json`,
-      resolución del default (CLI > `mutacion.workers` > núcleos−2), número
+      resolución del default (CLI > `mutacion.workers` >
+      `min(max(1, núcleos − 2), 16)`), número
       efectivo `min(workers, mutantes)` y camino en serie intacto con
       efectivo ≤ 1.
       | Verificación: `python -m pytest tests/test_f012_r7_r8_cli.py -q`
@@ -40,9 +41,10 @@ fallo previo de los tests centrales va pegada en `progress/impl_F-012.md`.
          anotados. Borrar los `progress/tmp_mutacion_*.md` tras pegar la
          evidencia (no son informes de campaña oficiales).
       4. Campaña completa en paralelo: `python -m harness.mutacion --feature F-011`
-         (sin `--workers`, default núcleos−2), tiempo total frente a los
-         3.694 s históricos, totales contrastados con
-         `progress/mutacion_F-011.md` a título informativo.
+         (sin `--workers`, default con tope: aquí 16), tiempo total frente a
+         los 3.694 s históricos, totales contrastados con
+         `progress/mutacion_F-011.md` a título informativo. Solo
+         informativa: el criterio de éxito es el diff limpio del punto 3.
       | Verificación: diff limpio del punto 3 pegado en `progress/impl_F-012.md`
 
 - [ ] **T6**: Portar a arnes-base: copiar `mutacion.py`,
