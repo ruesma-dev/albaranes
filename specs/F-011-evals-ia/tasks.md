@@ -77,7 +77,7 @@ empezar.
       | Verificación: MANUAL (humano) — revisar el diff en arnes-base:
       `git -C C:/Users/pgris/PycharmProjects/arnes-base diff HEAD~1` y
       decidir el push.
-- [ ] T12: corrida de humo del runner determinista y de la puerta con la
+- [x] T12: corrida de humo del runner determinista y de la puerta con la
       declaración real.
       | Verificación: `python -m evals.runner --feature F-011` exit 2
       (NO_EVALUABLE: libros sin casos) e informe `progress/evals_F-011.md`
@@ -85,8 +85,8 @@ empezar.
       Cuando el humano rellene los libros, la pasada completa
       (`python -m evals.runner --con-llm --feature F-XXX`) es
       MANUAL (humano): cuesta llamadas LLM.
-- [ ] T13: campaña de mutación y cierre.
+- [x] T13: campaña de mutación y cierre.
       | Verificación: `python -m harness.mutacion --feature F-011` con
       supervivientes analizados en `progress/mutacion_F-011.md`.
-- [ ] T14: Ejecutar `bash harness/init.sh` en verde.
+- [x] T14: Ejecutar `bash harness/init.sh` en verde.
       | Verificación: exit 0, sin KO ni features rotas.
