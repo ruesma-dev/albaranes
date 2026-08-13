@@ -14,7 +14,7 @@ empezar.
       | Verificación: `tests/test_f011_r4_barrido.py` en RED y luego verde
       (correo, IP, GUID, token detectados; texto limpio con precios y CIF
       pasa).
-- [ ] T2: `evals/criticidad.json` + `evals/criticidad.py` (clasificación por
+- [x] T2: `evals/criticidad.json` + `evals/criticidad.py` (clasificación por
       defecto crítico/laxo, ajuste por campo, campo sin clasificar =
       crítico con aviso).
       | Verificación: `tests/test_f011_r7_r8_criticidad.py`.
