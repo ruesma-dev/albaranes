@@ -1,0 +1,14 @@
+# evals/requirements.txt
+# Dependencias del runner de evals (decisión D6 de specs/F-011-evals-ia).
+# Se instalan en el venv RAÍZ del monorepo:
+#     .venv/Scripts/python.exe -m pip install -r evals/requirements.txt
+#
+# No son dependencias de ningún servicio: son las que necesitan los
+# adaptadores de `evals/procesos/` para componer sv2, sv5 y sv6 desde fuera,
+# más openpyxl para leer los libros de ground truth.
+openpyxl>=3.1        # conversor xlsx -> fixtures JSON
+PyYAML>=6.0          # prompts YAML de sv2/sv5 y unit_registry.yaml de sv6
+pydantic-settings>=2 # settings de los servicios al componerlos
+PyMuPDF>=1.24        # preprocesado de albaranes PDF, igual que en producción
+opencv-python-headless>=4.9  # preprocesado de imagen de albaranes
+numpy>=1.26          # lo exige el preprocesado de imagen

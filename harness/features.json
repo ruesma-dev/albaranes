@@ -29,7 +29,7 @@
       "id": "F-011",
       "title": "Evals de IA con ground truth y puerta en el arnés",
       "description": "Proceso de evaluación de las 4 fases de IA contra resultado esperado, al estilo de tests unitarios. Contrato de datos ya definido en evals/ (5 Excel: IA1-IA4 + INPUTS, pestañas por tipología; los rellena el humano). Alcance: (1) conversor xlsx -> fixtures JSON versionables, con barrido de datos sensibles C3-bis; (2) runner de evals: IA1/IA2 contra la extracción real (a demanda, cuesta llamadas LLM), IA3/IA4 con modo determinista contra las redes de sv6 además del modo real; (3) puerta del arnés: declaración de rutas sensibles (prompts, clientes LLM, schemas, redes deterministas) tal que si el diff de una feature las toca, el cierre exige evals en verde además de los tests; (4) el mecanismo genérico de la puerta (declaración de rutas -> verificación extra obligatoria) se porta a arnes-base como capacidad opcional del arnés (regla de propagación).",
-      "status": "pending",
+      "status": "done",
       "sdd": true,
       "rigor": "estandar",
       "priority": 2,
