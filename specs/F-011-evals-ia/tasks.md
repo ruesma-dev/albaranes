@@ -41,7 +41,7 @@ empezar.
       | Verificación: `tests/test_f011_r13_determinista.py` (asserta además
       cero llamadas de red con clientes-trampa) y
       `tests/test_f011_r17_secuencial.py`.
-- [ ] T7: `evals/procesos/sv2_extraccion.py` (composición mínima sv2,
+- [x] T7: `evals/procesos/sv2_extraccion.py` (composición mínima sv2,
       proveedor primario por defecto y `--proveedores` — D3) y
       `evals/procesos/sv5_valoracion.py` (contexto desde fixtures, IA3+IA4
       reales, emisión del envelope para el extremo-a-extremo); fallo
