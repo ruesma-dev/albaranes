@@ -1,8 +1,10 @@
 <!-- progress/review_F-011.md -->
 # F-011 · Evals de IA con ground truth y puerta en el arnés — Review
 
-- **Veredicto: CHANGES_REQUESTED**
-- Rama revisada: `feature/F-011-evals-ia` (HEAD `7e88275`), árbol principal.
+- **Veredicto: APPROVED** (tras la re-verificación de §9; el primer pase fue
+  CHANGES_REQUESTED por el §1.1, ya corregido).
+- Rama revisada: `feature/F-011-evals-ia`, árbol principal. Primer pase sobre
+  HEAD `7e88275`; re-verificación sobre HEAD `558d474`.
 - Fecha: 2026-08-13.
 - **Nivel de rigor: `estandar`** (declarado en `harness/features.json`).
   Exige: C1–C3, C3 bis, C5, tests trazables (C4), **fase RED** en los
@@ -10,10 +12,16 @@
   **campaña de mutación** con todos los supervivientes analizados (no exige
   cero supervivientes; eso es `critico`).
 
-Un solo motivo bloquea, y es barato de cerrar: la declaración de rutas
-sensibles se ha quedado **una ruta corta** respecto a la spec aprobada, sin
-que conste en ninguna parte que se decidió quitarla. Todo lo demás —y es
-mucho— está verificado y en verde.
+Un solo motivo bloqueó el primer pase, y era barato de cerrar: la declaración
+de rutas sensibles se había quedado **una ruta corta** respecto a la spec
+aprobada, sin que constase en ninguna parte que se decidió quitarla. Todo lo
+demás —y es mucho— estaba verificado y en verde. El implementer lo ha
+corregido con la opción (a); la re-verificación acotada está en **§9** y el
+veredicto final es **APPROVED**.
+
+> **Cómo leer este documento.** Las secciones §1 a §8 son el primer pase y se
+> conservan tal cual, sin retocar: son el registro de lo que se encontró y de
+> por qué se rechazó. Lo que cambió después vive en §9.
 
 ---
 
@@ -352,3 +360,72 @@ nuevo casa con su fichero.
 Las dos decisiones abiertas de las desviaciones 1 y 2 son del humano y **no**
 bloquean este review: el código está implementado como manda la spec y ambas
 están documentadas donde deben.
+
+---
+
+## 9. Re-verificación (2026-08-13, HEAD `558d474`)
+
+Acotada a los tres puntos del §8. No repito el resto de la review: quedó
+verificada en el primer pase y el commit de corrección no la toca (solo cambia
+un JSON de declaración, dos tests, el informe del implementer y este fichero).
+Tampoco exijo campaña de mutación nueva, por lo que yo mismo escribí en §8.
+
+Commit de corrección: **`558d474` «F-011: correcciones del review (ruta de
+revision_rules de sv5 y test del conjunto declarado)»**, formato `F-XXX: …`
+correcto para un ajuste. Diffstat: `harness/rutas_sensibles.json` (+1),
+`tests/test_f011_r19_r20_declaracion.py` (+45), `progress/impl_F-011.md`
+(+132), `progress/review_F-011.md`. Ni un fichero más.
+
+| # | Qué pedía el §8 | Evidencia de primera mano | ¿Cerrado? |
+|---|---|---|---|
+| 1 | La ruta de sv5 en la declaración | `harness/rutas_sensibles.json:23` → `{ "patron": "services/albaran-valoracion-api/config/revision_rules.yaml", "motivo": "reglas de revisión de sv5" }`. `python -m harness.rutas_sensibles --validar` → `1 verificación(es), 14 ruta(s) sensible(s) declaradas: evals (aviso)`, **exit 0** | ✔ |
+| 2 | Test que fija el CONJUNTO declarado, con su fase RED | Dos tests nuevos en `tests/test_f011_r19_r20_declaracion.py`. `pytest tests/test_f011_r19_r20_declaracion.py -q` → `16 passed in 4.43s` | ✔ |
+| 3 | `bash harness/init.sh` en solitario | **exit 0**, `ENTORNO LISTO`. `190 passed, 3 skipped` en la raíz, `19 passed, 3 skipped` en `comun`, `[OK] PUERTA COBERTURA: 88.8% de 1254`, `[OK] PUERTA RUTAS SENSIBLES [evals]: N/A` | ✔ |
+| 4 | Informe del implementer con la corrección | `progress/impl_F-011.md`: «14 rutas» en el recuento de la declaración, sección «Correcciones del review» con la traza RED, y Evidencias actualizadas a `171 passed` / `190 passed, 3 skipped` | ✔ |
+| 5 | Árbol limpio | `git status --short` vacío (antes y después de mis corridas) | ✔ |
+
+Suite de la raíz por separado: `171 passed in 13.53s` — los 169 del cierre más
+los 2 del review, y coinciden con el `190 = 171 + 19` de `init.sh`. Esta vez
+lancé `init.sh` **solo**, sin nada en paralelo, y no reapareció el 0,0 % de
+cobertura del §2.1: sale `88.8 % de 1254`, idéntico al primer pase. Correcto
+que no se mueva: lo añadido es un JSON de declaración y dos tests, y ninguno
+suma líneas Python de producción al alcance.
+
+### Sobre el test nuevo, que es lo que de verdad cierra el agujero
+
+No se ha limitado a añadir la línea que faltaba. `RUTAS_DE_LA_SPEC` fija los
+**14 patrones** de la spec como conjunto y el assert imprime `faltan:` y
+`sobran:`, de modo que la próxima omisión —o el próximo añadido silencioso—
+salta con el nombre de la ruta en la cara. El segundo test exige además que
+cada ruta traiga motivo. Es exactamente el hueco que señalé: los tests
+anteriores validaban la *forma* de la declaración y ninguno su *contenido*.
+
+La **fase RED es real y verificable**, no una frase: el informe pega la salida
+del test ejecutado ANTES de tocar el JSON, y no solo falla, nombra la ruta
+ausente:
+
+```
+E   AssertionError: faltan: ['services/albaran-valoracion-api/config/revision_rules.yaml'] · sobran: []
+...
+E   AssertionError: assert 13 == 14
+2 failed, 14 deselected in 0.14s
+```
+
+Y el informe llama a las cosas por su nombre —«No fue una decisión, fue una
+omisión, y por eso se corrige en vez de justificarse»—, que es la lectura
+correcta: la opción (b) habría sido legítima, pero solo si alguien la hubiera
+decidido a tiempo.
+
+### Veredicto final
+
+**APPROVED.** Los checkpoints C1–C5, C3 bis, C4 bis y C4 ter quedan como en
+§3, con el §1.1 cerrado y con la puerta de rutas sensibles ya cubriendo las 14
+rutas que manda la spec.
+
+Queda vivo, y no bloquea, lo del §6: las dos automejoras para `arnes-base`
+(6.1 la cobertura que no distingue «0 %» de «sin medición», 6.2 la validación
+que no ve una ruta ausente — a la que este test nuevo da una respuesta
+concreta y portable), el código muerto de 6.3 y la actualización de arnés de
+6.4. Y siguen pendientes del humano, como debe ser, las **dos decisiones
+abiertas** de las desviaciones 1 y 2, la **pasada completa de evals** cuando
+los seis libros tengan casos, y el **push de `arnes-base`**.
