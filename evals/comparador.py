@@ -188,6 +188,93 @@ def comparar(
     return [_discrepancia(prefijo, esperado, obtenido, criticidad)]
 
 
+def _clave_de_fila(fila: Mapping, claves: Sequence[str]) -> tuple:
+    return tuple(
+        None if fila.get(clave) is None else _texto(fila.get(clave)) for clave in claves
+    )
+
+
+def podar(fila: Mapping, observables: Sequence[str] | None) -> dict:
+    """Deja de una fila esperada solo los campos que la corrida puede observar.
+
+    No es una relajación encubierta: los campos podados se listan aparte y
+    salen en el informe como «no observables en esta corrida», con lo que se
+    ve qué parte del ground truth no está evaluando nadie.
+    """
+    if observables is None:
+        return dict(fila)
+    return {campo: valor for campo, valor in fila.items() if campo in observables}
+
+
+def comparar_tablas(
+    esperadas: Sequence[Mapping],
+    obtenidas: Sequence[Mapping],
+    criticidad: Criticidad,
+    *,
+    claves: Sequence[str],
+    prefijo: str,
+    observables: Sequence[str] | None = None,
+    severidad_sobrantes: str = "aviso",
+) -> list[Discrepancia]:
+    """Compara dos tablas emparejando sus filas por `claves`, no por posición.
+
+    Emparejar por posición sería frágil: sv6 inyecta líneas sintéticas
+    deterministas y el orden del ground truth no tiene por qué coincidir.
+    """
+    pendientes = list(enumerate(obtenidas))
+    discrepancias: list[Discrepancia] = []
+
+    for fila_esperada in esperadas:
+        buscada = _clave_de_fila(fila_esperada, claves)
+        pareja = None
+        for posicion, (_, fila_obtenida) in enumerate(pendientes):
+            if _clave_de_fila(fila_obtenida, claves) == buscada:
+                pareja = pendientes.pop(posicion)[1]
+                break
+
+        etiqueta = f"{prefijo}[{'/'.join(str(v) for v in buscada)}]"
+        if pareja is None:
+            discrepancias.append(
+                Discrepancia(
+                    campo=etiqueta,
+                    esperado=podar(fila_esperada, observables),
+                    obtenido=None,
+                    severidad="fallo",
+                    motivo="fila del ground truth que el sistema no ha producido",
+                )
+            )
+            continue
+        discrepancias.extend(
+            comparar(
+                podar(fila_esperada, observables), pareja, criticidad, etiqueta
+            )
+        )
+
+    for _, sobrante in pendientes:
+        discrepancias.append(
+            Discrepancia(
+                campo=f"{prefijo}[+]",
+                esperado=None,
+                obtenido=dict(sobrante),
+                severidad=severidad_sobrantes,  # type: ignore[arg-type]
+                motivo="fila producida por el sistema que el ground truth no declara",
+            )
+        )
+    return discrepancias
+
+
+def campos_no_observables(
+    esperadas: Sequence[Mapping], observables: Sequence[str]
+) -> list[str]:
+    """Campos del ground truth que esta corrida no puede mirar."""
+    vistos: list[str] = []
+    for fila in esperadas:
+        for campo in fila:
+            if campo not in observables and campo not in vistos:
+                vistos.append(campo)
+    return vistos
+
+
 def campos_sin_clasificar(
     esperado: object, criticidad: Criticidad, prefijo: str = ""
 ) -> list[str]:

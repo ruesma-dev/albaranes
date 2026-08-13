@@ -34,7 +34,7 @@ empezar.
       `es_pasada_completa`).
       | Verificación: `tests/test_f011_r2_comparador.py`,
       `tests/test_f011_r15_informe.py`.
-- [ ] T6: `evals/procesos/sv6_build.py`: modo determinista (envelope
+- [x] T6: `evals/procesos/sv6_build.py`: modo determinista (envelope
       estimulado con prohibidas inyectadas, redes reales de sv6, stubs de
       IA y repositorio, ejecución secuencial) y comparación extremo-a-extremo
       determinista contra `fixtures/final/`.
