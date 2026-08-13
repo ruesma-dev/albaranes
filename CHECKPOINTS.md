@@ -119,7 +119,11 @@ recorre estos puntos **contra ese nivel**.
 - [ ] **Fase RED** (niveles `estandar` y `critico`): el informe
       `progress/impl_F-XXX.md` contiene, para los requisitos centrales, la
       **salida real** del fallo del test antes de existir el código. No vale
-      «se hizo TDD»: vale la traza pegada.
+      «se hizo TDD»: vale la traza pegada. Si el entregable de la feature es
+      el propio test (no hay código de producción cuyo fallo previo enseñar),
+      la fase RED se demuestra rompiendo deliberadamente —en una copia
+      aislada, nunca en el árbol real— lo que el test vigila, y pegando la
+      traza de ese fallo.
 - [ ] **Cobertura** (niveles `estandar` y `critico`): la puerta de
       `bash harness/init.sh` sale en `[OK]` con el porcentaje de las líneas
       cambiadas, o en `N/A` **con el motivo impreso**.

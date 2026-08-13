@@ -257,7 +257,10 @@ if [ "$ES_PYTHON" -eq 1 ]; then
     if [ -d "tests" ]; then
         if $PY -c "import coverage" >/dev/null 2>&1; then
             rm -f coverage.json
-            if $PY -m coverage run -m pytest -q --tb=short -x; then
+            # La ruta `tests` acota la recolección a la suite de la raíz: sin
+            # ella, pytest arrastra los tests de los servicios y los ejecuta
+            # con un intérprete que no es el suyo (y dos veces: aquí y en 7 bis).
+            if $PY -m coverage run -m pytest tests -q --tb=short -x; then
                 ok "pytest en verde (con medición de cobertura)"
             else
                 ko "pytest en rojo (¿pytest instalado en el venv?)"
@@ -266,7 +269,7 @@ if [ "$ES_PYTHON" -eq 1 ]; then
                 || warn "coverage no pudo escribir coverage.json"
         else
             warn "coverage no instalado: pip install -r requirements-dev.txt"
-            if $PY -m pytest -q --tb=short -x; then
+            if $PY -m pytest tests -q --tb=short -x; then
                 ok "pytest en verde"
             else
                 ko "pytest en rojo (¿pytest instalado en el venv?)"

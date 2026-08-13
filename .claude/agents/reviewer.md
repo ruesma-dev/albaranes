@@ -60,6 +60,13 @@ nivel de rigor dice cuánta evidencia hay que exigir.
    además dos o tres supervivientes y confirma que existen como mutantes
    reales, con el mismo operador y el mismo texto original→mutado. Es la
    única defensa contra un informe de mutación escrito a mano.
+   **Si la campaña declara cero mutantes**, el recálculo no distingue entre
+   «no había nada que mutar» y «el generador está roto o el informe es
+   falso»: ambos dan 0. Haz la prueba de control: ejecuta
+   `generar_mutantes` sobre los ficheros del diff **ignorando la exclusión
+   de alcance**; si ahí sí salen mutantes, el cero es legítimo (exclusión
+   por diseño); si tampoco salen, el cero es sospechoso y hay que
+   investigarlo antes de aprobar.
 5. El informe del implementer debe traer la sección **«Evidencias»** con los
    cuatro números (tests, cobertura de lo cambiado, mutantes y
    supervivientes, tiempo de la suite).
