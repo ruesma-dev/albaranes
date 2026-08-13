@@ -37,6 +37,12 @@ Todo con biblioteca estándar, como el resto del arnés.
 
 from __future__ import annotations
 
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
+from types import TracebackType
+
 from harness.alcance import Alcance
 from harness.mutacion import InformeMutacion, Mutante
 
@@ -96,3 +102,100 @@ def fusionar(
             juntos.extend(getattr(parcial, atributo))
         setattr(informe, atributo, sorted(juntos, key=clave_estable))
     return informe
+
+
+# --- Worktrees desechables ---------------------------------------------------
+
+
+def _git(raiz: str, *args: str) -> tuple[int, str]:
+    """Ejecuta git en `raiz` y devuelve `(código de salida, salida completa)`.
+
+    No se usa `harness.alcance.ejecutar_git` a propósito: aquel devuelve cadena
+    vacía cuando git falla, y aquí la diferencia entre «no hay cambios» y «git
+    ha fallado» decide si se aborta la campaña.
+    """
+    proceso = subprocess.run(
+        ["git", "-C", str(raiz), *args],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    return proceso.returncode, (proceso.stdout or "") + (proceso.stderr or "")
+
+
+def arbol_limpio(raiz: str = ".") -> bool:
+    """¿El árbol de trabajo está sin cambios pendientes de commitear?
+
+    Un git que falla —no es un repositorio, no está instalado— cuenta como NO
+    limpio: la campaña paralela se apoya en `HEAD`, y sin poder comprobarlo lo
+    prudente es abortar.
+    """
+    codigo, salida = _git(raiz, "status", "--porcelain")
+    return codigo == 0 and not salida.strip()
+
+
+class Worktrees:
+    """Crea N worktrees desechables desde `HEAD` y garantiza su retirada.
+
+    Se usa como gestor de contexto: `__enter__` devuelve las rutas y `__exit__`
+    las retira pase lo que pase (fin normal, excepción o `KeyboardInterrupt`).
+    Viven en el temp del sistema, nunca bajo el repositorio: dentro saldrían en
+    `git status`, en la recolección de pytest y en el radar del portero, y el
+    peor caso imaginable —el proceso matado a machetazos— dejaría basura dentro
+    del árbol de trabajo.
+    """
+
+    def __init__(self, raiz: str, cuantos: int, etiqueta: str = "mutacion") -> None:
+        self.raiz = str(raiz)
+        self.cuantos = max(0, cuantos)
+        self.etiqueta = etiqueta
+        self.rutas: list[str] = []
+        self._temporal: str | None = None
+
+    def __enter__(self) -> list[str]:
+        # Retira primero los registros huérfanos que dejó una campaña muerta:
+        # si no, se acumulan campaña tras campaña en `git worktree list`.
+        _git(self.raiz, "worktree", "prune")
+        self._temporal = tempfile.mkdtemp(prefix=f"mutacion_{self.etiqueta}_")
+        try:
+            for indice in range(self.cuantos):
+                destino = Path(self._temporal) / f"wk_{indice}"
+                codigo, salida = _git(
+                    self.raiz, "worktree", "add", "--detach", str(destino), "HEAD"
+                )
+                if codigo != 0:
+                    raise RuntimeError(
+                        f"No se pudo crear el worktree {destino.as_posix()}: "
+                        f"{salida.strip()}"
+                    )
+                self.rutas.append(str(destino))
+        except BaseException:
+            self._retirar()
+            raise
+        return self.rutas
+
+    def __exit__(
+        self,
+        tipo: type[BaseException] | None,
+        valor: BaseException | None,
+        traza: TracebackType | None,
+    ) -> bool:
+        self._retirar()
+        return False  # nunca traga la excepción: solo limpia
+
+    def _retirar(self) -> None:
+        """Borra los worktrees creados; lo que no se deje borrar, se desregistra."""
+        for ruta in self.rutas:
+            codigo, _ = _git(self.raiz, "worktree", "remove", "--force", ruta)
+            if codigo != 0:
+                # Windows: un proceso rezagado puede tener un fichero abierto.
+                # Se borra el directorio y se desregistra después, en ese orden:
+                # `prune` solo retira el registro de un worktree que ya no está.
+                shutil.rmtree(ruta, ignore_errors=True)
+                _git(self.raiz, "worktree", "prune")
+        self.rutas = []
+        if self._temporal is not None:
+            shutil.rmtree(self._temporal, ignore_errors=True)
+            self._temporal = None
