@@ -207,7 +207,41 @@ PENDIENTE_T5
 
 ## T7 · Campaña de mutación de la propia F-012
 
-PENDIENTE_T7
+Informe: `progress/mutacion_F-012.md` (61 mutantes, campaña completa, sin
+muestreo). La campaña se lanzó **con la propia implementación paralela**, que
+es en sí misma parte de la evidencia de T5: el código que se está juzgando es
+el que reparte a los jueces.
+
+La campaña se ejecutó cuatro veces, y las tres primeras sirvieron para cerrar
+huecos de test reales:
+
+| Campaña | Mutantes | Muertos | Supervivientes | Timeouts | Tiempo | Qué cambió |
+|---|---|---|---|---|---|---|
+| 1ª (`--timeout 300`) | 61 | 37 | 24 | 0 | 910,0 s | estado tras T4 |
+| 2ª (`--timeout 300`) | 61 | 51 | 7 | 3 | 871,9 s | +15 tests que cazan 17 supervivientes |
+| 3ª (`--timeout 900`) | 61 | 53 | 8 | 0 | 837,6 s | mismo código; se sube el timeout y desaparecen los 3 timeouts |
+| **4ª (final)** | **61** | **55** | **6** | **0** | **1.234,0 s** | +1 test del fallback de limpieza con fichero bloqueado |
+
+- **Los 3 timeouts de la 2ª campaña eran contención, no mutantes lentos.** Con
+  16 suites simultáneas la suite del árbol completo (~130 s en reposo) puede
+  pasar de 300 s. Es el riesgo que anticipa el `design.md`, y se resolvió como
+  dice: subiendo el timeout, sin tocar código. Los tres mutantes «lentos»
+  volvieron a su sitio (dos muertos, uno equivalente) en cuanto tuvieron
+  margen.
+- **De 24 supervivientes a 6**: los 18 cazados eran huecos de verdad —la
+  frontera de dos workers, el ejecutor inyectado, el muestreo exacto, el fallo
+  de un worker, el reloj del informe, el fallback de limpieza—, no ruido.
+- **Los 6 supervivientes finales están analizados uno a uno** en
+  `progress/mutacion_F-012.md`, sin ningún `PENDIENTE`: cinco son equivalentes
+  demostrables (dos `flush` de la línea de progreso, el `or 1` del contador de
+  núcleos que da 1 worker en ambas versiones, el `text=True` que `subprocess`
+  ya deduce de `encoding=`, y un `!= 1` sobre códigos de salida que git nunca
+  devuelve) y el sexto es un superviviente aceptado: cambia CUÁNDO corre el
+  plan B de la limpieza sin cambiar el estado final, y cazarlo exigiría
+  asertar sobre los restos de un borrado parcial.
+
+Mutation score final: **55/61 = 90,2 %**; contando como no-cazables los cinco
+equivalentes demostrables, 55/56 = 98,2 %.
 
 ## Verificaciones MANUAL pendientes
 
