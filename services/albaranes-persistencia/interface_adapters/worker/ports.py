@@ -30,3 +30,21 @@ class FuenteDocumento(ABC):
     @abstractmethod
     def obtener(self, document_id: str) -> DocumentoPdf:
         raise NotImplementedError
+
+
+class FuenteContextoEmail(ABC):
+    """Contexto de email/adjunto a partir de la ``correlation_key``.
+
+    (ago 2026, F-002 · R12) En modo colas el mensaje solo trae
+    ``document_id`` y ``correlation_key``, asi que el merge se quedaba sin
+    ``email_received_datetime`` y el guard de año no tenia referencia. El
+    dato lo dejo sv1 en ``workflow_runs.payload_json``.
+
+    Devuelve el dict de contexto que ya entiende el repositorio de sv3
+    (claves ``email`` y ``document``), o ``{}`` si no hay nada que
+    aportar: es un colaborador best-effort, no una dependencia dura.
+    """
+
+    @abstractmethod
+    def obtener(self, correlation_key: str) -> Dict[str, Any]:
+        raise NotImplementedError

@@ -19,7 +19,11 @@ from application.pipelines.persist_albaran_pipeline import (
     PersistAlbaranRequest,
 )
 from domain.models.extraction_models import ExtractionMeta
-from interface_adapters.worker.ports import FuenteDocumento, FuenteEnvelope
+from interface_adapters.worker.ports import (
+    FuenteContextoEmail,
+    FuenteDocumento,
+    FuenteEnvelope,
+)
 from ruesma_comun.colas import MensajeBase
 
 logger = logging.getLogger(__name__)
@@ -52,6 +56,7 @@ def construir_handler_persistencia(
     pipeline: PersistAlbaranPipeline,
     fuente_documento: FuenteDocumento,
     fuente_envelope: FuenteEnvelope,
+    fuente_contexto: FuenteContextoEmail | None = None,
 ) -> Callable[[MensajeBase], None]:
     def handler(mensaje: MensajeBase) -> None:
         document_id = mensaje.document_id
@@ -102,6 +107,21 @@ def construir_handler_persistencia(
             if mensaje.correlation_key
             else {}
         )
+        # (F-002 · R12) El mensaje no trae el correo: se reconstruye desde
+        # workflow_runs para que email_received_datetime deje de quedar
+        # NULL en el merge (y el guard de año tenga referencia).
+        # Best-effort: si no hay contexto, el pipeline recibe lo de antes.
+        if fuente_contexto is not None and mensaje.correlation_key:
+            try:
+                context.update(
+                    fuente_contexto.obtener(mensaje.correlation_key) or {},
+                )
+            except Exception:  # noqa: BLE001 — best-effort
+                logger.exception(
+                    "[sv3-worker] no se pudo reconstruir el contexto de "
+                    "email; se sigue sin el. correlation_key=%s",
+                    mensaje.correlation_key,
+                )
 
         result = pipeline.run(
             PersistAlbaranRequest(

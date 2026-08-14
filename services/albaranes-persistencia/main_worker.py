@@ -25,6 +25,7 @@ from pathlib import Path
 from config.logging_config import configure_logging
 from config.settings import Settings
 from infrastructure.clients.cola_valuation_trigger import ColaValuationTrigger
+from infrastructure.database.session_factory import SessionFactory
 from interface_adapters.composition import build_persist_pipeline
 from interface_adapters.worker.blob_adapters import (
     FuenteDocumentoBlob,
@@ -33,9 +34,13 @@ from interface_adapters.worker.blob_adapters import (
 from interface_adapters.worker.persistence_worker import (
     construir_handler_persistencia,
 )
+from interface_adapters.worker.workflow_context_adapter import (
+    FuenteContextoEmailWorkflows,
+)
 from ruesma_comun.blobs import construir_almacen_desde_entorno
 from ruesma_comun.colas import COLA_PERSISTENCIA
 from ruesma_comun.colas.arranque import construir_publicador, ejecutar_worker
+from ruesma_comun.workflows.repositorio import RepositorioWorkflows
 
 
 def main() -> int:
@@ -55,10 +60,24 @@ def main() -> int:
     publicador = construir_publicador(emitido_por="ca-sv3-persistencia")
     valuation_trigger = ColaValuationTrigger(publicador)
     pipeline = build_persist_pipeline(settings, valuation_trigger=valuation_trigger)
+    # (F-002 · R12) Contexto de email desde workflow_runs: sin esto,
+    # email_received_datetime queda NULL en el merge cuando sv3 trabaja en
+    # modo colas. SessionFactory propio (mismo database_url que el
+    # pipeline; segundo engine asumido, patron ya usado por sv1).
+    fuente_contexto = FuenteContextoEmailWorkflows(
+        RepositorioWorkflows(
+            SessionFactory(
+                database_url=settings.database_url,
+                admin_database_url=settings.admin_database_url,
+                target_database_name=settings.pg_db,
+            )
+        )
+    )
     handler = construir_handler_persistencia(
         pipeline=pipeline,
         fuente_documento=FuenteDocumentoBlob(almacen),
         fuente_envelope=FuenteEnvelopeBlob(almacen),
+        fuente_contexto=fuente_contexto,
     )
     return ejecutar_worker(
         nombre_cola=COLA_PERSISTENCIA,

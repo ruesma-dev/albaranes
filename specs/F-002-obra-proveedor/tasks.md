@@ -44,7 +44,7 @@ ejecutarlo).
       no-op), R16/R17.
       | Verificación: pytest sv3 en verde (tests `test_f002_r13_*`.. `_r15_*`).
 
-- [ ] T6: sv3 — contexto de email desde `workflow_runs`: puerto
+- [x] T6: sv3 — contexto de email desde `workflow_runs`: puerto
       `FuenteContextoEmail` en `worker/ports.py`, adaptador
       `workflow_context_adapter.py`, handler de `persistence_worker.py` y
       wiring en `main_worker.py` + `test_f002_contexto_email_worker.py`:
