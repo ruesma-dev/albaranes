@@ -110,6 +110,7 @@ def build_persist_pipeline(
             client=sigrid_obra_client,
             repository=repository,
             enabled=settings.obra_enrichment_enabled,
+            enabled_red=settings.red_obra_enabled,
         )
         contrato_enrichment_service = ContratoEnrichmentService(
             client=sigrid_contrato_client,

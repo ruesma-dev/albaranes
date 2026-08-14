@@ -21,7 +21,7 @@ ejecutarlo).
       | Verificación: compileall + revisión contra design.md. La escritura
       real contra PG es MANUAL (humano) en T12.
 
-- [ ] T3: sv3 — red de obra en `obra_enrichment_service.py` + `tests/`
+- [x] T3: sv3 — red de obra en `obra_enrichment_service.py` + `tests/`
       (`conftest.py`, `test_f002_red_obra.py`): R5 (0937 inexistente →
       descartar+revisión), R6 (código no normalizable), R7 (retirada al
       validar; idempotencia en reproceso), R16 (excepción del cliente no

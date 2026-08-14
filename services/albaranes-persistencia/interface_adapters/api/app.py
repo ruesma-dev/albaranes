@@ -173,6 +173,7 @@ def build_app(settings: Settings) -> FastAPI:
             client=sigrid_obra_client,
             repository=repository,
             enabled=settings.obra_enrichment_enabled,
+            enabled_red=settings.red_obra_enabled,
         )
 
         contrato_enrichment_service = ContratoEnrichmentService(
