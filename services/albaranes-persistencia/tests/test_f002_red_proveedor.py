@@ -228,13 +228,95 @@ def test_f002_r10_sin_candidato_marca_revision_sin_propuesta() -> None:
 
 
 def test_f002_r10_sin_obra_efectiva_marca_revision_sin_propuesta() -> None:
+    """Sin obra no hay «proveedores con contrato en la obra» que
+    proponer, por muy bien que casara el nombre."""
     repo = RepoProveedorFake(_header(obra=None))
-    cliente = ClienteProveedorFake(por_cif=None)
+    cliente = ClienteProveedorFake(
+        por_cif=None,
+        candidatos_obra=[_candidato("B99111222", "HORPRESOL, S.L.")],
+    )
 
     _servicio(repo, cliente).resolve_merge_document(merge_document_id=DOC)
 
     assert len(repo.marcas) == 1
-    assert repo.marcas[0][0] == f"proveedor_cif_no_casa:{CIF_LEIDO}"
+    motivo, nota, _ = repo.marcas[0]
+    assert motivo == f"proveedor_cif_no_casa:{CIF_LEIDO}"
+    assert "B99111222" not in nota
+
+
+def test_f002_r10_un_parecido_por_debajo_del_umbral_no_se_propone() -> None:
+    """Un token en comun de tres no es «casar»: proponer eso al revisor
+    es peor que no proponer nada."""
+    repo = RepoProveedorFake(_header(nombre="TRANSPORTES MACOTRAN NORTE"))
+    cliente = ClienteProveedorFake(
+        por_cif=None,
+        candidatos_obra=[_candidato("B77000777", "MACOTRAN LOGISTICA GLOBAL")],
+    )
+
+    _servicio(repo, cliente).resolve_merge_document(merge_document_id=DOC)
+
+    assert "B77000777" not in repo.marcas[0][1]
+
+
+def test_f002_r9_el_umbral_es_inclusivo() -> None:
+    """Justo en el umbral (0.5) SI se propone: es el valor que el humano
+    acepto reutilizar de HEADER_RESOLVER_MIN_SCORE."""
+    repo = RepoProveedorFake(_header(nombre="HORMIGONES DEL EBRO"))
+    cliente = ClienteProveedorFake(
+        por_cif=None,
+        candidatos_obra=[_candidato("B66000666", "EBRO CANTERAS")],
+    )
+
+    _servicio(repo, cliente).resolve_merge_document(merge_document_id=DOC)
+
+    assert "B66000666" in repo.marcas[0][1]
+
+
+def test_f002_r9_ante_un_empate_gana_el_primer_candidato() -> None:
+    """La propuesta tiene que ser estable: dos pasadas sobre el mismo
+    documento no pueden proponer proveedores distintos."""
+    repo = RepoProveedorFake(_header(nombre="HORMIGONES DEL EBRO"))
+    cliente = ClienteProveedorFake(
+        por_cif=None,
+        candidatos_obra=[
+            _candidato("B66000666", "EBRO CANTERAS"),
+            _candidato("B55000555", "EBRO ARIDOS"),
+        ],
+    )
+
+    _servicio(repo, cliente).resolve_merge_document(merge_document_id=DOC)
+
+    nota = repo.marcas[0][1]
+    assert "B66000666" in nota
+    assert "B55000555" not in nota
+
+
+def test_f002_r10_sin_nombre_leido_la_nota_no_escupe_none() -> None:
+    """La nota la lee una persona en el portal: 'None' ahí es una fuga
+    de la implementación."""
+    repo = RepoProveedorFake(_header(nombre=None))
+    cliente = ClienteProveedorFake(por_cif=None)
+
+    _servicio(repo, cliente).resolve_merge_document(merge_document_id=DOC)
+
+    assert "None" not in repo.marcas[0][1]
+
+
+def test_f002_r9_la_propuesta_nombra_el_cif_leido_y_el_candidato() -> None:
+    """La nota tiene que dar los dos datos: qué se leyó y qué se
+    propone. Con uno solo, el revisor no puede decidir."""
+    repo = RepoProveedorFake(_header())
+    cliente = ClienteProveedorFake(
+        por_cif=None,
+        candidatos_obra=[_candidato("B99111222", "HORPRESOL, S.L.")],
+    )
+
+    _servicio(repo, cliente).resolve_merge_document(merge_document_id=DOC)
+
+    nota = repo.marcas[0][1]
+    assert CIF_LEIDO in nota
+    assert "GRUPO OTTO HORPRESOL" in nota
+    assert "None" not in nota
 
 
 # ---------------------------------------------------------------- #

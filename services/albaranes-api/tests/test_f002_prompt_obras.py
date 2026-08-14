@@ -155,6 +155,41 @@ def test_f002_r1_la_lista_se_capa_a_obras_activas_max() -> None:
     assert "0453" not in cliente.instructions
 
 
+def test_f002_r1_el_cap_por_defecto_son_300_obras() -> None:
+    """El default del servicio y el de ``OBRAS_ACTIVAS_MAX`` tienen que
+    coincidir: si se separan, el prompt cambia de tamaño sin que nadie
+    haya tocado la configuración."""
+    cliente = ClienteEspia()
+    codigos = [f"{n:04d}" for n in range(1000, 1301)]  # 301 obras
+    servicio = _servicio(
+        cliente,
+        PromptRepoFake("{obras_activas}"),
+        proveedor=ProveedorObras(_obras(*codigos)),
+    )
+
+    _extraer(servicio)
+
+    assert "1299 — OBRA 1299" in cliente.instructions
+    assert "1300" not in cliente.instructions
+
+
+def test_f002_r1_un_cap_absurdo_deja_al_menos_una_obra() -> None:
+    """Un ``OBRAS_ACTIVAS_MAX`` mal puesto (0 o negativo) no puede
+    convertir la lista en un bloque vacío que invite a inventar."""
+    cliente = ClienteEspia()
+    servicio = _servicio(
+        cliente,
+        PromptRepoFake("{obras_activas}"),
+        proveedor=ProveedorObras(_obras("0451", "0452")),
+        obras_activas_max=0,
+    )
+
+    _extraer(servicio)
+
+    assert "0451 — OBRA 0451" in cliente.instructions
+    assert "0452" not in cliente.instructions
+
+
 def test_f002_r1_el_bloque_prohibe_codigos_fuera_de_la_lista() -> None:
     cliente = ClienteEspia()
     servicio = _servicio(

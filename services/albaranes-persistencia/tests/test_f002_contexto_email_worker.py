@@ -198,6 +198,17 @@ def test_f002_r12_sin_fuente_cableada_el_handler_manda_lo_de_siempre() -> None:
     assert pipeline.contextos == [{"correlation_key": CLAVE}]
 
 
+def test_f002_r12_sin_fuente_cableada_no_se_registra_ningun_error(
+    caplog,
+) -> None:
+    """No cablear la fuente es una configuración válida (la API HTTP no
+    la usa): no puede aparecer como excepción en los logs del worker."""
+    with caplog.at_level("ERROR"):
+        _ejecutar_handler(None)
+
+    assert "contexto de email" not in caplog.text
+
+
 def test_f002_r16_una_fuente_que_revienta_no_rompe_el_handler() -> None:
     pipeline = _ejecutar_handler(
         FuenteContextoFake({}, error=RuntimeError("BBDD caida")),

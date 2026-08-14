@@ -37,8 +37,12 @@ class ProveedorFake:
 
 
 class RelojFalso:
+    """Arranca LEJOS de cero a proposito: con 0.0, sumar o restar el
+    instante de obtencion da lo mismo y la comparacion del TTL se
+    quedaria sin comprobar."""
+
     def __init__(self) -> None:
-        self.ahora = 0.0
+        self.ahora = 5000.0
 
     def __call__(self) -> float:
         return self.ahora
@@ -202,6 +206,31 @@ def test_f002_r1bis_las_filas_sin_codigo_se_ignoran() -> None:
     assert [o.codigo for o in filas_a_obras(columnas, filas)] == ["0451"]
 
 
+def test_f002_r1bis_sin_las_columnas_esperadas_se_lee_por_posicion() -> None:
+    """sigrid-api podria devolver los alias cambiados: el orden del SELECT
+    (codigo, nombre) es el respaldo."""
+    filas = [["0451", "EDIFICIO A"]]
+
+    assert filas_a_obras(["c0", "c1"], filas) == [
+        ObraActiva(codigo="0451", nombre="EDIFICIO A"),
+    ]
+
+
+def test_f002_r1bis_una_fila_sin_columna_de_nombre_no_revienta() -> None:
+    assert filas_a_obras(["codigo_obra", "nombre_obra"], [["0451"]]) == [
+        ObraActiva(codigo="0451", nombre=None),
+    ]
+
+
+def test_f002_r1bis_la_obra_es_inmutable() -> None:
+    """La cache reparte las MISMAS instancias a todas las extracciones:
+    si fueran mutables, una podria envenenar el prompt de las demas."""
+    obra = ObraActiva(codigo="0451", nombre="EDIFICIO A")
+
+    with pytest.raises(Exception):
+        obra.codigo = "9999"
+
+
 def test_f002_r1bis_los_codigos_se_deduplican_conservando_el_primero() -> None:
     """``con.cod`` se repite en Sigrid (varias filas por obra): el prompt
     no puede listar la misma obra dos veces."""
@@ -265,10 +294,15 @@ class ClientFake:
     def __init__(self, respuesta: RespuestaFake) -> None:
         self.respuesta = respuesta
         self.peticiones: list[dict] = []
+        self.transportes: list[dict] = []
 
     def __call__(self, **kwargs):
         self.kwargs = kwargs
         return self
+
+    def transporte(self, **kwargs):
+        self.transportes.append(kwargs)
+        return object()
 
     def __enter__(self):
         return self
@@ -286,6 +320,9 @@ def cliente_http(monkeypatch):
     def _instalar(respuesta: RespuestaFake) -> ClientFake:
         fake = ClientFake(respuesta)
         monkeypatch.setattr(modulo_cliente.httpx, "Client", fake)
+        monkeypatch.setattr(
+            modulo_cliente.httpx, "HTTPTransport", fake.transporte,
+        )
         return fake
 
     return _instalar
@@ -365,3 +402,69 @@ def test_f002_r1bis_el_max_rows_es_configurable(cliente_http) -> None:
         ObraActiva(codigo="0452", nombre="EDIFICIO B"),
     ]
     assert http.peticiones[0]["json"]["max_rows"] == 2
+
+
+def test_f002_r1bis_avisa_cuando_la_lista_puede_venir_truncada(
+    cliente_http, caplog,
+) -> None:
+    """Si llegan EXACTAMENTE max_rows filas, faltan obras y nadie lo
+    sabria: el aviso es la unica pista operativa."""
+    cliente_http(RespuestaFake(cuerpo={
+        "ok": True,
+        "columns": ["codigo_obra", "nombre_obra"],
+        "rows": [["0451", "A"], ["0452", "B"]],
+    }))
+
+    with caplog.at_level("WARNING"):
+        _cliente(max_rows=2).obtener()
+
+    assert "truncada" in caplog.text
+
+
+def test_f002_r1bis_con_una_fila_menos_no_avisa_de_truncado(
+    cliente_http, caplog,
+) -> None:
+    cliente_http(RespuestaFake(cuerpo={
+        "ok": True,
+        "columns": ["codigo_obra", "nombre_obra"],
+        "rows": [["0451", "A"]],
+    }))
+
+    with caplog.at_level("WARNING"):
+        _cliente(max_rows=2).obtener()
+
+    assert "truncada" not in caplog.text
+
+
+def test_f002_r2_un_400_se_trata_como_error_aunque_traiga_cuerpo(
+    cliente_http,
+) -> None:
+    """400 es el codigo tipico de una query mal formada: si se colase
+    como respuesta buena, el prompt se quedaria sin obras SIN error."""
+    cliente_http(RespuestaFake(status_code=400, cuerpo={
+        "ok": True,
+        "columns": ["codigo_obra", "nombre_obra"],
+        "rows": [["0451", "EDIFICIO A"]],
+    }, texto="bad request"))
+
+    assert _cliente().obtener() is None
+
+
+def test_f002_r2_una_respuesta_sin_ok_no_se_da_por_buena(cliente_http) -> None:
+    cliente_http(RespuestaFake(cuerpo={
+        "columns": ["codigo_obra", "nombre_obra"],
+        "rows": [["0451", "EDIFICIO A"]],
+    }))
+
+    assert _cliente().obtener() is None
+
+
+def test_f002_r2_el_transporte_reintenta_una_vez(cliente_http) -> None:
+    """Errores transitorios de red: un reintento, nunca bucle desnudo."""
+    http = cliente_http(RespuestaFake(cuerpo={
+        "ok": True, "columns": ["codigo_obra", "nombre_obra"], "rows": [],
+    }))
+
+    _cliente().obtener()
+
+    assert http.transportes == [{"retries": 1}]
