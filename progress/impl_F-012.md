@@ -27,7 +27,7 @@ una línea: cada worker la llama tal cual con `raiz=<su worktree>` y
 | `harness/mutacion.py` | Tres cambios acotados: `raiz_venvs` opcional en `ejecutor_para`; flag `--workers`; `main()` delega en el coordinador cuando el número de workers es ≥ 2. Añadidos `TOPE_WORKERS`, `workers_por_defecto()` y `resolver_workers()`. **Sin tocar** `generar_mutantes`, `aplicar_mutante`, `ejecutar_campania`, `escribir_informe` ni `EjecutorPytest`. |
 | `harness/rigor.py` | `workers_mutacion(rigor) -> int \| None`: lee la clave **opcional** `mutacion.workers`. A diferencia del timeout, su ausencia no es error. |
 | `harness/rigor.json` | Solo el texto `$doc` del bloque `mutacion`, documentando la clave opcional. **No se declara ningún número**: un valor cableado viajaría de máquina en máquina. |
-| `tests/test_f012_*.py` | 5 ficheros, 50 tests nuevos. |
+| `tests/test_f012_*.py` | 5 ficheros, **67 tests** nuevos. |
 | `specs/F-012-mutacion-paralela/tasks.md` | Tareas marcadas `[x]`. |
 | `progress/current.md`, `progress/impl_F-012.md`, `progress/mutacion_F-012.md` | Memoria de la sesión. |
 
@@ -203,7 +203,131 @@ FAILED tests/test_f012_r1_r5_r11_coordinador.py::test_f012_r2_el_arbol_principal
 
 ## T5 · Comparación serie-vs-paralelo (criterio de éxito)
 
-PENDIENTE_T5
+### Tres desviaciones respecto a los comandos literales de `tasks.md`
+
+Las tres se aplican **igual a las dos mitades**, así que la comparación sigue
+siendo entre iguales; las tres están medidas, no supuestas.
+
+1. **`--rama ""` en ambos comandos.** La rama `feature/F-011-evals-ia` sigue
+   existiendo Y ya está mergeada en `dev`, así que el camino por rama de
+   `harness.alcance` calcula `merge-base(dev, rama)` = la propia punta de la
+   rama y el alcance sale **vacío**:
+
+   ```
+   $ python -c "from harness.alcance import alcance_de_feature; print(alcance_de_feature('F-011', base='dev', rama='feature/F-011-evals-ia').descripcion())"
+   F-011: 0 fichero(s), 0 línea(s) de producción (origen rama, 4b57de8c1a45...^..feature/F-011-evals-ia)
+   ```
+
+   Comparar dos informes vacíos no demuestra nada. Con `--rama ""` se fuerza
+   el camino por commit de merge, que es el que `harness.alcance` tiene
+   previsto para features cerradas, y sale el alcance REAL de F-011: 13
+   ficheros, 3.812 líneas, **305 mutantes generados** — exactamente los del
+   informe histórico `progress/mutacion_F-011.md`.
+
+2. **`--timeout 300` en ambos comandos** (el flag ya existía; no se toca
+   `rigor.json`). Con el 120 s configurado, todo mutante superviviente daría
+   timeout en las DOS mitades, porque la suite del árbol completo tarda hoy
+   ~130 s. Ver «Hallazgo colateral».
+
+3. **Informes fuera de `progress/` y campaña en serie sobre un worktree
+   dedicado.** Lo primero, porque un `progress/tmp_*.md` sin commitear ensucia
+   el árbol y la campaña paralela (R9) no arranca con el árbol sucio —lo
+   comprobé en carne propia, ver más abajo—; los informes van al scratchpad de
+   la sesión, que es donde `tasks.md` los quería (temporales, se pegan aquí y
+   se tiran). Lo segundo, porque la campaña en serie muta EL ÁRBOL en el que
+   corre durante dos horas: lanzarla con
+   `--raiz <worktree detached en b23497a> --workers 1` la deja mutando un
+   checkout desechable del MISMO commit que usaron los workers de la mitad
+   paralela, en vez de bloquear el repositorio. Es el propio `--raiz` de
+   siempre, y el commit es idéntico, así que la suite que juzga cada mutante
+   es la misma en las dos mitades.
+
+### Los comandos, tal y como se lanzaron
+
+```bash
+# Mitad paralela (16 workers por defecto: 22 núcleos lógicos - 2, con tope 16)
+python -m harness.mutacion --feature F-011 --rama "" --base dev \
+    --max-mutantes 60 --semilla 20260813 --timeout 300 \
+    --salida <scratchpad>/mutacion_paralelo.md
+
+# Mitad en serie, sobre un worktree desechable del mismo commit
+git worktree add --detach C:/.../Temp/f012_serie_f011 b23497a
+python -m harness.mutacion --feature F-011 --rama "" --base dev \
+    --raiz C:/.../Temp/f012_serie_f011 --workers 1 \
+    --max-mutantes 60 --semilla 20260813 --timeout 300 \
+    --salida <scratchpad>/mutacion_serie.md
+```
+
+### Resultado
+
+| Métrica | En serie (`--workers 1`) | En paralelo (16 workers) |
+|---|---|---|
+| Mutantes generados | 305 | 305 |
+| Mutantes evaluados | 60 | 60 |
+| Muertos | 37 | 37 |
+| Supervivientes | 23 | 23 |
+| Timeouts | 0 | 0 |
+| Muestreo | sí — 60 de 305, semilla `20260813` | sí — 60 de 305, semilla `20260813` |
+| **Tiempo total** | **6.491,0 s** (1 h 48 min) | **743,4 s** (12 min 23 s) |
+| Segundos por mutante | 108,2 | 12,4 |
+
+**Ganancia: 8,7× más rápido** (6.491,0 / 743,4), con 16 workers sobre 22
+núcleos lógicos. No es 16× y no puede serlo: los 16 worktrees se crean al
+arrancar (~40 s), el reparto no reparte trabajo idéntico —un mutante que muere
+pronto cuesta menos que uno que sobrevive a la suite entera— y 16 suites
+simultáneas se estorban entre ellas. Para el que espera: **de hora y tres
+cuartos a doce minutos**.
+
+Línea final de cada una, tal cual:
+
+```
+# serie
+60 mutantes evaluados, 37 muertos, 23 supervivientes, 0 timeouts en 6491.0 s
+INICIO 14/08/2026  5:02:41.16   FIN 14/08/2026  6:50:52.40
+
+# paralelo
+60 mutantes evaluados, 37 muertos, 23 supervivientes, 0 timeouts en 743.4 s
+real    12m23.644s
+```
+
+
+### Diff de los dos informes (criterio de éxito)
+
+El `diff` **crudo**, sin filtrar nada, de los dos informes completos:
+
+```
+$ diff mutacion_serie.md mutacion_paralelo.md
+1c1
+< <!-- .../scratchpad/mutacion_serie.md -->
+---
+> <!-- .../scratchpad/mutacion_paralelo.md -->
+4c4
+< Generado por `python -m harness.mutacion --feature F-011` el 2026-08-14 06:50.
+---
+> Generado por `python -m harness.mutacion --feature F-011` el 2026-08-14 02:24.
+36c36
+< | Tiempo total | 6491.0 s |
+---
+> | Tiempo total | 743.4 s |
+```
+
+**Tres líneas y ni una más**, en 154 líneas de informe: la fecha y la fila
+«Tiempo total» que la spec admite (R4), y la primera línea, que es la ruta del
+propio fichero y difiere por construcción —hay dos ficheros porque hay que
+comparar dos informes—. Todo lo demás es idéntico: la tabla de alcance fichero
+a fichero, los cinco totales, la fila de muestreo y **las 23 secciones de
+supervivientes, en el mismo orden**.
+
+Quitando esas tres líneas:
+
+```
+$ diff <(filtrar serie) <(filtrar paralelo)
+SIN DIFERENCIAS
+```
+
+Los dos informes temporales se han borrado tras pegar esta evidencia, como
+pedía `tasks.md`: no son informes de campaña oficiales.
+
 
 ## T7 · Campaña de mutación de la propia F-012
 
@@ -243,6 +367,67 @@ huecos de test reales:
 Mutation score final: **55/61 = 90,2 %**; contando como no-cazables los cinco
 equivalentes demostrables, 55/56 = 98,2 %.
 
+## T6 · Portado a arnes-base (R12)
+
+Copiados `mutacion.py`, `mutacion_paralela.py`, `rigor.py` y `rigor.json` a
+`C:\Users\pgris\PycharmProjects\arnes-base\arnes-base\harness\`, con commit
+local **`0436314`** («Campana de mutacion en paralelo: N workers, cada uno en
+su git worktree») y **sin push**, como manda el convenio. `VERSION` no se toca:
+arnes-base sigue en 1.4.0 con commits pendientes de push, y la spec no pide
+subirla.
+
+Verificación de que las dos copias son la misma (el contenido **commiteado**,
+que es lo que se versiona):
+
+```
+$ git show HEAD:harness/mutacion_paralela.py | md5sum
+fb1ff7941742016bab4191d1fe4700e4 *-
+$ git -C ../arnes-base show HEAD:arnes-base/harness/mutacion_paralela.py | md5sum
+fb1ff7941742016bab4191d1fe4700e4 *-
+$ for f in mutacion.py mutacion_paralela.py rigor.py rigor.json; do
+      diff -q --strip-trailing-cr ../arnes-base/arnes-base/harness/$f harness/$f; done
+(sin salida: idénticos)
+```
+
+`diff` a secas sí marca diferencia en `mutacion_paralela.py`, y conviene saber
+por qué: `core.autocrlf` de esta máquina deja el fichero de trabajo de
+albaranes en CRLF (se recheckeó al restaurarlo tras las roturas deliberadas de
+la fase RED) y el de arnes-base en LF. El contenido versionado es idéntico
+—mismo md5 del objeto de git—, que es lo que R12 exige. De ahí el
+`--strip-trailing-cr` en la comprobación.
+
+Los tests `test_f012_*` NO se portan: arnes-base no versiona suites de tests
+hoy, y cambiar eso no es de esta feature (así lo fija el `design.md`).
+
+## Hallazgo colateral (no es de esta feature, pero conviene saberlo)
+
+La campaña de mutación juzga los ficheros que no pertenecen a ningún servicio
+con la suite de la RAÍZ, y esa suite se lanza sin acotar ruta, así que recoge
+todo el árbol. Hoy tarda **~130 s**, y **93 s** se los come el `setup` de un
+solo test:
+
+```
+$ .venv/Scripts/python.exe -m pytest services/albaranes-comun/tests -q --durations=8
+92.87s setup    tests/test_humo_colas.py::test_publicar_y_consumir
+ 1.35s call     tests/test_humo_sharepoint.py::test_validacion_de_modos
+ ...
+19 passed, 3 skipped in 104.08s (0:01:44)
+```
+
+Consecuencias medidas:
+
+- En la campaña de F-011 (2026-08-13) el coste era de **12,1 s por mutante**;
+  hoy es de **~130 s**, diez veces más. La diferencia no está en el mutador:
+  está en ese fixture.
+- Con el `timeout_por_mutante_s` de 120 s de `harness/rigor.json`, **cualquier
+  campaña de este repositorio daría timeout en todos los mutantes que
+  sobreviven**, en serie y en paralelo. Por eso las dos mitades de T5 se
+  lanzaron con `--timeout 300` (el mismo valor en ambas: la comparación sigue
+  siendo justa) y la campaña de F-012 con `--timeout 900`.
+- Se deja apuntado, no arreglado: no es de esta feature. Candidatos obvios
+  para otra: marcar ese test de humo con un marcador que la campaña pueda
+  deseleccionar, o subir `timeout_por_mutante_s` en `rigor.json`.
+
 ## Verificaciones MANUAL pendientes
 
 Ninguna. La feature es herramienta del arnés: no toca sistemas reales, ni
@@ -251,4 +436,49 @@ suite y con las dos campañas de mutación de este informe.
 
 ## Evidencias
 
-PENDIENTE_EVIDENCIAS
+Todos los números están medidos en esta sesión, no estimados.
+
+| Evidencia | Valor | De dónde sale |
+|---|---|---|
+| **Tests ejecutados y resultado** | **242 pasados, 0 fallos** en la suite de la raíz (**67 nuevos de F-012**), más 19 pasados y 3 saltados en la suite del servicio `comun` | `bash harness/init.sh` |
+| **Cobertura de las líneas cambiadas** | **95,8 %** (184/192 líneas), umbral 80 %, nivel `estandar` | línea `PUERTA COBERTURA` de `bash harness/init.sh` |
+| **Mutantes generados y supervivientes** | **61 generados, 55 muertos, 6 supervivientes, 0 timeouts** (los 6 analizados, ninguno en `PENDIENTE`) | `python -m harness.mutacion --feature F-012` → `progress/mutacion_F-012.md` |
+| **Tiempo de ejecución de la suite** | **34,18 s** la suite de la raíz bajo `coverage`; **~130 s** la del árbol completo, que es la que juzga cada mutante | salida de pytest en `init.sh` |
+
+Veredicto del portero:
+
+```
+$ bash harness/init.sh
+...
+242 passed in 34.18s
+[OK] pytest en verde (con medición de cobertura)
+[OK] servicio comun (services/albaranes-comun): pytest en verde (caché: árbol sin cambios desde el último verde)
+[OK] PUERTA COBERTURA: 95.8% de 192 líneas cambiadas cubiertas (184/192, umbral 80%, nivel estandar)
+[OK] PUERTA RUTAS SENSIBLES [evals]: N/A (F-012 no toca ninguna ruta sensible declarada)
+[OK] Rama actual: feature/F-012-mutacion-paralela
+----------------------------------------
+ENTORNO LISTO. Puedes trabajar.
+(exit 0)
+```
+
+### Evidencia extra, regalada por un accidente
+
+A mitad de la campaña en serie (mutante 33 de 60) el arnés mató la tarea de
+fondo que la contenía. Un `kill` en seco: el `try/finally` de
+`ejecutar_campania` no llegó a ejecutarse. El estado que quedó es exactamente
+el que el diseño promete:
+
+```
+$ git -C <worktree de la serie> status --porcelain
+ M evals/procesos/sv5_valoracion.py      <-- el mutante que estaba en vuelo, aplicado
+
+$ git status            # árbol principal
+ M progress/current.md                   <-- solo mis propias ediciones
+ M progress/impl_F-012.md
+```
+
+La mutación se quedó **dentro del checkout desechable** y el árbol de trabajo
+real no se enteró. Se restauró con un `git checkout -- .` en el worktree y la
+campaña se relanzó desde cero. Es el peor caso de R10 ocurrido de verdad, no
+en un test.
+

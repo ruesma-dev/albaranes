@@ -32,7 +32,7 @@ fallo previo de los tests centrales va pegada en `progress/impl_F-012.md`.
       efectivo ≤ 1.
       | Verificación: `python -m pytest tests/test_f012_r7_r8_cli.py -q`
 
-- [ ] **T5**: Comparación serie-vs-paralelo sobre feature real (criterio de
+- [x] **T5**: Comparación serie-vs-paralelo sobre feature real (criterio de
       éxito). Comandos exactos, salidas reales en `progress/impl_F-012.md`:
       1. `python -m harness.mutacion --feature F-011 --workers 1 --max-mutantes 60 --semilla 20260813 --salida progress/tmp_mutacion_serie.md`
       2. `python -m harness.mutacion --feature F-011 --max-mutantes 60 --semilla 20260813 --salida progress/tmp_mutacion_paralelo.md`
@@ -53,11 +53,11 @@ fallo previo de los tests centrales va pegada en `progress/impl_F-012.md`.
       commit local allí (sin push).
       | Verificación: `git -C C:/Users/pgris/PycharmProjects/arnes-base status` limpio tras el commit y diff vacío entre ambos `harness/` para esos 4 ficheros
 
-- [ ] **T7**: Campaña de mutación de la PROPIA F-012
+- [x] **T7**: Campaña de mutación de la PROPIA F-012
       (`python -m harness.mutacion --feature F-012`) con supervivientes
       analizados en `progress/mutacion_F-012.md`, y sección «Evidencias»
       completa en `progress/impl_F-012.md`.
       | Verificación: existe `progress/mutacion_F-012.md` sin análisis `PENDIENTE`
 
-- [ ] **T8**: Ejecutar `bash harness/init.sh` en verde.
+- [x] **T8**: Ejecutar `bash harness/init.sh` en verde.
       | Verificación: `bash harness/init.sh` → exit 0

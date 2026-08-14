@@ -22,8 +22,8 @@
 ### Estado de la implementación (2026-08-14)
 
 - T1 (`94d150e`), T2 (`a7f3576`), T3 (`3114a6f`) y T4 (`b23497a`)
-  commiteadas; 50 tests nuevos de F-012 en verde.
-- En curso: **T5** (comparación serie-vs-paralelo sobre F-011). Tres
+  commiteadas; 67 tests nuevos de F-012 en verde.
+- **T5** (comparación serie-vs-paralelo sobre F-011) se lanzó con tres
   desviaciones respecto a los comandos literales de `tasks.md`, todas
   documentadas y justificadas en `progress/impl_F-012.md`:
   1. `--rama ""` en ambos comandos: la rama `feature/F-011-evals-ia`
@@ -42,8 +42,21 @@
      limpio para que la campaña paralela arranque (R9), y un
      `progress/tmp_*.md` sin commitear lo ensucia. Van al scratchpad de
      la sesión y se pegan en el informe.
-- Pendiente tras T5: T6 (portado a arnes-base), T7 (campaña de la propia
-  F-012) y T8 (`bash harness/init.sh` en verde).
+- T6 hecha: portado a arnes-base con commit local `0436314` (sin push).
+  Contenido commiteado idéntico en los dos repositorios (mismo md5).
+- T7 hecha: campaña de la propia F-012 lanzada CON la implementación
+  paralela. Cuatro pasadas: 24 supervivientes → 6, cerrando 18 huecos de
+  test reales por el camino. Los 6 finales están analizados en
+  `progress/mutacion_F-012.md` (cinco equivalentes demostrables y uno
+  aceptado y documentado). Ninguno queda en `PENDIENTE`.
+- T5 hecha y es el criterio de éxito cumplido: mismos totales en serie y
+  en paralelo (60 evaluados, 37 muertos, 23 supervivientes, 0 timeouts) y
+  diff de informes limpio salvo fecha, «Tiempo total» y la ruta del propio
+  fichero. **6.491,0 s en serie frente a 743,4 s en paralelo: 8,7×.**
+- T8 hecha: `bash harness/init.sh` en verde (242 tests, cobertura de
+  líneas cambiadas 95,8 %, exit 0).
+- Feature lista para review. NO se marca `done`: eso es del líder tras el
+  APROBADO del reviewer.
 
 ## Pendientes del humano (heredados)
 
