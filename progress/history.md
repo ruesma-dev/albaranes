@@ -25,6 +25,28 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
   automejoras de protocolo propuestas por el reviewer en su informe (fase
   RED para features-que-son-tests, control del cero en mutación).
 
+## F-012 — Campaña de mutación en paralelo (done, 2026-08-14)
+
+- Rama `feature/F-012-mutacion-paralela` (T1–T8, un intento inicial perdido
+  por infraestructura sin tocar nada). Review: **APPROVED a la primera**
+  (`progress/review_F-012.md`).
+- Entregado: coordinador paralelo en `harness/mutacion` — reparto
+  round-robin determinista, workers sobre `git worktree` desechables con
+  limpieza y restauración garantizadas por worker, fusión de informes
+  idéntica al formato en serie, `--workers` con default
+  `min(max(1, núcleos−2), 16)`. Portado a `arnes-base` (commit `0436314`,
+  md5 idéntico).
+- Criterio de éxito cumplido y medido: muestreo con semilla (60 mutantes)
+  con **totales idénticos** serie vs paralelo (37 muertos / 23
+  supervivientes / 0 timeouts) y **6.491 s vs 743 s: 8,7×**.
+- T7 usó la propia herramienta sobre sí misma: 4 pasadas, de 24
+  supervivientes a 6 (cerrando 18 huecos de test reales); los 6 finales
+  analizados (5 equivalentes demostrables, 1 aceptado). Cobertura de líneas
+  cambiadas: 95,8 %. 242 tests en verde.
+- Desviaciones de T5 (documentadas y aceptadas por el reviewer): `--rama ""`
+  para el alcance por commit de merge, `--timeout 300` aplicado a ambos
+  lados, informes temporales fuera de `progress/`.
+
 ## F-011 — Evals de IA con ground truth y puerta en el arnés (done, 2026-08-13)
 
 - Rama `feature/F-011-evals-ia`, 16 commits (T1–T14 + lint + correcciones del
