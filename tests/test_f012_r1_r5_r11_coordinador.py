@@ -10,6 +10,7 @@ worktree, el veredicto no saldría.
 from __future__ import annotations
 
 import subprocess
+import threading
 from pathlib import Path
 
 import pytest
@@ -169,6 +170,56 @@ def test_f012_r1_el_eco_numera_el_progreso_sobre_el_total_de_la_campania(
     total = informe.evaluados
     prefijos = sorted(linea.split("]")[0] + "]" for linea in lineas)
     assert prefijos == sorted(f"[{numero}/{total}]" for numero in range(1, total + 1))
+    assert all("->" in linea for linea in lineas)  # la descripción llega entera
+    assert any("[comparacion]" in linea for linea in lineas)
+
+
+def test_f012_r1_sin_pedir_workers_el_coordinador_usa_dos(repo: Path) -> None:
+    registro: list[tuple[str, str, int]] = []
+
+    ejecutar_campania_paralela(
+        _alcance(), servicios=[], raiz=str(repo), fabrica=_fabrica_falsa(registro)
+    )
+
+    raices = {raiz for _, raiz, _ in registro}
+    assert len(raices) == 2
+    assert str(repo) not in raices
+
+
+def test_f012_r1_el_reloj_del_informe_es_el_de_la_campania(repo: Path) -> None:
+    informe = ejecutar_campania_paralela(
+        _alcance(),
+        servicios=[],
+        raiz=str(repo),
+        workers=2,
+        fabrica=_fabrica_falsa([]),
+    )
+
+    assert 0 < informe.segundos < 600
+
+
+def test_f012_r1_el_fallo_de_un_worker_se_relanza_en_el_hilo_principal(
+    repo: Path,
+) -> None:
+    """Un worker roto no puede acabar en un informe incompleto y silencioso."""
+    cerrojo = threading.Lock()
+    llamadas = [0]
+
+    def fabrica(fichero: str, raiz: str) -> _EjecutorFalso:
+        with cerrojo:
+            llamadas[0] += 1
+            primera = llamadas[0] == 1
+        if primera:
+            raise RuntimeError("ejecutor roto")
+        return _EjecutorFalso(fichero, raiz, [])
+
+    with pytest.raises(RuntimeError, match="ejecutor roto"):
+        ejecutar_campania_paralela(
+            _alcance(), servicios=[], raiz=str(repo), workers=2, fabrica=fabrica
+        )
+
+    assert len(_git(repo, "worktree", "list").strip().splitlines()) == 1
+    assert (repo / "codigo.py").read_text(encoding="utf-8") == FUENTE
 
 
 def test_f012_r1_r4_el_informe_paralelo_es_identico_al_de_la_campania_en_serie(

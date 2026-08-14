@@ -119,6 +119,10 @@ def test_f012_r7_la_clave_workers_se_lee_cuando_esta_declarada() -> None:
     assert workers_mutacion({"mutacion": {"workers": 6}}) == 6
 
 
+def test_f012_r7_un_solo_worker_declarado_en_rigor_json_vale() -> None:
+    assert workers_mutacion({"mutacion": {"workers": 1}}) == 1
+
+
 def test_f012_r7_una_clave_workers_absurda_se_ignora() -> None:
     assert workers_mutacion({"mutacion": {"workers": 0}}) is None
     assert workers_mutacion({"mutacion": {"workers": -4}}) is None
@@ -242,6 +246,107 @@ def test_f012_r7_la_cli_pasa_el_numero_de_workers_al_coordinador(
     assert recibido["semilla"] == 20260813
     assert recibido["raiz"] == str(repo_con_feature)
     assert recibido["ficheros"] == ["codigo.py"]
+
+
+def test_f012_r8_con_workers_2_la_cli_ya_paraleliza(
+    repo_con_feature: Path, tmp_path: Path, monkeypatch
+) -> None:
+    """Dos es la frontera: con dos workers ya se paraleliza, no a partir de tres."""
+    import harness.mutacion_paralela as paralela
+
+    recibido: dict[str, object] = {}
+
+    def espia(alcance, servicios, **kwargs):
+        recibido.update(kwargs)
+        return InformeMutacion(feature=alcance.feature, alcance=alcance)
+
+    monkeypatch.setattr(paralela, "ejecutar_campania_paralela", espia)
+
+    codigo = main(
+        [
+            "--feature", "F-999",
+            "--rama", "feature/F-999-prueba",
+            "--base", "dev",
+            "--raiz", str(repo_con_feature),
+            "--salida", str(tmp_path / "informe.md"),
+            "--workers", "2",
+        ]
+    )
+
+    assert codigo == 0
+    assert recibido["workers"] == 2
+
+
+def test_f012_r8_un_ejecutor_inyectado_desactiva_la_paralela(
+    repo_con_feature: Path, tmp_path: Path, monkeypatch
+) -> None:
+    """Con ejecutor inyectado se juzga con ESE, aunque se pidan varios workers."""
+    import harness.mutacion_paralela as paralela
+
+    def prohibido(*_args, **_kwargs):
+        raise AssertionError("con ejecutor inyectado no se paraleliza")
+
+    monkeypatch.setattr(paralela, "ejecutar_campania_paralela", prohibido)
+    registro: list[str] = []
+
+    codigo = main(
+        [
+            "--feature", "F-999",
+            "--rama", "feature/F-999-prueba",
+            "--base", "dev",
+            "--raiz", str(repo_con_feature),
+            "--salida", str(tmp_path / "informe.md"),
+            "--workers", "4",
+        ],
+        ejecutor=_EjecutorFalso(registro, str(repo_con_feature)),
+    )
+
+    assert codigo == 0
+    assert len(registro) == 3  # los tres mutantes, todos con el ejecutor inyectado
+
+
+def test_f012_r8_con_servicios_declarados_el_ejecutor_inyectado_sigue_mandando(
+    tmp_path: Path
+) -> None:
+    """El ejecutor inyectado gana también en un monorepo con servicios.
+
+    Si aquí se colara la factoría por servicio, el test lanzaría pytest de
+    verdad contra un servicio de mentira: el registro se quedaría vacío.
+    """
+    raiz = tmp_path / "repo"
+    (raiz / "services" / "svc").mkdir(parents=True)
+    (raiz / "harness").mkdir()
+    (raiz / "harness" / "servicios.json").write_text(
+        '{"servicios": [{"nombre": "svc", "ruta": "services/svc", '
+        '"lenguaje": "python"}]}',
+        encoding="utf-8",
+    )
+    (raiz / "services" / "svc" / "codigo.py").write_text(FUENTE_BASE, encoding="utf-8")
+    _git(raiz, "init", "-q")
+    _git(raiz, "config", "user.email", "arnes@ejemplo.invalid")
+    _git(raiz, "config", "user.name", "Arnes")
+    _git(raiz, "add", "-A")
+    _git(raiz, "commit", "-q", "-m", "base")
+    _git(raiz, "branch", "-M", "dev")
+    _git(raiz, "checkout", "-q", "-b", "feature/F-999-prueba")
+    (raiz / "services" / "svc" / "codigo.py").write_text(FUENTE_NUEVA, encoding="utf-8")
+    _git(raiz, "commit", "-q", "-a", "-m", "F-999: una linea")
+    registro: list[str] = []
+
+    codigo = main(
+        [
+            "--feature", "F-999",
+            "--rama", "feature/F-999-prueba",
+            "--base", "dev",
+            "--raiz", str(raiz),
+            "--salida", str(tmp_path / "informe.md"),
+            "--workers", "1",
+        ],
+        ejecutor=_EjecutorFalso(registro, str(raiz)),
+    )
+
+    assert codigo == 0
+    assert len(registro) == 3
 
 
 def test_f012_r9_la_cli_devuelve_2_con_el_arbol_sucio(

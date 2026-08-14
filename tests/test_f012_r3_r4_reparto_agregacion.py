@@ -8,9 +8,17 @@ indistinguible del que produce la campaña en serie.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from harness.alcance import Alcance
 from harness.mutacion import InformeMutacion, Mutante
-from harness.mutacion_paralela import clave_estable, fusionar, repartir
+from harness.mutacion_paralela import (
+    clave_estable,
+    fusionar,
+    generar_y_muestrear,
+    renumerar,
+    repartir,
+)
 
 
 def _mutante(fichero: str, linea: int, col: int = 4, operador: str = "comparacion") -> Mutante:
@@ -183,3 +191,94 @@ def test_f012_r4_clave_estable_es_la_del_orden_de_la_campania_en_serie() -> None
     mutante = _mutante("harness/uno.py", 12, col=7, operador="logico")
 
     assert clave_estable(mutante) == ("harness/uno.py", 12, 7, "logico")
+
+
+# --- R3: el muestreo se aplica UNA vez, en el coordinador --------------------
+
+FUENTE = "def f(a, b):\n    if a == b:\n        return a + b\n    return a - b\n"
+
+
+def _alcance_de(tmp_path: Path) -> Alcance:
+    (tmp_path / "codigo.py").write_text(FUENTE, encoding="utf-8")
+    return Alcance(
+        feature="F-012",
+        origen="rama",
+        ref_diff=("base", "rama"),
+        lineas={"codigo.py": {1, 2, 3, 4}},
+    )
+
+
+def test_f012_r3_sin_max_mutantes_no_hay_muestreo(tmp_path: Path) -> None:
+    alcance = _alcance_de(tmp_path)
+
+    mutantes, generados, muestreado = generar_y_muestrear(alcance, str(tmp_path))
+
+    assert generados == len(mutantes) == 3
+    assert muestreado is False
+
+
+def test_f012_r3_con_max_mutantes_por_encima_de_los_generados_no_hay_muestreo(
+    tmp_path: Path,
+) -> None:
+    alcance = _alcance_de(tmp_path)
+
+    mutantes, generados, muestreado = generar_y_muestrear(alcance, str(tmp_path), 99, 1)
+
+    assert generados == 3
+    assert len(mutantes) == 3
+    assert muestreado is False
+
+
+def test_f012_r3_con_max_mutantes_igual_a_los_generados_no_hay_muestreo(
+    tmp_path: Path,
+) -> None:
+    alcance = _alcance_de(tmp_path)
+
+    mutantes, generados, muestreado = generar_y_muestrear(alcance, str(tmp_path), 3, 1)
+
+    assert len(mutantes) == generados == 3
+    assert muestreado is False  # muestrear 3 de 3 no es muestrear
+
+
+def test_f012_r3_con_max_mutantes_por_debajo_se_muestrea_y_se_marca(
+    tmp_path: Path,
+) -> None:
+    alcance = _alcance_de(tmp_path)
+
+    mutantes, generados, muestreado = generar_y_muestrear(alcance, str(tmp_path), 2, 7)
+
+    assert generados == 3
+    assert len(mutantes) == 2
+    assert muestreado is True
+    assert [clave_estable(m) for m in mutantes] == sorted(
+        clave_estable(m) for m in mutantes
+    )
+
+
+def test_f012_r3_el_muestreo_con_la_misma_semilla_elige_los_mismos_mutantes(
+    tmp_path: Path,
+) -> None:
+    alcance = _alcance_de(tmp_path)
+
+    primero, _, _ = generar_y_muestrear(alcance, str(tmp_path), 2, 20260813)
+    segundo, _, _ = generar_y_muestrear(alcance, str(tmp_path), 2, 20260813)
+
+    assert [clave_estable(m) for m in primero] == [clave_estable(m) for m in segundo]
+
+
+# --- Eco: renumerar el progreso sin destrozar la descripción -----------------
+
+
+def test_f012_r1_renumerar_conserva_entera_la_descripcion_del_mutante() -> None:
+    linea = "[2/7] muerto        codigo.py:3 [aritmetico] a + b -> a - b"
+
+    assert renumerar(linea, 5, 60) == (
+        "[5/60] muerto        codigo.py:3 [aritmetico] a + b -> a - b"
+    )
+
+
+def test_f012_r1_renumerar_no_toca_una_linea_que_no_venga_numerada() -> None:
+    assert renumerar("aviso suelto", 3, 9) == "[3/9] aviso suelto"
+    assert renumerar("sin corchete] pero con separador", 3, 9) == (
+        "[3/9] sin corchete] pero con separador"
+    )

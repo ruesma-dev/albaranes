@@ -142,6 +142,44 @@ def test_f012_r10_el_arranque_poda_los_huerfanos_de_campanias_muertas(
         assert huerfano.name not in _git(repo, "worktree", "list")
 
 
+def test_f012_r10_si_falla_la_retirada_el_registro_se_poda_igual(repo: Path) -> None:
+    """El caso Windows: el `worktree remove` no puede con el directorio.
+
+    Se fuerza borrando el directorio por debajo, que es lo que deja `remove`
+    con un error. Al salir no puede quedar ni el registro ni una excepción
+    escapándose: la limpieza es una promesa, no un intento.
+    """
+    gestor = Worktrees(str(repo), 1)
+    with gestor as rutas:
+        shutil.rmtree(rutas[0])
+        fallado = _git(repo, "worktree", "list")
+        assert Path(rutas[0]).name in fallado  # sigue registrado antes de salir
+
+    assert Path(rutas[0]).name not in _git(repo, "worktree", "list")
+
+
+def test_f012_r10_un_worktree_que_no_se_puede_crear_aborta_con_el_motivo(
+    tmp_path: Path,
+) -> None:
+    """Sin `HEAD` no hay worktree posible, y el motivo tiene que ser legible.
+
+    El mensaje lleva la salida REAL de git (que la escribe en stderr): sin ella
+    quien lanza la campaña se queda con «no se pudo» y ninguna pista.
+    """
+    vacio = tmp_path / "sin_commits"
+    vacio.mkdir()
+    _git(vacio, "init", "-q")
+    gestor = Worktrees(str(vacio), 1)
+
+    with pytest.raises(RuntimeError, match="No se pudo crear el worktree") as fallo, gestor:
+        pass  # pragma: no cover
+
+    mensaje = str(fallo.value)
+    assert "fatal" in mensaje.lower()
+    assert "b'" not in mensaje  # la salida de git va como texto, no como bytes
+    assert gestor.rutas == []  # el gestor se limpió a sí mismo antes de salir
+
+
 def test_f012_r10_sin_workers_no_crea_ningun_worktree(repo: Path) -> None:
     antes = _git(repo, "worktree", "list").strip().splitlines()
 
