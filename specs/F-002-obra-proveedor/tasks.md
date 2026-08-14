@@ -99,7 +99,9 @@ ejecutarlo).
       todos los servicios declarados y cobertura del diff).
       | Verificación: `bash harness/init.sh` → ENTORNO LISTO.
 
-- [ ] T12: MANUAL (humano) — verificación integrada en local
+- [ ] T12: MANUAL (humano) — PENDIENTE del humano; comandos y consultas
+      exactas en la seccion «Verificaciones MANUAL» de
+      `progress/impl_F-002.md`. — verificación integrada en local
       (Azurite + PG local + sigrid-api real, solo lectura):
       1) reprocesar un albarán con obra inventada (caso 0937) →
          merge sin obra + `review_required` + nota `[AVISO] Obra`;
