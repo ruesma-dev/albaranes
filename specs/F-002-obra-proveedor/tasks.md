@@ -76,16 +76,24 @@ ejecutarlo).
       | Verificación: pytest sv2 en verde (tests `test_f002_r1_*`, `_r2_*`,
       `_r4_*`).
 
-- [ ] T9: docs — actualizar `azure-apps/albaranes.md` (sv2 pasa a consumir
-      sigrid-api: endpoint, variables y secret nuevos de
-      `ca-sv2-extraccion`) y dejar en `progress/` la lista exacta de env
-      vars/secret a aplicar en Azure (lo aplica el humano).
-      | Verificación: revisión del diff de `azure-apps/` (repo hermano) y
-      nota en `progress/impl_F-002.md`.
+- [~] T9: PENDIENTE-DE-DESPLIEGUE (parcial). La lista exacta de env vars y
+      del secret a aplicar en `ca-sv2-extraccion` queda escrita en
+      `progress/impl_F-002.md` (hecho). La actualización de
+      `azure-apps/albaranes.md` NO se ejecuta: el humano impuso en la
+      PARADA 1 la regla dura **SIN DESPLIEGUE**, y ese documento describe
+      lo que HAY desplegado en Azure — escribir allí que sv2 consume
+      sigrid-api antes de que exista el secret dejaría el documento
+      mintiendo, que es peor que no tenerlo. Se actualiza en el mismo
+      trabajo en que el humano despliegue.
+      | Verificación: sección «Acciones del humano al desplegar» de
+      `progress/impl_F-002.md`.
 
-- [ ] T10: `.env.example` de sv2 con las variables nuevas (sin valores
-      reales) y comentario en `.env.example` de sv3 si aplica flags nuevos.
+- [x] T10: `.env.example` de sv2 con las variables nuevas (sin valores
+      reales) y flags nuevos en el `.env.example` de sv3.
       | Verificación: revisión; ningún secreto en el diff.
+      | OJO: `services/albaranes-api/.gitignore` ignora `*.example`, así
+      que el `.env.example` de sv2 se actualiza en disco pero NO aparece
+      en el diff (ver informe).
 
 - [ ] T11: Ejecutar `bash harness/init.sh` en verde (incluye pytest de
       todos los servicios declarados y cobertura del diff).
