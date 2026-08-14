@@ -14,8 +14,10 @@ import pytest
 
 from config.settings import Settings
 from domain.ports.obras_activas_provider import ObraActiva
+from infrastructure.sigrid import sigrid_api_obras_client as modulo_cliente
 from infrastructure.sigrid.obras_activas_cache import ObrasActivasCacheTTL
 from infrastructure.sigrid.sigrid_api_obras_client import (
+    SigridApiObrasClient,
     filas_a_obras,
     filtrar_obras_activas,
 )
@@ -226,3 +228,140 @@ def test_f002_r1bis_los_codigos_se_deduplican_conservando_el_primero() -> None:
 )
 def test_f002_r1bis_defaults_de_configuracion(campo: str, esperado) -> None:
     assert Settings.model_fields[campo].default == esperado
+
+
+def test_f002_r2_sin_las_tres_credenciales_sigrid_no_esta_disponible() -> None:
+    incompleta = Settings.model_construct(
+        sigrid_api_base_url="https://sigrid.example",
+        sigrid_api_function_key="",
+        sigrid_api_database="ruesma",
+    )
+    completa = Settings.model_construct(
+        sigrid_api_base_url="https://sigrid.example",
+        sigrid_api_function_key="clave-de-prueba",
+        sigrid_api_database="ruesma",
+    )
+
+    assert incompleta.sigrid_credentials_present is False
+    assert completa.sigrid_credentials_present is True
+
+
+# ---------------------------------------------------------------- #
+# El cliente HTTP, sin tocar la red: httpx.Client sustituido.
+# ---------------------------------------------------------------- #
+class RespuestaFake:
+    def __init__(self, *, status_code: int = 200, cuerpo=None, texto: str = ""):
+        self.status_code = status_code
+        self._cuerpo = cuerpo if cuerpo is not None else {"ok": True}
+        self.text = texto
+
+    def json(self):
+        return self._cuerpo
+
+
+class ClientFake:
+    """Sustituto de ``httpx.Client``: registra la petición y responde."""
+
+    def __init__(self, respuesta: RespuestaFake) -> None:
+        self.respuesta = respuesta
+        self.peticiones: list[dict] = []
+
+    def __call__(self, **kwargs):
+        self.kwargs = kwargs
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *excepcion) -> bool:
+        return False
+
+    def post(self, url, json, headers):
+        self.peticiones.append({"url": url, "json": json, "headers": headers})
+        return self.respuesta
+
+
+@pytest.fixture()
+def cliente_http(monkeypatch):
+    def _instalar(respuesta: RespuestaFake) -> ClientFake:
+        fake = ClientFake(respuesta)
+        monkeypatch.setattr(modulo_cliente.httpx, "Client", fake)
+        return fake
+
+    return _instalar
+
+
+def _cliente(**kwargs) -> SigridApiObrasClient:
+    parametros = {
+        "base_url": "https://sigrid.example/",
+        "function_key": "clave-de-prueba",
+        "database": "ruesma",
+    }
+    parametros.update(kwargs)
+    return SigridApiObrasClient(**parametros)
+
+
+@pytest.mark.parametrize(
+    "falta", ["base_url", "function_key", "database"],
+)
+def test_f002_r2_el_cliente_exige_sus_tres_credenciales(falta: str) -> None:
+    with pytest.raises(ValueError):
+        _cliente(**{falta: ""})
+
+
+def test_f002_r1bis_el_cliente_pide_las_obras_y_las_filtra(cliente_http) -> None:
+    http = cliente_http(RespuestaFake(cuerpo={
+        "ok": True,
+        "columns": ["codigo_obra", "nombre_obra"],
+        "rows": [["0451", "EDIFICIO A"], ["0100", "OBRA VIEJA"]],
+    }))
+
+    obras = _cliente().obtener()
+
+    assert obras == [ObraActiva(codigo="0451", nombre="EDIFICIO A")]
+    peticion = http.peticiones[0]
+    assert peticion["url"] == "https://sigrid.example/api/sql/read"
+    assert peticion["headers"]["x-functions-key"] == "clave-de-prueba"
+    assert peticion["json"]["database"] == "ruesma"
+    assert peticion["json"]["max_rows"] == 10000
+    assert "FROM obr" in peticion["json"]["sql"]
+
+
+def test_f002_r2_una_lista_vacia_tras_el_filtro_es_no_disponible(
+    cliente_http,
+) -> None:
+    cliente_http(RespuestaFake(cuerpo={
+        "ok": True,
+        "columns": ["codigo_obra", "nombre_obra"],
+        "rows": [["0100", "OBRA VIEJA"]],
+    }))
+
+    assert _cliente().obtener() is None
+
+
+def test_f002_r2_un_error_http_no_propaga_y_devuelve_none(cliente_http) -> None:
+    cliente_http(RespuestaFake(status_code=500, texto="boom"))
+
+    assert _cliente().obtener() is None
+
+
+def test_f002_r2_un_ok_false_no_propaga_y_devuelve_none(cliente_http) -> None:
+    cliente_http(RespuestaFake(cuerpo={"ok": False, "error": "sql"}))
+
+    assert _cliente().obtener() is None
+
+
+def test_f002_r1bis_el_max_rows_es_configurable(cliente_http) -> None:
+    http = cliente_http(RespuestaFake(cuerpo={
+        "ok": True,
+        "columns": ["codigo_obra", "nombre_obra"],
+        "rows": [["0451", "EDIFICIO A"], ["0452", "EDIFICIO B"]],
+    }))
+
+    # Con max_rows=2 y 2 filas devueltas, la lista puede venir truncada:
+    # se sirve igual, pero queda avisado en el log.
+    assert _cliente(max_rows=2).obtener() == [
+        ObraActiva(codigo="0451", nombre="EDIFICIO A"),
+        ObraActiva(codigo="0452", nombre="EDIFICIO B"),
+    ]
+    assert http.peticiones[0]["json"]["max_rows"] == 2

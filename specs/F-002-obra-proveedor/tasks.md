@@ -95,7 +95,7 @@ ejecutarlo).
       que el `.env.example` de sv2 se actualiza en disco pero NO aparece
       en el diff (ver informe).
 
-- [ ] T11: Ejecutar `bash harness/init.sh` en verde (incluye pytest de
+- [x] T11: Ejecutar `bash harness/init.sh` en verde (incluye pytest de
       todos los servicios declarados y cobertura del diff).
       | Verificación: `bash harness/init.sh` → ENTORNO LISTO.
 

@@ -303,3 +303,22 @@ def test_f002_r17_servicio_deshabilitado_no_toca_nada() -> None:
     ) is False
     assert repo.descartes == []
     assert cliente.llamadas == []
+
+
+@pytest.mark.parametrize(
+    "campo,esperado",
+    [
+        ("red_obra_enabled", True),
+        ("red_proveedor_cif_enabled", True),
+        ("fecha_guard_enabled", True),
+        ("fecha_guard_max_dias", 365),
+    ],
+)
+def test_f002_r17_las_tres_redes_vienen_activadas_por_defecto(
+    campo: str, esperado,
+) -> None:
+    """Las redes protegen: apagarlas tiene que ser una decisión explícita,
+    no el estado de fábrica."""
+    from config.settings import Settings
+
+    assert Settings.model_fields[campo].default == esperado
