@@ -160,7 +160,46 @@ romper A PROPÓSITO el mecanismo central y ver **qué test lo caza**. (Trazas
 reales en la sección siguiente; el árbol se restauró con `git checkout --`
 después de cada una.)
 
-PENDIENTE_CONTROL_CERO
+**Rotura A — `fusionar` deja de ordenar por la clave estable** (el corazón de
+R4: sin ese orden el informe paralelo delata en qué worker cayó cada mutante).
+
+```
+$ # rotura: setattr(informe, atributo, juntos)  en vez de  sorted(juntos, key=clave_estable)
+$ .venv/Scripts/python.exe -m pytest tests/test_f012_r3_r4_reparto_agregacion.py tests/test_f012_r1_r5_r11_coordinador.py -q --tb=line
+      Use -v to get more diff
+C:\Users\pgris\PycharmProjects\albaranes\tests\test_f012_r3_r4_reparto_agregacion.py:144: AssertionError: assert [('harness/un...s/dos.py', 1)] == [('harness/do...s/uno.py', 8)]
+E   AssertionError: assert [('codigo.py'...racion'), ...] == [('codigo.py'...logico'), ...]
+
+      At index 1 diff: ('codigo.py', 5, 17, 'aritmetico') != ('codigo.py', 3, 17, 'aritmetico')
+      Use -v to get more diff
+C:\Users\pgris\PycharmProjects\albaranes\tests\test_f012_r1_r5_r11_coordinador.py:132: AssertionError: assert [('codigo.py'...racion'), ...] == [('codigo.py'...logico'), ...]
+=========================== short test summary info ===========================
+FAILED tests/test_f012_r3_r4_reparto_agregacion.py::test_f012_r4_fusionar_suma_totales_y_ordena_por_clave_estable
+FAILED tests/test_f012_r3_r4_reparto_agregacion.py::test_f012_r4_fusionar_agrega_y_ordena_los_timeouts
+FAILED tests/test_f012_r1_r5_r11_coordinador.py::test_f012_r1_evalua_todos_los_mutantes_una_sola_vez
+3 failed, 18 passed in 4.75s
+[arbol restaurado]
+```
+
+**Rotura B — los workers mutan el ÁRBOL PRINCIPAL en vez de su worktree** (el
+corazón de R2). El `IndexError` de la traza es el propio mecanismo delatándose:
+dos hilos escribiendo el mismo fichero a la vez lo dejan inservible.
+
+```
+$ # rotura: args=(indice, raiz)  en vez de  args=(indice, ruta)
+$ .venv/Scripts/python.exe -m pytest tests/test_f012_r1_r5_r11_coordinador.py -q --tb=line
+E   IndexError: list index out of range
+C:\Users\pgris\PycharmProjects\albaranes\harness\mutacion.py:256: IndexError: list index out of range
+E   IndexError: list index out of range
+C:\Users\pgris\PycharmProjects\albaranes\harness\mutacion.py:256: IndexError: list index out of range
+=========================== short test summary info ===========================
+FAILED tests/test_f012_r1_r5_r11_coordinador.py::test_f012_r1_evalua_todos_los_mutantes_una_sola_vez
+FAILED tests/test_f012_r1_r5_r11_coordinador.py::test_f012_r1_reparte_el_trabajo_entre_varios_worktrees
+FAILED tests/test_f012_r1_r5_r11_coordinador.py::test_f012_r1_r4_el_informe_paralelo_es_identico_al_de_la_campania_en_serie
+FAILED tests/test_f012_r1_r5_r11_coordinador.py::test_f012_r2_el_arbol_principal_queda_intacto_y_sin_worktrees
+4 failed, 6 passed in 4.84s
+[arbol restaurado]
+```
 
 ## T5 · Comparación serie-vs-paralelo (criterio de éxito)
 
