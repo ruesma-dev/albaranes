@@ -94,6 +94,94 @@ def _dump_contexto_linea(ctx) -> str | None:
 # =============================================================================
 
 
+# ====================================================================== #
+# Marcas de revision (ago 2026, F-002).
+#
+# Logica PURA de las tres marcas que dejan las redes deterministas sobre
+# un documento: motivos en ``review_reasons_json`` (lista JSON) y notas en
+# ``review_notes`` (texto, una nota por linea, con prefijo). Vive fuera de
+# la clase a proposito: asi se puede probar sin BBDD, que es justo la
+# parte con reglas (idempotencia, dedupe, JSON roto) donde estan los
+# errores. La clase solo aporta la transaccion.
+# ====================================================================== #
+
+#: Prefijo de la nota que deja la red de obra. Tambien es la clave por la
+#: que se RETIRA cuando la obra se valida (idempotencia en reprocesos).
+NOTA_OBRA_PREFIJO = "[AVISO] Obra"
+
+#: Prefijo de los motivos que retira ``retirar_revision_obra``.
+MOTIVO_OBRA_PREFIJO = "obra_"
+
+
+def _motivos_de_json(reasons_json: str | None) -> list[str]:
+    """Lista de motivos a partir de la columna. JSON roto o de otro tipo
+    se trata como lista vacia: perder un motivo es mejor que reventar la
+    persistencia por un dato historico mal formado."""
+    if not (reasons_json or "").strip():
+        return []
+    try:
+        cargado = json.loads(reasons_json)
+    except (TypeError, ValueError):
+        logger.warning(
+            "[revision] review_reasons_json no es JSON valido; se trata "
+            "como lista vacia. valor=%r", reasons_json,
+        )
+        return []
+    if not isinstance(cargado, list):
+        logger.warning(
+            "[revision] review_reasons_json no es una lista; se trata "
+            "como lista vacia. tipo=%s", type(cargado).__name__,
+        )
+        return []
+    return [str(m) for m in cargado]
+
+
+def anadir_motivo_revision(reasons_json: str | None, motivo: str) -> str:
+    """Devuelve el JSON con ``motivo`` anadido, SIN duplicarlo.
+
+    Idempotente: reprocesar el mismo documento no engorda la lista.
+    """
+    motivos = _motivos_de_json(reasons_json)
+    if motivo not in motivos:
+        motivos.append(motivo)
+    return json.dumps(motivos, ensure_ascii=False, indent=2)
+
+
+def quitar_motivos_con_prefijo(
+    reasons_json: str | None, prefijo: str,
+) -> str | None:
+    """Devuelve el JSON sin los motivos que empiecen por ``prefijo``.
+
+    ``None`` si no queda ninguno (columna a NULL, como estaba antes de la
+    primera marca).
+    """
+    motivos = [
+        m for m in _motivos_de_json(reasons_json)
+        if not m.startswith(prefijo)
+    ]
+    if not motivos:
+        return None
+    return json.dumps(motivos, ensure_ascii=False, indent=2)
+
+
+def sustituir_nota_por_prefijo(
+    notas: str | None, *, prefijo: str, nota: str | None,
+) -> str | None:
+    """Reemplaza la nota vigente de ``prefijo`` por ``nota``.
+
+    Con ``nota=None`` solo retira la vigente. Devuelve ``None`` cuando no
+    queda texto. Es la operacion idempotente que necesitan las redes: la
+    nota no se acumula al reprocesar y no contradice lo que ve el revisor.
+    """
+    lineas = [
+        ln for ln in str(notas or "").splitlines()
+        if not ln.strip().startswith(prefijo)
+    ]
+    if nota:
+        lineas.append(nota)
+    return "\n".join(lineas).strip() or None
+
+
 @dataclass(frozen=True)
 class RawProviderSpec:
     provider_origin: str
@@ -1563,6 +1651,185 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
                 nombre_clean,
             )
             return True
+
+    # ================================================================== #
+    # Redes deterministas de identificacion (ago 2026, F-002)
+    #
+    # Escrituras sobre albaran_documents_merge (sv3 es su dueno):
+    # obra_codigo, obra_codigo_origen, proveedor_nombre, review_required,
+    # review_reasons_json y review_notes. Todas IDEMPOTENTES: el mismo
+    # documento se reprocesa varias veces (duplicado, re-enrich de sv4) y
+    # las marcas no pueden acumularse.
+    # ================================================================== #
+    def _leer_notas(self, *, session: Any, document_id: str) -> str | None:
+        fila = session.execute(
+            text(
+                "SELECT review_notes FROM albaran_documents_merge "
+                "WHERE id = :doc_id"
+            ),
+            {"doc_id": document_id},
+        ).first()
+        return fila[0] if fila else None
+
+    def _escribir_notas(
+        self, *, session: Any, document_id: str, notas: str | None,
+    ) -> None:
+        session.execute(
+            text(
+                "UPDATE albaran_documents_merge "
+                "SET review_notes = :notas WHERE id = :doc_id"
+            ),
+            {"notas": notas, "doc_id": document_id},
+        )
+
+    def _sustituir_nota(
+        self,
+        *,
+        session: Any,
+        document_id: str,
+        prefijo: str,
+        nota: str | None,
+    ) -> None:
+        actuales = self._leer_notas(session=session, document_id=document_id)
+        nuevas = sustituir_nota_por_prefijo(
+            actuales, prefijo=prefijo, nota=nota,
+        )
+        if nuevas == actuales:
+            return
+        self._escribir_notas(
+            session=session, document_id=document_id, notas=nuevas,
+        )
+
+    def marcar_revision_cabecera(
+        self,
+        *,
+        document_id: str,
+        motivo: str,
+        nota: str,
+        nota_prefijo: str,
+    ) -> None:
+        """Marca el documento a revision con un motivo y una nota.
+
+        Una sola transaccion: ``review_required=true``, el motivo anadido
+        sin duplicar a ``review_reasons_json`` y la nota sustituyendo a la
+        anterior del mismo prefijo.
+        """
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            document = session.get(AlbaranDocumentMergeOrm, document_id)
+            if document is None:
+                raise KeyError(f"Documento merge no encontrado: {document_id}")
+            document.review_required = True
+            document.review_reasons_json = anadir_motivo_revision(
+                document.review_reasons_json, motivo,
+            )
+            session.flush()
+            self._sustituir_nota(
+                session=session,
+                document_id=document_id,
+                prefijo=nota_prefijo,
+                nota=nota,
+            )
+            session.commit()
+            logger.info(
+                "[revision][repo] doc=%s marcado a revision motivo=%s",
+                document_id, motivo,
+            )
+
+    def descartar_obra_no_valida(
+        self,
+        *,
+        document_id: str,
+        codigo_leido: str | None,
+        motivo: str,
+    ) -> None:
+        """Deja el merge SIN obra y marcado a revision (R5/R6).
+
+        Jamas debe quedar persistida una obra que no exista en Sigrid: el
+        codigo y su origen pasan a NULL. ``obra_nombre`` y
+        ``obra_direccion`` leidos se CONSERVAN (le sirven al revisor para
+        localizar la obra buena).
+        """
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            document = session.get(AlbaranDocumentMergeOrm, document_id)
+            if document is None:
+                raise KeyError(f"Documento merge no encontrado: {document_id}")
+            document.obra_codigo = None
+            document.obra_codigo_origen = None
+            document.review_required = True
+            document.review_reasons_json = anadir_motivo_revision(
+                document.review_reasons_json, motivo,
+            )
+            session.flush()
+            self._sustituir_nota(
+                session=session,
+                document_id=document_id,
+                prefijo=NOTA_OBRA_PREFIJO,
+                nota=(
+                    f"{NOTA_OBRA_PREFIJO} el codigo leido "
+                    f"'{codigo_leido or '—'}' no corresponde a ninguna obra "
+                    "de Sigrid: se ha dejado SIN obra. Indica la obra "
+                    "correcta y pulsa \"Guardar y volver a buscar\"."
+                ),
+            )
+            session.commit()
+            logger.warning(
+                "[obra-enrichment][repo] doc=%s obra descartada "
+                "codigo_leido=%r motivo=%s",
+                document_id, codigo_leido, motivo,
+            )
+
+    def retirar_revision_obra(self, *, document_id: str) -> None:
+        """Retira la nota y los motivos de obra cuando esta ya valida (R7).
+
+        ``review_required`` NO baja a false: puede haber otros motivos
+        vivos y cerrarlos es del revisor (decision D7).
+        """
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            document = session.get(AlbaranDocumentMergeOrm, document_id)
+            if document is None:
+                return
+            nuevos = quitar_motivos_con_prefijo(
+                document.review_reasons_json, MOTIVO_OBRA_PREFIJO,
+            )
+            cambio_motivos = nuevos != document.review_reasons_json
+            if cambio_motivos:
+                document.review_reasons_json = nuevos
+                session.flush()
+            self._sustituir_nota(
+                session=session,
+                document_id=document_id,
+                prefijo=NOTA_OBRA_PREFIJO,
+                nota=None,
+            )
+            session.commit()
+
+    def set_merge_proveedor_nombre_canonico(
+        self, *, document_id: str, nombre: str,
+    ) -> None:
+        """Sobrescribe ``proveedor_nombre`` con la razon social de ``prv``.
+
+        Delega en ``update_merge_proveedor_nombre`` (misma escritura, ya
+        probada en el camino del portal) para no tener dos implementaciones
+        del mismo UPDATE.
+        """
+        self.update_merge_proveedor_nombre(
+            document_id=document_id,
+            nombre_proveedor=nombre,
+        )
+
+    def get_merge_fechas_para_guard(
+        self, *, document_id: str,
+    ) -> tuple[str | None, str | None]:
+        """``(fecha_albaran, email_received_datetime)`` del merge."""
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            document = session.get(AlbaranDocumentMergeOrm, document_id)
+            if document is None:
+                return None, None
+            return document.fecha, document.email_received_datetime
 
     def _delete_existing_records(self, *, session: Any, source_sha256: str) -> None:
         merge_docs = session.scalars(

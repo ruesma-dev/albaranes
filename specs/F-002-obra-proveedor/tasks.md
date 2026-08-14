@@ -14,7 +14,7 @@ ejecutarlo).
       | Verificación: `python -m compileall` del servicio sin errores
       (lo cubre init.sh, sección 6).
 
-- [ ] T2: sv3 — métodos nuevos en `sqlalchemy_albaran_repository.py`
+- [x] T2: sv3 — métodos nuevos en `sqlalchemy_albaran_repository.py`
       (`marcar_revision_cabecera`, `descartar_obra_no_valida`,
       `retirar_revision_obra`, `get_merge_fechas_para_guard`), idempotentes
       (motivo no duplicado; nota con dedupe por prefijo).
