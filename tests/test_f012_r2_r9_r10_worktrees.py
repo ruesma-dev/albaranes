@@ -158,6 +158,32 @@ def test_f012_r10_si_falla_la_retirada_el_registro_se_poda_igual(repo: Path) -> 
     assert Path(rutas[0]).name not in _git(repo, "worktree", "list")
 
 
+def test_f012_r10_un_fichero_abierto_no_impide_salir_del_gestor(repo: Path) -> None:
+    """El caso Windows de verdad: un fichero abierto bloquea el borrado.
+
+    Comprobado contra git en esta máquina: con un fichero del worktree abierto,
+    `git worktree remove --force` devuelve 255 («failed to delete ...: Invalid
+    argument») y un `rmtree` sin `ignore_errors` lanza `PermissionError`. La
+    promesa del gestor es que, aun así, salir del `with` no lanza nada: una
+    campaña de dos horas no puede morir en la limpieza.
+    """
+    gestor = Worktrees(str(repo), 1)
+    abierto = None
+    rutas: list[str] = []
+    try:
+        with gestor as creadas:
+            rutas = list(creadas)
+            abierto = (Path(rutas[0]) / "codigo.py").open("a", encoding="utf-8")
+
+        assert gestor.rutas == []
+    finally:
+        if abierto is not None:
+            abierto.close()
+        for ruta in rutas:
+            shutil.rmtree(ruta, ignore_errors=True)
+        _git(repo, "worktree", "prune")
+
+
 def test_f012_r10_un_worktree_que_no_se_puede_crear_aborta_con_el_motivo(
     tmp_path: Path,
 ) -> None:
