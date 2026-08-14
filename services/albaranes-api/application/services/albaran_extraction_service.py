@@ -27,6 +27,10 @@ from pydantic import BaseModel
 from application.services.schema_registry import SchemaRegistry
 from domain.models.llm_attachment import LlmAttachment
 from domain.ports.llm_client import LlmVisionClient
+from domain.ports.obras_activas_provider import (
+    ObraActiva,
+    ObrasActivasProvider,
+)
 from domain.ports.prompt_repository import PromptRepository
 from infrastructure.prompts.revision_rules_repository import (
     RevisionRulesRepository,
@@ -71,6 +75,8 @@ class AlbaranExtractionService:
         schema_registry: SchemaRegistry,
         revision_rules_repo: RevisionRulesRepository,
         prompt_key_phase_1: str,
+        obras_activas_provider: ObrasActivasProvider | None = None,
+        obras_activas_max: int = 300,
     ) -> None:
         self._providers_by_name: Dict[str, ProviderClientSpec] = {
             spec.provider: spec for spec in providers
@@ -82,6 +88,11 @@ class AlbaranExtractionService:
         # incrustar en las instructions de la fase 2. Lo recibe el
         # servicio en construcción (lo lee app.py de settings).
         self._prompt_key_phase_1 = prompt_key_phase_1
+        # (ago 2026, F-002) Lista de obras activas para el prompt de fase
+        # 1. ``None`` = funcionalidad no cableada: la extracción se
+        # comporta exactamente como antes.
+        self._obras_activas_provider = obras_activas_provider
+        self._obras_activas_max = max(1, int(obras_activas_max))
 
     # ---------------------------------------------------------- #
     # FASE 1 — extracción inicial.
@@ -102,7 +113,28 @@ class AlbaranExtractionService:
         prompt_spec = self._prompts.get(prompt_key)
         response_model = self._schemas.get(prompt_spec.schema)
 
-        instructions = self._build_instructions(prompt_spec)
+        # (F-002 · R1) La lista de obras activas se renderiza en el task
+        # ANTES de componer las instructions. Mismo patrón de sustitución
+        # que la fase 2 ({sigrid_context}): str.replace, porque el task
+        # lleva llaves de ejemplos JSON que romperían .format().
+        obras = self._obtener_obras_activas()
+        task_rendered = prompt_spec.task
+        if "{obras_activas}" in task_rendered:
+            task_rendered = task_rendered.replace(
+                "{obras_activas}", self._render_obras_activas(obras),
+            )
+        elif obras:
+            # Compatibilidad: YAML desplegado sin el placeholder. Mejor
+            # el bloque en posición subóptima que perderlo.
+            task_rendered = (
+                f"{task_rendered}\n\n{self._render_obras_activas(obras)}"
+            )
+
+        instructions = self._compose_instructions(
+            system=prompt_spec.system,
+            task=task_rendered,
+            schema_hint=prompt_spec.schema_hint,
+        )
         user_text = (
             "Documento adjunto. Extrae el albarán siguiendo las reglas "
             "del prompt. Devuelve SOLO JSON válido conforme al schema."
@@ -110,10 +142,11 @@ class AlbaranExtractionService:
 
         logger.info(
             "Extracción FASE 1 proveedor=%s prompt_key=%s schema=%s "
-            "model=%s filename=%s",
+            "model=%s filename=%s obras_activas=%s",
             spec.provider, prompt_key, prompt_spec.schema,
             spec.model_name,
             attachments[0].filename if attachments else "n/a",
+            len(obras) if obras else "NO DISPONIBLE",
         )
 
         return self._invoke_provider(
@@ -126,6 +159,59 @@ class AlbaranExtractionService:
             prompt_key=prompt_key,
             phase_label="phase_1",
         )
+
+    # ---------------------------------------------------------- #
+    # FASE 1 — lista de obras activas (F-002 · R1, R2).
+    # ---------------------------------------------------------- #
+    def _obtener_obras_activas(self) -> list[ObraActiva] | None:
+        """Lista de obras, o ``None`` si no está disponible.
+
+        Best-effort: que la lista falte degrada la calidad de la
+        extracción, pero no puede impedirla (R2/R16). La red determinista
+        de sv3 sigue protegiendo aguas abajo.
+        """
+        if self._obras_activas_provider is None:
+            return None
+        try:
+            return self._obras_activas_provider.obtener()
+        except Exception:  # noqa: BLE001 — best-effort
+            logger.exception(
+                "No se pudo obtener la lista de obras activas; la fase 1 "
+                "sigue sin ella.",
+            )
+            return None
+
+    def _render_obras_activas(self, obras: list[ObraActiva] | None) -> str:
+        """Bloque DETERMINISTA de obras para el prompt.
+
+        Orden ascendente por código y formato fijo (``codigo — nombre``,
+        una por línea): así el prompt es reproducible y las evals de
+        ground truth (F-011) pueden fijar la lista como fixture.
+        """
+        if not obras:
+            return (
+                "(Lista de obras no disponible en esta ejecución: extrae "
+                "obra_codigo del documento como siempre.)"
+            )
+        ordenadas = sorted(obras, key=lambda o: o.codigo)[
+            : self._obras_activas_max
+        ]
+        lineas = [
+            "OBRAS ACTIVAS (codigo — nombre). El valor de obra_codigo "
+            "debe ser SOLO uno de estos códigos:",
+            "",
+        ]
+        lineas.extend(
+            f"  - {obra.codigo} — {obra.nombre or '?'}" for obra in ordenadas
+        )
+        lineas.append("")
+        lineas.append(
+            "PROHIBIDO devolver un obra_codigo que no esté en esta lista. "
+            "Si el documento no permite identificar la obra con seguridad, "
+            "devuelve null: null es una respuesta correcta, un código "
+            "inventado no."
+        )
+        return "\n".join(lineas)
 
     # ---------------------------------------------------------- #
     # FASE 2 — revisión.

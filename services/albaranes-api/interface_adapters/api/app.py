@@ -39,6 +39,10 @@ from infrastructure.prompts.revision_rules_repository import (
     RevisionRulesRepository,
 )
 from infrastructure.prompts.yaml_prompt_repository import YamlPromptRepository
+from infrastructure.sigrid.obras_activas_cache import ObrasActivasCacheTTL
+from infrastructure.sigrid.sigrid_api_obras_client import (
+    SigridApiObrasClient,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -207,12 +211,38 @@ def build_app(settings: Settings) -> FastAPI:
         settings.ia_segunda_fase,
     )
 
+    # (F-002) Lista de obras activas para el prompt de fase 1. Sigrid
+    # SOLO se consulta a traves de sigrid-api y en SOLO LECTURA; la
+    # cache TTL deja la consulta en una por replica y periodo.
+    obras_activas_provider = None
+    if settings.obras_activas_enabled:
+        if settings.sigrid_credentials_present:
+            obras_activas_provider = ObrasActivasCacheTTL(
+                SigridApiObrasClient(
+                    base_url=settings.sigrid_api_base_url,
+                    function_key=settings.sigrid_api_function_key,
+                    database=settings.sigrid_api_database,
+                    timeout_s=settings.sigrid_api_timeout_s,
+                    cod_min=settings.obras_activas_cod_min,
+                ),
+                ttl_s=settings.obras_activas_ttl_s,
+            )
+            logger.info("[svc2][wiring] Obras activas CABLEADAS")
+        else:
+            logger.warning(
+                "[svc2][wiring] OBRAS_ACTIVAS_ENABLED=true pero faltan "
+                "credenciales SIGRID_API_*: la lista de obras NO se "
+                "inyectara en el prompt de fase 1."
+            )
+
     extraction_service = AlbaranExtractionService(
         providers=providers,
         prompt_repo=prompt_repo,
         schema_registry=schema_registry,
         revision_rules_repo=revision_rules_repo,
         prompt_key_phase_1=settings.prompt_key_fase1,
+        obras_activas_provider=obras_activas_provider,
+        obras_activas_max=settings.obras_activas_max,
     )
     pipeline = ExtractAlbaranPipeline(
         extraction_service=extraction_service,

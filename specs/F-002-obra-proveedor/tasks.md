@@ -63,7 +63,7 @@ ejecutarlo).
       | Verificación: `pytest services/albaranes-api/tests -q` en verde
       (tests `test_f002_r3_*`, `test_f002_r1bis_*`).
 
-- [ ] T8: sv2 — prompt `albaran_factura_es` en `config/prompts.yaml`
+- [x] T8: sv2 — prompt `albaran_factura_es` en `config/prompts.yaml`
       (placeholder `{obras_activas}` + regla de elección SOLO de la lista +
       reescritura de `proveedor_nombre` según R4) y render en
       `albaran_extraction_service.extract_phase_1` + wiring

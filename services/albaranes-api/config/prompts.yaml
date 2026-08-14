@@ -38,8 +38,14 @@ albaran_factura_es:
 
     ## Reglas para la cabecera
 
-    - proveedor_nombre: razón social del proveedor (emisor del albarán).
-      Puede venir en el logo, suele estar en la parte superior. Construcciones Ruesma, cuyo CIF es A81873903, somos nosotros la constructora, asi que debes ignorarlo como posible proveedorc.
+    - proveedor_nombre: RAZÓN SOCIAL del emisor tal y como aparece en su
+      BLOQUE FISCAL, es decir, el nombre que acompaña al CIF/NIF (suele
+      llevar la forma jurídica: S.L., S.A., S.L.U., S. Coop., etc.).
+      La marca comercial o el nombre del grupo que aparece en el
+      LOGOTIPO NO es el proveedor: si el logotipo y el bloque fiscal
+      dicen cosas distintas, manda SIEMPRE el bloque fiscal.
+      Construcciones Ruesma, cuyo CIF es A81873903, somos nosotros la
+      constructora: ignóralo como posible proveedor.
     - proveedor_cif: CIF/NIF/NIE del proveedor según formato español.
       Busca el código por un campo que ponga CIF o NIF o NIE; si no,
       puede ser un código cerca de la razón social en cabecera.
@@ -49,6 +55,10 @@ albaran_factura_es:
     - obra_codigo: código de 4 números que empieza por 0. Puede estar
       escrito a mano, o traer solo los 3 últimos dígitos; normaliza a
       4 añadiendo el 0 inicial. NUNCA tiene puntos para separar codigo. Si tiene puntos SIEMPRE es un codigo de imputacion.
+
+    ## Obras entre las que elegir
+
+    {obras_activas}
 
     ## Reglas generales para las líneas
 
