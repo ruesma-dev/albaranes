@@ -450,6 +450,23 @@ def test_f002_r2_un_400_se_trata_como_error_aunque_traiga_cuerpo(
     assert _cliente().obtener() is None
 
 
+def test_f002_r1bis_las_columnas_mandan_sobre_el_orden_de_la_fila(
+    cliente_http,
+) -> None:
+    """El mapeo se hace por NOMBRE de columna: si algún día sigrid-api
+    devuelve el SELECT en otro orden, la lista no puede llenarse de
+    nombres de obra en el sitio del código."""
+    cliente_http(RespuestaFake(cuerpo={
+        "ok": True,
+        "columns": ["nombre_obra", "codigo_obra"],
+        "rows": [["EDIFICIO A", "0451"]],
+    }))
+
+    assert _cliente().obtener() == [
+        ObraActiva(codigo="0451", nombre="EDIFICIO A"),
+    ]
+
+
 def test_f002_r2_una_respuesta_sin_ok_no_se_da_por_buena(cliente_http) -> None:
     cliente_http(RespuestaFake(cuerpo={
         "columns": ["codigo_obra", "nombre_obra"],
