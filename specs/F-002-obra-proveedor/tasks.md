@@ -37,7 +37,7 @@ ejecutarlo).
       revisión sin propuesta), R11 (sin CIF → regresión del flujo actual).
       | Verificación: pytest sv3 en verde (tests `test_f002_r8_*`.. `_r11_*`).
 
-- [ ] T5: sv3 — `fecha_guard_service.py` + paso en
+- [x] T5: sv3 — `fecha_guard_service.py` + paso en
       `persist_albaran_pipeline.py` (3 rutas) + wiring en `composition.py`
       + `test_f002_fecha_guard.py`: R13 (2023 vs 2026 → revisión), R14
       (sin fecha de email → referencia now UTC), R15 (fecha nula/rota →

@@ -10,6 +10,7 @@ from application.services.albaran_normalizer import AlbaranNormalizer
 from application.services.contrato_enrichment_service import (
     ContratoEnrichmentService,
 )
+from application.services.fecha_guard_service import FechaGuardService
 from application.services.header_resolver_service import HeaderResolverService
 from application.services.obra_enrichment_service import ObraEnrichmentService
 from domain.models.extraction_models import (
@@ -70,6 +71,7 @@ class PersistAlbaranPipeline:
         obra_enrichment_service: ObraEnrichmentService | None = None,
         contrato_enrichment_service: ContratoEnrichmentService | None = None,
         valuation_trigger: ValuationTrigger | None = None,
+        fecha_guard_service: FechaGuardService | None = None,
     ) -> None:
         self._repository = repository
         self._document_storage = document_storage
@@ -78,6 +80,7 @@ class PersistAlbaranPipeline:
         self._obra_enrichment_service = obra_enrichment_service
         self._contrato_enrichment_service = contrato_enrichment_service
         self._valuation_trigger = valuation_trigger
+        self._fecha_guard_service = fecha_guard_service
         logger.info(
             "[pipeline] PersistAlbaranPipeline construido; "
             "obra_enrichment=%s contrato_enrichment=%s "
@@ -108,6 +111,9 @@ class PersistAlbaranPipeline:
                 merge_document_id=existing.document_id,
             )
             self._enrich_obra_safely(merge_document_id=existing.document_id)
+            self._check_fecha_guard_safely(
+                merge_document_id=existing.document_id,
+            )
             contratos_count = self._enrich_contratos_safely(
                 merge_document_id=existing.document_id,
                 force_refetch=request.force_refetch,
@@ -191,6 +197,7 @@ class PersistAlbaranPipeline:
             merge_document_id=saved.document_id,
         )
         self._enrich_obra_safely(merge_document_id=saved.document_id)
+        self._check_fecha_guard_safely(merge_document_id=saved.document_id)
         contratos_count = self._enrich_contratos_safely(
             merge_document_id=saved.document_id,
             force_refetch=request.force_refetch,
@@ -286,6 +293,7 @@ class PersistAlbaranPipeline:
             merge_document_id=merge_document_id,
         )
         self._enrich_obra_safely(merge_document_id=merge_document_id)
+        self._check_fecha_guard_safely(merge_document_id=merge_document_id)
         self._enrich_contratos_safely(
             merge_document_id=merge_document_id,
             force_refetch=force_refetch,
@@ -315,6 +323,26 @@ class PersistAlbaranPipeline:
         except Exception:
             logger.exception(
                 "[obra-enrichment][pipeline] step falló; se continúa. "
+                "document_id=%s",
+                merge_document_id,
+            )
+
+    def _check_fecha_guard_safely(self, *, merge_document_id: str) -> None:
+        """Guard de año (F-002 · R13): fecha del albarán muy alejada de la
+        recepción del email -> revisión. Best-effort: nunca rompe la
+        persistencia."""
+        if self._fecha_guard_service is None:
+            logger.info(
+                "[fecha-guard][pipeline] SKIP: servicio no cableado."
+            )
+            return
+        try:
+            self._fecha_guard_service.check_merge_document(
+                merge_document_id=merge_document_id,
+            )
+        except Exception:
+            logger.exception(
+                "[fecha-guard][pipeline] step falló; se continúa. "
                 "document_id=%s",
                 merge_document_id,
             )

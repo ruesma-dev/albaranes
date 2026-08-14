@@ -24,6 +24,7 @@ from application.services.albaran_normalizer import AlbaranNormalizer
 from application.services.contrato_enrichment_service import (
     ContratoEnrichmentService,
 )
+from application.services.fecha_guard_service import FechaGuardService
 from application.services.header_resolver_service import HeaderResolverService
 from application.services.obra_enrichment_service import ObraEnrichmentService
 from config.settings import Settings
@@ -124,6 +125,13 @@ def build_persist_pipeline(
     else:
         logger.info("[svc3][worker-wiring] Sigrid NO cableado (sin credenciales)")
 
+    # Guard de año (F-002): no depende de Sigrid, solo del merge.
+    fecha_guard_service = FechaGuardService(
+        repository=repository,
+        enabled=settings.fecha_guard_enabled,
+        max_dias=settings.fecha_guard_max_dias,
+    )
+
     return PersistAlbaranPipeline(
         repository=repository,
         document_storage=document_storage,
@@ -132,4 +140,5 @@ def build_persist_pipeline(
         obra_enrichment_service=obra_enrichment_service,
         contrato_enrichment_service=contrato_enrichment_service,
         valuation_trigger=valuation_trigger,
+        fecha_guard_service=fecha_guard_service,
     )

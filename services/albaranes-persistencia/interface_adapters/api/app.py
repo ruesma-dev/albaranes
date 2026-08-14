@@ -49,6 +49,7 @@ from application.services.contrato_enrichment_service import (
 from application.services.contrato_refetch_service import (
     ContratoRefetchService,
 )
+from application.services.fecha_guard_service import FechaGuardService
 from application.services.header_grounding_service import (
     HeaderGroundingRequest,
     HeaderGroundingService,
@@ -269,6 +270,13 @@ def build_app(settings: Settings) -> FastAPI:
     # ----------------------------------------------------------- #
     # Pipeline final con todos los colaboradores.
     # ----------------------------------------------------------- #
+    # Guard de año (F-002): no depende de Sigrid, solo del merge.
+    fecha_guard_service = FechaGuardService(
+        repository=repository,
+        enabled=settings.fecha_guard_enabled,
+        max_dias=settings.fecha_guard_max_dias,
+    )
+
     pipeline = PersistAlbaranPipeline(
         repository=repository,
         document_storage=document_storage,
@@ -277,6 +285,7 @@ def build_app(settings: Settings) -> FastAPI:
         obra_enrichment_service=obra_enrichment_service,
         contrato_enrichment_service=contrato_enrichment_service,
         valuation_trigger=valuation_trigger,
+        fecha_guard_service=fecha_guard_service,
     )
 
     # ----------------------------------------------------------- #
