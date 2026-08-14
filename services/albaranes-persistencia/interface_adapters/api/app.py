@@ -167,6 +167,7 @@ def build_app(settings: Settings) -> FastAPI:
             enabled=settings.header_resolver_enabled,
             familia_enabled=settings.header_resolver_familia_enabled,
             nota_max_candidatos=settings.header_resolver_nota_max_candidatos,
+            cif_enabled=settings.red_proveedor_cif_enabled,
         )
 
         obra_enrichment_service = ObraEnrichmentService(

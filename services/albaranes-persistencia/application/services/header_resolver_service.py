@@ -70,6 +70,40 @@ def _match_score(q_norm: str, cand_norm: str) -> float:
     return hits / len(toks)
 
 
+# ------------------------------------------------------------------ #
+# Red de PROVEEDOR por CIF (ago 2026, F-002).
+# ------------------------------------------------------------------ #
+#: Signos que separan palabras en una razon social pero que _norm no
+#: toca ("HORPRESOL, S.L." -> tokens "horpresol," y "s.l."). Sin esto,
+#: comparar razones sociales con puntuacion da 0 por un detalle
+#: tipografico.
+_PUNTUACION_RAZON = str.maketrans({c: " " for c in ",.;:()[]-/\\\"'"})
+
+
+def _score_razon_social(leido: str | None, candidato: str | None) -> float:
+    """Parecido entre el nombre LEIDO y una razon social candidata.
+
+    Dos diferencias con ``_match_score`` a secas, ambas necesarias para
+    el caso de referencia de R9 ("GRUPO OTTO HORPRESOL" en el logotipo
+    frente a "HORPRESOL, S.L." en el maestro):
+
+      1. Es SIMETRICO. Lo que describe la feature es que el nombre leido
+         CONTENGA a un proveedor con contrato, y ese sentido (tokens del
+         candidato presentes en lo leido) es el que puntua alto cuando el
+         albaran trae la marca comercial del grupo por delante.
+      2. Trata la puntuacion como separador, para que "S.L." no arrastre
+         el score a cero.
+
+    Se usa SOLO en esta red: los caminos previos del resolver siguen con
+    ``_match_score`` tal cual, sin cambio de comportamiento.
+    """
+    a = _norm((leido or "").translate(_PUNTUACION_RAZON))
+    b = _norm((candidato or "").translate(_PUNTUACION_RAZON))
+    if not a or not b:
+        return 0.0
+    return max(_match_score(a, b), _match_score(b, a))
+
+
 class _CandidatoObra:
     """Candidato puntuado (proveedor con contrato en la obra)."""
 
@@ -136,6 +170,7 @@ class HeaderResolverService:
         enabled: bool = True,
         familia_enabled: bool = True,
         nota_max_candidatos: int = 5,
+        cif_enabled: bool = True,
     ) -> None:
         self._obra_client = obra_client
         self._proveedor_client = proveedor_client
@@ -144,9 +179,11 @@ class HeaderResolverService:
         self._enabled = enabled
         self._familia_enabled = bool(familia_enabled)
         self._nota_max_candidatos = max(1, int(nota_max_candidatos))
+        self._cif_enabled = bool(cif_enabled)
         logger.info(
-            "%s INSTANCIADO (enabled=%s min_score=%s familia=%s)",
+            "%s INSTANCIADO (enabled=%s min_score=%s familia=%s cif=%s)",
             _LOG_PREFIX, enabled, self._min_score, self._familia_enabled,
+            self._cif_enabled,
         )
 
     def resolve_merge_document(self, *, merge_document_id: str) -> None:
@@ -269,11 +306,20 @@ class HeaderResolverService:
         'deterministic' (nombre supera umbral) o 'det_familia_obra'
         (decidio la familia con nombre debil).
         """
-        if (proveedor_cif or "").strip():
+        cif_leido = (proveedor_cif or "").strip()
+        if cif_leido:
             # CIF ya presente (IA o revisor): si quedo un aviso de
             # candidatos de un intento anterior, se retira para no
             # contradecir lo que ve el revisor.
             self._remove_nota_proveedor_safely(merge_document_id)
+            # RED DE PROVEEDOR (F-002, R8-R10): el CIF manda, pero hay
+            # que comprobarlo contra el maestro prv.
+            self._red_proveedor_por_cif(
+                cif_leido=cif_leido,
+                proveedor_nombre=proveedor_nombre,
+                obra_codigo_efectiva=obra_codigo_efectiva,
+                merge_document_id=merge_document_id,
+            )
             return None, "deterministic"
 
         # Paso 1 (jul 2026) — candidatos con contrato en la obra,
@@ -318,6 +364,174 @@ class HeaderResolverService:
             _LOG_PREFIX, best_score, self._min_score,
         )
         return None, "deterministic"
+
+    # ----------------------------------------------------------------- #
+    # RED DE PROVEEDOR POR CIF (F-002 · R8, R9, R10)
+    # ----------------------------------------------------------------- #
+    def _red_proveedor_por_cif(
+        self,
+        *,
+        cif_leido: str,
+        proveedor_nombre: str | None,
+        obra_codigo_efectiva: str | None,
+        merge_document_id: str,
+    ) -> None:
+        """Contrasta el CIF leido con el maestro ``prv`` de Sigrid.
+
+          - Existe -> ``proveedor_nombre`` pasa a ser la razon social
+            canonica (R8). Es un dato determinista del maestro, no una
+            conjetura; el literal leido queda auditado en las tablas raw.
+          - No existe -> se marca revision con motivo
+            ``proveedor_cif_no_casa:<cif>`` y, si algun proveedor CON
+            CONTRATO en la obra casa por nombre, se PROPONE en la nota
+            (R9). Sin candidato, la marca va sin propuesta (R10).
+
+        En ningun caso se sobrescriben el CIF ni el nombre leidos: lo
+        decide el humano en sv4 (decision D3). Best-effort completo (R16).
+        """
+        if not self._cif_enabled:
+            logger.info(
+                "%s RED DE PROVEEDOR desactivada "
+                "(RED_PROVEEDOR_CIF_ENABLED=false). document_id=%s",
+                _LOG_PREFIX, merge_document_id,
+            )
+            return
+
+        try:
+            encontrado = self._proveedor_client.fetch_proveedor_by_cif(
+                cif=cif_leido,
+            )
+        except Exception:
+            # Un fallo de red NO es un CIF inexistente: no se marca nada.
+            logger.exception(
+                "%s fetch_proveedor_by_cif fallo cif=%s; el documento "
+                "queda como estaba.", _LOG_PREFIX, cif_leido,
+            )
+            return
+
+        if encontrado is not None:
+            _, razon_social = encontrado
+            self._canonizar_nombre_safely(
+                merge_document_id=merge_document_id,
+                razon_social=razon_social,
+                cif_leido=cif_leido,
+            )
+            return
+
+        candidato = self._mejor_candidato_por_nombre(
+            proveedor_nombre=proveedor_nombre,
+            obra_codigo_efectiva=obra_codigo_efectiva,
+        )
+        if candidato is not None:
+            nota = (
+                f"{_NOTA_PROVEEDOR_PREFIX} el CIF leido {cif_leido} no "
+                f"existe en Sigrid. PROPUESTA: {candidato.cif} — "
+                f"{candidato.nombre or '?'}, con contrato en la obra "
+                f"{obra_codigo_efectiva} y nombre parecido al leido "
+                f"('{proveedor_nombre or '—'}'). Confirmala o corrigela "
+                "en el portal."
+            )
+        else:
+            nota = (
+                f"{_NOTA_PROVEEDOR_PREFIX} el CIF leido {cif_leido} no "
+                "existe en Sigrid y ningun proveedor con contrato en la "
+                "obra casa con el nombre leido "
+                f"('{proveedor_nombre or '—'}'). Revisa el proveedor en "
+                "el portal."
+            )
+        self._marcar_revision_safely(
+            merge_document_id=merge_document_id,
+            motivo=f"proveedor_cif_no_casa:{cif_leido}",
+            nota=nota,
+        )
+
+    def _mejor_candidato_por_nombre(
+        self,
+        *,
+        proveedor_nombre: str | None,
+        obra_codigo_efectiva: str | None,
+    ) -> ProveedorObraResumen | None:
+        """Proveedor con contrato en la obra cuyo nombre casa con el
+        leido por encima del umbral. ``None`` si no hay obra efectiva,
+        no hay nombre leido, falla la consulta o nadie llega al umbral."""
+        if not obra_codigo_efectiva or not (proveedor_nombre or "").strip():
+            return None
+        try:
+            resumenes = self._proveedor_client.fetch_contratos_resumen_por_obra(
+                codigo_obra=obra_codigo_efectiva,
+            )
+        except Exception:
+            logger.exception(
+                "%s fetch_contratos_resumen_por_obra fallo obra=%s; la "
+                "propuesta se omite.", _LOG_PREFIX, obra_codigo_efectiva,
+            )
+            return None
+        mejor: ProveedorObraResumen | None = None
+        mejor_score = 0.0
+        for resumen in resumenes or []:
+            score = _score_razon_social(proveedor_nombre, resumen.nombre)
+            if score > mejor_score:
+                mejor_score = score
+                mejor = resumen
+        if mejor is not None and mejor_score >= self._min_score:
+            logger.info(
+                "%s candidato de proveedor por nombre: cif=%s score=%.2f "
+                "obra=%s", _LOG_PREFIX, mejor.cif, mejor_score,
+                obra_codigo_efectiva,
+            )
+            return mejor
+        logger.info(
+            "%s ningun candidato de la obra %s casa con el nombre leido "
+            "(mejor score=%.2f < %.2f).",
+            _LOG_PREFIX, obra_codigo_efectiva, mejor_score, self._min_score,
+        )
+        return None
+
+    def _canonizar_nombre_safely(
+        self,
+        *,
+        merge_document_id: str,
+        razon_social: str | None,
+        cif_leido: str,
+    ) -> None:
+        nombre = (razon_social or "").strip()
+        if not nombre:
+            logger.info(
+                "%s CIF %s existe en prv pero sin razon social utilizable; "
+                "se conserva el nombre leido.", _LOG_PREFIX, cif_leido,
+            )
+            return
+        try:
+            self._repository.set_merge_proveedor_nombre_canonico(
+                document_id=merge_document_id,
+                nombre=nombre,
+            )
+            logger.info(
+                "%s proveedor canonizado por CIF %s -> %r. document_id=%s",
+                _LOG_PREFIX, cif_leido, nombre, merge_document_id,
+            )
+        except Exception:  # noqa: BLE001 — best-effort
+            logger.exception(
+                "%s no se pudo canonizar el nombre del proveedor. "
+                "document_id=%s", _LOG_PREFIX, merge_document_id,
+            )
+
+    def _marcar_revision_safely(
+        self, *, merge_document_id: str, motivo: str, nota: str,
+    ) -> None:
+        try:
+            self._repository.marcar_revision_cabecera(
+                document_id=merge_document_id,
+                motivo=motivo,
+                nota=nota,
+                nota_prefijo=_NOTA_PROVEEDOR_PREFIX,
+            )
+        except Exception:  # noqa: BLE001 — best-effort
+            logger.exception(
+                "%s no se pudo marcar la revision de proveedor. "
+                "document_id=%s motivo=%s",
+                _LOG_PREFIX, merge_document_id, motivo,
+            )
 
     def _resolver_por_obra_y_familia(
         self,

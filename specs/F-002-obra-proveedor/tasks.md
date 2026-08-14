@@ -29,7 +29,7 @@ ejecutarlo).
       | Verificación: `pytest services/albaranes-persistencia/tests -q`
       en verde (tests `test_f002_r5_*`, `_r6_*`, `_r7_*`, `_r16_*`, `_r17_*`).
 
-- [ ] T4: sv3 — red de proveedor en `header_resolver_service.py`
+- [x] T4: sv3 — red de proveedor en `header_resolver_service.py`
       (+ `fetch_proveedor_by_cif` en el puerto) +
       `test_f002_red_proveedor.py`: R8 (CIF válido → nombre canónico prv.raz),
       R9 (HORPRESOL: CIF no casa + nombre casa con candidato de la obra →
