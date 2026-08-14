@@ -19,6 +19,32 @@
 - Implementer lanzado sobre `specs/F-012-mutacion-paralela/`.
 - Después: F-002 (spec_ready aprobada) → F-003..F-007 → F-013.
 
+### Estado de la implementación (2026-08-14)
+
+- T1 (`94d150e`), T2 (`a7f3576`), T3 (`3114a6f`) y T4 (`b23497a`)
+  commiteadas; 50 tests nuevos de F-012 en verde.
+- En curso: **T5** (comparación serie-vs-paralelo sobre F-011). Tres
+  desviaciones respecto a los comandos literales de `tasks.md`, todas
+  documentadas y justificadas en `progress/impl_F-012.md`:
+  1. `--rama ""` en ambos comandos: la rama `feature/F-011-evals-ia`
+     sigue existiendo y ya está mergeada en `dev`, así que el camino por
+     rama da alcance VACÍO (0 ficheros). Con `--rama ""` se fuerza el
+     camino por commit de merge y sale el alcance real de F-011 (13
+     ficheros, 3.812 líneas, 305 mutantes: los mismos del informe
+     histórico).
+  2. `--timeout 300` en ambos comandos: hoy la suite del árbol completo
+     tarda ~130 s (93 s se los come el `setup` de
+     `services/albaranes-comun/tests/test_humo_colas.py`), por encima del
+     `timeout_por_mutante_s` de 120 s. Sin subirlo, TODOS los mutantes
+     saldrían timeout en serie y en paralelo, y la comparación no
+     compararía nada. No se toca `rigor.json`: el flag ya existía.
+  3. Informes temporales fuera de `progress/`: el árbol tiene que estar
+     limpio para que la campaña paralela arranque (R9), y un
+     `progress/tmp_*.md` sin commitear lo ensucia. Van al scratchpad de
+     la sesión y se pegan en el informe.
+- Pendiente tras T5: T6 (portado a arnes-base), T7 (campaña de la propia
+  F-012) y T8 (`bash harness/init.sh` en verde).
+
 ## Pendientes del humano (heredados)
 
 - Push: `git push origin dev` (albaranes) y `git push origin main`

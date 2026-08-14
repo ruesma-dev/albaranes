@@ -5,18 +5,18 @@ Rama: `feature/F-012-mutacion-paralela`. Un commit por tarea
 (`F-012 Tn: ...`). Fase RED obligatoria (rigor `estandar`): la traza del
 fallo previo de los tests centrales va pegada en `progress/impl_F-012.md`.
 
-- [ ] **T1**: Reparto y agregación puros en `harness/mutacion_paralela.py`
+- [x] **T1**: Reparto y agregación puros en `harness/mutacion_paralela.py`
       (`repartir` round-robin determinista, `fusionar` con reorden por clave
       estable y metadatos de muestreo del coordinador). Tests primero (RED).
       | Verificación: `python -m pytest tests/test_f012_r3_r4_reparto_agregacion.py -q`
 
-- [ ] **T2**: Gestor `Worktrees` (prune de arranque, `add --detach` en temp,
+- [x] **T2**: Gestor `Worktrees` (prune de arranque, `add --detach` en temp,
       limpieza garantizada en `__exit__` con fallback `prune + rmtree`) y
       guarda `arbol_limpio`. Tests sobre repos git temporales en `tmp_path`:
       éxito, excepción en vuelo, huérfanos de campañas muertas, árbol sucio.
       | Verificación: `python -m pytest tests/test_f012_r2_r9_r10_worktrees.py -q`
 
-- [ ] **T3**: Coordinador `ejecutar_campania_paralela` (hilos que reutilizan
+- [x] **T3**: Coordinador `ejecutar_campania_paralela` (hilos que reutilizan
       `ejecutar_campania` con `raiz=<worktree>` y `mutantes=<partición>`,
       eco con lock, cancelación cooperativa) + `resolver_interpretes` con
       fallo temprano por venv inexistente + parámetro `raiz_venvs` en
@@ -24,7 +24,7 @@ fallo previo de los tests centrales va pegada en `progress/impl_F-012.md`.
       que registran raiz/ejecutable; sin pytest real anidado.
       | Verificación: `python -m pytest tests/test_f012_r1_r5_r11_coordinador.py tests/test_f012_r6_timeout.py -q`
 
-- [ ] **T4**: CLI: `--workers` en `_analizar_argumentos`, helper
+- [x] **T4**: CLI: `--workers` en `_analizar_argumentos`, helper
       `workers_mutacion` en `harness/rigor.py`, `$doc` de `rigor.json`,
       resolución del default (CLI > `mutacion.workers` >
       `min(max(1, núcleos − 2), 16)`), número
@@ -47,7 +47,7 @@ fallo previo de los tests centrales va pegada en `progress/impl_F-012.md`.
          informativa: el criterio de éxito es el diff limpio del punto 3.
       | Verificación: diff limpio del punto 3 pegado en `progress/impl_F-012.md`
 
-- [ ] **T6**: Portar a arnes-base: copiar `mutacion.py`,
+- [x] **T6**: Portar a arnes-base: copiar `mutacion.py`,
       `mutacion_paralela.py`, `rigor.py` y `rigor.json` a
       `C:\Users\pgris\PycharmProjects\arnes-base\arnes-base\harness\` y
       commit local allí (sin push).
