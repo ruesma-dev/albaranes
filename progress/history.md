@@ -25,6 +25,33 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
   automejoras de protocolo propuestas por el reviewer en su informe (fase
   RED para features-que-son-tests, control del cero en mutación).
 
+## F-002 — Tanda 1: Identificación de obra y proveedor (done, 2026-08-14)
+
+- Rama `feature/F-002-obra-proveedor`. **Primera feature sobre servicios
+  reales (sv2 y sv3)**, con la regla dura del humano: SIN DESPLIEGUE hasta
+  probar en local. Review: **APPROVED** (`progress/review_F-002.md`).
+- Entregado: bloque determinista de obras activas en el prompt de IA1
+  (consulta a sigrid-api con filtro provisional 4 dígitos y >0450
+  configurable, cap 300) con secret pendiente-de-despliegue; redes
+  deterministas en sv3 (obra inexistente → sin obra + revisión;
+  canonicalización de proveedor por CIF conservando el literal en raw;
+  propuesta por similitud con scorer de razón social; guard de año) y fix
+  del gap de `email_received_datetime` en modo colas (R12). Sin DDL, sin
+  tocar ruesma_comun.
+- Evidencias: portero en verde; cobertura del diff 82,1 % (umbral 80);
+  mutación paralela 108 mutantes / 13 supervivientes analizados; puerta de
+  rutas sensibles APLICÓ por primera vez (prompts.yaml de sv2) en modo
+  aviso con NO_EVALUABLE documentado (libros de evals vacíos).
+- Desviación destacada (aceptada por el reviewer): scorer propio
+  `_score_razon_social` porque el `_match_score` que fijaba el design
+  puntuaba 0,33 el propio caso de referencia HORPRESOL — el design se
+  contradecía; los caminos previos del resolver quedan intactos.
+- Pendiente del humano: 5 verificaciones MANUAL en el pipeline LOCAL
+  (guion en `progress/impl_F-002.md` §T12) y, tras validar, autorización
+  expresa para desplegar (secret de sv2 + azure-apps/albaranes.md en ese
+  mismo trabajo). Hallazgo lateral: el .gitignore de sv2 ignora *.example
+  y su .env.example actualizado no entra en git.
+
 ## F-012 — Campaña de mutación en paralelo (done, 2026-08-14)
 
 - Rama `feature/F-012-mutacion-paralela` (T1–T8, un intento inicial perdido
