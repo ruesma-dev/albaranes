@@ -43,6 +43,16 @@ class ProveedorReverseLookupClient(Protocol):
         self, *, codigo_obra: str,
     ) -> list[ProveedorObraResumen]: ...
 
+    def fetch_proveedor_by_cif(
+        self, *, cif: str,
+    ) -> tuple[str, str | None] | None:
+        """``(cif_canonico, razon_social)`` si el CIF existe en ``prv``.
+
+        (ago 2026, F-002) El adaptador real ya lo exponía; se declara en el
+        puerto porque ahora lo usa la RED DE PROVEEDOR del resolver.
+        """
+        ...
+
 
 class HeaderMergeRepository(Protocol):
     def get_merge_header_for_resolution(
@@ -69,3 +79,29 @@ class HeaderMergeRepository(Protocol):
     def remove_review_note_prefix(
         self, *, document_id: str, prefijo: str,
     ) -> None: ...
+
+    def set_merge_proveedor_nombre_canonico(
+        self, *, document_id: str, nombre: str,
+    ) -> None:
+        """Sobrescribe ``proveedor_nombre`` con la razón social de ``prv``.
+
+        (ago 2026, F-002 · R8) Dato DETERMINISTA del maestro, no una
+        conjetura: el literal leído queda auditado en las tablas raw y en
+        ``raw_extraction_json``.
+        """
+        ...
+
+    def marcar_revision_cabecera(
+        self,
+        *,
+        document_id: str,
+        motivo: str,
+        nota: str,
+        nota_prefijo: str,
+    ) -> None:
+        """``review_required=true`` + motivo + nota, todo idempotente.
+
+        El motivo no se duplica en ``review_reasons_json`` y la nota
+        sustituye a la anterior del mismo ``nota_prefijo``.
+        """
+        ...

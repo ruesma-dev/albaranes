@@ -7,7 +7,7 @@ ni BBDD (fakes/mocks). Antes de T3 y T8: comprobar que el venv del servicio
 tiene `pytest` (al crear `tests/` la sección 7 bis de init.sh empieza a
 ejecutarlo).
 
-- [ ] T1: sv3 — ampliar puertos (`obra_merge_repository_port.py`,
+- [x] T1: sv3 — ampliar puertos (`obra_merge_repository_port.py`,
       `header_resolver_ports.py`) y `config/settings.py` (flags
       `RED_OBRA_ENABLED`, `RED_PROVEEDOR_CIF_ENABLED`,
       `FECHA_GUARD_ENABLED`, `FECHA_GUARD_MAX_DIAS`).

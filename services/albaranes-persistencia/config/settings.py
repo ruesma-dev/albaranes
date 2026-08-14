@@ -154,6 +154,27 @@ class Settings(BaseSettings):
     )
 
     # ------------------------------------------------------------ #
+    # Redes deterministas de identificación (ago 2026, F-002).
+    #
+    # Cada una se puede apagar por separado; a false el comportamiento
+    # es EXACTAMENTE el previo a la feature (R17).
+    #   - RED_OBRA_ENABLED: una obra que no existe en Sigrid no se
+    #     persiste (se descarta y el documento va a revisión).
+    #   - RED_PROVEEDOR_CIF_ENABLED: el proveedor se canoniza por CIF
+    #     contra el maestro ``prv``; si el CIF no existe, se PROPONE
+    #     candidato y se marca revisión (nunca se sobrescribe solo).
+    #   - FECHA_GUARD_ENABLED: fecha del albarán a más de
+    #     FECHA_GUARD_MAX_DIAS de la recepción del email -> revisión.
+    # ------------------------------------------------------------ #
+    red_obra_enabled: bool = Field(True, alias="RED_OBRA_ENABLED")
+    red_proveedor_cif_enabled: bool = Field(
+        True,
+        alias="RED_PROVEEDOR_CIF_ENABLED",
+    )
+    fecha_guard_enabled: bool = Field(True, alias="FECHA_GUARD_ENABLED")
+    fecha_guard_max_dias: int = Field(365, alias="FECHA_GUARD_MAX_DIAS")
+
+    # ------------------------------------------------------------ #
     # Grounding de cabecera para la fase 2 (jun 2026).
     #
     # Endpoint POST /v1/sigrid/header-grounding consumido por sv7
