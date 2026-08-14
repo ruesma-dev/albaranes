@@ -193,6 +193,43 @@ class Settings(BaseSettings):
         alias="IA_LOGGING_DIR",
     )
 
+    # --------------------------------------------------------------
+    # Sigrid API on-prem: lista de OBRAS ACTIVAS para el prompt de IA1
+    # (ago 2026, F-002).
+    #
+    # sigrid-api es el UNICO acceso al SQL Server de Sigrid. sv2 la
+    # consulta en SOLO LECTURA, una vez por replica y TTL. Si faltan
+    # credenciales, la funcionalidad queda desactivada con un WARN y la
+    # extraccion sigue exactamente como antes (best-effort, igual que
+    # sv3): NO se rompe el arranque.
+    #
+    #   - OBRAS_ACTIVAS_MAX solo controla el TAMAÑO DEL PROMPT.
+    #   - OBRAS_ACTIVAS_COD_MIN es el corte PROVISIONAL de «obra activa»
+    #     (decision D2 de la spec): 4 digitos y > 450. Con 0 se retira el
+    #     corte por valor, cuando negocio defina el criterio real.
+    # --------------------------------------------------------------
+    sigrid_api_base_url: str | None = Field(None, alias="SIGRID_API_BASE_URL")
+    sigrid_api_function_key: str | None = Field(
+        None,
+        alias="SIGRID_API_FUNCTION_KEY",
+    )
+    sigrid_api_database: str | None = Field(None, alias="SIGRID_API_DATABASE")
+    sigrid_api_timeout_s: float = Field(30.0, alias="SIGRID_API_TIMEOUT_S")
+
+    obras_activas_enabled: bool = Field(True, alias="OBRAS_ACTIVAS_ENABLED")
+    obras_activas_ttl_s: float = Field(21600, alias="OBRAS_ACTIVAS_TTL_S")
+    obras_activas_max: int = Field(300, alias="OBRAS_ACTIVAS_MAX")
+    obras_activas_cod_min: int = Field(450, alias="OBRAS_ACTIVAS_COD_MIN")
+
+    @property
+    def sigrid_credentials_present(self) -> bool:
+        """True si las 3 credenciales necesarias estan presentes."""
+        return bool(
+            (self.sigrid_api_base_url or "").strip()
+            and (self.sigrid_api_function_key or "").strip()
+            and (self.sigrid_api_database or "").strip()
+        )
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # --------------------------------------------------------------

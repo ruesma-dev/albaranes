@@ -52,7 +52,7 @@ ejecutarlo).
       payload roto → contexto como hoy (best-effort).
       | Verificación: pytest sv3 en verde (tests `test_f002_r12_*`).
 
-- [ ] T7: sv2 — `config/settings.py` (bloque SIGRID_* + OBRAS_ACTIVAS_*,
+- [x] T7: sv2 — `config/settings.py` (bloque SIGRID_* + OBRAS_ACTIVAS_*,
       incluido `OBRAS_ACTIVAS_COD_MIN`), puerto `obras_activas_provider.py`,
       cliente `sigrid_api_obras_client.py` (con `max_rows=10000` y el filtro
       provisional de R1-bis) y caché `obras_activas_cache.py` + `tests/`
