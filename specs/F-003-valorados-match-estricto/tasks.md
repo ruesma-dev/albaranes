@@ -119,7 +119,7 @@ prerrequisito abierto.
       todos los servicios con tests y cobertura del diff).
       | Verificación: `bash harness/init.sh` → ENTORNO LISTO.
 
-- [ ] T13: MANUAL (humano) — verificación integrada en local (Azurite +
+- [~] T13: MANUAL (humano) — verificación integrada en local (Azurite +
       PG local): 1) arrancar sv3 → columnas nuevas creadas
       (`\d albaran_lines_merge`); 2) reprocesar el albarán del caso ×120 →
       línea con importe 191,40 persistido y sin importe disparatado;
