@@ -115,7 +115,7 @@ prerrequisito abierto.
       sv6) va en `progress/impl_F-003.md`.
       | Verificación: revisión del diff; ningún secreto.
 
-- [ ] T12: Ejecutar `bash harness/init.sh` en verde (incluye pytest de
+- [x] T12: Ejecutar `bash harness/init.sh` en verde (incluye pytest de
       todos los servicios con tests y cobertura del diff).
       | Verificación: `bash harness/init.sh` → ENTORNO LISTO.
 
