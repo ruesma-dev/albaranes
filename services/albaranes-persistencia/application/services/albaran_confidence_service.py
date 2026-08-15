@@ -790,6 +790,30 @@ class AlbaranConfidenceService:
                 (claude_line.cabecera_id if claude_available else None),
             ),
         )
+        # F-003 · Campos TRANSCRITOS de albaranes valorados. Van fuera de
+        # _LINE_CONFIGS a propósito: son transcripción, no un campo más
+        # que puntuar (meterlos en el scoring movería los pesos de
+        # confianza de todas las líneas del histórico). Se resuelven con
+        # el mismo orden de precedencia por proveedor que el resto.
+        merged_payload["importe"] = self._coalesce_triple(
+            primary_provider=primary_provider,
+            gemini_value=(gemini_line.importe if gemini_available else None),
+            openai_value=(
+                openai_line.importe if openai_line is not None else None
+            ),
+            claude_value=(claude_line.importe if claude_available else None),
+        )
+        merged_payload["descuentos"] = self._coalesce_triple(
+            primary_provider=primary_provider,
+            gemini_value=(gemini_line.descuentos if gemini_available else None),
+            openai_value=(
+                openai_line.descuentos if openai_line is not None else None
+            ),
+            claude_value=(
+                claude_line.descuentos if claude_available else None
+            ),
+        )
+
         raw_openai_conf = (
             openai_line.confianza_pct if openai_line is not None else None
         )
@@ -957,6 +981,19 @@ class AlbaranConfidenceService:
                 tertiary.id if tertiary is not None else None,
             ),
         )
+
+        # F-003 · Total del albarán transcrito. Fuera de _HEADER_CONFIGS
+        # por la misma razón que el importe de línea: es transcripción,
+        # no un campo puntuado. La marca de IVA VIAJA CON SU TOTAL — un
+        # total base con la marca del otro proveedor sería mentira.
+        for candidata in (primary, secondary, tertiary):
+            if candidata is not None and candidata.importe_total is not None:
+                payload["importe_total"] = candidata.importe_total
+                payload["importe_total_incluye_iva"] = (
+                    candidata.importe_total_incluye_iva
+                )
+                break
+
         return CabeceraAlbaran(**payload)
 
     def _coalesce_triple(
@@ -1271,16 +1308,36 @@ class AlbaranConfidenceService:
         return round(max(0.0, min(100.0, combined)), 2)
 
     def _is_line_net_consistent(self, line: LineaAlbaran) -> bool:
-        if line.cantidad is None or line.precio is None or line.precio_neto is None:
+        """¿Cuadra la aritmética de la línea con lo que trae impreso?
+
+        F-003 · Hasta esta feature se comparaba
+        ``cantidad × precio × (1 − dto)`` contra ``precio_neto``, que es
+        un precio UNITARIO: la comparación solo tenía sentido porque el
+        prompt ORDENABA meter ahí el importe total de la línea (la causa
+        del caso ×120). Con R1, cada valor se transcribe por su etiqueta:
+
+          - si hay ``importe`` leído, se compara contra él (es el total
+            de la línea, que es lo que la fórmula produce);
+          - si no, y hay ``precio_neto`` impreso, se compara UNITARIO
+            contra unitario.
+
+        Sin datos suficientes no se penaliza nada.
+        """
+        if line.precio is None:
             return True
-        descuento = line.descuento or 0.0
-        expected = (
-            float(line.cantidad)
-            * float(line.precio)
-            * (1 - (float(descuento) / 100.0))
-        )
-        tolerance = max(0.15, abs(expected) * 0.02)
-        return abs(expected - float(line.precio_neto)) <= tolerance
+        descuento = float(line.descuento or 0.0)
+        precio_con_dto = float(line.precio) * (1 - (descuento / 100.0))
+
+        if line.importe is not None and line.cantidad is not None:
+            esperado = float(line.cantidad) * precio_con_dto
+            tolerancia = max(0.15, abs(esperado) * 0.02)
+            return abs(esperado - float(line.importe)) <= tolerancia
+
+        if line.precio_neto is not None:
+            tolerancia = max(0.01, abs(precio_con_dto) * 0.02)
+            return abs(precio_con_dto - float(line.precio_neto)) <= tolerancia
+
+        return True
 
     # ---------------------------------------------------------------- #
     # Helpers                                                          #

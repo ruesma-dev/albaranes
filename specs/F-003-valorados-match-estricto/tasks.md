@@ -29,7 +29,7 @@ prerrequisito abierto.
       calcular ha desaparecido).
       | Verificación: pytest sv2 en verde (tests `test_f003_r1_*`).
 
-- [ ] T3: sv3 — columnas nuevas (ORM mixins + DDL idempotente
+- [x] T3: sv3 — columnas nuevas (ORM mixins + DDL idempotente
       `ADD COLUMN IF NOT EXISTS` en raw y merge, 4 columnas), mapeo
       extracción→ORM de los campos nuevos y `descuento_cascada.py`
       (`descuento_efectivo`) + `test_f003_descuento_cascada.py` +

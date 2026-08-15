@@ -219,6 +219,14 @@ def _alter_columns_for_document_tables() -> List[Tuple[str, str]]:
             (f"ALTER {table_name}.comparison_summary_json",
              f"ALTER TABLE {table_name} "
              f"ADD COLUMN IF NOT EXISTS comparison_summary_json TEXT"),
+            # F-003 · Total del albarán transcrito y su marca de IVA.
+            # Lector acoplado: sv5 (SQL crudo) → arrancar sv3 antes.
+            (f"ALTER {table_name}.importe_total",
+             f"ALTER TABLE {table_name} "
+             f"ADD COLUMN IF NOT EXISTS importe_total DOUBLE PRECISION"),
+            (f"ALTER {table_name}.importe_total_incluye_iva",
+             f"ALTER TABLE {table_name} "
+             f"ADD COLUMN IF NOT EXISTS importe_total_incluye_iva BOOLEAN"),
             (f"UPDATE {table_name}.source_document_id backfill",
              f"UPDATE {table_name} SET source_document_id = source_sha256 "
              f"WHERE source_document_id IS NULL"),
@@ -264,6 +272,16 @@ def _alter_columns_for_line_tables() -> List[Tuple[str, str]]:
             (f"ALTER {table_name}.contexto_linea_json",
              f"ALTER TABLE {table_name} "
              f"ADD COLUMN IF NOT EXISTS contexto_linea_json TEXT"),
+            # F-003 · Importe de línea IMPRESO (transcrito, nunca
+            # derivado) y transcripción fiel de todas las columnas de
+            # descuento. Lector acoplado: sv5 hace SELECT de `importe`
+            # con SQL crudo → arrancar sv3 antes que sv5.
+            (f"ALTER {table_name}.importe",
+             f"ALTER TABLE {table_name} "
+             f"ADD COLUMN IF NOT EXISTS importe DOUBLE PRECISION"),
+            (f"ALTER {table_name}.descuentos_json",
+             f"ALTER TABLE {table_name} "
+             f"ADD COLUMN IF NOT EXISTS descuentos_json TEXT"),
         ])
     return statements
 

@@ -15,6 +15,7 @@ from application.services.albaran_confidence_service import (
     AlbaranConfidenceService,
     LineMergeResult,
 )
+from application.services.descuento_cascada import resolver_descuento
 from domain.models.contrato_models import ContratoEnrichmentResult
 from domain.models.extraction_models import (
     CabeceraAlbaran,
@@ -71,6 +72,21 @@ def _dump_contexto_linea(ctx) -> str | None:
     if not data:
         return None
     return json.dumps(data, ensure_ascii=False)
+
+
+def _dump_descuentos(descuentos) -> str | None:
+    """Serializa la lista de descuentos LEÍDOS a JSON (F-003, R3).
+
+    Es transcripción fiel: el orden de las columnas del documento se
+    conserva. Sin descuentos (None o lista vacía) la columna queda a
+    NULL — no se guarda ``[]``, que se confundiría con «leí y no había».
+    """
+    if not descuentos:
+        return None
+    valores = [v for v in descuentos if v is not None]
+    if not valores:
+        return None
+    return json.dumps(valores, ensure_ascii=False)
 
 
 # =============================================================================
@@ -280,6 +296,11 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
                     f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true",
                     f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS deleted_at_utc VARCHAR(64)",
                     f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS deleted_by VARCHAR(255)",
+                    # F-003: total del albarán transcrito y su marca de
+                    # IVA. Lector acoplado: sv5 (SQL crudo) → arrancar
+                    # sv3 ANTES que sv5 al desplegar.
+                    f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS importe_total DOUBLE PRECISION",
+                    f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS importe_total_incluye_iva BOOLEAN",
                     (
                         f"UPDATE {table_name} SET source_document_id = source_sha256 "
                         "WHERE source_document_id IS NULL"
@@ -314,6 +335,12 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
                     # combustible / alquiler_maquinaria / otro). Ver
                     # domain/models/contexto_linea.py. Idempotente.
                     f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS contexto_linea_json TEXT",
+                    # F-003: importe de línea IMPRESO (transcrito, nunca
+                    # derivado) y lista completa de descuentos leídos.
+                    # Lector acoplado: sv5 hace SELECT de `importe` con
+                    # SQL crudo → arrancar sv3 ANTES que sv5.
+                    f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS importe DOUBLE PRECISION",
+                    f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS descuentos_json TEXT",
                 ]
             )
 
@@ -1942,6 +1969,9 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
             obra_codigo=cabecera.obra_codigo,
             obra_nombre=cabecera.obra_nombre,
             obra_direccion=cabecera.obra_direccion,
+            # F-003 · Total del albarán transcrito y su marca de IVA.
+            importe_total=cabecera.importe_total,
+            importe_total_incluye_iva=cabecera.importe_total_incluye_iva,
             sharepoint_drive_id=stored_file.drive_id,
             sharepoint_item_id=stored_file.item_id,
             sharepoint_relative_path=stored_file.relative_path,
@@ -2007,8 +2037,12 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
                     concepto=line.concepto,
                     unidad_medida=line.unidad_medida,
                     precio=line.precio,
-                    descuento=line.descuento,
+                    descuento=resolver_descuento(
+                        line.descuento, line.descuentos
+                    ),
                     precio_neto=line.precio_neto,
+                    importe=line.importe,
+                    descuentos_json=_dump_descuentos(line.descuentos),
                     codigo_imputacion=line.codigo_imputacion,
                     confianza_pct=line.confianza_pct,
                     confidence_pct_calc=None,
@@ -2034,8 +2068,13 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
                 concepto=result.merged_line.concepto,
                 unidad_medida=result.merged_line.unidad_medida,
                 precio=result.merged_line.precio,
-                descuento=result.merged_line.descuento,
+                descuento=resolver_descuento(
+                    result.merged_line.descuento,
+                    result.merged_line.descuentos,
+                ),
                 precio_neto=result.merged_line.precio_neto,
+                importe=result.merged_line.importe,
+                descuentos_json=_dump_descuentos(result.merged_line.descuentos),
                 codigo_imputacion=result.merged_line.codigo_imputacion,
                 confianza_pct=result.raw_openai_confidence_pct,
                 confidence_pct_calc=result.confidence_pct_calc,

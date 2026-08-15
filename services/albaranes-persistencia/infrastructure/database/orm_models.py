@@ -40,6 +40,16 @@ class _DocumentColumnsMixin:
     obra_codigo: Mapped[str | None] = mapped_column(String(128))
     obra_nombre: Mapped[str | None] = mapped_column(String(255))
     obra_direccion: Mapped[str | None] = mapped_column(String(255))
+
+    # ------------------------------------------------------------------ #
+    # F-003 · Total del albarán transcrito por IA1 (nunca sumado por
+    # nadie). `importe_total_incluye_iva` dice si ese total es base
+    # imponible (False) o incluye IVA (True). sv5 los lee con SQL crudo
+    # y los pone en el meta del envelope de valoración.
+    # ------------------------------------------------------------------ #
+    importe_total: Mapped[float | None] = mapped_column(Float)
+    importe_total_incluye_iva: Mapped[bool | None] = mapped_column(Boolean)
+
     sharepoint_drive_id: Mapped[str | None] = mapped_column(String(255))
     sharepoint_item_id: Mapped[str | None] = mapped_column(String(255))
     sharepoint_relative_path: Mapped[str | None] = mapped_column(String(1024))
@@ -107,6 +117,18 @@ class _LineColumnsMixin:
     precio: Mapped[float | None] = mapped_column(Float)
     descuento: Mapped[float | None] = mapped_column(Float)
     precio_neto: Mapped[float | None] = mapped_column(Float)
+
+    # ------------------------------------------------------------------ #
+    # F-003 · Importe de LÍNEA impreso, transcrito tal cual por IA1
+    # (jamás derivado de precio × cantidad: esa derivación es la que
+    # produjo el caso ×120). `descuentos_json` guarda la lista completa
+    # de porcentajes leídos; `descuento` conserva el efectivo (el único
+    # transcrito, o la cascada derivada por descuento_cascada.py).
+    # sv5 lee `importe` con SQL crudo: NUNCA renombrar esta columna.
+    # ------------------------------------------------------------------ #
+    importe: Mapped[float | None] = mapped_column(Float)
+    descuentos_json: Mapped[str | None] = mapped_column(Text)
+
     codigo_imputacion: Mapped[str | None] = mapped_column(String(128))
     confianza_pct: Mapped[float | None] = mapped_column(Float)
     confidence_pct_calc: Mapped[float | None] = mapped_column(Float)
