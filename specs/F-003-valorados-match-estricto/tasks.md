@@ -105,7 +105,7 @@ prerrequisito abierto.
       | Verificación: runner de evals en verde si existe; si no, MANUAL
       (humano) con constancia en `progress/impl_F-003.md`.
 
-- [ ] T11: docs — `docs/referencia/dominio_negocio_albaranes.md`: pasar de
+- [x] T11: docs — `docs/referencia/dominio_negocio_albaranes.md`: pasar de
       🔶 a ✅ las reglas de §10.4 y el punto de matching estricto de §10.5
       que esta feature implementa (el de líneas manuscritas NO: queda 🔶);
       §3.4/§3.3 mencionan las columnas nuevas. `.env.example` de sv6 con

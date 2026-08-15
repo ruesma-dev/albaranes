@@ -180,7 +180,7 @@ versión merge + discriminador de proveedor). Solo consulta forense.
 | Grupo | Columnas |
 |---|---|
 | Identificación | `id` UUID v4 PK · `provider_origin` · `source_sha256` (UQ) · `source_filename` · `source_mime_type` |
-| Cabecera | `proveedor_nombre` · `proveedor_cif` · `fecha` · `numero_albaran` · `forma_pago` · `obra_codigo` · `obra_nombre` · `obra_direccion` |
+| Cabecera | `proveedor_nombre` · `proveedor_cif` · `fecha` · `numero_albaran` · `forma_pago` · `obra_codigo` · `obra_nombre` · `obra_direccion` · `importe_total` · `importe_total_incluye_iva` (F-003: total del albarán transcrito y si lleva IVA) |
 | SharePoint | `sharepoint_drive_id` · `sharepoint_item_id` · `sharepoint_relative_path` · `sharepoint_web_url` · `sharepoint_share_url` |
 | Artefactos IA | `ia_input_json` / `ia_output_json` inline · `{ia,gem,cla}_{input,output}_{relative_path,web_url}` |
 | Contexto email | `email_id` · `email_subject` · `email_sender` · `email_received_datetime` · `raw_context_json` |
@@ -194,6 +194,14 @@ Descripción, cantidad, unidad, precio/dtos/importe leídos, `codigo_imputacion`
 (partida impresa en el albarán si la hay), `line_match_score`,
 `field_scores_json`, `contexto_linea` (JSON del proveedor más rico),
 `raw_extraction_json`.
+
+Precio y descuentos, en detalle (F-003): `precio` (unitario bruto impreso),
+`descuento` (el único transcrito o el efectivo en cascada derivado por sv3),
+`descuentos_json` (transcripción fiel de TODAS las columnas de descuento, en
+el orden del documento), `precio_neto` (unitario neto, solo si figura
+impreso) e **`importe`** (importe de LÍNEA impreso, nunca derivado). sv5 lee
+`importe` con SQL crudo: renombrar esa columna lo rompe en runtime sin
+aviso (§ARCHITECTURE, regla 3).
 
 ### 3.5 `albaran_contratos_merge` (sv3 + sv4)
 
@@ -694,22 +702,43 @@ sufijos:
 
 ### 10.4 Albaranes que VIENEN VALORADOS
 
-- 🔶 **Transcribir, no recomponer**: precio unitario, TODOS los descuentos
-  (lista) e importe se copian tal cual están impresos, cada uno por su
-  etiqueta de columna. Prohibido derivar precio = importe×algo (caso ×120:
-  23.073,60 € por 191,40 €).
-- 🔶 **El dto del albarán no se aplica sobre el precio de contrato.**
-- 🔶 **Guard aritmético**: `precio × cantidad (− dtos) ≈ importe_linea` leído;
-  si no cuadra → revisión, nunca inventar. Y `Σ importes = total albarán`
-  (con una línea, idénticos — caso ORE OIL).
+- ✅ **Transcribir, no recomponer** (F-003): precio unitario, TODOS los
+  descuentos (lista) e importe se copian tal cual están impresos, cada uno
+  por su etiqueta de columna. Prohibido derivar precio = importe×algo (caso
+  ×120: 23.073,60 € por 191,40 €). El prompt de IA1 ya no manda calcular
+  `precio_neto`; el importe leído viaja en `albaran_lines[_merge].importe` y
+  los descuentos en `descuentos_json` (§3.4).
+- ✅ **El dto del albarán no se aplica sobre el precio de contrato** (F-003):
+  solo cuando el precio unitario final sale del propio albarán. Si se leyó y
+  no se aplicó, queda el motivo
+  `descuento_albaran_no_aplicado_a_precio_contrato`. Las sintéticas M1–M7
+  siguen heredando el descuento del padre (decisión de negocio 2026-08-13).
+- ✅ **Guard aritmético** (F-003): `precio × cantidad × (1 − dto) ≈ importe`
+  leído; si no cuadra → revisión con el descuadre en los motivos, y se
+  persiste SIEMPRE el importe leído, nunca el calculado. Y `Σ importes de
+  las líneas impresas ≈ total del albarán` (las sintéticas no suman: no
+  están en el papel). Con una sola línea sin importe impreso, el total ES su
+  importe (caso ORE OIL).
+- ✅ **Total con IVA** (decisión de negocio 2026-08-13): si el documento solo
+  imprime el total CON IVA, se transcribe ese total y se marca
+  (`importe_total_incluye_iva`); el guard entonces solo AVISA
+  (`guard_aritmetico_total_con_iva`) en vez de exigir cuadre, porque los
+  importes de línea del pipeline son base imponible.
 
 ### 10.5 Matching albarán ↔ contrato
 
-- 🔶 **Atributo sustantivo distinto ⇒ NO casar.** Si la descripción difiere
-  en tamaño, modelo o tipo (ladrillos CETOSA, elemento base 0,5 mm, bolsa de
-  cuñas), mejor línea nueva sin precio a revisión que un precio equivocado
-  con apariencia de bueno. ("Esto nos dará problemas siempre" — negocio.)
-- ✅ Diferencias solo tipográficas/de formato sí casan (mortero D-300).
+- ✅ **Atributo sustantivo distinto ⇒ NO casar** (F-003). Si la descripción
+  difiere en tamaño, modelo o tipo (ladrillos CETOSA, elemento base 0,5 mm,
+  bolsa de cuñas), mejor línea nueva sin precio a revisión que un precio
+  equivocado con apariencia de bueno. ("Esto nos dará problemas siempre" —
+  negocio.) Doble defensa: la regla está en los prompts de IA3 e IA4, y una
+  red determinista de sv6 anula el match cuando albarán y contrato traen
+  magnitudes del mismo tipo con VALORES distintos. La red solo alcanza
+  atributos numéricos con unidad; los modelos y formatos de venta dependen
+  del prompt y del revisor.
+- ✅ Diferencias solo tipográficas/de formato sí casan (mortero D-300 = D300
+  = DN300 = ø300; 0,5 = 0.5 = 0,50). La red determinista compara valores
+  normalizados, no cadenas.
 - ✅ Conciliación IA4 corre ANTES del build y muta el envelope; solo
   interviene en líneas sin match o sin precio.
 - ✅ Precio: si 1a (BBDD) y 1b (PDF) discrepan, **prevalece 1a** y se registra
