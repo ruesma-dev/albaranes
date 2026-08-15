@@ -100,6 +100,12 @@ def build_run_valuation_pipeline(settings: Settings) -> RunValuationPipeline:
         importe_calculator=ImporteCalculator(
             tolerance_pct=settings.importe_tolerance_pct,
         ),
+        # (F-003) Redes deterministas nuevas, apagables por separado.
+        guard_aritmetico_enabled=settings.guard_aritmetico_enabled,
+        red_atributo_sustantivo_enabled=(
+            settings.red_atributo_sustantivo_enabled
+        ),
+        importe_tolerance_pct=settings.importe_tolerance_pct,
     )
 
     pipeline = RunValuationPipeline(

@@ -49,7 +49,7 @@ prerrequisito abierto.
       efectivo = leído; fila antigua → efectivo = derivación actual).
       | Verificación: pytest sv5 en verde (tests `test_f003_r4_*`).
 
-- [ ] T5: sv6 — DTOs del envelope (`importe_leido`,
+- [x] T5: sv6 — DTOs del envelope (`importe_leido`,
       `meta.importe_total_albaran`, `meta.importe_total_incluye_iva`) +
       flags en `config/settings.py` +
       wiring en `composition.py` + crear

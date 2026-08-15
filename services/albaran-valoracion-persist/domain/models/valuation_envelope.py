@@ -22,6 +22,17 @@ class ValuationEnvelopeMeta(_StrictModel):
     # en cola siguen validando.
     fecha_albaran: Optional[str] = None
     numero_albaran: Optional[str] = None
+    # (ago 2026 · F-003) Total del albarán TRANSCRITO por IA1, con la
+    # marca de si incluye IVA:
+    #   - False → es base imponible: la suma de los importes de las
+    #     líneas from_albaran debe cuadrar con él o la valoración va a
+    #     revisión (guard aritmético de total, R7).
+    #   - True o None → el total lleva IVA (o no consta): comparar
+    #     contra una suma de bases daría falsos positivos, así que el
+    #     descuadre solo deja aviso de auditoría.
+    # Optional: los sobres en cola anteriores a F-003 siguen validando.
+    importe_total_albaran: Optional[float] = None
+    importe_total_incluye_iva: Optional[bool] = None
     pdf_relative_path: Optional[str] = None
     pdf_filename: Optional[str] = None
     pdf_sha256: Optional[str] = None
@@ -122,6 +133,22 @@ class AlbaranLineContextDto(_StrictModel):
     # -----------------------------------------------------------------
     descuento_albaran: Optional[float] = None
     precio_neto_albaran: Optional[float] = None
+
+    # -----------------------------------------------------------------
+    # F-003 (ago 2026) — importe de línea IMPRESO
+    #
+    # Lo que pone el papel, transcrito por IA1 y persistido por sv3. Es
+    # distinto de ``importe_albaran``, que es el EFECTIVO (el leído si
+    # existe; si no, la derivación cantidad × precio_neto).
+    #
+    # El guard aritmético (R6) contrasta precio × cantidad × (1 − dto)
+    # contra ESTE campo y, si no cuadra, manda la línea a revisión SIN
+    # tocar el importe: lo leído no se pisa jamás.
+    #
+    # None en sobres antiguos y en documentos que no imprimen importe →
+    # el guard no actúa y todo se comporta como antes.
+    # -----------------------------------------------------------------
+    importe_leido: Optional[float] = None
 
 
 class ContratoLineContextDto(_StrictModel):

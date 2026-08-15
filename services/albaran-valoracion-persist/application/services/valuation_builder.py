@@ -370,12 +370,25 @@ class ValuationBuilder:
         partida_matcher: PartidaMatcher,
         unit_converter: UnitConverter,
         importe_calculator: ImporteCalculator,
+        # (F-003) Interruptores de las redes nuevas. A False, el
+        # comportamiento es el previo a la feature.
+        guard_aritmetico_enabled: bool = True,
+        red_atributo_sustantivo_enabled: bool = True,
+        # Tolerancia del guard aritmético. Es la MISMA que usa el
+        # ImporteCalculator (IMPORTE_TOLERANCE_PCT): no se inventa un
+        # umbral nuevo para comparar los mismos importes.
+        importe_tolerance_pct: float = 5.0,
     ) -> None:
         self._guard = unit_category_guard
         self._reconciler = price_reconciler
         self._partida_matcher = partida_matcher
         self._converter = unit_converter
         self._importe_calc = importe_calculator
+        self._guard_aritmetico_enabled = bool(guard_aritmetico_enabled)
+        self._red_atributo_sustantivo_enabled = bool(
+            red_atributo_sustantivo_enabled
+        )
+        self._importe_tolerance_pct = float(importe_tolerance_pct)
 
     def build(
         self,

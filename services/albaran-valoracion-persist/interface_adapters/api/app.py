@@ -133,6 +133,12 @@ def build_app(settings: Settings) -> FastAPI:
         importe_calculator=ImporteCalculator(
             tolerance_pct=settings.importe_tolerance_pct,
         ),
+        # (F-003) Redes deterministas nuevas, apagables por separado.
+        guard_aritmetico_enabled=settings.guard_aritmetico_enabled,
+        red_atributo_sustantivo_enabled=(
+            settings.red_atributo_sustantivo_enabled
+        ),
+        importe_tolerance_pct=settings.importe_tolerance_pct,
     )
     pipeline = RunValuationPipeline(
         ia_client=ia_client,

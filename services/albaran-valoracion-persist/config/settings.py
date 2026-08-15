@@ -79,6 +79,29 @@ class Settings(BaseSettings):
     )
 
     # ----------------------------------------------------------------- #
+    # F-003 (ago 2026): redes deterministas de coherencia y de matching
+    # estricto. Cada una se puede apagar por separado; a False el
+    # comportamiento es EXACTAMENTE el previo a la feature (hay tests de
+    # regresión que lo comprueban).
+    # ----------------------------------------------------------------- #
+    guard_aritmetico_enabled: bool = Field(
+        True,
+        alias="GUARD_ARITMETICO_ENABLED",
+        description="Si True, contrasta precio × cantidad × (1 − dto) "
+                    "contra el importe LEÍDO de cada línea y la suma de "
+                    "las líneas contra el total del albarán. Nunca "
+                    "sustituye el importe leído: solo marca revisión.",
+    )
+    red_atributo_sustantivo_enabled: bool = Field(
+        True,
+        alias="RED_ATRIBUTO_SUSTANTIVO_ENABLED",
+        description="Si True, anula el match cuando albarán y contrato "
+                    "traen magnitudes del mismo tipo con valores "
+                    "distintos (0,5 mm vs 0,6 mm). La línea cae a nueva "
+                    "sin precio y a revisión.",
+    )
+
+    # ----------------------------------------------------------------- #
     # Schema integrity.
     #
     # Si está activado (recomendado en local y en stage; opcional en
