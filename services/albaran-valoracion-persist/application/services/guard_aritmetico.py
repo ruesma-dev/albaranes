@@ -52,10 +52,9 @@ def _cuadra(a: float, b: float, tolerance_pct: float) -> bool:
 
     Misma semántica que ``ImporteCalculator._close_enough``: el
     porcentaje se mide sobre el mayor de los dos, para que la
-    comparación sea simétrica.
+    comparación sea simétrica. El ``1e-9`` del denominador cubre el
+    caso 0 contra 0 sin necesidad de una rama aparte.
     """
-    if a == 0.0 and b == 0.0:
-        return True
     denominador = max(abs(a), abs(b), 1e-9)
     return abs(a - b) / denominador * 100.0 <= float(tolerance_pct)
 
@@ -78,11 +77,17 @@ def verificar_linea(
     leído, el precio declarado o la cantidad: sin los tres no hay
     aritmética que contrastar, y callar es mejor que sospechar de una
     línea que nadie ha declarado.
+
+    Un importe leído de 0 cuenta como AUSENTE, igual que en el
+    ``ImporteCalculator`` y el ``PriceReconciler``: una celda vacía que
+    el OCR devuelve como cero no puede mandar una línea a revisión.
     """
     leido = _num(importe_leido)
     precio = _num(precio_declarado)
     cant = _num(cantidad)
     if leido is None or precio is None or cant is None:
+        return []
+    if leido == 0.0:
         return []
 
     descuento = _num(descuento_pct) or 0.0

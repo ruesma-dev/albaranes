@@ -104,6 +104,65 @@ def test_f003_r6_cantidad_cero_no_dispara_falsos_positivos() -> None:
     assert _verificar_linea(cantidad=0.0, importe_leido=0.0) == []
 
 
+def test_f003_r6_un_importe_leido_de_cero_cuenta_como_ausente() -> None:
+    """Misma convencion que ImporteCalculator y PriceReconciler: una
+    celda vacia devuelta como 0 no manda nada a revision."""
+    assert _verificar_linea(
+        precio_declarado=1.0, cantidad=100.0, importe_leido=0.0,
+    ) == []
+
+
+def test_f003_r6_un_precio_a_cero_contra_un_importe_impreso_descuadra() -> None:
+    """Calculado 0 y leido 100 no cuadran: el atajo del 0 no puede
+    tragarse un descuadre real."""
+    assert _verificar_linea(
+        precio_declarado=0.0, cantidad=10.0, importe_leido=100.0,
+    ) != []
+
+
+def test_f003_r6_la_tolerancia_es_inclusiva_en_el_limite() -> None:
+    """Justo el 5 % pasa; un pelo mas, no."""
+    # 95 calculado contra 100 leido = 5,00 % exacto sobre el mayor.
+    assert _verificar_linea(
+        precio_declarado=1.0, cantidad=95.0, importe_leido=100.0,
+    ) == []
+    assert _verificar_linea(
+        precio_declarado=1.0, cantidad=94.0, importe_leido=100.0,
+    ) != []
+
+
+def test_f003_r6_un_descuento_fuera_de_rango_se_ignora() -> None:
+    """Un 150 % de descuento es basura de OCR: se ignora en vez de
+    fabricar un importe negativo y un descuadre fantasma."""
+    assert _verificar_linea(
+        precio_declarado=10.0,
+        cantidad=10.0,
+        descuento_pct=150.0,
+        importe_leido=100.0,
+    ) == []
+
+
+def test_f003_r6_un_descuento_del_cien_por_cien_si_se_aplica() -> None:
+    """100 % es un descuento legitimo (linea regalada): el importe
+    esperado es 0, y un importe impreso de 100 descuadra."""
+    assert _verificar_linea(
+        precio_declarado=10.0,
+        cantidad=10.0,
+        descuento_pct=100.0,
+        importe_leido=100.0,
+    ) != []
+
+
+def test_f003_r6_el_motivo_redondea_a_dos_decimales() -> None:
+    """El motivo lo lee un humano en el portal: 191.38, no
+    191.38173500000002."""
+    motivos = _verificar_linea(
+        precio_declarado=1.11111, cantidad=100.0, importe_leido=500.0,
+    )
+
+    assert motivos == ["guard_aritmetico_linea:111.11!=500.0"]
+
+
 # ---------------------------------------------------------------------
 # R6 · Guard de linea integrado en el builder
 # ---------------------------------------------------------------------
@@ -473,6 +532,43 @@ def test_f003_r8_ore_oil_integrado_en_el_builder() -> None:
 
     assert records[0].importe_calculado == pytest.approx(191.40)
     assert "importe_desde_total_documento" in records[0].review_reasons
+
+
+def test_f003_r8_una_linea_del_lote_sin_contexto_no_revienta() -> None:
+    """Robustez: si la IA devuelve una linea cuyo merge_line_id no esta
+    en el contexto, el builder no puede caerse buscandola."""
+    _, records = construir(
+        construir_builder(),
+        envelope(
+            lineas_data=[
+                linea_valorada(merge_line_id=1),
+                linea_valorada(merge_line_id=999),
+            ],
+            lineas_albaran=[linea_contexto(merge_line_id=1)],
+            lineas_contrato=[linea_contrato()],
+            meta={
+                "importe_total_albaran": 10.0,
+                "importe_total_incluye_iva": False,
+            },
+        ),
+    )
+
+    assert len(records) == 2
+
+
+def test_f003_r6_una_linea_limpia_no_va_a_revision() -> None:
+    """Regresion del contrato del builder: sin motivos, no hay revision.
+    Si esta se pone en rojo, algo esta mandando TODO a revisar."""
+    _, records = construir(construir_builder(), envelope())
+
+    assert records[0].review_required is False
+    # Los motivos que queden son informativos (trazabilidad del precio),
+    # ninguno de guard ni de red.
+    assert not [
+        motivo
+        for motivo in records[0].review_reasons
+        if motivo.startswith(("guard_aritmetico", "atributo_sustantivo"))
+    ]
 
 
 def test_f003_r13_ore_oil_no_actua_con_el_guard_apagado() -> None:

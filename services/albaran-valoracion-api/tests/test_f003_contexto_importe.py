@@ -137,6 +137,28 @@ def test_f003_r4_la_fila_sin_la_columna_no_revienta() -> None:
 # ---------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------
+# R4 · La marca de IVA distingue False de "no se sabe"
+# ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("crudo", [False, 0, "false", "f", "0", "no", "N"])
+def test_f003_r4_la_marca_de_iva_reconoce_el_falso(crudo) -> None:
+    """False (es base imponible: sv6 EXIGE cuadre) no puede degradarse a
+    None (no consta: sv6 solo avisa)."""
+    assert repo_mod._opt_bool(crudo) is False
+
+
+@pytest.mark.parametrize("crudo", [True, 1, "true", "t", "1", "yes", "Y"])
+def test_f003_r4_la_marca_de_iva_reconoce_el_verdadero(crudo) -> None:
+    assert repo_mod._opt_bool(crudo) is True
+
+
+@pytest.mark.parametrize("crudo", [None, "", "quiza", "  "])
+def test_f003_r4_lo_que_no_es_ni_si_ni_no_queda_en_desconocido(crudo) -> None:
+    assert repo_mod._opt_bool(crudo) is None
+
+
 def test_f003_r4_el_prefilter_propaga_el_importe_leido() -> None:
     prefilter = UnitCategoryPrefilter()
 

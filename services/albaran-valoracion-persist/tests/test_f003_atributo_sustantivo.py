@@ -247,6 +247,54 @@ def test_f003_r11_una_linea_sin_match_no_se_toca() -> None:
     assert motivos == {}
 
 
+def test_f003_r11_sin_la_linea_de_contrato_no_se_toca_nada() -> None:
+    """El match apunta a una linea de contrato que no viaja en el sobre:
+    sin ella no hay nada que comparar, y anular a ciegas seria peor."""
+    dto = _Dto()
+    motivos = sanear_matches_atributo_sustantivo(
+        lineas=[(0, dto)],
+        albaran_by_id={1: _Ctx("ELEMENTO BASE 0,5 mm")},
+        contrato_by_id={},
+    )
+
+    assert dto.matched_contrato_line_id == 100
+    assert motivos == {}
+
+
+def test_f003_r11_sin_la_linea_de_albaran_no_se_toca_nada() -> None:
+    dto = _Dto()
+    motivos = sanear_matches_atributo_sustantivo(
+        lineas=[(0, dto)],
+        albaran_by_id={},
+        contrato_by_id={100: _Contrato("ELEMENTO BASE 0,6 mm")},
+    )
+
+    assert dto.matched_contrato_line_id == 100
+    assert motivos == {}
+
+
+def test_f003_r11_la_razon_de_la_ia_se_conserva_al_anotar() -> None:
+    """La red AÑADE su explicacion; no borra lo que dijo la IA."""
+    dto, _ = _sanear(
+        "ELEMENTO BASE 0,5 mm",
+        "ELEMENTO BASE 0,6 mm",
+        dto=_Dto(razon_corta="la IA creyo que era el mismo producto"),
+    )
+
+    assert dto.razon_corta.startswith("la IA creyo que era el mismo producto")
+    assert "red determinista" in dto.razon_corta
+
+
+def test_f003_r11_la_razon_no_desborda_la_columna() -> None:
+    dto, _ = _sanear(
+        "ELEMENTO BASE 0,5 mm",
+        "ELEMENTO BASE 0,6 mm",
+        dto=_Dto(razon_corta="x" * 600),
+    )
+
+    assert len(dto.razon_corta) == 500
+
+
 def test_f003_r11_el_motivo_lleva_los_dos_valores() -> None:
     _, motivos = _sanear("ELEMENTO BASE 0,5 mm", "ELEMENTO BASE 0,6 mm")
 

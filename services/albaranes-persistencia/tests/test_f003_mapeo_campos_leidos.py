@@ -334,3 +334,57 @@ def test_f003_r3_sin_datos_suficientes_la_linea_no_se_penaliza() -> None:
 
     assert servicio._is_line_net_consistent(_linea(precio=None)) is True
     assert servicio._is_line_net_consistent(LineaAlbaran()) is True
+
+
+def test_f003_r3_sin_importe_ni_precio_neto_no_hay_nada_que_medir() -> None:
+    """La linea trae precio y cantidad pero el albaran no viene valorado:
+    no hay contra que contrastar, y eso no es una incoherencia."""
+    servicio = AlbaranConfidenceService()
+
+    coherente = servicio._is_line_net_consistent(
+        _linea(cantidad=10.0, precio=5.0, importe=None, precio_neto=None)
+    )
+
+    assert coherente is True
+
+
+def test_f003_r3_un_descuadre_moderado_del_importe_se_detecta() -> None:
+    """El doble de lo que sale de la aritmetica es incoherente, no solo
+    los descuadres astronomicos."""
+    servicio = AlbaranConfidenceService()
+
+    assert servicio._is_line_net_consistent(
+        _linea(cantidad=10.0, precio=10.0, importe=200.0)
+    ) is False
+
+
+def test_f003_r3_la_tolerancia_del_importe_es_inclusiva() -> None:
+    """2 % de 100 = 2: 102 entra justo, 103 ya no."""
+    servicio = AlbaranConfidenceService()
+
+    assert servicio._is_line_net_consistent(
+        _linea(cantidad=10.0, precio=10.0, importe=102.0)
+    ) is True
+    assert servicio._is_line_net_consistent(
+        _linea(cantidad=10.0, precio=10.0, importe=103.0)
+    ) is False
+
+
+def test_f003_r3_un_precio_neto_moderadamente_falso_se_detecta() -> None:
+    servicio = AlbaranConfidenceService()
+
+    assert servicio._is_line_net_consistent(
+        _linea(cantidad=10.0, precio=100.0, descuento=10.0, precio_neto=50.0)
+    ) is False
+
+
+def test_f003_r3_la_tolerancia_del_precio_neto_es_inclusiva() -> None:
+    """2 % de 100 = 2: un neto de 102 pasa, uno de 103 no."""
+    servicio = AlbaranConfidenceService()
+
+    assert servicio._is_line_net_consistent(
+        _linea(cantidad=10.0, precio=100.0, precio_neto=102.0)
+    ) is True
+    assert servicio._is_line_net_consistent(
+        _linea(cantidad=10.0, precio=100.0, precio_neto=103.0)
+    ) is False
