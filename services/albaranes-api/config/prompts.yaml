@@ -55,6 +55,16 @@ albaran_factura_es:
     - obra_codigo: código de 4 números que empieza por 0. Puede estar
       escrito a mano, o traer solo los 3 últimos dígitos; normaliza a
       4 añadiendo el 0 inicial. NUNCA tiene puntos para separar codigo. Si tiene puntos SIEMPRE es un codigo de imputacion.
+    - importe_total: total del albarán TRANSCRITO del documento, nunca
+      sumado ni calculado por ti. Si el documento distingue BASE
+      IMPONIBLE (base, subtotal sin IVA) y total con IVA, transcribe la
+      BASE IMPONIBLE y pon importe_total_incluye_iva a false. Si el
+      ÚNICO total impreso ya incluye IVA, transcribe ESE total y pon
+      importe_total_incluye_iva a true: no lo descartes ni intentes
+      quitarle el IVA. Si el documento no imprime ningún total, deja
+      importe_total y importe_total_incluye_iva a null.
+    - importe_total_incluye_iva: true/false según lo anterior; null si
+      no hay importe_total.
 
     ## Obras entre las que elegir
 
@@ -70,13 +80,44 @@ albaran_factura_es:
       tal, usa el peso neto. Si no lo encuentras, usa peso bruto - tara.
     - unidad_medida: texto corto tal y como aparece ('m3', 'kg', 'l',
       'ud', 'min', 'h', etc.). Respeta lo que dice el albarán.
-    - precio: unitario sin IVA.
-    - descuento: si aparece, como número.
-    - precio_neto: si figura, léelo; si no, calcula
-      cantidad*precio*(1 - descuento/100) cuando sea posible.
+    - precio: precio UNITARIO sin IVA, leído SOLO de la columna de
+      precio unitario (PRECIO, P.U., PRECIO UNIT., PRECIO/UD).
+    - descuento: porcentaje de descuento cuando el documento trae UNA
+      sola columna de descuento. Con varias columnas, déjalo a null y
+      rellena descuentos (ver abajo).
+    - descuentos: lista con TODOS los porcentajes de las columnas de
+      descuento (DTO, DTO%, DTO1, DTO2, DESC.), en el mismo orden en
+      que aparecen las columnas en el documento. No los combines, no los
+      sumes y no los multipliques entre sí: transcríbelos tal cual.
+    - importe: importe de LÍNEA impreso, leído SOLO de la columna de
+      importe de línea (IMPORTE, TOTAL, NETO, IMPORTE NETO). Es el total
+      de esa línea, no un precio unitario.
+    - precio_neto: precio unitario neto, SOLO si figura impreso como tal
+      en el documento. Si no figura, null.
     - Si hay un aviso de que una línea o producto no se ha entregado
       (total o parcialmente), o que está pendiente, ignora esas líneas
       o mediciones según corresponda.
+
+    ## Albaranes que vienen valorados: transcribir, no recomponer
+
+    Muchos albaranes llegan ya valorados, con columnas de precio,
+    descuento e importe. En ellos tu trabajo es COPIAR lo impreso, no
+    recomponerlo:
+
+    - Cada valor se transcribe por SU ETIQUETA DE COLUMNA: el precio
+      unitario solo de la columna de precio unitario; los descuentos
+      solo de las columnas de descuento; el importe de línea solo de la
+      columna de importe.
+    - PROHIBIDO derivar unos valores de otros. No calcules el importe a
+      partir del precio y la cantidad, ni el precio a partir del importe,
+      ni el precio_neto a partir del precio y el descuento, ni combines
+      varios descuentos en uno.
+    - Si un valor NO figura impreso en el documento, devuélvelo null.
+      Un null es correcto; un número calculado por ti es un error grave.
+    - No confundas el importe de LÍNEA (total de esa línea) con el
+      precio UNITARIO: si el documento imprime 120,55 litros a 1,5877 y
+      un importe de 191,40, entonces cantidad=120.55, precio=1.5877 e
+      importe=191.40, y precio_neto queda a null.
 
     ## Código de imputación manuscrito
 

@@ -19,7 +19,7 @@ prerrequisito abierto.
       | Verificación: `pytest services/albaranes-api/tests -q` en verde
       (tests `test_f003_r2_*`).
 
-- [ ] T2: sv2 — prompt `albaran_factura_es` (R1): bloque «transcribir, no
+- [x] T2: sv2 — prompt `albaran_factura_es` (R1): bloque «transcribir, no
       recomponer», reescritura de `precio`/`descuento`/`precio_neto`
       (eliminar el «calcula cantidad*precio*(1 - descuento/100)»), regla de
       `importe_total` en cabecera (total con IVA → se transcribe y se marca
