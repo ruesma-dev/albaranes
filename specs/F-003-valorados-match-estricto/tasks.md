@@ -9,7 +9,7 @@ init.sh). Las decisiones P1–P3 están respondidas por el humano
 (2026-08-13; ver «Decisiones tomadas» en design.md): no queda ningún
 prerrequisito abierto.
 
-- [ ] T1: sv2 — schema de extracción (`domain/models/albaran_models.py`):
+- [x] T1: sv2 — schema de extracción (`domain/models/albaran_models.py`):
       `LineaAlbaran.importe`, `LineaAlbaran.descuentos`,
       `CabeceraAlbaran.importe_total`,
       `CabeceraAlbaran.importe_total_incluye_iva` +

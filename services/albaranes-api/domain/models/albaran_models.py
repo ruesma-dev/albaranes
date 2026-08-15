@@ -20,6 +20,17 @@ class CabeceraAlbaran(StrictSchemaModel):
     obra_direccion: Optional[str] = None
     id: Optional[str] = None
 
+    # -----------------------------------------------------------------
+    # F-003 · Total del albarán TRANSCRITO (nunca sumado por la IA).
+    # `importe_total` es la base imponible si el documento la distingue;
+    # si el único total impreso incluye IVA, se transcribe ESE total y
+    # `importe_total_incluye_iva` queda a True para que los guards de
+    # sv6 avisen en vez de exigir cuadre (los importes de línea del
+    # pipeline son sin IVA). Sin total impreso: ambos null.
+    # -----------------------------------------------------------------
+    importe_total: Optional[float] = None
+    importe_total_incluye_iva: Optional[bool] = None
+
 
 class LineaAlbaran(StrictSchemaModel):
     id: Optional[str] = None
@@ -30,6 +41,18 @@ class LineaAlbaran(StrictSchemaModel):
     precio: Optional[float] = None
     descuento: Optional[float] = None
     precio_neto: Optional[float] = None
+
+    # -----------------------------------------------------------------
+    # F-003 · Albaranes que VIENEN valorados: transcribir, no recomponer.
+    # `importe` es el importe de línea IMPRESO en la columna de importe
+    # (IMPORTE / TOTAL / NETO), leído tal cual; jamás derivado de precio
+    # y cantidad. `descuentos` transcribe TODAS las columnas de descuento
+    # en el orden del documento; cuando hay más de una, la IA deja
+    # `descuento` a null y sv3 deriva el efectivo en cascada (R3).
+    # -----------------------------------------------------------------
+    importe: Optional[float] = None
+    descuentos: Optional[List[float]] = None
+
     codigo_imputacion: Optional[str] = None
     confianza_pct: Optional[float] = Field(default=None, ge=0, le=100)
 
