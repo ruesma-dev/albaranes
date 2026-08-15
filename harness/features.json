@@ -59,7 +59,7 @@
       "id": "F-003",
       "title": "Tanda 2 — Albaranes valorados, match estricto y coherencia (G3+G4+G5)",
       "description": "Albaranes que VIENEN valorados: transcribir, no recomponer (precio, TODOS los descuentos e importe se copian tal cual por su etiqueta de columna; prohibido derivar precio=importe×algo — caso ×120). El dto del albarán no se aplica sobre el precio de contrato. Guard aritmético: precio×cantidad(−dtos)≈importe leído y Σimportes=total albarán; si no cuadra => revisión, nunca inventar. Matching estricto: atributo sustantivo distinto (tamaño, modelo, tipo) => NO casar; mejor línea nueva sin precio a revisión (casos CETOSA, elemento base 0,5 mm, bolsa de cuñas). Toca sv5 (prompts) y sv6 (redes deterministas).",
-      "status": "in_progress",
+      "status": "done",
       "sdd": true,
       "rigor": "estandar",
       "priority": 5,

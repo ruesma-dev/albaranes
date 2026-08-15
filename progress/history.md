@@ -5,6 +5,23 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-003 — Tanda 2: Valorados, match estricto y coherencia (done, 2026-08-15)
+
+- Rama `feature/F-003-valorados-match-estricto`, implementada en worktree
+  aislado mientras el humano probaba F-002 en local. Regla dura vigente:
+  SIN DESPLIEGUE. Review: **APPROVED** (`progress/review_F-003.md`).
+- Entregado: extracción y persistencia del importe de línea impreso y el
+  total del albarán (sv2 prompt/schema + columnas NUEVAS en sv3, sin
+  renames); transcribir-no-recomponer y guard aritmético en sv6 (a
+  revisión, nunca inventar; total solo-con-IVA transcrito con AVISO);
+  match estricto por atributo sustantivo en sv5; las sintéticas M1–M7
+  conservan la herencia del descuento (decisión del humano).
+- Evidencias: cobertura del diff 96,6 % (umbral 80); mutación PARALELA
+  87 mutantes / 84 muertos / 3 supervivientes (los 3 equivalentes,
+  analizados) en 32,3 s con 8 workers; puerta de rutas sensibles en aviso
+  con NO_EVALUABLE documentado (libros vacíos).
+- Merge a dev EN ESPERA de que el humano valide su prueba local de F-002.
+
 ## F-001 — Test de estructura del monorepo (done, 2026-08-13)
 
 - Rama `feature/F-001-test-estructura` (pendiente de merge a `dev` por el

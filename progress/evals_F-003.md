@@ -2,8 +2,8 @@
 
 # Evals de IA — F-003
 
-- Fecha: 2026-08-15T11:14:58Z
-- Commit HEAD: fae488b
+- Fecha: 2026-08-15T11:41:06Z
+- Commit HEAD: 946afa1
 - Feature: F-003
 - Modo: determinista (sin ninguna llamada LLM ni de red)
 
