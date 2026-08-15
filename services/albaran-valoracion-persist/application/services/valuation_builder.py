@@ -940,6 +940,30 @@ class ValuationBuilder:
             descuento_pct=descuento_linea,
         )
 
+        # 2.bis (F-003, R5) ¿Se aplica el descuento del albarán al
+        # importe? SOLO si el precio unitario final SALE del albarán. Si
+        # el precio viene del CONTRATO (o del PDF de contrato), aplicarle
+        # además el descuento del albarán cuenta dos veces la misma
+        # rebaja: el precio pactado ya es el que es. Queda motivo de
+        # auditoría para que el revisor sepa que el descuento se leyó y
+        # se ignoró a propósito.
+        #
+        # OJO: el descuento SÍ sigue viajando al reconciler (arriba) —
+        # ahí se usa para derivar el unitario BRUTO desde el importe
+        # leído, que es otra cosa.
+        precio_sale_del_albaran = reconciliation.source in (
+            "albaran_declared",
+            "albaran_calculated",
+        )
+        descuento_para_importe = (
+            descuento_linea if precio_sale_del_albaran else None
+        )
+        descuento_no_aplicado_a_contrato = (
+            not precio_sale_del_albaran
+            and descuento_linea is not None
+            and float(descuento_linea) != 0.0
+        )
+
         # 3. Partida matching
         if partida_override is not None or ref_linea_base_merge_id is not None:
             partida_result: PartidaMatchResult = (
@@ -1083,10 +1107,12 @@ class ValuationBuilder:
             importe_albaran_declarado=(
                 albaran_line.importe_albaran if albaran_line else None
             ),
-            descuento_pct=descuento_linea,
+            descuento_pct=descuento_para_importe,
         )
 
         reasons: list[str] = []
+        if descuento_no_aplicado_a_contrato:
+            reasons.append("descuento_albaran_no_aplicado_a_precio_contrato")
         reasons.extend(guard_reasons)
         reasons.extend(reconciliation.reasons)
         reasons.extend(partida_result.reasons)

@@ -58,7 +58,7 @@ prerrequisito abierto.
       valida y valora como hoy).
       | Verificación: pytest sv6 en verde (tests `test_f003_r14_*`).
 
-- [ ] T6: sv6 — descuento no sobre precio de contrato (R5) en
+- [x] T6: sv6 — descuento no sobre precio de contrato (R5) en
       `valuation_builder._build_line` + `test_f003_dto_no_contrato.py`:
       precio de contrato + dto → sin descuento y reason
       `descuento_albaran_no_aplicado_a_precio_contrato`; precio del
