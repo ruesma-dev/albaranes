@@ -88,7 +88,7 @@ prerrequisito abierto.
       | Verificación: pytest sv6 en verde (tests `test_f003_r11_*`,
       `_r12_*`).
 
-- [ ] T9: sv5 — prompts `valuation_es` y `conciliacion_es` (R9, R10):
+- [x] T9: sv5 — prompts `valuation_es` y `conciliacion_es` (R9, R10):
       regla de atributo sustantivo + casos CETOSA / elemento base 0,5 mm /
       bolsa de cuñas + máxima «mejor línea nueva sin precio», excepción
       tipográfica conservada + `test_f003_prompts_match_estricto.py`.

@@ -960,12 +960,41 @@ valuation_es:
 
     ## No cases productos diferentes aunque se parezcan
 
+    REGLA GENERAL — ATRIBUTO SUSTANTIVO. Si las dos descripciones
+    difieren en un ATRIBUTO SUSTANTIVO, son productos DISTINTOS y NO
+    casan, por muy parecido que sea el texto. Son atributos
+    sustantivos:
+
+    - la DIMENSIÓN: espesor, diámetro, longitud, sección, volumen;
+    - el MODELO o la REFERENCIA del fabricante;
+    - el TIPO o el MATERIAL;
+    - el FORMATO DE VENTA (a granel, en bolsa, en palet, por unidad).
+
+    Casos de referencia (reales):
+
+    - Ladrillos CETOSA de MODELO distinto: no casan entre sí aunque
+      compartan familia y proveedor.
+    - "ELEMENTO BASE 0,5 mm" ≠ "ELEMENTO BASE" de otro espesor
+      (0,6 mm, 0,8 mm...): el espesor es el producto.
+    - "BOLSA DE CUÑAS" ≠ cuñas vendidas en otro formato: el formato
+      de venta cambia el precio y el artículo.
     - HA-25/B/20 ≠ HA-30/B/20 (resistencias diferentes).
     - B500S ø12 ≠ B500S ø16 (diámetros diferentes).
     - Mortero M-5 ≠ Mortero M-7.5.
     - Gasóleo A ≠ Gasóleo B (fiscalidad distinta).
     - HA-25 ≠ HA-25 sulforresistente (producto distinto si el
       contrato los tarifa por separado).
+
+    EXCEPCIÓN (no endurecemos aquí): las diferencias solo TIPOGRÁFICAS
+    o de FORMATO no son atributos distintos. D-300 = D300 = DN300 =
+    ø300; 0,5 = 0.5 = 0,50; mayúsculas, acentos, plurales,
+    abreviaturas y sinónimos siguen casando como hasta ahora. Lo que
+    no casa es un VALOR distinto, no una forma distinta de escribirlo.
+
+    Cuando dudes, NO cases: devuelve match_method='no_match' y deja la
+    línea sin precio. MEJOR UNA LÍNEA NUEVA SIN PRECIO A REVISIÓN QUE
+    UN PRECIO EQUIVOCADO CON APARIENCIA DE BUENO: el revisor humano
+    resuelve la primera en un minuto; la segunda se paga.
 
     En estos casos, si la diferencia es por MODIFICADOR tarifable,
     aplica Forma B del paso 4 (base + recargo). Si no encuentras
@@ -1189,6 +1218,30 @@ conciliacion_es:
     producto (el incremento no es el hormigon) ni con un modificador
     de OTRO tipo (año ≠ consistencia ≠ arido ≠ fibras ≠ fratasado ≠
     cemento ≠ carga incompleta ≠ tiempo).
+
+    ## REGLA DURA DE ATRIBUTO SUSTANTIVO (NO negociable)
+
+    Si las dos descripciones difieren en un ATRIBUTO SUSTANTIVO, son
+    productos DISTINTOS: JAMAS las cases por parecido textual. Son
+    atributos sustantivos la DIMENSION (espesor, diametro, longitud,
+    seccion, volumen), el MODELO o REFERENCIA, el TIPO o MATERIAL y el
+    FORMATO DE VENTA (granel, bolsa, palet, unidad).
+
+    Casos reales que NO pueden casar:
+      - "ELEMENTO BASE 0,5 mm" con un ELEMENTO BASE de otro espesor.
+      - "BOLSA DE CUÑAS" con cuñas vendidas en otro formato.
+      - Ladrillos de MODELO distinto (caso CETOSA).
+
+    En estos casos: matched_contrato_line_id=null y
+    match_method='no_match'. La linea quedara como linea nueva sin
+    precio, a revision humana — que es exactamente lo que se quiere:
+    mejor una linea nueva sin precio que un precio equivocado con
+    apariencia de bueno.
+
+    Esto NO afecta a las diferencias de FORMA: D-300 = D300 = DN300 =
+    ø300, 0,5 = 0.5 = 0,50, mayusculas, acentos, plurales, sinonimos y
+    abreviaturas siguen casando por significado como arriba. Lo que
+    impide el match es un VALOR distinto, no una escritura distinta.
 
     ## Completar precios (caso hormigon y similares)
 
