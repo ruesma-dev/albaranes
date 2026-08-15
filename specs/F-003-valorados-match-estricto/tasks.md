@@ -66,7 +66,7 @@ prerrequisito abierto.
       dto → herencia intacta (según P1/D4).
       | Verificación: pytest sv6 en verde (tests `test_f003_r5_*`).
 
-- [ ] T7: sv6 — `guard_aritmetico.py` + integración en builder (línea,
+- [x] T7: sv6 — `guard_aritmetico.py` + integración en builder (línea,
       total, ORE OIL) + `test_f003_guard_aritmetico.py`: R6 (caso ×120:
       cantidad 120,55 / precio 1,5877 / importe leído 191,40 → se
       persiste 191,40, mismatch → revisión; jamás 23.073,60), R7 (Σ

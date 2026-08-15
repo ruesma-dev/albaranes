@@ -8,6 +8,11 @@ from typing import Dict
 from application.services.importe_calculator import ImporteCalculator
 import dataclasses
 
+from application.services.guard_aritmetico import (
+    importe_efectivo_linea_unica,
+    verificar_linea,
+    verificar_total,
+)
 from application.services.residuos_container_calc import (
     calcular_contenedores_residuos,
 )
@@ -457,6 +462,39 @@ class ValuationBuilder:
             sinteticas.append((next_idx, dto))
             next_idx += 1
 
+        # (ago 2026 · F-003) Motivos que las redes deterministas nuevas
+        # cuelgan de una línea concreta y que _build_line adjuntará a su
+        # record (mismo mecanismo de mutación pre-pasadas que la red de
+        # años, pero para reasons en vez de matches).
+        motivos_red: Dict[int, list[str]] = {}
+
+        # (ago 2026 · F-003, R8) Caso ORE OIL: documento de UNA sola
+        # línea from_albaran sin importe impreso y con total BASE → el
+        # total del documento ES el importe de esa línea. Se inyecta
+        # ANTES de las pasadas para que reconciler e importe_calculator
+        # lo traten como lo que es: un importe leído del documento.
+        if self._guard_aritmetico_enabled:
+            lineas_from_albaran = [
+                albaran_by_id[line.merge_line_id]
+                for _, line in base_lines + complementarias
+                if line.merge_line_id is not None
+                and line.merge_line_id in albaran_by_id
+            ]
+            inyeccion = importe_efectivo_linea_unica(
+                lineas_albaran=lineas_from_albaran,
+                importe_total=envelope.meta.importe_total_albaran,
+                incluye_iva=envelope.meta.importe_total_incluye_iva,
+            )
+            if inyeccion is not None:
+                merge_line_id, importe = inyeccion
+                ctx_unica = albaran_by_id.get(merge_line_id)
+                if ctx_unica is not None:
+                    ctx_unica.importe_leido = importe
+                    ctx_unica.importe_albaran = importe
+                    motivos_red.setdefault(merge_line_id, []).append(
+                        "importe_desde_total_documento"
+                    )
+
         # Records indexados por la posición ORIGINAL en envelope.data.lineas
         # para poder recomponer al final en el orden recibido.
         records_by_index: Dict[int, LineValuationRecord] = {}
@@ -476,6 +514,7 @@ class ValuationBuilder:
                 line_already_valued=existing_document_already_valued,
                 partida_override=None,
                 ref_linea_base_merge_id=None,
+                motivos_red=motivos_red.get(line.merge_line_id),
             )
             records_by_index[idx] = record
             if record.merge_line_id is not None:
@@ -518,6 +557,7 @@ class ValuationBuilder:
                 line_already_valued=existing_document_already_valued,
                 partida_override=partida_base,
                 ref_linea_base_merge_id=ref_base_merge_id,
+                motivos_red=motivos_red.get(line.merge_line_id),
             )
             records_by_index[idx] = record
             if record.merge_line_id is not None:
@@ -884,6 +924,7 @@ class ValuationBuilder:
         line_already_valued: bool,
         partida_override: str | None,
         ref_linea_base_merge_id: int | None,
+        motivos_red: list[str] | None = None,
     ) -> LineValuationRecord:
         """Construye el record de una línea from_albaran (base o complementaria)."""
         albaran_line = albaran_by_id.get(line.merge_line_id)  # type: ignore[arg-type]
@@ -1110,9 +1151,26 @@ class ValuationBuilder:
             descuento_pct=descuento_para_importe,
         )
 
+        # 5.bis (F-003, R6) Guard aritmético de LÍNEA: lo impreso contra
+        # lo que da la aritmética. Si no cuadra, la línea va a revisión
+        # con el descuadre en los motivos — y el importe persistido
+        # sigue siendo el LEÍDO (de eso se encarga el ImporteCalculator,
+        # que ya da precedencia al declarado). Nunca se sustituye.
+        guard_aritmetico_reasons: list[str] = []
+        if self._guard_aritmetico_enabled and albaran_line is not None:
+            guard_aritmetico_reasons = verificar_linea(
+                precio_declarado=albaran_line.precio_unitario_albaran,
+                cantidad=albaran_line.cantidad,
+                descuento_pct=descuento_linea,
+                importe_leido=albaran_line.importe_leido,
+                tolerance_pct=self._importe_tolerance_pct,
+            )
+
         reasons: list[str] = []
+        reasons.extend(motivos_red or [])
         if descuento_no_aplicado_a_contrato:
             reasons.append("descuento_albaran_no_aplicado_a_precio_contrato")
+        reasons.extend(guard_aritmetico_reasons)
         reasons.extend(guard_reasons)
         reasons.extend(reconciliation.reasons)
         reasons.extend(partida_result.reasons)
@@ -1151,7 +1209,8 @@ class ValuationBuilder:
                     reasons.append("modifier_not_in_contract")
 
         review_required = (
-            not category_match
+            bool(guard_aritmetico_reasons)
+            or not category_match
             or reconciliation.agreement == "mismatch"
             or reconciliation.source == "none"
             or converted.ambiguous
@@ -1569,8 +1628,8 @@ class ValuationBuilder:
             descuento_albaran_aplicado=descuento_aplicado,
         )
 
-    @staticmethod
     def _build_header(
+        self,
         *,
         envelope: ValuationEnvelope,
         records: list[LineValuationRecord],
@@ -1597,6 +1656,26 @@ class ValuationBuilder:
             header_reasons.append(
                 f"lines_without_match:{match_counts['no_match']}"
             )
+
+        # (ago 2026 · F-003, R7) Guard aritmético de TOTAL: la suma de
+        # los importes de las líneas IMPRESAS (from_albaran) contra el
+        # total del documento. Las sintéticas M1–M7 quedan fuera: no
+        # están en el papel, así que sumarlas garantizaría el descuadre.
+        if self._guard_aritmetico_enabled:
+            suma_from_albaran = sum(
+                float(r.importe_calculado or 0.0)
+                for r in records
+                if r.line_kind == "from_albaran"
+            )
+            motivos_total, exige_revision = verificar_total(
+                suma_from_albaran=suma_from_albaran,
+                importe_total=envelope.meta.importe_total_albaran,
+                incluye_iva=envelope.meta.importe_total_incluye_iva,
+                tolerance_pct=self._importe_tolerance_pct,
+            )
+            header_reasons.extend(motivos_total)
+            if exige_revision:
+                header_review_required = True
 
         return ValuationHeaderRecord(
             document_id=envelope.meta.document_id,
