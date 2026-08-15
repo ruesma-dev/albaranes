@@ -95,7 +95,7 @@ prerrequisito abierto.
       | Verificación: pytest sv5 en verde (tests `test_f003_r9_*`,
       `_r10_*`).
 
-- [ ] T10: evals (R15, puerta de rutas sensibles de F-011) — actualizar el
+- [x] T10: evals (R15, puerta de rutas sensibles de F-011) — actualizar el
       ground truth con los casos de esta feature: IA1 (campos
       importe/descuentos/importe_total del caso ×120), IA3/IA4 (CETOSA,
       elemento base 0,5 mm, bolsa de cuñas → no casar; ORE OIL). Si F-011
