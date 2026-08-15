@@ -8,6 +8,9 @@ from typing import Dict
 from application.services.importe_calculator import ImporteCalculator
 import dataclasses
 
+from application.services.atributo_sustantivo_guard import (
+    sanear_matches_atributo_sustantivo,
+)
 from application.services.guard_aritmetico import (
     importe_efectivo_linea_unica,
     verificar_linea,
@@ -467,6 +470,21 @@ class ValuationBuilder:
         # record (mismo mecanismo de mutación pre-pasadas que la red de
         # años, pero para reasons en vez de matches).
         motivos_red: Dict[int, list[str]] = {}
+
+        # (ago 2026 · F-003, R11) Red de ATRIBUTO SUSTANTIVO. Corre
+        # DESPUÉS de IA4 (que ya mutó el envelope) y antes de las
+        # pasadas, para poder anular también lo que IA4 case mal:
+        # 0,5 mm contra 0,6 mm no es el mismo producto. La línea anulada
+        # cae al camino de «línea nueva» que ya existe (R12).
+        if self._red_atributo_sustantivo_enabled:
+            for merge_line_id, motivos in (
+                sanear_matches_atributo_sustantivo(
+                    lineas=base_lines + complementarias,
+                    albaran_by_id=albaran_by_id,
+                    contrato_by_id=contrato_by_id,
+                ).items()
+            ):
+                motivos_red.setdefault(merge_line_id, []).extend(motivos)
 
         # (ago 2026 · F-003, R8) Caso ORE OIL: documento de UNA sola
         # línea from_albaran sin importe impreso y con total BASE → el

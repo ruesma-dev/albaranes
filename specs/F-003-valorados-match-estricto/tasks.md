@@ -78,7 +78,7 @@ prerrequisito abierto.
       | Verificación: pytest sv6 en verde (tests `test_f003_r6_*`,
       `_r7_*`, `_r8_*`, `_r13_*`).
 
-- [ ] T8: sv6 — `atributo_sustantivo_guard.py` + integración en `build()`
+- [x] T8: sv6 — `atributo_sustantivo_guard.py` + integración en `build()`
       (tras IA4/saneo de años, antes de las pasadas) +
       `test_f003_atributo_sustantivo.py`: R11 (0,5 mm vs 0,6 mm anula
       match y precios; 0,5 = 0.50 y D-300 = D300 no anulan; hormigón y
