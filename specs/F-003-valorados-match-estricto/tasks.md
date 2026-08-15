@@ -39,7 +39,7 @@ prerrequisito abierto.
       en verde (tests `test_f003_r3_*`). El ALTER real contra PG es
       MANUAL (humano) en T12.
 
-- [ ] T4: sv5 — contexto de valoración (R4): SELECT de líneas
+- [x] T4: sv5 — contexto de valoración (R4): SELECT de líneas
       (`importe_leido` + `importe_albaran` con COALESCE), SELECT de
       cabecera (`importe_total`, `importe_total_incluye_iva`),
       `valuation_context.py` y propagación en

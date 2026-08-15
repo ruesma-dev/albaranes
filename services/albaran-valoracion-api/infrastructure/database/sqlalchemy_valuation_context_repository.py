@@ -79,9 +79,18 @@ _SQL_MERGE_HEADER = text(
 # valoración. La FECHA es imprescindible para los incrementos por año
 # (M1): el prompt de IA3 referenciaba context.meta.fecha_albaran pero
 # el campo nunca se enviaba, así que la IA no podía computarlos.
+# (ago 2026 · F-003) La cabecera trae además el TOTAL del albarán tal y
+# como está impreso (`importe_total`) y si ese total incluye IVA
+# (`importe_total_incluye_iva`). sv6 los usa para cuadrar la suma de los
+# importes de línea — o solo avisar, cuando el total lleva IVA y las
+# líneas son base imponible. Columnas creadas por sv3: hay que arrancar
+# sv3 ANTES que sv5 al desplegar.
 _SQL_DOC_HEADER = text(
     """
-    SELECT fecha, numero_albaran
+    SELECT fecha,
+           numero_albaran,
+           importe_total,
+           importe_total_incluye_iva
     FROM albaran_documents_merge
     WHERE id = :document_id
     """
@@ -113,10 +122,20 @@ _SQL_ALBARAN_LINES = text(
         -- (el importe leído manda) quedaba muda. Derivación en cascada:
         -- precio_neto si existe; si no, precio con el descuento
         -- aplicado; si no hay descuento, precio a secas.
-        (cantidad * COALESCE(
-            precio_neto,
-            precio * (1 - COALESCE(descuento, 0) / 100.0)
-        )) AS importe_albaran,
+        -- FIX 3 (ago 2026 · F-003): ya existe columna de IMPORTE de
+        -- línea. Es lo IMPRESO en el papel, transcrito por IA1, y manda
+        -- sobre cualquier derivación: «transcribir, no recomponer». La
+        -- cascada de abajo queda SOLO como fallback para las filas
+        -- persistidas antes de F-003, que tienen importe NULL para
+        -- siempre (no se re-extrae nada retroactivamente).
+        importe             AS importe_leido,
+        COALESCE(
+            importe,
+            cantidad * COALESCE(
+                precio_neto,
+                precio * (1 - COALESCE(descuento, 0) / 100.0)
+            )
+        ) AS importe_albaran,
         codigo_imputacion   AS codigo_partida_albaran,
         contexto_linea_json AS contexto_linea_json,
         descuento           AS descuento_albaran,
@@ -216,6 +235,12 @@ class SqlAlchemyValuationContextRepository(ValuationContextRepository):
                     lineas_contrato=[],
                     fecha_albaran=_opt_str(doc_row.get("fecha")),
                     numero_albaran=_opt_str(doc_row.get("numero_albaran")),
+                    importe_total_albaran=_opt_float(
+                        doc_row.get("importe_total")
+                    ),
+                    importe_total_incluye_iva=_opt_bool(
+                        doc_row.get("importe_total_incluye_iva")
+                    ),
                 )
 
             # La cabecera del contrato se busca por CODIGO (no por
@@ -256,6 +281,10 @@ class SqlAlchemyValuationContextRepository(ValuationContextRepository):
                 lineas_contrato=lineas_contrato,
                 fecha_albaran=_opt_str(doc_row.get("fecha")),
                 numero_albaran=_opt_str(doc_row.get("numero_albaran")),
+                importe_total_albaran=_opt_float(doc_row.get("importe_total")),
+                importe_total_incluye_iva=_opt_bool(
+                    doc_row.get("importe_total_incluye_iva")
+                ),
             )
 
     @staticmethod
@@ -269,6 +298,9 @@ class SqlAlchemyValuationContextRepository(ValuationContextRepository):
             cantidad=_opt_float(row.get("cantidad")),
             precio_unitario_albaran=_opt_float(row.get("precio_unitario_albaran")),
             importe_albaran=_opt_float(row.get("importe_albaran")),
+            # F-003: el importe IMPRESO, sin derivar. Null en las filas
+            # anteriores a la feature.
+            importe_leido=_opt_float(row.get("importe_leido")),
             codigo_partida_albaran=_opt_str(row.get("codigo_partida_albaran")),
             contexto_linea_json=_opt_str(row.get("contexto_linea_json")),
             # Tanda descuento — abr 2026
@@ -319,3 +351,25 @@ def _opt_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _opt_bool(value: Any) -> bool | None:
+    """Marca de IVA del total (F-003). ``None`` significa 'no se sabe'.
+
+    NO se convierte con ``bool(value)``: la diferencia entre False (el
+    total es base imponible: sv6 exige cuadre) y None (no consta: sv6
+    solo avisa) es justo la que decide si una valoración va a revisión.
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        token = value.strip().lower()
+        if token in {"true", "t", "1", "yes", "y"}:
+            return True
+        if token in {"false", "f", "0", "no", "n"}:
+            return False
+    return None

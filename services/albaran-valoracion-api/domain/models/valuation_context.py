@@ -68,6 +68,14 @@ class AlbaranLineForValuation:
     # Tanda descuento — abr 2026
     descuento_albaran: Optional[float] = None
     precio_neto_albaran: Optional[float] = None
+    # -----------------------------------------------------------------
+    # F-003 (ago 2026): importe de línea IMPRESO en el albarán. Null si
+    # el documento no lo imprime (o si la fila es anterior a F-003).
+    # ``importe_albaran`` sigue siendo el EFECTIVO: el leído si existe,
+    # la derivación de siempre si no. sv6 usa el leído para el guard
+    # aritmético y NUNCA lo sustituye por el calculado.
+    # -----------------------------------------------------------------
+    importe_leido: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -103,3 +111,8 @@ class ContextoValoracion:
     # imprescindible para los incrementos por año (M1).
     fecha_albaran: Optional[str] = None
     numero_albaran: Optional[str] = None
+    # (ago 2026 · F-003) Total del albarán transcrito. `..._incluye_iva`
+    # a False = base imponible (sv6 exige que la suma cuadre); True o
+    # None = el total lleva IVA o no consta (sv6 solo avisa).
+    importe_total_albaran: Optional[float] = None
+    importe_total_incluye_iva: Optional[bool] = None

@@ -67,6 +67,7 @@ def _raw_albaran_line_to_dict(line: RawAlbaranLine) -> Dict[str, Any]:
         "cantidad": line.cantidad,
         "precio_unitario_albaran": line.precio_unitario_albaran,
         "importe_albaran": line.importe_albaran,
+        "importe_leido": line.importe_leido,
         "codigo_partida_albaran": line.codigo_partida_albaran,
         "contexto_linea_json": line.contexto_linea_json,
     }
@@ -152,6 +153,10 @@ class ValueAlbaranPipeline:
             lineas_contrato=lineas_contrato,
             fecha_albaran=raw_ctx.fecha_albaran,
             numero_albaran=raw_ctx.numero_albaran,
+            # (F-003) Total del albarán transcrito, para el guard
+            # aritmético de sv6.
+            importe_total_albaran=raw_ctx.importe_total_albaran,
+            importe_total_incluye_iva=raw_ctx.importe_total_incluye_iva,
         )
 
         # Preferimos el MARKDOWN del contrato (lo genera sv3): va al
@@ -187,6 +192,10 @@ class ValueAlbaranPipeline:
                     lineas_contrato=context.lineas_contrato,
                     fecha_albaran=context.fecha_albaran,
                     numero_albaran=context.numero_albaran,
+                    importe_total_albaran=context.importe_total_albaran,
+                    importe_total_incluye_iva=(
+                        context.importe_total_incluye_iva
+                    ),
                 )
 
         results = self._service.extract(
@@ -276,6 +285,10 @@ class ValueAlbaranPipeline:
                 "codigo_contrato": None,
                 "fecha_albaran": raw_ctx.fecha_albaran,
                 "numero_albaran": raw_ctx.numero_albaran,
+                "importe_total_albaran": raw_ctx.importe_total_albaran,
+                "importe_total_incluye_iva": (
+                    raw_ctx.importe_total_incluye_iva
+                ),
                 "processed_at_utc": self._utc_iso(),
                 "service": "albaranes-valuation-api",
                 "service_version": self._service_version,
@@ -333,6 +346,10 @@ class ValueAlbaranPipeline:
                 "codigo_contrato": context.codigo_contrato,
                 "fecha_albaran": context.fecha_albaran,
                 "numero_albaran": context.numero_albaran,
+                "importe_total_albaran": context.importe_total_albaran,
+                "importe_total_incluye_iva": (
+                    context.importe_total_incluye_iva
+                ),
                 "pdf_relative_path": context.pdf_relative_path,
                 "pdf_filename": context.pdf_filename,
                 "pdf_sha256": pdf_sha,

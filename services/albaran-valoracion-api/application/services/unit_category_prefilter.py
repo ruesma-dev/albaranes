@@ -162,6 +162,8 @@ class UnitCategoryPrefilter:
                 # Tanda descuento — abr 2026
                 descuento_albaran=line.descuento,
                 precio_neto_albaran=line.precio_neto,
+                # F-003 — importe de línea impreso (transcrito)
+                importe_leido=line.importe_leido,
             )
             for line in raw_lines
         ]

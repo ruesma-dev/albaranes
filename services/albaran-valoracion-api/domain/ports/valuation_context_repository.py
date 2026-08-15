@@ -60,6 +60,20 @@ class RawAlbaranLine:
     descuento: Optional[float] = None
     precio_neto: Optional[float] = None
 
+    # -----------------------------------------------------------------
+    # F-003 (ago 2026) — importe de línea IMPRESO
+    #
+    # ``albaran_lines_merge.importe`` tal cual: lo que pone el papel,
+    # transcrito por IA1 y sin derivar de nada. Es distinto de
+    # ``importe_albaran``, que es el EFECTIVO (el leído si existe; si no,
+    # la derivación cantidad × precio_neto de siempre).
+    #
+    # Compatibilidad: None para todo lo persistido antes de F-003 → los
+    # guards aritméticos de sv6 no actúan y el comportamiento es el
+    # previo.
+    # -----------------------------------------------------------------
+    importe_leido: Optional[float] = None
+
 
 @dataclass(frozen=True)
 class RawContratoLine:
@@ -103,6 +117,10 @@ class ValuationContextRaw:
     # referenciaba context.meta.fecha_albaran pero NUNCA se enviaba.
     fecha_albaran: Optional[str] = None
     numero_albaran: Optional[str] = None
+    # (ago 2026 · F-003) Total del albarán transcrito y su marca de IVA.
+    # Viajan al meta del envelope por la misma vía que fecha_albaran.
+    importe_total_albaran: Optional[float] = None
+    importe_total_incluye_iva: Optional[bool] = None
 
 
 class ValuationContextRepository(ABC):
