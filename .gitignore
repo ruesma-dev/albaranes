@@ -21,3 +21,9 @@ infra/*.local.ps1
 *.xls
 *.ppt
 # <<< ARNES-BASE: fin del bloque. <<<
+
+# Datos de runtime del emulador Azurite (si se arranca sin --location)
+__azurite_db_*
+AzuriteConfig
+__blobstorage__/
+__queuestorage__/
