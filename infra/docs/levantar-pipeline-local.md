@@ -19,8 +19,21 @@ así conviene arrancar los **consumidores antes** que el productor (sv1).
 
 - **Azurite** (colas + blobs):
   ```powershell
-  azurite --silent --location C:\azurite
+  azurite --silent --skipApiVersionCheck --location C:\azurite
   ```
+  El `--skipApiVersionCheck` evita el error `The API version ... is not
+  supported by Azurite` cuando el SDK de Azure instalado es más nuevo que
+  Azurite (visto el 15-ago-2026). Mantén Azurite al día
+  (`npm install -g azurite`); si al arrancar revienta con
+  `Critical error happens during GC`, la carpeta `--location` tiene restos
+  corruptos: bórrala (solo contiene colas/blobs efímeros de pruebas).
+
+> **Atajo (monorepo)**: `infra/local/preparar_local.ps1` crea los venvs de
+> los 6 servicios e instala dependencias (incluidos los requirements de los
+> manifests Docker, que son la lista real: los internos de sv5/sv6 no
+> traen psycopg ni sv2 el SDK de Google), y `infra/local/arrancar_local.ps1`
+> arranca los 6 en orden con guardarraíles (se niega si el .env de sv4
+> apunta a colas reales o si Azurite/PostgreSQL no responden).
 - **Postgres** dev (el que ya usa sv1). Cada servicio con BBDD apunta con
   sus `PG_*`.
 

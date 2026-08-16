@@ -43,9 +43,9 @@ $pgEnv = @(
 # sonnet-5). Lo absorbe comun/llm/json_coercion.py -> si cambias de modelo
 # y sv5 empieza a devolver 400 "Input should be a valid list", el fix va
 # ahi, no en el prompt.
-$ANTHROPIC_MODEL = "claude-sonnet-5"   # 24-jul-2026
+$ANTHROPIC_MODEL = "claude-opus-4-8"   # 16-ago-2026 (decision del humano)
 $OPENAI_MODEL    = "gpt-5.4"
-$GEMINI_MODEL    = "gemini-3.1-pro-preview"
+$GEMINI_MODEL    = "gemini-3.7-flash"  # 16-ago-2026 (IA1; antes gemini-3.1-pro-preview)
 
 function Run-Az($argList) {
     az @argList | Out-Null

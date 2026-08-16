@@ -33,6 +33,12 @@
 >   **entregados − retirados**, que es lo que el código implementa
 >   (`residuos_container_calc.py`); la regla «ambos ⇒ solo cuenta RETIRAR»
 >   no deroga esa resta.
+> - **§5.4 (modelos)**: la foto del 05/08 decía `claude-sonnet-5` en
+>   producción, pero a 2026-08-16 lo desplegado real era `claude-opus-4-7`
+>   (sv2 y sv5). Decisión del humano (2026-08-16): modelo objetivo
+>   **`claude-opus-4-8`** en sv2 y sv5, y **`gemini-3.7-flash`** en IA1
+>   (aplicado con `set_models.ps1` y fijado como default en
+>   `create_capps.ps1`).
 > - **§5.2**: `q-feedback` está **reservada** para el futuro servicio de
 >   entrada al ERP (aprobado en sv4 → alta en Sigrid vía `sql/write`); el
 >   consumidor no está construido y nada externo la consume. `q-emails` es
