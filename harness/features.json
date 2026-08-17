@@ -72,7 +72,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 6,
+      "priority": 7,
       "branch": "feature/F-004-hormigon-fino"
     },
     {
@@ -82,7 +82,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 7,
+      "priority": 8,
       "branch": "feature/F-005-bombeo"
     },
     {
@@ -92,7 +92,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 8,
+      "priority": 9,
       "branch": "feature/F-006-residuos-pago"
     },
     {
@@ -102,7 +102,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 9,
+      "priority": 10,
       "branch": "feature/F-007-partida-alm-selector"
     },
     {
@@ -117,7 +117,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 11,
+      "priority": 14,
       "branch": "feature/F-008-blob-lifecycle"
     },
     {
@@ -133,7 +133,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 12,
+      "priority": 15,
       "branch": "feature/F-009-limpieza-q-emails"
     },
     {
@@ -143,7 +143,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 13,
+      "priority": 16,
       "branch": "feature/F-010-easy-auth-sv4"
     },
     {
@@ -153,8 +153,48 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 10,
+      "priority": 13,
       "branch": "feature/F-013-registro-sigrid"
+    },
+    {
+      "id": "F-014",
+      "title": "Conversor del formato plano del administrativo a fixtures de evals",
+      "description": "El ground truth real lo produce el administrativo como xlsx PLANO (una fila por línea final, 19 columnas — lote de referencia: alvaro_17082026) + carpeta de PDFs con convención <proveedor>_<codigoAlbaran>.pdf (símbolos prohibidos de Windows eliminados del código, p.ej. 2026/01/007181 -> 202601007181). Ese formato pasa a ser el OFICIAL del libro maestro: el conversor de evals debe ingerirlo y generar los fixtures E2E + derivar automáticamente los esperados de IA1 (cabecera + líneas EN ALBARAN, con precio/importe solo cuando su fuente es ALBARAN) e IA2 (tipología mapeada) dejando '?' donde no sea derivable. Normalizaciones: obra a 4 dígitos (Excel pierde ceros: 696 -> 0696), descuento en fracción = porcentaje (0.4 = 40%), prefijos de partida SOLO CI/CD/CP (corrige lecturas tipo C1 -> CI), mapeo de tipos del administrativo (FERRETERIA/MATERIALES/GRAVA -> genérico-suministros; HORMIGON; MORTERO; CAMION GRUA -> decidir en spec). Barrido C3-bis antes de versionar fixtures. Con fixtures reales, valorar subir la puerta de rutas sensibles a bloqueo.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 5,
+      "branch": "feature/F-014-conversor-administrativo"
+    },
+    {
+      "id": "F-015",
+      "title": "Líneas tachadas del albarán: no se registran",
+      "description": "Caso real (Feymaco 2137569, lote alvaro_17082026): una línea impresa TACHADA a mano (anulada) que el administrativo correctamente excluye. Hoy la extracción no distingue tachaduras. Comportamiento a especificar: IA1/IA2 detectan la línea anulada y no la emiten (o la emiten marcada como anulada y la persistencia la excluye con rastro); ante duda, a revisión — nunca valorarla como buena. Toca prompts de sv2 (rutas sensibles => evals) y posiblemente redes de sv3. Marcada por el humano como de bastante prioridad (2026-08-17).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 6,
+      "branch": "feature/F-015-lineas-tachadas"
+    },
+    {
+      "id": "F-016",
+      "title": "Reparto de una línea del albarán entre varias partidas",
+      "description": "Caso real (Feymaco 2137569): una línea impresa de 108 uds repartida a mano entre dos partidas (54 a P4.36.01 y 54 a P5.36.01, anotación 'P4/P5.36.01'). El pipeline actual modela una línea -> una partida. La spec debe decidir el modelo: ¿la valoración soporta líneas hijas con cantidades parciales por partida, o el reparto es una acción manual del revisor en sv4 (split de línea) previa al registro? Impacto potencial en schema (listar lectores: sv5 SQL crudo) y en el futuro registro en Sigrid (F-013).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 12,
+      "branch": "feature/F-016-linea-multipartida"
+    },
+    {
+      "id": "F-017",
+      "title": "El comparativo como fuente de precio (1c) en la valoración",
+      "description": "Decisión del humano (2026-08-17) que resuelve el 'OFERTA' del ground truth: el administrativo obtiene el precio unitario/importe por este orden: (1) líneas iguales ya registradas en líneas de contrato [hoy 1a], (2) contrato en papel [hoy 1b], (3) como ÚLTIMO recurso, el precio del COMPARATIVO asociado al contrato [nuevo, 1c]. Hay que añadir esa tercera fuente: la spec debe estudiar de dónde sale el comparativo (¿Sigrid vía sigrid-api? ¿documento en SharePoint?), cómo se asocia al contrato, y ampliar precio_source en sv5/sv6 (y el modelo de conciliación 1a-vs-1b) sin romper lectores. Las 3 líneas OFERTA del lote alvaro_17082026 son los casos de referencia.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 11,
+      "branch": "feature/F-017-comparativo-precio"
     }
   ]
 }

@@ -39,6 +39,17 @@
 >   **`claude-opus-4-8`** en sv2 y sv5, y **`gemini-3.7-flash`** en IA1
 >   (aplicado con `set_models.ps1` y fijado como default en
 >   `create_capps.ps1`).
+> - **Reglas nuevas del lote de ground truth alvaro_17082026 (2026-08-17,
+>   decididas por el humano):** (1) los prefijos de partida válidos son SOLO
+>   **CI, CD y CP** (una lectura «C1» es siempre CI); (2) el orden del
+>   administrativo para resolver precio/importe es: líneas iguales ya
+>   registradas en líneas de contrato → contrato en papel → como último
+>   recurso el **COMPARATIVO asociado al contrato** («OFERTA» en el ground
+>   truth = comparativo; es la futura fuente 1c, feature F-017); (3) las
+>   **líneas tachadas** del albarán no se registran (F-015); (4) existe el
+>   **reparto de una línea impresa entre varias partidas** con cantidades
+>   parciales (F-016; caso Feymaco 108 uds = 54+54); (5) el descuento del
+>   ground truth va en fracción (0.4 = 40 %).
 > - **§5.2**: `q-feedback` está **reservada** para el futuro servicio de
 >   entrada al ERP (aprobado en sv4 → alta en Sigrid vía `sql/write`); el
 >   consumidor no está construido y nada externo la consume. `q-emails` es
