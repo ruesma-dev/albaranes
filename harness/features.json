@@ -5,7 +5,13 @@
   "rules": {
     "one_feature_at_a_time": true,
     "require_init_green_to_close": true,
-    "valid_status": ["pending", "spec_ready", "in_progress", "done", "blocked"]
+    "valid_status": [
+      "pending",
+      "spec_ready",
+      "in_progress",
+      "done",
+      "blocked"
+    ]
   },
   "features": [
     {
@@ -72,7 +78,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 7,
+      "priority": 8,
       "branch": "feature/F-004-hormigon-fino"
     },
     {
@@ -82,7 +88,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 8,
+      "priority": 9,
       "branch": "feature/F-005-bombeo"
     },
     {
@@ -92,7 +98,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 9,
+      "priority": 10,
       "branch": "feature/F-006-residuos-pago"
     },
     {
@@ -102,7 +108,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 10,
+      "priority": 11,
       "branch": "feature/F-007-partida-alm-selector"
     },
     {
@@ -117,7 +123,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 14,
+      "priority": 15,
       "branch": "feature/F-008-blob-lifecycle"
     },
     {
@@ -133,7 +139,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 15,
+      "priority": 16,
       "branch": "feature/F-009-limpieza-q-emails"
     },
     {
@@ -143,7 +149,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 16,
+      "priority": 17,
       "branch": "feature/F-010-easy-auth-sv4"
     },
     {
@@ -153,7 +159,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 13,
+      "priority": 14,
       "branch": "feature/F-013-registro-sigrid"
     },
     {
@@ -183,7 +189,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 12,
+      "priority": 13,
       "branch": "feature/F-016-linea-multipartida"
     },
     {
@@ -193,8 +199,18 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 11,
+      "priority": 12,
       "branch": "feature/F-017-comparativo-precio"
+    },
+    {
+      "id": "F-018",
+      "title": "Carga incompleta: línea siempre generada por IA2 y cantidad fijada por IA3 con mínimo por defecto 6 m³",
+      "description": "Regla del humano (2026-08-18) que revisa el comportamiento actual de M7. HOY (prompt valuation_es de sv5, bloque M7): la línea de carga incompleta la emite IA3, SOLO si el contrato tarifa carga incompleta y SOLO ante señal (texto o cantidad < umbral), con umbral leído del PDF del contrato y sin default. REGLA NUEVA: (1) IA2 genera SIEMPRE la línea CARGA INCOMPLETA en hormigón/mortero como deducción de documento (conoce los m³ vertidos), aunque la cantidad final resulte 0; (2) IA3 fija la cantidad final contra el contrato: mínimo del contrato − m³ vertidos, con MÍNIMO POR DEFECTO 6 m³ si el contrato no lo indica; si vertidos ≥ mínimo → cantidad 0; (3) precio: el del contrato si lo tarifa; si no, a revisión (F-017 comparativo cuando exista). Caso de referencia: HSM 224964 (4 m³ → 2 m³ de carga incompleta). ATENCIÓN: F-004 (spec_ready) dice «M6/M7 solo con señal explícita»: esta feature la CONTRADICE y prevalece; al arrancar F-004 hay que reconciliar su R de M7 con esta regla. Toca sv2 (IA2, futura deducción por categoría), sv5 (prompt M7) y sv6 (builder/redes).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 7,
+      "branch": "feature/F-018-carga-incompleta"
     }
   ]
 }
