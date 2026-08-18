@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **21 features**, 17 abiertas, 4 terminadas.
+Resumen: **22 features**, 18 abiertas, 4 terminadas.
 
 ## Trabajo abierto
 
@@ -26,6 +26,7 @@ Resumen: **21 features**, 17 abiertas, 4 terminadas.
 | F-008 | Lifecycle de blobs de hand-off | 15 | pendiente | estandar | `feature/F-008-blob-lifecycle` |
 | F-009 | Limpieza de la cola huérfana q-emails | 16 | pendiente | estandar | `feature/F-009-limpieza-q-emails` |
 | F-010 | Easy Auth en el portal sv4 | 17 | pendiente | critico | `feature/F-010-easy-auth-sv4` |
+| F-022 | Bandeja de portada: el concepto de las líneas del albarán sale vacío porque el JOIN de la línea derivada apunta a la tabla equivocada | 18 | pendiente | estandar | `feature/F-022-concepto-lineas-bandeja` |
 
 ## Terminadas
 
@@ -139,6 +140,30 @@ q-emails es un resto del diseño original (intake partido en receptor+worker, co
 estado **pendiente** · prioridad 17 · rigor `critico` · SDD sí · rama `feature/F-010-easy-auth-sv4`
 
 sv4 es el único ingress externo y está sin autenticación (pendiente desde el despliegue). Configurar Easy Auth con Entra ID: app registration, redirect URIs, y verificación con usuarios reales del portal. Delicada: afecta a los usuarios y a las redirect URIs de Entra; verificación manual obligatoria.
+
+### F-022 · Bandeja de portada: el concepto de las líneas del albarán sale vacío porque el JOIN de la línea derivada apunta a la tabla equivocada
+
+estado **pendiente** · prioridad 18 · rigor `estandar` · SDD sí · rama `feature/F-022-concepto-lineas-bandeja`
+
+SÍNTOMA (reportado por el humano, prueba local del 2026-08-18): en la BANDEJA DE PORTADA del portal de revisión (sv4), la columna «Líneas valoradas» pinta «—» en lugar de la descripción del material en las líneas que vienen del albarán; solo se ve texto en las líneas sintéticas. Reproducido con los albaranes de Feymaco (ferretería) 2.137.569 (5 líneas) y 2.139.643 (1 línea).
+
+QUÉ VISTA ES Y DE QUÉ CAMPO TIRA. La portada es GET /documents (services/albaranes-front/interface_adapters/web/app.py:573-655) → plantilla services/albaranes-front/templates/documents_list.html, columna «Líneas valoradas» (cabecera en :107, celda en :260-273). Cada línea se pinta con `ln.concepto or '—'` (documents_list.html:265). El modelo es DocumentLineSummary (services/albaranes-front/domain/models/review_models.py:87-97) y lo rellena la consulta de líneas salmón dentro de list_documents (services/albaranes-front/infrastructure/database/review_repository.py:348-405; def en :226). Ahí, `concepto` se resuelve con COALESCE(NULLIF(lv.descripcion_linea,''), mcl.descripcion_linea, dcl.descripcion_linea) (review_repository.py:364-366) sobre dos LEFT JOIN (:375-378).
+
+CAUSA RAÍZ (confirmada): el LEFT JOIN de la línea DERIVADA apunta a la TABLA EQUIVOCADA. En review_repository.py:377-378 se hace «LEFT JOIN albaran_contrato_lines_merge dcl ON dcl.id = lv.derived_contrato_line_id», pero las líneas de contrato derivadas viven en la tabla `contrato_lines_derived` (docs/ARCHITECTURE.md:92; y el propio front lo hace BIEN en el detalle: _fetch_derived_lines_in_session, review_repository.py:1321-1350, que además documenta que el esquema de esa tabla es distinto). Como `derived_contrato_line_id` es un id de otra secuencia, el join no casa nunca, el COALESCE se queda sin candidatos y la plantilla pinta «—».
+
+POR QUÉ SOLO FALLA EN LAS from_albaran. `albaran_line_valuations.descripcion_linea` está a NULL POR DISEÑO en las líneas leídas del albarán: sv6 la fija explícitamente a None en la rama from_albaran (services/albaran-valoracion-persist/application/services/valuation_builder.py:1189) y sí la rellena en las sintéticas (:1528, con el texto del DTO de sv5, que lo exige: services/albaran-valoracion-api/domain/models/valuation_models.py:280-282). De ahí la impresión de que «solo sale en las sintéticas»: en ellas el PRIMER término del COALESCE ya trae texto y el join roto no se nota. En las from_albaran sin match de contrato, el texto solo está en la derivada — y ese es justamente el término que el join no encuentra.
+
+MEDICIÓN EN LA BBDD LOCAL (2026-08-18, consultas de SOLO LECTURA). Las 6 líneas de esos dos albaranes son line_kind='from_albaran' con descripcion_linea NULL, matched_contrato_line_id NULL y derived_contrato_line_id 383..388; esos ids SÍ existen en contrato_lines_derived (origen='no_ia_match') con el texto correcto: «PAPEL HIGIENICO (SACO 108)», «LTS. JABON LIQUIDO PH NEUTRO ****», «ROLLO PAPEL IND. (P)****», «KGS ANIL ESPECIAL FEYMACO (OSYMA-MONTSERRAT)», «BOLSA BASURA 52X58 (25 BOLSAS ROLLO)» y «DISCO ESPECIAL ACERO INOX. 115X1X22 ****» — el mismo texto que albaran_lines_merge.concepto. Simulando el COALESCE de la bandeja sobre toda la base: 10 de 10 líneas from_albaran salen con concepto NULL, y las 10 tienen su descripción disponible en contrato_lines_derived; las 11 sintéticas salen bien. Es decir, el defecto afecta al 100% de las líneas del albarán, no solo a Feymaco.
+
+RIESGO LATENTE (importante). Las dos tablas usan secuencias independientes: hoy los ids de albaran_contrato_lines_merge van por 25506..25947 y los de contrato_lines_derived por 383..403, sin solape, así que el join equivocado devuelve vacío. El día que los rangos se solapen, ese mismo join devolverá la descripción de OTRA línea de contrato cualquiera: el fallo pasaría de «falta el dato» a «dato falso» sin ningún aviso. Razón de más para corregirlo aunque el síntoma actual sea solo cosmético.
+
+RECOMENDACIÓN RAZONADA: ARREGLO EN EL FRONT, NO EN EL DATO. Dos cambios, ambos en la consulta de review_repository.py:348-405, ninguno en sv6: (1) apuntar el LEFT JOIN `dcl` a `contrato_lines_derived` (mismo criterio que ya usa el detalle); (2) añadir un último eslabón al COALESCE — LEFT JOIN albaran_lines_merge aml ON aml.id = lv.merge_line_id, y COALESCE(..., aml.concepto) — para que una línea leída del albarán NUNCA quede sin texto aunque no tenga ni matched ni derived. Por qué NO tocar sv6: `descripcion_linea` no es «la descripción de la línea», es el OVERRIDE del revisor sobre ella (sv4 escribe ahí cuando el humano edita el concepto de una fila Sigrid sin convertirla a Nueva: review_repository.py:1225-1231, y las UPDATE de :1753, :1762, :1778, :1792), más el texto propio de la sintética. Si sv6 la rellenara siempre con el concepto del albarán se perdería la distinción «editado por el humano» vs «leído del papel», habría que reescribirla en cada revaloración (sv6 persiste por replace transaccional) y el detalle del documento —que hoy funciona— empezaría a confundir ambos casos. El dato correcto YA está en la base; es la consulta la que lo busca donde no está. Decisión final del humano.
+
+ALCANCE: solo sv4 (services/albaranes-front), la consulta de list_documents y un test que fije el comportamiento (hoy no hay ninguno que cubra DocumentLineSummary). No toca schema, ni sv5, ni sv6.
+
+FUERA DE ALCANCE: cambiar quién rellena descripcion_linea o el diseño de las líneas sintéticas; el detalle del documento, que ya pinta bien (la conciliación lee contrato_lines_derived y la tabla «Líneas leídas del albarán (IA)» pinta ml.concepto, document_detail.html:470); y F-019/F-021, que salieron de los mismos albaranes Feymaco pero atacan la lectura de la partida, no la descripción.
+
+VERIFICACIÓN ESPERADA AL CERRAR: abrir /documents en local con esos dos albaranes y ver el concepto real en las 6 líneas from_albaran, con las sintéticas sin cambios.
 
 ### F-001 · Test de estructura del monorepo
 
