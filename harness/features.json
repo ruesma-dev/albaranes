@@ -179,7 +179,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 6,
+      "priority": 2,
       "branch": "feature/F-015-lineas-tachadas"
     },
     {
@@ -189,7 +189,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 13,
+      "priority": 3,
       "branch": "feature/F-016-linea-multipartida"
     },
     {
@@ -229,7 +229,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 2,
+      "priority": 4,
       "branch": "feature/F-020-proveedor-agnostico"
     }
   ]
