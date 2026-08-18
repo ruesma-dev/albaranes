@@ -84,7 +84,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       (es su función: si se pusieran rojos, el cambio habría roto lo bueno);
       en ROJO antes de T5 para R19/R20.
 
-- [ ] **T5**: **El cambio**. En
+- [x] **T5**: **El cambio**. En
       `services/albaran-valoracion-persist/application/services/valuation_builder.py`,
       paso «4. Unit conversion»: una sola llamada a `self._converter.convert`
       con la cantidad real (elimina la rama `else` con `cantidad=None`), y
