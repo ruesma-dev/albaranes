@@ -138,6 +138,50 @@ en `sys.modules`.
 
 ---
 
+## Round trip 2 (2026-08-18) — el importe PERSISTIDO
+
+La prueba local del humano midió `total_valorado = 232,76 €` en el
+2.137.569 con esta rama en ejecución. sv5 y sv6 escriben lo correcto; sv4 lo
+pisa después. Tareas del round trip:
+
+- [x] **T12**: Reabrir F-019 (`in_progress` en `harness/features.json`, con el
+      motivo escrito) y ampliar la spec: G6 con R23-R26.
+      | Verificación: `bash harness/init.sh` → `en curso: ['F-019']`.
+
+- [x] **T13**: **RED** — test del TOTAL del documento en sv6 (R25, R26):
+      `ValuationBuilder.build` sobre las cinco líneas del 2.137.569 y sobre la
+      línea única del 2.139.643, comprobando `header.total_valorado` == 139,66
+      y 19,41 y los cinco importes de línea.
+      | Verificación: falla ANTES del fix de R26 con la traza pegada en
+      `progress/impl_F-019.md`.
+
+- [x] **T14**: **RED** — suite NUEVA de sv4 (`services/albaranes-front/tests/`,
+      el servicio no tenía ninguna: `init.sh` lo avisaba) que reproduce el
+      pisado real contra SQLite en memoria: partiendo de las cinco líneas tal
+      como las dejó sv6 (35,19… con `declared_albaran` y dto 40),
+      `_recalc_valuation_importes` las deja en 58,64… y el total en 232,76.
+      | Verificación: falla con los números EXACTOS medidos en la BBDD local;
+      traza pegada en el informe.
+
+- [x] **T15**: Fix de R23 y R24 en
+      `services/albaranes-front/infrastructure/database/review_repository.py`:
+      una única fórmula canónica compartida (`_importe_de_linea`) para los
+      cuatro puntos que escriben `importe_calculado`, y recálculo que NO toca
+      las filas cuya cantidad y descuento no han cambiado.
+      | Verificación: las suites de T13 y T14 en verde.
+
+- [x] **T16**: Fix de R26 en `ValuationBuilder._build_header` (redondeo del
+      total a 2 decimales) y `bash harness/init.sh` en verde, incluida la
+      puerta de cobertura del diff. Campaña de mutación rehecha.
+      | Verificación: `bash harness/init.sh` → ENTORNO LISTO.
+
+- [ ] **T17**: MANUAL (humano) — revalorar los dos albaranes del lote y
+      comprobar en BBDD `total_valorado` = 139,66 y 19,41, y que **guardar
+      desde el front NO los altera**. Guion en `progress/impl_F-019.md`.
+      | Verificación: MANUAL (humano).
+
+---
+
 ## Trazabilidad requisito → tarea
 
 | R | Tarea |
@@ -150,3 +194,6 @@ en `sys.modules`.
 | R18 | T1 (tramo sv5) + T6 (tramo sv6) + T10 (MANUAL) |
 | R19, R20, R21 | T10 punto 4 + nota en `progress/current.md` (sin código) |
 | R22 | T9 |
+| R23, R24 | T14 (RED) → T15 |
+| R25 | T13 (tramo sv6) + T14 (tramo sv4) |
+| R26 | T13 (RED) → T16 |

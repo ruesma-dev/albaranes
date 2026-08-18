@@ -216,11 +216,12 @@
       "id": "F-019",
       "title": "Importe de línea: manda el unitario leído; el importe solo se despeja si faltan campos",
       "description": "Fallo REAL detectado en la prueba local del 2026-08-18 (lote FERRETERIA, Feymaco 2.137.569 y 2.139.643): la lectura de IA1 es exacta pero el importe valorado sale multiplicado por la cantidad (139,66 € reales -> 6.238,14 € valorados; 19,41 € -> 970,50 €). CADENA: (1) el SELECT de sv5 (infrastructure/database/sqlalchemy_valuation_context_repository.py, ~100-123, comentado como «FIX jun 2026») calcula importe_albaran = cantidad × precio_neto dando por hecho que precio_neto es un unitario NETO, cuando el prompt de IA1 (services/albaranes-api/config/prompts.yaml:75) lo define como cantidad*precio*(1-descuento/100), es decir el IMPORTE de la línea (columna NETO del albarán); (2) sv6 (application/services/price_reconciler.py) da prioridad al importe sobre el unitario leído y deriva unitario = importe / (cantidad × (1-dto/100)), con lo que 3.800,52 / (108 × 0,6) = 58,65 €/ud en vez de 0,543. REGLA DEL HUMANO (2026-08-18): si el PDF trae cantidad, precio unitario y descuento, importe = cantidad × precio_unitario × (1 - descuento/100) y el unitario leído MANDA; solo si faltan esos campos y hay importe final se despeja el unitario de esa misma fórmula. Alcance: alinear la semántica de precio_neto entre el prompt de IA1 y el consumidor de sv5, y ajustar la precedencia del reconciliador de sv6. Corrigiendo solo (1) la cadena ya cuadra (derivado 0,543 = declarado), pero la precedencia debe quedar explícita. Toca sv5 y sv6; revisar si el prompt de sv2 necesita precisar el significado del campo. Detalle y números en progress/prueba_local_feymaco_20260818.md.",
-      "status": "done",
+      "status": "in_progress",
       "sdd": true,
       "rigor": "critico",
       "priority": 1,
-      "branch": "feature/F-019-importe-unitario-manda"
+      "branch": "feature/F-019-importe-unitario-manda",
+      "reabierta": "2026-08-18: la prueba local del humano midió en BBDD total_valorado=232,76 € en el albarán 2.137.569 (debe ser 139,66 €). sv5 y sv6 quedaron correctos; el importe persistido lo PISA sv4 (services/albaranes-front/infrastructure/database/review_repository.py::_recalc_valuation_importes) al guardar el revisor, recalculando cantidad × unitario SIN aplicar el descuento. Round trip: extender el alcance a sv4 (R23) y fijar por test el TOTAL del documento persistido (R24)."
     },
     {
       "id": "F-020",

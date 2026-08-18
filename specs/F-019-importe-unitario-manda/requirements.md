@@ -199,3 +199,48 @@ importe_de_linea = cantidad × unitario_bruto × (1 − descuento/100)
   por escrito en el informe de review (exigencia `aviso`, decisión D5 de
   F-011). *(No es un checkbox que se marque N/A a secas: CHECKPOINTS.md C4
   ter.)*
+
+## G6 — El importe PERSISTIDO (round trip del 2026-08-18)
+
+Añadido tras la prueba local del humano, que midió en la BBDD
+`total_valorado = 232,76 €` en el albarán 2.137.569 **con el código de esta
+rama ya en ejecución**. sv5 y sv6 hacían lo correcto: el importe bueno se
+escribía y **otro servicio lo pisaba después**. Detalle de la causa en
+`progress/impl_F-019.md` §«Round trip 2 — el importe persistido».
+
+Ampliación de alcance declarada (regla LÍMITE DE SERVICIO de `CLAUDE.md`): la
+feature pasa de tocar **sv5 + sv6** a tocar **sv5 + sv6 + sv4**. No es una
+responsabilidad nueva —es la misma fórmula canónica del importe, aplicada en
+el otro punto del sistema que la escribe—, pero queda escrito aquí porque el
+alcance original no lo preveía.
+
+- **R23.** CUANDO sv4 recalcula el importe de una línea ya valorada —al
+  guardar el revisor los cambios del documento, al reconciliar una línea
+  contra el contrato o contra una derivada, o al editar una línea
+  sintética—, el sistema debe usar la **fórmula canónica**
+  `cantidad_efectiva × precio_unitario_final × (1 − descuento/100)`, con el
+  descuento de la línea. NUNCA `cantidad × precio` a secas. *(Era el defecto:
+  cuatro copias de la fórmula en `review_repository.py`, tres de ellas sin el
+  factor de descuento.)*
+
+- **R24.** MIENTRAS el revisor no cambie ni la cantidad ni el descuento de una
+  línea, el recálculo de sv4 NO debe modificar esa fila: ni su
+  `importe_calculado`, ni su `importe_source`. *(Hoy un guardado que solo
+  tocaba la partida degradaba las cinco líneas de `declared_albaran` a
+  `calculated` y les cambiaba el importe. Lo que el albarán declara no se pisa
+  sin que nadie lo haya pedido — es la misma regla de jul 2026 que ya sostiene
+  `ImporteCalculator`.)*
+
+- **R25.** El sistema debe fijar por test el **TOTAL del documento
+  persistido**, no solo el importe de una línea suelta:
+  `albaran_valuations.total_valorado` = **139,66 €** para el 2.137.569 y
+  **19,41 €** para el 2.139.643, en los dos servicios que lo escriben —sv6 al
+  valorar (`ValuationBuilder`) y sv4 al recalcular tras un guardado—. *(Este
+  es el agujero por el que se coló el fallo: los 57 tests de la feature
+  comprobaban líneas y nunca el agregado ni el valor que acaba en la
+  columna.)*
+
+- **R26.** El total valorado que se persiste debe ser una cantidad monetaria
+  redondeada a 2 decimales. *(La suma en coma flotante de los cinco importes
+  da `139.66000000000003`; un total que no es exactamente 139,66 no puede
+  compararse con el del albarán ni cuadrar contra Sigrid.)*
