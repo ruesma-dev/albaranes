@@ -361,3 +361,143 @@ def test_f019_r26_el_total_recalculado_no_arrastra_ruido_float(
     total = _leer_total(sesion)
     assert total == 3392.72
     assert total == round(total, 2)
+
+
+# ------------------------------------------------------------------ #
+# R24 · el caso DIFICIL (round trip 3)
+#
+# El reviewer demostro con una sonda que el guardian de R24 decidia por
+# el RESULTADO (importe guardado vs importe recalculado) y no por las
+# ENTRADAS (cantidad y descuento). Una linea que sv6 dejo en
+# 'declared_albaran' con un importe declarado que NO coincide con
+# cantidad x precio x (1 - dto/100) se pisaba en el primer guardado
+# aunque el revisor no la tocara.
+#
+# Y sv6 produce esas filas A PROPOSITO: ImporteCalculator.compute
+# devuelve el importe DECLARADO cuando declarado y calculado discrepan,
+# dejando el motivo 'declared_vs_calculated_mismatch'
+# (importe_calculator.py:150-170). Es la regla de jul 2026 y la regla 13
+# de docs/ARCHITECTURE.md: si ambos existen y discrepan, gana el
+# declarado y la linea va a revision.
+#
+# Los tests anteriores no lo veian porque las cinco lineas del Feymaco
+# 2.137.569 cuadran al centimo: ahi resultado y entradas dicen lo mismo.
+# ------------------------------------------------------------------ #
+
+#: Linea del reviewer: cantidad 100, unitario 1,00, dto 40 % => el
+#: recalculo da 60,00, pero el albaran DECLARA 100,00 (redondeos del
+#: proveedor, descuentos en cascada... basta con que difiera medio
+#: centimo).
+LINEA_DECLARADO_DISCREPANTE = ((600, 370, "DECLARADO != CALCULADO",
+                                100.0, 1.0, 40.0, 100.0),)
+
+
+def test_f019_r24_el_declarado_discrepante_no_se_pisa(repositorio, sesion):
+    """El caso dificil: declarado != recalculado y el revisor no toca nada.
+
+    Es la sonda del reviewer. Antes devolvia
+    {'importe_calculado': 60.0, 'importe_source': 'calculated'}.
+    """
+    _sembrar(sesion, lineas=LINEA_DECLARADO_DISCREPANTE, total=100.0)
+
+    repositorio._recalc_valuation_importes(
+        session=sesion,
+        document_id=DOCUMENT_ID,
+        new_line_quantities={},
+    )
+
+    linea = _leer_lineas(sesion)[370]
+    assert linea["importe_calculado"] == pytest.approx(100.0), (
+        "R24: el importe declarado fue pisado"
+    )
+    assert linea["importe_source"] == "declared_albaran"
+    assert _leer_total(sesion) == pytest.approx(100.0)
+
+
+def test_f019_r24_el_declarado_discrepante_si_cede_si_cambia_la_cantidad(
+    repositorio, sesion,
+):
+    """Lo contrario: en cuanto el revisor toca la cantidad, manda el calculo.
+
+    50 x 1,00 x 0,6 = 30,00. El declarado del albaran ya no describe esta
+    linea, porque la linea ha cambiado.
+    """
+    _sembrar(sesion, lineas=LINEA_DECLARADO_DISCREPANTE, total=100.0)
+
+    repositorio._recalc_valuation_importes(
+        session=sesion,
+        document_id=DOCUMENT_ID,
+        new_line_quantities={370: 50.0},
+    )
+
+    linea = _leer_lineas(sesion)[370]
+    assert linea["importe_calculado"] == pytest.approx(30.0)
+    assert linea["importe_source"] == "calculated"
+
+
+def test_f019_r24_el_declarado_discrepante_si_cede_si_cambia_el_descuento(
+    repositorio, sesion,
+):
+    """Y con el descuento igual: 100 x 1,00 x 0,75 = 75,00."""
+    _sembrar(sesion, lineas=LINEA_DECLARADO_DISCREPANTE, total=100.0)
+
+    repositorio._recalc_valuation_importes(
+        session=sesion,
+        document_id=DOCUMENT_ID,
+        new_line_quantities={},
+        new_line_discounts={370: 25.0},
+    )
+
+    linea = _leer_lineas(sesion)[370]
+    assert linea["importe_calculado"] == pytest.approx(75.0)
+    assert linea["importe_source"] == "calculated"
+
+
+def test_f019_r24_reenviar_el_mismo_descuento_no_es_un_cambio(
+    repositorio, sesion,
+):
+    """El front reenvia el descuento en cada guardado; eso no es tocarlo.
+
+    Si reenviar el mismo 40 % contara como cambio, el guardian de R24 no
+    protegeria nada en la practica: el payload SIEMPRE trae descuento.
+    """
+    _sembrar(sesion, lineas=LINEA_DECLARADO_DISCREPANTE, total=100.0)
+
+    repositorio._recalc_valuation_importes(
+        session=sesion,
+        document_id=DOCUMENT_ID,
+        new_line_quantities={},
+        new_line_discounts={370: 40.0},
+    )
+
+    linea = _leer_lineas(sesion)[370]
+    assert linea["importe_calculado"] == pytest.approx(100.0)
+    assert linea["importe_source"] == "declared_albaran"
+
+
+@pytest.mark.parametrize("descuento_reenviado", [0.0, None])
+def test_f019_r24_cero_y_nulo_son_el_mismo_descuento(
+    repositorio, sesion, descuento_reenviado,
+):
+    """Sin descuento es sin descuento, venga como 0 o como NULL.
+
+    sv6 persiste NULL cuando no hay descuento y el front puede reenviar
+    0. Si los dos no se compararan ya saneados, cada guardado veria un
+    cambio inexistente y pisaria la fila.
+    """
+    _sembrar(
+        sesion,
+        lineas=((600, 370, "SIN DTO DECLARADO", 10.0, 2.5, None, 30.0),),
+        total=30.0,
+    )
+
+    repositorio._recalc_valuation_importes(
+        session=sesion,
+        document_id=DOCUMENT_ID,
+        new_line_quantities={},
+        new_line_discounts={370: descuento_reenviado},
+    )
+
+    linea = _leer_lineas(sesion)[370]
+    assert linea["importe_calculado"] == pytest.approx(30.0)
+    assert linea["importe_source"] == "declared_albaran"

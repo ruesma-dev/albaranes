@@ -3332,18 +3332,37 @@ class AlbaranReviewRepository:
             if nuevo_importe is None:
                 continue
 
-            # (F-019 R24) Si nada de lo que entra en el importe ha
+            # (F-019 R24) Si nada de lo que ENTRA en el importe ha
             # cambiado, la fila NO se toca. Un guardado que solo movía
             # la partida degradaba las cinco líneas del 2.137.569 de
             # 'declared_albaran' a 'calculated' sin que nadie lo hubiera
             # pedido: lo que el albarán DECLARA no se reetiqueta como
             # calculado por nosotros salvo que el revisor intervenga.
-            importe_anterior = row["importe_calculado"]
+            #
+            # Se compara por las ENTRADAS (cantidad y descuento), NUNCA
+            # por el resultado. Comparar el importe guardado contra el
+            # recalculado parece equivalente y no lo es: sv6 deja a
+            # propósito filas en las que el importe DECLARADO no cuadra
+            # con `cantidad × precio × (1 − dto/100)` —motivo
+            # `declared_vs_calculated_mismatch` de `ImporteCalculator`,
+            # regla de jul 2026: si ambos existen y discrepan, gana el
+            # declarado y la línea va a revisión—. Con el criterio del
+            # resultado, esas líneas se pisaban en el primer guardado
+            # aunque el revisor no las tocara. Basta con que el importe
+            # impreso difiera medio céntimo del producto (redondeos por
+            # línea del proveedor, descuentos en cascada).
+            #
+            # El descuento se compara ya SANEADO: el front reenvía el
+            # descuento en cada guardado, y `0` y `NULL` significan lo
+            # mismo (sin descuento). Sin sanear, cada guardado vería un
+            # cambio inexistente y el guardián no protegería nada.
             sin_cambios = (
-                importe_anterior is not None
-                and self._num_iguales(importe_anterior, nuevo_importe)
-                and self._num_iguales(row["cantidad_albaran"], nueva_cant_albaran)
+                self._num_iguales(row["cantidad_albaran"], nueva_cant_albaran)
                 and self._num_iguales(row["cantidad_convertida"], nueva_cant_conv)
+                and self._num_iguales(
+                    _sanear_descuento(row["descuento_albaran_aplicado"]),
+                    _sanear_descuento(descuento),
+                )
             )
             if sin_cambios:
                 continue
