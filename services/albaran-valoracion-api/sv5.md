@@ -533,6 +533,30 @@ SHAREPOINT_DRIVE_ID=b!...
         ├─ classify(unidad_medida) → UnitCategory
         ├─ parse(contexto_linea_json) → ContextoLinea (tolerante)
         └─ propaga descuento, precio_neto al DTO
+```
+
+> **Qué es `precio_neto` y qué viaja como `importe_albaran`** (F-019,
+> ago 2026; regla 13 de `docs/ARCHITECTURE.md`). En `albaran_lines_merge`
+> conviven `precio` (unitario **bruto**, antes de descuento), `descuento`
+> (porcentaje) y `precio_neto`, que **es el IMPORTE de la línea DESPUÉS del
+> descuento** — no un precio unitario, pese al nombre. El SELECT de líneas
+> entrega ese importe al DTO como `importe_albaran` con esta cascada:
+>
+> 1. `precio_neto` si viene → **tal cual**, aunque falte la cantidad;
+> 2. si no, se deriva con la fórmula canónica
+>    `cantidad × precio × (1 − COALESCE(descuento,0)/100)`;
+> 3. si no hay ni uno ni otro → `NULL`, y sv6 cae al precio del contrato
+>    (caso hormigón: el albarán no imprime precios).
+>
+> `descuento` y `precio_neto` viajan además como campos propios del DTO
+> (`descuento_albaran`, `precio_neto_albaran`). Multiplicar `precio_neto` por
+> la cantidad —lo que hacía el SELECT entre jun y ago de 2026— infla el
+> importe por la cantidad de la línea, contamina el prompt de IA3 (que recibe
+> `importe_albaran`) y hace que sv6 despeje un unitario inventado: es el
+> defecto que valoró en 6.238,14 € un albarán de 139,66 €
+> (`progress/prueba_local_feymaco_20260818.md`).
+
+```
 
    e) lineas_contrato = prefilter.build_contrato_lines(raw_ctx.lineas_contrato)
         └─ classify(unidad_medida) → UnitCategory

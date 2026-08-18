@@ -87,7 +87,7 @@ en `sys.modules`.
       | Verificación: `python -m pytest services/albaran-valoracion-persist/tests -q`
       en verde (`test_f019_r16_*`, `_r17_*`).
 
-- [ ] **T7**: Documentación normativa (R3): regla nueva en
+- [x] **T7**: Documentación normativa (R3): regla nueva en
       `docs/ARCHITECTURE.md` §«Semántica de dominio imprescindible»;
       `services/albaran-valoracion-api/sv5.md` (propagación del campo);
       `services/albaran-valoracion-persist/sv6.md` §6.1 (tabla de
