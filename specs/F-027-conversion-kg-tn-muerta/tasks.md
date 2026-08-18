@@ -105,7 +105,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       | Verificación: revisión contra `design.md` §2.2 y §2.3; `git diff` sin
       cambios de código ejecutable en `unit_converter.py`.
 
-- [ ] **T7**: Regla 8 de `docs/ARCHITECTURE.md` §«Semántica de dominio
+- [x] **T7**: Regla 8 de `docs/ARCHITECTURE.md` §«Semántica de dominio
       imprescindible»: pasar por el conversor significa **pasarle la
       cantidad**; un desacuerdo de categoría marca revisión, nunca anula la
       cantidad; la unidad de destino es la de la línea que pone el precio.

@@ -95,7 +95,16 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
 8. **Unidades y tolerancias en sv6**: conversión por
    `UNIT_REGISTRY_YAML_PATH`, tolerancias `PRICE_TOLERANCE_PCT` e
    `IMPORTE_TOLERANCE_PCT`. No comparar cantidades ni precios de unidades
-   distintas sin pasar por el conversor.
+   distintas sin pasar por el conversor. Y **pasar por el conversor
+   significa pasarle la cantidad**: un desacuerdo de categoría de unidad
+   marca `review_required`, nunca anula la cantidad — llamar a `convert()`
+   con `cantidad=None` para "saltarse" la conversión mata las redes
+   deterministas que solo viven en el caso `unknown` (F-027: el albarán
+   58826 valorado en 468.763,40 € en vez de 390,99 €). La **unidad de
+   destino** de la conversión es la de la línea **que pone el precio** —la
+   derivada si el matcher generó una, si no la del contrato—, no la del
+   albarán: convertir hacia la del albarán da factor 1 contra un precio
+   en otra unidad.
 9. **Dedup de ingesta**: sv1 deduplica por `correlation_key` contra
    `workflow_runs` (PG). Reprocesar un email no debe crear un documento
    nuevo; el sha256 del PDF es la identidad del documento aguas abajo.
