@@ -348,8 +348,14 @@ Pasada 3 — líneas SINTÉTICAS
      · Pasada 2/3:        resolve_partida_for_{complementaria|synthetic}(partida_base)
         → inherited_from_base_line
 
-4. UnitConverter.convert(cantidad, unidad_albaran, unidad_contrato_para_conversion)
+4. UnitConverter.convert(cantidad, unidad_albaran, unidad_destino_conversion)
      → (cantidad_convertida, factor, ambiguous, reasons)
+     · SIEMPRE con la cantidad REAL del albarán. `category_match` NO gobierna
+       la conversión: gobierna la REVISIÓN (paso 5 de §5.3). Ver F-027.
+     · unidad_destino_conversion = la unidad de la línea QUE PONE EL PRECIO:
+       `derived_line.unidad_medida` si el matcher generó línea derivada
+       (que lleva la unidad del contrato siempre que la IA casara una línea),
+       si no `unidad_contrato`.
 
 5. ImporteCalculator.compute(cantidad_convertida, cantidad_albaran,
                              precio_unitario_final, importe_albaran_declarado,
@@ -451,13 +457,56 @@ Maneja 5 situaciones:
 > Las **líneas derivadas** se persisten en `contrato_lines_derived` y se referencian
 > desde `albaran_line_valuations.derived_contrato_line_id`.
 
-### 6.3 `UnitConverter` — cantidades a la unidad del contrato
+### 6.3 `UnitConverter` — cantidades a la unidad que pone el precio
 
 - Si no hay cantidad → `(null, null, ambiguous=False, ['no_quantity_in_albaran'])`.
+  Esta guarda es la PRIMERA a propósito y solo debe dispararse cuando la
+  cantidad falta de verdad (ver más abajo).
 - Si no hay unidad de contrato → factor 1, asume misma unidad, reason `no_contract_unit_assumed_same`.
-- Si no hay unidad de albarán → factor 1, reason `no_albaran_unit_assumed_same`.
+- Si no hay unidad de albarán → **red de plausibilidad de toneladas** (abajo);
+  si no aplica, factor 1, reason `no_albaran_unit_assumed_same`.
 - Si las unidades son convertibles (misma categoría) → conversión por `UnitRegistry`.
 - Si las categorías no casan → `cantidad_convertida=None`, reason `unit_category_mismatch_in_conversion`.
+
+#### Red de plausibilidad de toneladas (jul 2026)
+
+Existe desde julio de 2026 y esta documentación **no la recogía**. Aplica solo
+cuando el albarán NO trae unidad y el contrato tarifa en toneladas (`TN`, `T`,
+`TM`, `TON`…), y tiene dos niveles:
+
+| Cantidad leída | Qué hace | `factor` | Motivo |
+|---|---|---|---|
+| `>= 1000` | la reinterpreta como KG: `cantidad / 1000` | `0,001` | `cantidad_sin_unidad_reinterpretada_kg_a_tn` |
+| `[100, 1000)` | **no la toca**, solo avisa | `1,0` | `cantidad_tn_implausible_revisar` |
+
+Los dos casos ponen `ambiguous=True`, que aguas abajo fuerza
+`review_required`: ninguna cantidad reinterpretada llega muda al revisor. El
+argumento del umbral: un camión lleva 25-30 TN, así que ningún albarán real
+trae `>= 1000 TN`. Ambos umbrales son parámetros del constructor
+(`tn_umbral_convertir`, `tn_umbral_avisar`): ajustarlos no exige tocar código.
+
+#### Los cuatro estados que el revisor debe poder distinguir (F-027)
+
+| Estado | Motivo | `cantidad_convertida` | `factor_conversion` |
+|---|---|---|---|
+| Se convirtió aplicando la red de plausibilidad | `cantidad_sin_unidad_reinterpretada_kg_a_tn` | cantidad / 1000 | `0,001` |
+| Magnitud sospechosa pero no se tocó | `cantidad_tn_implausible_revisar` | cantidad | `1,0` |
+| No se pudo convertir (categorías incompatibles) | `unit_category_mismatch_in_conversion` + `importe_using_albaran_quantity_fallback` | `null` | `null` |
+| La cantidad falta de verdad | `no_quantity_in_albaran` | `null` | `null` |
+
+> **Por qué esta red estuvo MUERTA entre jul y ago 2026.** El
+> `ValuationBuilder` llamaba al conversor con `cantidad=None` a propósito
+> cuando `UnitCategoryGuard` devolvía `category_match=False` — y ese es
+> exactamente el caso en que la red aplica (albarán sin unidad ⇒ categoría
+> `unknown` ⇒ desacuerdo con el `mass` del contrato). La guarda de
+> `cantidad is None` salía antes de llegar a ella. Coste medido: el albarán
+> **58826** de MAHORSA (30.380 kg sin literal de unidad, contrato en TN) se
+> valoró en **468.763,40 €** frente a los 390,99 € del administrativo, y el
+> **58878** en **462.282,80 €** frente a 385,59 €. El fallo económico no
+> estaba en el conversor: estaba en quién lo llamaba. Corregido por F-027;
+> el warning `[unit-converter] … reinterpretada como KG` es su traza de
+> operación, y su ausencia en los logs es la señal de que la red no se está
+> ejecutando.
 
 ### 6.4 `ImporteCalculator` — fórmula con descuento
 

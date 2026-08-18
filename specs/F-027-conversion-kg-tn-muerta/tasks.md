@@ -95,7 +95,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       | Verificación: las suites de T2, T3 y T4 en VERDE
       (`test_f027_r1_*` … `test_f027_r20_*`), sin tocar T1.
 
-- [ ] **T6**: Documentación del conversor y del servicio (sin cambio
+- [x] **T6**: Documentación del conversor y del servicio (sin cambio
       funcional): ampliar el comentario de cabecera de
       `application/services/unit_converter.py` (líneas 21-33) con el periodo en
       que la red estuvo muerta y el caso 58826/58878; actualizar
