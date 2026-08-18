@@ -100,3 +100,68 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
   en el análisis de supervivientes); `ValorEsperado.desde_json` es código
   muerto (borrar o testar); automejoras 6.1/6.2 del review para arnes-base
   (cobertura sin medición ≠ 0%, y rutas mínimas en la declaración).
+
+## F-019 — Importe de línea: manda el unitario leído (done, 2026-08-18)
+
+- Rama `feature/F-019-importe-unitario-manda`, 12 commits (T1–T11 + round
+  trip). Review: CHANGES_REQUESTED (R18 sin ningún test automático) →
+  corregido → **APPROVED** en segunda pasada
+  (`progress/review_F-019.md`, que conserva los dos veredictos).
+- Origen: la prueba local del humano del 18-08 con los dos albaranes de
+  Feymaco del lote `alvaro_17082026` (`progress/prueba_local_feymaco_
+  20260818.md`). La lectura de IA1 era exacta, pero el importe valorado salía
+  multiplicado por la cantidad: 139,66 € reales → 6.238,14 €, y 19,41 € →
+  970,50 €.
+- Causa: el SELECT de sv5 (`sqlalchemy_valuation_context_repository.py`)
+  calculaba `importe_albaran = cantidad × precio_neto` creyendo que
+  `precio_neto` era un unitario neto, cuando el prompt de IA1 lo define como
+  el IMPORTE de la línea. sv6 (`price_reconciler.py`) agravaba el efecto
+  dando prioridad al importe sobre el unitario leído.
+- Entregado: 2 cambios reales de producción (el `cantidad *` sale del sitio
+  equivocado en sv5; la precedencia de sv6 pasa a «manda el unitario leído,
+  el importe solo se despeja si faltan campos») y 57 tests nuevos. La
+  protección contra partidas alzadas (cinta 18,84 € / PA 8.000 €) se conserva
+  con test de regresión propio. sv2 no se tocó.
+- Evidencias: 248 tests en la raíz + 11 en sv5 + 40 en sv6, todos en verde;
+  cobertura 100 % de las 5 líneas cambiadas (umbral 80, nivel `critico`);
+  mutación 4 generados / 4 muertos / 0 supervivientes. Fase RED con la salida
+  real del fallo pegada en `progress/impl_F-019.md`.
+- Efecto lateral saneado: ese importe inflado viajaba también al prompt de
+  IA3, así que el LLM de valoración estaba viendo importes × cantidad.
+- Puerta de rutas sensibles en AVISO (no bloquea): la pasada de evals
+  declarada no se pudo ejecutar porque `evals/ground_truth/` sigue sin casos.
+- PENDIENTE del humano: las 4 verificaciones MANUAL de T10 (reprocesar en
+  local 2.137.569 → 139,66 € y 2.139.643 → 19,41 €, sin
+  `unitario_declarado_vs_derivado_mismatch`, y un albarán de hormigón sin
+  precios impresos que siga valorándose por contrato); decidir qué histórico
+  se revalora (R20, sin script de backfill); y **reconciliar F-003 antes de
+  arrancarla**: su R4 manda conservar el cálculo que F-019 acaba de corregir.
+
+### F-019 — round trips 2 y 3 (cierre definitivo, 2026-08-18)
+
+El cierre anterior era prematuro: la prueba local del humano demostró que el
+criterio de aceptación (139,66 €) NO se cumplía. Dos round trips más:
+
+- **Round trip 2**: la causa no estaba en sv5 ni en sv6, sino en **sv4**.
+  `review_repository::_recalc_valuation_importes` recalculaba
+  `cantidad × precio` **sin descuento** y pisaba en BBDD el importe y el total
+  que sv6 había escrito bien. La pinza que lo demostró: el 2.137.569 tenía
+  `updated_at_utc` seis minutos posterior a su creación (cuando el humano lo
+  abrió en el portal) y quedaba en 232,76 €, mientras el 2.139.643 —mismo
+  código, 22 s después, nunca abierto en el front— conservaba sus 19,41 €.
+  La fórmula estaba escrita CUATRO veces en ese fichero. sv4 pasó de 0 a 44
+  tests.
+- **Round trip 3** (tres cambios exigidos por el reviewer): (1) el guardián de
+  R24 decidía por el RESULTADO, así que pisaba justo las filas que sv6 protege
+  a propósito (`declared_vs_calculated_mismatch`); ahora decide por las
+  ENTRADAS. (2) La fórmula pura se movió a **`ruesma_comun/importes.py`**
+  (regla dura de CLAUDE.md: nada de lógica copiada entre servicios), dejando
+  la política en cada servicio; al unificarlas se descubrió que **las dos
+  copias YA divergían**: un descuento ilegible reventaba sv6 con `ValueError`.
+  (3) El cableado `payload → descuento` quedó cubierto por test.
+- Evidencias finales: cobertura **93,1 %** (81/87, umbral 80); mutación 31
+  generados / 28 muertos / 3 supervivientes verificados equivalentes; suites
+  sv4 59, comun 49, sv6 53, todas ejecutadas en serie. **APPROVED en cuarta
+  pasada** (`progress/review_F-019.md` conserva los cuatro veredictos).
+- Lección para el arnés: el criterio «139,66 €» vivía solo en el guion MANUAL;
+  ningún test comprobaba el AGREGADO ni el valor PERSISTIDO. Por ahí se coló.

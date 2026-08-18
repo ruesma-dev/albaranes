@@ -58,17 +58,51 @@ _SQL_MERGE_HEADER = text(
 # de ``albaran_lines_merge``. Viajan por el envelope hasta el svc6
 # donde se usan para calcular el importe valorado con descuento.
 #
-# NOTA (corregida jun 2026) sobre ``importe_albaran``:
-# Históricamente el SELECT hacía ``precio_neto AS importe_albaran``,
-# es decir, lo que el svc5 llamaba "importe_albaran" era en realidad
-# el precio_neto UNITARIO de la línea (no el importe total). Eso era
-# un BUG: el ImporteCalculator del svc6 usa ``importe_albaran`` como
-# IMPORTE TOTAL declarado de la línea (su fallback cuando no hay
-# cantidad convertida, y su contraste con el calculado). Con el alias
-# antiguo, la línea base de hormigón aparecía con importe 0/vacío.
-# Ahora el SELECT calcula el importe total real = cantidad × precio_neto.
-# Si cualquiera de los dos es NULL, el importe sale NULL y el svc6
-# recae en el cálculo por precio×cantidad (comportamiento correcto).
+# -----------------------------------------------------------------
+# SEMÁNTICA DE ``precio_neto`` (F-019, ago 2026) — LEER ANTES DE TOCAR
+# -----------------------------------------------------------------
+# ``precio_neto`` de ``albaran_lines_merge`` es el **IMPORTE de la
+# línea DESPUÉS del descuento**, NUNCA un precio unitario. En esa
+# tabla conviven:
+#
+#   - ``precio``      → unitario BRUTO, antes de descuento.
+#   - ``descuento``   → porcentaje (40 = 40 %).
+#   - ``precio_neto`` → IMPORTE de la línea tras descuento
+#                       (la columna "NETO" del albarán impreso).
+#
+# Fórmula canónica del dominio, única y sin excepciones:
+#
+#     importe_de_linea = cantidad × precio × (1 − descuento/100)
+#
+# No es una interpretación de este servicio: es la semántica que ya
+# aplican TODOS los demás consumidores del campo —
+#   * el prompt de IA1 (``albaranes-api/config/prompts.yaml``:
+#     «si figura, léelo; si no, calcula cantidad*precio*
+#     (1 - descuento/100)»),
+#   * el guard de consistencia de svc3
+#     (``albaran_confidence_service._is_line_net_consistent``, que
+#     contrasta precio_neto contra cantidad × precio × (1 − dto/100)),
+#   * el front svc4 (``review_repository``: eff_importe =
+#     line.precio_neto),
+#   * los clientes de Document AI / Document Intelligence
+#     (precio_neto ← Amount / LineAmount / TotalPrice).
+# El único que la contradecía era este SELECT.
+#
+# ERRATA CORREGIDA (F-019). El comentario «FIX (jun 2026)» que vivía
+# aquí afirmaba que ``precio_neto`` era el "precio unitario NETO" y,
+# en consecuencia, el SELECT multiplicaba por la cantidad un valor
+# que YA era el importe. Medido en la prueba local del 2026-08-18
+# (``progress/prueba_local_feymaco_20260818.md``): el albarán Feymaco
+# 2.137.569 (139,66 €) llegó al svc6 valorado en 6.238,14 €, y su
+# primera línea —108 ud, 0,543 €/ud, 40 % dto, neto 35,19 €— viajó
+# como 108 × 35,19 = 3.800,52 €. El comentario que mintió era parte
+# del bug: por eso se corrige con la misma seriedad que el código.
+#
+# El problema que aquel FIX quiso arreglar (la línea base de hormigón
+# con importe 0/vacío) NO lo causaba el alias: lo causaba que en
+# hormigón ``precio_neto`` viene NULL porque el albarán no imprime
+# precios. Lo resuelve la cascada del «FIX 2 (jul 2026)», que se
+# conserva ENTERA.
 #
 # Compatibilidad: para albaranes sin columna descuento (anteriores
 # al fix de svc3), la columna viene NULL → descuento=None en el
@@ -97,26 +131,26 @@ _SQL_ALBARAN_LINES = text(
         unidad_medida       AS unidad_medida,
         cantidad            AS cantidad,
         precio              AS precio_unitario_albaran,
-        -- FIX (jun 2026): importe_albaran es el IMPORTE TOTAL de la
-        -- línea, no un precio unitario. En albaran_lines_merge NO existe
-        -- columna de importe: solo precio (unitario bruto), descuento y
-        -- precio_neto (unitario NETO). El importe real de la línea es
-        -- cantidad × precio_neto. Antes se mapeaba 'precio_neto AS
-        -- importe_albaran', metiendo un precio UNITARIO donde el
-        -- ImporteCalculator espera el importe TOTAL: cuando la línea
-        -- base de hormigón no producía cantidad_convertida, el importe
-        -- caía a ese unitario (o a 0/NULL si precio_neto venía vacío),
-        -- y la fila aparecía con importe 0/vacío en el portal.
-        -- FIX 2 (jul 2026): si el albarán no trae descuento, fase 1
-        -- deja precio_neto a NULL y el importe llegaba NULL a sv6
-        -- aunque 'precio' estuviera leído — la precedencia del albarán
-        -- (el importe leído manda) quedaba muda. Derivación en cascada:
-        -- precio_neto si existe; si no, precio con el descuento
-        -- aplicado; si no hay descuento, precio a secas.
-        (cantidad * COALESCE(
+        -- importe_albaran = IMPORTE de la línea (tras descuento), que
+        -- es lo que el ImporteCalculator del svc6 espera. Cascada:
+        --   1. precio_neto, si viene: YA ES el importe de la línea, se
+        --      entrega TAL CUAL (F-019 R4/R7 — ver el bloque de
+        --      semántica de arriba: multiplicarlo por la cantidad fue
+        --      el bug que infló el albarán Feymaco 2.137.569).
+        --      Se entrega aunque falte 'cantidad': el importe leído no
+        --      se pierde por un campo vacío al lado.
+        --   2. si no hay precio_neto, se DERIVA con la fórmula
+        --      canónica cantidad × precio × (1 − dto/100)
+        --      (FIX 2, jul 2026: sin esta rama, un albarán con precios
+        --      pero sin descuento llegaba al svc6 con el importe mudo,
+        --      porque fase 1 deja precio_neto a NULL).
+        --   3. sin precio_neto ni precio → NULL, y el svc6 cae al
+        --      precio del contrato (caso hormigón: el albarán no
+        --      imprime precios).
+        COALESCE(
             precio_neto,
-            precio * (1 - COALESCE(descuento, 0) / 100.0)
-        )) AS importe_albaran,
+            cantidad * precio * (1 - COALESCE(descuento, 0) / 100.0)
+        ) AS importe_albaran,
         codigo_imputacion   AS codigo_partida_albaran,
         contexto_linea_json AS contexto_linea_json,
         descuento           AS descuento_albaran,

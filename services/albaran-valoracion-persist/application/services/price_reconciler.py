@@ -38,19 +38,47 @@ class PriceReconciler:
     cinta de señalización de 18,84 EUR leídos valorada a 960.000 EUR
     por casar con una PA de 8.000 EUR del contrato).
 
+    ------------------------------------------------------------------
+    F-019 (ago 2026) — manda el UNITARIO leído
+    ------------------------------------------------------------------
+    Lo anterior sigue vigente palabra por palabra: el contrato no pisa
+    lo leído. Lo que cambia es la precedencia INTERNA entre los dos
+    valores del propio albarán. Regla del humano (2026-08-18), en dos
+    mitades:
+
+      * si el albarán trae cantidad, precio unitario y descuento, el
+        importe es ``cantidad × precio × (1 − dto/100)`` y **el
+        unitario leído MANDA**;
+      * **solo** si faltan esos campos y sí hay importe final, se
+        despeja el unitario de esa misma fórmula.
+
+    Antes ganaba el importe y el unitario declarado solo se respetaba
+    si coincidía con el derivado. Con un importe corrompido eso
+    fabricaba un unitario inventado en silencio: en la prueba local
+    del 2026-08-18 (``progress/prueba_local_feymaco_20260818.md``) la
+    línea de papel higiénico del albarán Feymaco 2.137.569 —108 ud a
+    0,543 EUR con 40 % de descuento— salió valorada a 58,65 EUR/ud.
+
     Prioridad:
-      1. IMPORTE leído (≠0) con cantidad válida → manda el importe;
-         el unitario final es el DERIVADO BRUTO:
+      1. UNITARIO declarado (≠0) → MANDA, con o sin importe leído.
+         source='albaran_declared'. Si además el importe es derivable:
+           - coincide dentro de la tolerancia → agreement='neither',
+             reason 'albaran_unitario_manda_derivado_coincide';
+           - discrepa → agreement='mismatch' y reason
+             'unitario_declarado_vs_derivado_mismatch:<decl>!=<deriv>'.
+             El precio final es el DECLARADO en ambos casos; el
+             mismatch viaja por ``agreement`` porque es lo que
+             ``ValuationBuilder._build_line`` ya lleva a
+             ``review_required`` (decisión D3 de F-019): así el
+             desacuerdo va a revisión en vez de persistirse mudo.
+      2. IMPORTE leído (≠0) con cantidad válida y SIN unitario
+         declarado → se despeja el DERIVADO BRUTO:
              unitario = importe / (cantidad × (1 − descuento/100))
          (la fórmula canónica del importe es
           cantidad × unitario × (1 − dto/100); derivar sin deshacer el
           descuento daría el unitario NETO y el descuento se aplicaría
-          dos veces aguas abajo — bug corregido en esta tanda).
-         Si además viene unitario declarado y coincide con el derivado
-         (tolerancia), se usa el DECLARADO (más fiel al documento); si
-         discrepan, manda el derivado del importe y se deja aviso.
-      2. UNITARIO declarado (≠0) sin importe derivable → manda el
-         declarado.
+          dos veces aguas abajo — bug corregido en jul 2026).
+         source='albaran_calculated'.
       3. FALLBACK contrato (albarán sin valores): la cadena clásica —
          1a y 1b coinciden → media; discrepan → 1a; solo 1a → 1a;
          solo 1b → 1b; nada → None.
@@ -102,42 +130,49 @@ class PriceReconciler:
             reasons=reasons,
         )
 
-        # ---- 1. El IMPORTE leído manda ----------------------------- #
-        if derivado_bruto is not None:
-            if declarado is not None and self._match(
+        # ---- 1. El UNITARIO declarado manda (F-019) ---------------- #
+        if declarado is not None:
+            if derivado_bruto is not None and not self._match(
                 declarado, derivado_bruto
             ):
-                return PriceReconciliation(
-                    final_price=float(declarado),
-                    source="albaran_declared",
-                    agreement="neither",
-                    reasons=reasons
-                    + ["albaran_importe_manda_declarado_coincide"],
-                )
-            if declarado is not None:
+                # El desacuerdo NO cambia el precio (manda el
+                # declarado), pero sale por ``agreement`` para que el
+                # builder mande la línea a revisión humana.
                 reasons.append(
                     f"unitario_declarado_vs_derivado_mismatch:"
                     f"{declarado}!={derivado_bruto}"
                 )
                 logger.info(
                     "[price-reconciler] unitario declarado %s no cuadra "
-                    "con el derivado del importe %s; manda el importe.",
+                    "con el derivado del importe %s; manda el declarado "
+                    "y la línea va a revisión.",
                     declarado, derivado_bruto,
                 )
+                return PriceReconciliation(
+                    final_price=float(declarado),
+                    source="albaran_declared",
+                    agreement="mismatch",
+                    reasons=reasons,
+                )
+            motivo = (
+                "albaran_unitario_manda_derivado_coincide"
+                if derivado_bruto is not None
+                else "albaran_unitario_declarado_manda"
+            )
+            return PriceReconciliation(
+                final_price=float(declarado),
+                source="albaran_declared",
+                agreement="neither",
+                reasons=reasons + [motivo],
+            )
+
+        # ---- 2. Sin unitario declarado: se despeja del importe ----- #
+        if derivado_bruto is not None:
             return PriceReconciliation(
                 final_price=derivado_bruto,
                 source="albaran_calculated",
                 agreement="neither",
                 reasons=reasons + ["albaran_importe_manda_derivado"],
-            )
-
-        # ---- 2. El UNITARIO declarado manda ------------------------ #
-        if declarado is not None:
-            return PriceReconciliation(
-                final_price=float(declarado),
-                source="albaran_declared",
-                agreement="neither",
-                reasons=reasons + ["albaran_unitario_declarado_manda"],
             )
 
         # ---- 3. Fallback contrato (cadena clásica 1a/1b) ----------- #

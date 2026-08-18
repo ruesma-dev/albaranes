@@ -106,9 +106,23 @@ class AlbaranLineContextDto(_StrictModel):
     # -----------------------------------------------------------------
     # Tanda descuento — abr 2026
     #
-    # Descuento porcentual de la línea (ej. 40 = 40%) y precio neto
-    # unitario tras descuento, ambos venidos de albaran_lines_merge
-    # vía svc5.
+    # Descuento porcentual de la línea (ej. 40 = 40%) y ``precio_neto``,
+    # ambos venidos de albaran_lines_merge vía svc5.
+    #
+    # OJO CON EL NOMBRE (F-019, ago 2026; regla 13 de
+    # docs/ARCHITECTURE.md): ``precio_neto_albaran`` NO es un precio
+    # unitario. Es el **IMPORTE de la línea DESPUÉS del descuento** —
+    # la columna "NETO" del albarán impreso. El unitario BRUTO (antes
+    # de descuento) es ``precio_unitario_albaran``. La fórmula canónica
+    # que los relaciona, sin excepciones, es:
+    #
+    #     importe = cantidad × precio × (1 − descuento/100)
+    #
+    # De ahí sale ``importe_albaran``: el ``precio_neto`` leído si
+    # existe y, si no, la derivación con esa fórmula (la hace el SELECT
+    # de svc5). Leerlo como unitario multiplica el importe por la
+    # cantidad: es lo que valoró en 6.238,14 EUR un albarán de
+    # 139,66 EUR (progress/prueba_local_feymaco_20260818.md).
     #
     # Se usan en el ImporteCalculator para calcular el importe valorado
     # como cantidad × precio_contrato × (1 - descuento/100).

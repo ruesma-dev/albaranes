@@ -365,7 +365,11 @@ Pasada 3 — líneas SINTÉTICAS
 Una línea `from_albaran` se marca para revisión humana si:
 
 - `not category_match` (las unidades no son comparables).
-- `agreement == 'mismatch'` (precio 1a y 1b discrepan más de `PRICE_TOLERANCE_PCT`).
+- `agreement == 'mismatch'`: las fuentes de precio no concuerdan más allá de
+  `PRICE_TOLERANCE_PCT`. Dos casos (§6.1): 1a y 1b del contrato discrepan, o
+  —desde F-019— el unitario leído del albarán discrepa del que se derivaría
+  de su importe. Este segundo es la vía por la que ese desacuerdo llega a
+  revisión humana en vez de persistirse en silencio.
 - `source == 'none'` (no hay precio de ningún sitio).
 - `converted.ambiguous` (conversión de unidad ambigua).
 - `importe_source == 'none'` (no se pudo calcular importe).
@@ -389,23 +393,48 @@ A nivel de cabecera, `review_required = any(r.review_required for r in records)`
 
 ### 6.1 `PriceReconciler` — orden de prioridad de precio
 
-**Decisión de negocio del cliente**:
+**Decisión de negocio del cliente** (jul 2026, refinada por F-019 en ago 2026):
+**lo LEÍDO del albarán manda siempre que exista**; el contrato aporta
+partida/código/concepto y su precio es solo FALLBACK. Y entre los dos valores
+leídos del propio albarán, **manda el UNITARIO**; el importe solo se despeja
+cuando no hay unitario.
 
-| Caso                                        | source                  | agreement   | final_price                  |
-|---------------------------------------------|-------------------------|-------------|------------------------------|
-| `line_already_valued=True` + albaran_decl   | `albaran_declared`      | `neither`   | `precio_albaran_declarado`   |
-| `line_already_valued=True` + importe/cant   | `albaran_calculated`    | `neither`   | `importe / cantidad`         |
-| 1a y 1b dentro de tolerancia                | `both_agreed`           | `match`     | `mean(1a, 1b)` (atenúa redondeos) |
-| 1a y 1b discrepan                           | `contract_line_match`   | `mismatch`  | **prevalece 1a** + reason     |
-| Solo 1a                                     | `contract_line_match`   | `only_1a`   | 1a                           |
-| Solo 1b                                     | `pdf_inference`         | `only_1b`   | 1b                           |
-| Ni 1a ni 1b, hay declarado                  | `albaran_declared`      | `neither`   | declarado                    |
-| Ni 1a ni 1b, calculable de imp/cant         | `albaran_calculated`    | `neither`   | importe / cantidad           |
-| Nada                                        | `none`                  | `neither`   | `null`                       |
+Los valores leídos se sanean antes de decidir: un **0 leído es una celda
+vacía**, no un precio de 0 € (`importe_albaran_cero_ignorado`,
+`precio_declarado_cero_ignorado`). Y el importe es *derivable* solo si hay
+cantidad ≠ 0 y el descuento no es del 100 %
+(`importe_leido_sin_cantidad_no_derivable`, `descuento_100_no_derivable`).
 
-> **Regla de oro**: si la IA encontró línea exacta en la **tabla del contrato** (1a),
-> esa manda incluso por encima del PDF (1b). El cliente prefiere fiarse de los datos
-> estructurados del ERP.
+| Prioridad | Caso                                              | source                | agreement  | final_price |
+|---|---------------------------------------------------|-----------------------|------------|-------------|
+| 1 | Unitario declarado (≠0) + importe derivable que **coincide** | `albaran_declared`   | `neither`  | **declarado** + reason `albaran_unitario_manda_derivado_coincide` |
+| 1 | Unitario declarado (≠0) + importe derivable que **discrepa** | `albaran_declared`   | **`mismatch`** | **declarado** + reason `unitario_declarado_vs_derivado_mismatch:<d>!=<x>` |
+| 1 | Unitario declarado (≠0), importe ausente o no derivable | `albaran_declared`   | `neither`  | declarado + reason `albaran_unitario_declarado_manda` |
+| 2 | Sin unitario declarado, importe derivable          | `albaran_calculated`  | `neither`  | `importe / (cantidad × (1 − dto/100))` — unitario **BRUTO** |
+| 3 | Sin valores leídos: 1a y 1b dentro de tolerancia   | `both_agreed`         | `match`    | `mean(1a, 1b)` (atenúa redondeos) |
+| 3 | Sin valores leídos: 1a y 1b discrepan              | `contract_line_match` | `mismatch` | **prevalece 1a** + reason |
+| 3 | Sin valores leídos: solo 1a                        | `contract_line_match` | `only_1a`  | 1a |
+| 3 | Sin valores leídos: solo 1b                        | `pdf_inference`       | `only_1b`  | 1b |
+| 3 | Nada                                               | `none`                | `neither`  | `null` |
+
+`line_already_valued=True` ya no es una rama aparte: con la regla de jul 2026
+ese es el comportamiento general, así que solo deja su reason de trazabilidad.
+
+> **El derivado es BRUTO, no neto.** La fórmula canónica del importe es
+> `cantidad × unitario × (1 − dto/100)`; despejar sin deshacer el descuento
+> daría el unitario neto y el descuento se aplicaría dos veces aguas abajo.
+
+> **Regla de oro del fallback**: si la IA encontró línea exacta en la **tabla
+> del contrato** (1a), esa manda por encima del PDF (1b). El cliente prefiere
+> fiarse de los datos estructurados del ERP.
+
+> **`agreement="mismatch"` ya no significa solo «1a y 1b discrepan»** (F-019,
+> decisión D3). Significa, literalmente, «las fuentes de precio no
+> concuerdan», y desde ago 2026 aparece también en líneas con
+> `source="albaran_declared"`: el unitario leído y el derivado del importe se
+> contradicen. En ambos casos el efecto es el mismo —la línea va a revisión
+> humana por la vía de `review_required` (§5.3)— y en ambos el precio elegido
+> es el más fiable, no la media de dos cosas que no cuadran.
 
 ### 6.2 `PartidaMatcher` — qué partida queda
 
@@ -440,12 +469,31 @@ calc          = round(calc_bruto × (1 - descuento_apl/100), 2)
 
 Tolerancia con `importe_albaran_declarado` (configurable, default 5%):
 - Coincide → se usa el **declarado** (más fiel al documento fuente).
-- No coincide → se usa el calculado y reason `declared_vs_calculated_mismatch`.
+- No coincide → **también se usa el declarado**, con reason
+  `declared_vs_calculated_mismatch:<declarado>!=<calculado>` para revisión.
+  Es la regla de jul 2026 —lo leído en el albarán no se pisa— y era lo único
+  que impedía que un precio de contrato tipo PA generase importes
+  disparatados. *(Este párrafo decía «se usa el calculado» desde jul 2026:
+  describía el comportamiento anterior al cambio. Corregido en F-019.)*
+
+Un **importe declarado igual a 0** se trata como AUSENTE (celda vacía), con
+reason `importe_declarado_cero_ignorado`. Un `descuento_pct` fuera de [0,100]
+no se aplica y deja `descuento_fuera_de_rango_ignorado:<valor>`.
+
+> **`importe_albaran_declarado` es el importe efectivo que entrega sv5**: el
+> `precio_neto` leído de la línea si existe (que YA es el importe tras
+> descuento) y, si no, `cantidad × precio × (1 − dto/100)`. Ver §6.1 y la
+> regla 13 de `docs/ARCHITECTURE.md`.
 
 Casos especiales:
-- `cantidad = 0` → importe = 0.
-- `cantidad > 0` y `precio = null` → importe `null` (Forma C: modificador no tarifado).
-- `cantidad = null` → importe `null`.
+- `cantidad = 0` → importe = 0 (hay cantidad efectiva y precio: el cálculo
+  se hace y da 0).
+- `cantidad > 0` y `precio = null` → sin declarado, importe `null` (Forma C:
+  modificador no tarifado) con reason `no_calc_possible_and_no_declared`; con
+  declarado, se usa el declarado (`no_calc_possible_using_declared`).
+- `cantidad = null` → lo mismo: `null` si no hay declarado, declarado si lo
+  hay. La cantidad efectiva cae primero a `cantidad_albaran` cuando no hay
+  `cantidad_convertida` (reason `importe_using_albaran_quantity_fallback`).
 
 ### 6.5 `UnitCategoryGuard` — re-validación de la IA
 

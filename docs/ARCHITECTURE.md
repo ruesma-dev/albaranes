@@ -110,6 +110,37 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
 12. **Matching estricto**: un atributo sustantivo distinto (tamaño, modelo,
     tipo) ⇒ NO casar; mejor línea nueva sin precio a revisión que un precio
     equivocado con apariencia de bueno.
+13. **Precio, descuento e importe de una línea de albarán** (F-019, ago 2026).
+    `precio` es el unitario **bruto** (antes de descuento) y **`precio_neto`
+    de una línea de albarán es el IMPORTE de la línea tras descuento**, NO un
+    precio unitario — nombre histórico y engañoso, pero es la semántica que
+    aplican el prompt de IA1, el guard de consistencia de sv3, el front sv4 y
+    los clientes de Document AI / Document Intelligence. Fórmula canónica,
+    única y sin excepciones:
+    **`importe = cantidad × precio × (1 − descuento/100)`**.
+    Y **el unitario leído manda**: el importe solo se despeja
+    (`importe / (cantidad × (1 − dto/100))`) cuando el albarán no trae
+    unitario. Si ambos existen y discrepan, gana el declarado y la línea va a
+    revisión — nunca se inventa un unitario en silencio. Leer un `precio_neto`
+    como si fuera unitario multiplica el importe por la cantidad: es lo que
+    valoró en 6.238,14 € un albarán de 139,66 € (`progress/
+    prueba_local_feymaco_20260818.md`). El contrato del ERP nunca pisa un
+    valor leído del albarán: es fallback solo cuando no hay ninguno.
+    La fórmula obliga a **todo el que escriba un importe**, no solo al
+    valorador, y por eso **vive en un único sitio**:
+    `ruesma_comun.importes` (`services/albaranes-comun`), del que beben sv6
+    (`ImporteCalculator`) y sv4 (`review_repository`). Ahí viven la
+    aritmética y los rangos del descuento; la **política** —precedencia del
+    declarado, motivos de revisión, qué se persiste— es de cada servicio.
+    Quien recalcule un importe sin el factor del descuento deshace el trabajo
+    del otro: el 2026-08-18 sv6 valoró el albarán 2.137.569 en sus 139,66 €
+    correctos y el primer guardado desde el front lo dejó en 232,76 €. Y con
+    una copia en cada servicio la divergencia llega sola: antes de unificarlas
+    ya diferían en qué hacían con un descuento ilegible. Un servicio **no
+    reetiqueta** como `calculated` un importe que el albarán declara si nadie
+    ha tocado la línea, y eso se decide mirando lo que el revisor **cambió**
+    (cantidad, descuento), nunca comparando el importe guardado con el
+    recalculado: hay filas en que discrepan a propósito.
 
 ## Acceso a datos y sistemas externos
 

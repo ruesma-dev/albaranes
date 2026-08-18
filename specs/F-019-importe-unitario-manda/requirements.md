@@ -158,8 +158,17 @@ importe_de_linea = cantidad × unitario_bruto × (1 − descuento/100)
   la garantía de que vuelva a cuadrar aunque el documento traiga ruido.)*
 
 - **R18.** CUANDO se valora el albarán Feymaco **2.139.643**, el total valorado
-  debe ser **19,41 €** y no 970,50 €. *(Solo se conoce el total: verificación
-  MANUAL (humano) contra el pipeline local, ver `tasks.md` T9.)*
+  debe ser **19,41 €** y no 970,50 €. Su composición es **una línea única**:
+  código `1 11 00353`, concepto `DISCO ESPECIAL ACERO INOX. 115X1X22`,
+  cantidad `50,00`, precio `0,647`, descuento `40,0 %`, neto `19,41`, partida
+  `CI.4.18`. *(No es una deducción a partir del total: son datos **leídos y
+  verificados de dos fuentes independientes** que coinciden campo a campo —
+  el PDF `Feymaco_2139643.pdf` del lote `alvaro_17082026` y el ground truth
+  del administrativo `alvaro_17082026.xlsx`, que además expresa el descuento
+  en fracción (0,4).)* Se cubre con **tests automáticos** en las dos suites
+  (`test_f019_r18_*` en T1 para sv5 y en T6 para sv6) **y además** con la
+  verificación MANUAL (humano) contra el pipeline local (`tasks.md` T10): el
+  test no sustituye a la prueba de extremo a extremo, la acompaña.
 
 ## G5 — Regresión y documentos ya persistidos
 
@@ -190,3 +199,91 @@ importe_de_linea = cantidad × unitario_bruto × (1 − descuento/100)
   por escrito en el informe de review (exigencia `aviso`, decisión D5 de
   F-011). *(No es un checkbox que se marque N/A a secas: CHECKPOINTS.md C4
   ter.)*
+
+## G6 — El importe PERSISTIDO (round trip del 2026-08-18)
+
+Añadido tras la prueba local del humano, que midió en la BBDD
+`total_valorado = 232,76 €` en el albarán 2.137.569 **con el código de esta
+rama ya en ejecución**. sv5 y sv6 hacían lo correcto: el importe bueno se
+escribía y **otro servicio lo pisaba después**. Detalle de la causa en
+`progress/impl_F-019.md` §«Round trip 2 — el importe persistido».
+
+Ampliación de alcance declarada (regla LÍMITE DE SERVICIO de `CLAUDE.md`): la
+feature pasa de tocar **sv5 + sv6** a tocar **sv5 + sv6 + sv4**. No es una
+responsabilidad nueva —es la misma fórmula canónica del importe, aplicada en
+el otro punto del sistema que la escribe—, pero queda escrito aquí porque el
+alcance original no lo preveía.
+
+- **R23.** CUANDO sv4 recalcula el importe de una línea ya valorada —al
+  guardar el revisor los cambios del documento, al reconciliar una línea
+  contra el contrato o contra una derivada, o al editar una línea
+  sintética—, el sistema debe usar la **fórmula canónica**
+  `cantidad_efectiva × precio_unitario_final × (1 − descuento/100)`, con el
+  descuento de la línea. NUNCA `cantidad × precio` a secas. *(Era el defecto:
+  cuatro copias de la fórmula en `review_repository.py`, tres de ellas sin el
+  factor de descuento.)*
+
+- **R24.** MIENTRAS el revisor no cambie ni la cantidad ni el descuento de una
+  línea, el recálculo de sv4 NO debe modificar esa fila: ni su
+  `importe_calculado`, ni su `importe_source`. La decisión se toma
+  comparando las **ENTRADAS** (cantidad y descuento, este último ya saneado),
+  **nunca** el resultado. *(Round trip 3: comparar el importe guardado contra
+  el recalculado parece equivalente y no lo es. sv6 deja a propósito filas
+  donde el importe DECLARADO no cuadra con la fórmula —motivo
+  `declared_vs_calculated_mismatch`, regla de jul 2026: si ambos existen y
+  discrepan, gana el declarado y la línea va a revisión—; con el criterio del
+  resultado esas líneas se pisaban en el primer guardado aunque nadie las
+  tocara. Basta con que el importe impreso difiera medio céntimo del producto:
+  redondeos por línea del proveedor, descuentos en cascada.)* *(Hoy un guardado que solo
+  tocaba la partida degradaba las cinco líneas de `declared_albaran` a
+  `calculated` y les cambiaba el importe. Lo que el albarán declara no se pisa
+  sin que nadie lo haya pedido — es la misma regla de jul 2026 que ya sostiene
+  `ImporteCalculator`.)*
+
+- **R25.** El sistema debe fijar por test el **TOTAL del documento
+  persistido**, no solo el importe de una línea suelta:
+  `albaran_valuations.total_valorado` = **139,66 €** para el 2.137.569 y
+  **19,41 €** para el 2.139.643, en los dos servicios que lo escriben —sv6 al
+  valorar (`ValuationBuilder`) y sv4 al recalcular tras un guardado—. *(Este
+  es el agujero por el que se coló el fallo: los 57 tests de la feature
+  comprobaban líneas y nunca el agregado ni el valor que acaba en la
+  columna.)*
+
+## G7 — Una sola fórmula, un solo criterio (round trip 3)
+
+Añadido tras el **CHANGES_REQUESTED** del reviewer sobre `3add86e`.
+
+- **R27.** El sistema debe tener **una única implementación** de la fórmula
+  canónica del importe y del saneamiento del descuento, en
+  `services/albaranes-comun` (`ruesma_comun.importes`), consumida por los dos
+  servicios que escriben importes: sv6 (`ImporteCalculator`) y sv4
+  (`review_repository`). *(`CLAUDE.md`, LÍMITE DE SERVICIO: «la lógica
+  compartida va a `services/albaranes-comun`, **nunca copiada entre
+  servicios**». No es teórico: con una copia en cada sitio, las dos ya
+  divergían en qué hacían con un descuento ilegible —`None` en sv4,
+  `ValueError` en sv6—, en qué dejaban escrito y en dónde ponían el borde del
+  cero.)*
+
+- **R28.** La **política** de cada servicio NO se comparte: la precedencia
+  declarado-vs-calculado, los motivos de revisión y qué se persiste en
+  `descuento_albaran_aplicado` siguen siendo de quien los aplica.
+  `ruesma_comun` decide aritmética y rangos; nada más. *(sv6 persiste `0.0`
+  para un descuento del 0 % y sv4 persiste `NULL`: son decisiones distintas
+  sobre el mismo dato, y las dos son correctas en su servicio.)*
+
+- **R29.** El cableado que traduce lo que el revisor guarda en las entradas
+  del recálculo debe estar cubierto por test. Las cantidades se filtran por
+  `is not None`; los descuentos **no**, porque `None` significa «el revisor ha
+  borrado el descuento» y debe llegar al recálculo. *(Escribir el segundo
+  como el primero es un cambio de una palabra que devolvería el incidente
+  entero y en silencio.)*
+
+- **R26.** El total valorado que se persiste debe ser una cantidad monetaria
+  redondeada a 2 decimales, **lo escriba quien lo escriba**. sv6 ya lo hacía
+  (`ValuationBuilder._build_header`); el `SUM()` de sv4 no, así que el mismo
+  documento acababa con un total distinto según cuál de los dos lo hubiera
+  escrito el último. *(El riesgo no es teórico: un barrido de 20.000
+  documentos de cinco líneas con importes de dos decimales da cola binaria en
+  2.275 de ellos —11 %—; p. ej. `549,34+882,62+818,64+863,26+278,86` da
+  `3392.7200000000003`. El de Feymaco no la tiene por suerte, y por eso R26 se
+  vigila con una fixture aparte.)*
