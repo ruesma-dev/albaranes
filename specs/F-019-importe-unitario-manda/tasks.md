@@ -20,7 +20,7 @@ en `sys.modules`.
 
 ---
 
-- [ ] **T1**: Crear la rama y la suite de sv5 en **RED**:
+- [x] **T1**: Crear la rama y la suite de sv5 en **RED**:
       `services/albaran-valoracion-api/tests/conftest.py` (ancla `sys.path`)
       y `tests/test_f019_r4_r7_importe_select.py`, que ejecuta
       `_SQL_ALBARAN_LINES` contra `create_engine("sqlite://")` con la tabla
