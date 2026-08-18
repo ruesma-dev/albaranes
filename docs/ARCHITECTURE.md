@@ -126,6 +126,14 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
     valoró en 6.238,14 € un albarán de 139,66 € (`progress/
     prueba_local_feymaco_20260818.md`). El contrato del ERP nunca pisa un
     valor leído del albarán: es fallback solo cuando no hay ninguno.
+    La fórmula obliga a **todo el que escriba un importe**, no solo al
+    valorador: sv6 la aplica en `ImporteCalculator` y sv4 en
+    `review_repository._importe_de_linea` cuando el revisor guarda. Quien
+    recalcule un importe sin el factor del descuento deshace el trabajo del
+    otro: el 2026-08-18 sv6 valoró el albarán 2.137.569 en sus 139,66 €
+    correctos y el primer guardado desde el front lo dejó en 232,76 €. Un
+    servicio **no reetiqueta** como `calculated` un importe que el albarán
+    declara si nadie ha tocado la línea.
 
 ## Acceso a datos y sistemas externos
 
