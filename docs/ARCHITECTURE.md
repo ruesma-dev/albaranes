@@ -127,13 +127,20 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
     prueba_local_feymaco_20260818.md`). El contrato del ERP nunca pisa un
     valor leído del albarán: es fallback solo cuando no hay ninguno.
     La fórmula obliga a **todo el que escriba un importe**, no solo al
-    valorador: sv6 la aplica en `ImporteCalculator` y sv4 en
-    `review_repository._importe_de_linea` cuando el revisor guarda. Quien
-    recalcule un importe sin el factor del descuento deshace el trabajo del
-    otro: el 2026-08-18 sv6 valoró el albarán 2.137.569 en sus 139,66 €
-    correctos y el primer guardado desde el front lo dejó en 232,76 €. Un
-    servicio **no reetiqueta** como `calculated` un importe que el albarán
-    declara si nadie ha tocado la línea.
+    valorador, y por eso **vive en un único sitio**:
+    `ruesma_comun.importes` (`services/albaranes-comun`), del que beben sv6
+    (`ImporteCalculator`) y sv4 (`review_repository`). Ahí viven la
+    aritmética y los rangos del descuento; la **política** —precedencia del
+    declarado, motivos de revisión, qué se persiste— es de cada servicio.
+    Quien recalcule un importe sin el factor del descuento deshace el trabajo
+    del otro: el 2026-08-18 sv6 valoró el albarán 2.137.569 en sus 139,66 €
+    correctos y el primer guardado desde el front lo dejó en 232,76 €. Y con
+    una copia en cada servicio la divergencia llega sola: antes de unificarlas
+    ya diferían en qué hacían con un descuento ilegible. Un servicio **no
+    reetiqueta** como `calculated` un importe que el albarán declara si nadie
+    ha tocado la línea, y eso se decide mirando lo que el revisor **cambió**
+    (cantidad, descuento), nunca comparando el importe guardado con el
+    recalculado: hay filas en que discrepan a propósito.
 
 ## Acceso a datos y sistemas externos
 

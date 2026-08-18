@@ -225,7 +225,16 @@ alcance original no lo preveía.
 
 - **R24.** MIENTRAS el revisor no cambie ni la cantidad ni el descuento de una
   línea, el recálculo de sv4 NO debe modificar esa fila: ni su
-  `importe_calculado`, ni su `importe_source`. *(Hoy un guardado que solo
+  `importe_calculado`, ni su `importe_source`. La decisión se toma
+  comparando las **ENTRADAS** (cantidad y descuento, este último ya saneado),
+  **nunca** el resultado. *(Round trip 3: comparar el importe guardado contra
+  el recalculado parece equivalente y no lo es. sv6 deja a propósito filas
+  donde el importe DECLARADO no cuadra con la fórmula —motivo
+  `declared_vs_calculated_mismatch`, regla de jul 2026: si ambos existen y
+  discrepan, gana el declarado y la línea va a revisión—; con el criterio del
+  resultado esas líneas se pisaban en el primer guardado aunque nadie las
+  tocara. Basta con que el importe impreso difiera medio céntimo del producto:
+  redondeos por línea del proveedor, descuentos en cascada.)* *(Hoy un guardado que solo
   tocaba la partida degradaba las cinco líneas de `declared_albaran` a
   `calculated` y les cambiaba el importe. Lo que el albarán declara no se pisa
   sin que nadie lo haya pedido — es la misma regla de jul 2026 que ya sostiene
@@ -239,6 +248,35 @@ alcance original no lo preveía.
   es el agujero por el que se coló el fallo: los 57 tests de la feature
   comprobaban líneas y nunca el agregado ni el valor que acaba en la
   columna.)*
+
+## G7 — Una sola fórmula, un solo criterio (round trip 3)
+
+Añadido tras el **CHANGES_REQUESTED** del reviewer sobre `3add86e`.
+
+- **R27.** El sistema debe tener **una única implementación** de la fórmula
+  canónica del importe y del saneamiento del descuento, en
+  `services/albaranes-comun` (`ruesma_comun.importes`), consumida por los dos
+  servicios que escriben importes: sv6 (`ImporteCalculator`) y sv4
+  (`review_repository`). *(`CLAUDE.md`, LÍMITE DE SERVICIO: «la lógica
+  compartida va a `services/albaranes-comun`, **nunca copiada entre
+  servicios**». No es teórico: con una copia en cada sitio, las dos ya
+  divergían en qué hacían con un descuento ilegible —`None` en sv4,
+  `ValueError` en sv6—, en qué dejaban escrito y en dónde ponían el borde del
+  cero.)*
+
+- **R28.** La **política** de cada servicio NO se comparte: la precedencia
+  declarado-vs-calculado, los motivos de revisión y qué se persiste en
+  `descuento_albaran_aplicado` siguen siendo de quien los aplica.
+  `ruesma_comun` decide aritmética y rangos; nada más. *(sv6 persiste `0.0`
+  para un descuento del 0 % y sv4 persiste `NULL`: son decisiones distintas
+  sobre el mismo dato, y las dos son correctas en su servicio.)*
+
+- **R29.** El cableado que traduce lo que el revisor guarda en las entradas
+  del recálculo debe estar cubierto por test. Las cantidades se filtran por
+  `is not None`; los descuentos **no**, porque `None` significa «el revisor ha
+  borrado el descuento» y debe llegar al recálculo. *(Escribir el segundo
+  como el primero es un cambio de una palabra que devolvería el incidente
+  entero y en silencio.)*
 
 - **R26.** El total valorado que se persiste debe ser una cantidad monetaria
   redondeada a 2 decimales, **lo escriba quien lo escriba**. sv6 ya lo hacía

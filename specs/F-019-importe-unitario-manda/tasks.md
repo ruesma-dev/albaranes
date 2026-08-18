@@ -182,6 +182,37 @@ pisa después. Tareas del round trip:
 
 ---
 
+## Round trip 3 (2026-08-18) — CHANGES_REQUESTED del reviewer
+
+Tres cambios sobre `3add86e`, los tres aplicados (decisión del humano,
+incluido el 2, que el reviewer dejaba a su elección).
+
+- [x] **T18**: **RED** → fix de R24. `sin_cambios` decidía por el RESULTADO
+      (importe guardado vs recalculado) en vez de por las ENTRADAS. Test
+      primero con la sonda del reviewer —línea `declared_albaran` con
+      declarado ≠ recálculo— y después el arreglo: comparar cantidad,
+      cantidad convertida y descuento **saneado**.
+      | Verificación: 6 tests nuevos en sv4; la sonda pasa de 60,00 a 100,00.
+
+- [x] **T19**: R27/R28 — la fórmula canónica y el saneado del descuento a
+      `services/albaranes-comun` (`ruesma_comun/importes.py`), consumidos por
+      sv4 y sv6. La política de cada servicio se queda donde estaba.
+      | Verificación: 49 tests en `comun`; tests de **identidad** en sv4 y sv6
+      que fallan si alguno vuelve a tener copia propia.
+
+- [x] **T20**: R29 — el cableado `payload → recálculo` a dos métodos con
+      nombre (`_cantidades_del_payload`, `_descuentos_del_payload`) y sus
+      tests, incluida la asimetría del filtrado de `None`.
+      | Verificación: 7 tests nuevos en sv4.
+
+- [x] **T21**: `bash harness/init.sh` en verde con la puerta de cobertura y
+      campaña de mutación rehecha, todo **en serie** (el reviewer midió que
+      lanzarlo en paralelo tumba `init.sh` en Windows por presión de
+      recursos).
+      | Verificación: `ENTORNO LISTO` + `PUERTA COBERTURA` en OK.
+
+---
+
 ## Trazabilidad requisito → tarea
 
 | R | Tarea |
@@ -197,3 +228,6 @@ pisa después. Tareas del round trip:
 | R23, R24 | T14 (RED) → T15 |
 | R25 | T13 (tramo sv6) + T14 (tramo sv4) |
 | R26 | T13 (RED) → T16 |
+| R24 (reformulado: por entradas) | T18 (RED) → T18 |
+| R27, R28 | T19 |
+| R29 | T20 |
