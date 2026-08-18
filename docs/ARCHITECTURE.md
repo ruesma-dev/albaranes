@@ -110,6 +110,22 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
 12. **Matching estricto**: un atributo sustantivo distinto (tamaño, modelo,
     tipo) ⇒ NO casar; mejor línea nueva sin precio a revisión que un precio
     equivocado con apariencia de bueno.
+13. **Precio, descuento e importe de una línea de albarán** (F-019, ago 2026).
+    `precio` es el unitario **bruto** (antes de descuento) y **`precio_neto`
+    de una línea de albarán es el IMPORTE de la línea tras descuento**, NO un
+    precio unitario — nombre histórico y engañoso, pero es la semántica que
+    aplican el prompt de IA1, el guard de consistencia de sv3, el front sv4 y
+    los clientes de Document AI / Document Intelligence. Fórmula canónica,
+    única y sin excepciones:
+    **`importe = cantidad × precio × (1 − descuento/100)`**.
+    Y **el unitario leído manda**: el importe solo se despeja
+    (`importe / (cantidad × (1 − dto/100))`) cuando el albarán no trae
+    unitario. Si ambos existen y discrepan, gana el declarado y la línea va a
+    revisión — nunca se inventa un unitario en silencio. Leer un `precio_neto`
+    como si fuera unitario multiplica el importe por la cantidad: es lo que
+    valoró en 6.238,14 € un albarán de 139,66 € (`progress/
+    prueba_local_feymaco_20260818.md`). El contrato del ERP nunca pisa un
+    valor leído del albarán: es fallback solo cuando no hay ninguno.
 
 ## Acceso a datos y sistemas externos
 

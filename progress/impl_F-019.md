@@ -138,3 +138,29 @@ partidas alzadas, R13 ceros, R14 derivaciones imposibles, R15 descuento fuera
 de rango) más R9: describen lo que NO debía cambiar, y estaban verdes ANTES y
 DESPUÉS. Que R9 pase en ambos lados es el resultado esperado: sin unitario
 declarado, la vieja prioridad 1 y la nueva prioridad 2 hacen lo mismo.
+
+### RED 3 — la semántica no estaba escrita donde se consume (R3)
+
+Comando exacto (desde la raíz del monorepo):
+
+```
+python -m pytest tests/test_f019_r1_r2_r3_semantica_precio_neto.py -q --tb=short
+```
+
+Salida antes de escribir la regla 13 de `docs/ARCHITECTURE.md`:
+
+```
+.....F                                                                   [100%]
+================================== FAILURES ===================================
+_______ test_f019_r3_architecture_documenta_la_semantica_de_precio_neto _______
+tests\test_f019_r1_r2_r3_semantica_precio_neto.py:141: in test_f019_r3_architecture_documenta_la_semantica_de_precio_neto
+    assert "`precio_neto` de una línea de albarán es el IMPORTE" in arquitectura
+E   AssertionError: assert '`precio_neto` de una línea de albarán es el IMPORTE' in '<!-- docs/ARCHITECTURE.md --> # Arquitectura · albaranes (monorepo) > Este documento es NORMATIVO: el spec-author dis...ionados; los valores reales viven en `infra/*.local.ps1` (gitignored). - `.env` nunca viaja: ni a git ni a una imagen.'
+=========================== short test summary info ===========================
+FAILED tests/test_f019_r1_r2_r3_semantica_precio_neto.py::test_f019_r3_architecture_documenta_la_semantica_de_precio_neto
+1 failed, 5 passed in 0.24s
+```
+
+Los 5 verdes son R1 (el prompt de IA1 ya definía bien el campo: el equivocado
+era el consumidor) y R2 (sv5, ya corregido en T2). Es exactamente el reparto
+que sostiene la decisión D1 de la spec.

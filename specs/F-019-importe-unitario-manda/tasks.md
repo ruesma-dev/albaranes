@@ -59,7 +59,7 @@ en `sys.modules`.
       `_match` **sin cambios**.
       | Verificación: suite de sv6 en VERDE (`test_f019_r8_*` … `_r15_*`).
 
-- [ ] **T5**: Test de contrato cruzado del monorepo:
+- [x] **T5**: Test de contrato cruzado del monorepo:
       `tests/test_f019_r1_r2_r3_semantica_precio_neto.py`. **Lee ficheros
       como texto** (`yaml.safe_load` del prompt, lectura plana del `.py` de
       sv5) — NO importa paquetes de sv5/sv6, para no romper la suite raíz:
