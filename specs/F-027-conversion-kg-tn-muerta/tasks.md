@@ -43,7 +43,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       `services/albaran-valoracion-persist` en verde, + traza del fallo
       provocado en `progress/impl_F-027.md`.
 
-- [ ] **T2**: **RED de verdad** — el defecto, a través del builder:
+- [x] **T2**: **RED de verdad** — el defecto, a través del builder:
       `tests/test_f027_r1_r2_r11_r13_builder.py`. Compone `ValuationBuilder`
       con sus cinco colaboradores reales (`UnitCategoryGuard`,
       `PriceReconciler(tolerance_pct=2.0)`, `PartidaMatcher(alm_codigo_partida="ALM")`,
