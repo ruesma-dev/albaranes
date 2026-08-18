@@ -1,5 +1,9 @@
 # tests/test_f019_r16_r17_feymaco.py
-"""F-019 · R16-R17: el albaran Feymaco 2.137.569, linea a linea.
+"""F-019 · R16-R18: los albaranes Feymaco del incidente, linea a linea.
+
+Los dos del lote ``alvaro_17082026``: el **2.137.569** (cinco lineas,
+139,66 EUR) en R16/R17 y el **2.139.643** (una linea, 19,41 EUR) en R18,
+al final del fichero.
 
 Ferreteria, contrato CTSU24/0454, 40 % de descuento en las cinco lineas.
 Total impreso: **139,66 EUR**. En la prueba local del 2026-08-18
@@ -169,3 +173,90 @@ def test_f019_r16_con_el_importe_inflado_la_linea_1_habria_ido_a_revision(
 
     assert reconciliacion.final_price == pytest.approx(0.543)
     assert reconciliacion.agreement == "mismatch"
+
+
+# --------------------------------------------------------------------- #
+# R18 — el segundo albaran del incidente: Feymaco 2.139.643
+#
+# Linea UNICA del albaran, TRANSCRITA de dos fuentes independientes que
+# coinciden campo a campo (no es una reconstruccion aritmetica a partir
+# del total):
+#
+#   * el PDF ``Feymaco_2139643.pdf`` del lote ``alvaro_17082026``:
+#     codigo "1 11 00353", concepto "DISCO ESPECIAL ACERO INOX.
+#     115X1X22", cantidad 50,00, precio 0,647, dto 40,0, neto 19,41;
+#   * el ground truth del administrativo
+#     (``alvaro_17082026.xlsx``): misma fila, con partida CI.4.18 y el
+#     descuento expresado en fraccion (0,4).
+#
+# La prueba local del 2026-08-18 registro este albaran valorado en
+# 970,50 EUR (= 50 x 19,41): el importe leido multiplicado por la
+# cantidad, igual que en el 2.137.569.
+#
+# COMENTARIO CRUZADO: la misma fixture, con los mismos numeros, esta en
+# la suite de sv5 (test_f019_r4_r7_importe_select.py).
+# --------------------------------------------------------------------- #
+#: Mismo formato que LINEAS_2137569, para reutilizar _valorar_linea.
+LINEA_2139643 = (
+    1, "DISCO ESPECIAL ACERO INOX. 115X1X22", 50.0, 0.647, 40.0, 19.41,
+)
+
+#: Total impreso en el albaran 2.139.643.
+TOTAL_2139643 = 19.41
+
+#: Total que producia el pipeline antes de F-019.
+TOTAL_2139643_INFLADO = 970.50
+
+
+def test_f019_r18_el_albaran_2139643_conserva_su_unitario_leido(
+    reconciliador, calculador_importe,
+):
+    """El unitario 0,647 del papel manda; el contrato no entra."""
+    reconciliacion, _ = _valorar_linea(
+        reconciliador, calculador_importe, LINEA_2139643,
+    )
+
+    assert reconciliacion.final_price == pytest.approx(0.647)
+    assert reconciliacion.source == "albaran_declared"
+    assert reconciliacion.agreement != "mismatch"
+    assert reconciliacion.final_price != pytest.approx(
+        PRECIO_CONTRATO_RUIDOSO
+    )
+
+
+def test_f019_r18_el_albaran_2139643_vale_1941_euros(
+    reconciliador, calculador_importe,
+):
+    """Total valorado 19,41 EUR, no los 970,50 EUR del 18-08."""
+    _, importe = _valorar_linea(
+        reconciliador, calculador_importe, LINEA_2139643,
+    )
+
+    total = round(importe.importe_calculado, 2)
+    assert total == pytest.approx(TOTAL_2139643)
+    assert total != pytest.approx(TOTAL_2139643_INFLADO)
+
+
+def test_f019_r18_el_importe_del_2139643_tambien_sale_del_calculo(
+    reconciliador, calculador_importe,
+):
+    """Sin importe declarado, el calculo desde cantidad x precio x
+    (1 - dto/100) da el mismo 19,41.
+
+    Cierra el hueco que el reviewer senalo en el test equivalente de
+    R16: aqui el importe NO se le regala al ``ImporteCalculator`` por la
+    entrada, se computa.
+    """
+    _, _, cantidad, precio, descuento, esperado = LINEA_2139643
+
+    importe = calculador_importe.compute(
+        cantidad_convertida=cantidad,
+        cantidad_albaran=cantidad,
+        precio_unitario_final=precio,
+        importe_albaran_declarado=None,
+        descuento_pct=descuento,
+    )
+
+    assert importe.importe_calculado == pytest.approx(esperado)
+    assert importe.importe_source == "calculated"
+    assert importe.importe_calculado != pytest.approx(TOTAL_2139643_INFLADO)

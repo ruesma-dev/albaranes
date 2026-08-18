@@ -1,5 +1,10 @@
 # tests/test_f019_r4_r7_importe_select.py
-"""F-019 · R4-R7 (+ tramo sv5 de R16): el importe leido no se multiplica.
+"""F-019 · R4-R7 (+ tramo sv5 de R16 y R18): el importe leido no se
+multiplica.
+
+Los dos albaranes del lote ``alvaro_17082026`` estan al final del
+fichero: el **2.137.569** (cinco lineas, 139,66 EUR) en R16 y el
+**2.139.643** (una linea, 19,41 EUR) en R18.
 
 ``_SQL_ALBARAN_LINES`` es SQL estandar (``COALESCE``, aritmetica,
 ``ORDER BY``): se ejecuta TAL CUAL contra SQLite en memoria con la tabla
@@ -281,3 +286,64 @@ def test_f019_r5_sin_precio_neto_ni_precio_pero_con_cantidad_nula(motor):
     )
 
     assert filas[0]["importe_albaran"] is None
+
+
+# --------------------------------------------------------------------- #
+# R18 — el segundo albaran del incidente: Feymaco 2.139.643
+#
+# Linea UNICA del albaran, TRANSCRITA de dos fuentes independientes que
+# coinciden campo a campo (no es una reconstruccion aritmetica):
+#
+#   * el PDF ``Feymaco_2139643.pdf`` del lote ``alvaro_17082026``:
+#     codigo "1 11 00353", concepto "DISCO ESPECIAL ACERO INOX.
+#     115X1X22", cantidad 50,00, precio 0,647, dto 40,0, neto 19,41;
+#   * el ground truth del administrativo
+#     (``alvaro_17082026.xlsx``): misma fila, con partida CI.4.18 y el
+#     descuento expresado en fraccion (0,4).
+#
+# Bajo el bug de jun 2026 el SELECT entregaba 50 x 19,41 = 970,50 EUR,
+# que es el total que registro la prueba local del 2026-08-18.
+#
+# COMENTARIO CRUZADO: la misma fixture, con los mismos numeros, esta en
+# la suite de sv6 (test_f019_r16_r17_feymaco.py). Los dos tramos de la
+# cadena no pueden importarse en la misma sesion de pytest.
+# --------------------------------------------------------------------- #
+#: (concepto, cantidad, precio, descuento, importe)
+LINEA_2139643 = (
+    "DISCO ESPECIAL ACERO INOX. 115X1X22", 50.0, 0.647, 40.0, 19.41,
+)
+
+#: Total que producia el pipeline antes de F-019.
+TOTAL_2139643_INFLADO = 970.50
+
+
+def test_f019_r18_el_albaran_2139643_vale_1941_euros(motor):
+    """19,41 EUR, no 970,50: 50 ud x 0,647 con 40 % de descuento."""
+    concepto, cantidad, precio, descuento, importe = LINEA_2139643
+    filas = _ejecutar_select(
+        motor,
+        [{"codigo": "1 11 00353", "concepto": concepto,
+          "cantidad": cantidad, "precio": precio, "descuento": descuento,
+          "precio_neto": importe, "codigo_imputacion": "CI.4.18"}],
+    )
+
+    assert filas[0]["importe_albaran"] == pytest.approx(19.41)
+    assert filas[0]["importe_albaran"] != pytest.approx(TOTAL_2139643_INFLADO)
+    assert filas[0]["descripcion"] == concepto
+    assert filas[0]["precio_unitario_albaran"] == pytest.approx(0.647)
+
+
+def test_f019_r18_la_derivacion_del_2139643_coincide_con_su_neto(motor):
+    """Sin ``precio_neto``, la formula canonica da el mismo 19,41.
+
+    Es la prueba de que el dato transcrito y la formula del dominio
+    cuadran entre si: 50 x 0,647 x 0,6 = 19,41 exacto.
+    """
+    _, cantidad, precio, descuento, importe = LINEA_2139643
+    filas = _ejecutar_select(
+        motor,
+        [{"cantidad": cantidad, "precio": precio, "descuento": descuento,
+          "precio_neto": None}],
+    )
+
+    assert filas[0]["importe_albaran"] == pytest.approx(importe)

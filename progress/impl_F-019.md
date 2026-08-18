@@ -468,10 +468,10 @@ citan.
 
 | Evidencia | Valor | Cómo se obtuvo |
 |---|---|---|
-| **Tests ejecutados y resultado** | **248 passed** (suite raíz) + **9 passed** (sv5) + **37 passed** (sv6); **0 fallos**. De ellos, **52 son nuevos de F-019** (6 en la raíz, 9 en sv5, 37 en sv6). sv2, sv3 y `comun` en verde por caché de árbol sin cambios. | `bash harness/init.sh` (secciones 7 y 7 bis) |
+| **Tests ejecutados y resultado** | **248 passed** (suite raíz) + **11 passed** (sv5) + **40 passed** (sv6); **0 fallos**. De ellos, **57 son nuevos de F-019** (6 en la raíz, 11 en sv5, 40 en sv6), incluidos los **5 de R18** del round trip. sv2, sv3 y `comun` en verde por caché de árbol sin cambios. | `bash harness/init.sh` (secciones 7 y 7 bis) |
 | **Cobertura de las líneas cambiadas** | **100,0 % (5/5 líneas, umbral 80 %, nivel `critico`)** | línea `PUERTA COBERTURA` de `bash harness/init.sh` |
 | **Mutantes generados y supervivientes** | **4 generados, 4 muertos, 0 supervivientes, 0 timeouts** sobre 144 líneas de producción en alcance (3 ficheros) | `python -m harness.mutacion --feature F-019` → `progress/mutacion_F-019.md` |
-| **Tiempo de ejecución de la suite** | raíz **65,30 s**; sv5 **0,79 s**; sv6 **0,12 s** | salida de cada pytest en `bash harness/init.sh` |
+| **Tiempo de ejecución de la suite** | tras el round trip: raíz **94,58 s**; sv5 **1,11 s**; sv6 **0,18 s**. (Antes del round trip: 65,30 / 0,79 / 0,12 s — la diferencia de la raíz es ruido de máquina, no de los 5 tests nuevos, que viven en sv5 y sv6 y cuestan centésimas.) | salida de cada pytest en `bash harness/init.sh` |
 
 Sobre los 4 mutantes: es un número bajo *porque el diff lo es*. De las 144
 líneas en alcance, el grueso son comentarios y docstrings (la corrección
@@ -495,3 +495,109 @@ pendiente**.
 ----------------------------------------
 ENTORNO LISTO. Puedes trabajar.
 ```
+
+---
+
+## Round trip de review — R18 con test automático
+
+`progress/review_F-019.md`: **CHANGES_REQUESTED por un solo punto**. El fondo
+técnico (corrección de sv5, precedencia de sv6, protección contra partidas
+alzadas, mutación y puerta de rutas sensibles) quedó verificado contra el diff
+real. Lo que faltaba:
+
+> **R18 no tenía ningún test automático.** `grep` sobre todos los `.py` del
+> repositorio: cero apariciones de `19.41`, `970.50`, `2139643` o `0.647`. El
+> segundo albarán del incidente —el que abre el diagnóstico del 18-08— no
+> tenía red de seguridad de ninguna clase.
+
+Tenía razón, y el reviewer además señaló la incoherencia que lo delataba: el
+guion MANUAL de §T10 afirmaba «50 ud × 0,647 con 40 % → 19,41 €» mientras la
+spec decía que de ese albarán «solo se conoce el total». Las dos cosas a la
+vez, no.
+
+### Qué se añadió
+
+| Suite | Test | Comprueba |
+|---|---|---|
+| sv5 | `test_f019_r18_el_albaran_2139643_vale_1941_euros` | `_SQL_ALBARAN_LINES` sobre la fila real ⇒ `importe_albaran == 19.41`, `!= 970.50`, con su concepto y su unitario |
+| sv5 | `test_f019_r18_la_derivacion_del_2139643_coincide_con_su_neto` | sin `precio_neto`, la fórmula canónica da el mismo 19,41 (50 × 0,647 × 0,6 exacto) |
+| sv6 | `test_f019_r18_el_albaran_2139643_conserva_su_unitario_leido` | `final_price == 0.647`, `source == "albaran_declared"`, `agreement != "mismatch"`, y el precio de contrato ruidoso no entra |
+| sv6 | `test_f019_r18_el_albaran_2139643_vale_1941_euros` | encadenando `ImporteCalculator` ⇒ `importe_calculado == 19.41`, `!= 970.50` |
+| sv6 | `test_f019_r18_el_importe_del_2139643_tambien_sale_del_calculo` | el importe se **calcula** (sin declarado que se lo regale) y sale 19,41 con `importe_source == "calculated"` |
+
+El último cubre de paso la observación no bloqueante nº 1 del reviewer: en el
+test equivalente de R16, el `ImporteCalculator` recibe el importe declarado y
+lo prefiere, así que esa mitad del aserto es en parte tautológica. Aquí no.
+
+### Corrección al informe del reviewer: los números NO son una reconstrucción
+
+El reviewer pedía documentar la fixture como «reconstrucción aritmética a
+partir del total conocido (`970,50 / 19,41 = 50`)». **No hace falta deducir
+nada**: la composición de esa línea es un dato **leído y verificado por el
+líder de dos fuentes independientes que coinciden campo a campo**:
+
+- el PDF `Feymaco_2139643.pdf` del lote `alvaro_17082026` — línea única,
+  código `1 11 00353`, concepto `DISCO ESPECIAL ACERO INOX. 115X1X22`,
+  cantidad `50,00`, precio `0,647`, dto `40,0`, neto `19,41`;
+- el ground truth del administrativo `alvaro_17082026.xlsx` — misma fila, con
+  partida `CI.4.18` y el descuento expresado en fracción (`0,4`).
+
+Los docstrings de los tests nuevos lo dicen así, con las dos fuentes citadas,
+y la nota de R18 en `requirements.md` se reescribió en el mismo sentido: la
+composición es transcripción, no deducción. Es una diferencia que importa —un
+dato deducido del propio bug no puede después usarse para juzgar el bug— y por
+eso no se copió la redacción propuesta.
+
+### Spec ajustada
+
+- `requirements.md` R18: incorpora la composición de la línea con sus dos
+  fuentes y deja de declararse «solo verificación MANUAL».
+- `tasks.md`: la tabla de trazabilidad pasa R18 de `T10 (MANUAL)` a
+  **`T1 (tramo sv5) + T6 (tramo sv6) + T10 (MANUAL)`**, y T1 y T6 recogen en
+  su enunciado la fila del 2.139.643.
+
+**T10 se mantiene intacta**: la verificación MANUAL del humano sobre el
+pipeline local sigue pendiente y sigue siendo necesaria. El test la acompaña,
+no la sustituye — comprueba las dos piezas deterministas de la cadena, no el
+extremo a extremo con IA real.
+
+### Verificación del round trip
+
+```
+python -m pytest tests -q -k "f019_r18"   (desde services/albaran-valoracion-api)
+  2 passed, 9 deselected
+python -m pytest tests -q -k "f019_r18"   (desde services/albaran-valoracion-persist)
+  3 passed, 37 deselected
+
+bash harness/init.sh
+  sv5: 11 passed · sv6: 40 passed · raíz: 248 passed
+  [OK] PUERTA COBERTURA: 100.0% de 5 líneas cambiadas cubiertas (5/5, umbral 80%, nivel critico)
+  ENTORNO LISTO. Puedes trabajar.
+```
+
+No se tocó nada más de la feature: el resto lo dio por bueno el reviewer. En
+particular, **no se tocó ningún fichero de producción** en este round trip —
+solo tests, spec y documentación—, así que la campaña de mutación de T8 sigue
+siendo válida sobre el mismo código (4 mutantes, 0 supervivientes) y la puerta
+de rutas sensibles no cambia de estado.
+
+### Observaciones no bloqueantes del reviewer, no aplicadas
+
+Las tres son correctas y ninguna es de esta feature; se dejan anotadas para
+que el humano decida, en vez de colarlas en un round trip acotado:
+
+1. La mitad tautológica de `test_f019_r16_cada_linea_conserva_su_unitario_y_su_importe`
+   — mitigada de hecho por el tercer test de R18, que sí calcula el importe.
+2. La descripción de `price_tolerance_pct` en `config/settings.py:48` («para
+   considerar que precio 1a y 1b coinciden») se quedó corta: esa tolerancia
+   gobierna además el contraste declarado-vs-derivado. Ya era así antes de
+   F-019, así que no es regresión de esta feature.
+3. `TOLERANCIA_PRECIO_PCT` / `TOLERANCIA_IMPORTE_PCT` del `conftest.py` de sv6
+   están fijados a mano (2.0 y 5.0, comprobados contra los defaults reales) y
+   nada avisaría si alguien cambiara el default. Un test de tres líneas lo
+   cerraría.
+
+También queda para el humano su **propuesta de mejora del protocolo**:
+extender la prueba de control de C4 bis de «si la campaña declara cero
+mutantes» a «cero mutantes **en cualquier fichero del alcance**». Si se
+acepta, es genérica y debe portarse a `arnes-base`.

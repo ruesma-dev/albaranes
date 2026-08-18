@@ -158,8 +158,17 @@ importe_de_linea = cantidad × unitario_bruto × (1 − descuento/100)
   la garantía de que vuelva a cuadrar aunque el documento traiga ruido.)*
 
 - **R18.** CUANDO se valora el albarán Feymaco **2.139.643**, el total valorado
-  debe ser **19,41 €** y no 970,50 €. *(Solo se conoce el total: verificación
-  MANUAL (humano) contra el pipeline local, ver `tasks.md` T9.)*
+  debe ser **19,41 €** y no 970,50 €. Su composición es **una línea única**:
+  código `1 11 00353`, concepto `DISCO ESPECIAL ACERO INOX. 115X1X22`,
+  cantidad `50,00`, precio `0,647`, descuento `40,0 %`, neto `19,41`, partida
+  `CI.4.18`. *(No es una deducción a partir del total: son datos **leídos y
+  verificados de dos fuentes independientes** que coinciden campo a campo —
+  el PDF `Feymaco_2139643.pdf` del lote `alvaro_17082026` y el ground truth
+  del administrativo `alvaro_17082026.xlsx`, que además expresa el descuento
+  en fracción (0,4).)* Se cubre con **tests automáticos** en las dos suites
+  (`test_f019_r18_*` en T1 para sv5 y en T6 para sv6) **y además** con la
+  verificación MANUAL (humano) contra el pipeline local (`tasks.md` T10): el
+  test no sustituye a la prueba de extremo a extremo, la acompaña.
 
 ## G5 — Regresión y documentos ya persistidos
 

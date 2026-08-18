@@ -27,6 +27,9 @@ en `sys.modules`.
       `albaran_lines_merge` creada al vuelo y las 5 filas del albarán
       2.137.569 (R16) más los casos de la matriz del design: sin
       `precio_neto` (R5), sin precio ni neto (R6), sin cantidad (R7).
+      Añadir además la línea única del albarán 2.139.643 (R18): cantidad 50,
+      precio 0,647, dto 40 %, neto 19,41 ⇒ `importe_albaran = 19.41`, nunca
+      970,50 (round trip de review; ver `progress/review_F-019.md`).
       Debe fallar con `importe_albaran = 3800.52`.
       | Verificación: `python -m pytest services/albaran-valoracion-api/tests -q`
       en ROJO, con la traza pegada en `progress/impl_F-019.md` (fase RED).
@@ -84,8 +87,12 @@ en `sys.modules`.
       (T1) con los mismos números y un comentario cruzado: es la unión de los
       dos tramos de la cadena, que no pueden importarse en la misma sesión de
       pytest.
+      Añadir también el albarán 2.139.643 (R18), de línea única: 50 ud a
+      0,647 con 40 % ⇒ `final_price = 0,647`, `source = "albaran_declared"`
+      e `importe_calculado = 19,41`, nunca 970,50 (round trip de review; ver
+      `progress/review_F-019.md`).
       | Verificación: `python -m pytest services/albaran-valoracion-persist/tests -q`
-      en verde (`test_f019_r16_*`, `_r17_*`).
+      en verde (`test_f019_r16_*`, `_r17_*`, `_r18_*`).
 
 - [x] **T7**: Documentación normativa (R3): regla nueva en
       `docs/ARCHITECTURE.md` §«Semántica de dominio imprescindible»;
@@ -140,6 +147,6 @@ en `sys.modules`.
 | R8, R9, R10 | T3 (RED) → T4 |
 | R11, R12, R13, R14, R15 | T3 → T4 (regresión) |
 | R16, R17 | T1 (tramo sv5) + T6 (tramo sv6) |
-| R18 | T10 (MANUAL) |
+| R18 | T1 (tramo sv5) + T6 (tramo sv6) + T10 (MANUAL) |
 | R19, R20, R21 | T10 punto 4 + nota en `progress/current.md` (sin código) |
 | R22 | T9 |
