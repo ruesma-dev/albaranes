@@ -136,3 +136,32 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
   precios impresos que siga valorándose por contrato); decidir qué histórico
   se revalora (R20, sin script de backfill); y **reconciliar F-003 antes de
   arrancarla**: su R4 manda conservar el cálculo que F-019 acaba de corregir.
+
+### F-019 — round trips 2 y 3 (cierre definitivo, 2026-08-18)
+
+El cierre anterior era prematuro: la prueba local del humano demostró que el
+criterio de aceptación (139,66 €) NO se cumplía. Dos round trips más:
+
+- **Round trip 2**: la causa no estaba en sv5 ni en sv6, sino en **sv4**.
+  `review_repository::_recalc_valuation_importes` recalculaba
+  `cantidad × precio` **sin descuento** y pisaba en BBDD el importe y el total
+  que sv6 había escrito bien. La pinza que lo demostró: el 2.137.569 tenía
+  `updated_at_utc` seis minutos posterior a su creación (cuando el humano lo
+  abrió en el portal) y quedaba en 232,76 €, mientras el 2.139.643 —mismo
+  código, 22 s después, nunca abierto en el front— conservaba sus 19,41 €.
+  La fórmula estaba escrita CUATRO veces en ese fichero. sv4 pasó de 0 a 44
+  tests.
+- **Round trip 3** (tres cambios exigidos por el reviewer): (1) el guardián de
+  R24 decidía por el RESULTADO, así que pisaba justo las filas que sv6 protege
+  a propósito (`declared_vs_calculated_mismatch`); ahora decide por las
+  ENTRADAS. (2) La fórmula pura se movió a **`ruesma_comun/importes.py`**
+  (regla dura de CLAUDE.md: nada de lógica copiada entre servicios), dejando
+  la política en cada servicio; al unificarlas se descubrió que **las dos
+  copias YA divergían**: un descuento ilegible reventaba sv6 con `ValueError`.
+  (3) El cableado `payload → descuento` quedó cubierto por test.
+- Evidencias finales: cobertura **93,1 %** (81/87, umbral 80); mutación 31
+  generados / 28 muertos / 3 supervivientes verificados equivalentes; suites
+  sv4 59, comun 49, sv6 53, todas ejecutadas en serie. **APPROVED en cuarta
+  pasada** (`progress/review_F-019.md` conserva los cuatro veredictos).
+- Lección para el arnés: el criterio «139,66 €» vivía solo en el guion MANUAL;
+  ningún test comprobaba el AGREGADO ni el valor PERSISTIDO. Por ahí se coló.
