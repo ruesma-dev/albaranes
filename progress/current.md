@@ -84,3 +84,45 @@ sección «T10 · Verificaciones MANUAL»**. Los cuatro puntos:
   sensibles puede subirse a `bloqueo`).
 - Del informe del 18-08 salen además F-016 (multipartida, con la lectura del
   separador «/») y la revisión del etiquetado de proveedor (F-020).
+
+---
+
+## F-019 · ROUND TRIP 2 (2026-08-18) — reabierta y corregida
+
+**Estado**: `in_progress`, rama `feature/F-019-importe-unitario-manda`,
+pendiente de reviewer. Informe completo en `progress/impl_F-019.md`
+§«Round trip 2».
+
+**Por qué se reabrió**: la prueba local del humano midió en la BBDD
+`total_valorado = 232,76 €` en el albarán Feymaco 2.137.569 (debe ser
+139,66 €), con la rama ya en ejecución. El criterio de aceptación de la
+feature no se cumplía.
+
+**Causa real**: NO era sv5 ni sv6 —los dos escribían lo correcto—, sino
+**sv4**: `review_repository::_recalc_valuation_importes` recalculaba
+`cantidad × precio` **sin el descuento** en cada guardado del revisor y
+pisaba el importe y el total que había escrito sv6. La pinza que lo
+demuestra: el 2.137.569 tiene `updated_at_utc` seis minutos posterior a su
+`created_at_utc`; el 2.139.643, valorado 22 s después con el mismo código y
+nunca abierto en el front, conserva sus 19,41 € correctos.
+
+**Qué se hizo**: alcance ampliado a sv4 (G6 de la spec, R23-R26); fórmula
+canónica única `_importe_de_linea` para los **cuatro** puntos del servicio
+que escribían un importe (tres se dejaban el descuento); el recálculo ya no
+toca las filas que nadie ha cambiado (dejaba de degradar `declared_albaran`
+a `calculated`); el total de la cabecera se redondea a 2 decimales.
+
+**Suite nueva de sv4**: el servicio no tenía tests y `init.sh` lo avisaba en
+cada pasada. Ahora tiene 44, incluido un **guardián estructural** que falla
+si alguien vuelve a escribir la multiplicación a mano.
+
+**Pendiente del humano (T17)**: revalorar los dos albaranes y, sobre todo,
+**guardar el 2.137.569 desde el front y volver a mirar el total** — que es
+justo el paso que destapó el fallo. Guion con las consultas en
+`progress/impl_F-019.md`. Y decidir si se revalora la fila que quedó en
+232,76 € en la BBDD local (no se ha escrito backfill: regla R20).
+
+**Aviso para quien retome esto**: `progress/revision_hormigones_20260818.md`
+es un fichero sin versionar de OTRA sesión. Se coló en un commit por un
+`git add -A` y se sacó acto seguido; sigue intacto en disco, sin versionar.
+Obliga a lanzar la mutación con `--workers 1`.

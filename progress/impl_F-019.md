@@ -601,3 +601,334 @@ También queda para el humano su **propuesta de mejora del protocolo**:
 extender la prueba de control de C4 bis de «si la campaña declara cero
 mutantes» a «cero mutantes **en cualquier fichero del alcance**». Si se
 acepta, es genérica y debe portarse a `arnes-base`.
+
+---
+
+# Round trip 2 (2026-08-18) — el importe PERSISTIDO
+
+La prueba local del humano midió en la BBDD, **con esta rama ya en
+ejecución**, `albaran_valuations.total_valorado = 232,76 €` en el albarán
+Feymaco 2.137.569, que vale **139,66 €**. El criterio de aceptación de la
+feature no se cumplía. F-019 se reabrió (`in_progress`, con el motivo escrito
+en `harness/features.json`) y la spec se amplió con G6 (R23–R26).
+
+## La causa real, y por qué las otras no lo eran
+
+**Causa: `services/albaranes-front/infrastructure/database/review_repository.py`
+`::_recalc_valuation_importes`.** sv4 recalcula el importe de TODAS las líneas
+de un documento cada vez que el revisor guarda —aunque no haya tocado ninguna
+cantidad— con la fórmula `cantidad × precio_unitario_final`, **sin el factor
+del descuento**, y fuerza `importe_source = 'calculated'`. Después reescribe
+`total_valorado` con un `SUM()` de esa columna. sv5 y sv6 hacían lo correcto;
+otro servicio lo pisaba seis minutos más tarde.
+
+### La prueba que lo cierra
+
+La pinza definitiva es la marca de tiempo, no el razonamiento:
+
+| Albarán | `created_at_utc` | `updated_at_utc` | Total | Estado |
+|---|---|---|---|---|
+| 2.137.569 | 13:24:26 | **13:30:31** | 232,76 € | pisado |
+| 2.139.643 | 13:24:48 | 13:24:48 | 19,41 € | intacto |
+
+Los dos se valoraron con el mismo código y con 22 s de diferencia. El único
+que salió mal es el único cuya fila fue **modificada después de crearse**: el
+que el revisor abrió y guardó en el front. El otro conserva `declared_albaran`
+y su total correcto. Consultado en la BBDD local, solo lecturas.
+
+Y explica la contradicción que abría el encargo —`importe_albaran_declarado =
+35,19` no nulo con `importe_source = 'calculated'`, imposible en
+`ImporteCalculator.compute`— porque **`compute` nunca produjo esa fila**. El
+`UPDATE` de sv4 reescribe importe y fuente pero **no toca**
+`descuento_albaran_aplicado`, `importe_albaran_declarado` ni
+`review_reasons_json`: los tres siguen siendo los que dejó sv6. De ahí el dato
+internamente contradictorio —un descuento del 40 % registrado y no aplicado,
+con el motivo `descuento_aplicado:40.0%` en los reasons— que era justamente la
+firma del culpable.
+
+### Las cuatro hipótesis del encargo, descartadas una a una
+
+1. **`albaran_line.importe_albaran` llega `None` a `compute`.** NO. Las líneas
+   1067 y 1165 de `valuation_builder.py` leen la MISMA expresión
+   (`albaran_line.importe_albaran if albaran_line else None`): si una fuera
+   `None`, la columna `importe_albaran_declarado` habría quedado nula, y vale
+   35,19. Descartada por construcción, sin necesidad de ejecutar nada.
+2. **El `descuento_pct` que llega a `compute` es `None` y el motivo
+   `descuento_aplicado:40.0%` viene del reconciliador.** NO. `price_reconciler.py`
+   no emite ese motivo en ninguna de sus ramas — sus cadenas son
+   `albaran_unitario_manda_derivado_coincide`,
+   `unitario_declarado_vs_derivado_mismatch`, `albaran_importe_manda_derivado`,
+   `descuento_100_no_derivable` e `importe_leido_sin_cantidad_no_derivable`.
+   El único emisor de `descuento_aplicado:N%` es `ImporteCalculator` (línea 121).
+3. **Un recálculo posterior pisa `importe_result`.** **SÍ — esta era.** Pero no
+   en el builder ni en el repositorio de sv6:
+   `sqlalchemy_valuation_repository.py` solo copia `line.importe_calculado` al
+   ORM (líneas 350 y 430), sin tocarlo. El recálculo estaba en **otro
+   servicio**, sv4, que no figuraba en el alcance de la feature. Es lo que hizo
+   falta ampliar.
+4. **La línea entra por otra ruta del builder.** NO. `LineValuationRecord(` se
+   construye en exactamente dos sitios de sv6 (`valuation_builder.py:1139` y
+   `:1491`); el segundo es el de líneas sintéticas y fija
+   `importe_albaran_declarado=None`, que no es el caso. Y el test de T13, que
+   hace pasar el documento entero por `ValuationBuilder.build` con
+   `match_method='no_match'`, sale en verde: la ruta con `ia_no_match` produce
+   los 35,19 correctos.
+
+### El apunte del front, comprobado
+
+Cierto que `document_detail.html:619` recalcula al vuelo y por eso el portal se
+veía bien. Pero no era una pista falsa del todo: **el front no solo pintaba
+bien un dato malo, es que además era quien lo había escrito**. La plantilla y
+el repositorio discrepaban porque solo uno de los dos aplicaba el descuento.
+
+## Qué cambió
+
+### Código de producción (1 fichero)
+
+`services/albaranes-front/infrastructure/database/review_repository.py`:
+
+| Cambio | Qué |
+|---|---|
+| `_importe_de_linea` (nuevo) | Fórmula canónica ÚNICA del servicio: `cantidad × unitario × (1 − dto/100)`, con `_sanear_descuento` alineado con `ImporteCalculator._sanitize_descuento` de sv6. |
+| Los **4** puntos que escribían un importe | Pasan a pedírselo. Tres de los cuatro se dejaban el descuento: `_recalc_valuation_importes` (el culpable), `set_line_conciliacion` y la conciliación desde la línea del merge. El cuarto (`update_line_valuation`) ya lo aplicaba y ahora comparte la fórmula. |
+| `_recalc_valuation_importes` | Recibe además el descuento nuevo del payload (`new_line_discounts`); persiste el descuento que aplica; **no toca la fila si cantidad y descuento no han cambiado** (R24); redondea el `SUM()` de la cabecera a 2 decimales (R26). |
+| `_num_iguales` (nuevo) | Decide si una fila cambia de verdad, con media unidad de céntimo de margen. |
+| Dos `SELECT` y un `INSERT` | Traen y persisten el descuento que antes no viajaba. |
+
+**sv5 y sv6 no se han tocado en este round trip.** Su corrección era correcta y
+así lo demuestra el test de T13, que pasó a la primera.
+
+### Tests (3 ficheros nuevos)
+
+| Fichero | Tests | Cubre |
+|---|---|---|
+| `services/albaranes-front/tests/test_f019_r23_r26_recalculo_importe.py` | 15 | R23, R24, R25, R26 contra SQLite en memoria |
+| `services/albaranes-front/tests/test_f019_r23_formula_canonica.py` | 29 | R23: la fórmula, el saneado del descuento, `_num_iguales` y el **guardián estructural** |
+| `services/albaran-valoracion-persist/tests/test_f019_r25_r26_total_documento.py` | 4 | R25, R26: el TOTAL por `ValuationBuilder.build` completo |
+
+Más `services/albaranes-front/tests/conftest.py`: **sv4 no tenía directorio de
+tests**. `bash harness/init.sh` lo avisaba en cada pasada («NADIE está
+comprobando los tests de sv4-front») y el aviso tenía razón — el fallo vivía
+justo ahí. Ahora corre en la sección 7 bis como los demás.
+
+### Documentación
+
+`docs/ARCHITECTURE.md` regla 13: la fórmula canónica obliga a **todo el que
+escriba un importe**, no solo al valorador, y un servicio no reetiqueta como
+`calculated` un importe que el albarán declara si nadie ha tocado la línea.
+
+## Fase RED — trazas reales
+
+### RED 4 — sv6 NO era el culpable (T13, R25)
+
+Comando exacto (desde `services/albaran-valoracion-persist`):
+
+```
+python -m pytest tests/test_f019_r25_r26_total_documento.py -q --tb=short
+```
+
+```
+....                                                                     [100%]
+4 passed in 0.49s
+```
+
+**Cuatro verdes a la primera, y ese es el hallazgo.** El test hace pasar el
+documento entero de cinco líneas por `ValuationBuilder.build` —guard,
+reconciliador, matcher, conversor, calculador de importe y cabecera— con el
+contexto medido en la BBDD (`unidad_medida` NULL, `match_method='no_match'`) y
+la cabecera sale con `total_valorado == 139.66`, igualdad exacta. sv6 ya
+escribía lo correcto y ya redondeaba su total. Sin este test, la única forma de
+saberlo era el razonamiento; con él, es una medida.
+
+### RED 5 — el pisado de sv4, reproducido (T14, R23-R26)
+
+Comando exacto (desde `services/albaranes-front`):
+
+```
+python -m pytest tests -q --tb=line
+```
+
+```
+FFFFFFF..FFFF                                                            [100%]
+================================== FAILURES ===================================
+E   assert 232.76 != 232.76 ± 2.3e-04
+     +  where 232.76 = _leer_total(<sqlalchemy.orm.session.Session object at 0x000002AB95C26390>)
+tests\test_f019_r23_r26_recalculo_importe.py:126: assert 232.76 != 232.76 ± 2.3e-04
+E   AssertionError: PAPEL HIGIENICO (SACO 108)
+    assert 58.64 != 58.64 ± 5.9e-05
+tests\test_f019_r23_r26_recalculo_importe.py:147: AssertionError: PAPEL HIGIENICO (SACO 108)
+E   AssertionError: LTS. JABON LIQUIDO PH NEUTRO
+    assert 34.22 != 34.22 ± 3.4e-05
+tests\test_f019_r23_r26_recalculo_importe.py:147: AssertionError: LTS. JABON LIQUIDO PH NEUTRO
+E   AssertionError: ROLLO PAPEL IND.
+    assert 92.71 != 92.71 ± 9.3e-05
+tests\test_f019_r23_r26_recalculo_importe.py:147: AssertionError: ROLLO PAPEL IND.
+E   AssertionError: KGS ANIL ESPECIAL FEYMACO
+    assert 21.99 != 21.99 ± 2.2e-05
+tests\test_f019_r23_r26_recalculo_importe.py:147: AssertionError: KGS ANIL ESPECIAL FEYMACO
+E   AssertionError: BOLSA BASURA 52X58
+    assert 25.2 != 25.2 ± 2.5e-05
+E   assert 54.3 == 32.58 ± 3.3e-05
+E   AssertionError: assert 'calculated' == 'declared_albaran'
+E   assert 232.76 == 139.66 ± 1.4e-04
+E   assert 3392.7200000000003 == 3392.72
+=========================== short test summary info ===========================
+11 failed, 2 passed in 0.73s
+```
+
+Los `!=` que fallan son deliberados: el test afirma «esto NO puede volver a
+salir» con el número exacto medido en la BBDD, y en RED sale **clavado** —
+232,76 de total y 58,64 / 34,22 / 92,71 / 21,99 / 25,20 por línea, con
+`importe_source` degradado a `calculated`. No es una reconstrucción del fallo:
+es el fallo.
+
+### RED 6 — el guardián estructural, contrastado contra el código anterior
+
+El test `test_f019_r23_nadie_multiplica_precio_por_cantidad_fuera_de_la_formula`
+sería un adorno si nadie comprobara que reconoce el patrón. Aplicado al fichero
+tal como estaba en `HEAD` antes del fix:
+
+```
+1443 return round(float(precio) * float(cantidad), 2)
+1702 base = float(new_precio) * float(new_cantidad)
+2013 round(float(precio) * float(cantidad), 2)
+3230 nuevo_importe = round(float(pu) * float(cantidad_efectiva), 2)
+```
+
+Las cuatro copias, incluida la culpable (3230). Además el fichero lleva una
+prueba de control (`test_f019_r23_el_guardian_detecta_de_verdad_el_patron`) que
+fija esas líneas literales como entradas que el patrón DEBE reconocer.
+
+## Decisiones de diseño
+
+1. **La corrección va a sv4, no a sv6.** Podría haberse «arreglado» haciendo
+   que sv6 escribiera un importe que sobreviviera al pisado, pero eso es tapar:
+   el que estaba mal era el que recalculaba. Alcance ampliado de sv5+sv6 a
+   sv5+sv6+sv4, declarado en G6 de `requirements.md` (regla LÍMITE DE SERVICIO
+   de `CLAUDE.md`). No es responsabilidad nueva: es la misma fórmula del
+   dominio, aplicada en el otro punto que la escribe.
+2. **Se arreglan las cuatro copias, no solo la culpable.** Dejar tres formas
+   defectuosas de calcular lo mismo, en el mismo fichero, junto a la que se
+   acaba de arreglar, es cómo se repite un incidente con otro botón del front.
+3. **Guardián estructural además de tests de comportamiento.** El defecto no
+   era un valor mal calculado: era una fórmula duplicada. La red que faltaba
+   tiene que vigilar la duplicación, no solo el resultado.
+4. **R24 (no tocar lo que nadie ha tocado) en vez de solo aplicar el
+   descuento.** Aplicar el descuento bastaba para que el total diera 139,66.
+   Pero un guardado que solo movía una partida seguía degradando las cinco
+   líneas de `declared_albaran` a `calculated`, es decir, afirmando en la BBDD
+   que ese importe lo habíamos calculado nosotros cuando lo declara el albarán.
+   Es la misma regla de jul 2026 que ya sostiene `ImporteCalculator`.
+5. **`_num_iguales` con margen de medio céntimo**, no igualdad exacta: sobre
+   `DOUBLE PRECISION`, `==` haría que casi toda fila pareciera cambiada y el
+   guardado volvería a reescribirlo todo.
+6. **El `ROUND` del `SUM()` va con `CAST(... AS numeric)`**, que funciona igual
+   en PostgreSQL (producción) y en SQLite (los tests).
+
+## Lo que quedó FUERA (a propósito)
+
+- **`_apply_valuation_line_updates_in_session` no tiene test de integración**:
+  usa `lv.id = ANY(:ids)`, sintaxis exclusiva de PostgreSQL, que SQLite no
+  ejecuta (el propio método lo captura y sale silenciosamente, así que un test
+  pasaría en vacío y mentiría). Su fórmula sí queda cubierta: ahora llama a
+  `_importe_de_linea`, que tiene 29 tests, y el guardián estructural impide que
+  vuelva a escribirla a mano. **Portar ese `ANY` a un `bindparam` expanding
+  haría el método testable**; es un cambio con riesgo propio sobre la ruta de
+  producción y no se cuela en un round trip acotado.
+- **No se ha reparado la fila ya corrupta de la BBDD local** (2.137.569,
+  232,76 €). Sigue la regla R20: el histórico se sanea revalorando desde sv4, y
+  qué se reprocesa lo decide el humano. Contra la BBDD solo se han hecho
+  lecturas.
+- **`total_valorado` de sv6 no se ha tocado**: ya redondeaba.
+
+## Verificaciones MANUAL (humano) — T17, PENDIENTE
+
+Requieren el pipeline local levantado. Las de T10 siguen vigentes; estas dos
+son nuevas y son las que habrían cazado esto:
+
+### 1) Revalorar y comprobar el total
+
+```sql
+SELECT d.numero_albaran, v.total_valorado, v.created_at_utc, v.updated_at_utc
+FROM albaran_valuations v
+JOIN albaran_documents_merge d ON d.id = v.document_id
+WHERE d.numero_albaran IN ('2.137.569', '2.139.643');
+-- ESPERADO: 139.66 y 19.41.
+```
+
+### 2) Guardar desde el front y volver a mirar (la nueva)
+
+Abrir el 2.137.569 en sv4, cambiar algo que NO sea una cantidad (una partida,
+una descripción), guardar, y repetir la consulta anterior:
+
+- `total_valorado` sigue siendo **139,66** (antes pasaba a 232,76);
+- `updated_at_utc` cambia (el guardado ocurrió), pero
+- las cinco líneas conservan `importe_source = 'declared_albaran'` y sus
+  importes 35,19 / 20,53 / 55,63 / 13,19 / 15,12.
+
+```sql
+SELECT l.merge_line_id, l.importe_calculado, l.importe_source,
+       l.descuento_albaran_aplicado
+FROM albaran_line_valuations l
+JOIN albaran_valuations v ON v.id = l.valuation_id
+JOIN albaran_documents_merge d ON d.id = v.document_id
+WHERE d.numero_albaran = '2.137.569'
+ORDER BY l.merge_line_id;
+```
+
+Después, cambiar **sí** una cantidad y comprobar que esa línea —y solo esa—
+pasa a `calculated` con el importe recalculado **con su descuento**.
+
+---
+
+## Evidencias (round trip 2)
+
+Números medidos, no estimados.
+
+| Evidencia | Valor | Cómo se obtuvo |
+|---|---|---|
+| **Tests ejecutados y resultado** | **248** (raíz) + **11** (sv5) + **44** (sv6) + **44** (sv4) = **347 passed, 0 fallos**. De ellos **48 nuevos** en este round trip: 44 de la suite nueva de sv4 y 4 de la de sv6. sv6 pasa de 40 a 44; sv4 de **0 a 44** (no tenía suite). | `bash harness/init.sh` (secciones 7 y 7 bis) |
+| **Cobertura de las líneas cambiadas** | **89,1 % (49/55 líneas, umbral 80 %, nivel `critico`)** | línea `PUERTA COBERTURA` de `bash harness/init.sh` |
+| **Mutantes generados y supervivientes** | **24 generados, 22 muertos, 2 supervivientes, 0 timeouts** sobre 328 líneas de producción en alcance. Los 2 supervivientes son **equivalentes**, demostrado ejecutando original y mutante sobre la tabla completa de entradas relevantes (8 casos cada uno, salida idéntica). Análisis completo en `progress/mutacion_F-019.md`. | `python -m harness.mutacion --feature F-019 --workers 1` |
+| **Tiempo de ejecución de la suite** | raíz **46,42 s**; sv5 **0,46 s**; sv6 **0,51 s**; sv4 **0,59 s** | salida de cada pytest |
+
+Sobre la mutación: la campaña anterior generó 4 mutantes (diff mínimo, casi
+todo comentarios); esta genera **24** porque el fix de sv4 aporta lógica real.
+En la primera pasada sobrevivieron 4; **dos eran huecos de verdad y se cerraron
+con test** —el aviso de descuento fuera de rango, cuyo mutante callaba ante un
+descuento absurdo y avisaba en cada línea sin descuento; y la frontera de medio
+céntimo de `_num_iguales`—, no con una justificación.
+
+La campaña se lanzó con `--workers 1`: la paralela crea worktrees desde `HEAD`
+y se negó a correr por un fichero sin versionar de **otra sesión**
+(`progress/revision_hormigones_20260818.md`), que no es de esta feature y no se
+ha tocado.
+
+### Estado de las puertas de `bash harness/init.sh`
+
+```
+[OK] PUERTA COBERTURA: 89.1% de 55 líneas cambiadas cubiertas (49/55, umbral 80%, nivel critico)
+[AVISO] PUERTA RUTAS SENSIBLES [evals]: aviso: falta la evidencia de 2 ruta(s) sensible(s) tocada(s):
+      - services/albaran-valoracion-persist/application/services/price_reconciler.py
+      - services/albaran-valoracion-persist/domain/models/valuation_envelope.py
+[OK] Rama actual: feature/F-019-importe-unitario-manda
+----------------------------------------
+ENTORNO LISTO. Puedes trabajar.
+```
+
+El aviso de rutas sensibles es **el mismo de antes y por el mismo motivo**
+(claves LLM ausentes del entorno local y `evals/ground_truth/` vacío, sección
+T9 de este informe). Este round trip **no ha tocado ninguna ruta sensible**:
+los dos ficheros que la puerta señala son los de sv5/sv6 del trabajo original,
+sin cambios desde entonces.
+
+## Lo que falta para cerrar
+
+1. Las verificaciones **MANUAL (humano)** de T10 y las dos nuevas de **T17**,
+   en particular «guardar desde el front y volver a mirar el total».
+2. El veredicto del **reviewer** contra `CHECKPOINTS.md`.
+3. Decisión del humano sobre **revalorar el 2.137.569** en la BBDD local para
+   sanear la fila que quedó en 232,76 € (R20: no se ha escrito backfill).
+4. Pendiente heredado: rellenar `evals/ground_truth/`.
+5. Anotado, no hecho: hacer testable `_apply_valuation_line_updates_in_session`
+   sustituyendo `ANY(:ids)` por un `bindparam` expanding.
