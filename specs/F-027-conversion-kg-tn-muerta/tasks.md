@@ -60,7 +60,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       `importe_calculado == 468763.4`; traza pegada en
       `progress/impl_F-027.md` (fase RED de los requisitos centrales).
 
-- [ ] **T3**: **RED** de la segunda mitad del ×1000:
+- [x] **T3**: **RED** de la segunda mitad del ×1000:
       `tests/test_f027_r6_r7_unidad_destino.py`. Mismo albarán pero con
       `unidad_medida='KG'` (el escenario que abre F-024) y partida cruzada que
       fuerza `partida_action='new_line_created'`: hoy convierte `KG→KG` con
