@@ -179,7 +179,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 10,
+      "priority": 11,
       "branch": "feature/F-015-lineas-tachadas"
     },
     {
@@ -189,7 +189,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 12,
+      "priority": 13,
       "branch": "feature/F-016-linea-multipartida"
     },
     {
@@ -239,7 +239,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 11,
+      "priority": 12,
       "branch": "feature/F-021-partida-catalogo-candidatas"
     },
     {
@@ -259,17 +259,17 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 9,
+      "priority": 10,
       "branch": "feature/F-023-mortero-incrementos"
     },
     {
       "id": "F-024",
       "title": "La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero",
-      "description": "HALLAZGO H-1 (gravedad ALTA) del informe progress/revision_hormigones_20260818.md §5.2: en los 4 albaranes del lote alvaro_17082026 (224964 y 225137 de HORMIGON SIERRA MADRID; 1167 y 1229 de PAZ DEL BARRIO) el campo albaran_lines_merge.unidad_medida sale NULL en las 4 líneas base, con field_scores_json.unidad_medida.status='both_empty_optional' — es decir, ni IA1 ni IA2 la leyeron y el merge lo dio por bueno como campo opcional vacío. Y sin embargo la unidad ESTÁ impresa en los cuatro PDFs («CANTIDAD M³» en Paz del Barrio, «M³» en Sierra Madrid) y los cuatro esperados de IA1 del ground truth piden unidad = M3.\n\nPOR QUÉ IMPORTA (no es cosmético): rompe la cadena de unidades de sv6. unidad_categoria queda 'unknown' frente al 'm3' del contrato, UnitCategoryGuard devuelve unit_category_partially_unknown y unidad_category_match=false (services/albaran-valoracion-persist/application/services/unit_category_guard.py:61); con category_match=false el builder salta la conversión (valuation_builder.py:1021-1025) y el importe se salva solo porque cae al fallback importe_using_albaran_quantity_fallback con factor 1. En este lote no duele porque contrato y albarán van ambos en m³: los importes salen bien POR SUERTE. Con un contrato en TN o en kg el importe saldría mal, y el propio UnitConverter documenta un caso real de ese tipo (árido «M 20/40», 29920 sin unidad, 298.302 €). Efecto secundario: cada línea base arrastra motivos de revisión falsos (ver F-025).\n\nFASE QUE FALLA: IA1 (prompt de fase 1 albaran_factura_es, campo unidad_medida definido en services/albaranes-api/config/prompts.yaml:71 como «texto corto tal y como aparece»); IA2 tampoco la repone.\n\nDOS OPCIONES A DECIDIR EN LA SPEC, no excluyentes: (A) LECTURA — en estos formatos la unidad no está en la fila sino en la ETIQUETA DE LA CASILLA / cabecera de columna, que es exactamente el patrón ya implementado y validado para residuos (§10.6 del dominio: «volumen y peso por ETIQUETA de casilla, nunca por magnitud del número», redactado en services/albaranes-api/config/prompts.yaml:356-362). Extender esa lección a los prompts de hormigón/mortero para que la unidad de la cabecera se propague a las líneas. (B) RED DETERMINISTA EN sv6 — para líneas de familia hormigón/mortero sin unidad, asumir la unidad de la línea de contrato dejando rastro con motivo propio, en vez de dejar unidad_categoria='unknown'. La opción A ataca la causa; la B es el cinturón de seguridad.\n\nNO ENTRA: renombrar el motivo no_quantity_in_albaran, que es F-025 (aunque arreglar F-024 haga desaparecer de facto la mayoría de sus casos, la rama que lo produce seguirá existiendo para desacuerdos reales de categoría); ni tocar la conversión entre unidades, que ya existe y funciona (UnitConverter). Toca sv2 (prompts: ruta sensible → el cierre exige evals en verde) y opcionalmente sv6. Fuente: progress/revision_hormigones_20260818.md §5.2 y H-1.",
+      "description": "HALLAZGO H-1 (gravedad ALTA) del informe progress/revision_hormigones_20260818.md §5.2: en los 4 albaranes del lote alvaro_17082026 (224964 y 225137 de HORMIGON SIERRA MADRID; 1167 y 1229 de PAZ DEL BARRIO) el campo albaran_lines_merge.unidad_medida sale NULL en las 4 líneas base, con field_scores_json.unidad_medida.status='both_empty_optional' — es decir, ni IA1 ni IA2 la leyeron y el merge lo dio por bueno como campo opcional vacío. Y sin embargo la unidad ESTÁ impresa en los cuatro PDFs («CANTIDAD M³» en Paz del Barrio, «M³» en Sierra Madrid) y los cuatro esperados de IA1 del ground truth piden unidad = M3.\n\nPOR QUÉ IMPORTA (no es cosmético): rompe la cadena de unidades de sv6. unidad_categoria queda 'unknown' frente al 'm3' del contrato, UnitCategoryGuard devuelve unit_category_partially_unknown y unidad_category_match=false (services/albaran-valoracion-persist/application/services/unit_category_guard.py:61); con category_match=false el builder salta la conversión (valuation_builder.py:1021-1025) y el importe se salva solo porque cae al fallback importe_using_albaran_quantity_fallback con factor 1. En este lote no duele porque contrato y albarán van ambos en m³: los importes salen bien POR SUERTE. Con un contrato en TN o en kg el importe saldría mal, y el propio UnitConverter documenta un caso real de ese tipo (árido «M 20/40», 29920 sin unidad, 298.302 €). Efecto secundario: cada línea base arrastra motivos de revisión falsos (ver F-025).\n\nFASE QUE FALLA: IA1 (prompt de fase 1 albaran_factura_es, campo unidad_medida definido en services/albaranes-api/config/prompts.yaml:71 como «texto corto tal y como aparece»); IA2 tampoco la repone.\n\nDOS OPCIONES A DECIDIR EN LA SPEC, no excluyentes: (A) LECTURA — en estos formatos la unidad no está en la fila sino en la ETIQUETA DE LA CASILLA / cabecera de columna, que es exactamente el patrón ya implementado y validado para residuos (§10.6 del dominio: «volumen y peso por ETIQUETA de casilla, nunca por magnitud del número», redactado en services/albaranes-api/config/prompts.yaml:356-362). Extender esa lección a los prompts de hormigón/mortero para que la unidad de la cabecera se propague a las líneas. (B) RED DETERMINISTA EN sv6 — para líneas de familia hormigón/mortero sin unidad, asumir la unidad de la línea de contrato dejando rastro con motivo propio, en vez de dejar unidad_categoria='unknown'. La opción A ataca la causa; la B es el cinturón de seguridad.\n\nNO ENTRA: renombrar el motivo no_quantity_in_albaran, que es F-025 (aunque arreglar F-024 haga desaparecer de facto la mayoría de sus casos, la rama que lo produce seguirá existiendo para desacuerdos reales de categoría); ni tocar la conversión entre unidades, que ya existe y funciona (UnitConverter). Toca sv2 (prompts: ruta sensible → el cierre exige evals en verde) y opcionalmente sv6. Fuente: progress/revision_hormigones_20260818.md §5.2 y H-1.\n\nAMPLIACION 2026-08-18 (instruccion del humano, literal): «En este caso la IA2 al revisar deberia darse cuenta de que un camion no puede llevar 30.000 toneladas. Si la cantidad es esa, tiene que ser kg. Debe haber una revision razonada de unidades, para casos tan claros.» La feature pasa a cubrir DOS cosas del mismo prompt y del mismo problema de raiz: (1) que la unidad se EXTRAIGA (la etiqueta de casilla / cabecera de columna, opciones A y B de arriba); y (2) que IA2 haga una REVISION RAZONADA DE UNIDADES cuando la magnitud sea fisicamente implausible para el tipo de material y el medio de transporte. Caso de referencia: albaran 58826 de MAHORSA, 30.380 sin literal de unidad con TARA 12500 impresa en el propio documento; 30.380 toneladas en un camion es imposible, luego son kg. IA2 ya lo tuvo delante y no lo cuestiono: escribio en explicacion_global «peso neto (30380)» reconociendo que es un peso, y aun asi dejo unidad_medida NULL. REQUISITOS DE LA AMPLIACION: el razonamiento debe quedar EXPLICITO Y TRAZABLE —motivo de revision con la reinterpretacion aplicada y su justificacion—, nunca un cambio silencioso del dato; y la reinterpretacion debe apoyarse en lo que el documento imprime (tara, peso bruto, familia de producto), no en una corazonada del modelo. RELACION CON OTRAS FEATURES, sin duplicar ninguna: es DEFENSA EN PROFUNDIDAD, no un sustituto. F-027 (prioridad 2) arregla la red determinista de ultima defensa en sv6 —la de `cantidad_sin_unidad_reinterpretada_kg_a_tn`, que hoy es codigo muerto—, y su spec deja escrito que esa correccion NO sustituye a esta revision de IA2: IA2 detecta arriba, sv6 protege abajo, y que la red de sv6 funcione no legitima que el dato siga llegando mal desde la extraccion. F-032 (semantica de campos) es otra cosa: alli el problema es que un campo significa cosas distintas segun quien lo lea, no que una magnitud sea imposible. Por eso F-024 sube a prioridad 3, justo detras de F-027.",
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 13,
+      "priority": 3,
       "branch": "feature/F-024-unidad-medida"
     },
     {
@@ -296,7 +296,7 @@
       "id": "F-027",
       "title": "Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto",
       "description": "HALLAZGO H-1 (CRÍTICA). El albarán 58826 de MAHORSA se valoró en 468.763,40 € cuando el administrativo dice 390,99 €, y el 58878 en 462.282,80 € frente a 385,59 €. Son 30.380 kg × 15,43 €/TN y 29.960 kg × 15,43: un factor 1000 de unidad (el albarán da kg sin literal de unidad y el contrato tarifa en TN). CAUSA RAÍZ: la red determinista que existe EXACTAMENTE para este caso (`cantidad_sin_unidad_reinterpretada_kg_a_tn`, con `_TN_UMBRAL_CONVERTIR = 1000`) NUNCA SE EJECUTA. Cuando las categorías de unidad no casan, `ValuationBuilder` llama al conversor con `cantidad=None` (services/albaran-valoracion-persist/application/services/valuation_builder.py:1020-1030, rama else de `if category_match`), y `UnitConverter.convert` sale por la guarda `cantidad is None` (unit_converter.py:64-70) ANTES de llegar al bloque de plausibilidad de toneladas (unit_converter.py:83-101), que se añadió en julio de 2026 justo para esto. El importe cae después al fallback con la cantidad cruda. El propio código documenta el caso gemelo: árido «M 20/40», 29920 sin unidad, 298.302 €. POR QUÉ ES LO PRIMERO: es un error de tres órdenes de magnitud que llega PERSISTIDO a `albaran_valuations.total_valorado` y de ahí a la bandeja del revisor; y no es raro, porque TODO el árido a granel viene en kg sin literal de unidad. PROPUESTA: invertir el orden — convertir primero y decidir revisión después. Llamar siempre a `convert()` con la cantidad real y usar `category_match=False` solo para marcar revisión, no para anular la cantidad; alternativamente, mover la comprobación de plausibilidad de TN a un guard previo e independiente. EXIGE test de regresión con el caso real 30380 kg / contrato en TN. RELACIÓN: F-024 (la unidad no se extrae de IA1) ataca la causa aguas arriba; esta feature es la red de seguridad de sv6, que debe funcionar aunque IA1 siga sin unidad. F-025 (falsa alarma `no_quantity_in_albaran`) toca la misma rama del builder: coordinar para no pisarse. Toca sv6. Fuente: progress/revision_resto_lote_20260818.md (revision de los 7 albaranes restantes del lote alvaro_17082026, 2026-08-18).",
-      "status": "pending",
+      "status": "spec_ready",
       "sdd": true,
       "rigor": "critico",
       "priority": 2,
@@ -309,7 +309,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 3,
+      "priority": 4,
       "branch": "feature/F-028-selector-contrato-por-partidas"
     },
     {
@@ -319,7 +319,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 4,
+      "priority": 5,
       "branch": "feature/F-029-obra-empates-y-sin-cif"
     },
     {
@@ -329,7 +329,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 5,
+      "priority": 6,
       "branch": "feature/F-030-proveedor-cif-aproximado"
     },
     {
@@ -339,7 +339,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 6,
+      "priority": 7,
       "branch": "feature/F-031-partida-elige-linea-contrato"
     },
     {
@@ -349,7 +349,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 7,
+      "priority": 8,
       "branch": "feature/F-032-semantica-precio-neto"
     },
     {
@@ -359,7 +359,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 8,
+      "priority": 9,
       "branch": "feature/F-033-contrato-md-o-pdf-determinista"
     }
   ]
