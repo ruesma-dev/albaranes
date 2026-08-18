@@ -103,7 +103,7 @@ en `sys.modules`.
       humano. Ojo: el SQL vive dentro de un `text("""…""")` y no genera
       mutantes; el código mutable real es `price_reconciler.py`.
 
-- [ ] **T9**: Puerta de rutas sensibles (R22). `price_reconciler.py` cae bajo
+- [x] **T9**: Puerta de rutas sensibles (R22). `price_reconciler.py` cae bajo
       `services/albaran-valoracion-persist/application/services/**`.
       | Verificación: `python -m evals.runner --con-llm --feature F-019` →
       `progress/evals_F-019.md`. Con el ground truth vacío la pasada dará

@@ -164,3 +164,67 @@ FAILED tests/test_f019_r1_r2_r3_semantica_precio_neto.py::test_f019_r3_architect
 Los 5 verdes son R1 (el prompt de IA1 ya definía bien el campo: el equivocado
 era el consumidor) y R2 (sv5, ya corregido en T2). Es exactamente el reparto
 que sostiene la decisión D1 de la spec.
+
+---
+
+## T9 · Puerta de rutas sensibles (R22) — evidencia y su límite
+
+El diff toca tres rutas declaradas en `harness/rutas_sensibles.json`:
+
+| Ruta tocada | Patrón declarado | Motivo declarado |
+|---|---|---|
+| `services/albaran-valoracion-persist/application/services/price_reconciler.py` | `.../application/services/**` | redes deterministas de sv6 |
+| `services/albaran-valoracion-persist/domain/models/valuation_envelope.py` | `.../domain/models/**` | envelope DTO y records finales de sv6 |
+| `services/albaran-valoracion-api/infrastructure/database/...` | — (no declarada) | — |
+
+**No se ha tocado ningún prompt YAML ni ningún schema Pydantic que rellene la
+IA**, tal como sostenía la spec: el cambio de sv5 es una expresión de un
+SELECT y el de `valuation_envelope.py` es un bloque de comentarios (ni un
+campo nuevo, ni un tipo cambiado). El saneado le llega a la IA3 por el dato,
+no por el prompt.
+
+### La pasada declarada NO se pudo ejecutar. Motivo, literal:
+
+```
+$ python -m evals.runner --con-llm --feature F-019
+no se puede lanzar la pasada completa: faltan en el entorno GEMINI_API_KEY, OPENAI_API_KEY. No se ha consumido ningún caso.
+$ echo $?
+2
+```
+
+Las claves de LLM son secretos: no están en el entorno de esta sesión y este
+repositorio prohíbe escribirlas en ningún fichero (`CLAUDE.md`, reglas duras).
+El implementer NO improvisa una vía alternativa para conseguirlas.
+
+### Lo que sí se ejecutó, y lo que demuestra
+
+```
+$ python -m evals.runner --feature F-019
+NO_EVALUABLE · informe en C:\Users\pgris\PycharmProjects\albaranes\progress\evals_F-019.md
+$ echo $?
+2
+```
+
+El informe generado (`progress/evals_F-019.md`) dice, en sus propias líneas
+parseables, `MODO: determinista` y `FASES: IA3,IA4,E2E`: **no cumple** las
+tres líneas que exige `harness/rutas_sensibles.json` (`MODO: completa`,
+`FASES: IA1,IA2,IA3,IA4,E2E`, `VEREDICTO: VERDE`), y no pretende hacerlo.
+Lo que sí demuestra, con la salida de la propia herramienta, es el motivo de
+fondo:
+
+```
+- Casos evaluados: 0 · omitidos: 0
+- Motivo: no hay ningún caso en evals/fixtures/inputs/
+```
+
+Es decir: **aunque hubiera claves, la pasada completa daría `NO_EVALUABLE`
+igual**, porque los libros de `evals/ground_truth/` siguen vacíos. Es
+exactamente el supuesto que R22 anticipa y por el que la exigencia declarada
+arranca en `aviso` (decisión D5 de F-011), no en `bloqueo`.
+
+**Para el reviewer (C4 ter)**: la evidencia declarada falta y este es el
+motivo por escrito — (1) claves LLM ausentes en el entorno local, que el
+implementer no puede ni debe suplir; (2) ground truth sin casos, que hace la
+pasada no evaluable por diseño. No se marca N/A: se declara ausente con causa.
+Rellenar los libros de `evals/ground_truth/` sigue siendo el pendiente del
+humano que permitiría subir esta puerta a `bloqueo`.
