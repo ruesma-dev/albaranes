@@ -50,7 +50,7 @@ en `sys.modules`.
       | Verificación: `python -m pytest services/albaran-valoracion-persist/tests -q`
       en ROJO (al menos R8, R9, R10), traza pegada en el informe.
 
-- [ ] **T4**: sv6 — invertir la precedencia en
+- [x] **T4**: sv6 — invertir la precedencia en
       `application/services/price_reconciler.py`: bloque 1 = unitario
       declarado (con contraste contra el derivado y `agreement="mismatch"` si
       discrepa), bloque 2 = despeje del importe, bloque 3 = fallback contrato
