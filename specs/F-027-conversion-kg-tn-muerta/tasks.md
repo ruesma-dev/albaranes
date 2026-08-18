@@ -71,7 +71,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       idéntico al de hoy.
       | Verificación: en **ROJO** antes de T5, con la traza pegada.
 
-- [ ] **T4**: **RED** de la no-regresión (R14, R15, R16, R19, R20):
+- [x] **T4**: **RED** de la no-regresión (R14, R15, R16, R19, R20):
       `tests/test_f027_r14_r20_no_regresion.py`. Fija los importes que hoy
       salen BIEN, medidos antes del cambio y pegados en el informe:
       hormigón/mortero sin unidad contra contrato en `M3` (4, 9, 8 y 3 m³ del
