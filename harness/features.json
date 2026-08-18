@@ -68,7 +68,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 6,
+      "priority": 10,
       "branch": "feature/F-003-valorados-match-estricto"
     },
     {
@@ -78,7 +78,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 9,
+      "priority": 13,
       "branch": "feature/F-004-hormigon-fino"
     },
     {
@@ -88,7 +88,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 10,
+      "priority": 14,
       "branch": "feature/F-005-bombeo"
     },
     {
@@ -98,7 +98,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 11,
+      "priority": 15,
       "branch": "feature/F-006-residuos-pago"
     },
     {
@@ -108,7 +108,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 12,
+      "priority": 16,
       "branch": "feature/F-007-partida-alm-selector"
     },
     {
@@ -123,7 +123,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 15,
+      "priority": 19,
       "branch": "feature/F-008-blob-lifecycle"
     },
     {
@@ -139,7 +139,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 16,
+      "priority": 20,
       "branch": "feature/F-009-limpieza-q-emails"
     },
     {
@@ -149,7 +149,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 17,
+      "priority": 21,
       "branch": "feature/F-010-easy-auth-sv4"
     },
     {
@@ -159,7 +159,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 14,
+      "priority": 18,
       "branch": "feature/F-013-registro-sigrid"
     },
     {
@@ -169,7 +169,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 7,
+      "priority": 11,
       "branch": "feature/F-014-conversor-administrativo"
     },
     {
@@ -179,7 +179,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 2,
+      "priority": 3,
       "branch": "feature/F-015-lineas-tachadas"
     },
     {
@@ -189,7 +189,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 4,
+      "priority": 5,
       "branch": "feature/F-016-linea-multipartida"
     },
     {
@@ -199,7 +199,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 13,
+      "priority": 17,
       "branch": "feature/F-017-comparativo-precio"
     },
     {
@@ -209,7 +209,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 8,
+      "priority": 12,
       "branch": "feature/F-018-carga-incompleta"
     },
     {
@@ -229,7 +229,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 5,
+      "priority": 9,
       "branch": "feature/F-020-proveedor-agnostico"
     },
     {
@@ -239,7 +239,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 3,
+      "priority": 4,
       "branch": "feature/F-021-partida-catalogo-candidatas"
     },
     {
@@ -249,8 +249,48 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 18,
+      "priority": 22,
       "branch": "feature/F-022-concepto-lineas-bandeja"
+    },
+    {
+      "id": "F-023",
+      "title": "Mortero: las sintéticas de contrato no se emiten porque IA3 y sv6 las vetan por tipo_familia",
+      "description": "HALLAZGO (revisión del lote alvaro_17082026, informe progress/revision_hormigones_20260818.md §4.4.b, H del §7 fila 2): el albarán 1229 de FABRICACION DE HORMIGONES PAZ DEL BARRIO (MORTERO M-7,5/B/04 48H, 3 m³, contrato CTSU25/0001, fecha 2026-06-09) valoró 210,00 € frente a los 307,50 € del administrativo. De esos −97,50 €, esta feature ataca los que dependen de las sintéticas de contrato: falta la línea INCREM. PRECIO 2026 (3 × 9,00 = 27,00 €) y falta la línea CARGAS INCOMPLETAS (3 × 20,00 = 60,00 €). No es que la tarifa no exista: el contrato tarifa «INCREMENTO PRECIO MORTERO 2026» a 9,00 €/m³ en la partida P4.39.03 (línea de contrato 25921) y «INCREM. AÑO 2026» a 9,00 €/m³ en P4.99.10. Es que no se busca.\n\nCAUSA RAÍZ — DOS VETOS ENCADENADOS POR tipo_familia. (1) PROMPT DE IA3: el Paso 7 («LÍNEAS SINTÉTICAS DE MODIFICADORES (hormigón)») dice literalmente «Se aplica SOLO cuando la línea base tiene tipo_familia='hormigon'» — services/albaran-valoracion-api/config/prompts.yaml:303-305, clave valuation_es, que es el fichero que el servicio carga de verdad (config/settings.py:214-215). OJO: la copia services/albaran-valoracion-api/config/prompts/svc5_prompt_valuation_es.yaml:304-306 dice lo mismo pero está DESACTUALIZADA (631 líneas, sin bloque M7) y NO se carga; el informe la citaba a ella. Con contexto_linea.tipo_familia='mortero' —que IA2 sí puso bien, prompt albaran_revision_fase2_mortero de services/albaranes-api/config/prompts.yaml:633— IA3 devolvió UNA sola línea y ninguna sintética. (2) RED DETERMINISTA DE RESPALDO DE sv6, con el mismo veto: `if ctx is None or getattr(ctx, \"tipo_familia\", None) != \"hormigon\": continue` en _sinteticas_m1_faltantes (services/albaran-valoracion-persist/application/services/valuation_builder.py:602) e idéntico en _sinteticas_codigo_faltantes (:686). Por eso NO basta con tocar el prompt: si solo se levanta el veto de IA3, la red determinista lo sigue bloqueando.\n\nINSTRUCCIÓN LITERAL DEL HUMANO (2026-08-18): «en el prompt particular de mortero hay que añadir los incrementos anuales igual que en hormigón, copiando y pegando el bloque correspondiente».\n\nQUÉ COPIAR Y DÓNDE PEGARLO (localizado para que quien implemente no tenga que buscarlo). ORIGEN: el bloque «==== M1 - INCREMENTOS POR AÑO ====» completo, sub-reglas M1.1 a M1.6, en services/albaran-valoracion-api/config/prompts.yaml líneas 454-535 (termina justo antes de «==== M2 - CONSISTENCIA DEL HORMIGÓN ====», que empieza en :536), dentro de la clave valuation_es. DESTINO: una clave NUEVA `valuation_mortero` en ese mismo fichero, siguiendo el patrón del prompt por tipología que ya existe, `valuation_residuos` (prompts.yaml:1008). Adaptaciones mínimas al pegar: en M1.5, descripcion_linea = «INCREMENTO POR AÑO {año} EN MORTERO» en vez de «EN HORMIGÓN»; el resto de M1 va tal cual (el año del contrato se deduce igual del prefijo CTSU{AA}).\n\nTRAMPA IMPORTANTE — CREAR LA CLAVE NO BASTA. El selector de prompt por tipología de sv5 (services/albaran-valoracion-api/application/services/valuation_extraction_service.py:205-210: monta `valuation_{tipologia}` y usa esa clave si existe) llama a _derivar_tipologia_valoracion (:316-333), que SOLO devuelve 'residuos' | 'hormigon' | 'generico'. Con tipo_familia='mortero' devuelve 'generico', busca `valuation_generico` (que tampoco existe) y cae a valuation_es. Verificado en BBDD: albaran_valuations.prompt_key='valuation_es' para el 1229. Hay que añadir 'mortero' a esa derivación o el prompt nuevo no se usará nunca.\n\nALCANCE: (1) clave `valuation_mortero` en sv5 con el bloque M1 copiado, más el veto de familia de §10.3 del dominio (solo arena: prohibidas sintéticas de árido, aditivo, plastificante, fibras y fratasado; el tercer campo del código D-*/M-* es resistencia, no árido); (2) 'mortero' reconocida por _derivar_tipologia_valoracion; (3) levantar el veto gemelo de sv6 en valuation_builder.py:602 y :686 para que la red determinista de respaldo también emita M1 en mortero; (4) evals: la feature toca rutas sensibles (prompts + redes deterministas), así que el cierre exige evals en verde además de los tests (F-011).\n\nNO ENTRA: el precio de la línea base del 1229 (70,00 € de la hermana MORTERO M-5 del contrato en vez de los 73,50 € de la OFERTA, −10,50 €), que es F-017 (el comparativo como fuente de precio 1c); ni que IA2 genere siempre la línea de carga incompleta, que es F-018. Relación con las vecinas: los 27,00 € del incremento de año los recupera F-023 sola; los 60,00 € de carga incompleta necesitan además F-018 (que se emita la línea) y F-017 (el precio, porque CTSU25/0001 no tarifa carga incompleta en sus 62 líneas), pero este veto es prerrequisito de ambas: mientras esté, en mortero no sale NINGUNA sintética. Solapa con F-004 (tanda 3, spec_ready): su R24 («incrementos por año también en mortero») y sus R9/R10 (prompt valuation_mortero) quedan ABSORBIDOS aquí; al arrancar F-004 hay que reconciliar su spec para no implementarlo dos veces.\n\nVERIFICACIÓN ESPERADA AL CERRAR: revalorar el 1229 en local y ver la línea INCREMENTO POR AÑO 2026 EN MORTERO con 3 × 9,00 = 27,00 €, y albaran_valuations.prompt_key='valuation_mortero'. Toca sv5 y sv6. Fuente: progress/revision_hormigones_20260818.md.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 2,
+      "branch": "feature/F-023-mortero-incrementos"
+    },
+    {
+      "id": "F-024",
+      "title": "La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero",
+      "description": "HALLAZGO H-1 (gravedad ALTA) del informe progress/revision_hormigones_20260818.md §5.2: en los 4 albaranes del lote alvaro_17082026 (224964 y 225137 de HORMIGON SIERRA MADRID; 1167 y 1229 de PAZ DEL BARRIO) el campo albaran_lines_merge.unidad_medida sale NULL en las 4 líneas base, con field_scores_json.unidad_medida.status='both_empty_optional' — es decir, ni IA1 ni IA2 la leyeron y el merge lo dio por bueno como campo opcional vacío. Y sin embargo la unidad ESTÁ impresa en los cuatro PDFs («CANTIDAD M³» en Paz del Barrio, «M³» en Sierra Madrid) y los cuatro esperados de IA1 del ground truth piden unidad = M3.\n\nPOR QUÉ IMPORTA (no es cosmético): rompe la cadena de unidades de sv6. unidad_categoria queda 'unknown' frente al 'm3' del contrato, UnitCategoryGuard devuelve unit_category_partially_unknown y unidad_category_match=false (services/albaran-valoracion-persist/application/services/unit_category_guard.py:61); con category_match=false el builder salta la conversión (valuation_builder.py:1021-1025) y el importe se salva solo porque cae al fallback importe_using_albaran_quantity_fallback con factor 1. En este lote no duele porque contrato y albarán van ambos en m³: los importes salen bien POR SUERTE. Con un contrato en TN o en kg el importe saldría mal, y el propio UnitConverter documenta un caso real de ese tipo (árido «M 20/40», 29920 sin unidad, 298.302 €). Efecto secundario: cada línea base arrastra motivos de revisión falsos (ver F-025).\n\nFASE QUE FALLA: IA1 (prompt de fase 1 albaran_factura_es, campo unidad_medida definido en services/albaranes-api/config/prompts.yaml:71 como «texto corto tal y como aparece»); IA2 tampoco la repone.\n\nDOS OPCIONES A DECIDIR EN LA SPEC, no excluyentes: (A) LECTURA — en estos formatos la unidad no está en la fila sino en la ETIQUETA DE LA CASILLA / cabecera de columna, que es exactamente el patrón ya implementado y validado para residuos (§10.6 del dominio: «volumen y peso por ETIQUETA de casilla, nunca por magnitud del número», redactado en services/albaranes-api/config/prompts.yaml:356-362). Extender esa lección a los prompts de hormigón/mortero para que la unidad de la cabecera se propague a las líneas. (B) RED DETERMINISTA EN sv6 — para líneas de familia hormigón/mortero sin unidad, asumir la unidad de la línea de contrato dejando rastro con motivo propio, en vez de dejar unidad_categoria='unknown'. La opción A ataca la causa; la B es el cinturón de seguridad.\n\nNO ENTRA: renombrar el motivo no_quantity_in_albaran, que es F-025 (aunque arreglar F-024 haga desaparecer de facto la mayoría de sus casos, la rama que lo produce seguirá existiendo para desacuerdos reales de categoría); ni tocar la conversión entre unidades, que ya existe y funciona (UnitConverter). Toca sv2 (prompts: ruta sensible → el cierre exige evals en verde) y opcionalmente sv6. Fuente: progress/revision_hormigones_20260818.md §5.2 y H-1.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 6,
+      "branch": "feature/F-024-unidad-medida"
+    },
+    {
+      "id": "F-025",
+      "title": "El motivo no_quantity_in_albaran es una falsa alarma sistemática cuando se omite la conversión de unidad",
+      "description": "HALLAZGO H-2 (gravedad MEDIA) del informe progress/revision_hormigones_20260818.md §5.2 punto 2: las 4 líneas base del lote alvaro_17082026 (albaranes 224964, 225137, 1167 y 1229) llevan el motivo de revisión `no_quantity_in_albaran` TENIENDO cantidad — 4, 9, 8 y 3 m³ respectivamente, correctamente leída y persistida en albaran_line_valuations.cantidad_albaran. El motivo miente en el 100 % de las líneas del lote.\n\nCAUSA RAÍZ: ValuationBuilder llama al conversor con cantidad=None A PROPÓSITO cuando unidad_category_match es falso — rama else de services/albaran-valoracion-persist/application/services/valuation_builder.py:1021-1025 — y UnitConverter.convert devuelve reasons=[\"no_quantity_in_albaran\"] para cantidad None (services/albaran-valoracion-persist/application/services/unit_converter.py:64-70). O sea: el motivo describe el ARGUMENTO que le pasó el builder, no el documento que se leyó.\n\nPOR QUÉ IMPORTA: es información falsa en la pantalla del revisor. Con todas las líneas marcadas así, el revisor aprende a ignorar el motivo, que es justo lo contrario de lo que un motivo de revisión debe conseguir.\n\nCAMBIO PROPUESTO (pequeño y de bajo riesgo): motivo propio para «conversión omitida por desacuerdo de categoría de unidad», del tipo `conversion_skipped_unit_category_mismatch`, emitido en esa rama else del builder (o por el conversor mediante un parámetro explícito que distinga «no hay cantidad» de «no convertimos a propósito»), dejando `no_quantity_in_albaran` reservado para cantidad realmente ausente. Antes de cambiar el string hay que listar quién lo consume (motivos de revisión de sv6 y su pintado en sv4) y fijar el comportamiento con un test.\n\nNO ENTRA: la causa de fondo, que es que unidad_medida no se extrae (F-024). Las dos features son independientes y ninguna hace innecesaria a la otra: F-024 elimina la mayoría de los casos de este lote, pero la rama de conversión omitida seguirá existiendo para desacuerdos REALES de categoría (albarán en m³ contra contrato en TN), y entonces el motivo seguirá siendo falso. Tampoco entra tocar UnitCategoryGuard (unit_category_guard.py:61), que se comporta correctamente. Toca solo sv6, con verificación de los lectores en sv4. Fuente: progress/revision_hormigones_20260818.md §5.2 y H-2.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 8,
+      "branch": "feature/F-025-motivo-conversion-omitida"
+    },
+    {
+      "id": "F-026",
+      "title": "Guard de partida de la línea BASE antes de escribir en contrato_lines_derived",
+      "description": "HALLAZGO H-3 (gravedad MEDIA) del informe progress/revision_hormigones_20260818.md §5.1 y §7 fila 5, MEDIDO en la BBDD local: en los 4 albaranes del lote alvaro_17082026 el código de partida manuscrito se leyó mal 4 veces de 4 (P5.03.04 → «03.04»; P5.03.09 → «PT.03.09»; P4.03.05 → «04.03.05»; P4.14.01.02.02 → «15.01.02.02»), y ninguno de los cuatro literales leídos existe en el catálogo de partidas del contrato (0 filas en albaran_contrato_lines_merge), mientras que los cuatro reales sí existen. CONSECUENCIA MEDIDA: sv6 no encuentra la partida, marca partida_action='new_line_created' y CREA 13 LÍNEAS en contrato_lines_derived (ids 389-403, origen='missing_partida') con literales de partida inexistentes en el catálogo, en vez de apuntar a la línea de contrato real, que existía y tenía el mismo precio. Es contaminación PERSISTENTE de una tabla de referencia, no un dato erróneo de una valoración concreta.\n\nDÓNDE FALTA EL GUARD: services/albaran-valoracion-persist/application/services/partida_matcher.py. En la rama (c) del caso principal (:139-152, reasons=['ia_match_partida_missing_derived']) y en el camino sin match de la IA (:162, origen='no_ia_match') se construye la línea derivada con codigo_partida_final=partida_norm SIN comprobar antes que ese literal exista en contrato_lines[].codigo_partida. Las sintéticas heredan después esa misma partida (_partida_para_sintetica, :198-232, partida_action='inherited_from_base_line').\n\nALCANCE: guard determinista ANTES de derivar — si el codigo_partida de la línea BASE no existe en el catálogo de partidas del contrato, no se escribe línea en contrato_lines_derived con ese literal: se deja la partida sin fijar (o se conserva el match de la IA) y la línea se marca para revisión con un motivo propio. Incluye test que fije que contrato_lines_derived nunca recibe un literal fuera del catálogo.\n\nFRONTERA CON LAS VECINAS (explícita, para que no se solapen). F-021 arregla la LECTURA: valida el código leído contra el catálogo del contrato y, cuando no valida, propone candidatas y deja elegir (IA por descripción, o el humano en el selector de sv4 que aporta F-007). F-026 es el ÚLTIMO CORTAFUEGOS aguas abajo: aunque la lectura siga siendo mala, o F-021 no resuelva el caso, o alguien reintroduzca el defecto, la ESCRITURA en contrato_lines_derived no se produce con un literal inválido. Y F-004 R7 veta la partida inexistente DE LAS SINTÉTICAS: no salta aquí porque la partida inválida está en la BASE y las sintéticas la heredan legítimamente — F-026 tapa ese hueco. Si F-021 se implementa antes, esta feature sigue teniendo sentido, pero su spec debe REUTILIZAR el validador contra el catálogo que aquella construya, no duplicarlo.\n\nNO ENTRA: mejorar la lectura del código manuscrito ni la elección asistida entre candidatas (F-021); el reparto de una línea entre varias partidas por el separador «/» (F-016); el selector humano de candidatas (F-007). Toca solo sv6. Fuente: progress/revision_hormigones_20260818.md §5.1, §7 fila 5 y H-3.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 7,
+      "branch": "feature/F-026-guard-partida-base"
     }
   ]
 }
