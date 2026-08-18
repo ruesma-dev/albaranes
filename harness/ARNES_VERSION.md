@@ -5,10 +5,10 @@ Lo escribe `instalar_arnes.ps1`. **No lo edites a mano.**
 
 | Dato | Valor |
 |---|---|
-| Version del arnes | `1.3.0` |
-| Fecha de la version | 2026-08-10 |
-| Instalado/actualizado el | 2026-08-12 17:59 |
-| Modo | instalar |
+| Version del arnes | `1.4.0` |
+| Fecha de la version | 2026-08-13 |
+| Instalado/actualizado el | 2026-08-18 10:18 |
+| Modo | actualizar |
 | Origen | `arnes-base` |
 
 Para actualizar a una version posterior, desde el repositorio `arnes-base`:
