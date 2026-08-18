@@ -17,6 +17,7 @@ Sin red, sin BBDD, sin LLM.
 """
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 
@@ -88,6 +89,45 @@ def test_f019_r23_descuento_ausente_o_ilegible_no_descuenta(descuento):
 def test_f019_r23_el_descuento_en_rango_si_se_aplica():
     assert _sanear_descuento(40.0) == pytest.approx(40.0)
     assert _sanear_descuento(0.5) == pytest.approx(0.5)
+
+
+def test_f019_r23_un_descuento_absurdo_deja_aviso_en_el_log(caplog):
+    """Un descuento fuera de rango se ignora, pero se avisa.
+
+    Es un dato mal leido del albaran y alguien tiene que enterarse.
+    """
+    with caplog.at_level(
+        logging.WARNING, logger="infrastructure.database.review_repository"
+    ):
+        _sanear_descuento(150.0)
+
+    assert any("fuera de rango" in r.getMessage() for r in caplog.records)
+
+
+@pytest.mark.parametrize("descuento", [0.0, None])
+def test_f019_r23_el_descuento_cero_no_ensucia_el_log(caplog, descuento):
+    """Sin descuento es lo NORMAL: no puede generar un aviso por linea.
+
+    La mayoria de las lineas de albaran no traen descuento. Avisar de
+    cada una convertiria el log en ruido y taparia los avisos de verdad.
+    """
+    with caplog.at_level(
+        logging.WARNING, logger="infrastructure.database.review_repository"
+    ):
+        assert _sanear_descuento(descuento) is None
+
+    assert caplog.records == []
+
+
+def test_f019_r24_el_umbral_de_cambio_es_medio_centimo_exacto():
+    """La frontera de ``_num_iguales`` esta cerrada por abajo.
+
+    Una diferencia de exactamente medio centimo YA es un cambio: si no,
+    el limite quedaria sin definir y dos implementaciones distintas
+    darian resultados distintos justo en el borde.
+    """
+    assert _iguales(0.0, 0.005) is False
+    assert _iguales(0.0, 0.004) is True
 
 
 @pytest.mark.parametrize(
