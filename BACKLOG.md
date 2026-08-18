@@ -3,13 +3,12 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **33 features**, 29 abiertas, 4 terminadas.
+Resumen: **33 features**, 28 abiertas, 5 terminadas.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-019 | Importe de línea: manda el unitario leído; el importe solo se despeja si faltan campos | 1 | spec lista | critico | `feature/F-019-importe-unitario-manda` |
 | F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | spec lista | critico | `feature/F-027-conversion-kg-tn-muerta` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 3 | pendiente | estandar | `feature/F-024-unidad-medida` |
 | F-028 | Con dos contratos candidatos no se elige ninguno y el albarán no llega a valorarse | 4 | pendiente | critico | `feature/F-028-selector-contrato-por-partidas` |
@@ -44,17 +43,12 @@ Resumen: **33 features**, 29 abiertas, 4 terminadas.
 | # | Feature | Prioridad | Rigor |
 |---|---|---|---|
 | F-001 | Test de estructura del monorepo | 1 | estandar |
+| F-019 | Importe de línea: manda el unitario leído; el importe solo se despeja si faltan campos | 1 | critico |
 | F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
 | F-012 | Campaña de mutación en paralelo | 3 | estandar |
 | F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
 
 ## Detalle
-
-### F-019 · Importe de línea: manda el unitario leído; el importe solo se despeja si faltan campos
-
-estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-019-importe-unitario-manda`
-
-Fallo REAL detectado en la prueba local del 2026-08-18 (lote FERRETERIA, Feymaco 2.137.569 y 2.139.643): la lectura de IA1 es exacta pero el importe valorado sale multiplicado por la cantidad (139,66 € reales -> 6.238,14 € valorados; 19,41 € -> 970,50 €). CADENA: (1) el SELECT de sv5 (infrastructure/database/sqlalchemy_valuation_context_repository.py, ~100-123, comentado como «FIX jun 2026») calcula importe_albaran = cantidad × precio_neto dando por hecho que precio_neto es un unitario NETO, cuando el prompt de IA1 (services/albaranes-api/config/prompts.yaml:75) lo define como cantidad*precio*(1-descuento/100), es decir el IMPORTE de la línea (columna NETO del albarán); (2) sv6 (application/services/price_reconciler.py) da prioridad al importe sobre el unitario leído y deriva unitario = importe / (cantidad × (1-dto/100)), con lo que 3.800,52 / (108 × 0,6) = 58,65 €/ud en vez de 0,543. REGLA DEL HUMANO (2026-08-18): si el PDF trae cantidad, precio unitario y descuento, importe = cantidad × precio_unitario × (1 - descuento/100) y el unitario leído MANDA; solo si faltan esos campos y hay importe final se despeja el unitario de esa misma fórmula. Alcance: alinear la semántica de precio_neto entre el prompt de IA1 y el consumidor de sv5, y ajustar la precedencia del reconciliador de sv6. Corrigiendo solo (1) la cadena ya cuadra (derivado 0,543 = declarado), pero la precedencia debe quedar explícita. Toca sv5 y sv6; revisar si el prompt de sv2 necesita precisar el significado del campo. Detalle y números en progress/prueba_local_feymaco_20260818.md.
 
 ### F-027 · Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto
 
@@ -287,6 +281,12 @@ VERIFICACIÓN ESPERADA AL CERRAR: abrir /documents en local con esos dos albaran
 estado **terminada** · prioridad 1 · rigor `estandar` · SDD no · rama `feature/F-001-test-estructura`
 
 Feature trivial de calentamiento para validar el circuito completo del arnés (rama, acceptance, implementer, reviewer, cierre) sin tocar ningún servicio: un test en tests/ raíz que valida la coherencia de harness/servicios.json contra el árbol real.
+
+### F-019 · Importe de línea: manda el unitario leído; el importe solo se despeja si faltan campos
+
+estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-019-importe-unitario-manda`
+
+Fallo REAL detectado en la prueba local del 2026-08-18 (lote FERRETERIA, Feymaco 2.137.569 y 2.139.643): la lectura de IA1 es exacta pero el importe valorado sale multiplicado por la cantidad (139,66 € reales -> 6.238,14 € valorados; 19,41 € -> 970,50 €). CADENA: (1) el SELECT de sv5 (infrastructure/database/sqlalchemy_valuation_context_repository.py, ~100-123, comentado como «FIX jun 2026») calcula importe_albaran = cantidad × precio_neto dando por hecho que precio_neto es un unitario NETO, cuando el prompt de IA1 (services/albaranes-api/config/prompts.yaml:75) lo define como cantidad*precio*(1-descuento/100), es decir el IMPORTE de la línea (columna NETO del albarán); (2) sv6 (application/services/price_reconciler.py) da prioridad al importe sobre el unitario leído y deriva unitario = importe / (cantidad × (1-dto/100)), con lo que 3.800,52 / (108 × 0,6) = 58,65 €/ud en vez de 0,543. REGLA DEL HUMANO (2026-08-18): si el PDF trae cantidad, precio unitario y descuento, importe = cantidad × precio_unitario × (1 - descuento/100) y el unitario leído MANDA; solo si faltan esos campos y hay importe final se despeja el unitario de esa misma fórmula. Alcance: alinear la semántica de precio_neto entre el prompt de IA1 y el consumidor de sv5, y ajustar la precedencia del reconciliador de sv6. Corrigiendo solo (1) la cadena ya cuadra (derivado 0,543 = declarado), pero la precedencia debe quedar explícita. Toca sv5 y sv6; revisar si el prompt de sv2 necesita precisar el significado del campo. Detalle y números en progress/prueba_local_feymaco_20260818.md.
 
 ### F-011 · Evals de IA con ground truth y puerta en el arnés
 
