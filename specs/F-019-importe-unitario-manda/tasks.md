@@ -96,7 +96,7 @@ en `sys.modules`.
       | Verificación: revisión contra `design.md` §«Documentación normativa»;
       `test_f019_r3_*` de T5 cubre la regla de `ARCHITECTURE.md`.
 
-- [ ] **T8**: Campaña de mutación y análisis de supervivientes.
+- [x] **T8**: Campaña de mutación y análisis de supervivientes.
       | Verificación: `python -m harness.mutacion --feature F-019` →
       `progress/mutacion_F-019.md` con **cero supervivientes** (nivel
       `critico`) o justificación escrita por superviviente, aceptada por el
