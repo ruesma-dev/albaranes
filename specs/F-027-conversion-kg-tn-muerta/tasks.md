@@ -127,7 +127,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       el alcance mutable es pequeño; los mutantes interesantes son los del
       operador `is not None` de la derivada y los del argumento `cantidad`.
 
-- [ ] **T9**: Puerta de rutas sensibles (R25).
+- [x] **T9**: Puerta de rutas sensibles (R25).
       `valuation_builder.py` cae bajo
       `services/albaran-valoracion-persist/application/services/**`.
       | Verificación: `python -m evals.runner --con-llm --feature F-027` →
