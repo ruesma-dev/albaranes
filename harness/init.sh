@@ -196,6 +196,30 @@ jq)
 esac
 if [ "$RES" -eq 0 ]; then ok "features.json válido"; else ko "features.json inválido (o >1 in_progress)"; fi
 
+# --- 3 bis. BACKLOG.md: proyección legible de features.json -----------------
+# features.json es la fuente de verdad, pero nadie lee un JSON de un vistazo.
+# BACKLOG.md es su proyección en Markdown, GENERADA: no se edita a mano. Se
+# regenera aquí para que esté siempre al día sin que nadie se acuerde.
+#
+# La salida es función pura de features.json (sin fecha de generación), así
+# que este paso NO ensucia el árbol salvo que el backlog haya cambiado de
+# verdad; cuando cambia, avisa para que entre en el mismo commit.
+# Necesita Python: sin él, degrada con aviso.
+if [ -n "$PY" ]; then
+    SALIDA_BACKLOG=$($PY harness/backlog.py 2>&1)
+    if [ $? -eq 0 ]; then
+        if [ -n "$SALIDA_BACKLOG" ]; then
+            warn "BACKLOG.md regenerado desde features.json: inclúyelo en el commit"
+        else
+            ok "BACKLOG.md al día"
+        fi
+    else
+        warn "No se pudo generar BACKLOG.md: $SALIDA_BACKLOG"
+    fi
+else
+    warn "Sin Python: no se regenera BACKLOG.md desde features.json"
+fi
+
 # --- 3b. Niveles de rigor: configuración válida y niveles declarados válidos -
 # Lo que exige cada nivel vive en harness/rigor.json. Una feature que no
 # declara nivel NO es un error: se le aplica el más exigente. Declarar uno

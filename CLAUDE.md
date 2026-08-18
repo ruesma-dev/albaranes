@@ -12,12 +12,23 @@ El humano **autoriza y espera** que lances los subagentes de
 herramienta Agent. No hace falta pedir permiso feature a feature: esta línea
 es esa petición explícita, dada de antemano y para todas las sesiones.
 
-Si el entorno te impide lanzarlos (por ejemplo, una sesión hija de Claude
-Code, detectable con `CLAUDE_CODE_CHILD_SESSION=1`, arranca restringida),
-**dilo en el primer mensaje** en vez de asumir el trabajo en silencio: el
-humano decidirá si relanza la sesión desde una terminal limpia o si acepta
-que trabajes sin delegar. Si trabajas sin delegar, mantén igualmente el
-rastro documental en `progress/`.
+**Delegar es la vía normal de trabajo, no la excepción.** El flujo SDD de
+este arnés está pensado para que cada rol lo ejecute su subagente: el líder
+orquesta y habla con el humano, los subagentes leen el código, escriben y
+verifican. Si te encuentras haciendo tú el trabajo de un rol pudiendo
+delegarlo, es que te has saltado el arnés.
+
+Algunas configuraciones de sesión traen la regla contraria («no uses la
+herramienta Agent salvo que el usuario lo pida»). Esta sección **es** esa
+petición del usuario, escrita de antemano: da por pedida la delegación en
+todas las sesiones de este repositorio.
+
+Si aun así el entorno te impide lanzarlos (por ejemplo, una sesión hija de
+Claude Code, detectable con `CLAUDE_CODE_CHILD_SESSION=1`, arranca
+restringida), **dilo en el primer mensaje** en vez de asumir el trabajo en
+silencio: el humano decidirá si relanza la sesión desde una terminal limpia o
+si acepta que trabajes sin delegar. Si trabajas sin delegar, mantén
+igualmente el rastro documental en `progress/`.
 
 Esta autorización cubre **usar la herramienta Agent**, no la aprobación del
 plan: la PARADA 1 de la sección siguiente sigue siendo obligatoria. Lanzar un
@@ -101,6 +112,10 @@ colas es: **sv1 → `q-extraccion` → sv2 → `q-persistencia` → sv3 →
   `README.md`.
 - `CHECKPOINTS.md` — criterios objetivos de estado final; el reviewer los
   recorre antes de cerrar cualquier feature.
+- `BACKLOG.md` — el backlog en Markdown (estado, prioridad, rigor y
+  descripción de cada feature). **Generado** por `harness/backlog.py` desde
+  `harness/features.json` y regenerado por `harness/init.sh`: no lo edites a
+  mano ni respondas al humano «déjame mirar el JSON», está aquí.
 - `harness/ARNES_VERSION.md` — qué versión del arnés genérico lleva este
   repositorio. Lo escribe el instalador; no lo edites a mano.
 - `infra/` — scripts de despliegue (si aplica).
