@@ -38,7 +38,7 @@ en `sys.modules`.
       | Verificación: la suite de T1 en VERDE (`test_f019_r4_*`, `_r5_*`,
       `_r6_*`, `_r7_*`).
 
-- [ ] **T3**: Suite de sv6 en **RED**:
+- [x] **T3**: Suite de sv6 en **RED**:
       `services/albaran-valoracion-persist/tests/conftest.py` y
       `tests/test_f019_r8_r15_precedencia.py`, con DTOs construidos a mano:
       R8 (declarado manda aunque haya importe), R9 (sin declarado → despeje),

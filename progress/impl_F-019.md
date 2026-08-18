@@ -79,3 +79,62 @@ reproducido por el SQL de producción sobre la fila real del albarán. Los
 5 tests que pasan en RED son los que describen comportamiento que NO debía
 cambiar (R5 cascada, R6 hormigón, columnas del SELECT): que estuvieran ya
 verdes es parte de la evidencia de que el fix es quirúrgico.
+
+### RED 2 — sv6, el importe manda sobre el unitario leído (R8, R10)
+
+Comando exacto (desde `services/albaran-valoracion-persist`):
+
+```
+python -m pytest tests -q --tb=short
+```
+
+Salida (con `price_reconciler.py` todavía con la precedencia de jul 2026):
+
+```
+F.....FFFF..................                                             [100%]
+================================== FAILURES ===================================
+___________ test_f019_r8_unitario_declarado_manda_habiendo_importe ____________
+tests\test_f019_r8_r15_precedencia.py:60: in test_f019_r8_unitario_declarado_manda_habiendo_importe
+    assert "albaran_unitario_manda_derivado_coincide" in resultado.reasons
+E   AssertionError: assert 'albaran_unitario_manda_derivado_coincide' in ['albaran_importe_manda_declarado_coincide']
+E    +  where ['albaran_importe_manda_declarado_coincide'] = PriceReconciliation(final_price=0.543, source='albaran_declared', agreement='neither', reasons=['albaran_importe_manda_declarado_coincide']).reasons
+__________ test_f019_r10_discrepancia_gana_el_declarado_con_mismatch __________
+tests\test_f019_r8_r15_precedencia.py:167: in test_f019_r10_discrepancia_gana_el_declarado_con_mismatch
+    assert resultado.final_price == pytest.approx(0.543)
+E   assert 58.65 == 0.543 ± 5.4e-07
+E
+E     comparison failed
+E     Obtained: 58.65
+E     Expected: 0.543 ± 5.4e-07
+________ test_f019_r10_el_mismatch_es_lo_que_lleva_la_linea_a_revision ________
+tests\test_f019_r8_r15_precedencia.py:192: in test_f019_r10_el_mismatch_es_lo_que_lleva_la_linea_a_revision
+    assert review_required is True
+E   assert False is True
+_____________ test_f019_r10_dentro_de_tolerancia_no_hay_mismatch ______________
+tests\test_f019_r8_r15_precedencia.py:208: in test_f019_r10_dentro_de_tolerancia_no_hay_mismatch
+    assert "albaran_unitario_manda_derivado_coincide" in resultado.reasons
+E   AssertionError: assert 'albaran_unitario_manda_derivado_coincide' in ['albaran_importe_manda_declarado_coincide']
+E    +  where ['albaran_importe_manda_declarado_coincide'] = PriceReconciliation(final_price=1.0, source='albaran_declared', agreement='neither', reasons=['albaran_importe_manda_declarado_coincide']).reasons
+____________ test_f019_r10_justo_fuera_de_tolerancia_hay_mismatch _____________
+tests\test_f019_r8_r15_precedencia.py:220: in test_f019_r10_justo_fuera_de_tolerancia_hay_mismatch
+    assert resultado.final_price == pytest.approx(1.0)
+E   assert 1.03 == 1.0 ± 1.0e-06
+E
+E     comparison failed
+E     Obtained: 1.03
+E     Expected: 1.0 ± 1.0e-06
+=========================== short test summary info ===========================
+FAILED tests/test_f019_r8_r15_precedencia.py::test_f019_r8_unitario_declarado_manda_habiendo_importe
+FAILED tests/test_f019_r8_r15_precedencia.py::test_f019_r10_discrepancia_gana_el_declarado_con_mismatch
+FAILED tests/test_f019_r8_r15_precedencia.py::test_f019_r10_el_mismatch_es_lo_que_lleva_la_linea_a_revision
+FAILED tests/test_f019_r8_r15_precedencia.py::test_f019_r10_dentro_de_tolerancia_no_hay_mismatch
+FAILED tests/test_f019_r8_r15_precedencia.py::test_f019_r10_justo_fuera_de_tolerancia_hay_mismatch
+5 failed, 23 passed in 0.30s
+```
+
+El `58.65` es exactamente el unitario inventado que denunció el informe del
+18-08. Los 23 tests verdes en RED son los de regresión (R11 contrato, R12
+partidas alzadas, R13 ceros, R14 derivaciones imposibles, R15 descuento fuera
+de rango) más R9: describen lo que NO debía cambiar, y estaban verdes ANTES y
+DESPUÉS. Que R9 pase en ambos lados es el resultado esperado: sin unitario
+declarado, la vieja prioridad 1 y la nueva prioridad 2 hacen lo mismo.
