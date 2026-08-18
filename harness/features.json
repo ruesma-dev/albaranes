@@ -211,6 +211,26 @@
       "rigor": "estandar",
       "priority": 7,
       "branch": "feature/F-018-carga-incompleta"
+    },
+    {
+      "id": "F-019",
+      "title": "Importe de línea: manda el unitario leído; el importe solo se despeja si faltan campos",
+      "description": "Fallo REAL detectado en la prueba local del 2026-08-18 (lote FERRETERIA, Feymaco 2.137.569 y 2.139.643): la lectura de IA1 es exacta pero el importe valorado sale multiplicado por la cantidad (139,66 € reales -> 6.238,14 € valorados; 19,41 € -> 970,50 €). CADENA: (1) el SELECT de sv5 (infrastructure/database/sqlalchemy_valuation_context_repository.py, ~100-123, comentado como «FIX jun 2026») calcula importe_albaran = cantidad × precio_neto dando por hecho que precio_neto es un unitario NETO, cuando el prompt de IA1 (services/albaranes-api/config/prompts.yaml:75) lo define como cantidad*precio*(1-descuento/100), es decir el IMPORTE de la línea (columna NETO del albarán); (2) sv6 (application/services/price_reconciler.py) da prioridad al importe sobre el unitario leído y deriva unitario = importe / (cantidad × (1-dto/100)), con lo que 3.800,52 / (108 × 0,6) = 58,65 €/ud en vez de 0,543. REGLA DEL HUMANO (2026-08-18): si el PDF trae cantidad, precio unitario y descuento, importe = cantidad × precio_unitario × (1 - descuento/100) y el unitario leído MANDA; solo si faltan esos campos y hay importe final se despeja el unitario de esa misma fórmula. Alcance: alinear la semántica de precio_neto entre el prompt de IA1 y el consumidor de sv5, y ajustar la precedencia del reconciliador de sv6. Corrigiendo solo (1) la cadena ya cuadra (derivado 0,543 = declarado), pero la precedencia debe quedar explícita. Toca sv5 y sv6; revisar si el prompt de sv2 necesita precisar el significado del campo. Detalle y números en progress/prueba_local_feymaco_20260818.md.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "branch": "feature/F-019-importe-unitario-manda"
+    },
+    {
+      "id": "F-020",
+      "title": "El pipeline es agnóstico al proveedor de IA: ninguna fase privilegia a OpenAI",
+      "description": "Hoy sv3 tiene los proveedores cableados por nombre: el contrato ExtractionEnvelope (services/albaranes-persistencia/domain/models/extraction_models.py:73) es «el envelope de OpenAI» + campos opcionales gemini y claude, así que quien venga en el envelope principal se registra como openai (prueba del 2026-08-18: provider_origin='openai' con model_name='gemini-3.7-flash'); el scoring premia la marca (openai_only 76 frente a gemini_only/claude_only 66, en albaran_confidence_service.py:81-83); y los topes y motivos la nombran (openai_fallback -> cap 84 % + single_provider_openai; line_only_in_openai:N). Consecuencia medida: una ejecución correcta con «FASE 1=gemini . FASE 2=gemini» queda capada al 84 %, por debajo del umbral de 80, y todo va a revisión con motivos que no describen lo ocurrido. ALCANCE (decisiones del humano, 2026-08-18): (1) sv2 declara en el meta del envelope 'provider', 'providers_used' y 'providers_expected' (application/services/phase_merge.py y application/pipelines/extract_albaran_pipeline.py); (2) el contrato pasa de «openai + gemini? + claude?» a «fuente principal + lista de fuentes adicionales», cada una con su provider, aceptando el formato antiguo para no romper mensajes en vuelo ni envelopes ya guardados; (3) sv3 puntúa por número de fuentes y no por marca: openai_only/gemini_only/claude_only se funden en un único 'single_source' con el MISMO valor para todos (76); (4) provider_origin guarda el valor real (gemini, gemini+openai...) en vez de openai_fallback; (5) SE ELIMINA el tope por número de fuentes y el motivo single_provider_openai: con una sola fuente la confianza sale del acuerdo entre campos, no de un castigo fijo. En su lugar, 'provider_missing:<esperado>' salta SOLO si providers_used < providers_expected (fallo real de un proveedor); (6) line_only_in_openai:N pasa a line_single_source:N. Los demás topes (conflicto en campo crítico, campo requerido ausente, líneas sin casar) NO cambian: penalizan hechos, no marcas. NO ENTRA: rehacer el algoritmo de merge multi-IA (se conserva primaria/secundaria/terciaria, solo cambia quién ocupa cada puesto) ni decidir si se vuelve a llamar a varios proveedores en fase 1 (es configuración). RIESGOS: no existe NINGÚN test que fije estos strings (comprobado), así que la red de seguridad se construye en la feature; los documentos ya persistidos se quedan con provider_origin='openai' y no se reescribe histórico; verificar el selector de vistas por proveedor de sv4 (infrastructure/database/review_repository.py). Toca sv2 y sv3, con verificación en sv4.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 2,
+      "branch": "feature/F-020-proveedor-agnostico"
     }
   ]
 }
