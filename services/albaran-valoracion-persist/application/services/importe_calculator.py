@@ -4,6 +4,8 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+from ruesma_comun.importes import clasificar_descuento, importe_de_linea
+
 from domain.models.valuation_records import ImporteSource
 
 logger = logging.getLogger(__name__)
@@ -97,7 +99,22 @@ class ImporteCalculator:
             descuento_pct, reasons,
         )
 
-        if cantidad_efectiva is None or precio_unitario_final is None:
+        # Cálculo con la fórmula CANÓNICA, que vive en
+        # ``ruesma_comun.importes`` porque la comparten sv6 y sv4
+        # (CLAUDE.md, LÍMITE DE SERVICIO: la lógica compartida no se
+        # copia entre servicios). Aquí solo queda la POLÍTICA de sv6:
+        # qué motivo se emite y qué descuento se persiste.
+        #
+        # Devuelve None cuando falta la cantidad o el precio — y también
+        # cuando alguno llega ilegible, que antes reventaba con
+        # ValueError en mitad de una valoración por cola.
+        calc = importe_de_linea(
+            cantidad=cantidad_efectiva,
+            precio_unitario=precio_unitario_final,
+            descuento_pct=descuento_aplicable,
+        )
+
+        if calc is None:
             if importe_albaran_declarado is not None:
                 return ImporteResult(
                     importe_calculado=float(importe_albaran_declarado),
@@ -112,19 +129,10 @@ class ImporteCalculator:
                 descuento_aplicado=None,
             )
 
-        # Cálculo base
-        calc_bruto = float(cantidad_efectiva) * float(precio_unitario_final)
-
-        # Aplicación de descuento (si procede)
         if descuento_aplicable is not None and descuento_aplicable > 0.0:
-            calc = calc_bruto * (1.0 - descuento_aplicable / 100.0)
             reasons.append(
                 f"descuento_aplicado:{descuento_aplicable}%"
             )
-        else:
-            calc = calc_bruto
-
-        calc = round(calc, 2)
 
         if used_albaran_fallback:
             reasons.append("importe_using_albaran_quantity_fallback")
@@ -178,25 +186,31 @@ class ImporteCalculator:
 
         - None → None (sin descuento).
         - 0    → 0 (sin descuento, pero registramos que vino).
-        - <0 o >100 → None y reason de aviso.
+        - <0, >100 o ilegible → None y reason de aviso.
         - dentro de rango → el valor.
+
+        Los RANGOS los decide ``ruesma_comun.importes.clasificar_descuento``,
+        compartido con sv4 (CLAUDE.md, LÍMITE DE SERVICIO). Lo que queda
+        aquí es la POLÍTICA de sv6: distinguir el 0 explícito y dejar
+        traza auditable en ``reasons`` de lo que se ignoró.
         """
-        if descuento_pct is None:
+        estado, valor = clasificar_descuento(descuento_pct)
+        if estado == "ausente":
             return None
-        d = float(descuento_pct)
-        if d == 0.0:
+        if estado == "cero":
             return 0.0
-        if d < 0.0 or d > 100.0:
+        if estado == "invalido":
+            leido = valor if valor is not None else descuento_pct
             reasons.append(
-                f"descuento_fuera_de_rango_ignorado:{d}"
+                f"descuento_fuera_de_rango_ignorado:{leido}"
             )
             logger.warning(
                 "[importe] descuento_pct fuera de rango [0,100]: %s. "
                 "Se ignora.",
-                d,
+                leido,
             )
             return None
-        return d
+        return valor
 
     def _close_enough(self, a: float, b: float) -> bool:
         if a == 0 and b == 0:

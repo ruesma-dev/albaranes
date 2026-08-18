@@ -22,6 +22,8 @@ from sqlalchemy import (
     text,
 )
 
+from ruesma_comun.importes import clasificar_descuento, importe_de_linea
+
 from domain.models.review_models import (
     ConciliacionDisplay,
     ConciliacionSibling,
@@ -62,26 +64,23 @@ logger = logging.getLogger(__name__)
 
 
 def _sanear_descuento(descuento_pct: float | None) -> float | None:
-    """Devuelve el descuento si es aplicable, None si no.
+    """Descuento aplicable a esta línea, o None.
 
-    Mismo criterio que ``ImporteCalculator._sanitize_descuento`` de sv6:
-    solo se aplica dentro de (0, 100]. Un porcentaje negativo o mayor
-    que 100 se ignora en vez de fabricar un importe negativo o cero.
+    Los rangos los decide `ruesma_comun.importes.clasificar_descuento`,
+    compartido con sv6. Lo que este servicio pone encima es su POLÍTICA:
+    un `0 %` se persiste como NULL —sv4 no distingue en su columna «0 %»
+    de «sin descuento»— y un valor imposible deja aviso en el log.
     """
-    if descuento_pct is None:
+    estado, valor = clasificar_descuento(descuento_pct)
+    if estado == "invalido":
+        logger.warning(
+            "[importe] descuento fuera de rango (0,100]: %s. Se ignora.",
+            descuento_pct,
+        )
         return None
-    try:
-        d = float(descuento_pct)
-    except (TypeError, ValueError):
+    if estado != "aplicable":
         return None
-    if d <= 0.0 or d > 100.0:
-        if d != 0.0:
-            logger.warning(
-                "[importe] descuento fuera de rango (0,100]: %s. Se ignora.",
-                d,
-            )
-        return None
-    return d
+    return valor
 
 
 def _importe_de_linea(
@@ -90,16 +89,16 @@ def _importe_de_linea(
     cantidad: float | None,
     descuento_pct: float | None,
 ) -> float | None:
-    """Fórmula CANÓNICA del importe de una línea. Única en el servicio.
+    """Importe de una línea. Único punto del BACKEND de sv4 que lo calcula.
 
-        importe = cantidad × precio_unitario × (1 − descuento/100)
+    La fórmula canónica —`cantidad × precio × (1 − dto/100)`— vive en
+    `ruesma_comun.importes`, compartida con sv6 (`ImporteCalculator`):
+    `CLAUDE.md` (LÍMITE DE SERVICIO) prohíbe copiar lógica entre
+    servicios, y estas dos copias ya habían empezado a divergir. Aquí
+    queda solo la firma que usa este repositorio.
 
-    Es la regla de negocio de Construcciones Ruesma (F-019, regla 13 de
-    `docs/ARCHITECTURE.md`) y la misma que aplica ``ImporteCalculator``
-    en sv6. Devuelve None si falta precio o cantidad.
-
-    F-019, round trip 2 (2026-08-18) — POR QUÉ ESTÁ AQUÍ
-    ---------------------------------------------------
+    F-019, round trip 2 (2026-08-18) — POR QUÉ HAY UN ÚNICO PUNTO
+    ------------------------------------------------------------
     Esta fórmula estaba escrita CUATRO veces en este fichero y tres de
     ellas se dejaban el factor del descuento. sv6 valoró el albarán
     Feymaco 2.137.569 en sus 139,66 € correctos y, seis minutos después,
@@ -109,19 +108,18 @@ def _importe_de_linea(
     tocaba—, lo que hacía el dato persistido internamente contradictorio
     y despistaba al leerlo.
 
-    Regla: NINGÚN sitio de este servicio vuelve a multiplicar precio por
-    cantidad por su cuenta. Si hace falta un importe, se pide aquí.
+    Regla: ningún sitio del **backend** de este servicio vuelve a
+    multiplicar precio por cantidad por su cuenta. Si hace falta un
+    importe, se pide aquí. (`templates/document_detail.html` y
+    `static/app.js` tienen su propia copia para pintar al vuelo, ambas
+    CON el descuento; el guardián estructural de los tests vigila el
+    backend, que es quien persiste.)
     """
-    if precio_unitario is None or cantidad is None:
-        return None
-    try:
-        base = float(precio_unitario) * float(cantidad)
-    except (TypeError, ValueError):
-        return None
-    descuento = _sanear_descuento(descuento_pct)
-    if descuento is not None:
-        base *= 1.0 - descuento / 100.0
-    return round(base, 2)
+    return importe_de_linea(
+        cantidad=cantidad,
+        precio_unitario=precio_unitario,
+        descuento_pct=descuento_pct,
+    )
 
 
 class AlbaranReviewRepository:
@@ -3203,20 +3201,8 @@ class AlbaranReviewRepository:
             self._recalc_valuation_importes(
                 session=session,
                 document_id=document.id,
-                new_line_quantities={
-                    int(line.id): line.cantidad
-                    for line in payload.lines
-                    if line.id is not None and line.cantidad is not None
-                },
-                # (F-019 R23) El descuento entra en la fórmula igual que
-                # la cantidad: si el revisor acaba de editarlo, manda el
-                # suyo. Sin esto, cambiar el descuento en la línea blanca
-                # dejaba el importe valorado con el descuento anterior.
-                new_line_discounts={
-                    int(line.id): line.descuento
-                    for line in payload.lines
-                    if line.id is not None
-                },
+                new_line_quantities=self._cantidades_del_payload(payload),
+                new_line_discounts=self._descuentos_del_payload(payload),
             )
 
             session.commit()
@@ -3231,6 +3217,44 @@ class AlbaranReviewRepository:
     # revisor. Tolerante a ausencia de la valoración (no pasa nada si
     # todavía no existe para este documento).
     # ------------------------------------------------------------------ #
+    @staticmethod
+    def _cantidades_del_payload(payload: Any) -> dict[int, float]:
+        """Cantidades que el revisor acaba de guardar, por merge_line_id.
+
+        Se EXCLUYEN las líneas sin cantidad: para esas, el recálculo debe
+        seguir usando la cantidad que ya tiene la fila valorada, no
+        entender que el revisor la ha borrado.
+        """
+        return {
+            int(line.id): line.cantidad
+            for line in payload.lines
+            if line.id is not None and line.cantidad is not None
+        }
+
+    @staticmethod
+    def _descuentos_del_payload(payload: Any) -> dict[int, float | None]:
+        """Descuentos que el revisor acaba de guardar, por merge_line_id.
+
+        (F-019 R23) El descuento entra en la fórmula igual que la
+        cantidad: si el revisor acaba de editarlo, manda el suyo. Sin
+        esto, cambiar el descuento en la línea blanca dejaba el importe
+        valorado con el descuento anterior.
+
+        OJO — aquí los `None` SÍ entran, al revés que en las cantidades,
+        y es deliberado: `None` significa «el revisor ha borrado el
+        descuento» y tiene que llegar al recálculo para que el importe
+        deje de descontar. Si se filtrara con `is not None`, como se
+        filtra la cantidad, borrar un descuento no tendría efecto y el
+        importe se quedaría descontando para siempre. Es la clase de
+        matiz de una línea que nadie recuerda al releer, así que va
+        fijado por test.
+        """
+        return {
+            int(line.id): line.descuento
+            for line in payload.lines
+            if line.id is not None
+        }
+
     def _recalc_valuation_importes(
         self,
         *,

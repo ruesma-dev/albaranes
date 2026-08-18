@@ -187,6 +187,33 @@ def test_f019_r24_un_valor_ilegible_cuenta_como_cambio():
     assert _iguales("no es un numero", 35.19) is False
 
 
+def test_f019_r27_sv4_no_tiene_su_propia_formula():
+    """sv4 usa la funcion de ruesma_comun, no una copia homonima.
+
+    Round trip 3: la formula seguia duplicada ENTRE servicios (sv4 y
+    sv6) pese a estar unificada dentro de sv4. CLAUDE.md, LIMITE DE
+    SERVICIO: la logica compartida no se copia entre servicios.
+
+    Identidad, no igualdad: si alguien vuelve a escribir la formula
+    dentro de sv4, este test cae aunque la copia sea correcta el primer
+    dia — que es exactamente como empezo la divergencia anterior.
+    """
+    from ruesma_comun.importes import importe_de_linea as compartida
+
+    from infrastructure.database import review_repository
+
+    assert review_repository.importe_de_linea is compartida
+
+
+def test_f019_r27_sv4_y_comun_dan_el_mismo_importe():
+    """Y lo que expone sv4 es lo que calcula la compartida."""
+    from ruesma_comun.importes import importe_de_linea as compartida
+
+    assert _importe_de_linea(
+        precio_unitario=0.543, cantidad=108.0, descuento_pct=40.0
+    ) == compartida(cantidad=108.0, precio_unitario=0.543, descuento_pct=40.0)
+
+
 # ------------------------------------------------------------------ #
 # El guardian estructural
 # ------------------------------------------------------------------ #
