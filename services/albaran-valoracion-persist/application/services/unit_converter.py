@@ -29,6 +29,30 @@ class ConvertedQuantity:
 #     la cantidad, solo se marca revisión.
 # Ambos casos ponen ambiguous=True, que aguas abajo activa
 # review_required (el revisor siempre lo ve).
+#
+# (ago 2026 · F-027) ESTA RED VIVIÓ MUERTA ENTRE JUL Y AGO DE 2026.
+# No por estar mal escrita —sus tests unitarios pasaban— sino porque
+# nadie la llamaba con una cantidad: el ValuationBuilder pasaba
+# cantidad=None a propósito cuando el guard de categoría devolvía
+# category_match=False, que es EXACTAMENTE el caso en que esta red
+# aplica (albarán sin unidad ⇒ categoría 'unknown' ⇒ desacuerdo con el
+# 'mass' del contrato). La guarda de `cantidad is None` de abajo salía
+# antes de llegar aquí.
+# Coste medido en la prueba local del 2026-08-18: albarán 58826 de
+# MAHORSA (30.380 kg sin literal de unidad, contrato CTSU25/0085 en TN)
+# valorado en 468.763,40 € frente a los 390,99 € del administrativo, y
+# el 58878 en 462.282,80 € frente a 385,59 €. Con la cantidad real,
+# este mismo código devuelve 30,38 TN con factor 0,001.
+# Y el warning de abajo NUNCA se emitió: su ausencia en los logs es la
+# señal de que la red no se está ejecutando. Si vuelve a desaparecer,
+# sospechar de quién llama, no de este fichero.
+#
+# La guarda de `cantidad is None` de convert() es la PRIMERA a
+# propósito, y solo debe dispararse cuando la cantidad falta DE VERDAD:
+# sin cantidad no hay nada que reinterpretar. Usarla como forma de
+# "saltarse la conversión" es lo que produjo el ×1000 — y además no
+# protegía de nada, porque ante categorías incompatibles de verdad
+# (UD → M3) convert() ya devuelve None por su cuenta.
 _TN_UMBRAL_CONVERTIR = 1000.0
 _TN_UMBRAL_AVISAR = 100.0
 _UNIDADES_TONELADA = frozenset({

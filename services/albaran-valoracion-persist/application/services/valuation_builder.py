@@ -1006,23 +1006,42 @@ class ValuationBuilder:
                 )
 
         # 4. Unit conversion
-        if category_match and partida_result.derived_line is not None:
-            unidad_contrato_para_conversion = unidad_albaran
+        # (ago 2026 · F-027) CONVERTIR PRIMERO, DECIDIR REVISIÓN DESPUÉS.
+        #
+        # Antes, con category_match=False, aquí se llamaba al conversor
+        # con cantidad=None A PROPÓSITO. Eso mataba la red de
+        # plausibilidad de toneladas del UnitConverter: los 30.380 kg
+        # sin unidad del albarán 58826 de MAHORSA, contra un contrato
+        # tarifado en TN, se valoraron como 30.380 TN → 468.763,40 €
+        # frente a los 390,99 € del administrativo (y el 58878, en
+        # 462.282,80 €). La red existía desde jul 2026 escrita justo
+        # para ese caso y NUNCA se ejecutó: convert() sale por su guarda
+        # de `cantidad is None` antes de llegar a ella.
+        #
+        # Y no protegía de nada: cuando las categorías son incompatibles
+        # DE VERDAD (UD → M3), convert() ya devuelve None por su cuenta.
+        # Lo único que conseguía era cegar el caso `unknown`, que es
+        # donde vive la red. category_match=False marca REVISIÓN
+        # (paso 5, `review_required`), nunca anula la cantidad.
+        #
+        # La unidad de DESTINO es la de la línea QUE PONE EL PRECIO: la
+        # derivada si la hay —que lleva la unidad del contrato siempre
+        # que la IA casara una línea (PartidaMatcher._build_derived)—,
+        # si no la del contrato. Convertir hacia la unidad del ALBARÁN
+        # cuando hay derivada era la otra mitad del mismo ×1000: KG → KG
+        # con factor 1 contra un precio por tonelada.
+        if partida_result.derived_line is not None:
+            unidad_destino_conversion = (
+                partida_result.derived_line.unidad_medida
+            )
         else:
-            unidad_contrato_para_conversion = unidad_contrato
+            unidad_destino_conversion = unidad_contrato
 
-        if category_match:
-            converted = self._converter.convert(
-                cantidad=albaran_line.cantidad if albaran_line else None,
-                unidad_albaran=unidad_albaran,
-                unidad_contrato=unidad_contrato_para_conversion,
-            )
-        else:
-            converted = self._converter.convert(
-                cantidad=None,
-                unidad_albaran=unidad_albaran,
-                unidad_contrato=unidad_contrato_para_conversion,
-            )
+        converted = self._converter.convert(
+            cantidad=albaran_line.cantidad if albaran_line else None,
+            unidad_albaran=unidad_albaran,
+            unidad_contrato=unidad_destino_conversion,
+        )
 
         # 4.bis Residuos: la cantidad VALORADA es el nº de contenedores
         # (contrato: X m3/contenedor), no los m3 del albaran. m3 y Tn se

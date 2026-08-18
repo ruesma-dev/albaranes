@@ -165,3 +165,35 @@ criterio de aceptación (139,66 €) NO se cumplía. Dos round trips más:
   pasada** (`progress/review_F-019.md` conserva los cuatro veredictos).
 - Lección para el arnés: el criterio «139,66 €» vivía solo en el guion MANUAL;
   ningún test comprobaba el AGREGADO ni el valor PERSISTIDO. Por ahí se coló.
+
+## F-027 — Error de ×1000: la red KG→TN era código muerto (done, 2026-08-19)
+
+- Rama `feature/F-027-conversion-kg-tn-muerta`, 11 commits (T1–T11).
+  **APPROVED a la primera** (`progress/review_F-027.md`), rigor `critico`.
+- Origen: la revisión del resto del lote alvaro_17082026
+  (`progress/revision_resto_lote_20260818.md`, hallazgo H-1). El albarán 58826
+  de MAHORSA se valoró en **468.763,40 €** (30.380 kg sin unidad impresa
+  contra un contrato en TN a 15,43 €/TN) y el 58878 en 462.282,80 €.
+- Causa: existía una red de plausibilidad de toneladas para exactamente ese
+  caso, pero **nunca se ejecutaba**. Con las categorías de unidad sin casar, el
+  builder llamaba al conversor con `cantidad=None` a propósito y el conversor
+  salía por su guarda antes de llegar a la red.
+- Entregado: un solo cambio de producción en `valuation_builder.py` — convertir
+  SIEMPRE con la cantidad real y usar `category_match=False` solo para marcar
+  revisión; y la unidad de destino pasa a ser la de la línea que pone el precio
+  (`derived_line.unidad_medida`), no la del albarán.
+- **La segunda mitad del ×1000**, descubierta al redactar la spec: con línea
+  derivada, la conversión iba hacia la unidad del albarán (KG→KG, factor 1) y
+  daba los mismos 468.763 € **sin que la IA fallara en nada**, y sin marcar
+  revisión. Ese camino se habría activado al implementar F-024. Cerrado antes
+  de abrirse.
+- Números: 58826 pasa de 468.763,40 € a **468,76 €** (30,38 TN, factor 0,001).
+  Los importes ya verificados NO se mueven: 224964 → 475,60 €, 225137 →
+  980,10 €, 1167 → 871,20 €, Feymaco 2.137.569 → 139,66 € y 2.139.643 → 19,41 €.
+- Los 468,76 € no son los 390,99 € del administrativo: la diferencia es el
+  precio (15,43 en vez de 12,87), que es **F-031** y queda fuera a propósito.
+- Riesgos asumidos y FIJADOS POR TEST (no en prosa): D2, se convierte también
+  cuando la IA declara desacuerdo de unidades, marcando revisión; D3, el umbral
+  de 1000 podría reinterpretar un albarán legítimo, que queda siempre marcado.
+- PENDIENTE del humano: las verificaciones MANUAL de T10 y decidir qué
+  histórico se revalora (R26/D5: sin script de backfill, se sanea desde sv4).

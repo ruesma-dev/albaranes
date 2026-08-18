@@ -23,7 +23,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
 
 ---
 
-- [ ] **T1**: Crear la rama y la suite del conversor en **RED**:
+- [x] **T1**: Crear la rama y la suite del conversor en **RED**:
       `services/albaran-valoracion-persist/tests/test_f027_r3_r9_conversor.py`
       con `YamlUnitRegistry` real sobre `config/unit_registry.yaml`. Cubre
       R3 (30380 y 29960 sin unidad contra TN → 30,38 / 29,96, factor 0,001,
@@ -43,7 +43,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       `services/albaran-valoracion-persist` en verde, + traza del fallo
       provocado en `progress/impl_F-027.md`.
 
-- [ ] **T2**: **RED de verdad** — el defecto, a través del builder:
+- [x] **T2**: **RED de verdad** — el defecto, a través del builder:
       `tests/test_f027_r1_r2_r11_r13_builder.py`. Compone `ValuationBuilder`
       con sus cinco colaboradores reales (`UnitCategoryGuard`,
       `PriceReconciler(tolerance_pct=2.0)`, `PartidaMatcher(alm_codigo_partida="ALM")`,
@@ -60,7 +60,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       `importe_calculado == 468763.4`; traza pegada en
       `progress/impl_F-027.md` (fase RED de los requisitos centrales).
 
-- [ ] **T3**: **RED** de la segunda mitad del ×1000:
+- [x] **T3**: **RED** de la segunda mitad del ×1000:
       `tests/test_f027_r6_r7_unidad_destino.py`. Mismo albarán pero con
       `unidad_medida='KG'` (el escenario que abre F-024) y partida cruzada que
       fuerza `partida_action='new_line_created'`: hoy convierte `KG→KG` con
@@ -71,7 +71,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       idéntico al de hoy.
       | Verificación: en **ROJO** antes de T5, con la traza pegada.
 
-- [ ] **T4**: **RED** de la no-regresión (R14, R15, R16, R19, R20):
+- [x] **T4**: **RED** de la no-regresión (R14, R15, R16, R19, R20):
       `tests/test_f027_r14_r20_no_regresion.py`. Fija los importes que hoy
       salen BIEN, medidos antes del cambio y pegados en el informe:
       hormigón/mortero sin unidad contra contrato en `M3` (4, 9, 8 y 3 m³ del
@@ -84,7 +84,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       (es su función: si se pusieran rojos, el cambio habría roto lo bueno);
       en ROJO antes de T5 para R19/R20.
 
-- [ ] **T5**: **El cambio**. En
+- [x] **T5**: **El cambio**. En
       `services/albaran-valoracion-persist/application/services/valuation_builder.py`,
       paso «4. Unit conversion»: una sola llamada a `self._converter.convert`
       con la cantidad real (elimina la rama `else` con `cantidad=None`), y
@@ -95,7 +95,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       | Verificación: las suites de T2, T3 y T4 en VERDE
       (`test_f027_r1_*` … `test_f027_r20_*`), sin tocar T1.
 
-- [ ] **T6**: Documentación del conversor y del servicio (sin cambio
+- [x] **T6**: Documentación del conversor y del servicio (sin cambio
       funcional): ampliar el comentario de cabecera de
       `application/services/unit_converter.py` (líneas 21-33) con el periodo en
       que la red estuvo muerta y el caso 58826/58878; actualizar
@@ -105,7 +105,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       | Verificación: revisión contra `design.md` §2.2 y §2.3; `git diff` sin
       cambios de código ejecutable en `unit_converter.py`.
 
-- [ ] **T7**: Regla 8 de `docs/ARCHITECTURE.md` §«Semántica de dominio
+- [x] **T7**: Regla 8 de `docs/ARCHITECTURE.md` §«Semántica de dominio
       imprescindible»: pasar por el conversor significa **pasarle la
       cantidad**; un desacuerdo de categoría marca revisión, nunca anula la
       cantidad; la unidad de destino es la de la línea que pone el precio.
@@ -119,7 +119,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       ningún `prompts*.yaml`).
       | Verificación: `python -m pytest tests -q` desde la raíz, en verde.
 
-- [ ] **T8**: Campaña de mutación y análisis de supervivientes.
+- [x] **T8**: Campaña de mutación y análisis de supervivientes.
       | Verificación: `python -m harness.mutacion --feature F-027` →
       `progress/mutacion_F-027.md` con **cero supervivientes** (nivel
       `critico`) o justificación escrita por superviviente aceptada por el
@@ -127,7 +127,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       el alcance mutable es pequeño; los mutantes interesantes son los del
       operador `is not None` de la derivada y los del argumento `cantidad`.
 
-- [ ] **T9**: Puerta de rutas sensibles (R25).
+- [x] **T9**: Puerta de rutas sensibles (R25).
       `valuation_builder.py` cae bajo
       `services/albaran-valoracion-persist/application/services/**`.
       | Verificación: `python -m evals.runner --con-llm --feature F-027` →
@@ -136,7 +136,9 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       en el informe** y el reviewer lo recoge en C4 ter. No se marca N/A a
       secas.
 
-- [ ] **T10**: MANUAL (humano) — prueba local de extremo a extremo con Azurite
+- [ ] **T10**: MANUAL (humano) — **PENDIENTE del humano**; guion con los
+      comandos y las consultas SQL exactas en `progress/impl_F-027.md`
+      §8. Prueba local de extremo a extremo con Azurite
       + PostgreSQL local (`infra/docs/levantar-pipeline-local.md`), con los
       PDFs del lote `alvaro_17082026`. Comandos exactos y consultas SQL en la
       sección «T10 · Verificaciones MANUAL» de `progress/impl_F-027.md`:
@@ -160,7 +162,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       | Verificación: MANUAL (humano); resultados pegados en
       `progress/impl_F-027.md`.
 
-- [ ] **T11**: Ejecutar `bash harness/init.sh` en verde (incluye la suite de
+- [x] **T11**: Ejecutar `bash harness/init.sh` en verde (incluye la suite de
       sv6 y la puerta de cobertura del diff).
       | Verificación: `bash harness/init.sh` → ENTORNO LISTO.
 
