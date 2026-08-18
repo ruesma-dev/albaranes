@@ -125,7 +125,7 @@ en `sys.modules`.
       | Verificación: MANUAL (humano); resultados pegados en
       `progress/impl_F-019.md`.
 
-- [ ] **T11**: Ejecutar `bash harness/init.sh` en verde (incluye las suites
+- [x] **T11**: Ejecutar `bash harness/init.sh` en verde (incluye las suites
       nuevas de sv5 y sv6 y la puerta de cobertura del diff).
       | Verificación: `bash harness/init.sh` → ENTORNO LISTO.
 

@@ -356,3 +356,142 @@ FROM albaran_valuations v
 JOIN albaran_documents_merge d ON d.id = v.document_id
 ORDER BY v.created_at_utc DESC;
 ```
+
+---
+
+## Qué cambió, en concreto
+
+### Código de producción (2 ficheros, 2 cambios reales)
+
+| Fichero | Cambio |
+|---|---|
+| `services/albaran-valoracion-api/infrastructure/database/sqlalchemy_valuation_context_repository.py` | `_SQL_ALBARAN_LINES`: el `cantidad *` se mueve DENTRO de la segunda rama del `COALESCE`. Un solo movimiento de paréntesis. Reescrito el bloque de comentarios que afirmaba que `precio_neto` era un unitario neto. |
+| `services/albaran-valoracion-persist/application/services/price_reconciler.py` | `reconcile`: los bloques 1 y 2 intercambian el orden (manda el unitario declarado; el importe solo se despeja si no hay unitario) y el desacuerdo pasa a viajar como `agreement="mismatch"`. Firma sin cambios; helpers `_no_cero`, `_derivar_bruto` y `_match` intactos. Docstring reescrito. |
+
+`services/albaran-valoracion-persist/domain/models/valuation_envelope.py` se
+toca **solo en comentarios** (aviso de que `precio_neto_albaran` es un
+importe, no un unitario): ni un campo nuevo, ni un tipo cambiado, ni un
+default distinto — R21 se cumple por construcción.
+
+### Tests (4 ficheros nuevos, 52 tests)
+
+| Fichero | Tests | Cubre |
+|---|---|---|
+| `services/albaran-valoracion-api/tests/test_f019_r4_r7_importe_select.py` | 9 | R4, R5, R6, R7 y el tramo sv5 de R16 |
+| `services/albaran-valoracion-persist/tests/test_f019_r8_r15_precedencia.py` | 28 | R8-R15 |
+| `services/albaran-valoracion-persist/tests/test_f019_r16_r17_feymaco.py` | 9 | R16, R17 |
+| `tests/test_f019_r1_r2_r3_semantica_precio_neto.py` | 6 | R1, R2, R3 |
+
+Más los dos `conftest.py` que anclan `sys.path` de sv5 y sv6 (patrón copiado
+de `services/albaranes-api/tests/conftest.py`).
+
+### Documentación
+
+`docs/ARCHITECTURE.md` (regla 13, nueva), `services/albaran-valoracion-api/sv5.md`
+(§9), `services/albaran-valoracion-persist/sv6.md` (§5.3, §6.1 reescrita, §6.4
+corregida) y el comentario del DTO del envelope.
+
+## Decisiones de diseño tomadas al implementar
+
+1. **El `derivado_bruto` se sigue calculando ANTES de decidir la prioridad**,
+   aunque el bloque 1 (unitario declarado) gane. Es lo que conserva intactos
+   los motivos de auditoría de R13/R14 (`importe_albaran_cero_ignorado`,
+   `importe_leido_sin_cantidad_no_derivable`, `descuento_100_no_derivable`)
+   en el caso —frecuente— de que además haya unitario declarado. Si se hubiera
+   calculado solo dentro del bloque 2, la auditoría habría enmudecido justo en
+   las líneas mejor leídas.
+2. **Un `return` propio para la rama de mismatch**, en vez de compartir el
+   final con un flag de `agreement`: así el `final_price=declarado` queda
+   escrito explícitamente en los dos caminos. Es dinero: antes la repetición
+   que la elegancia.
+3. **Los tests de sv5 ejecutan el SQL real, importado del módulo de
+   producción**, contra SQLite en memoria. Un test que copiara el SQL a mano
+   habría pasado igual con el bug dentro. Confirmada la viabilidad que la spec
+   anticipaba: `_SQL_ALBARAN_LINES` corre sin un solo cambio.
+4. **La fixture de las cinco líneas de Feymaco está duplicada** en las suites
+   de sv5 y sv6, con un comentario cruzado en ambas. No es descuido: sv5 y sv6
+   tienen paquetes `application`/`domain`/`infrastructure` homónimos de primer
+   nivel y no pueden convivir en una misma sesión de pytest.
+
+## Desviaciones respecto a la spec
+
+1. **La regla 13 de `docs/ARCHITECTURE.md` (parte de R3, asignada a T7) se
+   escribió en T5.** Motivo: el test (c) de T5 vigila justamente esa regla y
+   la verificación de T5 exige la suite en verde. Se dejó primero el test en
+   RED (traza arriba) y después la regla. El resto de R3 —`sv5.md`, `sv6.md`,
+   DTO del envelope— sí se hizo en T7.
+2. **T9 no pudo producir la evidencia declarada** (faltan claves LLM en el
+   entorno local). Motivo completo, con las salidas literales, en la sección
+   «T9 · Puerta de rutas sensibles» de este informe. No se improvisó ninguna
+   vía alternativa para obtener las claves.
+3. **`sv6.md` §6.4 y §5.3 se corrigieron más allá de lo estrictamente pedido**
+   (la spec pedía §6.1 y §6.4). §6.4 estaba desactualizada desde jul 2026 en
+   el punto del importe declarado —lo dice la propia spec— y §5.3 describía
+   `agreement == 'mismatch'` como si solo pudiera venir del contraste 1a/1b,
+   que es exactamente lo que esta feature cambia (D3). Dejarlo sin tocar
+   habría creado documentación falsa en el servicio que estamos tocando.
+4. **T10 queda `[ ]` en `tasks.md`**, siguiendo la convención de F-002: es una
+   verificación MANUAL del humano y marcarla hecha sería falso. Su guion
+   completo está en este informe.
+
+## Lo que quedó FUERA del alcance (a propósito)
+
+- **sv2 no se toca** (decisión D1, confirmada por el humano). El prompt de IA1
+  define bien `precio_neto`; el equivocado era el consumidor. El campo con
+  nombre no ambiguo (`importe_linea`) es F-003 R1/R2.
+- **Ningún script de backfill** (D4/R20): el histórico se sanea revalorando
+  desde sv4. Consulta para dimensionarlo, en el guion de T10.
+- **`ImporteCalculator` sin tocar**: el importe declarado sigue mandando sobre
+  el calculado. Endurecer ese contraste es el guard aritmético de F-003 R6.
+- **`ValuationBuilder` sin tocar** (D3): el mismatch llega a revisión por
+  `agreement`, que el builder ya mira.
+- **Descuento expresado en euros en vez de en porcentaje**: riesgo residual
+  conocido, anotado en la spec, y que corresponde a F-003 R2/R3.
+
+## Lo que falta para cerrar
+
+1. Las cuatro verificaciones **MANUAL (humano)** de T10.
+2. El veredicto del **reviewer** contra `CHECKPOINTS.md` (con C4 ter leído
+   sobre la sección T9 de este informe).
+3. Pendiente heredado, no de esta feature: rellenar `evals/ground_truth/` para
+   que la puerta de rutas sensibles pueda subir de `aviso` a `bloqueo`.
+4. Pendiente para el humano al arrancar **F-003**: su R4 manda conservar «la
+   derivación actual `cantidad × precio_neto`», que es exactamente el bug que
+   F-019 corrige, y su R6 es la evolución del R10 de aquí, no un duplicado.
+
+---
+
+## Evidencias
+
+Números medidos, no estimados. Todos reproducibles con los comandos que se
+citan.
+
+| Evidencia | Valor | Cómo se obtuvo |
+|---|---|---|
+| **Tests ejecutados y resultado** | **248 passed** (suite raíz) + **9 passed** (sv5) + **37 passed** (sv6); **0 fallos**. De ellos, **52 son nuevos de F-019** (6 en la raíz, 9 en sv5, 37 en sv6). sv2, sv3 y `comun` en verde por caché de árbol sin cambios. | `bash harness/init.sh` (secciones 7 y 7 bis) |
+| **Cobertura de las líneas cambiadas** | **100,0 % (5/5 líneas, umbral 80 %, nivel `critico`)** | línea `PUERTA COBERTURA` de `bash harness/init.sh` |
+| **Mutantes generados y supervivientes** | **4 generados, 4 muertos, 0 supervivientes, 0 timeouts** sobre 144 líneas de producción en alcance (3 ficheros) | `python -m harness.mutacion --feature F-019` → `progress/mutacion_F-019.md` |
+| **Tiempo de ejecución de la suite** | raíz **65,30 s**; sv5 **0,79 s**; sv6 **0,12 s** | salida de cada pytest en `bash harness/init.sh` |
+
+Sobre los 4 mutantes: es un número bajo *porque el diff lo es*. De las 144
+líneas en alcance, el grueso son comentarios y docstrings (la corrección
+documental de R1/R3 es media feature), el SQL vive dentro de un `text()`
+multilínea que el mutador no puede tocar —previsto en `tasks.md` T8— y el
+código mutable real es `price_reconciler.py`. Los 4 mutantes caen todos ahí,
+en la condición y en las listas de motivos que decide esta feature, y los
+cuatro mueren. Nivel `critico`: **cero supervivientes, sin justificación
+pendiente**.
+
+### Estado de las puertas de `bash harness/init.sh`
+
+```
+[OK] PUERTA COBERTURA: 100.0% de 5 líneas cambiadas cubiertas (5/5, umbral 80%, nivel critico)
+[AVISO] PUERTA RUTAS SENSIBLES [evals]: aviso: falta la evidencia de 2 ruta(s) sensible(s) tocada(s):
+      - services/albaran-valoracion-persist/application/services/price_reconciler.py (redes deterministas de sv6)
+      - services/albaran-valoracion-persist/domain/models/valuation_envelope.py (envelope DTO y records finales de sv6)
+      Sin cumplir: MODO: completa, FASES: IA1,IA2,IA3,IA4,E2E, VEREDICTO: VERDE
+      Lanzalo con: python -m evals.runner --con-llm --feature F-019
+[OK] Rama actual: feature/F-019-importe-unitario-manda
+----------------------------------------
+ENTORNO LISTO. Puedes trabajar.
+```
