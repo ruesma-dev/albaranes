@@ -90,6 +90,63 @@ def test_f019_r23_el_descuento_en_rango_si_se_aplica():
     assert _sanear_descuento(0.5) == pytest.approx(0.5)
 
 
+@pytest.mark.parametrize(
+    ("precio", "cantidad"),
+    [("no es un numero", 10.0), (2.5, "tampoco"), (object(), 3.0)],
+)
+def test_f019_r23_un_valor_ilegible_no_produce_importe(precio, cantidad):
+    """Basura en la columna no se convierte en un importe inventado.
+
+    La BBDD guarda estos campos como DOUBLE PRECISION, pero el importe
+    es dinero: ante un valor que no se puede multiplicar, la respuesta
+    correcta es «no hay importe», no un numero cualquiera ni una
+    excepcion que tumbe el guardado del revisor.
+    """
+    assert (
+        _importe_de_linea(
+            precio_unitario=precio, cantidad=cantidad, descuento_pct=None
+        )
+        is None
+    )
+
+
+# ------------------------------------------------------------------ #
+# La comparacion que decide si una fila cambia (R24)
+# ------------------------------------------------------------------ #
+def _iguales(a, b):
+    from infrastructure.database.review_repository import (
+        AlbaranReviewRepository,
+    )
+
+    return AlbaranReviewRepository._num_iguales(a, b)
+
+
+def test_f019_r24_dos_nulos_son_iguales():
+    assert _iguales(None, None) is True
+
+
+@pytest.mark.parametrize(("a", "b"), [(None, 1.0), (1.0, None)])
+def test_f019_r24_un_nulo_frente_a_un_numero_no_lo_es(a, b):
+    assert _iguales(a, b) is False
+
+
+def test_f019_r24_el_ruido_binario_no_cuenta_como_cambio():
+    """35.19 y 35.190000000000005 son el mismo importe."""
+    assert _iguales(35.19, 35.190000000000005) is True
+
+
+def test_f019_r24_medio_centimo_ya_es_un_cambio():
+    assert _iguales(35.19, 35.20) is False
+
+
+def test_f019_r24_un_valor_ilegible_cuenta_como_cambio():
+    """Ante un valor que no se puede comparar, se reescribe la fila.
+
+    Preferimos recalcular de mas que dejar basura persistida.
+    """
+    assert _iguales("no es un numero", 35.19) is False
+
+
 # ------------------------------------------------------------------ #
 # El guardian estructural
 # ------------------------------------------------------------------ #

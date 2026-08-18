@@ -215,6 +215,62 @@ def test_f019_r23_descuento_fuera_de_rango_se_ignora(repositorio, sesion):
     assert importe > 0
 
 
+def test_f019_r23_el_descuento_editado_por_el_revisor_manda(
+    repositorio, sesion,
+):
+    """Si el revisor corrige el descuento, el importe lo recoge.
+
+    Antes el descuento nuevo se guardaba en la linea blanca y el importe
+    valorado se quedaba con el anterior: 108 x 0,543 al 25 % = 43,98 EUR,
+    no los 35,19 del 40 % viejo.
+    """
+    _sembrar(sesion)
+
+    repositorio._recalc_valuation_importes(
+        session=sesion,
+        document_id=DOCUMENT_ID,
+        new_line_quantities={},
+        new_line_discounts={370: 25.0},
+    )
+
+    linea = _leer_lineas(sesion)[370]
+    assert linea["importe_calculado"] == pytest.approx(43.98)
+    assert linea["descuento_albaran_aplicado"] == pytest.approx(25.0)
+    assert linea["importe_source"] == "calculated"
+
+
+def test_f019_r23_una_linea_ilegible_no_rompe_el_guardado(
+    repositorio, sesion,
+):
+    """Un precio que no es un numero se salta; el resto se recalcula.
+
+    SQLite acepta texto en una columna DOUBLE y la BBDD real tampoco
+    garantiza que no haya llegado basura por otra via. El guardado del
+    revisor no puede caerse por eso, ni valorar la linea a cualquier
+    cosa: se deja como estaba y el total suma las demas.
+    """
+    _sembrar(sesion)
+    sesion.execute(
+        text(
+            "UPDATE albaran_line_valuations "
+            "SET precio_unitario_final = 'ilegible' WHERE merge_line_id = 370"
+        )
+    )
+    sesion.flush()
+
+    repositorio._recalc_valuation_importes(
+        session=sesion,
+        document_id=DOCUMENT_ID,
+        new_line_quantities={},
+    )
+
+    # La linea rota conserva su importe anterior, sin inventar nada.
+    assert _leer_lineas(sesion)[370]["importe_calculado"] == pytest.approx(
+        35.19
+    )
+    assert _leer_total(sesion) == pytest.approx(TOTAL_CORRECTO)
+
+
 # ------------------------------------------------------------------ #
 # R24 — lo que el revisor no ha tocado, no se toca
 # ------------------------------------------------------------------ #
