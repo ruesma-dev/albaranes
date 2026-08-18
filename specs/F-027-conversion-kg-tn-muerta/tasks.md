@@ -136,7 +136,9 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       en el informe** y el reviewer lo recoge en C4 ter. No se marca N/A a
       secas.
 
-- [ ] **T10**: MANUAL (humano) — prueba local de extremo a extremo con Azurite
+- [ ] **T10**: MANUAL (humano) — **PENDIENTE del humano**; guion con los
+      comandos y las consultas SQL exactas en `progress/impl_F-027.md`
+      §8. Prueba local de extremo a extremo con Azurite
       + PostgreSQL local (`infra/docs/levantar-pipeline-local.md`), con los
       PDFs del lote `alvaro_17082026`. Comandos exactos y consultas SQL en la
       sección «T10 · Verificaciones MANUAL» de `progress/impl_F-027.md`:
@@ -160,7 +162,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       | Verificación: MANUAL (humano); resultados pegados en
       `progress/impl_F-027.md`.
 
-- [ ] **T11**: Ejecutar `bash harness/init.sh` en verde (incluye la suite de
+- [x] **T11**: Ejecutar `bash harness/init.sh` en verde (incluye la suite de
       sv6 y la puerta de cobertura del diff).
       | Verificación: `bash harness/init.sh` → ENTORNO LISTO.
 
