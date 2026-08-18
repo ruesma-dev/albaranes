@@ -228,3 +228,131 @@ implementer no puede ni debe suplir; (2) ground truth sin casos, que hace la
 pasada no evaluable por diseño. No se marca N/A: se declara ausente con causa.
 Rellenar los libros de `evals/ground_truth/` sigue siendo el pendiente del
 humano que permitiría subir esta puerta a `bloqueo`.
+
+---
+
+## T10 · Verificaciones MANUAL (humano) — PENDIENTES
+
+No las puede ejecutar el implementer: requieren el pipeline local levantado
+(Azurite + PostgreSQL local + los dos PDFs del lote `alvaro_17082026`) y
+llamadas reales a los proveedores de IA. Guion completo, con los comandos y
+las consultas exactas, para que el humano solo tenga que copiar y pegar.
+
+**Preparación** (`infra/docs/levantar-pipeline-local.md` §0 y §3): Azurite y
+PostgreSQL en marcha y los servicios arrancados EN ESTE ORDEN — sv5
+(`python main.py`), sv6 (`python main_worker.py`), sv3
+(`python main_worker.py`), sv2 (`python main_worker.py`), sv4
+(`python main.py`). Para F-019 basta con **sv5 + sv6** si los documentos ya
+están extraídos y persistidos: la valoración se relanza sobre el merge, que
+NO cambia con esta feature (R19).
+
+### 1) Albarán 2.137.569 → total 139,66 € y cinco líneas correctas
+
+Relanzar la valoración (botón «revalorar» de sv4, o a mano desde
+`services/albaran-valoracion-persist`):
+
+```powershell
+python encolar_valoracion.py <document_id_2137569> CTSU24/0454 --force
+```
+
+Comprobación en PostgreSQL local:
+
+```sql
+SELECT v.total_valorado, v.total_lines
+FROM albaran_valuations v
+WHERE v.document_id = '<document_id_2137569>';
+-- ESPERADO: total_valorado = 139.66 ; total_lines = 5
+--    (antes de F-019: 6238.14)
+
+SELECT l.merge_line_id,
+       m.concepto,
+       l.cantidad_albaran,
+       l.precio_unitario_final,
+       l.precio_unitario_source,
+       l.importe_calculado,
+       l.importe_albaran_declarado,
+       l.importe_source
+FROM albaran_line_valuations l
+JOIN albaran_valuations v ON v.id = l.valuation_id
+JOIN albaran_lines_merge m ON m.id = l.merge_line_id
+WHERE v.document_id = '<document_id_2137569>'
+ORDER BY m.line_index;
+```
+
+ESPERADO, línea a línea (`precio_unitario_source = 'albaran_declared'` en las
+cinco):
+
+| # | Concepto | Cantidad | `precio_unitario_final` | `importe_calculado` | Antes (mal) |
+|---|---|---|---|---|---|
+| 1 | PAPEL HIGIENICO (SACO 108) | 108 | 0,543 | 35,19 | 58,6500 / 3.800,52 |
+| 2 | LTS. JABON LIQUIDO PH NEUTRO | 10 | 3,422 | 20,53 | 34,2167 / 205,30 |
+| 3 | ROLLO PAPEL IND. | 12 | 7,726 | 55,63 | 92,7167 / 667,56 |
+| 4 | KGS AÑIL ESPECIAL FEYMACO | 4 | 5,497 | 13,19 | 21,9833 / 52,76 |
+| 5 | BOLSA BASURA 52X58 | 100 | 0,252 | 15,12 | 25,2000 / 1.512,00 |
+
+### 2) Albarán 2.139.643 → total 19,41 € (R18)
+
+```powershell
+python encolar_valoracion.py <document_id_2139643> <codigo_contrato> --force
+```
+
+```sql
+SELECT total_valorado FROM albaran_valuations
+WHERE document_id = '<document_id_2139643>';
+-- ESPERADO: 19.41   (antes de F-019: 970.50)
+```
+
+De este albarán solo se conoce el total: 50 ud × 0,647 con 40 % → 19,41 €.
+
+### 3) Ninguna línea marcada por desacuerdo unitario/derivado
+
+```sql
+SELECT l.merge_line_id, l.precio_unitario_agreement, l.review_reasons_json
+FROM albaran_line_valuations l
+JOIN albaran_valuations v ON v.id = l.valuation_id
+WHERE v.document_id IN ('<document_id_2137569>', '<document_id_2139643>')
+  AND l.review_reasons_json LIKE '%unitario_declarado_vs_derivado_mismatch%';
+-- ESPERADO: 0 filas.
+```
+
+Si apareciera alguna, NO es un fallo de F-019 en sí: significa que en esa
+línea el unitario impreso y el importe impreso no cuadran entre sí, y la
+feature está haciendo justo lo que debe (usar el declarado y mandar la línea
+a revisión). Habría que mirar el PDF antes que el código.
+
+### 4) Un albarán de hormigón sigue valorándose por contrato (R6)
+
+Tomar cualquier documento de hormigón ya persistido (el albarán no imprime
+precios: `precio` y `precio_neto` vienen NULL en sus líneas), relanzar su
+valoración y comprobar:
+
+```sql
+SELECT l.merge_line_id, l.precio_unitario_final, l.precio_unitario_source,
+       l.importe_calculado, l.importe_source
+FROM albaran_line_valuations l
+JOIN albaran_valuations v ON v.id = l.valuation_id
+WHERE v.document_id = '<document_id_hormigon>';
+-- ESPERADO: precio_unitario_source ∈ {contract_line_match, both_agreed,
+--           pdf_inference} y importe_calculado NO nulo ni 0.
+--           Es el comportamiento de HOY: esta feature no debe cambiarlo.
+```
+
+Este cuarto punto es el que cierra R19/R21: los documentos anteriores se
+revaloran sin migración ni redrive, porque el contexto se relee del merge y la
+valoración es un replace transaccional por `document_id`.
+
+### R20 — histórico ya valorado: decisión del humano
+
+Las valoraciones hechas **antes** de esta feature conservan sus importes
+inflados hasta que se re-valoren. **No se ha escrito ningún script de
+backfill** (decisión D4/R20 de la spec, confirmada por el humano al
+aprobarla): el mecanismo para corregirlas ya existe —botón de revalorar de sv4
+→ `q-valoracion`— y qué documentos se reprocesan, y cuándo, lo decide el
+humano. Una consulta para dimensionarlo:
+
+```sql
+SELECT v.document_id, d.numero_albaran, v.total_valorado, v.created_at_utc
+FROM albaran_valuations v
+JOIN albaran_documents_merge d ON d.id = v.document_id
+ORDER BY v.created_at_utc DESC;
+```

@@ -111,7 +111,9 @@ en `sys.modules`.
       en el informe** y el reviewer lo recoge en C4 ter (no se marca N/A a
       secas).
 
-- [ ] **T10**: MANUAL (humano) — prueba local con los dos PDFs del lote
+- [ ] **T10**: MANUAL (humano) — **PENDIENTE del humano**; comandos y
+      consultas exactas en la sección «T10 · Verificaciones MANUAL» de
+      `progress/impl_F-019.md`. — prueba local con los dos PDFs del lote
       `alvaro_17082026` (Azurite + PG local, `infra/docs/levantar-pipeline-local.md`):
       1) reprocesar **2.137.569** → 5 líneas con los unitarios e importes de
          R16 y total **139,66 €**;
