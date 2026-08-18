@@ -3,15 +3,12 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **33 features**, 28 abiertas, 5 terminadas.
-
-En curso: **F-027**.
+Resumen: **33 features**, 27 abiertas, 6 terminadas.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | en curso | critico | `feature/F-027-conversion-kg-tn-muerta` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 3 | pendiente | estandar | `feature/F-024-unidad-medida` |
 | F-028 | Con dos contratos candidatos no se elige ninguno y el albarán no llega a valorarse | 4 | pendiente | critico | `feature/F-028-selector-contrato-por-partidas` |
 | F-029 | Obra resuelta por texto sin detectar empates: score 1,00 a la obra equivocada | 5 | pendiente | critico | `feature/F-029-obra-empates-y-sin-cif` |
@@ -47,16 +44,11 @@ En curso: **F-027**.
 | F-001 | Test de estructura del monorepo | 1 | estandar |
 | F-019 | Importe de línea: manda el unitario leído; el importe solo se despeja si faltan campos | 1 | critico |
 | F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
+| F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
 | F-012 | Campaña de mutación en paralelo | 3 | estandar |
 | F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
 
 ## Detalle
-
-### F-027 · Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto
-
-estado **en curso** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-027-conversion-kg-tn-muerta`
-
-HALLAZGO H-1 (CRÍTICA). El albarán 58826 de MAHORSA se valoró en 468.763,40 € cuando el administrativo dice 390,99 €, y el 58878 en 462.282,80 € frente a 385,59 €. Son 30.380 kg × 15,43 €/TN y 29.960 kg × 15,43: un factor 1000 de unidad (el albarán da kg sin literal de unidad y el contrato tarifa en TN). CAUSA RAÍZ: la red determinista que existe EXACTAMENTE para este caso (`cantidad_sin_unidad_reinterpretada_kg_a_tn`, con `_TN_UMBRAL_CONVERTIR = 1000`) NUNCA SE EJECUTA. Cuando las categorías de unidad no casan, `ValuationBuilder` llama al conversor con `cantidad=None` (services/albaran-valoracion-persist/application/services/valuation_builder.py:1020-1030, rama else de `if category_match`), y `UnitConverter.convert` sale por la guarda `cantidad is None` (unit_converter.py:64-70) ANTES de llegar al bloque de plausibilidad de toneladas (unit_converter.py:83-101), que se añadió en julio de 2026 justo para esto. El importe cae después al fallback con la cantidad cruda. El propio código documenta el caso gemelo: árido «M 20/40», 29920 sin unidad, 298.302 €. POR QUÉ ES LO PRIMERO: es un error de tres órdenes de magnitud que llega PERSISTIDO a `albaran_valuations.total_valorado` y de ahí a la bandeja del revisor; y no es raro, porque TODO el árido a granel viene en kg sin literal de unidad. PROPUESTA: invertir el orden — convertir primero y decidir revisión después. Llamar siempre a `convert()` con la cantidad real y usar `category_match=False` solo para marcar revisión, no para anular la cantidad; alternativamente, mover la comprobación de plausibilidad de TN a un guard previo e independiente. EXIGE test de regresión con el caso real 30380 kg / contrato en TN. RELACIÓN: F-024 (la unidad no se extrae de IA1) ataca la causa aguas arriba; esta feature es la red de seguridad de sv6, que debe funcionar aunque IA1 siga sin unidad. F-025 (falsa alarma `no_quantity_in_albaran`) toca la misma rama del builder: coordinar para no pisarse. Toca sv6. Fuente: progress/revision_resto_lote_20260818.md (revision de los 7 albaranes restantes del lote alvaro_17082026, 2026-08-18).
 
 ### F-024 · La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero
 
@@ -295,6 +287,12 @@ Fallo REAL detectado en la prueba local del 2026-08-18 (lote FERRETERIA, Feymaco
 estado **terminada** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-011-evals-ia`
 
 Proceso de evaluación de las 4 fases de IA contra resultado esperado, al estilo de tests unitarios. Contrato de datos ya definido en evals/ (5 Excel: IA1-IA4 + INPUTS, pestañas por tipología; los rellena el humano). Alcance: (1) conversor xlsx -> fixtures JSON versionables, con barrido de datos sensibles C3-bis; (2) runner de evals: IA1/IA2 contra la extracción real (a demanda, cuesta llamadas LLM), IA3/IA4 con modo determinista contra las redes de sv6 además del modo real; (3) puerta del arnés: declaración de rutas sensibles (prompts, clientes LLM, schemas, redes deterministas) tal que si el diff de una feature las toca, el cierre exige evals en verde además de los tests; (4) el mecanismo genérico de la puerta (declaración de rutas -> verificación extra obligatoria) se porta a arnes-base como capacidad opcional del arnés (regla de propagación).
+
+### F-027 · Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto
+
+estado **terminada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-027-conversion-kg-tn-muerta`
+
+HALLAZGO H-1 (CRÍTICA). El albarán 58826 de MAHORSA se valoró en 468.763,40 € cuando el administrativo dice 390,99 €, y el 58878 en 462.282,80 € frente a 385,59 €. Son 30.380 kg × 15,43 €/TN y 29.960 kg × 15,43: un factor 1000 de unidad (el albarán da kg sin literal de unidad y el contrato tarifa en TN). CAUSA RAÍZ: la red determinista que existe EXACTAMENTE para este caso (`cantidad_sin_unidad_reinterpretada_kg_a_tn`, con `_TN_UMBRAL_CONVERTIR = 1000`) NUNCA SE EJECUTA. Cuando las categorías de unidad no casan, `ValuationBuilder` llama al conversor con `cantidad=None` (services/albaran-valoracion-persist/application/services/valuation_builder.py:1020-1030, rama else de `if category_match`), y `UnitConverter.convert` sale por la guarda `cantidad is None` (unit_converter.py:64-70) ANTES de llegar al bloque de plausibilidad de toneladas (unit_converter.py:83-101), que se añadió en julio de 2026 justo para esto. El importe cae después al fallback con la cantidad cruda. El propio código documenta el caso gemelo: árido «M 20/40», 29920 sin unidad, 298.302 €. POR QUÉ ES LO PRIMERO: es un error de tres órdenes de magnitud que llega PERSISTIDO a `albaran_valuations.total_valorado` y de ahí a la bandeja del revisor; y no es raro, porque TODO el árido a granel viene en kg sin literal de unidad. PROPUESTA: invertir el orden — convertir primero y decidir revisión después. Llamar siempre a `convert()` con la cantidad real y usar `category_match=False` solo para marcar revisión, no para anular la cantidad; alternativamente, mover la comprobación de plausibilidad de TN a un guard previo e independiente. EXIGE test de regresión con el caso real 30380 kg / contrato en TN. RELACIÓN: F-024 (la unidad no se extrae de IA1) ataca la causa aguas arriba; esta feature es la red de seguridad de sv6, que debe funcionar aunque IA1 siga sin unidad. F-025 (falsa alarma `no_quantity_in_albaran`) toca la misma rama del builder: coordinar para no pisarse. Toca sv6. Fuente: progress/revision_resto_lote_20260818.md (revision de los 7 albaranes restantes del lote alvaro_17082026, 2026-08-18).
 
 ### F-012 · Campaña de mutación en paralelo
 
