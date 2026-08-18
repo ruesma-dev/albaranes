@@ -932,3 +932,258 @@ sin cambios desde entonces.
 4. Pendiente heredado: rellenar `evals/ground_truth/`.
 5. Anotado, no hecho: hacer testable `_apply_valuation_line_updates_in_session`
    sustituyendo `ANY(:ids)` por un `bindparam` expanding.
+
+---
+
+# Round trip 3 (2026-08-18) — CHANGES_REQUESTED del reviewer
+
+Sobre `3add86e`. `progress/review_F-019.md` §«Tercera pasada». Tres cambios,
+**los tres aplicados** por decisión del humano (incluido el 2, que el reviewer
+dejaba a su elección). El reviewer dio por bueno el fondo del round trip 2 —el
+fix del descuento, los 139,66 € fijados sobre el valor persistido, la campaña
+de mutación verificada de forma independiente y sv4 pasando de 0 a 44 tests—;
+lo que faltaba estaba en los bordes.
+
+## Cambio 1 · R24 se decidía por el resultado, no por las entradas
+
+**Tenía razón, y era el bloqueante de verdad.** `sin_cambios` incluía
+`_num_iguales(importe_anterior, nuevo_importe)`: la fila se actualizaba siempre
+que el importe guardado difiriera del recalculado, **aunque el revisor no
+hubiera tocado nada**.
+
+Lo que lo convierte en un defecto y no en una redundancia es que **sv6 genera
+esas filas a propósito**: `ImporteCalculator.compute` devuelve el importe
+DECLARADO cuando declarado y calculado discrepan, dejando el motivo
+`declared_vs_calculated_mismatch` (regla de jul 2026, y la propia regla 13: si
+ambos existen y discrepan, gana el declarado y la línea va a revisión). Es
+decir: el criterio del resultado pisaba exactamente las líneas que sv6 había
+decidido proteger.
+
+El Feymaco 2.137.569 se salvaba **por casualidad**, porque sus cinco líneas
+cuadran al céntimo. Basta con que el importe impreso difiera medio céntimo del
+producto —redondeos por línea del proveedor, descuentos en cascada— para caer
+en el camino malo.
+
+### RED 7 — la sonda del reviewer, reproducida
+
+```
+python -m pytest tests -q --tb=line     (desde services/albaranes-front)
+```
+
+```
+............................................F..FFF                       [100%]
+================================== FAILURES ===================================
+E   AssertionError: R24: el importe declarado fue pisado
+    assert 60.0 == 100.0 ± 1.0e-04
+      Obtained: 60.0
+      Expected: 100.0 ± 1.0e-04
+tests\test_f019_r23_r26_recalculo_importe.py:410: AssertionError: R24: el importe declarado fue pisado
+E   assert 60.0 == 100.0 ± 1.0e-04
+tests\test_f019_r23_r26_recalculo_importe.py:474: assert 60.0 == 100.0 ± 1.0e-04
+E   assert 25.0 == 30.0 ± 3.0e-05
+      Obtained: 25.0
+      Expected: 30.0 ± 3.0e-05
+=========================== short test summary info ===========================
+FAILED tests/test_f019_r23_r26_recalculo_importe.py::test_f019_r24_el_declarado_discrepante_no_se_pisa
+FAILED tests/test_f019_r23_r26_recalculo_importe.py::test_f019_r24_reenviar_el_mismo_descuento_no_es_un_cambio
+FAILED tests/test_f019_r23_r26_recalculo_importe.py::test_f019_r24_cero_y_nulo_son_el_mismo_descuento[0.0]
+FAILED tests/test_f019_r23_r26_recalculo_importe.py::test_f019_r24_cero_y_nulo_son_el_mismo_descuento[None]
+4 failed, 46 passed in 1.20s
+```
+
+El `60.0` frente a `100.0` es exactamente el número de la sonda del informe del
+reviewer, con las mismas entradas (cantidad 100, unitario 1,00, dto 40 %).
+
+### El arreglo
+
+`sin_cambios` pasa a comparar **solo entradas**: `cantidad_albaran`,
+`cantidad_convertida` y el **descuento ya saneado**. Dos detalles que no son
+adorno:
+
+- **El descuento se compara saneado** porque el front reenvía el descuento en
+  *cada* guardado (`static/app.js`: `descuento: pick("descuento")`) y `0` y
+  `NULL` significan lo mismo. Sin sanear, todo guardado vería un cambio
+  inexistente y el guardián no protegería nada. Cubierto por
+  `test_f019_r24_reenviar_el_mismo_descuento_no_es_un_cambio` y por
+  `..._cero_y_nulo_son_el_mismo_descuento`.
+- **Se cae el conjunto `importe_anterior is not None`**, que ya no hace falta:
+  una fila sin importe previo tampoco tiene entradas distintas, y si las tiene
+  se actualiza igual.
+
+6 tests nuevos, incluidos los tres simétricos que fijan que la línea **sí**
+cede cuando el revisor cambia la cantidad o el descuento (no vale proteger de
+más).
+
+## Cambio 2 · La fórmula duplicada ENTRE servicios → `ruesma_comun`
+
+El round trip 2 unificó las cuatro copias **dentro** de sv4 y dejó en pie la
+duplicación **entre** sv4 y sv6. `CLAUDE.md`, LÍMITE DE SERVICIO: «la lógica
+compartida va a `services/albaranes-comun`, **nunca copiada entre servicios**».
+
+Y el reviewer demostró que ya no era teórico: las dos copias **habían empezado
+a divergir** en tres puntos. Estado tras el cambio:
+
+| Divergencia señalada | sv4 antes | sv6 antes | Ahora |
+|---|---|---|---|
+| Descuento ilegible (`'x'`) | `None` | **`ValueError`** (reventaba una valoración por cola) | Los dos: `invalido` → se ignora, sin excepción |
+| Traza de lo ignorado | solo `logger.warning` | `reasons` auditable | Cada uno conserva la suya (es política) |
+| Borde del cero | `<= 0.0` → `None` | `< 0.0`, devolviendo `0.0` | Un solo criterio de rango; **cada servicio decide qué persiste** |
+
+### Qué se movió y qué NO
+
+**A `services/albaranes-comun/ruesma_comun/importes.py` (nuevo)**: la función
+pura. `clasificar_descuento` (`ausente` / `cero` / `aplicable` / `invalido`),
+`factor_descuento` e `importe_de_linea`. Aritmética y rangos, nada más. No
+lanza nunca: al otro lado hay una valoración por cola y el guardado de un
+revisor.
+
+**NO se movió la política**, siguiendo la instrucción explícita: la precedencia
+declarado-vs-calculado, los motivos de revisión y qué se persiste siguen en
+quien los aplica. Es la razón de que `clasificar_descuento` distinga `cero` de
+`ausente` aunque el importe salga igual: **sv6 persiste `0.0` y sv4 persiste
+`NULL` para el mismo dato**, y las dos decisiones son correctas en su servicio.
+Sin esa distinción, mover la función habría cambiado en silencio lo que se
+guarda.
+
+### La red que impide que vuelvan a separarse
+
+Tests de **identidad**, no de igualdad, uno en cada servicio:
+
+```python
+assert review_repository.importe_de_linea is compartida      # sv4
+assert importe_calculator.importe_de_linea is importe_de_linea  # sv6
+```
+
+Un test de igualdad pasaría el primer día con una copia recién hecha —que es
+justo como empezó esta divergencia—. El de identidad cae en cuanto alguien
+reintroduce una copia local, aunque sea correcta.
+
+`comun` se instala en modo editable (`pip install -e ../comun`) en los venvs de
+ambos servicios: comprobado que las dos suites la ven, y `init.sh` corre las
+tres en verde.
+
+### Efecto colateral bueno
+
+`ImporteCalculator` ya no revienta con un descuento, una cantidad o un precio
+ilegibles: degrada a «no se puede calcular» y usa el declarado si lo hay. Antes
+un `float('x')` sin proteger tumbaba la valoración en mitad de la cola.
+Fijado por `test_f019_r27_un_descuento_ilegible_ya_no_revienta` y
+`..._un_precio_ilegible_no_revienta_la_valoracion`.
+
+### La observación no bloqueante, aplicada
+
+El docstring afirmaba «NINGÚN sitio de este servicio vuelve a multiplicar
+precio por cantidad». No era exacto: `templates/document_detail.html:619` y
+`static/app.js:1003` tienen su copia para pintar al vuelo (ambas **con** el
+descuento, así que no hay defecto). Rebajado a «ningún sitio del **backend**»,
+con la excepción nombrada y el motivo — el guardián estructural vigila el
+backend, que es quien persiste.
+
+## Cambio 3 · El cableado `payload → descuento`, por test
+
+La línea que conecta todo el arreglo con la realidad no la ejecutaba ningún
+test: todos pasaban los mapas a mano al método privado. Extraída a dos métodos
+con nombre —`_cantidades_del_payload` y `_descuentos_del_payload`— y cubierta
+con 7 tests.
+
+Lo que protegen es **la asimetría**, que es el matiz que el reviewer identificó
+como peligroso:
+
+- las **cantidades** se filtran con `is not None` — una línea sin cantidad
+  conserva la que ya tiene la fila valorada;
+- los **descuentos NO** — `None` significa «el revisor ha borrado el
+  descuento» y tiene que llegar al recálculo.
+
+Escribir el segundo como el primero es un cambio de una palabra que devolvería
+el incidente entero y en silencio. Hay un test que afirma la asimetría de
+frente (`..._los_dos_mapas_no_se_filtran_igual`) para que nadie la «arregle».
+
+## Qué cambió, en concreto
+
+| Fichero | Cambio |
+|---|---|
+| `services/albaranes-comun/ruesma_comun/importes.py` | **NUEVO**. La función pura compartida. |
+| `services/albaranes-comun/tests/test_importes.py` | **NUEVO**. 27 tests del contrato compartido. |
+| `services/albaranes-front/.../review_repository.py` | `sin_cambios` por entradas; `_sanear_descuento` e `_importe_de_linea` delegan en `comun`; cableado del payload a dos métodos con nombre. |
+| `services/albaran-valoracion-persist/.../importe_calculator.py` | `_sanitize_descuento` delega los rangos en `comun`; el cálculo usa `importe_de_linea`; el guard de «no se puede calcular» pasa a mirar el resultado de la fórmula, lo que de paso cubre los valores ilegibles. |
+| `services/albaranes-front/tests/test_f019_r23_cableado_payload.py` | **NUEVO**. 7 tests del cableado. |
+| `services/albaran-valoracion-persist/tests/test_f019_r27_formula_compartida.py` | **NUEVO**. 9 tests: identidad, política conservada y no-regresión. |
+| `specs/.../requirements.md` | G7 (R27-R29) y R24 reformulado: por entradas, nunca por resultado. |
+| `specs/.../tasks.md` | T18-T21. |
+| `docs/ARCHITECTURE.md` | Regla 13: la fórmula vive en `ruesma_comun.importes`; aritmética vs política; y cómo se decide que una línea «no ha cambiado». |
+
+## Lo que quedó FUERA (a propósito)
+
+- **`_apply_valuation_line_updates_in_session` sigue sin test de
+  integración** (`ANY(:ids)` es de PostgreSQL y SQLite no lo ejecuta). Sin
+  cambios respecto al round trip 2; sigue anotado como pendiente.
+- **Los `reasons` obsoletos tras un recálculo legítimo de sv4** (observación no
+  bloqueante 1 del reviewer): cuando sv4 sí actualiza una fila, los motivos que
+  escribió sv6 se quedan como estaban. Real, y la siguiente piedra para quien
+  lea la BBDD — pero no entra en R23-R29 y el encargo dice «no toques nada más
+  de la feature».
+- **Las tres propuestas de mejora del protocolo** del reviewer (C4 con el «caso
+  difícil», `mutacion_paralela.py` y los ficheros sin versionar, y el reintento
+  ante `0xC0000142`): son genéricas y, si el humano las acepta, se portan a
+  `arnes-base`. No se aplican por cuenta propia.
+
+## Evidencias (round trip 3)
+
+| Evidencia | Valor | Cómo se obtuvo |
+|---|---|---|
+| **Tests ejecutados y resultado** | **248** (raíz) + **11** (sv5) + **53** (sv6) + **59** (sv4) + **49** (`comun`) = **420 passed, 0 fallos**. Nuevos en este round trip: **42** — 6 de R24, 2 de identidad y 7 del cableado en sv4; 9 de R27 en sv6; y **27** del contrato compartido en `comun`. | `bash harness/init.sh` |
+| **Cobertura de las líneas cambiadas** | **93,1 % (81/87 líneas, umbral 80 %, nivel `critico`)** — sube desde el 89,1 % del round trip 2 pese a crecer el alcance de 55 a 87 líneas | línea `PUERTA COBERTURA` de `bash harness/init.sh` |
+| **Mutantes generados y supervivientes** | **31 generados, 28 muertos, 3 supervivientes, 0 timeouts**. Los 3 son **equivalentes**, verificados ejecutando original y mutante (13 valores de frontera y 81 combinaciones). Análisis completo en `progress/mutacion_F-019.md`. | `python -m harness.mutacion --feature F-019 --workers 1` |
+| **Tiempo de ejecución de la suite** | raíz **≈46 s**; sv4 **1,30 s**; sv6 **1,13 s**; sv5 **0,46 s**; `comun` **25,43 s** | salida de cada pytest |
+
+Evolución de la mutación en las tres pasadas: 4 mutantes / 0 supervivientes →
+24 / 2 → **31 / 3**. Los 7 nuevos salen de `ruesma_comun/importes.py`; 6 mueren
+y el séptimo es el equivalente del borde del cero (inalcanzable: la línea
+anterior ya devolvió por el caso `valor == 0.0`).
+
+**Todo se ha ejecutado EN SERIE**, según el aviso del reviewer: él midió que
+lanzar `init.sh` en paralelo con otra ejecución lo tumba en Windows por presión
+de recursos (`git init` devolviendo `0xC0000142`, *STATUS_DLL_INIT_FAILED*), y
+que en aislamiento pasa. Ninguna medida de este round trip se ha tomado con
+otra cosa corriendo a la vez.
+
+### Estado de las puertas
+
+```
+[OK] PUERTA COBERTURA: 93.1% de 87 líneas cambiadas cubiertas (81/87, umbral 80%, nivel critico)
+[AVISO] PUERTA RUTAS SENSIBLES [evals]: aviso: falta la evidencia de 2 ruta(s) sensible(s) tocada(s):
+      - services/albaran-valoracion-persist/application/services/price_reconciler.py
+      - services/albaran-valoracion-persist/domain/models/valuation_envelope.py
+[OK] Rama actual: feature/F-019-importe-unitario-manda
+----------------------------------------
+ENTORNO LISTO. Puedes trabajar.
+```
+
+**Atención, esto ha cambiado y lo digo yo antes de que lo encuentre nadie**: la
+puerta pasa de señalar **2 rutas sensibles a 3**. Este round trip toca
+`services/albaran-valoracion-persist/application/services/importe_calculator.py`,
+que cae bajo el patrón `.../application/services/**` de
+`harness/rutas_sensibles.json` («redes deterministas de sv6»). En los dos round
+trips anteriores el único fichero de producción era de sv4, que no está
+declarado; ahora sí se toca sv6, porque el cambio 2 exige que `ImporteCalculator`
+consuma la fórmula compartida.
+
+El **estado** de la puerta no cambia (`aviso`) ni cambia la causa de fondo, que
+es la de siempre y no es de esta feature: las claves LLM no están en el entorno
+local —son secretos y este repositorio prohíbe escribirlas— y
+`evals/ground_truth/` sigue **sin un solo caso**, así que la pasada declarada
+daría `NO_EVALUABLE` aunque hubiera claves. Motivo completo y salidas literales
+en §T9 de este informe; exigencia declarada `aviso` por la decisión D5 de
+F-011. **No se marca N/A: se declara ausente con causa** (CHECKPOINTS.md C4
+ter), y ahora con una ruta más que antes.
+
+## Lo que falta para cerrar
+
+1. Las verificaciones **MANUAL (humano)** de T10 y T17, en particular «guardar
+   desde el front y volver a mirar el total».
+2. El veredicto del **reviewer** sobre esta tercera pasada.
+3. Decisión del humano sobre revalorar el 2.137.569 en la BBDD local (R20).
+4. Pendientes heredados: `evals/ground_truth/` vacío; hacer testable
+   `_apply_valuation_line_updates_in_session`; los `reasons` obsoletos tras un
+   recálculo de sv4; y las tres propuestas de protocolo del reviewer, que si se
+   aceptan se portan a `arnes-base`.

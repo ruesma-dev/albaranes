@@ -126,3 +126,34 @@ justo el paso que destapó el fallo. Guion con las consultas en
 es un fichero sin versionar de OTRA sesión. Se coló en un commit por un
 `git add -A` y se sacó acto seguido; sigue intacto en disco, sin versionar.
 Obliga a lanzar la mutación con `--workers 1`.
+
+### F-019 · round trip 3 (CHANGES_REQUESTED del reviewer) — aplicado
+
+Los **tres** cambios del reviewer, no dos (el humano decidió arreglar también
+el que quedaba a elección):
+
+1. **R24 se decidía por el RESULTADO y no por las entradas** (bloqueante). Una
+   línea que sv6 dejó en `declared_albaran` con el importe declarado
+   discrepando del calculado —cosa que sv6 hace **a propósito**— se pisaba en
+   el primer guardado aunque el revisor no la tocara. Ahora `sin_cambios`
+   compara cantidad, cantidad convertida y descuento **saneado**.
+2. **La fórmula duplicada ENTRE servicios** → `services/albaranes-comun`
+   (`ruesma_comun/importes.py`, nuevo). sv4 y sv6 la importan; la **política**
+   de cada uno se queda donde estaba. Tests de **identidad** en ambos para que
+   nadie reintroduzca una copia.
+3. **El cableado `payload → descuento`** pasa a dos métodos con nombre y 7
+   tests, que fijan la asimetría: las cantidades filtran los `None`, los
+   descuentos no.
+
+`init.sh` en verde; cobertura **93,1 %** (81/87); mutación **31/28/3**, los 3
+supervivientes equivalentes y verificados. Todo ejecutado **en serie**: el
+reviewer midió que lanzarlo en paralelo tumba `init.sh` en Windows
+(`0xC0000142`).
+
+**Ojo para el reviewer**: la puerta de rutas sensibles pasa de **2 a 3** rutas
+señaladas, porque este round trip sí toca sv6
+(`application/services/importe_calculator.py`). El estado sigue en `aviso` y la
+causa de fondo es la misma de siempre (claves LLM ausentes y
+`evals/ground_truth/` vacío).
+
+Detalle completo en `progress/impl_F-019.md` §«Round trip 3».
