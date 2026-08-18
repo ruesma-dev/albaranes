@@ -3,13 +3,23 @@
 
 **Feature**: Importe de línea: manda el unitario leído; el importe solo se
 despeja si faltan campos.
-**Rama revisada**: `feature/F-019-importe-unitario-manda` (11 commits sobre
-`dev` = `cd904cd`).
+**Rama revisada**: `feature/F-019-importe-unitario-manda`.
 **Spec**: `specs/F-019-importe-unitario-manda/` (requirements, design, tasks).
 **Informe del implementer**: `progress/impl_F-019.md`.
 **Diagnóstico de origen**: `progress/prueba_local_feymaco_20260818.md`.
 
-## Veredicto
+> **VEREDICTO VIGENTE: APPROVED** (segunda pasada, HEAD `8c6aa82`).
+> Este documento conserva las **dos** pasadas de review. La primera
+> (CHANGES_REQUESTED sobre HEAD `38cfa04`) se mantiene íntegra abajo porque es
+> el rastro de por qué la feature cambió; la segunda, con el resultado del
+> round trip y el veredicto final, está en la sección
+> «**Segunda pasada — round trip de R18**», al final.
+
+---
+
+# Primera pasada — 2026-08-18, HEAD `38cfa04` (11 commits sobre `dev` = `cd904cd`)
+
+## Veredicto (primera pasada)
 
 **CHANGES_REQUESTED** — por UN solo punto, concreto y barato: el requisito
 **R18** (albarán Feymaco **2.139.643**, total **19,41 €**) no tiene ni un test
@@ -432,3 +442,223 @@ de «el mutador no llega a esta clase de código» — que es información que e
 reviewer necesita para juzgar si hace falta exigir otra red (aquí: ejecutar el
 SQL real de producción en el test). Como el bloque es genérico, si se acepta
 debería portarse a `arnes-base`.
+
+---
+
+# Segunda pasada — round trip de R18 · 2026-08-18, HEAD `8c6aa82`
+
+**Commit revisado**: `8c6aa82` («F-019: round trip de review - R18 con test
+automatico») sobre `38cfa04`, misma rama. Árbol limpio
+(`git status --porcelain` sin salida).
+
+Alcance de esta pasada: **solo lo que cambió en `8c6aa82`** más lo que el
+veredicto anterior dejaba pendiente. El resto de la feature quedó verificado
+contra el diff real en la primera pasada y no se repite.
+
+## Veredicto
+
+**APPROVED.**
+
+El único punto que bloqueaba —R18 sin ningún test automático— está cerrado, y
+cerrado mejor de lo que pedía el informe: con cinco tests, con la spec
+corregida y con una **objeción bien fundada a mi propia redacción** que el
+reviewer acepta y recoge más abajo.
+
+## Qué cambió en `8c6aa82`
+
+Seis ficheros, **ninguno de producción**:
+
+| Fichero | Cambio |
+|---|---|
+| `services/albaran-valoracion-api/tests/test_f019_r4_r7_importe_select.py` | +2 tests de R18 y la fixture `LINEA_2139643` |
+| `services/albaran-valoracion-persist/tests/test_f019_r16_r17_feymaco.py` | +3 tests de R18 y la fixture homónima con comentario cruzado |
+| `specs/.../requirements.md` | R18 reescrito |
+| `specs/.../tasks.md` | trazabilidad de R18 y enunciados de T1 y T6 |
+| `progress/impl_F-019.md` | sección de round trip + «Evidencias» actualizadas |
+| `progress/review_F-019.md` | este informe, incluido para dejar rastro |
+
+Confirmado que **no se tocó código de producción**: el alcance recalculado con
+`harness.alcance.alcance_de_feature("F-019")` sigue dando **los mismos 3
+ficheros y las mismas 144 líneas** (64 + 63 + 17) que en la primera pasada.
+De ahí que la campaña de mutación de T8 (4 mutantes, 0 supervivientes, ya
+verificada de forma independiente) **siga vigente sin repetirla**, y que la
+puerta de rutas sensibles no cambie de estado.
+
+## Los cinco tests · existen, se ejecutan, pasan y muerden
+
+Abiertos uno a uno, no leídos del informe.
+
+### sv5 — `test_f019_r4_r7_importe_select.py`
+
+- `test_f019_r18_el_albaran_2139643_vale_1941_euros`: inserta la fila real
+  (código `1 11 00353`, cantidad 50, precio 0,647, dto 40, neto 19,41,
+  imputación `CI.4.18`) y ejecuta **`_SQL_ALBARAN_LINES` importado del módulo
+  de producción**. Afirma `importe_albaran == 19.41`, `!= 970.50`, y de paso
+  el concepto y el unitario. **Muerde de verdad**: con el `cantidad *` fuera
+  del `COALESCE` —el bug— este SELECT devuelve `50 × 19,41 = 970,50` y el
+  test cae. Es el test que le faltaba al segundo albarán del incidente.
+- `test_f019_r18_la_derivacion_del_2139643_coincide_con_su_neto`: la misma
+  fila sin `precio_neto` ⇒ la rama derivada del `COALESCE` da el mismo 19,41
+  (`50 × 0,647 × 0,6` exacto). Buen añadido: demuestra que el dato transcrito
+  y la fórmula canónica del dominio cuadran entre sí, que es justo lo que
+  hace confiable a la fixture.
+
+### sv6 — `test_f019_r16_r17_feymaco.py`
+
+- `test_f019_r18_el_albaran_2139643_conserva_su_unitario_leido`:
+  `final_price == 0.647`, `source == "albaran_declared"`,
+  `agreement != "mismatch"` y el `precio_1a` ruidoso de 4.000 €/ud no entra.
+- `test_f019_r18_el_albaran_2139643_vale_1941_euros`: encadena
+  `ImporteCalculator` ⇒ `importe_calculado == 19.41` y `!= 970.50`.
+- `test_f019_r18_el_importe_del_2139643_tambien_sale_del_calculo`: llama a
+  `compute` con **`importe_albaran_declarado=None`**, así que el importe se
+  **calcula** desde `cantidad × precio × (1 − dto/100)` en vez de recibirlo
+  regalado, y exige además `importe_source == "calculated"`. **Cierra la
+  observación no bloqueante nº 1 de la primera pasada**, que era exactamente
+  este hueco en el test equivalente de R16. Es la clase de respuesta que uno
+  quiere de un round trip: no solo tapa el agujero señalado, tapa el que se
+  señaló de pasada.
+
+Nota honesta sobre el reparto: los tres de sv6 habrían pasado también con la
+precedencia vieja (el derivado 0,647 coincidía con el declarado), así que son
+**regresión de valores**, no de precedencia — la precedencia ya la cubren los
+`test_f019_r8_*` y `_r10_*`. **El que caza el bug del 970,50 es el de sv5**, y
+existe. R18 queda cubierto «hasta donde llega el test», que era la exigencia.
+
+### Ejecución (por el reviewer, no leída del informe)
+
+```
+sv5:  python -m pytest tests -q -k r18   ->  2 passed, 9 deselected
+sv6:  python -m pytest tests -q -k r18   ->  3 passed, 37 deselected
+sv5:  python -m pytest tests -q          ->  11 passed
+sv6:  python -m pytest tests -q          ->  40 passed
+```
+
+`grep` de control sobre los `.py` del árbol: `19.41` / `970.50` / `0.647`
+aparecen ahora **15 veces**, frente a las **0** que motivaron el rechazo.
+
+## Corrección aceptada: los números NO son una reconstrucción aritmética
+
+La primera pasada pedía documentar la fixture como «reconstrucción aritmética
+a partir del total conocido (`970,50 / 19,41 = 50`)». **Esa parte de mi
+informe era incorrecta y queda rectificada.** El líder verificó la composición
+de la línea en dos fuentes independientes que coinciden campo a campo:
+
+- el PDF `Feymaco_2139643.pdf` del lote `alvaro_17082026` — línea única,
+  código `1 11 00353`, `DISCO ESPECIAL ACERO INOX. 115X1X22`, cantidad 50,00,
+  precio 0,647, dto 40,0, neto 19,41;
+- el ground truth del administrativo `alvaro_17082026.xlsx` — misma fila,
+  partida `CI.4.18`, descuento en fracción (0,4).
+
+El razonamiento del implementer para no copiar mi redacción es correcto y
+mejor que la mía: **un dato deducido del propio bug no puede después usarse
+para juzgar el bug**. Deducir la cantidad de `970,50 / 19,41` da por buena
+precisamente la fórmula rota. Que el número salga igual es una coincidencia
+afortunada, no una fuente.
+
+- [x] **Los docstrings lo dicen así**, comprobado abriendo los dos ficheros:
+      ambos abren su bloque de R18 con «TRANSCRITA de dos fuentes
+      independientes que coinciden campo a campo (**no** es una reconstrucción
+      aritmética)» y citan el PDF y el ground truth con sus campos. En sv6 se
+      añade además que la prueba local del 18-08 registró 970,50 = 50 × 19,41.
+- [x] Ninguna de las dos fuentes entra al repositorio: `git log --diff-filter=A`
+      sobre `*.pdf`, `*.xlsx` y `*.docx` en la rama no devuelve nada, y el
+      único fichero nuevo de `8c6aa82` es este informe. Se citan por nombre,
+      que es lo correcto.
+
+## La spec ya no afirma que R18 sea solo manual
+
+- [x] **`requirements.md` R18**: fuera «*Solo se conoce el total: verificación
+      MANUAL (humano)*». Ahora incorpora la composición completa de la línea,
+      nombra las dos fuentes, aclara que no es una deducción y declara que se
+      cubre con **tests automáticos** (`test_f019_r18_*` en T1 y T6)
+      **«y además»** con la verificación MANUAL. Redacción correcta: el test
+      acompaña, no sustituye.
+- [x] **`tasks.md`**: la tabla de trazabilidad pasa R18 de `T10 (MANUAL)` a
+      `T1 (tramo sv5) + T6 (tramo sv6) + T10 (MANUAL)`, y los enunciados de T1
+      y T6 recogen la fila del 2.139.643 con sus números y sus asertos. La
+      verificación de T6 pasa a exigir `_r18_*` en verde.
+- [x] La incoherencia que delató el fallo —el guion §T10 afirmando la
+      composición mientras la spec decía que solo se conocía el total— queda
+      resuelta por el lado correcto: la composición era cierta y verificable;
+      lo que estaba mal era la spec.
+
+## T10 sigue en pie como verificación MANUAL
+
+- [x] `tasks.md:121` conserva `- [ ] **T10**: MANUAL (humano) — **PENDIENTE
+      del humano**`, con sus cuatro puntos y su guion de comandos y SQL
+      exactos en `progress/impl_F-019.md` §T10, sin recortes.
+- [x] La trazabilidad mantiene T10 en R18 y en R19/R20/R21. Los tests nuevos
+      cubren las dos piezas deterministas de la cadena; **no** cubren el
+      extremo a extremo con IA real, PostgreSQL y Azurite, que es lo que T10
+      comprueba. La distinción está escrita tanto en la spec como en el
+      informe del implementer.
+- [x] `progress/current.md` sigue listando los cuatro puntos MANUAL como
+      pendientes del humano.
+
+## `bash harness/init.sh` sigue en verde
+
+Re-ejecutado por el reviewer sobre `8c6aa82`:
+
+```
+248 passed in 68.96s   (suite raiz)
+[OK] PUERTA COBERTURA: 100.0% de 5 lineas cambiadas cubiertas (5/5, umbral 80%, nivel critico)
+[AVISO] PUERTA RUTAS SENSIBLES [evals]: aviso (2 rutas, sin cambio respecto a la primera pasada)
+[OK] Rama actual: feature/F-019-importe-unitario-manda
+ENTORNO LISTO. Puedes trabajar.
+```
+
+La puerta de cobertura sigue midiendo las mismas 5 líneas de producción al
+100 % porque el round trip no tocó producción. Los `[AVISO]` son los mismos de
+la primera pasada (ruff como deuda previa, sv1/sv4/infra sin tests, y la
+puerta de rutas sensibles en `aviso` con su motivo ya justificado por escrito
+en C4 ter).
+
+## Checkpoints — estado final
+
+| Checkpoint | Estado | Nota |
+|---|---|---|
+| C1 · arnés en verde | **[x]** | `init.sh` exit 0 re-ejecutado sobre `8c6aa82` |
+| C2 · estado coherente | **[x]** | una sola feature `in_progress`, rama correcta, árbol limpio |
+| C3 · arquitectura y convenciones | **[x]** | verificado en la primera pasada; el round trip solo añade tests con su cabecera de ruta |
+| C3 bis · documentos de fuera | **N/A justificado** | no se toca `docs/referencia/`; ni PDF ni ofimática entran al repo (comprobado también en el histórico de la rama) |
+| C4 · verificación real | **[x]** | **R18 pasa de `[ ]` a `[x]`**: la tabla requisito→test de la primera pasada queda completa, R1-R22 sin huecos |
+| C4 bis · rigor `critico` | **[x]** | fase RED con tres trazas reales; cobertura 100 % (5/5); mutación 144 líneas / 4 mutantes / 0 supervivientes, recalculada y re-ejecutada por el reviewer, con la prueba de control del cero superada; «Evidencias» con los cuatro números, actualizados tras el round trip |
+| C4 ter · rutas sensibles | **[x]** | exigencia `aviso`; informe existe y es fresco; no cumple `exige_lineas` y **el motivo consta por escrito**, verificado de primera mano (claves LLM ausentes + `evals/fixtures/inputs/_indice.json` con `"casos": []`) |
+| C5 · sesión cerrada | **[x]** | T1-T9 y T11 `[x]` con un commit cada una; **T10 `[ ]` es correcto** (MANUAL del humano, convención de F-002); árbol limpio; `features.json` real |
+
+Ningún checkbox vacío en C1-C5. Los dos N/A están justificados por escrito.
+
+## Lo que queda pendiente, y no es del implementer
+
+Nada de esto bloquea el cierre, pero el humano debe verlo antes de mergear:
+
+1. **Las cuatro verificaciones MANUAL de T10** (los dos albaranes, el chequeo
+   de que ninguna línea arrastra `unitario_declarado_vs_derivado_mismatch` y
+   el albarán de hormigón por contrato). Guion listo en
+   `progress/impl_F-019.md` §T10. Es la única prueba que ejerce la cadena
+   entera con IA, BBDD y colas reales.
+2. **R20 — histórico**: las valoraciones anteriores conservan sus importes
+   inflados hasta que se re-valoren. No hay backfill, por decisión cerrada;
+   qué documentos se reprocesan y cuándo lo decide el humano. Hay consulta
+   para dimensionarlo en §T10.
+3. **F-003 hay que reconciliarla antes de arrancarla**: su R4 manda conservar
+   la derivación que F-019 acaba de corregir.
+4. **`evals/ground_truth/`** sigue sin casos: hasta que se rellene, la puerta
+   de rutas sensibles no puede pasar de `aviso` a `bloqueo`.
+5. Las **tres observaciones no bloqueantes** de la primera pasada. La nº 1
+   quedó de hecho mitigada por el tercer test de R18; las nº 2 y 3 son de una
+   línea cada una y no son regresión de esta feature.
+6. La **propuesta de mejora del protocolo** (extender la prueba de control del
+   cero a «cero mutantes en cualquier fichero del alcance», y portarla a
+   `arnes-base`) sigue sobre la mesa, sin aplicar.
+
+## Nota final del reviewer
+
+La feature entra con: 57 tests nuevos, los 22 requisitos trazados, cobertura
+del 100 % de lo cambiado, cero supervivientes de mutación verificados de forma
+independiente, los dos albaranes del incidente con sus números clavados por
+test automático, y una corrección al propio reviewer que era correcta. El
+código de producción son **dos cambios**: un paréntesis en un `COALESCE` y el
+orden de dos bloques `if`. El resto es la explicación de por qué, escrita
+donde se consume.
