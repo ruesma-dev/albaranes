@@ -72,7 +72,7 @@ en `sys.modules`.
       | Verificación: `python -m pytest tests -q` en verde
       (`test_f019_r1_*`, `_r2_*`, `_r3_*`).
 
-- [ ] **T6**: Caso Feymaco completo en la suite de sv6:
+- [x] **T6**: Caso Feymaco completo en la suite de sv6:
       `tests/test_f019_r16_r17_feymaco.py`. Las 5 líneas del 2.137.569
       encadenando `PriceReconciler` + `ImporteCalculator` con el importe
       efectivo que produce sv5 tras T2 (35,19 / 20,53 / 55,63 / 13,19 /
