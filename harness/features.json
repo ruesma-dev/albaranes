@@ -68,7 +68,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 10,
+      "priority": 17,
       "branch": "feature/F-003-valorados-match-estricto"
     },
     {
@@ -78,7 +78,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 13,
+      "priority": 20,
       "branch": "feature/F-004-hormigon-fino"
     },
     {
@@ -88,7 +88,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 14,
+      "priority": 21,
       "branch": "feature/F-005-bombeo"
     },
     {
@@ -98,7 +98,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 15,
+      "priority": 22,
       "branch": "feature/F-006-residuos-pago"
     },
     {
@@ -108,7 +108,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 16,
+      "priority": 23,
       "branch": "feature/F-007-partida-alm-selector"
     },
     {
@@ -123,7 +123,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 19,
+      "priority": 26,
       "branch": "feature/F-008-blob-lifecycle"
     },
     {
@@ -139,7 +139,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 20,
+      "priority": 27,
       "branch": "feature/F-009-limpieza-q-emails"
     },
     {
@@ -149,7 +149,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 21,
+      "priority": 28,
       "branch": "feature/F-010-easy-auth-sv4"
     },
     {
@@ -159,7 +159,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 18,
+      "priority": 25,
       "branch": "feature/F-013-registro-sigrid"
     },
     {
@@ -169,7 +169,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 11,
+      "priority": 18,
       "branch": "feature/F-014-conversor-administrativo"
     },
     {
@@ -179,7 +179,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 3,
+      "priority": 10,
       "branch": "feature/F-015-lineas-tachadas"
     },
     {
@@ -189,7 +189,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 5,
+      "priority": 12,
       "branch": "feature/F-016-linea-multipartida"
     },
     {
@@ -199,7 +199,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 17,
+      "priority": 24,
       "branch": "feature/F-017-comparativo-precio"
     },
     {
@@ -209,7 +209,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 12,
+      "priority": 19,
       "branch": "feature/F-018-carga-incompleta"
     },
     {
@@ -229,7 +229,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 9,
+      "priority": 16,
       "branch": "feature/F-020-proveedor-agnostico"
     },
     {
@@ -239,7 +239,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 4,
+      "priority": 11,
       "branch": "feature/F-021-partida-catalogo-candidatas"
     },
     {
@@ -249,7 +249,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 22,
+      "priority": 29,
       "branch": "feature/F-022-concepto-lineas-bandeja"
     },
     {
@@ -259,7 +259,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 2,
+      "priority": 9,
       "branch": "feature/F-023-mortero-incrementos"
     },
     {
@@ -269,7 +269,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 6,
+      "priority": 13,
       "branch": "feature/F-024-unidad-medida"
     },
     {
@@ -279,7 +279,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 8,
+      "priority": 15,
       "branch": "feature/F-025-motivo-conversion-omitida"
     },
     {
@@ -289,8 +289,78 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 7,
+      "priority": 14,
       "branch": "feature/F-026-guard-partida-base"
+    },
+    {
+      "id": "F-027",
+      "title": "Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto",
+      "description": "HALLAZGO H-1 (CRÍTICA). El albarán 58826 de MAHORSA se valoró en 468.763,40 € cuando el administrativo dice 390,99 €, y el 58878 en 462.282,80 € frente a 385,59 €. Son 30.380 kg × 15,43 €/TN y 29.960 kg × 15,43: un factor 1000 de unidad (el albarán da kg sin literal de unidad y el contrato tarifa en TN). CAUSA RAÍZ: la red determinista que existe EXACTAMENTE para este caso (`cantidad_sin_unidad_reinterpretada_kg_a_tn`, con `_TN_UMBRAL_CONVERTIR = 1000`) NUNCA SE EJECUTA. Cuando las categorías de unidad no casan, `ValuationBuilder` llama al conversor con `cantidad=None` (services/albaran-valoracion-persist/application/services/valuation_builder.py:1020-1030, rama else de `if category_match`), y `UnitConverter.convert` sale por la guarda `cantidad is None` (unit_converter.py:64-70) ANTES de llegar al bloque de plausibilidad de toneladas (unit_converter.py:83-101), que se añadió en julio de 2026 justo para esto. El importe cae después al fallback con la cantidad cruda. El propio código documenta el caso gemelo: árido «M 20/40», 29920 sin unidad, 298.302 €. POR QUÉ ES LO PRIMERO: es un error de tres órdenes de magnitud que llega PERSISTIDO a `albaran_valuations.total_valorado` y de ahí a la bandeja del revisor; y no es raro, porque TODO el árido a granel viene en kg sin literal de unidad. PROPUESTA: invertir el orden — convertir primero y decidir revisión después. Llamar siempre a `convert()` con la cantidad real y usar `category_match=False` solo para marcar revisión, no para anular la cantidad; alternativamente, mover la comprobación de plausibilidad de TN a un guard previo e independiente. EXIGE test de regresión con el caso real 30380 kg / contrato en TN. RELACIÓN: F-024 (la unidad no se extrae de IA1) ataca la causa aguas arriba; esta feature es la red de seguridad de sv6, que debe funcionar aunque IA1 siga sin unidad. F-025 (falsa alarma `no_quantity_in_albaran`) toca la misma rama del builder: coordinar para no pisarse. Toca sv6. Fuente: progress/revision_resto_lote_20260818.md (revision de los 7 albaranes restantes del lote alvaro_17082026, 2026-08-18).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 2,
+      "branch": "feature/F-027-conversion-kg-tn-muerta"
+    },
+    {
+      "id": "F-028",
+      "title": "Con dos contratos candidatos no se elige ninguno y el albarán no llega a valorarse",
+      "description": "HALLAZGO H-3 (ALTA) + INSTRUCCIÓN LITERAL DEL HUMANO (2026-08-18): «Pavimarsa tiene 2 contratos: debe elegir uno si puede». QUÉ PASA: los dos albaranes de PAVIMARSA (2026/01/007181 y 2026/01/007378, 521,07 € y 20.111,40 € esperados) **no se valoraron en absoluto**. No falló sv5 ni sv6: nunca se publicó mensaje en `q-valoracion`, porque sv3 solo dispara la valoración si hay contrato seleccionado y no lo había. Log: «[valuation-trigger][pipeline] SKIP: no hay contrato seleccionado» y «[contrato-selector] sin familia detectable en el albaran; no se auto-selecciona». Sigrid devolvió 2 contratos para el par (CIF A28800597, obra 0696): CTSU25/0317 (PED1 Parcela 4, 168 líneas, 40 partidas) y CTSU26/0187 (PED2, 48 líneas, 10 partidas). CAUSA RAÍZ: `elegir_contrato_probable` (contrato_selector.py:79-160) puntúa SOLO por familia de producto y tokens técnicos del texto; si no detecta familia devuelve None. Además `contrato_enrichment_service` NO le pasa el parámetro `tipologia` (la llamada de la línea ~466 solo envía `contratos` y `lineas_albaran`) pese a que el propio docstring del selector la llama «la señal más fuerte». LA SEÑAL DECISIVA ESTÁ EN EL ALBARÁN Y NO SE MIRA: las 7 partidas manuscritas del 007378 y las 2 del 007181 existen TODAS en CTSU25/0317 con la descripción y el precio del ground truth (comprobado en `albaran_contrato_lines_merge`, contrato_id=254), y CTSU26/0187 solo tiene 10 partidas. Un criterio de cobertura de partidas habría acertado sin ambigüedad. PROPUESTA: añadir al selector una señal de PARTIDAS (fracción de las partidas del albarán presentes en el catálogo de cada contrato) con más peso que las familias, y pasarle `tipologia` desde sv2. Si aun así hay empate, mantener el comportamiento actual de no elegir. POR QUÉ ES CRÍTICA: un documento que no se valora es peor que uno que se valora mal, porque no aparece en ninguna pantalla y nadie se entera. Son 20.632,47 € en dos documentos, y los albaranes de acabados (azulejos, carpintería, sanitarios) no tienen familia detectable por palabras, así que esto se repetirá en todo ese bloque de la obra. RELACIÓN: depende de que la partida se lea bien (F-021) pero no la bloquea: aun con lecturas parciales, la cobertura de partidas discrimina. Toca sv3. Fuente: progress/revision_resto_lote_20260818.md (revision de los 7 albaranes restantes del lote alvaro_17082026, 2026-08-18).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 3,
+      "branch": "feature/F-028-selector-contrato-por-partidas"
+    },
+    {
+      "id": "F-029",
+      "title": "Obra resuelta por texto sin detectar empates: score 1,00 a la obra equivocada",
+      "description": "HALLAZGO H-2 (ALTA) + INSTRUCCIÓN LITERAL DEL HUMANO (2026-08-18): «En Transportes y Grúas está mal elegida la obra y el proveedor; el CIF correcto es B84535764». QUÉ PASA: el albarán 09256 de TRANSPORTES Y GRUAS ANGEL MARTIN (1.129,00 € esperados) **no se valoró**. El papel es un «CONFORME DE SERVICIO»: no lleva número de obra (el campo está en blanco), no lleva CIF y solo dice «Valdebebas». `_match_score` (header_resolver_service.py:57-70) devuelve **1.00 si un texto contiene al otro**, y el bucle de selección (:266-284) usa `if score > best_score`, así que con varias obras empatadas a 1,00 gana la primera del listado y el empate no se registra en ningún sitio. Sigrid tiene al menos `0351 · VIV. PRADO VALDEBEBAS (UTE)` y `0686 · HOTEL CIUDAD AEROPORTUARIA VALDEBEBAS`; el log dice «obra resuelta por texto: codigo=0351 score=1.00» y el ground truth dice **0686**. La obra falsa arrastró todo lo demás: 0 proveedores en la obra 0351 → red de familia omitida → sin contrato → sin valoración. POR QUÉ ES CRÍTICA: la obra manda en toda la cadena (contratos, partidas, imputación). Una obra falsa CON CONFIANZA MÁXIMA es peor que no resolverla: el documento se queda sin contrato y además con un dato incorrecto persistido en `obra_codigo`/`obra_nombre` que el revisor puede dar por bueno. PROPUESTA: (1) detectar empates contando candidatos con `score == best_score`; con más de uno, NO resolver y dejar constancia (`obra_codigo_origen` + `review_note`); (2) sustituir el `contains → 1.00` por una puntuación que premie la cobertura del nombre completo y no la aparición de una sola palabra; (3) caso de prueba: 09256 debe quedar sin obra resuelta y a revisión, con el proveedor B84535764 como valor esperado una vez se resuelva por otra vía. RELACIÓN: el proveedor de este mismo documento lo ataca F-030 (búsqueda aproximada cuando no hay CIF o no casa). Toca sv3. Fuente: progress/revision_resto_lote_20260818.md (revision de los 7 albaranes restantes del lote alvaro_17082026, 2026-08-18).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 4,
+      "branch": "feature/F-029-obra-empates-y-sin-cif"
+    },
+    {
+      "id": "F-030",
+      "title": "IA2 busca el proveedor parecido cuando el CIF leído no casa con ninguno de Sigrid",
+      "description": "INSTRUCCIÓN LITERAL DEL HUMANO (2026-08-18): «En Pavimarsa no ha leído bien el proveedor. Si el CIF no coincide con uno existente, debe buscar uno parecido en IA2». SITUACIÓN ACTUAL Y FRONTERA CON F-002 (importante para no reimplementar lo hecho): F-002 ya resuelve el proveedor por CIF EXACTO contra Sigrid y, cuando no casa, conserva lo leído y deja el motivo `proveedor_cif_no_casa:<cif>` con una nota `[AVISO] Proveedor`. Esta feature es el PASO SIGUIENTE: cuando el CIF extraído no case con ninguno, IA2 debe buscar el proveedor PARECIDO — por CIF aproximado (dígito mal leído, letra confundida, separadores) y por razón social — entre los proveedores con contrato en la obra, y proponerlo con confianza y motivo en vez de dejar el documento sin resolver. CASOS DE REFERENCIA: los dos Pavimarsa del lote (CIF real A28800597) y el 09256 de Transportes y Grúas, que no trae CIF impreso y cuyo proveedor correcto es **B84535764**. CRITERIO DE SEGURIDAD: la propuesta no debe pisar en silencio lo leído. Si la confianza no supera el umbral, el documento va a revisión con los candidatos listados, igual que hace F-002 con el aviso. RELACIÓN: F-029 arregla la obra del mismo documento; F-021 y F-028 usan el proveedor ya resuelto para llegar al contrato. Toca sv2 (prompt e IA2) y sv3. Fuente: progress/revision_resto_lote_20260818.md (revision de los 7 albaranes restantes del lote alvaro_17082026, 2026-08-18).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 5,
+      "branch": "feature/F-030-proveedor-cif-aproximado"
+    },
+    {
+      "id": "F-031",
+      "title": "La partida del albarán no se usa para elegir la línea de contrato cuando la descripción no coincide",
+      "description": "HALLAZGO H-4 (ALTA). El prompt de IA3 dice explícitamente «NO decides partida: solo casas producto y precio», y `PartidaMatcher` (partida_matcher.py:118-153) solo re-apunta a la partida del albarán si encuentra LA MISMA DESCRIPCIÓN dentro de ella; si no, crea una línea derivada con el precio de la que eligió IA3. Resultado en el 58826: IA3 casó el árido a 15,43 €/TN cuando la partida manuscrita apuntaba a la línea de contrato correcta, a 12,87. Es decir, el error de partida AQUÍ SÍ CUESTA DINERO, no es solo imputación contable. PROPUESTA: usar la partida leída como señal de primer orden para elegir la línea de contrato dentro de esa partida aunque la descripción no sea idéntica (mismo producto, redacción distinta), antes de derivar una línea nueva. RELACIÓN: F-021 valida que la partida leída existe; F-026 impide escribir derivadas con partidas inexistentes; ESTA usa la partida válida para acertar el precio. Las tres se tocan: al implementarlas, reconciliar. Toca sv5 y sv6. Fuente: progress/revision_resto_lote_20260818.md (revision de los 7 albaranes restantes del lote alvaro_17082026, 2026-08-18).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 6,
+      "branch": "feature/F-031-partida-elige-linea-contrato"
+    },
+    {
+      "id": "F-032",
+      "title": "precio_neto no tiene semántica única y genera line_net_mismatch masivo",
+      "description": "HALLAZGO H-5 (MEDIA). El mismo IA1, con el mismo prompt, rellenó `precio_neto` con el IMPORTE en el albarán 2026/01/007181 (341,67 y 179,40) y con el PRECIO UNITARIO en el 007378 (14,38 en las seis primeras líneas). El validador de sv3 (albaran_confidence_service.py:377-382) marca `line_net_mismatch` y resta 12 puntos por línea: el 007378 acumula 8 marcas y baja a 67,69 de confianza, la más baja del lote, por un problema de DEFINICIÓN y no de lectura (sus cantidades y precios son todos correctos). PROPUESTA: fijar la semántica en el esquema y en el prompt de forma explícita y con ejemplo — o `precio_neto` = unitario neto tras descuento y el importe a su propio campo, o al revés, pero una sola. Barato y limpia mucho ruido de la pantalla de revisión. RELACIÓN DIRECTA CON F-019: el defecto del importe ×cantidad nació de esta misma ambigüedad (el prompt define `precio_neto` como importe de línea y el SELECT de sv5 lo trataba como unitario). F-019 alineó a los consumidores; esta feature elimina la ambigüedad en el origen para que no vuelva. Ver también F-003 R1/R2, que ya especifica un campo con nombre no ambiguo en IA1: reconciliar antes de implementar. Toca sv2 y sv3. Fuente: progress/revision_resto_lote_20260818.md (revision de los 7 albaranes restantes del lote alvaro_17082026, 2026-08-18).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 7,
+      "branch": "feature/F-032-semantica-precio-neto"
+    },
+    {
+      "id": "F-033",
+      "title": "El contrato llega a sv5 en Markdown o en PDF según el documento, sin criterio determinista",
+      "description": "HALLAZGO H-6 (BAJA). El albarán 58826 recibió el contrato CTSU25/0085 como MARKDOWN (18.005 caracteres, `attachment.kind='text_only'`) y el 58878, 23 segundos después, el MISMO contrato como PDF de 676 KB. El motivo es que `albaran_contratos_merge.md_sharepoint_relative_path` está relleno en la fila 251 y vacío en la 252. Log de sv5: «[pipeline] contrato -> MD (18005 chars); no se adjunta PDF» frente a «pdf=yes». POR QUÉ IMPORTA: dos ejecuciones del mismo caso dejan de ser comparables, lo que inutiliza el banco de pruebas de modelos (§10.9 del documento de dominio pide «mismos docs, 2 pasadas por doc»). También cambia el coste: 39.969 tokens de entrada con MD frente a 51.700 con PDF. PROPUESTA: hacer determinista la elección (siempre MD si existe) y garantizar que el MD se genera ANTES de disparar la valoración, igual que ya se hace con el PDF en el «Paso 9 — GARANTÍA de PDF» de `contrato_enrichment_service`. RELACIÓN: afecta a F-011 (evals), que necesita ejecuciones reproducibles para que la puerta tenga sentido. Toca sv3 y sv5. Fuente: progress/revision_resto_lote_20260818.md (revision de los 7 albaranes restantes del lote alvaro_17082026, 2026-08-18).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 8,
+      "branch": "feature/F-033-contrato-md-o-pdf-determinista"
     }
   ]
 }
