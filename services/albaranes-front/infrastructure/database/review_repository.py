@@ -61,6 +61,69 @@ from infrastructure.database.session_factory import SessionFactory
 logger = logging.getLogger(__name__)
 
 
+def _sanear_descuento(descuento_pct: float | None) -> float | None:
+    """Devuelve el descuento si es aplicable, None si no.
+
+    Mismo criterio que ``ImporteCalculator._sanitize_descuento`` de sv6:
+    solo se aplica dentro de (0, 100]. Un porcentaje negativo o mayor
+    que 100 se ignora en vez de fabricar un importe negativo o cero.
+    """
+    if descuento_pct is None:
+        return None
+    try:
+        d = float(descuento_pct)
+    except (TypeError, ValueError):
+        return None
+    if d <= 0.0 or d > 100.0:
+        if d != 0.0:
+            logger.warning(
+                "[importe] descuento fuera de rango (0,100]: %s. Se ignora.",
+                d,
+            )
+        return None
+    return d
+
+
+def _importe_de_linea(
+    *,
+    precio_unitario: float | None,
+    cantidad: float | None,
+    descuento_pct: float | None,
+) -> float | None:
+    """Fórmula CANÓNICA del importe de una línea. Única en el servicio.
+
+        importe = cantidad × precio_unitario × (1 − descuento/100)
+
+    Es la regla de negocio de Construcciones Ruesma (F-019, regla 13 de
+    `docs/ARCHITECTURE.md`) y la misma que aplica ``ImporteCalculator``
+    en sv6. Devuelve None si falta precio o cantidad.
+
+    F-019, round trip 2 (2026-08-18) — POR QUÉ ESTÁ AQUÍ
+    ---------------------------------------------------
+    Esta fórmula estaba escrita CUATRO veces en este fichero y tres de
+    ellas se dejaban el factor del descuento. sv6 valoró el albarán
+    Feymaco 2.137.569 en sus 139,66 € correctos y, seis minutos después,
+    el primer guardado del revisor lo dejó en 232,76 € recalculando
+    `cantidad × precio` a secas sobre las cinco líneas. El descuento del
+    40 % seguía escrito en `descuento_albaran_aplicado` —el UPDATE no lo
+    tocaba—, lo que hacía el dato persistido internamente contradictorio
+    y despistaba al leerlo.
+
+    Regla: NINGÚN sitio de este servicio vuelve a multiplicar precio por
+    cantidad por su cuenta. Si hace falta un importe, se pide aquí.
+    """
+    if precio_unitario is None or cantidad is None:
+        return None
+    try:
+        base = float(precio_unitario) * float(cantidad)
+    except (TypeError, ValueError):
+        return None
+    descuento = _sanear_descuento(descuento_pct)
+    if descuento is not None:
+        base *= 1.0 - descuento / 100.0
+    return round(base, 2)
+
+
 class AlbaranReviewRepository:
     def __init__(self, session_factory: SessionFactory) -> None:
         self._session_factory = session_factory
@@ -1419,7 +1482,8 @@ class AlbaranReviewRepository:
                     "SELECT lv.id, lv.merge_line_id, lv.valuation_id, "
                     "       lv.cantidad_albaran, lv.cantidad_convertida, "
                     "       lv.codigo_partida_final, lv.descripcion_linea, "
-                    "       lv.precio_unitario_final, v.document_id, "
+                    "       lv.precio_unitario_final, "
+                    "       lv.descuento_albaran_aplicado, v.document_id, "
                     "       v.contrato_codigo "
                     "FROM albaran_line_valuations lv "
                     "JOIN albaran_valuations v ON v.id = lv.valuation_id "
@@ -1437,10 +1501,17 @@ class AlbaranReviewRepository:
                 else row["cantidad_albaran"]
             )
 
+            # (F-019 R23) El descuento de la línea sigue vigente aunque
+            # el revisor reapunte la conciliación a otra línea de
+            # contrato: cambia el precio, no el trato con el proveedor.
+            descuento_linea = row["descuento_albaran_aplicado"]
+
             def _importe(precio):
-                if precio is None or cantidad is None:
-                    return None
-                return round(float(precio) * float(cantidad), 2)
+                return _importe_de_linea(
+                    precio_unitario=precio,
+                    cantidad=cantidad,
+                    descuento_pct=descuento_linea,
+                )
 
             if mode == "contract_line":
                 if matched_contrato_line_id is None:
@@ -1699,11 +1770,15 @@ class AlbaranReviewRepository:
             )
 
             if new_precio is not None and new_cantidad is not None:
-                base = float(new_precio) * float(new_cantidad)
                 # 'descuento' es un PORCENTAJE (p.ej. 3 = 3%): descuenta del
                 # importe de la línea (importe = base × (1 − dto/100)).
-                dto_pct = float(descuento) if descuento is not None else 0.0
-                importe = round(base * (1.0 - dto_pct / 100.0), 2)
+                # Único punto del servicio que ya lo hacía bien; ahora
+                # comparte la fórmula con los demás (F-019 R23).
+                importe = _importe_de_linea(
+                    precio_unitario=new_precio,
+                    cantidad=new_cantidad,
+                    descuento_pct=descuento,
+                )
             else:
                 importe = None
 
@@ -1912,7 +1987,7 @@ class AlbaranReviewRepository:
             ml = session.execute(
                 text(
                     "SELECT id, document_id, cantidad, concepto, "
-                    "       codigo_imputacion, precio "
+                    "       codigo_imputacion, precio, descuento "
                     "FROM albaran_lines_merge WHERE id = :id"
                 ),
                 {"id": merge_line_id},
@@ -2009,10 +2084,12 @@ class AlbaranReviewRepository:
                 source = "manual_contract"
                 mid_val = matched_contrato_line_id
 
-            importe = (
-                round(float(precio) * float(cantidad), 2)
-                if (precio is not None and cantidad is not None)
-                else None
+            # (F-019 R23) El descuento leído en la línea blanca del
+            # albarán entra en la fórmula también aquí.
+            importe = _importe_de_linea(
+                precio_unitario=precio,
+                cantidad=cantidad,
+                descuento_pct=ml["descuento"],
             )
 
             existing = session.execute(
@@ -2039,12 +2116,12 @@ class AlbaranReviewRepository:
                         "  importe_source, codigo_partida_albaran, codigo_partida_final, "
                         "  partida_action, descripcion_linea, line_kind, "
                         "  match_confidence_pct, match_method, review_required, "
-                        "  created_at_utc) "
+                        "  descuento_albaran_aplicado, created_at_utc) "
                         "VALUES ("
                         "  :v, :m, :mid, :did, :pu, :pu, :src, 'manual', "
                         "  NULL, :uc, 'manual', TRUE, :can, :can, 1.0, :imp, "
                         "  'calculated', :part, :part, 'manual', :desc, "
-                        "  'from_albaran', 100.0, 'manual', FALSE, :now)"
+                        "  'from_albaran', 100.0, 'manual', FALSE, :dto, :now)"
                     ),
                     {
                         "v": valuation_id,
@@ -2058,6 +2135,7 @@ class AlbaranReviewRepository:
                         "imp": importe,
                         "part": partida,
                         "desc": desc,
+                        "dto": _sanear_descuento(ml["descuento"]),
                         "now": now,
                     },
                 )
@@ -3130,6 +3208,15 @@ class AlbaranReviewRepository:
                     for line in payload.lines
                     if line.id is not None and line.cantidad is not None
                 },
+                # (F-019 R23) El descuento entra en la fórmula igual que
+                # la cantidad: si el revisor acaba de editarlo, manda el
+                # suyo. Sin esto, cambiar el descuento en la línea blanca
+                # dejaba el importe valorado con el descuento anterior.
+                new_line_discounts={
+                    int(line.id): line.descuento
+                    for line in payload.lines
+                    if line.id is not None
+                },
             )
 
             session.commit()
@@ -3150,7 +3237,9 @@ class AlbaranReviewRepository:
         session: Any,
         document_id: str,
         new_line_quantities: dict[int, float],
+        new_line_discounts: dict[int, float | None] | None = None,
     ) -> None:
+        new_line_discounts = new_line_discounts or {}
         try:
             val_row = session.execute(
                 text(
@@ -3174,7 +3263,8 @@ class AlbaranReviewRepository:
                 text(
                     "SELECT id, merge_line_id, precio_unitario_final, "
                     "       factor_conversion, cantidad_albaran, "
-                    "       cantidad_convertida, importe_source "
+                    "       cantidad_convertida, importe_source, "
+                    "       importe_calculado, descuento_albaran_aplicado "
                     "FROM albaran_line_valuations "
                     "WHERE valuation_id = :vid"
                 ),
@@ -3227,13 +3317,40 @@ class AlbaranReviewRepository:
             if cantidad_efectiva is None:
                 continue
 
-            nuevo_importe = round(float(pu) * float(cantidad_efectiva), 2)
+            # Descuento: el nuevo que acaba de guardar el revisor si lo
+            # trae el payload; si no, el que ya aplicó sv6.
+            if merge_line_id in new_line_discounts:
+                descuento = new_line_discounts[merge_line_id]
+            else:
+                descuento = row["descuento_albaran_aplicado"]
 
-            # Si antes era 'declared_albaran' respetamos esa semántica
-            # (el albarán lo traía explícito), pero igualmente sobre-
-            # escribimos con el nuevo calculado si el revisor cambió
-            # cantidad — tiene más autoridad. importe_source queda
-            # como 'calculated' cuando el revisor ha intervenido.
+            nuevo_importe = _importe_de_linea(
+                precio_unitario=pu,
+                cantidad=cantidad_efectiva,
+                descuento_pct=descuento,
+            )
+            if nuevo_importe is None:
+                continue
+
+            # (F-019 R24) Si nada de lo que entra en el importe ha
+            # cambiado, la fila NO se toca. Un guardado que solo movía
+            # la partida degradaba las cinco líneas del 2.137.569 de
+            # 'declared_albaran' a 'calculated' sin que nadie lo hubiera
+            # pedido: lo que el albarán DECLARA no se reetiqueta como
+            # calculado por nosotros salvo que el revisor intervenga.
+            importe_anterior = row["importe_calculado"]
+            sin_cambios = (
+                importe_anterior is not None
+                and self._num_iguales(importe_anterior, nuevo_importe)
+                and self._num_iguales(row["cantidad_albaran"], nueva_cant_albaran)
+                and self._num_iguales(row["cantidad_convertida"], nueva_cant_conv)
+            )
+            if sin_cambios:
+                continue
+
+            # El revisor ha intervenido sobre esta línea: consta que el
+            # importe lo calculamos nosotros, no que lo declare el
+            # albarán.
             new_src = "calculated"
 
             session.execute(
@@ -3242,7 +3359,8 @@ class AlbaranReviewRepository:
                     "SET cantidad_albaran = :ca, "
                     "    cantidad_convertida = :cc, "
                     "    importe_calculado = :imp, "
-                    "    importe_source = :src "
+                    "    importe_source = :src, "
+                    "    descuento_albaran_aplicado = :dto "
                     "WHERE id = :vid"
                 ),
                 {
@@ -3250,19 +3368,26 @@ class AlbaranReviewRepository:
                     "cc": nueva_cant_conv,
                     "imp": nuevo_importe,
                     "src": new_src,
+                    "dto": _sanear_descuento(descuento),
                     "vid": int(row["id"]),
                 },
             )
 
-        # Total de la cabecera.
+        # Total de la cabecera. ROUND porque la suma en coma flotante de
+        # importes de dos decimales arrastra cola binaria
+        # (549,34+882,62+818,64+863,26+278,86 = 3392.7200000000003) y el
+        # total es dinero que se compara por igualdad contra el albarán y
+        # contra Sigrid. sv6 ya redondea el suyo en
+        # ``ValuationBuilder._build_header``; sin esto, el mismo
+        # documento tenía un total distinto según quién lo escribiera.
         session.execute(
             text(
                 "UPDATE albaran_valuations SET "
-                "total_valorado = COALESCE(("
+                "total_valorado = ROUND(CAST(COALESCE(("
                 "  SELECT SUM(importe_calculado) "
                 "  FROM albaran_line_valuations "
                 "  WHERE valuation_id = albaran_valuations.id"
-                "), 0), "
+                "), 0) AS numeric), 2), "
                 "updated_at_utc = :now "
                 "WHERE id = :vid"
             ),
@@ -3311,7 +3436,8 @@ class AlbaranReviewRepository:
         try:
             allowed_rows = session.execute(
                 text(
-                    "SELECT lv.id AS lv_id "
+                    "SELECT lv.id AS lv_id, "
+                    "       lv.descuento_albaran_aplicado AS dto "
                     "FROM albaran_line_valuations lv "
                     "JOIN albaran_valuations v ON v.id = lv.valuation_id "
                     "WHERE v.document_id = :doc_id "
@@ -3329,6 +3455,12 @@ class AlbaranReviewRepository:
         allowed_ids = {int(row["lv_id"]) for row in allowed_rows}
         if not allowed_ids:
             return
+        # (F-019 R23) Descuento vigente de cada línea sintética: lo
+        # heredó de su base al valorar (sv6) y sigue aplicando cuando el
+        # revisor cambia su cantidad o su precio.
+        descuento_por_id = {
+            int(row["lv_id"]): row["dto"] for row in allowed_rows
+        }
 
         for upd in updates:
             lv_id = int(upd.valuation_line_id)
@@ -3339,22 +3471,14 @@ class AlbaranReviewRepository:
                 # la fila.
                 continue
 
-            # Derivamos el nuevo importe calculado: precio * cantidad.
-            # Si alguno falta, dejamos importe_calculado en null y que
-            # review_required se conserve como estaba.
-            nuevo_importe: float | None = None
-            if (
-                upd.precio_unitario_final is not None
-                and upd.cantidad_albaran is not None
-            ):
-                try:
-                    nuevo_importe = round(
-                        float(upd.precio_unitario_final)
-                        * float(upd.cantidad_albaran),
-                        2,
-                    )
-                except (TypeError, ValueError):
-                    nuevo_importe = None
+            # Derivamos el nuevo importe con la fórmula canónica. Si
+            # falta precio o cantidad, dejamos importe_calculado en null
+            # y que review_required se conserve como estaba.
+            nuevo_importe = _importe_de_linea(
+                precio_unitario=upd.precio_unitario_final,
+                cantidad=upd.cantidad_albaran,
+                descuento_pct=descuento_por_id.get(lv_id),
+            )
 
             # Si el revisor manda explícitamente un importe_calculado
             # distinto del calculado, respetamos el del revisor (tiene
@@ -3598,6 +3722,24 @@ class AlbaranReviewRepository:
     @staticmethod
     def _utc_iso() -> str:
         return datetime.now(timezone.utc).isoformat()
+
+    @staticmethod
+    def _num_iguales(a: Any, b: Any) -> bool:
+        """Compara dos números tolerando el ruido de coma flotante.
+
+        Se usa para decidir si el recálculo de importes cambia algo de
+        verdad (F-019 R24): media unidad de céntimo de margen, muy por
+        debajo de cualquier diferencia real y muy por encima del ruido
+        binario de un DOUBLE PRECISION.
+        """
+        if a is None and b is None:
+            return True
+        if a is None or b is None:
+            return False
+        try:
+            return abs(float(a) - float(b)) < 5e-3
+        except (TypeError, ValueError):
+            return False
 
     @staticmethod
     def _document_url(document: AlbaranDocumentMergeOrm) -> str | None:

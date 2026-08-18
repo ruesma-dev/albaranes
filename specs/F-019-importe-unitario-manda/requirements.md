@@ -241,6 +241,11 @@ alcance original no lo preveía.
   columna.)*
 
 - **R26.** El total valorado que se persiste debe ser una cantidad monetaria
-  redondeada a 2 decimales. *(La suma en coma flotante de los cinco importes
-  da `139.66000000000003`; un total que no es exactamente 139,66 no puede
-  compararse con el del albarán ni cuadrar contra Sigrid.)*
+  redondeada a 2 decimales, **lo escriba quien lo escriba**. sv6 ya lo hacía
+  (`ValuationBuilder._build_header`); el `SUM()` de sv4 no, así que el mismo
+  documento acababa con un total distinto según cuál de los dos lo hubiera
+  escrito el último. *(El riesgo no es teórico: un barrido de 20.000
+  documentos de cinco líneas con importes de dos decimales da cola binaria en
+  2.275 de ellos —11 %—; p. ej. `549,34+882,62+818,64+863,26+278,86` da
+  `3392.7200000000003`. El de Feymaco no la tiene por suerte, y por eso R26 se
+  vigila con una fixture aparte.)*
