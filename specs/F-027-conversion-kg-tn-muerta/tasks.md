@@ -23,7 +23,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
 
 ---
 
-- [ ] **T1**: Crear la rama y la suite del conversor en **RED**:
+- [x] **T1**: Crear la rama y la suite del conversor en **RED**:
       `services/albaran-valoracion-persist/tests/test_f027_r3_r9_conversor.py`
       con `YamlUnitRegistry` real sobre `config/unit_registry.yaml`. Cubre
       R3 (30380 y 29960 sin unidad contra TN → 30,38 / 29,96, factor 0,001,
