@@ -119,7 +119,7 @@ en `sys.modules`). La sección 7 bis de `init.sh` ya los ejecuta por separado co
       ningún `prompts*.yaml`).
       | Verificación: `python -m pytest tests -q` desde la raíz, en verde.
 
-- [ ] **T8**: Campaña de mutación y análisis de supervivientes.
+- [x] **T8**: Campaña de mutación y análisis de supervivientes.
       | Verificación: `python -m harness.mutacion --feature F-027` →
       `progress/mutacion_F-027.md` con **cero supervivientes** (nivel
       `critico`) o justificación escrita por superviviente aceptada por el

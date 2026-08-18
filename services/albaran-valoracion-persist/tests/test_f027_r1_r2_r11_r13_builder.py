@@ -221,6 +221,68 @@ def test_f027_r8_sin_linea_de_albaran_la_cantidad_sigue_siendo_ausente():
     assert linea.review_required is True
 
 
+def test_f027_r8_una_linea_sin_contexto_de_albaran_no_inventa_cantidad():
+    """El caso que de verdad ejercita ``if albaran_line else None``.
+
+    El test anterior tiene contexto de albaran con ``cantidad=None``; en
+    este NO HAY contexto: la linea de IA3 apunta a un ``merge_line_id``
+    que no viaja en ``context.lineas_albaran`` (sobre incompleto o
+    desincronizado). Entonces ``albaran_line`` es ``None`` y la
+    expresion condicional de la llamada al conversor es la unica que
+    decide.
+
+    Lo escribio la campana de mutacion: el mutante que cambiaba ese
+    ``else None`` por ``else 0.0`` sobrevivia a los 109 tests. Con 0.0
+    la linea se valoraria en 0,00 EUR con ``importe_source='calculated'``
+    —un importe INVENTADO con pinta de calculado— en vez de quedarse sin
+    importe y pedir revision.
+    """
+    from domain.models.valuation_envelope import (
+        DocumentoValoracionDto,
+        LineValuationDto,
+        ValuationContextDto,
+        ValuationEnvelope,
+        ValuationEnvelopeMeta,
+    )
+
+    from tests.f027_escenarios import construir_builder, construir_envelope
+
+    envelope = construir_envelope(_mahorsa("58826", 30380.0))
+    # Se conserva el catalogo de contrato y se vacia el contexto del
+    # albaran: la linea de IA3 queda apuntando al vacio.
+    huerfana = ValuationEnvelope(
+        status="ok",
+        meta=ValuationEnvelopeMeta(
+            document_id="doc-sin-contexto",
+            codigo_contrato="CTSU25/0085",
+            numero_albaran="58826-sin-contexto",
+        ),
+        data=DocumentoValoracionDto(
+            lineas=[
+                LineValuationDto(**envelope.data.lineas[0].model_dump()),
+            ],
+        ),
+        context=ValuationContextDto(
+            lineas_albaran=[],
+            lineas_contrato=envelope.context.lineas_contrato,
+        ),
+    )
+
+    _, registros = construir_builder().build(
+        envelope=huerfana, existing_document_already_valued=False,
+    )
+    linea = registros[0]
+
+    assert linea.cantidad_albaran is None
+    assert linea.cantidad_convertida is None
+    assert linea.factor_conversion is None
+    assert "no_quantity_in_albaran" in linea.review_reasons
+    # Sin cantidad no hay importe: ni 0,00 EUR ni nada parecido.
+    assert linea.importe_calculado is None
+    assert linea.importe_source == "none"
+    assert linea.review_required is True
+
+
 # --------------------------------------------------------------------- #
 # D2 y D3 — los dos riesgos ASUMIDOS del diseno, fijados con test propio
 #
