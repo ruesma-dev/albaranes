@@ -31,7 +31,7 @@ en `sys.modules`.
       | Verificación: `python -m pytest services/albaran-valoracion-api/tests -q`
       en ROJO, con la traza pegada en `progress/impl_F-019.md` (fase RED).
 
-- [ ] **T2**: sv5 — mover `cantidad *` dentro del `COALESCE` en
+- [x] **T2**: sv5 — mover `cantidad *` dentro del `COALESCE` en
       `_SQL_ALBARAN_LINES` y reescribir el bloque de comentarios ~55-125 de
       `sqlalchemy_valuation_context_repository.py` con la semántica de R1
       (fuera la afirmación «precio_neto es el unitario NETO»).
