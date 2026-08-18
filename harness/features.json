@@ -68,7 +68,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 17,
+      "priority": 16,
       "branch": "feature/F-003-valorados-match-estricto"
     },
     {
@@ -78,7 +78,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 20,
+      "priority": 19,
       "branch": "feature/F-004-hormigon-fino"
     },
     {
@@ -88,7 +88,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 21,
+      "priority": 20,
       "branch": "feature/F-005-bombeo"
     },
     {
@@ -98,7 +98,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 22,
+      "priority": 21,
       "branch": "feature/F-006-residuos-pago"
     },
     {
@@ -108,7 +108,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 23,
+      "priority": 22,
       "branch": "feature/F-007-partida-alm-selector"
     },
     {
@@ -123,7 +123,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 26,
+      "priority": 25,
       "branch": "feature/F-008-blob-lifecycle"
     },
     {
@@ -139,7 +139,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 27,
+      "priority": 26,
       "branch": "feature/F-009-limpieza-q-emails"
     },
     {
@@ -149,7 +149,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 28,
+      "priority": 27,
       "branch": "feature/F-010-easy-auth-sv4"
     },
     {
@@ -159,7 +159,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 25,
+      "priority": 24,
       "branch": "feature/F-013-registro-sigrid"
     },
     {
@@ -169,7 +169,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 18,
+      "priority": 17,
       "branch": "feature/F-014-conversor-administrativo"
     },
     {
@@ -179,7 +179,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 11,
+      "priority": 10,
       "branch": "feature/F-015-lineas-tachadas"
     },
     {
@@ -189,7 +189,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 13,
+      "priority": 12,
       "branch": "feature/F-016-linea-multipartida"
     },
     {
@@ -199,7 +199,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 24,
+      "priority": 23,
       "branch": "feature/F-017-comparativo-precio"
     },
     {
@@ -209,7 +209,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 19,
+      "priority": 18,
       "branch": "feature/F-018-carga-incompleta"
     },
     {
@@ -230,7 +230,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 16,
+      "priority": 15,
       "branch": "feature/F-020-proveedor-agnostico"
     },
     {
@@ -240,7 +240,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 12,
+      "priority": 11,
       "branch": "feature/F-021-partida-catalogo-candidatas"
     },
     {
@@ -250,7 +250,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 29,
+      "priority": 28,
       "branch": "feature/F-022-concepto-lineas-bandeja"
     },
     {
@@ -260,7 +260,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 10,
+      "priority": 9,
       "branch": "feature/F-023-mortero-incrementos"
     },
     {
@@ -270,7 +270,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 3,
+      "priority": 2,
       "branch": "feature/F-024-unidad-medida"
     },
     {
@@ -280,7 +280,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 15,
+      "priority": 14,
       "branch": "feature/F-025-motivo-conversion-omitida"
     },
     {
@@ -290,7 +290,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 14,
+      "priority": 13,
       "branch": "feature/F-026-guard-partida-base"
     },
     {
@@ -310,7 +310,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 4,
+      "priority": 3,
       "branch": "feature/F-028-selector-contrato-por-partidas"
     },
     {
@@ -320,7 +320,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 5,
+      "priority": 4,
       "branch": "feature/F-029-obra-empates-y-sin-cif"
     },
     {
@@ -330,7 +330,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 6,
+      "priority": 5,
       "branch": "feature/F-030-proveedor-cif-aproximado"
     },
     {
@@ -340,7 +340,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 7,
+      "priority": 6,
       "branch": "feature/F-031-partida-elige-linea-contrato"
     },
     {
@@ -350,7 +350,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 8,
+      "priority": 7,
       "branch": "feature/F-032-semantica-precio-neto"
     },
     {
@@ -360,8 +360,18 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 9,
+      "priority": 8,
       "branch": "feature/F-033-contrato-md-o-pdf-determinista"
+    },
+    {
+      "id": "F-034",
+      "title": "Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra",
+      "description": "URGENTE Y PRIMERO (decisión del humano, 2026-08-19): esto cambia la VARA DE MEDIR de todas las features, así que cada feature que se cierre antes de arreglarlo se mide con una campaña de mutación ciega en su punto más delicado. Sale de las observaciones del reviewer de F-027 (progress/review_F-027.md §12) y de la experiencia de F-019.\n\n(1) HALLAZGO PRINCIPAL — `harness/mutacion.py` NO muta `is` / `is not`. Confirmado por el reviewer leyendo la tabla `COMPARACIONES` del propio mutador. En Python `x is None` es LA guarda de ausencia, y es justo el patrón de las guardas que han provocado los dos defectos más caros del proyecto: el `if cantidad is None` que mataba la red KG→TN (F-027, 468.763 €) y el `importe_albaran_declarado is not None` del cálculo del importe (F-019). Es un punto ciego que afecta a CUALQUIER feature de CUALQUIER proyecto con este arnés: la campaña dice «0 supervivientes» sin haber probado la línea que más importa. En F-027 obligó a una campaña MANUAL de 7 mutantes. PROPUESTA: añadir `ast.Is` / `ast.IsNot` a `COMPARACIONES` en `harness/mutacion.py`, comprobar que la campaña de F-027 y la de F-019 generan ahora mutantes en esas guardas y que MUEREN con los tests que ya existen (si alguno sobrevive, es un hueco real que hay que cerrar), y PORTARLO A `arnes-base` en el mismo trabajo (regla de propagación de CLAUDE.md).\n\n(2) `CHECKPOINTS.md` C4 ter habla de `evals/ground_truth/`, que NO EXISTE en este repositorio: los casos viven en `evals/fixtures/inputs/`. La misma referencia equivocada aparece en `progress/current.md` y en `harness/rutas_sensibles.json`. Consecuencia práctica: la puerta de rutas sensibles lleva semanas en `aviso` «porque el ground truth está vacío» sin que nadie pueda comprobarlo sin adivinar dónde mirar. Unificar el nombre en los tres sitios.\n\n(3) Cuando la campaña automática da 0 mutantes y se sustituye por una MANUAL, hoy el guion vive en el scratchpad de la sesión y no queda rastro reproducible en el repositorio. En F-027 bastó porque las siete sustituciones estaban escritas con su texto exacto y el reviewer pudo reproducir cuatro al pie de la letra. PROPUESTA para `CHECKPOINTS.md`: exigir que la tabla de una campaña manual incluya el TEXTO EXACTO original → mutado de cada sustitución, que es lo que la hace verificable.\n\nALCANCE: `harness/mutacion.py`, `CHECKPOINTS.md`, `harness/rutas_sensibles.json`, `progress/current.md`, y la propagación a `arnes-base` (que subiría a 1.6.0). NO ENTRA: rehacer el mutador ni añadir más operadores de los citados. Fuente: progress/review_F-027.md §12.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 1,
+      "branch": "feature/F-034-mutacion-is-y-coherencia-evals"
     }
   ]
 }
