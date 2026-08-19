@@ -32,7 +32,7 @@ Un commit por tarea: `F-034 Tn: descripción`. Sin `push` ni PR.
       falla en R1, R2, R3, R4, R5, R8 y R14, y **pasa** en R6 y R7 (que fijan
       comportamiento actual que no debe cambiar).
 
-- [ ] **T3: `ast.Is` / `ast.IsNot` en `COMPARACIONES`** (`harness/mutacion.py`),
+- [x] **T3: `ast.Is` / `ast.IsNot` en `COMPARACIONES`** (`harness/mutacion.py`),
       con el comentario que declara la limitación de R7.
       **Verificación**: los tests de R1, R2, R3, R4, R7 y R8 pasan;
       `python -m pytest tests -q` (raíz) en verde.

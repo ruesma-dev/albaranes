@@ -50,6 +50,15 @@ TOPE_WORKERS = 16
 PYTEST_SIN_TESTS = 5
 
 #: (símbolo original, símbolo mutado) por tipo de nodo del árbol sintáctico.
+#:
+#: `is` / `is not` entran aquí porque en Python son LA guarda de ausencia
+#: (`x is None`), y sin ellas la campaña quedaba ciega justo en el patrón que
+#: ha provocado los defectos más caros de este proyecto. Límite conocido y
+#: aceptado: la sustitución busca la cadena literal, así que un `is  not` con
+#: espaciado no canónico —o partido entre dos líneas— NO genera mutante (no
+#: falla: simplemente no hay candidato). En un repositorio formateado con
+#: ruff/black ese espaciado no existe, y sostener una expresión regular por él
+#: obligaría a cambiar el contrato de `_Candidato` a cambio de nada.
 COMPARACIONES: dict[type, tuple[str, str]] = {
     ast.Eq: ("==", "!="),
     ast.NotEq: ("!=", "=="),
@@ -57,6 +66,8 @@ COMPARACIONES: dict[type, tuple[str, str]] = {
     ast.LtE: ("<=", "<"),
     ast.Gt: (">", ">="),
     ast.GtE: (">=", ">"),
+    ast.Is: ("is", "is not"),
+    ast.IsNot: ("is not", "is"),
 }
 ARITMETICOS: dict[type, tuple[str, str]] = {
     ast.Add: ("+", "-"),
