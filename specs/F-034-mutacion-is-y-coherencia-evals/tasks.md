@@ -10,14 +10,14 @@ Un commit por tarea: `F-034 Tn: descripción`. Sin `push` ni PR.
 
 ---
 
-- [ ] **T0: Recoger la decisión D1 del humano** (§3 de `requirements.md`:
+- [x] **T0: Recoger la decisión D1 del humano** (§3 de `requirements.md`:
       ¿se remide el histórico? A / B / C) y la D2 (1.5.3 vs **1.6.0**) y D3
       (corregir la descripción en `features.json`). Anotar la respuesta literal
       en `progress/impl_F-034.md`.
       **Verificación**: MANUAL (humano). Sin respuesta, T7 no se hace y T10 usa
       la versión que el humano diga; el resto de tareas no dependen de D1.
 
-- [ ] **T1: Medición de partida (el «antes»)**. Con el mutador **sin tocar**,
+- [x] **T1: Medición de partida (el «antes»)**. Con el mutador **sin tocar**,
       cálculo puro sobre los alcances históricos de F-019 y F-027, y pegar los
       totales en `progress/impl_F-034.md`.
       **Verificación**: `python -c` con `harness.alcance.alcance_de_feature` +
@@ -25,7 +25,7 @@ Un commit por tarea: `F-034 Tn: descripción`. Sin `push` ni PR.
       **31** mutantes para F-019 y **0** para F-027, con las referencias fijadas
       de `design.md` §6.
 
-- [ ] **T2: Tests en RED**. Crear `tests/test_mutacion_operadores.py` con los
+- [x] **T2: Tests en RED**. Crear `tests/test_mutacion_operadores.py` con los
       nueve casos de `design.md` §5 y pegar en `progress/impl_F-034.md` la
       **salida real** del fallo.
       **Verificación**: `python -m pytest tests/test_mutacion_operadores.py -q`
