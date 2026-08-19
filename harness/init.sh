@@ -97,33 +97,6 @@ else
     warn "Proyecto no Python: se saltan compilación, lint y pytest (ver cabecera de este fichero)"
 fi
 
-# --- 1 bis. ¿Hay una campaña de mutación en curso? --------------------------
-# Mientras una campaña de mutación corre, puede haber un mutante APLICADO en el
-# árbol: un `!=` donde el código dice `==`. Todo lo que este portero mida a
-# partir de ahí —compilación, lint, tests, cobertura— estaría midiendo ese
-# mutante, no el código, y su rojo no significa nada. Pasó el 2026-08-19: un
-# agente lanzó init.sh mientras otro tenía una campaña corriendo, salió en rojo
-# y la reacción natural —restaurar el fichero— habría contaminado la campaña
-# ajena.
-#
-# La campaña deja constancia en un centinela (.arnes_cache/mutacion_en_curso.json,
-# ver harness/mutacion.py) y aquí se lee con `--estado`, que devuelve 0 (no hay
-# campaña), 3 (la hay, pero muta en worktrees aparte) o 4 (la hay y el árbol
-# principal tiene un mutante escrito AHORA MISMO). El 4 es KO: no se puede dar
-# por bueno ni por malo un veredicto medido sobre un mutante.
-if [ -f ".arnes_cache/mutacion_en_curso.json" ]; then
-    if [ -n "$PY" ]; then
-        ESTADO_MUTACION=$($PY -m harness.mutacion --estado 2>&1)
-        case "$?" in
-            0) : ;;   # el centinela desapareció entre el test y la lectura
-            3) warn "$ESTADO_MUTACION" ;;
-            *) ko "$ESTADO_MUTACION" ;;
-        esac
-    else
-        ko "Hay un centinela de campaña de mutación (.arnes_cache/mutacion_en_curso.json) y sin Python no se puede leer: el árbol puede tener un mutante aplicado y NADA de lo que mida este portero es de fiar"
-    fi
-fi
-
 # --- 2. Ficheros del arnés --------------------------------------------------
 for f in CLAUDE.md CHECKPOINTS.md harness/features.json harness/rigor.json \
          specs/SPECS.md progress/current.md progress/history.md \

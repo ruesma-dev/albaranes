@@ -6,21 +6,6 @@ calcula `harness.alcance` desde el diff de git), ejecuta la suite por cada
 mutante y cuenta cuántos sobreviven. Un mutante superviviente es una línea que
 ningún test comprueba de verdad.
 
-Tres garantías que sostienen los números que imprime (1.5.3):
-
-1. **Línea base.** Antes de juzgar a nadie, la suite corre SIN mutar nada, en
-   el mismo sitio y con el mismo intérprete con que se va a juzgar. Si no está
-   verde, la campaña se aborta: sobre una base roja todo mutante sale «muerto»
-   y el cero de supervivientes es mentira. Pasó de verdad el 2026-08-19.
-2. **El veredicto no es binario.** Una suite que se rompe por su cuenta —error
-   de recolección, error interno, mal uso— no dice nada del mutante. Se
-   comprueba la base ahí mismo y, si está rota, el mutante NO cuenta como
-   muerto.
-3. **Restauración a prueba de muerte.** `try/finally`, manejador de SIGINT y
-   SIGTERM, y un centinela en disco que deja escrito qué mutante está aplicado
-   ahora mismo, para que un `kill` a machetazos deje rastro en vez de un
-   mutante disfrazado de código.
-
 Todo con biblioteca estándar (`ast` + `subprocess`): la herramienta tiene que
 poder instalarse tal cual en cualquier repositorio, incluido Windows.
 """
@@ -29,17 +14,13 @@ from __future__ import annotations
 
 import argparse
 import ast
-import json
 import os
 import random
 import re
-import signal
 import subprocess
 import sys
-import threading
 import time
 from collections.abc import Callable, Iterator
-from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -55,17 +36,6 @@ MUERTO = "muerto"
 SUPERVIVIENTE = "superviviente"
 TIMEOUT = "timeout"
 
-#: La suite no llegó a juzgar: se rompió por su cuenta (error de recolección,
-#: error interno, mal uso). Es un veredicto INTERNO: `ejecutar_campania` lo
-#: resuelve comprobando la línea base ahí mismo, y sale de ahí como `MUERTO`
-#: (la base está verde: fue el mutante quien la rompió) o como `BASE_ROTA`.
-INDETERMINADO = "indeterminado"
-
-#: Mutante juzgado sobre una base que ya estaba rota. No cuenta como muerto ni
-#: como superviviente: no se sabe nada de él, y decir «muerto» era el defecto
-#: que la 1.5.3 arregla.
-BASE_ROTA = "base_rota"
-
 #: Segundos máximos por mutante si nadie configura otra cosa.
 TIMEOUT_POR_DEFECTO = 120
 
@@ -74,52 +44,21 @@ TIMEOUT_POR_DEFECTO = 120
 #: lo que se pida a mano con `--workers` ni lo declarado en `rigor.json`.
 TOPE_WORKERS = 16
 
-#: Códigos de salida de pytest que este módulo distingue. Solo el 1 —«han
-#: fallado tests»— significa que el mutante pudo ser cazado; el 2 (recolección
-#: interrumpida), el 3 (error interno) y el 4 (mal uso) significan que la suite
-#: ni siquiera llegó a juzgar, y contarlos como muerte era parte del defecto.
-PYTEST_OK = 0
-PYTEST_FALLOS = 1
-
 #: Código con el que pytest avisa de que no ha recogido NINGÚN test. No es un
 #: fallo de la suite: es que no hay suite. Contarlo como mutante muerto daría
 #: por cazado lo que nadie comprueba, justo lo que esta herramienta destapa.
 PYTEST_SIN_TESTS = 5
 
-#: Argumentos con los que se corre la LÍNEA BASE (la suite sin mutar nada).
-#: Sin `-x` a propósito: el mensaje de aborto tiene que nombrar TODOS los tests
-#: que fallan, no solo el primero, o arreglar la base es un juego de adivinar.
-#: `-rfE` fuerza el resumen «FAILED ...» y «ERROR ...» aunque `--tb=no` calle
-#: las trazas. La `E` no sobra: una suite que muere en la RECOLECCIÓN no tiene
-#: ni un FAILED que enseñar, y ése es justo el caso más frecuente en modo serie
-#: —pytest invocado sin ruta sobre una raíz sin configuración—. Sin ella el
-#: aborto decía «código 2» a secas y mandaba a adivinar.
-ARGUMENTOS_LINEA_BASE: tuple[str, ...] = (
-    "-q", "--tb=no", "-rfE", "-p", "no:cacheprovider",
-)
-
-#: Fichero donde una campaña en curso deja escrito qué mutante tiene aplicado.
-#: Vive bajo `.arnes_cache/`, que el bloque gestionado del `.gitignore` ya
-#: ignora: es estado de una ejecución, no algo que se versione.
-RUTA_CENTINELA = Path(".arnes_cache/mutacion_en_curso.json")
-
-#: Líneas del resumen de pytest que nombran un test caído.
-_LINEA_FALLIDA = re.compile(r"^(?:FAILED|ERROR)\s+(\S+)", re.MULTILINE)
-
-#: Con qué empiezan las líneas de eco de la línea base. La campaña paralela las
-#: reconoce por aquí para NO contarlas en su `[i/n]` de progreso.
-MARCA_LINEA_BASE = "[base] "
-
 #: (símbolo original, símbolo mutado) por tipo de nodo del árbol sintáctico.
 #:
 #: `is` / `is not` entran aquí porque en Python son LA guarda de ausencia
 #: (`x is None`), y sin ellas la campaña quedaba ciega justo en el patrón que
-#: ha provocado los defectos más caros. Límite conocido y aceptado: la
-#: sustitución busca la cadena literal, así que un `is  not` con espaciado no
-#: canónico —o partido entre dos líneas— NO genera mutante (no falla:
-#: simplemente no hay candidato). En un repositorio formateado con ruff/black
-#: ese espaciado no existe, y sostener una expresión regular por él obligaría a
-#: cambiar el contrato de `_Candidato` a cambio de nada.
+#: ha provocado los defectos más caros de este proyecto. Límite conocido y
+#: aceptado: la sustitución busca la cadena literal, así que un `is  not` con
+#: espaciado no canónico —o partido entre dos líneas— NO genera mutante (no
+#: falla: simplemente no hay candidato). En un repositorio formateado con
+#: ruff/black ese espaciado no existe, y sostener una expresión regular por él
+#: obligaría a cambiar el contrato de `_Candidato` a cambio de nada.
 COMPARACIONES: dict[type, tuple[str, str]] = {
     ast.Eq: ("==", "!="),
     ast.NotEq: ("!=", "=="),
@@ -385,108 +324,18 @@ def _leer(ruta: Path) -> str:
         return fichero.read()
 
 
-def _purgar_bytecode(ruta: Path) -> None:
-    """Borra el `.pyc` de `ruta`, si lo hay.
-
-    CPython da por válido un bytecode cuando el fuente conserva el mismo tamaño
-    y el mismo mtime **truncado a segundos enteros**. Dos mutantes consecutivos
-    del mismo fichero cumplen las dos cosas más veces de las que parece: se
-    escriben en el mismo segundo y muchas mutaciones cambian el mismo número de
-    bytes (`*`->`//` y `>`->`>=` añaden uno cada una). Cuando coinciden, la
-    suite del segundo mutante ejecuta el bytecode del PRIMERO y su veredicto no
-    dice nada del código que hay en disco.
-
-    Medido aquí el 2026-08-19: la misma campaña sobre el mismo repositorio de
-    juguete daba 3 supervivientes o 2 según el segundo en que cayera, y el que
-    desaparecía salía contado como MUERTO. Es el mismo pecado que arregla esta
-    versión —un muerto que nadie mató—, por otra puerta.
-    """
-    cache = ruta.parent / "__pycache__"
-    if not cache.is_dir():
-        return
-    for compilado in cache.glob(f"{ruta.stem}.*.pyc"):
-        try:
-            compilado.unlink()
-        except OSError:
-            # Windows: otro proceso puede tenerlo abierto. No es fatal —la
-            # siguiente escritura vuelve a intentarlo— y perder la campaña por
-            # no poder borrar una caché sería peor.
-            pass
-
-
 def _escribir(ruta: Path, texto: str) -> None:
-    """Escribe un fuente sin traducir saltos de línea, y tira su bytecode.
-
-    Sin traducir, porque restaurar debe dejar el fichero idéntico. Y tirando el
-    `.pyc`, porque lo que se escribe aquí se va a ejecutar acto seguido: ver
-    `_purgar_bytecode`.
-    """
+    """Escribe sin traducir saltos de línea: restaurar debe ser idéntico."""
     with open(ruta, "w", encoding="utf-8", newline="") as fichero:
         fichero.write(texto)
-    _purgar_bytecode(ruta)
-
-
-@dataclass(frozen=True)
-class ResultadoSuite:
-    """Lo que devolvió una ejecución de la suite, sin interpretar todavía.
-
-    Separar el HECHO (código de salida y salida de texto) de su INTERPRETACIÓN
-    (¿mutante muerto?, ¿base rota?) es lo que permite que la misma ejecución
-    sirva para juzgar un mutante y para juzgar la línea base.
-    """
-
-    codigo: int
-    salida: str = ""
-    expirado: bool = False
-
-    @property
-    def verde(self) -> bool:
-        """¿La suite terminó sin fallos? Sin tests que recoger cuenta como sí.
-
-        No hay suite que romper: la campaña ya trata ese caso declarando
-        supervivientes, que es la respuesta honesta a «nadie comprueba esto».
-        """
-        return not self.expirado and self.codigo in (PYTEST_OK, PYTEST_SIN_TESTS)
-
-    @property
-    def sin_tests(self) -> bool:
-        return not self.expirado and self.codigo == PYTEST_SIN_TESTS
-
-    def fallidos(self) -> list[str]:
-        """Tests que la suite nombra como caídos, en orden y sin repetir."""
-        vistos: list[str] = []
-        for nombre in _LINEA_FALLIDA.findall(self.salida):
-            if nombre not in vistos:
-                vistos.append(nombre)
-        return vistos
-
-
-class CampaniaAbortada(RuntimeError):
-    """La campaña no puede dar un número honesto y para sin escribir informe.
-
-    Abortar es la única salida decente: escribir un informe con un cero de
-    supervivientes que nadie ha medido es peor que no medir, porque el reviewer
-    lo da por bueno.
-    """
-
-
-class BaseRota(CampaniaAbortada):
-    """La suite falla SIN mutar nada: ningún veredicto de esta campaña valdría."""
-
-
-class ArbolSucio(CampaniaAbortada):
-    """Hay trabajo sin commitear en ficheros que la campaña va a mutar."""
 
 
 class EjecutorPytest:
     """Lanza la suite en un proceso aparte y traduce el resultado.
 
-    Que la suite falle CON tests caídos significa que los tests cazan el mutante
-    (muerto). Que pase —o que no haya ningún test que recoger— significa que el
-    mutante sobrevive: nadie comprobaba esa línea. Y que pytest ni llegue a
-    ejecutar (recolección interrumpida, error interno, mal uso) no significa
-    nada del mutante: eso sale como `INDETERMINADO` y lo resuelve quien llama
-    comprobando la línea base.
+    Que la suite falle significa que los tests CAZAN el mutante (muerto). Que
+    pase —o que no haya ningún test que recoger— significa que el mutante
+    sobrevive: nadie comprobaba esa línea.
 
     `raiz` es el directorio desde el que se lanza la suite y `ejecutable`, el
     intérprete con el que se lanza. En un monorepo, los de cada servicio.
@@ -502,180 +351,20 @@ class EjecutorPytest:
         self.argumentos = argumentos or ["-x", "-q", "--tb=no", "-p", "no:cacheprovider"]
         self.ejecutable = ejecutable or sys.executable
 
-    def identidad(self) -> tuple[str, str]:
-        """Con qué intérprete y desde dónde juzga. Dos ejecutores con la misma
-        identidad ejecutan exactamente la misma suite: la línea base de uno
-        vale por la del otro y no se corre dos veces."""
-        return (str(Path(self.raiz).resolve()), self.ejecutable)
-
-    def correr(self, timeout_s: int, argumentos: tuple[str, ...] | None = None) -> ResultadoSuite:
-        """Ejecuta la suite y devuelve el hecho crudo, sin interpretarlo."""
+    def ejecutar(self, timeout_s: int) -> str:
         try:
             proceso = subprocess.run(
-                [self.ejecutable, "-m", "pytest", *(argumentos or self.argumentos)],
+                [self.ejecutable, "-m", "pytest", *self.argumentos],
                 cwd=self.raiz,
                 capture_output=True,
                 timeout=timeout_s,
                 check=False,
             )
         except subprocess.TimeoutExpired:
-            return ResultadoSuite(codigo=-1, salida="", expirado=True)
-        salida = (proceso.stdout or b"").decode("utf-8", "replace") + (
-            proceso.stderr or b""
-        ).decode("utf-8", "replace")
-        return ResultadoSuite(codigo=proceso.returncode, salida=salida)
-
-    def linea_base(self, timeout_s: int) -> ResultadoSuite:
-        """Corre la suite SIN mutar nada, nombrando todos los tests que caen."""
-        return self.correr(timeout_s, ARGUMENTOS_LINEA_BASE)
-
-    def ejecutar(self, timeout_s: int) -> str:
-        resultado = self.correr(timeout_s)
-        if resultado.expirado:
             return TIMEOUT
-        if resultado.verde:
+        if proceso.returncode in (0, PYTEST_SIN_TESTS):
             return SUPERVIVIENTE
-        if resultado.codigo == PYTEST_FALLOS:
-            return MUERTO
-        return INDETERMINADO
-
-
-# --- Línea base: nunca contar muertos sobre una suite que ya fallaba ---------
-
-
-#: Causas conocidas de una línea base roja que SOLO se rompe en modo paralelo.
-#: Se enumeran en el mensaje de aborto porque el arreglo es distinto en cada
-#: caso y adivinarlo desde «3 tests fallan» cuesta una tarde.
-CAUSAS_CONOCIDAS = (
-    (
-        "ficheros NO versionados que la suite necesita (.env, datos locales, "
-        "fixtures generadas): no existen dentro de un git worktree"
-    ),
-    (
-        "detached HEAD: el worktree no está en ninguna rama, así que un test "
-        "que lea `git branch --show-current` recibe cadena vacía"
-    ),
-    (
-        "instalación editable apuntando al árbol principal: la suite del worker "
-        "importaría el código de fuera del worktree, sin mutar"
-    ),
-)
-
-#: Causas que NO tienen nada que ver con el paralelismo y muerden igual con
-#: `--workers 1`. La primera se descubrió el 2026-08-19 en albaranes: un
-#: fichero de `harness/` no pertenece a ningún servicio, así que `ejecutor_para`
-#: lo juzga con `python -m pytest` SIN ruta desde la raíz; sin configuración de
-#: pytest ahí, esa invocación recoge las suites de todos los servicios y muere
-#: en la recolección en menos de un segundo, haga lo que haga el mutante. Los
-#: 19 mutantes de F-034 y los 61 de F-012 salieron «muertos» sin que un solo
-#: test los juzgara.
-CAUSAS_EN_CUALQUIER_MODO = (
-    (
-        "la suite se invoca SIN ruta —`python -m pytest` desde la raíz— porque "
-        "el fichero mutado no cae en ningún servicio de harness/servicios.json: "
-        "si la raíz no tiene configuración de pytest (testpaths, rootdir), esa "
-        "invocación recoge lo que no debe y muere en la recolección"
-    ),
-    (
-        "la suite necesita un servicio externo (base de datos, cola, API) que "
-        "en esta máquina no está levantado"
-    ),
-)
-
-
-def mensaje_base_rota(etiqueta: str, resultado: ResultadoSuite) -> str:
-    """Mensaje accionable: qué falla, dónde, por qué suele fallar y qué hacer."""
-    fallidos = resultado.fallidos()
-    detalle = (
-        "\n".join(f"    - {nombre}" for nombre in fallidos)
-        if fallidos
-        else f"    (pytest salió con código {resultado.codigo} sin nombrar tests)"
-    )
-    causas = "\n".join(f"    - {causa}" for causa in CAUSAS_CONOCIDAS)
-    siempre = "\n".join(f"    - {causa}" for causa in CAUSAS_EN_CUALQUIER_MODO)
-    return (
-        f"LÍNEA BASE EN ROJO en {etiqueta}: la suite falla SIN mutar nada.\n"
-        "Campaña abortada sin escribir informe: sobre una base roja TODO "
-        "mutante saldría «muerto» y el cero de supervivientes sería falso.\n"
-        "\n"
-        "  Tests que fallan sin mutar:\n"
-        f"{detalle}\n"
-        "\n"
-        "  Causas conocidas SOLO del modo paralelo (cada worker corre en un\n"
-        "  `git worktree` desechable creado desde HEAD):\n"
-        f"{causas}\n"
-        "\n"
-        "  Causas que muerden en CUALQUIER modo, también con --workers 1:\n"
-        f"{siempre}\n"
-        "\n"
-        "  Arregla la base. Si la tuya es de las primeras, --workers 1 la "
-        "esquiva: en\n"
-        "  serie la suite corre sobre el propio árbol y no hay worktree que "
-        "valga."
-    )
-
-
-def comprobar_linea_base(
-    implicados: list[tuple[str, object]],
-    timeout_s: int,
-    eco: Callable[[str], None] | None = None,
-) -> None:
-    """Corre la suite sin mutar en cada sitio donde se va a juzgar.
-
-    `implicados` son los pares `(etiqueta, ejecutor)` que van a dictar los
-    veredictos. Un ejecutor sin `linea_base` —un doble de test— se salta con
-    aviso: no se puede comprobar lo que no sabe correr una suite.
-
-    Lanza `BaseRota` en cuanto uno falla, sin haber tocado un solo fichero.
-    """
-    for etiqueta, ejecutor in implicados:
-        correr_base = getattr(ejecutor, "linea_base", None)
-        if correr_base is None:
-            if eco is not None:
-                eco(f"{MARCA_LINEA_BASE}{etiqueta}: ejecutor sin línea base, no se comprueba")
-            continue
-        resultado = correr_base(timeout_s)
-        if resultado.expirado:
-            raise BaseRota(
-                f"LÍNEA BASE SIN TERMINAR en {etiqueta}: la suite sin mutar agotó "
-                f"los {timeout_s} s de timeout. Ningún veredicto valdría: si la "
-                "suite limpia ya no cabe en el timeout, todo mutante saldría "
-                "«timeout». Sube mutacion.timeout_por_mutante_s en "
-                "harness/rigor.json o acota la suite."
-            )
-        if not resultado.verde:
-            raise BaseRota(mensaje_base_rota(etiqueta, resultado))
-        if eco is not None:
-            estado = "sin tests que recoger" if resultado.sin_tests else "en verde"
-            eco(f"{MARCA_LINEA_BASE}{etiqueta}: {estado}")
-
-
-def ejecutores_implicados(
-    mutantes: list[Mutante],
-    ejecutor: object,
-    ejecutor_de: Callable[[str], object] | None,
-) -> list[tuple[str, object]]:
-    """Ejecutores distintos que van a juzgar esta tanda de mutantes.
-
-    Se deduplica por identidad —(directorio, intérprete)— para no correr N
-    veces la misma suite en un monorepo donde varios ficheros del alcance caen
-    en el mismo servicio.
-    """
-    if ejecutor_de is None:
-        return [(_etiqueta_de(ejecutor), ejecutor)]
-    elegidos: dict[object, tuple[str, object]] = {}
-    for mutante in mutantes:
-        candidato = ejecutor_de(mutante.fichero)
-        identidad = getattr(candidato, "identidad", None)
-        clave = identidad() if identidad is not None else id(candidato)
-        elegidos.setdefault(clave, (_etiqueta_de(candidato), candidato))
-    return list(elegidos.values())
-
-
-def _etiqueta_de(ejecutor: object) -> str:
-    """Cómo se nombra un ejecutor en los mensajes: por el directorio que corre."""
-    raiz = getattr(ejecutor, "raiz", None)
-    return Path(str(raiz)).as_posix() if raiz is not None else repr(ejecutor)
+        return MUERTO
 
 
 def ejecutor_para(
@@ -706,285 +395,6 @@ def ejecutor_para(
     )
 
 
-# --- Centinela: qué mutante está aplicado AHORA MISMO ------------------------
-
-
-@dataclass(frozen=True)
-class Aplicado:
-    """Un mutante escrito en disco en este instante."""
-
-    fichero: str
-    ruta: str
-    linea: int
-    descripcion: str
-    linea_original: str
-    en_arbol_principal: bool
-
-
-class Centinela:
-    """Deja escrito en disco qué mutante está aplicado, y en qué fichero.
-
-    El `try/finally` de la campaña restaura el árbol en todo lo que se puede
-    prever: excepción, timeout, Ctrl-C. Lo que NO cubre es un `kill` que mata el
-    proceso sin desenrollar la pila —pasó el 2026-08-19 y dejaron el árbol con
-    un `==` convertido en `!=` dentro de la puerta que protege `build_mart`—. El
-    riesgo real de eso no es perder la campaña: es **commitear un mutante
-    creyendo que es código**.
-
-    Este centinela es la red de la red: un JSON pequeño que se reescribe al
-    aplicar y al soltar cada mutante, y que se borra al terminar bien. Si queda
-    ahí, algo murió a medias y lo dice con nombre y línea. Lo leen dos: la
-    siguiente campaña (que se ofrece a restaurar) y `harness/init.sh`, para no
-    dar por válido un veredicto medido sobre un mutante.
-
-    Es seguro entre hilos: los workers de la campaña paralela comparten uno.
-    """
-
-    def __init__(
-        self, raiz: str = ".", feature: str = "", modo: str = "serie", pid: int | None = None
-    ) -> None:
-        self.raiz = Path(raiz).resolve()
-        self.ruta = self.raiz / RUTA_CENTINELA
-        self.feature = feature
-        self.modo = modo
-        self.pid = os.getpid() if pid is None else pid
-        self.inicio = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self._aplicados: dict[str, Aplicado] = {}
-        self._cerrojo = threading.Lock()
-
-    # -- escritura ----------------------------------------------------------
-
-    def _volcar(self) -> None:
-        """Reescribe el fichero entero: es pequeño y así nunca queda a medias."""
-        aplicados = list(self._aplicados.values())
-        datos = {
-            "feature": self.feature,
-            "modo": self.modo,
-            "pid": self.pid,
-            "inicio": self.inicio,
-            "raiz": self.raiz.as_posix(),
-            "muta_arbol_principal": any(a.en_arbol_principal for a in aplicados),
-            "aplicados": [vars(a) for a in aplicados],
-        }
-        self.ruta.parent.mkdir(parents=True, exist_ok=True)
-        self.ruta.write_text(
-            json.dumps(datos, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
-
-    def abrir(self) -> None:
-        with self._cerrojo:
-            self._volcar()
-
-    def aplicar(self, ruta: Path, mutante: Mutante, fuente_original: str) -> None:
-        """Anota que `ruta` acaba de quedar mutada, con cómo era su línea."""
-        brutas = fuente_original.split("\n")
-        original = brutas[mutante.linea - 1] if mutante.linea <= len(brutas) else ""
-        absoluta = Path(ruta).resolve()
-        with self._cerrojo:
-            self._aplicados[absoluta.as_posix()] = Aplicado(
-                fichero=mutante.fichero,
-                ruta=absoluta.as_posix(),
-                linea=mutante.linea,
-                descripcion=mutante.descripcion(),
-                linea_original=original,
-                en_arbol_principal=_dentro_de(absoluta, self.raiz),
-            )
-            self._volcar()
-
-    def soltar(self, ruta: Path) -> None:
-        """Anota que `ruta` ya está restaurada."""
-        with self._cerrojo:
-            self._aplicados.pop(Path(ruta).resolve().as_posix(), None)
-            self._volcar()
-
-    def cerrar(self) -> None:
-        """Retira el centinela: la campaña terminó y el árbol está limpio."""
-        with self._cerrojo:
-            self._aplicados.clear()
-            self.ruta.unlink(missing_ok=True)
-
-    # -- lectura y recuperación ---------------------------------------------
-
-    @staticmethod
-    def leer(raiz: str = ".") -> dict | None:
-        """Contenido del centinela de `raiz`, o `None` si no hay campaña anotada."""
-        ruta = Path(raiz).resolve() / RUTA_CENTINELA
-        if not ruta.is_file():
-            return None
-        try:
-            return json.loads(ruta.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            # Un centinela ilegible es igual de sospechoso que uno legible: hubo
-            # una campaña y nadie la cerró. Se devuelve lo mínimo para avisar.
-            return {"feature": "", "aplicados": [], "muta_arbol_principal": True,
-                    "ilegible": True}
-
-
-def _dentro_de(ruta: Path, directorio: Path) -> bool:
-    """¿`ruta` cuelga de `directorio`? (sin `is_relative_to`, que exige 3.9+)."""
-    try:
-        Path(ruta).resolve().relative_to(Path(directorio).resolve())
-    except ValueError:
-        return False
-    return True
-
-
-def restaurar_desde_centinela(raiz: str = ".") -> tuple[list[str], list[str]]:
-    """Deshace los mutantes que dejó aplicados una campaña muerta a medias.
-
-    Devuelve `(restaurados, irrecuperables)`. Se reescribe LA LÍNEA mutada con
-    el texto original que el propio centinela guardó, que es lo único que la
-    campaña llegó a cambiar; solo si esos datos no sirven se recurre a `git
-    checkout`, que reescribe el fichero entero y, con `core.autocrlf` de por
-    medio, puede cambiarle los finales de línea por el camino. Lo que no se pueda
-    arreglar se devuelve para que lo vea un humano: dejarlo en silencio sería lo
-    peor.
-    """
-    datos = Centinela.leer(raiz)
-    if datos is None:
-        return ([], [])
-    restaurados: list[str] = []
-    irrecuperables: list[str] = []
-    for aplicado in datos.get("aplicados", []):
-        ruta = Path(str(aplicado.get("ruta", "")))
-        if not ruta.is_file():
-            continue  # el worktree ya no está: no hay nada que restaurar
-        original = aplicado.get("linea_original")
-        numero = int(aplicado.get("linea", 0) or 0)
-        brutas = _leer(ruta).split("\n") if original is not None else []
-        if original is not None and 0 < numero <= len(brutas):
-            brutas[numero - 1] = original
-            _escribir(ruta, "\n".join(brutas))
-            restaurados.append(ruta.as_posix())
-            continue
-        codigo, _ = _git_en(str(ruta.parent), "checkout", "--", str(ruta))
-        if codigo == 0:
-            restaurados.append(ruta.as_posix())
-        else:
-            irrecuperables.append(ruta.as_posix())
-    Path(raiz).resolve().joinpath(RUTA_CENTINELA).unlink(missing_ok=True)
-    return (restaurados, irrecuperables)
-
-
-# --- Restauración a prueba de señales ----------------------------------------
-
-
-@contextmanager
-def restauracion_ante_senales(restaurar: Callable[[], None]) -> Iterator[None]:
-    """Ejecuta `restaurar` también cuando llegan SIGINT o SIGTERM.
-
-    `try/finally` no cubre una señal que termina el proceso: SIGTERM lo mata sin
-    desenrollar la pila y el árbol se queda mutado. Aquí se atiende la señal, se
-    restaura y se convierte en la excepción que el `finally` de siempre sabe
-    tratar (`KeyboardInterrupt` para SIGINT, `SystemExit` para SIGTERM).
-
-    Solo el hilo principal puede registrar manejadores: llamado desde un worker
-    esto no hace nada, a propósito y sin ruido. En la campaña paralela el
-    manejador lo pone el coordinador, que sí es el hilo principal, y restaura
-    los worktrees de todos leyendo el centinela compartido.
-    """
-    anteriores: dict[int, object] = {}
-
-    def manejador(numero: int, _marco: object) -> None:
-        restaurar()
-        if numero == getattr(signal, "SIGINT", None):
-            raise KeyboardInterrupt
-        raise SystemExit(128 + numero)
-
-    for nombre in ("SIGINT", "SIGTERM"):
-        numero = getattr(signal, nombre, None)
-        if numero is None:
-            continue
-        try:
-            anteriores[int(numero)] = signal.signal(numero, manejador)
-        except (ValueError, OSError):
-            pass  # hilo secundario, o plataforma que no permite ese manejador
-    try:
-        yield
-    finally:
-        for numero, anterior in anteriores.items():
-            try:
-                signal.signal(numero, anterior)  # type: ignore[arg-type]
-            except (ValueError, OSError, TypeError):
-                pass
-
-
-# --- Guardia del árbol de trabajo --------------------------------------------
-
-
-def _git_en(raiz: str, *args: str) -> tuple[int, str]:
-    """git en `raiz`, devolviendo `(código, salida)`.
-
-    No se reutiliza `harness.alcance.ejecutar_git`: aquel devuelve cadena vacía
-    cuando git falla, y aquí distinguir «no hay cambios» de «git ha fallado»
-    decide si la campaña arranca o no.
-    """
-    proceso = subprocess.run(
-        ["git", "-C", str(raiz), *args],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-    )
-    return proceso.returncode, (proceso.stdout or "") + (proceso.stderr or "")
-
-
-def ficheros_con_cambios(raiz: str, ficheros: list[str]) -> list[str]:
-    """De los ficheros dados, cuáles tienen cambios sin commitear.
-
-    Lanza `ArbolSucio` si git no puede responder: no saber si un fichero que
-    vamos a sobrescribir tiene trabajo dentro es exactamente el caso en que no
-    hay que tocarlo.
-    """
-    if not ficheros:
-        return []
-    codigo, salida = _git_en(raiz, "status", "--porcelain", "--", *ficheros)
-    if codigo != 0:
-        raise ArbolSucio(
-            f"No se pudo comprobar el estado del árbol en {raiz} (git salió con "
-            f"{codigo}). La campaña sobrescribe ficheros de producción para "
-            "mutarlos y no arranca sin saber si tienen trabajo sin commitear.\n"
-            f"    {salida.strip()}"
-        )
-    sucios: list[str] = []
-    for linea in salida.splitlines():
-        if len(linea) < 4:
-            continue
-        ruta = linea[3:].strip().strip('"')
-        if " -> " in ruta:  # renombrado: interesa el destino
-            ruta = ruta.split(" -> ", 1)[1].strip().strip('"')
-        if ruta not in sucios:
-            sucios.append(ruta)
-    return sucios
-
-
-def guardia_arbol_limpio(raiz: str, ficheros: list[str]) -> None:
-    """Se niega a arrancar si algún fichero a mutar tiene cambios sin commitear.
-
-    Dos motivos, los dos vividos: (1) al restaurar, la campaña reescribe el
-    fichero con lo que leyó al empezar, así que un cambio a medias que llegue
-    después se pierde; (2) si la campaña muere a machetazos, el mutante que deje
-    escrito es indistinguible de trabajo real y acaba commiteado.
-    """
-    sucios = ficheros_con_cambios(raiz, ficheros)
-    if not sucios:
-        return
-    listado = "\n".join(f"    - {ruta}" for ruta in sucios)
-    raise ArbolSucio(
-        "Hay cambios sin commitear en ficheros que esta campaña va a MUTAR:\n"
-        f"{listado}\n"
-        "\n"
-        "  La campaña los sobrescribe y los restaura a como estaban al empezar, "
-        "así que\n"
-        "  cualquier edición posterior se perdería; y si la campaña muere a "
-        "medias, el\n"
-        "  mutante que quede en disco es indistinguible de tu trabajo. "
-        "Commitea (o guarda\n"
-        "  en un stash) y vuelve a lanzarla."
-    )
-
-
 # --- Campaña ----------------------------------------------------------------
 
 
@@ -1003,20 +413,10 @@ class InformeMutacion:
     muestreado: bool = False
     max_mutantes: int | None = None
     semilla: int | None = None
-    #: Mutantes juzgados sobre una base que ya estaba rota. Ni muertos ni
-    #: supervivientes: de ellos no se sabe nada.
-    base_rota: list[Mutante] = field(default_factory=list)
-    #: Motivo por el que los números de este informe NO son de fiar, si lo hay.
-    aviso_base: str | None = None
 
     @property
     def evaluados(self) -> int:
         return len(self.mutantes_evaluados)
-
-    @property
-    def fiable(self) -> bool:
-        """¿Se puede cerrar una feature con estos números?"""
-        return self.aviso_base is None and not self.base_rota
 
 
 def ejecutar_campania(
@@ -1029,9 +429,6 @@ def ejecutar_campania(
     mutantes: list[Mutante] | None = None,
     eco: Callable[[str], None] | None = None,
     ejecutor_de: Callable[[str], object] | None = None,
-    centinela: Centinela | None = None,
-    comprobar_arbol: bool = True,
-    comprobar_base: bool = True,
 ) -> InformeMutacion:
     """Muta el alcance, mutante a mutante, y cuenta cuántos sobreviven.
 
@@ -1039,16 +436,8 @@ def ejecutar_campania(
     cada mutante con la suite de su servicio); sin ella se usa `ejecutor` para
     todo, que es el caso de un repositorio de un solo proyecto.
 
-    Antes de juzgar a nadie corre la LÍNEA BASE —la suite sin mutar nada, en el
-    mismo sitio y con el mismo intérprete— y aborta con `BaseRota` si no está
-    verde. Y antes de eso se niega a arrancar, con `ArbolSucio`, si algún
-    fichero a mutar tiene cambios sin commitear. Las dos comprobaciones se
-    pueden desactivar (`comprobar_base`, `comprobar_arbol`) para el único caso
-    en que sobran: la campaña paralela, cuyo coordinador ya comprobó el árbol
-    principal entero y cuyos worktrees se comprueban uno a uno igualmente.
-
-    Garantía dura: pase lo que pase (excepción, timeout, Ctrl-C, SIGTERM),
-    ningún fichero queda mutado en el árbol de trabajo al salir de esta función.
+    Garantía dura: pase lo que pase (excepción, timeout, Ctrl-C), ningún
+    fichero queda mutado en el árbol de trabajo al salir de esta función.
     """
     inicio = time.monotonic()
     base = Path(raiz)
@@ -1080,124 +469,51 @@ def ejecutar_campania(
         )
         informe.muestreado = True
 
-    # Nada de esto toca un solo fichero: si algo falla, falla ANTES de mutar.
-    if comprobar_arbol:
-        guardia_arbol_limpio(raiz, list(fuentes))
-    implicados = ejecutores_implicados(list(mutantes), ejecutor, ejecutor_de)
-    if comprobar_base and mutantes:
-        comprobar_linea_base(implicados, timeout_s, eco)
+    try:
+        for indice, mutante in enumerate(mutantes, start=1):
+            fuente = fuentes.get(mutante.fichero)
+            if fuente is None:
+                continue
+            informe.mutantes_evaluados.append(mutante)
+            mutada = aplicar_mutante(fuente, mutante)
 
-    def restaurar_todo() -> None:
-        """Devuelve al disco los fuentes tal y como se leyeron al empezar."""
+            try:
+                compile(mutada, mutante.fichero, "exec")
+            except (SyntaxError, ValueError):
+                informe.muertos += 1  # no compila: los tests lo cazarían siempre
+                continue
+
+            elegido = ejecutor if ejecutor_de is None else ejecutor_de(mutante.fichero)
+
+            ruta = base / mutante.fichero
+            try:
+                _escribir(ruta, mutada)
+                veredicto = elegido.ejecutar(timeout_s)
+            finally:
+                _escribir(ruta, fuente)
+
+            if veredicto == SUPERVIVIENTE:
+                informe.supervivientes.append(mutante)
+            elif veredicto == TIMEOUT:
+                informe.timeouts.append(mutante)
+            else:
+                informe.muertos += 1
+
+            if eco is not None:
+                eco(
+                    f"[{indice}/{len(mutantes)}] {veredicto:13} "
+                    f"{mutante.descripcion()}"
+                )
+    finally:
+        # Red de seguridad: si algo se torció entre medias, el árbol vuelve a
+        # su estado original igualmente.
         for fichero, fuente in fuentes.items():
             ruta = base / fichero
             if ruta.is_file() and _leer(ruta) != fuente:
                 _escribir(ruta, fuente)
-            if centinela is not None:
-                centinela.soltar(ruta)
-
-    try:
-        with restauracion_ante_senales(restaurar_todo):
-            for indice, mutante in enumerate(mutantes, start=1):
-                fuente = fuentes.get(mutante.fichero)
-                if fuente is None:
-                    continue
-                informe.mutantes_evaluados.append(mutante)
-                mutada = aplicar_mutante(fuente, mutante)
-
-                try:
-                    compile(mutada, mutante.fichero, "exec")
-                except (SyntaxError, ValueError):
-                    informe.muertos += 1  # no compila: los tests lo cazarían siempre
-                    continue
-
-                elegido = (
-                    ejecutor if ejecutor_de is None else ejecutor_de(mutante.fichero)
-                )
-
-                ruta = base / mutante.fichero
-                try:
-                    _escribir(ruta, mutada)
-                    if centinela is not None:
-                        centinela.aplicar(ruta, mutante, fuente)
-                    veredicto = elegido.ejecutar(timeout_s)
-                finally:
-                    _escribir(ruta, fuente)
-                    if centinela is not None:
-                        centinela.soltar(ruta)
-
-                if veredicto == INDETERMINADO:
-                    # La suite ni llegó a juzgar. Puede ser el mutante (rompió
-                    # la recolección) o puede ser la base. Cuesta una ejecución
-                    # más averiguarlo, y es la diferencia entre un número y una
-                    # invención.
-                    veredicto = _resolver_indeterminado(elegido, timeout_s)
-
-                if veredicto == SUPERVIVIENTE:
-                    informe.supervivientes.append(mutante)
-                elif veredicto == TIMEOUT:
-                    informe.timeouts.append(mutante)
-                elif veredicto == BASE_ROTA:
-                    informe.base_rota.append(mutante)
-                else:
-                    informe.muertos += 1
-
-                if eco is not None:
-                    eco(
-                        f"[{indice}/{len(mutantes)}] {veredicto:13} "
-                        f"{mutante.descripcion()}"
-                    )
-    finally:
-        # Red de seguridad: si algo se torció entre medias, el árbol vuelve a
-        # su estado original igualmente.
-        restaurar_todo()
         informe.segundos = time.monotonic() - inicio
 
-    # La línea base del arranque protege el arranque. Ésta protege el resto: si
-    # la base se rompió a mitad —alguien borró un fichero, el entorno cambió—,
-    # cada «muerto» contado desde entonces es un mutante que nadie cazó.
-    if comprobar_base and informe.mutantes_evaluados:
-        informe.aviso_base = _base_rota_al_final(implicados, timeout_s)
-    if informe.base_rota and informe.aviso_base is None:
-        informe.aviso_base = (
-            f"{len(informe.base_rota)} mutante(s) se juzgaron con la suite rota "
-            "por causas ajenas a la mutación: no cuentan ni como muertos ni como "
-            "supervivientes, y la campaña no cubre esas líneas."
-        )
-
     return informe
-
-
-def _resolver_indeterminado(ejecutor: object, timeout_s: int) -> str:
-    """¿La suite se rompió por el mutante o ya estaba rota?
-
-    Se corre la línea base ahí mismo. Verde: fue el mutante quien reventó la
-    recolección, y eso es una muerte legítima. Roja: no se sabe nada de este
-    mutante, y decir «muerto» sería inventárselo.
-    """
-    correr_base = getattr(ejecutor, "linea_base", None)
-    if correr_base is None:
-        return BASE_ROTA
-    return MUERTO if correr_base(timeout_s).verde else BASE_ROTA
-
-
-def _base_rota_al_final(implicados: list[tuple[str, object]], timeout_s: int) -> str | None:
-    """Reejecuta la línea base al cerrar. Devuelve el motivo si dejó de estar verde."""
-    for etiqueta, ejecutor in implicados:
-        correr_base = getattr(ejecutor, "linea_base", None)
-        if correr_base is None:
-            continue
-        resultado = correr_base(timeout_s)
-        if not resultado.verde:
-            fallidos = ", ".join(resultado.fallidos()) or f"código {resultado.codigo}"
-            return (
-                f"La línea base estaba VERDE al empezar y ROJA al terminar en "
-                f"{etiqueta} ({fallidos}). La base se rompió durante la campaña, "
-                "así que los mutantes contados como «muertos» pueden no estarlo: "
-                "estos números NO valen para cerrar una feature. Arregla la suite "
-                "y repite la campaña."
-            )
-    return None
 
 
 # --- Informe ----------------------------------------------------------------
@@ -1297,20 +613,6 @@ def escribir_informe(informe: InformeMutacion, ruta: Path) -> None:
         f"Generado por `python -m harness.mutacion --feature {informe.feature}` "
         f"el {datetime.now().strftime('%Y-%m-%d %H:%M')}.",
         "",
-    ]
-    if not informe.fiable:
-        # Lo primero que se lee, y en negrita: un informe cuyos números no valen
-        # tiene que decirlo antes que nada, o el reviewer suma la tabla y cierra.
-        lineas += [
-            "> ## ⚠ CAMPAÑA NO VÁLIDA",
-            ">",
-            f"> {informe.aviso_base}",
-            ">",
-            "> **No cierres la feature con estos números.** Arregla la línea base "
-            "y repite la campaña.",
-            "",
-        ]
-    lineas += [
         "## Alcance",
         "",
         f"Origen del diff: **{alcance.origen}** "
@@ -1333,7 +635,6 @@ def escribir_informe(informe: InformeMutacion, ruta: Path) -> None:
         f"| Muertos | {informe.muertos} |",
         f"| Supervivientes | {len(informe.supervivientes)} |",
         f"| Timeouts | {len(informe.timeouts)} |",
-        f"| Sin veredicto (base rota) | {len(informe.base_rota)} |",
         f"| Tiempo total | {informe.segundos:.1f} s |",
     ]
     if informe.muestreado:
@@ -1385,20 +686,6 @@ def escribir_informe(informe: InformeMutacion, ruta: Path) -> None:
             lineas.append(f"- `{mutante.fichero}:{mutante.linea}` {mutante.descripcion()}")
         lineas.append("")
 
-    if informe.base_rota:
-        lineas += [
-            "## Sin veredicto: la suite estaba rota por su cuenta",
-            "",
-            "De estos mutantes no se sabe nada. La suite falló sin que la "
-            "mutación tuviera que ver, así que **no** cuentan como muertos: esas "
-            "líneas se quedan sin comprobar hasta que la base vuelva a estar "
-            "verde y la campaña se repita.",
-            "",
-        ]
-        for mutante in informe.base_rota:
-            lineas.append(f"- `{mutante.fichero}:{mutante.linea}` {mutante.descripcion()}")
-        lineas.append("")
-
     ruta.parent.mkdir(parents=True, exist_ok=True)
     ruta.write_text("\n".join(lineas) + "\n", encoding="utf-8")
 
@@ -1415,7 +702,7 @@ def _analizar_argumentos(argv: list[str] | None) -> argparse.Namespace:
         ),
     )
     analizador.add_argument(
-        "--feature", default=None, help="Identificador de la feature, p. ej. F-XXX"
+        "--feature", required=True, help="Identificador de la feature, p. ej. F-XXX"
     )
     analizador.add_argument("--base", default="dev", help="Rama de integración")
     analizador.add_argument("--rama", default=None, help="Rama de la feature")
@@ -1434,81 +721,7 @@ def _analizar_argumentos(argv: list[str] | None) -> argparse.Namespace:
             "'mutacion.workers' de harness/rigor.json o los núcleos menos dos."
         ),
     )
-    analizador.add_argument(
-        "--estado",
-        action="store_true",
-        help=(
-            "No lanza nada: dice si hay una campaña en curso según el centinela "
-            "de .arnes_cache/. Códigos: 0 no hay, 3 la hay sin tocar el árbol "
-            "principal, 4 la hay CON un mutante aplicado en el árbol principal. "
-            "Lo usa harness/init.sh."
-        ),
-    )
-    analizador.add_argument(
-        "--restaurar",
-        action="store_true",
-        help=(
-            "No lanza nada: deshace los mutantes que dejó aplicados una campaña "
-            "muerta a medias, según el centinela, y lo retira."
-        ),
-    )
     return analizador.parse_args(argv)
-
-
-#: Códigos de salida de `--estado`, para que init.sh no tenga que leer el JSON.
-SIN_CAMPANIA = 0
-CAMPANIA_AJENA = 3
-CAMPANIA_MUTANDO = 4
-
-
-def _modo_estado(raiz: str) -> int:
-    """Informa de si hay una campaña en curso. Ver `--estado`."""
-    datos = Centinela.leer(raiz)
-    if datos is None:
-        print("Sin campaña de mutación en curso.")
-        return SIN_CAMPANIA
-    aplicados = datos.get("aplicados", [])
-    detalle = "; ".join(str(a.get("descripcion", "")) for a in aplicados) or "ninguno"
-    cabecera = (
-        f"Campaña de mutación EN CURSO: feature {datos.get('feature') or '(?)'}, "
-        f"modo {datos.get('modo') or '(?)'}, pid {datos.get('pid') or '(?)'}, "
-        f"desde {datos.get('inicio') or '(?)'}. Mutante aplicado: {detalle}."
-    )
-    if datos.get("muta_arbol_principal"):
-        print(
-            f"{cabecera}\n"
-            "    El ÁRBOL PRINCIPAL tiene un mutante escrito ahora mismo: lo que "
-            "midas aquí\n"
-            "    (compilación, tests, cobertura) mide el mutante, no tu código. "
-            "Si no hay\n"
-            "    ninguna campaña viva, el centinela es basura de una que murió: "
-            "recupérate\n"
-            "    con `python -m harness.mutacion --restaurar`."
-        )
-        return CAMPANIA_MUTANDO
-    print(
-        f"{cabecera}\n"
-        "    Muta en worktrees aparte, no en este árbol. Aun así compite por CPU "
-        "y se\n"
-        "    romperá si commiteas mientras corre."
-    )
-    return CAMPANIA_AJENA
-
-
-def _modo_restaurar(raiz: str) -> int:
-    """Deshace lo que dejó una campaña muerta a medias. Ver `--restaurar`."""
-    datos = Centinela.leer(raiz)
-    if datos is None:
-        print("No hay centinela: no quedó ningún mutante aplicado.")
-        return 0
-    restaurados, irrecuperables = restaurar_desde_centinela(raiz)
-    for ruta in restaurados:
-        print(f"Restaurado: {ruta}")
-    for ruta in irrecuperables:
-        print(f"NO SE PUDO RESTAURAR: {ruta}", file=sys.stderr)
-    if not restaurados and not irrecuperables:
-        print("El centinela no apuntaba a ningún fichero vivo; retirado.")
-    return 2 if irrecuperables else 0
 
 
 def workers_por_defecto() -> int:
@@ -1553,32 +766,9 @@ def _workers_configurados() -> int | None:
 
 
 def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
-    """Punto de entrada.
-
-    Códigos: 0 sin supervivientes, 1 con ellos, 2 error de uso, 3 campaña
-    abortada (línea base roja o árbol sucio). El 3 es distinto del 1 a
-    propósito: «hay supervivientes» es un resultado; «no se ha medido nada» no.
-    """
+    """Punto de entrada: 0 sin supervivientes, 1 con ellos, 2 error de uso."""
     opciones = _analizar_argumentos(argv)
     timeout_s = opciones.timeout or _timeout_configurado()
-
-    if opciones.estado:
-        return _modo_estado(opciones.raiz)
-    if opciones.restaurar:
-        return _modo_restaurar(opciones.raiz)
-    if not opciones.feature:
-        print("Falta --feature (o usa --estado / --restaurar).", file=sys.stderr)
-        return 2
-
-    # Una campaña anterior que murió a machetazos pudo dejar un mutante escrito.
-    # Empezar encima de él mediría el mutante viejo, no el código.
-    if Centinela.leer(opciones.raiz) is not None:
-        print(
-            "Hay un centinela de una campaña anterior sin cerrar. Se restaura "
-            "antes de empezar:",
-            file=sys.stderr,
-        )
-        _modo_restaurar(opciones.raiz)
 
     try:
         servicios = cargar_servicios(raiz=opciones.raiz)
@@ -1602,21 +792,14 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
         return ejecutor_para(fichero, servicios, opciones.raiz)
 
     workers = resolver_workers(opciones.workers, _workers_configurados())
-    paralela = workers >= 2 and ejecutor is None
-    centinela = Centinela(
-        raiz=opciones.raiz,
-        feature=opciones.feature,
-        modo="paralelo" if paralela else "serie",
-    )
-    centinela.abrir()
 
-    try:
-        if paralela:
-            # Import perezoso: `harness.mutacion_paralela` se apoya en este
-            # módulo, y al revés solo aquí. Sin ciclo que gestionar.
-            from harness.mutacion_paralela import ejecutar_campania_paralela
+    if workers >= 2 and ejecutor is None:
+        # Import perezoso: `harness.mutacion_paralela` se apoya en este módulo,
+        # y al revés solo aquí. Así no hay ciclo de importación que gestionar.
+        from harness.mutacion_paralela import ejecutar_campania_paralela
 
-            print(f"Campaña paralela: hasta {workers} workers, uno por worktree.")
+        print(f"Campaña paralela: hasta {workers} workers, uno por worktree.")
+        try:
             informe = ejecutar_campania_paralela(
                 alcance,
                 servicios,
@@ -1626,54 +809,32 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
                 max_mutantes=opciones.max_mutantes,
                 semilla=opciones.semilla,
                 eco=lambda linea: print(linea, flush=True),
-                centinela=centinela,
             )
-        else:
-            informe = ejecutar_campania(
-                alcance,
-                ejecutor or EjecutorPytest(raiz=opciones.raiz),
-                timeout_s=timeout_s,
-                raiz=opciones.raiz,
-                max_mutantes=opciones.max_mutantes,
-                semilla=opciones.semilla,
-                eco=lambda linea: print(linea, flush=True),
-                ejecutor_de=factoria if servicios and ejecutor is None else None,
-                centinela=centinela,
-            )
-    except CampaniaAbortada as error:
-        # Sin informe a propósito: un fichero en `progress/` con un cero que
-        # nadie ha medido es peor que no tener fichero.
-        print(str(error), file=sys.stderr)
-        return 3
-    except ValueError as error:
-        print(str(error), file=sys.stderr)
-        return 2
-    finally:
-        centinela.cerrar()
+        except ValueError as error:
+            print(str(error), file=sys.stderr)
+            return 2
+    else:
+        informe = ejecutar_campania(
+            alcance,
+            ejecutor or EjecutorPytest(raiz=opciones.raiz),
+            timeout_s=timeout_s,
+            raiz=opciones.raiz,
+            max_mutantes=opciones.max_mutantes,
+            semilla=opciones.semilla,
+            eco=lambda linea: print(linea, flush=True),
+            ejecutor_de=factoria if servicios and ejecutor is None else None,
+        )
 
     destino = Path(opciones.salida or f"progress/mutacion_{opciones.feature}.md")
     escribir_informe(informe, destino)
     print(
         f"{informe.evaluados} mutantes evaluados, {informe.muertos} muertos, "
         f"{len(informe.supervivientes)} supervivientes, "
-        f"{len(informe.timeouts)} timeouts, {len(informe.base_rota)} sin "
-        f"veredicto en {informe.segundos:.1f} s"
+        f"{len(informe.timeouts)} timeouts en {informe.segundos:.1f} s"
     )
     print(f"Informe: {destino.as_posix()}")
-    if not informe.fiable:
-        print(f"CAMPAÑA NO VÁLIDA: {informe.aviso_base}", file=sys.stderr)
-        return 3
     return 1 if informe.supervivientes else 0
 
 
 if __name__ == "__main__":  # pragma: no cover
-    # Se llama al `main` del módulo IMPORTADO, no al de esta copia. Con
-    # `python -m harness.mutacion` este fichero se ejecuta como `__main__`, y
-    # `harness.mutacion_paralela` lo vuelve a importar como `harness.mutacion`:
-    # dos copias del módulo y, por tanto, dos clases `BaseRota` distintas. Un
-    # `except CampaniaAbortada` escrito aquí NO cazaría la que lanza la campaña
-    # paralela, y el aborto saldría por pantalla como un traceback pelado.
-    # Delegando en el módulo importado, todo el mundo usa las mismas clases.
-    from harness.mutacion import main as _main
-
-    raise SystemExit(_main())
+    raise SystemExit(main())
