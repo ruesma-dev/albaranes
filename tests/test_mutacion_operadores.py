@@ -26,7 +26,13 @@ import json
 
 import pytest
 
-from harness.mutacion import aplicar_mutante, clave_de_mutante, generar_mutantes
+from harness.mutacion import (
+    _delimitado,
+    _es_palabra,
+    aplicar_mutante,
+    clave_de_mutante,
+    generar_mutantes,
+)
 from harness.rutas_sensibles import RUTA_DECLARACION
 
 FICHERO = "modulo.py"
@@ -66,6 +72,19 @@ FUENTE_COMENTARIO = (
     "def con_comentario(valor):\n"
     "    if (\n"
     "        valor  # el analisis previo\n"
+    "        is None\n"
+    "    ):\n"
+    "        return uno()\n"
+    "    return dos()\n"
+)
+
+#: El caso que destapa la falta de delimitación **por la derecha**: «isla»
+#: EMPIEZA por `is`, así que el byte anterior no delata nada y lo único que
+#: separa el comentario del operador de verdad es el byte SIGUIENTE.
+FUENTE_COMENTARIO_ISLA = (
+    "def con_comentario(valor):\n"
+    "    if (\n"
+    "        valor  # isla desierta\n"
     "        is None\n"
     "    ):\n"
     "        return uno()\n"
@@ -176,6 +195,72 @@ def test_f034_r5_no_muta_dentro_de_una_palabra_del_comentario():
         f"({mutantes[0].mutado!r}); el operador está en la 4"
     )
     assert mutantes[0].mutado == "is not None"
+
+
+def test_f034_r5_bis_no_muta_una_palabra_que_EMPIEZA_por_is():
+    """R5: «isla» empieza por `is` — quien lo salva es el delimitador DERECHO.
+
+    El caso de «analisis» ya lo caza el byte ANTERIOR, así que por sí solo deja
+    sin comprobar la mitad derecha de `_delimitado`. Una palabra que empieza por
+    `is` obliga a mirar el byte que va DESPUÉS de la coincidencia: sin eso, el
+    mutante vuelve a caer dentro del comentario.
+    """
+    mutantes = _de_operador(FUENTE_COMENTARIO_ISLA, "comparacion")
+
+    assert len(mutantes) == 1, f"esperado 1 mutante, hay {len(mutantes)}"
+    assert mutantes[0].linea == 4, (
+        f"el mutante cayó en la línea {mutantes[0].linea} "
+        f"({mutantes[0].mutado!r}); el operador está en la 4"
+    )
+    assert mutantes[0].mutado == "is not None"
+
+
+def test_f034_r5_es_palabra_exige_que_LOS_DOS_extremos_sean_de_palabra():
+    """R5/R6: `_es_palabra` decide a quién se le exige delimitación.
+
+    Los dos extremos mandan, y cada uno por su cuenta: si bastara con el
+    primero, un token que empieza por letra y termina en símbolo pasaría por
+    palabra; si el segundo mirase el byte equivocado —el penúltimo en vez del
+    último—, la respuesta dejaría de depender del carácter que de verdad linda
+    con el operando de la derecha.
+    """
+    assert _es_palabra(b"is") is True
+    assert _es_palabra(b"is not") is True
+    assert _es_palabra(b"True") is True
+
+    assert _es_palabra(b"") is False, "sin token no hay palabra que delimitar"
+    assert _es_palabra(b"==") is False, "delimitar `==` dejaría de mutar `x==y`"
+
+    assert _es_palabra(b"is=") is False, (
+        "empieza por letra pero termina en símbolo: el ÚLTIMO byte también "
+        "tiene que ser de palabra, y es el último, no el penúltimo"
+    )
+    assert _es_palabra(b"=is") is False, (
+        "termina en letra pero empieza por símbolo: el PRIMER byte también "
+        "tiene que ser de palabra"
+    )
+
+
+def test_f034_r5_delimitado_mira_los_dos_bytes_que_rodean_la_coincidencia():
+    """R5: `_delimitado` interroga el byte anterior y el siguiente, ambos.
+
+    El anterior se mira desde la columna 1 —no solo a partir de la 2—, y el
+    siguiente es el que va justo detrás de la coincidencia. Cada uno basta por
+    sí solo para rechazarla.
+    """
+    assert _delimitado(b"is ", 0, 2) is True, (
+        "en la columna 0 no hay byte anterior que mirar: es un token entero"
+    )
+    assert _delimitado(b" is ", 1, 3) is True
+
+    assert _delimitado(b"ais", 1, 3) is False, (
+        "el byte anterior es de palabra: la coincidencia de la columna 1 es el "
+        "final de «ais», no un operador"
+    )
+    assert _delimitado(b"isla", 0, 2) is False, (
+        "el byte siguiente es de palabra: la coincidencia es el principio de "
+        "«isla», no un operador"
+    )
 
 
 def test_f034_r6_los_simbolos_sin_espacios_siguen_mutando():
