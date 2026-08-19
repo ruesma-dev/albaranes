@@ -9,8 +9,8 @@ Resumen: **35 features**, 29 abiertas, 6 terminadas.
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-034 | Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra | 1 | pendiente | estandar | `feature/F-034-mutacion-is-y-coherencia-evals` |
-| F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | pendiente | estandar | `feature/F-035-instalador-no-pisa-estado` |
+| F-034 | Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra | 1 | spec lista | estandar | `feature/F-034-mutacion-is-y-coherencia-evals` |
+| F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | spec lista | estandar | `feature/F-035-instalador-no-pisa-estado` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 3 | pendiente | estandar | `feature/F-024-unidad-medida` |
 | F-028 | Con dos contratos candidatos no se elige ninguno y el albarán no llega a valorarse | 4 | pendiente | critico | `feature/F-028-selector-contrato-por-partidas` |
 | F-029 | Obra resuelta por texto sin detectar empates: score 1,00 a la obra equivocada | 5 | pendiente | critico | `feature/F-029-obra-empates-y-sin-cif` |
@@ -54,7 +54,7 @@ Resumen: **35 features**, 29 abiertas, 6 terminadas.
 
 ### F-034 · Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra
 
-estado **pendiente** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-034-mutacion-is-y-coherencia-evals`
+estado **spec lista** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-034-mutacion-is-y-coherencia-evals`
 
 URGENTE Y PRIMERO (decisión del humano, 2026-08-19): esto cambia la VARA DE MEDIR de todas las features, así que cada feature que se cierre antes de arreglarlo se mide con una campaña de mutación ciega en su punto más delicado. Sale de las observaciones del reviewer de F-027 (progress/review_F-027.md §12) y de la experiencia de F-019.
 
@@ -68,7 +68,7 @@ ALCANCE: `harness/mutacion.py`, `CHECKPOINTS.md`, `harness/rutas_sensibles.json`
 
 ### F-035 · Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto
 
-estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-035-instalador-no-pisa-estado`
+estado **spec lista** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-035-instalador-no-pisa-estado`
 
 Sale de un incidente real: el 2026-08-19, al actualizar el arnes de 1.5.0 a 1.5.2 con `instalar_arnes.ps1 -Modo actualizar`, el instalador ofrecio -y aplico- sobrescribir con sus PLANTILLAS GENERICAS ficheros que son ESTADO DEL PROYECTO, no arnes: `harness/features.json` paso de 34 features a 1 (el ejemplo F-001), `docs/ARCHITECTURE.md` de 183 a 37 lineas, y `progress/current.md` e `progress/history.md` perdieron 157 y 161 lineas. Nada se habia commiteado y se recupero entero desde git, y el 1.5.2 se acabo aplicando por copia quirurgica (commit 3a146cd), pero la proxima vez puede tocar a alguien que haga `git add -A` sin mirar.
 
