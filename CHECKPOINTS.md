@@ -142,6 +142,14 @@ recorre estos puntos **contra ese nivel**.
       recálculo puro, pero el informe de review **lo dice explícitamente**.
       Recalcular alcance y nº de mutantes no demuestra que los muertos lo
       estén: unos «N muertos» inventados pasarían ese control.
+- [ ] **Si la campaña automática dio 0 mutantes y se sustituyó por una
+      MANUAL**: el informe trae una tabla con **una fila por mutante** y, en
+      cada fila, el fichero y la línea, el **texto exacto original → mutado**
+      de la sustitución, y el resultado con su **número de fallos**. Sin ese
+      texto exacto el punto NO se marca: describir la mutación con palabras
+      («se invierte la guarda») no la hace reproducible, y una campaña manual
+      que nadie puede repetir no es evidencia, es un párrafo. El reviewer
+      reproduce al menos dos filas al pie de la letra.
 - [ ] Cada superviviente de esa campaña tiene su sección de análisis
       **completada** (ninguna en `PENDIENTE`). En nivel `critico`, además,
       cero supervivientes salvo justificación escrita aceptada por el humano.

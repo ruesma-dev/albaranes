@@ -80,6 +80,12 @@ nivel de rigor dice cuánta evidencia hay que exigir.
    de alcance**; si ahí sí salen mutantes, el cero es legítimo (exclusión
    por diseño); si tampoco salen, el cero es sospechoso y hay que
    investigarlo antes de aprobar.
+   **Si la campaña automática se sustituyó por una MANUAL**, exige la tabla
+   con **una fila por mutante**: fichero y línea, el **texto exacto
+   original → mutado** de la sustitución, y el resultado con su **número de
+   fallos**. Sin ese texto no puedes reproducir ni una fila, y una campaña
+   manual irreproducible no es evidencia: es un párrafo. Reproduce al menos
+   dos filas al pie de la letra y dilo en tu informe.
 5. El informe del implementer debe traer la sección **«Evidencias»** con los
    cuatro números (tests, cobertura de lo cambiado, mutantes y
    supervivientes, tiempo de la suite).

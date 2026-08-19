@@ -79,7 +79,7 @@ Un commit por tarea: `F-034 Tn: descripción`. Sin `push` ni PR.
       error; y `grep -rn "ground_truth" CHECKPOINTS.md harness/rutas_sensibles.json progress/current.md`
       no devuelve ninguna línea que condicione la puerta a esa ruta.
 
-- [ ] **T9: Rastro de la campaña manual**. Punto nuevo en C4 bis de
+- [x] **T9: Rastro de la campaña manual**. Punto nuevo en C4 bis de
       `CHECKPOINTS.md` (R16) y la frase equivalente en el punto 4 de
       `.claude/agents/reviewer.md` (R17).
       **Verificación**: revisión del reviewer; el punto exige fichero, línea,
