@@ -168,10 +168,19 @@ def test_f012_r1_el_eco_numera_el_progreso_sobre_el_total_de_la_campania(
     )
 
     total = informe.evaluados
-    prefijos = sorted(linea.split("]")[0] + "]" for linea in lineas)
+    # (1.6.0) Cada worker ecoa además su LÍNEA BASE con el prefijo `[base]`:
+    # la suite sin mutar corre antes de juzgar a nadie. Ese eco no numera
+    # progreso, así que se aparta antes de comprobar la numeración; pero se
+    # exige que exista, porque su ausencia significaría que la campaña volvió
+    # a arrancar sin comprobar la base.
+    base = [linea for linea in lineas if linea.startswith("[base]")]
+    mutantes = [linea for linea in lineas if not linea.startswith("[base]")]
+    assert base, "sin eco de línea base: la campaña no la está comprobando"
+
+    prefijos = sorted(linea.split("]")[0] + "]" for linea in mutantes)
     assert prefijos == sorted(f"[{numero}/{total}]" for numero in range(1, total + 1))
-    assert all("->" in linea for linea in lineas)  # la descripción llega entera
-    assert any("[comparacion]" in linea for linea in lineas)
+    assert all("->" in linea for linea in mutantes)  # la descripción llega entera
+    assert any("[comparacion]" in linea for linea in mutantes)
 
 
 def test_f012_r1_sin_pedir_workers_el_coordinador_usa_dos(repo: Path) -> None:
