@@ -8,9 +8,10 @@ y las 09:43 UTC). Revisión hecha **por HTTP contra sv4 en local**
 recurso de Azure. Datos crudos en el scratchpad de la sesión
 (`sal_SS-*.json`).
 
-**Aún NO contrastado contra el Excel del administrativo**: la herramienta MCP
-`markitdown` no está conectada en esta sesión y `CLAUDE.md` prohíbe improvisar
-otra vía de conversión. Ver §6.
+**Contrastado contra el Excel del administrativo** (`OneDrive - Ruesma/
+Documentos/albaranes/evals/Copia de valoracion_alabranes.xlsx`), convertido con
+la herramienta MCP `markitdown` tras reconectarla. Ver §8, que es la sección
+que más importa: el ground truth cambia dos conclusiones de este informe.
 
 ## 1. Cuadro del lote
 
@@ -150,22 +151,21 @@ arreglar el CIF (F-030) desbloquea otros 2**; los otros 2 necesitan ambas.
   6 m³ (¿1,5 contenedores? ¿línea de 9 m³ sin tarifa?). Es un caso límite que
   hoy no está cubierto por ningún test conocido.
 
-## 6. Pendiente: contraste contra el Excel del administrativo
+## 6. El Excel del administrativo: RESUELTO
 
-El fichero es `OneDrive - Ruesma/Documentos/albaranes/evals/Copia de
-valoracion_alabranes.xlsx` (modificado el 2026-08-18). **No se ha leído**:
+La MCP `markitdown` no estaba disponible al empezar la revisión: el servidor
+arrancó tarde (descarga de `uvx markitdown-mcp`) y sus herramientas no llegaron
+a registrarse en la sesión, aunque `claude mcp list` lo daba por conectado. El
+humano lo reconectó con `/mcp` y la conversión se hizo por el camino normal que
+manda `CLAUDE.md`.
 
-1. `CLAUDE.md` obliga a convertir los documentos ofimáticos **siempre** con la
-   herramienta MCP `markitdown`, y a **parar y decirlo** si no está conectada.
-   En esta sesión no lo está.
-2. El fichero trae precios de proveedor, que `CLAUDE.md` clasifica como dato
-   sensible que no se convierte sin preguntar, porque el Markdown acabaría
-   versionado.
+El Markdown resultante **no se versiona**: el libro trae precios de proveedor.
+El contraste está en §8; el fichero convertido no se ha guardado en
+`docs/referencia/`.
 
-Decisión del humano pendiente: reconectar `markitdown`, o autorizar
-explícitamente una lectura de solo análisis (p. ej. con `openpyxl`) cuyo
-resultado se quede en el scratchpad y **no** entre en `docs/referencia/` ni en
-git.
+Nota para la próxima vez: si `markitdown` aparece como «still connecting» al
+arrancar la sesión, hay que reconectarla con `/mcp` antes de trabajar con
+documentos. Ya está en caché de `uv`, así que no debería repetirse.
 
 ## 7. Qué haría con esto
 
@@ -186,3 +186,126 @@ ya están en el backlog:
 Y una comprobación que no cuesta nada y hoy nadie hace: **un test de regresión
 con el SS-0000168** que fije 120 € — un contenedor, no seis m³ — para que el
 arreglo de F-024 no lo convierta en 720 €.
+
+---
+
+# 8. Contraste contra el Excel del administrativo (ground truth)
+
+Convertido con la MCP `markitdown` (reconectada por el humano). El Excel trae
+los siete albaranes de residuos **al final de la Hoja1**, con la valoración que
+el administrativo da por buena.
+
+## 8.1 Lo que dice el ground truth
+
+| Albarán (Excel) | Obra | Contrato | Partida | Líneas esperadas | **Total** |
+|---|---|---|---|---|---|
+| 168 | 687 | CTSU24/0228 | CI.03A.7 | CAMBIO CONTENEDOR 6M3 · 1 UD · 120 € | **120,00 €** |
+| 3935 | 687 | CTSU24/0228 | CI.03A.7 | CAMBIO CONTENEDOR 6M3 · 120 € | **120,00 €** |
+| 589 | 687 | CTSU24/0228 | CI.03A.7 | CAMBIO 120 € + **INCR. LER 170802** 51 € | **171,00 €** |
+| 3967 | 687 | CTSU24/0228 | CI.03A.7 | CAMBIO 120 € + **INCR. LER 170604** 90 € | **210,00 €** |
+| 1977 | 687 | CTSU24/0228 | CI.03A.7 | CAMBIO 120 € + **INCR. LER 170604** 90 € | **210,00 €** |
+| 25146 | **691** | **CTSU24/0402** | CI.03A.7 | CONTENEDOR RESIDUOS 6 M3 · 136 € | **136,00 €** |
+| 26122 | **691** | **CTSU24/0402** | CI.03A.7 | CONTENEDOR 9 M3 · 183 € (OFERTA) + **INCR. LER 170802** 77 € (OFERTA) | **260,00 €** |
+
+**En los siete la cantidad correcta es `1,00 UD`**, no los 6 (ni los 9) del
+albarán. Queda confirmado por el ground truth lo que §2 dedujo del código: el
+número que trae la línea es la **capacidad del contenedor**, y la cantidad
+valorada es **el número de contenedores**. La regla 4.bis del
+`valuation_builder` hace lo correcto.
+
+## 8.2 Los 120,00 € del SS-0000168 coinciden… con el concepto equivocado
+
+El total cuadra con el ground truth. Pero la línea que el sistema eligió es
+**«LLEVADA CONTENEDOR 6M3»** y la que el administrativo valora es **«CAMBIO
+CONTENEDOR 6M3»**. Las dos cuestan 120 € en CTSU24/0228, así que **el acierto
+del importe tapa un error de match**. Con otra tarifa —o en otro contrato— ese
+mismo fallo daría un importe equivocado sin que nada lo señalara.
+
+Súmese que **la partida esperada es `CI.03A.7`** y el sistema dejó
+`codigo_partida_final: null`. Es decir: importe correcto, concepto equivocado y
+partida ausente. Un test que solo mire el total daría este caso por bueno; hay
+que fijar también **concepto casado y partida**. Esto refuerza F-006
+(LLEVAR/RETIRAR) y F-021 (validación de partida contra el catálogo).
+
+## 8.3 CONFIRMADO: los incrementos por LER no se están sumando
+
+§2.1 lo planteó como hipótesis y el ground truth lo confirma. Tres de los siete
+llevan una **segunda línea de incremento según el código LER del residuo**:
+
+- **SS-0000589** (LER 170802): 120 + **51** = **171,00 €**
+- **SS-0003967** (LER 170604): 120 + **90** = **210,00 €**
+- **SS-0801977** (LER 170604): 120 + **90** = **210,00 €**
+
+Esas líneas de incremento **existen en el contrato CTSU24/0228** —el sistema
+las tiene cargadas, se ven en `contrato_lines`— pero el pipeline no las emite:
+el albarán trae UNA línea y la valoración produce UNA línea. Falta la regla que
+dice «si la familia es residuos y el LER de la línea tiene incremento tarifado
+en el contrato, emite la línea sintética del incremento».
+
+Coste del fallo: **infravalora un 43 % en el 170604** (120 € frente a 210 €) y
+un 30 % en el 170802. Sin ninguna señal de revisión que lo advierta.
+
+Nótese que el **SS-0000168 (LER 170201 madera) no tiene incremento tarifado**,
+y por eso sus 120 € son completos. Es decir: el único albarán que el humano
+valoró a mano es, por casualidad, **el único de los siete cuyo caso no ejercita
+esta regla**.
+
+## 8.4 CORRECCIÓN a §3: no es solo falso negativo, hay obra EQUIVOCADA
+
+§3 dio por buenos los dos aciertos de la obra 0623 (SS-0025146 y SS-0026122).
+**El ground truth dice que la obra de esos dos es la 691, no la 0623**, y su
+contrato el **CTSU24/0402**, no el CTSU24/0228.
+
+Así que el balance real del lote es peor de lo que decía §3:
+
+| Documento | Obra del sistema | Obra real | Veredicto |
+|---|---|---|---|
+| SS-0000168 | 0687 | 687 | correcta |
+| SS-0000589, SS-0003935, SS-0003967, SS-0801977 | — | 687 | **falso negativo** (×4) |
+| SS - 0025146, SS-0026122 | **0623** | **691** | **FALSO POSITIVO** (×2) |
+
+Un falso positivo es mucho peor que un falso negativo: el documento **no queda
+esperando**, entra en el circuito con una obra ajena y con un contrato que no
+es el suyo. Esto ya no es material para F-029 «también»: **es exactamente el
+caso que F-029 describe** (score alto a la obra equivocada), con dos ejemplos
+reproducibles.
+
+No he podido comprobar en Sigrid qué obra es la 691 ni si comparte dirección
+con la 0623 (desde local solo se consulta vía sigrid-api, y el listado del
+front local únicamente muestra obras que ya tienen albaranes). Queda como
+verificación para el humano: **si la 691 y la 0623 comparten la dirección de
+c/ Fútbol Sala 4 (Leganés), el matcher no tiene forma de distinguirlas por
+texto** y hará falta otro criterio —fecha, contrato vigente del proveedor,
+elección asistida (F-007)—.
+
+## 8.5 Otros contrastes
+
+- **La numeración del Excel no lleva prefijo ni ceros**: `168`, `589`, `1977`,
+  `3935`, `3967`, `25146`, `26122`. Ojo con `1977`: el sistema leyó
+  **`SS-0801977`**. O el administrativo lo abrevió, o la IA leyó de más. Hay
+  que decidir cuál es el número bueno antes de usar esto como caso de evals.
+- **El SS-0026122 se valora contra OFERTA, no contra contrato**: el contenedor
+  de 9 m³ (183 €) y su incremento (77 €) vienen marcados como `OFERTA` en el
+  ground truth. Es decir, el caso del contenedor de 9 m³ que §5 señalaba como
+  límite **no se resuelve prorrateando 9/6**: se resuelve con **otra tarifa**,
+  que además no está en el contrato sino en la oferta. Esto es **F-017** (el
+  comparativo como fuente de precio) y es condición para valorar bien ese
+  albarán.
+- **El CIF del Excel es `B82899550`** en los siete, lo que confirma §4: el CIF
+  bueno es ese y los tres que el sistema leyó distinto son errores de lectura.
+
+## 8.6 Qué cambia en el plan
+
+Además de lo dicho en §7:
+
+1. **La regla de incrementos por LER es el defecto de más impacto del lote**
+   (3 de 7 albaranes, hasta un 43 % de infravaloración) y no está cubierta por
+   ninguna feature con ese nombre. Encaja en **F-006** (residuos: canon y
+   lógica de pago), cuya spec conviene releer antes de arrancarla para ver si
+   la contempla; si no, hay que ampliarla o dar de alta una feature propia.
+2. **El caso de regresión que §7 proponía (SS-0000168 = 120 €) es insuficiente
+   por sí solo**: es el único de los siete que no ejercita los incrementos.
+   El caso bueno para evals es el **SS-0003967 (210 €)**, que ejercita
+   contenedor + incremento LER; y el **SS-0026122 (260 €)**, que además
+   ejercita oferta y contenedor de 9 m³.
+3. **Fijar en el test el concepto y la partida, no solo el total** (§8.2).
