@@ -561,3 +561,20 @@ Ninguna propia de F-034: sus nueve requisitos de G1 y el de R14 son tests puros.
 Lo que queda pendiente **del humano** son las **dos decisiones de §T12** (orden
 de aterrizaje en `arnes-base` y numeración 1.5.3 / 1.6.0), sin las cuales la
 feature no puede cerrarse.
+
+### Confirmación final (al cerrar la sesión)
+
+`git -C C:/Users/pgris/PycharmProjects/arnes-base status --short` en el último
+minuto de la sesión:
+
+```
+ M arnes-base/harness/init.sh
+ M arnes-base/harness/mutacion.py
+ M arnes-base/harness/mutacion_paralela.py
+?? arnes-base/tests/test_mutacion_linea_base.py
+```
+
+Al fichero de test **nuevo y sin versionar** —`test_mutacion_linea_base.py`, que
+es el test del 1.5.3 de la línea base— no lo he escrito yo, y no estaba cuando
+empezó la sesión. **Hay alguien trabajando ahí ahora mismo.** Confirma el
+diagnóstico de §T12 y confirma que parar era lo correcto.
