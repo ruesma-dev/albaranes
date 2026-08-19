@@ -37,7 +37,7 @@ Un commit por tarea: `F-034 Tn: descripción`. Sin `push` ni PR.
       **Verificación**: los tests de R1, R2, R3, R4, R7 y R8 pasan;
       `python -m pytest tests -q` (raíz) en verde.
 
-- [ ] **T4: Delimitador de palabra en `_localizar`** (`_PARTE_DE_PALABRA`,
+- [x] **T4: Delimitador de palabra en `_localizar`** (`_PARTE_DE_PALABRA`,
       `_es_palabra`, `_delimitado` y búsqueda de la primera coincidencia
       **válida**), aplicado solo a tokens alfabéticos.
       **Verificación**: `python -m pytest tests/test_mutacion_operadores.py -q`
