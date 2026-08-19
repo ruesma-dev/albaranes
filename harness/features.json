@@ -68,7 +68,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 17,
+      "priority": 19,
       "branch": "feature/F-003-valorados-match-estricto"
     },
     {
@@ -78,7 +78,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 20,
+      "priority": 22,
       "branch": "feature/F-004-hormigon-fino"
     },
     {
@@ -88,7 +88,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 21,
+      "priority": 23,
       "branch": "feature/F-005-bombeo"
     },
     {
@@ -98,7 +98,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 22,
+      "priority": 24,
       "branch": "feature/F-006-residuos-pago"
     },
     {
@@ -108,7 +108,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 23,
+      "priority": 25,
       "branch": "feature/F-007-partida-alm-selector"
     },
     {
@@ -123,7 +123,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 26,
+      "priority": 28,
       "branch": "feature/F-008-blob-lifecycle"
     },
     {
@@ -139,7 +139,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 27,
+      "priority": 29,
       "branch": "feature/F-009-limpieza-q-emails"
     },
     {
@@ -149,7 +149,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 28,
+      "priority": 30,
       "branch": "feature/F-010-easy-auth-sv4"
     },
     {
@@ -159,7 +159,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 25,
+      "priority": 27,
       "branch": "feature/F-013-registro-sigrid"
     },
     {
@@ -169,7 +169,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 18,
+      "priority": 20,
       "branch": "feature/F-014-conversor-administrativo"
     },
     {
@@ -179,7 +179,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 11,
+      "priority": 13,
       "branch": "feature/F-015-lineas-tachadas"
     },
     {
@@ -189,7 +189,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 13,
+      "priority": 15,
       "branch": "feature/F-016-linea-multipartida"
     },
     {
@@ -199,7 +199,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 24,
+      "priority": 26,
       "branch": "feature/F-017-comparativo-precio"
     },
     {
@@ -209,7 +209,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 19,
+      "priority": 21,
       "branch": "feature/F-018-carga-incompleta"
     },
     {
@@ -230,7 +230,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 16,
+      "priority": 18,
       "branch": "feature/F-020-proveedor-agnostico"
     },
     {
@@ -240,7 +240,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 12,
+      "priority": 14,
       "branch": "feature/F-021-partida-catalogo-candidatas"
     },
     {
@@ -250,7 +250,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 29,
+      "priority": 31,
       "branch": "feature/F-022-concepto-lineas-bandeja"
     },
     {
@@ -260,7 +260,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 10,
+      "priority": 12,
       "branch": "feature/F-023-mortero-incrementos"
     },
     {
@@ -270,7 +270,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 3,
+      "priority": 5,
       "branch": "feature/F-024-unidad-medida"
     },
     {
@@ -280,7 +280,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 15,
+      "priority": 17,
       "branch": "feature/F-025-motivo-conversion-omitida"
     },
     {
@@ -290,7 +290,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 14,
+      "priority": 16,
       "branch": "feature/F-026-guard-partida-base"
     },
     {
@@ -310,7 +310,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 4,
+      "priority": 6,
       "branch": "feature/F-028-selector-contrato-por-partidas"
     },
     {
@@ -320,7 +320,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 5,
+      "priority": 7,
       "branch": "feature/F-029-obra-empates-y-sin-cif"
     },
     {
@@ -330,7 +330,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 6,
+      "priority": 8,
       "branch": "feature/F-030-proveedor-cif-aproximado"
     },
     {
@@ -340,7 +340,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 7,
+      "priority": 9,
       "branch": "feature/F-031-partida-elige-linea-contrato"
     },
     {
@@ -350,7 +350,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 8,
+      "priority": 10,
       "branch": "feature/F-032-semantica-precio-neto"
     },
     {
@@ -360,7 +360,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 9,
+      "priority": 11,
       "branch": "feature/F-033-contrato-md-o-pdf-determinista"
     },
     {
@@ -382,6 +382,26 @@
       "rigor": "estandar",
       "priority": 2,
       "branch": "feature/F-035-instalador-no-pisa-estado"
+    },
+    {
+      "id": "F-036",
+      "title": "La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten",
+      "description": "Defecto MEDIDO el 2026-08-19 sobre los 7 albaranes de SALMEDINA del lote de residuos, con obra y contrato ya seleccionados a mano por el humano y contrastados contra el Excel del administrativo. Evidencia completa en progress/revision_residuos_salmedina_20260819.md. Son DOS defectos que se suman en el mismo importe.\n\n(1) LA REGLA DE CONTENEDORES ES INESTABLE. valuation_builder.py (bloque 4.bis) convierte los m3 del albaran en numero de contenedores, porque la cantidad que trae la linea es la CAPACIDAD del contenedor, no material. Funciona en 5 de los 7 y en 2 no: SS-0003967 y SS-0801977 salen con cantidad_convertida=null y el importe se calcula con la cantidad cruda (6), dando 6 x 120 = 720,00 EUR y 6 x 90 = 540,00 EUR frente a los 210,00 EUR que dice el ground truth en ambos. Es una SOBREVALORACION de x3,4 y x2,6 sin ninguna senal de revision que la delate. Mismo proveedor, mismo contrato (CTSU24/0228), mismo tipo de documento y misma cantidad (6) que los que si funcionan: la diferencia no esta en el dato de entrada. Segun el codigo, converter.convert() solo devuelve None si la cantidad es None, y aqui cantidad_albaran vale 6,0, asi que la rama por la que se cuela no es evidente leyendo el fichero: hay que instrumentar sv6 y reproducirlo.\n\n(2) LOS INCREMENTOS POR LER NO SE EMITEN NUNCA. El contrato tarifa un incremento por codigo LER del residuo (170202 vidrio 120 EUR, 170302 bituminosas 30 EUR, 170604 aislamiento 90 EUR, 170802 yesos 51 EUR) que el administrativo suma SIEMPRE como segunda linea. El pipeline emite una linea por linea de albaran y no genera esa sintetica: SS-0000589 sale 120,00 EUR y debe ser 171,00 EUR (120+51). Las lineas de incremento ESTAN cargadas en contrato_lines, o sea que el dato esta y no se usa.\n\n(3) EFECTO PERVERSO ENTRE AMBOS: en SS-0003967 el matcher eligio como linea principal el propio INCREMENTO LER 170604 (match exact_concept, 90 EUR) en vez del contenedor, porque el codigo LER aparece literal en la descripcion de la linea de incremento y eso gana al match semantico del contenedor. Es decir, el incremento no solo falta: a veces SUSTITUYE a la linea buena.\n\nRESULTADO ACTUAL frente al ground truth (7 albaranes): 3 correctos (SS-0000168 120, SS-0003935 120, SS-0025146 136), 1 corto por falta de incremento (SS-0000589 120 vs 171), 2 disparados (SS-0003967 540 vs 210, SS-0801977 720 vs 210) y 1 con tarifa equivocada (SS-0026122 272 vs 260, que ademas debe valorarse contra OFERTA con la tarifa de contenedor de 9 M3, lo que lo hace caso de F-017).\n\nALCANCE: services/albaran-valoracion-persist (valuation_builder, calcular_contenedores_residuos, el matcher de linea de contrato). NO ENTRA: la fuente OFERTA (F-017) ni la eleccion de partida (F-021). RECONCILIAR CON F-006 (residuos: pago LLEVAR/RETIRAR y canon) ANTES DE ARRANCAR: hay que decidir si esto es una ampliacion de F-006 o una feature propia. Y ojo con F-024: al extraer unidad_medida, los casos que hoy aciertan por la regla de contenedores pueden pasar a valorar x6.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 3,
+      "branch": "feature/F-036-residuos-contenedores-e-incrementos"
+    },
+    {
+      "id": "F-037",
+      "title": "sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar",
+      "description": "Pedido por el humano el 2026-08-19 tras corregir a mano obra y contrato en los 7 albaranes de SALMEDINA: seleccionar el contrato en el desplegable no surte efecto hasta que se pulsa Guardar, y en una sesion de revision de varios documentos eso es un paso de mas por documento, facil de olvidar y que deja el documento aparentemente arreglado pero sin persistir.\n\nPROPUESTA: que la seleccion de contrato persista en el momento (envio inmediato al backend), con senal visual de guardado y manejo del error si falla.\n\nA DECIDIR con el humano antes de implementar: (a) si el guardado inmediato vale solo para el contrato o tambien para obra y proveedor, que sufren el mismo paso; (b) si al guardar el contrato debe dispararse la revaloracion automaticamente o seguir siendo un acto aparte.\n\nRIESGO QUE HAY QUE MIRAR SI O SI: cada guardado del revisor pasa por review_repository::_recalc_valuation_importes, que fue la causa del round trip 2 de F-019 (recalculaba sin descuento y pisaba en BBDD lo que sv6 habia escrito bien). Hoy esta protegido por el guardian de R24, que decide por las ENTRADAS y deja intactas las filas que nadie ha tocado. Guardar automaticamente multiplica la frecuencia con que ese camino se ejecuta, asi que la feature debe traer test que demuestre que N guardados automaticos seguidos no alteran ningun importe que el revisor no haya tocado.\n\nALCANCE: services/albaranes-front (plantilla del detalle y su endpoint). NO ENTRA: rehacer el formulario de revision ni cambiar el flujo de aprobacion.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 4,
+      "branch": "feature/F-037-guardado-inmediato-contrato"
     }
   ]
 }

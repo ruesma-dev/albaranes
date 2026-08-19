@@ -309,3 +309,118 @@ Además de lo dicho en §7:
    contenedor + incremento LER; y el **SS-0026122 (260 €)**, que además
    ejercita oferta y contenedor de 9 m³.
 3. **Fijar en el test el concepto y la partida, no solo el total** (§8.2).
+
+---
+
+# 9. Segunda pasada: con obra y contrato puestos a mano (2026-08-19, ~12:44)
+
+El humano seleccionó obra y contrato en los siete y se revaloraron. Datos en el
+scratchpad (`despues/*.json`); la foto previa se conserva (`sal_*.json`), lo que
+permite comparar antes/después.
+
+## 9.1 Resultado frente al ground truth
+
+| Albarán | Obra | Contrato | **Total ahora** | **GT** | |
+|---|---|---|---|---|---|
+| SS-0000168 | 0687 | CTSU24/0228 | 120,00 € | 120,00 € | ✔ |
+| SS-0003935 | 0687 | CTSU24/0228 | 120,00 € | 120,00 € | ✔ |
+| SS-0025146 | 0691 | CTSU24/0402 | 136,00 € | 136,00 € | ✔ |
+| SS-0000589 | 0687 | CTSU24/0228 | 120,00 € | **171,00 €** | ✘ corto (−51) |
+| SS-0026122 | 0691 | CTSU24/0402 | 272,00 € | **260,00 €** | ✘ (+12) |
+| SS-0003967 | 0687 | CTSU24/0228 | **540,00 €** | **210,00 €** | ✘✘ ×2,6 |
+| SS-0801977 | 0687 | CTSU24/0228 | **720,00 €** | **210,00 €** | ✘✘ ×3,4 |
+
+**Obra y contrato quedan correctos en los siete** una vez puestos a mano
+(incluida la 0691 que §8.4 señalaba). Lo que falla ahora es **la valoración**.
+
+## 9.2 La regla de contenedores se aplica en 5 de 7 — y en 2 no
+
+| Albarán | `cantidad_albaran` | `cantidad_convertida` | precio | importe |
+|---|---|---|---|---|
+| SS-0000168 | 6,0 | **1,0** | 120 | 120,00 € |
+| SS-0003935 | 6,0 | **1,0** | 120 | 120,00 € |
+| SS-0000589 | 6,0 | **1,0** | 120 | 120,00 € |
+| SS-0025146 | 6,0 | **1,0** | 136 | 136,00 € |
+| SS-0026122 | 9,0 | **2,0** | 136 | 272,00 € |
+| SS-0003967 | 6,0 | **null** | 90 | **540,00 €** |
+| SS-0801977 | 6,0 | **null** | 120 | **720,00 €** |
+
+Cuando `cantidad_convertida` es `null`, el `importe_calculator` cae a
+`cantidad_albaran` y multiplica por la capacidad del contenedor: **6 × 120 =
+720**, **6 × 90 = 540**. Es la sobrevaloración que §2 advertía como riesgo
+teórico de F-024 — solo que **ya está ocurriendo**, sin necesidad de tocar nada.
+
+Lo que hace el caso difícil: entrada idéntica a la de los que sí funcionan
+(mismo proveedor, mismo contrato `CTSU24/0228`, misma cantidad 6, mismo tipo de
+documento). Y leyendo `unit_converter.convert()`, la única rama que devuelve
+`cantidad_convertida=None` es `cantidad is None`, que aquí **no se cumple**
+(vale 6,0). Es decir: **la explicación no está en la lectura del fichero**; hay
+que instrumentar sv6 y reproducirlo. No lo doy por diagnosticado.
+
+## 9.3 El incremento LER: ausente en uno, y usurpando la línea buena en otro
+
+- **SS-0000589** (LER 170802): 120,00 € y debía ser **171,00 €**. Falta la línea
+  `INCREMENTO LER 170802 ... 51 €`, que **está cargada** en `contrato_lines`.
+- **SS-0003967** (LER 170604): casó `match_method: exact_concept` con la línea
+  de **incremento** (90 €) **en lugar de** con el contenedor. El código LER
+  aparece literal en la descripción de la línea de incremento, así que gana el
+  match exacto sobre el semántico del contenedor. El incremento no solo falta:
+  **a veces sustituye a la línea principal**.
+
+## 9.4 El contenedor de 9 m³ (SS-0026122): 272 € vs 260 €
+
+El sistema hace `9 / 6 = 1,5` y redondea a **2 contenedores × 136 € = 272 €**.
+El ground truth no prorratea: usa **otra tarifa**, la de contenedor de 9 M3
+(**183 €**) más su incremento (**77 €**) = 260 €, **ambas de OFERTA, no del
+contrato**. O sea que el redondeo de contenedores no es solo impreciso: **es el
+enfoque equivocado** cuando existe tarifa para ese tamaño. Depende de **F-017**.
+
+## 9.5 Sobre el CIF: NO estaba bien en ninguno de los tres
+
+Respuesta a la duda del humano, con la foto previa delante:
+
+| Albarán | CIF leído (antes) | Correcto | Diferencia |
+|---|---|---|---|
+| SS-0801977 | `B82890550` | `B82899550` | **1 dígito** |
+| SS-0025146 | `B82305550` | `B82899550` | 3 dígitos |
+| SS-0026122 | `B82839580` | `B82899550` | 4 dígitos |
+| SS-0003935 | `null` | `B82899550` | no se leyó |
+
+Los tres traían `proveedor_cif_no_casa:<cif>` en `review_reasons_json`, o sea
+que **el sistema sabía que el CIF no casaba**. Por qué «parecía correcto» en el
+front: **`proveedor_nombre` se muestra siempre bien** —«SALMEDINA TRATAMIENTO DE
+RESIDUOS INERTES, S.L.»— porque se lee del documento, no de la resolución
+contra Sigrid. Con el nombre correcto a la vista, un CIF con un dígito cambiado
+(`B82890550`) pasa desapercibido.
+
+**Esto es un defecto de interfaz, no solo de extracción**: el front debería
+mostrar el CIF como *no resuelto* cuando `proveedor_cif_no_casa` está presente,
+en vez de enseñar un nombre que da confianza. Añádase a **F-030**.
+
+Caso del **SS-0025146**: el humano observa que «el CIF parecía bien pero el
+proveedor no está en la obra original». Los dos datos estaban mal a la vez
+—CIF `B82305550` **y** obra `0623` en lugar de `691`—, así que aunque el CIF se
+hubiera leído bien, buscar contrato del proveedor en la obra 0623 no habría
+dado nada: **el CTSU24/0402 pertenece a la obra 691**.
+
+## 9.6 Los IDs de línea de contrato cambian en cada re-fetch
+
+Hallazgo lateral con consecuencias. En la foto previa el CTSU24/0228 tenía las
+líneas `26471`-`26479`; ahora las mismas siete líneas son `26465`-`26516`. Las
+valoraciones guardan `matched_contrato_line_id` apuntando a filas **que ya no
+existen**: el SS-0000168 apunta a `26473` y esa fila ya no está.
+
+Consecuencia práctica: **no se puede auditar contra qué línea de contrato se
+valoró un albarán** en cuanto se re-fetchean los contratos. Toda la trazabilidad
+precio -> línea de contrato se rompe en silencio. No tiene feature: decidir si
+se arregla con IDs estables (upsert en vez de borrar+insertar) o guardando la
+descripción junto al id.
+
+## 9.7 Altas en el backlog
+
+- **F-036** (prioridad 3, rigor `critico`) - los dos defectos de §9.2 y §9.3.
+  Reconciliar con **F-006** antes de arrancarla.
+- **F-037** (prioridad 4) - guardado inmediato al seleccionar contrato, pedido
+  por el humano. Lleva anotado el riesgo de F-019: cada guardado del revisor
+  pasa por `_recalc_valuation_importes`, y automatizarlo multiplica la
+  frecuencia con que se ejecuta ese camino.
