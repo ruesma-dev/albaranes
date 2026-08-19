@@ -1,31 +1,54 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-## Spec escrita — F-034 (2026-08-19, rama `chore/specs-F-034-F-035`)
+## F-034 · BLOQUEADA en el porte a `arnes-base` (2026-08-19)
 
-`specs/F-034-mutacion-is-y-coherencia-evals/` con sus tres ficheros. La spec
-está **pendiente de aprobación del humano** y trae tres decisiones abiertas:
+Rama `feature/F-034-mutacion-is-y-coherencia-evals`. **T0 a T11 y T13-T14
+hechos y commiteados**; el trabajo en `albaranes` está terminado y en verde.
+Lo que bloquea es **T12, el porte a `arnes-base`**, que la spec (R18-R21) y el
+líder declaran parte de la feature, no un después.
 
-1. **D1 · ¿Se remide el histórico?** (sección propia en `requirements.md`).
-   Al mutar `is`/`is not` cambia la vara de medir y los informes de las seis
-   features cerradas dejan de ser comparables. Costes **medidos** por cálculo
-   puro: F-027 pasa de 0 a **1** mutante (< 1 min), F-019 de 31 a **49**
-   (≈ 5,8 min), F-002 +18 (1 min), F-011 +42 (**≈ 70 min**), F-012 +10
-   (≈ 24 min, y su alcance incluye `harness/mutacion.py`, que ya no es el
-   mismo). Opciones: **A** no remedir y solo anotar el cambio de vara; **B**
-   remedir F-019 y F-027; **C** remedirlas todas (≈ 101 min de máquina).
-   **Recomendación: B** — esas dos campañas hay que lanzarlas igual como
-   prueba de que el cambio funciona, así que la re-medición sale casi gratis,
-   y son justo las dos features cuyo defecto vivía en una guarda `is`.
-2. **D2 · ¿1.5.3 o 1.6.0?** Recomendación: **1.6.0** (cambia qué se mide y
-   puede volver roja una campaña verde en cualquier proyecto). Si entra
-   primero, F-035 pasaría a ser 1.6.1.
-3. **D3 · ¿Se corrige la descripción de F-034 en `features.json`?** Dice que
-   `evals/ground_truth/` no existe, y **sí existe** (seis libros `.xlsx`, no
-   versionados por `.gitignore`; `evals/conversor.py:39` los usa). El defecto
-   real es que la puerta se condiciona a un artefacto invisible en vez de a
-   los fixtures versionados de `evals/fixtures/`, que es lo que lee el runner.
-   Recomendación: corregir esa frase (`BACKLOG.md` se regenera solo).
+### El bloqueo, en una línea
+
+`C:/Users/pgris/PycharmProjects/arnes-base` tiene **tres ficheros modificados y
+sin commitear** —`harness/init.sh`, `harness/mutacion.py` y
+`harness/mutacion_paralela.py`, 949 líneas— que **no son el porte de F-034**
+(su `COMPARACIONES` sigue sin `is`/`is not`): son un **1.5.3 en vuelo** de otro
+trabajo, escrito a las 14:31 y 14:45 de hoy, ya empezada esta sesión. Al abrir
+la sesión ese repositorio estaba limpio en `9224a5a`.
+
+Portar encima significaría **destruir 949 líneas sin commitear de otro** o
+**commitearlas dentro de un commit «F-034»** dejando R19 en falso. No es una
+decisión del implementer. Detalle completo, con las cuatro alternativas y por
+qué se descartan, en `progress/impl_F-034.md` §T12.
+
+### Lo que necesita el humano decidir
+
+1. **Orden de aterrizaje** de los dos cambios sobre `harness/mutacion.py`. Son
+   compatibles en el fondo (uno añade operadores, otro verifica la línea base
+   antes de juzgar); lo que no es automático es quién va primero.
+2. **La numeración**: D2 fijó **1.6.0** para F-034 y el trabajo en vuelo se
+   llama **1.5.3**. `arnes-base/harness/VERSION` sigue en 1.5.2 **a propósito**:
+   no se ha tocado nada allí.
+
+En cuanto el otro trabajo esté commiteado, el porte es un `cp` de
+`harness/mutacion.py` y `tests/test_mutacion_operadores.py` más cuatro pegados
+(C4 bis, `reviewer.md`, `VERSION`, `GUIA_INSTALACION.md`).
+
+### El otro hallazgo de esta feature, que no bloquea pero importa
+
+**Las campañas de mutación sobre ficheros de la RAÍZ de este repositorio dan un
+falso verde.** `ejecutor_para` manda lo que no es de ningún servicio a
+`python -m pytest` **sin ruta**, y como no hay configuración de pytest en la
+raíz, esa invocación recoge `services/**/tests` y **revienta en la recolección
+en 0,81 s** pase lo que pase: exit 1, que el mutador cuenta como MUERTO. Los 19
+mutantes de F-034 salían «muertos» sin que ningún test los juzgara. Relanzada
+con la suite de verdad (`pytest tests`), los números reales están en
+`progress/mutacion_F-034.md`.
+
+Afecta también a `progress/mutacion_F-012.md` (61 mutantes sobre `harness/`).
+**No se arregla en F-034**: está fuera de su alcance y toca la puerta de todas
+las features. Y el 1.5.3 en vuelo de `arnes-base` ataca justo ese defecto.
 
 ## Cierre de sesión — 2026-08-19
 

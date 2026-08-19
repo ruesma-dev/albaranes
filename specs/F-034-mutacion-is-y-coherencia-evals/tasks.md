@@ -90,14 +90,14 @@ Un commit por tarea: `F-034 Tn: descripción`. Sin `push` ni PR.
       **Verificación**: `bash harness/init.sh` imprime `Arnés v1.6.0` en su
       primera comprobación.
 
-- [ ] **T11: Puertas propias de la feature** (nivel `estandar`): cobertura de
+- [x] **T11: Puertas propias de la feature** (nivel `estandar`): cobertura de
       las líneas cambiadas y **campaña de mutación de F-034**, con los
       supervivientes analizados.
       **Verificación**: `python -m harness.mutacion --feature F-034 --workers 1`
       → `progress/mutacion_F-034.md` sin ningún análisis en `PENDIENTE`; línea
       `PUERTA COBERTURA` de `init.sh` en `[OK]`.
 
-- [ ] **T12: Porte a `arnes-base`** (repositorio
+- [~] **T12: Porte a `arnes-base` — BLOQUEADO (ver progress/impl_F-034.md §T12)** (repositorio
       `C:\Users\pgris\PycharmProjects\arnes-base`, commit propio allí, sin
       `push`): `harness/mutacion.py`, `tests/test_mutacion_operadores.py`, el
       punto nuevo de C4 bis en `CHECKPOINTS.md`, la frase de
@@ -110,7 +110,7 @@ Un commit por tarea: `F-034 Tn: descripción`. Sin `push` ni PR.
       vacío, ídem para el test; `python -m pytest arnes-base/tests -q` en verde;
       `git -C ../arnes-base log --oneline -1` muestra el commit de la versión.
 
-- [ ] **T13: Cierre documental**. `progress/impl_F-034.md` con la sección
+- [x] **T13: Cierre documental**. `progress/impl_F-034.md` con la sección
       **Evidencias** (tests y resultado, cobertura, mutantes/supervivientes,
       tiempo de la suite), la fase RED de T2, el antes/después de T1 vs T5/T6 y
       la corrección del enunciado de `requirements.md` §1; `progress/current.md`
@@ -119,6 +119,6 @@ Un commit por tarea: `F-034 Tn: descripción`. Sin `push` ni PR.
       **Verificación**: `bash harness/init.sh` no avisa de `BACKLOG.md`
       desactualizado; `git status` limpio salvo lo commiteado.
 
-- [ ] **T14: Ejecutar `bash harness/init.sh` en verde** (incluye suites y
+- [x] **T14: Ejecutar `bash harness/init.sh` en verde** (incluye suites y
       puertas), en serie y sin nadie más trabajando en el árbol.
       **Verificación**: salida final sin `[FALLO]`.

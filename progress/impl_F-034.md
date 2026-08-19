@@ -257,3 +257,307 @@ Informe: progress/mutacion_F-019_remedida.md
 **R10 cumplido**: 49 mutantes (31 + 18 nuevos), los **18 nuevos muertos**, y los
 supervivientes son **exactamente los 3** ya analizados como equivalentes en
 `progress/mutacion_F-019.md`, con su análisis repuesto y ninguno en `PENDIENTE`.
+
+## T7 · El histórico queda etiquetado con la vara con la que se midió (D1 = B)
+
+En `progress/mutacion_F-019.md` y `progress/mutacion_F-027.md`, **una sola
+línea** que apunta a su re-medición oficial (`git diff` de esos dos ficheros:
+exactamente `1 +` en cada uno; nada más se tocó, porque llevan secciones
+escritas a mano que `escribir_informe` no conserva).
+
+D1 exige además dejar anotado por escrito que las campañas **no** remedidas se
+midieron con la vara anterior. Lo he hecho donde de verdad se va a leer: **una
+línea en cada uno** de `mutacion_F-001.md`, `F-002.md`, `F-011.md` y
+`F-012.md`, diciendo con qué versión se midieron, cuántos mutantes de más
+darían hoy (0, +18, +42, +10) y que la decisión del humano fue no remedirlos.
+
+> **Extensión sobre la letra de T7**, que solo pedía los dos punteros. Sin esta
+> nota, la parte de D1 que dice «lo que hay que anotar pase lo que pase» se
+> quedaba solo en `ARNES_VERSION.md`, y nadie que abra `mutacion_F-011.md`
+> dentro de dos meses va a mirar ahí.
+
+## T8 · La puerta de evals dice dónde hay que mirar
+
+`harness/rutas_sensibles.json` (solo la clave `_exigencia`), `CHECKPOINTS.md`
+(C4 ter) y `progress/current.md` (las dos frases). La condición pasa a los
+**fixtures versionados de `evals/fixtures/`**, con la aclaración de que los
+libros `.xlsx` de `evals/ground_truth/` existen pero `.gitignore` los excluye.
+
+Verificaciones, con su salida real:
+
+```
+$ python -m pytest tests/test_mutacion_operadores.py -q
+9 passed in 0.08s
+
+$ python -m harness.rutas_sensibles --validar
+    1 verificación(es), 14 ruta(s) sensible(s) declaradas: evals (aviso)
+
+$ grep -rn "ground_truth" CHECKPOINTS.md harness/rutas_sensibles.json progress/current.md
+```
+El `grep` sigue devolviendo líneas, y **debe** hacerlo: las que quedan son la
+**aclaración** que R15 exige («existen pero no se versionan»), no la condición
+de la puerta. Ninguna condiciona ya la subida a `bloqueo`.
+
+## T9 · Rastro de la campaña manual
+
+Punto nuevo en C4 bis de `CHECKPOINTS.md` y la misma exigencia en el punto 4
+del protocolo de `.claude/agents/reviewer.md`: una fila por mutante, con
+fichero y línea, **texto exacto original → mutado** y resultado con su número
+de fallos; y el reviewer reproduce al menos dos filas al pie de la letra.
+
+## T10 · Arnés 1.6.0 (D2)
+
+`harness/VERSION` (`ARNES_VERSION=1.6.0`, `ARNES_FECHA=2026-08-19`) y
+`harness/ARNES_VERSION.md`, con el aviso de que los informes de mutación de
+1.5.2 o anterior **no son comparables** con los posteriores.
+
+```
+$ bash harness/init.sh
+[OK] Arnés v1.6.0 (2026-08-19)
+```
+
+## T11 · Puertas propias de F-034 — y un FALSO VERDE que hay que contar
+
+### La campaña, tal como la lanza el comando de `tasks.md`, MIENTE aquí
+
+`python -m harness.mutacion --feature F-034 --workers 1` dio **19 mutantes, 19
+muertos, 0 supervivientes en 35,5 s**. Ese resultado **no vale**, y lo digo yo
+que lo generé. El motivo, medido:
+
+El alcance de F-034 es `harness/mutacion.py`, que **no pertenece a ningún
+servicio**. `ejecutor_para` manda esos ficheros a `EjecutorPytest(raiz=".")`,
+que lanza `python -m pytest` **sin ruta**. Este repositorio **no tiene
+configuración de pytest en la raíz** (no hay `pytest.ini`, `setup.cfg`,
+`pyproject.toml` ni `tox.ini`), así que esa invocación recoge también
+`services/**/tests`, que dependen de su propio `rootdir` y `sys.path`:
+
+```
+$ python -m pytest -x -q --tb=no -p no:cacheprovider
+ERROR services/albaran-valoracion-persist/tests/test_f019_r8_r15_precedencia.py
+1 error in 0.81s
+EXIT=1
+```
+
+La suite **revienta en la recolección en 0,81 s, haga lo que haga el mutante**.
+`EjecutorPytest.ejecutar` cuenta como MUERTO todo código de salida distinto de
+0 y de 5, así que **los 19 salían «muertos» sin que ningún test los juzgara**.
+El promedio de 1,87 s por mutante era la prueba a la vista: la suite de la raíz
+tarda ~75 s.
+
+### La campaña buena
+
+Relanzada con la suite de la raíz de verdad (`pytest tests`), pasando el
+ejecutor por la API en vez de por el CLI, que no tiene flag para esto:
+
+```python
+from harness.mutacion import EjecutorPytest, main
+main(["--feature", "F-034", "--workers", "1", "--salida", "progress/mutacion_F-034.md"],
+     ejecutor=EjecutorPytest(raiz=".",
+                             argumentos=["tests", "-x", "-q", "--tb=no", "-p", "no:cacheprovider"]))
+```
+
+Salida real:
+
+```
+F-034: 1 fichero(s), 56 línea(s) de producción (origen rama, 28971321108528484c52c5c91108afc02af59084..feature/F-034-mutacion-is-y-coherencia-evals)
+...
+19 mutantes evaluados, 18 muertos, 1 supervivientes, 0 timeouts en 111.0 s
+Informe: progress/mutacion_F-034.md
+```
+
+**19 generados, 18 muertos, 1 superviviente** — y el superviviente es de verdad,
+no un artefacto: `harness/mutacion.py:207` `[entero]`,
+`_PARTE_DE_PALABRA.match(objetivo[:1])` → `...(objetivo[:2])`. Está analizado y
+cerrado como **mutante equivalente** en `progress/mutacion_F-034.md`, sin
+ningún `PENDIENTE`: `_PARTE_DE_PALABRA` es una sola clase de carácter y
+`Pattern.match` está anclado al principio, así que las dos rodajas interrogan
+**el mismo byte 0**. Su gemelo de la línea 208 (`objetivo[-1:]` →
+`objetivo[-2:]`), que sí cambia el byte interrogado, **muere** con
+`test_f034_r7`.
+
+> El contraste entre las dos campañas es la propia evidencia: la invocación del
+> CLI daba **19/19 muertos en 35,5 s**; la buena, **18 muertos y 1 superviviente
+> en 111 s**. Un «0 supervivientes» que tarda tres veces menos de lo que tarda
+> la suite es la señal de que nadie ha corrido la suite.
+
+### Comprobación de que un muerto es un fallo de test, no un error de suite
+
+Mutante 1/19 aplicado a mano (`_es_palabra`: `and` → `or`), suite de la raíz:
+
+```
+FAILED tests/test_mutacion_operadores.py::test_f034_r6_los_simbolos_sin_espacios_siguen_mutando
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed, 273 passed in 53.01s
+```
+
+53 s, y lo caza un test con nombre y apellidos. Fichero restaurado acto seguido
+(`git status` limpio, verificado).
+
+### Lo que esto significa más allá de F-034
+
+**Toda campaña de mutación sobre ficheros de la raíz en este repositorio está
+afectada**: `progress/mutacion_F-012.md` (61 mutantes sobre `harness/`) se midió
+con esa misma invocación rota. Las de F-019 y F-027 **no**: sus ficheros son de
+servicios, y `ejecutor_para` les da la suite de su servicio, en su directorio y
+con su intérprete — por eso T5 y T6 sí valen.
+
+No lo arreglo aquí: cambiar `ejecutor_para` o añadir configuración de pytest a
+la raíz está **fuera del alcance declarado** de F-034 y toca la puerta de todas
+las features. Queda escrito, con el número medido, para que el humano decida.
+
+## T12 · Porte a `arnes-base` — **BLOQUEADO**, y por qué no lo he forzado
+
+**No he escrito ni un byte en `C:\Users\pgris\PycharmProjects\arnes-base`.** No
+hay ningún commit mío allí, y por eso este informe no puede traer los hashes
+que el reviewer espera.
+
+### Lo que me encontré, con fecha y hora
+
+Al empezar la sesión (≈ 13:50) comprobé el repositorio y estaba **limpio**, en
+`9224a5a` («1.5.2: la mejora del reviewer…»), al día con su remoto. Al ir a
+portar (≈ 14:50) tenía **tres ficheros modificados y sin commitear**:
+
+```
+$ git -C C:/Users/pgris/PycharmProjects/arnes-base status --short
+ M arnes-base/harness/init.sh
+ M arnes-base/harness/mutacion.py
+ M arnes-base/harness/mutacion_paralela.py
+
+$ git -C ... diff --stat HEAD
+ arnes-base/harness/init.sh              |  27 +
+ arnes-base/harness/mutacion.py          | 904 ++++++++++++++++++++++++++++---
+ arnes-base/harness/mutacion_paralela.py | 100 +-
+ 3 files changed, 949 insertions(+), 82 deletions(-)
+```
+
+Con mtime **2026-08-19 14:31 y 14:45**, es decir escritos **durante** mi
+sesión. `harness/VERSION` y `CHECKPOINTS.md` siguen con fecha de ayer.
+
+### Qué son esos 949 cambios: NO son mi porte
+
+Lo comprobé antes de tocar nada:
+
+```
+$ grep -c "ast.Is\|_PARTE_DE_PALABRA" arnes-base/harness/mutacion.py
+0
+```
+
+Su `COMPARACIONES` sigue con seis entradas y sin `is`/`is not`. Es un trabajo
+**distinto y ortogonal**, que se autodenomina **1.5.3** en sus propios
+docstrings: línea base de la suite antes de juzgar, veredictos `INDETERMINADO`
+y `BASE_ROTA`, manejadores de SIGINT/SIGTERM y centinela en disco. Textualmente,
+en su cabecera: *«Si no está verde, la campaña se aborta: sobre una base roja
+todo mutante sale “muerto” y el cero de supervivientes es mentira. Pasó de
+verdad el 2026-08-19»* — que es, palabra por palabra, el mismo defecto que yo
+he medido en T11.
+
+### Por qué he parado en vez de seguir
+
+Cualquier forma de completar T12 ahora hace daño:
+
+| Si hiciera… | Qué pasaría |
+|---|---|
+| Sobrescribir `mutacion.py` con el de `albaranes` | **Destruyo 949 líneas** de trabajo sin commitear de otro. Irrecuperable. |
+| Aplicar mi cambio **encima** del suyo y commitear | Commiteo el 1.5.3 **inacabado de otro** dentro de un commit «F-034», y R19 (`diff` idéntico entre repos) sale **falso**. |
+| Portar solo lo que no colisiona (test, C4 bis, VERSION, guía) | El test nuevo **pone roja la suite de `arnes-base`**: su `mutacion.py` no muta `is`. Y `VERSION 1.6.0` + sección en `GUIA_INSTALACION.md` describirían un cambio **que no está en su código**: un registro falso. |
+| `git stash` de su trabajo, portar, `unstash` | Manipular el árbol de otro agente que puede estar escribiendo ahora mismo. |
+
+Ninguna es aceptable, y **no es una decisión que me toque a mí**. `CLAUDE.md`
+lo dice sin matices: si el cambio toca otro trabajo, no se improvisa un
+workaround — se marca `blocked`, se anota el motivo y se para. Es lo que hago.
+
+### Lo que hay que decidir (humano) y lo que queda hecho para cuando se decida
+
+1. **Quién aterriza primero.** Los dos cambios tocan el mismo fichero y son
+   compatibles en el fondo (uno añade operadores, otro verifica la línea base);
+   lo que no es automático es el orden ni la numeración.
+2. **La numeración.** D2 fijó **1.6.0** para F-034. El trabajo en vuelo se
+   llama **1.5.3**. Si aterriza antes, F-034 sería 1.6.0 igualmente; si aterriza
+   después, alguien tiene que renumerar. `harness/VERSION` de `arnes-base` sigue
+   en 1.5.2: **la subida no está hecha allí**, a propósito.
+3. **La ironía útil**: el 1.5.3 en vuelo arregla exactamente el falso verde que
+   T11 documenta. Si se integran los dos, la campaña de F-034 habría abortado
+   sola en vez de dar 19 muertos falsos.
+
+Del lado de `albaranes` **todo lo que el porte necesita está listo y
+commiteado**: `harness/mutacion.py`, `tests/test_mutacion_operadores.py`, el
+punto de C4 bis, la frase de `reviewer.md` y el texto del aviso de R20 (está en
+`harness/ARNES_VERSION.md`, listo para copiar a `GUIA_INSTALACION.md`). El porte
+es un `cp` y cuatro pegados **en cuanto el otro trabajo esté commiteado**.
+
+## T13-T14 · Cierre
+
+`bash harness/init.sh` **en verde**, ejecutado tal cual, en serie y sin nadie
+más en el árbol. Salida relevante:
+
+```
+[OK] Arnés v1.6.0 (2026-08-19)
+[OK] features.json válido
+[AVISO] BACKLOG.md regenerado desde features.json: inclúyelo en el commit
+[OK] compileall: sin errores de sintaxis
+277 passed in 63.18s (0:01:03)
+[OK] pytest en verde (con medición de cobertura)
+111 passed in 2.87s
+[OK] servicio sv6-valoracion-persist (services/albaran-valoracion-persist): pytest en verde
+[OK] PUERTA COBERTURA: 100.0% de 12 líneas cambiadas cubiertas (12/12, umbral 80%, nivel estandar)
+[OK] PUERTA RUTAS SENSIBLES [evals]: N/A (F-034 no toca ninguna ruta sensible declarada)
+[OK] Rama actual: feature/F-034-mutacion-is-y-coherencia-evals
+ENTORNO LISTO. Puedes trabajar.
+```
+
+Avisos que **ya venían de antes** y no los introduce esta feature: los 1.102 de
+`ruff` (deuda previa), sv1-email e infra sin tests, y las marcas `[ADAPTAR]` de
+las specs de F-034 y F-035 — en el caso de F-034 es un **falso positivo**: la
+palabra aparece dentro de una frase de `design.md` §8 que *habla* de una marca
+`[ADAPTAR]` resuelta, no es una marca sin resolver. No toco una spec aprobada
+para acallar un aviso.
+
+**D3 aplicado**: corregida la frase del punto (2) de la descripción de F-034 en
+`harness/features.json`. Decía literalmente *«`CHECKPOINTS.md` C4 ter habla de
+`evals/ground_truth/`, que NO EXISTE en este repositorio: los casos viven en
+`evals/fixtures/inputs/`. La misma referencia equivocada aparece en
+`progress/current.md` y en `harness/rutas_sensibles.json`»*. Ahora dice que el
+directorio **sí existe** con sus seis libros, que `.gitignore` los excluye y que
+el defecto real era condicionar la puerta a un artefacto invisible. `BACKLOG.md`
+lo regenera `init.sh`.
+
+---
+
+## Evidencias
+
+| Evidencia | Valor real medido |
+|---|---|
+| **Tests ejecutados y resultado** | Suite de la raíz: **277 passed**, 0 failed. Suite de sv6: **111 passed**, 0 failed. Resto de servicios en verde por caché (árbol sin cambios). Tests nuevos: **9** en `tests/test_mutacion_operadores.py` + **1** en `services/albaran-valoracion-persist/tests/test_f019_r8_r15_precedencia.py` |
+| **Cobertura de las líneas cambiadas** | **100,0 %** (12/12 líneas, umbral 80 %, nivel `estandar`) — línea `PUERTA COBERTURA` de `bash harness/init.sh` |
+| **Mutantes generados y supervivientes** | F-034: **19 generados, 18 muertos, 1 superviviente**, analizado y cerrado como equivalente (`progress/mutacion_F-034.md`). Ojo: el CLI a secas da 19/19 falsos, ver §T11 |
+| **Tiempo de ejecución de la suite** | Raíz **63,18 s**; sv6 **2,87 s**; campaña de mutación de F-034 **111,0 s** |
+
+Evidencias adicionales de esta feature, que son su razón de ser:
+
+| Campaña | Antes (arnés 1.5.2) | Después (1.6.0) |
+|---|---|---|
+| **F-027** | 0 mutantes | **1** generado, **1 muerto**, 0 supervivientes (2,5 s) |
+| **F-019** | 31 mutantes, 28 muertos, 3 supervivientes | **49** generados, **46 muertos**, **3** supervivientes (los mismos 3, ya analizados) — 331,5 s |
+
+## Desviaciones respecto a la spec, todas justificadas
+
+1. **T12 (porte a `arnes-base`) NO se ha hecho: BLOQUEADO.** Motivo completo en
+   §T12. No hay ningún commit mío en `arnes-base` y por eso este informe no trae
+   hashes de allí: no los hay. **La feature no puede cerrarse sin esto** (R18).
+2. **T11 relanzado con un ejecutor distinto** del comando de `tasks.md`, porque
+   ese comando produce un falso verde aquí (§T11). El comando de `tasks.md` no
+   es incorrecto en general: lo es para un alcance que cae en la raíz.
+3. **Un superviviente NUEVO en la campaña de F-019** (R11), cerrado con un test
+   nuevo en sv6 y **cero líneas de producción tocadas**, como manda la spec.
+4. **T7 extendido** a los otros cuatro informes de mutación con una línea cada
+   uno (§T7). D1 lo pide («anotar pase lo que pase»); T7 solo nombraba dos.
+5. **El test de R14 se salta** en un repositorio sin `harness/rutas_sensibles.json`
+   (`pytest.skip`), para que el fichero pueda viajar byte a byte a `arnes-base`
+   como exige T12 sin poner roja su suite.
+
+## Verificaciones MANUAL pendientes
+
+Ninguna propia de F-034: sus nueve requisitos de G1 y el de R14 son tests puros.
+Lo que queda pendiente **del humano** son las **dos decisiones de §T12** (orden
+de aterrizaje en `arnes-base` y numeración 1.5.3 / 1.6.0), sin las cuales la
+feature no puede cerrarse.
