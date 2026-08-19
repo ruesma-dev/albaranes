@@ -85,7 +85,7 @@ Un commit por tarea: `F-034 Tn: descripción`. Sin `push` ni PR.
       **Verificación**: revisión del reviewer; el punto exige fichero, línea,
       **texto exacto original → mutado** y resultado con nº de fallos.
 
-- [ ] **T10: Versión del arnés**. `harness/VERSION` y `harness/ARNES_VERSION.md`
+- [x] **T10: Versión del arnés**. `harness/VERSION` y `harness/ARNES_VERSION.md`
       a la versión de D2 (recomendada: **1.6.0**), con fecha.
       **Verificación**: `bash harness/init.sh` imprime `Arnés v1.6.0` en su
       primera comprobación.
