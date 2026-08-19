@@ -2,6 +2,7 @@
 # F-019 · Campaña de mutación
 
 Generado por `python -m harness.mutacion --feature F-019` el 2026-08-18 21:55.
+> **Medida con el arnés 1.5.2, que NO mutaba `is`/`is not`. Re-medida con el 1.6.0 (F-034): 49 mutantes en vez de 31 — ver `progress/mutacion_F-019_remedida.md`.**
 
 ## Alcance
 

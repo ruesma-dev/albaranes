@@ -61,7 +61,7 @@ Un commit por tarea: `F-034 Tn: descripción`. Sin `push` ni PR.
       conocidos** con su análisis repuesto. Cualquier superviviente nuevo:
       R11 (test que lo mate o análisis escrito) antes de continuar.
 
-- [ ] **T7 (solo si D1 = opción B o C): re-medición oficial**. Añadir a mano un
+- [x] **T7 (solo si D1 = opción B o C): re-medición oficial**. Añadir a mano un
       puntero de UNA línea al principio de `progress/mutacion_F-019.md` y
       `progress/mutacion_F-027.md` («re-medida con el arnés X.Y.Z: ver
       `progress/mutacion_F-0XX_remedida.md`»), y las campañas extra que el
