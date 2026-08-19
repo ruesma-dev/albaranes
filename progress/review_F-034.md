@@ -284,3 +284,212 @@ recalculado hoy coincide con el que el informe declara** (nº de ficheros y de
 líneas, que es barato: cálculo puro). Si no coincide, la campaña está caduca y
 hay que rehacerla. Es una comprobación de dos segundos que aquí habría saltado
 sola, y encaja con el reviewer incremental que propone F-038.
+
+---
+
+# F-034 · Review, SEGUNDA PASADA (2026-08-20)
+
+**Veredicto: CHANGES_REQUESTED**
+
+**Revisión incremental**: solo `git diff 5e2a2f3..HEAD` (HEAD `3052cae`, 13
+ficheros). Lo aprobado en la primera pasada queda dado por bueno y no se
+vuelve a mirar. **Reviso desde el commit `5e2a2f3`.**
+
+`bash harness/init.sh` ejecutado tal cual: **exit 0**, 277 passed en 75,41 s,
+`PUERTA COBERTURA: 100.0% de 12 líneas cambiadas`, rama correcta.
+
+## Los cinco cambios requeridos: cuatro cerrados, uno reabierto
+
+| CR | Veredicto | Cómo lo he comprobado |
+|---|---|---|
+| **CR-1** alcance obsoleto | **CERRADO** | Recalculado por mi cuenta tras el revert: `alcance_de_feature` de F-034 → **56 líneas** en `harness/mutacion.py`; `generar_mutantes` → **19 mutantes**. Coincide exactamente con el informe. El revert `163846b` es **puro**: `git diff e97f9b9^..HEAD -- harness/ tests/` solo devuelve `features.json` (la ficha de F-038) |
+| **CR-2** campaña irreproducible | **REABIERTO** | Ver abajo. El método ya no aborta, pero **no reproduce los números** |
+| **CR-3** `tasks.md` / T12 | **CERRADO** | T12 en `[x]` con la tabla de commits de `arnes-base` y la desviación aceptada. Las catorce tareas T0–T14 están en `[x]` |
+| **CR-4** `current.md` | **CERRADO** | Reescrito al estado real, con la afirmación falsa anterior marcada como tal |
+| **CR-5** informe no cerrable | **CERRADO** | Nota de cierre en §T12, §T15 completo, y «Desviaciones» y «Verificaciones MANUAL pendientes» corregidas |
+
+## CR-2 reabierto · La campaña de F-034 no reproduce sus números (bloqueante)
+
+El informe declara **111,0 s** de tiempo total. Está por debajo del umbral de
+5 minutos, así que el protocolo me obliga a **reejecutar la campaña entera**.
+Lo he hecho, con el método exacto que documenta el aviso de
+`progress/mutacion_F-034.md` (ejecutor por API, `--workers 1`), con `--salida`
+a mi scratchpad. Confirmo primero lo bueno: **ya no aborta**. El revert repone
+el `mutacion.py` sin comprobación de línea base y la campaña corre entera.
+
+Pero los resultados no se parecen:
+
+| Métrica | `progress/mutacion_F-034.md` | Mi reejecución |
+|---|---|---|
+| Mutantes generados/evaluados | 19 / 19 | 19 / 19 |
+| **Muertos** | **18** | **9** |
+| **Supervivientes** | **1** | **8** |
+| **Timeouts** | **0** | **2** |
+| **Tiempo total** | **111,0 s** | **3.812,0 s** (63 min) |
+
+El alcance y el número de mutantes coinciden; **el veredicto de cada mutante,
+no**. Mi salida completa, mutante a mutante, quedó en el scratchpad de la
+sesión (`mutacion_F-034_reviewer.md`), fuera de `progress/`.
+
+### Por qué mi medición es la creíble, y no un accidente de mi máquina
+
+Un «superviviente» significa que **la suite terminó en verde** con el mutante
+puesto (exit 0). La contención de CPU o una máquina cargada pueden inventar
+**muertos** falsos, nunca supervivientes falsos: ningún test que fallaba pasa
+a aprobar por ir lento. Los 8 supervivientes son, por construcción, sólidos.
+
+Y hay una comprobación que no depende de ejecutar nada. **Dos de los mutantes
+que el informe declara MUERTOS son semánticamente idénticos al original**, así
+que ningún test puede matarlos:
+
+1. **`mutacion.py:221` [entero]**, `bruta[fin : fin + 1]` a `bruta[fin : fin + 2]`.
+   `_PARTE_DE_PALABRA` es una clase de **un solo carácter** y `Pattern.match`
+   está anclado: las dos rodajas interrogan el mismo byte 0. Es *exactamente*
+   el argumento que el propio informe usa para justificar su superviviente de
+   la línea 207.
+2. **`mutacion.py:220` [comparacion]**, `if ini > 0` a `if ini >= 0`. `ini`
+   viene de `bruta.find(...)` dentro de un `while posicion != -1`, así que
+   `ini >= 0` siempre. Y con `ini == 0` la rama then da `bruta[-1:0]`, que es
+   la cadena vacía: lo mismo que el `else`. Equivalente para todo valor posible.
+
+En mi reejecución los dos **sobreviven**, que es lo único que pueden hacer.
+Declararlos muertos es un **falso muerto**: la firma exacta del defecto que
+esta misma feature documenta en §T11 y que dio de alta en F-038.
+
+### El argumento central del único superviviente analizado es empíricamente falso
+
+`progress/mutacion_F-034.md` cierra su superviviente (207 `[entero]`) como
+equivalente apoyándose en su gemelo:
+
+> Su gemelo de la línea 208 (`objetivo[-1:]` a `objetivo[-2:]`), que **sí**
+> cambia el byte interrogado, **muere** con `test_f034_r7`.
+
+**No muere: sobrevive** (`[4/19] superviviente` en mi salida). La conclusión
+sobre el mutante 207 la doy igualmente por buena —la verifiqué de forma
+exhaustiva en la primera pasada y no depende del gemelo—, pero la frase que
+sostiene «la suite no tiene un hueco aquí» es falsa: **el hueco existe**.
+
+### Lo que la campaña de verdad destapa: el delimitador de palabra está poco probado
+
+De los 8 supervivientes, 3 son equivalentes (207 `[entero]`, 220
+`[comparacion]`, 221 `[entero]`) y **5 son huecos reales de test**, todos en el
+código que F-034 añade:
+
+| Superviviente | Cambio de comportamiento que nadie caza |
+|---|---|
+| `208` `[logico]` `and` a `or` | `_es_palabra` deja de exigir que el último byte sea de palabra |
+| `208` `[entero]` `[-1:]` a `[-2:]` | interroga el penúltimo byte en vez del último |
+| `220` `[entero]` `ini > 0` a `ini > 1` | con `ini == 1` deja de mirar el byte anterior |
+| `221` `[aritmetico]` `fin + 1` a `fin - 1` | `siguiente` pasa a ser siempre vacío: el delimitador derecho **nunca** se comprueba |
+| `251` `[entero]` `+ 1` a `+ 2` | la búsqueda de la siguiente coincidencia se salta un byte |
+
+C4 bis en nivel `estandar` exige los supervivientes **analizados, ninguno en
+`PENDIENTE`**. Hoy hay **siete sin analizar** y **dos timeouts** que el informe
+no menciona. La puerta de mutación **no está cumplida**.
+
+### Qué hace falta (a decidir con el humano, porque cuesta una hora de CPU)
+
+1. **Rehacer la campaña** con el método documentado y **pegar sus números
+   reales** en `progress/mutacion_F-034.md`, analizando los supervivientes que
+   salgan. Ojo: son ~63 min por campaña, no 111 s.
+2. **Cerrar los 5 huecos reales** con tests (son baratos: tests de
+   `_es_palabra` / `_delimitado` / `_localizar`, puros y rápidos), o
+   justificarlos por escrito.
+3. **Los 2 timeouts** (`207 [logico]` y `251 [aritmetico]`) son bucles
+   infinitos del mutante, no fallos de la herramienta; basta con declararlos.
+4. Si el humano prefiere **no pagar la campaña completa aquí**, la alternativa
+   honrada es dejar escrito en el informe que la puerta de mutación de F-034
+   queda **medida a la baja y pendiente de F-038**, y cerrarla allí — pero
+   entonces el informe **no puede seguir declarando 18/1/0 en 111 s**, que es
+   lo que hoy dice y no es reproducible.
+
+## Los dos puntos de criterio que se me pidieron
+
+**1. Reproducibilidad tras el revert.** Comprobado ejecutando, como se me
+pidió. El método **ya no aborta** (eso sí lo arregla el revert), pero
+**no reproduce los 19/18/1**. CR-2 sigue abierto por una razón distinta —y más
+grave— que la de la primera pasada: entonces no se podía repetir; ahora se
+puede, y sale otra cosa.
+
+**2. `harness/VERSION` en 1.6.0 con código de la 1.5.2.** **Me vale para C2**,
+y lo doy por bueno como decisión deliberada del humano, no como descuido:
+
+- Está anotada **en los tres sitios** donde alguien la buscaría:
+  `progress/current.md` (sección activa), `impl_F-034.md` §T15 punto 2 y el
+  aviso final de `progress/mutacion_F-034.md`, que además avisa a quien vuelva
+  tras el merge de la rama `chore/`.
+- `harness/ARNES_VERSION.md` describe la 1.6.0 **exactamente por lo que este
+  repositorio sí tiene** (el mutador que muta `is`/`is not`). Lo que falta es
+  la otra mitad que `arnes-base` metió en el mismo número.
+- Revertir el número sería peor: D2 fijó 1.6.0 para F-034 y T10 lo aplicó bien.
+
+No exijo nada más, con una condición que ya está escrita: que la rama de
+propagación llegue. Lo dejo como deuda **visible y con dueño**, no como
+incoherencia silenciosa.
+
+## Checkpoints (segunda pasada, solo lo tocado desde `5e2a2f3`)
+
+| | Estado | Nota |
+|---|---|---|
+| **C1** arnés en verde | `[x]` | `init.sh` exit 0, 277 passed. El revert borra los dos ficheros de test de la 1.6.0 y devuelve `test_f012` a su forma anterior, coherente con un `mutacion.py` que ya no ecoa `[base]` |
+| **C2** estado coherente | `[x]` | Una sola feature `in_progress`, rama correcta, `current.md` reescrito al estado real (CR-4). La incoherencia de `VERSION` queda aceptada como deuda documentada (arriba) |
+| **C3** arquitectura y convenciones | `[x]` | El incremental no toca `services/`. Primera línea con ruta en todo lo modificado. Sin secretos ni prints de debug: es un revert más documentación |
+| **C4** verificación real | `[x]` | Sin cambios respecto a la primera pasada: la trazabilidad requisito a test sigue en pie |
+| **C4 bis** rigor declarado | `[ ]` | Fase RED y cobertura `[x]`. **Mutación `[ ]`**: 7 supervivientes sin analizar y 2 timeouts no declarados; los totales del informe no se reproducen |
+| **C5** sesión cerrada | `[ ]` | Las 14 tareas en `[x]` y con commit, **pero el árbol no está limpio**: ver abajo |
+
+Los **N/A** de la primera pasada (C3 bis documentos externos, C4 ter rutas
+sensibles) siguen justificados por la misma razón y el incremental no los toca.
+
+## Hallazgo colateral: el árbol no está limpio, y hay otro agente escribiendo
+
+Al empezar esta review `git status --short` estaba **vacío**. Al terminarla
+aparecen dos ficheros **sin seguimiento que no son míos**:
+
+```
+?? progress/impl_F-035.md
+?? progress/mutacion_F-035.md
+```
+
+Alguien ha estado trabajando en **F-035 dentro de este repositorio** mientras
+yo revisaba F-034. Dos consecuencias que el líder debe atender:
+
+1. **C5 exige árbol limpio** y hoy no lo está.
+2. **Es un riesgo real, no formal.** El `mutacion.py` de esta rama (1.5.2)
+   **muta el árbol principal en sitio**: durante mi campaña, `harness/mutacion.py`
+   tuvo mutantes escritos en el fichero de verdad durante 63 minutos. El
+   centinela que protegía justo de esto (`.arnes_cache/mutacion_en_curso.json`,
+   leído por `init.sh`) **lo quitó el revert**, porque era de la 1.6.0.
+   Cualquiera que lanzara `init.sh` o una suite en esa ventana midió un mutante
+   y no el código. Lo verifiqué al acabar: `harness/mutacion.py` quedó
+   **restaurado** y sin diff contra HEAD.
+
+Esto refuerza que la propagación de la 1.6.0 hay que rehacerla pronto: el
+revert era correcto para el alcance de la feature, pero deja el repositorio sin
+esa red de seguridad mientras tanto.
+
+## Automejora del protocolo (propuesta, no aplicada)
+
+La de la primera pasada —que el informe de mutación declare el SHA de HEAD—
+sigue en pie y ya no es la más urgente. **Esta pasada demuestra algo más
+fuerte:**
+
+> **Recalcular el alcance no valida la campaña.** Aquí el alcance y el número
+> de mutantes coincidían al pie de la letra (56 líneas, 19 mutantes) y aun así
+> 9 de los 19 veredictos eran distintos. Lo único que lo destapó fue
+> **reejecutar**, que el protocolo solo obliga por debajo de 5 minutos — y un
+> informe con un tiempo declarado bajo es precisamente el sospechoso.
+
+Dos propuestas concretas para `CHECKPOINTS.md` C4 bis y
+`.claude/agents/reviewer.md`, a portar a `arnes-base` si el humano las acepta:
+
+1. **Coherencia interna del tiempo.** Si el tiempo total dividido entre el
+   número de mutantes es mucho menor que lo que tarda la suite que juzga, el
+   informe se rechaza sin más trámite. El propio implementer usó ese
+   razonamiento en §T11 para destapar el falso verde («el promedio de 1,87 s
+   por mutante era la prueba a la vista») y luego aceptó 5,8 s/mutante contra
+   una suite de 63 s.
+2. **Los mutantes equivalentes son un invariante comprobable.** Un mutante
+   semánticamente idéntico al original **no puede aparecer como muerto**. Un
+   solo caso así invalida la campaña entera, y se detecta leyendo, sin gastar
+   CPU.
