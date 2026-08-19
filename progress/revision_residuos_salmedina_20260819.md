@@ -1,0 +1,188 @@
+<!-- progress/revision_residuos_salmedina_20260819.md -->
+# Revisión del lote de residuos SALMEDINA · 2026-08-19
+
+Siete albaranes de **SALMEDINA TRATAMIENTO DE RESIDUOS INERTES, S.L.**
+enviados por el humano a la app local el 2026-08-19 (creados entre las 09:41
+y las 09:43 UTC). Revisión hecha **por HTTP contra sv4 en local**
+(`GET /documents`, `GET /api/documents/{uuid}`), sin tocar la BBDD ni ningún
+recurso de Azure. Datos crudos en el scratchpad de la sesión
+(`sal_SS-*.json`).
+
+**Aún NO contrastado contra el Excel del administrativo**: la herramienta MCP
+`markitdown` no está conectada en esta sesión y `CLAUDE.md` prohíbe improvisar
+otra vía de conversión. Ver §6.
+
+## 1. Cuadro del lote
+
+| Albarán | Fecha | LER | Cant. | Ud | Concepto | Obra | Contrato | Valorado |
+|---|---|---|---|---|---|---|---|---|
+| SS-0000168 | 2024-07-03 | 170201 | 6,0 | — | Madera | **0687** | **CTSU24/0228** | **120,00 €** |
+| SS-0000589 | 2024-07-08 | 170802 | 6,0 | — | Mat. Yeso | — | — | — |
+| SS-0003935 | 2024-07-16 | 170107 | 6,0 | — | Horm_Ladr_Cerám. | — | — | — |
+| SS-0003967 | 2024-07-10 | 170604 | 6,0 | — | Mat. Aislamiento | — | — | — |
+| SS-0801977 | 2024-07-18 | 170604 | 6,0 | — | Mat. Aislamiento | — | — | — |
+| SS - 0025146 | 2024-11-05 | 170904 | 6,0 | — | Mat. Mezclados | 0623 | — | — |
+| SS-0026122 | 2024-11-05 | 170802 | 9,0 | — | Mat. Yeso | 0623 | — | — |
+
+Los siete: una sola línea, `single_provider_openai`,
+`document_confidence_below_threshold`, `line_only_in_openai:1` y
+`fecha_albaran_fuera_de_rango`. Confianza 71,3 – 82,5 %.
+
+## 2. La valoración del SS-0000168 es CORRECTA, y por el motivo correcto
+
+El humano seleccionó obra y contrato a mano y salió **120,00 €**. Verificado
+paso a paso:
+
+- Línea del albarán: LER `170201` «Madera», **cantidad 6,0**, `unidad_medida`
+  **null**.
+- Línea de contrato que casó (`26473`): **«LLEVADA CONTENEDOR 6M3» = 120 €/UD**,
+  por `match_method: semantic`, confianza 70 %.
+- `cantidad_convertida = 1.0`, `factor_conversion = null`,
+  `importe_calculado = 120,00 €`.
+
+El `1.0` **no** es el fallback ciego del `UnitConverter` (que con
+`unidad_albaran=None` y contrato en `UD` habría devuelto 6,0 con factor 1,0, y
+el importe habría sido 720 €). Sale de la regla de residuos ya implementada en
+`valuation_builder.py:1046` (§4.bis): *la cantidad valorada es el nº de
+CONTENEDORES, no los m³ del albarán*. `calcular_contenedores_residuos` divide
+los 6 m³ del albarán entre los 6 m³/contenedor que declara el contrato → **1
+contenedor × 120 € = 120 €**.
+
+Es decir: el `6` del albarán es **la capacidad del contenedor**, no una
+cantidad de material, y el sistema lo entiende. Conviene dejarlo escrito
+porque invita a confusión: arreglar F-024 (extraer `unidad_medida`) **no** debe
+hacer que este caso pase a valorar 720 €.
+
+### 2.1 Lo que queda por comprobar de esa valoración
+
+- **`lines_matched_exact: 0`**, casó por semántica al 70 %. El contrato tiene
+  a la vez «CAMBIO CONTENEDOR 6M3» (120 €) y «LLEVADA CONTENEDOR 6M3» (120 €).
+  Aquí da igual al importe —mismo precio— pero **no da igual a la partida**, y
+  es justo la distinción LLEVAR/RETIRAR de F-006.
+- **Los «INCREMENTO LER» del contrato no se han sumado.** CTSU24/0228 tarifa
+  incrementos por tipo de residuo: 170202 vidrio (120 €), 170302 bituminosas
+  (30 €), **170604 aislamiento (90 €)**, 170802 const. (51 €). Para el 170201
+  madera **no hay incremento**, así que los 120 € parecen completos. Pero
+  cuando se valore el **SS-0003967 o el SS-0801977 (ambos LER 170604)** el
+  resultado esperado sería **120 + 90 = 210 €**, no 120 €. Sin caso valorado
+  todavía, no se puede afirmar que el pipeline lo haga.
+
+## 3. Por qué no encontró obra: NO es que no esté indicada
+
+Los **siete** albaranes traen `obra_codigo` y `obra_nombre` a null en la
+extracción, pero **los siete traen dirección de obra**. El resolutor por texto
+acertó en tres y falló en cuatro **que son la misma obra** que uno de los
+aciertos:
+
+| Albarán | Dirección leída | Obra |
+|---|---|---|
+| SS-0000168 | `M-401 - S/N, FUENLABRADA` | **0687** ✔ |
+| SS-0000589 | `CTRA. M-401 km 1'800, FUENLABRADA` | — ✘ |
+| SS-0003935 | `M 401 S/N, FUENLABRADA` | — ✘ |
+| SS-0003967 | `CRTA 401 MADRID TOLEDO P.K. 1800, FUENLABRADA` | — ✘ |
+| SS-0801977 | `CTRA M-401 PK 1.800, FUENLABRADA` | — ✘ |
+| SS - 0025146 | `c/ Futbol Sala 4, Leganes` | 0623 ✔ |
+| SS-0026122 | `CALLE FUTBOL SALA 4, LEGANES` | 0623 ✔ |
+
+La obra 0687 es **CENTRO PRIMERA ACOGIDA DE MENORES «LA CANTUEÑA»**, con
+dirección registrada *Carretera A42 Madrid-Toledo, Km. 18., 28947 FUENLABRADA*.
+Las cuatro direcciones fallidas son esa misma carretera escrita de otra forma
+(`CTRA.`/`CRTA`/`M 401`/`M-401`, `km 1'800`/`P.K. 1800`/`PK 1.800`).
+
+**Conclusión**: el dato está, es deducible, y el matching de dirección lo
+resuelve o no según la grafía. Entra de lleno en **F-029** (obra resuelta por
+texto), que hoy está redactada sobre el problema contrario —score 1,00 a la
+obra equivocada—; este lote aporta el **falso negativo**: cuatro documentos sin
+obra teniendo la dirección delante. Nótese que 0623 sí casó con dos grafías
+distintas (`c/ Futbol Sala 4` y `CALLE FUTBOL SALA 4`), así que el matcher
+normaliza algo, pero no las abreviaturas de carretera ni los puntos
+kilométricos.
+
+## 4. El CIF se lee mal en 3 de 7
+
+CIF real de SALMEDINA: **B82899550** (el que casó en el SS-0000168).
+
+| Albarán | CIF leído | Desviación |
+|---|---|---|
+| SS-0000168, SS-0000589, SS-0003967 | `B82899550` | correcto |
+| SS-0003935 | `null` | no se leyó |
+| SS - 0025146 | `B823**05**550` | 2 dígitos |
+| SS-0026122 | `B828**39580**` | 3 dígitos |
+| SS-0801977 | `B828**90**550` | 1 dígito |
+
+Los tres mal leídos arrastran `proveedor_cif_no_casa`. Es la causa directa de
+que **SS - 0025146 y SS-0026122 no tengan contrato pese a tener obra (0623)**:
+sin proveedor resuelto no hay contrato que buscar. Material para **F-030**
+(IA2 busca el proveedor parecido cuando el CIF no casa): aquí la distancia es
+de 1 a 3 dígitos sobre un CIF que además aparece bien leído en otros tres
+documentos **del mismo lote y el mismo proveedor**.
+
+### 4.1 Cruce de causas
+
+| Situación | Albaranes | Causa que bloquea |
+|---|---|---|
+| Obra ✔ + CIF ✔ | SS-0000168 | ninguna — valorado |
+| Obra ✘ + CIF ✔ | SS-0000589, SS-0003967 | **solo la obra** |
+| Obra ✔ + CIF ✘ | SS - 0025146, SS-0026122 | **solo el CIF** |
+| Obra ✘ + CIF ✘/null | SS-0003935, SS-0801977 | las dos |
+
+Es decir: **arreglar el matching de dirección (F-029) desbloquea 2 albaranes;
+arreglar el CIF (F-030) desbloquea otros 2**; los otros 2 necesitan ambas.
+
+## 5. Otros hallazgos del lote
+
+- **Una sola IA extrajo los siete.** Todos con `provider_origin:
+  openai_fallback` y a la vez `model_name: gemini-3.7-flash`, y motivo
+  `single_provider_openai`. Sin segunda opinión no hay contraste, y de ahí que
+  los siete caigan por `document_confidence_below_threshold` (71-82 %). Es
+  exactamente **F-020** (el pipeline debe ser agnóstico al proveedor de IA); el
+  lote es evidencia nueva y además muestra que la etiqueta `openai_*` se aplica
+  a una extracción hecha con Gemini, con lo que el motivo de revisión que ve el
+  humano es engañoso.
+- **`unidad_medida` null en las 7 líneas** → **F-024**. Aquí no daña porque la
+  regla de contenedores no la usa, pero es el mismo agujero.
+- **`fecha_albaran_fuera_de_rango` en los 7**: son albaranes de 2024 procesados
+  en 2026 (777 días en el SS-0000168). Esperable en un lote de prueba; conviene
+  no leerlo como señal de calidad del documento.
+- **SS-0026122 trae cantidad 9,0** frente al 6,0 de los demás: contenedor de
+  9 m³. Cuando se le asigne contrato habrá que comprobar qué hace
+  `calcular_contenedores_residuos` si el contrato solo tarifa contenedores de
+  6 m³ (¿1,5 contenedores? ¿línea de 9 m³ sin tarifa?). Es un caso límite que
+  hoy no está cubierto por ningún test conocido.
+
+## 6. Pendiente: contraste contra el Excel del administrativo
+
+El fichero es `OneDrive - Ruesma/Documentos/albaranes/evals/Copia de
+valoracion_alabranes.xlsx` (modificado el 2026-08-18). **No se ha leído**:
+
+1. `CLAUDE.md` obliga a convertir los documentos ofimáticos **siempre** con la
+   herramienta MCP `markitdown`, y a **parar y decirlo** si no está conectada.
+   En esta sesión no lo está.
+2. El fichero trae precios de proveedor, que `CLAUDE.md` clasifica como dato
+   sensible que no se convierte sin preguntar, porque el Markdown acabaría
+   versionado.
+
+Decisión del humano pendiente: reconectar `markitdown`, o autorizar
+explícitamente una lectura de solo análisis (p. ej. con `openpyxl`) cuyo
+resultado se quede en el scratchpad y **no** entre en `docs/referencia/` ni en
+git.
+
+## 7. Qué haría con esto
+
+Ninguna de estas features es nueva; el lote **refuerza y precisa** cuatro que
+ya están en el backlog:
+
+- **F-029** — añadir el falso negativo: normalizar abreviaturas de vía
+  (`CTRA`/`CRTA`/`CARRETERA`) y puntos kilométricos (`km 1'800` / `P.K. 1800`
+  / `PK 1.800`) antes de comparar. Cuatro casos reales de la misma obra.
+- **F-030** — el CIF con 1-3 dígitos de diferencia respecto a uno que el mismo
+  lote lee bien tres veces.
+- **F-020** — evidencia de que la etiqueta de proveedor de IA no corresponde al
+  modelo que trabajó.
+- **F-006** — LLEVAR/RETIRAR y, sobre todo, **los incrementos por LER**, que
+  este lote permite probar de verdad (170604 con incremento de 90 € en el
+  contrato).
+
+Y una comprobación que no cuesta nada y hoy nadie hace: **un test de regresión
+con el SS-0000168** que fije 120 € — un contenedor, no seis m³ — para que el
+arreglo de F-024 no lo convierta en 720 €.
