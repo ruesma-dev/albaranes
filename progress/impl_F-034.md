@@ -407,6 +407,15 @@ las features. Queda escrito, con el número medido, para que el humano decida.
 
 ## T12 · Porte a `arnes-base` — **BLOQUEADO**, y por qué no lo he forzado
 
+> **NOTA DE CIERRE, añadida el 2026-08-19 al atender el review.** Todo lo que
+> sigue en este §T12 es **registro histórico**: describe con exactitud lo que
+> el implementer se encontró y por qué paró, y esa parada fue correcta. Pero
+> **el bloqueo ya no existe y la feature SÍ se puede cerrar**. Lo resolvió el
+> humano incorporando los dos encargos a la misma versión: la **1.6.0 de
+> `arnes-base`** lleva el porte de F-034. **T12 está en `[x]`.** El desenlace
+> completo, con commits y con lo que pasó después (una propagación de vuelta
+> que hubo que revertir), en **§T15**. No leas este §T12 como el estado final.
+
 **No he escrito ni un byte en `C:\Users\pgris\PycharmProjects\arnes-base`.** No
 hay ningún commit mío allí, y por eso este informe no puede traer los hashes
 que el reviewer espera.
@@ -521,6 +530,155 @@ directorio **sí existe** con sus seis libros, que `.gitignore` los excluye y qu
 el defecto real era condicionar la puerta a un artefacto invisible. `BACKLOG.md`
 lo regenera `init.sh`.
 
+## T15 · Lo que pasó DESPUÉS: T12 desbloqueado, una propagación y su revert
+
+Esta sección se escribe al atender `progress/review_F-034.md` (veredicto
+CHANGES_REQUESTED, cinco cambios requeridos). Cuenta lo ocurrido entre el
+cierre de §T14 y hoy, para que nadie lea el §T12 dentro de dos meses y crea
+que la feature quedó bloqueada.
+
+### 1. T12 resuelto: la 1.6.0 de `arnes-base` absorbió los dos encargos
+
+Las dos decisiones que §T12 dejaba en manos del humano —orden de aterrizaje y
+numeración— las tomó el humano de la única forma que no obligaba a elegir:
+**una sola versión con los dos encargos dentro**. La **1.6.0 de `arnes-base`**
+lleva las cuatro piezas de «mutación fiable» **y** el porte de `is` / `is not`
+de F-034. Commits allí, ya **pusheados** a `origin/main`:
+
+| Commit | Qué trae |
+|---|---|
+| `860902e` | 1.6.0 (1/4): la campaña de mutación deja de poder contar muertos falsos |
+| `b7dce9d` | 1.6.0 (2/4): la prueba de verdad, y dos defectos más que ha destapado |
+| `febb51d` | 1.6.0 (3/4): **el mutador muta `is` / `is not` (porte de F-034)** |
+| `3ceb95b` | 1.6.0 (4/4): entrega — `VERSION`, entrada en la guía y el §5 ampliado |
+| `89a9ba9` | 1.6.0: `ruff` ordena los imports de los tres tests de mutación |
+
+Verificado hoy en **solo lectura** (hay otro agente trabajando en `arnes-base`,
+así que desde aquí no se escribe una línea en él):
+
+```
+$ git -C C:/Users/pgris/PycharmProjects/arnes-base log --oneline 860902e -1
+860902e 1.6.0 (1/4): la campana de mutacion deja de poder contar muertos falsos
+
+$ git -C ... branch -r --contains 89a9ba9
+  origin/main
+
+$ grep -n "ARNES_VERSION=" arnes-base/harness/VERSION
+6:ARNES_VERSION=1.6.0
+
+$ grep -c "ast.Is" arnes-base/harness/mutacion.py
+2
+```
+
+Las dos entradas de `ast.Is` son las de `COMPARACIONES` que añade F-034: el
+porte está dentro. **R18–R21 cumplidos.** La desviación respecto a la letra de
+T12 (`mutacion.py` y el test no viajan byte a byte, porque allí conviven con el
+encargo de línea base y el test de R14 se generalizó) ya la verificó y la
+aceptó el reviewer: «adaptación correcta y mejor que la copia literal».
+
+### 2. La propagación de vuelta a `albaranes`: hecha, y REVERTIDA a propósito
+
+Cerrada la 1.6.0 en `arnes-base`, se propagó de vuelta a `albaranes` **dentro
+de esta rama** (commit `e97f9b9`). Fue un error de encaje, no de contenido: esa
+propagación mete **~1.000 líneas de producción ajenas a F-034** (`mutacion.py`
++1037, `mutacion_paralela.py` +107, más dos ficheros de test) en el **alcance
+de la feature**, y las puertas ya se habían medido antes. El resultado fue
+exactamente lo que rechazó el review:
+
+| Puerta | Lo que declara el informe | Lo que medía la rama con `e97f9b9` |
+|---|---|---|
+| Alcance de mutación | 56 líneas, 19 mutantes | 1.057 líneas, 172 mutantes |
+| Cobertura de líneas cambiadas | 12 líneas | 392 líneas |
+
+Y además dejaba la campaña **irreproducible**: la 1.6.0 comprueba la línea base
+antes de juzgar, así que el método documentado en el aviso de
+`progress/mutacion_F-034.md` abortaba con `LÍNEA BASE EN ROJO` (por el mismo
+defecto del ejecutor de la raíz que §T11 midió, que ahora la herramienta
+detecta en vez de tragarse).
+
+**El commit `e97f9b9` se ha revertido** (`163846b`). La rama recupera su alcance
+real, y **CR-1 y CR-2 quedan cerrados por construcción**, no por un parche.
+La propagación **se rehará después del merge de F-034, en su propia rama
+`chore/`** — no aquí.
+
+**Incoherencia consciente que se deja en pie**: `harness/VERSION` de
+`albaranes` dice `ARNES_VERSION=1.6.0` (lo puso T10, y es correcto: F-034 *es*
+la 1.6.0) mientras el código de `harness/mutacion.py` es el de la 1.5.2 más el
+cambio de F-034. Lo cuadra la rama de propagación. **No se toca aquí.**
+
+### 3. Verificación de que este informe y el de mutación siguen siendo válidos
+
+No basta con que me lo digan: lo he recalculado tras el revert. Cálculo puro,
+sin ejecutar ninguna suite (`harness.alcance.alcance_de_feature` +
+`harness.mutacion.generar_mutantes`, leyendo cada fichero en el tip de la rama
+con `git show`; el script vive en el scratchpad, no en el repositorio):
+
+```
+harness/mutacion.py: 56 lineas, 19 mutantes
+TOTAL: 1 fichero(s), 56 lineas, 19 mutantes
+```
+
+**Coincide al pie de la letra con la sección «Alcance» de
+`progress/mutacion_F-034.md`** (56 líneas) y con sus totales (19 generados).
+
+Y el método documentado en el aviso de ese informe **vuelve a reproducirse**.
+Comprobado con una muestra, para no pagar los 111 s enteros:
+
+```python
+main(["--feature", "F-034", "--workers", "1",
+      "--max-mutantes", "3", "--semilla", "7", "--salida", "<scratchpad>"],
+     ejecutor=EjecutorPytest(raiz=".",
+         argumentos=["tests", "-x", "-q", "--tb=no", "-p", "no:cacheprovider"]))
+```
+
+```
+F-034: 1 fichero(s), 56 línea(s) de producción (origen rama, 28971321108528484c52c5c91108afc02af59084..feature/F-034-mutacion-is-y-coherencia-evals)
+[1/3] muerto        harness/mutacion.py:220 [aritmetico] anterior = bruta[ini - 1 : ini] if ini > 0 else b"" -> anterior = bruta[ini + 1 : ini] if ini > 0 else b""
+[3/3] muerto        harness/mutacion.py:246 [comparacion] while posicion != -1: -> while posicion == -1:
+3 mutantes evaluados, 3 muertos, 0 supervivientes, 0 timeouts en 82.7 s
+```
+
+No aborta, juzga con la suite de la raíz de verdad y los mutantes son mutantes
+reales del alcance de F-034. `git status` limpio después. Este mismo párrafo
+está copiado en `progress/mutacion_F-034.md`, que es donde lo va a buscar quien
+dude del informe.
+
+### 4. Los cinco cambios requeridos del review, uno a uno
+
+| CR | Estado | Cómo se cierra |
+|---|---|---|
+| **CR-1** alcance obsoleto de la campaña | cerrado | Revert de `e97f9b9`. Alcance recalculado: 56 líneas / 19 mutantes = lo declarado |
+| **CR-2** campaña irreproducible | cerrado | El mismo revert repone el `mutacion.py` sin línea base; método reproducido arriba con una muestra de 3 |
+| **CR-3** `tasks.md` no refleja T12 | cerrado | T12 pasa a `[x]` con la tabla de commits de `arnes-base` y la desviación aceptada |
+| **CR-4** `current.md` desactualizado | cerrado | Sección reescrita al estado real (T12 resuelto, propagación revertida, F-038) |
+| **CR-5** informe da la feature por no cerrable | cerrado | Nota de cierre en §T12, este §T15, y corregidas las secciones «Desviaciones» y «Verificaciones MANUAL pendientes» |
+
+### 5. Las observaciones que NO bloqueaban
+
+1. **`[ADAPTAR]` en `design.md` es un falso positivo de `init.sh`** — la marca
+   aparece dentro de una frase que *habla* de una marca ya resuelta. El
+   reviewer lo confirmó y propone que la comprobación ignore lo que va entre
+   comillas invertidas. **La acepto como buena, pero NO la aplico aquí**:
+   tocar `harness/init.sh` en esta rama es exactamente el error que acabamos de
+   revertir (meter arnés genérico en el alcance de F-034), y además la mejora
+   es del arnés, así que su sitio es `arnes-base` y de ahí a todos. Queda
+   propuesta por escrito; no la implemento en F-034.
+2. **`e97f9b9` no llevaba formato `F-034 Tn:`** siendo materialmente T12.
+   Cierto. **Sin efecto**: ese commit está revertido y el trabajo que
+   describía no pertenece a esta rama. La correspondencia tarea↔commit de C5
+   ya no lo incluye.
+3. **T7 se extendió** más allá de su letra. El reviewer la califica de
+   correcta. **Se mantiene tal cual**, sin cambios.
+
+Y la **automejora del protocolo** que propone el review —que el informe de
+mutación declare el SHA de HEAD contra el que se midió, y que el reviewer
+compruebe que el alcance recalculado coincide— es, en mi opinión, la lección
+más valiosa de este ciclo: es la comprobación que he hecho en el punto 3 de
+esta sección y habría saltado sola. **No la aplico en esta rama** por lo mismo
+que la observación 1: toca `CHECKPOINTS.md` y `.claude/agents/reviewer.md`, es
+arnés genérico, y su sitio es `arnes-base` con propagación posterior. La dejo
+propuesta para que el humano decida si abre feature.
+
 ---
 
 ## Evidencias
@@ -539,11 +697,44 @@ Evidencias adicionales de esta feature, que son su razón de ser:
 | **F-027** | 0 mutantes | **1** generado, **1 muerto**, 0 supervivientes (2,5 s) |
 | **F-019** | 31 mutantes, 28 muertos, 3 supervivientes | **49** generados, **46 muertos**, **3** supervivientes (los mismos 3, ya analizados) — 331,5 s |
 
+### Re-verificación de las Evidencias tras el revert (2026-08-19, al atender el review)
+
+Las cuatro filas de arriba se midieron antes del episodio de §T15 punto 2. Tras
+revertir la propagación, **vuelven a ser exactas**. Comprobado ejecutando, no
+leyendo:
+
+```
+$ bash harness/init.sh
+    38 features, 32 abiertas, en curso: ['F-034'], bloqueadas: ninguna
+277 passed in 68.00s (0:01:07)
+[OK] pytest en verde (con medición de cobertura)
+[OK] servicio sv6-valoracion-persist (...): pytest en verde (caché: árbol sin cambios desde el último verde)
+[OK] PUERTA COBERTURA: 100.0% de 12 líneas cambiadas cubiertas (12/12, umbral 80%, nivel estandar)
+[OK] PUERTA RUTAS SENSIBLES [evals]: N/A (F-034 no toca ninguna ruta sensible declarada)
+[OK] Rama actual: feature/F-034-mutacion-is-y-coherencia-evals
+ENTORNO LISTO. Puedes trabajar.
+```
+
+- **Cobertura**: `100.0% de 12 líneas cambiadas` — las **12** que declara la
+  tabla, no las 392 que medía la rama con `e97f9b9`. Coincide.
+- **Mutación**: alcance recalculado **56 líneas / 19 mutantes**, idéntico al
+  informe (§T15 punto 3).
+- **Tests**: 277 en la raíz, 0 fallos. El tiempo de la suite sube de 63,18 s a
+  **68,00 s** entre las dos ejecuciones; es ruido de máquina, no un cambio.
+- Los avisos siguen siendo los de siempre y ninguno lo introduce esta feature:
+  1.102 de `ruff` (deuda previa), sv1-email e infra sin tests, y las marcas
+  `[ADAPTAR]` de las specs de F-034 (falso positivo, §T13-T14) y F-035.
+- El backlog pasa de 34 a **38 features** porque entre medias se dieron de alta
+  F-035 a F-038. Ninguna toca esta rama salvo F-038, que solo añade su entrada.
+
 ## Desviaciones respecto a la spec, todas justificadas
 
-1. **T12 (porte a `arnes-base`) NO se ha hecho: BLOQUEADO.** Motivo completo en
-   §T12. No hay ningún commit mío en `arnes-base` y por eso este informe no trae
-   hashes de allí: no los hay. **La feature no puede cerrarse sin esto** (R18).
+1. **T12 (porte a `arnes-base`): el implementer paró, y lo resolvió el humano.**
+   Durante la sesión estaba **BLOQUEADO** por otro trabajo en vuelo sobre el
+   mismo fichero (motivo completo en §T12, que se conserva como registro). **Ya
+   no lo está**: la 1.6.0 de `arnes-base` absorbió los dos encargos y lleva el
+   porte dentro (commits `860902e`, `b7dce9d`, `febb51d`, `3ceb95b`, `89a9ba9`,
+   pusheados). **R18 cumplido y T12 en `[x]`.** Desenlace en §T15.
 2. **T11 relanzado con un ejecutor distinto** del comando de `tasks.md`, porque
    ese comando produce un falso verde aquí (§T11). El comando de `tasks.md` no
    es incorrecto en general: lo es para un alcance que cae en la raíz.
@@ -557,15 +748,29 @@ Evidencias adicionales de esta feature, que son su razón de ser:
 
 ## Verificaciones MANUAL pendientes
 
-Ninguna propia de F-034: sus nueve requisitos de G1 y el de R14 son tests puros.
-Lo que queda pendiente **del humano** son las **dos decisiones de §T12** (orden
-de aterrizaje en `arnes-base` y numeración 1.5.3 / 1.6.0), sin las cuales la
-feature no puede cerrarse.
+**Ninguna.** Los nueve requisitos de G1 y el de R14 son tests puros.
 
-### Confirmación final (al cerrar la sesión)
+Las **dos decisiones de §T12** que esta sección declaraba pendientes (orden de
+aterrizaje en `arnes-base` y numeración 1.5.3 / 1.6.0) **ya están tomadas por
+el humano**: una sola versión, la **1.6.0**, con los dos encargos dentro. Ver
+§T15. **Nada bloquea el cierre de F-034.**
+
+Lo único que queda apuntado, y **no bloquea porque no es de esta feature**:
+
+1. **Rehacer la propagación de la 1.6.0 a `albaranes`** en su propia rama
+   `chore/`, después del merge de F-034. Hasta entonces `harness/VERSION` dice
+   1.6.0 con el código de la 1.5.2 (§T15, punto 2). Es a propósito.
+2. **F-038** recoge el defecto del ejecutor de mutación de la raíz (§T11), que
+   invalida `progress/mutacion_F-012.md`.
+3. Dos mejoras del arnés propuestas y **no aplicadas aquí a propósito**, porque
+   su sitio es `arnes-base`: que `init.sh` ignore las marcas `[ADAPTAR]` entre
+   comillas invertidas, y que el informe de mutación declare el SHA de HEAD
+   contra el que se midió (§T15, punto 5).
+
+### Confirmación de por qué §T12 paró — y qué pasó luego
 
 `git -C C:/Users/pgris/PycharmProjects/arnes-base status --short` en el último
-minuto de la sesión:
+minuto de la sesión de implementación:
 
 ```
  M arnes-base/harness/init.sh
@@ -575,6 +780,9 @@ minuto de la sesión:
 ```
 
 Al fichero de test **nuevo y sin versionar** —`test_mutacion_linea_base.py`, que
-es el test del 1.5.3 de la línea base— no lo he escrito yo, y no estaba cuando
-empezó la sesión. **Hay alguien trabajando ahí ahora mismo.** Confirma el
-diagnóstico de §T12 y confirma que parar era lo correcto.
+es el test de la línea base— no lo escribió el implementer, y no estaba cuando
+empezó la sesión. **Había alguien trabajando ahí en ese momento.** Confirma el
+diagnóstico de §T12 y confirma que parar era lo correcto: ese trabajo terminó
+commiteado como parte de la 1.6.0 (`860902e`, `b7dce9d`), junto al porte de
+F-034 (`febb51d`). Si el implementer hubiera forzado el porte, lo habría
+destruido.

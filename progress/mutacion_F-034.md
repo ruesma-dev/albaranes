@@ -26,6 +26,52 @@ Generado por `python -m harness.mutacion --feature F-034` el 2026-08-19 14:48.
 > (Lánzalo con `PYTHONPATH=.`.) Este aviso está escrito a mano: `escribir_informe`
 > lo borrará si alguien regenera el fichero. Contexto en `progress/impl_F-034.md` §T11.
 
+> ## POR QUÉ ESTE INFORME SIGUE SIENDO VÁLIDO, aunque el historial parezca decir lo contrario
+>
+> Si miras el `git log` de esta rama vas a encontrar un tramo en el que los
+> números de abajo **no cuadraban** con el árbol. Pasó esto, y está resuelto:
+>
+> 1. La campaña se midió sobre el alcance real de F-034: **1 fichero, 56
+>    líneas, 19 mutantes**.
+> 2. Después, el commit `e97f9b9` propagó la **1.6.0 de `arnes-base`** a este
+>    repositorio **dentro de esta misma rama**. Eso metió ~1.000 líneas de
+>    producción ajenas a F-034 en el alcance de la feature: pasaba a **1.057
+>    líneas y 172 mutantes**, y la cobertura de líneas cambiadas de 12 a 392.
+>    El review de F-034 lo rechazó, con razón (CR-1 y CR-2).
+> 3. **Ese commit se ha revertido** (`163846b`). La propagación se rehará tras
+>    el merge de F-034, en su propia rama `chore/`.
+>
+> Recomprobado tras el revert, cálculo puro sin ejecutar ninguna suite
+> (`harness.alcance.alcance_de_feature` + `harness.mutacion.generar_mutantes`):
+>
+> ```
+> harness/mutacion.py: 56 lineas, 19 mutantes
+> TOTAL: 1 fichero(s), 56 lineas, 19 mutantes
+> ```
+>
+> **Coincide exactamente con la sección «Alcance» y con los «Totales» de abajo.**
+>
+> Y el método del aviso anterior **vuelve a reproducirse**: el revert repone el
+> `harness/mutacion.py` sin comprobación de línea base (esa comprobación es de
+> la 1.6.0), así que ya no aborta. Muestra de 3 mutantes con `--max-mutantes 3
+> --semilla 7`:
+>
+> ```
+> F-034: 1 fichero(s), 56 línea(s) de producción (origen rama, 28971321108528484c52c5c91108afc02af59084..feature/F-034-mutacion-is-y-coherencia-evals)
+> [1/3] muerto        harness/mutacion.py:220 [aritmetico] anterior = bruta[ini - 1 : ini] if ini > 0 else b"" -> anterior = bruta[ini + 1 : ini] if ini > 0 else b""
+> [3/3] muerto        harness/mutacion.py:246 [comparacion] while posicion != -1: -> while posicion == -1:
+> 3 mutantes evaluados, 3 muertos, 0 supervivientes, 0 timeouts en 82.7 s
+> ```
+>
+> Detalle completo en `progress/impl_F-034.md` §T15.
+>
+> **Aviso para quien vuelva aquí después del merge de la rama `chore/` de
+> propagación**: a partir de ese momento el `harness/mutacion.py` de este
+> repositorio **sí** comprobará la línea base, y el método de arriba **volverá a
+> abortar** hasta que F-038 arregle el ejecutor de la raíz. Eso no invalidará
+> estos números —se midieron sobre el árbol que el review aprobó—, pero sí hará
+> falta el arreglo de F-038 para repetirlos.
+
 
 ## Alcance
 

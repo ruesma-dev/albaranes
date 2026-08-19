@@ -1,54 +1,78 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-## F-034 · BLOQUEADA en el porte a `arnes-base` (2026-08-19)
+## F-034 · en revisión, segunda pasada (2026-08-19)
 
-Rama `feature/F-034-mutacion-is-y-coherencia-evals`. **T0 a T11 y T13-T14
-hechos y commiteados**; el trabajo en `albaranes` está terminado y en verde.
-Lo que bloquea es **T12, el porte a `arnes-base`**, que la spec (R18-R21) y el
-líder declaran parte de la feature, no un después.
+Rama `feature/F-034-mutacion-is-y-coherencia-evals`, feature `in_progress`.
+**Las catorce tareas T0–T14 están en `[x]`**, incluida T12. El trabajo en
+`albaranes` está terminado y `bash harness/init.sh` en verde. Lo que queda es
+el **veredicto de la segunda pasada del reviewer** sobre los cinco cambios
+requeridos de `progress/review_F-034.md`, ya atendidos.
 
-### El bloqueo, en una línea
+> Esta sección sustituye a la que titulaba «F-034 · BLOQUEADA en el porte a
+> `arnes-base`». **Ese bloqueo ya no existe** y la afirmación que hacía —
+> «`arnes-base/harness/VERSION` sigue en 1.5.2 a propósito»— es falsa hoy.
 
-`C:/Users/pgris/PycharmProjects/arnes-base` tiene **tres ficheros modificados y
-sin commitear** —`harness/init.sh`, `harness/mutacion.py` y
-`harness/mutacion_paralela.py`, 949 líneas— que **no son el porte de F-034**
-(su `COMPARACIONES` sigue sin `is`/`is not`): son un **1.5.3 en vuelo** de otro
-trabajo, escrito a las 14:31 y 14:45 de hoy, ya empezada esta sesión. Al abrir
-la sesión ese repositorio estaba limpio en `9224a5a`.
+### T12 (porte a `arnes-base`): resuelto, y cómo
 
-Portar encima significaría **destruir 949 líneas sin commitear de otro** o
-**commitearlas dentro de un commit «F-034»** dejando R19 en falso. No es una
-decisión del implementer. Detalle completo, con las cuatro alternativas y por
-qué se descartan, en `progress/impl_F-034.md` §T12.
+El bloqueo era real —otro trabajo en vuelo y sin commitear sobre el mismo
+`harness/mutacion.py`— y lo resolvió el **humano**: decidió incorporar los dos
+encargos a la **misma versión**. La **1.6.0 de `arnes-base`** lleva las cuatro
+piezas del encargo de «mutación fiable» **y** el porte de `is`/`is not` de
+F-034. Commits allí, ya **pusheados** a `origin/main`: `860902e`, `b7dce9d`,
+`febb51d` (el porte de F-034), `3ceb95b`, `89a9ba9`.
 
-### Lo que necesita el humano decidir
+Verificado en solo lectura (hay otro agente trabajando en ese repositorio, así
+que desde aquí **no se escribe** en él): `arnes-base/harness/VERSION` →
+`ARNES_VERSION=1.6.0`, y `grep -c "ast.Is" arnes-base/harness/mutacion.py` → 2.
 
-1. **Orden de aterrizaje** de los dos cambios sobre `harness/mutacion.py`. Son
-   compatibles en el fondo (uno añade operadores, otro verifica la línea base
-   antes de juzgar); lo que no es automático es quién va primero.
-2. **La numeración**: D2 fijó **1.6.0** para F-034 y el trabajo en vuelo se
-   llama **1.5.3**. `arnes-base/harness/VERSION` sigue en 1.5.2 **a propósito**:
-   no se ha tocado nada allí.
+### La propagación de la 1.6.0 a `albaranes` está REVERTIDA, y es a propósito
 
-En cuanto el otro trabajo esté commiteado, el porte es un `cp` de
-`harness/mutacion.py` y `tests/test_mutacion_operadores.py` más cuatro pegados
-(C4 bis, `reviewer.md`, `VERSION`, `GUIA_INSTALACION.md`).
+El commit `e97f9b9` trajo la 1.6.0 de vuelta a `albaranes` **dentro de la rama
+de F-034**. Eso metió ~1.000 líneas de producción ajenas en el alcance de la
+feature **después** de medir sus puertas: el informe de mutación declaraba 56
+líneas / 19 mutantes y la rama pasaba a tener 1.057 / 172, y la cobertura
+saltaba de 12 líneas cambiadas a 392. Fue la causa de CR-1 y CR-2.
 
-### El otro hallazgo de esta feature, que no bloquea pero importa
+**Se ha revertido** (`163846b`). Con el revert, el alcance de la rama vuelve a
+ser el que el informe declara —recomprobado, ver abajo— y la propagación se
+rehará **después del merge de F-034, en su propia rama `chore/`**.
+
+Efecto colateral consciente: `harness/VERSION` de `albaranes` dice **1.6.0**
+mientras el código de `harness/` es el de la **1.5.2**. Es incoherente y **se
+deja así a propósito**: lo arregla la rama de propagación, no ésta. Quien lea
+esto antes de ese merge, que no lo «arregle» aquí.
+
+### Comprobación de que el informe de mutación de F-034 sigue siendo válido
+
+Recalculado tras el revert, cálculo puro (`harness.alcance.alcance_de_feature`
++ `harness.mutacion.generar_mutantes`, sin ejecutar ninguna suite):
+
+```
+harness/mutacion.py: 56 lineas, 19 mutantes
+TOTAL: 1 fichero(s), 56 lineas, 19 mutantes
+```
+
+Coincide **exactamente** con lo que declara `progress/mutacion_F-034.md`. Y el
+método documentado en su aviso al reviewer **vuelve a reproducirse**: el
+`harness/mutacion.py` de esta rama no lleva comprobación de línea base (esa es
+de la 1.6.0, revertida), así que ya no aborta. Muestra de 3 mutantes con
+`--max-mutantes 3 --semilla 7`: `3 mutantes evaluados, 3 muertos, 0
+supervivientes, 0 timeouts en 82.7 s`, árbol limpio después.
+
+### El hallazgo del ejecutor de la raíz: ya tiene feature propia
 
 **Las campañas de mutación sobre ficheros de la RAÍZ de este repositorio dan un
-falso verde.** `ejecutor_para` manda lo que no es de ningún servicio a
-`python -m pytest` **sin ruta**, y como no hay configuración de pytest en la
-raíz, esa invocación recoge `services/**/tests` y **revienta en la recolección
-en 0,81 s** pase lo que pase: exit 1, que el mutador cuenta como MUERTO. Los 19
-mutantes de F-034 salían «muertos» sin que ningún test los juzgara. Relanzada
-con la suite de verdad (`pytest tests`), los números reales están en
-`progress/mutacion_F-034.md`.
+falso verde con el CLI a secas.** `ejecutor_para` manda lo que no es de ningún
+servicio a `python -m pytest` **sin ruta**, y como no hay configuración de
+pytest en la raíz, esa invocación recoge `services/**/tests` y **revienta en la
+recolección en 0,81 s** pase lo que pase: exit 1, que el mutador cuenta como
+MUERTO. Por eso la campaña buena de F-034 se lanzó pasando el ejecutor por API.
 
 Afecta también a `progress/mutacion_F-012.md` (61 mutantes sobre `harness/`).
 **No se arregla en F-034**: está fuera de su alcance y toca la puerta de todas
-las features. Y el 1.5.3 en vuelo de `arnes-base` ataca justo ese defecto.
+las features. Está dado de alta en **F-038** (`harness/features.json`, commit
+`73a6b1d`), junto al coste del ciclo SDD.
 
 ## Cierre de sesión — 2026-08-19
 

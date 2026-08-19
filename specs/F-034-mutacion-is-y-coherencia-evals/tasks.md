@@ -97,7 +97,7 @@ Un commit por tarea: `F-034 Tn: descripción`. Sin `push` ni PR.
       → `progress/mutacion_F-034.md` sin ningún análisis en `PENDIENTE`; línea
       `PUERTA COBERTURA` de `init.sh` en `[OK]`.
 
-- [~] **T12: Porte a `arnes-base` — BLOQUEADO (ver progress/impl_F-034.md §T12)** (repositorio
+- [x] **T12: Porte a `arnes-base`** (repositorio
       `C:\Users\pgris\PycharmProjects\arnes-base`, commit propio allí, sin
       `push`): `harness/mutacion.py`, `tests/test_mutacion_operadores.py`, el
       punto nuevo de C4 bis en `CHECKPOINTS.md`, la frase de
@@ -109,6 +109,44 @@ Un commit por tarea: `F-034 Tn: descripción`. Sin `push` ni PR.
       `diff <(tr -d '\r' < arnes-base/harness/mutacion.py) <(tr -d '\r' < ../albaranes/harness/mutacion.py)`
       vacío, ídem para el test; `python -m pytest arnes-base/tests -q` en verde;
       `git -C ../arnes-base log --oneline -1` muestra el commit de la versión.
+
+      **CÓMO SE RESOLVIÓ** (estaba `[~]` BLOQUEADO; ver `progress/impl_F-034.md`
+      §T12 para el bloqueo original y §T15 para el desenlace). El bloqueo era
+      real: había otro trabajo en vuelo y sin commitear sobre el mismo
+      `harness/mutacion.py` de `arnes-base`. Lo resolvió el **humano**, no el
+      implementer, decidiendo incorporar los dos encargos a la **misma versión**:
+      la **1.6.0 de `arnes-base`** lleva las cuatro piezas del encargo de
+      «mutación fiable» **y** el porte de `is`/`is not` de F-034. Commits allí,
+      ya **pusheados** a `origin/main` (verificado con
+      `git -C C:/Users/pgris/PycharmProjects/arnes-base log --oneline` y
+      `git branch -r --contains 89a9ba9`):
+
+      | Commit | Qué trae |
+      |---|---|
+      | `860902e` | 1.6.0 (1/4): la campaña de mutación deja de poder contar muertos falsos |
+      | `b7dce9d` | 1.6.0 (2/4): la prueba de verdad, y dos defectos más que ha destapado |
+      | `febb51d` | 1.6.0 (3/4): **el mutador muta `is` / `is not` (porte de F-034)** |
+      | `3ceb95b` | 1.6.0 (4/4): entrega — `VERSION`, entrada en la guía y el §5 ampliado |
+      | `89a9ba9` | 1.6.0: `ruff` ordena los imports de los tres tests de mutación |
+
+      Comprobado en `arnes-base` (solo lectura, hay otro agente trabajando ahí):
+      `arnes-base/harness/VERSION` → `ARNES_VERSION=1.6.0`, y
+      `grep -c "ast.Is" arnes-base/harness/mutacion.py` → **2** (las dos entradas
+      de `COMPARACIONES` que añade F-034). El porte está dentro.
+
+      **Desviación aceptada respecto a la letra de T12**: `mutacion.py` **no**
+      viaja byte a byte, porque en `arnes-base` convive con el encargo de línea
+      base, y `test_mutacion_operadores.py` tampoco (allí el test de R14 se
+      generalizó, porque `evals/fixtures/` es de `albaranes`). El reviewer ya
+      verificó ambas cosas y las calificó de «adaptación correcta y mejor que la
+      copia literal». Lo que R18–R21 exigen —que el mutador de `arnes-base` mute
+      `is`/`is not`, en su versión, con su aviso en la guía— está cumplido.
+
+      **La propagación de vuelta a `albaranes` NO forma parte de esta tarea.**
+      Se intentó en el commit `e97f9b9` y **se ha revertido** (`163846b`) porque
+      metía ~1.000 líneas de producción ajenas en el alcance de F-034 después de
+      medir las puertas. Se rehará tras el merge de F-034, en su propia rama
+      `chore/`. Ver la nota de §T15 del informe.
 
 - [x] **T13: Cierre documental**. `progress/impl_F-034.md` con la sección
       **Evidencias** (tests y resultado, cobertura, mutantes/supervivientes,
