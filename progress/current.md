@@ -1,13 +1,54 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-## F-034 · en revisión, segunda pasada (2026-08-19)
+## F-034 · CR-2 cerrado, a la espera de la tercera pasada (2026-08-20)
 
 Rama `feature/F-034-mutacion-is-y-coherencia-evals`, feature `in_progress`.
-**Las catorce tareas T0–T14 están en `[x]`**, incluida T12. El trabajo en
-`albaranes` está terminado y `bash harness/init.sh` en verde. Lo que queda es
-el **veredicto de la segunda pasada del reviewer** sobre los cinco cambios
-requeridos de `progress/review_F-034.md`, ya atendidos.
+**Las catorce tareas T0–T14 están en `[x]`**, incluida T12. `bash harness/init.sh`
+en verde: **280 passed en 86,30 s**, `PUERTA COBERTURA: 100.0% de 12 líneas
+cambiadas`.
+
+### El CR-2 reabierto de la segunda pasada: cerrado (§T16 del informe)
+
+De los cinco cambios requeridos del review, cuatro ya estaban cerrados y solo
+quedaba **CR-2: la campaña de mutación no reproducía sus números**. El reviewer
+la reejecutó y obtuvo 9 muertos / 8 supervivientes / 2 timeouts donde el
+informe declaraba 18 / 1 / 0. **Tenía razón**, y su argumento no se discute: un
+superviviente exige que la suite termine en verde, así que una máquina cargada
+puede inventar *muertos* falsos pero nunca *supervivientes* falsos.
+
+Lo hecho, en este orden:
+
+1. **Tres tests nuevos** en `tests/test_mutacion_operadores.py`, con **fase RED
+   pegada mutante a mutante**, que cierran los **cuatro huecos reales** de los
+   ocho supervivientes (`208 [logico]`, `208 [entero]`, `220 [entero]`,
+   `221 [aritmetico]`). El más grave era el cuarto: con él, el delimitador
+   **derecho** de `_delimitado` no se comprobaba nunca y el mutante volvía a
+   caer dentro del comentario. El test que ya existía usaba «anal**is**is», que
+   el byte ANTERIOR ya rechaza; el nuevo usa «**isla**», que empieza por `is` y
+   obliga a mirar el byte SIGUIENTE.
+2. **Campaña rehecha** con el método documentado (ejecutor por API,
+   `--workers 1`): **19 generados, 14 muertos, 4 supervivientes, 1 timeout en
+   1.063,1 s**. Números pegados en `progress/mutacion_F-034.md`.
+3. **Los 4 supervivientes que quedan son equivalentes**, comprobados uno a uno
+   por barrido exhaustivo antes de firmarlos —incluidos los tres que el
+   reviewer ya había identificado—. **Ninguno queda en `PENDIENTE`.**
+4. **El quinto «hueco» no lo era**: `251 [entero]` es equivalente, con
+   demostración. La línea solo se ejecuta con un token de palabra, cuyo primer
+   byte es de palabra; cualquier coincidencia en `posicion + 1` estaría
+   precedida por él y `_delimitado` la rechazaría igual. Saltársela no cambia
+   nada.
+5. **Los timeouts, medidos en vez de declarados**: `251 [aritmetico]` es un
+   bucle infinito de verdad (`exit=124` a los 200 s). `207 [logico]` **no lo
+   es**: muere en 48,28 s. Aquel timeout era la máquina cargada del reviewer
+   (63 min de campaña frente a los 17,7 min de ésta).
+6. **Corregida la frase falsa** del informe de mutación —que el gemelo de la
+   línea 208 moría con `test_f034_r7`—, con lo medido: hoy muere, pero por el
+   test nuevo, y antes sobrevivía.
+
+**No se ha propagado la 1.6.0 a esta rama**, que fue el error del primer
+rechazo. `harness/mutacion.py` sigue sin diff contra HEAD tras la campaña
+(comprobado con `git status`).
 
 > Esta sección sustituye a la que titulaba «F-034 · BLOQUEADA en el porte a
 > `arnes-base`». **Ese bloqueo ya no existe** y la afirmación que hacía —

@@ -681,14 +681,353 @@ propuesta para que el humano decida si abre feature.
 
 ---
 
+## T16 · CR-2 reabierto: la campaña de verdad, los huecos que destapó y los mutantes que no se pueden matar
+
+El review, en su **segunda pasada**, reejecutó la campaña de F-034 con el
+método que documenta el aviso de `progress/mutacion_F-034.md` y **los números
+de este informe no se reprodujeron**:
+
+| Métrica | Lo que declaraba `mutacion_F-034.md` | Reejecución del reviewer |
+|---|---|---|
+| Mutantes generados/evaluados | 19 / 19 | 19 / 19 |
+| Muertos | **18** | **9** |
+| Supervivientes | **1** | **8** |
+| Timeouts | **0** | **2** |
+| Tiempo total | **111,0 s** | **3.812,0 s** (63 min) |
+
+**No discuto la medición del reviewer: es la buena, y su argumento es
+correcto.** Un superviviente significa que la suite terminó en verde (exit 0)
+con el mutante puesto. Una máquina cargada puede inventar *muertos* falsos —un
+proceso que se corta por timeout, una suite que revienta por otra razón—, pero
+no puede inventar *supervivientes* falsos: ningún test que fallaba pasa a
+aprobar por ir lento. Y lo demostró además **sin ejecutar nada**: dos de los
+mutantes que este informe daba por muertos son semánticamente idénticos al
+original, así que ningún test podía matarlos.
+
+### Por qué los primeros números salieron mal (causa probable, no coartada)
+
+El **bytecode rancio** que se documentó al construir el arnés 1.6.0: CPython
+reutiliza el `.pyc` cuando el fuente conserva **tamaño y `mtime` truncado a
+segundos**, y dos mutantes consecutivos cumplen ambas cosas a menudo: una
+campaña en serie reescribe el mismo fichero muchas veces seguidas, y buena
+parte de las mutaciones de este mutador **no cambian la longitud del fichero**
+(`+`→`-`, `<`→`<=` no, pero `[-1:]`→`[-2:]`, `0`→`1` y `!=`→`==` sí). El
+segundo mutante se juzga entonces con el bytecode del primero y sale
+**muerto** sin haber sido evaluado.
+
+La 1.6.0 de `arnes-base` lo arregla, pero **esta rama corre a propósito con el
+`mutacion.py` anterior**: la propagación se revirtió (§T15 punto 2) porque
+metía ~1.000 líneas ajenas en el alcance de F-034 después de medir las puertas,
+y volver a meterla aquí sería repetir el error que ya provocó un rechazo. La
+propagación se rehará tras el merge, en su rama `chore/`.
+
+### La campaña rehecha: **14 muertos, 4 supervivientes, 1 timeout en 1.063,1 s**
+
+Relanzada con el método exacto del aviso (ejecutor por API contra la suite de
+la raíz, `--workers 1`, `PYTHONPATH=.`), **después** de escribir los tests
+nuevos. Salida completa mutante a mutante y análisis de cada superviviente en
+`progress/mutacion_F-034.md`; aquí, el antes y el después:
+
+| Métrica | Informe viejo | Reejecución del reviewer | **Esta campaña** |
+|---|---|---|---|
+| Generados / evaluados | 19 / 19 | 19 / 19 | **19 / 19** |
+| Muertos | 18 | 9 | **14** |
+| Supervivientes | 1 | 8 | **4** |
+| Timeouts | 0 | 2 | **1** |
+| Tiempo total | 111,0 s | 3.812,0 s | **1.063,1 s** |
+
+Los 8 supervivientes del reviewer se reparten exactamente como decía el
+análisis: **cuatro eran huecos reales** y hoy mueren (`208 [logico]`,
+`208 [entero]`, `220 [entero]`, `221 [aritmetico]`), y **cuatro son
+equivalentes** y siguen vivos (`207 [entero]`, `220 [comparacion]`,
+`221 [entero]`, `251 [entero]`). Ninguno queda en `PENDIENTE`.
+
+**Coherencia interna**, que es la comprobación que el propio review propone
+como invariante nuevo: 1.063,1 s / 19 = **56 s por mutante** contra una suite
+de la raíz de ~50 s con `-x`, más los 120 s del que se cuelga. Cuadra. Los
+111,0 s del informe viejo daban **5,8 s por mutante** contra esa misma suite:
+no cuadraba, y ahí estaba la pista que este informe no supo leer en su día —
+después de haber usado ese mismo razonamiento en §T11 para destapar el falso
+verde del CLI—.
+
+Y una nota sobre el tiempo: 1.063 s frente a los 3.812 s del reviewer, con la
+misma campaña. La diferencia es carga de máquina, y es también la explicación
+de sus dos timeouts (ver más abajo).
+
+**El mutante `[11/19]` no aparece en la salida** y no se ha perdido: es
+`222 [not]`, que al quitar el `not` de una expresión entre paréntesis deja el
+cierre huérfano (`SyntaxError: unmatched ')'`). `evaluar_mutantes` lo cuenta
+como muerto sin lanzar la suite y hace `continue` **antes** del eco. Los 14
+muertos son 13 juzgados por la suite + 1 que no compila. Observación para el
+arnés, fuera del alcance de F-034.
+
+### Fase RED de los tests nuevos (mutante a mutante, salida real)
+
+Los cinco supervivientes que el review señaló como huecos reales están todos en
+el delimitador de palabra que añade F-034 (`_es_palabra`, `_delimitado`,
+`_localizar` de `harness/mutacion.py`). Las tres funciones son **puras**: se
+prueban sin red, sin BBDD y sin subprocesos.
+
+Método de cada RED, repetible a mano: se edita la línea indicada de
+`harness/mutacion.py`, se lanza
+
+```
+PYTHONDONTWRITEBYTECODE=1 python -m pytest tests/test_mutacion_operadores.py \
+    -q --tb=short -p no:cacheprovider
+```
+
+y se restaura con `git checkout -- harness/mutacion.py`. (`PYTHONDONTWRITEBYTECODE=1`
+está puesto justamente para que el bytecode rancio no falsee también esto.)
+
+#### RED 1 y 2 — `_es_palabra` deja de exigir el último byte (mutantes `208 [logico]` y `208 [entero]`)
+
+```
+MUTANTE mutacion.py:208  and _PARTE_DE_PALABRA.match(objetivo[-1:])  ->  or _PARTE_DE_PALABRA.match(objetivo[-1:])
+......F.....                                                             [100%]
+================================== FAILURES ===================================
+_____ test_f034_r5_es_palabra_exige_que_LOS_DOS_extremos_sean_de_palabra ______
+tests\test_mutacion_operadores.py:234: in test_f034_r5_es_palabra_exige_que_LOS_DOS_extremos_sean_de_palabra
+    assert _es_palabra(b"is=") is False, (
+E   AssertionError: empieza por letra pero termina en símbolo: el ÚLTIMO byte también tiene que ser de palabra, y es el último, no el penúltimo
+E   assert True is False
+E    +  where True = _es_palabra(b'is=')
+=========================== short test summary info ===========================
+FAILED tests/test_mutacion_operadores.py::test_f034_r5_es_palabra_exige_que_LOS_DOS_extremos_sean_de_palabra
+1 failed, 11 passed in 0.29s
+--- arbol restaurado: 0 cambios en mutacion.py
+```
+
+```
+MUTANTE mutacion.py:208  and _PARTE_DE_PALABRA.match(objetivo[-1:])  ->  and _PARTE_DE_PALABRA.match(objetivo[-2:])
+......F.....                                                             [100%]
+================================== FAILURES ===================================
+_____ test_f034_r5_es_palabra_exige_que_LOS_DOS_extremos_sean_de_palabra ______
+tests\test_mutacion_operadores.py:234: in test_f034_r5_es_palabra_exige_que_LOS_DOS_extremos_sean_de_palabra
+    assert _es_palabra(b"is=") is False, (
+E   AssertionError: empieza por letra pero termina en símbolo: el ÚLTIMO byte también tiene que ser de palabra, y es el último, no el penúltimo
+E   assert True is False
+E    +  where True = _es_palabra(b'is=')
+=========================== short test summary info ===========================
+FAILED tests/test_mutacion_operadores.py::test_f034_r5_es_palabra_exige_que_LOS_DOS_extremos_sean_de_palabra
+1 failed, 11 passed in 0.29s
+--- arbol restaurado: 0 cambios en mutacion.py
+```
+
+Un solo caso —`b"is="`, letra al principio y símbolo al final— mata los dos: es
+el único token en el que «hay que mirar el último byte, y tiene que ser **el
+último**» tiene consecuencias.
+
+#### RED 3 — `_delimitado` deja de mirar el byte anterior en la columna 1 (mutante `220 [entero]`)
+
+```
+MUTANTE mutacion.py:220  anterior = bruta[ini - 1 : ini] if ini > 0 else b""  ->  anterior = bruta[ini - 1 : ini] if ini > 1 else b""
+.......F....                                                             [100%]
+================================== FAILURES ===================================
+____ test_f034_r5_delimitado_mira_los_dos_bytes_que_rodean_la_coincidencia ____
+tests\test_mutacion_operadores.py:256: in test_f034_r5_delimitado_mira_los_dos_bytes_que_rodean_la_coincidencia
+    assert _delimitado(b"ais", 1, 3) is False, (
+E   AssertionError: el byte anterior es de palabra: la coincidencia de la columna 1 es el final de «ais», no un operador
+E   assert True is False
+E    +  where True = _delimitado(b'ais', 1, 3)
+=========================== short test summary info ===========================
+FAILED tests/test_mutacion_operadores.py::test_f034_r5_delimitado_mira_los_dos_bytes_que_rodean_la_coincidencia
+1 failed, 11 passed in 0.28s
+--- arbol restaurado: 0 cambios en mutacion.py
+```
+
+#### RED 4 — el delimitador DERECHO no se comprueba nunca (mutante `221 [aritmetico]`)
+
+Este es el más grave de los cinco, y el único que se ve desde fuera del módulo:
+con `fin - 1`, `siguiente` es **siempre la cadena vacía** y el byte que va
+detrás de la coincidencia deja de mirarse. El mutante vuelve a caer **dentro
+del comentario**, que es exactamente el defecto que R5 existe para evitar:
+
+```
+MUTANTE mutacion.py:221  siguiente = bruta[fin : fin + 1]  ->  siguiente = bruta[fin : fin - 1]
+.....F.F....                                                             [100%]
+================================== FAILURES ===================================
+___________ test_f034_r5_bis_no_muta_una_palabra_que_EMPIEZA_por_is ___________
+tests\test_mutacion_operadores.py:211: in test_f034_r5_bis_no_muta_una_palabra_que_EMPIEZA_por_is
+    assert mutantes[0].linea == 4, (
+E   AssertionError: el mutante cayó en la línea 3 ('valor  # is notla desierta'); el operador está en la 4
+E   assert 3 == 4
+E    +  where 3 = Mutante(fichero='modulo.py', linea=3, col=17, original='valor  # isla desierta', mutado='valor  # is notla desierta', operador='comparacion', longitud=2, sustituto='is not').linea
+____ test_f034_r5_delimitado_mira_los_dos_bytes_que_rodean_la_coincidencia ____
+tests\test_mutacion_operadores.py:260: in test_f034_r5_delimitado_mira_los_dos_bytes_que_rodean_la_coincidencia
+    assert _delimitado(b"isla", 0, 2) is False, (
+E   AssertionError: el byte siguiente es de palabra: la coincidencia es el principio de «isla», no un operador
+E   assert True is False
+E    +  where True = _delimitado(b'isla', 0, 2)
+=========================== short test summary info ===========================
+FAILED tests/test_mutacion_operadores.py::test_f034_r5_delimitado_mira_los_dos_bytes_que_rodean_la_coincidencia
+2 failed, 10 passed in 0.31s
+--- arbol restaurado: 0 cambios en mutacion.py
+```
+
+**Por qué el test que ya existía no lo cazaba**, y esto es lo que hay que
+aprender del episodio: `FUENTE_COMENTARIO` usa la palabra «analisis», y las dos
+apariciones de `is` que lleva dentro están **precedidas** por letra (`l` y
+`s`). El byte ANTERIOR ya las rechaza, así que la mitad derecha de
+`_delimitado` nunca decidía nada. La fuente nueva usa «**isla**», que
+**empieza** por `is`: el byte anterior es un espacio y no delata nada, y lo
+único que separa el comentario del operador de verdad es el byte SIGUIENTE.
+
+#### RED 5 — el quinto no es un hueco: `251 [entero]` es EQUIVALENTE
+
+```
+MUTANTE mutacion.py:251  posicion = bruta.find(objetivo, posicion + 1, hasta)  ->  posicion = bruta.find(objetivo, posicion + 2, hasta)
+............                                                             [100%]
+12 passed in 0.12s
+--- arbol restaurado: 0 cambios en mutacion.py
+```
+
+No es que falte un test: es que **no puede existir**, y se demuestra en tres
+líneas. La línea 251 solo se ejecuta cuando `exigir_palabra` es cierto, es
+decir cuando `_es_palabra(objetivo)` lo es, es decir cuando `objetivo[0]` **es
+un byte de palabra**. Para que `+1` y `+2` se comporten distinto tendría que
+haber una coincidencia **en `posicion + 1`**; y esa coincidencia tendría, por
+definición, en `bruta[posicion]` el byte `objetivo[0]` — un byte de palabra—,
+con lo que `_delimitado` la rechazaría igualmente. Saltársela no cambia nunca
+lo que devuelve `_localizar`; solo ahorra una vuelta del bucle.
+
+Comprobado además por fuerza bruta (barrido de los dos bucles, `+1` contra
+`+2`, sobre todas las líneas de hasta 6 símbolos del alfabeto
+`{i, s, a, espacio, =, \xc3}` y los siete tokens de palabra de las tablas):
+**0 diferencias sobre 391.902 combinaciones**. Y con un token inventado de
+bytes repetidos (`b"aa"`), que es el único caso en el que dos coincidencias
+pueden solaparse: **0 diferencias** también, tal y como predice la
+demostración.
+
+### Los supervivientes que quedan, uno a uno
+
+Los tres que el reviewer ya había identificado como equivalentes los **he
+comprobado yo antes de firmarlos**, y no de palabra: con un barrido exhaustivo
+que compara la expresión sana con la mutada.
+
+El barrido, para quien quiera repetirlo (no se versiona: es un script de un
+solo uso, y aquí va entero para que no haga falta adivinarlo):
+
+```python
+import itertools
+from harness.mutacion import _PARTE_DE_PALABRA as P, _delimitado, _es_palabra
+
+TODOS = [bytes([b]) for b in range(256)]
+ALF = [b"i", b"s", b"a", b" ", b"=", b"\xc3"]
+
+# 207 [entero]: objetivo[:1] -> objetivo[:2]
+for n in (1, 2, 3):
+    for combo in itertools.product(TODOS, repeat=n):
+        o = b"".join(combo)
+        assert bool(o and P.match(o[:1]) and P.match(o[-1:])) == bool(
+            o and P.match(o[:2]) and P.match(o[-1:]))
+
+# 220 [comparacion] (ini>0 -> ini>=0) y 221 [entero] (fin+1 -> fin+2)
+for n in range(1, 5):
+    for combo in itertools.product(ALF, repeat=n):
+        bruta = b"".join(combo)
+        for ini in range(len(bruta) + 1):
+            for fin in range(ini, len(bruta) + 1):
+                ant = bruta[ini - 1 : ini] if ini > 0 else b""
+                sig = bruta[fin : fin + 1]
+                assert (not (P.match(ant) or P.match(sig))) == (
+                    not (P.match(bruta[ini - 1 : ini] if ini >= 0 else b"") or P.match(sig)))
+                assert (not (P.match(ant) or P.match(sig))) == (
+                    not (P.match(ant) or P.match(bruta[fin : fin + 2])))
+
+# 251 [entero]: el bucle de _localizar, avanzando 1 byte contra 2
+def barrer(bruta, objetivo, paso):
+    posicion = bruta.find(objetivo, 0, len(bruta))
+    while posicion != -1:
+        if _delimitado(bruta, posicion, posicion + len(objetivo)):
+            return posicion
+        posicion = bruta.find(objetivo, posicion + paso, len(bruta))
+    return None
+
+for objetivo in [b"is", b"is not", b"and", b"or", b"not", b"True", b"False", b"aa"]:
+    assert _es_palabra(objetivo)
+    for n in range(1, 7):
+        for combo in itertools.product(ALF, repeat=n):
+            bruta = b"".join(combo)
+            assert barrer(bruta, objetivo, 1) == barrer(bruta, objetivo, 2)
+```
+
+```
+$ PYTHONPATH=. PYTHONDONTWRITEBYTECODE=1 python equivalentes.py
+207 [entero]  objetivo[:1]->[:2]   : 0 diferencias sobre 16843008 tokens de 1..3 bytes
+220 [comparacion] ini>0 -> ini>=0  : 0 diferencias sobre 21834 casos
+    (bruta[-1:0] == b'' para toda bruta: la rama then con ini==0 da lo mismo que el else)
+221 [entero]  fin+1 -> fin+2       : 0 diferencias sobre 21834 casos
+251 [entero]  posicion+1 -> +2      : 0 diferencias sobre 391902 lineas x token
+    control con un token inventado de bytes repetidos (b'aa'): 0 diferencias
+    _PARTE_DE_PALABRA = b'[A-Za-z0-9_\x80-\xff]' (clase de UN carácter, y re.Pattern.match ancla al byte 0)
+```
+
+- **`207 [entero]`** (`objetivo[:1]` → `objetivo[:2]`) y **`221 [entero]`**
+  (`bruta[fin : fin + 1]` → `fin + 2`): `_PARTE_DE_PALABRA` es una clase de
+  **un solo carácter** y `re.Pattern.match` **ancla al byte 0**, así que la
+  rodaja de dos bytes interroga exactamente el mismo byte que la de uno. El
+  segundo byte no se mira nunca.
+- **`220 [comparacion]`** (`ini > 0` → `ini >= 0`): con `ini == 0` la rama
+  *then* evalúa `bruta[-1:0]`, que es la cadena vacía para **cualquier**
+  `bruta` —el índice `-1` cae al final y el corte va hacia atrás—, o sea lo
+  mismo que el `else`. Para `ini > 0` las dos condiciones coinciden.
+- **`251 [entero]`**: demostrado arriba (RED 5).
+
+### Los timeouts: uno lo es de verdad, el otro no
+
+El review pedía «basta con declararlos». Los he medido, porque declarar sin
+medir es lo que nos ha traído hasta aquí, y **uno de los dos no es lo que
+parecía**. Método: mutación aplicada y **la misma suite que juzga la campaña**
+(`python -m pytest tests -x -q --tb=no -p no:cacheprovider`) con tope de 200 s.
+
+| Mutante | Medido | Qué es |
+|---|---|---|
+| `251 [aritmetico]` `posicion + 1` → `posicion - 1` | `exit=124 segundos=200`, cortado por el tope, colgado en `tests/test_mutacion_operadores.py` | **Bucle infinito de verdad**: `find` desde `posicion - 1` devuelve otra vez la misma `posicion`, que se vuelve a rechazar, para siempre. El timeout es el único veredicto posible |
+| `207 [logico]` `and` → `or` | `1 failed, 274 passed in 48.28s`, `exit=1 segundos=50` | **NO es un bucle infinito: muere.** El timeout que vio el reviewer es su máquina cargada (63 min para 19 mutantes = ~200 s de media contra una suite de 48-92 s y un tope de 120 s por mutante) |
+
+Con `objetivo or (...)`, `_es_palabra` pasa a ser cierto para **todo** token no
+vacío, incluidos los símbolos; entonces a `==` se le exige delimitación y
+`x==y` deja de mutar. Leyendo el código, eso lo caza **`test_f034_r6`, que ya
+existía** —esta parte es razonamiento, no medición: en la ejecución de arriba
+el que falla primero es uno de los tests nuevos, porque va antes en el
+fichero—. Lo medido y lo que importa es que **muere en 48 s**.
+
+### La frase falsa de `progress/mutacion_F-034.md`, corregida
+
+El análisis del superviviente `207 [entero]` se apoyaba en esto:
+
+> «los otros **18 mutantes de esta misma función y de `_delimitado`/`_localizar`
+> mueren todos**, incluido el gemelo de la línea 208 (`objetivo[-1:]` →
+> `objetivo[-2:]`), que **sí** cambia el byte interrogado y **sí** lo caza
+> `test_f034_r7`. La suite no tiene un hueco aquí».
+
+**Era falsa por partida doble.** El gemelo de la 208 **sobrevivía** —el
+reviewer lo midió, `[4/19] superviviente`—, y `test_f034_r7` no tenía nada que
+ver con él: R7 comprueba que `is  not` con espaciado no canónico no genera
+mutante, que no interroga ningún extremo de `_es_palabra`. Y la conclusión que
+colgaba de ella —«la suite no tiene un hueco aquí»— era exactamente lo
+contrario de la verdad: **el hueco existía, y eran cuatro**.
+
+La conclusión sobre el mutante `207 [entero]` sí se sostiene, pero por su
+propio argumento (clase de un carácter + `match` anclado), no por el gemelo. La
+frase se ha reescrito en `progress/mutacion_F-034.md` con lo **medido**: el
+gemelo de la 208 **ya muere**, y muere por el test nuevo
+`test_f034_r5_es_palabra_exige_que_LOS_DOS_extremos_sean_de_palabra`, con la
+traza RED 2 de arriba como prueba de que antes no moría.
+
 ## Evidencias
+
+> **Al día a 2026-08-20**, tras cerrar el CR-2 reabierto (§T16). Las filas de
+> mutación y de tests que declaraba la versión anterior de esta tabla
+> —«18 muertos, 1 superviviente… 111,0 s»— **eran falsas**; se conservan
+> tachadas en la re-verificación de abajo para que el rastro no se pierda.
 
 | Evidencia | Valor real medido |
 |---|---|
-| **Tests ejecutados y resultado** | Suite de la raíz: **277 passed**, 0 failed. Suite de sv6: **111 passed**, 0 failed. Resto de servicios en verde por caché (árbol sin cambios). Tests nuevos: **9** en `tests/test_mutacion_operadores.py` + **1** en `services/albaran-valoracion-persist/tests/test_f019_r8_r15_precedencia.py` |
+| **Tests ejecutados y resultado** | Suite de la raíz: **280 passed**, 0 failed. Suite de sv6: **111 passed**, 0 failed. Resto de servicios en verde por caché (árbol sin cambios). Tests nuevos: **12** en `tests/test_mutacion_operadores.py` (9 de la primera entrega + **3** de §T16) + **1** en `services/albaran-valoracion-persist/tests/test_f019_r8_r15_precedencia.py` |
 | **Cobertura de las líneas cambiadas** | **100,0 %** (12/12 líneas, umbral 80 %, nivel `estandar`) — línea `PUERTA COBERTURA` de `bash harness/init.sh` |
-| **Mutantes generados y supervivientes** | F-034: **19 generados, 18 muertos, 1 superviviente**, analizado y cerrado como equivalente (`progress/mutacion_F-034.md`). Ojo: el CLI a secas da 19/19 falsos, ver §T11 |
-| **Tiempo de ejecución de la suite** | Raíz **63,18 s**; sv6 **2,87 s**; campaña de mutación de F-034 **111,0 s** |
+| **Mutantes generados y supervivientes** | F-034: **19 generados, 14 muertos, 4 supervivientes, 1 timeout** en 1.063,1 s. Los 4 supervivientes están **analizados y cerrados como equivalentes**, cada uno con barrido exhaustivo; el timeout es un bucle infinito del mutante (`progress/mutacion_F-034.md`). Ojo: el CLI a secas da 19/19 falsos, ver §T11 |
+| **Tiempo de ejecución de la suite** | Raíz **86,30 s** con medición de cobertura (**~50 s** sin ella, que es la que juzga la campaña); sv6 **2,87 s**; campaña de mutación de F-034 **1.063,1 s** (17,7 min) |
 
 Evidencias adicionales de esta feature, que son su razón de ser:
 
@@ -698,6 +1037,15 @@ Evidencias adicionales de esta feature, que son su razón de ser:
 | **F-019** | 31 mutantes, 28 muertos, 3 supervivientes | **49** generados, **46 muertos**, **3** supervivientes (los mismos 3, ya analizados) — 331,5 s |
 
 ### Re-verificación de las Evidencias tras el revert (2026-08-19, al atender el review)
+
+> **Corregido el 2026-08-20 (§T16).** Esta re-verificación dio por buena la
+> fila de mutación —«18 muertos, 1 superviviente, 111,0 s»— **y no lo era**.
+> Comprobó el **alcance** (56 líneas / 19 mutantes, que sí era correcto) y de
+> ahí dedujo que los veredictos también lo eran. No se sigue: el review lo
+> demostró reejecutando la campaña, y 9 de los 19 veredictos eran distintos.
+> Lo que dice esta sección sobre cobertura, tests y alcance sigue en pie; lo
+> que dice sobre los veredictos de mutación, no. Los números buenos están en la
+> tabla de Evidencias de arriba y en `progress/mutacion_F-034.md`.
 
 Las cuatro filas de arriba se midieron antes del episodio de §T15 punto 2. Tras
 revertir la propagación, **vuelven a ser exactas**. Comprobado ejecutando, no
@@ -766,6 +1114,18 @@ Lo único que queda apuntado, y **no bloquea porque no es de esta feature**:
    su sitio es `arnes-base`: que `init.sh` ignore las marcas `[ADAPTAR]` entre
    comillas invertidas, y que el informe de mutación declare el SHA de HEAD
    contra el que se midió (§T15, punto 5).
+4. **Tres observaciones más para `arnes-base`**, salidas de §T16 y tampoco
+   aplicadas aquí (esta rama no puede tocar `harness/mutacion.py` sin volver a
+   inflar su propio alcance, que es lo que provocó el primer rechazo):
+   - el `continue` del mutante que **no compila** se salta el eco, así que ese
+     mutante desaparece del rastro aunque cuente en los totales;
+   - el operador `not` aplicado a una expresión **entre paréntesis** genera
+     mutantes sintácticamente inválidos, que no miden nada;
+   - las dos invariantes que propone el review —**coherencia interna del
+     tiempo** (segundos ÷ mutantes contra lo que tarda la suite) y **un mutante
+     equivalente no puede salir muerto**— detectan campañas falsas **sin gastar
+     CPU**, y las dos habrían cazado este informe. La segunda es la que lo
+     cazó.
 
 ### Confirmación de por qué §T12 paró — y qué pasó luego
 
