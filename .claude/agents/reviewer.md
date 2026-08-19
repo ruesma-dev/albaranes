@@ -60,6 +60,19 @@ nivel de rigor dice cuánta evidencia hay que exigir.
    además dos o tres supervivientes y confirma que existen como mutantes
    reales, con el mismo operador y el mismo texto original→mutado. Es la
    única defensa contra un informe de mutación escrito a mano.
+   **Recalcular no demuestra que los muertos lo estén**: un informe con el
+   alcance y el número de mutantes correctos y unos «N muertos» inventados
+   pasaría el recálculo puro. Así que mira el «Tiempo total» que declara el
+   propio informe de mutación: **si es inferior a 5 minutos, reejecuta la
+   campaña entera** con `python -m harness.mutacion --feature F-XXX --salida
+   <ruta fuera de progress/>` y compara los totales (mutantes, muertos,
+   supervivientes, timeouts) con los del informe. La salida **nunca** puede ir
+   a `progress/`: pisaría el informe del implementer. Usa un directorio
+   temporal o tu scratchpad, y comprueba con `git status` que el árbol queda
+   limpio después. Si el «Tiempo total» pasa de 5 minutos, quédate en el
+   recálculo puro y **dilo explícitamente en tu informe** («campaña no
+   reejecutada: N min según el informe»), para que se vea qué nivel de
+   verificación se aplicó.
    **Si la campaña declara cero mutantes**, el recálculo no distingue entre
    «no había nada que mutar» y «el generador está roto o el informe es
    falso»: ambos dan 0. Haz la prueba de control: ejecuta

@@ -132,6 +132,16 @@ recorre estos puntos **contra ese nivel**.
       totales reales, **verificados de forma independiente por el reviewer**
       (alcance y nº de mutantes recalculados con `harness.alcance` y
       `harness.mutacion`; cálculo puro, sin ejecutar la suite).
+- [ ] **Los muertos están comprobados, no solo contados.** Si el «Tiempo
+      total» que declara el informe de mutación es **inferior a 5 minutos**,
+      el reviewer **reejecuta la campaña** con
+      `python -m harness.mutacion --feature F-XXX --salida <ruta fuera de
+      progress/>` y compara los totales. La salida no puede escribirse en
+      `progress/` (pisaría el informe del implementer) y el árbol debe quedar
+      limpio después (`git status`). Si la campaña pasa de 5 minutos, vale el
+      recálculo puro, pero el informe de review **lo dice explícitamente**.
+      Recalcular alcance y nº de mutantes no demuestra que los muertos lo
+      estén: unos «N muertos» inventados pasarían ese control.
 - [ ] Cada superviviente de esa campaña tiene su sección de análisis
       **completada** (ninguna en `PENDIENTE`). En nivel `critico`, además,
       cero supervivientes salvo justificación escrita aceptada por el humano.
