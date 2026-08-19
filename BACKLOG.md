@@ -5,11 +5,13 @@
 
 Resumen: **37 features**, 31 abiertas, 6 terminadas.
 
+En curso: **F-034**.
+
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-034 | Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra | 1 | spec lista | estandar | `feature/F-034-mutacion-is-y-coherencia-evals` |
+| F-034 | Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra | 1 | en curso | estandar | `feature/F-034-mutacion-is-y-coherencia-evals` |
 | F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | spec lista | estandar | `feature/F-035-instalador-no-pisa-estado` |
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 3 | pendiente | critico | `feature/F-036-residuos-contenedores-e-incrementos` |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 4 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -56,7 +58,7 @@ Resumen: **37 features**, 31 abiertas, 6 terminadas.
 
 ### F-034 · Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra
 
-estado **spec lista** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-034-mutacion-is-y-coherencia-evals`
+estado **en curso** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-034-mutacion-is-y-coherencia-evals`
 
 URGENTE Y PRIMERO (decisión del humano, 2026-08-19): esto cambia la VARA DE MEDIR de todas las features, así que cada feature que se cierre antes de arreglarlo se mide con una campaña de mutación ciega en su punto más delicado. Sale de las observaciones del reviewer de F-027 (progress/review_F-027.md §12) y de la experiencia de F-019.
 
