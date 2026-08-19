@@ -112,3 +112,148 @@ literal.)
 tabla pero sin delimitador de palabra, R5 falla por un motivo **distinto** —el
 mutante cae dentro del comentario— y esa traza es la que demuestra el segundo
 defecto.
+
+## T3 y T4 · El cambio en `harness/mutacion.py`, en dos pasos
+
+**T3 — la tabla.** `COMPARACIONES` gana `ast.Is: ("is", "is not")` y
+`ast.IsNot: ("is not", "is")`, con el comentario que declara el límite de R7.
+No hizo falta tocar `_candidatos`: ya recorre `nodo.ops` emitiendo un candidato
+por operador, así que R3 (encadenadas y unidas por `and`/`or`) salió sola.
+
+Tras T3: R1, R2, R3, R4, R7 y R8 en verde; suite de la raíz **275 passed, 2
+failed** (R5 y R14, que aún no tocaban turno). Ninguna regresión.
+
+**Segunda fase RED, la de R5.** Con la tabla ya cargada pero sin delimitador de
+palabra, R5 falla por el motivo que la spec predijo — y esta es la traza que lo
+demuestra:
+
+```
+tests/test_mutacion_operadores.py:174: in test_f034_r5_no_muta_dentro_de_una_palabra_del_comentario
+    assert mutantes[0].linea == 4, (
+E   AssertionError: el mutante cayó en la línea 3 ('valor  # el analis notis previo'); el operador está en la 4
+E   assert 3 == 4
+E    +  where 3 = Mutante(fichero='modulo.py', linea=3, col=24, original='valor  # el analisis previo', mutado='valor  # el analis notis previo', operador='comparacion', longitud=2, sustituto='is not').linea
+```
+
+El mutante caía **dentro de un comentario**: `analisis` → `analis notis`. No
+cambia el comportamiento, sobrevive siempre y ensucia el informe con un falso
+superviviente.
+
+**T4 — el delimitador.** `_PARTE_DE_PALABRA`, `_es_palabra`, `_delimitado` y el
+paso de «primera coincidencia» a «primera coincidencia **válida**» dentro del
+mismo hueco. Se aplica **solo** a tokens que empiezan y acaban en carácter de
+palabra (`is`, `is not`, `not`, `and`, `or`, `True`, `False`, enteros); los
+símbolos se quedan como estaban, o `x==y` dejaría de mutar (R6 lo fija).
+
+Tras T4: `tests/test_mutacion_operadores.py` con **8 de 9** en verde (R14 es de
+T8); suite de la raíz **276 passed, 1 failed** (solo R14). Sin regresión de
+`not`, `and`, `or`, booleanos ni enteros.
+
+Cálculo puro sobre los mismos alcances históricos, ya con el mutador cambiado:
+
+```
+F-019: 49 mutantes  (515 líneas de alcance)
+F-027: 1 mutantes  (58 líneas de alcance)
+```
+
+**Antes → después: F-019 de 31 a 49 (+18) y F-027 de 0 a 1 (+1)**, exactamente
+lo que R9 y R10 exigen.
+
+## T5 · Campaña real sobre F-027 — el mutante nuevo cae en una guarda de verdad
+
+Comando exacto, reproducible tal cual (R12):
+
+```bash
+python -m harness.mutacion --feature F-027 \
+  --base e95549d8880ebdabee45c1ec4fbe20651240428f \
+  --rama feature/F-027-conversion-kg-tn-muerta \
+  --workers 1 --salida progress/mutacion_F-027_remedida.md
+```
+
+Salida real:
+
+```
+F-027: 2 fichero(s), 58 línea(s) de producción (origen rama, e95549d8880ebdabee45c1ec4fbe20651240428f..feature/F-027-conversion-kg-tn-muerta)
+[1/1] muerto        services/albaran-valoracion-persist/application/services/valuation_builder.py:1033 [comparacion] if partida_result.derived_line is not None: -> if partida_result.derived_line is None:
+1 mutantes evaluados, 1 muertos, 0 supervivientes, 0 timeouts en 2.5 s
+Informe: progress/mutacion_F-027_remedida.md
+```
+
+**R9 cumplido al pie de la letra**: 1 mutante, en
+`valuation_builder.py:1033`, con el texto exacto que la spec anticipaba, y
+**MUERTO**. Es el **M1** de la campaña manual de F-027, la que el reviewer
+reprodujo a mano con 17 fallos: la herramienta nueva coincide con el resultado
+medido antes de que existiera. F-027 pasa de un «0 mutantes» que no demostraba
+nada a un mutante real cazado por los tests que ya había.
+
+## T6 · Campaña real sobre F-019 — y un superviviente NUEVO que hubo que cerrar
+
+Comando exacto (R12), precedido del `cp` que repone los análisis ya escritos:
+
+```bash
+cp progress/mutacion_F-019.md progress/mutacion_F-019_remedida.md
+python -m harness.mutacion --feature F-019 \
+  --base cd904cdcecee56311280ee54d81a7158d0529eb5 \
+  --rama feature/F-019-importe-unitario-manda \
+  --workers 1 --salida progress/mutacion_F-019_remedida.md
+```
+
+### Primera pasada: 49 generados, 45 muertos, **4** supervivientes
+
+Los 3 conocidos volvieron a salir **con su análisis repuesto** por el mecanismo
+de la 1.5.1 (`analisis_escritos` + `AVISO_REPUESTO`), que queda así ejercitado
+sobre un caso real. Y apareció **uno nuevo**, de los de `is`:
+
+```
+[5/49] superviviente services/albaran-valoracion-persist/application/services/importe_calculator.py:203 [comparacion] leido = valor if valor is not None else descuento_pct -> leido = valor if valor is None else descuento_pct
+```
+
+### Análisis del superviviente nuevo: **hueco real de la suite**, no equivalente
+
+`_sanitize_descuento` deja traza auditable de un descuento fuera de rango:
+`descuento_fuera_de_rango_ignorado:{leido}`. `clasificar_descuento` devuelve
+`(estado, valor)`, y para `invalido` hay **dos casos distintos**:
+
+| Entrada | `valor` | `leido` original | `leido` mutado |
+|---|---|---|---|
+| `150.0` (fuera de rango, numérico) | `150.0` | `150.0` | `150.0` — **idéntico** |
+| `"15%"` o `nan` (ilegible) | `None` | `"15%"` / `nan` | **`None`** |
+
+El único test que tocaba ese motivo usaba `150.0`, justo el caso en que ambas
+ramas coinciden: por eso el mutante sobrevivía. En el caso ilegible —el que de
+verdad importa, porque es cuando el motivo es la **única** pista de qué llegó
+del PDF— el mutante borra la evidencia y deja `:None`.
+
+Aplico **R11 opción (a): test nuevo que lo mata**. Ni una línea de producción
+(la spec lo prohíbe expresamente, y el código está bien: es la suite la que
+tenía el hueco):
+`services/albaran-valoracion-persist/tests/test_f019_r8_r15_precedencia.py::test_f019_r15_el_motivo_conserva_el_valor_ilegible_que_llego`.
+
+Fase RED del test nuevo — mutante aplicado a mano sobre una copia respaldada
+del fichero, y restaurado inmediatamente después (`git status` limpio de
+producción, verificado):
+
+```
+.F                                                                       [100%]
+________ test_f019_r15_el_motivo_conserva_el_valor_ilegible_que_llego _________
+tests\test_f019_r8_r15_precedencia.py:510: in test_f019_r15_el_motivo_conserva_el_valor_ilegible_que_llego
+    assert "descuento_fuera_de_rango_ignorado:15%" in resultado.reasons
+E   AssertionError: assert 'descuento_fuera_de_rango_ignorado:15%' in ['descuento_fuera_de_rango_ignorado:None']
+E    +  where ['descuento_fuera_de_rango_ignorado:None'] = ImporteResult(importe_calculado=100.0, importe_source='calculated', reasons=['descuento_fuera_de_rango_ignorado:None'], descuento_aplicado=None).reasons
+WARNING  application.services.importe_calculator:importe_calculator.py:207 [importe] descuento_pct fuera de rango [0,100]: None. Se ignora.
+1 failed, 1 passed, 27 deselected in 0.21s
+```
+
+El `1 passed` de esa línea es el test viejo (el de `150.0`) **pasando con el
+mutante puesto**: la demostración de por qué no lo cazaba.
+
+### Segunda pasada, la definitiva: 49 generados, **46 muertos, 3 supervivientes**
+
+```
+49 mutantes evaluados, 46 muertos, 3 supervivientes, 0 timeouts en 331.5 s
+Informe: progress/mutacion_F-019_remedida.md
+```
+
+**R10 cumplido**: 49 mutantes (31 + 18 nuevos), los **18 nuevos muertos**, y los
+supervivientes son **exactamente los 3** ya analizados como equivalentes en
+`progress/mutacion_F-019.md`, con su análisis repuesto y ninguno en `PENDIENTE`.

@@ -44,7 +44,7 @@ Un commit por tarea: `F-034 Tn: descripción`. Sin `push` ni PR.
       entero en verde (R5 y R6 incluidos) y `python -m pytest tests -q` en verde
       (no regresión de `not`, `and`, `or`, booleanos y enteros).
 
-- [ ] **T5: Campaña real sobre F-027** (la prueba de que el mutante nuevo cae en
+- [x] **T5: Campaña real sobre F-027** (la prueba de que el mutante nuevo cae en
       una guarda de verdad y **muere**), con el comando exacto de `design.md`
       §6 y salida a `progress/mutacion_F-027_remedida.md`.
       **Verificación**: el informe declara **1 mutante generado, 1 muerto, 0
@@ -53,7 +53,7 @@ Un commit por tarea: `F-034 Tn: descripción`. Sin `push` ni PR.
       **PARAR** y aplicar R11 (test nuevo o justificación escrita); no se sigue
       con T6 hasta cerrarlo.
 
-- [ ] **T6: Campaña real sobre F-019** (`cp` del informe histórico al nombre de
+- [x] **T6: Campaña real sobre F-019** (`cp` del informe histórico al nombre de
       salida **antes** de lanzarla, para que se repongan los análisis ya
       escritos), con el comando exacto de `design.md` §6.
       **Verificación**: `progress/mutacion_F-019_remedida.md` declara **49

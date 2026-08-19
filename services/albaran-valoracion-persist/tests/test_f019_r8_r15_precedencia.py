@@ -480,3 +480,33 @@ def test_f019_r15_el_importe_deja_el_motivo_de_descuento_invalido(
     assert "descuento_fuera_de_rango_ignorado:150.0" in resultado.reasons
     assert resultado.importe_calculado == pytest.approx(100.0)
     assert resultado.descuento_aplicado is None
+
+
+def test_f019_r15_el_motivo_conserva_el_valor_ilegible_que_llego(
+    calculador_importe,
+):
+    """Un descuento ILEGIBLE deja en el motivo lo que llego, no ``None``.
+
+    Con 150.0 el valor normalizado y el leido coinciden, asi que el test
+    de arriba no distingue de donde sale el numero del motivo. Con un
+    valor que no se puede convertir a float (``"15%"``, tipico de una
+    lectura de PDF) ``clasificar_descuento`` devuelve ``(invalido,
+    None)`` y el unico rastro de que llego algo es el dato crudo. Si el
+    motivo dijera ``:None``, la traza auditable que promete sv6.md se
+    perderia justo en el caso en que hace falta.
+
+    Lo destapa la campana de mutacion de F-034 (R11): el mutante
+    ``valor if valor is not None else descuento_pct`` ->
+    ``valor if valor is None else descuento_pct`` sobrevivia a toda la
+    suite de sv6.
+    """
+    resultado = calculador_importe.compute(
+        cantidad_convertida=10.0,
+        precio_unitario_final=10.0,
+        importe_albaran_declarado=None,
+        descuento_pct="15%",
+    )
+
+    assert "descuento_fuera_de_rango_ignorado:15%" in resultado.reasons
+    assert resultado.importe_calculado == pytest.approx(100.0)
+    assert resultado.descuento_aplicado is None
