@@ -182,9 +182,16 @@ evals** (`python -m evals.runner --con-llm --feature F-XXX`), que ejecuta las
 cuatro fases de IA más el extremo-a-extremo y deja
 `progress/evals_F-XXX.md`. Las rutas protegidas son los prompts YAML, los
 schemas Pydantic que rellena la IA, los clientes LLM y las redes deterministas
-de sv6. Mientras los libros de `evals/ground_truth/` no tengan casos, esa
-pasada da NO_EVALUABLE: por eso la exigencia arranca en `aviso` (decisión D5
-de F-011) y se sube a `bloqueo` cuando el ground truth esté relleno.
+de sv6. Mientras los **fixtures versionados de `evals/fixtures/`** no tengan
+casos, esa pasada da NO_EVALUABLE: por eso la exigencia arranca en `aviso`
+(decisión D5 de F-011) y se sube a `bloqueo` cuando esos fixtures estén
+rellenos. Hoy los seis `_indice.json` siguen con la lista de casos vacía.
+
+> Los libros `.xlsx` de `evals/ground_truth/` **sí existen** —los rellena el
+> humano y `evals/conversor.py` los lee—, pero `.gitignore` excluye `*.xlsx`:
+> quien clona el repositorio no los ve. Condicionar la puerta a ellos era
+> condicionarla a un artefacto invisible; lo que consume `evals.runner` son los
+> fixtures. Corregido en F-034.
 
 ## C5 — La sesión se cerró bien
 

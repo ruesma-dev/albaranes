@@ -1,6 +1,6 @@
 {
   "_descripcion": "Rutas del monorepo cuyo cambio NO lo cubren los tests unitarios: prompts, schemas que rellena la IA, clientes LLM y redes deterministas de valoración. Tocarlas obliga a una pasada completa de evals (specs/F-011-evals-ia).",
-  "_exigencia": "Arranca en 'aviso' (decisión D5 de F-011). Se sube a 'bloqueo' cuando los libros de evals/ground_truth/ tengan casos: hasta entonces la pasada completa no puede dar VERDE porque no hay nada que evaluar.",
+  "_exigencia": "Arranca en 'aviso' (decisión D5 de F-011). Se sube a 'bloqueo' cuando los fixtures versionados de evals/fixtures/ tengan casos (hoy los seis _indice.json siguen con la lista 'casos' vacía): hasta entonces la pasada completa no puede dar VERDE porque no hay nada que evaluar. Aclaración de F-034: los libros .xlsx de evals/ground_truth/ SÍ existen, pero .gitignore los excluye y quien clona el repositorio no los ve, así que condicionar la puerta a ellos era condicionarla a un artefacto invisible; lo que consume evals.runner son los fixtures.",
   "verificaciones": [
     {
       "nombre": "evals",

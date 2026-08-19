@@ -69,7 +69,7 @@ Un commit por tarea: `F-034 Tn: descripción`. Sin `push` ni PR.
       **Verificación**: `git diff` de los dos informes históricos = exactamente
       una línea añadida en cada uno; nada más se toca de ellos.
 
-- [ ] **T8: Coherencia de la puerta de evals**. `CHECKPOINTS.md` línea 185,
+- [x] **T8: Coherencia de la puerta de evals**. `CHECKPOINTS.md` línea 185,
       `harness/rutas_sensibles.json` clave `_exigencia`, y `progress/current.md`
       líneas 33 y 64: la condición pasa a los fixtures versionados de
       `evals/fixtures/`, con la aclaración de que los libros `.xlsx` de

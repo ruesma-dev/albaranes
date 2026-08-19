@@ -56,8 +56,10 @@ Sesión larga (18 y 19 de agosto). `dev` al día, árbol limpio, **ninguna featu
 la **vara de medir** de todas las features, así que va antes que cualquier otra
 cosa: cada feature cerrada hasta que se arregle se mide con una campaña ciega
 justo en el patrón (`x is None`) que ha causado los dos defectos más caros del
-proyecto. Incluye dos incoherencias más (el `evals/ground_truth/` inexistente y
-el rastro de las campañas manuales) y **se porta a `arnes-base`**.
+proyecto. Incluye dos incoherencias más (la puerta de evals condicionada a los
+libros `.xlsx` de `evals/ground_truth/`, que existen pero **no se versionan**,
+en vez de a los fixtures versionados de `evals/fixtures/` que es lo que lee el
+runner; y el rastro de las campañas manuales) y **se porta a `arnes-base`**.
 
 Después, por orden: F-024 (unidad + revisión razonada de unidades en IA2),
 F-028 y F-029 (los dos casos en que el albarán **no llega a valorarse**), F-030,
@@ -86,8 +88,10 @@ F-031…
    224964).
 6. **Rellenar `evals/fixtures/inputs/`**: mientras esté vacío, la puerta de
    rutas sensibles se queda en `aviso` y ninguna feature que toque prompts
-   puede demostrar nada. Ojo: F-034 arregla que la documentación diga
-   `evals/ground_truth/`, que no existe.
+   puede demostrar nada. Ojo: F-034 arregla que la condición de la puerta
+   apuntase a los libros `.xlsx` de `evals/ground_truth/` —que existen, pero
+   `.gitignore` los excluye y quien clona el repositorio no los ve— en vez de a
+   estos fixtures, que son los que consume `evals.runner`.
 7. **Despliegue**: NADA está desplegado. Producción corre las imágenes
    `r20260724-1632` (24 de julio), es decir **sin F-002, F-019 ni F-027** — el
    ×1000 y el importe sin descuento siguen vivos en Azure. Cuando se autorice:
