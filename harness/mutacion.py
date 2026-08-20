@@ -44,7 +44,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from harness.alcance import Alcance, alcance_de_feature
+from harness.alcance import (
+    ORIGEN_FICHEROS,
+    Alcance,
+    alcance_de_feature,
+    alcance_de_ficheros,
+)
 from harness.rigor import (
     RUTA_RIGOR,
     cargar_features,
@@ -1429,11 +1434,21 @@ def escribir_informe(informe: InformeMutacion, ruta: Path) -> None:
             "y repite la campaña.",
             "",
         ]
+    # Un alcance declarado a mano (`--ficheros`) no tiene diff detrás: enseñar
+    # dos refs entre backticks haría creer que se comparó algo con algo.
+    if alcance.origen == ORIGEN_FICHEROS:
+        origen_del_alcance = (
+            f"Origen del diff: **{ORIGEN_FICHEROS}** (alcance declarado en la orden)."
+        )
+    else:
+        origen_del_alcance = (
+            f"Origen del diff: **{alcance.origen}** "
+            f"(`{alcance.ref_diff[0]}` .. `{alcance.ref_diff[1]}`)."
+        )
     lineas += [
         "## Alcance",
         "",
-        f"Origen del diff: **{alcance.origen}** "
-        f"(`{alcance.ref_diff[0]}` .. `{alcance.ref_diff[1]}`).",
+        origen_del_alcance,
         "",
         "| Fichero | Líneas en alcance |",
         "|---|---|",
@@ -1561,6 +1576,16 @@ def _analizar_argumentos(argv: list[str] | None) -> argparse.Namespace:
     analizador.add_argument("--base", default="dev", help="Rama de integración")
     analizador.add_argument("--rama", default=None, help="Rama de la feature")
     analizador.add_argument("--raiz", default=".", help="Raíz del repositorio a mutar")
+    analizador.add_argument(
+        "--ficheros",
+        default=None,
+        help=(
+            "Rutas separadas por coma que se mutan ENTERAS, en vez de calcular "
+            "el alcance desde el diff de la feature. Para campañas cuyo sujeto "
+            "es un módulo, no un cambio. --feature sigue haciendo falta: es "
+            "quien resuelve el nivel de rigor y, con él, el muestreo."
+        ),
+    )
     analizador.add_argument("--timeout", type=int, default=None, help="Segundos por mutante")
     analizador.add_argument(
         "--max-mutantes",
@@ -1794,9 +1819,17 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
         return 2
 
     try:
-        alcance = alcance_de_feature(
-            opciones.feature, base=opciones.base, rama=opciones.rama, raiz=opciones.raiz
-        )
+        if opciones.ficheros:
+            alcance = alcance_de_ficheros(
+                opciones.ficheros.split(","), opciones.feature, raiz=opciones.raiz
+            )
+        else:
+            alcance = alcance_de_feature(
+                opciones.feature,
+                base=opciones.base,
+                rama=opciones.rama,
+                raiz=opciones.raiz,
+            )
     except SystemExit as parada:
         print(str(parada), file=sys.stderr)
         return 2
