@@ -133,6 +133,57 @@ def workers_mutacion(rigor: dict) -> int | None:
     return valor
 
 
+def max_mutantes_nivel(nivel: str, rigor: dict) -> int | None:
+    """Mutantes que se evalúan como mucho en ese nivel; `None` = sin tope.
+
+    Clave OPCIONAL, como `workers_mutacion`: ausencia, `null`, un booleano o un
+    entero absurdo (cero o negativo) se tratan como «sin tope». Un `rigor.json`
+    anterior a F-038 sigue funcionando y mide la campaña entera, que es lo que
+    hacía.
+    """
+    valor = rigor.get("niveles", {}).get(nivel, {}).get("max_mutantes")
+    if isinstance(valor, bool) or not isinstance(valor, int) or valor < 1:
+        return None
+    return valor
+
+
+def semilla_nivel(nivel: str, rigor: dict) -> int | None:
+    """Semilla del muestreo de ese nivel; `None` = la que decida quien llama.
+
+    Fijarla en el fichero es lo que hace REPRODUCIBLE una campaña muestreada:
+    dos reviewers que remidan la misma feature obtienen los mismos mutantes. A
+    diferencia del tope, aquí el `0` es una semilla legítima.
+    """
+    valor = rigor.get("niveles", {}).get(nivel, {}).get("semilla")
+    if isinstance(valor, bool) or not isinstance(valor, int):
+        return None
+    return valor
+
+
+#: Ficheros de papeleo que tienen tope de líneas, con su clave en `rigor.json`.
+CLAVES_TAMANO: tuple[str, ...] = ("requirements", "design", "impl", "review")
+
+
+def topes_tamano(rigor: dict) -> dict[str, int]:
+    """Topes de líneas del papeleo de una feature, o `{}` si no se declaran.
+
+    Bloque OPCIONAL: sin él, la puerta de tamaño se declara N/A con su motivo
+    en vez de romper el arnés de un proyecto con configuración anterior. Los
+    valores que no son un entero positivo se descartan uno a uno —incluido el
+    `$doc` del propio bloque—: un tope de cero prohibiría escribir.
+    """
+    bloque = rigor.get("tamano")
+    if not isinstance(bloque, dict):
+        return {}
+    topes: dict[str, int] = {}
+    for clave in CLAVES_TAMANO:
+        valor = bloque.get(clave)
+        if isinstance(valor, bool) or not isinstance(valor, int) or valor < 1:
+            continue
+        topes[clave] = valor
+    return topes
+
+
 # --- Inventario de features -------------------------------------------------
 
 
