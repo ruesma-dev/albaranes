@@ -92,6 +92,27 @@ def test_f038_r20_el_reviewer_recoge_las_seis_reglas_de_campania() -> None:
         assert regla in texto, regla
 
 
+def test_f038_r20_rm2_salta_por_orden_de_magnitud_no_por_cualquier_diferencia() -> None:
+    """Redactada «muy inferior» a secas, RM2 marcaba como sospechosa la campaña
+    legítima de F-038: línea base 52,1 s y media 36,4 s. La media baja porque la
+    campaña corre con `-x` y un mutante que muere aborta la suite antes de
+    terminarla. La alarma es el salto de orden de magnitud, no la diferencia."""
+    bloque = _texto(REVIEWER).split("**RM2", 1)[1].split("**RM3", 1)[0]
+
+    assert "orden de magnitud" in bloque
+    assert "-x" in bloque, "el motivo por el que la media baja legítimamente"
+    assert "111" in bloque, "el caso real de F-034 debe seguir cazándose"
+
+
+def test_f038_r20_checkpoints_recoge_rm2_con_el_mismo_matiz_que_el_reviewer() -> None:
+    """Dos redacciones distintas de la misma regla es peor que no tener ninguna."""
+    bloque = _texto(CHECKPOINTS).split("## C4 bis", 1)[1].split("## C4 ter", 1)[0]
+    rm2 = bloque.split("**RM2", 1)[1].split("- [ ]", 1)[0]
+
+    assert "orden de magnitud" in rm2
+    assert "-x" in rm2
+
+
 def test_f038_r20_rm5_solo_se_exige_en_rigor_critico_y_con_una_muestra() -> None:
     """Es la única regla que sube el coste: va acotada por decisión del humano."""
     bloque = _texto(REVIEWER).split("**RM5", 1)[1].split("**RM6", 1)[0]

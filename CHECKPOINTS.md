@@ -162,9 +162,16 @@ muerto) y RM4 (reejecutar el subconjunto de tests sobre una copia) viven en
       el que se midió (fila «SHA de HEAD medido»), y el reviewer comprueba que
       el alcance medido es el que está revisando. En F-034 la rama creció de 56
       a 1.057 líneas después de medir y el informe seguía pareciendo válido.
-- [ ] **RM2 · El tiempo del informe es internamente coherente:** la «Media por
-      mutante evaluado (s)» no puede ser muy inferior a la «Línea base (s)» del
-      ejecutor que juzgó. Si lo es, se rechaza **sin reejecutar nada**.
+- [ ] **RM2 · El tiempo del informe es internamente coherente:** lo que se
+      rechaza **sin reejecutar nada** es un **salto de orden de magnitud** —una
+      «Media por mutante evaluado (s)» que no llega ni a la décima parte de la
+      «Línea base (s)», o un «Tiempo total» que no cuadra con
+      `mutantes × media`—. Que la media quede **por debajo** de la línea base no
+      es sospechoso por sí solo: la campaña evalúa con `-x` y el mutante que
+      muere aborta la suite en el primer fallo, así que a más muertos, más baja
+      la media (F-038: base 52,1 s, media 36,4 s, 19 de 20 muertos, campaña
+      legítima). El caso que esta regla caza es F-034: 18 mutantes en 111 s
+      cuando la realidad eran 63 minutos.
 - [ ] **RM5 · Solo en rigor `critico`:** cada superviviente declarado
       «equivalente» trae demostración ejecutable, y el reviewer reproduce **una
       muestra de UNO**, elegido por él. En rigor `estandar` basta la

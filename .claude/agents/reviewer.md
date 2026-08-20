@@ -135,10 +135,17 @@ viven solo aquí, porque son criterio de juicio y no se pueden automatizar.
   cambió desde entonces toca ficheros del alcance: si los toca, la campaña hay
   que repetirla.
 - **RM2 · Coherencia interna del tiempo.** El informe trae «Línea base (s)» y
-  «Media por mutante evaluado (s)». Si la media es muy inferior a lo que tarda
-  la suite del módulo mutado, **rechaza sin reejecutar nada**: nadie juzga 18
-  mutantes en 111 s cuando una suite limpia tarda dos minutos (la realidad eran
-  63 min; ~350.000 tokens de segundo rechazo).
+  «Media por mutante evaluado (s)». Lo que delata un informe inventado es un
+  **salto de orden de magnitud**: una media que no llega ni a la décima parte
+  de la línea base, o un «Tiempo total» que no cuadra con `mutantes × media`.
+  Ahí **rechaza sin reejecutar nada**: nadie juzga 18 mutantes en 111 s cuando
+  una suite limpia tarda dos minutos (F-034; la realidad eran 63 min, ~350.000
+  tokens de segundo rechazo).
+  **Que la media quede por debajo de la línea base NO es sospechoso por sí
+  solo**: la campaña evalúa cada mutante con `-x`, así que el que muere aborta
+  la suite en el primer fallo, antes de terminarla. Cuanto mayor sea la tasa de
+  muertos, más baja la media. La campaña de F-038 —línea base 52,1 s, media
+  36,4 s, 19 de 20 mutantes muertos— es el caso legítimo de libro.
 - **RM3 · Un mutante equivalente NO puede salir MUERTO.** Si un mutante no
   cambia el comportamiento observable, ningún test puede cazarlo; que aparezca
   como muerto significa que la suite estaba roja por su cuenta o que el informe
