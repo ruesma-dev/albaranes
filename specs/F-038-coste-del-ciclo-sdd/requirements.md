@@ -5,7 +5,7 @@ Alcance y motivos: ficha `F-038` de `harness/features.json` (fuente única; no
 se repite aquí). Las seis reglas de revisión de campañas de la ficha se citan
 como **RM1..RM6** para no chocar con los `R` de este fichero.
 
-> Esta spec se somete a sus propios topes: 120 / 200 líneas.
+> Esta spec se somete a sus propios topes: 150 / 250 líneas.
 
 ## Bloque A — Infraestructura: hoy no se puede mutar `harness/` (T0)
 
@@ -61,8 +61,8 @@ un cero ni omitir la fila.
 ## Bloque D — Topes de tamaño del papeleo
 
 R13. `harness/rigor.json` debe declarar los topes de líneas de
-`requirements.md` (120), `design.md` (200), `progress/impl_F-XXX.md` (150) y
-`progress/review_F-XXX.md` (100). Los topes viven en el fichero de
+`requirements.md` (150), `design.md` (250), `progress/impl_F-XXX.md` (220) y
+`progress/review_F-XXX.md` (140). Los topes viven en el fichero de
 configuración, nunca cableados en el código.
 
 R14. CUANDO se ejecuta `python -m harness.tamano --feature F-XXX`, el sistema

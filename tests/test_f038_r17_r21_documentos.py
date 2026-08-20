@@ -30,8 +30,8 @@ def _texto(ruta: Path) -> str:
 def test_f038_r17_specs_md_declara_los_topes_de_requirements_y_design() -> None:
     texto = _texto(SPECS)
 
-    assert "120" in texto, "tope de requirements.md"
-    assert "200" in texto, "tope de design.md"
+    assert "150" in texto, "tope de requirements.md"
+    assert "250" in texto, "tope de design.md"
 
 
 def test_f038_r17_specs_md_pide_una_tarea_por_linea_en_tasks() -> None:
@@ -46,14 +46,14 @@ def test_f038_r17_specs_md_dice_que_lo_que_no_cabe_se_resume_y_se_enlaza() -> No
 def test_f038_r17_el_spec_author_conoce_los_topes_de_su_producto() -> None:
     texto = _texto(SPEC_AUTHOR)
 
-    assert "120" in texto and "200" in texto
+    assert "150" in texto and "250" in texto
     assert "se resume y se enlaza" in texto
 
 
 def test_f038_r17_el_implementer_conoce_el_tope_de_su_informe() -> None:
     texto = _texto(IMPLEMENTER)
 
-    assert "150" in texto, "tope de progress/impl_F-XXX.md"
+    assert "220" in texto, "tope de progress/impl_F-XXX.md"
     assert "se resume y se enlaza" in texto
 
 
@@ -65,7 +65,7 @@ REVIEWER = Path(".claude/agents/reviewer.md")
 def test_f038_r17_el_reviewer_conoce_el_tope_de_su_informe() -> None:
     texto = _texto(REVIEWER)
 
-    assert "100" in texto, "tope de progress/review_F-XXX.md"
+    assert "140" in texto, "tope de progress/review_F-XXX.md"
     assert "se resume y se enlaza" in texto
 
 

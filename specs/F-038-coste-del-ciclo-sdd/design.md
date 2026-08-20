@@ -32,8 +32,8 @@ después a `arnes-base` como 1.7.0.
 | `harness/init.sh` | Sección **7 quater**: puerta de topes de tamaño de la feature en curso. |
 | `specs/SPECS.md` | Topes de `requirements.md`/`design.md` y «una tarea por línea». |
 | `.claude/agents/spec-author.md` | Topes de su producto. |
-| `.claude/agents/implementer.md` | Tope del informe (150). |
-| `.claude/agents/reviewer.md` | Tope (100), umbral 60 s, revisión incremental, RM1–RM6. |
+| `.claude/agents/implementer.md` | Tope del informe (220). |
+| `.claude/agents/reviewer.md` | Tope (140), umbral 60 s, revisión incremental, RM1–RM6. |
 | `CHECKPOINTS.md` | C4 bis: 60 s, y checkboxes de RM1, RM2, RM5, RM6. |
 | `progress/mutacion_F-012.md` (y los demás afectados) | Cabecera de invalidez. |
 

@@ -30,7 +30,7 @@ Produces: la carpeta `specs/F-XXX-slug/` con TRES ficheros. NO tocas código.
 
 ### Topes de tamaño (obligatorios)
 
-`requirements.md` **≤ 120 líneas**, `design.md` **≤ 200**, `tasks.md` sin tope
+`requirements.md` **≤ 150 líneas**, `design.md` **≤ 250**, `tasks.md` sin tope
 duro pero con **una tarea por línea**. Los números viven en el bloque `tamano`
 de `harness/rigor.json` y los mide `bash harness/init.sh` sobre la feature en
 curso: pasarse pone el portero en rojo.

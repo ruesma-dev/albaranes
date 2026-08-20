@@ -39,7 +39,7 @@ que ese resumen se pueda construir sin releer el diff: deja explícito **qué
 cambió**, **qué se verificó y con qué resultado real** (no «debería
 funcionar»), **qué quedó fuera del alcance** y **qué falta**.
 
-**Tope: `progress/impl_F-XXX.md` ≤ 150 líneas.** El número vive en el bloque
+**Tope: `progress/impl_F-XXX.md` ≤ 220 líneas.** El número vive en el bloque
 `tamano` de `harness/rigor.json` y lo mide `bash harness/init.sh` sobre la
 feature en curso (sección 7 quater): pasarse pone el portero en rojo, así que
 no puedes cerrar con un informe de 400 líneas. Es un tope, no un objetivo, y

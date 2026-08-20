@@ -20,13 +20,13 @@ from harness.tamano import ETIQUETA, main, medir, slug_de_feature
 
 
 def test_f038_r13_los_topes_viven_en_el_rigor_json_y_no_en_el_codigo() -> None:
-    rigor = {"tamano": {"requirements": 120, "design": 200, "impl": 150, "review": 100}}
+    rigor = {"tamano": {"requirements": 150, "design": 250, "impl": 220, "review": 140}}
 
     assert topes_tamano(rigor) == {
-        "requirements": 120,
-        "design": 200,
-        "impl": 150,
-        "review": 100,
+        "requirements": 150,
+        "design": 250,
+        "impl": 220,
+        "review": 140,
     }
 
 
@@ -47,15 +47,15 @@ def test_f038_r13_un_tope_absurdo_del_rigor_json_se_descarta() -> None:
 
 
 def test_f038_r13_el_rigor_json_del_repositorio_declara_los_cuatro_topes() -> None:
-    """120 / 200 / 150 / 100: los cuatro ficheros que se pagan por triplicado."""
+    """150 / 250 / 220 / 140: los cuatro ficheros que se pagan por triplicado."""
     topes = topes_tamano(cargar_rigor())
 
-    assert topes == {"requirements": 120, "design": 200, "impl": 150, "review": 100}
+    assert topes == {"requirements": 150, "design": 250, "impl": 220, "review": 140}
 
 
 # --- R14, R16: la medición ---------------------------------------------------
 
-TOPES = {"requirements": 120, "design": 200, "impl": 150, "review": 100}
+TOPES = {"requirements": 150, "design": 250, "impl": 220, "review": 140}
 
 
 def _repositorio(tmp_path: Path, ficheros: dict[str, int]) -> Path:
@@ -94,23 +94,23 @@ def test_f038_r14_solo_se_nombra_lo_que_excede_su_tope(tmp_path: Path) -> None:
     raiz = _repositorio(
         tmp_path,
         {
-            "specs/F-100-de-juguete/requirements.md": 121,
-            "specs/F-100-de-juguete/design.md": 200,
-            "progress/impl_F-100.md": 151,
+            "specs/F-100-de-juguete/requirements.md": 151,
+            "specs/F-100-de-juguete/design.md": 250,
+            "progress/impl_F-100.md": 221,
         },
     )
 
     excesos = medir("F-100", "F-100-de-juguete", TOPES, raiz=str(raiz))
 
     assert [(e.clave, e.lineas, e.tope) for e in excesos] == [
-        ("requirements", 121, 120),
-        ("impl", 151, 150),
+        ("requirements", 151, 150),
+        ("impl", 221, 220),
     ]
 
 
 def test_f038_r14_el_tope_exacto_no_es_un_exceso(tmp_path: Path) -> None:
-    """120 líneas es «dentro»: el tope es el límite, no el primero que sobra."""
-    raiz = _repositorio(tmp_path, {"specs/F-100-de-juguete/requirements.md": 120})
+    """150 líneas es «dentro»: el tope es el límite, no el primero que sobra."""
+    raiz = _repositorio(tmp_path, {"specs/F-100-de-juguete/requirements.md": 150})
 
     assert medir("F-100", "F-100-de-juguete", TOPES, raiz=str(raiz)) == []
 
@@ -127,7 +127,7 @@ def test_f038_r16_sin_slug_no_se_miden_las_specs(tmp_path: Path) -> None:
         tmp_path,
         {
             "specs/F-100-de-juguete/requirements.md": 300,
-            "progress/impl_F-100.md": 151,
+            "progress/impl_F-100.md": 221,
         },
     )
 
@@ -169,7 +169,7 @@ def test_f038_r15_dos_directorios_de_spec_no_dejan_adivinar_el_slug(
 def test_f038_r14_el_cli_sale_con_cero_cuando_todo_cabe(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    raiz = _repositorio(tmp_path, {"progress/impl_F-100.md": 150})
+    raiz = _repositorio(tmp_path, {"progress/impl_F-100.md": 220})
 
     assert main(["--feature", "F-100", "--raiz", str(raiz)]) == 0
     assert ETIQUETA in capsys.readouterr().out
@@ -178,11 +178,11 @@ def test_f038_r14_el_cli_sale_con_cero_cuando_todo_cabe(
 def test_f038_r14_el_cli_sale_con_uno_nombrando_fichero_lineas_y_tope(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    raiz = _repositorio(tmp_path, {"progress/impl_F-100.md": 172})
+    raiz = _repositorio(tmp_path, {"progress/impl_F-100.md": 242})
 
     assert main(["--feature", "F-100", "--raiz", str(raiz)]) == 1
     salida = capsys.readouterr()
-    assert "progress/impl_F-100.md: 172 líneas > tope 150" in salida.out + salida.err
+    assert "progress/impl_F-100.md: 242 líneas > tope 220" in salida.out + salida.err
 
 
 def test_f038_r14_sin_topes_declarados_el_cli_no_bloquea_y_dice_por_que(
@@ -261,14 +261,14 @@ def test_f038_r14_el_cli_resume_cada_fichero_que_ha_medido(
         tmp_path,
         {
             "specs/F-100-de-juguete/requirements.md": 90,
-            "progress/impl_F-100.md": 150,
+            "progress/impl_F-100.md": 220,
         },
     )
 
     assert main(["--feature", "F-100", "--raiz", str(raiz)]) == 0
     salida = capsys.readouterr().out
-    assert "requirements 90/120" in salida
-    assert "impl 150/150" in salida
+    assert "requirements 90/150" in salida
+    assert "impl 220/220" in salida
 
 
 def test_f038_r14_sin_papeleo_todavia_el_cli_lo_dice_en_vez_de_callar(

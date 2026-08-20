@@ -20,6 +20,13 @@ del código (fase RED obligatoria: rigor `estandar`).
 - [x] T13: anotar en `progress/current.md` las tres preguntas abiertas de `requirements.md` y la deuda de remedición (D5)  |  Verificación: MANUAL (humano) — el humano responde 1, 2 y 3 antes del cierre
 - [x] T14: Ejecutar `bash harness/init.sh` en verde  |  Verificación: exit code 0
 
+> Recalibración posterior al APPROVED (decisión del humano, 2026-08-20). Los
+> números de T8 y T9 son el registro de lo que se hizo entonces; los topes
+> vigentes son los de T15.
+
+- [x] T15: ampliar los cuatro topes de `harness/rigor.json` a **150 / 250 / 220 / 140** y propagarlos a `specs/SPECS.md`, `.claude/agents/{spec-author,implementer,reviewer}.md`, R13 de `requirements.md`, la tabla de `design.md` y los dos ficheros de test  |  Verificación: `python -m pytest tests/test_f038_r13_r16_tamano.py tests/test_f038_r17_r21_documentos.py -q`
+- [x] T16: matizar **RM2** en `CHECKPOINTS.md` (C4 bis) y `.claude/agents/reviewer.md` para que la alarma sea el salto de orden de magnitud y no cualquier diferencia (la campaña corre con `-x`: un mutante que muere aborta antes de terminar la suite)  |  Verificación: `python -m pytest tests/test_f038_r17_r21_documentos.py -q`
+
 ## Fuera de esta rama (después del merge en `dev`)
 
 - [ ] P1: portar a `arnes-base` como **1.7.0** con su entrada en `GUIA_INSTALACION.md`, avisando de que `nivel_por_defecto` pasa a `estandar` y las campañas de ese nivel quedan **muestreadas**, con números no comparables con los anteriores (D6)  |  Verificación: MANUAL (humano) — `harness/VERSION` en `arnes-base` marca `1.7.0` y el diff se revisa antes de commitear

@@ -9,11 +9,11 @@
     "timeout_por_mutante_s": 120
   },
   "tamano": {
-    "$doc": "Topes de LINEAS del papeleo de una feature, medidos por 'python -m harness.tamano --feature F-XXX' y por la seccion 7 quater de init.sh, que mide SOLO la feature en curso. Son topes, no objetivos: lo que no cabe se resume y se enlaza al fichero donde vive el detalle. Cada linea de spec se paga tres veces (la escribe el spec-author, la lee el implementer, la relee el reviewer). tasks.md no tiene tope duro: una tarea por linea.",
-    "requirements": 120,
-    "design": 200,
-    "impl": 150,
-    "review": 100
+    "$doc": "Topes de LINEAS del papeleo de una feature, medidos por 'python -m harness.tamano --feature F-XXX' y por la seccion 7 quater de init.sh, que mide SOLO la feature en curso. Son topes, no objetivos: lo que no cabe se resume y se enlaza al fichero donde vive el detalle. Cada linea de spec se paga tres veces (la escribe el spec-author, la lee el implementer, la relee el reviewer). tasks.md no tiene tope duro: una tarea por linea. Valores ampliados el 2026-08-20 (120/200/150/100 -> 150/250/220/140): la mediana historica del repositorio es ~484 lineas en informes de implementer y ~475 en los de review; los topes originales recortaban ~70 % y en F-038 el implementer entrego 150/150 y el reviewer 100/100, ambos clavados en el limite. Con los nuevos el recorte sigue siendo ~55 %, asi que el ahorro se mantiene, pero queda aire para lo que nadie debe resumir: las trazas de fase RED y el analisis de supervivientes.",
+    "requirements": 150,
+    "design": 250,
+    "impl": 220,
+    "review": 140
   },
   "niveles": {
     "documental": {

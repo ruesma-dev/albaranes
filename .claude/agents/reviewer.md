@@ -163,7 +163,7 @@ viven solo aquí, porque son criterio de juicio y no se pueden automatizar.
 
 ## Informe (en disco, no en chat)
 
-Escribe `progress/review_F-XXX.md`, **≤ 100 líneas** (el tope vive en el bloque
+Escribe `progress/review_F-XXX.md`, **≤ 140 líneas** (el tope vive en el bloque
 `tamano` de `harness/rigor.json` y lo mide `bash harness/init.sh`). Es un tope,
 no un objetivo: **lo que no cabe se resume y se enlaza** al fichero donde vive
 el detalle. Lo que nunca se sacrifica por el tope: el veredicto, la razón de
