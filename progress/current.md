@@ -252,12 +252,15 @@ Altas relacionadas: **F-036** (los dos defectos, rigor `critico`), **F-037**
    quedan **muestreadas a 20 mutantes**: sus números no son comparables con los
    de versiones anteriores. Debe llevar ya los topes recalibrados
    (150/250/220/140), no los originales.
-2. **`progress/mutacion_F-011.md` no tiene ficha de remedición y lleva la
-   cabecera «CAMPAÑA NO VÁLIDA»**: todo su alcance (`evals/**`,
-   `harness/rutas_sensibles.py`) cae fuera de `services/`, así que se midió con
-   la invocación rota. Son **305 mutantes y 133 supervivientes**, la campaña más
-   cara del repositorio. **Decide el humano**: se cuelga de F-039, se abre ficha
-   propia, o se deja invalidada. `mutacion_F-034.md` NO se marcó: ya está
+2. **`progress/mutacion_F-011.md` se queda INVALIDADA — decidido por el humano
+   el 2026-08-20.** Todo su alcance (`evals/**`, `harness/rutas_sensibles.py`)
+   cae fuera de `services/`, así que sus **305 mutantes y 133 supervivientes**
+   se midieron con la invocación rota. Es la campaña más cara del repositorio y
+   **no se va a repetir**: se queda con la cabecera «CAMPAÑA NO VÁLIDA» y sin
+   ficha. Consecuencia que hay que tener presente: **la puerta de evals de F-011
+   no tiene hoy ninguna medición de mutación válida que la respalde**; si alguna
+   vez se toca ese código, la campaña se hace entonces y desde cero. No se cita
+   ese informe como evidencia de nada. `mutacion_F-034.md` NO se marcó: ya está
    remedido a mano con la ruta acotada y lo dice en su cabecera.
 3. **Deuda menor heredada por F-039** (observación 1 del reviewer): el filtro de
    filas de reloj del test de paridad es una lista de prefijos escrita a mano, y
