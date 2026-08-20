@@ -10,7 +10,7 @@ semilla dejan de ser algo que hay que acordarse de teclear y pasan a vivir en
 
 from __future__ import annotations
 
-from harness.rigor import max_mutantes_nivel, semilla_nivel
+from harness.rigor import cargar_rigor, max_mutantes_nivel, semilla_nivel
 
 RIGOR = {
     "nivel_por_defecto": "estandar",
@@ -81,3 +81,15 @@ def test_f038_r5_la_semilla_cero_es_una_semilla_valida_en_rigor_json() -> None:
     assert semilla_nivel("cero", {"niveles": {"cero": {"semilla": 0}}}) == 0
 
 
+def test_f038_r5_el_rigor_json_del_repositorio_declara_el_tope_de_estandar() -> None:
+    """El tope y la semilla viven en el fichero, no cableados en el código."""
+    rigor = cargar_rigor()
+
+    assert max_mutantes_nivel("estandar", rigor) == 20
+    assert semilla_nivel("estandar", rigor) == 20260820, "semilla fija: reproducible"
+    assert max_mutantes_nivel("critico", rigor) is None, "critico se mide entero"
+
+
+def test_f038_r8_el_nivel_por_defecto_del_rigor_json_es_estandar() -> None:
+    """R8: quien no declara `rigor` ya no arrastra el nivel más caro."""
+    assert cargar_rigor()["nivel_por_defecto"] == "estandar"

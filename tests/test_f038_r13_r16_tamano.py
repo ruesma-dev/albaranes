@@ -10,10 +10,7 @@ los agentes escribían cuanto se les ocurría. Los topes viven en
 
 from __future__ import annotations
 
-from harness.rigor import topes_tamano
-
-CLAVES = ("requirements", "design", "impl", "review")
-
+from harness.rigor import cargar_rigor, topes_tamano
 
 def test_f038_r13_los_topes_viven_en_el_rigor_json_y_no_en_el_codigo() -> None:
     rigor = {"tamano": {"requirements": 120, "design": 200, "impl": 150, "review": 100}}
@@ -40,3 +37,10 @@ def test_f038_r13_un_tope_absurdo_del_rigor_json_se_descarta() -> None:
     rigor = {"tamano": {"impl": 0, "review": -1, "design": True, "requirements": "120"}}
 
     assert topes_tamano(rigor) == {}
+
+
+def test_f038_r13_el_rigor_json_del_repositorio_declara_los_cuatro_topes() -> None:
+    """120 / 200 / 150 / 100: los cuatro ficheros que se pagan por triplicado."""
+    topes = topes_tamano(cargar_rigor())
+
+    assert topes == {"requirements": 120, "design": 200, "impl": 150, "review": 100}
