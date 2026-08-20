@@ -143,3 +143,43 @@ def test_f039_r25_mutacion_f034_no_se_modifica_en_esta_rama() -> None:
     assert "progress/mutacion_F-034.md" not in tocados, (
         "R25: mutacion_F-034.md ya está remedido a mano y no se toca aquí"
     )
+
+
+# --- R18: la cabecera manual del informe de la campaña -----------------------
+
+MAQUINARIA = PROGRESO / "mutacion_maquinaria_paralela_F-039.md"
+
+#: El `--ficheros` del comando de reproducción, ENTERO. Medio comando no
+#: reproduce nada: si falta un fichero del alcance, la campaña que sale es otra.
+FICHEROS_DEL_ALCANCE = "harness/mutacion.py,harness/mutacion_paralela.py,harness/rigor.py"
+
+
+def test_f039_r18_la_cabecera_lleva_el_comando_exacto_que_reproduce_la_campania() -> None:
+    """La guarda que R18 no tenía, y que el propio informe pedía a gritos.
+
+    `escribir_informe` conserva los análisis de los supervivientes pero NO esta
+    cabecera: quien repita la campaña se lleva por delante, en silencio, el
+    comando de reproducción. Sin este test nada lo detecta.
+    """
+    texto = MAQUINARIA.read_text(encoding="utf-8")
+
+    assert "python -m harness.mutacion --feature F-039" in texto
+    assert FICHEROS_DEL_ALCANCE in texto, (
+        "la cabecera no lleva el --ficheros COMPLETO: con medio alcance la "
+        "campaña que sale no es esta"
+    )
+    assert "--salida progress/mutacion_maquinaria_paralela_F-039.md" in texto
+
+
+def test_f039_r18_la_cabecera_avisa_de_que_mide_otro_codigo_que_f012() -> None:
+    texto = MAQUINARIA.read_text(encoding="utf-8")
+    minusculas = texto.lower()
+
+    assert "mutacion_f-012.md" in minusculas, (
+        "la cabecera debe nombrar el informe con el que NO hay que confundirla"
+    )
+    assert "otro código" in minusculas, (
+        "R18: la cabecera tiene que decir que mide OTRO código, no que sea la "
+        "campaña de F-012 rehecha"
+    )
+    assert "no repone" in minusculas and "no es comparable" in minusculas
