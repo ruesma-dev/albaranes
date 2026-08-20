@@ -151,26 +151,29 @@ antes). Con este informe escrito, PUERTA TAMAÑO añade `impl 150/150`.
 
 ---
 
-# Tanda posterior al APPROVED — T15 y T16 (2026-08-20)
+# Tanda posterior al APPROVED — T15, T16 y T17 (2026-08-20)
 
-Dos cambios del humano tras la primera pasada de review. **No tocan lógica** (4 números, 2 redacciones): **no se reejecutó la campaña**, el alcance no cambia.
+Dos cambios pedidos por el humano tras la primera pasada de review —**no tocan lógica**: 4 números y 2 redacciones, así que **no se reejecutó la campaña**— más T17, un flaky propio que destapó el portero al ejecutarlo.
 
 ## T15 · Los cuatro topes de tamaño suben
 
 `requirements` 120→**150**, `design` 200→**250**, `impl` 150→**220**, `review`
-100→**140**; motivo completo en el `$doc` de `harness/rigor.json` y en
-`specs/SPECS.md`. Mediana histórica ~484 líneas (impl) y ~475 (review): los viejos
+100→**140**; motivo completo en el `$doc` de `harness/rigor.json` y en `specs/SPECS.md`. Mediana histórica ~484 líneas (impl) y ~475 (review): los viejos
 recortaban ~70 % —este informe salió 150/150 y el de review 100/100, clavados—, los nuevos ~55 %, dejando sitio a la evidencia. Eco en los 9 ficheros que citaban los números (`5e60715`); no en `CHECKPOINTS.md`, que no cableaba ninguno.
 
 ## T16 · RM2 matizada (observación O2 del reviewer)
 
 «Muy inferior a la línea base» marcaba como sospechosa la campaña legítima de
-esta feature (base 52,1 s, media 36,4 s). Queda escrito el porqué: se evalúa con
-`-x`, el mutante que muere **aborta la suite en el primer fallo** (19 de 20) y a
+esta feature (base 52,1 s, media 36,4 s). Queda escrito el porqué: se evalúa con `-x`, el mutante que muere **aborta la suite en el primer fallo** (19 de 20) y a
 más muertos, más baja la media. La alarma pasa a ser el **salto de orden de magnitud** —media bajo la décima parte de la base, o «Tiempo total» que no cuadra con `mutantes × media`— y sigue cazando F-034 (18 mutantes en 111 s, eran 63 min). Igual en `CHECKPOINTS.md` (RM2 de C4 bis) y en `.claude/agents/reviewer.md`.
 
-## Fase RED · T15 — tests ya en los números nuevos, `rigor.json` y documentos aún en los viejos
-(`python -m pytest tests/test_f038_r13_r16_tamano.py tests/test_f038_r17_r21_documentos.py -q`):
+## T17 · Un test flaky que era de esta feature
+
+La primera pasada de `init.sh` salió en **rojo** por
+`test_f012_r1_r4_el_informe_paralelo_es_identico_al_de_la_campania_en_serie`, que
+compara los dos informes filtrando las filas de reloj: ya excluía `| Tiempo total`, pero **T5 de esta misma feature** añadió `| Media por mutante evaluado (s)` —que es `segundos / evaluados`, el mismo reloj— sin extender el filtro. En máquina cargada la serie redondeaba a 0.0 y la paralela a 0.1: falló 4 de 5 veces seguidas (traza en el mensaje del commit). Arreglado extendiendo el filtro; 6 de 6 verdes después. **No se toca lógica de producción**, solo el filtro del test: la campaña de mutación sigue valiendo.
+
+## Fase RED · T15 — tests en los números nuevos, `rigor.json` y documentos aún en los viejos (`python -m pytest tests/test_f038_r13_r16_tamano.py tests/test_f038_r17_r21_documentos.py -q`):
 
 ```
 >       assert topes == {"requirements": 150, "design": 250, "impl": 220, "review": 140}
@@ -185,8 +188,7 @@ FAILED ..._r17_r21_documentos.py::{specs_md_declara_los_topes, el_spec_author_co
 5 failed, 32 passed in 0.36s
 ```
 
-**Fase RED · T16** — dos tests nuevos que fijan la redacción de RM2 en los dos documentos, antes de reescribirla
-(`python -m pytest tests/test_f038_r17_r21_documentos.py -q -k rm2`):
+**Fase RED · T16** — dos tests nuevos que fijan la redacción de RM2 en los dos documentos, antes de reescribirla (`python -m pytest tests/test_f038_r17_r21_documentos.py -q -k rm2`):
 
 ```
 >       assert "orden de magnitud" in bloque
@@ -207,10 +209,10 @@ FAILED ..._r17_r21_documentos.py::test_f038_r20_checkpoints_recoge_rm2_con_el_mi
 ## Evidencias de esta tanda — `bash harness/init.sh` tal cual, en verde
 
 ```
-[OK] pytest en verde (con medición de cobertura)   391 passed in 69.05s (0:01:09)
+[OK] pytest en verde (con medición de cobertura)   391 passed in 91.40s (0:01:31)
 [OK] PUERTA COBERTURA: 95.9% de 171 líneas cambiadas cubiertas (164/171, umbral 80%, nivel estandar)
-[OK] PUERTA TAMAÑO: F-038 dentro de los topes (requirements 119/150, design 162/250, impl 150/220, review 100/140)
+[OK] PUERTA TAMAÑO: F-038 dentro de los topes (requirements 119/150, design 162/250, impl 218/220, review 100/140)
 ```
 
 **391 passed / 0 failed** (+2, los de RM2; los dos ficheros de arriba, `39 passed
-in 1.08s`), suite **69,05 s**, cobertura **95,9 %** sin variación (no hay código nuevo). **`arnes-base` no se ha tocado**: el porte a 1.7.0 (P1) va tras el merge.
+in 1.08s`), suite **91,4 s** en esta última pasada (69,1 s en la anterior; varía con la carga de la máquina), cobertura **95,9 %** sin variación (no hay código nuevo). **`arnes-base` no se ha tocado**: el porte a 1.7.0 (P1) va tras el merge.

@@ -26,6 +26,7 @@ del código (fase RED obligatoria: rigor `estandar`).
 
 - [x] T15: ampliar los cuatro topes de `harness/rigor.json` a **150 / 250 / 220 / 140** y propagarlos a `specs/SPECS.md`, `.claude/agents/{spec-author,implementer,reviewer}.md`, R13 de `requirements.md`, la tabla de `design.md` y los dos ficheros de test  |  Verificación: `python -m pytest tests/test_f038_r13_r16_tamano.py tests/test_f038_r17_r21_documentos.py -q`
 - [x] T16: matizar **RM2** en `CHECKPOINTS.md` (C4 bis) y `.claude/agents/reviewer.md` para que la alarma sea el salto de orden de magnitud y no cualquier diferencia (la campaña corre con `-x`: un mutante que muere aborta antes de terminar la suite)  |  Verificación: `python -m pytest tests/test_f038_r17_r21_documentos.py -q`
+- [x] T17: arreglar el flaky de `test_f012_r1_r4_el_informe_paralelo_es_identico_al_de_la_campania_en_serie`, que no filtraba la fila de reloj `| Media por mutante evaluado (s)` añadida por T5  |  Verificación: `python -m pytest tests/test_f012_r1_r5_r11_coordinador.py -q` seis veces seguidas en verde
 
 ## Fuera de esta rama (después del merge en `dev`)
 
