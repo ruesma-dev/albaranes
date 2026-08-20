@@ -10,6 +10,17 @@ semilla dejan de ser algo que hay que acordarse de teclear y pasan a vivir en
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
+
+from harness import mutacion
+from harness.alcance import Alcance
+from harness.mutacion import (
+    InformeMutacion,
+    _muestreo_configurado,
+    resolver_muestreo,
+)
 from harness.rigor import cargar_rigor, max_mutantes_nivel, semilla_nivel
 
 RIGOR = {
@@ -93,3 +104,106 @@ def test_f038_r5_el_rigor_json_del_repositorio_declara_el_tope_de_estandar() -> 
 def test_f038_r8_el_nivel_por_defecto_del_rigor_json_es_estandar() -> None:
     """R8: quien no declara `rigor` ya no arrastra el nivel más caro."""
     assert cargar_rigor()["nivel_por_defecto"] == "estandar"
+
+
+# --- R6, R7: precedencia de la orden sobre el nivel --------------------------
+
+
+def test_f038_r7_lo_pedido_a_mano_gana_al_nivel() -> None:
+    assert resolver_muestreo(5, 7, 20, 20260820) == (5, 7)
+
+
+def test_f038_r6_sin_nada_pedido_manda_el_nivel() -> None:
+    assert resolver_muestreo(None, None, 20, 20260820) == (20, 20260820)
+
+
+def test_f038_r7_max_mutantes_cero_significa_sin_tope() -> None:
+    """La única forma de anular desde la orden el tope que impone un nivel."""
+    assert resolver_muestreo(0, None, 20, 20260820) == (None, 20260820)
+
+
+def test_f038_r7_un_tope_negativo_tampoco_es_un_tope() -> None:
+    assert resolver_muestreo(-1, None, 20, None) == (None, None)
+
+
+def test_f038_r6_sin_nivel_ni_peticion_la_campania_es_completa() -> None:
+    """Un `rigor.json` sin las claves nuevas mide todo, como hasta hoy."""
+    assert resolver_muestreo(None, None, None, None) == (None, None)
+
+
+def test_f038_r7_la_semilla_pedida_gana_sin_arrastrar_el_tope() -> None:
+    assert resolver_muestreo(None, 1, 20, 20260820) == (20, 1)
+
+
+def test_f038_r6_el_muestreo_configurado_sale_del_nivel_de_la_feature() -> None:
+    maximo, semilla, nivel = _muestreo_configurado("F-038")
+
+    assert (maximo, semilla, nivel) == (20, 20260820, "estandar")
+
+
+def test_f038_r8_una_feature_sin_ficha_cae_en_estandar_no_en_critico() -> None:
+    """R8: omitir el nivel ya no arrastra la campaña completa."""
+    assert _muestreo_configurado("F-999-no-existe") == (20, 20260820, "estandar")
+
+
+def test_f038_r6_una_configuracion_ilegible_no_impone_muestreo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Misma red de seguridad que `_timeout_configurado`: se degrada, no se cae."""
+    monkeypatch.chdir(tmp_path)
+
+    assert _muestreo_configurado("F-038") == (None, None, None)
+
+
+# --- R6, R7 vistos desde el CLI ---------------------------------------------
+
+
+def _campania_espia(capturado: dict):
+    def falsa(alcance, ejecutor, **kwargs):
+        capturado.update(kwargs)
+        return InformeMutacion(feature=alcance.feature, alcance=alcance)
+
+    return falsa
+
+
+def _preparar_cli(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capturado: dict
+) -> list[str]:
+    alcance = Alcance(
+        feature="F-038",
+        origen="rama",
+        ref_diff=("dev", "feature/F-038-coste-del-ciclo-sdd"),
+        lineas={"harness/mutacion.py": {1}},
+    )
+    monkeypatch.setattr(mutacion, "alcance_de_feature", lambda *a, **k: alcance)
+    monkeypatch.setattr(mutacion, "ejecutar_campania", _campania_espia(capturado))
+    return [
+        "--feature",
+        "F-038",
+        "--raiz",
+        str(tmp_path),
+        "--salida",
+        str(tmp_path / "informe.md"),
+    ]
+
+
+def test_f038_r6_el_cli_sin_banderas_aplica_el_muestreo_del_nivel(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    capturado: dict = {}
+
+    mutacion.main(_preparar_cli(tmp_path, monkeypatch, capturado), ejecutor=object())
+
+    assert capturado["max_mutantes"] == 20
+    assert capturado["semilla"] == 20260820
+
+
+def test_f038_r7_el_cli_con_max_mutantes_cero_anula_el_tope_del_nivel(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    capturado: dict = {}
+    argv = _preparar_cli(tmp_path, monkeypatch, capturado) + ["--max-mutantes", "0"]
+
+    mutacion.main(argv, ejecutor=object())
+
+    assert capturado["max_mutantes"] is None, "0 = sin tope, no «cero mutantes»"

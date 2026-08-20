@@ -45,7 +45,16 @@ from datetime import datetime
 from pathlib import Path
 
 from harness.alcance import Alcance, alcance_de_feature
-from harness.rigor import RUTA_RIGOR, cargar_rigor, timeout_mutacion, workers_mutacion
+from harness.rigor import (
+    RUTA_RIGOR,
+    cargar_features,
+    cargar_rigor,
+    max_mutantes_nivel,
+    nivel_de_feature,
+    semilla_nivel,
+    timeout_mutacion,
+    workers_mutacion,
+)
 from harness.servicios import Servicio, cargar_servicios, interprete, servicio_de_ruta
 
 Posicion = tuple[int, int]
@@ -1451,8 +1460,27 @@ def _analizar_argumentos(argv: list[str] | None) -> argparse.Namespace:
     analizador.add_argument("--rama", default=None, help="Rama de la feature")
     analizador.add_argument("--raiz", default=".", help="Raíz del repositorio a mutar")
     analizador.add_argument("--timeout", type=int, default=None, help="Segundos por mutante")
-    analizador.add_argument("--max-mutantes", type=int, default=None)
-    analizador.add_argument("--semilla", type=int, default=None)
+    analizador.add_argument(
+        "--max-mutantes",
+        type=int,
+        default=None,
+        help=(
+            "Mutantes que se evalúan como mucho. 0 = SIN TOPE (la campaña "
+            "entera), que es como se anula el tope que impone un nivel de "
+            "rigor. Sin este flag, el 'max_mutantes' del nivel de la feature "
+            "en harness/rigor.json; si el nivel no declara ninguno, sin tope."
+        ),
+    )
+    analizador.add_argument(
+        "--semilla",
+        type=int,
+        default=None,
+        help=(
+            "Semilla del muestreo. Sin ella, la 'semilla' del nivel de rigor "
+            "de la feature: dos campañas del mismo nivel eligen los mismos "
+            "mutantes y son comparables."
+        ),
+    )
     analizador.add_argument("--salida", default=None, help="Ruta del informe")
     analizador.add_argument(
         "--workers",
@@ -1582,6 +1610,53 @@ def _workers_configurados() -> int | None:
         return None
 
 
+def resolver_muestreo(
+    pedido_max: int | None,
+    pedido_semilla: int | None,
+    nivel_max: int | None,
+    nivel_semilla: int | None,
+) -> tuple[int | None, int | None]:
+    """Tope y semilla del muestreo: `--max-mutantes` > nivel de rigor > sin tope.
+
+    Función pura, y sede ÚNICA de la precedencia: la campaña en serie y la
+    paralela reciben ya resuelto lo mismo. `pedido_max == 0` significa **sin
+    tope**, que es la única forma de anular desde la orden el tope que impone un
+    nivel; un negativo se trata igual, porque «menos de un mutante» no es un
+    tope que nadie quiera.
+
+    El tope y la semilla se resuelven por separado a propósito: pedir una
+    semilla distinta para reproducir algo no debe deshacer el tope del nivel.
+    """
+    if pedido_max is not None:
+        maximo = pedido_max if pedido_max > 0 else None
+    else:
+        maximo = nivel_max
+    semilla = pedido_semilla if pedido_semilla is not None else nivel_semilla
+    return (maximo, semilla)
+
+
+def _muestreo_configurado(feature: str) -> tuple[int | None, int | None, str | None]:
+    """Tope, semilla y NIVEL de rigor de una feature, según `harness/rigor.json`.
+
+    Devuelve también el nivel porque el informe tiene que declarar quién fijó la
+    semilla (R9), y resolverlo aparte obligaría a releer los mismos dos ficheros.
+
+    Ante cualquier configuración ausente o ilegible devuelve `(None, None,
+    None)` —campaña completa, como hasta hoy—, igual que hacen
+    `_timeout_configurado` y `_workers_configurados`: el arnés se degrada, no se
+    cae, en un repositorio con configuración anterior.
+    """
+    try:
+        rigor = cargar_rigor(RUTA_RIGOR)
+        ficha = next(
+            (f for f in cargar_features() if f.get("id") == feature), {}
+        )
+        nivel = nivel_de_feature(ficha, rigor)
+        return (max_mutantes_nivel(nivel, rigor), semilla_nivel(nivel, rigor), nivel)
+    except ValueError:
+        return (None, None, None)
+
+
 def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
     """Punto de entrada.
 
@@ -1631,6 +1706,16 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
     def factoria(fichero: str) -> object:
         return ejecutor_para(fichero, servicios, opciones.raiz)
 
+    nivel_max, nivel_semilla, nivel = _muestreo_configurado(opciones.feature)
+    max_mutantes, semilla = resolver_muestreo(
+        opciones.max_mutantes, opciones.semilla, nivel_max, nivel_semilla
+    )
+    if max_mutantes is not None:
+        print(
+            f"Muestreo: hasta {max_mutantes} mutantes, semilla {semilla} "
+            f"(nivel {nivel or 'no resuelto'})."
+        )
+
     workers = resolver_workers(opciones.workers, _workers_configurados())
     paralela = workers >= 2 and ejecutor is None
     centinela = Centinela(
@@ -1653,8 +1738,8 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
                 timeout_s=timeout_s,
                 raiz=opciones.raiz,
                 workers=workers,
-                max_mutantes=opciones.max_mutantes,
-                semilla=opciones.semilla,
+                max_mutantes=max_mutantes,
+                semilla=semilla,
                 eco=lambda linea: print(linea, flush=True),
                 centinela=centinela,
             )
@@ -1664,8 +1749,8 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
                 ejecutor or EjecutorPytest(raiz=opciones.raiz),
                 timeout_s=timeout_s,
                 raiz=opciones.raiz,
-                max_mutantes=opciones.max_mutantes,
-                semilla=opciones.semilla,
+                max_mutantes=max_mutantes,
+                semilla=semilla,
                 eco=lambda linea: print(linea, flush=True),
                 ejecutor_de=factoria if servicios and ejecutor is None else None,
                 centinela=centinela,

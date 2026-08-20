@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from harness.rigor import cargar_rigor, topes_tamano
 
+
 def test_f038_r13_los_topes_viven_en_el_rigor_json_y_no_en_el_codigo() -> None:
     rigor = {"tamano": {"requirements": 120, "design": 200, "impl": 150, "review": 100}}
 

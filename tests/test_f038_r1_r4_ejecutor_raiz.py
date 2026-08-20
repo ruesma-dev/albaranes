@@ -35,7 +35,7 @@ class _EspiaSubprocess:
     def __init__(self) -> None:
         self.ordenes: list[list[str]] = []
 
-    def __call__(self, orden, **_kwargs):  # noqa: ANN001, ANN204
+    def __call__(self, orden, **_kwargs):
         self.ordenes.append([str(parte) for parte in orden])
         return subprocess.CompletedProcess(orden, 0, b"", b"")
 
