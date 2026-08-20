@@ -252,3 +252,27 @@ Altas relacionadas: **F-036** (los dos defectos, rigor `critico`), **F-037**
   copias en el scratchpad. Un artefacto de finales de línea provocó un cuelgue.
 - **Cuidado con las rutas de Windows en heredocs de Python**: `\U` de
   `C:\Users` se interpreta como escape unicode y mata el script.
+
+## F-038 · spec escrita (spec-author, 2026-08-20)
+
+Escrita `specs/F-038-coste-del-ciclo-sdd/` (requirements 118 líneas, design
+162, tasks 15 tareas + 1 posterior al merge). La spec cumple los topes que la
+propia feature establece.
+
+Decisiones tomadas en el design: D1 `ejecutor_para` con ruta `tests` en vez de
+`testpaths` en la raíz; D3 los topes de tamaño NO son retroactivos (la puerta
+mide solo la feature en curso, las 12 specs viejas quedan amnistiadas); D4
+ninguna de las seis reglas de mutación es puerta automática de `init.sh` (RM1,
+RM2, RM5 y RM6 pasan a checkbox de C4 bis; RM3 y RM4 a criterio del reviewer);
+D5 remedir F-012 NO entra, solo se estampa el aviso de invalidez; D6 el porte a
+`arnes-base` 1.7.0 va después del merge en `dev`.
+
+Pendiente de validar por el humano (las tres preguntas abiertas del final de
+`requirements.md`):
+
+1. Semilla fija propuesta para el nivel `estandar`: `20260820`.
+2. Remedición de `progress/mutacion_F-012.md` (61 mutantes con la invocación
+   rota): ¿feature nueva o basta el aviso en cabecera?
+3. `nivel_por_defecto: estandar` deja sin `supervivientes_maximos: 0` a toda
+   feature que no declare rigor: ¿se aceptan o se revisan las fichas de
+   dinero/producción antes del cambio?
