@@ -188,7 +188,9 @@ def _preparar_cli(
 
 
 def test_f038_r6_el_cli_sin_banderas_aplica_el_muestreo_del_nivel(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     capturado: dict = {}
 
@@ -196,6 +198,23 @@ def test_f038_r6_el_cli_sin_banderas_aplica_el_muestreo_del_nivel(
 
     assert capturado["max_mutantes"] == 20
     assert capturado["semilla"] == 20260820
+    # Y se dice por pantalla: quien lanza la campaña tiene que ver que va
+    # muestreada, o leerá 20 mutantes creyendo que son todos.
+    assert "Muestreo: hasta 20 mutantes, semilla 20260820" in capsys.readouterr().out
+
+
+def test_f038_r6_una_campania_completa_no_anuncia_muestreo(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Sin tope no hay muestreo que anunciar: anunciarlo sería mentir."""
+    capturado: dict = {}
+    argv = _preparar_cli(tmp_path, monkeypatch, capturado) + ["--max-mutantes", "0"]
+
+    mutacion.main(argv, ejecutor=object())
+
+    assert "Muestreo:" not in capsys.readouterr().out
 
 
 def test_f038_r7_el_cli_con_max_mutantes_cero_anula_el_tope_del_nivel(
