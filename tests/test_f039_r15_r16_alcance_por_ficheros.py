@@ -1,0 +1,180 @@
+# tests/test_f039_r15_r16_alcance_por_ficheros.py
+"""F-039 · R15 y R16: alcance declarado a mano con `--ficheros`.
+
+Hasta ahora el alcance solo se sabía calcular desde un diff de git. Una campaña
+sobre la maquinaria del arnés tal como está HOY no tiene diff que la describa:
+el sujeto no es «lo que cambió», son tres ficheros enteros. `--ficheros` es esa
+puerta, y estos tests fijan sus dos mitades: que el alcance salga entero y
+declarado en el informe (R15), y que una ruta mala aborte sin mutar nada (R16).
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from harness.alcance import Alcance, alcance_de_ficheros
+from harness.mutacion import (
+    InformeMutacion,
+    _analizar_argumentos,
+    escribir_informe,
+    main,
+)
+
+FICHERO_REAL = "harness/rigor.py"
+
+
+# --- R15: el alcance son los ficheros ENTEROS -------------------------------
+
+
+def test_f039_r15_el_alcance_incluye_todas_las_lineas_del_fichero() -> None:
+    total = len(Path(FICHERO_REAL).read_text(encoding="utf-8").splitlines())
+
+    alcance = alcance_de_ficheros([FICHERO_REAL], "F-039")
+
+    assert alcance.ficheros() == [FICHERO_REAL]
+    assert alcance.lineas[FICHERO_REAL] == set(range(1, total + 1))
+    assert alcance.total_lineas() == total
+
+
+def test_f039_r15_el_alcance_admite_varios_ficheros_y_los_normaliza() -> None:
+    alcance = alcance_de_ficheros(
+        ["harness\\rigor.py", "harness/alcance.py"], "F-039"
+    )
+
+    assert alcance.ficheros() == ["harness/alcance.py", "harness/rigor.py"]
+
+
+def test_f039_r15_el_origen_es_ficheros_y_la_ref_dice_que_no_hay_diff() -> None:
+    alcance = alcance_de_ficheros([FICHERO_REAL], "F-039")
+
+    assert alcance.feature == "F-039"
+    assert alcance.origen == "ficheros"
+    assert alcance.ref_diff[0] == "(sin diff)"
+    assert len(alcance.ref_diff[1]) == 40, "la segunda ref debe ser el SHA de HEAD"
+
+
+def test_f039_r15_el_informe_declara_el_alcance_como_declarado_en_la_orden(
+    tmp_path: Path,
+) -> None:
+    """R15 exige esta frase literal: sin diff que enseñar, se dice por qué."""
+    alcance = Alcance(
+        feature="F-039",
+        origen="ficheros",
+        ref_diff=("(sin diff)", "0" * 40),
+        lineas={FICHERO_REAL: {1, 2, 3}},
+    )
+    ruta = tmp_path / "informe.md"
+
+    escribir_informe(InformeMutacion(feature="F-039", alcance=alcance), ruta)
+
+    assert (
+        "Origen del diff: **ficheros** (alcance declarado en la orden)."
+        in ruta.read_text(encoding="utf-8")
+    )
+
+
+def test_f039_r15_el_informe_de_un_alcance_calculado_sigue_enseniando_las_refs(
+    tmp_path: Path,
+) -> None:
+    """La rama nueva no puede comerse el caso normal: con diff, se ven las refs."""
+    alcance = Alcance(
+        feature="F-039",
+        origen="rama",
+        ref_diff=("base123", "rama456"),
+        lineas={FICHERO_REAL: {1}},
+    )
+    ruta = tmp_path / "informe.md"
+
+    escribir_informe(InformeMutacion(feature="F-039", alcance=alcance), ruta)
+
+    assert (
+        "Origen del diff: **rama** (`base123` .. `rama456`)."
+        in ruta.read_text(encoding="utf-8")
+    )
+
+
+# --- R15: el CLI cablea `--ficheros` al alcance -----------------------------
+
+
+def test_f039_r15_el_cli_acepta_ficheros_separados_por_coma() -> None:
+    opciones = _analizar_argumentos(["--feature", "F-039", "--ficheros", "a.py,b.py"])
+
+    assert opciones.ficheros == "a.py,b.py"
+
+
+def test_f039_r15_con_ficheros_la_campania_muta_ese_alcance_y_no_el_del_diff(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Cableado de `--ficheros` en `main`, sin lanzar ninguna suite.
+
+    La campaña se sustituye por un doble que solo apunta qué alcance recibió:
+    lo que se comprueba es la decisión del CLI, no el mutador.
+    """
+    recibidos: list[Alcance] = []
+
+    def _campania_falsa(alcance: Alcance, *_args: object, **_kwargs: object):
+        recibidos.append(alcance)
+        return InformeMutacion(feature=alcance.feature, alcance=alcance)
+
+    def _diff_prohibido(*_args: object, **_kwargs: object) -> Alcance:
+        raise AssertionError("con --ficheros no se calcula el alcance desde el diff")
+
+    monkeypatch.setattr("harness.mutacion.ejecutar_campania", _campania_falsa)
+    monkeypatch.setattr("harness.mutacion.alcance_de_feature", _diff_prohibido)
+
+    codigo = main(
+        [
+            "--feature",
+            "F-039",
+            "--ficheros",
+            FICHERO_REAL,
+            "--workers",
+            "1",
+            "--salida",
+            str(tmp_path / "informe.md"),
+        ]
+    )
+
+    assert codigo == 0
+    assert len(recibidos) == 1
+    assert recibidos[0].origen == "ficheros"
+    assert recibidos[0].ficheros() == [FICHERO_REAL]
+
+
+# --- R16: una ruta mala aborta sin mutar nada -------------------------------
+
+
+def test_f039_r16_una_ruta_inexistente_aborta_con_mensaje_explicito() -> None:
+    with pytest.raises(SystemExit) as parada:
+        alcance_de_ficheros(["harness/no_existe_de_nada.py"], "F-039")
+
+    assert "harness/no_existe_de_nada.py" in str(parada.value)
+    assert "no existe" in str(parada.value)
+
+
+def test_f039_r16_una_ruta_que_no_es_produccion_aborta() -> None:
+    with pytest.raises(SystemExit) as parada:
+        alcance_de_ficheros(["tests/test_f039_r15_r16_alcance_por_ficheros.py"], "F-039")
+
+    assert "no es código de producción" in str(parada.value)
+
+
+def test_f039_r16_una_lista_vacia_aborta() -> None:
+    with pytest.raises(SystemExit) as parada:
+        alcance_de_ficheros([], "F-039")
+
+    assert "--ficheros" in str(parada.value)
+
+
+def test_f039_r16_el_cli_devuelve_2_y_no_llega_a_mutar(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _campania_prohibida(*_args: object, **_kwargs: object):
+        raise AssertionError("no se puede mutar nada con un alcance rechazado")
+
+    monkeypatch.setattr("harness.mutacion.ejecutar_campania", _campania_prohibida)
+
+    assert main(["--feature", "F-039", "--ficheros", "harness/no_existe.py"]) == 2
+    assert main(["--feature", "F-039", "--ficheros", "docs/CONVENTIONS.md"]) == 2
