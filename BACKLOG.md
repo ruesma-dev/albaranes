@@ -9,7 +9,7 @@ Resumen: **38 features**, 30 abiertas, 8 terminadas.
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | pendiente | estandar | `feature/F-038-coste-del-ciclo-sdd` |
+| F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | spec lista | estandar | `feature/F-038-coste-del-ciclo-sdd` |
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | pendiente | critico | `feature/F-036-residuos-contenedores-e-incrementos` |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
@@ -57,7 +57,7 @@ Resumen: **38 features**, 30 abiertas, 8 terminadas.
 
 ### F-038 · Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor
 
-estado **pendiente** · prioridad 3 · rigor `estandar` · SDD sí · rama `feature/F-038-coste-del-ciclo-sdd`
+estado **spec lista** · prioridad 3 · rigor `estandar` · SDD sí · rama `feature/F-038-coste-del-ciclo-sdd`
 
 Pedido por el humano el 2026-08-19 con cinco proyectos en marcha y consumo alto. Medicion de la sesion: los cuatro subagentes gastaron ~712.000 tokens (implementer F-034 234k, agente del arnes 1.6.0 206k, spec-author F-034 159k, spec-author F-035 113k) y progress/ acumula 12.250 lineas, con review_F-019.md en 1.365 e impl_F-019.md en 1.189. La campana de mutacion NO gasta tokens -es Python y pytest, gasta CPU-: el coste esta en el papeleo y en las repeticiones. Cada linea de spec se paga TRES veces: la escribe el spec-author, la lee el implementer y la relee el reviewer; las 978 lineas de la spec de F-035, para arreglar un script PowerShell, son casi mil lineas por tres.
 
