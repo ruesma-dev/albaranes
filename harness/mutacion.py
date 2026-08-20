@@ -490,6 +490,12 @@ class EjecutorPytest:
 
     `raiz` es el directorio desde el que se lanza la suite y `ejecutable`, el
     intérprete con el que se lanza. En un monorepo, los de cada servicio.
+
+    `ruta` acota la RECOLECCIÓN dentro de esa raíz. Sin ella, `python -m pytest`
+    a secas recoge todo lo que cuelgue del directorio: en un monorepo eso
+    arrastra `services/**/tests` y muere en la recolección con el intérprete
+    equivocado, así que ningún mutante llega a juzgarse (F-038, R1–R3). Es la
+    misma ruta explícita que `harness/init.sh` usa para la suite de la raíz.
     """
 
     def __init__(
@@ -497,22 +503,35 @@ class EjecutorPytest:
         raiz: str = ".",
         argumentos: list[str] | None = None,
         ejecutable: str | None = None,
+        ruta: str | None = None,
     ) -> None:
         self.raiz = raiz
         self.argumentos = argumentos or ["-x", "-q", "--tb=no", "-p", "no:cacheprovider"]
         self.ejecutable = ejecutable or sys.executable
+        self.ruta = ruta
 
-    def identidad(self) -> tuple[str, str]:
-        """Con qué intérprete y desde dónde juzga. Dos ejecutores con la misma
-        identidad ejecutan exactamente la misma suite: la línea base de uno
-        vale por la del otro y no se corre dos veces."""
-        return (str(Path(self.raiz).resolve()), self.ejecutable)
+    def identidad(self) -> tuple[str, str, str]:
+        """Con qué intérprete, desde dónde y sobre qué ruta juzga. Dos
+        ejecutores con la misma identidad ejecutan exactamente la misma suite:
+        la línea base de uno vale por la del otro y no se corre dos veces.
+
+        La ruta entra en la identidad porque dos ejecutores que comparten raíz e
+        intérprete pero acotan distinto NO corren la misma suite: darles la
+        misma línea base sería medir una y dar por buena la otra."""
+        return (str(Path(self.raiz).resolve()), self.ejecutable, self.ruta or "")
 
     def correr(self, timeout_s: int, argumentos: tuple[str, ...] | None = None) -> ResultadoSuite:
-        """Ejecuta la suite y devuelve el hecho crudo, sin interpretarlo."""
+        """Ejecuta la suite y devuelve el hecho crudo, sin interpretarlo.
+
+        La ruta acotada va SIEMPRE al final, tanto aquí como en la línea base:
+        una base que recoge más tests que los mutantes no protege nada.
+        """
+        pedidos = list(argumentos or self.argumentos)
+        if self.ruta is not None:
+            pedidos.append(self.ruta)
         try:
             proceso = subprocess.run(
-                [self.ejecutable, "-m", "pytest", *(argumentos or self.argumentos)],
+                [self.ejecutable, "-m", "pytest", *pedidos],
                 cwd=self.raiz,
                 capture_output=True,
                 timeout=timeout_s,
@@ -678,6 +697,17 @@ def _etiqueta_de(ejecutor: object) -> str:
     return Path(str(raiz)).as_posix() if raiz is not None else repr(ejecutor)
 
 
+def _ruta_raiz(raiz: str) -> str | None:
+    """Ruta con la que se acota la suite de la RAÍZ, o `None` si no la hay.
+
+    `tests` es la convención del arnés —`harness/init.sh` ya invoca así la
+    suite de la raíz— y acotarla es lo que permite juzgar un fichero que no
+    pertenece a ningún servicio. Un repositorio que ponga su suite en otro sitio
+    no mejora (R2): se invoca sin ruta, exactamente como hasta hoy.
+    """
+    return "tests" if (Path(raiz) / "tests").is_dir() else None
+
+
 def ejecutor_para(
     fichero: str,
     servicios: list[Servicio],
@@ -699,7 +729,7 @@ def ejecutor_para(
     """
     servicio = servicio_de_ruta(fichero, servicios)
     if servicio is None or servicio.lenguaje != "python":
-        return EjecutorPytest(raiz=raiz)
+        return EjecutorPytest(raiz=raiz, ruta=_ruta_raiz(raiz))
     return EjecutorPytest(
         raiz=str(Path(raiz) / servicio.ruta),
         ejecutable=interprete(servicio, raiz_venvs or raiz),
