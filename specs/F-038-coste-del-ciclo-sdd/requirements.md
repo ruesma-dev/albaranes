@@ -107,12 +107,13 @@ R22. SI un informe de `progress/mutacion_*.md` midió ficheros fuera de
 de que sus números **no valen** y que hay que repetir la campaña. La repetición
 NO entra en esta feature (D5).
 
-## Preguntas abiertas para el humano
+## Decisiones del humano (2026-08-20) — las tres preguntas, cerradas
 
-1. ¿Semilla fija propuesta `20260820`? Cualquier entero vale; se pide fijarla
-   por escrito para que las campañas `estandar` sean reproducibles.
-2. Remedir F-012 (y los demás informes afectados) queda como deuda: ¿se abre
-   feature nueva o se acepta el aviso en cabecera y punto?
-3. `nivel_por_defecto: estandar` deja sin `supervivientes_maximos: 0` a toda
-   feature que no declare rigor. ¿Se acepta, o se revisan las fichas para subir
-   a `critico` las de dinero/producción antes del cambio?
+1. **Semilla `20260820`**, fija y escrita en `rigor.json` (R5). Dos reviewers
+   que remidan la misma feature obtienen los mismos 20 mutantes.
+2. **Remedir F-012 NO entra aquí** (se mantiene D5): el aviso de invalidez sí
+   (R22), y la remedición se abre como feature propia **F-039**.
+3. **`nivel_por_defecto: estandar` se acepta sin revisar fichas**: las 38
+   features del backlog **declaran rigor** (30 `estandar`, 8 `critico`), así
+   que el cambio no altera el rigor de ninguna feature actual; solo afecta a
+   las futuras que omitan declararlo.

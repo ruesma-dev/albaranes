@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **38 features**, 30 abiertas, 8 terminadas.
+Resumen: **39 features**, 31 abiertas, 8 terminadas.
 
 ## Trabajo abierto
 
@@ -39,6 +39,7 @@ Resumen: **38 features**, 30 abiertas, 8 terminadas.
 | F-009 | Limpieza de la cola huérfana q-emails | 30 | pendiente | estandar | `feature/F-009-limpieza-q-emails` |
 | F-010 | Easy Auth en el portal sv4 | 31 | pendiente | critico | `feature/F-010-easy-auth-sv4` |
 | F-022 | Bandeja de portada: el concepto de las líneas del albarán sale vacío porque el JOIN de la línea derivada apunta a la tabla equivocada | 32 | pendiente | estandar | `feature/F-022-concepto-lineas-bandeja` |
+| F-039 | Arnes: remedir las campanas de mutacion que se juzgaron con la invocacion rota | 33 | pendiente | estandar | `feature/F-039-remedir-campanas-invocacion-rota` |
 
 ## Terminadas
 
@@ -342,6 +343,12 @@ ALCANCE: solo sv4 (services/albaranes-front), la consulta de list_documents y un
 FUERA DE ALCANCE: cambiar quién rellena descripcion_linea o el diseño de las líneas sintéticas; el detalle del documento, que ya pinta bien (la conciliación lee contrato_lines_derived y la tabla «Líneas leídas del albarán (IA)» pinta ml.concepto, document_detail.html:470); y F-019/F-021, que salieron de los mismos albaranes Feymaco pero atacan la lectura de la partida, no la descripción.
 
 VERIFICACIÓN ESPERADA AL CERRAR: abrir /documents en local con esos dos albaranes y ver el concepto real en las 6 líneas from_albaran, con las sintéticas sin cambios.
+
+### F-039 · Arnes: remedir las campanas de mutacion que se juzgaron con la invocacion rota
+
+estado **pendiente** · prioridad 33 · rigor `estandar` · SDD no · rama `feature/F-039-remedir-campanas-invocacion-rota`
+
+Deuda declarada por F-038 (decision D5 de su design, confirmada por el humano el 2026-08-20). Hasta F-038, un fichero que no cae en ningun servicio de harness/servicios.json se juzgaba con `python -m pytest` SIN ruta desde la raiz; como la raiz no tiene testpaths, esa invocacion moria en la recoleccion en menos de un segundo y el ejecutor la leia como exit 1 = MUERTO. Resultado: mutantes declarados muertos sin que NINGUN test los juzgara. Afecta como minimo a progress/mutacion_F-012.md (61 mutantes) y a cualquier otro informe cuyo alcance incluya ficheros fuera de services/. F-038 solo estampa el aviso de invalidez en cabecera (su R22): NO remide, porque la auditoria de supervivientes cuesta justo lo que aquella feature viene a ahorrar. Aqui se remide de verdad, ya con `ejecutor_para` arreglado. OJO: los supervivientes que aparezcan son huecos reales de test que hoy nadie ve, asi que esta feature puede abrir trabajo nuevo; eso es el objetivo, no un efecto colateral. Requiere F-038 cerrada y mergeada.
 
 ### F-001 · Test de estructura del monorepo
 

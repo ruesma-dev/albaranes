@@ -412,6 +412,24 @@
       "rigor": "estandar",
       "priority": 3,
       "branch": "feature/F-038-coste-del-ciclo-sdd"
+    },
+    {
+      "id": "F-039",
+      "title": "Arnes: remedir las campanas de mutacion que se juzgaron con la invocacion rota",
+      "description": "Deuda declarada por F-038 (decision D5 de su design, confirmada por el humano el 2026-08-20). Hasta F-038, un fichero que no cae en ningun servicio de harness/servicios.json se juzgaba con `python -m pytest` SIN ruta desde la raiz; como la raiz no tiene testpaths, esa invocacion moria en la recoleccion en menos de un segundo y el ejecutor la leia como exit 1 = MUERTO. Resultado: mutantes declarados muertos sin que NINGUN test los juzgara. Afecta como minimo a progress/mutacion_F-012.md (61 mutantes) y a cualquier otro informe cuyo alcance incluya ficheros fuera de services/. F-038 solo estampa el aviso de invalidez en cabecera (su R22): NO remide, porque la auditoria de supervivientes cuesta justo lo que aquella feature viene a ahorrar. Aqui se remide de verdad, ya con `ejecutor_para` arreglado. OJO: los supervivientes que aparezcan son huecos reales de test que hoy nadie ve, asi que esta feature puede abrir trabajo nuevo; eso es el objetivo, no un efecto colateral. Requiere F-038 cerrada y mergeada.",
+      "acceptance": [
+        "F-038 esta done y mergeada en dev (sin ella la campana no puede ni ejecutarse)",
+        "Se listan en progress/ todos los informes progress/mutacion_*.md cuyo alcance incluye ficheros fuera de services/",
+        "La campana de F-012 se repite con la invocacion arreglada y su informe declara SHA de HEAD, linea base y media por mutante",
+        "Cada superviviente nuevo se analiza por escrito: test que falta, o justificacion de equivalencia",
+        "Los avisos de invalidez de cabecera se retiran solo de los informes efectivamente remedidos",
+        "bash harness/init.sh en verde"
+      ],
+      "status": "pending",
+      "sdd": false,
+      "rigor": "estandar",
+      "priority": 33,
+      "branch": "feature/F-039-remedir-campanas-invocacion-rota"
     }
   ]
 }
