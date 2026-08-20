@@ -18,7 +18,7 @@ del código (fase RED obligatoria: rigor `estandar`).
 - [x] T11: cabecera de invalidez en los `progress/mutacion_*.md` cuyo alcance incluye ficheros fuera de `services/` (al menos `mutacion_F-012.md`), diciendo que se midieron con la invocación rota y que hay que repetirlos (R22)  |  Verificación: `grep -l "CAMPAÑA NO VÁLIDA" progress/mutacion_F-012.md` devuelve el fichero; el resto de informes se listan en `progress/impl_F-038.md` con su decisión
 - [x] T12: campaña de mutación de la feature (`python -m harness.mutacion --feature F-038`), análisis de cada superviviente y sección «Evidencias» en `progress/impl_F-038.md`  |  Verificación: `progress/mutacion_F-038.md` existe, sin `PENDIENTE`, con su SHA y su línea base impresos
 - [x] T13: anotar en `progress/current.md` las tres preguntas abiertas de `requirements.md` y la deuda de remedición (D5)  |  Verificación: MANUAL (humano) — el humano responde 1, 2 y 3 antes del cierre
-- [ ] T14: Ejecutar `bash harness/init.sh` en verde  |  Verificación: exit code 0
+- [x] T14: Ejecutar `bash harness/init.sh` en verde  |  Verificación: exit code 0
 
 ## Fuera de esta rama (después del merge en `dev`)
 
