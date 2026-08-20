@@ -24,8 +24,8 @@ liberar contexto: lo que queda es trabajo largo y conviene retomarlo limpio.
 
 | Repositorio | Versión | Estado |
 |---|---|---|
-| `arnes-base` | **1.7.0** | F-038 portada e integrada sobre la 1.6.3 (6 commits). **pusheada** el 2026-08-20 (`9e2ced7..c6d4979`) |
-| `albaranes` | **1.6.1** sellado, pero con **el código de F-038 dentro** | El sello y el código YA NO COINCIDEN: F-038 se desarrolló aquí y se portó allí, pero **la 1.6.2 y la 1.6.3 nunca llegaron a este repositorio**. En particular **le falta el arreglo del bytecode envenenado**, que es lo que provocaba mutantes «muertos» falsos. Se arregla actualizándolo con el instalador |
+| `arnes-base` | **1.7.1** | 1.7.0 (F-038) pusheada el 20-ago. La **1.7.1 (F-039)** son 2 commits locales **sin subir**: `--ficheros` con su guarda de alcance vacío y `lineas_comparables`. Destino: 153 passed, instalador 65 verde |
+| `albaranes` | **1.6.1** sellado, pero con **el código de F-038 y F-039 dentro** | El sello y el código YA NO COINCIDEN: F-038 se desarrolló aquí y se portó allí, pero **la 1.6.2 y la 1.6.3 nunca llegaron a este repositorio**. En particular **le falta el arreglo del bytecode envenenado**, que es lo que provocaba mutantes «muertos» falsos. Se arregla actualizándolo con el instalador |
 | `porcentajes`, `postventa-incidencias` | 1.5.2 | sin actualizar |
 | `datamart-seg-anual` | 1.5.0 | sin actualizar |
 | `partes` | 1.4.0 | sin actualizar |
