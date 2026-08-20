@@ -8,9 +8,10 @@ liberar contexto: lo que queda es trabajo largo y conviene retomarlo limpio.
 
 ### Lo primero al abrir la próxima sesión
 
-1. **`git push` de `arnes-base`**: los commits locales de la 1.6.1 en adelante
-   —más los de la 1.7.0 cuando se porte F-038— son lo único que impide que todo
-   el trabajo del arnés exista fuera de un solo disco.
+1. **`git push`: HECHO el 2026-08-20.** `arnes-base` subió sus 8 commits
+   (`9e2ced7..c6d4979`, la 1.6.3 y la 1.7.0 completas) y `albaranes` sus 72 de
+   `dev` (`73b00d7..82f3e20`). Ya no hay trabajo del arnés en un solo disco.
+   `main` de `albaranes` NO se tocó y no se creó ningún PR.
 2. Por orden: **F-036 (residuos, lo único que toca dinero)** → **F-039 (subida
    a prioridad 2: sin una suite estable, ninguna medición del arnés vale)** →
    actualizar los otros cuatro proyectos con el instalador ya seguro.
@@ -23,7 +24,7 @@ liberar contexto: lo que queda es trabajo largo y conviene retomarlo limpio.
 
 | Repositorio | Versión | Estado |
 |---|---|---|
-| `arnes-base` | **1.7.0** | F-038 portada e integrada sobre la 1.6.3 (6 commits). **8 commits locales sin subir** (los 2 de la 1.6.3 + los 6 de la 1.7.0) |
+| `arnes-base` | **1.7.0** | F-038 portada e integrada sobre la 1.6.3 (6 commits). **pusheada** el 2026-08-20 (`9e2ced7..c6d4979`) |
 | `albaranes` | **1.6.1** sellado, pero con **el código de F-038 dentro** | El sello y el código YA NO COINCIDEN: F-038 se desarrolló aquí y se portó allí, pero **la 1.6.2 y la 1.6.3 nunca llegaron a este repositorio**. En particular **le falta el arreglo del bytecode envenenado**, que es lo que provocaba mutantes «muertos» falsos. Se arregla actualizándolo con el instalador |
 | `porcentajes`, `postventa-incidencias` | 1.5.2 | sin actualizar |
 | `datamart-seg-anual` | 1.5.0 | sin actualizar |
@@ -142,8 +143,9 @@ de cualquier test se lee como MUERTO**: ése era el falso muerto de
 
 ## Pendientes del humano
 
-1. **`git push` de `arnes-base`**: todo lo posterior a la 1.6.0 sigue sin subir.
-   Sin push, ese trabajo existe en un solo disco.
+1. ~~`git push` de `arnes-base`~~ **HECHO el 2026-08-20**, junto con el de
+   `dev` de `albaranes`. Pendiente de decidir por el humano: si `dev` se lleva a
+   `main` y cuándo.
 2. **Actualizar los otros cuatro proyectos** (F-035 ya cerró). `partes` está
    en 1.4.0 y se saltaría cuatro versiones: es el escenario donde más ficheros
    aparecen «distintos». Con el instalador nuevo ya no puede pisar estado.
