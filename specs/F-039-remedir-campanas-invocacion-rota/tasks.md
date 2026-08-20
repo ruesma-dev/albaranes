@@ -14,7 +14,7 @@ cabeceras).
 - [ ] T7 (R11): Si la línea base sale en rojo por una causa distinta del reloj, diagnosticarla por escrito ANTES de seguir; si el arreglo excede el arnés, marcar la feature `blocked` y parar  |  Verificación: sección de diagnóstico en `progress/verificacion_paralela_F-039.md`, o `blocked` en `progress/current.md`
 - [x] T8: Fase RED de R15/R16 — escribir `tests/test_f039_r15_r16_alcance_por_ficheros.py` (alcance de ficheros enteros, origen declarado, ruta inexistente y ruta no-producción abortan) y pegar la traza del fallo  |  Verificación: el fichero de tests en ROJO, traza pegada en `progress/impl_F-039.md`
 - [x] T9 (R15, R16): Implementar `alcance_de_ficheros()` en `harness/alcance.py` y el flag `--ficheros` en `harness/mutacion.py`, con `Origen del diff: **ficheros**` en el informe  |  Verificación: `python -m pytest tests/test_f039_r15_r16_alcance_por_ficheros.py` en verde
-- [ ] T10 (R22): Comprobar la línea base antes de gastar nada: la suite de la raíz en verde sin mutar  |  Verificación: `python -m pytest tests -q`; si sale en rojo, no se lanza la campaña (se arregla o `blocked`)
+- [x] T10 (R22): Comprobar la línea base antes de gastar nada: la suite de la raíz en verde sin mutar  |  Verificación: `python -m pytest tests -q`; si sale en rojo, no se lanza la campaña (se arregla o `blocked`)
 - [x] T11 (R13, R14, R17): Lanzar en SESIÓN DEDICADA `python -m harness.mutacion --feature F-039 --ficheros harness/mutacion.py,harness/mutacion_paralela.py,harness/rigor.py --salida progress/mutacion_maquinaria_paralela_F-039.md`  |  Verificación: MANUAL (humano) — el informe existe con SHA de HEAD medido, línea base y media por mutante; `git status` sin mutantes al terminar
 - [x] T12 (R18): Escribir a mano la cabecera del informe: comando exacto de reproducción y la advertencia de que mide **la maquinaria de hoy**, no repone los números de `mutacion_F-012.md` ni es comparable con ellos  |  Verificación: test de documentos de T15
 - [x] T13 (R19, R21): Completar el análisis de CADA superviviente —test que falta o justificación de equivalencia—, agrupado por causa; si alguno revela un defecto real de comportamiento, parar y anotarlo en `progress/current.md`  |  Verificación: `grep -c PENDIENTE progress/mutacion_maquinaria_paralela_F-039.md` da 0
@@ -22,6 +22,12 @@ cabeceras).
 - [x] T15 (R1, R2, R23, R24, R25): Escribir `progress/inventario_mutacion_F-039.md` y `tests/test_f039_r1_r2_r23_r25_documentos.py` — cada `mutacion_*.md` figura en el inventario con su veredicto; `mutacion_F-012.md` conserva el `⚠` y su puntero dice que el informe nuevo mide otro código; `mutacion_F-011.md` conserva su aviso con la decisión del 2026-08-20; `mutacion_F-034.md` sin cambios en el diff de la rama  |  Verificación: `python -m pytest tests/test_f039_r1_r2_r23_r25_documentos.py`
 - [x] T16 (R23, R24): Actualizar las cabeceras de `progress/mutacion_F-012.md` y `progress/mutacion_F-011.md` según R23 y R24  |  Verificación: el test de T15 en verde
 - [ ] T17: Portar a `arnes-base` las dos mejoras genéricas —`FILAS_DE_RELOJ` + `lineas_comparables` y `alcance_de_ficheros` + `--ficheros`— con sus tests (regla de propagación de `CLAUDE.md`)  |  Verificación: suite de `arnes-base` y nota en `progress/impl_F-039.md`
-- [ ] T18: Cerrar el papeleo — `progress/impl_F-039.md` con la sección «Evidencias» (tests, cobertura, mutantes/supervivientes, tiempo de suite) y `progress/current.md` con las verificaciones MANUAL pendientes y sus comandos exactos  |  Verificación: `python -m harness.tamano --feature F-039` con código 0
+- [x] T18: Cerrar el papeleo — `progress/impl_F-039.md` con la sección «Evidencias» (tests, cobertura, mutantes/supervivientes, tiempo de suite) y `progress/current.md` con las verificaciones MANUAL pendientes y sus comandos exactos  |  Verificación: `python -m harness.tamano --feature F-039` con código 0
 - [x] T19: Campaña de mutación de esta feature sobre su propio diff  |  Verificación: `python -m harness.mutacion --feature F-039` deja `progress/mutacion_F-039.md` con supervivientes analizados
-- [ ] T20: Ejecutar `bash harness/init.sh` en verde  |  Verificación: exit code 0
+- [x] T20: Ejecutar `bash harness/init.sh` en verde  |  Verificación: exit code 0
+
+> **T5, T6 y T7 quedan para el humano** (verificación MANUAL en sesión
+> dedicada): ver `progress/verificacion_paralela_F-039.md`. **T17 va
+> DESPUÉS del merge en `dev`** (F-038 D6: portar a `arnes-base` dentro de
+> la rama de una feature provocó el rechazo entero del reviewer en F-034);
+> la lista exacta de lo que hay que portar está en `progress/impl_F-039.md`.
