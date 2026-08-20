@@ -1,140 +1,140 @@
 <!-- progress/review_F-039.md -->
 # F-039 · Review
 
-**Revisión completa (pasada 1).** Rango recalculado con `git merge-base dev
-HEAD` = `d3422ee`: se revisa **`d3422ee..29d7fd6`** (14 commits, 19 ficheros,
-+1.864/−35); `dev` está en `d3422ee`, así que coincide con `dev..HEAD`. Árbol
-limpio al empezar y al terminar.
+**Revisión incremental desde `29d7fd6` (pasada 2).** Se revisa
+**`29d7fd6..6da533a`** (4 commits: `282f07d`, `adea6ab`, `8623187`, `6da533a`;
+7 ficheros, +298/−60). Lo aprobado en la pasada 1 —rango `d3422ee..29d7fd6`,
+revisión completa— queda dado por bueno y no se vuelve a mirar. Árbol limpio al
+empezar y al terminar: lo que tocaba ficheros se hizo sobre un worktree
+desechable en el scratchpad, ya retirado.
 
-## Veredicto: CHANGES_REQUESTED
+## Veredicto: APPROVED
 
-Dos CR pequeños y acotados. **El fondo está bien y verificado de forma
-independiente**: los números de las dos campañas son reales —reproducidos
-mutante a mutante—, `init.sh` en verde, y las decisiones de juicio (R20, R21, el
-equivalente, dejar fuera `_base_rota_al_final`) son las correctas. Falta una
-guarda de test y una guarda de entrada. **Nivel de rigor:** `estandar`, exige
-fase RED, cobertura ≥ 80 %, campaña analizada y «Evidencias»; RM5 no aplica.
+Los dos CR de la pasada 1 están cerrados y **verificados en vivo, no leídos**:
+las guardas de R18 muerden al degradar la cabecera, y la guarda de alcance vacío
+ahora sale por el camino por el que se llega. **Nivel de rigor:** `estandar`
+(declarado en `features.json`): exige fase RED, cobertura ≥ 80 %, campaña
+analizada y sección «Evidencias». RM5 no aplica (solo `critico`).
 
-## Verificación independiente
+## Resumen de la pasada 1 (cerrada, no se revisa de nuevo)
 
-- `bash harness/init.sh` tal cual, **exit 0**: **416 passed in 75.31s**,
-  `COBERTURA 96.9%` (31/32), `TAMAÑO requirements 150/150, design 224/250, impl
-  210/220`. Los avisos (`ruff` 1108, sv1/infra sin tests, `[ADAPTAR]` de
-  F-034/F-035) son deuda previa. **150/150 comprobado**: `wc -l` = 150 exactas;
-  clavado en el tope, que es legal.
-- **Recálculo puro de T11**: `alcance_de_ficheros` da 1932+541+269 = **2742**
-  líneas y `generar_mutantes` **417** mutantes; coinciden al dígito. **Los 20
-  muestreados reproducidos** con `Random(20260820).sample`: salen los mismos, y
-  **los 7 supervivientes están entre ellos**, con idéntico operador y texto
-  original→mutado. `mutacion_F-039.md`: 61+73 = **134** líneas, **13** mutantes.
-- **Campañas NO reejecutadas** (838,7 s y 473,1 s, muy por encima del umbral de
-  60 s de C4 bis). En su lugar, **tercera vía (RM4)**: copia del árbol en el
-  scratchpad y reejecución de los 33 mutantes contra el subconjunto de tests de
-  la maquinaria (219 tests): **13/13 muertos** en la campaña de la feature y
-  **20/20 veredictos idénticos** a los declarados en la de la maquinaria. Los
-  muertos están comprobados, no solo contados. Árbol principal intacto.
-- **R5 provocado sobre copia**: inyectada una fila de reloj nueva en
-  `escribir_informe` sin declararla, el test de R4 **falla** (`At index 22 diff:
-  '| Segundos netos de reloj | 2.70' != '… 888.84'`): la guarda contra el flake
-  de F-038 T5 funciona. **R16 en vivo**: ruta inexistente y no-producción
-  abortan con exit 2 y mensaje explícito, sin tocar nada.
-- **`arnes-base` intacto**: commit `c6d4979` del 20-ago 17:00, limpio, sin rastro
-  de lo nuevo (T17 bien aplazado). **`mutacion_F-034.md` fuera del diff** (R25) y
-  **`features.json` solo pasa a `in_progress`**: ninguna ficha nueva (R20).
+CHANGES_REQUESTED con el **fondo aprobado**: `init.sh` en verde, T11 recalculada
+al dígito (2.742 líneas, 417 mutantes, los 20 del muestreo reproducidos con
+`Random(20260820)` y los 7 supervivientes entre ellos), los 33 mutantes de las
+dos campañas reejecutados por RM4 sobre copia con veredictos idénticos, R5 y R16
+provocados en vivo, `arnes-base` intacto (T17 bien aplazado),
+`mutacion_F-034.md` fuera del diff y `features.json` sin ficha nueva. RM1–RM4 y
+RM6 `[x]`; C1, C2, C3, C4 bis y C5 `[x]`; C3 bis y C4 ter N/A justificados;
+**C4 en `[ ]`** por R18. Sus tres observaciones no bloqueantes (orden T16/T11,
+`_base_rota_al_final` bien dejado fuera, el mutante de `mutacion.py:1807` como
+hueco de test y no como defensa que falte) siguen en pie. Los dos CR eran:
 
-## RM1–RM6
+- **CR-1** · R18 sin ningún test, y T12 citando en `tasks.md` un test inexistente.
+- **CR-2** · la guarda de lista vacía de `alcance_de_ficheros` inalcanzable desde
+  el CLI: `--ficheros ","` terminaba en **exit 0** con un informe de 0 mutantes.
 
-- **RM1 [x]** · SHA completo `b0761e85…`. Desde ese commit hasta HEAD **ningún
-  fichero del alcance cambia** (`git diff --name-only b0761e8..HEAD` sobre los
-  tres, vacío): solo entran informes, `tasks.md` y un fichero de tests **nuevo**,
-  que como mucho mataría supervivientes, nunca al revés.
-- **RM2 [x]** · 20 × 41,9 = 838 ≈ **838,7 s**, sin salto de orden de magnitud;
-  media (41,9) < base (57,1) es el caso legítimo de `-x` con 13/20 muertos, como
-  F-038. Idem `mutacion_F-039.md`: 13 × 36,4 ≈ 473,1. **El relato de las tres
-  pasadas se sostiene**: otra sesión cargando la máquina explica 51 s → 149 s, la
-  suite seguía en `409 passed` y `--timeout 400` sin tocar `rigor.json` es el
-  remedio correcto (D5 en pie).
-- **RM3 [x]** · Ningún equivalente sale MUERTO: revisados los 13 uno a uno, todos
-  cambian comportamiento observable (`__name__ != "__main__"` ejecuta el cuerpo
-  al importar; `[None] // efectivo` y `split(…)[2]` revientan; el resto invierten
-  guardas vivas). Confirmado en la copia. **RM4 [x]**: usada, arriba.
-- **RM5 · N/A justificado** (solo `critico`). Aun así he leído la justificación
-  de `mutacion.py:1348` y **se sostiene**: con `or` la rama se toma también en
-  líneas sin backticks, que dejan `mutado` en `None` sin cambiar el estado; el
-  único camino divergente es un bloque sin `- Mutado:` válido, y ahí el original
-  recoge el análisis y lo tira después en `if analisis and original is not None and
-  mutado is not None`. Mismo observable. **RM6 · N/A justificado**: no se quita ni
-  una guarda defensiva; el superviviente de `mutacion.py:1807` se deja **vivo**.
+## Pasada 2 · verificación independiente del delta
 
-## CHECKPOINTS.md
+- **`bash harness/init.sh` tal cual, exit 0**: `420 passed in 76.44s`,
+  `COBERTURA 100.0%` (32/32, umbral 80 %), `RUTAS SENSIBLES N/A`, `TAMAÑO
+  requirements 150/150, design 224/250, impl 220/220, review 140/140`. Los
+  avisos (`ruff` 1108, sv1/`infra` sin tests, `[ADAPTAR]` de F-034/F-035) son
+  deuda previa. La suite entera, no solo el delta, como manda el protocolo.
+- **CR-1 cerrado · las guardas de R18 muerden.** Degradada la cabecera de
+  `mutacion_maquinaria_paralela_F-039.md` sobre el worktree, cinco veces, y el
+  test que toca **falla** cada vez: (1) `--ficheros` recortado a dos de los tres
+  ficheros → `la cabecera no lleva el --ficheros COMPLETO`; (2) «mide OTRO
+  código» → «mide el código de»; (3) «no repone sus números» → «actualiza»;
+  (4) `mutacion_F-012.md` renombrado en **todo** el fichero; (5) borrado el
+  bloque `>` entero (38 líneas) → **fallan los dos**. Sin degradar, `-k r18`
+  da `2 passed`. Y las cadenas exigidas aparecen **una sola vez** en el fichero,
+  todas dentro de la cabecera: no hay copia en otro sitio que deje pasar el test
+  con la cabecera perdida, que era el riesgo de comprobar el texto completo.
+- **T12 en `tasks.md` ya cita un test que existe**: ejecutado tal cual está
+  escrito, `-k r18` → `2 passed, 7 deselected`.
+- **CR-2 cerrado · comprobado en vivo**, que es donde estaba el defecto. Con
+  `--salida` al scratchpad: `--ficheros ","` → **exit 2**; `--ficheros ",,,"` →
+  **exit 2**; `--ficheros " "` → **exit 2**; y **no se escribió ningún informe**
+  (`ls` del destino: no existe). El mensaje nombra la lista recibida
+  (`(['', ''])`), que es lo que hace diagnosticable el aborto.
+- **La cuarta entrada, `--ficheros ""`, no se cuela**, pero por otro camino:
+  `if opciones.ficheros:` la trata como falsa y `main` cae al alcance del diff
+  (comprobado: `origen rama, d3422ee..feature/F-039…`). No es la campaña vacía
+  con exit 0 sino una legítima, así que no bloquea; queda como observación 2.
+- **RM6 · no se ha quitado defensa para matar nada.** La guarda vieja
+  (`if not rutas`) desaparece, pero la nueva la **contiene**: con `[]` el
+  diccionario queda vacío y aborta igual, y
+  `test_f039_r16_una_lista_vacia_aborta` (línea 164) sigue verde. Guarda movida
+  y ampliada, no retirada.
 
-- **C1 [x]** · `init.sh` exit 0; ficheros obligatorios presentes. **C2 [x]** ·
-  una sola feature `in_progress`, rama correcta, `current.md` al día.
-- **C3 [x]** · Hexagonal **N/A justificado**: la feature vive entera en
-  `harness/`, utillaje sin capas (design §«Encaje»). Primera línea con ruta en los
-  cinco nuevos; sin `print()` de debug; sin secretos. **C3 bis · N/A**: no entra
-  ningún documento externo.
-- **C4 [ ]** · Falla por **R18**: sin ningún test, y `tasks.md` T12 declara como
-  verificación «test de documentos de T15», que no existe (CR-1). El resto sí:
-  MANUAL de T5/T6/T7 en `current.md` §1 con comando exacto; nada toca red ni BBDD.
-- **C4 bis [x]** · Fase RED con **dos trazas reales** (los dos `ImportError`, más
-  el rojo intencionado de R7); cobertura en `[OK]`; `mutacion_F-039.md` generado
-  por la herramienta y con totales verificados; cero `PENDIENTE` en los dos
-  informes; «Evidencias» con los cuatro números; no es campaña de cero mutantes.
-  **C4 ter · N/A justificado**: «F-039 no toca ninguna ruta sensible».
-- **C5 [x] con salvedad escrita** · Commits `F-039 Tn: …` por tarea; árbol
-  limpio; `features.json` refleja el estado real. `tasks.md` deja `[ ]` T5, T6,
-  T7 —MANUAL del humano— y T17 —porte a `arnes-base` **tras** el merge, F-038
-  D6—; ambas excepciones constan por escrito: no son tareas sin hacer, son
-  tareas asignadas a otro momento y a otra persona.
+## La campaña de T19, reejecutada (RM1–RM3)
 
-## Trazabilidad requisito → test
+- **RM1 [x]** · SHA declarado `adea6abba5453dbf2be032d027793f2304e0bf41`.
+  `git diff --name-only adea6ab..HEAD` = `progress/impl_F-039.md` y
+  `progress/mutacion_F-039.md`: **ningún fichero del alcance se ha movido**.
+  Recálculo independiente en HEAD con `alcance_de_feature`: 2 ficheros,
+  `alcance.py` 67 + `mutacion.py` 73 = **140 líneas**, idéntico al informe (el
+  alcance creció de 134 a 140 justo por CR-2, y por eso tocaba remedir).
+  `generar_mutantes` da **13** mutantes, los mismos 13 del informe.
+- **RM2 [x]** · 13 × 37,1 = 482,3 ≈ **482,2 s** declarados: coherente al
+  decimal. Media (37,1 s) por debajo de la línea base (51,5 s) es el caso
+  legítimo de `-x` con 13/13 muertos, como F-038. **Campaña no reejecutada:
+  482,2 s, muy por encima del umbral de 60 s de C4 bis**; en su lugar,
+  recálculo puro + RM3/RM4 sobre muestra.
+- **RM3 [x]** · Ningún equivalente sale MUERTO. Revisados los 13: tres tocan
+  `range(1, total + 1)`, uno revienta por índice (`ref_diff[2]`), el resto
+  invierten guardas vivas o el `and` de `lineas_comparables`. **Tres muertes
+  reproducidas de verdad (RM4)** sobre el worktree: `alcance.py:262`
+  (`if not lineas:` → `if lineas:`) mata con `SystemExit … (['harness/rigor.py'])`
+  —**es el mutante de la guarda nueva**, la prueba de que CR-2 quedó cubierto
+  por test y no solo escrito—; `alcance.py:254` (`total + 2`, el único candidato
+  serio a equivalente) mata con `AssertionError: 270`; y `mutacion.py:1402`
+  (`and` → `or`) mata el test de paridad serie/paralelo de F-012.
+- **T11 no se reejecuta** y sigue siendo válida: `git diff --name-only
+  b0761e8..HEAD` sobre `mutacion.py`, `mutacion_paralela.py` y `rigor.py` sale
+  **vacío** también en HEAD. Confirmado, y adelante.
+
+## CHECKPOINTS.md (solo lo que el delta cambia)
+
+- **C4 [x]** · Cerrado el `[ ]` de la pasada 1: R18 tiene dos tests que muerden
+  y T12 cita uno que existe. El resto de C4 no lo toca el delta.
+- **C4 bis [x]** · Fase RED presente para los dos CR (mensajes de aserción
+  reales, no «se siguió TDD»), corroborada por mi propia degradación; cobertura
+  en `[OK]` al 100 %; `mutacion_F-039.md` regenerado por la herramienta con
+  totales verificados; cero `PENDIENTE`; «Evidencias» con los cuatro números
+  actualizados; no es campaña de cero mutantes.
+- **C1, C2, C3, C5 [x]** · `init.sh` exit 0, una sola feature `in_progress`,
+  rama correcta, árbol limpio. Los cuatro commits del delta llevan el prefijo
+  `F-039` y dicen qué CR cierran; `tasks.md` mantiene sus `[ ]` justificados
+  (T5–T7 MANUAL, T17 tras el merge). **C3 bis, C4 ter · N/A** justificados igual
+  que en la pasada 1 (ningún documento externo; ninguna ruta sensible).
+- **Tamaño del informe del implementer: medición correcta.** `wc -l` = **220
+  exactas**, clavado en el tope, que es legal. Revisadas sus cinco compresiones:
+  ninguna pierde nada exigible —la traza RED de T2/T4 pasa de bloque a línea
+  pero **conserva el mensaje de aserción literal**, y las decisiones 2–5 se
+  funden en 2–4 sin perder el `--workers 1`, el `--timeout 400` ni el motivo de
+  aplazar T17.
+
+## Trazabilidad (delta)
 
 | Req | Test |
 |---|---|
-| R1, R2 | `test_f039_r1_*` (3) y `test_f039_r2_todo_informe…figura_en_el_inventario` |
-| R3–R7 | `test_f039_r3_*` (2), `r4_dos_informes…`, `r5_*` (2), `r6_las_diferencias…`, `r7_el_test_de_paridad_de_f012…` |
-| R8–R12 | MANUAL (humano) · `verificacion_paralela_F-039.md`, comando y criterio listos |
-| R13, R14, R17 | Verificados por recálculo del reviewer sobre el informe |
-| R15, R16 | 6 tests `test_f039_r15_*` y 4 `test_f039_r16_*` (+ comprobado en vivo) |
-| **R18** | **ninguno — CR-1** |
-| R19–R26 | `grep -c PENDIENTE` = 0; `current.md` §2 y §3; `features.json` sin ficha nueva; línea base 57,1 s verde; `test_f039_r23_*`, `r24_*`, `r25_*`; `init.sh` exit 0 |
+| **R18** | `test_f039_r18_la_cabecera_lleva_el_comando_exacto…` y `…avisa_de_que_mide_otro_codigo_que_f012` — **cerrado** |
+| R16 | + `…ficheros_solo_con_separadores_aborta_desde_el_cli` y `…el_aborto_por_alcance_vacio_no_escribe_informe` |
 
-## Cambios requeridos
-
-**CR-1 · R18 no tiene guarda, y el propio informe dice por qué hace falta.**
-`progress/mutacion_maquinaria_paralela_F-039.md` avisa: «`escribir_informe`
-conserva los análisis de los supervivientes, pero **no esta cabecera**. Vuélvela
-a pegar.» Quien repita la campaña borra en silencio el comando de reproducción y
-la advertencia de que mide otro código que `mutacion_F-012.md`, y nada lo
-detecta. R23 —mismo tipo de requisito— sí tiene test; R18 se quedó fuera. Añadir
-a `tests/test_f039_r1_r2_r23_r25_documentos.py` un `test_f039_r18_*` que exija (a)
-el `--ficheros` completo del comando de reproducción y (b) la frase de que mide
-**otro código** y no repone los de F-012. Y corregir la verificación de **T12** en
-`tasks.md`, que declara un test inexistente.
-
-**CR-2 · La guarda de lista vacía de `alcance_de_ficheros` es inalcanzable desde
-el CLI** (`harness/alcance.py:235`). `design.md` promete «Aborta con
-`SystemExit` … si la lista viene vacía» y `test_f039_r16_una_lista_vacia_aborta`
-solo cubre la llamada directa con `[]`. Desde `main` la lista nunca es `[]`:
-`split(",")` devuelve siempre ≥ 1 elemento y las entradas en blanco se saltan
-con `continue` (líneas 245-246). Comprobado: `--ficheros ","` termina en **exit
-0** y escribe un informe de **0 mutantes**, que es justo la campaña vacía que
-`CHECKPOINTS.md` manda mirar con lupa. Mover la comprobación **después** del
-filtrado —si `lineas` queda vacío, abortar— y cubrirla con un test vía `main`.
+El resto de la tabla no cambia: vale la de la pasada 1.
 
 ## Observaciones (no bloquean)
 
-1. **T16 se commiteó antes que T11**, invirtiendo el orden D → E del design: sin
-   consecuencia, pero ese orden es parte de la spec y si se cambia, se dice. Y
-   `requirements.md` en 150/150 por segunda feature seguida sugiere que el tope
-   se queda corto para features de arnés: propuesta para el humano.
-2. **`_base_rota_al_final`: de acuerdo en dejarlo fuera.** No lo cubre ningún
-   requisito, es genérico del arnés, y —argumento que el implementer no hace—
-   **arreglarlo tras medir movería el alcance bajo el SHA ya declarado y
-   obligaría a repetir 838 s de campaña por RM1**.
-3. **R21 no debía dispararse, y el grupo A no cambia eso.** El mutante de
-   `mutacion.py:1807` invierte una guarda que **en el código real funciona**: la
-   campaña sí restaura el centinela sucio antes de empezar. Falta el test que la
-   sujeta, no la defensa: hueco, y de los graves, pero hueco. Bien clasificado
-   como Alta y bien enviado al humano.
+1. Las tres de la pasada 1 siguen en pie sin cambios.
+2. **`--ficheros ""` se ignora en silencio** (`mutacion.py:1822`, `if
+   opciones.ficheros:`): el flag explícito desaparece y la campaña mide el diff
+   de la feature. No es el defecto de CR-2 —no hay campaña vacía con exit 0—,
+   pero un flag que se pasa y no se aplica merece un aborto igual que `","`.
+   Propuesta para el humano, no CR de esta feature.
+3. **Propuesta al protocolo del reviewer** (`.claude/agents/reviewer.md`): esta
+   pasada ha valido por **degradar la evidencia y ver si el test falla** —una
+   guarda documental que pasa con el documento correcto no demuestra nada—.
+   Escribirlo como regla: si un CR se cierra con un test sobre un fichero de
+   `progress/`, el reviewer lo degrada sobre copia y comprueba el rojo. Es
+   barato, y es lo único que separa un test de un adorno.
