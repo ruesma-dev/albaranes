@@ -2,6 +2,7 @@
 # F-012 · Campaña de mutación
 
 Generado por `python -m harness.mutacion --feature F-012` el 2026-08-14 03:46.
+> **Medida con el arnés 1.5.2, que NO mutaba `is`/`is not`: NO es comparable con las campañas posteriores a la 1.6.0 (F-034), que generaría +10 mutantes aquí. Decisión del humano (D1, opción B): no se remide; solo se remidieron F-019 y F-027.**
 
 ## Alcance
 

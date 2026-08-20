@@ -1,31 +1,119 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-## Spec escrita — F-034 (2026-08-19, rama `chore/specs-F-034-F-035`)
+## F-034 · CR-2 cerrado, a la espera de la tercera pasada (2026-08-20)
 
-`specs/F-034-mutacion-is-y-coherencia-evals/` con sus tres ficheros. La spec
-está **pendiente de aprobación del humano** y trae tres decisiones abiertas:
+Rama `feature/F-034-mutacion-is-y-coherencia-evals`, feature `in_progress`.
+**Las catorce tareas T0–T14 están en `[x]`**, incluida T12. `bash harness/init.sh`
+en verde: **280 passed en 86,30 s**, `PUERTA COBERTURA: 100.0% de 12 líneas
+cambiadas`.
 
-1. **D1 · ¿Se remide el histórico?** (sección propia en `requirements.md`).
-   Al mutar `is`/`is not` cambia la vara de medir y los informes de las seis
-   features cerradas dejan de ser comparables. Costes **medidos** por cálculo
-   puro: F-027 pasa de 0 a **1** mutante (< 1 min), F-019 de 31 a **49**
-   (≈ 5,8 min), F-002 +18 (1 min), F-011 +42 (**≈ 70 min**), F-012 +10
-   (≈ 24 min, y su alcance incluye `harness/mutacion.py`, que ya no es el
-   mismo). Opciones: **A** no remedir y solo anotar el cambio de vara; **B**
-   remedir F-019 y F-027; **C** remedirlas todas (≈ 101 min de máquina).
-   **Recomendación: B** — esas dos campañas hay que lanzarlas igual como
-   prueba de que el cambio funciona, así que la re-medición sale casi gratis,
-   y son justo las dos features cuyo defecto vivía en una guarda `is`.
-2. **D2 · ¿1.5.3 o 1.6.0?** Recomendación: **1.6.0** (cambia qué se mide y
-   puede volver roja una campaña verde en cualquier proyecto). Si entra
-   primero, F-035 pasaría a ser 1.6.1.
-3. **D3 · ¿Se corrige la descripción de F-034 en `features.json`?** Dice que
-   `evals/ground_truth/` no existe, y **sí existe** (seis libros `.xlsx`, no
-   versionados por `.gitignore`; `evals/conversor.py:39` los usa). El defecto
-   real es que la puerta se condiciona a un artefacto invisible en vez de a
-   los fixtures versionados de `evals/fixtures/`, que es lo que lee el runner.
-   Recomendación: corregir esa frase (`BACKLOG.md` se regenera solo).
+### El CR-2 reabierto de la segunda pasada: cerrado (§T16 del informe)
+
+De los cinco cambios requeridos del review, cuatro ya estaban cerrados y solo
+quedaba **CR-2: la campaña de mutación no reproducía sus números**. El reviewer
+la reejecutó y obtuvo 9 muertos / 8 supervivientes / 2 timeouts donde el
+informe declaraba 18 / 1 / 0. **Tenía razón**, y su argumento no se discute: un
+superviviente exige que la suite termine en verde, así que una máquina cargada
+puede inventar *muertos* falsos pero nunca *supervivientes* falsos.
+
+Lo hecho, en este orden:
+
+1. **Tres tests nuevos** en `tests/test_mutacion_operadores.py`, con **fase RED
+   pegada mutante a mutante**, que cierran los **cuatro huecos reales** de los
+   ocho supervivientes (`208 [logico]`, `208 [entero]`, `220 [entero]`,
+   `221 [aritmetico]`). El más grave era el cuarto: con él, el delimitador
+   **derecho** de `_delimitado` no se comprobaba nunca y el mutante volvía a
+   caer dentro del comentario. El test que ya existía usaba «anal**is**is», que
+   el byte ANTERIOR ya rechaza; el nuevo usa «**isla**», que empieza por `is` y
+   obliga a mirar el byte SIGUIENTE.
+2. **Campaña rehecha** con el método documentado (ejecutor por API,
+   `--workers 1`): **19 generados, 14 muertos, 4 supervivientes, 1 timeout en
+   1.063,1 s**. Números pegados en `progress/mutacion_F-034.md`.
+3. **Los 4 supervivientes que quedan son equivalentes**, comprobados uno a uno
+   por barrido exhaustivo antes de firmarlos —incluidos los tres que el
+   reviewer ya había identificado—. **Ninguno queda en `PENDIENTE`.**
+4. **El quinto «hueco» no lo era**: `251 [entero]` es equivalente, con
+   demostración. La línea solo se ejecuta con un token de palabra, cuyo primer
+   byte es de palabra; cualquier coincidencia en `posicion + 1` estaría
+   precedida por él y `_delimitado` la rechazaría igual. Saltársela no cambia
+   nada.
+5. **Los timeouts, medidos en vez de declarados**: `251 [aritmetico]` es un
+   bucle infinito de verdad (`exit=124` a los 200 s). `207 [logico]` **no lo
+   es**: muere en 48,28 s. Aquel timeout era la máquina cargada del reviewer
+   (63 min de campaña frente a los 17,7 min de ésta).
+6. **Corregida la frase falsa** del informe de mutación —que el gemelo de la
+   línea 208 moría con `test_f034_r7`—, con lo medido: hoy muere, pero por el
+   test nuevo, y antes sobrevivía.
+
+**No se ha propagado la 1.6.0 a esta rama**, que fue el error del primer
+rechazo. `harness/mutacion.py` sigue sin diff contra HEAD tras la campaña
+(comprobado con `git status`).
+
+> Esta sección sustituye a la que titulaba «F-034 · BLOQUEADA en el porte a
+> `arnes-base`». **Ese bloqueo ya no existe** y la afirmación que hacía —
+> «`arnes-base/harness/VERSION` sigue en 1.5.2 a propósito»— es falsa hoy.
+
+### T12 (porte a `arnes-base`): resuelto, y cómo
+
+El bloqueo era real —otro trabajo en vuelo y sin commitear sobre el mismo
+`harness/mutacion.py`— y lo resolvió el **humano**: decidió incorporar los dos
+encargos a la **misma versión**. La **1.6.0 de `arnes-base`** lleva las cuatro
+piezas del encargo de «mutación fiable» **y** el porte de `is`/`is not` de
+F-034. Commits allí, ya **pusheados** a `origin/main`: `860902e`, `b7dce9d`,
+`febb51d` (el porte de F-034), `3ceb95b`, `89a9ba9`.
+
+Verificado en solo lectura (hay otro agente trabajando en ese repositorio, así
+que desde aquí **no se escribe** en él): `arnes-base/harness/VERSION` →
+`ARNES_VERSION=1.6.0`, y `grep -c "ast.Is" arnes-base/harness/mutacion.py` → 2.
+
+### La propagación de la 1.6.0 a `albaranes` está REVERTIDA, y es a propósito
+
+El commit `e97f9b9` trajo la 1.6.0 de vuelta a `albaranes` **dentro de la rama
+de F-034**. Eso metió ~1.000 líneas de producción ajenas en el alcance de la
+feature **después** de medir sus puertas: el informe de mutación declaraba 56
+líneas / 19 mutantes y la rama pasaba a tener 1.057 / 172, y la cobertura
+saltaba de 12 líneas cambiadas a 392. Fue la causa de CR-1 y CR-2.
+
+**Se ha revertido** (`163846b`). Con el revert, el alcance de la rama vuelve a
+ser el que el informe declara —recomprobado, ver abajo— y la propagación se
+rehará **después del merge de F-034, en su propia rama `chore/`**.
+
+Efecto colateral consciente: `harness/VERSION` de `albaranes` dice **1.6.0**
+mientras el código de `harness/` es el de la **1.5.2**. Es incoherente y **se
+deja así a propósito**: lo arregla la rama de propagación, no ésta. Quien lea
+esto antes de ese merge, que no lo «arregle» aquí.
+
+### Comprobación de que el informe de mutación de F-034 sigue siendo válido
+
+Recalculado tras el revert, cálculo puro (`harness.alcance.alcance_de_feature`
++ `harness.mutacion.generar_mutantes`, sin ejecutar ninguna suite):
+
+```
+harness/mutacion.py: 56 lineas, 19 mutantes
+TOTAL: 1 fichero(s), 56 lineas, 19 mutantes
+```
+
+Coincide **exactamente** con lo que declara `progress/mutacion_F-034.md`. Y el
+método documentado en su aviso al reviewer **vuelve a reproducirse**: el
+`harness/mutacion.py` de esta rama no lleva comprobación de línea base (esa es
+de la 1.6.0, revertida), así que ya no aborta. Muestra de 3 mutantes con
+`--max-mutantes 3 --semilla 7`: `3 mutantes evaluados, 3 muertos, 0
+supervivientes, 0 timeouts en 82.7 s`, árbol limpio después.
+
+### El hallazgo del ejecutor de la raíz: ya tiene feature propia
+
+**Las campañas de mutación sobre ficheros de la RAÍZ de este repositorio dan un
+falso verde con el CLI a secas.** `ejecutor_para` manda lo que no es de ningún
+servicio a `python -m pytest` **sin ruta**, y como no hay configuración de
+pytest en la raíz, esa invocación recoge `services/**/tests` y **revienta en la
+recolección en 0,81 s** pase lo que pase: exit 1, que el mutador cuenta como
+MUERTO. Por eso la campaña buena de F-034 se lanzó pasando el ejecutor por API.
+
+Afecta también a `progress/mutacion_F-012.md` (61 mutantes sobre `harness/`).
+**No se arregla en F-034**: está fuera de su alcance y toca la puerta de todas
+las features. Está dado de alta en **F-038** (`harness/features.json`, commit
+`73a6b1d`), junto al coste del ciclo SDD.
 
 ## Cierre de sesión — 2026-08-19
 
@@ -56,8 +144,10 @@ Sesión larga (18 y 19 de agosto). `dev` al día, árbol limpio, **ninguna featu
 la **vara de medir** de todas las features, así que va antes que cualquier otra
 cosa: cada feature cerrada hasta que se arregle se mide con una campaña ciega
 justo en el patrón (`x is None`) que ha causado los dos defectos más caros del
-proyecto. Incluye dos incoherencias más (el `evals/ground_truth/` inexistente y
-el rastro de las campañas manuales) y **se porta a `arnes-base`**.
+proyecto. Incluye dos incoherencias más (la puerta de evals condicionada a los
+libros `.xlsx` de `evals/ground_truth/`, que existen pero **no se versionan**,
+en vez de a los fixtures versionados de `evals/fixtures/` que es lo que lee el
+runner; y el rastro de las campañas manuales) y **se porta a `arnes-base`**.
 
 Después, por orden: F-024 (unidad + revisión razonada de unidades en IA2),
 F-028 y F-029 (los dos casos en que el albarán **no llega a valorarse**), F-030,
@@ -86,8 +176,10 @@ F-031…
    224964).
 6. **Rellenar `evals/fixtures/inputs/`**: mientras esté vacío, la puerta de
    rutas sensibles se queda en `aviso` y ninguna feature que toque prompts
-   puede demostrar nada. Ojo: F-034 arregla que la documentación diga
-   `evals/ground_truth/`, que no existe.
+   puede demostrar nada. Ojo: F-034 arregla que la condición de la puerta
+   apuntase a los libros `.xlsx` de `evals/ground_truth/` —que existen, pero
+   `.gitignore` los excluye y quien clona el repositorio no los ve— en vez de a
+   estos fixtures, que son los que consume `evals.runner`.
 7. **Despliegue**: NADA está desplegado. Producción corre las imágenes
    `r20260724-1632` (24 de julio), es decir **sin F-002, F-019 ni F-027** — el
    ×1000 y el importe sin descuento siguen vivos en Azure. Cuando se autorice:

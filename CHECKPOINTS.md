@@ -142,6 +142,14 @@ recorre estos puntos **contra ese nivel**.
       recálculo puro, pero el informe de review **lo dice explícitamente**.
       Recalcular alcance y nº de mutantes no demuestra que los muertos lo
       estén: unos «N muertos» inventados pasarían ese control.
+- [ ] **Si la campaña automática dio 0 mutantes y se sustituyó por una
+      MANUAL**: el informe trae una tabla con **una fila por mutante** y, en
+      cada fila, el fichero y la línea, el **texto exacto original → mutado**
+      de la sustitución, y el resultado con su **número de fallos**. Sin ese
+      texto exacto el punto NO se marca: describir la mutación con palabras
+      («se invierte la guarda») no la hace reproducible, y una campaña manual
+      que nadie puede repetir no es evidencia, es un párrafo. El reviewer
+      reproduce al menos dos filas al pie de la letra.
 - [ ] Cada superviviente de esa campaña tiene su sección de análisis
       **completada** (ninguna en `PENDIENTE`). En nivel `critico`, además,
       cero supervivientes salvo justificación escrita aceptada por el humano.
@@ -182,9 +190,16 @@ evals** (`python -m evals.runner --con-llm --feature F-XXX`), que ejecuta las
 cuatro fases de IA más el extremo-a-extremo y deja
 `progress/evals_F-XXX.md`. Las rutas protegidas son los prompts YAML, los
 schemas Pydantic que rellena la IA, los clientes LLM y las redes deterministas
-de sv6. Mientras los libros de `evals/ground_truth/` no tengan casos, esa
-pasada da NO_EVALUABLE: por eso la exigencia arranca en `aviso` (decisión D5
-de F-011) y se sube a `bloqueo` cuando el ground truth esté relleno.
+de sv6. Mientras los **fixtures versionados de `evals/fixtures/`** no tengan
+casos, esa pasada da NO_EVALUABLE: por eso la exigencia arranca en `aviso`
+(decisión D5 de F-011) y se sube a `bloqueo` cuando esos fixtures estén
+rellenos. Hoy los seis `_indice.json` siguen con la lista de casos vacía.
+
+> Los libros `.xlsx` de `evals/ground_truth/` **sí existen** —los rellena el
+> humano y `evals/conversor.py` los lee—, pero `.gitignore` excluye `*.xlsx`:
+> quien clona el repositorio no los ve. Condicionar la puerta a ellos era
+> condicionarla a un artefacto invisible; lo que consume `evals.runner` son los
+> fixtures. Corregido en F-034.
 
 ## C5 — La sesión se cerró bien
 

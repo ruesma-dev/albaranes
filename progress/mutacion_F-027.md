@@ -2,6 +2,7 @@
 # F-027 · Campaña de mutación
 
 Generado por `python -m harness.mutacion --feature F-027` el 2026-08-19 00:37.
+> **Medida con el arnés 1.5.2, que NO mutaba `is`/`is not`. Re-medida con el 1.6.0 (F-034): 1 mutante en vez de 0, y muerto — ver `progress/mutacion_F-027_remedida.md`.**
 
 ## Alcance
 
