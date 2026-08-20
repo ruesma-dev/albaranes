@@ -4,6 +4,29 @@
 Generado por `python -m harness.mutacion --feature F-011` el 2026-08-13 15:35.
 > **Medida con el arnés 1.5.2, que NO mutaba `is`/`is not`: NO es comparable con las campañas posteriores a la 1.6.0 (F-034), que generaría +42 mutantes aquí. Decisión del humano (D1, opción B): no se remide; solo se remidieron F-019 y F-027.**
 
+> ## ⚠ CAMPAÑA NO VÁLIDA · sus números no valen como evidencia
+>
+> Todo el alcance de esta campaña (`evals/**` y
+> `harness/rutas_sensibles.py`)
+> **no pertenece a ningún servicio** de `harness/servicios.json`, así que
+> `ejecutor_para` juzgó cada mutante con `python -m pytest` **sin ruta** desde la
+> raíz. Esa invocación no ejecuta la suite de la raíz: recoge también
+> `services/**/tests`, con un intérprete que no es el suyo. Los **172
+> «muertos»** de abajo no demuestran que ningún test cazara nada, y los
+> supervivientes tampoco están confirmados.
+>
+> **No cites estos números como evidencia.** La campaña hay que repetirla con el
+> arnés posterior a **F-038**, que acota la suite de la raíz a `tests` (R1–R4) y
+> convierte esto en medible. Su remedición **no está dada de alta**: F-039 solo cubre F-012.
+> Queda como deuda declarada, a decisión del humano — son 305 mutantes y
+> 133 supervivientes que analizar, la campaña más cara del repositorio.
+>
+> Los análisis escritos de los supervivientes se conservan —siguen siendo
+> información útil— pero cuelgan de una medición que no vale.
+>
+> Aviso escrito a mano el 2026-08-20 (F-038, T11): `escribir_informe` lo borrará
+> si alguien regenera el fichero, que es justo lo que hay que hacer.
+
 ## Alcance
 
 Origen del diff: **rama** (`42139da4067a65d8c6dd1cc8c4cbfe3d740c0c3e` .. `feature/F-011-evals-ia`).
