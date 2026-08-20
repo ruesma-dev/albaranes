@@ -68,8 +68,8 @@ error: vale la traza pegada. Sin ella, el reviewer trata el punto de C4 bis
 como checkbox vacío.
 
 El nivel de rigor de la feature sale del campo `rigor` de
-`harness/features.json`; si no lo declara, se aplica el más exigente. Consulta
-la tabla de niveles en `CHECKPOINTS.md`.
+`harness/features.json`; si no lo declara, se aplica el `nivel_por_defecto`
+de `harness/rigor.json`. Consulta la tabla de niveles en `CHECKPOINTS.md`.
 
 ## Sección «Evidencias» del informe (obligatoria)
 

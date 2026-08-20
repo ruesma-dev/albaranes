@@ -1,6 +1,6 @@
 {
   "$schema_doc": "Estados: pending -> spec_ready (aprueba humano) -> in_progress -> done. 'blocked' = parada con motivo en progress/current.md. Máximo UNA in_progress (lo valida init.sh). sdd=false salta la spec: 'acceptance' hace de mini-spec y el reviewer valida contra ella.",
-  "$rigor_doc": "El campo 'rigor' de cada feature declara cuanta evidencia se le exige: documental, estandar o critico (ver CHECKPOINTS.md y harness/rigor.json). Si una feature NO lo declara se le aplica el mas exigente: omitirlo no relaja nada.",
+  "$rigor_doc": "El campo 'rigor' de cada feature declara cuanta evidencia se le exige: documental, estandar o critico (ver CHECKPOINTS.md y harness/rigor.json). Si una feature NO lo declara se le aplica el 'nivel_por_defecto' de harness/rigor.json (hoy estandar): omitirlo no libra de las puertas, pero 'critico' se declara, no se hereda.",
   "$backlog_doc": "F-002..F-007 son las tandas del feedback de negocio de JMV (27-29/07, 16 albaranes), vigentes a 2026-08-12 y ordenadas por impacto; el detalle normativo de cada regla esta en docs/referencia/dominio_negocio_albaranes.md §10 (marcas 🔶 = decidido, pendiente de implementar). La tanda 4 va partida en dos (F-005 bombeo, F-006 residuos-pago): tocan prompts y servicios distintos.",
   "rules": {
     "one_feature_at_a_time": true,

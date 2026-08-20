@@ -7,8 +7,12 @@ compartida en producción debe exigir más que la media. El nivel se declara en
 el campo `rigor` de cada entrada de `harness/features.json` y lo que exige
 cada nivel vive en `harness/rigor.json`.
 
-Regla dura: si una feature no declara nivel, se le aplica el más exigente.
-Omitirlo no puede ser la vía fácil para saltarse las puertas.
+Regla dura: si una feature no declara nivel, se le aplica el
+`nivel_por_defecto` de `harness/rigor.json`. Ese nivel exige evidencia real
+(fase RED, cobertura y mutación), así que omitir el campo no es la vía fácil
+para saltarse las puertas; lo que no hace es arrastrar el modo más caro —cero
+supervivientes tolerados— a features que no lo necesitan. `critico` se
+declara: no se hereda por descuido.
 """
 
 from __future__ import annotations
@@ -72,7 +76,7 @@ def niveles_validos(rigor: dict) -> list[str]:
 
 
 def nivel_de_feature(feature: dict, rigor: dict) -> str:
-    """Nivel declarado por la feature; si falta o no vale, el más exigente."""
+    """Nivel declarado por la feature; si falta o no vale, el nivel por defecto."""
     declarado = feature.get("rigor")
     if isinstance(declarado, str) and declarado in rigor["niveles"]:
         return declarado
@@ -199,8 +203,8 @@ def cargar_features(ruta: Path | str = RUTA_FEATURES) -> list[dict]:
 def validar_features(features: list[dict], rigor: dict) -> list[str]:
     """Devuelve los errores de los niveles declarados (lista vacía = todo bien).
 
-    No declarar nivel NO es un error: se aplica el más exigente. Declarar uno
-    inexistente sí lo es: sería un rigor imaginario.
+    No declarar nivel NO es un error: se aplica el nivel por defecto. Declarar
+    uno inexistente sí lo es: sería un rigor imaginario.
     """
     errores: list[str] = []
     for feature in features:

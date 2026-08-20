@@ -249,7 +249,7 @@ fi
 
 # --- 3b. Niveles de rigor: configuración válida y niveles declarados válidos -
 # Lo que exige cada nivel vive en harness/rigor.json. Una feature que no
-# declara nivel NO es un error: se le aplica el más exigente. Declarar uno
+# declara nivel NO es un error: se le aplica el nivel por defecto. Declarar uno
 # inexistente sí lo es. Necesita Python: sin él, degrada con aviso.
 if [ -n "$PY" ]; then
     if $PY -m harness.rigor --validar; then

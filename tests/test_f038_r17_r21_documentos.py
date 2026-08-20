@@ -98,3 +98,51 @@ def test_f038_r20_rm5_solo_se_exige_en_rigor_critico_y_con_una_muestra() -> None
 
     assert "critico" in bloque or "crítico" in bloque
     assert "muestra" in bloque or "UNO" in bloque or "uno" in bloque
+
+
+# --- R20, R21: lo que bloquea el cierre y lo que NO automatiza el portero ----
+
+CHECKPOINTS = Path("CHECKPOINTS.md")
+INIT = Path("harness/init.sh")
+
+
+def test_f038_r18_checkpoints_usa_el_mismo_umbral_de_60_segundos() -> None:
+    """Dos umbrales distintos en dos documentos es peor que no tener ninguno."""
+    texto = _texto(CHECKPOINTS)
+
+    assert "60 segundos" in texto or "60 s" in texto
+    assert "inferior a 5 minutos" not in texto
+
+
+def test_f038_r20_c4_bis_tiene_un_checkbox_por_rm1_rm2_rm5_y_rm6() -> None:
+    bloque = _texto(CHECKPOINTS).split("## C4 bis", 1)[1].split("## C4 ter", 1)[0]
+
+    for regla in ("RM1", "RM2", "RM5", "RM6"):
+        assert f"{regla}" in bloque, regla
+        assert any(
+            linea.strip().startswith("- [ ]") and regla in linea
+            for linea in bloque.splitlines()
+        ), f"{regla} debe ser un checkbox, no un párrafo"
+
+
+def test_f038_r20_rm3_y_rm4_no_son_checkbox_sino_criterio_del_reviewer() -> None:
+    """No hay forma barata de decidir equivalencia ni de exigir una técnica."""
+    for linea in _texto(CHECKPOINTS).splitlines():
+        if linea.strip().startswith("- [ ]"):
+            assert "RM3" not in linea and "RM4" not in linea, linea
+
+
+def test_f038_r20_el_checkbox_de_rm5_esta_condicionado_a_rigor_critico() -> None:
+    bloque = _texto(CHECKPOINTS).split("## C4 bis", 1)[1].split("## C4 ter", 1)[0]
+    linea = next(l for l in bloque.splitlines() if "RM5" in l)
+    resto = bloque.split(linea, 1)[1].split("- [ ]", 1)[0]
+
+    assert "critico" in linea + resto or "crítico" in linea + resto
+
+
+def test_f038_r21_ninguna_regla_de_campania_es_puerta_automatica() -> None:
+    """Lo que init.sh gana es el tope de tamaño; RM1–RM6 exigen juicio."""
+    portero = _texto(INIT)
+
+    for regla in ("RM1", "RM2", "RM3", "RM4", "RM5", "RM6"):
+        assert regla not in portero, f"{regla} no puede ser puerta automática"

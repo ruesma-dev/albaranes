@@ -28,8 +28,11 @@ No todas las features merecen la misma vigilancia. Cada una declara su nivel
 en el campo `rigor` de su entrada de `harness/features.json`; lo que exige
 cada nivel vive en `harness/rigor.json` y lo valida `bash harness/init.sh`.
 
-**Si una feature no declara nivel se le aplica el más exigente (`critico`).**
-La omisión no puede ser la vía fácil para saltarse las puertas.
+**Si una feature no declara nivel se le aplica el `nivel_por_defecto` de
+`harness/rigor.json`**, hoy `estandar`: con puertas de fase RED, cobertura y
+mutación, pero sin la exigencia de cero supervivientes. Omitirlo no es gratis
+—se sigue exigiendo evidencia— y tampoco arrastra el modo más caro a features
+que no lo necesitan. Lo `critico` se declara: no se hereda por descuido.
 
 | Nivel | Para qué features | Exige |
 |---|---|---|
@@ -41,7 +44,9 @@ Comandos de las puertas:
 
 ```bash
 bash harness/init.sh                        # cobertura de las líneas cambiadas
+                                            # y topes de tamaño del papeleo
 python -m harness.mutacion --feature F-XXX  # campaña de mutación
+python -m harness.tamano --feature F-XXX    # solo los topes de tamaño
 ```
 
 Ambas herramientas son **solo para proyectos Python**. En un proyecto de otro
@@ -111,11 +116,21 @@ Si no toca ninguno, es N/A.
 ## C4 bis — El rigor declarado se cumple
 
 Comprobar que los tests son de verdad, no solo que pasan. El reviewer resuelve
-primero el nivel de la feature (campo `rigor`, o `critico` por omisión) y
-recorre estos puntos **contra ese nivel**.
+primero el nivel de la feature (campo `rigor`, o el `nivel_por_defecto` de
+`harness/rigor.json` si no lo declara) y recorre estos puntos **contra ese
+nivel**.
+
+Los cuatro puntos marcados **RM** son las reglas de revisión de campañas
+acordadas con el humano el 2026-08-19. Bloquean el cierre, pero **ninguna es
+puerta automática de `init.sh`**: exigen juicio (¿ha crecido la rama desde que
+se midió?, ¿es equivalente este mutante?). Lo que la herramienta garantiza son
+los DATOS sobre los que se juzga: el SHA, la línea base y la media por mutante,
+que el informe de mutación imprime siempre. RM3 (un equivalente no puede salir
+muerto) y RM4 (reejecutar el subconjunto de tests sobre una copia) viven en
+`.claude/agents/reviewer.md` como criterio, sin checkbox.
 
 - [ ] La feature declara `rigor` en `harness/features.json` con un valor
-      válido, o consta por escrito que se le aplica el más exigente.
+      válido, o consta por escrito qué nivel por defecto se le aplicó.
 - [ ] **Fase RED** (niveles `estandar` y `critico`): el informe
       `progress/impl_F-XXX.md` contiene, para los requisitos centrales, la
       **salida real** del fallo del test antes de existir el código. No vale
@@ -133,15 +148,31 @@ recorre estos puntos **contra ese nivel**.
       (alcance y nº de mutantes recalculados con `harness.alcance` y
       `harness.mutacion`; cálculo puro, sin ejecutar la suite).
 - [ ] **Los muertos están comprobados, no solo contados.** Si el «Tiempo
-      total» que declara el informe de mutación es **inferior a 5 minutos**,
+      total» que declara el informe de mutación es **inferior a 60 segundos**,
       el reviewer **reejecuta la campaña** con
       `python -m harness.mutacion --feature F-XXX --salida <ruta fuera de
       progress/>` y compara los totales. La salida no puede escribirse en
       `progress/` (pisaría el informe del implementer) y el árbol debe quedar
-      limpio después (`git status`). Si la campaña pasa de 5 minutos, vale el
-      recálculo puro, pero el informe de review **lo dice explícitamente**.
-      Recalcular alcance y nº de mutantes no demuestra que los muertos lo
-      estén: unos «N muertos» inventados pasarían ese control.
+      limpio después (`git status`). Si la campaña pasa de 60 segundos, vale el
+      recálculo puro más los cuatro puntos siguientes, pero el informe de
+      review **lo dice explícitamente**. Recalcular alcance y nº de mutantes no
+      demuestra que los muertos lo estén: unos «N muertos» inventados pasarían
+      ese control.
+- [ ] **RM1 · El informe de mutación declara el SHA completo de HEAD** contra
+      el que se midió (fila «SHA de HEAD medido»), y el reviewer comprueba que
+      el alcance medido es el que está revisando. En F-034 la rama creció de 56
+      a 1.057 líneas después de medir y el informe seguía pareciendo válido.
+- [ ] **RM2 · El tiempo del informe es internamente coherente:** la «Media por
+      mutante evaluado (s)» no puede ser muy inferior a la «Línea base (s)» del
+      ejecutor que juzgó. Si lo es, se rechaza **sin reejecutar nada**.
+- [ ] **RM5 · Solo en rigor `critico`:** cada superviviente declarado
+      «equivalente» trae demostración ejecutable, y el reviewer reproduce **una
+      muestra de UNO**, elegido por él. En rigor `estandar` basta la
+      justificación escrita, y este punto es N/A por nivel (justificado).
+- [ ] **RM6 · Si para matar un mutante se quitó código defensivo**, el
+      invariante está verificado en QUIEN CONSTRUYE EL DATO y consta por
+      escrito. Borrar una guarda `x is None` para que muera un mutante es
+      exactamente la ausencia de defensa que causó F-019 y F-027.
 - [ ] **Si la campaña automática dio 0 mutantes y se sustituyó por una
       MANUAL**: el informe trae una tabla con **una fila por mutante** y, en
       cada fila, el fichero y la línea, el **texto exacto original → mutado**
