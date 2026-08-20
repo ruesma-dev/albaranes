@@ -277,3 +277,38 @@ Altas relacionadas: **F-036** (los dos defectos, rigor `critico`), **F-037**
 4. **RM2 solo dispara a 10×** y, con «Tiempo total» > 60 s, tampoco se reejecuta:
    un informe «solo» cinco veces demasiado rápido pasaría. Aire deliberado, pero
    queda dicho.
+
+---
+
+## F-039 · spec escrita (2026-08-20, spec-author)
+
+Rama `feature/F-039-remedir-campanas-invocacion-rota` creada desde `dev`.
+Entregado `specs/F-039-remedir-campanas-invocacion-rota/` (requirements 137/150,
+design 185/250, tasks T1-T19). **Nada implementado**: ni campañas ni suites.
+
+Lo que decide la spec, por si el humano quiere discutirlo antes de implementar:
+
+- **D1 · la remedición de F-012 se mide sobre el árbol de la rama
+  `feature/F-012-mutacion-paralela`** en un worktree desechable (`--raiz`), con
+  el arnés de HOY. Motivo: el alcance original numera líneas de aquella versión
+  y `harness/mutacion.py` ha crecido +1.346 líneas desde su merge-base;
+  aplicarlo al árbol actual mutaría código ajeno. Ventaja secundaria: el árbol
+  principal queda libre mientras corre.
+- **D2/D3 · informe nuevo `progress/mutacion_F-012_remedida.md`**, y el aviso
+  `⚠ CAMPAÑA NO VÁLIDA` **no se retira nunca** de un fichero cuyos números
+  siguen siendo los inválidos: solo desaparece si el fichero se regenera en
+  sitio.
+- **C · la verificación del paralelo se abarata con `--max-mutantes 1`**: lo
+  que se verifica es la línea base en los 5 worktrees, no la campaña. Sesión
+  dedicada, y si `0xC0000142` tumba el proceso se baja N y se declara el mayor
+  verde.
+- **D5 · los supervivientes se documentan y se agrupan; no se cierran aquí.**
+  Se propone UNA ficha nueva con la lista.
+- La deuda del filtro de filas de reloj ENTRA (constante `FILAS_DE_RELOJ` +
+  `lineas_comparables` junto a `escribir_informe`, y porte a `arnes-base`).
+
+**Decisiones abiertas para el humano** (están al pie de `requirements.md`):
+1. ¿Cerrar la verificación con el mayor N verde si 5 workers tumban la máquina?
+2. Si N=5 es inviable aquí, ¿se declara `mutacion.workers` en `rigor.json`?
+3. ¿La ficha de huecos de test se abre en la sesión o se deja propuesta?
+4. ¿Se confirma D1 (medir sobre el árbol de F-012 y no sobre HEAD)?
