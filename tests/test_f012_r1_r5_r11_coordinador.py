@@ -256,10 +256,19 @@ def test_f012_r1_r4_el_informe_paralelo_es_identico_al_de_la_campania_en_serie(
     escribir_informe(en_paralelo, ruta_paralelo)
 
     def _comparable(ruta: Path) -> list[str]:
+        """Fuera las filas de reloj: dos campañas nunca tardan lo mismo.
+
+        `| Media por mutante evaluado (s)` es `segundos / evaluados`, o sea el
+        mismo reloj que `| Tiempo total`. La añadió F-038 T5 y nadie extendió
+        este filtro, así que el test quedó flaky: en serie redondeaba a 0.0 y
+        en paralelo a 0.1 según cómo estuviera la máquina.
+        """
         return [
             linea
             for linea in ruta.read_text(encoding="utf-8").splitlines()
-            if not linea.startswith(("Generado por", "| Tiempo total", "<!-- "))
+            if not linea.startswith(
+                ("Generado por", "| Tiempo total", "| Media por mutante", "<!-- ")
+            )
         ]
 
     assert _comparable(ruta_paralelo) == _comparable(ruta_serie)

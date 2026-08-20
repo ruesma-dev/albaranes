@@ -4,6 +4,28 @@
 Generado por `python -m harness.mutacion --feature F-012` el 2026-08-14 03:46.
 > **Medida con el arnés 1.5.2, que NO mutaba `is`/`is not`: NO es comparable con las campañas posteriores a la 1.6.0 (F-034), que generaría +10 mutantes aquí. Decisión del humano (D1, opción B): no se remide; solo se remidieron F-019 y F-027.**
 
+> ## ⚠ CAMPAÑA NO VÁLIDA · sus números no valen como evidencia
+>
+> Todo el alcance de esta campaña (`harness/mutacion.py`,
+> `harness/mutacion_paralela.py`, `harness/rigor.py`)
+> **no pertenece a ningún servicio** de `harness/servicios.json`, así que
+> `ejecutor_para` juzgó cada mutante con `python -m pytest` **sin ruta** desde la
+> raíz. Esa invocación no ejecuta la suite de la raíz: recoge también
+> `services/**/tests`, con un intérprete que no es el suyo. Los **55
+> «muertos»** de abajo no demuestran que ningún test cazara nada, y los
+> supervivientes tampoco están confirmados.
+>
+> **No cites estos números como evidencia.** La campaña hay que repetirla con el
+> arnés posterior a **F-038**, que acota la suite de la raíz a `tests` (R1–R4) y
+> convierte esto en medible. La remedición está dada de alta como **F-039**; no entra en
+> F-038 (D5 de su diseño).
+>
+> Los análisis escritos de los supervivientes se conservan —siguen siendo
+> información útil— pero cuelgan de una medición que no vale.
+>
+> Aviso escrito a mano el 2026-08-20 (F-038, T11): `escribir_informe` lo borrará
+> si alguien regenera el fichero, que es justo lo que hay que hacer.
+
 ## Alcance
 
 Origen del diff: **rama** (`73e4db0819466c1083c28a8fdf4dee2da65533e5` .. `feature/F-012-mutacion-paralela`).

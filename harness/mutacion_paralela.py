@@ -138,6 +138,15 @@ def fusionar(
         for parcial in parciales:
             juntos.extend(getattr(parcial, atributo))
         setattr(informe, atributo, sorted(juntos, key=clave_estable))
+    # Todos los workers nacen del MISMO `HEAD`, así que el primero que lo sepa
+    # habla por todos; y cada uno midió su propia línea base, en su worktree,
+    # así que sus tiempos se juntan en vez de pisarse (R10–R12). Sin parciales
+    # —campaña sin nada que evaluar— no hay dato, y el informe imprime `n/d`.
+    informe.sha_head = next(
+        (parcial.sha_head for parcial in parciales if parcial.sha_head), None
+    )
+    for parcial in parciales:
+        informe.segundos_linea_base.update(parcial.segundos_linea_base)
     # Basta con que UN worker haya perdido la base para que la campaña entera
     # deje de valer: su partición no está medida y el total no cuadra.
     avisos = [parcial.aviso_base for parcial in parciales if parcial.aviso_base]

@@ -264,3 +264,45 @@ criterio de aceptación (139,66 €) NO se cumplía. Dos round trips más:
   `[PROTEGIDO]` que aparecen son exactamente los cuatro ficheros que el
   incidente destruyo. Y 11 diffs que antes se enseñaban uno a uno resultaron ser
   solo finales de linea: ese ruido era lo que entrenaba a pulsar «Todos».
+
+### F-038 — bajar el coste en tokens del ciclo SDD (cerrada 2026-08-20)
+
+APPROVED en **dos** pasadas, la segunda ya incremental. Nació de una medición:
+los subagentes de una sola sesión gastaron ~712.000 tokens y `progress/`
+acumulaba 12.250 líneas. Cada línea de spec se paga tres veces —la escribe el
+spec-author, la lee el implementer, la relee el reviewer—.
+
+Lo que entregó, por orden de importancia real:
+
+- **T0, el cimiento**: `ejecutor_para` acota la suite de la raíz a `tests`. Sin
+  esto, cualquier fichero de `harness/` se juzgaba con `python -m pytest` SIN
+  ruta, que moría en la recolección y se leía como `exit 1` = MUERTO. Las
+  campañas sobre el propio arnés eran **falsos verdes**; desde la 1.6.0 abortaban
+  en vez de mentir, pero no se podían ejecutar. Afecta a F-011 y F-012.
+- **Muestreo por nivel de rigor**: `estandar` = 20 mutantes con semilla
+  `20260820`, `critico` sin tope; `nivel_por_defecto` baja de `critico` a
+  `estandar` (las 38 fichas ya declaran rigor, así que no cambió ninguna).
+- **El informe de mutación imprime SHA de HEAD, línea base y media por mutante**.
+  Ésa es la pieza que de verdad ahorra: convierte RM1 y RM2 de juicio en dato.
+  En las dos pasadas de esta feature el reviewer **no reejecutó la campaña**.
+- **Puerta de tamaño** (`harness/tamano.py` + sección 7 quater de `init.sh`),
+  que mide **solo la feature en curso**: las 12 specs viejas quedan amnistiadas
+  por construcción, sin lista de excepciones que mantener.
+- Umbral de reejecución de 5 min a 60 s, revisión incremental por defecto, y las
+  seis reglas RM1–RM6 repartidas entre `reviewer.md` y C4 bis.
+
+**Topes recalibrados el mismo día**, antes de cerrar: `120/200/150/100` →
+`150/250/220/140`. La mediana histórica del repositorio es ~484 líneas (impl) y
+~475 (review); los originales recortaban un ~70 % y tanto el implementer como el
+reviewer entregaron **clavados en el límite** (150/150 y 100/100), que es la
+señal de que el tope estaba mandando sobre el contenido. Los nuevos recortan un
+~55 %.
+
+**Lección que dejó T17**: el flaky que se creyó ajeno era propio. T5 añadió al
+informe la fila de reloj `Media por mutante evaluado (s)` y el test de paridad
+serie/paralelo no extendió su filtro. Como la campaña corre con `-x`, **un fallo
+intermitente de cualquier test se lee como MUERTO** — de ahí el falso muerto de
+`mutacion.py:1781`. Una campaña de mutación no vale más que la suite que la juzga.
+
+Altas relacionadas: **F-039** (prioridad 2; hereda verificar la campaña paralela
+y remedir las campañas medidas con la invocación rota).

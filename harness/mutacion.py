@@ -45,7 +45,16 @@ from datetime import datetime
 from pathlib import Path
 
 from harness.alcance import Alcance, alcance_de_feature
-from harness.rigor import RUTA_RIGOR, cargar_rigor, timeout_mutacion, workers_mutacion
+from harness.rigor import (
+    RUTA_RIGOR,
+    cargar_features,
+    cargar_rigor,
+    max_mutantes_nivel,
+    nivel_de_feature,
+    semilla_nivel,
+    timeout_mutacion,
+    workers_mutacion,
+)
 from harness.servicios import Servicio, cargar_servicios, interprete, servicio_de_ruta
 
 Posicion = tuple[int, int]
@@ -490,6 +499,12 @@ class EjecutorPytest:
 
     `raiz` es el directorio desde el que se lanza la suite y `ejecutable`, el
     intérprete con el que se lanza. En un monorepo, los de cada servicio.
+
+    `ruta` acota la RECOLECCIÓN dentro de esa raíz. Sin ella, `python -m pytest`
+    a secas recoge todo lo que cuelgue del directorio: en un monorepo eso
+    arrastra `services/**/tests` y muere en la recolección con el intérprete
+    equivocado, así que ningún mutante llega a juzgarse (F-038, R1–R3). Es la
+    misma ruta explícita que `harness/init.sh` usa para la suite de la raíz.
     """
 
     def __init__(
@@ -497,22 +512,35 @@ class EjecutorPytest:
         raiz: str = ".",
         argumentos: list[str] | None = None,
         ejecutable: str | None = None,
+        ruta: str | None = None,
     ) -> None:
         self.raiz = raiz
         self.argumentos = argumentos or ["-x", "-q", "--tb=no", "-p", "no:cacheprovider"]
         self.ejecutable = ejecutable or sys.executable
+        self.ruta = ruta
 
-    def identidad(self) -> tuple[str, str]:
-        """Con qué intérprete y desde dónde juzga. Dos ejecutores con la misma
-        identidad ejecutan exactamente la misma suite: la línea base de uno
-        vale por la del otro y no se corre dos veces."""
-        return (str(Path(self.raiz).resolve()), self.ejecutable)
+    def identidad(self) -> tuple[str, str, str]:
+        """Con qué intérprete, desde dónde y sobre qué ruta juzga. Dos
+        ejecutores con la misma identidad ejecutan exactamente la misma suite:
+        la línea base de uno vale por la del otro y no se corre dos veces.
+
+        La ruta entra en la identidad porque dos ejecutores que comparten raíz e
+        intérprete pero acotan distinto NO corren la misma suite: darles la
+        misma línea base sería medir una y dar por buena la otra."""
+        return (str(Path(self.raiz).resolve()), self.ejecutable, self.ruta or "")
 
     def correr(self, timeout_s: int, argumentos: tuple[str, ...] | None = None) -> ResultadoSuite:
-        """Ejecuta la suite y devuelve el hecho crudo, sin interpretarlo."""
+        """Ejecuta la suite y devuelve el hecho crudo, sin interpretarlo.
+
+        La ruta acotada va SIEMPRE al final, tanto aquí como en la línea base:
+        una base que recoge más tests que los mutantes no protege nada.
+        """
+        pedidos = list(argumentos or self.argumentos)
+        if self.ruta is not None:
+            pedidos.append(self.ruta)
         try:
             proceso = subprocess.run(
-                [self.ejecutable, "-m", "pytest", *(argumentos or self.argumentos)],
+                [self.ejecutable, "-m", "pytest", *pedidos],
                 cwd=self.raiz,
                 capture_output=True,
                 timeout=timeout_s,
@@ -619,7 +647,7 @@ def comprobar_linea_base(
     implicados: list[tuple[str, object]],
     timeout_s: int,
     eco: Callable[[str], None] | None = None,
-) -> None:
+) -> dict[str, float]:
     """Corre la suite sin mutar en cada sitio donde se va a juzgar.
 
     `implicados` son los pares `(etiqueta, ejecutor)` que van a dictar los
@@ -627,14 +655,24 @@ def comprobar_linea_base(
     aviso: no se puede comprobar lo que no sabe correr una suite.
 
     Lanza `BaseRota` en cuanto uno falla, sin haber tocado un solo fichero.
+
+    Devuelve los SEGUNDOS que tardó la suite limpia en cada sitio (R11). Ese
+    número es el patrón con el que se lee todo lo demás: una campaña que declara
+    veinte mutantes en menos de lo que tarda UNA suite limpia no ha juzgado a
+    nadie, y eso se ve leyendo el informe en vez de reejecutándolo. Un ejecutor
+    que no sabe correr la suite no aporta entrada: mejor `n/d` que un cero, que
+    se lee como medición.
     """
+    tiempos: dict[str, float] = {}
     for etiqueta, ejecutor in implicados:
         correr_base = getattr(ejecutor, "linea_base", None)
         if correr_base is None:
             if eco is not None:
                 eco(f"{MARCA_LINEA_BASE}{etiqueta}: ejecutor sin línea base, no se comprueba")
             continue
+        arranque = time.monotonic()
         resultado = correr_base(timeout_s)
+        tiempos[etiqueta] = time.monotonic() - arranque
         if resultado.expirado:
             raise BaseRota(
                 f"LÍNEA BASE SIN TERMINAR en {etiqueta}: la suite sin mutar agotó "
@@ -647,7 +685,11 @@ def comprobar_linea_base(
             raise BaseRota(mensaje_base_rota(etiqueta, resultado))
         if eco is not None:
             estado = "sin tests que recoger" if resultado.sin_tests else "en verde"
-            eco(f"{MARCA_LINEA_BASE}{etiqueta}: {estado}")
+            eco(
+                f"{MARCA_LINEA_BASE}{etiqueta}: {estado} "
+                f"({tiempos[etiqueta]:.1f} s)"
+            )
+    return tiempos
 
 
 def ejecutores_implicados(
@@ -678,6 +720,17 @@ def _etiqueta_de(ejecutor: object) -> str:
     return Path(str(raiz)).as_posix() if raiz is not None else repr(ejecutor)
 
 
+def _ruta_raiz(raiz: str) -> str | None:
+    """Ruta con la que se acota la suite de la RAÍZ, o `None` si no la hay.
+
+    `tests` es la convención del arnés —`harness/init.sh` ya invoca así la
+    suite de la raíz— y acotarla es lo que permite juzgar un fichero que no
+    pertenece a ningún servicio. Un repositorio que ponga su suite en otro sitio
+    no mejora (R2): se invoca sin ruta, exactamente como hasta hoy.
+    """
+    return "tests" if (Path(raiz) / "tests").is_dir() else None
+
+
 def ejecutor_para(
     fichero: str,
     servicios: list[Servicio],
@@ -699,7 +752,7 @@ def ejecutor_para(
     """
     servicio = servicio_de_ruta(fichero, servicios)
     if servicio is None or servicio.lenguaje != "python":
-        return EjecutorPytest(raiz=raiz)
+        return EjecutorPytest(raiz=raiz, ruta=_ruta_raiz(raiz))
     return EjecutorPytest(
         raiz=str(Path(raiz) / servicio.ruta),
         ejecutable=interprete(servicio, raiz_venvs or raiz),
@@ -930,6 +983,21 @@ def _git_en(raiz: str, *args: str) -> tuple[int, str]:
     return proceso.returncode, (proceso.stdout or "") + (proceso.stderr or "")
 
 
+def sha_de_head(raiz: str = ".") -> str | None:
+    """SHA COMPLETO de `HEAD` en `raiz`, o `None` si git no puede responder.
+
+    Completo y no abreviado a propósito: es lo que permite comprobar sin
+    ambigüedad que el alcance medido y el alcance revisado son el mismo commit.
+    Fuera de un repositorio devuelve `None`, y el informe imprime `n/d`: nunca
+    un SHA inventado.
+    """
+    codigo, salida = _git_en(raiz, "rev-parse", "HEAD")
+    if codigo != 0:
+        return None
+    sha = salida.strip()
+    return sha or None
+
+
 def ficheros_con_cambios(raiz: str, ficheros: list[str]) -> list[str]:
     """De los ficheros dados, cuáles tienen cambios sin commitear.
 
@@ -1008,6 +1076,22 @@ class InformeMutacion:
     base_rota: list[Mutante] = field(default_factory=list)
     #: Motivo por el que los números de este informe NO son de fiar, si lo hay.
     aviso_base: str | None = None
+    #: SHA completo de HEAD contra el que se midió. Sin él, un informe sigue
+    #: pareciendo válido después de que la rama crezca mil líneas (RM1/R10).
+    sha_head: str | None = None
+    #: Segundos que tardó la suite LIMPIA en cada ejecutor implicado (R11). Es
+    #: el patrón contra el que se lee la media por mutante.
+    segundos_linea_base: dict[str, float] = field(default_factory=dict)
+    #: Nivel de rigor que fijó el muestreo, para que el informe diga quién lo
+    #: decidió (R9). Lo rellena el CLI, que es quien lo resuelve.
+    nivel: str | None = None
+
+    @property
+    def segundos_por_mutante(self) -> float | None:
+        """Media de segundos por mutante evaluado; `None` si no se evaluó ninguno."""
+        if not self.mutantes_evaluados:
+            return None
+        return self.segundos / len(self.mutantes_evaluados)
 
     @property
     def evaluados(self) -> int:
@@ -1070,6 +1154,7 @@ def ejecutar_campania(
         generados=len(mutantes),
         max_mutantes=max_mutantes,
         semilla=semilla,
+        sha_head=sha_de_head(raiz),
     )
 
     if max_mutantes is not None and len(mutantes) > max_mutantes:
@@ -1085,7 +1170,7 @@ def ejecutar_campania(
         guardia_arbol_limpio(raiz, list(fuentes))
     implicados = ejecutores_implicados(list(mutantes), ejecutor, ejecutor_de)
     if comprobar_base and mutantes:
-        comprobar_linea_base(implicados, timeout_s, eco)
+        informe.segundos_linea_base = comprobar_linea_base(implicados, timeout_s, eco)
 
     def restaurar_todo() -> None:
         """Devuelve al disco los fuentes tal y como se leyeron al empezar."""
@@ -1336,10 +1421,32 @@ def escribir_informe(informe: InformeMutacion, ruta: Path) -> None:
         f"| Sin veredicto (base rota) | {len(informe.base_rota)} |",
         f"| Tiempo total | {informe.segundos:.1f} s |",
     ]
+    # RM1: sin el commit medido, un informe sigue pareciendo válido después de
+    # que la rama crezca mil líneas. RM2: con la línea base y la media por
+    # mutante juntas, una campaña imposiblemente rápida se ve leyendo. Las tres
+    # filas se imprimen SIEMPRE; lo que no se sabe se dice `n/d`, porque un cero
+    # se lee como medición y una fila ausente, como descuido.
+    lineas.append(
+        f"| SHA de HEAD medido | `{informe.sha_head}` |"
+        if informe.sha_head
+        else "| SHA de HEAD medido | n/d |"
+    )
+    if informe.segundos_linea_base:
+        for etiqueta, segundos in sorted(informe.segundos_linea_base.items()):
+            lineas.append(f"| Línea base (s) — `{etiqueta}` | {segundos:.1f} |")
+    else:
+        lineas.append("| Línea base (s) | n/d |")
+    media = informe.segundos_por_mutante
+    lineas.append(
+        f"| Media por mutante evaluado (s) | {media:.1f} |"
+        if media is not None
+        else "| Media por mutante evaluado (s) | n/d |"
+    )
     if informe.muestreado:
         lineas.append(
             f"| Muestreo | sí — {informe.evaluados} de {informe.generados} "
-            f"mutantes, semilla `{informe.semilla}` |"
+            f"mutantes, semilla `{informe.semilla}`, nivel "
+            f"`{informe.nivel or 'n/d'}` |"
         )
     else:
         lineas.append("| Muestreo | no: campaña completa |")
@@ -1421,8 +1528,27 @@ def _analizar_argumentos(argv: list[str] | None) -> argparse.Namespace:
     analizador.add_argument("--rama", default=None, help="Rama de la feature")
     analizador.add_argument("--raiz", default=".", help="Raíz del repositorio a mutar")
     analizador.add_argument("--timeout", type=int, default=None, help="Segundos por mutante")
-    analizador.add_argument("--max-mutantes", type=int, default=None)
-    analizador.add_argument("--semilla", type=int, default=None)
+    analizador.add_argument(
+        "--max-mutantes",
+        type=int,
+        default=None,
+        help=(
+            "Mutantes que se evalúan como mucho. 0 = SIN TOPE (la campaña "
+            "entera), que es como se anula el tope que impone un nivel de "
+            "rigor. Sin este flag, el 'max_mutantes' del nivel de la feature "
+            "en harness/rigor.json; si el nivel no declara ninguno, sin tope."
+        ),
+    )
+    analizador.add_argument(
+        "--semilla",
+        type=int,
+        default=None,
+        help=(
+            "Semilla del muestreo. Sin ella, la 'semilla' del nivel de rigor "
+            "de la feature: dos campañas del mismo nivel eligen los mismos "
+            "mutantes y son comparables."
+        ),
+    )
     analizador.add_argument("--salida", default=None, help="Ruta del informe")
     analizador.add_argument(
         "--workers",
@@ -1552,6 +1678,53 @@ def _workers_configurados() -> int | None:
         return None
 
 
+def resolver_muestreo(
+    pedido_max: int | None,
+    pedido_semilla: int | None,
+    nivel_max: int | None,
+    nivel_semilla: int | None,
+) -> tuple[int | None, int | None]:
+    """Tope y semilla del muestreo: `--max-mutantes` > nivel de rigor > sin tope.
+
+    Función pura, y sede ÚNICA de la precedencia: la campaña en serie y la
+    paralela reciben ya resuelto lo mismo. `pedido_max == 0` significa **sin
+    tope**, que es la única forma de anular desde la orden el tope que impone un
+    nivel; un negativo se trata igual, porque «menos de un mutante» no es un
+    tope que nadie quiera.
+
+    El tope y la semilla se resuelven por separado a propósito: pedir una
+    semilla distinta para reproducir algo no debe deshacer el tope del nivel.
+    """
+    if pedido_max is not None:
+        maximo = pedido_max if pedido_max > 0 else None
+    else:
+        maximo = nivel_max
+    semilla = pedido_semilla if pedido_semilla is not None else nivel_semilla
+    return (maximo, semilla)
+
+
+def _muestreo_configurado(feature: str) -> tuple[int | None, int | None, str | None]:
+    """Tope, semilla y NIVEL de rigor de una feature, según `harness/rigor.json`.
+
+    Devuelve también el nivel porque el informe tiene que declarar quién fijó la
+    semilla (R9), y resolverlo aparte obligaría a releer los mismos dos ficheros.
+
+    Ante cualquier configuración ausente o ilegible devuelve `(None, None,
+    None)` —campaña completa, como hasta hoy—, igual que hacen
+    `_timeout_configurado` y `_workers_configurados`: el arnés se degrada, no se
+    cae, en un repositorio con configuración anterior.
+    """
+    try:
+        rigor = cargar_rigor(RUTA_RIGOR)
+        ficha = next(
+            (f for f in cargar_features() if f.get("id") == feature), {}
+        )
+        nivel = nivel_de_feature(ficha, rigor)
+        return (max_mutantes_nivel(nivel, rigor), semilla_nivel(nivel, rigor), nivel)
+    except ValueError:
+        return (None, None, None)
+
+
 def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
     """Punto de entrada.
 
@@ -1601,6 +1774,16 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
     def factoria(fichero: str) -> object:
         return ejecutor_para(fichero, servicios, opciones.raiz)
 
+    nivel_max, nivel_semilla, nivel = _muestreo_configurado(opciones.feature)
+    max_mutantes, semilla = resolver_muestreo(
+        opciones.max_mutantes, opciones.semilla, nivel_max, nivel_semilla
+    )
+    if max_mutantes is not None:
+        print(
+            f"Muestreo: hasta {max_mutantes} mutantes, semilla {semilla} "
+            f"(nivel {nivel or 'no resuelto'})."
+        )
+
     workers = resolver_workers(opciones.workers, _workers_configurados())
     paralela = workers >= 2 and ejecutor is None
     centinela = Centinela(
@@ -1623,8 +1806,8 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
                 timeout_s=timeout_s,
                 raiz=opciones.raiz,
                 workers=workers,
-                max_mutantes=opciones.max_mutantes,
-                semilla=opciones.semilla,
+                max_mutantes=max_mutantes,
+                semilla=semilla,
                 eco=lambda linea: print(linea, flush=True),
                 centinela=centinela,
             )
@@ -1634,8 +1817,8 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
                 ejecutor or EjecutorPytest(raiz=opciones.raiz),
                 timeout_s=timeout_s,
                 raiz=opciones.raiz,
-                max_mutantes=opciones.max_mutantes,
-                semilla=opciones.semilla,
+                max_mutantes=max_mutantes,
+                semilla=semilla,
                 eco=lambda linea: print(linea, flush=True),
                 ejecutor_de=factoria if servicios and ejecutor is None else None,
                 centinela=centinela,
@@ -1652,6 +1835,9 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
         centinela.cerrar()
 
     destino = Path(opciones.salida or f"progress/mutacion_{opciones.feature}.md")
+    # Quién fijó el muestreo lo sabe el CLI, no la campaña: el informe tiene que
+    # decirlo para que se pueda repetir con los mismos mutantes (R9).
+    informe.nivel = nivel
     escribir_informe(informe, destino)
     print(
         f"{informe.evaluados} mutantes evaluados, {informe.muertos} muertos, "

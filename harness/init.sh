@@ -249,7 +249,7 @@ fi
 
 # --- 3b. Niveles de rigor: configuración válida y niveles declarados válidos -
 # Lo que exige cada nivel vive en harness/rigor.json. Una feature que no
-# declara nivel NO es un error: se le aplica el más exigente. Declarar uno
+# declara nivel NO es un error: se le aplica el nivel por defecto. Declarar uno
 # inexistente sí lo es. Necesita Python: sin él, degrada con aviso.
 if [ -n "$PY" ]; then
     if $PY -m harness.rigor --validar; then
@@ -483,6 +483,45 @@ if [ -f "harness/rutas_sensibles.json" ] && [ "$ES_PYTHON" -eq 1 ] && [ -n "$PY"
         3) warn "$SALIDA_SENSIBLES" ;;
         *) ko "$SALIDA_SENSIBLES" ;;
     esac
+fi
+
+# --- 7 quater. Puerta de TAMAÑO del papeleo de la feature en curso ----------
+# Cada línea de una spec se paga TRES veces: la escribe el spec-author, la lee
+# el implementer y la relee el reviewer. El arnés no decía nada del tamaño y
+# por eso los agentes escribían cuanto se les ocurría (978 líneas de spec para
+# arreglar un script PowerShell). Los topes viven en el bloque `tamano` de
+# harness/rigor.json: aquí no hay ningún número que tocar.
+#
+# Se mide SOLO la feature en curso, a propósito: las specs anteriores exceden
+# hoy los topes y medirlas dejaría el portero en rojo permanente o exigiría una
+# lista de excepciones que mantener. Lo viejo queda amnistiado por
+# construcción; lo que se retome y se edite pasará a medirse.
+#
+# Códigos de harness.tamano: 0 cabe, 1 se pasa (KO: el portero se pone rojo),
+# 2 no aplica (sin configuración o sin bloque `tamano`) => AVISO con el motivo
+# impreso, nunca un verde silencioso.
+if [ "$ES_PYTHON" -eq 1 ] && [ -n "$PY" ] && [ -f "harness/tamano.py" ]; then
+    FEATURE_TAMANO=$($PY - <<'EOF'
+from harness.alcance import ejecutar_git
+from harness.rigor import cargar_features, feature_de_rama
+
+rama = ejecutar_git(["branch", "--show-current"]).strip()
+ficha = feature_de_rama(rama, cargar_features())
+print(ficha.get("id", "") if ficha else "")
+EOF
+)
+    if [ -z "$FEATURE_TAMANO" ]; then
+        warn "PUERTA TAMAÑO: N/A (ni la rama actual corresponde a una feature declarada ni hay ninguna in_progress: no hay papeleo que medir)"
+    else
+        SALIDA_TAMANO=$($PY -m harness.tamano --feature "$FEATURE_TAMANO" 2>&1)
+        case "$?" in
+            0) ok "$SALIDA_TAMANO" ;;
+            1) ko "$SALIDA_TAMANO" ;;
+            *) warn "$SALIDA_TAMANO" ;;
+        esac
+    fi
+elif [ "$ES_PYTHON" -eq 1 ] && [ -n "$PY" ]; then
+    warn "PUERTA TAMAÑO: N/A (no existe harness/tamano.py: arnés anterior a la puerta de tamaño)"
 fi
 
 # --- 8. Marcas de adaptación sin resolver -----------------------------------
