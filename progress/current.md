@@ -313,3 +313,67 @@ al pie de `requirements.md` como «Decisiones del humano»:
   se presenta y decide el humano.
 
 Sin decisiones abiertas pendientes: las cuatro preguntas están respondidas.
+
+---
+
+## F-039 · implementada (2026-08-20, implementer) — pendiente de review
+
+Rama `feature/F-039-remedir-campanas-invocacion-rota`. Informe completo en
+`progress/impl_F-039.md`. Suite de la raíz **en verde** y campañas medidas.
+Aquí solo va lo que **tiene que decidir el humano**.
+
+### 1. Verificaciones MANUAL que quedan para el humano (T5, T6)
+
+La campaña **paralela** sigue sin verificar: `--workers 5` lanza cinco suites
+simultáneas y en esta máquina dos ya tumban el proceso (`0xC0000142`). El
+comando exacto, el criterio de verde y el descenso 5 → 3 → 2 están preparados
+para copiar y pegar en **`progress/verificacion_paralela_F-039.md`**, con su
+tabla de resultados esperando la salida real.
+
+Esto **no bloquea** la campaña del bloque D: se midió en serie (`--workers 1`),
+que es como se ha medido siempre en este repositorio.
+
+### 2. Huecos de test detectados — la lista es para decidir, no está abierta
+
+R20: **no se ha abierto ficha y no se ha tocado `harness/features.json`**. Son
+**6 huecos reales** de la campaña sobre la maquinaria de mutación de hoy
+(7 supervivientes, de los que 1 es equivalente justificado). Agrupados por
+causa, con el análisis completo de cada uno en
+`progress/mutacion_maquinaria_paralela_F-039.md`:
+
+| Grupo | Qué no se prueba | Supervivientes | Gravedad |
+|---|---|---|---|
+| **A · El CLI de `harness.mutacion` no se ejercita de punta a punta** | `main` con un centinela sucio en disco (arrancaría la campaña **encima del mutante viejo**) y el código de salida de `--restaurar` | `mutacion.py:1807`, `mutacion.py:1688` | **Alta** el primero: mediría un mutante y lo llamaría «el código» |
+| **B · El informe solo se escribe por su camino feliz** | La sección `## Timeouts` (y con ella la de `base_rota`), y el mensaje de `_base_rota_al_final`, que **no tiene ni un test** | `mutacion.py:1539`, `mutacion.py:1282` | Media: `lineas -= [...]` es un `TypeError` en cuanto hay un timeout |
+| **D · Las validaciones de `rigor.py` comprueban el tipo, no el rango** | Un `timeout_por_mutante_s` entero pero `<= 0` pasa la validación; con `timeout=0` **toda** la campaña sale «timeout» | `rigor.py:118` | Media |
+| **E · La limpieza de worktrees solo se prueba cuando `git worktree remove` funciona** | El respaldo `rmtree` + `prune` para cuando la retirada falla (el caso Windows para el que existe) | `mutacion_paralela.py:257` | Baja |
+
+(El grupo C es el único **mutante equivalente**: `mutacion.py:1348`, en
+`analisis_escritos`. No hay test que escribir; la justificación está escrita.)
+
+**Decide el humano**: si se abre trabajo, con qué prioridad y qué grupos
+entran. Los cuatro grupos caben en un solo fichero de tests nuevo.
+
+### 3. Hallazgo del arnés que NO se ha tocado (para decidir también)
+
+`_base_rota_al_final` (`harness/mutacion.py:1274`) **no distingue una línea
+base que EXPIRA de una que falla**. Con `expirado=True` el código es `-1` y el
+informe estampa «La línea base estaba VERDE al empezar y **ROJA** al terminar
+(código -1)», que manda a buscar un test caído que no existe.
+`comprobar_linea_base` sí lo distingue, y su mensaje —«LÍNEA BASE SIN TERMINAR
+… agotó los N s de timeout»— es el que hacía falta.
+
+**Pasó de verdad hoy**: dos pasadas de la campaña de T11 se invalidaron así
+mientras la suite estaba **verde** (409 passed) pero tres veces más lenta. No
+se arregla aquí por dos motivos: excede los requisitos de F-039, y `mutacion.py`
+es justo el código que esta feature está midiendo. Es genérico del arnés, así
+que si se abre, se abre para `arnes-base` también.
+
+### 4. Aviso de convivencia (costó ~40 minutos de máquina)
+
+Mientras corría la campaña de F-039, otra sesión lanzó **campañas de mutación
+en paralelo de `datamart-seg-anual`** en esta misma máquina (21:49 y 22:06).
+Una campaña de mutación necesita la máquina **para ella sola**: la de aquí pasó
+de 51 s a 149 s de línea base y el arnés invalidó sus propios números, con
+razón. **Dos campañas de mutación a la vez, en cualquier par de proyectos, se
+estropean mutuamente.**
