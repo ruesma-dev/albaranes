@@ -426,7 +426,7 @@
         "Los avisos de invalidez de cabecera se retiran solo de los informes efectivamente remedidos",
         "bash harness/init.sh en verde"
       ],
-      "status": "pending",
+      "status": "done",
       "sdd": true,
       "rigor": "estandar",
       "priority": 2,

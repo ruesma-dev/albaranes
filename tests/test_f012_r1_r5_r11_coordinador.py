@@ -24,6 +24,7 @@ from harness.mutacion import (
     ejecutor_para,
     escribir_informe,
     generar_mutantes,
+    lineas_comparables,
 )
 from harness.mutacion_paralela import (
     clave_estable,
@@ -255,23 +256,13 @@ def test_f012_r1_r4_el_informe_paralelo_es_identico_al_de_la_campania_en_serie(
     escribir_informe(en_serie, ruta_serie)
     escribir_informe(en_paralelo, ruta_paralelo)
 
-    def _comparable(ruta: Path) -> list[str]:
-        """Fuera las filas de reloj: dos campañas nunca tardan lo mismo.
-
-        `| Media por mutante evaluado (s)` es `segundos / evaluados`, o sea el
-        mismo reloj que `| Tiempo total`. La añadió F-038 T5 y nadie extendió
-        este filtro, así que el test quedó flaky: en serie redondeaba a 0.0 y
-        en paralelo a 0.1 según cómo estuviera la máquina.
-        """
-        return [
-            linea
-            for linea in ruta.read_text(encoding="utf-8").splitlines()
-            if not linea.startswith(
-                ("Generado por", "| Tiempo total", "| Media por mutante", "<!-- ")
-            )
-        ]
-
-    assert _comparable(ruta_paralelo) == _comparable(ruta_serie)
+    # Qué filas salen del reloj lo declara `harness.mutacion`, al lado de quien
+    # las escribe (F-039 R3/R7). Cuando esta lista se mantenía aquí a mano, la
+    # fila que añadió F-038 T5 se quedó fuera y el test quedó flaky: en serie
+    # redondeaba a 0.0 y en paralelo a 0.1 según cómo estuviera la máquina.
+    assert lineas_comparables(
+        ruta_paralelo.read_text(encoding="utf-8")
+    ) == lineas_comparables(ruta_serie.read_text(encoding="utf-8"))
 
 
 # --- R2: el árbol principal no se toca ---------------------------------------

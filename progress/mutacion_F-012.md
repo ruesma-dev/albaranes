@@ -15,10 +15,22 @@ Generado por `python -m harness.mutacion --feature F-012` el 2026-08-14 03:46.
 > «muertos»** de abajo no demuestran que ningún test cazara nada, y los
 > supervivientes tampoco están confirmados.
 >
-> **No cites estos números como evidencia.** La campaña hay que repetirla con el
-> arnés posterior a **F-038**, que acota la suite de la raíz a `tests` (R1–R4) y
-> convierte esto en medible. La remedición está dada de alta como **F-039**; no entra en
-> F-038 (D5 de su diseño).
+> **No cites estos números como evidencia.**
+>
+> ### Estos números NO se reponen · decisión del humano, 2026-08-20
+>
+> Este aviso **no se retira**: los 55 «muertos» de abajo siguen siendo los
+> inválidos y nadie va a rehacer esta medición. F-039 **no repite esta
+> campaña**.
+>
+> Lo que sí hizo F-039 es medir el **mismo sujeto** —la maquinaria de mutación—
+> con una campaña **nueva**, en `progress/mutacion_maquinaria_paralela_F-039.md`.
+> Ojo con la diferencia, que es toda: aquella mide **otro código**. Esta juzgó
+> `harness/mutacion.py` tal como estaba en agosto; desde entonces ese fichero ha
+> crecido más de mil líneas, así que los huecos de aquel código pueden ya no
+> existir y los de hoy no aparecerían aquí. El informe de F-039 **ni repone
+> estos números ni es comparable con ellos**: responde a «¿está protegido el
+> código que corre hoy?», no a «¿qué habría salido en agosto?».
 >
 > Los análisis escritos de los supervivientes se conservan —siguen siendo
 > información útil— pero cuelgan de una medición que no vale.

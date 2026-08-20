@@ -44,7 +44,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from harness.alcance import Alcance, alcance_de_feature
+from harness.alcance import (
+    ORIGEN_FICHEROS,
+    Alcance,
+    alcance_de_feature,
+    alcance_de_ficheros,
+)
 from harness.rigor import (
     RUTA_RIGOR,
     cargar_features,
@@ -1364,6 +1369,40 @@ def analisis_escritos(texto: str) -> dict[tuple, str]:
     }
 
 
+#: Prefijos de las filas del informe cuyo valor sale del RELOJ. Vive aquí, al
+#: lado de quien las escribe, para que quien añada una fila de reloj la vea y la
+#: declare: cuando esta lista se mantenía a mano dentro de un test (F-012), la
+#: fila que añadió F-038 T5 se quedó fuera y dejó el test flaky durante semanas.
+#: Se compara por PREFIJO a propósito: `| Línea base (s) — \`etiqueta\`` lleva
+#: pegada la etiqueta del ejecutor.
+FILAS_DE_RELOJ: tuple[str, ...] = (
+    "Generado por",
+    "| Tiempo total",
+    "| Línea base (s)",
+    "| Media por mutante evaluado (s)",
+)
+
+#: Comentario de ruta con el que arranca todo informe. Cambia con el nombre del
+#: fichero, no con lo medido, así que tampoco entra en la comparación.
+_COMENTARIO_DE_RUTA = "<!-- "
+
+
+def lineas_comparables(texto: str) -> list[str]:
+    """Las líneas de un informe que dos campañas equivalentes deben compartir.
+
+    Descarta las de `FILAS_DE_RELOJ` y el comentario de ruta de la cabecera. Lo
+    que queda es el resultado de la medición —alcance, totales, SHA, muestreo y
+    fichas de supervivientes—, que sí tiene que coincidir entre la campaña en
+    serie y la paralela.
+    """
+    return [
+        linea
+        for linea in texto.splitlines()
+        if not linea.startswith(FILAS_DE_RELOJ)
+        and not linea.startswith(_COMENTARIO_DE_RUTA)
+    ]
+
+
 def escribir_informe(informe: InformeMutacion, ruta: Path) -> None:
     """Escribe el informe de la campaña en Markdown.
 
@@ -1395,11 +1434,21 @@ def escribir_informe(informe: InformeMutacion, ruta: Path) -> None:
             "y repite la campaña.",
             "",
         ]
+    # Un alcance declarado a mano (`--ficheros`) no tiene diff detrás: enseñar
+    # dos refs entre backticks haría creer que se comparó algo con algo.
+    if alcance.origen == ORIGEN_FICHEROS:
+        origen_del_alcance = (
+            f"Origen del diff: **{ORIGEN_FICHEROS}** (alcance declarado en la orden)."
+        )
+    else:
+        origen_del_alcance = (
+            f"Origen del diff: **{alcance.origen}** "
+            f"(`{alcance.ref_diff[0]}` .. `{alcance.ref_diff[1]}`)."
+        )
     lineas += [
         "## Alcance",
         "",
-        f"Origen del diff: **{alcance.origen}** "
-        f"(`{alcance.ref_diff[0]}` .. `{alcance.ref_diff[1]}`).",
+        origen_del_alcance,
         "",
         "| Fichero | Líneas en alcance |",
         "|---|---|",
@@ -1527,6 +1576,16 @@ def _analizar_argumentos(argv: list[str] | None) -> argparse.Namespace:
     analizador.add_argument("--base", default="dev", help="Rama de integración")
     analizador.add_argument("--rama", default=None, help="Rama de la feature")
     analizador.add_argument("--raiz", default=".", help="Raíz del repositorio a mutar")
+    analizador.add_argument(
+        "--ficheros",
+        default=None,
+        help=(
+            "Rutas separadas por coma que se mutan ENTERAS, en vez de calcular "
+            "el alcance desde el diff de la feature. Para campañas cuyo sujeto "
+            "es un módulo, no un cambio. --feature sigue haciendo falta: es "
+            "quien resuelve el nivel de rigor y, con él, el muestreo."
+        ),
+    )
     analizador.add_argument("--timeout", type=int, default=None, help="Segundos por mutante")
     analizador.add_argument(
         "--max-mutantes",
@@ -1760,9 +1819,17 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
         return 2
 
     try:
-        alcance = alcance_de_feature(
-            opciones.feature, base=opciones.base, rama=opciones.rama, raiz=opciones.raiz
-        )
+        if opciones.ficheros:
+            alcance = alcance_de_ficheros(
+                opciones.ficheros.split(","), opciones.feature, raiz=opciones.raiz
+            )
+        else:
+            alcance = alcance_de_feature(
+                opciones.feature,
+                base=opciones.base,
+                rama=opciones.rama,
+                raiz=opciones.raiz,
+            )
     except SystemExit as parada:
         print(str(parada), file=sys.stderr)
         return 2

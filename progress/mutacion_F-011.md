@@ -15,11 +15,24 @@ Generado por `python -m harness.mutacion --feature F-011` el 2026-08-13 15:35.
 > «muertos»** de abajo no demuestran que ningún test cazara nada, y los
 > supervivientes tampoco están confirmados.
 >
-> **No cites estos números como evidencia.** La campaña hay que repetirla con el
-> arnés posterior a **F-038**, que acota la suite de la raíz a `tests` (R1–R4) y
-> convierte esto en medible. Su remedición **no está dada de alta**: F-039 solo cubre F-012.
-> Queda como deuda declarada, a decisión del humano — son 305 mutantes y
-> 133 supervivientes que analizar, la campaña más cara del repositorio.
+> **No cites estos números como evidencia.**
+>
+> ### Decisión del humano, 2026-08-20: INVALIDADA PARA SIEMPRE
+>
+> Esta campaña **no se va a repetir nunca** y **no se abre ficha** para
+> repetirla. Son 305 mutantes y 133 supervivientes —la campaña más cara del
+> repositorio—, y analizarlos cuesta más de lo que aporta medir hoy un código
+> que nadie está tocando. Este aviso, por tanto, **no se retira jamás**: sus
+> números seguirán siendo los inválidos mientras exista el fichero. F-039
+> tampoco la cubre: allí se midió otra cosa (la maquinaria de mutación de hoy,
+> en `progress/mutacion_maquinaria_paralela_F-039.md`).
+>
+> **Consecuencia, y es la parte que hay que recordar: la puerta de evals de
+> F-011 no tiene detrás NINGUNA medición de mutación válida.** Ni esta, ni otra.
+> Si algún día se toca `evals/**` o `harness/rutas_sensibles.py`, la campaña se
+> hace **entonces y desde cero**, con el arnés posterior a F-038 —que acota la
+> suite de la raíz a `tests` y convierte esto en medible—, no reponiendo estos
+> números.
 >
 > Los análisis escritos de los supervivientes se conservan —siguen siendo
 > información útil— pero cuelgan de una medición que no vale.

@@ -3,13 +3,12 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **39 features**, 30 abiertas, 9 terminadas.
+Resumen: **39 features**, 29 abiertas, 10 terminadas.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-039 | Arnes: estabilizar la suite de la raiz y remedir las campanas juzgadas con la invocacion rota | 2 | pendiente | estandar | `feature/F-039-remedir-campanas-invocacion-rota` |
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | pendiente | critico | `feature/F-036-residuos-contenedores-e-incrementos` |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
@@ -50,31 +49,12 @@ Resumen: **39 features**, 30 abiertas, 9 terminadas.
 | F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
 | F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
 | F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | estandar |
+| F-039 | Arnes: estabilizar la suite de la raiz y remedir las campanas juzgadas con la invocacion rota | 2 | estandar |
 | F-012 | Campaña de mutación en paralelo | 3 | estandar |
 | F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | estandar |
 | F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
 
 ## Detalle
-
-### F-039 · Arnes: estabilizar la suite de la raiz y remedir las campanas juzgadas con la invocacion rota
-
-estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-039-remedir-campanas-invocacion-rota`
-
-Deuda declarada por F-038 (decision D5 de su design, confirmada por el humano el 2026-08-20). Hasta F-038, un fichero que no cae en ningun servicio de harness/servicios.json se juzgaba con `python -m pytest` SIN ruta desde la raiz; como la raiz no tiene testpaths, esa invocacion moria en la recoleccion en menos de un segundo y el ejecutor la leia como exit 1 = MUERTO. Resultado: mutantes declarados muertos sin que NINGUN test los juzgara. Afecta como minimo a progress/mutacion_F-012.md (61 mutantes) y a cualquier otro informe cuyo alcance incluya ficheros fuera de services/. F-038 solo estampa el aviso de invalidez en cabecera (su R22): NO remide, porque la auditoria de supervivientes cuesta justo lo que aquella feature viene a ahorrar. Aqui se remide de verdad, ya con `ejecutor_para` arreglado. OJO: los supervivientes que aparezcan son huecos reales de test que hoy nadie ve, asi que esta feature puede abrir trabajo nuevo; eso es el objetivo, no un efecto colateral. Requiere F-038 cerrada y mergeada.
-
-AMPLIADA EL 2026-08-20 con dos hallazgos del ciclo de F-038, por decision del humano (el reviewer los saco como observacion O1 y propuso ficha; el humano decidio colgarlos de aqui). VAN ANTES DE LA REMEDICION, porque remedir con una suite inestable es medir dos veces mal:
-
-(a) HAY UN TEST INESTABLE EN LA SUITE DE LA RAIZ BAJO CARGA. Prueba: `harness/mutacion.py:1781` salio MUERTO en la primera campana de F-038 y SUPERVIVIENTE en la segunda SIN QUE SU CODIGO CAMBIARA. Una campana de mutacion vale lo que valga su suite: con un flake, un mutante puede salir 'muerto' por el fallo intermitente y no porque ningun test lo juzgue, que es exactamente el falso verde que F-038 vino a eliminar. Hay que identificar el test, hacerlo determinista y dejar escrito por que fallaba bajo carga.
-
-(b) LA CAMPANA PARALELA NO SE PUEDE EJECUTAR EN ESTE REPOSITORIO. Con `--workers 5` la linea base ABORTA dentro del git worktree porque falla `test_f012_r1_r4_el_informe_paralelo_...`. Es anterior a F-038 y la linea base se comporto bien -abortar en vez de contar muertos falsos-, pero deja sin usar la paralelizacion que entrego F-012. Sospecha a verificar: el worktree no trae lo que ese test espera encontrar en disco.
-
-ACTUALIZADA EL 2026-08-20 TRAS LA SEGUNDA PASADA DE REVIEW DE F-038, que determino con evidencia que parte de esta ficha YA ESTA HECHA:
-
-- El hallazgo (a) -test inestable de la suite de la raiz- esta CERRADO por la tarea T17 de F-038. Era `test_f012_r1_r4_el_informe_paralelo_es_identico_al_de_la_campania_en_serie`: T5 de F-038 anadio al informe la fila de reloj `Media por mutante evaluado (s)` y nadie extendio el filtro que el test usa para ignorar las filas de reloj; bajo carga la serie redondeaba a 0.0 y la paralela a 0.1. Encaja con la prueba original: la campana corre con `-x`, asi que un fallo intermitente de CUALQUIER test se lee como MUERTO, y ese era el falso muerto de `mutacion.py:1781`. Criterio retirado de la aceptacion.
-
-- El hallazgo (b) -la campana paralela aborta- tiene la CAUSA ELIMINADA pero NO CONFIRMADA. La ficha sospechaba que «el worktree no trae lo que ese test espera en disco»: REFUTADO, el test se fabrica su propio repositorio en `tmp_path` y su `Alcance` es un literal. Fallaba por el reloj, que ya esta arreglado. Queda solo ejecutar la campana con `--workers 5` y ver la linea base en verde: por eso el criterio pasa de «arreglar» a «verificar». No se hizo en la sesion del 20-ago porque son cinco suites simultaneas y en esta maquina dos suites a la vez tumban el proceso (0xC0000142).
-
-DEUDA HEREDADA (observacion 1 del reviewer, no bloqueante): el filtro de filas de reloj de ese test es una lista de prefijos escrita a mano, asi que la cuarta fila de reloj que se anada volvera a romperlo. Propuesta: derivarlo de una constante junto a `escribir_informe`.
 
 ### F-036 · La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten
 
@@ -377,6 +357,26 @@ PROPUESTA para `instalar_arnes.ps1`: (1) una lista de INTOCABLES que en modo `ac
 ALCANCE: `instalar_arnes.ps1` y `GUIA_INSTALACION.md`, ambos EN `arnes-base` (esta feature se implementa alli y aqui solo se consume: subiria a 1.5.3). NO ENTRA: rehacer el instalador ni cambiar el modo `instalar`, que no pisa nada por diseno. Fuente: sesion 2026-08-19; copia de lo que dejo el instalador en el scratchpad de esa sesion, `backup_arnes_20260819/`.
 
 NOTA DE RAMA (2026-08-20): el codigo de esta feature vive en arnes-base, no aqui. La rama feature/F-035-instalador-no-pisa-estado de albaranes existe para la spec, el informe y el rastro documental; los commits de produccion son los de arnes-base 1e67231..9e2ced7 (version 1.6.2, incluidos los cuatro cierres del review: P14, P15, el exit 4 del backup y el porte de los tres tests de _delimitado que solo existian en albaranes).
+
+### F-039 · Arnes: estabilizar la suite de la raiz y remedir las campanas juzgadas con la invocacion rota
+
+estado **terminada** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-039-remedir-campanas-invocacion-rota`
+
+Deuda declarada por F-038 (decision D5 de su design, confirmada por el humano el 2026-08-20). Hasta F-038, un fichero que no cae en ningun servicio de harness/servicios.json se juzgaba con `python -m pytest` SIN ruta desde la raiz; como la raiz no tiene testpaths, esa invocacion moria en la recoleccion en menos de un segundo y el ejecutor la leia como exit 1 = MUERTO. Resultado: mutantes declarados muertos sin que NINGUN test los juzgara. Afecta como minimo a progress/mutacion_F-012.md (61 mutantes) y a cualquier otro informe cuyo alcance incluya ficheros fuera de services/. F-038 solo estampa el aviso de invalidez en cabecera (su R22): NO remide, porque la auditoria de supervivientes cuesta justo lo que aquella feature viene a ahorrar. Aqui se remide de verdad, ya con `ejecutor_para` arreglado. OJO: los supervivientes que aparezcan son huecos reales de test que hoy nadie ve, asi que esta feature puede abrir trabajo nuevo; eso es el objetivo, no un efecto colateral. Requiere F-038 cerrada y mergeada.
+
+AMPLIADA EL 2026-08-20 con dos hallazgos del ciclo de F-038, por decision del humano (el reviewer los saco como observacion O1 y propuso ficha; el humano decidio colgarlos de aqui). VAN ANTES DE LA REMEDICION, porque remedir con una suite inestable es medir dos veces mal:
+
+(a) HAY UN TEST INESTABLE EN LA SUITE DE LA RAIZ BAJO CARGA. Prueba: `harness/mutacion.py:1781` salio MUERTO en la primera campana de F-038 y SUPERVIVIENTE en la segunda SIN QUE SU CODIGO CAMBIARA. Una campana de mutacion vale lo que valga su suite: con un flake, un mutante puede salir 'muerto' por el fallo intermitente y no porque ningun test lo juzgue, que es exactamente el falso verde que F-038 vino a eliminar. Hay que identificar el test, hacerlo determinista y dejar escrito por que fallaba bajo carga.
+
+(b) LA CAMPANA PARALELA NO SE PUEDE EJECUTAR EN ESTE REPOSITORIO. Con `--workers 5` la linea base ABORTA dentro del git worktree porque falla `test_f012_r1_r4_el_informe_paralelo_...`. Es anterior a F-038 y la linea base se comporto bien -abortar en vez de contar muertos falsos-, pero deja sin usar la paralelizacion que entrego F-012. Sospecha a verificar: el worktree no trae lo que ese test espera encontrar en disco.
+
+ACTUALIZADA EL 2026-08-20 TRAS LA SEGUNDA PASADA DE REVIEW DE F-038, que determino con evidencia que parte de esta ficha YA ESTA HECHA:
+
+- El hallazgo (a) -test inestable de la suite de la raiz- esta CERRADO por la tarea T17 de F-038. Era `test_f012_r1_r4_el_informe_paralelo_es_identico_al_de_la_campania_en_serie`: T5 de F-038 anadio al informe la fila de reloj `Media por mutante evaluado (s)` y nadie extendio el filtro que el test usa para ignorar las filas de reloj; bajo carga la serie redondeaba a 0.0 y la paralela a 0.1. Encaja con la prueba original: la campana corre con `-x`, asi que un fallo intermitente de CUALQUIER test se lee como MUERTO, y ese era el falso muerto de `mutacion.py:1781`. Criterio retirado de la aceptacion.
+
+- El hallazgo (b) -la campana paralela aborta- tiene la CAUSA ELIMINADA pero NO CONFIRMADA. La ficha sospechaba que «el worktree no trae lo que ese test espera en disco»: REFUTADO, el test se fabrica su propio repositorio en `tmp_path` y su `Alcance` es un literal. Fallaba por el reloj, que ya esta arreglado. Queda solo ejecutar la campana con `--workers 5` y ver la linea base en verde: por eso el criterio pasa de «arreglar» a «verificar». No se hizo en la sesion del 20-ago porque son cinco suites simultaneas y en esta maquina dos suites a la vez tumban el proceso (0xC0000142).
+
+DEUDA HEREDADA (observacion 1 del reviewer, no bloqueante): el filtro de filas de reloj de ese test es una lista de prefijos escrita a mano, asi que la cuarta fila de reloj que se anada volvera a romperlo. Propuesta: derivarlo de una constante junto a `escribir_informe`.
 
 ### F-012 · Campaña de mutación en paralelo
 

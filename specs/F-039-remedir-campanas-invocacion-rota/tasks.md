@@ -1,0 +1,33 @@
+<!-- specs/F-039-remedir-campanas-invocacion-rota/tasks.md -->
+# F-039 · Tareas
+
+Orden justificado en `design.md` §«Orden de ejecución»: B (estabilizar) → C
+(verificar el paralelo) → D (medir la maquinaria de hoy) → A y E (inventario y
+cabeceras).
+
+- [x] T1: Fase RED de R4/R5 — escribir `tests/test_f039_r3_r7_filas_de_reloj.py` con el test de dos informes que solo difieren en tiempos, y pegar en `progress/impl_F-039.md` la traza real del fallo (`ImportError` de `lineas_comparables`)  |  Verificación: `python -m pytest tests/test_f039_r3_r7_filas_de_reloj.py` en ROJO, traza pegada
+- [x] T2 (R3, R4, R5): Añadir `FILAS_DE_RELOJ` y `lineas_comparables()` en `harness/mutacion.py`, junto a `escribir_informe`, con la firma de `design.md`  |  Verificación: `python -m pytest tests/test_f039_r3_r7_filas_de_reloj.py` en verde
+- [x] T3 (R6): Test de que una diferencia REAL —alcance, totales, SHA, muestreo o ficha de superviviente— sigue apareciendo en `lineas_comparables`  |  Verificación: mismo fichero de tests, en verde
+- [x] T4 (R7): Sustituir el `_comparable` a mano de `tests/test_f012_r1_r5_r11_coordinador.py` (líneas 258-272) por `lineas_comparables`, y comprobar en el test de R7 que ese fichero ya no declara prefijos propios  |  Verificación: `python -m pytest tests/test_f012_r1_r5_r11_coordinador.py tests/test_f039_r3_r7_filas_de_reloj.py`
+- [ ] T5 (R9, R12): Verificar el paralelo con `python -m harness.mutacion --feature F-038 --workers 5 --max-mutantes 1 --salida "$TEMP/verificacion_paralela_F-039.md"` en SESIÓN DEDICADA, y volcar la salida real en `progress/verificacion_paralela_F-039.md`  |  Verificación: MANUAL (humano) — verde = sin `LÍNEA BASE EN ROJO` y llega a evaluar; después `git status --porcelain` vacío y `git worktree list` con una sola línea
+- [ ] T6 (R10): Si T5 muere con `0xC0000142`, repetir con `--workers 3` y `--workers 2` y declarar por escrito el mayor N con línea base verde, como límite de la máquina  |  Verificación: MANUAL (humano), resultado en `progress/verificacion_paralela_F-039.md`
+- [ ] T7 (R11): Si la línea base sale en rojo por una causa distinta del reloj, diagnosticarla por escrito ANTES de seguir; si el arreglo excede el arnés, marcar la feature `blocked` y parar  |  Verificación: sección de diagnóstico en `progress/verificacion_paralela_F-039.md`, o `blocked` en `progress/current.md`
+- [x] T8: Fase RED de R15/R16 — escribir `tests/test_f039_r15_r16_alcance_por_ficheros.py` (alcance de ficheros enteros, origen declarado, ruta inexistente y ruta no-producción abortan) y pegar la traza del fallo  |  Verificación: el fichero de tests en ROJO, traza pegada en `progress/impl_F-039.md`
+- [x] T9 (R15, R16): Implementar `alcance_de_ficheros()` en `harness/alcance.py` y el flag `--ficheros` en `harness/mutacion.py`, con `Origen del diff: **ficheros**` en el informe  |  Verificación: `python -m pytest tests/test_f039_r15_r16_alcance_por_ficheros.py` en verde
+- [x] T10 (R22): Comprobar la línea base antes de gastar nada: la suite de la raíz en verde sin mutar  |  Verificación: `python -m pytest tests -q`; si sale en rojo, no se lanza la campaña (se arregla o `blocked`)
+- [x] T11 (R13, R14, R17): Lanzar en SESIÓN DEDICADA `python -m harness.mutacion --feature F-039 --ficheros harness/mutacion.py,harness/mutacion_paralela.py,harness/rigor.py --salida progress/mutacion_maquinaria_paralela_F-039.md`  |  Verificación: MANUAL (humano) — el informe existe con SHA de HEAD medido, línea base y media por mutante; `git status` sin mutantes al terminar
+- [x] T12 (R18): Escribir a mano la cabecera del informe: comando exacto de reproducción y la advertencia de que mide **la maquinaria de hoy**, no repone los números de `mutacion_F-012.md` ni es comparable con ellos  |  Verificación: `python -m pytest tests/test_f039_r1_r2_r23_r25_documentos.py -k r18` en verde (los dos `test_f039_r18_*`: el `--ficheros` completo del comando de reproducción y el aviso de que mide otro código)
+- [x] T13 (R19, R21): Completar el análisis de CADA superviviente —test que falta o justificación de equivalencia—, agrupado por causa; si alguno revela un defecto real de comportamiento, parar y anotarlo en `progress/current.md`  |  Verificación: `grep -c PENDIENTE progress/mutacion_maquinaria_paralela_F-039.md` da 0
+- [x] T14 (R20): Presentar al humano la lista agrupada de huecos de test en `progress/current.md`, SIN abrir ficha ni tocar `harness/features.json`  |  Verificación: sección «huecos de test detectados» en `progress/current.md`; `git diff` no añade features nuevas
+- [x] T15 (R1, R2, R23, R24, R25): Escribir `progress/inventario_mutacion_F-039.md` y `tests/test_f039_r1_r2_r23_r25_documentos.py` — cada `mutacion_*.md` figura en el inventario con su veredicto; `mutacion_F-012.md` conserva el `⚠` y su puntero dice que el informe nuevo mide otro código; `mutacion_F-011.md` conserva su aviso con la decisión del 2026-08-20; `mutacion_F-034.md` sin cambios en el diff de la rama  |  Verificación: `python -m pytest tests/test_f039_r1_r2_r23_r25_documentos.py`
+- [x] T16 (R23, R24): Actualizar las cabeceras de `progress/mutacion_F-012.md` y `progress/mutacion_F-011.md` según R23 y R24  |  Verificación: el test de T15 en verde
+- [ ] T17: Portar a `arnes-base` las dos mejoras genéricas —`FILAS_DE_RELOJ` + `lineas_comparables` y `alcance_de_ficheros` + `--ficheros`— con sus tests (regla de propagación de `CLAUDE.md`)  |  Verificación: suite de `arnes-base` y nota en `progress/impl_F-039.md`
+- [x] T18: Cerrar el papeleo — `progress/impl_F-039.md` con la sección «Evidencias» (tests, cobertura, mutantes/supervivientes, tiempo de suite) y `progress/current.md` con las verificaciones MANUAL pendientes y sus comandos exactos  |  Verificación: `python -m harness.tamano --feature F-039` con código 0
+- [x] T19: Campaña de mutación de esta feature sobre su propio diff  |  Verificación: `python -m harness.mutacion --feature F-039` deja `progress/mutacion_F-039.md` con supervivientes analizados
+- [x] T20: Ejecutar `bash harness/init.sh` en verde  |  Verificación: exit code 0
+
+> **T5, T6 y T7 quedan para el humano** (verificación MANUAL en sesión
+> dedicada): ver `progress/verificacion_paralela_F-039.md`. **T17 va
+> DESPUÉS del merge en `dev`** (F-038 D6: portar a `arnes-base` dentro de
+> la rama de una feature provocó el rechazo entero del reviewer en F-034);
+> la lista exacta de lo que hay que portar está en `progress/impl_F-039.md`.
