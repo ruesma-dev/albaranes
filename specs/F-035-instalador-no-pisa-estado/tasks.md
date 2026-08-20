@@ -1,6 +1,21 @@
 <!-- specs/F-035-instalador-no-pisa-estado/tasks.md -->
 # F-035 · Tareas
 
+> **Estado al 2026-08-20** (lo escribe el líder, cerrando el CR-4 del review).
+> T1-T14 están hechas y commiteadas **en `arnes-base`** (`1e67231`..`b6ac623`,
+> versión 1.6.1), no aquí: el código de esta feature vive en ese repositorio y
+> la rama de `albaranes` solo sostiene spec, informe y rastro documental. T15
+> hecha (`progress/impl_F-035.md`).
+>
+> **T16 es MANUAL y la ejecuta el humano**: verificación del diseño §7.4, con
+> el comando exacto en `progress/current.md`.
+>
+> **T17** (portero en verde) lo ejecuta el líder al cerrar la feature.
+>
+> Quedan además los CR-1, CR-2 y CR-3 del review (`progress/review_F-035.md`),
+> en curso: el caso P14 que mata al superviviente MR1, el comentario falso de
+> P4 con R15, y el `Join-Path` fuera del `try` de `New-DirectorioBackup`.
+
 **Dos repositorios.** Cada tarea dice en cuál se hace y cada una es un commit
 en **ese** repositorio. Convención de mensaje en `arnes-base`, que no usa el
 arnés y no tiene features: `F-035 Tn: <qué>` igual que aquí, para poder
@@ -13,7 +28,7 @@ Leyenda: **[AB]** = `C:\Users\pgris\PycharmProjects\arnes-base` ·
 
 ## Fase 0 · Preparación
 
-- [ ] **T1 [AB]**: Confirmar el punto de partida: `git status` limpio,
+- [x] **T1 [AB]**: Confirmar el punto de partida: `git status` limpio,
       `git log -1` = `9224a5a` (1.5.2) o posterior si F-034 ya cerró, y
       `arnes-base/harness/VERSION` leído (fija el MINOR de T14, §8 del diseño).
       **Verificación**: `git -C ...\arnes-base status --porcelain` vacío y
@@ -22,7 +37,7 @@ Leyenda: **[AB]** = `C:\Users\pgris\PycharmProjects\arnes-base` ·
 
 ## Fase 1 · RED — reproducir el incidente en un banco de pruebas
 
-- [ ] **T2 [AB]**: Crear `tests_instalador/prueba_instalador.ps1` con el andamio
+- [x] **T2 [AB]**: Crear `tests_instalador/prueba_instalador.ps1` con el andamio
       (montaje/limpieza del repo de mentira, `Assert-Igual`, contador,
       `exit 1`) y **solo el caso P1**: sembrar `harness/features.json` con 7
       features, ejecutar `-Modo actualizar -Forzar`, comprobar que siguen
@@ -31,19 +46,19 @@ Leyenda: **[AB]** = `C:\Users\pgris\PycharmProjects\arnes-base` ·
       **FALLA** contra el instalador actual, con el mensaje de P1 y salida ≠ 0.
       Pegar la salida en `progress/impl_F-035.md`: es la fase RED.
 
-- [ ] **T3 [AB]**: Añadir los casos P2, P6, P9, P11 y P12.
+- [x] **T3 [AB]**: Añadir los casos P2, P6, P9, P11 y P12.
       **Verificación**: la prueba falla en P1, P2, P6, P11 y P12, y **pasa**
       P9 (el modo `instalar` ya es seguro hoy: si P9 falla, el diagnóstico de
       la spec es incorrecto y hay que parar y avisar).
 
 ## Fase 2 · La política
 
-- [ ] **T4 [AB]**: Crear `politica_ficheros.json` en la raíz con las cuatro
+- [x] **T4 [AB]**: Crear `politica_ficheros.json` en la raíz con las cuatro
       listas del diseño §3 (UTF-8 sin BOM, LF).
       **Verificación**:
       `powershell -NoProfile -Command "Get-Content politica_ficheros.json -Raw | ConvertFrom-Json | Out-Null; 'ok'"`.
 
-- [ ] **T5 [AB]**: En `instalar_arnes.ps1`, añadir `Get-Politica` y
+- [x] **T5 [AB]**: En `instalar_arnes.ps1`, añadir `Get-Politica` y
       `Get-CategoriaFichero` (resolución por especificidad, R3) y
       `Test-PayloadClasificado` (R4), ejecutado antes de cualquier escritura.
       Sustituir `$Excluidos` (línea 32) por la lista `excluidos` de la política
@@ -52,14 +67,14 @@ Leyenda: **[AB]** = `C:\Users\pgris\PycharmProjects\arnes-base` ·
       ruta sin clasificar ⇒ aborta ≠ 0 y no escribe) y verlo **pasar**; P12
       (`__pycache__` fuera) pasa también.
 
-- [ ] **T6 [AB]**: Añadir el caso **P3** (fichero de categoría (a) sí se
+- [x] **T6 [AB]**: Añadir el caso **P3** (fichero de categoría (a) sí se
       actualiza) a la prueba.
       **Verificación**: P3 pasa contra el comportamiento actual (hoy `-Forzar`
       ya lo pisa). Queda como red de no-regresión de T7.
 
 ## Fase 3 · El comportamiento por categoría
 
-- [ ] **T7 [AB]**: Reescribir el recorrido del payload (líneas 113-186) según
+- [x] **T7 [AB]**: Reescribir el recorrido del payload (líneas 113-186) según
       el diseño §5: `estado` ⇒ `protegido`, ni diff ni pregunta ni escritura
       (R9, R10); `puro` ⇒ se aplica sin preguntar salvo `-PreguntarTodo`
       (R11, R12); `adaptado` ⇒ diff y pregunta; ausente ⇒ se copia sea cual sea
@@ -67,13 +82,13 @@ Leyenda: **[AB]** = `C:\Users\pgris\PycharmProjects\arnes-base` ·
       **Verificación**: P1, P2 y P3 pasan. **P1 es la prueba de fuego: 7
       features siguen siendo 7 tras `-Forzar`.**
 
-- [ ] **T8 [AB]**: Diálogo con default en CONSERVAR: prompt nuevo, Intro ⇒
+- [x] **T8 [AB]**: Diálogo con default en CONSERVAR: prompt nuevo, Intro ⇒
       conservar a la primera (R13, R14), guardarraíl no interactivo intacto
       (R15). Añadir el caso **P4**.
       **Verificación**: P4 pasa (entrada redirigida a vacío ⇒ `CLAUDE.md`
       conserva su marcador).
 
-- [ ] **T9 [AB]**: `Test-MismoContenido` con normalización CRLF/BOM para
+- [x] **T9 [AB]**: `Test-MismoContenido` con normalización CRLF/BOM para
       extensiones de texto y tercer estado `solo-eol` (R23).
       **Verificación**: P11 pasa. Comprobar además que un `.png` o `.pdf`
       sembrado en el destino sigue comparándose por SHA-256 (no se normaliza
@@ -81,7 +96,7 @@ Leyenda: **[AB]** = `C:\Users\pgris\PycharmProjects\arnes-base` ·
 
 ## Fase 4 · Backup y precondiciones
 
-- [ ] **T10 [AB]**: `New-DirectorioBackup`, `Backup-Fichero`,
+- [x] **T10 [AB]**: `New-DirectorioBackup`, `Backup-Fichero`,
       `Write-Manifiesto` y el parámetro `-DirBackup` (R17-R22). Ninguna
       escritura destructiva sin backup previo; abortar si no se puede crear el
       directorio; fichero suelto que falla ⇒ se conserva y salida ≠ 0. Añadir
@@ -90,12 +105,12 @@ Leyenda: **[AB]** = `C:\Users\pgris\PycharmProjects\arnes-base` ·
       versión **previa** de `.claude/agents/leader.md`, el `MANIFIESTO.md` lo
       lista con rama y commit).
 
-- [ ] **T11 [AB]**: `Test-Precondiciones` (R25, R26, R27, R28) y el parámetro
+- [x] **T11 [AB]**: `Test-Precondiciones` (R25, R26, R27, R28) y el parámetro
       `-IgnorarPrecondiciones`. Añadir los casos **P7** y **P8**.
       **Verificación**: P7 y P8 pasan (sucio en ruta tocada bloquea; sucio en
       `services/algo.txt` no bloquea; `-IgnorarPrecondiciones` desbloquea).
 
-- [ ] **T12 [AB]**: Resumen final con `protegidos`, `solo finales de línea` y
+- [x] **T12 [AB]**: Resumen final con `protegidos`, `solo finales de línea` y
       `no aplicados (fallo de backup)`, listado de rutas protegidas, ruta del
       backup (R29, R30, R22), y `-SoloDiff` sin escribir nada pero mostrando
       los protegidos (R31). Texto de `harness/ARNES_VERSION.md` corregido
@@ -107,14 +122,14 @@ Leyenda: **[AB]** = `C:\Users\pgris\PycharmProjects\arnes-base` ·
 
 ## Fase 5 · Mutación manual y cierre en `arnes-base`
 
-- [ ] **T13 [AB]**: Campaña de mutación **manual**, 6 mutantes M1-M6 del
+- [x] **T13 [AB]**: Campaña de mutación **manual**, 6 mutantes M1-M6 del
       diseño §7.3, cada uno aplicado a mano, prueba ejecutada y revertido.
       **Verificación**: tabla en `progress/mutacion_F-035.md` (en `albaranes`)
       con el **texto exacto original → mutado** de cada sustitución, el caso
       que lo mata y la salida. Un superviviente = caso de prueba nuevo antes
       de seguir. Sin commit en `[AB]`; el commit es en `[ALB]`.
 
-- [ ] **T14 [AB]**: Subir `arnes-base/harness/VERSION` al MINOR siguiente al
+- [x] **T14 [AB]**: Subir `arnes-base/harness/VERSION` al MINOR siguiente al
       leído en T1 (1.7.0 si F-034 cerró como 1.6.0; ver diseño §8) con su
       `ARNES_FECHA`, y escribir en `GUIA_INSTALACION.md` la sección de la
       versión nueva (tres categorías, política, backup, precondiciones,
@@ -126,7 +141,7 @@ Leyenda: **[AB]** = `C:\Users\pgris\PycharmProjects\arnes-base` ·
 
 ## Fase 6 · Rastro y cierre en `albaranes`
 
-- [ ] **T15 [ALB]**: Escribir `progress/impl_F-035.md`: fase RED (salida de
+- [x] **T15 [ALB]**: Escribir `progress/impl_F-035.md`: fase RED (salida de
       T2 en rojo), salida final en verde de T12, tabla de mutación de T13, y
       **los hashes de los commits de `arnes-base`** (T2-T14) para que el
       reviewer pueda comprobarlos con

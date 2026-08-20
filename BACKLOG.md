@@ -5,11 +5,13 @@
 
 Resumen: **38 features**, 31 abiertas, 7 terminadas.
 
+En curso: **F-035**.
+
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | spec lista | estandar | `feature/F-035-instalador-no-pisa-estado` |
+| F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | en curso | estandar | `feature/F-035-instalador-no-pisa-estado` |
 | F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | pendiente | estandar | `feature/F-038-coste-del-ciclo-sdd` |
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | pendiente | critico | `feature/F-036-residuos-contenedores-e-incrementos` |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -57,7 +59,7 @@ Resumen: **38 features**, 31 abiertas, 7 terminadas.
 
 ### F-035 · Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto
 
-estado **spec lista** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-035-instalador-no-pisa-estado`
+estado **en curso** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-035-instalador-no-pisa-estado`
 
 Sale de un incidente real: el 2026-08-19, al actualizar el arnes de 1.5.0 a 1.5.2 con `instalar_arnes.ps1 -Modo actualizar`, el instalador ofrecio -y aplico- sobrescribir con sus PLANTILLAS GENERICAS ficheros que son ESTADO DEL PROYECTO, no arnes: `harness/features.json` paso de 34 features a 1 (el ejemplo F-001), `docs/ARCHITECTURE.md` de 183 a 37 lineas, y `progress/current.md` e `progress/history.md` perdieron 157 y 161 lineas. Nada se habia commiteado y se recupero entero desde git, y el 1.5.2 se acabo aplicando por copia quirurgica (commit 3a146cd), pero la proxima vez puede tocar a alguien que haga `git add -A` sin mirar.
 
@@ -66,6 +68,8 @@ EL DEFECTO no es del humano que pulso enter de mas: es que el instalador no dist
 PROPUESTA para `instalar_arnes.ps1`: (1) una lista de INTOCABLES que en modo `actualizar` ni siquiera se ofrecen -`harness/features.json`, todo `progress/`, `docs/ARCHITECTURE.md`, `docs/CONVENTIONS.md`, `docs/referencia/`, `.claude/settings.json`-, y que el resumen final cuente aparte como 'protegidos'; (2) los ficheros con marcas de adaptacion (`CLAUDE.md`, `CHECKPOINTS.md`) siguen preguntando, pero con el diff y con el default en CONSERVAR; (3) que el instalador escriba un backup de lo que va a pisar antes de pisarlo -hoy hace `Copy-Item -Force` sin red-, en una carpeta con sello de fecha fuera del repositorio; (4) revisar si el modo `actualizar` deberia negarse a correr con el arbol de trabajo sucio o sobre una rama que no sea la de integracion, que es lo que agravo este caso (se ejecuto sobre una rama de feature 25 commits por detras de dev).
 
 ALCANCE: `instalar_arnes.ps1` y `GUIA_INSTALACION.md`, ambos EN `arnes-base` (esta feature se implementa alli y aqui solo se consume: subiria a 1.5.3). NO ENTRA: rehacer el instalador ni cambiar el modo `instalar`, que no pisa nada por diseno. Fuente: sesion 2026-08-19; copia de lo que dejo el instalador en el scratchpad de esa sesion, `backup_arnes_20260819/`.
+
+NOTA DE RAMA (2026-08-20): el codigo de esta feature vive en arnes-base, no aqui. La rama feature/F-035-instalador-no-pisa-estado de albaranes existe para la spec, el informe y el rastro documental; los commits de produccion son los de arnes-base 1e67231..b6ac623 (version 1.6.1).
 
 ### F-038 · Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor
 
