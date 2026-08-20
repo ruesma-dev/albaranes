@@ -1,272 +1,254 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-## F-034 · CR-2 cerrado, a la espera de la tercera pasada (2026-08-20)
+## Cierre de sesión — 2026-08-20 (sesión del 19 y 20 de agosto)
 
-Rama `feature/F-034-mutacion-is-y-coherencia-evals`, feature `in_progress`.
-**Las catorce tareas T0–T14 están en `[x]`**, incluida T12. `bash harness/init.sh`
-en verde: **280 passed en 86,30 s**, `PUERTA COBERTURA: 100.0% de 12 líneas
-cambiadas`.
-
-### El CR-2 reabierto de la segunda pasada: cerrado (§T16 del informe)
-
-De los cinco cambios requeridos del review, cuatro ya estaban cerrados y solo
-quedaba **CR-2: la campaña de mutación no reproducía sus números**. El reviewer
-la reejecutó y obtuvo 9 muertos / 8 supervivientes / 2 timeouts donde el
-informe declaraba 18 / 1 / 0. **Tenía razón**, y su argumento no se discute: un
-superviviente exige que la suite termine en verde, así que una máquina cargada
-puede inventar *muertos* falsos pero nunca *supervivientes* falsos.
-
-Lo hecho, en este orden:
-
-1. **Tres tests nuevos** en `tests/test_mutacion_operadores.py`, con **fase RED
-   pegada mutante a mutante**, que cierran los **cuatro huecos reales** de los
-   ocho supervivientes (`208 [logico]`, `208 [entero]`, `220 [entero]`,
-   `221 [aritmetico]`). El más grave era el cuarto: con él, el delimitador
-   **derecho** de `_delimitado` no se comprobaba nunca y el mutante volvía a
-   caer dentro del comentario. El test que ya existía usaba «anal**is**is», que
-   el byte ANTERIOR ya rechaza; el nuevo usa «**isla**», que empieza por `is` y
-   obliga a mirar el byte SIGUIENTE.
-2. **Campaña rehecha** con el método documentado (ejecutor por API,
-   `--workers 1`): **19 generados, 14 muertos, 4 supervivientes, 1 timeout en
-   1.063,1 s**. Números pegados en `progress/mutacion_F-034.md`.
-3. **Los 4 supervivientes que quedan son equivalentes**, comprobados uno a uno
-   por barrido exhaustivo antes de firmarlos —incluidos los tres que el
-   reviewer ya había identificado—. **Ninguno queda en `PENDIENTE`.**
-4. **El quinto «hueco» no lo era**: `251 [entero]` es equivalente, con
-   demostración. La línea solo se ejecuta con un token de palabra, cuyo primer
-   byte es de palabra; cualquier coincidencia en `posicion + 1` estaría
-   precedida por él y `_delimitado` la rechazaría igual. Saltársela no cambia
-   nada.
-5. **Los timeouts, medidos en vez de declarados**: `251 [aritmetico]` es un
-   bucle infinito de verdad (`exit=124` a los 200 s). `207 [logico]` **no lo
-   es**: muere en 48,28 s. Aquel timeout era la máquina cargada del reviewer
-   (63 min de campaña frente a los 17,7 min de ésta).
-6. **Corregida la frase falsa** del informe de mutación —que el gemelo de la
-   línea 208 moría con `test_f034_r7`—, con lo medido: hoy muere, pero por el
-   test nuevo, y antes sobrevivía.
-
-**No se ha propagado la 1.6.0 a esta rama**, que fue el error del primer
-rechazo. `harness/mutacion.py` sigue sin diff contra HEAD tras la campaña
-(comprobado con `git status`).
-
-> Esta sección sustituye a la que titulaba «F-034 · BLOQUEADA en el porte a
-> `arnes-base`». **Ese bloqueo ya no existe** y la afirmación que hacía —
-> «`arnes-base/harness/VERSION` sigue en 1.5.2 a propósito»— es falsa hoy.
-
-### T12 (porte a `arnes-base`): resuelto, y cómo
-
-El bloqueo era real —otro trabajo en vuelo y sin commitear sobre el mismo
-`harness/mutacion.py`— y lo resolvió el **humano**: decidió incorporar los dos
-encargos a la **misma versión**. La **1.6.0 de `arnes-base`** lleva las cuatro
-piezas del encargo de «mutación fiable» **y** el porte de `is`/`is not` de
-F-034. Commits allí, ya **pusheados** a `origin/main`: `860902e`, `b7dce9d`,
-`febb51d` (el porte de F-034), `3ceb95b`, `89a9ba9`.
-
-Verificado en solo lectura (hay otro agente trabajando en ese repositorio, así
-que desde aquí **no se escribe** en él): `arnes-base/harness/VERSION` →
-`ARNES_VERSION=1.6.0`, y `grep -c "ast.Is" arnes-base/harness/mutacion.py` → 2.
-
-### La propagación de la 1.6.0 a `albaranes` está REVERTIDA, y es a propósito
-
-El commit `e97f9b9` trajo la 1.6.0 de vuelta a `albaranes` **dentro de la rama
-de F-034**. Eso metió ~1.000 líneas de producción ajenas en el alcance de la
-feature **después** de medir sus puertas: el informe de mutación declaraba 56
-líneas / 19 mutantes y la rama pasaba a tener 1.057 / 172, y la cobertura
-saltaba de 12 líneas cambiadas a 392. Fue la causa de CR-1 y CR-2.
-
-**Se ha revertido** (`163846b`). Con el revert, el alcance de la rama vuelve a
-ser el que el informe declara —recomprobado, ver abajo— y la propagación se
-rehará **después del merge de F-034, en su propia rama `chore/`**.
-
-Efecto colateral consciente: `harness/VERSION` de `albaranes` dice **1.6.0**
-mientras el código de `harness/` es el de la **1.5.2**. Es incoherente y **se
-deja así a propósito**: lo arregla la rama de propagación, no ésta. Quien lea
-esto antes de ese merge, que no lo «arregle» aquí.
-
-### Comprobación de que el informe de mutación de F-034 sigue siendo válido
-
-Recalculado tras el revert, cálculo puro (`harness.alcance.alcance_de_feature`
-+ `harness.mutacion.generar_mutantes`, sin ejecutar ninguna suite):
-
-```
-harness/mutacion.py: 56 lineas, 19 mutantes
-TOTAL: 1 fichero(s), 56 lineas, 19 mutantes
-```
-
-Coincide **exactamente** con lo que declara `progress/mutacion_F-034.md`. Y el
-método documentado en su aviso al reviewer **vuelve a reproducirse**: el
-`harness/mutacion.py` de esta rama no lleva comprobación de línea base (esa es
-de la 1.6.0, revertida), así que ya no aborta. Muestra de 3 mutantes con
-`--max-mutantes 3 --semilla 7`: `3 mutantes evaluados, 3 muertos, 0
-supervivientes, 0 timeouts en 82.7 s`, árbol limpio después.
-
-### El hallazgo del ejecutor de la raíz: ya tiene feature propia
-
-**Las campañas de mutación sobre ficheros de la RAÍZ de este repositorio dan un
-falso verde con el CLI a secas.** `ejecutor_para` manda lo que no es de ningún
-servicio a `python -m pytest` **sin ruta**, y como no hay configuración de
-pytest en la raíz, esa invocación recoge `services/**/tests` y **revienta en la
-recolección en 0,81 s** pase lo que pase: exit 1, que el mutador cuenta como
-MUERTO. Por eso la campaña buena de F-034 se lanzó pasando el ejecutor por API.
-
-Afecta también a `progress/mutacion_F-012.md` (61 mutantes sobre `harness/`).
-**No se arregla en F-034**: está fuera de su alcance y toca la puerta de todas
-las features. Está dado de alta en **F-038** (`harness/features.json`, commit
-`73a6b1d`), junto al coste del ciclo SDD.
-
-## Cierre de sesión — 2026-08-19
-
-Sesión larga (18 y 19 de agosto). `dev` al día, árbol limpio, **ninguna feature
-`in_progress` ni `blocked`**. El backlog tiene **34 features, 28 abiertas**.
-
-### Lo que se cerró en esta sesión
-
-- **F-019 · Importe de línea** (done, APPROVED en **cuarta** pasada). El fallo
-  apareció en tres capas sucesivas: el SELECT de sv5 multiplicaba por la
-  cantidad un `precio_neto` que ya era el importe de línea; la precedencia de
-  sv6 daba prioridad al importe sobre el unitario leído; y **sv4 recalculaba
-  sin descuento y pisaba en BBDD lo que sv6 escribía bien**. La fórmula
-  canónica vive ahora en `ruesma_comun/importes.py`, consumida de verdad por
-  sv4 y sv6 (fijado con tests de **identidad de objeto**). Al unificarlas se
-  descubrió que las dos copias **ya divergían**.
-- **F-027 · Error de ×1000 kg→TN** (done, APPROVED a la primera). MAHORSA
-  58826: de **468.763,40 €** a **468,76 €**. Incluye la *segunda mitad* del
-  error, que se habría activado al implementar F-024.
-- **Arnés 1.5.0**: `BACKLOG.md` generado desde `features.json` y regenerado por
-  `init.sh`; y la sección de subagentes de `CLAUDE.md` dice ahora que delegar
-  es la vía normal. Propagado a `arnes-base` (commit `3b46d55`).
-- **Backlog**: altas de F-021 a F-034 desde las dos revisiones del lote.
+Sesión larga y casi entera dedicada al **arnés**. Se cierra a propósito para
+liberar contexto: lo que queda es trabajo largo y conviene retomarlo limpio.
 
 ### Lo primero al abrir la próxima sesión
 
-**F-034 (prioridad 1)**: el mutador del arnés no muta `is` / `is not`. Cambia
-la **vara de medir** de todas las features, así que va antes que cualquier otra
-cosa: cada feature cerrada hasta que se arregle se mide con una campaña ciega
-justo en el patrón (`x is None`) que ha causado los dos defectos más caros del
-proyecto. Incluye dos incoherencias más (la puerta de evals condicionada a los
-libros `.xlsx` de `evals/ground_truth/`, que existen pero **no se versionan**,
-en vez de a los fixtures versionados de `evals/fixtures/` que es lo que lee el
-runner; y el rastro de las campañas manuales) y **se porta a `arnes-base`**.
-
-Después, por orden: F-024 (unidad + revisión razonada de unidades en IA2),
-F-028 y F-029 (los dos casos en que el albarán **no llega a valorarse**), F-030,
-F-031…
-
-### Pendientes del humano (ninguno bloquea, pero varios llevan tiempo)
-
-1. **Prueba local de F-002** — 4 de las 5 verificaciones siguen sin hacer (la K
-   ya salió: `obras_activas=275`). Es lo que libera el **merge de F-003**, que
-   está implementada y aprobada en su rama desde hace días.
-2. **Reconciliar F-003 antes de arrancarla**: su R4 manda conservar el cálculo
-   `cantidad × precio_neto` que **F-019 acaba de corregir**, y su R6 es la
-   evolución del R10 de F-019. Igual que **F-004**, que tiene absorbidos por
-   F-023 su R24 y sus R9/R10, y contradicha por F-018 su regla de «M7 solo con
-   señal».
-3. **Verificaciones MANUAL de F-019 (T17) y F-027 (T10)**: los números están
-   fijados por test, pero los totales de documento completo solo se comprueban
-   ahí.
-4. **Histórico mal valorado en BBDD**: 468.763,40 € y 462.282,80 € del lote de
-   MAHORSA, y los importes sin descuento anteriores a F-019. Por diseño no hay
-   backfill: se sanean **revalorando desde sv4**. Falta decidir cuáles y cuándo.
-5. **Derivados por IA del lote de Álvaro** (cierran F-014) y las dudas abiertas:
-   precios manuscritos de Pavimarsa (¿fuente `ALBARAN` o `MANUSCRITO`?), unidad
-   de Vodaland (377 u. en papel frente a MT en el Excel), partidas P4/P5, y las
-   erratas del Excel (fecha del 09256 como texto `11/08/20205`, concepto del
-   224964).
-6. **Rellenar `evals/fixtures/inputs/`**: mientras esté vacío, la puerta de
-   rutas sensibles se queda en `aviso` y ninguna feature que toque prompts
-   puede demostrar nada. Ojo: F-034 arregla que la condición de la puerta
-   apuntase a los libros `.xlsx` de `evals/ground_truth/` —que existen, pero
-   `.gitignore` los excluye y quien clona el repositorio no los ve— en vez de a
-   estos fixtures, que son los que consume `evals.runner`.
-7. **Despliegue**: NADA está desplegado. Producción corre las imágenes
-   `r20260724-1632` (24 de julio), es decir **sin F-002, F-019 ni F-027** — el
-   ×1000 y el importe sin descuento siguen vivos en Azure. Cuando se autorice:
-   secret `SIGRID_API_FUNCTION_KEY` en `ca-sv2-extraccion`, `set_models.ps1
-   -Anthropic claude-opus-4-8`, y actualizar `azure-apps/albaranes.md`.
-8. **Modelos en local**: sv5 tenía `ENABLE_CLAUDE=false` y `ANTHROPIC_MODEL=
-   claude-opus-4-7`; sv2, `claude-sonnet-4-5`. Lo decidido es `claude-opus-4-8`
-   en ambos. El humano edita los `.env` (los agentes no los tocan).
-
-### Notas operativas de la sesión (útiles para la siguiente)
-
-- **No lanzar suites ni campañas de mutación en paralelo**: hubo abortos por
-  presión de recursos de Windows (`git init` devolviendo `0xC0000142`) y varios
-  agentes colgados. En serie, y `--workers 1` si la mutación paralela protesta
-  por ficheros sin versionar.
-- **Worktree de `dev`** en `scratchpad/wt-dev`: permitió trabajar en el backlog
-  y en el arnés mientras el árbol principal estaba ocupado con una rama de
-  feature. Vale la pena mantener la costumbre.
-- La API dio muchos **529 (sobrecarga)** y cuelgues de watchdog. Los agentes se
-  reanudan con el trabajo intacto; si uno acumula demasiadas pasadas, sale más
-  barato lanzar uno nuevo con contexto acotado.
+1. **`git push` de `arnes-base`**: 16 commits locales. Es lo único que impide
+   que todo el trabajo del arnés exista fuera de un solo disco.
+2. Por orden: **F-036 (residuos, lo único que toca dinero)** → **F-038** →
+   actualizar los otros cuatro proyectos con el instalador ya seguro.
 
 ---
 
-## Spec escrita — F-035 (2026-08-19, rama `chore/specs-F-034-F-035`)
+## Estado del arnés
 
-`specs/F-035-instalador-no-pisa-estado/` con los tres ficheros. Sin tocar
-código, ni aquí ni en `arnes-base`.
+| Repositorio | Versión | Estado |
+|---|---|---|
+| `arnes-base` | **1.6.2** (en curso) | 1.6.0 pusheada; de la 1.6.1 en adelante, **14 commits locales sin subir** |
+| `albaranes` | **1.6.1** | código y sello coinciden, mergeado en `dev` |
+| `porcentajes`, `postventa-incidencias` | 1.5.2 | sin actualizar |
+| `datamart-seg-anual` | 1.5.0 | sin actualizar |
+| `partes` | 1.4.0 | sin actualizar |
 
-**Particularidad**: el código de F-035 **no vive en este repositorio**. Vive en
-`C:\Users\pgris\PycharmProjects\arnes-base` (`instalar_arnes.ps1` y
-`GUIA_INSTALACION.md`, en su raíz). En `albaranes` solo se escribe la spec y el
-rastro de `progress/`. El diseño lo dice en su §0, con el aviso de que las
-puertas de cobertura y mutación **no tienen sujeto aquí** (0 líneas Python
-cambiadas) y de que la evidencia real es la prueba de fuego en `arnes-base`.
+**Los cuatro proyectos atrasados no se actualizan hasta que F-035 cierre**: el
+instalador seguro es justo lo que trae esa feature.
 
-Hallazgos de la lectura del instalador 1.5.2 que sostienen el diseño:
+### F-034 · el mutador muta `is` / `is not` — CERRADA (done, en `dev`)
 
-- No existe lista de ficheros del payload: es un barrido
-  (`Get-ChildItem -Recurse`, línea 112) con **una sola** exclusión
-  (`harness/gitignore.arnes`, línea 32). El `Copy-Item -Force` sin red está en
-  la **línea 179**. El literal `ADAPTAR` **no aparece** en el script: la
-  distinción entre arnés y estado hoy es prosa, no código.
-- **Ruido CRLF medido**: de los 13 ficheros que el instalador marca como
-  distintos entre el payload y `albaranes`, **8 son idénticos salvo el final de
-  línea** (el payload está en LF por `.gitattributes`; `albaranes` **no tiene
-  `.gitattributes`** y hace checkout en CRLF). Es causa contribuyente directa
-  del incidente: 13 diffs, 8 aparentemente vacíos, invitan a pulsar `T`.
-- El payload arrastra `__pycache__/`, `*.pyc` y `.pytest_cache/` (no
-  versionados, pero el barrido sí los ve) y los copia al destino.
-- `arnes-base` **no tiene ninguna prueba del instalador**: la carpeta `tests/`
-  que se ve está **dentro del payload** y son tests de `harness/backlog.py` y
-  `harness/mutacion.py` que se instalan en el destino. Tampoco hay CI. Pester
-  disponible es el **3.4.0** de Windows, incompatible con la 5.x ⇒ la spec
-  propone PowerShell puro sin framework.
+APPROVED en **tercera** pasada. `x is None` es LA guarda de ausencia en Python y
+el mutador no la conocía: las campañas de F-019 y F-027 —los dos defectos más
+caros del proyecto, ambos en una guarda `is`— se midieron ciegas justo ahí.
 
-**Decisiones abiertas que necesita validar el humano** (todas en `design.md`
-§9, y todas de una línea de cambio si discrepa):
+Las dos primeras pasadas rechazaron con razón:
 
-1. **D1 · `.claude/settings.json`**: la spec lo pone en categoría (b)
-   *adaptado*, no en los intocables como decía `features.json`. Motivo: su
-   versión del payload es configuración **mejorable** (los hooks
-   `SessionStart`/`SessionEnd` llegaron a los proyectos por esa vía), no una
-   plantilla vacía. Hacerlo intocable congela esas mejoras para siempre.
-2. **D2 · `docs/CONVENTIONS.md`**: igual, categoría (b) y no intocable (el
-   payload trae 65 líneas de convenciones reales; en `albaranes` la diferencia
-   es de 5 líneas, no de 150 como en `ARCHITECTURE.md`).
-3. **D3 · Vía de escape de las precondiciones**: `-IgnorarPrecondiciones`
-   separado de `-Forzar`, porque el incidente ocurrió **sin** `-Forzar`.
-4. **D4 · Normalización CRLF (R23)**: es lo único que no se deduce literalmente
-   del enunciado de la feature. Se puede sacar sin tocar el resto del diseño.
-5. **D5 · Rigor**: F-035 está declarada `estandar`, pero aquí no hay código. La
-   spec propone mantenerlo y aceptar como equivalente la fase RED (la prueba
-   falla contra el instalador de hoy) y una campaña de mutación **manual** de 6
-   mutantes sobre el `.ps1`, con texto exacto original → mutado.
-6. **Versión de `arnes-base`**: la spec propone **MINOR, no 1.5.3** —hay tres
-   parámetros nuevos, cambia el comportamiento por defecto de `actualizar` y
-   aparece un artefacto del que el script depende para arrancar—. Como F-034
-   también sube MINOR, el número no se cablea: el implementer lee
-   `arnes-base/arnes-base/harness/VERSION` al empezar y sube el siguiente
-   (1.7.0 si F-034 ya cerró como 1.6.0).
+- **1ª**: culpa del líder, no del implementer. Propagó el arnés 1.6.0 **dentro
+  de la rama** después de medir las puertas, y la rama pasó a tener 1.057 líneas
+  donde el informe declaraba 56. **Lección: la propagación del arnés va en su
+  rama `chore/` y DESPUÉS del merge, nunca dentro de la rama de una feature.**
+- **2ª**: la campaña de mutación **mentía**. Declaraba 18/1/0 en 111 s y al
+  reejecutarla salía 9/8/2 en 63 min. El reviewer lo demostró sin ejecutar nada:
+  dos mutantes declarados MUERTOS eran semánticamente idénticos al original.
+  De sus 8 supervivientes, **cuatro eran huecos reales** en `_es_palabra`,
+  `_delimitado` y `_localizar` — la función que decide si una mutación de `is`
+  cae en el sitio correcto. Sin esa insistencia, la feature habría cerrado con
+  esos cuatro agujeros dentro.
 
-**Criterio de diseño que conviene revisar**, porque es el que decide la lista
-entera: un fichero es *estado del proyecto* (intocable) cuando su versión en el
-payload es una **plantilla semilla** —aceptarla no aporta nunca nada y destruye
-siempre—, no por llevar marcas `[ADAPTAR]`. Con ese criterio salen intocables
-`harness/features.json`, `docs/ARCHITECTURE.md` y `progress/**`, y se quedan en
-«pregunta con default CONSERVAR» `CLAUDE.md`, `CHECKPOINTS.md`,
-`harness/init.sh`, `docs/CONVENTIONS.md`, `docs/referencia/README.md` y
-`.claude/settings.json`.
+Causa probable de los falsos muertos: **bytecode rancio**. CPython reutiliza el
+`.pyc` cuando el fuente conserva tamaño y mtime truncado a segundos, cosa que
+dos mutantes consecutivos cumplen a menudo. Lo arregla la 1.6.0.
+
+### F-035 · el instalador no pisa estado del proyecto — CERRADA (done)
+
+**APPROVED en segunda pasada**, rama `feature/F-035-instalador-no-pisa-estado`.
+**El código vive en `arnes-base`** (versión **1.6.2**, commits `1e67231`..
+`9e2ced7`), no aquí; esta rama sostiene spec, informe y rastro.
+
+Origen: el 19-ago el instalador pisó en este repositorio `harness/features.json`
+(34 features → 1), `docs/ARCHITECTURE.md` (183 → 37 líneas), `progress/
+current.md` e `history.md`. Se recuperó porque nada estaba commiteado.
+
+Entregado y verificado: `politica_ficheros.json` con tres categorías, backup
+previo con manifiesto, precondiciones con `-IgnorarPrecondiciones`, normalización
+de fin de línea, y `tests_instalador/prueba_instalador.ps1` con **47
+comprobaciones en verde**, incluido P1 (el incidente: «features.json sobrevive a
+`-Modo actualizar -Forzar`»).
+
+**Review: CHANGES_REQUESTED** (`progress/review_F-035.md`). Estado de los CR:
+
+| CR | Qué | Estado |
+|---|---|---|
+| CR-1 | El mutante que anula el atajo del arnés puro sobrevive a las 47 comprobaciones (R11/R12 sin caso sin `-Forzar`) | **hecho** (`efdfbe7`) |
+| CR-2 | El comentario de P4 miente y R15 no lo ejercita nadie | **hecho** (`d64be41`) |
+| CR-3 | `Join-Path` fuera del `try` en `New-DirectorioBackup`: traza cruda y `exit 1` en vez de `exit 4` | **hecho** (`d937012`, sube a 1.6.2) |
+| CR-4 | C5 documental: tareas, estado, rama, `current.md` | **hecho** (líder, `c86b488` y `b1f7924`) |
+
+**Encargo extra: HECHO** (`9e2ced7`). Portar a `arnes-base` **tres tests de `test_mutacion_operadores.py`** que
+solo existen aquí (12 tests en `albaranes`, 9 en `arnes-base`). Son los que
+cierran los cuatro huecos de F-034, y se quedaron atrás porque el porte a la
+1.6.0 se hizo antes de escribirlos. Sin ellos `arnes-base` lleva `_es_palabra` y
+`_delimitado` **sin la red que los protege**. Va en commit APARTE de los CR.
+
+**Verificación MANUAL T16: HECHA por el humano el 20-ago.** Salida:
+`Nuevos 0 | Ya iguales 11 | Iguales salvo finales de línea 11 | Actualizados 0 |
+Conservados 9 | Protegidos 4`. Los **4 protegidos son exactamente los cuatro
+ficheros que el incidente destruyó**. Y los 11 «iguales salvo finales de línea»
+son la decisión D4 pagando: once diffs falsos que antes empujaban a pulsar
+«Todos».
+
+**Cerrada**: suite del instalador **65 comprobaciones en verde** (eran 47) y
+suite Python de `arnes-base` 46 passed (eran 43). Lo que cierra el rechazo no
+es ese número sino que **el reviewer volvió a aplicar el mutante MR1 y lo vio
+morir**, sobre una copia del scratchpad y comprobando antes que el literal
+aparecía exactamente una vez.
+
+**Deuda conocida anotada por el reviewer**, no bloqueante: R20, R26 (constancia
+en el manifiesto), R27, R28 y R21/R33 quedan parciales en la suite del
+instalador, para cuando vuelva a tocarse.
+
+### F-038 · bajar el coste en tokens del ciclo SDD — `pending`, SIN SPEC
+
+Prioridad 3. Medición que la motiva: los subagentes de esta sesión gastaron
+**~712.000 tokens** y `progress/` acumula 12.250 líneas. **La campaña de
+mutación NO gasta tokens** (es Python y pytest: gasta CPU); el coste está en el
+papeleo y en las repeticiones. Cada línea de spec se paga TRES veces: la escribe
+el spec-author, la lee el implementer, la relee el reviewer.
+
+Alcance aprobado por el humano, **cuatro palancas**:
+
+1. **Topes de tamaño**: `requirements.md` ≤ 120 líneas, `design.md` ≤ 200,
+   informe de implementer ≤ 150, review ≤ 100. La de más ahorro (40-50 %).
+2. **Coste de mutación por nivel** en `harness/rigor.json`: `nivel_por_defecto`
+   de `critico` a `estandar`, y `max_mutantes` por nivel (20 con semilla fija en
+   estándar, sin tope en crítico). `mutacion.py` ya acepta `--max-mutantes` y
+   `--semilla`: falta leerlos del nivel.
+3. **Umbral de reejecución del reviewer** de 5 min a **60 s**.
+4. **Reviewer incremental** por defecto: en la pasada N, solo
+   `git diff <último-aprobado>..HEAD`, y decirlo en el informe.
+
+**FUERA por decisión expresa**: modelo por rol (el humano quiere **Opus 5
+siempre**). Fuera también, para otro trabajo: informes por delta, y la regla de
+fijar en un test el número de aceptación antes de implementar.
+
+**Además, PENDIENTE DE AÑADIR A LA FICHA** (acordado con el humano, no escrito
+todavía en `features.json`): **seis reglas** que salen de los reviews de esta
+sesión. Cuatro del reviewer de F-034 y dos de otra sesión:
+
+| # | Regla | Efecto en tokens |
+|---|---|---|
+| 1 | El informe de mutación declara el **SHA de HEAD** contra el que se midió, y el reviewer comprueba que el alcance coincide | **ahorra mucho** (habría evitado el 1er rechazo de F-034, ~200k) |
+| 2 | **Coherencia interna del tiempo**: si `tiempo/mutantes` es mucho menor que lo que tarda la suite, se rechaza el informe | **ahorra mucho** (habría cazado el 2º, ~350k) |
+| 3 | Un mutante **equivalente no puede salir muerto**; un solo caso invalida la campaña. Como criterio de revisión, no puerta automática | ahorra |
+| 4 | Tercera vía de verificación: **reejecutar contra el subconjunto de tests** del módulo mutado, en copia del scratchpad (568 s en vez de 18 min, y no muta el árbol) | ahorra |
+| 5 | Un superviviente declarado «equivalente» trae **demostración ejecutable**; el reviewer **reproduce una muestra**, no todas | ⚠ la única que aumenta: **adoptarla ACOTADA** |
+| 6 | Quitar código defensivo para matar un mutante obliga a **verificar el invariante en quien construye el dato** | neutra, y muy oportuna |
+
+La 6 es especialmente pertinente ahora: con F-034, el mutador ataca las guardas
+`x is None`, y la salida fácil es **borrar la guarda**. Sin esa regla, F-034
+empuja a quitar justo las defensas que evitaron F-019 y F-027.
+
+**Aviso de coordinación**: las reglas 5 y 6 salieron de otra sesión, que las
+apuntó en **su** F-010 (que en `albaranes` es otra feature distinta: Easy Auth).
+Deben viajar por una sola vía o divergirán, que es lo que pasó cuando
+`arnes-base` era una carpeta suelta.
+
+**Sugerencia al arrancar**: que F-038 **cumpla sus propios topes** de tamaño.
+
+---
+
+## Pendientes del humano
+
+1. **`git push` de `arnes-base`**: 14 commits locales (todo lo posterior a la
+   1.6.0). Sin push, ese trabajo existe en un solo disco.
+2. **Actualizar los otros cuatro proyectos** cuando F-035 cierre. `partes` está
+   en 1.4.0 y se saltaría cuatro versiones: es el escenario donde más ficheros
+   aparecen «distintos». Con el instalador nuevo ya no puede pisar estado.
+3. **Retirar de la F-010 del otro proyecto** las dos reglas del arnés y apuntar
+   a F-038.
+4. **Verificaciones MANUAL arrastradas**: las 4 de F-002 (liberan el merge de
+   F-003, implementada y aprobada en su rama desde hace días), y las de F-019 y
+   F-027.
+5. **Reconciliar F-003 y F-004 antes de arrancarlas** (su R4 conserva el cálculo
+   que F-019 corrigió).
+6. **Histórico mal valorado en BBDD**: sin backfill por diseño; se sanea
+   revalorando desde sv4. Falta decidir cuáles.
+7. **NADA está desplegado**: producción corre imágenes del 24 de julio, o sea
+   **sin F-002, F-019 ni F-027**.
+8. **`evals/fixtures/inputs/` vacío**: mientras lo esté, la puerta de rutas
+   sensibles se queda en `aviso`.
+
+---
+
+## LO QUE TOCA DINERO, y sigue sin integrar: residuos (F-036)
+
+Informe completo en `progress/revision_residuos_salmedina_20260819.md`. Es lo
+único de toda la lista que vale euros, y por eso **debería ir antes que F-038 y
+que actualizar los otros proyectos**.
+
+Siete albaranes de SALMEDINA, contrastados contra el Excel del administrativo,
+con obra y contrato ya puestos a mano por el humano:
+
+| Albarán | Sistema | Ground truth | |
+|---|---|---|---|
+| SS-0000168, SS-0003935 | 120,00 € | 120,00 € | correctos |
+| SS-0025146 | 136,00 € | 136,00 € | correcto |
+| SS-0000589 | 120,00 € | **171,00 €** | falta el incremento LER |
+| SS-0026122 | 272,00 € | **260,00 €** | tarifa de 9 m³, y de OFERTA (F-017) |
+| SS-0003967 | **540,00 €** | **210,00 €** | ×2,6 |
+| SS-0801977 | **720,00 €** | **210,00 €** | ×3,4 |
+
+**Causas, ya diagnosticadas:**
+
+1. **El enrutado del prompt de fase 2 falla**: el SS-0003967 recibió
+   `albaran_revision_fase2_es` (genérico) en vez de `..._residuos`. Sin
+   `tipo_familia` ni `volumen_m3`, la regla de contenedores ni se invoca y el
+   importe sale multiplicado por la capacidad del contenedor.
+2. **El scorer del merge de contexto tira los campos de residuos**:
+   `contexto_linea_merger._score_contexto()` puntúa **solo cinco campos** —los
+   originales del modelo— e ignora `codigo_ler`, `volumen_m3`, `peso_toneladas`,
+   `contenedores`, `contenedores_entregados`, `contenedores_retirados`,
+   `carga_incompleta` y `exceso_declarado_min`. Un contexto que solo traiga
+   datos de residuos puntúa **0 y se descarta entero**. Es la explicación más
+   plausible del SS-0801977 (falta confirmarla en BBDD).
+3. **Los incrementos por LER no se emiten nunca**, aunque están cargados en
+   `contrato_lines`.
+4. **Efecto perverso**: en el SS-0003967 el matcher eligió como línea principal
+   el propio INCREMENTO LER (match exacto por el código LER en su descripción)
+   en vez del contenedor.
+
+**DECISIÓN DEL HUMANO, 2026-08-19, pendiente de implementar**: en
+`calcular_contenedores_residuos`, **el volumen manda sobre la resta
+entrada/salida**. Orden nuevo: (1) contenedores explícitos, (2)
+`ceil(volumen_m3 / tamaño)`, (3) resta entregados − retirados. Hoy la resta es
+la 2 y el volumen la 3. Hay que tocar `residuos_container_calc.py` (y su
+docstring), el prompt de sv5 (`config/prompts.yaml` ~1024, que documenta el
+orden viejo) y los tests de la prioridad 2. **Asunción por confirmar**: los
+contenedores explícitos siguen siendo prioridad 1.
+
+**Lo que sí está bien**: la regla de contenedores existe y es correcta —lee el
+tamaño del contrato (6 por defecto, admite 8), redondea al entero superior—, y
+IA2 extrae `volumen_m3` y `peso_toneladas` bien en 6 de 7. Ojo con **F-024**: al
+extraer `unidad_medida`, los casos que hoy aciertan pueden pasar a valorar ×6.
+
+**Sin trazabilidad**: las razones de `calcular_contenedores_residuos` no se ven
+en sv4. El revisor no puede saber si la regla se aplicó ni con qué tamaño; los
+720 € malos se le presentan igual que los 120 € buenos. Y los motivos de
+revisión **no se recalculan**: el SS-0801977 sigue mostrando
+`proveedor_cif_no_casa` con el CIF viejo después de corregirlo.
+
+Altas relacionadas: **F-036** (los dos defectos, rigor `critico`), **F-037**
+(guardado inmediato al seleccionar contrato, pedido por el humano).
+
+---
+
+## Notas operativas (valen para cualquier sesión)
+
+- **Nada en paralelo**: dos suites a la vez tumban el proceso en Windows
+  (`0xC0000142`). Y **una campaña de mutación muta el árbol principal**: mientras
+  corra, no lanzar `init.sh` ni tests. Desde la 1.6.0 hay centinela que lo avisa.
+- **Un agente que se cuelga no pierde el trabajo commiteado.** Esta sesión tuvo
+  tres cuelgues (dos de watchdog, uno `ECONNRESET`) y en los tres bastó
+  reanudar. Ayuda que commiteen por tarea.
+- **Un agente con demasiado contexto se cuelga en bucle**: el reviewer de F-034
+  murió dos veces seguidas sin escribir nada. Lanzar uno **nuevo y acotado**
+  —diciéndole exactamente qué leer— lo resolvió y costó 101k en vez de 173k.
+- **No ensuciar el árbol mientras un reviewer trabaja**: C5 exige árbol limpio.
+  Pasó dos veces esta sesión, y una costó una pasada entera.
+- **Los agentes no deben usar scripts que reescriban ficheros versionados**;
+  copias en el scratchpad. Un artefacto de finales de línea provocó un cuelgue.
+- **Cuidado con las rutas de Windows en heredocs de Python**: `\U` de
+  `C:\Users` se interpreta como escape unicode y mata el script.

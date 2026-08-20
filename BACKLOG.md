@@ -3,13 +3,12 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **38 features**, 31 abiertas, 7 terminadas.
+Resumen: **38 features**, 30 abiertas, 8 terminadas.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | spec lista | estandar | `feature/F-035-instalador-no-pisa-estado` |
 | F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | pendiente | estandar | `feature/F-038-coste-del-ciclo-sdd` |
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | pendiente | critico | `feature/F-036-residuos-contenedores-e-incrementos` |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -50,22 +49,11 @@ Resumen: **38 features**, 31 abiertas, 7 terminadas.
 | F-034 | Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra | 1 | estandar |
 | F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
 | F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
+| F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | estandar |
 | F-012 | Campaña de mutación en paralelo | 3 | estandar |
 | F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
 
 ## Detalle
-
-### F-035 · Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto
-
-estado **spec lista** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-035-instalador-no-pisa-estado`
-
-Sale de un incidente real: el 2026-08-19, al actualizar el arnes de 1.5.0 a 1.5.2 con `instalar_arnes.ps1 -Modo actualizar`, el instalador ofrecio -y aplico- sobrescribir con sus PLANTILLAS GENERICAS ficheros que son ESTADO DEL PROYECTO, no arnes: `harness/features.json` paso de 34 features a 1 (el ejemplo F-001), `docs/ARCHITECTURE.md` de 183 a 37 lineas, y `progress/current.md` e `progress/history.md` perdieron 157 y 161 lineas. Nada se habia commiteado y se recupero entero desde git, y el 1.5.2 se acabo aplicando por copia quirurgica (commit 3a146cd), pero la proxima vez puede tocar a alguien que haga `git add -A` sin mirar.
-
-EL DEFECTO no es del humano que pulso enter de mas: es que el instalador no distingue entre ficheros DEL ARNES (que puede y debe actualizar) y ficheros DE ESTADO del proyecto que solo existen porque el proyecto lleva meses trabajando. Que la GUIA diga 'casi siempre hay que conservarlos' no basta: una lista de intocables no se aplica leyendola, se aplica en el codigo.
-
-PROPUESTA para `instalar_arnes.ps1`: (1) una lista de INTOCABLES que en modo `actualizar` ni siquiera se ofrecen -`harness/features.json`, todo `progress/`, `docs/ARCHITECTURE.md`, `docs/CONVENTIONS.md`, `docs/referencia/`, `.claude/settings.json`-, y que el resumen final cuente aparte como 'protegidos'; (2) los ficheros con marcas de adaptacion (`CLAUDE.md`, `CHECKPOINTS.md`) siguen preguntando, pero con el diff y con el default en CONSERVAR; (3) que el instalador escriba un backup de lo que va a pisar antes de pisarlo -hoy hace `Copy-Item -Force` sin red-, en una carpeta con sello de fecha fuera del repositorio; (4) revisar si el modo `actualizar` deberia negarse a correr con el arbol de trabajo sucio o sobre una rama que no sea la de integracion, que es lo que agravo este caso (se ejecuto sobre una rama de feature 25 commits por detras de dev).
-
-ALCANCE: `instalar_arnes.ps1` y `GUIA_INSTALACION.md`, ambos EN `arnes-base` (esta feature se implementa alli y aqui solo se consume: subiria a 1.5.3). NO ENTRA: rehacer el instalador ni cambiar el modo `instalar`, que no pisa nada por diseno. Fuente: sesion 2026-08-19; copia de lo que dejo el instalador en el scratchpad de esa sesion, `backup_arnes_20260819/`.
 
 ### F-038 · Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor
 
@@ -85,7 +73,7 @@ CUATRO PALANCAS APROBADAS POR EL HUMANO:
 
 FUERA DE ALCANCE, DECIDIDO: (a) modelo por rol -el humano quiere Opus 5 siempre, no se toca-; (b) informes por delta en vez de reescritos, que toca el formato de todos los informes; (c) la regla de que toda feature con un numero de aceptacion lo fije en un test antes de implementar -es la que habria evitado los cuatro round trips de F-019-, que es un cambio de metodo y merece escribirse con calma aparte.
 
-ALCANCE: harness/rigor.json, harness/mutacion.py, specs/SPECS.md, .claude/agents/*.md, CHECKPOINTS.md, y el PORTE A arnes-base como 1.6.1 en el mismo trabajo (regla de propagacion: vale para los cinco proyectos). OJO: esto vuelve a cambiar la vara de medir, asi que la entrada de GUIA_INSTALACION.md debe decir que las campanas de nivel estandar pasan a estar muestreadas y sus numeros no son comparables con los anteriores.
+ALCANCE: harness/rigor.json, harness/mutacion.py, specs/SPECS.md, .claude/agents/*.md, CHECKPOINTS.md, y el PORTE A arnes-base como 1.7.0 en el mismo trabajo (arnes-base va ya por 1.6.2, y esto vuelve a cambiar la vara de medir: sube de MENOR) (regla de propagacion: vale para los cinco proyectos). OJO: esto vuelve a cambiar la vara de medir, asi que la entrada de GUIA_INSTALACION.md debe decir que las campanas de nivel estandar pasan a estar muestreadas y sus numeros no son comparables con los anteriores.
 
 (5) ANADIDO EL 2026-08-19 POR EL REVIEWER DE F-034, y es requisito de fondo: HOY NO SE PUEDE MEDIR MUTACION SOBRE FICHEROS DE harness/ EN ESTE REPOSITORIO. `ejecutor_para` manda lo que no cae en ningun servicio a `python -m pytest` SIN RUTA; como la raiz no tiene configuracion de pytest (testpaths, rootdir), esa invocacion recoge services/**/tests y muere en la recoleccion. Hasta la 1.6.0 eso daba un FALSO VERDE silencioso -exit 1 = MUERTO, todos los mutantes 'muertos' sin que ningun test los juzgara-; desde la 1.6.0 la linea base lo detecta y ABORTA, que es mejor pero deja la campana sin poder ejecutarse. Arreglo propuesto: que `ejecutor_para` use `tests` como ruta para los ficheros que no caen en ningun servicio, o dar testpaths a la raiz. Afecta a TODAS las features del repositorio y en particular invalida progress/mutacion_F-012.md (61 mutantes medidos con la invocacion rota), que hay que repetir. Va aqui y no en F-034 porque es infraestructura del arnes, no alcance de aquella feature.
 
@@ -376,6 +364,20 @@ Proceso de evaluación de las 4 fases de IA contra resultado esperado, al estilo
 estado **terminada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-027-conversion-kg-tn-muerta`
 
 HALLAZGO H-1 (CRÍTICA). El albarán 58826 de MAHORSA se valoró en 468.763,40 € cuando el administrativo dice 390,99 €, y el 58878 en 462.282,80 € frente a 385,59 €. Son 30.380 kg × 15,43 €/TN y 29.960 kg × 15,43: un factor 1000 de unidad (el albarán da kg sin literal de unidad y el contrato tarifa en TN). CAUSA RAÍZ: la red determinista que existe EXACTAMENTE para este caso (`cantidad_sin_unidad_reinterpretada_kg_a_tn`, con `_TN_UMBRAL_CONVERTIR = 1000`) NUNCA SE EJECUTA. Cuando las categorías de unidad no casan, `ValuationBuilder` llama al conversor con `cantidad=None` (services/albaran-valoracion-persist/application/services/valuation_builder.py:1020-1030, rama else de `if category_match`), y `UnitConverter.convert` sale por la guarda `cantidad is None` (unit_converter.py:64-70) ANTES de llegar al bloque de plausibilidad de toneladas (unit_converter.py:83-101), que se añadió en julio de 2026 justo para esto. El importe cae después al fallback con la cantidad cruda. El propio código documenta el caso gemelo: árido «M 20/40», 29920 sin unidad, 298.302 €. POR QUÉ ES LO PRIMERO: es un error de tres órdenes de magnitud que llega PERSISTIDO a `albaran_valuations.total_valorado` y de ahí a la bandeja del revisor; y no es raro, porque TODO el árido a granel viene en kg sin literal de unidad. PROPUESTA: invertir el orden — convertir primero y decidir revisión después. Llamar siempre a `convert()` con la cantidad real y usar `category_match=False` solo para marcar revisión, no para anular la cantidad; alternativamente, mover la comprobación de plausibilidad de TN a un guard previo e independiente. EXIGE test de regresión con el caso real 30380 kg / contrato en TN. RELACIÓN: F-024 (la unidad no se extrae de IA1) ataca la causa aguas arriba; esta feature es la red de seguridad de sv6, que debe funcionar aunque IA1 siga sin unidad. F-025 (falsa alarma `no_quantity_in_albaran`) toca la misma rama del builder: coordinar para no pisarse. Toca sv6. Fuente: progress/revision_resto_lote_20260818.md (revision de los 7 albaranes restantes del lote alvaro_17082026, 2026-08-18).
+
+### F-035 · Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto
+
+estado **terminada** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-035-instalador-no-pisa-estado`
+
+Sale de un incidente real: el 2026-08-19, al actualizar el arnes de 1.5.0 a 1.5.2 con `instalar_arnes.ps1 -Modo actualizar`, el instalador ofrecio -y aplico- sobrescribir con sus PLANTILLAS GENERICAS ficheros que son ESTADO DEL PROYECTO, no arnes: `harness/features.json` paso de 34 features a 1 (el ejemplo F-001), `docs/ARCHITECTURE.md` de 183 a 37 lineas, y `progress/current.md` e `progress/history.md` perdieron 157 y 161 lineas. Nada se habia commiteado y se recupero entero desde git, y el 1.5.2 se acabo aplicando por copia quirurgica (commit 3a146cd), pero la proxima vez puede tocar a alguien que haga `git add -A` sin mirar.
+
+EL DEFECTO no es del humano que pulso enter de mas: es que el instalador no distingue entre ficheros DEL ARNES (que puede y debe actualizar) y ficheros DE ESTADO del proyecto que solo existen porque el proyecto lleva meses trabajando. Que la GUIA diga 'casi siempre hay que conservarlos' no basta: una lista de intocables no se aplica leyendola, se aplica en el codigo.
+
+PROPUESTA para `instalar_arnes.ps1`: (1) una lista de INTOCABLES que en modo `actualizar` ni siquiera se ofrecen -`harness/features.json`, todo `progress/`, `docs/ARCHITECTURE.md`, `docs/CONVENTIONS.md`, `docs/referencia/`, `.claude/settings.json`-, y que el resumen final cuente aparte como 'protegidos'; (2) los ficheros con marcas de adaptacion (`CLAUDE.md`, `CHECKPOINTS.md`) siguen preguntando, pero con el diff y con el default en CONSERVAR; (3) que el instalador escriba un backup de lo que va a pisar antes de pisarlo -hoy hace `Copy-Item -Force` sin red-, en una carpeta con sello de fecha fuera del repositorio; (4) revisar si el modo `actualizar` deberia negarse a correr con el arbol de trabajo sucio o sobre una rama que no sea la de integracion, que es lo que agravo este caso (se ejecuto sobre una rama de feature 25 commits por detras de dev).
+
+ALCANCE: `instalar_arnes.ps1` y `GUIA_INSTALACION.md`, ambos EN `arnes-base` (esta feature se implementa alli y aqui solo se consume: subiria a 1.5.3). NO ENTRA: rehacer el instalador ni cambiar el modo `instalar`, que no pisa nada por diseno. Fuente: sesion 2026-08-19; copia de lo que dejo el instalador en el scratchpad de esa sesion, `backup_arnes_20260819/`.
+
+NOTA DE RAMA (2026-08-20): el codigo de esta feature vive en arnes-base, no aqui. La rama feature/F-035-instalador-no-pisa-estado de albaranes existe para la spec, el informe y el rastro documental; los commits de produccion son los de arnes-base 1e67231..9e2ced7 (version 1.6.2, incluidos los cuatro cierres del review: P14, P15, el exit 4 del backup y el porte de los tres tests de _delimitado que solo existian en albaranes).
 
 ### F-012 · Campaña de mutación en paralelo
 
