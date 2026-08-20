@@ -1,6 +1,52 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+## F-035 · instalador que no pisa estado — `in_progress` (2026-08-20)
+
+Rama `feature/F-035-instalador-no-pisa-estado`. **El código NO vive aquí**:
+está en `arnes-base`, commits `1e67231`..`b6ac623`, versión **1.6.1**, sin
+`push`. Esta rama sostiene spec, informe y rastro documental.
+
+T1-T15 hechas. Review con **CHANGES_REQUESTED** (`progress/review_F-035.md`):
+CR-1, CR-2 y CR-3 en curso en `arnes-base`; CR-4 (este cierre documental) lo
+hace el líder.
+
+**El hallazgo del review**: un mutante que anula el atajo del arnés puro
+—`if ($cat -eq 'puro' -and ...)` a `if ($false)`, línea 473— **sobrevive a las
+47 comprobaciones**, porque todos los casos que tocan arnés puro usan `-Forzar`
+y con `-Forzar` el diálogo dice que sí igualmente. R11 y R12 quedaban sin
+verificar. El producto está bien; faltaba la red. Se cierra con un caso P14 sin
+`-Forzar`.
+
+### VERIFICACIÓN MANUAL PENDIENTE (T16, la ejecuta el HUMANO)
+
+Ya está hecha la mitad: `-SoloDiff` contra este repositorio, sin tocarlo, y
+**los cuatro `[PROTEGIDO]` que salieron son exactamente los cuatro ficheros que
+el incidente del 19-ago destruyó** (`docs/ARCHITECTURE.md`,
+`harness/features.json`, `progress/current.md`, `progress/history.md`).
+
+Falta repetirlo **desde una rama limpia creada desde `dev`** (en la rama de
+F-034 seis de los doce diffs eran trabajo en vuelo, no diferencias reales con
+el arnés, así que el número de «distintos» será menor). Comando exacto:
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\arnes-base
+.\instalar_arnes.ps1 -Destino "C:\Users\pgris\PycharmProjects\albaranes" -Modo actualizar -SoloDiff
+```
+
+`-SoloDiff` **no escribe nada** (lo prueba el caso P13), así que es seguro
+lanzarlo contra el repositorio real. Qué hay que comprobar: que los cuatro
+protegidos siguen apareciendo como `[PROTEGIDO]` y que no se ofrece ningún
+fichero de estado del proyecto.
+
+**Aplicar de verdad la 1.6.1 a otros proyectos NO es parte de F-035**: es
+decisión posterior del humano, y es lo que desbloquea actualizar `porcentajes`
+y `postventa-incidencias` (1.5.2), `datamart-seg-anual` (1.5.0) y `partes`
+(1.4.0).
+
+---
+
+
 ## F-034 · CR-2 cerrado, a la espera de la tercera pasada (2026-08-20)
 
 Rama `feature/F-034-mutacion-is-y-coherencia-evals`, feature `in_progress`.
