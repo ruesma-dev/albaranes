@@ -1364,6 +1364,40 @@ def analisis_escritos(texto: str) -> dict[tuple, str]:
     }
 
 
+#: Prefijos de las filas del informe cuyo valor sale del RELOJ. Vive aquí, al
+#: lado de quien las escribe, para que quien añada una fila de reloj la vea y la
+#: declare: cuando esta lista se mantenía a mano dentro de un test (F-012), la
+#: fila que añadió F-038 T5 se quedó fuera y dejó el test flaky durante semanas.
+#: Se compara por PREFIJO a propósito: `| Línea base (s) — \`etiqueta\`` lleva
+#: pegada la etiqueta del ejecutor.
+FILAS_DE_RELOJ: tuple[str, ...] = (
+    "Generado por",
+    "| Tiempo total",
+    "| Línea base (s)",
+    "| Media por mutante evaluado (s)",
+)
+
+#: Comentario de ruta con el que arranca todo informe. Cambia con el nombre del
+#: fichero, no con lo medido, así que tampoco entra en la comparación.
+_COMENTARIO_DE_RUTA = "<!-- "
+
+
+def lineas_comparables(texto: str) -> list[str]:
+    """Las líneas de un informe que dos campañas equivalentes deben compartir.
+
+    Descarta las de `FILAS_DE_RELOJ` y el comentario de ruta de la cabecera. Lo
+    que queda es el resultado de la medición —alcance, totales, SHA, muestreo y
+    fichas de supervivientes—, que sí tiene que coincidir entre la campaña en
+    serie y la paralela.
+    """
+    return [
+        linea
+        for linea in texto.splitlines()
+        if not linea.startswith(FILAS_DE_RELOJ)
+        and not linea.startswith(_COMENTARIO_DE_RUTA)
+    ]
+
+
 def escribir_informe(informe: InformeMutacion, ruta: Path) -> None:
     """Escribe el informe de la campaña en Markdown.
 
