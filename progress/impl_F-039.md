@@ -2,15 +2,14 @@
 # F-039 · Informe de implementación
 
 Rama `feature/F-039-remedir-campanas-invocacion-rota`. Nivel `estandar`.
-**16 de 20 tareas hechas**: T5, T6 y T7 son verificación MANUAL del humano y
-T17 (porte a `arnes-base`) va **después del merge en `dev`**. `bash
-harness/init.sh` en **verde**.
+**16 de 20 tareas hechas**, más los dos CR del review: T5–T7 son verificación
+MANUAL del humano y T17 (porte a `arnes-base`) va **tras el merge en `dev`**.
 
 Lo que cambió, en una línea: el arnés ya sabe declarar qué filas de un informe
-salen del reloj, ya sabe mutar **ficheros enteros** sin un diff detrás, y con
-eso se ha medido —de verdad y con números válidos— la maquinaria de mutación
-tal como es hoy. Los 7 supervivientes están analizados y **la lista de huecos
-se presenta al humano sin abrir ficha** (R20).
+salen del reloj y ya sabe mutar **ficheros enteros** sin un diff detrás, y con
+eso se ha medido —con números válidos— la maquinaria de mutación de hoy. Los 7
+supervivientes están analizados y **la lista de huecos se presenta al humano
+sin abrir ficha** (R20).
 
 ## Qué cambió, por tarea
 
@@ -50,15 +49,9 @@ ERROR tests/test_f039_r3_r7_filas_de_reloj.py
 ============================== 1 error in 0.22s ===============================
 ```
 
-Tras T2 quedaron 6 verdes y **1 en rojo a propósito**, el de R7, hasta que T4
-sustituyó el filtro a mano del test de F-012:
-
-```text
-tests\test_f039_r3_r7_filas_de_reloj.py ......F                          [100%]
-E       AssertionError: el test de paridad de F-012 debe comparar con
-        `lineas_comparables`
-========================= 1 failed, 6 passed in 0.22s =========================
-```
+Tras T2 quedaron 6 verdes y **1 en rojo a propósito** —el de R7— hasta que T4
+sustituyó el filtro a mano del test de F-012: `1 failed, 6 passed in 0.22s`, con
+`AssertionError: el test de paridad de F-012 debe comparar con lineas_comparables`.
 
 ### T8 — R15/R16, antes de escribir `alcance_de_ficheros`
 
@@ -84,14 +77,12 @@ ERROR tests/test_f039_r15_r16_alcance_por_ficheros.py
    no tiene diff: imprimir `` `(sin diff)` .. `<sha>` `` haría creer que se
    comparó algo con algo. Es una rama de tres líneas, con test propio a los dos
    lados (el caso `ficheros` y el caso `rama`, que no puede comerse).
-2. **`SIN_DIFF` y `ORIGEN_FICHEROS` viven en `alcance.py`**, no como literales
-   repetidos: `escribir_informe` tiene que reconocer el origen, y dos cadenas
-   sueltas divergen.
-3. **T11 se lanzó con `--workers 1`.** El design lo dice: sin un N verde del
-   bloque C, en serie. Y R8 lo exige.
-4. **T11 se lanzó con `--timeout 400`**, que no estaba en el comando del
-   design. Motivo abajo; no cambia ni un mutante del muestreo.
-5. **T17 no se hace en esta rama** (F-038 D6): portar a `arnes-base` dentro de
+2. **`SIN_DIFF` y `ORIGEN_FICHEROS` viven en `alcance.py`**: `escribir_informe`
+   reconoce el origen, y dos literales sueltos divergen.
+3. **T11 se lanzó con `--workers 1`** (el design lo dice: sin N verde del
+   bloque C, en serie; y R8 lo exige) **y con `--timeout 400`**, que no estaba
+   en el comando del design. Motivo abajo; no cambia ni un mutante.
+4. **T17 no se hace en esta rama** (F-038 D6): portar a `arnes-base` dentro de
    la rama de una feature es lo que provocó el rechazo entero del reviewer en
    F-034. Detalle al final.
 
@@ -116,9 +107,8 @@ sin muestra— no se materializó.
 Las dos primeras se invalidaron **solas, y con razón**. Diagnóstico, porque no
 es lo que parece:
 
-- La suite de la raíz **nunca estuvo roja**. Comprobado en el momento con la
-  invocación exacta de la línea base: `409 passed`, código 0 — pero en **149 s**
-  en vez de los 51 s de esa misma mañana.
+- La suite de la raíz **nunca estuvo roja**: con la invocación exacta de la
+  línea base, `409 passed` y código 0, pero en **149 s** en vez de 51 s.
 - Causa: otra sesión estaba corriendo **campañas de mutación en paralelo de
   `datamart-seg-anual`** en esta misma máquina (arrancadas a las 21:49 y a las
   22:06, con ~15 pytest simultáneos). Evidencia: los `CommandLine` de los
@@ -131,12 +121,11 @@ es lo que parece:
   `--timeout 400`. La tercera pasada salió limpia. **No se tocó
   `harness/rigor.json`** (D5 sigue en pie).
 
-Hallazgo que se deja escrito y **no se arregla aquí** (excede F-039, y
-`mutacion.py` es justo el código que se está midiendo):
-`_base_rota_al_final` **no distingue una línea base que expira de una que
-falla**, y estampa «ROJA al terminar (código -1)», que manda a buscar un test
-caído inexistente. `comprobar_linea_base` sí lo distingue. Está en
-`progress/current.md` §3 para que decida el humano; es genérico del arnés.
+Hallazgo que se deja escrito y **no se arregla aquí** (excede F-039 y
+`mutacion.py` es el código que se está midiendo): `_base_rota_al_final` **no
+distingue una línea base que expira de una que falla** y estampa «ROJA al
+terminar (código -1)», que manda a buscar un test caído inexistente.
+`comprobar_linea_base` sí lo distingue. En `current.md` §3, para el humano.
 
 ### Los 7 supervivientes, agrupados por causa (R19, R20)
 
@@ -187,24 +176,45 @@ este repositorio. `tests/test_f039_r1_r2_r23_r25_documentos.py` tampoco.
 
 | Evidencia | Valor |
 |---|---|
-| **Tests ejecutados** (suite de la raíz, dentro de `init.sh`) | **416 passed**, 0 fallos. Eran 409 antes de la feature: +7 de R15/R16, +7 de R1/R2/R23–R25 y +7 de R3–R7, menos los que ya existían |
-| **Cobertura de las líneas cambiadas** | **96,9 %** — 31 de 32 líneas, umbral 80 %, nivel `estandar` (línea `PUERTA COBERTURA` de `init.sh`) |
-| **Mutación de la feature** (T19, su propio diff) | 13 mutantes generados, 13 evaluados, **13 muertos, 0 supervivientes**, 0 timeouts, en 473,1 s sobre línea base de 51,3 s → `progress/mutacion_F-039.md` |
+| **Tests ejecutados** (suite de la raíz, dentro de `init.sh`) | **420 passed**, 0 fallos. Eran 409 antes de la feature: +9 de R15/R16, +9 de R1/R2/R18/R23–R25 y +7 de R3–R7, menos los que ya existían |
+| **Cobertura de las líneas cambiadas** | **100,0 %** — 32 de 32 líneas, umbral 80 %, nivel `estandar` (línea `PUERTA COBERTURA` de `init.sh`). Era 96,9 % antes de CR-2 |
+| **Mutación de la feature** (T19, reejecutada tras CR-2) | 13 mutantes generados, 13 evaluados, **13 muertos, 0 supervivientes**, 0 timeouts, en 482,2 s sobre línea base de 51,5 s, SHA `adea6ab` → `progress/mutacion_F-039.md` |
 | **Mutación de la maquinaria** (T11, campaña del bloque D) | 417 generados, 20 evaluados (muestreo `estandar`), 13 muertos, **7 supervivientes** (6 huecos + 1 equivalente), 0 timeouts, 838,7 s → `progress/mutacion_maquinaria_paralela_F-039.md` |
-| **Tiempo de ejecución de la suite** | **76,51 s** medida con cobertura dentro de `init.sh`; **51 s** sin cobertura (línea base de las campañas) |
+| **Tiempo de ejecución de la suite** | **80,46 s** medida con cobertura dentro de `init.sh`; **51,5 s** sin cobertura (línea base de las campañas) |
 | **Suites de los 6 servicios** | En verde (caché de `init.sh`: árbol sin cambios; esta feature no toca `services/**`) |
 
 ### Salida real de `bash harness/init.sh`
 
 ```text
-[OK] pytest en verde (con medición de cobertura)     416 passed in 76.51s
-[OK] PUERTA COBERTURA: 96.9% de 32 líneas cambiadas cubiertas (31/32, umbral 80%, nivel estandar)
+[OK] pytest en verde (con medición de cobertura)     420 passed in 80.46s
+[OK] PUERTA COBERTURA: 100.0% de 32 líneas cambiadas cubiertas (32/32, umbral 80%, nivel estandar)
 [OK] PUERTA RUTAS SENSIBLES [evals]: N/A (F-039 no toca ninguna ruta sensible declarada)
-[OK] PUERTA TAMAÑO: F-039 dentro de los topes (requirements 150/150, design 224/250)
+[OK] PUERTA TAMAÑO: F-039 dentro de los topes (requirements 150/150, design 224/250, impl 220/220, review 140/140)
 [OK] Rama actual: feature/F-039-remedir-campanas-invocacion-rota
 ENTORNO LISTO. Puedes trabajar.
 ```
 
-Avisos que ya venían de antes y no bloquean: `ruff` 1108 (deuda previa), sv1 y
-`infra` sin directorio de tests, marcas `[ADAPTAR]` en las specs de F-034 y
-F-035.
+Avisos previos que no bloquean: `ruff` 1108, sv1 e `infra` sin tests, marcas
+`[ADAPTAR]` en las specs de F-034 y F-035.
+
+## Segunda pasada · los dos CR del review (`progress/review_F-039.md`)
+
+- **CR-1 · R18 no tenía guarda.** Dos `test_f039_r18_*`: la cabecera manual del
+  informe debe llevar el `--ficheros` **completo** del comando de reproducción y
+  el aviso de que mide **otro código** que `mutacion_F-012.md`. Hacía falta
+  porque `escribir_informe` conserva los análisis pero **no la cabecera**. RED
+  demostrada retirándola y restaurándola con `git checkout --`:
+  `AssertionError: la cabecera no lleva el --ficheros COMPLETO` y
+  `AssertionError: ... tiene que decir que mide OTRO código`. Corregida además
+  la verificación de T12 en `tasks.md`, que citaba un test inexistente.
+- **CR-2 · la guarda de alcance vacío no se alcanzaba desde el CLI.** Pasa
+  **detrás** del filtrado: lo que importa es que quede algo que mutar, no cómo
+  venga la lista. RED por el camino del CLI, con el defecto capturado en la
+  propia traza —`assert 0 == 2` y, en stdout, `0 mutantes evaluados …
+  Informe: …`—. Hoy `--ficheros ","` sale con **2** y sin escribir informe.
+- **T19 reejecutado**, porque CR-2 toca `harness/alcance.py`, que está en el
+  diff: 13 mutantes, **13 muertos, 0 supervivientes**, SHA `adea6ab` —desde ahí
+  ningún fichero de su alcance se ha movido—, y entre los muertos el de la
+  guarda nueva (`alcance.py:262`). **T11 no se toca**: nada de su alcance
+  (`mutacion.py`, `mutacion_paralela.py`, `rigor.py`) se ha movido desde
+  `b0761e8`.
