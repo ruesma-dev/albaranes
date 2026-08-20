@@ -98,3 +98,33 @@ ni la demostración ejecutable de RM5.
 3. **O3 · Menor:** en un proyecto no-Python 7 quater no imprime nada (igual que
    cobertura) y `CHECKPOINTS.md` promete `N/A` con motivo: deuda previa, a
    corregir en el porte a 1.7.0.
+
+---
+
+# Pasada 2 · revisión INCREMENTAL desde b43d672 (`b43d672..HEAD`, HEAD 7d08de6)
+
+**APPROVED. Cambios requeridos: ninguno.** Lo aprobado hasta `b43d672` queda dado por bueno. Delta: 6 commits, 16 ficheros, **ni una línea de lógica de producción**; T15–T17 `[x]` con su commit `F-038 Tn:`.
+`bash harness/init.sh` entero y en verde: **391 passed**, cobertura 95,9 %, `PUERTA TAMAÑO 119/150 · 162/250 · 218/220 · 100/140` — contrastado con `wc -l`, la medición es correcta.
+**Sin remedición de mutación:** recalculé el alcance en HEAD y da los mismos 4 ficheros y **469 líneas** que el informe medido en `337a948`; el delta no toca ningún `harness/*.py`, así que RM1 sigue en pie.
+
+**T15 · topes 150/250/220/140 — [x] completo.** `grep` de los cuatro valores viejos en todo el repo: no queda **ningún** punto de cableado con ellos.
+Los 9 ficheros están (`rigor.json` con el `$doc` del motivo, `SPECS.md`, los tres agentes, **R13** de `requirements.md`, la tabla de `design.md`, los dos tests).
+`CHECKPOINTS.md` no cableaba ninguno: **verificado**. Tampoco `tamano.py`, `rigor.py` ni `init.sh`, así que R13 («nunca cableados en el código») se cumple.
+
+**T16 · RM2 por orden de magnitud — [x].** Sigue cazando F-034 (18 mutantes en 111 s ⇒ media 6,2 s contra una base de ~120 s: 6,2 < 12,0, dispara) y **no** marca la campaña legítima de esta feature (36,4 s contra un umbral de 5,21 s, y 20 × 36,4 = 728 ≈ 728,5 del «Tiempo total»: coherente por las dos vías).
+Misma redacción en `CHECKPOINTS.md` y en el agente, con un test que la fija.
+
+**T17 · el flaky de paridad — [x].** (a) El arreglo es **del test**: el diff no toca `mutacion.py` ni `mutacion_paralela.py`.
+(b) El filtro **no se ensanchó de más**: sigue comparando alcance, los seis totales, SHA, línea base, muestreo y las fichas de supervivientes; una diferencia real serie/paralelo sigue fallando.
+(c) La única fila de reloj que queda fuera del filtro es `| Línea base (s) — …`, y aquí no varía: `_EjecutorFalso` no tiene `linea_base` y ambos informes imprimen `n/d`. Con eso el informe queda **determinista**, no «menos flaky». 3/3 en verde por mi parte, además del init completo.
+
+## F-039 · qué cierra T17 y qué no
+
+- **(a) test inestable de la suite de la raíz: CERRADO por T17.** Es el mismo test, identificado por su nombre, hecho determinista y con el porqué escrito (T5 añadió una fila de reloj y nadie extendió el filtro). Encaja con la prueba de la ficha: la campaña corre con `-x`, así que un fallo intermitente de *cualquier* test se lee como MUERTO — justo el falso MUERTO de `mutacion.py:1781`, que en la 2ª campaña salió SUPERVIVIENTE, su veredicto verdadero. **Retirar de F-039** ese criterio de aceptación.
+- **(b) campaña paralela: causa eliminada, falta UNA confirmación.** La ficha dice que la base aborta *porque falla ese test*, y ese test ya no falla. Su «sospecha a verificar» —«el worktree no trae lo que ese test espera en disco»— queda **refutada**: el test se fabrica su propio repo en `tmp_path` y su `Alcance` es un literal, no lee nada del worktree. Falta solo correr `python -m harness.mutacion --feature F-038 --workers 5 --salida <fuera de progress/>` y ver la línea base en verde; no lo hago aquí porque son 5 suites simultáneas y esta sesión lo tiene prohibido. **Reescribir** ese criterio como verificación, no como arreglo.
+
+## Observaciones (no bloquean)
+
+1. El filtro del test es una lista de prefijos escrita a mano: la cuarta fila de reloj que se añada volverá a romperlo. Propuesta para el porte a 1.7.0: derivar la exclusión de una constante junto a `escribir_informe`.
+2. RM2 solo dispara a 10× y, con «Tiempo total» > 60 s, tampoco se reejecuta: un informe «solo» 5 veces demasiado rápido pasaría. Aire deliberado, pero queda dicho.
+3. `BACKLOG.md`/ficha F-038 y `progress/current.md` siguen citando 120/200/150/100 como decisión original: es rastro, no cableado, pero una línea de «recalibrado el 2026-08-20» en `current.md` al cerrar evita el tropiezo.
