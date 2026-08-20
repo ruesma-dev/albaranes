@@ -5,7 +5,30 @@ Cada feature con `sdd: true` tiene una carpeta `specs/F-XXX-slug/` con tres
 ficheros. El spec-author los crea; el humano los aprueba; el implementer los
 ejecuta; el reviewer valida contra ellos.
 
-## 1. requirements.md — notación EARS
+## Topes de tamaño (obligatorios)
+
+Cada línea de una spec se paga **tres veces**: la escribe el spec-author, la lee
+el implementer y la relee el reviewer. Por eso el papeleo tiene tope:
+
+| Fichero | Tope |
+|---|---|
+| `requirements.md` | **120** líneas |
+| `design.md` | **200** líneas |
+| `tasks.md` | sin tope duro, pero **una tarea por línea** |
+| `progress/impl_F-XXX.md` | **150** líneas |
+| `progress/review_F-XXX.md` | **100** líneas |
+
+Los números viven en el bloque `tamano` de `harness/rigor.json` y los mide
+`python -m harness.tamano --feature F-XXX`, que `bash harness/init.sh` ejecuta
+sobre la feature en curso (sección 7 quater): pasarse **pone el portero en
+rojo**.
+
+Son **topes, no objetivos**, y recortar no puede significar tirar evidencia:
+**lo que no cabe se resume y se enlaza** al fichero donde vive el detalle (el
+informe de mutación, la traza completa, el documento de referencia). Un tope no
+justifica omitir una traza de fase RED ni el análisis de un superviviente.
+
+## 1. requirements.md — notación EARS (tope: 120 líneas)
 
 Cada requisito con id `R1, R2...` y una de estas plantillas:
 
@@ -23,7 +46,7 @@ Ejemplo:
 > R1. CUANDO el usuario ejecuta `python main.py version`, el sistema debe
 > imprimir la versión semántica y salir con código 0.
 
-## 2. design.md — diseño técnico
+## 2. design.md — diseño técnico (tope: 200 líneas)
 
 Secciones obligatorias:
 
@@ -36,7 +59,7 @@ Secciones obligatorias:
   fichero siguiendo la convención `NN_nombre.sql`, tablas/vistas afectadas.
 - **Riesgos y decisiones**: alternativas descartadas y por qué.
 
-## 3. tasks.md — lista de tareas atómicas
+## 3. tasks.md — lista de tareas atómicas (una tarea por línea)
 
 ```
 - [ ] T1: <acción concreta>  |  Verificación: <test o comando>
