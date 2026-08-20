@@ -19,14 +19,14 @@ liberar contexto: lo que queda es trabajo largo y conviene retomarlo limpio.
 
 | Repositorio | Versión | Estado |
 |---|---|---|
-| `arnes-base` | **1.6.2** (en curso) | 1.6.0 pusheada; de la 1.6.1 en adelante, **14 commits locales sin subir** |
+| `arnes-base` | **1.6.2** | 1.6.0 pusheada; de la 1.6.1 en adelante, **16 commits locales SIN SUBIR** |
 | `albaranes` | **1.6.1** | código y sello coinciden, mergeado en `dev` |
 | `porcentajes`, `postventa-incidencias` | 1.5.2 | sin actualizar |
 | `datamart-seg-anual` | 1.5.0 | sin actualizar |
 | `partes` | 1.4.0 | sin actualizar |
 
-**Los cuatro proyectos atrasados no se actualizan hasta que F-035 cierre**: el
-instalador seguro es justo lo que trae esa feature.
+**F-035 esta cerrada, asi que el instalador ya es seguro**: los cuatro
+proyectos atrasados se pueden actualizar cuando el humano quiera.
 
 ### F-034 · el mutador muta `is` / `is not` — CERRADA (done, en `dev`)
 

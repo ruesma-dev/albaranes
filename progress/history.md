@@ -238,3 +238,29 @@ criterio de aceptación (139,66 €) NO se cumplía. Dos round trips más:
   aborta nombrando el test culpable.
 - **1.6.1** — el instalador ya no puede pisar estado del proyecto (F-035).
 - Propagado a `albaranes`; los otros cuatro proyectos siguen atrás a propósito.
+
+### F-035 — el instalador del arnes no pisa el estado del proyecto (cerrada 2026-08-20)
+
+- **Origen**: el 19-ago, actualizando `albaranes` de 1.5.0 a 1.5.2, el propio
+  instalador piso `harness/features.json` (34 features -> 1),
+  `docs/ARCHITECTURE.md` (183 -> 37 lineas) y `current.md` e `history.md`.
+  Se recupero entero porque nada estaba commiteado. El defecto no era del humano
+  que pulso de mas: era que el instalador no distinguia entre ficheros DEL ARNES
+  y ficheros DE ESTADO del proyecto.
+- **Entregado** en `arnes-base` 1.6.2: `politica_ficheros.json` con tres
+  categorias y aborto si algo queda sin clasificar, backup previo con manifiesto,
+  precondiciones con `-IgnorarPrecondiciones`, normalizacion de finales de linea
+  y una suite propia de 65 comprobaciones.
+- **Lo que cerro la feature** no fue el verde de la suite: en la primera pasada,
+  un mutante que anulaba el atajo del arnes puro **sobrevivia a las 47
+  comprobaciones enteras**, porque todos los casos que lo tocaban usaban
+  `-Forzar`. El reviewer volvio a aplicarlo en la segunda pasada y lo vio morir.
+- **Hallazgo lateral que vale la pena recordar**: la verificacion MANUAL con
+  `-SoloDiff` —que no escribe nada— destapo que `albaranes` tenia 12 tests de
+  `test_mutacion_operadores.py` y `arnes-base` solo 9. Faltaban justo los que
+  cierran los cuatro huecos de F-034. El instalador encontro una divergencia que
+  se le habia pasado a todos.
+- **Prueba de que funciona**: al lanzarlo contra este repositorio, los cuatro
+  `[PROTEGIDO]` que aparecen son exactamente los cuatro ficheros que el
+  incidente destruyo. Y 11 diffs que antes se enseñaban uno a uno resultaron ser
+  solo finales de linea: ese ruido era lo que entrenaba a pulsar «Todos».
