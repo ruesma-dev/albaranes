@@ -280,47 +280,49 @@ Altas relacionadas: **F-036** (los dos defectos, rigor `critico`), **F-037**
 
 ---
 
-## F-039 · spec escrita (2026-08-20, spec-author)
+## F-039 · estabilizar la suite y medir la maquinaria de HOY — CERRADA (done)
 
-Rama `feature/F-039-remedir-campanas-invocacion-rota` creada desde `dev`.
-Entregado `specs/F-039-remedir-campanas-invocacion-rota/` (requirements 150/150,
-design 224/250, tasks T1-T20). **Nada implementado**: ni campañas ni suites.
+**APPROVED en segunda pasada** (CHANGES_REQUESTED en la primera, dos CR).
+Detalle: `progress/impl_F-039.md` (220), `progress/review_F-039.md` (140),
+`progress/mutacion_maquinaria_paralela_F-039.md` (233) y
+`progress/inventario_mutacion_F-039.md`.
 
-Spec **ajustada a las cuatro respuestas del humano** del 2026-08-20, recogidas
-al pie de `requirements.md` como «Decisiones del humano»:
+**Decisión del humano que cambió el diseño**: NO se remidió el árbol de agosto
+de F-012. `mutacion.py` había crecido +1.346 líneas desde entonces, así que
+aquella medición habría sido arqueología. Se midió **la maquinaria tal como es
+hoy** —`mutacion.py`, `mutacion_paralela.py` y `rigor.py` enteros, 2.742
+líneas—: 417 mutantes generados, 20 muestreados (`estandar`, semilla
+`20260820`), **13 muertos y 7 supervivientes**. Los siete están en el código que
+corre, no en el de agosto.
 
-- **Ya no es «remedir F-012»: es una campaña NUEVA sobre la maquinaria de
-  mutación tal como es hoy** (D1 del design). Se mide sobre HEAD de esta rama,
-  con alcance `harness/mutacion.py`, `harness/mutacion_paralela.py` y
-  `harness/rigor.py` **enteros en su versión actual**, muestreados por el nivel
-  `estandar` (20 mutantes, semilla `20260820`). Motivo: medir el árbol de
-  agosto diría qué habría salido entonces; interesa si está protegido el código
-  que corre hoy.
-- Informe en `progress/mutacion_maquinaria_paralela_F-039.md`, con cabecera que
-  diga que mide **otro código** y no repone los números de `mutacion_F-012.md`.
-  Ese `⚠ CAMPAÑA NO VÁLIDA` no se retira nunca: aquellos números **ya no se van
-  a reponer**.
-- Hace falta un flag nuevo `--ficheros` (+ `alcance_de_ficheros` en
-  `harness/alcance.py`): hoy el alcance solo se sabe calcular desde un diff y
-  esta campaña no tiene diff que la describa. Es genérico y se porta a
-  `arnes-base`, igual que `FILAS_DE_RELOJ` / `lineas_comparables`.
-- **Verificación del paralelo**: se abarata con `--max-mutantes 1` (lo que se
-  verifica es la línea base en los 5 worktrees). Se acepta cerrar con el
-  **mayor N verde** (5 → 3 → 2) como límite de la máquina.
-- **`mutacion.workers` NO se declara** en `rigor.json`: escrito como decisión
-  D5 del design para que nadie lo «arregle» luego.
-- **La ficha de huecos de test no se abre sola**: la lista agrupada por causa
-  se presenta y decide el humano.
+**Entregado**: `FILAS_DE_RELOJ` + `lineas_comparables()` —con la guarda R5, que
+hace **fallar el test** si alguien añade una fila de reloj sin declararla, para
+que el flake de F-038 T5 no se repita—, el flag `--ficheros` con
+`alcance_de_ficheros()`, el inventario de las 13 campañas con su portero, y las
+cabeceras de invalidez de `mutacion_F-011.md` y `mutacion_F-012.md`.
 
-Sin decisiones abiertas pendientes: las cuatro preguntas están respondidas.
+**Los dos CR del reviewer, ambos reales**:
 
----
+- **CR-1**: R18 se quedó sin test. Quien repitiera la campaña habría borrado en
+  silencio la cabecera manual —el comando de reproducción y el aviso de que mide
+  otro código—, porque `escribir_informe` conserva los análisis pero no la
+  cabecera.
+- **CR-2**: la guarda de alcance vacío **era inalcanzable desde el CLI**.
+  `--ficheros ","` terminaba en **exit 0 escribiendo un informe de 0 mutantes**:
+  una campaña que no mide nada, reportada como éxito. Es el mismo falso verde
+  que persiguen F-038 y esta feature, entrando por una puerta nueva. Hoy sale
+  con código 2 y sin escribir informe, verificado también con `",,,"` y `" "`.
 
-## F-039 · implementada (2026-08-20, implementer) — pendiente de review
+**Verificación final**: `init.sh` exit 0, **420 passed**, cobertura **100 %**
+(32/32). La campaña de la feature se reejecutó tras CR-2 porque el alcance
+cambió (134 → 140 líneas): 13 mutantes, **13 muertos, 0 supervivientes**.
 
-Rama `feature/F-039-remedir-campanas-invocacion-rota`. Informe completo en
-`progress/impl_F-039.md`. Suite de la raíz **en verde** y campañas medidas.
-Aquí solo va lo que **tiene que decidir el humano**.
+**Cómo se revisó, que es parte del valor**: el reviewer no reejecutó ninguna
+campaña —838 s y 482 s, muy por encima del umbral de 60 s—. Reprodujo el
+muestreo con la semilla, comprobó los 7 supervivientes uno a uno, reejecutó los
+33 mutantes **sobre copia en el scratchpad** (veredictos idénticos) y degradó la
+cabecera **cinco veces** para comprobar que el test de CR-1 muerde. Eso es la
+tercera vía de RM4 funcionando.
 
 ### 1. Verificaciones MANUAL que quedan para el humano (T5, T6)
 

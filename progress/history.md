@@ -306,3 +306,39 @@ intermitente de cualquier test se lee como MUERTO** — de ahí el falso muerto 
 
 Altas relacionadas: **F-039** (prioridad 2; hereda verificar la campaña paralela
 y remedir las campañas medidas con la invocación rota).
+
+### F-039 — estabilizar la suite y medir la maquinaria de mutación de HOY (cerrada 2026-08-21)
+
+CHANGES_REQUESTED en la primera pasada, **APPROVED en la segunda**. Nació de dos
+hallazgos de F-038 y de una deuda vieja: campañas medidas con la invocación rota.
+
+**La decisión que la definió fue del humano**: no remedir el árbol de agosto de
+F-012. `harness/mutacion.py` había crecido +1.346 líneas desde entonces, así que
+repetir aquella campaña habría sido arqueología —los huecos que encontrase
+podrían ya no existir, y los de hoy no aparecerían—. Se midió **la maquinaria tal
+como es hoy**: 2.742 líneas, 417 mutantes generados, 20 muestreados por el nivel
+`estandar`, **13 muertos y 7 supervivientes**. Seis huecos de test reales y un
+equivalente justificado. Los siete están en el código que corre.
+
+Entregado además: `FILAS_DE_RELOJ` + `lineas_comparables()`, con una guarda que
+**hace fallar el test si alguien añade una fila de reloj sin declararla** —para
+que el flake de F-038 T5 no pueda repetirse—; el flag `--ficheros` con
+`alcance_de_ficheros()`; el inventario de las 13 campañas con su portero; y las
+cabeceras de invalidez de `mutacion_F-011.md` y `mutacion_F-012.md`.
+
+**El CR que más enseña**: la guarda de alcance vacío existía pero **era
+inalcanzable desde el CLI**. `--ficheros ","` terminaba en exit 0 escribiendo un
+informe de **0 mutantes**: una campaña que no mide nada, reportada como éxito. Es
+la misma familia de falso verde que arregló F-038 (T0), entrando por una puerta
+recién abierta. Lección: cada camino nuevo hacia el motor de mutación necesita su
+propia guarda de «esto no ha medido nada», porque el modo de fallo silencioso de
+una campaña es siempre el mismo — decir que todo fue bien sin haber juzgado nada.
+
+**Y una lección de máquina**: dos pasadas de la campaña se invalidaron solas
+porque otra sesión estaba corriendo campañas de `datamart-seg-anual` en el mismo
+equipo (~15 pytest simultáneos). La suite nunca estuvo roja —`409 passed`—, pero
+pasó de 51 s a 149 s y dejó de caber en el timeout de 120 s. Se resolvió esperando
+y con `--timeout 400`, **sin tocar `rigor.json`**: el problema era la máquina, no
+la configuración.
+
+Verificación final: `init.sh` exit 0, **420 passed**, cobertura **100 %** (32/32).
