@@ -427,7 +427,7 @@
         "bash harness/init.sh en verde"
       ],
       "status": "pending",
-      "sdd": false,
+      "sdd": true,
       "rigor": "estandar",
       "priority": 2,
       "branch": "feature/F-039-remedir-campanas-invocacion-rota"
