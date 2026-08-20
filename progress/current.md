@@ -23,8 +23,8 @@ liberar contexto: lo que queda es trabajo largo y conviene retomarlo limpio.
 
 | Repositorio | Versión | Estado |
 |---|---|---|
-| `arnes-base` | **1.6.2** | 1.6.0 pusheada; de la 1.6.1 en adelante, **16 commits locales SIN SUBIR** |
-| `albaranes` | **1.6.1** | código y sello coinciden, mergeado en `dev` |
+| `arnes-base` | **1.7.0** | F-038 portada e integrada sobre la 1.6.3 (6 commits). **8 commits locales sin subir** (los 2 de la 1.6.3 + los 6 de la 1.7.0) |
+| `albaranes` | **1.6.1** sellado, pero con **el código de F-038 dentro** | El sello y el código YA NO COINCIDEN: F-038 se desarrolló aquí y se portó allí, pero **la 1.6.2 y la 1.6.3 nunca llegaron a este repositorio**. En particular **le falta el arreglo del bytecode envenenado**, que es lo que provocaba mutantes «muertos» falsos. Se arregla actualizándolo con el instalador |
 | `porcentajes`, `postventa-incidencias` | 1.5.2 | sin actualizar |
 | `datamart-seg-anual` | 1.5.0 | sin actualizar |
 | `partes` | 1.4.0 | sin actualizar |
@@ -245,13 +245,19 @@ Altas relacionadas: **F-036** (los dos defectos, rigor `critico`), **F-037**
 
 ## F-038 · lo que queda después del cierre
 
-1. **Porte a `arnes-base` como 1.7.0** (P1 de `tasks.md`), obligatorio por la
-   regla de propagación y **posterior al merge en `dev`**, nunca dentro de la
-   rama. Su entrada en `GUIA_INSTALACION.md` debe avisar de que
-   `nivel_por_defecto` pasa a `estandar` y de que las campañas de ese nivel
-   quedan **muestreadas a 20 mutantes**: sus números no son comparables con los
-   de versiones anteriores. Debe llevar ya los topes recalibrados
-   (150/250/220/140), no los originales.
+1. **Porte a `arnes-base` como 1.7.0: HECHO** el 2026-08-20, informe en
+   `progress/impl_F-038_porte_1.7.0.md`. Seis commits locales, suite del destino
+   **134 passed** (eran 47 con 1 fallo previo), prueba del instalador **65
+   comprobaciones en verde**, y `ruff` igual antes y después (40 avisos). No fue
+   copiar: de los 19 hunks de `mutacion.py`, 19 aplicaron, y el único rechazo
+   fue en `CHECKPOINTS.md`, justo donde la 1.6.3 había escrito. **Ahí había una
+   contradicción real** —la 1.6.3 declara sospechoso un coste «muy por debajo
+   del tiempo de la suite» y RM2 dice que con `-x` eso es normal—, resuelta
+   dejando a la 1.6.3 la señal dura (por debajo de un segundo, síntoma del
+   bytecode envenenado) y delegando en RM2 el resto; a cambio RM2 gana el matiz
+   de que en campaña paralela «Tiempo total» es tiempo de reloj y hay que
+   multiplicarlo por los workers. **Pendiente de la revisión del humano**
+   (verificación MANUAL de P1) y de `git push`, que no hacen los agentes.
 2. **`progress/mutacion_F-011.md` se queda INVALIDADA — decidido por el humano
    el 2026-08-20.** Todo su alcance (`evals/**`, `harness/rutas_sensibles.py`)
    cae fuera de `services/`, así que sus **305 mutantes y 133 supervivientes**
