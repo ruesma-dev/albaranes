@@ -493,3 +493,207 @@ Dos propuestas concretas para `CHECKPOINTS.md` C4 bis y
    semánticamente idéntico al original **no puede aparecer como muerto**. Un
    solo caso así invalida la campaña entera, y se detecta leyendo, sin gastar
    CPU.
+
+---
+
+# TERCERA PASADA · reviewer nuevo · 2026-08-20
+
+**Veredicto: APPROVED**
+
+**Alcance de esta pasada: desde `104de9b` hasta HEAD `702e984`** (dos commits:
+T15 en `tests/test_mutacion_operadores.py`, T16 en los informes). Todo lo
+anterior a `104de9b` queda dado por bueno por las dos pasadas previas y no se
+ha vuelto a mirar. La fase RED contrastada por el reviewer anterior se da por
+buena, según se me indicó.
+
+**Nivel de rigor: `estandar`** (declarado en `harness/features.json`). Exige
+fase RED, cobertura y mutación; `supervivientes_maximos: null`, es decir
+supervivientes permitidos si están **analizados** y el reviewer los juzga.
+
+## C4 bis · Por qué NO he reejecutado la campaña oficial, y qué he hecho en su lugar
+
+`progress/mutacion_F-034.md` declara **1.063,1 s** de tiempo total, **por
+encima del umbral de 5 minutos**, así que el protocolo no me obliga a
+reejecutar la campaña entera y **no la he reejecutado**. Lo digo explícitamente
+como manda C4 bis. Motivo añadido: la campaña oficial muta
+`harness/mutacion.py` **en el árbol principal** durante ~18 minutos y en esta
+rama no existe el centinela de la 1.6.0.
+
+En su lugar he hecho tres verificaciones, todas **dentro de mi scratchpad**,
+sin escribir en ningún fichero versionado (`git status` limpio antes y después).
+
+### 1. Recálculo puro (obligatorio) — coincide exacto
+
+`harness.alcance` + `harness.mutacion.generar_mutantes` sobre el árbol real:
+
+| | Informe | Mi recálculo |
+|---|---|---|
+| Ficheros / líneas en alcance | 1 / 56 | **1 / 56** |
+| Origen del diff | rama `2897132..feature/F-034…` | **idéntico** |
+| Mutantes generados | 19 | **19** |
+
+La lista mutante a mutante coincide **literalmente**, uno por uno, con la del
+informe: mismo orden, misma línea, mismo operador y mismo texto
+original→mutado. Los cuatro supervivientes declarados (`[2] 207 [entero]`,
+`[7] 220 [comparacion]`, `[10] 221 [entero]`, `[19] 251 [entero]`) y el timeout
+(`[18] 251 [aritmetico]`) existen como mutantes reales con esos textos exactos.
+
+Confirmado también el `[11/19]` ausente del eco: es `222 [not]`, y `compile()`
+sobre él da `SyntaxError: unmatched ')'`. La aritmética «14 muertos = 13
+juzgados por la suite + 1 que no compila» se sostiene.
+
+### 2. Mini-campaña independiente — **veredicto por veredicto idéntico**
+
+No me he quedado en el recálculo puro. He montado en el scratchpad una copia de
+`harness/` y de **los 7 ficheros de `tests/` que tocan `harness.mutacion`**
+(85 tests, verde de partida en 18,5 s) y he corrido **los 19 mutantes** contra
+ellos, con tope de 90 s por mutante:
+
+```
+TOTAL: 14 muertos, 4 supervivientes, 1 timeouts en 567.8 s
+```
+
+**Los 14/4/1 del informe se reproducen, y no solo en el total: mutante a
+mutante.** Los cuatro supervivientes son exactamente los cuatro declarados; el
+timeout es exactamente `251 [aritmetico]`.
+
+Es una verificación **a fortiori**: juzgo con un subconjunto de la suite (85 de
+280 tests), así que cada «muerto» que obtengo lo sería también con la suite
+completa. Coherencia interna de mis números: 567,8 s / 19 = 30 s por mutante
+contra una suite de ~19 s más el mutante colgado, que es la misma proporción
+sana que el informe exhibe (56 s contra ~50 s).
+
+### 3. Los tests nuevos, ¿matan de verdad lo que dicen matar? — **sí, ejecutado**
+
+Es el punto de máxima tentación (tests escritos a la medida de mutantes ya
+conocidos), así que lo he comprobado aplicando cada mutación a mano sobre la
+copia del scratchpad:
+
+| Mutante | Resultado medido por mí | Test que lo mata |
+|---|---|---|
+| `208 [logico]` `and`→`or` | 1 failed, 11 passed | `test_f034_r5_es_palabra_exige_que_LOS_DOS_extremos_sean_de_palabra` |
+| `208 [entero]` `[-1:]`→`[-2:]` | 1 failed, 11 passed | el mismo |
+| `220 [entero]` `ini > 0`→`ini > 1` | 1 failed, 11 passed | `test_f034_r5_delimitado_mira_los_dos_bytes_que_rodean_la_coincidencia` |
+| `221 [aritmetico]` `fin+1`→`fin-1` | **2** failed, 10 passed | `..._bis_no_muta_una_palabra_que_EMPIEZA_por_is` **y** `..._delimitado_mira_los_dos_bytes...` |
+
+**Reproduce exactamente las trazas RED 1–4 de `impl_F-034.md` §T16**, incluidas
+las cuentas de fallos y los nombres de los tests. Y los tests no son cáscaras a
+medida: el caso `b"is="` (letra al principio, símbolo al final) es el único
+token que distingue «mirar el último byte» de «mirar el penúltimo», y la fuente
+nueva `FUENTE_COMENTARIO_ISLA` ataca la mitad **derecha** de `_delimitado`, que
+`FUENTE_COMENTARIO` («analisis», siempre precedida de letra) no ejercitaba
+jamás. El diagnóstico del implementer sobre por qué el test viejo no cazaba
+nada es correcto.
+
+## Los cuatro supervivientes equivalentes
+
+Ninguno en `PENDIENTE` (0 apariciones en el fichero). He verificado el más
+disputado **ejecutando**, y los otros tres por lectura:
+
+1. **`251 [entero]`** (`posicion + 1` → `+ 2`) — **verificado ejecutando, y con
+   barrido propio, no el del implementer**. Cargué el `_localizar` **real**
+   sano y mutado en el mismo proceso y los comparé sobre un alfabeto más ancho
+   que el suyo (11 símbolos, incluido `_` y un byte ≥ 0x80) y 13 tokens,
+   añadiendo los adversariales `aa`, `ana`, `isis`, `éé` —los únicos en que dos
+   coincidencias pueden solaparse—:
+   **0 diferencias sobre 2.303.015 casos**.
+   La demostración por lectura también se sostiene y es de tres líneas: la 251
+   solo se ejecuta con `exigir_palabra` cierto, luego `objetivo[0]` es byte de
+   palabra; una coincidencia en `posicion + 1` tendría en `bruta[posicion]` ese
+   mismo byte, y `_delimitado` la rechazaría igual. Saltarla no cambia nada.
+2. **`207 [entero]`** y **`221 [entero]`** (rodaja de 1 byte → 2 bytes) —
+   `_PARTE_DE_PALABRA` es una **clase de un solo carácter** y `Pattern.match`
+   **ancla al byte 0**: el segundo byte no se mira nunca. Equivalencia evidente
+   por lectura. Confirmado además que ambos sobreviven en mi mini-campaña.
+3. **`220 [comparacion]`** (`ini > 0` → `ini >= 0`) — `ini` viene de `find()`
+   dentro de `while posicion != -1`, nunca negativo; y en `ini == 0` la rama
+   *then* da `bruta[-1:0]`, cadena vacía para cualquier `bruta` (también de
+   longitud 1), igual que el `else`. Equivalente por lectura.
+
+En los cuatro casos comparto la decisión de **no reescribir el código para
+complacer al mutador**: `objetivo[:1]` y `ini > 0` documentan la intención.
+
+## Las tres correcciones que el implementer hace al reviewer anterior
+
+Las he juzgado sin dar por supuesto que el reviewer tuviera razón. **Las tres
+son correctas, y en las tres el implementer tiene razón y el reviewer no.**
+
+1. **El quinto «hueco» no era un hueco.** `251 [entero]` es equivalente y no
+   admite test. Verificado por mí con barrido propio (2,3 M de casos) y por
+   demostración. La tabla de la segunda pasada listaba cinco huecos; **son
+   cuatro**. Que el implementer pegue la RED 5 fallida (12 passed con la
+   mutación puesta) en vez de fabricar un test que la matara es exactamente lo
+   que había que hacer.
+2. **El timeout `207 [logico]` no era un bucle infinito.** En mi mini-campaña
+   **muere**, con un tope de 90 s. La atribución a máquina cargada se sostiene:
+   la segunda pasada tardó 3.812 s en lo que aquí cuesta 568 s. Bien hecho
+   medir en vez de aceptar el «basta con declararlos» que yo mismo habría
+   heredado.
+3. **La frase sobre el gemelo de la línea 208 está corregida y ahora es
+   verdad.** Sobrevivía (lo midió la segunda pasada) y hoy **muere**, y muere
+   por `test_f034_r5_es_palabra_exige_que_LOS_DOS_extremos_sean_de_palabra`:
+   lo he comprobado ejecutando (fila 2 de mi tabla de arriba). El análisis de
+   `207 [entero]` ya no cuelga de ningún gemelo, sino de su propio argumento.
+
+Anoto a favor del informe que la corrección está escrita **como corrección
+visible**, con la frase falsa citada y el rastro de por qué lo era, en lugar de
+reescribir la historia en silencio.
+
+## Checkpoints de esta pasada
+
+- **C1 · Entorno en verde** `[x]` — `bash harness/init.sh` ejecutado tal cual:
+  **280 passed in 128,68 s**, `PUERTA COBERTURA` en `[OK]` con **100,0 % de 12
+  líneas cambiadas (12/12, umbral 80 %)**, `PUERTA RUTAS SENSIBLES` en N/A
+  justificado (F-034 no toca ninguna ruta declarada). `ENTORNO LISTO`.
+- **C2 · Diseño y capas** `[x]` — el diff toca un único fichero de código,
+  `tests/test_mutacion_operadores.py`, y solo añade tests. No hay cambio de
+  producción en esta pasada.
+- **C3 · Trazabilidad requisito → test** `[x]` — los tres tests nuevos citan su
+  requisito en el nombre y en el docstring: R5 (delimitación por ambos
+  extremos) y R5/R6 (`_es_palabra` no puede delimitar símbolos, o `x==y` deja
+  de mutar). Cada uno mata mutantes concretos, verificado arriba.
+- **C3 bis · Convenciones** `[x]` — `docs/CONVENTIONS.md`: primera línea con
+  ruta conservada, todo en español, sin secretos, sin prints de depuración.
+  Las importaciones de `_es_palabra` y `_delimitado` (privadas) están
+  justificadas: son las unidades puras que el delimitador expone al test.
+- **C4 · Fase RED** `[x]` — cinco trazas RED con salida real en §T16. Las
+  cuatro que corresponden a huecos las he **reproducido yo** con las mismas
+  cuentas de fallos y los mismos nombres de test.
+- **C4 bis · Mutación** `[x]` — informe presente, generado por el mutador,
+  totales **verificados de forma independiente** (recálculo puro + mini-campaña
+  con veredicto idéntico mutante a mutante), **cuatro supervivientes analizados
+  y ninguno en `PENDIENTE`**, timeout declarado y explicado. Campaña oficial
+  **no reejecutada: 1.063,1 s según el informe, por encima del umbral de 5
+  minutos**.
+- **C5 · Árbol limpio y commits** `[x]` — `git status --porcelain` vacío antes
+  y después de mi trabajo. Dos commits en el rango, con formato `F-034 Tn: ...`.
+  Todo mi trabajo quedó en el scratchpad; no he ejecutado ningún script que
+  reescriba ficheros versionados.
+
+## Observaciones que NO bloquean
+
+1. **`evaluar_mutantes` esconde los mutantes que no compilan.** El `continue`
+   antes del eco deja un hueco en el rastro (el `[11/19]` fantasma) que obliga a
+   explicarlo a mano en cada informe. Y el operador `not` sobre una expresión
+   entre paréntesis genera mutantes sintácticamente inválidos que no miden
+   nada: contarlos como «muertos» **infla la puntuación de mutación** sin que
+   ningún test haya hecho el trabajo. Ya está anotado como observación de
+   arnés; sugiero darlo de alta como feature.
+2. **Propuesta de mejora al protocolo del `reviewer` (no aplicada, para el
+   humano).** Este episodio enseña que el umbral de 5 minutos deja un agujero:
+   por encima de él, el protocolo se conforma con el recálculo puro, que **no
+   distingue muertos reales de muertos inventados** — que es justo el defecto
+   que tumbó la segunda pasada. Propongo añadir a `.claude/agents/reviewer.md`
+   una tercera vía, más barata que reejecutar y mucho más fuerte que recalcular:
+   *reejecutar la campaña en una copia del scratchpad contra el subconjunto de
+   tests que importa el módulo mutado*. Aquí ha costado 568 s en vez de ~18 min,
+   no ha tocado el árbol y ha reproducido el veredicto de los 19 mutantes.
+   Como los «muertos» de un subconjunto lo son a fortiori con la suite entera,
+   la comprobación es sólida en la dirección que importa.
+3. **Marcas `[ADAPTAR]` sin resolver** en
+   `specs/F-034-mutacion-is-y-coherencia-evals/design.md` (aviso de `init.sh`).
+   No bloquea y viene de antes de `104de9b`, pero conviene limpiarlo al cerrar.
+
+## Cambios requeridos
+
+Ninguno.

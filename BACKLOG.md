@@ -3,15 +3,12 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **38 features**, 32 abiertas, 6 terminadas.
-
-En curso: **F-034**.
+Resumen: **38 features**, 31 abiertas, 7 terminadas.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-034 | Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra | 1 | en curso | estandar | `feature/F-034-mutacion-is-y-coherencia-evals` |
 | F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | spec lista | estandar | `feature/F-035-instalador-no-pisa-estado` |
 | F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | pendiente | estandar | `feature/F-038-coste-del-ciclo-sdd` |
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | pendiente | critico | `feature/F-036-residuos-contenedores-e-incrementos` |
@@ -50,26 +47,13 @@ En curso: **F-034**.
 |---|---|---|---|
 | F-001 | Test de estructura del monorepo | 1 | estandar |
 | F-019 | Importe de línea: manda el unitario leído; el importe solo se despeja si faltan campos | 1 | critico |
+| F-034 | Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra | 1 | estandar |
 | F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
 | F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
 | F-012 | Campaña de mutación en paralelo | 3 | estandar |
 | F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
 
 ## Detalle
-
-### F-034 · Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra
-
-estado **en curso** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-034-mutacion-is-y-coherencia-evals`
-
-URGENTE Y PRIMERO (decisión del humano, 2026-08-19): esto cambia la VARA DE MEDIR de todas las features, así que cada feature que se cierre antes de arreglarlo se mide con una campaña de mutación ciega en su punto más delicado. Sale de las observaciones del reviewer de F-027 (progress/review_F-027.md §12) y de la experiencia de F-019.
-
-(1) HALLAZGO PRINCIPAL — `harness/mutacion.py` NO muta `is` / `is not`. Confirmado por el reviewer leyendo la tabla `COMPARACIONES` del propio mutador. En Python `x is None` es LA guarda de ausencia, y es justo el patrón de las guardas que han provocado los dos defectos más caros del proyecto: el `if cantidad is None` que mataba la red KG→TN (F-027, 468.763 €) y el `importe_albaran_declarado is not None` del cálculo del importe (F-019). Es un punto ciego que afecta a CUALQUIER feature de CUALQUIER proyecto con este arnés: la campaña dice «0 supervivientes» sin haber probado la línea que más importa. En F-027 obligó a una campaña MANUAL de 7 mutantes. PROPUESTA: añadir `ast.Is` / `ast.IsNot` a `COMPARACIONES` en `harness/mutacion.py`, comprobar que la campaña de F-027 y la de F-019 generan ahora mutantes en esas guardas y que MUEREN con los tests que ya existen (si alguno sobrevive, es un hueco real que hay que cerrar), y PORTARLO A `arnes-base` en el mismo trabajo (regla de propagación de CLAUDE.md).
-
-(2) CORREGIDO EN F-034 (la premisa del enunciado era falsa): `evals/ground_truth/` SI EXISTE, con sus seis libros .xlsx, y `evals/conversor.py:39` los declara como RUTA_GROUND_TRUTH; lo que pasa es que `.gitignore` excluye *.xlsx, asi que no estan versionados y quien clona el repositorio no los ve. El defecto real es otro: `CHECKPOINTS.md` C4 ter, `harness/rutas_sensibles.json` y `progress/current.md` condicionaban la subida de la puerta a ese artefacto INVISIBLE en vez de a los fixtures VERSIONADOS de `evals/fixtures/`, que son los que consume `evals.runner`. Consecuencia práctica: la puerta de rutas sensibles lleva semanas en `aviso` «porque el ground truth está vacío» sin que nadie pueda comprobarlo sin adivinar dónde mirar. Unificar el nombre en los tres sitios.
-
-(3) Cuando la campaña automática da 0 mutantes y se sustituye por una MANUAL, hoy el guion vive en el scratchpad de la sesión y no queda rastro reproducible en el repositorio. En F-027 bastó porque las siete sustituciones estaban escritas con su texto exacto y el reviewer pudo reproducir cuatro al pie de la letra. PROPUESTA para `CHECKPOINTS.md`: exigir que la tabla de una campaña manual incluya el TEXTO EXACTO original → mutado de cada sustitución, que es lo que la hace verificable.
-
-ALCANCE: `harness/mutacion.py`, `CHECKPOINTS.md`, `harness/rutas_sensibles.json`, `progress/current.md`, y la propagación a `arnes-base` (que subiría a 1.6.0). NO ENTRA: rehacer el mutador ni añadir más operadores de los citados. Fuente: progress/review_F-027.md §12.
 
 ### F-035 · Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto
 
@@ -366,6 +350,20 @@ Feature trivial de calentamiento para validar el circuito completo del arnés (r
 estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-019-importe-unitario-manda`
 
 Fallo REAL detectado en la prueba local del 2026-08-18 (lote FERRETERIA, Feymaco 2.137.569 y 2.139.643): la lectura de IA1 es exacta pero el importe valorado sale multiplicado por la cantidad (139,66 € reales -> 6.238,14 € valorados; 19,41 € -> 970,50 €). CADENA: (1) el SELECT de sv5 (infrastructure/database/sqlalchemy_valuation_context_repository.py, ~100-123, comentado como «FIX jun 2026») calcula importe_albaran = cantidad × precio_neto dando por hecho que precio_neto es un unitario NETO, cuando el prompt de IA1 (services/albaranes-api/config/prompts.yaml:75) lo define como cantidad*precio*(1-descuento/100), es decir el IMPORTE de la línea (columna NETO del albarán); (2) sv6 (application/services/price_reconciler.py) da prioridad al importe sobre el unitario leído y deriva unitario = importe / (cantidad × (1-dto/100)), con lo que 3.800,52 / (108 × 0,6) = 58,65 €/ud en vez de 0,543. REGLA DEL HUMANO (2026-08-18): si el PDF trae cantidad, precio unitario y descuento, importe = cantidad × precio_unitario × (1 - descuento/100) y el unitario leído MANDA; solo si faltan esos campos y hay importe final se despeja el unitario de esa misma fórmula. Alcance: alinear la semántica de precio_neto entre el prompt de IA1 y el consumidor de sv5, y ajustar la precedencia del reconciliador de sv6. Corrigiendo solo (1) la cadena ya cuadra (derivado 0,543 = declarado), pero la precedencia debe quedar explícita. Toca sv5 y sv6; revisar si el prompt de sv2 necesita precisar el significado del campo. Detalle y números en progress/prueba_local_feymaco_20260818.md.
+
+### F-034 · Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra
+
+estado **terminada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-034-mutacion-is-y-coherencia-evals`
+
+URGENTE Y PRIMERO (decisión del humano, 2026-08-19): esto cambia la VARA DE MEDIR de todas las features, así que cada feature que se cierre antes de arreglarlo se mide con una campaña de mutación ciega en su punto más delicado. Sale de las observaciones del reviewer de F-027 (progress/review_F-027.md §12) y de la experiencia de F-019.
+
+(1) HALLAZGO PRINCIPAL — `harness/mutacion.py` NO muta `is` / `is not`. Confirmado por el reviewer leyendo la tabla `COMPARACIONES` del propio mutador. En Python `x is None` es LA guarda de ausencia, y es justo el patrón de las guardas que han provocado los dos defectos más caros del proyecto: el `if cantidad is None` que mataba la red KG→TN (F-027, 468.763 €) y el `importe_albaran_declarado is not None` del cálculo del importe (F-019). Es un punto ciego que afecta a CUALQUIER feature de CUALQUIER proyecto con este arnés: la campaña dice «0 supervivientes» sin haber probado la línea que más importa. En F-027 obligó a una campaña MANUAL de 7 mutantes. PROPUESTA: añadir `ast.Is` / `ast.IsNot` a `COMPARACIONES` en `harness/mutacion.py`, comprobar que la campaña de F-027 y la de F-019 generan ahora mutantes en esas guardas y que MUEREN con los tests que ya existen (si alguno sobrevive, es un hueco real que hay que cerrar), y PORTARLO A `arnes-base` en el mismo trabajo (regla de propagación de CLAUDE.md).
+
+(2) CORREGIDO EN F-034 (la premisa del enunciado era falsa): `evals/ground_truth/` SI EXISTE, con sus seis libros .xlsx, y `evals/conversor.py:39` los declara como RUTA_GROUND_TRUTH; lo que pasa es que `.gitignore` excluye *.xlsx, asi que no estan versionados y quien clona el repositorio no los ve. El defecto real es otro: `CHECKPOINTS.md` C4 ter, `harness/rutas_sensibles.json` y `progress/current.md` condicionaban la subida de la puerta a ese artefacto INVISIBLE en vez de a los fixtures VERSIONADOS de `evals/fixtures/`, que son los que consume `evals.runner`. Consecuencia práctica: la puerta de rutas sensibles lleva semanas en `aviso` «porque el ground truth está vacío» sin que nadie pueda comprobarlo sin adivinar dónde mirar. Unificar el nombre en los tres sitios.
+
+(3) Cuando la campaña automática da 0 mutantes y se sustituye por una MANUAL, hoy el guion vive en el scratchpad de la sesión y no queda rastro reproducible en el repositorio. En F-027 bastó porque las siete sustituciones estaban escritas con su texto exacto y el reviewer pudo reproducir cuatro al pie de la letra. PROPUESTA para `CHECKPOINTS.md`: exigir que la tabla de una campaña manual incluya el TEXTO EXACTO original → mutado de cada sustitución, que es lo que la hace verificable.
+
+ALCANCE: `harness/mutacion.py`, `CHECKPOINTS.md`, `harness/rutas_sensibles.json`, `progress/current.md`, y la propagación a `arnes-base` (que subiría a 1.6.0). NO ENTRA: rehacer el mutador ni añadir más operadores de los citados. Fuente: progress/review_F-027.md §12.
 
 ### F-011 · Evals de IA con ground truth y puerta en el arnés
 
