@@ -178,3 +178,45 @@ def test_f039_r16_el_cli_devuelve_2_y_no_llega_a_mutar(
 
     assert main(["--feature", "F-039", "--ficheros", "harness/no_existe.py"]) == 2
     assert main(["--feature", "F-039", "--ficheros", "docs/CONVENTIONS.md"]) == 2
+
+
+def test_f039_r16_ficheros_solo_con_separadores_aborta_desde_el_cli(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """La guarda de lista vacía, por el camino por el que se llega de verdad.
+
+    `test_f039_r16_una_lista_vacia_aborta` cubre la llamada directa con `[]`,
+    pero desde `main` la lista NUNCA es `[]`: `split(",")` devuelve siempre al
+    menos un elemento y las entradas en blanco se descartan una a una. Con
+    `--ficheros ","` la campaña terminaba en **exit 0** escribiendo un informe
+    de **0 mutantes**, que es justo la campaña vacía que `CHECKPOINTS.md` manda
+    mirar con lupa. Lo que importa no es cómo llegue la lista: es que no quede
+    ningún fichero que mutar.
+    """
+
+    def _campania_prohibida(*_args: object, **_kwargs: object):
+        raise AssertionError("no se puede lanzar una campaña sin nada que mutar")
+
+    monkeypatch.setattr("harness.mutacion.ejecutar_campania", _campania_prohibida)
+
+    assert main(["--feature", "F-039", "--ficheros", ","]) == 2
+    assert main(["--feature", "F-039", "--ficheros", "   "]) == 2
+
+
+def test_f039_r16_el_aborto_por_alcance_vacio_no_escribe_informe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Un informe con un cero que nadie ha medido es peor que no tener informe."""
+
+    def _campania_prohibida(*_args: object, **_kwargs: object):
+        raise AssertionError("no se puede lanzar una campaña sin nada que mutar")
+
+    monkeypatch.setattr("harness.mutacion.ejecutar_campania", _campania_prohibida)
+    destino = tmp_path / "no_deberia_existir.md"
+
+    codigo = main(
+        ["--feature", "F-039", "--ficheros", ",,", "--salida", str(destino)]
+    )
+
+    assert codigo == 2
+    assert not destino.exists()

@@ -228,16 +228,10 @@ def alcance_de_ficheros(
 
     `origen="ficheros"` y `ref_diff=(SIN_DIFF, <sha de HEAD>)`, para que el
     informe pueda decir contra qué commit se midió. Aborta con `SystemExit` —sin
-    tocar nada— si la lista viene vacía, si una ruta no existe o si
-    `es_produccion` la rechaza: mutar un fichero que no es código de producción
-    da supervivientes que no significan nada.
+    tocar nada— si una ruta no existe, si `es_produccion` la rechaza —mutar lo
+    que no es código de producción da supervivientes que no significan nada— o
+    si, ya filtradas las entradas en blanco, no queda ni un fichero que mutar.
     """
-    if not rutas:
-        raise SystemExit(
-            "--ficheros no lleva ninguna ruta: no hay nada que mutar. Abortado "
-            "sin tocar nada."
-        )
-
     base = Path(raiz)
     lineas: dict[str, set[int]] = {}
     for ruta in rutas:
@@ -258,6 +252,18 @@ def alcance_de_ficheros(
             )
         total = len(fichero.read_text(encoding="utf-8").splitlines())
         lineas[normalizada] = set(range(1, total + 1))
+
+    # DESPUÉS del filtrado, no antes: desde el CLI la lista nunca llega vacía
+    # —`split(",")` devuelve siempre al menos un elemento— y las entradas en
+    # blanco se descartan una a una, así que `--ficheros ","` se colaba hasta
+    # el final y escribía un informe de CERO mutantes. Una campaña vacía que
+    # sale con éxito es peor que un aborto: se lee como «nada que mutar, todo
+    # bien». Lo que importa no es cómo venga la lista, sino que quede algo.
+    if not lineas:
+        raise SystemExit(
+            "--ficheros no deja ninguna ruta que mutar "
+            f"({rutas!r}): no hay nada que medir. Abortado sin tocar nada."
+        )
 
     sha = ejecutar_git(["rev-parse", "HEAD"], raiz=raiz).strip()
     return Alcance(
