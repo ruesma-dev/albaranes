@@ -148,3 +148,69 @@ antes). Con este informe escrito, PUERTA TAMAÑO añade `impl 150/150`.
 ## Qué queda fuera
 
 - **F-039** (remedir F-012), qué hacer con `mutacion_F-011.md` y el **porte a `arnes-base` 1.7.0** (P1) tras el merge. **Verificaciones MANUAL pendientes: 0.**
+
+---
+
+# Tanda posterior al APPROVED — T15 y T16 (2026-08-20)
+
+Dos cambios del humano tras la primera pasada de review. **No tocan lógica** (4 números, 2 redacciones): **no se reejecutó la campaña**, el alcance no cambia.
+
+## T15 · Los cuatro topes de tamaño suben
+
+`requirements` 120→**150**, `design` 200→**250**, `impl` 150→**220**, `review`
+100→**140**; motivo completo en el `$doc` de `harness/rigor.json` y en
+`specs/SPECS.md`. Mediana histórica ~484 líneas (impl) y ~475 (review): los viejos
+recortaban ~70 % —este informe salió 150/150 y el de review 100/100, clavados—, los nuevos ~55 %, dejando sitio a la evidencia. Eco en los 9 ficheros que citaban los números (`5e60715`); no en `CHECKPOINTS.md`, que no cableaba ninguno.
+
+## T16 · RM2 matizada (observación O2 del reviewer)
+
+«Muy inferior a la línea base» marcaba como sospechosa la campaña legítima de
+esta feature (base 52,1 s, media 36,4 s). Queda escrito el porqué: se evalúa con
+`-x`, el mutante que muere **aborta la suite en el primer fallo** (19 de 20) y a
+más muertos, más baja la media. La alarma pasa a ser el **salto de orden de magnitud** —media bajo la décima parte de la base, o «Tiempo total» que no cuadra con `mutantes × media`— y sigue cazando F-034 (18 mutantes en 111 s, eran 63 min). Igual en `CHECKPOINTS.md` (RM2 de C4 bis) y en `.claude/agents/reviewer.md`.
+
+## Fase RED · T15 — tests ya en los números nuevos, `rigor.json` y documentos aún en los viejos
+(`python -m pytest tests/test_f038_r13_r16_tamano.py tests/test_f038_r17_r21_documentos.py -q`):
+
+```
+>       assert topes == {"requirements": 150, "design": 250, "impl": 220, "review": 140}
+E       AssertionError: assert {'requirement...'review': 100} == {'requirement...'review': 140}
+E         Differing items:
+E         {'review': 100} != {'review': 140}
+E         {'design': 200} != {'design': 250}
+E         {'requirements': 120} != {'requirements': 150}
+E         {'impl': 150} != {'impl': 220}
+FAILED ..._r13_r16_tamano.py::test_f038_r13_el_rigor_json_del_repositorio_declara_los_cuatro_topes
+FAILED ..._r17_r21_documentos.py::{specs_md_declara_los_topes, el_spec_author_conoce_los_topes, el_implementer_conoce_el_tope, el_reviewer_conoce_el_tope}
+5 failed, 32 passed in 0.36s
+```
+
+**Fase RED · T16** — dos tests nuevos que fijan la redacción de RM2 en los dos documentos, antes de reescribirla
+(`python -m pytest tests/test_f038_r17_r21_documentos.py -q -k rm2`):
+
+```
+>       assert "orden de magnitud" in bloque
+E       AssertionError: assert 'orden de magnitud' in ' · Coherencia interna del tiempo.** El informe trae «Línea base (s)» y
+  «Media por mutante evaluado (s)». Si la med... 111 s cuando una suite limpia tarda dos minutos (la realidad eran
+  63 min; ~350.000 tokens de segundo rechazo).
+- '
+>       assert "orden de magnitud" in rm2
+E       AssertionError: assert 'orden de magnitud' in ' · El tiempo del informe es internamente coherente:** la «Media por
+      mutante evaluado (s)» no puede ser muy inferior a la «Línea base (s)» del
+      ejecutor que juzgó. Si lo es, se rechaza **sin reejecutar nada**.
+'
+FAILED ..._r17_r21_documentos.py::test_f038_r20_rm2_salta_por_orden_de_magnitud_no_por_cualquier_diferencia
+FAILED ..._r17_r21_documentos.py::test_f038_r20_checkpoints_recoge_rm2_con_el_mismo_matiz_que_el_reviewer
+2 failed, 1 passed, 14 deselected in 0.17s
+```
+
+## Evidencias de esta tanda — `bash harness/init.sh` tal cual, en verde
+
+```
+[OK] pytest en verde (con medición de cobertura)   391 passed in 69.05s (0:01:09)
+[OK] PUERTA COBERTURA: 95.9% de 171 líneas cambiadas cubiertas (164/171, umbral 80%, nivel estandar)
+[OK] PUERTA TAMAÑO: F-038 dentro de los topes (requirements 119/150, design 162/250, impl 150/220, review 100/140)
+```
+
+**391 passed / 0 failed** (+2, los de RM2; los dos ficheros de arriba, `39 passed
+in 1.08s`), suite **69,05 s**, cobertura **95,9 %** sin variación (no hay código nuevo). **`arnes-base` no se ha tocado**: el porte a 1.7.0 (P1) va tras el merge.
