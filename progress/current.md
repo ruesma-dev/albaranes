@@ -8,10 +8,14 @@ liberar contexto: lo que queda es trabajo largo y conviene retomarlo limpio.
 
 ### Lo primero al abrir la próxima sesión
 
-1. **`git push` de `arnes-base`**: 16 commits locales. Es lo único que impide
-   que todo el trabajo del arnés exista fuera de un solo disco.
-2. Por orden: **F-036 (residuos, lo único que toca dinero)** → **F-038** →
+1. **`git push` de `arnes-base`**: los commits locales de la 1.6.1 en adelante
+   —más los de la 1.7.0 cuando se porte F-038— son lo único que impide que todo
+   el trabajo del arnés exista fuera de un solo disco.
+2. Por orden: **F-036 (residuos, lo único que toca dinero)** → **F-039 (subida
+   a prioridad 2: sin una suite estable, ninguna medición del arnés vale)** →
    actualizar los otros cuatro proyectos con el instalador ya seguro.
+3. **Decidir qué se hace con `progress/mutacion_F-011.md`** (ver «F-038 · lo que
+   queda después del cierre», punto 2).
 
 ---
 
@@ -100,61 +104,47 @@ aparecía exactamente una vez.
 en el manifiesto), R27, R28 y R21/R33 quedan parciales en la suite del
 instalador, para cuando vuelva a tocarse.
 
-### F-038 · bajar el coste en tokens del ciclo SDD — `pending`, SIN SPEC
+### F-038 · bajar el coste en tokens del ciclo SDD — CERRADA (done)
 
-Prioridad 3. Medición que la motiva: los subagentes de esta sesión gastaron
-**~712.000 tokens** y `progress/` acumula 12.250 líneas. **La campaña de
-mutación NO gasta tokens** (es Python y pytest: gasta CPU); el coste está en el
-papeleo y en las repeticiones. Cada línea de spec se paga TRES veces: la escribe
-el spec-author, la lee el implementer, la relee el reviewer.
+**APPROVED en dos pasadas**, rama `feature/F-038-coste-del-ciclo-sdd`. Detalle:
+`progress/impl_F-038.md` (218 líneas) y `progress/review_F-038.md` (130).
 
-Alcance aprobado por el humano, **cuatro palancas**:
+Entregado: **T0** —`ejecutor_para` acota la suite de la raíz a `tests`, sin lo
+cual **no se podía medir mutación sobre `harness/`** y las campañas daban falsos
+verdes—, muestreo por nivel de rigor (`estandar` = 20 mutantes, semilla
+`20260820`), `nivel_por_defecto` de `critico` a `estandar`, el informe de
+mutación imprimiendo **SHA de HEAD, línea base y media por mutante**, la puerta
+de tamaño (`harness/tamano.py` + sección 7 quater de `init.sh`), umbral de
+reejecución de 5 min a 60 s, revisión incremental por defecto y las seis reglas
+RM1–RM6 repartidas entre `reviewer.md` y C4 bis.
 
-1. **Topes de tamaño**: `requirements.md` ≤ 120 líneas, `design.md` ≤ 200,
-   informe de implementer ≤ 150, review ≤ 100. La de más ahorro (40-50 %).
-2. **Coste de mutación por nivel** en `harness/rigor.json`: `nivel_por_defecto`
-   de `critico` a `estandar`, y `max_mutantes` por nivel (20 con semilla fija en
-   estándar, sin tope en crítico). `mutacion.py` ya acepta `--max-mutantes` y
-   `--semilla`: falta leerlos del nivel.
-3. **Umbral de reejecución del reviewer** de 5 min a **60 s**.
-4. **Reviewer incremental** por defecto: en la pasada N, solo
-   `git diff <último-aprobado>..HEAD`, y decirlo en el informe.
+**Los topes se recalibraron el mismo día**, antes de cerrar: `120/200/150/100` →
+**`150/250/220/140`** (requirements / design / impl / review). Motivo: la mediana
+histórica es ~484 líneas en informes de implementer y ~475 en los de review, así
+que los originales recortaban un ~70 % y **tanto el implementer como el reviewer
+entregaron clavados en el límite** (150/150 y 100/100). Los nuevos recortan un
+~55 %: el ahorro se mantiene y queda aire para lo que nadie debe resumir, las
+trazas de fase RED y el análisis de supervivientes. Cualquier cita de los
+números viejos en documentos anteriores a esa fecha es rastro, no configuración.
 
-**FUERA por decisión expresa**: modelo por rol (el humano quiere **Opus 5
-siempre**). Fuera también, para otro trabajo: informes por delta, y la regla de
-fijar en un test el número de aceptación antes de implementar.
+**El ahorro ya se cobró dentro de la propia feature**: el reviewer NO reejecutó
+la campaña de mutación en ninguna de las dos pasadas. Le bastó leer el SHA y los
+tiempos que ahora se imprimen. Y la segunda pasada, siendo incremental, cupo en
+30 líneas.
 
-**Además, PENDIENTE DE AÑADIR A LA FICHA** (acordado con el humano, no escrito
-todavía en `features.json`): **seis reglas** que salen de los reviews de esta
-sesión. Cuatro del reviewer de F-034 y dos de otra sesión:
+**Hallazgo de T17**: el flaky que se creía ajeno era de esta feature. T5 añadió
+al informe la fila de reloj `Media por mutante evaluado (s)` y el test de
+paridad serie/paralelo no extendió su filtro; bajo carga la serie redondeaba a
+0.0 y la paralela a 0.1. Como la campaña corre con `-x`, **un fallo intermitente
+de cualquier test se lee como MUERTO**: ése era el falso muerto de
+`mutacion.py:1781`. Arreglado en el test, sin tocar lógica.
 
-| # | Regla | Efecto en tokens |
-|---|---|---|
-| 1 | El informe de mutación declara el **SHA de HEAD** contra el que se midió, y el reviewer comprueba que el alcance coincide | **ahorra mucho** (habría evitado el 1er rechazo de F-034, ~200k) |
-| 2 | **Coherencia interna del tiempo**: si `tiempo/mutantes` es mucho menor que lo que tarda la suite, se rechaza el informe | **ahorra mucho** (habría cazado el 2º, ~350k) |
-| 3 | Un mutante **equivalente no puede salir muerto**; un solo caso invalida la campaña. Como criterio de revisión, no puerta automática | ahorra |
-| 4 | Tercera vía de verificación: **reejecutar contra el subconjunto de tests** del módulo mutado, en copia del scratchpad (568 s en vez de 18 min, y no muta el árbol) | ahorra |
-| 5 | Un superviviente declarado «equivalente» trae **demostración ejecutable**; el reviewer **reproduce una muestra**, no todas | ⚠ la única que aumenta: **adoptarla ACOTADA** |
-| 6 | Quitar código defensivo para matar un mutante obliga a **verificar el invariante en quien construye el dato** | neutra, y muy oportuna |
-
-La 6 es especialmente pertinente ahora: con F-034, el mutador ataca las guardas
-`x is None`, y la salida fácil es **borrar la guarda**. Sin esa regla, F-034
-empuja a quitar justo las defensas que evitaron F-019 y F-027.
-
-**Aviso de coordinación**: las reglas 5 y 6 salieron de otra sesión, que las
-apuntó en **su** F-010 (que en `albaranes` es otra feature distinta: Easy Auth).
-Deben viajar por una sola vía o divergirán, que es lo que pasó cuando
-`arnes-base` era una carpeta suelta.
-
-**Sugerencia al arrancar**: que F-038 **cumpla sus propios topes** de tamaño.
-
----
 
 ## Pendientes del humano
 
-1. **`git push` de `arnes-base`**: 14 commits locales (todo lo posterior a la
-   1.6.0). Sin push, ese trabajo existe en un solo disco.
-2. **Actualizar los otros cuatro proyectos** cuando F-035 cierre. `partes` está
+1. **`git push` de `arnes-base`**: todo lo posterior a la 1.6.0 sigue sin subir.
+   Sin push, ese trabajo existe en un solo disco.
+2. **Actualizar los otros cuatro proyectos** (F-035 ya cerró). `partes` está
    en 1.4.0 y se saltaría cuatro versiones: es el escenario donde más ficheros
    aparecen «distintos». Con el instalador nuevo ya no puede pisar estado.
 3. **Retirar de la F-010 del otro proyecto** las dos reglas del arnés y apuntar
@@ -253,46 +243,26 @@ Altas relacionadas: **F-036** (los dos defectos, rigor `critico`), **F-037**
 - **Cuidado con las rutas de Windows en heredocs de Python**: `\U` de
   `C:\Users` se interpreta como escape unicode y mata el script.
 
-## F-038 · spec escrita (spec-author, 2026-08-20)
+## F-038 · lo que queda después del cierre
 
-Escrita `specs/F-038-coste-del-ciclo-sdd/` (requirements 118 líneas, design
-162, tasks 15 tareas + 1 posterior al merge). La spec cumple los topes que la
-propia feature establece.
-
-Decisiones tomadas en el design: D1 `ejecutor_para` con ruta `tests` en vez de
-`testpaths` en la raíz; D3 los topes de tamaño NO son retroactivos (la puerta
-mide solo la feature en curso, las 12 specs viejas quedan amnistiadas); D4
-ninguna de las seis reglas de mutación es puerta automática de `init.sh` (RM1,
-RM2, RM5 y RM6 pasan a checkbox de C4 bis; RM3 y RM4 a criterio del reviewer);
-D5 remedir F-012 NO entra, solo se estampa el aviso de invalidez; D6 el porte a
-`arnes-base` 1.7.0 va después del merge en `dev`.
-
-Las tres preguntas abiertas las **respondió el humano el 2026-08-20** y están
-escritas en `requirements.md` («Decisiones del humano»): semilla `20260820`
-fija; remedir F-012 NO entra aquí (se abre como **F-039**); y
-`nivel_por_defecto: estandar` se acepta sin revisar fichas, porque las 38
-features del backlog ya declaran rigor (30 `estandar`, 8 `critico`).
-
-## F-038 · implementada (implementer, 2026-08-20)
-
-T0–T14 hechas, un commit por tarea en `feature/F-038-coste-del-ciclo-sdd`.
-Detalle, trazas de fase RED y evidencias: **`progress/impl_F-038.md`**.
-Pendiente el APPROVED del reviewer; la feature sigue `in_progress`.
-
-Lo que queda declarado como deuda, fuera de esta rama:
-
-1. **F-039 — remedir `progress/mutacion_F-012.md`.** Sus 61 mutantes se
-   midieron con la invocación rota; el informe ya lleva la cabecera «CAMPAÑA NO
-   VÁLIDA» (T11) para que nadie los cite como evidencia. Con T0 hecho, esa
-   campaña ya se puede ejecutar.
-2. **`progress/mutacion_F-011.md` lleva la misma cabecera** y **no** tiene
-   ficha de remedición: todo su alcance (`evals/**`, `harness/rutas_sensibles.py`)
-   cae fuera de `services/`. Son 305 mutantes y 133 supervivientes, la campaña
-   más cara del repositorio: decide el humano si se abre otra F-0XX o se deja
-   invalidada. `progress/mutacion_F-034.md` NO se marcó: ya está remedido a
-   mano con la ruta acotada y lo documenta en su cabecera.
-3. **Porte a `arnes-base` como 1.7.0** (P1 de `tasks.md`): va **después** del
-   merge en `dev`, nunca dentro de esta rama. Su entrada en
-   `GUIA_INSTALACION.md` debe avisar de que `nivel_por_defecto` pasa a
-   `estandar` y de que las campañas de ese nivel quedan **muestreadas a 20
-   mutantes**: sus números no son comparables con los de versiones anteriores.
+1. **Porte a `arnes-base` como 1.7.0** (P1 de `tasks.md`), obligatorio por la
+   regla de propagación y **posterior al merge en `dev`**, nunca dentro de la
+   rama. Su entrada en `GUIA_INSTALACION.md` debe avisar de que
+   `nivel_por_defecto` pasa a `estandar` y de que las campañas de ese nivel
+   quedan **muestreadas a 20 mutantes**: sus números no son comparables con los
+   de versiones anteriores. Debe llevar ya los topes recalibrados
+   (150/250/220/140), no los originales.
+2. **`progress/mutacion_F-011.md` no tiene ficha de remedición y lleva la
+   cabecera «CAMPAÑA NO VÁLIDA»**: todo su alcance (`evals/**`,
+   `harness/rutas_sensibles.py`) cae fuera de `services/`, así que se midió con
+   la invocación rota. Son **305 mutantes y 133 supervivientes**, la campaña más
+   cara del repositorio. **Decide el humano**: se cuelga de F-039, se abre ficha
+   propia, o se deja invalidada. `mutacion_F-034.md` NO se marcó: ya está
+   remedido a mano con la ruta acotada y lo dice en su cabecera.
+3. **Deuda menor heredada por F-039** (observación 1 del reviewer): el filtro de
+   filas de reloj del test de paridad es una lista de prefijos escrita a mano, y
+   la cuarta fila de reloj que se añada volverá a romperlo. Propuesta: derivarlo
+   de una constante junto a `escribir_informe`.
+4. **RM2 solo dispara a 10×** y, con «Tiempo total» > 60 s, tampoco se reejecuta:
+   un informe «solo» cinco veces demasiado rápido pasaría. Aire deliberado, pero
+   queda dicho.

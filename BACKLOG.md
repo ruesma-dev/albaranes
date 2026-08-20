@@ -3,16 +3,13 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **39 features**, 31 abiertas, 8 terminadas.
-
-En curso: **F-038**.
+Resumen: **39 features**, 30 abiertas, 9 terminadas.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
 | F-039 | Arnes: estabilizar la suite de la raiz y remedir las campanas juzgadas con la invocacion rota | 2 | pendiente | estandar | `feature/F-039-remedir-campanas-invocacion-rota` |
-| F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | en curso | estandar | `feature/F-038-coste-del-ciclo-sdd` |
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | pendiente | critico | `feature/F-036-residuos-contenedores-e-incrementos` |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
@@ -54,6 +51,7 @@ En curso: **F-038**.
 | F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
 | F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | estandar |
 | F-012 | Campaña de mutación en paralelo | 3 | estandar |
+| F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | estandar |
 | F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
 
 ## Detalle
@@ -70,43 +68,13 @@ AMPLIADA EL 2026-08-20 con dos hallazgos del ciclo de F-038, por decision del hu
 
 (b) LA CAMPANA PARALELA NO SE PUEDE EJECUTAR EN ESTE REPOSITORIO. Con `--workers 5` la linea base ABORTA dentro del git worktree porque falla `test_f012_r1_r4_el_informe_paralelo_...`. Es anterior a F-038 y la linea base se comporto bien -abortar en vez de contar muertos falsos-, pero deja sin usar la paralelizacion que entrego F-012. Sospecha a verificar: el worktree no trae lo que ese test espera encontrar en disco.
 
-### F-038 · Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor
+ACTUALIZADA EL 2026-08-20 TRAS LA SEGUNDA PASADA DE REVIEW DE F-038, que determino con evidencia que parte de esta ficha YA ESTA HECHA:
 
-estado **en curso** · prioridad 3 · rigor `estandar` · SDD sí · rama `feature/F-038-coste-del-ciclo-sdd`
+- El hallazgo (a) -test inestable de la suite de la raiz- esta CERRADO por la tarea T17 de F-038. Era `test_f012_r1_r4_el_informe_paralelo_es_identico_al_de_la_campania_en_serie`: T5 de F-038 anadio al informe la fila de reloj `Media por mutante evaluado (s)` y nadie extendio el filtro que el test usa para ignorar las filas de reloj; bajo carga la serie redondeaba a 0.0 y la paralela a 0.1. Encaja con la prueba original: la campana corre con `-x`, asi que un fallo intermitente de CUALQUIER test se lee como MUERTO, y ese era el falso muerto de `mutacion.py:1781`. Criterio retirado de la aceptacion.
 
-Pedido por el humano el 2026-08-19 con cinco proyectos en marcha y consumo alto. Medicion de la sesion: los cuatro subagentes gastaron ~712.000 tokens (implementer F-034 234k, agente del arnes 1.6.0 206k, spec-author F-034 159k, spec-author F-035 113k) y progress/ acumula 12.250 lineas, con review_F-019.md en 1.365 e impl_F-019.md en 1.189. La campana de mutacion NO gasta tokens -es Python y pytest, gasta CPU-: el coste esta en el papeleo y en las repeticiones. Cada linea de spec se paga TRES veces: la escribe el spec-author, la lee el implementer y la relee el reviewer; las 978 lineas de la spec de F-035, para arreglar un script PowerShell, son casi mil lineas por tres.
+- El hallazgo (b) -la campana paralela aborta- tiene la CAUSA ELIMINADA pero NO CONFIRMADA. La ficha sospechaba que «el worktree no trae lo que ese test espera en disco»: REFUTADO, el test se fabrica su propio repositorio en `tmp_path` y su `Alcance` es un literal. Fallaba por el reloj, que ya esta arreglado. Queda solo ejecutar la campana con `--workers 5` y ver la linea base en verde: por eso el criterio pasa de «arreglar» a «verificar». No se hizo en la sesion del 20-ago porque son cinco suites simultaneas y en esta maquina dos suites a la vez tumban el proceso (0xC0000142).
 
-CUATRO PALANCAS APROBADAS POR EL HUMANO:
-
-(1) TOPES DE TAMANO. El arnes no dice nada del tamano y por eso los agentes escriben cuanto se les ocurre. Fijar en specs/SPECS.md y en los tres agentes: requirements.md <= 120 lineas, design.md <= 200, tasks.md sin tope duro pero una tarea por linea, informe de implementer <= 150, informe de review <= 100. Son topes, no objetivos: lo que no cabe se resume y se enlaza. Es la palanca de mas ahorro (40-50% del papeleo) y la mas barata.
-
-(2) COSTE DE LA MUTACION en harness/rigor.json: nivel_por_defecto pasa de 'critico' a 'estandar' (hoy toda feature que no declara rigor arrastra 0 supervivientes tolerados, que es el modo mas caro), y se anade max_mutantes POR NIVEL -20 en estandar con semilla fija para que sea reproducible, sin tope en critico-. harness/mutacion.py ya acepta --max-mutantes y --semilla: falta leerlos del nivel. Acota la campana y, sobre todo, el numero de supervivientes que hay que analizar por escrito, que es lo que de verdad cuesta.
-
-(3) UMBRAL DE REEJECUCION DEL REVIEWER de 5 minutos a 60 segundos (.claude/agents/reviewer.md y CHECKPOINTS.md C4 bis, introducidos hoy mismo en la 1.5.2). Sigue cubriendo el fraude de 'N muertos inventados' en campanas baratas y deja de duplicar el trabajo en las caras.
-
-(4) REVIEWER INCREMENTAL POR DEFECTO. En la pasada N el reviewer solo mira `git diff <ultimo-commit-aprobado>..HEAD`, no la feature entera. Se hizo a mano en F-019 ('lo aprobado hasta acb97ee queda dado por bueno y no se vuelve a mirar') pero no esta escrito en el arnes. Debe indicar en su informe desde que commit revisa.
-
-FUERA DE ALCANCE, DECIDIDO: (a) modelo por rol -el humano quiere Opus 5 siempre, no se toca-; (b) informes por delta en vez de reescritos, que toca el formato de todos los informes; (c) la regla de que toda feature con un numero de aceptacion lo fije en un test antes de implementar -es la que habria evitado los cuatro round trips de F-019-, que es un cambio de metodo y merece escribirse con calma aparte.
-
-ALCANCE: harness/rigor.json, harness/mutacion.py, specs/SPECS.md, .claude/agents/*.md, CHECKPOINTS.md, y el PORTE A arnes-base como 1.7.0 en el mismo trabajo (arnes-base va ya por 1.6.2, y esto vuelve a cambiar la vara de medir: sube de MENOR) (regla de propagacion: vale para los cinco proyectos). OJO: esto vuelve a cambiar la vara de medir, asi que la entrada de GUIA_INSTALACION.md debe decir que las campanas de nivel estandar pasan a estar muestreadas y sus numeros no son comparables con los anteriores.
-
-(5) ANADIDO EL 2026-08-19 POR EL REVIEWER DE F-034, y es requisito de fondo: HOY NO SE PUEDE MEDIR MUTACION SOBRE FICHEROS DE harness/ EN ESTE REPOSITORIO. `ejecutor_para` manda lo que no cae en ningun servicio a `python -m pytest` SIN RUTA; como la raiz no tiene configuracion de pytest (testpaths, rootdir), esa invocacion recoge services/**/tests y muere en la recoleccion. Hasta la 1.6.0 eso daba un FALSO VERDE silencioso -exit 1 = MUERTO, todos los mutantes 'muertos' sin que ningun test los juzgara-; desde la 1.6.0 la linea base lo detecta y ABORTA, que es mejor pero deja la campana sin poder ejecutarse. Arreglo propuesto: que `ejecutor_para` use `tests` como ruta para los ficheros que no caen en ningun servicio, o dar testpaths a la raiz. Afecta a TODAS las features del repositorio y en particular invalida progress/mutacion_F-012.md (61 mutantes medidos con la invocacion rota), que hay que repetir. Va aqui y no en F-034 porque es infraestructura del arnes, no alcance de aquella feature.
-
-(6) SEIS REGLAS DE REVISION DE CAMPANAS DE MUTACION, acordadas con el humano el 2026-08-19 y escritas aqui el 2026-08-20 (hasta hoy solo vivian en progress/current.md, que es memoria de sesion y no ficha). Cuatro salen del reviewer de F-034 y dos de otra sesion, que las apunto en SU F-010; deben viajar por esta unica via o divergiran, como paso cuando arnes-base era una carpeta suelta. Van a .claude/agents/reviewer.md y, las que sean puerta, a CHECKPOINTS.md:
-
-  R1. El informe de mutacion declara el SHA de HEAD contra el que se midio, y el reviewer comprueba que el alcance medido coincide con el alcance revisado. AHORRA MUCHO: habria evitado el primer rechazo de F-034 (~200k tokens), donde la rama crecio de 56 a 1.057 lineas despues de medir.
-
-  R2. Coherencia interna del tiempo: si el cociente tiempo_total/mutantes es muy inferior a lo que tarda la suite del modulo mutado, el informe se rechaza sin reejecutar nada. AHORRA MUCHO: habria cazado el segundo rechazo de F-034 (~350k), donde se declararon 18/1/0 en 111 s y la realidad era 9/8/2 en 63 min.
-
-  R3. Un mutante equivalente al original NO puede aparecer como MUERTO. Un solo caso invalida la campana entera. Es criterio de revision para el reviewer, NO puerta automatica en init.sh: no hay forma barata de decidir equivalencia por maquina.
-
-  R4. Tercera via de verificacion, entre creer el informe y repetir la campana: reejecutar el subconjunto de tests del modulo mutado sobre una COPIA en el scratchpad. En F-034 fueron 568 s en vez de 18 min, y no muta el arbol de trabajo.
-
-  R5. Un superviviente declarado 'equivalente' trae demostracion ejecutable, y el reviewer reproduce una MUESTRA, no todas. ES LA UNICA REGLA QUE AUMENTA EL COSTE, asi que va ACOTADA por decision del humano del 2026-08-20: se exige SOLO en features de rigor 'critico', y la muestra es UNA declarada equivalente, elegida por el reviewer. En rigor 'estandar' basta la justificacion escrita. Motivo de la acotacion: el caso que invalido F-034 fue un unico equivalente falso, y el rigor critico es donde estan dinero, produccion e infraestructura.
-
-  R6. Si para matar un mutante se quita codigo defensivo, hay que verificar el invariante en QUIEN CONSTRUYE EL DATO, y dejarlo escrito. Coste neutro y especialmente pertinente ahora: con F-034 el mutador ataca las guardas 'x is None' y la salida facil es borrar la guarda, que son justo las defensas cuya ausencia causo F-019 y F-027.
-
-NOTA DE COORDINACION: R5 y R6 estan hoy tambien anotadas en la F-010 de otro proyecto (en albaranes F-010 es Easy Auth, feature distinta). El humano debe retirarlas de alli y apuntar a esta ficha.
+DEUDA HEREDADA (observacion 1 del reviewer, no bloqueante): el filtro de filas de reloj de ese test es una lista de prefijos escrita a mano, asi que la cuarta fila de reloj que se anada volvera a romperlo. Propuesta: derivarlo de una constante junto a `escribir_informe`.
 
 ### F-036 · La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten
 
@@ -415,6 +383,44 @@ NOTA DE RAMA (2026-08-20): el codigo de esta feature vive en arnes-base, no aqui
 estado **terminada** · prioridad 3 · rigor `estandar` · SDD sí · rama `feature/F-012-mutacion-paralela`
 
 python -m harness.mutacion tarda minutos porque evalúa cada mutante en serie relanzando la suite. Paralelizarla: N workers, cada uno en su git worktree aislado, repartiéndose los mutantes; agregación de resultados en un único progress/mutacion_F-XXX.md idéntico al actual; restauración del árbol garantizada POR WORKER incluso ante excepción o Ctrl-C (la garantía actual, multiplicada); número de workers configurable en harness/rigor.json o parámetro --workers con default sensato (nº de núcleos - 2). La mejora es genérica del arnés: se porta a arnes-base en la misma feature. Criterio de éxito: mismo informe y mismos totales que la campaña en serie sobre la misma feature, en una fracción del tiempo.
+
+### F-038 · Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor
+
+estado **terminada** · prioridad 3 · rigor `estandar` · SDD sí · rama `feature/F-038-coste-del-ciclo-sdd`
+
+Pedido por el humano el 2026-08-19 con cinco proyectos en marcha y consumo alto. Medicion de la sesion: los cuatro subagentes gastaron ~712.000 tokens (implementer F-034 234k, agente del arnes 1.6.0 206k, spec-author F-034 159k, spec-author F-035 113k) y progress/ acumula 12.250 lineas, con review_F-019.md en 1.365 e impl_F-019.md en 1.189. La campana de mutacion NO gasta tokens -es Python y pytest, gasta CPU-: el coste esta en el papeleo y en las repeticiones. Cada linea de spec se paga TRES veces: la escribe el spec-author, la lee el implementer y la relee el reviewer; las 978 lineas de la spec de F-035, para arreglar un script PowerShell, son casi mil lineas por tres.
+
+CUATRO PALANCAS APROBADAS POR EL HUMANO:
+
+(1) TOPES DE TAMANO. El arnes no dice nada del tamano y por eso los agentes escriben cuanto se les ocurre. Fijar en specs/SPECS.md y en los tres agentes: requirements.md <= 120 lineas, design.md <= 200, tasks.md sin tope duro pero una tarea por linea, informe de implementer <= 150, informe de review <= 100. Son topes, no objetivos: lo que no cabe se resume y se enlaza. Es la palanca de mas ahorro (40-50% del papeleo) y la mas barata.
+
+(2) COSTE DE LA MUTACION en harness/rigor.json: nivel_por_defecto pasa de 'critico' a 'estandar' (hoy toda feature que no declara rigor arrastra 0 supervivientes tolerados, que es el modo mas caro), y se anade max_mutantes POR NIVEL -20 en estandar con semilla fija para que sea reproducible, sin tope en critico-. harness/mutacion.py ya acepta --max-mutantes y --semilla: falta leerlos del nivel. Acota la campana y, sobre todo, el numero de supervivientes que hay que analizar por escrito, que es lo que de verdad cuesta.
+
+(3) UMBRAL DE REEJECUCION DEL REVIEWER de 5 minutos a 60 segundos (.claude/agents/reviewer.md y CHECKPOINTS.md C4 bis, introducidos hoy mismo en la 1.5.2). Sigue cubriendo el fraude de 'N muertos inventados' en campanas baratas y deja de duplicar el trabajo en las caras.
+
+(4) REVIEWER INCREMENTAL POR DEFECTO. En la pasada N el reviewer solo mira `git diff <ultimo-commit-aprobado>..HEAD`, no la feature entera. Se hizo a mano en F-019 ('lo aprobado hasta acb97ee queda dado por bueno y no se vuelve a mirar') pero no esta escrito en el arnes. Debe indicar en su informe desde que commit revisa.
+
+FUERA DE ALCANCE, DECIDIDO: (a) modelo por rol -el humano quiere Opus 5 siempre, no se toca-; (b) informes por delta en vez de reescritos, que toca el formato de todos los informes; (c) la regla de que toda feature con un numero de aceptacion lo fije en un test antes de implementar -es la que habria evitado los cuatro round trips de F-019-, que es un cambio de metodo y merece escribirse con calma aparte.
+
+ALCANCE: harness/rigor.json, harness/mutacion.py, specs/SPECS.md, .claude/agents/*.md, CHECKPOINTS.md, y el PORTE A arnes-base como 1.7.0 en el mismo trabajo (arnes-base va ya por 1.6.2, y esto vuelve a cambiar la vara de medir: sube de MENOR) (regla de propagacion: vale para los cinco proyectos). OJO: esto vuelve a cambiar la vara de medir, asi que la entrada de GUIA_INSTALACION.md debe decir que las campanas de nivel estandar pasan a estar muestreadas y sus numeros no son comparables con los anteriores.
+
+(5) ANADIDO EL 2026-08-19 POR EL REVIEWER DE F-034, y es requisito de fondo: HOY NO SE PUEDE MEDIR MUTACION SOBRE FICHEROS DE harness/ EN ESTE REPOSITORIO. `ejecutor_para` manda lo que no cae en ningun servicio a `python -m pytest` SIN RUTA; como la raiz no tiene configuracion de pytest (testpaths, rootdir), esa invocacion recoge services/**/tests y muere en la recoleccion. Hasta la 1.6.0 eso daba un FALSO VERDE silencioso -exit 1 = MUERTO, todos los mutantes 'muertos' sin que ningun test los juzgara-; desde la 1.6.0 la linea base lo detecta y ABORTA, que es mejor pero deja la campana sin poder ejecutarse. Arreglo propuesto: que `ejecutor_para` use `tests` como ruta para los ficheros que no caen en ningun servicio, o dar testpaths a la raiz. Afecta a TODAS las features del repositorio y en particular invalida progress/mutacion_F-012.md (61 mutantes medidos con la invocacion rota), que hay que repetir. Va aqui y no en F-034 porque es infraestructura del arnes, no alcance de aquella feature.
+
+(6) SEIS REGLAS DE REVISION DE CAMPANAS DE MUTACION, acordadas con el humano el 2026-08-19 y escritas aqui el 2026-08-20 (hasta hoy solo vivian en progress/current.md, que es memoria de sesion y no ficha). Cuatro salen del reviewer de F-034 y dos de otra sesion, que las apunto en SU F-010; deben viajar por esta unica via o divergiran, como paso cuando arnes-base era una carpeta suelta. Van a .claude/agents/reviewer.md y, las que sean puerta, a CHECKPOINTS.md:
+
+  R1. El informe de mutacion declara el SHA de HEAD contra el que se midio, y el reviewer comprueba que el alcance medido coincide con el alcance revisado. AHORRA MUCHO: habria evitado el primer rechazo de F-034 (~200k tokens), donde la rama crecio de 56 a 1.057 lineas despues de medir.
+
+  R2. Coherencia interna del tiempo: si el cociente tiempo_total/mutantes es muy inferior a lo que tarda la suite del modulo mutado, el informe se rechaza sin reejecutar nada. AHORRA MUCHO: habria cazado el segundo rechazo de F-034 (~350k), donde se declararon 18/1/0 en 111 s y la realidad era 9/8/2 en 63 min.
+
+  R3. Un mutante equivalente al original NO puede aparecer como MUERTO. Un solo caso invalida la campana entera. Es criterio de revision para el reviewer, NO puerta automatica en init.sh: no hay forma barata de decidir equivalencia por maquina.
+
+  R4. Tercera via de verificacion, entre creer el informe y repetir la campana: reejecutar el subconjunto de tests del modulo mutado sobre una COPIA en el scratchpad. En F-034 fueron 568 s en vez de 18 min, y no muta el arbol de trabajo.
+
+  R5. Un superviviente declarado 'equivalente' trae demostracion ejecutable, y el reviewer reproduce una MUESTRA, no todas. ES LA UNICA REGLA QUE AUMENTA EL COSTE, asi que va ACOTADA por decision del humano del 2026-08-20: se exige SOLO en features de rigor 'critico', y la muestra es UNA declarada equivalente, elegida por el reviewer. En rigor 'estandar' basta la justificacion escrita. Motivo de la acotacion: el caso que invalido F-034 fue un unico equivalente falso, y el rigor critico es donde estan dinero, produccion e infraestructura.
+
+  R6. Si para matar un mutante se quita codigo defensivo, hay que verificar el invariante en QUIEN CONSTRUYE EL DATO, y dejarlo escrito. Coste neutro y especialmente pertinente ahora: con F-034 el mutador ataca las guardas 'x is None' y la salida facil es borrar la guarda, que son justo las defensas cuya ausencia causo F-019 y F-027.
+
+NOTA DE COORDINACION: R5 y R6 estan hoy tambien anotadas en la F-010 de otro proyecto (en albaranes F-010 es Easy Auth, feature distinta). El humano debe retirarlas de alli y apuntar a esta ficha.
 
 ### F-002 · Tanda 1 — Identificación de obra y proveedor (G1+G2)
 
