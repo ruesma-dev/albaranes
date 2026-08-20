@@ -197,3 +197,44 @@ criterio de aceptación (139,66 €) NO se cumplía. Dos round trips más:
   de 1000 podría reinterpretar un albarán legítimo, que queda siempre marcado.
 - PENDIENTE del humano: las verificaciones MANUAL de T10 y decidir qué
   histórico se revalora (R26/D5: sin script de backfill, se sanea desde sv4).
+
+### F-034 — el mutador muta `is` / `is not` (cerrada 2026-08-20)
+
+- **Por qué importaba**: `x is None` es LA guarda de ausencia en Python y el
+  mutador no la conocía. Los dos defectos más caros del proyecto vivían en una
+  guarda `is` —el `cantidad is None` que mataba la red KG→TN de F-027
+  (468.763 €) y el `importe_albaran_declarado is not None` de F-019—, así que
+  sus campañas de mutación se midieron ciegas justo en el punto que más
+  importaba, declarando «0 supervivientes».
+- **Entregado**: `ast.Is`/`ast.IsNot` en `COMPARACIONES`, delimitación por
+  palabra entera para los operadores alfabéticos (`is` cabe dentro de
+  «análisis»), y la puerta de evals condicionada a lo **versionado**: el
+  `evals/ground_truth/` que la feature daba por inexistente **sí existe**, con
+  seis `.xlsx`, pero `.gitignore` los excluye.
+- **Tres pasadas de review, y las dos primeras acertaron.** La 1ª rechazó por un
+  error del LÍDER: propagar el arnés 1.6.0 dentro de la rama de la feature
+  después de medir las puertas (56 líneas declaradas, 1.057 reales). Se resolvió
+  revirtiendo. **Regla que queda**: la propagación del arnés va en rama `chore/`
+  y después del merge.
+- La 2ª demostró que **la campaña de mutación mentía**: 18/1/0 en 111 s frente a
+  9/8/2 al reejecutar. Dos mutantes declarados muertos eran semánticamente
+  idénticos al original —imposibles de matar—, y de los 8 supervivientes
+  **cuatro eran huecos reales** en el delimitador de palabra. Se cerraron con
+  tests. Sin esa insistencia la feature habría cerrado con cuatro agujeros.
+- **Causa probable de los falsos muertos**: bytecode rancio (CPython reutiliza
+  el `.pyc` entre mutantes consecutivos). Lo arregla el arnés 1.6.0.
+- **Coste**: ~600k tokens en dos implementers y tres reviewers. De ahí sale
+  F-038, y las seis reglas de protocolo que la acompañan.
+
+### Arnés 1.6.0 y 1.6.1 (2026-08-19 y 20)
+
+- **1.6.0** — la campaña de mutación deja de poder mentir: línea base
+  obligatoria, veredicto no binario (`BASE_ROTA`), restauración a prueba de
+  muerte con centinela en disco, e `init.sh` que reconoce una campaña en curso.
+  Más el porte de `is`/`is not` de F-034. Montar su prueba de verdad destapó
+  dos defectos más: el aborto no nombraba nada cuando la suite muere en la
+  RECOLECCIÓN, y el **bytecode rancio**. Evidencia medida sobre un repositorio de
+  juguete: control 5/2/3, ANTES (paralelo) 5/5/0 declarándose fiable, DESPUÉS
+  aborta nombrando el test culpable.
+- **1.6.1** — el instalador ya no puede pisar estado del proyecto (F-035).
+- Propagado a `albaranes`; los otros cuatro proyectos siguen atrás a propósito.
