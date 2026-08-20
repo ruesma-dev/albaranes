@@ -212,3 +212,24 @@ def test_f038_r16_el_cli_mide_una_sola_feature(
 
     assert main(["--feature", "F-100", "--raiz", str(raiz)]) == 0
     assert "F-019" not in capsys.readouterr().out
+
+
+# --- R15: la puerta dentro del portero --------------------------------------
+
+
+def test_f038_r15_init_sh_mide_el_tamano_de_la_feature_en_curso() -> None:
+    """La puerta vive en el portero, no en la buena voluntad de quien pasa."""
+    portero = Path("harness/init.sh").read_text(encoding="utf-8", errors="replace")
+
+    assert "7 quater" in portero, "la sección declarada en el diseño"
+    assert "python -m harness.tamano" in portero or "harness.tamano" in portero
+    assert "PUERTA TAMAÑO" in portero
+
+
+def test_f038_r15_init_sh_declara_na_con_motivo_cuando_no_hay_feature() -> None:
+    """N/A a secas es un checkbox vacío: el motivo se imprime."""
+    portero = Path("harness/init.sh").read_text(encoding="utf-8", errors="replace")
+    seccion = portero.split("7 quater", 1)[1].split("--- 8.", 1)[0]
+
+    assert "PUERTA TAMAÑO: N/A" in seccion
+    assert "feature_de_rama" in seccion, "la feature en curso se resuelve como en 7b"
