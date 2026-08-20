@@ -171,7 +171,7 @@ más muertos, más baja la media. La alarma pasa a ser el **salto de orden de ma
 
 La primera pasada de `init.sh` salió en **rojo** por
 `test_f012_r1_r4_el_informe_paralelo_es_identico_al_de_la_campania_en_serie`, que
-compara los dos informes filtrando las filas de reloj: ya excluía `| Tiempo total`, pero **T5 de esta misma feature** añadió `| Media por mutante evaluado (s)` —que es `segundos / evaluados`, el mismo reloj— sin extender el filtro. En máquina cargada la serie redondeaba a 0.0 y la paralela a 0.1: falló 4 de 5 veces seguidas (traza en el mensaje del commit). Arreglado extendiendo el filtro; 6 de 6 verdes después. **No se toca lógica de producción**, solo el filtro del test: la campaña de mutación sigue valiendo.
+compara los dos informes filtrando las filas de reloj: ya excluía `| Tiempo total`, pero **T5 de esta misma feature** añadió `| Media por mutante evaluado (s)` —que es `segundos / evaluados`, el mismo reloj— sin extender el filtro. En máquina cargada la serie redondeaba a 0.0 y la paralela a 0.1: falló 4 de 5 veces seguidas, con esta traza: `E   AssertionError: assert [...] == [...]` / `E     At index 24 diff: '| Media por mutante evaluado (s) | 0.1 |' != '| Media por mutante evaluado (s) | 0.0 |'`. Arreglado extendiendo el filtro; 6 de 6 verdes después. **No se toca lógica de producción**, solo el filtro del test: la campaña de mutación sigue valiendo.
 
 ## Fase RED · T15 — tests en los números nuevos, `rigor.json` y documentos aún en los viejos (`python -m pytest tests/test_f038_r13_r16_tamano.py tests/test_f038_r17_r21_documentos.py -q`):
 
