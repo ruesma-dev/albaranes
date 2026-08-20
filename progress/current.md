@@ -267,12 +267,32 @@ RM2, RM5 y RM6 pasan a checkbox de C4 bis; RM3 y RM4 a criterio del reviewer);
 D5 remedir F-012 NO entra, solo se estampa el aviso de invalidez; D6 el porte a
 `arnes-base` 1.7.0 va después del merge en `dev`.
 
-Pendiente de validar por el humano (las tres preguntas abiertas del final de
-`requirements.md`):
+Las tres preguntas abiertas las **respondió el humano el 2026-08-20** y están
+escritas en `requirements.md` («Decisiones del humano»): semilla `20260820`
+fija; remedir F-012 NO entra aquí (se abre como **F-039**); y
+`nivel_por_defecto: estandar` se acepta sin revisar fichas, porque las 38
+features del backlog ya declaran rigor (30 `estandar`, 8 `critico`).
 
-1. Semilla fija propuesta para el nivel `estandar`: `20260820`.
-2. Remedición de `progress/mutacion_F-012.md` (61 mutantes con la invocación
-   rota): ¿feature nueva o basta el aviso en cabecera?
-3. `nivel_por_defecto: estandar` deja sin `supervivientes_maximos: 0` a toda
-   feature que no declare rigor: ¿se aceptan o se revisan las fichas de
-   dinero/producción antes del cambio?
+## F-038 · implementada (implementer, 2026-08-20)
+
+T0–T14 hechas, un commit por tarea en `feature/F-038-coste-del-ciclo-sdd`.
+Detalle, trazas de fase RED y evidencias: **`progress/impl_F-038.md`**.
+Pendiente el APPROVED del reviewer; la feature sigue `in_progress`.
+
+Lo que queda declarado como deuda, fuera de esta rama:
+
+1. **F-039 — remedir `progress/mutacion_F-012.md`.** Sus 61 mutantes se
+   midieron con la invocación rota; el informe ya lleva la cabecera «CAMPAÑA NO
+   VÁLIDA» (T11) para que nadie los cite como evidencia. Con T0 hecho, esa
+   campaña ya se puede ejecutar.
+2. **`progress/mutacion_F-011.md` lleva la misma cabecera** y **no** tiene
+   ficha de remedición: todo su alcance (`evals/**`, `harness/rutas_sensibles.py`)
+   cae fuera de `services/`. Son 305 mutantes y 133 supervivientes, la campaña
+   más cara del repositorio: decide el humano si se abre otra F-0XX o se deja
+   invalidada. `progress/mutacion_F-034.md` NO se marcó: ya está remedido a
+   mano con la ruta acotada y lo documenta en su cabecera.
+3. **Porte a `arnes-base` como 1.7.0** (P1 de `tasks.md`): va **después** del
+   merge en `dev`, nunca dentro de esta rama. Su entrada en
+   `GUIA_INSTALACION.md` debe avisar de que `nivel_por_defecto` pasa a
+   `estandar` y de que las campañas de ese nivel quedan **muestreadas a 20
+   mutantes**: sus números no son comparables con los de versiones anteriores.
