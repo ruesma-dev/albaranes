@@ -1421,10 +1421,32 @@ def escribir_informe(informe: InformeMutacion, ruta: Path) -> None:
         f"| Sin veredicto (base rota) | {len(informe.base_rota)} |",
         f"| Tiempo total | {informe.segundos:.1f} s |",
     ]
+    # RM1: sin el commit medido, un informe sigue pareciendo válido después de
+    # que la rama crezca mil líneas. RM2: con la línea base y la media por
+    # mutante juntas, una campaña imposiblemente rápida se ve leyendo. Las tres
+    # filas se imprimen SIEMPRE; lo que no se sabe se dice `n/d`, porque un cero
+    # se lee como medición y una fila ausente, como descuido.
+    lineas.append(
+        f"| SHA de HEAD medido | `{informe.sha_head}` |"
+        if informe.sha_head
+        else "| SHA de HEAD medido | n/d |"
+    )
+    if informe.segundos_linea_base:
+        for etiqueta, segundos in sorted(informe.segundos_linea_base.items()):
+            lineas.append(f"| Línea base (s) — `{etiqueta}` | {segundos:.1f} |")
+    else:
+        lineas.append("| Línea base (s) | n/d |")
+    media = informe.segundos_por_mutante
+    lineas.append(
+        f"| Media por mutante evaluado (s) | {media:.1f} |"
+        if media is not None
+        else "| Media por mutante evaluado (s) | n/d |"
+    )
     if informe.muestreado:
         lineas.append(
             f"| Muestreo | sí — {informe.evaluados} de {informe.generados} "
-            f"mutantes, semilla `{informe.semilla}` |"
+            f"mutantes, semilla `{informe.semilla}`, nivel "
+            f"`{informe.nivel or 'n/d'}` |"
         )
     else:
         lineas.append("| Muestreo | no: campaña completa |")
@@ -1813,6 +1835,9 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
         centinela.cerrar()
 
     destino = Path(opciones.salida or f"progress/mutacion_{opciones.feature}.md")
+    # Quién fijó el muestreo lo sabe el CLI, no la campaña: el informe tiene que
+    # decirlo para que se pueda repetir con los mismos mutantes (R9).
+    informe.nivel = nivel
     escribir_informe(informe, destino)
     print(
         f"{informe.evaluados} mutantes evaluados, {informe.muertos} muertos, "

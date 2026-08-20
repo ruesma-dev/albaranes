@@ -27,9 +27,11 @@ from harness.mutacion import (
     PYTEST_OK,
     BaseRota,
     InformeMutacion,
+    Mutante,
     ResultadoSuite,
     comprobar_linea_base,
     ejecutar_campania,
+    escribir_informe,
     sha_de_head,
 )
 from harness.mutacion_paralela import fusionar
@@ -176,3 +178,88 @@ def test_f038_r12_sin_parciales_no_hay_dato_que_propagar() -> None:
 
     assert informe.sha_head is None
     assert informe.segundos_linea_base == {}
+
+
+# --- R9, R10, R11, R12: lo que se lee en el informe -------------------------
+
+
+def _informe_escrito(tmp_path: Path, **campos) -> str:
+    alcance = _alcance()
+    mutante = Mutante(
+        fichero="app.py",
+        linea=3,
+        col=11,
+        original="return True",
+        mutado="return False",
+        operador="booleano",
+    )
+    informe = InformeMutacion(
+        feature="F-999",
+        alcance=alcance,
+        generados=campos.pop("generados", 1),
+        muertos=1,
+        mutantes_evaluados=[mutante],
+        segundos=60.0,
+        **campos,
+    )
+    ruta = tmp_path / "mutacion_F-999.md"
+    escribir_informe(informe, ruta)
+    return ruta.read_text(encoding="utf-8")
+
+
+def test_f038_r10_el_informe_declara_el_sha_completo_contra_el_que_se_midio(
+    tmp_path: Path,
+) -> None:
+    texto = _informe_escrito(tmp_path, sha_head="b" * 40)
+
+    assert f"| SHA de HEAD medido | `{'b' * 40}` |" in texto
+
+
+def test_f038_r11_el_informe_declara_la_linea_base_y_la_media_por_mutante(
+    tmp_path: Path,
+) -> None:
+    """Con estos dos números, RM2 se comprueba leyendo, sin reejecutar nada."""
+    texto = _informe_escrito(tmp_path, segundos_linea_base={"services/sv2": 118.4})
+
+    assert "| Línea base (s) — `services/sv2` | 118.4 |" in texto
+    assert "| Media por mutante evaluado (s) | 60.0 |" in texto
+
+
+def test_f038_r12_sin_datos_el_informe_dice_n_d_y_no_omite_la_fila(
+    tmp_path: Path,
+) -> None:
+    """Un cero se lee como medición; una fila ausente se lee como descuido."""
+    texto = _informe_escrito(tmp_path)
+
+    assert "| SHA de HEAD medido | n/d |" in texto
+    assert "| Línea base (s) | n/d |" in texto
+    assert "| Línea base (s) | 0" not in texto
+
+
+def test_f038_r12_sin_mutantes_evaluados_la_media_tambien_es_n_d(
+    tmp_path: Path,
+) -> None:
+    alcance = _alcance()
+    ruta = tmp_path / "vacio.md"
+    escribir_informe(InformeMutacion(feature="F-999", alcance=alcance), ruta)
+
+    assert "| Media por mutante evaluado (s) | n/d |" in ruta.read_text(encoding="utf-8")
+
+
+def test_f038_r9_una_campania_muestreada_declara_cuantos_semilla_y_nivel(
+    tmp_path: Path,
+) -> None:
+    texto = _informe_escrito(
+        tmp_path,
+        generados=61,
+        muestreado=True,
+        max_mutantes=20,
+        semilla=20260820,
+        nivel="estandar",
+    )
+
+    assert "Muestreo | sí — 1 de 61 mutantes, semilla `20260820`, nivel `estandar`" in texto
+
+
+def test_f038_r9_una_campania_completa_lo_sigue_diciendo_asi(tmp_path: Path) -> None:
+    assert "| Muestreo | no: campaña completa |" in _informe_escrito(tmp_path)
