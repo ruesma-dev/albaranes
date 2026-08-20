@@ -77,6 +77,22 @@ ALCANCE: harness/rigor.json, harness/mutacion.py, specs/SPECS.md, .claude/agents
 
 (5) ANADIDO EL 2026-08-19 POR EL REVIEWER DE F-034, y es requisito de fondo: HOY NO SE PUEDE MEDIR MUTACION SOBRE FICHEROS DE harness/ EN ESTE REPOSITORIO. `ejecutor_para` manda lo que no cae en ningun servicio a `python -m pytest` SIN RUTA; como la raiz no tiene configuracion de pytest (testpaths, rootdir), esa invocacion recoge services/**/tests y muere en la recoleccion. Hasta la 1.6.0 eso daba un FALSO VERDE silencioso -exit 1 = MUERTO, todos los mutantes 'muertos' sin que ningun test los juzgara-; desde la 1.6.0 la linea base lo detecta y ABORTA, que es mejor pero deja la campana sin poder ejecutarse. Arreglo propuesto: que `ejecutor_para` use `tests` como ruta para los ficheros que no caen en ningun servicio, o dar testpaths a la raiz. Afecta a TODAS las features del repositorio y en particular invalida progress/mutacion_F-012.md (61 mutantes medidos con la invocacion rota), que hay que repetir. Va aqui y no en F-034 porque es infraestructura del arnes, no alcance de aquella feature.
 
+(6) SEIS REGLAS DE REVISION DE CAMPANAS DE MUTACION, acordadas con el humano el 2026-08-19 y escritas aqui el 2026-08-20 (hasta hoy solo vivian en progress/current.md, que es memoria de sesion y no ficha). Cuatro salen del reviewer de F-034 y dos de otra sesion, que las apunto en SU F-010; deben viajar por esta unica via o divergiran, como paso cuando arnes-base era una carpeta suelta. Van a .claude/agents/reviewer.md y, las que sean puerta, a CHECKPOINTS.md:
+
+  R1. El informe de mutacion declara el SHA de HEAD contra el que se midio, y el reviewer comprueba que el alcance medido coincide con el alcance revisado. AHORRA MUCHO: habria evitado el primer rechazo de F-034 (~200k tokens), donde la rama crecio de 56 a 1.057 lineas despues de medir.
+
+  R2. Coherencia interna del tiempo: si el cociente tiempo_total/mutantes es muy inferior a lo que tarda la suite del modulo mutado, el informe se rechaza sin reejecutar nada. AHORRA MUCHO: habria cazado el segundo rechazo de F-034 (~350k), donde se declararon 18/1/0 en 111 s y la realidad era 9/8/2 en 63 min.
+
+  R3. Un mutante equivalente al original NO puede aparecer como MUERTO. Un solo caso invalida la campana entera. Es criterio de revision para el reviewer, NO puerta automatica en init.sh: no hay forma barata de decidir equivalencia por maquina.
+
+  R4. Tercera via de verificacion, entre creer el informe y repetir la campana: reejecutar el subconjunto de tests del modulo mutado sobre una COPIA en el scratchpad. En F-034 fueron 568 s en vez de 18 min, y no muta el arbol de trabajo.
+
+  R5. Un superviviente declarado 'equivalente' trae demostracion ejecutable, y el reviewer reproduce una MUESTRA, no todas. ES LA UNICA REGLA QUE AUMENTA EL COSTE, asi que va ACOTADA por decision del humano del 2026-08-20: se exige SOLO en features de rigor 'critico', y la muestra es UNA declarada equivalente, elegida por el reviewer. En rigor 'estandar' basta la justificacion escrita. Motivo de la acotacion: el caso que invalido F-034 fue un unico equivalente falso, y el rigor critico es donde estan dinero, produccion e infraestructura.
+
+  R6. Si para matar un mutante se quita codigo defensivo, hay que verificar el invariante en QUIEN CONSTRUYE EL DATO, y dejarlo escrito. Coste neutro y especialmente pertinente ahora: con F-034 el mutador ataca las guardas 'x is None' y la salida facil es borrar la guarda, que son justo las defensas cuya ausencia causo F-019 y F-027.
+
+NOTA DE COORDINACION: R5 y R6 estan hoy tambien anotadas en la F-010 de otro proyecto (en albaranes F-010 es Easy Auth, feature distinta). El humano debe retirarlas de alli y apuntar a esta ficha.
+
 ### F-036 · La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten
 
 estado **pendiente** · prioridad 4 · rigor `critico` · SDD sí · rama `feature/F-036-residuos-contenedores-e-incrementos`
