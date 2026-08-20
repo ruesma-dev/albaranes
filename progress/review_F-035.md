@@ -406,3 +406,301 @@ anterior en la mano. Lo que falta es que la red que lo vigila cubra las dos
 mitades del arreglo, no solo la que da miedo: **el estado ya no se pisa (bien
 probado), pero que el arnés genérico siga aplicándose sin interrogatorio no lo
 prueba nadie**, y ese interrogatorio es la mitad de la historia del 2026-08-19.
+
+---
+
+# Segunda pasada (2026-08-20)
+
+**Veredicto: APPROVED**, con tres condiciones de cierre nombradas al final que
+son de bookkeeping del líder, no cambios de producto.
+
+**Desde dónde reviso.** Revisión **incremental**: solo
+`git -C ...\arnes-base diff b6ac623..HEAD` (cuatro commits: `efdfbe7`,
+`d64be41`, `d937012`, `9e2ced7`) más los cambios documentales de `albaranes`
+desde `0762f2b` (`c86b488`, `b1f7924`). Todo lo que la primera pasada dio por
+bueno —la política contra el payload real, las cinco decisiones del humano, la
+fase RED contra `89a9ba9`, las filas M1 y M3 de la campaña manual— queda dado
+por bueno y no se vuelve a mirar.
+
+Entregado ahora como **1.6.2**. `arnes-base` limpio
+(`git status --porcelain` vacío) y sin `push`, comprobado por mí en los dos
+repositorios.
+
+---
+
+## CR-1 · CERRADO. El mutante MR1 muere, y lo he matado yo
+
+Era el punto crítico del encargo, así que no me he fiado del informe. Copié el
+árbol de `arnes-base` al scratchpad, apliqué **la misma mutación** que encontró
+la primera pasada —`instalar_arnes.ps1`, hoy línea 481,
+`    if ($cat -eq 'puro' -and -not $PreguntarTodo -and -not $SoloDiff) {` →
+`    if ($false) {`, con `assert` de que el literal aparecía **exactamente una
+vez** antes de sustituir— y ejecuté la suite entera:
+
+```
+### P14 - el arnes puro se aplica sin preguntar; -PreguntarTodo si pregunta (R11, R12)
+  [FALLO] sin -Forzar, el arnes puro se pone al dia igualmente (R11)
+          aparece <MODIFICADO POR EL PROYECTO> y no deberia
+  [FALLO] y el resumen lo da por actualizado
+          no aparece <[ACTUALIZADO] .claude/agents/leader.md> en la salida
+  [FALLO] no se ha preguntado por el
+          aparece <.claude/agents/leader.md : [N] conservar el tuyo> y no deberia
+...
+FALLOS: 4 de 65 comprobaciones.
+```
+
+**MUERTO.** Donde antes salía `TODO VERDE: 47 comprobaciones`, ahora caen tres
+aserciones de P14 y una cuarta de propina: P15 detecta que el prompt de
+`leader.md` también pasa por el diálogo (`esperado <1>, obtenido <2>` en la
+cuenta de «Sin consola de la que leer»). El agujero no solo está tapado: está
+tapado por dos sitios.
+
+Sobre el diseño de P14, dos aciertos que merecen constar. Usa **el literal
+exacto del prompt** (`.claude/agents/leader.md : [N] conservar el tuyo`) en vez
+de buscar la ruta suelta, que aparecería igualmente dentro de un diff —el mismo
+cuidado que ya tenía P6—. Y para R12 monta un **escenario nuevo**, porque en el
+anterior `leader.md` ya había quedado al día y no habría nada que preguntar: es
+la clase de detalle que convierte un caso en verde permanente sin que nadie se
+entere.
+
+Suite limpia, restaurando la copia: **TODO VERDE: 65 comprobaciones**, exit 0,
+**67 s** (eran 47 y 42 s en la 1.6.1).
+
+## CR-2 · CERRADO, y P15 llega de verdad al `catch`
+
+Dos mitades, las dos comprobadas.
+
+**El comentario de P4 ya no miente.** Dice ahora lo contrario de lo que decía
+—que redirigir la entrada estándar a un fichero vacío **no** es la consola no
+interactiva— y remite a P15. Mejor todavía: P4 **añade la aserción que lo
+fija**, `Assert-Contiene $r.Texto '(Intro) se CONSERVA CLAUDE.md'`. Eso convierte
+el comentario en algo comprobable: si alguien cambiase el arnés para que esa
+redirección cayera por el `catch`, P4 fallaría en vez de seguir en verde
+diciendo una cosa y probando otra. Un comentario corregido se vuelve a pudrir;
+una aserción, no.
+
+**R15 ya tiene caso, y no es de adorno.** P15 lanza `powershell.exe` con
+`-NonInteractive` (switch `-SinConsola` nuevo en `Invoke-Instalador`), que es lo
+único que hace que `Read-Host` **lance excepción** en lugar de devolver cadena
+vacía. Que llega al `catch` lo prueba la propia aserción
+`'Sin consola de la que leer'`, pero eso solo demuestra que la rama se ejecuta,
+no que se compruebe lo que hace. Así que generé **un mutante propio**, distinto
+de los del informe, dentro del `catch` (línea 523):
+
+| Mutante | Sustitución | Resultado |
+|---|---|---|
+| **MR2** (mío) | `            $respuesta = 'n'` → `            $respuesta = 's'` | **MUERTO**: 2 de 65, **las dos en P15** («CLAUDE.md se conserva, que es lo seguro» y «el resumen lo da por conservado») |
+
+Muere solo ahí, que es exactamente lo que debe pasar: ningún otro caso alcanza
+esa rama. Sin P15 el mutante sobrevivía entero, tal como declara `d64be41`.
+
+Y P15 comprueba además que **se intenta una sola vez** contando las apariciones
+del mensaje. No es cosmético: hasta la 1.6.0 se preguntaba cinco veces, y en una
+consola sin entrada eso es un bucle que cuelga a quien lance el instalador. Es
+justamente el modo de fallo que un agente automatizado sufriría en silencio.
+
+## CR-3 · CERRADO. Verificado por dos vías independientes
+
+**(a) Que P16 es guarda de verdad, no acompañamiento.** Revertí el arreglo en la
+copia del scratchpad —volviendo a `Join-Path (Join-Path ...) ...` **fuera** del
+`try`, la forma de la 1.6.1— y ejecuté la suite:
+
+```
+### P16 - raiz de backup irresoluble: exit 4, mensaje propio y nada escrito (R18)
+  [FALLO] sale con el codigo 4 ...  esperado <4>, obtenido <1>
+  [FALLO] imprime el diagnostico
+  [FALLO] y dice que hacer
+  [FALLO] no hay volcado de excepcion en crudo -- aparece <Join-Path> y no deberia
+  [OK]    no ha escrito nada en el destino
+```
+
+Cuatro de cinco, y **la quinta pasa**: el resultado seguro se salvaba también
+antes. Esa quinta aserción en verde es la que hace honesto el caso —dice la
+verdad sobre qué estaba mal y qué no—, y coincide fila a fila con lo que declara
+`d937012`.
+
+**(b) Ejecución manual del instalador REAL**, fuera de la suite, contra un
+repositorio de mentira montado por mí en el scratchpad y con una letra de unidad
+que en esta máquina no existe:
+
+```
+=== Arnes v1.6.2 (2026-08-20) -> ...\scratchpad\p2\destino
+Rama del destino: master (8b945b9)
+No puedo crear el directorio de backup en Z:\no_existe_backup\destino\20260820-112810
+  No se encuentra la unidad. No existe ninguna unidad con el nombre 'Z'.
+Se aborta ANTES de escribir nada en el destino. Prueba con -DirBackup <ruta>.
+EXITCODE=4
+--- el destino sigue intacto? ---
+MODIFICADO POR EL PROYECTO
+```
+
+Está todo lo que faltaba: el **exit 4** en vez del 1 que ya significaba otra
+cosa, el diagnóstico, **la causa** («no existe ninguna unidad con el nombre
+'Z'») y **qué hacer**, sin una línea de traza de PowerShell. Y el destino
+intacto.
+
+Dos detalles del arreglo que están bien pensados. `[IO.Path]::Combine` es
+composición de cadenas pura y no resuelve la unidad, así que el fallo lo levanta
+`New-Item` **dentro** del `try`, que es donde tiene que salir. Y P16 **busca una
+letra libre en la máquina** en vez de cablear `Z:`, con el comentario que
+explica por qué: en otra máquina `Z:` puede ser una unidad de red montada y el
+caso dejaría de probar lo que dice probar. Eso es un test que sigue siendo
+verdad fuera de aquí.
+
+También es correcto que la aserción sea `Assert-NoContiene $r.Texto 'Join-Path'`
+y no el texto del error: el texto cambia con el idioma de Windows y el nombre
+del cmdlet no. Sigue siendo la guarda exacta de la regresión.
+
+## Commit extra `9e2ced7` · OK, y no ha pisado nada
+
+Comprobado lo que pedía el encargo, que era el riesgo real de este porte:
+
+- **Solo añade lo que dice.** En el diff completo del fichero de tests hay
+  **una única línea borrada** en todo el commit: el `from harness.mutacion
+  import ...` que se reescribe en bloque para meter `_delimitado` y
+  `_es_palabra`. Todo lo demás son inserciones: los tres tests y el fixture
+  `FUENTE_COMENTARIO_ISLA`.
+- **La variante genérica del último test sigue en pie.** `arnes-base` termina
+  con `test_la_declaracion_de_rutas_sensibles_dice_cuando_sube_a_bloqueo`
+  (genérica, se salta si el repositorio no declara `rutas_sensibles.json`) y
+  `albaranes` con
+  `test_f034_r14_la_puerta_de_evals_no_se_declara_sobre_lo_no_versionado`
+  (atada a los fixtures de evals). La divergencia deliberada está
+  intacta, y los tres tests portados caen en las **mismas líneas** (244, 266,
+  276, 281) en los dos ficheros.
+- **Suite del payload verificada por mí**: `11 passed, 1 skipped` en
+  `test_mutacion_operadores.py` (el skip es el de rutas sensibles, por diseño),
+  y **46 passed, 1 skipped, 1 failed** en la suite completa. Los 46 confirman
+  los 43 + 3. El fallo es `test_backlog_md`, **preexistente y ajeno**:
+  comprobé que `arnes-base/BACKLOG.md` tampoco existía en `b6ac623`, porque el
+  payload es una plantilla y no un proyecto instalado.
+
+Sobre el fondo: el diagnóstico es correcto y molesto de admitir. La 1.6.0 portó
+el mutador **antes** de que existieran los tests que lo protegen, así que quien
+instaló 1.6.0 o 1.6.1 se llevó `_es_palabra` y `_delimitado` sin la red. Que se
+haya detectado y cerrado por iniciativa propia, y que el commit deje escritos
+los dos mutantes de comprobación, es la regla de propagación funcionando de
+verdad y no solo citada.
+
+## CR-4 · CERRADO en lo sustantivo
+
+| Lo que pedía CR-4 | Estado |
+|---|---|
+| `tasks.md` con las tareas marcadas | **[x]** T1–T15 en `[x]`. Quedan T16 y T17, ver condiciones de cierre |
+| `features.json` con F-035 fuera de `spec_ready` | **[x]** `in_progress`, con `NOTA DE RAMA` explicando que el código vive en `arnes-base` y que esta rama sostiene spec, informe y rastro |
+| La rama, que no existía | **[x]** creada: `init.sh` imprime `Rama actual: feature/F-035-instalador-no-pisa-estado` |
+| `current.md` con la verificación MANUAL y su comando exacto | **[x]** sección de F-035 con el bloque `powershell` completo, qué comprobar y por qué es seguro (`-SoloDiff` no escribe, lo prueba P13) |
+| Commits con prefijo `F-035` | **[x]** `c86b488` y `b1f7924`. `b1f7924` va aparte y **dice por qué** —el commit anterior se comió `current.md` por el escape de una ruta de Windows— en vez de disimularlo dentro del otro |
+
+**T16 dada por buena** según lo indicado en el encargo: la ejecutó el humano el
+20-ago y salió `Protegidos: 4`, que son **exactamente los cuatro ficheros que el
+incidente del 19-ago destruyó** (`docs/ARCHITECTURE.md`,
+`harness/features.json`, `progress/current.md`, `progress/history.md`), con 11
+«iguales salvo finales de línea». Ese dato no es papeleo: es la feature entera
+demostrada contra el repositorio real y contra el incidente que la originó.
+
+**T17 verificada por mí ahora**: `bash harness/init.sh` → **ENTORNO LISTO**,
+`305 passed in 109.25s`, `PUERTA COBERTURA: N/A (F-035 no cambia líneas Python
+de producción frente a dev)` y `PUERTA RUTAS SENSIBLES [evals]: N/A (F-035 no
+toca ninguna ruta sensible declarada)`. Los dos N/A vienen ahora **con el motivo
+de esta feature impreso**, no con el genérico de rama, que es mejor de lo que
+había en la primera pasada.
+
+## La versión 1.6.2: bien numerada y bien documentada
+
+**Bien numerada.** El criterio de este repositorio está escrito y es de
+comportamiento, no de recuento de ficheros: la 1.6.0 fue MINOR «porque cambia la
+vara de medir… los informes de mutación anteriores no son comparables con los de
+después». Por ese mismo criterio la 1.6.2 es PATCH: no cambia nada de lo que el
+arnés instalado exige a un proyecto. Los tres tests portados verifican
+`harness/mutacion.py`, que es arnés puro y va a la misma versión, así que no
+pueden poner en rojo a nadie al actualizar —lo confirman mis 46 passed—. Sigue
+además el precedente ya aceptado por el humano en la 1.6.1 frente a R37.
+
+**Bien documentada, y con un detalle que casi nadie hace**: al subir la suite de
+47 a 65 comprobaciones, la sección **de la 1.6.1** se corrigió para no seguir
+afirmando «13 casos (47 comprobaciones)», y remite a la sección nueva. He
+barrido la guía: no queda ninguna cifra obsoleta. La sección de la 1.6.2 explica
+el defecto, por qué el exit 1 era ambiguo, los tres casos nuevos y el porte de
+los tests, y la lista de «Ficheros de la 1.6.2» se actualizó al añadirse
+`9e2ced7`. El párrafo de cabecera también se reescribió cuando dejó de ser
+cierto que «no cambia nada del arnés instalado». Eso es mantener un documento,
+no adjuntarlo.
+
+## Recorrido de CHECKPOINTS.md — solo lo que cambia
+
+| Punto | Antes | Ahora | Nota |
+|---|---|---|---|
+| **C1** init.sh exit 0 | [x] | **[x]** | ENTORNO LISTO, 305 passed, arnés 1.6.2 |
+| **C2** rama `feature/F-XXX` | N/A | **[x]** | La rama existe y es la activa. Deja de hacer falta el N/A |
+| **C2** `current.md` solo sesión activa | [ ] | **[x]** | Sección de F-035 presente |
+| **C4** cada requisito con ≥1 test | [ ] | **[x]** | R11, R12 (P14), R15 (P15) y R18 (P16) tienen caso propio, los cuatro verificados por mutación |
+| **C4** verificaciones MANUAL en `current.md` | [ ] | **[x]** | T16 con su comando exacto |
+| **C4 bis** supervivientes analizados | [ ] | **[x]** | MR1 cerrado y **matado por mí**; MR2, mutante propio de esta pasada, también muere |
+| **C5** `tasks.md` con todo `[x]` | [ ] | **[x] con condición** | T1–T15 marcadas; T16 (humano, hecha) y T17 (verificada por mí) solo falta tildarlas al cerrar |
+| **C5** `features.json` estado real | [ ] | **[x] con condición** | `in_progress` correcto; la `NOTA DE RAMA` cita 1.6.1, ver condición 3 |
+| **C5** sin artefactos sueltos | [x] | **[x] con condición** | `arnes-base` limpio; en `albaranes` quedan 208 líneas sin commitear, ver condición 1 |
+
+Los requisitos que la primera pasada dejó con `[ ]` o `[x] parcial` y que esta
+pasada **no** tocaba (R20, R26 constancia en el manifiesto, R27, R28, R21/R33
+parciales) siguen igual. No eran cambios requeridos —los dejé fuera de los CR a
+propósito— y no lo son ahora: quedan anotados como deuda conocida de la suite
+del instalador, para cuando vuelva a tocarse.
+
+---
+
+## Condiciones de cierre (del líder, en el commit que cierre F-035)
+
+No son cambios de producto ni reabren nada. Son las tres cosas que, por
+construcción, solo pueden hacerse en el momento de cerrar. La aprobación va
+condicionada a que entren en ese commit:
+
+1. **Commitear `progress/impl_F-035.md`.** Tiene **208 líneas sin commitear**
+   (el addendum de la segunda pasada). El implementer lo dejó así **a propósito
+   y lo dice por escrito**, porque tenía prohibido tocar `albaranes`; la razón
+   es buena, pero el rastro del arnés no puede quedarse en el árbol de trabajo,
+   que es exactamente cómo se estuvo a punto de perder todo el 19-ago. Con
+   prefijo `F-035`.
+2. **Tildar T16 y T17** en `tasks.md`, con la nota de que T16 la ejecutó el
+   humano el 20-ago (`Protegidos: 4`, los cuatro del incidente) y que T17 quedó
+   verificada en esta review.
+3. **Refrescar las dos referencias a 1.6.1.** La `NOTA DE RAMA` de
+   `harness/features.json` dice «commits de `arnes-base` `1e67231..b6ac623`
+   (versión **1.6.1**)» y la sección de `current.md` dice **1.6.1** y «CR-1,
+   CR-2 y CR-3 **en curso**». Lo entregado es **1.6.2**, hasta `9e2ced7`, y los
+   tres CR están cerrados. Se escribieron antes de que existiera esta ronda, así
+   que no es un descuido; pero es el fichero de estado del proyecto en la feature
+   que trata precisamente de no perder el estado del proyecto, y ahí conviene
+   predicar con el ejemplo.
+
+## Propuesta de mejora del protocolo (se mantiene, y esta pasada la confirma)
+
+La propuesta de la primera pasada —que el reviewer **genere un mutante propio**
+sobre una decisión que la tabla del implementer no cubra— ha vuelto a ganarse el
+sitio. En esta pasada, MR2 (`$respuesta = 'n'` → `'s'` dentro del `catch`) es lo
+único que separa «P15 ejecuta la rama» de «P15 comprueba la rama»: la aserción
+del mensaje sola habría pasado igual con el mutante puesto en la mitad de sus
+comprobaciones. Reproducir muertos ajenos verifica honradez; inventar uno propio
+verifica cobertura, y es lo que ha encontrado algo en las dos pasadas.
+
+Segunda, menor y nueva: `harness/init.sh` avisa de **marcas `[ADAPTAR]` sin
+resolver** en `specs/F-035-.../design.md` y `requirements.md`. Es un **falso
+positivo**: ahí `[ADAPTAR]` no es un hueco de plantilla, es el nombre del
+marcador citado como criterio de clasificación («el criterio discriminante no es
+"tiene marcas `[ADAPTAR]`"»). Una spec que hable del arnés siempre disparará ese
+aviso. Sugiero excluir las líneas donde la marca aparece entre comillas o dentro
+de una tabla, o al menos que el aviso diga que puede ser una cita. Es AVISO y no
+bloquea, pero un aviso que siempre está encendido deja de leerse.
+
+---
+
+**Veredicto: APPROVED** — CR-1, CR-2, CR-3 y CR-4 cerrados, con las tres
+condiciones de cierre de arriba.
+
+Lo que hacía falta ya está: la red cubre las **dos** mitades del arreglo. Que el
+estado del proyecto no se pise lo probaban trece casos; que el arnés genérico
+siga aplicándose **sin interrogatorio** —la otra mitad de la historia del
+2026-08-19, la que hace que alguien pulse `T`— ahora lo prueba P14, y lo he
+comprobado matando el mutante yo mismo. De regalo, dos defectos que nadie había
+pedido buscar: un `catch` que no ejercitaba nadie y un mensaje de aborto que
+estaba escrito pero no llegaba a imprimirse nunca.

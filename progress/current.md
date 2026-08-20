@@ -8,11 +8,10 @@ liberar contexto: lo que queda es trabajo largo y conviene retomarlo limpio.
 
 ### Lo primero al abrir la próxima sesión
 
-1. **Comprobar `arnes-base`**: la sesión se cerró con un implementer trabajando
-   en el **CR-3 de F-035** (ver §«F-035, a medias» más abajo). Si dejó cambios
-   sin commitear allí, hay que revisarlos antes de construir encima.
-2. Luego, por orden: cerrar F-035 → **F-038** → actualizar los otros cuatro
-   proyectos → y **F-036, que es lo único que toca dinero**.
+1. **`git push` de `arnes-base`**: 16 commits locales. Es lo único que impide
+   que todo el trabajo del arnés exista fuera de un solo disco.
+2. Por orden: **F-036 (residuos, lo único que toca dinero)** → **F-038** →
+   actualizar los otros cuatro proyectos con el instalador ya seguro.
 
 ---
 
@@ -53,10 +52,11 @@ Causa probable de los falsos muertos: **bytecode rancio**. CPython reutiliza el
 `.pyc` cuando el fuente conserva tamaño y mtime truncado a segundos, cosa que
 dos mutantes consecutivos cumplen a menudo. Lo arregla la 1.6.0.
 
-### F-035 · el instalador no pisa estado del proyecto — A MEDIAS
+### F-035 · el instalador no pisa estado del proyecto — CERRADA (done)
 
-`in_progress`, rama `feature/F-035-instalador-no-pisa-estado`. **El código vive
-en `arnes-base`**, no aquí; esta rama sostiene spec, informe y rastro.
+**APPROVED en segunda pasada**, rama `feature/F-035-instalador-no-pisa-estado`.
+**El código vive en `arnes-base`** (versión **1.6.2**, commits `1e67231`..
+`9e2ced7`), no aquí; esta rama sostiene spec, informe y rastro.
 
 Origen: el 19-ago el instalador pisó en este repositorio `harness/features.json`
 (34 features → 1), `docs/ARCHITECTURE.md` (183 → 37 líneas), `progress/
@@ -74,11 +74,10 @@ comprobaciones en verde**, incluido P1 (el incidente: «features.json sobrevive 
 |---|---|---|
 | CR-1 | El mutante que anula el atajo del arnés puro sobrevive a las 47 comprobaciones (R11/R12 sin caso sin `-Forzar`) | **hecho** (`efdfbe7`) |
 | CR-2 | El comentario de P4 miente y R15 no lo ejercita nadie | **hecho** (`d64be41`) |
-| CR-3 | `Join-Path` fuera del `try` en `New-DirectorioBackup`: traza cruda y `exit 1` en vez de `exit 4` | **EN CURSO al cerrar la sesión** |
+| CR-3 | `Join-Path` fuera del `try` en `New-DirectorioBackup`: traza cruda y `exit 1` en vez de `exit 4` | **hecho** (`d937012`, sube a 1.6.2) |
 | CR-4 | C5 documental: tareas, estado, rama, `current.md` | **hecho** (líder, `c86b488` y `b1f7924`) |
 
-**Encargo extra pendiente de confirmar** (se le mandó al implementer junto al
-CR-3): portar a `arnes-base` **tres tests de `test_mutacion_operadores.py`** que
+**Encargo extra: HECHO** (`9e2ced7`). Portar a `arnes-base` **tres tests de `test_mutacion_operadores.py`** que
 solo existen aquí (12 tests en `albaranes`, 9 en `arnes-base`). Son los que
 cierran los cuatro huecos de F-034, y se quedaron atrás porque el porte a la
 1.6.0 se hizo antes de escribirlos. Sin ellos `arnes-base` lleva `_es_palabra` y
@@ -91,8 +90,15 @@ ficheros que el incidente destruyó**. Y los 11 «iguales salvo finales de líne
 son la decisión D4 pagando: once diffs falsos que antes empujaban a pulsar
 «Todos».
 
-Al retomar: comprobar CR-3, correr `tests_instalador/prueba_instalador.ps1`,
-segunda pasada de review y merge.
+**Cerrada**: suite del instalador **65 comprobaciones en verde** (eran 47) y
+suite Python de `arnes-base` 46 passed (eran 43). Lo que cierra el rechazo no
+es ese número sino que **el reviewer volvió a aplicar el mutante MR1 y lo vio
+morir**, sobre una copia del scratchpad y comprobando antes que el literal
+aparecía exactamente una vez.
+
+**Deuda conocida anotada por el reviewer**, no bloqueante: R20, R26 (constancia
+en el manifiesto), R27, R28 y R21/R33 quedan parciales en la suite del
+instalador, para cuando vuelva a tocarse.
 
 ### F-038 · bajar el coste en tokens del ciclo SDD — `pending`, SIN SPEC
 

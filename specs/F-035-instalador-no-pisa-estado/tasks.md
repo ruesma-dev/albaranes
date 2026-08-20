@@ -7,10 +7,11 @@
 > la rama de `albaranes` solo sostiene spec, informe y rastro documental. T15
 > hecha (`progress/impl_F-035.md`).
 >
-> **T16 es MANUAL y la ejecuta el humano**: verificación del diseño §7.4, con
-> el comando exacto en `progress/current.md`.
+> **T16 HECHA por el humano el 2026-08-20**: `-SoloDiff` contra este
+> repositorio dio `Protegidos: 4`, y son exactamente los cuatro ficheros que
+> el incidente del 19-ago destruyo, mas 11 «iguales salvo finales de linea».
 >
-> **T17** (portero en verde) lo ejecuta el líder al cerrar la feature.
+> **T17 verificada en la segunda pasada de review.**
 >
 > Quedan además los CR-1, CR-2 y CR-3 del review (`progress/review_F-035.md`),
 > en curso: el caso P14 que mata al superviviente MR1, el comentario falso de
@@ -150,7 +151,7 @@ Leyenda: **[AB]** = `C:\Users\pgris\PycharmProjects\arnes-base` ·
       **Verificación**: el fichero existe y sus hashes casan con
       `git -C ...\arnes-base log`.
 
-- [ ] **T16 [ALB]**: Ejecutar la verificación MANUAL del diseño §7.4.
+- [x] **T16 [ALB]**: Ejecutar la verificación MANUAL del diseño §7.4.
       **Verificación**: **MANUAL (humano)**. Desde
       `C:\Users\pgris\PycharmProjects\arnes-base`, en `albaranes` con una rama
       limpia creada desde `dev`:
@@ -161,7 +162,7 @@ Leyenda: **[AB]** = `C:\Users\pgris\PycharmProjects\arnes-base` ·
       *(Aplicar de verdad la versión nueva a `albaranes` **no** es parte de
       F-035: lo decide el humano después.)*
 
-- [ ] **T17 [ALB]**: Ejecutar `bash harness/init.sh` en verde.
+- [x] **T17 [ALB]**: Ejecutar `bash harness/init.sh` en verde.
       **Verificación**: `bash harness/init.sh` termina en ENTORNO LISTO.
       *(Recordatorio del diseño §0: aquí no hay líneas Python cambiadas, así
       que las puertas de cobertura y mutación no tienen sujeto en este

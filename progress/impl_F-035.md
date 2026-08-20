@@ -327,3 +327,211 @@ humano después.
 | **Cobertura de las líneas cambiadas** | **No aplicable: 0 líneas de Python cambiadas en `albaranes`** | `harness/cobertura.py` mide el diff de este repositorio; el código de F-035 está en `arnes-base` y es PowerShell. No es puerta pasada, es puerta sin sujeto (§6) |
 | **Fase RED** | **P1 fallando con `esperado <7>, obtenido <1>`** contra la 1.6.0, antes de tocar el instalador | §1, commit `1e67231` |
 | **Verificación contra el repositorio real** | 4 protegidos, 0 ficheros de estado ofrecidos, `albaranes` sin modificar | §7 |
+
+---
+
+# Segunda pasada: cierre de CR-1, CR-2 y CR-3 del review (2026-08-20)
+
+Encargo: cerrar los tres primeros cambios requeridos de
+`progress/review_F-035.md` (veredicto CHANGES_REQUESTED). **CR-4 lo cierra el
+líder**; aquí no se ha tocado nada de `albaranes` salvo este informe, que se
+deja **sin commitear** a propósito.
+
+Todo el trabajo vive en `C:\Users\pgris\PycharmProjects\arnes-base`, cuatro
+commits locales sobre `b6ac623`, **sin push**:
+
+| Commit | Qué cierra |
+|---|---|
+| `efdfbe7` | CR-1: caso P14 |
+| `d64be41` | CR-2: cabecera de P4 corregida + caso P15 |
+| `d937012` | CR-3: arreglo de `New-DirectorioBackup` + caso P16 + versión 1.6.2 |
+| `9e2ced7` | (encargo aparte, F-034) los tres tests de `_delimitado` que faltaban en el payload |
+
+## CR-1 · El superviviente MR1, cazado
+
+El reviewer tenía razón en el diagnóstico completo: **el producto estaba bien y
+lo que faltaba era la red**. Todos los casos que tocaban arnés puro pasaban
+`-Forzar`, y con `-Forzar` el diálogo contesta `s` igual, así que anular la
+guarda del atajo no rompía nada visible.
+
+`tests_instalador/prueba_instalador.ps1`, **P14**, sin `-Forzar`, con el
+escenario sembrado de siempre:
+
+1. `-Modo actualizar` ⇒ `.claude/agents/leader.md` pierde su
+   `MODIFICADO POR EL PROYECTO`, la salida trae
+   `[ACTUALIZADO] .claude/agents/leader.md` y **no** trae el literal del prompt
+   `.claude/agents/leader.md : [N] conservar el tuyo` (R11);
+2. `-Modo actualizar -PreguntarTodo` sobre un escenario **nuevo** ⇒ el mismo
+   fichero conserva su marcador y **sí** aparece su prompt (R12).
+
+Verde contra el instalador real (7 aserciones nuevas). Y con MR1 reaplicado
+sobre una copia del árbol en el scratchpad —`instalar_arnes.ps1` línea 473,
+`if ($cat -eq 'puro' -and -not $PreguntarTodo -and -not $SoloDiff) {` →
+`if ($false) {`, verificado con `diff` antes de ejecutar—:
+
+```
+### P14 - el arnes puro se aplica sin preguntar; -PreguntarTodo si pregunta (R11, R12)
+  [FALLO] sin -Forzar, el arnes puro se pone al dia igualmente (R11)
+          aparece <MODIFICADO POR EL PROYECTO> y no deberia
+  [FALLO] y el resumen lo da por actualizado
+          no aparece <[ACTUALIZADO] .claude/agents/leader.md> en la salida
+  [FALLO] no se ha preguntado por el
+          aparece <.claude/agents/leader.md : [N] conservar el tuyo> y no deberia
+  [OK]    el instalador termina con codigo 0
+  [OK]    con -PreguntarTodo el arnes puro se conserva (R12)
+  [OK]    y ahi si se pregunta por el
+  [OK]    el instalador termina con codigo 0
+
+--------------------------------------------------
+FALLOS: 3 de 54 comprobaciones.
+```
+
+**MR1 muerto**, por tres aserciones distintas. Antes de P14 sobrevivía entero
+(`TODO VERDE: 47 comprobaciones`, reproducido por el reviewer).
+
+## CR-2 · El comentario falso de P4, y R15 con caso propio
+
+El comentario afirmaba lo que no hacía y se ha borrado. Comprobado a mano por
+qué, con un script mínimo que llama a `Read-Host` de las dos formas:
+
+```
+CATCH: System.Management.Automation.PSInvalidOperationException :: ...modo no interactivo...   <- powershell -NonInteractive
+LEIDO:<>                                                                                        <- powershell con la entrada redirigida a un fichero vacio
+```
+
+Es decir: redirigir la entrada **devuelve cadena vacía** y entra por la rama de
+Intro. El `catch` solo se alcanza con `-NonInteractive`.
+
+- **P4** pasa a titularse por lo que prueba (R13, R14) y gana una aserción que
+  lo fija: la salida contiene `(Intro) se CONSERVA CLAUDE.md`. Si algún día la
+  rama cambiara, el caso lo diría en vez de seguir pasando por otro camino.
+- **P15** es el caso nuevo que sí llega al `catch`: `Invoke-Instalador` acepta
+  ahora `-SinConsola`, que lanza `powershell.exe -NonInteractive`. Comprueba el
+  mensaje, que `CLAUDE.md` se conserva, que el resumen lo da por conservado y
+  —lo que de verdad importa— que **se intenta una sola vez**: un bucle de cinco
+  reintentos en una consola sin entrada cuelga a quien lo lance.
+
+R15 queda **verificado por test**, no por inspección. Con un mutante propio en
+el `catch` (`$respuesta = 'n'` pasa a `'s'`) mueren 2 aserciones, y **solo las
+de P15**: sin este caso el mutante sobrevivía a la suite entera.
+
+## CR-3 · La guarda del backup, con su fase RED
+
+Defecto real, reproducido antes de tocar el producto. P16 escrito primero,
+contra el instalador **sin arreglar**:
+
+```
+### P16 - raiz de backup irresoluble: exit 4, mensaje propio y nada escrito (R18)
+  [FALLO] sale con el codigo 4 de "no puedo crear el backup", no con el 1 de otra cosa
+          esperado <4>, obtenido <1>
+  [FALLO] imprime el diagnostico
+          no aparece <No puedo crear el directorio de backup> en la salida
+  [FALLO] y dice que hacer
+          no aparece <Se aborta ANTES de escribir nada en el destino> en la salida
+  [FALLO] no hay volcado de excepcion en crudo
+          aparece <Join-Path> y no deberia
+  [OK]    no ha escrito nada en el destino
+
+--------------------------------------------------
+FALLOS: 4 de 65 comprobaciones.
+```
+
+Exactamente lo que describía el review. El arreglo, en `New-DirectorioBackup`:
+la ruta se compone con `[IO.Path]::Combine` y **dentro** del `try`.
+`[IO.Path]::Combine` en vez de meter el `Join-Path` dentro sin más porque así
+la ruta **siempre se construye** y el fallo sale por donde debe —el `New-Item`
+con `-ErrorAction Stop`—, y el mensaje puede nombrar la ruta que se intentaba
+crear en lugar de quedarse sin ella. Verificado que `New-Item` lanza el mismo
+`DriveNotFoundException`, así que el diagnóstico no se pierde.
+
+Detalle de diseño del caso: la letra de unidad **se busca libre en la máquina**
+(`ZYXWV`, la primera que no exista) en vez de cablear `Z:`, porque en otra
+máquina `Z:` puede ser una unidad de red montada y el caso dejaría de probar lo
+que dice probar. Y la aserción del volcado busca el literal `Join-Path` y no el
+texto del error, que cambia con el idioma de Windows.
+
+### Versión: sí sube a 1.6.2
+
+CR-3 cambia el comportamiento observable del instalador (código de salida y
+mensaje), así que sube. **1.6.2 y no 1.7.0**: es un parche, no hay
+funcionalidad nueva, y mantiene la línea que el humano fijó al entregar la
+1.6.1. `arnes-base/harness/VERSION` pasa a `1.6.2` / `2026-08-20`, y
+`GUIA_INSTALACION.md` gana su sección al final, con el porqué del `exit 4`, los
+tres casos nuevos de la suite y la lista de ficheros. Se ha corregido también
+el recuento de `§8. Cómo se comprueba`, que seguía diciendo 13 casos y 47
+comprobaciones.
+
+## Encargo aparte: los tres tests de F-034 que faltaban en `arnes-base`
+
+Divergencia real: `tests/test_mutacion_operadores.py` tenía **12 tests en
+`albaranes` y 9 en el payload de `arnes-base`**. Los tres que faltaban se
+escribieron cerrando el review de F-034, **después** de que la 1.6.0 portase el
+mutador, y se quedaron atrás: el payload llevaba `_es_palabra` y `_delimitado`
+sin la red que cierra los cuatro huecos que destapó su campaña.
+
+Portados los tres, con la fixture `FUENTE_COMENTARIO_ISLA` y los imports
+`_delimitado` y `_es_palabra`. **No se ha copiado el fichero entero**: la
+variante genérica del último test (rutas sensibles, con `skip` si el
+repositorio no las declara) es deliberada y se queda como estaba; la de
+`albaranes` está adaptada a los fixtures de evals. El bloque de imports se
+ordenó con `ruff check --select I001 --fix` y queda idéntico al de `albaranes`.
+
+Resultado en `arnes-base/arnes-base`: **11 pasan, 1 se salta** (el de rutas
+sensibles: el payload solo trae `rutas_sensibles.ejemplo.json`) — los 12 que
+pedía el encargo.
+
+Dos mutantes de comprobación, sobre copias en el scratchpad, para no dar el
+porte por bueno solo porque pasa:
+
+| Mutante | Sustitución exacta | Resultado |
+|---|---|---|
+| MUT-A | `_delimitado`: `return not (_PARTE_DE_PALABRA.match(anterior) or _PARTE_DE_PALABRA.match(siguiente))` pasa a `return not _PARTE_DE_PALABRA.match(anterior)` | **MUERTO**: fallan `r5_bis_no_muta_una_palabra_que_EMPIEZA_por_is` y `r5_delimitado_mira_los_dos_bytes...` |
+| MUT-B | `_es_palabra`: `_PARTE_DE_PALABRA.match(objetivo[-1:])` pasa a `...match(objetivo[-2:-1])` | **MUERTO**: falla `r5_es_palabra_exige_que_LOS_DOS_extremos...` |
+
+Con los 9 tests anteriores **los dos sobrevivían**. Es la medida de lo que
+faltaba.
+
+## Verificación final
+
+```
+### P1 ... ### P16   (16 casos)
+--------------------------------------------------
+TODO VERDE: 65 comprobaciones.
+real    1m8.047s
+```
+
+- `powershell -NoProfile -File tests_instalador\prueba_instalador.ps1` en
+  `arnes-base`: **65 comprobaciones, 16 casos, 0 fallos, salida 0, 68 s**.
+- `python -m pytest tests/test_mutacion_operadores.py -q` en
+  `arnes-base/arnes-base`: **11 passed, 1 skipped**.
+- `git -C arnes-base status --porcelain`: **vacío**. Todos los mutantes se
+  ejecutaron sobre copias del árbol en el scratchpad, nunca sobre el fichero
+  versionado.
+
+## Evidencias (segunda pasada)
+
+| Evidencia | Valor | Cómo se ha obtenido |
+|---|---|---|
+| **Tests ejecutados y resultado** | **65 comprobaciones, 16 casos (P1–P16), 0 fallos, salida 0** (eran 47 y 13) | `powershell -NoProfile -File tests_instalador\prueba_instalador.ps1` |
+| **Tests del payload** | **12 tests: 11 passed, 1 skipped** (eran 9) | `python -m pytest tests/test_mutacion_operadores.py -q` en `arnes-base/arnes-base` |
+| **Tiempo de ejecución de la suite** | **68 s** (eran 44 s con 13 casos; los tres nuevos montan cuatro escenarios más) | `time` alrededor de la invocación |
+| **Mutantes generados y supervivientes** | **4 mutantes, 4 muertos, 0 supervivientes** en esta pasada: MR1 (el del review), el del `catch` de R15, MUT-A y MUT-B | cada uno sobre una copia en scratchpad, ejecutando la suite entera; trazas arriba |
+| **Cobertura de las líneas cambiadas** | **No aplicable** en `albaranes` (0 líneas de Python cambiadas aquí). En `arnes-base` no hay puerta de cobertura: el instalador es PowerShell y el payload no tiene CI | igual que en la primera pasada |
+| **Fase RED** | **P16 con 4 aserciones en rojo** contra el instalador sin arreglar (traza completa arriba) | CR-3, antes de tocar `New-DirectorioBackup` |
+
+## Qué queda fuera y qué falta
+
+- **CR-4 entero**: `tasks.md`, `features.json`, `current.md` y el prefijo
+  `F-035 Tn:` de los commits de `albaranes`. Por encargo explícito, lo cierra el
+  líder; aquí no se ha tocado nada de este repositorio.
+- **`git push` no se ha hecho** en `arnes-base`: 16 commits locales sin subir
+  (12 de la primera pasada + 4 de esta).
+- **Este informe se deja sin commitear**, también por encargo.
+- **Fallo previo y ajeno**: `python -m pytest tests -q` en el payload de
+  `arnes-base` deja `tests/test_backlog_md.py` en rojo, porque el payload no
+  trae `BACKLOG.md` (es un artefacto de cada proyecto). Comprobado que **falla
+  igual en `b6ac623`**, antes de esta pasada: no lo introduce este trabajo, pero
+  queda dicho. `ruff check tests/` en el payload arrastra 9 avisos previos; el
+  fichero que se ha tocado queda limpio.
+- **La verificación MANUAL de T16** (repetir el `-SoloDiff` desde una rama
+  limpia de `dev`) sigue pendiente y sigue siendo del humano.
