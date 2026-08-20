@@ -647,7 +647,7 @@ def comprobar_linea_base(
     implicados: list[tuple[str, object]],
     timeout_s: int,
     eco: Callable[[str], None] | None = None,
-) -> None:
+) -> dict[str, float]:
     """Corre la suite sin mutar en cada sitio donde se va a juzgar.
 
     `implicados` son los pares `(etiqueta, ejecutor)` que van a dictar los
@@ -655,14 +655,24 @@ def comprobar_linea_base(
     aviso: no se puede comprobar lo que no sabe correr una suite.
 
     Lanza `BaseRota` en cuanto uno falla, sin haber tocado un solo fichero.
+
+    Devuelve los SEGUNDOS que tardó la suite limpia en cada sitio (R11). Ese
+    número es el patrón con el que se lee todo lo demás: una campaña que declara
+    veinte mutantes en menos de lo que tarda UNA suite limpia no ha juzgado a
+    nadie, y eso se ve leyendo el informe en vez de reejecutándolo. Un ejecutor
+    que no sabe correr la suite no aporta entrada: mejor `n/d` que un cero, que
+    se lee como medición.
     """
+    tiempos: dict[str, float] = {}
     for etiqueta, ejecutor in implicados:
         correr_base = getattr(ejecutor, "linea_base", None)
         if correr_base is None:
             if eco is not None:
                 eco(f"{MARCA_LINEA_BASE}{etiqueta}: ejecutor sin línea base, no se comprueba")
             continue
+        arranque = time.monotonic()
         resultado = correr_base(timeout_s)
+        tiempos[etiqueta] = time.monotonic() - arranque
         if resultado.expirado:
             raise BaseRota(
                 f"LÍNEA BASE SIN TERMINAR en {etiqueta}: la suite sin mutar agotó "
@@ -675,7 +685,11 @@ def comprobar_linea_base(
             raise BaseRota(mensaje_base_rota(etiqueta, resultado))
         if eco is not None:
             estado = "sin tests que recoger" if resultado.sin_tests else "en verde"
-            eco(f"{MARCA_LINEA_BASE}{etiqueta}: {estado}")
+            eco(
+                f"{MARCA_LINEA_BASE}{etiqueta}: {estado} "
+                f"({tiempos[etiqueta]:.1f} s)"
+            )
+    return tiempos
 
 
 def ejecutores_implicados(
@@ -969,6 +983,21 @@ def _git_en(raiz: str, *args: str) -> tuple[int, str]:
     return proceso.returncode, (proceso.stdout or "") + (proceso.stderr or "")
 
 
+def sha_de_head(raiz: str = ".") -> str | None:
+    """SHA COMPLETO de `HEAD` en `raiz`, o `None` si git no puede responder.
+
+    Completo y no abreviado a propósito: es lo que permite comprobar sin
+    ambigüedad que el alcance medido y el alcance revisado son el mismo commit.
+    Fuera de un repositorio devuelve `None`, y el informe imprime `n/d`: nunca
+    un SHA inventado.
+    """
+    codigo, salida = _git_en(raiz, "rev-parse", "HEAD")
+    if codigo != 0:
+        return None
+    sha = salida.strip()
+    return sha or None
+
+
 def ficheros_con_cambios(raiz: str, ficheros: list[str]) -> list[str]:
     """De los ficheros dados, cuáles tienen cambios sin commitear.
 
@@ -1047,6 +1076,22 @@ class InformeMutacion:
     base_rota: list[Mutante] = field(default_factory=list)
     #: Motivo por el que los números de este informe NO son de fiar, si lo hay.
     aviso_base: str | None = None
+    #: SHA completo de HEAD contra el que se midió. Sin él, un informe sigue
+    #: pareciendo válido después de que la rama crezca mil líneas (RM1/R10).
+    sha_head: str | None = None
+    #: Segundos que tardó la suite LIMPIA en cada ejecutor implicado (R11). Es
+    #: el patrón contra el que se lee la media por mutante.
+    segundos_linea_base: dict[str, float] = field(default_factory=dict)
+    #: Nivel de rigor que fijó el muestreo, para que el informe diga quién lo
+    #: decidió (R9). Lo rellena el CLI, que es quien lo resuelve.
+    nivel: str | None = None
+
+    @property
+    def segundos_por_mutante(self) -> float | None:
+        """Media de segundos por mutante evaluado; `None` si no se evaluó ninguno."""
+        if not self.mutantes_evaluados:
+            return None
+        return self.segundos / len(self.mutantes_evaluados)
 
     @property
     def evaluados(self) -> int:
@@ -1109,6 +1154,7 @@ def ejecutar_campania(
         generados=len(mutantes),
         max_mutantes=max_mutantes,
         semilla=semilla,
+        sha_head=sha_de_head(raiz),
     )
 
     if max_mutantes is not None and len(mutantes) > max_mutantes:
@@ -1124,7 +1170,7 @@ def ejecutar_campania(
         guardia_arbol_limpio(raiz, list(fuentes))
     implicados = ejecutores_implicados(list(mutantes), ejecutor, ejecutor_de)
     if comprobar_base and mutantes:
-        comprobar_linea_base(implicados, timeout_s, eco)
+        informe.segundos_linea_base = comprobar_linea_base(implicados, timeout_s, eco)
 
     def restaurar_todo() -> None:
         """Devuelve al disco los fuentes tal y como se leyeron al empezar."""
