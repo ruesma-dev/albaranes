@@ -11,6 +11,7 @@ En curso: **F-038**.
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
+| F-039 | Arnes: estabilizar la suite de la raiz y remedir las campanas juzgadas con la invocacion rota | 2 | pendiente | estandar | `feature/F-039-remedir-campanas-invocacion-rota` |
 | F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | en curso | estandar | `feature/F-038-coste-del-ciclo-sdd` |
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | pendiente | critico | `feature/F-036-residuos-contenedores-e-incrementos` |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -41,7 +42,6 @@ En curso: **F-038**.
 | F-009 | Limpieza de la cola huérfana q-emails | 30 | pendiente | estandar | `feature/F-009-limpieza-q-emails` |
 | F-010 | Easy Auth en el portal sv4 | 31 | pendiente | critico | `feature/F-010-easy-auth-sv4` |
 | F-022 | Bandeja de portada: el concepto de las líneas del albarán sale vacío porque el JOIN de la línea derivada apunta a la tabla equivocada | 32 | pendiente | estandar | `feature/F-022-concepto-lineas-bandeja` |
-| F-039 | Arnes: estabilizar la suite de la raiz y remedir las campanas juzgadas con la invocacion rota | 33 | pendiente | estandar | `feature/F-039-remedir-campanas-invocacion-rota` |
 
 ## Terminadas
 
@@ -57,6 +57,18 @@ En curso: **F-038**.
 | F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
 
 ## Detalle
+
+### F-039 · Arnes: estabilizar la suite de la raiz y remedir las campanas juzgadas con la invocacion rota
+
+estado **pendiente** · prioridad 2 · rigor `estandar` · SDD no · rama `feature/F-039-remedir-campanas-invocacion-rota`
+
+Deuda declarada por F-038 (decision D5 de su design, confirmada por el humano el 2026-08-20). Hasta F-038, un fichero que no cae en ningun servicio de harness/servicios.json se juzgaba con `python -m pytest` SIN ruta desde la raiz; como la raiz no tiene testpaths, esa invocacion moria en la recoleccion en menos de un segundo y el ejecutor la leia como exit 1 = MUERTO. Resultado: mutantes declarados muertos sin que NINGUN test los juzgara. Afecta como minimo a progress/mutacion_F-012.md (61 mutantes) y a cualquier otro informe cuyo alcance incluya ficheros fuera de services/. F-038 solo estampa el aviso de invalidez en cabecera (su R22): NO remide, porque la auditoria de supervivientes cuesta justo lo que aquella feature viene a ahorrar. Aqui se remide de verdad, ya con `ejecutor_para` arreglado. OJO: los supervivientes que aparezcan son huecos reales de test que hoy nadie ve, asi que esta feature puede abrir trabajo nuevo; eso es el objetivo, no un efecto colateral. Requiere F-038 cerrada y mergeada.
+
+AMPLIADA EL 2026-08-20 con dos hallazgos del ciclo de F-038, por decision del humano (el reviewer los saco como observacion O1 y propuso ficha; el humano decidio colgarlos de aqui). VAN ANTES DE LA REMEDICION, porque remedir con una suite inestable es medir dos veces mal:
+
+(a) HAY UN TEST INESTABLE EN LA SUITE DE LA RAIZ BAJO CARGA. Prueba: `harness/mutacion.py:1781` salio MUERTO en la primera campana de F-038 y SUPERVIVIENTE en la segunda SIN QUE SU CODIGO CAMBIARA. Una campana de mutacion vale lo que valga su suite: con un flake, un mutante puede salir 'muerto' por el fallo intermitente y no porque ningun test lo juzgue, que es exactamente el falso verde que F-038 vino a eliminar. Hay que identificar el test, hacerlo determinista y dejar escrito por que fallaba bajo carga.
+
+(b) LA CAMPANA PARALELA NO SE PUEDE EJECUTAR EN ESTE REPOSITORIO. Con `--workers 5` la linea base ABORTA dentro del git worktree porque falla `test_f012_r1_r4_el_informe_paralelo_...`. Es anterior a F-038 y la linea base se comporto bien -abortar en vez de contar muertos falsos-, pero deja sin usar la paralelizacion que entrego F-012. Sospecha a verificar: el worktree no trae lo que ese test espera encontrar en disco.
 
 ### F-038 · Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor
 
@@ -345,18 +357,6 @@ ALCANCE: solo sv4 (services/albaranes-front), la consulta de list_documents y un
 FUERA DE ALCANCE: cambiar quién rellena descripcion_linea o el diseño de las líneas sintéticas; el detalle del documento, que ya pinta bien (la conciliación lee contrato_lines_derived y la tabla «Líneas leídas del albarán (IA)» pinta ml.concepto, document_detail.html:470); y F-019/F-021, que salieron de los mismos albaranes Feymaco pero atacan la lectura de la partida, no la descripción.
 
 VERIFICACIÓN ESPERADA AL CERRAR: abrir /documents en local con esos dos albaranes y ver el concepto real en las 6 líneas from_albaran, con las sintéticas sin cambios.
-
-### F-039 · Arnes: estabilizar la suite de la raiz y remedir las campanas juzgadas con la invocacion rota
-
-estado **pendiente** · prioridad 33 · rigor `estandar` · SDD no · rama `feature/F-039-remedir-campanas-invocacion-rota`
-
-Deuda declarada por F-038 (decision D5 de su design, confirmada por el humano el 2026-08-20). Hasta F-038, un fichero que no cae en ningun servicio de harness/servicios.json se juzgaba con `python -m pytest` SIN ruta desde la raiz; como la raiz no tiene testpaths, esa invocacion moria en la recoleccion en menos de un segundo y el ejecutor la leia como exit 1 = MUERTO. Resultado: mutantes declarados muertos sin que NINGUN test los juzgara. Afecta como minimo a progress/mutacion_F-012.md (61 mutantes) y a cualquier otro informe cuyo alcance incluya ficheros fuera de services/. F-038 solo estampa el aviso de invalidez en cabecera (su R22): NO remide, porque la auditoria de supervivientes cuesta justo lo que aquella feature viene a ahorrar. Aqui se remide de verdad, ya con `ejecutor_para` arreglado. OJO: los supervivientes que aparezcan son huecos reales de test que hoy nadie ve, asi que esta feature puede abrir trabajo nuevo; eso es el objetivo, no un efecto colateral. Requiere F-038 cerrada y mergeada.
-
-AMPLIADA EL 2026-08-20 con dos hallazgos del ciclo de F-038, por decision del humano (el reviewer los saco como observacion O1 y propuso ficha; el humano decidio colgarlos de aqui). VAN ANTES DE LA REMEDICION, porque remedir con una suite inestable es medir dos veces mal:
-
-(a) HAY UN TEST INESTABLE EN LA SUITE DE LA RAIZ BAJO CARGA. Prueba: `harness/mutacion.py:1781` salio MUERTO en la primera campana de F-038 y SUPERVIVIENTE en la segunda SIN QUE SU CODIGO CAMBIARA. Una campana de mutacion vale lo que valga su suite: con un flake, un mutante puede salir 'muerto' por el fallo intermitente y no porque ningun test lo juzgue, que es exactamente el falso verde que F-038 vino a eliminar. Hay que identificar el test, hacerlo determinista y dejar escrito por que fallaba bajo carga.
-
-(b) LA CAMPANA PARALELA NO SE PUEDE EJECUTAR EN ESTE REPOSITORIO. Con `--workers 5` la linea base ABORTA dentro del git worktree porque falla `test_f012_r1_r4_el_informe_paralelo_...`. Es anterior a F-038 y la linea base se comporto bien -abortar en vez de contar muertos falsos-, pero deja sin usar la paralelizacion que entrego F-012. Sospecha a verificar: el worktree no trae lo que ese test espera encontrar en disco.
 
 ### F-001 · Test de estructura del monorepo
 

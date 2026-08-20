@@ -430,7 +430,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 33,
+      "priority": 2,
       "branch": "feature/F-039-remedir-campanas-invocacion-rota"
     }
   ]
