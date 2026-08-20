@@ -233,3 +233,48 @@ def test_f038_r15_init_sh_declara_na_con_motivo_cuando_no_hay_feature() -> None:
 
     assert "PUERTA TAMAÑO: N/A" in seccion
     assert "feature_de_rama" in seccion, "la feature en curso se resuelve como en 7b"
+
+
+def test_f038_r13_un_tope_de_una_linea_es_valido_aunque_sea_absurdo() -> None:
+    """La frontera del `< 1`: lo que se descarta es el cero, no el uno."""
+    assert topes_tamano({"tamano": {"impl": 1}}) == {"impl": 1}
+
+
+def test_f038_r15_el_slug_es_todo_lo_que_sigue_a_la_primera_barra(
+    tmp_path: Path,
+) -> None:
+    """Una rama con más de una barra no puede recortarse por en medio."""
+    raiz = _repositorio(tmp_path, {})
+    (raiz / "harness" / "features.json").write_text(
+        json.dumps({"features": [{"id": "F-100", "branch": "feature/exp/F-100-largo"}]}),
+        encoding="utf-8",
+    )
+
+    assert slug_de_feature("F-100", raiz=str(raiz)) == "exp/F-100-largo"
+
+
+def test_f038_r14_el_cli_resume_cada_fichero_que_ha_medido(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Sin el resumen, la puerta en verde no dice QUÉ midió: podría no medir nada."""
+    raiz = _repositorio(
+        tmp_path,
+        {
+            "specs/F-100-de-juguete/requirements.md": 90,
+            "progress/impl_F-100.md": 150,
+        },
+    )
+
+    assert main(["--feature", "F-100", "--raiz", str(raiz)]) == 0
+    salida = capsys.readouterr().out
+    assert "requirements 90/120" in salida
+    assert "impl 150/150" in salida
+
+
+def test_f038_r14_sin_papeleo_todavia_el_cli_lo_dice_en_vez_de_callar(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    raiz = _repositorio(tmp_path, {})
+
+    assert main(["--feature", "F-100", "--raiz", str(raiz)]) == 0
+    assert "ningún fichero de papeleo todavía" in capsys.readouterr().out

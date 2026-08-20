@@ -207,3 +207,13 @@ def test_f038_r7_el_cli_con_max_mutantes_cero_anula_el_tope_del_nivel(
     mutacion.main(argv, ejecutor=object())
 
     assert capturado["max_mutantes"] is None, "0 = sin tope, no «cero mutantes»"
+
+
+def test_f038_r7_un_tope_de_un_solo_mutante_es_un_tope_legitimo() -> None:
+    """La frontera del `> 0`: pedir 1 mutante no puede leerse como «sin tope»."""
+    assert resolver_muestreo(1, None, 20, 20260820) == (1, 20260820)
+
+
+def test_f038_r5_un_nivel_de_rigor_puede_declarar_un_solo_mutante() -> None:
+    """Misma frontera en el lector: `1` es un tope, no un valor absurdo."""
+    assert max_mutantes_nivel("minimo", {"niveles": {"minimo": {"max_mutantes": 1}}}) == 1
