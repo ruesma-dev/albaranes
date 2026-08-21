@@ -668,3 +668,56 @@ def test_f040_r3_sin_timeout_el_cli_anuncia_que_lo_va_a_derivar(
     assert cli_con_campania_falsa[0]["timeout_base_s"] == timeout_de_linea_base(
         cli_con_campania_falsa[0]["timeout_s"]
     )
+
+
+# --- El default de `timeout_fijado` en la campaña paralela ------------------
+
+
+def test_f040_r6_la_campania_paralela_deriva_por_defecto(tmp_path: Path) -> None:
+    """Superviviente de la campaña de F-040: `timeout_fijado: bool = False`.
+
+    Sobrevivía porque el único llamador de producción (`main`) siempre lo pasa
+    explícito, y los dobles de los demás tests no saben correr una línea base,
+    así que sin medición el derivado coincide con el suelo. Con el default
+    puesto a `True` la derivación se apagaría entera y ningún test lo notaría:
+    el hueco es real, no un mutante equivalente.
+    """
+    import subprocess
+
+    from harness.mutacion_paralela import ejecutar_campania_paralela
+
+    def _git(*args: str) -> None:
+        subprocess.run(
+            ["git", "-C", str(tmp_path), *args], capture_output=True, check=True
+        )
+
+    # Repositorio de juguete: con un solo worker la campaña paralela muta IN
+    # SITU, y ahí la guardia de árbol limpio vuelve a aplicar.
+    (tmp_path / "codigo.py").write_text(FUENTE, encoding="utf-8")
+    _git("init", "-q")
+    _git("config", "user.email", "arnes@ejemplo.invalid")
+    _git("config", "user.name", "Arnes")
+    _git("add", "-A")
+    _git("commit", "-q", "-m", "base")
+    alcance = Alcance(
+        feature="F-040",
+        origen="rama",
+        ref_diff=("dev", "feature/x"),
+        lineas={"codigo.py": {2, 3}},
+    )
+    doble = EjecutorCronometrado(espera=ESPERA_BASE)
+
+    informe = ejecutar_campania_paralela(
+        alcance,
+        servicios=[],
+        timeout_s=SUELO_DE_JUGUETE,
+        raiz=str(tmp_path),
+        workers=1,
+        fabrica=lambda _fichero, _raiz: doble,
+    )
+
+    assert informe.timeout_fijado is False, (
+        "sin `--timeout`, la campaña paralela tiene que DERIVAR el timeout"
+    )
+    assert informe.timeout_efectivo > SUELO_DE_JUGUETE
+    assert set(doble.timeouts_de_mutante) == {informe.timeout_efectivo}
