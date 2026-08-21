@@ -1271,13 +1271,44 @@ def _resolver_indeterminado(ejecutor: object, timeout_s: int) -> str:
     return MUERTO if correr_base(timeout_s).verde else BASE_ROTA
 
 
+def mensaje_base_expirada_al_final(etiqueta: str, timeout_s: int) -> str:
+    """Aviso de una línea base de cierre que se quedó SIN TIEMPO (R11).
+
+    Expirar no es fallar. La suite no dijo que nada esté mal: no llegó a
+    terminar. Confundir las dos cosas no es un matiz de redacción: el
+    2026-08-21, en la primera ejecución real de la campaña paralela, el arnés
+    dijo «Arregla la suite y repite la campaña» sobre una suite impecable y
+    mandó al humano a buscar un fallo que no existía. Lo que hay que tocar aquí
+    es el reloj —menos workers compitiendo, o más suelo—, no los tests.
+    """
+    return (
+        f"La línea base de cierre EXPIRÓ en {etiqueta}: se agotaron los "
+        f"{timeout_s} s concedidos. Ojo, la suite NO falló y NO hay ningún test "
+        "roto que buscar: se quedó sin tiempo, que es otra cosa. Aun así los "
+        "números de esta campaña no valen, porque no se ha podido comprobar que "
+        "la base siguiera verde al terminar.\n"
+        "  Qué hacer: baja los workers (--workers N: cada worker corre una suite "
+        "entera y todas compiten por la misma máquina) o sube el SUELO "
+        "'mutacion.timeout_por_mutante_s' de harness/rigor.json. No toques la "
+        "suite."
+    )
+
+
 def _base_rota_al_final(implicados: list[tuple[str, object]], timeout_s: int) -> str | None:
-    """Reejecuta la línea base al cerrar. Devuelve el motivo si dejó de estar verde."""
+    """Reejecuta la línea base al cerrar. Devuelve el motivo si dejó de estar verde.
+
+    Distingue las dos formas de no estar verde, porque tienen arreglos opuestos:
+    EXPIRAR es un problema de reloj (R11) y FALLAR es un problema de suite
+    (R12). La consecuencia sí es la misma en los dos casos: el informe queda
+    marcado como no fiable y la ejecución sale con 3 (R13).
+    """
     for etiqueta, ejecutor in implicados:
         correr_base = getattr(ejecutor, "linea_base", None)
         if correr_base is None:
             continue
         resultado = correr_base(timeout_s)
+        if resultado.expirado:
+            return mensaje_base_expirada_al_final(etiqueta, timeout_s)
         if not resultado.verde:
             fallidos = ", ".join(resultado.fallidos()) or f"código {resultado.codigo}"
             return (
@@ -1538,7 +1569,13 @@ def escribir_informe(informe: InformeMutacion, ruta: Path) -> None:
     if informe.timeouts:
         lineas += ["## Timeouts", ""]
         for mutante in informe.timeouts:
-            lineas.append(f"- `{mutante.fichero}:{mutante.linea}` {mutante.descripcion()}")
+            # `descripcion()` ya empieza por `fichero:linea`: anteponerlo daba
+            # `- \`a.py:3\` a.py:3 [op] x -> y`. Nadie lo había leído nunca
+            # porque la sección entera estaba sin test (R20).
+            lineas.append(
+                f"- `{mutante.fichero}:{mutante.linea}` [{mutante.operador}] "
+                f"{mutante.original} -> {mutante.mutado}"
+            )
         lineas.append("")
 
     if informe.base_rota:
