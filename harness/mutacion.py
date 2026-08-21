@@ -1533,17 +1533,26 @@ def analisis_escritos(texto: str) -> dict[tuple, str]:
     }
 
 
-#: Prefijos de las filas del informe cuyo valor sale del RELOJ. Vive aquí, al
-#: lado de quien las escribe, para que quien añada una fila de reloj la vea y la
-#: declare: cuando esta lista se mantenía a mano dentro de un test (F-012), la
-#: fila que añadió F-038 T5 se quedó fuera y dejó el test flaky durante semanas.
+#: Prefijos de las filas del informe cuyo valor depende de CÓMO se corrió la
+#: campaña —el reloj y las condiciones— y no de lo que midió. Vive aquí, al lado
+#: de quien las escribe, para que quien añada una fila así la vea y la declare:
+#: cuando esta lista se mantenía a mano dentro de un test (F-012), la fila que
+#: añadió F-038 T5 se quedó fuera y dejó el test flaky durante semanas.
 #: Se compara por PREFIJO a propósito: `| Línea base (s) — \`etiqueta\`` lleva
 #: pegada la etiqueta del ejecutor.
+#:
+#: `Workers` y `Timeout efectivo` entran desde F-040: una campaña en serie y una
+#: paralela sobre el mismo commit tienen que dar informes comparables, y esas
+#: dos filas no coinciden nunca. El `Suelo configurado` NO entra: sale de
+#: `rigor.json`, es el mismo en las dos, y que deje de coincidir es una
+#: diferencia real que hay que ver.
 FILAS_DE_RELOJ: tuple[str, ...] = (
     "Generado por",
     "| Tiempo total",
     "| Línea base (s)",
     "| Media por mutante evaluado (s)",
+    "| Timeout efectivo por mutante (s)",
+    "| Workers",
 )
 
 #: Comentario de ruta con el que arranca todo informe. Cambia con el nombre del
@@ -1654,6 +1663,32 @@ def escribir_informe(informe: InformeMutacion, ruta: Path) -> None:
         f"| Media por mutante evaluado (s) | {media:.1f} |"
         if media is not None
         else "| Media por mutante evaluado (s) | n/d |"
+    )
+    # R4. Desde F-040 el timeout por mutante ya no es el fijo de `rigor.json`:
+    # se deriva de la línea base medida. Sin declararlo, los tiempos de dos
+    # campañas dejan de ser comparables sin que nadie se entere, y el reviewer
+    # compara peras con manzanas creyendo que compara lo mismo.
+    if informe.timeout_efectivo is None:
+        lineas.append("| Timeout efectivo por mutante (s) | n/d |")
+    elif informe.timeout_fijado:
+        lineas.append(
+            f"| Timeout efectivo por mutante (s) | {informe.timeout_efectivo} "
+            "— fijado a mano con `--timeout`, sin derivar |"
+        )
+    else:
+        lineas.append(
+            f"| Timeout efectivo por mutante (s) | {informe.timeout_efectivo} "
+            f"— derivado de la línea base × {MARGEN_TIMEOUT} |"
+        )
+    lineas.append(
+        f"| Suelo configurado (s) | {informe.timeout_suelo} |"
+        if informe.timeout_suelo is not None
+        else "| Suelo configurado (s) | n/d |"
+    )
+    lineas.append(
+        f"| Workers | {informe.workers} |"
+        if informe.workers is not None
+        else "| Workers | n/d |"
     )
     if informe.muestreado:
         lineas.append(

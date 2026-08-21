@@ -470,3 +470,118 @@ def test_f040_r6_el_timeout_fijado_sobrevive_a_la_fusion(
 
     assert informe.timeout_fijado is True
     assert informe.timeout_efectivo == 90
+
+
+# --- R4: el informe declara con qué reloj y con cuántos workers se midió ----
+
+from harness.mutacion import (  # noqa: E402
+    FILAS_DE_RELOJ,
+    escribir_informe,
+    lineas_comparables,
+)
+
+
+def _fila(texto: str, prefijo: str) -> str:
+    return next(linea for linea in texto.splitlines() if linea.startswith(prefijo))
+
+
+def test_f040_r4_el_informe_declara_timeout_efectivo_suelo_y_workers(
+    arbol: tuple[Alcance, str], tmp_path: Path
+) -> None:
+    """Sin estos tres números, dos campañas dejan de ser comparables en silencio.
+
+    Antes de F-040 el timeout era 120 s fijos para todo el mundo; ahora es un
+    derivado (~244 s en esta máquina). Un reviewer que compare el «Tiempo
+    total» de una campaña vieja con el de una nueva sin saberlo está comparando
+    peras con manzanas.
+    """
+    alcance, _ = arbol
+    informe = InformeMutacion(feature="F-040", alcance=alcance, generados=4)
+    informe.timeout_efectivo = 244
+    informe.timeout_suelo = 120
+    informe.workers = 3
+    ruta = tmp_path / "informe.md"
+
+    escribir_informe(informe, ruta)
+    texto = ruta.read_text(encoding="utf-8")
+
+    assert "244" in _fila(texto, "| Timeout efectivo por mutante")
+    assert "120" in _fila(texto, "| Suelo configurado")
+    assert "3" in _fila(texto, "| Workers")
+
+
+def test_f040_r4_lo_que_no_se_sabe_se_dice_n_d_y_no_cero(
+    arbol: tuple[Alcance, str], tmp_path: Path
+) -> None:
+    """Un cero se lee como medición; una fila ausente, como descuido."""
+    alcance, _ = arbol
+    ruta = tmp_path / "informe.md"
+
+    escribir_informe(InformeMutacion(feature="F-040", alcance=alcance), ruta)
+    texto = ruta.read_text(encoding="utf-8")
+
+    assert "n/d" in _fila(texto, "| Timeout efectivo por mutante")
+    assert "n/d" in _fila(texto, "| Suelo configurado")
+    assert "n/d" in _fila(texto, "| Workers")
+
+
+def test_f040_r6_el_informe_dice_cuando_el_timeout_se_fijo_a_mano(
+    arbol: tuple[Alcance, str], tmp_path: Path
+) -> None:
+    """Un número fijado a mano no es un número medido, y el informe lo separa."""
+    alcance, _ = arbol
+    informe = InformeMutacion(feature="F-040", alcance=alcance, generados=4)
+    informe.timeout_efectivo = 90
+    informe.timeout_suelo = 90
+    informe.timeout_fijado = True
+    ruta = tmp_path / "informe.md"
+
+    escribir_informe(informe, ruta)
+
+    fila = _fila(ruta.read_text(encoding="utf-8"), "| Timeout efectivo por mutante")
+    assert "fijado" in fila.lower()
+    assert "--timeout" in fila
+
+
+def test_f040_r4_el_timeout_y_los_workers_NO_entran_en_la_comparacion(
+    arbol: tuple[Alcance, str], tmp_path: Path
+) -> None:
+    """Dependen de CÓMO se corrió la campaña, no de lo que midió.
+
+    Una campaña en serie y una paralela sobre el mismo commit tienen que dar
+    informes comparables (F-039 R4), y sus workers y su timeout derivado no
+    coinciden nunca. Si estas filas entraran en la comparación, el test de
+    paridad de F-012 se rompería en cuanto la máquina respirase distinto.
+    """
+    alcance, _ = arbol
+
+    def _escribir(efectivo: int, workers: int, nombre: str) -> list[str]:
+        informe = InformeMutacion(feature="F-040", alcance=alcance, generados=4)
+        informe.timeout_efectivo = efectivo
+        informe.timeout_suelo = 120
+        informe.workers = workers
+        ruta = tmp_path / nombre
+        escribir_informe(informe, ruta)
+        return lineas_comparables(ruta.read_text(encoding="utf-8"))
+
+    assert _escribir(120, 1, "serie.md") == _escribir(244, 3, "paralelo.md")
+    assert "| Timeout efectivo por mutante" in " ".join(FILAS_DE_RELOJ) or any(
+        prefijo.startswith("| Timeout efectivo") for prefijo in FILAS_DE_RELOJ
+    )
+
+
+def test_f040_r4_el_suelo_configurado_SI_entra_en_la_comparacion(
+    arbol: tuple[Alcance, str], tmp_path: Path
+) -> None:
+    """El suelo sale de `rigor.json`, no del reloj: dos campañas equivalentes
+    tienen que declararlo igual, y que deje de coincidir es una diferencia real."""
+    alcance, _ = arbol
+
+    def _escribir(suelo: int, nombre: str) -> list[str]:
+        informe = InformeMutacion(feature="F-040", alcance=alcance, generados=4)
+        informe.timeout_suelo = suelo
+        ruta = tmp_path / nombre
+        escribir_informe(informe, ruta)
+        return lineas_comparables(ruta.read_text(encoding="utf-8"))
+
+    assert _escribir(120, "a.md") != _escribir(300, "b.md")
