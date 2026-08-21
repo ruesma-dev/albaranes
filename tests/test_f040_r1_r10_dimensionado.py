@@ -211,3 +211,262 @@ def test_f040_r2_la_linea_base_recibe_el_suelo_por_el_factor() -> None:
 def test_f040_r2_la_base_siempre_recibe_mas_tiempo_que_un_mutante() -> None:
     for suelo in (30, 120, 300):
         assert timeout_de_linea_base(suelo) > suelo
+
+
+# --- R3, R5, R6: la campaña deriva, lo dice, y se deja anular ---------------
+
+import time  # noqa: E402
+
+from harness.alcance import Alcance  # noqa: E402
+from harness.mutacion import (  # noqa: E402
+    MUERTO,
+    BaseRota,
+    ResultadoSuite,
+    ejecutar_campania,
+)
+
+#: Lo que tarda la línea base del doble. Por encima de medio segundo a
+#: propósito: con un suelo de 1 s, `ceil(espera × 2)` sale por encima del suelo
+#: y se ve que la derivación ha ocurrido de verdad.
+ESPERA_BASE = 1.2
+
+#: Suelo diminuto para que la derivación se note sin esperar dos minutos.
+SUELO_DE_JUGUETE = 1
+
+#: Fuente con dos comparaciones que mutar, para que la campaña tenga trabajo.
+FUENTE = "def clasifica(a, b):\n    if a == b:\n        return a > b\n    return None\n"
+
+
+class EjecutorCronometrado:
+    """Doble que tarda lo que se le diga y apunta con qué timeout se le llamó."""
+
+    def __init__(self, espera: float = 0.0, base: ResultadoSuite | None = None) -> None:
+        self.raiz = "wk_doble"
+        self.espera = espera
+        self.base = base or ResultadoSuite(codigo=0)
+        self.timeouts_de_base: list[int] = []
+        self.timeouts_de_mutante: list[int] = []
+
+    def linea_base(self, timeout_s: int) -> ResultadoSuite:
+        self.timeouts_de_base.append(timeout_s)
+        time.sleep(self.espera)
+        return self.base
+
+    def ejecutar(self, timeout_s: int) -> str:
+        self.timeouts_de_mutante.append(timeout_s)
+        return MUERTO
+
+
+@pytest.fixture
+def arbol(tmp_path: Path) -> tuple[Alcance, str]:
+    """Un fichero con código mutable y su alcance, sin git de por medio."""
+    (tmp_path / "codigo.py").write_text(FUENTE, encoding="utf-8")
+    alcance = Alcance(
+        feature="F-040",
+        origen="rama",
+        ref_diff=("dev", "feature/x"),
+        lineas={"codigo.py": {2, 3}},
+    )
+    return (alcance, str(tmp_path))
+
+
+def _campania(alcance, raiz, ejecutor, eco=None, **extra):
+    return ejecutar_campania(
+        alcance,
+        ejecutor,
+        timeout_s=extra.pop("timeout_s", SUELO_DE_JUGUETE),
+        raiz=raiz,
+        eco=eco,
+        comprobar_arbol=False,
+        **extra,
+    )
+
+
+def test_f040_r1_la_campania_juzga_con_el_timeout_DERIVADO_no_con_el_suelo(
+    arbol: tuple[Alcance, str],
+) -> None:
+    """El cambio que hace la feature: el mutante recibe lo medido, no el fijo."""
+    alcance, raiz = arbol
+    doble = EjecutorCronometrado(espera=ESPERA_BASE)
+
+    informe = _campania(alcance, raiz, doble)
+
+    assert informe.timeout_efectivo > SUELO_DE_JUGUETE, (
+        "con una base de 1,2 s y suelo 1 s, el derivado tiene que subir"
+    )
+    assert informe.timeout_efectivo == timeout_derivado(
+        SUELO_DE_JUGUETE, informe.segundos_linea_base
+    )
+    assert doble.timeouts_de_mutante, "no se juzgó ningún mutante"
+    assert set(doble.timeouts_de_mutante) == {informe.timeout_efectivo}
+
+
+def test_f040_r2_la_linea_base_recibe_su_timeout_holgado_no_el_del_mutante(
+    arbol: tuple[Alcance, str],
+) -> None:
+    alcance, raiz = arbol
+    doble = EjecutorCronometrado(espera=0.0)
+
+    _campania(alcance, raiz, doble)
+
+    assert doble.timeouts_de_base[0] == timeout_de_linea_base(SUELO_DE_JUGUETE)
+
+
+def test_f040_r3_la_campania_dice_por_pantalla_de_donde_sale_el_timeout(
+    arbol: tuple[Alcance, str],
+) -> None:
+    """Un número derivado que no se explica es tan opaco como uno inventado."""
+    alcance, raiz = arbol
+    dicho: list[str] = []
+
+    informe = _campania(
+        alcance, raiz, EjecutorCronometrado(espera=ESPERA_BASE), eco=dicho.append
+    )
+
+    anuncio = [linea for linea in dicho if "timeout" in linea.lower()]
+    assert anuncio, f"la campaña no anunció el timeout: {dicho}"
+    texto = "\n".join(anuncio)
+    assert str(informe.timeout_efectivo) in texto
+    assert "base" in texto.lower(), "hay que decir que sale de la línea base…"
+    assert "2" in texto, "…y con qué margen"
+
+
+def test_f040_r6_con_timeout_fijado_no_se_deriva_nada(
+    arbol: tuple[Alcance, str],
+) -> None:
+    """`--timeout N` manda: N es N, aunque la base medida pidiera más."""
+    alcance, raiz = arbol
+    doble = EjecutorCronometrado(espera=ESPERA_BASE)
+
+    informe = _campania(alcance, raiz, doble, timeout_fijado=True)
+
+    assert informe.timeout_efectivo == SUELO_DE_JUGUETE
+    assert set(doble.timeouts_de_mutante) == {SUELO_DE_JUGUETE}
+    assert informe.timeout_fijado is True
+
+
+def test_f040_r7_una_base_rapida_no_baja_el_timeout_del_suelo(
+    arbol: tuple[Alcance, str],
+) -> None:
+    """El valor configurado es un SUELO: un mutante nunca recibe menos que hoy."""
+    alcance, raiz = arbol
+    doble = EjecutorCronometrado(espera=0.0)
+
+    informe = _campania(alcance, raiz, doble, timeout_s=300)
+
+    assert informe.timeout_efectivo == 300
+    assert set(doble.timeouts_de_mutante) == {300}
+
+
+def test_f040_r5_una_base_que_expira_aborta_nombrando_workers_y_holgura(
+    arbol: tuple[Alcance, str],
+) -> None:
+    """El aborto tiene que decir qué tocar. «Sube el timeout» no basta.
+
+    Con W workers compitiendo, la respuesta suele ser bajar W, no subir el
+    reloj; y el suelo que se sube tiene nombre y fichero.
+    """
+    alcance, raiz = arbol
+    expirada = ResultadoSuite(codigo=-1, salida="", expirado=True)
+
+    with pytest.raises(BaseRota) as error:
+        _campania(
+            alcance,
+            raiz,
+            EjecutorCronometrado(base=expirada),
+            timeout_s=120,
+            workers=3,
+        )
+
+    mensaje = str(error.value)
+    assert "3 worker" in mensaje, "el mensaje tiene que nombrar los workers en juego"
+    assert str(timeout_de_linea_base(120)) in mensaje, "…y el timeout concedido"
+    assert "timeout_por_mutante_s" in mensaje
+    assert "--workers" in mensaje
+
+
+def test_f040_r5_el_aborto_por_base_expirada_no_deja_el_arbol_mutado(
+    arbol: tuple[Alcance, str],
+) -> None:
+    alcance, raiz = arbol
+    expirada = ResultadoSuite(codigo=-1, salida="", expirado=True)
+
+    with pytest.raises(BaseRota):
+        _campania(alcance, raiz, EjecutorCronometrado(base=expirada), workers=2)
+
+    assert (Path(raiz) / "codigo.py").read_text(encoding="utf-8") == FUENTE
+
+
+def test_f040_r4_el_informe_recuerda_con_que_workers_se_midio(
+    arbol: tuple[Alcance, str],
+) -> None:
+    alcance, raiz = arbol
+
+    informe = _campania(alcance, raiz, EjecutorCronometrado(), workers=3)
+
+    assert informe.workers == 3
+    assert informe.timeout_suelo == SUELO_DE_JUGUETE
+
+
+# --- R1 y R4 en la campaña PARALELA: manda el peor worker ------------------
+
+from harness.mutacion import InformeMutacion  # noqa: E402
+from harness.mutacion_paralela import fusionar  # noqa: E402
+
+
+def _parcial(alcance: Alcance, efectivo: int, suelo: int = 120) -> InformeMutacion:
+    return InformeMutacion(
+        feature=alcance.feature,
+        alcance=alcance,
+        timeout_efectivo=efectivo,
+        timeout_suelo=suelo,
+    )
+
+
+def test_f040_r1_el_informe_paralelo_declara_el_timeout_del_PEOR_worker(
+    arbol: tuple[Alcance, str],
+) -> None:
+    """Tres worktrees, tres líneas base, tres relojes. El informe declara uno.
+
+    Tiene que ser el más largo: es el que explica el peor caso. La media de
+    tres relojes distintos no es ningún reloj.
+    """
+    alcance, _ = arbol
+
+    informe = fusionar(
+        alcance,
+        [_parcial(alcance, 240), _parcial(alcance, 244), _parcial(alcance, 239)],
+        generados=9,
+        segundos=100.0,
+        workers=3,
+    )
+
+    assert informe.timeout_efectivo == 244
+    assert informe.timeout_suelo == 120
+    assert informe.workers == 3
+
+
+def test_f040_r4_sin_parciales_el_timeout_del_informe_es_desconocido(
+    arbol: tuple[Alcance, str],
+) -> None:
+    """Mejor `None` —que el informe imprime `n/d`— que un cero que se lee mal."""
+    alcance, _ = arbol
+
+    informe = fusionar(alcance, [], generados=0, segundos=0.0, workers=2)
+
+    assert informe.timeout_efectivo is None
+    assert informe.timeout_suelo is None
+    assert informe.workers == 2
+
+
+def test_f040_r6_el_timeout_fijado_sobrevive_a_la_fusion(
+    arbol: tuple[Alcance, str],
+) -> None:
+    alcance, _ = arbol
+    parcial = _parcial(alcance, 90, suelo=90)
+    parcial.timeout_fijado = True
+
+    informe = fusionar(alcance, [parcial], generados=1, segundos=1.0, workers=1)
+
+    assert informe.timeout_fijado is True
+    assert informe.timeout_efectivo == 90
