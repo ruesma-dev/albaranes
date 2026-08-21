@@ -388,3 +388,67 @@ sin contraste.
 Es la misma familia que F-038 T0 y que D4, **un piso más abajo**: D4 guarda el
 embudo («cero mutantes generados») y el caso «un mutante cuya suite ejecutó cero
 tests» sigue sin guarda.
+
+## Arnés · actualización de 1.6.1 a 1.7.2 (2026-08-21)
+
+Cierra el desfase que `progress/current.md` llevaba tres features denunciando:
+el sello decía 1.6.1 mientras el código de F-038, F-039 y F-040 (o sea, las
+versiones 1.7.0, 1.7.1 y 1.7.2, nacidas aquí) ya estaba dentro.
+
+**Aplicado a mano, no con el instalador**, por decisión del humano. `-SoloDiff`
+ofrecía 11 ficheros «nuevos» de los que **diez son tests que este repositorio ya
+tiene con nombre `test_f038_*`, `test_f039_*` y `test_f040_*`** —mismo número de
+casos, 2 a 4 líneas de diferencia—: aceptarlos habría duplicado ~190 tests. Se
+conservan los nombres con trazabilidad al requisito.
+
+Lo que faltaba de verdad, y entra:
+
+- **`harness/mutacion.py` (1.6.3, el arreglo que valía el viaje):**
+  `env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}` en el subproceso de la
+  suite. Sin él, el `.pyc` compilado desde el código MUTADO sobrevive a la
+  restauración del `.py` —CPython valida la caché por (tamaño, mtime) y la
+  restauración deja los dos iguales— y la campaña mide contra un árbol
+  envenenado. Origen: review de F-010 en `postventa-incidencias`.
+- **`tests/test_mutacion_sin_bytecode.py`** (nuevo, único test genuinamente
+  nuevo). Vigila las dos mitades: la variable y que se herede `os.environ` —sin
+  lo segundo el subproceso pierde `PATH` y `VIRTUAL_ENV`, y todos los mutantes
+  «mueren» por fallo de importación—. Fase RED comprobada: `KeyError: 'env'`.
+- **`CHECKPOINTS.md` C4 bis:** el punto del **coste por mutante**
+  (`Tiempo total × workers ÷ mutantes`; por debajo de un segundo la campaña es
+  sospechosa por construcción), el rechazo por cabecera «⚠ CAMPAÑA NO VÁLIDA» o
+  fila «Sin veredicto (base rota)» ≠ 0, los **workers** como quinto número de
+  «Evidencias», y la corrección de RM2: `mutantes × media` **es** el «Tiempo
+  total» por construcción, así que comparar esos dos no descubre nada; lo que se
+  compara con la línea base es `media × W`.
+- **`.claude/agents/reviewer.md`:** rechazo sin más análisis ante una campaña
+  que se declara no válida, y sospecha del cero de supervivientes sin línea base.
+- **`harness/init.sh`:** las puertas de cobertura y de tamaño imprimen su N/A
+  **con motivo** cuando no hay intérprete de Python, en vez de callar. Un tramo
+  mudo convierte en checkbox no marcable lo que `CHECKPOINTS.md` promete.
+- **`harness/rutas_sensibles.ejemplo.json`:** una exigencia que arranca en
+  `aviso` debe declarar por escrito qué la sube a `bloqueo`, y esa condición
+  tiene que apoyarse en algo **versionado** (aquí se condicionó a unos `.xlsx`
+  que `.gitignore` excluye).
+- **`CLAUDE.md`** (dónde vive `sigrid_tablas.md`) y **`docs/referencia/README.md`**
+  (documento común a varios repositorios = una sola copia en `azure-apps/` y un
+  puntero aquí).
+- **Sello:** `harness/VERSION` a 1.7.2 y `harness/ARNES_VERSION.md` reescrito,
+  con la nota de por qué se selló a mano y los avisos de la 1.6.3 y la 1.7.2.
+
+Descartado del diff por ser despersonalización del arnés (cambia «F-038» por
+«una versión posterior» y «este repositorio» por «el repositorio donde se
+calibraron»): `harness/rigor.json`, `specs/SPECS.md`, `harness/alcance.py`,
+comentarios de `mutacion.py` e `init.sh`. Y por regresión: la versión del arnés
+de `tests/test_mutacion_operadores.py` **borra** dos aserciones sobre la puerta
+de evals que aquí sí valen, y `.claude/settings.json` perdería la adaptación
+del monorepo (PostToolUse acotado a `tests/`).
+
+Verificado: `bash harness/init.sh` en verde, **531 passed** (eran 530; +1 el del
+bytecode). Rama `arnes/1.7.2`.
+
+**Hallazgo al aplicar la regla nueva a los informes ya escritos:**
+`progress/mutacion_F-002.md` declara 108 mutantes evaluados en 54,8 s en serie
+→ **0,51 s por mutante**, por debajo del segundo. Con esa vara su campaña es
+sospechosa por construcción y su evidencia de mutación no vale hasta relanzarla
+con la caché limpia. El resto de informes salen coherentes (F-012 20,2 s;
+F-034 55,9 s; F-038 36,4 s; F-039 37,1 s; F-040 16,8 × 4 workers = 67 s).

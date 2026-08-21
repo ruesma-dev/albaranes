@@ -10,14 +10,24 @@ está en `progress/history.md`; aquí solo queda lo vivo.
 La suite del monorepo pasó de **305 a 530 tests**; la de `arnes-base`, de 47 a
 **263**.
 
+**Añadido el 21-ago, después de ese cierre**: `albaranes` ya está **actualizado
+a la 1.7.2** (rama `arnes/1.7.2`, 531 tests). Se aplicó a mano, no con el
+instalador; el porqué y el detalle, en `progress/history.md`.
+
 ### Lo primero al abrir la próxima sesión
 
-1. **`git push` de `arnes-base`**: **4 commits locales** (la 1.7.2).
-   `git -C C:\Users\pgris\PycharmProjects\arnes-base push origin main`.
-2. **F-036 (residuos)**: lo único de toda la lista que **vale euros**, y lleva
+1. **Merge de `arnes/1.7.2` a `dev`** (hecho el push de `arnes-base`, hecha la
+   actualización). Lo pendiente aquí es la decisión del humano sobre el
+   hallazgo del punto 2.
+2. **`progress/mutacion_F-002.md` queda en cuarentena**: 108 mutantes en 54,8 s
+   en serie = **0,51 s por mutante**, por debajo del segundo que la regla nueva
+   del coste por mutante declara sospechoso por construcción. O se relanza con
+   la caché limpia, o se anota que su evidencia de mutación no vale. Decisión
+   del humano; no se ha tocado el informe.
+3. **F-036 (residuos)**: lo único de toda la lista que **vale euros**, y lleva
    dos días esperando. Ver la sección de abajo; la decisión del humano del
    19-ago ya está tomada y solo falta implementarla.
-3. Después, **F-041** (el quinto defecto de la campaña, `critico`, prioridad 2).
+4. Después, **F-041** (el quinto defecto de la campaña, `critico`, prioridad 2).
 
 ---
 
@@ -25,8 +35,8 @@ La suite del monorepo pasó de **305 a 530 tests**; la de `arnes-base`, de 47 a
 
 | Repositorio | Versión | Estado |
 |---|---|---|
-| `arnes-base` | **1.7.2** | F-038 (1.7.0), F-039 (1.7.1) y F-040 (1.7.2) portadas. Las dos primeras **pusheadas**; la **1.7.2 son 4 commits locales SIN SUBIR**. Destino: 263 passed, instalador 65 verde |
-| `albaranes` | **1.6.1** sellado, con el código de F-038, F-039 y F-040 dentro | **El sello miente desde hace tres features.** Le faltan la 1.6.2 y la 1.6.3, en particular **el arreglo del bytecode envenenado** (mutantes «muertos» falsos). Se arregla actualizándolo con el instalador a la 1.7.2 |
+| `arnes-base` | **1.7.2** | F-038 (1.7.0), F-039 (1.7.1) y F-040 (1.7.2) portadas y **subidas**: `main` sincronizado con `origin`. Destino: 263 passed, instalador 65 verde |
+| `albaranes` | **1.7.2** (2026-08-21) | Al día. El sello vuelve a decir la verdad: entró el **arreglo del bytecode envenenado** (1.6.3) y los criterios que faltaban en `CHECKPOINTS.md` y en el reviewer. Aplicado a mano —el instalador habría duplicado ~190 tests que aquí ya existen con nombre `test_f0XX_*`—; consta en `harness/ARNES_VERSION.md` |
 | `porcentajes`, `postventa-incidencias` | 1.5.2 | sin actualizar |
 | `datamart-seg-anual` | 1.5.0 | sin actualizar |
 | `partes` | 1.4.0 | sin actualizar; se saltaría **siete** versiones |
@@ -50,11 +60,12 @@ ya se aplicó dos veces y ahorró horas de máquina.
 
 ## Pendientes del humano
 
-1. **`git push` de `arnes-base`** (4 commits de la 1.7.2). Lo demás está subido:
-   `albaranes` tiene `dev` y `main` al día.
-2. **Actualizar `albaranes` a la 1.7.2** con el instalador, y luego los otros
-   cuatro proyectos. `partes` es donde más ficheros aparecerán «distintos»;
-   desde F-035 el instalador ya no puede pisar estado.
+1. **Merge de `arnes/1.7.2` a `dev`** y, si procede, push. `arnes-base` ya está
+   subido y `albaranes` actualizado.
+2. **Actualizar los otros cuatro proyectos** a la 1.7.2 con el instalador.
+   `partes` es donde más ficheros aparecerán «distintos»; desde F-035 el
+   instalador ya no puede pisar estado. Ahí sí conviene usarlo: el problema de
+   los tests duplicados es exclusivo de `albaranes`, que fue donde nacieron.
 3. **Verificaciones MANUAL arrastradas**: las 4 de F-002 (liberan el merge de
    F-003, aprobada en su rama desde hace días), y las de F-019 y F-027.
 4. **Reconciliar F-003 y F-004 antes de arrancarlas** (su R4 conserva el cálculo

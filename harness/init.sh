@@ -463,6 +463,10 @@ elif [ "$ES_PYTHON" -eq 1 ] && [ -n "$PY" ]; then
     else
         ko "$SALIDA_COBERTURA"
     fi
+elif [ -z "$PY" ]; then
+    warn "PUERTA COBERTURA: N/A (no hay intérprete de Python en el PATH: la puerta no se puede medir)"
+else
+    warn "PUERTA COBERTURA: N/A (proyecto sin Python: harness.cobertura solo mide líneas cambiadas de .py)"
 fi
 
 # --- 7 ter. Puerta de RUTAS SENSIBLES (solo si hay declaración) -------------
@@ -500,6 +504,10 @@ fi
 # Códigos de harness.tamano: 0 cabe, 1 se pasa (KO: el portero se pone rojo),
 # 2 no aplica (sin configuración o sin bloque `tamano`) => AVISO con el motivo
 # impreso, nunca un verde silencioso.
+#
+# Y por eso hay rama para CADA caso en que la puerta no puede medir, incluido
+# el proyecto sin Python: CHECKPOINTS.md promete un N/A "con su motivo impreso"
+# y un tramo mudo convierte esa promesa en un checkbox que nadie puede marcar.
 if [ "$ES_PYTHON" -eq 1 ] && [ -n "$PY" ] && [ -f "harness/tamano.py" ]; then
     FEATURE_TAMANO=$($PY - <<'EOF'
 from harness.alcance import ejecutar_git
@@ -522,6 +530,10 @@ EOF
     fi
 elif [ "$ES_PYTHON" -eq 1 ] && [ -n "$PY" ]; then
     warn "PUERTA TAMAÑO: N/A (no existe harness/tamano.py: arnés anterior a la puerta de tamaño)"
+elif [ -z "$PY" ]; then
+    warn "PUERTA TAMAÑO: N/A (no hay intérprete de Python en el PATH: la puerta no se puede medir)"
+else
+    warn "PUERTA TAMAÑO: N/A (proyecto sin Python: harness.tamano necesita el intérprete del arnés)"
 fi
 
 # --- 8. Marcas de adaptación sin resolver -----------------------------------
