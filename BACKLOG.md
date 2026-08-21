@@ -5,11 +5,13 @@
 
 Resumen: **40 features**, 30 abiertas, 10 terminadas.
 
+En curso: **F-040**.
+
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-040 | Arnes: la campana de mutacion se dimensiona sola y deja de mentir sobre lo que ha medido | 2 | pendiente | estandar | `feature/F-040-campana-dimensionada-y-honesta` |
+| F-040 | Arnes: la campana de mutacion se dimensiona sola y deja de mentir sobre lo que ha medido | 2 | en curso | estandar | `feature/F-040-campana-dimensionada-y-honesta` |
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | pendiente | critico | `feature/F-036-residuos-contenedores-e-incrementos` |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
@@ -59,7 +61,7 @@ Resumen: **40 features**, 30 abiertas, 10 terminadas.
 
 ### F-040 · Arnes: la campana de mutacion se dimensiona sola y deja de mentir sobre lo que ha medido
 
-estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-040-campana-dimensionada-y-honesta`
+estado **en curso** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-040-campana-dimensionada-y-honesta`
 
 Cuatro defectos del motor de mutacion + los huecos de test que dejaron F-039 y la verificacion del paralelo. Todos salieron el 2026-08-20/21 y el humano pidio cerrarlos en UNA feature porque son el mismo tema -que la campana se dimensione bien y diga la verdad- y tocan los mismos ficheros.
 
