@@ -30,6 +30,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import math
 import os
 import random
 import re
@@ -80,8 +81,26 @@ INDETERMINADO = "indeterminado"
 #: que la 1.5.3 arregla.
 BASE_ROTA = "base_rota"
 
-#: Segundos máximos por mutante si nadie configura otra cosa.
+#: SUELO de segundos por mutante si nadie configura otra cosa. Suelo y no
+#: techo: el timeout efectivo se deriva de la línea base medida (R1/R7).
 TIMEOUT_POR_DEFECTO = 120
+
+#: Cuánto se multiplica el peor tiempo de línea base MEDIDO para obtener el
+#: timeout de un mutante. Va en el código y no en `rigor.json` a propósito
+#: (decisión del humano del 2026-08-21): es un parámetro del mecanismo, no de la
+#: máquina, y meterlo en configuración reabre la puerta a cablear valores
+#: locales en un arnés que viaja a cinco proyectos.
+#:
+#: Dos, no diez: el margen tiene que absorber el ruido de una suite que ya se
+#: midió con los W workers compitiendo, no tapar un mutante que cuelga.
+MARGEN_TIMEOUT = 2.0
+
+#: Por cuánto se multiplica el suelo para darle su timeout a la LÍNEA BASE.
+#: Huevo y gallina: la base necesita un reloj para poder medirse, y no puede
+#: usar uno derivado de sí misma. Se le da uno holgado y aparte, y es defendible
+#: porque se paga **una vez por worker**, no una por mutante. Si ni con 10
+#: minutos cabe la suite limpia, el problema ya no es el reloj.
+FACTOR_HOLGURA_BASE = 5
 
 #: Tope del número de workers CALCULADO por defecto. No limita lo que se pida a
 #: mano con `--workers` ni lo declarado en `rigor.json` (R10).
@@ -622,6 +641,40 @@ CAUSAS_EN_CUALQUIER_MODO = (
         "en esta máquina no está levantado"
     ),
 )
+
+
+def timeout_derivado(
+    suelo: int, tiempos_base: dict[str, float], margen: float = MARGEN_TIMEOUT
+) -> int:
+    """Segundos por mutante derivados de la línea base ya medida (R1).
+
+    `max(suelo, ceil(peor_tiempo × margen))`. Sede ÚNICA de la fórmula.
+
+    Se deriva de la línea base y no de una medición aparte porque
+    `comprobar_linea_base` ya corre la suite limpia **dentro de cada worktree y
+    con los W workers compitiendo**, que es justo la contención que hay que
+    medir, y ya devuelve los segundos: la medición correcta estaba hecha y se
+    tiraba. Usarla no cuesta ni un segundo extra y absorbe máquina, workers y
+    tamaño de suite sin ninguna fórmula que adivine.
+
+    Manda el PEOR de los tiempos: un timeout que solo le vale al worker más
+    rápido no le vale a nadie. Se redondea hacia arriba porque regalar el
+    segundo que faltaba justo en el peor caso convierte una campaña válida en
+    una tanda de «timeout». Sin ninguna medición —ejecutores dobles, campaña sin
+    línea base— no hay nada de lo que derivar y se devuelve el suelo tal cual.
+    """
+    if not tiempos_base:
+        return suelo
+    return max(suelo, math.ceil(max(tiempos_base.values()) * margen))
+
+
+def timeout_de_linea_base(suelo: int) -> int:
+    """Segundos que se le conceden a la suite SIN mutar nada (R2).
+
+    Ver `FACTOR_HOLGURA_BASE`: es holgado a propósito y su coste está acotado
+    porque se paga una vez por worker.
+    """
+    return suelo * FACTOR_HOLGURA_BASE
 
 
 def mensaje_base_rota(etiqueta: str, resultado: ResultadoSuite) -> str:

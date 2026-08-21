@@ -129,3 +129,85 @@ def test_f040_r10_workers_pedidos_a_mano_no_se_recortan(pedidos: int) -> None:
 def test_f040_r10_tampoco_se_recorta_lo_declarado_en_rigor_json() -> None:
     """Un proyecto que sí quiera declarar `workers` puede pasarse del tope."""
     assert resolver_workers(None, 12) == 12
+
+
+# --- R1: el timeout por mutante sale de la línea base ya medida -------------
+
+from harness.mutacion import (  # noqa: E402
+    FACTOR_HOLGURA_BASE,
+    MARGEN_TIMEOUT,
+    timeout_de_linea_base,
+    timeout_derivado,
+)
+
+#: Los tres tiempos de línea base de la campaña real del 2026-08-21, uno por
+#: worktree, con tres workers compitiendo por la misma máquina.
+BASE_MEDIDA = {"wk_0": 119.3, "wk_1": 121.6, "wk_2": 119.5}
+
+#: `mutacion.timeout_por_mutante_s` de este repositorio. No se toca: pasa a ser
+#: un suelo, y un mutante nunca recibe menos que hoy.
+SUELO = 120
+
+
+def test_f040_r1_el_margen_es_dos() -> None:
+    """Dos, no diez: un margen generoso deja pasar mutantes que cuelgan."""
+    assert MARGEN_TIMEOUT == 2.0
+
+
+def test_f040_r1_con_la_medicion_real_el_timeout_sale_244_s() -> None:
+    """`max(120, ceil(121,6 × 2)) = 244`. Manda el peor worker, no la media."""
+    assert timeout_derivado(SUELO, BASE_MEDIDA) == 244
+
+
+def test_f040_r1_manda_el_PEOR_de_los_tiempos_medidos() -> None:
+    """Un timeout que solo le vale al worker más rápido no le vale a nadie."""
+    assert timeout_derivado(SUELO, {"lento": 200.0, "rapido": 1.0}) == 400
+
+
+def test_f040_r7_el_valor_configurado_es_un_SUELO_y_nunca_un_techo() -> None:
+    """Una suite rápida no baja el timeout por debajo de lo configurado."""
+    assert timeout_derivado(SUELO, {"wk_0": 3.0}) == SUELO
+    assert timeout_derivado(SUELO, {"wk_0": 59.9}) == SUELO
+    assert timeout_derivado(SUELO, {"wk_0": 60.1}) > SUELO
+
+
+def test_f040_r1_sin_medicion_se_queda_el_suelo() -> None:
+    """Ejecutores dobles, campaña sin línea base: no hay nada de lo que derivar."""
+    assert timeout_derivado(SUELO, {}) == SUELO
+
+
+def test_f040_r1_el_derivado_se_redondea_HACIA_ARRIBA() -> None:
+    """Redondear a la baja regalaría el segundo que faltaba justo al peor caso."""
+    assert timeout_derivado(1, {"wk_0": 60.01}) == math.ceil(60.01 * 2) == 121
+
+
+def test_f040_r1_el_margen_se_puede_inyectar_para_probarlo() -> None:
+    assert timeout_derivado(1, {"wk_0": 50.0}, margen=3.0) == 150
+
+
+def test_f040_r1_el_derivado_siempre_es_un_entero() -> None:
+    derivado = timeout_derivado(SUELO, BASE_MEDIDA)
+
+    assert isinstance(derivado, int) and not isinstance(derivado, bool)
+
+
+# --- R2: la línea base tiene su propio timeout, más holgado ----------------
+
+
+def test_f040_r2_el_factor_de_holgura_de_la_base_es_cinco() -> None:
+    assert FACTOR_HOLGURA_BASE == 5
+
+
+def test_f040_r2_la_linea_base_recibe_el_suelo_por_el_factor() -> None:
+    """Huevo y gallina: la base necesita un timeout para poder medirse.
+
+    Se le concede el suyo, holgado y aparte, y es defendible porque se paga UNA
+    VEZ POR WORKER, no una por mutante. Si ni con diez minutos cabe la suite
+    limpia, el problema ya no es el reloj.
+    """
+    assert timeout_de_linea_base(SUELO) == 600
+
+
+def test_f040_r2_la_base_siempre_recibe_mas_tiempo_que_un_mutante() -> None:
+    for suelo in (30, 120, 300):
+        assert timeout_de_linea_base(suelo) > suelo
