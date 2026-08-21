@@ -444,6 +444,48 @@ estropean mutuamente.**
 
 ---
 
+## F-040 · IMPLEMENTADA, pendiente de review (2026-08-21, implementer)
+
+`progress/impl_F-040.md` (219/220). Rama
+`feature/F-040-campana-dimensionada-y-honesta`, 15 commits, `bash
+harness/init.sh` en **verde**: 530 tests, cobertura de líneas cambiadas
+**100 %** (79/79), tamaño dentro de topes. Las cuatro decisiones del humano,
+aplicadas tal cual.
+
+**La prueba de campo de que D1 funciona**: la campaña de la propia feature se
+lanzó **sin `--timeout`** —imposible en esta máquina el 2026-08-21— y sus cuatro
+líneas base pasaron en verde a 64,7–68,3 s con **4 workers** (el tope nuevo),
+timeout derivado a **137 s**, cero timeouts en 20 mutantes.
+`progress/mutacion_F-040.md`: 49 generados, 20 evaluados, 17 muertos, 3
+supervivientes, los tres analizados.
+
+### Lo que el humano tiene que decidir
+
+1. **Aparece un QUINTO defecto y NO se ha metido**, según la regla del design:
+   **la campaña etiqueta mal algún mutante, y no siempre el mismo**. Los mismos
+   20 mutantes medidos dos veces discrepan en dos: la paralela declaró
+   superviviente a `mutacion.py:1942 max(1,→max(2,` y la serie a
+   `mutacion.py:677 *→//`; **los dos mueren** al reproducirlos a mano con la
+   invocación exacta del ejecutor (`EXIT=1` las dos veces, una de ellas también
+   dentro de un worktree recién creado). Es no determinista y es el espejo del
+   falso muerto que arreglaron F-012 y F-038. Propuesta en `impl_F-040.md`:
+   ficha nueva, rigor `critico`, empezando por guardar el **código de salida**
+   de cada mutante en el informe —hoy un «superviviente» puede ser un `exit 0` o
+   un `exit 5`, que `ResultadoSuite.verde` cuenta igual—. **Efecto sobre F-040:
+   ninguno en el recuento de muertos** (19 cazados y 1 equivalente de 20).
+2. **Una desviación respecto a R27**: la fórmula que pedía la spec para RM2
+   (`mutantes × media / W`) no cuadra, porque `media` ya es tiempo de pared
+   entre mutantes y por tanto ya viene dividida entre W. RM2 dice ahora que el
+   coste real por mutante es `media × W`. El propósito del requisito se cumple;
+   el texto literal, no. Justificada en `impl_F-040.md`.
+
+**Después del merge en `dev`** (NO en esta rama, y no se ha tocado
+`arnes-base`): porte a **1.7.2**, con la lista de ficheros en `impl_F-040.md` y
+el aviso obligatorio en `GUIA_INSTALACION.md` de que **los tiempos de campañas
+paralelas anteriores dejan de ser comparables** (timeout derivado; tope 16 → 4).
+
+---
+
 ## F-040 · spec escrita (2026-08-21, spec-author)
 
 `specs/F-040-campana-dimensionada-y-honesta/` — requirements (114/150), design
@@ -468,7 +510,7 @@ es un **booleano** (`true` → 1 s) y un `--timeout` negativo sin validar. Tampo
 `CHECKPOINTS.md` reconocía el factor de workers: no aparece ni «worker» ni
 «paralel». De ahí sale R27.
 
-### Necesita validación del humano (4 preguntas abiertas en requirements.md)
+### Las 4 preguntas — CERRADAS por el humano el 2026-08-21 e implementadas
 
 1. ¿`MARGEN = 2` y `FACTOR_HOLGURA_BASE = 5` en el código, o declarados en
    `rigor.json`?
