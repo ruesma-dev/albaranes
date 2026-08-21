@@ -371,6 +371,38 @@ se arregla aquí por dos motivos: excede los requisitos de F-039, y `mutacion.py
 es justo el código que esta feature está midiendo. Es genérico del arnés, así
 que si se abre, se abre para `arnes-base` también.
 
+### 3 bis. TERCER falso verde de la misma familia, hallado el 2026-08-21
+
+**Una campaña con alcance vacío por la vía `--feature` sale con código 0 y
+escribe su informe.** Lo destapó el humano al ejecutar la verificación T5:
+
+```
+F-038: 0 fichero(s), 0 línea(s) de producción (origen rama, ef5808c..feature/F-038-...)
+Sin líneas de producción en el alcance: nada que mutar.
+0 mutantes evaluados, 0 muertos, 0 supervivientes ... en 0.0 s
+Informe: ...erificacion_paralela_F-039.md
+```
+
+Causa inmediata: F-038 ya está mergeada en `dev`, así que el diff de su rama
+contra el merge-base es vacío y el comando preparado en
+`verificacion_paralela_F-039.md` **caducó al mergear**. Ese comando era correcto
+cuando se escribió.
+
+Pero lo que importa es lo otro: **es el mismo defecto que el CR-2 de F-039**
+—`--ficheros ","` salía con exit 0 y un informe de 0 mutantes—, por una vía que
+nadie tapó. Van **tres veces hoy** el mismo modo de fallo: la invocación sin
+ruta (F-038 T0), el flake de las filas de reloj (F-038 T17) y la guarda
+inalcanzable (F-039 CR-2). Todos dicen «todo bien» sin haber juzgado nada.
+
+Propuesta, pendiente de que el humano decida: que una campaña con **cero
+mutantes generados** aborte con código distinto de 0 y **sin escribir informe**,
+igual que hace hoy `--ficheros` tras CR-2. `CHECKPOINTS.md` ya manda mirar con
+lupa las campañas de cero mutantes; hoy la herramienta no ayuda a verlo.
+
+**Consecuencia inmediata**: la verificación T5/T6 del paralelo **sigue
+pendiente**. Comando que sí la ejercita, con alcance explícito:
+`python -m harness.mutacion --feature F-039 --ficheros harness/rigor.py --workers 5 --max-mutantes 1 --salida "$env:TEMPerificacion_paralela_F-039.md"`.
+
 ### 4. Aviso de convivencia (costó ~40 minutos de máquina)
 
 Mientras corría la campaña de F-039, otra sesión lanzó **campañas de mutación
