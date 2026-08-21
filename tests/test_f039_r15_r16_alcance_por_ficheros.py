@@ -116,7 +116,10 @@ def test_f039_r15_con_ficheros_la_campania_muta_ese_alcance_y_no_el_del_diff(
 
     def _campania_falsa(alcance: Alcance, *_args: object, **_kwargs: object):
         recibidos.append(alcance)
-        return InformeMutacion(feature=alcance.feature, alcance=alcance)
+        # `generados` no puede ser 0: desde F-040 (R14) una campaña sin ni un
+        # mutante aborta con código 3 sin escribir informe. Lo que este test
+        # comprueba es QUÉ alcance recibió la campaña, no su recuento.
+        return InformeMutacion(feature=alcance.feature, alcance=alcance, generados=5)
 
     def _diff_prohibido(*_args: object, **_kwargs: object) -> Alcance:
         raise AssertionError("con --ficheros no se calcula el alcance desde el diff")

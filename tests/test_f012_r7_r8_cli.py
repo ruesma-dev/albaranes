@@ -223,7 +223,10 @@ def test_f012_r7_la_cli_pasa_el_numero_de_workers_al_coordinador(
     def espia(alcance, servicios, **kwargs):
         recibido.update(kwargs)
         recibido["ficheros"] = alcance.ficheros()
-        return InformeMutacion(feature=alcance.feature, alcance=alcance)
+        # `generados` no puede ser 0: desde F-040 (R14) una campaña que no
+        # genera ni un mutante aborta con código 3 sin escribir informe, así
+        # que un doble con cero devolvía algo que ya no puede ocurrir.
+        return InformeMutacion(feature=alcance.feature, alcance=alcance, generados=3)
 
     monkeypatch.setattr(paralela, "ejecutar_campania_paralela", espia)
 
@@ -258,7 +261,8 @@ def test_f012_r8_con_workers_2_la_cli_ya_paraleliza(
 
     def espia(alcance, servicios, **kwargs):
         recibido.update(kwargs)
-        return InformeMutacion(feature=alcance.feature, alcance=alcance)
+        # Ver la nota de `generados` del espía anterior (R14 de F-040).
+        return InformeMutacion(feature=alcance.feature, alcance=alcance, generados=3)
 
     monkeypatch.setattr(paralela, "ejecutar_campania_paralela", espia)
 

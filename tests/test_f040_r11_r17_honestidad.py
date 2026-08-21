@@ -212,3 +212,218 @@ def test_f040_r20_hay_una_fila_por_mutante_expirado(tmp_path: Path) -> None:
     assert "## Timeouts" in texto
     filas = [linea for linea in texto.splitlines() if linea.startswith("- `harness/")]
     assert len(filas) == 3
+
+
+# --- R14, R15, R16: cero mutantes NO puede salir en verde -------------------
+
+#: Código con el que sale una campaña que no ha juzgado nada. Es el 3 de
+#: `CampaniaAbortada`, distinto del 1 de «hay supervivientes» a propósito: «hay
+#: supervivientes» es un resultado, «no se ha medido nada» no lo es.
+NO_SE_MIDIO_NADA = 3
+
+
+def _informe_de(alcance: Alcance, generados: int) -> InformeMutacion:
+    return InformeMutacion(feature=alcance.feature, alcance=alcance, generados=generados)
+
+
+@pytest.fixture
+def sin_campania(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Prohíbe arrancar la campaña: la guarda tiene que morder ANTES (R16)."""
+
+    def _prohibida(*_args: object, **_kwargs: object):
+        raise AssertionError(
+            "con el alcance vacío no se arranca ni una línea base: el aborto va "
+            "antes de tocar nada"
+        )
+
+    monkeypatch.setattr("harness.mutacion.ejecutar_campania", _prohibida)
+    monkeypatch.setattr(
+        "harness.mutacion_paralela.ejecutar_campania_paralela", _prohibida
+    )
+
+
+def test_f040_r16_un_alcance_sin_lineas_aborta_con_3_antes_de_la_linea_base(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sin_campania: None
+) -> None:
+    """Hoy imprime «Sin líneas de producción en el alcance» y SIGUE.
+
+    Seguir es lo que produce el informe de cero mutantes que se lee como «todo
+    bien». R16: se aborta ahí mismo, sin correr ninguna suite.
+    """
+    vacio = Alcance(feature="F-040", origen="rama", ref_diff=("dev", "x"), lineas={})
+    monkeypatch.setattr(
+        "harness.mutacion.alcance_de_feature", lambda *_a, **_k: vacio
+    )
+    destino = tmp_path / "no_deberia_existir.md"
+
+    codigo = main(["--feature", "F-040", "--salida", str(destino)])
+
+    assert codigo == NO_SE_MIDIO_NADA
+    assert not destino.exists(), "una campaña que no midió nada no escribe informe"
+
+
+def test_f040_r16_el_aborto_por_alcance_vacio_explica_por_que(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    sin_campania: None,
+) -> None:
+    vacio = Alcance(feature="F-040", origen="rama", ref_diff=("dev", "x"), lineas={})
+    monkeypatch.setattr(
+        "harness.mutacion.alcance_de_feature", lambda *_a, **_k: vacio
+    )
+
+    main(["--feature", "F-040", "--salida", str(tmp_path / "x.md")])
+
+    salida = capsys.readouterr()
+    texto = salida.out + salida.err
+    assert "no se ha juzgado" in texto.lower() or "no se ha medido" in texto.lower()
+    assert "alcance" in texto.lower()
+
+
+def test_f040_r16_un_alcance_con_ficheros_pero_sin_ninguna_linea_tambien_aborta(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sin_campania: None
+) -> None:
+    """`{"a.py": set()}` no es un alcance: es un diccionario con un fichero."""
+    hueco = Alcance(
+        feature="F-040",
+        origen="rama",
+        ref_diff=("dev", "x"),
+        lineas={"harness/mutacion.py": set()},
+    )
+    monkeypatch.setattr(
+        "harness.mutacion.alcance_de_feature", lambda *_a, **_k: hueco
+    )
+
+    assert main(["--feature", "F-040", "--salida", str(tmp_path / "x.md")]) == (
+        NO_SE_MIDIO_NADA
+    )
+
+
+@pytest.mark.parametrize(
+    "via", ["feature", "ficheros"], ids=["por --feature", "por --ficheros"]
+)
+def test_f040_r14_r15_cero_mutantes_generados_aborta_con_3_por_cualquier_via(
+    via: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R15: la guarda vive en el EMBUDO, no en cada constructor de alcance.
+
+    Van tres puertas por las que ha entrado el mismo fallo —invocación sin
+    ruta, `--ficheros ","` y `--feature` sobre una rama ya mergeada—. Taparlas
+    una a una garantiza una cuarta; `main` es el único punto por el que pasan
+    todas, presentes y futuras.
+    """
+    con_lineas = _alcance()
+    monkeypatch.setattr(
+        "harness.mutacion.alcance_de_feature", lambda *_a, **_k: con_lineas
+    )
+    monkeypatch.setattr(
+        "harness.mutacion.alcance_de_ficheros", lambda *_a, **_k: con_lineas
+    )
+    monkeypatch.setattr(
+        "harness.mutacion.ejecutar_campania",
+        lambda alcance, *_a, **_k: _informe_de(alcance, generados=0),
+    )
+    destino = tmp_path / "no_deberia_existir.md"
+    orden = ["--feature", "F-040", "--workers", "1", "--salida", str(destino)]
+    if via == "ficheros":
+        orden += ["--ficheros", "harness/mutacion.py"]
+
+    codigo = main(orden)
+
+    assert codigo == NO_SE_MIDIO_NADA
+    assert not destino.exists()
+
+
+def test_f040_r14_el_aborto_por_cero_mutantes_dice_que_no_se_juzgo_nada(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    con_lineas = _alcance()
+    monkeypatch.setattr(
+        "harness.mutacion.alcance_de_feature", lambda *_a, **_k: con_lineas
+    )
+    monkeypatch.setattr(
+        "harness.mutacion.ejecutar_campania",
+        lambda alcance, *_a, **_k: _informe_de(alcance, generados=0),
+    )
+
+    main(["--feature", "F-040", "--workers", "1", "--salida", str(tmp_path / "x.md")])
+
+    salida = capsys.readouterr()
+    texto = (salida.out + salida.err).lower()
+    assert "0 mutantes" in texto or "cero mutantes" in texto
+    assert "mutable" in texto, (
+        "el mensaje tiene que decir el porqué: alcance vacío o sin código mutable"
+    )
+
+
+def test_f040_r14_una_campania_con_mutantes_sigue_escribiendo_su_informe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """La guarda nueva no puede comerse el caso normal."""
+    con_lineas = _alcance()
+    monkeypatch.setattr(
+        "harness.mutacion.alcance_de_feature", lambda *_a, **_k: con_lineas
+    )
+    monkeypatch.setattr(
+        "harness.mutacion.ejecutar_campania",
+        lambda alcance, *_a, **_k: _informe_de(alcance, generados=7),
+    )
+    destino = tmp_path / "informe.md"
+
+    codigo = main(["--feature", "F-040", "--workers", "1", "--salida", str(destino)])
+
+    assert codigo == 0
+    assert destino.is_file()
+    assert "| Mutantes generados | 7 |" in destino.read_text(encoding="utf-8")
+
+
+# --- R17: la guarda de entrada de `alcance_de_ficheros` se queda ------------
+
+
+def test_f040_r17_la_guarda_de_alcance_de_ficheros_sigue_existiendo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sin_campania: None
+) -> None:
+    """R14 es la red final, NO la sustituta de la guarda de entrada.
+
+    Las dos hacen falta y dicen cosas distintas: `alcance_de_ficheros` sabe QUÉ
+    ruta sobra y por qué (código 2, error de uso); `main` solo sabe que no
+    quedó nada que juzgar (código 3). Quedarse con la segunda perdería el
+    diagnóstico que ahorra la tarde.
+    """
+    destino = tmp_path / "no_deberia_existir.md"
+
+    assert main(["--feature", "F-040", "--ficheros", ",", "--salida", str(destino)]) == 2
+    assert (
+        main(
+            [
+                "--feature",
+                "F-040",
+                "--ficheros",
+                "docs/CONVENTIONS.md",
+                "--salida",
+                str(destino),
+            ]
+        )
+        == 2
+    )
+    assert not destino.exists()
+
+
+def test_f040_r17_el_mensaje_de_la_guarda_de_entrada_nombra_la_ruta_que_sobra(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], sin_campania: None
+) -> None:
+    main(
+        [
+            "--feature",
+            "F-040",
+            "--ficheros",
+            "docs/CONVENTIONS.md",
+            "--salida",
+            str(tmp_path / "x.md"),
+        ]
+    )
+
+    assert "docs/CONVENTIONS.md" in capsys.readouterr().err

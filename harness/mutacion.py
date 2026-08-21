@@ -1845,12 +1845,57 @@ def _muestreo_configurado(feature: str) -> tuple[int | None, int | None, str | N
         return (None, None, None)
 
 
+#: Código con el que sale una campaña que NO ha juzgado nada. Distinto del 1
+#: de «hay supervivientes» a propósito: aquello es un resultado, esto no.
+NADA_JUZGADO = 3
+
+
+def mensaje_alcance_vacio(alcance: Alcance) -> str:
+    """Por qué se aborta cuando el alcance no tiene ni una línea (R16)."""
+    return (
+        f"ALCANCE VACÍO en {alcance.feature}: ni una línea de producción que "
+        f"mutar (origen {alcance.origen}, {alcance.ref_diff[0]}.."
+        f"{alcance.ref_diff[1]}). No se ha juzgado NADA.\n"
+        "  No se escribe informe: un fichero en progress/ con un cero que nadie "
+        "ha medido es peor que no tener fichero, porque se lee como «nada que "
+        "arreglar» y el reviewer lo da por bueno.\n"
+        "  Causas habituales: la rama ya está mergeada y el diff contra la base "
+        "sale vacío (declara el alcance a mano con --ficheros), o todo lo que "
+        "cambió es documentación, tests o especificaciones."
+    )
+
+
+def mensaje_sin_mutantes(alcance: Alcance) -> str:
+    """Por qué se aborta cuando hay líneas pero no sale ni un mutante (R14)."""
+    return (
+        f"CERO MUTANTES en {alcance.feature}: el alcance tiene "
+        f"{alcance.total_lineas()} línea(s) de producción pero no se ha generado "
+        "ni un mutante, así que no se ha juzgado NADA.\n"
+        "  No se escribe informe: «0 generados, 0 supervivientes» se lee como "
+        "una campaña impecable.\n"
+        "  Motivo: esas líneas no llevan código mutable —imports, docstrings, "
+        "declaraciones, cadenas— o el fichero no se pudo leer. Amplía el "
+        "alcance o aporta la evidencia de otra forma, y dilo por escrito."
+    )
+
+
 def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
     """Punto de entrada.
 
     Códigos: 0 sin supervivientes, 1 con ellos, 2 error de uso, 3 campaña
-    abortada (línea base roja o árbol sucio). El 3 es distinto del 1 a
-    propósito: «hay supervivientes» es un resultado; «no se ha medido nada» no.
+    abortada (línea base roja, árbol sucio o nada que juzgar). El 3 es distinto
+    del 1 a propósito: «hay supervivientes» es un resultado; «no se ha medido
+    nada» no.
+
+    Las dos guardas de D4 viven AQUÍ y no en `harness.alcance` a sabiendas. El
+    mismo modo de fallo —una campaña de cero que sale en verde— ha entrado ya
+    por tres puertas distintas: la invocación de pytest sin ruta (F-038),
+    `--ficheros ","` (F-039) y `--feature` sobre una rama ya mergeada. Poner
+    una cuarta guarda en el cuarto constructor de alcance es esperar a la
+    quinta; `main` es el único punto por el que pasan todas las vías, incluidas
+    las que todavía no existen, y además es quien escribe el informe y elige el
+    código de salida. La guarda de entrada de `alcance_de_ficheros` NO se
+    retira (R17): ésa sabe QUÉ ruta sobra, y ésta solo sabe que no quedó nada.
     """
     opciones = _analizar_argumentos(argv)
     timeout_s = opciones.timeout or _timeout_configurado()
@@ -1896,8 +1941,12 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
         return 2
 
     print(alcance.descripcion())
-    if not alcance.lineas:
-        print("Sin líneas de producción en el alcance: nada que mutar.")
+    # R16: aquí, ANTES de crear worktrees o correr ninguna línea base. Hasta hoy
+    # esto solo imprimía «Sin líneas de producción» y SEGUÍA, y seguir es lo que
+    # producía el informe de cero mutantes que se lee como «todo bien».
+    if not alcance.total_lineas():
+        print(mensaje_alcance_vacio(alcance), file=sys.stderr)
+        return NADA_JUZGADO
 
     def factoria(fichero: str) -> object:
         return ejecutor_para(fichero, servicios, opciones.raiz)
@@ -1961,6 +2010,12 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
         return 2
     finally:
         centinela.cerrar()
+
+    # R14: red final. Puede haber líneas en el alcance y aun así ni un mutante
+    # (imports, docstrings, declaraciones). Ese informe no dice nada de nada.
+    if informe.generados == 0:
+        print(mensaje_sin_mutantes(alcance), file=sys.stderr)
+        return NADA_JUZGADO
 
     destino = Path(opciones.salida or f"progress/mutacion_{opciones.feature}.md")
     # Quién fijó el muestreo lo sabe el CLI, no la campaña: el informe tiene que
