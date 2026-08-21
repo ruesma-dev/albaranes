@@ -450,8 +450,12 @@ def test_f040_r27_rm2_avisa_de_que_el_tiempo_total_se_divide_entre_workers() -> 
     bloque = " ".join(crudo.split())
 
     assert "worker" in bloque.lower(), "RM2 no menciona los workers"
-    assert "/ W" in bloque or "÷ W" in bloque, (
-        "RM2 tiene que dar la fórmula: mutantes × media / W"
+    assert "media × W" in bloque, (
+        "RM2 tiene que dar la corrección: el coste real por mutante es media × W"
+    )
+    assert "ya viene dividida" in bloque, (
+        "RM2 tiene que explicar POR QUÉ: la media es tiempo de pared entre "
+        "mutantes, así que el paralelismo ya está descontado"
     )
     assert "Timeout efectivo" in bloque, (
         "RM2 tiene que mandar leer el timeout efectivo antes de juzgar tiempos"
