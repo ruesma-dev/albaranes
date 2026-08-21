@@ -585,3 +585,29 @@ def test_f040_r4_el_suelo_configurado_SI_entra_en_la_comparacion(
         return lineas_comparables(ruta.read_text(encoding="utf-8"))
 
     assert _escribir(120, "a.md") != _escribir(300, "b.md")
+
+
+# --- R7: la configuración tiene que DECIR que es un suelo -------------------
+
+
+def test_f040_r7_el_doc_de_rigor_json_dice_que_el_timeout_es_un_SUELO() -> None:
+    """La semántica cambió sin que el valor cambie: 120 significa otra cosa.
+
+    Quien lea `"timeout_por_mutante_s": 120` y no encuentre escrito que es un
+    suelo seguirá creyendo que ha puesto un techo, y no entenderá por qué el
+    informe declara 244.
+    """
+    doc = json.loads(RUTA_RIGOR.read_text(encoding="utf-8"))["mutacion"]["$doc"]
+
+    assert "SUELO" in doc or "suelo" in doc
+    assert "linea base" in doc.lower() or "línea base" in doc.lower()
+
+
+def test_f040_r8_el_doc_de_rigor_json_trae_el_default_nuevo_de_workers() -> None:
+    doc = json.loads(RUTA_RIGOR.read_text(encoding="utf-8"))["mutacion"]["$doc"]
+
+    assert "// 2" in doc, "el $doc sigue anunciando la fórmula vieja de workers"
+    assert "16" not in doc.split("workers", 1)[-1], (
+        "el tope 16 ya no existe: dejarlo escrito manda a la gente a esperar 16 "
+        "workers que nunca se van a calcular"
+    )
