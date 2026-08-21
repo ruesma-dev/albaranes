@@ -14,9 +14,10 @@ from pathlib import Path
 
 import pytest
 
-from harness.mutacion import _analizar_argumentos
-from harness.rigor import timeout_mutacion, validar_features
+from harness.mutacion import RUTA_CENTINELA, _analizar_argumentos, _modo_restaurar
+from harness.mutacion import main as mutacion_main
 from harness.rigor import main as rigor_main
+from harness.rigor import timeout_mutacion, validar_features
 
 #: Configuración de rigor mínima y válida con la que se prueba el CLI sin
 #: depender del `harness/rigor.json` real, que cambia con el proyecto.
@@ -340,10 +341,6 @@ def test_f040_r24_si_remove_funciona_no_se_borra_a_mano_ni_se_purga(
 
 
 # --- R18 y R19: no se mide encima de un mutante viejo -----------------------
-
-from harness.mutacion import RUTA_CENTINELA, _modo_restaurar  # noqa: E402
-from harness.mutacion import main as mutacion_main  # noqa: E402
-
 
 def _plantar_centinela(raiz: Path, aplicados: list[dict]) -> Path:
     """Deja en `raiz` el centinela que habría dejado una campaña muerta."""

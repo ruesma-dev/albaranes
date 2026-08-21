@@ -22,17 +22,31 @@ from __future__ import annotations
 
 import json
 import math
+import time
 from pathlib import Path
 
 import pytest
 
+from harness.alcance import Alcance
 from harness.mutacion import (
+    FACTOR_HOLGURA_BASE,
+    FILAS_DE_RELOJ,
+    MARGEN_TIMEOUT,
+    MUERTO,
     TOPE_WORKERS,
+    BaseRota,
+    InformeMutacion,
+    ResultadoSuite,
+    ejecutar_campania,
+    escribir_informe,
+    lineas_comparables,
     resolver_workers,
+    timeout_de_linea_base,
+    timeout_derivado,
     workers_por_defecto,
 )
+from harness.mutacion_paralela import fusionar
 from harness.rigor import RUTA_RIGOR, cargar_rigor, workers_mutacion
-
 
 # --- R8: el default deja de suponer que el cuello es la CPU -----------------
 
@@ -133,13 +147,6 @@ def test_f040_r10_tampoco_se_recorta_lo_declarado_en_rigor_json() -> None:
 
 # --- R1: el timeout por mutante sale de la línea base ya medida -------------
 
-from harness.mutacion import (  # noqa: E402
-    FACTOR_HOLGURA_BASE,
-    MARGEN_TIMEOUT,
-    timeout_de_linea_base,
-    timeout_derivado,
-)
-
 #: Los tres tiempos de línea base de la campaña real del 2026-08-21, uno por
 #: worktree, con tres workers compitiendo por la misma máquina.
 BASE_MEDIDA = {"wk_0": 119.3, "wk_1": 121.6, "wk_2": 119.5}
@@ -214,16 +221,6 @@ def test_f040_r2_la_base_siempre_recibe_mas_tiempo_que_un_mutante() -> None:
 
 
 # --- R3, R5, R6: la campaña deriva, lo dice, y se deja anular ---------------
-
-import time  # noqa: E402
-
-from harness.alcance import Alcance  # noqa: E402
-from harness.mutacion import (  # noqa: E402
-    MUERTO,
-    BaseRota,
-    ResultadoSuite,
-    ejecutar_campania,
-)
 
 #: Lo que tarda la línea base del doble. Por encima de medio segundo a
 #: propósito: con un suelo de 1 s, `ceil(espera × 2)` sale por encima del suelo
@@ -410,9 +407,6 @@ def test_f040_r4_el_informe_recuerda_con_que_workers_se_midio(
 
 # --- R1 y R4 en la campaña PARALELA: manda el peor worker ------------------
 
-from harness.mutacion import InformeMutacion  # noqa: E402
-from harness.mutacion_paralela import fusionar  # noqa: E402
-
 
 def _parcial(alcance: Alcance, efectivo: int, suelo: int = 120) -> InformeMutacion:
     return InformeMutacion(
@@ -473,12 +467,6 @@ def test_f040_r6_el_timeout_fijado_sobrevive_a_la_fusion(
 
 
 # --- R4: el informe declara con qué reloj y con cuántos workers se midió ----
-
-from harness.mutacion import (  # noqa: E402
-    FILAS_DE_RELOJ,
-    escribir_informe,
-    lineas_comparables,
-)
 
 
 def _fila(texto: str, prefijo: str) -> str:
@@ -610,4 +598,73 @@ def test_f040_r8_el_doc_de_rigor_json_trae_el_default_nuevo_de_workers() -> None
     assert "16" not in doc.split("workers", 1)[-1], (
         "el tope 16 ya no existe: dejarlo escrito manda a la gente a esperar 16 "
         "workers que nunca se van a calcular"
+    )
+
+
+# --- R3 y R6 desde el CLI: el anuncio del timeout --------------------------
+
+
+@pytest.fixture
+def cli_con_campania_falsa(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
+    """Sustituye la campaña por un doble que apunta con qué timeout se la llamó."""
+    recibidos: list[dict] = []
+    alcance = Alcance(
+        feature="F-040",
+        origen="rama",
+        ref_diff=("dev", "feature/x"),
+        lineas={"harness/mutacion.py": {1, 2, 3}},
+    )
+
+    def _campania(alc, *_args: object, **kwargs: object):
+        recibidos.append(dict(kwargs))
+        return InformeMutacion(feature=alc.feature, alcance=alc, generados=4)
+
+    monkeypatch.setattr("harness.mutacion.alcance_de_feature", lambda *_a, **_k: alcance)
+    monkeypatch.setattr("harness.mutacion.ejecutar_campania", _campania)
+    return recibidos
+
+
+def test_f040_r6_el_cli_avisa_de_que_timeout_anula_el_calculo(
+    cli_con_campania_falsa: list[dict],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Sin este aviso, quien pasa `--timeout` lee el informe creyendo que el
+    número está medido."""
+    from harness.mutacion import main
+
+    main(
+        [
+            "--feature", "F-040", "--workers", "1", "--timeout", "90",
+            "--salida", str(tmp_path / "informe.md"),
+        ]
+    )
+
+    salida = capsys.readouterr().out
+    assert "90" in salida
+    assert "ANULADO" in salida or "anulado" in salida
+    assert cli_con_campania_falsa[0]["timeout_fijado"] is True
+    assert cli_con_campania_falsa[0]["timeout_s"] == 90
+
+
+def test_f040_r3_sin_timeout_el_cli_anuncia_que_lo_va_a_derivar(
+    cli_con_campania_falsa: list[dict],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from harness.mutacion import main
+
+    main(
+        [
+            "--feature", "F-040", "--workers", "1",
+            "--salida", str(tmp_path / "informe.md"),
+        ]
+    )
+
+    salida = capsys.readouterr().out
+    assert "derivar" in salida
+    assert "suelo" in salida
+    assert cli_con_campania_falsa[0]["timeout_fijado"] is False
+    assert cli_con_campania_falsa[0]["timeout_base_s"] == timeout_de_linea_base(
+        cli_con_campania_falsa[0]["timeout_s"]
     )
