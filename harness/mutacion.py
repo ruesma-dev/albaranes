@@ -1586,7 +1586,16 @@ def _analizar_argumentos(argv: list[str] | None) -> argparse.Namespace:
             "quien resuelve el nivel de rigor y, con él, el muestreo."
         ),
     )
-    analizador.add_argument("--timeout", type=int, default=None, help="Segundos por mutante")
+    analizador.add_argument(
+        "--timeout",
+        type=int,
+        default=None,
+        help=(
+            "Segundos por mutante, ANULANDO el cálculo automático. Sin este "
+            "flag el timeout se deriva de la línea base medida y "
+            "'mutacion.timeout_por_mutante_s' actúa solo como suelo."
+        ),
+    )
     analizador.add_argument(
         "--max-mutantes",
         type=int,
@@ -1637,7 +1646,22 @@ def _analizar_argumentos(argv: list[str] | None) -> argparse.Namespace:
             "muerta a medias, según el centinela, y lo retira."
         ),
     )
-    return analizador.parse_args(argv)
+    opciones = analizador.parse_args(argv)
+    # R23. Hasta hoy `--timeout 0` era falsy y caía EN SILENCIO al valor
+    # configurado: quien lo escribía creía haber pedido algo y recibía otra
+    # cosa. Un timeout de cero no es una opción legítima, así que se rechaza con
+    # el código 2 de error de uso en vez de esconderse.
+    if opciones.timeout is not None and opciones.timeout <= 0:
+        analizador.error(
+            f"--timeout tiene que ser un entero de segundos mayor que cero, y "
+            f"es {opciones.timeout}."
+        )
+    if opciones.workers is not None and opciones.workers < 1:
+        analizador.error(
+            f"--workers tiene que ser 1 o más (1 = campaña en serie), y es "
+            f"{opciones.workers}."
+        )
+    return opciones
 
 
 #: Códigos de salida de `--estado`, para que init.sh no tenga que leer el JSON.
