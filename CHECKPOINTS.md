@@ -154,10 +154,43 @@ muerto) y RM4 (reejecutar el subconjunto de tests sobre una copia) viven en
       progress/>` y compara los totales. La salida no puede escribirse en
       `progress/` (pisaría el informe del implementer) y el árbol debe quedar
       limpio después (`git status`). Si la campaña pasa de 60 segundos, vale el
-      recálculo puro más los cuatro puntos siguientes, pero el informe de
-      review **lo dice explícitamente**. Recalcular alcance y nº de mutantes no
-      demuestra que los muertos lo estén: unos «N muertos» inventados pasarían
-      ese control.
+      recálculo puro más los puntos siguientes, pero el informe de review **lo
+      dice explícitamente**. Recalcular alcance y nº de mutantes no demuestra
+      que los muertos lo estén: unos «N muertos» inventados pasarían ese
+      control.
+- [ ] **La campaña tardó lo que tenía que tardar.** Evaluar un mutante es
+      **ejecutar entera la suite del servicio**, así que el coste por mutante
+      no puede bajar de lo que tarda esa suite. Se calcula:
+
+      > coste por mutante = «Tiempo total» × nº de workers ÷ nº de mutantes
+
+      El factor de workers **no es opcional**: la campaña es paralela por
+      defecto y su «Tiempo total» es tiempo de reloj, no de CPU. Sin corregir,
+      toda campaña paralela sana parece sospechosa. Por eso el implementer
+      declara en **«Evidencias»** con cuántos workers la lanzó; si fue en
+      serie (`--workers 1`), el factor es 1.
+
+      Si ese coste sale **por debajo de un segundo**, la campaña es
+      **sospechosa por construcción**: no da tiempo a arrancar el intérprete,
+      importar el proyecto y recorrer los tests. Lo normal es que la suite ni
+      siquiera se estuviera ejecutando de verdad —un árbol con bytecode
+      envenenado, una caché que devuelve el veredicto anterior, un fallo de
+      importación que mata a todos los mutantes por la misma razón—. **Se
+      relanza con la caché limpia** (`__pycache__` y `.pytest_cache` borrados)
+      y se comparan los totales; si cambian, el informe válido es el segundo y
+      el primero se descarta por escrito.
+
+      Complementa la regla de los 60 segundos: aquella mira el total, esta
+      mira el coste por mutante, y una campaña grande y rápida solo la caza la
+      segunda. **Cuándo un coste bajo pero mayor que un segundo es sospechoso
+      lo decide RM2**, más abajo, que ya trabaja sobre la línea base y la media
+      que el propio informe imprime: aquí no se juzga eso a ojo.
+- [ ] **El informe de mutación NO lleva la cabecera «⚠ CAMPAÑA NO VÁLIDA» ni
+      una fila «Sin veredicto (base rota)» distinta de cero.** Cualquiera de
+      las dos significa que la propia herramienta declara que sus números no
+      valen: se arregla la línea base y se repite la campaña. Un cero de
+      supervivientes medido sobre una suite que ya fallaba es el defecto que
+      arregló el arnés 1.6.0, y antes de él se colaba entero.
 - [ ] **RM1 · El informe de mutación declara el SHA completo de HEAD** contra
       el que se midió (fila «SHA de HEAD medido»), y el reviewer comprueba que
       el alcance medido es el que está revisando. En F-034 la rama creció de 56
@@ -175,8 +208,10 @@ muerto) y RM4 (reejecutar el subconjunto de tests sobre una copia) viven en
       **Con W workers la aritmética cambia, y el informe declara W** (fila
       «Workers», nueva desde F-040). La «Media por mutante evaluado (s)» es
       tiempo de PARED dividido entre los mutantes, así que **ya viene dividida
-      entre W**: el coste real de juzgar un mutante es `media × W`, y es ese
-      número —no la media— el que se compara con la «Línea base (s)». Sin
+      entre W**: `mutantes × media` ES el «Tiempo total» por construcción y
+      comparar esos dos no descubre nada. Lo que sí se compara es el coste real
+      de juzgar un mutante, `media × W`, contra la «Línea base (s)» —el mismo
+      número de la regla del coste por mutante de más arriba—. Sin
       corregir por W, cuatro workers hunden la media a la cuarta parte y la
       regla marca como inventada una campaña legítima (F-040: base 64,9 s,
       media 16,8 s, **4 workers** → 67 s reales por mutante, coherente).
@@ -207,6 +242,8 @@ muerto) y RM4 (reejecutar el subconjunto de tests sobre una copia) viven en
 - [ ] El informe del implementer trae la sección **«Evidencias»** con los
       cuatro números: tests ejecutados y resultado, cobertura de las líneas
       cambiadas, mutantes generados y supervivientes, y tiempo de la suite.
+      Con la campaña de mutación, además, **el nº de workers con que se lanzó**:
+      sin él no se puede calcular el coste por mutante del punto anterior.
 - [ ] Ningún punto de este bloque marcado N/A sin justificación escrita.
 
 ## C4 ter — Las verificaciones extra por rutas sensibles están hechas

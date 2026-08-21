@@ -198,6 +198,12 @@ Dos reglas: el documento de este proyecto **se actualiza cuando cambie lo que
 exponemos o consumimos**, en el mismo trabajo y no después; y **no se
 duplican aquí** los documentos de otros proyectos, se enlazan.
 
+Además de un documento por proyecto, `azure-apps/` guarda la **documentación
+del sistema origen común**: `sigrid_api.md` (la pasarela) y
+`sigrid_tablas.md` (el diccionario completo de la BBDD de Sigrid, tablas,
+campos, tipos e índices). Cuando necesites saber qué es una tabla o un campo
+de Sigrid, ve ahí; en `docs/referencia/` de cada proyecto solo hay punteros.
+
 ### El arnés genérico: `arnes-base`
 
 Este arnés no nació aquí. Su versión genérica y reutilizable vive en

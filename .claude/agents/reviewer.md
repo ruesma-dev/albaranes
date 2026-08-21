@@ -110,6 +110,12 @@ nivel de rigor dice cuánta evidencia hay que exigir.
    fallos**. Sin ese texto no puedes reproducir ni una fila, y una campaña
    manual irreproducible no es evidencia: es un párrafo. Reproduce al menos
    dos filas al pie de la letra y dilo en tu informe.
+   **Si el informe lleva la cabecera «⚠ CAMPAÑA NO VÁLIDA», o una fila «Sin
+   veredicto (base rota)» distinta de cero**, RECHAZA sin más análisis: la
+   herramienta está diciendo que sus propios números no valen. Y si la
+   campaña dice cero supervivientes pero **no** dice que corrió la línea
+   base, sospecha del cero: hasta el arnés 1.5.2 una suite rota de base los
+   producía a puñados (ver la entrada 1.6.0 de `GUIA_INSTALACION.md`).
 5. El informe del implementer debe traer la sección **«Evidencias»** con los
    cuatro números (tests, cobertura de lo cambiado, mutantes y
    supervivientes, tiempo de la suite).
