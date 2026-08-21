@@ -427,3 +427,33 @@ def test_f040_r17_el_mensaje_de_la_guarda_de_entrada_nombra_la_ruta_que_sobra(
     )
 
     assert "docs/CONVENTIONS.md" in capsys.readouterr().err
+
+
+# --- R27: CHECKPOINTS.md tiene que reconocer el factor de workers ----------
+
+
+def test_f040_r27_rm2_avisa_de_que_el_tiempo_total_se_divide_entre_workers() -> None:
+    """La regla de coherencia estaba escrita para campañas EN SERIE.
+
+    Aplicada tal cual a una campaña paralela, un «Tiempo total» tres veces
+    menor que `mutantes × media` parece una campaña inventada cuando es
+    exactamente lo que tiene que salir con tres workers.
+    """
+    crudo = (
+        Path("CHECKPOINTS.md")
+        .read_text(encoding="utf-8")
+        .split("**RM2 ·", 1)[1]
+        .split("- [ ] **RM5", 1)[0]
+    )
+    # El documento va envuelto a 79 columnas: una frase parte en dos líneas y
+    # buscarla literal fallaría por un salto de línea, no por lo que dice.
+    bloque = " ".join(crudo.split())
+
+    assert "worker" in bloque.lower(), "RM2 no menciona los workers"
+    assert "/ W" in bloque or "÷ W" in bloque, (
+        "RM2 tiene que dar la fórmula: mutantes × media / W"
+    )
+    assert "Timeout efectivo" in bloque, (
+        "RM2 tiene que mandar leer el timeout efectivo antes de juzgar tiempos"
+    )
+    assert "no son comparables" in bloque or "no comparables" in bloque

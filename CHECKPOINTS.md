@@ -172,6 +172,15 @@ muerto) y RM4 (reejecutar el subconjunto de tests sobre una copia) viven en
       la media (F-038: base 52,1 s, media 36,4 s, 19 de 20 muertos, campaña
       legítima). El caso que esta regla caza es F-034: 18 mutantes en 111 s
       cuando la realidad eran 63 minutos.
+      **Con W workers, el «Tiempo total» es aproximadamente
+      `mutantes × media / W`, no `mutantes × media`.** El informe declara los
+      workers y el «Timeout efectivo por mutante (s)» con que se midió (fila
+      nueva desde F-040): léelos ANTES de aplicar la regla, o marcarás como
+      incoherente una campaña paralela perfectamente legítima. Y **no compares
+      tiempos entre campañas con timeouts efectivos distintos**: desde F-040 el
+      timeout se deriva de la línea base medida en vez de ser un fijo de
+      `rigor.json`, así que las campañas anteriores al 2026-08-21 no son
+      comparables con las posteriores.
 - [ ] **RM5 · Solo en rigor `critico`:** cada superviviente declarado
       «equivalente» trae demostración ejecutable, y el reviewer reproduce **una
       muestra de UNO**, elegido por él. En rigor `estandar` basta la
