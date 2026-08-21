@@ -2,7 +2,7 @@
 # F-040 · Informe de implementación
 
 **La campaña de mutación se dimensiona sola y deja de mentir sobre lo que ha
-medido.** 27 requisitos, 26 tareas, 18 commits, todo del arnés: ni una línea de
+medido.** 27 requisitos, 26 tareas, un commit por tarea, todo del arnés: ni una línea de
 `services/`. La prueba de campo de que D1 funciona es que **la campaña de esta
 feature se lanzó sin `--timeout`** —imposible en esta máquina el 2026-08-21— y
 sus cuatro líneas base pasaron en verde con **4 workers**, el tope nuevo.
