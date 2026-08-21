@@ -83,10 +83,18 @@ BASE_ROTA = "base_rota"
 #: Segundos máximos por mutante si nadie configura otra cosa.
 TIMEOUT_POR_DEFECTO = 120
 
-#: Tope del número de workers CALCULADO por defecto. Más allá, la máquina se
-#: pasa el rato cambiando de contexto y cada suite roza su timeout. No limita
-#: lo que se pida a mano con `--workers` ni lo declarado en `rigor.json`.
-TOPE_WORKERS = 16
+#: Tope del número de workers CALCULADO por defecto. No limita lo que se pida a
+#: mano con `--workers` ni lo declarado en `rigor.json` (R10).
+#:
+#: Fue 16 hasta F-040, y ese 16 hacía la campaña paralela inutilizable por
+#: defecto: el 2026-08-21, en esta máquina de 22 núcleos, la suite limpia tardó
+#: 51 s en reposo, 97,5 s con UN worker y 119-122 s con TRES, contra un timeout
+#: configurado de 120 s. Con 16 no habría cabido ni una línea base.
+#:
+#: El único punto medido y verde son 3 workers, y ya ahí la suite sube un 25 %.
+#: 4 es un paso sobre lo medido, no un salto; subirlo es una decisión CON
+#: DATOS, y `--workers N` sigue sin límite para quien quiera producirlos.
+TOPE_WORKERS = 4
 
 #: Códigos de salida de pytest que este módulo distingue. Solo el 1 —«han
 #: fallado tests»— significa que el mutante pudo ser cazado; el 2 (recolección
@@ -1758,13 +1766,20 @@ def _modo_restaurar(raiz: str) -> int:
 
 
 def workers_por_defecto() -> int:
-    """Workers cuando nadie dice nada: los núcleos menos dos, con tope.
+    """Workers cuando nadie dice nada: `min(max(1, (núcleos - 2) // 2), tope)`.
 
-    Menos dos para dejar respirar a la máquina —el coordinador y quien la esté
-    usando— y con tope porque a partir de ahí las suites simultáneas se estorban
-    entre ellas y empiezan a rozar su propio timeout.
+    Los dos primeros núcleos son los de siempre: la máquina y el coordinador. El
+    `// 2` es lo que cambia en F-040, y cambia porque la fórmula vieja suponía
+    que el cuello de botella es la CPU. No lo es: cada worker arranca un proceso
+    **pytest completo** —intérprete, importaciones, recolección, E/S de disco y,
+    en un monorepo, un venv por servicio—, así que el recurso escaso es la
+    máquina entera y no el núcleo. Se reserva del orden de dos núcleos por
+    suite.
+
+    En 4 núcleos da 1; en 8, 3; en 22, 4 (antes daba 16, y con 16 no cabía ni
+    una línea base dentro de su timeout).
     """
-    return min(max(1, (os.cpu_count() or 1) - 2), TOPE_WORKERS)
+    return min(max(1, ((os.cpu_count() or 1) - 2) // 2), TOPE_WORKERS)
 
 
 def resolver_workers(pedidos: int | None, configurados: int | None) -> int:
