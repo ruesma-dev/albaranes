@@ -337,3 +337,138 @@ def test_f040_r24_si_remove_funciona_no_se_borra_a_mano_ni_se_purga(
     assert ("rmtree", "/tmp/mutacion_F-040/wk_0") not in eventos
     assert ("git", "worktree prune") not in eventos
     assert eventos == [("git", "worktree remove --force /tmp/mutacion_F-040/wk_0")]
+
+
+# --- R18 y R19: no se mide encima de un mutante viejo -----------------------
+
+from harness.mutacion import RUTA_CENTINELA, _modo_restaurar  # noqa: E402
+from harness.mutacion import main as mutacion_main  # noqa: E402
+
+
+def _plantar_centinela(raiz: Path, aplicados: list[dict]) -> Path:
+    """Deja en `raiz` el centinela que habría dejado una campaña muerta."""
+    ruta = raiz / RUTA_CENTINELA
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    ruta.write_text(
+        json.dumps(
+            {
+                "feature": "F-039",
+                "modo": "serie",
+                "pid": 4242,
+                "inicio": "2026-08-20 23:59:59",
+                "raiz": raiz.as_posix(),
+                "muta_arbol_principal": True,
+                "aplicados": aplicados,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    return ruta
+
+
+def _mutado(raiz: Path, recuperable: bool) -> dict:
+    """Un fichero con un mutante escrito, con o sin datos para deshacerlo."""
+    fichero = raiz / "codigo.py"
+    fichero.write_text("VALOR = 2\n", encoding="utf-8")
+    entrada = {
+        "fichero": "codigo.py",
+        "ruta": fichero.resolve().as_posix(),
+        "linea": 1,
+        "descripcion": "codigo.py:1 [entero] VALOR = 1 -> VALOR = 2",
+        "linea_original": "VALOR = 1" if recuperable else None,
+        "en_arbol_principal": True,
+    }
+    if not recuperable:
+        # Sin `linea_original` solo queda `git checkout`, y `tmp_path` no es un
+        # repositorio: ahí es donde la restauración se declara irrecuperable.
+        entrada["linea_original"] = None
+    return entrada
+
+
+def test_f040_r19_restaurar_sale_con_0_cuando_no_hay_nada_que_restaurar(
+    tmp_path: Path,
+) -> None:
+    assert _modo_restaurar(str(tmp_path)) == 0
+
+
+def test_f040_r19_restaurar_sale_con_0_cuando_lo_restaura_todo(tmp_path: Path) -> None:
+    _plantar_centinela(tmp_path, [_mutado(tmp_path, recuperable=True)])
+
+    assert _modo_restaurar(str(tmp_path)) == 0
+    assert (tmp_path / "codigo.py").read_text(encoding="utf-8").startswith("VALOR = 1")
+    assert not (tmp_path / RUTA_CENTINELA).exists(), "el centinela se retira"
+
+
+def test_f040_r19_restaurar_sale_con_2_si_algo_queda_irrecuperable(
+    tmp_path: Path,
+) -> None:
+    _plantar_centinela(tmp_path, [_mutado(tmp_path, recuperable=False)])
+
+    assert _modo_restaurar(str(tmp_path)) == 2
+
+
+def test_f040_r19_el_cli_propaga_el_codigo_de_restaurar(tmp_path: Path) -> None:
+    _plantar_centinela(tmp_path, [_mutado(tmp_path, recuperable=False)])
+
+    assert mutacion_main(["--restaurar", "--raiz", str(tmp_path)]) == 2
+
+
+def test_f040_r18_un_centinela_irrecuperable_aborta_con_3_sin_empezar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Medir encima de un mutante viejo es medir el mutante.
+
+    Hasta hoy `main` llamaba a `_modo_restaurar` y TIRABA su código de salida:
+    si la restauración no podía deshacer algo, la campaña arrancaba igual sobre
+    un árbol que ya estaba mutado, y todos sus veredictos hablaban de un código
+    que nadie había escrito.
+    """
+
+    def _prohibido(*_args: object, **_kwargs: object):
+        raise AssertionError(
+            "con un mutante viejo sin deshacer no se calcula alcance ni se muta"
+        )
+
+    monkeypatch.setattr("harness.mutacion.alcance_de_feature", _prohibido)
+    monkeypatch.setattr("harness.mutacion.ejecutar_campania", _prohibido)
+    _plantar_centinela(tmp_path, [_mutado(tmp_path, recuperable=False)])
+
+    assert mutacion_main(["--feature", "F-040", "--raiz", str(tmp_path)]) == 3
+
+
+def test_f040_r18_el_aborto_dice_que_el_arbol_sigue_mutado(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(
+        "harness.mutacion.alcance_de_feature",
+        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("no se llega aquí")),
+    )
+    _plantar_centinela(tmp_path, [_mutado(tmp_path, recuperable=False)])
+
+    mutacion_main(["--feature", "F-040", "--raiz", str(tmp_path)])
+
+    error = capsys.readouterr().err
+    assert "codigo.py" in error, "hay que nombrar el fichero que sigue mutado"
+    assert "mutante" in error.lower()
+
+
+def test_f040_r18_un_centinela_que_SI_se_restaura_deja_seguir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """La guarda nueva no puede bloquear el caso que ya funcionaba.
+
+    Un centinela restaurable es la situación normal tras un Ctrl-C: se deshace
+    y la campaña continúa.
+    """
+    llegadas: list[str] = []
+
+    def _alcance_espia(*_args: object, **_kwargs: object):
+        llegadas.append("alcance")
+        raise SystemExit("hasta aquí basta: la guarda dejó pasar")
+
+    monkeypatch.setattr("harness.mutacion.alcance_de_feature", _alcance_espia)
+    _plantar_centinela(tmp_path, [_mutado(tmp_path, recuperable=True)])
+
+    assert mutacion_main(["--feature", "F-040", "--raiz", str(tmp_path)]) == 2
+    assert llegadas == ["alcance"]

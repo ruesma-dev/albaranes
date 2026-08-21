@@ -1916,7 +1916,23 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
             "antes de empezar:",
             file=sys.stderr,
         )
-        _modo_restaurar(opciones.raiz)
+        # R18: hasta hoy este código de salida se TIRABA. Si la restauración no
+        # podía deshacer algo, la campaña arrancaba igual sobre un árbol que ya
+        # estaba mutado y todos sus veredictos hablaban de un código que nadie
+        # había escrito.
+        if _modo_restaurar(opciones.raiz) != 0:
+            print(
+                "ABORTADA sin empezar: queda al menos un fichero con un MUTANTE "
+                "de la campaña anterior escrito en disco (los nombra la línea "
+                "«NO SE PUDO RESTAURAR» de aquí arriba).\n"
+                "  Medir encima de un mutante viejo es medir el mutante: cada "
+                "veredicto de esta campaña hablaría de un código que nadie ha "
+                "escrito, y el informe no lo diría.\n"
+                "  Deshazlo a mano —`git checkout -- <fichero>`— y vuelve a "
+                "lanzarla.",
+                file=sys.stderr,
+            )
+            return NADA_JUZGADO
 
     try:
         servicios = cargar_servicios(raiz=opciones.raiz)
