@@ -441,3 +441,43 @@ Una campaña de mutación necesita la máquina **para ella sola**: la de aquí p
 de 51 s a 149 s de línea base y el arnés invalidó sus propios números, con
 razón. **Dos campañas de mutación a la vez, en cualquier par de proyectos, se
 estropean mutuamente.**
+
+---
+
+## F-040 · spec escrita (2026-08-21, spec-author)
+
+`specs/F-040-campana-dimensionada-y-honesta/` — requirements (114/150), design
+(176/250), tasks (26 tareas + 1 posterior al merge). Rama
+`feature/F-040-campana-dimensionada-y-honesta`. Nada implementado.
+
+**Decisión de diseño de D1**: el timeout por mutante NO se multiplica por los
+workers (el dato de campo lo desmiente: de 1 a 3 workers la suite crece un 25 %,
+no un 300 %) ni se mide la suite aparte (cuesta una suite extra y mediría en
+reposo). Se **deriva de la línea base que la campaña ya corre dentro de cada
+worktree**, que ya incluye la contención real: `max(suelo, ceil(peor_base × 2))`.
+La línea base recibe su propio timeout holgado, `suelo × 5`, porque se paga una
+vez por worker y no una por mutante. `rigor.json` no gana ningún número de esta
+máquina: cambia el mecanismo. **D2**: `TOPE_WORKERS` 16 → 4 y
+`min(max(1, (núcleos-2)//2), 4)`. **D4**: guarda única en `main` (embudo), no una
+cuarta guarda en `alcance.py`; código de salida 3, sin informe.
+
+**Dos premisas de la ficha resultaron falsas al comprobarlas** (sección 0 del
+design): la sección `## Timeouts` NO lanza `TypeError` —solo duplica
+`fichero:linea`—, y `timeout_mutacion` SÍ rechaza enteros `<= 0`; lo que se cuela
+es un **booleano** (`true` → 1 s) y un `--timeout` negativo sin validar. Tampoco
+`CHECKPOINTS.md` reconocía el factor de workers: no aparece ni «worker» ni
+«paralel». De ahí sale R27.
+
+### Necesita validación del humano (4 preguntas abiertas en requirements.md)
+
+1. ¿`MARGEN = 2` y `FACTOR_HOLGURA_BASE = 5` en el código, o declarados en
+   `rigor.json`?
+2. Con el timeout ya derivado, ¿sigue en pie no declarar `mutacion.workers`?
+3. ¿`TOPE_WORKERS = 4` o 3, el único punto con medición real en verde?
+4. R23 cambia el significado de `--timeout 0` (hoy cae en silencio al
+   configurado) y pasa a salir con código 2. ¿Se acepta?
+
+**Riesgo anotado en el design**: si al implementar aparece un **quinto** defecto
+de esta maquinaria, se anota en `progress/impl_F-040.md` y se propone al humano;
+no entra en F-040 sin preguntar. El porte a `arnes-base` 1.7.2 va **después** del
+merge en `dev`, nunca dentro de la rama.
