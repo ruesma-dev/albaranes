@@ -403,6 +403,36 @@ lupa las campañas de cero mutantes; hoy la herramienta no ayuda a verlo.
 pendiente**. Comando que sí la ejercita, con alcance explícito:
 `python -m harness.mutacion --feature F-039 --ficheros harness/rigor.py --workers 5 --max-mutantes 1 --salida "$env:TEMPerificacion_paralela_F-039.md"`.
 
+### 3 ter. Primera ejecución real del paralelo (2026-08-21) — lo verificado y lo que falla
+
+`--feature F-039 --ficheros harness/rigor.py --workers 5 --max-mutantes 1`:
+
+**Verificado (R9 parcial, R12 completo):**
+
+- **El paralelo arranca**: `[base] .: en verde (97.5 s)` — la línea base se
+  ejecutó DENTRO del worktree y pasó. **Sin `0xC0000142`**: la máquina aguanta
+  el montaje paralelo.
+- **R12 se cumple incluso con la campaña inválida**: `git status --porcelain`
+  vacío y `git worktree list` con una sola línea. La limpieza funciona por el
+  camino malo, que es donde importa.
+- **Falta lo esencial de R9**: con `--max-mutantes 1` solo se usó UN worker. Los
+  cinco simultáneos siguen sin probarse. Hacen falta ≥ N mutantes para ejercitar
+  N worktrees.
+
+**Defecto A · el timeout de 120 s no sirve en campaña paralela.** La suite tarda
+~51 s en reposo y **97,5 s solo por el arranque paralelo**; el
+`timeout_por_mutante_s` de `rigor.json` es 120. Expiraron el mutante y la línea
+base de cierre (97,5 + 120 + 120 ≈ 337,7 s de total). **Propuesta**: que el
+timeout efectivo escale con el número de workers, igual que la 1.6.3 hizo con el
+coste por mutante de `CHECKPOINTS.md` (`f1b250e`). Hoy el arnés reconoce el
+factor de workers al JUZGAR el coste, pero no al CONCEDER el tiempo.
+
+**Defecto B · `_base_rota_al_final` mintió en su primera ejecución real.** El
+mensaje fue: «La base se rompió durante la campaña… **Arregla la suite y repite
+la campaña**». La suite estaba impecable: la línea base **expiró** (código -1),
+no falló. Es el hallazgo §3 de F-039, y deja de ser teórico: **mandó al humano a
+arreglar algo que no estaba roto**. Sube de prioridad.
+
 ### 4. Aviso de convivencia (costó ~40 minutos de máquina)
 
 Mientras corría la campaña de F-039, otra sesión lanzó **campañas de mutación
