@@ -112,3 +112,67 @@ depende del paralelo: mide con la maquinaria en serie, que es la que este
 repositorio lleva usando en todas sus campañas. Lo que queda pendiente de esta
 verificación es el uso de `--workers` en campañas futuras, no el número de
 T11.
+
+---
+
+## RESULTADO REAL — 2026-08-21, ejecutado por el humano (T5, T6)
+
+### VERDE con `--workers 3`, y solo con el reloj ampliado
+
+```
+python -m harness.mutacion --feature F-039 --ficheros harness/rigor.py \
+  --workers 3 --max-mutantes 3 --timeout 600 --salida "$env:TEMP\verificacion_paralela_F-039.md"
+
+[base] .../wk_0: en verde (119.3 s)
+[base] .../wk_2: en verde (119.5 s)
+[base] .../wk_1: en verde (121.6 s)
+3 mutantes evaluados, 1 muertos, 2 supervivientes, 0 timeouts, 0 sin veredicto en 277.2 s
+```
+
+Los cuatro criterios de verde, cumplidos: 3 de 3 evaluados, sin `CAMPAÑA NO
+VÁLIDA`, cero timeouts, y árbol y worktrees limpios al terminar.
+
+**La campaña paralela FUNCIONA.** Monta un worktree por worker, cada línea base
+pasa dentro del suyo, reparte los mutantes y limpia al terminar. El hallazgo (b)
+que motivó F-039 —«no se puede ejecutar»— queda **cerrado**.
+
+### Pero el arnés la deja inutilizable por defecto
+
+| Dato | Valor |
+|---|---|
+| Suite en reposo | ~51 s |
+| Suite con **1** worker | 97,5 s |
+| Suite con **3** workers | **119,3 – 121,6 s** |
+| `timeout_por_mutante_s` de `rigor.json` | **120 s** |
+| Workers **por defecto** en esta máquina (22 núcleos) | **16** |
+
+Con tres workers una de las tres líneas base **ya supera el timeout**. Con el
+default de 16, ninguna cabría: la campaña expiraría entera. **Nadie puede lanzar
+`--feature X` sin `--workers` en esta máquina y obtener algo válido.**
+
+No es un problema de este equipo: la fórmula del default (`núcleos − 2`, tope
+16) supone que el cuello de botella es la CPU, cuando cada worker arranca **una
+suite completa** —intérprete, importaciones, E/S—. A más hilos, peor.
+
+### Intento previo, con `--workers 5 --max-mutantes 1` (inválido, y por qué)
+
+Un solo mutante ⇒ **un solo worker**: no ejercitó el paralelo. Además expiró el
+mutante y la línea base de cierre con el timeout de 120 s, y el mensaje final
+dijo «La base se rompió… **Arregla la suite y repite la campaña**» cuando la
+suite estaba impecable: solo había **expirado** (código −1). Es el defecto
+`_base_rota_al_final`, mintiendo en su primera ejecución real.
+
+### Lo que queda por decidir (paso 4)
+
+1. **Que el timeout escale con los workers.** El arnés ya reconoce el factor de
+   workers al *juzgar* el coste por mutante (1.6.3), pero no al *conceder* el
+   tiempo. Es la misma idea aplicada a medias.
+2. **Revisar la fórmula del default de workers**: un tope de 16 es irreal cuando
+   cada worker corre una suite entera.
+3. **`_base_rota_al_final`**: distinguir expirada (código −1) de fallida.
+4. **N=5 no se probó**: con 3 verde y la base rozando el timeout, subir sin
+   arreglar (1) no tiene sentido.
+5. **Dos supervivientes nuevos** en `harness/rigor.py`, huecos de test reales:
+   línea 258 (`return 1` → `return 2`) y línea 211 (`or` → `and`, la guarda de
+   feature sin `rigor` o con `rigor` nulo — no se prueba porque hoy las 39
+   fichas declaran rigor).
