@@ -9,10 +9,30 @@ mide la calidad de los tests es exactamente el peor sitio donde tenerla.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from harness.mutacion import _analizar_argumentos
-from harness.rigor import timeout_mutacion
+from harness.rigor import timeout_mutacion, validar_features
+from harness.rigor import main as rigor_main
+
+#: Configuración de rigor mínima y válida con la que se prueba el CLI sin
+#: depender del `harness/rigor.json` real, que cambia con el proyecto.
+RIGOR_MINIMO = {
+    "nivel_por_defecto": "estandar",
+    "cobertura": {"umbral_lineas_cambiadas": 80},
+    "niveles": {
+        "estandar": {"fase_red": True, "cobertura": True, "mutacion": True},
+        "documental": {"fase_red": False, "cobertura": False, "mutacion": False},
+    },
+}
+
+
+def _escribir_json(ruta: Path, datos: object) -> str:
+    ruta.write_text(json.dumps(datos, ensure_ascii=False), encoding="utf-8")
+    return str(ruta)
 
 
 # --- R22: el timeout configurado, validado de verdad ------------------------
@@ -122,3 +142,115 @@ def test_f040_r23_sin_flags_no_se_valida_nada() -> None:
 
     assert opciones.timeout is None
     assert opciones.workers is None
+
+
+# --- R25: un nivel inexistente hace salir al validador con código 1 ----------
+
+
+def test_f040_r25_una_ficha_con_nivel_inexistente_sale_con_codigo_1(
+    tmp_path: Path,
+) -> None:
+    """El código de salida ES el contrato: `harness/init.sh` solo mira eso.
+
+    Que la validación IMPRIMA el error no sirve de nada si devuelve 0: el
+    portero da la configuración por buena y sigue.
+    """
+    config = _escribir_json(tmp_path / "rigor.json", RIGOR_MINIMO)
+    features = _escribir_json(
+        tmp_path / "features.json",
+        {"features": [{"id": "F-999", "rigor": "marciano"}]},
+    )
+
+    assert rigor_main(["--config", config, "--features", features]) == 1
+
+
+def test_f040_r25_el_error_nombra_la_ficha_y_los_niveles_validos(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    config = _escribir_json(tmp_path / "rigor.json", RIGOR_MINIMO)
+    features = _escribir_json(
+        tmp_path / "features.json",
+        {"features": [{"id": "F-999", "rigor": "marciano"}]},
+    )
+
+    rigor_main(["--config", config, "--features", features])
+
+    error = capsys.readouterr().err
+    assert "F-999" in error
+    assert "marciano" in error
+    assert "documental" in error and "estandar" in error
+
+
+def test_f040_r25_un_inventario_correcto_sale_con_codigo_0(tmp_path: Path) -> None:
+    """La rama nueva no puede comerse el caso normal."""
+    config = _escribir_json(tmp_path / "rigor.json", RIGOR_MINIMO)
+    features = _escribir_json(
+        tmp_path / "features.json",
+        {"features": [{"id": "F-001", "rigor": "estandar"}, {"id": "F-002"}]},
+    )
+
+    assert rigor_main(["--config", config, "--features", features]) == 0
+
+
+def test_f040_r25_una_configuracion_ilegible_tambien_sale_con_codigo_1(
+    tmp_path: Path,
+) -> None:
+    features = _escribir_json(tmp_path / "features.json", {"features": []})
+
+    assert (
+        rigor_main(
+            ["--config", str(tmp_path / "no_existe.json"), "--features", features]
+        )
+        == 1
+    )
+
+
+# --- R26: las dos ramas de «feature sin rigor o con rigor nulo» --------------
+
+
+def test_f040_r26_una_ficha_SIN_la_clave_rigor_no_es_un_error() -> None:
+    """Rama 1 de la guarda: `"rigor" not in feature`.
+
+    No declarar nivel es legítimo —se aplica `nivel_por_defecto`—, y hoy nada lo
+    comprobaba porque las 40 fichas del inventario real declaran su rigor.
+    """
+    assert validar_features([{"id": "F-100"}], RIGOR_MINIMO) == []
+
+
+def test_f040_r26_una_ficha_con_rigor_NULO_no_es_un_error() -> None:
+    """Rama 2 de la guarda: `feature["rigor"] is None`.
+
+    Es la mitad que el mutante `or` -> `and` deja viva si solo se prueba la
+    primera: con `and`, una ficha sin la clave revienta con `KeyError` y una
+    ficha con `null` se cuela sin validar.
+    """
+    assert validar_features([{"id": "F-101", "rigor": None}], RIGOR_MINIMO) == []
+
+
+def test_f040_r26_las_dos_ramas_conviven_en_el_mismo_inventario() -> None:
+    fichas = [
+        {"id": "F-100"},
+        {"id": "F-101", "rigor": None},
+        {"id": "F-102", "rigor": "estandar"},
+    ]
+
+    assert validar_features(fichas, RIGOR_MINIMO) == []
+
+
+def test_f040_r26_un_rigor_declarado_y_malo_si_es_un_error() -> None:
+    """La guarda no puede tragárselo todo: lo declarado se valida."""
+    errores = validar_features(
+        [{"id": "F-100"}, {"id": "F-103", "rigor": "marciano"}], RIGOR_MINIMO
+    )
+
+    assert len(errores) == 1
+    assert "F-103" in errores[0]
+
+
+@pytest.mark.parametrize("declarado", [123, [], {}, False])
+def test_f040_r26_un_rigor_declarado_que_ni_siquiera_es_texto_es_un_error(
+    declarado: object,
+) -> None:
+    errores = validar_features([{"id": "F-104", "rigor": declarado}], RIGOR_MINIMO)
+
+    assert len(errores) == 1
