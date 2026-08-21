@@ -342,3 +342,49 @@ y con `--timeout 400`, **sin tocar `rigor.json`**: el problema era la máquina, 
 la configuración.
 
 Verificación final: `init.sh` exit 0, **420 passed**, cobertura **100 %** (32/32).
+
+### F-040 — la campaña de mutación se dimensiona sola y deja de mentir (cerrada 2026-08-21)
+
+**APPROVED en primera pasada.** Cinco bloques en una sola feature, a petición del
+humano, porque eran el mismo tema y los mismos ficheros. La suite pasó de 420 a
+**530 tests**, cobertura **100 %** de lo cambiado.
+
+- **D1 · el timeout sale de lo medido.** `max(suelo, ceil(peor_base × 2))`, con la
+  línea base recibiendo `suelo × 5` aparte. Antes era un fijo de 120 s, y la
+  medición de campo lo tumbaba: la suite tarda ~51 s en reposo, 97,5 s con un
+  worker y **119,3–121,6 s con tres**. Con tres workers una de las tres bases ya
+  superaba el timeout.
+- **D2 · el default de workers.** `min(max(1, (núcleos−2)//2), 4)`, antes tope 16.
+  En una máquina de 22 núcleos daba **16 workers**, con los que ninguna línea base
+  cabría: `--feature X` sin `--workers` no podía dar nada válido. La fórmula vieja
+  suponía que el cuello de botella era la CPU, cuando **cada worker arranca una
+  suite completa**.
+- **D3 · una base que expira no es una base rota.** El mensaje mandaba a «arreglar
+  la suite» cuando la suite estaba impecable y solo se había quedado sin tiempo.
+  Mintió al humano en la primera ejecución real del paralelo.
+- **D4 · cero mutantes deja de salir en verde**, con la guarda **en el embudo**
+  (`main`) y no puerta a puerta: era la tercera vez que el mismo fallo entraba por
+  una vía nueva.
+- **D5 · nueve huecos de test** cerrados, incluidos los dos supervivientes de
+  `rigor.py` que destapó la verificación del paralelo.
+
+**El quinto defecto, y por qué no entró.** El implementer encontró que la campaña
+**etiqueta mal algún mutante, y no siempre el mismo**: midió los mismos 20 dos
+veces —paralela y serie— y cada modo declaró superviviente a uno distinto que la
+suite **sí caza**. Siguió la regla del design y no lo metió. El reviewer reprodujo
+**las dos** discrepancias sobre copia y verificó la causa en el código:
+`ResultadoSuite.verde` cuenta `PYTEST_SIN_TESTS = 5` como verde, y el ejecutor
+devuelve SUPERVIVIENTE tanto para el 0 como para el 5 sin distinguirlos; el
+informe no guarda el código de salida, así que la campaña no puede demostrar de
+qué habla.
+
+Dictamen sobre si la campaña servía para cerrar: **sí**, por dos razones que
+conviene recordar. El **sesgo del fallo es el seguro** —solo produce falsos
+supervivientes, trabajo de más, nunca falsos muertos que dejen pasar un agujero—,
+y **16 de los 20 mutantes murieron en ambos modos** de forma independiente.
+Mientras el defecto viva, ninguna campaña de una sola pasada vale como evidencia
+sin contraste.
+
+Es la misma familia que F-038 T0 y que D4, **un piso más abajo**: D4 guarda el
+embudo («cero mutantes generados») y el caso «un mutante cuya suite ejecutó cero
+tests» sigue sin guarda.

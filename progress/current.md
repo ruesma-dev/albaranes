@@ -441,3 +441,85 @@ Una campaña de mutación necesita la máquina **para ella sola**: la de aquí p
 de 51 s a 149 s de línea base y el arnés invalidó sus propios números, con
 razón. **Dos campañas de mutación a la vez, en cualquier par de proyectos, se
 estropean mutuamente.**
+
+---
+
+## F-040 · IMPLEMENTADA, pendiente de review (2026-08-21, implementer)
+
+`progress/impl_F-040.md` (219/220). Rama
+`feature/F-040-campana-dimensionada-y-honesta`, 15 commits, `bash
+harness/init.sh` en **verde**: 530 tests, cobertura de líneas cambiadas
+**100 %** (79/79), tamaño dentro de topes. Las cuatro decisiones del humano,
+aplicadas tal cual.
+
+**La prueba de campo de que D1 funciona**: la campaña de la propia feature se
+lanzó **sin `--timeout`** —imposible en esta máquina el 2026-08-21— y sus cuatro
+líneas base pasaron en verde a 64,7–68,3 s con **4 workers** (el tope nuevo),
+timeout derivado a **137 s**, cero timeouts en 20 mutantes.
+`progress/mutacion_F-040.md`: 49 generados, 20 evaluados, 17 muertos, 3
+supervivientes, los tres analizados.
+
+### Lo que el humano tiene que decidir
+
+1. **Aparece un QUINTO defecto y NO se ha metido**, según la regla del design:
+   **la campaña etiqueta mal algún mutante, y no siempre el mismo**. Los mismos
+   20 mutantes medidos dos veces discrepan en dos: la paralela declaró
+   superviviente a `mutacion.py:1942 max(1,→max(2,` y la serie a
+   `mutacion.py:677 *→//`; **los dos mueren** al reproducirlos a mano con la
+   invocación exacta del ejecutor (`EXIT=1` las dos veces, una de ellas también
+   dentro de un worktree recién creado). Es no determinista y es el espejo del
+   falso muerto que arreglaron F-012 y F-038. Propuesta en `impl_F-040.md`:
+   ficha nueva, rigor `critico`, empezando por guardar el **código de salida**
+   de cada mutante en el informe —hoy un «superviviente» puede ser un `exit 0` o
+   un `exit 5`, que `ResultadoSuite.verde` cuenta igual—. **Efecto sobre F-040:
+   ninguno en el recuento de muertos** (19 cazados y 1 equivalente de 20).
+2. **Una desviación respecto a R27**: la fórmula que pedía la spec para RM2
+   (`mutantes × media / W`) no cuadra, porque `media` ya es tiempo de pared
+   entre mutantes y por tanto ya viene dividida entre W. RM2 dice ahora que el
+   coste real por mutante es `media × W`. El propósito del requisito se cumple;
+   el texto literal, no. Justificada en `impl_F-040.md`.
+
+**Después del merge en `dev`** (NO en esta rama, y no se ha tocado
+`arnes-base`): porte a **1.7.2**, con la lista de ficheros en `impl_F-040.md` y
+el aviso obligatorio en `GUIA_INSTALACION.md` de que **los tiempos de campañas
+paralelas anteriores dejan de ser comparables** (timeout derivado; tope 16 → 4).
+
+---
+
+## F-040 · spec escrita (2026-08-21, spec-author)
+
+`specs/F-040-campana-dimensionada-y-honesta/` — requirements (114/150), design
+(176/250), tasks (26 tareas + 1 posterior al merge). Rama
+`feature/F-040-campana-dimensionada-y-honesta`. Nada implementado.
+
+**Decisión de diseño de D1**: el timeout por mutante NO se multiplica por los
+workers (el dato de campo lo desmiente: de 1 a 3 workers la suite crece un 25 %,
+no un 300 %) ni se mide la suite aparte (cuesta una suite extra y mediría en
+reposo). Se **deriva de la línea base que la campaña ya corre dentro de cada
+worktree**, que ya incluye la contención real: `max(suelo, ceil(peor_base × 2))`.
+La línea base recibe su propio timeout holgado, `suelo × 5`, porque se paga una
+vez por worker y no una por mutante. `rigor.json` no gana ningún número de esta
+máquina: cambia el mecanismo. **D2**: `TOPE_WORKERS` 16 → 4 y
+`min(max(1, (núcleos-2)//2), 4)`. **D4**: guarda única en `main` (embudo), no una
+cuarta guarda en `alcance.py`; código de salida 3, sin informe.
+
+**Dos premisas de la ficha resultaron falsas al comprobarlas** (sección 0 del
+design): la sección `## Timeouts` NO lanza `TypeError` —solo duplica
+`fichero:linea`—, y `timeout_mutacion` SÍ rechaza enteros `<= 0`; lo que se cuela
+es un **booleano** (`true` → 1 s) y un `--timeout` negativo sin validar. Tampoco
+`CHECKPOINTS.md` reconocía el factor de workers: no aparece ni «worker» ni
+«paralel». De ahí sale R27.
+
+### Las 4 preguntas — CERRADAS por el humano el 2026-08-21 e implementadas
+
+1. ¿`MARGEN = 2` y `FACTOR_HOLGURA_BASE = 5` en el código, o declarados en
+   `rigor.json`?
+2. Con el timeout ya derivado, ¿sigue en pie no declarar `mutacion.workers`?
+3. ¿`TOPE_WORKERS = 4` o 3, el único punto con medición real en verde?
+4. R23 cambia el significado de `--timeout 0` (hoy cae en silencio al
+   configurado) y pasa a salir con código 2. ¿Se acepta?
+
+**Riesgo anotado en el design**: si al implementar aparece un **quinto** defecto
+de esta maquinaria, se anota en `progress/impl_F-040.md` y se propone al humano;
+no entra en F-040 sin preguntar. El porte a `arnes-base` 1.7.2 va **después** del
+merge en `dev`, nunca dentro de la rama.

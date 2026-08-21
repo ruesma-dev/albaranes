@@ -113,11 +113,28 @@ def umbral_cobertura(rigor: dict) -> int:
 
 
 def timeout_mutacion(rigor: dict) -> int:
-    """Segundos máximos que se le conceden a la suite por cada mutante."""
-    valor = rigor.get("mutacion", {}).get("timeout_por_mutante_s")
-    if not isinstance(valor, int) or valor <= 0:
+    """SUELO de segundos que se le conceden a la suite por cada mutante.
+
+    Suelo y no techo: `harness.mutacion` deriva el timeout efectivo de la línea
+    base que mide antes de juzgar a nadie, y nunca concede menos que este valor.
+
+    «Falta la clave» y «el valor no vale» son dos averías distintas y llevan
+    mensajes distintos: cuando las dos decían «falta», quien leía el aviso se
+    ponía a buscar una clave que tenía delante. Y un booleano NO es un timeout,
+    aunque `isinstance(True, int)` diga que sí: con `true` la campaña concedía
+    **1 segundo** por mutante y salía entera en «timeout».
+    """
+    bloque = rigor.get("mutacion", {})
+    valor = bloque.get("timeout_por_mutante_s") if isinstance(bloque, dict) else None
+    if valor is None:
         raise ValueError(
             "Falta 'mutacion.timeout_por_mutante_s' en la configuración de rigor."
+        )
+    if isinstance(valor, bool) or not isinstance(valor, int) or valor <= 0:
+        raise ValueError(
+            f"'mutacion.timeout_por_mutante_s' no vale: {valor!r}. Tiene que ser "
+            "un entero estrictamente positivo (un booleano NO cuenta como "
+            "entero aquí: 'true' daría 1 segundo por mutante)."
         )
     return valor
 

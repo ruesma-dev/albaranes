@@ -116,12 +116,18 @@ def fusionar(
     muestreado: bool = False,
     max_mutantes: int | None = None,
     semilla: int | None = None,
+    workers: int | None = None,
 ) -> InformeMutacion:
     """Funde los informes de los workers en el informe único de la campaña.
 
     Los totales se suman y las listas se reordenan por la clave estable, de
     forma que el resultado no delata en qué worker cayó cada mutante. Los
     metadatos de muestreo son los del coordinador, que es quien muestreó.
+
+    El timeout efectivo del conjunto es el MÁXIMO de los parciales: cada worker
+    lo deriva de la línea base de SU worktree, y el informe tiene que declarar
+    el reloj más largo que se concedió, que es el que explica el peor caso. La
+    media de tres relojes distintos no es ningún reloj.
     """
     informe = InformeMutacion(
         feature=alcance.feature,
@@ -147,6 +153,18 @@ def fusionar(
     )
     for parcial in parciales:
         informe.segundos_linea_base.update(parcial.segundos_linea_base)
+    informe.workers = workers
+    efectivos = [
+        parcial.timeout_efectivo
+        for parcial in parciales
+        if parcial.timeout_efectivo is not None
+    ]
+    informe.timeout_efectivo = max(efectivos) if efectivos else None
+    suelos = [
+        parcial.timeout_suelo for parcial in parciales if parcial.timeout_suelo is not None
+    ]
+    informe.timeout_suelo = max(suelos) if suelos else None
+    informe.timeout_fijado = any(parcial.timeout_fijado for parcial in parciales)
     # Basta con que UN worker haya perdido la base para que la campaña entera
     # deje de valer: su partición no está medida y el total no cuadra.
     avisos = [parcial.aviso_base for parcial in parciales if parcial.aviso_base]
@@ -385,6 +403,8 @@ def ejecutar_campania_paralela(
     eco: Callable[[str], None] | None = None,
     fabrica: Fabrica | None = None,
     centinela: Centinela | None = None,
+    timeout_base_s: int | None = None,
+    timeout_fijado: bool = False,
 ) -> InformeMutacion:
     """Evalúa los mutantes del alcance repartidos entre varios worktrees.
 
@@ -436,6 +456,12 @@ def ejecutar_campania_paralela(
             eco=eco_compartido if eco is not None else None,
             ejecutor_de=lambda fichero: fabrica(fichero, raiz_worker),
             centinela=centinela,
+            # Cada worker deriva SU timeout de la línea base de SU worktree: es
+            # ahí donde se nota la contención de los W workers, y es lo que hace
+            # que el reloj se adapte a la máquina sin fórmula que lo adivine.
+            timeout_base_s=timeout_base_s,
+            timeout_fijado=timeout_fijado,
+            workers=efectivo,
             # El worktree acaba de nacer de HEAD: comprobar que está limpio
             # sería preguntarle a git lo que git acaba de hacer. Lo que sí se
             # comprueba, y aquí es donde importa, es su LÍNEA BASE.
@@ -451,6 +477,7 @@ def ejecutar_campania_paralela(
             muestreado=muestreado,
             max_mutantes=max_mutantes,
             semilla=semilla,
+            workers=efectivo,
         )
 
     # R8: con menos de dos mutantes que evaluar, paralelizar solo cuesta. Se
@@ -469,6 +496,9 @@ def ejecutar_campania_paralela(
                     eco=eco_compartido if eco is not None else None,
                     ejecutor_de=lambda fichero: fabrica(fichero, raiz),
                     centinela=centinela,
+                    timeout_base_s=timeout_base_s,
+                    timeout_fijado=timeout_fijado,
+                    workers=efectivo,
                 )
             ]
             if mutantes

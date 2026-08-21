@@ -77,16 +77,24 @@ class _EjecutorFalso:
 # --- R7: de dónde sale el número de workers ---------------------------------
 
 
-def test_f012_r7_workers_por_defecto_son_los_nucleos_menos_dos(monkeypatch) -> None:
+def test_f012_r7_workers_por_defecto_reservan_dos_nucleos_por_worker(
+    monkeypatch,
+) -> None:
+    """F-040 (R8) cambió la fórmula: era `núcleos - 2`, ahora `(núcleos - 2)//2`.
+
+    El motivo, con medición: cada worker arranca un proceso pytest completo, no
+    un hilo, así que el recurso escaso es la máquina y no el núcleo. El detalle
+    y los ocho tamaños de máquina están en `test_f040_r1_r10_dimensionado.py`.
+    """
     monkeypatch.setattr("harness.mutacion.os.cpu_count", lambda: 8)
 
-    assert workers_por_defecto() == 6
+    assert workers_por_defecto() == 3
 
 
 def test_f012_r7_workers_por_defecto_tienen_tope(monkeypatch) -> None:
     monkeypatch.setattr("harness.mutacion.os.cpu_count", lambda: 22)
 
-    assert workers_por_defecto() == TOPE_WORKERS == 16
+    assert workers_por_defecto() == TOPE_WORKERS == 4
 
 
 def test_f012_r7_workers_por_defecto_nunca_bajan_de_uno(monkeypatch) -> None:
@@ -223,7 +231,10 @@ def test_f012_r7_la_cli_pasa_el_numero_de_workers_al_coordinador(
     def espia(alcance, servicios, **kwargs):
         recibido.update(kwargs)
         recibido["ficheros"] = alcance.ficheros()
-        return InformeMutacion(feature=alcance.feature, alcance=alcance)
+        # `generados` no puede ser 0: desde F-040 (R14) una campaña que no
+        # genera ni un mutante aborta con código 3 sin escribir informe, así
+        # que un doble con cero devolvía algo que ya no puede ocurrir.
+        return InformeMutacion(feature=alcance.feature, alcance=alcance, generados=3)
 
     monkeypatch.setattr(paralela, "ejecutar_campania_paralela", espia)
 
@@ -258,7 +269,8 @@ def test_f012_r8_con_workers_2_la_cli_ya_paraleliza(
 
     def espia(alcance, servicios, **kwargs):
         recibido.update(kwargs)
-        return InformeMutacion(feature=alcance.feature, alcance=alcance)
+        # Ver la nota de `generados` del espía anterior (R14 de F-040).
+        return InformeMutacion(feature=alcance.feature, alcance=alcance, generados=3)
 
     monkeypatch.setattr(paralela, "ejecutar_campania_paralela", espia)
 

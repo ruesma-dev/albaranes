@@ -30,6 +30,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import math
 import os
 import random
 import re
@@ -80,13 +81,39 @@ INDETERMINADO = "indeterminado"
 #: que la 1.5.3 arregla.
 BASE_ROTA = "base_rota"
 
-#: Segundos máximos por mutante si nadie configura otra cosa.
+#: SUELO de segundos por mutante si nadie configura otra cosa. Suelo y no
+#: techo: el timeout efectivo se deriva de la línea base medida (R1/R7).
 TIMEOUT_POR_DEFECTO = 120
 
-#: Tope del número de workers CALCULADO por defecto. Más allá, la máquina se
-#: pasa el rato cambiando de contexto y cada suite roza su timeout. No limita
-#: lo que se pida a mano con `--workers` ni lo declarado en `rigor.json`.
-TOPE_WORKERS = 16
+#: Cuánto se multiplica el peor tiempo de línea base MEDIDO para obtener el
+#: timeout de un mutante. Va en el código y no en `rigor.json` a propósito
+#: (decisión del humano del 2026-08-21): es un parámetro del mecanismo, no de la
+#: máquina, y meterlo en configuración reabre la puerta a cablear valores
+#: locales en un arnés que viaja a cinco proyectos.
+#:
+#: Dos, no diez: el margen tiene que absorber el ruido de una suite que ya se
+#: midió con los W workers compitiendo, no tapar un mutante que cuelga.
+MARGEN_TIMEOUT = 2.0
+
+#: Por cuánto se multiplica el suelo para darle su timeout a la LÍNEA BASE.
+#: Huevo y gallina: la base necesita un reloj para poder medirse, y no puede
+#: usar uno derivado de sí misma. Se le da uno holgado y aparte, y es defendible
+#: porque se paga **una vez por worker**, no una por mutante. Si ni con 10
+#: minutos cabe la suite limpia, el problema ya no es el reloj.
+FACTOR_HOLGURA_BASE = 5
+
+#: Tope del número de workers CALCULADO por defecto. No limita lo que se pida a
+#: mano con `--workers` ni lo declarado en `rigor.json` (R10).
+#:
+#: Fue 16 hasta F-040, y ese 16 hacía la campaña paralela inutilizable por
+#: defecto: el 2026-08-21, en esta máquina de 22 núcleos, la suite limpia tardó
+#: 51 s en reposo, 97,5 s con UN worker y 119-122 s con TRES, contra un timeout
+#: configurado de 120 s. Con 16 no habría cabido ni una línea base.
+#:
+#: El único punto medido y verde son 3 workers, y ya ahí la suite sube un 25 %.
+#: 4 es un paso sobre lo medido, no un salto; subirlo es una decisión CON
+#: DATOS, y `--workers N` sigue sin límite para quien quiera producirlos.
+TOPE_WORKERS = 4
 
 #: Códigos de salida de pytest que este módulo distingue. Solo el 1 —«han
 #: fallado tests»— significa que el mutante pudo ser cazado; el 2 (recolección
@@ -616,6 +643,40 @@ CAUSAS_EN_CUALQUIER_MODO = (
 )
 
 
+def timeout_derivado(
+    suelo: int, tiempos_base: dict[str, float], margen: float = MARGEN_TIMEOUT
+) -> int:
+    """Segundos por mutante derivados de la línea base ya medida (R1).
+
+    `max(suelo, ceil(peor_tiempo × margen))`. Sede ÚNICA de la fórmula.
+
+    Se deriva de la línea base y no de una medición aparte porque
+    `comprobar_linea_base` ya corre la suite limpia **dentro de cada worktree y
+    con los W workers compitiendo**, que es justo la contención que hay que
+    medir, y ya devuelve los segundos: la medición correcta estaba hecha y se
+    tiraba. Usarla no cuesta ni un segundo extra y absorbe máquina, workers y
+    tamaño de suite sin ninguna fórmula que adivine.
+
+    Manda el PEOR de los tiempos: un timeout que solo le vale al worker más
+    rápido no le vale a nadie. Se redondea hacia arriba porque regalar el
+    segundo que faltaba justo en el peor caso convierte una campaña válida en
+    una tanda de «timeout». Sin ninguna medición —ejecutores dobles, campaña sin
+    línea base— no hay nada de lo que derivar y se devuelve el suelo tal cual.
+    """
+    if not tiempos_base:
+        return suelo
+    return max(suelo, math.ceil(max(tiempos_base.values()) * margen))
+
+
+def timeout_de_linea_base(suelo: int) -> int:
+    """Segundos que se le conceden a la suite SIN mutar nada (R2).
+
+    Ver `FACTOR_HOLGURA_BASE`: es holgado a propósito y su coste está acotado
+    porque se paga una vez por worker.
+    """
+    return suelo * FACTOR_HOLGURA_BASE
+
+
 def mensaje_base_rota(etiqueta: str, resultado: ResultadoSuite) -> str:
     """Mensaje accionable: qué falla, dónde, por qué suele fallar y qué hacer."""
     fallidos = resultado.fallidos()
@@ -648,10 +709,36 @@ def mensaje_base_rota(etiqueta: str, resultado: ResultadoSuite) -> str:
     )
 
 
+def mensaje_base_expirada_al_arrancar(
+    etiqueta: str, timeout_s: int, workers: int | None
+) -> str:
+    """Aviso de una línea base de ARRANQUE que se quedó sin tiempo (R5).
+
+    «Sube el timeout» no es una acción: con W workers compitiendo, la respuesta
+    casi siempre es bajar W, y el valor que se sube tiene nombre y fichero. Sin
+    esos dos datos el mensaje manda a adivinar, y adivinar en esta maquinaria ha
+    costado ya varias tardes.
+    """
+    cuantos = f"{workers} worker(s)" if workers is not None else "los workers en juego"
+    return (
+        f"LÍNEA BASE SIN TERMINAR en {etiqueta}: la suite SIN MUTAR agotó los "
+        f"{timeout_s} s que se le concedieron (el suelo "
+        f"'mutacion.timeout_por_mutante_s' multiplicado por la holgura de "
+        f"{FACTOR_HOLGURA_BASE}), con {cuantos} compitiendo por la máquina.\n"
+        "  Ningún veredicto de esta campaña valdría: si la suite LIMPIA ya no "
+        "cabe en el reloj, todo mutante saldría «timeout».\n"
+        "  Qué hacer: baja los workers (--workers N; cada worker arranca una "
+        "suite entera, no un hilo) o sube el suelo "
+        "'mutacion.timeout_por_mutante_s' de harness/rigor.json. Si ni con esa "
+        "holgura cabe la suite limpia, entonces sí: acótala."
+    )
+
+
 def comprobar_linea_base(
     implicados: list[tuple[str, object]],
     timeout_s: int,
     eco: Callable[[str], None] | None = None,
+    workers: int | None = None,
 ) -> dict[str, float]:
     """Corre la suite sin mutar en cada sitio donde se va a juzgar.
 
@@ -680,11 +767,7 @@ def comprobar_linea_base(
         tiempos[etiqueta] = time.monotonic() - arranque
         if resultado.expirado:
             raise BaseRota(
-                f"LÍNEA BASE SIN TERMINAR en {etiqueta}: la suite sin mutar agotó "
-                f"los {timeout_s} s de timeout. Ningún veredicto valdría: si la "
-                "suite limpia ya no cabe en el timeout, todo mutante saldría "
-                "«timeout». Sube mutacion.timeout_por_mutante_s en "
-                "harness/rigor.json o acota la suite."
+                mensaje_base_expirada_al_arrancar(etiqueta, timeout_s, workers)
             )
         if not resultado.verde:
             raise BaseRota(mensaje_base_rota(etiqueta, resultado))
@@ -1090,6 +1173,20 @@ class InformeMutacion:
     #: Nivel de rigor que fijó el muestreo, para que el informe diga quién lo
     #: decidió (R9). Lo rellena el CLI, que es quien lo resuelve.
     nivel: str | None = None
+    #: Segundos concedidos a CADA mutante en esta campaña (R4). Desde F-040 no
+    #: es el valor de `rigor.json` sino uno derivado de la línea base medida, y
+    #: sin declararlo los tiempos de dos campañas dejan de ser comparables sin
+    #: que nadie se entere.
+    timeout_efectivo: int | None = None
+    #: El SUELO del que se partió (`mutacion.timeout_por_mutante_s`), o el valor
+    #: de `--timeout` si se fijó a mano.
+    timeout_suelo: int | None = None
+    #: ¿El timeout vino de `--timeout` en vez de derivarse? (R6)
+    timeout_fijado: bool = False
+    #: Workers con los que se midió. Con W workers el «Tiempo total» es
+    #: aproximadamente `mutantes × media / W`, y sin este número la regla de
+    #: coherencia de RM2 marcaría como sospechosa una campaña legítima (R27).
+    workers: int | None = None
 
     @property
     def segundos_por_mutante(self) -> float | None:
@@ -1121,6 +1218,9 @@ def ejecutar_campania(
     centinela: Centinela | None = None,
     comprobar_arbol: bool = True,
     comprobar_base: bool = True,
+    timeout_base_s: int | None = None,
+    timeout_fijado: bool = False,
+    workers: int = 1,
 ) -> InformeMutacion:
     """Muta el alcance, mutante a mutante, y cuenta cuántos sobreviven.
 
@@ -1136,10 +1236,19 @@ def ejecutar_campania(
     en que sobran: la campaña paralela, cuyo coordinador ya comprobó el árbol
     principal entero y cuyos worktrees se comprueban uno a uno igualmente.
 
+    `timeout_s` es el SUELO por mutante, no el techo: tras medir la línea base
+    se deriva de ella el timeout efectivo (`timeout_derivado`), que nunca baja
+    del suelo. Con `timeout_fijado=True` —`--timeout N` en la orden— no se
+    deriva nada y `timeout_s` se usa tal cual (R6). La propia línea base corre
+    con su reloj aparte y más holgado, `timeout_base_s` (R2).
+
     Garantía dura: pase lo que pase (excepción, timeout, Ctrl-C, SIGTERM),
     ningún fichero queda mutado en el árbol de trabajo al salir de esta función.
     """
     inicio = time.monotonic()
+    suelo = timeout_s
+    if timeout_base_s is None:
+        timeout_base_s = timeout_de_linea_base(suelo)
     base = Path(raiz)
     fuentes: dict[str, str] = {}
 
@@ -1160,6 +1269,10 @@ def ejecutar_campania(
         max_mutantes=max_mutantes,
         semilla=semilla,
         sha_head=sha_de_head(raiz),
+        timeout_suelo=suelo,
+        timeout_efectivo=suelo,
+        timeout_fijado=timeout_fijado,
+        workers=workers,
     )
 
     if max_mutantes is not None and len(mutantes) > max_mutantes:
@@ -1175,7 +1288,23 @@ def ejecutar_campania(
         guardia_arbol_limpio(raiz, list(fuentes))
     implicados = ejecutores_implicados(list(mutantes), ejecutor, ejecutor_de)
     if comprobar_base and mutantes:
-        informe.segundos_linea_base = comprobar_linea_base(implicados, timeout_s, eco)
+        informe.segundos_linea_base = comprobar_linea_base(
+            implicados, timeout_base_s, eco, workers=workers
+        )
+        # Aquí es donde la campaña deja de adivinar: la suite limpia ya se ha
+        # corrido en el sitio donde se va a juzgar y con los W workers
+        # compitiendo, así que lo que tardó ES la medida buena. Antes de F-040
+        # ese número se tiraba y el timeout salía de un fijo de `rigor.json`.
+        if not timeout_fijado:
+            timeout_s = timeout_derivado(suelo, informe.segundos_linea_base)
+            informe.timeout_efectivo = timeout_s
+            if eco is not None and informe.segundos_linea_base:
+                peor = max(informe.segundos_linea_base.values())
+                eco(
+                    f"{MARCA_LINEA_BASE}timeout por mutante: {timeout_s} s "
+                    f"= max(suelo {suelo} s, peor línea base {peor:.1f} s "
+                    f"× margen {MARGEN_TIMEOUT})"
+                )
 
     def restaurar_todo() -> None:
         """Devuelve al disco los fuentes tal y como se leyeron al empezar."""
@@ -1247,7 +1376,11 @@ def ejecutar_campania(
     # la base se rompió a mitad —alguien borró un fichero, el entorno cambió—,
     # cada «muerto» contado desde entonces es un mutante que nadie cazó.
     if comprobar_base and informe.mutantes_evaluados:
-        informe.aviso_base = _base_rota_al_final(implicados, timeout_s)
+        # Con el timeout de la BASE, no con el del mutante: ésta también es una
+        # suite limpia y también se corre una vez por worker (R2). Dársela con
+        # el reloj corto convertiría en «base expirada» lo que solo es una
+        # máquina ocupada, y eso ya es la mentira que arregla R11.
+        informe.aviso_base = _base_rota_al_final(implicados, timeout_base_s)
     if informe.base_rota and informe.aviso_base is None:
         informe.aviso_base = (
             f"{len(informe.base_rota)} mutante(s) se juzgaron con la suite rota "
@@ -1271,13 +1404,44 @@ def _resolver_indeterminado(ejecutor: object, timeout_s: int) -> str:
     return MUERTO if correr_base(timeout_s).verde else BASE_ROTA
 
 
+def mensaje_base_expirada_al_final(etiqueta: str, timeout_s: int) -> str:
+    """Aviso de una línea base de cierre que se quedó SIN TIEMPO (R11).
+
+    Expirar no es fallar. La suite no dijo que nada esté mal: no llegó a
+    terminar. Confundir las dos cosas no es un matiz de redacción: el
+    2026-08-21, en la primera ejecución real de la campaña paralela, el arnés
+    dijo «Arregla la suite y repite la campaña» sobre una suite impecable y
+    mandó al humano a buscar un fallo que no existía. Lo que hay que tocar aquí
+    es el reloj —menos workers compitiendo, o más suelo—, no los tests.
+    """
+    return (
+        f"La línea base de cierre EXPIRÓ en {etiqueta}: se agotaron los "
+        f"{timeout_s} s concedidos. Ojo, la suite NO falló y NO hay ningún test "
+        "roto que buscar: se quedó sin tiempo, que es otra cosa. Aun así los "
+        "números de esta campaña no valen, porque no se ha podido comprobar que "
+        "la base siguiera verde al terminar.\n"
+        "  Qué hacer: baja los workers (--workers N: cada worker corre una suite "
+        "entera y todas compiten por la misma máquina) o sube el SUELO "
+        "'mutacion.timeout_por_mutante_s' de harness/rigor.json. No toques la "
+        "suite."
+    )
+
+
 def _base_rota_al_final(implicados: list[tuple[str, object]], timeout_s: int) -> str | None:
-    """Reejecuta la línea base al cerrar. Devuelve el motivo si dejó de estar verde."""
+    """Reejecuta la línea base al cerrar. Devuelve el motivo si dejó de estar verde.
+
+    Distingue las dos formas de no estar verde, porque tienen arreglos opuestos:
+    EXPIRAR es un problema de reloj (R11) y FALLAR es un problema de suite
+    (R12). La consecuencia sí es la misma en los dos casos: el informe queda
+    marcado como no fiable y la ejecución sale con 3 (R13).
+    """
     for etiqueta, ejecutor in implicados:
         correr_base = getattr(ejecutor, "linea_base", None)
         if correr_base is None:
             continue
         resultado = correr_base(timeout_s)
+        if resultado.expirado:
+            return mensaje_base_expirada_al_final(etiqueta, timeout_s)
         if not resultado.verde:
             fallidos = ", ".join(resultado.fallidos()) or f"código {resultado.codigo}"
             return (
@@ -1369,17 +1533,26 @@ def analisis_escritos(texto: str) -> dict[tuple, str]:
     }
 
 
-#: Prefijos de las filas del informe cuyo valor sale del RELOJ. Vive aquí, al
-#: lado de quien las escribe, para que quien añada una fila de reloj la vea y la
-#: declare: cuando esta lista se mantenía a mano dentro de un test (F-012), la
-#: fila que añadió F-038 T5 se quedó fuera y dejó el test flaky durante semanas.
+#: Prefijos de las filas del informe cuyo valor depende de CÓMO se corrió la
+#: campaña —el reloj y las condiciones— y no de lo que midió. Vive aquí, al lado
+#: de quien las escribe, para que quien añada una fila así la vea y la declare:
+#: cuando esta lista se mantenía a mano dentro de un test (F-012), la fila que
+#: añadió F-038 T5 se quedó fuera y dejó el test flaky durante semanas.
 #: Se compara por PREFIJO a propósito: `| Línea base (s) — \`etiqueta\`` lleva
 #: pegada la etiqueta del ejecutor.
+#:
+#: `Workers` y `Timeout efectivo` entran desde F-040: una campaña en serie y una
+#: paralela sobre el mismo commit tienen que dar informes comparables, y esas
+#: dos filas no coinciden nunca. El `Suelo configurado` NO entra: sale de
+#: `rigor.json`, es el mismo en las dos, y que deje de coincidir es una
+#: diferencia real que hay que ver.
 FILAS_DE_RELOJ: tuple[str, ...] = (
     "Generado por",
     "| Tiempo total",
     "| Línea base (s)",
     "| Media por mutante evaluado (s)",
+    "| Timeout efectivo por mutante (s)",
+    "| Workers",
 )
 
 #: Comentario de ruta con el que arranca todo informe. Cambia con el nombre del
@@ -1491,6 +1664,32 @@ def escribir_informe(informe: InformeMutacion, ruta: Path) -> None:
         if media is not None
         else "| Media por mutante evaluado (s) | n/d |"
     )
+    # R4. Desde F-040 el timeout por mutante ya no es el fijo de `rigor.json`:
+    # se deriva de la línea base medida. Sin declararlo, los tiempos de dos
+    # campañas dejan de ser comparables sin que nadie se entere, y el reviewer
+    # compara peras con manzanas creyendo que compara lo mismo.
+    if informe.timeout_efectivo is None:
+        lineas.append("| Timeout efectivo por mutante (s) | n/d |")
+    elif informe.timeout_fijado:
+        lineas.append(
+            f"| Timeout efectivo por mutante (s) | {informe.timeout_efectivo} "
+            "— fijado a mano con `--timeout`, sin derivar |"
+        )
+    else:
+        lineas.append(
+            f"| Timeout efectivo por mutante (s) | {informe.timeout_efectivo} "
+            f"— derivado de la línea base × {MARGEN_TIMEOUT} |"
+        )
+    lineas.append(
+        f"| Suelo configurado (s) | {informe.timeout_suelo} |"
+        if informe.timeout_suelo is not None
+        else "| Suelo configurado (s) | n/d |"
+    )
+    lineas.append(
+        f"| Workers | {informe.workers} |"
+        if informe.workers is not None
+        else "| Workers | n/d |"
+    )
     if informe.muestreado:
         lineas.append(
             f"| Muestreo | sí — {informe.evaluados} de {informe.generados} "
@@ -1538,7 +1737,13 @@ def escribir_informe(informe: InformeMutacion, ruta: Path) -> None:
     if informe.timeouts:
         lineas += ["## Timeouts", ""]
         for mutante in informe.timeouts:
-            lineas.append(f"- `{mutante.fichero}:{mutante.linea}` {mutante.descripcion()}")
+            # `descripcion()` ya empieza por `fichero:linea`: anteponerlo daba
+            # `- \`a.py:3\` a.py:3 [op] x -> y`. Nadie lo había leído nunca
+            # porque la sección entera estaba sin test (R20).
+            lineas.append(
+                f"- `{mutante.fichero}:{mutante.linea}` [{mutante.operador}] "
+                f"{mutante.original} -> {mutante.mutado}"
+            )
         lineas.append("")
 
     if informe.base_rota:
@@ -1586,7 +1791,16 @@ def _analizar_argumentos(argv: list[str] | None) -> argparse.Namespace:
             "quien resuelve el nivel de rigor y, con él, el muestreo."
         ),
     )
-    analizador.add_argument("--timeout", type=int, default=None, help="Segundos por mutante")
+    analizador.add_argument(
+        "--timeout",
+        type=int,
+        default=None,
+        help=(
+            "Segundos por mutante, ANULANDO el cálculo automático. Sin este "
+            "flag el timeout se deriva de la línea base medida y "
+            "'mutacion.timeout_por_mutante_s' actúa solo como suelo."
+        ),
+    )
     analizador.add_argument(
         "--max-mutantes",
         type=int,
@@ -1637,7 +1851,22 @@ def _analizar_argumentos(argv: list[str] | None) -> argparse.Namespace:
             "muerta a medias, según el centinela, y lo retira."
         ),
     )
-    return analizador.parse_args(argv)
+    opciones = analizador.parse_args(argv)
+    # R23. Hasta hoy `--timeout 0` era falsy y caía EN SILENCIO al valor
+    # configurado: quien lo escribía creía haber pedido algo y recibía otra
+    # cosa. Un timeout de cero no es una opción legítima, así que se rechaza con
+    # el código 2 de error de uso en vez de esconderse.
+    if opciones.timeout is not None and opciones.timeout <= 0:
+        analizador.error(
+            f"--timeout tiene que ser un entero de segundos mayor que cero, y "
+            f"es {opciones.timeout}."
+        )
+    if opciones.workers is not None and opciones.workers < 1:
+        analizador.error(
+            f"--workers tiene que ser 1 o más (1 = campaña en serie), y es "
+            f"{opciones.workers}."
+        )
+    return opciones
 
 
 #: Códigos de salida de `--estado`, para que init.sh no tenga que leer el JSON.
@@ -1697,13 +1926,20 @@ def _modo_restaurar(raiz: str) -> int:
 
 
 def workers_por_defecto() -> int:
-    """Workers cuando nadie dice nada: los núcleos menos dos, con tope.
+    """Workers cuando nadie dice nada: `min(max(1, (núcleos - 2) // 2), tope)`.
 
-    Menos dos para dejar respirar a la máquina —el coordinador y quien la esté
-    usando— y con tope porque a partir de ahí las suites simultáneas se estorban
-    entre ellas y empiezan a rozar su propio timeout.
+    Los dos primeros núcleos son los de siempre: la máquina y el coordinador. El
+    `// 2` es lo que cambia en F-040, y cambia porque la fórmula vieja suponía
+    que el cuello de botella es la CPU. No lo es: cada worker arranca un proceso
+    **pytest completo** —intérprete, importaciones, recolección, E/S de disco y,
+    en un monorepo, un venv por servicio—, así que el recurso escaso es la
+    máquina entera y no el núcleo. Se reserva del orden de dos núcleos por
+    suite.
+
+    En 4 núcleos da 1; en 8, 3; en 22, 4 (antes daba 16, y con 16 no cabía ni
+    una línea base dentro de su timeout).
     """
-    return min(max(1, (os.cpu_count() or 1) - 2), TOPE_WORKERS)
+    return min(max(1, ((os.cpu_count() or 1) - 2) // 2), TOPE_WORKERS)
 
 
 def resolver_workers(pedidos: int | None, configurados: int | None) -> int:
@@ -1784,15 +2020,64 @@ def _muestreo_configurado(feature: str) -> tuple[int | None, int | None, str | N
         return (None, None, None)
 
 
+#: Código con el que sale una campaña que NO ha juzgado nada. Distinto del 1
+#: de «hay supervivientes» a propósito: aquello es un resultado, esto no.
+NADA_JUZGADO = 3
+
+
+def mensaje_alcance_vacio(alcance: Alcance) -> str:
+    """Por qué se aborta cuando el alcance no tiene ni una línea (R16)."""
+    return (
+        f"ALCANCE VACÍO en {alcance.feature}: ni una línea de producción que "
+        f"mutar (origen {alcance.origen}, {alcance.ref_diff[0]}.."
+        f"{alcance.ref_diff[1]}). No se ha juzgado NADA.\n"
+        "  No se escribe informe: un fichero en progress/ con un cero que nadie "
+        "ha medido es peor que no tener fichero, porque se lee como «nada que "
+        "arreglar» y el reviewer lo da por bueno.\n"
+        "  Causas habituales: la rama ya está mergeada y el diff contra la base "
+        "sale vacío (declara el alcance a mano con --ficheros), o todo lo que "
+        "cambió es documentación, tests o especificaciones."
+    )
+
+
+def mensaje_sin_mutantes(alcance: Alcance) -> str:
+    """Por qué se aborta cuando hay líneas pero no sale ni un mutante (R14)."""
+    return (
+        f"CERO MUTANTES en {alcance.feature}: el alcance tiene "
+        f"{alcance.total_lineas()} línea(s) de producción pero no se ha generado "
+        "ni un mutante, así que no se ha juzgado NADA.\n"
+        "  No se escribe informe: «0 generados, 0 supervivientes» se lee como "
+        "una campaña impecable.\n"
+        "  Motivo: esas líneas no llevan código mutable —imports, docstrings, "
+        "declaraciones, cadenas— o el fichero no se pudo leer. Amplía el "
+        "alcance o aporta la evidencia de otra forma, y dilo por escrito."
+    )
+
+
 def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
     """Punto de entrada.
 
     Códigos: 0 sin supervivientes, 1 con ellos, 2 error de uso, 3 campaña
-    abortada (línea base roja o árbol sucio). El 3 es distinto del 1 a
-    propósito: «hay supervivientes» es un resultado; «no se ha medido nada» no.
+    abortada (línea base roja, árbol sucio o nada que juzgar). El 3 es distinto
+    del 1 a propósito: «hay supervivientes» es un resultado; «no se ha medido
+    nada» no.
+
+    Las dos guardas de D4 viven AQUÍ y no en `harness.alcance` a sabiendas. El
+    mismo modo de fallo —una campaña de cero que sale en verde— ha entrado ya
+    por tres puertas distintas: la invocación de pytest sin ruta (F-038),
+    `--ficheros ","` (F-039) y `--feature` sobre una rama ya mergeada. Poner
+    una cuarta guarda en el cuarto constructor de alcance es esperar a la
+    quinta; `main` es el único punto por el que pasan todas las vías, incluidas
+    las que todavía no existen, y además es quien escribe el informe y elige el
+    código de salida. La guarda de entrada de `alcance_de_ficheros` NO se
+    retira (R17): ésa sabe QUÉ ruta sobra, y ésta solo sabe que no quedó nada.
     """
     opciones = _analizar_argumentos(argv)
-    timeout_s = opciones.timeout or _timeout_configurado()
+    # `is not None` y no `or`: aquí el 0 ya no puede llegar (R23 lo rechaza),
+    # pero era justo el `or` lo que hacía que `--timeout 0` cayera en silencio
+    # al valor configurado.
+    timeout_fijado = opciones.timeout is not None
+    timeout_s = opciones.timeout if timeout_fijado else _timeout_configurado()
 
     if opciones.estado:
         return _modo_estado(opciones.raiz)
@@ -1810,7 +2095,23 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
             "antes de empezar:",
             file=sys.stderr,
         )
-        _modo_restaurar(opciones.raiz)
+        # R18: hasta hoy este código de salida se TIRABA. Si la restauración no
+        # podía deshacer algo, la campaña arrancaba igual sobre un árbol que ya
+        # estaba mutado y todos sus veredictos hablaban de un código que nadie
+        # había escrito.
+        if _modo_restaurar(opciones.raiz) != 0:
+            print(
+                "ABORTADA sin empezar: queda al menos un fichero con un MUTANTE "
+                "de la campaña anterior escrito en disco (los nombra la línea "
+                "«NO SE PUDO RESTAURAR» de aquí arriba).\n"
+                "  Medir encima de un mutante viejo es medir el mutante: cada "
+                "veredicto de esta campaña hablaría de un código que nadie ha "
+                "escrito, y el informe no lo diría.\n"
+                "  Deshazlo a mano —`git checkout -- <fichero>`— y vuelve a "
+                "lanzarla.",
+                file=sys.stderr,
+            )
+            return NADA_JUZGADO
 
     try:
         servicios = cargar_servicios(raiz=opciones.raiz)
@@ -1835,8 +2136,12 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
         return 2
 
     print(alcance.descripcion())
-    if not alcance.lineas:
-        print("Sin líneas de producción en el alcance: nada que mutar.")
+    # R16: aquí, ANTES de crear worktrees o correr ninguna línea base. Hasta hoy
+    # esto solo imprimía «Sin líneas de producción» y SEGUÍA, y seguir es lo que
+    # producía el informe de cero mutantes que se lee como «todo bien».
+    if not alcance.total_lineas():
+        print(mensaje_alcance_vacio(alcance), file=sys.stderr)
+        return NADA_JUZGADO
 
     def factoria(fichero: str) -> object:
         return ejecutor_para(fichero, servicios, opciones.raiz)
@@ -1852,6 +2157,20 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
         )
 
     workers = resolver_workers(opciones.workers, _workers_configurados())
+    timeout_base_s = timeout_de_linea_base(timeout_s)
+    if timeout_fijado:
+        # R6: quien fija el timeout a mano tiene que saber que ha desactivado la
+        # derivación, o leerá el informe creyendo que el número está medido.
+        print(
+            f"Timeout FIJADO a mano: {timeout_s} s por mutante. El cálculo "
+            "automático a partir de la línea base queda ANULADO."
+        )
+    else:
+        print(
+            f"Timeout por mutante: se derivará de la línea base medida, con "
+            f"suelo {timeout_s} s y margen {MARGEN_TIMEOUT}. La propia línea "
+            f"base dispone de {timeout_base_s} s."
+        )
     paralela = workers >= 2 and ejecutor is None
     centinela = Centinela(
         raiz=opciones.raiz,
@@ -1877,6 +2196,8 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
                 semilla=semilla,
                 eco=lambda linea: print(linea, flush=True),
                 centinela=centinela,
+                timeout_base_s=timeout_base_s,
+                timeout_fijado=timeout_fijado,
             )
         else:
             informe = ejecutar_campania(
@@ -1889,6 +2210,9 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
                 eco=lambda linea: print(linea, flush=True),
                 ejecutor_de=factoria if servicios and ejecutor is None else None,
                 centinela=centinela,
+                timeout_base_s=timeout_base_s,
+                timeout_fijado=timeout_fijado,
+                workers=workers,
             )
     except CampaniaAbortada as error:
         # Sin informe a propósito: un fichero en `progress/` con un cero que
@@ -1900,6 +2224,12 @@ def main(argv: list[str] | None = None, ejecutor: object | None = None) -> int:
         return 2
     finally:
         centinela.cerrar()
+
+    # R14: red final. Puede haber líneas en el alcance y aun así ni un mutante
+    # (imports, docstrings, declaraciones). Ese informe no dice nada de nada.
+    if informe.generados == 0:
+        print(mensaje_sin_mutantes(alcance), file=sys.stderr)
+        return NADA_JUZGADO
 
     destino = Path(opciones.salida or f"progress/mutacion_{opciones.feature}.md")
     # Quién fijó el muestreo lo sabe el CLI, no la campaña: el informe tiene que
