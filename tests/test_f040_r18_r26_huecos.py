@@ -254,3 +254,86 @@ def test_f040_r26_un_rigor_declarado_que_ni_siquiera_es_texto_es_un_error(
     errores = validar_features([{"id": "F-104", "rigor": declarado}], RIGOR_MINIMO)
 
     assert len(errores) == 1
+
+
+# --- R24: la retirada de worktrees cuando `git worktree remove` FALLA -------
+
+
+def test_f040_r24_si_remove_falla_se_borra_el_directorio_y_luego_se_purga(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """El camino de rescate de Windows, con un git que falla de verdad.
+
+    Hasta hoy solo se probaba con un git que funciona: la rama del `if codigo
+    != 0` —la que existe porque en Windows un proceso rezagado deja un fichero
+    abierto— no la ejercitaba nadie. Y el ORDEN importa: `prune` solo retira el
+    registro de un worktree que YA no está en disco, así que purgar antes de
+    borrar no desregistra nada.
+    """
+    import shutil as _shutil
+
+    from harness import mutacion_paralela
+
+    eventos: list[tuple[str, str]] = []
+
+    def _git_que_no_sabe_borrar(_raiz: str, *args: str) -> tuple[int, str]:
+        eventos.append(("git", " ".join(args)))
+        if args[:2] == ("worktree", "remove"):
+            return (128, "fatal: 'wk_0' contains modified or untracked files")
+        return (0, "")
+
+    def _rmtree_falso(ruta: str, **_kwargs: object) -> None:
+        eventos.append(("rmtree", str(ruta)))
+
+    monkeypatch.setattr(mutacion_paralela, "_git", _git_que_no_sabe_borrar)
+    monkeypatch.setattr(_shutil, "rmtree", _rmtree_falso)
+
+    worktrees = mutacion_paralela.Worktrees(".", 0)
+    worktrees.rutas = ["/tmp/mutacion_F-040/wk_0"]
+    worktrees._retirar()
+
+    assert ("rmtree", "/tmp/mutacion_F-040/wk_0") in eventos, (
+        "con `remove` en fallo hay que borrar el directorio a mano"
+    )
+    orden = [nombre for nombre, _ in eventos]
+    borrado = orden.index("rmtree")
+    purgas = [
+        indice
+        for indice, (nombre, args) in enumerate(eventos)
+        if nombre == "git" and args == "worktree prune"
+    ]
+    assert purgas, "tras borrar a mano hay que desregistrar el worktree con prune"
+    assert purgas[-1] > borrado, (
+        "el `prune` va DESPUÉS del `rmtree`: purgar antes no desregistra nada, "
+        "porque el worktree todavía está en disco"
+    )
+    assert worktrees.rutas == [], "la lista de worktrees queda vacía pase lo que pase"
+
+
+def test_f040_r24_si_remove_funciona_no_se_borra_a_mano_ni_se_purga(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """El camino normal no puede pagar el precio del de rescate."""
+    import shutil as _shutil
+
+    from harness import mutacion_paralela
+
+    eventos: list[tuple[str, str]] = []
+
+    def _git_que_borra_bien(_raiz: str, *args: str) -> tuple[int, str]:
+        eventos.append(("git", " ".join(args)))
+        return (0, "")
+
+    def _rmtree_falso(ruta: str, **_kwargs: object) -> None:
+        eventos.append(("rmtree", str(ruta)))
+
+    monkeypatch.setattr(mutacion_paralela, "_git", _git_que_borra_bien)
+    monkeypatch.setattr(_shutil, "rmtree", _rmtree_falso)
+
+    worktrees = mutacion_paralela.Worktrees(".", 0)
+    worktrees.rutas = ["/tmp/mutacion_F-040/wk_0"]
+    worktrees._retirar()
+
+    assert ("rmtree", "/tmp/mutacion_F-040/wk_0") not in eventos
+    assert ("git", "worktree prune") not in eventos
+    assert eventos == [("git", "worktree remove --force /tmp/mutacion_F-040/wk_0")]
