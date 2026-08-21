@@ -103,12 +103,15 @@ ficha de `harness/features.json`; el detalle de campo está en
   coherencia escrita para campañas en serie marcaría como incoherente una
   campaña paralela legítima.
 
-## Preguntas abiertas para el humano
+## Decisiones del humano (2026-08-21) — las cuatro preguntas, cerradas
 
-1. ¿`MARGEN = 2` y `FACTOR_HOLGURA_BASE = 5` son los valores que quieres, o
-   prefieres declararlos en `rigor.json` (con el riesgo de volver a cablear)?
-2. Con el timeout ya derivado de lo medido, ¿sigue en pie la decisión de no
-   declarar `mutacion.workers`, o el tope 4 la hace innecesaria del todo?
-3. ¿`TOPE_WORKERS = 4` o prefieres 3, el único punto con medición real en verde?
-4. R23 cambia el significado de `--timeout 0` (hoy cae en silencio al
-   configurado): ¿aceptas el cambio de comportamiento?
+1. **`MARGEN = 2.0` y `FACTOR_HOLGURA_BASE = 5` van como constantes del código**,
+   no en `rigor.json`: son parámetros del mecanismo, no de la máquina, y meterlos
+   en configuración reabre la puerta a cablear valores locales.
+2. **Sigue en pie no declarar `mutacion.workers`** (decisión del 2026-08-20). Con
+   el tope nuevo, además, deja de hacer falta.
+3. **`TOPE_WORKERS = 4`**, la propuesta de la spec. No está medido en verde —el
+   humano verificó 3—, pero con el timeout ya derivado de la línea base real, 4
+   debe caber. La campaña de la propia feature lo pone a prueba.
+4. **R23 se acepta**: `--timeout 0` pasa a ser error con código 2. Un timeout de
+   cero no es una opción legítima y hoy el silencio esconde el error.
