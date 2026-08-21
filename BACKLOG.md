@@ -3,15 +3,12 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **40 features**, 30 abiertas, 10 terminadas.
-
-En curso: **F-040**.
+Resumen: **40 features**, 29 abiertas, 11 terminadas.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-040 | Arnes: la campana de mutacion se dimensiona sola y deja de mentir sobre lo que ha medido | 2 | en curso | estandar | `feature/F-040-campana-dimensionada-y-honesta` |
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | pendiente | critico | `feature/F-036-residuos-contenedores-e-incrementos` |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
@@ -53,31 +50,12 @@ En curso: **F-040**.
 | F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
 | F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | estandar |
 | F-039 | Arnes: estabilizar la suite de la raiz y remedir las campanas juzgadas con la invocacion rota | 2 | estandar |
+| F-040 | Arnes: la campana de mutacion se dimensiona sola y deja de mentir sobre lo que ha medido | 2 | estandar |
 | F-012 | Campaña de mutación en paralelo | 3 | estandar |
 | F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | estandar |
 | F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
 
 ## Detalle
-
-### F-040 · Arnes: la campana de mutacion se dimensiona sola y deja de mentir sobre lo que ha medido
-
-estado **en curso** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-040-campana-dimensionada-y-honesta`
-
-Cuatro defectos del motor de mutacion + los huecos de test que dejaron F-039 y la verificacion del paralelo. Todos salieron el 2026-08-20/21 y el humano pidio cerrarlos en UNA feature porque son el mismo tema -que la campana se dimensione bien y diga la verdad- y tocan los mismos ficheros.
-
-D1. EL TIMEOUT NO ESCALA CON LOS WORKERS. Medido en esta maquina: la suite de la raiz tarda ~51 s en reposo, 97,5 s con 1 worker y 119,3-121,6 s con 3. El `timeout_por_mutante_s` de rigor.json son 120, asi que con TRES workers una de las tres lineas base YA lo supera. El arnes reconoce el factor de workers al JUZGAR el coste por mutante desde la 1.6.3 (CHECKPOINTS.md), pero no al CONCEDER el tiempo: la misma idea aplicada a medias.
-
-D2. LA FORMULA DEL DEFAULT DE WORKERS ES IRREAL. `min(max(1, nucleos - 2), 16)` da **16** en esta maquina (22 nucleos). Con 16 workers ninguna linea base cabria en el timeout: NADIE puede lanzar `python -m harness.mutacion --feature X` sin `--workers` y obtener algo valido. La formula supone que el cuello de botella es la CPU, cuando cada worker arranca UNA SUITE COMPLETA -interprete, importaciones, E/S-. A mas hilos, peor. D1 y D2 son el mismo problema por dos lados y van juntos.
-
-D3. `_base_rota_al_final` NO DISTINGUE UNA LINEA BASE QUE EXPIRA DE UNA QUE FALLA. Estampa «ROJA al terminar (codigo -1)» y «Arregla la suite y repite la campana» cuando la suite esta impecable y solo ha expirado. `comprobar_linea_base` SI lo distingue. Dejo de ser teorico el 2026-08-21: mando al humano a arreglar algo que no estaba roto, en la primera ejecucion real del paralelo.
-
-D4. TERCER FALSO VERDE: una campana con ALCANCE VACIO por la via `--feature` sale con codigo 0 y escribe su informe («0 mutantes evaluados ... en 0.0 s»). Es el mismo defecto que el CR-2 de F-039 -`--ficheros ","` salia con exit 0- por una via que nadie tapo. Van TRES veces el mismo modo de fallo en un dia: la invocacion sin ruta (F-038 T0), el flake de las filas de reloj (F-038 T17) y la guarda inalcanzable (F-039 CR-2). Todos dicen «todo bien» sin haber juzgado nada. CHECKPOINTS.md ya manda mirar con lupa las campanas de cero mutantes; la herramienta debe ayudar a verlo.
-
-D5. OCHO HUECOS DE TEST, presentados al humano por F-039 (R20) sin abrir ficha. Seis de la campana sobre la maquinaria: (A) el CLI de harness.mutacion no se ejercita de punta a punta -`main` con un centinela sucio arrancaria la campana ENCIMA del mutante viejo, y el codigo de salida de `--restaurar`-; (B) el informe solo se escribe por su camino feliz -la seccion `## Timeouts` es un TypeError en cuanto hay uno, y el mensaje de `_base_rota_al_final` no tiene NI UN test-; (D) rigor.py valida el tipo pero no el rango: un `timeout_por_mutante_s` entero pero <= 0 pasa, y con timeout=0 TODA la campana sale «timeout»; (E) la limpieza de worktrees solo se prueba cuando funciona, no el respaldo rmtree+prune, que es el unico caso para el que existe. Y dos mas, de la verificacion del paralelo del 21-ago: rigor.py:258 (`return 1` -> `return 2`) y rigor.py:211 (el `or` de la guarda «feature sin rigor o con rigor nulo» pasa a `and` y nadie se entera, porque hoy las 39 fichas declaran rigor).
-
-LO QUE NO ENTRA: el superviviente `mutacion.py:1348`, analizado y aceptado como equivalente por el reviewer de F-039.
-
-ALCANCE: harness/mutacion.py, harness/mutacion_paralela.py, harness/alcance.py, harness/rigor.py, harness/rigor.json, CHECKPOINTS.md, y el PORTE A arnes-base como 1.7.2 DESPUES del merge en dev (regla de propagacion; la version instalada alli es 1.7.1). D1 y D2 cambian como se dimensiona la campana, asi que la entrada de GUIA_INSTALACION.md debe decir que los tiempos de campanas paralelas anteriores no son comparables.
 
 ### F-036 · La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten
 
@@ -400,6 +378,26 @@ ACTUALIZADA EL 2026-08-20 TRAS LA SEGUNDA PASADA DE REVIEW DE F-038, que determi
 - El hallazgo (b) -la campana paralela aborta- tiene la CAUSA ELIMINADA pero NO CONFIRMADA. La ficha sospechaba que «el worktree no trae lo que ese test espera en disco»: REFUTADO, el test se fabrica su propio repositorio en `tmp_path` y su `Alcance` es un literal. Fallaba por el reloj, que ya esta arreglado. Queda solo ejecutar la campana con `--workers 5` y ver la linea base en verde: por eso el criterio pasa de «arreglar» a «verificar». No se hizo en la sesion del 20-ago porque son cinco suites simultaneas y en esta maquina dos suites a la vez tumban el proceso (0xC0000142).
 
 DEUDA HEREDADA (observacion 1 del reviewer, no bloqueante): el filtro de filas de reloj de ese test es una lista de prefijos escrita a mano, asi que la cuarta fila de reloj que se anada volvera a romperlo. Propuesta: derivarlo de una constante junto a `escribir_informe`.
+
+### F-040 · Arnes: la campana de mutacion se dimensiona sola y deja de mentir sobre lo que ha medido
+
+estado **terminada** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-040-campana-dimensionada-y-honesta`
+
+Cuatro defectos del motor de mutacion + los huecos de test que dejaron F-039 y la verificacion del paralelo. Todos salieron el 2026-08-20/21 y el humano pidio cerrarlos en UNA feature porque son el mismo tema -que la campana se dimensione bien y diga la verdad- y tocan los mismos ficheros.
+
+D1. EL TIMEOUT NO ESCALA CON LOS WORKERS. Medido en esta maquina: la suite de la raiz tarda ~51 s en reposo, 97,5 s con 1 worker y 119,3-121,6 s con 3. El `timeout_por_mutante_s` de rigor.json son 120, asi que con TRES workers una de las tres lineas base YA lo supera. El arnes reconoce el factor de workers al JUZGAR el coste por mutante desde la 1.6.3 (CHECKPOINTS.md), pero no al CONCEDER el tiempo: la misma idea aplicada a medias.
+
+D2. LA FORMULA DEL DEFAULT DE WORKERS ES IRREAL. `min(max(1, nucleos - 2), 16)` da **16** en esta maquina (22 nucleos). Con 16 workers ninguna linea base cabria en el timeout: NADIE puede lanzar `python -m harness.mutacion --feature X` sin `--workers` y obtener algo valido. La formula supone que el cuello de botella es la CPU, cuando cada worker arranca UNA SUITE COMPLETA -interprete, importaciones, E/S-. A mas hilos, peor. D1 y D2 son el mismo problema por dos lados y van juntos.
+
+D3. `_base_rota_al_final` NO DISTINGUE UNA LINEA BASE QUE EXPIRA DE UNA QUE FALLA. Estampa «ROJA al terminar (codigo -1)» y «Arregla la suite y repite la campana» cuando la suite esta impecable y solo ha expirado. `comprobar_linea_base` SI lo distingue. Dejo de ser teorico el 2026-08-21: mando al humano a arreglar algo que no estaba roto, en la primera ejecucion real del paralelo.
+
+D4. TERCER FALSO VERDE: una campana con ALCANCE VACIO por la via `--feature` sale con codigo 0 y escribe su informe («0 mutantes evaluados ... en 0.0 s»). Es el mismo defecto que el CR-2 de F-039 -`--ficheros ","` salia con exit 0- por una via que nadie tapo. Van TRES veces el mismo modo de fallo en un dia: la invocacion sin ruta (F-038 T0), el flake de las filas de reloj (F-038 T17) y la guarda inalcanzable (F-039 CR-2). Todos dicen «todo bien» sin haber juzgado nada. CHECKPOINTS.md ya manda mirar con lupa las campanas de cero mutantes; la herramienta debe ayudar a verlo.
+
+D5. OCHO HUECOS DE TEST, presentados al humano por F-039 (R20) sin abrir ficha. Seis de la campana sobre la maquinaria: (A) el CLI de harness.mutacion no se ejercita de punta a punta -`main` con un centinela sucio arrancaria la campana ENCIMA del mutante viejo, y el codigo de salida de `--restaurar`-; (B) el informe solo se escribe por su camino feliz -la seccion `## Timeouts` es un TypeError en cuanto hay uno, y el mensaje de `_base_rota_al_final` no tiene NI UN test-; (D) rigor.py valida el tipo pero no el rango: un `timeout_por_mutante_s` entero pero <= 0 pasa, y con timeout=0 TODA la campana sale «timeout»; (E) la limpieza de worktrees solo se prueba cuando funciona, no el respaldo rmtree+prune, que es el unico caso para el que existe. Y dos mas, de la verificacion del paralelo del 21-ago: rigor.py:258 (`return 1` -> `return 2`) y rigor.py:211 (el `or` de la guarda «feature sin rigor o con rigor nulo» pasa a `and` y nadie se entera, porque hoy las 39 fichas declaran rigor).
+
+LO QUE NO ENTRA: el superviviente `mutacion.py:1348`, analizado y aceptado como equivalente por el reviewer de F-039.
+
+ALCANCE: harness/mutacion.py, harness/mutacion_paralela.py, harness/alcance.py, harness/rigor.py, harness/rigor.json, CHECKPOINTS.md, y el PORTE A arnes-base como 1.7.2 DESPUES del merge en dev (regla de propagacion; la version instalada alli es 1.7.1). D1 y D2 cambian como se dimensiona la campana, asi que la entrada de GUIA_INSTALACION.md debe decir que los tiempos de campanas paralelas anteriores no son comparables.
 
 ### F-012 · Campaña de mutación en paralelo
 
