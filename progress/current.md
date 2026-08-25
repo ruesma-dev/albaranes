@@ -281,4 +281,36 @@ documento, la plantilla deja de recalcular el importe en Jinja y los
   documentado y **cubierto por un test que fija el comportamiento actual**, sin
   inventar nada para taparlo.
 
-Siguiente: bloque B (T8-T13, `comun` + sv3 + sv5).
+### Bloque A REVISADO — APROBADO (2026-08-25)
+
+`progress/review_F-036_bloque_A.md`. El reviewer verificó por su cuenta la
+suite (130 passed, **0 skipped**), la cobertura y que R26 sigue intacto. Los
+tres puntos de criterio salen a favor, y deja constancia de que el arreglo
+**mejora** el guardián de F-019: sacar `cantidad_convertida` de `sin_cambios`
+era justo lo que impedía que la rama «esta fila no se toca» entrara nunca en
+una línea de residuos.
+
+**Cuatro cambios requeridos antes de CERRAR F-036** (ninguno bloquea el bloque A):
+
+1. `requirements.md` R4: escribir que la razón se sella solo en las líneas que
+   el guardado actualiza.
+2. `templates/document_detail.html:623`: `join('&#10;')` no da salto de línea
+   —con `autoescape` Jinja escapa el `&`—; separar con `"
+"` real y test del
+   separador.
+3. `review_repository.py:4048`: la docstring nombra `_num_iguales`, que hoy
+   vive en `domain.models.review_models.numeros_iguales`.
+4. Entorno de los tests de render. **DECIDIDO POR EL HUMANO el 2026-08-25**:
+   `conftest.py` pasa a `import jinja2` DURO (un entorno sin jinja2 debe caerse,
+   no saltarse 10 tests en silencio) **y** `harness/servicios.json` declara
+   `"venv": "services/albaranes-front/.venv"` para sv4; hay que **instalar
+   pytest en ese venv**. Se ejecuta en **T25**, con el bloque D.
+
+Los cambios 1-3 se entregan al implementer del bloque B como su tarea T0.
+
+**Pendiente de arnés (propuesta del reviewer, NO aplicada)**: `CHECKPOINTS.md`
+no contempla la review por bloques de una feature grande —obliga a recorrer
+C1-C5 aunque el bloque no pueda satisfacer C1 ni C5—. Si se acepta, es mejora
+genérica y hay que portarla a `arnes-base` en el mismo trabajo.
+
+Siguiente: bloque B (T8-T13, `comun` + sv3 + sv5 + el orden de prioridades de sv6).
