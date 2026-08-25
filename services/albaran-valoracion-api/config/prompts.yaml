@@ -1019,11 +1019,13 @@ valuation_residuos:
     con la linea de CONTENEDOR correcta del contrato y fijar su
     tamano (contenedor_m3) y precio. El numero de contenedores y el
     importe los calcula otro servicio de forma determinista con
-    esta PRIORIDAD (jul 2026): 1) contenedores EXPLICITOS del
-    albaran (contexto_linea.contenedores); 2) resta unidades
-    llevadas - retiradas (contenedores_entregados -
-    contenedores_retirados) si ambas vienen; 3) ceil(volumen_m3 /
-    contenedor_m3). Tu NO calculas ninguna de las tres.
+    esta PRIORIDAD (ago 2026): 1) contenedores EXPLICITOS del
+    albaran (contexto_linea.contenedores); 2) ceil(volumen_m3 /
+    contenedor_m3); 3) resta unidades llevadas - retiradas
+    (contenedores_entregados - contenedores_retirados) si ambas
+    vienen. El VOLUMEN manda sobre la resta: la resta describe el
+    movimiento de contenedores, el volumen es un dato impreso del
+    albaran. Tu NO calculas ninguna de las tres.
 
     Reglas estrictas: NUNCA inventes precios ni ids. NUNCA calcules
     importes ni numero de contenedores. NUNCA elijas partida tu.
