@@ -1,5 +1,38 @@
 # Fix 2D svc4 v2 — Sintéticas editables en la UI
 
+## Entorno de desarrollo: `pytest` y `coverage` son OBLIGATORIOS
+
+sv4 es el único servicio que declara su propio intérprete en
+`harness/servicios.json` (`services/albaranes-front/.venv`). El portero
+del arnés (`bash harness/init.sh`, sección 7) ejecuta la suite de cada
+servicio **con ese intérprete**, y con `coverage` cuando lo encuentra:
+
+```
+.venv/Scripts/python -m coverage run -m pytest -q --tb=short -x
+.venv/Scripts/python -m coverage json -q -o coverage.json
+```
+
+Consecuencias, y por eso está escrito aquí:
+
+- **Sin `pytest` en ESE venv**, el portero da rojo con «pytest en rojo
+  (¿pytest instalado en el venv?)». No basta con tenerlo en el Python
+  del sistema o en el de otro servicio.
+- **Sin `coverage` en ESE venv**, la suite corre igual pero no se
+  escribe `coverage.json`, y la puerta de cobertura de las líneas
+  cambiadas se queda sin datos para sv4.
+
+Instalación, desde `services/albaranes-front/`:
+
+```powershell
+.venv\Scripts\python -m pip install pytest coverage
+```
+
+**No van en `requirements.txt`**: ese fichero es lo que se hornea en la
+imagen de producción y `pytest` no pinta nada ahí. Tampoco se añade un
+`requirements-dev.txt`: la dependencia la impone el arnés, no el
+servicio, así que se documenta donde se busca (decisión de la review de
+F-036, bloques B/C/D).
+
 ## Contexto
 
 Segunda iteración del fix del svc4 tras la Sub-tanda 2D. La primera
