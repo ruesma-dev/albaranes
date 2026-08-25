@@ -4,7 +4,7 @@
 Rama `feature/F-036-residuos-contenedores-e-incrementos`, rigor `critico`.
 **Solo el bloque A**: D1 (el recálculo que destruía la cantidad valorada de
 residuos al guardar) y la trazabilidad (4). Un commit por tarea. Los demás
-informes: `impl_F-036_bloque_{B,C,D}.md` y `impl_F-036_correcciones_BCD.md`.
+informes: `impl_F-036_` + `bloque_{B,C,D}` / `correcciones_BCD` / `cambios_menores` (CR-10..CR-13) + `.md`.
 
 | Commit | Tarea |
 |---|---|
