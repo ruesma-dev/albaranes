@@ -5,14 +5,14 @@
 
 Resumen: **43 features**, 32 abiertas, 11 terminadas.
 
-En curso: **F-036**.
+Bloqueadas: **F-036**.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
 | F-043 | IA1 clasifica el albaran: la tipologia la decide la IA, siempre y con definiciones claras, nunca una regla determinista | 1 | pendiente | critico | `feature/F-043-clasificacion-por-ia1` |
-| F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | en curso | critico | `feature/F-036-residuos-contenedores-e-incrementos` |
+| F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | bloqueada | critico | `feature/F-036-residuos-contenedores-e-incrementos` |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
 | F-028 | Con dos contratos candidatos no se elige ninguno y el albarán no llega a valorarse | 7 | pendiente | critico | `feature/F-028-selector-contrato-por-partidas` |
@@ -84,7 +84,7 @@ COSTE Y RIESGO: config/prompts.yaml es RUTA SENSIBLE del arnes, asi que el cierr
 
 ### F-036 · La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten
 
-estado **en curso** · prioridad 4 · rigor `critico` · SDD sí · rama `feature/F-036-residuos-contenedores-e-incrementos`
+estado **bloqueada** · prioridad 4 · rigor `critico` · SDD sí · rama `feature/F-036-residuos-contenedores-e-incrementos`
 
 Defecto MEDIDO el 2026-08-19 sobre los 7 albaranes de SALMEDINA del lote de residuos (evidencia: progress/revision_residuos_salmedina_20260819.md) y DIAGNOSTICADO el 2026-08-21/22 contra el codigo y contra la BBDD real (progress/explore_F-036.md, con su APENDICE de confirmacion). El diagnostico de la version anterior de esta ficha era INCORRECTO: no es un defecto de sv6 con dos caras, son TRES defectos independientes en tres servicios distintos.
 

@@ -413,3 +413,46 @@ propuestas en §2 del informe, ninguna dentro del alcance de F-036.
 Pendiente del humano: **T23** (mutación), **T24** (BBDD real, solo lectura) y
 `progress/evals_F-036.md` (la puerta de rutas sensibles avisa; NO se ha
 lanzado `python -m evals.runner --con-llm`: gasta LLM real).
+
+## F-036 · BLOQUEADA a la espera de F-043 (decisión del humano, 2026-08-25)
+
+**Estado: `blocked`.** No es un fallo del trabajo: los cuatro bloques están
+implementados y en verde (`init.sh` exit 0, 531 tests en la raíz, cobertura
+97,8 % de las líneas cambiadas). Lo que falta es una pieza que **no está en el
+alcance de F-036** y que el humano ha decidido esperar en vez de rodear.
+
+**Por qué.** Toda la maquinaria de residuos de sv6 está cerrada tras
+`contexto_linea.tipo_familia == 'residuos'`: el cálculo de contenedores
+(`valuation_builder.py:1165`), la red de sintéticas del LER (`:846`) y la
+guarda anti-incremento (`:985`). Ese campo NO llega al merge: T9/T10 restituyen
+las nueve MEDIDAS, pero `tipo_familia` es narrativo y por diseño (R12) no se
+fusiona. Medido con el builder real, mismo albarán y mismo contrato, cambiando
+solo ese campo: **sin `tipo_familia` → 540,00 €; con él → 210,00 €** (el ground
+truth). Detalle en `progress/impl_F-036_bloque_D.md` §2.
+
+**Consecuencia concreta**: cinco de los seis albaranes del lote quedan
+correctos; **SS-0003967 no**, y **T24 fallará en ese albarán** hasta que F-043
+esté hecha.
+
+**Lo que NO se hizo, y a propósito**: no se reintrodujo la regla de T11 ni se
+abrieron los gates de sv6 al `codigo_ler`. Sería clasificar por LER, que es
+justo lo que el humano prohibió el 2026-08-25.
+
+### Para desbloquearla
+
+1. **F-043** (prioridad 1, `pending`): IA1 clasifica y la clasificación llega
+   hasta sv6.
+2. Después, **T23** (campaña de mutación, la lanza el humano), **T24**
+   (comprobación contra la BBDD real, MANUAL) y el **reviewer final** contra
+   `CHECKPOINTS.md`.
+3. Pendiente del humano y sin decidir: **`progress/evals_F-036.md`**. La puerta
+   de rutas sensibles avisa (no bloquea) de seis rutas tocadas sin evals.
+   `python -m evals.runner --con-llm --feature F-036` gasta LLM real.
+
+### Deuda de entorno que nace aquí
+
+`pytest` y `coverage` están ahora instalados en `services/albaranes-front/.venv`,
+que desde T25 es el venv declarado de sv4 en `harness/servicios.json`. **En otra
+máquina sin esos paquetes, `init.sh` saldrá en rojo en sv4.** Falta decidir si
+se documenta en el README de sv4 o se añade un `requirements-dev.txt`.
+
