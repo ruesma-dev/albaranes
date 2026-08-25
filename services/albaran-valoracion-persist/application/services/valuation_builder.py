@@ -11,6 +11,9 @@ import dataclasses
 from application.services.residuos_container_calc import (
     calcular_contenedores_residuos,
 )
+from application.services.residuos_incrementos import (
+    es_linea_incremento_ler,
+)
 from application.services.partida_matcher import (
     PartidaMatcher,
     PartidaMatchResult,
@@ -889,6 +892,45 @@ class ValuationBuilder:
         rol_linea = ctx.rol_linea if ctx is not None else None
 
         # ------------------------------------------------------------ #
+        # (ago 2026 · F-036 R15) GUARDA ANTI-INCREMENTO en residuos.
+        #
+        # Caso real SS-0003967: con el contexto perdido (D2), sv5 valora
+        # con el prompt generico y la linea de contrato "INCREMENTO LER
+        # 170604 ..." gana a la del contenedor por similitud TEXTUAL — el
+        # LER esta literal en las dos. La IA casa el recargo en vez de lo
+        # que se factura y el `partida_matcher` lo RESPETA
+        # ("ia_match_trusted"): 90 EUR/m3 y 540 en un albaran de 210.
+        #
+        # Una linea BASE de residuos nunca se valora con la tarifa de un
+        # incremento. Se anula el match ENTERO —id, precio y metodo—,
+        # igual que hace `_sanear_matches_incremento_year` con las
+        # tarifas de otro anio, y la linea va a revision. El incremento
+        # que de verdad toque lo inyecta la red de `_sinteticas_residuos_
+        # faltantes` como linea aparte.
+        # ------------------------------------------------------------ #
+        base_casada_con_incremento = False
+        if (
+            ctx is not None
+            and getattr(ctx, "tipo_familia", None) == "residuos"
+            and contrato_line is not None
+            and es_linea_incremento_ler(contrato_line.descripcion) is not None
+        ):
+            logger.warning(
+                "[builder][guard-residuos] la linea base merge=%s venia "
+                "casada con contrato_line_id=%s (%r), que es un "
+                "INCREMENTO por LER: match ANULADO. Queda a revision.",
+                line.merge_line_id,
+                contrato_line.contrato_line_id,
+                contrato_line.descripcion,
+            )
+            base_casada_con_incremento = True
+            line.matched_contrato_line_id = None
+            line.precio_unitario_contrato_db = None
+            line.match_method = "no_match"
+            contrato_line = None
+            unidad_contrato = None
+
+        # ------------------------------------------------------------ #
         # Tanda descuento — abr 2026
         # Descuento de la línea del albarán (None si no hay).
         # ------------------------------------------------------------ #
@@ -1099,6 +1141,11 @@ class ValuationBuilder:
         reasons.extend(converted.reasons)
         if _movimiento_asumido_1:
             reasons.append("movimiento_residuos_sin_cantidad_asumido_1")
+        # (F-036 R15) La guarda anti-incremento deja constancia: sv4 la
+        # pinta en la ficha (R23) y el revisor sabe por que esa linea
+        # perdio su casado.
+        if base_casada_con_incremento:
+            reasons.append("residuos_base_casada_con_incremento")
 
         # (jul 2026) Hormigón: si IA2 dejó constancia de que faltan las
         # horas de descarga (fin/límite en blanco), el exceso de tiempo
@@ -1143,6 +1190,10 @@ class ValuationBuilder:
                     "contract_line_match", "both_agreed",
                 ))
         )
+        # (F-036 R15) Anular el match manda la línea a revisión SIEMPRE,
+        # con independencia de lo que opinen el resto de señales.
+        if base_casada_con_incremento:
+            review_required = True
         # Residuos sin nº de contenedores calculable → revisión manual.
         if residuos_calc is not None and residuos_calc.num_contenedores is None:
             review_required = True
