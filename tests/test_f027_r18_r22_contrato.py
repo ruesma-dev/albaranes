@@ -44,10 +44,19 @@ def _arbol(ruta: Path) -> ast.Module:
     return ast.parse(ruta.read_text(encoding="utf-8"))
 
 
-def _texto_de(nodo: ast.AST) -> str | None:
-    """Devuelve el literal, con `{}` donde hay interpolación."""
+def _texto_de(nodo: ast.AST, tabla: dict[str, str] | None = None) -> str | None:
+    """Devuelve el literal, con `{}` donde hay interpolación.
+
+    ``tabla`` resuelve además los nombres de CONSTANTE: sin ella,
+    ``reasons.append(RAZON_SIN_TARIFA)`` es un ``ast.Name`` y el motivo
+    se cuela sin pasar por la congelación. Fue un agujero real: F-036
+    metió `residuos_ler_sin_tarifa_en_contrato` sin tocar
+    ``MOTIVOS_DEL_BUILDER`` y el test siguió en verde.
+    """
     if isinstance(nodo, ast.Constant) and isinstance(nodo.value, str):
         return nodo.value
+    if isinstance(nodo, ast.Name) and tabla:
+        return tabla.get(nodo.id)
     if isinstance(nodo, ast.JoinedStr):
         partes = []
         for trozo in nodo.values:
@@ -59,14 +68,60 @@ def _texto_de(nodo: ast.AST) -> str | None:
     return None
 
 
+def _constantes_str(ruta: Path) -> dict[str, str]:
+    """Constantes de módulo cuyo valor es una cadena literal."""
+    constantes: dict[str, str] = {}
+    for nodo in _arbol(ruta).body:  # solo nivel de módulo
+        if not isinstance(nodo, (ast.Assign, ast.AnnAssign)):
+            continue
+        if nodo.value is None:
+            continue
+        texto = _texto_de(nodo.value)
+        if texto is None:
+            continue
+        objetivos = (
+            nodo.targets if isinstance(nodo, ast.Assign) else [nodo.target]
+        )
+        for objetivo in objetivos:
+            if isinstance(objetivo, ast.Name):
+                constantes[objetivo.id] = texto
+    return constantes
+
+
+def _tabla_de_simbolos(ruta: Path) -> dict[str, str]:
+    """Constantes visibles en el módulo: las propias y las importadas.
+
+    Se sigue el ``from application.services.X import CONST`` hasta el
+    fichero de sv6 y se lee su constante. Solo imports absolutos que
+    resuelvan a un fichero del servicio; lo que no resuelva (paquetes
+    externos, ``ruesma_comun``) simplemente no aporta símbolos.
+    """
+    tabla = _constantes_str(ruta)
+    for nodo in _arbol(ruta).body:
+        if not isinstance(nodo, ast.ImportFrom) or not nodo.module:
+            continue
+        if nodo.level:  # import relativo: no se usa en sv6
+            continue
+        origen = SV6.joinpath(*nodo.module.split(".")).with_suffix(".py")
+        if not origen.is_file():
+            continue
+        del_origen = _constantes_str(origen)
+        for alias in nodo.names:
+            if alias.name in del_origen:
+                tabla[alias.asname or alias.name] = del_origen[alias.name]
+    return tabla
+
+
 def _motivos_de(ruta: Path) -> set[str]:
     """Los motivos que el módulo mete en una lista ``reasons``.
 
     Se recogen del AST, no por expresión regular: interesa lo que de
     verdad acaba en ``review_reasons``, no cualquier cadena en
-    snake_case que aparezca en el fichero.
+    snake_case que aparezca en el fichero. Los nombres de constante se
+    resuelven a su valor (ver ``_texto_de``).
     """
     encontrados: set[str] = set()
+    tabla = _tabla_de_simbolos(ruta)
     for nodo in ast.walk(_arbol(ruta)):
         if (
             isinstance(nodo, ast.Call)
@@ -76,7 +131,7 @@ def _motivos_de(ruta: Path) -> set[str]:
             and nodo.func.value.id.endswith("reasons")
             and nodo.args
         ):
-            texto = _texto_de(nodo.args[0])
+            texto = _texto_de(nodo.args[0], tabla)
             if texto:
                 encontrados.add(texto)
         if (
@@ -85,7 +140,7 @@ def _motivos_de(ruta: Path) -> set[str]:
             and isinstance(nodo.value, ast.List)
         ):
             for elemento in nodo.value.elts:
-                texto = _texto_de(elemento)
+                texto = _texto_de(elemento, tabla)
                 if texto:
                     encontrados.add(texto)
         if isinstance(nodo, (ast.Assign, ast.AnnAssign)):
@@ -99,7 +154,7 @@ def _motivos_de(ruta: Path) -> set[str]:
                     and isinstance(nodo.value, ast.List)
                 ):
                     for elemento in nodo.value.elts:
-                        texto = _texto_de(elemento)
+                        texto = _texto_de(elemento, tabla)
                         if texto:
                             encontrados.add(texto)
     return encontrados
@@ -204,6 +259,17 @@ MOTIVOS_DEL_BUILDER = {
     # desde `review_reasons_json` (F-036 R23), sin lista blanca de
     # cadenas que haya que ampliar.
     "residuos_base_casada_con_incremento",
+    # (ago 2026 · F-036 R17 y R19, correcciones de la review B/C/D) Los
+    # dos motivos de las SINTETICAS de residuos. Se escriben desde
+    # constantes de `residuos_incrementos` (`RAZON_SIN_TARIFA`,
+    # `RAZON_SIN_CANTIDAD`), y hasta que `_motivos_de` resolvió nombres
+    # el primero llevaba ya un bloque entero sin pasar por esta lista.
+    # Consumidores comprobados, mismo criterio que en el de R15: sv6
+    # solo los escribe; sv4 pinta `review_reasons_json` en crudo
+    # (`services/albaranes-front/tests/test_f036_r23_r24_trazabilidad.py`
+    # afirma la cadena sobre el HTML), sin lista blanca que ampliar.
+    "residuos_ler_sin_tarifa_en_contrato",
+    "residuos_sintetica_sin_cantidad",
 }
 
 #: Ídem para el conversor. Los cuatro de la tabla de R19 salen de aquí.
@@ -228,6 +294,26 @@ def test_f027_r22_el_builder_no_introduce_ni_retira_motivos():
     humano antes de arrancarla.
     """
     assert _motivos_de(VALUATION_BUILDER) == MOTIVOS_DEL_BUILDER
+
+
+def test_f027_r22_la_congelacion_ve_los_motivos_escritos_como_constante():
+    """El guardián del guardián: la resolución de nombres funciona.
+
+    Sin esto, la congelación vuelve a ser una lista que solo mira
+    literales y cualquier motivo escrito como constante importada entra
+    sin pasar por ella. Pasó de verdad con
+    ``residuos_ler_sin_tarifa_en_contrato`` en F-036, y el test siguió
+    en verde una feature entera.
+    """
+    tabla = _tabla_de_simbolos(VALUATION_BUILDER)
+
+    # Importada de `application.services.residuos_incrementos`.
+    assert tabla["RAZON_SIN_TARIFA"] == "residuos_ler_sin_tarifa_en_contrato"
+    assert tabla["RAZON_SIN_CANTIDAD"] == "residuos_sintetica_sin_cantidad"
+    assert {
+        "residuos_ler_sin_tarifa_en_contrato",
+        "residuos_sintetica_sin_cantidad",
+    } <= _motivos_de(VALUATION_BUILDER)
 
 
 def test_f027_r22_el_conversor_no_introduce_ni_retira_motivos():
