@@ -232,6 +232,34 @@ def test_f036_r23_la_ficha_pinta_las_razones_de_la_linea(
     assert "residuos_sin_volumen_m3" in html
 
 
+def test_f036_r23_el_tooltip_separa_las_razones_con_salto_de_linea(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
+    """El tooltip lista una razon por linea, de verdad.
+
+    La entidad `&#10;` no vale: con `autoescape` activo Jinja escapa el
+    `&` y el revisor ve `residuos_contenedores&#10;residuos_...` en una
+    sola linea. El separador tiene que ser un salto de linea REAL.
+    """
+    html = render_detalle(
+        documento_detalle(
+            lineas_valoracion=[
+                linea_valorada(
+                    review_reasons=[
+                        "residuos_contenedores",
+                        "residuos_sin_volumen_m3",
+                    ]
+                )
+            ],
+            display=[fila_detalle()],
+        )
+    )
+
+    assert "residuos_contenedores\nresiduos_sin_volumen_m3" in html
+    assert "&amp;#10;" not in html
+    assert "&#10;" not in html
+
+
 def test_f036_r23_una_linea_sin_razones_no_pinta_el_hueco(
     render_detalle, documento_detalle, linea_valorada, fila_detalle,
 ):

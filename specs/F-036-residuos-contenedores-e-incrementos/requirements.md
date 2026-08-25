@@ -24,7 +24,10 @@ añadir a sus razones `front_cantidad_editada_sin_conversion_reproducible`.
 
 R4. SI la conversión NO es reproducible y la `cantidad_convertida` guardada es
 NULL, ENTONCES sv4 debe mantener el comportamiento actual (importe con la
-cantidad cruda) y añadir la razón `front_sin_cantidad_convertida`.
+cantidad cruda) y sellar la razón `front_sin_cantidad_convertida` SOLO en las
+líneas que ese guardado ACTUALIZA: una línea que el guardián de R5 deja
+intacta tampoco cambia sus razones. Si no, abrir y guardar un documento
+sellaría la razón en todas sus líneas y la traza dejaría de significar nada.
 
 R5. El criterio de «la fila no se toca» (guardián de F-019 R24) debe evaluarse
 SOLO por las ENTRADAS —`cantidad_albaran` y descuento saneado—. La

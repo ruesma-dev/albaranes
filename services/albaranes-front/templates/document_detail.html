@@ -620,7 +620,9 @@
                                            una columna nueva en una tabla que ya tiene diez. #}
                                         {% if razones %}
                                             <span class="linea-razones js-linea-razones{% if v and v.review_required %} linea-razones-warn{% endif %}"
-                                                  title="{{ razones | join('&#10;') }}"
+                                                  {# Salto de linea REAL: la entidad `&#10;` no vale porque
+                                                     con `autoescape` Jinja escapa el `&` y se ve literal. #}
+                                                  title="{{ razones | join('\n') }}"
                                                   data-razones="{{ razones | join(' ') }}">⚑ {{ razones | length }}</span>
                                         {% endif %}
                                     </td>

@@ -4045,11 +4045,12 @@ class AlbaranReviewRepository:
     def _num_iguales(a: Any, b: Any) -> bool:
         """Compara dos números tolerando el ruido de coma flotante.
 
-        La comparación vive ahora en la función de módulo
-        ``_num_iguales`` (F-036): ``_conversion_reproducible`` la
-        necesita y no puede depender de un método de esta clase. Este
-        método se conserva como delegación porque es el nombre con el
-        que lo llama el resto del repositorio.
+        La comparación vive en ``domain.models.review_models.
+        numeros_iguales`` (F-036), importada arriba con el alias
+        ``_num_iguales``: ``_conversion_reproducible`` la necesita y no
+        puede depender de un método de esta clase. Este método se
+        conserva como delegación porque es el nombre con el que lo
+        llama el resto del repositorio.
         """
         return _num_iguales(a, b)
 
