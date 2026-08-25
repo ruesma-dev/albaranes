@@ -21,11 +21,14 @@ from enum import Enum
 
 # ------------------------------------------------------------------- #
 # (F-036 R14) El catálogo LER y su validador se MOVIERON a
-# ``ruesma_comun.ler``: sv5 también los necesita (regla dura de
-# tipología de valoración) y no puede importar el dominio de sv2. Aquí
-# queda SOLO la reexportación, para no romper a quien ya importaba
+# ``ruesma_comun.ler``: sv6 también los necesita (las líneas de
+# INCREMENTO por LER del contrato, en ``residuos_incrementos`` y
+# ``modifier_contract_matcher``) y no puede importar el dominio de sv2.
+# Aquí queda SOLO la reexportación, para no romper a quien ya importaba
 # desde este módulo (``tipologia_resolver``, entre otros). Cero lógica
 # duplicada: si algo del catálogo hay que tocar, se toca en comun.
+# sv5 NO lo consume: su regla dura de tipología (R13) la retiró el
+# humano el 2026-08-25 y se revirtió en ``7ca2ffc``.
 # ------------------------------------------------------------------- #
 from ruesma_comun.ler import (
     es_ler_valido,

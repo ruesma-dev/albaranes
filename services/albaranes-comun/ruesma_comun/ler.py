@@ -5,16 +5,23 @@ Un código LER identifica un residuo y es la señal DURA de que un albarán
 es de gestión de residuos. La regla vive en más de un servicio:
 
   - sv2 la usa en ``tipologia_resolver`` para enrutar la fase 2.
-  - sv5 la usa en ``_derivar_tipologia_valoracion`` como defensa en
-    profundidad, por si el contexto llega sin ``tipo_familia`` (F-036 R13).
+  - sv6 la usa para las líneas de INCREMENTO por LER del contrato:
+    ``residuos_incrementos`` (sintéticas y guarda de R15) y
+    ``modifier_contract_matcher`` (predicado del rol).
 
 Hasta F-036 esto vivía solo en el dominio de sv2
-(``services/albaranes-api/domain/models/tipologia.py``). sv5 no puede
+(``services/albaranes-api/domain/models/tipologia.py``). sv6 no puede
 importar el dominio de otro servicio, así que la alternativa era copiar
 el catálogo: dos tablas de 20 capítulos que divergen a la primera
 corrección. Por eso se movió aquí, y en sv2 queda solo la reexportación
 (**R14**). El coste aceptado por el humano: reconstruir las imágenes de
 sv2, sv3, sv5 y sv6, porque ``ruesma_comun`` va horneado en cada una.
+
+**sv5 NO es consumidor.** Lo fue durante F-036 (R13: derivar la
+tipología de valoración del LER como defensa en profundidad), pero el
+humano RETIRÓ esa regla el 2026-08-25 y el código se revirtió en
+``7ca2ffc``: la tipología la decide la IA, y los residuos no se
+clasifican solo por contener un LER. No lo restituyas aquí.
 
 AQUÍ NO HAY LÓGICA DE DOMINIO de ningún servicio: el catálogo LER es una
 norma europea, no una decisión de este sistema. Módulo puro: sin red,

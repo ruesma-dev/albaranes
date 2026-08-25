@@ -69,7 +69,7 @@ determinista. Además, los residuos no se deben clasificar solo porque
 contengan LER». sv5 deriva la tipología SOLO del `tipo_familia` del contexto.
 
 R14. El validador y el catálogo LER deben vivir en un único sitio compartido
-(`ruesma_comun`), consumido por sv2 y sv5 sin copias.
+(`ruesma_comun`), consumido por sv2 y sv6 sin copias (sv5 no: R13 retirado).
 
 R15. SI una línea `from_albaran` de residuos queda casada con una línea de
 contrato que tarifa un INCREMENTO por LER, ENTONCES sv6 debe anular ese match,
