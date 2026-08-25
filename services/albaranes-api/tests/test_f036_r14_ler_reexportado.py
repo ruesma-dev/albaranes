@@ -2,8 +2,9 @@
 """F-036 R14 · sv2 consume el catalogo LER de `ruesma_comun`, sin copia.
 
 El catalogo (Decision 2014/955/UE) y su validador se movieron a
-`ruesma_comun.ler` porque sv5 tambien los necesita (R13). En sv2 queda
-SOLO la reexportacion, para no romper a quien importa desde
+`ruesma_comun.ler` porque los consumen sv2 y sv6. sv5 NO es consumidor:
+R13 se retiro en el commit `7ca2ffc` (ago 2026). En sv2 queda SOLO la
+reexportacion, para no romper a quien importa desde
 `domain.models.tipologia`.
 
 El contrato de comportamiento del catalogo vive en
