@@ -12,12 +12,33 @@ lo ha capturado) en lugar de hacer merge campo-a-campo, porque los
 campos están correlacionados semánticamente: un ``rol_linea`` puesto
 por OpenAI encaja con la ``descripcion_extendida`` de OpenAI, no con
 la de Claude. Fusionarlos podría producir contextos incoherentes.
+
+(F-036 R11/R12) Ese argumento vale para los CINCO campos narrativos
+—``tipo_familia``, ``rol_linea``, ``descripcion_extendida``,
+``notas_tiempo``, ``ref_linea_base``—, que son INTERPRETACIONES de la
+línea y siguen llegando íntegros del ganador. NO vale para las nueve
+MEDIDAS de ``_CAMPOS_RESIDUOS`` (código LER, m³, Tn, nº de
+contenedores...): son hechos impresos en el documento, no lecturas de
+uno u otro modelo, y dos proveedores que leen el mismo PDF no producen
+un m³ incoherente con un LER. Por eso el ganador se COMPLETA con las
+medidas que le falten, tomadas del candidato de mayor score que sí las
+traiga, y nunca se le sobrescribe ninguna que ya tenga.
+
+El motivo es un defecto real: puntuar las medidas (R9) arregla solo la
+primera cara —el contexto que se descartaba entero por sacar 0—, pero
+no que un candidato con ``tipo_familia`` + ``rol_linea`` le gane por
+score a otro que trae los m³. Sin el relleno, los m³ se perdían igual.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Optional
 
 from domain.models.contexto_linea import ContextoLinea
+
+logger = logging.getLogger(__name__)
+
+_LOG = "[contexto_merger]"
 
 # Orden canónico del sistema. El índice de cada proveedor es el que
 # desempata a igualdad de score y el que da nombre al log de R11.
@@ -81,6 +102,47 @@ def _score_contexto(ctx: Optional[ContextoLinea]) -> int:
     return score
 
 
+def _completar_campos_objetivos(
+    ganador: ContextoLinea,
+    candidatos: list[tuple[int, int, ContextoLinea]],
+) -> ContextoLinea:
+    """Rellena las medidas de residuos que le faltan al ganador. **R11.**
+
+    ``candidatos`` viene YA ordenado (score DESC, orden canónico ASC) y
+    sin el ganador: para cada campo de ``_CAMPOS_RESIDUOS`` que el
+    ganador no traiga, se coge el del primer candidato que lo tenga, o
+    sea, el de mayor score.
+
+    Nunca sobrescribe: un campo con valor en el ganador se respeta,
+    aunque otro proveedor traiga otro distinto. Los cinco campos
+    narrativos no se tocan (**R12**). Si no hay nada que rellenar
+    devuelve el propio ganador, sin copiar.
+    """
+    rellenos: dict[str, Any] = {}
+    procedencia: list[str] = []
+
+    for campo in _CAMPOS_RESIDUOS:
+        if _tiene_valor(getattr(ganador, campo, None)):
+            continue
+        for _score, order, ctx in candidatos:
+            valor = getattr(ctx, campo, None)
+            if _tiene_valor(valor):
+                rellenos[campo] = valor
+                procedencia.append(f"{campo}<-{_PROVEEDORES[order]}")
+                break
+
+    if not rellenos:
+        return ganador
+
+    logger.info(
+        "%s contexto_linea completado con %d medida(s) de residuos: %s",
+        _LOG,
+        len(rellenos),
+        ", ".join(procedencia),
+    )
+    return ganador.model_copy(update=rellenos)
+
+
 def pick_best_contexto_linea(
     *,
     openai_ctx: Optional[ContextoLinea] = None,
@@ -92,6 +154,10 @@ def pick_best_contexto_linea(
     Devuelve ``None`` si ninguno aporta información útil. Tolera
     silenciosamente proveedores deshabilitados (basta con no pasar
     el argumento o pasar ``None``).
+
+    (F-036 R11) El elegido se devuelve COMPLETADO con las medidas de
+    residuos que no traiga y sí tenga otro candidato. Ver la cabecera
+    del módulo para el porqué.
     """
     candidates: list[tuple[int, int, ContextoLinea]] = []
 
@@ -105,4 +171,4 @@ def pick_best_contexto_linea(
 
     # Score DESC, orden canónico ASC.
     candidates.sort(key=lambda item: (-item[0], item[1]))
-    return candidates[0][2]
+    return _completar_campos_objetivos(candidates[0][2], candidates[1:])
