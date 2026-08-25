@@ -255,3 +255,30 @@ contra `CHECKPOINTS.md` al final.
 **T23 (campaña de mutación) y T24 (comprobación en la BBDD real) las lanza el
 humano**, no un agente: la campaña muta el árbol principal y T24 es lectura
 contra Azure.
+
+### Bloque A (T1-T7) IMPLEMENTADO — 2026-08-25
+
+**Hecho y commiteado en la rama** (8 commits, `4caeb0a`..`960e0d1`, ninguno
+subido). Informe completo con las trazas de fase RED:
+`progress/impl_F-036.md`. Falta la revisión corta del bloque A.
+
+Lo que cambió, en una línea cada cosa: sv4 conserva la `cantidad_convertida`
+que no sabe rehacer (se acabó el ×6 de SALMEDINA al guardar), el guardián de
+F-019 R24 mira solo las entradas, las decisiones quedan escritas en
+`review_reasons_json`, la ficha PINTA por fin esas razones y los motivos del
+documento, la plantilla deja de recalcular el importe en Jinja y los
+`proveedor_cif_no_casa:<cif>` caducan cuando el revisor corrige el CIF.
+
+- Suite de sv4: **130 passed** (eran 59). `test_f019_r23_r26_recalculo_importe.py`
+  en verde **sin tocarlo** (R26).
+- `PUERTA COBERTURA: 97,3 % de 113 líneas cambiadas` (umbral 80 %, `critico`).
+- **Se instaló `jinja2` en el venv raíz** para que los tests de render de T5/T6
+  no se salten. `jinja2>=3.1` ya estaba en el `requirements.txt` de sv4; no se
+  tocó ningún manifiesto. Alternativa más limpia, si el humano la prefiere:
+  declarar `"venv"` de sv4 en `harness/servicios.json` (ese venv tiene jinja2 y
+  FastAPI, pero hoy NO tiene pytest).
+- El punto ciego conocido de R7 (`factor=1.0`, cantidad 1, convertida 1) queda
+  documentado y **cubierto por un test que fija el comportamiento actual**, sin
+  inventar nada para taparlo.
+
+Siguiente: bloque B (T8-T13, `comun` + sv3 + sv5).
