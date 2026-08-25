@@ -29,11 +29,17 @@ if str(RAIZ_SERVICIO) not in sys.path:
     sys.path.insert(0, str(RAIZ_SERVICIO))
 
 
-#: Subconjunto de ``albaran_valuations`` y ``albaran_line_valuations``
-#: que toca el recalculo de importes. Los tipos son los de
+#: Subconjunto de ``albaran_valuations``, ``albaran_line_valuations`` y
+#: ``albaran_documents_merge`` que tocan el recalculo de importes y la
+#: trazabilidad de motivos. Los tipos son los de
 #: ``services/albaran-valoracion-persist/infrastructure/database/
-#: schema_contribution.py`` (sv6 es el dueno del schema); en SQLite
-#: DOUBLE PRECISION se acepta tal cual.
+#: schema_contribution.py`` (sv6 es el dueno del schema de valoracion) y
+#: los de ``infrastructure/database/orm_models.py`` para el merge; en
+#: SQLite DOUBLE PRECISION se acepta tal cual.
+#:
+#: Es un SUBCONJUNTO a proposito: replicar el schema entero aqui seria
+#: una segunda copia que divergiria del dueno a la primera migracion.
+#: Se anaden columnas cuando un test las necesita.
 _DDL = (
     """
     CREATE TABLE albaran_valuations (
@@ -55,7 +61,20 @@ _DDL = (
         importe_calculado           DOUBLE PRECISION,
         importe_albaran_declarado   DOUBLE PRECISION,
         importe_source              VARCHAR(32) NOT NULL,
-        descuento_albaran_aplicado  DOUBLE PRECISION
+        descuento_albaran_aplicado  DOUBLE PRECISION,
+        review_required             BOOLEAN NOT NULL DEFAULT 0,
+        review_reasons_json         TEXT
+    )
+    """,
+    # F-036: la trazabilidad (R23, R24) toca tambien la cabecera del
+    # merge. Solo las tres columnas que interviene la purga de motivos
+    # (`_depurar_motivos_documento_in_session`): la tabla real la
+    # gobierna sv3 y tiene cuarenta y pico.
+    """
+    CREATE TABLE albaran_documents_merge (
+        id                   VARCHAR(64) PRIMARY KEY,
+        proveedor_cif        VARCHAR(64),
+        review_reasons_json  TEXT
     )
     """,
 )
