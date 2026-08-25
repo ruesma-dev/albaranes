@@ -19,7 +19,7 @@ valorado lo estropea— y no puede quedar detrás de D2 ni de D3.
 - [x] T4: Leer `review_reasons_json` en el SELECT de `_load_valuation_in_session` (:1021-1057), exponerlo en `LineValuationPayload` (`domain/models/review_models.py:285`) y en el payload del merge (R23)  |  Verificación: `services/albaranes-front/tests/test_f036_r23_r24_trazabilidad.py::test_f036_r23_*`
 - [x] T5: Pintar en `templates/document_detail.html` las razones de cada línea (tabla principal, vía el mapa `val_lines` de :22) y los motivos del documento (banner :84-96) (R23)  |  Verificación: test de render del detalle que comprueba que una razón `residuos_contenedores=1` aparece en el HTML
 - [x] T6: Dejar de recalcular el importe en Jinja (:619-627) cuando la conversión de la línea no es reproducible: se muestra el `importe_calculado` persistido (R8)  |  Verificación: test de render con una línea cantidad 6 / convertida 1 / importe 120 que debe mostrar 120,00 y no 720,00
-- [ ] T7: Añadir `_depurar_motivos_documento_in_session(...)` y llamarla desde `update_document` (:3024) para retirar los `proveedor_cif_no_casa:<cif>` cuyo CIF ya no es el del merge (R24)  |  Verificación: `test_f036_r23_r24_trazabilidad.py::test_f036_r24_*`
+- [x] T7: Añadir `_depurar_motivos_documento_in_session(...)` y llamarla desde `update_document` (:3024) para retirar los `proveedor_cif_no_casa:<cif>` cuyo CIF ya no es el del merge (R24)  |  Verificación: `test_f036_r23_r24_trazabilidad.py::test_f036_r24_*`
 
 ## Bloque compartido · el catálogo LER
 

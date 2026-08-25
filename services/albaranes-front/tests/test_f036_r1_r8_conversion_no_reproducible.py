@@ -767,7 +767,9 @@ def test_f036_r8_una_conversion_reproducible_sigue_calculando_en_jinja(
                     importe_calculado=99.0,
                 )
             ],
-            display=[fila_detalle(cantidad=8.0, conciliacion={"unitario": 2.5})],
+            display=[
+                fila_detalle(cantidad=8.0, conciliacion={"unitario": 2.5})
+            ],
         )
     )
 

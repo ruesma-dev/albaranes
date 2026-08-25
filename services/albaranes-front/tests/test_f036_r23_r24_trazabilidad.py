@@ -316,3 +316,190 @@ def test_f036_r23_sin_motivos_el_banner_no_inventa_nada(
     )
 
     assert "Motivos de revisión" not in html
+
+
+# ------------------------------------------------------------------ #
+# R24 · el motivo que sella un CIF caduca cuando el CIF cambia
+# ------------------------------------------------------------------ #
+def _sembrar_documento(sesion, cif, motivos):
+    sesion.execute(
+        text(
+            "INSERT INTO albaran_documents_merge "
+            "(id, proveedor_cif, review_reasons_json) "
+            "VALUES (:id, :cif, :motivos)"
+        ),
+        {
+            "id": DOCUMENT_ID,
+            "cif": cif,
+            "motivos": json.dumps(motivos) if motivos is not None else None,
+        },
+    )
+    sesion.flush()
+
+
+def _leer_motivos(sesion):
+    """Los motivos del documento, leidos como los lee sv4."""
+    from domain.models.review_models import motivos_de_json
+
+    return motivos_de_json(
+        sesion.execute(
+            text(
+                "SELECT review_reasons_json FROM albaran_documents_merge "
+                "WHERE id = :id"
+            ),
+            {"id": DOCUMENT_ID},
+        ).scalar_one()
+    )
+
+
+def test_f036_r24_el_motivo_con_el_cif_viejo_se_retira(repositorio, sesion):
+    """El caso de SS-0801977, medido en la BBDD real.
+
+    sv3 sello ``proveedor_cif_no_casa:B12345678``; el revisor corrigio el
+    CIF a B87654321 y el motivo se quedo colgado meses.
+    """
+    _sembrar_documento(
+        sesion,
+        cif="B87654321",
+        motivos=["proveedor_cif_no_casa:B12345678", "obra_no_resuelta"],
+    )
+
+    repositorio._depurar_motivos_documento_in_session(
+        session=sesion, document_id=DOCUMENT_ID, cif_actual="B87654321"
+    )
+
+    assert _leer_motivos(sesion) == ["obra_no_resuelta"]
+
+
+def test_f036_r24_el_motivo_vigente_no_se_toca(repositorio, sesion):
+    """Si el CIF sigue siendo el sellado, el aviso sigue siendo verdad.
+
+    Es la mitad que importa: R24 retira motivos CADUCOS, no motivos
+    incomodos. Barrerlos todos dejaria al revisor sin el aviso.
+    """
+    _sembrar_documento(
+        sesion,
+        cif="B12345678",
+        motivos=["proveedor_cif_no_casa:B12345678"],
+    )
+
+    repositorio._depurar_motivos_documento_in_session(
+        session=sesion, document_id=DOCUMENT_ID, cif_actual="B12345678"
+    )
+
+    assert _leer_motivos(sesion) == ["proveedor_cif_no_casa:B12345678"]
+
+
+@pytest.mark.parametrize(
+    ("sellado", "actual"),
+    [
+        ("b12345678", "B12345678"),
+        ("B12345678", " b12345678 "),
+        ("B-12345678", "B12345678"),
+    ],
+)
+def test_f036_r24_el_cif_se_compara_normalizado(
+    repositorio, sesion, sellado, actual,
+):
+    """Mayusculas, espacios y guiones no hacen caducar un motivo vigente.
+
+    El CIF llega tecleado por un humano en un formulario libre.
+    """
+    _sembrar_documento(
+        sesion, cif=actual, motivos=[f"proveedor_cif_no_casa:{sellado}"]
+    )
+
+    repositorio._depurar_motivos_documento_in_session(
+        session=sesion, document_id=DOCUMENT_ID, cif_actual=actual
+    )
+
+    assert _leer_motivos(sesion) == [f"proveedor_cif_no_casa:{sellado}"]
+
+
+def test_f036_r24_sin_cif_en_el_merge_el_motivo_caduca(repositorio, sesion):
+    """Si el revisor borra el CIF, el motivo ya no describe nada."""
+    _sembrar_documento(
+        sesion, cif=None, motivos=["proveedor_cif_no_casa:B12345678"]
+    )
+
+    repositorio._depurar_motivos_documento_in_session(
+        session=sesion, document_id=DOCUMENT_ID, cif_actual=None
+    )
+
+    assert _leer_motivos(sesion) == []
+
+
+def test_f036_r24_un_motivo_sin_cif_sellado_se_respeta(repositorio, sesion):
+    """``proveedor_cif_no_casa`` a secas: no hay con que compararlo.
+
+    Retirarlo seria inventarse que ha caducado. Se deja para que lo
+    resuelva quien lo puso.
+    """
+    _sembrar_documento(
+        sesion, cif="B87654321", motivos=["proveedor_cif_no_casa"]
+    )
+
+    repositorio._depurar_motivos_documento_in_session(
+        session=sesion, document_id=DOCUMENT_ID, cif_actual="B87654321"
+    )
+
+    assert _leer_motivos(sesion) == ["proveedor_cif_no_casa"]
+
+
+def test_f036_r24_los_demas_motivos_no_se_tocan(repositorio, sesion):
+    """R24 esta ACOTADO a ``proveedor_cif_no_casa`` (decision 2026-08-22).
+
+    El resto de motivos sellados por sv3 van en ficha aparte; aqui no se
+    barre nada mas.
+    """
+    otros = [
+        "obra_no_resuelta",
+        "contrato_no_encontrado",
+        "confianza_baja",
+    ]
+    _sembrar_documento(sesion, cif="B87654321", motivos=list(otros))
+
+    repositorio._depurar_motivos_documento_in_session(
+        session=sesion, document_id=DOCUMENT_ID, cif_actual="B87654321"
+    )
+
+    assert _leer_motivos(sesion) == otros
+
+
+@pytest.mark.parametrize("guardado", [None, "", "{no es json"])
+def test_f036_r24_una_columna_ilegible_no_rompe_el_guardado(
+    repositorio, sesion, guardado,
+):
+    """Sin motivos que depurar, el guardado del revisor sigue su curso."""
+    sesion.execute(
+        text(
+            "INSERT INTO albaran_documents_merge "
+            "(id, proveedor_cif, review_reasons_json) "
+            "VALUES (:id, 'B87654321', :motivos)"
+        ),
+        {"id": DOCUMENT_ID, "motivos": guardado},
+    )
+    sesion.flush()
+
+    repositorio._depurar_motivos_documento_in_session(
+        session=sesion, document_id=DOCUMENT_ID, cif_actual="B87654321"
+    )
+
+    assert _leer_motivos(sesion) == []
+
+
+def test_f036_r24_la_depuracion_esta_cableada_en_update_document():
+    """El cableado, fijado por test (leccion del round trip 3 de F-019).
+
+    La depuracion puede estar perfecta y no servir de nada si nadie la
+    llama desde el guardado del revisor, que es el unico momento en que
+    el CIF puede haber cambiado.
+    """
+    import inspect
+
+    from infrastructure.database.review_repository import (
+        AlbaranReviewRepository,
+    )
+
+    fuente = inspect.getsource(AlbaranReviewRepository.update_document)
+    assert "_depurar_motivos_documento_in_session" in fuente

@@ -3238,6 +3238,15 @@ class AlbaranReviewRepository:
                 new_line_discounts=self._descuentos_del_payload(payload),
             )
 
+            # (F-036 R24) El guardado es el ÚNICO momento en que el CIF
+            # del proveedor puede haber cambiado, así que es aquí donde
+            # caducan los motivos que llevan un CIF sellado dentro.
+            self._depurar_motivos_documento_in_session(
+                session=session,
+                document_id=document.id,
+                cif_actual=document.proveedor_cif,
+            )
+
             session.commit()
 
         detail = self.get_document_detail(document_id)
@@ -3287,6 +3296,89 @@ class AlbaranReviewRepository:
             for line in payload.lines
             if line.id is not None
         }
+
+    @staticmethod
+    def _cif_normalizado(cif: str | None) -> str:
+        """CIF comparable: sin espacios, sin guiones/puntos, en mayúsculas.
+
+        Lo teclea un humano en un formulario libre, y el que sella sv3
+        viene del contrato. `b-12345678` y `B12345678` son el mismo.
+        """
+        if cif is None:
+            return ""
+        return re.sub(r"[^0-9A-Z]", "", str(cif).upper())
+
+    def _depurar_motivos_documento_in_session(
+        self,
+        *,
+        session: Any,
+        document_id: str,
+        cif_actual: str | None,
+    ) -> None:
+        """Retira los ``proveedor_cif_no_casa:<cif>`` que ya no aplican.
+
+        F-036 R24. sv3 sella el motivo con el CIF DENTRO
+        (``proveedor_cif_no_casa:B12345678``). Cuando el revisor corrige
+        el CIF del proveedor, el motivo se queda ahí describiendo un
+        problema que ya no existe: en SS-0801977 seguía colgado meses
+        después. Como el CIF viejo va sellado en el propio texto, se
+        puede saber si el aviso sigue vigente sin preguntarle a nadie.
+
+        ACOTADO a ``proveedor_cif_no_casa`` (decisión del humano,
+        2026-08-22): los demás motivos de sv3 se revisan en ficha
+        aparte. Un motivo SIN CIF sellado no se toca — no hay con qué
+        compararlo, y retirarlo sería inventarse que ha caducado.
+        """
+        prefijo = "proveedor_cif_no_casa:"
+        try:
+            with session.begin_nested():
+                fila = session.execute(
+                    text(
+                        "SELECT review_reasons_json "
+                        "FROM albaran_documents_merge WHERE id = :id"
+                    ),
+                    {"id": document_id},
+                ).mappings().first()
+                if fila is None:
+                    return
+                motivos = motivos_de_json(fila["review_reasons_json"])
+                if not motivos:
+                    return
+
+                actual = self._cif_normalizado(cif_actual)
+                vigentes = [
+                    motivo
+                    for motivo in motivos
+                    if not motivo.startswith(prefijo)
+                    or self._cif_normalizado(motivo[len(prefijo):]) == actual
+                ]
+                if len(vigentes) == len(motivos):
+                    return
+
+                logger.info(
+                    "[revision] documento %s: retirados %s motivos "
+                    "'%s' cuyo CIF ya no es el del merge.",
+                    document_id,
+                    len(motivos) - len(vigentes),
+                    prefijo.rstrip(":"),
+                )
+                session.execute(
+                    text(
+                        "UPDATE albaran_documents_merge "
+                        "SET review_reasons_json = :motivos WHERE id = :id"
+                    ),
+                    {
+                        "motivos": json.dumps(vigentes, ensure_ascii=False),
+                        "id": document_id,
+                    },
+                )
+        except Exception:
+            logger.warning(
+                "[revision] no se pudieron depurar los motivos del "
+                "documento %s. El guardado sigue.",
+                document_id,
+                exc_info=True,
+            )
 
     def _anadir_reason_linea_in_session(
         self,
