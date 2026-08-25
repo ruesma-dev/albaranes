@@ -347,3 +347,36 @@ lo decide el humano. El bloque D3 vuelve a tocar `prompts.yaml` (T20), así que
 la pasada tiene sentido UNA vez, en T25.
 
 Siguiente: bloque C (T14-T20, sintéticas de LER en sv6).
+
+### Bloque C ENTREGADO — T14-T20 (2026-08-25)
+
+Informe: **`progress/impl_F-036_bloque_C.md`**. Siete commits, uno por tarea,
+ninguno subido. D3 cerrado: los incrementos por LER ya se emiten.
+
+- **T14** · `residuos_incrementos.py` (sv6) con `es_linea_incremento_ler`,
+  `tarifa_incremento_ler` y `REGLAS_SINTETICAS_RESIDUOS`. Punto de enganche de
+  F-006: el recorrido del builder no conoce ninguna regla concreta (test con
+  una regla ficticia que se emite sin tocar el builder).
+- **T15** · una línea base de residuos casada con un incremento por LER pierde
+  el match ENTERO —id, precio y `match_method`— y va a revisión.
+- **T16/T17** · el builder inyecta la sintética siempre que haya LER válido,
+  con dedupe; sin tarifa sale sin precio, con
+  `residuos_ler_sin_tarifa_en_contrato`, y activa revisión.
+- **T18** · **el design se equivocaba**: R19 no era «solo un test». La
+  sintética heredaba los m³ crudos, no el nº de contenedores → SS-0000589 daba
+  426 € en vez de 171. Corregido solo para padres de residuos.
+- **T19** · predicado por código LER en `ModifierContractMatcher`.
+- **T20** · el prompt `valuation_residuos` dice ya que el incremento por LER lo
+  inyecta sv6 de forma determinista, sin ablandar la prohibición a IA3.
+
+Verificado: sv6 **156 passed**, sv5 **34 passed**, 34 tests nuevos,
+`PUERTA COBERTURA 97.9 %` (281/287) y `PUERTA TAMAÑO` en verde. `init.sh` NO se
+ejecutó: es T25.
+
+**Tres cosas para el líder**: (a) `ModifierContractMatcher` **no está cableado
+en producción** —no lo instancia nadie—, así que el predicado de T19 hoy no
+afecta a ninguna valoración real; cablearlo es F-004. (b) El hallazgo de
+`texto_contiene_ler` sigue abierto y sin tocar. (c) `config/prompts.yaml`
+vuelto a tocar: la pasada de evals sigue pendiente para T25.
+
+Siguiente: bloque D (T21-T25, aceptación, mutación y `init.sh`).

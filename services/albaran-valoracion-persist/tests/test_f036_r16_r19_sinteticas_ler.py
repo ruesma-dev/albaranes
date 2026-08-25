@@ -99,6 +99,9 @@ def test_f036_r21_el_contenedor_no_es_un_incremento():
     # Seis digitos que no existen en el catalogo LER (19 21 no llega):
     # el bug real de Prebetong con el codigo de producto 192137.
     assert es_linea_incremento_ler("INCREMENTO 192137") is None
+    # Sin descripcion no hay nada que decidir.
+    assert es_linea_incremento_ler(None) is None
+    assert es_linea_incremento_ler("") is None
 
 
 def test_f036_r21_la_tarifa_se_busca_por_el_ler_concreto():
@@ -445,3 +448,23 @@ def test_f036_r19_la_herencia_normal_no_cambia_fuera_de_residuos():
     syn = sinteticas_de(registros)[0]
 
     assert syn.cantidad_albaran == pytest.approx(8.0)
+
+
+def test_f036_r16_una_linea_sin_merge_line_id_no_rompe_el_recorrido():
+    """Guarda defensiva, hermana de la de las otras dos redes.
+
+    Una linea `from_albaran` sin `merge_line_id` no tiene base a la que
+    colgar una sintetica: se salta en silencio y el resto del documento
+    se valora igual.
+    """
+    huerfana = LineValuationDto(
+        merge_line_id=None,
+        line_kind="from_albaran",
+        match_method="no_match",
+        descripcion_linea="LINEA SIN IDENTIFICAR",
+    )
+    escenario = EscenarioResiduos(sinteticas_ia=(huerfana,))
+    cabecera, registros = valorar(escenario)
+
+    assert len(sinteticas_de(registros)) == 1
+    assert cabecera.total_valorado == pytest.approx(171.0)
