@@ -196,6 +196,14 @@ MOTIVOS_DEL_BUILDER = {
     "movimiento_residuos_sin_cantidad_asumido_1",
     "synthetic_parent_not_in_context",
     "synthetic_without_parent",
+    # (ago 2026 · F-036 R15, T15) La guarda anti-incremento: una línea
+    # BASE de residuos casada con la tarifa de un INCREMENTO por LER
+    # pierde el match y va a revisión. Motivo NUEVO, añadido aquí a
+    # conciencia y no para callar el test. Consumidores comprobados:
+    # sv6 solo lo escribe; sv4 pinta las razones de línea en crudo
+    # desde `review_reasons_json` (F-036 R23), sin lista blanca de
+    # cadenas que haya que ampliar.
+    "residuos_base_casada_con_incremento",
 }
 
 #: Ídem para el conversor. Los cuatro de la tabla de R19 salen de aquí.
