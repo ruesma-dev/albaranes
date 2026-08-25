@@ -210,6 +210,127 @@ def render_detalle():
     return _render
 
 
+#: Documento y valoracion de referencia de los tests de render: la
+#: linea de residuos de SALMEDINA SS-0000589 tal cual la dejo sv6.
+DOCUMENT_ID_RENDER = "f036-doc-0000-0000-000000000589"
+VALUATION_ID_RENDER = "f036-val-0000-0000-000000000589"
+
+
+@pytest.fixture
+def linea_valorada():
+    """Factoria de ``LineValuationPayload`` (la linea de SS-0000589)."""
+    from domain.models.review_models import LineValuationPayload
+
+    def _linea(**campos):
+        base = {
+            "valuation_line_id": 900,
+            "merge_line_id": 500,
+            "precio_unitario_final": 120.0,
+            "cantidad_albaran": 6.0,
+            "cantidad_convertida": 1.0,
+            "factor_conversion": None,
+            "importe_calculado": 120.0,
+            "importe_source": "declared_albaran",
+            "review_reasons": ["residuos_contenedores"],
+            "review_required": True,
+        }
+        base.update(campos)
+        return LineValuationPayload(**base)
+
+    return _linea
+
+
+@pytest.fixture
+def fila_detalle():
+    """Factoria de ``DisplayLine`` con su bloque de conciliacion."""
+    from domain.models.review_models import ConciliacionDisplay, DisplayLine
+
+    def _fila(conciliacion=None, **campos):
+        conc = ConciliacionDisplay(
+            **{
+                "kind": "assigned",
+                "codigo_partida": "01.01",
+                "descripcion": "RETIRADA CONTENEDOR RCD",
+                "unidad": "UD",
+                "unitario": 120.0,
+                "descuento": None,
+                **(conciliacion or {}),
+            }
+        )
+        base = {
+            "line_kind": "from_albaran",
+            "merge_line_id": 500,
+            "valuation_line_id": 900,
+            "line_index": 1,
+            "concepto": "RETIRADA CONTENEDOR RCD",
+            "cantidad": 6.0,
+            "unidad": "M3",
+            "precio_unitario": 120.0,
+            "importe": 120.0,
+            "is_valued": True,
+            "concilia": conc,
+        }
+        base.update(campos)
+        return DisplayLine(**base)
+
+    return _fila
+
+
+@pytest.fixture
+def documento_detalle():
+    """Factoria de ``DocumentDetailPayload`` listo para renderizar."""
+    import json as _json
+
+    from domain.models.review_models import (
+        DocumentDetailPayload,
+        ValuationPayload,
+    )
+
+    def _documento(
+        lineas_valoracion=(),
+        motivos_documento=None,
+        display=(),
+        is_editable=True,
+    ):
+        valoracion = None
+        if lineas_valoracion:
+            valoracion = ValuationPayload(
+                valuation_id=VALUATION_ID_RENDER,
+                contrato_codigo="C-001",
+                status="completed",
+                total_valorado=120.0,
+                total_lines=len(lineas_valoracion),
+                review_required=True,
+                lines_by_merge_line_id={
+                    linea.merge_line_id: linea
+                    for linea in lineas_valoracion
+                    if linea.merge_line_id is not None
+                },
+                synthetic_lines=[
+                    linea
+                    for linea in lineas_valoracion
+                    if linea.merge_line_id is None
+                ],
+            )
+        return DocumentDetailPayload(
+            id=DOCUMENT_ID_RENDER,
+            is_editable=is_editable,
+            source_filename="SS-0000589.pdf",
+            provider_origin="merge",
+            model_name="—",
+            created_at_utc="2026-08-19T10:00:00Z",
+            proveedor_cif="B87654321",
+            review_reasons_json=(
+                _json.dumps(motivos_documento) if motivos_documento else None
+            ),
+            review_required=bool(motivos_documento),
+            display_lines=list(display),
+            valuation=valoracion,
+        )
+
+    return _documento
+
+
 @pytest.fixture
 def repositorio():
     """``AlbaranReviewRepository`` sin factoria de sesiones.

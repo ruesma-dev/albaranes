@@ -24,11 +24,17 @@ from sqlalchemy import (
 
 from ruesma_comun.importes import clasificar_descuento, importe_de_linea
 
+# F-036: la reproducibilidad de la conversión y la comparación numérica
+# viven en el dominio (`review_models`) porque las necesitan los DOS
+# lados —este repositorio al guardar y `LineValuationPayload` al pintar—
+# y no puede haber dos copias de esa regla. Se importan con el nombre
+# privado con el que las llama el resto de este módulo.
 from domain.models.review_models import (
     ConciliacionDisplay,
     ConciliacionSibling,
     ContratoLinePayload,
     ContratoPayload,
+    conversion_reproducible as _conversion_reproducible,
     DisplayLine,
     DocumentDetailPayload,
     DocumentListFilters,
@@ -39,6 +45,7 @@ from domain.models.review_models import (
     MergeDocumentUpdatePayload,
     MergeLinePayload,
     motivos_de_json,
+    numeros_iguales as _num_iguales,
     ObraOption,
     ObraResumenItem,
     PaginatedDocuments,
@@ -84,25 +91,6 @@ def _sanear_descuento(descuento_pct: float | None) -> float | None:
     return valor
 
 
-def _num_iguales(a: Any, b: Any) -> bool:
-    """Compara dos números tolerando el ruido de coma flotante.
-
-    Se usa para decidir si el recálculo de importes cambia algo de
-    verdad (F-019 R24) y para clasificar la conversión de una línea
-    (F-036 R1): media unidad de céntimo de margen, muy por debajo de
-    cualquier diferencia real y muy por encima del ruido binario de un
-    DOUBLE PRECISION.
-    """
-    if a is None and b is None:
-        return True
-    if a is None or b is None:
-        return False
-    try:
-        return abs(float(a) - float(b)) < 5e-3
-    except (TypeError, ValueError):
-        return False
-
-
 #: (F-036 R3) El revisor cambió la cantidad de una línea cuya conversión
 #: de unidad sv4 no sabe rehacer. La cantidad convertida se conserva —el
 #: importe NO se calcula con la cantidad cruda— y la línea va a revisión
@@ -116,54 +104,6 @@ REASON_CANTIDAD_EDITADA_SIN_CONVERSION = (
 #: calculó con la cantidad del albarán, que es el comportamiento de
 #: siempre. Es trazabilidad, no un aviso: la línea NO va a revisión.
 REASON_SIN_CANTIDAD_CONVERTIDA = "front_sin_cantidad_convertida"
-
-
-def _conversion_reproducible(
-    *,
-    factor: Any,
-    cantidad_albaran: Any,
-    cantidad_convertida: Any,
-) -> bool:
-    """¿Puede sv4 REHACER la conversión de unidad de esta línea?
-
-    F-036 R1, R6, R7 (SALMEDINA, ago 2026) — POR QUÉ EXISTE
-    -------------------------------------------------------
-    sv6 no siempre convierte multiplicando por un factor. En residuos
-    aplica su REGLA DE CONTENEDORES: el albarán declara 6 m³, el
-    contrato tarifa CONTENEDORES, y sv6 persiste
-    ``cantidad_albaran=6``, ``cantidad_convertida=1``,
-    ``factor_conversion=NULL`` (no existe factor entre m³ y UD: es el
-    *hard mismatch* de ``unit_converter``). El importe correcto es
-    1 × 120 = 120,00 €.
-
-    Cuando sv4 recalculaba al guardar, tiraba esa `cantidad_convertida`
-    y multiplicaba por la cantidad CRUDA: 6 × 120 = 720,00 €. Seis veces.
-
-    La pregunta que responde esta función NO es «¿es una línea de
-    residuos?» —R6 prohíbe expresamente condicionar nada a
-    ``tipo_familia``— sino «¿la cantidad convertida guardada se explica
-    como ``factor × cantidad_albaran``?». Si no se explica, es que
-    aguas arriba se aplicó una regla de negocio que sv4 no conoce, y el
-    dato se conserva en vez de reinventarse.
-
-    Se decide por CONSISTENCIA, no por ``factor is None`` (R7). Hoy
-    ``factor is None`` bastaría, porque el *hard mismatch* deja el
-    factor a NULL; pero ``unit_converter`` tiene una rama
-    ``no_albaran_unit_assumed_same`` que devuelve ``factor=1.0``, y en
-    cuanto F-024 haga que se lea la ``unidad_medida`` del albarán, esa
-    rama devolvería el ×6. Comparar contra el producto aguanta ese
-    cambio.
-
-    Devuelve True solo si los tres valores existen, son numéricos y
-    ``cantidad_convertida ≈ factor × cantidad_albaran``.
-    """
-    if factor is None or cantidad_albaran is None or cantidad_convertida is None:
-        return False
-    try:
-        producto = float(factor) * float(cantidad_albaran)
-    except (TypeError, ValueError):
-        return False
-    return _num_iguales(cantidad_convertida, producto)
 
 
 def _importe_de_linea(

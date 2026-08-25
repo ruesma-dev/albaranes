@@ -653,10 +653,21 @@
                                             <span class="concilia-val">{{ c.unitario | importe_eur if c.unitario is not none else '—' }}</span>
                                         {% endif %}
                                     </td>
-                                    {# Importe — editable: importe = cantidad × precio × (1 − dto%). #}
-                                    <td class="concilia-td td-num" data-col="importe" data-sort-value="{{ (dline.cantidad * c.unitario * (1 - (c.descuento or 0) / 100)) if (dline.cantidad is not none and c.unitario is not none) else '' }}">
-                                        {% if dline.cantidad is not none and c.unitario is not none %}
-                                            {% set _imp = dline.cantidad * c.unitario * (1 - (c.descuento or 0) / 100) %}
+                                    {# Importe — editable: importe = cantidad × precio × (1 − dto%).
+
+                                       F-036 R8: ESA fórmula no vale cuando la conversión de la
+                                       línea no es reproducible. En un albarán de residuos, sv6
+                                       valora 1 CONTENEDOR (120 €) sobre 6 m³ declarados; el
+                                       producto de aquí pintaba 6 × 120 = 720 €, un número que no
+                                       está en la BBDD y que no cuadra con el total del documento.
+                                       En ese caso se muestra el `importe_calculado` persistido,
+                                       que ya lleva su descuento aplicado. Si no lo hubiera, se
+                                       cae al producto: mejor eso que un hueco. #}
+                                    {% set _imp_persistido = v.importe_calculado if (v and not v.conversion_reproducible and v.importe_calculado is not none) else none %}
+                                    {% set _imp_jinja = (dline.cantidad * c.unitario * (1 - (c.descuento or 0) / 100)) if (dline.cantidad is not none and c.unitario is not none) else none %}
+                                    <td class="concilia-td td-num" data-col="importe" data-sort-value="{{ (_imp_persistido if _imp_persistido is not none else _imp_jinja) if (_imp_persistido is not none or _imp_jinja is not none) else '' }}">
+                                        {% if _imp_persistido is not none or _imp_jinja is not none %}
+                                            {% set _imp = _imp_persistido if _imp_persistido is not none else _imp_jinja %}
                                             {% if cedit %}
                                                 <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit" data-field="importe" data-numeric="1" value="{{ '%.2f'|format(_imp) }}" placeholder="—">
                                             {% elif c.agree_importe == false %}

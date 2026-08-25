@@ -118,8 +118,10 @@ def test_f036_r23_un_json_ilegible_no_rompe_la_ficha(repositorio, sesion):
     _sembrar_valoracion(
         sesion,
         [
-            {"id": 902, "merge_line_id": 502, "review_reasons_json": "{no json"},
-            {"id": 903, "merge_line_id": 503, "review_reasons_json": '"texto"'},
+            {"id": 902, "merge_line_id": 502,
+             "review_reasons_json": "{no json"},
+            {"id": 903, "merge_line_id": 503,
+             "review_reasons_json": '"texto"'},
         ],
     )
 
@@ -203,108 +205,26 @@ def test_f036_r23_los_motivos_del_documento_se_exponen_como_lista(
 # ------------------------------------------------------------------ #
 # R23 · lo que el revisor VE en la ficha
 # ------------------------------------------------------------------ #
-def _documento(lineas_valoracion=(), motivos_documento=None, display=()):
-    """``DocumentDetailPayload`` minimo para renderizar el detalle."""
-    from domain.models.review_models import (
-        DocumentDetailPayload,
-        ValuationPayload,
-    )
-
-    valoracion = None
-    if lineas_valoracion:
-        valoracion = ValuationPayload(
-            valuation_id=VALUATION_ID,
-            contrato_codigo="C-001",
-            status="completed",
-            total_valorado=120.0,
-            total_lines=len(lineas_valoracion),
-            review_required=True,
-            lines_by_merge_line_id={
-                linea.merge_line_id: linea
-                for linea in lineas_valoracion
-                if linea.merge_line_id is not None
-            },
-            synthetic_lines=[
-                linea
-                for linea in lineas_valoracion
-                if linea.merge_line_id is None
-            ],
-        )
-    return DocumentDetailPayload(
-        id=DOCUMENT_ID,
-        source_filename="SS-0801977.pdf",
-        provider_origin="merge",
-        model_name="—",
-        created_at_utc="2026-08-19T10:00:00Z",
-        proveedor_cif="B87654321",
-        review_reasons_json=(
-            json.dumps(motivos_documento) if motivos_documento else None
-        ),
-        review_required=bool(motivos_documento),
-        display_lines=list(display),
-        valuation=valoracion,
-    )
-
-
-def _linea_valorada(**campos):
-    from domain.models.review_models import LineValuationPayload
-
-    base = {
-        "valuation_line_id": 900,
-        "merge_line_id": 500,
-        "precio_unitario_final": 120.0,
-        "cantidad_albaran": 6.0,
-        "cantidad_convertida": 1.0,
-        "importe_calculado": 120.0,
-        "importe_source": "declared_albaran",
-        "review_reasons": ["residuos_contenedores"],
-        "review_required": True,
-    }
-    base.update(campos)
-    return LineValuationPayload(**base)
-
-
-def _display(**campos):
-    from domain.models.review_models import ConciliacionDisplay, DisplayLine
-
-    conciliacion = ConciliacionDisplay(
-        kind="assigned",
-        codigo_partida="01.01",
-        descripcion="RETIRADA CONTENEDOR RCD",
-        unidad="UD",
-        unitario=120.0,
-        descuento=None,
-    )
-    base = {
-        "line_kind": "from_albaran",
-        "merge_line_id": 500,
-        "valuation_line_id": 900,
-        "line_index": 1,
-        "concepto": "RETIRADA CONTENEDOR RCD",
-        "cantidad": 6.0,
-        "unidad": "M3",
-        "precio_unitario": 120.0,
-        "importe": 120.0,
-        "is_valued": True,
-        "concilia": conciliacion,
-    }
-    base.update(campos)
-    return DisplayLine(**base)
-
-
-def test_f036_r23_la_ficha_pinta_las_razones_de_la_linea(render_detalle):
+#
+# Las factorias de payload (`documento_detalle`, `linea_valorada`,
+# `fila_detalle`) y el renderizador viven en el conftest: los comparten
+# estos tests y los de R8.
+# ------------------------------------------------------------------ #
+def test_f036_r23_la_ficha_pinta_las_razones_de_la_linea(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
     """La razon de sv6 llega hasta el HTML que ve el revisor."""
     html = render_detalle(
-        _documento(
+        documento_detalle(
             lineas_valoracion=[
-                _linea_valorada(
+                linea_valorada(
                     review_reasons=[
                         "residuos_contenedores",
                         "residuos_sin_volumen_m3",
                     ]
                 )
             ],
-            display=[_display()],
+            display=[fila_detalle()],
         )
     )
 
@@ -312,12 +232,14 @@ def test_f036_r23_la_ficha_pinta_las_razones_de_la_linea(render_detalle):
     assert "residuos_sin_volumen_m3" in html
 
 
-def test_f036_r23_una_linea_sin_razones_no_pinta_el_hueco(render_detalle):
+def test_f036_r23_una_linea_sin_razones_no_pinta_el_hueco(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
     """Sin razones no hay marca: la tabla no se llena de adornos vacios."""
     html = render_detalle(
-        _documento(
-            lineas_valoracion=[_linea_valorada(review_reasons=[])],
-            display=[_display()],
+        documento_detalle(
+            lineas_valoracion=[linea_valorada(review_reasons=[])],
+            display=[fila_detalle()],
         )
     )
 
@@ -325,14 +247,14 @@ def test_f036_r23_una_linea_sin_razones_no_pinta_el_hueco(render_detalle):
 
 
 def test_f036_r23_las_razones_de_la_sintetica_tambien_se_pintan(
-    render_detalle,
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
 ):
     """La sintetica sin tarifa (R17) existe para que el revisor actue.
 
     Si su razon no se pinta, la linea sin precio parece un error del
     sistema en vez de un encargo.
     """
-    sintetica = _linea_valorada(
+    sintetica = linea_valorada(
         valuation_line_id=904,
         merge_line_id=None,
         precio_unitario_final=None,
@@ -343,11 +265,11 @@ def test_f036_r23_las_razones_de_la_sintetica_tambien_se_pintan(
         review_reasons=["residuos_ler_sin_tarifa_en_contrato"],
     )
     html = render_detalle(
-        _documento(
-            lineas_valoracion=[_linea_valorada(), sintetica],
+        documento_detalle(
+            lineas_valoracion=[linea_valorada(), sintetica],
             display=[
-                _display(),
-                _display(
+                fila_detalle(),
+                fila_detalle(
                     line_kind="synthetic_modifier",
                     merge_line_id=None,
                     valuation_line_id=904,
@@ -363,16 +285,18 @@ def test_f036_r23_las_razones_de_la_sintetica_tambien_se_pintan(
     assert "residuos_ler_sin_tarifa_en_contrato" in html
 
 
-def test_f036_r23_el_banner_pinta_los_motivos_del_documento(render_detalle):
+def test_f036_r23_el_banner_pinta_los_motivos_del_documento(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
     """Los motivos que sella sv3 tampoco se veian en ninguna parte."""
     html = render_detalle(
-        _documento(
-            lineas_valoracion=[_linea_valorada()],
+        documento_detalle(
+            lineas_valoracion=[linea_valorada()],
             motivos_documento=[
                 "proveedor_cif_no_casa:B12345678",
                 "obra_no_resuelta",
             ],
-            display=[_display()],
+            display=[fila_detalle()],
         )
     )
 
@@ -380,12 +304,14 @@ def test_f036_r23_el_banner_pinta_los_motivos_del_documento(render_detalle):
     assert "obra_no_resuelta" in html
 
 
-def test_f036_r23_sin_motivos_el_banner_no_inventa_nada(render_detalle):
+def test_f036_r23_sin_motivos_el_banner_no_inventa_nada(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
     """Un documento limpio no gana una lista de motivos vacia."""
     html = render_detalle(
-        _documento(
-            lineas_valoracion=[_linea_valorada()],
-            display=[_display()],
+        documento_detalle(
+            lineas_valoracion=[linea_valorada()],
+            display=[fila_detalle()],
         )
     )
 

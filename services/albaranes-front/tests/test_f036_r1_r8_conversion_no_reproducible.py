@@ -668,3 +668,149 @@ def test_f036_r3_el_helper_de_razones_es_idempotente(repositorio, sesion):
 
     _, razones = _leer_traza(sesion)
     assert razones == ["una_razon", "otra_razon"]
+
+
+
+
+# ------------------------------------------------------------------ #
+# R8 — la plantilla tampoco puede rehacer la conversion
+#
+# El backend ya no destroza el dato (R1-R7), pero la celda de importe de
+# la tabla del detalle calcula SU propio numero en Jinja:
+#   cantidad x precio_de_contrato x (1 - dto/100)
+# Con la linea de SS-0000589 —6 en la celda de cantidad, 120 EUR de
+# precio de contrato— eso pinta 720,00 EUR sobre un importe persistido
+# de 120,00. El revisor ve un numero que no esta en ninguna parte de la
+# BBDD y que no cuadra con el total del documento.
+#
+# Las factorias (`documento_detalle`, `linea_valorada`, `fila_detalle`) y
+# el renderizador viven en el conftest.
+# ------------------------------------------------------------------ #
+def _celda_importe(html):
+    """La celda de importe de la fila de la tabla del detalle.
+
+    Se aisla a proposito: el HTML de la ficha entera trae el mismo
+    importe en el banner, en el precio unitario y en el total, asi que
+    buscar «120,00» en toda la pagina no probaria nada.
+    """
+    import re
+
+    celda = re.search(
+        r'<td[^>]*data-col="importe"[^>]*>.*?</td>', html, re.DOTALL
+    )
+    assert celda is not None, "no se encontro la celda de importe"
+    return celda.group(0)
+
+
+def test_f036_r8_el_detalle_muestra_el_importe_persistido(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
+    """Cantidad 6, convertida 1, importe 120: la celda pinta 120,00.
+
+    Se mira el campo editable porque es lo que ve el revisor: la tabla
+    del detalle solo se pinta en modo edicion (la vista de solo lectura
+    del documento es otra plantilla dentro del mismo fichero).
+    """
+    html = render_detalle(
+        documento_detalle(
+            lineas_valoracion=[linea_valorada()],
+            display=[fila_detalle()],
+        )
+    )
+
+    celda = _celda_importe(html)
+    assert 'value="120.00"' in celda
+    assert "720" not in celda, (
+        "R8: la plantilla rehizo la conversion en Jinja"
+    )
+
+
+def test_f036_r8_el_valor_de_ordenacion_tampoco_es_el_producto(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
+    """Ordenar por importe debe ordenar por lo que se ve.
+
+    La celda lleva un ``data-sort-value`` que usa la tabla para ordenar.
+    Si ahi sigue el producto de Jinja, la columna se ordena por un numero
+    distinto del que pinta.
+    """
+    html = render_detalle(
+        documento_detalle(
+            lineas_valoracion=[linea_valorada()],
+            display=[fila_detalle()],
+        )
+    )
+
+    celda = _celda_importe(html)
+    assert 'data-sort-value="120.0"' in celda
+    assert 'data-sort-value="720.0"' not in celda
+
+
+def test_f036_r8_una_conversion_reproducible_sigue_calculando_en_jinja(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
+    """Contrapunto: donde no hay regla ajena, la celda sigue como estaba.
+
+    Linea normal: 8 unidades a 2,50 EUR = 20,00. El importe persistido
+    esta viejo a proposito (99,00) porque es lo que pasa mientras el
+    revisor teclea: la celda sigue mostrando el producto, que es lo que
+    hace que editar la cantidad se refleje al instante en la tabla.
+    """
+    html = render_detalle(
+        documento_detalle(
+            lineas_valoracion=[
+                linea_valorada(
+                    factor_conversion=1.0,
+                    cantidad_albaran=8.0,
+                    cantidad_convertida=8.0,
+                    precio_unitario_final=2.5,
+                    importe_calculado=99.0,
+                )
+            ],
+            display=[fila_detalle(cantidad=8.0, conciliacion={"unitario": 2.5})],
+        )
+    )
+
+    celda = _celda_importe(html)
+    assert 'value="20.00"' in celda
+    assert "99" not in celda
+
+
+def test_f036_r8_sin_importe_persistido_se_calcula_como_siempre(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
+    """No reproducible pero sin importe guardado: no hay nada que pintar.
+
+    Es el caso de la sintetica sin tarifa (R17). Mejor el producto que un
+    hueco: la celda no puede quedarse vacia por no tener el dato bueno.
+    """
+    html = render_detalle(
+        documento_detalle(
+            lineas_valoracion=[linea_valorada(importe_calculado=None)],
+            display=[fila_detalle()],
+        )
+    )
+
+    assert 'value="720.00"' in _celda_importe(html)
+
+
+def test_f036_r8_el_descuento_no_se_aplica_dos_veces(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
+    """El importe persistido YA lleva el descuento aplicado.
+
+    1 contenedor x 120 EUR x 0,90 = 108,00, que es lo que hay en BBDD. Si
+    la celda volviera a aplicar el 10 % sobre el persistido saldrian
+    97,20; si recalculara desde la cantidad, 648,00.
+    """
+    html = render_detalle(
+        documento_detalle(
+            lineas_valoracion=[linea_valorada(importe_calculado=108.0)],
+            display=[fila_detalle(conciliacion={"descuento": 10.0})],
+        )
+    )
+
+    celda = _celda_importe(html)
+    assert 'value="108.00"' in celda
+    assert "97.20" not in celda
+    assert "648" not in celda

@@ -13,6 +13,73 @@ KNOWN_PROVIDER_VIEWS = ("openai", "gemini", "claude")
 ALLOWED_VIEW_MODES = (VIEW_MODE_MERGE, *KNOWN_PROVIDER_VIEWS)
 
 
+def numeros_iguales(a: Any, b: Any) -> bool:
+    """Compara dos números tolerando el ruido de coma flotante.
+
+    Se usa para decidir si el recálculo de importes cambia algo de
+    verdad (F-019 R24) y para clasificar la conversión de una línea
+    (F-036 R1): media unidad de céntimo de margen, muy por debajo de
+    cualquier diferencia real y muy por encima del ruido binario de un
+    DOUBLE PRECISION.
+    """
+    if a is None and b is None:
+        return True
+    if a is None or b is None:
+        return False
+    try:
+        return abs(float(a) - float(b)) < 5e-3
+    except (TypeError, ValueError):
+        return False
+
+
+def conversion_reproducible(
+    *,
+    factor: Any,
+    cantidad_albaran: Any,
+    cantidad_convertida: Any,
+) -> bool:
+    """¿Puede sv4 REHACER la conversión de unidad de esta línea?
+
+    F-036 R1, R6, R7 (SALMEDINA, ago 2026) — POR QUÉ EXISTE
+    -------------------------------------------------------
+    sv6 no siempre convierte multiplicando por un factor. En residuos
+    aplica su REGLA DE CONTENEDORES: el albarán declara 6 m³, el
+    contrato tarifa CONTENEDORES, y sv6 persiste
+    ``cantidad_albaran=6``, ``cantidad_convertida=1``,
+    ``factor_conversion=NULL`` (no existe factor entre m³ y UD: es el
+    *hard mismatch* de ``unit_converter``). El importe correcto es
+    1 × 120 = 120,00 €.
+
+    Cuando sv4 recalculaba al guardar, tiraba esa `cantidad_convertida`
+    y multiplicaba por la cantidad CRUDA: 6 × 120 = 720,00 €. Seis veces.
+
+    La pregunta que responde esta función NO es «¿es una línea de
+    residuos?» —R6 prohíbe expresamente condicionar nada a
+    ``tipo_familia``— sino «¿la cantidad convertida guardada se explica
+    como ``factor × cantidad_albaran``?». Si no se explica, es que
+    aguas arriba se aplicó una regla de negocio que sv4 no conoce, y el
+    dato se conserva en vez de reinventarse.
+
+    Se decide por CONSISTENCIA, no por ``factor is None`` (R7). Hoy
+    ``factor is None`` bastaría, porque el *hard mismatch* deja el
+    factor a NULL; pero ``unit_converter`` tiene una rama
+    ``no_albaran_unit_assumed_same`` que devuelve ``factor=1.0``, y en
+    cuanto F-024 haga que se lea la ``unidad_medida`` del albarán, esa
+    rama devolvería el ×6. Comparar contra el producto aguanta ese
+    cambio.
+
+    Devuelve True solo si los tres valores existen, son numéricos y
+    ``cantidad_convertida ≈ factor × cantidad_albaran``.
+    """
+    if factor is None or cantidad_albaran is None or cantidad_convertida is None:
+        return False
+    try:
+        producto = float(factor) * float(cantidad_albaran)
+    except (TypeError, ValueError):
+        return False
+    return numeros_iguales(cantidad_convertida, producto)
+
+
 def motivos_de_json(valor: Any) -> list[str]:
     """Lista de motivos a partir de una columna ``review_reasons_json``.
 
@@ -371,6 +438,23 @@ class LineValuationPayload(BaseModel):
     modifier_source: str | None = None
     modifier_reason: str | None = None
     descripcion_linea: str | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def conversion_reproducible(self) -> bool:
+        """¿Sabe sv4 rehacer la conversión de unidad de esta línea?
+
+        F-036 R1/R8. Es un campo CALCULADO y no un dato guardado a
+        propósito: así no puede quedar desincronizado de las tres
+        columnas que lo determinan. El backend lo usa para no destrozar
+        la cantidad convertida al guardar; la plantilla, para no
+        rehacer en Jinja un importe que ya está calculado en BBDD.
+        """
+        return conversion_reproducible(
+            factor=self.factor_conversion,
+            cantidad_albaran=self.cantidad_albaran,
+            cantidad_convertida=self.cantidad_convertida,
+        )
 
 
 class ValuationPayload(BaseModel):
