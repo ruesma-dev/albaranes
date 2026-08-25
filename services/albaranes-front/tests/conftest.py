@@ -14,12 +14,22 @@ del cwd. Mismo patron que los conftest de sv2, sv5 y sv6.
 NINGUN test de este directorio toca red, la BBDD real ni un LLM: el
 repositorio recibe una sesion de SQLAlchemy sobre **SQLite en memoria**
 con las dos tablas de valoracion creadas al vuelo.
+
+``jinja2`` se importa DURO (decision del humano del 2026-08-25, punto 4
+de ``progress/review_F-036_bloque_A.md``). Antes el fixture de render
+usaba ``pytest.importorskip``, y un interprete sin jinja2 se saltaba en
+silencio los ONCE tests de render dejando la suite en verde y el exit
+code en 0: justo la falsa tranquilidad que el arnes existe para evitar.
+Es dependencia declarada de sv4 (``requirements.txt``), asi que un
+entorno sin ella esta ROTO y debe caerse. Su venv esta declarado en
+``harness/servicios.json``.
 """
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
+import jinja2
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
@@ -162,20 +172,11 @@ def render_detalle():
     plantillas del servicio, con un ``request`` falso y los filtros
     minimos que la plantilla usa.
     """
-    pytest.importorskip(
-        "jinja2",
-        reason=(
-            "jinja2 es dependencia declarada de sv4 (requirements.txt); "
-            "sin ella no se puede comprobar lo que pinta la plantilla"
-        ),
-    )
     import json
 
-    from jinja2 import Environment, FileSystemLoader, select_autoescape
-
-    entorno = Environment(
-        loader=FileSystemLoader(str(RAIZ_SERVICIO / "templates")),
-        autoescape=select_autoescape(["html"]),
+    entorno = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(str(RAIZ_SERVICIO / "templates")),
+        autoescape=jinja2.select_autoescape(["html"]),
     )
     entorno.filters["importe_eur"] = _importe_eur
     entorno.filters["fecha_int_iso"] = lambda valor: str(valor or "—")
