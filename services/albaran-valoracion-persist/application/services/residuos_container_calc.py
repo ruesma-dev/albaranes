@@ -6,27 +6,39 @@ contenedor de X m³, y la cantidad valorada es el NÚMERO de contenedores,
 no los m³ del albarán. Los m³ (y el peso en Tn) se conservan como
 metadato de la línea para trabajos posteriores.
 
-Regla de negocio CONFIRMADA por Ruesma (jul 2026), por PRIORIDAD:
+Regla de negocio CONFIRMADA por Ruesma (jul 2026), con el orden de las
+prioridades 2 y 3 INTERCAMBIADO por decisión del humano del 2026-08-19
+(F-036 R22): el VOLUMEN manda sobre la resta. Queda así, por PRIORIDAD:
 
     1) contenedores EXPLICITOS del albaran
        (contexto_linea.contenedores) -> ese numero, tal cual.
-    2) resta unidades LLEVADAS - RETIRADAS
-       (contenedores_entregados - contenedores_retirados) cuando
-       AMBAS vienen y la resta es >= 1.
-    3) num_contenedores = ceil(volumen_m3 / m3_por_contenedor), con
+    2) num_contenedores = ceil(volumen_m3 / m3_por_contenedor), con
        el tamano elegido asi: si los m3 del albaran COINCIDEN con un
        tamano del contrato, ESE (8 m3 con contenedores de 6 y 8 ->
        el de 8, 1 ud); si no coinciden con ninguno -> 6 m3 (el
        contenedor ESTANDAR: 7 m3 con contenedores de 6 y 8 -> 2 de
        6); un unico tamano en contrato -> ese; y ante CUALQUIER
        duda restante -> 6 m3 por defecto.
+    3) resta unidades LLEVADAS - RETIRADAS
+       (contenedores_entregados - contenedores_retirados) cuando
+       AMBAS vienen y la resta es >= 1.
+
+Por qué el volumen va ANTES que la resta: la resta describe el
+MOVIMIENTO de contenedores (cuántos quedaron en obra), que no tiene por
+qué ser lo que se factura; el volumen es un dato impreso del documento.
+Un albarán con 12 m³ y "llevadas 2 / retiradas 1" se factura por los 12
+m³ —2 contenedores de 6—, no por el 1 de la resta.
 
 donde ``m3_por_contenedor_contrato`` se lee de la descripción de la línea
 de contrato casada (p.ej. "CONTENEDOR RCD 6 M3" → 6). Si no hay m³ en el
-albarán o no se detecta el tamaño de contenedor, se devuelve
-``num_contenedores=None`` y una razón para que la línea vaya a revisión
+albarán ni resta utilizable, se devuelve ``num_contenedores=None`` y la
+razón ``residuos_sin_volumen_m3`` para que la línea vaya a revisión
 (NUNCA se inventa un número de la nada; el 6 m3 por defecto solo se
 aplica cuando HAY volumen que repartir).
+
+Los NOMBRES de las ``reasons`` no cambiaron con el intercambio: hay
+código aguas arriba (``valuation_builder``) que los inspecciona por
+prefijo.
 
 Esta función es PURA (sin I/O), fácil de testear.
 """
@@ -127,8 +139,9 @@ def calcular_contenedores_residuos(
 ) -> ResultadoContenedores:
     """Devuelve el nº de contenedores a valorar para una línea de residuos.
 
-    Prioridad (jul 2026): explícitos > resta llevadas-retiradas >
-    ceil(volumen / tamaño). Ver docstring del módulo.
+    Prioridad (F-036 R22, decisión del humano del 2026-08-19):
+    explícitos > ceil(volumen / tamaño) > resta llevadas-retiradas.
+    El volumen manda sobre la resta. Ver docstring del módulo.
     """
     def _num(campo: str) -> Optional[float]:
         v = getattr(contexto_linea, campo, None)
@@ -150,26 +163,30 @@ def calcular_contenedores_residuos(
             reasons=[f"residuos_contenedores_explicitos={num}"],
         )
 
-    # ---- Prioridad 2: resta unidades LLEVADAS - RETIRADAS ---------- #
-    entregados = _num("contenedores_entregados")
-    retirados = _num("contenedores_retirados")
-    if entregados is not None and retirados is not None:
-        resta = entregados - retirados
-        if resta >= 1:
-            num = int(round(resta))
-            return ResultadoContenedores(
-                num_contenedores=num,
-                volumen_m3=m3,
-                contenedor_m3=None,
-                reasons=[
-                    f"residuos_contenedores_resta={num} "
-                    f"(llevadas {entregados:g} - retiradas "
-                    f"{retirados:g})"
-                ],
-            )
-
-    # ---- Prioridad 3: ceil(volumen / tamaño de contenedor) --------- #
+    # ---- Prioridad 2: ceil(volumen / tamaño de contenedor) --------- #
+    # (F-036 R22) El volumen va ANTES que la resta desde el 2026-08-19:
+    # la resta describe el movimiento de contenedores, el volumen es un
+    # dato impreso del albarán. Ver docstring del módulo.
     if m3 is None or m3 <= 0:
+        # ---- Prioridad 3: resta unidades LLEVADAS - RETIRADAS ------ #
+        entregados = _num("contenedores_entregados")
+        retirados = _num("contenedores_retirados")
+        if entregados is not None and retirados is not None:
+            resta = entregados - retirados
+            if resta >= 1:
+                num = int(round(resta))
+                return ResultadoContenedores(
+                    num_contenedores=num,
+                    volumen_m3=m3,
+                    contenedor_m3=None,
+                    reasons=[
+                        f"residuos_contenedores_resta={num} "
+                        f"(llevadas {entregados:g} - retiradas "
+                        f"{retirados:g})"
+                    ],
+                )
+
+        # ---- Ni volumen ni resta utilizables: NO se inventa nada ---- #
         return ResultadoContenedores(
             num_contenedores=None,
             volumen_m3=m3,
