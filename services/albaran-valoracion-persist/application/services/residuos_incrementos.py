@@ -142,8 +142,14 @@ def claves_dedupe(dto: LineValuationDto) -> tuple[str, ...]:
 
     Vive AQUI y no en el builder para que una regla nueva (F-006) pueda
     dar su propia clave sin tocar el recorrido.
+
+    `ler_creible` y NO `normalizar_ler`, por lo mismo que en
+    ``es_linea_incremento_ler``: la descripcion es TEXTO LIBRE y una
+    fecha dd-mm-aa tiene forma de LER ("...TARIFA DESDE 01-01-25" daba
+    la clave "010125"). Una clave inventada dispara el dedupe donde no
+    debe y lo que se pierde es una sintetica que SI habia que emitir.
     """
-    ler = normalizar_ler(dto.descripcion_linea)
+    ler = ler_creible(dto.descripcion_linea)
     return (ler,) if ler else ()
 
 

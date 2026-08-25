@@ -323,6 +323,69 @@ def test_f036_r18_una_sintetica_de_OTRA_base_no_bloquea_la_inyeccion():
     assert padres == [700, 999]
 
 
+def test_f036_r18_la_clave_de_dedupe_no_lee_una_fecha_como_LER():
+    """Mismo defecto que se corrigio en `es_linea_incremento_ler` (CR-3).
+
+    `claves_dedupe` recibe TEXTO LIBRE —la descripcion de la sintetica—
+    y lo pasaba por `normalizar_ler`, que no defiende de la forma-fecha:
+    "INCREMENTO TARIFA DESDE 01-01-25" daba la clave "010125". Una clave
+    inventada es un dedupe que dispara donde no debe, y lo que se pierde
+    es una sintetica que si habia que emitir. Sobre texto libre manda
+    `ler_creible`.
+    """
+    from application.services.residuos_incrementos import claves_dedupe
+
+    assert claves_dedupe(
+        _sintetica_de_ia3("INCREMENTO TARIFA DESDE 01-01-25")
+    ) == ()
+    assert claves_dedupe(_sintetica_de_ia3("INCREMENTO 01.01.25")) == ()
+    # Y lo que SI es una clave real no se toca.
+    assert claves_dedupe(
+        _sintetica_de_ia3("INCREMENTO LER 170802")
+    ) == ("170802",)
+
+
+def test_f036_r18_una_fecha_en_la_regla_nueva_no_le_come_la_sintetica():
+    """El precio de la clave inventada, medido en una sintetica perdida.
+
+    Una regla futura cuya descripcion nombre una fecha sacaba la clave
+    "010125"; si IA3 traia cualquier linea que nombrase esos seis
+    digitos, el dedupe la daba por emitida y la sintetica no salia. Con
+    `ler_creible` no hay clave, y se emite.
+
+    Limite conocido, heredado de `ler_creible` y comun a todo el
+    proyecto: si el texto trae ADEMAS contexto de residuos ("CANON DE
+    VERTEDERO TARIFA 01-01-25"), la fecha si cuenta como LER. Es la
+    contrapartida deliberada de esa funcion —el contexto es lo que
+    permite leer "170802" pegado— y no algo que este cambio deshaga.
+    """
+    from application.services import residuos_incrementos as ri
+
+    def _regla_canon(*, ctx, base, contrato_lines):
+        return ri.dto_red_residuos(
+            base=base,
+            rol="recargo_tarifa",
+            descripcion="RECARGO TARIFA DESDE 01-01-25",
+            motivo="regla de prueba",
+            etiqueta="recargo ficticio",
+            tarifa=None,
+        )
+
+    escenario = EscenarioResiduos(
+        sinteticas_ia=(
+            _sintetica_de_ia3("TARIFA 010125", rol="otro_rol"),
+        ),
+    )
+    ri.REGLAS_SINTETICAS_RESIDUOS.append(_regla_canon)
+    try:
+        _, registros = valorar(escenario)
+    finally:
+        ri.REGLAS_SINTETICAS_RESIDUOS.remove(_regla_canon)
+
+    descripciones = [s.descripcion_linea for s in sinteticas_de(registros)]
+    assert "RECARGO TARIFA DESDE 01-01-25" in descripciones
+
+
 def test_f036_r21_una_regla_ficticia_se_emite_sin_tocar_el_recorrido():
     """La prueba de que la lista es el punto de enganche de F-006.
 
