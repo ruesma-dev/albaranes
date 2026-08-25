@@ -14,19 +14,19 @@ La suite del monorepo pasó de **305 a 530 tests**; la de `arnes-base`, de 47 a
 a la 1.7.2** (rama `arnes/1.7.2`, 531 tests). Se aplicó a mano, no con el
 instalador; el porqué y el detalle, en `progress/history.md`.
 
-### Lo primero al abrir la próxima sesión
+### Estado de esos cuatro puntos, al 2026-08-25
 
-1. **Merge de `arnes/1.7.2` a `dev`** (hecho el push de `arnes-base`, hecha la
-   actualización). Lo pendiente aquí es la decisión del humano sobre el
-   hallazgo del punto 2.
-2. **`progress/mutacion_F-002.md` queda en cuarentena**: 108 mutantes en 54,8 s
-   en serie = **0,51 s por mutante**, por debajo del segundo que la regla nueva
-   del coste por mutante declara sospechoso por construcción. O se relanza con
-   la caché limpia, o se anota que su evidencia de mutación no vale. Decisión
-   del humano; no se ha tocado el informe.
-3. **F-036 (residuos)**: lo único de toda la lista que **vale euros**, y lleva
-   dos días esperando. Ver la sección de abajo; la decisión del humano del
-   19-ago ya está tomada y solo falta implementarla.
+1. **Merge de `arnes/1.7.2` a `dev`: HECHO y subido.** `origin/dev` está al día.
+2. **`progress/mutacion_F-002.md` sigue en cuarentena, pero ya lo dice el propio
+   informe**: 108 mutantes en 54,8 s en serie = **0,51 s por mutante**, por
+   debajo del segundo que la regla del coste por mutante declara sospechoso por
+   construcción. El 25-ago se le puso el sello en su primera pantalla, porque la
+   advertencia vivía solo aquí y quien abriera el fichero se creía sus números.
+   **La decisión sigue siendo del humano**: relanzar con la caché limpia, o
+   anotar allí que su evidencia no vale.
+3. **F-036 (residuos): EN CURSO desde el 2026-08-25**, rama
+   `feature/F-036-residuos-contenedores-e-incrementos`. Spec aprobada, 27
+   requisitos y 25 tareas. Ver la sección de abajo.
 4. Después, **F-041** (el quinto defecto de la campaña, `critico`, prioridad 2).
 
 ---
@@ -60,8 +60,8 @@ ya se aplicó dos veces y ahorró horas de máquina.
 
 ## Pendientes del humano
 
-1. **Merge de `arnes/1.7.2` a `dev`** y, si procede, push. `arnes-base` ya está
-   subido y `albaranes` actualizado.
+1. ~~Merge de `arnes/1.7.2` a `dev` y push.~~ **HECHO el 2026-08-25**, junto con
+   el merge de `chore/poda-progress`. `origin/dev` está al día.
 2. **Actualizar los otros cuatro proyectos** a la 1.7.2 con el instalador.
    `partes` es donde más ficheros aparecerán «distintos»; desde F-035 el
    instalador ya no puede pisar estado. Ahí sí conviene usarlo: el problema de
@@ -231,3 +231,27 @@ ni su estado de revisión. **No es una regresión**, y está escrito así para q
 el reviewer no lo lea como tal.
 
 Tamaños tras la segunda pasada: requirements 146/150, design 228/250.
+
+### Arranque de la implementación (2026-08-25)
+
+Rama `feature/F-036-residuos-contenedores-e-incrementos` creada desde `dev`
+(que ya incluye la poda de `progress/`). F-036 pasa a `in_progress`; es la
+ÚNICA en curso.
+
+**Las 25 tareas se reparten en cuatro implementers en serie**, no en uno solo:
+un agente con demasiado contexto se cuelga en bucle (le pasó al reviewer de
+F-034 esta misma semana). Cada tarea, su commit.
+
+| Bloque | Tareas | Servicios |
+|---|---|---|
+| A | T1-T7 | sv4 (D1: el recálculo que hoy estropea los albaranes, y la trazabilidad) |
+| B | T8-T13 | `comun` (catálogo LER), sv3 (scorer del merger), sv5 (tipología y prompts) |
+| C | T14-T20 | sv6 (D3: sintéticas por LER, guarda anti-incremento, predicado del matcher) |
+| D | T21, T22, T25 | tests de aceptación de SALMEDINA e `init.sh` |
+
+Revisión corta tras el bloque A (es el que mueve los euros) y reviewer completo
+contra `CHECKPOINTS.md` al final.
+
+**T23 (campaña de mutación) y T24 (comprobación en la BBDD real) las lanza el
+humano**, no un agente: la campaña muta el árbol principal y T24 es lectura
+contra Azure.

@@ -5,12 +5,13 @@
 
 Resumen: **42 features**, 31 abiertas, 11 terminadas.
 
+En curso: **F-036**.
+
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-041 | Arnes: el veredicto de un mutante no puede depender de que la suite recogiera tests | 2 | pendiente | critico | `feature/F-041-veredicto-honesto-del-mutante` |
-| F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | pendiente | critico | `feature/F-036-residuos-contenedores-e-incrementos` |
+| F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | en curso | critico | `feature/F-036-residuos-contenedores-e-incrementos` |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
 | F-028 | Con dos contratos candidatos no se elige ninguno y el albarán no llega a valorarse | 7 | pendiente | critico | `feature/F-028-selector-contrato-por-partidas` |
@@ -37,9 +38,10 @@ Resumen: **42 features**, 31 abiertas, 11 terminadas.
 | F-013 | Registro del albarán aprobado en Sigrid (consumidor de q-feedback) | 28 | pendiente | critico | `feature/F-013-registro-sigrid` |
 | F-008 | Lifecycle de blobs de hand-off | 29 | pendiente | estandar | `feature/F-008-blob-lifecycle` |
 | F-009 | Limpieza de la cola huérfana q-emails | 30 | pendiente | estandar | `feature/F-009-limpieza-q-emails` |
-| F-042 | Arnes: segunda opinion de review con un modelo de otra familia (Codex/OpenAI) | 30 | pendiente | estandar | `feature/F-042-segunda-opinion-otro-modelo` |
 | F-010 | Easy Auth en el portal sv4 | 31 | pendiente | critico | `feature/F-010-easy-auth-sv4` |
 | F-022 | Bandeja de portada: el concepto de las líneas del albarán sale vacío porque el JOIN de la línea derivada apunta a la tabla equivocada | 32 | pendiente | estandar | `feature/F-022-concepto-lineas-bandeja` |
+| F-041 | Arnes: el veredicto de un mutante no puede depender de que la suite recogiera tests | 99 | pendiente | critico | `feature/F-041-veredicto-honesto-del-mutante` |
+| F-042 | Arnes: segunda opinion de review con un modelo de otra familia (Codex/OpenAI) | 99 | pendiente | estandar | `feature/F-042-segunda-opinion-otro-modelo` |
 
 ## Terminadas
 
@@ -59,39 +61,33 @@ Resumen: **42 features**, 31 abiertas, 11 terminadas.
 
 ## Detalle
 
-### F-041 · Arnes: el veredicto de un mutante no puede depender de que la suite recogiera tests
-
-estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-041-veredicto-honesto-del-mutante`
-
-EL QUINTO DEFECTO, encontrado por el implementer de F-040 el 2026-08-21 y NO metido alli por la regla del design (§5: si aparece uno nuevo se anota y decide el humano). Confirmado por el reviewer reproduciendo las DOS discrepancias sobre copia en el scratchpad.
-
-SINTOMA: la campana etiqueta mal algun mutante, y NO SIEMPRE EL MISMO. Los mismos 20 mutantes medidos dos veces sobre el mismo harness/: en paralela (4 workers) salio superviviente `mutacion.py:1942` (max(1,->max(2,), y en serie salio superviviente `mutacion.py:677` (*->//). Reproducidos a mano con la invocacion exacta del ejecutor, LOS DOS MUEREN: el primero deja 5 tests en rojo, el segundo 2. Descartado por medicion que sea el worktree (se repitio en uno recien creado con --detach) o el paralelo (la serie falla igual, en otro mutante).
-
-CAUSA, verificada en codigo por el reviewer: `ResultadoSuite.verde` (harness/mutacion.py:490) cuenta `PYTEST_SIN_TESTS = 5` como VERDE, y `EjecutorPytest.ejecutar` (:592-600) devuelve SUPERVIVIENTE tanto para el codigo 0 como para el 5, sin distinguirlos. El informe NO guarda el codigo de salida de cada mutante, asi que hoy la campana no puede demostrar de que habla: un «superviviente» puede ser «ningun test lo cazo» o «no se ejecuto ni un test».
-
-POR QUE NO ES URGENTE PERO SI IMPORTANTE: el sesgo del fallo es el SEGURO. Por ese mecanismo un mutante solo puede salir FALSO SUPERVIVIENTE -trabajo de mas- y nunca falso muerto -un agujero que pasa la puerta-. Un falso muerto exigiria otro mecanismo (un test flaky bajo -x, el de F-038 T17) y la suite es hoy estable. Aun asi rompe la promesa de que el veredicto describa lo que hace la suite, y MIENTRAS VIVA, NINGUNA CAMPANA DE UNA SOLA PASADA VALE COMO EVIDENCIA SIN CONTRASTE: lo que salvo a F-040 fue haber medido dos veces y que 16 de 20 murieran en ambos modos.
-
-FAMILIA: es la MISMA que F-038 T0 (la invocacion sin ruta que moria en la recoleccion) y que el bloque D4 de F-040 (cero mutantes generados), UN PISO MAS ABAJO. D4 guarda el embudo -la campana entera sin nada que medir-; aqui falta la guarda del caso «UN mutante cuya suite ejecuto cero tests». Es la cuarta aparicion del mismo modo de fallo: decir que todo fue bien sin haber juzgado nada.
-
-PRIMERA TAREA PROPUESTA (diagnostico antes que arreglo): que `EjecutorPytest.ejecutar` guarde el CODIGO DE SALIDA de cada mutante y que el informe lo declare. Sin ese dato no se puede demostrar cuantos supervivientes historicos eran falsos. Despues: que el codigo 5 deje de contar como verde y produzca un veredicto propio -no juzgado- en vez de SUPERVIVIENTE.
-
-ALCANCE: harness/mutacion.py, y el porte a arnes-base DESPUES del merge (la version instalada alli sera 1.7.2 tras el porte de F-040).
-
 ### F-036 · La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten
 
-estado **pendiente** · prioridad 4 · rigor `critico` · SDD sí · rama `feature/F-036-residuos-contenedores-e-incrementos`
+estado **en curso** · prioridad 4 · rigor `critico` · SDD sí · rama `feature/F-036-residuos-contenedores-e-incrementos`
 
-Defecto MEDIDO el 2026-08-19 sobre los 7 albaranes de SALMEDINA del lote de residuos, con obra y contrato ya seleccionados a mano por el humano y contrastados contra el Excel del administrativo. Evidencia completa en progress/revision_residuos_salmedina_20260819.md. Son DOS defectos que se suman en el mismo importe.
+Defecto MEDIDO el 2026-08-19 sobre los 7 albaranes de SALMEDINA del lote de residuos (evidencia: progress/revision_residuos_salmedina_20260819.md) y DIAGNOSTICADO el 2026-08-21/22 contra el codigo y contra la BBDD real (progress/explore_F-036.md, con su APENDICE de confirmacion). El diagnostico de la version anterior de esta ficha era INCORRECTO: no es un defecto de sv6 con dos caras, son TRES defectos independientes en tres servicios distintos.
 
-(1) LA REGLA DE CONTENEDORES ES INESTABLE. valuation_builder.py (bloque 4.bis) convierte los m3 del albaran en numero de contenedores, porque la cantidad que trae la linea es la CAPACIDAD del contenedor, no material. Funciona en 5 de los 7 y en 2 no: SS-0003967 y SS-0801977 salen con cantidad_convertida=null y el importe se calcula con la cantidad cruda (6), dando 6 x 120 = 720,00 EUR y 6 x 90 = 540,00 EUR frente a los 210,00 EUR que dice el ground truth en ambos. Es una SOBREVALORACION de x3,4 y x2,6 sin ninguna senal de revision que la delate. Mismo proveedor, mismo contrato (CTSU24/0228), mismo tipo de documento y misma cantidad (6) que los que si funcionan: la diferencia no esta en el dato de entrada. Segun el codigo, converter.convert() solo devuelve None si la cantidad es None, y aqui cantidad_albaran vale 6,0, asi que la rama por la que se cuela no es evidente leyendo el fichero: hay que instrumentar sv6 y reproducirlo.
+D1 - sv4 DESTRUYE LA CANTIDAD VALORADA DE RESIDUOS AL GUARDAR (el que mas euros mueve y el mas facil de arreglar). review_repository._recalc_valuation_importes:3329-3333 recalcula la cantidad convertida como factor_conversion x cantidad_albaran y, si el factor es None, la deja en None; entonces :3335-3339 usa la cantidad CRUDA del albaran y :3399-3417 pisa cantidad_convertida, importe_calculado e importe_source. En residuos factor_conversion es NULL SIEMPRE, porque m3 contra UD es hard mismatch por diseno (unit_registry.yaml:47-50 y :91-95), asi que la formula del front NO PUEDE reproducir un numero de contenedores. Confirmado en BBDD: SS-0801977 tiene a la vez la reason residuos_contenedores=1 (m3=6 / contenedor=6 m3) -que solo escribe sv6 cuando el calculo dio 1- y cantidad_convertida=None con importe 720; valuation_builder.py:1181 persiste cantidad_convertida=_cant_conv_final, luego esa combinacion es imposible en una sola pasada de sv6. Y el guardian de R24 (F-019) NO PROTEGE: :3386-3392 compara la cantidad_convertida guardada (1.0) contra la recalculada (None) y siempre difieren, de modo que la rama la-fila-no-se-toca nunca entra en residuos; en vez de proteger, garantiza que se pise en el primer guardado. Explica el patron que desconcertaba (mismo proveedor, mismo contrato, misma cantidad, unos si y otros no): la diferencia no esta en el dato de entrada sino en SI EL REVISOR GUARDO esa ficha. SS-0000168 y SS-0000589 conservan su 1.0 solo porque el recalculo no llego a sus filas. CONSECUENCIA OPERATIVA: hoy revisar en sv4 un albaran de residuos ya valorado lo estropea.
 
-(2) LOS INCREMENTOS POR LER NO SE EMITEN NUNCA. El contrato tarifa un incremento por codigo LER del residuo (170202 vidrio 120 EUR, 170302 bituminosas 30 EUR, 170604 aislamiento 90 EUR, 170802 yesos 51 EUR) que el administrativo suma SIEMPRE como segunda linea. El pipeline emite una linea por linea de albaran y no genera esa sintetica: SS-0000589 sale 120,00 EUR y debe ser 171,00 EUR (120+51). Las lineas de incremento ESTAN cargadas en contrato_lines, o sea que el dato esta y no se usa.
+D2 - EL CONTEXTO DE RESIDUOS SE PIERDE EN sv3 Y ARRASTRA A sv5 Y AL MATCHER. contexto_linea_merger._score_contexto:23-38 puntua exactamente cinco campos (tipo_familia, rol_linea, descripcion_extendida, notas_tiempo, ref_linea_base) y NINGUNO de los nueve de residuos (codigo_ler, volumen_m3, peso_toneladas, contenedores, contenedores_entregados, contenedores_retirados, carga_incompleta, m3_no_transportados, exceso_declarado_min). Dos caras: un contexto que solo traiga datos de residuos puntua 0 y se descarta ENTERO (:55-61), y un candidato pobre con tipo_familia+rol_linea (score 2) GANA a otro rico con los m3 (score 1), porque se elige el contexto integro por score (:64-65). Sin tipo_familia, sv5 deriva mal la tipologia (valuation_extraction_service.py:316-335, que a diferencia de sv2 no tiene la regla dura de LER) y valora con el prompt generico valuation_es; con ese prompt, una linea de contrato INCREMENTO LER 170604 casa por texto literal >90% y gana al contenedor como exact_concept, y partida_matcher.py:100-134 respeta el match de la IA sin comprobar nada. Confirmado en BBDD: SS-0003967 es el UNICO con contexto_linea_json NULL, el unico valorado con valuation_es, su precio_unitario_final es 90 (el del incremento, no los 120 del contenedor) y su match_method es exact_concept; 6 x 90 = 540.
 
-(3) EFECTO PERVERSO ENTRE AMBOS: en SS-0003967 el matcher eligio como linea principal el propio INCREMENTO LER 170604 (match exact_concept, 90 EUR) en vez del contenedor, porque el codigo LER aparece literal en la descripcion de la linea de incremento y eso gana al match semantico del contenedor. Es decir, el incremento no solo falta: a veces SUSTITUYE a la linea buena.
+D3 - LOS INCREMENTOS POR LER NO SE EMITEN NUNCA. El contrato tarifa un incremento por codigo LER (170202 vidrio 120, 170302 bituminosas 30, 170604 aislamiento 90, 170802 yesos 51) que el administrativo suma SIEMPRE como segunda linea. El mecanismo de lineas sinteticas YA EXISTE en sv6 (valuation_builder.py:422-444, _sinteticas_m1_faltantes y _sinteticas_codigo_faltantes, que reutilizan toda la maquinaria via _build_synthetic_line:1213) pero esta cerrado a hormigon con un continue si tipo_familia no es hormigon (:602 y :686), y los prompts prohiben sinteticas en residuos (prompts.yaml:1017-1018, :1035-1036, :1113-1118). Confirmado: SS-0000589 sale 120,00 y debe ser 171,00 (120+51); ninguna linea del lote tiene line_kind distinto de from_albaran. El enganche natural es un _sinteticas_residuos_faltantes hermano de los otros dos, mas un predicado por codigo LER en modifier_contract_matcher._build_predicate:273 (hoy, para rol incremento_residuos, el predicado es solo RESIDUOS in descripcion: no sabe nada de codigos LER).
 
-RESULTADO ACTUAL frente al ground truth (7 albaranes): 3 correctos (SS-0000168 120, SS-0003935 120, SS-0025146 136), 1 corto por falta de incremento (SS-0000589 120 vs 171), 2 disparados (SS-0003967 540 vs 210, SS-0801977 720 vs 210) y 1 con tarifa equivocada (SS-0026122 272 vs 260, que ademas debe valorarse contra OFERTA con la tarifa de contenedor de 9 M3, lo que lo hace caso de F-017).
+DECISIONES DEL HUMANO YA TOMADAS (no volver a preguntarlas):
+(1) 2026-08-19: en calcular_contenedores_residuos el VOLUMEN MANDA sobre la resta entrada/salida. Orden nuevo: 1) contenedores explicitos, 2) ceil(volumen_m3 / tamano), 3) resta entregados - retirados. Hoy la resta es la 2 y el volumen la 3. Toca residuos_container_calc.py y su docstring, el prompt de sv5 (config/prompts.yaml ~1024, que documenta el orden viejo) y los tests de la prioridad 2.
+(2) 2026-08-22: los contenedores EXPLICITOS siguen siendo prioridad 1 (asuncion confirmada).
+(3) 2026-08-22: F-036 sigue siendo feature propia y NO se fusiona con F-006; ademas construye el mecanismo GENERICO de lineas sinteticas de residuos, que F-006 reutilizara para el canon de vertedero. F-006 se queda en espera y su spec se revisa despues.
+(4) 2026-08-22: la trazabilidad en sv4 ENTRA en esta feature (las razones de calcular_contenedores_residuos deben ser visibles para el revisor, y los motivos de revision deben recalcularse: hoy SS-0801977 sigue mostrando proveedor_cif_no_casa con el CIF viejo despues de corregirlo).
+(5) 2026-08-22: D1 se arregla CONSERVANDO lo que hay: si factor_conversion es NULL, sv4 no puede rehacer la conversion, asi que mantiene la cantidad_convertida que escribio sv6 y calcula el importe con ella; solo recalcula de verdad si el revisor cambio la cantidad. Arreglo minimo y general, valido para cualquier familia con regla propia, no solo residuos.
+(6) 2026-08-22: ORDEN DE ENTREGA. D1 es la TAREA 1 y su primer commit, para que el arreglo que para la sangria no espere a lo grande.
 
-ALCANCE: services/albaran-valoracion-persist (valuation_builder, calcular_contenedores_residuos, el matcher de linea de contrato). NO ENTRA: la fuente OFERTA (F-017) ni la eleccion de partida (F-021). RECONCILIAR CON F-006 (residuos: pago LLEVAR/RETIRAR y canon) ANTES DE ARRANCAR: hay que decidir si esto es una ampliacion de F-006 o una feature propia. Y ojo con F-024: al extraer unidad_medida, los casos que hoy aciertan por la regla de contenedores pueden pasar a valorar x6.
+RESULTADO ACTUAL frente al ground truth (7 albaranes): 3 correctos (SS-0000168 120, SS-0003935 120, SS-0025146 136), 1 corto por falta de incremento (SS-0000589 120 vs 171), 2 disparados (SS-0003967 540 vs 210 por D2, SS-0801977 720 vs 210 por D1) y 1 con tarifa equivocada (SS-0026122 272 vs 260, que ademas debe valorarse contra OFERTA con la tarifa de contenedor de 9 M3: es caso de F-017, NO entra aqui).
+
+ALCANCE POR SERVICIO: sv4 albaranes-front (D1: el recalculo y el guardian; y la trazabilidad de la decision (4)), sv3 albaranes-persistencia (D2: el scorer del merger), sv5 albaran-valoracion-api (D2: derivacion de tipologia con regla dura de LER, y prompts de residuos para D3 y para el orden de (1)), sv6 albaran-valoracion-persist (D3: sinteticas de residuos y predicado por LER; y el orden de prioridades de (1)). NO ENTRA: la fuente OFERTA (F-017), la eleccion de partida (F-021), ni la logica de pago LLEVAR/RETIRAR ni el canon (F-006).
+
+TESTS: hoy NO HAY NI UNO de la regla de contenedores, ni del contexto_linea_merger, ni del tipologia_resolver; del ModifierContractMatcher y del exact_concept en residuos, nada especifico. Con rigor critico, fase RED obligatoria y hay que crear esa base desde cero.
+
+RIESGO A VIGILAR: F-024 (unidad_medida no se extrae, NULL en las lineas base). Los 4 albaranes de este lote tienen unidad_medida NULL y unidad_categoria unknown; al arreglar F-024 los casos que hoy aciertan por la regla de contenedores pueden pasar a valorar x6. Cualquier diseno aqui debe seguir siendo correcto cuando la unidad SI se lea.
 
 ### F-037 · sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar
 
@@ -297,22 +293,6 @@ estado **pendiente** · prioridad 30 · rigor `estandar` · SDD no · rama `feat
 
 q-emails es un resto del diseño original (intake partido en receptor+worker, colapsado en sv1): nadie la publica ni consume. Retirarla de la lista canónica de ruesma_comun.colas. Antes: grep en infra/ por si algún script la crea o referencia (create_capps, scale rules, fase1), y decisión del humano sobre borrarla del storage o dejarla morir.
 
-### F-042 · Arnes: segunda opinion de review con un modelo de otra familia (Codex/OpenAI)
-
-estado **pendiente** · prioridad 30 · rigor `estandar` · SDD sí · rama `feature/F-042-segunda-opinion-otro-modelo`
-
-Pedido por el humano el 2026-08-21 («lo veremos mas adelante, apuntalo como feature de baja prioridad»), tras preguntar si se podria usar Codex para alguno de los roles del arnes.
-
-LO QUE NO SE PUEDE: cambiarle el modelo a un subagente del arnes. Los .claude/agents/*.md los lanza Claude Code y su campo `model` solo acepta modelos Claude.
-
-LO QUE NO MERECE LA PENA: usarlo para lanzar tests o campanas de mutacion. Ya esta medido, y fue el motivo de F-038: la campana NO gasta tokens, gasta CPU. Son comandos deterministas; meter un modelo ahi anade coste, latencia e incertidumbre a un script. Para spec-author tampoco: depende de conocer el repo y las convenciones, y su producto lo lee luego un implementer de Claude.
-
-DONDE SI APORTA: una SEGUNDA OPINION de revision, independiente. Hoy implementer y reviewer son EL MISMO MODELO, con los mismos puntos ciegos: es la debilidad estructural del arnes. Se vio en ambas direcciones el 20-21 de agosto: el reviewer cazo defectos reales (los dos CR de F-039, los falsos muertos de F-034, la reproduccion del quinto defecto), pero tambien hubo errores que nadie detecto hasta que el humano ejecuto a mano -el comando de verificacion del paralelo, que habia caducado al mergear F-038-.
-
-DISENO PROPUESTO: no sustituye al reviewer. Rol opcional que escribe progress/segunda_opinion_F-XXX.md con la regla anti-telefono-descompuesto (una linea por chat, el detalle en fichero). Se invoca desde Bash con `codex exec`, como proceso externo y NO como subagente. Se lanza solo donde compensa: rigor `critico`, o cuando el reviewer aprueba A LA PRIMERA, que es cuando mas riesgo hay de complacencia. Mejora del arnes -> porte a arnes-base y a los cinco proyectos.
-
-AVISOS: se factura en la cuenta de OpenAI del humano, aparte. El 2026-08-21 NO habia `codex` ni `openai` en PATH ni variables OPENAI: hay que instalarlo y autenticarlo primero, y comprobar los flags reales del CLI, que cambian entre versiones. La clave NO entra en el repositorio ni en progress/: variable de entorno o el login del propio CLI.
-
 ### F-010 · Easy Auth en el portal sv4
 
 estado **pendiente** · prioridad 31 · rigor `critico` · SDD sí · rama `feature/F-010-easy-auth-sv4`
@@ -342,6 +322,40 @@ ALCANCE: solo sv4 (services/albaranes-front), la consulta de list_documents y un
 FUERA DE ALCANCE: cambiar quién rellena descripcion_linea o el diseño de las líneas sintéticas; el detalle del documento, que ya pinta bien (la conciliación lee contrato_lines_derived y la tabla «Líneas leídas del albarán (IA)» pinta ml.concepto, document_detail.html:470); y F-019/F-021, que salieron de los mismos albaranes Feymaco pero atacan la lectura de la partida, no la descripción.
 
 VERIFICACIÓN ESPERADA AL CERRAR: abrir /documents en local con esos dos albaranes y ver el concepto real en las 6 líneas from_albaran, con las sintéticas sin cambios.
+
+### F-041 · Arnes: el veredicto de un mutante no puede depender de que la suite recogiera tests
+
+estado **pendiente** · prioridad 99 · rigor `critico` · SDD sí · rama `feature/F-041-veredicto-honesto-del-mutante`
+
+EL QUINTO DEFECTO, encontrado por el implementer de F-040 el 2026-08-21 y NO metido alli por la regla del design (§5: si aparece uno nuevo se anota y decide el humano). Confirmado por el reviewer reproduciendo las DOS discrepancias sobre copia en el scratchpad.
+
+SINTOMA: la campana etiqueta mal algun mutante, y NO SIEMPRE EL MISMO. Los mismos 20 mutantes medidos dos veces sobre el mismo harness/: en paralela (4 workers) salio superviviente `mutacion.py:1942` (max(1,->max(2,), y en serie salio superviviente `mutacion.py:677` (*->//). Reproducidos a mano con la invocacion exacta del ejecutor, LOS DOS MUEREN: el primero deja 5 tests en rojo, el segundo 2. Descartado por medicion que sea el worktree (se repitio en uno recien creado con --detach) o el paralelo (la serie falla igual, en otro mutante).
+
+CAUSA, verificada en codigo por el reviewer: `ResultadoSuite.verde` (harness/mutacion.py:490) cuenta `PYTEST_SIN_TESTS = 5` como VERDE, y `EjecutorPytest.ejecutar` (:592-600) devuelve SUPERVIVIENTE tanto para el codigo 0 como para el 5, sin distinguirlos. El informe NO guarda el codigo de salida de cada mutante, asi que hoy la campana no puede demostrar de que habla: un «superviviente» puede ser «ningun test lo cazo» o «no se ejecuto ni un test».
+
+POR QUE NO ES URGENTE PERO SI IMPORTANTE: el sesgo del fallo es el SEGURO. Por ese mecanismo un mutante solo puede salir FALSO SUPERVIVIENTE -trabajo de mas- y nunca falso muerto -un agujero que pasa la puerta-. Un falso muerto exigiria otro mecanismo (un test flaky bajo -x, el de F-038 T17) y la suite es hoy estable. Aun asi rompe la promesa de que el veredicto describa lo que hace la suite, y MIENTRAS VIVA, NINGUNA CAMPANA DE UNA SOLA PASADA VALE COMO EVIDENCIA SIN CONTRASTE: lo que salvo a F-040 fue haber medido dos veces y que 16 de 20 murieran en ambos modos.
+
+FAMILIA: es la MISMA que F-038 T0 (la invocacion sin ruta que moria en la recoleccion) y que el bloque D4 de F-040 (cero mutantes generados), UN PISO MAS ABAJO. D4 guarda el embudo -la campana entera sin nada que medir-; aqui falta la guarda del caso «UN mutante cuya suite ejecuto cero tests». Es la cuarta aparicion del mismo modo de fallo: decir que todo fue bien sin haber juzgado nada.
+
+PRIMERA TAREA PROPUESTA (diagnostico antes que arreglo): que `EjecutorPytest.ejecutar` guarde el CODIGO DE SALIDA de cada mutante y que el informe lo declare. Sin ese dato no se puede demostrar cuantos supervivientes historicos eran falsos. Despues: que el codigo 5 deje de contar como verde y produzca un veredicto propio -no juzgado- en vez de SUPERVIVIENTE.
+
+ALCANCE: harness/mutacion.py, y el porte a arnes-base DESPUES del merge (la version instalada alli sera 1.7.2 tras el porte de F-040).
+
+### F-042 · Arnes: segunda opinion de review con un modelo de otra familia (Codex/OpenAI)
+
+estado **pendiente** · prioridad 99 · rigor `estandar` · SDD sí · rama `feature/F-042-segunda-opinion-otro-modelo`
+
+Pedido por el humano el 2026-08-21 («lo veremos mas adelante, apuntalo como feature de baja prioridad»), tras preguntar si se podria usar Codex para alguno de los roles del arnes.
+
+LO QUE NO SE PUEDE: cambiarle el modelo a un subagente del arnes. Los .claude/agents/*.md los lanza Claude Code y su campo `model` solo acepta modelos Claude.
+
+LO QUE NO MERECE LA PENA: usarlo para lanzar tests o campanas de mutacion. Ya esta medido, y fue el motivo de F-038: la campana NO gasta tokens, gasta CPU. Son comandos deterministas; meter un modelo ahi anade coste, latencia e incertidumbre a un script. Para spec-author tampoco: depende de conocer el repo y las convenciones, y su producto lo lee luego un implementer de Claude.
+
+DONDE SI APORTA: una SEGUNDA OPINION de revision, independiente. Hoy implementer y reviewer son EL MISMO MODELO, con los mismos puntos ciegos: es la debilidad estructural del arnes. Se vio en ambas direcciones el 20-21 de agosto: el reviewer cazo defectos reales (los dos CR de F-039, los falsos muertos de F-034, la reproduccion del quinto defecto), pero tambien hubo errores que nadie detecto hasta que el humano ejecuto a mano -el comando de verificacion del paralelo, que habia caducado al mergear F-038-.
+
+DISENO PROPUESTO: no sustituye al reviewer. Rol opcional que escribe progress/segunda_opinion_F-XXX.md con la regla anti-telefono-descompuesto (una linea por chat, el detalle en fichero). Se invoca desde Bash con `codex exec`, como proceso externo y NO como subagente. Se lanza solo donde compensa: rigor `critico`, o cuando el reviewer aprueba A LA PRIMERA, que es cuando mas riesgo hay de complacencia. Mejora del arnes -> porte a arnes-base y a los cinco proyectos.
+
+AVISOS: se factura en la cuenta de OpenAI del humano, aparte. El 2026-08-21 NO habia `codex` ni `openai` en PATH ni variables OPENAI: hay que instalarlo y autenticarlo primero, y comprobar los flags reales del CLI, que cambian entre versiones. La clave NO entra en el repositorio ni en progress/: variable de entorno o el login del propio CLI.
 
 ### F-001 · Test de estructura del monorepo
 
