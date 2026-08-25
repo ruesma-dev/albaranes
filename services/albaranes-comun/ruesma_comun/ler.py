@@ -103,8 +103,8 @@ def normalizar_ler(texto: str | None) -> str | None:
     return None
 
 
-def texto_contiene_ler(texto: str | None) -> bool:
-    """True si el texto contiene un código LER CREÍBLE.
+def ler_creible(texto: str | None) -> str | None:
+    """El LER CREÍBLE del texto en formato canónico, o ``None``.
 
     (jul 2026, blindado) Tres niveles según la grafía, siempre
     validando capítulo/subcapítulo contra el catálogo:
@@ -116,9 +116,15 @@ def texto_contiene_ler(texto: str | None) -> bool:
       * "170504" pegado → igual: solo con contexto; un 6-dígitos
         suelto en un campo de código suele ser referencia de producto
         (bug real: "192137" de Prebetong disparaba residuos).
+
+    Se diferencia de `normalizar_ler`, que NO aplica esta defensa: aquel
+    solo valida contra el catálogo y por eso lee "01-01-25" como el LER
+    010125. Quien decide sobre TEXTO LIBRE (una descripción de línea)
+    debe usar esta función; `normalizar_ler` es para campos que ya se
+    sabe que contienen un código (`contexto_linea.codigo_ler`).
     """
     if not texto:
-        return False
+        return None
     t = str(texto)
     t_lower = t.lower()
     hay_contexto = any(p in t_lower for p in _PALABRAS_CONTEXTO_LER)
@@ -129,5 +135,10 @@ def texto_contiene_ler(texto: str | None) -> bool:
         separador = m.group(2)
         con_espacios = separador == " "
         if con_espacios or hay_contexto:
-            return True
-    return False
+            return solo_digitos
+    return None
+
+
+def texto_contiene_ler(texto: str | None) -> bool:
+    """True si el texto contiene un código LER CREÍBLE (`ler_creible`)."""
+    return ler_creible(texto) is not None

@@ -15,6 +15,7 @@ from __future__ import annotations
 import pytest
 from ruesma_comun.ler import (
     es_ler_valido,
+    ler_creible,
     normalizar_ler,
     texto_contiene_ler,
 )
@@ -93,3 +94,42 @@ def test_f036_r14_una_fecha_no_es_un_ler():
     """`17-05-04` tiene forma de fecha: sin contexto no cuenta."""
     assert texto_contiene_ler("albaran de 17-05-04") is False
     assert texto_contiene_ler("residuo 17-05-04") is True
+
+
+# ------------------------------------------------------------------ #
+# `ler_creible` — el MISMO juicio, devolviendo el codigo
+# ------------------------------------------------------------------ #
+
+def test_f036_r14_ler_creible_devuelve_el_codigo_no_un_booleano():
+    """Quien decide sobre texto libre necesita saber DE QUE LER.
+
+    `texto_contiene_ler` respondia si/no, y quien queria el codigo caia
+    en `normalizar_ler`, que NO lleva la defensa de forma-fecha. De ahi
+    salio el defecto de `es_linea_incremento_ler` en sv6 (una fecha
+    leida como el LER 010125). Las dos preguntas comparten ahora una
+    sola implementacion.
+    """
+    assert ler_creible("RCD 17 05 04") == "170504"
+    assert ler_creible("LER 170504") == "170504"
+    assert ler_creible("residuo 17-05-04") == "170504"
+
+
+def test_f036_r14_ler_creible_rechaza_lo_que_texto_contiene_ler_rechaza():
+    assert ler_creible("albaran de 17-05-04") is None
+    assert ler_creible("codigo 170504") is None
+    assert ler_creible("referencia 192137") is None
+    assert ler_creible(None) is None
+    assert ler_creible("") is None
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        "RCD 17 05 04", "LER 170504", "residuo 17-05-04",
+        "albaran de 17-05-04", "codigo 170504", "referencia 192137",
+        "TARIFA DESDE 01-01-25", "", None,
+    ],
+)
+def test_f036_r14_texto_contiene_ler_es_exactamente_ler_creible(texto):
+    """El booleano no puede divergir del codigo: es la misma funcion."""
+    assert texto_contiene_ler(texto) is (ler_creible(texto) is not None)

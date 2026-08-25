@@ -105,6 +105,30 @@ def test_f036_r21_el_contenedor_no_es_un_incremento():
     assert es_linea_incremento_ler("") is None
 
 
+def test_f036_r21_una_fecha_no_es_un_codigo_ler():
+    """"INCREMENTO TARIFA DESDE 01-01-25" no tarifa ningun residuo.
+
+    Una fecha dd-mm-aa tiene la misma forma que un LER escrito con
+    guiones, y 01 01 SI existe en el catalogo. Sin esta defensa la
+    linea se leia como "incremento del LER 010125", y la guarda de R15
+    anulaba el match de cualquier base de residuos casada con ella,
+    dejandola SIN PRECIO. Encontrado por el reviewer (bloques B/C/D).
+
+    Solo cuenta como LER la grafia canonica con espacios o un texto que
+    de contexto de residuos: es la misma defensa de `texto_contiene_ler`
+    (R14), no una regla nueva de sv6.
+    """
+    from application.services.residuos_incrementos import (
+        es_linea_incremento_ler,
+    )
+
+    assert es_linea_incremento_ler("INCREMENTO TARIFA DESDE 01-01-25") is None
+    assert es_linea_incremento_ler("INCREMENTO 01.01.25 REVISION") is None
+    # Y lo que SI debe seguir casando no se toca.
+    assert es_linea_incremento_ler("INCREMENTO LER 01-01-25") == "010125"
+    assert es_linea_incremento_ler("INCREMENTO 17 08 02") == "170802"
+
+
 def test_f036_r21_la_tarifa_se_busca_por_el_ler_concreto():
     """Con dos incrementos en el contrato se elige el del LER pedido."""
     from application.services.residuos_incrementos import (

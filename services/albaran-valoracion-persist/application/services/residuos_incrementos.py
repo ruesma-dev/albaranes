@@ -51,7 +51,7 @@ from collections.abc import Callable
 from typing import Any
 
 from domain.models.valuation_envelope import LineValuationDto
-from ruesma_comun.ler import normalizar_ler
+from ruesma_comun.ler import ler_creible, normalizar_ler
 
 from application.services.designacion_hormigon import normalizar_texto
 
@@ -101,13 +101,19 @@ def es_linea_incremento_ler(descripcion: str | None) -> str | None:
       * "INCREMENTO 192137" lleva seis digitos que NO son un LER (el
         capitulo 19 llega al subcapitulo 13); es el codigo de producto
         de Prebetong que ya provoco un bug real en sv2.
+      * "INCREMENTO TARIFA DESDE 01-01-25" es una FECHA con forma de
+        LER, y 01 01 si existe en el catalogo. Por eso aqui se usa
+        `ler_creible` y NO `normalizar_ler`: sobre texto libre hace
+        falta la defensa de forma-fecha (espacios o contexto de
+        residuos). Sin ella la guarda de R15 anulaba el match de una
+        base casada con una linea asi y la dejaba sin precio.
     """
     texto = normalizar_texto(descripcion)
     if not texto:
         return None
     if not any(token in texto for token in _TOKENS_INCREMENTO):
         return None
-    return normalizar_ler(texto)
+    return ler_creible(texto)
 
 
 def tarifa_incremento_ler(contrato_lines: Any, codigo_ler: str | None):
