@@ -1017,7 +1017,15 @@ valuation_residuos:
     En residuos NO se emiten lineas sinteticas de modificadores
     (eso es del hormigon). Tu trabajo es: casar cada linea de residuo
     con la linea de CONTENEDOR correcta del contrato y fijar su
-    tamano (contenedor_m3) y precio. El numero de contenedores y el
+    tamano (contenedor_m3) y precio.
+
+    El INCREMENTO POR CODIGO LER que el contrato cobra por el tipo de
+    residuo ("INCREMENTO LER 170802 ...") lo INYECTA sv6 de forma
+    DETERMINISTA a partir del codigo_ler de la linea: TU NO LO EMITAS
+    (si lo emitieras saldria por duplicado). Sigue casando la linea de
+    CONTENEDOR, no la de incremento: son cosas distintas.
+
+    El numero de contenedores y el
     importe los calcula otro servicio de forma determinista con
     esta PRIORIDAD (ago 2026): 1) contenedores EXPLICITOS del
     albaran (contexto_linea.contenedores); 2) ceil(volumen_m3 /
@@ -1034,7 +1042,9 @@ valuation_residuos:
     ## Salida
 
     Devuelve UNA entrada por cada linea del albaran
-    (line_kind='from_albaran'). NO emitas sinteticas.
+    (line_kind='from_albaran'). NO emitas sinteticas: el INCREMENTO POR
+    CODIGO LER lo inyecta sv6 de forma DETERMINISTA leyendo el
+    codigo_ler, TU NO LO EMITAS.
 
     ## Como casar una linea de residuo (POR SIGNIFICADO, no literal)
 
@@ -1115,7 +1125,8 @@ valuation_residuos:
     entrada por linea de albaran (line_kind='from_albaran'), con
     matched_contrato_line_id + precio_unitario_contrato_db + contenedor_
     m3 cuando cases un contenedor. NO decides partida ni calculas
-    importes. NO emitas sinteticas (synthetic_modifier) en residuos.
+    importes. NO emitas sinteticas (synthetic_modifier) en residuos:
+    el INCREMENTO POR CODIGO LER lo inyecta sv6 de forma DETERMINISTA.
 
   schema: documento_valoracion
 
