@@ -102,6 +102,21 @@ def _num_iguales(a: Any, b: Any) -> bool:
         return False
 
 
+#: (F-036 R3) El revisor cambió la cantidad de una línea cuya conversión
+#: de unidad sv4 no sabe rehacer. La cantidad convertida se conserva —el
+#: importe NO se calcula con la cantidad cruda— y la línea va a revisión
+#: para que un humano decida. No se re-encola a `q-valoracion`
+#: (decisión del humano, 2026-08-22).
+REASON_CANTIDAD_EDITADA_SIN_CONVERSION = (
+    "front_cantidad_editada_sin_conversion_reproducible"
+)
+
+#: (F-036 R4) No había cantidad convertida guardada: el importe se
+#: calculó con la cantidad del albarán, que es el comportamiento de
+#: siempre. Es trazabilidad, no un aviso: la línea NO va a revisión.
+REASON_SIN_CANTIDAD_CONVERTIDA = "front_sin_cantidad_convertida"
+
+
 def _conversion_reproducible(
     *,
     factor: Any,
@@ -3322,6 +3337,91 @@ class AlbaranReviewRepository:
             if line.id is not None
         }
 
+    def _anadir_reason_linea_in_session(
+        self,
+        *,
+        session: Any,
+        valuation_line_id: int,
+        reason: str,
+    ) -> None:
+        """Añade una razón a ``albaran_line_valuations.review_reasons_json``.
+
+        Idempotente: si la razón ya está, no se duplica. Y ADITIVA: las
+        razones que dejó sv6 (``residuos_contenedores``,
+        ``declared_vs_calculated_mismatch``...) se conservan; sv4 no es
+        dueño de esa columna, solo añade la parte que le consta a él.
+
+        Va dentro de un SAVEPOINT propio: si la columna no existiera
+        (BBDD anterior a sv6) el fallo se queda ahí y NO tumba el
+        guardado del revisor, que es lo que de verdad importa.
+        """
+        try:
+            with session.begin_nested():
+                fila = session.execute(
+                    text(
+                        "SELECT review_reasons_json "
+                        "FROM albaran_line_valuations WHERE id = :id"
+                    ),
+                    {"id": int(valuation_line_id)},
+                ).mappings().first()
+                if fila is None:
+                    return
+                try:
+                    razones = json.loads(fila["review_reasons_json"] or "[]")
+                except (TypeError, ValueError):
+                    razones = []
+                if not isinstance(razones, list):
+                    razones = []
+                if reason in razones:
+                    return
+                razones.append(reason)
+                session.execute(
+                    text(
+                        "UPDATE albaran_line_valuations "
+                        "SET review_reasons_json = :razones WHERE id = :id"
+                    ),
+                    {
+                        "razones": json.dumps(razones, ensure_ascii=False),
+                        "id": int(valuation_line_id),
+                    },
+                )
+        except Exception:
+            logger.warning(
+                "[valoracion] no se pudo sellar la razón '%s' en la línea "
+                "valorada %s. El guardado sigue.",
+                reason,
+                valuation_line_id,
+                exc_info=True,
+            )
+
+    def _marcar_linea_en_revision_in_session(
+        self,
+        *,
+        session: Any,
+        valuation_line_id: int,
+    ) -> None:
+        """Deja ``review_required = TRUE`` en una línea de valoración.
+
+        Solo sube: sv4 nunca retira una revisión que pidió sv6. Mismo
+        SAVEPOINT defensivo que ``_anadir_reason_linea_in_session``.
+        """
+        try:
+            with session.begin_nested():
+                session.execute(
+                    text(
+                        "UPDATE albaran_line_valuations "
+                        "SET review_required = :si WHERE id = :id"
+                    ),
+                    {"si": True, "id": int(valuation_line_id)},
+                )
+        except Exception:
+            logger.warning(
+                "[valoracion] no se pudo marcar en revisión la línea "
+                "valorada %s. El guardado sigue.",
+                valuation_line_id,
+                exc_info=True,
+            )
+
     def _recalc_valuation_importes(
         self,
         *,
@@ -3514,6 +3614,39 @@ class AlbaranReviewRepository:
                     "vid": int(row["id"]),
                 },
             )
+
+            # (F-036 R3, R4) Queda escrito con qué cantidad se calculó
+            # el importe y por qué. Se sella DESPUÉS del guardián de
+            # F-019 R24 a propósito: una línea en la que el revisor no
+            # ha intervenido no se toca, y eso incluye sus razones. Si
+            # no, abrir y guardar cualquier documento sellaría
+            # `front_sin_cantidad_convertida` en TODAS sus líneas —el
+            # caso mayoritario es no tener conversión de unidad— y la
+            # traza dejaría de significar nada.
+            if not reproducible:
+                if nueva_cant_conv is None:
+                    # (R4) El importe salió de la cantidad cruda.
+                    self._anadir_reason_linea_in_session(
+                        session=session,
+                        valuation_line_id=int(row["id"]),
+                        reason=REASON_SIN_CANTIDAD_CONVERTIDA,
+                    )
+                elif not self._num_iguales(
+                    row["cantidad_albaran"], nueva_cant_albaran
+                ):
+                    # (R3) El revisor movió la cantidad y sv4 NO ha
+                    # rehecho la conversión: el nº de contenedores (o lo
+                    # que sea que calculó sv6) sigue siendo el de antes.
+                    # Que lo mire un humano.
+                    self._anadir_reason_linea_in_session(
+                        session=session,
+                        valuation_line_id=int(row["id"]),
+                        reason=REASON_CANTIDAD_EDITADA_SIN_CONVERSION,
+                    )
+                    self._marcar_linea_en_revision_in_session(
+                        session=session,
+                        valuation_line_id=int(row["id"]),
+                    )
 
         # Total de la cabecera. ROUND porque la suma en coma flotante de
         # importes de dos decimales arrastra cola binaria

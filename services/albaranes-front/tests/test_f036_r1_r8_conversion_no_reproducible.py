@@ -431,3 +431,240 @@ def test_f036_r7_punto_ciego_conocido_un_contenedor_y_una_unidad(
     linea = _leer_linea(sesion)
     assert linea["cantidad_convertida"] == pytest.approx(2.0)
     assert linea["importe_calculado"] == pytest.approx(240.0)
+
+
+# ------------------------------------------------------------------ #
+# R3 / R4 — la decision queda escrita en las razones de la linea
+# ------------------------------------------------------------------ #
+def _leer_traza(sesion, merge_line_id=500):
+    """(review_required, [razones]) de la linea de valoracion."""
+    import json
+
+    fila = sesion.execute(
+        text(
+            "SELECT review_required, review_reasons_json "
+            "FROM albaran_line_valuations WHERE merge_line_id = :m"
+        ),
+        {"m": merge_line_id},
+    ).mappings().one()
+    return (
+        bool(fila["review_required"]),
+        json.loads(fila["review_reasons_json"] or "[]"),
+    )
+
+
+def test_f036_r3_editar_la_cantidad_sin_conversion_reproducible_va_a_revision(
+    repositorio, sesion,
+):
+    """El revisor corrige 6 m3 -> 8 m3 en una linea de contenedores.
+
+    sv4 no sabe cuantos contenedores son 8 m3 —esa regla es de sv6—, asi
+    que CONSERVA el contenedor valorado y avisa: la cantidad cambio pero
+    la conversion no se ha rehecho, que lo mire un humano. Lo que NO
+    hace es re-encolar a q-valoracion (decision del 2026-08-22).
+    """
+    from infrastructure.database.review_repository import (
+        REASON_CANTIDAD_EDITADA_SIN_CONVERSION,
+    )
+
+    _sembrar(sesion)
+
+    repositorio._recalc_valuation_importes(
+        session=sesion,
+        document_id=DOCUMENT_ID,
+        new_line_quantities={500: 8.0},
+    )
+
+    linea = _leer_linea(sesion)
+    assert linea["cantidad_albaran"] == pytest.approx(8.0)
+    assert linea["cantidad_convertida"] == pytest.approx(1.0)
+    assert linea["importe_calculado"] == pytest.approx(120.0)
+
+    revision, razones = _leer_traza(sesion)
+    assert revision is True
+    assert REASON_CANTIDAD_EDITADA_SIN_CONVERSION in razones
+
+
+def test_f036_r3_la_razon_no_se_duplica_al_guardar_dos_veces(
+    repositorio, sesion,
+):
+    """Idempotencia: el revisor guarda dos veces, la razon sigue una."""
+    from infrastructure.database.review_repository import (
+        REASON_CANTIDAD_EDITADA_SIN_CONVERSION,
+    )
+
+    _sembrar(sesion)
+
+    for cantidad in (8.0, 9.0):
+        repositorio._recalc_valuation_importes(
+            session=sesion,
+            document_id=DOCUMENT_ID,
+            new_line_quantities={500: cantidad},
+        )
+
+    _, razones = _leer_traza(sesion)
+    assert razones.count(REASON_CANTIDAD_EDITADA_SIN_CONVERSION) == 1
+
+
+def test_f036_r3_sin_editar_la_cantidad_no_se_avisa_de_nada(
+    repositorio, sesion,
+):
+    """Solo cambia el descuento: la conversion no queda en entredicho.
+
+    La cantidad convertida sigue describiendo la misma entrega, asi que
+    no hay nada que revisar por este motivo.
+    """
+    from infrastructure.database.review_repository import (
+        REASON_CANTIDAD_EDITADA_SIN_CONVERSION,
+    )
+
+    _sembrar(sesion)
+
+    repositorio._recalc_valuation_importes(
+        session=sesion,
+        document_id=DOCUMENT_ID,
+        new_line_quantities={},
+        new_line_discounts={500: 10.0},
+    )
+
+    revision, razones = _leer_traza(sesion)
+    assert REASON_CANTIDAD_EDITADA_SIN_CONVERSION not in razones
+    assert revision is False
+
+
+def test_f036_r3_una_conversion_reproducible_no_va_a_revision(
+    repositorio, sesion,
+):
+    """Contrapunto: si sabemos rehacerla, editar la cantidad es normal."""
+    _sembrar(
+        sesion,
+        factor=1000.0,
+        cantidad_albaran=2.0,
+        cantidad_convertida=2000.0,
+        pu=0.05,
+        importe=100.0,
+    )
+
+    repositorio._recalc_valuation_importes(
+        session=sesion,
+        document_id=DOCUMENT_ID,
+        new_line_quantities={500: 3.0},
+    )
+
+    revision, razones = _leer_traza(sesion)
+    assert revision is False
+    assert razones == []
+
+
+def test_f036_r3_la_razon_no_pisa_las_que_dejo_sv6(repositorio, sesion):
+    """Las razones de sv6 (``residuos_*``) se conservan; se ANADE."""
+    from infrastructure.database.review_repository import (
+        REASON_CANTIDAD_EDITADA_SIN_CONVERSION,
+    )
+
+    _sembrar(sesion)
+    sesion.execute(
+        text(
+            "UPDATE albaran_line_valuations "
+            "SET review_reasons_json = '[\"residuos_contenedores\"]' "
+            "WHERE merge_line_id = 500"
+        )
+    )
+    sesion.flush()
+
+    repositorio._recalc_valuation_importes(
+        session=sesion,
+        document_id=DOCUMENT_ID,
+        new_line_quantities={500: 8.0},
+    )
+
+    _, razones = _leer_traza(sesion)
+    assert razones == [
+        "residuos_contenedores",
+        REASON_CANTIDAD_EDITADA_SIN_CONVERSION,
+    ]
+
+
+def test_f036_r4_sin_cantidad_convertida_se_deja_dicho(repositorio, sesion):
+    """R4: el importe sale de la cantidad cruda, y consta que fue asi.
+
+    No es un aviso de revision —el resultado es el de siempre y es
+    correcto—: es trazabilidad de con que cantidad se calculo.
+    """
+    from infrastructure.database.review_repository import (
+        REASON_SIN_CANTIDAD_CONVERTIDA,
+    )
+
+    _sembrar(
+        sesion,
+        factor=None,
+        cantidad_albaran=10.0,
+        cantidad_convertida=None,
+        pu=2.5,
+        importe=25.0,
+    )
+
+    repositorio._recalc_valuation_importes(
+        session=sesion,
+        document_id=DOCUMENT_ID,
+        new_line_quantities={500: 8.0},
+    )
+
+    revision, razones = _leer_traza(sesion)
+    assert REASON_SIN_CANTIDAD_CONVERTIDA in razones
+    assert revision is False, (
+        "R4 no manda la linea a revision: solo R3 lo hace"
+    )
+
+
+def test_f036_r4_una_linea_que_nadie_toca_no_recibe_razones(
+    repositorio, sesion,
+):
+    """El guardian de F-019 R24 manda tambien sobre las razones.
+
+    Si el revisor no ha intervenido en la linea, el guardado no la toca:
+    ni el importe, ni la fuente, ni las razones. Sin esto, abrir y
+    guardar un documento cualquiera sellaria
+    ``front_sin_cantidad_convertida`` en TODAS sus lineas —que es el
+    caso mayoritario: sin conversion de unidad no hay convertida— y la
+    traza dejaria de significar nada.
+    """
+    _sembrar(
+        sesion,
+        factor=None,
+        cantidad_albaran=10.0,
+        cantidad_convertida=None,
+        pu=2.5,
+        importe=25.0,
+    )
+
+    repositorio._recalc_valuation_importes(
+        session=sesion,
+        document_id=DOCUMENT_ID,
+        new_line_quantities={},
+    )
+
+    revision, razones = _leer_traza(sesion)
+    assert razones == []
+    assert revision is False
+
+
+def test_f036_r3_el_helper_de_razones_es_idempotente(repositorio, sesion):
+    """``_anadir_reason_linea_in_session`` no duplica ni pierde nada."""
+    _sembrar(sesion)
+
+    for _ in range(3):
+        repositorio._anadir_reason_linea_in_session(
+            session=sesion,
+            valuation_line_id=LINEA_RESIDUOS["id"],
+            reason="una_razon",
+        )
+    repositorio._anadir_reason_linea_in_session(
+        session=sesion,
+        valuation_line_id=LINEA_RESIDUOS["id"],
+        reason="otra_razon",
+    )
+    sesion.flush()
+
+    _, razones = _leer_traza(sesion)
+    assert razones == ["una_razon", "otra_razon"]
