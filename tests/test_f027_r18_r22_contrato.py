@@ -112,37 +112,163 @@ def _tabla_de_simbolos(ruta: Path) -> dict[str, str]:
     return tabla
 
 
+def _alias_de_modulo(ruta: Path) -> dict[str, Path]:
+    """Alias con los que el módulo nombra OTROS módulos de sv6.
+
+    Cubre ``from application.services import residuos_incrementos as ri``
+    e ``import application.services.residuos_incrementos as ri``, para
+    poder resolver ``ri.RAZON_SIN_TARIFA``. Lo que no resuelva a un
+    fichero del servicio no entra: un ``res.reason`` cualquiera no es
+    una constante de módulo, es un valor de tiempo de ejecución.
+    """
+    alias: dict[str, Path] = {}
+    for nodo in _arbol(ruta).body:
+        if isinstance(nodo, ast.ImportFrom):
+            if not nodo.module or nodo.level:
+                continue
+            for nombre in nodo.names:
+                fichero = SV6.joinpath(
+                    *nodo.module.split("."), nombre.name,
+                ).with_suffix(".py")
+                if fichero.is_file():
+                    alias[nombre.asname or nombre.name] = fichero
+        elif isinstance(nodo, ast.Import):
+            for nombre in nodo.names:
+                fichero = SV6.joinpath(
+                    *nombre.name.split("."),
+                ).with_suffix(".py")
+                if fichero.is_file() and nombre.asname:
+                    alias[nombre.asname] = fichero
+    return alias
+
+
+class MotivoIlegible(AssertionError):
+    """El analizador encontró un ``reasons`` que no sabe leer.
+
+    Es `AssertionError` a propósito: un motivo que no se puede resolver
+    invalida la congelación entera, así que tiene que romper el test que
+    la ejecuta, no aparecer como error de infraestructura.
+    """
+
+
+def _exigir_texto(
+    nodo: ast.AST,
+    tabla: dict[str, str],
+    alias: dict[str, Path],
+    ruta: Path,
+    forma: str,
+    admite_propagacion: bool = False,
+) -> str | None:
+    """El literal del nodo, ``None`` si es propagación, o REVIENTA.
+
+    El silencio es lo único que no vale: un motivo que el analizador no
+    sabe resolver se cuela en el vocabulario sin pasar por la lista
+    congelada, y el test sigue verde. Pasó de verdad en F-036 con una
+    constante importada.
+
+    ``admite_propagacion`` solo vale cuando el nodo es el valor ENTERO
+    que se añade (``reasons.append(result.reason)``): ahí el motivo lo
+    escribe otro módulo y lo congela el test de ese módulo. Dentro de
+    una lista literal —que es el módulo escribiendo su vocabulario— no
+    hay excusa: cada elemento tiene que resolverse.
+    """
+    texto = _texto_de(nodo, tabla)
+    if texto is not None:
+        return texto
+    if isinstance(nodo, ast.Attribute) and isinstance(nodo.value, ast.Name):
+        origen = alias.get(nodo.value.id)
+        if origen is not None:
+            del_origen = _constantes_str(origen)
+            if nodo.attr in del_origen:
+                return del_origen[nodo.attr]
+        elif admite_propagacion:
+            return None  # atributo de un objeto: propagación
+    raise MotivoIlegible(
+        f"{ruta.name}:{getattr(nodo, 'lineno', '?')} · {forma}: el "
+        f"analizador de motivos no sabe resolver un "
+        f"{type(nodo).__name__} a un literal — {ast.unparse(nodo)!r}. "
+        "Si es un motivo nuevo, escríbelo como literal o como constante "
+        "de módulo de sv6 y añádelo a la lista congelada; si son motivos "
+        "que llegan de otro módulo, propágalos con `reasons.extend(...)` "
+        "sobre el valor entero, no elemento a elemento."
+    )
+
+
+def _recoger(
+    destino: set[str],
+    nodo: ast.AST,
+    tabla: dict[str, str],
+    alias: dict[str, Path],
+    ruta: Path,
+    forma: str,
+    admite_propagacion: bool = False,
+) -> None:
+    texto = _exigir_texto(
+        nodo, tabla, alias, ruta, forma, admite_propagacion,
+    )
+    if texto:
+        destino.add(texto)
+
+
+#: Métodos de lista que meten motivos en un ``reasons``. ``extend`` e
+#: ``insert`` no se usan hoy con literales en sv6, pero saltárselos era
+#: la forma más barata de meter un motivo sin pasar por la congelación.
+_METODOS_QUE_ANADEN = {"append": 0, "insert": 1, "extend": 0}
+
+
 def _motivos_de(ruta: Path) -> set[str]:
     """Los motivos que el módulo mete en una lista ``reasons``.
 
     Se recogen del AST, no por expresión regular: interesa lo que de
     verdad acaba en ``review_reasons``, no cualquier cadena en
     snake_case que aparezca en el fichero. Los nombres de constante se
-    resuelven a su valor (ver ``_texto_de``).
+    resuelven a su valor (ver ``_texto_de``) y los atributos de un
+    módulo de sv6 (``ri.RAZON_X``) siguiendo el import.
+
+    Ante una forma que NO sabe resolver, **revienta** con
+    ``MotivoIlegible`` diciendo cuál y dónde. Ver el bloque de tests
+    «El portero del portero» al final de este fichero.
     """
     encontrados: set[str] = set()
     tabla = _tabla_de_simbolos(ruta)
+    alias = _alias_de_modulo(ruta)
     for nodo in ast.walk(_arbol(ruta)):
         if (
             isinstance(nodo, ast.Call)
             and isinstance(nodo.func, ast.Attribute)
-            and nodo.func.attr == "append"
+            and nodo.func.attr in _METODOS_QUE_ANADEN
             and isinstance(nodo.func.value, ast.Name)
             and nodo.func.value.id.endswith("reasons")
-            and nodo.args
         ):
-            texto = _texto_de(nodo.args[0], tabla)
-            if texto:
-                encontrados.add(texto)
+            metodo = nodo.func.attr
+            posicion = _METODOS_QUE_ANADEN[metodo]
+            forma = f"{nodo.func.value.id}.{metodo}(...)"
+            if len(nodo.args) <= posicion:
+                raise MotivoIlegible(
+                    f"{ruta.name}:{nodo.lineno} · {forma}: llamada sin el "
+                    f"argumento {posicion} del que sale el motivo."
+                )
+            valor = nodo.args[posicion]
+            if metodo == "extend":
+                # `extend(otra_lista)` es propagación; `extend([...])`
+                # es vocabulario propio y se mira elemento a elemento.
+                if isinstance(valor, (ast.List, ast.Tuple, ast.Set)):
+                    for elemento in valor.elts:
+                        _recoger(encontrados, elemento, tabla, alias, ruta, forma)
+                continue
+            _recoger(
+                encontrados, valor, tabla, alias, ruta, forma,
+                admite_propagacion=True,
+            )
         if (
             isinstance(nodo, ast.keyword)
             and nodo.arg == "reasons"
             and isinstance(nodo.value, ast.List)
         ):
             for elemento in nodo.value.elts:
-                texto = _texto_de(elemento, tabla)
-                if texto:
-                    encontrados.add(texto)
+                _recoger(
+                    encontrados, elemento, tabla, alias, ruta, "reasons=[...]",
+                )
         if isinstance(nodo, (ast.Assign, ast.AnnAssign)):
             objetivos = (
                 nodo.targets if isinstance(nodo, ast.Assign) else [nodo.target]
@@ -154,9 +280,10 @@ def _motivos_de(ruta: Path) -> set[str]:
                     and isinstance(nodo.value, ast.List)
                 ):
                     for elemento in nodo.value.elts:
-                        texto = _texto_de(elemento, tabla)
-                        if texto:
-                            encontrados.add(texto)
+                        _recoger(
+                            encontrados, elemento, tabla, alias, ruta,
+                            f"{objetivo.id} = [...]",
+                        )
     return encontrados
 
 
@@ -430,3 +557,156 @@ def test_f027_r23_r24_la_feature_no_toca_ni_el_matcher_ni_ningun_prompt():
     assert otros_servicios == [], (
         f"F-027 declara tocar solo sv6, y tocó: {otros_servicios}"
     )
+
+
+# --------------------------------------------------------------------- #
+# El portero del portero: `_motivos_de` no puede callarse lo que no lee
+# --------------------------------------------------------------------- #
+#
+# (ago 2026 · F-036, review de la pasada 2) La congelación de motivos
+# vale lo que valga el analizador que la alimenta. Hasta aquí, ante un
+# `reasons.append(<algo que no sabía resolver>)` se lo saltaba EN
+# SILENCIO: el motivo no entraba en el conjunto, la comparación con
+# `MOTIVOS_DEL_BUILDER` seguía cuadrando y la congelación decía «todo
+# en orden» sobre un vocabulario que no había visto entero. Ya pasó una
+# vez con `residuos_ler_sin_tarifa_en_contrato` (constante importada) y
+# el test aguantó verde una feature completa.
+#
+# Las formas de abajo NO se usan hoy en sv6: esto es preventivo. Lo que
+# se fija es que el analizador falle A GRITOS —diciendo qué forma vio y
+# dónde— en vez de encogerse de hombros.
+
+def _modulo(tmp_path, cuerpo: str, nombre: str = "sonda.py") -> Path:
+    ruta = tmp_path / nombre
+    ruta.write_text(cuerpo, encoding="utf-8")
+    return ruta
+
+
+#: Formas que el analizador NO sabe resolver a un literal. Todas deben
+#: reventar; ninguna puede colarse en silencio.
+ILEGIBLES = {
+    "constante_de_fuera_de_sv6": (
+        "from ruesma_comun.ler import RAZON_QUE_VIVE_FUERA\n"
+        "def f(reasons):\n"
+        "    reasons.append(RAZON_QUE_VIVE_FUERA)\n"
+    ),
+    "local_de_funcion": (
+        "def f(reasons):\n"
+        "    motivo = 'inventado_aqui'\n"
+        "    reasons.append(motivo)\n"
+    ),
+    "atributo_de_modulo_inexistente": (
+        "from application.services import residuos_incrementos as ri\n"
+        "def f(reasons):\n"
+        "    reasons.append(ri.RAZON_QUE_NO_EXISTE)\n"
+    ),
+    "llamada": (
+        "def f(reasons):\n"
+        "    reasons.append(_calcular_motivo())\n"
+    ),
+    "extend_con_lista_ilegible": (
+        "def f(reasons, otro):\n"
+        "    reasons.extend([otro.motivo_raro])\n"
+    ),
+    "insert_ilegible": (
+        "def f(reasons, motivo):\n"
+        "    reasons.insert(0, motivo)\n"
+    ),
+    "lista_literal_ilegible": (
+        "def f(cualquier_cosa):\n"
+        "    reasons = [cualquier_cosa]\n"
+        "    return reasons\n"
+    ),
+    "keyword_reasons_ilegible": (
+        "def f(cualquier_cosa):\n"
+        "    return Resultado(reasons=[cualquier_cosa])\n"
+    ),
+}
+
+
+@pytest.mark.parametrize("forma", sorted(ILEGIBLES))
+def test_f027_r22_el_analizador_revienta_ante_lo_que_no_sabe_leer(
+    tmp_path, forma,
+):
+    """Un portero que calla ante lo que no entiende es decorado."""
+    ruta = _modulo(tmp_path, ILEGIBLES[forma])
+
+    with pytest.raises(AssertionError):
+        _motivos_de(ruta)
+
+
+@pytest.mark.parametrize("forma", sorted(ILEGIBLES))
+def test_f027_r22_el_fallo_dice_QUE_forma_vio_y_DONDE(tmp_path, forma):
+    """Sin el sitio y la forma, el fallo obliga a buscar a ciegas."""
+    ruta = _modulo(tmp_path, ILEGIBLES[forma])
+
+    with pytest.raises(AssertionError) as fallo:
+        _motivos_de(ruta)
+
+    mensaje = str(fallo.value)
+    assert "sonda.py" in mensaje, mensaje
+    # El número de línea del `reasons` ofensor (siempre la última del
+    # cuerpo salvo en la forma con `return`).
+    assert any(f":{n}" in mensaje for n in (2, 3, 4)), mensaje
+    assert "reasons" in mensaje, mensaje
+
+
+#: Formas que SÍ sabe leer, con lo que tiene que sacar de cada una.
+LEGIBLES = {
+    "append_literal": (
+        "def f(reasons):\n    reasons.append('motivo_a')\n",
+        {"motivo_a"},
+    ),
+    "extend_lista_de_literales": (
+        "def f(reasons):\n    reasons.extend(['motivo_a', 'motivo_b'])\n",
+        {"motivo_a", "motivo_b"},
+    ),
+    "insert_literal": (
+        "def f(reasons):\n    reasons.insert(0, 'motivo_a')\n",
+        {"motivo_a"},
+    ),
+    "atributo_de_modulo_resuelto": (
+        "from application.services import residuos_incrementos as ri\n"
+        "def f(reasons):\n"
+        "    reasons.append(ri.RAZON_SIN_TARIFA)\n",
+        {"residuos_ler_sin_tarifa_en_contrato"},
+    ),
+}
+
+
+@pytest.mark.parametrize("forma", sorted(LEGIBLES))
+def test_f027_r22_lo_que_sabe_leer_lo_recoge_entero(tmp_path, forma):
+    """`extend` e `insert` cuentan igual que `append`: acaban en la lista."""
+    cuerpo, esperado = LEGIBLES[forma]
+
+    assert _motivos_de(_modulo(tmp_path, cuerpo)) == esperado
+
+
+#: Formas que NO son vocabulario de este módulo, sino motivos que le
+#: llegan ya hechos de otro sitio (`guard_reasons`, `result.reason`...).
+#: Ni se recogen ni revientan: los congela el test de SU módulo.
+PROPAGACIONES = {
+    "extend_de_otra_lista": "def f(reasons, otras):\n    reasons.extend(otras)\n",
+    "extend_de_un_atributo": (
+        "def f(reasons, res):\n    reasons.extend(res.reasons)\n"
+    ),
+    "append_de_un_atributo_de_objeto": (
+        "def f(reasons, res):\n    reasons.append(res.reason)\n"
+    ),
+    "asignacion_no_literal": (
+        "def f(otro):\n    reasons = list(otro.reasons)\n    return reasons\n"
+    ),
+}
+
+
+@pytest.mark.parametrize("forma", sorted(PROPAGACIONES))
+def test_f027_r22_los_motivos_que_llegan_de_otro_modulo_no_son_de_este(
+    tmp_path, forma,
+):
+    """`reasons.append(result.reason)` existe hoy en el conversor.
+
+    No es vocabulario del conversor: es el motivo que le devuelve el
+    `UnitRegistry`. Ni entra en la congelación de este fichero ni puede
+    reventar el análisis — lo congela el test del módulo que lo escribe.
+    """
+    assert _motivos_de(_modulo(tmp_path, PROPAGACIONES[forma])) == set()
