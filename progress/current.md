@@ -468,3 +468,50 @@ regla de T11 (retirada), y **R19 se incumplía por el camino sin contenedores**
 1026,00—. La feature sigue `blocked` por F-043; `features.json` no se tocó y
 T11 no se restauró.
 
+### Bloques B, C y D · APROBADOS en la pasada 2 (2026-08-26)
+
+`progress/review_F-036_bloques_BCD_pasada2.md`. La pasada 1 los RECHAZÓ por dos
+bloqueantes; el ciclo de corrección (nueve commits `F-036 CR-*`) los cerró y el
+reviewer lo verificó **reproduciendo el antes y el después con el builder real**,
+sin usar los tests del implementer, y con un worktree desechable en el commit
+anterior:
+
+| Escenario | ANTES | AHORA |
+|---|---|---|
+| Base de residuos SIN contenedores calculables | sintética 6,0 UD, **306,00 €**, total 1026,00, sin revisión | sintética sin cantidad, **sin importe**, total 720,00, **en revisión** |
+| 6 m³ / 12 m³ / 3 contenedores | 51 / 102 / 153 € | **idénticos** |
+
+Lo que se aprendió, y vale para cualquier feature: **el mismo defecto puede
+volver por otra rama del código**. El bloque C arregló que la sintética heredara
+los m³ crudos; la corrección solo actuaba si el padre tenía `cantidad_convertida`,
+así que el camino `residuos_sin_volumen_m3` seguía multiplicando por seis. Hoy en
+residuos **no hay fallback**: si no se sabe el nº de contenedores, la línea sale
+sin cantidad, con `residuos_sintetica_sin_cantidad` y en revisión. No se inventa.
+
+**Confirmado por el reviewer con grep propio**: `ModifierContractMatcher` NO está
+cableado en producción —nadie lo instancia ni lee su flag—, así que T19/R20 está
+bien hecho pero **hoy no cambia ninguna valoración**. Cablearlo es F-004.
+
+### Cuatro cambios requeridos que quedan vivos (ninguno de euros)
+
+1. `services/albaranes-api/tests/test_f036_r14_ler_reexportado.py:5` sigue
+   diciendo que el catálogo se movió «porque sv5 también los necesita (R13)».
+   Una línea, y es la última mentira que queda de T11.
+2. **La sintética muda**: con `modifier_source` distinto de `gestion_residuos` y
+   padre de residuos sin contenedores, la línea sale con cantidad e importe a
+   `None`, **sin razón y sin `review_required`**. No hay euros de más, pero es
+   justo la línea muda que `RAZON_SIN_CANTIDAD` existe para evitar: la guarda
+   está atada a `modifier_source` y no a «el padre es de residuos».
+3. `_motivos_de` (`tests/test_f027_r18_r22_contrato.py`) debe **fallar a gritos**
+   ante un `reasons.append(<expresión que no sabe resolver>)` en vez de saltárselo
+   en silencio. Un analizador que alimenta una congelación y calla lo que no
+   entiende es decorado.
+4. `claves_dedupe` (`residuos_incrementos.py:146`) sigue llamando a
+   `normalizar_ler` sobre texto libre: **el mismo defecto de la fecha leída como
+   LER** que se acaba de corregir en `es_linea_incremento_ler`. `ler_creible` lo
+   cierra.
+
+**Añadir a T24 cuando se haga**: comprobar que ninguna línea real escribe el
+incremento como `INCREMENTO 170802` —pegado y sin la palabra `LER`—, grafía que
+antes casaba y que desde CR-3 devuelve `None` (medido por el reviewer).
+
