@@ -27,6 +27,7 @@ Sin red, sin BBDD, sin LLM.
 from __future__ import annotations
 
 import pytest
+from application.services.residuos_incrementos import RAZON_SIN_CANTIDAD
 from domain.models.contexto_linea import ContextoLinea
 from domain.models.valuation_envelope import LineValuationDto
 from tests.f036_escenarios_residuos import (
@@ -448,6 +449,72 @@ def test_f036_r19_la_herencia_normal_no_cambia_fuera_de_residuos():
     syn = sinteticas_de(registros)[0]
 
     assert syn.cantidad_albaran == pytest.approx(8.0)
+
+
+# ------------------------------------------------------------------- #
+# R19 por el OTRO camino: la base de residuos SIN contenedores
+# calculables (`residuos_sin_volumen_m3`). Encontrado por el reviewer
+# en la review de los bloques B/C/D: la herencia de contenedores solo
+# actuaba con `cantidad_convertida is not None`, asi que este caso caia
+# al fallback de `cantidad_albaran` y valoraba el incremento sobre los
+# m3 crudos — exactamente lo que R19 prohibe, por otra rama.
+# ------------------------------------------------------------------- #
+
+def _escenario_sin_contenedores() -> EscenarioResiduos:
+    """Base de residuos que NO permite calcular contenedores.
+
+    Ni `volumen_m3` ni `contenedores` en el contexto: es el caso
+    `residuos_sin_volumen_m3` de `residuos_container_calc`. La linea
+    del albaran sigue trayendo sus 6 m3 crudos en `cantidad`.
+    """
+    return EscenarioResiduos(
+        lineas=(LineaResiduos(volumen_m3=None, contenedores=None),),
+    )
+
+
+def test_f036_r19_sin_contenedores_la_sintetica_no_hereda_los_m3():
+    """R19 no admite excepciones: NUNCA los m3, ni en este camino.
+
+    Heredar `cantidad_albaran` aqui daba 6 UD x 51 = 306,00 EUR de
+    incremento (total 1026,00), seis veces el recargo real. Como no hay
+    forma de saber cuantos contenedores son, la cantidad se deja SIN
+    inventar en vez de inventarla mal.
+    """
+    _, registros = valorar(_escenario_sin_contenedores())
+    syn = sinteticas_de(registros)[0]
+
+    assert base_de(registros).cantidad_convertida is None
+    assert syn.cantidad_albaran is None
+    assert syn.cantidad_convertida is None
+    assert syn.importe_calculado is None
+
+
+def test_f036_r19_sin_contenedores_la_sintetica_dice_por_que_y_va_a_revision():
+    """Una linea sin cantidad tiene que explicarse, no aparecer muda.
+
+    El revisor ve el incremento del LER, ve que no lleva numero y lee
+    el motivo: la base no permitio calcular contenedores. Ponerle 306
+    EUR lo hubiera dejado sin nada que revisar.
+    """
+    _, registros = valorar(_escenario_sin_contenedores())
+    syn = sinteticas_de(registros)[0]
+
+    assert RAZON_SIN_CANTIDAD in syn.review_reasons
+    assert syn.review_required is True
+
+
+def test_f036_r19_sin_contenedores_el_total_no_incluye_el_incremento():
+    """Sin cantidad no hay importe, y sin importe no suma al total.
+
+    El importe de la BASE (720,00 = 6 m3 x 120) es un fallback
+    preexistente de `importe_calculator` ajeno a F-036: aqui se fija
+    solo que la sintetica no anade sus 306 EUR fantasma.
+    """
+    cabecera, registros = valorar(_escenario_sin_contenedores())
+
+    assert cabecera.total_valorado == pytest.approx(
+        base_de(registros).importe_calculado
+    )
 
 
 def test_f036_r16_una_linea_sin_merge_line_id_no_rompe_el_recorrido():

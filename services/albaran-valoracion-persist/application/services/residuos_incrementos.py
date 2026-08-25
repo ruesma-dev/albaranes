@@ -71,6 +71,12 @@ FUENTE_GESTION_RESIDUOS = "gestion_residuos"
 #: ponga a mano: un incremento invisible no se le reclama a nadie.
 RAZON_SIN_TARIFA = "residuos_ler_sin_tarifa_en_contrato"
 
+#: Razon que lleva la sintetica cuando la linea BASE de residuos no
+#: permitio calcular contenedores (R19). La cantidad se deja vacia en
+#: vez de heredar los m3 del albaran, que multiplicarian el recargo por
+#: la capacidad del contenedor; el revisor pone el numero a mano.
+RAZON_SIN_CANTIDAD = "residuos_sintetica_sin_cantidad"
+
 #: Grafia con la que Sigrid escribe estas lineas ("INCREMENTO LER
 #: 170604 ..."). Se compara sobre el texto normalizado, asi que cubre
 #: INCREMENTO / INCREMENTOS / INCREMENT. Si aparece otra grafia real, se

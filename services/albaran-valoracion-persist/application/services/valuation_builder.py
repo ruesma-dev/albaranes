@@ -13,6 +13,7 @@ from application.services.residuos_container_calc import (
 )
 from application.services.residuos_incrementos import (
     FUENTE_GESTION_RESIDUOS,
+    RAZON_SIN_CANTIDAD,
     RAZON_SIN_TARIFA,
     REGLAS_SINTETICAS_RESIDUOS,
     claves_dedupe,
@@ -1447,18 +1448,29 @@ class ValuationBuilder:
             # albarán de 6 m³ = UN contenedor: seis veces lo que cobra
             # el gestor. Fuera de residuos ambas coinciden, así que la
             # herencia de siempre no cambia.
+            #
+            # (ago 2026 · corrección de la review de los bloques B/C/D)
+            # En residuos la herencia NO tiene fallback: si el padre no
+            # trae contenedores (`residuos_sin_volumen_m3`: ni volumen ni
+            # resta entregados-retirados), la cantidad se queda en None.
+            # Caer al `elif` de `cantidad_albaran` reintroducía el defecto
+            # que R19 prohíbe —los m³ crudos— por otro camino: medido en
+            # 306 € de incremento sobre una base de 6 m³. No sabemos
+            # cuántos contenedores son, así que no se inventa ninguno; la
+            # línea sale sin importe, con `RAZON_SIN_CANTIDAD`, y el
+            # revisor pone el número. R19 no admite excepciones.
             padre_residuos = (
                 parent_albaran is not None
                 and getattr(
                     parent_albaran.contexto_linea, "tipo_familia", None,
                 ) == "residuos"
             )
-            if (
-                padre_residuos
-                and parent_record is not None
-                and parent_record.cantidad_convertida is not None
-            ):
-                cantidad = parent_record.cantidad_convertida
+            if padre_residuos:
+                cantidad = (
+                    parent_record.cantidad_convertida
+                    if parent_record is not None
+                    else None
+                )
             # Cantidad: del parent_record si existe (ya resuelto con factor
             # de conversión), si no del albarán directamente como fallback.
             elif parent_record is not None and parent_record.cantidad_albaran is not None:
@@ -1640,6 +1652,20 @@ class ValuationBuilder:
             and precio_final is None
         ):
             reasons.append(RAZON_SIN_TARIFA)
+            review_required = True
+
+        # ------------------------------------------------------------ #
+        # (ago 2026 · F-036 R19) La sintética de residuos que se quedó
+        # SIN cantidad porque la base no permitió calcular contenedores.
+        # Sin este motivo la línea aparecería muda —sin número y sin
+        # explicación— y el revisor no sabría si es un cero real o un
+        # dato que falta. Es el precio de no inventar los m³.
+        # ------------------------------------------------------------ #
+        if (
+            (line.modifier_source or "") == FUENTE_GESTION_RESIDUOS
+            and cantidad is None
+        ):
+            reasons.append(RAZON_SIN_CANTIDAD)
             review_required = True
 
         tarifa_pdf_encontrada: bool | None = (
