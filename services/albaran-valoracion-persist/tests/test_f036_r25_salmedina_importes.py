@@ -30,14 +30,29 @@ del albaran: el numero del documento es la CAPACIDAD del contenedor
 
 ALCANCE DE ESTE FICHERO (leer antes de darlo por prueba de R25).
 Mide **sv6 desde el sobre que le entrega sv5**, con fixtures: sin red,
-sin BBDD y sin LLM. La precondicion de todos los casos es que el
-`contexto_linea` del merge traiga `tipo_familia='residuos'`, porque TODA
-la maquinaria de residuos de sv6 esta cerrada tras esa comprobacion
-(`valuation_builder.py:1165`, `:846`, `:985`). Para SS-0003967 esa
-precondicion NO esta garantizada en produccion: su merge real tenia
-`contexto_linea = NULL` y ninguna de las tareas de F-036 la restituye
-(ver `test_f036_r25_sin_tipo_familia_no_corre_ninguna_regla_de_residuos`
-y el informe `progress/impl_F-036_bloque_D.md`).
+sin BBDD y sin LLM. Los importes de R25 salen SOLO si se cumplen DOS
+precondiciones, y ninguna de las dos la arregla F-036:
+
+1. **El `contexto_linea` del merge trae `tipo_familia='residuos'`**,
+   porque toda la maquinaria de residuos de sv6 esta cerrada tras esa
+   comprobacion (`valuation_builder.py:1165`, `:846`, `:985`). En
+   SS-0003967 no se cumple: su merge real tenia `contexto_linea = NULL`
+   y ninguna tarea de F-036 lo restituye (R9-R12 rellenan las nueve
+   MEDIDAS, y R12 deja los narrativos intactos a proposito). Fijado en
+   `test_f036_r25_sin_tipo_familia_no_corre_ninguna_regla_de_residuos`.
+
+2. **IA3 caso la linea base contra el CONTENEDOR del contrato**, no
+   contra la linea de INCREMENTO. En SS-0003967 el match real fue a la
+   26481 ("INCREMENTO LER 170604"), y con `tipo_familia` puesto la
+   guarda de R15 lo ANULA —correctamente: esa linea no tarifa la
+   retirada— dejando la base sin precio. El documento sale entonces en
+   **90,00 EUR** (solo la sintetica) frente a los 210,00 de R25. Fijado
+   en `test_f036_r25_con_el_match_real_de_ss_0003967_no_se_llega_a_210`.
+
+O sea: de los tres importes de R25, el de SS-0003967 esta demostrado
+aqui **bajo hipotesis**, no medido contra lo que hoy llega de sv5.
+Arreglar el match de IA3 y la restitucion del `tipo_familia` es trabajo
+FUERA de F-036 (ver `progress/impl_F-036_bloque_D.md`).
 """
 from __future__ import annotations
 
@@ -322,3 +337,48 @@ def test_f036_r25_sin_tipo_familia_no_corre_ninguna_regla_de_residuos():
     base = base_de(registros)
     assert base.cantidad_convertida is None
     assert "residuos_base_casada_con_incremento" not in base.review_reasons
+
+
+def test_f036_r25_con_el_match_real_de_ss_0003967_no_se_llega_a_210():
+    """La SEGUNDA precondicion de R25, escrita como test.
+
+    Con `tipo_familia` puesto pero el match REAL de IA3 —la linea 26481,
+    que es el INCREMENTO y no el CONTENEDOR— la guarda de R15 anula el
+    match, y hace bien: esa linea no tarifa la retirada. Pero la base se
+    queda sin precio y el documento sale en 90,00 EUR (solo la
+    sintetica) en vez de los 210,00 de R25.
+
+    No es un defecto de F-036 ni algo que F-036 arregle: es la hipotesis
+    sobre la que descansa el importe de SS-0003967 en los tests de
+    arriba, y se fija aqui para que nadie lea el escenario como si el
+    numero ya estuviera conseguido de punta a punta.
+    """
+    caso = INFRAVALORADOS[1]
+    assert caso.numero == "SS-0003967"
+
+    escenario = EscenarioResiduos(
+        lineas=(
+            LineaResiduos(
+                descripcion=caso.concepto,
+                cantidad=6.0,
+                unidad="M3",
+                codigo_ler=caso.codigo_ler,
+                volumen_m3=6.0,
+                tipo_familia="residuos",
+                rol_linea="base",
+                matched_contrato_line_id=INCREMENTO_170604.contrato_line_id,
+                precio_contrato_db=INCREMENTO_170604.precio_unitario,
+                match_method="exact_concept",
+            ),
+        ),
+        contrato=CONTRATO_0228,
+        numero_albaran=caso.numero,
+    )
+    cabecera, registros = valorar(escenario)
+    base = base_de(registros)
+
+    assert "residuos_base_casada_con_incremento" in base.review_reasons
+    assert base.precio_unitario_contrato_db is None
+    assert base.importe_calculado is None
+    assert cabecera.total_valorado == pytest.approx(90.0)
+    assert cabecera.total_valorado != pytest.approx(caso.total)
