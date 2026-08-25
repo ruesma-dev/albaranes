@@ -15,9 +15,46 @@ la de Claude. Fusionarlos podría producir contextos incoherentes.
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from domain.models.contexto_linea import ContextoLinea
+
+# Orden canónico del sistema. El índice de cada proveedor es el que
+# desempata a igualdad de score y el que da nombre al log de R11.
+_PROVEEDORES = ("openai", "gemini", "claude")
+
+# (F-036 R9) Las nueve MEDIDAS que el documento de residuos trae por
+# línea. Hasta F-036 ninguna puntuaba: un contexto con el código LER,
+# los m³ y el nº de contenedores —y ni un campo narrativo— sacaba 0 y
+# se descartaba entero, así que sv3 persistía `contexto_linea = NULL`.
+# Desde ahí, la tipología de sv5 y el cálculo de contenedores de sv6
+# trabajaban a ciegas. Esta tupla es también la lista EXACTA de campos
+# que `_completar_campos_objetivos` puede rellenar (R11).
+_CAMPOS_RESIDUOS: tuple[str, ...] = (
+    "codigo_ler",
+    "volumen_m3",
+    "peso_toneladas",
+    "contenedores",
+    "contenedores_entregados",
+    "contenedores_retirados",
+    "carga_incompleta",
+    "m3_no_transportados",
+    "exceso_declarado_min",
+)
+
+
+def _tiene_valor(valor: Any) -> bool:
+    """True si el campo trae dato. Ojo: ``False`` y ``0`` SON dato.
+
+    Solo `None` y las cadenas en blanco cuentan como hueco:
+    `carga_incompleta=False` significa «el albarán dice que la carga
+    iba completa», que es información, no ausencia de ella.
+    """
+    if valor is None:
+        return False
+    if isinstance(valor, str):
+        return bool(valor.strip())
+    return True
 
 
 def _score_contexto(ctx: Optional[ContextoLinea]) -> int:
@@ -35,6 +72,12 @@ def _score_contexto(ctx: Optional[ContextoLinea]) -> int:
         score += 1
     if ctx.ref_linea_base is not None:
         score += 1
+    # (R9, R10) Las nueve medidas de residuos suman igual que las
+    # narrativas: un contexto que SOLO las trae puntúa > 0 y ya no se
+    # descarta.
+    for campo in _CAMPOS_RESIDUOS:
+        if _tiene_valor(getattr(ctx, campo, None)):
+            score += 1
     return score
 
 

@@ -1,0 +1,129 @@
+# tests/test_f036_r9_r12_contexto_merger.py
+"""F-036 D2 · el contexto de residuos ya no se pierde al fusionar.
+
+Diagnostico (progress/explore_F-036.md): `_score_contexto` solo puntuaba
+los CINCO campos narrativos. Un contexto que traia el codigo LER, los m3
+y el numero de contenedores —y nada mas— puntuaba 0 y se descartaba
+ENTERO. Y aun puntuando, un candidato con `tipo_familia` + `rol_linea`
+(score 2) le ganaba a otro con las nueve medidas, asi que los m3 se
+perdian igual. Por eso R9/R10 (puntuar) y R11/R12 (completar) van
+juntos: cada uno arregla una cara del mismo defecto.
+
+Funcion pura: sin red, sin BBDD, sin LLM.
+"""
+from __future__ import annotations
+
+import pytest
+from domain.models.contexto_linea import ContextoLinea
+
+from application.services.contexto_linea_merger import (
+    _CAMPOS_RESIDUOS,
+    _score_contexto,
+    pick_best_contexto_linea,
+)
+
+
+# ------------------------------------------------------------------ #
+# R9 · los nueve campos de residuos puntuan
+# ------------------------------------------------------------------ #
+@pytest.mark.parametrize(
+    ("campo", "valor"),
+    [
+        ("codigo_ler", "170504"),
+        ("volumen_m3", 6.0),
+        ("peso_toneladas", 1.2),
+        ("contenedores", 1.0),
+        ("contenedores_entregados", 2.0),
+        ("contenedores_retirados", 1.0),
+        ("carga_incompleta", True),
+        ("m3_no_transportados", 0.5),
+        ("exceso_declarado_min", 103.0),
+    ],
+)
+def test_f036_r9_cada_campo_de_residuos_suma_un_punto(campo, valor):
+    assert _score_contexto(ContextoLinea(**{campo: valor})) == 1
+
+
+def test_f036_r9_son_exactamente_los_nueve_campos_del_requisito():
+    """La lista es el contrato: si crece, R9 y R11 cambian a la vez."""
+    assert _CAMPOS_RESIDUOS == (
+        "codigo_ler",
+        "volumen_m3",
+        "peso_toneladas",
+        "contenedores",
+        "contenedores_entregados",
+        "contenedores_retirados",
+        "carga_incompleta",
+        "m3_no_transportados",
+        "exceso_declarado_min",
+    )
+
+
+def test_f036_r9_los_cinco_narrativos_siguen_puntuando():
+    """Ampliar el scorer no puede quitarle valor a lo que ya contaba."""
+    ctx = ContextoLinea(
+        tipo_familia="residuos",
+        rol_linea="base",
+        descripcion_extendida="CONTENEDOR RCD 6 m3",
+        notas_tiempo="carga 10 min",
+        ref_linea_base=0,
+    )
+
+    assert _score_contexto(ctx) == 5
+
+
+def test_f036_r9_carga_incompleta_false_es_un_dato_no_un_hueco():
+    """`False` es informacion: el albaran dijo que la carga iba llena."""
+    assert _score_contexto(ContextoLinea(carga_incompleta=False)) == 1
+
+
+def test_f036_r9_un_codigo_ler_en_blanco_no_puntua():
+    """Cadena vacia o de espacios = campo sin rellenar."""
+    assert _score_contexto(ContextoLinea(codigo_ler="   ")) == 0
+
+
+def test_f036_r9_todo_relleno_suma_los_catorce():
+    ctx = ContextoLinea(
+        tipo_familia="residuos",
+        rol_linea="base",
+        descripcion_extendida="x",
+        notas_tiempo="y",
+        ref_linea_base=0,
+        codigo_ler="170504",
+        volumen_m3=6.0,
+        peso_toneladas=1.2,
+        contenedores=1.0,
+        contenedores_entregados=2.0,
+        contenedores_retirados=1.0,
+        carga_incompleta=True,
+        m3_no_transportados=0.5,
+        exceso_declarado_min=103.0,
+    )
+
+    assert _score_contexto(ctx) == 14
+
+
+# ------------------------------------------------------------------ #
+# R10 · un contexto de SOLO residuos ya no se descarta
+# ------------------------------------------------------------------ #
+def test_f036_r10_un_contexto_solo_de_residuos_no_se_descarta():
+    """El caso real de SALMEDINA: LER + m3 y ni un campo narrativo.
+
+    Antes de F-036 este contexto puntuaba 0, `pick_best` lo descartaba
+    y sv3 persistia `contexto_linea = NULL`. Desde ahi todo lo demas
+    (tipologia de sv5, calculo de contenedores de sv6) trabajaba a
+    ciegas.
+    """
+    solo_residuos = ContextoLinea(codigo_ler="170504", volumen_m3=6.0)
+
+    elegido = pick_best_contexto_linea(openai_ctx=solo_residuos)
+
+    assert elegido is not None
+    assert elegido.codigo_ler == "170504"
+    assert elegido.volumen_m3 == 6.0
+
+
+def test_f036_r10_sin_ningun_campo_sigue_devolviendo_none():
+    """Puntuar mas campos no puede resucitar un contexto vacio."""
+    assert pick_best_contexto_linea(openai_ctx=ContextoLinea()) is None
+    assert pick_best_contexto_linea() is None
