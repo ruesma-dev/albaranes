@@ -1438,9 +1438,30 @@ class ValuationBuilder:
             else:
                 unidad_cat = "unknown"
         else:
+            # (ago 2026 · F-036 R19) RESIDUOS: la cantidad valorada del
+            # padre NO es la del albarán, es el nº de CONTENEDORES que
+            # calculó `residuos_container_calc`, y vive en
+            # `cantidad_convertida` (`cantidad_albaran` conserva los m³
+            # crudos como metadato). Heredar `cantidad_albaran` aquí
+            # valoraba el incremento del LER a 6 × 51 = 306 € en un
+            # albarán de 6 m³ = UN contenedor: seis veces lo que cobra
+            # el gestor. Fuera de residuos ambas coinciden, así que la
+            # herencia de siempre no cambia.
+            padre_residuos = (
+                parent_albaran is not None
+                and getattr(
+                    parent_albaran.contexto_linea, "tipo_familia", None,
+                ) == "residuos"
+            )
+            if (
+                padre_residuos
+                and parent_record is not None
+                and parent_record.cantidad_convertida is not None
+            ):
+                cantidad = parent_record.cantidad_convertida
             # Cantidad: del parent_record si existe (ya resuelto con factor
             # de conversión), si no del albarán directamente como fallback.
-            if parent_record is not None and parent_record.cantidad_albaran is not None:
+            elif parent_record is not None and parent_record.cantidad_albaran is not None:
                 cantidad = parent_record.cantidad_albaran
             elif parent_albaran is not None:
                 cantidad = parent_albaran.cantidad

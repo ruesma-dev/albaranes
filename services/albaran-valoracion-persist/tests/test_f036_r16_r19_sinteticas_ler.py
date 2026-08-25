@@ -36,6 +36,7 @@ from tests.f036_escenarios_residuos import (
     INCREMENTO_170802,
     EscenarioResiduos,
     LineaResiduos,
+    base_de,
     sinteticas_de,
     valorar,
 )
@@ -373,3 +374,74 @@ def test_f036_r17_el_total_del_documento_no_se_mueve():
     assert cabecera.total_valorado == pytest.approx(120.0)
     assert len(registros) == 2
     assert cabecera.review_required is True
+
+
+# =================================================================== #
+# T18 · R19 — la cantidad se hereda del nº de CONTENEDORES
+# =================================================================== #
+
+def test_f036_r19_la_sintetica_hereda_el_numero_de_contenedores():
+    """NUNCA los m3 del albaran.
+
+    La base son 6 m3 = 1 contenedor. Si la sintetica heredara los 6 m3
+    el incremento saldria a 6 x 51 = 306 EUR: seis veces lo que cobra
+    el gestor. En residuos la cantidad VALORADA es el nº de
+    contenedores y vive en `cantidad_convertida`, no en la cantidad
+    cruda del albaran.
+    """
+    _, registros = valorar(EscenarioResiduos())
+    syn = sinteticas_de(registros)[0]
+
+    assert syn.cantidad_albaran == pytest.approx(1.0)
+    assert syn.cantidad_convertida == pytest.approx(1.0)
+    assert syn.importe_calculado == pytest.approx(51.0)
+
+
+def test_f036_r19_el_total_de_ss_0000589_son_171_euros():
+    """El numero del administrativo: 120 del contenedor + 51 del LER."""
+    cabecera, registros = valorar(EscenarioResiduos())
+    base = base_de(registros)
+
+    assert base.importe_calculado == pytest.approx(120.0)
+    assert cabecera.total_valorado == pytest.approx(171.0)
+
+
+def test_f036_r19_con_dos_contenedores_el_incremento_va_por_contenedor():
+    """12 m3 = 2 contenedores: 2 x 120 + 2 x 51 = 342 EUR."""
+    escenario = EscenarioResiduos(
+        lineas=(LineaResiduos(volumen_m3=12.0, cantidad=12.0),),
+    )
+    cabecera, registros = valorar(escenario)
+    syn = sinteticas_de(registros)[0]
+
+    assert base_de(registros).cantidad_convertida == pytest.approx(2.0)
+    assert syn.cantidad_convertida == pytest.approx(2.0)
+    assert cabecera.total_valorado == pytest.approx(342.0)
+
+
+def test_f036_r19_la_herencia_normal_no_cambia_fuera_de_residuos():
+    """La regla es de residuos: el resto sigue heredando como siempre.
+
+    Una sintetica de hormigon hereda `cantidad_albaran` del padre (los
+    m3 del albaran), que ahi SI es la cantidad valorada.
+    """
+    escenario = EscenarioResiduos(
+        lineas=(
+            LineaResiduos(
+                tipo_familia="hormigon",
+                codigo_ler=None,
+                volumen_m3=None,
+                cantidad=8.0,
+            ),
+        ),
+        sinteticas_ia=(
+            _sintetica_de_ia3(
+                "INCREMENTO POR CONSISTENCIA FLUIDA",
+                rol="incremento_consistencia",
+            ),
+        ),
+    )
+    _, registros = valorar(escenario)
+    syn = sinteticas_de(registros)[0]
+
+    assert syn.cantidad_albaran == pytest.approx(8.0)
