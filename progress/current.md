@@ -449,10 +449,22 @@ justo lo que el humano prohibió el 2026-08-25.
    de rutas sensibles avisa (no bloquea) de seis rutas tocadas sin evals.
    `python -m evals.runner --con-llm --feature F-036` gasta LLM real.
 
-### Deuda de entorno que nace aquí
+### Deuda de entorno que nace aquí — RESUELTA
 
 `pytest` y `coverage` están ahora instalados en `services/albaranes-front/.venv`,
 que desde T25 es el venv declarado de sv4 en `harness/servicios.json`. **En otra
-máquina sin esos paquetes, `init.sh` saldrá en rojo en sv4.** Falta decidir si
-se documenta en el README de sv4 o se añade un `requirements-dev.txt`.
+máquina sin esos paquetes, `init.sh` saldrá en rojo en sv4.** Documentado en el
+README de sv4 (commit `5edd058`); se descartó `requirements-dev.txt`.
+
+## 2026-08-25 · ciclo de corrección del RECHAZO de los bloques B/C/D
+
+`progress/review_F-036_bloques_BCD.md` rechazó B/C/D con 2 bloqueantes y 6
+cambios. **Los ocho están hechos**, un commit por punto (`2025e08` → `5edd058`).
+Informe: **`progress/impl_F-036_correcciones_BCD.md`**.
+
+Lo caro de los dos bloqueantes: la doc de producción seguía describiendo la
+regla de T11 (retirada), y **R19 se incumplía por el camino sin contenedores**
+—la sintética heredaba los m³ crudos y sacaba 306,00 € de incremento, total
+1026,00—. La feature sigue `blocked` por F-043; `features.json` no se tocó y
+T11 no se restauró.
 
