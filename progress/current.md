@@ -149,6 +149,7 @@ Altas relacionadas: **F-036** (los dos defectos, rigor `critico`), **F-037**
 
 ## Notas operativas (valen para cualquier sesión)
 
+- **Los `impl_`, `review_` y `evals_` de features cerradas viven en `progress/historico/`** (archivados el 2026-08-25: 29 ficheros, 639 KB). Las **campañas de mutación NO se archivan**: F-039 las vigila por ruta fija y moverlas pone 8 tests en rojo (el porqué, en `progress/historico/README.md`).
 - **Nada en paralelo**: dos suites a la vez tumban el proceso en Windows
   (`0xC0000142`). Y **una campaña de mutación muta el árbol principal**: mientras
   corra, no lanzar `init.sh` ni tests. Desde la 1.6.0 hay centinela que lo avisa.
@@ -186,3 +187,47 @@ Altas relacionadas: **F-036** (los dos defectos, rigor `critico`), **F-037**
    `init.sh`, no bloquea).
 3. **`ruff`: 1108 avisos** de deuda previa en el monorepo.
 4. **sv1-email e `infra` sin directorio de tests**: nadie comprueba lo suyo.
+
+---
+
+## F-036 · spec escrita (2026-08-22, spec-author)
+
+Escrita `specs/F-036-residuos-contenedores-e-incrementos/`: **27 requisitos**
+EARS y **25 tareas**. `python -m harness.tamano --feature F-036` en verde
+(requirements 149/150, design 222/250).
+
+- **T1 = D1** y es su propio commit, como manda la decisión (6). D1 se
+  especifica como regla GENERAL de sv4 («si la conversión no es reproducible,
+  sv4 conserva lo que escribió sv6»), sin ningún `if residuos`, y el guardián
+  de F-019 R24 pasa a compararse SOLO por entradas.
+- Sin SQL nuevo: `albaran_line_valuations.review_reasons_json` ya existe; sv4
+  pasa a leerla y escribirla.
+- `modifier_source='gestion_residuos'` ya está en el `Literal` de sv5, así que
+  D3 NO dispara los «5 sitios» de ARCHITECTURE §10.
+
+### Decisiones del humano aplicadas (2026-08-22, segunda pasada)
+
+Las cinco dudas están RESUELTAS y la spec ya las incorpora:
+
+1. **R3** confirmado tal cual: conservar la `cantidad_convertida` de sv6,
+   marcar `review_required`, razón
+   `front_cantidad_editada_sin_conversion_reproducible`. No se re-encola.
+2. **R8** confirmado: la plantilla deja de recalcular el importe en Jinja
+   cuando la conversión no es reproducible.
+3. **R14** confirmado: el catálogo LER va a `ruesma_comun`; el coste de
+   reconstruir las imágenes de sv2, sv3, sv5 y sv6 está aceptado.
+4. **R17 CAMBIÓ** («siempre debe crear la sintética; ya pondrá el revisor el
+   importe a mano»): con LER válido sv6 emite SIEMPRE la sintética; sin tarifa
+   sale sin precio (forma C, alineada con la red M1) y SÍ activa
+   `review_required`. Arrastró a R16, a R25 y a las tareas T16, T17, T21, T22
+   y T24.
+5. **R24** acotado a `proveedor_cif_no_casa`; el resto de motivos sellados por
+   sv3 van en ficha aparte.
+
+**Consecuencia declarada en R25 y en el diseño**: SS-0000168, SS-0003935 y
+SS-0025146 GANAN una línea sintética sin precio y pasan a `review_required`.
+El invariante es su TOTAL (120,00 / 120,00 / 136,00), no su número de líneas
+ni su estado de revisión. **No es una regresión**, y está escrito así para que
+el reviewer no lo lea como tal.
+
+Tamaños tras la segunda pasada: requirements 146/150, design 228/250.
