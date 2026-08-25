@@ -219,13 +219,20 @@ def _sintetica_de_ia3(
     *,
     rol: str = "incremento_residuos",
     parent: int = 700,
+    fuente: str = "gestion_residuos",
 ) -> LineValuationDto:
-    """Una sintetica que IA3 hubiera traido en el sobre (dedupe R18)."""
+    """Una sintetica que IA3 hubiera traido en el sobre (dedupe R18).
+
+    ``fuente`` es el ``modifier_source``: por defecto el de la red de
+    residuos, pero IA3 cuelga de una base de residuos sinteticas de
+    OTRAS fuentes (portes, esperas...), y esas tambien heredan la
+    cantidad del padre.
+    """
     return LineValuationDto(
         merge_line_id=None,
         line_kind="synthetic_modifier",
         parent_merge_line_id=parent,
-        modifier_source="gestion_residuos",
+        modifier_source=fuente,
         descripcion_linea=descripcion,
         rol_linea=rol,
         match_method="no_match",
@@ -539,6 +546,98 @@ def test_f036_r19_sin_contenedores_el_total_no_incluye_el_incremento():
     assert cabecera.total_valorado == pytest.approx(
         base_de(registros).importe_calculado
     )
+
+
+def _sinteticas_por_fuente(registros, fuente: str):
+    return [s for s in sinteticas_de(registros) if s.modifier_source == fuente]
+
+
+def test_f036_r19_sin_contenedores_CUALQUIER_sintetica_del_padre_se_explica():
+    """La linea muda no depende de QUIEN emitio la sintetica.
+
+    Encontrado por el reviewer (pasada 2): la guarda de
+    `RAZON_SIN_CANTIDAD` estaba atada a `modifier_source ==
+    'gestion_residuos'`, pero la cantidad la deja en None la HERENCIA
+    del padre de residuos, que se aplica a TODAS las sinteticas que
+    cuelgan de esa base — las de la red y las que trae IA3 (portes,
+    esperas...). Con otra fuente la linea salia sin cantidad, sin
+    importe, sin motivo y SIN revision: exactamente la linea muda que
+    `RAZON_SIN_CANTIDAD` existe para evitar.
+
+    No son euros de mas (antes heredaba los 6 m3 crudos, que si lo
+    eran): es una linea que el revisor no sabe interpretar.
+    """
+    escenario = EscenarioResiduos(
+        lineas=(LineaResiduos(volumen_m3=None, contenedores=None),),
+        sinteticas_ia=(
+            _sintetica_de_ia3(
+                "PORTES ADICIONALES",
+                rol="incremento_portes",
+                fuente="portes",
+            ),
+        ),
+    )
+    _, registros = valorar(escenario)
+    ajena = _sinteticas_por_fuente(registros, "portes")[0]
+
+    assert ajena.cantidad_convertida is None
+    assert ajena.importe_calculado is None
+    assert RAZON_SIN_CANTIDAD in ajena.review_reasons
+    assert ajena.review_required is True
+
+
+def test_f036_r19_con_contenedores_la_sintetica_ajena_no_lleva_el_motivo():
+    """El motivo es de la linea SIN cantidad, no de toda la familia.
+
+    Con la base valorada en contenedores la sintetica de otra fuente
+    hereda su cantidad y no tiene nada que explicar: el motivo no puede
+    convertirse en una etiqueta que lleve toda sintetica de residuos.
+    """
+    escenario = EscenarioResiduos(
+        sinteticas_ia=(
+            _sintetica_de_ia3(
+                "PORTES ADICIONALES",
+                rol="incremento_portes",
+                fuente="portes",
+            ),
+        ),
+    )
+    _, registros = valorar(escenario)
+    ajena = _sinteticas_por_fuente(registros, "portes")[0]
+
+    assert ajena.cantidad_convertida == pytest.approx(1.0)
+    assert RAZON_SIN_CANTIDAD not in ajena.review_reasons
+
+
+def test_f036_r19_fuera_de_residuos_una_sintetica_sin_cantidad_no_lo_lleva():
+    """La guarda mira el padre de RESIDUOS, no cualquier padre sin numero.
+
+    Un padre de hormigon sin cantidad deja la sintetica sin cantidad por
+    otro motivo (no hay contenedores que calcular), y `R19` no habla de
+    ese caso: el motivo mentiria sobre por que falta el numero.
+    """
+    escenario = EscenarioResiduos(
+        lineas=(
+            LineaResiduos(
+                tipo_familia="hormigon",
+                codigo_ler=None,
+                volumen_m3=None,
+                cantidad=None,
+            ),
+        ),
+        sinteticas_ia=(
+            _sintetica_de_ia3(
+                "INCREMENTO POR CONSISTENCIA FLUIDA",
+                rol="incremento_consistencia",
+                fuente="consistencia",
+            ),
+        ),
+    )
+    _, registros = valorar(escenario)
+    ajena = _sinteticas_por_fuente(registros, "consistencia")[0]
+
+    assert ajena.cantidad_convertida is None
+    assert RAZON_SIN_CANTIDAD not in ajena.review_reasons
 
 
 def test_f036_r16_una_linea_sin_merge_line_id_no_rompe_el_recorrido():

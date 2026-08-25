@@ -1385,6 +1385,19 @@ class ValuationBuilder:
             else None
         )
 
+        # (ago 2026 · F-036 R19) ¿La base de la que cuelga esta sintética
+        # es de RESIDUOS? Se calcula AQUÍ, y no dentro de la rama de
+        # herencia, porque manda dos cosas distintas: de qué campo se
+        # hereda la cantidad (contenedores, no m³) y, más abajo, si una
+        # línea sin cantidad tiene que explicarse. Atarla a la rama la
+        # dejaba invisible para lo segundo (review de la pasada 2).
+        padre_residuos = (
+            parent_albaran is not None
+            and getattr(
+                parent_albaran.contexto_linea, "tipo_familia", None,
+            ) == "residuos"
+        )
+
         # Detección de línea de tiempo (M6 del prompt): tiene semántica
         # distinta del resto — cantidad y unidad no heredan del parent,
         # vienen del LLM (cantidad = minutos de exceso, unidad = "min").
@@ -1459,12 +1472,6 @@ class ValuationBuilder:
             # cuántos contenedores son, así que no se inventa ninguno; la
             # línea sale sin importe, con `RAZON_SIN_CANTIDAD`, y el
             # revisor pone el número. R19 no admite excepciones.
-            padre_residuos = (
-                parent_albaran is not None
-                and getattr(
-                    parent_albaran.contexto_linea, "tipo_familia", None,
-                ) == "residuos"
-            )
             if padre_residuos:
                 cantidad = (
                     parent_record.cantidad_convertida
@@ -1660,11 +1667,19 @@ class ValuationBuilder:
         # Sin este motivo la línea aparecería muda —sin número y sin
         # explicación— y el revisor no sabría si es un cero real o un
         # dato que falta. Es el precio de no inventar los m³.
+        #
+        # (corrección de la review de la pasada 2) La condición es
+        # PADRE DE RESIDUOS + SIN CANTIDAD, no el `modifier_source` de
+        # la sintética. Quien deja la cantidad en None es la herencia
+        # del padre (arriba), que se aplica a TODAS las sintéticas que
+        # cuelgan de esa base: las de la red de residuos y las que trae
+        # IA3 con otra fuente (portes, esperas...). Atado a la fuente,
+        # esas segundas salían mudas y encima sin revisión.
+        # La sintética `gestion_residuos` cuyo padre NO está en el
+        # contexto no pierde nada: ya lleva `synthetic_without_parent` /
+        # `synthetic_parent_not_in_context` y su propio review_required.
         # ------------------------------------------------------------ #
-        if (
-            (line.modifier_source or "") == FUENTE_GESTION_RESIDUOS
-            and cantidad is None
-        ):
+        if padre_residuos and cantidad is None:
             reasons.append(RAZON_SIN_CANTIDAD)
             review_required = True
 
