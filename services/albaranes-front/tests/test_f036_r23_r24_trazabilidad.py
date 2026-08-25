@@ -198,3 +198,195 @@ def test_f036_r23_los_motivos_del_documento_se_exponen_como_lista(
     )
 
     assert payload.review_reasons == esperado
+
+
+# ------------------------------------------------------------------ #
+# R23 · lo que el revisor VE en la ficha
+# ------------------------------------------------------------------ #
+def _documento(lineas_valoracion=(), motivos_documento=None, display=()):
+    """``DocumentDetailPayload`` minimo para renderizar el detalle."""
+    from domain.models.review_models import (
+        DocumentDetailPayload,
+        ValuationPayload,
+    )
+
+    valoracion = None
+    if lineas_valoracion:
+        valoracion = ValuationPayload(
+            valuation_id=VALUATION_ID,
+            contrato_codigo="C-001",
+            status="completed",
+            total_valorado=120.0,
+            total_lines=len(lineas_valoracion),
+            review_required=True,
+            lines_by_merge_line_id={
+                linea.merge_line_id: linea
+                for linea in lineas_valoracion
+                if linea.merge_line_id is not None
+            },
+            synthetic_lines=[
+                linea
+                for linea in lineas_valoracion
+                if linea.merge_line_id is None
+            ],
+        )
+    return DocumentDetailPayload(
+        id=DOCUMENT_ID,
+        source_filename="SS-0801977.pdf",
+        provider_origin="merge",
+        model_name="—",
+        created_at_utc="2026-08-19T10:00:00Z",
+        proveedor_cif="B87654321",
+        review_reasons_json=(
+            json.dumps(motivos_documento) if motivos_documento else None
+        ),
+        review_required=bool(motivos_documento),
+        display_lines=list(display),
+        valuation=valoracion,
+    )
+
+
+def _linea_valorada(**campos):
+    from domain.models.review_models import LineValuationPayload
+
+    base = {
+        "valuation_line_id": 900,
+        "merge_line_id": 500,
+        "precio_unitario_final": 120.0,
+        "cantidad_albaran": 6.0,
+        "cantidad_convertida": 1.0,
+        "importe_calculado": 120.0,
+        "importe_source": "declared_albaran",
+        "review_reasons": ["residuos_contenedores"],
+        "review_required": True,
+    }
+    base.update(campos)
+    return LineValuationPayload(**base)
+
+
+def _display(**campos):
+    from domain.models.review_models import ConciliacionDisplay, DisplayLine
+
+    conciliacion = ConciliacionDisplay(
+        kind="assigned",
+        codigo_partida="01.01",
+        descripcion="RETIRADA CONTENEDOR RCD",
+        unidad="UD",
+        unitario=120.0,
+        descuento=None,
+    )
+    base = {
+        "line_kind": "from_albaran",
+        "merge_line_id": 500,
+        "valuation_line_id": 900,
+        "line_index": 1,
+        "concepto": "RETIRADA CONTENEDOR RCD",
+        "cantidad": 6.0,
+        "unidad": "M3",
+        "precio_unitario": 120.0,
+        "importe": 120.0,
+        "is_valued": True,
+        "concilia": conciliacion,
+    }
+    base.update(campos)
+    return DisplayLine(**base)
+
+
+def test_f036_r23_la_ficha_pinta_las_razones_de_la_linea(render_detalle):
+    """La razon de sv6 llega hasta el HTML que ve el revisor."""
+    html = render_detalle(
+        _documento(
+            lineas_valoracion=[
+                _linea_valorada(
+                    review_reasons=[
+                        "residuos_contenedores",
+                        "residuos_sin_volumen_m3",
+                    ]
+                )
+            ],
+            display=[_display()],
+        )
+    )
+
+    assert "residuos_contenedores" in html
+    assert "residuos_sin_volumen_m3" in html
+
+
+def test_f036_r23_una_linea_sin_razones_no_pinta_el_hueco(render_detalle):
+    """Sin razones no hay marca: la tabla no se llena de adornos vacios."""
+    html = render_detalle(
+        _documento(
+            lineas_valoracion=[_linea_valorada(review_reasons=[])],
+            display=[_display()],
+        )
+    )
+
+    assert "js-linea-razones" not in html
+
+
+def test_f036_r23_las_razones_de_la_sintetica_tambien_se_pintan(
+    render_detalle,
+):
+    """La sintetica sin tarifa (R17) existe para que el revisor actue.
+
+    Si su razon no se pinta, la linea sin precio parece un error del
+    sistema en vez de un encargo.
+    """
+    sintetica = _linea_valorada(
+        valuation_line_id=904,
+        merge_line_id=None,
+        precio_unitario_final=None,
+        importe_calculado=None,
+        descripcion_linea="INCREMENTO LER 170504",
+        line_kind="synthetic_modifier",
+        parent_merge_line_id=500,
+        review_reasons=["residuos_ler_sin_tarifa_en_contrato"],
+    )
+    html = render_detalle(
+        _documento(
+            lineas_valoracion=[_linea_valorada(), sintetica],
+            display=[
+                _display(),
+                _display(
+                    line_kind="synthetic_modifier",
+                    merge_line_id=None,
+                    valuation_line_id=904,
+                    concepto="INCREMENTO LER 170504",
+                    cantidad=1.0,
+                    precio_unitario=None,
+                    importe=None,
+                ),
+            ],
+        )
+    )
+
+    assert "residuos_ler_sin_tarifa_en_contrato" in html
+
+
+def test_f036_r23_el_banner_pinta_los_motivos_del_documento(render_detalle):
+    """Los motivos que sella sv3 tampoco se veian en ninguna parte."""
+    html = render_detalle(
+        _documento(
+            lineas_valoracion=[_linea_valorada()],
+            motivos_documento=[
+                "proveedor_cif_no_casa:B12345678",
+                "obra_no_resuelta",
+            ],
+            display=[_display()],
+        )
+    )
+
+    assert "proveedor_cif_no_casa:B12345678" in html
+    assert "obra_no_resuelta" in html
+
+
+def test_f036_r23_sin_motivos_el_banner_no_inventa_nada(render_detalle):
+    """Un documento limpio no gana una lista de motivos vacia."""
+    html = render_detalle(
+        _documento(
+            lineas_valoracion=[_linea_valorada()],
+            display=[_display()],
+        )
+    )
+
+    assert "Motivos de revisión" not in html

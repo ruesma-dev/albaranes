@@ -399,6 +399,28 @@ class ValuationPayload(BaseModel):
     # las itera aparte o las mezcla en display_lines.
     synthetic_lines: list[LineValuationPayload] = Field(default_factory=list)
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def lines_by_valuation_line_id(self) -> dict[int, LineValuationPayload]:
+        """Mapa ``valuation_line_id -> línea``, base Y sintéticas (F-036).
+
+        ``lines_by_merge_line_id`` deja fuera a las sintéticas —no tienen
+        ``merge_line_id``—, así que la plantilla necesitaba dos búsquedas
+        distintas según el tipo de fila. La tabla del detalle sí tiene un
+        identificador que vale para TODAS: ``DisplayLine.valuation_line_id``.
+        Con este mapa, pintar las razones de una fila (R23) o decidir si
+        su conversión es reproducible (R8) es la misma expresión para
+        cualquier línea.
+        """
+        todas = list(self.lines_by_merge_line_id.values()) + list(
+            self.synthetic_lines
+        )
+        return {
+            linea.valuation_line_id: linea
+            for linea in todas
+            if linea.valuation_line_id is not None
+        }
+
 
 # ====================================================================== #
 class ConciliacionDisplay(BaseModel):

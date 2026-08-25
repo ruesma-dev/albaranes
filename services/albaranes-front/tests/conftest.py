@@ -130,6 +130,86 @@ def sesion():
     motor.dispose()
 
 
+class _PeticionFalsa:
+    """Lo unico que la plantilla base pide de ``request``: ``url_for``."""
+
+    @staticmethod
+    def url_for(nombre: str, path: str = "") -> str:
+        return f"/{nombre}/{path}"
+
+
+def _importe_eur(valor):
+    """Stand-in del filtro ``importe_eur`` de ``interface_adapters.web.app``.
+
+    NO se importa el de produccion a proposito: ese modulo arrastra
+    FastAPI y la suite de sv4 se ejecuta con el interprete del arnes, que
+    no lo tiene. Lo que los tests de render comprueban es QUE VALOR llega
+    al filtro (el importe persistido o el producto recalculado en Jinja),
+    no como se formatea; el formato va en formato espanol solo para que
+    las aserciones se lean como lo que ve el revisor.
+    """
+    if valor is None:
+        return "—"
+    entero, _, decimal = f"{float(valor):,.2f}".partition(".")
+    return f"{entero.replace(',', '.')},{decimal} €"
+
+
+@pytest.fixture
+def render_detalle():
+    """Renderiza ``templates/document_detail.html`` y devuelve el HTML.
+
+    Sin FastAPI ni servidor: Jinja2 a pelo sobre el directorio real de
+    plantillas del servicio, con un ``request`` falso y los filtros
+    minimos que la plantilla usa.
+    """
+    pytest.importorskip(
+        "jinja2",
+        reason=(
+            "jinja2 es dependencia declarada de sv4 (requirements.txt); "
+            "sin ella no se puede comprobar lo que pinta la plantilla"
+        ),
+    )
+    import json
+
+    from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+    entorno = Environment(
+        loader=FileSystemLoader(str(RAIZ_SERVICIO / "templates")),
+        autoescape=select_autoescape(["html"]),
+    )
+    entorno.filters["importe_eur"] = _importe_eur
+    entorno.filters["fecha_int_iso"] = lambda valor: str(valor or "—")
+    entorno.filters["tojson_pretty"] = lambda valor: json.dumps(
+        valor, ensure_ascii=False, indent=2
+    )
+    entorno.filters["fecha_hora_local"] = lambda valor: str(valor or "—")
+    entorno.filters["fecha_local"] = lambda valor: str(valor or "—")
+    entorno.filters["hora_local"] = lambda valor: str(valor or "—")
+    entorno.globals["view_label"] = str
+    entorno.globals["asset_version"] = "test"
+
+    def _render(document, **extra):
+        contexto = {
+            "request": _PeticionFalsa(),
+            "title": "Albaranes · test",
+            "document": document,
+            "document_json": "{}",
+            "message": None,
+            "preview_enabled": False,
+            "document_preview_url": f"/documents/{document.id}/preview",
+            "current_view": document.view_mode,
+            "available_views": document.available_views,
+            "view_label": str,
+            "back_to_list_url": "/documents",
+            "nav_prev_url": None,
+            "nav_next_url": None,
+        }
+        contexto.update(extra)
+        return entorno.get_template("document_detail.html").render(**contexto)
+
+    return _render
+
+
 @pytest.fixture
 def repositorio():
     """``AlbaranReviewRepository`` sin factoria de sesiones.

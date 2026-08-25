@@ -20,6 +20,13 @@
 #}
 {% set valuation = document.valuation %}
 {% set val_lines = valuation.lines_by_merge_line_id if valuation else {} %}
+{#
+    F-036 R23/R8: mismo mapa indexado por valuation_line_id, que existe
+    en TODAS las filas de la tabla (base y sintéticas). Con él, pintar
+    las razones de una línea o saber si su conversión es reproducible es
+    la misma expresión para cualquier fila.
+#}
+{% set val_by_vid = valuation.lines_by_valuation_line_id if valuation else {} %}
 
 {% block content %}
 <section class="page-header detail-header">
@@ -93,6 +100,25 @@
         {% if valuation.review_required %}
             · <strong>Requiere revisión</strong>
         {% endif %}
+    </div>
+{% endif %}
+
+{# =========================================================== #}
+{#  Motivos de revisión del DOCUMENTO (F-036 R23)               #}
+{#                                                              #}
+{#  sv3 los sella en albaran_documents_merge.review_reasons_json #}
+{#  y hasta ahora viajaban al payload sin que nadie los pintara: #}
+{#  el revisor no tenía forma de saber por qué su documento      #}
+{#  estaba marcado salvo abriendo la BBDD.                       #}
+{# =========================================================== #}
+{% if document.review_reasons %}
+    <div class="alert warning">
+        <strong>Motivos de revisión</strong>
+        <ul class="motivos-documento">
+            {% for motivo in document.review_reasons %}
+                <li><code>{{ motivo }}</code></li>
+            {% endfor %}
+        </ul>
     </div>
 {% endif %}
 
@@ -540,6 +566,9 @@
                             {% if dline.concilia %}
                                 {% set c = dline.concilia %}
                                 {% set cedit = document.is_editable and dline.valuation_line_id is not none %}
+                                {# F-036: la línea de valoración de ESTA fila, sea base o sintética. #}
+                                {% set v = val_by_vid.get(dline.valuation_line_id) if dline.valuation_line_id is not none else none %}
+                                {% set razones = v.review_reasons if v else [] %}
                                 <tr class="conciliacion-row salmon-row concilia-{{ c.kind }}{% if cedit %} concilia-editable{% endif %}"
                                     data-line-kind="{{ dline.line_kind }}"
                                     data-for-line-id="{{ dline.merge_line_id if dline.merge_line_id is not none else '' }}"
@@ -584,6 +613,15 @@
                                             </select>
                                         {% else %}
                                             <span class="concilia-val" title="{{ _med }}">{{ c.descripcion or '—' }}</span>
+                                        {% endif %}
+                                        {# F-036 R23 — por qué esta línea salió así. Las razones las
+                                           sellan sv6 (residuos_*, declared_vs_calculated_mismatch...)
+                                           y sv4 (front_*). Van como marca con tooltip para no meter
+                                           una columna nueva en una tabla que ya tiene diez. #}
+                                        {% if razones %}
+                                            <span class="linea-razones js-linea-razones{% if v and v.review_required %} linea-razones-warn{% endif %}"
+                                                  title="{{ razones | join('&#10;') }}"
+                                                  data-razones="{{ razones | join(' ') }}">⚑ {{ razones | length }}</span>
                                         {% endif %}
                                     </td>
                                     {# Cantidad — la leída del albarán (recepciones parciales). Editable. #}
