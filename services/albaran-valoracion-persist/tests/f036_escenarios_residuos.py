@@ -37,10 +37,11 @@ def linea_contrato(
     precio: float,
     *,
     partida: str = PARTIDA,
+    codigo_contrato: str = "CTSU25/0100",
 ) -> ContratoLineContextDto:
     return ContratoLineContextDto(
         contrato_line_id=contrato_line_id,
-        codigo_contrato="CTSU25/0100",
+        codigo_contrato=codigo_contrato,
         codigo_producto=None,
         descripcion=descripcion,
         unidad_medida="UD",
