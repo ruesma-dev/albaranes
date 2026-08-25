@@ -28,44 +28,16 @@ from __future__ import annotations
 
 import pytest
 from domain.models.contexto_linea import ContextoLinea
-from domain.models.valuation_envelope import (
-    ContratoLineContextDto,
-    LineValuationDto,
+from domain.models.valuation_envelope import LineValuationDto
+from tests.f036_escenarios_residuos import (
+    CONTENEDOR_6,
+    CONTRATO_SALMEDINA,
+    INCREMENTO_170802,
+    EscenarioResiduos,
+    LineaResiduos,
+    sinteticas_de,
+    valorar,
 )
-
-
-# ------------------------------------------------------------------ #
-# Catalogo minimo del contrato de SALMEDINA (los dos conceptos que
-# importan, en la MISMA partida, como estan en Sigrid).
-# ------------------------------------------------------------------ #
-def _contrato_line(
-    contrato_line_id: int,
-    descripcion: str,
-    precio: float,
-    partida: str = "32.01",
-) -> ContratoLineContextDto:
-    return ContratoLineContextDto(
-        contrato_line_id=contrato_line_id,
-        codigo_contrato="CTSU25/0100",
-        codigo_producto=None,
-        descripcion=descripcion,
-        unidad_medida="UD",
-        precio_unitario=precio,
-        codigo_partida=partida,
-    )
-
-
-CONTENEDOR_6 = _contrato_line(
-    9001, "MOVIMIENTO DE CONTENEDOR DE 6 M CUBICOS MEZCLA OTROS RESIDUOS", 120.0
-)
-INCREMENTO_170802 = _contrato_line(
-    9002, "INCREMENTO LER 170802 MATERIALES DE CONSTRUCCION A BASE DE YESO", 51.0
-)
-INCREMENTO_170904 = _contrato_line(
-    9003, "INCREMENTO LER 170904 RESIDUOS MEZCLADOS", 16.0
-)
-
-CONTRATO_SALMEDINA = [CONTENEDOR_6, INCREMENTO_170802, INCREMENTO_170904]
 
 
 def _base(merge_line_id: int = 700) -> LineValuationDto:
@@ -206,3 +178,139 @@ def test_f036_r21_la_lista_de_reglas_es_el_punto_de_enganche_de_f006():
     assert isinstance(REGLAS_SINTETICAS_RESIDUOS, list)
     assert len(REGLAS_SINTETICAS_RESIDUOS) == 1
     assert all(callable(r) for r in REGLAS_SINTETICAS_RESIDUOS)
+
+
+# =================================================================== #
+# T16 · R16 y R18 — el recorrido del builder inyecta (y no duplica)
+# =================================================================== #
+
+def _sintetica_de_ia3(
+    descripcion: str,
+    *,
+    rol: str = "incremento_residuos",
+    parent: int = 700,
+) -> LineValuationDto:
+    """Una sintetica que IA3 hubiera traido en el sobre (dedupe R18)."""
+    return LineValuationDto(
+        merge_line_id=None,
+        line_kind="synthetic_modifier",
+        parent_merge_line_id=parent,
+        modifier_source="gestion_residuos",
+        descripcion_linea=descripcion,
+        rol_linea=rol,
+        match_method="no_match",
+        match_confidence_pct=80.0,
+    )
+
+
+def test_f036_r16_la_sintetica_del_ler_se_inyecta_en_la_valoracion():
+    """De 1 linea de albaran salen 2 records: contenedor + incremento."""
+    _, registros = valorar(EscenarioResiduos())
+    sinteticas = sinteticas_de(registros)
+
+    assert len(sinteticas) == 1
+    syn = sinteticas[0]
+    assert syn.modifier_source == "gestion_residuos"
+    assert syn.rol_linea == "incremento_residuos"
+    assert syn.descripcion_linea == "INCREMENTO LER 170802"
+    assert syn.parent_merge_line_id == 700
+    assert syn.matched_contrato_line_id == INCREMENTO_170802.contrato_line_id
+    assert syn.precio_unitario_final == pytest.approx(51.0)
+
+
+def test_f036_r16_sin_codigo_ler_no_se_inventa_ninguna_sintetica():
+    """Sin LER no hay incremento que reclamar."""
+    escenario = EscenarioResiduos(
+        lineas=(LineaResiduos(codigo_ler=None),),
+    )
+    _, registros = valorar(escenario)
+
+    assert sinteticas_de(registros) == []
+
+
+def test_f036_r16_el_recorrido_solo_mira_lineas_de_residuos():
+    """Un LER en una linea de hormigon no dispara la red de residuos."""
+    escenario = EscenarioResiduos(
+        lineas=(
+            LineaResiduos(tipo_familia="hormigon", codigo_ler="170802"),
+        ),
+    )
+    _, registros = valorar(escenario)
+
+    assert sinteticas_de(registros) == []
+
+
+def test_f036_r18_no_se_duplica_si_ia3_ya_emitio_el_mismo_rol():
+    """Dedupe por rol: `incremento_residuos` para esa misma base."""
+    escenario = EscenarioResiduos(
+        sinteticas_ia=(
+            _sintetica_de_ia3("RECARGO POR TIPO DE RESIDUO"),
+        ),
+    )
+    _, registros = valorar(escenario)
+
+    assert len(sinteticas_de(registros)) == 1
+
+
+def test_f036_r18_no_se_duplica_si_ia3_ya_nombro_ese_ler():
+    """Dedupe por clave: el codigo LER en la descripcion, con otro rol."""
+    escenario = EscenarioResiduos(
+        sinteticas_ia=(
+            _sintetica_de_ia3(
+                "INCREMENTO LER 170802", rol="incremento_otro",
+            ),
+        ),
+    )
+    _, registros = valorar(escenario)
+
+    assert len(sinteticas_de(registros)) == 1
+
+
+def test_f036_r18_una_sintetica_de_OTRA_base_no_bloquea_la_inyeccion():
+    """El dedupe es POR LINEA BASE, no por documento.
+
+    La sintetica del sobre cuelga de otra base (999): la nuestra se
+    emite igual, de modo que salen las DOS. Si el dedupe mirase el
+    documento entero, la linea 700 se quedaria sin su incremento.
+    """
+    escenario = EscenarioResiduos(
+        sinteticas_ia=(
+            _sintetica_de_ia3("INCREMENTO LER 170802", parent=999),
+        ),
+    )
+    _, registros = valorar(escenario)
+    sinteticas = sinteticas_de(registros)
+
+    assert len(sinteticas) == 2
+    padres = sorted(s.parent_merge_line_id for s in sinteticas)
+    assert padres == [700, 999]
+
+
+def test_f036_r21_una_regla_ficticia_se_emite_sin_tocar_el_recorrido():
+    """La prueba de que la lista es el punto de enganche de F-006.
+
+    Se anade una regla NUEVA a `REGLAS_SINTETICAS_RESIDUOS` y su
+    sintetica sale en la valoracion sin haber cambiado una linea del
+    builder. Es exactamente lo que hara el canon de vertedero.
+    """
+    from application.services import residuos_incrementos as ri
+
+    def _regla_canon(*, ctx, base, contrato_lines):
+        return ri.dto_red_residuos(
+            base=base,
+            rol="canon_vertedero",
+            descripcion="CANON DE VERTEDERO (regla ficticia)",
+            motivo="regla de prueba",
+            etiqueta="canon ficticio",
+            tarifa=None,
+        )
+
+    ri.REGLAS_SINTETICAS_RESIDUOS.append(_regla_canon)
+    try:
+        _, registros = valorar(EscenarioResiduos())
+    finally:
+        ri.REGLAS_SINTETICAS_RESIDUOS.remove(_regla_canon)
+
+    descripciones = [s.descripcion_linea for s in sinteticas_de(registros)]
+    assert "INCREMENTO LER 170802" in descripciones
+    assert "CANON DE VERTEDERO (regla ficticia)" in descripciones

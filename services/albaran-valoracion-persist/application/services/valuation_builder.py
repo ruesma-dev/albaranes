@@ -12,6 +12,8 @@ from application.services.residuos_container_calc import (
     calcular_contenedores_residuos,
 )
 from application.services.residuos_incrementos import (
+    REGLAS_SINTETICAS_RESIDUOS,
+    claves_dedupe,
     es_linea_incremento_ler,
 )
 from application.services.partida_matcher import (
@@ -435,6 +437,16 @@ class ValuationBuilder:
             base_lines=base_lines,
             sinteticas=sinteticas,
         )
+        # (ago 2026 · F-036) Red determinista de RESIDUOS: el incremento
+        # que el contrato cobra por el código LER del residuo. IA3 tiene
+        # PROHIBIDO emitir sintéticas en residuos, así que si no lo
+        # inyecta el builder no lo inyecta nadie (medido: SS-0000589,
+        # 120 € valorados contra 171 del administrativo).
+        inyectadas += self._sinteticas_residuos_faltantes(
+            envelope=envelope,
+            base_lines=base_lines,
+            sinteticas=sinteticas,
+        )
         # (jul 2026) Guard determinista de AÑO: anula matches de
         # incrementos por año casados (por IA3 o IA4) con tarifas de
         # OTRO año. Ver _sanear_matches_incremento_year.
@@ -795,6 +807,63 @@ class ValuationBuilder:
                     etiqueta="cemento SR",
                     tarifa=tarifa,
                 ))
+        return nuevas
+
+    def _sinteticas_residuos_faltantes(
+        self,
+        *,
+        envelope,
+        base_lines,
+        sinteticas,
+    ) -> list[LineValuationDto]:
+        """Red determinista de RESIDUOS (ago 2026, F-036 R16/R18/R21).
+
+        Hermana de ``_sinteticas_m1_faltantes`` y
+        ``_sinteticas_codigo_faltantes``, con una diferencia deliberada:
+        este método es SOLO el RECORRIDO. No sabe qué sintéticas existen
+        ni cómo se construyen — eso vive en
+        ``residuos_incrementos.REGLAS_SINTETICAS_RESIDUOS``, que itera
+        tal cual. Añadir una regla nueva (el canon de vertedero de
+        F-006) NO obliga a tocar este fichero (**R21**).
+
+        Por cada línea base de ``tipo_familia='residuos'`` aplica todas
+        las reglas y deduplica lo que IA3 ya hubiera traído para ESA
+        base (por rol o por la clave textual de la sintética, **R18**).
+        """
+        albaran_by_id = {
+            l.merge_line_id: l for l in envelope.context.lineas_albaran
+        }
+        contrato_lines = envelope.context.lineas_contrato
+        nuevas: list[LineValuationDto] = []
+
+        for _, base in base_lines:
+            if base.merge_line_id is None:
+                continue
+            alb = albaran_by_id.get(base.merge_line_id)
+            ctx = alb.contexto_linea if alb is not None else None
+            if ctx is None or getattr(ctx, "tipo_familia", None) != "residuos":
+                continue
+            for regla in REGLAS_SINTETICAS_RESIDUOS:
+                dto = regla(
+                    ctx=ctx,
+                    base=base,
+                    contrato_lines=contrato_lines,
+                )
+                if dto is None:
+                    continue
+                if _mod_ya_emitido(
+                    sinteticas,
+                    base.merge_line_id,
+                    roles=(dto.rol_linea,) if dto.rol_linea else (),
+                    claves=claves_dedupe(dto),
+                ):
+                    logger.info(
+                        "[builder][red-residuos] base merge=%s: %r ya "
+                        "venía en el sobre; no se duplica.",
+                        base.merge_line_id, dto.descripcion_linea,
+                    )
+                    continue
+                nuevas.append(dto)
         return nuevas
 
     @staticmethod

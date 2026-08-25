@@ -119,6 +119,22 @@ def tarifa_incremento_ler(contrato_lines: Any, codigo_ler: str | None):
     return None
 
 
+def claves_dedupe(dto: LineValuationDto) -> tuple[str, ...]:
+    """Claves textuales que identifican una sintetica de residuos (R18).
+
+    El recorrido del builder deduplica con ``_mod_ya_emitido``, que
+    compara por ``rol_linea`` O por estas claves sobre el texto
+    normalizado de lo que IA3 ya trajo. El rol solo no basta: una
+    sintetica de IA3 con rol distinto pero que ya nombra ESE LER es la
+    misma linea con otro nombre.
+
+    Vive AQUI y no en el builder para que una regla nueva (F-006) pueda
+    dar su propia clave sin tocar el recorrido.
+    """
+    ler = normalizar_ler(dto.descripcion_linea)
+    return (ler,) if ler else ()
+
+
 def dto_red_residuos(
     *,
     base: LineValuationDto,
