@@ -38,6 +38,7 @@ from domain.models.review_models import (
     LineValuationPayload,
     MergeDocumentUpdatePayload,
     MergeLinePayload,
+    motivos_de_json,
     ObraOption,
     ObraResumenItem,
     PaginatedDocuments,
@@ -1118,7 +1119,10 @@ class AlbaranReviewRepository:
                     "       codigo_partida_albaran, codigo_partida_final, "
                     "       partida_action, "
                     "       match_confidence_pct, match_method, "
-                    "       review_required, "
+                    # F-036 R23: por qué la línea salió así. La columna
+                    # existe desde sv6; sv4 no la leía y el revisor no
+                    # veía nunca los motivos.
+                    "       review_required, review_reasons_json, "
                     # ----- sub-tanda 2D: campos de líneas sintéticas -----
                     "       line_kind, parent_merge_line_id, "
                     "       modifier_source, modifier_reason, "
@@ -1183,6 +1187,12 @@ class AlbaranReviewRepository:
                 descripcion_linea = row["descripcion_linea"]
             except KeyError:
                 descripcion_linea = None
+            # F-036 R23 — opcional por el mismo motivo: una BBDD sin la
+            # columna abre la ficha igual, sin razones.
+            try:
+                review_reasons = motivos_de_json(row["review_reasons_json"])
+            except KeyError:
+                review_reasons = []
 
             merge_line_id_typed: int | None
             if raw_merge_line_id is None:
@@ -1224,6 +1234,7 @@ class AlbaranReviewRepository:
                 match_confidence_pct=row["match_confidence_pct"],
                 match_method=row["match_method"],
                 review_required=row["review_required"],
+                review_reasons=review_reasons,
                 # --- sub-tanda 2D ---
                 line_kind=line_kind,
                 parent_merge_line_id=parent_merge_line_id,

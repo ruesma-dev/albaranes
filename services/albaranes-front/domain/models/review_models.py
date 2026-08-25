@@ -1,6 +1,7 @@
 # domain/models/review_models.py
 from __future__ import annotations
 
+import json
 from typing import Any, Literal
 
 from urllib.parse import quote
@@ -10,6 +11,27 @@ from pydantic import BaseModel, Field, computed_field, field_validator
 VIEW_MODE_MERGE = "merge"
 KNOWN_PROVIDER_VIEWS = ("openai", "gemini", "claude")
 ALLOWED_VIEW_MODES = (VIEW_MODE_MERGE, *KNOWN_PROVIDER_VIEWS)
+
+
+def motivos_de_json(valor: Any) -> list[str]:
+    """Lista de motivos a partir de una columna ``review_reasons_json``.
+
+    F-036 R23. Las columnas ``review_reasons_json`` —la del documento
+    (sv3) y la de cada línea de valoración (sv6)— guardan una lista JSON
+    de textos. sv4 solo las LEE, y no es su dueño: NULL, cadena vacía,
+    JSON ilegible o un JSON que no es una lista devuelven `[]` en vez de
+    reventar la ficha. Los elementos que no son texto se descartan uno a
+    uno, sin tirar los que sí lo son.
+    """
+    if not valor:
+        return []
+    try:
+        motivos = json.loads(valor)
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(motivos, list):
+        return []
+    return [motivo for motivo in motivos if isinstance(motivo, str)]
 
 
 class DocumentListFilters(BaseModel):
@@ -333,6 +355,15 @@ class LineValuationPayload(BaseModel):
     match_method: str | None = None
     review_required: bool | None = None
 
+    # ---- F-036 R23: por qué esta línea salió así ----
+    # Razones que sellaron sv6 (`residuos_contenedores`,
+    # `declared_vs_calculated_mismatch`...) y sv4
+    # (`front_sin_cantidad_convertida`...) en
+    # `albaran_line_valuations.review_reasons_json`. Llega ya parseada:
+    # siempre una lista, nunca None, para que la plantilla itere sin
+    # guardas.
+    review_reasons: list[str] = []
+
     # ---- sub-tanda 2D: identificación de línea sintética ----
     # Opcionales por compatibilidad con valoraciones anteriores a 2D.
     line_kind: str = "from_albaran"
@@ -553,6 +584,18 @@ class DocumentDetailPayload(BaseModel):
     selected_contrato_codigo: str | None = None
     # NUEVO — None mientras no exista valoración en BBDD.
     valuation: ValuationPayload | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def review_reasons(self) -> list[str]:
+        """Motivos de revisión del documento, ya parseados (F-036 R23).
+
+        ``review_reasons_json`` viajaba al payload desde siempre y nadie
+        lo abría: la plantilla no puede hacer `json.loads` en Jinja, así
+        que los motivos que sella sv3 —``proveedor_cif_no_casa:<cif>``,
+        ``obra_no_resuelta``...— no se pintaban en ninguna parte.
+        """
+        return motivos_de_json(self.review_reasons_json)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

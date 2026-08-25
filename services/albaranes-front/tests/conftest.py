@@ -40,30 +40,68 @@ if str(RAIZ_SERVICIO) not in sys.path:
 #: Es un SUBCONJUNTO a proposito: replicar el schema entero aqui seria
 #: una segunda copia que divergiria del dueno a la primera migracion.
 #: Se anaden columnas cuando un test las necesita.
+#:
+#: Las columnas que en el schema real son NOT NULL aqui van NULABLES
+#: salvo ``importe_source``: un test siembra la fila minima que su caso
+#: necesita, no una fila valida de produccion. Lo que se prueba es el
+#: comportamiento del repositorio, no las restricciones de sv6.
 _DDL = (
     """
     CREATE TABLE albaran_valuations (
-        id              VARCHAR(64) PRIMARY KEY,
-        document_id     VARCHAR(64) NOT NULL,
-        total_valorado  DOUBLE PRECISION,
-        updated_at_utc  VARCHAR(40)
+        id                        VARCHAR(64) PRIMARY KEY,
+        document_id               VARCHAR(64) NOT NULL,
+        contrato_codigo           VARCHAR(64),
+        status                    VARCHAR(32),
+        provider_ia               VARCHAR(32),
+        model_name                VARCHAR(100),
+        total_valorado            DOUBLE PRECISION,
+        total_lines               INTEGER,
+        lines_matched_exact       INTEGER,
+        lines_matched_semantic    INTEGER,
+        lines_matched_price_only  INTEGER,
+        lines_unmatched           INTEGER,
+        review_required           BOOLEAN NOT NULL DEFAULT 0,
+        review_reasons_json       TEXT,
+        created_at_utc            VARCHAR(64),
+        updated_at_utc            VARCHAR(40)
     )
     """,
     """
     CREATE TABLE albaran_line_valuations (
-        id                          INTEGER PRIMARY KEY,
-        valuation_id                VARCHAR(64) NOT NULL,
-        merge_line_id               INTEGER,
-        precio_unitario_final       DOUBLE PRECISION,
-        factor_conversion           DOUBLE PRECISION,
-        cantidad_albaran            DOUBLE PRECISION,
-        cantidad_convertida         DOUBLE PRECISION,
-        importe_calculado           DOUBLE PRECISION,
-        importe_albaran_declarado   DOUBLE PRECISION,
-        importe_source              VARCHAR(32) NOT NULL,
-        descuento_albaran_aplicado  DOUBLE PRECISION,
-        review_required             BOOLEAN NOT NULL DEFAULT 0,
-        review_reasons_json         TEXT
+        id                            INTEGER PRIMARY KEY,
+        valuation_id                  VARCHAR(64) NOT NULL,
+        merge_line_id                 INTEGER,
+        matched_contrato_line_id      INTEGER,
+        derived_contrato_line_id      INTEGER,
+        precio_unitario_contrato_db   DOUBLE PRECISION,
+        precio_unitario_pdf_inferido  DOUBLE PRECISION,
+        precio_unitario_final         DOUBLE PRECISION,
+        precio_unitario_source        VARCHAR(32),
+        precio_unitario_agreement     VARCHAR(32),
+        unidad_albaran                VARCHAR(32),
+        unidad_contrato               VARCHAR(32),
+        unidad_categoria              VARCHAR(32),
+        unidad_category_match         BOOLEAN,
+        factor_conversion             DOUBLE PRECISION,
+        cantidad_albaran              DOUBLE PRECISION,
+        cantidad_convertida           DOUBLE PRECISION,
+        importe_calculado             DOUBLE PRECISION,
+        importe_albaran_declarado     DOUBLE PRECISION,
+        importe_source                VARCHAR(32) NOT NULL,
+        codigo_partida_albaran        VARCHAR(64),
+        codigo_partida_final          VARCHAR(64),
+        partida_action                VARCHAR(32),
+        match_confidence_pct          DOUBLE PRECISION,
+        match_method                  VARCHAR(32),
+        descuento_albaran_aplicado    DOUBLE PRECISION,
+        codigo_externo                VARCHAR(64),
+        line_kind                     VARCHAR(32),
+        parent_merge_line_id          INTEGER,
+        modifier_source               VARCHAR(32),
+        modifier_reason               TEXT,
+        descripcion_linea             TEXT,
+        review_required               BOOLEAN NOT NULL DEFAULT 0,
+        review_reasons_json           TEXT
     )
     """,
     # F-036: la trazabilidad (R23, R24) toca tambien la cabecera del
