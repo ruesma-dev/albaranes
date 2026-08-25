@@ -515,3 +515,34 @@ bien hecho pero **hoy no cambia ninguna valoración**. Cablearlo es F-004.
 incremento como `INCREMENTO 170802` —pegado y sin la palabra `LER`—, grafía que
 antes casaba y que desde CR-3 devuelve `None` (medido por el reviewer).
 
+### Los cuatro cambios requeridos, CERRADOS (2026-08-26, `CR-10`..`CR-13`)
+
+`progress/impl_F-036_cambios_menores.md`. Ya no queda ninguno vivo:
+
+- **CR-10**: la última mentira de T11 (docstring de `test_f036_r14_ler_reexportado`).
+- **CR-11**: la sintética sin cantidad se explica por **el PADRE de residuos**, no
+  por su `modifier_source`. Ya no hay línea muda.
+- **CR-12**: el analizador que alimenta la congelación de motivos **revienta ante
+  lo que no sabe leer** en vez de saltárselo. Un portero que calla lo que no
+  entiende es decorado.
+- **CR-13**: `claves_dedupe` deja de leer una fecha como código LER — el mismo
+  defecto que CR-3 había corregido en la función de al lado.
+
+`bash harness/init.sh` **exit 0**; raíz **556 passed** (eran 532), sv6 **185**.
+
+**Estos cuatro NO tienen review propia**: el arnés admite dos ciclos y ya se
+usaron (pasada 1 rechazó, pasada 2 aprobó). Los verificará el **reviewer final
+de cierre**, junto con T23 y T24, cuando F-043 desbloquee la feature.
+
+---
+
+## F-043 · ARRANCADA (2026-08-26)
+
+Rama `feature/F-043-clasificacion-por-ia1`, creada **desde la rama de F-036** y
+no desde `dev`: F-043 toca sv2, sv3, sv5 y sv6, los mismos ficheros que F-036
+tiene sin mergear, y dos ramas divergentes sobre ese código darían conflictos de
+lógica, no de formato. Se cerrarán y mergearán en cadena.
+
+Siguiente paso: `spec-author`. Y después, **PARADA OBLIGATORIA**: la spec pasa a
+`spec_ready` y no se implementa una línea sin que el humano la apruebe.
+
