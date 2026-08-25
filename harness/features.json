@@ -396,7 +396,9 @@
         "sv4-front",
         "sv3-persistencia",
         "sv5-valoracion-api",
-        "sv6-valoracion-persist"
+        "sv6-valoracion-persist",
+        "sv2-api",
+        "comun"
       ]
     },
     {
