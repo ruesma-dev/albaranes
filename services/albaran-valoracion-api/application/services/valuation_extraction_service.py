@@ -8,6 +8,7 @@ from dataclasses import asdict, dataclass
 from typing import Any, Dict, Iterable, Optional, Type
 
 from pydantic import BaseModel
+from ruesma_comun.ler import es_ler_valido, texto_contiene_ler
 
 from application.services.schema_registry import SchemaRegistry
 from domain.models.llm_attachment import LlmAttachment
@@ -313,16 +314,68 @@ class ValuationExtractionService:
         )
 
 
+def _hay_ler_en_linea(linea) -> bool:
+    """True si la linea persistida delata un codigo LER creible.
+
+    Mismo criterio que ``tipologia_resolver`` de sv2, con el catalogo
+    compartido de ``ruesma_comun.ler`` (F-036 R14):
+
+      1. ``contexto_linea.codigo_ler``, VALIDADO contra el catalogo —la
+         IA puede colar ahi una referencia de producto.
+      2. Red de seguridad sobre el texto de la linea (codigo,
+         descripcion y descripcion_extendida juntos): asi la palabra
+         "LER"/"residuo"/"contenedor" de una da contexto a un numero
+         pegado escrito en otra. ``texto_contiene_ler`` exige catalogo
+         + (grafia con espacios o palabra de contexto).
+    """
+    ctx = getattr(linea, "contexto_linea", None)
+    if ctx is not None and es_ler_valido(getattr(ctx, "codigo_ler", None)):
+        return True
+    extendida = (
+        getattr(ctx, "descripcion_extendida", None) if ctx is not None else None
+    )
+    texto = " ".join(
+        str(t)
+        for t in (
+            getattr(linea, "codigo", None),
+            getattr(linea, "descripcion", None),
+            extendida,
+        )
+        if t
+    )
+    return texto_contiene_ler(texto)
+
+
 def _derivar_tipologia_valoracion(context) -> str:
     """Tipologia del albaran para elegir el prompt de valoracion.
 
-    Se deriva de la familia de las lineas (contexto_linea.tipo_familia):
-    si hay alguna de residuos -> 'residuos'; si hay de hormigon ->
-    'hormigon'; en otro caso 'generico'. Mismo criterio que el resolver
-    de sv2, pero sobre las lineas ya persistidas.
+    Prioridad:
+
+      1. (F-036 R13) Regla DURA de LER: si CUALQUIER linea persistida
+         trae un codigo LER creible -> 'residuos', aunque ninguna traiga
+         ``tipo_familia``. Es la misma regla que sv2 aplica en fase 1,
+         repetida aqui como defensa en profundidad: cuando el
+         ``contexto_linea`` se perdia al fusionar los proveedores
+         (defecto D2 de F-036, ``contexto_linea = NULL`` en el merge),
+         un albaran de residuos se valoraba con el prompt 'generico' y
+         ninguna regla de contenedores llegaba a correr.
+      2. Familia de las lineas (``contexto_linea.tipo_familia``): si hay
+         alguna de residuos -> 'residuos'; si hay de hormigon ->
+         'hormigon'.
+      3. En otro caso, 'generico'.
     """
+    lineas = getattr(context, "lineas_albaran", None) or []
+
+    for linea in lineas:
+        if _hay_ler_en_linea(linea):
+            logger.info(
+                "[tipologia_valoracion] regla dura LER -> residuos "
+                "(F-036 R13)"
+            )
+            return "residuos"
+
     fams = set()
-    for l in getattr(context, "lineas_albaran", None) or []:
+    for l in lineas:
         ctx = getattr(l, "contexto_linea", None)
         fam = getattr(ctx, "tipo_familia", None) if ctx is not None else None
         if fam:
