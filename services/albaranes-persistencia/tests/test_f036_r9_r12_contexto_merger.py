@@ -77,6 +77,47 @@ def test_f036_r9_carga_incompleta_false_es_un_dato_no_un_hueco():
     assert _score_contexto(ContextoLinea(carga_incompleta=False)) == 1
 
 
+@pytest.mark.parametrize(
+    "campo",
+    [
+        "volumen_m3", "peso_toneladas", "contenedores",
+        "contenedores_entregados", "contenedores_retirados",
+        "m3_no_transportados", "exceso_declarado_min",
+    ],
+)
+def test_f036_r9_un_cero_numerico_no_es_una_medida(campo):
+    """Un 0 en una MEDIDA es "no lo se", no "vale cero".
+
+    Ninguna de las siete medidas numericas tiene sentido a cero: no hay
+    retiradas de 0 m3 ni contenedores de 0 toneladas. Contarlo como
+    dato hacia dos danos: inflaba el score de un contexto vacio y, peor,
+    BLOQUEABA el relleno de R11 desde el proveedor que si traia los 6
+    m3. `carga_incompleta` es aparte: es un bool y su `False` si dice
+    algo (ver el test siguiente).
+    """
+    assert _score_contexto(ContextoLinea(**{campo: 0.0})) == 0
+
+
+def test_f036_r9_un_cero_no_bloquea_el_relleno_desde_otro_proveedor():
+    """R11 medido en el caso que lo motivo (review de los bloques B/C/D).
+
+    El ganador trae `volumen_m3=0.0` y otro proveedor los 6 m3 buenos.
+    Con el cero contando como dato, el hueco no existia y el ganador se
+    quedaba con su cero: sv6 no calculaba contenedores y la valoracion
+    entera se iba por el camino `residuos_sin_volumen_m3`.
+    """
+    ganador = ContextoLinea(
+        tipo_familia="residuos", rol_linea="base",
+        descripcion_extendida="RETIRADA RCD", volumen_m3=0.0,
+    )
+    otro = ContextoLinea(volumen_m3=6.0)
+
+    elegido = pick_best_contexto_linea(openai_ctx=ganador, gemini_ctx=otro)
+
+    assert elegido is not None
+    assert elegido.volumen_m3 == 6.0
+
+
 def test_f036_r9_un_codigo_ler_en_blanco_no_puntua():
     """Cadena vacia o de espacios = campo sin rellenar."""
     assert _score_contexto(ContextoLinea(codigo_ler="   ")) == 0

@@ -65,16 +65,30 @@ _CAMPOS_RESIDUOS: tuple[str, ...] = (
 
 
 def _tiene_valor(valor: Any) -> bool:
-    """True si el campo trae dato. Ojo: ``False`` y ``0`` SON dato.
+    """True si el campo trae dato. El ``bool`` y el 0 numérico NO son lo mismo.
 
-    Solo `None` y las cadenas en blanco cuentan como hueco:
-    `carga_incompleta=False` significa «el albarán dice que la carga
-    iba completa», que es información, no ausencia de ella.
+    Cuentan como hueco `None`, las cadenas en blanco y el **cero de las
+    siete medidas numéricas**. Un 0 ahí es «no lo sé», no «vale cero»:
+    no existen retiradas de 0 m³ ni contenedores de 0 toneladas, así que
+    el único 0 que llega es el de un proveedor que no supo leer el
+    número. Contarlo como dato hacía dos daños: inflaba el score de un
+    contexto vacío y, sobre todo, tapaba el hueco de R11 e impedía
+    rellenarlo desde el proveedor que sí traía los 6 m³ (encontrado en
+    la review de los bloques B/C/D de F-036).
+
+    `carga_incompleta` es la excepción, y por eso el ``bool`` se
+    comprueba ANTES que el número (en Python `False == 0`):
+    `carga_incompleta=False` significa «el albarán dice que la carga iba
+    completa», que es información, no ausencia de ella.
     """
     if valor is None:
         return False
+    if isinstance(valor, bool):
+        return True
     if isinstance(valor, str):
         return bool(valor.strip())
+    if isinstance(valor, (int, float)):
+        return valor != 0
     return True
 
 
