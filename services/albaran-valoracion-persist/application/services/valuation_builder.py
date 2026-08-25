@@ -12,6 +12,8 @@ from application.services.residuos_container_calc import (
     calcular_contenedores_residuos,
 )
 from application.services.residuos_incrementos import (
+    FUENTE_GESTION_RESIDUOS,
+    RAZON_SIN_TARIFA,
     REGLAS_SINTETICAS_RESIDUOS,
     claves_dedupe,
     es_linea_incremento_ler,
@@ -1602,6 +1604,22 @@ class ValuationBuilder:
             or parent_albaran is None
             or line.match_confidence_pct < 60.0
         )
+
+        # ------------------------------------------------------------ #
+        # (ago 2026 · F-036 R17) La sintética de LER que el contrato no
+        # tarifa se emite IGUAL, sin precio, y SIEMPRE va a revisión:
+        # existe justamente para que el revisor ponga el importe a mano
+        # (decisión del humano del 2026-08-22). El motivo se nombra
+        # aparte de 'modifier_identified_no_tariff' porque dice algo
+        # más concreto —el contrato no cubre ESE código LER— y porque
+        # sv4 lo pinta en la ficha (R23).
+        # ------------------------------------------------------------ #
+        if (
+            (line.modifier_source or "") == FUENTE_GESTION_RESIDUOS
+            and precio_final is None
+        ):
+            reasons.append(RAZON_SIN_TARIFA)
+            review_required = True
 
         tarifa_pdf_encontrada: bool | None = (
             line.precio_unitario_pdf_inferido is not None

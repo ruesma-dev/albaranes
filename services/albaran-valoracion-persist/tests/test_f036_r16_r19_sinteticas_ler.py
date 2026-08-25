@@ -32,6 +32,7 @@ from domain.models.valuation_envelope import LineValuationDto
 from tests.f036_escenarios_residuos import (
     CONTENEDOR_6,
     CONTRATO_SALMEDINA,
+    CONTRATO_SIN_INCREMENTOS,
     INCREMENTO_170802,
     EscenarioResiduos,
     LineaResiduos,
@@ -314,3 +315,61 @@ def test_f036_r21_una_regla_ficticia_se_emite_sin_tocar_el_recorrido():
     descripciones = [s.descripcion_linea for s in sinteticas_de(registros)]
     assert "INCREMENTO LER 170802" in descripciones
     assert "CANON DE VERTEDERO (regla ficticia)" in descripciones
+
+
+# =================================================================== #
+# T17 · R17 — sin tarifa en el contrato, la sintetica se emite IGUAL
+# =================================================================== #
+
+def _escenario_sin_tarifa() -> EscenarioResiduos:
+    """El contrato solo tarifa el contenedor: ningun INCREMENTO LER."""
+    return EscenarioResiduos(contrato=tuple(CONTRATO_SIN_INCREMENTOS))
+
+
+def test_f036_r17_la_sintetica_se_emite_aunque_el_contrato_no_tarife_ese_ler():
+    """Decision del humano (2026-08-22): "siempre debe crear la
+    sintetica; ya pondra el revisor el importe a mano".
+
+    La alternativa —no emitirla— se descarto a proposito: dejaba el
+    incremento invisible y sin nadie a quien reclamarlo.
+    """
+    _, registros = valorar(_escenario_sin_tarifa())
+    sinteticas = sinteticas_de(registros)
+
+    assert len(sinteticas) == 1
+    syn = sinteticas[0]
+    assert syn.descripcion_linea == "INCREMENTO LER 170802"
+    assert syn.match_method == "no_match"
+    assert syn.matched_contrato_line_id is None
+
+
+def test_f036_r17_la_sintetica_sin_tarifa_sale_sin_precio_ni_importe():
+    """Es la "forma C" de la red M1, no una divergencia de residuos."""
+    _, registros = valorar(_escenario_sin_tarifa())
+    syn = sinteticas_de(registros)[0]
+
+    assert syn.precio_unitario_final is None
+    assert syn.importe_calculado is None
+
+
+def test_f036_r17_la_sintetica_sin_tarifa_lleva_su_razon_y_va_a_revision():
+    """La linea existe JUSTAMENTE para que el revisor la complete."""
+    _, registros = valorar(_escenario_sin_tarifa())
+    syn = sinteticas_de(registros)[0]
+
+    assert "residuos_ler_sin_tarifa_en_contrato" in syn.review_reasons
+    assert syn.review_required is True
+
+
+def test_f036_r17_el_total_del_documento_no_se_mueve():
+    """El invariante de SS-0000168 / SS-0003935 / SS-0025146.
+
+    Esos tres albaranes GANAN una linea sin precio y pasan a
+    `review_required`, y eso es lo querido (riesgo 3 del design). Lo
+    que no puede moverse es su TOTAL: una linea sin importe suma 0.
+    """
+    cabecera, registros = valorar(_escenario_sin_tarifa())
+
+    assert cabecera.total_valorado == pytest.approx(120.0)
+    assert len(registros) == 2
+    assert cabecera.review_required is True
