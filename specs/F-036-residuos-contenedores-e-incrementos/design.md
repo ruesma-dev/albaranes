@@ -32,7 +32,6 @@ cada vez que un revisor guarda su ficha.
 | `services/albaranes-front/tests/test_f036_r1_r8_conversion_no_reproducible.py` | D1: reproducibilidad, guardián y conservación. |
 | `services/albaranes-front/tests/test_f036_r23_r24_trazabilidad.py` | Razones de línea visibles y purga de `proveedor_cif_no_casa`. |
 | `services/albaranes-persistencia/tests/test_f036_r9_r12_contexto_merger.py` | D2 en sv3: score y relleno de campos objetivos. |
-| `services/albaran-valoracion-api/tests/test_f036_r13_tipologia_ler.py` | D2 en sv5: regla dura de LER. |
 | `services/albaran-valoracion-persist/tests/test_f036_r22_contenedores_prioridades.py` | Orden nuevo de prioridades (decisión 1). |
 | `services/albaran-valoracion-persist/tests/test_f036_r15_r20_matcher_ler.py` | Guarda anti-incremento y predicado LER del matcher. |
 | `services/albaran-valoracion-persist/tests/test_f036_r16_r19_sinteticas_ler.py` | D3: emisión (tarifada y sin tarifar), dedupe y herencia de cantidad. |
@@ -118,9 +117,10 @@ cada vez que un revisor guarda su ficha.
 ### sv5 · `services/albaran-valoracion-api`
 
 - `application/services/valuation_extraction_service.py`,
-  `_derivar_tipologia_valoracion` (`:316-335`): antes de mirar `tipo_familia`,
-  si alguna línea trae `contexto_linea.codigo_ler` válido (o su texto contiene
-  un LER, con `ruesma_comun.ler`) → `"residuos"`. **R13.**
+  `_derivar_tipologia_valoracion`: **NO se toca**. La tipología la sigue
+  decidiendo el `tipo_familia` que puso la IA de la fase 1. R13 RETIRADO por
+  el humano el 2026-08-25 (ver `tasks.md` T11): clasificar es competencia de
+  la IA, y un LER en una línea no basta para llamar residuos al albarán.
 - `config/prompts.yaml`, bloque `valuation_residuos` (`:1008` y ss.):
   - `~:1024`: reescribir el orden de prioridades al de R22.
   - `:1017-1018`, `:1035-1036`, `:1113-1118`: la prohibición de que **IA3**

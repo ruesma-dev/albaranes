@@ -63,9 +63,10 @@ proveedor. Un campo con valor en el ganador NO se sobrescribe nunca.
 R12. Los cinco campos narrativos que ya puntúan hoy NO se fusionan: llegan
 íntegros del contexto ganador.
 
-R13. CUANDO sv5 deriva la tipología de valoración, SI alguna línea persistida
-trae un código LER válido, ENTONCES debe devolver `residuos` aunque ninguna
-traiga `tipo_familia` (misma regla dura que sv2; defensa en profundidad).
+R13. **RETIRADO por el humano el 2026-08-25** (implementado y revertido, ver
+`tasks.md` T11): «es la IA1 la que debe decidir cómo clasifica. No puede ser
+determinista. Además, los residuos no se deben clasificar solo porque
+contengan LER». sv5 deriva la tipología SOLO del `tipo_familia` del contexto.
 
 R14. El validador y el catálogo LER deben vivir en un único sitio compartido
 (`ruesma_comun`), consumido por sv2 y sv5 sin copias.
@@ -134,9 +135,8 @@ R26. Los tests de `services/albaranes-front/tests/test_f019_r23_r26_recalculo_im
 deben seguir pasando **sin modificarlos**, en particular el «round trip 2»: el
 recálculo del front no puede pisar en BBDD lo que sv6 escribió bien.
 
-R27. Deben existir tests propios, hoy inexistentes, de
-`residuos_container_calc`, `contexto_linea_merger`, la tipología de sv5, la
-sintética de LER de sv6 y el predicado LER del `ModifierContractMatcher`.
+R27. Deben existir tests propios, hoy inexistentes, de `contexto_linea_merger`,
+`residuos_container_calc`, la sintética LER de sv6 y el predicado del matcher.
 
 ## Decisiones confirmadas por el humano (2026-08-22)
 
