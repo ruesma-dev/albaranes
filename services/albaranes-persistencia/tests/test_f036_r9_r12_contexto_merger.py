@@ -44,19 +44,37 @@ def test_f036_r9_cada_campo_de_residuos_suma_un_punto(campo, valor):
     assert _score_contexto(ContextoLinea(**{campo: valor})) == 1
 
 
+#: Los CINCO campos narrativos de `ContextoLinea` (R12). Todo lo demas
+#: del modelo es, por definicion, una medida de residuos.
+_NARRATIVOS = (
+    "tipo_familia",
+    "rol_linea",
+    "descripcion_extendida",
+    "notas_tiempo",
+    "ref_linea_base",
+)
+
+
 def test_f036_r9_son_exactamente_los_nueve_campos_del_requisito():
-    """La lista es el contrato: si crece, R9 y R11 cambian a la vez."""
-    assert _CAMPOS_RESIDUOS == (
-        "codigo_ler",
-        "volumen_m3",
-        "peso_toneladas",
-        "contenedores",
-        "contenedores_entregados",
-        "contenedores_retirados",
-        "carga_incompleta",
-        "m3_no_transportados",
-        "exceso_declarado_min",
+    """La lista es el contrato: si crece, R9 y R11 cambian a la vez.
+
+    Se contrasta contra `ContextoLinea` y NO repitiendo la tupla: una
+    decima medida anadida al modelo debe hacer fallar este test, que es
+    justo lo que una copia literal no ve. `_CAMPOS_RESIDUOS` es ademas
+    la lista exacta de lo que `_completar_campos_objetivos` rellena, asi
+    que un campo nuevo que no entre aqui se queda sin R11 en silencio.
+    """
+    campos_del_modelo = list(ContextoLinea.model_fields)
+
+    # Los cinco narrativos, tambien fijados: si aparece un narrativo
+    # nuevo hay que decidir si R12 lo cubre, no darlo por medida.
+    assert [c for c in campos_del_modelo if c in _NARRATIVOS] == list(
+        _NARRATIVOS
     )
+    assert list(_CAMPOS_RESIDUOS) == [
+        c for c in campos_del_modelo if c not in _NARRATIVOS
+    ]
+    assert len(_CAMPOS_RESIDUOS) == 9
 
 
 def test_f036_r9_los_cinco_narrativos_siguen_puntuando():
