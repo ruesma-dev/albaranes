@@ -3,8 +3,8 @@
 
 Rama `feature/F-036-residuos-contenedores-e-incrementos`, rigor `critico`.
 **Solo el bloque A**: D1 (el recálculo que destruía la cantidad valorada de
-residuos al guardar) y la trazabilidad de la decisión (4). Nada de sv3, sv5,
-sv6 ni `comun`. Un commit por tarea, ninguno subido.
+residuos al guardar) y la trazabilidad de la decisión (4). Un commit por
+tarea, ninguno subido. **Bloque B (T0+T8-T13): `impl_F-036_bloque_B.md`.**
 
 | Commit | Tarea |
 |---|---|

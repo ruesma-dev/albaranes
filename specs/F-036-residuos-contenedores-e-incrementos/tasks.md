@@ -21,20 +21,22 @@ valorado lo estropea— y no puede quedar detrás de D2 ni de D3.
 - [x] T6: Dejar de recalcular el importe en Jinja (:619-627) cuando la conversión de la línea no es reproducible: se muestra el `importe_calculado` persistido (R8)  |  Verificación: test de render con una línea cantidad 6 / convertida 1 / importe 120 que debe mostrar 120,00 y no 720,00
 - [x] T7: Añadir `_depurar_motivos_documento_in_session(...)` y llamarla desde `update_document` (:3024) para retirar los `proveedor_cif_no_casa:<cif>` cuyo CIF ya no es el del merge (R24)  |  Verificación: `test_f036_r23_r24_trazabilidad.py::test_f036_r24_*`
 
+- [x] T7-bis (T0 del bloque B): cerrar los tres cambios pedidos en `progress/review_F-036_bloque_A.md` §«Cambios requeridos» 1-3 (R4 escrito en la spec; el tooltip de razones separado con salto de línea REAL, con su test; la docstring de `_num_iguales`). El punto 4 (entorno de los tests de render) es de T25  |  Verificación: `test_f036_r23_..._el_tooltip_separa_las_razones_con_salto_de_linea` en verde y la suite de sv4 sin tocar nada más
+
 ## Bloque compartido · el catálogo LER
 
-- [ ] T8: Crear `services/albaranes-comun/ruesma_comun/ler.py` moviendo `es_ler_valido` y `texto_contiene_ler` desde `services/albaranes-api/domain/models/tipologia.py` (:87, :164), y dejar en sv2 solo la reexportación (R14)  |  Verificación: `python -m pytest services/albaranes-api/tests -q` en verde sin cambios en `tipologia_resolver.py`
+- [x] T8: Crear `services/albaranes-comun/ruesma_comun/ler.py` moviendo `es_ler_valido` y `texto_contiene_ler` desde `services/albaranes-api/domain/models/tipologia.py` (:87, :164), y dejar en sv2 solo la reexportación (R14)  |  Verificación: `python -m pytest services/albaranes-api/tests -q` en verde sin cambios en `tipologia_resolver.py`
 
 ## Bloque D2 · sv3 y sv5
 
-- [ ] T9: Ampliar `_score_contexto` de `services/albaranes-persistencia/application/services/contexto_linea_merger.py` (:23-38) con los nueve campos de residuos (R9, R10)  |  Verificación: `services/albaranes-persistencia/tests/test_f036_r9_r12_contexto_merger.py::test_f036_r9_*` y `::test_f036_r10_*`
-- [ ] T10: Añadir `_completar_campos_objetivos(...)` y usarla en `pick_best_contexto_linea`, sin sobrescribir valores del ganador y sin fusionar los campos narrativos; actualizar la docstring del módulo (R11, R12)  |  Verificación: `::test_f036_r11_*` (candidato pobre gana por score pero conserva los m³ del rico) y `::test_f036_r12_*`
-- [ ] T11: Añadir la regla dura de LER a `_derivar_tipologia_valoracion` de `services/albaran-valoracion-api/application/services/valuation_extraction_service.py` (:316-335) usando `ruesma_comun.ler` (R13)  |  Verificación: `services/albaran-valoracion-api/tests/test_f036_r13_tipologia_ler.py`
+- [x] T9: Ampliar `_score_contexto` de `services/albaranes-persistencia/application/services/contexto_linea_merger.py` (:23-38) con los nueve campos de residuos (R9, R10)  |  Verificación: `services/albaranes-persistencia/tests/test_f036_r9_r12_contexto_merger.py::test_f036_r9_*` y `::test_f036_r10_*`
+- [x] T10: Añadir `_completar_campos_objetivos(...)` y usarla en `pick_best_contexto_linea`, sin sobrescribir valores del ganador y sin fusionar los campos narrativos; actualizar la docstring del módulo (R11, R12)  |  Verificación: `::test_f036_r11_*` (candidato pobre gana por score pero conserva los m³ del rico) y `::test_f036_r12_*`
+- [x] T11: Añadir la regla dura de LER a `_derivar_tipologia_valoracion` de `services/albaran-valoracion-api/application/services/valuation_extraction_service.py` (:316-335) usando `ruesma_comun.ler` (R13)  |  Verificación: `services/albaran-valoracion-api/tests/test_f036_r13_tipologia_ler.py`
 
 ## Bloque decisión (1) · orden de prioridades del cálculo de contenedores
 
-- [ ] T12: Intercambiar las prioridades 2 y 3 en `services/albaran-valoracion-persist/application/services/residuos_container_calc.py` (el volumen manda sobre la resta) y actualizar la docstring del módulo y el comentario de :129-131, conservando los nombres de las `reasons` (R22)  |  Verificación: `services/albaran-valoracion-persist/tests/test_f036_r22_contenedores_prioridades.py` (los tres órdenes + el caso sin volumen ni resta)
-- [ ] T13: Actualizar el orden documentado en el prompt `valuation_residuos` de `services/albaran-valoracion-api/config/prompts.yaml` (~:1024) (R22)  |  Verificación: test que carga el YAML y comprueba que el texto del prompt nombra el orden nuevo
+- [x] T12: Intercambiar las prioridades 2 y 3 en `services/albaran-valoracion-persist/application/services/residuos_container_calc.py` (el volumen manda sobre la resta) y actualizar la docstring del módulo y el comentario de :129-131, conservando los nombres de las `reasons` (R22)  |  Verificación: `services/albaran-valoracion-persist/tests/test_f036_r22_contenedores_prioridades.py` (los tres órdenes + el caso sin volumen ni resta)
+- [x] T13: Actualizar el orden documentado en el prompt `valuation_residuos` de `services/albaran-valoracion-api/config/prompts.yaml` (~:1024) (R22)  |  Verificación: test que carga el YAML y comprueba que el texto del prompt nombra el orden nuevo
 
 ## Bloque D3 · sv6
 

@@ -313,4 +313,37 @@ no contempla la review por bloques de una feature grande —obliga a recorrer
 C1-C5 aunque el bloque no pueda satisfacer C1 ni C5—. Si se acepta, es mejora
 genérica y hay que portarla a `arnes-base` en el mismo trabajo.
 
-Siguiente: bloque B (T8-T13, `comun` + sv3 + sv5 + el orden de prioridades de sv6).
+### Bloque B ENTREGADO — T0 + T8-T13 (2026-08-25)
+
+Informe: **`progress/impl_F-036_bloque_B.md`**. Siete commits, uno por tarea,
+ninguno subido. Los cambios 1-3 de la review del bloque A quedan CERRADOS (T0);
+el 4 sigue siendo de T25.
+
+- **T8** · el catálogo LER vive ya en `services/albaranes-comun/ruesma_comun/
+  ler.py`; en sv2 solo queda la reexportación y hay test que comprueba que no
+  hay copia. `tipologia_resolver.py` intacto.
+- **T9/T10** · el merger de sv3 puntúa las nueve medidas de residuos Y completa
+  al ganador con las que le faltan, sin sobrescribir ni fusionar los narrativos.
+- **T11** · sv5 aplica la regla dura LER → residuos antes de mirar
+  `tipo_familia`, con el catálogo compartido.
+- **T12** · en sv6 el **volumen manda sobre la resta**; los nombres de las
+  `reasons` no cambian. **T13** · el prompt `valuation_residuos` documenta ese
+  orden nuevo.
+
+Verificado: las **6 suites en verde** (526 passed, 3 skipped, 0 failed), 84
+tests nuevos, `PUERTA COBERTURA 97.0 %` (196/202) y `PUERTA TAMAÑO` en verde.
+`bash harness/init.sh` NO se ejecutó: es T25.
+
+**Dos cosas para el líder** (detalle en el informe): (a) `texto_contiene_ler`
+busca `"ler"` como SUBCADENA —`TORNILLERIA`, `ALQUILER`— y da contexto de
+residuos a cualquier 6-dígitos válido; es heredado de sv2 y NO se tocó, pero
+T11 lo extiende a sv5: propongo ficha aparte. (b) `harness/features.json` no
+declara sv2 ni `comun` entre los servicios de F-036, y T8 los toca por R14.
+
+**Puerta de rutas sensibles en `aviso`**: tres rutas tocadas sin
+`progress/evals_F-036.md` (`prompts.yaml` de sv5, `residuos_container_calc.py`,
+`tipologia.py` de sv2). No se lanzó `evals.runner --con-llm`: gasta LLM real y
+lo decide el humano. El bloque D3 vuelve a tocar `prompts.yaml` (T20), así que
+la pasada tiene sentido UNA vez, en T25.
+
+Siguiente: bloque C (T14-T20, sintéticas de LER en sv6).
