@@ -68,6 +68,7 @@ from domain.models.valuation_envelope import (
     ContratoLineContextDto,
     LineValuationDto,
 )
+from ruesma_comun.ler import normalizar_ler
 
 logger = logging.getLogger(__name__)
 
@@ -271,6 +272,19 @@ class ModifierContractMatcher:
             return lambda d: "ARIDO" in d
 
         if rol == "incremento_residuos":
+            # (ago 2026 · F-036 R20) Si la sintética nombra un código
+            # LER, se exige ESE código en la línea de contrato: un
+            # contrato de gestor tarifa un incremento POR CADA LER
+            # ("INCREMENTO LER 170802", "INCREMENTO LER 170904") y
+            # `"RESIDUOS" in d` casaba el primero que pasara — incluso
+            # la propia línea de contenedor, que también lleva la
+            # palabra RESIDUOS en su descripción.
+            ler = normalizar_ler(desc)
+            if ler:
+                return lambda d: normalizar_ler(d) == ler or ler in d
+            # Sin LER en la descripción, el predicado de siempre: es el
+            # "INCREMENTO POR GESTION DE RESIDUOS EN HORMIGON", que no
+            # va por código y no puede cambiar de comportamiento.
             return lambda d: "RESIDUOS" in d
 
         if rol == "incremento_tiempo":
