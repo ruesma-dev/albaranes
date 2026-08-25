@@ -380,3 +380,36 @@ afecta a ninguna valoración real; cablearlo es F-004. (b) El hallazgo de
 vuelto a tocar: la pasada de evals sigue pendiente para T25.
 
 Siguiente: bloque D (T21-T25, aceptación, mutación y `init.sh`).
+
+## Bloque D de F-036 — CERRADO con un aviso (2026-08-25)
+
+Detalle en `progress/impl_F-036_bloque_D.md`. Cuatro commits locales:
+`7ca2ffc` (reversión de T11), `591d9ee` (T21+T22), `766abee` y `492889e`
+(las dos partes de T25).
+
+- **T11 REVERTIDA por decisión del humano.** sv5 vuelve a derivar la
+  tipología SOLO del `tipo_familia` que puso la IA. R13 marcado RETIRADO en
+  la spec; `ruesma_comun.ler` y el `tipologia_resolver` de sv2 intactos.
+- **T21/T22** · escenario de aceptación de SALMEDINA, 19 tests, fase RED
+  hecha contra `dev` en un worktree (9 failed, 10 passed; los totales daban
+  120 donde el administrativo espera 171/210/210).
+- **T25** · `bash harness/init.sh` en **verde, exit code 0**. Por el camino
+  salió un rojo heredado del bloque C: T15 añadió el motivo
+  `residuos_base_casada_con_incremento` sin ampliar el inventario congelado
+  de `tests/test_f027_r18_r22_contrato.py`. Arreglado comprobando antes los
+  consumidores del string. Además, sv4 declara ya su venv en
+  `harness/servicios.json` y `jinja2` se importa duro en su conftest (once
+  tests de render se saltaban en silencio con exit code 0).
+
+**LO QUE TIENE QUE DECIDIR EL HUMANO ANTES DE CERRAR LA FEATURE**:
+**SS-0003967 no llega a 210,00 € de extremo a extremo**. Toda la maquinaria
+de residuos de sv6 está cerrada tras `contexto_linea.tipo_familia ==
+'residuos'`, y ese campo NO lo restituyen T9/T10 (por R12 los cinco campos
+narrativos no se fusionan) ni, ya, T11. Medido con el builder real: sin
+`tipo_familia` el albarán se queda en **540,00**; con él da **210,00**. T24
+fallará en ese albarán; los otros cinco no dependen del hueco. Tres salidas
+propuestas en §2 del informe, ninguna dentro del alcance de F-036.
+
+Pendiente del humano: **T23** (mutación), **T24** (BBDD real, solo lectura) y
+`progress/evals_F-036.md` (la puerta de rutas sensibles avisa; NO se ha
+lanzado `python -m evals.runner --con-llm`: gasta LLM real).
