@@ -816,3 +816,107 @@ def test_f036_r8_el_descuento_no_se_aplica_dos_veces(
     assert 'value="108.00"' in celda
     assert "97.20" not in celda
     assert "648" not in celda
+
+
+# ------------------------------------------------------------------ #
+# Lo defensivo: guardar es lo que NUNCA se puede caer
+#
+# sv4 no es dueno de `albaran_line_valuations`. Todo lo que F-036 escribe
+# ahi va en un SAVEPOINT y con la excepcion tragada a proposito: sellar
+# una razon es trazabilidad, y perderla es infinitamente menos grave que
+# tumbar el guardado del revisor con su trabajo dentro.
+# ------------------------------------------------------------------ #
+class _SesionRota:
+    """Una sesion en la que cualquier escritura falla."""
+
+    def begin_nested(self):
+        raise RuntimeError("columna inexistente")
+
+
+def test_f036_r3_una_bbdd_sin_la_columna_no_tumba_el_guardado(repositorio):
+    """El sellado de razones falla en silencio, con aviso en el log."""
+    repositorio._anadir_reason_linea_in_session(
+        session=_SesionRota(), valuation_line_id=900, reason="una_razon"
+    )
+    repositorio._marcar_linea_en_revision_in_session(
+        session=_SesionRota(), valuation_line_id=900
+    )
+
+
+def test_f036_r24_depurar_motivos_no_tumba_el_guardado(repositorio):
+    """Idem para la purga de motivos del documento."""
+    repositorio._depurar_motivos_documento_in_session(
+        session=_SesionRota(), document_id="da-igual", cif_actual="B1"
+    )
+
+
+def test_f036_r3_una_linea_que_no_existe_no_recibe_razones(
+    repositorio, sesion,
+):
+    """Sellar sobre una fila borrada entre medias no inventa una fila."""
+    _sembrar(sesion)
+
+    repositorio._anadir_reason_linea_in_session(
+        session=sesion, valuation_line_id=999999, reason="una_razon"
+    )
+    sesion.flush()
+
+    assert _leer_traza(sesion) == (False, [])
+
+
+@pytest.mark.parametrize("guardado", ["{no es json", '"texto"', "{}"])
+def test_f036_r3_razones_ilegibles_se_reemplazan_por_la_nueva(
+    repositorio, sesion, guardado,
+):
+    """Si lo guardado no es una lista, no hay nada que conservar.
+
+    Se parte de cero con la razon nueva en vez de dejar la columna
+    inservible para siempre.
+    """
+    _sembrar(sesion)
+    sesion.execute(
+        text(
+            "UPDATE albaran_line_valuations "
+            "SET review_reasons_json = :json WHERE merge_line_id = 500"
+        ),
+        {"json": guardado},
+    )
+    sesion.flush()
+
+    repositorio._anadir_reason_linea_in_session(
+        session=sesion,
+        valuation_line_id=LINEA_RESIDUOS["id"],
+        reason="una_razon",
+    )
+    sesion.flush()
+
+    assert _leer_traza(sesion)[1] == ["una_razon"]
+
+
+def test_f036_r2_una_cantidad_convertida_ilegible_cae_a_la_cruda(
+    repositorio, sesion,
+):
+    """Basura en `cantidad_convertida`: se calcula como si no estuviera.
+
+    SQLite acepta texto en una columna DOUBLE y la BBDD real tampoco
+    garantiza que no haya llegado algo raro por otra via. Lo que no puede
+    pasar es que el guardado del revisor se caiga: 8 x 120 = 960,00.
+    """
+    _sembrar(sesion)
+    sesion.execute(
+        text(
+            "UPDATE albaran_line_valuations "
+            "SET cantidad_convertida = 'ilegible' WHERE merge_line_id = 500"
+        )
+    )
+    sesion.flush()
+
+    repositorio._recalc_valuation_importes(
+        session=sesion,
+        document_id=DOCUMENT_ID,
+        new_line_quantities={500: 8.0},
+    )
+
+    linea = _leer_linea(sesion)
+    assert linea["importe_calculado"] == pytest.approx(960.0)
+    assert linea["cantidad_convertida"] is None

@@ -503,3 +503,16 @@ def test_f036_r24_la_depuracion_esta_cableada_en_update_document():
 
     fuente = inspect.getsource(AlbaranReviewRepository.update_document)
     assert "_depurar_motivos_documento_in_session" in fuente
+
+
+def test_f036_r24_un_documento_que_no_existe_no_rompe_nada(
+    repositorio, sesion,
+):
+    """Depurar un documento borrado entre medias no crea filas."""
+    repositorio._depurar_motivos_documento_in_session(
+        session=sesion, document_id="no-existe", cif_actual="B87654321"
+    )
+
+    assert sesion.execute(
+        text("SELECT COUNT(*) FROM albaran_documents_merge")
+    ).scalar_one() == 0
