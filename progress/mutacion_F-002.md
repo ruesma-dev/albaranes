@@ -4,6 +4,19 @@
 Generado por `python -m harness.mutacion --feature F-002` el 2026-08-14 21:01.
 > **Medida con el arnés 1.5.2, que NO mutaba `is`/`is not`: NO es comparable con las campañas posteriores a la 1.6.0 (F-034), que generaría +18 mutantes aquí. Decisión del humano (D1, opción B): no se remide; solo se remidieron F-019 y F-027.**
 
+> ## ⚠ CAMPAÑA EN CUARENTENA · su evidencia no vale mientras no se decida
+>
+> Sellado el 2026-08-25. **108 mutantes en 54,8 s en serie = 0,51 s por
+> mutante**, por debajo del segundo que la regla del coste por mutante
+> (arnés 1.7.x) declara **sospechoso por construcción**: un tiempo así
+> indica que la suite no llegó a juzgar de verdad a cada mutante.
+>
+> Mientras la cuarentena siga abierta, **no cites estos números como
+> evidencia de nada**. Para levantarla hay dos salidas y las dos son del
+> humano: relanzar la campaña con la caché limpia, o anotar aquí que su
+> evidencia de mutación se da por no válida. Ver `progress/current.md`.
+
+
 ## Alcance
 
 Origen del diff: **rama** (`89bc79d62e97bcd5f70b8e60d2ffc4b2f2ce40cc` .. `feature/F-002-obra-proveedor`).
