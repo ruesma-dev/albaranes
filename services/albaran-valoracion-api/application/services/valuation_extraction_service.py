@@ -9,6 +9,8 @@ from typing import Any, Dict, Iterable, Optional, Type
 
 from pydantic import BaseModel
 
+from ruesma_comun.contratos.familias import prompt_valoracion_de
+
 from application.services.schema_registry import SchemaRegistry
 from domain.models.llm_attachment import LlmAttachment
 from domain.models.valuation_context import (
@@ -195,6 +197,42 @@ class ValuationExtractionService:
         parts.append(json.dumps(serialized, ensure_ascii=False, indent=2))
         return "\n\n".join(part for part in parts if part).strip()
 
+    def _prompt_key_de(self, context: ContextoValoracion) -> str:
+        """Prompt de valoracion de este albaran (F-043 · R24, R15, R27).
+
+        Consulta DIRECTA al catalogo con la familia que dijo la IA sobre
+        el DOCUMENTO. Tres salidas, en este orden:
+
+        1. La familia tiene prompt propio y esta registrado en el YAML
+           del servicio: ese.
+        2. La familia tiene prompt propio en el catalogo pero el YAML no
+           lo trae todavia: cae al generico configurado y **lo deja en
+           el log** (R15). Anadir una familia al catalogo antes que su
+           prompt no puede reventar la valoracion, pero tampoco puede
+           pasar en silencio.
+        3. Sin clasificacion, o familia sin prompt propio: el generico
+           configurado, que es el comportamiento de hoy (R27).
+
+        Lo que ya NO hace, y es el punto de la tarea: derivar la
+        tipologia agregando las ``contexto_linea.tipo_familia`` de las
+        lineas. La clasificacion es propiedad del DOCUMENTO (R17) y la
+        decide IA1; deducirla aqui era la otra mitad del lazo cerrado
+        que F-043 desmonta.
+        """
+        clasificacion = getattr(context, "clasificacion", None)
+        familia = getattr(clasificacion, "familia", None)
+        candidato = prompt_valoracion_de(familia)
+        if candidato is None:
+            return self._prompt_key
+        if self._prompts.has(candidato):
+            return candidato
+        logger.warning(
+            "[extract] la familia %r pide el prompt de valoracion %r y no "
+            "esta registrado en el indice; se usa el generico %r.",
+            familia, candidato, self._prompt_key,
+        )
+        return self._prompt_key
+
     def extract(
         self,
         *,
@@ -202,12 +240,7 @@ class ValuationExtractionService:
         pdf_attachment: Optional[LlmAttachment],
         contrato_markdown: Optional[str] = None,
     ) -> Dict[str, ProviderValuationResult]:
-        # Prompt de valoracion por TIPOLOGIA si existe; si no, el generico.
-        prompt_key = self._prompt_key
-        _tipologia = _derivar_tipologia_valoracion(context)
-        _candidato = f"valuation_{_tipologia}"
-        if self._prompts.has(_candidato):
-            prompt_key = _candidato
+        prompt_key = self._prompt_key_de(context)
         spec = self._prompts.get(prompt_key)
         response_model: Type[BaseModel] = self._schemas.get(spec.schema)
         user_text = self._build_user_text(
@@ -311,29 +344,3 @@ class ValuationExtractionService:
             parsed=parsed,
             debug_payload=debug_payload,
         )
-
-
-def _derivar_tipologia_valoracion(context) -> str:
-    """Tipologia del albaran para elegir el prompt de valoracion.
-
-    Se deriva de la familia de las lineas (contexto_linea.tipo_familia):
-    si hay alguna de residuos -> 'residuos'; si hay de hormigon ->
-    'hormigon'; en otro caso 'generico'. Mismo criterio que el resolver
-    de sv2, pero sobre las lineas ya persistidas.
-
-    Decision del humano (2026-08-25, F-036 T11 RETIRADA): la familia la
-    decide la IA de la fase 1; sv5 NO la deduce por su cuenta. No se
-    clasifica un albaran como residuos solo porque alguna linea traiga
-    un codigo LER.
-    """
-    fams = set()
-    for l in getattr(context, "lineas_albaran", None) or []:
-        ctx = getattr(l, "contexto_linea", None)
-        fam = getattr(ctx, "tipo_familia", None) if ctx is not None else None
-        if fam:
-            fams.add(str(fam).strip().lower())
-    if "residuos" in fams:
-        return "residuos"
-    if "hormigon" in fams:
-        return "hormigon"
-    return "generico"

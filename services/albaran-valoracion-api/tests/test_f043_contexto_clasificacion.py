@@ -447,7 +447,7 @@ def test_f043_r24_una_familia_sin_prompt_propio_usa_el_prompt_generico(
     assert repo.pedidos == ["valuation_es"]
 
 
-def test_f043_r15_si_la_clave_del_catalogo_no_esta_registrada_cae_al_generico(
+def test_f043_r15_si_la_clave_del_catalogo_no_esta_registrada_el_prompt_cae(
     caplog,
 ):
     """Catalogo con clave que el YAML aun no tiene: cae y lo deja en log.
@@ -519,7 +519,7 @@ def test_f043_r24_el_prompt_ya_no_se_deriva_de_la_familia_de_las_lineas():
     assert repo.pedidos == ["valuation_es"]
 
 
-def test_f043_r24_sv5_no_conserva_su_derivacion_propia_de_tipologia():
+def test_f043_r24_el_prompt_ya_no_tiene_derivacion_propia_de_tipologia():
     """El decisor viejo no queda ahi "por si acaso" (R12, R24).
 
     Un modulo puede dejar de llamarse y seguir invitando a volver a
