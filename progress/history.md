@@ -452,3 +452,95 @@ bytecode). Rama `arnes/1.7.2`.
 sospechosa por construcción y su evidencia de mutación no vale hasta relanzarla
 con la caché limpia. El resto de informes salen coherentes (F-012 20,2 s;
 F-034 55,9 s; F-038 36,4 s; F-039 37,1 s; F-040 16,8 × 4 workers = 67 s).
+
+---
+
+## Sesión del 25-26 de agosto de 2026 · F-036 implementada y F-043 abierta
+
+Sesión larga y en cadena: se podó `progress/`, se implementó F-036 entera en
+cuatro bloques con sus dos ciclos de review, y de sus hallazgos nació F-043.
+
+### Poda de `progress/` (2026-08-25)
+
+`progress/` tenía 53 ficheros y 1,2 MB. Se archivaron en `progress/historico/`
+los **29** informes `impl_`, `review_` y `evals_` de las 11 features cerradas
+(**639 KB**). Nada se borró: `git mv`.
+
+**Las campañas de mutación NO se archivan**, y el intento de hacerlo dejó la
+lección: F-039 había creado ocho tests que las vigilan **por ruta fija** —el
+inventario exige una fila por informe en disco y los avisos de invalidez tienen
+que seguir donde están—, más un noveno (R25) que compara `git diff --name-only`,
+donde un `git mv` sale como fichero tocado. Se midió antes de commitear y se
+revirtió esa parte. El porqué vive en `progress/historico/README.md`.
+
+Se selló además `mutacion_F-002.md` como **EN CUARENTENA** en su primera
+pantalla: la advertencia vivía solo en `current.md` y quien abriera el fichero se
+creía sus números. `mutacion_F-011.md` ya venía sellado por F-039.
+
+**Lo que se aprendió sobre el coste**: nada de `progress/` se carga solo. Lo que
+se paga en cada sesión es `current.md` (~3,3k tokens por agente que lo lea); un
+informe grande cuesta 26k **solo cuando alguien lo abre**. El riesgo real no era
+el token, era un informe invalidado que alguien pudiera creerse.
+
+### F-036 · los cuatro bloques
+
+Se implementó con **cinco agentes en serie** (A, B, C, D y un ciclo de
+corrección), nunca uno solo con las 25 tareas. Sin un cuelgue.
+
+- **Bloque A** (sv4, D1) — aprobado a la primera. sv4 dejó de destruir la
+  cantidad valorada al guardar. El arreglo **mejora** el guardián de F-019:
+  sacar `cantidad_convertida` de `sin_cambios` era justo lo que impedía que la
+  rama «esta fila no se toca» entrara nunca en una línea de residuos.
+- **Bloque B** — catálogo LER a `ruesma_comun`, scorer del merger de sv3 (las dos
+  caras: puntuar los nueve campos **y** completar el ganador), y el volumen
+  mandando sobre la resta al contar contenedores.
+- **Bloque C** (sv6, D3) — sintéticas por LER, guarda anti-incremento, predicado
+  del matcher.
+- **Bloque D** — escenario de aceptación de SALMEDINA, entorno de sv4 e
+  `init.sh`. Volvió **`blocked`**, y con razón (ver abajo).
+
+### Los hallazgos que valieron la sesión
+
+1. **El diseño se equivocaba en R19.** Decía que la sintética ya heredaba el nº
+   de contenedores y que «solo exige test»; el test demostró que heredaba los
+   **m³ crudos**, y SS-0000589 habría salido a 426 € en vez de 171.
+2. **El mismo defecto volvió por otra rama.** La corrección de R19 solo actuaba
+   si el padre tenía `cantidad_convertida`; por el camino `residuos_sin_volumen_m3`
+   la sintética seguía multiplicando por seis (**306 €** de incremento fantasma,
+   total 1026). Lo cazó el reviewer **ejecutando el builder real**, no leyendo el
+   código. Hoy en residuos **no hay fallback**: si no se sabe el nº de
+   contenedores, la línea sale sin cantidad, con razón propia y en revisión.
+3. **`ModifierContractMatcher` no está cableado en producción.** T19/R20 quedó
+   bien hecho y probado pero no cambia ninguna valoración. Cablearlo es F-004.
+4. **Una fecha se leía como código LER**: `"INCREMENTO TARIFA DESDE 01-01-25"` →
+   `010125`. Corregido en `es_linea_incremento_ler` (CR-3) y, cuando el reviewer
+   vio que el mismo defecto seguía vivo en `claves_dedupe`, también allí (CR-13).
+5. **`texto_contiene_ler` busca «ler» como subcadena**, así que `TORNILLERIA` o
+   `ALQUILER` dan contexto de residuos a un 6-dígitos del catálogo. Heredado de
+   sv2 desde julio. Se llevó al humano y de ahí salió la decisión de fondo.
+
+### La decisión de diseño del humano (2026-08-25) y F-043
+
+Ante ese hallazgo, el humano no eligió ninguna de las opciones ofrecidas y
+cambió el fondo: **«es SIEMPRE la IA la responsable de clasificar tras entender
+el problema. No puede ser determinista. Los residuos no se deben clasificar solo
+porque contengan LER, es una regla de mierda»**. Y después: **«vamos a
+preguntarle a la IA1 que, además de leer la info que necesitamos, clasifique el
+albarán; siempre debe clasificar, aunque sea en genérico»**, con el catálogo de
+posibilidades y su definición en el prompt.
+
+Consecuencias inmediatas: **T11 revertida entera**, y alta de **F-043 con
+prioridad 1**. Al medir la reversión apareció lo que dejó F-036 `blocked`: toda
+la maquinaria de residuos de sv6 exige `tipo_familia`, que no llega al merge
+—los cinco campos narrativos no se fusionan por diseño (R12)—. **Sin el campo
+540,00 €, con él 210,00 €.** Y el dato que ordena todo: **sv2 ya resuelve la
+tipología en fase 1 y no la persiste en ningún campo que sv5 o sv6 lean**. No
+falta información: se tira por el camino.
+
+### Cierre de la sesión
+
+F-036 `blocked` con 53 commits en su rama; F-043 en `spec_ready` con spec
+aprobada, seis dudas resueltas y plan de implementación aprobado, en una rama
+que sale de la de F-036 para no abrir dos frentes sobre los mismos ficheros.
+Nada subido.
+
