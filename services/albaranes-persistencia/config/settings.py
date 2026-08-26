@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import quote_plus
 
+from application.services.albaran_confidence_service import (
+    UMBRAL_CLASIFICACION_CONFIANZA_POR_DEFECTO,
+)
 from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -166,6 +169,20 @@ class Settings(BaseSettings):
     #   - FECHA_GUARD_ENABLED: fecha del albarán a más de
     #     FECHA_GUARD_MAX_DIAS de la recepción del email -> revisión.
     # ------------------------------------------------------------ #
+    # ------------------------------------------------------------ #
+    # Clasificación del albarán por IA1 (ago 2026, F-043 · R28).
+    #
+    # Por debajo de esta confianza, sv3 añade el motivo de revisión
+    # `clasificacion_confianza_baja`. SOLO marca: no bloquea la
+    # valoración (decisión del humano del 2026-08-26). El defecto vive
+    # en el servicio que lo aplica, para que el número esté en un sitio
+    # y no en cuatro.
+    # ------------------------------------------------------------ #
+    clasificacion_confianza_minima_pct: float = Field(
+        UMBRAL_CLASIFICACION_CONFIANZA_POR_DEFECTO,
+        alias="CLASIFICACION_CONFIANZA_MINIMA_PCT",
+    )
+
     red_obra_enabled: bool = Field(True, alias="RED_OBRA_ENABLED")
     red_proveedor_cif_enabled: bool = Field(
         True,

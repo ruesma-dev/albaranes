@@ -432,3 +432,135 @@ def test_f043_r22_la_tabla_raw_no_persiste_la_clasificacion():
     )
 
     assert not hasattr(documento, "tipologia")
+
+
+# ------------------------------------------------------------------ #
+# T16 · R11, R28, R29 — umbral configurable y motivos de revision.
+# ------------------------------------------------------------------ #
+
+def _motivos(*, umbral: float | None = None, **campos) -> list[str]:
+    """Motivos de revision del merge para una clasificacion dada."""
+    from application.services.albaran_confidence_service import (
+        AlbaranConfidenceService,
+    )
+
+    servicio = (
+        AlbaranConfidenceService()
+        if umbral is None
+        else AlbaranConfidenceService(clasificacion_confianza_minima_pct=umbral)
+    )
+    analisis = servicio.build_merge_analysis(
+        openai=_envelope_validado(**campos),
+        gemini=None,
+    )
+    return analisis.review_reasons
+
+
+def test_f043_r28_motivos_confianza_por_debajo_del_umbral():
+    assert "clasificacion_confianza_baja" in _motivos(confianza_pct=59.9)
+
+
+def test_f043_r28_motivos_confianza_justo_en_el_umbral_no_lo_anade():
+    """El umbral es «menor que», no «menor o igual»: 60 es suficiente."""
+    assert "clasificacion_confianza_baja" not in _motivos(confianza_pct=60.0)
+
+
+def test_f043_r28_motivos_el_umbral_es_configurable():
+    """Con el umbral por defecto (60) una confianza de 93 no marca nada;
+    subiendolo a 95, la misma clasificacion si."""
+    assert "clasificacion_confianza_baja" not in _motivos(confianza_pct=93.0)
+    assert "clasificacion_confianza_baja" in _motivos(
+        umbral=95.0,
+        confianza_pct=93.0,
+    )
+
+
+def test_f043_r28_motivos_el_umbral_por_defecto_es_60_y_lo_declara_settings():
+    """Un solo numero: el que trae el servicio y el que declara la
+    configuracion tienen que ser el mismo (F-023: cuatro sitios)."""
+    from application.services.albaran_confidence_service import (
+        UMBRAL_CLASIFICACION_CONFIANZA_POR_DEFECTO,
+    )
+    from config.settings import Settings
+
+    campo = Settings.model_fields["clasificacion_confianza_minima_pct"]
+
+    assert UMBRAL_CLASIFICACION_CONFIANZA_POR_DEFECTO == 60.0
+    assert campo.default == UMBRAL_CLASIFICACION_CONFIANZA_POR_DEFECTO
+
+
+def test_f043_r28_motivos_de_confianza_baja_mandan_el_documento_a_revision():
+    from application.services.albaran_confidence_service import (
+        AlbaranConfidenceService,
+    )
+
+    analisis = AlbaranConfidenceService().build_merge_analysis(
+        openai=_envelope_validado(confianza_pct=10.0),
+        gemini=None,
+    )
+
+    assert analisis.review_required is True
+    assert "clasificacion_confianza_baja" in analisis.review_reasons
+    assert "clasificacion_confianza_baja" in (
+        analisis.comparison_summary["review_reasons"]
+    )
+
+
+def test_f043_r29_motivos_albaran_mixto():
+    motivos = _motivos(mixto=True, familias_secundarias=["hormigon"])
+
+    assert "clasificacion_mixta" in motivos
+
+
+def test_f043_r29_motivos_un_albaran_de_una_sola_familia_no_lo_anade():
+    assert "clasificacion_mixta" not in _motivos()
+
+
+def test_f043_r11_motivos_clasificacion_ausente():
+    """Envelope sin clasificacion (documento anterior a la feature)."""
+    motivos = _motivos(con_clasificacion=False)
+
+    assert "clasificacion_ausente" in motivos
+
+
+def test_f043_r11_motivos_ia_sin_clasificacion_cuenta_como_ausente():
+    """El caso REAL en produccion: sv2 si sella un bloque, pero con
+    `origen='ausente'` porque la IA no clasifico. Es el mismo hueco."""
+    motivos = _motivos(
+        familia="generico",
+        confianza_pct=0.0,
+        motivo="ia_sin_clasificacion",
+        origen="ausente",
+    )
+
+    assert "clasificacion_ausente" in motivos
+    # El hueco se nombra UNA vez: la confianza 0 es consecuencia de que
+    # no hay clasificacion, no un segundo problema que investigar.
+    assert "clasificacion_confianza_baja" not in motivos
+
+
+def test_f043_r11_motivos_sin_clasificacion_sv3_no_se_la_inventa():
+    """PROHIBIDO deducir la familia por LER, texto, producto o CIF: el
+    documento se queda sin clasificacion y va a revision."""
+    from application.services.albaran_confidence_service import (
+        AlbaranConfidenceService,
+    )
+
+    analisis = AlbaranConfidenceService().build_merge_analysis(
+        openai=_envelope_validado(con_clasificacion=False),
+        gemini=None,
+    )
+
+    assert analisis.merged_envelope.data.clasificacion is None
+    assert analisis.review_required is True
+
+
+def test_f043_r28_motivos_una_clasificacion_solida_no_anade_ninguno():
+    motivos = _motivos()
+
+    for motivo in (
+        "clasificacion_confianza_baja",
+        "clasificacion_mixta",
+        "clasificacion_ausente",
+    ):
+        assert motivo not in motivos

@@ -12,6 +12,7 @@ from sqlalchemy import delete, func, select, text
 from sqlalchemy.exc import IntegrityError
 
 from application.services.albaran_confidence_service import (
+    UMBRAL_CLASIFICACION_CONFIANZA_POR_DEFECTO,
     AlbaranConfidenceService,
     LineMergeResult,
 )
@@ -235,10 +236,25 @@ class RawProviderSpec:
 
 
 class SqlAlchemyAlbaranRepository(AlbaranRepository):
-    def __init__(self, session_factory: SessionFactory) -> None:
+    def __init__(
+        self,
+        session_factory: SessionFactory,
+        *,
+        clasificacion_confianza_minima_pct: float = (
+            UMBRAL_CLASIFICACION_CONFIANZA_POR_DEFECTO
+        ),
+    ) -> None:
+        """``clasificacion_confianza_minima_pct`` (F-043 · R28) es el
+        umbral por debajo del cual la clasificación de la IA manda el
+        documento a revisión. Lo inyectan los dos puntos de composición
+        desde `Settings`; el defecto deja el servicio en pie sin ellos."""
         self._session_factory = session_factory
         self._initialized_generation: int | None = None
-        self._confidence_service = AlbaranConfidenceService()
+        self._confidence_service = AlbaranConfidenceService(
+            clasificacion_confianza_minima_pct=(
+                clasificacion_confianza_minima_pct
+            ),
+        )
 
     def initialize(self) -> None:
         self._session_factory.ensure_database_and_engine()

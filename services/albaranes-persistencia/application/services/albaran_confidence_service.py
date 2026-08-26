@@ -19,6 +19,8 @@ from domain.models.extraction_models import (
     LineaAlbaran,
     ProviderExtractionEnvelope,
 )
+from ruesma_comun.contratos import ClasificacionAlbaran
+from ruesma_comun.contratos.clasificacion import ORIGEN_AUSENTE
 
 
 @dataclass(frozen=True)
@@ -88,7 +90,39 @@ _FIELD_SCORE_BY_STATUS: dict[str, float] = {
 }
 
 
+# ---------------------------------------------------------------------- #
+# (F-043 · R11, R28, R29) Motivos de revisión de la clasificación.
+#
+# La clasificación la decide la IA y sv3 NO la corrige: lo único que hace
+# cuando la ve floja es MARCARLA, para que aparezca en la portada de
+# revisión de sv4 y alguien la mire. Ni bloquea la valoración —un
+# documento que no se valora no sale en ninguna pantalla y nadie se
+# entera: es lo que pasó con los 20.632 € de PAVIMARSA— ni deduce la
+# familia por otra vía.
+# ---------------------------------------------------------------------- #
+MOTIVO_CLASIFICACION_CONFIANZA_BAJA = "clasificacion_confianza_baja"
+MOTIVO_CLASIFICACION_MIXTA = "clasificacion_mixta"
+MOTIVO_CLASIFICACION_AUSENTE = "clasificacion_ausente"
+
+# Umbral por defecto de `confianza_pct` (R28, duda 3 del humano). Lo
+# declara también `config/settings.py` como
+# `CLASIFICACION_CONFIANZA_MINIMA_PCT`, que importa esta constante para
+# que el número viva en UN solo sitio.
+UMBRAL_CLASIFICACION_CONFIANZA_POR_DEFECTO = 60.0
+
+
 class AlbaranConfidenceService:
+    def __init__(
+        self,
+        *,
+        clasificacion_confianza_minima_pct: float = (
+            UMBRAL_CLASIFICACION_CONFIANZA_POR_DEFECTO
+        ),
+    ) -> None:
+        self._clasificacion_confianza_minima_pct = (
+            clasificacion_confianza_minima_pct
+        )
+
     # ---------------------------------------------------------------- #
     # Entry-point                                                      #
     # ---------------------------------------------------------------- #
@@ -215,6 +249,7 @@ class AlbaranConfidenceService:
             line_results=line_results,
             coherence_flags=coherence_flags,
             provider_origin=provider_origin,
+            clasificacion=merged_document.clasificacion,
         )
         review_required = doc_conf < 80.0 or bool(review_reasons)
 
@@ -483,6 +518,7 @@ class AlbaranConfidenceService:
         line_results: list[LineMergeResult],
         coherence_flags: list[str],
         provider_origin: str,
+        clasificacion: ClasificacionAlbaran | None = None,
     ) -> list[str]:
         reasons: list[str] = []
         if provider_origin == "openai_fallback":
@@ -500,6 +536,7 @@ class AlbaranConfidenceService:
             for field in header_summary["required_missing"]
         )
         reasons.extend(coherence_flags)
+        reasons.extend(self._motivos_de_clasificacion(clasificacion))
         for item in line_results:
             if item.provider_origin == "gemini_only":
                 reasons.append(
@@ -531,6 +568,45 @@ class AlbaranConfidenceService:
             seen.add(reason)
             ordered.append(reason)
         return ordered
+
+    def _motivos_de_clasificacion(
+        self,
+        clasificacion: ClasificacionAlbaran | None,
+    ) -> list[str]:
+        """Motivos de revisión de la clasificación (R11, R28, R29).
+
+        Tres casos y solo tres:
+
+        - **No hay clasificación** —o la hay pero con ``origen='ausente'``,
+          que es el hueco que sella el resolver de sv2 cuando la IA no
+          clasificó (R11)—: ``clasificacion_ausente``, y se acaba ahí. La
+          confianza 0 de ese bloque es CONSECUENCIA del hueco, no un
+          segundo problema; nombrarlo dos veces solo estorba al revisor.
+        - **Confianza por debajo del umbral** (R28, defecto 60 %):
+          ``clasificacion_confianza_baja``. Es «menor que», no «menor o
+          igual»: justo en el umbral se considera suficiente.
+        - **Albarán mixto** (R29): ``clasificacion_mixta``. En un mixto la
+          fase 2 leyó las líneas de la familia minoritaria con el prompt
+          de la mayoritaria y las líneas sin familia propia no heredan
+          (R19). No se disimula: se marca.
+
+        Lo que este método NO hace: mirar códigos LER, texto, familia de
+        producto o CIF para arreglar la familia. Prohibido por decisión
+        expresa del humano del 2026-08-25 — si la IA clasifica mal, se
+        arregla el PROMPT.
+        """
+        if clasificacion is None or clasificacion.origen == ORIGEN_AUSENTE:
+            return [MOTIVO_CLASIFICACION_AUSENTE]
+
+        motivos: list[str] = []
+        if (
+            clasificacion.confianza_pct
+            < self._clasificacion_confianza_minima_pct
+        ):
+            motivos.append(MOTIVO_CLASIFICACION_CONFIANZA_BAJA)
+        if clasificacion.mixto:
+            motivos.append(MOTIVO_CLASIFICACION_MIXTA)
+        return motivos
 
     # ---------------------------------------------------------------- #
     # Utilities                                                        #

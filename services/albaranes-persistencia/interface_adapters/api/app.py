@@ -91,7 +91,14 @@ def build_app(settings: Settings) -> FastAPI:
         admin_database_url=settings.admin_database_url,
         target_database_name=settings.pg_db,
     )
-    repository = SqlAlchemyAlbaranRepository(session_factory)
+    repository = SqlAlchemyAlbaranRepository(
+        session_factory,
+        # (F-043 R28) Umbral de confianza de la clasificacion por
+        # debajo del cual el documento se marca a revision.
+        clasificacion_confianza_minima_pct=(
+            settings.clasificacion_confianza_minima_pct
+        ),
+    )
     repository.initialize()
     contrato_cache = SqlAlchemyContratoCacheRepository(session_factory)
 
