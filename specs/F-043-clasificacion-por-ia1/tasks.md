@@ -9,10 +9,10 @@ al informe). Un commit por tarea, `F-043 Tn: ...`. Sin `git push`.
 final de `requirements.md`). La única que sigue abierta a propósito es el
 alcance de las evals, que se decide al llegar a **T30** y no antes.
 
-- [ ] T1: Crear `ruesma_comun/contratos/familias.py` con el catálogo (R1–R5), `familias_documento/linea`, `obtener`, `render_catalogo_markdown` y los dos `prompt_*_de`  |  Verificación: `pytest services/albaranes-comun/tests/test_f043_familias.py -k "catalogo or render or prompt"`
-- [ ] T2: Añadir `familia_efectiva` al catálogo con las cuatro ramas de §1.1 del diseño (R18–R21, R27)  |  Verificación: `pytest services/albaranes-comun/tests/test_f043_familias.py -k efectiva`
-- [ ] T3: Crear `ruesma_comun/contratos/clasificacion.py` con `ClasificacionAlbaran` (R7) y exportarlo en `ruesma_comun/contratos/__init__.py`  |  Verificación: `pytest services/albaranes-comun/tests/test_f043_familias.py -k contrato`
-- [ ] T4: Declarar `clasificacion` en `DocumentoAlbaran` de sv2 y de sv3, con default `None` (R8)  |  Verificación: `pytest services/albaranes-api/tests services/albaranes-persistencia/tests -k f043_schema`
+- [x] T1: Crear `ruesma_comun/contratos/familias.py` con el catálogo (R1–R5), `familias_documento/linea`, `obtener`, `render_catalogo_markdown` y los dos `prompt_*_de`  |  Verificación: `pytest services/albaranes-comun/tests/test_f043_familias.py -k "catalogo or render or prompt"`
+- [x] T2: Añadir `familia_efectiva` al catálogo con las cuatro ramas de §1.1 del diseño (R18–R21, R27)  |  Verificación: `pytest services/albaranes-comun/tests/test_f043_familias.py -k efectiva`
+- [x] T3: Crear `ruesma_comun/contratos/clasificacion.py` con `ClasificacionAlbaran` (R7) y exportarlo en `ruesma_comun/contratos/__init__.py`  |  Verificación: `pytest services/albaranes-comun/tests/test_f043_familias.py -k contrato`
+- [x] T4: Declarar `clasificacion` en `DocumentoAlbaran` de sv2 y de sv3, con default `None` (R8)  |  Verificación: `pytest services/albaranes-api/tests services/albaranes-persistencia/tests -k f043_schema`
 - [ ] T5: Inyectar `{catalogo_familias}` en el render del `task` de fase 1 (`albaran_extraction_service`) junto a `{obras_activas}` (R6)  |  Verificación: `pytest services/albaranes-api/tests/test_f043_prompt_fase1.py`
 - [ ] T6: Escribir en `config/prompts.yaml` de sv2 el bloque «Clasificación del albarán» de `albaran_factura_es`: marcador, campos obligatorios y `generico` como respuesta legítima (R6, R7, R4)  |  Verificación: `pytest services/albaranes-api/tests/test_f043_prompt_fase1.py -k bloque`
 - [ ] T7: Añadir a los cuatro `albaran_revision_fase2_*` la confirmación o corrección de `clasificacion` en `documento_revisado` (R16)  |  Verificación: `pytest services/albaranes-api/tests/test_f043_prompt_fase1.py -k fase2`

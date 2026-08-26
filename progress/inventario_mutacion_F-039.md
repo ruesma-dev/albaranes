@@ -49,9 +49,11 @@ servicio: esos números no están tocados por este defecto.
 | `progress/mutacion_F-039.md` | **Sí** (`harness/alcance.py`, `harness/mutacion.py`) | `VÁLIDA` | Campaña de la propia F-039 sobre su diff, la que exige el nivel `estandar` para cerrar la feature. |
 | `progress/mutacion_F-040.md` | **Sí** (`harness/mutacion.py`, `harness/mutacion_paralela.py`, `harness/rigor.py`) | `VÁLIDA` | Campaña de la propia F-040 sobre su diff, muestreada a 20 mutantes por el nivel `estandar`. **Primera campaña con el timeout DERIVADO** de la línea base (137 s efectivos sobre un suelo de 120) y con el tope de workers nuevo (4): sus tiempos no son comparables con los de campañas anteriores. Sus muertos son muertos de verdad; uno de sus tres «supervivientes» resultó ser FALSO al reproducirlo a mano (ver `progress/impl_F-040.md`, «El quinto defecto»), lo que sobra-cuenta trabajo pero no infla el número de muertos. |
 
+| `progress/mutacion_F-043_bloque_A.md` | No | `VÁLIDA` | Campaña del **bloque A** de F-043 (T1-T4), no de la feature entera. Alcance declarado con `--ficheros` sobre los dos módulos nuevos de `ruesma_comun/contratos/` porque esta rama sale de la de F-036, no de `dev`: con `--feature` el diff arrastra los 32 ficheros de F-036 y la campaña deja de medir este bloque. 12 mutantes, 12 muertos, 0 supervivientes, campaña completa (sin muestreo). La campaña de la feature entera es su T28 y sigue pendiente. |
+
 ## Recuento
 
-- Informes inventariados: **14**.
+- Informes inventariados: **15**.
 - Con alcance fuera de `services/`: **7** (F-011, F-012, F-034, F-038,
   maquinaria-paralela-F-039, F-039, F-040).
 - Medidos con la invocación rota y **no repuestos**: **2** (F-011 y F-012).

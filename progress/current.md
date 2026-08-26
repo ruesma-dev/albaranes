@@ -16,7 +16,37 @@ El plan de implementación **también está aprobado**. Lo siguiente, sin volver
 preguntarlo:
 
 1. Poner F-043 en `in_progress` (`harness/features.json`) y regenerar el backlog.
-2. Lanzar el implementer del **BLOQUE A (T1-T4)**.
+2. ~~Lanzar el implementer del **BLOQUE A (T1-T4)**~~ → **HECHO** el 2026-08-26.
+   Informe: `progress/impl_F-043_bloque_A.md`. Lo siguiente es el **BLOQUE B
+   (T5-T12)**, el que borra `tipologia_resolver` (riesgo ya aceptado, abajo).
+
+### BLOQUE A · terminado (T1-T4), a la espera de review
+
+Cuatro commits, uno por tarea (`af550a2`, `d5e5994`, `31817bf`, `44707c5`).
+Lo que existe ahora y el bloque B ya puede usar:
+
+- `ruesma_comun.contratos.familias` — catálogo único (7 familias: 4 de
+  documento, 3 de solo línea), `familias_documento/linea`, `obtener`,
+  `render_catalogo_markdown`, `prompt_fase2_de`, `prompt_valoracion_de` y
+  `familia_efectiva`.
+- `ruesma_comun.contratos.clasificacion.ClasificacionAlbaran`, reexportado en
+  `ruesma_comun.contratos`.
+- `DocumentoAlbaran.clasificacion` (default `None`) en sv2 y en sv3.
+
+**Dos avisos para quien siga:**
+
+- La verificación de T4 en `tasks.md` (`pytest services/albaranes-api/tests
+  services/albaranes-persistencia/tests -k f043_schema`) **no puede funcionar**:
+  sv2 y sv3 tienen ambos un paquete real `infrastructure/sigrid`, y en un solo
+  proceso de pytest uno tapa al otro (falla al RECOGER
+  `test_f002_obras_cache.py`, nada que ver con F-043). Es previo a esta feature.
+  Se verificó lanzando las dos suites por separado, que es como lo hace
+  `harness/init.sh`. Mismo cuidado en las verificaciones de T13-T17.
+- La campaña de mutación con `--feature F-043` **muta también todo F-036**
+  (esta rama sale de la de F-036, no de `dev`: 32 ficheros de diff contra
+  `dev`). Para el bloque A se acotó con `--ficheros` a los dos módulos nuevos.
+  Y muta el ÁRBOL PRINCIPAL: si se corta a medias, `python -m harness.mutacion
+  --restaurar` antes de nada.
 
 ### El plan aprobado de F-043 · cinco implementers en serie
 
