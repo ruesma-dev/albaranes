@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+from ruesma_comun.contratos import ClasificacionAlbaran
 
 from domain.models.contexto_linea import ContextoLinea
 
@@ -152,6 +153,25 @@ class ContratoLineContextDto(_StrictModel):
 class ValuationContextDto(_StrictModel):
     lineas_albaran: List[AlbaranLineContextDto] = Field(default_factory=list)
     lineas_contrato: List[ContratoLineContextDto] = Field(default_factory=list)
+    # -----------------------------------------------------------------
+    # (ago 2026 · F-043 R23) Clasificacion del DOCUMENTO: a que familia
+    # dijo IA1 que pertenece este albaran, con que confianza y por que.
+    # La escribe sv5 en el `context` del sobre leyendo las seis columnas
+    # `tipologia*` de la merge.
+    #
+    # Es el UNICO punto por el que esa decision entra en sv6, y de aqui
+    # la leen las puertas de familia del builder a traves de
+    # `familia_efectiva` (R25). sv6 NO la recalcula, no la corrige y no
+    # infiere familia por LER, texto ni CIF: eso era el lazo cerrado que
+    # F-043 desmonta.
+    #
+    # Default `None` — y NO un `generico` de relleno — para que un sobre
+    # anterior a la feature, incluidos los que ya esten en la cola
+    # `q-valoracion`, siga validando y valorandose EXACTAMENTE como hoy
+    # (R27): sin clasificacion, `familia_efectiva` devuelve `None` y no
+    # se abre ninguna puerta de familia.
+    # -----------------------------------------------------------------
+    clasificacion: Optional[ClasificacionAlbaran] = None
 
 
 class ValuationEnvelope(_StrictModel):
