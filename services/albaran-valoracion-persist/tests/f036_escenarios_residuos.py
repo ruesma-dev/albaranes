@@ -114,6 +114,11 @@ class EscenarioResiduos:
     #: Sinteticas que IA3 trajo en el sobre (para probar el dedupe).
     sinteticas_ia: tuple[LineValuationDto, ...] = field(default_factory=tuple)
     numero_albaran: str = "SS-0000589"
+    #: (F-043) Clasificacion de DOCUMENTO que IA1 puso al albaran, tal
+    #: como llega en ``context.clasificacion``. ``None`` = sobre
+    #: anterior a F-043, que es como se comportaba este modulo entero
+    #: hasta ahora: la familia solo podia venir por linea.
+    clasificacion: object | None = None
 
 
 def construir_envelope(escenario: EscenarioResiduos):
@@ -171,6 +176,7 @@ def construir_envelope(escenario: EscenarioResiduos):
         context=ValuationContextDto(
             lineas_albaran=contexto,
             lineas_contrato=list(escenario.contrato),
+            clasificacion=escenario.clasificacion,
         ),
     )
 

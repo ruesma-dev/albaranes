@@ -23,6 +23,8 @@ from application.services.partida_matcher import (
     PartidaMatcher,
     PartidaMatchResult,
 )
+from ruesma_comun.contratos.familias import familia_efectiva
+
 from application.services.price_reconciler import PriceReconciler
 from application.services.unit_category_guard import UnitCategoryGuard
 from application.services.unit_converter import UnitConverter
@@ -286,6 +288,39 @@ def _tarifa_cemento_sr(contrato_lines):
     return None
 
 
+# ------------------------------------------------------------------- #
+# (ago 2026 · F-043 R20/R25) LA FAMILIA CON LA QUE SE TRATA UNA LINEA.
+#
+# Antes, las ocho puertas de familia de este fichero preguntaban por
+# `contexto_linea.tipo_familia` a pelo. Ese campo lo rellena la fase 2
+# por LINEA y en muchos albaranes no viene: en SS-0003967 el merge real
+# traia `contexto_linea = NULL` y ningun proveedor puso la familia, asi
+# que no corrio ni una regla de residuos y el albaran salio en 540,00
+# EUR frente a los 210,00 del administrativo
+# (`progress/impl_F-036_bloque_D.md` §2).
+#
+# `familia_efectiva` vive en el catalogo compartido —sv5 y sv6 NO
+# duplican el criterio (R20)— y hace UNA sola cosa: si la linea trae
+# familia, esa; si no, la que la IA decidio para el DOCUMENTO. No mira
+# el codigo LER, ni el texto del concepto, ni el CIF del proveedor: eso
+# seria volver a inferir la familia con reglas, que es justo el lazo
+# cerrado que F-043 desmonta.
+#
+# Sin clasificacion de documento devuelve `None`, es decir, exactamente
+# el comportamiento anterior a la feature (R27).
+# ------------------------------------------------------------------- #
+def _familia_de(ctx, clasificacion) -> str | None:
+    """Familia efectiva de la linea cuyo contexto es ``ctx``.
+
+    ``ctx`` puede ser ``None`` (linea sin contexto): entonces la
+    familia sale entera del documento, si lo hay.
+    """
+    return familia_efectiva(
+        getattr(ctx, "tipo_familia", None) if ctx is not None else None,
+        clasificacion,
+    )
+
+
 _RE_MOVIMIENTO_RESIDUOS = re.compile(
     r"\b(porte|transporte|movimiento|desplazamiento|retirada|entrega|"
     r"cambio|colocacion|colocación|recogida)",
@@ -293,16 +328,19 @@ _RE_MOVIMIENTO_RESIDUOS = re.compile(
 )
 
 
-def _es_movimiento_residuos(*, ctx, albaran_line, contrato_line) -> bool:
+def _es_movimiento_residuos(
+    *, ctx, albaran_line, contrato_line, clasificacion=None,
+) -> bool:
     """(jul 2026) True si la línea es un MOVIMIENTO de residuos
     (porte / retirada / entrega / cambio de contenedor...).
 
-    Señales, cualquiera vale (la línea ya debe ser tipo_familia
+    Señales, cualquiera vale (la línea ya debe ser de familia EFECTIVA
     'residuos'): rol_linea transporte/desplazamiento del contexto, o
     palabra de movimiento en la descripción del albarán o de la línea
     de contrato casada.
     """
-    if ctx is None or getattr(ctx, "tipo_familia", None) != "residuos":
+    # Puerta 1 de 8 (F-043 R25).
+    if _familia_de(ctx, clasificacion) != "residuos":
         return False
     if getattr(ctx, "rol_linea", None) in ("transporte", "desplazamiento"):
         return True
@@ -384,6 +422,13 @@ class ValuationBuilder:
         self._partida_matcher = partida_matcher
         self._converter = unit_converter
         self._importe_calc = importe_calculator
+        # (ago 2026 · F-043 R25) Clasificación del DOCUMENTO que se está
+        # valorando. La sella ``build`` al abrir el sobre, igual que
+        # ``_codigo_contrato_actual``, y la leen las OCHO puertas de
+        # familia a través de ``_familia_de``. ``None`` hasta que haya
+        # sobre —y en los sobres anteriores a F-043— es lo que deja el
+        # servicio comportándose exactamente como hoy (R27).
+        self._clasificacion = None
 
     def build(
         self,
@@ -394,6 +439,11 @@ class ValuationBuilder:
         # Codigo de contrato de esta valoracion (para la "linea nueva" de
         # fallback cuando la IA no casa nada con el contrato).
         self._codigo_contrato_actual = envelope.meta.codigo_contrato
+        # (ago 2026 · F-043 R25) La familia que IA1 decidió para ESTE
+        # documento. De aquí la leen las ocho puertas de familia.
+        self._clasificacion = getattr(
+            envelope.context, "clasificacion", None,
+        )
         albaran_by_id: Dict[int, AlbaranLineContextDto] = {
             line.merge_line_id: line for line in envelope.context.lineas_albaran
         }
@@ -617,7 +667,7 @@ class ValuationBuilder:
                 continue
             alb = albaran_by_id.get(base.merge_line_id)
             ctx = alb.contexto_linea if alb is not None else None
-            if ctx is None or getattr(ctx, "tipo_familia", None) != "hormigon":
+            if _familia_de(ctx, self._clasificacion) != "hormigon":
                 continue
             ya = _anios_m1_ya_emitidos(sinteticas, base.merge_line_id)
             for anio in range(anio_contrato + 1, anio_albaran + 1):
@@ -701,7 +751,7 @@ class ValuationBuilder:
                 continue
             alb = albaran_by_id.get(base.merge_line_id)
             ctx = alb.contexto_linea if alb is not None else None
-            if ctx is None or getattr(ctx, "tipo_familia", None) != "hormigon":
+            if _familia_de(ctx, self._clasificacion) != "hormigon":
                 continue
             texto = " ".join(
                 parte for parte in (
@@ -844,7 +894,7 @@ class ValuationBuilder:
                 continue
             alb = albaran_by_id.get(base.merge_line_id)
             ctx = alb.contexto_linea if alb is not None else None
-            if ctx is None or getattr(ctx, "tipo_familia", None) != "residuos":
+            if _familia_de(ctx, self._clasificacion) != "residuos":
                 continue
             for regla in REGLAS_SINTETICAS_RESIDUOS:
                 dto = regla(
@@ -982,8 +1032,7 @@ class ValuationBuilder:
         # ------------------------------------------------------------ #
         base_casada_con_incremento = False
         if (
-            ctx is not None
-            and getattr(ctx, "tipo_familia", None) == "residuos"
+            _familia_de(ctx, self._clasificacion) == "residuos"
             and contrato_line is not None
             and es_linea_incremento_ler(contrato_line.descripcion) is not None
         ):
@@ -1163,7 +1212,7 @@ class ValuationBuilder:
         # Determinista y AISLADO: solo afecta a lineas tipo_familia='residuos';
         # si no se puede calcular, cae a la cantidad normal y marca revision.
         residuos_calc = None
-        if ctx is not None and getattr(ctx, "tipo_familia", None) == "residuos":
+        if _familia_de(ctx, self._clasificacion) == "residuos":
             residuos_calc = calcular_contenedores_residuos(
                 contexto_linea=ctx,
                 contrato_line=contrato_by_id.get(effective_matched_id),
@@ -1189,6 +1238,7 @@ class ValuationBuilder:
                 ctx=ctx,
                 albaran_line=albaran_line,
                 contrato_line=contrato_by_id.get(effective_matched_id),
+                clasificacion=self._clasificacion,
             )
         ):
             _cant_conv_final = 1.0
@@ -1223,8 +1273,7 @@ class ValuationBuilder:
         # horas de descarga (fin/límite en blanco), el exceso de tiempo
         # no es computable — se avisa para que el revisor lo mire.
         if (
-            ctx is not None
-            and getattr(ctx, "tipo_familia", None) == "hormigon"
+            _familia_de(ctx, self._clasificacion) == "hormigon"
             and rol_linea in (None, "base")
             and getattr(ctx, "notas_tiempo", None)
         ):
@@ -1393,8 +1442,8 @@ class ValuationBuilder:
         # dejaba invisible para lo segundo (review de la pasada 2).
         padre_residuos = (
             parent_albaran is not None
-            and getattr(
-                parent_albaran.contexto_linea, "tipo_familia", None,
+            and _familia_de(
+                parent_albaran.contexto_linea, self._clasificacion,
             ) == "residuos"
         )
 
