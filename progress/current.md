@@ -19,9 +19,12 @@ preguntarlo:
 2. ~~Lanzar el implementer del **BLOQUE A (T1-T4)**~~ → **HECHO** el 2026-08-26,
    revisado y con los cambios requeridos aplicados. Informes:
    `progress/impl_F-043_bloque_A.md` + `progress/impl_F-043_bloque_A_cr.md`.
-   Lo siguiente es la **pasada 2 del reviewer** sobre el bloque A y, con su
-   APROBADO, el **BLOQUE B (T5-T12)**, el que borra `tipologia_resolver`
-   (riesgo ya aceptado, abajo).
+3. ~~**BLOQUE B (T5-T12)**~~ → **HECHO** el 2026-08-26. Informe:
+   `progress/impl_F-043_bloque_B.md`. Nueve commits (`230fc22` … `3a10fce`),
+   `init.sh` verde, 556 passed en la raíz y 139 en sv2, cobertura 98,9 %.
+   **`tipologia_resolver` ya no existe**: el `grep` de T10 sale sin
+   resultados. Lo siguiente es la **review del bloque B** y, con su APROBADO,
+   el **BLOQUE C (T13-T17)**, que es sv3.
 
 ### BLOQUE A · pasada 1 revisada y CAMBIOS REQUERIDOS APLICADOS
 
@@ -67,6 +70,26 @@ Lo que existe ahora y el bloque B ya puede usar:
   `dev`). Para el bloque A se acotó con `--ficheros` a los dos módulos nuevos.
   Y muta el ÁRBOL PRINCIPAL: si se corta a medias, `python -m harness.mutacion
   --restaurar` antes de nada.
+
+### BLOQUE B · qué existe ya (T5-T12), y qué tiene que saber el bloque C
+
+- **La clasificación viaja en `data.clasificacion`** del envelope final, con
+  los seis campos del contrato y el `origen` sellado (`ia1`/`ia2`/`ausente`).
+  `meta.tipologia` sigue ahí, pero solo como espejo: el dato bueno es el de
+  `data`. Es justo lo que T13 tiene que ver sobrevivir a `_sanear_envelope`.
+- **Confianza 0 = hueco**, y hay dos formas de llegar a ella: la IA no
+  clasificó (`origen='ausente'`, motivo `ia_sin_clasificacion`) o se inventó
+  una familia (`origen='ia1'`, motivo `familia fuera de catalogo: '…'`). Las
+  dos tienen que caer del lado de «a revisión» con el umbral de 60 % de T16.
+- `application/services/clasificacion_resolver.py` es el único punto de sv2
+  que decide algo sobre la familia, y no decide: normaliza. Sin `ler`, sin
+  texto, sin CIF, con dos tests que lo vigilan.
+- **El prompt de fase 2 se elige con `prompt_fase2_de(familia)`**: `None`
+  significa «genérico configurado». Si alguien da de alta una familia con
+  clave de prompt y olvida escribirlo en el YAML, el pipeline avisa por
+  `WARNING` en vez de callarse.
+- **`config/prompts.yaml` de sv2 es ahora ruta sensible tocada**: `init.sh`
+  lista 8 rutas en aviso en vez de 7. Su evidencia es T30.
 
 ### El plan aprobado de F-043 · cinco implementers en serie
 
