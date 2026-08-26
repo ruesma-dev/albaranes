@@ -12,6 +12,9 @@ Funciones puras: sin red, sin BBDD, sin LLM.
 """
 from __future__ import annotations
 
+from pathlib import Path
+from types import SimpleNamespace
+
 import pytest
 
 from ruesma_comun.contratos import familias as cat
@@ -259,3 +262,139 @@ def test_f043_r15_prompt_sin_clave_registrada_devuelve_none_para_caer_al_generic
     assert cat.prompt_valoracion_de("familia_que_no_existe") is None
     assert cat.prompt_fase2_de(None) is None
     assert cat.prompt_valoracion_de(None) is None
+
+
+# ------------------------------------------------------------------ #
+# R18-R21, R27 · familia EFECTIVA de una linea
+#
+# Las cuatro ramas del diseno §1.1, en este orden:
+#   1. la linea trae `tipo_familia`      -> esa (lo que la IA dijo manda)
+#   2. no hay clasificacion de documento -> None (R27, como hoy)
+#   3. el documento esta marcado `mixto` -> None (R19, no se hereda)
+#   4. si no                             -> la del documento, si es
+#                                           familia de LINEA
+#
+# No es una regla que infiere la familia: propaga a la linea la decision
+# que tomo la IA sobre el documento. No mira LER, ni texto, ni CIF.
+# ------------------------------------------------------------------ #
+def _clasif(familia: str, mixto: bool = False) -> SimpleNamespace:
+    """Doble minimo de `ClasificacionAlbaran` (que llega en T3)."""
+    return SimpleNamespace(familia=familia, mixto=mixto)
+
+
+def test_f043_r18_familia_efectiva_rama1_la_de_la_linea_manda():
+    """Lo que la IA dijo por LINEA gana siempre a lo del documento."""
+    assert (
+        cat.familia_efectiva("combustible", _clasif("residuos"))
+        == "combustible"
+    )
+
+
+def test_f043_r18_familia_efectiva_rama1_la_linea_otro_no_hereda():
+    """Duda 2 resuelta por el humano: 'otro' = 'no es de ninguna familia
+    con reglas'. Si heredara, una linea de transporte dentro de un albaran
+    de residuos se comeria la regla de contenedores."""
+    assert cat.familia_efectiva("otro", _clasif("residuos")) == "otro"
+
+
+def test_f043_r18_familia_efectiva_rama1_normaliza_lo_que_dijo_la_ia():
+    assert cat.familia_efectiva("  RESIDUOS  ", None) == "residuos"
+
+
+def test_f043_r27_familia_efectiva_rama2_sin_clasificacion_es_none():
+    """Envelope anterior a F-043: exactamente el comportamiento de hoy."""
+    assert cat.familia_efectiva(None, None) is None
+    assert cat.familia_efectiva("", None) is None
+    assert cat.familia_efectiva("   ", None) is None
+
+
+def test_f043_r19_familia_efectiva_rama3_en_mixto_no_se_hereda():
+    """MIENTRAS el documento este marcado mixto, la linea sin familia
+    queda SIN familia efectiva (y sv3 le pone su motivo de revision)."""
+    assert cat.familia_efectiva(None, _clasif("residuos", mixto=True)) is None
+
+
+def test_f043_r19_familia_efectiva_rama3_en_mixto_la_linea_propia_sigue_valiendo():
+    """El mixto no anula la rama 1: bloquea la HERENCIA, no lo que la IA
+    dijo explicitamente de esa linea."""
+    assert (
+        cat.familia_efectiva("hormigon", _clasif("residuos", mixto=True))
+        == "hormigon"
+    )
+
+
+def test_f043_r18_familia_efectiva_rama4_hereda_la_del_documento():
+    """El caso SS-0003967: documento 'residuos', lineas sin tipo_familia."""
+    assert cat.familia_efectiva(None, _clasif("residuos")) == "residuos"
+    assert cat.familia_efectiva("", _clasif("hormigon")) == "hormigon"
+
+
+def test_f043_r20_familia_efectiva_rama4_familia_fuera_de_catalogo_es_none():
+    """Si la IA se invento la etiqueta, no se hereda nada: None."""
+    assert cat.familia_efectiva(None, _clasif("familia_inventada")) is None
+
+
+def test_f043_r20_familia_efectiva_rama4_solo_hereda_familias_de_linea(
+    monkeypatch,
+):
+    """Una familia que solo tiene alcance de DOCUMENTO no puede bajar a la
+    linea: no significa nada ahi."""
+    solo_doc = cat.Familia(
+        id="solo_documento",
+        nombre="Solo documento",
+        definicion="Familia de prueba con alcance unicamente de documento.",
+        no_es="No baja a la linea.",
+        senales="Ninguna.",
+        alcance=frozenset({cat.ALCANCE_DOCUMENTO}),
+    )
+    monkeypatch.setattr(cat, "CATALOGO", cat.CATALOGO + (solo_doc,))
+
+    assert "solo_documento" in cat.familias_documento()
+    assert "solo_documento" not in cat.familias_linea()
+    assert cat.familia_efectiva(None, _clasif("solo_documento")) is None
+
+
+def test_f043_r20_familia_efectiva_acepta_dict_ademas_del_contrato():
+    """UN solo punto compartido (R20): sv5 y sv6 lo llaman con el contrato
+    Pydantic, pero el envelope viaja como dict antes de validarse."""
+    assert cat.familia_efectiva(None, {"familia": "residuos"}) == "residuos"
+    assert (
+        cat.familia_efectiva(None, {"familia": "residuos", "mixto": True})
+        is None
+    )
+
+
+def test_f043_r21_familia_efectiva_no_escribe_nada_en_la_linea():
+    """R21: la herencia se resuelve EN LECTURA. Lo que la IA dijo por linea
+    se conserva intacto; si se escribiera, se perderia la diferencia entre
+    'lo dijo la IA' y 'se heredo del documento'."""
+    clasificacion = _clasif("residuos")
+    contexto = {"tipo_familia": None, "codigo_ler": "170504"}
+
+    resultado = cat.familia_efectiva(contexto["tipo_familia"], clasificacion)
+
+    assert resultado == "residuos"
+    assert contexto == {"tipo_familia": None, "codigo_ler": "170504"}
+    assert clasificacion.familia == "residuos"
+    assert clasificacion.mixto is False
+
+
+def test_f043_r13_familia_efectiva_no_mira_el_ler_ni_el_texto():
+    """Prohibicion expresa del humano (2026-08-25): nada de deducir la
+    familia por codigo LER, familia de producto o palabras del texto. Una
+    linea con LER en un documento 'generico' NO se vuelve 'residuos'."""
+    assert cat.familia_efectiva(None, _clasif("generico")) == "generico"
+
+    # El modulo no importa NADA con lo que deducir una familia: ni el
+    # catalogo LER, ni las funciones de texto de sv2, ni nada de proveedor.
+    fuente = Path(cat.__file__).read_text(encoding="utf-8")
+    lineas_import = [
+        linea.strip()
+        for linea in fuente.splitlines()
+        if linea.startswith(("import ", "from "))
+    ]
+    assert lineas_import == [
+        "from __future__ import annotations",
+        "from dataclasses import dataclass",
+        "from typing import Optional",
+    ]

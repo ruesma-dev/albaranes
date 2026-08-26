@@ -250,7 +250,7 @@ CATALOGO: tuple[Familia, ...] = (
 )
 
 
-def _normalizar(id_familia: Optional[str]) -> str:
+def _normalizar(id_familia: object) -> str:
     """Deja el identificador como lo escribe el catalogo.
 
     La IA puede devolver ' Hormigon ' o 'RESIDUOS'; eso no es una familia
@@ -330,3 +330,62 @@ def prompt_valoracion_de(familia: Optional[str]) -> Optional[str]:
     """Clave del prompt de valoracion de esa familia, o ``None`` (R24)."""
     entrada = obtener(familia)
     return entrada.prompt_valoracion if entrada is not None else None
+
+
+def _campo(clasificacion: object, nombre: str, defecto: object) -> object:
+    """Lee un campo de la clasificacion venga como objeto o como dict.
+
+    sv5 y sv6 la manejan ya validada (``ClasificacionAlbaran``), pero el
+    envelope viaja como diccionario antes de validarse. Un solo lector para
+    los dos casos es lo que permite que el criterio viva en UN punto (R20).
+    """
+    if isinstance(clasificacion, dict):
+        valor = clasificacion.get(nombre, defecto)
+    else:
+        valor = getattr(clasificacion, nombre, defecto)
+    return defecto if valor is None else valor
+
+
+def familia_efectiva(
+    tipo_familia_linea: Optional[str],
+    clasificacion: object,
+) -> Optional[str]:
+    """Familia con la que hay que tratar UNA linea (R18-R21, R27).
+
+    Las cuatro ramas, en este orden:
+
+    1. La linea trae ``tipo_familia``: manda esa. Lo que la IA dijo de la
+       linea gana siempre a lo que dijo del documento — incluido ``otro``,
+       que es precisamente la forma de decir "a esta linea no le apliques
+       las reglas del albaran".
+    2. No hay clasificacion de documento (envelope anterior a F-043):
+       ``None``, es decir, exactamente el comportamiento de hoy (R27).
+    3. El documento esta marcado ``mixto``: ``None``. En un albaran mixto
+       NO se hereda (R19); esas lineas se quedan sin familia efectiva y sv3
+       les anade el motivo ``linea_sin_familia_en_albaran_mixto``.
+    4. Si no, la familia del documento, siempre que sea familia de LINEA.
+
+    Esto NO es una regla que infiera la familia: propaga a la linea la
+    decision que la IA tomo sobre el documento. No mira el codigo LER, ni el
+    texto del concepto, ni el CIF del proveedor. Y no ESCRIBE nada: la
+    herencia se resuelve en lectura, para no borrar la diferencia entre "lo
+    dijo la IA por linea" y "se heredo del documento" (R21).
+    """
+    # Rama 1
+    de_la_linea = _normalizar(tipo_familia_linea)
+    if de_la_linea:
+        return de_la_linea
+
+    # Rama 2
+    if clasificacion is None:
+        return None
+
+    # Rama 3
+    if bool(_campo(clasificacion, "mixto", False)):
+        return None
+
+    # Rama 4
+    del_documento = _normalizar(_campo(clasificacion, "familia", ""))
+    if del_documento in familias_linea():
+        return del_documento
+    return None
