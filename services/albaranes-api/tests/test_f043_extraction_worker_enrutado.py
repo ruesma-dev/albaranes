@@ -181,15 +181,45 @@ def test_f043_r15_una_familia_sin_prompt_propio_cae_al_generico(
     assert pipeline.peticion_fase2.prompt_key is None
 
 
+def _log_del_worker(caplog) -> list[str]:
+    return [
+        r.getMessage() for r in caplog.records
+        if r.name.endswith("extraction_worker")
+    ]
+
+
 def test_f043_r15_la_caida_al_generico_queda_en_el_log(caplog) -> None:
+    """R15 lo pide literalmente: «cae al prompt generico configurado y lo
+    deja en el log». Se comprueba el aviso CONCRETO, no que la palabra
+    'generico' aparezca en algun sitio: la linea final del worker tambien
+    la lleva, y con esa asercion floja el aviso podia desaparecer entero
+    sin que nadie se enterara."""
     pipeline = PipelineDoble(data1=_data(_bloque("generico")))
 
     with caplog.at_level(logging.INFO):
         _ejecutar(pipeline)
 
+    mensajes = _log_del_worker(caplog)
+    assert any("sin prompt propio" in m for m in mensajes), mensajes
     assert any(
-        "generico" in r.getMessage() for r in caplog.records
-    ), caplog.text
+        "prompt_fase2=(generico configurado)" in m for m in mensajes
+    ), mensajes
+
+
+def test_f043_r15_con_prompt_propio_no_se_avisa_de_caida(caplog) -> None:
+    """No-regresion del caso normal: el albaran de residuos se lee con su
+    prompt y el log lo dice, sin avisos de caida."""
+    pipeline = PipelineDoble(data1=_data(_bloque("residuos")))
+
+    with caplog.at_level(logging.INFO):
+        _ejecutar(pipeline)
+
+    mensajes = _log_del_worker(caplog)
+    assert not any("sin prompt propio" in m for m in mensajes), mensajes
+    assert any(
+        "prompt_fase2=albaran_revision_fase2_residuos" in m
+        for m in mensajes
+    ), mensajes
 
 
 def test_f043_r10_una_familia_inventada_no_enruta_a_un_prompt_inventado(

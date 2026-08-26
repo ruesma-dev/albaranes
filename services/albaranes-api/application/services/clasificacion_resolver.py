@@ -163,6 +163,6 @@ def resolver_clasificacion(
     logger.info(
         "%s familia=%s confianza=%.1f origen=%s mixto=%s secundarias=%s",
         _LOG, resultado.familia, resultado.confianza_pct, resultado.origen,
-        resultado.mixto, resultado.familias_secundarias or "-",
+        resultado.mixto, resultado.familias_secundarias,
     )
     return resultado
