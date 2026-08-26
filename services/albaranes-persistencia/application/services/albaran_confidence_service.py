@@ -155,6 +155,16 @@ class AlbaranConfidenceService:
         merged_document = DocumentoAlbaran(
             cabecera=header,
             lineas=[item.merged_line for item in line_results],
+            # (F-043 · R9/R22) La clasificacion es del DOCUMENTO y la
+            # sello el resolver de sv2 sobre el envelope FINAL, que es
+            # justo el que llega aqui como ``openai``. No se "fusiona"
+            # entre proveedores —los sub-envelopes son la extraccion
+            # cruda de cada IA, auditoria forense— porque fusionarla
+            # seria volver a DECIDIR la familia, y eso lo hace la IA.
+            # Sin esta linea el merge rehace ``data`` sin ella y la
+            # clasificacion se pierde aqui igual que se perdia en
+            # ``meta``: las seis columnas quedarian a NULL.
+            clasificacion=openai.data.clasificacion,
         )
         merged_envelope = ProviderExtractionEnvelope(
             meta=base_envelope.meta,

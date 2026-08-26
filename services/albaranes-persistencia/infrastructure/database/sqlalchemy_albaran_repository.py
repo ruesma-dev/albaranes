@@ -37,11 +37,50 @@ from infrastructure.database.orm_models import (
     Base,
 )
 from infrastructure.database.session_factory import SessionFactory
+from ruesma_comun.contratos import ClasificacionAlbaran
 
 logger = logging.getLogger(__name__)
 
 DocumentOrmType = Type[AlbaranDocumentOrm] | Type[AlbaranDocumentMergeOrm]
 LineOrmType = Type[AlbaranLineOrm] | Type[AlbaranLineMergeOrm]
+
+
+def campos_clasificacion_merge(
+    clasificacion: ClasificacionAlbaran | None,
+) -> Dict[str, Any]:
+    """Los seis campos de ``albaran_documents_merge`` (F-043 · R22).
+
+    Traduce la clasificación de DOCUMENTO que decidió la IA a las
+    columnas del merge. Se aplica SOLO a ``albaran_documents_merge``:
+    las tablas por proveedor son auditoría forense y ni siquiera tienen
+    esas columnas.
+
+    ``None`` devuelve ``{}`` a propósito. Un envelope sin clasificación
+    —un documento anterior a esta feature— deja las columnas a NULL:
+    sv3 NO reconstruye la familia por código LER, texto ni CIF (R11,
+    decisión del humano del 2026-08-25); lo que hace es marcar el
+    documento a revisión con ``clasificacion_ausente``. Si aquí se
+    escribiera ``generico``/0/``ausente``, sv5 leería una clasificación
+    donde no la hay y los documentos viejos dejarían de comportarse como
+    hoy, que es exactamente lo que R27 prohíbe.
+
+    Los dos recortes son defensivos: ``tipologia`` es VARCHAR(32) y
+    ``tipologia_origen`` VARCHAR(16), y un valor más largo no puede
+    tumbar el INSERT del albarán entero por un campo informativo.
+    """
+    if clasificacion is None:
+        return {}
+    return {
+        "tipologia": clasificacion.familia[:32],
+        "tipologia_confianza_pct": clasificacion.confianza_pct,
+        "tipologia_motivo": clasificacion.motivo,
+        "tipologia_origen": clasificacion.origen[:16],
+        "tipologia_mixta": clasificacion.mixto,
+        "tipologia_secundarias_json": json.dumps(
+            clasificacion.familias_secundarias,
+            ensure_ascii=False,
+        ),
+    }
 
 
 def _dump_contexto_linea(ctx) -> str | None:
@@ -702,6 +741,12 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
             review_reasons=merge_analysis.review_reasons,
             comparison_summary=merge_analysis.comparison_summary,
             line_results=merge_analysis.line_results,
+            # (F-043 · R22) La clasificación de la IA, a sus seis
+            # columnas. Solo en el merge; vacío si el envelope no la
+            # traía (documento anterior a la feature).
+            campos_clasificacion=campos_clasificacion_merge(
+                merge_analysis.merged_envelope.data.clasificacion
+            ),
         )
 
         with self._session_factory.create_session() as session:
@@ -1894,7 +1939,14 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
         review_reasons: list[str] | None,
         comparison_summary: Dict[str, Any] | None,
         line_results: list[LineMergeResult] | None,
+        campos_clasificacion: Dict[str, Any] | None = None,
     ) -> AlbaranDocumentOrm | AlbaranDocumentMergeOrm:
+        """Construye la fila del documento.
+
+        ``campos_clasificacion`` (F-043 · R22) solo se pasa para
+        ``albaran_documents_merge``: las tablas por proveedor no tienen
+        esas columnas y recibirlas reventaría el constructor del ORM.
+        """
         cabecera: CabeceraAlbaran = provider_envelope.data.cabecera
         payload = provider_envelope.model_dump(by_alias=True)
         lines = self._build_lines(
@@ -1983,6 +2035,7 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
             ),
             created_at_utc=provider_envelope.meta.processed_at_utc,
             lines=lines,
+            **(campos_clasificacion or {}),
         )
 
     @staticmethod

@@ -230,3 +230,205 @@ def test_f043_r22_el_orm_indexa_la_tipologia_con_el_nombre_del_ddl():
     }
 
     assert _INDICE_TIPOLOGIA in nombres
+
+
+# ------------------------------------------------------------------ #
+# T15 · R22 — los seis campos se escriben en albaran_documents_merge.
+# ------------------------------------------------------------------ #
+
+def _envelope_validado(*, con_clasificacion: bool = True, **campos):
+    """`ExtractionEnvelope` de sv3 con la clasificacion ya validada."""
+    clasificacion = {**_CLASIFICACION, **campos}
+    saneado = _sanear_envelope(_envelope_de_sv2(
+        con_clasificacion=con_clasificacion,
+    ))
+    if con_clasificacion:
+        saneado["data"]["clasificacion"] = clasificacion
+    return ExtractionEnvelope.model_validate(saneado)
+
+
+def _stored_file():
+    from domain.models.persistence_models import StoredFile
+
+    return StoredFile(
+        drive_id="drive-de-prueba",
+        item_id="item-de-prueba",
+        relative_path="albaranes/2026/SS-0003967.pdf",
+        web_url=None,
+        share_url=None,
+    )
+
+
+def test_f043_r22_el_merge_conserva_la_clasificacion_y_la_persiste():
+    """El merge multi-proveedor rehace `data` campo a campo. Si al
+    rehacerlo no copia la clasificacion, se pierde AQUI —igual que se
+    perdia en `meta`— y las seis columnas se quedan a NULL."""
+    from application.services.albaran_confidence_service import (
+        AlbaranConfidenceService,
+    )
+
+    analisis = AlbaranConfidenceService().build_merge_analysis(
+        openai=_envelope_validado(),
+        gemini=None,
+    )
+
+    assert analisis.merged_envelope.data.clasificacion is not None
+    assert analisis.merged_envelope.data.clasificacion.familia == "residuos"
+
+
+def test_f043_r22_persiste_los_seis_campos_del_documento():
+    from infrastructure.database.sqlalchemy_albaran_repository import (
+        campos_clasificacion_merge,
+    )
+
+    campos = campos_clasificacion_merge(
+        _envelope_validado().data.clasificacion
+    )
+
+    assert campos == {
+        "tipologia": "residuos",
+        "tipologia_confianza_pct": 93.0,
+        "tipologia_motivo": (
+            "Gestor autorizado de RCD, codigos LER y contenedores."
+        ),
+        "tipologia_origen": "ia1",
+        "tipologia_mixta": False,
+        "tipologia_secundarias_json": "[]",
+    }
+
+
+def test_f043_r22_persiste_las_familias_secundarias_como_json():
+    from infrastructure.database.sqlalchemy_albaran_repository import (
+        campos_clasificacion_merge,
+    )
+
+    campos = campos_clasificacion_merge(
+        _envelope_validado(
+            mixto=True,
+            familias_secundarias=["hormigon", "generico"],
+        ).data.clasificacion
+    )
+
+    assert campos["tipologia_mixta"] is True
+    assert campos["tipologia_secundarias_json"] == (
+        '["hormigon", "generico"]'
+    )
+
+
+def test_f043_r22_no_persiste_clasificacion_cuando_el_envelope_no_la_trae():
+    """R11/R27 · sv3 NO la inventa: columnas a NULL y a revision.
+
+    Si sv3 escribiera aqui `generico`/0/`ausente`, sv5 leeria una
+    clasificacion donde no la hay y los documentos anteriores a la
+    feature dejarian de comportarse como hoy.
+    """
+    from infrastructure.database.sqlalchemy_albaran_repository import (
+        campos_clasificacion_merge,
+    )
+
+    assert campos_clasificacion_merge(None) == {}
+
+
+def test_f043_r22_persiste_recortando_lo_que_no_cabe_en_la_columna():
+    """`tipologia` es VARCHAR(32) y `tipologia_origen` VARCHAR(16): un
+    valor largo tumbaria el INSERT entero y con el, el albaran."""
+    from infrastructure.database.sqlalchemy_albaran_repository import (
+        campos_clasificacion_merge,
+    )
+
+    campos = campos_clasificacion_merge(
+        _envelope_validado(familia="x" * 90, origen="y" * 90).data.clasificacion
+    )
+
+    assert campos["tipologia"] == "x" * 32
+    assert campos["tipologia_origen"] == "y" * 16
+
+
+def test_f043_r22_el_orm_del_merge_persiste_los_seis_campos():
+    """Del envelope a la fila: el objeto ORM sale con los seis valores."""
+    from infrastructure.database.orm_models import (
+        AlbaranDocumentMergeOrm,
+        AlbaranLineMergeOrm,
+    )
+    from infrastructure.database.sqlalchemy_albaran_repository import (
+        SqlAlchemyAlbaranRepository,
+        campos_clasificacion_merge,
+    )
+
+    envelope = _envelope_validado()
+    repositorio = SqlAlchemyAlbaranRepository(session_factory=None)
+
+    documento = repositorio._build_document_orm(
+        orm_document_cls=AlbaranDocumentMergeOrm,
+        orm_line_cls=AlbaranLineMergeOrm,
+        document_id="doc-merge",
+        provider_origin="openai_fallback",
+        provider_envelope=envelope,
+        context={},
+        email_ctx={},
+        document_ctx={},
+        stored_file=_stored_file(),
+        ia_input_payload={},
+        ia_output_payload={},
+        ia_input_relative_path=None,
+        ia_input_web_url=None,
+        ia_output_relative_path=None,
+        ia_output_web_url=None,
+        raw_lines=envelope.data.lineas,
+        document_confidence_pct=88.0,
+        review_required=False,
+        review_reasons=[],
+        comparison_summary={},
+        line_results=None,
+        campos_clasificacion=campos_clasificacion_merge(
+            envelope.data.clasificacion
+        ),
+    )
+
+    assert documento.tipologia == "residuos"
+    assert documento.tipologia_confianza_pct == 93.0
+    assert documento.tipologia_origen == "ia1"
+    assert documento.tipologia_mixta is False
+    assert documento.tipologia_secundarias_json == "[]"
+    assert "Gestor autorizado" in documento.tipologia_motivo
+
+
+def test_f043_r22_la_tabla_raw_no_persiste_la_clasificacion():
+    """El mismo constructor sirve para las tablas por proveedor, que NO
+    tienen esas columnas: sin campos, no se les cuela nada."""
+    from infrastructure.database.orm_models import (
+        AlbaranDocumentOrm,
+        AlbaranLineOrm,
+    )
+    from infrastructure.database.sqlalchemy_albaran_repository import (
+        SqlAlchemyAlbaranRepository,
+    )
+
+    envelope = _envelope_validado()
+    repositorio = SqlAlchemyAlbaranRepository(session_factory=None)
+
+    documento = repositorio._build_document_orm(
+        orm_document_cls=AlbaranDocumentOrm,
+        orm_line_cls=AlbaranLineOrm,
+        document_id="doc-raw",
+        provider_origin="openai",
+        provider_envelope=envelope,
+        context={},
+        email_ctx={},
+        document_ctx={},
+        stored_file=_stored_file(),
+        ia_input_payload={},
+        ia_output_payload={},
+        ia_input_relative_path=None,
+        ia_input_web_url=None,
+        ia_output_relative_path=None,
+        ia_output_web_url=None,
+        raw_lines=envelope.data.lineas,
+        document_confidence_pct=88.0,
+        review_required=None,
+        review_reasons=None,
+        comparison_summary=None,
+        line_results=None,
+    )
+
+    assert not hasattr(documento, "tipologia")
