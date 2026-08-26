@@ -5,7 +5,9 @@ import hashlib
 import logging
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+
+from ruesma_comun.contratos import ClasificacionAlbaran
 
 from application.services.unit_category_prefilter import UnitCategoryPrefilter
 from application.services.valuation_extraction_service import (
@@ -70,6 +72,25 @@ def _raw_albaran_line_to_dict(line: RawAlbaranLine) -> Dict[str, Any]:
         "codigo_partida_albaran": line.codigo_partida_albaran,
         "contexto_linea_json": line.contexto_linea_json,
     }
+
+
+def _clasificacion_a_dict(
+    clasificacion: Optional[ClasificacionAlbaran],
+) -> Optional[Dict[str, Any]]:
+    """Vuelca la clasificacion del DOCUMENTO al sobre (F-043 · R23).
+
+    ``None`` se conserva como ``None`` a proposito: un documento
+    anterior a F-043 llega a sv6 SIN clasificacion y se comporta
+    exactamente como hoy (R27). Volcarla como ``{}`` o inventar un
+    ``generico`` abriria las puertas de familia de sv6.
+
+    Se vuelca ENTERA —tambien ``origen`` y ``motivo``, que no deciden
+    nada aguas abajo— para que el sobre siga siendo la traza completa
+    de lo que se valoro y con que.
+    """
+    if clasificacion is None:
+        return None
+    return clasificacion.model_dump()
 
 
 class ValueAlbaranPipeline:
@@ -293,6 +314,13 @@ class ValueAlbaranPipeline:
                     for l in raw_ctx.lineas_albaran
                 ],
                 "lineas_contrato": [],
+                # (F-043 R23) Tambien aqui: sv6 persiste este sobre
+                # igual que el otro. Si la clasificacion faltara solo en
+                # esta rama, el mismo albaran quedaria clasificado o no
+                # segun si tenia contrato seleccionado.
+                "clasificacion": _clasificacion_a_dict(
+                    getattr(raw_ctx, "clasificacion", None)
+                ),
             },
             "debug": {},
         }
@@ -355,6 +383,16 @@ class ValueAlbaranPipeline:
                     _albaran_line_to_dict(l) for l in context.lineas_albaran
                 ],
                 "lineas_contrato": [asdict(l) for l in context.lineas_contrato],
+                # (ago 2026 · F-043 R23) La clasificacion del DOCUMENTO,
+                # dentro de `context`. Es de donde sv6 la lee para
+                # resolver la familia EFECTIVA de cada linea (R25). Va
+                # aqui y no en `meta` por la misma razon por la que en
+                # sv2 va en `data`: los modelos estrictos de la otra
+                # punta descartan lo que no declaran, y asi es como se
+                # perdio `meta.tipologia` (R9).
+                "clasificacion": _clasificacion_a_dict(
+                    context.clasificacion
+                ),
             },
             "debug": {primary_name: primary_result.debug_payload},
         }

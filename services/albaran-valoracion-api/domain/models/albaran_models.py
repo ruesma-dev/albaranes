@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 from pydantic import Field
+from ruesma_comun.contratos import ClasificacionAlbaran
 
 from domain.models.contexto_linea import ContextoLinea
 from domain.models.schema_base import StrictSchemaModel
@@ -56,3 +57,23 @@ class LineaAlbaran(StrictSchemaModel):
 class DocumentoAlbaran(StrictSchemaModel):
     cabecera: CabeceraAlbaran
     lineas: List[LineaAlbaran]
+    # -----------------------------------------------------------------
+    # (ago 2026 · F-043 R8) Clasificacion de DOCUMENTO que IA1 devuelve
+    # siempre en fase 1 y que IA2 puede corregir en `documento_revisado`.
+    #
+    # POR QUE ESTA AQUI SI SV5 NO VALIDA DOCUMENTOS DE FASE 1 NI 2.
+    # Esta copia de los schemas de sv2 vive en sv5 sin usarse: el
+    # `SchemaRegistry` del servicio solo sirve `documento_valoracion` y
+    # `documento_conciliacion`, y el albaran se lee con SQL crudo. Hoy,
+    # por tanto, este campo no cambia ningun comportamiento.
+    #
+    # Se declara igualmente porque el modelo es `extra='forbid'`: sin
+    # el, el dia que alguien registre este schema, un documento con
+    # `clasificacion` seria RECHAZADO ENTERO y el fallo apareceria
+    # lejos de aqui. Es el mismo cepo que se llevo por delante a
+    # `meta.tipologia` en el `ExtractionMeta` de sv3 —el defecto que
+    # F-043 existe para arreglar— y no se deja montado dos veces.
+    #
+    # `None` por defecto: un documento anterior a F-043 sigue validando.
+    # -----------------------------------------------------------------
+    clasificacion: Optional[ClasificacionAlbaran] = None
