@@ -546,3 +546,45 @@ lógica, no de formato. Se cerrarán y mergearán en cadena.
 Siguiente paso: `spec-author`. Y después, **PARADA OBLIGATORIA**: la spec pasa a
 `spec_ready` y no se implementa una línea sin que el humano la apruebe.
 
+
+---
+
+## F-043 · Spec escrita (2026-08-26, spec-author)
+
+`specs/F-043-clasificacion-por-ia1/` con `requirements.md` (34 requisitos EARS
++ 6 dudas), `design.md` y `tasks.md` (33 tareas). Topes de tamaño en verde
+(150/150 y 250/250). NO se ha tocado código ni `harness/features.json`.
+
+**Lo que decide la spec**, por si hace falta discutirlo antes de implementar:
+
+1. `tipologia_resolver` se **borra** (con el enum `Tipologia`, las funciones de
+   texto hormigón/mortero y el override por CIF). El determinismo queda en un
+   `dict` familia → clave de prompt.
+2. Si IA1 no clasifica: `generico` + confianza 0 + `origen='ausente'` + motivo
+   de revisión. **Nunca** se reconstruye la familia por LER ni por texto.
+3. La clasificación es de **DOCUMENTO** y viaja en `data.clasificacion`, no en
+   `meta`: hoy `persistence_worker._sanear_envelope` de sv3 **descarta**
+   `meta.tipologia`, y ése es el punto exacto donde se tira el dato.
+4. Catálogo único en `ruesma_comun/contratos/familias.py` (definición, en qué
+   se diferencia, señales, alcance y las dos claves de prompt por familia).
+   `generico` tiene definición propia; la duda se expresa bajando la confianza.
+5. Las puertas de familia de sv6 pasan a `familia_efectiva(línea, documento)`:
+   una línea sin `tipo_familia` hereda la familia del documento **salvo** si el
+   albarán es mixto. Eso es lo que devuelve SS-0003967 a 210,00 € y **desbloquea
+   F-036** (su T24).
+
+**DECISIONES ABIERTAS QUE NECESITA VALIDAR EL HUMANO** (las 6 dudas del final
+de `requirements.md`, y la implementación no debe arrancar sin ellas):
+
+1. ¿El catálogo arranca con solo 4 familias de documento (`generico`,
+   `hormigon`, `mortero`, `residuos`), dejando `combustible`,
+   `alquiler_maquinaria` y `bombeo` como familias de LÍNEA hasta que tengan
+   prompt de fase 2 propio?
+2. ¿`tipo_familia='otro'` es «genérico» o «ninguna familia con reglas»? Cambia
+   si esa línea hereda o no.
+3. Umbral de confianza baja: ¿60 %, y solo marca revisión sin bloquear?
+4. Albarán mixto: la spec lo hace VISIBLE pero no re-ejecuta la fase 2 con un
+   segundo prompt. ¿De acuerdo en dejarlo para otra feature?
+5. ¿Backfill de los albaranes ya persistidos, o solo los nuevos?
+6. Evals con LLM real: ¿cuántos casos y con qué proveedores autoriza? Se
+   factura y es condición de cierre (ruta sensible).

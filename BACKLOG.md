@@ -5,15 +5,13 @@
 
 Resumen: **43 features**, 32 abiertas, 11 terminadas.
 
-En curso: **F-043**.
-
 Bloqueadas: **F-036**.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-043 | IA1 clasifica el albaran: la tipologia la decide la IA, siempre y con definiciones claras, nunca una regla determinista | 1 | en curso | critico | `feature/F-043-clasificacion-por-ia1` |
+| F-043 | IA1 clasifica el albaran: la tipologia la decide la IA, siempre y con definiciones claras, nunca una regla determinista | 1 | spec lista | critico | `feature/F-043-clasificacion-por-ia1` |
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | bloqueada | critico | `feature/F-036-residuos-contenedores-e-incrementos` |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
@@ -66,7 +64,7 @@ Bloqueadas: **F-036**.
 
 ### F-043 · IA1 clasifica el albaran: la tipologia la decide la IA, siempre y con definiciones claras, nunca una regla determinista
 
-estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-043-clasificacion-por-ia1`
+estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-043-clasificacion-por-ia1`
 
 DECISION DE DISENO DEL HUMANO, 2026-08-25, prioridad 1: "vamos a preguntarle a la IA1 que, ademas de leer la info que necesitamos (lo maximo posible), clasifique el albaran. Es de las tareas mas importantes que puede hacer. SIEMPRE debe clasificar, aunque sea en generico". Y antes, el criterio de fondo: "es SIEMPRE la IA la responsable de clasificar tras entender el problema; lo que pasa es que hay que definirle bien que significa cada clasificacion (residuos, que hormigon y mortero no es lo mismo, etc.): debe entenderlo, asi que en el prompt necesitara una definicion clara de las posibilidades".
 
