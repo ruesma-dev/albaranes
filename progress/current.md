@@ -16,11 +16,31 @@ El plan de implementación **también está aprobado**. Lo siguiente, sin volver
 preguntarlo:
 
 1. Poner F-043 en `in_progress` (`harness/features.json`) y regenerar el backlog.
-2. ~~Lanzar el implementer del **BLOQUE A (T1-T4)**~~ → **HECHO** el 2026-08-26.
-   Informe: `progress/impl_F-043_bloque_A.md`. Lo siguiente es el **BLOQUE B
-   (T5-T12)**, el que borra `tipologia_resolver` (riesgo ya aceptado, abajo).
+2. ~~Lanzar el implementer del **BLOQUE A (T1-T4)**~~ → **HECHO** el 2026-08-26,
+   revisado y con los cambios requeridos aplicados. Informes:
+   `progress/impl_F-043_bloque_A.md` + `progress/impl_F-043_bloque_A_cr.md`.
+   Lo siguiente es la **pasada 2 del reviewer** sobre el bloque A y, con su
+   APROBADO, el **BLOQUE B (T5-T12)**, el que borra `tipologia_resolver`
+   (riesgo ya aceptado, abajo).
 
-### BLOQUE A · terminado (T1-T4), a la espera de review
+### BLOQUE A · pasada 1 revisada y CAMBIOS REQUERIDOS APLICADOS
+
+Review: `progress/review_F-043_bloque_A.md` (CHANGES_REQUESTED, 2 bloqueantes).
+Los tres cambios están hechos —`74c80be` CR-1, `d3d195b` CR-2, `2c438b4` CR-3—
+y documentados en `progress/impl_F-043_bloque_A_cr.md`. `init.sh` verde,
+556 passed, cobertura 98,6 %. **Falta la pasada 2 del reviewer.**
+
+Dos cosas que el bloque D (T22) tiene que saber:
+
+- **`generico` es ahora familia de LÍNEA válida** (entró en el `Literal`
+  `TipoFamilia` por decisión del humano del 2026-08-26, con test de coherencia
+  contra `familias_linea()`). `familia_efectiva` puede devolver `'generico'`
+  por su rama 4; las puertas de sv6 comparan contra `'residuos'` y
+  `'hormigon'`, así que **no abre ninguna: mismo efecto que el `None` de hoy**.
+- `ClasificacionAlbaran` se importa **siempre** de `ruesma_comun.contratos`
+  (el reexport), nunca de `ruesma_comun.contratos.clasificacion`.
+
+### BLOQUE A · qué existe (T1-T4)
 
 Cuatro commits, uno por tarea (`af550a2`, `d5e5994`, `31817bf`, `44707c5`).
 Lo que existe ahora y el bloque B ya puede usar:
