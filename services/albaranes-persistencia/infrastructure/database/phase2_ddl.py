@@ -21,6 +21,24 @@ Columnas añadidas:
         cambios[], apply_summary, provider, model. Auditable para el
         algoritmo de confianza futuro.
 
+    - tipologia                    VARCHAR(32)
+    - tipologia_confianza_pct      DOUBLE PRECISION
+    - tipologia_motivo             TEXT
+    - tipologia_origen             VARCHAR(16)
+    - tipologia_mixta              BOOLEAN
+    - tipologia_secundarias_json   TEXT
+        (F-043 · R22) La clasificación de DOCUMENTO que decidió la IA:
+        familia, confianza, por qué, quién la puso ('ia1' | 'ia2' |
+        'ausente'), si el albarán mezcla familias y cuáles son las
+        secundarias (lista JSON). Llega en ``data.clasificacion`` del
+        envelope —NO en ``meta``, que sv3 filtra y descartaba— y se
+        persiste SOLO en el merge: las tablas ``albaran_documents`` son
+        auditoría forense de lo que dijo cada proveedor.
+        NULL cuando el envelope no traía clasificación (documentos
+        anteriores a F-043): sv3 no la inventa, marca revisión (R11).
+        Lectores acoplados a avisar si esto cambia: sv5 (SELECT con SQL
+        crudo sobre el merge) y sv4 (ficha del documento).
+
   En albaran_lines_merge:
     - source_phase                 VARCHAR(16) DEFAULT 'phase_1'
         'phase_1' si la línea proviene de la extracción inicial.
@@ -57,6 +75,24 @@ _PHASE2_DDL: tuple[str, ...] = (
     "ALTER TABLE albaran_documents_merge "
     "ADD COLUMN IF NOT EXISTS proveedor_cif_origen VARCHAR(24)",
 
+    # Clasificacion de DOCUMENTO decidida por la IA (F-043 · R22).
+    # Solo en el merge. Todas nullable: un documento anterior a la
+    # feature no la trae y sv3 NO la reconstruye (R11).
+    "ALTER TABLE albaran_documents_merge "
+    "ADD COLUMN IF NOT EXISTS tipologia VARCHAR(32)",
+    "ALTER TABLE albaran_documents_merge "
+    "ADD COLUMN IF NOT EXISTS tipologia_confianza_pct DOUBLE PRECISION",
+    "ALTER TABLE albaran_documents_merge "
+    "ADD COLUMN IF NOT EXISTS tipologia_motivo TEXT",
+    "ALTER TABLE albaran_documents_merge "
+    "ADD COLUMN IF NOT EXISTS tipologia_origen VARCHAR(16)",
+    "ALTER TABLE albaran_documents_merge "
+    "ADD COLUMN IF NOT EXISTS tipologia_mixta BOOLEAN",
+    "ALTER TABLE albaran_documents_merge "
+    "ADD COLUMN IF NOT EXISTS tipologia_secundarias_json TEXT",
+    "CREATE INDEX IF NOT EXISTS ix_albaran_documents_merge_tipologia "
+    "ON albaran_documents_merge(tipologia)",
+
     # albaran_lines_merge
     "ALTER TABLE albaran_lines_merge "
     "ADD COLUMN IF NOT EXISTS source_phase VARCHAR(16) "
@@ -81,6 +117,7 @@ def apply_phase2_ddl(session_factory: SessionFactory) -> None:
             logger.info(
                 "[svc3-ddl][phase2] DDL fase 2 OK. Columnas: "
                 "albaran_documents_merge.review_phase2_*, "
+                "albaran_documents_merge.tipologia*, "
                 "albaran_lines_merge.source_phase"
             )
         except Exception:

@@ -526,7 +526,8 @@ def get_ddl_statements() -> List[Tuple[str, str]]:
       3. ALTERs sobre tablas de contratos / partidas.
       4. ALTERs v2: sigrid_ide + UPSERT (ON DELETE SET NULL).
       5. Limpieza de constraints + índices.
-      6. Columnas de fase 2 (review_phase2_*, source_phase).
+      6. Columnas de fase 2 (review_phase2_*, source_phase) y de la
+         clasificación de documento (tipologia*, F-043 R22).
 
     Returns
     -------

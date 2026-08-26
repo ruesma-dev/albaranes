@@ -166,6 +166,32 @@ class AlbaranDocumentMergeOrm(_DocumentColumnsMixin, Base):
     obra_codigo_origen: Mapped[str | None] = mapped_column(String(24))
     proveedor_cif_origen: Mapped[str | None] = mapped_column(String(24))
 
+    # ------------------------------------------------------------------ #
+    # (F-043 · R22) Clasificación de DOCUMENTO decidida por la IA. Llega
+    # en `data.clasificacion` del envelope y la escribe el repositorio al
+    # guardar el merge.
+    #
+    # Van AQUÍ y no en `_DocumentColumnsMixin` a propósito: las tablas
+    # `albaran_documents` son la auditoría forense de lo que dijo cada
+    # proveedor por separado, y la clasificación es UNA por documento,
+    # sellada por el resolver de sv2 sobre el envelope final.
+    #
+    # Todas nullable: un documento anterior a la feature no la trae y
+    # sv3 NO la inventa —marca revisión (R11)—, de modo que sv5 y sv6
+    # siguen viendo exactamente lo de hoy (R27).
+    #
+    # `index=True` sobre `tipologia` genera `ix_albaran_documents_merge_
+    # tipologia`, el MISMO nombre que crea el DDL idempotente de
+    # `phase2_ddl.py`: si divergieran, habría dos índices sobre la misma
+    # columna. Lo vigila test_f043_r22_el_orm_indexa_la_tipologia_*.
+    # ------------------------------------------------------------------ #
+    tipologia: Mapped[str | None] = mapped_column(String(32), index=True)
+    tipologia_confianza_pct: Mapped[float | None] = mapped_column(Float)
+    tipologia_motivo: Mapped[str | None] = mapped_column(Text)
+    tipologia_origen: Mapped[str | None] = mapped_column(String(16))
+    tipologia_mixta: Mapped[bool | None] = mapped_column(Boolean)
+    tipologia_secundarias_json: Mapped[str | None] = mapped_column(Text)
+
     lines: Mapped[list["AlbaranLineMergeOrm"]] = relationship(
         back_populates="document",
         cascade="all, delete-orphan",

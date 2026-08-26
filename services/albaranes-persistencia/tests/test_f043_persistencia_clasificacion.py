@@ -114,3 +114,119 @@ def test_f043_r27_sanear_un_envelope_anterior_sigue_validando_sin_ella():
     envelope = ExtractionEnvelope.model_validate(saneado)
 
     assert envelope.data.clasificacion is None
+
+
+# ------------------------------------------------------------------ #
+# T14 · R22 — DDL idempotente, espejo en schema_contribution y ORM.
+# ------------------------------------------------------------------ #
+
+# Las seis columnas del diseño §3, con el tipo PostgreSQL que les toca.
+_COLUMNAS_CLASIFICACION: tuple[tuple[str, str], ...] = (
+    ("tipologia", "VARCHAR(32)"),
+    ("tipologia_confianza_pct", "DOUBLE PRECISION"),
+    ("tipologia_motivo", "TEXT"),
+    ("tipologia_origen", "VARCHAR(16)"),
+    ("tipologia_mixta", "BOOLEAN"),
+    ("tipologia_secundarias_json", "TEXT"),
+)
+_INDICE_TIPOLOGIA = "ix_albaran_documents_merge_tipologia"
+
+
+def _sentencias_de_clasificacion(sentencias: tuple[str, ...]) -> list[str]:
+    """Las sentencias del DDL que hablan de las columnas nuevas."""
+    return [s for s in sentencias if "tipologia" in s]
+
+
+def test_f043_r22_el_ddl_anade_las_seis_columnas_al_merge():
+    from infrastructure.database.phase2_ddl import _PHASE2_DDL
+
+    for columna, tipo in _COLUMNAS_CLASIFICACION:
+        esperado = (
+            "ALTER TABLE albaran_documents_merge "
+            f"ADD COLUMN IF NOT EXISTS {columna} {tipo}"
+        )
+        assert esperado in _PHASE2_DDL, f"falta el ALTER de {columna}"
+
+
+def test_f043_r22_el_ddl_crea_el_indice_de_tipologia():
+    from infrastructure.database.phase2_ddl import _PHASE2_DDL
+
+    esperado = (
+        f"CREATE INDEX IF NOT EXISTS {_INDICE_TIPOLOGIA} "
+        "ON albaran_documents_merge(tipologia)"
+    )
+
+    assert esperado in _PHASE2_DDL
+
+
+def test_f043_r22_el_ddl_de_clasificacion_es_idempotente():
+    """Se ejecuta en CADA arranque, sobre bases que ya existen.
+
+    Idempotente = re-ejecutarla no cambia nada ni revienta: todas las
+    sentencias llevan `IF NOT EXISTS` y ninguna destruye o renombra.
+    """
+    from infrastructure.database.phase2_ddl import _PHASE2_DDL
+
+    nuevas = _sentencias_de_clasificacion(_PHASE2_DDL)
+    assert len(nuevas) == 7
+
+    for sentencia in nuevas:
+        assert "IF NOT EXISTS" in sentencia, sentencia
+        for prohibido in ("DROP", "RENAME", "NOT NULL", "DELETE", "UPDATE"):
+            assert prohibido not in sentencia, f"{prohibido} en {sentencia}"
+
+
+def test_f043_r22_el_ddl_de_clasificacion_no_toca_las_tablas_raw():
+    """Solo el merge: las `albaran_documents` son auditoria forense."""
+    from infrastructure.database.phase2_ddl import _PHASE2_DDL
+
+    for sentencia in _sentencias_de_clasificacion(_PHASE2_DDL):
+        assert "albaran_documents_merge" in sentencia
+        assert "albaran_lines" not in sentencia
+
+
+def test_f043_r22_schema_contribution_espeja_el_ddl_de_clasificacion():
+    """sv7 aplica el schema de sv3 desde aqui: si no lo espeja, las
+    columnas no existen en la base que monta el orquestador."""
+    from infrastructure.database.phase2_ddl import _PHASE2_DDL
+    from infrastructure.database.schema_contribution import (
+        get_ddl_statements,
+    )
+
+    exportadas = {sql for _, sql in get_ddl_statements()}
+
+    for sentencia in _sentencias_de_clasificacion(_PHASE2_DDL):
+        assert sentencia in exportadas, sentencia
+
+
+def test_f043_r22_el_orm_del_merge_espeja_las_columnas_del_ddl():
+    from infrastructure.database.orm_models import AlbaranDocumentMergeOrm
+
+    columnas = AlbaranDocumentMergeOrm.__table__.columns
+
+    for nombre, _ in _COLUMNAS_CLASIFICACION:
+        assert nombre in columnas, f"el ORM no declara {nombre}"
+        assert columnas[nombre].nullable, f"{nombre} debe admitir NULL"
+
+
+def test_f043_r22_el_orm_de_la_tabla_raw_no_espeja_ese_ddl():
+    """El ORM comparte mixin entre raw y merge: si las columnas caen en
+    el mixin, se cuelan en `albaran_documents`, que no las quiere."""
+    from infrastructure.database.orm_models import AlbaranDocumentOrm
+
+    columnas = AlbaranDocumentOrm.__table__.columns
+
+    for nombre, _ in _COLUMNAS_CLASIFICACION:
+        assert nombre not in columnas, f"{nombre} se colo en la tabla raw"
+
+
+def test_f043_r22_el_orm_indexa_la_tipologia_con_el_nombre_del_ddl():
+    """Mismo nombre de indice que el DDL: si no, `CREATE INDEX IF NOT
+    EXISTS` crearia un SEGUNDO indice sobre la misma columna."""
+    from infrastructure.database.orm_models import AlbaranDocumentMergeOrm
+
+    nombres = {
+        indice.name for indice in AlbaranDocumentMergeOrm.__table__.indexes
+    }
+
+    assert _INDICE_TIPOLOGIA in nombres
