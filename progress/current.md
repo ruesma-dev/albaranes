@@ -28,8 +28,40 @@ preguntarlo:
    `progress/impl_F-043_bloque_C.md`. Seis commits (`db205a2` … `6dd6844`),
    `init.sh` verde, 556 passed en la raíz y **169 en sv3**, cobertura 98,6 %,
    38 tests nuevos y **17 mutantes inyectados uno a uno, 0 supervivientes**.
-   Lo siguiente: la **review de los bloques B y C** y, con su APROBADO, el
-   **BLOQUE D (T18-T23)**, que es sv5 y sv6.
+5. ~~**BLOQUE D (T18-T23)**~~ → **HECHO** el 2026-08-26. Informe:
+   `progress/impl_F-043_bloque_D.md`. Seis commits (`af0846c` … `6f2599a`),
+   `init.sh` verde, 27 tests nuevos y **17 mutantes inyectados uno a uno, 0
+   supervivientes**. **R26 CONSEGUIDO**: SS-0003967 vale **210,00 EUR en 2
+   líneas** con la línea SIN `tipo_familia`, por la clasificación del
+   DOCUMENTO. Medido con el builder real, mismo albarán, mismo contrato y
+   mismo match, cambiando solo `context.clasificacion`: **720,00 € / 1 línea
+   → 210,00 € / 2 líneas**.
+   Lo siguiente: la **review de los bloques B, C y D** y, con su APROBADO, el
+   **BLOQUE E (T24-T27, T29, T33)**, que es sv4 y el papeleo.
+
+### BLOQUE D · lo que el bloque E y el reviewer tienen que saber
+
+- **sv5 ya lee las seis columnas** y las entrega en `ContextoValoracion.
+  clasificacion` y en `context.clasificacion` del sobre hacia sv6.
+  `tipologia` NULL → `clasificacion=None`, nunca un `generico` inventado.
+- **Las OCHO puertas de familia de sv6** (seis de familia, el detector de
+  movimiento y el padre de la sintética) abren ya por
+  `familia_efectiva(tipo_familia, clasificacion)`. Sin clasificación no se
+  abre ninguna: comportamiento idéntico al de hoy (R27).
+- **CAMBIO DE COMPORTAMIENTO CONOCIDO Y QUERIDO (R24).** Se borró
+  `_derivar_tipologia_valoracion` de sv5: un documento **anterior** a F-043
+  con líneas de residuos ya **no** se valora con `valuation_residuos` sino
+  con el genérico, porque sin clasificación no hay familia de documento y
+  adivinarla por las líneas es el lazo cerrado que la feature desmonta.
+  Consecuencia para **T31**: revalorar SS-0003967 desde sv4 **no** basta —esa
+  vía no re-extrae y el merge sigue con las seis columnas a NULL—; hay que
+  volver a pasarlo por sv2 (`q-extraccion`) para que IA1 lo clasifique.
+- **Lo que F-043 NO arregla y sigue vivo**: el 210,00 € exige además que IA3
+  case la base contra el CONTENEDOR. Con el match REAL de SS-0003967 —la
+  26481, que es el INCREMENTO— la guarda de F-036 R15 lo anula y el albarán
+  sale en **90,00 € a revisión**. Es mejor que los 540,00 € valorados de más
+  en silencio, pero no son los 210,00. Arreglar ese match es **T30** (evals
+  del prompt), no el bloque D.
 
 ### BLOQUE C · qué existe ya (T13-T17), y qué tiene que saber el bloque D
 
@@ -125,7 +157,7 @@ Lo que existe ahora y el bloque B ya puede usar:
 | A | T1-T4 | El **catálogo** en `ruesma_comun` (familias, definiciones, `familia_efectiva`) y el contrato `ClasificacionAlbaran`. Base de todo lo demás |
 | B | T5-T12 | **sv2**: fase 1 clasifica, fase 2 confirma, nace `clasificacion_resolver` y **se borra `tipologia_resolver`** |
 | C | T13-T17 | **sv3**: que la clasificación sobreviva a `_sanear_envelope`, DDL, persistencia, umbral 60 % y motivos — **HECHO** |
-| D | T18-T23 | **sv5 y sv6**: el contexto la lleva, las puertas de familia pasan a `familia_efectiva`, y **T23 prueba SS-0003967 → 210,00 €** |
+| D | T18-T23 | **sv5 y sv6**: el contexto la lleva, las puertas de familia pasan a `familia_efectiva`, y **T23 prueba SS-0003967 → 210,00 €** — **HECHO** |
 | E | T24-T27, T29, T33 | **sv4** la pinta, rutas sensibles, docs, cobertura, tamaños e `init.sh` |
 
 **T28** (mutación completa, sin tope), **T30** (evals), **T31** y **T32** son del
