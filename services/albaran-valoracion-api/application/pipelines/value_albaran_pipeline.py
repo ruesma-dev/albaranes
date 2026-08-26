@@ -152,6 +152,9 @@ class ValueAlbaranPipeline:
             lineas_contrato=lineas_contrato,
             fecha_albaran=raw_ctx.fecha_albaran,
             numero_albaran=raw_ctx.numero_albaran,
+            # (ago 2026 · F-043 R23) La clasificacion del documento
+            # viaja intacta desde el merge hasta el sobre de sv6.
+            clasificacion=raw_ctx.clasificacion,
         )
 
         # Preferimos el MARKDOWN del contrato (lo genera sv3): va al
@@ -187,6 +190,7 @@ class ValueAlbaranPipeline:
                     lineas_contrato=context.lineas_contrato,
                     fecha_albaran=context.fecha_albaran,
                     numero_albaran=context.numero_albaran,
+                    clasificacion=context.clasificacion,
                 )
 
         results = self._service.extract(

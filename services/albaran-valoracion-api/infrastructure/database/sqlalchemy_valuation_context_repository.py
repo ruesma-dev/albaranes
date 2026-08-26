@@ -1,10 +1,13 @@
 # infrastructure/database/sqlalchemy_valuation_context_repository.py
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
 from sqlalchemy import text
+
+from ruesma_comun.contratos import ClasificacionAlbaran
 
 from domain.ports.valuation_context_repository import (
     RawAlbaranLine,
@@ -22,6 +25,18 @@ logger = logging.getLogger(__name__)
 # este microservicio a su código. Esto es una VIEW conceptual sobre
 # las tablas públicas del modelo de persistencia.
 
+# -----------------------------------------------------------------
+# (ago 2026 · F-043 R23) Las SEIS columnas de la clasificacion que sv3
+# persiste en la merge (``campos_clasificacion_merge``). Se leen aqui
+# TAL COMO estan escritas: sv5 no normaliza la familia ni la corrige
+# —eso lo hizo ya el resolver de sv2 (R10)—, solo la transporta hasta
+# ``ContextoValoracion`` y hasta el ``context`` del sobre de sv6.
+#
+# Las seis admiten NULL: un albaran anterior a F-043 no tiene
+# clasificacion y debe seguir comportandose EXACTAMENTE como hoy
+# (R27). Por eso el NULL se traduce a ``clasificacion=None`` y NO a un
+# ``generico`` inventado, que abriria las puertas de familia de sv6.
+# -----------------------------------------------------------------
 _SQL_MERGE_HEADER = text(
     """
     SELECT
@@ -30,7 +45,13 @@ _SQL_MERGE_HEADER = text(
         proveedor_nombre AS nombre_proveedor,
         obra_codigo AS codigo_obra,
         obra_nombre AS nombre_obra,
-        selected_contrato_codigo AS codigo_contrato_seleccionado
+        selected_contrato_codigo AS codigo_contrato_seleccionado,
+        tipologia AS tipologia,
+        tipologia_confianza_pct AS tipologia_confianza_pct,
+        tipologia_motivo AS tipologia_motivo,
+        tipologia_origen AS tipologia_origen,
+        tipologia_mixta AS tipologia_mixta,
+        tipologia_secundarias_json AS tipologia_secundarias_json
     FROM albaran_documents_merge
     WHERE id = :document_id
     """
@@ -223,6 +244,7 @@ class SqlAlchemyValuationContextRepository(ValuationContextRepository):
                 codigo_contrato_override
                 or header_row.get("codigo_contrato_seleccionado")
             )
+            clasificacion = self._build_clasificacion(header_row)
 
             albaran_rows = session.execute(
                 _SQL_ALBARAN_LINES,
@@ -250,6 +272,7 @@ class SqlAlchemyValuationContextRepository(ValuationContextRepository):
                     lineas_contrato=[],
                     fecha_albaran=_opt_str(doc_row.get("fecha")),
                     numero_albaran=_opt_str(doc_row.get("numero_albaran")),
+                    clasificacion=clasificacion,
                 )
 
             # La cabecera del contrato se busca por CODIGO (no por
@@ -290,7 +313,37 @@ class SqlAlchemyValuationContextRepository(ValuationContextRepository):
                 lineas_contrato=lineas_contrato,
                 fecha_albaran=_opt_str(doc_row.get("fecha")),
                 numero_albaran=_opt_str(doc_row.get("numero_albaran")),
+                clasificacion=clasificacion,
             )
+
+    @staticmethod
+    def _build_clasificacion(
+        row: dict[str, Any],
+    ) -> ClasificacionAlbaran | None:
+        """Monta la clasificacion del DOCUMENTO desde la cabecera merge.
+
+        Es el inverso exacto de ``campos_clasificacion_merge`` de sv3
+        (F-043 R22): ahi se escriben las seis columnas, aqui se leen.
+
+        ``None`` cuando ``tipologia`` viene NULL —un documento anterior
+        a F-043—: es la mitad sv5 de R27. Devolver ``generico``/0 seria
+        fabricar una clasificacion que nadie tomo, y ``familia_efectiva``
+        heredaria familia a lineas de albaranes que nunca se
+        clasificaron.
+        """
+        familia = _opt_str(row.get("tipologia"))
+        if not familia:
+            return None
+        return ClasificacionAlbaran(
+            familia=familia,
+            confianza_pct=_opt_float(row.get("tipologia_confianza_pct")) or 0.0,
+            motivo=_opt_str(row.get("tipologia_motivo")) or "",
+            mixto=bool(row.get("tipologia_mixta")),
+            familias_secundarias=_lista_json(
+                row.get("tipologia_secundarias_json")
+            ),
+            origen=_opt_str(row.get("tipologia_origen")) or "ia1",
+        )
 
     @staticmethod
     def _build_albaran_line(row: dict[str, Any]) -> RawAlbaranLine:
@@ -344,6 +397,30 @@ def _opt_str(value: Any) -> str | None:
         stripped = value.strip()
         return stripped or None
     return str(value)
+
+
+def _lista_json(value: Any) -> list[str]:
+    """Deshace el ``json.dumps`` con el que sv3 guarda las secundarias.
+
+    Sin esto, ``familias_secundarias`` llegaria como la CADENA
+    ``'["hormigon"]'`` en vez de una lista. Un JSON corrupto o de otro
+    tipo devuelve lista vacia: la clasificacion entera no se pierde por
+    un campo informativo.
+    """
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    try:
+        cargado = json.loads(str(value))
+    except (TypeError, ValueError):
+        logger.warning(
+            "tipologia_secundarias_json no es JSON valido: %r", value,
+        )
+        return []
+    if not isinstance(cargado, list):
+        return []
+    return [str(item) for item in cargado]
 
 
 def _opt_float(value: Any) -> float | None:

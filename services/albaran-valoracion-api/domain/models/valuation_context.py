@@ -4,6 +4,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal, Optional
 
+from ruesma_comun.contratos import ClasificacionAlbaran
+
 from domain.models.contexto_linea import ContextoLinea
 
 UnitCategory = Literal[
@@ -103,3 +105,17 @@ class ContextoValoracion:
     # imprescindible para los incrementos por año (M1).
     fecha_albaran: Optional[str] = None
     numero_albaran: Optional[str] = None
+    # -----------------------------------------------------------------
+    # (ago 2026 · F-043 R23) La clasificacion del DOCUMENTO que decidio
+    # IA1. Manda dos cosas en este servicio:
+    #   - QUE PROMPT de valoracion se usa (R24): sale del catalogo con
+    #     ``prompt_valoracion_de(clasificacion.familia)``, no de agregar
+    #     las familias de las lineas, que era el lazo cerrado que F-043
+    #     desmonta.
+    #   - Viaja en el ``context`` del sobre hacia sv6, que la usa para
+    #     resolver la familia EFECTIVA de cada linea (R25).
+    #
+    # ``None`` = documento anterior a F-043: prompt generico y sv6 como
+    # hoy (R27).
+    # -----------------------------------------------------------------
+    clasificacion: Optional[ClasificacionAlbaran] = None

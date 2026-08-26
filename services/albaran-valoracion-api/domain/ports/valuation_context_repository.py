@@ -15,6 +15,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional
 
+from ruesma_comun.contratos import ClasificacionAlbaran
+
 
 @dataclass(frozen=True)
 class RawAlbaranLine:
@@ -103,6 +105,16 @@ class ValuationContextRaw:
     # referenciaba context.meta.fecha_albaran pero NUNCA se enviaba.
     fecha_albaran: Optional[str] = None
     numero_albaran: Optional[str] = None
+    # -----------------------------------------------------------------
+    # (ago 2026 · F-043 R23) Clasificacion del DOCUMENTO decidida por
+    # IA1 (o corregida por IA2) y persistida por sv3 en las seis
+    # columnas ``tipologia*`` del merge.
+    #
+    # ``None`` significa "este documento no se clasifico" —es anterior
+    # a F-043— y NO "generico": ``familia_efectiva`` lo distingue y
+    # deja la linea sin familia, que es el comportamiento de hoy (R27).
+    # -----------------------------------------------------------------
+    clasificacion: Optional[ClasificacionAlbaran] = None
 
 
 class ValuationContextRepository(ABC):
