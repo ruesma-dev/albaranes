@@ -678,3 +678,43 @@ def test_f043_r8_sv5_no_valida_hoy_documentos_de_fase_1_ni_de_fase_2():
         "documento_valoracion",
         "documento_conciliacion",
     }
+
+
+# =================================================================== #
+# Las ramas defensivas del lector de secundarias
+# =================================================================== #
+
+@pytest.mark.parametrize(
+    ("guardado", "esperado"),
+    [
+        (None, []),
+        ("[]", []),
+        ('["hormigon"]', ["hormigon"]),
+        (["mortero"], ["mortero"]),
+        ("esto no es json", []),
+        ('"hormigon"', []),
+        ("{}", []),
+    ],
+    ids=[
+        "null", "vacia", "json-lista", "ya-es-lista",
+        "json-corrupto", "json-que-no-es-lista", "json-objeto",
+    ],
+)
+def test_f043_r23_el_select_lee_las_secundarias_sin_romperse(
+    guardado, esperado,
+):
+    """Un campo informativo no puede tumbar la clasificacion entera.
+
+    sv3 escribe esta columna con ``json.dumps`` y **no normaliza** las
+    familias secundarias contra el catalogo: puede llegar cualquier
+    cosa. Las ramas defensivas se prueban una a una porque son
+    precisamente las que nadie ejecuta hasta el dia que hacen falta;
+    mismo criterio con el que sv3 recorta ``tipologia`` a VARCHAR(32).
+    """
+    from infrastructure.database import (
+        sqlalchemy_valuation_context_repository as repositorio,
+    )
+
+    _lista_json = repositorio._lista_json
+
+    assert _lista_json(guardado) == esperado
