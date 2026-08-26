@@ -29,8 +29,6 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from domain.models.tipologia import Tipologia
-
 
 def _doc_final(
     env_fase1: Mapping[str, Any],
@@ -53,14 +51,12 @@ def construir_envelope_final(
     *,
     env_fase1: Mapping[str, Any],
     env_fase2: Mapping[str, Any] | None = None,
-    tipologia: Tipologia | str | None = None,
+    tipologia: str | None = None,
 ) -> dict:
     """Envelope final ``{meta, data, debug}`` para sv3."""
     documento, razonamientos, fase = _doc_final(env_fase1, env_fase2)
 
-    tip = tipologia.value if isinstance(tipologia, Tipologia) else (
-        str(tipologia) if tipologia else None
-    )
+    tip = str(tipologia) if tipologia else None
 
     meta_base = dict(env_fase1.get("meta") or {})
     if env_fase2 is not None:

@@ -30,8 +30,18 @@ def test_f036_r14_sv2_reexporta_la_misma_funcion_no_una_copia():
     assert tipologia_sv2.normalizar_ler is ler_comun.normalizar_ler
 
 
-def test_f036_r14_el_resolver_de_tipologia_sigue_funcionando():
-    """`tipologia_resolver` no cambia: importa donde importaba."""
-    from application.services.tipologia_resolver import resolver_tipologia
-
-    assert resolver_tipologia is not None
+# ------------------------------------------------------------------ #
+# RETIRADO en F-043 T10: `test_f036_r14_el_resolver_de_tipologia_sigue_
+# funcionando`, que comprobaba que el resolver determinista de tipologia
+# seguia importandose desde donde importaba.
+#
+# Lo sustituye **R12** («el sistema debe retirar el resolver como DECISOR:
+# la familia del documento es exactamente la que dijo la IA») y su test
+# `test_f043_r12_el_resolver_de_tipologia_ya_no_existe`, en
+# `tests/test_f043_clasificacion_resolver.py`, que exige lo contrario: que
+# ese modulo NO exista. Junto con el, R14 retira el override por CIF.
+#
+# Lo que ese test protegia de verdad -que sv2 no reimplemente el catalogo
+# LER- lo sigue cubriendo el test de arriba, que es de lo que trata R14
+# de F-036.
+# ------------------------------------------------------------------ #

@@ -1,7 +1,8 @@
 # tests/test_f043_clasificacion_resolver.py
 """F-043 · El resolver de clasificacion de sv2 (R10, R11, R12, R13, R16).
 
-Sustituye al `tipologia_resolver`, que DECIDIA la familia con reglas y con
+Sustituye al resolver de tipologia (borrado en T10), que DECIDIA la
+familia con reglas y con
 ella elegia el prompt de fase 2 (el lazo cerrado que F-043 desmonta). Este
 no decide nada: la familia es la que dijo la IA. Lo unico que hace es
 normalizar, sellar el origen y dejar constancia cuando la IA no clasifico o
@@ -11,6 +12,7 @@ Sin red, sin BBDD y sin LLM: funcion pura sobre diccionarios.
 """
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
 
 import pytest
@@ -246,7 +248,7 @@ def test_f043_r16_acepta_el_contrato_ya_validado_no_solo_dicts() -> None:
 def test_f043_r12_el_resolver_no_importa_ler_ni_funciones_de_texto() -> None:
     """Lista NEGRA de imports, como en `familias.py`.
 
-    El `tipologia_resolver` deducia la familia con el catalogo LER, las
+    El resolver de tipologia deducia la familia con el catalogo LER, las
     funciones de texto de hormigon/mortero y un override por CIF. Que este
     modulo no pueda importarlos es la unica forma de que la prohibicion
     sobreviva a la siguiente sesion que "solo anade un caso".
@@ -313,7 +315,7 @@ def test_f043_r12_el_resolver_no_lee_la_cabecera_ni_las_lineas() -> None:
 # Decision expresa del humano del 2026-08-25, que mando revertir la T11 de
 # F-036: «los residuos no se deben clasificar solo porque contenga LER, es
 # una regla de mierda». Estos tests son el guardian de esa reversion: cada
-# uno mete en el documento la senal con la que el `tipologia_resolver`
+# uno mete en el documento la senal con la que el resolver de tipologia
 # decidia, y exige que la familia siga siendo la que dijo la IA.
 #
 # Fase RED de un test de no-regresion: el codigo correcto ya esta, asi que
@@ -417,3 +419,52 @@ def test_f043_r13_prohibicion_tampoco_al_reves_residuos_sin_ler() -> None:
     )
 
     assert res.familia == "residuos"
+
+
+# ------------------------------------------------------------------ #
+# R12, R14 · el lazo cerrado se BORRA, no se deja "por si acaso"
+#
+# Conservar el resolver viejo como red de seguridad esta descartado por
+# decision expresa del humano (diseno §6). Y un modulo muerto que sigue
+# importandose vuelve solo: estos tests son el cierre.
+# ------------------------------------------------------------------ #
+def test_f043_r12_el_resolver_de_tipologia_ya_no_existe() -> None:
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module(
+            "application.services." + "tipologia" + "_resolver"
+        )
+
+
+def test_f043_r12_ni_el_enum_ni_las_funciones_de_texto_existen_ya() -> None:
+    """`domain/models/tipologia.py` sobrevive SOLO como reexportacion del
+    catalogo LER de `ruesma_comun` (F-036 R14, que sv6 consume). El enum y
+    las dos funciones de texto solo las usaba el resolver borrado."""
+    modulo = importlib.import_module("domain.models." + "tipologia")
+
+    for nombre in ("Tipologia", "texto_contiene_hormigon",
+                   "texto_contiene_mortero"):
+        assert not hasattr(modulo, nombre), f"sigue existiendo {nombre}"
+    assert hasattr(modulo, "es_ler_valido")  # esto SI se queda
+
+
+def test_f043_r14_no_queda_rastro_en_el_codigo_de_sv2() -> None:
+    """La verificacion de T10 (`grep -rn`) convertida en test.
+
+    Se escanea el codigo de PRODUCCION de sv2: los tests hablan a
+    proposito de lo que ya no existe. Los nombres van troceados para que
+    este fichero no se cace a si mismo.
+    """
+    raiz = Path(__file__).resolve().parents[1]
+    prohibidos = ("tipologia" + "_resolver", "override" + "_por_cif")
+    carpetas = ("application", "domain", "infrastructure",
+                "interface_adapters", "config")
+
+    encontrados = []
+    for carpeta in carpetas:
+        for fichero in (raiz / carpeta).rglob("*.py"):
+            contenido = fichero.read_text(encoding="utf-8")
+            for prohibido in prohibidos:
+                if prohibido in contenido:
+                    encontrados.append(f"{fichero.name}: {prohibido}")
+
+    assert not encontrados, f"el lazo cerrado sigue vivo: {encontrados}"

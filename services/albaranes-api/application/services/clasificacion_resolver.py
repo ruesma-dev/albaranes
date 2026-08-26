@@ -1,7 +1,8 @@
 # application/services/clasificacion_resolver.py
 """Consolida la clasificacion del albaran que decidio la IA (F-043).
 
-Sustituye al `tipologia_resolver`, y la diferencia es toda la feature: aquel
+Sustituye al resolver de tipologia que F-043 borro, y la diferencia es
+toda la feature: aquel
 DECIDIA la familia con reglas deterministas (codigo LER, familia dominante
 de las lineas, override por CIF) y con esa decision elegia el prompt de fase
 2, asi que la regla acotaba lo que la IA podia concluir. Este NO decide

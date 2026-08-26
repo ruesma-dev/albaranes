@@ -21,7 +21,9 @@ from application.pipelines.extract_albaran_pipeline import (
     ReviewAlbaranRequest,
 )
 from application.services.phase_merge import construir_envelope_final
-from application.services.tipologia_resolver import resolver_tipologia
+from application.services.clasificacion_resolver import (
+    resolver_clasificacion,
+)
 from interface_adapters.worker.ports import (
     FuenteDocumento,
     GroundingCabecera,
@@ -64,9 +66,9 @@ def construir_handler_extraccion(
         )
         sumidero.persistir(document_id=document_id, envelope=env1, fase="phase_1")
 
-        # Tipologia consolidada (nivel documento) a partir de fase 1:
-        # regla dura LER -> residuos, familia dominante, u override por CIF.
-        tip = resolver_tipologia(env1.get("data") or {})
+        # (F-043) Clasificacion de DOCUMENTO decidida por IA1. No se
+        # deduce de nada: el resolver solo normaliza y sella el origen.
+        clasificacion = resolver_clasificacion(env1.get("data") or {})
 
         # 3) Fase 2 — revision + extraccion particular (SIEMPRE). El esquema
         #    de 4 IAs deja la extraccion especial (hormigon/residuos) en la
@@ -84,7 +86,7 @@ def construir_handler_extraccion(
                 # Fase 2 por tipología: el pipeline usa este prompt si
                 # existe (albaran_revision_fase2_{generico|hormigon|
                 # residuos}); si no, cae al genérico configurado.
-                prompt_key=f"albaran_revision_fase2_{tip.tipologia.value}",
+                prompt_key=f"albaran_revision_fase2_{clasificacion.familia}",
             )
         )
         sumidero.persistir(
@@ -96,7 +98,8 @@ def construir_handler_extraccion(
         #    la lee de forma laxa); el detalle de residuos/hormigon
         #    (contexto_linea) viaja dentro de data, y sv3 lo guarda como JSON.
         envelope_final = construir_envelope_final(
-            env_fase1=env1, env_fase2=env2, tipologia=tip.tipologia,
+            env_fase1=env1, env_fase2=env2,
+            tipologia=clasificacion.familia,
         )
         sumidero.persistir(
             document_id=document_id, envelope=envelope_final, fase="phase_1"
@@ -111,9 +114,9 @@ def construir_handler_extraccion(
             ),
         )
         logger.info(
-            "[sv2-worker] document_id=%s OK tipologia=%s fase=%s -> q-persistencia",
+            "[sv2-worker] document_id=%s OK familia=%s fase=%s -> q-persistencia",
             document_id,
-            tip.tipologia.value,
+            clasificacion.familia,
             "phase_2",
         )
         # Si el handler lanza, el mensaje NO se borra: reaparece por
