@@ -138,6 +138,24 @@ def test_f043_r30_el_orm_del_merge_declara_las_seis_columnas():
         assert columna in columnas, f"el ORM de sv4 no declara {columna}"
 
 
+def test_f043_r30_el_orm_declara_las_mismas_longitudes_que_sv3():
+    """`VARCHAR(32)` y `VARCHAR(16)`, los del DDL de sv3 (bloque C).
+
+    sv4 nunca crea esta tabla, así que una longitud distinta no rompe
+    nada HOY: se cae en silencio al terreno de la documentación que
+    miente. Y este ORM es lo que lee quien quiera saber cómo es la
+    columna sin abrir sv3. El bloque C dejó cazado el mismo par entre el
+    ORM y el DDL de sv3 porque allí sí se crea la tabla; aquí se fija por
+    la misma razón por la que los seis campos se llaman igual que las
+    columnas: es el único hilo que ata los dos servicios.
+    """
+    from infrastructure.database.orm_models import AlbaranDocumentMergeOrm
+
+    columnas = AlbaranDocumentMergeOrm.__table__.columns
+    assert columnas["tipologia"].type.length == 32
+    assert columnas["tipologia_origen"].type.length == 16
+
+
 def test_f043_r30_sv4_no_escribe_ddl_de_las_columnas_de_sv3():
     """sv3 es el dueno del schema: sv4 solo LEE estas seis columnas.
 
