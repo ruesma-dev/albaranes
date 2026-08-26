@@ -305,3 +305,115 @@ def test_f043_r12_el_resolver_no_lee_la_cabecera_ni_las_lineas() -> None:
         resolver_clasificacion(con_pistas).model_dump()
         == resolver_clasificacion(sin_pistas).model_dump()
     )
+
+
+# ------------------------------------------------------------------ #
+# R13 · LA PROHIBICION (no-regresion)
+#
+# Decision expresa del humano del 2026-08-25, que mando revertir la T11 de
+# F-036: «los residuos no se deben clasificar solo porque contenga LER, es
+# una regla de mierda». Estos tests son el guardian de esa reversion: cada
+# uno mete en el documento la senal con la que el `tipologia_resolver`
+# decidia, y exige que la familia siga siendo la que dijo la IA.
+#
+# Fase RED de un test de no-regresion: el codigo correcto ya esta, asi que
+# no puede fallar por si solo. Se demostro reintroduciendo a mano la regla
+# LER -> residuos en el resolver y viendo que estos tests la cazan; la
+# traza esta en progress/impl_F-043_bloque_B.md.
+# ------------------------------------------------------------------ #
+def _lineas_con_ler() -> list[dict]:
+    """TODAS las lineas con LER, por los tres sitios donde lo miraba el
+    resolver viejo: contexto, codigo y concepto."""
+    return [
+        {"codigo": "170504", "concepto": "Retirada tierras LER 170504",
+         "contexto_linea": {"tipo_familia": "residuos",
+                            "codigo_ler": "170504"}},
+        {"codigo": "170203", "concepto": "Residuo madera LER 170203",
+         "contexto_linea": {"tipo_familia": "residuos",
+                            "codigo_ler": "170203"}},
+    ]
+
+
+def test_f043_r13_prohibicion_ler_en_todas_las_lineas_no_fuerza_residuos(
+) -> None:
+    """EL test de la feature: LER en todas las lineas y la IA dijo
+    `generico` => sale `generico`."""
+    res = resolver_clasificacion(
+        _documento(
+            _bloque("generico", motivo="suministro de material, sin gestion"),
+            lineas=_lineas_con_ler(),
+        )
+    )
+
+    assert res.familia == "generico"
+    assert res.origen == ORIGEN_IA1
+    assert res.confianza_pct == 88.0
+
+
+def test_f043_r13_prohibicion_sin_clasificacion_el_ler_no_la_reconstruye(
+) -> None:
+    """R11 al pie de la letra: sin bloque, el LER NO reconstruye la
+    familia. Se registra el hueco y se manda a revision."""
+    res = resolver_clasificacion(
+        {"cabecera": {"proveedor_nombre": "GESTORA DE RESIDUOS SL",
+                      "proveedor_cif": "B99999999"},
+         "lineas": _lineas_con_ler()}
+    )
+
+    assert res.familia == "generico"
+    assert res.origen == ORIGEN_AUSENTE
+    assert res.motivo == MOTIVO_SIN_CLASIFICACION
+
+
+def test_f043_r13_prohibicion_la_familia_dominante_de_lineas_no_manda(
+) -> None:
+    """El paso 3 del resolver viejo: familia dominante de `contexto_linea`.
+    La clasificacion es del DOCUMENTO (R17); las lineas la afinan, no la
+    deciden."""
+    res = resolver_clasificacion(
+        _documento(_bloque("generico"), lineas=_lineas_con_ler())
+    )
+
+    assert res.familia == "generico"
+
+
+def test_f043_r13_prohibicion_el_texto_de_hormigon_no_fuerza_hormigon(
+) -> None:
+    """`texto_contiene_hormigon` / `texto_contiene_mortero` eran la otra
+    mitad del lazo cerrado (se borran en T10)."""
+    lineas = [
+        {"codigo": "HA-25/B/20/IIa", "concepto": "HORMIGON BOMBEADO HA-25"},
+        {"codigo": "M-7,5", "concepto": "MORTERO SECO M-7,5"},
+    ]
+
+    res = resolver_clasificacion(
+        _documento(_bloque("generico"), lineas=lineas)
+    )
+
+    assert res.familia == "generico"
+
+
+def test_f043_r13_prohibicion_el_cif_del_proveedor_no_fuerza_nada() -> None:
+    """R14: el override por CIF se retira. Un gestor de residuos conocido
+    que emite un albaran de suministro es un albaran de suministro."""
+    documento = _documento(
+        _bloque("generico"), lineas=_lineas_con_ler(),
+    )
+    documento["cabecera"] = {"proveedor_cif": "A28526275",
+                             "proveedor_nombre": "SALMEDINA TRANSFER SL"}
+
+    assert resolver_clasificacion(documento).familia == "generico"
+
+
+def test_f043_r13_prohibicion_tampoco_al_reves_residuos_sin_ler() -> None:
+    """La prohibicion es simetrica: si la IA dice `residuos` en un albaran
+    donde no aparece ni un LER, la familia sigue siendo `residuos`. No hay
+    regla que la 'corrija' con las senales del papel."""
+    res = resolver_clasificacion(
+        _documento(
+            _bloque("residuos", motivo="el proveedor es gestor autorizado"),
+            lineas=[{"codigo": "PORTES", "concepto": "Transporte a planta"}],
+        )
+    )
+
+    assert res.familia == "residuos"
