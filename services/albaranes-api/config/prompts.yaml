@@ -293,6 +293,24 @@ albaran_revision_fase2_es:
     {json_fase_1}
     ```
 
+    ## Clasificación del albarán
+
+    El JSON de fase 1 trae un bloque clasificacion con la familia que IA1
+    decidió para el albarán COMPLETO, con su confianza y su motivo. Tú ves
+    las dos cosas: el documento original y lo que dedujo la fase 1.
+
+    - Si la familia es correcta, CONFIRMALA copiándola tal cual en
+      documento_revisado, con su confianza_pct y su motivo. No la omitas:
+      un documento_revisado sin clasificacion deja el albarán sin familia.
+    - Si es incorrecta, CORRIGELA: cambia familia, ajusta confianza_pct y
+      escribe en motivo qué has leído en el documento que la fase 1 no
+      vio. Añade además un razonamiento con campo "clasificacion.familia"
+      explicando el cambio.
+    - Si el bloque no viene en el JSON de fase 1, RELLENALO con la familia
+      que corresponda según las reglas del prompt de fase 1 de arriba.
+    - Confirmar no cuesta nada; corregir reenruta la valoración entera del
+      albarán, así que corrige solo con evidencia leída en el documento.
+
     ## Reglas finales
 
     - documento_revisado SIEMPRE debe respetar el schema de fase 1.
@@ -484,6 +502,29 @@ albaran_revision_fase2_residuos:
     {json_fase_1}
     ```
 
+    ## Clasificación del albarán
+
+    El JSON de fase 1 trae un bloque clasificacion con la familia que IA1
+    decidió para el albarán COMPLETO, con su confianza y su motivo. Tú ves
+    las dos cosas: el documento original y lo que dedujo la fase 1.
+
+    Estás leyendo este albarán con las instrucciones de residuos porque eso
+    es lo que dijo la fase 1. Si al mirar el documento ves que no lo es,
+    corrígelo igual: queda registrado y el revisor lo ve. Extrae lo que el
+    papel diga, no lo que este prompt esperaba encontrar.
+
+    - Si la familia es correcta, CONFIRMALA copiándola tal cual en
+      documento_revisado, con su confianza_pct y su motivo. No la omitas:
+      un documento_revisado sin clasificacion deja el albarán sin familia.
+    - Si es incorrecta, CORRIGELA: cambia familia, ajusta confianza_pct y
+      escribe en motivo qué has leído en el documento que la fase 1 no
+      vio. Añade además un razonamiento con campo "clasificacion.familia"
+      explicando el cambio.
+    - Si el bloque no viene en el JSON de fase 1, RELLENALO con la familia
+      que corresponda según las reglas del prompt de fase 1 de arriba.
+    - Confirmar no cuesta nada; corregir reenruta la valoración entera del
+      albarán, así que corrige solo con evidencia leída en el documento.
+
     ## Reglas finales
 
     - documento_revisado SIEMPRE respeta el schema de fase 1 (mismos
@@ -645,6 +686,29 @@ albaran_revision_fase2_hormigon:
     {json_fase_1}
     ```
 
+    ## Clasificación del albarán
+
+    El JSON de fase 1 trae un bloque clasificacion con la familia que IA1
+    decidió para el albarán COMPLETO, con su confianza y su motivo. Tú ves
+    las dos cosas: el documento original y lo que dedujo la fase 1.
+
+    Estás leyendo este albarán con las instrucciones de hormigón porque eso
+    es lo que dijo la fase 1. Si al mirar el documento ves que no lo es,
+    corrígelo igual: queda registrado y el revisor lo ve. Extrae lo que el
+    papel diga, no lo que este prompt esperaba encontrar.
+
+    - Si la familia es correcta, CONFIRMALA copiándola tal cual en
+      documento_revisado, con su confianza_pct y su motivo. No la omitas:
+      un documento_revisado sin clasificacion deja el albarán sin familia.
+    - Si es incorrecta, CORRIGELA: cambia familia, ajusta confianza_pct y
+      escribe en motivo qué has leído en el documento que la fase 1 no
+      vio. Añade además un razonamiento con campo "clasificacion.familia"
+      explicando el cambio.
+    - Si el bloque no viene en el JSON de fase 1, RELLENALO con la familia
+      que corresponda según las reglas del prompt de fase 1 de arriba.
+    - Confirmar no cuesta nada; corregir reenruta la valoración entera del
+      albarán, así que corrige solo con evidencia leída en el documento.
+
     ## Reglas finales
 
     - documento_revisado SIEMPRE respeta el schema de fase 1 (mismos
@@ -759,6 +823,29 @@ albaran_revision_fase2_mortero:
     ```json
     {json_fase_1}
     ```
+
+    ## Clasificación del albarán
+
+    El JSON de fase 1 trae un bloque clasificacion con la familia que IA1
+    decidió para el albarán COMPLETO, con su confianza y su motivo. Tú ves
+    las dos cosas: el documento original y lo que dedujo la fase 1.
+
+    Estás leyendo este albarán con las instrucciones de mortero porque eso
+    es lo que dijo la fase 1. Si al mirar el documento ves que no lo es,
+    corrígelo igual: queda registrado y el revisor lo ve. Extrae lo que el
+    papel diga, no lo que este prompt esperaba encontrar.
+
+    - Si la familia es correcta, CONFIRMALA copiándola tal cual en
+      documento_revisado, con su confianza_pct y su motivo. No la omitas:
+      un documento_revisado sin clasificacion deja el albarán sin familia.
+    - Si es incorrecta, CORRIGELA: cambia familia, ajusta confianza_pct y
+      escribe en motivo qué has leído en el documento que la fase 1 no
+      vio. Añade además un razonamiento con campo "clasificacion.familia"
+      explicando el cambio.
+    - Si el bloque no viene en el JSON de fase 1, RELLENALO con la familia
+      que corresponda según las reglas del prompt de fase 1 de arriba.
+    - Confirmar no cuesta nada; corregir reenruta la valoración entera del
+      albarán, así que corrige solo con evidencia leída en el documento.
 
     ## Reglas finales
 

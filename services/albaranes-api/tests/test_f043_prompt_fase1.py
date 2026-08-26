@@ -37,6 +37,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 PROMPTS_REALES = RAIZ / "config" / "prompts.yaml"
 REGLAS_REALES = RAIZ / "config" / "revision_rules.yaml"
 CLAVE_FASE_1 = "albaran_factura_es"
+CLAVE_FASE2_GENERICA = "albaran_revision_fase2_es"
 MARCADOR = "{catalogo_familias}"
 
 
@@ -248,3 +249,73 @@ def test_f043_r7_el_schema_hint_no_contradice_el_bloque() -> None:
     hint = _prompts_reales()[CLAVE_FASE_1]["schema_hint"]
 
     assert "clasificacion" in hint
+
+
+# ------------------------------------------------------------------ #
+# T7 · los CUATRO prompts de fase 2 confirman o corrigen (R16, R3).
+#
+# IA2 ve el documento entero y el JSON de fase 1: es quien mejor puede
+# decir que IA1 se equivoco de familia. Si el prompt no se lo pide, R16
+# ("la clasificacion de fase 2 prevalece") no llega a ocurrir nunca.
+# ------------------------------------------------------------------ #
+def _claves_fase2_del_catalogo() -> tuple[str, ...]:
+    """Claves de fase 2 que el catalogo enruta, mas el generico.
+
+    Se derivan del catalogo (R3): si manana entra una familia nueva con su
+    prompt, este conjunto crece solo y los tests de abajo la exigen.
+    """
+    claves = {CLAVE_FASE2_GENERICA}
+    for id_familia in cat.familias_documento():
+        clave = cat.prompt_fase2_de(id_familia)
+        if clave:
+            claves.add(clave)
+    return tuple(sorted(claves))
+
+
+def test_f043_r3_las_claves_de_fase2_del_catalogo_existen_en_el_yaml() -> None:
+    """El enrutado del catalogo apunta a prompts que existen de verdad.
+
+    Una clave del catalogo sin prompt detras no revienta (el pipeline cae
+    al generico, R15): simplemente se lee un albaran de residuos con las
+    instrucciones genericas y nadie se entera. Por eso se comprueba aqui.
+    """
+    prompts = _prompts_reales()
+
+    for clave in _claves_fase2_del_catalogo():
+        assert clave in prompts, f"falta el prompt {clave} en prompts.yaml"
+
+
+def test_f043_r16_los_prompts_de_fase2_piden_confirmar_o_corregir() -> None:
+    """Los CUATRO: el genérico y los tres particulares."""
+    prompts = _prompts_reales()
+
+    for clave in _claves_fase2_del_catalogo():
+        task = prompts[clave]["task"]
+        minusculas = task.lower()
+        assert "clasificacion" in minusculas, clave
+        assert "documento_revisado" in minusculas, clave
+        assert "confirma" in minusculas, clave
+        assert "corrige" in minusculas or "corrig" in minusculas, clave
+
+
+def test_f043_r16_los_prompts_de_fase2_exigen_explicar_el_cambio() -> None:
+    """Cambiar la familia del albaran reenruta su valoracion entera: no
+    puede pasar sin que quede escrito por que."""
+    prompts = _prompts_reales()
+
+    for clave in _claves_fase2_del_catalogo():
+        minusculas = prompts[clave]["task"].lower()
+        i = minusculas.index("## clasificación del albarán")
+        seccion = minusculas[i:]
+        assert "razonamiento" in seccion, clave
+
+
+def test_f043_r16_fase2_no_enumera_las_familias_a_mano() -> None:
+    """R2 tambien aqui: la lista de familias la trae el prompt de fase 1
+    embebido en `{prompt_fase_1}`, no una copia en cada prompt de fase 2."""
+    prompts = _prompts_reales()
+
+    for clave in _claves_fase2_del_catalogo():
+        task = prompts[clave]["task"]
+        for id_familia in (f.id for f in cat.CATALOGO):
+            assert f"`{id_familia}`" not in task, clave
