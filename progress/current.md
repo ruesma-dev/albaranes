@@ -36,8 +36,32 @@ preguntarlo:
    DOCUMENTO. Medido con el builder real, mismo albarán, mismo contrato y
    mismo match, cambiando solo `context.clasificacion`: **720,00 € / 1 línea
    → 210,00 € / 2 líneas**.
-   Lo siguiente: la **review de los bloques B, C y D** y, con su APROBADO, el
-   **BLOQUE E (T24-T27, T29, T33)**, que es sv4 y el papeleo.
+6. ~~**BLOQUE E (T24-T27, T29, T33)**~~ → **HECHO** el 2026-08-27. Informe:
+   `progress/impl_F-043_bloque_E.md`. Seis commits (`f989563` … `f3fd682`),
+   `init.sh` verde, **26 tests nuevos en sv4** (131 → 157), cobertura de
+   líneas cambiadas **98,8 %** y **8 mutantes inyectados uno a uno, 0
+   supervivientes**. sv4 ya pinta familia, confianza y motivo; el catálogo y
+   el contrato son **ruta sensible** (13 en aviso, evidencia = T30); la regla
+   14 de `docs/ARCHITECTURE.md` y la nota del §9 del documento de negocio
+   dejan escrito que **clasifica IA1, nunca una regla determinista**.
+
+   **La implementación de F-043 está COMPLETA.** Lo siguiente: la **review de
+   los bloques B, C, D y E** y, con su APROBADO, lo que queda es del humano —
+   T28, T30, T31 y T32.
+
+### BLOQUE E · dos cosas que el reviewer tiene que saber
+
+- **Se corrigió la verificación de T27 en `tasks.md`.** Decía
+  `python -m harness.cobertura --feature F-043`, y ese módulo no tiene
+  `--feature`: argparse lo abreviaba a `--features`, no encontraba el catálogo
+  y la puerta salía **`N/A` con exit code 0**. Un falso verde. Ahora usa el
+  comando de `init.sh`. La de T29 sí funcionaba y no se tocó.
+- **Se partió en dos la verificación de T4**, como pidió la review del bloque
+  A: sv2 y sv3 comparten el paquete `infrastructure/sigrid` y en un solo
+  proceso de pytest la pasada muere al RECOGER. Comprobados los dos comandos.
+- Se tocó `tests/test_f011_r19_r20_declaracion.py` (el guarda del conjunto de
+  rutas sensibles): las dos nuevas van en `RUTAS_ANADIDAS_DESPUES`, aparte de
+  `RUTAS_DE_LA_SPEC`, que sigue siendo lo que aprobó F-011.
 
 ### BLOQUE D · lo que el bloque E y el reviewer tienen que saber
 
@@ -158,7 +182,7 @@ Lo que existe ahora y el bloque B ya puede usar:
 | B | T5-T12 | **sv2**: fase 1 clasifica, fase 2 confirma, nace `clasificacion_resolver` y **se borra `tipologia_resolver`** |
 | C | T13-T17 | **sv3**: que la clasificación sobreviva a `_sanear_envelope`, DDL, persistencia, umbral 60 % y motivos — **HECHO** |
 | D | T18-T23 | **sv5 y sv6**: el contexto la lleva, las puertas de familia pasan a `familia_efectiva`, y **T23 prueba SS-0003967 → 210,00 €** — **HECHO** |
-| E | T24-T27, T29, T33 | **sv4** la pinta, rutas sensibles, docs, cobertura, tamaños e `init.sh` |
+| E | T24-T27, T29, T33 | **sv4** la pinta, rutas sensibles, docs, cobertura, tamaños e `init.sh` — **HECHO** |
 
 **T28** (mutación completa, sin tope), **T30** (evals), **T31** y **T32** son del
 humano.
@@ -304,7 +328,8 @@ por el humano el 2026-08-25.
    un informe «solo» cinco veces demasiado rápido pasaría. Aire deliberado.
 2. **Marcas `[ADAPTAR]` sin resolver** en las specs de F-034 y F-035 (aviso de
    `init.sh`, no bloquea).
-3. **`ruff`: 1127 avisos** de deuda previa en el monorepo (+9 del bloque C de
+3. **`ruff`: 1138 avisos** de deuda previa en el monorepo (+9 del bloque C de
    F-043: 7 `ISC004` de las sentencias DDL nuevas y 2 `UP006`, ambas reglas ya
-   incumplidas por esos mismos ficheros; el detalle, en su informe §6).
+   incumplidas por esos mismos ficheros; el detalle, en su informe §6). El
+   bloque E no añadió ninguno, medido fichero a fichero.
 4. **sv1-email e `infra` sin directorio de tests**: nadie comprueba lo suyo.
