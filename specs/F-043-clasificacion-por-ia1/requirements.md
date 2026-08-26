@@ -126,25 +126,25 @@ aguas abajo.
   extracción, redes deterministas de sv6 y el catálogo nuevo), el cierre exige
   evals con LLM real en verde.
 
-## DUDAS PARA EL HUMANO (resolver antes de implementar)
+## DECISIONES DEL HUMANO (2026-08-26) — las seis dudas, RESUELTAS
 
-1. **Alcance del catálogo.** Hoy son tipología de DOCUMENTO cuatro familias
-   (`generico`, `hormigon`, `mortero`, `residuos`) y son familias de LÍNEA
-   además `combustible`, `alquiler_maquinaria` y `otro`. La spec asume que el
-   catálogo arranca así y que `combustible`, `alquiler_maquinaria` y `bombeo`
-   NO son todavía clasificación de documento porque no tienen prompt de fase 2
-   propio. ¿Correcto, o quieres que IA1 pueda devolverlas ya?
-2. **`otro` como familia de línea.** ¿`tipo_familia='otro'` significa
-   «genérico» o «no es de ninguna familia con reglas»? Afecta a si esa línea
-   hereda o no la familia del documento (R18).
-3. **Umbral de confianza baja.** La spec propone 60 % y que solo MARQUE
-   revisión, sin bloquear la valoración. ¿Confirmas el número y que no
-   bloquee?
-4. **Albarán mixto.** La spec deja las líneas de la familia minoritaria
-   leídas con el prompt de la mayoritaria (límite real de hoy) y solo lo hace
-   VISIBLE con un motivo de revisión. Re-ejecutar la fase 2 con un segundo
-   prompt sería otra feature. ¿De acuerdo?
-5. **Backfill.** ¿Los albaranes ya persistidos se re-clasifican (re-fetch
-   masivo) o solo se clasifican los nuevos y los que se revaloren a mano?
-6. **Coste de evals.** ¿Cuántos casos con LLM real autorizas para el cierre y
-   con qué proveedores?
+1. **Catálogo**: arranca con las **cuatro familias de documento que hoy tienen
+   prompt de fase 2 propio** — `generico`, `hormigon`, `mortero`, `residuos`.
+   `combustible`, `alquiler_maquinaria` y `bombeo` siguen siendo familia de
+   LÍNEA y NO son clasificación de documento: sin prompt al que enrutar, la
+   etiqueta no tendría reglas detrás. Añadir una después = una entrada en el
+   catálogo más su prompt.
+2. **`otro`** = «no es de ninguna familia con reglas»: esa línea **NO hereda** la
+   del documento (R18). Si heredara, una línea de transporte dentro de un albarán
+   de residuos se comería la regla de contenedores.
+3. **Confianza baja: umbral 60 %, y solo MARCA revisión.** No bloquea la
+   valoración. Un documento que no se valora no aparece en ninguna pantalla y
+   nadie se entera — es lo que pasó con los 20.632 € de PAVIMARSA.
+4. **Albarán mixto**: las líneas de la familia minoritaria se siguen leyendo con
+   el prompt de la mayoritaria, y eso se hace VISIBLE con motivo de revisión.
+   Re-ejecutar la fase 2 con un segundo prompt es otra feature.
+5. **Sin backfill**: solo se clasifican los albaranes NUEVOS y los que se
+   revaloren a mano desde sv4. Misma política que el histórico mal valorado.
+   Consecuencia para T31: SS-0003967 hay que revalorarlo a mano para verlo.
+6. **Evals (T30)**: no hay autorización previa. Al llegar a T30 se le presentan
+   número de casos, proveedores y coste estimado, y decide entonces.

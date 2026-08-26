@@ -5,9 +5,9 @@ Rama `feature/F-043-clasificacion-por-ia1`. Rigor `critico`: **fase RED
 obligatoria** en toda tarea con test (falla antes, pasa después; la traza va
 al informe). Un commit por tarea, `F-043 Tn: ...`. Sin `git push`.
 
-**ANTES DE T1**: las seis DUDAS PARA EL HUMANO de `requirements.md` deben
-estar respondidas. Si alguna sigue abierta al llegar a la tarea que la
-necesita, se marca la feature `blocked` y se para.
+**Las seis dudas están RESUELTAS** (decisiones del humano del 2026-08-26, al
+final de `requirements.md`). La única que sigue abierta a propósito es el
+alcance de las evals, que se decide al llegar a **T30** y no antes.
 
 - [ ] T1: Crear `ruesma_comun/contratos/familias.py` con el catálogo (R1–R5), `familias_documento/linea`, `obtener`, `render_catalogo_markdown` y los dos `prompt_*_de`  |  Verificación: `pytest services/albaranes-comun/tests/test_f043_familias.py -k "catalogo or render or prompt"`
 - [ ] T2: Añadir `familia_efectiva` al catálogo con las cuatro ramas de §1.1 del diseño (R18–R21, R27)  |  Verificación: `pytest services/albaranes-comun/tests/test_f043_familias.py -k efectiva`
