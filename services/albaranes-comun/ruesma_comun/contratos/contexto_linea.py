@@ -7,8 +7,8 @@ maquinaria). Este fichero se copia IDÉNTICO en los servicios 2, 3 y 5
 que manipulan el envelope de extracción.
 
 Campos (ver prompts V2 para semántica completa):
-  - tipo_familia: 'hormigon' | 'combustible' | 'alquiler_maquinaria'
-                  | 'residuos' | 'otro' | null
+  - tipo_familia: una de las familias de LÍNEA del catálogo único
+    (``ruesma_comun.contratos.familias.familias_linea()``), o null.
   - rol_linea: 'base' | 'extra_tiempo' | 'transporte' | 'recargo_horario'
                | 'desplazamiento' | 'operario' | 'otro' | null
   - descripcion_extendida: string con la descripción técnica completa
@@ -32,7 +32,19 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# F-043 R2: esta lista debe coincidir EXACTAMENTE con
+# ``familias.familias_linea()``, el catálogo único. El test
+# ``test_f043_r2_las_familias_de_linea_del_catalogo_coinciden_con_tipo_familia``
+# lo vigila: si divergen, dar de alta una familia en el catálogo la enruta en
+# fase 2 y valoración pero la validación de ``ContextoLinea`` rechaza la línea
+# que la lleve, y vuelven a ser dos sitios.
+#
+# ``generico`` es familia de documento Y de línea (diseño §1.1): una línea de
+# suministro corriente —un porte de material, una pieza suelta— puede ser
+# genérica dentro de un albarán de otra familia, y la IA tiene que poder
+# decirlo sin que la validación se lo tumbe.
 TipoFamilia = Literal[
+    "generico",
     "hormigon",
     "mortero",
     "combustible",

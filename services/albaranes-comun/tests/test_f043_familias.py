@@ -14,12 +14,14 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
+from typing import get_args
 
 import pytest
 from pydantic import ValidationError
 
 from ruesma_comun.contratos import familias as cat
 from ruesma_comun.contratos.clasificacion import ClasificacionAlbaran
+from ruesma_comun.contratos.contexto_linea import TipoFamilia
 
 
 # ------------------------------------------------------------------ #
@@ -97,6 +99,17 @@ def test_f043_r2_catalogo_las_listas_se_derivan_no_se_declaran():
 
     assert cat.familias_documento() == esperado_doc
     assert cat.familias_linea() == esperado_linea
+
+
+def test_f043_r2_las_familias_de_linea_del_catalogo_coinciden_con_tipo_familia():
+    """UN solo sitio de verdad: el `Literal` de `ContextoLinea.tipo_familia`
+    no puede ser una SEGUNDA lista de familias de linea.
+
+    Si divergen, dar de alta una familia en el catalogo la enruta en fase 2 y
+    en valoracion, pero la validacion de `ContextoLinea` rechaza la linea que
+    la lleve: siguen siendo dos sitios, que es la trampa que R1-R3 cierran.
+    """
+    assert set(get_args(TipoFamilia)) == set(cat.familias_linea())
 
 
 def test_f043_r2_catalogo_obtener_devuelve_la_familia_o_none():
