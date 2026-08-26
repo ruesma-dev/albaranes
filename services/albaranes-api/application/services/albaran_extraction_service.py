@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Optional, Type
 
 from pydantic import BaseModel
+from ruesma_comun.contratos.familias import render_catalogo_markdown
 
 from application.services.schema_registry import SchemaRegistry
 from domain.models.llm_attachment import LlmAttachment
@@ -37,6 +38,11 @@ from infrastructure.prompts.revision_rules_repository import (
 )
 
 logger = logging.getLogger(__name__)
+
+# (F-043 · R6) Marcador del catalogo de familias en el task de fase 1,
+# mismo patron que ``{obras_activas}``: IA1 no puede clasificar contra un
+# catalogo que no ha leido.
+MARCADOR_CATALOGO_FAMILIAS = "{catalogo_familias}"
 
 
 @dataclass(frozen=True)
@@ -130,6 +136,13 @@ class AlbaranExtractionService:
                 f"{task_rendered}\n\n{self._render_obras_activas(obras)}"
             )
 
+        # (F-043 · R6) Catalogo de familias, con el mismo patron y por la
+        # misma razon: `str.replace`, no `.format()`, porque el task lleva
+        # llaves de ejemplos JSON. El catalogo es determinista (no depende
+        # de ningun proveedor externo), asi que aqui no hay caso "no
+        # disponible": o va en su sitio o se anade al final.
+        task_rendered = self._render_catalogo_familias(task_rendered)
+
         instructions = self._compose_instructions(
             system=prompt_spec.system,
             task=task_rendered,
@@ -159,6 +172,28 @@ class AlbaranExtractionService:
             prompt_key=prompt_key,
             phase_label="phase_1",
         )
+
+    # ---------------------------------------------------------- #
+    # FASE 1 — catálogo de familias (F-043 · R6).
+    # ---------------------------------------------------------- #
+    @staticmethod
+    def _render_catalogo_familias(task: str) -> str:
+        """Sustituye ``{catalogo_familias}`` por el catálogo renderizado.
+
+        El catálogo vive en UN solo sitio
+        (``ruesma_comun.contratos.familias``) y se inyecta entero: qué es
+        cada familia, en qué se diferencia de sus vecinas y qué señales
+        mirar en el papel. Solo las de alcance DOCUMENTO: ofrecerle a IA1
+        una familia de línea sería pedirle una etiqueta sin prompt detrás.
+
+        Si el YAML desplegado no trae el marcador, el bloque se añade al
+        final en vez de perderse: un prompt de clasificación sin catálogo
+        no falla, clasifica mal, que es peor.
+        """
+        bloque = render_catalogo_markdown("documento")
+        if MARCADOR_CATALOGO_FAMILIAS in task:
+            return task.replace(MARCADOR_CATALOGO_FAMILIAS, bloque)
+        return f"{task}\n\nFAMILIAS DE ALBARAN:\n\n{bloque}"
 
     # ---------------------------------------------------------- #
     # FASE 1 — lista de obras activas (F-002 · R1, R2).
