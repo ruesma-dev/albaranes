@@ -564,3 +564,108 @@ def test_f043_r28_motivos_una_clasificacion_solida_no_anade_ninguno():
         "clasificacion_ausente",
     ):
         assert motivo not in motivos
+
+
+# ------------------------------------------------------------------ #
+# T17 · R19 — las lineas que NO heredan en un albaran mixto.
+# ------------------------------------------------------------------ #
+
+_MOTIVO_LINEA_MIXTA = "linea_sin_familia_en_albaran_mixto"
+
+
+def _motivos_con_lineas(
+    lineas: list[dict],
+    *,
+    con_clasificacion: bool = True,
+    **campos,
+) -> list[str]:
+    """Motivos del merge para un albaran con estas lineas."""
+    from application.services.albaran_confidence_service import (
+        AlbaranConfidenceService,
+    )
+
+    saneado = _sanear_envelope(
+        _envelope_de_sv2(con_clasificacion=con_clasificacion)
+    )
+    saneado["data"]["lineas"] = lineas
+    if con_clasificacion:
+        saneado["data"]["clasificacion"] = {**_CLASIFICACION, **campos}
+
+    analisis = AlbaranConfidenceService().build_merge_analysis(
+        openai=ExtractionEnvelope.model_validate(saneado),
+        gemini=None,
+    )
+    return analisis.review_reasons
+
+
+_LINEA_SIN_FAMILIA = {"concepto": "Portes de la retirada", "cantidad": 1}
+_LINEA_CON_FAMILIA = {
+    "concepto": "Contenedor RCD 6 m3",
+    "cantidad": 1,
+    "contexto_linea": {"tipo_familia": "residuos"},
+}
+
+
+def test_f043_r19_en_albaran_mixto_la_linea_sin_familia_se_marca():
+    """La linea no hereda la familia del documento (la heredaria fuera
+    de un mixto) y se queda sin familia efectiva: hay que decirlo."""
+    motivos = _motivos_con_lineas([_LINEA_SIN_FAMILIA], mixto=True)
+
+    assert f"{_MOTIVO_LINEA_MIXTA}:1" in motivos
+
+
+def test_f043_r19_en_albaran_mixto_la_linea_con_familia_propia_no_se_marca():
+    """El mixto bloquea la HERENCIA, no lo que la IA dijo de la linea."""
+    motivos = _motivos_con_lineas([_LINEA_CON_FAMILIA], mixto=True)
+
+    assert not [m for m in motivos if m.startswith(_MOTIVO_LINEA_MIXTA)]
+
+
+def test_f043_r19_en_albaran_mixto_se_marca_cada_linea_que_no_hereda():
+    motivos = _motivos_con_lineas(
+        [_LINEA_CON_FAMILIA, _LINEA_SIN_FAMILIA, _LINEA_SIN_FAMILIA],
+        mixto=True,
+    )
+
+    marcadas = [m for m in motivos if m.startswith(_MOTIVO_LINEA_MIXTA)]
+    assert marcadas == [
+        f"{_MOTIVO_LINEA_MIXTA}:2",
+        f"{_MOTIVO_LINEA_MIXTA}:3",
+    ]
+
+
+def test_f043_r18_fuera_de_un_albaran_mixto_la_linea_hereda_y_no_se_marca():
+    """Documento NO mixto: la linea sin familia hereda la del documento
+    (R18), tiene familia efectiva y no hay nada que revisar."""
+    motivos = _motivos_con_lineas([_LINEA_SIN_FAMILIA], mixto=False)
+
+    assert not [m for m in motivos if m.startswith(_MOTIVO_LINEA_MIXTA)]
+
+
+def test_f043_r27_sin_clasificacion_ninguna_linea_se_marca_como_mixta():
+    """Documento anterior a la feature: no hay mixto que valga."""
+    motivos = _motivos_con_lineas(
+        [_LINEA_SIN_FAMILIA],
+        con_clasificacion=False,
+    )
+
+    assert not [m for m in motivos if m.startswith(_MOTIVO_LINEA_MIXTA)]
+
+
+def test_f043_r20_el_criterio_de_herencia_lo_decide_el_catalogo():
+    """R20 · UN solo punto. sv3 no reimplementa «cuando hereda una
+    linea»: se lo pregunta a `familia_efectiva` del catalogo compartido,
+    que es la misma que usaran sv5 y sv6."""
+    import inspect
+
+    from application.services import albaran_confidence_service
+    from ruesma_comun.contratos.familias import familia_efectiva
+
+    fuente = inspect.getsource(
+        albaran_confidence_service._motivos_de_linea_sin_familia
+    )
+
+    assert albaran_confidence_service.familia_efectiva is familia_efectiva
+    assert "familia_efectiva(" in fuente
+    for prohibido in ("ler", "LER", "cif", "concepto", "descripcion"):
+        assert prohibido not in fuente, f"regla determinista: {prohibido}"

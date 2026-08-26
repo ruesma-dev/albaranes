@@ -21,6 +21,7 @@ from domain.models.extraction_models import (
 )
 from ruesma_comun.contratos import ClasificacionAlbaran
 from ruesma_comun.contratos.clasificacion import ORIGEN_AUSENTE
+from ruesma_comun.contratos.familias import familia_efectiva
 
 
 @dataclass(frozen=True)
@@ -104,11 +105,44 @@ MOTIVO_CLASIFICACION_CONFIANZA_BAJA = "clasificacion_confianza_baja"
 MOTIVO_CLASIFICACION_MIXTA = "clasificacion_mixta"
 MOTIVO_CLASIFICACION_AUSENTE = "clasificacion_ausente"
 
+# (R19) Línea de un albarán MIXTO que no hereda la familia del documento
+# y se queda sin familia efectiva. Lleva el índice de la línea en el
+# merge, como el resto de motivos por línea de este servicio.
+MOTIVO_LINEA_SIN_FAMILIA_EN_MIXTO = "linea_sin_familia_en_albaran_mixto"
+
 # Umbral por defecto de `confianza_pct` (R28, duda 3 del humano). Lo
 # declara también `config/settings.py` como
 # `CLASIFICACION_CONFIANZA_MINIMA_PCT`, que importa esta constante para
 # que el número viva en UN solo sitio.
 UMBRAL_CLASIFICACION_CONFIANZA_POR_DEFECTO = 60.0
+
+
+def _motivos_de_linea_sin_familia(
+    line_results: list[LineMergeResult],
+    clasificacion: ClasificacionAlbaran | None,
+) -> list[str]:
+    """Marca las líneas que NO heredan la familia del documento (R19).
+
+    Solo pasa en un albarán marcado ``mixto``: fuera de él, una línea sin
+    familia propia hereda la del documento (R18) y no hay nada que
+    revisar; sin bloque de clasificación tampoco (R27).
+
+    Quién hereda y quién no lo decide ``familia_efectiva`` del catálogo
+    compartido, que es la MISMA función que usan sv5 y sv6 (R20). Aquí no
+    se reimplementa el criterio ni se mira nada del papel: si la función
+    devuelve ``None``, esa línea se queda sin familia efectiva y el
+    revisor tiene que saberlo.
+    """
+    if clasificacion is None or not clasificacion.mixto:
+        return []
+
+    motivos: list[str] = []
+    for indice, item in enumerate(line_results, start=1):
+        contexto = getattr(item.merged_line, "contexto_linea", None)
+        tipo_linea = getattr(contexto, "tipo_familia", None)
+        if familia_efectiva(tipo_linea, clasificacion) is None:
+            motivos.append(f"{MOTIVO_LINEA_SIN_FAMILIA_EN_MIXTO}:{indice}")
+    return motivos
 
 
 class AlbaranConfidenceService:
@@ -537,6 +571,9 @@ class AlbaranConfidenceService:
         )
         reasons.extend(coherence_flags)
         reasons.extend(self._motivos_de_clasificacion(clasificacion))
+        reasons.extend(
+            _motivos_de_linea_sin_familia(line_results, clasificacion)
+        )
         for item in line_results:
             if item.provider_origin == "gemini_only":
                 reasons.append(
