@@ -117,6 +117,7 @@ def test_f043_r30_un_documento_anterior_a_f043_no_tiene_clasificacion():
     documento = _payload(**dict.fromkeys(COLUMNAS_SV3, None))
 
     assert documento.clasificacion is None
+    assert documento.clasificacion_nombre is None
 
 
 def test_f043_r30_los_seis_campos_se_llaman_como_las_columnas_de_sv3():
