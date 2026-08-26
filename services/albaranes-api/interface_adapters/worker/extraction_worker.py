@@ -93,13 +93,14 @@ def construir_handler_extraccion(
             document_id=document_id, envelope=env2, fase="phase_2"
         )
 
-        # 4) Envelope FINAL: fusiona fase 2 y sella la tipologia. Es el que
-        #    consume sv3 (fase logica "phase_1"). La tipologia va en meta (sv3
-        #    la lee de forma laxa); el detalle de residuos/hormigon
-        #    (contexto_linea) viaja dentro de data, y sv3 lo guarda como JSON.
+        # 4) Envelope FINAL: fusiona fase 2 y sella la clasificacion. Es el
+        #    que consume sv3 (fase logica "phase_1"). La clasificacion va
+        #    DENTRO de data (F-043 R9): sv3 filtra meta contra un modelo
+        #    estricto y la descartaba. En meta queda solo el espejo. El
+        #    detalle por linea (contexto_linea) viaja en data como siempre.
         envelope_final = construir_envelope_final(
             env_fase1=env1, env_fase2=env2,
-            tipologia=clasificacion.familia,
+            clasificacion=clasificacion,
         )
         sumidero.persistir(
             document_id=document_id, envelope=envelope_final, fase="phase_1"
