@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from pydantic import Field
+from ruesma_comun.contratos.clasificacion import ClasificacionAlbaran
 
 from domain.models.contexto_linea import ContextoLinea
 from domain.models.schema_base import StrictSchemaModel
@@ -62,6 +63,18 @@ class LineaAlbaran(StrictSchemaModel):
 class DocumentoAlbaran(StrictSchemaModel):
     cabecera: CabeceraAlbaran
     lineas: List[LineaAlbaran]
+
+    # -----------------------------------------------------------------
+    # (F-043, R8/R9) Clasificacion de DOCUMENTO decidida por la IA en
+    # sv2. Llega DENTRO de `data`, que es lo unico que sobrevive: el
+    # saneado de sv3 valida `meta` contra `ExtractionMeta`
+    # (`extra='forbid'`) y descarta lo que no este declarado alli —asi
+    # se perdia `meta.tipologia`—, mientras que `data` se conserva.
+    #
+    # Default `None`: los envelopes anteriores a esta feature no la
+    # traen y tienen que seguir validando igual que hoy (R8, R27).
+    # -----------------------------------------------------------------
+    clasificacion: Optional[ClasificacionAlbaran] = None
 
 
 class ProviderExtractionEnvelope(StrictSchemaModel):

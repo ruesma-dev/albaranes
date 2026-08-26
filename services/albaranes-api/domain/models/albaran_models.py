@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 from pydantic import Field
+from ruesma_comun.contratos.clasificacion import ClasificacionAlbaran
 
 from domain.models.contexto_linea import ContextoLinea
 from domain.models.schema_base import StrictSchemaModel
@@ -50,3 +51,19 @@ class LineaAlbaran(StrictSchemaModel):
 class DocumentoAlbaran(StrictSchemaModel):
     cabecera: CabeceraAlbaran
     lineas: List[LineaAlbaran]
+
+    # -----------------------------------------------------------------
+    # (F-043, R8) Clasificacion de DOCUMENTO decidida por la IA: a que
+    # familia pertenece el albaran, con cuanta confianza y por que. Es
+    # propiedad del DOCUMENTO; `contexto_linea.tipo_familia` sigue
+    # siendo el afinado por LINEA (R17).
+    #
+    # Viaja aqui, dentro de `data`, y NO en `meta`: sv3 filtra `meta`
+    # contra un modelo estricto y hoy descarta `meta.tipologia`, que es
+    # por lo que sv5 y sv6 la exigian sin recibirla nunca (R9).
+    #
+    # Default `None` a proposito: un envelope anterior a esta feature
+    # no la trae y tiene que seguir validando (R8). El `extra='forbid'`
+    # de StrictSchemaModel no estorba porque el campo esta declarado.
+    # -----------------------------------------------------------------
+    clasificacion: Optional[ClasificacionAlbaran] = None
