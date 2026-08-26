@@ -26,7 +26,9 @@
         { "patron": "services/albaran-valoracion-persist/application/services/**", "motivo": "redes deterministas de sv6" },
         { "patron": "services/albaran-valoracion-persist/domain/models/**", "motivo": "envelope DTO y records finales de sv6" },
         { "patron": "services/albaran-valoracion-persist/config/unit_registry.yaml", "motivo": "registro de unidades" },
-        { "patron": "services/albaranes-comun/ruesma_comun/llm/**", "motivo": "clientes LLM y json_coercion compartidos" }
+        { "patron": "services/albaranes-comun/ruesma_comun/llm/**", "motivo": "clientes LLM y json_coercion compartidos" },
+        { "patron": "services/albaranes-comun/ruesma_comun/contratos/familias.py", "motivo": "catálogo de familias (F-043): su TEXTO —definición, en qué se diferencia de sus vecinas y señales— se renderiza e inyecta en el prompt de fase 1 de sv2, y sus claves eligen el prompt de fase 2 y el de valoración de sv5. Cambiar una definición cambia lo que lee la IA, y ningún test unitario puede decir si clasifica mejor o peor" },
+        { "patron": "services/albaranes-comun/ruesma_comun/contratos/clasificacion.py", "motivo": "contrato del bloque `clasificacion` (F-043): las `description` de sus campos son literalmente las instrucciones que la IA lee al rellenarlo, igual que los schemas de extracción de sv2" }
       ]
     }
   ]

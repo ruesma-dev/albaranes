@@ -175,15 +175,37 @@ RUTAS_DE_LA_SPEC: frozenset[str] = frozenset(
     }
 )
 
+#: Rutas que features POSTERIORES a F-011 añadieron a la declaración, cada
+#: una con la suya. No se meten en `RUTAS_DE_LA_SPEC` a propósito: ese
+#: conjunto es lo que aprobó F-011 y tiene que seguir leyéndose tal cual.
+#: Añadir una ruta sigue siendo una decisión, y aquí se ve de quién es.
+#:
+#: - F-043 (T25, R34): el catálogo de familias y el contrato del bloque
+#:   `clasificacion`. No son código normal: su TEXTO —definiciones, «en qué
+#:   se diferencia», señales, y las `description` de los campos— se renderiza
+#:   dentro del prompt de fase 1 de sv2, y sus claves eligen el prompt de
+#:   fase 2 y el de valoración de sv5. Cambiar una definición cambia lo que
+#:   lee la IA, y ningún test unitario puede decir si clasifica mejor o peor:
+#:   eso solo lo contestan las evals con LLM real.
+RUTAS_ANADIDAS_DESPUES: frozenset[str] = frozenset(
+    {
+        "services/albaranes-comun/ruesma_comun/contratos/familias.py",
+        "services/albaranes-comun/ruesma_comun/contratos/clasificacion.py",
+    }
+)
+
+#: Lo que el repositorio debe declarar HOY.
+RUTAS_DECLARADAS_HOY: frozenset[str] = RUTAS_DE_LA_SPEC | RUTAS_ANADIDAS_DESPUES
+
 
 def test_f011_r19_la_declaracion_cubre_las_rutas_de_la_spec():
-    """El conjunto declarado es exactamente el de la spec: ni una menos."""
+    """El conjunto declarado es exactamente el esperado: ni una menos."""
     verificacion = cargar_declaracion(RUTA_DECLARACION)[0]
     declaradas = {ruta.patron for ruta in verificacion.rutas}
 
-    assert declaradas == RUTAS_DE_LA_SPEC, (
-        f"faltan: {sorted(RUTAS_DE_LA_SPEC - declaradas)} · "
-        f"sobran: {sorted(declaradas - RUTAS_DE_LA_SPEC)}"
+    assert declaradas == RUTAS_DECLARADAS_HOY, (
+        f"faltan: {sorted(RUTAS_DECLARADAS_HOY - declaradas)} · "
+        f"sobran: {sorted(declaradas - RUTAS_DECLARADAS_HOY)}"
     )
 
 
@@ -191,5 +213,5 @@ def test_f011_r19_cada_ruta_declarada_explica_por_que_es_sensible():
     """Sin motivo, el KO de la puerta no le dice nada a quien lo lee."""
     verificacion = cargar_declaracion(RUTA_DECLARACION)[0]
 
-    assert len(verificacion.rutas) == 14
+    assert len(verificacion.rutas) == len(RUTAS_DECLARADAS_HOY)
     assert all(len(ruta.motivo) > 10 for ruta in verificacion.rutas)
