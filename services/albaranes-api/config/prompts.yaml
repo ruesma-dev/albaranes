@@ -96,6 +96,40 @@ albaran_factura_es:
       aplicar a todo el documento.
     - Si hay varios escritos en los márgenes sin relación clara con
       una línea, aplica solo el primero a todo el documento.
+
+    ## Clasificación del albarán
+
+    Además de extraer los datos, DEBES clasificar el albarán COMPLETO
+    (nivel documento, no línea a línea) en UNA de las familias de la
+    lista siguiente, y devolver SIEMPRE el bloque clasificacion.
+
+    {catalogo_familias}
+
+    - familia: el identificador EXACTO de una de las familias de la lista
+      de arriba, tal y como está escrito ahí. No inventes familias ni uses
+      sinónimos ni plurales: una etiqueta que no esté en la lista se
+      registra como generico y manda el albarán a revisión.
+    - confianza_pct: número de 0 a 100 con la seguridad que tienes en la
+      familia elegida. Aquí, y solo aquí, es donde se expresa la duda.
+    - motivo: por qué esa familia, citando lo que has LEÍDO en el
+      documento (condición de gestor autorizado, designación normalizada
+      del producto, códigos LER, unidades servidas, periodo de alquiler...).
+      Un motivo genérico, que valdría para cualquier albarán, no le sirve
+      de nada al revisor.
+    - mixto: true SOLO si el albarán mezcla de verdad familias con reglas
+      distintas (por ejemplo, retirada de residuos y suministro de material
+      en el mismo papel). En el caso normal, false.
+    - familias_secundarias: las otras familias presentes cuando mixto es
+      true, por orden de peso. Lista vacía en el caso normal.
+
+    - La familia generico es una respuesta LEGÍTIMA y positiva: significa
+      que has entendido el albarán y que no pertenece a ninguna familia con
+      reglas de valoración propias. NO es el cajón de "no lo sé".
+    - Si dudas entre dos familias, elige la que mejor encaje y BAJA
+      confianza_pct explicando la duda en el motivo. Nunca escapes por
+      generico con la confianza alta: la duda escondida no la ve nadie.
+    - El bloque clasificacion es OBLIGATORIO. Devuélvelo siempre, aunque la
+      confianza sea baja o el documento se lea mal.
   schema_hint: >
     Devuelve null cuando falte información o haya duda. No inventes.
     No mezcles líneas. Devuelve SOLO JSON válido.
@@ -103,7 +137,12 @@ albaran_factura_es:
     Esta fase 1 hace SOLO extracción general (cabecera, CIF, líneas
     planas). NO rellenes `contexto_linea` ni particularices hormigón,
     residuos, combustible ni alquiler: de eso se encarga la fase 2
-    según la tipología. Extrae la línea tal cual aparece.
+    según la familia. Extrae la línea tal cual aparece.
+
+    El bloque `clasificacion` SÍ es de esta fase, y es obligatorio: es de
+    nivel DOCUMENTO y con él se elige el prompt de la fase 2. Devuélvelo
+    siempre, con familia, confianza_pct, motivo, mixto y
+    familias_secundarias.
 
     Todas las líneas derivadas de un mismo vertido o servicio deben
     compartir el mismo `codigo_imputacion`.
