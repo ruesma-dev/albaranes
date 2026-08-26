@@ -16,8 +16,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from pydantic import ValidationError
 
 from ruesma_comun.contratos import familias as cat
+from ruesma_comun.contratos.clasificacion import ClasificacionAlbaran
 
 
 # ------------------------------------------------------------------ #
@@ -398,3 +400,129 @@ def test_f043_r13_familia_efectiva_no_mira_el_ler_ni_el_texto():
         "from dataclasses import dataclass",
         "from typing import Optional",
     ]
+
+
+# ------------------------------------------------------------------ #
+# R7 · el contrato `ClasificacionAlbaran`
+#
+# Lo que IA1 devuelve SIEMPRE en el bloque `clasificacion` de nivel
+# DOCUMENTO. Viaja dentro de `data` (nunca en `meta`: sv3 filtra `meta`
+# contra un modelo estricto y lo descartaria).
+# ------------------------------------------------------------------ #
+def test_f043_r7_contrato_declara_los_seis_campos():
+    clasificacion = ClasificacionAlbaran(
+        familia="residuos",
+        confianza_pct=92.5,
+        motivo="Gestor autorizado, codigos LER por linea y contenedores.",
+    )
+
+    assert clasificacion.familia == "residuos"
+    assert clasificacion.confianza_pct == 92.5
+    assert clasificacion.motivo.startswith("Gestor autorizado")
+    # Los tres con defecto: la IA no tiene por que sellarlos.
+    assert clasificacion.mixto is False
+    assert clasificacion.familias_secundarias == []
+    assert clasificacion.origen == "ia1"
+
+
+def test_f043_r7_contrato_exige_familia_confianza_y_motivo():
+    """El motivo es obligatorio: una clasificacion sin el porque no sirve
+    para que el revisor decida si fiarse."""
+    with pytest.raises(ValidationError):
+        ClasificacionAlbaran(confianza_pct=90, motivo="x")
+    with pytest.raises(ValidationError):
+        ClasificacionAlbaran(familia="residuos", motivo="x")
+    with pytest.raises(ValidationError):
+        ClasificacionAlbaran(familia="residuos", confianza_pct=90)
+
+
+def test_f043_r7_contrato_acota_la_confianza_entre_0_y_100():
+    """Es un porcentaje. 150 % de confianza no significa nada, y colarlo
+    dejaria inservible el umbral de revision de R28."""
+    assert ClasificacionAlbaran(
+        familia="generico", confianza_pct=0, motivo="x"
+    ).confianza_pct == 0
+    assert ClasificacionAlbaran(
+        familia="generico", confianza_pct=100, motivo="x"
+    ).confianza_pct == 100
+    with pytest.raises(ValidationError):
+        ClasificacionAlbaran(familia="generico", confianza_pct=-1, motivo="x")
+    with pytest.raises(ValidationError):
+        ClasificacionAlbaran(familia="generico", confianza_pct=101, motivo="x")
+
+
+def test_f043_r7_contrato_tolera_campos_extra_del_prompt():
+    """`extra='ignore'`, como `ContextoLinea`: que el prompt evolucione y
+    devuelva un campo de mas no puede invalidar la clasificacion entera."""
+    clasificacion = ClasificacionAlbaran(
+        familia="hormigon",
+        confianza_pct=80,
+        motivo="Designacion HA-25/B/20/IIa y m3 servidos.",
+        campo_que_invento_el_prompt="lo que sea",
+    )
+
+    assert clasificacion.familia == "hormigon"
+    assert not hasattr(clasificacion, "campo_que_invento_el_prompt")
+
+
+def test_f043_r7_contrato_admite_familias_secundarias_del_albaran_mixto():
+    clasificacion = ClasificacionAlbaran(
+        familia="residuos",
+        confianza_pct=70,
+        motivo="Contenedores y ademas suministro de arido.",
+        mixto=True,
+        familias_secundarias=["generico"],
+    )
+
+    assert clasificacion.mixto is True
+    assert clasificacion.familias_secundarias == ["generico"]
+
+
+def test_f043_r7_contrato_no_comparte_la_lista_entre_instancias():
+    """`default_factory`, no una lista de clase: si se compartiera, marcar
+    un albaran como mixto contaminaria a los demas del mismo proceso."""
+    una = ClasificacionAlbaran(familia="generico", confianza_pct=10, motivo="x")
+    otra = ClasificacionAlbaran(familia="generico", confianza_pct=10, motivo="x")
+
+    una.familias_secundarias.append("residuos")
+
+    assert otra.familias_secundarias == []
+
+
+def test_f043_r11_contrato_admite_el_sello_de_clasificacion_ausente():
+    """R11: envelope sin bloque `clasificacion` => generico, confianza 0,
+    origen 'ausente' y motivo `ia_sin_clasificacion`. Nada de reconstruir la
+    familia por LER, producto, palabras clave ni CIF."""
+    clasificacion = ClasificacionAlbaran(
+        familia="generico",
+        confianza_pct=0,
+        motivo="ia_sin_clasificacion",
+        origen="ausente",
+    )
+
+    assert clasificacion.origen == "ausente"
+    assert clasificacion.confianza_pct == 0
+
+
+def test_f043_r7_contrato_se_exporta_desde_ruesma_comun_contratos():
+    """Un solo sitio del que importarlo: `ruesma_comun.contratos`."""
+    import ruesma_comun.contratos as paquete
+
+    assert paquete.ClasificacionAlbaran is ClasificacionAlbaran
+    assert "ClasificacionAlbaran" in paquete.__all__
+
+
+def test_f043_r20_contrato_encaja_con_familia_efectiva():
+    """El contrato y el catalogo son piezas del mismo mecanismo: lo que
+    valida IA1 es exactamente lo que lee `familia_efectiva`."""
+    clasificacion = ClasificacionAlbaran(
+        familia="residuos", confianza_pct=95, motivo="LER y contenedores."
+    )
+
+    assert cat.familia_efectiva(None, clasificacion) == "residuos"
+
+    mixta = ClasificacionAlbaran(
+        familia="residuos", confianza_pct=95, motivo="Mezcla.", mixto=True
+    )
+
+    assert cat.familia_efectiva(None, mixta) is None
