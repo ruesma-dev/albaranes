@@ -150,6 +150,35 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
     ha tocado la línea, y eso se decide mirando lo que el revisor **cambió**
     (cantidad, descuento), nunca comparando el importe guardado con el
     recalculado: hay filas en que discrepan a propósito.
+14. **La familia del albarán la decide IA1; NUNCA una regla determinista**
+    (F-043, ago 2026). La clasificación es del **documento** y la devuelve
+    IA1 al leerlo, en el bloque `data.clasificacion` —`familia`,
+    `confianza_pct`, `motivo`, `mixto`, `familias_secundarias`— que la fase 2
+    puede confirmar o corregir. Viaja dentro de **`data`, no de `meta`**: sv3
+    filtra `meta` contra un modelo estricto y por eso descartaba
+    `meta.tipologia`. **Prohibido** inferirla, forzarla o completarla aguas
+    abajo por código LER, designación de producto, palabras clave, familia
+    dominante de las líneas u override por CIF: si la IA clasifica mal se
+    arregla el **prompt**, no se pone un `if` detrás (decisión del humano,
+    2026-08-25). Que la IA responda `generico` es una respuesta legítima; la
+    duda se expresa en `confianza_pct`, y por debajo del umbral configurable
+    de sv3 (defecto 60) el documento va a revisión — marcado, no bloqueado.
+    El **catálogo de familias vive en un único módulo**,
+    `ruesma_comun.contratos.familias` (`services/albaranes-comun`), y de él
+    salen las familias válidas de documento y de línea, la clave del prompt
+    de fase 2 de sv2 y la del prompt de valoración de sv5: **ningún servicio
+    mantiene lista propia de familias ni tabla propia de prompts por
+    familia**, y añadir una familia es una entrada en el catálogo más su
+    prompt, sin tocar código de sv2, sv5 ni sv6. La herencia
+    documento→línea se resuelve **en lectura** con `familia_efectiva` del
+    mismo módulo (nunca se escribe en `contexto_linea`), y un albarán
+    `mixto` **no** hereda: sus líneas sin familia propia van a revisión.
+    sv3 persiste las seis columnas `tipologia*` del merge y sella los
+    motivos; sv5, sv6 y sv4 solo **leen**. Por qué existe la regla: el lazo
+    cerrado anterior —el albarán se clasificaba por lo que la IA había
+    escrito en las líneas, y la IA escribía las líneas según cómo se había
+    clasificado el albarán— dejó SS-0003967 valorado en 540,00 € en 1 línea
+    en vez de 210,00 € en 2 (F-036, `progress/impl_F-036_bloque_D.md`).
 
 ## Acceso a datos y sistemas externos
 

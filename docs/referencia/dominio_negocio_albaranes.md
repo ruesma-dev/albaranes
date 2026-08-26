@@ -595,6 +595,28 @@ habilitados; sv6 expone `schema_ready`).
 
 ## 9. Tipologías de albarán
 
+> **Anotado el 2026-08-27 (F-043).** Esta sección es la NARRATIVA de negocio
+> de cada tipología —qué es, qué se entregó y qué falta—, y sigue valiendo
+> como tal. **No es la lista de familias válidas**: esa vive en UN solo
+> sitio, el catálogo `ruesma_comun/contratos/familias.py` de
+> `services/albaranes-comun`, y es de donde salen las familias que la IA
+> puede elegir, sus definiciones, el prompt de fase 2 y el de valoración.
+> Mantener aquí una segunda lista es exactamente lo que hizo que sv2, sv5 y
+> sv6 acabaran con criterios distintos sobre qué es «residuos» (F-023).
+> Si añades o cambias una familia, se hace en el catálogo; esta sección se
+> lee para saber **por qué** existe, no para saber **cuáles** hay.
+>
+> Dos matices que el catálogo sí decide y aquí no se ven:
+> - **Familia de DOCUMENTO** (la que clasifica el albarán entero y elige el
+>   prompt) hoy son cuatro: `generico`, `hormigon`, `mortero`, `residuos`
+>   —las que tienen prompt de fase 2 propio—. `combustible`,
+>   `alquiler_maquinaria` y `bombeo` (§9.5–§9.7) son familia de **LÍNEA**:
+>   sin prompt al que enrutar, la etiqueta de documento no tendría reglas
+>   detrás (decisión del humano, 2026-08-26).
+> - **La clasificación la decide IA1 leyendo el papel**, nunca una regla que
+>   la deduzca del código LER, del producto, del texto o del CIF. Ver la
+>   regla 14 de `docs/ARCHITECTURE.md`.
+
 La tipología determina el prompt de IA2 (bloque `contexto_linea`), las
 sintéticas admisibles en IA3 y las redes deterministas de sv6. Estado a
 05/08/2026:
