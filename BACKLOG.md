@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **43 features**, 32 abiertas, 11 terminadas.
+Resumen: **44 features**, 33 abiertas, 11 terminadas.
 
 En curso: **F-043**.
 
@@ -43,6 +43,7 @@ Bloqueadas: **F-036**.
 | F-009 | Limpieza de la cola huérfana q-emails | 30 | pendiente | estandar | `feature/F-009-limpieza-q-emails` |
 | F-010 | Easy Auth en el portal sv4 | 31 | pendiente | critico | `feature/F-010-easy-auth-sv4` |
 | F-022 | Bandeja de portada: el concepto de las líneas del albarán sale vacío porque el JOIN de la línea derivada apunta a la tabla equivocada | 32 | pendiente | estandar | `feature/F-022-concepto-lineas-bandeja` |
+| F-044 | Cache de prompts en las llamadas a Claude: hoy el prompt de sistema entero se reenvia y se paga completo en cada albaran | 33 | pendiente | estandar |  |
 | F-041 | Arnes: el veredicto de un mutante no puede depender de que la suite recogiera tests | 99 | pendiente | critico | `feature/F-041-veredicto-honesto-del-mutante` |
 | F-042 | Arnes: segunda opinion de review con un modelo de otra familia (Codex/OpenAI) | 99 | pendiente | estandar | `feature/F-042-segunda-opinion-otro-modelo` |
 
@@ -345,6 +346,26 @@ ALCANCE: solo sv4 (services/albaranes-front), la consulta de list_documents y un
 FUERA DE ALCANCE: cambiar quién rellena descripcion_linea o el diseño de las líneas sintéticas; el detalle del documento, que ya pinta bien (la conciliación lee contrato_lines_derived y la tabla «Líneas leídas del albarán (IA)» pinta ml.concepto, document_detail.html:470); y F-019/F-021, que salieron de los mismos albaranes Feymaco pero atacan la lectura de la partida, no la descripción.
 
 VERIFICACIÓN ESPERADA AL CERRAR: abrir /documents en local con esos dos albaranes y ver el concepto real en las 6 líneas from_albaran, con las sintéticas sin cambios.
+
+### F-044 · Cache de prompts en las llamadas a Claude: hoy el prompt de sistema entero se reenvia y se paga completo en cada albaran
+
+estado **pendiente** · prioridad 33 · rigor `estandar` · SDD sí
+
+ORIGEN: aviso de consumo de Anthropic recibido por el humano el 2026-08-26: el almacenamiento en cache de contenido repetido, como los prompts de sistema, podria ahorrar hasta un 67% del gasto directo en API de la organizacion. El propio aviso acota el alcance: cubre SOLO el trafico directo de la API; Claude Code queda excluido porque gestiona la cache automaticamente. Es decir, el 67% apunta a lo que gastan sv2 y sv5 llamando a Claude, que es justo lo que este repositorio controla.
+
+EL DEFECTO (verificado en el codigo el 2026-08-26, no supuesto). ruesma_comun/llm/claude_messages_client.py llama a self._client.messages.create(model=..., system=instructions, ...) sin ningun cache_control. El prompt de sistema sale de config/prompts.yaml y es grande y estable entre albaranes: son las instrucciones de extraccion y de valoracion, iguales para todos los documentos. Hoy se reenvia entero y se paga a precio de entrada completo en cada llamada, con una llamada por albaran (o mas, porque el pipeline es de dos fases). El contenido que de verdad cambia por albaran es el PDF y los datos del documento, no las instrucciones.
+
+COMO FUNCIONA LA CACHE (referencia oficial consultada, no de memoria): es un PREFIX MATCH. El orden de render es tools -> system -> messages, y cualquier byte que cambie en el prefijo invalida todo lo que va detras. Se marca con cache_control {type: ephemeral} sobre un bloque de contenido; TTL de 5 minutos por defecto o de 1 hora con {ttl: '1h'}. Maximo 4 puntos de corte por peticion. Las lecturas de cache cuestan ~0,1x el precio de entrada y las escrituras 1,25x (TTL 5 min) o 2x (TTL 1 h): con TTL de 5 minutos el punto de equilibrio son DOS peticiones, con el de 1 hora son TRES. Hay un minimo de prefijo cacheable que depende del modelo y NO es monotono entre generaciones: 1024 tokens en claude-sonnet-4-5, que es el modelo configurado hoy en sv2 y sv5 (settings.py de ambos). Por debajo del minimo no cachea y NO da error: simplemente devuelve cache_creation_input_tokens = 0.
+
+LO PRIMERO ES MEDIR, NO MARCAR. Antes de tocar nada hay que saber (a) cuantos tokens ocupa realmente el prompt de sistema de cada fase, con messages.count_tokens y no a ojo, para confirmar que supera el minimo del modelo; y (b) el ritmo real de llamadas en produccion, porque la cache solo paga si llegan varias peticiones dentro del TTL. El pipeline es por colas y a rafagas: si los albaranes entran de uno en uno y muy espaciados, el TTL de 5 minutos no llega y hay que valorar el de 1 hora, que cuesta el doble de escritura y necesita tres lecturas para amortizar. Sin esas dos medidas, marcar cache_control puede SUBIR la factura en vez de bajarla.
+
+LOS INVALIDADORES SILENCIOSOS QUE YA TENEMOS. El prompt de fase 1 de sv2 interpola {obras_activas} —la lista de obras activas, que cambia— y, desde F-043 T5, {catalogo_familias}, que es estable. El orden importa: lo estable tiene que ir FISICAMENTE ANTES de lo volatil, o no cachea nada por muchos marcadores que se pongan. Hay que revisar tambien que no se cuele una fecha, un identificador de documento o un json.dumps sin sort_keys dentro del prefijo, y que la lista de herramientas y el modelo no cambien entre llamadas (las caches son por modelo). La verificacion es objetiva: usage.cache_read_input_tokens distinto de cero en peticiones repetidas; si sale cero siempre, hay un invalidador y se caza diffando los bytes renderizados de dos peticiones.
+
+ALCANCE PROPUESTO (a cerrar en la spec): (1) medir tokens del prompt de sistema y ritmo real de llamadas; (2) reordenar el ensamblado del prompt para que lo estable preceda a lo volatil; (3) anadir cache_control en el cliente Claude de ruesma_comun, con el TTL que digan las medidas; (4) registrar cache_creation_input_tokens y cache_read_input_tokens en llm_call_logger, para que el ahorro se pueda ver y no haya que creerselo. NO ENTRA: cambiar el TEXTO de los prompts (eso es trabajo de otra feature), ni tocar los clientes de OpenAI ni de Gemini, que tienen su propio mecanismo y su propia factura.
+
+AVISO DE RIESGO: reordenar el ensamblado CAMBIA el prompt que ve la IA aunque no cambie una sola palabra del texto, y config/prompts.yaml es RUTA SENSIBLE del arnes. Si el cambio toca el orden o el contenido del prompt, el cierre exige pasada de evals con LLM real, que se factura. Si se logra que sea puramente aditivo (marcadores de cache sin mover nada), el riesgo baja mucho: decidirlo en la spec y medirlo, no asumirlo.
+
+RELACIONADAS: F-043 (acaba de meter el catalogo de familias en el prompt de fase 1, +128 lineas en prompts.yaml: mas texto estable que cachear, y mas motivo para hacerlo).
 
 ### F-041 · Arnes: el veredicto de un mutante no puede depender de que la suite recogiera tests
 
