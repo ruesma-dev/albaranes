@@ -23,8 +23,35 @@ preguntarlo:
    `progress/impl_F-043_bloque_B.md`. Nueve commits (`230fc22` … `3a10fce`),
    `init.sh` verde, 556 passed en la raíz y 139 en sv2, cobertura 98,9 %.
    **`tipologia_resolver` ya no existe**: el `grep` de T10 sale sin
-   resultados. Lo siguiente es la **review del bloque B** y, con su APROBADO,
-   el **BLOQUE C (T13-T17)**, que es sv3.
+   resultados. **Falta su review.**
+4. ~~**BLOQUE C (T13-T17)**~~ → **HECHO** el 2026-08-26. Informe:
+   `progress/impl_F-043_bloque_C.md`. Seis commits (`db205a2` … `6dd6844`),
+   `init.sh` verde, 556 passed en la raíz y **169 en sv3**, cobertura 98,6 %,
+   38 tests nuevos y **17 mutantes inyectados uno a uno, 0 supervivientes**.
+   Lo siguiente: la **review de los bloques B y C** y, con su APROBADO, el
+   **BLOQUE D (T18-T23)**, que es sv5 y sv6.
+
+### BLOQUE C · qué existe ya (T13-T17), y qué tiene que saber el bloque D
+
+- **La clasificación llega y se persiste.** `albaran_documents_merge` tiene
+  seis columnas nuevas —`tipologia`, `tipologia_confianza_pct`,
+  `tipologia_motivo`, `tipologia_origen`, `tipologia_mixta`,
+  `tipologia_secundarias_json`— con DDL idempotente e índice en `tipologia`.
+  **Es lo que T18 tiene que meter en el SELECT de sv5.**
+- **Sin clasificación, las seis columnas quedan a NULL.** sv3 NO escribe
+  `generico`/0/`ausente` para un documento anterior a la feature: si lo
+  hiciera, sv5 leería una clasificación donde no la hay y R27 se rompería.
+  El envelope sin bloque se marca con el motivo `clasificacion_ausente`.
+- **Había un segundo hueco además de `_sanear_envelope`**, no previsto en
+  `tasks.md`: `AlbaranConfidenceService.build_merge_analysis` rehace `data`
+  campo a campo y tiraba la clasificación. Arreglado en T15. **Si el bloque D
+  toca ese merge, que no lo deshaga.**
+- **Motivos nuevos en `review_reasons_json` del documento** (los pinta sv4 en
+  T24): `clasificacion_confianza_baja` (umbral `CLASIFICACION_CONFIANZA_
+  MINIMA_PCT`, defecto 60), `clasificacion_mixta`, `clasificacion_ausente` y
+  `linea_sin_familia_en_albaran_mixto:{n}` con el índice de la línea.
+- **sv3 usa `familia_efectiva` del catálogo**, no una copia: es el mismo
+  punto que T22 tiene que usar en las seis puertas de sv6 (R20).
 
 ### BLOQUE A · pasada 1 revisada y CAMBIOS REQUERIDOS APLICADOS
 
@@ -97,7 +124,7 @@ Lo que existe ahora y el bloque B ya puede usar:
 |---|---|---|
 | A | T1-T4 | El **catálogo** en `ruesma_comun` (familias, definiciones, `familia_efectiva`) y el contrato `ClasificacionAlbaran`. Base de todo lo demás |
 | B | T5-T12 | **sv2**: fase 1 clasifica, fase 2 confirma, nace `clasificacion_resolver` y **se borra `tipologia_resolver`** |
-| C | T13-T17 | **sv3**: que la clasificación sobreviva a `_sanear_envelope`, DDL, persistencia, umbral 60 % y motivos |
+| C | T13-T17 | **sv3**: que la clasificación sobreviva a `_sanear_envelope`, DDL, persistencia, umbral 60 % y motivos — **HECHO** |
 | D | T18-T23 | **sv5 y sv6**: el contexto la lleva, las puertas de familia pasan a `familia_efectiva`, y **T23 prueba SS-0003967 → 210,00 €** |
 | E | T24-T27, T29, T33 | **sv4** la pinta, rutas sensibles, docs, cobertura, tamaños e `init.sh` |
 
@@ -245,5 +272,7 @@ por el humano el 2026-08-25.
    un informe «solo» cinco veces demasiado rápido pasaría. Aire deliberado.
 2. **Marcas `[ADAPTAR]` sin resolver** en las specs de F-034 y F-035 (aviso de
    `init.sh`, no bloquea).
-3. **`ruff`: ~1112 avisos** de deuda previa en el monorepo.
+3. **`ruff`: 1127 avisos** de deuda previa en el monorepo (+9 del bloque C de
+   F-043: 7 `ISC004` de las sentencias DDL nuevas y 2 `UP006`, ambas reglas ya
+   incumplidas por esos mismos ficheros; el detalle, en su informe §6).
 4. **sv1-email e `infra` sin directorio de tests**: nadie comprueba lo suyo.
