@@ -38,7 +38,7 @@ _META = {
 }
 
 
-def test_f043_schema_sv3_documento_acepta_el_bloque_clasificacion():
+def test_f043_r8_schema_sv3_documento_acepta_el_bloque_clasificacion():
     documento = DocumentoAlbaran.model_validate(
         {
             "cabecera": _CABECERA,
@@ -52,7 +52,7 @@ def test_f043_schema_sv3_documento_acepta_el_bloque_clasificacion():
     assert documento.clasificacion.origen == "ia1"
 
 
-def test_f043_schema_sv3_documento_usa_el_contrato_compartido():
+def test_f043_r8_schema_sv3_documento_usa_el_contrato_compartido():
     """El mismo objeto que sv2: un solo contrato, no una copia por
     servicio (es lo que hizo divergir a `contexto_linea` en su dia)."""
     anotacion = DocumentoAlbaran.model_fields["clasificacion"].annotation
@@ -60,7 +60,7 @@ def test_f043_schema_sv3_documento_usa_el_contrato_compartido():
     assert ClasificacionAlbaran in getattr(anotacion, "__args__", (anotacion,))
 
 
-def test_f043_schema_sv3_documento_sin_clasificacion_sigue_validando():
+def test_f043_r8_schema_sv3_documento_sin_clasificacion_sigue_validando():
     documento = DocumentoAlbaran.model_validate(
         {"cabecera": _CABECERA, "lineas": _LINEAS}
     )
@@ -68,7 +68,7 @@ def test_f043_schema_sv3_documento_sin_clasificacion_sigue_validando():
     assert documento.clasificacion is None
 
 
-def test_f043_schema_sv3_documento_sigue_rechazando_campos_no_declarados():
+def test_f043_r8_schema_sv3_documento_sigue_rechazando_campos_no_declarados():
     with pytest.raises(ValidationError):
         DocumentoAlbaran.model_validate(
             {
@@ -79,7 +79,7 @@ def test_f043_schema_sv3_documento_sigue_rechazando_campos_no_declarados():
         )
 
 
-def test_f043_schema_sv3_envelope_completo_la_conserva_dentro_de_data():
+def test_f043_r8_schema_sv3_envelope_completo_la_conserva_dentro_de_data():
     """El envelope que llega por la cola: la clasificacion esta en `data`."""
     envelope = ExtractionEnvelope.model_validate(
         {
@@ -96,7 +96,7 @@ def test_f043_schema_sv3_envelope_completo_la_conserva_dentro_de_data():
     assert envelope.data.clasificacion.familia == "residuos"
 
 
-def test_f043_schema_sv3_meta_sigue_sin_admitir_la_tipologia():
+def test_f043_r9_schema_sv3_meta_sigue_sin_admitir_la_tipologia():
     """R9 documentado como test: `meta` NO es el camino. Si alguien vuelve
     a colgar la clasificacion de `meta`, esto lo delata."""
     with pytest.raises(ValidationError):

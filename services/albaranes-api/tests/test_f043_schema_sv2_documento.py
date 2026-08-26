@@ -33,7 +33,7 @@ _CLASIFICACION = {
 }
 
 
-def test_f043_schema_sv2_documento_acepta_el_bloque_clasificacion():
+def test_f043_r8_schema_sv2_documento_acepta_el_bloque_clasificacion():
     documento = DocumentoAlbaran.model_validate(
         {
             "cabecera": _CABECERA,
@@ -48,14 +48,14 @@ def test_f043_schema_sv2_documento_acepta_el_bloque_clasificacion():
     assert documento.clasificacion.origen == "ia1"
 
 
-def test_f043_schema_sv2_documento_usa_el_contrato_compartido():
+def test_f043_r8_schema_sv2_documento_usa_el_contrato_compartido():
     """El contrato vive en `ruesma_comun`, no copiado en el servicio."""
     anotacion = DocumentoAlbaran.model_fields["clasificacion"].annotation
 
     assert ClasificacionAlbaran in getattr(anotacion, "__args__", (anotacion,))
 
 
-def test_f043_schema_sv2_documento_sin_clasificacion_sigue_validando():
+def test_f043_r8_schema_sv2_documento_sin_clasificacion_sigue_validando():
     """Un envelope anterior a F-043 no la trae y no puede romperse."""
     documento = DocumentoAlbaran.model_validate(
         {"cabecera": _CABECERA, "lineas": _LINEAS}
@@ -64,7 +64,7 @@ def test_f043_schema_sv2_documento_sin_clasificacion_sigue_validando():
     assert documento.clasificacion is None
 
 
-def test_f043_schema_sv2_documento_sigue_rechazando_campos_no_declarados():
+def test_f043_r8_schema_sv2_documento_sigue_rechazando_campos_no_declarados():
     """El `extra='forbid'` no se ha aflojado para colar la clasificacion."""
     with pytest.raises(ValidationError):
         DocumentoAlbaran.model_validate(
@@ -76,7 +76,7 @@ def test_f043_schema_sv2_documento_sigue_rechazando_campos_no_declarados():
         )
 
 
-def test_f043_schema_sv2_documento_rechaza_una_clasificacion_mal_formada():
+def test_f043_r8_schema_sv2_documento_rechaza_una_clasificacion_mal_formada():
     """Si la IA devuelve un porcentaje imposible, se ve; no se cuela."""
     with pytest.raises(ValidationError):
         DocumentoAlbaran.model_validate(
@@ -88,7 +88,7 @@ def test_f043_schema_sv2_documento_rechaza_una_clasificacion_mal_formada():
         )
 
 
-def test_f043_schema_sv2_documento_revisado_de_fase2_tambien_la_acepta():
+def test_f043_r8_schema_sv2_documento_revisado_de_fase2_tambien_la_acepta():
     """R8/R16: la fase 2 devuelve el MISMO modelo de documento, asi que
     puede confirmar o corregir la clasificacion en `documento_revisado`."""
     revision = RevisionAlbaranFase2.model_validate(
@@ -106,7 +106,7 @@ def test_f043_schema_sv2_documento_revisado_de_fase2_tambien_la_acepta():
     assert revision.documento_revisado.clasificacion.familia == "generico"
 
 
-def test_f043_schema_sv2_documento_expone_clasificacion_en_el_json_schema():
+def test_f043_r8_schema_sv2_documento_expone_clasificacion_en_el_json_schema():
     """El schema que se le manda al LLM tiene que incluir el bloque: si no,
     IA1 no sabe que se le pide (R7)."""
     esquema = DocumentoAlbaran.model_json_schema()
