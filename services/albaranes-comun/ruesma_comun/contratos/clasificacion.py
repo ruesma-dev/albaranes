@@ -20,8 +20,6 @@ devuelva un campo de mas no puede invalidar la clasificacion entera.
 """
 from __future__ import annotations
 
-from typing import List
-
 from pydantic import BaseModel, ConfigDict, Field
 
 ORIGEN_IA1 = "ia1"
@@ -69,7 +67,7 @@ class ClasificacionAlbaran(BaseModel):
             "del documento (R19)."
         ),
     )
-    familias_secundarias: List[str] = Field(
+    familias_secundarias: list[str] = Field(
         default_factory=list,
         description=(
             "Otras familias presentes en el albaran cuando es mixto, por "

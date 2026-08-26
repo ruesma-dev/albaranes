@@ -6,6 +6,7 @@ cuatro commits, fase RED en las cuatro. Sin `git push`.
 
 `af550a2` T1 catálogo · `d5e5994` T2 `familia_efectiva` · `31817bf` T3
 contrato `ClasificacionAlbaran` · `44707c5` T4 el campo en sv2 y sv3.
+Cambios requeridos de la review: `progress/impl_F-043_bloque_A_cr.md`.
 
 ## 1 · Qué cambió
 
@@ -23,7 +24,7 @@ contrato `ClasificacionAlbaran` · `44707c5` T4 el campo en sv2 y sv3.
   (R7) con `familia`, `confianza_pct` (acotada 0-100), `motivo`, `mixto`,
   `familias_secundarias`, `origen`; `extra="ignore"`. Constantes
   `ORIGEN_IA1/IA2/AUSENTE` y `MOTIVO_SIN_CLASIFICACION`.
-- `…-comun/tests/test_f043_familias.py` (42 tests, T1-T3),
+- `…-comun/tests/test_f043_familias.py` (43 tests, T1-T3),
   `…-api/tests/test_f043_schema_sv2_documento.py` (7) y
   `…-persistencia/tests/test_f043_schema_sv3_documento.py` (6).
 
@@ -60,8 +61,9 @@ contrato `ClasificacionAlbaran` · `44707c5` T4 el campo en sv2 y sv3.
 
 **Lo que NO se hizo, a propósito**: ni una regla que infiera la familia por
 código LER, familia de producto, palabras del texto o CIF. El módulo importa
-exactamente tres cosas (`annotations`, `dataclass`, `Optional`), y
-`test_f043_r13_familia_efectiva_no_mira_el_ler_ni_el_texto` lo comprueba.
+exactamente dos cosas (`annotations` y `dataclass`), y
+`test_f043_r13_familia_efectiva_no_mira_el_ler_ni_el_texto` lo comprueba con
+lista NEGRA (cifra y test, ya con los CR aplicados).
 
 ## 3 · Fase RED → GREEN, tarea a tarea
 
@@ -85,10 +87,9 @@ E     'otro' is contained here:
 E       n punto a otro, sin hacerse cargo del residuo (sin codigo LER, ...
 ```
 
-El test buscaba la palabra suelta `otro`, que es además palabra corriente del
-castellano y aparece en las definiciones. **Se corrigió el test, no el
-código**: ahora busca el id entrecomillado (`` `otro` ``), que es como el
-render lista cada familia. Verde: `21 passed in 0.12s`.
+El test buscaba la palabra suelta `otro`, corriente en castellano y presente
+en las definiciones. **Se corrigió el test, no el código**: ahora busca el id
+entrecomillado (`` `otro` ``), como lo lista el render. Verde: `21 passed`.
 
 ### T2 · `familia_efectiva`
 
@@ -135,10 +136,11 @@ $ (sv3) pytest tests -k f043_schema
 4 failed, 2 passed, 125 deselected in 2.33s
 ```
 
-Los 2 que ya pasaban en cada uno son los de no-regresión (`extra='forbid'`
-sigue rechazando campos no declarados; `meta` sigue sin admitir `tipologia`):
-tenían que pasar antes y después, y lo hicieron. Verde: sv2 `7 passed`; sv3
-`6 passed`.
+Los 2 que ya pasaban en cada uno **tenían que pasar antes y después**, y lo
+hicieron. Corregido tras la review: en **sv3** sí son los dos de no-regresión,
+pero en **sv2** el segundo es `..._rechaza_una_clasificacion_mal_formada`, que
+en RED pasaba por el `extra_forbidden` del bloque entero y no por el `le=100`
+que comprueba de verdad. Verde: sv2 `7 passed`; sv3 `6 passed`.
 
 ## 4 · Desviación respecto a `tasks.md` (una, y no es opcional)
 
@@ -155,10 +157,9 @@ E   ImportError: cannot import name 'sigrid_api_obras_client' from
 
 Causa: sv2 y sv3 tienen **ambos** un paquete real `infrastructure/sigrid`, y
 en un único proceso de pytest el `sys.path` de uno tapa al del otro. Es
-**previo a F-043**: se reprodujo con el mismo comando ignorando los dos
-ficheros nuevos y falla igual. No se tocó nada para sortearlo (sería un
-workaround en código ajeno): las dos suites se lanzan **por separado**, como
-las ejecuta `init.sh`. Mismo cuidado hará falta en T13-T17.
+**previo a F-043** (se reprodujo ignorando los dos ficheros nuevos). No se
+tocó nada para sortearlo, sería un workaround en código ajeno: las dos suites
+se lanzan **por separado**, como en `init.sh`. Igual en T13-T17.
 
 ## 5 · Fuera de alcance y verificaciones MANUAL
 
@@ -176,13 +177,13 @@ las ejecuta `init.sh`. Mismo cuidado hará falta en T13-T17.
 
 | Evidencia | Valor medido |
 |---|---|
-| Tests nuevos de F-043 | **55** (42 comun, 7 sv2, 6 sv3), todos en verde |
+| Tests nuevos de F-043 | **56** (43 comun, 7 sv2, 6 sv3), todos en verde |
 | Suites ejecutadas | raíz **556 passed** (131,90 s) · comun **117 passed, 3 skipped** (123,38 s) · sv2 **65 passed** (2,22 s) · sv3 **131 passed** (3,50 s) |
-| Cobertura de líneas cambiadas | **98,7 %** (367/372, umbral 80 %, nivel `critico`) |
+| Cobertura de líneas cambiadas | **98,7 %** (367/372, umbral 80 %, nivel `critico`) — **medida sobre el diff contra `dev`, que arrastra F-036**, no solo sobre el bloque A |
 | Mutantes generados / evaluados / supervivientes | **12 / 12 / 0** (campaña completa, sin muestreo; 239,4 s, línea base 109,4 s, 1 worker) |
 
-Informe: `progress/mutacion_F-043_bloque_A.md`, inventariado con veredicto
-`VÁLIDA` en `progress/inventario_mutacion_F-039.md`.
+Informe: `progress/mutacion_F-043_bloque_A.md`, inventariado `VÁLIDA` en
+`progress/inventario_mutacion_F-039.md`.
 
 **Alcance de la campaña.** Se lanzó con `--ficheros` sobre los dos módulos
 nuevos, no con `--feature F-043` a secas: esta rama sale de la de F-036 y no

@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 from pydantic import Field
-from ruesma_comun.contratos.clasificacion import ClasificacionAlbaran
+from ruesma_comun.contratos import ClasificacionAlbaran
 
 from domain.models.contexto_linea import ContextoLinea
 from domain.models.schema_base import StrictSchemaModel

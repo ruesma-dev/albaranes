@@ -32,7 +32,6 @@ Capa ``domain`` compartida: funciones puras, sin I/O, sin red, sin BBDD.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 ALCANCE_DOCUMENTO = "documento"
 ALCANCE_LINEA = "linea"
@@ -57,8 +56,8 @@ class Familia:
     no_es: str
     senales: str
     alcance: frozenset[str]
-    prompt_fase2: Optional[str] = None
-    prompt_valoracion: Optional[str] = None
+    prompt_fase2: str | None = None
+    prompt_valoracion: str | None = None
 
 
 _DOCUMENTO_Y_LINEA = frozenset({ALCANCE_DOCUMENTO, ALCANCE_LINEA})
@@ -272,7 +271,7 @@ def familias_linea() -> tuple[str, ...]:
     return tuple(f.id for f in CATALOGO if ALCANCE_LINEA in f.alcance)
 
 
-def obtener(id_familia: Optional[str]) -> Optional[Familia]:
+def obtener(id_familia: str | None) -> Familia | None:
     """Devuelve la familia del catalogo, o ``None`` si esta fuera de el.
 
     ``None`` es una respuesta legitima y esperada: es lo que ocurre cuando
@@ -315,7 +314,7 @@ def render_catalogo_markdown(alcance: str = ALCANCE_DOCUMENTO) -> str:
     return "\n".join(bloques)
 
 
-def prompt_fase2_de(familia: Optional[str]) -> Optional[str]:
+def prompt_fase2_de(familia: str | None) -> str | None:
     """Clave del prompt de fase 2 de esa familia, o ``None`` (R15).
 
     ``None`` significa "usa el prompt generico configurado en el servicio":
@@ -326,7 +325,7 @@ def prompt_fase2_de(familia: Optional[str]) -> Optional[str]:
     return entrada.prompt_fase2 if entrada is not None else None
 
 
-def prompt_valoracion_de(familia: Optional[str]) -> Optional[str]:
+def prompt_valoracion_de(familia: str | None) -> str | None:
     """Clave del prompt de valoracion de esa familia, o ``None`` (R24)."""
     entrada = obtener(familia)
     return entrada.prompt_valoracion if entrada is not None else None
@@ -347,9 +346,9 @@ def _campo(clasificacion: object, nombre: str, defecto: object) -> object:
 
 
 def familia_efectiva(
-    tipo_familia_linea: Optional[str],
+    tipo_familia_linea: str | None,
     clasificacion: object,
-) -> Optional[str]:
+) -> str | None:
     """Familia con la que hay que tratar UNA linea (R18-R21, R27).
 
     Las cuatro ramas, en este orden:

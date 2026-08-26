@@ -16,11 +16,10 @@ Sin red, sin BBDD, sin LLM.
 from __future__ import annotations
 
 import pytest
-from pydantic import ValidationError
-from ruesma_comun.contratos.clasificacion import ClasificacionAlbaran
-
 from domain.models.albaran_models import DocumentoAlbaran
 from domain.models.revision_models import RevisionAlbaranFase2
+from pydantic import ValidationError
+from ruesma_comun.contratos import ClasificacionAlbaran
 
 _CABECERA = {"proveedor_nombre": "SALMEDINA", "numero_albaran": "SS-0003967"}
 _LINEAS = [{"concepto": "Contenedor RCD", "cantidad": 1}]

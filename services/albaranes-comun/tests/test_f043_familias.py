@@ -12,15 +12,15 @@ Funciones puras: sin red, sin BBDD, sin LLM.
 """
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
 from pathlib import Path
 from types import SimpleNamespace
 from typing import get_args
 
 import pytest
 from pydantic import ValidationError
-
+from ruesma_comun.contratos import ClasificacionAlbaran
 from ruesma_comun.contratos import familias as cat
-from ruesma_comun.contratos.clasificacion import ClasificacionAlbaran
 from ruesma_comun.contratos.contexto_linea import TipoFamilia
 
 
@@ -58,7 +58,9 @@ def test_f043_r1_catalogo_es_inmutable():
     """El catalogo es una tupla de dataclases congeladas: nadie lo parchea
     en caliente desde un servicio para 'arreglar' una clasificacion."""
     assert isinstance(cat.CATALOGO, tuple)
-    with pytest.raises(Exception):
+    # `FrozenInstanceError` y no `Exception`: lo que se comprueba es que el
+    # dataclass esta congelado, no que la asignacion falle por lo que sea.
+    with pytest.raises(FrozenInstanceError):
         cat.CATALOGO[0].id = "otra_cosa"  # type: ignore[misc]
 
 
@@ -400,19 +402,44 @@ def test_f043_r13_familia_efectiva_no_mira_el_ler_ni_el_texto():
     linea con LER en un documento 'generico' NO se vuelve 'residuos'."""
     assert cat.familia_efectiva(None, _clasif("generico")) == "generico"
 
-    # El modulo no importa NADA con lo que deducir una familia: ni el
-    # catalogo LER, ni las funciones de texto de sv2, ni nada de proveedor.
+    # El modulo no importa NADA con lo que deducir una familia: ni catalogo
+    # LER, ni funciones de texto de sv2, ni nada de proveedor. Lista NEGRA y
+    # no lista exacta: anadir un import legitimo (`Iterable`, por ejemplo) no
+    # debe romper este test, pero colar uno de los prohibidos si.
     fuente = Path(cat.__file__).read_text(encoding="utf-8")
     lineas_import = [
         linea.strip()
         for linea in fuente.splitlines()
         if linea.startswith(("import ", "from "))
     ]
-    assert lineas_import == [
-        "from __future__ import annotations",
-        "from dataclasses import dataclass",
-        "from typing import Optional",
-    ]
+    prohibidos = (
+        "ler",
+        "residuo",
+        "proveedor",
+        "cif",
+        "texto",
+        "producto",
+        "tipologia",
+        "regex",
+        "unicodedata",
+        "difflib",
+        "rapidfuzz",
+        "infrastructure",
+        "domain.",
+    )
+    for linea in lineas_import:
+        for prohibido in prohibidos:
+            assert prohibido not in linea.lower(), (
+                f"import sospechoso en familias.py: {linea!r} "
+                f"(contiene {prohibido!r})"
+            )
+    # `re` va aparte: como subcadena aparece en media biblioteca estandar,
+    # asi que se mira el nombre del modulo importado y no la subcadena.
+    assert "import re" not in lineas_import
+    assert not any(
+        linea.startswith(("import re ", "from re "))
+        for linea in lineas_import
+    )
 
 
 # ------------------------------------------------------------------ #
@@ -518,10 +545,19 @@ def test_f043_r11_contrato_admite_el_sello_de_clasificacion_ausente():
 
 
 def test_f043_r7_contrato_se_exporta_desde_ruesma_comun_contratos():
-    """Un solo sitio del que importarlo: `ruesma_comun.contratos`."""
+    """Un solo sitio del que importarlo: `ruesma_comun.contratos`.
+
+    La ruta interna del modulo sigue existiendo, pero devuelve EL MISMO
+    objeto: dos clases distintas con el mismo nombre serian la copia
+    divergente de `contexto_linea` otra vez.
+    """
     import ruesma_comun.contratos as paquete
+    from ruesma_comun.contratos.clasificacion import (
+        ClasificacionAlbaran as ClasificacionDesdeElModulo,
+    )
 
     assert paquete.ClasificacionAlbaran is ClasificacionAlbaran
+    assert ClasificacionDesdeElModulo is ClasificacionAlbaran
     assert "ClasificacionAlbaran" in paquete.__all__
 
 
