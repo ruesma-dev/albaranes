@@ -18,6 +18,8 @@ Sin red, sin BBDD, sin LLM.
 """
 from __future__ import annotations
 
+import re
+
 from domain.models.extraction_models import ExtractionEnvelope
 from interface_adapters.worker.persistence_worker import _sanear_envelope
 from ruesma_comun.contratos import ClasificacionAlbaran
@@ -132,6 +134,12 @@ _COLUMNAS_CLASIFICACION: tuple[tuple[str, str], ...] = (
 _INDICE_TIPOLOGIA = "ix_albaran_documents_merge_tipologia"
 
 
+def _longitud_declarada(tipo: str) -> int | None:
+    """Los caracteres de un ``VARCHAR(n)``; ``None`` si no lo es."""
+    encontrado = re.fullmatch(r"VARCHAR\((\d+)\)", tipo)
+    return int(encontrado.group(1)) if encontrado else None
+
+
 def _sentencias_de_clasificacion(sentencias: tuple[str, ...]) -> list[str]:
     """Las sentencias del DDL que hablan de las columnas nuevas."""
     return [s for s in sentencias if "tipologia" in s]
@@ -204,9 +212,16 @@ def test_f043_r22_el_orm_del_merge_espeja_las_columnas_del_ddl():
 
     columnas = AlbaranDocumentMergeOrm.__table__.columns
 
-    for nombre, _ in _COLUMNAS_CLASIFICACION:
+    for nombre, tipo in _COLUMNAS_CLASIFICACION:
         assert nombre in columnas, f"el ORM no declara {nombre}"
         assert columnas[nombre].nullable, f"{nombre} debe admitir NULL"
+        # El ORM crea la tabla en una base nueva y el ALTER la parchea en
+        # una que ya existe: si los dos no dicen lo MISMO, el mismo
+        # sistema acaba con dos schemas distintos segun por donde entro.
+        declarada = getattr(columnas[nombre].type, "length", None)
+        assert declarada == _longitud_declarada(tipo), (
+            f"{nombre}: el ORM y el DDL declaran longitudes distintas"
+        )
 
 
 def test_f043_r22_el_orm_de_la_tabla_raw_no_espeja_ese_ddl():
@@ -313,6 +328,24 @@ def test_f043_r22_persiste_las_familias_secundarias_como_json():
     assert campos["tipologia_secundarias_json"] == (
         '["hormigon", "generico"]'
     )
+
+
+def test_f043_r22_persiste_el_json_con_el_texto_tal_cual():
+    """Sin escapes `\\uXXXX`: la columna la lee sv5 y la enseña sv4, y
+    ahi tiene que verse el texto. sv3 NO normaliza las secundarias
+    contra el catalogo, asi que puede llegar cualquier cosa."""
+    from infrastructure.database.sqlalchemy_albaran_repository import (
+        campos_clasificacion_merge,
+    )
+
+    campos = campos_clasificacion_merge(
+        _envelope_validado(
+            mixto=True,
+            familias_secundarias=["hormigón"],
+        ).data.clasificacion
+    )
+
+    assert campos["tipologia_secundarias_json"] == '["hormigón"]'
 
 
 def test_f043_r22_no_persiste_clasificacion_cuando_el_envelope_no_la_trae():
