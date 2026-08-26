@@ -56,6 +56,20 @@ class AlbaranDocumentMergeOrm(Base):
     review_reasons_json: Mapped[str | None] = mapped_column(Text)
     comparison_summary_json: Mapped[str | None] = mapped_column(Text)
 
+    # F-043 R30 — clasificacion del DOCUMENTO decidida por IA1 (la
+    # familia decide QUE PRECIO se aplica). Las escribe sv3, dueno del
+    # schema, en `campos_clasificacion_merge`; sv4 SOLO LAS LEE, y por
+    # eso no aparecen en `_review_schema_statements`: si sv4 declarase
+    # aqui su propio ALTER con sus propias longitudes, una base creada
+    # por sv3 y otra parcheada por sv4 acabarian con schemas distintos.
+    # Mismo trato que `confidence_pct_calc` o `review_reasons_json`.
+    tipologia: Mapped[str | None] = mapped_column(String(32))
+    tipologia_confianza_pct: Mapped[float | None] = mapped_column(Float)
+    tipologia_motivo: Mapped[str | None] = mapped_column(Text)
+    tipologia_origen: Mapped[str | None] = mapped_column(String(16))
+    tipologia_mixta: Mapped[bool | None] = mapped_column(Boolean)
+    tipologia_secundarias_json: Mapped[str | None] = mapped_column(Text)
+
     approved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     approved_at_utc: Mapped[str | None] = mapped_column(String(64))
     approved_by: Mapped[str | None] = mapped_column(String(255))

@@ -2859,6 +2859,15 @@ class AlbaranReviewRepository:
             confidence_pct_calc=merge_doc.confidence_pct_calc,
             review_required=merge_doc.review_required,
             review_reasons_json=merge_doc.review_reasons_json,
+            # F-043 R30 — la clasificación que decidió IA1 viaja tal cual
+            # a la ficha. El payload la monta en su `clasificacion`; aquí
+            # no se interpreta, ni se completa, ni se corrige.
+            tipologia=merge_doc.tipologia,
+            tipologia_confianza_pct=merge_doc.tipologia_confianza_pct,
+            tipologia_motivo=merge_doc.tipologia_motivo,
+            tipologia_origen=merge_doc.tipologia_origen,
+            tipologia_mixta=merge_doc.tipologia_mixta,
+            tipologia_secundarias_json=merge_doc.tipologia_secundarias_json,
             comparison_summary_json=merge_doc.comparison_summary_json,
             raw_extraction_json=merge_doc.raw_extraction_json,
             ia_output_json=None,
@@ -2916,6 +2925,10 @@ class AlbaranReviewRepository:
             confidence_pct_calc=None,
             review_required=None,
             review_reasons_json=None,
+            # F-043 R30: la clasificación es del MERGE y se enseña ahí.
+            # Esta vista es la extracción CRUDA de un proveedor —igual
+            # que no trae motivos de revisión ni confianza calculada—, y
+            # las seis columnas se quedan a su default `None`.
             comparison_summary_json=None,
             raw_extraction_json=provider_doc.raw_extraction_json,
             ia_output_json=provider_doc.ia_output_json,

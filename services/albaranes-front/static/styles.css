@@ -1744,6 +1744,16 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
     font-size: .8rem;
 }
 .motivos-documento li { margin: 2px 0; }
+
+/* F-043 (ago 2026): el porque de la clasificacion que decidio IA1.
+   El motivo lo escribe un LLM citando lo que leyo en el papel, asi que
+   es una frase entera y va en su propia linea bajo la familia. Misma
+   escala que .motivos-documento: es contexto, no titular. */
+.clasificacion-motivo {
+    margin: 6px 0 0;
+    font-size: .8rem;
+    line-height: 1.35;
+}
 .linea-razones {
     display: inline-block;
     margin-left: 6px;

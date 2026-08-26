@@ -292,7 +292,11 @@ def documento_detalle():
         motivos_documento=None,
         display=(),
         is_editable=True,
+        clasificacion=None,
     ):
+        """``clasificacion`` son las SEIS columnas del merge (F-043 R30),
+        tal cual las escribe sv3, o ``None`` para un documento anterior a
+        la feature (las seis a NULL)."""
         valoracion = None
         if lineas_valoracion:
             valoracion = ValuationPayload(
@@ -327,6 +331,7 @@ def documento_detalle():
             review_required=bool(motivos_documento),
             display_lines=list(display),
             valuation=valoracion,
+            **(clasificacion or {}),
         )
 
     return _documento

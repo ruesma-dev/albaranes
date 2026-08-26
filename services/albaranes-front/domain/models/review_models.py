@@ -8,6 +8,10 @@ from urllib.parse import quote
 
 from pydantic import BaseModel, Field, computed_field, field_validator
 
+from ruesma_comun.contratos import ClasificacionAlbaran
+from ruesma_comun.contratos.clasificacion import ORIGEN_IA1
+from ruesma_comun.contratos.familias import obtener as obtener_familia
+
 VIEW_MODE_MERGE = "merge"
 KNOWN_PROVIDER_VIEWS = ("openai", "gemini", "claude")
 ALLOWED_VIEW_MODES = (VIEW_MODE_MERGE, *KNOWN_PROVIDER_VIEWS)
@@ -99,6 +103,19 @@ def motivos_de_json(valor: Any) -> list[str]:
     if not isinstance(motivos, list):
         return []
     return [motivo for motivo in motivos if isinstance(motivo, str)]
+
+
+#: Motivos de revisión que sella sv3 cuando la clasificación de IA1 no
+#: es de fiar (F-043 R11, R28, R29). sv4 los LEE para pintar el bloque
+#: de clasificación como aviso: no recalcula el umbral —que vive en
+#: `CLASIFICACION_CONFIANZA_MINIMA_PCT` de sv3, que es quien lo
+#: aplica—, porque el mismo número en dos servicios diverge a la
+#: primera vez que el humano lo cambie (la trampa de F-023).
+MOTIVOS_CLASIFICACION_EN_DUDA = (
+    "clasificacion_confianza_baja",
+    "clasificacion_mixta",
+    "clasificacion_ausente",
+)
 
 
 class DocumentListFilters(BaseModel):
@@ -665,6 +682,18 @@ class DocumentDetailPayload(BaseModel):
     confidence_pct_calc: float | None = None
     review_required: bool | None = None
     review_reasons_json: str | None = None
+    # F-043 R30 — las seis columnas de clasificación que sv3 escribe en
+    # `albaran_documents_merge`. Se llaman IGUAL que allí a propósito:
+    # sv4 no puede importar de sv3 (los dos tienen un paquete
+    # `infrastructure` de primer nivel y en un proceso uno tapa al
+    # otro), así que lo que ata las dos puntas es el nombre y el test
+    # `test_f043_r30_los_seis_campos_se_llaman_como_las_columnas_de_sv3`.
+    tipologia: str | None = None
+    tipologia_confianza_pct: float | None = None
+    tipologia_motivo: str | None = None
+    tipologia_origen: str | None = None
+    tipologia_mixta: bool | None = None
+    tipologia_secundarias_json: str | None = None
     comparison_summary_json: str | None = None
     raw_extraction_json: str | None = None
     ia_output_json: str | None = None
@@ -702,6 +731,75 @@ class DocumentDetailPayload(BaseModel):
         ``obra_no_resuelta``...— no se pintaban en ninguna parte.
         """
         return motivos_de_json(self.review_reasons_json)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def clasificacion(self) -> ClasificacionAlbaran | None:
+        """La clasificación de DOCUMENTO que decidió IA1 (F-043 R30).
+
+        Inverso exacto de `campos_clasificacion_merge` de sv3: allí se
+        escriben las seis columnas, aquí se leen. sv4 **pinta** lo que
+        decidió la IA; no infiere, no corrige y no completa la familia
+        por código LER, designación de producto, palabras clave ni CIF
+        (R12, R13). El front es el sitio más tentador para «arreglarlo»
+        con un `if` —tiene delante todo el papel— y es justo el lazo
+        cerrado que esta feature desmonta.
+
+        `None` cuando `tipologia` viene NULL: un documento anterior a
+        F-043, que no se reclasifica (decisión 5 del humano: sin
+        backfill). Devolver `generico`/0 sería enseñarle al revisor una
+        decisión de IA que nadie tomó.
+
+        Los dos recortes son defensivos, con el mismo criterio con que
+        sv3 recorta `tipologia` a VARCHAR(32): ni un JSON corrupto en
+        `tipologia_secundarias_json` ni una confianza fuera de 0..100
+        pueden dejar al revisor sin poder ABRIR la ficha. Lo que el
+        revisor necesita —familia, confianza y motivo— sobrevive.
+        """
+        familia = (self.tipologia or "").strip()
+        if not familia:
+            return None
+        confianza = float(self.tipologia_confianza_pct or 0.0)
+        return ClasificacionAlbaran(
+            familia=familia,
+            confianza_pct=min(100.0, max(0.0, confianza)),
+            motivo=self.tipologia_motivo or "",
+            mixto=bool(self.tipologia_mixta),
+            familias_secundarias=motivos_de_json(
+                self.tipologia_secundarias_json
+            ),
+            origen=self.tipologia_origen or ORIGEN_IA1,
+        )
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def clasificacion_nombre(self) -> str | None:
+        """Nombre legible de la familia, sacado del catálogo compartido.
+
+        sv4 NO mantiene lista propia de familias (F-043 R2): la única
+        vive en `ruesma_comun.contratos.familias`. Una etiqueta que no
+        esté en el catálogo se enseña tal cual —sv2 ya normaliza a
+        `generico` lo que la IA se invente (R10)—: taparla aquí sería
+        decidir, y sv4 no decide.
+        """
+        clasificacion = self.clasificacion
+        if clasificacion is None:
+            return None
+        familia = obtener_familia(clasificacion.familia)
+        return familia.nombre if familia else clasificacion.familia
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def clasificacion_en_duda(self) -> bool:
+        """¿Sv3 marcó esta clasificación como poco fiable? (R28, R29).
+
+        La respuesta sale de los motivos que sv3 ya selló, NO de
+        recalcular el umbral aquí: el umbral es configurable y vive en
+        sv3, que es quien lo aplica. Con una copia en sv4, el día que el
+        humano lo cambie la ficha diría una cosa y la BBDD otra.
+        """
+        motivos = set(self.review_reasons)
+        return any(motivo in motivos for motivo in MOTIVOS_CLASIFICACION_EN_DUDA)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

@@ -104,6 +104,37 @@
 {% endif %}
 
 {# =========================================================== #}
+{#  Clasificación del albarán (F-043 R30)                       #}
+{#                                                              #}
+{#  La familia la decide IA1 al leer el papel y es lo que elige #}
+{#  QUÉ PRECIO del contrato se aplica. Hasta aquí vivía sólo en #}
+{#  BBDD: el revisor veía el importe y no de dónde salía.       #}
+{#  sv4 PINTA; no infiere, no corrige y no completa la familia. #}
+{#  El aviso lo dispara un motivo que ya selló sv3, nunca un    #}
+{#  umbral calculado en esta plantilla.                         #}
+{# =========================================================== #}
+{% if document.clasificacion %}
+    <div class="alert {% if document.clasificacion_en_duda %}warning clasificacion-duda{% else %}info{% endif %}">
+        <strong>Clasificación del albarán</strong>
+        · Familia: <strong>{{ document.clasificacion_nombre }}</strong>
+        (<code>{{ document.clasificacion.familia }}</code>)
+        · Confianza: <strong>{{ document.clasificacion.confianza_pct }} %</strong>
+        · Decidida por: <code>{{ document.clasificacion.origen }}</code>
+        {% if document.clasificacion.mixto %}
+            · <strong>Albarán mixto</strong>
+            {% if document.clasificacion.familias_secundarias %}
+                (también: {% for otra in document.clasificacion.familias_secundarias %}<code>{{ otra }}</code>{% if not loop.last %}, {% endif %}{% endfor %})
+            {% endif %}
+        {% endif %}
+        {% if document.clasificacion.motivo %}
+            <div class="clasificacion-motivo">
+                <em>Motivo de la IA:</em> {{ document.clasificacion.motivo }}
+            </div>
+        {% endif %}
+    </div>
+{% endif %}
+
+{# =========================================================== #}
 {#  Motivos de revisión del DOCUMENTO (F-036 R23)               #}
 {#                                                              #}
 {#  sv3 los sella en albaran_documents_merge.review_reasons_json #}
