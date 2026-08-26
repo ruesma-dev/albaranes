@@ -35,6 +35,7 @@ from ruesma_comun.colas import (
     MensajePersistencia,
     PublicadorColas,
 )
+from ruesma_comun.contratos.familias import prompt_fase2_de
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +67,22 @@ def construir_handler_extraccion(
         )
         sumidero.persistir(document_id=document_id, envelope=env1, fase="phase_1")
 
-        # (F-043) Clasificacion de DOCUMENTO decidida por IA1. No se
-        # deduce de nada: el resolver solo normaliza y sella el origen.
+        # (F-043 · R12) Clasificacion de DOCUMENTO decidida por IA1. No
+        # se deduce de nada: el resolver solo normaliza y sella el origen.
         clasificacion = resolver_clasificacion(env1.get("data") or {})
+
+        # (F-043 · R15) El prompt de fase 2 sale del CATALOGO, por consulta
+        # directa con la familia que dijo la IA. Antes se componia con un
+        # f-string, y una familia sin prompt propio generaba una clave
+        # inventada que el pipeline descartaba en silencio. `None` = "usa
+        # el generico configurado", y aqui queda dicho en el log.
+        prompt_fase2 = prompt_fase2_de(clasificacion.familia)
+        if prompt_fase2 is None:
+            logger.info(
+                "[sv2-worker] document_id=%s familia=%s sin prompt propio "
+                "de fase 2: cae al generico configurado",
+                document_id, clasificacion.familia,
+            )
 
         # 3) Fase 2 — revision + extraccion particular (SIEMPRE). El esquema
         #    de 4 IAs deja la extraccion especial (hormigon/residuos) en la
@@ -83,14 +97,21 @@ def construir_handler_extraccion(
                 file_bytes=doc.file_bytes,
                 phase_1_json=env1,
                 sigrid_context=ctx,
-                # Fase 2 por tipología: el pipeline usa este prompt si
-                # existe (albaran_revision_fase2_{generico|hormigon|
-                # residuos}); si no, cae al genérico configurado.
-                prompt_key=f"albaran_revision_fase2_{clasificacion.familia}",
+                prompt_key=prompt_fase2,
             )
         )
         sumidero.persistir(
             document_id=document_id, envelope=env2, fase="phase_2"
+        )
+
+        # (F-043 · R16) IA2 ve el papel Y el JSON de fase 1: es quien mejor
+        # puede decir que IA1 se equivoco de familia. Se vuelve a resolver
+        # con su documento_revisado, y lo que diga prevalece (origen=ia2).
+        # Limite conocido y escrito en el diseno: el prompt de fase 2 ya se
+        # eligio con la clasificacion de IA1; releer con el otro prompt es
+        # otra feature.
+        clasificacion = resolver_clasificacion(
+            env1.get("data") or {}, env2.get("data") or {},
         )
 
         # 4) Envelope FINAL: fusiona fase 2 y sella la clasificacion. Es el
@@ -115,10 +136,13 @@ def construir_handler_extraccion(
             ),
         )
         logger.info(
-            "[sv2-worker] document_id=%s OK familia=%s fase=%s -> q-persistencia",
+            "[sv2-worker] document_id=%s OK familia=%s origen=%s "
+            "confianza=%.1f prompt_fase2=%s -> q-persistencia",
             document_id,
             clasificacion.familia,
-            "phase_2",
+            clasificacion.origen,
+            clasificacion.confianza_pct,
+            prompt_fase2 or "(generico configurado)",
         )
         # Si el handler lanza, el mensaje NO se borra: reaparece por
         # visibilidad y se reintenta (lo gestiona ConsumidorCola).

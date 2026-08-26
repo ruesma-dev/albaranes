@@ -110,10 +110,22 @@ class ExtractAlbaranPipeline:
             mime_type=request.mime_type,
             file_bytes=request.file_bytes,
         )
-        # Prompt de fase 2 por tipología si existe; si no, el genérico.
+        # Prompt de fase 2 por familia si existe; si no, el genérico.
         prompt_key_fase2 = self._prompt_key_phase_2
-        if request.prompt_key and self._service.has_prompt(request.prompt_key):
-            prompt_key_fase2 = request.prompt_key
+        if request.prompt_key:
+            if self._service.has_prompt(request.prompt_key):
+                prompt_key_fase2 = request.prompt_key
+            else:
+                # (F-043 · R15) El catálogo enruta esa familia a un prompt
+                # que NO está registrado en el YAML: se lee con el genérico.
+                # Sin este aviso el fallo es invisible — todos los albaranes
+                # de esa familia se leen con las instrucciones equivocadas y
+                # nadie se entera.
+                logger.warning(
+                    "Fase 2: el prompt %s no está registrado; se usa el "
+                    "genérico configurado (%s).",
+                    request.prompt_key, prompt_key_fase2,
+                )
         result = self._service.review_phase_2(
             attachments=attachments,
             provider=self._provider_phase_2,
