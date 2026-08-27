@@ -27,8 +27,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from ruesma_comun.contratos import familias as cat
-
 from application.services.albaran_extraction_service import (
     AlbaranExtractionService,
     ProviderClientSpec,
@@ -40,6 +38,7 @@ from infrastructure.prompts.revision_rules_repository import (
     RevisionRulesRepository,
 )
 from infrastructure.prompts.yaml_prompt_repository import YamlPromptRepository
+from ruesma_comun.contratos import familias as cat
 
 RAIZ = Path(__file__).resolve().parents[1]
 PROMPTS_REALES = RAIZ / "config" / "prompts.yaml"

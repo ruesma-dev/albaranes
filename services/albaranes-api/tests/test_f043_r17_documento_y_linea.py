@@ -32,12 +32,11 @@ from pathlib import Path
 
 import pytest
 import yaml
-from pydantic import ValidationError
-from ruesma_comun.contratos import familias as cat
-
 from domain.models.albaran_models import DocumentoAlbaran, LineaAlbaran
 from domain.models.contexto_linea import ContextoLinea
 from domain.models.revision_models import RevisionAlbaranFase2
+from pydantic import ValidationError
+from ruesma_comun.contratos import familias as cat
 
 RAIZ = Path(__file__).resolve().parents[1]
 PROMPTS_REALES = RAIZ / "config" / "prompts.yaml"
