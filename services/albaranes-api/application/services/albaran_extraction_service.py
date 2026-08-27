@@ -119,29 +119,12 @@ class AlbaranExtractionService:
         prompt_spec = self._prompts.get(prompt_key)
         response_model = self._schemas.get(prompt_spec.schema)
 
-        # (F-002 · R1) La lista de obras activas se renderiza en el task
-        # ANTES de componer las instructions. Mismo patrón de sustitución
-        # que la fase 2 ({sigrid_context}): str.replace, porque el task
-        # lleva llaves de ejemplos JSON que romperían .format().
-        obras = self._obtener_obras_activas()
-        task_rendered = prompt_spec.task
-        if "{obras_activas}" in task_rendered:
-            task_rendered = task_rendered.replace(
-                "{obras_activas}", self._render_obras_activas(obras),
-            )
-        elif obras:
-            # Compatibilidad: YAML desplegado sin el placeholder. Mejor
-            # el bloque en posición subóptima que perderlo.
-            task_rendered = (
-                f"{task_rendered}\n\n{self._render_obras_activas(obras)}"
-            )
-
-        # (F-043 · R6) Catalogo de familias, con el mismo patron y por la
-        # misma razon: `str.replace`, no `.format()`, porque el task lleva
-        # llaves de ejemplos JSON. El catalogo es determinista (no depende
-        # de ningun proveedor externo), asi que aqui no hay caso "no
-        # disponible": o va en su sitio o se anade al final.
-        task_rendered = self._render_catalogo_familias(task_rendered)
+        # El task de fase 1 lleva DOS marcadores propios
+        # ({obras_activas} y {catalogo_familias}) que se sustituyen en un
+        # solo sitio compartido: este mismo task viaja embebido dentro del
+        # prompt de fase 2 y allí sufría la misma fuga (ver
+        # `_render_task_fase_1`).
+        task_rendered, obras = self._render_task_fase_1(prompt_spec.task)
 
         instructions = self._compose_instructions(
             system=prompt_spec.system,
@@ -172,6 +155,47 @@ class AlbaranExtractionService:
             prompt_key=prompt_key,
             phase_label="phase_1",
         )
+
+    # ---------------------------------------------------------- #
+    # FASE 1 — renderizado del task (F-002 · R1, F-043 · R6).
+    # ---------------------------------------------------------- #
+    def _render_task_fase_1(
+        self, task: str,
+    ) -> tuple[str, list[ObraActiva] | None]:
+        """Sustituye TODOS los marcadores del task de fase 1.
+
+        Un solo sitio, y a propósito: el task de fase 1 no viaja solo a
+        IA1, también va **entero** dentro del prompt de fase 2 (el
+        marcador ``{prompt_fase_1}`` de los cuatro
+        ``albaran_revision_fase2_*``). Mientras el renderizado vivió
+        dentro de ``extract_phase_1``, el camino de fase 2 metía el task
+        en crudo y IA2 leía los literales ``{catalogo_familias}`` y
+        ``{obras_activas}`` donde debían ir la lista de familias y la de
+        obras. Como R16 hace prevalecer la clasificación de fase 2, la
+        decisión central de F-043 la tomaba la IA que no había leído el
+        catálogo.
+
+        Se sustituye con ``str.replace`` y no con ``.format()`` porque el
+        task lleva llaves de ejemplos JSON que romperían el formateo.
+
+        Devuelve el task renderizado y la lista de obras que se usó (o
+        ``None``), que la fase 1 necesita para su log.
+        """
+        obras = self._obtener_obras_activas()
+        if "{obras_activas}" in task:
+            task = task.replace(
+                "{obras_activas}", self._render_obras_activas(obras),
+            )
+        elif obras:
+            # Compatibilidad: YAML desplegado sin el placeholder. Mejor
+            # el bloque en posición subóptima que perderlo.
+            task = f"{task}\n\n{self._render_obras_activas(obras)}"
+
+        # (F-043 · R6) Catalogo de familias, con el mismo patron. El
+        # catalogo es determinista (no depende de ningun proveedor
+        # externo), asi que aqui no hay caso "no disponible": o va en su
+        # sitio o se anade al final.
+        return self._render_catalogo_familias(task), obras
 
     # ---------------------------------------------------------- #
     # FASE 1 — catálogo de familias (F-043 · R6).
@@ -264,9 +288,11 @@ class AlbaranExtractionService:
 
         El prompt de fase 2 (config/prompts.yaml → albaran_revision_fase2_es)
         contiene 4 placeholders en su ``task``:
-          - {prompt_fase_1}: el system+task del prompt de fase 1, para
-            que la IA conozca las reglas que se siguieron en la
-            extracción.
+          - {prompt_fase_1}: el system+task del prompt de fase 1 ya
+            RENDERIZADO (catálogo de familias y obras activas
+            sustituidos), para que la IA conozca las reglas que se
+            siguieron en la extracción y, sobre todo, el catálogo contra
+            el que R16 le pide confirmar o corregir la clasificación.
           - {revision_rules}: la checklist de patrones conocidos
             cargada de config/revision_rules.yaml.
           - {json_fase_1}: el JSON producido por la fase 1, para que
@@ -291,7 +317,16 @@ class AlbaranExtractionService:
         # al pipeline a pasarlo en cada llamada y mantenemos la firma
         # simple.
         prompt_fase_1_spec = self._prompts.get(self._prompt_key_phase_1)
-        prompt_fase_1_text = self._build_instructions(prompt_fase_1_spec)
+        # El prompt de fase 1 viaja ENTERO dentro del de fase 2, así que
+        # se renderiza igual que en la fase 1: si no, IA2 recibe los
+        # literales `{catalogo_familias}` y `{obras_activas}` en vez del
+        # catálogo de familias y de la lista de obras.
+        task_fase_1, _obras = self._render_task_fase_1(prompt_fase_1_spec.task)
+        prompt_fase_1_text = self._compose_instructions(
+            system=prompt_fase_1_spec.system,
+            task=task_fase_1,
+            schema_hint=prompt_fase_1_spec.schema_hint,
+        )
         revision_rules_text = self._revision_rules_repo.render_for_prompt()
         json_fase_1_text = json.dumps(
             phase_1_json, ensure_ascii=False, indent=2,
@@ -510,16 +545,11 @@ class AlbaranExtractionService:
             )
         return spec
 
-    @staticmethod
-    def _build_instructions(prompt_spec) -> str:
-        # Concatenamos system + task + schema_hint para el system prompt
-        # del proveedor (como hacía la versión anterior). Cada provider
-        # client decidirá cómo lo distribuye en su API concreta.
-        return AlbaranExtractionService._compose_instructions(
-            system=prompt_spec.system,
-            task=prompt_spec.task,
-            schema_hint=prompt_spec.schema_hint,
-        )
+    # NOTA: aquí vivía `_build_instructions(prompt_spec)`, que componía
+    # el prompt con el `task` SIN renderizar. Su único llamante era
+    # `review_phase_2`, y era justo el origen de la fuga de marcadores
+    # hacia IA2. Se retira en vez de dejarla muerta: una función que
+    # compone un prompt a medio renderizar solo puede volver a usarse mal.
 
     @staticmethod
     def _compose_instructions(
