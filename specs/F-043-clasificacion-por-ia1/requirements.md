@@ -2,9 +2,8 @@
 # F-043 · IA1 clasifica el albarán — Requisitos (EARS)
 
 Rigor `critico`. Servicios: sv2, sv3, sv5, sv6 (+ sv4 solo para mostrar) y
-`albaranes-comun`. Decisión del humano del 2026-08-25: **la clasificación la
-hace SIEMPRE la IA**; si clasifica mal se arregla el PROMPT, nunca con un `if`
-aguas abajo.
+`albaranes-comun`. Decisión del humano (2026-08-25): **clasifica SIEMPRE la
+IA**; si clasifica mal se arregla el PROMPT, nunca un `if` aguas abajo.
 
 ## A · Catálogo de familias en un solo sitio
 
@@ -101,7 +100,8 @@ aguas abajo.
   caso SS-0003967, debe producir **210,00 €** en 2 líneas (contenedor 120 +
   incremento LER 90), no 540,00 € en 1 línea.
 - **R27.** SI un envelope llega sin clasificación (documento anterior a esta
-  feature), ENTONCES sv5 y sv6 deben comportarse exactamente como hoy.
+  feature), ENTONCES sv5 y sv6 deben comportarse como hoy, SALVO la elección
+  del prompt de valoración, que R24 retira: se usa el genérico configurado.
 
 ## F · Que el revisor lo vea y que la duda pare
 
@@ -145,6 +145,6 @@ aguas abajo.
    Re-ejecutar la fase 2 con un segundo prompt es otra feature.
 5. **Sin backfill**: solo se clasifican los albaranes NUEVOS y los que se
    revaloren a mano desde sv4. Misma política que el histórico mal valorado.
-   Consecuencia para T31: SS-0003967 hay que revalorarlo a mano para verlo.
+   Consecuencia para T31: SS-0003967 hay que RE-EXTRAERLO; revalorar no basta.
 6. **Evals (T30)**: no hay autorización previa. Al llegar a T30 se le presentan
    número de casos, proveedores y coste estimado, y decide entonces.

@@ -48,6 +48,19 @@ preguntarlo:
    **La implementación de F-043 está COMPLETA.** Lo siguiente: la **review de
    los bloques B, C, D y E** y, con su APROBADO, lo que queda es del humano —
    T28, T30, T31 y T32.
+7. ~~**REVIEW FINAL** (`progress/review_F-043_final.md`)~~ → hecha el
+   2026-08-27: **CHANGES_REQUESTED, 4 bloqueantes + 2 menores**. Todos
+   **APLICADOS** el mismo día. Informe: `progress/impl_F-043_crf.md`. Lo que
+   cambió: **CRF-1** el catálogo de familias no llegaba a IA2 —el task de fase
+   1 viajaba SIN renderizar dentro del prompt de fase 2— y de paso se cerró la
+   misma fuga de `{obras_activas}`, previa a F-043 (hallazgo 9); **CRF-2** R17
+   ya tiene sus `test_f043_r17_*`; **CRF-3** T31 reescrita con la vía real
+   (RE-EXTRAER) y el criterio de verde honesto; **CRF-4**
+   `azure-apps/albaranes.md` recoge las seis columnas `tipologia*` y su índice
+   (commit local `43196b1` **en ese otro repositorio**, sin push); **menores 5
+   y 6** aquí abajo y en `requirements.md` (R27 acotado).
+   **Decide el humano** si esto se cierra sin más review o si abre un tercer
+   ciclo: el arnés admite dos y este era el segundo.
 
 ### BLOQUE E · dos cosas que el reviewer tiene que saber
 
@@ -184,8 +197,41 @@ Lo que existe ahora y el bloque B ya puede usar:
 | D | T18-T23 | **sv5 y sv6**: el contexto la lleva, las puertas de familia pasan a `familia_efectiva`, y **T23 prueba SS-0003967 → 210,00 €** — **HECHO** |
 | E | T24-T27, T29, T33 | **sv4** la pinta, rutas sensibles, docs, cobertura, tamaños e `init.sh` — **HECHO** |
 
-**T28** (mutación completa, sin tope), **T30** (evals), **T31** y **T32** son del
-humano.
+### Las CUATRO verificaciones MANUAL del humano, con su comando
+
+Estaban solo nombradas aquí y sus comandos vivían en `tasks.md`. Copiados, con
+el criterio de verde de cada una. **T31 lleva su detalle largo en `tasks.md`**
+(cinco pasos) porque no cabe aquí sin repetirlo mal.
+
+- **T28 · campaña de mutación COMPLETA, sin tope, 0 supervivientes.**
+  `python -m harness.mutacion --feature F-043`.
+  **Verde**: informe `progress/mutacion_F-043.md` sin «⚠ CAMPAÑA NO VÁLIDA»,
+  «base rota» = 0 y **cero supervivientes** (o cada superviviente con test
+  nuevo o justificación escrita). **Ojo**: `--feature F-043` arrastra F-036
+  entera, porque esta rama sale de F-036 y no de `dev`. Rehacerla cierra
+  además el `[~]` de RM1 que dejó la review (el SHA medido en
+  `mutacion_F-043_bloque_A.md` ya no es HEAD). **No se lanza en paralelo con
+  nada**: muta el árbol principal.
+- **T30 · evals con LLM real. SE FACTURA y NO está autorizada** (duda 6: se
+  decide al llegar, con número de casos, proveedores y coste delante).
+  `python -m evals.runner --con-llm --feature F-043`.
+  **Verde**: `progress/evals_F-043.md` con `MODO: completa`,
+  `FASES: IA1,IA2,IA3,IA4,E2E` y `VEREDICTO: VERDE`. Hoy daría
+  `NO_EVALUABLE`: los seis `evals/fixtures/*_indice.json` están a `casos = 0`.
+  Es la **única** red que dice si IA1 clasifica bien y si IA3 casa el
+  contenedor, o sea lo que cubre el riesgo aceptado de más abajo.
+- **T31 · el caso real SS-0003967, de extremo a extremo.** **Reescrita**: hay
+  que **RE-EXTRAER** (`encolar_extraccion.py`), revalorar NO basta, y el verde
+  honesto es **90,00 € con `total_lines = 2` y `review_required = true`**, no
+  210,00 €. Los cinco pasos ejecutables, el SQL y el «NO es verde si» están en
+  `specs/F-043-clasificacion-por-ia1/tasks.md` → T31.
+- **T32 · la ficha del revisor en sv4.** Abrir `http://localhost:8004` y entrar
+  en la ficha del documento.
+  **Verde**: se ven **familia, confianza y motivo** de la clasificación, y un
+  albarán con `tipologia_confianza_pct` por debajo de 60 aparece **marcado a
+  revisión**, con los motivos nuevos (`clasificacion_confianza_baja`,
+  `clasificacion_mixta`, `clasificacion_ausente`) dentro del bloque de motivos
+  que ya existía (F-036 R23).
 
 ### El riesgo declarado y ACEPTADO por el humano
 
