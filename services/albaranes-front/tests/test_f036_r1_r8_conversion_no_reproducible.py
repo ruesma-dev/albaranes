@@ -850,6 +850,40 @@ def test_f036_r24_depurar_motivos_no_tumba_el_guardado(repositorio):
     )
 
 
+def test_f036_r3_el_aviso_de_lo_defensivo_lleva_la_traza_del_fallo(
+    repositorio, caplog,
+):
+    """Tragar la excepcion SIN el traceback deja el fallo indiagnosticable.
+
+    Los tres caminos de arriba existen para que un fallo al sellar
+    trazabilidad no tumbe el guardado del revisor, y ese es el orden de
+    prioridades correcto. El precio que se paga es que el fallo no
+    aparece en ningun otro sitio: ni excepcion, ni columna, ni aviso al
+    revisor. Lo unico que queda es ese `logger.warning`, y sin
+    `exc_info` lo unico que dice es "no se pudo" — ni que fallo, ni
+    donde. Los tres tests de arriba comprueban que el guardado
+    sobrevive; ninguno comprobaba que quede algo con lo que diagnosticar.
+    """
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        repositorio._anadir_reason_linea_in_session(
+            session=_SesionRota(), valuation_line_id=900, reason="una_razon"
+        )
+        repositorio._marcar_linea_en_revision_in_session(
+            session=_SesionRota(), valuation_line_id=900
+        )
+        repositorio._depurar_motivos_documento_in_session(
+            session=_SesionRota(), document_id="da-igual", cif_actual="B1"
+        )
+
+    avisos = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(avisos) == 3, [r.getMessage() for r in avisos]
+    for aviso in avisos:
+        assert aviso.exc_info is not None, aviso.getMessage()
+        assert aviso.exc_info[0] is RuntimeError, aviso.getMessage()
+
+
 def test_f036_r3_una_linea_que_no_existe_no_recibe_razones(
     repositorio, sesion,
 ):

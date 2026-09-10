@@ -399,6 +399,44 @@ def test_f036_r24_el_motivo_con_el_cif_viejo_se_retira(repositorio, sesion):
     assert _leer_motivos(sesion) == ["obra_no_resuelta"]
 
 
+def test_f036_r24_el_aviso_dice_CUANTOS_motivos_se_retiraron(
+    repositorio, sesion, caplog,
+):
+    """La traza cuenta lo RETIRADO, no la suma de las dos listas.
+
+    Es el unico rastro que queda de que un motivo desaparecio de la
+    ficha: la columna se sobrescribe y el motivo caduco no se guarda en
+    ningun sitio. Un numero mal calculado ahi —la suma en vez de la
+    resta— dice "retirados 5" donde se retiro 1, y quien audite la
+    ficha ira a buscar cuatro motivos que nunca existieron.
+    """
+    import logging
+
+    _sembrar_documento(
+        sesion,
+        cif="B87654321",
+        motivos=[
+            "proveedor_cif_no_casa:B12345678",
+            "obra_no_resuelta",
+            "importe_no_cuadra",
+            "sin_contrato",
+        ],
+    )
+
+    with caplog.at_level(logging.INFO):
+        repositorio._depurar_motivos_documento_in_session(
+            session=sesion, document_id=DOCUMENT_ID, cif_actual="B87654321"
+        )
+
+    assert len(_leer_motivos(sesion)) == 3
+    trazas = [
+        r.getMessage() for r in caplog.records
+        if "[revision] documento" in r.getMessage()
+    ]
+    assert len(trazas) == 1, trazas
+    assert "retirados 1 motivos" in trazas[0], trazas[0]
+
+
 def test_f036_r24_el_motivo_vigente_no_se_toca(repositorio, sesion):
     """Si el CIF sigue siendo el sellado, el aviso sigue siendo verdad.
 
