@@ -13,6 +13,8 @@ Funcion pura: sin red, sin BBDD, sin LLM.
 """
 from __future__ import annotations
 
+from typing import get_args
+
 import pytest
 
 from application.services.contexto_linea_merger import (
@@ -348,3 +350,41 @@ def test_f036_r12_el_orden_canonico_sigue_desempatando():
     elegido = pick_best_contexto_linea(openai_ctx=a, gemini_ctx=b)
 
     assert elegido.descripcion_extendida == "OPENAI"
+
+
+# ------------------------------------------------------------------ #
+# T28 · la guarda que sostiene el mutante equivalente de `_tiene_valor`
+# ------------------------------------------------------------------ #
+def test_t28_las_nueve_medidas_son_escalares_opcionales():
+    """Las nueve medidas se declaran como escalares opcionales.
+
+    NO mata al mutante `contexto_linea_merger.py:92` (`return True` ->
+    `return False`): ese `return` es la rama de `_tiene_valor` para un
+    tipo que no es `None`, ni `bool`, ni `str`, ni `int`/`float`, y hoy
+    es INALCANZABLE — `_tiene_valor` solo se llama con
+    `getattr(ctx, campo, None)` sobre estos nueve campos de un
+    `ContextoLinea` ya validado por pydantic, que rechaza cualquier
+    valor no escalar.
+
+    Lo que hace este test es CUSTODIAR esa inalcanzabilidad, que es lo
+    unico que sostiene la justificacion de equivalencia: el dia que
+    alguien de de alta en `_CAMPOS_RESIDUOS` una medida de tipo lista o
+    diccionario —una lista de codigos LER, por ejemplo—, la rama deja de
+    ser inalcanzable, el mutante deja de ser equivalente y hay que
+    decidir a proposito si un valor asi cuenta como dato o como hueco.
+    Sin esta guarda ese dia pasaria en silencio.
+    """
+    escalares = (str, float, int, bool)
+
+    for campo in _CAMPOS_RESIDUOS:
+        anotacion = ContextoLinea.model_fields[campo].annotation
+        admitidos = get_args(anotacion) or (anotacion,)
+        no_escalares = [
+            tipo
+            for tipo in admitidos
+            if tipo is not type(None) and tipo not in escalares
+        ]
+        assert not no_escalares, (
+            f"`{campo}` admite {no_escalares}, que no es un escalar: "
+            "revisa la rama final de `_tiene_valor` antes de seguir"
+        )
