@@ -142,6 +142,29 @@ def test_f036_r22_prioridad_3_sin_volumen_manda_la_resta():
     ]
 
 
+def test_f036_r22_la_resta_de_un_solo_contenedor_ya_cuenta():
+    """El BORDE de la resta: 1 contenedor si se valora.
+
+    La suite cubria la resta 2 (arriba), la 0 y la negativa; el 1 —el
+    limite exacto del `>= 1`— no lo cubria nadie, y es el caso mas
+    corriente del gestor: deja un contenedor en obra y no retira
+    ninguno. Con el corte movido a `> 1` (o a `>= 2`) esa linea sale
+    sin cantidad, sin importe y con `residuos_sin_volumen_m3`: el
+    albaran se queda sin valorar y nadie dice por que.
+    """
+    res = calcular_contenedores_residuos(
+        contexto_linea=_Ctx(
+            contenedores_entregados=1.0, contenedores_retirados=0.0
+        ),
+        contrato_lines=CONTRATO_6,
+    )
+
+    assert res.num_contenedores == 1
+    assert res.reasons == [
+        "residuos_contenedores_resta=1 (llevadas 1 - retiradas 0)"
+    ]
+
+
 @pytest.mark.parametrize(
     ("entregados", "retirados"),
     [

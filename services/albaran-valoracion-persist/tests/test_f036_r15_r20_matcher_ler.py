@@ -207,3 +207,30 @@ def test_f036_r20_el_incremento_de_residuos_del_hormigon_sigue_casando():
 
     assert resultado.matched_line is not None
     assert resultado.matched_line.contrato_line_id == 9100
+
+
+def test_f036_r20_el_predicado_casa_el_ler_escrito_con_separadores():
+    """El contrato escribe el LER en su grafia canonica: "17 09 04".
+
+    El predicado tiene dos vias —normalizar el LER de la linea de
+    contrato, o buscar los seis digitos pegados dentro del texto— y la
+    suite solo ejercitaba la segunda, porque en el catalogo de
+    SALMEDINA los incrementos van pegados ("INCREMENTO LER 170904").
+    Con la grafia por pares la comparacion literal falla y lo unico que
+    salva el match es la normalizacion. Un contrato asi es normal: es
+    como la Decision 2014/955/UE escribe los codigos.
+    """
+    espaciado = INCREMENTO_170904.model_copy(
+        update={
+            "contrato_line_id": 9200,
+            "descripcion": "INCREMENTO LER 17 09 04 RESIDUOS MEZCLADOS",
+        }
+    )
+    resultado = _matcher().match(
+        synthetic_line=_sintetica("INCREMENTO LER 170904"),
+        base_partida=espaciado.codigo_partida,
+        contrato_lines=[CONTENEDOR_6, espaciado],
+    )
+
+    assert resultado.matched_line is not None
+    assert resultado.matched_line.contrato_line_id == 9200

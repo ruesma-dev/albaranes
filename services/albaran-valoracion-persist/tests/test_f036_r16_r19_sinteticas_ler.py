@@ -152,6 +152,26 @@ def test_f036_r21_sin_tarifa_para_ese_ler_devuelve_none():
     assert tarifa_incremento_ler([], "170802") is None
 
 
+def test_f036_r21_sin_codigo_ler_no_se_cuela_la_tarifa_de_otra_linea():
+    """Sin LER que buscar la respuesta es `None`, no "la primera".
+
+    La guarda de entrada corta ANTES del recorrido, y tiene que cortar
+    por CUALQUIERA de las dos causas (sin LER, o sin lineas de
+    contrato). Si solo cortara cuando faltan las dos, con `codigo_ler`
+    nulo el bucle compararia `es_linea_incremento_ler(desc) == None` y
+    la primera linea que NO sea un incremento por LER casaria por
+    `None == None`: el MOVIMIENTO DE CONTENEDOR entraria como tarifa
+    del incremento y la sintetica saldria a 120 EUR en vez de sin
+    precio.
+    """
+    from application.services.residuos_incrementos import (
+        tarifa_incremento_ler,
+    )
+
+    for codigo in (None, "", "192137"):
+        assert tarifa_incremento_ler(CONTRATO_SALMEDINA, codigo) is None, codigo
+
+
 def test_f036_r21_la_regla_del_ler_produce_la_sintetica_completa():
     """La regla es autonoma: devuelve el DTO ya listo para el builder."""
     from application.services.residuos_incrementos import (
@@ -458,6 +478,76 @@ def test_f036_r17_la_sintetica_sin_tarifa_lleva_su_razon_y_va_a_revision():
 
     assert "residuos_ler_sin_tarifa_en_contrato" in syn.review_reasons
     assert syn.review_required is True
+
+
+def test_f036_r17_la_sintetica_CON_tarifa_no_lleva_la_razon_de_sin_tarifa():
+    """El motivo es del caso SIN tarifa, y SOLO de ese.
+
+    Con el contrato de SALMEDINA cargado la sintetica sale valorada a
+    51 EUR. Ponerle igualmente "el contrato no tarifa ese LER" mandaria
+    a revision una linea que no la necesita y le pediria al revisor un
+    importe que ya esta puesto: el motivo dejaria de significar nada.
+    La suite comprobaba el caso sin tarifa, nunca el contrario.
+    """
+    from application.services.residuos_incrementos import RAZON_SIN_TARIFA
+
+    _, registros = valorar(EscenarioResiduos())
+    syn = sinteticas_de(registros)[0]
+
+    assert syn.precio_unitario_final == pytest.approx(51.0)
+    assert RAZON_SIN_TARIFA not in syn.review_reasons
+
+
+def test_f036_r17_el_dto_de_la_red_separa_el_con_tarifa_del_sin_tarifa(caplog):
+    """Los cuatro campos del DTO que dependen de si HAY tarifa.
+
+    `match_method` y `matched_contrato_line_id` ya estaban cubiertos
+    por los tests de R17 de mas abajo; `match_confidence_pct` (90 / 0),
+    el sufijo de `razon_corta` —lo unico que le dice al revisor que el
+    importe lo tiene que poner el— y la traza de operacion no lo
+    estaban. Invertir cualquiera de esas tres condiciones no rompia
+    ningun test, y las tres las lee alguien: el confidence lo pinta sv4
+    en la ficha, la razon corta la lee el revisor y la traza la lee
+    quien diagnostica una valoracion rara.
+    """
+    import logging
+
+    from application.services import residuos_incrementos as ri
+
+    def _dto(tarifa):
+        return ri.dto_red_residuos(
+            base=_base(),
+            rol="incremento_residuos",
+            descripcion="INCREMENTO LER 170802",
+            motivo="el contrato tarifa el LER 170802",
+            etiqueta="LER 170802",
+            tarifa=tarifa,
+        )
+
+    with caplog.at_level(logging.INFO):
+        con_tarifa = _dto(INCREMENTO_170802)
+        sin_tarifa = _dto(None)
+
+    assert con_tarifa.match_confidence_pct == pytest.approx(90.0)
+    assert con_tarifa.match_method == "semantic"
+    assert (
+        con_tarifa.matched_contrato_line_id
+        == INCREMENTO_170802.contrato_line_id
+    )
+    assert "no tarifa ese LER" not in (con_tarifa.razon_corta or "")
+
+    assert sin_tarifa.match_confidence_pct == pytest.approx(0.0)
+    assert sin_tarifa.match_method == "no_match"
+    assert sin_tarifa.matched_contrato_line_id is None
+    assert "no tarifa ese LER" in (sin_tarifa.razon_corta or "")
+
+    trazas = [
+        r.getMessage() for r in caplog.records
+        if "[builder][red-residuos]" in r.getMessage()
+    ]
+    assert len(trazas) == 2, trazas
+    assert "tarifa=si" in trazas[0]
+    assert "tarifa=no" in trazas[1]
 
 
 def test_f036_r17_el_total_del_documento_no_se_mueve():
