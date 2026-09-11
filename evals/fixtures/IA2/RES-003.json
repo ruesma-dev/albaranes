@@ -1,0 +1,32 @@
+{
+  "caso_id": "RES-003",
+  "fase": "IA2",
+  "libro": "IA2_contexto.xlsx",
+  "sha256_libro": "2d20cf72a315dcb421baa3df03508282b9eb207bd7f9c17d71c10c29cfe7accb",
+  "tablas": {
+    "contexto": [
+      {
+        "campo_contexto": "tipo_familia",
+        "caso_id": "RES-003",
+        "comentario": "Familia de linea del catalogo unico: el documento es de gestion de residuos (RCD).",
+        "num_linea": 1,
+        "valor_esperado": "residuos"
+      },
+      {
+        "campo_contexto": "codigo_ler",
+        "caso_id": "RES-003",
+        "comentario": "Fila marcada en la rejilla del papel: 17 08 02. Normalizado segun el LEEME de IA2 y el contrato de contexto_linea: 6 digitos, sin espacios ni puntos.",
+        "num_linea": 1,
+        "valor_esperado": "170802"
+      },
+      {
+        "campo_contexto": "volumen_m3",
+        "caso_id": "RES-003",
+        "comentario": "El 6 manuscrito en la columna VOL. m3. Es la CAPACIDAD del contenedor (§8.1), no una cantidad de material.",
+        "num_linea": 1,
+        "valor_esperado": 6
+      }
+    ]
+  },
+  "tipologia": "Residuos"
+}

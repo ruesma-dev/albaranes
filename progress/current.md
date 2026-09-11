@@ -415,24 +415,39 @@ por el humano el 2026-08-25.
 
 ---
 
-## BLOQUEO abierto · IA1/IA2 del lote SALMEDINA (2026-09-11)
+## IA1/IA2 del lote SALMEDINA: HECHO (2026-09-11)
 
-Encargo: rellenar `IA1_extraccion.xlsx` e `IA2_contexto.xlsx` con los siete
-albaranes de SALMEDINA. **Parado antes de escribir en los libros.**
+Banco de evals completo en las fases IA1 e IA2 con los siete albaranes de
+SALMEDINA. **Indices: IA1 0 -> 7, IA2 0 -> 7.** Informe:
+`progress/impl_F-043_evals_ia1_ia2.md`.
 
-Motivo: el Excel de negocio da la vista **valorada** (1 UD, conceptos del
-contrato, precios de contrato, obra 687/691) y el `LEEME` de IA1 pide la vista
-**impresa**. Leidos los siete PDF: son documentos de control de residuos con una
-rejilla LER y un volumen a mano; no imprimen conceptos, ni precios, ni codigo de
-obra. Cuatro decisiones quedan en manos del humano (nº de lineas, cantidad/unidad,
-descripcion y obra_codigo).
+Se hizo con la **Opcion A** que decidio el humano: IA1 mide LO IMPRESO. Los
+siete PDF no son albaranes comerciales, son el documento de control de residuos
+(RD 553/2020) con una rejilla LER preimpresa y el volumen a mano; no imprimen
+concepto, ni precio, ni codigo de obra. Lo que el Excel de negocio pone en esas
+columnas es la vista ya valorada.
 
-Hecho y no revertido: los siete PDF movidos a `evals/inputs/albaranes/<caso_id>.pdf`
-(la ruta que usa el runner), comprobados como ignorados por git.
+Tres cosas que arrastrar:
 
-Hallazgos que piden decision: `SS-0801977` de RES-005 es una mala lectura, el
-papel imprime `SS-0001977`; y hay un PDF preexistente en el indice de git
-(`services/albaranes-api/worker_input/0695 - Albaranes 2026.03.09-13-16.pdf`).
+1. **`SS-0801977` -> `SS-0001977`** en RES-005: el papel lo imprime asi y el
+   numero anterior era una mala lectura del sistema. Corregido en los cuatro
+   sitios del banco. `progress/impl_F-043_evals_banco.md` queda **superado en
+   ese punto** (sigue citando el numero viejo; no se reescribe el pasado). La
+   **BBDD local no se toco** y sigue guardando `SS-0801977`: la divergencia
+   queda escrita en el comentario del caso.
+2. **IA1 e IA2 daran 35 fallos falsos** (14 + 21) hasta que se les pase su lista
+   de `observables` en `evals/runner.py:306`, como ya hacen IA3 e IA4: hoy
+   comparan tambien las columnas de papeleo (`caso_id`, `fichero_albaran`). Es
+   una linea, pero es diseno del banco y lo decide el humano. El defecto estaba
+   tapado por tener los libros vacios.
+3. **Sigue abierto** el agujero de `impl_F-043_evals_banco.md` §5: las
+   CONDICIONES no se propagan al `contexto_linea` y los importes salen x6. Es lo
+   unico que impide el verde de T30.
 
-Detalle y las dos opciones cerradas para decidir en un mensaje:
-`progress/impl_F-043_evals_ia1_ia2.md` (§4 y §12).
+Verificado: conversor con 0 hallazgos del barrido, runner determinista con
+**diff vacio** contra la linea base (la siembra no mueve nada), `init.sh` en
+verde, ningun `.xlsx` ni `.pdf` en el indice de git. Cero llamadas a LLM.
+
+Aparte y sin tocar: hay **un PDF preexistente en el indice**,
+`services/albaranes-api/worker_input/0695 - Albaranes 2026.03.09-13-16.pdf`,
+entrado con la importacion de `albaranes-api` (`df01ef4`).

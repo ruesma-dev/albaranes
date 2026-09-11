@@ -1,0 +1,37 @@
+{
+  "caso_id": "RES-006",
+  "fase": "IA1",
+  "libro": "IA1_extraccion.xlsx",
+  "sha256_libro": "e93e047be1e7a408809df4b1e51d5942120b88a3c6c53d01858f676a40997947",
+  "tablas": {
+    "cabeceras": [
+      {
+        "caso_id": "RES-006",
+        "comentario": "Documento de control de residuos (Art. 6 RD 553/2020): rejilla LER preimpresa y volumen escrito a mano. No imprime codigo de obra (687/691 son de Sigrid) ni forma de pago, y la casilla CIF/NIF esta vacia. obra_nombre va '?' porque el papel solo trae la direccion de obra manuscrita, distinta en cada albaran, y es campo critico: exigir una transcripcion exacta de la caligrafia seria una moneda al aire. proveedor_cif va '?': el unico CIF visible (B-82899550) esta dentro del sello de SALMEDINA TRI, no en la cabecera del documento.",
+        "fecha": "2024-11-05",
+        "fichero_albaran": "RES-006.pdf",
+        "forma_pago": null,
+        "numero_albaran": "SS-0025146",
+        "obra_codigo": null,
+        "obra_nombre": "@@NO_COMPARAR@@",
+        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_nombre": "SALMEDINA TRATAMIENTO DE RESIDUOS INERTES, S.L."
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad": 6,
+        "caso_id": "RES-006",
+        "codigo_imputacion": null,
+        "comentario": "Fila LER 17 09 04 'Mat. Mezclados', con 6 manuscrito en la columna VOL. m3. Sin precio ni importe: el Excel de negocio declara que vienen del CONTRATO (de la OFERTA en RES-007), nunca del albaran. unidad vacia: el papel no escribe unidad en la linea (el m3 es el rotulo de la columna) y F-024 fijo unidad_medida null en los siete. Sin codigo_imputacion: CI.03A.7 es de Sigrid, no del papel. El incremento por LER NO se extrae aqui: es sintetica de IA3.",
+        "descripcion_esperada": "Mat. Mezclados",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "precio_unitario": null,
+        "unidad": null
+      }
+    ]
+  },
+  "tipologia": "Residuos"
+}

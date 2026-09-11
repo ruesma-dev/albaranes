@@ -2,18 +2,18 @@
   "caso_id": "RES-005",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "7128201b65cc083a4b4f74e7302e29ce0a345f07c34c016a5769de108703600e",
+  "sha256_libro": "42b17f99ec6a6f157a8661bfd542877f2f12dc6b74a476cd43e946640a880687",
   "tablas": {
     "datos_generales": [
       {
         "caso_id": "RES-005",
         "cif": "B82899550",
-        "comentario": "SS-0801977 · 210,00 €. §8.5: el Excel lo numera '1977'; se usa el numero que leyo el sistema, SS-0801977.",
+        "comentario": "SS-0001977 · 210,00 €. Numero corregido el 2026-09-11 contra el PDF: el papel imprime SS-0001977 (el Excel lo numera '1977'). SS-0801977 era una mala lectura del sistema; la BBDD local sigue guardando el documento como SS-0801977 y por eso diverge del banco (§8.5).",
         "contrato_elegido": "CTSU24/0228",
         "fecha": "2024-07-18",
         "fichero": null,
         "motivo_revision": null,
-        "numero_albaran": "SS-0801977",
+        "numero_albaran": "SS-0001977",
         "obra": "687",
         "proveedor": "SALMEDINA TRATAMIENTO DE RESIDUOS INERTES, S.L.",
         "requiere_revision": "@@NO_COMPARAR@@",

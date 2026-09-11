@@ -2,7 +2,7 @@
   "caso_id": "RES-001",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "b6dacbe169a76b3f807b403e8b3697a7c8c5982d21260f998c8527f40fd79654",
+  "sha256_libro": "9e586929015fa794caa356809ae20e7b6d094e016cd648991a10eaf566c16344",
   "tablas": {
     "caso": [
       {

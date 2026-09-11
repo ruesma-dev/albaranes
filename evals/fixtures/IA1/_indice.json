@@ -1,6 +1,14 @@
 {
-  "casos": [],
+  "casos": [
+    "RES-001",
+    "RES-002",
+    "RES-003",
+    "RES-004",
+    "RES-005",
+    "RES-006",
+    "RES-007"
+  ],
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "5ca7e9cd6f16964c3778073a7d2d64ad828835993d7981ef1e13d533437b3e91"
+  "sha256_libro": "e93e047be1e7a408809df4b1e51d5942120b88a3c6c53d01858f676a40997947"
 }

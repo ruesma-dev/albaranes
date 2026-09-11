@@ -2,13 +2,13 @@
   "caso_id": "RES-005",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "b6dacbe169a76b3f807b403e8b3697a7c8c5982d21260f998c8527f40fd79654",
+  "sha256_libro": "9e586929015fa794caa356809ae20e7b6d094e016cd648991a10eaf566c16344",
   "tablas": {
     "caso": [
       {
         "caso_id": "RES-005",
         "contrato_codigo": "CTSU24/0228",
-        "descripcion_caso": "SS-0801977 · 210,00 €. §8.5: el Excel lo numera '1977'; se usa el numero que leyo el sistema, SS-0801977.",
+        "descripcion_caso": "SS-0001977 · 210,00 €. Numero corregido el 2026-09-11 contra el PDF: el papel imprime SS-0001977 (el Excel lo numera '1977'). SS-0801977 era una mala lectura del sistema; la BBDD local sigue guardando el documento como SS-0801977 y por eso diverge del banco (§8.5).",
         "ia_destino": "IA3",
         "origen": "manual",
         "tipologia": "Residuos"
@@ -25,7 +25,7 @@
         "campo": "numero_albaran",
         "caso_id": "RES-005",
         "comentario": "numero leido por el sistema",
-        "valor": "SS-0801977"
+        "valor": "SS-0001977"
       },
       {
         "campo": "codigo_ler",
