@@ -222,6 +222,23 @@ def test_f043_t31_el_contexto_trae_los_tres_campos_que_usan_las_puertas():
     assert ctx.volumen_m3 == pytest.approx(6.0)  # nº de contenedores
 
 
+def test_f043_t31_basta_con_que_UNA_linea_traiga_contexto():
+    """Un albaran mixto: la linea 2 no es de familia compleja y llega sin
+    contexto. Eso no puede impedir que se escriba el de la linea 1."""
+    envelope = _envelope()
+    envelope["data"]["lineas"].append(
+        {"codigo": "ZZ", "concepto": "Otra cosa", "cantidad": 1.0},
+    )
+    repo = RepoDuplicadoFake()
+
+    _run(repo, envelope)
+
+    lineas = repo.contextos[0][1]
+    assert len(lineas) == 2
+    assert lineas[0].contexto_linea is not None
+    assert lineas[1].contexto_linea is None
+
+
 def test_f043_t31_lo_escribe_antes_de_disparar_la_valoracion():
     """Orden obligatorio: sv6 valora leyendo el merge. Escribir el
     contexto DESPUES del trigger es una carrera que sv6 pierde."""
@@ -321,6 +338,7 @@ class _SesionFake:
     def __init__(self, lineas: list[_LineaOrmFake]) -> None:
         self.lineas = lineas
         self.commits = 0
+        self.sentencias: list[str] = []
 
     def __enter__(self):
         return self
@@ -328,7 +346,8 @@ class _SesionFake:
     def __exit__(self, *_exc) -> bool:
         return False
 
-    def scalars(self, _stmt):
+    def scalars(self, stmt):
+        self.sentencias.append(str(stmt))
         return self
 
     def all(self):
