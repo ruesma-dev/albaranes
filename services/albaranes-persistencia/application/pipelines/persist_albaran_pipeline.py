@@ -105,6 +105,17 @@ class PersistAlbaranPipeline:
                 sha256,
                 existing.document_id,
             )
+            # (F-043 · R22, T31) La clasificación que trae ESTE envelope
+            # va a las seis columnas del merge ANTES de re-enriquecer y,
+            # sobre todo, antes de disparar la valoración: sv6 las lee
+            # para abrir sus puertas de familia. `save()` no corre en
+            # esta rama, así que sin esto un documento ya persistido se
+            # queda a NULL aunque sv2 lo hubiera clasificado (el caso
+            # REAL SS-0003967 del 2026-09-11).
+            self._persist_clasificacion_safely(
+                merge_document_id=existing.document_id,
+                clasificacion=envelope.data.clasificacion,
+            )
             # Re-enriquecer para idempotencia: si la BBDD on-prem cambió,
             # el merge se actualiza. No duplica contratos (replace).
             self._resolve_header_deterministic_safely(
@@ -227,6 +238,60 @@ class PersistAlbaranPipeline:
             contratos_count=contratos_count,
             selected_contrato_codigo=selected_codigo,
         )
+
+    def _persist_clasificacion_safely(
+        self,
+        *,
+        merge_document_id: str,
+        clasificacion: Any,
+    ) -> None:
+        """Vuelca la clasificación del envelope al merge ya existente.
+
+        Sin clasificación no hay nada que hacer y se dice en el log: un
+        envelope anterior a F-043 deja las columnas como están (R27), y
+        sv3 NO infiere la familia por LER, producto, texto ni CIF.
+
+        Best-effort, como el resto de pasos de esta rama: un fallo aquí
+        no puede tumbar el re-proceso del albarán. Pero deja WARNING (no
+        DEBUG) porque su consecuencia es que sv5/sv6 valoren sin familia.
+        """
+        if clasificacion is None:
+            logger.info(
+                "[clasificacion][pipeline] el envelope no trae "
+                "clasificación; las columnas se quedan como estaban. "
+                "document_id=%s",
+                merge_document_id,
+            )
+            return
+        escribir = getattr(
+            self._repository, "update_merge_clasificacion", None,
+        )
+        if not callable(escribir):
+            logger.warning(
+                "[clasificacion][pipeline] SKIP: el repositorio no sabe "
+                "escribirla. document_id=%s",
+                merge_document_id,
+            )
+            return
+        try:
+            escribir(
+                document_id=merge_document_id,
+                clasificacion=clasificacion,
+            )
+            logger.info(
+                "[clasificacion][pipeline] OK document_id=%s familia=%s "
+                "confianza=%s origen=%s",
+                merge_document_id,
+                getattr(clasificacion, "familia", None),
+                getattr(clasificacion, "confianza_pct", None),
+                getattr(clasificacion, "origen", None),
+            )
+        except Exception:
+            logger.exception(
+                "[clasificacion][pipeline] step falló; se continúa, pero "
+                "sv5/sv6 valorarán sin familia. document_id=%s",
+                merge_document_id,
+            )
 
     def _resolve_header_deterministic_safely(
         self, *, merge_document_id: str,

@@ -789,6 +789,55 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
             stored_lines=len(merge_analysis.line_results),
         )
 
+    def update_merge_clasificacion(
+        self,
+        *,
+        document_id: str,
+        clasificacion: ClasificacionAlbaran | None,
+    ) -> bool:
+        """Escribe las seis columnas ``tipologia*`` de un merge EXISTENTE.
+
+        ``save`` solo corre cuando el documento es nuevo. Un PDF ya
+        persistido —re-publicar el mensaje en ``q-persistencia``, un
+        re-proceso, el mismo adjunto que vuelve— entra por la rama de
+        duplicado del pipeline, que re-enriquece pero no guarda: por eso
+        el caso REAL SS-0003967 acabó con las seis columnas a NULL aunque
+        sv2 había sellado ``residuos`` al 100 % (F-043 · R22, T31).
+
+        ``clasificacion=None`` es un NO-OP deliberado (R27): un envelope
+        sin clasificación deja las columnas como estaban. NO se infiere
+        la familia por LER, producto, texto ni CIF: eso lo decide la IA.
+
+        Devuelve ``True`` si escribió, ``False`` si no había nada que
+        escribir o el documento no existe.
+        """
+        campos = campos_clasificacion_merge(clasificacion)
+        if not campos:
+            return False
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            document = session.get(AlbaranDocumentMergeOrm, document_id)
+            if document is None:
+                logger.warning(
+                    "[clasificacion][repo] merge %s no existe; no se "
+                    "escribe la clasificación.",
+                    document_id,
+                )
+                return False
+            for columna, valor in campos.items():
+                setattr(document, columna, valor)
+            session.commit()
+        logger.info(
+            "[clasificacion][repo] doc=%s tipologia=%s confianza=%s "
+            "origen=%s mixta=%s",
+            document_id,
+            campos["tipologia"],
+            campos["tipologia_confianza_pct"],
+            campos["tipologia_origen"],
+            campos["tipologia_mixta"],
+        )
+        return True
+
     # ================================================================== #
     # Puerto ObraMergeRepository (cumplido por duck-typing)
     # ================================================================== #
