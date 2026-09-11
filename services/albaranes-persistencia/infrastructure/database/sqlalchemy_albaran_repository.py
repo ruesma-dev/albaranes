@@ -838,6 +838,79 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
         )
         return True
 
+    def update_merge_lineas_contexto(
+        self,
+        *,
+        document_id: str,
+        lineas: list[LineaAlbaran] | list[Any],
+    ) -> int:
+        """Escribe el ``contexto_linea`` de las líneas de un merge EXISTENTE.
+
+        Hermana de ``update_merge_clasificacion`` y por el mismo motivo:
+        ``save`` —donde ``_build_lines`` serializa el contexto— solo
+        corre cuando el documento es nuevo. Un PDF ya persistido entra
+        por la rama de duplicado, que no guarda, así que el contexto que
+        IA2 acaba de emitir se perdía y la fila del merge se quedaba con
+        el ``contexto_linea_json`` de la primera vez (NULL, si entonces
+        no hubo fase 2 de familia).
+
+        Es el dato del que cuelga TODA la maquinaria de residuos de sv6:
+        ``volumen_m3`` para contar contenedores y ``codigo_ler`` para
+        inyectar el incremento. El caso REAL SS-0003967 del 2026-09-11
+        salió en 720,00 EUR (6 m3 × 120) en vez de 210,00 por esto,
+        con la clasificación del documento correctamente puesta.
+
+        Reglas, todas conservadoras:
+
+        * se empareja por POSICIÓN (la línea n del sobre con la fila
+          ``line_index = n``, que es como las numera ``_build_lines``) y
+          solo si el sobre y el merge tienen el MISMO número de líneas;
+          si no cuadran no se escribe nada y se avisa: meter el contexto
+          de otra línea es peor que no meter ninguno;
+        * un contexto ``None`` NO pisa lo que hubiera escrito: esto
+          enriquece, no destruye (R27);
+        * no se toca ningún otro campo de la línea — cantidad, concepto
+          y precios son el dato del albarán y de la revisión humana.
+
+        Devuelve cuántas filas se escribieron.
+        """
+        contextos = [
+            _dump_contexto_linea(getattr(linea, "contexto_linea", None))
+            for linea in lineas
+        ]
+        if not any(contextos):
+            return 0
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            filas = session.scalars(
+                select(AlbaranLineMergeOrm)
+                .where(AlbaranLineMergeOrm.document_id == document_id)
+                .order_by(AlbaranLineMergeOrm.line_index)
+            ).all()
+            if len(filas) != len(contextos):
+                logger.warning(
+                    "[contexto-linea][repo] doc=%s el sobre trae %s "
+                    "líneas y el merge tiene %s; no se emparejan a "
+                    "ciegas y no se escribe nada.",
+                    document_id, len(contextos), len(filas),
+                )
+                return 0
+            escritas = 0
+            for fila, contexto_json in zip(filas, contextos):
+                if contexto_json is None:
+                    continue
+                if fila.contexto_linea_json == contexto_json:
+                    continue
+                fila.contexto_linea_json = contexto_json
+                escritas += 1
+            if escritas:
+                session.commit()
+        logger.info(
+            "[contexto-linea][repo] doc=%s líneas=%s actualizadas=%s",
+            document_id, len(contextos), escritas,
+        )
+        return escritas
+
     # ================================================================== #
     # Puerto ObraMergeRepository (cumplido por duck-typing)
     # ================================================================== #

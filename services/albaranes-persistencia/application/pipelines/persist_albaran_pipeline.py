@@ -116,6 +116,15 @@ class PersistAlbaranPipeline:
                 merge_document_id=existing.document_id,
                 clasificacion=envelope.data.clasificacion,
             )
+            # (F-043 · T31) Y el contexto de cada LÍNEA, por lo mismo y
+            # antes que nada: `volumen_m3` y `codigo_ler` son de lo que
+            # cuelga la maquinaria de residuos de sv6. Con la familia
+            # del documento puesta pero el contexto perdido, SS-0003967
+            # se valoró en 720,00 EUR (6 m3 × 120) en vez de 210,00.
+            self._persist_contexto_lineas_safely(
+                merge_document_id=existing.document_id,
+                lineas=envelope.data.lineas,
+            )
             # Re-enriquecer para idempotencia: si la BBDD on-prem cambió,
             # el merge se actualiza. No duplica contratos (replace).
             self._resolve_header_deterministic_safely(
@@ -290,6 +299,64 @@ class PersistAlbaranPipeline:
             logger.exception(
                 "[clasificacion][pipeline] step falló; se continúa, pero "
                 "sv5/sv6 valorarán sin familia. document_id=%s",
+                merge_document_id,
+            )
+
+    def _persist_contexto_lineas_safely(
+        self,
+        *,
+        merge_document_id: str,
+        lineas: Any,
+    ) -> None:
+        """Vuelca el ``contexto_linea`` de cada línea al merge existente.
+
+        Hermana de ``_persist_clasificacion_safely``: misma rama, mismo
+        motivo (``save`` no corre) y mismas reglas. Ninguna línea con
+        contexto es un NO-OP —no se infiere la familia por LER, texto ni
+        CIF— y el repositorio nunca pisa un contexto ya escrito con un
+        ``None``.
+
+        Best-effort, pero con WARNING: la consecuencia de saltárselo es
+        que sv6 abra la puerta de residuos y no tenga con qué contar
+        contenedores ni qué incremento inyectar.
+        """
+        lineas = list(lineas or [])
+        if not any(
+            getattr(linea, "contexto_linea", None) is not None
+            for linea in lineas
+        ):
+            logger.info(
+                "[contexto-linea][pipeline] ninguna línea del envelope "
+                "trae contexto; el merge se queda como estaba. "
+                "document_id=%s",
+                merge_document_id,
+            )
+            return
+        escribir = getattr(
+            self._repository, "update_merge_lineas_contexto", None,
+        )
+        if not callable(escribir):
+            logger.warning(
+                "[contexto-linea][pipeline] SKIP: el repositorio no sabe "
+                "escribirlo. document_id=%s",
+                merge_document_id,
+            )
+            return
+        try:
+            escritas = escribir(
+                document_id=merge_document_id,
+                lineas=lineas,
+            )
+            logger.info(
+                "[contexto-linea][pipeline] OK document_id=%s "
+                "lineas_actualizadas=%s",
+                merge_document_id,
+                escritas,
+            )
+        except Exception:
+            logger.exception(
+                "[contexto-linea][pipeline] step falló; se continúa, "
+                "pero sv6 valorará sin contexto de línea. document_id=%s",
                 merge_document_id,
             )
 
