@@ -279,3 +279,108 @@ def test_f043_r22_un_repositorio_sin_el_metodo_no_rompe_el_duplicado():
 
     assert resultado.ok is True
     assert resultado.duplicate is True
+
+
+# ------------------------------------------------------------------ #
+# La escritura en si (repositorio), sin BBDD.
+# ------------------------------------------------------------------ #
+
+class _SesionFake:
+    """Lo justo que usa ``update_merge_clasificacion``."""
+
+    def __init__(self, documento) -> None:
+        self.documento = documento
+        self.commits = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_exc) -> bool:
+        return False
+
+    def get(self, _orm, _document_id):
+        return self.documento
+
+    def commit(self) -> None:
+        self.commits += 1
+
+
+class _FabricaSesionFake:
+    """Fábrica de sesiones sin BBDD, ya «inicializada» (no hay DDL)."""
+
+    generation = 1
+
+    def __init__(self, documento) -> None:
+        self.sesion = _SesionFake(documento)
+
+    def ensure_database_and_engine(self) -> None:
+        return None
+
+    def create_session(self):
+        return self.sesion
+
+
+def _repositorio(documento):
+    from infrastructure.database.sqlalchemy_albaran_repository import (
+        SqlAlchemyAlbaranRepository,
+    )
+
+    fabrica = _FabricaSesionFake(documento)
+    repo = SqlAlchemyAlbaranRepository(fabrica)
+    # El DDL no pinta en un test sin BBDD: se da por aplicado.
+    repo._initialized_generation = fabrica.generation
+    return repo, fabrica
+
+
+class _MergeOrmFake:
+    tipologia = None
+    tipologia_confianza_pct = None
+    tipologia_motivo = None
+    tipologia_origen = None
+    tipologia_mixta = None
+    tipologia_secundarias_json = None
+
+
+def _clasificacion_de(envelope: dict):
+    from domain.models.extraction_models import ExtractionEnvelope
+
+    return ExtractionEnvelope.model_validate(envelope).data.clasificacion
+
+
+def test_f043_r22_update_merge_clasificacion_escribe_las_seis_columnas():
+    documento = _MergeOrmFake()
+    repo, fabrica = _repositorio(documento)
+
+    assert repo.update_merge_clasificacion(
+        document_id=_MERGE_ID,
+        clasificacion=_clasificacion_de(_envelope()),
+    ) is True
+    assert documento.tipologia == "residuos"
+    assert documento.tipologia_confianza_pct == 100.0
+    assert documento.tipologia_origen == "ia2"
+    assert documento.tipologia_mixta is False
+    assert documento.tipologia_secundarias_json == "[]"
+    assert fabrica.sesion.commits == 1
+
+
+def test_f043_r27_update_merge_clasificacion_sin_clasificacion_no_escribe():
+    documento = _MergeOrmFake()
+    repo, fabrica = _repositorio(documento)
+
+    assert repo.update_merge_clasificacion(
+        document_id=_MERGE_ID,
+        clasificacion=None,
+    ) is False
+    assert documento.tipologia is None
+    assert fabrica.sesion.commits == 0
+
+
+def test_f043_r22_update_merge_clasificacion_con_merge_inexistente():
+    """Si el merge no está, no se inventa nada y tampoco revienta."""
+    repo, fabrica = _repositorio(None)
+
+    assert repo.update_merge_clasificacion(
+        document_id=_MERGE_ID,
+        clasificacion=_clasificacion_de(_envelope()),
+    ) is False
+    assert fabrica.sesion.commits == 0
