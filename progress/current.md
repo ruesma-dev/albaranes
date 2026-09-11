@@ -199,19 +199,45 @@ Lo que existe ahora y el bloque B ya puede usar:
 
 ### Las CUATRO verificaciones MANUAL del humano, con su comando
 
+> **Al 2026-09-11: T28 HECHA. Quedan T30, T31 y T32**, las tres del humano.
+> T30 se factura y sigue sin autorizar; T31 depende de re-extraer el albarán
+> por sv2; T32 es abrir la ficha en sv4. Con las tres, F-043 se puede cerrar
+> y **F-036 se desbloquea** (su T23 se apoya en esta misma campaña).
+
 Estaban solo nombradas aquí y sus comandos vivían en `tasks.md`. Copiados, con
 el criterio de verde de cada una. **T31 lleva su detalle largo en `tasks.md`**
 (cinco pasos) porque no cabe aquí sin repetirlo mal.
 
-- **T28 · campaña de mutación COMPLETA, sin tope, 0 supervivientes.**
-  `python -m harness.mutacion --feature F-043`.
-  **Verde**: informe `progress/mutacion_F-043.md` sin «⚠ CAMPAÑA NO VÁLIDA»,
-  «base rota» = 0 y **cero supervivientes** (o cada superviviente con test
-  nuevo o justificación escrita). **Ojo**: `--feature F-043` arrastra F-036
-  entera, porque esta rama sale de F-036 y no de `dev`. Rehacerla cierra
-  además el `[~]` de RM1 que dejó la review (el SHA medido en
-  `mutacion_F-043_bloque_A.md` ya no es HEAD). **No se lanza en paralelo con
-  nada**: muta el árbol principal.
+- ~~**T28 · campaña de mutación COMPLETA, sin tope, 0 supervivientes.**~~ →
+  **HECHA** el 2026-09-11. Informe:
+  `progress/impl_F-043_T28_supervivientes.md`. **No la relances: cuesta dos
+  horas y muta el árbol principal.**
+
+  La campaña corrió el 2026-09-10 (`progress/mutacion_F-043.md`, ya
+  versionado): 347 mutantes, **184 muertos y 163 supervivientes**, sin
+  muestreo, «base rota» = 0, sin «⚠ CAMPAÑA NO VÁLIDA». **Los 163
+  supervivientes quedan analizados; sin justificar: CERO.** 96 eran huecos
+  reales y se cerraron con tests nuevos (84 del catálogo LER, 8 de sv6, 4 de
+  sv4), 7 son equivalentes con su guarda, y 60 se justifican **en bloque**
+  —los dos `scripts/diagnose_sigrid_contrato_docs*.py`, con autorización
+  expresa del humano del 2026-09-10—, verificado que son ejecutables sueltos
+  que ningún servicio importa y que ninguna ruta de producción usa.
+
+  **Los 3 «timeouts» eran ruido de la máquina, no mutantes lentos**: los
+  mutantes 6, 7 y 9 de 347, con los 4 workers midiendo líneas base a la vez.
+  Reinyectados, los tres **matan la suite de su servicio en menos de 3,5 s**
+  frente al timeout de 275 s. Por eso el recuento real es 184/163/0.
+
+  Cuatro commits previos (`9568ac2`, `8f36c77`, `cd35efb`, `805cccb`) más
+  `78d1c6e` (las guardas de los seis equivalentes que faltaban: 1 en sv6 y 5
+  en sv4, estos últimos sin tocar por nadie hasta ahora) y `b114377`
+  (informe + fila en `inventario_mutacion_F-039.md`, que tenía `init.sh` en
+  rojo por el guardián de F-039 R2).
+
+  **Sigue abierto el `[~]` de RM1** que dejó la review: el SHA medido en
+  `mutacion_F-043_bloque_A.md` no es HEAD. La campaña de T28 sí midió
+  `48e3d17`, que tampoco es HEAD ya (hay 3 commits nuevos, todos de tests y
+  papeleo: ninguno toca código de producción).
 - **T30 · evals con LLM real. SE FACTURA y NO está autorizada** (duda 6: se
   decide al llegar, con número de casos, proveedores y coste delante).
   `python -m evals.runner --con-llm --feature F-043`.
@@ -265,6 +291,13 @@ por el humano el 2026-08-25.
 1. **T23** · `python -m harness.mutacion --feature F-036`, cero supervivientes o
    justificación escrita por superviviente (rigor `critico`). **La lanza el
    humano**: muta el árbol principal.
+   **Puede que ya no haga falta lanzarla.** La campaña de T28 de F-043
+   (`progress/mutacion_F-043.md`) muta **F-036 entera**, porque esta rama sale
+   de la de F-036 y no de `dev`: sus 38 ficheros de alcance incluyen los de
+   F-036, y sus 163 supervivientes quedan **todos** analizados —los grupos A,
+   B, D y G de `progress/impl_F-043_T28_supervivientes.md` son precisamente
+   código de F-036—. **Lo decide el humano**: aceptar esa medición como la
+   evidencia de T23, o exigir una campaña propia acotada al diff de F-036.
 2. **T24** · BBDD real en SOLO LECTURA, los 7 albaranes de SALMEDINA. **Añadir
    ahí**: comprobar que ninguna línea real escribe el incremento como
    `INCREMENTO 170802` —pegado y sin la palabra `LER`—, grafía que antes casaba y

@@ -50,7 +50,6 @@ Sin red, sin BBDD, sin LLM.
 from __future__ import annotations
 
 import pytest
-
 from tests.f027_escenarios import construir_builder
 
 #: Partida comun a la base y al contrato: la herencia de partida no es
