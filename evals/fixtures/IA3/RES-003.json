@@ -1,0 +1,37 @@
+{
+  "caso_id": "RES-003",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "198f070d16c69675710aa0e7aeee58e8a18de19d8e4a7c043e4bc875860e9958",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "RES-003",
+        "codigo_partida_final": "CI.03A.7",
+        "codigo_producto_contrato": "C1",
+        "comentario": null,
+        "importe_calculado": 120,
+        "match_method": "semantic",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 120,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [
+      {
+        "cantidad": 1,
+        "caso_id": "RES-003",
+        "codigo_partida": "CI.03A.7",
+        "comentario": "§8.3: el incremento esta cargado en el contrato y no se emitia.",
+        "descripcion_esperada": "INCREMENTO LER 170802",
+        "modifier_source": "gestion_residuos",
+        "num_linea_base": 1,
+        "precio_unitario": 51,
+        "rol_linea": "incremento_residuos"
+      }
+    ],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Residuos"
+}

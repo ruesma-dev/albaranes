@@ -1,0 +1,76 @@
+{
+  "caso_id": "RES-006",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "b6dacbe169a76b3f807b403e8b3697a7c8c5982d21260f998c8527f40fd79654",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "RES-006",
+        "contrato_codigo": "CTSU24/0402",
+        "descripcion_caso": "SS-0025146 · 136,00 €. §8.4: la obra es la 691 y el contrato el CTSU24/0402; el sistema puso 0623 (FALSO POSITIVO).",
+        "ia_destino": "IA3",
+        "origen": "manual",
+        "tipologia": "Residuos"
+      }
+    ],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "RES-006",
+        "comentario": "§1 del informe",
+        "valor": "2024-11-05"
+      },
+      {
+        "campo": "numero_albaran",
+        "caso_id": "RES-006",
+        "comentario": "numero leido por el sistema",
+        "valor": "SS-0025146"
+      },
+      {
+        "campo": "codigo_ler",
+        "caso_id": "RES-006",
+        "comentario": "LER del residuo (§1)",
+        "valor": "170904"
+      },
+      {
+        "campo": "volumen_m3",
+        "caso_id": "RES-006",
+        "comentario": "m3 impresos en el albaran = capacidad del contenedor",
+        "valor": "6"
+      },
+      {
+        "campo": "tamano_contenedor_contrato",
+        "caso_id": "RES-006",
+        "comentario": "m3 por contenedor que tarifa el contrato",
+        "valor": "6"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "RES-006",
+        "codigo_partida": "CI.03A.7",
+        "codigo_producto": "C1",
+        "comentario": "unica linea conocida del CTSU24/0402; no tarifa ningun incremento LER",
+        "descripcion_recurso": "CONTENEDOR RESIDUOS 6 M3",
+        "precio_unitario": 136,
+        "unidad": "UD"
+      }
+    ],
+    "lineas_albaran": [
+      {
+        "cantidad": 6,
+        "caso_id": "RES-006",
+        "codigo_imputacion": null,
+        "descripcion": "170904 RESIDUOS MEZCLADOS",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": "LER 170904. El numero de la linea (6) es la CAPACIDAD del contenedor, no una cantidad de material: la cantidad valorada es 1,00 UD (§8.1).",
+        "precio_unitario": null,
+        "unidad": null
+      }
+    ]
+  },
+  "tipologia": "Residuos"
+}

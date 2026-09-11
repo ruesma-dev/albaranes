@@ -1,6 +1,14 @@
 {
-  "casos": [],
+  "casos": [
+    "RES-001",
+    "RES-002",
+    "RES-003",
+    "RES-004",
+    "RES-005",
+    "RES-006",
+    "RES-007"
+  ],
   "fase": "IA3",
   "libro": "IA3_valoracion.xlsx",
-  "sha256_libro": "2f304a2578da72c69c8807cd968934362cb19705615ea2e83b6447943362a606"
+  "sha256_libro": "198f070d16c69675710aa0e7aeee58e8a18de19d8e4a7c043e4bc875860e9958"
 }

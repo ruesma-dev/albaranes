@@ -1,0 +1,76 @@
+{
+  "caso_id": "RES-007",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "b6dacbe169a76b3f807b403e8b3697a7c8c5982d21260f998c8527f40fd79654",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "RES-007",
+        "contrato_codigo": "CTSU24/0402",
+        "descripcion_caso": "SS-0026122 · 260,00 €. ROJO ESPERADO HASTA F-017, no es una regresion: la tarifa de 9 M3 (183 €) y su incremento (77 €) vienen de la OFERTA, no del contrato, y el comparativo como fuente de precio es F-017, que no esta hecha. Hoy el sistema prorratea 9/6 y da 272,00 € (§9.4). Decision del humano del 2026-09-11: el caso ENTRA con sus 260 € para que no se olvide.",
+        "ia_destino": "IA3",
+        "origen": "manual",
+        "tipologia": "Residuos"
+      }
+    ],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "RES-007",
+        "comentario": "§1 del informe",
+        "valor": "2024-11-05"
+      },
+      {
+        "campo": "numero_albaran",
+        "caso_id": "RES-007",
+        "comentario": "numero leido por el sistema",
+        "valor": "SS-0026122"
+      },
+      {
+        "campo": "codigo_ler",
+        "caso_id": "RES-007",
+        "comentario": "LER del residuo (§1)",
+        "valor": "170802"
+      },
+      {
+        "campo": "volumen_m3",
+        "caso_id": "RES-007",
+        "comentario": "m3 impresos en el albaran = capacidad del contenedor",
+        "valor": "9"
+      },
+      {
+        "campo": "tamano_contenedor_contrato",
+        "caso_id": "RES-007",
+        "comentario": "m3 por contenedor que tarifa el contrato",
+        "valor": "6"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "RES-007",
+        "codigo_partida": "CI.03A.7",
+        "codigo_producto": "C1",
+        "comentario": "unica linea conocida del CTSU24/0402; no tarifa ningun incremento LER",
+        "descripcion_recurso": "CONTENEDOR RESIDUOS 6 M3",
+        "precio_unitario": 136,
+        "unidad": "UD"
+      }
+    ],
+    "lineas_albaran": [
+      {
+        "cantidad": 9,
+        "caso_id": "RES-007",
+        "codigo_imputacion": null,
+        "descripcion": "170802 MATERIALES DE CONSTRUCCION A BASE DE YESO",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": "LER 170802. El numero de la linea (9) es la CAPACIDAD del contenedor, no una cantidad de material: la cantidad valorada es 1,00 UD (§8.1).",
+        "precio_unitario": null,
+        "unidad": null
+      }
+    ]
+  },
+  "tipologia": "Residuos"
+}

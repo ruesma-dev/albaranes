@@ -1,0 +1,121 @@
+{
+  "caso_id": "RES-003",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "b6dacbe169a76b3f807b403e8b3697a7c8c5982d21260f998c8527f40fd79654",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "RES-003",
+        "contrato_codigo": "CTSU24/0228",
+        "descripcion_caso": "SS-0000589 · 120 + INCR. LER 170802 (51 €) = 171,00 € (§8.3).",
+        "ia_destino": "IA3",
+        "origen": "manual",
+        "tipologia": "Residuos"
+      }
+    ],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "RES-003",
+        "comentario": "§1 del informe",
+        "valor": "2024-07-08"
+      },
+      {
+        "campo": "numero_albaran",
+        "caso_id": "RES-003",
+        "comentario": "numero leido por el sistema",
+        "valor": "SS-0000589"
+      },
+      {
+        "campo": "codigo_ler",
+        "caso_id": "RES-003",
+        "comentario": "LER del residuo (§1)",
+        "valor": "170802"
+      },
+      {
+        "campo": "volumen_m3",
+        "caso_id": "RES-003",
+        "comentario": "m3 impresos en el albaran = capacidad del contenedor",
+        "valor": "6"
+      },
+      {
+        "campo": "tamano_contenedor_contrato",
+        "caso_id": "RES-003",
+        "comentario": "m3 por contenedor que tarifa el contrato",
+        "valor": "6"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "RES-003",
+        "codigo_partida": "CI.03A.7",
+        "codigo_producto": "C1",
+        "comentario": "lo que valora el administrativo (§8.2)",
+        "descripcion_recurso": "CAMBIO CONTENEDOR 6M3",
+        "precio_unitario": 120,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-003",
+        "codigo_partida": "CI.03A.7",
+        "codigo_producto": "C2",
+        "comentario": "SEÑUELO: mismo precio que C1; el sistema caso aqui por error (§8.2)",
+        "descripcion_recurso": "LLEVADA CONTENEDOR 6M3",
+        "precio_unitario": 120,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-003",
+        "codigo_partida": null,
+        "codigo_producto": "C3",
+        "comentario": "incremento no usado por este lote; partida real no conocida",
+        "descripcion_recurso": "INCREMENTO LER 170202 VIDRIO",
+        "precio_unitario": 120,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-003",
+        "codigo_partida": null,
+        "codigo_producto": "C4",
+        "comentario": "incremento no usado por este lote; partida real no conocida",
+        "descripcion_recurso": "INCREMENTO LER 170302 MEZCLAS BITUMINOSAS",
+        "precio_unitario": 30,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-003",
+        "codigo_partida": "CI.03A.7",
+        "codigo_producto": "C5",
+        "comentario": "incremento del LER 170604 (§2.1, §8.3)",
+        "descripcion_recurso": "INCREMENTO LER 170604 MATERIALES DE AISLAMIENTO",
+        "precio_unitario": 90,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-003",
+        "codigo_partida": "CI.03A.7",
+        "codigo_producto": "C6",
+        "comentario": "incremento del LER 170802 (§2.1, §8.3)",
+        "descripcion_recurso": "INCREMENTO LER 170802 MATERIALES DE CONSTRUCCION A BASE DE YESO",
+        "precio_unitario": 51,
+        "unidad": "UD"
+      }
+    ],
+    "lineas_albaran": [
+      {
+        "cantidad": 6,
+        "caso_id": "RES-003",
+        "codigo_imputacion": null,
+        "descripcion": "170802 MATERIALES DE CONSTRUCCION A BASE DE YESO",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": "LER 170802. El numero de la linea (6) es la CAPACIDAD del contenedor, no una cantidad de material: la cantidad valorada es 1,00 UD (§8.1).",
+        "precio_unitario": null,
+        "unidad": null
+      }
+    ]
+  },
+  "tipologia": "Residuos"
+}

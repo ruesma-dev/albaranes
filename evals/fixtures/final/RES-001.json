@@ -1,0 +1,54 @@
+{
+  "caso_id": "RES-001",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "7128201b65cc083a4b4f74e7302e29ce0a345f07c34c016a5769de108703600e",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "RES-001",
+        "cif": "B82899550",
+        "comentario": "SS-0000168 · el unico que el humano valoro a mano. El total cuadra pero el sistema caso C2 (LLEVADA) donde el administrativo valora C1 (CAMBIO): se exige CONCEPTO y PARTIDA, no solo el total (§8.2).",
+        "contrato_elegido": "CTSU24/0228",
+        "fecha": "2024-07-03",
+        "fichero": null,
+        "motivo_revision": "la sintetica del incremento LER se emite sin precio: el contrato no lo tarifa (R16/R17)",
+        "numero_albaran": "SS-0000168",
+        "obra": "687",
+        "proveedor": "SALMEDINA TRATAMIENTO DE RESIDUOS INERTES, S.L.",
+        "requiere_revision": "SI",
+        "total_valorado_esperado": 120
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 1,
+        "casa_con_contrato": "SI",
+        "caso_id": "RES-001",
+        "comentario": "§8.2: 120 € correctos pero con el concepto equivocado. La partida esperada es CI.03A.7 y el sistema la dejo nula.",
+        "descripcion": "170201 MADERA",
+        "importe_final": 120,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "C1",
+        "num_linea": 1,
+        "partida_final": "CI.03A.7",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 120,
+        "unidad_final": "UD"
+      }
+    ],
+    "lineas_anadidas": [
+      {
+        "cantidad": 1,
+        "caso_id": "RES-001",
+        "comentario": "LER 170201 (madera) NO esta tarifado en CTSU24/0228: la sintetica se emite igual y SIN precio, para que el revisor lo ponga (R16/R17, decision del humano del 2026-08-22).",
+        "concepto": "INCREMENTO LER 170201",
+        "importe": "@@ESPERA_REVISION@@",
+        "num_linea_base": 1,
+        "partida": "CI.03A.7",
+        "precio_unitario": "@@ESPERA_REVISION@@"
+      }
+    ]
+  },
+  "tipologia": "Residuos"
+}

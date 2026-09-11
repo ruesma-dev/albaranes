@@ -1,6 +1,14 @@
 {
-  "casos": [],
+  "casos": [
+    "RES-001",
+    "RES-002",
+    "RES-003",
+    "RES-004",
+    "RES-005",
+    "RES-006",
+    "RES-007"
+  ],
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "8cd562b453bd93976795d85b46f969ddae590b997a49eacd1c47af25a27318cb"
+  "sha256_libro": "7128201b65cc083a4b4f74e7302e29ce0a345f07c34c016a5769de108703600e"
 }

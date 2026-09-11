@@ -1,0 +1,37 @@
+{
+  "caso_id": "RES-007",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "198f070d16c69675710aa0e7aeee58e8a18de19d8e4a7c043e4bc875860e9958",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "RES-007",
+        "codigo_partida_final": "CI.03A.7",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "La linea esperada (CONTENEDOR 9 M3, 183 € de OFERTA) no existe en el CTSU24/0402: hasta F-017 es inalcanzable. ROJO por diseño, causa F-017.",
+        "importe_calculado": 183,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "@@NO_COMPARAR@@",
+        "precio_unitario_final": 183,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [
+      {
+        "cantidad": 1,
+        "caso_id": "RES-007",
+        "codigo_partida": "CI.03A.7",
+        "comentario": "INCR. LER 170802 a 77 € de OFERTA (no del contrato). ROJO por diseño hasta F-017.",
+        "descripcion_esperada": "INCREMENTO LER 170802",
+        "modifier_source": "gestion_residuos",
+        "num_linea_base": 1,
+        "precio_unitario": 77,
+        "rol_linea": "incremento_residuos"
+      }
+    ],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Residuos"
+}

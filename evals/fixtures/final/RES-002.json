@@ -1,0 +1,54 @@
+{
+  "caso_id": "RES-002",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "7128201b65cc083a4b4f74e7302e29ce0a345f07c34c016a5769de108703600e",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "RES-002",
+        "cif": "B82899550",
+        "comentario": "SS-0003935 · 120,00 € (§8.1).",
+        "contrato_elegido": "CTSU24/0228",
+        "fecha": "2024-07-16",
+        "fichero": null,
+        "motivo_revision": "la sintetica del incremento LER se emite sin precio: el contrato no lo tarifa (R16/R17)",
+        "numero_albaran": "SS-0003935",
+        "obra": "687",
+        "proveedor": "SALMEDINA TRATAMIENTO DE RESIDUOS INERTES, S.L.",
+        "requiere_revision": "SI",
+        "total_valorado_esperado": 120
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 1,
+        "casa_con_contrato": "SI",
+        "caso_id": "RES-002",
+        "comentario": null,
+        "descripcion": "170107 HORMIGON LADRILLOS CERAMICOS",
+        "importe_final": 120,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "C1",
+        "num_linea": 1,
+        "partida_final": "CI.03A.7",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 120,
+        "unidad_final": "UD"
+      }
+    ],
+    "lineas_anadidas": [
+      {
+        "cantidad": 1,
+        "caso_id": "RES-002",
+        "comentario": "LER 170107 no tarifado en CTSU24/0228: sintetica sin precio (R16/R17, decision del 2026-08-22).",
+        "concepto": "INCREMENTO LER 170107",
+        "importe": "@@ESPERA_REVISION@@",
+        "num_linea_base": 1,
+        "partida": "CI.03A.7",
+        "precio_unitario": "@@ESPERA_REVISION@@"
+      }
+    ]
+  },
+  "tipologia": "Residuos"
+}

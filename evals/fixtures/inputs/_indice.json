@@ -1,6 +1,14 @@
 {
-  "casos": [],
+  "casos": [
+    "RES-001",
+    "RES-002",
+    "RES-003",
+    "RES-004",
+    "RES-005",
+    "RES-006",
+    "RES-007"
+  ],
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "250c520aa0e3d3d4d11f54e509049d99c98132f28cde2d89ae1d63815361f37d"
+  "sha256_libro": "b6dacbe169a76b3f807b403e8b3697a7c8c5982d21260f998c8527f40fd79654"
 }
