@@ -222,16 +222,20 @@ Los tres bajo `services/albaranes-persistencia/`:
 `update_merge_clasificacion`) y
 `tests/test_f043_t31_clasificacion_en_duplicado.py` (**nuevo**, 11 tests).
 
-Commits: `818850c` (RED), `ffeb2c3` (arreglo), `279655c` (tests del repo).
+Más `progress/inventario_mutacion_F-039.md`: la campaña nueva necesita su fila
+con veredicto o `test_f039_r2_...` pone la suite en rojo (F-039 · R2).
+
+Commits: `818850c` (RED), `ffeb2c3` (arreglo), `279655c` (tests del repo),
+`a32851e` (informe + mutación), `d73967c` (inventario).
 
 ## 7 · Evidencias
 
 | Evidencia | Valor real |
 |---|---|
 | Tests ejecutados (raíz, `harness/init.sh`) | **556 passed**, 0 failed |
-| Tests ejecutados (sv3) | **178 passed**, 0 failed (11 nuevos) |
-| Tiempo de la suite | raíz **129,68 s**; sv3 **7,71 s** |
-| Cobertura de líneas cambiadas | **87,8 %** (619/705, umbral 80 %, nivel `critico`) — línea `PUERTA COBERTURA` de `init.sh` |
+| Tests ejecutados (sv3) | **181 passed**, 0 failed (11 nuevos) |
+| Tiempo de la suite | raíz **198,28 s**; sv3 **5,32 s** |
+| Cobertura de líneas cambiadas | **89,8 %** (633/705, umbral 80 %, nivel `critico`) — línea `PUERTA COBERTURA` de `init.sh` |
 | Mutación | 7 generados, **0 supervivientes** — §7.1 |
 | `bash harness/init.sh` | **ENTORNO LISTO. Puedes trabajar.** |
 
