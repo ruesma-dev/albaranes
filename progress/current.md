@@ -412,3 +412,27 @@ por el humano el 2026-08-25.
    incumplidas por esos mismos ficheros; el detalle, en su informe §6). El
    bloque E no añadió ninguno, medido fichero a fichero.
 4. **sv1-email e `infra` sin directorio de tests**: nadie comprueba lo suyo.
+
+---
+
+## BLOQUEO abierto · IA1/IA2 del lote SALMEDINA (2026-09-11)
+
+Encargo: rellenar `IA1_extraccion.xlsx` e `IA2_contexto.xlsx` con los siete
+albaranes de SALMEDINA. **Parado antes de escribir en los libros.**
+
+Motivo: el Excel de negocio da la vista **valorada** (1 UD, conceptos del
+contrato, precios de contrato, obra 687/691) y el `LEEME` de IA1 pide la vista
+**impresa**. Leidos los siete PDF: son documentos de control de residuos con una
+rejilla LER y un volumen a mano; no imprimen conceptos, ni precios, ni codigo de
+obra. Cuatro decisiones quedan en manos del humano (nº de lineas, cantidad/unidad,
+descripcion y obra_codigo).
+
+Hecho y no revertido: los siete PDF movidos a `evals/inputs/albaranes/<caso_id>.pdf`
+(la ruta que usa el runner), comprobados como ignorados por git.
+
+Hallazgos que piden decision: `SS-0801977` de RES-005 es una mala lectura, el
+papel imprime `SS-0001977`; y hay un PDF preexistente en el indice de git
+(`services/albaranes-api/worker_input/0695 - Albaranes 2026.03.09-13-16.pdf`).
+
+Detalle y las dos opciones cerradas para decidir en un mensaje:
+`progress/impl_F-043_evals_ia1_ia2.md` (§4 y §12).
