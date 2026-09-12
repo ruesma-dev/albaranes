@@ -28,6 +28,7 @@ from evals.comparador import (
     comparar_tablas,
 )
 from evals.criticidad import Criticidad, cargar_criticidad
+from evals.procesos import canal
 from evals.modelos import NO_COMPARAR, Discrepancia
 
 #: Raíz del repositorio y del servicio sv6 (rutas, no imports).
@@ -587,12 +588,13 @@ def ejecutar_en_subproceso(
             f"el subproceso de sv6 falló con código {proceso.returncode}:\n"
             f"{proceso.stderr.strip()}"
         )
-    return json.loads(proceso.stdout)
+    return canal.leer(proceso.stdout, "sv6")
 
 
 def main(argv: list[str] | None = None) -> int:  # pragma: no cover - subproceso
     """Punto de entrada del subproceso: stdin → build de sv6 → stdout."""
     del argv
+    canal.blindar_stdout()
     sys.path.insert(0, str(RAIZ_SV6))
     try:
         trabajo = json.loads(sys.stdin.read() or "{}")
@@ -600,7 +602,7 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - subproceso
     except Exception as error:  # noqa: BLE001 - la frontera devuelve el motivo
         print(f"sv6_build: {type(error).__name__}: {error}", file=sys.stderr)
         return 1
-    print(json.dumps(salida, ensure_ascii=False))
+    canal.emitir(salida)
     return 0
 
 
