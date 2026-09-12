@@ -127,6 +127,11 @@ def test_f043_el_lector_se_queda_con_el_ultimo_json_marcado():
     assert canal.leer(stdout, "sv6") == {"resultados": []}
 
 
+def test_f043_el_lector_admite_la_marca_en_el_primer_caracter():
+    """Sin ruido delante, la marca abre el stdout: eso no es «no hay marca»."""
+    assert canal.leer(f"{canal.MARCA_INICIO}\n{{}}\n{canal.MARCA_FIN}\n", "sv6") == {}
+
+
 def test_f043_el_lector_explica_que_llego_cuando_no_hay_json_marcado():
     """Un canal roto tiene que decir qué llegó, no `line 1 column 1`."""
     with pytest.raises(RuntimeError) as fallo:

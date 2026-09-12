@@ -104,3 +104,14 @@ lo específico de este repositorio es la declaración y el runner.
 runner compone sv2, sv5 y sv6 desde fuera, cada uno en su propio subproceso
 (comparten los nombres de sus paquetes de primer nivel y no caben en el mismo
 intérprete).
+
+### El canal de vuelta del subproceso
+
+Cada subproceso devuelve su resultado por stdout, pero **no como JSON a pelo**:
+lo emite entre las marcas de `evals/procesos/canal.py`, y antes de empezar el
+trabajo redirige su descriptor 1 al 2. El motivo tiene fecha: el 2026-09-12 la
+pasada con LLM murió entera en `json.loads` porque PyMuPDF había escrito en
+STDOUT su aviso de que `fitz` está deprecado. Cualquier librería puede imprimir
+ahí; el canal de datos no puede ser el mismo sitio donde todo el mundo habla. Si
+escribes un adaptador nuevo en `evals/procesos/`, usa `canal.emitir` y
+`canal.leer`: hay un test que lo vigila.
