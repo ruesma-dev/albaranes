@@ -451,3 +451,15 @@ verde, ningun `.xlsx` ni `.pdf` en el indice de git. Cero llamadas a LLM.
 Aparte y sin tocar: hay **un PDF preexistente en el indice**,
 `services/albaranes-api/worker_input/0695 - Albaranes 2026.03.09-13-16.pdf`,
 entrado con la importacion de `albaranes-api` (`df01ef4`).
+
+## 2026-09-12 · el canal de los subprocesos de evals (defecto que bloqueaba T30)
+
+`--con-llm` moria en `json.loads(proceso.stdout)`: PyMuPDF escribe en STDOUT
+su aviso de que `fitz` esta deprecado y contaminaba el canal por el que vuelve
+el JSON. Arreglado en `evals/procesos/canal.py` por los dos extremos (el hijo
+blinda su stdout con `dup2`, el padre lee la carga entre marcas); sv2, sv5 y
+sv6 tenian los tres el mismo defecto. Detalle, traza RED y evidencias en
+`progress/impl_F-043_evals_runner_fix.md`.
+
+La **pasada de T30 queda desbloqueada**, pero seguira dando ROJO por el punto
+3 de arriba (las CONDICIONES sin propagar, importes x6): eso sigue abierto.

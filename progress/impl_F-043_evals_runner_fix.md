@@ -20,13 +20,9 @@ warning: The `fitz` API is deprecated and will be removed in future. Use `import
 {"resultados": []}
 ```
 
-Reproducido a mano en este mismo intérprete, sin evals de por medio:
-
-```
-$ python scratchpad/sin_blindaje.py 2>/dev/null | cat -A | head -3
-warning: The `fitz` API is deprecated and will be removed in future. Use `import pymupdf` instead.^M$
-{"resultados": []}^M$
-```
+Reproducido a mano en este mismo intérprete (`import fitz` + un `print` de
+JSON, sin evals de por medio): esas dos líneas exactas por stdout, con el
+aviso primero.
 
 Con `casos: []` nadie abre un PDF, nadie importa `fitz` y el stdout sale
 limpio: por eso ni los tests ni la corrida determinista lo veían nunca.
@@ -111,10 +107,10 @@ vuelva a aparecer en `evals/procesos/`.
 ## Verificación de que no cambia nada más
 
 - Pasada determinista completa (sin LLM, atraviesa los subprocesos de sv5 y
-  sv6): `python -m evals.runner --feature F-043` termina y escribe informe.
-  Comparado con el informe de la MISMA corrida sobre el código anterior
-  (con mis cambios en `git stash`): **idénticos salvo fecha y commit**. El
-  veredicto ROJO de esa corrida es anterior a este trabajo y ajeno a él.
+  sv6): `python -m evals.runner --feature F-043` termina y escribe informe,
+  **idéntico salvo fecha y commit** al de la misma corrida sobre el código
+  anterior (con mis cambios en `git stash`). Su ROJO es anterior a este
+  trabajo y ajeno a él.
 - El subproceso real de sv2, el que rompía, atravesado con cero casos y una
   clave de mentira (ni una llamada al proveedor): devuelve
   `{'resultados': [], 'proveedores': ['gemini']}` por el canal nuevo.
@@ -128,6 +124,12 @@ llamada al LLM en sí, que es exactamente lo que el encargo prohibía y lo que
 no tenía nada que ver con el fallo: el subproceso ya volvía con código 0 y el
 resultado completo.
 
+Aviso para no crear falsas expectativas: **desbloqueada no es lo mismo que en
+verde**. `progress/current.md` §3 deja abierto que las CONDICIONES no se
+propagan al `contexto_linea` y los importes salen ×6 —se ve en la corrida
+determinista de hoy, 720,0 donde se espera 120—, así que la pasada correrá,
+pero su veredicto seguirá siendo ROJO hasta que eso se arregle.
+
 ## Segundo asunto, para que no se pierda: RES-001 y la carretera M-401
 
 En la corrida del 2026-09-12, IA1 extrajo `obra_codigo = "0401"` para RES-001.
@@ -138,10 +140,9 @@ Un matiz que agrava el caso, leído del ground truth
 (`evals/fixtures/IA1/RES-001.json`): el valor esperado de `obra_codigo` es
 **vacío**, y el comentario del libro lo explica —«No imprime codigo de obra
 (687/691 son de Sigrid)»—. O sea que no es que la IA acertara el campo
-equivocado: **se inventó un código donde el papel no trae ninguno**, y lo
-fabricó con el trozo de texto que más se le parecía. Es justo el tipo de error
-que el banco existe para cazar. NO se ha tocado: es materia de prompt y lo
-dirá la eval cuando corra.
+equivocado: **se inventó un código donde el papel no trae ninguno**, con el
+trozo de texto que más se le parecía. Justo lo que el banco existe para cazar.
+NO se ha tocado: es materia de prompt y lo dirá la eval cuando corra.
 
 ## Evidencias
 
