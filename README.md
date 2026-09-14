@@ -27,3 +27,8 @@ reales viven en `infra/*.local.ps1`, que no se versiona.
 
 La BBDD, colas y contratos entre servicios están documentados en
 `azure-apps/albaranes.md`.
+
+
+arrancar local
+
+powershell -ExecutionPolicy Bypass -File .\infra\local\arrancar_local.ps1 
