@@ -27,10 +27,40 @@ mañanas (24-jul-2026):
   y el bucle muere en la primera iteración *sin decir nada* (se actualizaba
   solo el primer servicio).
 - **`comun` no tiene imagen propia**: `build_images.ps1` lo copia fresco desde
-  `albaranes-comun` a cada contexto. Por eso, si tocas `comun`, hay que
-  reconstruir **todos** los servicios que lo usan (sv2, sv3, sv5, sv6), aunque
-  su código propio no haya cambiado.
+  `services/albaranes-comun` a cada contexto. Por eso, si tocas `comun`, hay
+  que reconstruir **todos** los servicios que lo usan (sv2, sv3, sv5, sv6),
+  aunque su código propio no haya cambiado.
 - **`replicas 0` en sv3/sv6 es normal**: son workers KEDA escalados a cero.
+
+### Lo que costó dos meses (14-sep-2026)
+
+Tres fallos encadenados hacían que el despliegue «funcionara» sin desplegar
+nada de lo desarrollado desde julio. Ya están corregidos; quedan aquí para que
+no se repitan:
+
+- **El build leía de los repositorios ARCHIVADOS.** `$ProjectsRoot` estaba
+  escrito a mano como `C:\Users\pgris\PycharmProjects`, así que cada servicio
+  se cogía de la carpeta hermana previa a la migración al monorepo (cuatro de
+  ellas con «ARCHIVADO: migrado al monorepo albaranes» como último commit).
+  Ahora la raíz se **deriva de la ubicación del script** (`<repo>\services`) y
+  una guarda hace **fallar el build en seco** si alguna carpeta fuente cae
+  fuera de ese `services\`. Para construir a propósito desde fuera:
+  `-PermitirFuenteExterna` (avisa por pantalla).
+- **`-Only` no llegaba al build.** `.\deploy.ps1 -Only sv3` construía los seis
+  y solo filtraba el update. Ahora `deploy.ps1` se lo pasa a `build_images.ps1`,
+  que también acepta `-Only sv1..sv6`.
+- **La suscripción no se cargaba.** `00_vars.ps1` fija marcadores
+  `REDACTADO-VER-COPIA-LOCAL` y **nunca** cargaba `00_vars.local.ps1` (que
+  existe, no se versiona y trae los valores reales). `az account set` fallaba
+  con «The subscription of 'redactado-ver-copia-local' doesn't exist in cloud
+  'AzureCloud'» y todo seguía **por casualidad**, contra la suscripción activa
+  de la consola. Ahora `00_vars.ps1` carga el `.local` al final, avisa en rojo
+  si tras eso la suscripción sigue redactada, y `build_images.ps1` se niega a
+  construir en ese estado.
+
+Moraleja operativa: **`az acr build` en verde no prueba que se haya construido
+lo que crees**. Antes de dar por bueno un despliegue, comprueba en la app algo
+que solo exista en el código nuevo.
 
 ### Cambiar modelo LLM sin reconstruir
 

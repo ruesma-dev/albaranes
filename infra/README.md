@@ -35,6 +35,12 @@ una **managed identity** compartida con los roles de datos ya asignados.
 ```
 
 ## Notas / gotchas
+- **Los identificadores reales viven en `00_vars.local.ps1`** (no versionado,
+  `.gitignore: infra/*.local.ps1`). El `00_vars.ps1` versionado trae
+  marcadores `REDACTADO-VER-COPIA-LOCAL` y **carga el `.local` encima** al
+  final; si no existe, avisa en rojo de que la suscripción no está resuelta.
+  Hasta el 14-sep-2026 no lo cargaba y `az` trabajaba contra la suscripción
+  activa de la consola, fuera cual fuera.
 - **Nombres únicos globales**: `ACR`, `STORAGE`, `PG`, `KV`. Si alguno está
   pillado, añade sufijo en `00_vars.ps1` (como sigrid-api con `-huyke`).
 - **Tags obligatorios**: la policy acens audita/bloquea recursos sin los tags.

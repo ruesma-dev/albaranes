@@ -20,6 +20,11 @@
 #      el ACR tuviera codigo nuevo. Ahora el tag es por fecha y ademas se
 #      fuerza revision nueva con --revision-suffix.
 #
+# Y una cuarta (14-sep-2026): -Only no llegaba al build. '.\deploy.ps1 -Only
+# sv3' construia los SEIS servicios (desde carpetas equivocadas, ademas: ver
+# la cabecera de build_images.ps1) y solo despues filtraba el update. Ahora
+# $svcs se le pasa al build.
+#
 # Deja las apps en modo de revision SINGLE: una sola revision activa. Con
 # 'multiple' dos revisiones compiten por la misma cola y el trafico se
 # reparte entre imagen nueva y vieja.
@@ -86,7 +91,10 @@ if ($SkipBuild) {
     Write-Host "`n[1/3] BUILD omitido (-SkipBuild)." -ForegroundColor DarkGray
 } else {
     Write-Host "`n[1/3] Construyendo imagenes (inyecta 'comun' fresco en cada una)..." -ForegroundColor Yellow
-    & (Join-Path $PSScriptRoot "build_images.ps1")
+    # -Only SI se propaga al build (14-sep-2026). Antes no: '.\deploy.ps1
+    # -Only sv3' construia los SEIS servicios y luego actualizaba solo sv3.
+    # $svcs ya viene validado y, si no se paso -Only, contiene los seis.
+    & (Join-Path $PSScriptRoot "build_images.ps1") -Only $svcs
     if ($LASTEXITCODE -ne 0) { throw "build_images.ps1 fallo (exit $LASTEXITCODE). Nada desplegado." }
 }
 

@@ -5,6 +5,10 @@
 #
 # RELLENA los marcados con  <-- RELLENA  con tus valores reales antes de correr.
 
+# Los valores reales (suscripción, tenant...) NO se versionan: viven en
+# 00_vars.local.ps1, que este fichero carga ENCIMA al final (ver el bloque
+# "Superposición local"). Lo que hay aquí abajo son los marcadores.
+
 # --- Identidad de la suscripción -------------------------------------------
 $Global:SUBSCRIPTION = "REDACTADO-VER-COPIA-LOCAL"
 $Global:TENANT       = "REDACTADO-VER-COPIA-LOCAL"
@@ -119,6 +123,43 @@ $Global:PG_STORAGE_GB = 32
 
 # --- sigrid-api (informativo) ----------------------------------------------
 $Global:SIGRID_BASE_URL = "https://func-sigridapi-dev-huyke.azurewebsites.net"
+
+# --- Superposición local (14-sep-2026) --------------------------------------
+# 00_vars.local.ps1 (NO versionado, .gitignore: infra/*.local.ps1) trae los
+# identificadores reales. Existía desde el principio y nadie lo cargaba: la
+# suscripción se quedaba en "REDACTADO-VER-COPIA-LOCAL" y
+# 'az account set --subscription REDACTADO-...' fallaba con
+#   The subscription of 'redactado-ver-copia-local' doesn't exist in cloud 'AzureCloud'
+# Los despliegues salían bien POR CASUALIDAD, porque az caía en la
+# suscripción activa de la sesión. Se carga AL FINAL para que pise a los
+# marcadores de arriba.
+#
+# 00_vars.local.ps1 es hoy una COPIA COMPLETA de este fichero con los valores
+# reales, no un parche de dos líneas. Por eso el guardia de reentrada: si
+# alguien lo refresca copiando este fichero encima, el dot-source se llamaría
+# a sí mismo sin fin.
+$Global:VARS_LOCAL = Join-Path $PSScriptRoot "00_vars.local.ps1"
+if ($Global:VARS_LOCAL_EN_CURSO) {
+    # Nada: ya estamos dentro de la superposición.
+} elseif (Test-Path $Global:VARS_LOCAL) {
+    $Global:VARS_LOCAL_EN_CURSO = $true
+    try { . $Global:VARS_LOCAL } finally { $Global:VARS_LOCAL_EN_CURSO = $false }
+    Write-Host "[vars] valores reales cargados de 00_vars.local.ps1 (no versionado)" -ForegroundColor DarkGray
+} else {
+    Write-Warning "[vars] no existe $Global:VARS_LOCAL : los identificadores siguen redactados."
+}
+
+# Si tras la superposición la suscripción sigue redactada, se avisa AQUI y en
+# claro, en vez de dejar que az reviente luego con un mensaje críptico.
+if (-not $Global:SUBSCRIPTION -or $Global:SUBSCRIPTION -like "REDACTADO*") {
+    Write-Host ""
+    Write-Host "*** SUSCRIPCION SIN RESOLVER ***" -ForegroundColor Red
+    Write-Host "  `$SUBSCRIPTION vale '$Global:SUBSCRIPTION' (marcador, no un id real)." -ForegroundColor Red
+    Write-Host "  Falta infra\00_vars.local.ps1 (no versionado) con los valores reales." -ForegroundColor Yellow
+    Write-Host "  NO lances build ni deploy: 'az account set' fallara y az trabajara" -ForegroundColor Yellow
+    Write-Host "  contra la suscripcion activa de la sesion, sea cual sea." -ForegroundColor Yellow
+    Write-Host ""
+}
 
 Write-Host "[vars] cargadas. RG=$RG  STORAGE=$STORAGE  KV=$KV  PG=$PG" -ForegroundColor Cyan
 Write-Host "[vars] servicios: $((($Global:APPS.Keys) -join ', '))  |  despliegue: .\deploy.ps1" -ForegroundColor DarkGray
