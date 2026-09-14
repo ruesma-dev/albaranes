@@ -29,6 +29,8 @@ from evals.procesos.sv6_build import (
     _decimal,
     _entero,
     _tablas,
+    condiciones_de,
+    contexto_linea_de,
     valor,
 )
 
@@ -78,11 +80,7 @@ def construir_contexto(inputs: dict) -> dict:
     """Contexto de valoración de un caso, con la forma que espera sv5."""
     caso = (_tablas(inputs, "caso") or [{}])[0]
     tipo_familia = MAPA_TIPO_FAMILIA.get(str(inputs.get("tipologia", "")), "otro")
-    condiciones = {
-        str(valor(fila, "campo")): valor(fila, "valor")
-        for fila in _tablas(inputs, "condiciones")
-        if valor(fila, "campo") is not None
-    }
+    condiciones = condiciones_de(inputs)
 
     lineas_albaran = []
     for fila in _tablas(inputs, "lineas_albaran"):
@@ -101,11 +99,9 @@ def construir_contexto(inputs: dict) -> dict:
                 "precio_unitario_albaran": _decimal(valor(fila, "precio_unitario")),
                 "importe_albaran": _decimal(valor(fila, "importe")),
                 "codigo_partida_albaran": valor(fila, "codigo_imputacion"),
-                "contexto_linea": {
-                    "tipo_familia": tipo_familia,
-                    "rol_linea": "base",
-                    "descripcion_extendida": valor(fila, "observaciones_albaran"),
-                },
+                "contexto_linea": contexto_linea_de(
+                    condiciones, tipo_familia, fila
+                ),
             }
         )
 

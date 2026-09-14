@@ -30,6 +30,20 @@ from evals.comparador import (
 from evals.criticidad import Criticidad, cargar_criticidad
 from evals.procesos import canal
 from evals.modelos import NO_COMPARAR, Discrepancia
+from ruesma_comun.contratos.contexto_linea import ContextoLinea
+
+#: Campos del contrato compartido `ContextoLinea` — exactamente lo que el
+#: pipeline real le entrega a sv6 en el bloque `contexto_linea` de cada línea
+#: (sv5 lo lee de `albaran_lines_merge.contexto_linea_json` y lo vuelca al
+#: envelope). El banco propaga al `contexto_linea` una CONDICIÓN del libro
+#: `INPUTS` si —y solo si— su nombre está aquí: ni más (`tamano_contenedor_
+#: contrato` es del caso y en producción sale del contrato, no de la línea) ni
+#: menos (`volumen_m3` y `codigo_ler` son lo que hace contar contenedores).
+#:
+#: Se deriva del contrato, no se copia: el catálogo de campos vive en
+#: `services/albaranes-comun` y dar de alta uno allí no puede exigir acordarse
+#: de tocar también el banco.
+CAMPOS_DE_CONTEXTO_LINEA: frozenset[str] = frozenset(ContextoLinea.model_fields)
 
 #: Raíz del repositorio y del servicio sv6 (rutas, no imports).
 RAIZ_REPO = Path(__file__).resolve().parent.parent.parent
@@ -137,6 +151,45 @@ def _tablas(fixture: dict, nombre: str) -> list[dict]:
     return list(fixture.get("tablas", {}).get(nombre, []))
 
 
+def condiciones_de(inputs: dict) -> dict:
+    """Las CONDICIONES del caso, del formato largo del libro a un diccionario."""
+    return {
+        str(valor(fila, "campo")): valor(fila, "valor")
+        for fila in _tablas(inputs, "condiciones")
+        if valor(fila, "campo") is not None
+    }
+
+
+def contexto_linea_de(condiciones: dict, tipo_familia: str, fila: dict) -> dict:
+    """El bloque `contexto_linea` de una línea, como lo recibiría sv6.
+
+    En producción ese bloque lo rellena IA2 y llega ENTERO: sv5 lo lee de
+    `albaran_lines_merge.contexto_linea_json` y lo vuelca al envelope. El banco
+    lo reconstruye desde el ground truth con la misma regla: la familia y la
+    descripción extendida salen de la línea, y de las CONDICIONES del caso
+    entra lo que sea campo del contrato (`CAMPOS_DE_CONTEXTO_LINEA`).
+
+    Los campos de las CONDICIONES que NO son del contrato —el número y la
+    fecha del albarán, que van en `meta`, o `tamano_contenedor_contrato`, que
+    en producción sale de la descripción de la línea de contrato o de IA3— se
+    quedan fuera a propósito: el banco tiene que alimentar al builder con lo
+    que el pipeline real le daría, ni más ni menos.
+    """
+    contexto = {
+        "tipo_familia": tipo_familia,
+        "rol_linea": "base",
+        "descripcion_extendida": valor(fila, "observaciones_albaran"),
+    }
+    contexto.update(
+        {
+            campo: dato
+            for campo, dato in condiciones.items()
+            if campo in CAMPOS_DE_CONTEXTO_LINEA and dato is not None
+        }
+    )
+    return contexto
+
+
 # --- Estímulo: el envelope que sv5 habría devuelto --------------------------
 
 
@@ -150,11 +203,7 @@ def construir_envelope_estimulado(inputs: dict, ia3: dict) -> dict:
     caso = (_tablas(inputs, "caso") or [{}])[0]
     tipo_familia = MAPA_TIPO_FAMILIA.get(str(inputs.get("tipologia", "")), "otro")
 
-    condiciones = {
-        str(valor(fila, "campo")): valor(fila, "valor")
-        for fila in _tablas(inputs, "condiciones")
-        if valor(fila, "campo") is not None
-    }
+    condiciones = condiciones_de(inputs)
 
     lineas_albaran = []
     for fila in _tablas(inputs, "lineas_albaran"):
@@ -173,11 +222,9 @@ def construir_envelope_estimulado(inputs: dict, ia3: dict) -> dict:
                 "precio_unitario_albaran": _decimal(valor(fila, "precio_unitario")),
                 "importe_albaran": _decimal(valor(fila, "importe")),
                 "codigo_partida_albaran": valor(fila, "codigo_imputacion"),
-                "contexto_linea": {
-                    "tipo_familia": tipo_familia,
-                    "rol_linea": "base",
-                    "descripcion_extendida": valor(fila, "observaciones_albaran"),
-                },
+                "contexto_linea": contexto_linea_de(
+                    condiciones, tipo_familia, fila
+                ),
             }
         )
 
