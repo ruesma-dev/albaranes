@@ -503,3 +503,55 @@ sv6 tenian los tres el mismo defecto. Detalle, traza RED y evidencias en
 
 La **pasada de T30 queda desbloqueada**, pero seguira dando ROJO por el punto
 3 de arriba (las CONDICIONES sin propagar, importes x6): eso sigue abierto.
+
+## 2026-09-15 · DESPLIEGUE EN CURSO (punto de reanudación)
+
+**sv3 YA está desplegado y al día**: `sv3-persistencia:r20260915-0002`, una sola
+revisión, estado `ok`. Es el primer servicio que se actualiza **desde el 24 de
+julio**, y el primero construido desde el monorepo. Al arrancar habrá aplicado
+su DDL, así que **las seis columnas `tipologia*` deberían existir ya en la BBDD
+de producción** — falta confirmarlo (el humano; la consulta está abajo).
+
+**Faltan los otros cinco**: sv1, sv2, sv4, sv5 y sv6, todos con
+`r20260724-1632`.
+
+### Lo que se arregló para poder desplegar
+
+1. **El build empaquetaba los repositorios ARCHIVADOS** en vez del monorepo:
+   la causa de que nada llegara a producción desde julio. Rama
+   `chore/infra-build-desde-el-monorepo`, informe en
+   `progress/infra_despliegue_fuente_equivocada.md`.
+2. **`00_vars.ps1` no cargaba `00_vars.local.ps1`**: la suscripción iba
+   redactada y `az account set` fallaba siempre. Ya carga («[vars] valores
+   reales cargados»).
+3. **`-Only` no limitaba el build**: construía los seis.
+4. **El temporal de build bloqueado tumbaba el despliegue** (2026-09-15):
+   Windows retiene `%TEMP%\acrbuild_<svc>` y el `Remove-Item` del `finally`
+   abortaba el script DESPUÉS de subir la imagen. Ahora el contexto lleva
+   nombre único por ejecución y la limpieza es best-effort. **Sin commitear
+   todavía** cuando se escribió esto.
+
+### Al retomar
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+. .\00_vars.ps1
+.\deploy.ps1 -Only sv1,sv2,sv4,sv5,sv6
+.\check_deploy.ps1
+```
+
+Vigilar: que las rutas impresas sean `albaranes\services\...`; que no queden
+**revisiones múltiples** (`fix_revisiones.ps1 -Only <svc>`); y si algo falla
+tras el `OK <svc> ->`, la imagen ya está subida: continuar con
+`-Tag <el impreso> -SkipBuild`.
+
+**La comprobación que de verdad importa** no es `check_deploy`, sino procesar
+un albarán y ver en la ficha del portal la familia, la confianza y el motivo.
+Y en la BBDD de producción:
+
+```sql
+SELECT column_name FROM information_schema.columns
+WHERE table_name = 'albaran_documents_merge' AND column_name LIKE 'tipologia%';
+```
+
+Deben salir seis.
