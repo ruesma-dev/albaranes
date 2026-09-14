@@ -544,3 +544,70 @@ aprobada, seis dudas resueltas y plan de implementación aprobado, en una rama
 que sale de la de F-036 para no abrir dos frentes sobre los mismos ficheros.
 Nada subido.
 
+
+## 2026-09-14 · F-043 y F-036 cerradas
+
+**F-043 (clasificación por IA1) y F-036 (residuos: contenedores e incrementos
+por LER) quedan en `done`.** F-036 estaba bloqueada esperando a F-043 desde el
+2026-08-26; se cierran juntas y **su merge va junto**: los tests que matan 96
+supervivientes del código de F-036 viven en la rama de F-043, así que F-036 no
+puede mergearse sola.
+
+### Lo que entrega F-043, medido de punta a punta contra el pipeline real
+
+IA1 clasifica el albarán leyendo el catálogo de familias, enruta el prompt de
+fase 2, IA2 confirma, sv3 persiste documento y líneas, sv5 elige el prompt de
+valoración y sv6 abre sus puertas de familia. **SS-0003967 pasó de 540,00 € (y
+720,00 € con las puertas cerradas) a 210,00 € en 2 líneas**, que es el ground
+truth del administrativo. `tipologia_resolver` ya no existe.
+
+### Las cuatro verificaciones
+
+- **T28** · campaña completa: 347 mutantes, 181 muertos, **163 supervivientes
+  analizados, 0 sin justificar**. 60 justificados en bloque (scripts de
+  diagnóstico ajenos, autorizado por el humano el 2026-09-10); el resto matados
+  con tests nuevos, casi todos de F-036, que nunca había pasado una campaña.
+- **T31** · verde: 210,00 € en 2 líneas por la vía nueva.
+- **T32** · verde: el revisor ve familia, confianza y motivo en la ficha.
+- **T30** · ejecutada con LLM real (Opus 4.8 y Gemini Flash 3.7), `MODO:
+  completa`, las cinco fases, **VEREDICTO: ROJO**.
+
+### Por qué se cierra con las evals en ROJO (decisión del humano, 2026-09-14)
+
+De los **103 fallos**, **42 son de papeleo** (`caso_id`, `fichero_albaran`,
+`comentario`): ruido conocido, se quita pasando los observables a IA1 e IA2
+como ya hacen IA3 e IA4. **La clasificación —lo que F-043 entrega— no falla en
+ningún caso**: familia correcta en los 7 albaranes con los dos proveedores, y
+IA2 sin un solo fallo real.
+
+Los fallos reales son **ajenos a esta feature** y coinciden uno a uno con la
+revisión manual del humano: cantidad 6 leída como 8120, números de albarán con
+dígitos cambiados (`SS-0000589`→`SS-0080589`, `SS-0026122`→`SS-0028122`), razón
+social abreviada, e **IA3 que no casa la línea con el contrato** (`no_match`)
+donde se esperan 120 €. Todos ellos son materia de **F-045**.
+
+### Tres defectos que solo aparecieron al probar en real
+
+Ningún test los vio, y los tres eran el mismo patrón —cada pieza probada por
+separado, nadie recorriendo el camino entero—:
+
+1. La rama de **documento duplicado** del pipeline no llamaba a `save()`, la
+   única escritura de las seis columnas de clasificación.
+2. Ese mismo reproceso **perdía el `contexto_linea`** de la línea, y sin
+   `codigo_ler` la red de sintéticas no tenía con qué trabajar.
+3. **PyMuPDF escribe en stdout**, el canal por el que los subprocesos de evals
+   devuelven su JSON: `--con-llm` era imposible. sv2, sv5 y sv6 lo tenían.
+
+### Salvedades que quedan escritas
+
+- La review final de F-043 fue `CHANGES_REQUESTED` con sus 4 bloqueantes
+  **aplicados**; el humano dio por bueno el cierre sin un tercer pase de
+  reviewer (2026-08-27). F-036 sí tiene `APROBADO` explícito.
+- **T24 de F-036** (los 7 albaranes contra la BBDD real, solo lectura) sigue
+  **pendiente del humano**.
+- `SS-0801977` es una **mala lectura**: el papel dice `SS-0001977`. Corregido en
+  el banco de evals; la BBDD local conserva el número viejo.
+- Deuda anotada y no tocada: en la rama de duplicado **no se recalculan** los
+  motivos de revisión por confianza baja ni por albarán mixto; y cuando
+  `calcular_contenedores_residuos` no puede contar, el builder **cae a la
+  cantidad cruda** y la valora (los 720,00 €), aunque va a revisión.

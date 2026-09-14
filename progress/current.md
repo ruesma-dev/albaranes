@@ -7,6 +7,46 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
+**F-043 y F-036 están CERRADAS** (`done`, 2026-09-14). El relato completo, con
+las cuatro verificaciones, los tres defectos que solo salieron probando en real
+y las salvedades, está en `progress/history.md`.
+
+**Lo siguiente es F-045** (prioridad 2, `pending`): llevar al banco de evals los
+**32 albaranes** que el humano revisó uno a uno, con sus comentarios de defecto,
+desde `evals_summary.xlsx` (carpeta `evals` de OneDrive). **El Excel sigue
+creciendo**: a 2026-09-14 faltaban por valorar los últimos de hormigón y
+residuos, así que se siembra lo cerrado y el resto entra después.
+
+### Pendiente del humano, arrastrado
+
+1. **T24 de F-036**: los 7 albaranes de SALMEDINA contra la BBDD real, SOLO
+   LECTURA. Avisos: SS-0003967 dará 90,00 € ó 210,00 € según lo que case IA3;
+   los tres que hoy aciertan (120/120/136) GANAN una sintética sin precio y
+   pasan a revisión, y eso es lo querido.
+2. **El push y el despliegue**: 130+ commits locales sin subir. **F-036 no puede
+   mergearse sola** —sus tests viven en la rama de F-043—, y al desplegar **sv3
+   va primero**: es quien crea las seis columnas que sv5 y sv4 leen.
+3. **Tres mejoras del arnés** propuestas y no aplicadas (las lleva el humano):
+   el falso verde de `harness.cobertura --feature`, que `harness.mutacion` no
+   muta `in`/`not in`, y que avise cuando el alcance de una feature arrastra el
+   de otra.
+4. **Un PDF versionado** que incumple la norma:
+   `services/albaranes-api/worker_input/0695 - Albaranes 2026.03.09-13-16.pdf`.
+
+### Deuda conocida del banco de evals (entra en F-045)
+
+- **42 de los 103 fallos de T30 son ruido de papeleo** (`caso_id`,
+  `fichero_albaran`, `comentario`): se quitan pasando los observables a IA1 e
+  IA2 en `evals/runner.py`, como ya hacen IA3 e IA4. El humano lo aprobó el
+  2026-09-12 y quedó sin aplicar.
+- IA4 sigue con 0 casos.
+
+<!-- fin del bloque nuevo -->
+
+## Lo anterior (histórico de la sesión de F-043)
+
+### LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
+
 **Estás en `feature/F-043-clasificacion-por-ia1`**, que sale de la rama de
 F-036 (no de `dev`). **56 commits locales, ninguno subido.**
 
