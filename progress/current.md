@@ -33,10 +33,15 @@ familia, 35 filas con comentario de defecto (había crecido desde las ~110).
    extracción/valoración que pediste: lo que el albarán imprime va a IA1/IA2, lo
    que el sistema decide (partida final, precio de contrato o de oferta,
    contrato elegido, obra deducida) va a IA3/IA4 y a `RESULTADO_FINAL`.
-2. **D3 · celda vacía → `?` (no comparar)**, no → `null` esperado. Es la
-   decisión más discutible: deja el banco más laxo de lo que parece, a cambio de
-   no inventar ground truth donde solo hay una celda sin rellenar. El informe de
-   importación dirá, columna a columna, dónde está ciego el banco.
+2. **D3 · CORREGIDA por el humano el 2026-09-15.** La versión anterior («toda
+   celda vacía → `?`») era errónea, y la marca de «validada» que llevaba
+   también: un **comentario** vacío significa que eso salió BIEN y hay que
+   seguir comprobándolo en cada pasada, así que esos casos se comparan y hoy
+   deben salir en VERDE (son los de no regresión: 107 de 142 filas, y 36 de los
+   59 albaranes no tienen ni un comentario). El `?` solo lo produce un **valor
+   esperado** ausente, y ni siempre: `descuento` vacío = sin descuento y `LER`
+   vacío = no aplica a esa familia. Con esa lectura la ceguera real del banco
+   son ~10 celdas, no las 107 filas. Está en `design.md` §5 y D3.
 3. **D1 · el mapa de familias**: `CONTENEDORES`→`residuos` y
    `CAMION GRUA`→`alquiler_maquinaria` son interpretación nuestra de tus
    etiquetas. Van en fichero de datos para cambiarlas sin tocar código.
