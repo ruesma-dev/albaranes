@@ -15,7 +15,13 @@ from __future__ import annotations
 
 import re
 
-from evals.revision.modelos import CasoRevisado, FilaPlana, LineaRevisada
+from evals.revision.modelos import (
+    DEFECTO_CONOCIDO,
+    NO_REGRESION,
+    CasoRevisado,
+    FilaPlana,
+    LineaRevisada,
+)
 from evals.revision.vocabulario import ErrorVocabulario, Vocabulario, normalizar
 
 _NO_ALFANUMERICO = re.compile(r"[^0-9A-Z]+")
@@ -236,6 +242,25 @@ def _descuentos(linea: LineaRevisada, vocab: Vocabulario) -> object | None:
 def _base(linea: LineaRevisada) -> object:
     """El `num_linea_base` de una sintética, o `?` si no hay impresa delante."""
     return INTERROGANTE if linea.num_linea is None else linea.num_linea
+
+
+# --- Los dos ejes del vacío (R9, R10) --------------------------------------
+
+
+def clasificar(casos: list[CasoRevisado]) -> dict[str, list[CasoRevisado]]:
+    """Reparte los casos entre no regresión y defecto conocido.
+
+    El comentario del Excel es el diagnóstico de HOY, no el resultado
+    esperado. Vacío significa que ese caso salió BIEN y hay que seguir
+    comprobando que lo sigue haciendo: son los que avisan de que hemos roto
+    algo que funcionaba, y NUNCA producen un `?`. Con texto, el caso es un
+    defecto conocido: rojo esperado hasta que exista su arreglo, y se compara
+    exactamente igual.
+    """
+    grupos: dict[str, list[CasoRevisado]] = {NO_REGRESION: [], DEFECTO_CONOCIDO: []}
+    for caso in casos:
+        grupos[caso.clasificacion].append(caso)
+    return grupos
 
 
 # --- El reparto (design §3, NORMATIVA) -------------------------------------
