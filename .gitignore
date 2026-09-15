@@ -27,3 +27,10 @@ __azurite_db_*
 AzuriteConfig
 __blobstorage__/
 __queuestorage__/
+
+# Originales de albaran para el banco de evals: PDF, PNG, JPG o lo que venga.
+# Son documentos de proveedor CON PRECIOS y no entran en git en ningun
+# formato. Hasta el 15-sep-2026 solo los tapaba la regla '*.pdf' de arriba,
+# asi que un original en PNG habria entrado sin que nadie lo notara.
+# Al repositorio entran unicamente los fixtures JSON ya barridos.
+evals/inputs/albaranes/

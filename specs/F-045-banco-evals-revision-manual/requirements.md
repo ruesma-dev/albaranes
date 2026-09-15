@@ -1,12 +1,10 @@
 <!-- specs/F-045-banco-evals-revision-manual/requirements.md -->
 # F-045 · Requisitos
 
-El origen, el material y los nueve patrones de defecto están en la ficha de
-`harness/features.json` (id F-045). Aquí va el CÓMO. **Alcance**: SEMBRAR el
-banco de evals con la revisión manual y catalogar las decisiones de mejora;
-ningún arreglo de sv2, sv5 o sv6 entra aquí (fichas propias, `design.md` §7).
-El origen sigue creciendo: nada aquí depende de valores ni de recuentos
-concretos; las cifras de `design.md` van fechadas y son orientativas.
+Origen, material y los nueve patrones: ficha de `harness/features.json`
+(F-045). Aquí va el CÓMO. **Alcance**: sembrar el banco con la revisión manual
+y catalogar las mejoras; ningún arreglo de sv2/sv5/sv6 entra aquí (fichas
+propias, `design.md` §7). Nada depende de recuentos: las cifras van fechadas.
 
 ## A. El importador de la revisión
 
@@ -24,8 +22,8 @@ decide (partida final, precio de contrato o de oferta, contrato elegido, obra
 deducida) va al de la fase que lo decide (IA3/IA4) y a `RESULTADO_FINAL`.
 
 R4. CUANDO la columna que declara el origen de un dato diga que ese dato NO
-viene en el albarán, el sistema debe escribir la celda correspondiente de IA1
-vacía (se espera `null`) y el valor en el libro de la fase que lo decide.
+viene en el albarán, el sistema debe escribir la celda de IA1 vacía (`null`
+afirmado, nunca `?`) y el valor en el libro de la fase que lo decide.
 
 R5. SI la tabla plana trae una etiqueta de familia, de origen de línea o de
 origen de precio que el vocabulario versionado no reconoce, ENTONCES el sistema
@@ -46,68 +44,71 @@ reutilizarlo y actualizar sus filas, nunca crear un caso nuevo.
 ## B. Convenios de celda (qué se compara y qué no)
 
 R9. CUANDO la columna de COMENTARIOS esté vacía, el sistema debe marcar el caso
-como **no regresión** y comparar sus valores como cualquier otro: ese vacío
-significa que eso salió BIEN y hay que seguir comprobando en cada pasada que lo
-sigue haciendo. Un comentario vacío NUNCA produce un `?`.
+como **no regresión** y comparar sus valores como cualquier otro: ese vacío dice
+que salió BIEN y hay que seguir comprobándolo. Nunca produce un `?`.
 
 R10. CUANDO la columna de COMENTARIOS traiga texto, el sistema debe marcar el
-caso como **defecto conocido**, copiar el texto a la columna `comentario` del
-libro (campo laxo, no comparado) y clasificarlo contra un patrón de
-`evals/patrones.json`. El valor esperado se compara exactamente igual.
+caso como **defecto conocido**, copiar el texto a `comentario` del libro (laxo,
+no comparado) y clasificarlo contra un patrón. El valor esperado se compara
+igual.
 
-R11. CUANDO la celda de RESULTADO ESPERADO esté vacía, el sistema debe escribir
-`?` —el humano no ha afirmado el valor bueno— salvo que su columna diga otra.
+R11. CUANDO la celda de RESULTADO ESPERADO esté vacía, o la fila no permita
+decidir a qué fase pertenece un dato, el sistema debe escribir `?` y contarlo
+(salvo que su columna diga otra cosa): nunca un valor supuesto.
 
-R12. El sistema debe leer de un fichero de datos versionado qué significa el
-vacío en CADA columna: `descuento` = sin descuento (`null`, factor 1 de §13);
-`LER` = no aplica a esa familia, sin fila de IA2; `partida`, `precio unitario`
-e `importe` = `?`.
+R12. El sistema debe leer de un fichero versionado qué significa el vacío en
+CADA columna: `descuento` = sin descuento (`null`, factor 1 de §13); `LER` = no
+aplica a esa familia, sin fila de IA2; el resto = `?`.
 
-R13. MIENTRAS el reparto derive de una columna de origen que el dato no está en
-el papel, el sistema debe escribir la celda vacía (R4) y no `?`: ahí el `null`
-sí lo afirma el humano.
-
-R14. El sistema debe escribir `?` en `numero_albaran`, `obra_codigo` y
+R13. El sistema debe escribir `?` en `numero_albaran`, `obra_codigo` y
 `obra_nombre` de IA1 —el código de la tabla plana es la clave del documento, no
-el literal impreso, y deducir la obra no es extraer—, llevar la obra esperada a
-`RESULTADO_FINAL` y contar en su informe que el patrón 9 no se vigila.
+el literal impreso, y deducir la obra no es extraer— y llevar la obra a
+`RESULTADO_FINAL`.
 
-R15. SI una fila no permite decidir a qué fase pertenece un dato, ENTONCES el
-sistema debe escribir `?` y contarlo: nunca un valor supuesto.
-
-R16. El sistema debe emitir un informe de importación con: por libro y columna,
-cuántas celdas llevan valor, cuántas `?` y cuántas vacías; el reparto de casos
-entre **no regresión** y **defecto conocido**; y las filas descartadas con su
-motivo. Los `?` son la única ceguera del banco.
+R14. El sistema debe emitir un informe de importación con: por libro y columna,
+cuántas celdas llevan valor, cuántas `?` y cuántas vacías; el reparto entre **no
+regresión** y **defecto conocido**; y las filas descartadas con su motivo.
 
 ## C. Escritura de los libros
 
-R17. El sistema debe escribir cada fila en la pestaña de su familia, respetando
+R15. El sistema debe escribir cada fila en la pestaña de su familia, respetando
 las tablas que el conversor declara y sin mover sus filas de título.
 
-R18. CUANDO el sistema vaya a escribir un libro, debe copiarlo antes a
+R16. CUANDO el sistema vaya a escribir un libro, debe copiarlo antes a
 `evals/ground_truth/copias/<fichero>.<AAAAMMDD-HHMM>.xlsx`.
 
-R19. El sistema NO debe tocar las filas cuyo `caso_id` no sea de esta
+R17. El sistema NO debe tocar las filas cuyo `caso_id` no sea de esta
 importación: la revisión no pisa lo que el humano escribió a mano.
 
-R20. CUANDO se ejecute dos veces seguidas sobre el mismo origen, el sistema
-debe dejar los mismos libros y los mismos fixtures (salvo la copia de R18).
+R18. CUANDO se ejecute dos veces seguidas sobre el mismo origen, el sistema
+debe dejar los mismos libros y los mismos fixtures (salvo la copia de R16).
 
-R21. `python -m evals.conversor` debe convertir los libros resultantes sin
+R19. `python -m evals.conversor` debe convertir los libros resultantes sin
 error y sin hallazgos del barrido de datos sensibles.
 
-## D. Los albaranes de entrada
+## D. Los documentos de entrada (PDF **e imagen**)
 
-R22. El sistema debe emparejar cada caso con su PDF por el código de albarán
-normalizado contenido en el nombre del fichero, y emitir el plan de copia a
-`evals/inputs/albaranes/<caso_id>.pdf`.
+R20. El sistema debe admitir como entrada `.pdf`, `.png`, `.jpg` y `.jpeg`,
+emparejar cada caso con su documento por el código normalizado del nombre y
+emitir el plan de copia a `evals/inputs/albaranes/<caso_id><extensión de
+origen>`: nada da por supuesto el `.pdf`.
 
-R23. SI un caso no tiene PDF, o un nombre encaja con más de un caso, ENTONCES
-debe quedar fuera del plan y listado como huérfano, sin adivinar.
+R21. SI un caso no tiene documento, o un nombre encaja con más de un caso,
+ENTONCES debe quedar fuera del plan y listado como huérfano, sin adivinar.
 
-R24. El sistema NO debe versionar ni los PDF ni los `.xlsx`: al repositorio
-entran solo los fixtures JSON y los ficheros de datos del importador.
+R22. CUANDO el mismo albarán exista en PDF y en imagen, el sistema debe crear
+DOS casos, `<caso_id>` y `<caso_id>-IMG`, con el MISMO ground truth y distinta
+entrada, hermanados por `gemelo_de` en el mapa. No es un duplicado a
+deduplicar: es el par que aísla el efecto del formato.
+
+R23. El sistema debe MEDIR en cada corrida el camino de lectura de cada caso
+—`pdf_texto`, `pdf_escaneado` o `imagen`— y agrupar por él el informe; el camino
+se mide, NO se afirma en un libro. SI un caso falla solo en su gemelo de imagen,
+ENTONCES eso es un hallazgo de FORMATO, no un defecto de extracción.
+
+R24. El sistema NO debe versionar ningún documento de entrada, PDF o imagen:
+`.gitignore` debe cubrir `evals/inputs/albaranes/` (hoy solo cubre `*.pdf`, y un
+`.png` entraría sin que nada lo pare).
 
 ## E. Lo que ya falla hoy en el banco (deuda declarada)
 
@@ -122,9 +123,8 @@ darlos por buenos o por fallidos.
 ## F. El catálogo de patrones y el filtro de robustez
 
 R27. El sistema debe mantener `evals/patrones.json`, versionado, con un
-registro por patrón (id, título, fase, casos que lo vigilan, decisión candidata
-y estado) más la lista de casos de **no regresión**: los que hoy deben salir en
-VERDE y no pertenecen a ningún patrón.
+registro por patrón (id, título, fase, casos, decisión candidata y estado) más
+la lista de casos de **no regresión**, los que hoy deben salir en VERDE.
 
 R28. El sistema debe exigir que cada caso citado en `evals/patrones.json`
 exista en `evals/fixtures/`, y que cada patrón cite al menos un caso.
@@ -132,10 +132,10 @@ exista en `evals/fixtures/`, y que cada patrón cite al menos un caso.
 R29. CUANDO se registre una decisión candidata de mejora, el sistema debe
 exigirle respuesta a las dos preguntas del filtro de robustez: ¿sigue
 funcionando si el proveedor cambia el formato del papel? ¿y si aparece un
-proveedor nuevo sin histórico? SI alguna respuesta es «no», ENTONCES queda
-`descartada` con su motivo y no genera ficha. Estrechar el espacio de búsqueda
-(la partida entre las de la obra; la obra entre las que tienen contrato con ese
-proveedor) pasa el filtro; una regla atada a un formato o a un proveedor, no.
+proveedor nuevo? SI alguna respuesta es «no», ENTONCES queda `descartada` con su
+motivo y no genera ficha. Estrechar el espacio de búsqueda (la partida entre las
+de la obra; la obra entre las del proveedor) pasa el filtro; una regla atada a
+un formato o a un proveedor, no.
 
 R30. El sistema debe proponer las fichas de arreglo en `harness/features.json`
 ordenadas por cuántas líneas toca cada patrón, y en estado `pending`.
@@ -146,5 +146,5 @@ R31. El humano debe validar la tabla de reparto de `design.md` §3, la política
 de vacíos por columna (R12) y el mapa de familias antes de sembrar.
 
 R32. La pasada `python -m evals.runner --con-llm --feature F-045` cuesta dinero
-y la lanza el humano; su informe queda en `progress/evals_F-045.md`, y en él
-los casos de no regresión deben salir en VERDE.
+y la lanza el humano; su informe queda en `progress/evals_F-045.md`, con los
+casos de no regresión en VERDE y el resumen agrupado por camino de lectura.

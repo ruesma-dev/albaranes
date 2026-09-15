@@ -51,6 +51,18 @@ familia, 35 filas con comentario de defecto (había crecido desde las ~110).
 5. **D6 · el campo `servicios` de la ficha**: F-045 no toca sv2/sv5/sv6, solo
    los vigila.
 
+**Añadido el 2026-09-15 · parte de los originales son PNG, a propósito** («asi
+medimos tambien en otro formato»). La spec lo recoge en `design.md` §4 bis: son
+TRES caminos de lectura, no dos —PDF con texto, PDF escaneado (JPEG por página)
+e imagen suelta realzada por `preparar_imagen_para_ia`, rama de sv2 de julio de
+2026 que hoy no mide nadie—, y un fallo que solo sale en el tercero es
+información sobre el FORMATO, no un defecto de extracción. Tres consecuencias:
+el mismo albarán en PDF y en PNG son DOS casos con el mismo ground truth
+(`HOR-012` y `HOR-012-IMG`, hermanados por `gemelo_de`) y no se deduplican; el
+formato NO se escribe en ningún libro, se mide en la corrida y el informe agrupa
+por él; y **hay un agujero que cerrar en `.gitignore`**, que ignora `*.pdf` pero
+no `*.png`, así que hoy un original de proveedor en PNG entraría en git.
+
 Los arreglos salen como fichas propias, priorizadas en `design.md` §7: patrón 1
 (partida mal leída) y patrón 3 (líneas deducidas que no se generan) primero;
 CIF raro y número de albarán, al final, por tener un solo caso cada uno.
