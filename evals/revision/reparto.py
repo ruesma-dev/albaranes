@@ -294,6 +294,8 @@ def repartir(caso: CasoRevisado, vocab: Vocabulario) -> dict[str, dict[str, list
     comentario = " | ".join(caso.comentarios) or None
 
     tablas["IA1"]["cabeceras"].append(_ia1_cabecera(caso, comentario))
+    tablas["INPUTS"]["caso"].append(_inputs_caso(caso, comentario))
+    tablas["FINAL"]["datos_generales"].append(_final_generales(caso, comentario, vocab))
     for linea in caso.impresas:
         tablas["IA1"]["lineas"].append(_ia1_linea(caso, linea, vocab))
         contexto = _ia2_contexto(caso, linea)
@@ -301,6 +303,7 @@ def repartir(caso: CasoRevisado, vocab: Vocabulario) -> dict[str, dict[str, list
             tablas["IA2"]["contexto"].append(contexto)
         tablas["IA3"]["lineas_valoradas"].append(_ia3_valorada(caso, linea, vocab))
         tablas["FINAL"]["lineas"].append(_final_linea(caso, linea, vocab))
+        tablas["INPUTS"]["lineas_albaran"].append(_inputs_linea(caso, linea, vocab))
         if linea.origen_contrato == "nueva":
             tablas["IA4"]["conciliacion"].append(_ia4_conciliacion(caso, linea, vocab))
     for linea in caso.deducidas:
@@ -461,6 +464,88 @@ def _final_anadida(caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario)
         "importe": celda(linea, "importe", vocab),
         "comentario": linea.fila.texto("comentarios") or None,
     }
+
+
+def _inputs_caso(caso: CasoRevisado, comentario: str | None) -> dict:
+    """El registro maestro de la ENTRADA del caso, no una expectativa.
+
+    `tipologia` lleva la familia de DOCUMENTO del catálogo, no la pestaña
+    (design §3): la pestaña es organización del banco y las dos no siempre
+    coinciden —GASOLEO vive en la pestaña Combustible—.
+    """
+    primera = caso.lineas[0].fila
+    hay_nuevas = any(linea.origen_contrato == "nueva" for linea in caso.impresas)
+    return {
+        "caso_id": caso.caso_id,
+        "tipologia": caso.destino.familia_documento,
+        "ia_destino": "ambas" if hay_nuevas else "IA3",
+        "origen": "manual",
+        "contrato_codigo": primera.texto("codigo_contrato"),
+        "descripcion_caso": " · ".join(
+            trozo for trozo in (caso.codigo, caso.destino.etiqueta, comentario) if trozo
+        ),
+    }
+
+
+def _inputs_linea(caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario) -> dict:
+    """La línea tal como LLEGA a la valoración. Aquí nunca se escribe `?`.
+
+    El sentinela significa «no compares», y en una entrada no hay nada que
+    comparar: viajaría como texto literal dentro de la carga que lee sv5. Y el
+    precio que no imprime el papel tampoco se le da: darle el del contrato es
+    hacerle el trabajo que se le está evaluando.
+    """
+    return {
+        "caso_id": caso.caso_id,
+        "num_linea": linea.num_linea,
+        "descripcion": linea.fila.texto("concepto") or None,
+        "cantidad": _numero(linea.fila.bruto("cantidad")),
+        "unidad": linea.fila.texto("unidad") or None,
+        "precio_unitario": (
+            _numero(linea.fila.bruto("precio_unitario")) if linea.precio_impreso else None
+        ),
+        "descuentos": _descuentos(linea, vocab),
+        "importe": (
+            _numero(linea.fila.bruto("importe")) if linea.importe_impreso else None
+        ),
+        "codigo_imputacion": None,
+        "observaciones_albaran": None,
+    }
+
+
+def _final_generales(
+    caso: CasoRevisado, comentario: str | None, vocab: Vocabulario
+) -> dict:
+    """La referencia MAESTRA: cómo debe quedar el albarán al acabar."""
+    primera = caso.lineas[0].fila
+    return {
+        "caso_id": caso.caso_id,
+        "fichero": caso.fichero or None,
+        "obra": primera.texto("codigo_obra") or INTERROGANTE,
+        "proveedor": primera.texto("nombre_empresa") or INTERROGANTE,
+        "cif": primera.texto("cif") or INTERROGANTE,
+        "fecha": primera.texto("fecha") or INTERROGANTE,
+        # El código del humano (0025146) no es el literal impreso (SS-0025146).
+        "numero_albaran": INTERROGANTE,
+        "contrato_elegido": primera.texto("codigo_contrato") or INTERROGANTE,
+        "total_valorado_esperado": _total(caso, vocab),
+        "requiere_revision": INTERROGANTE,
+        "motivo_revision": None,
+        "comentario": comentario,
+    }
+
+
+def _total(caso: CasoRevisado, vocab: Vocabulario) -> object:
+    """La suma de los importes, o `?` si falta alguno.
+
+    Sumar sobre un hueco daría un total falso con pinta de bueno, y el total
+    es lo primero que mira quien audita un caso en rojo.
+    """
+    importes = [celda(linea, "importe", vocab) for linea in caso.lineas]
+    if any(not isinstance(importe, (int, float)) for importe in importes):
+        return INTERROGANTE
+    total = sum(importes)  # type: ignore[arg-type]
+    return int(total) if float(total).is_integer() else round(total, 2)
 
 
 def _final_linea(caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario) -> dict:
