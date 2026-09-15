@@ -1,0 +1,86 @@
+{
+  "_doc": "Vocabulario del importador de la revision manual (F-045). Es DATO, no codigo: la tabla de etiquetas de design.md 5 bis vive AQUI y en ningun otro sitio, para poder corregirla sin tocar Python. Lo que no aparezca aqui ABORTA la importacion con su fila (R5): caer en 'generico' por descuido sembraria ground truth falso sin que nadie lo notara. Cotejo de valores: se normaliza a mayusculas sin acentos y todo lo que no sea alfanumerico pasa a un solo espacio, asi que CONTRATO \"PAPEL\" se cota como CONTRATO PAPEL. Primero se prueban los exactos y despues los prefijos, del mas largo al mas corto.",
+
+  "_doc_etiquetas": "Tres espacios de nombres que hoy nadie reconcilia (design 5 bis): la ETIQUETA la escribe el humano en el Excel; la FAMILIA DE DOCUMENTO es la del catalogo unico (ruesma_comun.contratos.familias); la PESTANA es organizacion del banco. La pestana NO es la familia: GASOLEO va a la pestana Combustible con familia combustible, y CAMION GRUA a la pestana Alquiler con familia generico.",
+  "etiquetas": {
+    "HORMIGON":     { "familia_documento": "hormigon",    "pestana": "Hormigon",             "familia_linea": null },
+    "MORTERO":      { "familia_documento": "mortero",     "pestana": "Mortero",              "familia_linea": null },
+    "RESIDUOS":     { "familia_documento": "residuos",    "pestana": "Residuos",             "familia_linea": null },
+    "CONTENEDORES": { "familia_documento": "residuos",    "pestana": "Residuos",             "familia_linea": null },
+    "GENERICO":     { "familia_documento": "generico",    "pestana": "Generico-Suministros", "familia_linea": null },
+    "MATERIALES":   { "familia_documento": "generico",    "pestana": "Generico-Suministros", "familia_linea": null },
+    "CAMION GRUA":  { "familia_documento": "generico",    "pestana": "Alquiler",             "familia_linea": "alquiler_maquinaria" },
+    "GASOLEO":      { "familia_documento": "combustible", "pestana": "Combustible",          "familia_linea": "combustible" },
+    "FERRETERIA":   { "familia_documento": "ferreteria",  "pestana": "Ferreteria",           "familia_linea": null },
+    "GRAVA":        { "familia_documento": "grava",       "pestana": "Grava",                "familia_linea": null }
+  },
+
+  "_doc_prefijos": "Prefijo del caso_id por pestana (R7). Grava y Ferreteria son pestanas nuevas de F-045; Ferralla se anadira cuando el humano traiga albaranes.",
+  "prefijos_pestana": {
+    "Generico-Suministros": "GEN",
+    "Hormigon": "HOR",
+    "Mortero": "MOR",
+    "Residuos": "RES",
+    "Bombeo": "BOM",
+    "Combustible": "COM",
+    "Alquiler": "ALQ",
+    "Grava": "GRA",
+    "Ferreteria": "FER"
+  },
+
+  "_doc_familias_vigentes": "Las familias que HOY existen como clasificacion de DOCUMENTO en ruesma_comun.contratos.familias. combustible, grava, ferreteria y ferralla no estan: sus casos se escriben igual, nacen ROJOS a proposito y el informe los agrupa aparte de los defectos reales de clasificacion. Ampliar el catalogo es F-046, no F-045 (familias.py es ruta sensible: su texto se inyecta en el prompt de IA1). Si un test dice que esta lista ya no coincide con el catalogo, es que F-046 aterrizo: actualizala aqui.",
+  "familias_documento_vigentes": ["generico", "hormigon", "mortero", "residuos"],
+
+  "_doc_origen_linea": "Discrimina la fila ENTERA (design 3): una linea impresa va a IA1 y al FINAL tabla 2; una deducida NUNCA va a IA1 -exigirle a IA1 que la invente seria un rojo permanente- y va a IA3 tabla 2 y al FINAL tabla 3. El humano escribe cola libre detras ('EN ALBARAN 189502', 'DEDUCIDA INCREMENTO PRECIO ANO 2026'), por eso hay prefijos.",
+  "origen_linea": [
+    { "canonico": "impresa",  "exactos": ["EN ALBARAN", "ALBARAN"], "prefijos": ["EN ALBARAN ", "ALBARAN "] },
+    { "canonico": "deducida", "exactos": ["DEDUCIDA", "DEDUCIDO"],  "prefijos": ["DEDUCIDA ", "DEDUCIDO "] }
+  ],
+
+  "_doc_origen_contrato": "EN CONTRATO -> hay linea de contrato con la que casar; NUEVA -> sin match, el caso pasa a IA4; OFERTA -> el precio sale de una oferta (F-017).",
+  "origen_contrato": [
+    { "canonico": "contrato", "exactos": ["EN CONTRATO", "CONTRATO", "CONTRATO PAPEL", "DE CONTRATO"], "prefijos": [] },
+    { "canonico": "nueva",    "exactos": ["NUEVA"],                                                    "prefijos": [] },
+    { "canonico": "oferta",   "exactos": ["OFERTA", "EN OFERTA", "OFERTTA", "DE OFERTA"],              "prefijos": [] }
+  ],
+
+  "_doc_origen_precio": "Sirve para las DOS columnas de origen (unitario e importe). 'precio_source' es el valor que se escribe en los libros, y coincide con el que emite el sistema (evals/procesos/sv6_build.py, MAPA_PRECIO_SOURCE) salvo 'oferta', que hoy no emite nadie: esas lineas nacen rojas y su ficha es F-017. 'impreso' es lo que decide si el dato va a IA1: solo ALBARAN a secas viene del papel. ALBARAN VALORADO es un importe calculado a partir del unitario del albaran, no un importe impreso, y por eso no se le puede exigir a la extraccion.",
+  "origen_precio": [
+    { "precio_source": "albaran",     "impreso": true,  "exactos": ["ALBARAN", "EN ALBARAN"],                       "prefijos": [] },
+    { "precio_source": "albaran",     "impreso": false, "exactos": ["ALBARAN VALORADO"],                            "prefijos": [] },
+    { "precio_source": "contrato_db", "impreso": false, "exactos": ["CONTRATO", "DE CONTRATO", "EN CONTRATO"],      "prefijos": [] },
+    { "precio_source": "oferta",      "impreso": false, "exactos": ["OFERTA", "EN OFERTA", "OFERTTA", "DE OFERTA"], "prefijos": [] },
+    { "precio_source": "deducido",    "impreso": false, "exactos": [],                                              "prefijos": ["DEDUCIDO ", "DEDUCIDA "] }
+  ],
+
+  "_doc_politica_vacios": "Que significa una celda VACIA en CADA columna (R12). 'nulo' = el humano afirma que no hay valor y se escribe vacio en el libro; 'sin_fila' = no se genera fila para ese dato; 'interrogante' = el humano no lo ha afirmado y se escribe '?' (no se compara). OJO: esto es el eje del VALOR ESPERADO. El eje del COMENTARIO es otro y NO produce nunca un '?': comentario vacio significa que ese caso salio BIEN y hay que seguir comprobandolo (R9).",
+  "politica_vacios": {
+    "codigo_albaran": "interrogante",
+    "tipo_albaran": "interrogante",
+    "cif": "interrogante",
+    "nombre_empresa": "interrogante",
+    "codigo_obra": "interrogante",
+    "fecha": "interrogante",
+    "codigo_contrato": "interrogante",
+    "partida": "interrogante",
+    "origen_linea": "interrogante",
+    "origen_contrato": "interrogante",
+    "concepto": "interrogante",
+    "cantidad": "interrogante",
+    "unidad": "interrogante",
+    "precio_unitario": "interrogante",
+    "origen_precio": "interrogante",
+    "importe": "interrogante",
+    "origen_importe": "interrogante",
+    "descuento": "nulo",
+    "ler": "sin_fila",
+    "comentarios": "nulo"
+  },
+
+  "_doc_descuento": "La columna 'descuento' del Excel viene en FRACCION (0,4 = 40 %) y los libros guardan el descuento IMPRESO en porcentaje, que es lo que consume la formula canonica importe = cantidad x precio x (1 - descuento/100) (ARCHITECTURE 13). El factor hace la traduccion; un descuento de 0 se escribe vacio, que es lo mismo que decir 'sin descuento'.",
+  "descuento_factor_porcentaje": 100,
+
+  "_doc_unidades": "Unidades de CONTEO. Todo lo demas se pesa o se mide, y es a eso a lo que se le aplica el minimo facturable de 1 en residuos -canon y tratamiento-, nunca al movimiento de contenedor, que sigue en unidades: 1 cambio = 1 UD (design 5 ter, criterio del humano del 2026-09-15).",
+  "unidades_conteo": ["UD", "U", "UDS"],
+  "minimo_facturable_residuos": 1
+}
