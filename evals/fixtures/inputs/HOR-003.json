@@ -1,0 +1,35 @@
+{
+  "caso_id": "HOR-003",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "HOR-003",
+        "contrato_codigo": "CTSU25/0001",
+        "descripcion_caso": "0001167 · HORMIGON · Partida deberia ser P4.03.05, es verdad que casi parece un 0 el primer digito. Por eso buscar en lista de partidas",
+        "ia_destino": "IA3",
+        "origen": "manual",
+        "tipologia": "Hormigon"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-003",
+        "codigo_imputacion": null,
+        "descripcion": "HORMIGÓN HA-25/B/20/XC2",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

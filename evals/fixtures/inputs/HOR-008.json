@@ -1,0 +1,35 @@
+{
+  "caso_id": "HOR-008",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "HOR-008",
+        "contrato_codigo": "CTSU23/0386",
+        "descripcion_caso": "W25963 · HORMIGON · partida ha cogido 02.01, pero no se de donde sale ni de donde la coge neogcio",
+        "ia_destino": "IA3",
+        "origen": "manual",
+        "tipologia": "Hormigon"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-008",
+        "codigo_imputacion": null,
+        "descripcion": "HNE-15/B/20",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

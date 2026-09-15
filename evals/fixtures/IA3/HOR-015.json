@@ -1,0 +1,61 @@
+{
+  "caso_id": "HOR-015",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "HOR-015",
+        "codigo_partida_final": 42.01,
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "no habia elegido contrato. Cuando sean 2 vamos a unirlos. Y que no elija. El incremento de precio se calcula contra año contrato antiguo",
+        "importe_calculado": 625.1,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 89.3,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "HOR-015",
+        "codigo_partida_final": 42.01,
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02",
+        "importe_calculado": 21,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 3,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "HOR-015",
+        "codigo_partida_final": 42.01,
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02",
+        "importe_calculado": 21,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 3,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 3,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [
+      {
+        "cantidad": 7,
+        "caso_id": "HOR-015",
+        "codigo_partida": 42.01,
+        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02. importe de oferta, ahora no sale",
+        "descripcion_esperada": "HA-25/F/12/XC2/1. INCREM. 2025",
+        "modifier_source": "@@NO_COMPARAR@@",
+        "num_linea_base": 3,
+        "precio_unitario": 6.7,
+        "rol_linea": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Hormigon"
+}

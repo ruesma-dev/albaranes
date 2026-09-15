@@ -120,7 +120,8 @@ def test_f045_r7_el_mapa_versionado_trae_los_siete_casos_ya_sembrados():
     assert mapa["RES-001"]["codigo"] == "0000168"
     for caso_id, registro in mapa.items():
         assert set(registro) >= {"codigo", "clave", "nombre_original", "formato",
-                                 "gemelo_de", "pestana"}, caso_id
+                                 "gemelo_de", "pestana",
+                                 "familia_documento"}, caso_id
 
 
 def test_f045_r7_el_mapa_se_guarda_y_se_relee_igual(tmp_path):

@@ -1,0 +1,20 @@
+{
+  "caso_id": "RES-008",
+  "fase": "IA4",
+  "libro": "IA4_conciliacion.xlsx",
+  "sha256_libro": "b81f85b50da7a9b70c1de8c52debf9080fbf418b7be3d9d2b3dd3d85a4ce763c",
+  "tablas": {
+    "conciliacion": [
+      {
+        "caso_id": "RES-008",
+        "comentario": "la partida esta mal, era 32.01, en lugar de 04.52.01 (si bien es cierto que esta cortado el numero). El ler no viene en el contrato, asi que aunque haya cogido el generico deberia buscar en la oferta",
+        "concilia": "@@NO_COMPARAR@@",
+        "linea_contrato_esperada": "@@NO_COMPARAR@@",
+        "motivo": null,
+        "num_linea": 1,
+        "precio_unitario_esperado": 173
+      }
+    ]
+  },
+  "tipologia": "Residuos"
+}

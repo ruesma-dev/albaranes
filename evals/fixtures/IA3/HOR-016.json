@@ -1,0 +1,37 @@
+{
+  "caso_id": "HOR-016",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "HOR-016",
+        "codigo_partida_final": "38.01.01",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2",
+        "importe_calculado": 785.8,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 78.58,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [
+      {
+        "cantidad": 10,
+        "caso_id": "HOR-016",
+        "codigo_partida": "38.01.01",
+        "comentario": "no ha salido esta linea. Porque no la ha generado? El contrato es 2024 (se ve en codigo) y el alabran 2025",
+        "descripcion_esperada": "HM-10/B/22/I. INCREM. 2025",
+        "modifier_source": "@@NO_COMPARAR@@",
+        "num_linea_base": 1,
+        "precio_unitario": 5.9,
+        "rol_linea": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Hormigon"
+}

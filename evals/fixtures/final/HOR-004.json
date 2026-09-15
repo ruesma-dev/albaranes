@@ -1,0 +1,134 @@
+{
+  "caso_id": "HOR-004",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "HOR-004",
+        "cif": "B86359866",
+        "comentario": "esta linea no la ha generado. Marca sin aditivo (y encima subrayado con rotulador) cuando ponga hay que generar linea",
+        "contrato_elegido": "CTSU24/0476",
+        "fecha": "2026-03-11",
+        "fichero": null,
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "0695",
+        "proveedor": "SUMINISTROS DE OBRAS MOSTOLES, S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 1302.5
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 10,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-004",
+        "comentario": null,
+        "descripcion": "HORMIGON PREPARADOS EN CENTRAL HA-25.",
+        "importe_final": 965,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": "03.03.07",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 96.5,
+        "unidad_final": "M3"
+      },
+      {
+        "cantidad_final": 10,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-004",
+        "comentario": "esta linea no la ha generado. Marca sin aditivo (y encima subrayado con rotulador) cuando ponga hay que generar linea",
+        "descripcion": "INCREMENTO POR SIN ADITIVO",
+        "importe_final": 50,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "partida_final": "03.03.07",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 5,
+        "unidad_final": "M3"
+      },
+      {
+        "cantidad_final": 10,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-004",
+        "comentario": null,
+        "descripcion": "INCREMENTO POR ÁRIDO 12 EN HORMIGÓN",
+        "importe_final": 40,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 3,
+        "partida_final": "03.03.07",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 4,
+        "unidad_final": "M3"
+      },
+      {
+        "cantidad_final": 10,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-004",
+        "comentario": null,
+        "descripcion": "INCREMENTO POR CONSISTENCIA FLUIDA EN HORMIGON",
+        "importe_final": 40,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 4,
+        "partida_final": "03.03.07",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 4,
+        "unidad_final": "M3"
+      },
+      {
+        "cantidad_final": 10,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-004",
+        "comentario": null,
+        "descripcion": "INCREMENTO POR FIBRAS",
+        "importe_final": 60,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 5,
+        "partida_final": "03.03.07",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 6,
+        "unidad_final": "M3"
+      }
+    ],
+    "lineas_anadidas": [
+      {
+        "cantidad": 10,
+        "caso_id": "HOR-004",
+        "comentario": null,
+        "concepto": "INCREMENTO POR AÑO 2025 EN HORMIGON",
+        "importe": 30,
+        "num_linea_base": 1,
+        "partida": "03.03.07",
+        "precio_unitario": 3
+      },
+      {
+        "cantidad": 10,
+        "caso_id": "HOR-004",
+        "comentario": null,
+        "concepto": "INCREMENTO POR AÑO 2026 EN HORMIGON",
+        "importe": 110,
+        "num_linea_base": 1,
+        "partida": "03.03.07",
+        "precio_unitario": 11
+      },
+      {
+        "cantidad": 10,
+        "caso_id": "HOR-004",
+        "comentario": null,
+        "concepto": "INCREMENTO POR GESTION DE RESIDUOS EN HORMIGON",
+        "importe": 7.5,
+        "num_linea_base": 5,
+        "partida": "03.03.07",
+        "precio_unitario": 0.75
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

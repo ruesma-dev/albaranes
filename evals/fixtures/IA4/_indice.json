@@ -1,6 +1,20 @@
 {
-  "casos": [],
+  "casos": [
+    "COM-001",
+    "FER-001",
+    "FER-002",
+    "FER-003",
+    "GEN-002",
+    "HOR-005",
+    "HOR-007",
+    "HOR-014",
+    "HOR-017",
+    "MOR-002",
+    "MOR-003",
+    "MOR-004",
+    "RES-008"
+  ],
   "fase": "IA4",
   "libro": "IA4_conciliacion.xlsx",
-  "sha256_libro": "fc874a83aaa3a2bdb86bfb8c3970ab88a1af01d119b7e8f4da4808e8297bda91"
+  "sha256_libro": "b81f85b50da7a9b70c1de8c52debf9080fbf418b7be3d9d2b3dd3d85a4ce763c"
 }

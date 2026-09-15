@@ -84,12 +84,13 @@ def ejecutar(
         "7 casos RES."
     )
     resultado.avisos.append(
-        "`INPUTS.CASOS.tipologia` lleva la familia de DOCUMENTO (design §3), "
-        "mientras que `MAPA_TIPO_FAMILIA` de `evals/procesos/sv5_valoracion.py` "
-        "y `sv6_build.py` se indexa por PESTAÑA: los casos nuevos llegarán a "
-        "sv5/sv6 como `tipo_familia='otro'` hasta que eso se reconcilie. "
-        "Decisión pendiente del humano; esos dos ficheros los declara "
-        "`design.md` §2 como intocables en F-045."
+        "DESVIACIÓN de `design.md` §3, pendiente de que la cierre el humano: "
+        "`INPUTS.CASOS.tipologia` lleva la PESTAÑA y no la familia de "
+        "documento. `MAPA_TIPO_FAMILIA` de `evals/procesos/sv5_valoracion.py` "
+        "y `sv6_build.py` está indexado por pestaña, así que escribir la "
+        "familia dejaría TODOS los casos —incluidos los 7 RES que ya "
+        "funcionaban— en `tipo_familia='otro'`. La familia de documento queda "
+        "en `evals/mapa_casos.json` y agrupada más arriba en este informe."
     )
     return resultado
 
@@ -166,28 +167,44 @@ def _escribir(tablas: dict, resultado: InformeImportacion, dir_ground_truth) -> 
 
     for definicion in conversor.LIBROS:
         ruta = carpeta / definicion.fichero
-        resultado.copias.append(str(escritura.copia_de_seguridad(ruta)))
+        creadas = False
         if definicion.por_tipologia:
             libro = openpyxl.load_workbook(ruta)
             try:
-                if escritura.asegurar_pestanas(libro, pestanas_nuevas):
+                creadas = bool(escritura.asegurar_pestanas(libro, pestanas_nuevas))
+                if creadas:
                     libro.save(ruta)
             finally:
                 libro.close()
-        por_pestana = tablas.get(definicion.fase, {})
-        for pestana, definiciones in definicion.tablas_por_pestana.items():
-            filas = _filas_de(definicion, pestana, por_pestana)
-            if not any(filas.values()):
-                continue
+
+        trabajo = [
+            (pestana, definiciones, _filas_de(definicion, pestana, por_pestana))
+            for pestana, definiciones in definicion.tablas_por_pestana.items()
+            for por_pestana in [tablas.get(definicion.fase, {})]
+        ]
+        trabajo = [(p, d, f) for p, d, f in trabajo if any(f.values())]
+
+        # Primero se mira si el libro cambia; solo entonces se copia y se
+        # escribe. Guardar un libro idéntico le cambiaría el sha256 y dejaría
+        # 264 fixtures «modificados» sin que hubiera cambiado ni un dato (R18).
+        cambia = creadas or any(
             escritura.escribir_pestana(
-                ruta,
-                pestana,
-                tuple(escritura.DefTabla(t.titulo, t.clave) for t in definiciones),
-                filas,
-                caso_ids,
+                ruta, pestana, _definiciones(defs), filas, caso_ids, ejecutar=False
             )
+            for pestana, defs, filas in trabajo
+        )
+        if not cambia:
+            continue
+        resultado.copias.append(str(escritura.copia_de_seguridad(ruta)))
+        for pestana, defs, filas in trabajo:
+            escritura.escribir_pestana(ruta, pestana, _definiciones(defs), filas, caso_ids)
         escritos.append(definicion.fichero)
     return escritos
+
+
+def _definiciones(tablas) -> tuple[escritura.DefTabla, ...]:
+    """Del contrato que declara el conversor al que consume la escritura."""
+    return tuple(escritura.DefTabla(tabla.titulo, tabla.clave) for tabla in tablas)
 
 
 def _filas_de(definicion, pestana: str, por_pestana: dict) -> dict[str, list[dict]]:

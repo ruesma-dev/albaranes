@@ -1,0 +1,73 @@
+{
+  "caso_id": "HOR-017",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "HOR-017",
+        "codigo_partida_final": 42.01,
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "importe_calculado": 267.9,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 89.3,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "HOR-017",
+        "codigo_partida_final": 42.01,
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "importe_calculado": 9,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 3,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "HOR-017",
+        "codigo_partida_final": 42.01,
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "importe_calculado": 9,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 3,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 3,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "HOR-017",
+        "codigo_partida_final": 42.01,
+        "codigo_producto_contrato": null,
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "importe_calculado": 18,
+        "match_method": "no_match",
+        "num_linea": 4,
+        "precio_source": "oferta",
+        "precio_unitario_final": 6,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [
+      {
+        "cantidad": 3,
+        "caso_id": "HOR-017",
+        "codigo_partida": 42.01,
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "descripcion_esperada": "HA-25/F/12/XC1. INCREM. 2025",
+        "modifier_source": "@@NO_COMPARAR@@",
+        "num_linea_base": 3,
+        "precio_unitario": 6.7,
+        "rol_linea": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Hormigon"
+}

@@ -2,7 +2,7 @@
   "caso_id": "RES-005",
   "fase": "IA2",
   "libro": "IA2_contexto.xlsx",
-  "sha256_libro": "0bb6480134e91b44245f662205b3e78bf4e5feaacedf223de310b8363c022d7c",
+  "sha256_libro": "c47f95e3a52bcc1f94110186ebcc636f76a37db4701631f289c8016df0dba1ef",
   "tablas": {
     "contexto": [
       {
@@ -15,7 +15,7 @@
       {
         "campo_contexto": "codigo_ler",
         "caso_id": "RES-005",
-        "comentario": "Fila marcada en la rejilla del papel: 17 06 04. Normalizado segun el LEEME de IA2 y el contrato de contexto_linea: 6 digitos, sin espacios ni puntos.",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
         "num_linea": 1,
         "valor_esperado": "170604"
       },
@@ -25,6 +25,13 @@
         "comentario": "El 6 manuscrito en la columna VOL. m3. Es la CAPACIDAD del contenedor (§8.1), no una cantidad de material.",
         "num_linea": 1,
         "valor_esperado": 6
+      },
+      {
+        "campo_contexto": "codigo_ler",
+        "caso_id": "RES-005",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
+        "num_linea": 2,
+        "valor_esperado": "170604"
       }
     ]
   },

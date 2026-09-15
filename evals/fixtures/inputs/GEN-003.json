@@ -1,0 +1,47 @@
+{
+  "caso_id": "GEN-003",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "GEN-003",
+        "contrato_codigo": "CTSU25/0317",
+        "descripcion_caso": "2026/01/007181 · GENERICO",
+        "ia_destino": "IA3",
+        "origen": "manual",
+        "tipologia": "Generico-Suministros"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 23.76,
+        "caso_id": "GEN-003",
+        "codigo_imputacion": null,
+        "descripcion": "SOLADO BOREAL GREY 60X60 cm - BAÑOS PRINCIPALES (OP2)",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M2"
+      },
+      {
+        "cantidad": 65,
+        "caso_id": "GEN-003",
+        "codigo_imputacion": null,
+        "descripcion": "RODAPIÉ BOREAL GREY C/BISELADO 14,8x60 cm - BAÑOS PRINCIPALES (OP2)",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "UD"
+      }
+    ]
+  },
+  "tipologia": "Generico-Suministros"
+}

@@ -1,0 +1,37 @@
+{
+  "caso_id": "RES-009",
+  "fase": "IA1",
+  "libro": "IA1_extraccion.xlsx",
+  "sha256_libro": "6cf05b81645531a8c1d252ad48b1f38287ad1f6cc6eb644c4962954954ff9144",
+  "tablas": {
+    "cabeceras": [
+      {
+        "caso_id": "RES-009",
+        "comentario": "numero de albraran incorrecto. Ha cogido 09478. la obra no venaia y ha deducido una incorrecta. Si tiene match de proveedor solo deberia intentar deducir entre las que tienen dicho porveedor en la obra | el precio por incremento por año tambien hay que meterlo en residuos. No lo ha cogido. Si no esta en contrato deducir de la oferta",
+        "fecha": "2026-03-13",
+        "fichero_albaran": null,
+        "forma_pago": "@@NO_COMPARAR@@",
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra_codigo": "@@NO_COMPARAR@@",
+        "obra_nombre": "@@NO_COMPARAR@@",
+        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_nombre": "PINSACON, S.L."
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad": 1,
+        "caso_id": "RES-009",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "numero de albraran incorrecto. Ha cogido 09478. la obra no venaia y ha deducido una incorrecta. Si tiene match de proveedor solo deberia intentar deducir entre las que tienen dicho porveedor en la obra",
+        "descripcion_esperada": "MOVIMIENTO DE CONTENEDOR DE 6 M CÚBICOS MEZCLA OTROS RESIDUOS",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "precio_unitario": null,
+        "unidad": "UD"
+      }
+    ]
+  },
+  "tipologia": "Residuos"
+}

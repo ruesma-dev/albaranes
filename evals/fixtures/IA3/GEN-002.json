@@ -1,0 +1,109 @@
+{
+  "caso_id": "GEN-002",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "GEN-002",
+        "codigo_partida_final": "P5.09.03",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "habia 2 contratos, y no ha sabido elegir uno. Podriamos hacer uqe si no sabe elegir que coja los 2, lo smerge (distinguiendo que es un mergeo) y que siga con eso. No ha coigo el capitulo inicial P5. el codigo era P5.09.03",
+        "importe_calculado": 621.22,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 14.38,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "GEN-002",
+        "codigo_partida_final": "P5.09.03",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": null,
+        "importe_calculado": 5590.94,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 14.38,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "GEN-002",
+        "codigo_partida_final": "P5.09.03",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": null,
+        "importe_calculado": 621.22,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 3,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 14.38,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "GEN-002",
+        "codigo_partida_final": "P5.09.04",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": null,
+        "importe_calculado": 621.22,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 4,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 14.38,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "GEN-002",
+        "codigo_partida_final": "P5.09.05",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": null,
+        "importe_calculado": 621.22,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 5,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 14.38,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "GEN-002",
+        "codigo_partida_final": "P5.09.06",
+        "codigo_producto_contrato": null,
+        "comentario": null,
+        "importe_calculado": 621.22,
+        "match_method": "no_match",
+        "num_linea": 6,
+        "precio_source": "albaran",
+        "precio_unitario_final": 14.38,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "GEN-002",
+        "codigo_partida_final": "P5.38.07.02",
+        "codigo_producto_contrato": null,
+        "comentario": null,
+        "importe_calculado": 11234.36,
+        "match_method": "no_match",
+        "num_linea": 7,
+        "precio_source": "albaran",
+        "precio_unitario_final": 22.44,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "GEN-002",
+        "codigo_partida_final": "ALMACEN",
+        "codigo_producto_contrato": null,
+        "comentario": null,
+        "importe_calculado": 180,
+        "match_method": "no_match",
+        "num_linea": 8,
+        "precio_source": "albaran",
+        "precio_unitario_final": 9,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Generico-Suministros"
+}

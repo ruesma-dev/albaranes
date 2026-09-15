@@ -1,0 +1,47 @@
+{
+  "caso_id": "HOR-014",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "HOR-014",
+        "contrato_codigo": "CTSU24/0452",
+        "descripcion_caso": "249927 · HORMIGON · el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2 | el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2.como se que es final de bombeo?. Ha leido bien que cantidad es 5, deberia haber pueesto cantidad en carga incompleta 1. analizar porque no lo ha hecho",
+        "ia_destino": "ambas",
+        "origen": "manual",
+        "tipologia": "Hormigon"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 5,
+        "caso_id": "HOR-014",
+        "codigo_imputacion": null,
+        "descripcion": "HA-25/B/22/XC2",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 1,
+        "caso_id": "HOR-014",
+        "codigo_imputacion": null,
+        "descripcion": "CARGA INCOMPLETA. NO PROCEDE. FINAL DE BOMBEO",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

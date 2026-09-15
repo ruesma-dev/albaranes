@@ -1,0 +1,43 @@
+{
+  "caso_id": "GRA-002",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "GRA-002",
+        "cif": "B86615549",
+        "comentario": "La partida ha cogido PT.03.04 en lugar de P5.03.04La unidad esta bien, pero ha cogio un unitario que no es. Es grava 20/40 (se deduce del texto, esta en el contrato), el unitario es 12,87",
+        "contrato_elegido": "CTSU25/0085",
+        "fecha": "2026-05-26",
+        "fichero": null,
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "696",
+        "proveedor": "MATERIALES Y HORMIGONES, S.L. (MAHORSA)",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 385.59
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 29.96,
+        "casa_con_contrato": "SI",
+        "caso_id": "GRA-002",
+        "comentario": "La partida ha cogido PT.03.04 en lugar de P5.03.04La unidad esta bien, pero ha cogio un unitario que no es. Es grava 20/40 (se deduce del texto, esta en el contrato), el unitario es 12,87",
+        "descripcion": "GRAVA 20/40",
+        "importe_final": 385.59,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": "P5.03.04",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 12.87,
+        "unidad_final": "TN"
+      }
+    ],
+    "lineas_anadidas": []
+  },
+  "tipologia": "Grava"
+}

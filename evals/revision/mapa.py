@@ -31,7 +31,18 @@ _DOC = (
 )
 
 #: Campos que todo registro del mapa declara, aunque vengan vacíos.
-CAMPOS = ("clave", "codigo", "nombre_original", "formato", "gemelo_de", "pestana")
+CAMPOS = (
+    "clave",
+    "codigo",
+    "nombre_original",
+    "formato",
+    "gemelo_de",
+    "pestana",
+    # La familia de DOCUMENTO del catálogo, que no cabe en los libros:
+    # `INPUTS.CASOS.tipologia` lleva la pestaña porque es lo que leen sv5 y
+    # sv6 (ver `reparto._inputs_caso`). Aquí es donde se consulta.
+    "familia_documento",
+)
 
 
 def cargar(ruta: Path | str = RUTA_MAPA) -> dict[str, dict]:

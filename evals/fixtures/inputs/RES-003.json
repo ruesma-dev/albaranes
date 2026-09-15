@@ -2,13 +2,13 @@
   "caso_id": "RES-003",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "9e586929015fa794caa356809ae20e7b6d094e016cd648991a10eaf566c16344",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
   "tablas": {
     "caso": [
       {
         "caso_id": "RES-003",
         "contrato_codigo": "CTSU24/0228",
-        "descripcion_caso": "SS-0000589 · 120 + INCR. LER 170802 (51 €) = 171,00 € (§8.3).",
+        "descripcion_caso": "0000589 · RESIDUOS · No hay codigo de obra en albaran, no ha cogido ninguna",
         "ia_destino": "IA3",
         "origen": "manual",
         "tipologia": "Residuos"
@@ -104,16 +104,28 @@
     ],
     "lineas_albaran": [
       {
-        "cantidad": 6,
+        "cantidad": 1,
         "caso_id": "RES-003",
         "codigo_imputacion": null,
-        "descripcion": "170802 MATERIALES DE CONSTRUCCION A BASE DE YESO",
+        "descripcion": "CAMBIO CONTENEDOR 6M3",
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
-        "observaciones_albaran": "LER 170802. El numero de la linea (6) es la CAPACIDAD del contenedor, no una cantidad de material: la cantidad valorada es 1,00 UD (§8.1).",
+        "observaciones_albaran": null,
         "precio_unitario": null,
-        "unidad": null
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 1,
+        "caso_id": "RES-003",
+        "codigo_imputacion": null,
+        "descripcion": "INCREMENTO LER 170802 MAT. DE CONST. A PARTIR DE YESOS-E",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "UD"
       }
     ]
   },

@@ -1,0 +1,69 @@
+{
+  "caso_id": "MOR-004",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "MOR-004",
+        "cif": "B29679628",
+        "comentario": "partida mal, ha cogido 00.03.01. importe viene de oferta. Añadir | no se porque hay que meter esta linea, revisar negocio | incrementos por año en morteros hay que meterlo",
+        "contrato_elegido": "CTSU24/0452",
+        "fecha": "2025-09-29",
+        "fichero": null,
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "693",
+        "proveedor": "HORMIGONES Y CEMENTOS ANDALUCES, S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 920.7
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 9,
+        "casa_con_contrato": "NO",
+        "caso_id": "MOR-004",
+        "comentario": "partida mal, ha cogido 00.03.01. importe viene de oferta. Añadir",
+        "descripcion": "D-300/B/5/I",
+        "importe_final": 837,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": null,
+        "num_linea": 1,
+        "partida_final": "10.03.04",
+        "precio_source": "oferta",
+        "precio_unitario_final": 93,
+        "unidad_final": "M3"
+      },
+      {
+        "cantidad_final": 9,
+        "casa_con_contrato": "SI",
+        "caso_id": "MOR-004",
+        "comentario": "no se porque hay que meter esta linea, revisar negocio",
+        "descripcion": "INCREM. FIBRAS POLIPROPILENO",
+        "importe_final": 36,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "partida_final": "10.03.04",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 4,
+        "unidad_final": "M3"
+      }
+    ],
+    "lineas_anadidas": [
+      {
+        "cantidad": 9,
+        "caso_id": "MOR-004",
+        "comentario": "incrementos por año en morteros hay que meterlo",
+        "concepto": "D-300/B/5/I. INCREM. 2025",
+        "importe": 47.7,
+        "num_linea_base": 2,
+        "partida": "10.03.04",
+        "precio_unitario": 5.3
+      }
+    ]
+  },
+  "tipologia": "Mortero"
+}

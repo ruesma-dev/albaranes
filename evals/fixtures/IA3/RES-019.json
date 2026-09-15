@@ -1,0 +1,37 @@
+{
+  "caso_id": "RES-019",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "RES-019",
+        "codigo_partida_final": "CI.03A.7",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": null,
+        "importe_calculado": 90,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 90,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "RES-019",
+        "codigo_partida_final": "CI.03A.7",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "de donde sale que el unitario es 10?",
+        "importe_calculado": 10,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 10,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Residuos"
+}

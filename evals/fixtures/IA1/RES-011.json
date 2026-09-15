@@ -1,0 +1,49 @@
+{
+  "caso_id": "RES-011",
+  "fase": "IA1",
+  "libro": "IA1_extraccion.xlsx",
+  "sha256_libro": "6cf05b81645531a8c1d252ad48b1f38287ad1f6cc6eb644c4962954954ff9144",
+  "tablas": {
+    "cabeceras": [
+      {
+        "caso_id": "RES-011",
+        "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año",
+        "fecha": "2025-01-27",
+        "fichero_albaran": null,
+        "forma_pago": "@@NO_COMPARAR@@",
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra_codigo": "@@NO_COMPARAR@@",
+        "obra_nombre": "@@NO_COMPARAR@@",
+        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_nombre": "CARGA Y TRANSPORTE DE CUBAS, S.L."
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad": 1,
+        "caso_id": "RES-011",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": null,
+        "descripcion_esperada": "CONTENEDOR DE 8M3",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "precio_unitario": null,
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 3.28,
+        "caso_id": "RES-011",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año",
+        "descripcion_esperada": "RCDS. SUCIOS",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Residuos"
+}

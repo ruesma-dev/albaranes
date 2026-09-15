@@ -182,8 +182,26 @@ def test_f045_r14_el_informe_declara_los_criterios_de_residuos_pendientes(entorn
 
 def test_f045_r14_se_copia_cada_libro_antes_de_escribirlo(entorno):
     correr(entorno)
-    copias = list((entorno["ground_truth"] / "copias").glob("*.xlsx"))
-    assert len(copias) == len(conversor.LIBROS)
+    copias = {ruta.name.split(".xlsx")[0] for ruta in
+              (entorno["ground_truth"] / "copias").glob("*.xlsx")}
+    # Los cinco que el importador toca. IA4 no: no hay ninguna línea NUEVA en
+    # este Excel de prueba, así que no hay nada que conciliar.
+    assert copias == {
+        "IA1_extraccion", "IA2_contexto", "IA3_valoracion", "INPUTS",
+        "RESULTADO_FINAL",
+    }
+
+
+def test_f045_r18_la_segunda_pasada_no_deja_ni_una_copia_mas(entorno):
+    """Si el libro no cambia no se guarda: guardarlo le movería el sha256 y
+
+    dejaría todos sus fixtures «modificados» sin que hubiera cambiado un dato.
+    """
+    correr(entorno)
+    antes = sorted(p.name for p in (entorno["ground_truth"] / "copias").glob("*.xlsx"))
+    correr(entorno)
+    despues = sorted(p.name for p in (entorno["ground_truth"] / "copias").glob("*.xlsx"))
+    assert despues == antes
 
 
 def test_f045_r14_el_mapa_queda_escrito_con_los_casos_nuevos(entorno):

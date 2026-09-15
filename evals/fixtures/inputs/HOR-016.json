@@ -1,0 +1,35 @@
+{
+  "caso_id": "HOR-016",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "HOR-016",
+        "contrato_codigo": "CTSU24/0452",
+        "descripcion_caso": "249997 · HORMIGON · el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2 | no ha salido esta linea. Porque no la ha generado? El contrato es 2024 (se ve en codigo) y el alabran 2025",
+        "ia_destino": "IA3",
+        "origen": "manual",
+        "tipologia": "Hormigon"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 10,
+        "caso_id": "HOR-016",
+        "codigo_imputacion": null,
+        "descripcion": "HM-10/B/22/I",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

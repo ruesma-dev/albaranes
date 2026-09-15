@@ -1,0 +1,58 @@
+{
+  "caso_id": "MOR-003",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "MOR-003",
+        "cif": "B04685541",
+        "comentario": "partida en blanco es almacen | partida en blanco es almacen. En mortero tambien hay carga incompleta.en hormigon lo pilla bien , aquí en mortero lo mismo (copiar regla desde hormigon sin inventar)",
+        "contrato_elegido": "CTSU23/0386",
+        "fecha": "2025-06-23",
+        "fichero": null,
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "669",
+        "proveedor": "HORPRESOL, S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 280.5
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 3,
+        "casa_con_contrato": "NO",
+        "caso_id": "MOR-003",
+        "comentario": "partida en blanco es almacen",
+        "descripcion": "MD-200 (M-5) / 48 H.",
+        "importe_final": 250.5,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": null,
+        "num_linea": 1,
+        "partida_final": "almacen",
+        "precio_source": "oferta",
+        "precio_unitario_final": 83.5,
+        "unidad_final": "M3"
+      },
+      {
+        "cantidad_final": 2,
+        "casa_con_contrato": "NO",
+        "caso_id": "MOR-003",
+        "comentario": "partida en blanco es almacen. En mortero tambien hay carga incompleta.en hormigon lo pilla bien , aquí en mortero lo mismo (copiar regla desde hormigon sin inventar)",
+        "descripcion": "MD-200 (M-5) / 48 H. CARGA INCOMPLETA",
+        "importe_final": 30,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": null,
+        "num_linea": 2,
+        "partida_final": "almacen",
+        "precio_source": "oferta",
+        "precio_unitario_final": 15,
+        "unidad_final": "M3"
+      }
+    ],
+    "lineas_anadidas": []
+  },
+  "tipologia": "Mortero"
+}

@@ -1,0 +1,54 @@
+{
+  "caso_id": "HOR-013",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "HOR-013",
+        "cif": "B29679628",
+        "comentario": "el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2",
+        "contrato_elegido": "CTSU24/0452",
+        "fecha": "2025-09-09",
+        "fichero": null,
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "693",
+        "proveedor": "HORMIGONES Y CEMENTOS ANDALUCES, S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 768
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 8,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-013",
+        "comentario": "el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2",
+        "descripcion": "HA-25/B/22/XC2",
+        "importe_final": 714.4,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": "38.01.03",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 89.3,
+        "unidad_final": "M3"
+      }
+    ],
+    "lineas_anadidas": [
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-013",
+        "comentario": "el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2",
+        "concepto": "HA-25/B/22/XC2. INCREM. 2025",
+        "importe": 53.6,
+        "num_linea_base": 1,
+        "partida": "38.01.03",
+        "precio_unitario": 6.7
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

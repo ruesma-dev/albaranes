@@ -1,0 +1,54 @@
+{
+  "caso_id": "HOR-011",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "HOR-011",
+        "cif": "B04685541",
+        "comentario": null,
+        "contrato_elegido": "CTSU23/0386",
+        "fecha": "2024-01-10",
+        "fichero": null,
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "669",
+        "proveedor": "HORPRESOL, S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 660.52
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 7,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-011",
+        "comentario": null,
+        "descripcion": "HA-30/B/20/XC2",
+        "importe_final": 618.8,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": "03.01.01",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 88.4,
+        "unidad_final": "M3"
+      }
+    ],
+    "lineas_anadidas": [
+      {
+        "cantidad": 7,
+        "caso_id": "HOR-011",
+        "comentario": null,
+        "concepto": "HA-30/B/20/XC2. INCREMENTO 2024",
+        "importe": 41.72,
+        "num_linea_base": 1,
+        "partida": "03.01.01",
+        "precio_unitario": 5.96
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

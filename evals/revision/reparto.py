@@ -160,6 +160,7 @@ def asignar_casos_id(
                 "clave": caso.clave,
                 "codigo": caso.codigo,
                 "pestana": caso.destino.pestana,
+                "familia_documento": caso.destino.familia_documento,
                 "gemelo_de": caso.gemelo_de or None,
             }
         )
@@ -510,15 +511,26 @@ def _final_anadida(caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario)
 def _inputs_caso(caso: CasoRevisado, comentario: str | None) -> dict:
     """El registro maestro de la ENTRADA del caso, no una expectativa.
 
-    `tipologia` lleva la familia de DOCUMENTO del catálogo, no la pestaña
-    (design §3): la pestaña es organización del banco y las dos no siempre
-    coinciden —GASOLEO vive en la pestaña Combustible—.
+    **Desviación medida de `design.md` §3, pendiente de que la cierre el
+    humano.** La tabla normativa dice que `tipologia` lleve la familia de
+    DOCUMENTO del catálogo. Escribirlo así rompe el banco: `MAPA_TIPO_FAMILIA`
+    de `evals/procesos/sv5_valoracion.py` y `sv6_build.py` está indexado por
+    PESTAÑA (`Residuos` → `residuos`), así que con la familia en minúscula la
+    búsqueda falla y TODOS los casos —incluidos los 7 RES que ya funcionaban—
+    llegarían a la valoración como `tipo_familia='otro'`, que es precisamente
+    la clasificación equivocada que F-043 vino a arreglar. Y esos dos ficheros
+    `design.md` §2 los declara intocables en F-045.
+
+    Así que aquí va la **pestaña**, que es el contrato que leen sv5 y sv6 y lo
+    que ya tenían los 7 casos RES. La familia de documento no se pierde: queda
+    en `evals/mapa_casos.json` y agrupada en el informe de importación, que es
+    donde R6 pide que se vea.
     """
     primera = caso.lineas[0].fila
     hay_nuevas = any(linea.origen_contrato == "nueva" for linea in caso.impresas)
     return {
         "caso_id": caso.caso_id,
-        "tipologia": caso.destino.familia_documento,
+        "tipologia": caso.destino.pestana,
         "ia_destino": "ambas" if hay_nuevas else "IA3",
         "origen": "manual",
         "contrato_codigo": primera.texto("codigo_contrato"),

@@ -1,0 +1,54 @@
+{
+  "caso_id": "MOR-001",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "MOR-001",
+        "cif": "B86738812",
+        "comentario": "la partida ha puesto RJ.14.01.02.02 en lugar de P5.14.01.02.02 | No ha cogido la linea. El mortero tambien tiene incremento de precio por año como hormigon. Sale en el contrato. Si sale en el contrato hay que analizarlo",
+        "contrato_elegido": "CTSU24/0518",
+        "fecha": "2026-05-28",
+        "fichero": null,
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "696",
+        "proveedor": "HORMIGON SIERRA MADRID, S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 567
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 7,
+        "casa_con_contrato": "SI",
+        "caso_id": "MOR-001",
+        "comentario": "la partida ha puesto RJ.14.01.02.02 en lugar de P5.14.01.02.02",
+        "descripcion": "MORTERO PREP. M-7,5",
+        "importe_final": 504,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": "P5.14.01.02.02",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 72,
+        "unidad_final": "M3"
+      }
+    ],
+    "lineas_anadidas": [
+      {
+        "cantidad": 7,
+        "caso_id": "MOR-001",
+        "comentario": "No ha cogido la linea. El mortero tambien tiene incremento de precio por año como hormigon. Sale en el contrato. Si sale en el contrato hay que analizarlo",
+        "concepto": "INCREM. PRECIO 2026",
+        "importe": 63,
+        "num_linea_base": 1,
+        "partida": "P5.14.01.02.02",
+        "precio_unitario": 9
+      }
+    ]
+  },
+  "tipologia": "Mortero"
+}

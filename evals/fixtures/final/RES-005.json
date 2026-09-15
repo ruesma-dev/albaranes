@@ -2,16 +2,16 @@
   "caso_id": "RES-005",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "97f1af78746a3692aa40be02dc8d7b57a6390486719acf229e373e7c0e8a3bfd",
+  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
   "tablas": {
     "datos_generales": [
       {
         "caso_id": "RES-005",
         "cif": "B82899550",
-        "comentario": "SS-0001977 · 210,00 €. Numero corregido el 2026-09-11 contra el PDF: el papel imprime SS-0001977 (el Excel lo numera '1977'). SS-0801977 era una mala lectura del sistema; la BBDD local sigue guardando el documento como SS-0801977 y por eso diverge del banco (§8.5).",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
         "contrato_elegido": "CTSU24/0228",
         "fecha": "2024-07-18",
-        "fichero": null,
+        "fichero": "RES-005.pdf",
         "motivo_revision": null,
         "numero_albaran": "SS-0001977",
         "obra": "687",
@@ -25,8 +25,8 @@
         "cantidad_final": 1,
         "casa_con_contrato": "SI",
         "caso_id": "RES-005",
-        "comentario": "§9.2: hoy sale en 720,00 € (6 × 120) por cantidad_convertida nula.",
-        "descripcion": "170604 MATERIALES DE AISLAMIENTO",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
+        "descripcion": "CAMBIO CONTENEDOR 6M3",
         "importe_final": 120,
         "linea_a_revision": "@@NO_COMPARAR@@",
         "linea_contrato": "C1",
@@ -34,6 +34,21 @@
         "partida_final": "CI.03A.7",
         "precio_source": "contrato_db",
         "precio_unitario_final": 120,
+        "unidad_final": "UD"
+      },
+      {
+        "cantidad_final": 1,
+        "casa_con_contrato": "SI",
+        "caso_id": "RES-005",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
+        "descripcion": "INCREMENTO LER 170604 MATERIALES DE AISLAMIENTO-E",
+        "importe_final": 90,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "partida_final": "CI.03A.7",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 90,
         "unidad_final": "UD"
       }
     ],

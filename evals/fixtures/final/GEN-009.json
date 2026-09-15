@@ -1,0 +1,43 @@
+{
+  "caso_id": "GEN-009",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "GEN-009",
+        "cif": "A31132590",
+        "comentario": null,
+        "contrato_elegido": "CTSU25/0188",
+        "fecha": "2026-03-10",
+        "fichero": null,
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "0695",
+        "proveedor": "DICONA, S.A.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 17021.03
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 1013.76,
+        "casa_con_contrato": "SI",
+        "caso_id": "GEN-009",
+        "comentario": null,
+        "descripcion": "Solado Somport Light 60x120",
+        "importe_final": 17021.03,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": "05.01.22",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 16.79,
+        "unidad_final": "M2"
+      }
+    ],
+    "lineas_anadidas": []
+  },
+  "tipologia": "Generico-Suministros"
+}

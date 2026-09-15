@@ -2,13 +2,13 @@
   "caso_id": "RES-007",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "9e586929015fa794caa356809ae20e7b6d094e016cd648991a10eaf566c16344",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
   "tablas": {
     "caso": [
       {
         "caso_id": "RES-007",
         "contrato_codigo": "CTSU24/0402",
-        "descripcion_caso": "SS-0026122 · 260,00 €. ROJO ESPERADO HASTA F-017, no es una regresion: la tarifa de 9 M3 (183 €) y su incremento (77 €) vienen de la OFERTA, no del contrato, y el comparativo como fuente de precio es F-017, que no esta hecha. Hoy el sistema prorratea 9/6 y da 272,00 € (§9.4). Decision del humano del 2026-09-11: el caso ENTRA con sus 260 € para que no se olvide.",
+        "descripcion_caso": "0026122 · RESIDUOS · leido mal la obra (no sale en albaran, la habra cogido po rdireccion, ver como lo ha hecho). Coge mal el CIF proveedor (no encuentro de donde lo ha sacado, en la obra si que estra salmedina). Podriamos hacer que proveedores ya identificados claramente, como salmedina, al leer el nombre ya coja todo?. estudiar como ha llegado a la info que ha recogido. no ha encontrado contrato porque no hay en la obra que eligio (que estaba mal)\nNo ha metido el precio unitario del incremento LER | leido mal la obra (no sale en albaran, la habra cogido po rdireccion, ver como lo ha hecho). Coge mal el CIF proveedor (no encuentro de donde lo ha sacado, en la obra si que estra salmedina). Podriamos hacer que proveedores ya identificados claramente, como salmedina, al leer el nombre ya coja todo?. estudiar como ha llegado a la info que ha recogido. no ha encontrado contrato porque no hay en la obra que eligio (que estaba mal)",
         "ia_destino": "IA3",
         "origen": "manual",
         "tipologia": "Residuos"
@@ -59,16 +59,28 @@
     ],
     "lineas_albaran": [
       {
-        "cantidad": 9,
+        "cantidad": 1,
         "caso_id": "RES-007",
         "codigo_imputacion": null,
-        "descripcion": "170802 MATERIALES DE CONSTRUCCION A BASE DE YESO",
+        "descripcion": "CONTENEDOR DE RESIDUOS 9 M3",
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
-        "observaciones_albaran": "LER 170802. El numero de la linea (9) es la CAPACIDAD del contenedor, no una cantidad de material: la cantidad valorada es 1,00 UD (§8.1).",
+        "observaciones_albaran": null,
         "precio_unitario": null,
-        "unidad": null
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 1,
+        "caso_id": "RES-007",
+        "codigo_imputacion": null,
+        "descripcion": "INCREMENTO LEER 17 08 02",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "UD"
       }
     ]
   },

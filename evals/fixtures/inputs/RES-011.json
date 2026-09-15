@@ -1,0 +1,47 @@
+{
+  "caso_id": "RES-011",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "RES-011",
+        "contrato_codigo": "CTSB23/0964",
+        "descripcion_caso": "24385 · RESIDUOS · en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año",
+        "ia_destino": "IA3",
+        "origen": "manual",
+        "tipologia": "Residuos"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 1,
+        "caso_id": "RES-011",
+        "codigo_imputacion": null,
+        "descripcion": "CONTENEDOR DE 8M3",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 3.28,
+        "caso_id": "RES-011",
+        "codigo_imputacion": null,
+        "descripcion": "RCDS. SUCIOS",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Residuos"
+}

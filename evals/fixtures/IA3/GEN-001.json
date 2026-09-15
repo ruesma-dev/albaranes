@@ -1,0 +1,25 @@
+{
+  "caso_id": "GEN-001",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "GEN-001",
+        "codigo_partida_final": "P4.22.02.03.01.07",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": null,
+        "importe_calculado": 3393,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 9,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Generico-Suministros"
+}

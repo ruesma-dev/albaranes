@@ -93,11 +93,31 @@ def test_f045_r2_hay_una_sola_fila_de_datos_generales_por_caso():
 # --- INPUTS -----------------------------------------------------------------
 
 
-def test_f045_r2_inputs_declara_la_familia_de_documento_no_la_pestana():
+def test_f045_r2_inputs_declara_la_pestana_porque_es_lo_que_leen_sv5_y_sv6():
+    """Desviación medida de design §3, pendiente de que la cierre el humano.
+
+    La tabla normativa pide la familia de DOCUMENTO. Pero `MAPA_TIPO_FAMILIA`
+    de `evals/procesos/sv5_valoracion.py` y `sv6_build.py` está indexado por
+    PESTAÑA, así que escribir `residuos` en vez de `Residuos` dejaría todos los
+    casos —incluidos los 7 RES que ya funcionaban— en `tipo_familia='otro'`,
+    que es la clasificación equivocada que F-043 vino a arreglar. Y esos dos
+    ficheros design §2 los declara intocables en F-045.
+    """
+    from evals.procesos.sv6_build import MAPA_TIPO_FAMILIA
+
     caso = tablas_de()["INPUTS"]["caso"][0]
-    assert caso["tipologia"] == "residuos"
+    assert caso["tipologia"] == "Residuos"
+    assert MAPA_TIPO_FAMILIA.get(caso["tipologia"]) == "residuos"
     assert caso["origen"] == "manual"
     assert caso["contrato_codigo"] == "CTSU24/0402"
+
+
+def test_f045_r6_la_familia_de_documento_no_se_pierde_queda_en_el_mapa():
+    """R6 pide que la familia se vea; el sitio es el mapa y el informe."""
+    casos = reparto.agrupar_por_albaran([fila()], VOCAB)
+    mapa, _ = reparto.asignar_casos_id(casos, {})
+    assert mapa["RES-001"]["familia_documento"] == "residuos"
+    assert mapa["RES-001"]["pestana"] == "Residuos"
 
 
 def test_f045_r2_inputs_manda_a_ia4_solo_si_hay_lineas_nuevas():

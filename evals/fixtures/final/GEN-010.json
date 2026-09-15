@@ -1,0 +1,43 @@
+{
+  "caso_id": "GEN-010",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "GEN-010",
+        "cif": "B85286318",
+        "comentario": "aunque pone almacen en el albaran ha cogio 02.43 que es el unitario (que lo ha usado despues para unitario acertadamente)",
+        "contrato_elegido": "CTSU26/0006",
+        "fecha": "2026-03-10",
+        "fichero": null,
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "0695",
+        "proveedor": "CONDUCCIONES DE SANEAMIENTO INTEGRADO S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 174.96
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 72,
+        "casa_con_contrato": "SI",
+        "caso_id": "GEN-010",
+        "comentario": "aunque pone almacen en el albaran ha cogio 02.43 que es el unitario (que lo ha usado despues para unitario acertadamente)",
+        "descripcion": "TUBO DRENAJE 240º Ø160",
+        "importe_final": 174.96,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": "ALMACEN",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 2.43,
+        "unidad_final": "MT"
+      }
+    ],
+    "lineas_anadidas": []
+  },
+  "tipologia": "Generico-Suministros"
+}

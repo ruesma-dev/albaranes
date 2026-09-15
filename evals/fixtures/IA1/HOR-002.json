@@ -1,0 +1,37 @@
+{
+  "caso_id": "HOR-002",
+  "fase": "IA1",
+  "libro": "IA1_extraccion.xlsx",
+  "sha256_libro": "6cf05b81645531a8c1d252ad48b1f38287ad1f6cc6eb644c4962954954ff9144",
+  "tablas": {
+    "cabeceras": [
+      {
+        "caso_id": "HOR-002",
+        "comentario": "Sale PJ.03.04 en la partida. Es P5, es dificil de leer. A la hora de localizar la partida, se puede hacer que busque entre la lista de partidas de la obra (nivel mas bajo, justo superior a los descompuestos)",
+        "fecha": "2026-05-18",
+        "fichero_albaran": null,
+        "forma_pago": "@@NO_COMPARAR@@",
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra_codigo": "@@NO_COMPARAR@@",
+        "obra_nombre": "@@NO_COMPARAR@@",
+        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_nombre": "HORMIGON SIERRA MADRID, S.L."
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad": 4,
+        "caso_id": "HOR-002",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "Sale PJ.03.04 en la partida. Es P5, es dificil de leer. A la hora de localizar la partida, se puede hacer que busque entre la lista de partidas de la obra (nivel mas bajo, justo superior a los descompuestos)",
+        "descripcion_esperada": "HORMIGÓN HA-25/B/20/XC2",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

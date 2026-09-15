@@ -1,0 +1,18 @@
+{
+  "caso_id": "RES-009",
+  "fase": "IA2",
+  "libro": "IA2_contexto.xlsx",
+  "sha256_libro": "c47f95e3a52bcc1f94110186ebcc636f76a37db4701631f289c8016df0dba1ef",
+  "tablas": {
+    "contexto": [
+      {
+        "campo_contexto": "codigo_ler",
+        "caso_id": "RES-009",
+        "comentario": "numero de albraran incorrecto. Ha cogido 09478. la obra no venaia y ha deducido una incorrecta. Si tiene match de proveedor solo deberia intentar deducir entre las que tienen dicho porveedor en la obra",
+        "num_linea": 1,
+        "valor_esperado": "170904"
+      }
+    ]
+  },
+  "tipologia": "Residuos"
+}

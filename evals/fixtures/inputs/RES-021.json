@@ -1,0 +1,47 @@
+{
+  "caso_id": "RES-021",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "RES-021",
+        "contrato_codigo": "CTSB26/0428",
+        "descripcion_caso": "MC/26-443249 · RESIDUOS · al cambiar la obra deberia eliminar el contrato que tenia seleccionado de la obra original, y buscar de nuevo, no dejar el contrato viejeo. obra mal, solo debe elegir de obras abiertas (ver criterio datamart).",
+        "ia_destino": "IA3",
+        "origen": "manual",
+        "tipologia": "Residuos"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 1,
+        "caso_id": "RES-021",
+        "codigo_imputacion": null,
+        "descripcion": "LLEVAR CONTENEDOR 6 M/3. (RCD´S)",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 1,
+        "caso_id": "RES-021",
+        "codigo_imputacion": null,
+        "descripcion": "SERVICIO CONTENEDOR 6 M/3. (RCD´S)",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "UD"
+      }
+    ]
+  },
+  "tipologia": "Residuos"
+}

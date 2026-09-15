@@ -1,0 +1,37 @@
+{
+  "caso_id": "MOR-001",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "MOR-001",
+        "codigo_partida_final": "P5.14.01.02.02",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "la partida ha puesto RJ.14.01.02.02 en lugar de P5.14.01.02.02",
+        "importe_calculado": 504,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 72,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [
+      {
+        "cantidad": 7,
+        "caso_id": "MOR-001",
+        "codigo_partida": "P5.14.01.02.02",
+        "comentario": "No ha cogido la linea. El mortero tambien tiene incremento de precio por año como hormigon. Sale en el contrato. Si sale en el contrato hay que analizarlo",
+        "descripcion_esperada": "INCREM. PRECIO 2026",
+        "modifier_source": "@@NO_COMPARAR@@",
+        "num_linea_base": 1,
+        "precio_unitario": 9,
+        "rol_linea": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Mortero"
+}

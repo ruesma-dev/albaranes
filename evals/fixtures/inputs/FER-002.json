@@ -1,0 +1,119 @@
+{
+  "caso_id": "FER-002",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "FER-002",
+        "contrato_codigo": "CTSU24/0454",
+        "descripcion_caso": "2137569 · FERRETERIA",
+        "ia_destino": "ambas",
+        "origen": "manual",
+        "tipologia": "Ferreteria"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 54,
+        "caso_id": "FER-002",
+        "codigo_imputacion": null,
+        "descripcion": "papel higienico",
+        "descuentos": 40,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": 0.543,
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 5,
+        "caso_id": "FER-002",
+        "codigo_imputacion": null,
+        "descripcion": "jabon liquido ph neutro",
+        "descuentos": 40,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": 3.422,
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 6,
+        "caso_id": "FER-002",
+        "codigo_imputacion": null,
+        "descripcion": "rollo papel ind.",
+        "descuentos": 40,
+        "importe": null,
+        "num_linea": 3,
+        "observaciones_albaran": null,
+        "precio_unitario": 7.726,
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 54,
+        "caso_id": "FER-002",
+        "codigo_imputacion": null,
+        "descripcion": "papel higienico",
+        "descuentos": 40,
+        "importe": null,
+        "num_linea": 4,
+        "observaciones_albaran": null,
+        "precio_unitario": 0.543,
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 5,
+        "caso_id": "FER-002",
+        "codigo_imputacion": null,
+        "descripcion": "jabon liquido ph neutro",
+        "descuentos": 40,
+        "importe": null,
+        "num_linea": 5,
+        "observaciones_albaran": null,
+        "precio_unitario": 3.422,
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 6,
+        "caso_id": "FER-002",
+        "codigo_imputacion": null,
+        "descripcion": "rollo papel ind.",
+        "descuentos": 40,
+        "importe": null,
+        "num_linea": 6,
+        "observaciones_albaran": null,
+        "precio_unitario": 7.726,
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 4,
+        "caso_id": "FER-002",
+        "codigo_imputacion": null,
+        "descripcion": "AÑIL ESPECIAL FEYMACO",
+        "descuentos": 40,
+        "importe": null,
+        "num_linea": 7,
+        "observaciones_albaran": null,
+        "precio_unitario": 5.497,
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 100,
+        "caso_id": "FER-002",
+        "codigo_imputacion": null,
+        "descripcion": "BOLSA BASURA 52x58",
+        "descuentos": 40,
+        "importe": null,
+        "num_linea": 8,
+        "observaciones_albaran": null,
+        "precio_unitario": 0.252,
+        "unidad": "UD"
+      }
+    ]
+  },
+  "tipologia": "Ferreteria"
+}

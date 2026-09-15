@@ -1,0 +1,35 @@
+{
+  "caso_id": "GRA-002",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "GRA-002",
+        "contrato_codigo": "CTSU25/0085",
+        "descripcion_caso": "58878 · GRAVA · La partida ha cogido PT.03.04 en lugar de P5.03.04La unidad esta bien, pero ha cogio un unitario que no es. Es grava 20/40 (se deduce del texto, esta en el contrato), el unitario es 12,87",
+        "ia_destino": "IA3",
+        "origen": "manual",
+        "tipologia": "Grava"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 29.96,
+        "caso_id": "GRA-002",
+        "codigo_imputacion": null,
+        "descripcion": "GRAVA 20/40",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "TN"
+      }
+    ]
+  },
+  "tipologia": "Grava"
+}

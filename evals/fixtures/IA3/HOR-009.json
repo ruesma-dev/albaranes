@@ -1,0 +1,61 @@
+{
+  "caso_id": "HOR-009",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "HOR-009",
+        "codigo_partida_final": "32.03.02",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio. El codigo de hormigon leido es correcto, pero luego lo ha cambiado en la descripcion de la linea de sigrid para casarlo. El codigo de hormigon no se puede cambiar",
+        "importe_calculado": 80,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 80,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "HOR-009",
+        "codigo_partida_final": "32.03.02",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio",
+        "importe_calculado": 3.5,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 3.5,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "HOR-009",
+        "codigo_partida_final": "32.03.02",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio- esta linea no la ha generado, pero pon B en el codigo asi que parece error de negocio",
+        "importe_calculado": 3,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 3,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 3,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-009",
+        "codigo_partida": "32.03.02",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio",
+        "descripcion_esperada": "HMF-20/P/F/12-12/IIa. INCREMENTO 2024",
+        "modifier_source": "@@NO_COMPARAR@@",
+        "num_linea_base": 3,
+        "precio_unitario": 5,
+        "rol_linea": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Hormigon"
+}

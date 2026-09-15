@@ -1,0 +1,35 @@
+{
+  "caso_id": "GEN-010",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "GEN-010",
+        "contrato_codigo": "CTSU26/0006",
+        "descripcion_caso": "261046 · MATERIALES · aunque pone almacen en el albaran ha cogio 02.43 que es el unitario (que lo ha usado despues para unitario acertadamente)",
+        "ia_destino": "IA3",
+        "origen": "manual",
+        "tipologia": "Generico-Suministros"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 72,
+        "caso_id": "GEN-010",
+        "codigo_imputacion": null,
+        "descripcion": "TUBO DRENAJE 240º Ø160",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "MT"
+      }
+    ]
+  },
+  "tipologia": "Generico-Suministros"
+}

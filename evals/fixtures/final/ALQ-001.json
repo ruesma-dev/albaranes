@@ -1,0 +1,73 @@
+{
+  "caso_id": "ALQ-001",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "ALQ-001",
+        "cif": "B84535764",
+        "comentario": "ha cogido una obra que no es (vieja), pero es que no hay obra indicada con codigo en el albaran",
+        "contrato_elegido": "CTSB25/0708",
+        "fecha": "2025-08-11",
+        "fichero": null,
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "686",
+        "proveedor": "TRANSPORTES Y GRUAS ANGEL MARTIN, S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 1129
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 1,
+        "casa_con_contrato": "SI",
+        "caso_id": "ALQ-001",
+        "comentario": "ha cogido una obra que no es (vieja), pero es que no hay obra indicada con codigo en el albaran",
+        "descripcion": "SALIDA CAMIÓN GRÚA 100 TN",
+        "importe_final": 170,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": "ALMACEN",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 170,
+        "unidad_final": "UD"
+      },
+      {
+        "cantidad_final": 7,
+        "casa_con_contrato": "SI",
+        "caso_id": "ALQ-001",
+        "comentario": null,
+        "descripcion": "CAMIÓN GRÚA 100 TN",
+        "importe_final": 805,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "partida_final": "ALMACEN",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 115,
+        "unidad_final": "UD"
+      },
+      {
+        "cantidad_final": 1,
+        "casa_con_contrato": "NO",
+        "caso_id": "ALQ-001",
+        "comentario": null,
+        "descripcion": "HHEE CAMIÓN GRÚA 100 TN",
+        "importe_final": 154,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": null,
+        "num_linea": 3,
+        "partida_final": "ALMACEN",
+        "precio_source": "oferta",
+        "precio_unitario_final": 157,
+        "unidad_final": "UD"
+      }
+    ],
+    "lineas_anadidas": []
+  },
+  "tipologia": "Alquiler"
+}

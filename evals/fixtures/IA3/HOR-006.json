@@ -1,0 +1,25 @@
+{
+  "caso_id": "HOR-006",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "HOR-006",
+        "codigo_partida_final": 5.01,
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado, ni de donde lo ha sacado negocio",
+        "importe_calculado": 593.25,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 84.75,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Hormigon"
+}

@@ -1,0 +1,25 @@
+{
+  "caso_id": "FER-001",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "FER-001",
+        "codigo_partida_final": "CI.4.18",
+        "codigo_producto_contrato": null,
+        "comentario": null,
+        "importe_calculado": 19.41,
+        "match_method": "no_match",
+        "num_linea": 1,
+        "precio_source": "albaran",
+        "precio_unitario_final": 0.647,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Ferreteria"
+}

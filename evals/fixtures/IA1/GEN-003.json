@@ -1,0 +1,49 @@
+{
+  "caso_id": "GEN-003",
+  "fase": "IA1",
+  "libro": "IA1_extraccion.xlsx",
+  "sha256_libro": "6cf05b81645531a8c1d252ad48b1f38287ad1f6cc6eb644c4962954954ff9144",
+  "tablas": {
+    "cabeceras": [
+      {
+        "caso_id": "GEN-003",
+        "comentario": null,
+        "fecha": "2026-06-09",
+        "fichero_albaran": null,
+        "forma_pago": "@@NO_COMPARAR@@",
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra_codigo": "@@NO_COMPARAR@@",
+        "obra_nombre": "@@NO_COMPARAR@@",
+        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_nombre": "PAVIMARSA, S.A."
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad": 23.76,
+        "caso_id": "GEN-003",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": null,
+        "descripcion_esperada": "SOLADO BOREAL GREY 60X60 cm - BAÑOS PRINCIPALES (OP2)",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "precio_unitario": null,
+        "unidad": "M2"
+      },
+      {
+        "cantidad": 65,
+        "caso_id": "GEN-003",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": null,
+        "descripcion_esperada": "RODAPIÉ BOREAL GREY C/BISELADO 14,8x60 cm - BAÑOS PRINCIPALES (OP2)",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "precio_unitario": null,
+        "unidad": "UD"
+      }
+    ]
+  },
+  "tipologia": "Generico-Suministros"
+}

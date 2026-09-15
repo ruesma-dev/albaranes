@@ -251,11 +251,19 @@ def escribir_pestana(
     definiciones: tuple[DefTabla, ...],
     filas_por_tabla: dict[str, list[dict]],
     caso_ids: set[str],
-) -> int:
+    ejecutar: bool = True,
+) -> bool:
     """Vuelca las tablas de una pestaña fundiéndolas con lo que ya había.
 
     `caso_ids` son los casos de ESTA importación: solo sus filas se tocan.
-    Devuelve cuántas filas quedaron escritas por el importador.
+    Devuelve si la pestaña cambia (o cambiaría, con `ejecutar=False`).
+
+    **Si nada cambia, el libro NO se guarda.** No es una optimización: cada
+    guardado reescribe el `.zip` del `.xlsx` y le cambia el sha256, que es
+    justo la huella con la que el conversor detecta deriva entre el libro y
+    sus fixtures. Guardar por guardar haría que dos importaciones seguidas
+    dejasen 264 fixtures «modificados» sin que hubiera cambiado ni un dato
+    (R18).
     """
     import openpyxl
 
@@ -265,7 +273,7 @@ def escribir_pestana(
         if pestana not in libro.sheetnames:
             raise ErrorEscritura(f"falta la pestaña '{pestana}' en '{camino.name}'.")
         hoja = libro[pestana]
-        escritas = 0
+        cambia = False
         # De abajo arriba: insertar o borrar filas mueve todo lo que hay
         # debajo, y así los índices de las tablas de arriba siguen valiendo.
         for bloque in sorted(
@@ -279,13 +287,26 @@ def escribir_pestana(
                 if not caso_ids or fila.get("caso_id") in caso_ids
             ]
             campos = CLAVES_DE_TABLA.get(bloque.definicion.clave, ("caso_id",))
-            fundidas = fundir_filas(_filas_existentes(hoja, bloque), nuevas, campos)
-            _reescribir(hoja, bloque, fundidas)
-            escritas += len(nuevas)
-        libro.save(camino)
-        return escritas
+            existentes = _filas_existentes(hoja, bloque)
+            fundidas = fundir_filas(existentes, nuevas, campos)
+            cambia = cambia or _difieren(existentes, fundidas, bloque)
+            if ejecutar:
+                _reescribir(hoja, bloque, fundidas)
+        if ejecutar and cambia:
+            libro.save(camino)
+        return cambia
     finally:
         libro.close()
+
+
+def _difieren(existentes: list[dict], fundidas: list[dict], bloque: Bloque) -> bool:
+    """Compara solo las columnas que el libro tiene: lo demás no se escribe."""
+    columnas = bloque.encabezados or []
+
+    def recorte(filas: list[dict]) -> list[list]:
+        return [[_a_celda(fila.get(columna)) for columna in columnas] for fila in filas]
+
+    return recorte(existentes) != recorte(fundidas)
 
 
 def _ultima_con_datos(hoja, bloque: Bloque) -> int:

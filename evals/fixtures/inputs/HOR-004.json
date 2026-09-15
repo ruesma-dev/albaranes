@@ -1,0 +1,83 @@
+{
+  "caso_id": "HOR-004",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "HOR-004",
+        "contrato_codigo": "CTSU24/0476",
+        "descripcion_caso": "0334191 · HORMIGON · esta linea no la ha generado. Marca sin aditivo (y encima subrayado con rotulador) cuando ponga hay que generar linea",
+        "ia_destino": "IA3",
+        "origen": "manual",
+        "tipologia": "Hormigon"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 10,
+        "caso_id": "HOR-004",
+        "codigo_imputacion": null,
+        "descripcion": "HORMIGON PREPARADOS EN CENTRAL HA-25.",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 10,
+        "caso_id": "HOR-004",
+        "codigo_imputacion": null,
+        "descripcion": "INCREMENTO POR SIN ADITIVO",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 10,
+        "caso_id": "HOR-004",
+        "codigo_imputacion": null,
+        "descripcion": "INCREMENTO POR ÁRIDO 12 EN HORMIGÓN",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 3,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 10,
+        "caso_id": "HOR-004",
+        "codigo_imputacion": null,
+        "descripcion": "INCREMENTO POR CONSISTENCIA FLUIDA EN HORMIGON",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 4,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 10,
+        "caso_id": "HOR-004",
+        "codigo_imputacion": null,
+        "descripcion": "INCREMENTO POR FIBRAS",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 5,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

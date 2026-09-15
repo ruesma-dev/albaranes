@@ -1,0 +1,109 @@
+{
+  "caso_id": "FER-002",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "FER-002",
+        "codigo_partida_final": "P4.36.01",
+        "codigo_producto_contrato": null,
+        "comentario": null,
+        "importe_calculado": 17.59,
+        "match_method": "no_match",
+        "num_linea": 1,
+        "precio_source": "albaran",
+        "precio_unitario_final": 0.543,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "FER-002",
+        "codigo_partida_final": "P4.36.01",
+        "codigo_producto_contrato": null,
+        "comentario": null,
+        "importe_calculado": 10.27,
+        "match_method": "no_match",
+        "num_linea": 2,
+        "precio_source": "albaran",
+        "precio_unitario_final": 3.422,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "FER-002",
+        "codigo_partida_final": "P4.36.01",
+        "codigo_producto_contrato": null,
+        "comentario": null,
+        "importe_calculado": 27.81,
+        "match_method": "no_match",
+        "num_linea": 3,
+        "precio_source": "albaran",
+        "precio_unitario_final": 7.726,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "FER-002",
+        "codigo_partida_final": "P5.36.01",
+        "codigo_producto_contrato": null,
+        "comentario": null,
+        "importe_calculado": 17.59,
+        "match_method": "no_match",
+        "num_linea": 4,
+        "precio_source": "albaran",
+        "precio_unitario_final": 0.543,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "FER-002",
+        "codigo_partida_final": "P5.36.01",
+        "codigo_producto_contrato": null,
+        "comentario": null,
+        "importe_calculado": 10.27,
+        "match_method": "no_match",
+        "num_linea": 5,
+        "precio_source": "albaran",
+        "precio_unitario_final": 3.422,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "FER-002",
+        "codigo_partida_final": "P5.36.01",
+        "codigo_producto_contrato": null,
+        "comentario": null,
+        "importe_calculado": 27.81,
+        "match_method": "no_match",
+        "num_linea": 6,
+        "precio_source": "albaran",
+        "precio_unitario_final": 7.726,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "FER-002",
+        "codigo_partida_final": "CI.4.18",
+        "codigo_producto_contrato": null,
+        "comentario": null,
+        "importe_calculado": 13.19,
+        "match_method": "no_match",
+        "num_linea": 7,
+        "precio_source": "albaran",
+        "precio_unitario_final": 5.497,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "FER-002",
+        "codigo_partida_final": "CI.4.18",
+        "codigo_producto_contrato": null,
+        "comentario": null,
+        "importe_calculado": 15.12,
+        "match_method": "no_match",
+        "num_linea": 8,
+        "precio_source": "albaran",
+        "precio_unitario_final": 0.252,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Ferreteria"
+}

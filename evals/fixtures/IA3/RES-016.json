@@ -1,0 +1,25 @@
+{
+  "caso_id": "RES-016",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "RES-016",
+        "codigo_partida_final": "CI.03A.7",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "como se que es para llevar? Por que no viene LER?",
+        "importe_calculado": 0,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "oferta",
+        "precio_unitario_final": 90,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Residuos"
+}

@@ -1,0 +1,49 @@
+{
+  "caso_id": "RES-015",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "RES-015",
+        "codigo_partida_final": "CI.03A.7",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": null,
+        "importe_calculado": 90,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 90,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "RES-015",
+        "codigo_partida_final": "CI.03A.7",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año",
+        "importe_calculado": 104,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 26,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [
+      {
+        "cantidad": 4,
+        "caso_id": "RES-015",
+        "codigo_partida": "CI.03A.7",
+        "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año",
+        "descripcion_esperada": "RCDS. SUCIOS. INCREM. 2025",
+        "modifier_source": "@@NO_COMPARAR@@",
+        "num_linea_base": 2,
+        "precio_unitario": 4,
+        "rol_linea": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Residuos"
+}

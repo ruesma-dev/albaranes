@@ -1,0 +1,20 @@
+{
+  "caso_id": "FER-001",
+  "fase": "IA4",
+  "libro": "IA4_conciliacion.xlsx",
+  "sha256_libro": "b81f85b50da7a9b70c1de8c52debf9080fbf418b7be3d9d2b3dd3d85a4ce763c",
+  "tablas": {
+    "conciliacion": [
+      {
+        "caso_id": "FER-001",
+        "comentario": null,
+        "concilia": "@@NO_COMPARAR@@",
+        "linea_contrato_esperada": "@@NO_COMPARAR@@",
+        "motivo": null,
+        "num_linea": 1,
+        "precio_unitario_esperado": 0.647
+      }
+    ]
+  },
+  "tipologia": "Ferreteria"
+}

@@ -1,0 +1,49 @@
+{
+  "caso_id": "HOR-014",
+  "fase": "IA1",
+  "libro": "IA1_extraccion.xlsx",
+  "sha256_libro": "6cf05b81645531a8c1d252ad48b1f38287ad1f6cc6eb644c4962954954ff9144",
+  "tablas": {
+    "cabeceras": [
+      {
+        "caso_id": "HOR-014",
+        "comentario": "el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2 | el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2.como se que es final de bombeo?. Ha leido bien que cantidad es 5, deberia haber pueesto cantidad en carga incompleta 1. analizar porque no lo ha hecho",
+        "fecha": "2025-09-09",
+        "fichero_albaran": null,
+        "forma_pago": "@@NO_COMPARAR@@",
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra_codigo": "@@NO_COMPARAR@@",
+        "obra_nombre": "@@NO_COMPARAR@@",
+        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_nombre": "HORMIGONES Y CEMENTOS ANDALUCES, S.L."
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad": 5,
+        "caso_id": "HOR-014",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2",
+        "descripcion_esperada": "HA-25/B/22/XC2",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 1,
+        "caso_id": "HOR-014",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2.como se que es final de bombeo?. Ha leido bien que cantidad es 5, deberia haber pueesto cantidad en carga incompleta 1. analizar porque no lo ha hecho",
+        "descripcion_esperada": "CARGA INCOMPLETA. NO PROCEDE. FINAL DE BOMBEO",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

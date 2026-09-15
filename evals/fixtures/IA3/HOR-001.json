@@ -1,0 +1,37 @@
+{
+  "caso_id": "HOR-001",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida_final": "P5.03.09",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "falta P5 al inicio de la partida.",
+        "importe_calculado": 899.1,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 99.9,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [
+      {
+        "cantidad": 9,
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.09",
+        "comentario": "falta P5 al inicio de la partida.",
+        "descripcion_esperada": "INCREM. PRECIO 2026",
+        "modifier_source": "@@NO_COMPARAR@@",
+        "num_linea_base": 1,
+        "precio_unitario": 9,
+        "rol_linea": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Hormigon"
+}
