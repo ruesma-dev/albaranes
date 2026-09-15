@@ -1,0 +1,61 @@
+{
+  "_doc": "Mapa del banco de evals: de cada caso_id al albaran de papel del que salio (F-045, R7). GENERADO por 'python -m evals.revision'; se puede corregir a mano, pero una importacion posterior manda. 'clave' es CIF/codigo normalizado y es lo que identifica el albaran entre importaciones; 'codigo' es el que escribe el humano en el Excel, que NO es el literal impreso (0000168 en la tabla, SS-0000168 en el papel); 'nombre_original' es el fichero tal como llego, antes del renombrado a <caso_id>; 'gemelo_de' hermana el caso de imagen con el de PDF (R22).",
+  "casos": {
+    "RES-001": {
+      "clave": "B82899550/0000168",
+      "codigo": "0000168",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "RES-001.pdf",
+      "pestana": "Residuos"
+    },
+    "RES-002": {
+      "clave": "B82899550/0003935",
+      "codigo": "0003935",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "RES-002.pdf",
+      "pestana": "Residuos"
+    },
+    "RES-003": {
+      "clave": "B82899550/0000589",
+      "codigo": "0000589",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "RES-003.pdf",
+      "pestana": "Residuos"
+    },
+    "RES-004": {
+      "clave": "B82899550/0003967",
+      "codigo": "0003967",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "RES-004.pdf",
+      "pestana": "Residuos"
+    },
+    "RES-005": {
+      "clave": "B82899550/0001977",
+      "codigo": "0001977",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "RES-005.pdf",
+      "pestana": "Residuos"
+    },
+    "RES-006": {
+      "clave": "B82899550/0025146",
+      "codigo": "0025146",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "RES-006.pdf",
+      "pestana": "Residuos"
+    },
+    "RES-007": {
+      "clave": "B82899550/0026122",
+      "codigo": "0026122",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "RES-007.pdf",
+      "pestana": "Residuos"
+    }
+  }
+}
