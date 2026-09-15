@@ -16,6 +16,7 @@ from __future__ import annotations
 import re
 
 from evals.revision.modelos import (
+    COLUMNAS,
     DEFECTO_CONOCIDO,
     NO_REGRESION,
     CasoRevisado,
@@ -224,6 +225,25 @@ def celda(linea: LineaRevisada, columna: str, vocab: Vocabulario) -> object | No
     if not linea.fila.vacia(columna):
         return _numero(linea.fila.bruto(columna))
     return None if vocab.politica_vacio(columna) == "nulo" else INTERROGANTE
+
+
+def recuento_vacios(
+    filas: list[FilaPlana], vocab: Vocabulario
+) -> dict[str, dict[str, object]]:
+    """Cuántas celdas con valor y cuántas vacías hay en cada columna (R14).
+
+    Con el significado de su vacío al lado: sin él, «58 vacías en descuento»
+    se lee como ceguera cuando en realidad son 58 líneas sin descuento.
+    """
+    recuento = {
+        columna: {"valor": 0, "vacia": 0, "significado": vocab.politica_vacio(columna)}
+        for columna in COLUMNAS
+    }
+    for fila in filas:
+        for columna in COLUMNAS:
+            clave = "vacia" if fila.vacia(columna) else "valor"
+            recuento[columna][clave] = int(recuento[columna][clave]) + 1
+    return recuento
 
 
 def _descuentos(linea: LineaRevisada, vocab: Vocabulario) -> object | None:
