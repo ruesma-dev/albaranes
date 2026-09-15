@@ -17,6 +17,39 @@ desde `evals_summary.xlsx` (carpeta `evals` de OneDrive). **El Excel sigue
 creciendo**: a 2026-09-14 faltaban por valorar los últimos de hormigón y
 residuos, así que se siembra lo cerrado y el resto entra después.
 
+### Spec de F-045 escrita (2026-09-15)
+
+`specs/F-045-banco-evals-revision-manual/` con los tres ficheros (requirements
+150/150, design 186/250). Propone un importador nuevo, `evals/revision/`, que
+traduce la tabla PLANA de la revisión a los seis libros de `ground_truth/` y
+deja `evals/conversor.py` como única puerta a los fixtures. La tabla de reparto
+columna a columna es `design.md` §3 y es normativa. Medido el 2026-09-15 sobre
+el Excel del humano: 142 filas con datos, 59 códigos de albarán, 10 etiquetas de
+familia, 35 filas con comentario de defecto (había crecido desde las ~110).
+
+**Decisiones abiertas que necesita validar el humano antes de implementar:**
+
+1. **La tabla de reparto de `design.md` §3**, y en particular la separación
+   extracción/valoración que pediste: lo que el albarán imprime va a IA1/IA2, lo
+   que el sistema decide (partida final, precio de contrato o de oferta,
+   contrato elegido, obra deducida) va a IA3/IA4 y a `RESULTADO_FINAL`.
+2. **D3 · celda vacía → `?` (no comparar)**, no → `null` esperado. Es la
+   decisión más discutible: deja el banco más laxo de lo que parece, a cambio de
+   no inventar ground truth donde solo hay una celda sin rellenar. El informe de
+   importación dirá, columna a columna, dónde está ciego el banco.
+3. **D1 · el mapa de familias**: `CONTENEDORES`→`residuos` y
+   `CAMION GRUA`→`alquiler_maquinaria` son interpretación nuestra de tus
+   etiquetas. Van en fichero de datos para cambiarlas sin tocar código.
+4. **D4 · `numero_albaran` y la obra de IA1 quedan sin vigilar** (patrones 9 y
+   la mitad de extracción del 2): tu columna `codigo alabran` es la clave del
+   documento, no el literal impreso (`0000168` frente a `SS-0000168`).
+5. **D6 · el campo `servicios` de la ficha**: F-045 no toca sv2/sv5/sv6, solo
+   los vigila.
+
+Los arreglos salen como fichas propias, priorizadas en `design.md` §7: patrón 1
+(partida mal leída) y patrón 3 (líneas deducidas que no se generan) primero;
+CIF raro y número de albarán, al final, por tener un solo caso cada uno.
+
 ### Pendiente del humano, arrastrado
 
 1. **T24 de F-036**: los 7 albaranes de SALMEDINA contra la BBDD real, SOLO
