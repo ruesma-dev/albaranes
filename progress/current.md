@@ -75,6 +75,28 @@ nombre vacío) salen listados uno a uno en el informe; y **manda el código del
 papel, nunca el persistido** — el precedente es `SS-0801977` leído donde el
 papel decía `SS-0001977`.
 
+**Añadido el 2026-09-15 · residuos y el lío de las familias** (`design.md` §5
+bis y §5 ter). Los tres criterios de residuos que dio el humano están
+**verificados contra el código y NINGUNO existe hoy**: el canon por LER es el
+enganche que `residuos_incrementos.py` deja para F-006 (`spec_ready`); el
+mínimo facturable de 1 tn no está en ningún sitio; y la red M1 del incremento
+por año corta con `!= "hormigon"`, así que ni residuos ni mortero lo generan.
+Sus casos nacen ROJOS como defecto conocido y los arreglos son fichas propias.
+**Pregunta abierta que cambia el ground truth de 19 albaranes**: el mínimo de 1
+tn, ¿alcanza al movimiento de contenedor —que hoy se cuenta en CONTENEDORES,
+§10.6 del doc de dominio— o solo a la línea de incremento/canon, que sí se
+tarifa por tonelada?
+
+Y hay **tres espacios de nombres que nadie reconciliaba**: las 10 etiquetas del
+Excel, las CUATRO familias de documento del catálogo (`combustible` y
+`alquiler_maquinaria` son de alcance LÍNEA) y las 7 pestañas de los libros.
+Poner `combustible` como familia de documento dejaría ese caso ROJO para
+siempre sin que nada esté roto. La tabla de mapeo vive solo en
+`vocabulario.json`, y **tres filas quedan pendientes de ti**: CONTENEDORES
+(¿residuos o genérico con línea de alquiler?), GASOLEO y CAMION GRUA. La
+pestaña Bombeo se queda vacía. Que al catálogo le falten familias de documento
+es ficha aparte: hoy deja mal a 2 albaranes de 59.
+
 Los arreglos salen como fichas propias, priorizadas en `design.md` §7: patrón 1
 (partida mal leída) y patrón 3 (líneas deducidas que no se generan) primero;
 CIF raro y número de albarán, al final, por tener un solo caso cada uno.
