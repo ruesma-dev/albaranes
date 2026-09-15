@@ -137,6 +137,7 @@ disco: son las que llevan la cobertura y la campaña de mutación.
   generar los JSON directamente. Saltaría el barrido de C3 bis, duplicaría la
   normalización del conversor y dejaría al humano sin poder corregir a mano.
 - **D3 · Vacío → `?`.** Alternativa descartada: vacío → `null` esperado. El
+  **Validada por el humano el 2026-09-15.** El
   humano deja celdas sin rellenar porque aún no las ha mirado, no porque afirme
   que el sistema no debe devolver nada; comparar eso sería inventar ground
   truth (R13). El coste es un banco más laxo, y el informe de R14 dice
