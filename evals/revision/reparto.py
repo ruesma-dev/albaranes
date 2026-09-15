@@ -291,16 +291,63 @@ def repartir(caso: CasoRevisado, vocab: Vocabulario) -> dict[str, dict[str, list
     tablas: dict[str, dict[str, list[dict]]] = {
         libro: {tabla: [] for tabla in nombres} for libro, nombres in TABLAS.items()
     }
-    comentario = " | ".join(caso.comentarios)
+    comentario = " | ".join(caso.comentarios) or None
 
+    tablas["IA1"]["cabeceras"].append(_ia1_cabecera(caso, comentario))
     for linea in caso.impresas:
         tablas["IA1"]["lineas"].append(_ia1_linea(caso, linea, vocab))
+        contexto = _ia2_contexto(caso, linea)
+        if contexto is not None:
+            tablas["IA2"]["contexto"].append(contexto)
     for linea in caso.deducidas:
         tablas["IA3"]["sinteticas_esperadas"].append(_ia3_sintetica(caso, linea, vocab))
         tablas["FINAL"]["lineas_anadidas"].append(_final_anadida(caso, linea, vocab))
 
-    del comentario
     return tablas
+
+
+def _ia1_cabecera(caso: CasoRevisado, comentario: str | None) -> dict:
+    """La cabecera esperada, con las tres cegueras declaradas de R13.
+
+    `numero_albaran`, `obra_codigo` y `obra_nombre` van `?` a propósito: el
+    código de la tabla plana es la clave con la que el humano identifica el
+    documento (`0000168`), no el literal impreso (`SS-0000168`), y deducir la
+    obra no es extraer. Es el mismo criterio con el que están escritos los 7
+    casos RES que ya había en el banco.
+    """
+    return {
+        "caso_id": caso.caso_id,
+        "fichero_albaran": caso.fichero or None,
+        "proveedor_nombre": caso.lineas[0].fila.texto("nombre_empresa") or INTERROGANTE,
+        # El CIF correcto es el del proveedor identificado, no siempre el
+        # impreso: se le exige al resultado final, no a la lectura.
+        "proveedor_cif": INTERROGANTE,
+        "fecha": caso.lineas[0].fila.texto("fecha") or INTERROGANTE,
+        "numero_albaran": INTERROGANTE,
+        "obra_codigo": INTERROGANTE,
+        "obra_nombre": INTERROGANTE,
+        # No hay columna de forma de pago en la tabla plana. Lo que el Excel no
+        # dice, no se compara: `?`, jamás un null afirmado.
+        "forma_pago": INTERROGANTE,
+        "comentario": comentario,
+    }
+
+
+def _ia2_contexto(caso: CasoRevisado, linea: LineaRevisada) -> dict | None:
+    """El LER es contexto de LÍNEA, no dato de cabecera (design §3).
+
+    Solo en residuos y solo si el humano lo afirmó: su vacío significa «no
+    aplica a esta familia», y entonces no hay fila que escribir (R12).
+    """
+    if caso.destino.familia_documento != "residuos" or linea.fila.vacia("ler"):
+        return None
+    return {
+        "caso_id": caso.caso_id,
+        "num_linea": linea.num_linea,
+        "campo_contexto": "codigo_ler",
+        "valor_esperado": _NO_ALFANUMERICO.sub("", normalizar(linea.fila.texto("ler"))),
+        "comentario": linea.fila.texto("comentarios") or None,
+    }
 
 
 def _ia1_linea(caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario) -> dict:

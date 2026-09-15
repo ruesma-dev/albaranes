@@ -115,6 +115,8 @@ class CasoRevisado:
     destino: object  # vocabulario.DestinoEtiqueta (evita el import circular)
     lineas: list[LineaRevisada] = field(default_factory=list)
     caso_id: str = ""
+    #: Nombre del documento de entrada ya renombrado, cuando existe (R20).
+    fichero: str = ""
     #: Caso del que este es gemelo de formato (R22); vacío si no lo es.
     gemelo_de: str = ""
 
