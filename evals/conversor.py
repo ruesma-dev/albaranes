@@ -54,6 +54,12 @@ TIPOLOGIAS: tuple[str, ...] = (
     "Bombeo",
     "Combustible",
     "Alquiler",
+    # F-045: dos familias que la revisión manual del humano trajo al banco y
+    # que el catálogo de `ruesma_comun` todavía no tiene (las añade F-046).
+    # La pestaña es organización del banco, no clasificación de producción:
+    # que exista aquí no las convierte en familias válidas de documento.
+    "Grava",
+    "Ferreteria",
 )
 
 #: Campos cuyo valor de texto se interpreta como número si se puede. Fuera de

@@ -283,6 +283,21 @@ def clasificar(casos: list[CasoRevisado]) -> dict[str, list[CasoRevisado]]:
     return grupos
 
 
+def familias_pendientes(casos: list[CasoRevisado]) -> dict[str, list[str]]:
+    """Casos cuya familia de documento aún no existe en el catálogo (R6).
+
+    `combustible` (que existe, pero solo de línea), `grava` y `ferreteria`
+    nacen ROJOS a propósito: ampliarlos es F-046, y `familias.py` es ruta
+    sensible porque su texto se inyecta en el prompt de IA1. El informe los
+    agrupa aparte para que un rojo esperado no parezca una regresión.
+    """
+    pendientes: dict[str, list[str]] = {}
+    for caso in casos:
+        if not caso.destino.en_catalogo:
+            pendientes.setdefault(caso.destino.familia_documento, []).append(caso.caso_id)
+    return pendientes
+
+
 # --- El reparto (design §3, NORMATIVA) -------------------------------------
 
 

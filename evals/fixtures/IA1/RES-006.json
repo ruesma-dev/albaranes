@@ -2,7 +2,7 @@
   "caso_id": "RES-006",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "e93e047be1e7a408809df4b1e51d5942120b88a3c6c53d01858f676a40997947",
+  "sha256_libro": "89ed674ed3f5c0a13d1c9cc4e6d3a7a6f10de0cebffdb64bfbae89d9212711c2",
   "tablas": {
     "cabeceras": [
       {
