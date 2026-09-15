@@ -63,6 +63,18 @@ formato NO se escribe en ningún libro, se mide en la corrida y el informe agrup
 por él; y **hay un agujero que cerrar en `.gitignore`**, que ignora `*.pdf` pero
 no `*.png`, así que hoy un original de proveedor en PNG entraría en git.
 
+**Añadido el 2026-09-15 · el convenio de nombres** que cierra la capa 1: el
+código de albarán va al final del nombre del fichero, después del último `_`, o
+es el nombre entero si no hay `_` (`PROVEEDOR_SS-0003967.pdf` y
+`SS-0003967.png` → `SS-0003967`). Ese es el puente **nombre de fichero → código
+del Excel → `caso_id`**, y sin él emparejar 59 albaranes con sus ~142 filas es
+trabajo manual. Queda en `design.md` §4 y en R20–R22, con tres cosas: el
+renombrado es un script reproducible (T11), no un `mv`; los cuatro casos que la
+regla no cubre (dos ficheros al mismo código, código sin fila, fila sin fichero,
+nombre vacío) salen listados uno a uno en el informe; y **manda el código del
+papel, nunca el persistido** — el precedente es `SS-0801977` leído donde el
+papel decía `SS-0001977`.
+
 Los arreglos salen como fichas propias, priorizadas en `design.md` §7: patrón 1
 (partida mal leída) y patrón 3 (líneas deducidas que no se generan) primero;
 CIF raro y número de albarán, al final, por tener un solo caso cada uno.

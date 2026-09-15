@@ -8,16 +8,14 @@ se toca ni una línea de sv1–sv6 ni de `ruesma_comun`**: F-045 siembra la red,
 arregla lo que detecta. La ficha declara `servicios: [sv2, sv5, sv6]`: son los
 **vigilados** por los casos, no los modificados (decisión abierta D6).
 
-El flujo existente no cambia de forma: revisión manual → **libros de
-`ground_truth/`** → `evals.conversor` → `evals/fixtures/*.json` → `evals.runner`.
-Esta feature añade un escalón **antes** de los libros y deja el conversor como
-única puerta hacia los fixtures (y por tanto único sitio donde corre el barrido
-de C3 bis).
-
-Reglas de dominio que gobiernan el reparto: `docs/ARCHITECTURE.md` §6
-(`codigo_imputacion` = partida impresa; `codigo_partida_final` = decisión del
-matching), §7 (sintéticas y derivadas), §13 (`precio` bruto, `precio_neto` =
-importe de la línea; el unitario leído manda) y §14 (la familia la decide IA1).
+El flujo no cambia de forma: revisión manual → **libros de `ground_truth/`** →
+`evals.conversor` → `evals/fixtures/*.json` → `evals.runner`. Esta feature añade
+un escalón **antes** de los libros y deja el conversor como única puerta a los
+fixtures (y único sitio donde corre el barrido de C3 bis). Reglas de dominio que
+gobiernan el reparto: `docs/ARCHITECTURE.md` §6 (`codigo_imputacion` = partida
+impresa; `codigo_partida_final` = decisión del matching), §7 (sintéticas), §13
+(`precio` bruto, `precio_neto` = importe; el unitario leído manda) y §14 (la
+familia la decide IA1).
 
 ## 2. Ficheros
 
@@ -55,15 +53,13 @@ importe de la línea; el unitario leído manda) y §14 (la familia la decide IA1
 
 `evals/conversor.py`, `evals/comparador.py`, `evals/criticidad.py|json`,
 `evals/barrido.py`, `evals/modelos.py`, `evals/procesos/sv5_valoracion.py`,
-`evals/procesos/sv6_build.py`, y **todo** `services/`. Tentaciones concretas:
-no se añade un campo `unidad` a `LineaAlbaran` (eso es F-024) ni se cambia el
-formato de los libros (rompería los 7 casos RES ya sembrados).
+`evals/procesos/sv6_build.py` y **todo** `services/`. Tentaciones: no se añade
+`unidad` a `LineaAlbaran` (es F-024) ni se cambia el formato de los libros.
 
 ## 3. La tabla de reparto (NORMATIVA)
 
-La tabla plana tiene una fila por **línea de albarán** y mezcla lo leído del
-papel con lo valorado. Medido el 2026-09-15 (142 filas con datos, 59 códigos de
-albarán, 10 etiquetas de familia; puede haber crecido).
+Una fila por **línea de albarán**, mezclando lo leído del papel con lo valorado.
+Medido el 2026-09-15 (142 filas, 59 códigos, 10 familias; puede haber crecido).
 
 | Columna plana | Destino | Por qué |
 |---|---|---|
@@ -104,15 +100,30 @@ def asignar_casos_id(casos, mapa: dict[str, str]) -> tuple[dict[str, str], list[
 
 ```python
 # evals/revision/albaranes.py
-def normalizar_codigo(texto: str) -> str                   # "2.115.714" -> "2115714"
+def codigo_desde_nombre(nombre: str) -> str   # "PROV_SS-0003967.pdf" -> "SS-0003967"
+def normalizar_codigo(texto: str) -> str      # "2.115.714" -> "2115714"
 def emparejar(codigos: dict[str, str], ficheros: list[str]) -> tuple[dict, list]
 ```
 
-```python
-# evals/revision/escritura.py  (infraestructura)
-def copia_de_seguridad(ruta: Path, momento: dt.datetime) -> Path
-def escribir_libro(ruta: Path, tablas: dict[str, list[dict]], propios: set[str]) -> None
-```
+**El puente entre los tres mundos** (convenio del humano, 2026-09-15): del
+**nombre del fichero** sale el **código de albarán** —la columna con la que él
+identifica cada fila de su Excel— y de ahí el **`caso_id`**. La regla: si el
+nombre sin extensión trae `_`, el código es lo que va **después del último
+`_`**; si no, el nombre entero es el código (`PROVEEDOR_SS-0003967.pdf` y
+`SS-0003967.png` → `SS-0003967`). Sin ese puente, casar 59 albaranes con sus
+~142 filas es trabajo manual; el renombrado a `<caso_id>` es un script
+reproducible (T11), no un `mv`.
+
+**Manda el código del papel** —el del nombre y el del Excel—, nunca el que el
+sistema haya persistido: el precedente del proyecto es `SS-0801977` leído donde
+el papel decía `SS-0001977`, justo la discrepancia que el banco existe para
+cazar. **Cuatro fallos ruidosos, nunca silenciosos** (R21): dos ficheros con el
+mismo código, un código sin fila en el Excel, una fila sin fichero y un nombre
+vacío tras la regla; el informe los lista uno a uno, porque importar 57 de 59
+sin decir cuáles faltan es peor que no importar. Y el **mapa persistido**
+(`evals/mapa_casos.json`, R7) guarda `caso_id` ↔ código ↔ nombre original ↔
+formato ↔ `gemelo_de`: sin él, un caso rojo no se puede auditar contra el
+papel.
 
 `reparto.py`, `vocabulario.py` y `albaranes.py` no importan `openpyxl` ni tocan
 disco: son las que llevan la cobertura y la campaña de mutación.
@@ -129,10 +140,9 @@ extract_albaran_pipeline.py` (rama de imágenes, ~línea 249) y en
 | `pdf_escaneado` | una imagen JPEG por página | cadena de realce, flags `PREPROCESO_*` |
 | `imagen` (PNG/JPG suelto) | la imagen realzada | `preparar_imagen_para_ia`, mismos flags |
 
-Límite conocido: lo que no se puede decodificar (HEIC) va sin realzar,
-best-effort. La rama de imágenes es de julio de 2026 y **hoy no la mide nadie**.
-Leer píxeles rinde peor que leer texto: un fallo que solo aparece en el tercer
-camino es información sobre el FORMATO, no un defecto de extracción (R23).
+Límite conocido: lo indecodificable (HEIC) va sin realzar, best-effort. La rama
+de imágenes es de julio de 2026 y **hoy no la mide nadie**. Leer píxeles rinde
+peor: un fallo que solo sale en el tercer camino es FORMATO, no extracción (R23).
 
 **Dónde vive el formato: en ningún libro.** El camino se **mide** en la corrida.
 `sv2_extraccion.py` ya resuelve la ruta con `EXTENSIONES = (".pdf", ".jpg",
@@ -148,10 +158,9 @@ escribe las mismas filas para los dos y los hermana en `mapa_casos.json` con
 
 **Qué no cambia y qué sí.** `evals/barrido.py` solo mira texto de celda y
 `evals/conversor.py` no toca ficheros de entrada: ninguno asume PDF. Sí cambia
-el `.gitignore`, que ignora `*.pdf` pero **no** `*.png`: un original de
-proveedor en PNG entraría en git sin que nada lo pare (R24). Se ignora la
-carpeta `evals/inputs/albaranes/` entera, no `*.png` global, para no arrastrar
-assets legítimos del front sv4.
+el `.gitignore`, que ignora `*.pdf` pero **no** `*.png`: hoy un original en PNG
+entraría en git (R24). Se ignora `evals/inputs/albaranes/` entera, no `*.png`
+global, para no arrastrar assets legítimos del front sv4.
 
 ## 5. Convenios de celda: dos ejes que NO se mezclan
 
@@ -174,12 +183,10 @@ comparar. La política por columna vive en `vocabulario.json` (R11, R12):
 |---|---|---|---|
 | `descuento` | sin descuento | vacío (`null`; factor 1 de §13) | 58 de 142 |
 | `LER o codigo…` | no aplica a esa familia | no genera fila de IA2 | 128 de 142 |
-| `partida`, `precio unitario`, `importe` | el humano no lo ha afirmado | `?` | 8, 1 y 1 |
-| resto de columnas de valor | ídem | `?` | 0 |
+| `partida`, `precio unitario`, `importe` y el resto | el humano no lo ha afirmado | `?` | 8, 1, 1 y 0 |
 
 Con esa lectura el banco es **poco laxo**: la ceguera real son unas diez celdas
-`?` más los campos de IA1 que no se vigilan por D4, no las 107 filas sin
-comentario.
+`?` más los campos de IA1 que no se vigilan por D4, no las 107 filas.
 
 - Los valores de origen llegan con ruido (`CONTRATO` / `DE CONTRATO`,
   `EN OFERTA` / `OFERTTA`). Los sinónimos aceptados viven en
@@ -199,14 +206,12 @@ comentario.
   dejaría al humano sin poder corregir a mano.
 - **D3 · El vacío del comentario y el del valor son cosas distintas** (§5).
   **Corregida por el humano el 2026-09-15**, que desmontó la versión anterior
-  de esta decisión —«toda celda vacía → `?`»— y la marca de validación que la
-  acompañaba, ambas erróneas. Sus palabras: «celda vacia EN COMENTARIOS no es
-  que no se compare. es que ha salido ok en las pruebas. pero hay que seguir
-  validando en los evals que sigue saliendo bien». El `?` solo lo produce un
-  **valor esperado** ausente, y ni siquiera siempre: `descuento` y `LER` vacíos
-  significan otra cosa (R12). Alternativa descartada: tratar las 107 filas sin
-  comentario como huecos; habría tirado los casos más valiosos del banco, los
-  de no regresión, y habría dejado el banco laxo sin necesidad.
+  —«toda celda vacía → `?`»— y su marca de validación, ambas erróneas: «celda
+  vacia EN COMENTARIOS no es que no se compare. es que ha salido ok en las
+  pruebas. pero hay que seguir validando en los evals que sigue saliendo bien».
+  El `?` solo lo produce un **valor esperado** ausente, y ni siempre (R12).
+  Descartado tratar las 107 filas sin comentario como huecos: habría tirado los
+  casos más valiosos del banco.
 - **D4 · `numero_albaran` y la obra de IA1 quedan sin vigilar** (patrón 9 y la
   mitad de extracción del 2). Es lo que ya hacen los 7 casos RES y el precio de
   no fabricar literales; se recupera cuando el humano escriba el número.
@@ -214,8 +219,8 @@ comentario.
   (solo se reescriben los `caso_id` propios); los libros están en `.gitignore`.
 - **D6 · `servicios` de la ficha.** F-045 no toca sv2/sv5/sv6: anotarlo como
   «vigilados» o vaciar el campo.
-- **Riesgo de deriva**: el Excel cambia bajo nuestros pies. Por eso todo es
-  reejecutable (R18) y nada del código depende de un valor concreto.
+- **Deriva**: el Excel cambia bajo nuestros pies; por eso todo es reejecutable
+  (R18) y nada del código depende de un valor concreto.
 
 ## 7. Fichas de arreglo propuestas (NO entran en F-045)
 
@@ -223,28 +228,23 @@ Ordenadas por cuántas líneas de la revisión toca cada patrón (medido el
 2026-09-15). Todas pasan el filtro de robustez de R29 salvo donde se indica.
 
 1. **Patrón 1 · la partida se lee mal** (el más repetido: 5 albaranes, 4
-   familias). Decisión: no leer la partida a ciegas, sino **elegirla de la
-   lista de partidas de la obra** (el nivel justo por encima de los
-   descompuestos), vía sigrid-api. Estrecha el espacio de búsqueda: sobrevive a
-   un cambio de formato y a un proveedor nuevo. Relacionada: F-021.
-2. **Patrón 3 · líneas deducidas que no se generan.** El incremento por cambio
-   de año existe en mortero y en residuos, no solo en hormigón; la carga
-   incompleta, también en mortero; y hay incrementos subrayados a mano. Regla
-   del humano: si sale en el contrato hay que analizarlo; si no, buscarlo en la
-   oferta (F-017).
+   familias). Decisión: no leerla a ciegas, sino **elegirla de la lista de
+   partidas de la obra** (el nivel justo por encima de los descompuestos), vía
+   sigrid-api: estrecha el espacio de búsqueda. Relacionada: F-021.
+2. **Patrón 3 · líneas deducidas que no se generan.** El incremento por año
+   existe en mortero y residuos, no solo en hormigón; la carga incompleta,
+   también en mortero; y hay incrementos subrayados a mano. Regla del humano: si
+   sale en el contrato hay que analizarlo; si no, buscarlo en la oferta (F-017).
 3. **Patrón 2 · la obra se deduce mal.** Decisión: con el proveedor
    identificado con certeza, deducir la obra **solo entre las obras con
    contrato con ese proveedor**. Estrecha el espacio de búsqueda.
 4. **Patrón 5 · unitario equivocado dentro del contrato** (grava 20/40). Roza
-   §12 (matching estricto): candidata a resolverse por contexto de línea, nunca
-   por una regla de producto.
-5. **Patrón 8 · dos contratos candidatos y no elige ninguno.** Propuesta del
-   humano: coger los dos, fusionarlos dejando marcada la fusión y seguir.
-   Revisar contra §12 antes de aceptarla.
+   §12 (matching estricto): por contexto de línea, nunca por regla de producto.
+5. **Patrón 8 · dos contratos candidatos y no elige.** Propuesta del humano:
+   coger los dos y fusionarlos marcando la fusión. Revisar contra §12.
 6. **Patrón 4 · devoluciones** (cantidad negativa que referencia el número de
    albarán del proveedor). Funcionalidad nueva, un solo caso hoy.
 7. **Patrón 6 · el código LER no se ve en la vista detallada**: verificar si se
    persiste. Barata y cerrada.
-8. **Patrones 7 y 9** (CIF raro, número mal leído): un caso cada uno. Con uno
-   solo no se distingue defecto de casualidad: quedan en `patrones.json` y
-   esperan un segundo caso.
+8. **Patrones 7 y 9** (CIF raro, número mal leído): un caso cada uno; con uno
+   solo no se distingue defecto de casualidad. Esperan un segundo caso.
