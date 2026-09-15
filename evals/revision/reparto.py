@@ -299,6 +299,9 @@ def repartir(caso: CasoRevisado, vocab: Vocabulario) -> dict[str, dict[str, list
         contexto = _ia2_contexto(caso, linea)
         if contexto is not None:
             tablas["IA2"]["contexto"].append(contexto)
+        tablas["IA3"]["lineas_valoradas"].append(_ia3_valorada(caso, linea, vocab))
+        if linea.origen_contrato == "nueva":
+            tablas["IA4"]["conciliacion"].append(_ia4_conciliacion(caso, linea, vocab))
     for linea in caso.deducidas:
         tablas["IA3"]["sinteticas_esperadas"].append(_ia3_sintetica(caso, linea, vocab))
         tablas["FINAL"]["lineas_anadidas"].append(_final_anadida(caso, linea, vocab))
@@ -369,6 +372,60 @@ def _ia1_linea(caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario) -> 
         # así que la lectura de la partida no se vigila; su decisión sí, en
         # IA3 y en el FINAL, que es donde vive el patrón 1.
         "codigo_imputacion": INTERROGANTE,
+        "comentario": linea.fila.texto("comentarios") or None,
+    }
+
+
+def _ia3_valorada(caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario) -> dict:
+    """Lo que el sistema DECIDE sobre una línea impresa (design §3).
+
+    La partida final, el unitario y el importe se le exigen a la valoración
+    vengan de donde vengan: el patrón 1 —la partida se lee mal— vive en la
+    decisión, no solo en la lectura.
+    """
+    nueva = linea.origen_contrato == "nueva"
+    return {
+        "caso_id": caso.caso_id,
+        "num_linea": linea.num_linea,
+        # Que una línea NUEVA no case es afirmable; con qué método casa una del
+        # contrato, no: el Excel no lo dice y suponerlo sería inventar (R11).
+        "match_method": "no_match" if nueva else INTERROGANTE,
+        "codigo_producto_contrato": None if nueva else _codigo_producto(caso, linea, vocab),
+        "codigo_partida_final": celda(linea, "partida", vocab),
+        "precio_unitario_final": celda(linea, "precio_unitario", vocab),
+        "precio_source": linea.precio_source,
+        "importe_calculado": celda(linea, "importe", vocab),
+        "review_required": INTERROGANTE,
+        "comentario": linea.fila.texto("comentarios") or None,
+    }
+
+
+def _codigo_producto(
+    caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario
+) -> object | None:
+    """La columna de LER/código de producto, salvo en residuos: ahí es el LER.
+
+    En residuos ese valor es contexto de línea y ya viajó a IA2; repetirlo aquí
+    como código de contrato sería comparar una cosa contra otra distinta.
+    """
+    if caso.destino.familia_documento == "residuos":
+        return INTERROGANTE
+    return celda(linea, "ler", vocab) or INTERROGANTE
+
+
+def _ia4_conciliacion(
+    caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario
+) -> dict:
+    """Solo las líneas NUEVA llegan a la conciliación: son las que no casan."""
+    return {
+        "caso_id": caso.caso_id,
+        "num_linea": linea.num_linea,
+        # El Excel dice a qué precio acabó la línea, no si lo correcto era
+        # conciliarla o dejarla a revisión humana. Eso no se supone (R11).
+        "concilia": INTERROGANTE,
+        "linea_contrato_esperada": INTERROGANTE,
+        "precio_unitario_esperado": celda(linea, "precio_unitario", vocab),
+        "motivo": None,
         "comentario": linea.fila.texto("comentarios") or None,
     }
 
