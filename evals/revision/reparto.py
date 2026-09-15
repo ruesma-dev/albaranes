@@ -264,6 +264,32 @@ def _base(linea: LineaRevisada) -> object:
     return INTERROGANTE if linea.num_linea is None else linea.num_linea
 
 
+def crear_gemelos(
+    casos: list[CasoRevisado], formatos: dict[str, str]
+) -> list[CasoRevisado]:
+    """Duplica en `<caso_id>-IMG` los casos que además existen en imagen (R22).
+
+    Mismo ground truth y distinta entrada. `formatos` dice qué caso tiene un
+    gemelo de imagen; lo decide el emparejado de documentos, porque el formato
+    se MIDE en la carpeta de entrada y no se afirma en ningún libro.
+    """
+    gemelos: list[CasoRevisado] = []
+    for caso in casos:
+        if formatos.get(caso.caso_id) != "imagen":
+            continue
+        gemelos.append(
+            CasoRevisado(
+                codigo=caso.codigo,
+                clave=caso.clave,
+                destino=caso.destino,
+                lineas=list(caso.lineas),
+                caso_id=f"{caso.caso_id}-IMG",
+                gemelo_de=caso.caso_id,
+            )
+        )
+    return gemelos
+
+
 # --- Los dos ejes del vacío (R9, R10) --------------------------------------
 
 

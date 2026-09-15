@@ -168,16 +168,28 @@ def _hay_choque(plan: Emparejado, codigo: str, encontrados: list[tuple[str, str]
 
 
 def _copias_de(caso_id: str, encontrados: list[tuple[str, str]]) -> list[Copia]:
-    """Un fichero, un caso. Los gemelos de formato los añade R22 (T11 bis)."""
-    return [
-        Copia(
-            origen=nombre,
-            destino=f"{caso_id}{Path(nombre).suffix.lower()}",
-            caso_id=caso_id,
-            formato=formato,
+    """Un fichero por caso; y si hay PDF e imagen, DOS casos gemelos (R22).
+
+    El mismo albarán en los dos formatos no es un duplicado que deduplicar: es
+    el único experimento del banco que aísla el formato. Mismo ground truth,
+    distinta entrada; un fallo que solo sale en el gemelo de imagen es un
+    hallazgo de FORMATO, no de extracción.
+    """
+    hay_pareja = len({formato for _, formato in encontrados}) > 1
+    copias: list[Copia] = []
+    for nombre, formato in sorted(encontrados, key=lambda par: par[1] != "pdf"):
+        es_gemelo = hay_pareja and formato == "imagen"
+        propio = f"{caso_id}{SUFIJO_IMAGEN}" if es_gemelo else caso_id
+        copias.append(
+            Copia(
+                origen=nombre,
+                destino=f"{propio}{Path(nombre).suffix.lower()}",
+                caso_id=propio,
+                formato=formato,
+                gemelo_de=caso_id if es_gemelo else "",
+            )
         )
-        for nombre, formato in sorted(encontrados)
-    ]
+    return copias
 
 
 def _ya_colocado(caso_id: str, plan: Emparejado) -> bool:
