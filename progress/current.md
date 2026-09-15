@@ -107,6 +107,22 @@ alcanza SOLO a lo que se pesa —canon y tratamiento: 0,42 tn se valora como 1;
 propia, es ficha del catálogo, no de F-045). Las diez etiquetas del Excel tienen
 destino y ninguna cae en «desconocida».
 
+**Corregido el 2026-09-15 · el vocabulario amplía el CATÁLOGO.** GASOLEO no es
+genérico con línea marcada, es **`combustible`** (que hoy existe solo con
+alcance línea), y GRAVA y FERRETERIA son **familias nuevas**, más **FERRALLA**,
+que ni siquiera aparece en el Excel. Eso obliga a tocar
+`ruesma_comun/contratos/familias.py`, que es ruta sensible —su texto se inyecta
+en el prompt de IA1 y toca F-043—, así que **sale como ficha propia** y NO entra
+en F-045. Mientras no exista, los casos de GASOLEO, GRAVA y FERRETERIA nacen
+ROJOS a propósito y el informe los agrupa bajo «la familia aún no existe en el
+catálogo», sin mezclarlos con defectos reales de clasificación. Volumen medido:
+FERRETERIA 11 filas/3 albaranes, GRAVA 2/2, GASOLEO 1/1. Riesgos anotados en esa
+ficha: `grava` no se puede validar con dos líneas, `ferralla` llega sin ningún
+caso, y **el doc de dominio no documenta ninguna regla de ferralla**, así que la
+ficha nace sin insumo de negocio. En el banco esto sí entra: las pestañas
+`Grava` y `Ferreteria` se crean en los seis libros y se añaden a `TIPOLOGIAS`
+del conversor (T8 bis), con prefijos `GRA-` y `FER-`.
+
 ### Lo único que sigue abierto de la spec
 
 1. **Validación del humano** de la tabla de reparto (`design.md` §3) y de la

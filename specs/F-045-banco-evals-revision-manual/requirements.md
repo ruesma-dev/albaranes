@@ -26,15 +26,17 @@ R5. SI la tabla plana trae una etiqueta de familia, de origen de línea o de
 precio que el vocabulario versionado no reconoce, ENTONCES el sistema debe
 abortar sin escribir nada y listar las etiquetas con su fila.
 
-R6. El sistema debe traducir la etiqueta del Excel a UNA de las CUATRO familias
-de DOCUMENTO del catálogo (`ruesma_comun.contratos.familias`) y a su pestaña con
-la tabla de `design.md` §5 bis, en un único fichero de datos. La pestaña NO es la
-familia, y esto etiqueta ground truth humano: no clasifica producción (§14).
+R6. El sistema debe traducir la etiqueta del Excel a su familia de DOCUMENTO y a
+su pestaña con la tabla de `design.md` §5 bis, en un único fichero de datos. La
+pestaña NO es la familia; esto etiqueta ground truth humano y no clasifica
+producción (§14). SI esa familia aún no existe en el catálogo (`combustible`
+como documento, `grava`, `ferreteria`, `ferralla`), ENTONCES el caso se escribe
+igual, nace ROJO y el informe lo agrupa aparte de los defectos reales.
 
 R7. El sistema debe dar a cada albarán un `caso_id` estable, con el prefijo de
-su pestaña (`GEN/HOR/MOR/RES/BOM/COM/ALQ-NNN`), y guardar en un mapa versionado
-`caso_id` ↔ código ↔ nombre original ↔ formato ↔ `gemelo_de`: es lo que permite
-volver al papel cuando un eval falle.
+su pestaña (`GEN/HOR/MOR/RES/BOM/COM/ALQ/GRA/FER-NNN`), y guardar en un mapa
+versionado `caso_id` ↔ código ↔ nombre ↔ formato ↔ `gemelo_de`: es lo que
+permite volver al papel cuando un eval falle.
 
 R8. CUANDO el albarán ya tenga `caso_id` en ese mapa, el sistema debe
 reutilizarlo y actualizar sus filas, nunca crear un caso nuevo.
@@ -68,8 +70,8 @@ R13. El sistema debe escribir `?` en `numero_albaran`, `obra_codigo` y
 el literal impreso, y deducir la obra no es extraer— y la obra en el FINAL.
 
 R14. El informe de importación debe traer: por libro y columna, cuántas celdas
-llevan valor, `?` y vacías; el reparto entre **no regresión** y **defecto
-conocido**; y las filas descartadas con su motivo (R21).
+llevan valor, `?` y vacías; el reparto entre no regresión y defecto conocido; y
+las filas descartadas (R21).
 
 ## C. Escritura de los libros
 
@@ -123,7 +125,7 @@ son observables (p. ej. `unidad`, F-024), en vez de darlos por buenos o malos.
 
 R27. El sistema debe mantener `evals/patrones.json`, versionado: un registro por
 patrón (id, título, fase, casos, decisión, estado) más los casos de **no
-regresión**, los que hoy deben salir en VERDE.
+regresión**, los que deben salir en VERDE.
 
 R28. El sistema debe exigir que cada caso citado en `evals/patrones.json` exista
 en `evals/fixtures/`, y que cada patrón cite al menos un caso.
@@ -131,9 +133,8 @@ en `evals/fixtures/`, y que cada patrón cite al menos un caso.
 R29. CUANDO se registre una decisión candidata de mejora, el sistema debe
 exigirle respuesta a las dos preguntas del filtro de robustez: ¿sigue
 funcionando si el proveedor cambia el formato del papel? ¿y si aparece uno
-nuevo? SI alguna es «no», ENTONCES queda `descartada` y no genera ficha.
-Estrechar el espacio de búsqueda (la partida entre las de la obra; la obra entre
-las del proveedor) pasa el filtro; una regla atada a un formato o proveedor, no.
+nuevo? SI alguna es «no», queda `descartada` y no genera ficha. Estrechar el
+espacio de búsqueda pasa el filtro; una regla atada a un formato o proveedor, no.
 
 R30. Las fichas de arreglo se proponen en `harness/features.json` ordenadas por
 cuántas líneas toca cada patrón, en estado `pending`.
