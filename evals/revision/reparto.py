@@ -171,3 +171,150 @@ def _ultimos_numeros(mapa: dict[str, dict]) -> dict[str, int]:
             numero = int(casado.group("numero"))
             ultimos[prefijo] = max(ultimos.get(prefijo, 0), numero)
     return ultimos
+
+
+# --- Convenios de celda (R11, R12) -----------------------------------------
+
+#: Sentinela `?` de los libros: «no compares este campo en este caso».
+INTERROGANTE = "?"
+
+#: Las tablas que este importador alimenta. `INPUTS.CONTRATO_LINEAS`,
+#: `INPUTS.CONDICIONES` e `IA3` TABLA 3 quedan fuera a propósito (design §3):
+#: la revisión manual no trae líneas de contrato, y lo que no alimenta tampoco
+#: lo toca. Sin líneas de contrato los casos nuevos solo son evaluables con
+#: LLM; la corrida determinista sigue viviendo de los 7 RES.
+TABLAS: dict[str, tuple[str, ...]] = {
+    "IA1": ("cabeceras", "lineas"),
+    "IA2": ("contexto",),
+    "IA3": ("lineas_valoradas", "sinteticas_esperadas"),
+    "IA4": ("conciliacion",),
+    "INPUTS": ("caso", "lineas_albaran"),
+    "FINAL": ("datos_generales", "lineas", "lineas_anadidas"),
+}
+
+
+def _numero(valor: object | None) -> object | None:
+    """Los importes y cantidades viajan como número si lo son."""
+    if isinstance(valor, bool) or valor is None:
+        return valor
+    if isinstance(valor, (int, float)):
+        return valor
+    texto = str(valor).strip().replace(" ", "")
+    if not texto:
+        return None
+    try:
+        return float(texto.replace(",", ".")) if texto.count(",") == 1 else float(texto)
+    except ValueError:
+        return valor
+
+
+def celda(linea: LineaRevisada, columna: str, vocab: Vocabulario) -> object | None:
+    """El valor de una columna aplicando su política de vacío (R11, R12).
+
+    `nulo` = el humano afirma que no hay valor (vacío en el libro, que se
+    compara contra `null`); `interrogante` = no lo ha afirmado y se escribe
+    `?`, que NO se compara. Nunca un valor supuesto.
+    """
+    if not linea.fila.vacia(columna):
+        return _numero(linea.fila.bruto(columna))
+    return None if vocab.politica_vacio(columna) == "nulo" else INTERROGANTE
+
+
+def _descuentos(linea: LineaRevisada, vocab: Vocabulario) -> object | None:
+    """La columna viene en fracción (0,4) y el libro guarda el % impreso (40).
+
+    Sin descuento —vacío o cero— se escribe vacío: es lo mismo que decir «sin
+    descuento», y es el factor 1 de la fórmula canónica de ARCHITECTURE §13.
+    """
+    bruto = _numero(linea.fila.bruto("descuento"))
+    if not isinstance(bruto, (int, float)) or not bruto:
+        return None
+    porcentaje = bruto * vocab.factor_descuento
+    return int(porcentaje) if float(porcentaje).is_integer() else porcentaje
+
+
+def _base(linea: LineaRevisada) -> object:
+    """El `num_linea_base` de una sintética, o `?` si no hay impresa delante."""
+    return INTERROGANTE if linea.num_linea is None else linea.num_linea
+
+
+# --- El reparto (design §3, NORMATIVA) -------------------------------------
+
+
+def repartir(caso: CasoRevisado, vocab: Vocabulario) -> dict[str, dict[str, list[dict]]]:
+    """Reparte un caso entre las tablas de los seis libros."""
+    tablas: dict[str, dict[str, list[dict]]] = {
+        libro: {tabla: [] for tabla in nombres} for libro, nombres in TABLAS.items()
+    }
+    comentario = " | ".join(caso.comentarios)
+
+    for linea in caso.impresas:
+        tablas["IA1"]["lineas"].append(_ia1_linea(caso, linea, vocab))
+    for linea in caso.deducidas:
+        tablas["IA3"]["sinteticas_esperadas"].append(_ia3_sintetica(caso, linea, vocab))
+        tablas["FINAL"]["lineas_anadidas"].append(_final_anadida(caso, linea, vocab))
+
+    del comentario
+    return tablas
+
+
+def _ia1_linea(caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario) -> dict:
+    """Solo lo que el papel IMPRIME. Lo que decide el sistema no es de IA1."""
+    return {
+        "caso_id": caso.caso_id,
+        "num_linea": linea.num_linea,
+        "descripcion_esperada": celda(linea, "concepto", vocab),
+        "cantidad": celda(linea, "cantidad", vocab),
+        "unidad": celda(linea, "unidad", vocab),
+        # R4: si el unitario sale del contrato o de una oferta, en el papel NO
+        # está, y la celda va vacía (null afirmado), nunca `?`.
+        "precio_unitario": (
+            celda(linea, "precio_unitario", vocab) if linea.precio_impreso else None
+        ),
+        "descuentos": _descuentos(linea, vocab),
+        "importe": celda(linea, "importe", vocab) if linea.importe_impreso else None,
+        # D4: la tabla plana no dice si la partida venía impresa en el papel,
+        # así que la lectura de la partida no se vigila; su decisión sí, en
+        # IA3 y en el FINAL, que es donde vive el patrón 1.
+        "codigo_imputacion": INTERROGANTE,
+        "comentario": linea.fila.texto("comentarios") or None,
+    }
+
+
+def _ia3_sintetica(caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario) -> dict:
+    """Una línea deducida es una sintética que el sistema DEBE emitir."""
+    return {
+        "caso_id": caso.caso_id,
+        "num_linea_base": _base(linea),
+        # El Excel dice que la línea se dedujo, no con qué `modifier_source`
+        # del catálogo de sv5: entre `year_contract` y `year_albaran` no hay
+        # forma de decidir desde la tabla, y suponerlo sería inventar (R11).
+        "modifier_source": INTERROGANTE,
+        "rol_linea": INTERROGANTE,
+        "descripcion_esperada": celda(linea, "concepto", vocab),
+        "cantidad": _cantidad_final(caso, linea, vocab),
+        "precio_unitario": celda(linea, "precio_unitario", vocab),
+        "codigo_partida": celda(linea, "partida", vocab),
+        "comentario": linea.fila.texto("comentarios") or None,
+    }
+
+
+def _final_anadida(caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario) -> dict:
+    """La misma línea deducida, vista por el administrativo (TABLA 3)."""
+    return {
+        "caso_id": caso.caso_id,
+        "num_linea_base": _base(linea),
+        "concepto": celda(linea, "concepto", vocab),
+        "cantidad": _cantidad_final(caso, linea, vocab),
+        "precio_unitario": celda(linea, "precio_unitario", vocab),
+        "partida": celda(linea, "partida", vocab),
+        "importe": celda(linea, "importe", vocab),
+        "comentario": linea.fila.texto("comentarios") or None,
+    }
+
+
+def _cantidad_final(
+    caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario
+) -> object | None:
+    """La cantidad con la que se factura (de momento, la leída)."""
+    return celda(linea, "cantidad", vocab)
