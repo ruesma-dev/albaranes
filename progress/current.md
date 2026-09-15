@@ -7,6 +7,32 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
+**F-045 · CAPA 1 IMPLEMENTADA** (2026-09-15, rama
+`feature/F-045-banco-evals-revision-manual`, 20 commits de tarea). Informe
+completo en `progress/impl_F-045.md`; informe de la importación en
+`progress/import_F-045.md`. El banco pasa de **7 casos** a **59**, de ocho
+familias y 18 proveedores. Falta el veredicto del reviewer: la feature sigue
+`in_progress` y NO se marca `done`.
+
+**Tres cosas que tiene que decidir el humano antes de cerrar:**
+
+1. **`INPUTS.CASOS.tipologia`**: la implementación escribe la **pestaña**, no
+   la familia de documento que pide `design.md` §3. Motivo medido:
+   `MAPA_TIPO_FAMILIA` de `evals/procesos/{sv5_valoracion,sv6_build}.py` está
+   indexado por pestaña, así que escribir la familia deja a TODOS los casos
+   —incluidos los 7 RES que ya funcionaban— en `tipo_familia='otro'`, que es
+   justo la clasificación equivocada que F-043 vino a arreglar; y esos dos
+   ficheros §2 los declara intocables en F-045. La familia no se pierde: va a
+   `evals/mapa_casos.json` y agrupada en el informe.
+2. **Los incrementos LER de los 7 casos RES**: el Excel los marca
+   `EN ALBARAN`, pero el libro escrito a mano los tenía como sintéticas
+   esperadas. Hoy RES-004 los espera por los dos caminos a la vez, y eso es
+   ground truth contradictorio. Hay que mirar el papel.
+3. **Los originales siguen sin copiarse**: los 59 casos salen como
+   `fila_sin_fichero`. El plan de renombrado se propone en el informe con la
+   estrategia de cada emparejado, y **no se ha renombrado nada**: hay que
+   pedirlo con `python -m evals.revision --renombrar` tras revisarlo.
+
 **F-043 y F-036 están CERRADAS** (`done`, 2026-09-14). El relato completo, con
 las cuatro verificaciones, los tres defectos que solo salieron probando en real
 y las salvedades, está en `progress/history.md`.

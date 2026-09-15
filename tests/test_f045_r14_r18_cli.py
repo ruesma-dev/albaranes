@@ -192,16 +192,41 @@ def test_f045_r14_se_copia_cada_libro_antes_de_escribirlo(entorno):
     }
 
 
-def test_f045_r18_la_segunda_pasada_no_deja_ni_una_copia_mas(entorno):
+def test_f045_r18_la_segunda_pasada_no_copia_ni_un_libro(entorno):
     """Si el libro no cambia no se guarda: guardarlo le movería el sha256 y
 
     dejaría todos sus fixtures «modificados» sin que hubiera cambiado un dato.
+    El recuento se lee del informe y no de los nombres de fichero: la copia
+    lleva la hora con precisión de minuto, así que dos pasadas seguidas
+    escribirían el mismo nombre y contar ficheros no distinguiría nada.
     """
     correr(entorno)
-    antes = sorted(p.name for p in (entorno["ground_truth"] / "copias").glob("*.xlsx"))
+    assert "- Copias de seguridad: 5" in entorno["informe"].read_text(encoding="utf-8")
     correr(entorno)
-    despues = sorted(p.name for p in (entorno["ground_truth"] / "copias").glob("*.xlsx"))
-    assert despues == antes
+    assert "- Copias de seguridad: 0" in entorno["informe"].read_text(encoding="utf-8")
+
+
+def test_f045_r22_el_gemelo_queda_hermanado_en_el_mapa(entorno):
+    (entorno["originales"] / "ALB H132525.pdf").write_bytes(b"%PDF")
+    (entorno["originales"] / "0693 obra _H132525.png").write_bytes(b"PNG")
+    correr(entorno)
+    mapa = json.loads(entorno["mapa"].read_text(encoding="utf-8"))["casos"]
+    assert mapa["HOR-001"]["gemelo_de"] is None
+    assert mapa["HOR-001-IMG"]["gemelo_de"] == "HOR-001"
+    assert mapa["HOR-001-IMG"]["formato"] == "imagen"
+    assert mapa["HOR-001"]["familia_documento"] == "hormigon"
+
+
+def test_f045_r14_ejecutar_sin_argumentos_opcionales_no_renombra_ni_va_en_seco(entorno):
+    """Los valores por defecto de `ejecutar` son los conservadores."""
+    resultado = cli.ejecutar(
+        entorno["origen"],
+        entorno["ground_truth"],
+        entorno["originales"],
+        entorno["mapa"],
+    )
+    assert resultado.renombrados == []
+    assert resultado.libros_escritos  # sin dry_run, sí escribe
 
 
 def test_f045_r14_el_mapa_queda_escrito_con_los_casos_nuevos(entorno):
