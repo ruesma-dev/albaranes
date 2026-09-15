@@ -59,8 +59,9 @@ el resto = `?`.
 
 R12 bis. El ground truth de residuos debe seguir los tres criterios de
 `design.md` §5 ter: incremento por LER deducido del **canon** por código LER;
-cantidad = peso en tn con **mínimo facturable 1**; e **incremento por año**
-también en residuos. Ninguno está implementado: nacen como defecto conocido.
+**mínimo facturable de 1 tn en lo que se pesa** —canon y tratamiento—, con el
+movimiento de contenedor intacto en unidades; e **incremento por año** también
+en residuos. Ninguno está implementado: nacen como defecto conocido.
 
 R13. El sistema debe escribir `?` en `numero_albaran`, `obra_codigo` y
 `obra_nombre` de IA1 —el código de la tabla plana es la clave del documento, no
@@ -139,10 +140,9 @@ cuántas líneas toca cada patrón, en estado `pending`.
 
 ## G. Verificaciones que solo puede hacer el humano
 
-R31. El humano debe validar, antes de sembrar: la tabla de reparto (§3), la
-política de vacíos por columna (R12), las tres filas pendientes del mapa de
-etiquetas (CONTENEDORES, GASOLEO, CAMION GRUA, §5 bis) y si el mínimo de 1 tn
-alcanza al movimiento de contenedor o solo al canon (§5 ter).
+R31. El humano debe validar, antes de sembrar, la tabla de reparto (§3) y la
+política de vacíos por columna (R12). El mapa de etiquetas (§5 bis) y el alcance
+del mínimo de 1 tn (§5 ter) los cerró el 2026-09-15.
 
 R32. La pasada `--con-llm` cuesta dinero y la lanza el humano; su informe queda
 en `progress/evals_F-045.md`, con los casos de no regresión en VERDE y el

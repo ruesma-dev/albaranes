@@ -97,6 +97,27 @@ siempre sin que nada esté roto. La tabla de mapeo vive solo en
 pestaña Bombeo se queda vacía. Que al catálogo le falten familias de documento
 es ficha aparte: hoy deja mal a 2 albaranes de 59.
 
+**Cerrado el 2026-09-15 · las dos decisiones que faltaban.** (1) El mínimo de 1
+alcanza SOLO a lo que se pesa —canon y tratamiento: 0,42 tn se valora como 1;
+3,10 tn como 3,10—, y el movimiento de contenedor sigue en unidades (1 cambio =
+1 UD), así que el ground truth de los 19 albaranes de residuos queda fijado.
+(2) CONTENEDORES es familia `residuos`; GASOLEO y CAMION GRUA van con documento
+`generico` y la LÍNEA marcada `combustible` / `alquiler_maquinaria`, que es lo
+único que el sistema produce hoy (si algún día fueran familia de documento
+propia, es ficha del catálogo, no de F-045). Las diez etiquetas del Excel tienen
+destino y ninguna cae en «desconocida».
+
+### Lo único que sigue abierto de la spec
+
+1. **Validación del humano** de la tabla de reparto (`design.md` §3) y de la
+   política de vacíos por columna (R12): es la PARADA 1 antes de implementar.
+2. **D6 · el campo `servicios` de la ficha F-045**: declara sv2/sv5/sv6, pero la
+   feature no los toca; hay que anotarlo como «vigilados» o vaciarlo.
+
+Revisada la spec entera tras los cambios de hoy, no queda ninguna
+contradicción: se corrigió la última, que la columna `Tipo de albaran` daba a la
+vez la pestaña y la familia, y ya no es cierto para GASOLEO ni CAMION GRUA.
+
 Los arreglos salen como fichas propias, priorizadas en `design.md` §7: patrón 1
 (partida mal leída) y patrón 3 (líneas deducidas que no se generan) primero;
 CIF raro y número de albarán, al final, por tener un solo caso cada uno.

@@ -54,12 +54,12 @@ cambia el formato de los libros.
 ## 3. La tabla de reparto (NORMATIVA)
 
 Una fila por **línea de albarán**, mezclando lo leído del papel con lo valorado.
-Medido el 2026-09-15 (142 filas, 59 códigos, 10 familias; puede haber crecido).
+Medido el 2026-09-15 (142 filas, 59 códigos, 10 etiquetas; puede haber crecido).
 
 | Columna plana | Destino | Por qué |
 |---|---|---|
 | `codigo alabran` | clave natural del caso (§4); `IA1.cabeceras.numero_albaran` = `?` | el código del humano no es el literal impreso (`0000168` vs `SS-0000168`): compararlo daría rojo falso (R13) |
-| `Tipo de albaran` | pestaña de los seis libros + `INPUTS.CASOS.tipologia` | es la familia del catálogo, traducida por `vocabulario.json` (R6) |
+| `Tipo de albaran` | pestaña del libro **y** `INPUTS.CASOS.tipologia` = familia de DOCUMENTO del catálogo (§5 bis) | pestaña y familia no siempre coinciden: GASOLEO va a la pestaña Combustible con familia `generico` (R6) |
 | `cif` | `RESULTADO_FINAL.datos_generales.CIF`; en IA1 `?` | el CIF correcto es el del proveedor identificado, no siempre el impreso; así lo tienen ya los 7 casos RES |
 | `nombre empresa (el bueno…)` | `IA1.cabeceras.proveedor_nombre` **y** `FINAL.proveedor` | es la razón social con la que se guarda, y coincide con lo impreso en los casos ya sembrados |
 | `codigo obra` | `FINAL.datos_generales.obra`; en IA1 `obra_codigo` y `obra_nombre` = `?` | deducir la obra NO es extraer: el papel a menudo no la trae (R13) |
@@ -184,38 +184,38 @@ caso ROJO para siempre sin que nada esté roto.
 |---|---|---|
 | HORMIGON 55/17 · MORTERO 10/4 · RESIDUOS 38/19 | la suya | Hormigon · Mortero · Residuos |
 | GENERICO 11/3 · FERRETERIA 11/3 · MATERIALES 8/7 · GRAVA 2/2 | `generico` | Generico-Suministros |
-| CONTENEDORES 3/2 | ¿`residuos`, o `generico` + línea de alquiler? | **PENDIENTE del humano** |
-| GASOLEO 1/1 | `generico` + línea `combustible` | **PENDIENTE**: Combustible o Generico |
-| CAMION GRUA 3/1 | `generico` + línea `alquiler_maquinaria` | **PENDIENTE**: Alquiler o Generico |
+| CONTENEDORES 3/2 | `residuos` (gestión de RCD, como el resto) | Residuos |
+| GASOLEO 1/1 | `generico` + línea `combustible` | Combustible |
+| CAMION GRUA 3/1 | `generico` + línea `alquiler_maquinaria` | Alquiler |
 
-La pestaña **Bombeo** no tiene etiqueta en el Excel ni familia en el catálogo:
-el importador nunca escribe ahí y el informe lo dice; no se borra, porque el
-conversor declara las siete. Una etiqueta desconocida **aborta** (R5), nunca cae
-en `generico`. Que al catálogo le falten familias de documento es ficha aparte
-(§7): hoy deja mal a 2 albaranes de 59.
+Las diez etiquetas medidas tienen destino; ninguna cae en «desconocida». El
+humano cerró las tres dudosas el 2026-09-15: GASOLEO y CAMION GRUA llevan
+documento `generico` con la LÍNEA marcada, que es lo único que el sistema
+produce hoy; que fueran familia de documento propia sería ficha **del catálogo**
+(§7), no de F-045. La pestaña **Bombeo** no tiene etiqueta ni familia: nadie
+escribe ahí y el informe lo dice; no se borra, porque el conversor declara las
+siete. Una etiqueta desconocida **aborta** (R5), nunca cae en `generico`.
 
 ## 5 ter. Criterio de valoración de residuos (ground truth)
 
-Criterios del humano del 2026-09-15, verificados contra sv6 y
-`docs/referencia/dominio_negocio_albaranes.md` §10.6. Son de VALORACIÓN, no de
-extracción, y pasan el filtro de R29: dependen del contrato y del LER.
+Criterios del humano del 2026-09-15, verificados contra sv6 y el §10.6 del doc
+de dominio. Son de VALORACIÓN, no de extracción, y pasan el filtro de R29.
 
 | Criterio | Hoy |
 |---|---|
 | Si el contrato no tarifa ese LER, el incremento se deduce del **canon**, localizado por el código LER | **NO implementado**: `residuos_incrementos.py` emite la sintética sin precio y deja el enganche para F-006 (canon de vertedero, `spec_ready`) |
-| **Cantidad = peso en tn, con mínimo facturable de 1** | **NO implementado**; y ojo: hoy la cantidad de residuos son CONTENEDORES (§10.6) |
+| **Mínimo facturable de 1 tn en lo que se PESA**: canon y tratamiento (0,42 tn → 1; 3,10 tn → 3,10). El **movimiento de contenedor no se toca**: sigue en unidades, 1 cambio = 1 UD (§10.6) | **NO implementado** |
 | **Incremento por año también en residuos** | **NO implementado**: la red M1 de `valuation_builder` corta con `!= "hormigon"` |
 
 Los tres nacen como **defecto conocido**: sus casos salen ROJOS hasta que exista
-el código, y los arreglos van a fichas propias (§7), nunca a F-045. **Pendiente
-del humano**: si el mínimo de 1 tn aplica solo al incremento/canon —tarifado por
-tonelada— o también al movimiento de contenedor, que hoy se cuenta en
-contenedores. La respuesta cambia el ground truth de 19 albaranes.
+el código, y los arreglos van a fichas propias (§7), nunca a F-045. El alcance
+del mínimo fija ya el ground truth de los 19 albaranes de residuos: se aplica a
+lo que se pesa, no a lo que se cuenta.
 
 ## 6. Riesgos y decisiones
 
 - **D1 · El mapeo de etiquetas (§5 bis) vive solo en `vocabulario.json`**, para
-  cambiarlo sin tocar código. Tres filas están pendientes del humano.
+  cambiarlo sin tocar código. Cerrado por el humano el 2026-09-15.
 - **D2 · El importador escribe LIBROS, no fixtures.** Generar los JSON directos
   saltaría el barrido de C3 bis y dejaría al humano sin corregir a mano.
 - **D3 · El vacío del comentario y el del valor son cosas distintas** (§5).
