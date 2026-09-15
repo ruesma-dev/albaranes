@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from pathlib import Path
 
 import pytest
 
@@ -247,6 +248,16 @@ def test_f045_r5_entre_dos_prefijos_que_solapan_gana_el_mas_largo(tmp_path):
         albaranes.Copia(origen="a.pdf", destino="b.pdf", caso_id="X", formato="pdf"),
         albaranes.Fallo(tipo="x", detalle="y"),
         escritura.DefTabla(titulo="TABLA 1", clave="cabeceras"),
+        vocabulario.DestinoEtiqueta(
+            etiqueta="HORMIGON", familia_documento="hormigon", pestana="Hormigon",
+            prefijo="HOR", familia_linea=None, en_catalogo=True,
+        ),
+        LineaRevisada(
+            fila=FilaPlana(numero_fila=2, valores={}), origen_linea="impresa",
+            origen_contrato="contrato", precio_source="contrato_db",
+            precio_impreso=False, importe_source="contrato_db",
+            importe_impreso=False, num_linea=1,
+        ),
     ],
 )
 def test_f045_r2_los_modelos_del_importador_no_se_mutan_por_accidente(objeto):
@@ -334,3 +345,74 @@ def _caso_completo(comentarios=None, deducida=False, nueva=False, importe=580) -
     casos = reparto.agrupar_por_albaran(filas, VOCAB)
     reparto.asignar_casos_id(casos, {})
     return casos[0]
+
+
+# --- Segunda tanda: lo que la reinyección dejó todavía vivo ---------------
+
+
+def test_f045_r2_la_fila_de_ia4_tambien_arrastra_su_comentario():
+    caso = _caso_completo(comentarios="no encuentro de donde saca el CIF", nueva=True)
+    conciliacion = reparto.repartir(caso, VOCAB)["IA4"]["conciliacion"][0]
+    assert conciliacion["comentario"] == "no encuentro de donde saca el CIF"
+
+
+def test_f045_r7_un_caso_sin_gemelo_guarda_null_y_no_una_cadena_vacia():
+    """`gemelo_de` es un enlace o no lo es; `""` no es ninguna de las dos."""
+    casos = reparto.agrupar_por_albaran([_fila_hormigon()], VOCAB)
+    mapa_nuevo, _ = reparto.asignar_casos_id(casos, {})
+    assert mapa_nuevo["HOR-001"]["gemelo_de"] is None
+
+
+def test_f045_r20_el_minimo_de_subcadena_cuenta_tambien_sin_los_ceros():
+    """`024385` pela a `24385`, que mide exactamente el mínimo: entra."""
+    plan = albaranes.emparejar({"024385": "RES-009"}, ["ALB del 24385 obra.pdf"])
+    assert [(c.caso_id, c.estrategia) for c in plan.copias] == [("RES-009", "sin_ceros")]
+
+
+def test_f045_r1_del_excel_se_lee_el_VALOR_no_la_formula(tmp_path):
+    """`data_only=True`: una celda con fórmula vale por su resultado, y un
+
+    libro recién escrito no lo trae; leer el texto `=A2*2` como cantidad
+    metería una cadena donde el banco espera un número."""
+    import openpyxl
+
+    from tests.test_f045_r1_lectura import ENCABEZADOS, FILA
+
+    libro = openpyxl.Workbook()
+    hoja = libro.active
+    hoja.append(list(ENCABEZADOS))
+    hoja.append(list(FILA))
+    hoja.cell(row=2, column=12, value="=1+1")  # la columna `cantidad`
+    ruta = tmp_path / "con_formula.xlsx"
+    libro.save(ruta)
+    libro.close()
+    assert lectura.leer(ruta)[0].bruto("cantidad") is None
+
+
+def test_f045_r1_las_rutas_por_defecto_caen_dentro_del_repositorio():
+    """Un `parents[N]` de más las saca del repo y el importador leería y
+
+    escribiría en otro sitio sin decir nada."""
+    import evals
+    from evals.revision import __main__ as cli
+
+    paquete = Path(evals.__file__).resolve().parent
+    raiz = paquete.parent
+    # Lo que vive dentro del banco tiene que caer dentro de `evals/`...
+    for ruta in (lectura.RUTA_FUENTE, cli.RUTA_ORIGINALES, mapa.RUTA_MAPA,
+                 vocabulario.RUTA_VOCABULARIO):
+        assert paquete in ruta.parents, ruta
+    # ...y el informe, en `progress/` de la raíz, que es de donde lo lee el humano.
+    assert cli.RUTA_INFORME.parent == raiz / "progress"
+    assert cli.RUTA_ORIGINALES == paquete / "inputs" / "albaranes"
+    assert lectura.RUTA_FUENTE.parent == paquete / "inputs" / "fuente"
+
+
+def _fila_hormigon() -> FilaPlana:
+    return FilaPlana(
+        numero_fila=2,
+        valores={"codigo_albaran": "H132525", "tipo_albaran": "HORMIGON",
+                 "cif": "B04685541", "origen_linea": "EN ALBARAN",
+                 "origen_contrato": "EN CONTRATO", "origen_precio": "DE CONTRATO",
+                 "origen_importe": "DE CONTRATO"},
+    )

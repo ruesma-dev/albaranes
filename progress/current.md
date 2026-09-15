@@ -7,12 +7,14 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
-**F-045 · CAPA 1 IMPLEMENTADA** (2026-09-15, rama
-`feature/F-045-banco-evals-revision-manual`, 20 commits de tarea). Informe
-completo en `progress/impl_F-045.md`; informe de la importación en
-`progress/import_F-045.md`. El banco pasa de **7 casos** a **59**, de ocho
-familias y 18 proveedores. Falta el veredicto del reviewer: la feature sigue
-`in_progress` y NO se marca `done`.
+**F-045 · CAPA 1 IMPLEMENTADA** (2026-09-16, rama
+`feature/F-045-banco-evals-revision-manual`, 22 commits de tarea). Informe
+completo en `progress/impl_F-045.md`, importación en
+`progress/import_F-045.md`, mutación en `progress/mutacion_F-045.md`. El banco
+pasa de **7 casos** a **59**, de ocho familias y 18 proveedores; 807 tests en
+verde, 98,2 % de cobertura de lo cambiado y campaña de mutación completa con
+sus 90 supervivientes analizados (71 con test nuevo, 19 equivalentes). Falta
+el veredicto del reviewer: la feature sigue `in_progress` y NO se marca `done`.
 
 **Tres cosas que tiene que decidir el humano antes de cerrar:**
 

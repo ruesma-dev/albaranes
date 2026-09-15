@@ -24,11 +24,13 @@ fixtures y el único sitio donde corre el barrido de datos sensibles.
 | `escritura.py` | copia previa, pestañas nuevas y fusión conservadora con lo que ya había |
 | `informe.py`, `__main__.py` | el informe de R14 y la CLI |
 | `evals/mapa_casos.json` | versionado: `caso_id` ↔ código ↔ nombre ↔ formato ↔ familia ↔ gemelo |
+| 14 ficheros `tests/test_f045_*` | 238 tests |
 
 ### Ficheros modificados
 
 - `evals/conversor.py`: `Grava` y `Ferreteria` en `TIPOLOGIAS` (su único cambio).
-- `tests/conftest.py`: `TIPOLOGIAS` se importa del conversor en vez de copiarse.
+- `tests/conftest.py`: `TIPOLOGIAS` se importa del conversor en vez de copiarse
+  —era una copia, y ampliar el contrato dejó 20 tests de F-011 en rojo—.
 - `tests/test_mutacion_prueba_de_verdad.py`: ver «El desbloqueo» más abajo.
 - Los seis libros de `ground_truth/` y los 264 fixtures (regenerados).
 
@@ -37,10 +39,9 @@ fixtures y el único sitio donde corre el barrido de datos sensibles.
 1. **Fusión conservadora, no volcado** (R8 + R17). El importador actualiza las
    filas de sus casos pero **nunca degrada a `?` una celda con valor ya
    afirmado**, y conserva las filas que él no genera. Los 7 casos RES están
-   TAMBIÉN en el Excel, así que un volcado a pelo los habría barrido en la
-   primera pasada. Verificado: RES-001 conserva `SS-0000168`, su
-   `match_method` semántico, sus filas `tipo_familia`/`volumen_m3` y sus 6
-   líneas de contrato.
+   TAMBIÉN en el Excel: un volcado a pelo los habría barrido en la primera
+   pasada. Verificado sobre RES-001, que conserva `SS-0000168`, su
+   `match_method` semántico, su contexto y sus 6 líneas de contrato.
 2. **`INPUTS.CASOS.tipologia` lleva la PESTAÑA, no la familia de documento.**
    Desviación medida de §3, **pendiente de que la cierre el humano**:
    `MAPA_TIPO_FAMILIA` de `evals/procesos/{sv5_valoracion,sv6_build}.py` está
@@ -53,22 +54,21 @@ fixtures y el único sitio donde corre el barrido de datos sensibles.
 3. **El emparejado es una escalera de estrategias** (`exacto` → `subcadena` →
    `sin_ceros`), tras la medición del líder sobre los 133 ficheros reales: la
    regla de la spec dejaba 24 de 59 códigos sin fichero. La normalización ya
-   resolvía los puntos de millar y las barras; faltaba buscar el código dentro
-   del nombre y contemplar los ceros a la izquierda. `sin_ceros` quita SOLO
-   los de la izquierda: `SS-0801977` y `SS-0001977` difieren por dentro.
+   resolvía puntos de millar y barras; faltaba buscar el código dentro del
+   nombre y los ceros a la izquierda —y `sin_ceros` quita SOLO los de la
+   izquierda: `SS-0801977` y `SS-0001977` difieren por dentro—.
 4. **La ambigüedad no se resuelve sola.** Un fichero cuyo nombre contiene dos
-   códigos del Excel —existe: un PDF con dos albaranes— sale como
+   códigos —existe: un PDF con dos albaranes— sale como
    `fichero_varios_codigos` y no se asigna a ninguno.
-5. **Renombrar es opt-in** (`--renombrar`). El plan se propone en el informe
-   con la estrategia de cada emparejado: deshacer un renombrado equivocado es
-   caro y un caso casado con el papel de otro no lo detecta nadie.
-6. **Un libro que no cambia no se guarda.** Cada guardado reescribe el zip del
-   `.xlsx` y le mueve el sha256, con lo que dos importaciones seguidas dejaban
-   264 fixtures «modificados» sin que hubiera cambiado un dato (R18).
-7. **`?` jamás en `INPUTS`.** Es una ENTRADA, no una expectativa: el sentinela
-   viajaría como texto literal dentro de la carga que lee sv5.
-8. **El descuento se traduce a porcentaje** (0,4 → `40`): es lo que consume la
-   fórmula canónica de ARCHITECTURE §13. Declarado en `vocabulario.json`.
+5. **Renombrar es opt-in** (`--renombrar`): el plan se propone en el informe
+   con la estrategia de cada emparejado, porque deshacer un renombrado
+   equivocado es caro y un caso casado con el papel de otro no lo ve nadie.
+6. **Un libro que no cambia no se guarda**: cada guardado le mueve el sha256 y
+   dejaba 264 fixtures «modificados» sin que cambiara un dato (R18).
+7. **`?` jamás en `INPUTS`**, que es una ENTRADA y no una expectativa: el
+   sentinela viajaría como texto literal dentro de la carga que lee sv5.
+8. **El descuento se traduce a porcentaje** (0,4 → `40`), que es lo que consume
+   la fórmula canónica de ARCHITECTURE §13. Declarado en `vocabulario.json`.
 
 ## Fase RED (obligatoria, nivel `critico`)
 
@@ -93,21 +93,11 @@ E       AttributeError: module 'evals.revision.reparto' has no attribute 'repart
 5 failed in 0.25s
 ```
 
-**T5 · clasificación** — `python -m pytest tests/test_f045_r9_r10_clasificacion.py -q`
-
-```
->       grupos = reparto.clasificar(casos)
-E       AttributeError: module 'evals.revision.reparto' has no attribute 'clasificar'
-1 failed, 6 passed in 0.21s
-```
-
 **T7 bis · criterios de residuos** — `python -m pytest tests/test_f045_r12bis_residuos.py -q`
 
 ```
 FAILED ...::test_f045_r12bis_el_minimo_se_aplica_a_lo_que_se_pesa
 FAILED ...::test_f045_r12bis_el_movimiento_de_contenedor_no_se_toca
-FAILED ...::test_f045_r12bis_el_minimo_marca_el_caso_como_criterio_pendiente
-FAILED ...::test_f045_r12bis_los_tres_criterios_estan_declarados_en_el_vocabulario
 10 failed in 0.28s
 ```
 
@@ -115,9 +105,7 @@ FAILED ...::test_f045_r12bis_los_tres_criterios_estan_declarados_en_el_vocabular
 
 ```
 FAILED ...::test_f045_r22_pdf_e_imagen_del_mismo_codigo_dan_dos_casos
-FAILED ...::test_f045_r22_el_gemelo_de_imagen_apunta_a_su_hermano
 FAILED ...::test_f045_r22_el_gemelo_hereda_el_mismo_ground_truth
-FAILED ...::test_f045_r22_sin_gemelos_no_se_crea_ningun_caso_extra
 4 failed, 2 passed in 0.27s
 ```
 
@@ -125,10 +113,36 @@ FAILED ...::test_f045_r22_sin_gemelos_no_se_crea_ningun_caso_extra
 
 ```
 E       AttributeError: 'Copia' object has no attribute 'estrategia'
-FAILED ...::test_f045_r20_el_codigo_en_medio_del_nombre_se_encuentra
-FAILED ...::test_f045_r21_un_fichero_con_dos_albaranes_no_se_asigna_a_ninguno
 7 failed, 5 passed in 0.25s
 ```
+
+## Mutación: 90 supervivientes, 71 cerrados con test y 19 justificados
+
+La campaña completa (266 mutantes, 106 min) dejó **90 supervivientes**, y casi
+todos señalaban lo mismo: el banco comprobaba QUÉ se escribe y casi nada de
+**cómo se cuenta** ni de **cuándo se deja de escribir**, que es justamente lo
+que prometen R14 y R18. Un informe que suma mal es peor que no tener informe:
+se lee igual de convincente.
+
+De ahí 65 tests nuevos en dos ficheros (`test_f045_r14_recuento_y_convenios.py`
+y `test_f045_r17_r18_fusion.py`) más refuerzos en los de la CLI. **71 de los 90
+mutantes mueren con ellos**; los 19 restantes son equivalentes y se justifican
+en seis grupos —el índice de celda que no cambia el número de fila, defectos de
+dataclass que siempre se sobrescriben, una rama inalcanzable, argumentos que no
+cambian el resultado observable y mutaciones semánticamente idénticas—. El
+detalle, uno a uno, en `progress/mutacion_F-045.md`; **ninguno queda
+`PENDIENTE`**.
+
+La mutación también encontró un fallo en un test MÍO: el de las copias de
+seguridad contaba NOMBRES de fichero, y la copia lleva la hora con precisión de
+minuto, así que dos pasadas seguidas escribían el mismo nombre y el test no
+distinguía nada. Ahora lee el recuento del informe.
+
+**Cómo se verificó el cierre.** Repetir la campaña entera costaba otras dos
+horas y el intento se degradó (cinco horas en el primer fichero, un worker
+bloqueado), así que cada superviviente se **reinyectó uno a uno** contra la
+suite acotada a F-045, ~11 s cada uno. Es la técnica que el inventario ya
+documenta para F-043.
 
 ## El desbloqueo: la línea base de TODA campaña de mutación estaba roja
 
@@ -180,11 +194,12 @@ inalcanzable el nivel `critico`. **Es mejora del arnés y hay que portarla a
 
 | Evidencia | Valor |
 |---|---|
-| Tests ejecutados (suite de la raíz) | **742 pasan, 0 fallan** |
-| De ellos, de F-045 | **173** en 12 ficheros `tests/test_f045_*` |
-| Cobertura de las líneas cambiadas | **97,4 %** (888/912), umbral 80 %, nivel `critico` |
-| Tiempo de la suite | **123,56 s** |
-| Mutación | PENDIENTE |
+| Tests ejecutados (suite de la raíz) | **807 pasan, 0 fallan** |
+| De ellos, de F-045 | **238** en 14 ficheros `tests/test_f045_*` |
+| Cobertura de las líneas cambiadas | **98,2 %** (896/912), umbral 80 %, nivel `critico` |
+| Tiempo de la suite | **71,42 s** |
+| Mutación · campaña completa, sin muestreo | **266 mutantes, 176 muertos, 90 supervivientes**, 0 timeouts, 0 sin veredicto, 6381 s |
+| Mutación · tras los tests de T18 | de los 90, **71 mueren** y **19 son equivalentes justificados**; ninguno queda pendiente |
 | Conversor | `python -m evals.conversor` en 0, sin hallazgos del barrido |
 | Idempotencia medida | segunda pasada de `revision` + `conversor`: `git status` vacío |
 

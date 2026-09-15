@@ -218,7 +218,11 @@ def test_f045_r22_el_gemelo_queda_hermanado_en_el_mapa(entorno):
 
 
 def test_f045_r14_ejecutar_sin_argumentos_opcionales_no_renombra_ni_va_en_seco(entorno):
-    """Los valores por defecto de `ejecutar` son los conservadores."""
+    """Los valores por defecto de `ejecutar` son los conservadores: escribe los
+
+    libros, pero NO renombra. Renombrar sobre una asignación equivocada es
+    difícil de deshacer, así que hay que pedirlo."""
+    (entorno["originales"] / "HORPRESOL_H132525.pdf").write_bytes(b"%PDF")
     resultado = cli.ejecutar(
         entorno["origen"],
         entorno["ground_truth"],
@@ -226,7 +230,18 @@ def test_f045_r14_ejecutar_sin_argumentos_opcionales_no_renombra_ni_va_en_seco(e
         entorno["mapa"],
     )
     assert resultado.renombrados == []
+    assert (entorno["originales"] / "HORPRESOL_H132525.pdf").exists()
     assert resultado.libros_escritos  # sin dry_run, sí escribe
+
+
+def test_f045_r7_un_caso_sin_documento_guarda_gemelo_de_nulo(entorno):
+    """El registro del mapa lo completa el camino de «sin fichero», y ahí
+
+    `gemelo_de` tiene que seguir siendo `null`, no una cadena vacía."""
+    correr(entorno)
+    mapa = json.loads(entorno["mapa"].read_text(encoding="utf-8"))["casos"]
+    assert mapa["HOR-001"]["gemelo_de"] is None
+    assert mapa["RES-001"]["gemelo_de"] is None
 
 
 def test_f045_r14_el_mapa_queda_escrito_con_los_casos_nuevos(entorno):
