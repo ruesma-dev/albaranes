@@ -24,7 +24,7 @@ fixtures y el único sitio donde corre el barrido de datos sensibles.
 | `escritura.py` | copia previa, pestañas nuevas y fusión conservadora con lo que ya había |
 | `informe.py`, `__main__.py` | el informe de R14 y la CLI |
 | `evals/mapa_casos.json` | versionado: `caso_id` ↔ código ↔ nombre ↔ formato ↔ familia ↔ gemelo |
-| 14 ficheros `tests/test_f045_*` | 238 tests |
+| 19 ficheros `tests/test_f045_*` | 238 tests |
 
 ### Ficheros modificados
 
@@ -124,7 +124,7 @@ todos señalaban lo mismo: el banco comprobaba QUÉ se escribe y casi nada de
 que prometen R14 y R18. Un informe que suma mal es peor que no tener informe:
 se lee igual de convincente.
 
-De ahí 65 tests nuevos en dos ficheros (`test_f045_r14_recuento_y_convenios.py`
+De ahí 62 tests nuevos en dos ficheros (`test_f045_r14_recuento_y_convenios.py`
 y `test_f045_r17_r18_fusion.py`) más refuerzos en los de la CLI. **71 de los 90
 mutantes mueren con ellos**; los 19 restantes son equivalentes y se justifican
 en seis grupos —el índice de celda que no cambia el número de fila, defectos de
@@ -195,7 +195,7 @@ inalcanzable el nivel `critico`. **Es mejora del arnés y hay que portarla a
 | Evidencia | Valor |
 |---|---|
 | Tests ejecutados (suite de la raíz) | **807 pasan, 0 fallan** |
-| De ellos, de F-045 | **238** en 14 ficheros `tests/test_f045_*` |
+| De ellos, de F-045 | **238** en 19 ficheros `tests/test_f045_*` |
 | Cobertura de las líneas cambiadas | **98,2 %** (896/912), umbral 80 %, nivel `critico` |
 | Tiempo de la suite | **71,42 s** |
 | Mutación · campaña completa, sin muestreo | **266 mutantes, 176 muertos, 90 supervivientes**, 0 timeouts, 0 sin veredicto, 6381 s |
