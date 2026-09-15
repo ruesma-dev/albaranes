@@ -326,10 +326,23 @@ def test_C_un_mutante_nunca_se_juzga_con_el_bytecode_del_anterior(
     Aquí se fuerza esa coincidencia con `os.utime` en vez de esperar a que el
     reloj la regale, que es lo que la hace reproducible.
     """
+    # El entorno de los dos subprocesos tiene que DEJAR escribir bytecode,
+    # venga de donde venga esta suite. La campaña de mutación la lanza con
+    # PYTHONDONTWRITEBYTECODE=1 (harness/mutacion.py), y heredarlo aquí dejaba
+    # el `__pycache__` vacío, el assert de abajo en rojo y —por ser línea
+    # base— TODA campaña abortada en este repositorio: «LÍNEA BASE EN ROJO».
+    # Visto el 2026-09-15 al lanzar la de F-045; sin esto, el nivel `critico`
+    # es inalcanzable porque su campaña no llega a empezar.
+    entorno = {c: v for c, v in os.environ.items() if c != "PYTHONDONTWRITEBYTECODE"}
+
     modulo = tmp_path / "m.py"
     _escribir(modulo, "VALOR = 1\n")
     subprocess.run(
-        [sys.executable, "-c", "import m"], cwd=tmp_path, check=True, capture_output=True
+        [sys.executable, "-c", "import m"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        env=entorno,
     )
     assert list((tmp_path / "__pycache__").glob("m.*.pyc")), (
         "el intérprete no dejó bytecode: este test no estaría probando nada"
@@ -345,6 +358,7 @@ def test_C_un_mutante_nunca_se_juzga_con_el_bytecode_del_anterior(
         check=True,
         capture_output=True,
         text=True,
+        env=entorno,
     ).stdout.strip()
 
     assert salida == "9", (
