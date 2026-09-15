@@ -154,6 +154,11 @@ class InformeImportacion:
     celdas: dict[str, dict[str, dict[str, dict[str, int]]]] = field(default_factory=dict)
     #: Fallos ruidosos del emparejado de documentos de entrada (R21).
     fallos_documentos: list[str] = field(default_factory=list)
+    #: El plan de renombrado, con la estrategia de cada emparejado: el
+    #: humano lo revisa ANTES de renombrar, porque deshacer un renombrado
+    #: sobre una asignación equivocada es caro.
+    plan_renombrado: list[str] = field(default_factory=list)
+    renombrados: list[str] = field(default_factory=list)
     #: Casos cuya familia de documento aún no existe en el catálogo (R6).
     familias_pendientes: dict[str, list[str]] = field(default_factory=dict)
     #: Criterios de residuos aún sin implementar que tocan a cada caso (R12 bis).

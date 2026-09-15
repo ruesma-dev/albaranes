@@ -38,6 +38,7 @@ def ejecutar(
     dir_originales: Path | str = RUTA_ORIGINALES,
     ruta_mapa: Path | str = mapa.RUTA_MAPA,
     dry_run: bool = False,
+    renombrar: bool = False,
 ) -> InformeImportacion:
     """La importación entera. Levanta antes de escribir si algo no cuadra."""
     vocab = vocabulario.cargar()
@@ -60,13 +61,18 @@ def ejecutar(
             f"`{fallo.tipo}` — {fallo.detalle}" for fallo in plan.fallos
         ],
         familias_pendientes=reparto.familias_pendientes(casos + gemelos),
+        plan_renombrado=[
+            f"| `{copia.origen}` | {copia.caso_id} | {copia.estrategia} |"
+            for copia in plan.copias
+        ],
     )
     tablas = _repartir_todo(resultado, vocab)
 
     if not dry_run:
         resultado.libros_escritos = _escribir(tablas, resultado, dir_ground_truth)
         mapa.guardar(mapa_nuevo, ruta_mapa)
-        albaranes.renombrar(plan.copias, dir_originales)
+        if renombrar:
+            resultado.renombrados = albaranes.renombrar(plan.copias, dir_originales)
     else:
         resultado.avisos.append(
             "Pasada EN SECO (`--dry-run`): no se ha escrito ningún libro, ni el "
@@ -238,6 +244,15 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="no escribe libros, mapa ni renombra: solo deja el informe",
     )
+    analizador.add_argument(
+        "--renombrar",
+        action="store_true",
+        help=(
+            "aplica el plan de renombrado a <caso_id>. Sin este flag el plan "
+            "solo se propone en el informe, para que el humano lo revise: "
+            "deshacer un renombrado equivocado es caro"
+        ),
+    )
     opciones = analizador.parse_args(argv)
 
     try:
@@ -247,6 +262,7 @@ def main(argv: list[str] | None = None) -> int:
             opciones.originales,
             opciones.mapa,
             dry_run=opciones.dry_run,
+            renombrar=opciones.renombrar,
         )
     except (
         lectura.ErrorLectura,

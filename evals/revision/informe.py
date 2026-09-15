@@ -16,15 +16,6 @@ from evals.revision.modelos import (
     InformeImportacion,
 )
 
-#: Qué significa cada tipo de fallo del emparejado, en una línea (R21).
-MOTIVOS: dict[str, str] = {
-    "codigo_duplicado": "dos ficheros del mismo formato resuelven al mismo código",
-    "codigo_sin_fila": "el fichero existe pero su código no está en el Excel",
-    "fila_sin_fichero": "la fila existe pero no hay documento suyo en la carpeta",
-    "nombre_vacio": "el nombre queda vacío tras aplicar la regla del código",
-}
-
-
 def render(informe: InformeImportacion) -> str:
     """El informe entero. Sin reloj: dos pasadas iguales dan el mismo texto."""
     partes = [
@@ -87,6 +78,31 @@ def _documentos(informe: InformeImportacion) -> list[str]:
         "importación que se traga casos en silencio es peor que no importar.",
         "",
     ]
+    lineas += ["### Plan de renombrado", ""]
+    if informe.plan_renombrado:
+        lineas += [
+            "Revísalo ANTES de renombrar: deshacer un renombrado sobre una",
+            "asignación equivocada es caro, y un caso emparejado con el papel de",
+            "otro no lo detecta nadie. `estrategia` dice por qué casó cada uno:",
+            "`exacto` (el nombre ES el código), `subcadena` (el código va dentro",
+            "del nombre) o `sin_ceros` (además, ignorando los ceros de la",
+            "izquierda).",
+            "",
+            "| Fichero | Caso | Estrategia |",
+            "|---|---|---|",
+            *informe.plan_renombrado,
+            "",
+        ]
+        estado = (
+            f"Renombrados en esta pasada: {len(informe.renombrados)}."
+            if informe.renombrados
+            else "**No se ha renombrado nada**: hay que pedirlo con `--renombrar`."
+        )
+        lineas += [estado, ""]
+    else:
+        lineas += ["(ningún fichero emparejado)", ""]
+
+    lineas += ["### Lo que se quedó fuera", ""]
     if not informe.fallos_documentos:
         lineas += ["Sin incidencias: cada caso tiene su documento.", ""]
         return lineas

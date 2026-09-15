@@ -28,6 +28,12 @@ Defecto conocido: ALQ-001, FER-003, GEN-002, GEN-005, GEN-007, GEN-010, GRA-001,
 Lo que la regla de nombres no cubre sale listado UNO A UNO: una
 importación que se traga casos en silencio es peor que no importar.
 
+### Plan de renombrado
+
+(ningún fichero emparejado)
+
+### Lo que se quedó fuera
+
 - `fila_sin_fichero` — ALQ-001 (código '0009256'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
 - `fila_sin_fichero` — COM-001 (código 'J1000505'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
 - `fila_sin_fichero` — FER-001 (código '2139643'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.

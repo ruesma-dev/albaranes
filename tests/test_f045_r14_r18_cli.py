@@ -232,6 +232,35 @@ def test_f045_r18_en_seco_no_se_toca_ni_un_libro_ni_el_mapa(entorno):
     assert entorno["informe"].exists()
 
 
+# --- El renombrado se propone; lo aprueba el humano ------------------------
+
+
+def test_f045_r20_sin_renombrar_el_plan_solo_se_propone(entorno):
+    """Deshacer un renombrado sobre una asignación equivocada es caro."""
+    (entorno["originales"] / "HORPRESOL_H132525.pdf").write_bytes(b"%PDF")
+    correr(entorno)
+    assert (entorno["originales"] / "HORPRESOL_H132525.pdf").exists()
+    texto = entorno["informe"].read_text(encoding="utf-8")
+    assert "Plan de renombrado" in texto
+    assert "HORPRESOL_H132525.pdf" in texto and "HOR-001" in texto
+    assert "`--renombrar`" in texto
+
+
+def test_f045_r20_con_renombrar_si_se_aplica_el_plan(entorno):
+    (entorno["originales"] / "HORPRESOL_H132525.pdf").write_bytes(b"%PDF")
+    assert correr(entorno, "--renombrar") == 0
+    assert (entorno["originales"] / "HOR-001.pdf").exists()
+    assert not (entorno["originales"] / "HORPRESOL_H132525.pdf").exists()
+
+
+def test_f045_r20_el_informe_dice_con_que_estrategia_caso_cada_fichero(entorno):
+    """El código va EN MEDIO del nombre: hay que poder auditar el emparejado."""
+    (entorno["originales"] / "ALB CTC 2026-03-11 H132525 - 0693.pdf").write_bytes(b"%PDF")
+    correr(entorno)
+    texto = entorno["informe"].read_text(encoding="utf-8")
+    assert "subcadena" in texto
+
+
 # --- R5: lo desconocido aborta sin escribir nada ---------------------------
 
 
