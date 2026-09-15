@@ -507,12 +507,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 2,
-      "servicios": [
-        "sv2-api",
-        "sv5-valoracion-api",
-        "sv6-valoracion-persist"
-      ]
+      "priority": 2
     }
   ]
 }
