@@ -80,6 +80,25 @@
   "_doc_descuento": "La columna 'descuento' del Excel viene en FRACCION (0,4 = 40 %) y los libros guardan el descuento IMPRESO en porcentaje, que es lo que consume la formula canonica importe = cantidad x precio x (1 - descuento/100) (ARCHITECTURE 13). El factor hace la traduccion; un descuento de 0 se escribe vacio, que es lo mismo que decir 'sin descuento'.",
   "descuento_factor_porcentaje": 100,
 
+  "_doc_criterios_residuos": "Los tres criterios de valoracion de residuos que cerro el humano el 2026-09-15 (design 5 ter), verificados contra sv6 y el 10.6 del doc de dominio. NINGUNO esta implementado hoy: los casos que los tocan nacen ROJOS a proposito y el informe los agrupa aparte para que un rojo esperado no parezca una regresion. Sus arreglos son fichas propias. 'marcas' son subcadenas que se buscan -ya normalizadas- en el texto con el que el humano describe la linea deducida y su concepto: es leer lo que el escribio, no adivinar.",
+  "criterios_residuos": {
+    "minimo_1_tn": {
+      "titulo": "Minimo facturable de 1 en lo que se PESA (canon y tratamiento); el movimiento de contenedor sigue en unidades",
+      "marcas": [],
+      "implementado": false
+    },
+    "incremento_por_ano": {
+      "titulo": "El incremento por cambio de ano existe tambien en residuos; hoy la red M1 de valuation_builder corta con != hormigon",
+      "marcas": ["ANO"],
+      "implementado": false
+    },
+    "canon_por_ler": {
+      "titulo": "Si el contrato no tarifa ese LER, el incremento se deduce del CANON, localizado por codigo LER (F-006)",
+      "marcas": ["LER", "CANON"],
+      "implementado": false
+    }
+  },
+
   "_doc_unidades": "Unidades de CONTEO. Todo lo demas se pesa o se mide, y es a eso a lo que se le aplica el minimo facturable de 1 en residuos -canon y tratamiento-, nunca al movimiento de contenedor, que sigue en unidades: 1 cambio = 1 UD (design 5 ter, criterio del humano del 2026-09-15).",
   "unidades_conteo": ["UD", "U", "UDS"],
   "minimo_facturable_residuos": 1

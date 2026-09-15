@@ -300,6 +300,7 @@ def repartir(caso: CasoRevisado, vocab: Vocabulario) -> dict[str, dict[str, list
         if contexto is not None:
             tablas["IA2"]["contexto"].append(contexto)
         tablas["IA3"]["lineas_valoradas"].append(_ia3_valorada(caso, linea, vocab))
+        tablas["FINAL"]["lineas"].append(_final_linea(caso, linea, vocab))
         if linea.origen_contrato == "nueva":
             tablas["IA4"]["conciliacion"].append(_ia4_conciliacion(caso, linea, vocab))
     for linea in caso.deducidas:
@@ -462,8 +463,74 @@ def _final_anadida(caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario)
     }
 
 
+def _final_linea(caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario) -> dict:
+    """La línea impresa como debe quedar al final del proceso (TABLA 2)."""
+    casa = linea.origen_contrato == "contrato"
+    return {
+        "caso_id": caso.caso_id,
+        "num_linea": linea.num_linea,
+        "descripcion": celda(linea, "concepto", vocab),
+        "cantidad_final": _cantidad_final(caso, linea, vocab),
+        "unidad_final": celda(linea, "unidad", vocab),
+        "casa_con_contrato": "SI" if casa else "NO",
+        # Sin línea de contrato con la que casar, la celda va vacía: es un null
+        # afirmado. Con ella, el Excel no dice cuál es, así que `?`.
+        "linea_contrato": INTERROGANTE if casa else None,
+        "partida_final": celda(linea, "partida", vocab),
+        "precio_unitario_final": celda(linea, "precio_unitario", vocab),
+        "precio_source": linea.precio_source,
+        "importe_final": celda(linea, "importe", vocab),
+        "linea_a_revision": INTERROGANTE,
+        "comentario": linea.fila.texto("comentarios") or None,
+    }
+
+
+# --- Los tres criterios de residuos (R12 bis, design §5 ter) ---------------
+
+
 def _cantidad_final(
     caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario
 ) -> object | None:
-    """La cantidad con la que se factura (de momento, la leída)."""
-    return celda(linea, "cantidad", vocab)
+    """La cantidad con la que se factura, con el mínimo de residuos aplicado.
+
+    **Mínimo facturable de 1 en lo que se PESA** —canon y tratamiento—: 0,42
+    factura 1; 3,10 factura 3,10. El movimiento de contenedor NO se toca:
+    sigue en unidades, 1 cambio = 1 UD (§10.6 del doc de dominio). La cantidad
+    LEÍDA no cambia: el papel imprime 0,42 y eso es lo que se le pide a IA1.
+    """
+    cantidad = celda(linea, "cantidad", vocab)
+    if not _pesa(caso, linea, vocab) or not isinstance(cantidad, (int, float)):
+        return cantidad
+    return max(cantidad, vocab.minimo_residuos)
+
+
+def _pesa(caso: CasoRevisado, linea: LineaRevisada, vocab: Vocabulario) -> bool:
+    """La línea es de residuos y su unidad no es de conteo: se pesa o se mide."""
+    return caso.destino.familia_documento == "residuos" and not vocab.es_unidad_de_conteo(
+        linea.fila.texto("unidad")
+    )
+
+
+def criterios_residuos(caso: CasoRevisado, vocab: Vocabulario) -> list[str]:
+    """Qué criterios de §5 ter toca este caso. **Ninguno está implementado**.
+
+    Se devuelven para que el informe agrupe esos casos aparte: un rojo
+    esperado que se mezcla con los defectos reales deja de ser información.
+    Las marcas se buscan en el texto con el que el HUMANO describió la línea
+    deducida y su concepto: es leer lo que escribió, no adivinar.
+    """
+    if caso.destino.familia_documento != "residuos":
+        return []
+    tocados: list[str] = []
+    texto = " ".join(
+        normalizar(f"{linea.fila.texto('origen_linea')} {linea.fila.texto('concepto')}")
+        for linea in caso.deducidas
+    )
+    for criterio, definicion in vocab.criterios_residuos.items():
+        marcas = definicion["marcas"]
+        if marcas:
+            if any(normalizar(marca) in texto for marca in marcas):
+                tocados.append(criterio)
+        elif any(_pesa(caso, linea, vocab) for linea in caso.lineas):
+            tocados.append(criterio)
+    return tocados

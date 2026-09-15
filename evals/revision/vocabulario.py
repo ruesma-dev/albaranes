@@ -90,6 +90,7 @@ class Vocabulario:
             normalizar(u) for u in datos["unidades_conteo"]
         )
         self.minimo_residuos: float = float(datos["minimo_facturable_residuos"])
+        self.criterios_residuos: dict[str, dict] = datos["criterios_residuos"]
         self.factor_descuento: float = float(datos["descuento_factor_porcentaje"])
         self._etiquetas = {
             normalizar(nombre): (nombre, destino)
