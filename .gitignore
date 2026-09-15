@@ -33,4 +33,8 @@ __queuestorage__/
 # formato. Hasta el 15-sep-2026 solo los tapaba la regla '*.pdf' de arriba,
 # asi que un original en PNG habria entrado sin que nadie lo notara.
 # Al repositorio entran unicamente los fixtures JSON ya barridos.
-evals/inputs/albaranes/
+evals/inputs/
+# Incluye evals/inputs/fuente/, donde se deja una copia del Excel de trabajo
+# del humano (evals_summary.xlsx). El original vive en OneDrive; aqui solo
+# entra una copia para que el conversor lea un fichero estable y no
+# bloqueado. Lleva precios de proveedor: no se versiona.
