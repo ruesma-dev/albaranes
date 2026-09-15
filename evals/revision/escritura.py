@@ -6,22 +6,28 @@ Tres cosas que este módulo hace a propósito:
 1. **Copia antes de escribir** (R16). Los libros los rellena una persona y no
    se versionan: si el importador los estropea, no hay `git checkout` que
    valga. La copia va a `ground_truth/copias/` con la fecha en el nombre.
-2. **Las tablas se localizan por su fila de título**, no por coordenadas:
-   el humano añade y quita filas y las posiciones se mueven. Mismo criterio
-   que `evals/conversor.py`, que es quien luego las lee.
-3. **Fusión conservadora, no volcado** (R17, R8). El importador actualiza las
+2. **Las tablas se localizan por su fila de título**, no por coordenadas: el
+   humano añade y quita filas y las posiciones se mueven entre una
+   importación y la siguiente. Mismo criterio que `evals/conversor.py`, que es
+   quien luego las lee; si las dos declaraciones divergen, el importador
+   escribe donde el conversor no mira.
+3. **Fusión conservadora, no volcado** (R8, R17). El importador actualiza las
    filas de SUS casos, pero nunca degrada a `?` una celda que ya tenía valor
-   afirmado, y deja intactas las filas que no genera. El banco ya tenía 7
+   afirmado y deja intactas las filas que él no genera. El banco ya tenía 7
    casos escritos a mano con mucho más detalle del que cabe en la tabla plana
-   —`match_method` semántico, el número real del albarán, el volumen en m3—;
-   un volcado a pelo los habría barrido en la primera pasada.
+   —el número real del albarán, el `match_method` semántico, el volumen en
+   m3—, y los 7 están también en el Excel: un volcado a pelo los habría
+   barrido en la primera pasada.
 """
 
 from __future__ import annotations
 
 import datetime as dt
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
+
+from evals.conversor import clave_de_encabezado, sin_acentos
 
 #: Dónde se deja la copia de seguridad previa (R16).
 NOMBRE_COPIAS = "copias"
@@ -29,9 +35,50 @@ NOMBRE_COPIAS = "copias"
 #: Pestaña de la que se copia la estructura de una tipología nueva.
 PLANTILLA = "Generico-Suministros"
 
+#: Campos que identifican una fila dentro de su tabla. Es lo que permite
+#: ACTUALIZAR la fila de un caso en vez de duplicarla, y lo que distingue una
+#: fila del importador de otra que escribió el humano a mano.
+CLAVES_DE_TABLA: dict[str, tuple[str, ...]] = {
+    "cabeceras": ("caso_id",),
+    "lineas": ("caso_id", "num_linea"),
+    "contexto": ("caso_id", "num_linea", "campo_contexto"),
+    "lineas_valoradas": ("caso_id", "num_linea"),
+    "sinteticas_esperadas": ("caso_id", "num_linea_base", "descripcion_esperada"),
+    "sinteticas_prohibidas": ("caso_id", "concepto_vetado"),
+    "conciliacion": ("caso_id", "num_linea"),
+    "caso": ("caso_id",),
+    "lineas_albaran": ("caso_id", "num_linea"),
+    "contrato_lineas": ("caso_id", "codigo_producto"),
+    "condiciones": ("caso_id", "campo"),
+    "datos_generales": ("caso_id",),
+    "lineas_anadidas": ("caso_id", "num_linea_base", "concepto"),
+}
+
 
 class ErrorEscritura(RuntimeError):
     """El libro no tiene la forma que el contrato de datos declara."""
+
+
+@dataclass(frozen=True)
+class DefTabla:
+    """Una tabla dentro de una pestaña: por qué título empieza y cómo se llama."""
+
+    titulo: str
+    clave: str
+
+
+@dataclass
+class Bloque:
+    """Dónde empieza y acaba una tabla ya localizada en la hoja."""
+
+    definicion: DefTabla
+    fila_encabezados: int = 0
+    encabezados: list[str] | None = None
+    primera_fila: int = 0
+    ultima_fila: int = 0
+
+
+# --- Copia previa y pestañas nuevas ----------------------------------------
 
 
 def copia_de_seguridad(ruta: Path | str, momento: dt.datetime | None = None) -> Path:
@@ -46,13 +93,15 @@ def copia_de_seguridad(ruta: Path | str, momento: dt.datetime | None = None) -> 
     return destino
 
 
-def asegurar_pestanas(libro, pestanas: tuple[str, ...], plantilla: str = PLANTILLA) -> list[str]:
+def asegurar_pestanas(
+    libro, pestanas: tuple[str, ...], plantilla: str = PLANTILLA
+) -> list[str]:
     """Crea las pestañas que falten copiando la estructura de la plantilla.
 
     `Grava` y `Ferreteria` no existían en los libros: se crean copiando
     `Generico-Suministros`, que trae las mismas tablas y encabezados y ningún
-    caso. Sin plantilla NO se inventa nada: un libro con una pestaña de
-    estructura improvisada rompería el conversor más tarde y más lejos.
+    caso. Sin plantilla NO se inventa nada: una pestaña de estructura
+    improvisada rompería el conversor más tarde y más lejos.
     """
     creadas: list[str] = []
     for pestana in pestanas:
@@ -67,3 +116,212 @@ def asegurar_pestanas(libro, pestanas: tuple[str, ...], plantilla: str = PLANTIL
         copia.title = pestana
         creadas.append(pestana)
     return creadas
+
+
+# --- Localización de las tablas dentro de una pestaña (R15) ----------------
+
+
+def _titulo_de(valor: object, titulos: tuple[str, ...]) -> str | None:
+    if not isinstance(valor, str):
+        return None
+    normalizado = sin_acentos(valor).strip().upper()
+    for titulo in titulos:
+        if normalizado.startswith(sin_acentos(titulo).upper()):
+            return titulo
+    return None
+
+
+def localizar_bloques(hoja, definiciones: tuple[DefTabla, ...]) -> list[Bloque]:
+    """Encuentra las tablas por su fila de TÍTULO, nunca por coordenadas."""
+    titulos = tuple(definicion.titulo for definicion in definiciones)
+    por_titulo = {definicion.titulo: definicion for definicion in definiciones}
+    bloques: list[Bloque] = []
+    actual: Bloque | None = None
+
+    for fila in hoja.iter_rows():
+        valores = [celda.value for celda in fila]
+        titulo = _titulo_de(valores[0] if valores else None, titulos)
+        if titulo is not None:
+            if actual is not None:
+                actual.ultima_fila = fila[0].row - 1
+            actual = Bloque(por_titulo[titulo])
+            bloques.append(actual)
+            continue
+        if actual is None or actual.encabezados is not None:
+            continue
+        if all(valor is None for valor in valores):
+            continue
+        actual.encabezados = [
+            clave_de_encabezado(valor) for valor in valores if valor is not None
+        ]
+        actual.fila_encabezados = fila[0].row
+        actual.primera_fila = fila[0].row + 1
+        actual.ultima_fila = max(hoja.max_row, fila[0].row)
+
+    ausentes = [
+        definicion.titulo
+        for definicion in definiciones
+        if definicion.titulo not in {bloque.definicion.titulo for bloque in bloques}
+    ]
+    if ausentes:
+        raise ErrorEscritura(
+            f"la pestaña '{hoja.title}' no tiene la fila de título de "
+            f"{', '.join(ausentes)}. El contrato de datos la declara."
+        )
+    sin_encabezados = [b.definicion.titulo for b in bloques if b.encabezados is None]
+    if sin_encabezados:
+        raise ErrorEscritura(
+            f"la pestaña '{hoja.title}': {', '.join(sin_encabezados)} no tiene "
+            f"fila de encabezados debajo de su título."
+        )
+    return bloques
+
+
+# --- Fusión conservadora (R8, R17) -----------------------------------------
+
+
+def _clave(registro: dict, campos: tuple[str, ...]) -> tuple:
+    return tuple(str(registro.get(campo, "")).strip() for campo in campos)
+
+
+def _tiene_valor(valor: object) -> bool:
+    if valor is None:
+        return False
+    texto = str(valor).strip()
+    return bool(texto) and texto != "?"
+
+
+def fundir(existente: dict, nuevo: dict) -> dict:
+    """El importador actualiza, pero NO degrada un valor ya afirmado.
+
+    Un `?` significa «no lo sé»; si el libro ya traía un valor escrito a mano,
+    el que no sabe es el importador. Las columnas que no produce se quedan
+    como están: la tabla plana no cubre todo lo que cabe en los libros.
+    """
+    fundido = dict(existente)
+    for campo, valor in nuevo.items():
+        if valor == "?" and _tiene_valor(existente.get(campo)):
+            continue
+        fundido[campo] = valor
+    return fundido
+
+
+def fundir_filas(
+    existentes: list[dict], nuevas: list[dict], campos_clave: tuple[str, ...]
+) -> list[dict]:
+    """Actualiza en su sitio, conserva lo ajeno y añade al final lo nuevo."""
+    por_clave = {_clave(nueva, campos_clave): nueva for nueva in nuevas}
+    resultado: list[dict] = []
+    usadas: set[tuple] = set()
+    for existente in existentes:
+        clave = _clave(existente, campos_clave)
+        nueva = por_clave.get(clave)
+        if nueva is None:
+            resultado.append(existente)
+            continue
+        resultado.append(fundir(existente, nueva))
+        usadas.add(clave)
+    for nueva in nuevas:
+        if _clave(nueva, campos_clave) not in usadas:
+            resultado.append(nueva)
+    return resultado
+
+
+# --- Escritura de una pestaña ----------------------------------------------
+
+
+def _vacia(valor: object) -> bool:
+    return valor is None or (isinstance(valor, str) and not valor.strip())
+
+
+def _filas_existentes(hoja, bloque: Bloque) -> list[dict]:
+    ancho = len(bloque.encabezados or [])
+    filas: list[dict] = []
+    for fila in hoja.iter_rows(min_row=bloque.primera_fila, max_row=bloque.ultima_fila):
+        valores = [celda.value for celda in fila[:ancho]]
+        if all(_vacia(valor) for valor in valores):
+            continue
+        filas.append(dict(zip(bloque.encabezados or [], valores)))
+    return filas
+
+
+def escribir_pestana(
+    ruta: Path | str,
+    pestana: str,
+    definiciones: tuple[DefTabla, ...],
+    filas_por_tabla: dict[str, list[dict]],
+    caso_ids: set[str],
+) -> int:
+    """Vuelca las tablas de una pestaña fundiéndolas con lo que ya había.
+
+    `caso_ids` son los casos de ESTA importación: solo sus filas se tocan.
+    Devuelve cuántas filas quedaron escritas por el importador.
+    """
+    import openpyxl
+
+    camino = Path(ruta)
+    libro = openpyxl.load_workbook(camino)
+    try:
+        if pestana not in libro.sheetnames:
+            raise ErrorEscritura(f"falta la pestaña '{pestana}' en '{camino.name}'.")
+        hoja = libro[pestana]
+        escritas = 0
+        # De abajo arriba: insertar o borrar filas mueve todo lo que hay
+        # debajo, y así los índices de las tablas de arriba siguen valiendo.
+        for bloque in sorted(
+            localizar_bloques(hoja, definiciones),
+            key=lambda b: b.fila_encabezados,
+            reverse=True,
+        ):
+            nuevas = [
+                fila
+                for fila in filas_por_tabla.get(bloque.definicion.clave, [])
+                if not caso_ids or fila.get("caso_id") in caso_ids
+            ]
+            campos = CLAVES_DE_TABLA.get(bloque.definicion.clave, ("caso_id",))
+            fundidas = fundir_filas(_filas_existentes(hoja, bloque), nuevas, campos)
+            _reescribir(hoja, bloque, fundidas)
+            escritas += len(nuevas)
+        libro.save(camino)
+        return escritas
+    finally:
+        libro.close()
+
+
+def _ultima_con_datos(hoja, bloque: Bloque) -> int:
+    """La última fila del bloque que tiene algo escrito.
+
+    Las filas en blanco del final NO se tocan: son el aire que el humano dejó
+    entre una tabla y la siguiente, y comérselas subiría las filas de título
+    de todas las tablas de abajo en cada importación (R15).
+    """
+    ancho = len(bloque.encabezados or [])
+    ultima = bloque.primera_fila - 1
+    for fila in hoja.iter_rows(min_row=bloque.primera_fila, max_row=bloque.ultima_fila):
+        if not all(_vacia(celda.value) for celda in fila[:ancho]):
+            ultima = fila[0].row
+    return ultima
+
+
+def _reescribir(hoja, bloque: Bloque, filas: list[dict]) -> None:
+    """Sustituye el bloque de datos por las filas ya fundidas."""
+    sobrantes = _ultima_con_datos(hoja, bloque) - bloque.primera_fila + 1
+    if sobrantes > 0:
+        hoja.delete_rows(bloque.primera_fila, sobrantes)
+    if not filas:
+        return
+    hoja.insert_rows(bloque.primera_fila, len(filas))
+    for desplazamiento, registro in enumerate(filas):
+        for columna, campo in enumerate(bloque.encabezados or [], start=1):
+            hoja.cell(
+                row=bloque.primera_fila + desplazamiento,
+                column=columna,
+                value=_a_celda(registro.get(campo)),
+            )
+
+
+def _a_celda(valor: object) -> object | None:
+    """Lo que se escribe en la celda. Las listas viajan como `a;b` (contrato)."""
+    if isinstance(valor, (list, tuple)):
+        return ";".join(str(trozo) for trozo in valor) or None
+    return valor
