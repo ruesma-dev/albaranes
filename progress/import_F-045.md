@@ -9,8 +9,8 @@ siguiente importación lo reescribe.
 - Filas leídas de la tabla plana: **142**
 - Casos (albaranes): **59**, de los que **0** son nuevos
 - Libros comprobados: 6
-- Libros escritos: IA1_extraccion.xlsx, RESULTADO_FINAL.xlsx
-- Copias de seguridad: 2
+- Libros escritos: (ninguno: ningún libro cambiaba; ver R18)
+- Copias de seguridad: 0
 
 ## Cómo se reparten los casos
 
@@ -98,7 +98,7 @@ izquierda).
 | `0669_HORMIGON HNE-15-B-20 - 2024-06-05 - Alb_W25963.pdf` | HOR-008 | exacto |
 | `0669_HORMIGON HMF-20-P-CR-B-20-12-X0-P - 2024-08-06 - Alb_W26580.pdf` | HOR-009 | exacto |
 
-**No se ha renombrado nada**: hay que pedirlo con `--renombrar`.
+Renombrados en esta pasada: 50.
 
 ### Lo que se quedó fuera
 
