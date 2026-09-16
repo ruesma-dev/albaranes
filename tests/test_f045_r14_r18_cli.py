@@ -118,6 +118,10 @@ def entorno(tmp_path):
         "ground_truth": ground_truth,
         "originales": entrada,
         "mapa": tmp_path / "mapa_casos.json",
+        # La huella TAMBIÉN va a tmp: sin esto los tests escribían la del
+        # repositorio y la dejaban con sus dos casos de mentira, que es
+        # exactamente la memoria con la que el importador decide qué retirar.
+        "huella": tmp_path / "huella.json",
         "informe": tmp_path / "import.md",
     }
 
@@ -129,10 +133,26 @@ def correr(entorno, *extra):
             "--ground-truth", str(entorno["ground_truth"]),
             "--originales", str(entorno["originales"]),
             "--mapa", str(entorno["mapa"]),
+            "--huella", str(entorno["huella"]),
             "--informe", str(entorno["informe"]),
             *extra,
         ]
     )
+
+
+def test_f045_r17_los_tests_no_escriben_la_huella_del_repositorio(entorno):
+    """Un test que escribe en `evals/` corrompe la memoria del importador.
+
+    Pasó: la huella del repositorio acabó con los dos casos de este fixture, y
+    con ella el importador habría creído que solo había escrito esas filas.
+    """
+    from evals.revision import huella
+
+    antes = huella.RUTA_HUELLA.read_bytes() if huella.RUTA_HUELLA.is_file() else None
+    correr(entorno)
+    despues = huella.RUTA_HUELLA.read_bytes() if huella.RUTA_HUELLA.is_file() else None
+    assert despues == antes
+    assert entorno["huella"].is_file()
 
 
 def contenido(directorio):
