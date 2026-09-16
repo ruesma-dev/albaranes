@@ -11,9 +11,10 @@ semántica corregida del vacío, §5 del diseño); T13 salda la deuda del
 banco; T14–T16 son el catálogo de decisiones. Un commit por tarea
 (`F-045 Tn: ...`).
 
-**Estado al 2026-09-16**: la CAPA 1 está hecha (T1–T12) más T17, T18 y T21.
-Sin marcar quedan la capa 2 (T13, T13 bis, T14–T16) y las dos MANUAL del
-humano (T19, T20), que no dependen de nadie más que de él.
+**Estado al 2026-09-16**: la CAPA 1 está hecha (T1–T12) más T17, T18, T21 y
+**T13**, que entró después de la pasada con LLM porque sin ella el banco no
+era legible: 266 de sus 352 fallos de IA1 eran ruido. Sin marcar quedan
+T13 bis y T14–T16, y las dos MANUAL del humano (T19, T20).
 
 - [x] T1: Crear `evals/revision/vocabulario.json` y `vocabulario.py`: mapeo etiqueta del Excel → familia de DOCUMENTO → pestaña (design §5 bis; las diez etiquetas con destino, y `combustible`, `grava`, `ferreteria` y `ferralla` admitidas aunque el catálogo aún no las tenga), orígenes de línea y de precio con sus sinónimos, y aborto si algo no se reconoce —nunca caer en `generico`—.  |  Verificación: `pytest tests/test_f045_r5_r6_vocabulario.py` (R5, R6); traza RED en el informe
 - [x] T2: Crear `evals/revision/modelos.py` y `lectura.py`: del Excel plano a `list[FilaPlana]`, localizando las columnas por nombre y no por posición (el humano añade columnas).  |  Verificación: `pytest tests/test_f045_r1_lectura.py` con un `.xlsx` fabricado en el propio test (sin red ni BBDD)
@@ -32,7 +33,7 @@ humano (T19, T20), que no dependen de nadie más que de él.
 - [x] T11 bis: Casos gemelos: el mismo albarán en PDF y en imagen genera `<caso_id>` y `<caso_id>-IMG` con el MISMO ground truth, hermanados por `gemelo_de`, sin deduplicar.  |  Verificación: `pytest tests/test_f045_r22_gemelos.py` (R22); traza RED en el informe
 - [x] T11 ter: Ignorar `evals/inputs/albaranes/` en `.gitignore` (hoy solo hay `*.pdf`) y test que comprueba que git no traquea nada ahí.  |  Verificación: `pytest tests/test_f045_r24_no_versionar.py` (R24)
 - [x] T12: Pasada real del importador sobre el Excel del humano y `python -m evals.conversor`; commit SOLO de los fixtures, el mapa y los datos.  |  Verificación: `python -m evals.conversor` termina en 0 y `git status` no muestra ni documentos de entrada ni `.xlsx` (R19, R24)
-- [ ] T13: `OBSERVABLES` de IA1/IA2 en `evals/procesos/sv2_extraccion.py` y su uso en `evals/runner.py`, con los campos no observables en el informe.  |  Verificación: `pytest tests/test_f045_r25_r26_observables.py` (R25, R26)
+- [x] T13: `OBSERVABLES` de IA1/IA2 en `evals/procesos/sv2_extraccion.py` y su uso en `evals/runner.py`, con los campos no observables en el informe.  |  Verificación: `pytest tests/test_f045_r25_r26_observables.py` (R25, R26)
 - [ ] T13 bis: Medir el camino de lectura (`pdf_texto` / `pdf_escaneado` / `imagen`) en `sv2_extraccion.py` y agrupar por él el resumen de `evals/informe.py`.  |  Verificación: `pytest tests/test_f045_r23_caminos.py` (R23: un fallo solo en el gemelo de imagen sale como hallazgo de formato)
 - [ ] T14: Crear `evals/patrones.json` con los nueve patrones más el de residuos de §5 ter (casos, decisión candidata y las dos respuestas del filtro de robustez) y la lista de casos de no regresión.  |  Verificación: `pytest tests/test_f045_r27_r29_patrones.py` (R27–R29: casos existentes, filtro obligatorio, descartadas sin ficha)
 - [ ] T15: Actualizar `evals/README.md`: comando nuevo, catálogo de patrones, las cuatro extensiones de entrada (hoy dice «`.pdf` (o `.jpg`)»), los casos gemelos y qué se versiona.  |  Verificación: `pytest tests/test_f039_r1_r2_r23_r25_documentos.py` y revisión del humano
