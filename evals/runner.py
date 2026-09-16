@@ -23,7 +23,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from evals.comparador import comparar_tablas
+from evals.comparador import campos_no_observables, comparar_tablas
 from evals.conversor import RUTA_FIXTURES
 from evals.criticidad import cargar_criticidad
 from evals.informe import MODO_COMPLETA, MODO_DETERMINISTA, render
@@ -268,6 +268,7 @@ def corrida_completa(
                                 criticidad,
                                 (("cabeceras", ()), ("lineas", ("num_linea",))),
                                 "IA1",
+                                no_observables,
                             ),
                         )
                     )
@@ -282,6 +283,7 @@ def corrida_completa(
                                 criticidad,
                                 (("contexto", ("num_linea", "campo_contexto")),),
                                 "IA2",
+                                no_observables,
                             ),
                         )
                     )
@@ -293,20 +295,34 @@ def corrida_completa(
     return [fase_ia1, fase_ia2, *fases_valoracion], sorted(set(no_observables))
 
 
-def _comparar_tablas_de(fixture, proyeccion, criticidad, tablas, prefijo) -> list:
+def _comparar_tablas_de(
+    fixture, proyeccion, criticidad, tablas, prefijo, no_observables=None
+) -> list:
+    """Compara IA1/IA2 SOLO por lo que la corrida ve, como ya hacen IA3 e IA4.
+
+    Sin esta poda, el ground truth le exigía a la extracción las columnas de
+    control del banco —`caso_id`, `fichero_albaran`, `comentario`— y los campos
+    que sv2 no extrae (`unidad`, `descuentos`, F-024). En la pasada del
+    2026-09-16 eso fueron 258 fallos de ruido que tapaban los 94 defectos de
+    verdad (R25). Lo podado se declara en el informe, no desaparece (R26).
+    """
     discrepancias = []
     for nombre, claves in tablas:
+        esperadas = fixture.get("tablas", {}).get(nombre, [])
+        observables = sv2_extraccion.OBSERVABLES.get(nombre)
         discrepancias.extend(
             comparar_tablas(
-                fixture.get("tablas", {}).get(nombre, []),
+                esperadas,
                 proyeccion.get(nombre, []),
                 criticidad,
                 claves=claves,
                 prefijo=f"{prefijo}.{nombre}",
-                observables=None,
+                observables=observables,
                 severidad_sobrantes="aviso",
             )
         )
+        if observables is not None and no_observables is not None:
+            no_observables.extend(campos_no_observables(esperadas, observables))
     return discrepancias
 
 
@@ -499,7 +515,7 @@ def main(argv: list[str] | None = None) -> int:
 
     destino = ruta_de_informe(opciones.feature, opciones.informes)
     destino.parent.mkdir(parents=True, exist_ok=True)
-    destino.write_text(render(pasada, no_observables), encoding="utf-8")
+    destino.write_text(render(pasada, no_observables=no_observables), encoding="utf-8")
 
     print(f"{pasada.veredicto()} · informe en {destino}")
     return pasada.codigo_salida()

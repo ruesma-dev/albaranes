@@ -18,8 +18,19 @@ sus 90 supervivientes analizados (**74 con test nuevo, 16 equivalentes**).
 **Pasada 1 del review: CHANGES_REQUESTED, ya corregido** (`review_F-045.md`).
 Los dos bloqueantes eran justificaciones de equivalencia FALSAS —`sort_keys`
 del mapa y la copia de seguridad de R16— y se cierran con test, no con prosa;
-los cinco menores también. Falta la pasada 2 del reviewer: la feature sigue
-`in_progress` y NO se marca `done`.
+los cinco menores también.
+
+**Pasada con LLM del 2026-09-16** (`evals_F-045.md`): ROJO, pero 1295 de los
+1456 fallos eran «obtenido None», o sea ruido del banco. **T13 entró** (no
+estaba en la capa 1): IA1 e IA2 se comparan ya solo por lo que la corrida VE, y
+eso quita 266 fallos de ruido —`caso_id`, `fichero_albaran`, `unidad`,
+`descuentos`— y deja los 86 defectos de verdad a la vista. **IA3, IA4 y el E2E
+no miden nada** hasta que se decida de dónde salen las líneas de contrato: las
+tres vías, medidas, en `progress/impl_F-045_contrato_lineas.md` (recomendada la
+B, por `sigrid-api`). Otra pasada con LLM la decide el humano.
+
+Falta la pasada 2 del reviewer: la feature sigue `in_progress` y NO se marca
+`done`.
 
 **Tres cosas que tiene que decidir el humano antes de cerrar:**
 

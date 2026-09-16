@@ -85,6 +85,43 @@ def prompt_de_fase_2(tipologia: str) -> str:
     return f"albaran_revision_fase2_{sufijo}" if sufijo else PROMPT_FASE_2
 
 
+#: Campos que ESTA corrida puede observar en cada tabla de IA1 e IA2 (R25).
+#: Es exactamente lo que producen `proyectar_ia1` y `proyectar_ia2`, y hay un
+#: test que lo ata: si las dos listas divergen, o se compara contra `None` para
+#: siempre, o se deja de mirar algo que sí llega.
+#:
+#: Lo que queda fuera y por qué:
+#:
+#: - `caso_id` y `fichero_albaran` son **columnas de control del banco** —la
+#:   etiqueta que le ponemos nosotros al caso y el nombre que le dimos al
+#:   papel—. No están impresas en ningún albarán y sv2 no las devuelve.
+#:   Exigirlas costó 186 fallos de ruido en la pasada del 2026-09-16.
+#: - `comentario` es contexto para quien lee el libro, no una expectativa.
+#: - `unidad` y `descuentos`: sv2 no los extrae hoy (F-024). Se declaran en el
+#:   informe en vez de darlos por malos (R26); el día que sv2 los devuelva,
+#:   entran aquí y el banco los vigila solo.
+OBSERVABLES: dict[str, tuple[str, ...]] = {
+    "cabeceras": (
+        "proveedor_nombre",
+        "proveedor_cif",
+        "fecha",
+        "numero_albaran",
+        "obra_codigo",
+        "obra_nombre",
+        "forma_pago",
+    ),
+    "lineas": (
+        "num_linea",
+        "descripcion_esperada",
+        "cantidad",
+        "precio_unitario",
+        "importe",
+        "codigo_imputacion",
+    ),
+    "contexto": ("num_linea", "campo_contexto", "valor_esperado"),
+}
+
+
 # --- Proyecciones al vocabulario de los libros IA1 e IA2 --------------------
 
 
