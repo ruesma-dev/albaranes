@@ -201,10 +201,10 @@ decide el humano con los números de la sección anterior.
 
 | Evidencia | Valor |
 |---|---|
-| Tests ejecutados (suite de la raíz) | **846 pasan, 0 fallan** |
-| De ellos, de F-045 | **277** en 21 ficheros `tests/test_f045_*` |
-| Cobertura de las líneas cambiadas | **96,2 %** (102/106) de lo cambiado hoy; **97,9 %** (914/934) sobre la feature entera |
-| Tiempo de la suite | **83,24 s** |
+| Tests ejecutados (suite de la raíz) | **865 pasan, 0 fallan** |
+| De ellos, de F-045 | **296** en 23 ficheros `tests/test_f045_*` |
+| Cobertura de las líneas cambiadas | **98,3 %** (113/115) de lo último cambiado; **97,9 %** sobre la feature entera |
+| Tiempo de la suite | **82,37 s** |
 | Mutación · capa 1 | **266 mutantes, 176 muertos, 90 supervivientes**, 0 timeouts, 6381 s, 4 workers; de los 90, **74 mueren** con los tests nuevos y **16 son equivalentes** con su comprobación ejecutada |
 | Mutación · lote de las dos decisiones | 325 líneas, **44 mutantes, 35 muertos, 9 supervivientes**, 871 s con 4 workers; **los 9 cerrados con test**, ninguno como equivalente (`progress/mutacion_F-045_lote2.md`) |
 | Conversor e idempotencia | `python -m evals.conversor` en 0, sin hallazgos del barrido; segunda pasada de `revision` + `conversor` deja `git status` vacío |
