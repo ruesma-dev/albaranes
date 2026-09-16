@@ -3,15 +3,12 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **47 features**, 34 abiertas, 13 terminadas.
-
-En curso: **F-045**.
+Resumen: **47 features**, 33 abiertas, 14 terminadas.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-045 | El banco de evals recoge la revision manual de los 32 albaranes: convertir los comentarios del humano en casos que se comprueban solos | 2 | en curso | critico | `feature/F-045-banco-evals-revision-manual` |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -59,39 +56,13 @@ En curso: **F-045**.
 | F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | estandar |
 | F-039 | Arnes: estabilizar la suite de la raiz y remedir las campanas juzgadas con la invocacion rota | 2 | estandar |
 | F-040 | Arnes: la campana de mutacion se dimensiona sola y deja de mentir sobre lo que ha medido | 2 | estandar |
+| F-045 | El banco de evals recoge la revision manual de los 32 albaranes: convertir los comentarios del humano en casos que se comprueban solos | 2 | critico |
 | F-012 | Campaña de mutación en paralelo | 3 | estandar |
 | F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | estandar |
 | F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | critico |
 
 ## Detalle
-
-### F-045 · El banco de evals recoge la revision manual de los 32 albaranes: convertir los comentarios del humano en casos que se comprueban solos
-
-estado **en curso** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-045-banco-evals-revision-manual`
-
-ORIGEN: el humano reviso UNO A UNO los albaranes que probo en local y anoto en 'evals_summary.xlsx' (carpeta evals de OneDrive) el resultado esperado de cada linea y, en una columna de comentarios, QUE HA FALLADO hoy. Aviso el 2026-09-13. Los PDF estan en la raiz de esa misma carpeta.
-
-EL MATERIAL, medido el 2026-09-14: 32 albaranes en PDF y ~110 lineas en la tabla. Cubre DIEZ familias -hormigon, mortero, residuos, contenedores, ferreteria, grava, materiales, generico, camion grua y gasoleo- y SEIS obras. Para comparar: el banco de evals de hoy tiene 7 casos, todos de residuos y todos del mismo proveedor.
-
-POR QUE IMPORTA MAS QUE UNA FEATURE DE ARREGLO. F-043 cambio el enrutado del prompt de TODOS los albaranes segun la familia, y las dos familias donde ese cambio mas pesa -hormigon y mortero- no tienen hoy ni un caso en el banco. Esta revision los trae. Ademas convierte un trabajo manual que caduca (una revision en un Excel) en una red que se comprueba sola en cada pasada de evals.
-
-LOS PATRONES DE DEFECTO QUE DESCRIBEN LOS COMENTARIOS (agrupados; el detalle linea a linea esta en el Excel):
-(1) LA PARTIDA SE LEE MAL, y es el patron mas repetido: se pierde el prefijo del capitulo o se confunden digitos sobre el papel escaneado. El humano propone la solucion en dos comentarios distintos: no leer la partida a ciegas, sino BUSCARLA EN LA LISTA DE PARTIDAS DE LA OBRA (el nivel mas bajo, justo por encima de los descompuestos). Es un cambio de enfoque, no un ajuste de prompt.
-(2) LA OBRA SE DEDUCE MAL cuando el albaran no la trae impresa. Propuesta del humano: si el proveedor ya esta identificado con certeza, deducir la obra SOLO entre las obras que tienen contrato con ese proveedor.
-(3) LINEAS DEDUCIDAS QUE NO SE GENERAN. El incremento por cambio de ano existe tambien en MORTERO y en RESIDUOS, no solo en hormigon. La carga incompleta existe tambien en MORTERO. Y hay incrementos marcados a mano en el papel -subrayados con rotulador- que deben generar linea. Regla que enuncia el humano: si sale en el contrato, hay que analizarlo; si no esta en el contrato, buscarlo en la oferta.
-(4) DEVOLUCIONES: un albaran con cantidad NEGATIVA que deduce material de un albaran anterior, referenciado por el numero del proveedor y no por el identificador interno. No estaba contemplado.
-(5) UNITARIO EQUIVOCADO dentro del contrato: elige una tarifa parecida pero no la que corresponde al producto que el texto describe.
-(6) EL CODIGO LER no se ve en la vista detallada y el humano duda de si se persiste.
-(7) EL CIF DEL PROVEEDOR sale mal en un caso sin que se sepa de donde lo saca.
-(8) DOS CONTRATOS CANDIDATOS y no elige ninguno. Propuesta del humano: si no sabe elegir, coger los dos, fusionarlos dejando marcado que es una fusion, y seguir.
-(9) EL NUMERO DE ALBARAN se lee mal en un caso.
-
-ALCANCE PROPUESTO PARA ESTA FICHA -sembrar, no arreglar-: llevar los 32 albaranes y sus ~110 lineas al banco de evals, con el resultado esperado del Excel como ground truth, reutilizando el flujo que ya existe (libros de ground_truth, conversor, fixtures). El resultado es una pasada de evals que dice, con nombre y apellidos, cuales de los defectos (1)-(9) siguen vivos y cuales no. Los ARREGLOS salen como fichas propias, priorizadas por cuantas lineas toca cada patron: la (1) y la (3) son las que mas pesan.
-
-CUIDADOS: los PDF y los .xlsx NO se versionan -son documentos de proveedor y llevan precios-; solo entran los fixtures JSON y tras el barrido de datos sensibles que describe evals/README.md. El ground truth es del humano y NO se inventa: lo que el Excel no diga, no se compara. Y conviene separar lo que es fallo de EXTRACCION (IA1/IA2) de lo que es fallo de VALORACION (IA3/IA4), porque el Excel los mezcla en la misma fila.
-
-RELACIONADAS: F-011 (el banco y su flujo), F-043 (el enrutado por familia que estos casos vigilan), F-017 (la fuente OFERTA, que explica varias lineas del Excel), F-021 (eleccion de partida, que es el patron 1), F-024 (unidad_medida).
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 
@@ -537,6 +508,33 @@ D5. OCHO HUECOS DE TEST, presentados al humano por F-039 (R20) sin abrir ficha. 
 LO QUE NO ENTRA: el superviviente `mutacion.py:1348`, analizado y aceptado como equivalente por el reviewer de F-039.
 
 ALCANCE: harness/mutacion.py, harness/mutacion_paralela.py, harness/alcance.py, harness/rigor.py, harness/rigor.json, CHECKPOINTS.md, y el PORTE A arnes-base como 1.7.2 DESPUES del merge en dev (regla de propagacion; la version instalada alli es 1.7.1). D1 y D2 cambian como se dimensiona la campana, asi que la entrada de GUIA_INSTALACION.md debe decir que los tiempos de campanas paralelas anteriores no son comparables.
+
+### F-045 · El banco de evals recoge la revision manual de los 32 albaranes: convertir los comentarios del humano en casos que se comprueban solos
+
+estado **terminada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-045-banco-evals-revision-manual`
+
+ORIGEN: el humano reviso UNO A UNO los albaranes que probo en local y anoto en 'evals_summary.xlsx' (carpeta evals de OneDrive) el resultado esperado de cada linea y, en una columna de comentarios, QUE HA FALLADO hoy. Aviso el 2026-09-13. Los PDF estan en la raiz de esa misma carpeta.
+
+EL MATERIAL, medido el 2026-09-14: 32 albaranes en PDF y ~110 lineas en la tabla. Cubre DIEZ familias -hormigon, mortero, residuos, contenedores, ferreteria, grava, materiales, generico, camion grua y gasoleo- y SEIS obras. Para comparar: el banco de evals de hoy tiene 7 casos, todos de residuos y todos del mismo proveedor.
+
+POR QUE IMPORTA MAS QUE UNA FEATURE DE ARREGLO. F-043 cambio el enrutado del prompt de TODOS los albaranes segun la familia, y las dos familias donde ese cambio mas pesa -hormigon y mortero- no tienen hoy ni un caso en el banco. Esta revision los trae. Ademas convierte un trabajo manual que caduca (una revision en un Excel) en una red que se comprueba sola en cada pasada de evals.
+
+LOS PATRONES DE DEFECTO QUE DESCRIBEN LOS COMENTARIOS (agrupados; el detalle linea a linea esta en el Excel):
+(1) LA PARTIDA SE LEE MAL, y es el patron mas repetido: se pierde el prefijo del capitulo o se confunden digitos sobre el papel escaneado. El humano propone la solucion en dos comentarios distintos: no leer la partida a ciegas, sino BUSCARLA EN LA LISTA DE PARTIDAS DE LA OBRA (el nivel mas bajo, justo por encima de los descompuestos). Es un cambio de enfoque, no un ajuste de prompt.
+(2) LA OBRA SE DEDUCE MAL cuando el albaran no la trae impresa. Propuesta del humano: si el proveedor ya esta identificado con certeza, deducir la obra SOLO entre las obras que tienen contrato con ese proveedor.
+(3) LINEAS DEDUCIDAS QUE NO SE GENERAN. El incremento por cambio de ano existe tambien en MORTERO y en RESIDUOS, no solo en hormigon. La carga incompleta existe tambien en MORTERO. Y hay incrementos marcados a mano en el papel -subrayados con rotulador- que deben generar linea. Regla que enuncia el humano: si sale en el contrato, hay que analizarlo; si no esta en el contrato, buscarlo en la oferta.
+(4) DEVOLUCIONES: un albaran con cantidad NEGATIVA que deduce material de un albaran anterior, referenciado por el numero del proveedor y no por el identificador interno. No estaba contemplado.
+(5) UNITARIO EQUIVOCADO dentro del contrato: elige una tarifa parecida pero no la que corresponde al producto que el texto describe.
+(6) EL CODIGO LER no se ve en la vista detallada y el humano duda de si se persiste.
+(7) EL CIF DEL PROVEEDOR sale mal en un caso sin que se sepa de donde lo saca.
+(8) DOS CONTRATOS CANDIDATOS y no elige ninguno. Propuesta del humano: si no sabe elegir, coger los dos, fusionarlos dejando marcado que es una fusion, y seguir.
+(9) EL NUMERO DE ALBARAN se lee mal en un caso.
+
+ALCANCE PROPUESTO PARA ESTA FICHA -sembrar, no arreglar-: llevar los 32 albaranes y sus ~110 lineas al banco de evals, con el resultado esperado del Excel como ground truth, reutilizando el flujo que ya existe (libros de ground_truth, conversor, fixtures). El resultado es una pasada de evals que dice, con nombre y apellidos, cuales de los defectos (1)-(9) siguen vivos y cuales no. Los ARREGLOS salen como fichas propias, priorizadas por cuantas lineas toca cada patron: la (1) y la (3) son las que mas pesan.
+
+CUIDADOS: los PDF y los .xlsx NO se versionan -son documentos de proveedor y llevan precios-; solo entran los fixtures JSON y tras el barrido de datos sensibles que describe evals/README.md. El ground truth es del humano y NO se inventa: lo que el Excel no diga, no se compara. Y conviene separar lo que es fallo de EXTRACCION (IA1/IA2) de lo que es fallo de VALORACION (IA3/IA4), porque el Excel los mezcla en la misma fila.
+
+RELACIONADAS: F-011 (el banco y su flujo), F-043 (el enrutado por familia que estos casos vigilan), F-017 (la fuente OFERTA, que explica varias lineas del Excel), F-021 (eleccion de partida, que es el patron 1), F-024 (unidad_medida).
 
 ### F-012 · Campaña de mutación en paralelo
 

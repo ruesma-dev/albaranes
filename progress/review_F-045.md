@@ -1,132 +1,126 @@
 <!-- progress/review_F-045.md -->
-# F-045 · Review de la restauración, el guardián y la campaña del lote
+# F-045 · Review final: los dos supervivientes y el repaso del patrón
 
-**Revisión incremental desde `490db12` (pasada 4)** — HEAD `e7ca7e5`, 4
-commits. Lo aprobado antes queda dado por bueno; aquí se revisa
-`490db12..HEAD`, más las puertas enteras.
+**Revisión incremental desde `e7ca7e5` (pasada 5)** — HEAD `758b151`, 1 commit.
+Lo aprobado en las pasadas anteriores queda dado por bueno; aquí se revisa
+`e7ca7e5..HEAD` (solo tests y papeleo: **ni una línea de producción**, así que
+la campaña del lote sigue midiendo el alcance que se revisa), más las puertas
+enteras.
 
-## Veredicto: CHANGES_REQUESTED
+## Veredicto: APROBADO
 
-**La restauración es exacta y completa, y el guardián es el que hacía falta**:
-eso queda cerrado y verificado abajo, valor a valor. Lo que bloquea es la
-campaña: **uno de los 9 supervivientes NO está cerrado** —sobrevive hoy y
-sobrevivía en el commit donde se dice haberlo matado—, y **otro está mal
-etiquetado**. Es poco trabajo, pero es justo la lógica de fusión que ya se
-comió datos una vez.
+Los dos puntos que bloqueaban están cerrados y lo he comprobado ejecutando: el
+superviviente 3 **muere** con el test reescrito y el 7 **es equivalente de
+verdad**, demostrado sobre la huella real y no sobre un ejemplo. El repaso del
+patrón se sostiene: he buscado yo el mismo defecto por todo el banco de tests de
+F-045 y no queda ningún sitio donde comparar una proyección pueda tapar el
+resultado.
 
 ## Las puertas, ejecutadas enteras
 
-`bash harness/init.sh` → **exit 0**: **865 tests** en 121 s; COBERTURA `[OK]
-98,3 % de 115 líneas`; RUTAS SENSIBLES `N/A` con su motivo; TAMAÑO todo dentro.
-Árbol limpio, sin ficheros borrados en el lote (`git log --diff-filter=D` vacío:
-el incidente del `git checkout` no se llevó nada versionado por delante).
+`bash harness/init.sh` → **exit 0**: **865 tests** en 116 s; COBERTURA `[OK]
+98,3 % de 115 líneas (113/115)`; RUTAS SENSIBLES `N/A` con su motivo; TAMAÑO
+todo dentro. Árbol limpio, sin `push`, `README.md` sin tocar.
 
-## Lo primero, y está BIEN: los 35 y el método
+## Superviviente 3: muere, y el test ya mira lo que debe
 
-Repetí mi barrido —todos los fixtures, todas las tablas, todos los campos,
-buscando un valor afirmado que pase a `@@NO_COMPARAR@@`—, ahora contra las dos
-referencias:
+Reinyectado sobre el código de hoy (`escritura.py`, `if nueva is None and
+campo_prefijo:` → `or`) con la suite acotada de 296 tests: **MUERE**, y lo mata
+`test_f045_r17_el_casado_por_prefijo_no_duplica_la_sintetica_del_humano`. El
+test ya no colapsa las filas en un `dict` por descripción: compara **la lista
+entera**, `[("INCREMENTO", 10), ("INCREMENTO LER 170604", 99)]`, que es donde se
+ve la tercera fila que el mutante añadía —la del humano conservada **y** la del
+importador añadida, el banco esperando dos sintéticas donde el sistema emite
+una—. El nombre nuevo dice lo que vigila, que antes tampoco.
 
-- **`5132bdc..HEAD`: 0 degradados** (eran 35). Los seis campos restaurados
-  coinciden **exactamente** con el estado sano: 42 valores comparados uno a uno,
-  cero diferencias.
-- **`697f00e..HEAD`: 0 degradados y 0 filas del original sin pareja hoy.** Del
-  ground truth que escribió el humano antes de F-045 no falta nada.
-- **Las «28 filas movidas a propósito» lo están de verdad**: son exactamente 28
-  y sus 112 valores se reparten en dos grupos sin residuo —20 filas
-  `num_linea=2` (el incremento por LER retirado en IA1, IA2, IA3, INPUTS y
-  FINAL) y 8 sintéticas/añadidas re-tecleadas con el concepto largo del Excel—.
-  **Cero valores fuera de esas dos categorías**, y todas las re-tecleadas
-  existen hoy con su clave nueva: la categoría no tapa ninguna pérdida.
+## Superviviente 7: equivalente, y comprobado sobre la huella real
 
-## El guardián: correcto y eficaz
+No me fié del ejemplo: cargué la **huella real del repositorio** (10 tablas,
+717 filas) y serialicé con `sort_keys=True` y con `False` desde la misma
+estructura que construye `guardar`.
 
-- **Los 496 no son «lo que hay hoy»**: crucé la instantánea contra el estado
-  sano previo con las claves del propio test. **433 son idénticos a `5132bdc`**
-  y los demás son altas legítimas (las sintéticas bajo su clave nueva). Contra
-  el original `697f00e`, 375 coinciden literalmente. **Ningún valor de la
-  instantánea es el centinela ni está vacío**: no fija el daño, fija el dato.
-- **Falla de verdad**: degradé `IA3.lineas_valoradas[RES-001|1].match_method` a
-  `@@NO_COMPARAR@@` en una copia aislada y
-  `test_f045_r17_ningun_valor_afirmado_ha_desaparecido` **falla nombrándolo**
-  («era `'semantic'`»). Los otros cuatro tests del fichero cubren el cambio de
-  valor, los seis campos del disgusto por su nombre, que la instantánea no se
-  quede corta y que `fundir()` no degrade.
+- Ambas salidas: **35.673 bytes, idénticas** (`IDENTICOS: True`), y coinciden
+  byte a byte con `evals/huella_importacion.json` versionado.
+- El argumento estructural se sostiene donde importa: dentro de `tablas` **todo
+  son listas**, no `dict`, así que `sort_keys` no tiene nada que reordenar. Es
+  justo lo contrario de `mapa.py`, donde los registros se montaban en el orden
+  de `CAMPOS` y esa misma justificación era falsa.
 
-## La campaña del lote: bien medida, mal cerrada en dos puntos
+Y la etiqueta ya está corregida donde se lee: `mutacion_F-045_lote2.md`
+(«**8 cerrados con test y 1 equivalente justificado**»), la tabla de Evidencias
+del informe y el inventario de campañas dicen lo mismo, con la historia de las
+dos correcciones escrita en vez de tapada.
 
-Totales recalculados por mí: el alcance que declara (325 líneas, 44 mutantes en
-`5132bdc..a7de52a`) es correcto, RM2 cuadra (871 s × 4 workers ÷ 44 = 79 s por
-mutante frente a línea base 88 s) y no hay cabecera de campaña inválida.
+## El repaso del patrón: lo he rehecho por mi cuenta
 
-**RM1 · lo que la campaña no vio, lo he medido yo.** El SHA medido es `a7de52a`
-y después entró `f14eb68`, que **reescribe la guarda de retirada**. El alcance
-de hoy son 357 líneas y 47 mutantes; el delta posterior a la campaña genera
-**11 mutantes**, todos en esa guarda. Los reinyecté uno a uno: **mueren los
-11**. Ese hueco queda cerrado, y queda escrito aquí.
+No conté lo que él cuenta; busqué el defecto. Recorrí los ficheros
+`tests/test_f045_*` buscando dónde una **proyección** puede tapar el resultado:
 
-**Los 9 supervivientes, reinyectados uno a uno por mí: 7 mueren, 2 no.**
+- **`dict` por un campo sobre filas fundidas**: cero ocurrencias. Era el único
+  sitio y está arreglado.
+- **`set(...)`**: 13 usos, todos sobre **nombres** —columnas, tablas, campos del
+  mapa, extensiones, familias, `caso_id`— donde el duplicado es imposible o no
+  significa nada; uno de ellos (`len(claves) == len(set(claves))`) es
+  precisamente una comprobación de duplicados.
+- **`assert len(...)` como única comprobación de una lista de filas**: quedan
+  seis, y en todos la lista de entrada **no admite altas** (se funde con
+  `nuevas=[]`) o el propio recuento ES la propiedad —«no se eligió ninguno
+  candidato»: 2 + 1 = 3 filas—. Ninguno puede esconder una fila duplicada.
+- **Comparaciones contra literal de `set`/`dict`**: sobre etiquetas y recuentos,
+  y las que proyectan `plan.copias` van acompañadas del recuento o del `fallos
+  == []` que hace imposible el duplicado.
+- Los tres tests de fusión que solo miraban el número ahora fijan **qué fila
+  queda y con qué valores** (`[(descripcion, precio, comentario)] == [...]`),
+  incluido el del `modifier_source` que sobrevive a la refundición.
 
-1. **BLOQUEANTE · el 3 no está cerrado.** `escritura.py`, `if nueva is None and
-   campo_prefijo:` → `or`: **sobrevive** a la suite acotada (296 tests) **en
-   HEAD y también en `a7de52a`**, el commit donde el informe dice «reinyectado
-   uno a uno, muere». El test que lo nombra,
-   `test_f045_r17_el_casado_por_prefijo_no_pisa_una_coincidencia_exacta`,
-   **existe y pasa con el mutante puesto**: monta el resultado en un `dict`
-   por descripción, y ahí la fila duplicada se colapsa. Con el mutante,
-   `fundir_filas` devuelve **3 filas donde debe devolver 2** —la del humano con
-   `20` conservada y la del importador con `99` añadida—, que es exactamente el
-   defecto que este lote vino a matar: el banco exigiendo lo mismo por dos
-   caminos. **Arréglese el test** (que compare la lista de filas, no un `dict`
-   que se traga los duplicados) y corríjase la ficha.
-2. **El 7 está mal etiquetado.** `huella.py`, `sort_keys=True` → `False`:
-   **sobrevive**, como corresponde a un mutante que el propio análisis reconoce
-   equivalente («aquí sí da el mismo fichero»). El test byte a byte no puede
-   matarlo porque el byte no cambia. Que se declare **EQUIVALENTE con su
-   demostración ejecutada** —que la tiene— en vez de «cerrado con test»: con
-   esa ficha, la frase «los 9 cerrados con test, ninguno equivalente» del
-   informe y de «Evidencias» es falsa, y esa frase es la que lee el siguiente.
-
-Los otros siete (1, 2, 4, 5, 6, 8, 9) mueren con el test que dice cada ficha, y
-los cacé nombrando el test que falla en cada caso.
-
-## La guarda reescrita: el arreglo es correcto
-
-`_solo_del_importador` pasa de deducir las columnas en duda de las filas de la
-pestaña de turno a recibirlas declaradas para **toda la importación**
-(`_columnas_en_duda`). Es más estricto, no menos: el conjunto de columnas
-protegidas crece, y sin columnas declaradas devuelve `False`, o sea **no retira
-nada**. Corrige el defecto real que describe —una pestaña donde esta vez no se
-escribe nada no podía retirar, que es justo cuando el humano borra una línea— y
-los 11 mutantes de ese código mueren.
-
-**Riesgo residual, no bloqueante**: la fila se protege por las columnas que el
-importador deja en `?`. Un valor del humano en una columna que el importador
-**nunca escribe ni deja en `?`** no protege su fila. Hoy no es alcanzable en los
-7 RES —los cubre la instantánea—, pero si algún día se retiran filas de otros
-casos, conviene que `interrogantes` sea «todas las columnas que el importador
-produce en esa tabla», no solo las que deja en duda.
+Mi conclusión coincide con la suya, pero medida por separado: **no queda ningún
+falso verde de esta familia** en el banco de F-045.
 
 ## Checkpoints
 
-- **C1** [x] exit 0 y ficheros obligatorios. **C2** [x] estado coherente, rama
-  correcta, `current.md` al día.
-- **C3** [x] `huella.py` sigue siendo dominio puro y sin valores (solo claves);
-  ruta en la primera línea, sin prints, secretos ni dependencias nuevas.
+- **C1** [x] exit 0 y ficheros obligatorios. **C2** [x] una feature
+  `in_progress`, rama correcta, `current.md` al día.
+- **C3** [x] este lote no toca producción; lo aprobado en las pasadas anteriores
+  sigue en pie (dominio puro, ruta en la primera línea, sin prints ni secretos).
 - **C3 bis** N/A **justificado**: no toca `docs/referencia/`.
-- **C4** [x] 865 en verde y **el hueco que señalé está cubierto**: la
-  instantánea de R17 es el test que faltaba.
-- **C4 bis** [ ] campaña del lote presente, bien medida y verificada por mí,
-  pero **un superviviente sigue vivo con la ficha diciendo que muere** y otro
-  está etiquetado al revés. En `critico` eso es el checkbox vacío.
+- **C4** [x] 865 en verde; cada requisito con su test trazable, y los que
+  comprobaban de mentira ya no lo hacen.
+- **C4 bis** [x] **cerrado**: fase RED con trazas, cobertura `[OK]`, dos
+  campañas con sus totales recalculados por mí (capa 1: 266 mutantes;
+  lote 2: 325 líneas y 44 mutantes, más los **11 posteriores al SHA medido que
+  reinyecté yo y mueren**), RM1 comprobado en las dos, RM2 coherente (871 s ×
+  4 workers ÷ 44 = 79 s frente a línea base 88 s), RM3 sin equivalentes muertos,
+  RM4 usado en cada pasada, **RM5 con muestra reproducida** —el único
+  equivalente del lote, demostrado sobre el dato real— y RM6 sin defensa
+  eliminada.
 - **C4 ter** [x] la puerta corre y sale N/A con su motivo.
-- **C5** [x] commits por tarea, sin temporales, estado real. Bien separado el
-  informe del lote (`mutacion_F-045_lote2.md`), como F-043.
+- **C5** [x] commits por tarea, `tasks.md` marcado, sin temporales, estado real
+  en `features.json`; informes de campaña separados por lote, como F-043.
 
-## Fuera de este lote
+## Lo que este review deja atado, para que no se pierda
 
-Los dos hallazgos nuevos del banco —`ALBARAN VALORADO` leído al revés (9 líneas,
-17 fallos falsos) y la consolidación de FER-002 (37)— **no son de este lote y no
-entran en el veredicto**; anotados para su ficha. Siguen abiertas las tres
-condiciones del humano: los documentos que faltan (RES-020, RES-021),
-`codigo_imputacion` en `?` y las líneas de contrato de IA3/IA4/E2E.
+1. **La restauración de los 38 valores** (35 + los 3 `modifier_source`) está
+   verificada valor a valor contra `5132bdc` y `697f00e`: **cero degradados** y
+   ninguna fila del original sin pareja hoy.
+2. **El guardián** `tests/datos/afirmado_por_el_humano_RES.json` fija 496
+   valores —433 idénticos al estado sano previo, ninguno centinela— y **falla
+   nombrando el campo** cuando degrado uno a mano. Es la red que faltaba,
+   porque los libros `.xlsx` no se versionan.
+3. **La guarda de retirada** es más estricta que la anterior y sus 11 mutantes
+   mueren. Riesgo residual anotado y **no bloqueante**: un valor del humano en
+   una columna que el importador nunca escribe ni deja en `?` no protege su
+   fila; si algún día se retiran filas fuera de los 7 RES, conviene ampliar
+   `interrogantes` a todas las columnas que el importador produce en esa tabla.
+
+## Condiciones de cierre que siguen siendo del humano
+
+- **Los documentos que faltan**: RES-020 y RES-021 siguen sin papel y salen
+  OMITIDOS; los otros 57 ya están renombrados a su `caso_id`.
+- **`codigo_imputacion` en `?`** en las 114 líneas: columna nueva en el Excel o
+  aceptar la ceguera de la mitad de extracción del patrón 1.
+- **`INPUTS.CONTRATO_LINEAS` y `CONDICIONES`**: sin ellas IA3, IA4 y el E2E no
+  miden nada; las tres vías están medidas en `impl_F-045_contrato_lineas.md`.
+
+Y fuera de este lote, anotados para su ficha y **sin efecto en el veredicto**:
+`ALBARAN VALORADO` leído al revés (9 líneas, 17 fallos falsos) y la
+consolidación de FER-002 (37 fallos que no son defectos).
