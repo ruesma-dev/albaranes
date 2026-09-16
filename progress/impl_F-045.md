@@ -199,10 +199,10 @@ decide el humano con los números de la sección anterior.
 
 | Evidencia | Valor |
 |---|---|
-| Tests ejecutados (suite de la raíz) | **811 pasan, 0 fallan** |
-| De ellos, de F-045 | **242** en 19 ficheros `tests/test_f045_*` |
-| Cobertura de las líneas cambiadas | **98,3 %** (906/922), umbral 80 %, nivel `critico` |
-| Tiempo de la suite | **102,89 s** |
+| Tests ejecutados (suite de la raíz) | **819 pasan, 0 fallan** |
+| De ellos, de F-045 | **250** en 20 ficheros `tests/test_f045_*` |
+| Cobertura de las líneas cambiadas | **97,9 %** (914/934), umbral 80 %, nivel `critico` |
+| Tiempo de la suite | **165,20 s** |
 | Mutación · campaña completa, sin muestreo | **266 mutantes, 176 muertos, 90 supervivientes**, 0 timeouts, 0 sin veredicto, 6381 s |
 | Mutación · workers | **4**, uno por `git worktree`, con el `README.md` del humano en un stash |
 | Mutación · tras los tests de T18 y del review | de los 90, **74 mueren** y **16 son equivalentes**, cada uno con su comprobación ejecutada; ninguno pendiente |
