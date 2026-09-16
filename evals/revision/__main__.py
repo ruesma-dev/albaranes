@@ -230,10 +230,11 @@ def _escribir(
             tabla: huella.claves_de(previa or {}, tabla)
             for tabla in escritura.CLAVES_DE_TABLA
         }
+        dudosas = _columnas_en_duda(tablas)
         cambia = creadas or any(
             escritura.escribir_pestana(
                 ruta, pestana, _definiciones(defs), filas, caso_ids,
-                ejecutar=False, huella_previa=huellas,
+                ejecutar=False, huella_previa=huellas, interrogantes=dudosas,
             )
             for pestana, defs, filas in trabajo
         )
@@ -243,10 +244,29 @@ def _escribir(
         for pestana, defs, filas in trabajo:
             escritura.escribir_pestana(
                 ruta, pestana, _definiciones(defs), filas, caso_ids,
-                huella_previa=huellas,
+                huella_previa=huellas, interrogantes=dudosas,
             )
         escritos.append(definicion.fichero)
     return escritos
+
+
+def _columnas_en_duda(tablas: dict) -> dict[str, set[str]]:
+    """Qué columnas deja el importador en `?`, mirando TODA la importación.
+
+    Es lo que distingue una fila suya de una del humano cuando la clave ya no
+    las separa. Deducirlas de las filas de una pestaña concreta dejaría sin
+    poder retirar justo a la pestaña donde esta vez no escribe nada, que es
+    exactamente cuando el humano acaba de quitar esa línea del Excel.
+    """
+    dudosas: dict[str, set[str]] = {}
+    for por_pestana in tablas.values():
+        for por_tabla in por_pestana.values():
+            for tabla, filas in por_tabla.items():
+                for fila in filas:
+                    dudosas.setdefault(tabla, set()).update(
+                        campo for campo, valor in fila.items() if valor == "?"
+                    )
+    return dudosas
 
 
 def _definiciones(tablas) -> tuple[escritura.DefTabla, ...]:
