@@ -9,8 +9,8 @@ siguiente importación lo reescribe.
 - Filas leídas de la tabla plana: **142**
 - Casos (albaranes): **59**, de los que **0** son nuevos
 - Libros comprobados: 6
-- Libros escritos: (ninguno: ningún libro cambiaba; ver R18)
-- Copias de seguridad: 0
+- Libros escritos: IA1_extraccion.xlsx, RESULTADO_FINAL.xlsx
+- Copias de seguridad: 2
 
 ## Cómo se reparten los casos
 
@@ -31,60 +31,80 @@ importación que se traga casos en silencio es peor que no importar.
 
 ### Plan de renombrado
 
-(ningún fichero emparejado)
+Revísalo ANTES de renombrar: deshacer un renombrado sobre una
+asignación equivocada es caro, y un caso emparejado con el papel de
+otro no lo detecta nadie. `estrategia` dice por qué casó cada uno:
+`exacto` (el nombre ES el código), `subcadena` (el código va dentro
+del nombre) o `sin_ceros` (además, ignorando los ceros de la
+izquierda).
+
+| Fichero | Caso | Estrategia |
+|---|---|---|
+| `SALMEDINA_0000168.pdf` | RES-001 | exacto |
+| `SALMEDINA_0000589.pdf` | RES-003 | exacto |
+| `Hormigones Paz del Barrio_1167.pdf` | HOR-003 | sin_ceros |
+| `Hormigones Paz del Barrio_1229.pdf` | MOR-002 | sin_ceros |
+| `SALMEDINA_0001977.pdf` | RES-005 | exacto |
+| `SALMEDINA_0003935.pdf` | RES-002 | exacto |
+| `SALMEDINA_0003967.pdf` | RES-004 | exacto |
+| `TyG Angel_09256.pdf` | ALQ-001 | sin_ceros |
+| `SALMEDINA_0025146.pdf` | RES-006 | exacto |
+| `SALMEDINA_0026122.pdf` | RES-007 | exacto |
+| `0334191.pdf` | HOR-004 | exacto |
+| `170161.pdf` | GEN-009 | exacto |
+| `Pavimarsa_202601007181.pdf` | GEN-003 | exacto |
+| `Pavimarsa_202601007378.pdf` | GEN-002 | exacto |
+| `2115714.pdf` | FER-003 | exacto |
+| `Feymaco_2137569.pdf` | FER-002 | exacto |
+| `Feymaco_2139643.pdf` | FER-001 | exacto |
+| `Hormigon Sierra Madrid_224964.pdf` | HOR-002 | exacto |
+| `Hormigon Sierra Madrid_225137.pdf` | HOR-001 | exacto |
+| `Mortero Sierra Madrid_225225.pdf` | MOR-001 | exacto |
+| `0669 BLOSSOM II _024346.png` | RES-010 | subcadena |
+| `0669 BLOSSOM II _024385.png` | RES-011 | subcadena |
+| `0669 BLOSSOM II _024566.png` | RES-012 | subcadena |
+| `0669 BLOSSOM II _024571.png` | RES-013 | subcadena |
+| `0669 BLOSSOM II _024788.png` | RES-014 | subcadena |
+| `0669 BLOSSOM II _024790.png` | RES-015 | subcadena |
+| `0693_HORMIGON HA-25-F-20-XC1 - 2025-09-09 - Alb_249917.pdf` | HOR-012 | exacto |
+| `0693_HORMIGON HA-25-B-22-XC2 - 2025-09-09 - Alb_249924.pdf` | HOR-013 | exacto |
+| `0693_HORMIGON HA-25-B-22-XC2+INCOMPLETA-NO PROCEDE - 2025-09-09 - Alb_249927.pdf` | HOR-014 | exacto |
+| `0693_HORMIGON HM-10-B-22-1 - 2025-09-11 - Alb_249997.pdf` | HOR-016 | exacto |
+| `0693_HORMIGON HA-25-F-12-XC2+INCOMPLETA - 2025-09-12 - Alb_250012.pdf` | HOR-017 | exacto |
+| `261046.pdf` | GEN-010 | exacto |
+| `2672297.pdf` | GEN-008 | exacto |
+| `2672497.pdf` | GEN-007 | exacto |
+| `2674074.pdf` | GEN-006 | exacto |
+| `2674143.pdf` | GEN-005 | exacto |
+| `2674163.pdf` | GEN-004 | exacto |
+| `0669 BLOSSOM II _029990.png` | RES-018 | subcadena |
+| `0669 BLOSSOM II _030366.png` | RES-019 | subcadena |
+| `0669 BLOSSOM II _030440.png` | RES-016 | subcadena |
+| `0669 BLOSSOM II _030490.png` | RES-017 | subcadena |
+| `0693_HORMIGON HA-25-F-12-XC2-1 - 2025-09-11 - Alb_37515.pdf` | HOR-015 | exacto |
+| `0693_MORTERO D-300-B-5-1 - 2025-09-29 - Alb_37816.pdf` | MOR-004 | exacto |
+| `Mahorsa_58826.pdf` | GRA-001 | exacto |
+| `Mahorsa_58878.pdf` | GRA-002 | exacto |
+| `93478.pdf` | RES-009 | exacto |
+| `96187.pdf` | RES-008 | exacto |
+| `Vodaland_A261584.pdf` | GEN-001 | exacto |
+| `0669_HORMIGON HA-25-B-20-XC2+INCOMPLETA - 2024-06-04 - Alb_H122959.pdf` | HOR-007 | exacto |
+| `0669_MORTERO MD-200-2-36H+INCOMPLETA - 2025-06-23 - Alb_H132193.pdf` | MOR-003 | exacto |
+| `0669_HORMIGON HA-25-B-12-XC2-F-P+INCOMPLETA - 2025-07-15 - Alb_H132525.pdf` | HOR-005 | exacto |
+| `0669_HORMIGON HA-25-B-20-XC2$ - 2023-12-19 - Alb_H98634.pdf` | HOR-006 | exacto |
+| `0669_HORMIGON HA-30-B-20-XC2 - 2024-01-10 - Alb_H99168.pdf` | HOR-011 | exacto |
+| `J1000505.pdf` | COM-001 | exacto |
+| `0669_HORMIGON HA-25-F-20-XC2 - 2024-03-21 - Alb_W25237.pdf` | HOR-010 | exacto |
+| `0669_HORMIGON HNE-15-B-20 - 2024-06-05 - Alb_W25963.pdf` | HOR-008 | exacto |
+| `0669_HORMIGON HMF-20-P-CR-B-20-12-X0-P - 2024-08-06 - Alb_W26580.pdf` | HOR-009 | exacto |
+
+**No se ha renombrado nada**: hay que pedirlo con `--renombrar`.
 
 ### Lo que se quedó fuera
 
-- `fila_sin_fichero` — ALQ-001 (código '0009256'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — COM-001 (código 'J1000505'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — FER-001 (código '2139643'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — FER-002 (código '2137569'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — FER-003 (código '2115714'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — GEN-001 (código 'A261584'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — GEN-002 (código '202601007378'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — GEN-003 (código '202601007181'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — GEN-004 (código '2674163'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — GEN-005 (código '2674143'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — GEN-006 (código '2674074'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — GEN-007 (código '2672497'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — GEN-008 (código '2672297'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — GEN-009 (código '170161'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — GEN-010 (código '261046'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — GRA-001 (código '58826'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — GRA-002 (código '58878'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-001 (código '225137'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-002 (código '224964'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-003 (código '0001167'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-004 (código '0334191'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-005 (código 'H132525'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-006 (código 'H98634'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-007 (código 'H122959'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-008 (código 'W25963'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-009 (código 'W26580'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-010 (código 'W25237'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-011 (código 'H99168'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-012 (código '249917'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-013 (código '249924'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-014 (código '249927'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-015 (código '37515'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-016 (código '249997'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — HOR-017 (código '250012'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — MOR-001 (código '225225'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — MOR-002 (código '0001229'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — MOR-003 (código 'H132193'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — MOR-004 (código '37816'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — RES-008 (código '96187'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — RES-009 (código '93478'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — RES-010 (código '24346'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — RES-011 (código '24385'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — RES-012 (código '24566'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — RES-013 (código '24571'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — RES-014 (código '24788'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — RES-015 (código '24790'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — RES-016 (código '30440'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — RES-017 (código '30490'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — RES-018 (código '29990'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
-- `fila_sin_fichero` — RES-019 (código '30366'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
+- `codigo_sin_fila` — '0669 BLOSSOM II _117.png': ninguna de las estrategias (exacto, subcadena, sin_ceros) encuentra en el Excel un código de albarán que case con este nombre.
+- `codigo_sin_fila` — '0669 BLOSSOM II _37.png': ninguna de las estrategias (exacto, subcadena, sin_ceros) encuentra en el Excel un código de albarán que case con este nombre.
+- `codigo_sin_fila` — '0669 BLOSSOM II _51.png': ninguna de las estrategias (exacto, subcadena, sin_ceros) encuentra en el Excel un código de albarán que case con este nombre.
 - `fila_sin_fichero` — RES-020 (código 'MC26442903'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
 - `fila_sin_fichero` — RES-021 (código 'MC26443249'): el Excel lo trae pero no hay ningún documento suyo en la carpeta de entrada.
 
@@ -112,7 +132,7 @@ del sistema que estos casos ponen a la vista.
 | Libro | Tabla | Columna | valor | `?` | vacía |
 |---|---|---|---:|---:|---:|
 | IA1 | cabeceras | caso_id | 59 | 0 | 0 |
-| IA1 | cabeceras | fichero_albaran | 7 | 0 | 52 |
+| IA1 | cabeceras | fichero_albaran | 57 | 0 | 2 |
 | IA1 | cabeceras | proveedor_nombre | 59 | 0 | 0 |
 | IA1 | cabeceras | proveedor_cif | 0 | 59 | 0 |
 | IA1 | cabeceras | fecha | 59 | 0 | 0 |
@@ -174,7 +194,7 @@ del sistema que estos casos ponen a la vista.
 | INPUTS | lineas_albaran | codigo_imputacion | 0 | 0 | 114 |
 | INPUTS | lineas_albaran | observaciones_albaran | 0 | 0 | 114 |
 | FINAL | datos_generales | caso_id | 59 | 0 | 0 |
-| FINAL | datos_generales | fichero | 7 | 0 | 52 |
+| FINAL | datos_generales | fichero | 57 | 0 | 2 |
 | FINAL | datos_generales | obra | 59 | 0 | 0 |
 | FINAL | datos_generales | proveedor | 59 | 0 | 0 |
 | FINAL | datos_generales | cif | 59 | 0 | 0 |

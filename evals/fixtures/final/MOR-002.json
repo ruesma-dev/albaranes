@@ -2,7 +2,7 @@
   "caso_id": "MOR-002",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
   "tablas": {
     "datos_generales": [
       {
@@ -11,7 +11,7 @@
         "comentario": "La partida ha puesto 14.01.02.02, cuando es P4.01.02.02. partida debe buscar en lista de partidas de la obra | La partida ha puesto 14.01.02.02, cuando es P4.01.02.02. partida debe buscar en lista de partidas de la obra. No ha creado esta linea. Sin embargo hay una casilla claramente donde dice carga incompleta 3. los morteross tambien tienen carga incompleta como los hormigones, añadir a la tipologia",
         "contrato_elegido": "CTSU25/0001",
         "fecha": "2026-06-09",
-        "fichero": null,
+        "fichero": "MOR-002.pdf",
         "motivo_revision": null,
         "numero_albaran": "@@NO_COMPARAR@@",
         "obra": "696",

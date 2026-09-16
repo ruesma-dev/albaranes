@@ -2,7 +2,7 @@
   "caso_id": "GEN-002",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
   "tablas": {
     "datos_generales": [
       {
@@ -11,7 +11,7 @@
         "comentario": "habia 2 contratos, y no ha sabido elegir uno. Podriamos hacer uqe si no sabe elegir que coja los 2, lo smerge (distinguiendo que es un mergeo) y que siga con eso. No ha coigo el capitulo inicial P5. el codigo era P5.09.03",
         "contrato_elegido": "CTSU25/0317",
         "fecha": "2026-06-11",
-        "fichero": null,
+        "fichero": "GEN-002.pdf",
         "motivo_revision": null,
         "numero_albaran": "@@NO_COMPARAR@@",
         "obra": "696",

@@ -2,7 +2,7 @@
   "caso_id": "HOR-016",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
   "tablas": {
     "datos_generales": [
       {
@@ -11,7 +11,7 @@
         "comentario": "el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2 | no ha salido esta linea. Porque no la ha generado? El contrato es 2024 (se ve en codigo) y el alabran 2025",
         "contrato_elegido": "CTSU24/0452",
         "fecha": "2025-09-11",
-        "fichero": null,
+        "fichero": "HOR-016.pdf",
         "motivo_revision": null,
         "numero_albaran": "@@NO_COMPARAR@@",
         "obra": "693",

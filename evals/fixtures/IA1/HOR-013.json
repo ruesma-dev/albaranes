@@ -2,14 +2,14 @@
   "caso_id": "HOR-013",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "6cf05b81645531a8c1d252ad48b1f38287ad1f6cc6eb644c4962954954ff9144",
+  "sha256_libro": "ba90a8cfb7acbfb6426dcdb47bd527295fc8aa40aa79b98569b4d6dab42f0c93",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "HOR-013",
         "comentario": "el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2",
         "fecha": "2025-09-09",
-        "fichero_albaran": null,
+        "fichero_albaran": "HOR-013.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
         "numero_albaran": "@@NO_COMPARAR@@",
         "obra_codigo": "@@NO_COMPARAR@@",

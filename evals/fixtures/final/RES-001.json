@@ -2,7 +2,7 @@
   "caso_id": "RES-001",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
   "tablas": {
     "datos_generales": [
       {

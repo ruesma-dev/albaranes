@@ -2,7 +2,7 @@
   "caso_id": "RES-015",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "7baf4a7177a6b2b0aa3667281661a1bbd6c3ba03390483e975ce390b053eaaf4",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
   "tablas": {
     "datos_generales": [
       {
@@ -11,7 +11,7 @@
         "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año",
         "contrato_elegido": "CTSB23/0964",
         "fecha": "2025-02-14",
-        "fichero": null,
+        "fichero": "RES-015.png",
         "motivo_revision": null,
         "numero_albaran": "@@NO_COMPARAR@@",
         "obra": "669",
