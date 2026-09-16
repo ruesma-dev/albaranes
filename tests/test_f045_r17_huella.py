@@ -134,10 +134,18 @@ def test_f045_r17_con_filas_nuevas_si_se_retira_lo_que_es_suyo():
     assert [f["num_linea"] for f in fundidas] == [1, 9]
 
 
-def test_f045_r17_el_casado_por_prefijo_no_pisa_una_coincidencia_exacta():
-    """Si la clave casa exacta, esa es: buscar además por prefijo podría
+def test_f045_r17_el_casado_por_prefijo_no_duplica_la_sintetica_del_humano():
+    """Si la clave casa EXACTA, esa es: buscar además por prefijo empareja la
 
-    emparejarla con otra fila y escribir los valores en la línea equivocada."""
+    fila nueva con dos existentes y **escribe las dos**, duplicando la línea
+    deducida que el humano anotó. El banco esperaría entonces dos sintéticas
+    donde el sistema emite una.
+
+    Las filas se comparan **en lista, sin colapsar**: la versión anterior de
+    este test las metía en un `dict` por descripción, y ahí la fila duplicada
+    pisaba a su gemela y el fallo pasaba invisible. Es la segunda vez en esta
+    feature que un test dice cubrir algo y pasa con el fallo puesto.
+    """
     existentes = [
         {"caso_id": "X", "num_linea_base": 1, "descripcion_esperada": "INCREMENTO",
          "precio_unitario": 10},
@@ -152,9 +160,10 @@ def test_f045_r17_el_casado_por_prefijo_no_pisa_una_coincidencia_exacta():
         existentes, nuevas, ("caso_id", "num_linea_base", "descripcion_esperada"),
         campo_prefijo="descripcion_esperada",
     )
-    por_descripcion = {f["descripcion_esperada"]: f["precio_unitario"] for f in fundidas}
-    assert por_descripcion["INCREMENTO LER 170604"] == 99
-    assert por_descripcion["INCREMENTO"] == 10
+    assert [(f["descripcion_esperada"], f["precio_unitario"]) for f in fundidas] == [
+        ("INCREMENTO", 10),
+        ("INCREMENTO LER 170604", 99),
+    ]
 
 
 # --- El informe dice bien en qué dirección va el cambio ------------------

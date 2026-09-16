@@ -147,3 +147,29 @@ tres reimportaciones seguidas no degradan ni uno. Era daño viejo sin restaurar
 los **496 valores afirmados** de los 7 casos RES y el test los compara uno a
 uno, fallando **con el nombre** de cada pérdida. Comprobado que muerde:
 degradando a mano un `match_method` se pone en rojo.
+
+## El patrón que me ha mordido dos veces: el test que pasa con el fallo puesto
+
+Dos veces en esta feature un test ha dicho cubrir algo y ha pasado **con el
+defecto dentro**:
+
+1. El de **R16**, que comprobaba la copia de seguridad en `escritura` cuando el
+   mutante vivía un nivel más arriba, en el camino de la CLI. No mataba nada.
+2. El del **casado por prefijo**, que metía las filas en un `dict` por
+   descripción: la fila duplicada pisaba a su gemela y el `dict` salía idéntico
+   con mutante y sin él, aunque hubiera **3 filas donde debían ir 2**.
+
+Los dos tienen la misma forma: **comparar una proyección en vez del resultado**.
+Un `dict` por clave pierde los duplicados; un nivel por debajo pierde el camino
+real. Y las dos veces el mutante correspondía a un defecto de verdad —la copia
+que deja de ser el estado previo, la sintética del humano duplicada—, así que la
+proyección no solo no cazaba: tapaba.
+
+**Repaso hecho sobre los 23 ficheros de test de F-045.** El colapso a `dict`
+sobre filas aparecía en **un solo sitio**, el ya citado, y está reescrito para
+comparar la lista entera. Los `set()` que quedan son todos sobre **nombres de
+columna, de tabla o de caso**, donde un duplicado es imposible por
+construcción. Los tests de fusión que solo miraban el recuento (`len(...) == N`)
+sí habrían cazado esta duplicación —de hecho es lo único que la habría cazado—,
+y aun así se han reforzado para decir **qué fila queda y con qué valores**, que
+es lo que distingue «hay dos filas» de «hay las dos filas correctas».

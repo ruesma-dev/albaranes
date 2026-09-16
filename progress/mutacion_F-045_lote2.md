@@ -43,22 +43,32 @@ Origen del diff: **rama** (`5132bdc39889c18af588ec3c3d045775f3fbe524` .. `HEAD`)
 
 ## Supervivientes: resultado del análisis
 
-**Los 9 están cerrados con test; ninguno se justifica como equivalente.** Todos
-caían en el código que acababa de perder datos —`huella.py` entero y las dos
-guardas de `escritura.py` que deciden qué se retira—, así que aquí no había
-sitio para la prosa: **ante la duda, test**.
+**8 cerrados con test y 1 equivalente justificado.** Todos caían en el código
+que acababa de perder datos —`huella.py` entero y las dos guardas de
+`escritura.py` que deciden qué se retira—, así que casi no había sitio para la
+prosa: **ante la duda, test**.
 
-Dos merecen mención. El **7** (`sort_keys`) sí es equivalente de verdad en este
-fichero, y aun así se cierra con test: es exactamente la justificación que en
-`mapa.py` resultó falsa, y fijar el byte cuesta lo mismo que razonarlo. Y el
-**2** destapó que la guarda de `_solo_del_importador` era casi código muerto
-—nunca retiraba, porque la clave siempre tiene valor—, lo que además impedía
+> **Corregido tras el review (pasada 3).** La versión anterior de esta sección
+> decía «los 9 cerrados con test, ninguno equivalente», y era **falso por los
+> dos lados**: el **7** (`sort_keys`) es equivalente de verdad y ningún test lo
+> mata, y el **3** seguía **vivo**, porque el test que lo nombraba colapsaba las
+> filas en un `dict` y así no veía que el mutante devuelve 3 donde deben ir 2,
+> **duplicando la sintética del humano**. Los dos están arreglados y medidos por
+> reinyección; el informe dice ahora lo que el código hace.
+
+El **2** destapó además que la guarda de `_solo_del_importador` era casi código
+muerto —nunca retiraba, porque la clave siempre tiene valor—, lo que impedía
 retirar en la pestaña donde el humano acababa de borrar una línea; se reescribió
 para declarar las columnas en duda de TODA la importación.
 
-Verificado por reinyección uno a uno contra la suite acotada a F-045; los dos
-cuyas líneas se movieron al reescribir la guarda se reinyectaron a mano sobre el
-código de hoy. **9 de 9 mueren.**
+| Superviviente | Estado |
+|---|---|
+| 1, 2, 3, 4, 5, 6, 8, 9 | **muertos** con test nuevo, verificado por reinyección |
+| 7 (`sort_keys` de la huella) | **equivalente**, con su comprobación ejecutada |
+
+Verificado por reinyección uno a uno contra la suite acotada a F-045; los que
+cambiaron de línea al reescribir la guarda se reinyectaron a mano sobre el
+código de hoy.
 
 ## Supervivientes
 
@@ -91,8 +101,8 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 
 #### Análisis
 
-- **Por qué sobrevivía**: con `or`, el casado por prefijo se intentaría incluso cuando la clave ya casa exacta, y podría emparejar la fila con otra y escribir los valores en la línea equivocada.
-- **Decisión**: TEST NUEVO — `test_f045_r17_el_casado_por_prefijo_no_pisa_una_coincidencia_exacta`. Reinyectado uno a uno, **muere**.
+- **Por qué sobrevivía**: con `or`, el casado por prefijo se intenta incluso cuando la clave ya casa EXACTA, y entonces la fila nueva se empareja también con la existente más corta y **se escriben las dos**: 3 filas donde deben ir 2, duplicando la línea deducida que el humano anotó. El banco esperaría dos sintéticas donde el sistema emite una. El test que lo nombraba **pasaba con el mutante puesto** porque colapsaba las filas en un `dict` por descripción, y ahí la duplicada pisaba a su gemela: el fallo quedaba invisible.
+- **Decisión**: TEST NUEVO — `test_f045_r17_el_casado_por_prefijo_no_duplica_la_sintetica_del_humano`, que compara las filas **en lista, sin colapsar**. Reinyectado sobre el código de hoy, **muere**.
 
 ### 4. `evals/revision/huella.py:29` [entero]
 
@@ -131,8 +141,8 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 
 #### Análisis
 
-- **Por qué sobrevivía**: `sort_keys=False` sí da el mismo fichero aquí —el envoltorio solo tiene `_doc` y `tablas`, ya alfabéticos, y dentro hay LISTAS, no dicts—, a diferencia de `mapa.py`, donde los registros se montaban en el orden de `CAMPOS`. Aun así se cierra con test en vez de justificarse: fijar el byte cuesta lo mismo y no depende de que el razonamiento siga siendo cierto mañana.
-- **Decisión**: TEST NUEVO — el mismo test byte a byte. Reinyectado uno a uno, **muere**.
+- **Por qué ningún test lo caza**: porque no hay nada que cazar. El envoltorio que escribe `guardar` solo tiene `_doc` y `tablas`, ya en orden alfabético, y dentro hay **listas, no dicts**, así que `sort_keys` no tiene nada que ordenar. Comprobado ejecutando `json.dumps` con `True` y con `False` sobre la huella real del repositorio (35.668 bytes) y sobre unas tablas deliberadamente desordenadas: **idéntico en los dos casos**. El orden que sí importa —el de las tablas y el de sus claves— lo fija el `sorted()` de `guardar`, y de eso sí hay test.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. **No es el caso de `mapa.py`**, donde la misma justificación resultó falsa: allí cada registro es un `dict` montado en el orden de `CAMPOS`, que NO es alfabético, y por eso `sort_keys` sí cambiaba el fichero. La diferencia es que aquí se ha comprobado ejecutando en vez de razonado.
 
 ### 8. `evals/revision/huella.py:76` [not]
 

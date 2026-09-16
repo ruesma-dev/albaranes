@@ -157,8 +157,13 @@ def test_f045_r12bis_la_sintetica_importada_se_funde_con_la_escrita_a_mano():
         existentes, nuevas, ("caso_id", "num_linea_base", "descripcion_esperada"),
         campo_prefijo="descripcion_esperada",
     )
-    assert len(fundidas) == 1
-    assert fundidas[0]["precio_unitario"] == 90
+    # Una sola fila, con el precio del humano intacto. El `comentario` SÍ lo
+    # pisa el del Excel —es laxo y viene de ahí, por eso el guardián de R17 no
+    # lo vigila—, y aquí el Excel no trae ninguno.
+    assert [(f["descripcion_esperada"], f["precio_unitario"], f["comentario"])
+            for f in fundidas] == [
+        ("INCREMENTO LER 170604 MATERIALES DE AISLAMIENTO-E", 90, None),
+    ]
 
 
 def test_f045_r12bis_dos_sinteticas_distintas_del_mismo_caso_no_se_funden():
@@ -175,7 +180,10 @@ def test_f045_r12bis_dos_sinteticas_distintas_del_mismo_caso_no_se_funden():
         existentes, nuevas, ("caso_id", "num_linea_base", "descripcion_esperada"),
         campo_prefijo="descripcion_esperada",
     )
-    assert len(fundidas) == 2
+    assert [f["descripcion_esperada"] for f in fundidas] == [
+        "INCREMENTO POR AÑO 2025 EN HORMIGON",
+        "INCREMENTO POR AÑO 2026 EN HORMIGON",
+    ]
 
 
 def test_f045_r12bis_ante_dos_candidatos_por_prefijo_no_se_elige_ninguno():
@@ -260,15 +268,17 @@ def test_f045_r12bis_la_sintetica_casa_aunque_el_humano_escriba_LEER_y_espacios(
     cada sobre la misma línea base: son la misma, y escribir las dos haría que
     el banco esperase dos sintéticas donde el sistema emite una.
     """
-    existentes = [{"caso_id": "RES-007", "num_linea_base": 1,
+    existentes = [{"caso_id": "RES-007", "num_linea_base": 1, "modifier_source": "gestion_residuos",
                    "descripcion_esperada": "INCREMENTO LER 170802", "precio_unitario": 77}]
-    nuevas = [{"caso_id": "RES-007", "num_linea_base": 1,
+    nuevas = [{"caso_id": "RES-007", "num_linea_base": 1, "modifier_source": "?",
                "descripcion_esperada": "INCREMENTO LEER 17 08 02", "precio_unitario": 77}]
     fundidas = escritura.fundir_filas(
         existentes, nuevas, ("caso_id", "num_linea_base", "descripcion_esperada"),
         campo_prefijo="descripcion_esperada",
     )
-    assert len(fundidas) == 1
+    assert [(f["descripcion_esperada"], f["modifier_source"]) for f in fundidas] == [
+        ("INCREMENTO LEER 17 08 02", "gestion_residuos"),
+    ]
 
 
 def test_f045_r12bis_con_varias_sinteticas_en_la_misma_base_no_se_adivina():
