@@ -15,16 +15,13 @@ from pathlib import Path
 import openpyxl
 import pytest
 
-#: Las siete tipologías que tienen pestaña propia en los libros por tipología.
-TIPOLOGIAS: tuple[str, ...] = (
-    "Generico-Suministros",
-    "Hormigon",
-    "Mortero",
-    "Residuos",
-    "Bombeo",
-    "Combustible",
-    "Alquiler",
-)
+from evals import conversor
+
+#: Las tipologías que tienen pestaña propia en los libros por tipología. Se
+#: importan del conversor en vez de copiarse: hasta F-045 esta tupla era una
+#: copia, y añadir `Grava` y `Ferreteria` al contrato dejó en rojo 20 tests de
+#: F-011 que fabricaban libros sin esas pestañas.
+TIPOLOGIAS: tuple[str, ...] = conversor.TIPOLOGIAS
 
 _ENC_IA1_CABECERAS = [
     "caso_id",

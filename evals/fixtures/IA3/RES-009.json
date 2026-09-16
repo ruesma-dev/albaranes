@@ -1,0 +1,37 @@
+{
+  "caso_id": "RES-009",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "RES-009",
+        "codigo_partida_final": 32.01,
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "numero de albraran incorrecto. Ha cogido 09478. la obra no venaia y ha deducido una incorrecta. Si tiene match de proveedor solo deberia intentar deducir entre las que tienen dicho porveedor en la obra",
+        "importe_calculado": 157,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 157,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [
+      {
+        "cantidad": 1,
+        "caso_id": "RES-009",
+        "codigo_partida": 32.01,
+        "comentario": "el precio por incremento por año tambien hay que meterlo en residuos. No lo ha cogido. Si no esta en contrato deducir de la oferta",
+        "descripcion_esperada": "INCREMENTO PRECIO 2026",
+        "modifier_source": "@@NO_COMPARAR@@",
+        "num_linea_base": 1,
+        "precio_unitario": 6,
+        "rol_linea": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Residuos"
+}

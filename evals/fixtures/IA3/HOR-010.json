@@ -1,0 +1,49 @@
+{
+  "caso_id": "HOR-010",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "HOR-010",
+        "codigo_partida_final": 5.02,
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": null,
+        "importe_calculado": 678,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 84.75,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "HOR-010",
+        "codigo_partida_final": 5.02,
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "ha cambiado codigo de linea de hormigon en descripcion para casar con sigrid. El codigo del hormigon no se cambia",
+        "importe_calculado": 24,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 3,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-010",
+        "codigo_partida": 5.02,
+        "comentario": "no la ha generado. Y hay cambio de año entre contrato (ver codigo) y año de albaran. Deberia haberlo hecho",
+        "descripcion_esperada": "HA-25/F/20/XC2. INCREMENTO 2024",
+        "modifier_source": "@@NO_COMPARAR@@",
+        "num_linea_base": 2,
+        "precio_unitario": 5.5,
+        "rol_linea": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Hormigon"
+}

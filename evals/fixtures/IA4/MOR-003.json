@@ -1,0 +1,29 @@
+{
+  "caso_id": "MOR-003",
+  "fase": "IA4",
+  "libro": "IA4_conciliacion.xlsx",
+  "sha256_libro": "b81f85b50da7a9b70c1de8c52debf9080fbf418b7be3d9d2b3dd3d85a4ce763c",
+  "tablas": {
+    "conciliacion": [
+      {
+        "caso_id": "MOR-003",
+        "comentario": "partida en blanco es almacen",
+        "concilia": "@@NO_COMPARAR@@",
+        "linea_contrato_esperada": "@@NO_COMPARAR@@",
+        "motivo": null,
+        "num_linea": 1,
+        "precio_unitario_esperado": 83.5
+      },
+      {
+        "caso_id": "MOR-003",
+        "comentario": "partida en blanco es almacen. En mortero tambien hay carga incompleta.en hormigon lo pilla bien , aquí en mortero lo mismo (copiar regla desde hormigon sin inventar)",
+        "concilia": "@@NO_COMPARAR@@",
+        "linea_contrato_esperada": "@@NO_COMPARAR@@",
+        "motivo": null,
+        "num_linea": 2,
+        "precio_unitario_esperado": 15
+      }
+    ]
+  },
+  "tipologia": "Mortero"
+}

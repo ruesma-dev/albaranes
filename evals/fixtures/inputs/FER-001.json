@@ -1,0 +1,35 @@
+{
+  "caso_id": "FER-001",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "FER-001",
+        "contrato_codigo": "CTSU24/0454",
+        "descripcion_caso": "2139643 · FERRETERIA",
+        "ia_destino": "ambas",
+        "origen": "manual",
+        "tipologia": "Ferreteria"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 50,
+        "caso_id": "FER-001",
+        "codigo_imputacion": null,
+        "descripcion": "DISCO ESPECIAL ACERO INOX 115x1x22",
+        "descuentos": 40,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": 0.647,
+        "unidad": "UD"
+      }
+    ]
+  },
+  "tipologia": "Ferreteria"
+}

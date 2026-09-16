@@ -7,6 +7,50 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
+**F-045 · CAPA 1 IMPLEMENTADA** (2026-09-16, rama
+`feature/F-045-banco-evals-revision-manual`, 22 commits de tarea). Informe
+completo en `progress/impl_F-045.md`, importación en
+`progress/import_F-045.md`, mutación en `progress/mutacion_F-045.md`. El banco
+pasa de **7 casos** a **59**, de ocho familias y 18 proveedores; 811 tests en
+verde, 98,3 % de cobertura de lo cambiado y campaña de mutación completa con
+sus 90 supervivientes analizados (**74 con test nuevo, 16 equivalentes**).
+
+**Pasada 1 del review: CHANGES_REQUESTED, ya corregido** (`review_F-045.md`).
+Los dos bloqueantes eran justificaciones de equivalencia FALSAS —`sort_keys`
+del mapa y la copia de seguridad de R16— y se cierran con test, no con prosa;
+los cinco menores también.
+
+**Pasada con LLM del 2026-09-16** (`evals_F-045.md`): ROJO, pero 1295 de los
+1456 fallos eran «obtenido None», o sea ruido del banco. **T13 entró** (no
+estaba en la capa 1): IA1 e IA2 se comparan ya solo por lo que la corrida VE, y
+eso quita 266 fallos de ruido —`caso_id`, `fichero_albaran`, `unidad`,
+`descuentos`— y deja los 86 defectos de verdad a la vista. **IA3, IA4 y el E2E
+no miden nada** hasta que se decida de dónde salen las líneas de contrato: las
+tres vías, medidas, en `progress/impl_F-045_contrato_lineas.md` (recomendada la
+B, por `sigrid-api`). Otra pasada con LLM la decide el humano.
+
+Falta la pasada 2 del reviewer: la feature sigue `in_progress` y NO se marca
+`done`.
+
+**Tres cosas que tiene que decidir el humano antes de cerrar:**
+
+1. **`INPUTS.CASOS.tipologia`**: la implementación escribe la **pestaña**, no
+   la familia de documento que pide `design.md` §3. Motivo medido:
+   `MAPA_TIPO_FAMILIA` de `evals/procesos/{sv5_valoracion,sv6_build}.py` está
+   indexado por pestaña, así que escribir la familia deja a TODOS los casos
+   —incluidos los 7 RES que ya funcionaban— en `tipo_familia='otro'`, que es
+   justo la clasificación equivocada que F-043 vino a arreglar; y esos dos
+   ficheros §2 los declara intocables en F-045. La familia no se pierde: va a
+   `evals/mapa_casos.json` y agrupada en el informe.
+2. **Los incrementos LER de los 7 casos RES**: el Excel los marca
+   `EN ALBARAN`, pero el libro escrito a mano los tenía como sintéticas
+   esperadas. Hoy RES-004 los espera por los dos caminos a la vez, y eso es
+   ground truth contradictorio. Hay que mirar el papel.
+3. **Los originales siguen sin copiarse**: los 59 casos salen como
+   `fila_sin_fichero`. El plan de renombrado se propone en el informe con la
+   estrategia de cada emparejado, y **no se ha renombrado nada**: hay que
+   pedirlo con `python -m evals.revision --renombrar` tras revisarlo.
+
 **F-043 y F-036 están CERRADAS** (`done`, 2026-09-14). El relato completo, con
 las cuatro verificaciones, los tres defectos que solo salieron probando en real
 y las salvedades, está en `progress/history.md`.
@@ -16,6 +60,127 @@ y las salvedades, está en `progress/history.md`.
 desde `evals_summary.xlsx` (carpeta `evals` de OneDrive). **El Excel sigue
 creciendo**: a 2026-09-14 faltaban por valorar los últimos de hormigón y
 residuos, así que se siembra lo cerrado y el resto entra después.
+
+### Spec de F-045 escrita (2026-09-15)
+
+`specs/F-045-banco-evals-revision-manual/` con los tres ficheros (requirements
+150/150, design 186/250). Propone un importador nuevo, `evals/revision/`, que
+traduce la tabla PLANA de la revisión a los seis libros de `ground_truth/` y
+deja `evals/conversor.py` como única puerta a los fixtures. La tabla de reparto
+columna a columna es `design.md` §3 y es normativa. Medido el 2026-09-15 sobre
+el Excel del humano: 142 filas con datos, 59 códigos de albarán, 10 etiquetas de
+familia, 35 filas con comentario de defecto (había crecido desde las ~110).
+
+**Decisiones abiertas que necesita validar el humano antes de implementar:**
+
+1. **La tabla de reparto de `design.md` §3**, y en particular la separación
+   extracción/valoración que pediste: lo que el albarán imprime va a IA1/IA2, lo
+   que el sistema decide (partida final, precio de contrato o de oferta,
+   contrato elegido, obra deducida) va a IA3/IA4 y a `RESULTADO_FINAL`.
+2. **D3 · CORREGIDA por el humano el 2026-09-15.** La versión anterior («toda
+   celda vacía → `?`») era errónea, y la marca de «validada» que llevaba
+   también: un **comentario** vacío significa que eso salió BIEN y hay que
+   seguir comprobándolo en cada pasada, así que esos casos se comparan y hoy
+   deben salir en VERDE (son los de no regresión: 107 de 142 filas, y 36 de los
+   59 albaranes no tienen ni un comentario). El `?` solo lo produce un **valor
+   esperado** ausente, y ni siempre: `descuento` vacío = sin descuento y `LER`
+   vacío = no aplica a esa familia. Con esa lectura la ceguera real del banco
+   son ~10 celdas, no las 107 filas. Está en `design.md` §5 y D3.
+3. **D1 · el mapa de familias**: `CONTENEDORES`→`residuos` y
+   `CAMION GRUA`→`alquiler_maquinaria` son interpretación nuestra de tus
+   etiquetas. Van en fichero de datos para cambiarlas sin tocar código.
+4. **D4 · `numero_albaran` y la obra de IA1 quedan sin vigilar** (patrones 9 y
+   la mitad de extracción del 2): tu columna `codigo alabran` es la clave del
+   documento, no el literal impreso (`0000168` frente a `SS-0000168`).
+5. **D6 · el campo `servicios` de la ficha**: F-045 no toca sv2/sv5/sv6, solo
+   los vigila.
+
+**Añadido el 2026-09-15 · parte de los originales son PNG, a propósito** («asi
+medimos tambien en otro formato»). La spec lo recoge en `design.md` §4 bis: son
+TRES caminos de lectura, no dos —PDF con texto, PDF escaneado (JPEG por página)
+e imagen suelta realzada por `preparar_imagen_para_ia`, rama de sv2 de julio de
+2026 que hoy no mide nadie—, y un fallo que solo sale en el tercero es
+información sobre el FORMATO, no un defecto de extracción. Tres consecuencias:
+el mismo albarán en PDF y en PNG son DOS casos con el mismo ground truth
+(`HOR-012` y `HOR-012-IMG`, hermanados por `gemelo_de`) y no se deduplican; el
+formato NO se escribe en ningún libro, se mide en la corrida y el informe agrupa
+por él; y **hay un agujero que cerrar en `.gitignore`**, que ignora `*.pdf` pero
+no `*.png`, así que hoy un original de proveedor en PNG entraría en git.
+
+**Añadido el 2026-09-15 · el convenio de nombres** que cierra la capa 1: el
+código de albarán va al final del nombre del fichero, después del último `_`, o
+es el nombre entero si no hay `_` (`PROVEEDOR_SS-0003967.pdf` y
+`SS-0003967.png` → `SS-0003967`). Ese es el puente **nombre de fichero → código
+del Excel → `caso_id`**, y sin él emparejar 59 albaranes con sus ~142 filas es
+trabajo manual. Queda en `design.md` §4 y en R20–R22, con tres cosas: el
+renombrado es un script reproducible (T11), no un `mv`; los cuatro casos que la
+regla no cubre (dos ficheros al mismo código, código sin fila, fila sin fichero,
+nombre vacío) salen listados uno a uno en el informe; y **manda el código del
+papel, nunca el persistido** — el precedente es `SS-0801977` leído donde el
+papel decía `SS-0001977`.
+
+**Añadido el 2026-09-15 · residuos y el lío de las familias** (`design.md` §5
+bis y §5 ter). Los tres criterios de residuos que dio el humano están
+**verificados contra el código y NINGUNO existe hoy**: el canon por LER es el
+enganche que `residuos_incrementos.py` deja para F-006 (`spec_ready`); el
+mínimo facturable de 1 tn no está en ningún sitio; y la red M1 del incremento
+por año corta con `!= "hormigon"`, así que ni residuos ni mortero lo generan.
+Sus casos nacen ROJOS como defecto conocido y los arreglos son fichas propias.
+**Pregunta abierta que cambia el ground truth de 19 albaranes**: el mínimo de 1
+tn, ¿alcanza al movimiento de contenedor —que hoy se cuenta en CONTENEDORES,
+§10.6 del doc de dominio— o solo a la línea de incremento/canon, que sí se
+tarifa por tonelada?
+
+Y hay **tres espacios de nombres que nadie reconciliaba**: las 10 etiquetas del
+Excel, las CUATRO familias de documento del catálogo (`combustible` y
+`alquiler_maquinaria` son de alcance LÍNEA) y las 7 pestañas de los libros.
+Poner `combustible` como familia de documento dejaría ese caso ROJO para
+siempre sin que nada esté roto. La tabla de mapeo vive solo en
+`vocabulario.json`, y **tres filas quedan pendientes de ti**: CONTENEDORES
+(¿residuos o genérico con línea de alquiler?), GASOLEO y CAMION GRUA. La
+pestaña Bombeo se queda vacía. Que al catálogo le falten familias de documento
+es ficha aparte: hoy deja mal a 2 albaranes de 59.
+
+**Cerrado el 2026-09-15 · las dos decisiones que faltaban.** (1) El mínimo de 1
+alcanza SOLO a lo que se pesa —canon y tratamiento: 0,42 tn se valora como 1;
+3,10 tn como 3,10—, y el movimiento de contenedor sigue en unidades (1 cambio =
+1 UD), así que el ground truth de los 19 albaranes de residuos queda fijado.
+(2) CONTENEDORES es familia `residuos`; GASOLEO y CAMION GRUA van con documento
+`generico` y la LÍNEA marcada `combustible` / `alquiler_maquinaria`, que es lo
+único que el sistema produce hoy (si algún día fueran familia de documento
+propia, es ficha del catálogo, no de F-045). Las diez etiquetas del Excel tienen
+destino y ninguna cae en «desconocida».
+
+**Corregido el 2026-09-15 · el vocabulario amplía el CATÁLOGO.** GASOLEO no es
+genérico con línea marcada, es **`combustible`** (que hoy existe solo con
+alcance línea), y GRAVA y FERRETERIA son **familias nuevas**, más **FERRALLA**,
+que ni siquiera aparece en el Excel. Eso obliga a tocar
+`ruesma_comun/contratos/familias.py`, que es ruta sensible —su texto se inyecta
+en el prompt de IA1 y toca F-043—, así que **sale como ficha propia** y NO entra
+en F-045. Mientras no exista, los casos de GASOLEO, GRAVA y FERRETERIA nacen
+ROJOS a propósito y el informe los agrupa bajo «la familia aún no existe en el
+catálogo», sin mezclarlos con defectos reales de clasificación. Volumen medido:
+FERRETERIA 11 filas/3 albaranes, GRAVA 2/2, GASOLEO 1/1. Riesgos anotados en esa
+ficha: `grava` no se puede validar con dos líneas, `ferralla` llega sin ningún
+caso, y **el doc de dominio no documenta ninguna regla de ferralla**, así que la
+ficha nace sin insumo de negocio. En el banco esto sí entra: las pestañas
+`Grava` y `Ferreteria` se crean en los seis libros y se añaden a `TIPOLOGIAS`
+del conversor (T8 bis), con prefijos `GRA-` y `FER-`.
+
+### Lo único que sigue abierto de la spec
+
+1. **Validación del humano** de la tabla de reparto (`design.md` §3) y de la
+   política de vacíos por columna (R12): es la PARADA 1 antes de implementar.
+2. **D6 · el campo `servicios` de la ficha F-045**: declara sv2/sv5/sv6, pero la
+   feature no los toca; hay que anotarlo como «vigilados» o vaciarlo.
+
+Revisada la spec entera tras los cambios de hoy, no queda ninguna
+contradicción: se corrigió la última, que la columna `Tipo de albaran` daba a la
+vez la pestaña y la familia, y ya no es cierto para GASOLEO ni CAMION GRUA.
+
+Los arreglos salen como fichas propias, priorizadas en `design.md` §7: patrón 1
+(partida mal leída) y patrón 3 (líneas deducidas que no se generan) primero;
+CIF raro y número de albarán, al final, por tener un solo caso cada uno.
 
 ### Pendiente del humano, arrastrado
 
@@ -503,3 +668,116 @@ sv6 tenian los tres el mismo defecto. Detalle, traza RED y evidencias en
 
 La **pasada de T30 queda desbloqueada**, pero seguira dando ROJO por el punto
 3 de arriba (las CONDICIONES sin propagar, importes x6): eso sigue abierto.
+
+## 2026-09-15 · DESPLIEGUE EN CURSO (punto de reanudación)
+
+**sv3 YA está desplegado y al día**: `sv3-persistencia:r20260915-0002`, una sola
+revisión, estado `ok`. Es el primer servicio que se actualiza **desde el 24 de
+julio**, y el primero construido desde el monorepo. Al arrancar habrá aplicado
+su DDL, así que **las seis columnas `tipologia*` deberían existir ya en la BBDD
+de producción** — falta confirmarlo (el humano; la consulta está abajo).
+
+**Faltan los otros cinco**: sv1, sv2, sv4, sv5 y sv6, todos con
+`r20260724-1632`.
+
+### Lo que se arregló para poder desplegar
+
+1. **El build empaquetaba los repositorios ARCHIVADOS** en vez del monorepo:
+   la causa de que nada llegara a producción desde julio. Rama
+   `chore/infra-build-desde-el-monorepo`, informe en
+   `progress/infra_despliegue_fuente_equivocada.md`.
+2. **`00_vars.ps1` no cargaba `00_vars.local.ps1`**: la suscripción iba
+   redactada y `az account set` fallaba siempre. Ya carga («[vars] valores
+   reales cargados»).
+3. **`-Only` no limitaba el build**: construía los seis.
+4. **El temporal de build bloqueado tumbaba el despliegue** (2026-09-15):
+   Windows retiene `%TEMP%\acrbuild_<svc>` y el `Remove-Item` del `finally`
+   abortaba el script DESPUÉS de subir la imagen. Ahora el contexto lleva
+   nombre único por ejecución y la limpieza es best-effort. **Sin commitear
+   todavía** cuando se escribió esto.
+
+### Al retomar
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+. .\00_vars.ps1
+.\deploy.ps1 -Only sv1,sv2,sv4,sv5,sv6
+.\check_deploy.ps1
+```
+
+Vigilar: que las rutas impresas sean `albaranes\services\...`; que no queden
+**revisiones múltiples** (`fix_revisiones.ps1 -Only <svc>`); y si algo falla
+tras el `OK <svc> ->`, la imagen ya está subida: continuar con
+`-Tag <el impreso> -SkipBuild`.
+
+**La comprobación que de verdad importa** no es `check_deploy`, sino procesar
+un albarán y ver en la ficha del portal la familia, la confianza y el motivo.
+Y en la BBDD de producción:
+
+```sql
+SELECT column_name FROM information_schema.columns
+WHERE table_name = 'albaran_documents_merge' AND column_name LIKE 'tipologia%';
+```
+
+Deben salir seis.
+
+---
+
+## F-047 · SPEC ESCRITA (2026-09-16, spec-author) — 2.ª versión
+
+`specs/F-047-evals-ciclo-completo/`: requirements (150 líneas, 40 R), design
+(245) y tasks (23 tareas; T19–T22 son MANUAL y exigen el pipeline local).
+Rigor `critico`. No se ha tocado una línea de código. Ficha de
+`harness/features.json` reescrita con el alcance nuevo y pasada a `spec_ready`.
+
+**La 1.ª versión fue RECHAZADA por el humano**: proponía encadenar los hand-off
+en memoria saltándose la persistencia. Sus palabras: «no, debería encadenar el
+proceso completo, incluyendo ambas persistencias». Tenía razón y el argumento
+está recogido en la spec: dos de los defectos que motivan la ficha —el
+`contexto_linea` perdido en el reproceso y la rama de duplicado que no llamaba a
+`save()`, con las seis `tipologia*` en NULL— son de persistencia y un ciclo en
+memoria no los habría visto.
+
+### El alcance vigente
+
+El banco inyecta por la misma puerta que sv1 (fila en `workflow_runs`, blob
+`input/`, `MensajeExtraccion`, reutilizando `ruesma_comun`) y deja que el
+pipeline LOCAL lo recorra entero: `q-extraccion` → sv2 → `q-persistencia` → sv3
+→ `q-valoracion` → sv6 → HTTP → sv5 → sv6 persiste. Las salidas de cada fase se
+leen de Postgres y solo con `SELECT`.
+
+### Hallazgo del análisis que cambia el diseño
+
+**`workflow_runs` NO avanza en el pipeline real.** `ruesma_comun.workflows`
+expone `transicionar`, pero el único código que la llama son los tests de humo
+del propio paquete: la fila se queda en `email_received` todo el recorrido. Por
+eso la terminación se decide por **evidencia persistida** (cinco hitos, de las
+filas de `albaran_documents` a `albaran_line_valuations`), con plazo por hito
+contado desde el último avance y vigilancia de las colas `-poison`. Que los
+workers transicionen es un arreglo del SISTEMA, no del banco: **candidato a
+ficha propia**.
+
+### Decisiones abiertas que necesita validar el humano
+
+1. **`INDETERMINADO` degrada la pasada a NO_EVALUABLE, no a ROJO.** Cuando IA1
+   rompe el emparejado de líneas no se puede atribuir sin adivinar.
+2. **Cuando sv3 no auto-selecciona contrato**, el banco hace el gesto del
+   revisor de sv4 (fija el de `INPUTS.CASOS.contrato_codigo` y republica
+   `MensajeValoracion`) y declara que ese caso NO midió la selección. La
+   alternativa —dejarlo colgar— convertiría en NO_EVALUABLE todos los casos con
+   más de un contrato.
+3. **El aislamiento va por baja LÓGICA**, la misma vía de sv4, nunca `DELETE`, y
+   solo sobre documentos con prefijo `eval/`. `--reproceso` hace lo contrario a
+   propósito para ejercitar la rama de duplicado.
+4. **El coste y el tiempo**: cada caso recorre seis servicios con dos llamadas
+   LLM en sv2 y una o dos en sv5. T19 pasa UN caso, T20 seis, y la de 59 (T22)
+   la decide el humano.
+
+### Costuras que el ciclo NO vigila (declaradas en design §9)
+
+sv1 y el buzón M365, sv4 salvo el gesto de contrato, SharePoint real, y el
+comportamiento contra Azure de verdad (Azurite no es Azure Queue; la identidad
+gestionada no se ejercita).
+
+Siguiente paso: aprobación del humano y, con ella, el implementer sobre
+`feature/F-047-evals-ciclo-completo`.

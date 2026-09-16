@@ -1,0 +1,58 @@
+{
+  "caso_id": "GEN-005",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "GEN-005",
+        "cif": "A82825456",
+        "comentario": "la partida la ha leido mal. Ha puesto 18.04.11",
+        "contrato_elegido": "CTSU26/0005",
+        "fecha": "2026-03-09",
+        "fichero": "GEN-005.pdf",
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "0695",
+        "proveedor": "SALTOKI CENTRO, S.A.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 505.24
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 2,
+        "casa_con_contrato": "SI",
+        "caso_id": "GEN-005",
+        "comentario": "la partida la ha leido mal. Ha puesto 18.04.11",
+        "descripcion": "Inodoro Roca Gap Square Compact taza",
+        "importe_final": 219.48,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": "11.02.01",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 109.74,
+        "unidad_final": "UD"
+      },
+      {
+        "cantidad_final": 4,
+        "casa_con_contrato": "SI",
+        "caso_id": "GEN-005",
+        "comentario": null,
+        "descripcion": "Reja vertedero",
+        "importe_final": 285.76,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "partida_final": "11.01.11",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 71.44,
+        "unidad_final": "UD"
+      }
+    ],
+    "lineas_anadidas": []
+  },
+  "tipologia": "Generico-Suministros"
+}

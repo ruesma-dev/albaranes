@@ -1,0 +1,43 @@
+{
+  "caso_id": "COM-001",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "COM-001",
+        "cif": "B56747264",
+        "comentario": null,
+        "contrato_elegido": "CTSU24/0475",
+        "fecha": "2026-03-09",
+        "fichero": "COM-001.pdf",
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "0695",
+        "proveedor": "GASOLEOS GALAPAGAR, S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 984.46
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 800,
+        "casa_con_contrato": "NO",
+        "caso_id": "COM-001",
+        "comentario": null,
+        "descripcion": "GASOLEO A",
+        "importe_final": 984.46,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": null,
+        "num_linea": 1,
+        "partida_final": "CI.4.1",
+        "precio_source": "deducido",
+        "precio_unitario_final": 1.230578,
+        "unidad_final": "LT"
+      }
+    ],
+    "lineas_anadidas": []
+  },
+  "tipologia": "Combustible"
+}

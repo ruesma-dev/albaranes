@@ -1,0 +1,37 @@
+{
+  "caso_id": "MOR-003",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "MOR-003",
+        "codigo_partida_final": "almacen",
+        "codigo_producto_contrato": null,
+        "comentario": "partida en blanco es almacen",
+        "importe_calculado": 250.5,
+        "match_method": "no_match",
+        "num_linea": 1,
+        "precio_source": "oferta",
+        "precio_unitario_final": 83.5,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "MOR-003",
+        "codigo_partida_final": "almacen",
+        "codigo_producto_contrato": null,
+        "comentario": "partida en blanco es almacen. En mortero tambien hay carga incompleta.en hormigon lo pilla bien , aquí en mortero lo mismo (copiar regla desde hormigon sin inventar)",
+        "importe_calculado": 30,
+        "match_method": "no_match",
+        "num_linea": 2,
+        "precio_source": "oferta",
+        "precio_unitario_final": 15,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Mortero"
+}

@@ -1,0 +1,54 @@
+{
+  "caso_id": "HOR-016",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "HOR-016",
+        "cif": "B29679628",
+        "comentario": "el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2 | no ha salido esta linea. Porque no la ha generado? El contrato es 2024 (se ve en codigo) y el alabran 2025",
+        "contrato_elegido": "CTSU24/0452",
+        "fecha": "2025-09-11",
+        "fichero": "HOR-016.pdf",
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "693",
+        "proveedor": "HORMIGONES Y CEMENTOS ANDALUCES, S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 844.8
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 10,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-016",
+        "comentario": "el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2",
+        "descripcion": "HM-10/B/22/I",
+        "importe_final": 785.8,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": "38.01.01",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 78.58,
+        "unidad_final": "M3"
+      }
+    ],
+    "lineas_anadidas": [
+      {
+        "cantidad": 10,
+        "caso_id": "HOR-016",
+        "comentario": "no ha salido esta linea. Porque no la ha generado? El contrato es 2024 (se ve en codigo) y el alabran 2025",
+        "concepto": "HM-10/B/22/I. INCREM. 2025",
+        "importe": 59,
+        "num_linea_base": 1,
+        "partida": "38.01.01",
+        "precio_unitario": 5.9
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

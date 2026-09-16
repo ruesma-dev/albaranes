@@ -1,0 +1,69 @@
+{
+  "caso_id": "HOR-010",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "HOR-010",
+        "cif": "B04685541",
+        "comentario": "ha cambiado codigo de linea de hormigon en descripcion para casar con sigrid. El codigo del hormigon no se cambia | no la ha generado. Y hay cambio de año entre contrato (ver codigo) y año de albaran. Deberia haberlo hecho",
+        "contrato_elegido": "CTSU23/0386",
+        "fecha": "2024-03-21",
+        "fichero": "HOR-010.pdf",
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "669",
+        "proveedor": "HORPRESOL, S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 746
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 8,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-010",
+        "comentario": null,
+        "descripcion": "HA-25/F/20/XC2",
+        "importe_final": 678,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": 5.02,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 84.75,
+        "unidad_final": "M3"
+      },
+      {
+        "cantidad_final": 8,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-010",
+        "comentario": "ha cambiado codigo de linea de hormigon en descripcion para casar con sigrid. El codigo del hormigon no se cambia",
+        "descripcion": "INCREM. CONSISTENCIA FLUIDA",
+        "importe_final": 24,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "partida_final": 5.02,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 3,
+        "unidad_final": "M3"
+      }
+    ],
+    "lineas_anadidas": [
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-010",
+        "comentario": "no la ha generado. Y hay cambio de año entre contrato (ver codigo) y año de albaran. Deberia haberlo hecho",
+        "concepto": "HA-25/F/20/XC2. INCREMENTO 2024",
+        "importe": 44,
+        "num_linea_base": 2,
+        "partida": 5.02,
+        "precio_unitario": 5.5
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

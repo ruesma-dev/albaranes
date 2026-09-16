@@ -169,8 +169,17 @@ foreach ($img in $aConstruir) {
     Assert-FuenteDelMonorepo -Que $img -Ruta $svcDir
 
     Write-Host "`n=== $img  ($svcDir) ===" -ForegroundColor Cyan
-    $ctx = Join-Path $env:TEMP "acrbuild_$img"
-    if (Test-Path $ctx) { Remove-Item -Recurse -Force $ctx }
+    # (15-sep-2026) Contexto con nombre UNICO por ejecucion. Antes era fijo
+    # ("acrbuild_$img") y bastaba con que Windows tuviera la carpeta abierta
+    # -antivirus, Explorador, un indexador- para que el borrado fallara y,
+    # con $ErrorActionPreference='Stop', tumbara el despliegue ENTERO.
+    $ctx = Join-Path $env:TEMP ("acrbuild_{0}_{1}" -f $img, (Get-Date -Format "yyyyMMddHHmmss"))
+    # Limpieza de contextos viejos: best-effort, nunca fatal.
+    Get-ChildItem -Path $env:TEMP -Directory -Filter "acrbuild_$img*" -ErrorAction SilentlyContinue |
+        ForEach-Object {
+            try { Remove-Item -Recurse -Force $_.FullName -ErrorAction Stop }
+            catch { Write-Warning "[build] no se pudo borrar el contexto viejo $($_.TargetObject): se deja y se sigue." }
+        }
     New-Item -ItemType Directory -Path $ctx | Out-Null
     try {
         # 1) código del proyecto -> contexto temporal (sin pesados ni comun viejo)
@@ -199,7 +208,15 @@ foreach ($img in $aConstruir) {
         Write-Host "OK $img -> $ACR.azurecr.io/$imgRef" -ForegroundColor Green
     }
     finally {
-        if (Test-Path $ctx) { Remove-Item -Recurse -Force $ctx }
+        # La imagen YA esta construida y subida: no poder borrar un temporal
+        # es un aviso, no un fallo del despliegue.
+        try {
+            if (Test-Path $ctx) { Remove-Item -Recurse -Force $ctx -ErrorAction Stop }
+        }
+        catch {
+            Write-Warning "[build] no se pudo borrar el contexto temporal $ctx : $($_.Exception.Message)"
+            Write-Warning "[build] la imagen de $img ya esta en el ACR; se continua."
+        }
     }
 }
 

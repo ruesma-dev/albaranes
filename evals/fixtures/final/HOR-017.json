@@ -1,0 +1,99 @@
+{
+  "caso_id": "HOR-017",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "HOR-017",
+        "cif": "B29679628",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "contrato_elegido": "CTSU24/0452",
+        "fecha": "2025-09-12",
+        "fichero": "HOR-017.pdf",
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "693",
+        "proveedor": "HORMIGONES Y CEMENTOS ANDALUCES, S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 324
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 3,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-017",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "descripcion": "HA-25/F/12/XC2",
+        "importe_final": 267.9,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": 42.01,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 89.3,
+        "unidad_final": "M3"
+      },
+      {
+        "cantidad_final": 3,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-017",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "descripcion": "INCREM. ARIDO 12",
+        "importe_final": 9,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "partida_final": 42.01,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 3,
+        "unidad_final": "M3"
+      },
+      {
+        "cantidad_final": 3,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-017",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "descripcion": "INCREM. CONSISTENCIA FLUIDA",
+        "importe_final": 9,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 3,
+        "partida_final": 42.01,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 3,
+        "unidad_final": "M3"
+      },
+      {
+        "cantidad_final": 3,
+        "casa_con_contrato": "NO",
+        "caso_id": "HOR-017",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "descripcion": "CARGA INCOMPLETA",
+        "importe_final": 18,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": null,
+        "num_linea": 4,
+        "partida_final": 42.01,
+        "precio_source": "oferta",
+        "precio_unitario_final": 6,
+        "unidad_final": "M3"
+      }
+    ],
+    "lineas_anadidas": [
+      {
+        "cantidad": 3,
+        "caso_id": "HOR-017",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "concepto": "HA-25/F/12/XC1. INCREM. 2025",
+        "importe": 20.1,
+        "num_linea_base": 3,
+        "partida": 42.01,
+        "precio_unitario": 6.7
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

@@ -1,0 +1,73 @@
+{
+  "caso_id": "HOR-017",
+  "fase": "IA1",
+  "libro": "IA1_extraccion.xlsx",
+  "sha256_libro": "ba90a8cfb7acbfb6426dcdb47bd527295fc8aa40aa79b98569b4d6dab42f0c93",
+  "tablas": {
+    "cabeceras": [
+      {
+        "caso_id": "HOR-017",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "fecha": "2025-09-12",
+        "fichero_albaran": "HOR-017.pdf",
+        "forma_pago": "@@NO_COMPARAR@@",
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra_codigo": "@@NO_COMPARAR@@",
+        "obra_nombre": "@@NO_COMPARAR@@",
+        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_nombre": "HORMIGONES Y CEMENTOS ANDALUCES, S.L."
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad": 3,
+        "caso_id": "HOR-017",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "descripcion_esperada": "HA-25/F/12/XC2",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 3,
+        "caso_id": "HOR-017",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "descripcion_esperada": "INCREM. ARIDO 12",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 3,
+        "caso_id": "HOR-017",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "descripcion_esperada": "INCREM. CONSISTENCIA FLUIDA",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 3,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 3,
+        "caso_id": "HOR-017",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "descripcion_esperada": "CARGA INCOMPLETA",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 4,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

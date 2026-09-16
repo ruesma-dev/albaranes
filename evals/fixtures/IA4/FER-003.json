@@ -1,0 +1,29 @@
+{
+  "caso_id": "FER-003",
+  "fase": "IA4",
+  "libro": "IA4_conciliacion.xlsx",
+  "sha256_libro": "b81f85b50da7a9b70c1de8c52debf9080fbf418b7be3d9d2b3dd3d85a4ce763c",
+  "tablas": {
+    "conciliacion": [
+      {
+        "caso_id": "FER-003",
+        "comentario": "ha cogido 01.04.18 en lugar de CI.04.18",
+        "concilia": "@@NO_COMPARAR@@",
+        "linea_contrato_esperada": "@@NO_COMPARAR@@",
+        "motivo": null,
+        "num_linea": 1,
+        "precio_unitario_esperado": 95.481
+      },
+      {
+        "caso_id": "FER-003",
+        "comentario": "la deduccion no la ha cogido (no estaba planteado hasta ahora). En el albaran poner RTIRAR 4 disco diamante. Y una referencia a un albaran anterior (su numero de alabaran, no nuestro codigo interno)",
+        "concilia": "@@NO_COMPARAR@@",
+        "linea_contrato_esperada": "@@NO_COMPARAR@@",
+        "motivo": null,
+        "num_linea": 2,
+        "precio_unitario_esperado": 95.481
+      }
+    ]
+  },
+  "tipologia": "Ferreteria"
+}

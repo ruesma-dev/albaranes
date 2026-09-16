@@ -1,0 +1,38 @@
+{
+  "caso_id": "HOR-005",
+  "fase": "IA4",
+  "libro": "IA4_conciliacion.xlsx",
+  "sha256_libro": "b81f85b50da7a9b70c1de8c52debf9080fbf418b7be3d9d2b3dd3d85a4ce763c",
+  "tablas": {
+    "conciliacion": [
+      {
+        "caso_id": "HOR-005",
+        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen",
+        "concilia": "@@NO_COMPARAR@@",
+        "linea_contrato_esperada": "@@NO_COMPARAR@@",
+        "motivo": null,
+        "num_linea": 3,
+        "precio_unitario_esperado": 3
+      },
+      {
+        "caso_id": "HOR-005",
+        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen",
+        "concilia": "@@NO_COMPARAR@@",
+        "linea_contrato_esperada": "@@NO_COMPARAR@@",
+        "motivo": null,
+        "num_linea": 4,
+        "precio_unitario_esperado": 3
+      },
+      {
+        "caso_id": "HOR-005",
+        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen",
+        "concilia": "@@NO_COMPARAR@@",
+        "linea_contrato_esperada": "@@NO_COMPARAR@@",
+        "motivo": null,
+        "num_linea": 5,
+        "precio_unitario_esperado": 15
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

@@ -111,13 +111,43 @@ def _bloque_fase(fase: ResultadoFase) -> list[str]:
     return lineas
 
 
-def render(pasada: ResultadoPasada, sin_clasificar: list[str] | None = None) -> str:
-    """Escribe el informe completo de una corrida (R15)."""
+_AVISO_NO_OBSERVABLES = (
+    "El ground truth los declara, pero esta corrida NO puede verlos: el "
+    "proceso evaluado no los devuelve. NO se comparan y NO cuentan como "
+    "fallo (R26). Son deuda declarada, no un rojo: se cierran el día que el "
+    "proceso empiece a producirlos, y entonces entran solos en OBSERVABLES."
+)
+
+
+def render(
+    pasada: ResultadoPasada,
+    sin_clasificar: list[str] | None = None,
+    no_observables: list[str] | None = None,
+) -> str:
+    """Escribe el informe completo de una corrida (R15, R26).
+
+    `sin_clasificar` y `no_observables` son problemas DISTINTOS y con
+    arreglos distintos: el primero se cierra clasificando el campo en
+    `criticidad.json`; el segundo, cuando el proceso empiece a devolverlo.
+    Hasta F-045 viajaban por el mismo parámetro y el informe anunciaba los
+    no observables como «sin clasificar», que mandaba a quien lo leyera a
+    editar el fichero equivocado.
+    """
     lineas = ["<!-- informe generado por evals/informe.py -->", ""]
     lineas += _cabecera(pasada)
 
     for fase in pasada.fases:
         lineas += _bloque_fase(fase)
+
+    if no_observables:
+        lineas += [
+            "## Campos no observables en esta corrida",
+            "",
+            _AVISO_NO_OBSERVABLES,
+            "",
+            *[f"- `{campo}`" for campo in no_observables],
+            "",
+        ]
 
     if sin_clasificar:
         lineas += [

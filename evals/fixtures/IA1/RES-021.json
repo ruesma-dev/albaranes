@@ -1,0 +1,49 @@
+{
+  "caso_id": "RES-021",
+  "fase": "IA1",
+  "libro": "IA1_extraccion.xlsx",
+  "sha256_libro": "ba90a8cfb7acbfb6426dcdb47bd527295fc8aa40aa79b98569b4d6dab42f0c93",
+  "tablas": {
+    "cabeceras": [
+      {
+        "caso_id": "RES-021",
+        "comentario": "al cambiar la obra deberia eliminar el contrato que tenia seleccionado de la obra original, y buscar de nuevo, no dejar el contrato viejeo. obra mal, solo debe elegir de obras abiertas (ver criterio datamart).",
+        "fecha": "2026-06-24",
+        "fichero_albaran": null,
+        "forma_pago": "@@NO_COMPARAR@@",
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra_codigo": "@@NO_COMPARAR@@",
+        "obra_nombre": "@@NO_COMPARAR@@",
+        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_nombre": "MACOTRAN, S.L.U."
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad": 1,
+        "caso_id": "RES-021",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": null,
+        "descripcion_esperada": "LLEVAR CONTENEDOR 6 M/3. (RCD´S)",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "precio_unitario": null,
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 1,
+        "caso_id": "RES-021",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "al cambiar la obra deberia eliminar el contrato que tenia seleccionado de la obra original, y buscar de nuevo, no dejar el contrato viejeo. obra mal, solo debe elegir de obras abiertas (ver criterio datamart).",
+        "descripcion_esperada": "SERVICIO CONTENEDOR 6 M/3. (RCD´S)",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "precio_unitario": null,
+        "unidad": "UD"
+      }
+    ]
+  },
+  "tipologia": "Residuos"
+}

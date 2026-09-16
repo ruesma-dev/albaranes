@@ -1,0 +1,54 @@
+{
+  "caso_id": "HOR-001",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "HOR-001",
+        "cif": "B86738812",
+        "comentario": "falta P5 al inicio de la partida.",
+        "contrato_elegido": "CTSU24/0518",
+        "fecha": "2026-05-25",
+        "fichero": "HOR-001.pdf",
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "696",
+        "proveedor": "HORMIGON SIERRA MADRID, S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 980.1
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 9,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-001",
+        "comentario": "falta P5 al inicio de la partida.",
+        "descripcion": "HORMIGÓN HA-25/B/20/XC2",
+        "importe_final": 899.1,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": "P5.03.09",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 99.9,
+        "unidad_final": "M3"
+      }
+    ],
+    "lineas_anadidas": [
+      {
+        "cantidad": 9,
+        "caso_id": "HOR-001",
+        "comentario": "falta P5 al inicio de la partida.",
+        "concepto": "INCREM. PRECIO 2026",
+        "importe": 81,
+        "num_linea_base": 1,
+        "partida": "P5.03.09",
+        "precio_unitario": 9
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

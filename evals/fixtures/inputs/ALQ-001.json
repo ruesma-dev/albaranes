@@ -1,0 +1,59 @@
+{
+  "caso_id": "ALQ-001",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "ALQ-001",
+        "contrato_codigo": "CTSB25/0708",
+        "descripcion_caso": "0009256 · CAMION GRUA · ha cogido una obra que no es (vieja), pero es que no hay obra indicada con codigo en el albaran",
+        "ia_destino": "IA3",
+        "origen": "manual",
+        "tipologia": "Alquiler"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 1,
+        "caso_id": "ALQ-001",
+        "codigo_imputacion": null,
+        "descripcion": "SALIDA CAMIÓN GRÚA 100 TN",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 7,
+        "caso_id": "ALQ-001",
+        "codigo_imputacion": null,
+        "descripcion": "CAMIÓN GRÚA 100 TN",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 1,
+        "caso_id": "ALQ-001",
+        "codigo_imputacion": null,
+        "descripcion": "HHEE CAMIÓN GRÚA 100 TN",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 3,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "UD"
+      }
+    ]
+  },
+  "tipologia": "Alquiler"
+}

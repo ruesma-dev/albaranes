@@ -1,0 +1,54 @@
+{
+  "caso_id": "HOR-003",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "HOR-003",
+        "cif": "B86362290",
+        "comentario": "Partida deberia ser P4.03.05, es verdad que casi parece un 0 el primer digito. Por eso buscar en lista de partidas",
+        "contrato_elegido": "CTSU25/0001",
+        "fecha": "2026-06-05",
+        "fichero": "HOR-003.pdf",
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "696",
+        "proveedor": "FABRICACION DE HORMIGONES PAZ DEL BARRIO,S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 871.2
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 8,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-003",
+        "comentario": "Partida deberia ser P4.03.05, es verdad que casi parece un 0 el primer digito. Por eso buscar en lista de partidas",
+        "descripcion": "HORMIGÓN HA-25/B/20/XC2",
+        "importe_final": 799.2,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": "P4.03.05",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 99.9,
+        "unidad_final": "M3"
+      }
+    ],
+    "lineas_anadidas": [
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-003",
+        "comentario": "Partida deberia ser P4.03.05, es verdad que casi parece un 0 el primer digito. Por eso buscar en lista de partidas",
+        "concepto": "INCREM. PRECIO 2026",
+        "importe": 72,
+        "num_linea_base": 1,
+        "partida": "P4.03.05",
+        "precio_unitario": 9
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

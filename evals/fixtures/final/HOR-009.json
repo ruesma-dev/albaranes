@@ -1,0 +1,84 @@
+{
+  "caso_id": "HOR-009",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "HOR-009",
+        "cif": "B04685541",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio. El codigo de hormigon leido es correcto, pero luego lo ha cambiado en la descripcion de la linea de sigrid para casarlo. El codigo de hormigon no se puede cambiar | partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio | partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio- esta linea no la ha generado, pero pon B en el codigo asi que parece error de negocio",
+        "contrato_elegido": "CTSU23/0386",
+        "fecha": "2024-08-06",
+        "fichero": "HOR-009.pdf",
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "669",
+        "proveedor": "HORPRESOL, S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 91.5
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 8,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-009",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio. El codigo de hormigon leido es correcto, pero luego lo ha cambiado en la descripcion de la linea de sigrid para casarlo. El codigo de hormigon no se puede cambiar",
+        "descripcion": "HMF-20/P-CR/B/20-12/X0/P",
+        "importe_final": 80,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": "32.03.02",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 80,
+        "unidad_final": "M3"
+      },
+      {
+        "cantidad_final": 8,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-009",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio",
+        "descripcion": "ADICIÓN FIBRAS POLIPROPILENO (600 GR/M3)",
+        "importe_final": 3.5,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "partida_final": "32.03.02",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 3.5,
+        "unidad_final": "M3"
+      },
+      {
+        "cantidad_final": 8,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-009",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio- esta linea no la ha generado, pero pon B en el codigo asi que parece error de negocio",
+        "descripcion": "INCREM. CONSISTENCIA FLUIDA",
+        "importe_final": 3,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 3,
+        "partida_final": "32.03.02",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 3,
+        "unidad_final": "M3"
+      }
+    ],
+    "lineas_anadidas": [
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-009",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio",
+        "concepto": "HMF-20/P/F/12-12/IIa. INCREMENTO 2024",
+        "importe": 5,
+        "num_linea_base": 3,
+        "partida": "32.03.02",
+        "precio_unitario": 5
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

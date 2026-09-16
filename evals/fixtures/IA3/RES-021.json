@@ -1,0 +1,37 @@
+{
+  "caso_id": "RES-021",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "RES-021",
+        "codigo_partida_final": "16.01.",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": null,
+        "importe_calculado": 0,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 184,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "RES-021",
+        "codigo_partida_final": "16.01.",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "al cambiar la obra deberia eliminar el contrato que tenia seleccionado de la obra original, y buscar de nuevo, no dejar el contrato viejeo. obra mal, solo debe elegir de obras abiertas (ver criterio datamart).",
+        "importe_calculado": 184,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 184,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Residuos"
+}

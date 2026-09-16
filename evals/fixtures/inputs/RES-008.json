@@ -1,0 +1,35 @@
+{
+  "caso_id": "RES-008",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "RES-008",
+        "contrato_codigo": "CTSU24/0477",
+        "descripcion_caso": "96187 · CONTENEDORES · la partida esta mal, era 32.01, en lugar de 04.52.01 (si bien es cierto que esta cortado el numero). El ler no viene en el contrato, asi que aunque haya cogido el generico deberia buscar en la oferta",
+        "ia_destino": "ambas",
+        "origen": "manual",
+        "tipologia": "Residuos"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 1,
+        "caso_id": "RES-008",
+        "codigo_imputacion": null,
+        "descripcion": "MOVIMIENTO DE CONTENEDOR DE 6 M CÚBICOS PLASTICO",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "UD"
+      }
+    ]
+  },
+  "tipologia": "Residuos"
+}

@@ -1,0 +1,85 @@
+{
+  "caso_id": "HOR-005",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "HOR-005",
+        "codigo_partida_final": "almacen",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen",
+        "importe_calculado": 339,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 84.75,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "HOR-005",
+        "codigo_partida_final": "almacen",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen",
+        "importe_calculado": 14,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 3.5,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "HOR-005",
+        "codigo_partida_final": "almacen",
+        "codigo_producto_contrato": null,
+        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen",
+        "importe_calculado": 12,
+        "match_method": "no_match",
+        "num_linea": 3,
+        "precio_source": "oferta",
+        "precio_unitario_final": 3,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "HOR-005",
+        "codigo_partida_final": "almacen",
+        "codigo_producto_contrato": null,
+        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen",
+        "importe_calculado": 12,
+        "match_method": "no_match",
+        "num_linea": 4,
+        "precio_source": "oferta",
+        "precio_unitario_final": 3,
+        "review_required": "@@NO_COMPARAR@@"
+      },
+      {
+        "caso_id": "HOR-005",
+        "codigo_partida_final": "almacen",
+        "codigo_producto_contrato": null,
+        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen",
+        "importe_calculado": 30,
+        "match_method": "no_match",
+        "num_linea": 5,
+        "precio_source": "oferta",
+        "precio_unitario_final": 15,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [
+      {
+        "cantidad": 4,
+        "caso_id": "HOR-005",
+        "codigo_partida": "almacen",
+        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen",
+        "descripcion_esperada": "HA-25/B/20/XC2. INCREM. 2024",
+        "modifier_source": "@@NO_COMPARAR@@",
+        "num_linea_base": 4,
+        "precio_unitario": 5.5,
+        "rol_linea": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Hormigon"
+}

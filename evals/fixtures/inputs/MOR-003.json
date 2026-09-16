@@ -1,0 +1,47 @@
+{
+  "caso_id": "MOR-003",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "MOR-003",
+        "contrato_codigo": "CTSU23/0386",
+        "descripcion_caso": "H132193 · MORTERO · partida en blanco es almacen | partida en blanco es almacen. En mortero tambien hay carga incompleta.en hormigon lo pilla bien , aquí en mortero lo mismo (copiar regla desde hormigon sin inventar)",
+        "ia_destino": "ambas",
+        "origen": "manual",
+        "tipologia": "Mortero"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 3,
+        "caso_id": "MOR-003",
+        "codigo_imputacion": null,
+        "descripcion": "MD-200 (M-5) / 48 H.",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 2,
+        "caso_id": "MOR-003",
+        "codigo_imputacion": null,
+        "descripcion": "MD-200 (M-5) / 48 H. CARGA INCOMPLETA",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Mortero"
+}

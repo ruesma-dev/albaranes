@@ -1,0 +1,49 @@
+{
+  "caso_id": "FER-003",
+  "fase": "IA1",
+  "libro": "IA1_extraccion.xlsx",
+  "sha256_libro": "ba90a8cfb7acbfb6426dcdb47bd527295fc8aa40aa79b98569b4d6dab42f0c93",
+  "tablas": {
+    "cabeceras": [
+      {
+        "caso_id": "FER-003",
+        "comentario": "ha cogido 01.04.18 en lugar de CI.04.18 | la deduccion no la ha cogido (no estaba planteado hasta ahora). En el albaran poner RTIRAR 4 disco diamante. Y una referencia a un albaran anterior (su numero de alabaran, no nuestro codigo interno)",
+        "fecha": "2026-03-10",
+        "fichero_albaran": "FER-003.pdf",
+        "forma_pago": "@@NO_COMPARAR@@",
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra_codigo": "@@NO_COMPARAR@@",
+        "obra_nombre": "@@NO_COMPARAR@@",
+        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_nombre": "FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)"
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad": 4,
+        "caso_id": "FER-003",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "ha cogido 01.04.18 en lugar de CI.04.18",
+        "descripcion_esperada": "DISCO DIAMANTE 180 MM. PULIDORA (DEBASTAR)",
+        "descuentos": 40,
+        "importe": 229.15,
+        "num_linea": 1,
+        "precio_unitario": null,
+        "unidad": "UD"
+      },
+      {
+        "cantidad": -4,
+        "caso_id": "FER-003",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "la deduccion no la ha cogido (no estaba planteado hasta ahora). En el albaran poner RTIRAR 4 disco diamante. Y una referencia a un albaran anterior (su numero de alabaran, no nuestro codigo interno)",
+        "descripcion_esperada": "DISCO DIAMANTE 100 MM. PULIDORA (11-380)",
+        "descuentos": 40,
+        "importe": null,
+        "num_linea": 2,
+        "precio_unitario": null,
+        "unidad": "UD"
+      }
+    ]
+  },
+  "tipologia": "Ferreteria"
+}

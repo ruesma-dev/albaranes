@@ -1,0 +1,536 @@
+{
+  "_doc": "Mapa del banco de evals: de cada caso_id al albaran de papel del que salio (F-045, R7). GENERADO por 'python -m evals.revision'; se puede corregir a mano, pero una importacion posterior manda. 'clave' es CIF/codigo normalizado y es lo que identifica el albaran entre importaciones; 'codigo' es el que escribe el humano en el Excel, que NO es el literal impreso (0000168 en la tabla, SS-0000168 en el papel); 'nombre_original' es el fichero tal como llego, antes del renombrado a <caso_id>; 'gemelo_de' hermana el caso de imagen con el de PDF (R22).",
+  "casos": {
+    "ALQ-001": {
+      "clave": "B84535764/0009256",
+      "codigo": "0009256",
+      "familia_documento": "generico",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "TyG Angel_09256.pdf",
+      "pestana": "Alquiler"
+    },
+    "COM-001": {
+      "clave": "B56747264/J1000505",
+      "codigo": "J1000505",
+      "familia_documento": "combustible",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "J1000505.pdf",
+      "pestana": "Combustible"
+    },
+    "FER-001": {
+      "clave": "A28733558/2139643",
+      "codigo": "2139643",
+      "familia_documento": "ferreteria",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "Feymaco_2139643.pdf",
+      "pestana": "Ferreteria"
+    },
+    "FER-002": {
+      "clave": "A28733558/2137569",
+      "codigo": "2137569",
+      "familia_documento": "ferreteria",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "Feymaco_2137569.pdf",
+      "pestana": "Ferreteria"
+    },
+    "FER-003": {
+      "clave": "A28733558/2115714",
+      "codigo": "2.115.714",
+      "familia_documento": "ferreteria",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "2115714.pdf",
+      "pestana": "Ferreteria"
+    },
+    "GEN-001": {
+      "clave": "B98976111/A261584",
+      "codigo": "A261584",
+      "familia_documento": "generico",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "Vodaland_A261584.pdf",
+      "pestana": "Generico-Suministros"
+    },
+    "GEN-002": {
+      "clave": "A28800597/202601007378",
+      "codigo": "2026/01/007378",
+      "familia_documento": "generico",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "Pavimarsa_202601007378.pdf",
+      "pestana": "Generico-Suministros"
+    },
+    "GEN-003": {
+      "clave": "A28800597/202601007181",
+      "codigo": "2026/01/007181",
+      "familia_documento": "generico",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "Pavimarsa_202601007181.pdf",
+      "pestana": "Generico-Suministros"
+    },
+    "GEN-004": {
+      "clave": "A82825456/2674163",
+      "codigo": "2.674.163",
+      "familia_documento": "generico",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "2674163.pdf",
+      "pestana": "Generico-Suministros"
+    },
+    "GEN-005": {
+      "clave": "A82825456/2674143",
+      "codigo": "2.674.143",
+      "familia_documento": "generico",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "2674143.pdf",
+      "pestana": "Generico-Suministros"
+    },
+    "GEN-006": {
+      "clave": "A82825456/2674074",
+      "codigo": "2.674.074",
+      "familia_documento": "generico",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "2674074.pdf",
+      "pestana": "Generico-Suministros"
+    },
+    "GEN-007": {
+      "clave": "A82825456/2672497",
+      "codigo": "2.672.497",
+      "familia_documento": "generico",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "2672497.pdf",
+      "pestana": "Generico-Suministros"
+    },
+    "GEN-008": {
+      "clave": "A82825456/2672297",
+      "codigo": "2.672.297",
+      "familia_documento": "generico",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "2672297.pdf",
+      "pestana": "Generico-Suministros"
+    },
+    "GEN-009": {
+      "clave": "A31132590/170161",
+      "codigo": "170.161",
+      "familia_documento": "generico",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "170161.pdf",
+      "pestana": "Generico-Suministros"
+    },
+    "GEN-010": {
+      "clave": "B85286318/261046",
+      "codigo": "261046",
+      "familia_documento": "generico",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "261046.pdf",
+      "pestana": "Generico-Suministros"
+    },
+    "GRA-001": {
+      "clave": "B86615549/58826",
+      "codigo": "58826",
+      "familia_documento": "grava",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "Mahorsa_58826.pdf",
+      "pestana": "Grava"
+    },
+    "GRA-002": {
+      "clave": "B86615549/58878",
+      "codigo": "58878",
+      "familia_documento": "grava",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "Mahorsa_58878.pdf",
+      "pestana": "Grava"
+    },
+    "HOR-001": {
+      "clave": "B86738812/225137",
+      "codigo": "225137",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "Hormigon Sierra Madrid_225137.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-002": {
+      "clave": "B86738812/224964",
+      "codigo": "224964",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "Hormigon Sierra Madrid_224964.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-003": {
+      "clave": "B86362290/0001167",
+      "codigo": "0001167",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "Hormigones Paz del Barrio_1167.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-004": {
+      "clave": "B86359866/0334191",
+      "codigo": "0334191",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0334191.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-005": {
+      "clave": "B04685541/H132525",
+      "codigo": "H132525",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0669_HORMIGON HA-25-B-12-XC2-F-P+INCOMPLETA - 2025-07-15 - Alb_H132525.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-006": {
+      "clave": "B04685541/H98634",
+      "codigo": "H98634",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0669_HORMIGON HA-25-B-20-XC2$ - 2023-12-19 - Alb_H98634.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-007": {
+      "clave": "B04685541/H122959",
+      "codigo": "H122959",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0669_HORMIGON HA-25-B-20-XC2+INCOMPLETA - 2024-06-04 - Alb_H122959.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-008": {
+      "clave": "B04685541/W25963",
+      "codigo": "W25963",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0669_HORMIGON HNE-15-B-20 - 2024-06-05 - Alb_W25963.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-009": {
+      "clave": "B04685541/W26580",
+      "codigo": "W26580",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0669_HORMIGON HMF-20-P-CR-B-20-12-X0-P - 2024-08-06 - Alb_W26580.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-010": {
+      "clave": "B04685541/W25237",
+      "codigo": "W25237",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0669_HORMIGON HA-25-F-20-XC2 - 2024-03-21 - Alb_W25237.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-011": {
+      "clave": "B04685541/H99168",
+      "codigo": "H99168",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0669_HORMIGON HA-30-B-20-XC2 - 2024-01-10 - Alb_H99168.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-012": {
+      "clave": "B29679628/249917",
+      "codigo": "249917",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0693_HORMIGON HA-25-F-20-XC1 - 2025-09-09 - Alb_249917.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-013": {
+      "clave": "B29679628/249924",
+      "codigo": "249924",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0693_HORMIGON HA-25-B-22-XC2 - 2025-09-09 - Alb_249924.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-014": {
+      "clave": "B29679628/249927",
+      "codigo": "249927",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0693_HORMIGON HA-25-B-22-XC2+INCOMPLETA-NO PROCEDE - 2025-09-09 - Alb_249927.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-015": {
+      "clave": "B29679628/37515",
+      "codigo": "37515",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0693_HORMIGON HA-25-F-12-XC2-1 - 2025-09-11 - Alb_37515.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-016": {
+      "clave": "B29679628/249997",
+      "codigo": "249997",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0693_HORMIGON HM-10-B-22-1 - 2025-09-11 - Alb_249997.pdf",
+      "pestana": "Hormigon"
+    },
+    "HOR-017": {
+      "clave": "B29679628/250012",
+      "codigo": "250012",
+      "familia_documento": "hormigon",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0693_HORMIGON HA-25-F-12-XC2+INCOMPLETA - 2025-09-12 - Alb_250012.pdf",
+      "pestana": "Hormigon"
+    },
+    "MOR-001": {
+      "clave": "B86738812/225225",
+      "codigo": "225225",
+      "familia_documento": "mortero",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "Mortero Sierra Madrid_225225.pdf",
+      "pestana": "Mortero"
+    },
+    "MOR-002": {
+      "clave": "B86362290/0001229",
+      "codigo": "0001229",
+      "familia_documento": "mortero",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "Hormigones Paz del Barrio_1229.pdf",
+      "pestana": "Mortero"
+    },
+    "MOR-003": {
+      "clave": "B04685541/H132193",
+      "codigo": "H132193",
+      "familia_documento": "mortero",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0669_MORTERO MD-200-2-36H+INCOMPLETA - 2025-06-23 - Alb_H132193.pdf",
+      "pestana": "Mortero"
+    },
+    "MOR-004": {
+      "clave": "B29679628/37816",
+      "codigo": "37816",
+      "familia_documento": "mortero",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "0693_MORTERO D-300-B-5-1 - 2025-09-29 - Alb_37816.pdf",
+      "pestana": "Mortero"
+    },
+    "RES-001": {
+      "clave": "B82899550/0000168",
+      "codigo": "0000168",
+      "familia_documento": "residuos",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "SALMEDINA_0000168.pdf",
+      "pestana": "Residuos"
+    },
+    "RES-002": {
+      "clave": "B82899550/0003935",
+      "codigo": "0003935",
+      "familia_documento": "residuos",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "SALMEDINA_0003935.pdf",
+      "pestana": "Residuos"
+    },
+    "RES-003": {
+      "clave": "B82899550/0000589",
+      "codigo": "0000589",
+      "familia_documento": "residuos",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "SALMEDINA_0000589.pdf",
+      "pestana": "Residuos"
+    },
+    "RES-004": {
+      "clave": "B82899550/0003967",
+      "codigo": "0003967",
+      "familia_documento": "residuos",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "SALMEDINA_0003967.pdf",
+      "pestana": "Residuos"
+    },
+    "RES-005": {
+      "clave": "B82899550/0001977",
+      "codigo": "0001977",
+      "familia_documento": "residuos",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "SALMEDINA_0001977.pdf",
+      "pestana": "Residuos"
+    },
+    "RES-006": {
+      "clave": "B82899550/0025146",
+      "codigo": "0025146",
+      "familia_documento": "residuos",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "SALMEDINA_0025146.pdf",
+      "pestana": "Residuos"
+    },
+    "RES-007": {
+      "clave": "B82899550/0026122",
+      "codigo": "0026122",
+      "familia_documento": "residuos",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "SALMEDINA_0026122.pdf",
+      "pestana": "Residuos"
+    },
+    "RES-008": {
+      "clave": "B83287276/96187",
+      "codigo": "96187",
+      "familia_documento": "residuos",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "96187.pdf",
+      "pestana": "Residuos"
+    },
+    "RES-009": {
+      "clave": "B83287276/93478",
+      "codigo": "93478",
+      "familia_documento": "residuos",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "93478.pdf",
+      "pestana": "Residuos"
+    },
+    "RES-010": {
+      "clave": "B93649002/24346",
+      "codigo": "24346",
+      "familia_documento": "residuos",
+      "formato": "imagen",
+      "gemelo_de": null,
+      "nombre_original": "0669 BLOSSOM II _024346.png",
+      "pestana": "Residuos"
+    },
+    "RES-011": {
+      "clave": "B93649002/24385",
+      "codigo": "24385",
+      "familia_documento": "residuos",
+      "formato": "imagen",
+      "gemelo_de": null,
+      "nombre_original": "0669 BLOSSOM II _024385.png",
+      "pestana": "Residuos"
+    },
+    "RES-012": {
+      "clave": "B93649002/24566",
+      "codigo": "24566",
+      "familia_documento": "residuos",
+      "formato": "imagen",
+      "gemelo_de": null,
+      "nombre_original": "0669 BLOSSOM II _024566.png",
+      "pestana": "Residuos"
+    },
+    "RES-013": {
+      "clave": "B93649002/24571",
+      "codigo": "24571",
+      "familia_documento": "residuos",
+      "formato": "imagen",
+      "gemelo_de": null,
+      "nombre_original": "0669 BLOSSOM II _024571.png",
+      "pestana": "Residuos"
+    },
+    "RES-014": {
+      "clave": "B93649002/24788",
+      "codigo": "24788",
+      "familia_documento": "residuos",
+      "formato": "imagen",
+      "gemelo_de": null,
+      "nombre_original": "0669 BLOSSOM II _024788.png",
+      "pestana": "Residuos"
+    },
+    "RES-015": {
+      "clave": "B93649002/24790",
+      "codigo": "24790",
+      "familia_documento": "residuos",
+      "formato": "imagen",
+      "gemelo_de": null,
+      "nombre_original": "0669 BLOSSOM II _024790.png",
+      "pestana": "Residuos"
+    },
+    "RES-016": {
+      "clave": "B93649002/30440",
+      "codigo": "30440",
+      "familia_documento": "residuos",
+      "formato": "imagen",
+      "gemelo_de": null,
+      "nombre_original": "0669 BLOSSOM II _030440.png",
+      "pestana": "Residuos"
+    },
+    "RES-017": {
+      "clave": "B93649002/30490",
+      "codigo": "30490",
+      "familia_documento": "residuos",
+      "formato": "imagen",
+      "gemelo_de": null,
+      "nombre_original": "0669 BLOSSOM II _030490.png",
+      "pestana": "Residuos"
+    },
+    "RES-018": {
+      "clave": "B93649002/29990",
+      "codigo": "29990",
+      "familia_documento": "residuos",
+      "formato": "imagen",
+      "gemelo_de": null,
+      "nombre_original": "0669 BLOSSOM II _029990.png",
+      "pestana": "Residuos"
+    },
+    "RES-019": {
+      "clave": "B93649002/30366",
+      "codigo": "30366",
+      "familia_documento": "residuos",
+      "formato": "imagen",
+      "gemelo_de": null,
+      "nombre_original": "0669 BLOSSOM II _030366.png",
+      "pestana": "Residuos"
+    },
+    "RES-020": {
+      "clave": "B78507472/MC26442903",
+      "codigo": "MC/26-442903",
+      "familia_documento": "residuos",
+      "formato": "",
+      "gemelo_de": null,
+      "nombre_original": "",
+      "pestana": "Residuos"
+    },
+    "RES-021": {
+      "clave": "B78507472/MC26443249",
+      "codigo": "MC/26-443249",
+      "familia_documento": "residuos",
+      "formato": "",
+      "gemelo_de": null,
+      "nombre_original": "",
+      "pestana": "Residuos"
+    }
+  }
+}

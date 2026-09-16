@@ -3,13 +3,17 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **45 features**, 32 abiertas, 13 terminadas.
+Resumen: **47 features**, 34 abiertas, 13 terminadas.
+
+En curso: **F-045**.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-045 | El banco de evals recoge la revision manual de los 32 albaranes: convertir los comentarios del humano en casos que se comprueban solos | 2 | pendiente | critico |  |
+| F-045 | El banco de evals recoge la revision manual de los 32 albaranes: convertir los comentarios del humano en casos que se comprueban solos | 2 | en curso | critico | `feature/F-045-banco-evals-revision-manual` |
+| F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
+| F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
 | F-028 | Con dos contratos candidatos no se elige ninguno y el albarán no llega a valorarse | 7 | pendiente | critico | `feature/F-028-selector-contrato-por-partidas` |
@@ -64,7 +68,7 @@ Resumen: **45 features**, 32 abiertas, 13 terminadas.
 
 ### F-045 · El banco de evals recoge la revision manual de los 32 albaranes: convertir los comentarios del humano en casos que se comprueban solos
 
-estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
+estado **en curso** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-045-banco-evals-revision-manual`
 
 ORIGEN: el humano reviso UNO A UNO los albaranes que probo en local y anoto en 'evals_summary.xlsx' (carpeta evals de OneDrive) el resultado esperado de cada linea y, en una columna de comentarios, QUE HA FALLADO hoy. Aviso el 2026-09-13. Los PDF estan en la raiz de esa misma carpeta.
 
@@ -88,6 +92,51 @@ ALCANCE PROPUESTO PARA ESTA FICHA -sembrar, no arreglar-: llevar los 32 albarane
 CUIDADOS: los PDF y los .xlsx NO se versionan -son documentos de proveedor y llevan precios-; solo entran los fixtures JSON y tras el barrido de datos sensibles que describe evals/README.md. El ground truth es del humano y NO se inventa: lo que el Excel no diga, no se compara. Y conviene separar lo que es fallo de EXTRACCION (IA1/IA2) de lo que es fallo de VALORACION (IA3/IA4), porque el Excel los mezcla en la misma fila.
 
 RELACIONADAS: F-011 (el banco y su flujo), F-043 (el enrutado por familia que estos casos vigilan), F-017 (la fuente OFERTA, que explica varias lineas del Excel), F-021 (eleccion de partida, que es el patron 1), F-024 (unidad_medida).
+
+### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
+
+estado **pendiente** · prioridad 3 · rigor `critico` · SDD sí
+
+ORIGEN: al mapear las etiquetas del Excel de revision manual (F-045) contra `ruesma_comun/contratos/familias.py` aparecio que el catalogo solo tiene CUATRO familias de DOCUMENTO -generico, hormigon, mortero, residuos- mientras el humano trabaja con diez etiquetas. El 2026-09-15 decidio: gasoleo es COMBUSTIBLE (que hoy existe pero con alcance solo LINEA), y grava, ferreteria y ferralla son familias NUEVAS.
+
+QUE HAY QUE HACER: subir `combustible` a familia de documento y anadir `grava`, `ferreteria` y `ferralla`, cada una con su definicion para el prompt de IA1 y sus dos claves de prompt de fase 2, que es lo que exige R3 del catalogo.
+
+POR QUE ES FICHA APARTE Y NO PARTE DE F-045: `familias.py` es RUTA SENSIBLE. Su texto se inyecta en el prompt que decide la familia de TODOS los albaranes, asi que tocarlo cambia el enrutado de F-043 entero. F-045 solo siembra el banco; esta ficha es la que mueve el sistema.
+
+ARGUMENTO MEDIDO (2026-09-15, sobre las 142 filas del banco): bloquea 14 filas de 6 albaranes, que hoy no pueden salir en verde de ninguna manera porque el sistema no sabe devolver esas familias.
+
+TRES RIESGOS ANOTADOS, que conviene mirar ANTES de implementar:
+(1) `grava` llega con 2 lineas en 2 albaranes: una familia con tan pocos casos no se puede validar y su prompt de fase 2 no tiene con que probarse.
+(2) `ferralla` no aparece en el Excel: nace SIN NINGUN CASO. Conviene que el humano meta albaranes de ferralla en la siguiente tanda, o se escribira su prompt a ciegas.
+(3) `docs/referencia/dominio_negocio_albaranes.md` no documenta ni una regla de ferralla, asi que esta ficha nace sin insumo de negocio para ella.
+
+CUIDADO: cada familia nueva necesita su pestana en los seis libros de ground truth. Las de `Grava` y `Ferreteria` las crea F-045 (prefijos GRA- y FER-); la de ferralla no, porque no hay casos.
+
+RELACIONADAS: F-043 (la clasificacion la decide IA1 contra este catalogo), F-045 (el banco que mide si estas familias se clasifican bien).
+
+### F-047 · El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior
+
+estado **spec lista** · prioridad 3 · rigor `critico` · SDD sí
+
+ORIGEN: decision del humano del 2026-09-16, al ver el resultado de la primera pasada con LLM de F-045. Sus palabras: «no es tan importante la entrada como la salida que da. lo suyo es hacer el ciclo completo, e ir obteniendo las salidas de cada IA. no correrlas por separado con entradas puntuales». Y el 2026-09-16, al revisar la spec: «no, deberia encadenar el proceso completo, incluyendo ambas persistencias».
+
+EL PROBLEMA QUE RESUELVE. Hoy el banco ejecuta cada fase por separado alimentandola con entradas preparadas a mano en los libros. Eso mide un sistema que no existe: el real encadena IA1 -> IA2 -> IA3 -> IA4 pasando por DOS PERSISTENCIAS. Los defectos que mas han dolido vivian TODOS en la costura, y dos de ellos son de persistencia: el `contexto_linea` que se perdia en el reproceso -dejando la red de sinteticas sin `codigo_ler`- y la rama de duplicado que no llamaba a save(), con las seis columnas `tipologia*` en NULL. Ninguno lo habria cazado un eval por fases, NI UN CICLO ENCADENADO EN MEMORIA que se saltara sv3 y sv6.
+
+Y DE PASO DISUELVE UN PROBLEMA: IA3, IA4 y el E2E hoy no miden NADA porque `INPUTS.CONTRATO_LINEAS` esta vacia (~865 fallos «obtenido None» en la pasada del 2026-09-16). En ciclo completo NO hay que fabricar esas lineas: las trae sv3 de sigrid-api al procesar el albaran. Las tres vias que se estaban valorando dejan de hacer falta. El analisis dimensionado esta en `progress/impl_F-045_contrato_lineas.md`.
+
+ALCANCE (fijado tras el rechazo de la primera spec): el banco inyecta el albaran por la MISMA puerta que sv1 -fila en workflow_runs, blob input/, MensajeExtraccion- y deja que el pipeline LOCAL lo recorra entero con sus colas: q-extraccion -> sv2 -> q-persistencia -> sv3 -> q-valoracion -> sv6 -> HTTP -> sv5 -> sv6 persiste. Las salidas de cada fase se LEEN DE POSTGRES, que es donde el sistema las deja, y solo con SELECT.
+
+LA DECISION DE DISENO CRITICA — ATRIBUCION DEL FALLO. En cadena, si IA1 lee mal el numero de albaran, IA3 valorara mal POR SU CULPA. Cada fallo se atribuye a la PRIMERA fase donde nace; las de aguas abajo se marcan «arrastrado» y no cuentan como defecto propio. Sin esto un solo error se cuenta cuatro veces y se acaba buscando en sv5 un defecto que vive en sv2. Cuando la ligadura no es fiable, INDETERMINADO: mejor no atribuir que atribuir mal.
+
+HALLAZGO QUE CONDICIONA EL DISENO: `workflow_runs` NO avanza. `ruesma_comun.workflows` ofrece `transicionar` pero ningun worker la llama (solo los tests de humo del paquete), asi que el estado se queda en `email_received` todo el recorrido. La terminacion se decide por EVIDENCIA PERSISTIDA, con plazo por hito desde el ultimo avance y vigilancia de las colas -poison; agotar el plazo es NO_EVALUABLE, nunca rojo ni verde.
+
+NO SE ELIMINAN las corridas por fase: se quedan para aislar un defecto concreto sin pagar el ciclo entero.
+
+CUIDADOS: el ciclo necesita el pipeline LEVANTADO EN LOCAL (Azurite + Postgres, `infra/docs/levantar-pipeline-local.md`, `infra/local/arrancar_local.ps1 -SinSv1`) y se niega a arrancar si la configuracion no apunta a lo local. sigrid-api la consulta sv3 y es SOLO LECTURA, maximo 1.000 filas por peticion. Contra los recursos reales de Azure, solo lectura. El aislamiento entre casos va por `correlation_key` UNIQUE y baja LOGICA de las pasadas anteriores (nunca DELETE); `--reproceso` ejercita a proposito la rama de duplicado. Y ojo con el coste y el tiempo: cada caso recorre seis servicios.
+
+LO QUE NO VIGILA, y hay que decirlo: sv1 y el buzon M365, sv4 (salvo el gesto de seleccionar contrato, que el banco simula), SharePoint real y el comportamiento contra Azure de verdad.
+
+RELACIONADAS: F-045 (el ground truth que esta ficha aprovecha), F-011 (el banco y su flujo), F-043 (el enrutado por familia que estos casos vigilan).
 
 ### F-037 · sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar
 

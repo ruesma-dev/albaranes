@@ -2,17 +2,17 @@
   "caso_id": "RES-003",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "e93e047be1e7a408809df4b1e51d5942120b88a3c6c53d01858f676a40997947",
+  "sha256_libro": "ba90a8cfb7acbfb6426dcdb47bd527295fc8aa40aa79b98569b4d6dab42f0c93",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "RES-003",
-        "comentario": "Documento de control de residuos (Art. 6 RD 553/2020): rejilla LER preimpresa y volumen escrito a mano. No imprime codigo de obra (687/691 son de Sigrid) ni forma de pago, y la casilla CIF/NIF esta vacia. obra_nombre va '?' porque el papel solo trae la direccion de obra manuscrita, distinta en cada albaran, y es campo critico: exigir una transcripcion exacta de la caligrafia seria una moneda al aire. proveedor_cif va '?': el unico CIF visible (B-82899550) esta dentro del sello de SALMEDINA TRI, no en la cabecera del documento.",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
         "fecha": "2024-07-08",
         "fichero_albaran": "RES-003.pdf",
-        "forma_pago": null,
+        "forma_pago": "@@NO_COMPARAR@@",
         "numero_albaran": "SS-0000589",
-        "obra_codigo": null,
+        "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
         "proveedor_cif": "@@NO_COMPARAR@@",
         "proveedor_nombre": "SALMEDINA TRATAMIENTO DE RESIDUOS INERTES, S.L."
@@ -20,16 +20,28 @@
     ],
     "lineas": [
       {
-        "cantidad": 6,
+        "cantidad": 1,
         "caso_id": "RES-003",
-        "codigo_imputacion": null,
-        "comentario": "Fila LER 17 08 02 'Mat. Yeso', con 6 manuscrito en la columna VOL. m3. Sin precio ni importe: el Excel de negocio declara que vienen del CONTRATO (de la OFERTA en RES-007), nunca del albaran. unidad vacia: el papel no escribe unidad en la linea (el m3 es el rotulo de la columna) y F-024 fijo unidad_medida null en los siete. Sin codigo_imputacion: CI.03A.7 es de Sigrid, no del papel. El incremento por LER NO se extrae aqui: es sintetica de IA3.",
-        "descripcion_esperada": "Mat. Yeso",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
+        "descripcion_esperada": "CAMBIO CONTENEDOR 6M3",
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
         "precio_unitario": null,
-        "unidad": null
+        "unidad": "UD"
+      },
+      {
+        "cantidad": 1,
+        "caso_id": "RES-003",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
+        "descripcion_esperada": "INCREMENTO LER 170802 MAT. DE CONST. A PARTIR DE YESOS-E",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "precio_unitario": null,
+        "unidad": "UD"
       }
     ]
   },

@@ -1,0 +1,71 @@
+{
+  "caso_id": "HOR-017",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "HOR-017",
+        "contrato_codigo": "CTSU24/0452",
+        "descripcion_caso": "250012 · HORMIGON · cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "ia_destino": "ambas",
+        "origen": "manual",
+        "tipologia": "Hormigon"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 3,
+        "caso_id": "HOR-017",
+        "codigo_imputacion": null,
+        "descripcion": "HA-25/F/12/XC2",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 3,
+        "caso_id": "HOR-017",
+        "codigo_imputacion": null,
+        "descripcion": "INCREM. ARIDO 12",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 3,
+        "caso_id": "HOR-017",
+        "codigo_imputacion": null,
+        "descripcion": "INCREM. CONSISTENCIA FLUIDA",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 3,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 3,
+        "caso_id": "HOR-017",
+        "codigo_imputacion": null,
+        "descripcion": "CARGA INCOMPLETA",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 4,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

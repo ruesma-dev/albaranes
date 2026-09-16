@@ -1,0 +1,61 @@
+{
+  "caso_id": "HOR-009",
+  "fase": "IA1",
+  "libro": "IA1_extraccion.xlsx",
+  "sha256_libro": "ba90a8cfb7acbfb6426dcdb47bd527295fc8aa40aa79b98569b4d6dab42f0c93",
+  "tablas": {
+    "cabeceras": [
+      {
+        "caso_id": "HOR-009",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio. El codigo de hormigon leido es correcto, pero luego lo ha cambiado en la descripcion de la linea de sigrid para casarlo. El codigo de hormigon no se puede cambiar | partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio | partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio- esta linea no la ha generado, pero pon B en el codigo asi que parece error de negocio",
+        "fecha": "2024-08-06",
+        "fichero_albaran": "HOR-009.pdf",
+        "forma_pago": "@@NO_COMPARAR@@",
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra_codigo": "@@NO_COMPARAR@@",
+        "obra_nombre": "@@NO_COMPARAR@@",
+        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_nombre": "HORPRESOL, S.L."
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-009",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio. El codigo de hormigon leido es correcto, pero luego lo ha cambiado en la descripcion de la linea de sigrid para casarlo. El codigo de hormigon no se puede cambiar",
+        "descripcion_esperada": "HMF-20/P-CR/B/20-12/X0/P",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-009",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio",
+        "descripcion_esperada": "ADICIÓN FIBRAS POLIPROPILENO (600 GR/M3)",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-009",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio- esta linea no la ha generado, pero pon B en el codigo asi que parece error de negocio",
+        "descripcion_esperada": "INCREM. CONSISTENCIA FLUIDA",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 3,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

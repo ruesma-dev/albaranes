@@ -1,0 +1,29 @@
+{
+  "caso_id": "MOR-002",
+  "fase": "IA4",
+  "libro": "IA4_conciliacion.xlsx",
+  "sha256_libro": "b81f85b50da7a9b70c1de8c52debf9080fbf418b7be3d9d2b3dd3d85a4ce763c",
+  "tablas": {
+    "conciliacion": [
+      {
+        "caso_id": "MOR-002",
+        "comentario": "La partida ha puesto 14.01.02.02, cuando es P4.01.02.02. partida debe buscar en lista de partidas de la obra",
+        "concilia": "@@NO_COMPARAR@@",
+        "linea_contrato_esperada": "@@NO_COMPARAR@@",
+        "motivo": null,
+        "num_linea": 1,
+        "precio_unitario_esperado": 73.5
+      },
+      {
+        "caso_id": "MOR-002",
+        "comentario": "La partida ha puesto 14.01.02.02, cuando es P4.01.02.02. partida debe buscar en lista de partidas de la obra. No ha creado esta linea. Sin embargo hay una casilla claramente donde dice carga incompleta 3. los morteross tambien tienen carga incompleta como los hormigones, añadir a la tipologia",
+        "concilia": "@@NO_COMPARAR@@",
+        "linea_contrato_esperada": "@@NO_COMPARAR@@",
+        "motivo": null,
+        "num_linea": 2,
+        "precio_unitario_esperado": 20
+      }
+    ]
+  },
+  "tipologia": "Mortero"
+}

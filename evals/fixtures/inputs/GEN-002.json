@@ -1,0 +1,119 @@
+{
+  "caso_id": "GEN-002",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "GEN-002",
+        "contrato_codigo": "CTSU25/0317",
+        "descripcion_caso": "2026/01/007378 · GENERICO · habia 2 contratos, y no ha sabido elegir uno. Podriamos hacer uqe si no sabe elegir que coja los 2, lo smerge (distinguiendo que es un mergeo) y que siga con eso. No ha coigo el capitulo inicial P5. el codigo era P5.09.03",
+        "ia_destino": "ambas",
+        "origen": "manual",
+        "tipologia": "Generico-Suministros"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 43.2,
+        "caso_id": "GEN-002",
+        "codigo_imputacion": null,
+        "descripcion": "SOLADO BOREAL WHITE 60X60 cm - COCINA (OP1)",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M2"
+      },
+      {
+        "cantidad": 388.8,
+        "caso_id": "GEN-002",
+        "codigo_imputacion": null,
+        "descripcion": "SOLADO SAN FRANCISCO SAND 60X60 cm - COCINA (OP2)",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M2"
+      },
+      {
+        "cantidad": 43.2,
+        "caso_id": "GEN-002",
+        "codigo_imputacion": null,
+        "descripcion": "SOLADO SAN FRANCISCO GREY 60X60 cm - COCINA (OP3)",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 3,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M2"
+      },
+      {
+        "cantidad": 43.2,
+        "caso_id": "GEN-002",
+        "codigo_imputacion": null,
+        "descripcion": "SOLADO BOREAL GREY 60X60 cm - BAÑOS PRINCIPALES (OP2)",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 4,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M2"
+      },
+      {
+        "cantidad": 43.2,
+        "caso_id": "GEN-002",
+        "codigo_imputacion": null,
+        "descripcion": "SOLADO NATURE BONE RECTIFICADO 60x60 cm - BAÑOS SECUNDARIOS (OP2)",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 5,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M2"
+      },
+      {
+        "cantidad": 43.2,
+        "caso_id": "GEN-002",
+        "codigo_imputacion": null,
+        "descripcion": "SOLADO RC ESSEN GREY 60x60",
+        "descuentos": null,
+        "importe": 621.22,
+        "num_linea": 6,
+        "observaciones_albaran": null,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "cantidad": 500.64,
+        "caso_id": "GEN-002",
+        "codigo_imputacion": null,
+        "descripcion": "ROMANCE ROBLE 24,8x150",
+        "descuentos": null,
+        "importe": 11234.36,
+        "num_linea": 7,
+        "observaciones_albaran": null,
+        "precio_unitario": 22.44,
+        "unidad": "M2"
+      },
+      {
+        "cantidad": 22,
+        "caso_id": "GEN-002",
+        "codigo_imputacion": null,
+        "descripcion": "EUROPALET",
+        "descuentos": null,
+        "importe": 180,
+        "num_linea": 8,
+        "observaciones_albaran": null,
+        "precio_unitario": 9,
+        "unidad": "UD"
+      }
+    ]
+  },
+  "tipologia": "Generico-Suministros"
+}

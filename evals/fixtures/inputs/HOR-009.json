@@ -1,0 +1,59 @@
+{
+  "caso_id": "HOR-009",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "HOR-009",
+        "contrato_codigo": "CTSU23/0386",
+        "descripcion_caso": "W26580 · HORMIGON · partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio. El codigo de hormigon leido es correcto, pero luego lo ha cambiado en la descripcion de la linea de sigrid para casarlo. El codigo de hormigon no se puede cambiar | partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio | partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio- esta linea no la ha generado, pero pon B en el codigo asi que parece error de negocio",
+        "ia_destino": "IA3",
+        "origen": "manual",
+        "tipologia": "Hormigon"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-009",
+        "codigo_imputacion": null,
+        "descripcion": "HMF-20/P-CR/B/20-12/X0/P",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-009",
+        "codigo_imputacion": null,
+        "descripcion": "ADICIÓN FIBRAS POLIPROPILENO (600 GR/M3)",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-009",
+        "codigo_imputacion": null,
+        "descripcion": "INCREM. CONSISTENCIA FLUIDA",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 3,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

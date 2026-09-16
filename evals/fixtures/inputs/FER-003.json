@@ -1,0 +1,47 @@
+{
+  "caso_id": "FER-003",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "FER-003",
+        "contrato_codigo": "CTSU24/0491",
+        "descripcion_caso": "2.115.714 · FERRETERIA · ha cogido 01.04.18 en lugar de CI.04.18 | la deduccion no la ha cogido (no estaba planteado hasta ahora). En el albaran poner RTIRAR 4 disco diamante. Y una referencia a un albaran anterior (su numero de alabaran, no nuestro codigo interno)",
+        "ia_destino": "ambas",
+        "origen": "manual",
+        "tipologia": "Ferreteria"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 4,
+        "caso_id": "FER-003",
+        "codigo_imputacion": null,
+        "descripcion": "DISCO DIAMANTE 180 MM. PULIDORA (DEBASTAR)",
+        "descuentos": 40,
+        "importe": 229.15,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "UD"
+      },
+      {
+        "cantidad": -4,
+        "caso_id": "FER-003",
+        "codigo_imputacion": null,
+        "descripcion": "DISCO DIAMANTE 100 MM. PULIDORA (11-380)",
+        "descuentos": 40,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "UD"
+      }
+    ]
+  },
+  "tipologia": "Ferreteria"
+}

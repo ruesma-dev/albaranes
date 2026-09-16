@@ -1,0 +1,47 @@
+{
+  "caso_id": "MOR-004",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "MOR-004",
+        "contrato_codigo": "CTSU24/0452",
+        "descripcion_caso": "37816 · MORTERO · partida mal, ha cogido 00.03.01. importe viene de oferta. Añadir | no se porque hay que meter esta linea, revisar negocio | incrementos por año en morteros hay que meterlo",
+        "ia_destino": "ambas",
+        "origen": "manual",
+        "tipologia": "Mortero"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 9,
+        "caso_id": "MOR-004",
+        "codigo_imputacion": null,
+        "descripcion": "D-300/B/5/I",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 9,
+        "caso_id": "MOR-004",
+        "codigo_imputacion": null,
+        "descripcion": "INCREM. FIBRAS POLIPROPILENO",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Mortero"
+}

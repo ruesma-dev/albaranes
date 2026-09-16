@@ -1,0 +1,49 @@
+{
+  "caso_id": "HOR-010",
+  "fase": "IA1",
+  "libro": "IA1_extraccion.xlsx",
+  "sha256_libro": "ba90a8cfb7acbfb6426dcdb47bd527295fc8aa40aa79b98569b4d6dab42f0c93",
+  "tablas": {
+    "cabeceras": [
+      {
+        "caso_id": "HOR-010",
+        "comentario": "ha cambiado codigo de linea de hormigon en descripcion para casar con sigrid. El codigo del hormigon no se cambia | no la ha generado. Y hay cambio de año entre contrato (ver codigo) y año de albaran. Deberia haberlo hecho",
+        "fecha": "2024-03-21",
+        "fichero_albaran": "HOR-010.pdf",
+        "forma_pago": "@@NO_COMPARAR@@",
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra_codigo": "@@NO_COMPARAR@@",
+        "obra_nombre": "@@NO_COMPARAR@@",
+        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_nombre": "HORPRESOL, S.L."
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-010",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": null,
+        "descripcion_esperada": "HA-25/F/20/XC2",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-010",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": "ha cambiado codigo de linea de hormigon en descripcion para casar con sigrid. El codigo del hormigon no se cambia",
+        "descripcion_esperada": "INCREM. CONSISTENCIA FLUIDA",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

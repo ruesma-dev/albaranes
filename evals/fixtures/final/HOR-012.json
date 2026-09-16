@@ -1,0 +1,69 @@
+{
+  "caso_id": "HOR-012",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "HOR-012",
+        "cif": "B29679628",
+        "comentario": "no habia elegido contrato. Cuando sean 2 vamos a unirlos. Y que no elija. El incremento de precio se calcula contra año contrato antiguo | no se de donde saca la partida. Ha puesto 02.01.02 | no se de donde saca la partida. Ha puesto 02.01.02. importe de oferta, ahora no sale",
+        "contrato_elegido": "CTSU24/0452",
+        "fecha": "2025-09-09",
+        "fichero": "HOR-012.pdf",
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "693",
+        "proveedor": "HORMIGONES Y CEMENTOS ANDALUCES, S.L.",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 891
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 9,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-012",
+        "comentario": "no habia elegido contrato. Cuando sean 2 vamos a unirlos. Y que no elija. El incremento de precio se calcula contra año contrato antiguo",
+        "descripcion": "HA-25/F/20/XC1",
+        "importe_final": 803.7,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "partida_final": 42.01,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 89.3,
+        "unidad_final": "M3"
+      },
+      {
+        "cantidad_final": 9,
+        "casa_con_contrato": "SI",
+        "caso_id": "HOR-012",
+        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02",
+        "descripcion": "INCREM. CONSISTENCIA FLUIDA",
+        "importe_final": 27,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "partida_final": 42.01,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 3,
+        "unidad_final": "M3"
+      }
+    ],
+    "lineas_anadidas": [
+      {
+        "cantidad": 9,
+        "caso_id": "HOR-012",
+        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02. importe de oferta, ahora no sale",
+        "concepto": "HA-25/F/20/XC1. INCREM. 2025",
+        "importe": 60.3,
+        "num_linea_base": 2,
+        "partida": 42.01,
+        "precio_unitario": 6.7
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

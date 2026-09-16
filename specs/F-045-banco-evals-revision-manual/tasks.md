@@ -1,0 +1,45 @@
+<!-- specs/F-045-banco-evals-revision-manual/tasks.md -->
+# F-045 · Tareas
+
+Rigor `critico`: **fase RED obligatoria** (el test falla ANTES de la
+implementación y la traza va al informe), cobertura >= 80 % de lo tocado y
+campaña de mutación **completa** sin supervivientes injustificados.
+
+Orden pensado para que la **capa 1** (el banco sembrado) dé valor aunque la
+capa 2 se quede a medias: T1–T12 cierran el volcado (T5 y T5 bis son la
+semántica corregida del vacío, §5 del diseño); T13 salda la deuda del
+banco; T14–T16 son el catálogo de decisiones. Un commit por tarea
+(`F-045 Tn: ...`).
+
+**Estado al 2026-09-16**: la CAPA 1 está hecha (T1–T12) más T17, T18, T21 y
+**T13**, que entró después de la pasada con LLM porque sin ella el banco no
+era legible: 266 de sus 352 fallos de IA1 eran ruido. Sin marcar quedan
+T13 bis y T14–T16, y las dos MANUAL del humano (T19, T20).
+
+- [x] T1: Crear `evals/revision/vocabulario.json` y `vocabulario.py`: mapeo etiqueta del Excel → familia de DOCUMENTO → pestaña (design §5 bis; las diez etiquetas con destino, y `combustible`, `grava`, `ferreteria` y `ferralla` admitidas aunque el catálogo aún no las tenga), orígenes de línea y de precio con sus sinónimos, y aborto si algo no se reconoce —nunca caer en `generico`—.  |  Verificación: `pytest tests/test_f045_r5_r6_vocabulario.py` (R5, R6); traza RED en el informe
+- [x] T2: Crear `evals/revision/modelos.py` y `lectura.py`: del Excel plano a `list[FilaPlana]`, localizando las columnas por nombre y no por posición (el humano añade columnas).  |  Verificación: `pytest tests/test_f045_r1_lectura.py` con un `.xlsx` fabricado en el propio test (sin red ni BBDD)
+- [x] T3: `reparto.clave_natural`, `agrupar_por_albaran` y `asignar_casos_id` contra `evals/mapa_casos.json` (`caso_id` ↔ código ↔ nombre original ↔ formato ↔ `gemelo_de`), sembrado con los 7 casos RES.  |  Verificación: `pytest tests/test_f045_r7_r8_casos_id.py` (R7, R8: reimportar no crea caso nuevo)
+- [x] T4: Discriminación de fila impresa vs deducida a partir de la columna de origen de línea; la deducida NUNCA va a IA1.  |  Verificación: `pytest tests/test_f045_r3_impresa_vs_deducida.py` (R3)
+- [x] T5: Clasificar cada caso en **no regresión** (comentario vacío: se compara y hoy debe salir VERDE) o **defecto conocido** (comentario con texto), sin que el comentario produzca nunca un `?`.  |  Verificación: `pytest tests/test_f045_r9_r10_clasificacion.py` (R9, R10); traza RED en el informe
+- [x] T5 bis: Política de vacíos por columna en `vocabulario.json` (`descuento` = sin descuento; `LER` = no aplica; `partida`, `precio unitario` e `importe` = `?`), con el recuento por columna.  |  Verificación: `pytest tests/test_f045_r11_r12_vacios.py` (R11, R12)
+- [x] T6: Reparto a IA1 (cabeceras y líneas) e IA2 (contexto, con el LER de residuos), incluidos los `?` de `numero_albaran`, `obra_codigo`, `obra_nombre` y `cif`.  |  Verificación: `pytest tests/test_f045_r2_r13_ia1_ia2.py` (R2, R13)
+- [x] T7: Reparto a IA3 (líneas valoradas y sintéticas esperadas) y a IA4 (`concilia` de las líneas `NUEVA`), con `precio_source` según la columna de origen.  |  Verificación: `pytest tests/test_f045_r2_r4_ia3_ia4.py` (R2, R4)
+- [x] T7 bis: Aplicar los tres criterios de residuos al ground truth (canon por código LER cuando el contrato no tarifa ese LER; mínimo de 1 tn solo en lo que se pesa —canon y tratamiento—, con el movimiento en unidades; incremento por año también en residuos); los tres nacen como defecto conocido porque hoy no hay código.  |  Verificación: `pytest tests/test_f045_r12bis_residuos.py` (R12 bis)
+- [x] T8: Reparto a `INPUTS.CASOS` y a `RESULTADO_FINAL` (datos generales, líneas y líneas añadidas).  |  Verificación: `pytest tests/test_f045_r2_inputs_final.py` (R2)
+- [x] T8 bis: Crear las pestañas `Grava` y `Ferreteria` en los seis libros copiando `Generico-Suministros`, añadirlas a `TIPOLOGIAS` de `evals/conversor.py` y marcar los casos cuya familia aún no existe en el catálogo para que el informe los agrupe aparte.  |  Verificación: `pytest tests/test_f045_r6_familias_nuevas.py` (R6) y `python -m evals.conversor` en 0
+- [x] T9: `escritura.py`: copia de seguridad previa, escritura por pestaña respetando las filas de título y sin tocar `caso_id` ajenos.  |  Verificación: `pytest tests/test_f045_r15_r16_r17_escritura.py` (R15, R16, R17)
+- [x] T10: CLI `python -m evals.revision --origen <xlsx> [--dry-run]` con el informe de R14 (valor/`?`/vacías por columna y reparto no regresión vs defecto conocido) a `progress/import_F-045.md`.  |  Verificación: `pytest tests/test_f045_r14_r18_cli.py` (R14, R18: dos pasadas dejan lo mismo)
+- [x] T11: `albaranes.py`: `codigo_desde_nombre` con el convenio del humano (tras el último `_`, o el nombre entero si no lo hay), normalización, emparejado admitiendo `.pdf/.png/.jpg/.jpeg` y renombrado reproducible a `<caso_id>`, con los cuatro fallos ruidosos listados uno a uno.  |  Verificación: `pytest tests/test_f045_r20_r21_albaranes.py` (R20, R21: nada asume `.pdf`; manda el código del papel, no el persistido)
+- [x] T11 bis: Casos gemelos: el mismo albarán en PDF y en imagen genera `<caso_id>` y `<caso_id>-IMG` con el MISMO ground truth, hermanados por `gemelo_de`, sin deduplicar.  |  Verificación: `pytest tests/test_f045_r22_gemelos.py` (R22); traza RED en el informe
+- [x] T11 ter: Ignorar `evals/inputs/albaranes/` en `.gitignore` (hoy solo hay `*.pdf`) y test que comprueba que git no traquea nada ahí.  |  Verificación: `pytest tests/test_f045_r24_no_versionar.py` (R24)
+- [x] T12: Pasada real del importador sobre el Excel del humano y `python -m evals.conversor`; commit SOLO de los fixtures, el mapa y los datos.  |  Verificación: `python -m evals.conversor` termina en 0 y `git status` no muestra ni documentos de entrada ni `.xlsx` (R19, R24)
+- [x] T13: `OBSERVABLES` de IA1/IA2 en `evals/procesos/sv2_extraccion.py` y su uso en `evals/runner.py`, con los campos no observables en el informe.  |  Verificación: `pytest tests/test_f045_r25_r26_observables.py` (R25, R26)
+- [ ] T13 bis: Medir el camino de lectura (`pdf_texto` / `pdf_escaneado` / `imagen`) en `sv2_extraccion.py` y agrupar por él el resumen de `evals/informe.py`.  |  Verificación: `pytest tests/test_f045_r23_caminos.py` (R23: un fallo solo en el gemelo de imagen sale como hallazgo de formato)
+- [ ] T14: Crear `evals/patrones.json` con los nueve patrones más el de residuos de §5 ter (casos, decisión candidata y las dos respuestas del filtro de robustez) y la lista de casos de no regresión.  |  Verificación: `pytest tests/test_f045_r27_r29_patrones.py` (R27–R29: casos existentes, filtro obligatorio, descartadas sin ficha)
+- [ ] T15: Actualizar `evals/README.md`: comando nuevo, catálogo de patrones, las cuatro extensiones de entrada (hoy dice «`.pdf` (o `.jpg`)»), los casos gemelos y qué se versiona.  |  Verificación: `pytest tests/test_f039_r1_r2_r23_r25_documentos.py` y revisión del humano
+- [ ] T16: Añadir a `harness/features.json` las fichas de arreglo de `design.md` §7 —incluida la del catálogo de familias (`combustible` a documento, `grava`, `ferreteria`, `ferralla`), con su argumento medido y sus riesgos—, en el orden allí fijado y en estado `pending`.  |  Verificación: `python -m harness.backlog` regenera `BACKLOG.md` y `bash harness/init.sh` valida el JSON (R30)
+- [x] T17: Cerrar cobertura >= 80 % sobre lo tocado.  |  Verificación: `python -m harness.cobertura --feature F-045`
+- [x] T18: Campaña de mutación COMPLETA (sin tope) sobre `evals/revision/` y el diff de `runner.py`, `informe.py` y `sv2_extraccion.py`; cada superviviente, test nuevo o justificación escrita.  |  Verificación: `python -m harness.mutacion --feature F-045` y análisis en `progress/impl_F-045.md`
+- [ ] T19: Validar con el humano la tabla de reparto (§3), la política de vacíos por columna y el campo `servicios` (D6); el mapa de etiquetas y el alcance del mínimo de 1 tn quedaron cerrados el 2026-09-15.  |  Verificación: MANUAL (humano) (R31)
+- [ ] T20: Pasada de evals con LLM sobre los casos nuevos; los de no regresión deben salir en VERDE y los de defecto conocido en ROJO con su patrón.  |  Verificación: MANUAL (humano) — `python -m evals.runner --con-llm --feature F-045`, informe en `progress/evals_F-045.md` (R32)
+- [x] T21: Ejecutar `bash harness/init.sh` en verde.  |  Verificación: `bash harness/init.sh` termina con exit code 0

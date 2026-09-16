@@ -1,0 +1,20 @@
+{
+  "caso_id": "HOR-014",
+  "fase": "IA4",
+  "libro": "IA4_conciliacion.xlsx",
+  "sha256_libro": "b81f85b50da7a9b70c1de8c52debf9080fbf418b7be3d9d2b3dd3d85a4ce763c",
+  "tablas": {
+    "conciliacion": [
+      {
+        "caso_id": "HOR-014",
+        "comentario": "el contrato elegido estaba mal. Tiene 2. al quere cambiar de contrato en el desplegable solo me salia el seleccionado y sin contrato, he tenido que poner sin contrato para que me salgan los 2.como se que es final de bombeo?. Ha leido bien que cantidad es 5, deberia haber pueesto cantidad en carga incompleta 1. analizar porque no lo ha hecho",
+        "concilia": "@@NO_COMPARAR@@",
+        "linea_contrato_esperada": "@@NO_COMPARAR@@",
+        "motivo": null,
+        "num_linea": 2,
+        "precio_unitario_esperado": 6
+      }
+    ]
+  },
+  "tipologia": "Hormigon"
+}

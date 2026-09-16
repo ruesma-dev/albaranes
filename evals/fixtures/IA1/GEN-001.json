@@ -1,0 +1,37 @@
+{
+  "caso_id": "GEN-001",
+  "fase": "IA1",
+  "libro": "IA1_extraccion.xlsx",
+  "sha256_libro": "ba90a8cfb7acbfb6426dcdb47bd527295fc8aa40aa79b98569b4d6dab42f0c93",
+  "tablas": {
+    "cabeceras": [
+      {
+        "caso_id": "GEN-001",
+        "comentario": null,
+        "fecha": "2026-04-16",
+        "fichero_albaran": "GEN-001.pdf",
+        "forma_pago": "@@NO_COMPARAR@@",
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra_codigo": "@@NO_COMPARAR@@",
+        "obra_nombre": "@@NO_COMPARAR@@",
+        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_nombre": "VODALAND ESPAÑA, S.L"
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad": 377,
+        "caso_id": "GEN-001",
+        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "comentario": null,
+        "descripcion_esperada": "CANAL DE PLÁSTICO BASE DN100 H60",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "precio_unitario": null,
+        "unidad": "MT"
+      }
+    ]
+  },
+  "tipologia": "Generico-Suministros"
+}

@@ -2,16 +2,16 @@
   "caso_id": "RES-003",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "42b17f99ec6a6f157a8661bfd542877f2f12dc6b74a476cd43e946640a880687",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
   "tablas": {
     "datos_generales": [
       {
         "caso_id": "RES-003",
         "cif": "B82899550",
-        "comentario": "SS-0000589 · 120 + INCR. LER 170802 (51 €) = 171,00 € (§8.3).",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
         "contrato_elegido": "CTSU24/0228",
         "fecha": "2024-07-08",
-        "fichero": null,
+        "fichero": "RES-003.pdf",
         "motivo_revision": null,
         "numero_albaran": "SS-0000589",
         "obra": "687",
@@ -25,8 +25,8 @@
         "cantidad_final": 1,
         "casa_con_contrato": "SI",
         "caso_id": "RES-003",
-        "comentario": null,
-        "descripcion": "170802 MATERIALES DE CONSTRUCCION A BASE DE YESO",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
+        "descripcion": "CAMBIO CONTENEDOR 6M3",
         "importe_final": 120,
         "linea_a_revision": "@@NO_COMPARAR@@",
         "linea_contrato": "C1",
@@ -34,6 +34,21 @@
         "partida_final": "CI.03A.7",
         "precio_source": "contrato_db",
         "precio_unitario_final": 120,
+        "unidad_final": "UD"
+      },
+      {
+        "cantidad_final": 1,
+        "casa_con_contrato": "SI",
+        "caso_id": "RES-003",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
+        "descripcion": "INCREMENTO LER 170802 MAT. DE CONST. A PARTIR DE YESOS-E",
+        "importe_final": 51,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": "@@NO_COMPARAR@@",
+        "num_linea": 2,
+        "partida_final": "CI.03A.7",
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 51,
         "unidad_final": "UD"
       }
     ],

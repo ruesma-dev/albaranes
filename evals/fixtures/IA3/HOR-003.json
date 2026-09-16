@@ -1,0 +1,37 @@
+{
+  "caso_id": "HOR-003",
+  "fase": "IA3",
+  "libro": "IA3_valoracion.xlsx",
+  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "tablas": {
+    "lineas_valoradas": [
+      {
+        "caso_id": "HOR-003",
+        "codigo_partida_final": "P4.03.05",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "comentario": "Partida deberia ser P4.03.05, es verdad que casi parece un 0 el primer digito. Por eso buscar en lista de partidas",
+        "importe_calculado": 799.2,
+        "match_method": "@@NO_COMPARAR@@",
+        "num_linea": 1,
+        "precio_source": "contrato_db",
+        "precio_unitario_final": 99.9,
+        "review_required": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_esperadas": [
+      {
+        "cantidad": 8,
+        "caso_id": "HOR-003",
+        "codigo_partida": "P4.03.05",
+        "comentario": "Partida deberia ser P4.03.05, es verdad que casi parece un 0 el primer digito. Por eso buscar en lista de partidas",
+        "descripcion_esperada": "INCREM. PRECIO 2026",
+        "modifier_source": "@@NO_COMPARAR@@",
+        "num_linea_base": 1,
+        "precio_unitario": 9,
+        "rol_linea": "@@NO_COMPARAR@@"
+      }
+    ],
+    "sinteticas_prohibidas": []
+  },
+  "tipologia": "Hormigon"
+}

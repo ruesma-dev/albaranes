@@ -1,0 +1,43 @@
+{
+  "caso_id": "FER-001",
+  "fase": "FINAL",
+  "libro": "RESULTADO_FINAL.xlsx",
+  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
+  "tablas": {
+    "datos_generales": [
+      {
+        "caso_id": "FER-001",
+        "cif": "A28733558",
+        "comentario": null,
+        "contrato_elegido": "CTSU24/0454",
+        "fecha": "2026-06-05",
+        "fichero": "FER-001.pdf",
+        "motivo_revision": null,
+        "numero_albaran": "@@NO_COMPARAR@@",
+        "obra": "696",
+        "proveedor": "FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)",
+        "requiere_revision": "@@NO_COMPARAR@@",
+        "total_valorado_esperado": 19.41
+      }
+    ],
+    "lineas": [
+      {
+        "cantidad_final": 50,
+        "casa_con_contrato": "NO",
+        "caso_id": "FER-001",
+        "comentario": null,
+        "descripcion": "DISCO ESPECIAL ACERO INOX 115x1x22",
+        "importe_final": 19.41,
+        "linea_a_revision": "@@NO_COMPARAR@@",
+        "linea_contrato": null,
+        "num_linea": 1,
+        "partida_final": "CI.4.18",
+        "precio_source": "albaran",
+        "precio_unitario_final": 0.647,
+        "unidad_final": "UD"
+      }
+    ],
+    "lineas_anadidas": []
+  },
+  "tipologia": "Ferreteria"
+}

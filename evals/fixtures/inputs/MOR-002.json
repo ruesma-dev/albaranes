@@ -1,0 +1,47 @@
+{
+  "caso_id": "MOR-002",
+  "fase": "INPUTS",
+  "libro": "INPUTS.xlsx",
+  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "tablas": {
+    "caso": [
+      {
+        "caso_id": "MOR-002",
+        "contrato_codigo": "CTSU25/0001",
+        "descripcion_caso": "0001229 · MORTERO · La partida ha puesto 14.01.02.02, cuando es P4.01.02.02. partida debe buscar en lista de partidas de la obra | La partida ha puesto 14.01.02.02, cuando es P4.01.02.02. partida debe buscar en lista de partidas de la obra. No ha creado esta linea. Sin embargo hay una casilla claramente donde dice carga incompleta 3. los morteross tambien tienen carga incompleta como los hormigones, añadir a la tipologia",
+        "ia_destino": "ambas",
+        "origen": "manual",
+        "tipologia": "Mortero"
+      }
+    ],
+    "condiciones": [],
+    "contrato_lineas": [],
+    "lineas_albaran": [
+      {
+        "cantidad": 3,
+        "caso_id": "MOR-002",
+        "codigo_imputacion": null,
+        "descripcion": "MORTERO 7,5 - 48H",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 1,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      },
+      {
+        "cantidad": 3,
+        "caso_id": "MOR-002",
+        "codigo_imputacion": null,
+        "descripcion": "CARGAS INCOMPLETAS",
+        "descuentos": null,
+        "importe": null,
+        "num_linea": 2,
+        "observaciones_albaran": null,
+        "precio_unitario": null,
+        "unidad": "M3"
+      }
+    ]
+  },
+  "tipologia": "Mortero"
+}
