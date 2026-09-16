@@ -723,40 +723,61 @@ Deben salir seis.
 
 ---
 
-## F-047 · SPEC ESCRITA (2026-09-16, spec-author)
+## F-047 · SPEC ESCRITA (2026-09-16, spec-author) — 2.ª versión
 
-`specs/F-047-evals-ciclo-completo/` con los tres ficheros: requirements (149
-líneas, 38 R), design (225) y tasks (18 tareas, T16/T17 MANUAL). Rigor
-`critico`. No se ha tocado una línea de código.
+`specs/F-047-evals-ciclo-completo/`: requirements (150 líneas, 40 R), design
+(245) y tasks (23 tareas; T19–T22 son MANUAL y exigen el pipeline local).
+Rigor `critico`. No se ha tocado una línea de código. Ficha de
+`harness/features.json` reescrita con el alcance nuevo y pasada a `spec_ready`.
 
-Lo que resuelve: el banco encadena IA1 → IA2 → contrato → IA3 → IA4 → build
-alimentando cada fase con la salida real de la anterior; cada fallo se atribuye
-a la PRIMERA fase donde nace (`PROPIO` / `ARRASTRADO` / `INDETERMINADO`) según
-un mapa de dependencias versionado, y solo los propios ponen roja una fase. Con
-el contrato leído de sigrid-api desaparece el motivo de los ~865 fallos
-«obtenido None» de la pasada del 2026-09-16, y las tres vías de
-`progress/impl_F-045_contrato_lineas.md` quedan sin objeto.
+**La 1.ª versión fue RECHAZADA por el humano**: proponía encadenar los hand-off
+en memoria saltándose la persistencia. Sus palabras: «no, debería encadenar el
+proceso completo, incluyendo ambas persistencias». Tenía razón y el argumento
+está recogido en la spec: dos de los defectos que motivan la ficha —el
+`contexto_linea` perdido en el reproceso y la rama de duplicado que no llamaba a
+`save()`, con las seis `tipologia*` en NULL— son de persistencia y un ciclo en
+memoria no los habría visto.
+
+### El alcance vigente
+
+El banco inyecta por la misma puerta que sv1 (fila en `workflow_runs`, blob
+`input/`, `MensajeExtraccion`, reutilizando `ruesma_comun`) y deja que el
+pipeline LOCAL lo recorra entero: `q-extraccion` → sv2 → `q-persistencia` → sv3
+→ `q-valoracion` → sv6 → HTTP → sv5 → sv6 persiste. Las salidas de cada fase se
+leen de Postgres y solo con `SELECT`.
+
+### Hallazgo del análisis que cambia el diseño
+
+**`workflow_runs` NO avanza en el pipeline real.** `ruesma_comun.workflows`
+expone `transicionar`, pero el único código que la llama son los tests de humo
+del propio paquete: la fila se queda en `email_received` todo el recorrido. Por
+eso la terminación se decide por **evidencia persistida** (cinco hitos, de las
+filas de `albaran_documents` a `albaran_line_valuations`), con plazo por hito
+contado desde el último avance y vigilancia de las colas `-poison`. Que los
+workers transicionen es un arreglo del SISTEMA, no del banco: **candidato a
+ficha propia**.
 
 ### Decisiones abiertas que necesita validar el humano
 
-1. **El ciclo NO va por colas** (design §1). La ficha daba por necesarios
-   Azurite + Postgres; el diseño encadena por los mismos hand-off JSON de
-   producción (envelope de sv2, `ContextoValoracion`, envelope de sv5) en
-   secuencia y en memoria. Motivo: la vía por colas es asíncrona, no deja ver la
-   salida de cada IA sin espiar la BBDD, y escribir en Postgres desde local roza
-   las reglas duras. **Precio declarado**: quedan sin cubrir el transporte por
-   cola, la persistencia SQL de sv3/sv6, el `header_grounding_service` contra
-   Sigrid y la descarga de PDF de contrato. Es LA decisión discutible de la
-   spec: si el humano quiere el ciclo por colas, es otra ficha y otro diseño.
-2. **`INDETERMINADO` degrada la pasada a NO_EVALUABLE**, no a ROJO (R12).
-   Cuando IA1 rompe el emparejado de líneas no se puede atribuir sin adivinar;
-   marcarlo rojo mentiría sobre de quién es el defecto.
-3. **`INPUTS.CASOS.tipologia` y `contrato_codigo` pasan de entrada a
-   expectativa** (R5, R17). Esto toca la decisión 1 que F-045 dejó abierta: en
-   ciclo la clasificación la produce el sistema y el libro la juzga, así que la
-   discusión pestaña-contra-familia deja de ser una decisión de entrada.
-4. **El coste de la primera pasada**: T16 la acota a seis casos de familias
-   distintas antes de la de 59 (T17). Las dos son verificación MANUAL.
+1. **`INDETERMINADO` degrada la pasada a NO_EVALUABLE, no a ROJO.** Cuando IA1
+   rompe el emparejado de líneas no se puede atribuir sin adivinar.
+2. **Cuando sv3 no auto-selecciona contrato**, el banco hace el gesto del
+   revisor de sv4 (fija el de `INPUTS.CASOS.contrato_codigo` y republica
+   `MensajeValoracion`) y declara que ese caso NO midió la selección. La
+   alternativa —dejarlo colgar— convertiría en NO_EVALUABLE todos los casos con
+   más de un contrato.
+3. **El aislamiento va por baja LÓGICA**, la misma vía de sv4, nunca `DELETE`, y
+   solo sobre documentos con prefijo `eval/`. `--reproceso` hace lo contrario a
+   propósito para ejercitar la rama de duplicado.
+4. **El coste y el tiempo**: cada caso recorre seis servicios con dos llamadas
+   LLM en sv2 y una o dos en sv5. T19 pasa UN caso, T20 seis, y la de 59 (T22)
+   la decide el humano.
+
+### Costuras que el ciclo NO vigila (declaradas en design §9)
+
+sv1 y el buzón M365, sv4 salvo el gesto de contrato, SharePoint real, y el
+comportamiento contra Azure de verdad (Azurite no es Azure Queue; la identidad
+gestionada no se ejercita).
 
 Siguiente paso: aprobación del humano y, con ella, el implementer sobre
 `feature/F-047-evals-ciclo-completo`.

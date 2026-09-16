@@ -13,7 +13,7 @@ En curso: **F-045**.
 |---|---|---|---|---|---|
 | F-045 | El banco de evals recoge la revision manual de los 32 albaranes: convertir los comentarios del humano en casos que se comprueban solos | 2 | en curso | critico | `feature/F-045-banco-evals-revision-manual` |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
-| F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | pendiente | critico |  |
+| F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
 | F-028 | Con dos contratos candidatos no se elige ninguno y el albarán no llega a valorarse | 7 | pendiente | critico | `feature/F-028-selector-contrato-por-partidas` |
@@ -116,21 +116,25 @@ RELACIONADAS: F-043 (la clasificacion la decide IA1 contra este catalogo), F-045
 
 ### F-047 · El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior
 
-estado **pendiente** · prioridad 3 · rigor `critico` · SDD sí
+estado **spec lista** · prioridad 3 · rigor `critico` · SDD sí
 
-ORIGEN: decision del humano del 2026-09-16, al ver el resultado de la primera pasada con LLM de F-045. Sus palabras: «no es tan importante la entrada como la salida que da. lo suyo es hacer el ciclo completo, e ir obteniendo las salidas de cada IA. no correrlas por separado con entradas puntuales».
+ORIGEN: decision del humano del 2026-09-16, al ver el resultado de la primera pasada con LLM de F-045. Sus palabras: «no es tan importante la entrada como la salida que da. lo suyo es hacer el ciclo completo, e ir obteniendo las salidas de cada IA. no correrlas por separado con entradas puntuales». Y el 2026-09-16, al revisar la spec: «no, deberia encadenar el proceso completo, incluyendo ambas persistencias».
 
-EL PROBLEMA QUE RESUELVE. Hoy el banco ejecuta cada fase por separado alimentandola con entradas preparadas a mano en los libros. Eso mide un sistema que no existe: el real encadena IA1 -> IA2 -> IA3 -> IA4. Los defectos que mas han dolido en este proyecto vivian TODOS en la costura entre fases -el `contexto_linea` que se perdia en el reproceso, el `{catalogo_familias}` que llegaba a IA2 sin renderizar- y ninguno lo habria cazado un eval por fases.
+EL PROBLEMA QUE RESUELVE. Hoy el banco ejecuta cada fase por separado alimentandola con entradas preparadas a mano en los libros. Eso mide un sistema que no existe: el real encadena IA1 -> IA2 -> IA3 -> IA4 pasando por DOS PERSISTENCIAS. Los defectos que mas han dolido vivian TODOS en la costura, y dos de ellos son de persistencia: el `contexto_linea` que se perdia en el reproceso -dejando la red de sinteticas sin `codigo_ler`- y la rama de duplicado que no llamaba a save(), con las seis columnas `tipologia*` en NULL. Ninguno lo habria cazado un eval por fases, NI UN CICLO ENCADENADO EN MEMORIA que se saltara sv3 y sv6.
 
-Y DE PASO DISUELVE UN PROBLEMA: IA3, IA4 y el E2E hoy no miden NADA porque `INPUTS.CONTRATO_LINEAS` esta vacia (~865 fallos «obtenido None» en la pasada del 2026-09-16). En ciclo completo NO hay que fabricar esas lineas: las trae el propio sistema de sigrid-api al procesar el albaran. Las tres vias que se estaban valorando -sintetizarlas del Excel, leerlas del ERP, tomarlas de lo persistido- dejan de hacer falta. El analisis dimensionado esta en `progress/impl_F-045_contrato_lineas.md`.
+Y DE PASO DISUELVE UN PROBLEMA: IA3, IA4 y el E2E hoy no miden NADA porque `INPUTS.CONTRATO_LINEAS` esta vacia (~865 fallos «obtenido None» en la pasada del 2026-09-16). En ciclo completo NO hay que fabricar esas lineas: las trae sv3 de sigrid-api al procesar el albaran. Las tres vias que se estaban valorando dejan de hacer falta. El analisis dimensionado esta en `progress/impl_F-045_contrato_lineas.md`.
 
-LO QUE HAY QUE HACER: que el banco ejecute el ciclo por cada albaran y guarde la salida de las CUATRO fases, comparando cada una contra el ground truth que F-045 ya volco. El ground truth NO se tira: cambia de donde sale la ENTRADA, no contra que se compara.
+ALCANCE (fijado tras el rechazo de la primera spec): el banco inyecta el albaran por la MISMA puerta que sv1 -fila en workflow_runs, blob input/, MensajeExtraccion- y deja que el pipeline LOCAL lo recorra entero con sus colas: q-extraccion -> sv2 -> q-persistencia -> sv3 -> q-valoracion -> sv6 -> HTTP -> sv5 -> sv6 persiste. Las salidas de cada fase se LEEN DE POSTGRES, que es donde el sistema las deja, y solo con SELECT.
 
-LA DECISION DE DISENO CRITICA — ATRIBUCION DEL FALLO. En cadena, si IA1 lee mal el numero de albaran, IA3 valorara mal POR SU CULPA. Cada fallo se atribuye a la PRIMERA fase donde nace; las de aguas abajo se marcan «arrastrado» y no cuentan como defecto propio. Sin esto un solo error se cuenta cuatro veces y se acaba buscando en sv5 un defecto que vive en sv2.
+LA DECISION DE DISENO CRITICA — ATRIBUCION DEL FALLO. En cadena, si IA1 lee mal el numero de albaran, IA3 valorara mal POR SU CULPA. Cada fallo se atribuye a la PRIMERA fase donde nace; las de aguas abajo se marcan «arrastrado» y no cuentan como defecto propio. Sin esto un solo error se cuenta cuatro veces y se acaba buscando en sv5 un defecto que vive en sv2. Cuando la ligadura no es fiable, INDETERMINADO: mejor no atribuir que atribuir mal.
 
-NO SE ELIMINAN las corridas por fase: se quedan para aislar un defecto concreto sin pagar el ciclo entero. Son baratas y sirven para reproducir.
+HALLAZGO QUE CONDICIONA EL DISENO: `workflow_runs` NO avanza. `ruesma_comun.workflows` ofrece `transicionar` pero ningun worker la llama (solo los tests de humo del paquete), asi que el estado se queda en `email_received` todo el recorrido. La terminacion se decide por EVIDENCIA PERSISTIDA, con plazo por hito desde el ultimo avance y vigilancia de las colas -poison; agotar el plazo es NO_EVALUABLE, nunca rojo ni verde.
 
-CUIDADOS: el ciclo completo necesita el pipeline levantado (Azurite + Postgres en local, `infra/docs/levantar-pipeline-local.md`) y toca sigrid-api, que es SOLO LECTURA y sirve como maximo 1.000 filas por peticion. Contra los recursos reales de Azure, solo lectura. Y ojo con el coste: una pasada completa con LLM sobre 59 albaranes gasta API de verdad.
+NO SE ELIMINAN las corridas por fase: se quedan para aislar un defecto concreto sin pagar el ciclo entero.
+
+CUIDADOS: el ciclo necesita el pipeline LEVANTADO EN LOCAL (Azurite + Postgres, `infra/docs/levantar-pipeline-local.md`, `infra/local/arrancar_local.ps1 -SinSv1`) y se niega a arrancar si la configuracion no apunta a lo local. sigrid-api la consulta sv3 y es SOLO LECTURA, maximo 1.000 filas por peticion. Contra los recursos reales de Azure, solo lectura. El aislamiento entre casos va por `correlation_key` UNIQUE y baja LOGICA de las pasadas anteriores (nunca DELETE); `--reproceso` ejercita a proposito la rama de duplicado. Y ojo con el coste y el tiempo: cada caso recorre seis servicios.
+
+LO QUE NO VIGILA, y hay que decirlo: sv1 y el buzon M365, sv4 (salvo el gesto de seleccionar contrato, que el banco simula), SharePoint real y el comportamiento contra Azure de verdad.
 
 RELACIONADAS: F-045 (el ground truth que esta ficha aprovecha), F-011 (el banco y su flujo), F-043 (el enrutado por familia que estos casos vigilan).
 
