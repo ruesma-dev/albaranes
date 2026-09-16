@@ -221,3 +221,42 @@ def test_f045_r15_una_lista_viaja_como_texto_separado_por_punto_y_coma():
     assert escritura._a_celda([]) is None
     assert escritura._a_celda("40") == "40"
     assert escritura._a_celda(None) is None
+
+
+# --- R16: la copia es el estado PREVIO, o no es una copia de seguridad ---
+
+
+def test_f045_r16_la_copia_es_el_libro_tal_como_estaba_antes_de_escribir(tmp_path):
+    """El bloqueante que encontró el reviewer en la pasada 1.
+
+    Si la comprobación previa —la que solo mira si el libro cambia— llegara a
+    guardar, la copia se haría sobre el libro YA modificado y dejaría de ser lo
+    que R16 promete: el estado al que volver. Y esa copia es la única red del
+    trabajo manual del humano, porque los libros no se versionan (D5).
+    """
+    ruta = libro_de(tmp_path, filas_t1=[["RES-001", "SALMEDINA", "a mano"]])
+    previo = ruta.read_bytes()
+
+    cambia = escritura.escribir_pestana(
+        ruta, "Residuos", TABLAS,
+        {"cabeceras": [{"caso_id": "RES-008", "proveedor_nombre": "NUEVO"}],
+         "lineas": []},
+        {"RES-008"}, ejecutar=False,
+    )
+    assert cambia is True
+    assert ruta.read_bytes() == previo, (
+        "la pasada de comprobación ha escrito en el libro: la copia de "
+        "seguridad que venga después ya no sería el estado previo (R16)"
+    )
+
+    copia = escritura.copia_de_seguridad(ruta)
+    escritura.escribir_pestana(
+        ruta, "Residuos", TABLAS,
+        {"cabeceras": [{"caso_id": "RES-008", "proveedor_nombre": "NUEVO"}],
+         "lineas": []},
+        {"RES-008"},
+    )
+    assert copia.read_bytes() == previo, (
+        f"la copia de {ruta.name} NO es el libro previo"
+    )
+    assert ruta.read_bytes() != previo  # y la escritura de verdad sí ocurrió

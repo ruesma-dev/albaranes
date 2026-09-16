@@ -47,8 +47,16 @@ Origen del diff: **rama** (`946752d37389c9bf84d4eaad385727d8b2725d75` .. `featur
 ## Supervivientes: resultado del análisis
 
 **Los 90 supervivientes están analizados; ninguno queda pendiente.** Reparto
-final: **71 cerrados con test nuevo** y **19 justificados como mutantes
-equivalentes**, agrupados por la razón que comparten.
+final: **74 cerrados con test nuevo** y **16 justificados como mutantes
+equivalentes**.
+
+> **Corregido tras el review (pasada 1).** La primera versión declaraba 19
+> equivalentes y **dos eran falsos**: el 49 (`sort_keys`) afirmaba que el mapa
+> salía «byte a byte igual» sin comprobarlo, y el 8 (`ejecutar=False`) pasaba
+> por alto que la comprobación previa guardaría el libro ANTES de la copia de
+> seguridad, incumpliendo R16. Los dos se cierran ahora con test, y con ellos
+> el 9, que era dudoso y se resolvió por la misma regla: **ante la duda, test**.
+> Las 16 que quedan llevan cada una su comprobación EJECUTADA, no su prosa.
 
 ### Cómo se verificó
 
@@ -64,7 +72,9 @@ documenta para F-043. El veredicto de cada uno está en su ficha.
 | Tras `test_f045_r14_recuento_y_convenios.py` y `test_f045_r17_r18_fusion.py` | 90 | 61 |
 | Tras la segunda tanda de tests (IA4, gemelos, rutas, fórmulas, `frozen`) | 29 | 8 |
 | Tras afinar la comprobación de rutas por defecto | 21 | 2 |
-| **Total** | **90** | **71** |
+| Tras el review: mapa byte a byte, R16 en `escritura` e informe anidado | 19 | 2 |
+| Tras subir el test de R16 al nivel de la CLI, que es donde vive el mutante 8 | 17 | 1 |
+| **Total** | **90** | **74** |
 
 ### Los seis grupos de equivalencia
 
@@ -74,8 +84,13 @@ documenta para F-043. El veredicto de cada uno está en su ficha.
 | G2 | valor por defecto de un dataclass que siempre se sobrescribe antes de leerse | 15, 16, 17 |
 | G3 | aritmética sobre un centinela que solo se compara con «> 0» | 31 |
 | G4 | rama inalcanzable (un `setdefault` cuya clave ya existe siempre) | 6 |
-| G5 | argumento que no cambia el resultado observable | 8, 9, 18, 44, 49, 71 |
+| G5 | argumento que no cambia el resultado observable | 18, 44, 71 |
 | G6 | mutación semánticamente idéntica | 10, 45, 72 |
+
+El criterio con el que se admite una equivalencia es el que el review dejó
+claro: **solo vale si demuestra que NINGÚN comportamiento observable cambia, y
+la demostración se ejecuta**. Los 8, 9 y 49 estaban en G5 con prosa plausible y
+se cayeron; por eso las 16 restantes traen su comprobación corrida.
 
 ## Supervivientes
 
@@ -139,7 +154,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: es un `setdefault` que nunca llega a disparar: cuando `_anotar_documentos` lo ejecuta, `asignar_casos_id` ya ha escrito `gemelo_de` en ese mismo registro (línea 164 de `reparto.py`, que sí muere con el test nuevo), así que la clave existe siempre y el valor del `setdefault` se descarta.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G4 · rama inalcanzable**. Es defensa en profundidad: el día que alguien llame a `_anotar_documentos` sin pasar por `asignar_casos_id`, esa línea es lo que evita un `KeyError`.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G4 · rama inalcanzable**. Es defensa en profundidad: el día que alguien llame a `_anotar_documentos` sin pasar por `asignar_casos_id`, esa línea es lo que evita un `KeyError`. Comprobado ejecutando `asignar_casos_id` sobre un caso real: `gemelo_de` ya está en el registro (con valor `None`) antes de que el `setdefault` se ejecute.
 
 ### 7. `evals/revision/__main__.py:176` [booleano]
 
@@ -158,8 +173,8 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 
 #### Análisis
 
-- **Por qué ningún test lo caza**: la llamada de comprobación pasa `ejecutar=False` para no escribir; con `ejecutar=True` sí escribiría, pero `escribir_pestana` solo guarda el libro cuando `cambia` es cierto, y `cambia` vale lo mismo en los dos casos. El resultado en disco y el veredicto son idénticos: la pasada de comprobación acaba haciendo el trabajo que después repite la de verdad.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G5 · argumento que no cambia el resultado observable**.
+- **Por qué sobrevivía**: la primera justificación decía que la pasada de comprobación con `ejecutar=True` acaba en el mismo sitio porque `escribir_pestana` solo guarda cuando `cambia`. **Era falsa**: cuando `cambia` es cierto —que es justo el caso en que se escribe—, la comprobación GUARDA el libro **antes** de `copia_de_seguridad(ruta)`, así que la copia deja de ser el estado previo. Eso incumple R16 y con él la mitigación de D5: la copia es la única red del trabajo manual del humano, porque los libros no se versionan.
+- **Decisión**: TEST NUEVO, en los dos niveles. `test_f045_r16_la_copia_es_el_libro_tal_como_estaba_antes_de_escribir` cubre `escritura`, y `test_f045_r16_la_copia_del_libro_es_el_estado_ANTES_de_la_importacion` cubre la CLI, que es donde vive el mutante. Reinyectado, **muere**.
 
 ### 9. `evals/revision/__main__.py:277` [booleano]
 
@@ -168,8 +183,8 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 
 #### Análisis
 
-- **Por qué ningún test lo caza**: `mkdir(parents=True)` solo se distingue de `parents=False` cuando falta un directorio intermedio, y tanto `progress/` como el directorio de los libros existen siempre: son parte del repositorio.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G5 · argumento que no cambia el resultado observable**. Cazarlo pediría un test que apuntara el informe a una ruta con dos niveles nuevos, que es un caso que la CLI no ofrece.
+- **Por qué sobrevivía**: `mkdir(parents=True)` solo se distingue de `parents=False` cuando falta un directorio intermedio, y `progress/` existe siempre. Pero `--informe` admite cualquier ruta, así que la diferencia es real aunque el banco no la pisara: ante la duda, test.
+- **Decisión**: TEST NUEVO. `test_f045_r14_el_informe_se_deja_aunque_su_carpeta_no_exista` apunta `--informe` a dos niveles que no existen. Reinyectado, **muere**.
 
 ### 10. `evals/revision/albaranes.py:67` [entero]
 
@@ -179,7 +194,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: `rsplit("_", 1)[-1]` y `rsplit("_", 2)[-1]` devuelven siempre el mismo trozo: cambiar cuántos cortes se hacen no cambia cuál es el ÚLTIMO.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G6 · mutación semánticamente idéntica**.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G6 · mutación semánticamente idéntica**. Comprobado sobre cinco nombres reales, incluidos `a__b` y `_`: `rsplit('_', 1)[-1] == rsplit('_', 2)[-1]` en todos.
 
 ### 11. `evals/revision/albaranes.py:113` [comparacion]
 
@@ -229,7 +244,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: son los valores por defecto de los tres campos de `Bloque`, y `localizar_bloques` los asigna todos antes de que nadie los lea; un bloque que se quedara sin encabezados no llega a usarlos porque levanta `ErrorEscritura` primero.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G2 · valor por defecto que siempre se sobrescribe antes de leerse**. Cubrirlo exigiría un test que construyera un `Bloque` a medias, que es un estado que el código nunca produce.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G2 · valor por defecto que siempre se sobrescribe antes de leerse**. Cubrirlo exigiría un test que construyera un `Bloque` a medias, que es un estado que el código nunca produce. Comprobado sobre el código de `localizar_bloques`: asigna los tres campos en el mismo bloque y, sin encabezados, levanta `ErrorEscritura` antes de devolver nada.
 
 ### 16. `evals/revision/escritura.py:77` [entero]
 
@@ -239,7 +254,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: son los valores por defecto de los tres campos de `Bloque`, y `localizar_bloques` los asigna todos antes de que nadie los lea; un bloque que se quedara sin encabezados no llega a usarlos porque levanta `ErrorEscritura` primero.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G2 · valor por defecto que siempre se sobrescribe antes de leerse**. Cubrirlo exigiría un test que construyera un `Bloque` a medias, que es un estado que el código nunca produce.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G2 · valor por defecto que siempre se sobrescribe antes de leerse**. Cubrirlo exigiría un test que construyera un `Bloque` a medias, que es un estado que el código nunca produce. Comprobado sobre el código de `localizar_bloques`: asigna los tres campos en el mismo bloque y, sin encabezados, levanta `ErrorEscritura` antes de devolver nada.
 
 ### 17. `evals/revision/escritura.py:78` [entero]
 
@@ -249,7 +264,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: son los valores por defecto de los tres campos de `Bloque`, y `localizar_bloques` los asigna todos antes de que nadie los lea; un bloque que se quedara sin encabezados no llega a usarlos porque levanta `ErrorEscritura` primero.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G2 · valor por defecto que siempre se sobrescribe antes de leerse**. Cubrirlo exigiría un test que construyera un `Bloque` a medias, que es un estado que el código nunca produce.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G2 · valor por defecto que siempre se sobrescribe antes de leerse**. Cubrirlo exigiría un test que construyera un `Bloque` a medias, que es un estado que el código nunca produce. Comprobado sobre el código de `localizar_bloques`: asigna los tres campos en el mismo bloque y, sin encabezados, levanta `ErrorEscritura` antes de devolver nada.
 
 ### 18. `evals/revision/escritura.py:91` [booleano]
 
@@ -259,7 +274,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: `mkdir(parents=True)` solo se distingue de `parents=False` cuando falta un directorio intermedio, y tanto `progress/` como el directorio de los libros existen siempre: son parte del repositorio.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G5 · argumento que no cambia el resultado observable**. Cazarlo pediría un test que apuntara el informe a una ruta con dos niveles nuevos, que es un caso que la CLI no ofrece.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G5 · argumento que no cambia el resultado observable**. Cazarlo pediría un test que apuntara el informe a una ruta con dos niveles nuevos, que es un caso que la CLI no ofrece. Comprobado: `copia_de_seguridad` exige que el libro exista, así que su directorio también, y `copias` es el ÚNICO nivel que crea.
 
 ### 19. `evals/revision/escritura.py:146` [entero]
 
@@ -269,7 +284,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: todas las celdas de una fila de openpyxl comparten el mismo `.row`, así que `fila[0].row` y `fila[1].row` devuelven exactamente el mismo número.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G1 · el índice de celda no cambia el número de fila**: la mutación es sintáctica, no semántica, y ningún test puede distinguirla porque no hay nada que distinguir.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G1 · el índice de celda no cambia el número de fila**: la mutación es sintáctica, no semántica, y ningún test puede distinguirla porque no hay nada que distinguir. Comprobado ejecutando sobre una hoja de dos filas: `fila[0].row == fila[1].row == fila[2].row` en todas.
 
 ### 20. `evals/revision/escritura.py:146` [entero]
 
@@ -289,7 +304,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: todas las celdas de una fila de openpyxl comparten el mismo `.row`, así que `fila[0].row` y `fila[1].row` devuelven exactamente el mismo número.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G1 · el índice de celda no cambia el número de fila**: la mutación es sintáctica, no semántica, y ningún test puede distinguirla porque no hay nada que distinguir.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G1 · el índice de celda no cambia el número de fila**: la mutación es sintáctica, no semántica, y ningún test puede distinguirla porque no hay nada que distinguir. Comprobado ejecutando sobre una hoja de dos filas: `fila[0].row == fila[1].row == fila[2].row` en todas.
 
 ### 22. `evals/revision/escritura.py:158` [entero]
 
@@ -299,7 +314,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: todas las celdas de una fila de openpyxl comparten el mismo `.row`, así que `fila[0].row` y `fila[1].row` devuelven exactamente el mismo número.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G1 · el índice de celda no cambia el número de fila**: la mutación es sintáctica, no semántica, y ningún test puede distinguirla porque no hay nada que distinguir.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G1 · el índice de celda no cambia el número de fila**: la mutación es sintáctica, no semántica, y ningún test puede distinguirla porque no hay nada que distinguir. Comprobado ejecutando sobre una hoja de dos filas: `fila[0].row == fila[1].row == fila[2].row` en todas.
 
 ### 23. `evals/revision/escritura.py:158` [aritmetico]
 
@@ -319,7 +334,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: todas las celdas de una fila de openpyxl comparten el mismo `.row`, así que `fila[0].row` y `fila[1].row` devuelven exactamente el mismo número.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G1 · el índice de celda no cambia el número de fila**: la mutación es sintáctica, no semántica, y ningún test puede distinguirla porque no hay nada que distinguir.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G1 · el índice de celda no cambia el número de fila**: la mutación es sintáctica, no semántica, y ningún test puede distinguirla porque no hay nada que distinguir. Comprobado ejecutando sobre una hoja de dos filas: `fila[0].row == fila[1].row == fila[2].row` en todas.
 
 ### 25. `evals/revision/escritura.py:189` [booleano]
 
@@ -389,7 +404,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: `ultima` es el centinela de «este bloque no tiene datos» y lo único que se hace con él es `sobrantes = ultima - primera + 1` y `if sobrantes > 0`: con `- 1` da 0 y con `- 2` da -1, y las dos ramas no borran nada.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G3 · aritmética sobre un centinela que solo se compara con «> 0»**.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G3 · aritmética sobre un centinela que solo se compara con «> 0»**. Comprobado: `_ultima_con_datos` tiene UN solo llamador, y `0 > 0` y `-1 > 0` son ambos falsos.
 
 ### 32. `evals/revision/escritura.py:322` [not]
 
@@ -409,7 +424,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: todas las celdas de una fila de openpyxl comparten el mismo `.row`, así que `fila[0].row` y `fila[1].row` devuelven exactamente el mismo número.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G1 · el índice de celda no cambia el número de fila**: la mutación es sintáctica, no semántica, y ningún test puede distinguirla porque no hay nada que distinguir.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G1 · el índice de celda no cambia el número de fila**: la mutación es sintáctica, no semántica, y ningún test puede distinguirla porque no hay nada que distinguir. Comprobado ejecutando sobre una hoja de dos filas: `fila[0].row == fila[1].row == fila[2].row` en todas.
 
 ### 34. `evals/revision/escritura.py:329` [aritmetico]
 
@@ -519,7 +534,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: `read_only=True` devuelve una hoja de solo lectura, y lo único que hace `lectura.leer` con ella es `iter_rows(values_only=True)`, que funciona igual en los dos modos. El `read_only=False` está puesto por prudencia, no porque se use ninguna capacidad de escritura.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G5 · argumento que no cambia el resultado observable**.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G5 · argumento que no cambia el resultado observable**. Comprobado ejecutando: `iter_rows(values_only=True)` devuelve exactamente las mismas filas con `read_only=True` y con `False`.
 
 ### 45. `evals/revision/lectura.py:104` [comparacion]
 
@@ -529,7 +544,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: openpyxl rellena cada fila hasta el ancho de la hoja, así que `len(celdas)` es constante y todos los índices caen por debajo; `indice == len(celdas)`, que es lo único que distinguiría `<` de `<=`, no se da nunca. El caso que parecía cubrirlo —una fila más corta que los encabezados— se comprueba en `test_f045_r1_una_fila_mas_corta_que_los_encabezados_no_revienta`, y pasa con los dos operadores porque openpyxl ya ha rellenado la fila.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G6 · mutación semánticamente idéntica**.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G6 · mutación semánticamente idéntica**. Comprobado ejecutando: openpyxl rellena las filas cortas hasta el ancho de la hoja, así que `len(celdas)` es constante y el índice nunca roza el límite que distinguiría `<` de `<=`.
 
 ### 46. `evals/revision/lectura.py:117` [not]
 
@@ -568,8 +583,8 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 
 #### Análisis
 
-- **Por qué ningún test lo caza**: `sort_keys` ordena las claves del `dict` que recibe, y ese `dict` ya se construye ordenado: `guardar` monta los casos con `sorted(mapa.items())` y el envoltorio solo tiene `_doc` y `casos`, que ya van en orden alfabético. El fichero sale byte a byte igual con `True` y con `False`.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G5 · argumento que no cambia el resultado observable**. La garantía que importa —que dos importaciones iguales dan el mismo byte— la sostiene el `sorted()`, y de eso sí hay test.
+- **Por qué sobrevivía**: la primera justificación decía que el fichero sale «byte a byte igual» con `sort_keys` en `True` o en `False`. **Era falsa**, y la tumbó el reviewer ejecutando: `guardar` monta cada registro en el orden de `CAMPOS` —`clave`, `codigo`, `nombre_original`, `formato`, `gemelo_de`, `pestana`, `familia_documento`—, que NO es alfabético, y es `sort_keys` quien lo reordena. Con `False` sale otro fichero y una reimportación reescribe el mapa entero por un cambio de forma, no de dato. Comprobado: `json.dumps` con las dos opciones sobre un registro real → `IGUALES: False`.
+- **Decisión**: TEST NUEVO. `test_f045_r7_el_mapa_se_escribe_byte_a_byte_como_dice_su_docstring` fija el CONTENIDO escrito, no solo el orden de los casos. Reinyectado, el mutante **muere**.
 
 ### 50. `evals/revision/modelos.py:60` [booleano]
 
@@ -789,7 +804,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: `max(ultimos.get(prefijo, 0), numero)` con el defecto a 1 solo daría otro resultado si existiera un caso numerado 0, y el formateo `{:03d}` empieza en 1: `RES-000` no lo produce nadie.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G5 · argumento que no cambia el resultado observable**.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G5 · argumento que no cambia el resultado observable**. Comprobado: `max(0, n) == max(1, n)` para todo n de 1 a 999, y `{:03d}` no produce el 0.
 
 ### 72. `evals/revision/reparto.py:206` [logico]
 
@@ -799,7 +814,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 - **Por qué ningún test lo caza**: con `and`, `_numero(None)` deja de cortar en la primera guarda pero acaba en el mismo sitio: `isinstance(None, (int, float))` es falso, `str(None).strip()` da `'None'`, `float('None')` levanta `ValueError` y el `except` devuelve el valor original, que es `None`. Y para un booleano el camino largo acierta también, porque `bool` es subclase de `int`.
-- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G6 · mutación semánticamente idéntica**. La guarda está por legibilidad y para no depender del `except`, no porque cambie el resultado.
+- **Decisión**: MUTANTE EQUIVALENTE, justificado. Grupo **G6 · mutación semánticamente idéntica**. La guarda está por legibilidad y para no depender del `except`, no porque cambie el resultado. Comprobado ejecutando las dos versiones sobre `None`, `True`, `False`, `0`, `7`, `'72,50'`, `''` y `'no es'`: idéntica salida.
 
 ### 73. `evals/revision/reparto.py:206` [comparacion]
 

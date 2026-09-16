@@ -57,6 +57,7 @@ def ejecutar(
         filas_leidas=len(filas),
         casos=casos + gemelos,
         caso_ids_nuevos=nuevos,
+        en_seco=dry_run,
         fallos_documentos=[
             f"`{fallo.tipo}` — {fallo.detalle}" for fallo in plan.fallos
         ],
@@ -70,6 +71,7 @@ def ejecutar(
 
     if not dry_run:
         resultado.libros_escritos = _escribir(tablas, resultado, dir_ground_truth)
+        resultado.libros_comprobados = [d.fichero for d in conversor.LIBROS]
         mapa.guardar(mapa_nuevo, ruta_mapa)
         if renombrar:
             resultado.renombrados = albaranes.renombrar(plan.copias, dir_originales)
@@ -88,6 +90,17 @@ def ejecutar(
         "alimentan (design §3): sin líneas de contrato, los casos nuevos solo "
         "son evaluables con LLM y la corrida determinista sigue viviendo de los "
         "7 casos RES."
+    )
+    resultado.avisos.append(
+        "DESVIACIÓN de `design.md` §3, pendiente de que la cierre el humano: "
+        "`IA1.lineas.codigo_imputacion` sale `?` en TODAS las líneas. §3 dice "
+        "«fila impresa con partida en el papel → IA1», pero la tabla plana no "
+        "tiene ninguna columna que diga si la partida venía impresa —en "
+        "residuos no viene y en hormigón sí—, y suponerlo sería inventar ground "
+        "truth (R11). El precio es que la mitad de EXTRACCIÓN del patrón 1 (la "
+        "partida se lee mal) queda sin vigilar; su mitad de DECISIÓN sí se "
+        "compara, en `IA3.codigo_partida_final` y `FINAL.lineas.partida_final`. "
+        "Se cierra con una columna nueva en el Excel o aceptando la ceguera."
     )
     resultado.avisos.append(
         "DESVIACIÓN de `design.md` §3, pendiente de que la cierre el humano: "

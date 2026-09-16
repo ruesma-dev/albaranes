@@ -301,6 +301,46 @@ def test_f045_r20_el_informe_dice_con_que_estrategia_caso_cada_fichero(entorno):
     assert "subcadena" in texto
 
 
+def test_f045_r14_el_informe_se_deja_aunque_su_carpeta_no_exista(entorno, tmp_path):
+    """`--informe` puede apuntar a una ruta que aún no está: el informe es lo
+
+    que el humano lee después, y perderlo por un directorio ausente sería
+    perder la única evidencia de la pasada."""
+    entorno["informe"] = tmp_path / "salidas" / "de-hoy" / "import.md"
+    assert correr(entorno) == 0
+    assert entorno["informe"].is_file()
+
+
+def test_f045_r16_la_copia_del_libro_es_el_estado_ANTES_de_la_importacion(entorno):
+    """El bloqueante del reviewer, al nivel al que vive el mutante.
+
+    La CLI mira primero si el libro cambia y solo entonces lo copia y lo
+    escribe. Si esa comprobación llegara a guardar, la copia se haría sobre el
+    libro YA modificado: dejaría de ser el estado al que volver, que es lo
+    único que R16 promete y la única red del trabajo manual del humano, porque
+    los libros no se versionan (D5).
+    """
+    correr(entorno)
+    libro = entorno["ground_truth"] / "IA1_extraccion.xlsx"
+
+    # Un cambio en el Excel para que la segunda pasada tenga qué escribir.
+    fuente = openpyxl.load_workbook(entorno["origen"])
+    fuente.active["D2"] = "HORPRESOL RENOMBRADA, S.L."
+    fuente.save(entorno["origen"])
+    fuente.close()
+
+    previo = libro.read_bytes()
+    correr(entorno)
+
+    copias = sorted((entorno["ground_truth"] / "copias").glob("IA1_extraccion.xlsx.*"))
+    assert copias, "la segunda pasada tenía que copiar el libro antes de tocarlo"
+    assert copias[-1].read_bytes() == previo, (
+        f"la copia de {libro.name} NO es el libro previo: alguien escribió "
+        f"antes de copiar y R16 deja de proteger nada"
+    )
+    assert libro.read_bytes() != previo  # y la escritura de verdad sí ocurrió
+
+
 # --- R5: lo desconocido aborta sin escribir nada ---------------------------
 
 

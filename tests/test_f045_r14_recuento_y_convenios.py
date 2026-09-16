@@ -103,8 +103,18 @@ def test_f045_r14_cada_caso_sale_en_su_grupo_y_no_en_el_otro():
     assert defecto == "HOR-002"
 
 
-def test_f045_r14_sin_libros_escritos_el_informe_no_deja_la_linea_a_medias():
-    assert "(ninguno: en seco)" in informe_mod.render(InformeImportacion())
+def test_f045_r14_ninguno_tiene_dos_motivos_y_el_informe_los_separa():
+    """«En seco» es no haber querido escribir; «nada cambiaba» es R18 diciendo
+
+    que la importación es idempotente. Llamar «en seco» a la segunda haría
+    pasar por simulacro una pasada de verdad, y eso ya despistó a un reviewer.
+    """
+    seco = informe_mod.render(InformeImportacion(en_seco=True))
+    assert "pasada EN SECO" in seco
+    real = informe_mod.render(InformeImportacion())
+    assert "ningún libro cambiaba" in real
+    escrita = informe_mod.render(InformeImportacion(libros_escritos=["INPUTS.xlsx"]))
+    assert "- Libros escritos: INPUTS.xlsx" in escrita
 
 
 def test_f045_r14_sin_avisos_no_se_escribe_la_seccion_de_avisos():
@@ -134,6 +144,40 @@ def test_f045_r7_el_mapa_se_escribe_ordenado_legible_y_sin_escapes(tmp_path):
     # Sin escapes: el acento viaja tal cual, no como ó.
     assert "Residuós" in texto
     assert "\\u" not in texto
+
+
+def test_f045_r7_el_mapa_se_escribe_byte_a_byte_como_dice_su_docstring(tmp_path):
+    """El segundo bloqueante del reviewer: fijar el CONTENIDO, no solo el orden.
+
+    `guardar` monta cada registro en el orden de `CAMPOS` —que NO es
+    alfabético— y es `sort_keys` quien lo reordena. Sin este test, quitarlo
+    pasaba desapercibido y una reimportación reescribía el mapa entero por un
+    cambio de forma, no de dato.
+    """
+    ruta = tmp_path / "mapa.json"
+    mapa.guardar(
+        {"RES-001": {"clave": "B82899550/0000168", "codigo": "0000168",
+                     "nombre_original": "RES-001.pdf", "formato": "pdf",
+                     "gemelo_de": None, "pestana": "Residuos",
+                     "familia_documento": "residuos"}},
+        ruta,
+    )
+    esperado = """{
+  "_doc": "%s",
+  "casos": {
+    "RES-001": {
+      "clave": "B82899550/0000168",
+      "codigo": "0000168",
+      "familia_documento": "residuos",
+      "formato": "pdf",
+      "gemelo_de": null,
+      "nombre_original": "RES-001.pdf",
+      "pestana": "Residuos"
+    }
+  }
+}
+""" % mapa._DOC
+    assert ruta.read_text(encoding="utf-8") == esperado
 
 
 def test_f045_r7_el_mapa_declara_todos_sus_campos_aunque_vengan_vacios(tmp_path):

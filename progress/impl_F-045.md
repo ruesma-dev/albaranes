@@ -93,13 +93,9 @@ E       AttributeError: module 'evals.revision.reparto' has no attribute 'repart
 5 failed in 0.25s
 ```
 
-**T7 bis · criterios de residuos** — `python -m pytest tests/test_f045_r12bis_residuos.py -q`
-
-```
-FAILED ...::test_f045_r12bis_el_minimo_se_aplica_a_lo_que_se_pesa
-FAILED ...::test_f045_r12bis_el_movimiento_de_contenedor_no_se_toca
-10 failed in 0.28s
-```
+**T7 bis · criterios de residuos** — `pytest tests/test_f045_r12bis_residuos.py`:
+`10 failed in 0.28s`, empezando por
+`test_f045_r12bis_el_minimo_se_aplica_a_lo_que_se_pesa`.
 
 **T11 bis · gemelos** — `python -m pytest tests/test_f045_r22_gemelos.py -q`
 
@@ -124,14 +120,18 @@ todos señalaban lo mismo: el banco comprobaba QUÉ se escribe y casi nada de
 que prometen R14 y R18. Un informe que suma mal es peor que no tener informe:
 se lee igual de convincente.
 
-De ahí 62 tests nuevos en dos ficheros (`test_f045_r14_recuento_y_convenios.py`
-y `test_f045_r17_r18_fusion.py`) más refuerzos en los de la CLI. **71 de los 90
-mutantes mueren con ellos**; los 19 restantes son equivalentes y se justifican
-en seis grupos —el índice de celda que no cambia el número de fila, defectos de
-dataclass que siempre se sobrescriben, una rama inalcanzable, argumentos que no
-cambian el resultado observable y mutaciones semánticamente idénticas—. El
-detalle, uno a uno, en `progress/mutacion_F-045.md`; **ninguno queda
-`PENDIENTE`**.
+De ahí 66 tests nuevos en dos ficheros (`test_f045_r14_recuento_y_convenios.py`
+y `test_f045_r17_r18_fusion.py`) más refuerzos en los de la CLI. **74 de los 90
+mutantes mueren con ellos**; los 16 restantes son equivalentes, agrupados por la
+razón que comparten y **cada uno con su comprobación ejecutada**. El detalle,
+uno a uno, en `progress/mutacion_F-045.md`; ninguno queda `PENDIENTE`.
+
+**Dos de las equivalencias eran FALSAS y las tumbó el reviewer ejecutando**: el
+49 afirmaba que el mapa salía «byte a byte igual» sin `sort_keys` —y no, los
+registros se montan en el orden de `CAMPOS`, que no es alfabético—, y el 8 pasaba
+por alto que la pasada de comprobación guardaría el libro ANTES de la copia de
+seguridad, incumpliendo R16. Los dos se cierran con test, y con ellos el 9, que
+era dudoso: la regla es **ante la duda, test**, y la prosa plausible no cuenta.
 
 La mutación también encontró un fallo en un test MÍO: el de las copias de
 seguridad contaba NOMBRES de fichero, y la copia lleva la hora con precisión de
@@ -148,34 +148,35 @@ documenta para F-043.
 
 `harness/mutacion.py` lanza la suite con `PYTHONDONTWRITEBYTECODE=1`, y
 `test_C_un_mutante_nunca_se_juzga_con_el_bytecode_del_anterior` heredaba esa
-variable en sus dos subprocesos: `__pycache__` quedaba vacío, su assert en
-rojo y —por ser línea base— la campaña abortaba antes de generar un mutante.
-
-```
-LÍNEA BASE EN ROJO en .: la suite falla SIN mutar nada.
-Campaña abortada sin escribir informe: sobre una base roja TODO mutante
-saldría «muerto» y el cero de supervivientes sería falso.
-  Tests que fallan sin mutar:
-    - tests/test_mutacion_prueba_de_verdad.py::test_C_un_mutante_nunca_se_juzga_con_el_bytecode_del_anterior
-```
+variable en sus subprocesos: `__pycache__` quedaba vacío, su assert en rojo y
+—por ser línea base— la campaña abortaba antes de generar un mutante
+(«LÍNEA BASE EN ROJO en .: la suite falla SIN mutar nada»).
 
 No es de F-045: muerde a cualquier feature de este repositorio y hace
 inalcanzable el nivel `critico`. **Es mejora del arnés y hay que portarla a
-`arnes-base`** (regla de propagación de `CLAUDE.md`).
+`arnes-base`** (regla de propagación de `CLAUDE.md`). Detalle en
+`progress/inventario_mutacion_F-039.md`.
 
 ## Lo que queda fuera y lo que el humano tiene que decidir
 
 1. **DECISIÓN · `INPUTS.CASOS.tipologia`**: pestaña (lo implementado) o
-   familia de documento (§3 literal, que rompe los 7 RES). Ver decisión 2.
+   familia de documento (§3 literal, que rompe los 7 RES). Ver decisión 2. El
+   reviewer confirma que **la spec es la que está mal**, no la implementación.
+1 bis. **DECISIÓN · `IA1.lineas.codigo_imputacion` sale `?` en las 114 líneas**,
+   segunda desviación de §3. La tabla plana no tiene columna que diga si la
+   partida venía IMPRESA —en residuos no viene, en hormigón sí— y suponerlo
+   sería inventar (R11). El precio: la mitad de EXTRACCIÓN del patrón 1 queda
+   sin vigilar; su mitad de DECISIÓN sí se compara. Se cierra con una columna
+   nueva en el Excel o aceptando la ceguera. Declarada en los avisos del
+   informe de importación.
 2. **DECISIÓN · los incrementos LER de los 7 casos RES**: el Excel los marca
    `EN ALBARAN`, mientras que el libro escrito a mano los tenía como
    sintéticas esperadas. Con la fusión conservadora, RES-004 acaba
    esperándolos por los dos caminos a la vez (línea 2 de IA1 **y** sintética),
    y eso es ground truth contradictorio: el sistema no puede a la vez leerlo
    del papel y deducirlo. Hay que mirar el papel y decidir.
-3. **Los documentos de entrada siguen sin copiarse**: los 59 casos salen como
-   `fila_sin_fichero` en el informe, uno a uno. El plan de renombrado se
-   propone pero **no se ha renombrado nada**.
+3. **Los documentos de entrada siguen sin copiarse**: los 59 salen como
+   `fila_sin_fichero`, uno a uno; el plan se propone y no se renombra nada.
 4. **`INPUTS.CONTRATO_LINEAS`, `CONDICIONES` e `IA3` TABLA 3 no se alimentan**
    (§3): sin líneas de contrato los 52 casos nuevos solo son evaluables con
    LLM; la corrida determinista sigue viviendo de los 7 RES.
@@ -199,7 +200,8 @@ inalcanzable el nivel `critico`. **Es mejora del arnés y hay que portarla a
 | Cobertura de las líneas cambiadas | **98,2 %** (896/912), umbral 80 %, nivel `critico` |
 | Tiempo de la suite | **71,42 s** |
 | Mutación · campaña completa, sin muestreo | **266 mutantes, 176 muertos, 90 supervivientes**, 0 timeouts, 0 sin veredicto, 6381 s |
-| Mutación · tras los tests de T18 | de los 90, **71 mueren** y **19 son equivalentes justificados**; ninguno queda pendiente |
+| Mutación · workers | **4**, uno por `git worktree`, con el `README.md` del humano en un stash |
+| Mutación · tras los tests de T18 y del review | de los 90, **74 mueren** y **16 son equivalentes**, cada uno con su comprobación ejecutada; ninguno pendiente |
 | Conversor | `python -m evals.conversor` en 0, sin hallazgos del barrido |
 | Idempotencia medida | segunda pasada de `revision` + `conversor`: `git status` vacío |
 

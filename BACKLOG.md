@@ -11,7 +11,7 @@ En curso: **F-045**.
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-045 | El banco de evals recoge la revision manual de los 32 albaranes: convertir los comentarios del humano en casos que se comprueban solos | 2 | en curso | critico |  |
+| F-045 | El banco de evals recoge la revision manual de los 32 albaranes: convertir los comentarios del humano en casos que se comprueban solos | 2 | en curso | critico | `feature/F-045-banco-evals-revision-manual` |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
@@ -67,7 +67,7 @@ En curso: **F-045**.
 
 ### F-045 · El banco de evals recoge la revision manual de los 32 albaranes: convertir los comentarios del humano en casos que se comprueban solos
 
-estado **en curso** · prioridad 2 · rigor `critico` · SDD sí
+estado **en curso** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-045-banco-evals-revision-manual`
 
 ORIGEN: el humano reviso UNO A UNO los albaranes que probo en local y anoto en 'evals_summary.xlsx' (carpeta evals de OneDrive) el resultado esperado de cada linea y, en una columna de comentarios, QUE HA FALLADO hoy. Aviso el 2026-09-13. Los PDF estan en la raiz de esa misma carpeta.
 

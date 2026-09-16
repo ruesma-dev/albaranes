@@ -42,10 +42,26 @@ def _resumen(informe: InformeImportacion) -> list[str]:
         f"- Filas leídas de la tabla plana: **{informe.filas_leidas}**",
         f"- Casos (albaranes): **{len(informe.casos)}**, "
         f"de los que **{len(informe.caso_ids_nuevos)}** son nuevos",
-        f"- Libros escritos: {', '.join(informe.libros_escritos) or '(ninguno: en seco)'}",
+        f"- Libros comprobados: {len(informe.libros_comprobados)}",
+        f"- Libros escritos: {_libros(informe)}",
         f"- Copias de seguridad: {len(informe.copias)}",
         "",
     ]
+
+
+def _libros(informe: InformeImportacion) -> str:
+    """«Ninguno» tiene dos motivos muy distintos y hay que separarlos.
+
+    En una pasada en seco no se escribe nada porque no se ha querido; en una
+    pasada real puede no escribirse nada porque ningún libro cambiaba, que es
+    lo que confirma R18. Llamar «en seco» a la segunda haría pasar por
+    simulacro una importación de verdad.
+    """
+    if informe.libros_escritos:
+        return ", ".join(informe.libros_escritos)
+    if informe.en_seco:
+        return "(ninguno: pasada EN SECO, no se ha tocado el disco)"
+    return "(ninguno: ningún libro cambiaba; ver R18)"
 
 
 def _clasificacion(informe: InformeImportacion) -> list[str]:

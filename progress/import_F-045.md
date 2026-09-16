@@ -8,7 +8,8 @@ siguiente importación lo reescribe.
 
 - Filas leídas de la tabla plana: **142**
 - Casos (albaranes): **59**, de los que **0** son nuevos
-- Libros escritos: (ninguno: en seco)
+- Libros comprobados: 6
+- Libros escritos: (ninguno: ningún libro cambiaba; ver R18)
 - Copias de seguridad: 0
 
 ## Cómo se reparten los casos
@@ -214,4 +215,5 @@ del sistema que estos casos ponen a la vista.
 ## Avisos
 
 - `INPUTS.CONTRATO_LINEAS`, `INPUTS.CONDICIONES` e `IA3` TABLA 3 no se alimentan (design §3): sin líneas de contrato, los casos nuevos solo son evaluables con LLM y la corrida determinista sigue viviendo de los 7 casos RES.
+- DESVIACIÓN de `design.md` §3, pendiente de que la cierre el humano: `IA1.lineas.codigo_imputacion` sale `?` en TODAS las líneas. §3 dice «fila impresa con partida en el papel → IA1», pero la tabla plana no tiene ninguna columna que diga si la partida venía impresa —en residuos no viene y en hormigón sí—, y suponerlo sería inventar ground truth (R11). El precio es que la mitad de EXTRACCIÓN del patrón 1 (la partida se lee mal) queda sin vigilar; su mitad de DECISIÓN sí se compara, en `IA3.codigo_partida_final` y `FINAL.lineas.partida_final`. Se cierra con una columna nueva en el Excel o aceptando la ceguera.
 - DESVIACIÓN de `design.md` §3, pendiente de que la cierre el humano: `INPUTS.CASOS.tipologia` lleva la PESTAÑA y no la familia de documento. `MAPA_TIPO_FAMILIA` de `evals/procesos/sv5_valoracion.py` y `sv6_build.py` está indexado por pestaña, así que escribir la familia dejaría TODOS los casos —incluidos los 7 RES que ya funcionaban— en `tipo_familia='otro'`. La familia de documento queda en `evals/mapa_casos.json` y agrupada más arriba en este informe.

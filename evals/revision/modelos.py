@@ -164,7 +164,13 @@ class InformeImportacion:
     #: Criterios de residuos aún sin implementar que tocan a cada caso (R12 bis).
     criterios_residuos: dict[str, list[str]] = field(default_factory=dict)
     avisos: list[str] = field(default_factory=list)
+    #: La pasada fue `--dry-run`. Distingue «no se escribió porque no se
+    #: quiso» de «no se escribió porque nada cambiaba», que es R18.
+    en_seco: bool = False
     libros_escritos: list[str] = field(default_factory=list)
+    #: Los que la pasada miró, escribiera o no: sin esto, un «ninguno»
+    #: no distingue «no cambiaba nada» de «no llegó a mirarlos».
+    libros_comprobados: list[str] = field(default_factory=list)
     copias: list[str] = field(default_factory=list)
 
     def contar(self, libro: str, tabla: str, columna: str, valor: object | None) -> None:
