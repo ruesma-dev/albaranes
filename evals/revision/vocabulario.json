@@ -99,6 +99,15 @@
     }
   },
 
+  "_doc_deducidas_por_concepto": "Decision del humano del 2026-09-16, que cierra el ground truth contradictorio de RES-004. En RESIDUOS, la linea de MATERIAL esta impresa en el papel con su codigo LER, pero el INCREMENTO no: se deduce mirando el contrato con ese LER -el contrato trae 'incremento por codigo LER xxx' o 'incremento por canon de (material, tipologia)', y de ahi se resuelve cual aplica-. Son dos lineas distintas, una por fase: el material a IA1, el incremento a las sinteticas de IA3. El Excel marca las dos EN ALBARAN porque el humano describe el albaran, no las fases; separarlas es trabajo del volcado. Encaja con design.md 5 ter: si el contrato no trae el LER, el incremento se deduce del CANON, que es lo mismo por otro nombre. Las marcas se buscan en el concepto ya normalizado. OJO: esto NO implementa el criterio en sv5/sv6 -sigue sin estar y sus casos siguen naciendo rojos-, solo deja de pedirle a la extraccion una linea que el papel no imprime.",
+  "deducidas_por_concepto": {
+    "familias": ["residuos"],
+    "marcas": ["INCREMENTO", "INCREM", "CANON"]
+  },
+
+  "_doc_sinonimos_concepto": "Erratas y variantes con las que el humano escribe el MISMO concepto en el Excel y en los libros. Solo se usan para decidir si dos filas son la misma linea al fundirlas, nunca para cambiar el texto que se escribe. Ejemplo real: el libro dice 'INCREMENTO LER 170802' y el Excel 'INCREMENTO LEER 17 08 02' -errata y digitos separados-, y son la misma sintetica; escribir las dos haria que el banco esperase dos donde el sistema emite una. Los digitos separados se juntan aparte, sin lista.",
+  "sinonimos_concepto": { "LEER": "LER", "INCREM": "INCREMENTO" },
+
   "_doc_unidades": "Unidades de CONTEO. Todo lo demas se pesa o se mide, y es a eso a lo que se le aplica el minimo facturable de 1 en residuos -canon y tratamiento-, nunca al movimiento de contenedor, que sigue en unidades: 1 cambio = 1 UD (design 5 ter, criterio del humano del 2026-09-15).",
   "unidades_conteo": ["UD", "U", "UDS"],
   "minimo_facturable_residuos": 1

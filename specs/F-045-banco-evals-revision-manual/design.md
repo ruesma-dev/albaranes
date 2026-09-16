@@ -5,28 +5,27 @@
 
 Todo ocurre en `evals/`, el banco de pruebas del monorepo. **No se toca ni una
 línea de sv1–sv6 ni de `ruesma_comun`**: F-045 siembra la red, no arregla lo que
-detecta. La ficha declara `servicios: [sv2, sv5, sv6]`: son los **vigilados**,
-no los modificados (decisión abierta D6). El flujo no cambia de forma: revisión
-manual → **libros de `ground_truth/`** → `evals.conversor` → `fixtures/*.json` →
-`evals.runner`; esta feature añade un escalón **antes** de los libros y deja el
-conversor como única puerta a los fixtures (y único sitio donde corre el barrido
-de C3 bis). Reglas de dominio que gobiernan el reparto: `docs/ARCHITECTURE.md`
-§6 (`codigo_imputacion` = partida impresa; `codigo_partida_final` = decisión del
-matching), §7 (sintéticas), §13 (`precio` bruto, `precio_neto` = importe; el
-unitario leído manda) y §14 (la familia la decide IA1).
+detecta; los servicios que declara la ficha son los **vigilados**. El flujo no
+cambia de forma: revisión manual → **libros de `ground_truth/`** →
+`evals.conversor` → `fixtures/*.json` → `evals.runner`; esta feature añade un
+escalón **antes** de los libros y deja el conversor como única puerta a los
+fixtures (y único sitio donde corre el barrido de C3 bis). Reglas de dominio que
+gobiernan el reparto: `docs/ARCHITECTURE.md` §6 (`codigo_imputacion` = partida
+impresa; `codigo_partida_final` = decisión del matching), §7 (sintéticas), §13
+(`precio` bruto, `precio_neto` = importe; manda el unitario leído) y §14.
 
 ## 2. Ficheros
 
 ### A crear
 
 Paquete `evals/revision/`. **Dominio puro** (sin openpyxl ni disco: es lo que
-lleva cobertura y mutación): `modelos.py` (`FilaPlana`, `LineaRevisada`,
-`CasoRevisado`, `InformeImportacion`), `vocabulario.py`, `reparto.py` (**el
+lleva cobertura y mutación): `modelos.py`, `vocabulario.py`, `reparto.py` (**el
 núcleo**: filas planas → tablas de los seis libros) y `albaranes.py` (código
 desde el nombre, emparejado y plan de copia). **Infraestructura**: `lectura.py`
 y `escritura.py` (con copia previa). **Entrada**: `__main__.py`. **Datos
-versionados**: `evals/revision/vocabulario.json`, `evals/mapa_casos.json` y
-`evals/patrones.json`. **Tests**: `tests/test_f045_r*.py`, uno por bloque.
+versionados**: `vocabulario.json`, `evals/mapa_casos.json`,
+`evals/huella_importacion.json` y `evals/patrones.json`. **Tests**:
+`tests/test_f045_r*.py`, uno por bloque.
 
 ### A modificar
 
@@ -56,7 +55,7 @@ Medido el 2026-09-15 (142 filas, 59 códigos, 10 etiquetas; puede haber crecido)
 | Columna plana | Destino | Por qué |
 |---|---|---|
 | `codigo alabran` | clave natural del caso (§4); `IA1.cabeceras.numero_albaran` = `?` | el código del humano no es el literal impreso (`0000168` vs `SS-0000168`): compararlo daría rojo falso (R13) |
-| `Tipo de albaran` | pestaña del libro **y** `INPUTS.CASOS.tipologia` = familia de DOCUMENTO del catálogo (§5 bis) | pestaña y familia no siempre coinciden: GASOLEO va a la pestaña Combustible con familia `generico` (R6) |
+| `Tipo de albaran` | pestaña del libro **y** `INPUTS.CASOS.tipologia` = esa misma PESTAÑA; la familia de DOCUMENTO (§5 bis) va al mapa de casos y al informe | corregido el 2026-09-16: `MAPA_TIPO_FAMILIA` de `evals/procesos/{sv5_valoracion,sv6_build}.py` está indexado por PESTAÑA, y escribir ahí la familia deja TODOS los casos en `tipo_familia='otro'` —los 7 RES incluidos—, que es la clasificación equivocada que F-043 vino a arreglar. Pestaña y familia no siempre coinciden y el sitio de la familia no es este (R6) |
 | `cif` | `RESULTADO_FINAL.datos_generales.CIF`; en IA1 `?` | el CIF correcto es el del proveedor identificado, no siempre el impreso; así lo tienen ya los 7 casos RES |
 | `nombre empresa (el bueno…)` | `IA1.cabeceras.proveedor_nombre` **y** `FINAL.proveedor` | es la razón social con la que se guarda, y coincide con lo impreso en los casos ya sembrados |
 | `codigo obra` | `FINAL.datos_generales.obra`; en IA1 `obra_codigo` y `obra_nombre` = `?` | deducir la obra NO es extraer: el papel a menudo no la trae (R13) |
@@ -74,8 +73,9 @@ Medido el 2026-09-15 (142 filas, 59 códigos, 10 etiquetas; puede haber crecido)
 | `Comentarios` | columna `comentario` del libro (laxo, no se compara) **y** clasificación del caso: con texto → defecto conocido y patrón de `evals/patrones.json`; vacía → **caso de no regresión** | es el diagnóstico de hoy, no el resultado esperado; el vacío afirma que eso salió BIEN (R9) |
 
 No alimenta `INPUTS.CONTRATO_LINEAS` ni `IA3` TABLA 3: se dejan vacías y el
-informe lo dice. Sin líneas de contrato los casos nuevos solo son evaluables
-**con LLM**; la corrida determinista vivirá de los 7 RES.
+informe lo dice. **Medido el 2026-09-16**: el precio es mayor del previsto —sin
+líneas de contrato, IA3, IA4 y el E2E no miden nada, con LLM o sin él—; las tres
+vías para llenarlas, en `progress/impl_F-045_contrato_lineas.md`.
 
 ## 4. Firmas principales
 
@@ -91,48 +91,42 @@ def normalizar_codigo(texto: str) -> str  # "2.115.714" -> "2115714"
 def emparejar(codigos: dict, ficheros: list[str]) -> tuple[dict, list]
 ```
 
-**El puente entre los tres mundos** (convenio del humano, 2026-09-15): del
-**nombre del fichero** sale el **código de albarán** —con el que él identifica
-cada fila del Excel— y de ahí el **`caso_id`**. Si el nombre sin extensión trae
-`_`, el código es lo de después del último; si no, el nombre entero
-(`PROVEEDOR_SS-0003967.pdf` y `SS-0003967.png` → `SS-0003967`). Sin él, casar 59
-albaranes con ~142 filas es manual; el renombrado es script (T11). **Manda el
-código del papel**, nunca el persistido: el precedente es `SS-0801977` leído
-donde el papel decía `SS-0001977`. **Cuatro fallos ruidosos** (R21): dos
-ficheros con el mismo código, un código sin fila, una fila sin fichero y un
-nombre vacío tras la regla; el informe los lista uno a uno. El **mapa**
-(`mapa_casos.json`, R7) guarda `caso_id` ↔ código ↔ nombre ↔ formato ↔
-`gemelo_de`: sin él un caso rojo no se audita contra el papel.
+**El puente entre los tres mundos** (humano, 2026-09-15): del **nombre del
+fichero** sale el **código de albarán** —con el que él identifica cada fila del
+Excel— y de ahí el **`caso_id`**. Si el nombre trae `_`, el código es lo de
+después del último; si no, el nombre entero (`PROVEEDOR_SS-0003967.pdf` y
+`SS-0003967.png` → `SS-0003967`). Sin él, casar 59 albaranes con ~142 filas es
+manual; el renombrado es script (T11). **Manda el código del papel**, nunca el
+persistido: el precedente es `SS-0801977` donde el papel decía `SS-0001977`.
+**Cuatro fallos ruidosos** (R21): dos ficheros al mismo código, un código sin
+fila, una fila sin fichero y un nombre vacío; el informe los lista uno a uno.
+El **mapa** (`mapa_casos.json`, R7) guarda `caso_id` ↔ código ↔ nombre ↔
+formato ↔ `gemelo_de`: sin él un caso rojo no se audita contra el papel.
 
 ## 4 bis. Los tres caminos de lectura y los casos gemelos
 
 Verificado en `extract_albaran_pipeline.py` de sv2 (rama de imágenes, ~línea
 249) y en `ruesma_comun/imaging/preprocess.py`. Son tres, no dos:
 
-| Camino | Qué recibe la IA y con qué realce |
-|---|---|
-| `pdf_texto` | el PDF tal cual, lee caracteres; sin realce |
-| `pdf_escaneado` | una imagen JPEG por página, cadena de realce con flags `PREPROCESO_*` |
-| `imagen` (PNG/JPG suelto) | la imagen pasada por `preparar_imagen_para_ia`, mismos flags |
+Son `pdf_texto` (el PDF tal cual, lee caracteres, sin realce), `pdf_escaneado`
+(una imagen JPEG por página, con la cadena de realce de los flags
+`PREPROCESO_*`) e `imagen` (PNG/JPG suelto pasado por
+`preparar_imagen_para_ia`, mismos flags). Límite conocido: lo indecodificable
+(HEIC) va sin realzar, best-effort. La rama de imágenes es de julio de 2026 y
+**hoy no la mide nadie**; leer píxeles rinde peor, y un fallo solo del tercer
+camino es FORMATO, no extracción (R23).
 
-Límite conocido: lo indecodificable (HEIC) va sin realzar, best-effort. La rama
-de imágenes es de julio de 2026 y **hoy no la mide nadie**; leer píxeles rinde
-peor, y un fallo solo del tercer camino es FORMATO, no extracción (R23).
+**Dónde vive el formato: en ningún libro.** Se **mide** en la corrida
+(`sv2_extraccion.py` ya resuelve la ruta y el mime) y `evals/informe.py` agrupa
+por él; una columna `formato` sería ground truth afirmado sobre algo observable.
+**Casos gemelos**: el mismo albarán en PDF y en PNG son DOS casos con el MISMO
+ground truth y distinta entrada, `HOR-012` y `HOR-012-IMG` (R22), hermanados por
+`gemelo_de`. **No se deduplica**: es el único experimento que aísla el formato.
 
-**Dónde vive el formato: en ningún libro.** Se **mide** en la corrida:
-`sv2_extraccion.py` ya resuelve la ruta con `EXTENSIONES = (".pdf", ".jpg",
-".jpeg", ".png")` y el mime con `mimetypes`; devolverá el camino y
-`evals/informe.py` agrupa por él. Descartada una columna `formato`: sería ground
-truth afirmado sobre algo observable. **Casos gemelos**: el mismo albarán en PDF
-y en PNG son DOS casos con el MISMO ground truth y distinta entrada, `HOR-012` y
-`HOR-012-IMG` (R22), hermanados por `gemelo_de`. **No se deduplica**: es el
-único experimento que aísla el formato.
-
-**Qué no cambia y qué sí.** `evals/barrido.py` solo mira texto de celda y
-`evals/conversor.py` no toca ficheros de entrada: ninguno asume PDF. Sí cambia
-el `.gitignore`, que ignora `*.pdf` pero **no** `*.png`: hoy un original en PNG
-entraría en git (R24). Se ignora `evals/inputs/albaranes/` entera, no `*.png`
-global, por los assets del front sv4.
+**Qué no cambia y qué sí.** `evals/barrido.py` y `evals/conversor.py` no asumen
+PDF. Sí cambia el `.gitignore`, que ignora `*.pdf` pero **no** `*.png`: hoy un
+original en PNG entraría en git (R24). Se ignora `evals/inputs/` entera, no
+`*.png` global, por los assets del front sv4.
 
 ## 5. Convenios de celda: dos ejes que NO se mezclan
 
@@ -149,16 +143,15 @@ eje es el **valor esperado**, y su política por columna vive en
 |---|---|---|---|
 | `descuento` | sin descuento | vacío (`null`; factor 1 de §13) | 58 de 142 |
 | `LER o codigo…` | no aplica a esa familia | no genera fila de IA2 | 128 de 142 |
-| `partida`, `precio unitario`, `importe` y el resto | el humano no lo ha afirmado | `?` | 8, 1, 1 y 0 |
+| el resto | el humano no lo ha afirmado | `?` | 8, 1, 1 y 0 |
 
-El banco es **poco laxo**: la ceguera real son ~10 celdas `?` y los campos de
-IA1 que no se vigilan por D4, no las 107 filas.
+El banco es **poco laxo**: la ceguera real son ~10 celdas `?` más los campos de
+IA1 que D4 no vigila.
 
 - Los valores de origen llegan con ruido (`CONTRATO` / `DE CONTRATO`,
-  `EN OFERTA` / `OFERTTA`). Los sinónimos aceptados viven en
-  `vocabulario.json`; lo no reconocido **aborta** (R5), no se adivina.
-- Las etiquetas de familia se traducen con la tabla de §5 bis, que vive en
-  `vocabulario.json` y en ningún otro sitio.
+  `EN OFERTA` / `OFERTTA`): los sinónimos viven en `vocabulario.json` y lo no
+  reconocido **aborta** (R5), no se adivina. Las etiquetas de familia se
+  traducen con la tabla de §5 bis, que vive ahí y en ningún otro sitio.
 
 ## 5 bis. Etiquetas, familias y pestañas: tres espacios de nombres
 
@@ -180,25 +173,22 @@ banco, no familia.
 | GRAVA 2/2 | **`grava`**, que no existe | Grava (nueva) |
 
 Las diez etiquetas tienen destino; ninguna cae en «desconocida». Pero **tres
-apuntan a familias de documento que hoy no existen** (decisión del humano,
-2026-09-15): subir `combustible` de línea a documento y añadir `grava` y
-`ferreteria` —más **`ferralla`**, que ni siquiera aparece en el Excel—. Ampliar
-el catálogo **no se hace en F-045**: `familias.py` es ruta sensible, su texto se
-inyecta en el prompt de IA1 y toca F-043; es **ficha propia** (§7). Mientras no
-exista, esos casos **nacen ROJOS a propósito** y el informe los agrupa bajo «la
-familia aún no existe en el catálogo», aparte de los defectos reales de
-clasificación, para que un rojo esperado no parezca regresión. **Riesgos de esa
-ficha, no de esta**: `grava` llega con 2 líneas en 2 albaranes y `ferralla` con
-**ninguno**, así que ni su definición ni su prompt de fase 2 tendrían con qué
-probarse, y el doc de dominio **no documenta ninguna regla de ferralla**, pese a
-que en obra tiene vida propia (armaduras, despieces, kilos de acero).
+apuntan a familias de documento que hoy no existen** (humano, 2026-09-15):
+subir `combustible` de línea a documento y añadir `grava` y `ferreteria` —más
+**`ferralla`**, que ni aparece en el Excel—. Ampliar el catálogo **no se hace
+en F-045**: `familias.py` es ruta sensible, su texto se inyecta en el prompt de
+IA1 y toca F-043; es **ficha propia** (§7). Mientras no exista, esos casos
+**nacen ROJOS a propósito** y el informe los agrupa bajo «la familia aún no
+existe en el catálogo», para que un rojo esperado no parezca regresión.
+**Riesgos de esa ficha, no de esta**: `grava` llega con 2 líneas en 2 albaranes
+y `ferralla` con **ninguno**, así que ni su definición ni su prompt de fase 2
+tendrían con qué probarse, y el doc de dominio **no documenta ninguna regla de
+ferralla** pese a que en obra tiene vida propia (armaduras, kilos de acero).
 
-Las pestañas **`Grava`** y **`Ferreteria`** no existen en los libros: se crean en
-los seis copiando la estructura de `Generico-Suministros` (mismas tablas y
-encabezados) y se añaden a `TIPOLOGIAS` de `evals/conversor.py`, con prefijos
-`GRA-` y `FER-`; `Ferralla` se añadirá igual cuando el humano traiga albaranes,
-y su ausencia hoy no rompe nada. **Bombeo** no tiene etiqueta ni familia: nadie
-escribe ahí y el informe lo dice. Una etiqueta desconocida **aborta** (R5).
+Las pestañas **`Grava`** y **`Ferreteria`** se crean en los seis libros copiando
+`Generico-Suministros` y se añaden a `TIPOLOGIAS` de `evals/conversor.py`, con
+prefijos `GRA-` y `FER-`; `Ferralla` igual cuando haya albaranes. **Bombeo** no
+tiene etiqueta ni familia y el informe lo dice. Lo desconocido **aborta** (R5).
 
 ## 5 ter. Criterio de valoración de residuos (ground truth)
 
@@ -216,22 +206,32 @@ y sus arreglos son fichas propias (§7). El alcance del mínimo fija el ground
 truth de los 19 albaranes de residuos: se aplica a lo que se pesa, no a lo que
 se cuenta.
 
+**El incremento por LER se DEDUCE, y por eso NO es línea de IA1** (humano,
+2026-09-16): el material sí está impreso con su LER, pero el incremento sale de
+mirar el contrato con ese LER —«pone incremento por código LER xxx, o
+incremento por canon de (material, tipología) y de ahí se deduce el ler»—. Dos
+líneas, una por fase: material a `IA1.lineas`, incremento a `IA3` TABLA 2 y al
+FINAL TABLA 3. El Excel marca las dos `EN ALBARAN` porque describe el albarán,
+no las fases; separarlas es del volcado y la regla vive en `vocabulario.json`.
+Es el primer criterio de la tabla dicho desde el ground truth.
+
 ## 6. Riesgos y decisiones
 
-- **D1 · El mapeo de etiquetas (§5 bis) vive solo en `vocabulario.json`**, para
-  cambiarlo sin tocar código. **D2 · El importador escribe LIBROS, no fixtures**:
-  generar los JSON directos saltaría el barrido de C3 bis.
+- **D1 · El mapeo de etiquetas (§5 bis) vive solo en `vocabulario.json`**, y con
+  él las demás reglas de traducción. **D2 · El importador escribe LIBROS, no
+  fixtures**: generar los JSON saltaría el barrido de C3 bis.
 - **D3 · El vacío del comentario y el del valor son cosas distintas** (§5).
   **Corregida por el humano el 2026-09-15**: «celda vacia EN COMENTARIOS no es
   que no se compare. es que ha salido ok en las pruebas. pero hay que seguir
   validando en los evals que sigue saliendo bien». El `?` solo lo produce un
   **valor esperado** ausente, y ni siempre (R12); tratar las 107 filas sin
   comentario como huecos habría tirado los casos más valiosos del banco.
-- **D4 · `numero_albaran` y la obra de IA1 quedan sin vigilar** (patrón 9 y la
-  mitad de extracción del 2), como ya hacen los 7 casos RES. **Deriva**: el
-  Excel cambia; por eso todo es reejecutable (R18).
-- **D5 · Pisar trabajo manual**: mitigado por R16 y R17. **D6 · `servicios` de
-  la ficha**: F-045 no toca sv2/sv5/sv6, son «vigilados».
+- **D4 · `numero_albaran`, la obra y `codigo_imputacion` de IA1 quedan sin
+  vigilar** (patrón 9 y la mitad de extracción del 1 y el 2), como ya hacen los
+  7 RES. **Deriva**: el Excel cambia; por eso todo es reejecutable (R18).
+- **D5 · Pisar trabajo manual**: mitigado por R16, R17 y la huella de lo que
+  escribió el importador (`huella_importacion.json`), que es lo único que él
+  puede retirar. **D6 · `servicios`**: F-045 no toca sv2/sv5/sv6, los vigila.
 
 ## 7. Fichas de arreglo propuestas (NO entran en F-045)
 
@@ -245,6 +245,5 @@ Por cuántas líneas toca cada patrón (2026-09-15); todas pasan el filtro de R2
 | 4 | **residuos: canon e incremento por año** (§5 ter) | canon por LER (F-006, ya `spec_ready`), mínimo facturable y M1 fuera de hormigón |
 | 5 | **5 · unitario equivocado en el contrato** (grava 20/40) | por contexto de línea, nunca por regla de producto (§12) |
 | 6 | **8 · dos contratos candidatos y no elige** | coger los dos y fusionarlos marcando la fusión. Revisar contra §12 |
-| 7 | **4 · devoluciones** (cantidad negativa que cita el albarán del proveedor) y **6 · el LER no se ve en la vista detallada** | la primera es funcionalidad nueva con un solo caso; la segunda, verificar si se persiste: barata y cerrada |
-| 9 | **7 y 9** (CIF raro, número mal leído) | un caso cada uno: esperan un segundo antes de ser ficha |
+| 7 | **4 · devoluciones** (cantidad negativa que cita el albarán del proveedor), **6 · el LER no se ve en la vista detallada** y **7 y 9** (CIF raro, número mal leído) | la primera es funcionalidad nueva con un solo caso; la segunda, verificar si se persiste, barata y cerrada; las dos últimas, un caso cada una: esperan un segundo antes de ser ficha |
 | 10 | **ampliar el catálogo de familias** (§5 bis) | `combustible` de línea a documento, más `grava`, `ferreteria` y `ferralla`. Ruta sensible (prompt de IA1, F-043); **bloquea** 14 filas / 6 albaranes del banco, y `ferralla` llega sin ningún caso |

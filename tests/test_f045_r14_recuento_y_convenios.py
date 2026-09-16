@@ -159,13 +159,15 @@ def test_f045_r7_el_mapa_se_escribe_byte_a_byte_como_dice_su_docstring(tmp_path)
         {"RES-001": {"clave": "B82899550/0000168", "codigo": "0000168",
                      "nombre_original": "RES-001.pdf", "formato": "pdf",
                      "gemelo_de": None, "pestana": "Residuos",
-                     "familia_documento": "residuos"}},
+                     "familia_documento": "residuos",
+                     "clasificacion": "no_regresion"}},
         ruta,
     )
     esperado = """{
   "_doc": "%s",
   "casos": {
     "RES-001": {
+      "clasificacion": "no_regresion",
       "clave": "B82899550/0000168",
       "codigo": "0000168",
       "familia_documento": "residuos",
@@ -452,11 +454,67 @@ def test_f045_r1_las_rutas_por_defecto_caen_dentro_del_repositorio():
     assert lectura.RUTA_FUENTE.parent == paquete / "inputs" / "fuente"
 
 
-def _fila_hormigon() -> FilaPlana:
+def _con_grupo_previo(grupo: str, comentarios: str | None = None):
+    """El caso ya existía en el mapa, con el grupo en el que quedó entonces."""
+    casos = reparto.agrupar_por_albaran([_fila_hormigon(comentarios)], VOCAB)
+    previo = {"HOR-001": {"clave": casos[0].clave, "clasificacion": grupo,
+                          "codigo": "H132525", "pestana": "Hormigon"}}
+    reparto.asignar_casos_id(casos, previo)
+    return casos, previo
+
+
+def _fila_hormigon(comentarios: str | None = None) -> FilaPlana:
     return FilaPlana(
         numero_fila=2,
         valores={"codigo_albaran": "H132525", "tipo_albaran": "HORMIGON",
                  "cif": "B04685541", "origen_linea": "EN ALBARAN",
                  "origen_contrato": "EN CONTRATO", "origen_precio": "DE CONTRATO",
-                 "origen_importe": "DE CONTRATO"},
+                 "origen_importe": "DE CONTRATO", "comentarios": comentarios},
     )
+
+
+# --- Cambios de grupo entre importaciones: lo que no puede pasar callado --
+
+
+def test_f045_r9_el_mapa_recuerda_en_que_grupo_quedo_cada_caso():
+    """Sin memoria no hay forma de saber que un caso cambió de bando."""
+    assert "clasificacion" in mapa.CAMPOS
+
+
+def test_f045_r9_borrar_un_comentario_mueve_el_caso_a_no_regresion():
+    """Y eso cambia lo que se le exige: pasa a tener que salir VERDE."""
+    casos, previo = _con_grupo_previo(DEFECTO_CONOCIDO, comentarios=None)
+    cambios = reparto.cambios_de_grupo(casos, previo)
+    assert cambios == [("HOR-001", DEFECTO_CONOCIDO, NO_REGRESION)]
+
+
+def test_f045_r10_escribir_un_comentario_lo_mueve_a_defecto_conocido():
+    casos, previo = _con_grupo_previo(NO_REGRESION, comentarios="falla")
+    assert reparto.cambios_de_grupo(casos, previo) == [
+        ("HOR-001", NO_REGRESION, DEFECTO_CONOCIDO)
+    ]
+
+
+def test_f045_r9_un_caso_nuevo_no_es_un_cambio_de_grupo():
+    casos = reparto.agrupar_por_albaran([_fila_hormigon()], VOCAB)
+    reparto.asignar_casos_id(casos, {})
+    assert reparto.cambios_de_grupo(casos, {}) == []
+
+
+def test_f045_r9_sin_cambios_no_se_inventa_ninguno():
+    casos, previo = _con_grupo_previo(NO_REGRESION)
+    assert reparto.cambios_de_grupo(casos, previo) == []
+
+
+def test_f045_r14_el_informe_canta_el_cambio_de_grupo():
+    informe = InformeImportacion(
+        cambios_de_grupo=[("HOR-001", DEFECTO_CONOCIDO, NO_REGRESION)]
+    )
+    texto = informe_mod.render(informe)
+    assert "## Casos que cambian de grupo" in texto
+    assert "HOR-001" in texto and "VERDE" in texto
+
+
+def test_f045_r14_sin_cambios_el_informe_lo_dice_en_vez_de_callar():
+    texto = informe_mod.render(InformeImportacion())
+    assert "ningún caso cambia de grupo" in texto

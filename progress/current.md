@@ -29,6 +29,21 @@ no miden nada** hasta que se decida de dónde salen las líneas de contrato: las
 tres vías, medidas, en `progress/impl_F-045_contrato_lineas.md` (recomendada la
 B, por `sigrid-api`). Otra pasada con LLM la decide el humano.
 
+**Las dos decisiones del humano, cerradas el 2026-09-16**: la tipología va por
+PESTAÑA —y **§3 queda corregida**, era la spec la que estaba mal— y el
+incremento por LER **se deduce del contrato**, así que el material impreso va a
+IA1 y el incremento a las sintéticas de IA3: son dos líneas, una por fase, y el
+ground truth contradictorio de RES-004 desaparece.
+
+**PENDIENTE de un solo comando**: regenerar los fixtures con
+`python -m evals.conversor`. No se hizo porque había una pasada de evals
+corriendo que los estaba leyendo; verificado en un directorio aparte, termina en
+0 y deja el ground truth correcto. Los libros y el mapa ya están al día.
+
+Siguen abiertas dos decisiones que no bloquean: `codigo_imputacion` (que sale
+`?` en las 114 líneas) y de dónde salen las líneas de contrato para que IA3,
+IA4 y el E2E midan algo.
+
 Falta la pasada 2 del reviewer: la feature sigue `in_progress` y NO se marca
 `done`.
 

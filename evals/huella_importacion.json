@@ -1,0 +1,109 @@
+{
+  "_doc": "Claves de las filas que 'python -m evals.revision' escribio en la ultima importacion, por tabla. GENERADO: no se edita a mano. Sirve para una sola cosa y no es poca: distinguir lo que escribio el importador -y por tanto puede retirar cuando deja de producirlo- de lo que escribio el humano a mano, que no se toca jamas (R17). Sin este fichero el importador conserva todo, que es el comportamiento de antes.",
+  "tablas": {
+    "cabeceras": [
+      [
+        "HOR-001"
+      ],
+      [
+        "RES-001"
+      ]
+    ],
+    "caso": [
+      [
+        "HOR-001"
+      ],
+      [
+        "RES-001"
+      ]
+    ],
+    "contexto": [
+      [
+        "RES-001",
+        "1",
+        "codigo_ler"
+      ],
+      [
+        "RES-001",
+        "2",
+        "codigo_ler"
+      ]
+    ],
+    "datos_generales": [
+      [
+        "HOR-001"
+      ],
+      [
+        "RES-001"
+      ]
+    ],
+    "lineas": [
+      [
+        "HOR-001",
+        "1"
+      ],
+      [
+        "HOR-001",
+        "1"
+      ],
+      [
+        "RES-001",
+        "1"
+      ],
+      [
+        "RES-001",
+        "1"
+      ],
+      [
+        "RES-001",
+        "2"
+      ],
+      [
+        "RES-001",
+        "2"
+      ]
+    ],
+    "lineas_albaran": [
+      [
+        "HOR-001",
+        "1"
+      ],
+      [
+        "RES-001",
+        "1"
+      ],
+      [
+        "RES-001",
+        "2"
+      ]
+    ],
+    "lineas_anadidas": [
+      [
+        "HOR-001",
+        "1",
+        "INCREM. PRECIO 2026"
+      ]
+    ],
+    "lineas_valoradas": [
+      [
+        "HOR-001",
+        "1"
+      ],
+      [
+        "RES-001",
+        "1"
+      ],
+      [
+        "RES-001",
+        "2"
+      ]
+    ],
+    "sinteticas_esperadas": [
+      [
+        "HOR-001",
+        "1",
+        "INCREM. PRECIO 2026"
+      ]
+    ]
+  }
+}

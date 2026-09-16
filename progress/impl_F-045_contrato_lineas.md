@@ -103,3 +103,21 @@ local **solo lectura** está permitido.
 pasada **no cuente IA3, IA4 y E2E como rojos de sistema**, porque hoy dicen algo
 sobre el banco y nada sobre el código. Eso es barato: la fase ya sabe si su
 entrada está vacía, y `NO_EVALUABLE` existe justamente para esto.
+
+## Lo que costó aplicar la decisión 2 (y el agujero que destapó)
+
+Separar las dos líneas no bastaba: las importaciones anteriores habían escrito
+el incremento como línea de IA1, y **la fusión conservadora mantiene lo que no
+genera** (R17), así que esas filas se quedaban y el banco seguía exigiendo lo
+mismo por los dos caminos. De ahí `evals/huella_importacion.json`: las CLAVES
+—no los valores— de lo que el importador escribió la vez anterior. Lo que está
+en la huella y ya no se produce, se retira; lo que no está, se conserva, porque
+es del humano.
+
+Y la huella tenía su propio agujero, que **costó el `modifier_source` de tres
+casos RES antes de verse**: al fusionar, la fila del humano toma la clave del
+importador y desde ese momento la huella la da por suya. Ahora solo se retira
+una fila si no lleva **nada** que el importador no pudiera escribir; los tres
+valores se restauraron desde los fixtures de `697f00e`. Con eso los 7 RES
+conservan su `gestion_residuos`, su `incremento_residuos` y sus precios, y
+tienen UNA línea en IA1 —el material— y UNA sintética en IA3 —el incremento—.
