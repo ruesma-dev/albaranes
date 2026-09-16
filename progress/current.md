@@ -720,3 +720,43 @@ WHERE table_name = 'albaran_documents_merge' AND column_name LIKE 'tipologia%';
 ```
 
 Deben salir seis.
+
+---
+
+## F-047 · SPEC ESCRITA (2026-09-16, spec-author)
+
+`specs/F-047-evals-ciclo-completo/` con los tres ficheros: requirements (149
+líneas, 38 R), design (225) y tasks (18 tareas, T16/T17 MANUAL). Rigor
+`critico`. No se ha tocado una línea de código.
+
+Lo que resuelve: el banco encadena IA1 → IA2 → contrato → IA3 → IA4 → build
+alimentando cada fase con la salida real de la anterior; cada fallo se atribuye
+a la PRIMERA fase donde nace (`PROPIO` / `ARRASTRADO` / `INDETERMINADO`) según
+un mapa de dependencias versionado, y solo los propios ponen roja una fase. Con
+el contrato leído de sigrid-api desaparece el motivo de los ~865 fallos
+«obtenido None» de la pasada del 2026-09-16, y las tres vías de
+`progress/impl_F-045_contrato_lineas.md` quedan sin objeto.
+
+### Decisiones abiertas que necesita validar el humano
+
+1. **El ciclo NO va por colas** (design §1). La ficha daba por necesarios
+   Azurite + Postgres; el diseño encadena por los mismos hand-off JSON de
+   producción (envelope de sv2, `ContextoValoracion`, envelope de sv5) en
+   secuencia y en memoria. Motivo: la vía por colas es asíncrona, no deja ver la
+   salida de cada IA sin espiar la BBDD, y escribir en Postgres desde local roza
+   las reglas duras. **Precio declarado**: quedan sin cubrir el transporte por
+   cola, la persistencia SQL de sv3/sv6, el `header_grounding_service` contra
+   Sigrid y la descarga de PDF de contrato. Es LA decisión discutible de la
+   spec: si el humano quiere el ciclo por colas, es otra ficha y otro diseño.
+2. **`INDETERMINADO` degrada la pasada a NO_EVALUABLE**, no a ROJO (R12).
+   Cuando IA1 rompe el emparejado de líneas no se puede atribuir sin adivinar;
+   marcarlo rojo mentiría sobre de quién es el defecto.
+3. **`INPUTS.CASOS.tipologia` y `contrato_codigo` pasan de entrada a
+   expectativa** (R5, R17). Esto toca la decisión 1 que F-045 dejó abierta: en
+   ciclo la clasificación la produce el sistema y el libro la juzga, así que la
+   discusión pestaña-contra-familia deja de ser una decisión de entrada.
+4. **El coste de la primera pasada**: T16 la acota a seis casos de familias
+   distintas antes de la de 59 (T17). Las dos son verificación MANUAL.
+
+Siguiente paso: aprobación del humano y, con ella, el implementer sobre
+`feature/F-047-evals-ciclo-completo`.
