@@ -35,10 +35,9 @@ incremento por LER **se deduce del contrato**, así que el material impreso va a
 IA1 y el incremento a las sintéticas de IA3: son dos líneas, una por fase, y el
 ground truth contradictorio de RES-004 desaparece.
 
-**PENDIENTE de un solo comando**: regenerar los fixtures con
-`python -m evals.conversor`. No se hizo porque había una pasada de evals
-corriendo que los estaba leyendo; verificado en un directorio aparte, termina en
-0 y deja el ground truth correcto. Los libros y el mapa ya están al día.
+Libros, mapa y **fixtures ya regenerados** (se esperó a que terminara la pasada
+de evals que los estaba leyendo). Repetir importador + conversor no deja ni un
+cambio.
 
 Siguen abiertas dos decisiones que no bloquean: `codigo_imputacion` (que sale
 `?` en las 114 líneas) y de dónde salen las líneas de contrato para que IA3,
