@@ -24,7 +24,7 @@ fixtures y el único sitio donde corre el barrido de datos sensibles.
 | `escritura.py` | copia previa, pestañas nuevas y fusión conservadora con lo que ya había |
 | `informe.py`, `__main__.py` | el informe de R14 y la CLI |
 | `evals/mapa_casos.json` | versionado: `caso_id` ↔ código ↔ nombre ↔ formato ↔ familia ↔ gemelo |
-| 19 ficheros `tests/test_f045_*` | 238 tests |
+| 19 ficheros `tests/test_f045_*` | 242 tests |
 
 ### Ficheros modificados
 
@@ -195,10 +195,10 @@ inalcanzable el nivel `critico`. **Es mejora del arnés y hay que portarla a
 
 | Evidencia | Valor |
 |---|---|
-| Tests ejecutados (suite de la raíz) | **807 pasan, 0 fallan** |
-| De ellos, de F-045 | **238** en 19 ficheros `tests/test_f045_*` |
-| Cobertura de las líneas cambiadas | **98,2 %** (896/912), umbral 80 %, nivel `critico` |
-| Tiempo de la suite | **71,42 s** |
+| Tests ejecutados (suite de la raíz) | **811 pasan, 0 fallan** |
+| De ellos, de F-045 | **242** en 19 ficheros `tests/test_f045_*` |
+| Cobertura de las líneas cambiadas | **98,3 %** (906/922), umbral 80 %, nivel `critico` |
+| Tiempo de la suite | **102,89 s** |
 | Mutación · campaña completa, sin muestreo | **266 mutantes, 176 muertos, 90 supervivientes**, 0 timeouts, 0 sin veredicto, 6381 s |
 | Mutación · workers | **4**, uno por `git worktree`, con el `README.md` del humano en un stash |
 | Mutación · tras los tests de T18 y del review | de los 90, **74 mueren** y **16 son equivalentes**, cada uno con su comprobación ejecutada; ninguno pendiente |
