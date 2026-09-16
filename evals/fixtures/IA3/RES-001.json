@@ -2,16 +2,16 @@
   "caso_id": "RES-001",
   "fase": "IA3",
   "libro": "IA3_valoracion.xlsx",
-  "sha256_libro": "5911fb20f746b6b022d628a1ddb2e8b6ba4cde5ea78f46ed1aa9bee5a8d55ef9",
+  "sha256_libro": "5df41714a4b2116fc74a154a641a2f75952b1dd3a09cabe411a63bed56d97de1",
   "tablas": {
     "lineas_valoradas": [
       {
         "caso_id": "RES-001",
         "codigo_partida_final": "CI.03A.7",
-        "codigo_producto_contrato": "@@NO_COMPARAR@@",
+        "codigo_producto_contrato": "C1",
         "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
         "importe_calculado": 120,
-        "match_method": "@@NO_COMPARAR@@",
+        "match_method": "semantic",
         "num_linea": 1,
         "precio_source": "contrato_db",
         "precio_unitario_final": 120,

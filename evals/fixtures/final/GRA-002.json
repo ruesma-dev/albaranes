@@ -2,7 +2,7 @@
   "caso_id": "GRA-002",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "ec80aa35df65aa122d6129d422d1be51105298001cb7b7dcfde79ef4d6ba420b",
+  "sha256_libro": "9a0869b9fdd4a4d65b7792062d6a02f11615c9cc339ec2097442efdc558a85ea",
   "tablas": {
     "datos_generales": [
       {

@@ -2,7 +2,7 @@
   "caso_id": "RES-003",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "323c7825aeac9521e882f60635acd538abcf04b18afd401507b6405e9baaa2de",
+  "sha256_libro": "8415ac68cd9086104f4bb1033b8bb99fc467943b806dcd9d645b6f9e890beddc",
   "tablas": {
     "cabeceras": [
       {
@@ -11,7 +11,7 @@
         "fecha": "2024-07-08",
         "fichero_albaran": "RES-003.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "SS-0000589",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
         "proveedor_cif": "@@NO_COMPARAR@@",

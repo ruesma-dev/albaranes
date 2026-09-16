@@ -2,7 +2,7 @@
   "caso_id": "HOR-010",
   "fase": "IA3",
   "libro": "IA3_valoracion.xlsx",
-  "sha256_libro": "5911fb20f746b6b022d628a1ddb2e8b6ba4cde5ea78f46ed1aa9bee5a8d55ef9",
+  "sha256_libro": "5df41714a4b2116fc74a154a641a2f75952b1dd3a09cabe411a63bed56d97de1",
   "tablas": {
     "lineas_valoradas": [
       {

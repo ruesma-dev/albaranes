@@ -2,7 +2,7 @@
   "caso_id": "RES-002",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "ec80aa35df65aa122d6129d422d1be51105298001cb7b7dcfde79ef4d6ba420b",
+  "sha256_libro": "9a0869b9fdd4a4d65b7792062d6a02f11615c9cc339ec2097442efdc558a85ea",
   "tablas": {
     "datos_generales": [
       {
@@ -13,10 +13,10 @@
         "fecha": "2024-07-16",
         "fichero": "RES-002.pdf",
         "motivo_revision": null,
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "SS-0003935",
         "obra": "687",
         "proveedor": "SALMEDINA TRATAMIENTO DE RESIDUOS INERTES, S.L.",
-        "requiere_revision": "@@NO_COMPARAR@@",
+        "requiere_revision": "SI",
         "total_valorado_esperado": 120
       }
     ],
@@ -29,7 +29,7 @@
         "descripcion": "CAMBIO CONTENEDOR 6M3",
         "importe_final": 120,
         "linea_a_revision": "@@NO_COMPARAR@@",
-        "linea_contrato": "@@NO_COMPARAR@@",
+        "linea_contrato": "C1",
         "num_linea": 1,
         "partida_final": "CI.03A.7",
         "precio_source": "contrato_db",
