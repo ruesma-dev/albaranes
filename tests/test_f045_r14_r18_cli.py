@@ -150,8 +150,12 @@ def test_f045_r17_los_tests_no_escriben_la_huella_del_repositorio(entorno):
 
     antes = huella.RUTA_HUELLA.read_bytes() if huella.RUTA_HUELLA.is_file() else None
     correr(entorno)
+    cli.ejecutar(
+        entorno["origen"], entorno["ground_truth"], entorno["originales"],
+        entorno["mapa"], entorno["huella"],
+    )
     despues = huella.RUTA_HUELLA.read_bytes() if huella.RUTA_HUELLA.is_file() else None
-    assert despues == antes
+    assert despues == antes, "un test ha escrito la huella del repositorio"
     assert entorno["huella"].is_file()
 
 
@@ -248,6 +252,7 @@ def test_f045_r14_ejecutar_sin_argumentos_opcionales_no_renombra_ni_va_en_seco(e
         entorno["ground_truth"],
         entorno["originales"],
         entorno["mapa"],
+        entorno["huella"],
     )
     assert resultado.renombrados == []
     assert (entorno["originales"] / "HORPRESOL_H132525.pdf").exists()
