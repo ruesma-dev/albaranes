@@ -121,3 +121,29 @@ una fila si no lleva **nada** que el importador no pudiera escribir; los tres
 valores se restauraron desde los fixtures de `697f00e`. Con eso los 7 RES
 conservan su `gestion_residuos`, su `incremento_residuos` y sus precios, y
 tienen UNA línea en IA1 —el material— y UNA sintética en IA3 —el incremento—.
+
+## Por qué mi comprobación vio 3 y el reviewer 38
+
+No es que mirara mal: es que **miré poco**. Cuando la retirada demasiado amplia
+se llevó datos, comprobé el campo que ya sabía roto —`modifier_source`— en los
+tres casos donde lo había visto, y di por bueno el resto. Es el mismo error que
+el banco entero existe para evitar: comprobar lo que sospechas en vez de todo
+lo que puede romperse.
+
+**El método arreglado**: comparar los fixtures versionados campo a campo entre
+dos commits, emparejando las filas por su clave, y buscar **la firma exacta del
+daño** —un valor afirmado que pasa a `@@NO_COMPARAR@@`, a `null` o a nada—.
+Con él, el recuento reproduce los 35 del reviewer exactamente, y además separa
+las **28 filas que se movieron a propósito** (el incremento por LER que pasó de
+IA1 a las sintéticas de IA3) de las pérdidas de verdad, que era la distinción
+que a ojo no se podía hacer.
+
+**El camino está muerto**, y esto se midió, no se supuso: tras restaurar los 35,
+tres reimportaciones seguidas no degradan ni uno. Era daño viejo sin restaurar
+—de la retirada amplia que ya se corrigió—, no un camino vivo.
+
+**La defensa que faltaba**: los libros `.xlsx` no se versionan, así que un
+`git diff` no podía avisar. `tests/datos/afirmado_por_el_humano_RES.json` guarda
+los **496 valores afirmados** de los 7 casos RES y el test los compara uno a
+uno, fallando **con el nombre** de cada pérdida. Comprobado que muerde:
+degradando a mano un `match_method` se pone en rojo.

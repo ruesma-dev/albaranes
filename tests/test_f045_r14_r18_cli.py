@@ -366,6 +366,45 @@ def test_f045_r16_la_copia_del_libro_es_el_estado_ANTES_de_la_importacion(entorn
     assert libro.read_bytes() != previo  # y la escritura de verdad sí ocurrió
 
 
+def test_f045_r17_una_linea_que_el_humano_borra_del_excel_se_retira_del_libro(entorno):
+    """La huella, de extremo a extremo: es lo único que permite DESescribir.
+
+    Si el humano quita una línea del Excel, la fila que el importador escribió
+    por ella tiene que irse del libro. Sin la huella se quedaría para siempre
+    —la fusión conservadora mantiene lo que no genera— y el banco seguiría
+    exigiendo una línea que ya nadie afirma.
+    """
+    correr(entorno)
+    libro = entorno["ground_truth"] / "IA1_extraccion.xlsx"
+
+    def lineas_de(caso_id):
+        wb = openpyxl.load_workbook(libro)
+        hoja, dentro, filas = wb["Hormigon"], False, []
+        for fila in hoja.iter_rows(values_only=True):
+            primera = str(fila[0]) if fila[0] else ""
+            if primera.startswith("TABLA"):
+                dentro = primera.startswith("TABLA 2")
+                continue
+            if dentro and fila[0] == caso_id:
+                filas.append(fila[2])
+        wb.close()
+        return filas
+
+    assert lineas_de("HOR-001") == ["HA-25/B/20/IIa"]
+
+    # El humano borra la única línea impresa de ese albarán.
+    fuente = openpyxl.load_workbook(entorno["origen"])
+    fuente.active.delete_rows(2)
+    fuente.save(entorno["origen"])
+    fuente.close()
+
+    correr(entorno)
+    assert lineas_de("HOR-001") == [], (
+        "la línea que el importador escribió sigue en el libro después de que "
+        "el humano la quitara del Excel: la huella no la ha retirado"
+    )
+
+
 # --- R5: lo desconocido aborta sin escribir nada ---------------------------
 
 

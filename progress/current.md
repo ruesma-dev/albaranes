@@ -35,6 +35,14 @@ incremento por LER **se deduce del contrato**, así que el material impreso va a
 IA1 y el incremento a las sintéticas de IA3: son dos líneas, una por fase, y el
 ground truth contradictorio de RES-004 desaparece.
 
+**Pasada 2 del review: RECHAZADA y corregida.** La pérdida de datos era de 38
+valores afirmados, no de 3: restaurados los 35 que faltaban desde `5132bdc`,
+arreglado el método que solo vio tres —ahora la comparación recorre todos los
+fixtures campo a campo— y puesto un guardián versionado
+(`tests/datos/afirmado_por_el_humano_RES.json`, 496 valores) que falla nombrando
+cada pérdida. Y la campaña de mutación del lote: 44 mutantes, 35 muertos, **los
+9 supervivientes cerrados con test**.
+
 Libros, mapa y **fixtures ya regenerados** (se esperó a que terminara la pasada
 de evals que los estaba leyendo). Repetir importador + conversor no deja ni un
 cambio.

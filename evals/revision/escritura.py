@@ -287,7 +287,7 @@ def _prefijo_comun(uno: str, otro: str) -> bool:
     return bool(uno) and bool(otro) and (uno.startswith(otro) or otro.startswith(uno))
 
 
-def _solo_del_importador(existente: dict, nuevas: list[dict]) -> bool:
+def _solo_del_importador(existente: dict, interrogantes: set[str]) -> bool:
     """La fila NO lleva nada que el importador no pudiera haber escrito.
 
     Es la condición para poder retirarla. Hace falta porque la fusión mueve la
@@ -299,15 +299,17 @@ def _solo_del_importador(existente: dict, nuevas: list[dict]) -> bool:
     Así que una fila solo se retira si TODAS sus columnas están vacías o en
     `?` allí donde el importador escribe `?`. Si alguna lleva un valor que él
     nunca pone, la fila no es solo suya y se queda.
+
+    `interrogantes` son las columnas que el importador deja en `?` **en toda la
+    importación**, no solo en las filas de esta pestaña: si se dedujeran de las
+    filas de turno, una pestaña donde esta vez no escribe nada no podría
+    retirar nada, que es justo cuando hay que hacerlo —el humano ha quitado esa
+    línea del Excel—. Sin columnas declaradas no se retira nada: ante la duda,
+    no se toca lo del humano.
     """
-    if not nuevas:
-        return all(not _tiene_valor(valor) for valor in existente.values())
-    escribe_interrogante = {
-        campo for fila in nuevas for campo, valor in fila.items() if valor == "?"
-    }
-    return not any(
-        _tiene_valor(existente.get(campo)) for campo in escribe_interrogante
-    )
+    if not interrogantes:
+        return False
+    return not any(_tiene_valor(existente.get(campo)) for campo in interrogantes)
 
 
 def fundir_filas(
@@ -316,6 +318,7 @@ def fundir_filas(
     campos_clave: tuple[str, ...],
     campo_prefijo: str | None = None,
     mias: set[tuple[str, ...]] | None = None,
+    interrogantes: set[str] | None = None,
 ) -> list[dict]:
     """Actualiza en su sitio, conserva lo ajeno y añade al final lo nuevo.
 
@@ -325,6 +328,9 @@ def fundir_filas(
     siempre, porque lo escribió el humano (R17). Sin `mias`, no se retira nada.
     """
     por_clave = {_clave(nueva, campos_clave): nueva for nueva in nuevas}
+    columnas_en_duda = interrogantes if interrogantes is not None else {
+        campo for fila in nuevas for campo, valor in fila.items() if valor == "?"
+    }
     resultado: list[dict] = []
     usadas: set[tuple] = set()
     for existente in existentes:
@@ -337,7 +343,11 @@ def fundir_filas(
             if nueva is not None and _clave(nueva, campos_clave) in usadas:
                 nueva = None
         if nueva is None:
-            if mias is not None and clave in mias and _solo_del_importador(existente, nuevas):
+            if (
+                mias is not None
+                and clave in mias
+                and _solo_del_importador(existente, columnas_en_duda)
+            ):
                 continue  # la escribió el importador y ya no la produce
             resultado.append(existente)
             continue
@@ -375,6 +385,7 @@ def escribir_pestana(
     caso_ids: set[str],
     ejecutar: bool = True,
     huella_previa: dict[str, set[tuple[str, ...]]] | None = None,
+    interrogantes: dict[str, set[str]] | None = None,
 ) -> bool:
     """Vuelca las tablas de una pestaña fundiéndolas con lo que ya había.
 
@@ -415,6 +426,7 @@ def escribir_pestana(
                 existentes, nuevas, campos,
                 campo_prefijo=CLAVE_POR_PREFIJO.get(bloque.definicion.clave),
                 mias=huella_previa.get(bloque.definicion.clave) if huella_previa else None,
+                interrogantes=(interrogantes or {}).get(bloque.definicion.clave),
             )
             cambia = cambia or _difieren(existentes, fundidas, bloque)
             if ejecutar:

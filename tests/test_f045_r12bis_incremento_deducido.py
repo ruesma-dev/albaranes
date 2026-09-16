@@ -210,9 +210,12 @@ def test_f045_r17_una_fila_que_el_importador_dejo_de_producir_se_retira(tmp_path
     from evals.revision import huella
 
     existentes = [
-        {"caso_id": "RES-004", "num_linea": 1, "descripcion_esperada": "CAMBIO CONTENEDOR"},
-        {"caso_id": "RES-004", "num_linea": 2, "descripcion_esperada": "INCREMENTO LER 170604"},
-        {"caso_id": "RES-004", "num_linea": 3, "descripcion_esperada": "A MANO"},
+        {"caso_id": "RES-004", "num_linea": 1,
+         "descripcion_esperada": "CAMBIO CONTENEDOR", "codigo_imputacion": None},
+        {"caso_id": "RES-004", "num_linea": 2,
+         "descripcion_esperada": "INCREMENTO LER 170604", "codigo_imputacion": None},
+        {"caso_id": "RES-004", "num_linea": 3,
+         "descripcion_esperada": "A MANO", "codigo_imputacion": "P5.01"},
     ]
     nuevas = [
         {"caso_id": "RES-004", "num_linea": 1, "descripcion_esperada": "CAMBIO CONTENEDOR 6M3"},
@@ -222,6 +225,9 @@ def test_f045_r17_una_fila_que_el_importador_dejo_de_producir_se_retira(tmp_path
     fundidas = escritura.fundir_filas(
         existentes, nuevas, ("caso_id", "num_linea"),
         mias=huella.claves_de(previa, "lineas"),
+        # La columna que el importador deja en `?`: es lo que distingue una
+        # fila suya de una del humano cuando la clave ya no las separa.
+        interrogantes={"codigo_imputacion"},
     )
     assert [f["num_linea"] for f in fundidas] == [1, 3]
     assert fundidas[0]["descripcion_esperada"] == "CAMBIO CONTENEDOR 6M3"
@@ -242,6 +248,7 @@ def test_f045_r17_lo_que_escribio_el_humano_nunca_se_retira():
     fundidas = escritura.fundir_filas(
         existentes, [], ("caso_id", "num_linea", "campo_contexto"),
         mias=huella.claves_de({"contexto": [["RES-001", "1", "codigo_ler"]]}, "contexto"),
+        interrogantes={"valor_esperado"},
     )
     assert len(fundidas) == 1
 

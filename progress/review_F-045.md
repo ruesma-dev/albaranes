@@ -1,140 +1,140 @@
 <!-- progress/review_F-045.md -->
-# F-045 · Review de la CAPA 1 (T1–T12, T17, T18, T21)
+# F-045 · Review de las dos decisiones del humano (segundo lote)
 
-**Revisión incremental desde `3d01f5f` (pasada 2)** — rama
-`feature/F-045-banco-evals-revision-manual`, HEAD `e3ffcbd`. Lo aprobado en la
-pasada 1 queda dado por bueno; aquí se revisa el delta `3d01f5f..HEAD` (2
-commits: 3 ficheros de producción, 3 de tests y el papeleo) más las puertas
-enteras, que se ejecutan siempre.
+**Revisión incremental desde `5132bdc` (pasada 3)** — HEAD `490db12`, 6
+commits. Lo aprobado en las pasadas 1 y 2 queda dado por bueno; aquí se revisa
+`5132bdc..HEAD`, más las puertas enteras.
 
-## Veredicto: APROBADO
+## Veredicto: CHANGES_REQUESTED
 
-Los dos bloqueantes están cerrados **con test, no con prosa**, y lo he
-comprobado matando los mutantes yo mismo. La capa 1 queda aprobada; el cierre de
-la feature depende de tres decisiones del humano, que enumero al final.
-
-**Nivel de rigor: `critico`** (`harness/features.json`): fase RED, cobertura
-≥ 80 %, campaña completa sin muestreo, cero supervivientes injustificados y las
-MANUAL listadas con su comando.
+Las dos decisiones están bien aplicadas y la regla nueva de la huella es
+correcta. **Bloquean dos cosas**: se perdieron **35 valores afirmados más** del
+ground truth escrito a mano —además de los tres `modifier_source` que sí se
+vieron y se restauraron—, y **este lote no tiene campaña de mutación**, que en
+`critico` no es opcional y aquí mide justo el código que causó la pérdida.
 
 ## Las puertas, ejecutadas enteras
 
-`bash harness/init.sh` → **exit 0**: **811 tests** en 96,6 s; PUERTA COBERTURA
-`[OK] 98,3 % de 922 líneas (906/922)`; **PUERTA RUTAS SENSIBLES [evals]: `N/A`
-(F-045 no toca ninguna ruta sensible declarada)** —ya por el motivo correcto,
-no por falta de rama—; PUERTA TAMAÑO `impl 219/220`, `review 140/140`. Árbol
-limpio salvo el `README.md` del humano, que sigue sin tocarse.
+`bash harness/init.sh` → **exit 0**: **846 tests** en 118 s; COBERTURA `[OK]
+96,2 % de 106 líneas`; RUTAS SENSIBLES `N/A` con su motivo; TAMAÑO `design
+249/250`, `impl 220/220`. Árbol limpio. `services/` sin tocar: **sv5 y sv6
+siguen sin implementar nada** y sus casos nacen rojos a propósito (§5 ter).
 
-## Los dos bloqueantes: verificados muriendo, no leídos
+## BLOQUEANTE 1 · se perdieron 35 valores afirmados más, y nadie los vio
 
-Reinyecté cada mutante en un **worktree aparte** y corrí la suite acotada
-(242 tests, 9,9 s de base):
+Comparé fixture a fixture `5132bdc..HEAD` buscando la firma exacta del daño: un
+valor afirmado que pasa a `@@NO_COMPARAR@@`. Aparecen **35**, todos de los 7
+casos RES, que son **los únicos que hoy miden IA3** (sus líneas de contrato las
+escribió el humano):
 
-| Mutante | Antes | Ahora | Test que lo mata |
-|---|---|---|---|
-| 49 `mapa.py:64` `sort_keys=True→False` | sobrevivía | **MUERE** | `test_f045_r7_el_mapa_se_escribe_byte_a_byte_como_dice_su_docstring` |
-| 8 `__main__.py:211` `ejecutar=False→True` | sobrevivía | **MUERE** | `test_f045_r16_la_copia_del_libro_es_el_estado_ANTES_de_la_importacion` |
-| 9 `__main__.py:290` `parents=True→False` | «equivalente» | **MUERE** | `test_f045_r14_el_informe_se_deja_aunque_su_carpeta_no_exista` |
+| Tabla · campo | Casos | Lo que había |
+|---|---:|---|
+| `IA1.cabeceras.numero_albaran` | 7 | `SS-0000168`, `SS-0003935`, `SS-0000589`, `SS-0003967`, `SS-0001977`, `SS-0025146`, `SS-0026122` |
+| `FINAL.datos_generales.numero_albaran` | 7 | los mismos |
+| `IA3.lineas_valoradas.match_method` | 6 | `semantic` |
+| `IA3.lineas_valoradas.codigo_producto_contrato` | 6 | `C1` |
+| `FINAL.lineas.linea_contrato` | 6 | la línea de contrato afirmada |
+| `FINAL.datos_generales.requiere_revision` | 3 | su valor |
 
-**Confirmado el punto que pedía el coordinador**: el mutante 8 vive en la CLI y
-**solo** lo mata el test de `test_f045_r14_r18_cli.py`; el de `escritura` es
-correcto y necesario (fija que la pasada de comprobación no escribe), pero no
-alcanza al `__main__`. Al reinyectar el 8 falla exactamente uno, y es el de la
-CLI. Los dos tests son de verdad: el de la CLI provoca un cambio real en el
-Excel para que la segunda pasada tenga que escribir, y compara los **bytes** de
-`copias/` con los del libro previo; el del mapa fija el **contenido literal**
-del JSON, no solo el orden de los casos.
+No es una lectura de fixtures: lo comprobé **en los libros**, que son la fuente
+y lo que NO se versiona. `IA3_valoracion.xlsx`/Residuos/RES-001 trae hoy
+`match_method='?'` y `codigo_producto_contrato='?'`, e `IA1_extraccion.xlsx`
+trae `numero_albaran='?'`. En `5132bdc` y en `697f00e` estaban; son los mismos
+que la pasada 1 presumía de conservar («RES-001 conserva `SS-0000168` y su
+`match_method` semántico»).
 
-## RM1 · el delta tocó producción, así que lo he vuelto a medir
+**Por qué importa**: `match_method` y `codigo_producto_contrato` son lo único
+que comprueba que la valoración eligió **el producto correcto del contrato** —el
+patrón 5, «unitario equivocado dentro del contrato»—, y `SS-0001977` es el caso
+que dio nombre al precedente de F-045 («manda el código del papel, no el
+persistido»). Con `?` no salen rojos: dejan de mirarse, en silencio.
 
-El informe de mutación sigue declarando `SHA de HEAD medido: 1c3e8d7`, y desde
-entonces sí cambió producción (`modelos.py`, `informe.py`, `__main__.py`).
-Recalculado hoy: el alcance sube de 2371 a **2406 líneas** y el total sigue en
-**266 mutantes** (una línea mutada desapareció al extraerse `_libros`). El
-**delta `3d01f5f..HEAD` son 36 líneas y genera exactamente UN mutante nuevo**:
-`modelos.py:169 en_seco: bool = False → True`. Lo reinyecté: **MUERE**, con
-`test_f045_r14_ninguno_tiene_dos_motivos_y_el_informe_los_separa`. La campaña
-no hay que repetirla: el único hueco que abrió el delta está medido y cerrado,
-y queda aquí escrito con el comando y el resultado.
+**Qué hay que hacer**: restaurarlos en los libros desde los fixtures de
+`5132bdc` (idénticos a `697f00e` en estos campos), regenerar, y decir por escrito
+**por qué camino se fueron**. Con el código de hoy `fundir()` no degrada un `?`
+sobre un valor afirmado y `_solo_del_importador` impide retirar la fila, así que
+lo más probable es **daño viejo sin restaurar**: la restauración de los tres
+`modifier_source` se quedó corta y nadie volvió a mirar el resto. Si quedara
+algún camino vivo, hay que cerrarlo. **Y falta la defensa**: los libros no se
+versionan, así que nada avisa de un valor afirmado que desaparece. Propongo un
+test que fije los valores del humano en los 7 RES —una instantánea versionada de
+esas celdas, barata— y falle si se degradan. Sin eso, la próxima pérdida también
+será invisible.
 
-## Las 16 equivalencias: comprobadas, y cinco las ejecuté yo
+## BLOQUEANTE 2 · este lote no tiene campaña de mutación
 
-16 equivalentes + 74 con test = 90, ninguno pendiente. Las 16 traen ahora su
-línea de comprobación. **Cinco de ellas siguen siendo un razonamiento sobre el
-código, no una ejecución** (15, 16, 17 de G2, más 18 y 31), así que las corrí
-yo: `localizar_bloques` sobre los **seis libros reales** da **94 bloques y
-ninguno** conserva un valor por defecto (G2 en pie); `_ultima_con_datos` tiene
-un solo llamador y `0 > 0` y `-1 > 0` son falsos (31); `copia_de_seguridad`
-exige que el libro exista, así que `copias` es el único nivel que crea (18).
-De las demás reproduje G1 (todas las celdas de una fila comparten `.row`), el
-10 (`rsplit(1)[-1] == rsplit(2)[-1]`), el 71 (`max(0,n) == max(1,n)` de 1 a
-999) y el 72 (las dos guardas dan lo mismo en `None`, `True`, `False`, `0`,
-`7`, `'72,50'`, `''`, `'no es'` y `'1.234,5'`). Y verifiqué que tres declarados
-equivalentes **siguen sobreviviendo** (6, 18, 71): coherente, ninguno sale
-muerto (RM3).
+`progress/mutacion_F-045.md` sigue midiendo `1c3e8d7`, 2371 líneas y 266
+mutantes: el lote anterior. Tras el merge, el alcance de la feature es **otro**:
+recalculado con `harness.alcance` da **325 líneas y 44 mutantes**, y ninguno se
+ha juzgado. Lo que queda sin medir es exactamente lo que más lo necesita:
 
-## Los cinco menores
+| Fichero | Líneas | Mutantes |
+|---|---:|---:|
+| `escritura.py` (fusión, retirada, prefijo) | 131 | **26** |
+| `huella.py` (nuevo) | 81 | **7** |
+| `reparto.py`, `informe.py`, `__main__.py`, `vocabulario.py` | 106 | 11 |
 
-1. **`tasks.md`**: 20 tareas en `[x]` (T1–T12 con sus bis, T17, T18, T21) y una
-   nota de estado; abiertas solo la capa 2 (T13–T16) y las MANUAL T19 y T20.
-2. **`branch` en `features.json`**: declarada. `harness.alcance --feature F-045`
-   ya resuelve solo, y la puerta de rutas sensibles corre y sale N/A porque de
-   verdad no se toca ninguna, no porque no tuviera qué mirar.
-3. **«Evidencias»**: trae los **4 workers** y los cuatro números al día (811 tests, 98,3 %, 266/90, 102,9 s).
-4. **Desviación de §3 en `codigo_imputacion`**: declarada en el aviso del
-   informe de importación, con lo que cuesta (la mitad de EXTRACCIÓN del patrón
-   1 queda sin vigilar) y cómo se cierra.
-5. **Informe de importación regenerado con pasada REAL**: «Libros comprobados:
-   6» y «Libros escritos: (ninguno: ningún libro cambiaba; ver R18)». El
-   «ninguno» ya distingue sus dos motivos, que era justo lo que me despistó.
+Son ~20 minutos con los 4 workers de siempre (`python -m harness.mutacion
+--feature F-045` ya mide solo este lote, porque la rama sale de `dev`). En
+`critico`, T18 pide campaña completa y cero supervivientes injustificados; y tras
+una pérdida de datos, dar por buena la lógica nueva porque la suite pasa es justo
+lo que esta puerta existe para evitar.
+
+## Lo que sí está bien, y lo he verificado
+
+- **Tipología por pestaña**: `design.md` §3 corregida diciendo lo que el sistema
+  hace —`INPUTS.CASOS.tipologia` = pestaña; la familia de documento va al mapa y
+  al informe— con el motivo (`MAPA_TIPO_FAMILIA` indexado por pestaña). No queda
+  ningún resto que la llame desviación: el aviso del informe desapareció y la
+  lista de decisiones la marca CERRADA.
+- **El incremento por LER**: los 7 RES quedan con **1 línea en IA1** (el
+  material impreso), **1 sintética en IA3** con `modifier_source=gestion_residuos`,
+  `rol_linea=incremento_residuos` y su precio (51, 90, 90, 77 y el centinela
+  `@@ESPERA_REVISION@@` donde el contrato no tarifa el LER), 1 en
+  `FINAL.lineas_anadidas` y el `codigo_ler` intacto en el contexto de IA2. La
+  contradicción de RES-004 desaparece sin elegir, que es lo que decía el humano.
+  Contra `697f00e`: **ninguna clave del ground truth original ha desaparecido**.
+- **La regla nueva de la huella es correcta**: retirar solo lo que está en la
+  huella Y `_solo_del_importador`, es decir, ninguna columna con un valor que el
+  importador nunca escribe. Cierra el camino por el que una fila fusionada se
+  daba por propia. Con tres tests que lo fijan, incluido el del agujero.
+- **El guardián funciona**: reintroduje la fuga en una copia aislada —quitar la
+  ruta de huella de la llamada a `cli.ejecutar`— y
+  `test_f045_r17_los_tests_no_escriben_la_huella_del_repositorio` **falla**.
+- **La reimportación no mueve nada**: corrí `python -m evals.revision --dry-run`
+  con el informe a mi scratchpad y sale **idéntico** al versionado salvo el
+  aviso de seco: 59 casos, 0 nuevos, 11 no regresión y 48 defecto conocido,
+  «ningún caso cambia de grupo». El `git status` queda limpio.
 
 ## Checkpoints
 
 - **C1** [x] exit 0 y ficheros obligatorios. **C2** [x] una feature
-  `in_progress`, rama correcta, `current.md` al día con la pasada 1 y lo que
-  falta; `features.json` sigue en `in_progress`, como debe hasta el cierre.
-- **C3** [x] el delta respeta la arquitectura: `informe.py` y `modelos.py`
-  siguen sin infraestructura, ruta en la primera línea, sin prints de debug ni
-  secretos ni dependencias nuevas.
-- **C3 bis** N/A **justificado**: no toca `docs/referencia/`. En la pasada 1
-  hice igualmente el barrido de lo versionado (correo, `api[_-]?key`, `secret`,
-  `token`, `AccountKey=`, GUID): cero hallazgos, y el delta no añade datos.
-- **C4** [x] R1–R18, R20–R22 y R24 con test trazable; 811 verdes. R19 lo
-  verifiqué ejecutando el conversor (pasada 1). T19 y T20 (MANUAL) listadas con
-  su comando en `current.md`.
-- **C4 bis** [x] fase RED con trazas reales, cobertura `[OK]`, totales
-  recalculados (2406 líneas, 266 mutantes), RM1 re-medido sobre el delta, RM2
-  coherente (media 24,0 s × 4 workers ≈ 96 s frente a línea base 141,6 s), RM3
-  sin equivalentes muertos, RM4 usado, **RM5 con muestra reproducida** y RM6 sin
-  defensa eliminada: los 74 mueren por tests nuevos, no por quitar guardas.
-- **C4 ter** [x] la puerta corre y sale N/A con su motivo correcto. **C5** [x]
-  `tasks.md` marcado con commit por tarea, sin temporales, estado real.
+  `in_progress`, rama correcta, `current.md` al día.
+- **C3** [x] `huella.py` es dominio puro (solo `json` y `pathlib`), ruta en la
+  primera línea, sin prints ni secretos ni dependencias nuevas. La huella no
+  guarda valores, solo claves: ni precios ni datos de proveedor.
+- **C3 bis** N/A **justificado**: no toca `docs/referencia/`.
+- **C4** [ ] los 846 pasan y el LER trae 13 tests nuevos, pero **ningún test
+  protege los valores afirmados del humano en los libros**, que es R17 y lo que
+  se ha perdido dos veces.
+- **C4 bis** [ ] **sin campaña de mutación de este lote** (bloqueante 2). Fase
+  RED sí (traza del incremento deducido, `12 failed, 1 passed`), cobertura
+  `[OK]` 96,2 %, y RM1 es precisamente lo que falla: el alcance medido no es el
+  que se revisa.
+- **C4 ter** [x] la puerta corre y sale N/A con su motivo.
+- **C5** [x] commits por tarea y estado real; `tasks.md` sin cambios (estas dos
+  decisiones eran T19, que sigue abierta a la espera del resto).
 
-## Condiciones de cierre (del humano, no del implementer)
+## Condiciones de cierre que siguen siendo del humano
 
-No bloquean este veredicto sobre el código, pero **la feature no se marca
-`done` sin ellas**:
+1. **Copiar los documentos de entrada**: 57 de 59 ya renombrados; RES-020 y
+   RES-021 siguen sin papel y salen OMITIDOS.
+2. **`codigo_imputacion` sale `?` en las 114 líneas** (columna nueva en el Excel
+   o aceptar la ceguera de la mitad de extracción del patrón 1).
+3. **`INPUTS.CONTRATO_LINEAS` y `CONDICIONES`**: sin ellas IA3, IA4 y el E2E no
+   miden nada; las tres vías están medidas en `impl_F-045_contrato_lineas.md`.
 
-1. **Copiar los documentos de entrada**: hoy los 59 casos salen
-   `fila_sin_fichero`, uno a uno en el informe, como pide R21.
-2. **Validar la tipología por pestaña**: confirmé en la pasada 1 que lo
-   implementado es lo acertado —`MAPA_TIPO_FAMILIA` de `sv6_build.py:69` está
-   indexado por PESTAÑA— y que **la spec §3 es la que está mal**. Falta que el
-   humano lo cierre y se corrija §3, no el código. Con ella va la desviación de
-   `codigo_imputacion` (menor 4).
-3. **La contradicción de RES-004**: los incrementos LER esperados a la vez como
-   impresos y como deducidos. Hay que mirar el papel.
-
-**Recomendación no bloqueante**: que `progress/mutacion_F-045.md` recoja el
-re-medido del delta (SHA `e3ffcbd`, 2406 líneas, el mutante nuevo y su
-veredicto), para que la evidencia viva junto a la campaña y no solo aquí.
-
-## Registro de la pasada 1 (CHANGES_REQUESTED, 2026-09-16)
-
-Bloqueaban dos justificaciones de equivalencia falsas —`sort_keys` del mapa,
-que sí cambiaba el fichero, y `ejecutar=False`, que rompía la copia previa de
-R16— más cinco menores. Todo cerrado y verificado arriba. **La lección que deja
-y que propongo llevar a `CHECKPOINTS.md`** (propuesta, no aplicada): RM5 debe
-exigir que la demostración de equivalencia **pueda fallar** —fragmento
-ejecutado con su salida— y que el reviewer elija su muestra entre las que
-afirman igualdad de un artefacto en disco, que es donde se escondieron las dos.
+El dato de la última pasada (IA1 en 128 fallos reales y 12 verdes, sin el ruido
+de `caso_id`, `fichero_albaran` ni `unidad`) es coherente con lo que mide el
+banco hoy y no cambia el veredicto: lo que bloquea no es lo que el banco ve,
+sino lo que ha dejado de ver sin avisar.
