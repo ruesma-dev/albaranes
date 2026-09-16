@@ -31,4 +31,10 @@ La BBDD, colas y contratos entre servicios están documentados en
 
 arrancar local
 
-powershell -ExecutionPolicy Bypass -File .\infra\local\arrancar_local.ps1 
+Azurite hay que arrancarlo aparte y dejarlo corriendo. Abre una ventana de PowerShell nueva —se queda ocupada, es un daemon— y lanza:                                       
+                                                                                                                                                                              
+  azurite --silent --skipApiVersionCheck --location C:\azurite                                                                                                                
+                                                                                                                                                                              
+  Y en tu ventana de siempre, ya con Azurite vivo:                                                                                                                            
+                                                                                                                                                                              
+  powershell -ExecutionPolicy Bypass -File .\infra\local\arrancar_local.ps1  
