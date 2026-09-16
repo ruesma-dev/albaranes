@@ -2,31 +2,19 @@
   "caso_id": "RES-003",
   "fase": "IA3",
   "libro": "IA3_valoracion.xlsx",
-  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "sha256_libro": "5911fb20f746b6b022d628a1ddb2e8b6ba4cde5ea78f46ed1aa9bee5a8d55ef9",
   "tablas": {
     "lineas_valoradas": [
       {
         "caso_id": "RES-003",
         "codigo_partida_final": "CI.03A.7",
-        "codigo_producto_contrato": "C1",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
         "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
         "importe_calculado": 120,
-        "match_method": "semantic",
+        "match_method": "@@NO_COMPARAR@@",
         "num_linea": 1,
         "precio_source": "contrato_db",
         "precio_unitario_final": 120,
-        "review_required": "@@NO_COMPARAR@@"
-      },
-      {
-        "caso_id": "RES-003",
-        "codigo_partida_final": "CI.03A.7",
-        "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
-        "importe_calculado": 51,
-        "match_method": "@@NO_COMPARAR@@",
-        "num_linea": 2,
-        "precio_source": "contrato_db",
-        "precio_unitario_final": 51,
         "review_required": "@@NO_COMPARAR@@"
       }
     ],
@@ -35,8 +23,8 @@
         "cantidad": 1,
         "caso_id": "RES-003",
         "codigo_partida": "CI.03A.7",
-        "comentario": "§8.3: el incremento esta cargado en el contrato y no se emitia.",
-        "descripcion_esperada": "INCREMENTO LER 170802",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
+        "descripcion_esperada": "INCREMENTO LER 170802 MAT. DE CONST. A PARTIR DE YESOS-E",
         "modifier_source": "gestion_residuos",
         "num_linea_base": 1,
         "precio_unitario": 51,

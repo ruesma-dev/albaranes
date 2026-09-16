@@ -2,7 +2,7 @@
   "caso_id": "HOR-017",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "ba90a8cfb7acbfb6426dcdb47bd527295fc8aa40aa79b98569b4d6dab42f0c93",
+  "sha256_libro": "323c7825aeac9521e882f60635acd538abcf04b18afd401507b6405e9baaa2de",
   "tablas": {
     "cabeceras": [
       {

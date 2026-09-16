@@ -2,7 +2,7 @@
   "caso_id": "RES-004",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
+  "sha256_libro": "ec80aa35df65aa122d6129d422d1be51105298001cb7b7dcfde79ef4d6ba420b",
   "tablas": {
     "datos_generales": [
       {
@@ -13,7 +13,7 @@
         "fecha": "2024-07-10",
         "fichero": "RES-004.pdf",
         "motivo_revision": null,
-        "numero_albaran": "SS-0003967",
+        "numero_albaran": "@@NO_COMPARAR@@",
         "obra": "687",
         "proveedor": "SALMEDINA TRATAMIENTO DE RESIDUOS INERTES, S.L.",
         "requiere_revision": "@@NO_COMPARAR@@",
@@ -29,26 +29,11 @@
         "descripcion": "CAMBIO CONTENEDOR 6M3",
         "importe_final": 120,
         "linea_a_revision": "@@NO_COMPARAR@@",
-        "linea_contrato": "C1",
+        "linea_contrato": "@@NO_COMPARAR@@",
         "num_linea": 1,
         "partida_final": "CI.03A.7",
         "precio_source": "contrato_db",
         "precio_unitario_final": 120,
-        "unidad_final": "UD"
-      },
-      {
-        "cantidad_final": 1,
-        "casa_con_contrato": "SI",
-        "caso_id": "RES-004",
-        "comentario": null,
-        "descripcion": "INCREMENTO LER 170604 MATERIALES DE AISLAMIENTO-E",
-        "importe_final": 90,
-        "linea_a_revision": "@@NO_COMPARAR@@",
-        "linea_contrato": "@@NO_COMPARAR@@",
-        "num_linea": 2,
-        "partida_final": "CI.03A.7",
-        "precio_source": "contrato_db",
-        "precio_unitario_final": 90,
         "unidad_final": "UD"
       }
     ],
@@ -57,7 +42,7 @@
         "cantidad": 1,
         "caso_id": "RES-004",
         "comentario": null,
-        "concepto": "INCREMENTO LER 170604",
+        "concepto": "INCREMENTO LER 170604 MATERIALES DE AISLAMIENTO-E",
         "importe": 90,
         "num_linea_base": 1,
         "partida": "CI.03A.7",

@@ -2,7 +2,7 @@
   "caso_id": "RES-003",
   "fase": "IA2",
   "libro": "IA2_contexto.xlsx",
-  "sha256_libro": "c47f95e3a52bcc1f94110186ebcc636f76a37db4701631f289c8016df0dba1ef",
+  "sha256_libro": "54145e049522f54103e77e647e8470b11d88eab42f0d1e6af9439568dedf37f2",
   "tablas": {
     "contexto": [
       {
@@ -11,13 +11,6 @@
         "comentario": "Familia de linea del catalogo unico: el documento es de gestion de residuos (RCD).",
         "num_linea": 1,
         "valor_esperado": "residuos"
-      },
-      {
-        "campo_contexto": "codigo_ler",
-        "caso_id": "RES-003",
-        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
-        "num_linea": 1,
-        "valor_esperado": "170802"
       },
       {
         "campo_contexto": "volumen_m3",
@@ -30,7 +23,7 @@
         "campo_contexto": "codigo_ler",
         "caso_id": "RES-003",
         "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
-        "num_linea": 2,
+        "num_linea": 1,
         "valor_esperado": "170802"
       }
     ]

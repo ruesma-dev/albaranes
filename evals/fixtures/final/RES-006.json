@@ -2,7 +2,7 @@
   "caso_id": "RES-006",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
+  "sha256_libro": "ec80aa35df65aa122d6129d422d1be51105298001cb7b7dcfde79ef4d6ba420b",
   "tablas": {
     "datos_generales": [
       {
@@ -13,10 +13,10 @@
         "fecha": "2024-11-05",
         "fichero": "RES-006.pdf",
         "motivo_revision": null,
-        "numero_albaran": "SS-0025146",
+        "numero_albaran": "@@NO_COMPARAR@@",
         "obra": "691",
         "proveedor": "SALMEDINA TRATAMIENTO DE RESIDUOS INERTES, S.L.",
-        "requiere_revision": "SI",
+        "requiere_revision": "@@NO_COMPARAR@@",
         "total_valorado_esperado": 136
       }
     ],
@@ -29,7 +29,7 @@
         "descripcion": "CONTENEDOR DE RESIDUOS 6 M3",
         "importe_final": 136,
         "linea_a_revision": "@@NO_COMPARAR@@",
-        "linea_contrato": "C1",
+        "linea_contrato": "@@NO_COMPARAR@@",
         "num_linea": 1,
         "partida_final": "CI.03A.7",
         "precio_source": "contrato_db",

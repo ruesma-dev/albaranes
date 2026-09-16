@@ -2,7 +2,7 @@
   "caso_id": "RES-003",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
+  "sha256_libro": "ec80aa35df65aa122d6129d422d1be51105298001cb7b7dcfde79ef4d6ba420b",
   "tablas": {
     "datos_generales": [
       {
@@ -13,7 +13,7 @@
         "fecha": "2024-07-08",
         "fichero": "RES-003.pdf",
         "motivo_revision": null,
-        "numero_albaran": "SS-0000589",
+        "numero_albaran": "@@NO_COMPARAR@@",
         "obra": "687",
         "proveedor": "SALMEDINA TRATAMIENTO DE RESIDUOS INERTES, S.L.",
         "requiere_revision": "@@NO_COMPARAR@@",
@@ -29,26 +29,11 @@
         "descripcion": "CAMBIO CONTENEDOR 6M3",
         "importe_final": 120,
         "linea_a_revision": "@@NO_COMPARAR@@",
-        "linea_contrato": "C1",
+        "linea_contrato": "@@NO_COMPARAR@@",
         "num_linea": 1,
         "partida_final": "CI.03A.7",
         "precio_source": "contrato_db",
         "precio_unitario_final": 120,
-        "unidad_final": "UD"
-      },
-      {
-        "cantidad_final": 1,
-        "casa_con_contrato": "SI",
-        "caso_id": "RES-003",
-        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
-        "descripcion": "INCREMENTO LER 170802 MAT. DE CONST. A PARTIR DE YESOS-E",
-        "importe_final": 51,
-        "linea_a_revision": "@@NO_COMPARAR@@",
-        "linea_contrato": "@@NO_COMPARAR@@",
-        "num_linea": 2,
-        "partida_final": "CI.03A.7",
-        "precio_source": "contrato_db",
-        "precio_unitario_final": 51,
         "unidad_final": "UD"
       }
     ],
@@ -56,8 +41,8 @@
       {
         "cantidad": 1,
         "caso_id": "RES-003",
-        "comentario": "§8.3: el incremento esta cargado en el contrato y no se emitia.",
-        "concepto": "INCREMENTO LER 170802",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
+        "concepto": "INCREMENTO LER 170802 MAT. DE CONST. A PARTIR DE YESOS-E",
         "importe": 51,
         "num_linea_base": 1,
         "partida": "CI.03A.7",

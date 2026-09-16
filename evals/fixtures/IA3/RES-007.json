@@ -2,7 +2,7 @@
   "caso_id": "RES-007",
   "fase": "IA3",
   "libro": "IA3_valoracion.xlsx",
-  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "sha256_libro": "5911fb20f746b6b022d628a1ddb2e8b6ba4cde5ea78f46ed1aa9bee5a8d55ef9",
   "tablas": {
     "lineas_valoradas": [
       {
@@ -16,18 +16,6 @@
         "precio_source": "oferta",
         "precio_unitario_final": 183,
         "review_required": "@@NO_COMPARAR@@"
-      },
-      {
-        "caso_id": "RES-007",
-        "codigo_partida_final": "CI.03A.7",
-        "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": "leido mal la obra (no sale en albaran, la habra cogido po rdireccion, ver como lo ha hecho). Coge mal el CIF proveedor (no encuentro de donde lo ha sacado, en la obra si que estra salmedina). Podriamos hacer que proveedores ya identificados claramente, como salmedina, al leer el nombre ya coja todo?. estudiar como ha llegado a la info que ha recogido. no ha encontrado contrato porque no hay en la obra que eligio (que estaba mal)",
-        "importe_calculado": 77,
-        "match_method": "@@NO_COMPARAR@@",
-        "num_linea": 2,
-        "precio_source": "oferta",
-        "precio_unitario_final": 77,
-        "review_required": "@@NO_COMPARAR@@"
       }
     ],
     "sinteticas_esperadas": [
@@ -35,8 +23,8 @@
         "cantidad": 1,
         "caso_id": "RES-007",
         "codigo_partida": "CI.03A.7",
-        "comentario": "INCR. LER 170802 a 77 € de OFERTA (no del contrato). ROJO por diseño hasta F-017.",
-        "descripcion_esperada": "INCREMENTO LER 170802",
+        "comentario": "leido mal la obra (no sale en albaran, la habra cogido po rdireccion, ver como lo ha hecho). Coge mal el CIF proveedor (no encuentro de donde lo ha sacado, en la obra si que estra salmedina). Podriamos hacer que proveedores ya identificados claramente, como salmedina, al leer el nombre ya coja todo?. estudiar como ha llegado a la info que ha recogido. no ha encontrado contrato porque no hay en la obra que eligio (que estaba mal). El ler esta en el contrato y no ha cogido el precio",
+        "descripcion_esperada": "INCREMENTO LEER 17 08 02",
         "modifier_source": "gestion_residuos",
         "num_linea_base": 1,
         "precio_unitario": 77,

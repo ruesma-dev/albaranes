@@ -2,7 +2,7 @@
   "caso_id": "FER-002",
   "fase": "IA4",
   "libro": "IA4_conciliacion.xlsx",
-  "sha256_libro": "b81f85b50da7a9b70c1de8c52debf9080fbf418b7be3d9d2b3dd3d85a4ce763c",
+  "sha256_libro": "c4f38b618ff2a925ce405b09fcd553eb3346eb211d4e07067e43dfb43c9c5f86",
   "tablas": {
     "conciliacion": [
       {

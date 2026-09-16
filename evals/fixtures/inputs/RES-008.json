@@ -2,13 +2,13 @@
   "caso_id": "RES-008",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "eb1f4adcff1f9d83f6b651e8d330ce8965d1c26c01b5a6c34fa4d25e05acc837",
+  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
   "tablas": {
     "caso": [
       {
         "caso_id": "RES-008",
         "contrato_codigo": "CTSU24/0477",
-        "descripcion_caso": "96187 · CONTENEDORES · la partida esta mal, era 32.01, en lugar de 04.52.01 (si bien es cierto que esta cortado el numero). El ler no viene en el contrato, asi que aunque haya cogido el generico deberia buscar en la oferta",
+        "descripcion_caso": "96187 · RESIDUOS · la partida esta mal, era 32.01, en lugar de 04.52.01 (si bien es cierto que esta cortado el numero). El ler no viene en el contrato, asi que aunque haya cogido el generico deberia buscar en la oferta",
         "ia_destino": "ambas",
         "origen": "manual",
         "tipologia": "Residuos"

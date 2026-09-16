@@ -2,16 +2,16 @@
   "caso_id": "RES-006",
   "fase": "IA3",
   "libro": "IA3_valoracion.xlsx",
-  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "sha256_libro": "5911fb20f746b6b022d628a1ddb2e8b6ba4cde5ea78f46ed1aa9bee5a8d55ef9",
   "tablas": {
     "lineas_valoradas": [
       {
         "caso_id": "RES-006",
         "codigo_partida_final": "CI.03A.7",
-        "codigo_producto_contrato": "C1",
+        "codigo_producto_contrato": "@@NO_COMPARAR@@",
         "comentario": "hay que guardar el codigo ler en bbdd, lo ha hecho? En codigo existente no sale, y no hay columna de LER en la vista detallada.",
         "importe_calculado": 136,
-        "match_method": "semantic",
+        "match_method": "@@NO_COMPARAR@@",
         "num_linea": 1,
         "precio_source": "contrato_db",
         "precio_unitario_final": 136,

@@ -2,7 +2,7 @@
   "caso_id": "RES-004",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "ba90a8cfb7acbfb6426dcdb47bd527295fc8aa40aa79b98569b4d6dab42f0c93",
+  "sha256_libro": "323c7825aeac9521e882f60635acd538abcf04b18afd401507b6405e9baaa2de",
   "tablas": {
     "cabeceras": [
       {
@@ -11,7 +11,7 @@
         "fecha": "2024-07-10",
         "fichero_albaran": "RES-004.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "SS-0003967",
+        "numero_albaran": "@@NO_COMPARAR@@",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
         "proveedor_cif": "@@NO_COMPARAR@@",
@@ -28,18 +28,6 @@
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
-        "precio_unitario": null,
-        "unidad": "UD"
-      },
-      {
-        "cantidad": 1,
-        "caso_id": "RES-004",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": null,
-        "descripcion_esperada": "INCREMENTO LER 170604 MATERIALES DE AISLAMIENTO-E",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 2,
         "precio_unitario": null,
         "unidad": "UD"
       }
