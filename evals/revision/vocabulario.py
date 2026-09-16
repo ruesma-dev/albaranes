@@ -91,6 +91,8 @@ class Vocabulario:
         )
         self.minimo_residuos: float = float(datos["minimo_facturable_residuos"])
         self.criterios_residuos: dict[str, dict] = datos["criterios_residuos"]
+        self.deducidas_por_concepto: dict = datos["deducidas_por_concepto"]
+        self.sinonimos_concepto: dict[str, str] = datos["sinonimos_concepto"]
         self.factor_descuento: float = float(datos["descuento_factor_porcentaje"])
         self._etiquetas = {
             normalizar(nombre): (nombre, destino)
@@ -138,6 +140,20 @@ class Vocabulario:
     def politica_vacio(self, columna: str) -> str:
         """Qué significa una celda vacía en esa columna. Sin declaración, `?`."""
         return self.politica_vacios.get(columna, "interrogante")
+
+    def concepto_es_deducido(self, familia: str, concepto: object | None) -> bool:
+        """El concepto describe algo que se DEDUCE del contrato, no que se lee.
+
+        En residuos, el incremento por LER no está impreso: sale de mirar el
+        contrato con el código LER de la línea de material (decisión del humano
+        del 2026-09-16). El Excel las marca las dos `EN ALBARAN` porque
+        describe el albarán, no las fases.
+        """
+        regla = self.deducidas_por_concepto
+        if familia not in regla["familias"]:
+            return False
+        texto = normalizar(concepto)
+        return any(normalizar(marca) in texto for marca in regla["marcas"])
 
     def es_unidad_de_conteo(self, unidad: object | None) -> bool:
         """UD y sus variantes. Lo demás se pesa o se mide (design §5 ter)."""

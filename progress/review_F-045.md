@@ -1,140 +1,126 @@
 <!-- progress/review_F-045.md -->
-# F-045 · Review de la CAPA 1 (T1–T12, T17, T18, T21)
+# F-045 · Review final: los dos supervivientes y el repaso del patrón
 
-**Revisión incremental desde `3d01f5f` (pasada 2)** — rama
-`feature/F-045-banco-evals-revision-manual`, HEAD `e3ffcbd`. Lo aprobado en la
-pasada 1 queda dado por bueno; aquí se revisa el delta `3d01f5f..HEAD` (2
-commits: 3 ficheros de producción, 3 de tests y el papeleo) más las puertas
-enteras, que se ejecutan siempre.
+**Revisión incremental desde `e7ca7e5` (pasada 5)** — HEAD `758b151`, 1 commit.
+Lo aprobado en las pasadas anteriores queda dado por bueno; aquí se revisa
+`e7ca7e5..HEAD` (solo tests y papeleo: **ni una línea de producción**, así que
+la campaña del lote sigue midiendo el alcance que se revisa), más las puertas
+enteras.
 
 ## Veredicto: APROBADO
 
-Los dos bloqueantes están cerrados **con test, no con prosa**, y lo he
-comprobado matando los mutantes yo mismo. La capa 1 queda aprobada; el cierre de
-la feature depende de tres decisiones del humano, que enumero al final.
-
-**Nivel de rigor: `critico`** (`harness/features.json`): fase RED, cobertura
-≥ 80 %, campaña completa sin muestreo, cero supervivientes injustificados y las
-MANUAL listadas con su comando.
+Los dos puntos que bloqueaban están cerrados y lo he comprobado ejecutando: el
+superviviente 3 **muere** con el test reescrito y el 7 **es equivalente de
+verdad**, demostrado sobre la huella real y no sobre un ejemplo. El repaso del
+patrón se sostiene: he buscado yo el mismo defecto por todo el banco de tests de
+F-045 y no queda ningún sitio donde comparar una proyección pueda tapar el
+resultado.
 
 ## Las puertas, ejecutadas enteras
 
-`bash harness/init.sh` → **exit 0**: **811 tests** en 96,6 s; PUERTA COBERTURA
-`[OK] 98,3 % de 922 líneas (906/922)`; **PUERTA RUTAS SENSIBLES [evals]: `N/A`
-(F-045 no toca ninguna ruta sensible declarada)** —ya por el motivo correcto,
-no por falta de rama—; PUERTA TAMAÑO `impl 219/220`, `review 140/140`. Árbol
-limpio salvo el `README.md` del humano, que sigue sin tocarse.
+`bash harness/init.sh` → **exit 0**: **865 tests** en 116 s; COBERTURA `[OK]
+98,3 % de 115 líneas (113/115)`; RUTAS SENSIBLES `N/A` con su motivo; TAMAÑO
+todo dentro. Árbol limpio, sin `push`, `README.md` sin tocar.
 
-## Los dos bloqueantes: verificados muriendo, no leídos
+## Superviviente 3: muere, y el test ya mira lo que debe
 
-Reinyecté cada mutante en un **worktree aparte** y corrí la suite acotada
-(242 tests, 9,9 s de base):
+Reinyectado sobre el código de hoy (`escritura.py`, `if nueva is None and
+campo_prefijo:` → `or`) con la suite acotada de 296 tests: **MUERE**, y lo mata
+`test_f045_r17_el_casado_por_prefijo_no_duplica_la_sintetica_del_humano`. El
+test ya no colapsa las filas en un `dict` por descripción: compara **la lista
+entera**, `[("INCREMENTO", 10), ("INCREMENTO LER 170604", 99)]`, que es donde se
+ve la tercera fila que el mutante añadía —la del humano conservada **y** la del
+importador añadida, el banco esperando dos sintéticas donde el sistema emite
+una—. El nombre nuevo dice lo que vigila, que antes tampoco.
 
-| Mutante | Antes | Ahora | Test que lo mata |
-|---|---|---|---|
-| 49 `mapa.py:64` `sort_keys=True→False` | sobrevivía | **MUERE** | `test_f045_r7_el_mapa_se_escribe_byte_a_byte_como_dice_su_docstring` |
-| 8 `__main__.py:211` `ejecutar=False→True` | sobrevivía | **MUERE** | `test_f045_r16_la_copia_del_libro_es_el_estado_ANTES_de_la_importacion` |
-| 9 `__main__.py:290` `parents=True→False` | «equivalente» | **MUERE** | `test_f045_r14_el_informe_se_deja_aunque_su_carpeta_no_exista` |
+## Superviviente 7: equivalente, y comprobado sobre la huella real
 
-**Confirmado el punto que pedía el coordinador**: el mutante 8 vive en la CLI y
-**solo** lo mata el test de `test_f045_r14_r18_cli.py`; el de `escritura` es
-correcto y necesario (fija que la pasada de comprobación no escribe), pero no
-alcanza al `__main__`. Al reinyectar el 8 falla exactamente uno, y es el de la
-CLI. Los dos tests son de verdad: el de la CLI provoca un cambio real en el
-Excel para que la segunda pasada tenga que escribir, y compara los **bytes** de
-`copias/` con los del libro previo; el del mapa fija el **contenido literal**
-del JSON, no solo el orden de los casos.
+No me fié del ejemplo: cargué la **huella real del repositorio** (10 tablas,
+717 filas) y serialicé con `sort_keys=True` y con `False` desde la misma
+estructura que construye `guardar`.
 
-## RM1 · el delta tocó producción, así que lo he vuelto a medir
+- Ambas salidas: **35.673 bytes, idénticas** (`IDENTICOS: True`), y coinciden
+  byte a byte con `evals/huella_importacion.json` versionado.
+- El argumento estructural se sostiene donde importa: dentro de `tablas` **todo
+  son listas**, no `dict`, así que `sort_keys` no tiene nada que reordenar. Es
+  justo lo contrario de `mapa.py`, donde los registros se montaban en el orden
+  de `CAMPOS` y esa misma justificación era falsa.
 
-El informe de mutación sigue declarando `SHA de HEAD medido: 1c3e8d7`, y desde
-entonces sí cambió producción (`modelos.py`, `informe.py`, `__main__.py`).
-Recalculado hoy: el alcance sube de 2371 a **2406 líneas** y el total sigue en
-**266 mutantes** (una línea mutada desapareció al extraerse `_libros`). El
-**delta `3d01f5f..HEAD` son 36 líneas y genera exactamente UN mutante nuevo**:
-`modelos.py:169 en_seco: bool = False → True`. Lo reinyecté: **MUERE**, con
-`test_f045_r14_ninguno_tiene_dos_motivos_y_el_informe_los_separa`. La campaña
-no hay que repetirla: el único hueco que abrió el delta está medido y cerrado,
-y queda aquí escrito con el comando y el resultado.
+Y la etiqueta ya está corregida donde se lee: `mutacion_F-045_lote2.md`
+(«**8 cerrados con test y 1 equivalente justificado**»), la tabla de Evidencias
+del informe y el inventario de campañas dicen lo mismo, con la historia de las
+dos correcciones escrita en vez de tapada.
 
-## Las 16 equivalencias: comprobadas, y cinco las ejecuté yo
+## El repaso del patrón: lo he rehecho por mi cuenta
 
-16 equivalentes + 74 con test = 90, ninguno pendiente. Las 16 traen ahora su
-línea de comprobación. **Cinco de ellas siguen siendo un razonamiento sobre el
-código, no una ejecución** (15, 16, 17 de G2, más 18 y 31), así que las corrí
-yo: `localizar_bloques` sobre los **seis libros reales** da **94 bloques y
-ninguno** conserva un valor por defecto (G2 en pie); `_ultima_con_datos` tiene
-un solo llamador y `0 > 0` y `-1 > 0` son falsos (31); `copia_de_seguridad`
-exige que el libro exista, así que `copias` es el único nivel que crea (18).
-De las demás reproduje G1 (todas las celdas de una fila comparten `.row`), el
-10 (`rsplit(1)[-1] == rsplit(2)[-1]`), el 71 (`max(0,n) == max(1,n)` de 1 a
-999) y el 72 (las dos guardas dan lo mismo en `None`, `True`, `False`, `0`,
-`7`, `'72,50'`, `''`, `'no es'` y `'1.234,5'`). Y verifiqué que tres declarados
-equivalentes **siguen sobreviviendo** (6, 18, 71): coherente, ninguno sale
-muerto (RM3).
+No conté lo que él cuenta; busqué el defecto. Recorrí los ficheros
+`tests/test_f045_*` buscando dónde una **proyección** puede tapar el resultado:
 
-## Los cinco menores
+- **`dict` por un campo sobre filas fundidas**: cero ocurrencias. Era el único
+  sitio y está arreglado.
+- **`set(...)`**: 13 usos, todos sobre **nombres** —columnas, tablas, campos del
+  mapa, extensiones, familias, `caso_id`— donde el duplicado es imposible o no
+  significa nada; uno de ellos (`len(claves) == len(set(claves))`) es
+  precisamente una comprobación de duplicados.
+- **`assert len(...)` como única comprobación de una lista de filas**: quedan
+  seis, y en todos la lista de entrada **no admite altas** (se funde con
+  `nuevas=[]`) o el propio recuento ES la propiedad —«no se eligió ninguno
+  candidato»: 2 + 1 = 3 filas—. Ninguno puede esconder una fila duplicada.
+- **Comparaciones contra literal de `set`/`dict`**: sobre etiquetas y recuentos,
+  y las que proyectan `plan.copias` van acompañadas del recuento o del `fallos
+  == []` que hace imposible el duplicado.
+- Los tres tests de fusión que solo miraban el número ahora fijan **qué fila
+  queda y con qué valores** (`[(descripcion, precio, comentario)] == [...]`),
+  incluido el del `modifier_source` que sobrevive a la refundición.
 
-1. **`tasks.md`**: 20 tareas en `[x]` (T1–T12 con sus bis, T17, T18, T21) y una
-   nota de estado; abiertas solo la capa 2 (T13–T16) y las MANUAL T19 y T20.
-2. **`branch` en `features.json`**: declarada. `harness.alcance --feature F-045`
-   ya resuelve solo, y la puerta de rutas sensibles corre y sale N/A porque de
-   verdad no se toca ninguna, no porque no tuviera qué mirar.
-3. **«Evidencias»**: trae los **4 workers** y los cuatro números al día (811 tests, 98,3 %, 266/90, 102,9 s).
-4. **Desviación de §3 en `codigo_imputacion`**: declarada en el aviso del
-   informe de importación, con lo que cuesta (la mitad de EXTRACCIÓN del patrón
-   1 queda sin vigilar) y cómo se cierra.
-5. **Informe de importación regenerado con pasada REAL**: «Libros comprobados:
-   6» y «Libros escritos: (ninguno: ningún libro cambiaba; ver R18)». El
-   «ninguno» ya distingue sus dos motivos, que era justo lo que me despistó.
+Mi conclusión coincide con la suya, pero medida por separado: **no queda ningún
+falso verde de esta familia** en el banco de F-045.
 
 ## Checkpoints
 
 - **C1** [x] exit 0 y ficheros obligatorios. **C2** [x] una feature
-  `in_progress`, rama correcta, `current.md` al día con la pasada 1 y lo que
-  falta; `features.json` sigue en `in_progress`, como debe hasta el cierre.
-- **C3** [x] el delta respeta la arquitectura: `informe.py` y `modelos.py`
-  siguen sin infraestructura, ruta en la primera línea, sin prints de debug ni
-  secretos ni dependencias nuevas.
-- **C3 bis** N/A **justificado**: no toca `docs/referencia/`. En la pasada 1
-  hice igualmente el barrido de lo versionado (correo, `api[_-]?key`, `secret`,
-  `token`, `AccountKey=`, GUID): cero hallazgos, y el delta no añade datos.
-- **C4** [x] R1–R18, R20–R22 y R24 con test trazable; 811 verdes. R19 lo
-  verifiqué ejecutando el conversor (pasada 1). T19 y T20 (MANUAL) listadas con
-  su comando en `current.md`.
-- **C4 bis** [x] fase RED con trazas reales, cobertura `[OK]`, totales
-  recalculados (2406 líneas, 266 mutantes), RM1 re-medido sobre el delta, RM2
-  coherente (media 24,0 s × 4 workers ≈ 96 s frente a línea base 141,6 s), RM3
-  sin equivalentes muertos, RM4 usado, **RM5 con muestra reproducida** y RM6 sin
-  defensa eliminada: los 74 mueren por tests nuevos, no por quitar guardas.
-- **C4 ter** [x] la puerta corre y sale N/A con su motivo correcto. **C5** [x]
-  `tasks.md` marcado con commit por tarea, sin temporales, estado real.
+  `in_progress`, rama correcta, `current.md` al día.
+- **C3** [x] este lote no toca producción; lo aprobado en las pasadas anteriores
+  sigue en pie (dominio puro, ruta en la primera línea, sin prints ni secretos).
+- **C3 bis** N/A **justificado**: no toca `docs/referencia/`.
+- **C4** [x] 865 en verde; cada requisito con su test trazable, y los que
+  comprobaban de mentira ya no lo hacen.
+- **C4 bis** [x] **cerrado**: fase RED con trazas, cobertura `[OK]`, dos
+  campañas con sus totales recalculados por mí (capa 1: 266 mutantes;
+  lote 2: 325 líneas y 44 mutantes, más los **11 posteriores al SHA medido que
+  reinyecté yo y mueren**), RM1 comprobado en las dos, RM2 coherente (871 s ×
+  4 workers ÷ 44 = 79 s frente a línea base 88 s), RM3 sin equivalentes muertos,
+  RM4 usado en cada pasada, **RM5 con muestra reproducida** —el único
+  equivalente del lote, demostrado sobre el dato real— y RM6 sin defensa
+  eliminada.
+- **C4 ter** [x] la puerta corre y sale N/A con su motivo.
+- **C5** [x] commits por tarea, `tasks.md` marcado, sin temporales, estado real
+  en `features.json`; informes de campaña separados por lote, como F-043.
 
-## Condiciones de cierre (del humano, no del implementer)
+## Lo que este review deja atado, para que no se pierda
 
-No bloquean este veredicto sobre el código, pero **la feature no se marca
-`done` sin ellas**:
+1. **La restauración de los 38 valores** (35 + los 3 `modifier_source`) está
+   verificada valor a valor contra `5132bdc` y `697f00e`: **cero degradados** y
+   ninguna fila del original sin pareja hoy.
+2. **El guardián** `tests/datos/afirmado_por_el_humano_RES.json` fija 496
+   valores —433 idénticos al estado sano previo, ninguno centinela— y **falla
+   nombrando el campo** cuando degrado uno a mano. Es la red que faltaba,
+   porque los libros `.xlsx` no se versionan.
+3. **La guarda de retirada** es más estricta que la anterior y sus 11 mutantes
+   mueren. Riesgo residual anotado y **no bloqueante**: un valor del humano en
+   una columna que el importador nunca escribe ni deja en `?` no protege su
+   fila; si algún día se retiran filas fuera de los 7 RES, conviene ampliar
+   `interrogantes` a todas las columnas que el importador produce en esa tabla.
 
-1. **Copiar los documentos de entrada**: hoy los 59 casos salen
-   `fila_sin_fichero`, uno a uno en el informe, como pide R21.
-2. **Validar la tipología por pestaña**: confirmé en la pasada 1 que lo
-   implementado es lo acertado —`MAPA_TIPO_FAMILIA` de `sv6_build.py:69` está
-   indexado por PESTAÑA— y que **la spec §3 es la que está mal**. Falta que el
-   humano lo cierre y se corrija §3, no el código. Con ella va la desviación de
-   `codigo_imputacion` (menor 4).
-3. **La contradicción de RES-004**: los incrementos LER esperados a la vez como
-   impresos y como deducidos. Hay que mirar el papel.
+## Condiciones de cierre que siguen siendo del humano
 
-**Recomendación no bloqueante**: que `progress/mutacion_F-045.md` recoja el
-re-medido del delta (SHA `e3ffcbd`, 2406 líneas, el mutante nuevo y su
-veredicto), para que la evidencia viva junto a la campaña y no solo aquí.
+- **Los documentos que faltan**: RES-020 y RES-021 siguen sin papel y salen
+  OMITIDOS; los otros 57 ya están renombrados a su `caso_id`.
+- **`codigo_imputacion` en `?`** en las 114 líneas: columna nueva en el Excel o
+  aceptar la ceguera de la mitad de extracción del patrón 1.
+- **`INPUTS.CONTRATO_LINEAS` y `CONDICIONES`**: sin ellas IA3, IA4 y el E2E no
+  miden nada; las tres vías están medidas en `impl_F-045_contrato_lineas.md`.
 
-## Registro de la pasada 1 (CHANGES_REQUESTED, 2026-09-16)
-
-Bloqueaban dos justificaciones de equivalencia falsas —`sort_keys` del mapa,
-que sí cambiaba el fichero, y `ejecutar=False`, que rompía la copia previa de
-R16— más cinco menores. Todo cerrado y verificado arriba. **La lección que deja
-y que propongo llevar a `CHECKPOINTS.md`** (propuesta, no aplicada): RM5 debe
-exigir que la demostración de equivalencia **pueda fallar** —fragmento
-ejecutado con su salida— y que el reviewer elija su muestra entre las que
-afirman igualdad de un artefacto en disco, que es donde se escondieron las dos.
+Y fuera de este lote, anotados para su ficha y **sin efecto en el veredicto**:
+`ALBARAN VALORADO` leído al revés (9 líneas, 17 fallos falsos) y la
+consolidación de FER-002 (37 fallos que no son defectos).

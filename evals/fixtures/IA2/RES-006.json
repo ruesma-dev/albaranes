@@ -2,7 +2,7 @@
   "caso_id": "RES-006",
   "fase": "IA2",
   "libro": "IA2_contexto.xlsx",
-  "sha256_libro": "c47f95e3a52bcc1f94110186ebcc636f76a37db4701631f289c8016df0dba1ef",
+  "sha256_libro": "54145e049522f54103e77e647e8470b11d88eab42f0d1e6af9439568dedf37f2",
   "tablas": {
     "contexto": [
       {
@@ -13,18 +13,18 @@
         "valor_esperado": "residuos"
       },
       {
-        "campo_contexto": "codigo_ler",
-        "caso_id": "RES-006",
-        "comentario": "hay que guardar el codigo ler en bbdd, lo ha hecho? En codigo existente no sale, y no hay columna de LER en la vista detallada.",
-        "num_linea": 1,
-        "valor_esperado": "170904"
-      },
-      {
         "campo_contexto": "volumen_m3",
         "caso_id": "RES-006",
         "comentario": "El 6 manuscrito en la columna VOL. m3. Es la CAPACIDAD del contenedor (§8.1), no una cantidad de material.",
         "num_linea": 1,
         "valor_esperado": 6
+      },
+      {
+        "campo_contexto": "codigo_ler",
+        "caso_id": "RES-006",
+        "comentario": "hay que guardar el codigo ler en bbdd, lo ha hecho? En codigo existente no sale, y no hay columna de LER en la vista detallada.",
+        "num_linea": 1,
+        "valor_esperado": "170904"
       }
     ]
   },

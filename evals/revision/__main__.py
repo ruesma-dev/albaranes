@@ -21,7 +21,8 @@ import sys
 from pathlib import Path
 
 from evals import conversor
-from evals.revision import albaranes, escritura, informe as informe_mod, lectura, mapa
+from evals.revision import albaranes, escritura, huella, informe as informe_mod
+from evals.revision import lectura, mapa
 from evals.revision import reparto, vocabulario
 from evals.revision.modelos import InformeImportacion
 
@@ -37,6 +38,7 @@ def ejecutar(
     dir_ground_truth: Path | str = conversor.RUTA_GROUND_TRUTH,
     dir_originales: Path | str = RUTA_ORIGINALES,
     ruta_mapa: Path | str = mapa.RUTA_MAPA,
+    ruta_huella: Path | str = huella.RUTA_HUELLA,
     dry_run: bool = False,
     renombrar: bool = False,
 ) -> InformeImportacion:
@@ -46,6 +48,9 @@ def ejecutar(
     casos = reparto.agrupar_por_albaran(filas, vocab)
     mapa_actual = mapa.cargar(ruta_mapa)
     mapa_nuevo, nuevos = reparto.asignar_casos_id(casos, mapa_actual)
+    # Contra el mapa ANTERIOR: `asignar_casos_id` ya ha escrito el grupo
+    # nuevo en `mapa_nuevo`, así que comparar contra él no diría nada.
+    cambios = reparto.cambios_de_grupo(casos, mapa_actual)
 
     plan = _emparejar(casos, dir_originales, mapa_nuevo)
     gemelos = reparto.crear_gemelos(
@@ -58,6 +63,7 @@ def ejecutar(
         casos=casos + gemelos,
         caso_ids_nuevos=nuevos,
         en_seco=dry_run,
+        cambios_de_grupo=cambios,
         fallos_documentos=[
             f"`{fallo.tipo}` — {fallo.detalle}" for fallo in plan.fallos
         ],
@@ -68,9 +74,21 @@ def ejecutar(
         ],
     )
     tablas = _repartir_todo(resultado, vocab)
+    # `anotar` quiere `{lo que sea: {tabla: filas}}`, una tabla por nivel: aquí
+    # la clave es (caso, fase), que es lo que hace únicas sus filas.
+    por_caso_y_fase = {
+        (caso.caso_id, fase): por_tabla
+        for caso in resultado.casos
+        for fase, por_tabla in reparto.repartir(caso, vocab).items()
+    }
 
     if not dry_run:
-        resultado.libros_escritos = _escribir(tablas, resultado, dir_ground_truth)
+        resultado.libros_escritos = _escribir(
+            tablas, resultado, dir_ground_truth, huella.cargar(ruta_huella)
+        )
+        huella.guardar(
+            huella.anotar(por_caso_y_fase, escritura.CLAVES_DE_TABLA), ruta_huella
+        )
         resultado.libros_comprobados = [d.fichero for d in conversor.LIBROS]
         mapa.guardar(mapa_nuevo, ruta_mapa)
         if renombrar:
@@ -173,7 +191,9 @@ def _repartir_todo(resultado: InformeImportacion, vocab) -> dict:
     return tablas
 
 
-def _escribir(tablas: dict, resultado: InformeImportacion, dir_ground_truth) -> list[str]:
+def _escribir(
+    tablas: dict, resultado: InformeImportacion, dir_ground_truth, previa=None
+) -> list[str]:
     """Copia, crea las pestañas que falten y funde las filas de cada caso."""
     import openpyxl
 
@@ -206,9 +226,15 @@ def _escribir(tablas: dict, resultado: InformeImportacion, dir_ground_truth) -> 
         # Primero se mira si el libro cambia; solo entonces se copia y se
         # escribe. Guardar un libro idéntico le cambiaría el sha256 y dejaría
         # 264 fixtures «modificados» sin que hubiera cambiado ni un dato (R18).
+        huellas = {
+            tabla: huella.claves_de(previa or {}, tabla)
+            for tabla in escritura.CLAVES_DE_TABLA
+        }
+        dudosas = _columnas_en_duda(tablas)
         cambia = creadas or any(
             escritura.escribir_pestana(
-                ruta, pestana, _definiciones(defs), filas, caso_ids, ejecutar=False
+                ruta, pestana, _definiciones(defs), filas, caso_ids,
+                ejecutar=False, huella_previa=huellas, interrogantes=dudosas,
             )
             for pestana, defs, filas in trabajo
         )
@@ -216,9 +242,31 @@ def _escribir(tablas: dict, resultado: InformeImportacion, dir_ground_truth) -> 
             continue
         resultado.copias.append(str(escritura.copia_de_seguridad(ruta)))
         for pestana, defs, filas in trabajo:
-            escritura.escribir_pestana(ruta, pestana, _definiciones(defs), filas, caso_ids)
+            escritura.escribir_pestana(
+                ruta, pestana, _definiciones(defs), filas, caso_ids,
+                huella_previa=huellas, interrogantes=dudosas,
+            )
         escritos.append(definicion.fichero)
     return escritos
+
+
+def _columnas_en_duda(tablas: dict) -> dict[str, set[str]]:
+    """Qué columnas deja el importador en `?`, mirando TODA la importación.
+
+    Es lo que distingue una fila suya de una del humano cuando la clave ya no
+    las separa. Deducirlas de las filas de una pestaña concreta dejaría sin
+    poder retirar justo a la pestaña donde esta vez no escribe nada, que es
+    exactamente cuando el humano acaba de quitar esa línea del Excel.
+    """
+    dudosas: dict[str, set[str]] = {}
+    for por_pestana in tablas.values():
+        for por_tabla in por_pestana.values():
+            for tabla, filas in por_tabla.items():
+                for fila in filas:
+                    dudosas.setdefault(tabla, set()).update(
+                        campo for campo, valor in fila.items() if valor == "?"
+                    )
+    return dudosas
 
 
 def _definiciones(tablas) -> tuple[escritura.DefTabla, ...]:
@@ -251,6 +299,7 @@ def main(argv: list[str] | None = None) -> int:
     analizador.add_argument("--ground-truth", default=str(conversor.RUTA_GROUND_TRUTH))
     analizador.add_argument("--originales", default=str(RUTA_ORIGINALES))
     analizador.add_argument("--mapa", default=str(mapa.RUTA_MAPA))
+    analizador.add_argument("--huella", default=str(huella.RUTA_HUELLA))
     analizador.add_argument("--informe", default=str(RUTA_INFORME))
     analizador.add_argument(
         "--dry-run",
@@ -274,6 +323,7 @@ def main(argv: list[str] | None = None) -> int:
             opciones.ground_truth,
             opciones.originales,
             opciones.mapa,
+            opciones.huella,
             dry_run=opciones.dry_run,
             renombrar=opciones.renombrar,
         )

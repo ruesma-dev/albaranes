@@ -152,6 +152,8 @@ class InformeImportacion:
     caso_ids_nuevos: list[str] = field(default_factory=list)
     #: {libro: {tabla: {columna: {"valor": n, "interrogante": n, "vacia": n}}}}
     celdas: dict[str, dict[str, dict[str, dict[str, int]]]] = field(default_factory=dict)
+    #: Casos que cambian de bando respecto a la importación anterior.
+    cambios_de_grupo: list[tuple[str, str, str]] = field(default_factory=list)
     #: Fallos ruidosos del emparejado de documentos de entrada (R21).
     fallos_documentos: list[str] = field(default_factory=list)
     #: El plan de renombrado, con la estrategia de cada emparejado: el

@@ -2,7 +2,7 @@
   "caso_id": "RES-004",
   "fase": "IA3",
   "libro": "IA3_valoracion.xlsx",
-  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "sha256_libro": "5df41714a4b2116fc74a154a641a2f75952b1dd3a09cabe411a63bed56d97de1",
   "tablas": {
     "lineas_valoradas": [
       {
@@ -16,18 +16,6 @@
         "precio_source": "contrato_db",
         "precio_unitario_final": 120,
         "review_required": "@@NO_COMPARAR@@"
-      },
-      {
-        "caso_id": "RES-004",
-        "codigo_partida_final": "CI.03A.7",
-        "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": null,
-        "importe_calculado": 90,
-        "match_method": "@@NO_COMPARAR@@",
-        "num_linea": 2,
-        "precio_source": "contrato_db",
-        "precio_unitario_final": 90,
-        "review_required": "@@NO_COMPARAR@@"
       }
     ],
     "sinteticas_esperadas": [
@@ -36,7 +24,7 @@
         "caso_id": "RES-004",
         "codigo_partida": "CI.03A.7",
         "comentario": null,
-        "descripcion_esperada": "INCREMENTO LER 170604",
+        "descripcion_esperada": "INCREMENTO LER 170604 MATERIALES DE AISLAMIENTO-E",
         "modifier_source": "gestion_residuos",
         "num_linea_base": 1,
         "precio_unitario": 90,

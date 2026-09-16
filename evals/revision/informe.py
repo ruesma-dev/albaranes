@@ -27,6 +27,7 @@ def render(informe: InformeImportacion) -> str:
         "",
         *_resumen(informe),
         *_clasificacion(informe),
+        *_cambios(informe),
         *_documentos(informe),
         *_rojos_esperados(informe),
         *_celdas(informe),
@@ -83,6 +84,24 @@ def _clasificacion(informe: InformeImportacion) -> list[str]:
     ):
         casos = [c.caso_id for c in informe.casos if c.clasificacion == clasificacion]
         lineas += [f"{titulo}: {', '.join(sorted(casos)) or '(ninguno)'}", ""]
+    return lineas
+
+
+def _cambios(informe: InformeImportacion) -> list[str]:
+    """Quién cambió de bando, que es lo que cambia lo que se le exige."""
+    lineas = ["## Casos que cambian de grupo", ""]
+    if not informe.cambios_de_grupo:
+        return lineas + ["Respecto a la importación anterior, **ningún caso cambia "
+                         "de grupo**.", ""]
+    lineas += [
+        "El humano ha tocado su comentario, y con él lo que se le exige al caso.",
+        "",
+    ]
+    for caso_id, antes, ahora in informe.cambios_de_grupo:
+        destino = "y a partir de ahora tiene que salir **VERDE**" if ahora == NO_REGRESION else (
+            "y pasa a ser rojo esperado hasta que exista su arreglo")
+        lineas.append(f"- **{caso_id}**: {antes} → {ahora}, {destino}.")
+    lineas.append("")
     return lineas
 
 

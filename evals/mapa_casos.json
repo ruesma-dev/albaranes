@@ -2,6 +2,7 @@
   "_doc": "Mapa del banco de evals: de cada caso_id al albaran de papel del que salio (F-045, R7). GENERADO por 'python -m evals.revision'; se puede corregir a mano, pero una importacion posterior manda. 'clave' es CIF/codigo normalizado y es lo que identifica el albaran entre importaciones; 'codigo' es el que escribe el humano en el Excel, que NO es el literal impreso (0000168 en la tabla, SS-0000168 en el papel); 'nombre_original' es el fichero tal como llego, antes del renombrado a <caso_id>; 'gemelo_de' hermana el caso de imagen con el de PDF (R22).",
   "casos": {
     "ALQ-001": {
+      "clasificacion": "defecto_conocido",
       "clave": "B84535764/0009256",
       "codigo": "0009256",
       "familia_documento": "generico",
@@ -11,6 +12,7 @@
       "pestana": "Alquiler"
     },
     "COM-001": {
+      "clasificacion": "no_regresion",
       "clave": "B56747264/J1000505",
       "codigo": "J1000505",
       "familia_documento": "combustible",
@@ -20,6 +22,7 @@
       "pestana": "Combustible"
     },
     "FER-001": {
+      "clasificacion": "no_regresion",
       "clave": "A28733558/2139643",
       "codigo": "2139643",
       "familia_documento": "ferreteria",
@@ -29,6 +32,7 @@
       "pestana": "Ferreteria"
     },
     "FER-002": {
+      "clasificacion": "no_regresion",
       "clave": "A28733558/2137569",
       "codigo": "2137569",
       "familia_documento": "ferreteria",
@@ -38,6 +42,7 @@
       "pestana": "Ferreteria"
     },
     "FER-003": {
+      "clasificacion": "defecto_conocido",
       "clave": "A28733558/2115714",
       "codigo": "2.115.714",
       "familia_documento": "ferreteria",
@@ -47,6 +52,7 @@
       "pestana": "Ferreteria"
     },
     "GEN-001": {
+      "clasificacion": "no_regresion",
       "clave": "B98976111/A261584",
       "codigo": "A261584",
       "familia_documento": "generico",
@@ -56,6 +62,7 @@
       "pestana": "Generico-Suministros"
     },
     "GEN-002": {
+      "clasificacion": "defecto_conocido",
       "clave": "A28800597/202601007378",
       "codigo": "2026/01/007378",
       "familia_documento": "generico",
@@ -65,6 +72,7 @@
       "pestana": "Generico-Suministros"
     },
     "GEN-003": {
+      "clasificacion": "no_regresion",
       "clave": "A28800597/202601007181",
       "codigo": "2026/01/007181",
       "familia_documento": "generico",
@@ -74,6 +82,7 @@
       "pestana": "Generico-Suministros"
     },
     "GEN-004": {
+      "clasificacion": "no_regresion",
       "clave": "A82825456/2674163",
       "codigo": "2.674.163",
       "familia_documento": "generico",
@@ -83,6 +92,7 @@
       "pestana": "Generico-Suministros"
     },
     "GEN-005": {
+      "clasificacion": "defecto_conocido",
       "clave": "A82825456/2674143",
       "codigo": "2.674.143",
       "familia_documento": "generico",
@@ -92,6 +102,7 @@
       "pestana": "Generico-Suministros"
     },
     "GEN-006": {
+      "clasificacion": "no_regresion",
       "clave": "A82825456/2674074",
       "codigo": "2.674.074",
       "familia_documento": "generico",
@@ -101,6 +112,7 @@
       "pestana": "Generico-Suministros"
     },
     "GEN-007": {
+      "clasificacion": "defecto_conocido",
       "clave": "A82825456/2672497",
       "codigo": "2.672.497",
       "familia_documento": "generico",
@@ -110,6 +122,7 @@
       "pestana": "Generico-Suministros"
     },
     "GEN-008": {
+      "clasificacion": "no_regresion",
       "clave": "A82825456/2672297",
       "codigo": "2.672.297",
       "familia_documento": "generico",
@@ -119,6 +132,7 @@
       "pestana": "Generico-Suministros"
     },
     "GEN-009": {
+      "clasificacion": "no_regresion",
       "clave": "A31132590/170161",
       "codigo": "170.161",
       "familia_documento": "generico",
@@ -128,6 +142,7 @@
       "pestana": "Generico-Suministros"
     },
     "GEN-010": {
+      "clasificacion": "defecto_conocido",
       "clave": "B85286318/261046",
       "codigo": "261046",
       "familia_documento": "generico",
@@ -137,6 +152,7 @@
       "pestana": "Generico-Suministros"
     },
     "GRA-001": {
+      "clasificacion": "defecto_conocido",
       "clave": "B86615549/58826",
       "codigo": "58826",
       "familia_documento": "grava",
@@ -146,6 +162,7 @@
       "pestana": "Grava"
     },
     "GRA-002": {
+      "clasificacion": "defecto_conocido",
       "clave": "B86615549/58878",
       "codigo": "58878",
       "familia_documento": "grava",
@@ -155,6 +172,7 @@
       "pestana": "Grava"
     },
     "HOR-001": {
+      "clasificacion": "defecto_conocido",
       "clave": "B86738812/225137",
       "codigo": "225137",
       "familia_documento": "hormigon",
@@ -164,6 +182,7 @@
       "pestana": "Hormigon"
     },
     "HOR-002": {
+      "clasificacion": "defecto_conocido",
       "clave": "B86738812/224964",
       "codigo": "224964",
       "familia_documento": "hormigon",
@@ -173,6 +192,7 @@
       "pestana": "Hormigon"
     },
     "HOR-003": {
+      "clasificacion": "defecto_conocido",
       "clave": "B86362290/0001167",
       "codigo": "0001167",
       "familia_documento": "hormigon",
@@ -182,6 +202,7 @@
       "pestana": "Hormigon"
     },
     "HOR-004": {
+      "clasificacion": "defecto_conocido",
       "clave": "B86359866/0334191",
       "codigo": "0334191",
       "familia_documento": "hormigon",
@@ -191,6 +212,7 @@
       "pestana": "Hormigon"
     },
     "HOR-005": {
+      "clasificacion": "defecto_conocido",
       "clave": "B04685541/H132525",
       "codigo": "H132525",
       "familia_documento": "hormigon",
@@ -200,6 +222,7 @@
       "pestana": "Hormigon"
     },
     "HOR-006": {
+      "clasificacion": "defecto_conocido",
       "clave": "B04685541/H98634",
       "codigo": "H98634",
       "familia_documento": "hormigon",
@@ -209,6 +232,7 @@
       "pestana": "Hormigon"
     },
     "HOR-007": {
+      "clasificacion": "no_regresion",
       "clave": "B04685541/H122959",
       "codigo": "H122959",
       "familia_documento": "hormigon",
@@ -218,6 +242,7 @@
       "pestana": "Hormigon"
     },
     "HOR-008": {
+      "clasificacion": "defecto_conocido",
       "clave": "B04685541/W25963",
       "codigo": "W25963",
       "familia_documento": "hormigon",
@@ -227,6 +252,7 @@
       "pestana": "Hormigon"
     },
     "HOR-009": {
+      "clasificacion": "defecto_conocido",
       "clave": "B04685541/W26580",
       "codigo": "W26580",
       "familia_documento": "hormigon",
@@ -236,6 +262,7 @@
       "pestana": "Hormigon"
     },
     "HOR-010": {
+      "clasificacion": "defecto_conocido",
       "clave": "B04685541/W25237",
       "codigo": "W25237",
       "familia_documento": "hormigon",
@@ -245,6 +272,7 @@
       "pestana": "Hormigon"
     },
     "HOR-011": {
+      "clasificacion": "no_regresion",
       "clave": "B04685541/H99168",
       "codigo": "H99168",
       "familia_documento": "hormigon",
@@ -254,6 +282,7 @@
       "pestana": "Hormigon"
     },
     "HOR-012": {
+      "clasificacion": "defecto_conocido",
       "clave": "B29679628/249917",
       "codigo": "249917",
       "familia_documento": "hormigon",
@@ -263,6 +292,7 @@
       "pestana": "Hormigon"
     },
     "HOR-013": {
+      "clasificacion": "defecto_conocido",
       "clave": "B29679628/249924",
       "codigo": "249924",
       "familia_documento": "hormigon",
@@ -272,6 +302,7 @@
       "pestana": "Hormigon"
     },
     "HOR-014": {
+      "clasificacion": "defecto_conocido",
       "clave": "B29679628/249927",
       "codigo": "249927",
       "familia_documento": "hormigon",
@@ -281,6 +312,7 @@
       "pestana": "Hormigon"
     },
     "HOR-015": {
+      "clasificacion": "defecto_conocido",
       "clave": "B29679628/37515",
       "codigo": "37515",
       "familia_documento": "hormigon",
@@ -290,6 +322,7 @@
       "pestana": "Hormigon"
     },
     "HOR-016": {
+      "clasificacion": "defecto_conocido",
       "clave": "B29679628/249997",
       "codigo": "249997",
       "familia_documento": "hormigon",
@@ -299,6 +332,7 @@
       "pestana": "Hormigon"
     },
     "HOR-017": {
+      "clasificacion": "defecto_conocido",
       "clave": "B29679628/250012",
       "codigo": "250012",
       "familia_documento": "hormigon",
@@ -308,6 +342,7 @@
       "pestana": "Hormigon"
     },
     "MOR-001": {
+      "clasificacion": "defecto_conocido",
       "clave": "B86738812/225225",
       "codigo": "225225",
       "familia_documento": "mortero",
@@ -317,6 +352,7 @@
       "pestana": "Mortero"
     },
     "MOR-002": {
+      "clasificacion": "defecto_conocido",
       "clave": "B86362290/0001229",
       "codigo": "0001229",
       "familia_documento": "mortero",
@@ -326,6 +362,7 @@
       "pestana": "Mortero"
     },
     "MOR-003": {
+      "clasificacion": "defecto_conocido",
       "clave": "B04685541/H132193",
       "codigo": "H132193",
       "familia_documento": "mortero",
@@ -335,6 +372,7 @@
       "pestana": "Mortero"
     },
     "MOR-004": {
+      "clasificacion": "defecto_conocido",
       "clave": "B29679628/37816",
       "codigo": "37816",
       "familia_documento": "mortero",
@@ -344,6 +382,7 @@
       "pestana": "Mortero"
     },
     "RES-001": {
+      "clasificacion": "defecto_conocido",
       "clave": "B82899550/0000168",
       "codigo": "0000168",
       "familia_documento": "residuos",
@@ -353,6 +392,7 @@
       "pestana": "Residuos"
     },
     "RES-002": {
+      "clasificacion": "defecto_conocido",
       "clave": "B82899550/0003935",
       "codigo": "0003935",
       "familia_documento": "residuos",
@@ -362,6 +402,7 @@
       "pestana": "Residuos"
     },
     "RES-003": {
+      "clasificacion": "defecto_conocido",
       "clave": "B82899550/0000589",
       "codigo": "0000589",
       "familia_documento": "residuos",
@@ -371,6 +412,7 @@
       "pestana": "Residuos"
     },
     "RES-004": {
+      "clasificacion": "defecto_conocido",
       "clave": "B82899550/0003967",
       "codigo": "0003967",
       "familia_documento": "residuos",
@@ -380,6 +422,7 @@
       "pestana": "Residuos"
     },
     "RES-005": {
+      "clasificacion": "defecto_conocido",
       "clave": "B82899550/0001977",
       "codigo": "0001977",
       "familia_documento": "residuos",
@@ -389,6 +432,7 @@
       "pestana": "Residuos"
     },
     "RES-006": {
+      "clasificacion": "defecto_conocido",
       "clave": "B82899550/0025146",
       "codigo": "0025146",
       "familia_documento": "residuos",
@@ -398,6 +442,7 @@
       "pestana": "Residuos"
     },
     "RES-007": {
+      "clasificacion": "defecto_conocido",
       "clave": "B82899550/0026122",
       "codigo": "0026122",
       "familia_documento": "residuos",
@@ -407,6 +452,7 @@
       "pestana": "Residuos"
     },
     "RES-008": {
+      "clasificacion": "defecto_conocido",
       "clave": "B83287276/96187",
       "codigo": "96187",
       "familia_documento": "residuos",
@@ -416,6 +462,7 @@
       "pestana": "Residuos"
     },
     "RES-009": {
+      "clasificacion": "defecto_conocido",
       "clave": "B83287276/93478",
       "codigo": "93478",
       "familia_documento": "residuos",
@@ -425,6 +472,7 @@
       "pestana": "Residuos"
     },
     "RES-010": {
+      "clasificacion": "defecto_conocido",
       "clave": "B93649002/24346",
       "codigo": "24346",
       "familia_documento": "residuos",
@@ -434,6 +482,7 @@
       "pestana": "Residuos"
     },
     "RES-011": {
+      "clasificacion": "defecto_conocido",
       "clave": "B93649002/24385",
       "codigo": "24385",
       "familia_documento": "residuos",
@@ -443,6 +492,7 @@
       "pestana": "Residuos"
     },
     "RES-012": {
+      "clasificacion": "defecto_conocido",
       "clave": "B93649002/24566",
       "codigo": "24566",
       "familia_documento": "residuos",
@@ -452,6 +502,7 @@
       "pestana": "Residuos"
     },
     "RES-013": {
+      "clasificacion": "defecto_conocido",
       "clave": "B93649002/24571",
       "codigo": "24571",
       "familia_documento": "residuos",
@@ -461,6 +512,7 @@
       "pestana": "Residuos"
     },
     "RES-014": {
+      "clasificacion": "defecto_conocido",
       "clave": "B93649002/24788",
       "codigo": "24788",
       "familia_documento": "residuos",
@@ -470,6 +522,7 @@
       "pestana": "Residuos"
     },
     "RES-015": {
+      "clasificacion": "defecto_conocido",
       "clave": "B93649002/24790",
       "codigo": "24790",
       "familia_documento": "residuos",
@@ -479,6 +532,7 @@
       "pestana": "Residuos"
     },
     "RES-016": {
+      "clasificacion": "defecto_conocido",
       "clave": "B93649002/30440",
       "codigo": "30440",
       "familia_documento": "residuos",
@@ -488,6 +542,7 @@
       "pestana": "Residuos"
     },
     "RES-017": {
+      "clasificacion": "defecto_conocido",
       "clave": "B93649002/30490",
       "codigo": "30490",
       "familia_documento": "residuos",
@@ -497,6 +552,7 @@
       "pestana": "Residuos"
     },
     "RES-018": {
+      "clasificacion": "defecto_conocido",
       "clave": "B93649002/29990",
       "codigo": "29990",
       "familia_documento": "residuos",
@@ -506,6 +562,7 @@
       "pestana": "Residuos"
     },
     "RES-019": {
+      "clasificacion": "defecto_conocido",
       "clave": "B93649002/30366",
       "codigo": "30366",
       "familia_documento": "residuos",
@@ -515,6 +572,7 @@
       "pestana": "Residuos"
     },
     "RES-020": {
+      "clasificacion": "defecto_conocido",
       "clave": "B78507472/MC26442903",
       "codigo": "MC/26-442903",
       "familia_documento": "residuos",
@@ -524,6 +582,7 @@
       "pestana": "Residuos"
     },
     "RES-021": {
+      "clasificacion": "defecto_conocido",
       "clave": "B78507472/MC26443249",
       "codigo": "MC/26-443249",
       "familia_documento": "residuos",

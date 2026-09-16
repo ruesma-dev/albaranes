@@ -103,3 +103,73 @@ local **solo lectura** está permitido.
 pasada **no cuente IA3, IA4 y E2E como rojos de sistema**, porque hoy dicen algo
 sobre el banco y nada sobre el código. Eso es barato: la fase ya sabe si su
 entrada está vacía, y `NO_EVALUABLE` existe justamente para esto.
+
+## Lo que costó aplicar la decisión 2 (y el agujero que destapó)
+
+Separar las dos líneas no bastaba: las importaciones anteriores habían escrito
+el incremento como línea de IA1, y **la fusión conservadora mantiene lo que no
+genera** (R17), así que esas filas se quedaban y el banco seguía exigiendo lo
+mismo por los dos caminos. De ahí `evals/huella_importacion.json`: las CLAVES
+—no los valores— de lo que el importador escribió la vez anterior. Lo que está
+en la huella y ya no se produce, se retira; lo que no está, se conserva, porque
+es del humano.
+
+Y la huella tenía su propio agujero, que **costó el `modifier_source` de tres
+casos RES antes de verse**: al fusionar, la fila del humano toma la clave del
+importador y desde ese momento la huella la da por suya. Ahora solo se retira
+una fila si no lleva **nada** que el importador no pudiera escribir; los tres
+valores se restauraron desde los fixtures de `697f00e`. Con eso los 7 RES
+conservan su `gestion_residuos`, su `incremento_residuos` y sus precios, y
+tienen UNA línea en IA1 —el material— y UNA sintética en IA3 —el incremento—.
+
+## Por qué mi comprobación vio 3 y el reviewer 38
+
+No es que mirara mal: es que **miré poco**. Cuando la retirada demasiado amplia
+se llevó datos, comprobé el campo que ya sabía roto —`modifier_source`— en los
+tres casos donde lo había visto, y di por bueno el resto. Es el mismo error que
+el banco entero existe para evitar: comprobar lo que sospechas en vez de todo
+lo que puede romperse.
+
+**El método arreglado**: comparar los fixtures versionados campo a campo entre
+dos commits, emparejando las filas por su clave, y buscar **la firma exacta del
+daño** —un valor afirmado que pasa a `@@NO_COMPARAR@@`, a `null` o a nada—.
+Con él, el recuento reproduce los 35 del reviewer exactamente, y además separa
+las **28 filas que se movieron a propósito** (el incremento por LER que pasó de
+IA1 a las sintéticas de IA3) de las pérdidas de verdad, que era la distinción
+que a ojo no se podía hacer.
+
+**El camino está muerto**, y esto se midió, no se supuso: tras restaurar los 35,
+tres reimportaciones seguidas no degradan ni uno. Era daño viejo sin restaurar
+—de la retirada amplia que ya se corrigió—, no un camino vivo.
+
+**La defensa que faltaba**: los libros `.xlsx` no se versionan, así que un
+`git diff` no podía avisar. `tests/datos/afirmado_por_el_humano_RES.json` guarda
+los **496 valores afirmados** de los 7 casos RES y el test los compara uno a
+uno, fallando **con el nombre** de cada pérdida. Comprobado que muerde:
+degradando a mano un `match_method` se pone en rojo.
+
+## El patrón que me ha mordido dos veces: el test que pasa con el fallo puesto
+
+Dos veces en esta feature un test ha dicho cubrir algo y ha pasado **con el
+defecto dentro**:
+
+1. El de **R16**, que comprobaba la copia de seguridad en `escritura` cuando el
+   mutante vivía un nivel más arriba, en el camino de la CLI. No mataba nada.
+2. El del **casado por prefijo**, que metía las filas en un `dict` por
+   descripción: la fila duplicada pisaba a su gemela y el `dict` salía idéntico
+   con mutante y sin él, aunque hubiera **3 filas donde debían ir 2**.
+
+Los dos tienen la misma forma: **comparar una proyección en vez del resultado**.
+Un `dict` por clave pierde los duplicados; un nivel por debajo pierde el camino
+real. Y las dos veces el mutante correspondía a un defecto de verdad —la copia
+que deja de ser el estado previo, la sintética del humano duplicada—, así que la
+proyección no solo no cazaba: tapaba.
+
+**Repaso hecho sobre los 23 ficheros de test de F-045.** El colapso a `dict`
+sobre filas aparecía en **un solo sitio**, el ya citado, y está reescrito para
+comparar la lista entera. Los `set()` que quedan son todos sobre **nombres de
+columna, de tabla o de caso**, donde un duplicado es imposible por
+construcción. Los tests de fusión que solo miraban el recuento (`len(...) == N`)
+sí habrían cazado esta duplicación —de hecho es lo único que la habría cazado—,
+y aun así se han reforzado para decir **qué fila queda y con qué valores**, que
+es lo que distingue «hay dos filas» de «hay las dos filas correctas».

@@ -2,7 +2,7 @@
   "caso_id": "FER-002",
   "fase": "IA3",
   "libro": "IA3_valoracion.xlsx",
-  "sha256_libro": "25b852b60598ad39c653fba60e906e4d4336f7b5fd1b8afd7c561754ab862ad5",
+  "sha256_libro": "5df41714a4b2116fc74a154a641a2f75952b1dd3a09cabe411a63bed56d97de1",
   "tablas": {
     "lineas_valoradas": [
       {

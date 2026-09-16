@@ -140,7 +140,7 @@ def test_f045_r12bis_un_caso_que_no_es_de_residuos_no_declara_criterios():
 
 def test_f045_r12bis_los_tres_criterios_estan_declarados_en_el_vocabulario():
     declarados = VOCAB.criterios_residuos
-    assert set(declarados) == {"minimo_1_tn", "incremento_por_ano", "canon_por_ler"}
+    assert sorted(declarados) == ["canon_por_ler", "incremento_por_ano", "minimo_1_tn"]
     for criterio in declarados.values():
         assert criterio["titulo"]
         assert criterio["implementado"] is False

@@ -2,7 +2,7 @@
   "caso_id": "RES-003",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "f3f8f64f1318ca185f074c0666db66c20fcd043c764138b376604bbacc67d5b7",
+  "sha256_libro": "9a0869b9fdd4a4d65b7792062d6a02f11615c9cc339ec2097442efdc558a85ea",
   "tablas": {
     "datos_generales": [
       {
@@ -35,29 +35,14 @@
         "precio_source": "contrato_db",
         "precio_unitario_final": 120,
         "unidad_final": "UD"
-      },
-      {
-        "cantidad_final": 1,
-        "casa_con_contrato": "SI",
-        "caso_id": "RES-003",
-        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
-        "descripcion": "INCREMENTO LER 170802 MAT. DE CONST. A PARTIR DE YESOS-E",
-        "importe_final": 51,
-        "linea_a_revision": "@@NO_COMPARAR@@",
-        "linea_contrato": "@@NO_COMPARAR@@",
-        "num_linea": 2,
-        "partida_final": "CI.03A.7",
-        "precio_source": "contrato_db",
-        "precio_unitario_final": 51,
-        "unidad_final": "UD"
       }
     ],
     "lineas_anadidas": [
       {
         "cantidad": 1,
         "caso_id": "RES-003",
-        "comentario": "§8.3: el incremento esta cargado en el contrato y no se emitia.",
-        "concepto": "INCREMENTO LER 170802",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
+        "concepto": "INCREMENTO LER 170802 MAT. DE CONST. A PARTIR DE YESOS-E",
         "importe": 51,
         "num_linea_base": 1,
         "partida": "CI.03A.7",

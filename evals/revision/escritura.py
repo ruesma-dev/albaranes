@@ -23,11 +23,14 @@ Tres cosas que este módulo hace a propósito:
 from __future__ import annotations
 
 import datetime as dt
+import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
 from evals.conversor import clave_de_encabezado, sin_acentos
+from evals.revision.vocabulario import cargar as cargar_vocabulario
+from evals.revision.vocabulario import normalizar
 
 #: Dónde se deja la copia de seguridad previa (R16).
 NOMBRE_COPIAS = "copias"
@@ -52,6 +55,16 @@ CLAVES_DE_TABLA: dict[str, tuple[str, ...]] = {
     "condiciones": ("caso_id", "campo"),
     "datos_generales": ("caso_id",),
     "lineas_anadidas": ("caso_id", "num_linea_base", "concepto"),
+}
+
+
+#: Tablas cuya identidad incluye un texto libre que el humano y el Excel
+#: escriben con distinto detalle. Ahí la descripción casa por PREFIJO: el libro
+#: dice `INCREMENTO LER 170604` y la revisión trae el concepto entero, y son la
+#: misma sintética.
+CLAVE_POR_PREFIJO: dict[str, str] = {
+    "sinteticas_esperadas": "descripcion_esperada",
+    "lineas_anadidas": "concepto",
 }
 
 
@@ -206,21 +219,140 @@ def fundir(existente: dict, nuevo: dict) -> dict:
     return fundido
 
 
+def _casa_por_prefijo(
+    existente: dict,
+    nuevas: list[dict],
+    campos_clave: tuple[str, ...],
+    campo: str,
+    existentes: list[dict],
+) -> dict | None:
+    """La misma línea descrita más corto o más largo (F-045, 2026-09-16).
+
+    El libro escrito a mano dice `INCREMENTO LER 170604` y el Excel trae el
+    concepto entero, `INCREMENTO LER 170604 MATERIALES DE AISLAMIENTO-E`. Son
+    la MISMA sintética: escribir las dos haría que el banco esperase dos donde
+    el sistema emite una, y ese rojo no existe.
+
+    La pareja tiene que ser única **por los dos lados**: si una fila nueva
+    podría ser la continuación de dos existentes, o al revés, NO se elige.
+    Adivinar cuál es sería peor que dejar la fila aparte, donde se ve.
+    """
+    resto = tuple(c for c in campos_clave if c != campo)
+    propio = normalizar_concepto(existente.get(campo))
+    if not propio:
+        return None
+
+    def emparejan(fila_a: dict, fila_b: dict) -> bool:
+        return _clave(fila_a, resto) == _clave(fila_b, resto) and _prefijo_comun(
+            normalizar_concepto(fila_a.get(campo)), normalizar_concepto(fila_b.get(campo))
+        )
+
+    candidatos = [nueva for nueva in nuevas if emparejan(existente, nueva)]
+    if len(candidatos) != 1:
+        return None
+    rivales = [otra for otra in existentes if emparejan(candidatos[0], otra)]
+    return candidatos[0] if len(rivales) == 1 else None
+
+
+_DIGITOS_SUELTOS = re.compile(r"(?<=\d) (?=\d)")
+
+
+def normalizar_concepto(texto: object | None, sinonimos: dict[str, str] | None = None) -> str:
+    """El mismo concepto escrito de dos maneras tiene que salir igual.
+
+    Junta los dígitos separados —`17 08 02` es el LER `170802`— y aplica los
+    sinónimos declarados en `vocabulario.json`, que hoy son las erratas con las
+    que el humano escribe lo mismo en el Excel y en los libros. **Solo decide
+    si dos filas son la misma línea**; el texto que se escribe no se toca.
+    """
+    palabras = _DIGITOS_SUELTOS.sub("", normalizar(texto)).split()
+    tabla = _sinonimos() if sinonimos is None else sinonimos
+    return " ".join(tabla.get(palabra, palabra) for palabra in palabras)
+
+
+def _sinonimos() -> dict[str, str]:
+    global _CACHE_SINONIMOS
+    if _CACHE_SINONIMOS is None:
+        _CACHE_SINONIMOS = {
+            normalizar(k): normalizar(v)
+            for k, v in cargar_vocabulario().sinonimos_concepto.items()
+        }
+    return _CACHE_SINONIMOS
+
+
+_CACHE_SINONIMOS: dict[str, str] | None = None
+
+
+def _prefijo_comun(uno: str, otro: str) -> bool:
+    return bool(uno) and bool(otro) and (uno.startswith(otro) or otro.startswith(uno))
+
+
+def _solo_del_importador(existente: dict, interrogantes: set[str]) -> bool:
+    """La fila NO lleva nada que el importador no pudiera haber escrito.
+
+    Es la condición para poder retirarla. Hace falta porque la fusión mueve la
+    clave: cuando el importador actualiza una fila del humano, esa fila pasa a
+    tener la clave del importador y, a partir de ahí, la huella la daría por
+    suya. Retirarla se llevaría por delante lo que el humano escribió —pasó el
+    2026-09-16 con el `modifier_source` de tres casos RES—.
+
+    Así que una fila solo se retira si TODAS sus columnas están vacías o en
+    `?` allí donde el importador escribe `?`. Si alguna lleva un valor que él
+    nunca pone, la fila no es solo suya y se queda.
+
+    `interrogantes` son las columnas que el importador deja en `?` **en toda la
+    importación**, no solo en las filas de esta pestaña: si se dedujeran de las
+    filas de turno, una pestaña donde esta vez no escribe nada no podría
+    retirar nada, que es justo cuando hay que hacerlo —el humano ha quitado esa
+    línea del Excel—. Sin columnas declaradas no se retira nada: ante la duda,
+    no se toca lo del humano.
+    """
+    if not interrogantes:
+        return False
+    return not any(_tiene_valor(existente.get(campo)) for campo in interrogantes)
+
+
 def fundir_filas(
-    existentes: list[dict], nuevas: list[dict], campos_clave: tuple[str, ...]
+    existentes: list[dict],
+    nuevas: list[dict],
+    campos_clave: tuple[str, ...],
+    campo_prefijo: str | None = None,
+    mias: set[tuple[str, ...]] | None = None,
+    interrogantes: set[str] | None = None,
 ) -> list[dict]:
-    """Actualiza en su sitio, conserva lo ajeno y añade al final lo nuevo."""
+    """Actualiza en su sitio, conserva lo ajeno y añade al final lo nuevo.
+
+    `mias` son las claves que el importador escribió la vez anterior (ver
+    `huella.py`). Una fila que está ahí y que ya no se produce **se retira**:
+    es suya y ha dejado de tener sentido. Lo que no está en `mias` se conserva
+    siempre, porque lo escribió el humano (R17). Sin `mias`, no se retira nada.
+    """
     por_clave = {_clave(nueva, campos_clave): nueva for nueva in nuevas}
+    columnas_en_duda = interrogantes if interrogantes is not None else {
+        campo for fila in nuevas for campo, valor in fila.items() if valor == "?"
+    }
     resultado: list[dict] = []
     usadas: set[tuple] = set()
     for existente in existentes:
         clave = _clave(existente, campos_clave)
         nueva = por_clave.get(clave)
+        if nueva is None and campo_prefijo:
+            nueva = _casa_por_prefijo(
+                existente, nuevas, campos_clave, campo_prefijo, existentes
+            )
+            if nueva is not None and _clave(nueva, campos_clave) in usadas:
+                nueva = None
         if nueva is None:
+            if (
+                mias is not None
+                and clave in mias
+                and _solo_del_importador(existente, columnas_en_duda)
+            ):
+                continue  # la escribió el importador y ya no la produce
             resultado.append(existente)
             continue
         resultado.append(fundir(existente, nueva))
-        usadas.add(clave)
+        usadas.add(_clave(nueva, campos_clave))
     for nueva in nuevas:
         if _clave(nueva, campos_clave) not in usadas:
             resultado.append(nueva)
@@ -252,6 +384,8 @@ def escribir_pestana(
     filas_por_tabla: dict[str, list[dict]],
     caso_ids: set[str],
     ejecutar: bool = True,
+    huella_previa: dict[str, set[tuple[str, ...]]] | None = None,
+    interrogantes: dict[str, set[str]] | None = None,
 ) -> bool:
     """Vuelca las tablas de una pestaña fundiéndolas con lo que ya había.
 
@@ -288,7 +422,12 @@ def escribir_pestana(
             ]
             campos = CLAVES_DE_TABLA.get(bloque.definicion.clave, ("caso_id",))
             existentes = _filas_existentes(hoja, bloque)
-            fundidas = fundir_filas(existentes, nuevas, campos)
+            fundidas = fundir_filas(
+                existentes, nuevas, campos,
+                campo_prefijo=CLAVE_POR_PREFIJO.get(bloque.definicion.clave),
+                mias=huella_previa.get(bloque.definicion.clave) if huella_previa else None,
+                interrogantes=(interrogantes or {}).get(bloque.definicion.clave),
+            )
             cambia = cambia or _difieren(existentes, fundidas, bloque)
             if ejecutar:
                 _reescribir(hoja, bloque, fundidas)

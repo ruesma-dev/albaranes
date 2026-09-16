@@ -118,6 +118,10 @@ def entorno(tmp_path):
         "ground_truth": ground_truth,
         "originales": entrada,
         "mapa": tmp_path / "mapa_casos.json",
+        # La huella TAMBIÉN va a tmp: sin esto los tests escribían la del
+        # repositorio y la dejaban con sus dos casos de mentira, que es
+        # exactamente la memoria con la que el importador decide qué retirar.
+        "huella": tmp_path / "huella.json",
         "informe": tmp_path / "import.md",
     }
 
@@ -129,10 +133,30 @@ def correr(entorno, *extra):
             "--ground-truth", str(entorno["ground_truth"]),
             "--originales", str(entorno["originales"]),
             "--mapa", str(entorno["mapa"]),
+            "--huella", str(entorno["huella"]),
             "--informe", str(entorno["informe"]),
             *extra,
         ]
     )
+
+
+def test_f045_r17_los_tests_no_escriben_la_huella_del_repositorio(entorno):
+    """Un test que escribe en `evals/` corrompe la memoria del importador.
+
+    Pasó: la huella del repositorio acabó con los dos casos de este fixture, y
+    con ella el importador habría creído que solo había escrito esas filas.
+    """
+    from evals.revision import huella
+
+    antes = huella.RUTA_HUELLA.read_bytes() if huella.RUTA_HUELLA.is_file() else None
+    correr(entorno)
+    cli.ejecutar(
+        entorno["origen"], entorno["ground_truth"], entorno["originales"],
+        entorno["mapa"], entorno["huella"],
+    )
+    despues = huella.RUTA_HUELLA.read_bytes() if huella.RUTA_HUELLA.is_file() else None
+    assert despues == antes, "un test ha escrito la huella del repositorio"
+    assert entorno["huella"].is_file()
 
 
 def contenido(directorio):
@@ -228,6 +252,7 @@ def test_f045_r14_ejecutar_sin_argumentos_opcionales_no_renombra_ni_va_en_seco(e
         entorno["ground_truth"],
         entorno["originales"],
         entorno["mapa"],
+        entorno["huella"],
     )
     assert resultado.renombrados == []
     assert (entorno["originales"] / "HORPRESOL_H132525.pdf").exists()
@@ -339,6 +364,45 @@ def test_f045_r16_la_copia_del_libro_es_el_estado_ANTES_de_la_importacion(entorn
         f"antes de copiar y R16 deja de proteger nada"
     )
     assert libro.read_bytes() != previo  # y la escritura de verdad sí ocurrió
+
+
+def test_f045_r17_una_linea_que_el_humano_borra_del_excel_se_retira_del_libro(entorno):
+    """La huella, de extremo a extremo: es lo único que permite DESescribir.
+
+    Si el humano quita una línea del Excel, la fila que el importador escribió
+    por ella tiene que irse del libro. Sin la huella se quedaría para siempre
+    —la fusión conservadora mantiene lo que no genera— y el banco seguiría
+    exigiendo una línea que ya nadie afirma.
+    """
+    correr(entorno)
+    libro = entorno["ground_truth"] / "IA1_extraccion.xlsx"
+
+    def lineas_de(caso_id):
+        wb = openpyxl.load_workbook(libro)
+        hoja, dentro, filas = wb["Hormigon"], False, []
+        for fila in hoja.iter_rows(values_only=True):
+            primera = str(fila[0]) if fila[0] else ""
+            if primera.startswith("TABLA"):
+                dentro = primera.startswith("TABLA 2")
+                continue
+            if dentro and fila[0] == caso_id:
+                filas.append(fila[2])
+        wb.close()
+        return filas
+
+    assert lineas_de("HOR-001") == ["HA-25/B/20/IIa"]
+
+    # El humano borra la única línea impresa de ese albarán.
+    fuente = openpyxl.load_workbook(entorno["origen"])
+    fuente.active.delete_rows(2)
+    fuente.save(entorno["origen"])
+    fuente.close()
+
+    correr(entorno)
+    assert lineas_de("HOR-001") == [], (
+        "la línea que el importador escribió sigue en el libro después de que "
+        "el humano la quitara del Excel: la huella no la ha retirado"
+    )
 
 
 # --- R5: lo desconocido aborta sin escribir nada ---------------------------

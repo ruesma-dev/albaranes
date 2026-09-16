@@ -29,6 +29,28 @@ no miden nada** hasta que se decida de dónde salen las líneas de contrato: las
 tres vías, medidas, en `progress/impl_F-045_contrato_lineas.md` (recomendada la
 B, por `sigrid-api`). Otra pasada con LLM la decide el humano.
 
+**Las dos decisiones del humano, cerradas el 2026-09-16**: la tipología va por
+PESTAÑA —y **§3 queda corregida**, era la spec la que estaba mal— y el
+incremento por LER **se deduce del contrato**, así que el material impreso va a
+IA1 y el incremento a las sintéticas de IA3: son dos líneas, una por fase, y el
+ground truth contradictorio de RES-004 desaparece.
+
+**Pasada 2 del review: RECHAZADA y corregida.** La pérdida de datos era de 38
+valores afirmados, no de 3: restaurados los 35 que faltaban desde `5132bdc`,
+arreglado el método que solo vio tres —ahora la comparación recorre todos los
+fixtures campo a campo— y puesto un guardián versionado
+(`tests/datos/afirmado_por_el_humano_RES.json`, 496 valores) que falla nombrando
+cada pérdida. Y la campaña de mutación del lote: 44 mutantes, 35 muertos, **los
+9 supervivientes cerrados con test**.
+
+Libros, mapa y **fixtures ya regenerados** (se esperó a que terminara la pasada
+de evals que los estaba leyendo). Repetir importador + conversor no deja ni un
+cambio.
+
+Siguen abiertas dos decisiones que no bloquean: `codigo_imputacion` (que sale
+`?` en las 114 líneas) y de dónde salen las líneas de contrato para que IA3,
+IA4 y el E2E midan algo.
+
 Falta la pasada 2 del reviewer: la feature sigue `in_progress` y NO se marca
 `done`.
 

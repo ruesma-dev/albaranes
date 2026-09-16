@@ -2,12 +2,12 @@
   "caso_id": "RES-007",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "ba90a8cfb7acbfb6426dcdb47bd527295fc8aa40aa79b98569b4d6dab42f0c93",
+  "sha256_libro": "8415ac68cd9086104f4bb1033b8bb99fc467943b806dcd9d645b6f9e890beddc",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "RES-007",
-        "comentario": "leido mal la obra (no sale en albaran, la habra cogido po rdireccion, ver como lo ha hecho). Coge mal el CIF proveedor (no encuentro de donde lo ha sacado, en la obra si que estra salmedina). Podriamos hacer que proveedores ya identificados claramente, como salmedina, al leer el nombre ya coja todo?. estudiar como ha llegado a la info que ha recogido. no ha encontrado contrato porque no hay en la obra que eligio (que estaba mal)\nNo ha metido el precio unitario del incremento LER | leido mal la obra (no sale en albaran, la habra cogido po rdireccion, ver como lo ha hecho). Coge mal el CIF proveedor (no encuentro de donde lo ha sacado, en la obra si que estra salmedina). Podriamos hacer que proveedores ya identificados claramente, como salmedina, al leer el nombre ya coja todo?. estudiar como ha llegado a la info que ha recogido. no ha encontrado contrato porque no hay en la obra que eligio (que estaba mal)",
+        "comentario": "leido mal la obra (no sale en albaran, la habra cogido po rdireccion, ver como lo ha hecho). Coge mal el CIF proveedor (no encuentro de donde lo ha sacado, en la obra si que estra salmedina). Podriamos hacer que proveedores ya identificados claramente, como salmedina, al leer el nombre ya coja todo?. estudiar como ha llegado a la info que ha recogido. no ha encontrado contrato porque no hay en la obra que eligio (que estaba mal)\nNo ha metido el precio unitario del incremento LER | leido mal la obra (no sale en albaran, la habra cogido po rdireccion, ver como lo ha hecho). Coge mal el CIF proveedor (no encuentro de donde lo ha sacado, en la obra si que estra salmedina). Podriamos hacer que proveedores ya identificados claramente, como salmedina, al leer el nombre ya coja todo?. estudiar como ha llegado a la info que ha recogido. no ha encontrado contrato porque no hay en la obra que eligio (que estaba mal). El ler esta en el contrato y no ha cogido el precio",
         "fecha": "2024-11-05",
         "fichero_albaran": "RES-007.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
@@ -28,18 +28,6 @@
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
-        "precio_unitario": null,
-        "unidad": "UD"
-      },
-      {
-        "cantidad": 1,
-        "caso_id": "RES-007",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "leido mal la obra (no sale en albaran, la habra cogido po rdireccion, ver como lo ha hecho). Coge mal el CIF proveedor (no encuentro de donde lo ha sacado, en la obra si que estra salmedina). Podriamos hacer que proveedores ya identificados claramente, como salmedina, al leer el nombre ya coja todo?. estudiar como ha llegado a la info que ha recogido. no ha encontrado contrato porque no hay en la obra que eligio (que estaba mal)",
-        "descripcion_esperada": "INCREMENTO LEER 17 08 02",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 2,
         "precio_unitario": null,
         "unidad": "UD"
       }

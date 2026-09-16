@@ -60,9 +60,17 @@ def clave_natural(fila: FilaPlana) -> str:
 
 
 def _interpretar(fila: FilaPlana, vocab: Vocabulario, num_linea: int | None,
-                 contador: int) -> tuple[LineaRevisada, int]:
-    """Traduce los tres ejes de origen de UNA fila y le da su número de línea."""
+                 contador: int, familia: str = "") -> tuple[LineaRevisada, int]:
+    """Traduce los tres ejes de origen de UNA fila y le da su número de línea.
+
+    El concepto puede corregir a la columna de origen: en residuos, el
+    incremento por LER lo marca el humano `EN ALBARAN` —porque describe el
+    albarán— pero NO está impreso, se deduce del contrato con ese LER
+    (2026-09-16). La línea de material sí está impresa y se queda en IA1.
+    """
     origen_linea = vocab.origen_linea(fila.texto("origen_linea"), fila.numero_fila)
+    if vocab.concepto_es_deducido(familia, fila.texto("concepto")):
+        origen_linea = "deducida"
     precio = vocab.origen_precio(fila.texto("origen_precio"), fila.numero_fila)
     importe = vocab.origen_precio(fila.texto("origen_importe"), fila.numero_fila)
     if origen_linea == "impresa":
@@ -105,7 +113,11 @@ def agrupar_por_albaran(
         try:
             destino = vocab.etiqueta(fila.texto("tipo_albaran"), fila.numero_fila)
             linea, contador = _interpretar(
-                fila, vocab, ultimo.get(clave), contadores.get(clave, 0)
+                fila,
+                vocab,
+                ultimo.get(clave),
+                contadores.get(clave, 0),
+                destino.familia_documento,
             )
         except ErrorVocabulario:
             continue  # ya acumulado; se listan todos juntos en `comprobar`
@@ -161,6 +173,7 @@ def asignar_casos_id(
                 "codigo": caso.codigo,
                 "pestana": caso.destino.pestana,
                 "familia_documento": caso.destino.familia_documento,
+                "clasificacion": caso.clasificacion,
                 "gemelo_de": caso.gemelo_de or None,
             }
         )
@@ -289,6 +302,26 @@ def crear_gemelos(
             )
         )
     return gemelos
+
+
+def cambios_de_grupo(
+    casos: list[CasoRevisado], mapa: dict[str, dict]
+) -> list[tuple[str, str, str]]:
+    """Casos que cambian de bando respecto a la importación anterior.
+
+    El humano edita el Excel cada semana, y **borrar un comentario no es un
+    detalle**: ese caso pasa de defecto conocido a no regresión y a partir de
+    ahí tiene que salir VERDE. Al revés, un comentario nuevo convierte en rojo
+    esperado algo que se vigilaba. Un cambio así no puede pasar callado.
+
+    Un caso nuevo no cuenta: no cambia de grupo, entra en uno.
+    """
+    cambios: list[tuple[str, str, str]] = []
+    for caso in casos:
+        previo = (mapa.get(caso.caso_id) or {}).get("clasificacion")
+        if previo and previo != caso.clasificacion:
+            cambios.append((caso.caso_id, previo, caso.clasificacion))
+    return cambios
 
 
 # --- Los dos ejes del vacío (R9, R10) --------------------------------------

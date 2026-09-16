@@ -42,6 +42,11 @@ CAMPOS = (
     # `INPUTS.CASOS.tipologia` lleva la pestaña porque es lo que leen sv5 y
     # sv6 (ver `reparto._inputs_caso`). Aquí es donde se consulta.
     "familia_documento",
+    # En qué grupo quedó el caso la última vez. Sin esta memoria no hay
+    # forma de avisar de que un caso ha cambiado de bando, y cambiar de
+    # bando cambia lo que se le exige: un defecto conocido que pasa a no
+    # regresión tiene que empezar a salir VERDE.
+    "clasificacion",
 )
 
 
