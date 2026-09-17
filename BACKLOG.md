@@ -110,6 +110,12 @@ CUIDADOS: el ciclo necesita el pipeline LEVANTADO EN LOCAL (Azurite + Postgres, 
 
 LO QUE NO VIGILA, y hay que decirlo: sv1 y el buzon M365, sv4 (salvo el gesto de seleccionar contrato, que el banco simula), SharePoint real y el comportamiento contra Azure de verdad.
 
+CONTRASTE MANUAL (anadido por el humano el 2026-09-18, antes de implementar): «quiero contrastar cada resultado con una revision manual». No es el ground truth -ese ya esta-, sino poder mirar con sus ojos, caso por caso, LO QUE PRODUJO EL CICLO. Motivo medido: en F-045 el 37 % de los fallos no eran defectos del sistema sino artefactos del banco -una etiqueta leida al reves, un desfase de lineas- y solo se descubrieron cuando el humano miro casos concretos; con cuatro fases y dos persistencias el riesgo crece. Por eso cada caso deja una FICHA legible: cabecera con el papel del que viene (codigo, fichero original, formato, familia, desde `evals/mapa_casos.json`, mas la ruta local) y una tabla por fase con la COSTURA -que ENTRO, que SALIO, que se ESPERABA y la ATRIBUCION-, de modo que si IA3 valoro mal se vea que recibio de IA2. Se puede pedir UN caso suelto sin ejecutar nada (`python -m evals.ficha --caso HOR-003`), y por defecto solo se emite ficha de los casos que no salieron limpios, que 59 x 4 fases no lo lee nadie.
+
+Y LA REVISION SE CAPTURA, que si no caduca: `evals/revision_manual.json`, versionado, con una entrada por caso/fase/campo -veredicto 'defecto real' o 'artefacto del banco', nota, arreglo pendiente, fecha, pasada y huella de la expectativa-. NO lleva valores del albaran ni del contrato, solo juicio, y por eso puede versionarse; no hace falta un Excel nuevo (el de F-045 es ground truth, esto es juicio sobre UNA pasada). Una anotacion NUNCA pone verde un rojo: declara y agrupa. Si la expectativa cambia, la anotacion se marca CADUCADA y vuelve a pendiente.
+
+FUGA DETECTADA al disenar esto: `evals/informe.py` imprime hoy 'esperado X, obtenido Y' campo a campo y `progress/evals_F-045.md` ESTA VERSIONADO CON IMPORTES DE PROVEEDOR DENTRO. En adelante el informe de progress/ lleva solo campo, veredicto y atribucion, y los valores viven en las fichas, fuera de git. Lo ya commiteado no lo borra este cambio -el historial de git no suelta lo que entra- y necesita decision del humano.
+
 RELACIONADAS: F-045 (el ground truth que esta ficha aprovecha), F-011 (el banco y su flujo), F-043 (el enrutado por familia que estos casos vigilan).
 
 ### F-048 · El codigo de obra que viene en el TEXTO DEL CORREO llega al pipeline

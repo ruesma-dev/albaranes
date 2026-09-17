@@ -801,5 +801,49 @@ sv1 y el buzón M365, sv4 salvo el gesto de contrato, SharePoint real, y el
 comportamiento contra Azure de verdad (Azurite no es Azure Queue; la identidad
 gestionada no se ejercita).
 
+### Añadido el 2026-09-18: contrastar cada resultado con revisión manual
+
+El humano, antes de implementar: «vamos con f47. y quiero contrastar cada
+resultado con una revisión manual». **Mi lectura, que él puede corregir**: quiere
+mirar con sus ojos, caso por caso, LO QUE PRODUJO EL CICLO —no el ground truth,
+que ya está y es contra lo que se compara—, presentado de forma que pueda
+contrastarlo contra el papel.
+
+Añadido a la spec (requirements §G y §H, design §9 y §10, tareas T14–T17):
+
+- **Ficha por caso** con la cabecera del papel (código, fichero original, formato
+  y familia de `mapa_casos.json`, más la ruta local) y una tabla por fase con la
+  COSTURA: `ENTRÓ | SALIÓ | ESPERADO | ATRIBUCIÓN`. Si IA3 valoró mal, se ve qué
+  recibió de IA2.
+- **UN caso sin ejecutar nada**: `python -m evals.ficha --caso HOR-003`, desde el
+  volcado de la pasada. Y por defecto solo se emiten fichas de los casos que no
+  salieron limpios: 59 × 4 fases no lo lee nadie.
+- **`evals/revision_manual.json`**, versionado, para que su revisión no caduque:
+  una entrada por caso/fase/campo con veredicto («defecto real» o «artefacto del
+  banco»), nota, arreglo pendiente, fecha, pasada y huella de la expectativa. No
+  hace falta Excel nuevo: el de F-045 es ground truth, esto es juicio sobre UNA
+  pasada.
+- **T14 se adelanta**: la ficha va antes del pulido del informe, porque es lo que
+  el humano pidió y lo que hace utilizable todo lo demás.
+
+**FUGA DETECTADA, y necesita decisión del humano.** `evals/informe.py` imprime
+hoy `esperado …, obtenido …` campo a campo, y **`progress/evals_F-045.md` está
+versionado con importes de proveedor dentro** (`IA1.lineas[1].importe: obtenido
+19.41`, y así decenas). R31 corta la fuga hacia adelante —el informe de
+`progress/` pasa a llevar solo campo, veredicto y atribución, y los valores viven
+en las fichas, fuera de git—, pero **lo ya commiteado no lo borra**: el historial
+de git no suelta lo que entra. Hay que decidir si se sanea el historial, si se
+acepta, o si se abre ficha.
+
+### Decisiones nuevas que necesita validar el humano
+
+5. **Una anotación de revisión NO cambia ningún veredicto** (R34): declara y
+   agrupa. La alternativa —que «artefacto del banco» ponga verde el rojo— sería
+   la vía fácil para blanquear el banco. El precio es que el rojo sigue ahí hasta
+   que se arregle el banco, y por eso la anotación obliga a nombrar el arreglo.
+6. **Mi lectura de «revisión manual»** (arriba, en cursiva de este apartado): si
+   lo que quería era otra cosa —por ejemplo, revisar y CORREGIR el ground truth
+   desde la ficha—, hay que decirlo antes de T14.
+
 Siguiente paso: aprobación del humano y, con ella, el implementer sobre
 `feature/F-047-evals-ciclo-completo`.
