@@ -5,12 +5,14 @@
 
 Resumen: **48 features**, 34 abiertas, 14 terminadas.
 
+En curso: **F-047**.
+
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
-| F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
+| F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | en curso | critico | `feature/F-047-evals-ciclo-completo` |
 | F-048 | El codigo de obra que viene en el TEXTO DEL CORREO llega al pipeline | 4 | pendiente | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
@@ -88,7 +90,7 @@ RELACIONADAS: F-043 (la clasificacion la decide IA1 contra este catalogo), F-045
 
 ### F-047 · El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior
 
-estado **spec lista** · prioridad 3 · rigor `critico` · SDD sí
+estado **en curso** · prioridad 3 · rigor `critico` · SDD sí · rama `feature/F-047-evals-ciclo-completo`
 
 ORIGEN: decision del humano del 2026-09-16, al ver el resultado de la primera pasada con LLM de F-045. Sus palabras: «no es tan importante la entrada como la salida que da. lo suyo es hacer el ciclo completo, e ir obteniendo las salidas de cada IA. no correrlas por separado con entradas puntuales». Y el 2026-09-16, al revisar la spec: «no, deberia encadenar el proceso completo, incluyendo ambas persistencias».
 
