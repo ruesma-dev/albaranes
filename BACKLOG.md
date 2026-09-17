@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **47 features**, 33 abiertas, 14 terminadas.
+Resumen: **48 features**, 34 abiertas, 14 terminadas.
 
 ## Trabajo abierto
 
@@ -11,6 +11,7 @@ Resumen: **47 features**, 33 abiertas, 14 terminadas.
 |---|---|---|---|---|---|
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
+| F-048 | El codigo de obra que viene en el TEXTO DEL CORREO llega al pipeline | 4 | pendiente | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
 | F-028 | Con dos contratos candidatos no se elige ninguno y el albarán no llega a valorarse | 7 | pendiente | critico | `feature/F-028-selector-contrato-por-partidas` |
@@ -108,6 +109,33 @@ CUIDADOS: el ciclo necesita el pipeline LEVANTADO EN LOCAL (Azurite + Postgres, 
 LO QUE NO VIGILA, y hay que decirlo: sv1 y el buzon M365, sv4 (salvo el gesto de seleccionar contrato, que el banco simula), SharePoint real y el comportamiento contra Azure de verdad.
 
 RELACIONADAS: F-045 (el ground truth que esta ficha aprovecha), F-011 (el banco y su flujo), F-043 (el enrutado por familia que estos casos vigilan).
+
+### F-048 · El codigo de obra que viene en el TEXTO DEL CORREO llega al pipeline
+
+estado **pendiente** · prioridad 4 · rigor `critico` · SDD sí
+
+ORIGEN: peticion del humano el 2026-09-17: «apunta feature leer codigo del texto del correo. codigo de obra».
+
+EL PROBLEMA. La obra se deduce MAL cuando el albaran no la trae impresa: es el patron (2) de los nueve que el humano anoto revisando a mano los 59 albaranes. Hoy la obra la adivina la IA a partir del papel y de la lista de obras activas, y cuando el papel no dice nada no hay de donde sacarla.
+
+LA OPORTUNIDAD, medida el 2026-09-17: el correo con el que llega el albaran a menudo trae el codigo de obra en el asunto o en el cuerpo, escrito por quien lo envia. Es un dato FIABLE que hoy se TIRA: sv1 lista los adjuntos, sube el PDF al blob y publica `MensajeExtraccion`, que NO lleva asunto, ni cuerpo, ni remitente (verificado en `ruesma_comun/colas/mensajes.py`). El texto del correo muere en sv1.
+
+QUE HAY QUE HACER, en dos piezas que conviene no confundir:
+1. Que el TEXTO del correo (asunto y cuerpo, y probablemente el remitente) viaje desde sv1 hasta quien lo necesite. Es un cambio de contrato en `ruesma_comun`, asi que toca a todos los consumidores.
+2. Que de ese texto se extraiga el codigo de obra y se use como senal, sin que atropelle lo que diga el papel cuando el papel lo diga.
+
+ROBUSTEZ (criterio del humano, F-045 §filtro): NADA de reglas fragiles sobre el formato del correo, que cambia con cada remitente. El codigo de obra es un numero corto (696, 669, 693, 722 en el banco de evals), asi que buscar «un numero de tres digitos» en un correo daria falsos positivos a mansalva: fechas, numeros de albaran, importes. El filtro robusto es el mismo que ya funciona en otras partes: **validar el candidato contra la lista de OBRAS ACTIVAS**, que ya se le pasa a IA1 (F-002). Si el numero no es una obra activa, no es un codigo de obra. Eso es estrechar el espacio de busqueda, no anadir una regla.
+
+DECISIONES QUE HAY QUE TOMAR EN LA SPEC:
+- Quien manda si el correo dice una obra y el papel dice otra. Propuesta a discutir: el papel manda, y la discrepancia se marca para revision humana en sv4; el correo sirve sobre todo cuando el papel NO dice nada.
+- Si el texto se le da a la IA como contexto o se extrae con codigo antes. Lo primero es mas robusto ante formatos raros; lo segundo es mas barato y trazable.
+- Que pasa con un correo que trae VARIOS albaranes de obras distintas: el codigo del correo no puede aplicarse a todos a ciegas.
+
+CUIDADO CON LOS DATOS: el cuerpo de un correo puede traer datos personales (firmas, telefonos, direcciones) y no debe acabar versionado en fixtures sin pasar por el barrido de `evals/barrido.py`. Y el buzon M365 real es SOLO LECTURA desde local.
+
+COMO SE MIDE: el banco de F-045 tiene hoy 59 casos cuyo ground truth incluye el codigo de obra, pero NINGUNO trae el correo: para vigilar esta feature hara falta que el banco guarde tambien el texto del correo de cada caso, o al menos de una muestra.
+
+RELACIONADAS: F-045 (el banco que mide el patron 2), F-002 (las obras activas que se le pasan a IA1), F-047 (el ciclo completo, que es donde esto se vera de punta a punta).
 
 ### F-037 · sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar
 
