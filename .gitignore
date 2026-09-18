@@ -38,3 +38,11 @@ evals/inputs/
 # del humano (evals_summary.xlsx). El original vive en OneDrive; aqui solo
 # entra una copia para que el conversor lea un fichero estable y no
 # bloqueado. Lleva precios de proveedor: no se versiona.
+
+# Informes de evals: imprimen 'esperado X, obtenido Y' campo a campo, asi que
+# arrastran PRECIOS E IMPORTES de albaranes de proveedor. Se regeneran cuando
+# hacen falta (python -m evals.runner) y no entran en git. Retirados del
+# seguimiento el 18-sep-2026; lo ya commiteado sigue en el historial.
+progress/evals_*.md
+progress/historico/evals_*.md
+progress/impl_F-043_evals_*.md
