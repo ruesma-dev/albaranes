@@ -11,9 +11,9 @@ En curso: **F-047**.
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
+| F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: codigo de OBRA y de PARTIDA | 1 | pendiente | critico |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | en curso | critico | `feature/F-047-evals-ciclo-completo` |
-| F-048 | El codigo de obra que viene en el TEXTO DEL CORREO llega al pipeline | 4 | pendiente | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
 | F-028 | Con dos contratos candidatos no se elige ninguno y el albarán no llega a valorarse | 7 | pendiente | critico | `feature/F-028-selector-contrato-por-partidas` |
@@ -67,6 +67,36 @@ En curso: **F-047**.
 
 ## Detalle
 
+### F-048 · El texto del correo (asunto y cuerpo) llega a IA1 como contexto: codigo de OBRA y de PARTIDA
+
+estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
+
+PRIORIDAD 1 por decision del humano el 2026-09-18: «pon una feature prioridad 1, que sea leer el codigo de obra y/o partida del email (asunto o cuerpo) de forma que el texto se le pase como contexto a la IA1, para que lo procese, si viene el codigo de la obra ya no tiene que leerlo, y con la partida igual».
+
+EL MECANISMO, ya decidido y sin alternativas que discutir: el texto del correo -ASUNTO y CUERPO- se le pasa a **IA1 como CONTEXTO**, y es IA1 quien lo procesa junto con el papel. NO se extrae con una expresion regular antes de llamarla. Si el correo trae el codigo de obra, IA1 ya no tiene que leerlo del albaran; con la partida, igual.
+
+QUE MANDA: lo que venga en el correo MANDA sobre lo que se lea del papel (decision del humano del 2026-09-17: «ese dato manda luego en la lectura de obra»). El papel solo decide cuando el correo no trae el dato.
+
+POR QUE ES LO MAS PRIORITARIO. Ataca los DOS patrones que mas pesan de los nueve que el humano anoto revisando a mano los 59 albaranes:
+- Patron (1), LA PARTIDA SE LEE MAL: es el mas repetido de todos. Se pierde el prefijo del capitulo o se confunden digitos sobre el escaneo.
+- Patron (2), LA OBRA SE DEDUCE MAL cuando el albaran no la trae impresa.
+Los dos desaparecen si el dato viene escrito en el correo por quien lo envia, que ademas SABE a que obra y a que partida va. Es la fuente mas fiable que tenemos y hoy la estamos TIRANDO.
+
+LO QUE HAY QUE CAMBIAR, verificado el 2026-09-17: el texto del correo MUERE EN SV1. `MensajeExtraccion` de `ruesma_comun/colas/mensajes.py` no lleva asunto, ni cuerpo, ni remitente: sv1 lista los adjuntos, sube el PDF al blob y publica el mensaje. Hay que hacer que ese texto viaje hasta sv2, lo que es un cambio de contrato en `ruesma_comun` y toca a sus consumidores, y que sv2 lo inyecte en el prompt de IA1 como un bloque de contexto mas -igual que ya hace con las obras activas (F-002) y con el catalogo de familias (F-043)-.
+
+ROBUSTEZ: nada de reglas sobre el formato del correo, que cambia con cada remitente. Al pasar el texto como CONTEXTO y no como regla, el formato deja de importar: es la IA quien lo interpreta. Y el candidato se valida contra lo que ya conocemos -la lista de OBRAS ACTIVAS y, para la partida, la LISTA DE PARTIDAS DE LA OBRA, que es justo lo que el humano propuso para el patron 1: «no leer la partida a ciegas, sino buscarla en la lista de partidas de la obra»-. Estrechar el espacio de busqueda, no anadir reglas.
+
+DECISIONES QUE QUEDAN PARA LA SPEC:
+- Un correo con VARIOS albaranes de obras o partidas distintas: el codigo del correo no puede aplicarse a todos a ciegas. Quiza solo manda cuando trae UN codigo.
+- Dejar rastro de la DISCREPANCIA cuando el papel diga otra cosa, sin frenar el documento, para poder auditarlo si el correo se equivoca alguna vez.
+- Cuanto texto se pasa: un cuerpo largo con cadena de respuestas puede traer codigos viejos de correos anteriores.
+
+CUIDADO CON LOS DATOS: el cuerpo de un correo trae datos personales -firmas, telefonos, direcciones- y no puede acabar en fixtures versionados sin pasar por `evals/barrido.py`. El buzon M365 real es SOLO LECTURA desde local.
+
+COMO SE MIDE: ninguno de los 59 casos del banco guarda hoy el correo. Para vigilar esta feature hara falta que el banco capture tambien el texto del correo, al menos de una muestra. Ver F-047, que es donde se vera de punta a punta.
+
+RELACIONADAS: F-045 (el banco que mide los patrones 1 y 2), F-002 (las obras activas que ya se le pasan a IA1), F-021 (eleccion de partida), F-047 (el ciclo completo).
+
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 
 estado **pendiente** · prioridad 3 · rigor `critico` · SDD sí
@@ -117,33 +147,6 @@ Y LA REVISION SE CAPTURA, que si no caduca: `evals/revision_manual.json`, versio
 FUGA DETECTADA al disenar esto: `evals/informe.py` imprime hoy 'esperado X, obtenido Y' campo a campo y `progress/evals_F-045.md` ESTA VERSIONADO CON IMPORTES DE PROVEEDOR DENTRO. En adelante el informe de progress/ lleva solo campo, veredicto y atribucion, y los valores viven en las fichas, fuera de git. Lo ya commiteado no lo borra este cambio -el historial de git no suelta lo que entra- y necesita decision del humano.
 
 RELACIONADAS: F-045 (el ground truth que esta ficha aprovecha), F-011 (el banco y su flujo), F-043 (el enrutado por familia que estos casos vigilan).
-
-### F-048 · El codigo de obra que viene en el TEXTO DEL CORREO llega al pipeline
-
-estado **pendiente** · prioridad 4 · rigor `critico` · SDD sí
-
-ORIGEN: peticion del humano el 2026-09-17: «apunta feature leer codigo del texto del correo. codigo de obra».
-
-EL PROBLEMA. La obra se deduce MAL cuando el albaran no la trae impresa: es el patron (2) de los nueve que el humano anoto revisando a mano los 59 albaranes. Hoy la obra la adivina la IA a partir del papel y de la lista de obras activas, y cuando el papel no dice nada no hay de donde sacarla.
-
-LA OPORTUNIDAD, medida el 2026-09-17: el correo con el que llega el albaran a menudo trae el codigo de obra en el asunto o en el cuerpo, escrito por quien lo envia. Es un dato FIABLE que hoy se TIRA: sv1 lista los adjuntos, sube el PDF al blob y publica `MensajeExtraccion`, que NO lleva asunto, ni cuerpo, ni remitente (verificado en `ruesma_comun/colas/mensajes.py`). El texto del correo muere en sv1.
-
-QUE HAY QUE HACER, en dos piezas que conviene no confundir:
-1. Que el TEXTO del correo (asunto y cuerpo, y probablemente el remitente) viaje desde sv1 hasta quien lo necesite. Es un cambio de contrato en `ruesma_comun`, asi que toca a todos los consumidores.
-2. Que de ese texto se extraiga el codigo de obra y se use como senal, sin que atropelle lo que diga el papel cuando el papel lo diga.
-
-ROBUSTEZ (criterio del humano, F-045 §filtro): NADA de reglas fragiles sobre el formato del correo, que cambia con cada remitente. El codigo de obra es un numero corto (696, 669, 693, 722 en el banco de evals), asi que buscar «un numero de tres digitos» en un correo daria falsos positivos a mansalva: fechas, numeros de albaran, importes. El filtro robusto es el mismo que ya funciona en otras partes: **validar el candidato contra la lista de OBRAS ACTIVAS**, que ya se le pasa a IA1 (F-002). Si el numero no es una obra activa, no es un codigo de obra. Eso es estrechar el espacio de busqueda, no anadir una regla.
-
-DECISIONES QUE HAY QUE TOMAR EN LA SPEC:
-- QUIEN MANDA: **decidido por el humano el 2026-09-17**. El codigo de obra del correo MANDA sobre lo que se lea del papel: «debe leer el codigo de obra del cuerpo del correo o del asunto. ese dato manda luego en la lectura de obra». Se busca en el CUERPO y en el ASUNTO. No es una senal mas a ponderar: es la fuente preferente, y la lectura del papel solo decide cuando el correo no trae codigo. Si el papel dice otra obra distinta, gana el correo; conviene dejar constancia de la discrepancia para que se pueda auditar, pero sin frenar el documento.
-- Si el texto se le da a la IA como contexto o se extrae con codigo antes. Lo primero es mas robusto ante formatos raros; lo segundo es mas barato y trazable.
-- Que pasa con un correo que trae VARIOS albaranes de obras distintas: el codigo del correo no puede aplicarse a todos a ciegas.
-
-CUIDADO CON LOS DATOS: el cuerpo de un correo puede traer datos personales (firmas, telefonos, direcciones) y no debe acabar versionado en fixtures sin pasar por el barrido de `evals/barrido.py`. Y el buzon M365 real es SOLO LECTURA desde local.
-
-COMO SE MIDE: el banco de F-045 tiene hoy 59 casos cuyo ground truth incluye el codigo de obra, pero NINGUNO trae el correo: para vigilar esta feature hara falta que el banco guarde tambien el texto del correo de cada caso, o al menos de una muestra.
-
-RELACIONADAS: F-045 (el banco que mide el patron 2), F-002 (las obras activas que se le pasan a IA1), F-047 (el ciclo completo, que es donde esto se vera de punta a punta).
 
 ### F-037 · sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar
 
