@@ -46,3 +46,8 @@ evals/inputs/
 progress/evals_*.md
 progress/historico/evals_*.md
 progress/impl_F-043_evals_*.md
+# Salidas de cada pasada del banco (fichas por caso y analisis): llevan
+# importes y precios de proveedor. Fuera de git en TODAS las ramas; antes solo
+# lo tapaba un .gitignore interno que la rama de F-047 versiona y que desaparece
+# al cambiar de rama (visto el 22-sep-2026).
+evals/salidas/
