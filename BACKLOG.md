@@ -3,13 +3,14 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **48 features**, 34 abiertas, 14 terminadas.
+Resumen: **49 features**, 35 abiertas, 14 terminadas.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
 | F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: codigo de OBRA y de PARTIDA | 1 | pendiente | critico |  |
+| F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -94,6 +95,22 @@ CUIDADO CON LOS DATOS: el cuerpo de un correo trae datos personales -firmas, tel
 COMO SE MIDE: ninguno de los 59 casos del banco guarda hoy el correo. Para vigilar esta feature hara falta que el banco capture tambien el texto del correo, al menos de una muestra. Ver F-047, que es donde se vera de punta a punta.
 
 RELACIONADAS: F-045 (el banco que mide los patrones 1 y 2), F-002 (las obras activas que ya se le pasan a IA1), F-021 (eleccion de partida), F-047 (el ciclo completo).
+
+DECISIONES DEL HUMANO SOBRE LA SPEC (2026-09-22), ya aplicadas en specs/F-048-correo-contexto-ia1/: (1) si el correo trae varios albaranes, el codigo se aplica a TODOS —«si hay varios albaranes aplica el codigo a todos»—, sin condicion de «solo si trae un codigo»; queda SIN DECIDIR que hacer cuando el correo menciona VARIOS codigos distintos, con la propuesta escrita en design.md D4 bis (decide el papel, los codigos quedan como candidatos y el revisor los ve). (2) La discrepancia entre el codigo del correo y la lectura del papel SE GUARDA (las dos lecturas y su origen) y SE MARCA para que el revisor la vea en la ficha de sv4 —por eso la feature toca ahora tambien sv4, solo para pintar: ni DDL ni escrituras—; el correo sigue mandando. (3) «En el futuro bajara % de fiabilidad»: FUERA DE ALCANCE, el dato queda guardado para poder hacerlo (ficha futura; bajar la confianza dispara review_required, asi que no es inocuo). Validadas ademas: la precedencia la sella el resolver de sv2, solo uniqueBody del cuerpo, el orden de despliegue sv3 -> sv2 -> sv1 y la muestra de medicion. La validacion de la partida contra la lista de partidas de la obra sale a F-049.
+
+### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
+
+estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
+
+ORIGEN MEDIDO: la pasada del ciclo completo de F-047 (analisis por caso del 2026-09-18, §1.3 y §1.6, fuera de git porque lleva precios) mide que LA PARTIDA SALE MAL EN 33 DE 41 albaranes evaluados y coloca este arreglo el PRIMERO por relacion coste/beneficio: «validar la partida leida contra la lista de partidas de la obra y, si no casa, quedarse con la mas parecida». Cada partida mal arrastra de media 3 campos aguas abajo (partida_final, partida de lineas anadidas, casa_con_contrato). Es tambien lo que el humano lleva anotado CINCO veces revisando a mano los 59 albaranes: «no leer la partida a ciegas, sino buscarla en la lista de partidas de la obra».
+
+EL SUBPATRON QUE ATACA: 7 albaranes pierden o deforman el prefijo de capitulo (03.09 por P5.03.09, PJ.0304 por P5.03.04, 04.03.05 por P4.03.05, RJ.14.01.02.02 por P5.14.01.02.02...), y otros 23 dan una partida «que no sale de ningun sitio identificable». Estrechar el espacio de busqueda, no anadir reglas.
+
+DONDE, verificado al escribir la spec de F-048: la lista de partidas HOJA de una obra SOLO existe hoy en sv4 (sigrid_lookup_client.fetch_partidas_por_obra, con _SQL_PARTIDAS_POR_OBRA sobre obrparpar y el calculo de hojas en Python); sv3 solo ve las partidas de las lineas de contrato y sv2 no la tiene. Validar en sv3 NO sirve: corre despues de IA1 e IA2 y no puede devolverles nada. El sitio es SV2, que ya habla con sigrid-api (como con las obras activas de F-002) y conoce la obra en cuanto termina la fase 1 —y con F-048, mejor y antes, porque la trae el correo—. ALCANCE: mover la consulta y el calculo de hojas a ruesma_comun.sigrid.partidas (sv4 pasa a importarlo, nunca una copia), cache por obra, inyectar la lista en el prompt de fase 2 para que IA2 ELIJA en vez de leer a ciegas, y rellenar origen_datos.partida.validada, que F-048 deja siempre a null.
+
+CUIDADOS: toca los cuatro prompts de fase 2 (RUTA SENSIBLE: exige pasada de evals con LLM real, que se factura), anade una llamada a sigrid-api por documento (solo lectura, maximo 10.000 filas por peticion, el balanceador corta a 230 s) y toca sv4 al mover la consulta, asi que su suite tiene que seguir verde sin cambios de comportamiento. Ojo tambien con el formato: hay 3 albaranes cuyo unico fallo son los ceros a la izquierda (CI.04.18 vs CI.4.18), que se arreglan normalizando antes de comparar, no cambiando la lectura.
+
+RELACIONADAS: F-048 (de donde sale, con el hueco validada=null ya preparado), F-021 (eleccion de partida), F-047 (el ciclo que lo mide), F-007 (partida ALM/acopio).
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 

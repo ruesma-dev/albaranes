@@ -7,33 +7,29 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
-**F-048 · SPEC ESCRITA** (2026-09-22, rama `feature/F-048-correo-contexto-ia1`,
-`specs/F-048-correo-contexto-ia1/`: 38 requisitos, 38 tareas). Pendiente de
-aprobación del humano. Hallazgos que condicionan el diseño: sv3 valida `data`
-con `extra='forbid'` y su merge rehace `data` a mano (hay que tocar sv3 aunque
-la ficha no lo listaba); `LlmCallLogger` escribe el prompt entero a disco; sv1
-no tiene ni un test; la lista de partidas de la obra solo existe en sv4; la
-inyección de F-047 no está integrada en esta rama (T27 es precondición).
+**F-048 · SPEC LISTA PARA IMPLEMENTAR** (2026-09-22, rama
+`feature/F-048-correo-contexto-ia1`, `specs/F-048-correo-contexto-ia1/`:
+41 requisitos, 40 tareas). Las siete decisiones abiertas las revisó el humano
+el 2026-09-22 y están **cerradas y aplicadas**: el código del correo se aplica
+a TODOS los albaranes del correo, y la discrepancia se guarda y se le enseña al
+revisor en la ficha de sv4 (por eso la feature toca ahora también sv4, solo
+para pintar). Bajar el % de fiabilidad queda FUERA de alcance, con el dato ya
+guardado para poder hacerlo: ficha futura.
 
-Decisiones abiertas para el humano:
+Queda UNA decisión abierta y dos pendientes del humano:
 
-1. **Precedencia en sv2, no en la IA** (design D3): IA1 lee correo y papel por
-   separado y un resolver de sv2 aplica «el correo manda». Sin esto no hay
-   forma de registrar la discrepancia.
-2. **Varios albaranes en un correo** (D4): manda si el correo trae UN código,
-   aunque traiga varios documentos. Alternativa estricta: con varios
-   documentos y papel discrepante, gana el papel.
-3. **La discrepancia no manda a revisión** (D6): solo rastro en
-   `origen_datos` dentro de `raw_extraction_json`.
-4. **Validar la partida contra la lista de la obra queda fuera** y se propone
-   como **F-049** (design §7): mover la consulta de sv4 a `ruesma_comun` y
-   validar en sv2. Hay que crear la ficha si se aprueba.
-5. **Solo `uniqueBody`** (D2): en un reenvío `RV:` el texto del remitente
-   original no llega. Se mide en T33 antes de cambiarlo.
-6. **Orden de despliegue obligatorio sv3 → sv2 → sv1** (design §9).
-7. **La muestra de correos** (design §8) la elige el humano: los cinco
-   atascados más ≥10 con partida mal; captura con `capturar_correo.py` (solo
-   lectura) o a mano, en `evals/inputs/correos/` (ignorado por git).
+1. **Varios CÓDIGOS distintos en el mismo correo** (design D4 bis): no es el
+   caso que él resolvió («un código, varios albaranes»). Propuesta escrita:
+   decide el papel, los códigos quedan como candidatos y el revisor los ve.
+2. **Cómo llegan los correos** (si los reenvía alguien de obra, `uniqueBody`
+   es justo lo que hay que leer) y **quién captura la muestra** de correos
+   para medir (design §8).
+
+Hallazgos que condicionan el diseño: sv3 valida `data` con `extra='forbid'` y
+su merge rehace `data` a mano; `LlmCallLogger` escribe el prompt entero a
+disco; sv1 no tiene ni un test; la lista de partidas de la obra solo existe en
+sv4 (de ahí **F-049**, ficha creada, `pending`, prioridad 2); la inyección de
+F-047 no está integrada en esta rama (T29 es precondición del bloque de evals).
 
 **F-045 · CAPA 1 IMPLEMENTADA** (2026-09-16, rama
 `feature/F-045-banco-evals-revision-manual`, 22 commits de tarea). Informe
