@@ -91,7 +91,7 @@ def _normalizar_cuerpo(texto: str | None) -> str:
 
 
 def _huella(asunto: str, cuerpo: str) -> str:
-    return hashlib.sha256(f"{asunto}\n\n{cuerpo}".encode("utf-8")).hexdigest()
+    return hashlib.sha256(f"{asunto}\n\n{cuerpo}".encode()).hexdigest()
 
 
 def construir_contexto_correo(

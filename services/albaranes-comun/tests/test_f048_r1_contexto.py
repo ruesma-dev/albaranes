@@ -32,7 +32,7 @@ CENTINELA = "CENTINELA-F048"
 
 def _huella(asunto: str, cuerpo: str) -> str:
     """Huella esperada: asunto y cuerpo conservados, separados por linea en blanco."""
-    return hashlib.sha256(f"{asunto}\n\n{cuerpo}".encode("utf-8")).hexdigest()
+    return hashlib.sha256(f"{asunto}\n\n{cuerpo}".encode()).hexdigest()
 
 
 class AlmacenDoble:

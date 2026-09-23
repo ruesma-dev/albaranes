@@ -40,7 +40,7 @@ def _escribir(tmp_path, request_summary):
 
 def test_f048_r37_instructions_y_user_text_sin_el_cuerpo(tmp_path):
     ctx, bloque = _bloque()
-    ruta, texto = _escribir(
+    _, texto = _escribir(
         tmp_path,
         {
             "instructions": f"Lee el albaran.\n{bloque}\nDevuelve JSON.",

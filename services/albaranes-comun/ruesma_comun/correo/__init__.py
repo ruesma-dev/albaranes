@@ -21,15 +21,15 @@ from ruesma_comun.correo.prompt import (
 )
 
 __all__ = [
+    "MARCA_FIN",
+    "MARCA_INICIO",
     "MAX_CARACTERES_DEFECTO",
+    "NOTA_SIN_CORREO",
     "ContextoCorreo",
     "construir_contexto_correo",
     "guardar_contexto_correo",
     "leer_contexto_correo",
     "nombre_blob_correo",
-    "MARCA_FIN",
-    "MARCA_INICIO",
-    "NOTA_SIN_CORREO",
     "redactar_correo",
     "render_bloque_correo",
 ]
