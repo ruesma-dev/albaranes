@@ -17,7 +17,6 @@ import copy
 import json
 
 from pydantic import BaseModel
-
 from ruesma_comun.correo import construir_contexto_correo, render_bloque_correo
 from ruesma_comun.correo.prompt import ADVERTENCIA_DATO
 from ruesma_comun.llm.llm_call_logger import LlmCallLogger
