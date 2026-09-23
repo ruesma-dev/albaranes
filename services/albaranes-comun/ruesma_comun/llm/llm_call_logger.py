@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from ruesma_comun.correo.prompt import redactar_correo
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,6 +28,10 @@ class LlmCallLogger:
           <base_dir>/<YYYYMMDD>/<HHMMSS_milis>_<provider>_<short_id>.json
       - El attachment binario (PDF, imagen) NUNCA se guarda crudo.
         Solo metadatos + sha256 para correlación con otros logs.
+      - El texto del correo (F-048, R37) tampoco: todo texto de
+        ``request_summary``, a cualquier profundidad, pasa por
+        ``redactar_correo`` antes de escribir, que deja en su lugar un
+        resumen (sha256, caracteres). No muta el dict del llamador.
       - El response del SDK se serializa best-effort:
           1. obj.model_dump() si es Pydantic v2.
           2. obj.to_dict() si lo expone (algunos SDKs).
@@ -102,7 +108,7 @@ class LlmCallLogger:
                 "document_id": document_id,
                 "status": "error" if error else "ok",
                 "error": error,
-                "request": request_summary,
+                "request": self._sin_correo(request_summary),
                 "response": self._serializable(response_payload),
             }
             target.write_text(
@@ -135,6 +141,17 @@ class LlmCallLogger:
             "size_bytes": len(data),
             "sha256": hashlib.sha256(data).hexdigest(),
         }
+
+    @classmethod
+    def _sin_correo(cls, obj: Any) -> Any:
+        """Copia de ``obj`` con cada bloque de correo redactado (R37)."""
+        if isinstance(obj, str):
+            return redactar_correo(obj)
+        if isinstance(obj, dict):
+            return {k: cls._sin_correo(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return [cls._sin_correo(v) for v in obj]
+        return obj
 
     @classmethod
     def _serializable(cls, obj: Any) -> Any:
