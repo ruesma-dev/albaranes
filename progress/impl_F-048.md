@@ -36,7 +36,8 @@ GREEN: T1 35 · T2 7 · T3 17 · T4 5 (9 tras CR-A1) · T5 44 (48 tras CR-A4).
 
 **Commits**: `e0e0a82` T6 primera suite · `2e6bf67` T7 `get_contenido` (R2, R4) · `bf9d983` T8
 pipeline (R3, R5) · `4a81304` T9 todas las páginas (R6) · `501b0fd` T10 blob lateral (R7, R10) ·
-`97d6cf6` T11 logs (R36) · `8e2a309` T12 `capturar_correo.py` (R38, R39).
+`97d6cf6` T11 logs (R36) · `8e2a309` T12 `capturar_correo.py` (R38, R39) · `26a9496` orden de
+imports según el ruff de la raíz (8 I001 que el ruff del servicio no veía; sin cambio de comportamiento).
 **Producción** (`services/albaranes-email/`): `domain/models/email_models.py` (`ContenidoCorreo`),
 `domain/ports/{mailbox_client,orchestrator_port}.py`, `infrastructure/graph/mail_client.py`,
 `application/pipelines/polling_pipeline.py`, `infrastructure/colas/intake_cola_adapter.py`,
@@ -164,16 +165,20 @@ comprueba un test). `capturar_correo.py` **no se ha ejecutado contra el buzón r
 
 - Suite de sv1: **62 passed in 1.57 s** (a mano, `python -m pytest -q` en el servicio).
 - Tests F-048 de comun que usa el bloque (T1 y T2), a mano: `42 passed in 0.91s`.
-- Ruff: los ficheros nuevos y `tests/` sin avisos; en los de producción tocados, el mismo número
-  de avisos que antes (todos previos: UP006, BLE001, RUF100...).
-- `bash harness/init.sh`: PENDIENTE_INIT
+- Ruff de la raíz: 1161 avisos, los mismos que antes del bloque (54 en sv1, todos previos).
+- `bash harness/init.sh` (tras `26a9496`): `ENTORNO LISTO`, exit 0. Raíz `865 passed in 173.16s`;
+  **`[OK] servicio sv1-email: pytest en verde`** (`62 passed in 25.77s` bajo coverage): ya no sale
+  el aviso «sin directorio de tests». El resto de servicios, de caché. `PUERTA COBERTURA: 99.3% de
+  299 líneas cambiadas cubiertas (297/299)`: las 2 sin cubrir son el `raise SystemExit(main())`
+  de `capturar_correo.py` y el `raise NotImplementedError` del puerto. `PUERTA TAMAÑO` impl
+  183/220. Sigue el `[AVISO]` de rutas sensibles por `llm_call_logger.py` (evals, T40).
 
 ### Evidencias (bloque B)
 
 | Evidencia | Valor real |
 |---|---|
 | Tests F-048 de sv1 | 62 passed (7 ficheros), 1.57 s |
-| Cobertura de las líneas cambiadas | PENDIENTE_COBERTURA |
+| Cobertura de las líneas cambiadas | 99.3 % (297/299), `PUERTA COBERTURA` de init.sh |
 | Mutación | en T34, con la feature completa (`python -m harness.mutacion --feature F-048`) |
 | Tiempo de la suite de sv1 | 1.57 s (19.4 s bajo `coverage run`) |
 
