@@ -7,29 +7,35 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
-**F-048 · SPEC LISTA PARA IMPLEMENTAR** (2026-09-22, rama
+**F-048 · SPEC v3 LISTA PARA IMPLEMENTAR** (2026-09-23, rama
 `feature/F-048-correo-contexto-ia1`, `specs/F-048-correo-contexto-ia1/`:
-41 requisitos, 40 tareas). Las siete decisiones abiertas las revisó el humano
-el 2026-09-22 y están **cerradas y aplicadas**: el código del correo se aplica
-a TODOS los albaranes del correo, y la discrepancia se guarda y se le enseña al
-revisor en la ficha de sv4 (por eso la feature toca ahora también sv4, solo
-para pintar). Bajar el % de fiabilidad queda FUERA de alcance, con el dato ya
-guardado para poder hacerlo: ficha futura.
+44 requisitos, 41 tareas; informe del cambio en `progress/spec_F-048_v3.md`).
+Aplicadas las decisiones del humano del 2026-09-23: **del correo SOLO la
+obra** (la partida sale del alcance); el código del correo manda y se CRUZA con
+el del papel; **si no cuadran, el documento va a revisión** (motivo
+`obra_correo_distinta_papel` en sv3, revoca lo del 22); **varios códigos en el
+correo** (D4 bis, decidido): si el del papel es uno de ellos se usa sin
+revisión, si no o el papel no trae código, revisión con `obra_correo_ambigua`
+y candidatos visibles en sv4. Irán MÁS albaranes a revisión (design §9).
 
-Queda UNA decisión abierta y dos pendientes del humano:
+Dudas abiertas que el humano puede querer mirar antes de implementar:
 
-1. **Varios CÓDIGOS distintos en el mismo correo** (design D4 bis): no es el
-   caso que él resolvió («un código, varios albaranes»). Propuesta escrita:
-   decide el papel, los códigos quedan como candidatos y el revisor los ve.
-2. **Cómo llegan los correos** (si los reenvía alguien de obra, `uniqueBody`
-   es justo lo que hay que leer) y **quién captura la muestra** de correos
-   para medir (design §8).
+1. **`correo_fuera_de_lista`** (código único del correo que no está en las
+   obras activas): hoy decide el papel y se pinta, pero NO manda a revisión
+   (D5, validada el 22). Con «si no cuadra, revisión» quizá debería.
+2. **Formato de los códigos**: el cruce solo ignora mayúsculas y espacios;
+   ceros a la izquierda o guiones darían falsas discrepancias (a revisión).
+3. **Cómo llegan los correos** y **quién captura la muestra** (design §8);
+   la muestra validada hablaba de «diez de los 33 con partida mal»: sin
+   partida en el alcance, quizá haya que reajustarla.
+4. **F-049** dice que rellenará `origen_datos.partida.validada` «que F-048 deja
+   a null»: F-048 ya no crea ese campo; lo creará F-049 (compatible).
 
 Hallazgos que condicionan el diseño: sv3 valida `data` con `extra='forbid'` y
 su merge rehace `data` a mano; `LlmCallLogger` escribe el prompt entero a
 disco; sv1 no tiene ni un test; la lista de partidas de la obra solo existe en
 sv4 (de ahí **F-049**, ficha creada, `pending`, prioridad 2); la inyección de
-F-047 no está integrada en esta rama (T29 es precondición del bloque de evals).
+F-047 no está integrada en esta rama (T30 es precondición del bloque de evals).
 
 **F-045 · CAPA 1 IMPLEMENTADA** (2026-09-16, rama
 `feature/F-045-banco-evals-revision-manual`, 22 commits de tarea). Informe
@@ -831,18 +837,9 @@ Siguiente paso: aprobación del humano y, con ella, el implementer sobre
 ## 2026-09-23 · PUNTO DE REANUDACION (sesion guardada)
 
 **En curso: F-048** (correo -> IA1), rama `feature/F-048-correo-contexto-ia1`,
-spec COMPLETA y aprobada por el humano salvo UNA decision:
-
-- **D4 bis, SIN DECIDIR**: que pasa si un mismo correo menciona VARIOS codigos
-  de obra distintos. Propuesta escrita en `design.md`: decide el papel, los
-  codigos quedan como candidatos y el revisor los ve en la ficha. Pendiente de
-  que el humano la apruebe. **Con eso, lanzar al implementer.**
-- Pendientes del humano, no bloquean: como llegan los correos (si los reenvia
-  alguien de obra, `uniqueBody` es lo que hay que leer) y quien captura la
-  muestra de correos de `design.md` §8.
-- Decidido el 2026-09-22: el codigo del correo se aplica a TODOS los albaranes
-  del correo; la discrepancia se guarda y se pinta en un bloque de aviso propio
-  de la ficha de sv4; bajar el % de fiabilidad queda para ficha futura.
+spec v3 del 2026-09-23 (solo obra; discrepancia y correo ambiguo mandan a
+revision), sin decisiones bloqueantes: ver las dudas abiertas de la cabecera.
+**Siguiente paso: aprobacion del humano de la v3 y lanzar al implementer.**
 
 **Aparcada: F-047** (`blocked` por decision, no por fallo). El ciclo completo
 FUNCIONA de punta a punta. Falta: analizar los 130 supervivientes de

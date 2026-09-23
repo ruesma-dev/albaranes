@@ -9,7 +9,7 @@ Resumen: **49 features**, 35 abiertas, 14 terminadas.
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: codigo de OBRA y de PARTIDA | 1 | pendiente | critico |  |
+| F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel | 1 | pendiente | critico |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
@@ -66,7 +66,7 @@ Resumen: **49 features**, 35 abiertas, 14 terminadas.
 
 ## Detalle
 
-### F-048 · El texto del correo (asunto y cuerpo) llega a IA1 como contexto: codigo de OBRA y de PARTIDA
+### F-048 · El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel
 
 estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
 
@@ -97,6 +97,8 @@ COMO SE MIDE: ninguno de los 59 casos del banco guarda hoy el correo. Para vigil
 RELACIONADAS: F-045 (el banco que mide los patrones 1 y 2), F-002 (las obras activas que ya se le pasan a IA1), F-021 (eleccion de partida), F-047 (el ciclo completo).
 
 DECISIONES DEL HUMANO SOBRE LA SPEC (2026-09-22), ya aplicadas en specs/F-048-correo-contexto-ia1/: (1) si el correo trae varios albaranes, el codigo se aplica a TODOS —«si hay varios albaranes aplica el codigo a todos»—, sin condicion de «solo si trae un codigo»; queda SIN DECIDIR que hacer cuando el correo menciona VARIOS codigos distintos, con la propuesta escrita en design.md D4 bis (decide el papel, los codigos quedan como candidatos y el revisor los ve). (2) La discrepancia entre el codigo del correo y la lectura del papel SE GUARDA (las dos lecturas y su origen) y SE MARCA para que el revisor la vea en la ficha de sv4 —por eso la feature toca ahora tambien sv4, solo para pintar: ni DDL ni escrituras—; el correo sigue mandando. (3) «En el futuro bajara % de fiabilidad»: FUERA DE ALCANCE, el dato queda guardado para poder hacerlo (ficha futura; bajar la confianza dispara review_required, asi que no es inocuo). Validadas ademas: la precedencia la sella el resolver de sv2, solo uniqueBody del cuerpo, el orden de despliegue sv3 -> sv2 -> sv1 y la muestra de medicion. La validacion de la partida contra la lista de partidas de la obra sale a F-049.
+
+DECISIONES DEL HUMANO DEL 2026-09-23, aplicadas en specs/F-048-correo-contexto-ia1/: (1) SOLO OBRA: «la partida de momento no se indica en correo. solo obra»; la partida sale del alcance de F-048 (ni lectura, ni precedencia, ni discrepancia, ni origen_datos.partida, que creara F-049). (2) PRECEDENCIA Y CRUCE: «el codigo indicado en el correo, ya sea en subject o en el body, manda sobre lo que elija la IA [...] va a mandar el del email, pero si no cuadra se marcara para revision»: IA1 lee el codigo del correo y el del papel y sv2 los cruza. (3) LA DISCREPANCIA MANDA A REVISION (revoca lo del 2026-09-22): se usa el del correo y sv3 anade el motivo obra_correo_distinta_papel a review_reasons; sin codigo en el papel no hay discrepancia. (4) VARIOS CODIGOS DISTINTOS EN EL CORREO: si el del papel es uno de ellos se usa y no va a revision; si no, o el papel no trae codigo, se queda la lectura del papel (o ninguna) y va a revision con obra_correo_ambigua, con los codigos del correo como candidatos visibles en la ficha de sv4. Consecuencia: iran MAS albaranes a revision; se cuenta en la muestra antes de desplegar.
 
 ### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
 
