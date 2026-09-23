@@ -78,9 +78,10 @@ albaran_factura_es:
         copies el correo entero.
     - La obra del PAPEL es otra lectura, independiente de la del correo:
       cabecera.obra_codigo se lee o se deduce del albarán SIEMPRE, como
-      hasta ahora, traiga o no obra el correo. NO copies en
-      cabecera.obra_codigo el código del correo: las dos lecturas las
-      cruza el sistema después.
+      hasta ahora, traiga o no obra el correo. Si el papel no permite
+      identificar la obra, cabecera.obra_codigo es null, como hasta
+      ahora. NO copies en cabecera.obra_codigo el código del correo: las
+      dos lecturas las cruza el sistema después.
 
     ## Reglas generales para las líneas
 

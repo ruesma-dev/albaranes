@@ -85,6 +85,9 @@ def test_f048_r12_el_task_real_de_fase_1_lleva_el_marcador_una_vez_junto_a_las_o
         "estén o no en la lista de obras de arriba",
         "esa lista es solo para cabecera.obra_codigo",
         "los códigos del correo los comprueba el sistema",
+        # CR-C2 (review del bloque C1): «siempre» no obliga a inventar la
+        # obra del papel; sin datos, null como hoy.
+        "si el papel no permite identificar la obra, cabecera.obra_codigo es null, como hasta ahora",
     ],
 )
 def test_f048_r16_el_task_real_dice_las_frases_clave(frase):
