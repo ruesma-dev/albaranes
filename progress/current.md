@@ -13,8 +13,22 @@ redacción, `LlmCallLogger` sin correo y el contrato `origen_datos`. Informe en
 `progress/impl_F-048.md`. **Desviación aplicada por decisión del humano del
 2026-09-23** (vía el líder): `normalizar_codigo` quita todo lo no alfanumérico
 y los ceros a la izquierda, y devuelve `None` si no queda nada; la spec (R18–R20,
-design §3) dice aún «mayúsculas y espacios» y `-> str`: la actualiza el líder.
+design §3) ya lo recogen en la v4 (D9).
 Siguiente: bloque B (sv1, T6–T12).
+
+**F-048 · SPEC v4** (2026-09-23, tarde; informe `progress/spec_F-048_v4.md`):
+aplicadas dos decisiones del humano. **D5 revisada**: el código del correo se
+valida contra TODAS las obras con contrato (activas o no), de la misma consulta
+y caché de F-002 (tarea nueva **T16 bis**); lo que no está en la lista no
+cuenta y se descarta ANTES de contar; si no queda ninguno, manda la IA **sin
+revisión** (`correo_fuera_de_lista`, solo rastro). **D9**: «sí, normaliza
+todo» (ya hecho en el bloque A). Solo mandan a revisión la discrepancia con un
+código de la lista y varios de la lista sin casar. Cierra las dudas 1 y 2 de
+abajo y revoca la 5 del informe v3. Nada del bloque A choca con la v4.
+Dudas nuevas: (a) R16 dice a IA1 que no deduzca la obra del papel si el correo
+trae obra: con un falso código la cabecera puede quedar sin la obra que antes
+se deducía (design §8); (b) los códigos descartados cuando otros sí cuentan no
+se guardan aparte.
 
 **F-048 · SPEC v3 LISTA PARA IMPLEMENTAR** (2026-09-23, rama
 `feature/F-048-correo-contexto-ia1`, `specs/F-048-correo-contexto-ia1/`:
@@ -25,16 +39,13 @@ el del papel; **si no cuadran, el documento va a revisión** (motivo
 `obra_correo_distinta_papel` en sv3, revoca lo del 22); **varios códigos en el
 correo** (D4 bis, decidido): si el del papel es uno de ellos se usa sin
 revisión, si no o el papel no trae código, revisión con `obra_correo_ambigua`
-y candidatos visibles en sv4. Irán MÁS albaranes a revisión (design §9).
+y candidatos visibles en sv4. Irán MÁS albaranes a revisión, aunque menos de lo previsto en la v3 (design §8).
 
 Dudas abiertas que el humano puede querer mirar antes de implementar:
 
-1. **`correo_fuera_de_lista`** (código único del correo que no está en las
-   obras activas): hoy decide el papel y se pinta, pero NO manda a revisión
-   (D5, validada el 22). Con «si no cuadra, revisión» quizá debería.
-2. **Formato de los códigos**: el cruce solo ignora mayúsculas y espacios;
-   ceros a la izquierda o guiones darían falsas discrepancias (a revisión).
-3. **Cómo llegan los correos** y **quién captura la muestra** (design §8);
+1. ~~`correo_fuera_de_lista`~~ CERRADA en la v4 (D5 revisada: sin revisión).
+2. ~~Formato de los códigos~~ CERRADA en la v4 (D9: normalizar todo).
+3. **Cómo llegan los correos** y **quién captura la muestra** (design §7);
    la muestra validada hablaba de «diez de los 33 con partida mal»: sin
    partida en el alcance, quizá haya que reajustarla.
 4. **F-049** dice que rellenará `origen_datos.partida.validada` «que F-048 deja

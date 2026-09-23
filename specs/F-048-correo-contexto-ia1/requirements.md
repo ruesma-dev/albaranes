@@ -18,15 +18,14 @@ obra: «la partida de momento no se indica en correo. solo obra» (2026-09-23).
   Graph asunto y `uniqueBody` en texto con UNA petición GET por mensaje, sin
   más escrituras sobre el buzón que las de hoy.
 - **R3.** SI `uniqueBody` llega vacío, ENTONCES el contexto lleva solo el
-  asunto (nunca el `body` completo, con la cadena de respuestas).
+  asunto (nunca el `body`, con la cadena de respuestas).
 - **R4.** SI Graph devuelve HTML pese a pedir texto, ENTONCES sv1 lo reduce a
   texto plano sin interpretar su contenido.
 - **R5.** SI la petición del contexto falla, ENTONCES sv1 sigue con los
   adjuntos sin contexto, sin mover el correo a `Errores` por ese motivo, y
   con un aviso en el log sin texto del correo.
-- **R6.** El contexto de un mensaje debe aplicarse a TODOS sus documentos:
-  cada página nueva de cada adjunto recibe el mismo contexto (mismo sha256),
-  sea uno o sean varios albaranes (decisión del humano, 2026-09-22).
+- **R6.** El contexto de un mensaje se aplica a TODOS sus documentos: cada
+  página nueva de cada adjunto recibe el mismo (mismo sha256) (2026-09-22).
 - **R7.** CUANDO sv1 encola una página NUEVA con contexto, debe guardarlo en
   `input/{document_id}.correo.json` ANTES de publicar `MensajeExtraccion`, que
   lleva el nombre del blob en el campo nuevo `correo_blob`. En la rama de
@@ -61,32 +60,34 @@ obra: «la partida de momento no se indica en correo. solo obra» (2026-09-23).
 
 ## C · Qué manda y el cruce: lo sella sv2, no la IA
 
-Los códigos se comparan sin mayúsculas ni espacios; «distintos» es tras normalizar.
-
-- **R18.** CUANDO el correo trae UN código de obra y está en la lista de obras
-  activas (o la lista no está disponible), sv2 fija `cabecera.obra_codigo` a
-  ese código con `fuente = correo` (motivo `correo_unico`), aunque el papel
-  diga otra cosa: el correo manda (decisión del humano, 2026-09-23).
-- **R19.** CUANDO se aplica R18 y el papel trae OTRO código de obra, sv2 marca
-  `obra.discrepancia = true` con las dos lecturas (correo y papel). SI el papel
-  no trae código o trae el mismo, ENTONCES no hay discrepancia.
-- **R20.** CUANDO el correo trae DOS O MÁS códigos distintos y el del papel es
-  uno de ellos, sv2 deja la obra del papel (motivo `correo_confirma_papel`,
-  sin discrepancia). SI el del papel no está entre ellos o el papel no trae
-  código, ENTONCES sv2 deja la obra del papel —o ninguna— sin imponer ninguno
-  del correo (motivo `correo_ambiguo`). En ambos casos los códigos quedan en
-  `candidatos_correo` (decisión del humano, 2026-09-23).
-- **R21.** SI la lista está disponible y el código único del correo no está en
-  ella, ENTONCES decide el papel (motivo `correo_fuera_de_lista`), el código
-  leído queda en `candidatos_correo` y el revisor lo ve (R33).
+- **R18.** Todo código se compara con `normalizar_codigo` (mayúsculas, fuera lo
+  no alfanumérico y los ceros a la izquierda; vacío ⇒ sin código: «sí,
+  normaliza todo», 2026-09-23) y se valida contra la lista de TODAS las obras
+  de Sigrid con contrato, activas o no, que sv2 ya descarga para F-002, sin
+  llamada nueva. Del correo CUENTAN solo los que están en ella; SI la lista no
+  está disponible, ENTONCES cuentan todos, con `validada = null`.
+- **R19.** CUANDO del correo cuenta UN código, sv2 fija `cabecera.obra_codigo`
+  a ese código —escrito como figura en la lista— con `fuente = correo` (motivo
+  `correo_unico`) aunque el papel diga otra cosa: el correo manda. SI el papel
+  trae OTRO código, ENTONCES `obra.discrepancia = true` con las dos lecturas;
+  sin código en el papel, o el mismo, no hay discrepancia.
+- **R20.** CUANDO cuentan DOS O MÁS códigos distintos y el del papel es uno de
+  ellos, sv2 deja la obra del papel (motivo `correo_confirma_papel`, sin
+  discrepancia). SI no lo es o el papel no trae código, ENTONCES deja la del
+  papel —o ninguna— sin imponer ninguno (motivo `correo_ambiguo`). En los dos
+  casos los que cuentan quedan en `candidatos_correo`.
+- **R21.** SI la lista está disponible y NINGÚN código del correo está en ella,
+  ENTONCES el correo se trata como sin código (será un pedido, un teléfono):
+  manda la IA con lo que lea del papel, motivo `correo_fuera_de_lista`,
+  `validada = false`, los leídos en `candidatos_correo`, sin discrepancia y
+  sin motivo de revisión («si no está manda IA», 2026-09-23).
 - **R22.** SI el mensaje no trae contexto, ENTONCES el `data` final es idéntico
   al de hoy salvo `origen_datos` (`fuente = papel`, motivo `sin_correo`).
 - **R23.** `origen_datos` lo sella el resolver: lo que ponga la IA se ignora, y
   `lectura_correo` no llega al `data` final.
 - **R24.** `origen_datos` no contiene el cuerpo: solo sha256, `truncado`,
   códigos y la frase de evidencia recortada a 160 caracteres.
-- **R25.** La precedencia y el cruce se aplican sobre el documento FINAL (tras
-  la fase 2).
+- **R25.** La precedencia y el cruce se aplican al documento FINAL (fase 2).
 
 ## D · Persistencia y revisión (sv3)
 
@@ -95,23 +96,24 @@ Los códigos se comparan sin mayúsculas ni espacios; «distintos» es tras norm
   de `albaran_documents_merge` (el defecto que F-043 cazó con `clasificacion`).
 - **R28.** La red de obra de sv3 (inexistente ⇒ sin obra + revisión) se aplica
   igual venga la obra del correo o del papel.
-- **R29.** CUANDO `origen_datos.obra.discrepancia` es true, sv3 debe añadir el
-  motivo `obra_correo_distinta_papel` a los motivos de revisión del documento,
-  con lo que `review_required = true`, sin cambiar la obra ni la confianza.
+- **R29.** CUANDO `origen_datos.obra.discrepancia` es true, sv3 añade el motivo
+  `obra_correo_distinta_papel` a los de revisión (`review_required = true`),
+  sin cambiar la obra ni la confianza.
 - **R30.** CUANDO `origen_datos.obra.motivo` es `correo_ambiguo`, sv3 debe
   añadir el motivo `obra_correo_ambigua`, con el mismo efecto.
-- **R31.** SI `origen_datos` falta o su obra no cumple R29 ni R30, ENTONCES los
-  motivos de revisión son idénticos a los de hoy. Los nombres de los dos
+- **R31.** SI `origen_datos` falta o su obra no cumple R29 ni R30 (sin correo,
+  sin código, fuera de lista, único sin discrepancia o confirmado por el papel),
+  ENTONCES los motivos de revisión son los de hoy. Los nombres de los dos
   motivos se definen UNA vez en `ruesma_comun` (los importan sv3 y sv4).
 
 ## E · Lo que ve el revisor (sv4, solo lectura)
 
-- **R32.** CUANDO el merge trae `origen_datos` con discrepancia, sv4 debe
-  mostrar en la ficha (`document_detail.html`), junto a la clasificación y los
-  motivos de revisión, un aviso con el campo, el código del correo y el del
-  papel.
+- **R32.** CUANDO el merge trae `origen_datos` con discrepancia, sv4 muestra en
+  la ficha (`document_detail.html`), junto a la clasificación y los motivos de
+  revisión, un aviso con el campo, el código del correo y el del papel.
 - **R33.** CUANDO la obra trae `correo_ambiguo`, `correo_confirma_papel` o
-  `correo_fuera_de_lista`, el aviso muestra `candidatos_correo` y el motivo.
+  `correo_fuera_de_lista`, el aviso muestra `candidatos_correo` y el motivo
+  (los dos últimos, informativos: no llevan motivo de revisión).
 - **R34.** Los motivos de R29–R30 aparecen en el bloque «Motivos de revisión»
   que ya existe, y el aviso de R32–R33 se pinta como advertencia cuando el
   documento trae alguno de ellos (como la clasificación en duda de F-043).
@@ -131,13 +133,12 @@ Los códigos se comparan sin mayúsculas ni espacios; «distintos» es tras norm
 ## G · Medición y verificación real
 
 - **R39.** Script de SOLO LECTURA en sv1 que, dado un `message_id`, pide el
-  contexto por el camino de R2 y lo guarda en
-  `evals/inputs/correos/{caso_id}.json`, sin mover, marcar ni modificar nada.
+  contexto por el camino de R2 y lo guarda en `evals/inputs/correos/{caso_id}.json`
+  sin mover, marcar ni modificar nada.
 - **R40.** CUANDO un caso del banco tiene ese fichero, la inyección de F-047 lo
   guarda con la MISMA función de `ruesma_comun` que sv1 y pone `correo_blob`.
 - **R41.** El ciclo admite inyectar el mismo caso con y sin correo.
-- **R42.** `encolar_extraccion.py` de sv2 admite un contexto desde fichero, por
-  la misma función de `ruesma_comun`.
+- **R42.** `encolar_extraccion.py` de sv2 admite un contexto desde fichero (misma función).
 - **R43.** La feature no se cierra sin una verificación extremo a extremo con
   un correo REAL y su albarán en el pipeline local, incluida la ficha de sv4.
 - **R44.** Cada R tiene test trazable (`test_f048_rN_...`) con fase RED;
