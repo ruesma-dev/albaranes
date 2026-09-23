@@ -183,32 +183,32 @@ def test_f048_r31_se_importan_desde_contratos():
 # normalizar_codigo · decision del humano del 2026-09-23
 # ------------------------------------------------------------------ #
 @pytest.mark.parametrize("codigo", ["0945", "945", "09-45", "09.45", " 0945 ", "09/45", "0 9 4 5"])
-def test_f048_r19_normalizar_codigo_equivalentes_dan_lo_mismo(codigo):
+def test_f048_r18_normalizar_codigo_equivalentes_dan_lo_mismo(codigo):
     assert od.normalizar_codigo(codigo) == "945"
 
 
-def test_f048_r19_normalizar_codigo_distintos_siguen_distintos():
+def test_f048_r18_normalizar_codigo_distintos_siguen_distintos():
     assert od.normalizar_codigo("0945") != od.normalizar_codigo("0946")
     assert od.normalizar_codigo("9045") == "9045"
     assert od.normalizar_codigo("0900") == "900"
 
 
-def test_f048_r19_normalizar_codigo_pasa_a_mayusculas():
+def test_f048_r18_normalizar_codigo_pasa_a_mayusculas():
     assert od.normalizar_codigo("ab-12") == "AB12"
     assert od.normalizar_codigo("ab 12") == od.normalizar_codigo("AB12")
 
 
-def test_f048_r19_normalizar_codigo_no_quita_palabras():
+def test_f048_r18_normalizar_codigo_no_quita_palabras():
     """Extraer el codigo es trabajo de IA1: aqui solo se normaliza."""
     assert od.normalizar_codigo("obra 0945") == "OBRA0945"
     assert od.normalizar_codigo("obra 0945") != od.normalizar_codigo("0945")
 
 
-def test_f048_r19_normalizar_codigo_solo_quita_ceros_de_la_izquierda():
+def test_f048_r18_normalizar_codigo_solo_quita_ceros_de_la_izquierda():
     assert od.normalizar_codigo("0A012") == "A012"
     assert od.normalizar_codigo("_0_945_") == "945"
 
 
 @pytest.mark.parametrize("vacio", [None, "", "   ", "000", "--", "0-0", ". / _"])
-def test_f048_r19_normalizar_codigo_vacio_es_sin_codigo(vacio):
+def test_f048_r18_normalizar_codigo_vacio_es_sin_codigo(vacio):
     assert od.normalizar_codigo(vacio) is None
