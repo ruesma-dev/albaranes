@@ -78,6 +78,13 @@ def test_f048_r12_el_task_real_de_fase_1_lleva_el_marcador_una_vez_junto_a_las_o
         # Menor 7 (review del bloque A): evidencia corta.
         "solo el fragmento corto del correo donde aparece el código",
         "como mucho 160 caracteres",
+        # CR-C1 (review del bloque C1): la prohibicion de la lista de obras
+        # activas NO se aplica a obra_codigos; D5 valida contra TODAS las
+        # obras, y eso lo hace sv2.
+        "todos los códigos de obra que leas en el asunto o en el cuerpo del correo",
+        "estén o no en la lista de obras de arriba",
+        "esa lista es solo para cabecera.obra_codigo",
+        "los códigos del correo los comprueba el sistema",
     ],
 )
 def test_f048_r16_el_task_real_dice_las_frases_clave(frase):

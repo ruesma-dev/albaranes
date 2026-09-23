@@ -67,9 +67,12 @@ albaran_factura_es:
     - Del correo SOLO se lee el código de OBRA. NUNCA la partida ni el
       código de imputación: esos salen solo del papel.
     - Devuelve SIEMPRE el bloque lectura_correo:
-      - obra_codigos: los códigos de obra que leas en el asunto o en el
-        cuerpo del correo, tal y como aparecen. Lista vacía si el correo
-        no trae ninguno o si no hay correo.
+      - obra_codigos: TODOS los códigos de obra que leas en el asunto o
+        en el cuerpo del correo, tal y como aparecen, estén o no en la
+        lista de obras de arriba. Esa lista es solo para
+        cabecera.obra_codigo; los códigos del correo los comprueba el
+        sistema. Lista vacía si el correo no trae ninguno o si no hay
+        correo.
       - evidencia: SOLO el fragmento corto del correo donde aparece el
         código, como mucho 160 caracteres. null si no hay código. No
         copies el correo entero.
