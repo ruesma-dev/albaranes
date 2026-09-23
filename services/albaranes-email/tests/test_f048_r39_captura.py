@@ -24,6 +24,7 @@ CONTENIDO = ContenidoCorreo(
     asunto="RE: Albaran obra 0945",
     cuerpo_unico=f"Va para la 0945.\n{CENTINELA}",
     tipo="html",
+    recibido_utc="2026-09-23T08:00:00Z",
 )
 
 
@@ -67,7 +68,21 @@ def test_f048_r39_captura_solo_pide_el_contenido_y_lo_guarda(tmp_path):
     assert datos["asunto"] == CONTENIDO.asunto
     assert datos["cuerpo"] == CONTENIDO.cuerpo_unico
     assert datos["tipo_origen"] == "html"
+    assert datos["recibido_utc"] == "2026-09-23T08:00:00Z"  # CR-B5
     assert datos["capturado_utc"].endswith("Z")
+
+
+def test_f048_r39_sin_fecha_de_recepcion_guarda_null(tmp_path):
+    """CR-B5: si Graph no da ``receivedDateTime``, ``recibido_utc`` queda a null."""
+    sin_fecha = ContenidoCorreo(asunto="Albaran", cuerpo_unico="Obra 0945", tipo="text")
+
+    ruta = capturar_correo.capturar(
+        BuzonSoloLectura(sin_fecha), mailbox=BUZON, message_id="m", caso_id="c1", directorio=tmp_path
+    )
+
+    datos = json.loads(ruta.read_text(encoding="utf-8"))
+    assert "recibido_utc" in datos
+    assert datos["recibido_utc"] is None
 
 
 def test_f048_r39_el_fichero_da_el_mismo_contexto_que_sv1(tmp_path):

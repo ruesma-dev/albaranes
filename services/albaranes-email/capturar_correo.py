@@ -17,8 +17,8 @@ ignorado; sin git, tambien lo rechaza.
 
 Formato del fichero (``version`` 1): ``caso_id``, ``message_id``,
 ``asunto`` y ``cuerpo`` TAL CUAL los da Graph (el HTML ya reducido a texto,
-sin normalizar ni recortar), ``tipo_origen`` (``text`` o ``html``) y
-``capturado_utc``. Quien lo lea construye el contexto con
+sin normalizar ni recortar), ``tipo_origen`` (``text`` o ``html``),
+``recibido_utc`` (``receivedDateTime`` de Graph, o null) y ``capturado_utc``. Quien lo lea construye el contexto con
 ``ruesma_comun.correo.construir_contexto_correo``, la MISMA funcion que usa
 sv1: asi la huella sale igual que si el correo hubiera entrado por el buzon.
 """
@@ -93,6 +93,7 @@ def capturar(
         "asunto": contenido.asunto,
         "cuerpo": contenido.cuerpo_unico,
         "tipo_origen": contenido.tipo,
+        "recibido_utc": contenido.recibido_utc,
         "capturado_utc": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
     }
     ruta.parent.mkdir(parents=True, exist_ok=True)

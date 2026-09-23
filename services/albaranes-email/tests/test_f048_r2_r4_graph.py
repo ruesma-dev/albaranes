@@ -63,9 +63,22 @@ def test_f048_r2_una_sola_peticion_get_con_select_y_prefer_texto():
     peticion = graph.peticiones[0]
     assert peticion.method == "GET"
     assert peticion.url.path == f"/v1.0/users/{BUZON}/messages/msg-1"
-    assert peticion.url.params["$select"].split(",") == ["subject", "uniqueBody"]
+    # ``receivedDateTime`` (CR-B5): la fecha para la captura de evals, en el MISMO GET.
+    assert peticion.url.params["$select"].split(",") == ["subject", "uniqueBody", "receivedDateTime"]
     assert peticion.headers["Prefer"] == 'outlook.body-content-type="text"'
     assert peticion.headers["Authorization"] == "Bearer token-de-prueba"
+
+
+def test_f048_r39_trae_la_fecha_de_recepcion_si_graph_la_da():
+    """CR-B5: ``recibido_utc`` tal cual la da Graph (ISO UTC); sin ella, ``None``."""
+    con_fecha = {**_respuesta("Obra 0945"), "receivedDateTime": "2026-09-23T08:00:00Z"}
+
+    assert _cliente(_GraphSoloLectura(con_fecha)).get_contenido(
+        mailbox=BUZON, message_id="msg-1"
+    ).recibido_utc == "2026-09-23T08:00:00Z"
+    assert _cliente(_GraphSoloLectura(_respuesta("Obra 0945"))).get_contenido(
+        mailbox=BUZON, message_id="msg-1"
+    ).recibido_utc is None
 
 
 def test_f048_r2_el_transporte_falla_si_ve_un_metodo_distinto_de_get():

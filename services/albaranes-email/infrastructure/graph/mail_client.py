@@ -290,7 +290,7 @@ class GraphMailClient(MailboxClient):
         mailbox: str,
         message_id: str,
     ) -> ContenidoCorreo:
-        """Asunto y ``uniqueBody`` en texto con UN GET (F-048, R2-R4).
+        """Asunto, ``uniqueBody`` en texto y fecha de recepcion con UN GET (F-048, R2-R4).
 
         Nunca pide ``body``: arrastra la cadena de respuestas citada (R3). El
         error no lleva ``response.text``, que podria citar el correo (R36).
@@ -300,7 +300,7 @@ class GraphMailClient(MailboxClient):
         response = self._client.get(
             url,
             headers=headers,
-            params={"$select": "subject,uniqueBody"},
+            params={"$select": "subject,uniqueBody,receivedDateTime"},
         )
         if response.status_code >= 300:
             raise RuntimeError(f"Graph contenido del mensaje {response.status_code}")
@@ -315,4 +315,5 @@ class GraphMailClient(MailboxClient):
             asunto=str(data.get("subject") or ""),
             cuerpo_unico=cuerpo,
             tipo=tipo,
+            recibido_utc=str(data.get("receivedDateTime") or "") or None,
         )

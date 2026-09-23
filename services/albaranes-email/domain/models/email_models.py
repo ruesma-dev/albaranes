@@ -36,3 +36,6 @@ class ContenidoCorreo:
     asunto: str
     cuerpo_unico: str
     tipo: str = "text"
+    # ``receivedDateTime`` tal cual lo da Graph (ISO UTC) o ``None``; lo
+    # guarda la captura de evals (CR-B5). El pipeline usa el del listado.
+    recibido_utc: str | None = None
