@@ -10,8 +10,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from io import BytesIO
 
+from pypdf import PdfWriter
+
 from application.pipelines.polling_pipeline import PollingPipeline
-from domain.models.email_models import EmailAttachment, EmailMessage
+from domain.models.email_models import ContenidoCorreo, EmailAttachment, EmailMessage
 from domain.ports.mailbox_client import MailboxClient
 from domain.ports.orchestrator_port import (
     OrchestratorAck,
@@ -19,7 +21,6 @@ from domain.ports.orchestrator_port import (
     OrchestratorError,
 )
 from infrastructure.document.pdf_page_splitter import PdfPageSplitter
-from pypdf import PdfWriter
 
 CENTINELA = "CENTINELA-F048"
 BUZON = "buzon@ejemplo.test"
@@ -57,8 +58,17 @@ def adjunto(att_id: str, nombre: str = "albaran.pdf", *, inline: bool = False) -
     )
 
 
+def contenido_inventado(cuerpo: str = f"Material para la obra 0945. {CENTINELA}", asunto: str = "Albaran obra") -> ContenidoCorreo:
+    """Contenido inventado de un correo, con el centinela en el cuerpo."""
+    return ContenidoCorreo(asunto=asunto, cuerpo_unico=cuerpo, tipo="text")
+
+
 class BuzonDoble(MailboxClient):
-    """Buzon en memoria. ``ficheros[att_id]`` son los bytes o una excepcion."""
+    """Buzon en memoria. ``ficheros[att_id]`` son los bytes o una excepcion.
+
+    ``contenido`` es lo que devuelve ``get_contenido`` (o la excepcion que
+    lanza); por defecto, un correo inventado con el centinela.
+    """
 
     def __init__(
         self,
@@ -66,10 +76,12 @@ class BuzonDoble(MailboxClient):
         mensajes: list[EmailMessage],
         adjuntos: dict[str, list[EmailAttachment]],
         ficheros: dict[str, bytes | Exception],
+        contenido: ContenidoCorreo | Exception | None = None,
     ) -> None:
         self._mensajes = mensajes
         self._adjuntos = adjuntos
         self._ficheros = ficheros
+        self._contenido = contenido if contenido is not None else contenido_inventado()
         self.llamadas: list[tuple[str, str]] = []
         self.movidos: list[tuple[str, str]] = []
 
@@ -98,6 +110,16 @@ class BuzonDoble(MailboxClient):
     def move_message(self, mailbox: str, message_id: str, destination_folder_id: str) -> None:
         self.llamadas.append(("move_message", message_id))
         self.movidos.append((message_id, destination_folder_id))
+
+    def get_contenido(self, mailbox: str, message_id: str) -> ContenidoCorreo:
+        self.llamadas.append(("get_contenido", message_id))
+        if isinstance(self._contenido, Exception):
+            raise self._contenido
+        return self._contenido
+
+    def veces(self, metodo: str) -> int:
+        """Cuantas veces se llamo a ``metodo``."""
+        return sum(1 for nombre, _ in self.llamadas if nombre == metodo)
 
 
 @dataclass(frozen=True)

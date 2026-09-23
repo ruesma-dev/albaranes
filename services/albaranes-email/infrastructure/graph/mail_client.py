@@ -2,21 +2,84 @@
 from __future__ import annotations
 
 import logging
+from html.parser import HTMLParser
 from typing import Any, Dict, List
 
 import httpx
 
-from domain.models.email_models import EmailAttachment, EmailMessage
+from domain.models.email_models import ContenidoCorreo, EmailAttachment, EmailMessage
 from domain.ports.mailbox_client import MailboxClient
 from infrastructure.graph.token_provider import GraphTokenProvider
 
 logger = logging.getLogger(__name__)
 
+# Pide el cuerpo en texto plano (F-048, D2). Graph puede ignorarlo y
+# devolver HTML: por eso ``get_contenido`` mira el ``contentType``.
+_PREFER_TEXTO = 'outlook.body-content-type="text"'
+
+# Etiquetas que separan bloques de texto: se traducen a un salto de linea.
+_ETIQUETAS_DE_BLOQUE = frozenset({
+    "br", "p", "div", "li", "tr", "table", "ul", "ol",
+    "h1", "h2", "h3", "h4", "h5", "h6",
+})
+# Etiquetas cuyo contenido no es texto del correo (estilos y codigo).
+_ETIQUETAS_SIN_TEXTO = frozenset({"script", "style"})
+
+
+class _ExtractorTexto(HTMLParser):
+    """Se queda con el texto de un HTML; no sigue enlaces ni ejecuta nada."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._trozos: list[str] = []
+        self._dentro_sin_texto = 0
+
+    def handle_starttag(self, tag: str, attrs: list) -> None:
+        if tag in _ETIQUETAS_SIN_TEXTO:
+            self._dentro_sin_texto += 1
+        elif tag in _ETIQUETAS_DE_BLOQUE:
+            self._trozos.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in _ETIQUETAS_SIN_TEXTO:
+            self._dentro_sin_texto = max(0, self._dentro_sin_texto - 1)
+        elif tag in _ETIQUETAS_DE_BLOQUE:
+            self._trozos.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if not self._dentro_sin_texto:
+            self._trozos.append(data)
+
+    def texto(self) -> str:
+        lineas = (linea.strip() for linea in "".join(self._trozos).split("\n"))
+        return "\n".join(linea for linea in lineas if linea)
+
+
+def html_a_texto(html: str) -> str:
+    """Reduce un HTML a texto plano (F-048, R4) sin interpretar su contenido.
+
+    Solo quita marcado: las etiquetas de bloque pasan a saltos de linea, las
+    entidades se resuelven y se descartan ``script`` y ``style``. Lo que diga
+    el texto no se mira: esa decision es de la IA, y el texto le llega como
+    dato (D7).
+    """
+    extractor = _ExtractorTexto()
+    extractor.feed(html)
+    extractor.close()
+    return extractor.texto()
+
 
 class GraphMailClient(MailboxClient):
-    def __init__(self, token_provider: GraphTokenProvider, timeout_s: int) -> None:
+    def __init__(
+        self,
+        token_provider: GraphTokenProvider,
+        timeout_s: int,
+        *,
+        http_client: httpx.Client | None = None,
+    ) -> None:
         self._token_provider = token_provider
-        self._client = httpx.Client(timeout=timeout_s)
+        # ``http_client`` solo lo pasan los tests (``httpx.MockTransport``).
+        self._client = http_client or httpx.Client(timeout=timeout_s)
         self._base = "https://graph.microsoft.com/v1.0"
 
     def _headers(self) -> dict[str, str]:
@@ -221,3 +284,35 @@ class GraphMailClient(MailboxClient):
             raise RuntimeError(
                 f"Graph move {response.status_code}: {response.text[:400]}"
             )
+
+    def get_contenido(
+        self,
+        mailbox: str,
+        message_id: str,
+    ) -> ContenidoCorreo:
+        """Asunto y ``uniqueBody`` en texto con UN GET (F-048, R2-R4).
+
+        Nunca pide ``body``: arrastra la cadena de respuestas citada (R3). El
+        error no lleva ``response.text``, que podria citar el correo (R36).
+        """
+        url = f"{self._base}/users/{mailbox}/messages/{message_id}"
+        headers = {**self._headers(), "Prefer": _PREFER_TEXTO}
+        response = self._client.get(
+            url,
+            headers=headers,
+            params={"$select": "subject,uniqueBody"},
+        )
+        if response.status_code >= 300:
+            raise RuntimeError(f"Graph contenido del mensaje {response.status_code}")
+
+        data = response.json() or {}
+        unico = data.get("uniqueBody") or {}
+        tipo = str(unico.get("contentType") or "text").lower()
+        cuerpo = str(unico.get("content") or "")
+        if tipo == "html":
+            cuerpo = html_a_texto(cuerpo)
+        return ContenidoCorreo(
+            asunto=str(data.get("subject") or ""),
+            cuerpo_unico=cuerpo,
+            tipo=tipo,
+        )

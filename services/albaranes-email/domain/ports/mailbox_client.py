@@ -4,7 +4,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List
 
-from domain.models.email_models import EmailAttachment, EmailMessage
+from domain.models.email_models import ContenidoCorreo, EmailAttachment, EmailMessage
 
 
 class MailboxClient(ABC):
@@ -49,4 +49,17 @@ class MailboxClient(ABC):
         message_id: str,
         destination_folder_id: str,
     ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_contenido(
+        self,
+        mailbox: str,
+        message_id: str,
+    ) -> ContenidoCorreo:
+        """Asunto y parte unica del cuerpo de un mensaje (F-048, R2).
+
+        SOLO LECTURA: una peticion por mensaje y ninguna escritura sobre el
+        buzon. Si falla, lanza; decidir que hacer es del pipeline (R5).
+        """
         raise NotImplementedError
