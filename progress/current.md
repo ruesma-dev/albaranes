@@ -827,3 +827,32 @@ gestionada no se ejercita).
 
 Siguiente paso: aprobación del humano y, con ella, el implementer sobre
 `feature/F-047-evals-ciclo-completo`.
+
+## 2026-09-23 · PUNTO DE REANUDACION (sesion guardada)
+
+**En curso: F-048** (correo -> IA1), rama `feature/F-048-correo-contexto-ia1`,
+spec COMPLETA y aprobada por el humano salvo UNA decision:
+
+- **D4 bis, SIN DECIDIR**: que pasa si un mismo correo menciona VARIOS codigos
+  de obra distintos. Propuesta escrita en `design.md`: decide el papel, los
+  codigos quedan como candidatos y el revisor los ve en la ficha. Pendiente de
+  que el humano la apruebe. **Con eso, lanzar al implementer.**
+- Pendientes del humano, no bloquean: como llegan los correos (si los reenvia
+  alguien de obra, `uniqueBody` es lo que hay que leer) y quien captura la
+  muestra de correos de `design.md` §8.
+- Decidido el 2026-09-22: el codigo del correo se aplica a TODOS los albaranes
+  del correo; la discrepancia se guarda y se pinta en un bloque de aviso propio
+  de la ficha de sv4; bajar el % de fiabilidad queda para ficha futura.
+
+**Aparcada: F-047** (`blocked` por decision, no por fallo). El ciclo completo
+FUNCIONA de punta a punta. Falta: analizar los 130 supervivientes de
+`progress/mutacion_F-047.md` (vigente, mide 2e05499), T24-T26 manuales, la
+revision, y limpiar 28 worktrees huerfanos de mutacion.
+
+**Backlog inmediato**: F-049 (validar la partida contra la lista de partidas de
+la obra; prioridad 2; el arreglo con mejor coste/beneficio segun el analisis) y
+F-046 (catalogo: combustible a documento, grava, ferreteria, ferralla).
+
+**Pendientes del humano que arrastran dias**: meter un albaran por produccion
+(desplegado el 16-sep, sin que haya pasado ninguno), y decidir si se versionan
+los libros de `evals/ground_truth/` (estuvieron a punto de perderse dos veces).
