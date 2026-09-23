@@ -13,12 +13,8 @@ cambiados `colas/mensajes.py`, `llm/llm_call_logger.py` y `contratos/__init__.py
 **Tests**: `services/albaranes-comun/tests/test_f048_{r1_contexto,r8_r9_mensaje,r13_prompt,r37_llm_logger,r24_origen_datos}.py`.
 Los textos son inventados, con el centinela `CENTINELA-F048`. Sin red ni BBDD.
 
-### Desviación de la spec, por decisión del humano (2026-09-23, vía el líder)
-
-**`normalizar_codigo`** pasa a mayúsculas, quita todo lo que no sea alfanumérico y los ceros a la
-izquierda, y devuelve `None` si no queda nada. `0945`, `945`, `09-45`, `09.45` y ` 0945 ` dan `945`;
-`0945` ≠ `0946`; `000` y `--` dan `None`. No quita palabras: `obra 0945` da `OBRA0945`. La spec
-(R18–R20, design §3: «mayúsculas y espacios», `-> str`) **la actualiza el líder**.
+**`normalizar_codigo`** empezó como desviación, por decisión del humano. Hoy ya no lo es: la v4 la recoge
+como R18/D9 (mayúsculas, fuera lo no alfanumérico y los ceros; vacío ⇒ `None`). NFKC, en CR-A4.
 
 ### Decisiones donde la spec no llegaba al detalle
 
@@ -39,8 +35,8 @@ izquierda, y devuelve `None` si no queda nada. `0945`, `945`, `09-45`, `09.45` y
 5. **`redactar_correo`** deja `[correo omitido: sha256=<huella del contexto>, caracteres=<longitud del
    segmento>]`; si no hay línea de huella, la calcula sobre el segmento. Un bloque sin cerrar se redacta
    hasta el final.
-6. **`LlmCallLogger._sin_correo`** hace una copia recursiva (dict, list, tuple) y redacta cada `str` de
-   `request_summary`. No muta el dict del llamador.
+6. **`LlmCallLogger._sin_correo`** hace una copia recursiva (dict, list, tuple) y redacta cada `str`. No
+   muta el dict del llamador. Desde CR-A1 se aplica a todo lo que se escribe, no solo a `request_summary`.
 7. **`OrigenDatos`/`OrigenCampo`** usan `extra="ignore"`. `fuente` y `motivo` son `Literal` derivados de
    las constantes: un motivo desconocido no valida. `evidencia` junta espacios, se recorta a 160 y,
    vacía, pasa a `None`. `hay_discrepancia` es una propiedad y no se serializa. No hay `partida` (D8).
@@ -141,3 +137,81 @@ se importan de `ruesma_comun.contratos`, sin copiarlos.
 | Mutación | se lanza en T34, con la feature completa (`python -m harness.mutacion --feature F-048`) |
 
 Este bloque no tiene verificaciones MANUAL: las de la feature son T36–T40. Queda fuera todo lo demás (T6–T41).
+
+## Bloque A · cambios de la review (pasada 1) — 2026-09-23
+
+Respuesta a `progress/review_F-048_bloque_A.md` (CHANGES_REQUESTED). Los menores 5 y 7 son avisos
+para el bloque C y no se tocan aquí. El 6 no pide cambio y el 8 lo hizo el líder.
+
+**Commits**: `32b3a57` CR-A1 logger (R37, bloqueante 1; T4 vuelve a `[x]`) · `87972da` CR-A2 renombra
+`r19`→`r18` (menor 2) · `606da58` CR-A3 los docstrings citan R18 y D9 (menor 3) · `56ad7f0` CR-A4 NFKC
+(menor 4) · `8568cec` quita una línea en blanco entre imports que puse en CR-A1 y que el ruff de la raíz rechaza.
+
+### CR-A1 · R37 en todo lo que escribe el logger
+
+`log_call` pasa por `_sin_correo` el **payload entero** que va a disco: petición, respuesta (después
+de `_serializable`) y error. También redacta las **claves** `str` de los dicts, y `json.dumps` usa
+`default=_str_sin_correo`, así que un objeto que no es JSON sale por su `str` ya redactado. Este último
+era un cuarto hueco, de la misma familia que los tres de la review: un objeto opaco en `request_summary`
+saltaba `_sin_correo` y llegaba entero a `default=str`. Tests nuevos, con el centinela buscado en **todo
+lo que hay en `tmp_path`** (`rglob`): (a) `_RespuestaSdk`, un modelo pydantic con `instructions`;
+(b) el bloque anidado en la respuesta: `output[].content[].text`, una tupla y una clave de dict; (c) un
+`error` que lo contiene; (d) un objeto que no es JSON. Además, con el `Response` real de `openai`
+(3.0.0 en el venv, creado con `model_construct`) y `{"raw_sdk_response": resp}`, sale `centinela en
+disco: False`. La review había reproducido `True`.
+
+RED (`python -m pytest tests/test_f048_r37_llm_logger.py -q --tb=line`, con el logger de HEAD):
+```
+E   assert 'CENTINELA-F048' not in '{\n  "times..."{}"\n  }\n}'
+        bra 1234. CENTINELA-F048\n<<<FIN_CORREO>>>",
+E   assert 'CENTINELA-F048' not in '{\n  "times...   }\n  }\n}'
+E   assert 'CENTINELA-F048' not in '{\n  "times...se": null\n}'
+E   assert 'CENTINELA-F048' not in '{\n  "times...se": null\n}'
+FAILED ...::test_f048_r37_respuesta_pydantic_con_instructions_sin_el_cuerpo
+FAILED ...::test_f048_r37_bloque_anidado_en_la_respuesta_sin_el_cuerpo
+FAILED ...::test_f048_r37_error_con_el_bloque_sin_el_cuerpo
+FAILED ...::test_f048_r37_objeto_no_json_se_escribe_sin_el_cuerpo
+4 failed, 5 passed in 0.90s
+```
+GREEN: `9 passed in 0.69s`. Con el código ya escrito, la primera ejecución dio 2 fallos por un error
+del test: esperaba `[correo omitido` justo después del prefijo, pero la advertencia va **antes** de la
+marca y se queda (el mismo tropiezo que en T3/T4). Corregí la aserción (`{ADVERTENCIA_DATO}\n[correo
+omitido: `) y repetí el RED contra el logger de HEAD (`git stash` solo del logger): son los 4 fallos de
+arriba. Ruff del logger: 10 avisos antes y 10 después, todos previos (BLE001, S110, UP017).
+
+### CR-A4 · NFKC en `normalizar_codigo`
+
+`unicodedata.normalize("NFKC", str(codigo))` va antes de las mayúsculas, la limpieza y los ceros.
+**Decisión sobre `'0945²'`**: da `'9452'`. NFKC convierte el superíndice en `2`, y no añado una regla
+para quitarlo, porque D9 no la recoge y sería una regla nueva. Si `9452` no es una obra de la lista,
+R18 lo descarta y no cuenta. Si lo fuera, se asignaría esa obra (improbable: IA1 devuelve ASCII). La
+alternativa de antes, `'945²'`, tampoco casaba con nada. Queda en el docstring y fijado por un test.
+
+RED (`python -m pytest tests/test_f048_r24_origen_datos.py -q --tb=line -k "nfkc or superindice"`):
+```
+E   AssertionError: assert '０９４５' == '945'
+E   AssertionError: assert 'ＡＢ12' == 'AB12'
+E   AssertionError: assert '０００' == None
+E   AssertionError: assert '945²' == '9452'
+4 failed, 44 deselected in 1.73s
+```
+GREEN: `48 passed in 1.08s` (el fichero entero).
+
+### Resultados reales
+
+- `bash harness/init.sh`: `ENTORNO LISTO` (cifras en «Evidencias»; esta vez comun corrió sin caché).
+  Avisos previos: sv1 sin tests (T6), infra y ruff de la raíz (1161, deuda).
+- **`PUERTA RUTAS SENSIBLES [evals]`**: ahora se aplica y da `[AVISO]`, que no bloquea. Falta
+  `progress/evals_F-048.md` para `llm/llm_call_logger.py` (propone `python -m evals.runner --con-llm
+  --feature F-048`). **No hay evidencia de evals**: es T40, se factura y requiere el visto bueno del humano.
+
+### Evidencias (review del bloque A)
+
+| Evidencia | Valor real |
+|---|---|
+| Tests F-048 del bloque | 116 passed (5 ficheros; eran 108), 8.06 s |
+| Suite comun / raíz | 259 passed + 3 skipped, 155.95 s / 865 passed, 362.91 s (init.sh) |
+| Cobertura de las líneas cambiadas | 100.0 % (173/173), `PUERTA COBERTURA` |
+| Mutación | sigue en T34, con la feature completa (`python -m harness.mutacion --feature F-048`) |
+
+Sin verificaciones MANUAL nuevas. Queda fuera: los menores 5 y 7 (bloque C) y T6–T41.

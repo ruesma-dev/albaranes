@@ -14,6 +14,12 @@ redacción, `LlmCallLogger` sin correo y el contrato `origen_datos`. Informe en
 2026-09-23** (vía el líder): `normalizar_codigo` quita todo lo no alfanumérico
 y los ceros a la izquierda, y devuelve `None` si no queda nada; la spec (R18–R20,
 design §3) ya lo recogen en la v4 (D9).
+**Review del bloque A (pasada 1, CHANGES_REQUESTED) atendida** (2026-09-23,
+implementer, `32b3a57..8568cec`): el logger redacta el correo en petición,
+respuesta, error, claves y `str` de lo no JSON (R37; T4 `[x]`); tests `r18`;
+docstrings con D9; NFKC en `normalizar_codigo` (`'0945²'` da `'9452'`, a
+propósito). La puerta de rutas sensibles da `[AVISO]`: falta la evidencia de
+evals (T40, se factura). Pendiente: pasada 2 de la review del bloque A.
 Siguiente: bloque B (sv1, T6–T12).
 
 **F-048 · SPEC v4** (2026-09-23, tarde; informe `progress/spec_F-048_v4.md`):
