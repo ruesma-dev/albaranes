@@ -114,6 +114,9 @@ def test_f048_r39_si_graph_falla_no_escribe_nada(tmp_path):
 def test_f048_r39_main_captura_con_el_buzon_del_entorno(tmp_path, monkeypatch, capsys):
     buzon = BuzonSoloLectura()
     monkeypatch.setattr(capturar_correo, "_buzon_desde_entorno", lambda: (buzon, BUZON))
+    # ``tmp_path`` no esta en el repositorio: aqui se da por ignorada para
+    # probar el resto del CLI; el rechazo tiene sus propios tests (R38).
+    monkeypatch.setattr(capturar_correo, "ruta_ignorada_por_git", lambda ruta: True)
 
     codigo = capturar_correo.main(
         ["--message-id", "msg-9", "--caso", "ALB-009", "--directorio", str(tmp_path)]
@@ -167,3 +170,65 @@ def test_f048_r38_la_ruta_de_salida_por_defecto_la_ignora_git():
     )
 
     assert resultado.returncode == 0, "evals/inputs/correos/ tiene que estar ignorada por git"
+
+
+def _buzon_que_no_se_puede_crear() -> tuple[MailboxClient, str]:
+    raise AssertionError("con la ruta rechazada no se lee el .env ni se habla con Graph")
+
+
+@pytest.mark.parametrize(
+    "directorio",
+    [
+        capturar_correo.RAIZ_SERVICIO.parents[1] / "docs",  # versionada
+        capturar_correo.RAIZ_SERVICIO.parents[1] / "specs",  # versionada
+    ],
+    ids=["docs", "specs"],
+)
+def test_f048_r38_main_rechaza_un_directorio_versionado(directorio, monkeypatch, capsys):
+    """CR-B1: ``--directorio`` no puede sacar un correo real a una ruta versionada."""
+    monkeypatch.setattr(capturar_correo, "_buzon_desde_entorno", _buzon_que_no_se_puede_crear)
+    salida = directorio / "CR-B1-NO-DEBE-EXISTIR.json"
+
+    with pytest.raises(SystemExit) as fallo:
+        capturar_correo.main(
+            ["--message-id", "msg-1", "--caso", "CR-B1-NO-DEBE-EXISTIR", "--directorio", str(directorio)]
+        )
+
+    assert fallo.value.code == 2
+    assert not salida.exists()
+    assert "ignorada por git" in capsys.readouterr().err
+
+
+def test_f048_r38_main_rechaza_un_directorio_que_git_no_confirma(tmp_path, monkeypatch, capsys):
+    """Fuera del repositorio git no puede confirmar nada: se rechaza."""
+    monkeypatch.setattr(capturar_correo, "_buzon_desde_entorno", _buzon_que_no_se_puede_crear)
+
+    with pytest.raises(SystemExit) as fallo:
+        capturar_correo.main(["--message-id", "msg-1", "--caso", "c1", "--directorio", str(tmp_path)])
+
+    assert fallo.value.code == 2
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_f048_r38_la_ruta_por_defecto_la_confirma_git():
+    if shutil.which("git") is None:
+        pytest.skip("git no disponible")
+
+    assert capturar_correo.ruta_ignorada_por_git(capturar_correo.ruta_captura("ALB-001")) is True
+    assert capturar_correo.ruta_ignorada_por_git(capturar_correo.RAIZ_SERVICIO / "capturar_correo.py") is False
+
+
+def test_f048_r38_sin_git_se_rechaza(monkeypatch):
+    monkeypatch.setattr(capturar_correo.shutil, "which", lambda nombre: None)
+
+    assert capturar_correo.ruta_ignorada_por_git(capturar_correo.ruta_captura("ALB-001")) is False
+
+
+def test_f048_r38_si_git_no_arranca_se_rechaza(monkeypatch):
+    def _revienta(*args: object, **kwargs: object) -> None:
+        raise FileNotFoundError("git")
+
+    monkeypatch.setattr(capturar_correo.shutil, "which", lambda nombre: "git")
+    monkeypatch.setattr(capturar_correo.subprocess, "run", _revienta)
+
+    assert capturar_correo.ruta_ignorada_por_git(capturar_correo.ruta_captura("ALB-001")) is False

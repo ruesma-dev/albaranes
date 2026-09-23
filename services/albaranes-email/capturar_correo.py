@@ -11,6 +11,9 @@ el pipeline (``GraphMailClient.get_contenido``: un GET) y lo guarda en
 modifica nada del buzon.
 
 La ruta de salida la ignora git (R38): un correo real nunca se versiona.
+Por eso el CLI rechaza, antes de leer el ``.env`` o hablar con Graph, un
+``--directorio`` cuyo fichero de salida ``git check-ignore`` no confirme
+ignorado; sin git, tambien lo rechaza.
 
 Formato del fichero (``version`` 1): ``caso_id``, ``message_id``,
 ``asunto`` y ``cuerpo`` TAL CUAL los da Graph (el HTML ya reducido a texto,
@@ -24,6 +27,8 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -47,6 +52,27 @@ def ruta_captura(caso_id: str, directorio: Path = DIRECTORIO_SALIDA) -> Path:
     if not _CASO_VALIDO.fullmatch(caso_id or ""):
         raise ValueError(f"caso no valido: {caso_id!r} (letras, digitos, '_', '.' o '-')")
     return Path(directorio) / f"{caso_id}.json"
+
+
+def ruta_ignorada_por_git(ruta: Path) -> bool:
+    """True solo si ``git check-ignore`` confirma ``ruta`` ignorada (R38).
+
+    Cualquier otra cosa —ruta versionada, fuera del repositorio, git ausente
+    o que no arranca— da False: ante la duda, no se escribe.
+    """
+    if shutil.which("git") is None:
+        return False
+    try:
+        resultado = subprocess.run(
+            ["git", "check-ignore", "-q", str(Path(ruta).resolve())],
+            cwd=RAIZ_SERVICIO,
+            check=False,
+            capture_output=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return resultado.returncode == 0
 
 
 def capturar(
@@ -93,6 +119,13 @@ def main(argv: list[str] | None = None) -> int:
         "--directorio", type=Path, default=DIRECTORIO_SALIDA, help="carpeta de salida"
     )
     opciones = analizador.parse_args(argv)
+
+    salida = ruta_captura(opciones.caso, opciones.directorio)
+    if not ruta_ignorada_por_git(salida):
+        analizador.error(
+            f"{salida} no esta ignorada por git: un correo real no se escribe "
+            "en una ruta versionada (R38)"
+        )
 
     buzon, mailbox = _buzon_desde_entorno()
     ruta = capturar(
