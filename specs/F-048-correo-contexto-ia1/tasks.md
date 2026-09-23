@@ -28,7 +28,7 @@ solo se lee la OBRA (D8): ninguna tarea toca la partida.
 
 ## Bloque C · sv2
 
-- [ ] T13: `LecturaCorreo` (`obra_codigos`, `evidencia`; sin partida) y `DocumentoAlbaran.lectura_correo` opcional; un envelope sin él valida (R15, R17)  |  Verificación: `pytest services/albaranes-api/tests/test_f048_r15_schema.py`
+- [x] T13: `LecturaCorreo` (`obra_codigos`, `evidencia`; sin partida) y `DocumentoAlbaran.lectura_correo` opcional; un envelope sin él valida (R15, R17)  |  Verificación: `pytest services/albaranes-api/tests/test_f048_r15_schema.py`
 - [ ] T14: `_render_task_fase_1(task, correo)` — marcador sustituido, nota sin contexto, bloque al final si falta el marcador (R12)  |  Verificación: `pytest services/albaranes-api/tests/test_f048_r12_render_fase1.py`
 - [ ] T15: Fase 2 recibe el MISMO bloque dentro de `{prompt_fase_1}`: test que carga el `config/prompts.yaml` REAL y recorre TODOS los prompts de fase 2 del catálogo, con y sin correo, buscando el literal `{contexto_correo}` y cualquier `{...}` de marcador conocido sin sustituir (R14)  |  Verificación: `pytest services/albaranes-api/tests/test_f048_r14_fase2_sin_marcadores.py`
 - [ ] T16: `config/prompts.yaml` — marcador, instrucciones R15–R16 (del correo solo la obra, nunca la partida; la obra del papel sigue en cabecera y se lee o deduce SIEMPRE, traiga o no obra el correo) y `lectura_correo.obra_codigos` en `schema_hint`; test de que el task real contiene el marcador y las frases clave (R15, R16)  |  Verificación: `pytest services/albaranes-api/tests/test_f048_r16_prompt_yaml.py`
