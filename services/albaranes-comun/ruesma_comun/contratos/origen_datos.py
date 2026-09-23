@@ -17,18 +17,25 @@ Lo que NO lleva, a proposito:
   con ``extra="ignore"`` y ``version`` es compatible en los dos sentidos.
 
 ``normalizar_codigo`` es la UNICA forma de comparar codigos de obra entre
-correo, papel y lista de obras (R18, D9 «si, normaliza todo»): se pasa a
-mayusculas, se quita todo caracter que no sea alfanumerico (espacios,
-guiones, puntos, barras...) y los ceros a la izquierda, de modo que ``0945``, ``945``, ``09-45``, ``09.45`` y
-`` 0945 `` son el mismo codigo. Si no queda nada (``000``, ``--``), no hay
+correo, papel y lista de obras (R18, D9 «si, normaliza todo»). Primero se
+pliega el Unicode con NFKC (los digitos y letras de ancho completo pasan a
+ASCII); luego se pasa a mayusculas, se quita todo caracter que no sea
+alfanumerico (espacios, guiones, puntos, barras...) y los ceros a la
+izquierda, de modo que ``0945``, ``945``, ``09-45``, ``09.45``, `` 0945 `` y
+``０９４５`` son el mismo codigo. Si no queda nada (``000``, ``--``), no hay
 codigo: ``None``. No quita palabras: extraer el codigo del texto es trabajo
 de IA1, nunca de una regla sobre el texto.
+
+Efecto de NFKC que se acepta a proposito: un superindice es un digito
+(``0945²`` da ``9452``). No hay regla aparte para quitarlo: si el resultado
+no es una obra de la lista, R18 lo descarta y no cuenta.
 
 Capa ``domain`` compartida: modelos y funciones puras, sin I/O.
 """
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -80,7 +87,8 @@ def normalizar_codigo(codigo: str | None) -> str | None:
     """Forma canonica de un codigo de obra para compararlo; ``None`` si no hay codigo."""
     if codigo is None:
         return None
-    canonico = _NO_ALFANUMERICO.sub("", str(codigo).upper()).lstrip("0")
+    plegado = unicodedata.normalize("NFKC", str(codigo))
+    canonico = _NO_ALFANUMERICO.sub("", plegado.upper()).lstrip("0")
     return canonico or None
 
 

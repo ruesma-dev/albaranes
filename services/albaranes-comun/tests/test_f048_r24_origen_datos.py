@@ -212,3 +212,25 @@ def test_f048_r18_normalizar_codigo_solo_quita_ceros_de_la_izquierda():
 @pytest.mark.parametrize("vacio", [None, "", "   ", "000", "--", "0-0", ". / _"])
 def test_f048_r18_normalizar_codigo_vacio_es_sin_codigo(vacio):
     assert od.normalizar_codigo(vacio) is None
+
+
+@pytest.mark.parametrize(
+    ("codigo", "esperado"),
+    [
+        ("０９４５", "945"),  # digitos de ancho completo
+        ("ａｂ-12", "AB12"),  # letras de ancho completo
+        ("０００", None),  # ceros de ancho completo: sin codigo
+    ],
+)
+def test_f048_r18_normalizar_codigo_pliega_unicode_con_nfkc(codigo, esperado):
+    """Review del bloque A, menor 4: NFKC antes de todo lo demas."""
+    assert od.normalizar_codigo(codigo) == esperado
+
+
+def test_f048_r18_normalizar_codigo_superindice_cuenta_como_digito():
+    """Decision documentada: NFKC hace de ``²`` un ``2`` y no hay regla aparte.
+
+    ``0945²`` da ``9452``, no ``945``: si no es una obra de la lista, R18 lo
+    descarta y no cuenta.
+    """
+    assert od.normalizar_codigo("0945²") == "9452"
