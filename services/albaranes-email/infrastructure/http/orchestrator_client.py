@@ -37,7 +37,10 @@ class HttpOrchestratorClient(OrchestratorClient):
         file_bytes: bytes,
         filename: str,
         content_type: str,
+        contexto_correo: object | None = None,
     ) -> OrchestratorAck:
+        # ``contexto_correo`` (F-048) no viaja a sv7: el adaptador es legado
+        # y sin uso; acepta el parametro para cumplir el puerto.
         url = f"{self._base_url}{self._path}"
         last_error = ""
         for attempt in range(1, self._max_retries + 1):

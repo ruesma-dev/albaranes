@@ -5,6 +5,7 @@ from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from ruesma_comun.correo import MAX_CARACTERES_DEFECTO
 
 _ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 
@@ -37,6 +38,15 @@ class Settings(BaseSettings):
     poll_interval_s: int = Field(60, alias="POLL_INTERVAL_S")
     max_emails: int = Field(10, alias="MAX_EMAILS")
     max_attachment_mb: int = Field(25, alias="MAX_ATTACHMENT_MB")
+
+    # --------------------------------------------------------------- #
+    # F-048 — Texto del correo como contexto de IA1: maximo de caracteres
+    # del cuerpo que se conservan (D2). Positivo: con 0 la funcion de
+    # ``ruesma_comun`` que construye el contexto lanza ValueError.
+    # --------------------------------------------------------------- #
+    correo_max_caracteres: int = Field(
+        MAX_CARACTERES_DEFECTO, alias="CORREO_MAX_CARACTERES", gt=0
+    )
 
     # --------------------------------------------------------------- #
     # Servicios downstream — LEGACY (sv1 → sv2 → sv3 directo).

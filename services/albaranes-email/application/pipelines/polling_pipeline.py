@@ -7,6 +7,9 @@ Flujo (run_once):
   2. Para cada mensaje:
      a. Lista adjuntos.
      b. Filtra adjuntos no-inline tipo file (descarta inline e items).
+     b'. Si hay alguno elegible, pide UNA vez el asunto y la parte única
+         del cuerpo y construye el contexto del correo (F-048, R2-R5). Si
+         falla, se sigue sin contexto: no es motivo para ir a 'Errores'.
      c. Para cada adjunto válido:
         i.   Descarga sus bytes vía Graph.
         ii.  Si es PDF, lo divide por páginas (cada página es un evento
@@ -33,6 +36,12 @@ import hashlib
 import logging
 import time
 from datetime import datetime, timezone
+
+from ruesma_comun.correo import (
+    MAX_CARACTERES_DEFECTO,
+    ContextoCorreo,
+    construir_contexto_correo,
+)
 
 from domain.models.email_models import EmailAttachment, EmailMessage
 from domain.ports.mailbox_client import MailboxClient
@@ -68,10 +77,12 @@ class PollingPipeline:
         mailbox: MailboxClient,
         orchestrator: OrchestratorClient,
         pdf_splitter: PdfPageSplitter,
+        correo_max_caracteres: int = MAX_CARACTERES_DEFECTO,
     ) -> None:
         self._mailbox = mailbox
         self._orchestrator = orchestrator
         self._splitter = pdf_splitter
+        self._correo_max_caracteres = correo_max_caracteres
 
     # ----------------------------------------------------------- #
     # Bucle infinito (lo invoca main.py).
@@ -204,12 +215,17 @@ class PollingPipeline:
             )
             return
 
+        # UNA petición por mensaje: el mismo contexto va a todas las
+        # páginas de todos sus adjuntos (F-048, R6).
+        contexto = self._contexto_del_correo(msg=msg, mailbox=mailbox)
+
         all_ok = True
         for att in eligible:
             ok = self._process_attachment(
                 msg=msg,
                 attachment=att,
                 mailbox=mailbox,
+                contexto=contexto,
             )
             all_ok = all_ok and ok
 
@@ -228,6 +244,7 @@ class PollingPipeline:
         msg: EmailMessage,
         attachment: EmailAttachment,
         mailbox: str,
+        contexto: ContextoCorreo | None,
     ) -> bool:
         """Devuelve True si TODAS las páginas se enviaron a sv7 con éxito."""
         logger.info(
@@ -281,6 +298,7 @@ class PollingPipeline:
                 attachment=attachment,
                 attachment_sha256=attachment_sha256,
                 prepared=prepared,
+                contexto=contexto,
             )
             all_pages_ok = all_pages_ok and page_ok
 
@@ -293,6 +311,7 @@ class PollingPipeline:
         attachment: EmailAttachment,
         attachment_sha256: str,
         prepared: PreparedDocument,
+        contexto: ContextoCorreo | None,
     ) -> bool:
         page_sha256 = hashlib.sha256(prepared.file_bytes).hexdigest()
 
@@ -316,6 +335,7 @@ class PollingPipeline:
                 file_bytes=prepared.file_bytes,
                 filename=prepared.filename,
                 content_type=prepared.mime_type,
+                contexto_correo=contexto,
             )
         except OrchestratorError as exc:
             logger.error(
@@ -341,6 +361,48 @@ class PollingPipeline:
     # ----------------------------------------------------------- #
     # Helpers.
     # ----------------------------------------------------------- #
+    def _contexto_del_correo(
+        self,
+        *,
+        msg: EmailMessage,
+        mailbox: str,
+    ) -> ContextoCorreo | None:
+        """Asunto + parte única del cuerpo del mensaje, o ``None`` (F-048).
+
+        Sin ``uniqueBody`` el contexto lleva solo el asunto (R3): nunca se
+        pide el ``body``. Si Graph falla, se sigue sin contexto (R5). Los
+        logs llevan la huella abreviada, los caracteres y ``truncado``,
+        nunca el texto (R36); del error, solo el tipo, porque su mensaje
+        podría citar el correo.
+        """
+        try:
+            contenido = self._mailbox.get_contenido(
+                mailbox=mailbox,
+                message_id=msg.id,
+            )
+            contexto = construir_contexto_correo(
+                contenido.asunto,
+                contenido.cuerpo_unico,
+                max_caracteres=self._correo_max_caracteres,
+                recibido_utc=_to_iso_utc(msg.received_datetime) or None,
+            )
+        except Exception as exc:  # noqa: BLE001 — cualquier fallo: sin contexto
+            logger.warning(
+                "msg=%s sin contexto de correo (%s): se sigue con los adjuntos",
+                msg.id,
+                type(exc).__name__,
+            )
+            return None
+
+        logger.info(
+            "msg=%s contexto de correo sha=%s caracteres=%d truncado=%s",
+            msg.id,
+            contexto.sha256[:8],
+            contexto.caracteres_originales,
+            contexto.truncado,
+        )
+        return contexto
+
     @staticmethod
     def _is_eligible(att: EmailAttachment, max_bytes: int) -> bool:
         """Filtra adjuntos válidos: no inline, no item/reference, y

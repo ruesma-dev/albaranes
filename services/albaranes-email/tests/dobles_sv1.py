@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from io import BytesIO
 
 from pypdf import PdfWriter
+from ruesma_comun.correo import ContextoCorreo
 
 from application.pipelines.polling_pipeline import PollingPipeline
 from domain.models.email_models import ContenidoCorreo, EmailAttachment, EmailMessage
@@ -130,6 +131,7 @@ class EnvioRegistrado:
     file_bytes: bytes
     filename: str
     content_type: str
+    contexto_correo: ContextoCorreo | None = None
 
 
 class IntakeDoble(OrchestratorClient):
@@ -146,8 +148,11 @@ class IntakeDoble(OrchestratorClient):
         file_bytes: bytes,
         filename: str,
         content_type: str,
+        contexto_correo: ContextoCorreo | None = None,
     ) -> OrchestratorAck:
-        self.envios.append(EnvioRegistrado(meta, file_bytes, filename, content_type))
+        self.envios.append(
+            EnvioRegistrado(meta, file_bytes, filename, content_type, contexto_correo)
+        )
         if self._fallar:
             raise OrchestratorError("intake doble: fallo pedido por el test")
         return OrchestratorAck(
@@ -158,8 +163,12 @@ class IntakeDoble(OrchestratorClient):
         )
 
 
-def construir_pipeline(buzon: MailboxClient, intake: OrchestratorClient) -> PollingPipeline:
-    return PollingPipeline(mailbox=buzon, orchestrator=intake, pdf_splitter=PdfPageSplitter())
+def construir_pipeline(
+    buzon: MailboxClient, intake: OrchestratorClient, **opciones: object
+) -> PollingPipeline:
+    return PollingPipeline(
+        mailbox=buzon, orchestrator=intake, pdf_splitter=PdfPageSplitter(), **opciones
+    )
 
 
 def ejecutar_ciclo(pipeline: PollingPipeline) -> None:

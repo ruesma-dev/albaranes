@@ -30,6 +30,7 @@ from ruesma_comun.blobs.conexion import CONTENEDOR_INPUT
 from ruesma_comun.colas.conexion import COLA_EXTRACCION
 from ruesma_comun.colas.mensajes import MensajeExtraccion
 from ruesma_comun.colas.publicador import PublicadorColas
+from ruesma_comun.correo import ContextoCorreo
 from ruesma_comun.workflows.repositorio import RepositorioWorkflows
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,7 @@ class IntakeColaClient(OrchestratorClient):
         file_bytes: bytes,
         filename: str,
         content_type: str,
+        contexto_correo: ContextoCorreo | None = None,
     ) -> OrchestratorAck:
         message_id = str(meta.get("email_message_id") or "")
         page_sha256 = str(meta.get("page_sha256") or "")
