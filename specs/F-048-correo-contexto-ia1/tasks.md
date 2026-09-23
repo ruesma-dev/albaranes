@@ -10,7 +10,7 @@ solo se lee la OBRA (D8): ninguna tarea toca la partida.
 
 ## Bloque A · comun
 
-- [ ] T1: `ruesma_comun/correo/contexto.py` — `ContextoCorreo`, `construir_contexto_correo` (normaliza, recorta, sha256), `nombre_blob_correo`, `guardar_contexto_correo`, `leer_contexto_correo` (None si falta o no valida) (R1)  |  Verificación: `pytest services/albaranes-comun/tests/test_f048_r1_contexto.py`
+- [x] T1: `ruesma_comun/correo/contexto.py` — `ContextoCorreo`, `construir_contexto_correo` (normaliza, recorta, sha256), `nombre_blob_correo`, `guardar_contexto_correo`, `leer_contexto_correo` (None si falta o no valida) (R1)  |  Verificación: `pytest services/albaranes-comun/tests/test_f048_r1_contexto.py`
 - [ ] T2: `MensajeExtraccion.correo_blob` opcional; tests de ida y vuelta con un modelo sin el campo y de tamaño con cuerpo de 60.000 caracteres (R8, R9)  |  Verificación: `pytest services/albaranes-comun/tests/test_f048_r8_r9_mensaje.py`
 - [ ] T3: `ruesma_comun/correo/prompt.py` — marcas, `render_bloque_correo` (advertencia de DATO, neutraliza marcas, nota fija sin contexto) y `redactar_correo` (R12, R13)  |  Verificación: `pytest services/albaranes-comun/tests/test_f048_r13_prompt.py`
 - [ ] T4: `LlmCallLogger` aplica `redactar_correo` a todo texto de `request_summary`; test que escribe a `tmp_path` y busca el centinela (R37)  |  Verificación: `pytest services/albaranes-comun/tests/test_f048_r37_llm_logger.py`
