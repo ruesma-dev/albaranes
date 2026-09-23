@@ -7,6 +7,9 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
+**F-048 · BLOQUE B (sv1, T6–T12) EN CURSO** (2026-09-23, implementer). Tarea
+en curso: T6. Informe en `progress/impl_F-048.md`, sección «Bloque B».
+
 **F-048 · BLOQUE A (comun, T1–T5) IMPLEMENTADO** (2026-09-23, implementer):
 contexto de correo, `MensajeExtraccion.correo_blob`, bloque del prompt y su
 redacción, `LlmCallLogger` sin correo y el contrato `origen_datos`. Informe en
