@@ -14,15 +14,14 @@ import logging
 
 import pytest
 from dobles_sv1 import CENTINELA, AlmacenDoble, PublicadorDoble, RepositorioDoble
+from domain.ports.orchestrator_port import OrchestratorError
+from infrastructure.colas.intake_cola_adapter import IntakeColaClient
 from ruesma_comun.colas.mensajes import MensajeExtraccion
 from ruesma_comun.correo import (
     construir_contexto_correo,
     leer_contexto_correo,
     nombre_blob_correo,
 )
-
-from domain.ports.orchestrator_port import OrchestratorError
-from infrastructure.colas.intake_cola_adapter import IntakeColaClient
 
 META = {
     "email_message_id": "msg-1",

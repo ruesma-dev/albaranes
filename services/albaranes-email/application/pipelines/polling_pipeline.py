@@ -37,18 +37,17 @@ import logging
 import time
 from datetime import datetime, timezone
 
-from ruesma_comun.correo import (
-    MAX_CARACTERES_DEFECTO,
-    ContextoCorreo,
-    construir_contexto_correo,
-)
-
 from domain.models.email_models import EmailAttachment, EmailMessage
 from domain.ports.mailbox_client import MailboxClient
 from domain.ports.orchestrator_port import OrchestratorClient, OrchestratorError
 from infrastructure.document.pdf_page_splitter import (
     PdfPageSplitter,
     PreparedDocument,
+)
+from ruesma_comun.correo import (
+    MAX_CARACTERES_DEFECTO,
+    ContextoCorreo,
+    construir_contexto_correo,
 )
 
 logger = logging.getLogger(__name__)

@@ -15,6 +15,7 @@ import logging
 
 import httpx
 import pytest
+from application.pipelines.polling_pipeline import PollingPipeline
 from dobles_sv1 import (
     BUZON,
     CARPETA_ORIGEN,
@@ -27,8 +28,6 @@ from dobles_sv1 import (
     ejecutar_ciclo,
     pdf_de_paginas,
 )
-
-from application.pipelines.polling_pipeline import PollingPipeline
 from infrastructure.colas.intake_cola_adapter import IntakeColaClient
 from infrastructure.document.pdf_page_splitter import PdfPageSplitter
 from infrastructure.graph.mail_client import GraphMailClient

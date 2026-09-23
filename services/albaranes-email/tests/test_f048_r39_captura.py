@@ -16,10 +16,9 @@ import subprocess
 import capturar_correo
 import pytest
 from dobles_sv1 import BUZON, CENTINELA
-from ruesma_comun.correo import construir_contexto_correo
-
 from domain.models.email_models import ContenidoCorreo
 from domain.ports.mailbox_client import MailboxClient
+from ruesma_comun.correo import construir_contexto_correo
 
 CONTENIDO = ContenidoCorreo(
     asunto="RE: Albaran obra 0945",

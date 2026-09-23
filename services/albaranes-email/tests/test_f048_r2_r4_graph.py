@@ -11,7 +11,6 @@ from __future__ import annotations
 import httpx
 import pytest
 from dobles_sv1 import BUZON, CENTINELA
-
 from domain.models.email_models import ContenidoCorreo
 from infrastructure.graph.mail_client import GraphMailClient, html_a_texto
 

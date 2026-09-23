@@ -10,9 +10,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from io import BytesIO
 
-from pypdf import PdfWriter
-from ruesma_comun.correo import ContextoCorreo
-
 from application.pipelines.polling_pipeline import PollingPipeline
 from domain.models.email_models import ContenidoCorreo, EmailAttachment, EmailMessage
 from domain.ports.mailbox_client import MailboxClient
@@ -22,6 +19,8 @@ from domain.ports.orchestrator_port import (
     OrchestratorError,
 )
 from infrastructure.document.pdf_page_splitter import PdfPageSplitter
+from pypdf import PdfWriter
+from ruesma_comun.correo import ContextoCorreo
 
 CENTINELA = "CENTINELA-F048"
 BUZON = "buzon@ejemplo.test"

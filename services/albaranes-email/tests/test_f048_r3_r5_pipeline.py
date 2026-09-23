@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 
 import pytest
+from config.settings import Settings
 from dobles_sv1 import (
     CENTINELA,
     ID_ERRORES,
@@ -25,11 +26,9 @@ from dobles_sv1 import (
     mensaje,
     pdf_de_paginas,
 )
+from domain.models.email_models import EmailMessage
 from pydantic import ValidationError
 from ruesma_comun.correo import MAX_CARACTERES_DEFECTO, construir_contexto_correo
-
-from config.settings import Settings
-from domain.models.email_models import EmailMessage
 
 
 def _buzon(**opciones) -> BuzonDoble:

@@ -27,13 +27,12 @@ import re
 from datetime import UTC, datetime
 from pathlib import Path
 
-from dotenv import load_dotenv
-from ruesma_comun.correo import construir_contexto_correo
-
 from config.settings import Settings
 from domain.ports.mailbox_client import MailboxClient
+from dotenv import load_dotenv
 from infrastructure.graph.mail_client import GraphMailClient
 from infrastructure.graph.token_provider import GraphTokenProvider
+from ruesma_comun.correo import construir_contexto_correo
 
 VERSION_CAPTURA = 1
 RAIZ_SERVICIO = Path(__file__).resolve().parent
