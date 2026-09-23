@@ -23,7 +23,7 @@ solo se lee la OBRA (D8): ninguna tarea toca la partida.
 - [x] T8: Pipeline — contenido una vez por mensaje; `uniqueBody` vacío ⇒ solo asunto; fallo ⇒ sigue sin contexto y sin mover a Errores (R3, R5)  |  Verificación: `pytest services/albaranes-email/tests/test_f048_r3_r5_pipeline.py`
 - [x] T9: Pipeline — el MISMO contexto (mismo sha256) llega a todas las páginas de todos los adjuntos del mensaje, sean uno o varios albaranes, y el destino Procesados/Errores no cambia respecto a hoy (todo bien / un adjunto falla / sin elegibles) (R6)  |  Verificación: `pytest services/albaranes-email/tests/test_f048_r6_todos_los_albaranes.py`
 - [x] T10: `IntakeColaClient` — blob lateral ANTES de publicar (orden comprobado con un doble que registra llamadas), `correo_blob` en el mensaje, `correo_sha256` en meta sin cuerpo, nada en duplicado (R7, R10)  |  Verificación: `pytest services/albaranes-email/tests/test_f048_r7_r10_intake.py`
-- [ ] T11: sv1 no loguea el cuerpo: `caplog` a DEBUG sobre un ciclo completo con centinela (R36)  |  Verificación: `pytest services/albaranes-email/tests/test_f048_r36_logs.py`
+- [x] T11: sv1 no loguea el cuerpo: `caplog` a DEBUG sobre un ciclo completo con centinela (R36)  |  Verificación: `pytest services/albaranes-email/tests/test_f048_r36_logs.py`
 - [ ] T12: `capturar_correo.py` — solo `get_contenido`, escribe `evals/inputs/correos/{caso_id}.json`; test con doble de buzón que revienta si se llama a `move_message` u otro método de escritura; `git check-ignore` de la ruta de salida (R38, R39)  |  Verificación: `pytest services/albaranes-email/tests/test_f048_r39_captura.py`
 
 ## Bloque C · sv2
