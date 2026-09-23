@@ -206,7 +206,7 @@ class _Proveedor:
 def _obras_conocidas(*codigos: str) -> dict[str, str] | None:
     class _Reglas:
         count = 0
-        rule_ids: list[str] = []
+        rule_ids: tuple[str, ...] = ()
 
         def render_for_prompt(self) -> str:
             return ""
