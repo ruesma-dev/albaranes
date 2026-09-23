@@ -2,8 +2,8 @@
 # F-048 · Informe del implementer
 
 Rigor `critico`. Rama `feature/F-048-correo-contexto-ia1`. Una sección por bloque. El texto
-íntegro del bloque A (decisiones, API y pasada 1 de review) está en
-`progress/impl_F-048_bloque_A.md`; aquí queda el resumen con sus trazas RED y sus evidencias.
+íntegro de los bloques ya aprobados está en `progress/impl_F-048_bloque_A.md` y
+`progress/impl_F-048_bloque_B.md`; aquí queda su resumen con las trazas RED y las evidencias.
 
 ## Bloque A · comun (T1–T5) — resumen
 
@@ -32,157 +32,175 @@ GREEN: T1 35 · T2 7 · T3 17 · T4 5 (9 tras CR-A1) · T5 44 (48 tras CR-A4).
 | Cobertura de las líneas cambiadas | 100.0 % (173/173), `PUERTA COBERTURA` |
 | Mutación | en T34, con la feature completa |
 
-## Bloque B · sv1 (T6–T12) — 2026-09-23
+## Bloque B · sv1 (T6–T12) — resumen
 
-**Commits**: `e0e0a82` T6 primera suite · `2e6bf67` T7 `get_contenido` (R2, R4) · `bf9d983` T8
-pipeline (R3, R5) · `4a81304` T9 todas las páginas (R6) · `501b0fd` T10 blob lateral (R7, R10) ·
-`97d6cf6` T11 logs (R36) · `8e2a309` T12 `capturar_correo.py` (R38, R39) · `26a9496` orden de
-imports según el ruff de la raíz (8 I001 que el ruff del servicio no veía; sin cambio de comportamiento).
-**Producción** (`services/albaranes-email/`): `domain/models/email_models.py` (`ContenidoCorreo`),
-`domain/ports/{mailbox_client,orchestrator_port}.py`, `infrastructure/graph/mail_client.py`,
-`application/pipelines/polling_pipeline.py`, `infrastructure/colas/intake_cola_adapter.py`,
-`config/settings.py`, `main.py`, `infrastructure/http/orchestrator_client.py` y el nuevo
-`capturar_correo.py`. **Tests**: `tests/{conftest,dobles_sv1}.py` y siete `test_f048_*.py`.
+**Commits**: `e0e0a82` T6 · `2e6bf67` T7 · `bf9d983` T8 · `4a81304` T9 · `501b0fd` T10 · `97d6cf6` T11
+· `8e2a309` T12 · `26a9496` imports. Review: APPROVED (`63cc1fc`), seis menores. Decisiones,
+trazas completas y lo que el bloque B deja a sv2 (blob lateral `input/{id}.correo.json`,
+`correo_blob`, huella en `payload_json`): `progress/impl_F-048_bloque_B.md`.
+**RED** (T7, T8, T10, T12 con el test antes del código; T6, T9, T11 rompiendo una copia aislada):
+```
+T7  E   ImportError: cannot import name 'ContenidoCorreo' ...          -> 1 error in 0.73s
+T8  E   TypeError: PollingPipeline.__init__() got an unexpected keyword argument 'correo_max_caracteres'
+                                                                        -> 7 failed, 2 passed in 1.11s
+T10 E   Failed: DID NOT RAISE OrchestratorError  (y 5 más)              -> 6 failed, 3 passed in 1.31s
+T11 E   assert 'CENTINELA-F048' not in 'INFO     ht...Procesados\n' (x3) -> 3 failed, 1 passed in 1.39s
+T12 E   ModuleNotFoundError: No module named 'capturar_correo'         -> 1 error in 0.23s
+```
 
-### Decisiones (la spec no llegaba al detalle)
+## Bloque B · menores de la review (CR-B1, CR-B3, CR-B5, CR-B6) — 2026-09-24
 
-1. **HTML ⇒ texto** (`html_a_texto`, en `mail_client.py`): `html.parser` con entidades resueltas;
-   `br/p/div/li/tr/table/ul/ol/h1-h6` pasan a salto de línea, se descartan `script` y `style`,
-   se quitan líneas vacías. El texto no se mira. `contentType` se compara en minúsculas.
-2. **El error de `get_contenido` no lleva `response.text`** (solo el código HTTP), y el aviso del
-   pipeline solo el **tipo** de la excepción: cualquiera de los dos podría citar el correo (R36).
-3. **Se pide el contenido solo con adjuntos elegibles** (R2 dice «con adjuntos elegibles»): sin
-   elegibles el correo va a Errores como hoy sin tocar Graph.
-4. **Puerto del orquestador**: `contexto_correo: ContextoCorreo | None = None` (import de `comun`
-   solo bajo `TYPE_CHECKING`). El `HttpOrchestratorClient` legado (sv7, sin cablear) acepta el
-   parámetro y no lo usa, para cumplir el puerto: fichero fuera de la lista de design §5.
-5. **Orden del intake**: `put_bytes` del PDF → `guardar_contexto_correo` → `publicar`. Si guardar
-   el contexto falla, la página falla (`OrchestratorError`), como hoy un fallo del blob del PDF,
-   y **no se publica**: nunca sale un `correo_blob` que no exista.
-6. **`correo_sha256` en `payload_json` solo si hay contexto**: sin correo el payload es
-   byte a byte el de hoy. Se copia el `meta`; el del llamador no se muta.
-7. **`CORREO_MAX_CARACTERES`** en `Settings` (defecto `MAX_CARACTERES_DEFECTO` de `comun`, `gt=0`)
-   y `PollingPipeline(correo_max_caracteres=...)`, cableado en `main.py`. `recibido_utc` =
-   `receivedDateTime` del mensaje en ISO UTC, `None` si no viene. No toqué `.env.example`.
-8. **`capturar_correo.py`** guarda asunto y cuerpo **sin normalizar ni recortar** (formato
-   `version` 1: `caso_id`, `message_id`, `asunto`, `cuerpo`, `tipo_origen`, `capturado_utc`):
-   quien lo lea (T22, T29) usa `construir_contexto_correo` y la huella sale igual que en sv1.
-   El caso solo admite `[A-Za-z0-9][A-Za-z0-9_.-]*`. Por pantalla, huella, caracteres y tipo.
-9. **`init.sh` y sv1**: no hizo falta tocar `harness/servicios.json`. Sin `venv` declarado,
-   sv1 corre con el intérprete de la raíz, que tiene sus dependencias (httpx, pypdf, sqlalchemy,
-   dotenv, `ruesma_comun`). El `conftest.py` mete la raíz del servicio en `sys.path`.
-10. **El asunto** se sigue logueando entero (`msg=%s subject=%r`, de antes): no lo toqué; en los
-   tests de R36 el centinela va solo en el cuerpo.
+**Commits**: `ecac419` CR-B1 · `8a7a46e` CR-B3 · `79a1485` CR-B5 · `51111b7` CR-B6. Los menores 2
+y 4 no se tocan (van a T32 y a la medición de §7), como pidió el líder.
 
-### Fase RED → GREEN (salidas reales; `python -m pytest <fichero> -q --tb=line` en `services/albaranes-email`)
+- **CR-B1** `capturar_correo.py`: `ruta_ignorada_por_git(ruta)` = `git check-ignore -q` sobre el
+  FICHERO de salida (ruta resuelta, `cwd` = sv1). Solo exit 0 vale: versionada, fuera del
+  repositorio, sin git o git que no arranca ⇒ `False`. `main()` lo comprueba ANTES de leer el
+  `.env` o hablar con Graph y sale con `argparse.error` (código 2). `capturar()` no lo mira: los
+  tests siguen usando `tmp_path` por la función. Ojo: el `.gitignore` de sv1 ignora `*.json`
+  en todo el servicio, así que un `--directorio` dentro de sv1 git lo da por ignorado (es el
+  criterio de R38); los tests de rechazo usan `docs/` y `specs/` de la raíz.
+- **CR-B3** `intake_cola_adapter.py`: el blob lateral se guarda en `_guardar_correo`, y su fallo
+  sale como `OrchestratorError("blob correo: <Tipo>")`, SIN el mensaje (que podía repetir el
+  cuerpo, como demuestra el RED). El PDF y la cola conservan `blob/cola: {exc}` como hoy. Test con
+  un almacén que falla citando lo que guardaba, ciclo completo a DEBUG.
+- **CR-B5**: `get_contenido` pide `receivedDateTime` en el MISMO GET
+  (`$select=subject,uniqueBody,receivedDateTime`) y lo deja en `ContenidoCorreo.recibido_utc`
+  (tal cual, `None` si falta); la captura escribe `recibido_utc` (sigue `version` 1: campo
+  añadido). **Desviación de design §5** (`$select=subject,uniqueBody`): un campo más en el mismo
+  GET de solo lectura, sin cambiar R2; edité la aserción de `$select` del test de T7.
+- **CR-B6** `orchestrator_client.py`: `ContextoCorreo | None` con el import bajo `TYPE_CHECKING`;
+  un test compara la anotación con la del puerto.
 
-Cuando la tarea no tiene código nuevo (T6, T9, T11), el RED se hizo **rompiendo a propósito una
-copia aislada** del servicio en el scratchpad (nunca el árbol real), como pide C4 bis.
+**RED → GREEN** (`python -m pytest <fichero> -q --tb=line` en `services/albaranes-email`):
+```
+CR-B1 E   AttributeError: module 'capturar_correo' has no attribute 'ruta_ignorada_por_git'
+      E   AssertionError: con la ruta rechazada no se lee el .env ni se habla con Graph (x3)
+      E   AttributeError: module 'capturar_correo' has no attribute 'shutil' (x2)
+      7 failed, 12 passed in 4.97s                                      -> 19 passed in 1.78s
+CR-B3 test_f048_r36_logs.py:170: AssertionError: assert 'CENTINELA-F048' not in 'INFO     ht... a Errores\n'
+      (log real: "ERROR sv7: blob/cola: no se pudo guardar <id>.correo.json: {... 'cuerpo': '...CENTINELA-F048 ...'}")
+      1 failed, 4 passed in 1.74s                                       -> 69 passed (suite sv1)
+CR-B5 E   AssertionError: assert ['subject', 'uniqueBody'] == ['subject', '...ivedDateTime']
+      E   AttributeError: 'ContenidoCorreo' object has no attribute 'recibido_utc'
+      2 failed, 29 passed in 1.91s; captura: E TypeError: ContenidoCorreo.__init__() got an
+      unexpected keyword argument 'recibido_utc' (1 error in 1.75s)      -> 71 passed (suite sv1)
+CR-B6 test_f048_r7_r10_intake.py:170: AssertionError: assert 'object | None' == 'ContextoCorreo | None'
+      1 failed, 9 passed in 2.97s                                       -> 72 passed (suite sv1)
+```
 
-**T6** `tests -k humo` antes de existir, y copia con `target = errors_folder_id`. GREEN `3 passed in 0.46s`
-```
-ERROR: file or directory not found: tests
-no tests ran in 0.01s
---- copia rota:
-E   AssertionError: assert [('msg-1', 'carpeta-errores')] == [('msg-1', 'c...-procesados')]
-FAILED tests/test_f048_humo_pipeline.py::test_f048_humo_un_pdf_de_dos_paginas_llega_al_intake_y_va_a_procesados
-1 failed, 2 passed in 0.53s
-```
-**T7** `test_f048_r2_r4_graph.py`. GREEN `11 passed in 0.63s`
-```
-E   ImportError: cannot import name 'ContenidoCorreo' from 'domain.models.email_models'
-ERROR tests/test_f048_r2_r4_graph.py
-1 error in 0.73s
-```
-**T8** `test_f048_r3_r5_pipeline.py`. GREEN `10 passed in 0.57s` (con el test de `recibido_utc=None`, añadido después)
-```
-E   AssertionError: assert [] == ['msg-1', 'msg-2']
-E   AssertionError: assert [None, None, None] == [ContextoCorr...3T08:00:00Z')]
-E   TypeError: PollingPipeline.__init__() got an unexpected keyword argument 'correo_max_caracteres'
-E   AttributeError: 'NoneType' object has no attribute 'asunto'   (x2, uniqueBody vacío)
-test_f048_r3_r5_pipeline.py:129: assert 0 == 1                   (ningún aviso de R5)
-E   AttributeError: 'Settings' object has no attribute 'correo_max_caracteres'
-7 failed, 2 passed in 1.11s
-```
-Los 2 que ya pasaban vigilan lo de hoy: sin elegibles no se pide nada, y un adjunto roto manda a Errores.
+## Bloque C1 · sv2 (T13–T16 bis) — 2026-09-24
 
-**T9** `test_f048_r6_todos_los_albaranes.py`, copia con `contexto=contexto if att is eligible[0] else None`
-y, aparte, con `return None` → `raise` en el fallo de Graph. GREEN `12 passed in 0.71s`
-```
-E   AssertionError: assert None not in [ContextoCorreo(...), None, None, None, None]
-E   AttributeError: 'NoneType' object has no attribute 'sha256'
-2 failed, 10 passed in 0.81s
---- segunda copia:
-FAILED ...::test_f048_r6_el_destino_del_correo_no_cambia_respecto_a_hoy[sin_contexto-todo_bien-carpeta-procesados]
-1 failed, 11 passed in 0.85s
-```
-**T10** `test_f048_r7_r10_intake.py`. GREEN `9 passed in 1.37s`
-```
-E   AssertionError: assert ['crear_si_no...', 'publicar'] == ['crear_si_no...', 'publicar']   (x2, falta put_json)
-E   AssertionError: assert None == ContextoCorreo(version=1, asunto='Albaran obra', ...)
-E   Failed: DID NOT RAISE OrchestratorError
-E   KeyError: 'correo_sha256'
-E   AssertionError: assert '7ba90a9b' in 'INFO ... intake encolado document_id=... correlation_key=...'
-6 failed, 3 passed in 1.31s
-```
-Los 3 que ya pasaban vigilan la compatibilidad: sin contexto, duplicado y tamaño del mensaje (R8).
+**Commits**: `1f30462` T13 (+ `08e8fd3`, anotación) · `b0483c7` T14 · `8cb9db6` T15 · `adb488d` T16 ·
+`1ef98fe` T16 bis. **Producción** (`services/albaranes-api/`): nuevo `domain/models/lectura_correo.py`;
+`domain/models/albaran_models.py`, `application/services/albaran_extraction_service.py`,
+`config/prompts.yaml` (ruta sensible), `domain/ports/obras_activas_provider.py`,
+`infrastructure/sigrid/{sigrid_api_obras_client,obras_activas_cache}.py`. **Tests**: cinco
+`test_f048_*.py`. Sin tocar `composition.py`, `api/app.py`, `_SQL_OBRAS` ni `test_f002_obras_cache.py`.
 
-**T11** `test_f048_r36_logs.py`, copia que loguea `contexto.cuerpo`, mete `response.text` en el
-error de Graph y el `exc` en el aviso. GREEN `4 passed in 1.36s`
+### Decisiones
+
+1. **`LecturaCorreo`** (`StrictSchemaModel`): `obra_codigos: list[str] = []`, `evidencia: str | None`.
+   Sin `max_length` en la evidencia: una respuesta larga haría fallar la extracción entera; el
+   recorte a 160 lo hace `OrigenDatos` (bloque A) y el prompt lo pide (menor 7).
+2. **Orden del render de fase 1**: obras → catálogo → correo, el correo EL ÚLTIMO, para que su
+   texto no se recorra (un correo con `{obras_activas}` no recibe la lista). **Sin marcador y
+   sin correo no se añade nada** (ni la nota): R12 habla de añadir «el bloque»; con correo, el
+   bloque va al final, como hace F-002 con las obras.
+3. **Fase 2 en UNA pasada** (regex sobre la plantilla, `_MARCADORES_FASE_2`): antes se encadenaban
+   `str.replace` y un correo (o el JSON de fase 1, que lleva la evidencia del correo) que
+   escribiera `{json_fase_1}` o `{sigrid_context}` recibía el relleno dentro, y IA2 ya no veía el
+   MISMO bloque que IA1 (R14; RED del paso 2). La compatibilidad de `{sigrid_context}` ausente
+   se conserva (mira la plantilla) y tiene test.
+4. **Logs**: fase 1 y fase 2 añaden `correo=SI(<caracteres>, <sha8>)` o `correo=NO` (design §5).
+5. **Prompt (T16)**: sección `## Correo con el que llegó el albarán` justo tras la de obras, con
+   las reglas de R15–R16 y la del menor 7; `schema_hint` declara `lectura_correo.obra_codigos` y
+   `.evidencia`. Solo el task de fase 1 lleva `{contexto_correo}` (test sobre el YAML crudo).
+6. **Catálogo (T16 bis)**: `CatalogoObras(activas, todas)` frozen con tuplas. El cliente devuelve
+   `None` si no llega ninguna obra. La caché guarda el catálogo; `obtener()` da `None` si no hay
+   activas (antes, un doble que devolviera `[]` recibía `[]`: el render trata igual los dos) y,
+   con activas vacías pero `todas` llenas, ya no reconsulta en cada llamada.
+7. **`obras_conocidas()`**: colisiones (menor 5) ⇒ la clave ambigua sale del mapa y UN `WARNING`
+   por llamada con `clave <- códigos`; si no queda ninguna clave, `None`. Excepción del
+   proveedor ⇒ `None` con `logger.exception`.
+
+### Para quien haga T17–T22
+
+- **`AlbaranExtractionService.obras_conocidas() -> dict[str, str] | None`**: `{normalizar_codigo(c): c}`
+  sobre TODAS las obras con contrato (`'945' -> '0945'`, `'A12' -> 'A-12'`), de la MISMA caché que
+  el prompt (dentro de la TTL no cuesta consulta). `None` = sin lista ⇒ `validada=null` (R18).
+  Las claves ambiguas no están: un código que normalice a una de ellas no cuenta.
+- **`lectura_correo`**: `DocumentoAlbaran.lectura_correo: LecturaCorreo | None`
+  (`domain/models/lectura_correo.py`), en el documento de fase 1 y en `documento_revisado` de
+  fase 2 (mismo modelo). Hay que quitarlo del `data` final (R23). **Aviso**: el pipeline mete
+  `phase_1_json` en `debug.phase_1_json` del envelope (`extra_debug` de fase 2): la evidencia de
+  IA1 viaja ahí; lo mira T19/T21.
+- **Render**: `extract_phase_1(..., contexto_correo=None)` y `review_phase_2(..., contexto_correo=None)`,
+  keyword con default; ambas llaman a `_render_task_fase_1(task, correo)`, que pone
+  `render_bloque_correo(correo)` (o `NOTA_SIN_CORREO`) en `{contexto_correo}`. Falta que
+  `extract_albaran_pipeline.py` y el worker pasen el contexto (T20): hoy nadie lo pasa y todo
+  va con la nota fija.
+
+### Fase RED → GREEN (`python -m pytest <fichero> -q --tb=line` en `services/albaranes-api`)
+
 ```
-E   assert 'CENTINELA-F048' not in 'INFO     ht...Procesados\n'   (x3)
-FAILED ...::test_f048_r36_ciclo_completo_a_debug_sin_el_cuerpo_en_el_log[texto]
-FAILED ...::test_f048_r36_ciclo_completo_a_debug_sin_el_cuerpo_en_el_log[html]
-FAILED ...::test_f048_r36_fallo_de_graph_al_pedir_el_contenido_sin_el_cuerpo_en_el_log
-3 failed, 1 passed in 1.39s
+T13 test_f048_r15_schema.py
+    E   ModuleNotFoundError: No module named 'domain.models.lectura_correo'   1 error in 0.66s -> 7 passed
+T14 test_f048_r12_render_fase1.py
+    E   TypeError: AlbaranExtractionService._render_task_fase_1() takes 2 positional arguments but 3 were given (x5)
+    E   TypeError: AlbaranExtractionService.extract_phase_1() got an unexpected keyword argument 'contexto_correo' (x2)
+    test_f048_r12_render_fase1.py:164: AssertionError: assert '(Este albaran no trae texto de correo: ...)' in 'SYSTEM...HINT'
+    8 failed in 0.65s                                                      -> 8 passed in 0.66s
+T15 test_f048_r14_fase2_sin_marcadores.py, paso 1 (sin el parámetro):
+    E   TypeError: AlbaranExtractionService.review_phase_2() got an unexpected keyword argument 'contexto_correo' (x17)
+    17 failed, 1 passed in 1.13s
+    paso 2 (con el parámetro, antes de la pasada única):
+    E   assert 'ATENCION: ... Texto con {json_fase_1}, {sigrid_context}, {revision_rules} y {prompt_fase_1}\n<<<FIN_CORREO>>>'
+        in 'Eres un revisor experto de albaranes y factu...'
+    1 failed, 17 passed in 1.27s                                           -> 21 passed in 1.49s
+T16 test_f048_r16_prompt_yaml.py
+    E   AssertionError: assert 0 == 1                                   (el task no trae el marcador)
+    E   AssertionError: assert 'del correo solo se lee el código de obra' in '## convenciones generales ...' (y 8 frases más)
+    E   AssertionError: assert 'lectura_correo.obra_codigos' in 'devuelve null cuando falte información ...'
+    E   AssertionError: assert [] == ['albaran_factura_es.task']
+    13 failed, 1 passed in 0.90s                                           -> 14 passed in 0.92s
+T16 bis test_f048_r18_lista_obras.py
+    E   ImportError: cannot import name 'CatalogoObras' from 'domain.ports.obras_activas_provider'   1 error in 0.94s
+    con el puerto, sin cliente, caché ni servicio:
+    E   AttributeError: 'AlbaranExtractionService' object has no attribute 'obras_conocidas' (x11)
+    E   AttributeError: 'SigridApiObrasClient' object has no attribute 'obtener_catalogo' (x4) / 'obtener_todas' (x2)
+    E   AssertionError: assert None == [ObraActiva(codigo='0945', ...)] (x3, caché)
+    22 failed, 4 passed in 0.75s                                           -> 26 passed in 0.71s
+    y test_f002_obras_cache.py SIN editar: 39 passed (junto con T16 bis: 65 passed in 1.12s)
 ```
-**T12** `test_f048_r39_captura.py`. GREEN `13 passed in 3.02s`
-```
-E   ModuleNotFoundError: No module named 'capturar_correo'
-ERROR tests/test_f048_r39_captura.py
-1 error in 0.23s
-```
-`git check-ignore -v evals/inputs/correos/ALB-001.json` → `.gitignore:36:evals/inputs/` (y lo
-comprueba un test). `capturar_correo.py` **no se ha ejecutado contra el buzón real** (es T36).
+Los 4 que ya pasaban en T16 bis (reproducido en una copia aislada) vigilan lo de hoy: `obtener()`
+solo da activas, catálogo inmutable, sin catálogo todo `None` y proveedor de solo `obtener()` ⇒
+`todas=None`. El de T15 paso 1: hay prompts de fase 2 que recorrer. El de T16: el fallback de T14.
 
-### Lo que el bloque C (sv2) tiene que saber
+### Verificaciones MANUAL y lo que queda fuera
 
-- **Blob lateral**: `input/{document_id}.correo.json` (contenedor `input`, junto al PDF), escrito
-  con `guardar_contexto_correo`; se lee con `leer_contexto_correo(almacen, msg.correo_blob)`.
-  Un test de sv1 hace ya esa ida y vuelta con el mismo almacén.
-- **El mensaje** `MensajeExtraccion` lleva `document_id`, `correlation_key` y `correo_blob` (el
-  nombre del blob, o `None`). Nunca texto: con 60.000 caracteres mide < 1 KB.
-- **Cuándo falta el contexto**: `correo_blob=None` si Graph falló (R5, aviso en el log de sv1), y
-  en todos los mensajes anteriores a esta feature. Con contexto pero `uniqueBody` vacío, el blob
-  existe con `cuerpo=""` y solo el asunto (R3). Si guardar el blob falla, no hay mensaje.
-- Todas las páginas de todos los adjuntos del correo traen **el mismo** contexto (mismo `sha256`,
-  R6), cada una en su propio blob. sv2 no tiene que agrupar nada.
-- La huella está en `workflow_runs.payload_json.correo_sha256` y en el log de sv1
-  (`correo=SI(sha=xxxxxxxx caracteres=N truncado=B)`): sirve para cruzar con el log de sv2.
-- Orden de despliegue (§8): sv1 va el último. Un sv2 viejo ignora `correo_blob`.
+Sin MANUAL propia de este bloque. `prompts.yaml`, `albaran_models.py` y `lectura_correo.py` son
+rutas sensibles: la evidencia de evals es **T40** (LLM real, se factura, visto bueno del humano).
+Que IA1 devuelva de verdad `lectura_correo` con evidencia corta solo lo dirá T40. Fuera: T17–T22
+(resolver, worker, logs de sv2, `encolar_extraccion.py`), bloques D–G.
 
-### Resultados reales
+## Resultados reales
 
-- Suite de sv1: **62 passed in 1.57 s** (a mano, `python -m pytest -q` en el servicio).
-- Tests F-048 de comun que usa el bloque (T1 y T2), a mano: `42 passed in 0.91s`.
-- Ruff de la raíz: 1161 avisos, los mismos que antes del bloque (54 en sv1, todos previos).
-- `bash harness/init.sh` (tras `26a9496`): `ENTORNO LISTO`, exit 0. Raíz `865 passed in 173.16s`;
-  **`[OK] servicio sv1-email: pytest en verde`** (`62 passed in 25.77s` bajo coverage): ya no sale
-  el aviso «sin directorio de tests». El resto de servicios, de caché. `PUERTA COBERTURA: 99.3% de
-  299 líneas cambiadas cubiertas (297/299)`: las 2 sin cubrir son el `raise SystemExit(main())`
-  de `capturar_correo.py` y el `raise NotImplementedError` del puerto. `PUERTA TAMAÑO` impl
-  183/220. Sigue el `[AVISO]` de rutas sensibles por `llm_call_logger.py` (evals, T40).
+- Suites a mano, una detrás de otra: sv2 `226 passed in 3.71s`; sv1 `72 passed in 5.60s`;
+  F-048 de sv2 `76 passed` (5 ficheros); comun sin cambios en este encargo.
+- `bash harness/init.sh` (tras `1ef98fe`): `ENTORNO LISTO`, exit 0. Raíz `865 passed in 164.83s`;
+  **sv1 `72 passed in 21.89s` y sv2 `226 passed in 12.36s` corrieron de verdad** (sin caché); el
+  resto, de caché (árbol sin cambios). `PUERTA COBERTURA: 99.5% de 427 líneas cambiadas
+  cubiertas (425/427)`. `[AVISO]` de rutas sensibles: ahora 4 (`prompts.yaml`,
+  `albaran_models.py`, `lectura_correo.py`, `llm_call_logger.py`), sin `progress/evals_F-048.md`
+  (T40). Ruff de la raíz: 1161 avisos, los mismos de antes (el +1 de ese init lo quitó `08e8fd3`).
+- `bash harness/init.sh` final (tras este informe): ver «Evidencias».
 
-### Evidencias (bloque B)
+## Evidencias (menores del bloque B y bloque C1)
 
 | Evidencia | Valor real |
 |---|---|
-| Tests F-048 de sv1 | 62 passed (7 ficheros), 1.57 s |
-| Cobertura de las líneas cambiadas | 99.3 % (297/299), `PUERTA COBERTURA` de init.sh |
-| Mutación | en T34, con la feature completa (`python -m harness.mutacion --feature F-048`) |
-| Tiempo de la suite de sv1 | 1.57 s (19.4 s bajo `coverage run`) |
-
-Sin verificaciones MANUAL propias: la de este bloque es **T36** (humano, Graph real, SOLO
-LECTURA): `cd services\albaranes-email; .\.venv\Scripts\python.exe capturar_correo.py
---message-id <ID> --caso <CASO>` ×3 y abrir `evals\inputs\correos\<CASO>.json`. Queda fuera:
-T13–T41 (sv2, sv3, sv4, evals, documentación, puertas y verificación real).
+| Tests ejecutados | sv1 72 passed (5.60 s); sv2 226 passed (3.71 s), 76 de ellos F-048; raíz 865 passed |
+| Cobertura de las líneas cambiadas | 99.5 % (425/427), `PUERTA COBERTURA` de init.sh |
+| Mutación | N/A en un bloque intermedio: campaña completa en T34 (`python -m harness.mutacion --feature F-048`) |
+| Tiempo de las suites | sv1 5.60 s (21.89 s bajo coverage); sv2 3.71 s (12.36 s bajo coverage) |
