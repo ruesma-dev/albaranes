@@ -75,4 +75,4 @@ class DocumentoAlbaran(StrictSchemaModel):
     # `cabecera.obra_codigo`; las dos lecturas las cruza sv2 (D3). Default
     # `None`: un envelope sin el bloque valida como antes (R17).
     # -----------------------------------------------------------------
-    lectura_correo: Optional[LecturaCorreo] = None
+    lectura_correo: LecturaCorreo | None = None
