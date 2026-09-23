@@ -127,11 +127,7 @@ class IntakeColaClient(OrchestratorClient):
             )
             # R7: el blob lateral ANTES de publicar. Si no se puede
             # guardar, la página falla como falla hoy un blob del PDF.
-            correo_blob = (
-                guardar_contexto_correo(self._almacen, document_id, contexto_correo)
-                if contexto_correo is not None
-                else None
-            )
+            correo_blob = self._guardar_correo(document_id, contexto_correo)
             self._pub.publicar(
                 COLA_EXTRACCION,
                 MensajeExtraccion(
@@ -140,6 +136,8 @@ class IntakeColaClient(OrchestratorClient):
                     correo_blob=correo_blob,
                 ),
             )
+        except OrchestratorError:
+            raise
         except Exception as exc:  # noqa: BLE001
             raise OrchestratorError(f"blob/cola: {exc}") from exc
 
@@ -154,6 +152,22 @@ class IntakeColaClient(OrchestratorClient):
             duplicate=False,
             message="encolado",
         )
+
+    def _guardar_correo(
+        self, document_id: str, contexto_correo: ContextoCorreo | None
+    ) -> str | None:
+        """Blob lateral del correo; ``None`` sin contexto.
+
+        Si falla, ``OrchestratorError`` SOLO con el tipo de la excepcion: su
+        mensaje podria repetir lo que se intentaba guardar, y el pipeline lo
+        loguea (R36, CR-B3).
+        """
+        if contexto_correo is None:
+            return None
+        try:
+            return guardar_contexto_correo(self._almacen, document_id, contexto_correo)
+        except Exception as exc:
+            raise OrchestratorError(f"blob correo: {type(exc).__name__}") from exc
 
 
 def _resumen_correo(contexto: ContextoCorreo | None) -> str:

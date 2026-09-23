@@ -76,9 +76,24 @@ class _GraphFalso:
         raise AssertionError(f"ruta inesperada: {ruta}")
 
 
-def _ciclo(graph: _GraphFalso) -> tuple[AlmacenDoble, PublicadorDoble]:
+class _AlmacenQueCitaElCorreo(AlmacenDoble):
+    """Almacen cuyo ``put_json`` falla citando lo que se le pidio guardar.
+
+    Simula un SDK que, al fallar, repite el contenido en el mensaje de la
+    excepcion: el peor caso para el log de ``OrchestratorError`` (CR-B3).
+    """
+
+    def put_json(self, contenedor: str, nombre: str, objeto: object) -> None:
+        self._llamadas.append(("put_json", contenedor, nombre))
+        raise OSError(f"no se pudo guardar {nombre}: {objeto!r}")
+
+
+def _ciclo(
+    graph: _GraphFalso, almacen: AlmacenDoble | None = None
+) -> tuple[AlmacenDoble, PublicadorDoble]:
     llamadas: list = []
-    almacen = AlmacenDoble(llamadas)
+    almacen = almacen if almacen is not None else AlmacenDoble(llamadas)
+    llamadas = almacen._llamadas
     publicador = PublicadorDoble(llamadas)
     pipeline = PollingPipeline(
         mailbox=GraphMailClient(
@@ -135,6 +150,27 @@ def test_f048_r36_fallo_de_graph_al_pedir_el_contenido_sin_el_cuerpo_en_el_log(c
     assert [m.correo_blob for _, m in publicador.publicados] == [None, None]
     assert ("POST", "/messages/msg-1/move") in graph.metodos
     assert "sin contexto de correo (RuntimeError)" in caplog.text
+
+
+def test_f048_r36_error_del_intake_que_cita_el_correo_no_llega_al_log(caplog):
+    """CR-B3: el log de ``OrchestratorError`` no repite el cuerpo aunque la excepcion lo cite."""
+    graph = _GraphFalso({"subject": "Albaran obra", "uniqueBody": {"contentType": "text", "content": CUERPO_TEXTO}})
+    almacen = _AlmacenQueCitaElCorreo([])
+
+    with caplog.at_level(logging.DEBUG):
+        _, publicador = _ciclo(graph, almacen)
+
+    # El fallo ocurrio de verdad y se registro (el test no es vacuo)...
+    assert [n for (_, _, n) in (c for c in almacen._llamadas if c[0] == "put_json")]
+    assert publicador.publicados == []
+    errores = [r.getMessage() for r in caplog.records if "ERROR sv7" in r.getMessage()]
+    assert len(errores) == 2
+    # ...sin el cuerpo (solo el tipo de la excepcion), y el correo va a
+    # Errores como hoy con un fallo de blob.
+    assert CENTINELA not in caplog.text
+    assert all("OSError" in m for m in errores)
+    (movimiento,) = [c for c in graph.metodos if c[0] == "POST"]
+    assert movimiento == ("POST", "/messages/msg-1/move")
 
 
 def test_f048_r36_el_destino_del_ciclo_completo_es_procesados():
