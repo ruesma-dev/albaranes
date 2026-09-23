@@ -7,6 +7,16 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
+**F-048 · MENORES DEL BLOQUE B Y BLOQUE C1 (sv2, T13–T16 bis) IMPLEMENTADOS**
+(2026-09-24, implementer, `ecac419..08e8fd3`): CR-B1/B3/B5/B6 en sv1;
+`LecturaCorreo`, `{contexto_correo}` en fase 1 y el mismo bloque en fase 2
+(sustitución en una pasada), `prompts.yaml` (ruta sensible, evals en T40) y
+`CatalogoObras` + `obras_conocidas()` sin consulta nueva. Informe:
+`progress/impl_F-048.md` (el bloque B íntegro pasó a
+`progress/impl_F-048_bloque_B.md` por el tope). Desviación: CR-B5 añade
+`receivedDateTime` al `$select` del GET de Graph (design §5 decía
+`subject,uniqueBody`). Pendiente: review de este encargo; después, T17–T22.
+
 **F-048 · BLOQUE B (sv1, T6–T12) IMPLEMENTADO** (2026-09-23, implementer,
 `e0e0a82..8e2a309`): primera suite de sv1 (62 tests), `get_contenido` con un
 GET a Graph, contexto una vez por mensaje a todas las páginas, blob lateral

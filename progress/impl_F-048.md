@@ -194,7 +194,8 @@ Que IA1 devuelva de verdad `lectura_correo` con evidencia corta solo lo dirá T4
   cubiertas (425/427)`. `[AVISO]` de rutas sensibles: ahora 4 (`prompts.yaml`,
   `albaran_models.py`, `lectura_correo.py`, `llm_call_logger.py`), sin `progress/evals_F-048.md`
   (T40). Ruff de la raíz: 1161 avisos, los mismos de antes (el +1 de ese init lo quitó `08e8fd3`).
-- `bash harness/init.sh` final (tras este informe): ver «Evidencias».
+- `bash harness/init.sh` final (con este informe ya commiteado): exit 0, `ENTORNO LISTO`; raíz
+  `865 passed in 182.62s`, sv2 `226 passed in 15.06s`, cobertura 99.5 % (425/427), impl 206/220.
 
 ## Evidencias (menores del bloque B y bloque C1)
 
