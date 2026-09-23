@@ -37,27 +37,19 @@ con la feature completa (T34): en un bloque intermedio es N/A, justificado abajo
 
 ## Comprobaciones pedidas
 
-- **Solo lectura del buzón**: `get_contenido` (`mail_client.py:288-318`) hace un único
-  `self._client.get` con `$select=subject,uniqueBody` y `Prefer` de texto; el diff no añade ningún
-  `post/patch/put/delete` (los dos POST que hay, `ensure_folder` y `move_message`, son de antes).
-  Un GET en Graph no cambia `isRead`. `capturar_correo.py` solo llama a `get_contenido` (lo prueba
-  un doble que revienta con cualquier otro método); el token es POST a Entra ID, no al buzón.
-- **R36**: el cuerpo no llega a ningún log. El aviso de R5 solo lleva `type(exc).__name__`
-  (`polling_pipeline.py:388-394`); el error de Graph no lleva `response.text`; el intake loguea
-  `correo=SI(sha=… caracteres=… truncado=…)`. El SDK de Blob no se crea con `logging_enable`, así
-  que no vuelca cuerpos de petición. Los tracebacks de `logger.exception` no llevan valores. El
-  test a DEBUG usa las piezas reales (Graph sobre `MockTransport`, splitter, `IntakeColaClient`) y
-  además comprueba que el cuerpo SÍ viajó al blob (no es vacuo). El asunto queda fuera (humano).
+- **Solo lectura del buzón**: `get_contenido` (`mail_client.py:288-318`) hace un único GET; el
+  diff no añade ningún `post/patch/put/delete` (los POST de `ensure_folder` y `move_message` son
+  de antes). `capturar_correo.py` solo llama a `get_contenido` (doble que revienta con lo demás).
+- **R36**: aviso de R5 solo con `type(exc).__name__` (`polling_pipeline.py:388-394`), error de
+  Graph sin `response.text`, intake con `correo=SI(sha=…)`; el SDK de Blob no usa `logging_enable`.
+  El test a DEBUG usa las piezas reales y comprueba que el cuerpo SÍ llegó al blob (no es vacuo).
 - **R6**: un único `get_contenido` por mensaje y el mismo objeto a cada página de cada adjunto;
   test con 3 adjuntos/6 páginas, un único sha256, y la matriz destino × {con, sin contexto} × {todo
   bien, adjunto falla, intake falla, sin elegibles} = el destino de hoy.
-- **R7/R10**: orden `crear_si_no_existe → put_bytes → put_json → publicar` comprobado con una
-  lista de llamadas compartida; `correo_blob == nombre_blob_correo(doc)`; ida y vuelta con
-  `leer_contexto_correo`; duplicado = solo `crear_si_no_existe`; sin contexto,
-  `payload_json == json.dumps(META)` byte a byte y `correo_blob is None`; meta del llamador intacto.
-- **R38**: `git check-ignore -v evals/inputs/correos/x.json` → `.gitignore:36:evals/inputs/`. Los
-  textos de los tests son inventados (`ejemplo.test`, centinela `CENTINELA-F048`); ninguno sale a
-  la red ni usa un correo real.
+- **R7/R10**: orden `crear_si_no_existe → put_bytes → put_json → publicar`; `correo_blob` bien y
+  legible con `leer_contexto_correo`; duplicado = solo `crear_si_no_existe`; sin contexto, payload
+  byte a byte el de hoy y `correo_blob is None`.
+- **R38**: `git check-ignore -v` → `.gitignore:36:evals/inputs/`; tests con textos inventados.
 
 ## Las diez decisiones del implementer
 
@@ -68,20 +60,17 @@ con la feature completa (T34): en un bloque intermedio es N/A, justificado abajo
    correo sin elegibles va a Errores sin tocar Graph, como hoy (test que lo fija).
 4. `HttpOrchestratorClient` acepta el parámetro: **aceptable**; sin él, cablear ese adaptador
    daría `TypeError`. Fuera de la lista de design §5, pero declarado. Ver menor 6.
-5. Si guardar el contexto falla, falla la página y no se publica: **coherente con R5**. R5 habla
-   de «la petición del contexto» (el GET a Graph), no de escribir en Blob: ese fallo es de
-   infraestructura, en el mismo contenedor donde el PDF se acaba de subir, y se trata igual que un
-   fallo del blob del PDF. Degradar a «sin contexto» sería defendible, pero publicar un
-   `correo_blob` inexistente no, y eso queda imposible. Ver menor 2 (trampa previa que se agranda).
+5. Si guardar el contexto falla, falla la página y no se publica: **coherente con R5**, que habla
+   de «la petición del contexto» (el GET a Graph), no de escribir en Blob; se trata como un fallo
+   del blob del PDF y nunca sale un `correo_blob` inexistente. Ver menor 2.
 6. `correo_sha256` solo con contexto: **correcta**, es lo que garantiza el byte a byte de R10.
 7. `CORREO_MAX_CARACTERES` con `gt=0` y defecto de `comun`: **correcta**; sv1 no tiene
    `.env.example`, así que no había nada que actualizar.
 8. Captura sin normalizar ni recortar: **correcta**; el test demuestra que da el mismo contexto que
    sv1 al pasar por `construir_contexto_correo`. Ver menor 5.
-9. sv1 con el intérprete de la raíz: **correcta y coherente con el repo**: sv2, sv3, sv5, sv6 y
-   `comun` tampoco declaran `venv` (solo sv4). Raíz 3.12.7 = `python:3.12-slim` del Dockerfile;
-   httpx 0.28.1 en los dos. Además `services/albaranes-email/.venv` existe y tiene `ruesma_comun`
-   editable (`import ruesma_comun.correo` OK), así que el comando de T36 funciona.
+9. sv1 con el intérprete de la raíz: **correcta**; solo sv4 declara `venv`. Raíz 3.12.7 como el
+   Dockerfile, httpx 0.28.1 en los dos; el `.venv` de sv1 existe con `ruesma_comun` editable, así
+   que el comando de T36 funciona.
 10. El asunto se sigue logueando: decisión del humano; los tests ponen el centinela solo en el cuerpo.
 
 ## Checkpoints (bloque intermedio)
@@ -140,17 +129,13 @@ Ninguno.
    (`intake_cola_adapter.py:144`). Hoy ninguna excepción de Blob ni de la cola cita el cuerpo
    (reportan la respuesta del servidor), pero R36 no tiene test en ese camino. Un test con un
    almacén que falle citando el centinela lo dejaría vigilado.
-4. `mail_client.py:300` — sin reintento: un 429/503 transitorio deja ese correo sin contexto
-   (aviso en el log, R5). Es lo que dice la spec y ningún otro método del cliente reintenta; se
-   anota para la medición de §7 (contar los `sin contexto de correo`).
-5. `capturar_correo.py:62-71` — la captura no guarda `receivedDateTime`, así que el contexto de
-   evals saldrá con `recibido_utc=None`. No cambia la huella (no entra en el sha256); solo lo digo.
-6. `orchestrator_client.py:40` — `contexto_correo: object | None` en vez de `ContextoCorreo | None`
-   (el tipo del puerto). Cosmético.
+4. `mail_client.py:300` — sin reintento: un 429/503 transitorio deja el correo sin contexto (R5
+   lo admite); contar los `sin contexto de correo` en la medición de §7.
+5. `capturar_correo.py:62-71` — no guarda `receivedDateTime`: en evals `recibido_utc=None`. No
+   cambia la huella.
+6. `orchestrator_client.py:40` — `object | None` en vez de `ContextoCorreo | None`. Cosmético.
 
 ## Automejora (propuesta, no aplicada)
 
-- `reviewer.md`/`CHECKPOINTS.md`: cuando se pida comprobar que un servicio corre «sin caché», el
-  paso es borrar `.arnes_cache/suite_<servicio>.ok` antes de `init.sh`: con el árbol commiteado,
-  la caché de la última pasada del implementer lo habría saltado y el `[OK]` no habría demostrado
-  nada. Vale para cualquier proyecto con el arnés ≥ 1.7: candidata a `arnes-base`.
+Para comprobar que una suite corre «sin caché», borrar `.arnes_cache/suite_<servicio>.ok` antes
+de `init.sh`: aquí la caché del implementer la habría saltado. Candidata a `arnes-base`.
