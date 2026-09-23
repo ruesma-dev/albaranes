@@ -235,11 +235,10 @@ discrepancias y revisiones.
   (`validada=null`); una obra sin contrato, o una lista truncada a 10.000 filas
   (hoy ya se avisa en el log), hace que un código bueno no cuente y decida la
   IA, sin revisión. Lo vigilan la red de sv3 (R28) y §7.
-- **R16 y el falso código**: el prompt dice a IA1 que, si el correo trae obra,
-  no la deduzca del papel. Si lo que tomó por obra es un pedido, el resolver lo
-  descarta y la cabecera puede quedar sin la obra que antes habría deducido,
-  sin motivo de revisión (`obra_codigo` no es obligatorio). Se mide en §7;
-  aflojar R16 lo decide el humano.
+- **R16 y el falso código, CERRADO (2026-09-23)**: el humano pidió que la IA
+  extraiga la obra «del propio albarán y lo cruce», así que IA1 lee o deduce
+  la obra del papel SIEMPRE. Un falso código del correo se descarta y queda la
+  lectura del papel de hoy: no se pierde nada.
 - **IA2 puede copiar el código del correo en la cabecera** y borrar la lectura
   del papel: se perdería la discrepancia (no la precedencia). El task embebido
   lo prohíbe; se vigila en la muestra.

@@ -53,8 +53,8 @@ obra: «la partida de momento no se indica en correo. solo obra» (2026-09-23).
   correo (lista) y la frase donde los lee. `cabecera.obra_codigo` sigue siendo
   lectura del PAPEL; `lineas[].codigo_imputacion` sale solo del papel.
 - **R16.** El prompt le dice a IA1 que del correo solo toma el código de obra
-  (nunca la partida) y que, CUANDO el correo trae obra, NO la deduzca del
-  papel (dirección, nombre, destinatario): solo la transcribe si está impresa.
+  (nunca la partida) y que la obra del PAPEL la lee o deduce SIEMPRE como hoy,
+  traiga o no obra el correo: son dos lecturas independientes que cruza sv2.
 - **R17.** SI la respuesta no trae `lectura_correo`, ENTONCES se trata como
   correo sin dato (motivo `ia_sin_lectura_correo`) y la extracción sigue.
 
