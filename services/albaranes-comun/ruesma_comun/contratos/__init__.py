@@ -7,5 +7,22 @@ ruta interna de cada modulo.
 """
 from ruesma_comun.contratos.clasificacion import ClasificacionAlbaran
 from ruesma_comun.contratos.contexto_linea import ContextoLinea
+from ruesma_comun.contratos.origen_datos import (
+    MOTIVO_REVISION_OBRA_CORREO_AMBIGUA,
+    MOTIVO_REVISION_OBRA_CORREO_DISTINTA,
+    MOTIVOS_REVISION_ORIGEN,
+    OrigenCampo,
+    OrigenDatos,
+    normalizar_codigo,
+)
 
-__all__ = ["ClasificacionAlbaran", "ContextoLinea"]
+__all__ = [
+    "ClasificacionAlbaran",
+    "ContextoLinea",
+    "MOTIVO_REVISION_OBRA_CORREO_AMBIGUA",
+    "MOTIVO_REVISION_OBRA_CORREO_DISTINTA",
+    "MOTIVOS_REVISION_ORIGEN",
+    "OrigenCampo",
+    "OrigenDatos",
+    "normalizar_codigo",
+]

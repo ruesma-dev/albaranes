@@ -7,6 +7,15 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
+**F-048 · BLOQUE A (comun, T1–T5) IMPLEMENTADO** (2026-09-23, implementer):
+contexto de correo, `MensajeExtraccion.correo_blob`, bloque del prompt y su
+redacción, `LlmCallLogger` sin correo y el contrato `origen_datos`. Informe en
+`progress/impl_F-048.md`. **Desviación aplicada por decisión del humano del
+2026-09-23** (vía el líder): `normalizar_codigo` quita todo lo no alfanumérico
+y los ceros a la izquierda, y devuelve `None` si no queda nada; la spec (R18–R20,
+design §3) dice aún «mayúsculas y espacios» y `-> str`: la actualiza el líder.
+Siguiente: bloque B (sv1, T6–T12).
+
 **F-048 · SPEC v3 LISTA PARA IMPLEMENTAR** (2026-09-23, rama
 `feature/F-048-correo-contexto-ia1`, `specs/F-048-correo-contexto-ia1/`:
 44 requisitos, 41 tareas; informe del cambio en `progress/spec_F-048_v3.md`).
