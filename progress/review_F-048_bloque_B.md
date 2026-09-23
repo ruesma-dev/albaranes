@@ -3,8 +3,7 @@ Revisión incremental desde 4a6802b (bloque B, pasada 1; el bloque A quedó apro
 
 # F-048 · Review del bloque B (sv1, T6–T12)
 
-**Veredicto: APPROVED** — HEAD revisado `5b9637a`. Sin bloqueantes; seis menores abajo, ninguno
-impide seguir con el bloque C.
+**Veredicto: APPROVED** — HEAD revisado `5b9637a`. Sin bloqueantes; seis menores, que no frenan el bloque C.
 
 **Rigor**: `critico` (declarado en `harness/features.json`). Exige fase RED, cobertura ≥ 80 % de lo
 cambiado, mutación con 0 supervivientes injustificados y MANUAL con comando exacto. La mutación va
