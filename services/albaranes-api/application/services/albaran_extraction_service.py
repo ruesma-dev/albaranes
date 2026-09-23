@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Type
 
 from pydantic import BaseModel
+from ruesma_comun.contratos import normalizar_codigo
 from ruesma_comun.contratos.familias import render_catalogo_markdown
 from ruesma_comun.correo import render_bloque_correo
 
@@ -281,6 +282,53 @@ class AlbaranExtractionService:
                 "sigue sin ella.",
             )
             return None
+
+    def obras_conocidas(self) -> dict[str, str] | None:
+        """Obras de Sigrid para validar el código del correo (F-048, R18, D5).
+
+        Mapa ``normalizar_codigo(codigo) -> codigo tal como figura en la
+        lista``, sobre TODAS las obras con contrato (activas o no), de la
+        MISMA lista y caché que la del prompt. ``None`` si no hay lista: sin
+        proveedor, con un proveedor sin ``obtener_todas`` o si no da nada;
+        entonces el resolver cuenta todos los códigos, con ``validada=null``.
+
+        Dos códigos DISTINTOS que normalizan igual (``0945-1`` y ``9451``)
+        son ambiguos: la clave se deja fuera, en vez de elegir uno en
+        silencio, y se avisa con los códigos que chocan.
+        """
+        obtener_todas = getattr(self._obras_activas_provider, "obtener_todas", None)
+        if obtener_todas is None:
+            return None
+        try:
+            todas = obtener_todas()
+        except Exception:  # best-effort, como la del prompt
+            logger.exception(
+                "No se pudo obtener la lista de todas las obras; el código "
+                "del correo se usa sin validar.",
+            )
+            return None
+        if not todas:
+            return None
+
+        mapa: dict[str, str] = {}
+        choques: dict[str, set[str]] = {}
+        for obra in todas:
+            clave = normalizar_codigo(obra.codigo)
+            if clave is None:
+                continue
+            codigos = choques.setdefault(clave, set())
+            codigos.add(obra.codigo)
+            mapa.setdefault(clave, obra.codigo)
+        ambiguas = {clave: sorted(c) for clave, c in choques.items() if len(c) > 1}
+        for clave in ambiguas:
+            del mapa[clave]
+        if ambiguas:
+            logger.warning(
+                "Lista de obras: códigos distintos que normalizan igual, "
+                "fuera del mapa por ambiguos: %s",
+                "; ".join(f"{clave} <- {', '.join(c)}" for clave, c in sorted(ambiguas.items())),
+            )
+        return mapa or None
 
     def _render_obras_activas(self, obras: list[ObraActiva] | None) -> str:
         """Bloque DETERMINISTA de obras para el prompt.
