@@ -12,6 +12,13 @@ from ruesma_comun.correo.contexto import (
     leer_contexto_correo,
     nombre_blob_correo,
 )
+from ruesma_comun.correo.prompt import (
+    MARCA_FIN,
+    MARCA_INICIO,
+    NOTA_SIN_CORREO,
+    redactar_correo,
+    render_bloque_correo,
+)
 
 __all__ = [
     "MAX_CARACTERES_DEFECTO",
@@ -20,4 +27,9 @@ __all__ = [
     "guardar_contexto_correo",
     "leer_contexto_correo",
     "nombre_blob_correo",
+    "MARCA_FIN",
+    "MARCA_INICIO",
+    "NOTA_SIN_CORREO",
+    "redactar_correo",
+    "render_bloque_correo",
 ]
