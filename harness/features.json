@@ -542,7 +542,8 @@
         "sv3-persistencia",
         "sv4-front",
         "comun"
-      ]
+      ],
+      "branch": "feature/F-048-correo-contexto-ia1"
     },
     {
       "id": "F-049",

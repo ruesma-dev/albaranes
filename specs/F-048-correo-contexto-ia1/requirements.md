@@ -126,7 +126,7 @@ obra: «la partida de momento no se indica en correo. solo obra» (2026-09-23).
 - **R36.** Ningún log de sv1 ni de sv2 contiene el cuerpo: solo sha256
   abreviado, caracteres y `truncado` (comprobado con un centinela).
 - **R37.** `LlmCallLogger` sustituye el bloque del correo por un resumen
-  (sha256, caracteres) en todo texto de `request_summary` antes de escribir.
+  (sha256, caracteres) en TODO lo que escribe (petición, respuesta y error).
 - **R38.** Ningún fixture versionado contiene texto de un correo real; los
   correos reales viven en rutas que `git check-ignore` confirma ignoradas.
 
