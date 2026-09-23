@@ -155,3 +155,16 @@ def test_f048_r36_el_log_del_intake_lleva_la_huella_y_no_el_texto(caplog):
 
     assert CTX.sha256[:8] in caplog.text
     assert CENTINELA not in caplog.text
+
+
+def test_f048_r7_el_cliente_http_legado_declara_el_tipo_del_puerto():
+    """CR-B6: ``contexto_correo`` con el mismo tipo que el puerto, no ``object``."""
+    import inspect
+
+    from domain.ports.orchestrator_port import OrchestratorClient
+    from infrastructure.http.orchestrator_client import HttpOrchestratorClient
+
+    def _anotacion(clase: type) -> object:
+        return inspect.signature(clase.submit_email_received).parameters["contexto_correo"].annotation
+
+    assert _anotacion(HttpOrchestratorClient) == _anotacion(OrchestratorClient) == "ContextoCorreo | None"

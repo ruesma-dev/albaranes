@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from typing import TYPE_CHECKING
 
 import httpx
 
@@ -12,6 +13,10 @@ from domain.ports.orchestrator_port import (
     OrchestratorClient,
     OrchestratorError,
 )
+
+if TYPE_CHECKING:
+    # Solo para la firma, como en el puerto (F-048).
+    from ruesma_comun.correo import ContextoCorreo
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +42,7 @@ class HttpOrchestratorClient(OrchestratorClient):
         file_bytes: bytes,
         filename: str,
         content_type: str,
-        contexto_correo: object | None = None,
+        contexto_correo: ContextoCorreo | None = None,
     ) -> OrchestratorAck:
         # ``contexto_correo`` (F-048) no viaja a sv7: el adaptador es legado
         # y sin uso; acepta el parametro para cumplir el puerto.
