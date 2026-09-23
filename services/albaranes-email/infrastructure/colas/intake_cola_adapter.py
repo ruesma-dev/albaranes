@@ -8,9 +8,16 @@ sv7, por cada página de adjunto:
      ``workflow_runs`` vía ``ruesma_comun.workflows``. VESTIGIO de sv7:
      si esa tabla no existe (sv7 disuelto), se continua sin dedup en
      vez de fallar (el correo NO va a Errores por eso).
-  2. Si es nueva: sube la página a ``input/{document_id}.pdf`` (Blob) y
-     publica ``MensajeExtraccion`` en ``q-extraccion``.
-  3. Si ya existía (duplicado): no re-sube ni re-encola (at-least-once).
+  2. Si es nueva: sube la página a ``input/{document_id}.pdf`` (Blob), y
+     si hay contexto de correo, ``input/{document_id}.correo.json``
+     (F-048, R7), y publica ``MensajeExtraccion`` en ``q-extraccion`` con
+     el nombre de ese blob en ``correo_blob``. Los blobs van ANTES de
+     publicar: sv2 nunca recibe un mensaje cuyo blob aún no existe.
+  3. Si ya existía (duplicado): no re-sube ni re-encola (at-least-once),
+     y tampoco escribe el contexto.
+
+``payload_json`` de ``workflow_runs`` lleva ``correo_sha256`` si hay
+contexto: la huella, nunca el texto (R10).
 
 El ``document_id`` lo genera sv1 y viaja consistente a blob + cola + BBDD.
 """
@@ -30,7 +37,7 @@ from ruesma_comun.blobs.conexion import CONTENEDOR_INPUT
 from ruesma_comun.colas.conexion import COLA_EXTRACCION
 from ruesma_comun.colas.mensajes import MensajeExtraccion
 from ruesma_comun.colas.publicador import PublicadorColas
-from ruesma_comun.correo import ContextoCorreo
+from ruesma_comun.correo import ContextoCorreo, guardar_contexto_correo
 from ruesma_comun.workflows.repositorio import RepositorioWorkflows
 
 logger = logging.getLogger(__name__)
@@ -63,6 +70,11 @@ class IntakeColaClient(OrchestratorClient):
         page_sha256 = str(meta.get("page_sha256") or "")
         correlation_key = f"email:{message_id}:{page_sha256}"
         document_id = str(uuid.uuid4())
+        # R10: la huella del correo va al payload; el texto, nunca. Copia:
+        # el meta del llamador no se toca.
+        meta_workflow = dict(meta)
+        if contexto_correo is not None:
+            meta_workflow["correo_sha256"] = contexto_correo.sha256
 
         # 1) workflow_runs idempotente (dedup). VESTIGIO de sv7: si la
         #    tabla no existe (sv7 disuelto y no se creo), NO tumbamos el
@@ -74,7 +86,7 @@ class IntakeColaClient(OrchestratorClient):
         try:
             res = self._repo.crear_si_no_existe(
                 correlation_key=correlation_key,
-                payload_json=json.dumps(meta, ensure_ascii=False),
+                payload_json=json.dumps(meta_workflow, ensure_ascii=False),
                 document_id=document_id,
                 attachment_sha256=page_sha256 or None,
             )
@@ -113,19 +125,28 @@ class IntakeColaClient(OrchestratorClient):
                 content_type=content_type or "application/pdf",
                 metadata={"filename": safe_name},
             )
+            # R7: el blob lateral ANTES de publicar. Si no se puede
+            # guardar, la página falla como falla hoy un blob del PDF.
+            correo_blob = (
+                guardar_contexto_correo(self._almacen, document_id, contexto_correo)
+                if contexto_correo is not None
+                else None
+            )
             self._pub.publicar(
                 COLA_EXTRACCION,
                 MensajeExtraccion(
                     document_id=document_id,
                     correlation_key=correlation_key,
+                    correo_blob=correo_blob,
                 ),
             )
         except Exception as exc:  # noqa: BLE001
             raise OrchestratorError(f"blob/cola: {exc}") from exc
 
         logger.info(
-            "intake encolado document_id=%s wf=%s correlation_key=%s",
+            "intake encolado document_id=%s wf=%s correlation_key=%s correo=%s",
             document_id, workflow_id, correlation_key,
+            _resumen_correo(contexto_correo),
         )
         return OrchestratorAck(
             accepted=True,
@@ -133,3 +154,13 @@ class IntakeColaClient(OrchestratorClient):
             duplicate=False,
             message="encolado",
         )
+
+
+def _resumen_correo(contexto: ContextoCorreo | None) -> str:
+    """Resumen del contexto para el log: huella abreviada, nunca texto (R36)."""
+    if contexto is None:
+        return "NO"
+    return (
+        f"SI(sha={contexto.sha256[:8]} caracteres={contexto.caracteres_originales}"
+        f" truncado={contexto.truncado})"
+    )

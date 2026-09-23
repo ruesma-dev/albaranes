@@ -185,3 +185,66 @@ def ejecutar_ciclo(pipeline: PollingPipeline) -> None:
         top=10,
         max_attachment_bytes=25 * 1024 * 1024,
     )
+
+
+# --------------------------------------------------------------------- #
+# Dobles del intake por colas (F-048, T10): repositorio de workflows,
+# almacen de blobs y publicador. Los tres apuntan en la MISMA lista de
+# llamadas para poder comprobar el orden (blob lateral antes de publicar).
+# --------------------------------------------------------------------- #
+@dataclass(frozen=True)
+class ResultadoCreacionDoble:
+    workflow_id: str
+    creado: bool
+    estado_actual: str
+
+
+class RepositorioDoble:
+    """``crear_si_no_existe`` en memoria; ``creado=False`` simula el duplicado."""
+
+    def __init__(self, llamadas: list, *, creado: bool = True, error: Exception | None = None) -> None:
+        self._llamadas = llamadas
+        self._creado = creado
+        self._error = error
+        self.payloads: list[str] = []
+
+    def crear_si_no_existe(self, *, correlation_key: str, payload_json: str = "{}", **_: object):
+        self._llamadas.append(("crear_si_no_existe", correlation_key))
+        self.payloads.append(payload_json)
+        if self._error is not None:
+            raise self._error
+        return ResultadoCreacionDoble("wf-1", self._creado, "extraccion_pendiente")
+
+
+class AlmacenDoble:
+    """Almacen de blobs en memoria con la forma de ``AlmacenBlobs``."""
+
+    def __init__(self, llamadas: list, *, fallar_json: bool = False) -> None:
+        self._llamadas = llamadas
+        self._fallar_json = fallar_json
+        self.blobs: dict[tuple[str, str], object] = {}
+
+    def put_bytes(self, contenedor: str, nombre: str, datos: bytes, **_: object) -> None:
+        self._llamadas.append(("put_bytes", contenedor, nombre))
+        self.blobs[(contenedor, nombre)] = datos
+
+    def put_json(self, contenedor: str, nombre: str, objeto: object) -> None:
+        self._llamadas.append(("put_json", contenedor, nombre))
+        if self._fallar_json:
+            raise OSError("almacen doble: put_json falla a proposito")
+        self.blobs[(contenedor, nombre)] = objeto
+
+    def get_json(self, contenedor: str, nombre: str) -> object:
+        if (contenedor, nombre) not in self.blobs:
+            raise FileNotFoundError(nombre)
+        return self.blobs[(contenedor, nombre)]
+
+
+class PublicadorDoble:
+    def __init__(self, llamadas: list) -> None:
+        self._llamadas = llamadas
+        self.publicados: list[tuple[str, object]] = []
+
+    def publicar(self, nombre_cola: str, mensaje: object) -> None:
+        self._llamadas.append(("publicar", nombre_cola, mensaje.document_id))
+        self.publicados.append((nombre_cola, mensaje))
