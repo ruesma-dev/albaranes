@@ -68,7 +68,8 @@ class BuzonDoble(MailboxClient):
     """Buzon en memoria. ``ficheros[att_id]`` son los bytes o una excepcion.
 
     ``contenido`` es lo que devuelve ``get_contenido`` (o la excepcion que
-    lanza); por defecto, un correo inventado con el centinela.
+    lanza), o un dict por ``message_id``; por defecto, un correo inventado
+    con el centinela.
     """
 
     def __init__(
@@ -77,7 +78,7 @@ class BuzonDoble(MailboxClient):
         mensajes: list[EmailMessage],
         adjuntos: dict[str, list[EmailAttachment]],
         ficheros: dict[str, bytes | Exception],
-        contenido: ContenidoCorreo | Exception | None = None,
+        contenido: ContenidoCorreo | Exception | dict | None = None,
     ) -> None:
         self._mensajes = mensajes
         self._adjuntos = adjuntos
@@ -114,9 +115,12 @@ class BuzonDoble(MailboxClient):
 
     def get_contenido(self, mailbox: str, message_id: str) -> ContenidoCorreo:
         self.llamadas.append(("get_contenido", message_id))
-        if isinstance(self._contenido, Exception):
-            raise self._contenido
-        return self._contenido
+        valor = self._contenido
+        if isinstance(valor, dict):
+            valor = valor[message_id]
+        if isinstance(valor, Exception):
+            raise valor
+        return valor
 
     def veces(self, metodo: str) -> int:
         """Cuantas veces se llamo a ``metodo``."""
