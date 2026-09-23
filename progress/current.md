@@ -7,8 +7,17 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
-**F-048 · BLOQUE B (sv1, T6–T12) EN CURSO** (2026-09-23, implementer). Tarea
-en curso: T6. Informe en `progress/impl_F-048.md`, sección «Bloque B».
+**F-048 · BLOQUE B (sv1, T6–T12) IMPLEMENTADO** (2026-09-23, implementer,
+`e0e0a82..8e2a309`): primera suite de sv1 (62 tests), `get_contenido` con un
+GET a Graph, contexto una vez por mensaje a todas las páginas, blob lateral
+`input/{id}.correo.json` antes de publicar, `correo_sha256` en `payload_json`,
+logs sin cuerpo y `capturar_correo.py`. Informe: `progress/impl_F-048.md`,
+«Bloque B» (el texto íntegro del bloque A pasó a
+`progress/impl_F-048_bloque_A.md` por el tope de 220 líneas). Desviación
+menor: el `HttpOrchestratorClient` legado acepta `contexto_correo` para
+cumplir el puerto (fuera de la lista de design §5). Pendiente: review del
+bloque B. Verificación MANUAL de este bloque: T36 (humano, Graph real, solo
+lectura) con `capturar_correo.py`, ver el informe.
 
 **F-048 · BLOQUE A (comun, T1–T5) IMPLEMENTADO** (2026-09-23, implementer):
 contexto de correo, `MensajeExtraccion.correo_blob`, bloque del prompt y su
