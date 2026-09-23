@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Type
 
@@ -51,6 +52,11 @@ MARCADOR_CATALOGO_FAMILIAS = "{catalogo_familias}"
 # (F-048 · R12) Marcador del texto del correo en el task de fase 1. Lo
 # sustituye el bloque delimitado de ``ruesma_comun.correo`` (o su nota fija).
 MARCADOR_CONTEXTO_CORREO = "{contexto_correo}"
+
+# Marcadores del task de fase 2, sustituidos en UNA pasada (F-048 · R14).
+_MARCADORES_FASE_2 = re.compile(
+    r"\{(?:prompt_fase_1|revision_rules|json_fase_1|sigrid_context)\}"
+)
 
 
 @dataclass(frozen=True)
@@ -319,6 +325,7 @@ class AlbaranExtractionService:
         prompt_key: str,
         phase_1_json: dict,
         sigrid_context: dict | None = None,
+        contexto_correo: ContextoCorreo | None = None,
     ) -> ProviderExtractionResult:
         """Ejecuta la revisión de fase 2.
 
@@ -357,8 +364,10 @@ class AlbaranExtractionService:
         # se renderiza igual que en la fase 1: si no, IA2 recibe los
         # literales `{catalogo_familias}` y `{obras_activas}` en vez del
         # catálogo de familias y de la lista de obras.
+        # (F-048 · R14) Con el MISMO correo que la fase 1: IA2 recibe el
+        # mismo bloque, dentro de `{prompt_fase_1}`.
         task_fase_1, _obras = self._render_task_fase_1(
-            prompt_fase_1_spec.task, None,
+            prompt_fase_1_spec.task, contexto_correo,
         )
         prompt_fase_1_text = self._compose_instructions(
             system=prompt_fase_1_spec.system,
@@ -372,27 +381,29 @@ class AlbaranExtractionService:
         sigrid_context_text = self._render_sigrid_context(sigrid_context)
 
         # -- Renderizar el task de fase 2 con sus placeholders -- #
-        # IMPORTANTE: usamos str.replace en vez de .format() porque
-        # el task contiene llaves de ejemplos JSON ("{...}") que
-        # romperían el .format(). replace() es más robusto.
-        task_rendered = prompt_spec.task
-        task_rendered = task_rendered.replace(
-            "{prompt_fase_1}", prompt_fase_1_text,
-        )
-        task_rendered = task_rendered.replace(
-            "{revision_rules}", revision_rules_text,
-        )
-        task_rendered = task_rendered.replace(
-            "{json_fase_1}", json_fase_1_text,
+        # IMPORTANTE: no se usa .format() porque el task contiene llaves
+        # de ejemplos JSON ("{...}") que lo romperían.
+        #
+        # (F-048 · R14) Una sola pasada sobre la PLANTILLA: lo insertado
+        # no se vuelve a recorrer. Antes se encadenaban `str.replace` y el
+        # texto del correo (dentro de `{prompt_fase_1}`) o el JSON de fase
+        # 1 (que lleva la evidencia leída del correo) podían escribir
+        # `{json_fase_1}` o `{sigrid_context}` y recibir el relleno dentro:
+        # IA2 ya no vería el MISMO bloque que IA1.
+        plantilla = prompt_spec.task
+        valores = {
+            "{prompt_fase_1}": prompt_fase_1_text,
+            "{revision_rules}": revision_rules_text,
+            "{json_fase_1}": json_fase_1_text,
+            "{sigrid_context}": sigrid_context_text,
+        }
+        task_rendered = _MARCADORES_FASE_2.sub(
+            lambda m: valores[m.group(0)], plantilla,
         )
         # Compatibilidad: si el prompts.yaml desplegado aún no tiene el
         # placeholder {sigrid_context}, el bloque se APPENDEA al final
         # del task (mejor inyectarlo en posición subóptima que perderlo).
-        if "{sigrid_context}" in task_rendered:
-            task_rendered = task_rendered.replace(
-                "{sigrid_context}", sigrid_context_text,
-            )
-        elif sigrid_context is not None:
+        if "{sigrid_context}" not in plantilla and sigrid_context is not None:
             task_rendered = (
                 f"{task_rendered}\n\n{sigrid_context_text}"
             )
@@ -418,13 +429,14 @@ class AlbaranExtractionService:
         logger.info(
             "Revisión FASE 2 proveedor=%s prompt_key=%s schema=%s "
             "model=%s filename=%s json_fase1_chars=%d "
-            "rules_count=%d sigrid_grounding=%s",
+            "rules_count=%d sigrid_grounding=%s correo=%s",
             spec.provider, prompt_key, prompt_spec.schema,
             spec.model_name,
             attachments[0].filename if attachments else "n/a",
             len(json_fase_1_text),
             self._revision_rules_repo.count,
             "SI" if sigrid_context is not None else "NO",
+            _resumen_correo(contexto_correo),
         )
 
         return self._invoke_provider(
