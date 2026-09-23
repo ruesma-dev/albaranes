@@ -5,11 +5,13 @@
 
 Resumen: **49 features**, 35 abiertas, 14 terminadas.
 
+En curso: **F-048**.
+
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel | 1 | pendiente | critico |  |
+| F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel | 1 | en curso | critico |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
@@ -68,7 +70,7 @@ Resumen: **49 features**, 35 abiertas, 14 terminadas.
 
 ### F-048 · El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel
 
-estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
+estado **en curso** · prioridad 1 · rigor `critico` · SDD sí
 
 PRIORIDAD 1 por decision del humano el 2026-09-18: «pon una feature prioridad 1, que sea leer el codigo de obra y/o partida del email (asunto o cuerpo) de forma que el texto se le pase como contexto a la IA1, para que lo procese, si viene el codigo de la obra ya no tiene que leerlo, y con la partida igual».
 
