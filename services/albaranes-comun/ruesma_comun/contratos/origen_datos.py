@@ -17,10 +17,9 @@ Lo que NO lleva, a proposito:
   con ``extra="ignore"`` y ``version`` es compatible en los dos sentidos.
 
 ``normalizar_codigo`` es la UNICA forma de comparar codigos de obra entre
-correo y papel. Decision del humano del 2026-09-23, que amplia la de la
-spec (mayusculas y espacios): se pasa a mayusculas, se quita todo caracter
-que no sea alfanumerico (espacios, guiones, puntos, barras...) y los ceros a
-la izquierda, de modo que ``0945``, ``945``, ``09-45``, ``09.45`` y
+correo, papel y lista de obras (R18, D9 «si, normaliza todo»): se pasa a
+mayusculas, se quita todo caracter que no sea alfanumerico (espacios,
+guiones, puntos, barras...) y los ceros a la izquierda, de modo que ``0945``, ``945``, ``09-45``, ``09.45`` y
 `` 0945 `` son el mismo codigo. Si no queda nada (``000``, ``--``), no hay
 codigo: ``None``. No quita palabras: extraer el codigo del texto es trabajo
 de IA1, nunca de una regla sobre el texto.

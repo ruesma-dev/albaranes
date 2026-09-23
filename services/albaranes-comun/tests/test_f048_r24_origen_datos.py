@@ -6,9 +6,9 @@
   Del correo solo la OBRA (D8): no hay bloque ``partida``.
 - R31: los nombres de los dos motivos de revision se definen UNA vez aqui
   (los importan sv3 y sv4).
-- ``normalizar_codigo`` (decision del humano del 2026-09-23, amplia la de
-  la spec): mayusculas, fuera todo lo que no sea alfanumerico y fuera los
-  ceros a la izquierda; si no queda nada, no hay codigo (``None``).
+- R18 · ``normalizar_codigo`` (D9 del design, «si, normaliza todo»):
+  mayusculas, fuera todo lo que no sea alfanumerico y fuera los ceros a la
+  izquierda; si no queda nada, no hay codigo (``None``).
 
 Solo modelos y funciones puras: sin red ni BBDD.
 """
@@ -180,7 +180,7 @@ def test_f048_r31_se_importan_desde_contratos():
 
 
 # ------------------------------------------------------------------ #
-# normalizar_codigo · decision del humano del 2026-09-23
+# R18 · normalizar_codigo (D9)
 # ------------------------------------------------------------------ #
 @pytest.mark.parametrize("codigo", ["0945", "945", "09-45", "09.45", " 0945 ", "09/45", "0 9 4 5"])
 def test_f048_r18_normalizar_codigo_equivalentes_dan_lo_mismo(codigo):
