@@ -56,7 +56,7 @@ va a mandar el del email, pero si no cuadra se marcará para revisión». IA1
 devuelve `lectura_correo` y la lectura del papel por separado; un resolver puro
 de sv2 cruza y sella sobre el documento final (IA2 puede tocar la cabecera,
 R25). **No es una regla sobre el texto**: el resolver solo mira las listas que
-devolvió IA1 (F-043).
+devolvió IA1 (F-043). `lectura_correo` es SIEMPRE la de fase 1; la de IA2 se ignora.
 
 **D4 · Varios albaranes en un correo: el código se aplica a TODOS** (2026-09-22).
 sv1 guarda el mismo contexto para cada página de cada adjunto (R6); sv2 no
@@ -112,9 +112,9 @@ partida (R16). Validarla contra la obra es **F-049**, que añadirá
 **D9 · «Sí, normaliza todo»** (2026-09-23; revoca «solo mayúsculas y espacios»
 de la v3). `normalizar_codigo` (hecha en el bloque A): mayúsculas, fuera todo
 lo no alfanumérico y los ceros a la izquierda; vacío ⇒ `None` (sin código).
-`0945`, `945`, `09-45` y `09.45` son el mismo. Se aplica a correo, papel y
-lista para validar, contar y cruzar. No quita palabras (`obra 0945` ⇒
-`OBRA0945`): sacar el código del texto es trabajo de IA1.
+`0945`, `945`, `09-45` y `09.45` son el mismo; se aplica a correo, papel y
+lista. No quita palabras (sacar el código es de IA1). Dos obras de la lista que
+normalizan igual salen del mapa con WARNING: su código no cuenta (fila 1).
 
 ## 3. Contratos nuevos
 
@@ -154,7 +154,7 @@ sv1 (**su primera suite**, con `conftest.py`: R2–R7, R10, R36, R39), sv2
 - **sv1** `domain/models/email_models.py` (`ContenidoCorreo(asunto,
   cuerpo_unico, tipo)`), `domain/ports/mailbox_client.py` (`get_contenido`),
   `infrastructure/graph/mail_client.py` (GET `/messages/{id}?$select=subject,
-  uniqueBody` con `Prefer`), `domain/ports/orchestrator_port.py`
+  uniqueBody,receivedDateTime` con `Prefer`), `domain/ports/orchestrator_port.py`
   (`contexto_correo` opcional), `application/pipelines/polling_pipeline.py`
   (contenido UNA vez por mensaje, a todas las páginas, R6),
   `intake_cola_adapter.py` (blob antes de publicar, `correo_sha256` en meta,
