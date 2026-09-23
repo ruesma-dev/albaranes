@@ -557,6 +557,18 @@
         "sv4-front",
         "comun"
       ]
+    },
+    {
+      "id": "F-050",
+      "title": "Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes",
+      "description": "PETICION DEL HUMANO (2026-09-23): «añade una feature, que sea estudiar la IA jev para mejorar clasificaciones».\n\nQUE ES JEV, segun la prensa del lanzamiento (2026-09-15; NADA verificado todavia por nosotros): modelo de TypeSafe AI de la clase «System One». No genera texto: responde preguntas predefinidas sobre una entrada con valores TIPADOS (elecciones, puntuaciones, si/no) y una probabilidad o confianza por respuesta, pensados para que los consuma el software. Dicen que es hasta 200 veces mas rapido y barato que un LLM grande para este tipo de decisiones (0,042 USD por millon de tokens de entrada).\n\nPOR QUE ENCAJA: la clasificacion de familia de F-043 es justo una eleccion cerrada sobre un catalogo con confianza (`ClasificacionAlbaran`: familia, confianza_pct, motivo, mixta, secundarias). Una confianza calibrada mejoraria ademas el umbral de revision del 60 % (`CLASIFICACION_CONFIANZA_MINIMA_PCT`). No contradice la decision del 2026-08-25 de que clasifica la IA y nunca una regla determinista: Jev es IA.\n\nALCANCE: ESTUDIO, no integracion. (1) Verificar con la documentacion oficial que admite entrada (texto, imagen o PDF), limites, precio, region y tratamiento de datos. (2) Medir, con el banco de evals de F-045 y la pasada con LLM real, la clasificacion de Jev frente a IA1 en los mismos casos: acierto por familia, calibracion de la confianza, coste y latencia. (3) Informe con recomendacion: no usarlo, usarlo como segundo opinante (desempate o auditoria de IA1) o sustituir la clasificacion de fase 1. Integrarlo en sv2 seria ficha aparte.\n\nCUIDADOS: es un proveedor NUEVO, asi que el texto de los albaranes (y con F-048 el del correo, con datos personales) saldria a un tercero que hoy no lo ve; eso lo decide el humano antes de mandar un solo documento real. Las llamadas se facturan: el numero de casos y el coste se enseñan antes de lanzar. Si Jev solo acepta texto, hay que pasarle lo que ya extrajo sv2, y la comparacion con IA1 (que ve el papel) no es de igual a igual: hay que declararlo en el informe.\n\nRELACIONADAS: F-043 (clasificacion por IA1), F-045 (banco de evals), F-046 (familias nuevas del catalogo), F-047 (ciclo completo).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 2,
+      "servicios": [
+        "sv2-api"
+      ]
     }
   ]
 }

@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **49 features**, 35 abiertas, 14 terminadas.
+Resumen: **50 features**, 36 abiertas, 14 terminadas.
 
 En curso: **F-048**.
 
@@ -13,6 +13,7 @@ En curso: **F-048**.
 |---|---|---|---|---|---|
 | F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel | 1 | en curso | critico |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
+| F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -115,6 +116,22 @@ DONDE, verificado al escribir la spec de F-048: la lista de partidas HOJA de una
 CUIDADOS: toca los cuatro prompts de fase 2 (RUTA SENSIBLE: exige pasada de evals con LLM real, que se factura), anade una llamada a sigrid-api por documento (solo lectura, maximo 10.000 filas por peticion, el balanceador corta a 230 s) y toca sv4 al mover la consulta, asi que su suite tiene que seguir verde sin cambios de comportamiento. Ojo tambien con el formato: hay 3 albaranes cuyo unico fallo son los ceros a la izquierda (CI.04.18 vs CI.4.18), que se arreglan normalizando antes de comparar, no cambiando la lectura.
 
 RELACIONADAS: F-048 (de donde sale, con el hueco validada=null ya preparado), F-021 (eleccion de partida), F-047 (el ciclo que lo mide), F-007 (partida ALM/acopio).
+
+### F-050 · Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes
+
+estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí
+
+PETICION DEL HUMANO (2026-09-23): «añade una feature, que sea estudiar la IA jev para mejorar clasificaciones».
+
+QUE ES JEV, segun la prensa del lanzamiento (2026-09-15; NADA verificado todavia por nosotros): modelo de TypeSafe AI de la clase «System One». No genera texto: responde preguntas predefinidas sobre una entrada con valores TIPADOS (elecciones, puntuaciones, si/no) y una probabilidad o confianza por respuesta, pensados para que los consuma el software. Dicen que es hasta 200 veces mas rapido y barato que un LLM grande para este tipo de decisiones (0,042 USD por millon de tokens de entrada).
+
+POR QUE ENCAJA: la clasificacion de familia de F-043 es justo una eleccion cerrada sobre un catalogo con confianza (`ClasificacionAlbaran`: familia, confianza_pct, motivo, mixta, secundarias). Una confianza calibrada mejoraria ademas el umbral de revision del 60 % (`CLASIFICACION_CONFIANZA_MINIMA_PCT`). No contradice la decision del 2026-08-25 de que clasifica la IA y nunca una regla determinista: Jev es IA.
+
+ALCANCE: ESTUDIO, no integracion. (1) Verificar con la documentacion oficial que admite entrada (texto, imagen o PDF), limites, precio, region y tratamiento de datos. (2) Medir, con el banco de evals de F-045 y la pasada con LLM real, la clasificacion de Jev frente a IA1 en los mismos casos: acierto por familia, calibracion de la confianza, coste y latencia. (3) Informe con recomendacion: no usarlo, usarlo como segundo opinante (desempate o auditoria de IA1) o sustituir la clasificacion de fase 1. Integrarlo en sv2 seria ficha aparte.
+
+CUIDADOS: es un proveedor NUEVO, asi que el texto de los albaranes (y con F-048 el del correo, con datos personales) saldria a un tercero que hoy no lo ve; eso lo decide el humano antes de mandar un solo documento real. Las llamadas se facturan: el numero de casos y el coste se enseñan antes de lanzar. Si Jev solo acepta texto, hay que pasarle lo que ya extrajo sv2, y la comparacion con IA1 (que ve el papel) no es de igual a igual: hay que declararlo en el informe.
+
+RELACIONADAS: F-043 (clasificacion por IA1), F-045 (banco de evals), F-046 (familias nuevas del catalogo), F-047 (ciclo completo).
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 
