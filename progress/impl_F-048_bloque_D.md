@@ -104,3 +104,55 @@ red los borra en la misma pasada. `review_required` sigue en true, sin motivo, y
 aviso como `info`. Choca R29/R30 con design §6 («las redes de obra no se tocan»): no se aplica
 ningún arreglo. El líder eligió la opción (a) (`7f419aa`): renombrar los motivos en comun. Hecho
 en CR-D1 (`6356ad7`, traza RED en `progress/impl_F-048.md`).
+
+<!-- Movido desde progress/impl_F-048.md el 2026-09-24 por el tope de 220 lineas -->
+## CR-D1 · la red de obra ya no borra los motivos del origen — 2026-09-24
+
+**Commit** `6356ad7`. Opción (a) del líder (`7f419aa`). **Producción**: solo los VALORES de
+`MOTIVO_REVISION_OBRA_CORREO_DISTINTA` y `..._AMBIGUA` en `ruesma_comun/contratos/origen_datos.py`
+(`correo_obra_distinta_papel`, `correo_obra_ambigua`); las constantes conservan el nombre. La red de
+obra de sv3 NO se toca (design §6). **Tests**:
+- sv3, `test_f048_r29_r31_motivos_revision.py` (+4): merge real de las filas 3 y 5 con obra válida,
+  columna como la deja `save()` más un `obra_inexistente:0937` viejo, `ObraEnrichmentService` con
+  Sigrid «existe» y un repositorio doble cuyo `retirar_revision_obra` aplica la función pura real
+  (`quitar_motivos_con_prefijo` + `MOTIVO_OBRA_PREFIJO`, importados de sv3). Sale el viejo, queda el
+  del origen. Y cada motivo de `MOTIVOS_REVISION_ORIGEN` sobrevive al prefijo.
+- comun, `test_f048_r24_origen_datos.py` (+1): ningún motivo empieza por `obra_`; literal con
+  comentario que cita `MOTIVO_OBRA_PREFIJO` de sv3 (comun no importa de servicios).
+- Literales: el test de R31 de comun fija los nombres NUEVOS a propósito (es el contrato de R29/R30;
+  comparar la constante consigo misma no probaría nada); el de sv3 que busca literales en el módulo
+  pasa a usar las constantes. Ni sv2 ni sv4 usaban los literales.
+```
+$ ../../.venv/Scripts/python.exe -m pytest tests/test_f048_r29_r31_motivos_revision.py -q --tb=short -k cr_d1
+fila3/fila5: assert json.loads(repo.review_reasons_json) == [motivo]
+  E   TypeError: the JSON object must be str, bytes or bytearray, not NoneType   (la red dejó la columna a NULL)
+prefijo: E   AssertionError: assert not True  ('obra_correo_distinta_papel'.startswith('obra_'), idem ambigua)
+4 failed, 15 deselected in 0.91s                                            -> 19 passed in 0.91s
+$ (comun) ../../.venv/Scripts/python.exe -m pytest tests/test_f048_r24_origen_datos.py -q -k "cr_d1 or r31"
+E   AssertionError: obra_correo_distinta_papel   1 failed, 2 passed in 0.43s -> 49 passed in 0.48s
+```
+**Spec**: `tasks.md` T37 y T39 dicen aún «sin motivos `obra_correo_*`»; es del líder (no se edita aquí).
+
+## Verificaciones MANUAL y lo que queda fuera
+
+Sin MANUAL propia de estos bloques: el extremo a extremo es T37–T39 (con CR-D1, T37/T38 ya deberían
+ver `correo_obra_distinta_papel` en `review_reasons_json`). Rutas sensibles: `lectura_correo.py` se
+suma a las de T40. No tocados: sv5 (aviso A, T32) y `azure-apps/` (T32). Fuera: bloques E–G.
+
+## Resultados reales
+
+- Suites a mano, una detrás de otra (tras `6356ad7`): comun `272 passed, 3 skipped in 106.92s` ·
+  sv3 `233 passed in 1.49s` · sv4 (su venv) `223 passed in 3.27s`. sv2 no se tocó.
+- `bash harness/init.sh` (tras `6356ad7`): exit 0, `ENTORNO LISTO`. Raíz `865 passed in 110.43s`;
+  sv3 y comun corrieron de verdad (233 / 272 + 3 skipped), el resto de caché. `PUERTA COBERTURA:
+  99.5% de 642 líneas cambiadas cubiertas (639/642)`. `[AVISO]` de rutas sensibles: 5 (T40). Ruff:
+  1160 avisos, los mismos.
+
+## Evidencias (CR-D1)
+
+| Evidencia | Valor real |
+|---|---|
+| Tests ejecutados | comun 272 + 3 skipped (1 nuevo); sv3 233 (4 nuevos); sv4 223; raíz 865 |
+| Cobertura de las líneas cambiadas | 99.5 % (639/642), `PUERTA COBERTURA` de init.sh |
+| Mutación | N/A en un cambio intermedio: campaña completa en T34 (`python -m harness.mutacion --feature F-048`) |
+| Tiempo de las suites | comun 106.92 s; sv3 1.49 s; sv4 3.27 s; raíz 110.43 s |

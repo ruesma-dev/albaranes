@@ -101,53 +101,72 @@ T22 E TypeError: main() takes 0 positional arguments but 1 was given (x9)       
 (ficha de sv4, solo lectura). Detalle, trazas RED y el bloqueo original en
 [`progress/impl_F-048_bloque_D.md`](impl_F-048_bloque_D.md).
 
-## CR-D1 · la red de obra ya no borra los motivos del origen — 2026-09-24
+## CR-D1 · la red de obra ya no borra los motivos del origen — resumen
 
-**Commit** `6356ad7`. Opción (a) del líder (`7f419aa`). **Producción**: solo los VALORES de
-`MOTIVO_REVISION_OBRA_CORREO_DISTINTA` y `..._AMBIGUA` en `ruesma_comun/contratos/origen_datos.py`
-(`correo_obra_distinta_papel`, `correo_obra_ambigua`); las constantes conservan el nombre. La red de
-obra de sv3 NO se toca (design §6). **Tests**:
-- sv3, `test_f048_r29_r31_motivos_revision.py` (+4): merge real de las filas 3 y 5 con obra válida,
-  columna como la deja `save()` más un `obra_inexistente:0937` viejo, `ObraEnrichmentService` con
-  Sigrid «existe» y un repositorio doble cuyo `retirar_revision_obra` aplica la función pura real
-  (`quitar_motivos_con_prefijo` + `MOTIVO_OBRA_PREFIJO`, importados de sv3). Sale el viejo, queda el
-  del origen. Y cada motivo de `MOTIVOS_REVISION_ORIGEN` sobrevive al prefijo.
-- comun, `test_f048_r24_origen_datos.py` (+1): ningún motivo empieza por `obra_`; literal con
-  comentario que cita `MOTIVO_OBRA_PREFIJO` de sv3 (comun no importa de servicios).
-- Literales: el test de R31 de comun fija los nombres NUEVOS a propósito (es el contrato de R29/R30;
-  comparar la constante consigo misma no probaría nada); el de sv3 que busca literales en el módulo
-  pasa a usar las constantes. Ni sv2 ni sv4 usaban los literales.
+**Commit** `6356ad7`. Solo los VALORES de los dos motivos de comun (`correo_obra_distinta_papel`,
+`correo_obra_ambigua`); la red de obra de sv3 no se toca. RED `4 failed` (sv3) y `1 failed` (comun)
+-> verde. Resultados de entonces: init.sh verde, cobertura 99.5 % (639/642). Texto íntegro (tests,
+trazas, MANUAL y evidencias de CR-D1): `progress/impl_F-048_bloque_D.md`, sección «CR-D1».
+
+## Menores del bloque D y bloque F (T32, T33, T35) — 2026-09-24
+
+**Commits**: `c909c59` CR-D2 · `5bae02e` CR-D3 · `fb54c05` CR-D4 · `cf00a08` y `2227889` T32 · `e362df6` T33;
+en `azure-apps` (otro repo, sin push) `96bbdb6`. Solo sv4 en producción (`review_models.py`,
+`document_detail.html`); el resto es documentación, `rutas_sensibles.json` y tests.
+- **CR-D2** (menor 2): «que no están» con varios códigos fuera de la lista.
+- **CR-D3** (menor 3): en la fila 4, si `valor_final` ≠ `valor_papel` el aviso cita las dos: «una es la
+  del papel (el papel dice 945; en la lista de obras, 0945). Se ha usado 0945.» Iguales: como antes.
+- **CR-D4** (aviso C, opción (b)): propiedad `obra_cambiada_tras_extraer` = `normalizar_codigo(obra_codigo)`
+  ≠ `normalizar_codigo(valor_final)`, los dos con código. Si es cierta, el primer aviso dice «el revisor
+  cambió la obra a X; al extraer se fijó Y, la que decía el correo / la del papel», el de siempre pasa
+  a «Al extraer, …» y el `<div>` lleva la clase `obra-cambiada`. **Decisiones**: (1) el `warning` sigue
+  dependiendo SOLO del motivo sellado (R34 intacto; sv4 no escribe nada, R35); (2) una cabecera VACÍA
+  no cuenta como cambio: la deja la red de obra de sv3 (R28), que pone su propio motivo, y decir «el
+  revisor la cambió» sería falso; (3) comparar normalizado, para que `945`/`0945` no parezca un cambio;
+  (4) filas donde el correo no dijo nada (`sin_correo`, `correo_sin_dato`, `ia_sin_lectura_correo`): sin
+  aviso aunque cambie la obra; en `correo_unico` sin discrepancia (hoy sin aviso) sí se pinta el cambio.
+- **T32**: regla 15 en `docs/ARCHITECTURE.md` (tabla D5, `correo_obra_*` y su prefijo, DATO y logs,
+  orden sv3 → sv2 → sv1, trampa de `workflow_runs` del menor 2 del bloque B) y el blob lateral en la
+  sección de blobs. **Aviso A (sv5): código muerto**, no se toca: `DocumentoAlbaran` de sv5 solo lo usa
+  `RevisionAlbaranFase2`, de un `ExtractAlbaranPipeline` que nada instancia (grep de
+  `raw_extraction|DocumentoAlbaran|RevisionAlbaranFase2|ExtractAlbaranPipeline` fuera de `.venv`: solo
+  sus propios ficheros y un test de F-043); `SchemaRegistry` solo sirve valoración y conciliación.
+  Queda escrito en la regla 15. `rutas_sensibles.json`: `ruesma_comun/correo/**`,
+  `contratos/origen_datos.py` y `origen_datos_resolver.py` (`retry_policy.py` y `llm_call_logger.py`
+  ya caían en `ruesma_comun/llm/**`; `prompts.yaml` y `lectura_correo.py`, en las de sv2). Eso rompió
+  `tests/test_f011_r19_r20_declaracion.py`, que fija el conjunto: se añaden a `RUTAS_ANADIDAS_DESPUES`
+  con su motivo, como F-043. `azure-apps/albaranes.md`: §1 (blob), §3 (`data.origen_datos` sin DDL y
+  los dos motivos) y §7 nuevo (GET de Graph con `subject,uniqueBody,receivedDateTime`, blob lateral,
+  `correo_blob`, huella en `workflow_runs`, orden de despliegue). Sin secretos ni IDs.
+- **T33**: `python -m harness.cobertura --base dev --config harness/rigor.json` ⇒ **99.4 % (660/664)**.
+  Quedan sin cubrir 3 líneas de protocolos (`ports.py`, `mailbox_client.py`) y 1 de `capturar_correo.py`.
+- **T35**: `python -m harness.tamano --feature F-048` ⇒ exit 0, `impl 172/220` (requirements 150/150,
+  design 249/250). Para dejar aire a T34, el texto íntegro de CR-D1 pasó a `impl_F-048_bloque_D.md`.
+
+**RED** (en `services/albaranes-front`, su venv: `.venv/Scripts/python.exe -m pytest <r35 y r32_r34> -q --tb=line -k <cr_dN>`):
 ```
-$ ../../.venv/Scripts/python.exe -m pytest tests/test_f048_r29_r31_motivos_revision.py -q --tb=short -k cr_d1
-fila3/fila5: assert json.loads(repo.review_reasons_json) == [motivo]
-  E   TypeError: the JSON object must be str, bytes or bytearray, not NoneType   (la red dejó la columna a NULL)
-prefijo: E   AssertionError: assert not True  ('obra_correo_distinta_papel'.startswith('obra_'), idem ambigua)
-4 failed, 15 deselected in 0.91s                                            -> 19 passed in 0.91s
-$ (comun) ../../.venv/Scripts/python.exe -m pytest tests/test_f048_r24_origen_datos.py -q -k "cr_d1 or r31"
-E   AssertionError: obra_correo_distinta_papel   1 failed, 2 passed in 0.43s -> 49 passed in 0.48s
+CR-D2 E 'Obra: el correo cita PED-555, 600123, que no está en la lista ...' != '... que no están en la lista ...'
+      1 failed, 1 passed, 26 deselected in 0.42s                                  -> 41 passed (r35 + r32_r34)
+CR-D3 E assert '(el papel dice 945; en la lista de obras, 0945). Se ha usado 0945.' in
+        '<div class="alert info origen-datos">...una es la del papel (945). Se ha usado esa.</p>...'
+      4 failed, 4 passed, 37 deselected in 0.73s                                  -> 45 passed
+CR-D4 E AttributeError: 'DocumentDetailPayload' object has no attribute 'obra_cambiada_tras_extraer' (x10)
+      E assert 'class="alert warning origen-duda origen-datos obra-cambiada"' in '<div class="alert warning origen-duda origen-datos">...'
+      11 failed, 5 passed, 45 deselected in 0.72s                                 -> 61 passed
+T32   (init.sh, suite raíz) E AssertionError: faltan: [] · sobran: ['...origen_datos_resolver.py',
+      '...contratos/origen_datos.py', '...ruesma_comun/correo/**']  1 failed, 77 passed -> 16 passed
 ```
-**Spec**: `tasks.md` T37 y T39 dicen aún «sin motivos `obra_correo_*`»; es del líder (no se edita aquí).
+Los 5 que pasaban en el RED de CR-D4 son los de «sin cambio» que no tocan la propiedad nueva.
 
-## Verificaciones MANUAL y lo que queda fuera
-
-Sin MANUAL propia de estos bloques: el extremo a extremo es T37–T39 (con CR-D1, T37/T38 ya deberían
-ver `correo_obra_distinta_papel` en `review_reasons_json`). Rutas sensibles: `lectura_correo.py` se
-suma a las de T40. No tocados: sv5 (aviso A, T32) y `azure-apps/` (T32). Fuera: bloques E–G.
-
-## Resultados reales
-
-- Suites a mano, una detrás de otra (tras `6356ad7`): comun `272 passed, 3 skipped in 106.92s` ·
-  sv3 `233 passed in 1.49s` · sv4 (su venv) `223 passed in 3.27s`. sv2 no se tocó.
-- `bash harness/init.sh` (tras `6356ad7`): exit 0, `ENTORNO LISTO`. Raíz `865 passed in 110.43s`;
-  sv3 y comun corrieron de verdad (233 / 272 + 3 skipped), el resto de caché. `PUERTA COBERTURA:
-  99.5% de 642 líneas cambiadas cubiertas (639/642)`. `[AVISO]` de rutas sensibles: 5 (T40). Ruff:
-  1160 avisos, los mismos.
-
-## Evidencias (CR-D1)
+**Resultados reales**: sv4 a mano `244 passed in 3.50s` (223 → 244). `bash harness/init.sh`: exit 0,
+**ENTORNO LISTO**, raíz `865 passed in 112.38s`, sv4 corrió de verdad (244), el resto de caché;
+`PUERTA COBERTURA 99.4 % (660/664)`; `[AVISO]` de rutas sensibles: ahora 10 rutas (las 3 nuevas), T40.
+**Fuera / falta**: T34 (mutación, se lanza aparte), bloque E (T29–T31), G (T36–T41, MANUAL). La trampa
+de reintento de sv1 queda documentada, sin arreglar: pide ficha propia.
 
 | Evidencia | Valor real |
 |---|---|
-| Tests ejecutados | comun 272 + 3 skipped (1 nuevo); sv3 233 (4 nuevos); sv4 223; raíz 865 |
-| Cobertura de las líneas cambiadas | 99.5 % (639/642), `PUERTA COBERTURA` de init.sh |
-| Mutación | N/A en un cambio intermedio: campaña completa en T34 (`python -m harness.mutacion --feature F-048`) |
-| Tiempo de las suites | comun 106.92 s; sv3 1.49 s; sv4 3.27 s; raíz 110.43 s |
+| Tests ejecutados | sv4 244 (+21); raíz 865; demás servicios de caché, en verde |
+| Cobertura de las líneas cambiadas | 99.4 % (660/664), `PUERTA COBERTURA` |
+| Mutación | N/A aquí: T34, campaña completa sobre la feature (`python -m harness.mutacion --feature F-048`) |
+| Tiempo de las suites | sv4 3.50 s; raíz 112.38 s |
