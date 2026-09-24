@@ -17,6 +17,13 @@ humano del 23-sep aplicadas: solo OBRA del correo; validación contra TODAS las 
 está en la lista = sin código (manda la IA, sin revisión); normalizar todo; discrepancia y correo
 ambiguo a revisión con `correo_obra_distinta_papel` / `correo_obra_ambigua`.
 
+**T40 hecha el 2026-09-24** (autorizada por el humano; claves del `.env` de sv2 solo en el proceso): pasada
+`completa` SIN correo, `progress/evals_F-048.md` (ignorado, lleva valores), ROJO por defectos previos; el banco no
+compara la obra, así que se midió aparte con `evals/comparar_obra.py`: la rama deduce bien la obra en residuos
+donde `dev` devolvía null, sin ningún empeoramiento (`progress/analisis_evals_F-048.md` §6). Falta la parte CON
+correo (depende de T36 y del bloque E) y que el humano acepte el ROJO heredado frente a «VEREDICTO: VERDE» de la
+puerta de rutas sensibles. Un runner arreglado de paso: fallos aislados por caso (`77b4bc2`).
+
 **Lo que falta, todo del humano:**
 
 (a) **Bloque E (T29–T31) bloqueado por F-047**: la inyección de `evals/inyeccion.py` no está en esta
