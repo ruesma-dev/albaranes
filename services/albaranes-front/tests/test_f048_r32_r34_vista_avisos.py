@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 
 import pytest
 from ruesma_comun.contratos.origen_datos import (
@@ -181,3 +182,11 @@ def test_f048_r35_sin_aviso_la_ficha_es_la_de_hoy(render_detalle, documento_deta
 
     assert _bloque_origen(html) is None
     assert html == hoy
+
+
+def test_f048_cr_f4_la_hoja_de_la_ficha_distingue_la_obra_cambiada():
+    """Menor 3 de la review del bloque F: sin CSS, la clase ``obra-cambiada`` solo
+    se notaba por el texto. La ficha usa ``static/styles.css`` (via ``base.html``)."""
+    hoja = (Path(__file__).resolve().parents[1] / "static" / "styles.css").read_text(encoding="utf-8")
+
+    assert re.search(r"\.origen-datos\.obra-cambiada[^{]*\{[^}]+\}", hoja)
