@@ -163,12 +163,26 @@ def test_f048_r24_hay_discrepancia_es_la_de_la_obra():
 # R31 · los nombres de los motivos de revision, una sola vez
 # ------------------------------------------------------------------ #
 def test_f048_r31_nombres_de_los_motivos_de_revision():
-    assert od.MOTIVO_REVISION_OBRA_CORREO_DISTINTA == "obra_correo_distinta_papel"
-    assert od.MOTIVO_REVISION_OBRA_CORREO_AMBIGUA == "obra_correo_ambigua"
+    assert od.MOTIVO_REVISION_OBRA_CORREO_DISTINTA == "correo_obra_distinta_papel"
+    assert od.MOTIVO_REVISION_OBRA_CORREO_AMBIGUA == "correo_obra_ambigua"
     assert od.MOTIVOS_REVISION_ORIGEN == (
-        "obra_correo_distinta_papel",
-        "obra_correo_ambigua",
+        "correo_obra_distinta_papel",
+        "correo_obra_ambigua",
     )
+
+
+# Prefijo de los motivos que retira la red de obra de sv3 (F-002):
+# ``MOTIVO_OBRA_PREFIJO`` en
+# ``services/albaranes-persistencia/infrastructure/database/sqlalchemy_albaran_repository.py``.
+# Va como literal a proposito: comun no importa de ningun servicio.
+_PREFIJO_RED_OBRA_SV3 = "obra_"
+
+
+def test_f048_cr_d1_ningun_motivo_de_revision_empieza_por_el_prefijo_de_la_red_de_obra():
+    """Si empezara por ``obra_``, ``retirar_revision_obra`` lo borraria en
+    cuanto la obra del merge existe en Sigrid (bloqueo CR-D1)."""
+    for motivo in od.MOTIVOS_REVISION_ORIGEN:
+        assert not motivo.startswith(_PREFIJO_RED_OBRA_SV3), motivo
 
 
 def test_f048_r31_se_importan_desde_contratos():

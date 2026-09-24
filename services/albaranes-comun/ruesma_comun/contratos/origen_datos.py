@@ -67,8 +67,8 @@ MOTIVOS = (
 
 # Motivos de REVISION que sv3 anade a ``review_reasons`` (R29, R30) y sv4
 # reconoce (R34). Definidos UNA vez (R31).
-MOTIVO_REVISION_OBRA_CORREO_DISTINTA = "obra_correo_distinta_papel"
-MOTIVO_REVISION_OBRA_CORREO_AMBIGUA = "obra_correo_ambigua"
+MOTIVO_REVISION_OBRA_CORREO_DISTINTA = "correo_obra_distinta_papel"
+MOTIVO_REVISION_OBRA_CORREO_AMBIGUA = "correo_obra_ambigua"
 MOTIVOS_REVISION_ORIGEN = (
     MOTIVO_REVISION_OBRA_CORREO_DISTINTA,
     MOTIVO_REVISION_OBRA_CORREO_AMBIGUA,

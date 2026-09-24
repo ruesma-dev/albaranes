@@ -4,9 +4,9 @@
 Solo DOS filas de la tabla de D5 mandan a revision:
 
 - fila 3 — el correo trae UNA obra de la lista y el papel OTRA
-  (``obra.discrepancia``) ⇒ ``obra_correo_distinta_papel``;
+  (``obra.discrepancia``) ⇒ ``correo_obra_distinta_papel``;
 - fila 5 — el correo trae VARIAS y el papel no casa con ninguna, o no trae
-  obra (``correo_ambiguo``) ⇒ ``obra_correo_ambigua``.
+  obra (``correo_ambiguo``) ⇒ ``correo_obra_ambigua``.
 
 Con cualquiera de los dos, ``review_required = true`` aunque la confianza
 del documento sea >= 80. Ni la obra ni la confianza cambian: sv3 MARCA, no
@@ -25,11 +25,19 @@ from __future__ import annotations
 
 import copy
 import inspect
+import json
 
 import pytest
 from application.services import albaran_confidence_service
 from application.services.albaran_confidence_service import AlbaranConfidenceService
+from application.services.obra_enrichment_service import ObraEnrichmentService
 from domain.models.extraction_models import ExtractionEnvelope
+from domain.models.obra_models import ObraEnrichmentResult
+from infrastructure.database.sqlalchemy_albaran_repository import (
+    MOTIVO_OBRA_PREFIJO,
+    anadir_motivo_revision,
+    quitar_motivos_con_prefijo,
+)
 from ruesma_comun.contratos.origen_datos import (
     MOTIVO_REVISION_OBRA_CORREO_AMBIGUA,
     MOTIVO_REVISION_OBRA_CORREO_DISTINTA,
@@ -167,6 +175,79 @@ def test_f048_r29_reprocesar_no_duplica_el_motivo(origen):
 def test_f048_r31_los_nombres_se_importan_de_comun_no_se_copian():
     fuente = inspect.getsource(albaran_confidence_service)
 
-    assert "obra_correo_distinta_papel" not in fuente
-    assert "obra_correo_ambigua" not in fuente
+    assert MOTIVO_REVISION_OBRA_CORREO_DISTINTA not in fuente
+    assert MOTIVO_REVISION_OBRA_CORREO_AMBIGUA not in fuente
     assert "correo_ambiguo" not in fuente
+
+
+# ---------------------------------------------------------------- #
+# CR-D1 · la red de obra de F-002 no borra los motivos del origen.
+#
+# ``retirar_revision_obra`` corre justo despues de ``save()`` cuando la obra
+# del merge existe en Sigrid y quita los motivos que empiezan por
+# ``MOTIVO_OBRA_PREFIJO``. La red no se toca (design §6): son los nombres de
+# ``comun`` los que no pueden caer bajo ese prefijo.
+# ---------------------------------------------------------------- #
+class _RepoRedObra:
+    """Doble del puerto ``ObraMergeRepository`` con la columna de motivos.
+
+    ``retirar_revision_obra`` hace lo MISMO que el repositorio SQLAlchemy
+    (``sqlalchemy_albaran_repository.py``), sin la sesion: aplica la funcion
+    pura ``quitar_motivos_con_prefijo`` con ``MOTIVO_OBRA_PREFIJO``.
+    """
+
+    def __init__(self, *, obra_codigo: str, review_reasons_json: str | None) -> None:
+        self._obra_codigo = obra_codigo
+        self.review_reasons_json = review_reasons_json
+        self.retiradas = 0
+
+    def get_merge_obra_codigo(self, *, document_id):
+        return self._obra_codigo
+
+    def update_merge_obra_fields(self, *, document_id, obra_nombre, obra_direccion):
+        pass
+
+    def descartar_obra_no_valida(self, *, document_id, codigo_leido, motivo):
+        raise AssertionError("la obra existe: la red no debe descartarla")
+
+    def retirar_revision_obra(self, *, document_id):
+        self.retiradas += 1
+        self.review_reasons_json = quitar_motivos_con_prefijo(self.review_reasons_json, MOTIVO_OBRA_PREFIJO)
+
+
+class _SigridObraExiste:
+    def fetch_obra_by_codigo(self, *, codigo_obra_normalizado):
+        return ObraEnrichmentResult(
+            codigo_obra=codigo_obra_normalizado, nombre_obra="OBRA DEMO", direccion_linea1="CALLE FALSA 1",
+            direccion_linea2=None, codigo_postal="50001", municipio="ZARAGOZA", provincia="ZARAGOZA",
+        )
+
+
+@pytest.mark.parametrize(
+    ("origen", "motivo"),
+    [(FILA_3, MOTIVO_REVISION_OBRA_CORREO_DISTINTA), (FILA_5, MOTIVO_REVISION_OBRA_CORREO_AMBIGUA)],
+    ids=["fila3_discrepancia", "fila5_ambiguo"],
+)
+def test_f048_cr_d1_la_red_de_obra_conserva_el_motivo_del_origen(origen, motivo):
+    """Merge con obra valida + motivo del origen + un motivo de obra viejo:
+    tras la red, el de obra se va (la red actuo) y el del origen se queda."""
+    analisis = _analisis(origen)
+    assert analisis.review_reasons == [motivo]
+    # La columna como la deja ``save()``, con un motivo de obra de una pasada anterior.
+    columna = anadir_motivo_revision(
+        json.dumps(analisis.review_reasons, ensure_ascii=False, indent=2), "obra_inexistente:0937",
+    )
+    repo = _RepoRedObra(obra_codigo=analisis.merged_envelope.data.cabecera.obra_codigo, review_reasons_json=columna)
+
+    ObraEnrichmentService(client=_SigridObraExiste(), repository=repo).enrich_merge_document(merge_document_id="m-1")
+
+    assert repo.retiradas == 1
+    assert json.loads(repo.review_reasons_json) == [motivo]
+
+
+@pytest.mark.parametrize("motivo", MOTIVOS_REVISION_ORIGEN)
+def test_f048_cr_d1_ningun_motivo_del_origen_cae_bajo_el_prefijo_de_la_red(motivo):
+    columna = json.dumps([motivo])
+
+    assert not motivo.startswith(MOTIVO_OBRA_PREFIJO)
+    assert quitar_motivos_con_prefijo(columna, MOTIVO_OBRA_PREFIJO) == json.dumps([motivo], indent=2)
