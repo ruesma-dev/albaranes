@@ -171,3 +171,42 @@ de reintento de sv1 queda documentada, sin arreglar: pide ficha propia.
 | Cobertura de las líneas cambiadas | 99.5 % (661/664), `PUERTA COBERTURA` del init.sh final |
 | Mutación | N/A aquí: T34, campaña completa sobre la feature (`python -m harness.mutacion --feature F-048`) |
 | Tiempo de las suites | sv4 3.79 s; raíz 112.42 s |
+
+## Bloque F · cambios de la review (pasada 1, CHANGES_REQUESTED) — 2026-09-24
+
+**Commits**: `9886281` CR-F1 · `768d559` CR-F2 · `739d80a` CR-F3 · `03bd912` CR-F4. Producción: solo sv4.
+- **CR-F1** (bloqueante 1): el aviso va SIN sujeto: «Obra: la cabecera lleva ahora 0999 (cambiada después
+  de extraer); al extraer se fijó 0945, la que decía el correo.». La obra la cambia también sv3
+  (`HeaderResolverService`) y sv4 no sabe quién. Docstrings, comentario de la plantilla y tests ajustados
+  (`cr_d4_*` renombrados sin «revisor»); test nuevo `cr_f1_*`: papel `O937`, cabecera `0937`, sin «revisor».
+- **CR-F2** (menor 1): `albaran_extraction_service.py` de sv2 en `rutas_sensibles.json` y en
+  `RUTAS_ANADIDAS_DESPUES`, con su motivo (`_render_contexto_correo`, defensa de R12). `[AVISO]` → 11 rutas.
+- **CR-F3** (menor 2): regla 15 corregida. Grep repetido en `services/albaran-valoracion-api` fuera de
+  `.venv`: `DocumentoAlbaran` solo lo importan `revision_models.py` y `test_f043_contexto_clasificacion.py`;
+  `revision_models` no lo importa nadie; `albaran_extraction_service.py` solo lo nombra en un docstring.
+- **CR-F4** (menor 3): la ficha usa `static/styles.css` (vía `base.html`): regla
+  `.origen-datos.obra-cambiada .origen-aviso:first-of-type { font-weight: 600; }`, y un test que la fija.
+
+**RED** (sv4, su venv: `.venv/Scripts/python.exe -m pytest tests/test_f048_r35_vista_modelo.py
+tests/test_f048_r32_r34_vista_avisos.py -q --tb=line -k "cr_d4 or cr_f1"`):
+```
+E   At index 0 diff: 'Obra: el revisor cambió la obra a 0999; al extraer se fijó 0945, la que decía el correo.'
+      != 'Obra: la cabecera lleva ahora 0999 (cambiada después de extraer); al extraer se fijó 0945, ...'  (x5)
+E   - Obra: la cabecera lleva ahora 0937 (cambiada después de extraer); al extraer se fijó O937, la del papel.
+    + Obra: el revisor cambió la obra a 0937; al extraer se fijó O937, la del papel.   (caso sv3)
+E   assert 'la cabecera lleva ahora 0999 (cambiada después de extraer); ...' in '<div class="alert warning
+      origen-duda origen-datos obra-cambiada">...'
+7 failed, 10 passed, 45 deselected in 0.59s                           -> 62 passed (r35 + r32_r34)
+CR-F2 (raíz) test_f011_r19_r20_declaracion.py: AssertionError: assert 19 == 20 · 2 failed, 14 passed -> 16 passed
+CR-F4 -k cr_f4: AssertionError: assert None · 1 failed, 16 deselected                 -> 17 passed
+```
+**Resultados reales**: sv4 a mano `246 passed in 3.52s` (244 → 246). `bash harness/init.sh`: exit 0,
+**ENTORNO LISTO**, raíz `865 passed in 113.60s`, sv4 corrió (246), el resto de caché; `PUERTA COBERTURA
+99.5 % (661/664)`; `TAMAÑO` OK. **Falta**: T34 (mutación, ahora sin el bloqueante en su alcance), E y G.
+
+| Evidencia (tras la review del bloque F) | Valor real |
+|---|---|
+| Tests ejecutados | sv4 246 (+2); raíz 865; demás servicios de caché, en verde |
+| Cobertura de las líneas cambiadas | 99.5 % (661/664), `PUERTA COBERTURA` del init.sh final |
+| Mutación | N/A aquí: T34, campaña completa sobre la feature |
+| Tiempo de las suites | sv4 3.52 s; raíz 113.60 s |

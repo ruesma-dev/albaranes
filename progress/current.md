@@ -7,6 +7,12 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
+**F-048 · CAMBIOS DE LA REVIEW DEL BLOQUE F HECHOS** (2026-09-24, implementer,
+`9886281..03bd912`): CR-F1 aviso de obra cambiada SIN sujeto (la cambia también sv3), CR-F2 ruta
+sensible `albaran_extraction_service.py` (el `[AVISO]` de T40 pasa a 11), CR-F3 frase de sv5 en la
+regla 15, CR-F4 CSS de `.obra-cambiada`. init.sh verde. Pendiente: review pasada 2; T34; bloques E y G.
+Informe: `progress/impl_F-048.md`, sección «Bloque F · cambios de la review».
+
 **F-048 · MENORES 2–3 Y AVISO C DE LA REVIEW DEL BLOQUE D, Y BLOQUE F (T32, T33, T35) HECHOS**
 (2026-09-24, implementer, `c909c59..c46a330`; en `azure-apps`, `96bbdb6`, sin push). sv4: plural,
 fila 4 con las dos lecturas, y la ficha dice «el revisor cambió la obra» sin escribir nada (CR-D4).
