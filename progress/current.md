@@ -7,6 +7,13 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
+**F-048 · CAMBIOS DE LA REVIEW DE C2 Y BLOQUES D (sv3) Y D BIS (sv4): EN CURSO**
+(2026-09-24, implementer). Hechos: `43bc9b9` CR-C3 (evidencia a 160 en el
+origen y `obra_codigos` tolerante en `LecturaCorreo`), `b51a7be` CR-C4 (test
+de `_mensaje_para_log` en la suite de comun), `353a5c4` CR-C5 (fila 4: la
+cabecera toma la forma de la lista). Tarea en curso: T23. Si la sesión se
+corta, seguir por la primera `[ ]` de los bloques D y D bis de `tasks.md`.
+
 **F-048 · CAMBIOS DE LA REVIEW DE C1 Y BLOQUE C2 (sv2, T17–T22) IMPLEMENTADOS**
 (2026-09-24, implementer, `fe99db0..2b40968`): CR-C1 y CR-C2 en `prompts.yaml`;
 resolver puro de `origen_datos` (tabla de D5, D9, colisiones), worker con el
