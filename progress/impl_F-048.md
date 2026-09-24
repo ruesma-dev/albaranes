@@ -205,7 +205,8 @@ sv5 (aviso A, decisión de T32) y `azure-apps/` (T32). Fuera: bloques E–G.
 - `bash harness/init.sh` (tras `f68b510`): exit 0, `ENTORNO LISTO`. Raíz `865 passed in 111.65s`;
   sv2, sv3, sv4 y comun corrieron de verdad (368 / 229 / 223 / 271 + 3 skipped); sv1, sv5 y sv6 de
   caché. `PUERTA COBERTURA: 99.5% de 642 líneas cambiadas cubiertas (639/642)`. `[AVISO]` de rutas
-  sensibles: 5 (T40). Ruff de la raíz: 1160 avisos, los mismos que antes.
+  sensibles: 5 (T40). Ruff de la raíz: 1160 avisos, los mismos que antes. Repetido tras marcar
+  `blocked` (`289e566`): verde, pero la puerta de rutas sensibles sale N/A sin feature en curso.
 
 ## Evidencias (cambios de la review de C2 y bloques D y D bis)
 
