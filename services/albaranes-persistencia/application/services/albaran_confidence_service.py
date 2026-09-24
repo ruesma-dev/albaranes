@@ -233,6 +233,11 @@ class AlbaranConfidenceService:
             # clasificacion se pierde aqui igual que se perdia en
             # ``meta``: las seis columnas quedarian a NULL.
             clasificacion=openai.data.clasificacion,
+            # (F-048 · R27) Lo mismo con `origen_datos`: lo sella el
+            # resolver de sv2 sobre el envelope FINAL (`openai` aqui) y no
+            # se fusiona entre proveedores. Sin esta linea el merge lo
+            # perdia y no llegaba al `raw_extraction_json` del merge.
+            origen_datos=openai.data.origen_datos,
         )
         merged_envelope = ProviderExtractionEnvelope(
             meta=base_envelope.meta,
