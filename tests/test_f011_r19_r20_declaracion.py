@@ -187,10 +187,19 @@ RUTAS_DE_LA_SPEC: frozenset[str] = frozenset(
 #:   fase 2 y el de valoración de sv5. Cambiar una definición cambia lo que
 #:   lee la IA, y ningún test unitario puede decir si clasifica mejor o peor:
 #:   eso solo lo contestan las evals con LLM real.
+#: - F-048 (T32): el texto del correo que lee IA1 (`ruesma_comun/correo/**`:
+#:   recorte, marcas y advertencia de DATO), `normalizar_codigo` y los
+#:   motivos de `contratos/origen_datos.py`, y el resolver de sv2 que aplica
+#:   la tabla D5. Los tres mueven la obra final de documentos reales o lo que
+#:   lee la IA; cuántos cambian de obra o van a revisión solo lo dicen las
+#:   evals (T40).
 RUTAS_ANADIDAS_DESPUES: frozenset[str] = frozenset(
     {
         "services/albaranes-comun/ruesma_comun/contratos/familias.py",
         "services/albaranes-comun/ruesma_comun/contratos/clasificacion.py",
+        "services/albaranes-comun/ruesma_comun/correo/**",
+        "services/albaranes-comun/ruesma_comun/contratos/origen_datos.py",
+        "services/albaranes-api/application/services/origen_datos_resolver.py",
     }
 )
 
