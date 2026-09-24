@@ -42,7 +42,7 @@ solo se lee la OBRA (D8): ninguna tarea toca la partida.
 
 ## Bloque D · sv3
 
-- [ ] T23: `DocumentoAlbaran.origen_datos: OrigenDatos | None` en sv3; envelope viejo y nuevo validan; envelope con `origen_datos` NO va a poison (R26)  |  Verificación: `pytest services/albaranes-persistencia/tests/test_f048_r26_modelo.py`
+- [x] T23: `DocumentoAlbaran.origen_datos: OrigenDatos | None` en sv3; envelope viejo y nuevo validan; envelope con `origen_datos` NO va a poison (R26)  |  Verificación: `pytest services/albaranes-persistencia/tests/test_f048_r26_modelo.py`
 - [ ] T24: El merge conserva `origen_datos` y acaba en `raw_extraction_json` del merge (repositorio con sesión doble, sin BBDD) (R27)  |  Verificación: `pytest services/albaranes-persistencia/tests/test_f048_r27_merge.py`
 - [ ] T25: Test de regresión: obra del correo inexistente en Sigrid ⇒ la red de sv3 la descarta y marca revisión igual que si viniera del papel (R28)  |  Verificación: `pytest services/albaranes-persistencia/tests/test_f048_r28_red_obra.py`
 - [ ] T26: RED primero — `_motivos_de_origen_datos` en `_build_review_reasons`: discrepancia ⇒ `obra_correo_distinta_papel` y `review_required=true` aun con confianza ≥ 80; `correo_ambiguo` ⇒ `obra_correo_ambigua`; solo esas dos filas de D5 (3 y 5): sin `origen_datos`, `sin_correo`, `correo_sin_dato`, `ia_sin_lectura_correo`, `correo_fuera_de_lista`, `correo_unico` sin discrepancia y `correo_confirma_papel` ⇒ motivos idénticos a hoy; ni obra ni `doc_conf` cambian; reprocesar no duplica el motivo; nombres importados de `comun` (R29, R30, R31)  |  Verificación: `pytest services/albaranes-persistencia/tests/test_f048_r29_r31_motivos_revision.py`
