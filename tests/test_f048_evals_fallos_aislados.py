@@ -12,8 +12,8 @@ Lo que fijan estos tests, sin red ni LLM (dobles del extractor):
 
 - En el HIJO, cada caso y cada proveedor van aislados: el error queda en el
   resultado de ESE caso (fase, tipo, motivo corto) y el bucle sigue.
-- En el PADRE, un caso con error sale OMITIDO con su motivo y el informe se
-  escribe; si el subproceso entero muere, la fase queda NO_EVALUABLE con
+- En el PADRE, un caso con error sale ERROR con su motivo (CR-E2: no es un
+  OMITIDO, y la fase no puede salir VERDE) y el informe se escribe; si el subproceso entero muere, la fase queda NO_EVALUABLE con
   motivo en vez de una traza sin informe.
 - El motivo NO lleva valores del albarán (R31 de F-047): el `input_value` de
   pydantic lleva la respuesta del LLM, y aquí va un centinela para probarlo.
@@ -33,7 +33,7 @@ import evals.procesos.sv2_extraccion as sv2
 import evals.procesos.sv5_valoracion as sv5
 import evals.procesos.sv6_build as sv6
 from evals import runner
-from evals.modelos import NO_EVALUABLE, OMITIDO
+from evals.modelos import ERROR, NO_EVALUABLE, OMITIDO, ROJO, VERDE
 from evals.procesos.errores import describir_error
 
 #: Lo que NUNCA puede aparecer en un motivo: va dentro de la respuesta del LLM.
@@ -259,7 +259,7 @@ def test_f048_evals_sv2_el_log_dice_que_caso_fallo_y_sin_valores(capsys):
     assert CENTINELA not in log
 
 
-# --- Padre: el caso roto sale OMITIDO con motivo y el informe se escribe ----
+# --- Padre: el caso roto sale ERROR con motivo y el informe se escribe ------
 
 
 def _banco_ia1_ia2(tmp_path, *ids):
@@ -309,7 +309,7 @@ def pasada_con_llm(monkeypatch):
     monkeypatch.setattr(sv5, "ejecutar_en_subproceso", prohibido)
 
 
-def test_f048_evals_runner_el_caso_roto_sale_omitido_y_el_resto_se_evalua(
+def test_f048_evals_runner_el_caso_roto_sale_error_y_el_resto_se_evalua(
     tmp_path, monkeypatch, pasada_con_llm
 ):
     fixtures, albaranes = _banco_ia1_ia2(tmp_path, "HOR-001", "HOR-002")
@@ -328,7 +328,7 @@ def test_f048_evals_runner_el_caso_roto_sale_omitido_y_el_resto_se_evalua(
     estados = {c.caso_id: c for c in ia2.casos}
     assert estados["HOR-001/openai"].estado == "VERDE"
     roto = estados["HOR-002/openai"]
-    assert roto.estado == OMITIDO
+    assert roto.estado == ERROR
     assert roto.motivo.startswith("ERROR en IA2")
     assert "json_invalid" in roto.motivo
     assert CENTINELA not in roto.motivo
@@ -346,8 +346,8 @@ def test_f048_evals_runner_si_falla_ia1_ia2_tampoco_se_evalua(
 
     ia1 = next(f for f in fases if f.nombre == "IA1")
     ia2 = next(f for f in fases if f.nombre == "IA2")
-    assert ia1.casos[0].estado == OMITIDO and ia1.casos[0].motivo.startswith("ERROR en IA1")
-    assert ia2.casos[0].estado == OMITIDO and "falló IA1" in ia2.casos[0].motivo
+    assert ia1.casos[0].estado == ERROR and ia1.casos[0].motivo.startswith("ERROR en IA1")
+    assert ia2.casos[0].estado == ERROR and "falló IA1" in ia2.casos[0].motivo
 
 
 def test_f048_evals_runner_un_caso_que_sv2_no_devuelve_se_declara(
@@ -359,7 +359,7 @@ def test_f048_evals_runner_un_caso_que_sv2_no_devuelve_se_declara(
     fases, _ = runner.corrida_completa(fixtures, directorio_albaranes=albaranes)
 
     ia1 = next(f for f in fases if f.nombre == "IA1")
-    assert [c.estado for c in ia1.casos] == [OMITIDO]
+    assert [c.estado for c in ia1.casos] == [ERROR]
     assert "sv2 no devolvió resultado" in ia1.casos[0].motivo
 
 
@@ -410,7 +410,7 @@ def test_f048_evals_runner_con_un_caso_roto_el_informe_se_escribe_sin_valores(
     informe = (tmp_path / "progress" / "evals_F-999.md").read_text(encoding="utf-8")
     assert codigo in (0, 1, 2)
     assert "HOR-002/openai | VERDE" in informe
-    assert "HOR-001/openai | OMITIDO" in informe
+    assert "HOR-001/openai | ERROR" in informe
     assert "json_invalid" in informe
     assert CENTINELA not in informe
 
@@ -526,7 +526,7 @@ def _fase(fases, nombre):
     return next(f for f in fases if f.nombre == nombre)
 
 
-def test_f048_evals_runner_un_caso_roto_en_sv5_sale_omitido_en_ia3_ia4_y_e2e(
+def test_f048_evals_runner_un_caso_roto_en_sv5_sale_error_en_ia3_ia4_y_e2e(
     tmp_path, monkeypatch, valoracion_sin_servicios
 ):
     fixtures = _banco_valoracion(tmp_path, "HOR-001", "HOR-002")
@@ -552,7 +552,7 @@ def test_f048_evals_runner_un_caso_roto_en_sv5_sale_omitido_en_ia3_ia4_y_e2e(
 
     for nombre in ("IA3", "IA4", "E2E"):
         casos = {c.caso_id: c for c in _fase(fases, nombre).casos}
-        assert casos["HOR-001"].estado == OMITIDO
+        assert casos["HOR-001"].estado == ERROR
         assert "ERROR en IA3" in casos["HOR-001"].motivo
         assert casos["HOR-002"].estado == "VERDE"
     assert valoracion_sin_servicios["sv6"] == [["HOR-002"]], "el caso roto no va a sv6"
@@ -648,7 +648,7 @@ def test_f048_evals_runner_un_build_roto_omite_ia3_y_e2e_pero_no_ia4(
 
     for nombre in ("IA3", "E2E"):
         casos = {c.caso_id: c for c in _fase(fases, nombre).casos}
-        assert casos["HOR-001"].estado == OMITIDO
+        assert casos["HOR-001"].estado == ERROR
         assert "ERROR en el build de sv6" in casos["HOR-001"].motivo
         assert casos["HOR-002"].estado == "VERDE"
     ia4 = {c.caso_id: c for c in _fase(fases, "IA4").casos}
@@ -693,7 +693,7 @@ def test_f048_evals_runner_un_albaran_ilegible_omite_ia1_e_ia2_de_ese_caso(
 
     for nombre in ("IA1", "IA2"):
         caso = _fase(fases, nombre).casos[0]
-        assert caso.estado == OMITIDO
+        assert caso.estado == ERROR
         assert caso.motivo == "ERROR en preproceso · OSError: sin detalle"
 
 
@@ -710,6 +710,7 @@ def test_f048_evals_runner_un_proveedor_que_sv2_no_devuelve_se_declara(
     fases, _ = runner.corrida_completa(fixtures, directorio_albaranes=albaranes)
 
     assert _fase(fases, "IA2").casos[0].motivo == "sv2 no devolvió resultado"
+    assert _fase(fases, "IA2").casos[0].estado == ERROR
 
 
 def test_f048_evals_runner_un_caso_solo_del_libro_ia1_no_aparece_en_ia2(
@@ -739,6 +740,7 @@ def test_f048_evals_runner_un_caso_que_sv5_no_devuelve_se_declara(
 
     for nombre in ("IA3", "IA4", "E2E"):
         assert _fase(fases, nombre).casos[0].motivo == "sv5 no devolvió resultado"
+        assert _fase(fases, nombre).casos[0].estado == ERROR
     assert valoracion_sin_servicios["sv6"] == [], "sin envelopes no se lanza sv6"
 
 
@@ -860,3 +862,185 @@ def test_f048_cr_e1_los_indices_y_los_nombres_de_campo_se_conservan():
     motivo = describir_error(error.value, "IA1")["motivo"]
 
     assert motivo == "ValidationError: float_parsing en lineas.1.cantidad"
+
+
+# --- CR-E2: un caso con ERROR nunca deja la fase en VERDE --------------------
+#
+# Antes un caso roto salía OMITIDO, que no cuenta para el veredicto: con 1 de
+# 10 casos reventado por una salida inválida del LLM, la fase salía VERDE y la
+# pasada escribía `VEREDICTO: VERDE`, justo la línea que pide la puerta de
+# rutas sensibles. OMITIDO queda para «no había con qué evaluarlo».
+
+
+def _caso(estado, caso_id="HOR-001"):
+    from evals.modelos import ResultadoCaso
+
+    if estado == ERROR:
+        return ResultadoCaso.con_error(caso_id, "IA2", "ERROR en IA2 · json_invalid")
+    if estado == OMITIDO:
+        return ResultadoCaso.omitido(caso_id, "IA2", "sin caso en el libro IA2")
+    return ResultadoCaso(caso_id=caso_id, fase="IA2", estado=estado)
+
+
+@pytest.mark.parametrize(
+    ("estados", "veredicto"),
+    [
+        ((VERDE, ERROR), NO_EVALUABLE),
+        ((ERROR,), NO_EVALUABLE),
+        ((ROJO, ERROR), ROJO),
+        ((VERDE, OMITIDO), VERDE),
+        ((VERDE, ERROR, OMITIDO), NO_EVALUABLE),
+    ],
+    ids=["verde+error", "solo-error", "rojo-manda", "omitido-no-cuenta", "los-tres"],
+)
+def test_f048_cr_e2_un_caso_con_error_deja_la_fase_como_minimo_no_evaluable(
+    estados, veredicto
+):
+    from evals.modelos import ResultadoFase
+
+    fase = ResultadoFase(
+        nombre="IA2", casos=[_caso(e, f"C-{i}") for i, e in enumerate(estados)]
+    )
+
+    assert fase.veredicto() == veredicto
+
+
+def test_f048_cr_e2_el_caso_con_error_no_cuenta_como_evaluado_ni_como_omitido():
+    from evals.modelos import ResultadoFase
+
+    fase = ResultadoFase(
+        nombre="IA2", casos=[_caso(VERDE, "A"), _caso(ERROR, "B"), _caso(OMITIDO, "C")]
+    )
+
+    assert [c.caso_id for c in fase.evaluados] == ["A"]
+    assert [c.caso_id for c in fase.omitidos] == ["C"]
+    assert [c.caso_id for c in fase.con_error] == ["B"]
+
+
+def test_f048_cr_e2_un_caso_roto_nunca_da_veredicto_verde_y_no_se_lleva_la_pasada(
+    tmp_path, monkeypatch, pasada_con_llm
+):
+    fixtures, albaranes = _banco_ia1_ia2(tmp_path, "HOR-001", "HOR-002")
+    monkeypatch.setattr(sv2, "RUTA_ALBARANES", albaranes)
+    monkeypatch.setattr(
+        sv2, "ejecutar_en_subproceso", _sv2_en_proceso(_ExtractorDoble(falla_ia2={"HOR-001"}))
+    )
+
+    codigo = runner.main(
+        ["--con-llm", "--fases", "IA1,IA2", "--feature", "F-999", "--fixtures",
+         str(fixtures), "--informes", str(tmp_path / "progress")]
+    )
+
+    informe = (tmp_path / "progress" / "evals_F-999.md").read_text(encoding="utf-8")
+    assert codigo == 2
+    assert "VEREDICTO: VERDE" not in informe
+    assert "VEREDICTO: NO_EVALUABLE" in informe
+    assert "1 caso con ERROR: IA2 HOR-001/openai" in informe
+    assert "con ERROR: 1" in informe
+    # El aislamiento sigue: el otro caso se evalúa y el IA1 del roto también.
+    assert "HOR-002/openai | VERDE" in informe
+    assert "## IA1 · extracción genérica (sv2) — VERDE" in informe
+
+
+def test_f048_cr_e2_con_rojo_y_error_manda_rojo_y_se_listan_los_errores():
+    from evals.informe import render
+    from evals.modelos import ResultadoFase, ResultadoPasada
+
+    pasada = ResultadoPasada(
+        modo="completa",
+        fases=[
+            ResultadoFase(nombre="IA1", casos=[_caso(ROJO, "A")]),
+            ResultadoFase(nombre="IA2", casos=[_caso(ERROR, "B"), _caso(ERROR, "C")]),
+        ],
+    )
+
+    informe = render(pasada)
+
+    assert pasada.codigo_salida() == 1
+    assert "VEREDICTO: ROJO" in informe
+    assert "Hay fallos críticos en: IA1." in informe
+    assert "2 casos con ERROR: IA2 B, IA2 C" in informe
+
+
+def test_f048_cr_e2_un_albaran_sin_fichero_sigue_sin_afectar_al_veredicto(
+    tmp_path, monkeypatch, pasada_con_llm
+):
+    fixtures, albaranes = _banco_ia1_ia2(tmp_path, "HOR-001", "HOR-002")
+    (albaranes / "HOR-002.pdf").unlink()
+    monkeypatch.setattr(sv2, "ejecutar_en_subproceso", _sv2_en_proceso(_ExtractorDoble()))
+
+    fases, _ = runner.corrida_completa(fixtures, directorio_albaranes=albaranes)
+
+    for nombre in ("IA1", "IA2"):
+        fase = _fase(fases, nombre)
+        estados = {c.caso_id: c.estado for c in fase.casos}
+        assert estados == {"HOR-001/openai": VERDE, "HOR-002": OMITIDO}
+        assert fase.veredicto() == VERDE
+
+
+def test_f048_cr_e2_sin_caso_en_el_libro_sigue_sin_afectar_al_veredicto(
+    tmp_path, monkeypatch, valoracion_sin_servicios
+):
+    fixtures = _banco_valoracion(tmp_path, "HOR-001", "HOR-002")
+    (fixtures / "final" / "HOR-002.json").unlink()
+    (fixtures / "IA4" / "HOR-002.json").unlink()
+
+    fases, _ = runner.corrida_determinista(fixtures)
+
+    for nombre in ("E2E", "IA4"):
+        fase = _fase(fases, nombre)
+        assert {c.caso_id: c.estado for c in fase.casos} == {"HOR-001": VERDE, "HOR-002": OMITIDO}
+        assert "sin caso en el libro" in fase.omitidos[0].motivo
+        assert fase.veredicto() == VERDE
+
+
+def test_f048_cr_e2_sin_caso_en_el_libro_tampoco_cuenta_en_la_valoracion_real(
+    tmp_path, monkeypatch, valoracion_sin_servicios
+):
+    fixtures = _banco_valoracion(tmp_path, "HOR-001", "HOR-002")
+    (fixtures / "IA3" / "HOR-002.json").unlink()
+    monkeypatch.setattr(
+        sv5,
+        "ejecutar_en_subproceso",
+        lambda trabajo, interprete=None: {
+            "resultados": [
+                {"caso_id": c["caso_id"], "envelope": {}, "conciliaciones": []}
+                for c in trabajo["casos"]
+            ]
+        },
+    )
+
+    fases, _ = runner._corrida_valoracion_real(
+        *(runner.cargar_fixtures(fixtures, f) for f in ("inputs", "IA3", "IA4", "final")),
+        criticidad=runner.cargar_criticidad(),
+        proveedores=["gemini"],
+    )
+
+    ia3 = _fase(fases, "IA3")
+    assert {c.caso_id: c.estado for c in ia3.casos} == {"HOR-001": VERDE, "HOR-002": OMITIDO}
+    assert ia3.veredicto() == VERDE
+
+
+def test_f048_cr_e2_la_explicacion_distingue_error_de_fase_sin_casos():
+    from evals.informe import render
+    from evals.modelos import ResultadoFase, ResultadoPasada
+
+    solo_error = render(
+        ResultadoPasada(modo="completa", fases=[ResultadoFase(nombre="IA2", casos=[_caso(ERROR, "B")])])
+    )
+    error_y_vacia = render(
+        ResultadoPasada(
+            modo="completa",
+            fases=[
+                ResultadoFase(nombre="IA2", casos=[_caso(ERROR, "B")]),
+                ResultadoFase(nombre="IA3", casos=[_caso(OMITIDO, "C")]),
+            ],
+        )
+    )
+
+    assert "1 caso con ERROR: IA2 B." in solo_error
+    assert "Un caso que revienta" in solo_error
+    assert "no tenía ni un caso" not in solo_error
+    assert "| B | ERROR | — | — |" in solo_error
+    assert "1 caso con ERROR: IA2 B." in error_y_vacia
+    assert "no tenía ni un caso" in error_y_vacia

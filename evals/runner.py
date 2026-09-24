@@ -117,7 +117,7 @@ def corrida_determinista(
         motivo_sv6 = _motivo_sv6(resultado, motivo_muerte)
         if motivo_sv6:
             # Sin build no hay IA3 ni E2E; IA4 no depende de sv6 y se evalúa.
-            fase_ia3.casos.append(ResultadoCaso.omitido(caso_id, "IA3", motivo_sv6))
+            fase_ia3.casos.append(ResultadoCaso.con_error(caso_id, "IA3", motivo_sv6))
         elif caso_id in ia3:
             evaluacion = sv6_build.evaluar_caso_determinista(
                 caso_id=caso_id,
@@ -150,7 +150,7 @@ def corrida_determinista(
             )
 
         if motivo_sv6:
-            fase_e2e.casos.append(ResultadoCaso.omitido(caso_id, "E2E", motivo_sv6))
+            fase_e2e.casos.append(ResultadoCaso.con_error(caso_id, "E2E", motivo_sv6))
         elif caso_id in final:
             evaluacion = sv6_build.evaluar_caso_determinista(
                 caso_id=caso_id,
@@ -322,7 +322,11 @@ def _ejecutar_aislado(servicio: str, ejecutar, trabajo: dict) -> tuple[dict | No
 
 
 def _evaluar_sv2(trabajo, proveedores, fases, criticidad, no_observables) -> None:
-    """IA1 e IA2 de todos los casos; un caso roto sale OMITIDO con su motivo."""
+    """IA1 e IA2 de todos los casos; un caso roto sale ERROR con su motivo.
+
+    Todos los motivos de aquí nacen de un fallo —el subproceso murió, no
+    devolvió el caso o el caso reventó—, así que ninguno es un OMITIDO (CR-E2).
+    """
     salida, motivo_muerte = _ejecutar_aislado(
         "sv2",
         sv2_extraccion.ejecutar_en_subproceso,
@@ -352,7 +356,7 @@ def _evaluar_sv2(trabajo, proveedores, fases, criticidad, no_observables) -> Non
                     continue
                 etiqueta = f"{caso_id}/{proveedor}"
                 if motivos.get(nombre):
-                    fase.casos.append(ResultadoCaso.omitido(etiqueta, nombre, motivos[nombre]))
+                    fase.casos.append(ResultadoCaso.con_error(etiqueta, nombre, motivos[nombre]))
                     continue
                 proyectar, tablas = _COMPARACION_SV2[nombre]
                 fase.casos.append(
@@ -453,7 +457,7 @@ def _corrida_valoracion_real(
         for fase in fases:
             fase.motivo = motivo_muerte_sv5
             fase.casos.extend(
-                ResultadoCaso.omitido(caso_id, fase.nombre, motivo_muerte_sv5)
+                ResultadoCaso.con_error(caso_id, fase.nombre, motivo_muerte_sv5)
                 for caso_id in sorted(inputs)
             )
         return list(fases), no_observables
@@ -467,7 +471,7 @@ def _corrida_valoracion_real(
         if motivo:
             # Sin la valoración de sv5 no hay envelope: ni IA3, ni IA4, ni build.
             for fase in fases:
-                fase.casos.append(ResultadoCaso.omitido(caso_id, fase.nombre, motivo))
+                fase.casos.append(ResultadoCaso.con_error(caso_id, fase.nombre, motivo))
             continue
         envelopes[caso_id] = resultado_sv5["envelope"]
         conciliaciones[caso_id] = resultado_sv5.get("conciliaciones", [])
@@ -483,11 +487,12 @@ def _corrida_valoracion_real(
             (fase_ia3, "IA3", ia3.get(caso_id)),
             (fase_e2e, "E2E", final.get(caso_id)),
         ):
-            if motivo_sv6 or fixture is None:
+            if motivo_sv6:
+                fase.casos.append(ResultadoCaso.con_error(caso_id, nombre, motivo_sv6))
+                continue
+            if fixture is None:
                 fase.casos.append(
-                    ResultadoCaso.omitido(
-                        caso_id, nombre, motivo_sv6 or f"sin caso en el libro {nombre}"
-                    )
+                    ResultadoCaso.omitido(caso_id, nombre, f"sin caso en el libro {nombre}")
                 )
                 continue
             evaluacion = sv6_build.evaluar_caso_determinista(
