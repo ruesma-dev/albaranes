@@ -311,6 +311,66 @@ def test_f048_r4_guarda_dentro_de_script_y_style_no_hay_etiquetas(html, esperado
     assert html_a_texto(html) == esperado
 
 
+def test_f048_r4_demostracion_los_mutantes_22_y_23_no_cambian_ninguna_salida():
+    """Demostración EJECUTABLE de la equivalencia (RM5), diferencial.
+
+    Toma el extractor del ``mail_client.py`` real, fabrica las dos variantes
+    mutadas sustituyendo el texto de la línea y compara ``html_a_texto`` de
+    las tres sobre TODAS las secuencias de hasta 4 fichas de un alfabeto de
+    12 (22.620) y 3.000 aleatorias de 5 a 20: cero discrepancias. La versión larga
+    (hasta 5 fichas y 50.000 aleatorias, 321.452 casos) está en el informe
+    de T34. El control final prueba que la comparación no es ciega. Si
+    alguien reescribe esas líneas y no queda ni la forma original ni la
+    mutada, el test avisa: la justificación hay que rehacerla.
+    """
+    import itertools
+    import random
+    from pathlib import Path
+
+    import infrastructure.graph.mail_client as modulo
+
+    fuente = Path(modulo.__file__).read_text(encoding="utf-8")
+    trozo = fuente[fuente.index("# Etiquetas que separan bloques"):fuente.index("class GraphMailClient")]
+    sustituciones = {
+        "m22": ("self._dentro_sin_texto += 1", "self._dentro_sin_texto -= 1"),
+        "m23": ("self._dentro_sin_texto - 1)", "self._dentro_sin_texto - 2)"),
+        "control": ("if not self._dentro_sin_texto:", "if True:"),
+    }
+
+    def _cargar(codigo: str):
+        espacio: dict = {}
+        exec("from html.parser import HTMLParser\n" + codigo, espacio)  # noqa: S102 — fuente propia
+        return espacio["html_a_texto"]
+
+    # La variante es «la otra forma» de la línea: el mutante si el fichero
+    # trae el original y el original si trae el mutante. Así la demostración
+    # sigue comparando original contra mutante cuando una campaña inyecta
+    # uno de los dos en el propio ``mail_client.py``, y un equivalente no
+    # sale muerto por leer su propia fuente (RM3).
+    variantes = {}
+    for nombre, (original, mutado) in sustituciones.items():
+        forma = {trozo.count(original), trozo.count(mutado)}
+        assert forma == {0, 1}, f"{nombre}: la línea cambió; rehacer la justificación"
+        de, a = (original, mutado) if original in trozo else (mutado, original)
+        variantes[nombre] = _cargar(trozo.replace(de, a))
+    fichas = ["<script>", "</script>", "<style>", "</style>", "<style/>", "<SCRIPT>",
+              "<p>", "</p>", "<br>", "a", "b", "</div>"]
+    azar = random.Random(48)
+    secuencias = [s for n in range(1, 5) for s in itertools.product(fichas, repeat=n)]
+    secuencias += [tuple(azar.choice(fichas) for _ in range(azar.randint(5, 20))) for _ in range(3000)]
+
+    discrepancias = {"m22": 0, "m23": 0}
+    for secuencia in secuencias:
+        html = "".join(secuencia)
+        esperado = html_a_texto(html)
+        for nombre in discrepancias:
+            discrepancias[nombre] += variantes[nombre](html) != esperado
+
+    assert len(secuencias) == 25_620
+    assert discrepancias == {"m22": 0, "m23": 0}
+    assert variantes["control"]("<style>x</style>y") != html_a_texto("<style>x</style>y")
+
+
 # ---------------------------------------------------------------- #
 # Mutantes 24 y 25 · mail_client.py:305 (``>= 300`` -> ``> 300`` y
 # ``>= 301``). R5: una respuesta que no es 2xx es un fallo; un 300 (Graph
