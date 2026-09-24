@@ -50,7 +50,7 @@ solo se lee la OBRA (D8): ninguna tarea toca la partida.
 ## Bloque D bis · sv4 (solo pintar)
 
 - [x] T27: `review_models.py` — propiedades `origen_datos` (parsea `raw_extraction_json` con el modelo de `comun`), `avisos_origen_datos` y `origen_en_duda` (con `MOTIVOS_REVISION_ORIGEN` de `comun`, sin copiar nombres); JSON roto, ausente o sin bloque ⇒ `None` y la ficha abre igual (R34, R35)  |  Verificación: `pytest services/albaranes-front/tests/test_f048_r35_vista_modelo.py`
-- [ ] T28: `document_detail.html` — aviso con la discrepancia (campo, código del correo, código del papel) y con `candidatos_correo` y motivo en `correo_ambiguo`, `correo_confirma_papel` y `correo_fuera_de_lista`; estilo `warning` solo si `origen_en_duda` (`correo_fuera_de_lista` y `correo_confirma_papel`, informativos); los dos motivos nuevos salen en el bloque «Motivos de revisión» existente; sv4 no escribe nada (R32, R33, R34)  |  Verificación: `pytest services/albaranes-front/tests/test_f048_r32_r34_vista_avisos.py`
+- [x] T28: `document_detail.html` — aviso con la discrepancia (campo, código del correo, código del papel) y con `candidatos_correo` y motivo en `correo_ambiguo`, `correo_confirma_papel` y `correo_fuera_de_lista`; estilo `warning` solo si `origen_en_duda` (`correo_fuera_de_lista` y `correo_confirma_papel`, informativos); los dos motivos nuevos salen en el bloque «Motivos de revisión» existente; sv4 no escribe nada (R32, R33, R34)  |  Verificación: `pytest services/albaranes-front/tests/test_f048_r32_r34_vista_avisos.py`
 
 ## Bloque E · evals (depende de F-047)
 
