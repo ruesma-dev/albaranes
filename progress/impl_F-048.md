@@ -161,8 +161,7 @@ informe: IA2 devolvió JSON degenerado en UN caso, `json_invalid`, el hijo de sv
      [type=list_type, input_value='CENTINELA-VALOR-DEL-ALBARAN-7731', ...]   (sv6 real: tumba todo Y filtra el valor)
    20 failed, 5 passed in 5.38s          -> 25 passed in 2.19s;  con los bordes: 31 passed in 2.93s
 ```
-**MANUAL pendiente (líder)**: relanzar T40; si vuelve el JSON degenerado, el informe dirá el caso y la pasada acaba.
-**Fuera**: stderr del hijo en vivo (sigue capturado; sale por consola si muere); estado `ERROR` propio en el informe.
+**MANUAL (líder)**: relanzar T40. **Fuera**: stderr del hijo en vivo (sale por consola si muere); estado `ERROR` propio.
 
 | Evidencia (runner de evals) | Valor real |
 |---|---|
@@ -170,3 +169,51 @@ informe: IA2 devolvió JSON degenerado en UN caso, `json_invalid`, el hijo de sv
 | Cobertura de las líneas cambiadas | 99.7 % (872/875), `PUERTA COBERTURA` de la feature |
 | Mutación | no relanzada: T34 es anterior a este cambio; nueva campaña a decisión del líder (nivel `critico`) |
 | Tiempo de la suite | raíz 214.73 s; el fichero nuevo 2.93 s |
+
+## Comparador de obra dev/rama — 2026-09-24
+Encargo del líder (aprobado por el humano el 24-sep) tras `progress/analisis_evals_F-048.md`: medir si cambia la
+obra que lee IA1. Solo `evals/` y `tests/`. **Commits** `a264c36` (código + tests) · `8b37675` (test de dev). **No se lanzó contra LLM.**
+- `evals/comparar_obra.py`: CLI, corrida aislada por caso (`describir_error`, se sigue), clasificación e informes.
+  `evals/procesos/sv2_obra.py`: montaje de sv2 (YAML de `dev` con `git show`, `ObrasFijas`, consulta con el
+  `SigridApiObrasClient` de sv2 y su corte `cod_min`). Solo fase 1, sin correo, `IA_PRIMERA_FASE` (gemini).
+- **Decisión 1 (ajuste del diseño): schema.** Los clientes mandan el JSON Schema del modelo al proveedor
+  (`response_json_schema` en gemini) y el de la rama lleva `lectura_correo`, que `dev` no conoce: la variante `dev`
+  usa el schema SIN ese campo (`modelo_sin_campo`). El test extrae `dev` con `git archive` y compara lo que llega al
+  cliente LLM (`instructions`, `user_text`, schema): **idéntico byte a byte**. Confirma la decisión 2 de C1.
+- **Decisión 2**: en proceso (solo usa sv2: el proceso del CLI ya es el intérprete dedicado) y con los clientes LLM
+  del runner (`_especificacion`, sin la `retry_policy` de producción): lo que lee el LLM no cambia.
+- **Decisión 3**: UNA consulta de obras, congelada en `ObrasFijas` para las dos variantes y todas las repeticiones.
+  El cliente de sv2 es best-effort (devuelve `None`): lista `None` o vacía = **parada**, no «NO DISPONIBLE».
+- **Decisión 4**: paradas con código 2, todas ANTES del LLM y sin escribir nada, en este orden: clave del
+  proveedor → algún albarán → variables de sigrid-api → `git show dev:` → consulta de obras. Código 1 si ninguna extracción sale.
+- **Decisión 5**: variantes intercaladas dentro de cada repetición. Estable = mismo `obra_codigo` en todas (se quitan
+  los espacios y el vacío cuenta como null; el nombre no cuenta). Categorías: `difiere` (estables y distintas: señal del
+  prompt), `inestable` (ruido), `identico`, `con_errores`. Con una sola variante: `estable`, `inestable` y `con_errores`.
+- Salida CON valores: `<dir>/<variante>_r<n>.json` (`caso_id → obra_codigo, obra_nombre` o `error`) y `<dir>/resumen.md`,
+  ignorados (`git check-ignore`: `.gitignore:53`). SIN valores y versionable: `progress/comparar_obra_F-048.md`.
+
+**Comando** (se factura: 10 casos × 2 variantes × 3 repeticiones = 60 llamadas a IA1; la rama `dev` tiene que estar en local):
+```
+python -m evals.comparar_obra --casos GEN-001,GEN-009,GEN-010,HOR-003,HOR-006,FER-003,RES-005,RES-011,RES-012,RES-015 --repeticiones 3 --variante ambas
+```
+Entorno (solo nombres): `GEMINI_API_KEY` (o `OPENAI_API_KEY`/`ANTHROPIC_API_KEY` si `IA_PRIMERA_FASE` lo cambia),
+`SIGRID_API_BASE_URL`, `SIGRID_API_FUNCTION_KEY`, `SIGRID_API_DATABASE`. Opcionales, con los defectos de sv2:
+`IA_PRIMERA_FASE`, `GEMINI_MODEL`, `SIGRID_API_TIMEOUT_S`, `OBRAS_ACTIVAS_COD_MIN`, `OBRAS_ACTIVAS_MAX`.
+
+**RED** (test antes del código; el de `dev`, rompiendo una copia del montaje y restaurándola):
+```
+python -m pytest tests/test_f048_comparar_obra.py -q --tb=line -p no:cacheprovider
+E   ImportError: cannot import name 'comparar_obra' from 'evals' (...\evals\__init__.py)      -> 1 error in 0.94s
+python -m pytest tests/test_f048_comparar_obra_prompt_dev.py -q --tb=line -p no:cacheprovider
+  sin recortar el schema:    E AssertionError: assert 'lectura_correo' not in {'cabecera': ...}   2 failed, 2 passed in 7.42s
+  YAML de HEAD como de dev:  E AssertionError: assert 'Eres un admi..._imputacion`.' == 'Eres un admi..._imputacion`.'  1 failed, 3 passed in 6.63s
+-> 32 passed in 3.35s (comparador) · 4 passed in 14.84s (prompt de dev)
+```
+**MANUAL (líder)**: lanzar el comando y leer `progress/comparar_obra_F-048.md`. **Fuera**: fase 2, correo, ground truth.
+
+| Evidencia (comparador) | Valor real |
+|---|---|
+| Tests | 36 nuevos; raíz `932 passed in 404.61s` en `bash harness/init.sh` (ENTORNO LISTO) |
+| Cobertura de las líneas cambiadas | 98.7 % (1158/1173). Sin cubrir: 12 de `sv2_obra.py`, que solo corren en el subproceso del test de `dev` |
+| Mutación | no relanzada; las dos roturas de la fase RED hacen de mutantes a mano. Campaña nueva: la decide el líder |
+| Tiempo de la suite | raíz 404.61 s; los dos ficheros nuevos, 3.35 s y 14.84 s |

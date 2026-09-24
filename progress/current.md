@@ -33,6 +33,9 @@ rama (`git merge-base --is-ancestor 9f8a008 HEAD` falla). Decidir: traer solo la
   La 1ª pasada (24-sep) murió a los 50 min por un JSON degenerado de IA2 en un caso; desde `77b4bc2`
   el runner aísla los fallos por caso (sale OMITIDO con motivo) y siempre escribe el informe.
   Detalle: `progress/impl_F-048.md`, «Runner de evals: fallos aislados por caso».
+  **Comparador de obra dev/rama** listo (`a264c36`, sin lanzar; se factura): mide si el prompt nuevo cambia la
+  obra de IA1, con la lista de obras de sigrid-api y 3 repeticiones. Comando y entorno: `progress/impl_F-048.md`,
+  «Comparador de obra dev/rama»; su resumen sin valores irá a `progress/comparar_obra_F-048.md`.
 - T41: `bash harness/init.sh`.
 
 (c) **Aceptar los 3 equivalentes de T34** (mutantes 9, 22 y 23, justificados en el informe).
