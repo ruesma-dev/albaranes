@@ -7,6 +7,14 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
+**F-048 · MENORES 2–3 Y AVISO C DE LA REVIEW DEL BLOQUE D, Y BLOQUE F (T32, T33, T35) HECHOS**
+(2026-09-24, implementer, `c909c59..c46a330`; en `azure-apps`, `96bbdb6`, sin push). sv4: plural,
+fila 4 con las dos lecturas, y la ficha dice «el revisor cambió la obra» sin escribir nada (CR-D4).
+Regla 15 en `docs/ARCHITECTURE.md`, 3 rutas sensibles nuevas (el `[AVISO]` de T40 pasa a 10 rutas),
+`azure-apps/albaranes.md` al día. Aviso A: la copia de sv5 es código muerto (escrito en la regla 15).
+Cobertura 99.4 % (660/664); init.sh verde. Pendiente: review; T34 (mutación, aparte); bloques E y G.
+Informe: `progress/impl_F-048.md`, última sección.
+
 **F-048 · CR-D1 HECHO (2026-09-24, implementer, `6356ad7`): bloqueo de la red de obra RESUELTO.**
 Motivos renombrados en comun a `correo_obra_distinta_papel` / `correo_obra_ambigua`; la red de
 F-002 ya no los borra (test en sv3). Informe: `progress/impl_F-048.md` (sección CR-D1).
