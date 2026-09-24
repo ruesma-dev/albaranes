@@ -7,128 +7,36 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
-**F-048 · T34 HECHA** (2026-09-24, implementer, `70f9498..ada3ca8`): campaña completa versionada y sus 26
-supervivientes analizados: 23 huecos cerrados con tests nuevos, 3 equivalentes con guarda y demostración
-ejecutable, 0 sin justificar, sin defectos de producción. Fila nueva en el inventario de F-039. Informe:
-`progress/impl_F-048_T34_supervivientes.md`. Pendiente: review de T34; bloques E y G.
+**F-048 · CÓDIGO COMPLETO Y REVISADO; PENDIENTE DEL HUMANO** (2026-09-24). Rama
+`feature/F-048-correo-contexto-ia1`. Bloques A, B, C1, C2, D, D bis y F aprobados en sus reviews
+(`progress/review_F-048_bloque_*.md`); T34 cerrada (175 mutantes: 172 muertos, 3 equivalentes
+justificados, `progress/impl_F-048_T34_supervivientes.md`); review final
+(`progress/review_F-048_final.md`): solo pedía papeleo, ya hecho por el líder. Informe de
+implementación: `progress/impl_F-048.md` y sus ficheros `impl_F-048_bloque_*.md`. Decisiones del
+humano del 23-sep aplicadas: solo OBRA del correo; validación contra TODAS las obras; código que no
+está en la lista = sin código (manda la IA, sin revisión); normalizar todo; discrepancia y correo
+ambiguo a revisión con `correo_obra_distinta_papel` / `correo_obra_ambigua`.
 
-**F-048 · CAMBIOS DE LA REVIEW DEL BLOQUE F HECHOS** (2026-09-24, implementer,
-`9886281..03bd912`): CR-F1 aviso de obra cambiada SIN sujeto (la cambia también sv3), CR-F2 ruta
-sensible `albaran_extraction_service.py` (el `[AVISO]` de T40 pasa a 11), CR-F3 frase de sv5 en la
-regla 15, CR-F4 CSS de `.obra-cambiada`. init.sh verde. Pendiente: review pasada 2; T34; bloques E y G.
-Informe: `progress/impl_F-048.md`, sección «Bloque F · cambios de la review».
+**Lo que falta, todo del humano:**
 
-**F-048 · MENORES 2–3 Y AVISO C DE LA REVIEW DEL BLOQUE D, Y BLOQUE F (T32, T33, T35) HECHOS**
-(2026-09-24, implementer, `c909c59..c46a330`; en `azure-apps`, `96bbdb6`, sin push). sv4: plural,
-fila 4 con las dos lecturas, y la ficha dice «el revisor cambió la obra» sin escribir nada (CR-D4).
-Regla 15 en `docs/ARCHITECTURE.md`, 3 rutas sensibles nuevas (el `[AVISO]` de T40 pasa a 10 rutas),
-`azure-apps/albaranes.md` al día. Aviso A: la copia de sv5 es código muerto (escrito en la regla 15).
-Cobertura 99.5 % (661/664); init.sh verde. Pendiente: review; T34 (mutación, aparte); bloques E y G.
-Informe: `progress/impl_F-048.md`, última sección.
+(a) **Bloque E (T29–T31) bloqueado por F-047**: la inyección de `evals/inyeccion.py` no está en esta
+rama (`git merge-base --is-ancestor 9f8a008 HEAD` falla). Decidir: traer solo la inyección
+(recomendado), retomar F-047, o cerrar F-048 con T40 como riesgo aceptado.
 
-**F-048 · CR-D1 HECHO (2026-09-24, implementer, `6356ad7`): bloqueo de la red de obra RESUELTO.**
-Motivos renombrados en comun a `correo_obra_distinta_papel` / `correo_obra_ambigua`; la red de
-F-002 ya no los borra (test en sv3). Informe: `progress/impl_F-048.md` (sección CR-D1).
+(b) **Bloque G**, con el comando exacto de `specs/F-048-correo-contexto-ia1/tasks.md` (T36–T41):
+- T36: `cd services\albaranes-email; .\.venv\Scripts\python.exe capturar_correo.py --message-id <ID> --caso <CASO>` ×3 (directo, `RE:`, `RV:`), Graph solo lectura.
+- T37–T39: pipeline LOCAL (`infra\local\arrancar_local.ps1 -SinSv1`, `seed_input.py`, `encolar_extraccion.py <DOC_ID> --correo ...`) y el SELECT de T37.
+- T40: `python -m evals.runner --con-llm --feature F-048` (SE FACTURA; enseñar casos y coste antes). Contar
+  además los avisos «sin contexto de correo» de sv1 (429/503 de Graph, menor B-4) y los WARNING de
+  colisión de la lista de obras (menor C1-2). El informe `progress/evals_F-048.md` está ignorado por
+  git: su frescura se juzga por la fecha, posterior a `63571a6`.
+- T41: `bash harness/init.sh`.
 
-**F-048 · CAMBIOS DE LA REVIEW DE C2 Y BLOQUES D (sv3) Y D BIS (sv4) IMPLEMENTADOS,
-CHOQUE CON LA RED DE OBRA RESUELTO EN CR-D1** (2026-09-24, implementer, `43bc9b9..f68b510`):
-CR-C3 (evidencia a 160 en el origen, `obra_codigos` tolerante), CR-C4 (test de
-`retry_policy` en comun), CR-C5 (fila 4 con la forma de la lista); T23 (sv3 acepta el
-bloque), T24 (el merge lo conserva en `raw_extraction_json`), T25 (regresión de la red de
-obra, con el aviso B), T26 (motivos en el merge), T27–T28 (ficha de sv4, solo lectura).
-`bash harness/init.sh` en verde. Informe: `progress/impl_F-048.md` (el detalle de C2 pasó a
-`progress/impl_F-048_bloque_C2.md`). Detalle de D y D bis en
-`progress/impl_F-048_bloque_D.md`. Pendiente: review de este encargo y de CR-D1; después, bloques E–G.
+(c) **Aceptar los 3 equivalentes de T34** (mutantes 9, 22 y 23, justificados en el informe).
 
-**F-048 · CAMBIOS DE LA REVIEW DE C1 Y BLOQUE C2 (sv2, T17–T22) IMPLEMENTADOS**
-(2026-09-24, implementer, `fe99db0..2b40968`): CR-C1 y CR-C2 en `prompts.yaml`;
-resolver puro de `origen_datos` (tabla de D5, D9, colisiones), worker con el
-blob lateral del correo en las dos fases y el sello tras el envelope final,
-logs sin correo (incluido `retry_policy` de comun, que lo filtraba) y
-`encolar_extraccion.py --correo`. La lectura del correo es la de FASE 1 y la
-cabecera la del documento FINAL (aviso A); `obras_conocidas()` UNA vez por
-documento y solo si hay correo (aviso B). Informe: `progress/impl_F-048.md`
-(el detalle de C1 pasó a `progress/impl_F-048_bloque_C1.md`), con la forma de
-`data.origen_datos` para el bloque D. Pendiente: review de este encargo;
-después, bloque D (sv3, T23–T26).
-
-**F-048 · MENORES DEL BLOQUE B Y BLOQUE C1 (sv2, T13–T16 bis) IMPLEMENTADOS**
-(2026-09-24, implementer, `ecac419..08e8fd3`): CR-B1/B3/B5/B6 en sv1;
-`LecturaCorreo`, `{contexto_correo}` en fase 1 y el mismo bloque en fase 2
-(sustitución en una pasada), `prompts.yaml` (ruta sensible, evals en T40) y
-`CatalogoObras` + `obras_conocidas()` sin consulta nueva. Informe:
-`progress/impl_F-048.md` (el bloque B íntegro pasó a
-`progress/impl_F-048_bloque_B.md` por el tope). Desviación: CR-B5 añade
-`receivedDateTime` al `$select` del GET de Graph (design §5 decía
-`subject,uniqueBody`). Pendiente: review de este encargo; después, T17–T22.
-
-**F-048 · BLOQUE B (sv1, T6–T12) IMPLEMENTADO** (2026-09-23, implementer,
-`e0e0a82..8e2a309`): primera suite de sv1 (62 tests), `get_contenido` con un
-GET a Graph, contexto una vez por mensaje a todas las páginas, blob lateral
-`input/{id}.correo.json` antes de publicar, `correo_sha256` en `payload_json`,
-logs sin cuerpo y `capturar_correo.py`. Informe: `progress/impl_F-048.md`,
-«Bloque B» (el texto íntegro del bloque A pasó a
-`progress/impl_F-048_bloque_A.md` por el tope de 220 líneas). Desviación
-menor: el `HttpOrchestratorClient` legado acepta `contexto_correo` para
-cumplir el puerto (fuera de la lista de design §5). Pendiente: review del
-bloque B. Verificación MANUAL de este bloque: T36 (humano, Graph real, solo
-lectura) con `capturar_correo.py`, ver el informe.
-
-**F-048 · BLOQUE A (comun, T1–T5) IMPLEMENTADO** (2026-09-23, implementer):
-contexto de correo, `MensajeExtraccion.correo_blob`, bloque del prompt y su
-redacción, `LlmCallLogger` sin correo y el contrato `origen_datos`. Informe en
-`progress/impl_F-048.md`. **Desviación aplicada por decisión del humano del
-2026-09-23** (vía el líder): `normalizar_codigo` quita todo lo no alfanumérico
-y los ceros a la izquierda, y devuelve `None` si no queda nada; la spec (R18–R20,
-design §3) ya lo recogen en la v4 (D9).
-**Review del bloque A (pasada 1, CHANGES_REQUESTED) atendida** (2026-09-23,
-implementer, `32b3a57..8568cec`): el logger redacta el correo en petición,
-respuesta, error, claves y `str` de lo no JSON (R37; T4 `[x]`); tests `r18`;
-docstrings con D9; NFKC en `normalizar_codigo` (`'0945²'` da `'9452'`, a
-propósito). La puerta de rutas sensibles da `[AVISO]`: falta la evidencia de
-evals (T40, se factura). Pendiente: pasada 2 de la review del bloque A.
-Siguiente: bloque B (sv1, T6–T12).
-
-**F-048 · SPEC v4** (2026-09-23, tarde; informe `progress/spec_F-048_v4.md`):
-aplicadas dos decisiones del humano. **D5 revisada**: el código del correo se
-valida contra TODAS las obras con contrato (activas o no), de la misma consulta
-y caché de F-002 (tarea nueva **T16 bis**); lo que no está en la lista no
-cuenta y se descarta ANTES de contar; si no queda ninguno, manda la IA **sin
-revisión** (`correo_fuera_de_lista`, solo rastro). **D9**: «sí, normaliza
-todo» (ya hecho en el bloque A). Solo mandan a revisión la discrepancia con un
-código de la lista y varios de la lista sin casar. Cierra las dudas 1 y 2 de
-abajo y revoca la 5 del informe v3. Nada del bloque A choca con la v4.
-Dudas nuevas: (a) R16 dice a IA1 que no deduzca la obra del papel si el correo
-trae obra: con un falso código la cabecera puede quedar sin la obra que antes
-se deducía (design §8); (b) los códigos descartados cuando otros sí cuentan no
-se guardan aparte.
-
-**F-048 · SPEC v3 LISTA PARA IMPLEMENTAR** (2026-09-23, rama
-`feature/F-048-correo-contexto-ia1`, `specs/F-048-correo-contexto-ia1/`:
-44 requisitos, 41 tareas; informe del cambio en `progress/spec_F-048_v3.md`).
-Aplicadas las decisiones del humano del 2026-09-23: **del correo SOLO la
-obra** (la partida sale del alcance); el código del correo manda y se CRUZA con
-el del papel; **si no cuadran, el documento va a revisión** (motivo
-`correo_obra_distinta_papel` en sv3, revoca lo del 22); **varios códigos en el
-correo** (D4 bis, decidido): si el del papel es uno de ellos se usa sin
-revisión, si no o el papel no trae código, revisión con `correo_obra_ambigua`
-y candidatos visibles en sv4. Irán MÁS albaranes a revisión, aunque menos de lo previsto en la v3 (design §8).
-
-Dudas abiertas que el humano puede querer mirar antes de implementar:
-
-1. ~~`correo_fuera_de_lista`~~ CERRADA en la v4 (D5 revisada: sin revisión).
-2. ~~Formato de los códigos~~ CERRADA en la v4 (D9: normalizar todo).
-3. **Cómo llegan los correos** y **quién captura la muestra** (design §7);
-   la muestra validada hablaba de «diez de los 33 con partida mal»: sin
-   partida en el alcance, quizá haya que reajustarla.
-4. **F-049** dice que rellenará `origen_datos.partida.validada` «que F-048 deja
-   a null»: F-048 ya no crea ese campo; lo creará F-049 (compatible).
-
-Hallazgos que condicionan el diseño: sv3 valida `data` con `extra='forbid'` y
-su merge rehace `data` a mano; `LlmCallLogger` escribe el prompt entero a
-disco; sv1 no tiene ni un test; la lista de partidas de la obra solo existe en
-sv4 (de ahí **F-049**, ficha creada, `pending`, prioridad 2); la inyección de
-F-047 no está integrada en esta rama (T30 es precondición del bloque de evals).
+Después de E y G: review incremental desde `63571a6` y cierre. Despliegue: **sv3 → sv2 → sv1** con
+`-Only` uno a uno (ver regla 15 de `docs/ARCHITECTURE.md`; `deploy.ps1` sin `-Only` actualiza sv2
+antes que sv3 y el hueco manda documentos a poison). `azure-apps` tiene dos commits locales sin push.
 
 **F-045 · CAPA 1 IMPLEMENTADA** (2026-09-16, rama
 `feature/F-045-banco-evals-revision-manual`, 22 commits de tarea). Informe
@@ -927,22 +835,19 @@ gestionada no se ejercita).
 Siguiente paso: aprobación del humano y, con ella, el implementer sobre
 `feature/F-047-evals-ciclo-completo`.
 
-## 2026-09-23 · PUNTO DE REANUDACION (sesion guardada)
+## 2026-09-24 · Aparcado y backlog
 
-**En curso: F-048** (correo -> IA1), rama `feature/F-048-correo-contexto-ia1`,
-spec v3 del 2026-09-23 (solo obra; discrepancia y correo ambiguo mandan a
-revision), sin decisiones bloqueantes: ver las dudas abiertas de la cabecera.
-**Siguiente paso: aprobacion del humano de la v3 y lanzar al implementer.**
-
-**Aparcada: F-047** (`blocked` por decision, no por fallo). El ciclo completo
+**Aparcada: F-047** (`blocked` por decisión, no por fallo). El ciclo completo
 FUNCIONA de punta a punta. Falta: analizar los 130 supervivientes de
 `progress/mutacion_F-047.md` (vigente, mide 2e05499), T24-T26 manuales, la
-revision, y limpiar 28 worktrees huerfanos de mutacion.
+revisión, y limpiar 28 worktrees huérfanos de mutación.
 
 **Backlog inmediato**: F-049 (validar la partida contra la lista de partidas de
-la obra; prioridad 2; el arreglo con mejor coste/beneficio segun el analisis) y
-F-046 (catalogo: combustible a documento, grava, ferreteria, ferralla).
+la obra; prioridad 2), F-046 (catálogo: combustible a documento, grava,
+ferretería, ferralla) y F-050 (estudiar Jev, de TypeSafe AI, para la
+clasificación).
 
-**Pendientes del humano que arrastran dias**: meter un albaran por produccion
-(desplegado el 16-sep, sin que haya pasado ninguno), y decidir si se versionan
-los libros de `evals/ground_truth/` (estuvieron a punto de perderse dos veces).
+**Pendientes del humano que arrastran días**: meter un albarán por producción
+(desplegado el 16-sep, sin que haya pasado ninguno), decidir si se versionan
+los libros de `evals/ground_truth/`, y la automejora del arnés: la caché de
+`init.sh` no se invalida cuando cambia `comun` (vale para `arnes-base`).

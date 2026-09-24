@@ -224,6 +224,10 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
     - **Orden de despliegue OBLIGATORIO: sv3 → sv2 → sv1** (sv4 cuando sea;
       `comun` va en cada imagen). sv2 emite `origen_datos` siempre, y un sv3
       anterior lo manda a poison (`DocumentoAlbaran` con `extra='forbid'`).
+      Comando: `.\deploy.ps1 -Only sv3`, `.\check_deploy.ps1`, luego
+      `-Only sv2` y `-Only sv1`. **`.\deploy.ps1` sin `-Only` sigue `$APPS`
+      y actualiza sv2 antes que sv3**: abre el hueco de poison. El rollback
+      va al revés (sv1 → sv2 → sv3).
     - **Trampa de reintento en sv1** (menor 2 de la review del bloque B): la
       fila de `workflow_runs` se crea ANTES que los blobs. Si falla el blob
       lateral (igual que el del PDF o la publicación), el correo va a
