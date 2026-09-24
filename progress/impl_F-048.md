@@ -138,8 +138,9 @@ en `azure-apps` (otro repo, sin push) `96bbdb6`. Solo sv4 en producción (`revie
   con su motivo, como F-043. `azure-apps/albaranes.md`: §1 (blob), §3 (`data.origen_datos` sin DDL y
   los dos motivos) y §7 nuevo (GET de Graph con `subject,uniqueBody,receivedDateTime`, blob lateral,
   `correo_blob`, huella en `workflow_runs`, orden de despliegue). Sin secretos ni IDs.
-- **T33**: `python -m harness.cobertura --base dev --config harness/rigor.json` ⇒ **99.4 % (660/664)**.
-  Quedan sin cubrir 3 líneas de protocolos (`ports.py`, `mailbox_client.py`) y 1 de `capturar_correo.py`.
+- **T33**: `python -m harness.cobertura --base dev --config harness/rigor.json` ⇒ **99.4 % (660/664)**;
+  con el test de `e362df6` (la guarda sin bloque), **99.5 % (661/664)** en el init.sh final.
+  Sin cubrir: 2 líneas de protocolos (`ports.py`, `mailbox_client.py`) y 1 de `capturar_correo.py`.
 - **T35**: `python -m harness.tamano --feature F-048` ⇒ exit 0, `impl 172/220` (requirements 150/150,
   design 249/250). Para dejar aire a T34, el texto íntegro de CR-D1 pasó a `impl_F-048_bloque_D.md`.
 
@@ -158,15 +159,15 @@ T32   (init.sh, suite raíz) E AssertionError: faltan: [] · sobran: ['...origen
 ```
 Los 5 que pasaban en el RED de CR-D4 son los de «sin cambio» que no tocan la propiedad nueva.
 
-**Resultados reales**: sv4 a mano `244 passed in 3.50s` (223 → 244). `bash harness/init.sh`: exit 0,
-**ENTORNO LISTO**, raíz `865 passed in 112.38s`, sv4 corrió de verdad (244), el resto de caché;
-`PUERTA COBERTURA 99.4 % (660/664)`; `[AVISO]` de rutas sensibles: ahora 10 rutas (las 3 nuevas), T40.
+**Resultados reales**: sv4 a mano `244 passed in 3.79s` (223 → 244). `bash harness/init.sh`: exit 0,
+**ENTORNO LISTO**, raíz `865 passed in 112.42s`, sv4 corrió de verdad (244), el resto de caché;
+`PUERTA COBERTURA 99.5 % (661/664)`; `[AVISO]` de rutas sensibles: ahora 10 rutas (las 3 nuevas), T40.
 **Fuera / falta**: T34 (mutación, se lanza aparte), bloque E (T29–T31), G (T36–T41, MANUAL). La trampa
 de reintento de sv1 queda documentada, sin arreglar: pide ficha propia.
 
 | Evidencia | Valor real |
 |---|---|
 | Tests ejecutados | sv4 244 (+21); raíz 865; demás servicios de caché, en verde |
-| Cobertura de las líneas cambiadas | 99.4 % (660/664), `PUERTA COBERTURA` |
+| Cobertura de las líneas cambiadas | 99.5 % (661/664), `PUERTA COBERTURA` del init.sh final |
 | Mutación | N/A aquí: T34, campaña completa sobre la feature (`python -m harness.mutacion --feature F-048`) |
-| Tiempo de las suites | sv4 3.50 s; raíz 112.38 s |
+| Tiempo de las suites | sv4 3.79 s; raíz 112.42 s |
