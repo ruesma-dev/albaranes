@@ -896,8 +896,10 @@ class DocumentDetailPayload(BaseModel):
         un código que casa con el papel) no pinta nada. sv4 PINTA: el
         cruce lo hizo sv2 y aquí no se recalcula.
 
-        Si el revisor cambió la obra después (``obra_cambiada_tras_extraer``),
+        Si la cabecera cambió de obra después (``obra_cambiada_tras_extraer``),
         el primer aviso lo dice y el resto queda como lo que pasó al extraer.
+        Sin sujeto (CR-F1): la pudo cambiar el revisor o sv3, y sv4 no sabe
+        quién.
         """
         origen = self.origen_datos
         if origen is None:
@@ -908,15 +910,20 @@ class DocumentDetailPayload(BaseModel):
             return [aviso] if aviso else []
         # CR-D4 (aviso C de la review del bloque D, opción (b) del líder):
         # la cabecera ya no es la que fijó la extracción. Se dice primero y
-        # lo demás pasa a ser historia. Solo si el correo dijo algo: sin
+        # lo demás pasa a ser historia. Sin sujeto (CR-F1, bloqueante 1 de
+        # la review del bloque F): además del revisor, la cambia sv3
+        # (``HeaderResolverService`` deduce la obra si el código no pasa su
+        # normalizador) ya en la primera persistencia, y ``update_document``
+        # no deja marca de quién fue. Solo si el correo dijo algo: sin
         # aviso de siempre y sin obra impuesta por el correo, no hay nada
         # «según el correo» que contar.
         if aviso is None and obra.fuente != FUENTE_CORREO:
             return []
         de_donde = "la que decía el correo" if obra.fuente == FUENTE_CORREO else "la del papel"
         cambio = (
-            f"Obra: el revisor cambió la obra a {self.obra_codigo}; al "
-            f"extraer se fijó {obra.valor_final}, {de_donde}."
+            f"Obra: la cabecera lleva ahora {self.obra_codigo} (cambiada "
+            f"después de extraer); al extraer se fijó {obra.valor_final}, "
+            f"{de_donde}."
         )
         historia = [aviso.replace("Obra: ", "Al extraer, ", 1)] if aviso else []
         return [cambio, *historia]
@@ -930,7 +937,10 @@ class DocumentDetailPayload(BaseModel):
         con ``normalizar_codigo`` de ``comun`` (D9: ``945`` y ``0945`` son la
         misma). Solo cuenta un cambio a OTRA obra: sin ``valor_final`` no hay
         con qué comparar, y una obra vacía la deja la red de obra de sv3
-        (R28), que añade su propio motivo; eso no es «el revisor la cambió».
+        (R28), que añade su propio motivo; eso no es un cambio de obra.
+        No dice QUIÉN la cambió (CR-F1): puede ser el revisor o sv3
+        (``HeaderResolverService``, al persistir, en el duplicado o al
+        «volver a buscar»), y el payload no trae con qué distinguirlos.
         Solo pinta: no escribe nada ni toca ``review_reasons`` (R35, §6).
         """
         origen = self.origen_datos

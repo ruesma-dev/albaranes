@@ -207,8 +207,9 @@ def test_f048_r33_el_resto_de_motivos_no_pinta_aviso(origen):
 
 
 # ---------------------------------------------------------------- #
-# CR-D4 · el revisor cambió la obra (aviso C de la review del bloque D,
-# opción (b) del líder): sv4 lo PINTA distinto y no escribe nada.
+# CR-D4 · la obra cambió tras extraer (aviso C de la review del bloque D,
+# opción (b) del líder): sv4 lo PINTA distinto y no escribe nada. Sin
+# sujeto (CR-F1): la puede haber cambiado el revisor o sv3.
 # ---------------------------------------------------------------- #
 UNICO = _origen("correo_unico", correo="0945", candidatos=["0945"], fuente="correo")
 
@@ -224,15 +225,32 @@ UNICO = _origen("correo_unico", correo="0945", candidatos=["0945"], fuente="corr
     ],
     ids=["discrepancia", "unico", "ambiguo", "confirma_papel", "fuera_de_lista"],
 )
-def test_f048_cr_d4_si_el_revisor_cambio_la_obra_el_aviso_lo_dice_primero(origen, final, de_donde):
+def test_f048_cr_d4_si_la_obra_cambio_tras_extraer_el_aviso_lo_dice_primero(origen, final, de_donde):
     documento = _payload(_raw(origen), obra_codigo="0999")
     original = _payload(_raw(origen), obra_codigo=final).avisos_origen_datos
 
     assert documento.obra_cambiada_tras_extraer is True
     assert documento.avisos_origen_datos == [
-        f"Obra: el revisor cambió la obra a 0999; al extraer se fijó {final}, {de_donde}.",
+        f"Obra: la cabecera lleva ahora 0999 (cambiada después de extraer); al extraer se fijó {final}, "
+        f"{de_donde}.",
         *[aviso.replace("Obra: ", "Al extraer, ", 1) for aviso in original],
     ]
+
+
+def test_f048_cr_f1_si_la_cambio_sv3_el_aviso_no_culpa_al_revisor():
+    """Bloqueante 1 de la review del bloque F: sv3 (``HeaderResolverService``) deduce
+    la obra cuando el papel trae ``O937`` y la escribe en la cabecera ya en la PRIMERA
+    persistencia, sin revisor. sv4 no sabe quién la cambió: el aviso va sin sujeto."""
+    fuera = _origen("correo_fuera_de_lista", final="O937", candidatos=["PED-555"], papel="O937",
+                    validada=False)
+    documento = _payload(_raw(fuera), obra_codigo="0937")
+
+    assert documento.obra_cambiada_tras_extraer is True
+    assert documento.avisos_origen_datos[0] == (
+        "Obra: la cabecera lleva ahora 0937 (cambiada después de extraer); al extraer se fijó O937, "
+        "la del papel."
+    )
+    assert not any("revisor" in aviso for aviso in documento.avisos_origen_datos)
 
 
 @pytest.mark.parametrize(

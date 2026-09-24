@@ -107,9 +107,10 @@ def test_f048_cr_d3_confirma_papel_pinta_la_lectura_del_papel_y_la_de_la_lista(r
     assert "(el papel dice 945; en la lista de obras, 0945). Se ha usado 0945." in bloque
 
 
-def test_f048_cr_d4_el_revisor_cambio_la_obra_se_pinta_distinto(render_detalle, documento_detalle):
+def test_f048_cr_d4_la_obra_cambiada_tras_extraer_se_pinta_distinto(render_detalle, documento_detalle):
     """Aviso C de la review del bloque D, opción (b): sigue siendo advertencia
-    (el motivo sellado no se toca, R34/R35) pero dice que el revisor la cambió."""
+    (el motivo sellado no se toca, R34/R35) pero dice que la obra cambió tras
+    extraer, sin sujeto (CR-F1: la puede haber cambiado sv3, no solo el revisor)."""
     documento = documento_detalle(motivos_documento=[MOTIVO_REVISION_OBRA_CORREO_DISTINTA]).model_copy(
         update={"raw_extraction_json": _raw(DISCREPANCIA), "obra_codigo": "0999"}
     )
@@ -117,7 +118,9 @@ def test_f048_cr_d4_el_revisor_cambio_la_obra_se_pinta_distinto(render_detalle, 
     bloque = _bloque_origen(render_detalle(documento))
 
     assert 'class="alert warning origen-duda origen-datos obra-cambiada"' in bloque
-    assert "el revisor cambió la obra a 0999; al extraer se fijó 0945, la que decía el correo." in bloque
+    assert ("la cabecera lleva ahora 0999 (cambiada después de extraer); al extraer se fijó 0945, "
+            "la que decía el correo.") in bloque
+    assert "revisor" not in bloque
     assert "Al extraer, el correo dice 0945 y el papel dice 0937." in bloque
 
 
