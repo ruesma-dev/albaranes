@@ -86,7 +86,7 @@ Los dos motivos salen en el bloque «Motivos de revisión» que ya existía, y e
 del motivo: con la fila 3 sin su motivo, sale `info`. sv4 no escribe nada: `review_repository.py` no
 cambia en el diff. Los nombres (`MOTIVOS_REVISION_ORIGEN` y los `MOTIVO_CORREO_*`) se importan de comun.
 
-## Bloqueantes: ninguno. Menores (no bloquean):
+## Bloqueantes: ninguno. Menores (no bloquean)
 
 1. **Quedan los nombres viejos en el papeleo del líder.** Aparecen en `harness/features.json:534`
    (la descripción de F-048, que se copia a `BACKLOG.md:104`) y en `progress/current.md:93-95`.
@@ -107,12 +107,9 @@ queda**. `review_required` no baja, igual que con cualquier otro motivo (D7 de F
 del revisor). El aviso sigue en `warning` y dice «Se ha usado la del correo (0945)» cuando la
 cabecera ya muestra la obra del revisor. **No se pierde nada ni se corrompe nada**, pero el aviso
 queda obsoleto. Es el mismo patrón que `proveedor_cif_no_casa` colgado en SS-0801977, y ese caso
-acabó con una depuración propia. Opciones:
-(a) aceptarlo: el motivo explica por qué entró en revisión;
-(b) que sv4 lo PINTE distinto cuando `obra_codigo` ≠ `origen.obra.valor_final` («el revisor cambió
-la obra»), sin escribir nada, compatible con R35;
-(c) retirarlo, lo que choca con R35 y design §6.
-Mi recomendación es (b), como ficha aparte o en T38.
+acabó con una depuración propia. Opciones: (a) aceptarlo (el motivo explica por qué entró en revisión); (b) que sv4 lo PINTE
+distinto si `obra_codigo` ≠ `origen.obra.valor_final` («el revisor cambió la obra»), sin escribir
+nada, compatible con R35; (c) retirarlo, que choca con R35 y §6. Recomiendo (b), aparte o en T38.
 
 ## Checkpoints (bloque intermedio)
 
@@ -121,8 +118,7 @@ Mi recomendación es (b), como ficha aparte o en T38.
 - **C3** [x] hexagonal: sv3 marca en `application` y el modelo va en `domain`; sv4 solo pinta, en
   `domain/models` + plantilla · [x] primera línea con la ruta en todos los `.py` del diff · [x] sin prints,
   secretos ni dependencias nuevas · [x] sin DDL · [x] la obra la decide sv2, y sv3 y sv4 no recalculan.
-- **C3 bis** N/A: no se toca `docs/referencia/`.
-- **C4** [x] R26–R35 con `test_f048_rN_*` en verde (ver tabla) · [x] sin red ni BBDD (dobles de sesión
+- **C3 bis** N/A: no se toca `docs/referencia/` · **C4** [x] R26–R35 con `test_f048_rN_*` en verde (ver tabla) · [x] sin red ni BBDD (dobles de sesión
   y de Sigrid) · [x] el extremo a extremo es T37–T39 (MANUAL), que ya cita `correo_obra_*`.
 - **C4 bis** [x] rigor declarado · [x] RED real, 2 reproducidos (uno de CR-D1) · [x] cobertura 99,5 %
   · **N/A mutación y RM1–RM6**: la campaña es T34 sobre la feature completa, y medir ahora dejaría de
@@ -134,15 +130,10 @@ Mi recomendación es (b), como ficha aparte o en T38.
 
 ## Trazabilidad
 
-| R | Tests |
-|---|---|
-| R26 | `albaranes-persistencia/tests/test_f048_r26_modelo.py` (handler real, sin poison) |
-| R27 | `test_f048_r27_merge.py` (`build_merge_analysis` y `save()` sobre sesión doble) |
-| R28 | `test_f048_r28_red_obra.py` (+ fila 4 con la forma de la lista) |
-| R29–R31, CR-D1 | `test_f048_r29_r31_motivos_revision.py` (19); comun `test_f048_r24_origen_datos.py` |
-| R32–R34 | `albaranes-front/tests/test_f048_r32_r34_vista_avisos.py` (13) |
-| R34–R35 | `test_f048_r35_vista_modelo.py` (27) |
-| R17/R24 (CR-C3), R36 (CR-C4), D4 bis (CR-C5) | `test_f048_r24_lectura_tolerante.py`, comun `test_f048_r36_retry_policy.py`, `r19_r22 ::fila4_*` |
+- sv3: R26 `test_f048_r26_modelo.py` · R27 `r27_merge.py` · R28 `r28_red_obra.py` · R29–R31 y CR-D1
+  `r29_r31_motivos_revision.py` (19) y comun `test_f048_r24_origen_datos.py`.
+- sv4: R32–R34 `test_f048_r32_r34_vista_avisos.py` (13) · R34–R35 `r35_vista_modelo.py` (27).
+- CR-C3 `sv2 r24_lectura_tolerante.py` · CR-C4 comun `r36_retry_policy.py` · CR-C5 `r19_r22 ::fila4_*`.
 
 **Automejora** (propuesta, no aplicada; vale para `arnes-base`): en C4, «si una feature añade valores a
 una lista que otra red filtra por PREFIJO, el test recorre esa red real». CR-D1 salió porque el
