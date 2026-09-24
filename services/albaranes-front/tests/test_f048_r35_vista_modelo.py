@@ -136,8 +136,8 @@ def test_f048_r32_la_discrepancia_dice_el_campo_y_las_dos_lecturas():
     [
         (AMBIGUO, ("Obra: el correo cita varias obras (0945, 0320) y ninguna es la del papel (0937). "
                    "Se ha dejado la del papel.")),
-        (CONFIRMA, ("Obra: el correo cita varias obras (0945, 0320) y una es la del papel (09-45). "
-                    "Se ha usado esa.")),
+        (CONFIRMA, ("Obra: el correo cita varias obras (0945, 0320) y una es la del papel "
+                    "(el papel dice 09-45; en la lista de obras, 0945). Se ha usado 0945.")),
         (FUERA, ("Obra: el correo cita PED-555, que no está en la lista de obras de Sigrid. "
                  "Se ha usado la lectura del papel.")),
     ],
@@ -145,6 +145,26 @@ def test_f048_r32_la_discrepancia_dice_el_campo_y_las_dos_lecturas():
 )
 def test_f048_r33_los_candidatos_del_correo_salen_con_su_motivo(origen, esperado):
     assert _payload(_raw(origen)).avisos_origen_datos == [esperado]
+
+
+@pytest.mark.parametrize(("papel", "final"), [("945", "0945"), ("09-45", "0945")], ids=["sin_cero", "con_guion"])
+def test_f048_cr_d3_confirma_papel_cita_la_lectura_del_papel_y_la_de_la_lista(papel, final):
+    """Menor 3 de la review del bloque D: desde CR-C5 la cabecera lleva la forma
+    de la lista; el aviso cita las dos lecturas para que no parezcan dos obras."""
+    confirma = _origen("correo_confirma_papel", final=final, candidatos=[final, "0320"], papel=papel)
+
+    assert _payload(_raw(confirma)).avisos_origen_datos == [
+        f"Obra: el correo cita varias obras ({final}, 0320) y una es la del papel "
+        f"(el papel dice {papel}; en la lista de obras, {final}). Se ha usado {final}."
+    ]
+
+
+def test_f048_cr_d3_confirma_papel_con_la_misma_forma_cita_una_sola_vez():
+    confirma = _origen("correo_confirma_papel", candidatos=["0945", "0320"], papel="0945")
+
+    assert _payload(_raw(confirma)).avisos_origen_datos == [
+        "Obra: el correo cita varias obras (0945, 0320) y una es la del papel (0945). Se ha usado esa."
+    ]
 
 
 def test_f048_cr_d2_varios_codigos_fuera_de_lista_concuerdan_en_plural():

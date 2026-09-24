@@ -98,6 +98,15 @@ def test_f048_r33_el_aviso_ensena_los_candidatos_y_el_motivo(render_detalle, doc
         assert candidato in bloque
 
 
+def test_f048_cr_d3_confirma_papel_pinta_la_lectura_del_papel_y_la_de_la_lista(render_detalle, documento_detalle):
+    """Menor 3 de la review del bloque D: ``945`` en el papel, ``0945`` en la cabecera."""
+    confirma = _origen("correo_confirma_papel", candidatos=["0945", "0320"], papel="945")
+
+    bloque = _bloque_origen(_html(render_detalle, documento_detalle, _raw(confirma)))
+
+    assert "(el papel dice 945; en la lista de obras, 0945). Se ha usado 0945." in bloque
+
+
 @pytest.mark.parametrize("origen", [CONFIRMA, FUERA], ids=["confirma_papel", "fuera_de_lista"])
 def test_f048_r33_confirma_papel_y_fuera_de_lista_son_informativos(render_detalle, documento_detalle, origen):
     bloque = _bloque_origen(_html(render_detalle, documento_detalle, _raw(origen)))

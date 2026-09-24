@@ -687,6 +687,14 @@ def _aviso_de_obra(obra: OrigenCampo) -> str | None:
             cierre = "el papel no trae obra. Se ha dejado sin obra."
         return f"Obra: el correo cita varias obras ({candidatos}) y {cierre}"
     if obra.motivo == MOTIVO_CORREO_CONFIRMA_PAPEL:
+        if obra.valor_final and obra.valor_final != obra.valor_papel:
+            # Desde CR-C5 la cabecera lleva la forma de la lista (945 ⇒
+            # 0945): se citan las dos para que no parezcan dos obras.
+            return (
+                f"Obra: el correo cita varias obras ({candidatos}) y una es "
+                f"la del papel (el papel dice {obra.valor_papel}; en la lista "
+                f"de obras, {obra.valor_final}). Se ha usado {obra.valor_final}."
+            )
         return (
             f"Obra: el correo cita varias obras ({candidatos}) y una es "
             f"la del papel ({obra.valor_papel}). Se ha usado esa."
