@@ -38,8 +38,11 @@ rama (`git merge-base --is-ancestor 9f8a008 HEAD` falla). Decidir: traer solo la
   colisión de la lista de obras (menor C1-2). El informe `progress/evals_F-048.md` está ignorado por
   git: su frescura se juzga por la fecha, posterior a `63571a6`.
   La 1ª pasada (24-sep) murió a los 50 min por un JSON degenerado de IA2 en un caso; desde `77b4bc2`
-  el runner aísla los fallos por caso (sale OMITIDO con motivo) y siempre escribe el informe.
-  Detalle: `progress/impl_F-048.md`, «Runner de evals: fallos aislados por caso».
+  el runner aísla los fallos por caso y siempre escribe el informe. Desde CR-E2 (`a3c870a`) el caso roto
+  sale `ERROR`, no `OMITIDO`, y deja la fase como mínimo en NO_EVALUABLE: con un caso roto no hay
+  `VEREDICTO: VERDE`. Detalle: `progress/impl_F-048.md`, «Bloque E · cambios de la review».
+  **Review del bloque E (CHANGES_REQUESTED)**: CR-E1…CR-E5 aplicados (`fc91569`…`fc3ee60`); falta que el
+  líder relance la campaña de mutación (bloqueante 3) y la review incremental.
   **Comparador de obra dev/rama** listo (`a264c36`, sin lanzar; se factura): mide si el prompt nuevo cambia la
   obra de IA1, con la lista de obras de sigrid-api y 3 repeticiones. Comando y entorno: `progress/impl_F-048.md`,
   «Comparador de obra dev/rama»; su resumen sin valores irá a `progress/comparar_obra_F-048.md`.

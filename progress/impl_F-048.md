@@ -173,3 +173,47 @@ E   AttributeError: module 'evals.inyeccion' has no attribute 'anadir_opcion_sin
 | Cobertura de las líneas cambiadas | 97.0 % (1313/1354). `correos.py` 100 %; `inyeccion.py` 79 % (falta `GestoRevisor`, de F-047) |
 | Mutación | campaña no relanzada; 9 mutantes a mano sobre `correos.py` e `inyeccion.py`, 9 muertos. Campaña nueva: la decide el líder |
 | Tiempo de la suite | raíz 456.87 s; los tres ficheros del bloque, 12.07 s + 3.44 s + 7.90 s |
+
+## Bloque E · cambios de la review — 2026-09-24
+
+Review `progress/review_F-048_bloque_E.md` (CHANGES_REQUESTED). Bloqueante 4: líder (`6558755`). Bloqueante 3
+(relanzar la mutación): la lanza el líder DESPUÉS de esto; no se lanzó aquí. Solo `evals/` y `tests/`.
+- **CR-E1** (`fc91569`, `evals/procesos/errores.py`): la `loc` de pydantic pasa por `_ubicacion`: en
+  `extra_forbidden` se quita la última parte; del resto pasan los enteros y los nombres `^[a-z_][a-z0-9_]*$`,
+  lo demás sale `<clave>`. Residuo aceptado por la review: una clave de `dict` en minúsculas pasa tal cual.
+- **CR-E2** (`a3c870a`, `modelos.py`, `runner.py`, `informe.py`): nuevo estado `ERROR`
+  (`ResultadoCaso.con_error`); no cuenta como evaluado ni como omitido (`ResultadoFase.con_error`). Veredicto:
+  ROJO si hay un ROJO; si no, NO_EVALUABLE si hay algún ERROR o ningún evaluado. El informe cuenta «con ERROR: N»
+  por fase y la explicación lista «N casos con ERROR: fase caso, …». **Decisión**: también «sv2/sv5/sv6 no
+  devolvió resultado» (hijo vivo que se salta el caso) es ERROR: es un fallo nuestro, no «no había con qué
+  evaluar». `OMITIDO` queda solo para «no existe el fichero» y «sin caso en el libro». Aislamiento intacto.
+- **CR-E3** (`e00bc41`, `evals/correos.py`): R38 cuenta todo `.eml`/`.msg` (sin distinguir mayúsculas) bajo
+  `evals/` y `tests/`, y la firma admite `subject`+`uniqueBody`. Comprobado además en una copia (worktree en el
+  scratchpad, `git add -f` de `tests/fixtures/copia.eml`, `evals/datos/copia.msg`, `evals/datos/graph.json`):
+  `['evals/datos/copia.msg', 'evals/datos/graph.json', 'tests/fixtures/copia.eml']`. Worktree quitado.
+- **CR-E4** (`1ec5853`): sin `sort_keys` en el test del schema de `dev` (`4 passed`). **CR-E5** (`fc3ee60`): el
+  README avisa de que el stderr de un hijo muerto no va a `progress/`. Fuera: menores 4 y 5 de la review.
+
+Fase RED (comandos exactos; salida real, recortada a las líneas `E`):
+```
+python -m pytest tests/test_f048_evals_fallos_aislados.py -q --tb=line -p no:cacheprovider -k "cr_e1 and (documento_real or dict)"
+E   AssertionError: assert 'ValidationEr...BARAN-7731 SL' == 'ValidationEr...n en cabecera'
+E   AssertionError: assert 'ValidationEr...-ALBARAN-7731' == 'ValidationEr... mapa.<clave>'
+2 failed, 34 deselected in 6.86s          (-k cr_e1 entero: 4 failed, 1 passed)          -> 36 passed
+python -m pytest tests/test_f048_evals_fallos_aislados.py -q --tb=line -p no:cacheprovider   (solo la constante ERROR)
+E   assert 0 == 2          <- runner.main con un caso roto salía VERDE (código 0)
+E   AttributeError: type object 'ResultadoCaso' has no attribute 'con_error'   (x6)
+E   AssertionError: assert 'OMITIDO' == 'ERROR'   (x8, los tests viejos ya reescritos)
+16 failed, 31 passed in 13.16s                                                     -> 48 passed
+python -m pytest tests/test_f048_evals_correos.py -q --tb=line -p no:cacheprovider -k cr_e3
+E   AssertionError: assert False is True   (x2, la firma de Graph)
+E   AssertionError: assert [] == ['evals/datos...s/correo.eml']
+3 failed, 3 passed, 33 deselected in 3.30s                                         -> 39 passed
+```
+
+| Evidencia (cambios de la review del bloque E) | Valor real |
+|---|---|
+| Tests | +23 (5 CR-E1, 12 CR-E2, 6 CR-E3); raíz `1018 passed in 514.76s` en `bash harness/init.sh` (ENTORNO LISTO, exit 0) |
+| Cobertura de las líneas cambiadas | `PUERTA COBERTURA`: 96.9 % (1350/1393) |
+| Mutación | no lanzada (bloqueante 3: la relanza el líder sobre este HEAD) |
+| Tiempo de la suite | raíz 514.76 s; los tres ficheros tocados, `91 passed in 11.58s` |
