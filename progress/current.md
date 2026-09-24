@@ -7,12 +7,34 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
+**F-048 · BLOQUEO (2026-09-24, implementer): la red de obra de sv3 BORRA los
+motivos `obra_correo_*`.** El código choca con la spec (R29/R30 frente a design
+§6 «las redes de obra no se tocan»): `MOTIVO_OBRA_PREFIJO = "obra_"`
+(`sqlalchemy_albaran_repository.py:153`) y `retirar_revision_obra` quita TODOS
+los motivos que empiezan por `obra_` cuando la obra del merge existe en Sigrid
+(`obra_enrichment_service.py`, R7 de F-002). Corre justo después de `save()`,
+en la misma pasada del pipeline. Los dos motivos de comun
+(`obra_correo_distinta_papel`, `obra_correo_ambigua`) empiezan por `obra_`,
+así que en el caso normal (fila 3 o 5 con obra que existe) el merge los calcula
+bien (T26 en verde) y la red los borra acto seguido: `review_required` queda en
+true, pero sin motivo, y sv4 no pintaría el aviso en `warning`. Reproducción
+(solo lectura, sin BBDD):
+```
+prefijo de la red: 'obra_'
+antes : ["single_provider_openai", "obra_correo_distinta_papel", "obra_correo_ambigua"]
+despues de retirar_revision_obra (obra valida): ["single_provider_openai"]
+```
+Opciones para el líder, sin aplicar ninguna: (a) renombrar los dos motivos en
+comun para que no empiecen por `obra_` (cambia el contrato del bloque A y los
+literales de R29/R30); (b) que `retirar_revision_obra` no quite
+`MOTIVOS_REVISION_ORIGEN` (toca la red, que design §6 excluye); (c) acotar el
+prefijo de la red a sus dos motivos, `obra_inexistente:` y
+`obra_codigo_invalido:` (también toca la red). T37 fallaría hoy por esto.
+
 **F-048 · CAMBIOS DE LA REVIEW DE C2 Y BLOQUES D (sv3) Y D BIS (sv4): EN CURSO**
-(2026-09-24, implementer). Hechos: `43bc9b9` CR-C3 (evidencia a 160 en el
-origen y `obra_codigos` tolerante en `LecturaCorreo`), `b51a7be` CR-C4 (test
-de `_mensaje_para_log` en la suite de comun), `353a5c4` CR-C5 (fila 4: la
-cabecera toma la forma de la lista). Tarea en curso: T23. Si la sesión se
-corta, seguir por la primera `[ ]` de los bloques D y D bis de `tasks.md`.
+(2026-09-24, implementer). Hechos: `43bc9b9` CR-C3, `b51a7be` CR-C4, `353a5c4`
+CR-C5, `dd5417b` T23, `6099c2e` T24, `a356a62` T25, `3b4e7a3` T26 (el cálculo en
+el merge; el efecto final lo rompe el bloqueo de arriba). En curso: T27 (sv4).
 
 **F-048 · CAMBIOS DE LA REVIEW DE C1 Y BLOQUE C2 (sv2, T17–T22) IMPLEMENTADOS**
 (2026-09-24, implementer, `fe99db0..2b40968`): CR-C1 y CR-C2 en `prompts.yaml`;
