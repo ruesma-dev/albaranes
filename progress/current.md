@@ -90,9 +90,9 @@ se guardan aparte.
 Aplicadas las decisiones del humano del 2026-09-23: **del correo SOLO la
 obra** (la partida sale del alcance); el código del correo manda y se CRUZA con
 el del papel; **si no cuadran, el documento va a revisión** (motivo
-`obra_correo_distinta_papel` en sv3, revoca lo del 22); **varios códigos en el
+`correo_obra_distinta_papel` en sv3, revoca lo del 22); **varios códigos en el
 correo** (D4 bis, decidido): si el del papel es uno de ellos se usa sin
-revisión, si no o el papel no trae código, revisión con `obra_correo_ambigua`
+revisión, si no o el papel no trae código, revisión con `correo_obra_ambigua`
 y candidatos visibles en sv4. Irán MÁS albaranes a revisión, aunque menos de lo previsto en la v3 (design §8).
 
 Dudas abiertas que el humano puede querer mirar antes de implementar:
