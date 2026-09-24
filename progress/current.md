@@ -30,6 +30,9 @@ rama (`git merge-base --is-ancestor 9f8a008 HEAD` falla). Decidir: traer solo la
   además los avisos «sin contexto de correo» de sv1 (429/503 de Graph, menor B-4) y los WARNING de
   colisión de la lista de obras (menor C1-2). El informe `progress/evals_F-048.md` está ignorado por
   git: su frescura se juzga por la fecha, posterior a `63571a6`.
+  La 1ª pasada (24-sep) murió a los 50 min por un JSON degenerado de IA2 en un caso; desde `77b4bc2`
+  el runner aísla los fallos por caso (sale OMITIDO con motivo) y siempre escribe el informe.
+  Detalle: `progress/impl_F-048.md`, «Runner de evals: fallos aislados por caso».
 - T41: `bash harness/init.sh`.
 
 (c) **Aceptar los 3 equivalentes de T34** (mutantes 9, 22 y 23, justificados en el informe).
