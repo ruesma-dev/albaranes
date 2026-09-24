@@ -206,6 +206,68 @@ def test_f048_r33_el_resto_de_motivos_no_pinta_aviso(origen):
 
 
 # ---------------------------------------------------------------- #
+# CR-D4 · el revisor cambió la obra (aviso C de la review del bloque D,
+# opción (b) del líder): sv4 lo PINTA distinto y no escribe nada.
+# ---------------------------------------------------------------- #
+UNICO = _origen("correo_unico", correo="0945", candidatos=["0945"], fuente="correo")
+
+
+@pytest.mark.parametrize(
+    ("origen", "final", "de_donde"),
+    [
+        (DISCREPANCIA, "0945", "la que decía el correo"),
+        (UNICO, "0945", "la que decía el correo"),
+        (AMBIGUO, "0937", "la del papel"),
+        (CONFIRMA, "0945", "la del papel"),
+        (FUERA, "0945", "la del papel"),
+    ],
+    ids=["discrepancia", "unico", "ambiguo", "confirma_papel", "fuera_de_lista"],
+)
+def test_f048_cr_d4_si_el_revisor_cambio_la_obra_el_aviso_lo_dice_primero(origen, final, de_donde):
+    documento = _payload(_raw(origen), obra_codigo="0999")
+    original = _payload(_raw(origen), obra_codigo=final).avisos_origen_datos
+
+    assert documento.obra_cambiada_tras_extraer is True
+    assert documento.avisos_origen_datos == [
+        f"Obra: el revisor cambió la obra a 0999; al extraer se fijó {final}, {de_donde}.",
+        *[aviso.replace("Obra: ", "Al extraer, ", 1) for aviso in original],
+    ]
+
+
+@pytest.mark.parametrize(
+    ("origen", "cabecera"),
+    [
+        (DISCREPANCIA, "0945"),
+        (DISCREPANCIA, "945"),
+        (CONFIRMA, "09-45"),
+        (DISCREPANCIA, None),
+        (_origen("correo_ambiguo", final=None, candidatos=["0945", "0320"], papel=None), "0999"),
+    ],
+    ids=["misma_obra", "misma_obra_sin_cero", "misma_obra_con_guion", "sin_obra_red_de_sv3", "sin_valor_final"],
+)
+def test_f048_cr_d4_sin_cambio_real_el_aviso_es_el_de_siempre(origen, cabecera):
+    """Misma obra en otra forma (D9), obra retirada por la red de sv3 (R28, deja su
+    propio motivo) o sin ``valor_final`` con el que comparar: aviso de siempre."""
+    documento = _payload(_raw(origen), obra_codigo=cabecera)
+
+    assert documento.obra_cambiada_tras_extraer is False
+    assert documento.avisos_origen_datos == _payload(_raw(origen)).avisos_origen_datos
+
+
+@pytest.mark.parametrize("motivo", ["sin_correo", "correo_sin_dato", "ia_sin_lectura_correo"])
+def test_f048_cr_d4_si_el_correo_no_dijo_nada_no_hay_aviso_aunque_cambie_la_obra(motivo):
+    assert _payload(_raw(_origen(motivo)), obra_codigo="0999").avisos_origen_datos == []
+
+
+def test_f048_cr_d4_el_motivo_sellado_sigue_mandando_en_la_duda():
+    """R34 intacto: el cierre es del revisor; sv4 no toca ``review_reasons``."""
+    documento = _payload(_raw(DISCREPANCIA), [MOTIVO_REVISION_OBRA_CORREO_DISTINTA], obra_codigo="0999")
+
+    assert documento.origen_en_duda is True
+    assert documento.review_reasons == [MOTIVO_REVISION_OBRA_CORREO_DISTINTA]
+
+
+# ---------------------------------------------------------------- #
 # origen_en_duda
 # ---------------------------------------------------------------- #
 @pytest.mark.parametrize("motivo", MOTIVOS_REVISION_ORIGEN)

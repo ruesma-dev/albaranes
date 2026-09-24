@@ -17,9 +17,11 @@ from ruesma_comun.contratos import (
 from ruesma_comun.contratos.clasificacion import ORIGEN_IA1
 from ruesma_comun.contratos.familias import obtener as obtener_familia
 from ruesma_comun.contratos.origen_datos import (
+    FUENTE_CORREO,
     MOTIVO_CORREO_AMBIGUO,
     MOTIVO_CORREO_CONFIRMA_PAPEL,
     MOTIVO_CORREO_FUERA_DE_LISTA,
+    normalizar_codigo,
 )
 
 VIEW_MODE_MERGE = "merge"
@@ -893,10 +895,50 @@ class DocumentDetailPayload(BaseModel):
         El resto de casos (sin correo, sin código, sin lectura de la IA o
         un código que casa con el papel) no pinta nada. sv4 PINTA: el
         cruce lo hizo sv2 y aquí no se recalcula.
+
+        Si el revisor cambió la obra después (``obra_cambiada_tras_extraer``),
+        el primer aviso lo dice y el resto queda como lo que pasó al extraer.
         """
         origen = self.origen_datos
-        aviso = _aviso_de_obra(origen.obra) if origen is not None else None
-        return [aviso] if aviso else []
+        if origen is None:
+            return []
+        obra = origen.obra
+        aviso = _aviso_de_obra(obra)
+        if not self.obra_cambiada_tras_extraer:
+            return [aviso] if aviso else []
+        # CR-D4 (aviso C de la review del bloque D, opción (b) del líder):
+        # la cabecera ya no es la que fijó la extracción. Se dice primero y
+        # lo demás pasa a ser historia. Solo si el correo dijo algo: sin
+        # aviso de siempre y sin obra impuesta por el correo, no hay nada
+        # «según el correo» que contar.
+        if aviso is None and obra.fuente != FUENTE_CORREO:
+            return []
+        de_donde = "la que decía el correo" if obra.fuente == FUENTE_CORREO else "la del papel"
+        cambio = (
+            f"Obra: el revisor cambió la obra a {self.obra_codigo}; al "
+            f"extraer se fijó {obra.valor_final}, {de_donde}."
+        )
+        historia = [aviso.replace("Obra: ", "Al extraer, ", 1)] if aviso else []
+        return [cambio, *historia]
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def obra_cambiada_tras_extraer(self) -> bool:
+        """¿La obra de la cabecera ya no es la que fijó la extracción? (CR-D4).
+
+        Compara la obra actual del merge con ``origen_datos.obra.valor_final``
+        con ``normalizar_codigo`` de ``comun`` (D9: ``945`` y ``0945`` son la
+        misma). Solo cuenta un cambio a OTRA obra: sin ``valor_final`` no hay
+        con qué comparar, y una obra vacía la deja la red de obra de sv3
+        (R28), que añade su propio motivo; eso no es «el revisor la cambió».
+        Solo pinta: no escribe nada ni toca ``review_reasons`` (R35, §6).
+        """
+        origen = self.origen_datos
+        if origen is None:
+            return False
+        final = normalizar_codigo(origen.obra.valor_final)
+        actual = normalizar_codigo(self.obra_codigo)
+        return final is not None and actual is not None and actual != final
 
     @computed_field  # type: ignore[prop-decorator]
     @property

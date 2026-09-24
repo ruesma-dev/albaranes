@@ -107,6 +107,31 @@ def test_f048_cr_d3_confirma_papel_pinta_la_lectura_del_papel_y_la_de_la_lista(r
     assert "(el papel dice 945; en la lista de obras, 0945). Se ha usado 0945." in bloque
 
 
+def test_f048_cr_d4_el_revisor_cambio_la_obra_se_pinta_distinto(render_detalle, documento_detalle):
+    """Aviso C de la review del bloque D, opción (b): sigue siendo advertencia
+    (el motivo sellado no se toca, R34/R35) pero dice que el revisor la cambió."""
+    documento = documento_detalle(motivos_documento=[MOTIVO_REVISION_OBRA_CORREO_DISTINTA]).model_copy(
+        update={"raw_extraction_json": _raw(DISCREPANCIA), "obra_codigo": "0999"}
+    )
+
+    bloque = _bloque_origen(render_detalle(documento))
+
+    assert 'class="alert warning origen-duda origen-datos obra-cambiada"' in bloque
+    assert "el revisor cambió la obra a 0999; al extraer se fijó 0945, la que decía el correo." in bloque
+    assert "Al extraer, el correo dice 0945 y el papel dice 0937." in bloque
+
+
+def test_f048_cr_d4_sin_cambio_no_lleva_la_marca(render_detalle, documento_detalle):
+    documento = documento_detalle(motivos_documento=[MOTIVO_REVISION_OBRA_CORREO_DISTINTA]).model_copy(
+        update={"raw_extraction_json": _raw(DISCREPANCIA), "obra_codigo": "0945"}
+    )
+
+    bloque = _bloque_origen(render_detalle(documento))
+
+    assert 'class="alert warning origen-duda origen-datos"' in bloque
+    assert "revisor" not in bloque
+
+
 @pytest.mark.parametrize("origen", [CONFIRMA, FUERA], ids=["confirma_papel", "fuera_de_lista"])
 def test_f048_r33_confirma_papel_y_fuera_de_lista_son_informativos(render_detalle, documento_detalle, origen):
     bloque = _bloque_origen(_html(render_detalle, documento_detalle, _raw(origen)))
