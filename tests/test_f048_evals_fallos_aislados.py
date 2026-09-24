@@ -671,3 +671,91 @@ def test_f048_evals_runner_si_muere_sv6_la_corrida_determinista_no_revienta(
         assert "subproceso de sv6" in fase.motivo
         assert CENTINELA not in fase.motivo
     assert CENTINELA in capsys.readouterr().err
+
+
+# --- Bordes del padre y de la descripción ------------------------------------
+
+
+def test_f048_evals_runner_un_albaran_ilegible_omite_ia1_e_ia2_de_ese_caso(
+    tmp_path, monkeypatch, pasada_con_llm
+):
+    fixtures, albaranes = _banco_ia1_ia2(tmp_path, "HOR-001")
+    error = {"fase": "preproceso", "tipo": "OSError", "motivo": "OSError: sin detalle"}
+    monkeypatch.setattr(
+        sv2,
+        "ejecutar_en_subproceso",
+        lambda *a, **k: {"resultados": [{"caso_id": "HOR-001", "proveedores": {}, "error": error}]},
+    )
+
+    fases, _ = runner.corrida_completa(fixtures, directorio_albaranes=albaranes)
+
+    for nombre in ("IA1", "IA2"):
+        caso = _fase(fases, nombre).casos[0]
+        assert caso.estado == OMITIDO
+        assert caso.motivo == "ERROR en preproceso · OSError: sin detalle"
+
+
+def test_f048_evals_runner_un_proveedor_que_sv2_no_devuelve_se_declara(
+    tmp_path, monkeypatch, pasada_con_llm
+):
+    fixtures, albaranes = _banco_ia1_ia2(tmp_path, "HOR-001")
+    monkeypatch.setattr(
+        sv2,
+        "ejecutar_en_subproceso",
+        lambda *a, **k: {"resultados": [{"caso_id": "HOR-001", "proveedores": {}}]},
+    )
+
+    fases, _ = runner.corrida_completa(fixtures, directorio_albaranes=albaranes)
+
+    assert _fase(fases, "IA2").casos[0].motivo == "sv2 no devolvió resultado"
+
+
+def test_f048_evals_runner_un_caso_solo_del_libro_ia1_no_aparece_en_ia2(
+    tmp_path, monkeypatch, pasada_con_llm
+):
+    fixtures, albaranes = _banco_ia1_ia2(tmp_path, "HOR-001")
+    (fixtures / "IA2" / "HOR-001.json").unlink()
+    monkeypatch.setattr(sv2, "ejecutar_en_subproceso", _sv2_en_proceso(_ExtractorDoble()))
+
+    fases, _ = runner.corrida_completa(fixtures, directorio_albaranes=albaranes)
+
+    assert [c.estado for c in _fase(fases, "IA1").casos] == ["VERDE"]
+    assert _fase(fases, "IA2").casos == []
+
+
+def test_f048_evals_runner_un_caso_que_sv5_no_devuelve_se_declara(
+    tmp_path, monkeypatch, valoracion_sin_servicios
+):
+    fixtures = _banco_valoracion(tmp_path, "HOR-001")
+    monkeypatch.setattr(sv5, "ejecutar_en_subproceso", lambda *a, **k: {"resultados": []})
+
+    fases, _ = runner._corrida_valoracion_real(
+        *(runner.cargar_fixtures(fixtures, f) for f in ("inputs", "IA3", "IA4", "final")),
+        criticidad=runner.cargar_criticidad(),
+        proveedores=["gemini"],
+    )
+
+    for nombre in ("IA3", "IA4", "E2E"):
+        assert _fase(fases, nombre).casos[0].motivo == "sv5 no devolvió resultado"
+    assert valoracion_sin_servicios["sv6"] == [], "sin envelopes no se lanza sv6"
+
+
+def test_f048_evals_un_errors_que_no_es_el_de_pydantic_no_rompe_la_descripcion():
+    class _Raro(Exception):
+        def errors(self):  # sin los argumentos de pydantic
+            return [{"type": CENTINELA}]
+
+    descripcion = describir_error(_Raro(CENTINELA), "IA1")
+
+    assert descripcion["tipo"] == "_Raro"
+    assert CENTINELA not in descripcion["motivo"]
+
+
+def test_f048_evals_un_validation_error_sin_errores_da_un_motivo_generico():
+    class _Vacio(Exception):
+        def errors(self, **kwargs):
+            return []
+
+    assert describir_error(_Vacio(), "IA2")["motivo"] == (
+        "_Vacio: error de validación sin detalle"
+    )
