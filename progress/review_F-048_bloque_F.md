@@ -1,140 +1,129 @@
-Revisión incremental desde 9c70de2 (bloque D aprobado) hasta HEAD `0b04682` · pasada 1 de CR-D2..D4, T32, T33 y T35
+Revisión incremental desde 53d769b (pasada 2) hasta HEAD `faea4a2` · CR-F1..CR-F4 (pasada 1: desde 9c70de2 hasta `0b04682`)
 
-# F-048 · Review de los menores del bloque D (CR-D2, CR-D3, CR-D4) y del bloque F (T32, T33, T35)
+# F-048 · Review de los menores del bloque D (CR-D2..D4) y del bloque F (T32, T33, T35)
 
-**Veredicto: CHANGES_REQUESTED.** Hay un bloqueante barato: el aviso de CR-D4 dice «el revisor cambió
-la obra» también cuando la cambió sv3 sin que nadie la tocara. El resto está bien. Hay que arreglarlo
-**antes de T34**, porque toca un fichero del alcance de la campaña (RM1).
+**Veredicto final (pasada 2): APPROVED.** El bloqueante 1 y los menores 1, 2 y 3 están cerrados.
 **Rigor** `critico` (declarado): exige RED, cobertura ≥ 80 %, mutación (T34, fuera de esta review) y
 evals (T40).
 
-## Qué se ejecutó (resultados reales)
+---
 
-- **`bash harness/init.sh`** tal cual: exit 0, **ENTORNO LISTO**. Raíz `865 passed in 120.64s`, con el
-  test de F-011; los servicios salieron de caché. `PUERTA COBERTURA 99.5 % (661/664)` y `TAMAÑO` OK. El
-  `[AVISO]` de rutas sensibles (10 rutas) es el esperado para T40.
-- **sv4** a mano, con su venv: `244 passed in 3.60s`. **T35**: `harness.tamano --feature F-048` exit 0.
-- **T33**: `python -m harness.cobertura --base dev --config harness/rigor.json` ⇒ **99.5 % (661/664)**.
-- **T32**: `harness.rutas_sensibles` exit 3 (`aviso`: falta `evals_F-048.md`, llega con T40).
-  `git status` limpio.
+## Pasada 1 (compactada) · CHANGES_REQUESTED
 
-## RED de CR-D4 reproducido (copia en el scratchpad)
+- **Ejecutado**: `init.sh` exit 0 (raíz 865, cobertura 99,5 % 661/664, TAMAÑO OK); sv4 a mano 244
+  passed; T35 `harness.tamano` exit 0; T32 `harness.rutas_sensibles` exit 3 (`aviso`, falta evals).
+- **RED de CR-D4** reproducido en una copia: `11 failed, 5 passed`, igual que el informe.
+- **CR-D2 y CR-D3**: cerrados. **CR-D4**: las cuatro decisiones son correctas (el `warning` depende solo
+  del motivo, sv4 no escribe, la cabecera vacía no cuenta, `normalizar_codigo` de comun, `correo_unico`
+  pinta como `info`).
+- **T32**: la regla 15 coincide con D5 y con el código. El `DocumentoAlbaran` de sv5 es código muerto
+  (CONFIRMADO). `azure-apps/albaranes.md` está bien y no contiene secretos.
+- **Bloqueante 1**: `review_models.py:918` decía «el revisor cambió la obra» también cuando la cambia sv3
+  (`HeaderResolverService._resolve_obra`, con `origen='deterministic'`, ya en la primera persistencia:
+  papel `O937` → cabecera `0937`). sv4 no puede distinguirlo porque `update_document` no marca
+  `manual`. Se pidió: texto sin sujeto, ajustar los tests y docstrings y añadir el caso de sv3.
+- **Menores**: (1) faltaba `albaran_extraction_service.py` en `rutas_sensibles.json`; (2) la cadena de
+  `ARCHITECTURE.md:235-236` estaba mal; (3) `.obra-cambiada` no tenía CSS.
 
-Copia de sv4 con `git archive HEAD`, con `review_models.py` y `document_detail.html` de `5bae02e` (el
-commit anterior a CR-D4) y los tests de HEAD, ejecutada con `-k cr_d4`. Sale **`11 failed, 5 passed,
-45 deselected`**: 10 `AttributeError ... 'obra_cambiada_tras_extraer'` y el `assert '...origen-datos
-obra-cambiada"'`. Coincide exactamente con el informe. Con HEAD, en verde.
+---
 
-## CR-D2 y CR-D3: cerrados
+## Pasada 2 · APPROVED
 
-- **CR-D2** (`review_models.py:705`): pone «están» si hay más de un candidato. El test usa dos códigos.
-- **CR-D3** (`:692-700`): si `valor_final` ≠ `valor_papel`, el aviso cita las dos lecturas; si son
-  iguales, el texto de siempre. Tests con `945`, `09-45` y `0945`, sobre el modelo y la plantilla.
+### Qué se ejecutó (resultados reales)
 
-## CR-D4: las cuatro decisiones y la plantilla renderizada
+- **`bash harness/init.sh`** tal cual: exit 0, **ENTORNO LISTO**. Raíz `865 passed in 117.25s`.
+  sv4 y el resto de servicios, en verde desde la caché («árbol sin cambios desde el último verde»).
+  `PUERTA COBERTURA 99.5 % (661/664, umbral 80 %, nivel critico)`. `PUERTA TAMAÑO` OK (impl 212/220).
+  `[AVISO] RUTAS SENSIBLES`: **11** rutas (antes 10), como se esperaba con CR-F2.
+- **sv4 a mano** (`services/albaranes-front/.venv`): `246 passed in 3.54s` (244 + 2 tests nuevos).
+- `git status` limpio antes del commit de esta review.
 
-Rendericé la plantilla real con el conftest de sv4 en la copia:
-- **Discrepancia, y el revisor pone 0999**: `warning origen-duda origen-datos obra-cambiada`, con
-  «el revisor cambió la obra a 0999; al extraer se fijó 0945, la que decía el correo.» y
-  «Al extraer, el correo dice 0945…».
-- **Discrepancia sin cambio o con cabecera vacía**: `warning origen-duda origen-datos`, texto de siempre.
-- **`correo_unico`**: con cambio, `info … obra-cambiada` y solo esa línea; sin cambio, no se pinta.
+### RED de CR-F1 reproducido (copia en el scratchpad)
 
-1. **El `warning` depende solo del motivo (R34) y sv4 no escribe (R35).** Correcto: la propiedad es un
-   `computed_field` puro, y ni `origen_en_duda` ni el `class` del `warning` la leen.
-   `review_repository.py` no cambia, y un test comprueba que `review_reasons` queda intacto.
-2. **Cabecera vacía no cuenta como cambio.** Correcto: la red de sv3 la deja en NULL
-   (`sqlalchemy_albaran_repository.py:1941`) con su propio motivo `obra_*`. **Pero el mismo criterio
-   falla cuando la cabecera no está vacía** (bloqueante 1).
-3. **Comparación con `normalizar_codigo` de comun.** Correcto: sin copia, y cubre `945`, `09-45` y
-   `0945`.
-4. **`correo_unico` sin discrepancia pinta el cambio.** Correcto y útil: el correo impuso la obra sin
-   avisar y ahora la cabecera es otra; sale como `info` porque no hay motivo. Las filas en las que el
-   correo no dijo nada no llevan aviso.
+`git archive HEAD services/albaranes-front` con `review_models.py`, `document_detail.html` y
+`styles.css` de `53d769b`, más los tests de HEAD, ejecutado con `-k "cr_d4 or cr_f1 or cr_f4"`:
+**`8 failed, 10 passed, 45 deselected`**. Los fallos son:
+- 5 `cr_d4_*` del modelo: `'Obra: el revisor cambió la obra a 0999…' != 'Obra: la cabecera lleva ahora 0999…'`.
+- `cr_f1_*`: `+ Obra: el revisor cambió la obra a 0937; al extraer se fijó O937, la del papel.`
+- `cr_d4_*` de la plantilla: `assert 'la cabecera lleva ahora 0999…' in '<div class="alert warning…'`.
+- `cr_f4_*`: `re.search(...) → None`.
 
-## T32: documentación y rutas sensibles
+Coincide con el informe (`7 failed, 10 passed` sin `cr_f4` y `1 failed` con `cr_f4`). Con HEAD, en
+verde.
 
-- **Regla 15** (`docs/ARCHITECTURE.md:183-241`): la tabla coincide con D5 fila a fila, incluida la
-  «forma de la lista» de la fila 4. Contrastada con el código:
-  - Un GET con `$select=subject,uniqueBody,receivedDateTime` y `Prefer` texto (`mail_client.py:293-316`).
-  - El blob se escribe antes de publicar (`intake_cola_adapter.py:130-138`), y `correo_blob` es
-    opcional: `MensajeBase` no lleva `forbid` en `dev`.
-  - Topes de 4.000 y 160 caracteres; `evals/inputs/` en `.gitignore:36`. Motivos `correo_obra_*`: el grep de literales `obra_*` solo da `obra_inexistente:`, que es de la
-    red, y `obra_lookup:`, que es un `errors` y no un motivo.
-  - La trampa de `workflow_runs` es exacta: la fila se crea en `:83-93` y el duplicado sale en `:104`,
-    antes que los blobs. El orden es sv3 → sv2 → sv1.
-- **sv5, código muerto: CONFIRMADO** con el grep repetido fuera de `.venv`. `DocumentoAlbaran` solo lo
-  importa `revision_models.py`, y a este no lo importa nadie salvo un test de F-043.
-  `ExtractAlbaranPipeline` no se instancia, `SchemaRegistry` solo tiene valoración y conciliación, y en
-  sv5 no aparece `raw_extraction_json`.
-- **`rutas_sensibles.json`**: es un superconjunto del §5 del diseño y coincide con
-  `RUTAS_ANADIDAS_DESPUES` de F-011 (con su motivo, en verde). Tras recorrer `git diff dev...HEAD
-  --stat`, falta **una** ruta (menor 1).
-- **`azure-apps/albaranes.md` (`96bbdb6`)**: exacto frente al código (§1 blob, §3 `origen_datos` sin
-  DDL y los dos motivos, §7). Sin secretos, IDs, IPs ni GUID (`stalbaranesrs9k2` ya estaba). No duplica
-  nada de otros proyectos y enlaza la regla 15.
+### Bloqueante 1: CERRADO
 
-## Bloqueantes
+- **Texto** (`review_models.py:924-927`): «Obra: la cabecera lleva ahora X (cambiada después de
+  extraer); al extraer se fijó Y, …». No lleva sujeto, así que es verdad tanto si la cambió el revisor
+  como si fue sv3.
+- **Grep de «revisor»** en `review_models.py` y en `document_detail.html`: todo lo que queda está en
+  docstrings y comentarios (`:888`, `:901`, `:914`, `:941`, plantilla `:145`), que ya dicen «el revisor
+  o sv3». Ninguna cadena que se renderice lo nombra. Los tests lo fijan en dos niveles:
+  `assert "revisor" not in bloque` en la plantilla y `not any("revisor" in aviso …)` en el modelo.
+- **Caso sv3**: `test_f048_r35_vista_modelo.py::test_f048_cr_f1_si_la_cambio_sv3_el_aviso_no_culpa_al_revisor`
+  cubre `correo_fuera_de_lista` con papel `O937`, `valor_final="O937"` y cabecera `0937`. Es el caso
+  exacto de la pasada 1.
+- **Coherencia**: el caso `O937` → `0937` sale como cambio. Es correcto, porque `normalizar_codigo` no
+  iguala una letra O con un cero y la cabecera sí es otra respecto a lo que selló la extracción.
+- Los docstrings (`:899-902`, `:940-943`) y el comentario de la plantilla (`:145-148`) están ajustados.
+  El `warning` sigue dependiendo solo del motivo (R34) y sv4 sigue sin escribir (R35).
 
-1. **`services/albaranes-front/domain/models/review_models.py:918`: «el revisor cambió la obra» es falso
-   cuando la cambia sv3.** `obra_cambiada_tras_extraer` (`:926-941`) sabe que la cabecera ya no es
-   `valor_final`, pero no QUIÉN la cambió.
-   - **Cómo la cambia sv3.** `HeaderResolverService._resolve_obra`
-     (`albaranes-persistencia/application/services/header_resolver_service.py:253-285`) deduce la obra
-     por nombre y dirección cuando el código no pasa `normalize_obra_code` (4 dígitos con un 0 delante,
-     `obra_code_normalizer.py:26-30`). La escribe con `origen='deterministic'`
-     (`sqlalchemy_albaran_repository.py:1004-1006`), antes de la red: al persistir, en el duplicado y en
-     «volver a buscar» (`persist_albaran_pipeline.py:130, 216, 424`).
-   - **Caso alcanzable en la PRIMERA persistencia.** Fila 1 (`correo_fuera_de_lista`) o 5 con el papel
-     leído `O937` o `09-37`: `valor_final` guarda el papel tal cual (`origen_datos_resolver.py:93`), sv3
-     deduce `0450`, y la plantilla renderiza «Obra: el revisor cambió la obra a 0450; al extraer se fijó
-     09-37, la del papel.» sin que haya habido revisor. Es justo lo que la decisión 2 quería evitar.
-   - **sv4 no puede distinguirlo:** `update_document` (`review_repository.py:3087`) no marca
-     `obra_codigo_origen='manual'`, y ese campo no viaja en el payload.
+### Menores: CERRADOS
 
-   **Qué hacer:**
-   - Redactarlo sin sujeto, por ejemplo: «Obra: la cabecera lleva ahora 0999 (cambiada después de
-     extraer); al extraer se fijó 0945, la que decía el correo.».
-   - Ajustar `test_f048_r35_vista_modelo.py:233` y `test_f048_r32_r34_vista_avisos.py:120`, y añadir el
-     caso de sv3 (`valor_final="O937"`, cabecera `0937`).
-   - Ajustar los docstrings `:899` y `:930-936` y el comentario de `document_detail.html:145-146`.
+1. **CR-F2**: `albaran_extraction_service.py` está en `rutas_sensibles.json:35` y en
+   `RUTAS_ANADIDAS_DESPUES` (`tests/test_f011_r19_r20_declaracion.py:208`), con su motivo. He recorrido
+   `git diff dev..HEAD --stat` (103 ficheros). Todo fichero de producción que cambia lo que lee la IA o
+   la obra final queda cubierto (`domain/models/**`, `prompts.yaml`, `llm/**`, `correo/**`,
+   `origen_datos.py`, el resolver y el servicio de extracción). Lo que queda fuera es:
+   - Fontanería sin decisión: `extract_albaran_pipeline.py` solo pasa `contexto_correo` y delega
+     `obras_conocidas`; también el worker, `correo_adapter.py`, `encolar_extraccion.py`, sv1 y sv4.
+   - Lógica determinista que fijan los tests unitarios: `albaran_confidence_service.py` de sv3, con
+     dos disparadores cubiertos por `test_f048_r29_r31_*`; y la caché y el cliente de obras.
 
-## Menores (no bloquean)
+   **No falta ninguna ruta.**
+2. **CR-F3**: `ARCHITECTURE.md:235-237` dice ahora «ningún módulo de producción la importa (solo
+   `revision_models.py`, al que no importa nadie, y un test de F-043)». Coincide con el grep de la
+   pasada 1.
+3. **CR-F4**: `styles.css:1758-1763`: `.origen-datos.obra-cambiada .origen-aviso:first-of-type`. En la
+   plantilla, los avisos son los únicos `<p>` del `div`, así que `:first-of-type` coge justo la línea
+   del cambio. `base.html:27` carga la hoja. El test `cr_f4_*` la fija.
 
-1. **Falta la ruta sensible `services/albaranes-api/application/services/albaran_extraction_service.py`.**
-   `_render_contexto_correo` (`:226`) decide dónde entra el correo en el prompt de IA1, y sustituir
-   `{contexto_correo}` en último lugar es la defensa ante la inyección de R12. Ningún test unitario lo
-   mide. Hay que añadirla a `rutas_sensibles.json` y a `RUTAS_ANADIDAS_DESPUES`
-   (`tests/test_f011_r19_r20_declaracion.py:196`) antes de T40.
-2. **La cadena de `docs/ARCHITECTURE.md:235-236` está mal** («solo la usa `RevisionAlbaranFase2`, de un
-   `ExtractAlbaranPipeline`…»): `revision_models` no lo importa nadie, tampoco ese pipeline. La
-   conclusión es correcta; basta con decir que ningún módulo de producción lo importa.
-3. **La clase `obra-cambiada` (`document_detail.html:149`) no tiene CSS**: en pantalla solo la distingue
-   la primera línea. Vale para la opción (b).
-
-## Checkpoints (bloque intermedio)
+### Checkpoints (pasada 2, sobre el delta)
 
 - **C1** [x] init.sh exit 0 · [x] ficheros del arnés. **C3 bis** N/A: no se toca `docs/referencia/`.
-- **C2** [x] una sola feature en `in_progress` · [x] rama `feature/F-048-…` · [x] `current.md` al día
-  (el menor 1 del bloque D también está resuelto) · N/A `history.md`: nada pasa a `done`.
-- **C3** [x] hexagonal (sv4 solo en `domain/models` y la plantilla, e importa de comun) · [x] primera
-  línea con la ruta · [x] sin prints, secretos ni dependencias nuevas · [x] sin DDL; trampas 1–3 no tocadas.
-- **C4** [x] R32–R35 y CR-D2..D4 con tests `test_f048_*` en verde · [x] sin red ni BBDD. Ojo: un test
-  fija como buena la frase falsa del bloqueante 1.
-- **C4 bis** [x] rigor `critico` declarado · [x] RED real (el de CR-D4, reproducido) · [x] cobertura
-  99,5 % · **N/A mutación y RM1–RM6**, por encargo del líder: es T34, sobre la feature completa y
-  DESPUÉS de esta review; medir ahora caducaría con el bloqueante 1 (RM1) · [x] «Evidencias» completas.
-- **C4 ter** [x] `aviso` con motivo: las 10 rutas se evalúan en T40 (aún no existe `evals_F-048.md`).
-  **Bloqueará la review final** si falta.
-- **C5** [x] T32, T33 y T35 `[x]` con commits `F-048 T3n:` · [x] árbol limpio · [x] `features.json` en
-  `in_progress`. Siguen abiertos T34 y los bloques E y G.
+- **C2** [x] una sola feature en `in_progress` · [x] rama `feature/F-048-…` · [x] `current.md` al día ·
+  N/A `history.md`: nada pasa a `done`.
+- **C3** [x] el delta de producción es solo de sv4 (modelo, plantilla y CSS) y de la documentación ·
+  [x] primera línea con la ruta en los ficheros de código · [x] sin prints, secretos ni dependencias
+  nuevas · [x] sin DDL.
+- **C4** [x] CR-F1..F4 con tests `test_f048_*` y `test_f011_*` en verde · [x] sin red ni BBDD.
+- **C4 bis**:
+  - [x] rigor `critico` declarado.
+  - [x] RED real (el de CR-F1, reproducido).
+  - [x] cobertura 99,5 %.
+  - **N/A mutación y RM1–RM6**, por encargo del líder: la mutación es T34 y se hace sobre la feature
+    completa DESPUÉS de esta review. Con el bloqueante cerrado, el alcance de sv4 ya es estable (RM1).
+  - [x] «Evidencias» completas en `impl_F-048.md:207-212`.
+- **C4 ter** [x] `aviso` con motivo: las 11 rutas se evalúan en T40. **Bloqueará la review final** si
+  falta `evals_F-048.md`.
+- **C5** [x] commits `F-048 CR-F1..F4` · [x] árbol limpio · [x] `features.json` en `in_progress`.
+  Siguen abiertos T34 y los bloques E y G.
 
-## Trazabilidad
+### Trazabilidad
 
-CR-D2 `r35::test_f048_cr_d2_*` · CR-D3 `r35::…cr_d3_*` (3) y `r32_r34::…cr_d3_*` · CR-D4 `r35::…cr_d4_*`
-(14 casos) y `r32_r34::…cr_d4_*` (2) · R34/R35 `r35::…el_motivo_sellado_sigue_mandando…` y
-`r35_json_roto_*` · T32 `tests/test_f011_r19_r20_declaracion.py`.
+| Requisito / cambio | Tests |
+|---|---|
+| CR-F1 (R32, R33) | `r35::test_f048_cr_d4_si_la_obra_cambio_tras_extraer_…` (5) y `r35::test_f048_cr_f1_…` |
+| CR-F1 en la plantilla | `r32_r34::test_f048_cr_d4_la_obra_cambiada_tras_extraer_se_pinta_distinto` |
+| R34 / R35 | los de la pasada 1, en verde |
+| CR-F2 | `tests/test_f011_r19_r20_declaracion.py` |
+| CR-F4 | `r32_r34::test_f048_cr_f4_la_hoja_de_la_ficha_distingue_la_obra_cambiada` |
 
-**Automejora** (propuesta, sin aplicar; vale para `arnes-base`): en C3, «un texto que atribuye una acción
-a alguien ("el revisor cambió…") exige recorrer TODOS los escritores del campo». El aviso C de la review
-anterior propuso esa frase sin hacerlo.
+### Observación (no bloquea)
+
+El test de CR-F4 busca en el CSS cualquier regla para `.origen-datos.obra-cambiada`. No mira qué hace
+la regla. Es suficiente para lo que fija el menor, que es que la clase tenga estilo.
+
+**Automejora** (propuesta de la pasada 1, sin aplicar; vale para `arnes-base`): en C3, añadir «un texto
+que atribuye una acción a alguien ("el revisor cambió…") exige recorrer TODOS los escritores del
+campo».
