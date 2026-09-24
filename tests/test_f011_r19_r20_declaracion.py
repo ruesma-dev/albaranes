@@ -193,6 +193,11 @@ RUTAS_DE_LA_SPEC: frozenset[str] = frozenset(
 #:   la tabla D5. Los tres mueven la obra final de documentos reales o lo que
 #:   lee la IA; cuántos cambian de obra o van a revisión solo lo dicen las
 #:   evals (T40).
+#: - F-048 (CR-F2, menor 1 de la review del bloque F): el servicio de
+#:   extracción de sv2, donde `_render_contexto_correo` decide en qué punto
+#:   del prompt de IA1 entra el correo. Sustituir `{contexto_correo}` el
+#:   último es la defensa ante la inyección de R12, y eso ningún test
+#:   unitario lo mide: solo las evals.
 RUTAS_ANADIDAS_DESPUES: frozenset[str] = frozenset(
     {
         "services/albaranes-comun/ruesma_comun/contratos/familias.py",
@@ -200,6 +205,7 @@ RUTAS_ANADIDAS_DESPUES: frozenset[str] = frozenset(
         "services/albaranes-comun/ruesma_comun/correo/**",
         "services/albaranes-comun/ruesma_comun/contratos/origen_datos.py",
         "services/albaranes-api/application/services/origen_datos_resolver.py",
+        "services/albaranes-api/application/services/albaran_extraction_service.py",
     }
 )
 
