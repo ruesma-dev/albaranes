@@ -13,12 +13,10 @@ evals (T40).
 - **`bash harness/init.sh`** tal cual: exit 0, **ENTORNO LISTO**. Raíz `865 passed in 120.64s`, con el
   test de F-011; los servicios salieron de caché. `PUERTA COBERTURA 99.5 % (661/664)` y `TAMAÑO` OK. El
   `[AVISO]` de rutas sensibles (10 rutas) es el esperado para T40.
-- **sv4** a mano, con su venv: `244 passed in 3.60s`.
+- **sv4** a mano, con su venv: `244 passed in 3.60s`. **T35**: `harness.tamano --feature F-048` exit 0.
 - **T33**: `python -m harness.cobertura --base dev --config harness/rigor.json` ⇒ **99.5 % (661/664)**.
-- **T35**: `python -m harness.tamano --feature F-048` ⇒ exit 0 (150/150, 249/250, impl 173/220).
-- **T32**: `python -m harness.rutas_sensibles` ⇒ exit 3, un `aviso` porque falta
-  `progress/evals_F-048.md`, que llega con T40.
-- `git status` quedó limpio.
+- **T32**: `harness.rutas_sensibles` exit 3 (`aviso`: falta `evals_F-048.md`, llega con T40).
+  `git status` limpio.
 
 ## RED de CR-D4 reproducido (copia en el scratchpad)
 
@@ -39,10 +37,8 @@ Rendericé la plantilla real con el conftest de sv4 en la copia:
 - **Discrepancia, y el revisor pone 0999**: `warning origen-duda origen-datos obra-cambiada`, con
   «el revisor cambió la obra a 0999; al extraer se fijó 0945, la que decía el correo.» y
   «Al extraer, el correo dice 0945…».
-- **Discrepancia sin cambio**, y también con la cabecera vacía: `warning origen-duda origen-datos`,
-  con el texto de siempre.
-- **`correo_unico`**: con cambio, `info … obra-cambiada` y solo la línea del cambio; sin cambio, no
-  se pinta.
+- **Discrepancia sin cambio o con cabecera vacía**: `warning origen-duda origen-datos`, texto de siempre.
+- **`correo_unico`**: con cambio, `info … obra-cambiada` y solo esa línea; sin cambio, no se pinta.
 
 1. **El `warning` depende solo del motivo (R34) y sv4 no escribe (R35).** Correcto: la propiedad es un
    `computed_field` puro, y ni `origen_en_duda` ni el `class` del `warning` la leen.
@@ -63,8 +59,7 @@ Rendericé la plantilla real con el conftest de sv4 en la copia:
   - Un GET con `$select=subject,uniqueBody,receivedDateTime` y `Prefer` texto (`mail_client.py:293-316`).
   - El blob se escribe antes de publicar (`intake_cola_adapter.py:130-138`), y `correo_blob` es
     opcional: `MensajeBase` no lleva `forbid` en `dev`.
-  - Los topes, 4.000 y 160 caracteres. `evals/inputs/` está en `.gitignore:36`.
-  - Motivos `correo_obra_*`: el grep de literales `obra_*` solo da `obra_inexistente:`, que es de la
+  - Topes de 4.000 y 160 caracteres; `evals/inputs/` en `.gitignore:36`. Motivos `correo_obra_*`: el grep de literales `obra_*` solo da `obra_inexistente:`, que es de la
     red, y `obra_lookup:`, que es un `errors` y no un motivo.
   - La trampa de `workflow_runs` es exacta: la fila se crea en `:83-93` y el duplicado sale en `:104`,
     antes que los blobs. El orden es sv3 → sv2 → sv1.
@@ -119,12 +114,11 @@ Rendericé la plantilla real con el conftest de sv4 en la copia:
 
 ## Checkpoints (bloque intermedio)
 
-- **C1** [x] init.sh exit 0 · [x] ficheros del arnés.
+- **C1** [x] init.sh exit 0 · [x] ficheros del arnés. **C3 bis** N/A: no se toca `docs/referencia/`.
 - **C2** [x] una sola feature en `in_progress` · [x] rama `feature/F-048-…` · [x] `current.md` al día
   (el menor 1 del bloque D también está resuelto) · N/A `history.md`: nada pasa a `done`.
 - **C3** [x] hexagonal (sv4 solo en `domain/models` y la plantilla, e importa de comun) · [x] primera
   línea con la ruta · [x] sin prints, secretos ni dependencias nuevas · [x] sin DDL; trampas 1–3 no tocadas.
-- **C3 bis** N/A: no se toca `docs/referencia/`.
 - **C4** [x] R32–R35 y CR-D2..D4 con tests `test_f048_*` en verde · [x] sin red ni BBDD. Ojo: un test
   fija como buena la frase falsa del bloqueante 1.
 - **C4 bis** [x] rigor `critico` declarado · [x] RED real (el de CR-D4, reproducido) · [x] cobertura
@@ -137,11 +131,9 @@ Rendericé la plantilla real con el conftest de sv4 en la copia:
 
 ## Trazabilidad
 
-- **CR-D2**: `r35::test_f048_cr_d2_*`.
-- **CR-D3**: `r35::test_f048_cr_d3_*` (3) y `r32_r34::test_f048_cr_d3_*`.
-- **CR-D4**: `r35::test_f048_cr_d4_*` (14 casos) y `r32_r34::test_f048_cr_d4_*` (2).
-- **R34 y R35**: `r35::…el_motivo_sellado_sigue_mandando…` y `r35_json_roto_*`.
-- **T32**: `tests/test_f011_r19_r20_declaracion.py`.
+CR-D2 `r35::test_f048_cr_d2_*` · CR-D3 `r35::…cr_d3_*` (3) y `r32_r34::…cr_d3_*` · CR-D4 `r35::…cr_d4_*`
+(14 casos) y `r32_r34::…cr_d4_*` (2) · R34/R35 `r35::…el_motivo_sellado_sigue_mandando…` y
+`r35_json_roto_*` · T32 `tests/test_f011_r19_r20_declaracion.py`.
 
 **Automejora** (propuesta, sin aplicar; vale para `arnes-base`): en C3, «un texto que atribuye una acción
 a alguien ("el revisor cambió…") exige recorrer TODOS los escritores del campo». El aviso C de la review
