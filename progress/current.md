@@ -850,7 +850,10 @@ Siguiente paso: aprobación del humano y, con ella, el implementer sobre
 
 ## 2026-09-24 · Aparcado y backlog
 
-**Aparcada: F-047** (`blocked` por decisión, no por fallo). El ciclo completo
+**Aparcada: F-047** (`blocked` por decisión, no por fallo). **Al retomarla**: F-048 trajo y amplió `evals/inyeccion.py`; falta cablear
+`anadir_opcion_sin_correo` en el CLI del ciclo, pasar `correo=correos.cargar_correo(caso_id)` desde `ciclo.py` y
+traer `tests/test_f047_r5_seleccion_contrato.py` (`GestoRevisor`). Ver la nota al final de
+`specs/F-047-evals-ciclo-completo/tasks.md`. El ciclo completo
 FUNCIONA de punta a punta. Falta: analizar los 130 supervivientes de
 `progress/mutacion_F-047.md` (vigente, mide 2e05499), T24-T26 manuales, la
 revisión, y limpiar 28 worktrees huérfanos de mutación.
