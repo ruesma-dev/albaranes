@@ -232,9 +232,9 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       F-048 añade un punto de fallo. Sin arreglar: pide ficha propia.
     - **sv5 no ve `origen_datos`, y su copia de `DocumentoAlbaran` es código
       muerto** (`albaran-valoracion-api/domain/models/albaran_models.py`,
-      `extra='forbid'`). Comprobado con grep el 2026-09-24: solo la usa
-      `RevisionAlbaranFase2`, de un `ExtractAlbaranPipeline` que nadie
-      instancia; el `SchemaRegistry` de sv5 solo sirve
+      `extra='forbid'`). Comprobado con grep el 2026-09-24: ningún módulo
+      de producción la importa (solo `revision_models.py`, al que no
+      importa nadie, y un test de F-043); el `SchemaRegistry` de sv5 solo sirve
       `documento_valoracion` y `documento_conciliacion`, y sv5 no lee
       `raw_extraction_json`. Por eso no se le declara el campo (design §6).
       Quien resucite esa copia tiene que declararlo, o rechazará el
