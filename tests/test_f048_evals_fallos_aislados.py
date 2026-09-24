@@ -22,6 +22,8 @@ Lo que fijan estos tests, sin red ni LLM (dobles del extractor):
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from types import SimpleNamespace
 
 import pydantic
@@ -759,3 +761,102 @@ def test_f048_evals_un_validation_error_sin_errores_da_un_motivo_generico():
     assert describir_error(_Vacio(), "IA2")["motivo"] == (
         "_Vacio: error de validación sin detalle"
     )
+
+
+# --- CR-E1: la `loc` de pydantic tampoco cuela lo que escribió el LLM --------
+#
+# `include_input=False` quita el valor, pero NO las claves: con `extra='forbid'`
+# (todo `StrictSchemaModel` de sv2) y en los campos `dict`, la `loc` lleva la
+# clave tal como la escribió el LLM. Aquí el centinela va EN LA CLAVE.
+
+
+def test_f048_cr_e1_la_clave_extra_del_documento_real_de_sv2_no_se_cuela(tmp_path):
+    """`DocumentoAlbaran` REAL (en un hijo: sv2 no cabe en este intérprete)."""
+    hijo = tmp_path / "hijo_documento.py"
+    hijo.write_text(
+        "import json, sys\n"
+        f"sys.path.insert(0, {str(sv2.RAIZ_REPO)!r})\n"
+        f"sys.path.insert(0, {str(sv2.RAIZ_SV2)!r})\n"
+        "from domain.models.albaran_models import DocumentoAlbaran\n"
+        "from evals.procesos.errores import describir_error\n"
+        "clave = 'Hormigones ' + sys.argv[1] + ' SL'\n"
+        "try:\n"
+        "    DocumentoAlbaran.model_validate_json(\n"
+        "        json.dumps({'cabecera': {clave: 'x'}, 'lineas': []})\n"
+        "    )\n"
+        "except Exception as error:\n"
+        "    print(json.dumps(describir_error(error, 'IA1')))\n",
+        encoding="utf-8",
+    )
+
+    proceso = subprocess.run(
+        [sys.executable, str(hijo), CENTINELA],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=str(sv2.RAIZ_REPO),
+        check=False,
+    )
+
+    assert proceso.returncode == 0, proceso.stderr
+    motivo = json.loads(proceso.stdout)["motivo"]
+    assert motivo == "ValidationError: extra_forbidden en cabecera"
+    assert CENTINELA not in motivo
+    assert "Hormigones" not in motivo
+
+
+def test_f048_cr_e1_una_clave_de_un_dict_se_cambia_por_un_marcador():
+    class _Mapa(pydantic.BaseModel):
+        mapa: dict[str, int]
+
+    with pytest.raises(pydantic.ValidationError) as error:
+        _Mapa.model_validate({"mapa": {CENTINELA: "no es un entero"}})
+    assert CENTINELA in str(error.value.errors()[0]["loc"]), "el doble debe llevar la clave"
+
+    motivo = describir_error(error.value, "IA1")["motivo"]
+
+    assert motivo == "ValidationError: int_parsing en mapa.<clave>"
+    assert CENTINELA not in motivo
+
+
+class _Estricto(pydantic.BaseModel):
+    model_config = pydantic.ConfigDict(extra="forbid")
+
+    cantidad: float = 0
+
+
+def test_f048_cr_e1_extra_forbidden_quita_la_clave_aunque_parezca_un_nombre():
+    """La clave extra se quita SIEMPRE, también si encaja con `^[a-z_][a-z0-9_]*$`."""
+
+    class _Documento(pydantic.BaseModel):
+        cabecera: _Estricto
+
+    with pytest.raises(pydantic.ValidationError) as error:
+        _Documento.model_validate({"cabecera": {"clave_del_llm_7731": 1}})
+
+    motivo = describir_error(error.value, "IA1")["motivo"]
+
+    assert motivo == "ValidationError: extra_forbidden en cabecera"
+    assert "clave_del_llm_7731" not in motivo
+
+
+def test_f048_cr_e1_extra_forbidden_en_la_raiz_no_deja_ubicacion():
+    with pytest.raises(pydantic.ValidationError) as error:
+        _Estricto.model_validate({CENTINELA: 1})
+
+    motivo = describir_error(error.value, "IA1")["motivo"]
+
+    assert motivo == "ValidationError: extra_forbidden"
+    assert CENTINELA not in motivo
+
+
+def test_f048_cr_e1_los_indices_y_los_nombres_de_campo_se_conservan():
+    class _Documento(pydantic.BaseModel):
+        lineas: list[_Estricto]
+
+    with pytest.raises(pydantic.ValidationError) as error:
+        _Documento.model_validate({"lineas": [{"cantidad": 1}, {"cantidad": CENTINELA}]})
+
+    motivo = describir_error(error.value, "IA1")["motivo"]
+
+    assert motivo == "ValidationError: float_parsing en lineas.1.cantidad"

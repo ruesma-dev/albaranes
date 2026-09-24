@@ -12,6 +12,12 @@ El motivo que sale de aquí acaba en el informe de la pasada, que se versiona
 SIN valores (R31 de F-047). Por eso no se usa `str(error)`: el de pydantic
 incluye `input_value`, o sea, el trozo de la respuesta del LLM. Se describe el
 error por su FORMA —tipo, ubicación, línea y columna— y nunca por su texto.
+
+La ubicación tampoco se copia tal cual: la `loc` de pydantic lleva las claves
+que escribió el LLM cuando sobra un campo (`extra_forbidden`, todo
+`StrictSchemaModel` de sv2) o en un campo `dict`. Por eso se quita la clave
+sobrante y del resto solo pasan los índices y los nombres con forma de campo
+(`_NOMBRE_DE_CAMPO`); lo demás sale como `<clave>`.
 """
 
 from __future__ import annotations
@@ -26,6 +32,12 @@ TOPE_MOTIVO = 200
 MAX_ERRORES_DETALLADOS = 3
 
 _POSICION = re.compile(r"line (\d+) column (\d+)")
+
+#: Lo que puede salir de una `loc` tal cual: un nombre con forma de campo.
+_NOMBRE_DE_CAMPO = re.compile(r"[a-z_][a-z0-9_]*")
+
+#: Marcador de una parte de la `loc` que no se copia (puede ser texto del LLM).
+MARCADOR_CLAVE = "<clave>"
 
 
 def avisar(servicio: str, texto: str) -> None:
@@ -84,13 +96,33 @@ def _forma_pydantic(errores: list[dict]) -> str:
 def _un_error(dato: dict) -> str:
     """`tipo en ubicación`, y la posición si es JSON roto. Nunca `msg` entero."""
     texto = str(dato.get("type", "desconocido"))
-    ubicacion = ".".join(str(parte) for parte in dato.get("loc", ()) or ())
+    ubicacion = ".".join(_ubicacion(texto, dato.get("loc", ()) or ()))
     if ubicacion:
         texto += f" en {ubicacion}"
     posicion = _POSICION.search(str(dato.get("msg", "")))
     if posicion:
         texto += f" (línea {posicion.group(1)}, columna {posicion.group(2)})"
     return texto
+
+
+def _ubicacion(tipo: str, loc) -> list[str]:
+    """La `loc` sin nada que haya podido escribir el LLM (CR-E1).
+
+    En `extra_forbidden` la última parte ES la clave que sobraba: se quita.
+    Del resto pasan los enteros (índices de lista) y los nombres con forma de
+    campo; cualquier otra cosa —la clave de un `dict`, por ejemplo— sale
+    como `<clave>`.
+    """
+    partes = list(loc)
+    if tipo == "extra_forbidden":
+        partes = partes[:-1]
+    return [
+        str(parte)
+        if isinstance(parte, int)
+        or (isinstance(parte, str) and _NOMBRE_DE_CAMPO.fullmatch(parte))
+        else MARCADOR_CLAVE
+        for parte in partes
+    ]
 
 
 def _recortar(texto: str) -> str:
