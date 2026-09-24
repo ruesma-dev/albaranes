@@ -7,6 +7,13 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
+**F-048 · BLOQUEO RESUELTO por el líder (2026-09-24): opción (a).** Los dos
+motivos se renombran a `correo_obra_distinta_papel` y `correo_obra_ambigua`
+(ya no empiezan por `obra_`, así que la red de obra de F-002 no los borra). No
+se toca la red (design §6). Spec actualizada; falta el cambio en comun y un
+test de sv3 que pruebe que `retirar_revision_obra` los conserva (CR-D1).
+Feature de nuevo `in_progress`.
+
 **F-048 · BLOQUEO (2026-09-24, implementer): la red de obra de sv3 BORRA los
 motivos `obra_correo_*`.** El código choca con la spec (R29/R30 frente a design
 §6 «las redes de obra no se tocan»): `MOTIVO_OBRA_PREFIJO = "obra_"`

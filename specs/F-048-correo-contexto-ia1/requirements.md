@@ -97,10 +97,10 @@ obra: «la partida de momento no se indica en correo. solo obra» (2026-09-23).
 - **R28.** La red de obra de sv3 (inexistente ⇒ sin obra + revisión) se aplica
   igual venga la obra del correo o del papel.
 - **R29.** CUANDO `origen_datos.obra.discrepancia` es true, sv3 añade el motivo
-  `obra_correo_distinta_papel` a los de revisión (`review_required = true`),
+  `correo_obra_distinta_papel` a los de revisión (`review_required = true`),
   sin cambiar la obra ni la confianza.
 - **R30.** CUANDO `origen_datos.obra.motivo` es `correo_ambiguo`, sv3 debe
-  añadir el motivo `obra_correo_ambigua`, con el mismo efecto.
+  añadir el motivo `correo_obra_ambigua`, con el mismo efecto.
 - **R31.** SI `origen_datos` falta o su obra no cumple R29 ni R30 (sin correo,
   sin código, fuera de lista, único sin discrepancia o confirmado por el papel),
   ENTONCES los motivos de revisión son los de hoy. Los nombres de los dos

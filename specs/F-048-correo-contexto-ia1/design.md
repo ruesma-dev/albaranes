@@ -66,7 +66,7 @@ cuenta documentos. Si el papel de alguno dice otra obra, revisión (D6).
 qué albarán va cada uno: decide el cruce (R20). Si el del papel es uno de ellos,
 se usa (`correo_confirma_papel`, sin revisión); si no, o el papel no trae
 código, se queda el del papel —o ninguno— y va a revisión (`correo_ambiguo` ⇒
-`obra_correo_ambigua`). En `correo_ambiguo` la cabecera no se toca; en
+`correo_obra_ambigua`). En `correo_ambiguo` la cabecera no se toca; en
 `correo_confirma_papel` se reescribe con la forma de la lista (`945` ⇒ `0945`,
 líder 2026-09-24, para que la red de sv3 la case). Descartado: elegir por cercanía.
 
@@ -83,9 +83,9 @@ lista (sigrid-api caído o `OBRAS_ACTIVAS_ENABLED=false`) cuentan todos, con
 |---|---|---|---|
 | Sin código, o con código que no está en la lista | lo que lea la IA | manda la IA | No |
 | Un código de la lista (activa o no) | igual, o no trae código | manda el correo | No |
-| Un código de la lista (activa o no) | distinto | manda el correo | SÍ (`obra_correo_distinta_papel`) |
+| Un código de la lista (activa o no) | distinto | manda el correo | SÍ (`correo_obra_distinta_papel`) |
 | Varios de la lista | el del papel es uno de ellos | ese | No |
-| Varios de la lista | no es ninguno, o no trae código | el del papel, o ninguno | SÍ (`obra_correo_ambigua`) |
+| Varios de la lista | no es ninguno, o no trae código | el del papel, o ninguno | SÍ (`correo_obra_ambigua`) |
 
 `obra.motivo` por fila: 1) `correo_sin_dato`, `ia_sin_lectura_correo` o —si
 leyó códigos y ninguno está— `correo_fuera_de_lista` (`validada=false`, los
@@ -98,7 +98,7 @@ no cuenta (fila 1). Los descartados cuando otros cuentan no se guardan aparte.
 
 **D6 · La discrepancia MANDA A REVISIÓN** (revisada el 2026-09-23; revoca la
 del 22). Se usa el código del correo, las dos lecturas quedan en
-`data.origen_datos` y sv3 añade `obra_correo_distinta_papel` en el merge, como
+`data.origen_datos` y sv3 añade `correo_obra_distinta_papel` en el merge, como
 F-043. Sin código en el papel no hay discrepancia. **D6 bis**: rebajar el % de
 fiabilidad queda FUERA (ficha futura, umbral del humano).
 
@@ -189,8 +189,8 @@ sv1 (**su primera suite**, con `conftest.py`: R2–R7, R10, R36, R39), sv2
   rehacer el documento (R27) y `_motivos_de_origen_datos(origen)` en
   `_build_review_reasons` (kwarg `origen_datos=merged_document.origen_datos`),
   hermano de `_motivos_de_clasificacion`. SOLO dos disparadores (filas 3 y 5
-  de D5): `discrepancia` ⇒ `obra_correo_distinta_papel`; `motivo ==
-  correo_ambiguo` ⇒ `obra_correo_ambigua`. No toca la obra ni `doc_conf`.
+  de D5): `discrepancia` ⇒ `correo_obra_distinta_papel`; `motivo ==
+  correo_ambiguo` ⇒ `correo_obra_ambigua`. No toca la obra ni `doc_conf`.
 - **sv4** `domain/models/review_models.py` (propiedades `origen_datos` —parsea
   el `raw_extraction_json` que la ficha ya carga con el modelo de `comun`—,
   `avisos_origen_datos: list[str]` y `origen_en_duda` —algún motivo de

@@ -5,13 +5,13 @@
 
 Resumen: **50 features**, 36 abiertas, 14 terminadas.
 
-Bloqueadas: **F-048**.
+En curso: **F-048**.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel | 1 | bloqueada | critico | `feature/F-048-correo-contexto-ia1` |
+| F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel | 1 | en curso | critico | `feature/F-048-correo-contexto-ia1` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
@@ -71,7 +71,7 @@ Bloqueadas: **F-048**.
 
 ### F-048 · El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel
 
-estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-048-correo-contexto-ia1`
+estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-048-correo-contexto-ia1`
 
 PRIORIDAD 1 por decision del humano el 2026-09-18: «pon una feature prioridad 1, que sea leer el codigo de obra y/o partida del email (asunto o cuerpo) de forma que el texto se le pase como contexto a la IA1, para que lo procese, si viene el codigo de la obra ya no tiene que leerlo, y con la partida igual».
 
