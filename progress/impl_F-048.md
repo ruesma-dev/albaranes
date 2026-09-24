@@ -179,13 +179,17 @@ petición llevaría el bloque al log del contenedor; ningún cliente de hoy lo h
 
 - Suites a mano, una detrás de otra: sv2 `338 passed in 3.61s` (188 de F-048); comun `259 passed, 3 skipped
   in 106.45s` (por `retry_policy`); sv5 `43 passed in 1.36s` (reexporta `retry_policy`).
-- `bash harness/init.sh`: RESULTADO_INIT
+- `bash harness/init.sh` (tras `89e4234`): exit 0, `ENTORNO LISTO`. Raíz `865 passed in 118.65s`; sv2
+  `338 passed in 11.08s` y comun `259 passed, 3 skipped in 118.24s` corrieron de verdad; sv1, sv3–sv6 de
+  caché (la clave no mira comun: por eso sv5 se corrió a mano). `PUERTA COBERTURA: 99.3% de 557 líneas
+  cambiadas cubiertas (553/557)`. `[AVISO]` de rutas sensibles: 5, ahora con `retry_policy.py` (T40).
+  Ruff de la raíz: 1160 avisos (uno menos: el `Callable` de `extraction_worker.py`). Impl 191/220.
 
 ## Evidencias (cambios de la review de C1 y bloque C2)
 
 | Evidencia | Valor real |
 |---|---|
-| Tests ejecutados | sv2 338 passed (188 F-048, 107 nuevos del C2); comun 259 + 3 skipped; sv5 43; raíz RAIZ_INIT |
-| Cobertura de las líneas cambiadas | COBERTURA_INIT, `PUERTA COBERTURA` de init.sh |
+| Tests ejecutados | sv2 338 passed (188 F-048, 107 nuevos del C2); comun 259 + 3 skipped; sv5 43; raíz 865 passed |
+| Cobertura de las líneas cambiadas | 99.3 % (553/557), `PUERTA COBERTURA` de init.sh |
 | Mutación | N/A en un bloque intermedio: campaña completa en T34 (`python -m harness.mutacion --feature F-048`) |
 | Tiempo de las suites | sv2 3.61 s; comun 106.45 s; sv5 1.36 s |
