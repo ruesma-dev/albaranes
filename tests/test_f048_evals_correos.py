@@ -217,3 +217,62 @@ def test_f048_r38_la_carpeta_de_capturas_la_ignora_git():
         check=False,
     )
     assert resultado.returncode == 0, "git NO ignora evals/inputs/correos/: un correo real se versionaría"
+
+
+# --- CR-E3: R38 también ve un .eml, un .msg y un volcado de Graph ------------
+
+
+def _volcado_graph() -> dict:
+    """Lo que devuelve `GET /messages` de Graph: `subject` + `uniqueBody`."""
+    return {
+        "value": [
+            {
+                "id": "AAMk-prueba",
+                "subject": "RV: albarán",
+                "uniqueBody": {"contentType": "text", "content": "obra 0945"},
+            }
+        ]
+    }
+
+
+@pytest.mark.parametrize(
+    "datos",
+    [
+        _volcado_graph(),
+        {"subject": "a", "uniqueBody": {"content": "b"}},
+    ],
+    ids=["volcado-graph", "mensaje-graph"],
+)
+def test_f048_cr_e3_la_firma_reconoce_un_mensaje_de_graph(datos):
+    assert correos.tiene_firma_de_correo(datos) is True
+
+
+@pytest.mark.parametrize(
+    "datos",
+    [{"subject": "a"}, {"uniqueBody": {"content": "b"}}, {"subject": "a", "body": "b"}],
+    ids=["solo-subject", "solo-uniquebody", "subject-y-body"],
+)
+def test_f048_cr_e3_media_firma_de_graph_no_salta(datos):
+    assert correos.tiene_firma_de_correo(datos) is False
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="sin git no hay índice que mirar")
+def test_f048_cr_e3_el_escaner_encuentra_eml_msg_y_volcados_de_graph(tmp_path):
+    """Una copia de juguete, como la del reviewer: lo que antes pasaba sin saltar."""
+    _git("init", "-q", cwd=tmp_path)
+    for carpeta in ("evals/datos", "tests/fixtures", "otros"):
+        (tmp_path / carpeta).mkdir(parents=True)
+    (tmp_path / "tests" / "fixtures" / "correo.eml").write_text("Subject: x\n\ny", encoding="utf-8")
+    (tmp_path / "evals" / "datos" / "correo.MSG").write_bytes(b"\xd0\xcf\x11\xe0")
+    _escribir(tmp_path / "evals" / "datos", "graph", _volcado_graph())
+    (tmp_path / "tests" / "fixtures" / "no_es_correo.emlx.txt").write_text("x", encoding="utf-8")
+    (tmp_path / "otros" / "fuera.eml").write_text("Subject: x\n\ny", encoding="utf-8")
+    _git("add", ".", cwd=tmp_path)
+
+    hallazgos = correos.versionados_con_correo(tmp_path)
+
+    assert hallazgos == [
+        "evals/datos/correo.MSG",
+        "evals/datos/graph.json",
+        "tests/fixtures/correo.eml",
+    ]

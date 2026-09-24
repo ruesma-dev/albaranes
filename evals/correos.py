@@ -19,10 +19,11 @@ con `guardar_contexto_correo`, la misma puerta que sv1.
 
 R38 se defiende con `versionados_con_correo`: la firma de un correo es un
 objeto JSON con `asunto` y `cuerpo` (lo mínimo que acepta la carga, y lo que
-comparten la captura y el contexto del blob lateral), a cualquier
+comparten la captura y el contexto del blob lateral) o con `subject` y
+`uniqueBody` (un mensaje tal como lo devuelve Graph), a cualquier
 profundidad. Con esa firma, ningún fichero versionado bajo `evals/` o `tests/`
-puede tener un correo; bajo `evals/inputs/correos/`, ningún fichero en
-absoluto.
+puede tener un correo, y tampoco un `.eml` ni un `.msg`, que son correos
+por definición; bajo `evals/inputs/correos/`, ningún fichero en absoluto.
 """
 
 from __future__ import annotations
@@ -43,6 +44,12 @@ VERSION_CAPTURA = 1
 #: Lo que se revisa en R38, relativo a la raíz del repositorio.
 PREFIJOS_R38 = ("evals", "tests")
 _CARPETA_CAPTURAS = "evals/inputs/correos/"
+
+#: Extensiones de un correo guardado tal cual (CR-E3): nunca se versionan.
+EXTENSIONES_CORREO = (".eml", ".msg")
+
+#: Pares de claves que delatan un correo: el de la captura y el de Graph.
+FIRMAS_CORREO = (("asunto", "cuerpo"), ("subject", "uniqueBody"))
 
 # El mismo nombre de caso que admite `capturar_correo.py`: un nombre de
 # fichero sencillo, sin separadores, sin `..` y sin ocultos.
@@ -98,12 +105,12 @@ def cargar_correo(
 
 
 def tiene_firma_de_correo(datos) -> bool:
-    """¿Hay, a cualquier profundidad, un objeto con `asunto` y `cuerpo`?"""
+    """¿Hay, a cualquier profundidad, un objeto con una de las `FIRMAS_CORREO`?"""
     pendientes = [datos]
     while pendientes:
         actual = pendientes.pop()
         if isinstance(actual, dict):
-            if "asunto" in actual and "cuerpo" in actual:
+            if any(a in actual and b in actual for a, b in FIRMAS_CORREO):
                 return True
             pendientes.extend(actual.values())
         elif isinstance(actual, list):
@@ -122,8 +129,9 @@ def _json_con_firma(ruta: Path) -> bool:
 def versionados_con_correo(raiz: Path, prefijos: tuple[str, ...] = PREFIJOS_R38) -> list[str]:
     """Ficheros del índice de git que tienen, o pueden tener, un correo (R38).
 
-    Cuenta todo lo versionado bajo `evals/inputs/correos/` y todo `.json` con
-    la firma de un correo. Rutas relativas a `raiz`, con `/`, ordenadas.
+    Cuenta todo lo versionado bajo `evals/inputs/correos/`, todo `.eml` y
+    `.msg` y todo `.json` con la firma de un correo. Rutas relativas a `raiz`,
+    con `/`, ordenadas.
     """
     salida = subprocess.run(
         ["git", "ls-files", "-z", "--", *prefijos],
@@ -135,5 +143,6 @@ def versionados_con_correo(raiz: Path, prefijos: tuple[str, ...] = PREFIJOS_R38)
         ruta
         for ruta in filter(None, salida.split("\0"))
         if ruta.startswith(_CARPETA_CAPTURAS)
+        or ruta.lower().endswith(EXTENSIONES_CORREO)
         or (ruta.endswith(".json") and _json_con_firma(Path(raiz) / ruta))
     )
