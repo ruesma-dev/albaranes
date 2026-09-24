@@ -31,10 +31,15 @@ literales de R29/R30); (b) que `retirar_revision_obra` no quite
 prefijo de la red a sus dos motivos, `obra_inexistente:` y
 `obra_codigo_invalido:` (también toca la red). T37 fallaría hoy por esto.
 
-**F-048 · CAMBIOS DE LA REVIEW DE C2 Y BLOQUES D (sv3) Y D BIS (sv4): EN CURSO**
-(2026-09-24, implementer). Hechos: `43bc9b9` CR-C3, `b51a7be` CR-C4, `353a5c4`
-CR-C5, `dd5417b` T23, `6099c2e` T24, `a356a62` T25, `3b4e7a3` T26 (el cálculo en
-el merge; el efecto final lo rompe el bloqueo de arriba). En curso: T27 (sv4).
+**F-048 · CAMBIOS DE LA REVIEW DE C2 Y BLOQUES D (sv3) Y D BIS (sv4) IMPLEMENTADOS,
+FEATURE `blocked` POR EL CHOQUE DE ARRIBA** (2026-09-24, implementer, `43bc9b9..f68b510`):
+CR-C3 (evidencia a 160 en el origen, `obra_codigos` tolerante), CR-C4 (test de
+`retry_policy` en comun), CR-C5 (fila 4 con la forma de la lista); T23 (sv3 acepta el
+bloque), T24 (el merge lo conserva en `raw_extraction_json`), T25 (regresión de la red de
+obra, con el aviso B), T26 (motivos en el merge), T27–T28 (ficha de sv4, solo lectura).
+`bash harness/init.sh` en verde. Informe: `progress/impl_F-048.md` (el detalle de C2 pasó a
+`progress/impl_F-048_bloque_C2.md`). Pendiente: que el líder decida el bloqueo (a/b/c);
+después, review de este encargo y bloques E–G.
 
 **F-048 · CAMBIOS DE LA REVIEW DE C1 Y BLOQUE C2 (sv2, T17–T22) IMPLEMENTADOS**
 (2026-09-24, implementer, `fe99db0..2b40968`): CR-C1 y CR-C2 en `prompts.yaml`;
