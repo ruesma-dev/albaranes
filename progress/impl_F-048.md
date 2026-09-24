@@ -4,7 +4,8 @@
 Rigor `critico`. Rama `feature/F-048-correo-contexto-ia1`. Una sección por bloque. El texto
 íntegro de los bloques ya revisados está en `progress/impl_F-048_bloque_A.md`,
 `progress/impl_F-048_bloque_B.md`, `progress/impl_F-048_bloque_C1.md`,
-`progress/impl_F-048_bloque_C2.md` y `progress/impl_F-048_bloque_D.md`; aquí queda su resumen.
+`progress/impl_F-048_bloque_C2.md`, `progress/impl_F-048_bloque_D.md`, `progress/impl_F-048_bloque_E.md`
+y `progress/impl_F-048_evals.md`; aquí queda su resumen.
 
 ## Bloque A · comun (T1–T5) — resumen
 
@@ -128,92 +129,47 @@ Reinyectados uno a uno en copias aisladas: **23 huecos cerrados con test nuevo**
 en sv2, comun, sv1 y sv4) y **3 equivalentes** (9, 22, 23) con guarda y demostración ejecutable. Sin cambios de
 producción. Tabla de los 26 y demostraciones: `progress/impl_F-048_T34_supervivientes.md`.
 
-## Runner de evals: fallos aislados por caso — 2026-09-24
+## Runner de evals (fallos aislados) y comparador de obra dev/rama — resumen
 
-Encargo del líder (aprobado por el humano el 24-sep) tras la pasada `--con-llm` muerta a los 50 min sin
-informe: IA2 devolvió JSON degenerado en UN caso, `json_invalid`, el hijo de sv2 salió con 1 y
-`corrida_completa` no capturaba el `RuntimeError`. Solo `evals/` y `tests/`: producción intacta.
-**Commits**: `77b4bc2` (código + tests) · `3470648` (tests de bordes). **No se lanzó ninguna pasada con LLM.**
-- **Hijos** (`sv2_extraccion`, `sv5_valoracion`, `sv6_build`: los tres tenían el mismo agujero): el bucle pasa
-  a `procesar_casos(...)`, con cada caso (y en sv2 cada proveedor) en su `try`. El error va al resultado del
-  caso como `error: {fase, tipo, motivo}` (sv2: `preproceso`/`IA1`/`IA2`; sv5: `IA3`/`IA4`; sv6: `build`) y
-  el bucle sigue; lo que IA1 ya devolvió se conserva si falla IA2. Avance por stderr: `sv2_extraccion: caso
-  X, proveedor Y: ok` / `: error en IA2 · <motivo>`. El `main` de los tres ya no imprime `str(error)`.
-- **`evals/procesos/errores.py`** (nuevo): `describir_error` da la FORMA, nunca el texto: pydantic →
-  `errors(include_input=False, …)`, tipo + `loc` + línea/columna sacadas de `msg` (máx. 3 y «(+N más)»);
-  `JSONDecodeError` → posición; SDK → `HTTP <código>`; resto → solo el tipo. Tope 200 caracteres.
-- **Padre** (`runner.py`): **decisión**: no hay estado `ERROR`; el caso sale `OMITIDO` con motivo
-  `ERROR en IA2 · ValidationError: json_invalid (línea 1, columna N)` (si falla IA1, IA2 dice «no se
-  evaluó: falló IA1»). Consecuencia a sabiendas: un caso roto no pone la fase en ROJO, pero cuenta en
-  «omitidos» y lleva su motivo. Si un subproceso entero muere (`_ejecutar_aislado`), sus fases quedan
-  NO_EVALUABLE con motivo y el informe se escribe; el stderr del hijo va a la consola, NO al informe.
-  Un caso que sv5 no valora sale omitido en IA3, IA4 y E2E y no va a sv6; sin build de sv6, IA3 y E2E
-  omitidos, IA4 se evalúa igual (antes, sin resultado de sv6 se saltaban IA3 e IA4 en silencio).
+Texto íntegro (decisiones, comando y entorno del comparador, RED y evidencias): [`progress/impl_F-048_evals.md`](impl_F-048_evals.md).
+- **Runner** (`77b4bc2` · `3470648`): cada caso de sv2/sv5/sv6 en su `try`; el caso roto sale `OMITIDO` con
+  motivo (`evals/procesos/errores.py` describe la FORMA del error, nunca el texto). RED: `ModuleNotFoundError:
+  No module named 'evals.procesos.errores'` y `20 failed, 5 passed` → `31 passed`. Cobertura 99.7 % (872/875).
+- **Comparador** (`a264c36` · `8b37675`): `evals/comparar_obra.py` + `evals/procesos/sv2_obra.py`, obra de IA1
+  con el prompt de `dev` y el de la rama; la variante `dev` manda al LLM lo mismo que `dev`, byte a byte.
+  RED: `ImportError: cannot import name 'comparar_obra'` → `32 passed`; test de `dev` `2 failed`/`1 failed` →
+  `4 passed`. Raíz entonces `932 passed in 404.61s`; cobertura 98.7 % (1158/1173).
+- **MANUAL (líder)**: relanzar T40; lanzar el comparador (se factura). Mutación de ambos: la decide el líder.
 
-**RED** (`python -m pytest tests/test_f048_evals_fallos_aislados.py -q --tb=line -p no:cacheprovider`, test antes del código):
+## Bloque E (T29–T31) · evals: el correo del caso y la inyección — 2026-09-24
+
+**Commits**: `01c4b13` T30 · `10fd14b` T29 · `00b60ab` T31. Solo `evals/` y `tests/`; producción intacta. **Nada
+contra LLM, Azurite ni Azure.** Texto íntegro: [`progress/impl_F-048_bloque_E.md`](impl_F-048_bloque_E.md).
+- **T30**: traídos de F-047 SOLO `evals/inyeccion.py` y `tests/test_f047_r2_r16_inyeccion.py` (dependencias:
+  estándar y `ruesma_comun`). `git diff feature/F-047-evals-ciclo-completo -- evals/inyeccion.py` vacío y
+  `17 passed` **en el commit de T30**; tras T31 difiere a propósito. **No se trae** `test_f047_r5_seleccion_contrato.py`:
+  importa `evals/lectura_bbdd.py`, la capa de lectura del ciclo (623 líneas, siete tests de F-047 detrás).
+  `GestoRevisor` queda sin cubrir aquí hasta que llegue F-047.
+- **T29**: `evals/correos.py`. `cargar_correo` lee `evals/inputs/correos/{caso}.json` (captura v1 o copia
+  manual con `asunto`/`cuerpo`) con `construir_contexto_correo`; sin fichero `None`; mal formado
+  `CapturaInvalida` con ruta y motivo, sin contenido y sin causa. R38: `versionados_con_correo` recorre
+  `git ls-files` de `evals/` y `tests/` con la firma `asunto`+`cuerpo` (→ `[]`), y `git check-ignore` confirma la carpeta.
+- **T31**: `inyectar(..., correo=)` → huella a `payload_json`, PDF → `guardar_contexto_correo` → mensaje con
+  `correo_blob`; si el blob falla, `ErrorCorreo` (solo el tipo) y no se publica. `Inyector(sin_correo=True)`
+  lo descarta. **Desviación**: sin el CLI del ciclo de F-047 en la rama, `--sin-correo` queda en
+  `anadir_opcion_sin_correo(analizador)`; el cableado (`montaje.py`, `ciclo.py`) llega con F-047.
 ```
-1ª (errores.py aún no existía)  E ModuleNotFoundError: No module named 'evals.procesos.errores'  -> 1 error
-2ª E AttributeError: module 'evals.procesos.sv2_extraccion' has no attribute 'procesar_casos'  (sv2, sv5, sv6)
-   E RuntimeError: el subproceso de sv2 falló con código 1:
-    CENTINELA-VALOR-DEL-ALBARAN-7731   (el fallo real)
-   E KeyError: 'envelope'   (runner.py:357, un caso roto de sv5)
-   E RuntimeError: el subproceso de sv6 falló con código 1: ... data.lineas  Input should be a valid list
-     [type=list_type, input_value='CENTINELA-VALOR-DEL-ALBARAN-7731', ...]   (sv6 real: tumba todo Y filtra el valor)
-   20 failed, 5 passed in 5.38s          -> 25 passed in 2.19s;  con los bordes: 31 passed in 2.93s
+python -m pytest tests/test_f048_evals_correos.py -q --tb=line -p no:cacheprovider
+E   ImportError: cannot import name 'correos' from 'evals' (...\evals\__init__.py)   1 error in 1.65s -> 33 passed in 3.44s
+python -m pytest tests/test_f048_r40_r41_inyeccion.py -q --tb=line -p no:cacheprovider
+E   TypeError: Inyector.__init__() got an unexpected keyword argument 'sin_correo'   (x12)
+E   AttributeError: module 'evals.inyeccion' has no attribute 'anadir_opcion_sin_correo'
+13 failed in 3.16s                                          -> 13 passed, 982 deselected (-k "f048 and inyeccion")
 ```
-**MANUAL (líder)**: relanzar T40. **Fuera**: stderr del hijo en vivo (sale por consola si muere); estado `ERROR` propio.
 
-| Evidencia (runner de evals) | Valor real |
+| Evidencia (bloque E) | Valor real |
 |---|---|
-| Tests ejecutados | 31 nuevos; raíz `896 passed in 214.73s` en `bash harness/init.sh` (ENTORNO LISTO) |
-| Cobertura de las líneas cambiadas | 99.7 % (872/875), `PUERTA COBERTURA` de la feature |
-| Mutación | no relanzada: T34 es anterior a este cambio; nueva campaña a decisión del líder (nivel `critico`) |
-| Tiempo de la suite | raíz 214.73 s; el fichero nuevo 2.93 s |
-
-## Comparador de obra dev/rama — 2026-09-24
-Encargo del líder (aprobado por el humano el 24-sep) tras `progress/analisis_evals_F-048.md`: medir si cambia la
-obra que lee IA1. Solo `evals/` y `tests/`. **Commits** `a264c36` (código + tests) · `8b37675` (test de dev). **No se lanzó contra LLM.**
-- `evals/comparar_obra.py`: CLI, corrida aislada por caso (`describir_error`, se sigue), clasificación e informes.
-  `evals/procesos/sv2_obra.py`: montaje de sv2 (YAML de `dev` con `git show`, `ObrasFijas`, consulta con el
-  `SigridApiObrasClient` de sv2 y su corte `cod_min`). Solo fase 1, sin correo, `IA_PRIMERA_FASE` (gemini).
-- **Decisión 1 (ajuste del diseño): schema.** Los clientes mandan el JSON Schema del modelo al proveedor
-  (`response_json_schema` en gemini) y el de la rama lleva `lectura_correo`, que `dev` no conoce: la variante `dev`
-  usa el schema SIN ese campo (`modelo_sin_campo`). El test extrae `dev` con `git archive` y compara lo que llega al
-  cliente LLM (`instructions`, `user_text`, schema): **idéntico byte a byte**. Confirma la decisión 2 de C1.
-- **Decisión 2**: en proceso (solo usa sv2: el proceso del CLI ya es el intérprete dedicado) y con los clientes LLM
-  del runner (`_especificacion`, sin la `retry_policy` de producción): lo que lee el LLM no cambia.
-- **Decisión 3**: UNA consulta de obras, congelada en `ObrasFijas` para las dos variantes y todas las repeticiones.
-  El cliente de sv2 es best-effort (devuelve `None`): lista `None` o vacía = **parada**, no «NO DISPONIBLE».
-- **Decisión 4**: paradas con código 2, todas ANTES del LLM y sin escribir nada, en este orden: clave del
-  proveedor → algún albarán → variables de sigrid-api → `git show dev:` → consulta de obras. Código 1 si ninguna extracción sale.
-- **Decisión 5**: variantes intercaladas dentro de cada repetición. Estable = mismo `obra_codigo` en todas (se quitan
-  los espacios y el vacío cuenta como null; el nombre no cuenta). Categorías: `difiere` (estables y distintas: señal del
-  prompt), `inestable` (ruido), `identico`, `con_errores`. Con una sola variante: `estable`, `inestable` y `con_errores`.
-- Salida CON valores: `<dir>/<variante>_r<n>.json` (`caso_id → obra_codigo, obra_nombre` o `error`) y `<dir>/resumen.md`,
-  ignorados (`git check-ignore`: `.gitignore:53`). SIN valores y versionable: `progress/comparar_obra_F-048.md`.
-
-**Comando** (se factura: 10 casos × 2 variantes × 3 repeticiones = 60 llamadas a IA1; la rama `dev` tiene que estar en local):
-```
-python -m evals.comparar_obra --casos GEN-001,GEN-009,GEN-010,HOR-003,HOR-006,FER-003,RES-005,RES-011,RES-012,RES-015 --repeticiones 3 --variante ambas
-```
-Entorno (solo nombres): `GEMINI_API_KEY` (o `OPENAI_API_KEY`/`ANTHROPIC_API_KEY` si `IA_PRIMERA_FASE` lo cambia),
-`SIGRID_API_BASE_URL`, `SIGRID_API_FUNCTION_KEY`, `SIGRID_API_DATABASE`. Opcionales, con los defectos de sv2:
-`IA_PRIMERA_FASE`, `GEMINI_MODEL`, `SIGRID_API_TIMEOUT_S`, `OBRAS_ACTIVAS_COD_MIN`, `OBRAS_ACTIVAS_MAX`.
-
-**RED** (test antes del código; el de `dev`, rompiendo una copia del montaje y restaurándola):
-```
-python -m pytest tests/test_f048_comparar_obra.py -q --tb=line -p no:cacheprovider
-E   ImportError: cannot import name 'comparar_obra' from 'evals' (...\evals\__init__.py)      -> 1 error in 0.94s
-python -m pytest tests/test_f048_comparar_obra_prompt_dev.py -q --tb=line -p no:cacheprovider
-  sin recortar el schema:    E AssertionError: assert 'lectura_correo' not in {'cabecera': ...}   2 failed, 2 passed in 7.42s
-  YAML de HEAD como de dev:  E AssertionError: assert 'Eres un admi..._imputacion`.' == 'Eres un admi..._imputacion`.'  1 failed, 3 passed in 6.63s
--> 32 passed in 3.35s (comparador) · 4 passed in 14.84s (prompt de dev)
-```
-**MANUAL (líder)**: lanzar el comando y leer `progress/comparar_obra_F-048.md`. **Fuera**: fase 2, correo, ground truth.
-
-| Evidencia (comparador) | Valor real |
-|---|---|
-| Tests | 36 nuevos; raíz `932 passed in 404.61s` en `bash harness/init.sh` (ENTORNO LISTO) |
-| Cobertura de las líneas cambiadas | 98.7 % (1158/1173). Sin cubrir: 12 de `sv2_obra.py`, que solo corren en el subproceso del test de `dev` |
-| Mutación | no relanzada; las dos roturas de la fase RED hacen de mutantes a mano. Campaña nueva: la decide el líder |
-| Tiempo de la suite | raíz 404.61 s; los dos ficheros nuevos, 3.35 s y 14.84 s |
+| Tests | 63 del bloque (17 F-047 + 33 T29 + 13 T31); raíz `995 passed in 456.87s` en `bash harness/init.sh` (ENTORNO LISTO) |
+| Cobertura de las líneas cambiadas | 97.0 % (1313/1354). `correos.py` 100 %; `inyeccion.py` 79 % (falta `GestoRevisor`, de F-047) |
+| Mutación | campaña no relanzada; 9 mutantes a mano sobre `correos.py` e `inyeccion.py`, 9 muertos. Campaña nueva: la decide el líder |
+| Tiempo de la suite | raíz 456.87 s; los tres ficheros del bloque, 12.07 s + 3.44 s + 7.90 s |
