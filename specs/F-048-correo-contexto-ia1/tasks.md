@@ -56,7 +56,7 @@ solo se lee la OBRA (D8): ninguna tarea toca la partida.
 
 - [x] T29: `evals/correos.py` — carga `evals/inputs/correos/{caso_id}.json` con `construir_contexto_correo`; sin fichero ⇒ None; test de que ningún fichero versionado bajo `evals/` o `tests/` contiene un contexto de correo real (R38)  |  Verificación: `pytest tests/test_f048_evals_correos.py`
 - [x] T30: PRECONDICIÓN — traer SOLO `evals/inyeccion.py` de F-047 (rama `feature/F-047-evals-ciclo-completo`, decisión del humano del 2026-09-24: no se integra F-047 entera) con sus tests, sin cambios de comportamiento; sus únicas dependencias son `ruesma_comun`  |  Verificación: `git diff feature/F-047-evals-ciclo-completo -- evals/inyeccion.py` vacío y sus tests en verde en esta rama
-- [ ] T31: La inyección de F-047 acepta `correo` y lo guarda con `guardar_contexto_correo` (misma puerta que sv1); `--sin-correo` fuerza la inyección sin él (R40, R41)  |  Verificación: `pytest tests -k "f048 and inyeccion"`
+- [x] T31: La inyección de F-047 acepta `correo` y lo guarda con `guardar_contexto_correo` (misma puerta que sv1); `--sin-correo` fuerza la inyección sin él (R40, R41)  |  Verificación: `pytest tests -k "f048 and inyeccion"`
 
 ## Bloque F · documentación y puertas
 

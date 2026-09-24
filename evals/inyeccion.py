@@ -24,10 +24,20 @@ revisor de §3 es el segundo con `codigo_contrato`. Publicar ese mensaje BASTA:
 `MensajeValoracion.codigo_contrato` lo honra el worker de sv6, así que el banco
 no necesita escribir en la base y R3 —«el banco no altera lo que mide»— queda
 intacta.
+
+**El correo del caso** (F-048, R40 y R41): si el caso trae contexto de correo
+(`evals/correos.py`), se guarda con `guardar_contexto_correo`, la MISMA función
+que usa sv1, en el blob lateral `input/{document_id}.correo.json`, DESPUÉS del
+PDF y ANTES de publicar, y su nombre viaja en `MensajeExtraccion.correo_blob`;
+la huella (nunca el texto) va a `payload_json.correo_sha256`, como en sv1. Si
+el blob no se puede guardar, no se publica. `--sin-correo` (el `sin_correo` del
+`Inyector`) fuerza la inyección sin él aunque el caso lo tenga: el mismo caso
+se mide con y sin correo en dos pasadas.
 """
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import logging
@@ -45,6 +55,7 @@ from ruesma_comun.colas.mensajes import (
     MensajePersistencia,
     MensajeValoracion,
 )
+from ruesma_comun.correo import ContextoCorreo, guardar_contexto_correo
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +77,10 @@ class ClaveAjena(ValueError):
     """Se ha pedido actuar sobre un documento que no es del banco."""
 
 
+class ErrorCorreo(RuntimeError):
+    """No se pudo guardar el blob lateral del correo: el caso no se publica."""
+
+
 @dataclass(frozen=True)
 class Inyeccion:
     """Lo que quedó de meter un caso por la puerta del pipeline."""
@@ -76,6 +91,8 @@ class Inyeccion:
     workflow_id: str | None
     duplicado: bool
     sha256: str
+    #: Nombre del blob lateral del correo (F-048); `None` si fue sin correo.
+    correo_blob: str | None = None
 
 
 def nuevo_pasada_id(fecha: str, contador: int) -> str:
@@ -110,6 +127,23 @@ def partes_de_clave(correlation_key: str | None) -> tuple[str, str] | None:
     return partes[0], partes[1]
 
 
+def anadir_opcion_sin_correo(analizador: argparse.ArgumentParser) -> None:
+    """`--sin-correo` en el CLI que monte el `Inyector` (R41).
+
+    En esta rama no hay CLI del ciclo (F-047 no está integrada): quien lo
+    monte registra la opción con esta función y pasa `sin_correo` al
+    `Inyector`.
+    """
+    analizador.add_argument(
+        "--sin-correo",
+        action="store_true",
+        help=(
+            "inyecta los casos SIN su correo aunque tengan fichero en "
+            "evals/inputs/correos/ (F-048, R41: medir con y sin correo)"
+        ),
+    )
+
+
 def _exigir_del_banco(correlation_key: str | None) -> None:
     if not es_del_banco(correlation_key):
         raise ClaveAjena(
@@ -129,16 +163,23 @@ class Inyector:
         publicador,  # PublicadorColas o doble
         pasada_id: str,
         generador_id=None,  # inyectable para hacer tests deterministas
+        sin_correo: bool = False,  # --sin-correo (F-048, R41)
     ) -> None:
         self._repo = repositorio
         self._almacen = almacen
         self._pub = publicador
         self._pasada_id = pasada_id
         self._generar_id = generador_id or (lambda: str(uuid.uuid4()))
+        self._sin_correo = sin_correo
 
     @property
     def pasada_id(self) -> str:
         return self._pasada_id
+
+    @property
+    def sin_correo(self) -> bool:
+        """¿Esta pasada inyecta sin correo aunque el caso lo tenga?"""
+        return self._sin_correo
 
     # --- La entrada (R2, R16) ----------------------------------------------
 
@@ -148,23 +189,33 @@ class Inyector:
         contenido: bytes,
         nombre_fichero: str,
         content_type: str = "application/pdf",
+        *,
+        correo: ContextoCorreo | None = None,
     ) -> Inyeccion:
-        """Un caso por la puerta de sv1: workflow, blob y `q-extraccion`."""
+        """Un caso por la puerta de sv1: workflow, blob(s) y `q-extraccion`.
+
+        Con `correo` (y sin `--sin-correo`), además el blob lateral del correo
+        entre el PDF y el mensaje, como sv1 (R40).
+        """
         correlation_key = clave_correlacion(self._pasada_id, caso_id)
         document_id = self._generar_id()
         sha256 = hashlib.sha256(contenido).hexdigest()
+        if correo is not None and self._sin_correo:
+            logger.info("[evals] %s: correo del caso omitido por --sin-correo", caso_id)
+            correo = None
 
+        payload = {
+            "origen": "evals",
+            "pasada_id": self._pasada_id,
+            "caso_id": caso_id,
+            "nombre_fichero": nombre_fichero,
+        }
+        if correo is not None:
+            # Como sv1 (R10): la huella al payload; el texto, nunca.
+            payload["correo_sha256"] = correo.sha256
         resultado = self._repo.crear_si_no_existe(
             correlation_key=correlation_key,
-            payload_json=json.dumps(
-                {
-                    "origen": "evals",
-                    "pasada_id": self._pasada_id,
-                    "caso_id": caso_id,
-                    "nombre_fichero": nombre_fichero,
-                },
-                ensure_ascii=False,
-            ),
+            payload_json=json.dumps(payload, ensure_ascii=False),
             document_id=document_id,
             attachment_sha256=sha256,
         )
@@ -189,15 +240,23 @@ class Inyector:
             content_type=content_type,
             metadata={"filename": nombre_fichero},
         )
+        # El correo, también ANTES que el mensaje (R40, como el R7 de sv1).
+        correo_blob = self._guardar_correo(document_id, correo)
         self._pub.publicar(
             COLA_EXTRACCION,
             MensajeExtraccion(
                 document_id=document_id,
                 correlation_key=correlation_key,
                 emitido_por=EMITIDO_POR,
+                correo_blob=correo_blob,
             ),
         )
-        logger.info("[evals] inyectado %s → %s", caso_id, document_id)
+        logger.info(
+            "[evals] inyectado %s → %s correo=%s",
+            caso_id,
+            document_id,
+            f"SI(sha={correo.sha256[:8]})" if correo is not None else "NO",
+        )
         return Inyeccion(
             caso_id=caso_id,
             document_id=document_id,
@@ -205,7 +264,23 @@ class Inyector:
             workflow_id=resultado.workflow_id,
             duplicado=False,
             sha256=sha256,
+            correo_blob=correo_blob,
         )
+
+    def _guardar_correo(self, document_id: str, correo: ContextoCorreo | None) -> str | None:
+        """Blob lateral con la función de sv1; `None` sin correo.
+
+        Si falla, `ErrorCorreo` SOLO con el tipo y sin encadenar la causa: su
+        mensaje podría repetir lo que se intentaba guardar.
+        """
+        if correo is None:
+            return None
+        try:
+            return guardar_contexto_correo(self._almacen, document_id, correo)
+        except Exception as exc:  # noqa: BLE001 - cualquier fallo corta el caso
+            raise ErrorCorreo(
+                f"blob del correo de {document_id}: {type(exc).__name__}"
+            ) from None
 
     # --- Las reentradas que el sistema ya ofrece (R5, R24) ------------------
 
