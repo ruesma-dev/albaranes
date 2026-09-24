@@ -66,8 +66,9 @@ cuenta documentos. Si el papel de alguno dice otra obra, revisión (D6).
 qué albarán va cada uno: decide el cruce (R20). Si el del papel es uno de ellos,
 se usa (`correo_confirma_papel`, sin revisión); si no, o el papel no trae
 código, se queda el del papel —o ninguno— y va a revisión (`correo_ambiguo` ⇒
-`obra_correo_ambigua`). El resolver NO cambia `cabecera.obra_codigo` y los que
-cuentan van a `candidatos_correo`. Descartado: elegir por cercanía en el texto.
+`obra_correo_ambigua`). En `correo_ambiguo` la cabecera no se toca; en
+`correo_confirma_papel` se reescribe con la forma de la lista (`945` ⇒ `0945`,
+líder 2026-09-24, para que la red de sv3 la case). Descartado: elegir por cercanía.
 
 **D5 · Se valida contra TODAS las obras; lo que no es obra no cuenta** (revisada
 el 2026-09-23; revoca «obras activas» del 22 y el «se cuentan antes de
