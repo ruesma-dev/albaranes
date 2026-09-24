@@ -118,3 +118,13 @@ Los otros 7 casos de F-048 no tienen referencia en F-047, y salen todos en VERDE
 
 `progress/evals_F-048.md` **lleva valores** (nombres, cantidades, precios): esta rama sale de `dev` y el informe sin valores (R31) llegó con F-047, que no está aquí.
 El fichero lo ignora git (`.gitignore:46`), así que no hay fuga en el repositorio, pero no debe copiarse a ningún sitio versionado.
+
+## 6. Comparador de obra dev/rama (2026-09-24, `progress/comparar_obra_F-048.md`)
+
+Solo fase 1, sin correo, gemini, CON lista de obras activas (277), 10 casos × 2 prompts × 3 repeticiones.
+7 casos idénticos. Los 3 que no lo son (RES-015 «difiere», RES-005 y RES-011 «inestables») tienen el mismo
+patrón: **`dev` devuelve null donde la rama deduce una obra**, y en todas las repeticiones en que la rama
+la deduce **coincide con la obra de `RESULTADO_FINAL`** del ground truth (`evals/fixtures/final/`). En
+ninguna repetición la rama da una obra distinta de la esperada. Lectura: el prompt nuevo (R16: la obra del
+papel se lee o deduce SIEMPRE) **mejora** la obra en los documentos de residuos que no la imprimen; no se
+ha visto ningún empeoramiento. Muestra pequeña (10 casos, 3 réplicas): indicio, no prueba.
