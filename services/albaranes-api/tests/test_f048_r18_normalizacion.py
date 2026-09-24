@@ -154,8 +154,10 @@ def test_f048_r18_el_papel_casa_normalizado_entre_varios():
     obra, origen = _sellar("12-03", "0945", "1203")
 
     assert origen.obra.motivo == MOTIVO_CORREO_CONFIRMA_PAPEL
-    # Varios: la cabecera no se toca, ni siquiera para darle la forma de la lista.
-    assert obra == "12-03"
+    # CR-C5 (D4 bis, 2026-09-24): el correo confirma el papel y la cabecera
+    # toma la forma de la lista, para que la red de sv3 la encuentre.
+    assert obra == "1203"
+    assert origen.obra.valor_papel == "12-03"
 
 
 def test_f048_r18_varios_sin_lista_se_deduplican_por_la_forma():

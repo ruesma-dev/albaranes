@@ -16,9 +16,10 @@ Este modulo las cruza y aplica la precedencia que decidio el humano el
 3. Cuenta UNO ⇒ manda el correo: la cabecera se escribe con el codigo COMO
    FIGURA EN LA LISTA (``945`` ⇒ ``0945``, para que la red de sv3 lo
    encuentre, R28); si el papel traia otro, ``discrepancia = true``.
-4. Cuentan VARIOS ⇒ la cabecera no se toca: si el del papel es uno de
-   ellos, ``correo_confirma_papel``; si no, ``correo_ambiguo`` (sv3 lo manda
-   a revision).
+4. Cuentan VARIOS ⇒ si el del papel es uno de ellos,
+   ``correo_confirma_papel``: manda el papel, escrito con la forma de la
+   lista (``945`` ⇒ ``0945``, D4 bis, para la red de sv3). Si no,
+   ``correo_ambiguo``: la cabecera no se toca y sv3 lo manda a revision.
 
 Lo que este modulo NO hace, a proposito:
 
@@ -130,8 +131,21 @@ def _resolver_obra(
             validada=validada,
         )
 
-    motivo = MOTIVO_CORREO_CONFIRMA_PAPEL if clave_papel in cuentan else MOTIVO_CORREO_AMBIGUO
-    return OrigenCampo(motivo=motivo, candidatos_correo=candidatos, validada=validada, **base)
+    if clave_papel not in cuentan:
+        return OrigenCampo(
+            motivo=MOTIVO_CORREO_AMBIGUO, candidatos_correo=candidatos, validada=validada, **base,
+        )
+    # Fila 4 (D4 bis, 2026-09-24): el correo confirma el papel y la cabecera
+    # toma la forma de la LISTA (``945`` ⇒ ``0945``) para que la red de obra
+    # de sv3 la encuentre (R28). Sin lista no hay forma que aplicar: queda
+    # como la leyo IA1 en el papel.
+    final = cuentan[clave_papel] if obras_conocidas is not None else papel
+    return OrigenCampo(
+        motivo=MOTIVO_CORREO_CONFIRMA_PAPEL,
+        candidatos_correo=candidatos,
+        validada=validada,
+        **{**base, "valor_final": final},
+    )
 
 
 def sellar_origen_datos(

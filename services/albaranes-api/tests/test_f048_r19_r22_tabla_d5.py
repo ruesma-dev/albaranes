@@ -189,6 +189,41 @@ def test_f048_r20_fila4_varios_y_el_del_papel_es_uno_confirma_el_papel():
     assert origen.obra.validada is True
 
 
+@pytest.mark.parametrize("papel", ["945", "09-45", "0945"])
+def test_f048_r20_fila4_la_cabecera_toma_la_forma_de_la_lista(papel):
+    """CR-C5 (D4 bis, lider 2026-09-24): ``945`` ⇒ ``0945``, para que la red
+    de obra de sv3 (R28) encuentre el codigo que el correo CONFIRMA."""
+    final, origen = _sellar(papel, _lectura("0945", "1203"))
+
+    assert origen.obra.motivo == MOTIVO_CORREO_CONFIRMA_PAPEL
+    assert origen.obra.fuente == FUENTE_PAPEL
+    assert _obra_final(final) == "0945"
+    assert origen.obra.valor_final == "0945"
+    # La lectura del papel queda tal cual la hizo IA1: es el rastro.
+    assert origen.obra.valor_papel == papel
+    assert origen.obra.valor_correo is None
+    assert origen.obra.discrepancia is False
+
+
+def test_f048_r20_fila4_sin_lista_la_cabecera_queda_como_la_leyo_el_papel():
+    """Sin lista no hay forma de la lista que aplicar: el papel, como lo leyo IA1."""
+    final, origen = _sellar("945", _lectura("0945", "1203"), obras=None)
+
+    assert origen.obra.motivo == MOTIVO_CORREO_CONFIRMA_PAPEL
+    assert origen.obra.validada is None
+    assert _obra_final(final) == "945"
+    assert origen.obra.valor_final == "945"
+
+
+def test_f048_r20_fila5_ambiguo_no_da_forma_a_la_cabecera():
+    """En ``correo_ambiguo`` la cabecera no se toca, aunque su codigo este en la lista."""
+    final, origen = _sellar("03-20", _lectura("0945", "1203"))
+
+    assert origen.obra.motivo == MOTIVO_CORREO_AMBIGUO
+    assert _obra_final(final) == "03-20"
+    assert origen.obra.valor_final == "03-20"
+
+
 # ---------------------------------------------------------------- #
 # Fila 5 — varios de la lista y el papel no casa, o no trae codigo.
 # ---------------------------------------------------------------- #
