@@ -62,7 +62,7 @@ solo se lee la OBRA (D8): ninguna tarea toca la partida.
 
 - [x] T32: `docs/ARCHITECTURE.md` (regla 15: el correo manda y cruza, motivos de revisión nuevos, orden de despliegue sv3 → sv2 → sv1), `harness/rutas_sensibles.json` y `azure-apps/albaranes.md` (commit aparte en ese repo)  |  Verificación: `python -m harness.rutas_sensibles` y revisión del reviewer
 - [x] T33: Cobertura de líneas cambiadas ≥ 80 % (R44)  |  Verificación: `python -m harness.cobertura --base dev --config harness/rigor.json` (sin `--feature`: la deduce de la rama)
-- [ ] T34: Campaña de mutación COMPLETA, 0 supervivientes sin test nuevo o justificación escrita (R44)  |  Verificación: `python -m harness.mutacion --feature F-048`
+- [x] T34: Campaña de mutación COMPLETA, 0 supervivientes sin test nuevo o justificación escrita (R44)  |  Verificación: `python -m harness.mutacion --feature F-048`
 - [x] T35: Topes de tamaño del papeleo  |  Verificación: `python -m harness.tamano --feature F-048`
 
 ## Bloque G · verificación REAL (en F-047 tres defectos salieron solo al ejecutar)

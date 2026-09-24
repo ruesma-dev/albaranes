@@ -57,9 +57,11 @@ servicio: esos números no están tocados por este defecto.
 
 | `progress/mutacion_F-045_lote2.md` | No | `VÁLIDA` | Campaña **completa** del SEGUNDO lote de F-045: las dos decisiones del humano del 2026-09-16 y la huella de importación que hizo falta para aplicarlas. `--base 5132bdc --rama HEAD` para que el diff sean solo esos commits; 7 ficheros y **325 líneas** de alcance, **44 mutantes, 35 muertos, 9 supervivientes**, 0 timeouts, 871 s con 4 workers. Los 9 caían en el codigo que acababa de perder datos —`huella.py` entero y las dos guardas de `escritura.py`— y se cierran **8 con test y 1 como equivalente** (`sort_keys`, comprobado ejecutando `json.dumps` con y sin él sobre la huella real: idéntico, porque dentro hay listas y no dicts, a diferencia de `mapa.py`). La primera versión de este informe decía «los 9 con test» y era falsa por los dos lados: el reviewer encontró que el 7 es equivalente y que el 3 **seguía vivo**, porque su test colapsaba las filas en un `dict` y no veía que el mutante duplica la sintética del humano. No repone a `progress/mutacion_F-045.md`, que es la de la capa 1: mide líneas que aquella no tenía. |
 
+| `progress/mutacion_F-048.md` | No | `VÁLIDA` | Campaña **completa** (sin muestreo, nivel `critico`) de F-048, medida sobre `e7fe2c0`: 34 ficheros y 1883 líneas de alcance, **175 mutantes, 149 muertos, 26 supervivientes**, 0 timeouts, 0 sin veredicto, 617 s con 4 workers. Los 26 quedan **todos analizados, ninguno `PENDIENTE`** (T34): 23 eran huecos reales y se cierran con tests nuevos (`test_f048_t34_supervivientes.py` en sv2, comun, sv1 y sv4) y 3 son equivalentes con guarda y demostración ejecutable (el `check` de `git check-ignore` y el contador de `script`/`style` bajo CDATA). El cierre NO se midió con una segunda campaña sino **reinyectando cada superviviente uno a uno** en copias aisladas (worktree para los que preguntan a git). Desglose en `progress/impl_F-048_T34_supervivientes.md`. |
+
 ## Recuento
 
-- Informes inventariados: **17**.
+- Informes inventariados: **20** (recontado el 2026-09-24 al añadir F-048: decía 17 con 19 filas).
 - Con alcance fuera de `services/`: **7** (F-011, F-012, F-034, F-038,
   maquinaria-paralela-F-039, F-039, F-040).
 - Medidos con la invocación rota y **no repuestos**: **2** (F-011 y F-012).

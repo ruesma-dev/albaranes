@@ -210,3 +210,9 @@ CR-F4 -k cr_f4: AssertionError: assert None · 1 failed, 16 deselected          
 | Cobertura de las líneas cambiadas | 99.5 % (661/664), `PUERTA COBERTURA` del init.sh final |
 | Mutación | N/A aquí: T34, campaña completa sobre la feature |
 | Tiempo de las suites | sv4 3.52 s; raíz 113.60 s |
+
+## T34 · mutación completa, 0 supervivientes sin justificar — 2026-09-24
+Campaña `progress/mutacion_F-048.md` (`e7fe2c0`, 175 mutantes, sin muestreo, 4 workers): 149 muertos, 26 vivos.
+Reinyectados uno a uno en copias aisladas: **23 huecos cerrados con test nuevo** (`test_f048_t34_supervivientes.py`
+en sv2, comun, sv1 y sv4) y **3 equivalentes** (9, 22, 23) con guarda y demostración ejecutable. Sin cambios de
+producción. Tabla de los 26 y demostraciones: `progress/impl_F-048_T34_supervivientes.md`.
