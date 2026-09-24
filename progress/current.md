@@ -7,6 +7,11 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
+**F-048 · T34 HECHA** (2026-09-24, implementer, `70f9498..ada3ca8`): campaña completa versionada y sus 26
+supervivientes analizados: 23 huecos cerrados con tests nuevos, 3 equivalentes con guarda y demostración
+ejecutable, 0 sin justificar, sin defectos de producción. Fila nueva en el inventario de F-039. Informe:
+`progress/impl_F-048_T34_supervivientes.md`. Pendiente: review de T34; bloques E y G.
+
 **F-048 · CAMBIOS DE LA REVIEW DEL BLOQUE F HECHOS** (2026-09-24, implementer,
 `9886281..03bd912`): CR-F1 aviso de obra cambiada SIN sujeto (la cambia también sv3), CR-F2 ruta
 sensible `albaran_extraction_service.py` (el `[AVISO]` de T40 pasa a 11), CR-F3 frase de sv5 en la
