@@ -7,46 +7,19 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
-**F-048 · BLOQUEO RESUELTO por el líder (2026-09-24): opción (a).** Los dos
-motivos se renombran a `correo_obra_distinta_papel` y `correo_obra_ambigua`
-(ya no empiezan por `obra_`, así que la red de obra de F-002 no los borra). No
-se toca la red (design §6). Spec actualizada; falta el cambio en comun y un
-test de sv3 que pruebe que `retirar_revision_obra` los conserva (CR-D1).
-Feature de nuevo `in_progress`.
-
-**F-048 · BLOQUEO (2026-09-24, implementer): la red de obra de sv3 BORRA los
-motivos `obra_correo_*`.** El código choca con la spec (R29/R30 frente a design
-§6 «las redes de obra no se tocan»): `MOTIVO_OBRA_PREFIJO = "obra_"`
-(`sqlalchemy_albaran_repository.py:153`) y `retirar_revision_obra` quita TODOS
-los motivos que empiezan por `obra_` cuando la obra del merge existe en Sigrid
-(`obra_enrichment_service.py`, R7 de F-002). Corre justo después de `save()`,
-en la misma pasada del pipeline. Los dos motivos de comun
-(`obra_correo_distinta_papel`, `obra_correo_ambigua`) empiezan por `obra_`,
-así que en el caso normal (fila 3 o 5 con obra que existe) el merge los calcula
-bien (T26 en verde) y la red los borra acto seguido: `review_required` queda en
-true, pero sin motivo, y sv4 no pintaría el aviso en `warning`. Reproducción
-(solo lectura, sin BBDD):
-```
-prefijo de la red: 'obra_'
-antes : ["single_provider_openai", "obra_correo_distinta_papel", "obra_correo_ambigua"]
-despues de retirar_revision_obra (obra valida): ["single_provider_openai"]
-```
-Opciones para el líder, sin aplicar ninguna: (a) renombrar los dos motivos en
-comun para que no empiecen por `obra_` (cambia el contrato del bloque A y los
-literales de R29/R30); (b) que `retirar_revision_obra` no quite
-`MOTIVOS_REVISION_ORIGEN` (toca la red, que design §6 excluye); (c) acotar el
-prefijo de la red a sus dos motivos, `obra_inexistente:` y
-`obra_codigo_invalido:` (también toca la red). T37 fallaría hoy por esto.
+**F-048 · CR-D1 HECHO (2026-09-24, implementer, `6356ad7`): bloqueo de la red de obra RESUELTO.**
+Motivos renombrados en comun a `correo_obra_distinta_papel` / `correo_obra_ambigua`; la red de
+F-002 ya no los borra (test en sv3). Informe: `progress/impl_F-048.md` (sección CR-D1).
 
 **F-048 · CAMBIOS DE LA REVIEW DE C2 Y BLOQUES D (sv3) Y D BIS (sv4) IMPLEMENTADOS,
-FEATURE `blocked` POR EL CHOQUE DE ARRIBA** (2026-09-24, implementer, `43bc9b9..f68b510`):
+CHOQUE CON LA RED DE OBRA RESUELTO EN CR-D1** (2026-09-24, implementer, `43bc9b9..f68b510`):
 CR-C3 (evidencia a 160 en el origen, `obra_codigos` tolerante), CR-C4 (test de
 `retry_policy` en comun), CR-C5 (fila 4 con la forma de la lista); T23 (sv3 acepta el
 bloque), T24 (el merge lo conserva en `raw_extraction_json`), T25 (regresión de la red de
 obra, con el aviso B), T26 (motivos en el merge), T27–T28 (ficha de sv4, solo lectura).
 `bash harness/init.sh` en verde. Informe: `progress/impl_F-048.md` (el detalle de C2 pasó a
-`progress/impl_F-048_bloque_C2.md`). Pendiente: que el líder decida el bloqueo (a/b/c);
-después, review de este encargo y bloques E–G.
+`progress/impl_F-048_bloque_C2.md`). Detalle de D y D bis en
+`progress/impl_F-048_bloque_D.md`. Pendiente: review de este encargo y de CR-D1; después, bloques E–G.
 
 **F-048 · CAMBIOS DE LA REVIEW DE C1 Y BLOQUE C2 (sv2, T17–T22) IMPLEMENTADOS**
 (2026-09-24, implementer, `fe99db0..2b40968`): CR-C1 y CR-C2 en `prompts.yaml`;
