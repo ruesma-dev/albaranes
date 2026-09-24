@@ -6,11 +6,21 @@ from typing import Any, Literal
 
 from urllib.parse import quote
 
-from pydantic import BaseModel, Field, computed_field, field_validator
+from pydantic import BaseModel, Field, ValidationError, computed_field, field_validator
 
-from ruesma_comun.contratos import ClasificacionAlbaran
+from ruesma_comun.contratos import (
+    MOTIVOS_REVISION_ORIGEN,
+    ClasificacionAlbaran,
+    OrigenCampo,
+    OrigenDatos,
+)
 from ruesma_comun.contratos.clasificacion import ORIGEN_IA1
 from ruesma_comun.contratos.familias import obtener as obtener_familia
+from ruesma_comun.contratos.origen_datos import (
+    MOTIVO_CORREO_AMBIGUO,
+    MOTIVO_CORREO_CONFIRMA_PAPEL,
+    MOTIVO_CORREO_FUERA_DE_LISTA,
+)
 
 VIEW_MODE_MERGE = "merge"
 KNOWN_PROVIDER_VIEWS = ("openai", "gemini", "claude")
@@ -659,6 +669,36 @@ class DisplayLine(BaseModel):
     concilia: ConciliacionDisplay | None = None
 
 
+def _aviso_de_obra(obra: OrigenCampo) -> str | None:
+    """Texto del aviso de la obra para la ficha (F-048 R32, R33); ``None`` sin aviso."""
+    candidatos = ", ".join(obra.candidatos_correo)
+    if obra.discrepancia:
+        return (
+            f"Obra: el correo dice {obra.valor_correo} y el papel dice "
+            f"{obra.valor_papel}. Se ha usado la del correo."
+        )
+    if obra.motivo == MOTIVO_CORREO_AMBIGUO:
+        if obra.valor_papel:
+            cierre = (
+                f"ninguna es la del papel ({obra.valor_papel}). "
+                "Se ha dejado la del papel."
+            )
+        else:
+            cierre = "el papel no trae obra. Se ha dejado sin obra."
+        return f"Obra: el correo cita varias obras ({candidatos}) y {cierre}"
+    if obra.motivo == MOTIVO_CORREO_CONFIRMA_PAPEL:
+        return (
+            f"Obra: el correo cita varias obras ({candidatos}) y una es "
+            f"la del papel ({obra.valor_papel}). Se ha usado esa."
+        )
+    if obra.motivo == MOTIVO_CORREO_FUERA_DE_LISTA:
+        return (
+            f"Obra: el correo cita {candidatos}, que no está en la lista "
+            "de obras de Sigrid. Se ha usado la lectura del papel."
+        )
+    return None
+
+
 class DocumentDetailPayload(BaseModel):
     id: str
     view_mode: str = Field(default=VIEW_MODE_MERGE)
@@ -800,6 +840,67 @@ class DocumentDetailPayload(BaseModel):
         """
         motivos = set(self.review_reasons)
         return any(motivo in motivos for motivo in MOTIVOS_CLASIFICACION_EN_DUDA)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def origen_datos(self) -> OrigenDatos | None:
+        """De dónde salió la OBRA —correo o papel— (F-048 R32–R35).
+
+        sv3 guarda el bloque dentro del ``raw_extraction_json`` del merge y
+        aquí solo se LEE, con el modelo de ``comun``. Todo lo que no sea un
+        bloque válido —JSON ausente, roto o que no es un objeto, sin
+        ``data``, sin bloque o un bloque que no valida— da ``None`` y la
+        ficha abre como hoy, sin aviso (R35): perder el aviso es mejor que
+        dejar al revisor sin poder abrir el documento.
+
+        Solo en la vista MERGE, como la clasificación de F-043: la vista
+        de un proveedor es su extracción cruda.
+        """
+        if self.view_mode != VIEW_MODE_MERGE or not self.raw_extraction_json:
+            return None
+        try:
+            envelope = json.loads(self.raw_extraction_json)
+        except (TypeError, ValueError):
+            return None
+        data = envelope.get("data") if isinstance(envelope, dict) else None
+        bloque = data.get("origen_datos") if isinstance(data, dict) else None
+        if not isinstance(bloque, dict):
+            return None
+        try:
+            return OrigenDatos.model_validate(bloque)
+        except ValidationError:
+            return None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def avisos_origen_datos(self) -> list[str]:
+        """Lo que el revisor tiene que saber de la obra (R32, R33).
+
+        - Discrepancia: el campo, lo que dice el correo y lo que dice el
+          papel (manda el correo).
+        - ``correo_ambiguo``, ``correo_confirma_papel`` y
+          ``correo_fuera_de_lista``: los códigos que cita el correo.
+
+        El resto de casos (sin correo, sin código, sin lectura de la IA o
+        un código que casa con el papel) no pinta nada. sv4 PINTA: el
+        cruce lo hizo sv2 y aquí no se recalcula.
+        """
+        origen = self.origen_datos
+        aviso = _aviso_de_obra(origen.obra) if origen is not None else None
+        return [aviso] if aviso else []
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def origen_en_duda(self) -> bool:
+        """¿Sv3 mandó la obra a revisión por el correo? (R34).
+
+        Sale de los motivos que sv3 ya selló (``MOTIVOS_REVISION_ORIGEN``
+        de ``comun``), no del bloque: la regla vive en sv3, que es quien la
+        aplica. ``correo_confirma_papel`` y ``correo_fuera_de_lista`` son
+        informativos y no la ponen en duda.
+        """
+        motivos = set(self.review_reasons)
+        return any(motivo in motivos for motivo in MOTIVOS_REVISION_ORIGEN)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
