@@ -38,7 +38,7 @@ solo se lee la OBRA (D8): ninguna tarea toca la partida.
 - [x] T19: Resolver — lo que la IA ponga en `origen_datos` se ignora, `lectura_correo` sale del `data` final, el resolver no muta el envelope de entrada y corre sobre el documento de fase 2 (R23, R25)  |  Verificación: `pytest services/albaranes-api/tests/test_f048_r23_r25_sellado.py`
 - [x] T20: Worker — `FuenteContextoCorreoBlob`; lee `correo_blob` con `getattr`; blob ausente o roto ⇒ sigue sin él; pasa el contexto a las dos fases; sella tras `construir_envelope_final` con `obras_conocidas()` del servicio; cableado en `main_worker.py` (R11)  |  Verificación: `pytest services/albaranes-api/tests/test_f048_r11_worker.py`
 - [x] T21: sv2 no loguea el cuerpo: `caplog` sobre el handler completo con LLM doble y centinela (R36)  |  Verificación: `pytest services/albaranes-api/tests/test_f048_r36_logs.py`
-- [ ] T22: `encolar_extraccion.py --correo <json>` usa `guardar_contexto_correo` y pone `correo_blob` (R42)  |  Verificación: `pytest services/albaranes-api/tests/test_f048_r42_encolar.py`
+- [x] T22: `encolar_extraccion.py --correo <json>` usa `guardar_contexto_correo` y pone `correo_blob` (R42)  |  Verificación: `pytest services/albaranes-api/tests/test_f048_r42_encolar.py`
 
 ## Bloque D · sv3
 
