@@ -104,11 +104,12 @@ def test_f048_r35_el_payload_parsea_el_bloque_con_el_modelo_de_comun():
          "bloque_no_objeto", "bloque_que_no_valida"],
 )
 def test_f048_r35_json_roto_ausente_o_sin_bloque_da_none_y_ningun_aviso(raw):
-    documento = _payload(raw)
+    documento = _payload(raw, obra_codigo="0999")
 
     assert documento.origen_datos is None
     assert documento.avisos_origen_datos == []
     assert documento.origen_en_duda is False
+    assert documento.obra_cambiada_tras_extraer is False
 
 
 def test_f048_r35_la_vista_de_un_proveedor_no_lo_ensena():
