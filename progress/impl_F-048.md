@@ -141,7 +141,7 @@ en `azure-apps` (otro repo, sin push) `96bbdb6`. Solo sv4 en producción (`revie
 - **T33**: `python -m harness.cobertura --base dev --config harness/rigor.json` ⇒ **99.4 % (660/664)**;
   con el test de `e362df6` (la guarda sin bloque), **99.5 % (661/664)** en el init.sh final.
   Sin cubrir: 2 líneas de protocolos (`ports.py`, `mailbox_client.py`) y 1 de `capturar_correo.py`.
-- **T35**: `python -m harness.tamano --feature F-048` ⇒ exit 0, `impl 172/220` (requirements 150/150,
+- **T35**: `python -m harness.tamano --feature F-048` ⇒ exit 0, `impl 173/220` (requirements 150/150,
   design 249/250). Para dejar aire a T34, el texto íntegro de CR-D1 pasó a `impl_F-048_bloque_D.md`.
 
 **RED** (en `services/albaranes-front`, su venv: `.venv/Scripts/python.exe -m pytest <r35 y r32_r34> -q --tb=line -k <cr_dN>`):
