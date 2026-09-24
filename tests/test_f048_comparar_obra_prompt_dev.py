@@ -163,9 +163,13 @@ def test_f048_comparar_obra_variante_dev_instrucciones_identicas_a_dev(capturas)
 
 
 def test_f048_comparar_obra_variante_dev_schema_identico_a_dev(capturas):
-    """El JSON Schema de respuesta, que gemini manda al proveedor: sin `lectura_correo`."""
-    esperado = json.dumps(capturas["codigo_dev"]["dev"]["schema"], sort_keys=True)
-    obtenido = json.dumps(capturas["rama"]["dev"]["schema"], sort_keys=True)
+    """El JSON Schema de respuesta, que gemini manda al proveedor: sin `lectura_correo`.
+
+    Sin `sort_keys`: byte a byte, también el orden de las propiedades, que a
+    Gemini le importa.
+    """
+    esperado = json.dumps(capturas["codigo_dev"]["dev"]["schema"])
+    obtenido = json.dumps(capturas["rama"]["dev"]["schema"])
     assert obtenido == esperado
 
 
