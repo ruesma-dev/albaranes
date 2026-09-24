@@ -7,12 +7,17 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
-**F-048 · CAMBIOS DE LA REVIEW DE C1 Y BLOQUE C2 (T17–T22) EN CURSO**
-(2026-09-24, implementer): CR-C1 (`fe99db0`) y CR-C2 (`0efedb7`) hechos en
-`prompts.yaml`; T17 hecho (`909c59a`, resolver de `origen_datos`). En curso:
-T18–T22. Decisiones: la lectura del correo es la de FASE 1 y la cabecera la
-del documento FINAL (aviso A); `obras_conocidas()` solo se consulta si hay
-correo, UNA vez por documento (aviso B).
+**F-048 · CAMBIOS DE LA REVIEW DE C1 Y BLOQUE C2 (sv2, T17–T22) IMPLEMENTADOS**
+(2026-09-24, implementer, `fe99db0..2b40968`): CR-C1 y CR-C2 en `prompts.yaml`;
+resolver puro de `origen_datos` (tabla de D5, D9, colisiones), worker con el
+blob lateral del correo en las dos fases y el sello tras el envelope final,
+logs sin correo (incluido `retry_policy` de comun, que lo filtraba) y
+`encolar_extraccion.py --correo`. La lectura del correo es la de FASE 1 y la
+cabecera la del documento FINAL (aviso A); `obras_conocidas()` UNA vez por
+documento y solo si hay correo (aviso B). Informe: `progress/impl_F-048.md`
+(el detalle de C1 pasó a `progress/impl_F-048_bloque_C1.md`), con la forma de
+`data.origen_datos` para el bloque D. Pendiente: review de este encargo;
+después, bloque D (sv3, T23–T26).
 
 **F-048 · MENORES DEL BLOQUE B Y BLOQUE C1 (sv2, T13–T16 bis) IMPLEMENTADOS**
 (2026-09-24, implementer, `ecac419..08e8fd3`): CR-B1/B3/B5/B6 en sv1;
