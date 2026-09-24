@@ -7,6 +7,13 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
+**F-048 · CAMBIOS DE LA REVIEW DE C1 Y BLOQUE C2 (T17–T22) EN CURSO**
+(2026-09-24, implementer): CR-C1 (`fe99db0`) y CR-C2 (`0efedb7`) hechos en
+`prompts.yaml`; T17 hecho (`909c59a`, resolver de `origen_datos`). En curso:
+T18–T22. Decisiones: la lectura del correo es la de FASE 1 y la cabecera la
+del documento FINAL (aviso A); `obras_conocidas()` solo se consulta si hay
+correo, UNA vez por documento (aviso B).
+
 **F-048 · MENORES DEL BLOQUE B Y BLOQUE C1 (sv2, T13–T16 bis) IMPLEMENTADOS**
 (2026-09-24, implementer, `ecac419..08e8fd3`): CR-B1/B3/B5/B6 en sv1;
 `LecturaCorreo`, `{contexto_correo}` en fase 1 y el mismo bloque en fase 2
