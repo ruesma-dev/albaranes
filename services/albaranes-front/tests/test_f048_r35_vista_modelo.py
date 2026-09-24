@@ -147,6 +147,16 @@ def test_f048_r33_los_candidatos_del_correo_salen_con_su_motivo(origen, esperado
     assert _payload(_raw(origen)).avisos_origen_datos == [esperado]
 
 
+def test_f048_cr_d2_varios_codigos_fuera_de_lista_concuerdan_en_plural():
+    """Menor 2 de la review del bloque D: «que no están», no «que no está»."""
+    fuera = _origen("correo_fuera_de_lista", candidatos=["PED-555", "600123"], validada=False)
+
+    assert _payload(_raw(fuera)).avisos_origen_datos == [
+        "Obra: el correo cita PED-555, 600123, que no están en la lista de obras de Sigrid. "
+        "Se ha usado la lectura del papel."
+    ]
+
+
 def test_f048_r33_sin_papel_el_aviso_lo_dice():
     ambiguo = _origen("correo_ambiguo", final=None, candidatos=["0945", "0320"], papel=None)
 

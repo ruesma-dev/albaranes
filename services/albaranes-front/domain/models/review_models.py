@@ -692,8 +692,9 @@ def _aviso_de_obra(obra: OrigenCampo) -> str | None:
             f"la del papel ({obra.valor_papel}). Se ha usado esa."
         )
     if obra.motivo == MOTIVO_CORREO_FUERA_DE_LISTA:
+        verbo = "están" if len(obra.candidatos_correo) > 1 else "está"
         return (
-            f"Obra: el correo cita {candidatos}, que no está en la lista "
+            f"Obra: el correo cita {candidatos}, que no {verbo} en la lista "
             "de obras de Sigrid. Se ha usado la lectura del papel."
         )
     return None
