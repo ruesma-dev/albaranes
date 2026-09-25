@@ -22,7 +22,7 @@ bien la obra en residuos donde `dev` daba null; `progress/analisis_evals_F-048.m
 «VEREDICTO: VERDE» de la puerta de rutas sensibles.
 (b) Aceptados los 3 equivalentes de la 1.ª campaña de T34 (mutantes 9, 22 y 23).
 (c) De F-047 se trae SOLO `evals/inyeccion.py` (T30). `GestoRevisor` es código de F-047: sus 6 supervivientes
-de la 2.ª campaña se justifican en bloque (aceptado por el reviewer; **confírmalo**).
+de la 2.ª campaña se justifican en bloque (aceptado por el humano el 2026-09-25).
 
 **Cerrado:** bloque E (T29–T31); 2.ª campaña de mutación (`14cee8a`, 410 mutantes: 401 muertos tras el análisis,
 9 justificados, 0 sin justificar; `progress/impl_F-048_T34b_supervivientes.md`); runner de evals con fallos
