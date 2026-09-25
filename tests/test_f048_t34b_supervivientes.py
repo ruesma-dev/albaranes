@@ -474,6 +474,28 @@ def test_f048_t34b_r24_revalorar_fuerza_por_defecto():
     assert publicador.publicados[0][1].force is True
 
 
+def test_f048_t34b_r5_sin_contrato_declarado_no_se_marca_contrato_ausente():
+    """[45] «sv3 no trajo el contrato declarado» exige que haya uno declarado.
+
+    `GestoRevisor` es de F-047 y su test llega con ella, pero ese test NO mata
+    este mutante (comprobado en un worktree de F-047): sin código en INPUTS el
+    gesto vuelve antes de calcular `contrato_ausente`, y con el valor inicial a
+    `True` el caso se declararía como un defecto de sv3 que no ha ocurrido.
+    """
+    gesto = inyeccion.GestoRevisor(
+        _inyector()[0],
+        caso_id="RES-001",
+        correlation_key="eval/2026-09-25-01/RES-001",
+        codigo_contrato="",
+    )
+    assert gesto.contrato_ausente is False
+
+    gesto(types.SimpleNamespace(document_id="doc-1", contratos=[{"codigo_contrato": "OTRO-1"}]))
+
+    assert gesto.realizado is False
+    assert gesto.contrato_ausente is False
+
+
 # =============================================================================
 # procesos/errores.py — el motivo del caso roto [50-60]
 # =============================================================================
