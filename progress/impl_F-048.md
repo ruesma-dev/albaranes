@@ -123,11 +123,12 @@ sin sujeto, `albaran_extraction_service.py` en rutas sensibles, regla 15 corregi
 Resultado: sv4 246 passed, raíz 865, cobertura 99.5 % (661/664). Texto íntegro, RED y evidencias:
 `progress/impl_F-048_bloque_F.md`.
 
-## T34 · mutación completa, 0 supervivientes sin justificar — 2026-09-24
-Campaña `progress/mutacion_F-048.md` (`e7fe2c0`, 175 mutantes, sin muestreo, 4 workers): 149 muertos, 26 vivos.
-Reinyectados uno a uno en copias aisladas: **23 huecos cerrados con test nuevo** (`test_f048_t34_supervivientes.py`
-en sv2, comun, sv1 y sv4) y **3 equivalentes** (9, 22, 23) con guarda y demostración ejecutable. Sin cambios de
-producción. Tabla de los 26 y demostraciones: `progress/impl_F-048_T34_supervivientes.md`.
+## T34 · mutación completa, 0 supervivientes sin justificar — 2026-09-24 y 25
+1.ª (`e7fe2c0`, 175): 26 vivos → 23 huecos con test y 3 equivalentes (9, 22, 23): `progress/impl_F-048_T34_supervivientes.md`.
+**2.ª, con `evals/`** (`14cee8a`, 410 mutantes, sin muestreo, 2 workers, 21051 s): 330 muertos, 80 vivos. Reinyectados
+uno a uno en worktrees: **71 huecos cerrados** (`tests/test_f048_t34b_supervivientes.py`, 46 passed; 71/71 mueren), **6 de
+`GestoRevisor`** en bloque (los mata el test de F-047, comprobado en su worktree; el 45 no, y se cierra aquí) y los **3
+equivalentes** ya aceptados (78-80). 0 sin justificar; sin tocar producción ni `evals/`: `progress/impl_F-048_T34b_supervivientes.md`.
 
 ## Runner de evals (fallos aislados) y comparador de obra dev/rama — resumen
 

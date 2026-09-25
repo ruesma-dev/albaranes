@@ -42,13 +42,17 @@ rama (`git merge-base --is-ancestor 9f8a008 HEAD` falla). Decidir: traer solo la
   sale `ERROR`, no `OMITIDO`, y deja la fase como mínimo en NO_EVALUABLE: con un caso roto no hay
   `VEREDICTO: VERDE`. Detalle: `progress/impl_F-048.md`, «Bloque E · cambios de la review».
   **Review del bloque E (CHANGES_REQUESTED)**: CR-E1…CR-E5 aplicados (`fc91569`…`fc3ee60`); falta que el
-  líder relance la campaña de mutación (bloqueante 3) y la review incremental.
+  líder relance la campaña de mutación (bloqueante 3) y la review incremental. **Campaña relanzada** (2026-09-25,
+  `14cee8a`, 410 mutantes, 80 vivos) y cerrada por reinyección: 71 huecos con test, 6 de `GestoRevisor` en bloque,
+  3 equivalentes ya aceptados (`progress/impl_F-048_T34b_supervivientes.md`). Para F-047: su test de
+  `GestoRevisor` no mata el mutante 45 (`contrato_ausente` al nacer); el test que lo mata está en esta rama.
   **Comparador de obra dev/rama** listo (`a264c36`, sin lanzar; se factura): mide si el prompt nuevo cambia la
   obra de IA1, con la lista de obras de sigrid-api y 3 repeticiones. Comando y entorno: `progress/impl_F-048.md`,
   «Comparador de obra dev/rama»; su resumen sin valores irá a `progress/comparar_obra_F-048.md`.
 - T41: `bash harness/init.sh`.
 
-(c) **Aceptar los 3 equivalentes de T34** (mutantes 9, 22 y 23, justificados en el informe).
+(c) **Aceptar los 3 equivalentes de T34** (mutantes 9, 22 y 23, justificados en el informe). Aceptados el
+2026-09-24. Pendiente: aceptar en bloque los **6 de `GestoRevisor`** de la 2.ª campaña (43, 44, 46-49; llegan con F-047).
 
 Después de E y G: review incremental desde `63571a6` y cierre. Despliegue: **sv3 → sv2 → sv1** con
 `-Only` uno a uno (ver regla 15 de `docs/ARCHITECTURE.md`; `deploy.ps1` sin `-Only` actualiza sv2
