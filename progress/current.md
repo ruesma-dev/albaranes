@@ -7,56 +7,34 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
-**F-048 · CÓDIGO COMPLETO Y REVISADO; PENDIENTE DEL HUMANO** (2026-09-24). Rama
-`feature/F-048-correo-contexto-ia1`. Bloques A, B, C1, C2, D, D bis y F aprobados en sus reviews
-(`progress/review_F-048_bloque_*.md`); T34 cerrada (175 mutantes: 172 muertos, 3 equivalentes
-justificados, `progress/impl_F-048_T34_supervivientes.md`); review final
-(`progress/review_F-048_final.md`): solo pedía papeleo, ya hecho por el líder. Informe de
-implementación: `progress/impl_F-048.md` y sus ficheros `impl_F-048_bloque_*.md`. Decisiones del
-humano del 23-sep aplicadas: solo OBRA del correo; validación contra TODAS las obras; código que no
-está en la lista = sin código (manda la IA, sin revisión); normalizar todo; discrepancia y correo
-ambiguo a revisión con `correo_obra_distinta_papel` / `correo_obra_ambigua`.
+**F-048 · TODO HECHO Y REVISADO SALVO EL BLOQUE G (del humano)** (2026-09-25). Rama
+`feature/F-048-correo-contexto-ia1`. Bloques A, B, C1, C2, D, D bis, E y F aprobados en sus reviews
+(`progress/review_F-048_bloque_*.md`); review final `progress/review_F-048_final.md` (pasada 2). Informe de
+implementación: `progress/impl_F-048.md` y sus ficheros de detalle. Decisiones del 23-sep aplicadas: solo OBRA
+del correo; validación contra TODAS las obras; código fuera de la lista = sin código (manda la IA, sin
+revisión); normalizar todo; discrepancia y correo ambiguo a revisión con `correo_obra_distinta_papel` /
+`correo_obra_ambigua`.
 
-**T40 hecha el 2026-09-24** (autorizada por el humano; claves del `.env` de sv2 solo en el proceso): pasada
-`completa` SIN correo, `progress/evals_F-048.md` (ignorado, lleva valores), ROJO por defectos previos; el banco no
-compara la obra, así que se midió aparte con `evals/comparar_obra.py`: la rama deduce bien la obra en residuos
-donde `dev` devolvía null, sin ningún empeoramiento (`progress/analisis_evals_F-048.md` §6). Falta la parte CON
-correo (depende de T36 y del bloque E) y que el humano acepte el ROJO heredado frente a «VEREDICTO: VERDE» de la
-puerta de rutas sensibles. Un runner arreglado de paso: fallos aislados por caso (`77b4bc2`).
+**Decisiones del humano del 2026-09-24:**
+(a) **T40 aceptada** con la pasada `completa` SIN correo (`progress/evals_F-048.md` a `fac6b10`, ignorado por git,
+ROJO por defectos previos del banco) más el comparador de obra (`progress/comparar_obra_F-048.md`: la rama deduce
+bien la obra en residuos donde `dev` daba null; `progress/analisis_evals_F-048.md` §6). Sustituye el
+«VEREDICTO: VERDE» de la puerta de rutas sensibles.
+(b) Aceptados los 3 equivalentes de la 1.ª campaña de T34 (mutantes 9, 22 y 23).
+(c) De F-047 se trae SOLO `evals/inyeccion.py` (T30). `GestoRevisor` es código de F-047: sus 6 supervivientes
+de la 2.ª campaña se justifican en bloque (aceptado por el reviewer; **confírmalo**).
 
-**Lo que falta, todo del humano:**
+**Cerrado:** bloque E (T29–T31); 2.ª campaña de mutación (`14cee8a`, 410 mutantes: 401 muertos tras el análisis,
+9 justificados, 0 sin justificar; `progress/impl_F-048_T34b_supervivientes.md`); runner de evals con fallos
+aislados (`ERROR` nunca deja VERDE). Lo pendiente para F-047 está anotado abajo («Aparcada: F-047»).
 
-(a) **Bloque E (T29–T31) bloqueado por F-047**: la inyección de `evals/inyeccion.py` no está en esta
-rama (`git merge-base --is-ancestor 9f8a008 HEAD` falla). Decidir: traer solo la inyección
-(recomendado), retomar F-047, o cerrar F-048 con T40 como riesgo aceptado.
-
-(b) **Bloque G**, con el comando exacto de `specs/F-048-correo-contexto-ia1/tasks.md` (T36–T41):
+**Solo falta el bloque G, todo del humano** (comandos exactos en `specs/F-048-correo-contexto-ia1/tasks.md`):
 - T36: `cd services\albaranes-email; .\.venv\Scripts\python.exe capturar_correo.py --message-id <ID> --caso <CASO>` ×3 (directo, `RE:`, `RV:`), Graph solo lectura.
-- T37–T39: pipeline LOCAL (`infra\local\arrancar_local.ps1 -SinSv1`, `seed_input.py`, `encolar_extraccion.py <DOC_ID> --correo ...`) y el SELECT de T37.
-- T40: `python -m evals.runner --con-llm --feature F-048` (SE FACTURA; enseñar casos y coste antes). Contar
-  además los avisos «sin contexto de correo» de sv1 (429/503 de Graph, menor B-4) y los WARNING de
-  colisión de la lista de obras (menor C1-2). El informe `progress/evals_F-048.md` está ignorado por
-  git: su frescura se juzga por la fecha, posterior a `63571a6`.
-  La 1ª pasada (24-sep) murió a los 50 min por un JSON degenerado de IA2 en un caso; desde `77b4bc2`
-  el runner aísla los fallos por caso y siempre escribe el informe. Desde CR-E2 (`a3c870a`) el caso roto
-  sale `ERROR`, no `OMITIDO`, y deja la fase como mínimo en NO_EVALUABLE: con un caso roto no hay
-  `VEREDICTO: VERDE`. Detalle: `progress/impl_F-048.md`, «Bloque E · cambios de la review».
-  **Review del bloque E (CHANGES_REQUESTED)**: CR-E1…CR-E5 aplicados (`fc91569`…`fc3ee60`); falta que el
-  líder relance la campaña de mutación (bloqueante 3) y la review incremental. **Campaña relanzada** (2026-09-25,
-  `14cee8a`, 410 mutantes, 80 vivos) y cerrada por reinyección: 71 huecos con test, 6 de `GestoRevisor` en bloque,
-  3 equivalentes ya aceptados (`progress/impl_F-048_T34b_supervivientes.md`). Para F-047: su test de
-  `GestoRevisor` no mata el mutante 45 (`contrato_ausente` al nacer); el test que lo mata está en esta rama.
-  **Comparador de obra dev/rama** listo (`a264c36`, sin lanzar; se factura): mide si el prompt nuevo cambia la
-  obra de IA1, con la lista de obras de sigrid-api y 3 repeticiones. Comando y entorno: `progress/impl_F-048.md`,
-  «Comparador de obra dev/rama»; su resumen sin valores irá a `progress/comparar_obra_F-048.md`.
+- T37–T39: pipeline LOCAL (`infra\local\arrancar_local.ps1 -SinSv1`, `seed_input.py`, `encolar_extraccion.py <DOC_ID> --correo ...`), el SELECT de T37, «Volver a buscar» (T38) y reinyección sin correo (T39).
 - T41: `bash harness/init.sh`.
-
-(c) **Aceptar los 3 equivalentes de T34** (mutantes 9, 22 y 23, justificados en el informe). Aceptados el
-2026-09-24. Pendiente: aceptar en bloque los **6 de `GestoRevisor`** de la 2.ª campaña (43, 44, 46-49; llegan con F-047).
-
-Después de E y G: review incremental desde `63571a6` y cierre. Despliegue: **sv3 → sv2 → sv1** con
-`-Only` uno a uno (ver regla 15 de `docs/ARCHITECTURE.md`; `deploy.ps1` sin `-Only` actualiza sv2
-antes que sv3 y el hueco manda documentos a poison). `azure-apps` tiene dos commits locales sin push.
+Después: review incremental del bloque G y cierre. Despliegue **sv3 → sv2 → sv1** con `-Only` uno a uno (regla
+15 de `docs/ARCHITECTURE.md`; `deploy.ps1` sin `-Only` actualiza sv2 antes que sv3 y el hueco manda documentos a
+poison). `azure-apps` tiene dos commits locales sin push.
 
 **F-045 · CAPA 1 IMPLEMENTADA** (2026-09-16, rama
 `feature/F-045-banco-evals-revision-manual`, 22 commits de tarea). Informe
