@@ -206,6 +206,7 @@ tests/test_f048_t34_supervivientes.py -k "guarda or demostracion"`.
 | Sin justificar | **0** |
 | Muertos tras T34 (2.ª) | 330 + 71 = **401 de 410** |
 | Tests nuevos | 41 funciones, 46 casos, en `tests/test_f048_t34b_supervivientes.py`: `46 passed in 1.71s` |
+| `bash harness/init.sh` (HEAD `e670c1e`) | ENTORNO LISTO, exit 0 · raíz `1064 passed in 149.35s` · `PUERTA COBERTURA` 98.3 % (1369/1393) |
 
 **Pendiente del humano**: aceptar por escrito los **6 de `GestoRevisor`** en bloque (los 3 equivalentes
 ya lo están). Además: fila de `progress/mutacion_F-048.md` en `progress/inventario_mutacion_F-039.md`
