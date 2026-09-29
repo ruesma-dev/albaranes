@@ -5,6 +5,19 @@
 > bloques de F-036, sus dos ciclos de review y los hallazgos— está en
 > `progress/history.md`. Aquí solo queda lo vivo.
 
+## F-052 · spec escrita (2026-09-29, `spec_ready`)
+
+Spec en `specs/F-052-proveedores-truncados/`, informe en
+`progress/spec_F-052.md`. Rama `feature/F-052-proveedores-truncados`
+(worktree `albaranes-F-052`). **Falta la PARADA 1**: el humano valida las
+decisiones D1–D7 del informe. Recomendaciones: D1 paginar, D2 SQL en
+`ruesma_comun`, D3 5.000 × 20, D4 opción B (rastro de búsqueda con 4
+columnas nuevas en sv3), D5 sin backfill, D6 colindantes fuera y D7 aceptar
+menos deducciones por familia. Verificaciones MANUAL (humano) previstas:
+T20 (obra 0691 contra sigrid-api, solo lectura), T21 (SS-0026122 en local)
+y T22 (SELECT de saneamiento tras desplegar). No se ha ejecutado `init.sh`
+ni ninguna suite: había una review en curso.
+
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
 **F-045 · CAPA 1 IMPLEMENTADA** (2026-09-16, rama

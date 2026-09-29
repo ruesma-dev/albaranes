@@ -9,7 +9,7 @@ Resumen: **48 features**, 34 abiertas, 14 terminadas.
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-052 | sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF) | 1 | pendiente | critico | `feature/F-052-proveedores-truncados` |
+| F-052 | sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF) | 1 | spec lista | critico | `feature/F-052-proveedores-truncados` |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -67,7 +67,7 @@ Resumen: **48 features**, 34 abiertas, 14 terminadas.
 
 ### F-052 · sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF)
 
-estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-052-proveedores-truncados`
+estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-052-proveedores-truncados`
 
 PRIORIDAD 1 por decision del humano el 2026-09-29. ORIGEN: albaran SS-0026122 de SALMEDINA (caso RES-007) en la prueba local de F-048. Diagnostico de solo lectura en progress/explore_salmedina_proveedor.md.
 
