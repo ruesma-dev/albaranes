@@ -153,3 +153,105 @@ esperado** — `harness/servicios.json` declara el venv
 por instrucción). Todo lo demás en verde: features.json válido, BACKLOG al
 día, compileall limpio, **865 tests passed** (194,85 s), puerta de tamaño
 dentro de topes, cobertura y rutas sensibles N/A (no hay código cambiado).
+
+## v2 (2026-09-29) — a qué líneas va la partida
+
+**Respuesta del humano, literal**: «si hay una partida en el documento esta
+aplica a todas las lineas, si hay partidas por linea, en general aplica a las
+que esten marcadas». Y, mientras se redactaba: «hasta ahora ia1 lo hace como
+decimos excepto que no sabe qué hacer con línea sin partida». Lectura del
+líder aplicada (lo no literal, **a confirmar**): partida única de documento ⇒
+todas; partidas por línea ⇒ las que marca o agrupa; línea sin marca ⇒ vacía
+(almacén); sin partida en ningún sitio ⇒ todas en almacén. Supera lo que el
+v1 decía de sv2 («no se toca») en §Resumen.
+
+### Hallazgo (a): ¿extrae hoy la IA una partida de DOCUMENTO?
+
+- **No hay campo de cabecera**: `CabeceraAlbaran` (sv2
+  `domain/models/albaran_models.py`) no tiene partida; solo
+  `LineaAlbaran.codigo_imputacion`. Ningún código de sv2, sv3 ni sv6 copia
+  `codigo_imputacion` entre líneas (grep: sv3 solo normaliza y compara
+  proveedores en `albaran_normalizer.py` / `albaran_confidence_service.py`).
+- **La propagación ya la hace IA1 por prompt** (`config/prompts.yaml`,
+  `albaran_factura_es.task`, «## Código de imputación manuscrito», ~81-97):
+  asociación por cercanía/raya/flecha/llave; «si solo hay un código claro en
+  todo el documento, se aplica a todas las líneas»; «si no puede asociarse
+  con claridad, devuelve null»; márgenes superior/inferior aplican a todo;
+  «varios sin relación clara ⇒ el primero a todo». Coincide con lo que dice
+  el humano. Los cuatro prompts de fase 2 incrustan el de fase 1
+  (`{prompt_fase_1}`, líneas 263/487/671/809), así que IA2 ve las mismas
+  reglas; los de familia piden además el mismo código para base y
+  complementos.
+- **El hueco** (confirmado por el humano): nada dice qué hacer con la línea
+  sin partida cuando otras la tienen, y la regla del «código único» empuja a
+  copiárselo aunque esté escrito junto a una sola línea.
+- `config/prompts/svc2_prompt_albaran_factura_es.yaml` no lo carga ningún
+  código (settings apunta a `config/prompts.yaml`): no se toca.
+- **sv6 confirma el otro lado**: `partida_matcher.py:108` da a la línea sin
+  partida la de la línea de contrato casada (`ia_match_trusted`). Eso lo
+  corrige R1 (ya en v1).
+
+### Hallazgo (b): dónde vive la regla — opción elegida
+
+**Solo en el prompt de IA1, con dos frases** (design.md, «sv2»): condicionar
+el código único a que no esté junto a una línea concreta, y decir que la línea
+sin partida marcada sale null sin copiarle la de otra («irá a almacén»).
+Descartado un campo `cabecera.codigo_imputacion` con propagación determinista
+en sv3/sv6: cambia el contrato sv2 → sv3 (`extraction_models.py` estricto,
+columna en el merge) → sv6, y seguiría necesitando saber si hay marcas por
+línea, que es leer el papel (espíritu de ARCHITECTURE regla 14). Resultado:
+**sin DDL, sin cambio de contrato, sin sv3**.
+
+### Qué cambia en la spec
+
+- `servicios`: + `sv2-api` (queda sv2, sv6, sv4). Descripción de la ficha con
+  la decisión. Sigue `spec_ready`.
+- requirements (150/150): cabecera con la regla literal y la lectura;
+  sección sv2 con **R25** (línea sin partida marcada ⇒ null, sin copiar),
+  **R26** (regresión de las reglas que IA1 ya cumple), **R27** (fase 2 la
+  recibe por `{prompt_fase_1}`); **R28** en sv6 (una hermana con partida no
+  se la pasa). Numeración v1 intacta. Vocabulario, R22 y R24 condensados.
+- design (249/250): contexto de sv2, sección «dónde vive la regla», sección
+  sv2 con el texto exacto de las dos frases, riesgo de conflicto con F-048
+  (su rama añade texto a `prompts.yaml` en ~60 y ~144, fuera de la sección),
+  evals también por sv2, docs (+ `sv2.md`), decisiones. Contexto de Sigrid y
+  sv4 resumido y enlazado a §1–§3 de este informe.
+- tasks (25): **T7** tests RED del prompt (R25/R27 en rojo, R26 verde) y
+  **T8** el cambio del YAML; R28 en T5 (guarda, verde tras T4; su RED es
+  contra `dev`); **T23** MANUAL con LLM real sobre tres albaranes (partida de
+  cabecera, partida junto a una de varias líneas, sin partida); docs, mutación
+  y evals ajustados. sv4 renumerado T9–T18.
+- **Despliegue sv6 → sv4 → sv2**; cualquier orden es seguro, sv2 el último
+  porque mueve las métricas de evals. Rollback de sv2: imagen anterior (el
+  prompt no tiene interruptor).
+
+### Decisiones
+
+- **D1, D3, D4, D5, D7, D8**: recomendación aceptada por omisión
+  (2026-09-29), **a confirmar en la PARADA 1**.
+- **D2**: la parte «a qué líneas» la resuelve el humano (aplicada en sv2 y
+  sv6); la parte «todas las familias, revisión solo en destinadas», aceptada
+  por omisión, a confirmar.
+
+### Preguntas que quedan para el humano
+
+1. **D6 (explícita)**: ¿cómo se da de alta hoy el albarán aprobado en
+   Sigrid? ¿Lo teclea administración a mano leyendo el portal? De eso depende
+   si el almacén llega a Sigrid ya (a mano) o solo con F-013 + sigrid-api.
+2. **Confirmar la lectura** con un ejemplo: albarán de tres líneas con
+   «03.02» escrito solo junto a la segunda ⇒ la 1 y la 3 en almacén (hoy IA1
+   pondría 03.02 en las tres por la regla del código único).
+3. **D9 (nueva)**: partida en cabecera **y** otra junto a alguna línea.
+   Recomendado: las marcadas llevan la suya y el resto la de cabecera; el
+   prompt no se toca para esto.
+4. El «en general» de la respuesta: ¿hay excepciones conocidas (p. ej.
+   portes o complementos sin marca que deban seguir a su línea base)? Los
+   prompts de familia ya dan a los complementos el código de su base.
+
+### Estado del entorno
+
+`python -m harness.tamano --feature F-051` y `python harness/backlog.py`
+ejecutados: «BACKLOG.md regenerado» y «PUERTA TAMAÑO: F-051 dentro de los topes (requirements 150/150, design 249/250)». **No se ha ejecutado `bash harness/init.sh` ni
+ninguna suite** por instrucción del líder (otra review corriendo en la
+máquina; dos suites a la vez tumban Windows). Cambio solo de spec, ficha y
+progress: ningún fichero de código tocado.

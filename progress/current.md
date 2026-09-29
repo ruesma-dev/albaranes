@@ -11,9 +11,13 @@
 `feature/F-051-almacen-por-linea`): `specs/F-051-almacen-por-linea/`, estado
 `spec_ready`. Informe con hallazgos y decisiones en `progress/spec_F-051.md`.
 Hallazgo principal: **nadie crea hoy el albarán en Sigrid** (q-feedback sin
-consumidor, F-013) y sigrid-api no sabe dejar una línea sin partida. **El
-humano tiene que cerrar D1–D8** (final de `design.md`) antes de implementar,
-y decidir qué hacer con F-007 (propuesta: re-alcance a candidatas + memoria).
+consumidor, F-013) y sigrid-api no sabe dejar una línea sin partida.
+**Spec v2 (2026-09-29)** con la respuesta del humano sobre a qué líneas va la
+partida: entra **sv2** solo con dos frases del prompt de IA1 (línea sin
+partida marcada ⇒ null); sin campo de cabecera ni sv3. D1, D3, D4, D5, D7 y
+D8 aceptadas por omisión, **a confirmar en la PARADA 1**; **D6 abierta**
+(¿cómo se da hoy de alta el albarán en Sigrid?); **D9 nueva** (caso mixto
+documento + línea). Detalle en `progress/spec_F-051.md` §v2.
 
 **F-045 · CAPA 1 IMPLEMENTADA** (2026-09-16, rama
 `feature/F-045-banco-evals-revision-manual`, 22 commits de tarea). Informe
