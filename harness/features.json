@@ -527,6 +527,21 @@
       "sdd": true,
       "rigor": "critico",
       "priority": 3
+    },
+    {
+      "id": "F-051",
+      "title": "Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas»",
+      "description": "PETICION DEL HUMANO (2026-09-29), literal: «si no hay partida se deje en blanco (almacen en el portal) o que se pueda siempre elegir almacen en la lista de partidas. si hay almacen en la lista en sigrid se crea el albaran sin partida en esa linea (el almacen es por linea, boton de asignar almacen a todas las lineas)».\n\nLO QUE PIDE: (1) una linea SIN partida no se rellena con una inventada: queda en blanco y el portal (sv4) la muestra como ALMACEN; (2) en la lista de partidas de cada linea de sv4 la opcion ALMACEN esta SIEMPRE disponible, sea cual sea la obra o el contrato; (3) el almacen es POR LINEA, no por albaran; (4) un boton en la ficha asigna almacen a TODAS las lineas de una vez; (5) una linea en almacen llega a Sigrid SIN partida: el albaran se crea en Sigrid con esa linea sin imputar.\n\nA INVESTIGAR EN LA SPEC: como llega hoy un albaran aprobado a Sigrid (sigrid-api es SOLO LECTURA: quien crea el albaran en Sigrid y con que datos); como se representa hoy la partida por linea en el merge y en sv4; que hacen hoy sv5/sv6 con una linea sin partida (valoracion, casa_con_contrato, revision); y como encaja con la partida ALM de F-007 (spec_ready, que proponia ALM por defecto para suministros) y con F-049 (elegir la partida de la lista de la obra). Si F-007 queda superada o absorbida, decirlo.\n\nRELACIONADAS: F-007, F-049, F-021, F-048.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 2,
+      "servicios": [
+        "sv4-front",
+        "sv3-persistencia",
+        "sv6-valoracion-persist"
+      ],
+      "branch": "feature/F-051-almacen-por-linea"
     }
   ]
 }
