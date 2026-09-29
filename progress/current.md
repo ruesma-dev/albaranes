@@ -7,34 +7,13 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
-**F-048 · TODO HECHO Y REVISADO SALVO EL BLOQUE G (del humano)** (2026-09-25). Rama
-`feature/F-048-correo-contexto-ia1`. Bloques A, B, C1, C2, D, D bis, E y F aprobados en sus reviews
-(`progress/review_F-048_bloque_*.md`); review final `progress/review_F-048_final.md` (pasada 2). Informe de
-implementación: `progress/impl_F-048.md` y sus ficheros de detalle. Decisiones del 23-sep aplicadas: solo OBRA
-del correo; validación contra TODAS las obras; código fuera de la lista = sin código (manda la IA, sin
-revisión); normalizar todo; discrepancia y correo ambiguo a revisión con `correo_obra_distinta_papel` /
-`correo_obra_ambigua`.
+**F-048 · CERRADA (`done`, 2026-09-29).** Resumen en `progress/history.md`. **Pendiente del humano: merge a
+`dev`, push (este repo y `azure-apps`, que no tiene remoto) y despliegue sv3 → sv2 → sv1 → sv4 con `-Only`
+uno a uno** (regla 15 de `docs/ARCHITECTURE.md`).
 
-**Decisiones del humano del 2026-09-24:**
-(a) **T40 aceptada** con la pasada `completa` SIN correo (`progress/evals_F-048.md` a `fac6b10`, ignorado por git,
-ROJO por defectos previos del banco) más el comparador de obra (`progress/comparar_obra_F-048.md`: la rama deduce
-bien la obra en residuos donde `dev` daba null; `progress/analisis_evals_F-048.md` §6). Sustituye el
-«VEREDICTO: VERDE» de la puerta de rutas sensibles.
-(b) Aceptados los 3 equivalentes de la 1.ª campaña de T34 (mutantes 9, 22 y 23).
-(c) De F-047 se trae SOLO `evals/inyeccion.py` (T30). `GestoRevisor` es código de F-047: sus 6 supervivientes
-de la 2.ª campaña se justifican en bloque (aceptado por el humano el 2026-09-25).
-
-**Cerrado:** bloque E (T29–T31); 2.ª campaña de mutación (`14cee8a`, 410 mutantes: 401 muertos tras el análisis,
-9 justificados, 0 sin justificar; `progress/impl_F-048_T34b_supervivientes.md`); runner de evals con fallos
-aislados (`ERROR` nunca deja VERDE). Lo pendiente para F-047 está anotado abajo («Aparcada: F-047»).
-
-**Solo falta el bloque G, todo del humano** (comandos exactos en `specs/F-048-correo-contexto-ia1/tasks.md`):
-- T36: `cd services\albaranes-email; .\.venv\Scripts\python.exe capturar_correo.py --message-id <ID> --caso <CASO>` ×3 (directo, `RE:`, `RV:`), Graph solo lectura.
-- T37–T39: pipeline LOCAL (`infra\local\arrancar_local.ps1 -SinSv1`, `seed_input.py`, `encolar_extraccion.py <DOC_ID> --correo ...`), el SELECT de T37, «Volver a buscar» (T38) y reinyección sin correo (T39).
-- T41: `bash harness/init.sh`.
-Después: review incremental del bloque G y cierre. Despliegue **sv3 → sv2 → sv1** con `-Only` uno a uno (regla
-15 de `docs/ARCHITECTURE.md`; `deploy.ps1` sin `-Only` actualiza sv2 antes que sv3 y el hueco manda documentos a
-poison). `azure-apps` tiene dos commits locales sin push.
+**En spec (worktrees aparte, ramas desde `dev`):** F-051 almacén por línea (`../albaranes-F-051`, `spec_ready`
+v2, preguntas abiertas en `progress/spec_F-051.md` de esa rama) y F-052 proveedores truncados en sv3
+(`../albaranes-F-052`, prioridad 1, spec a medias: `specs/F-052-*` sin commitear en ese worktree).
 
 **F-045 · CAPA 1 IMPLEMENTADA** (2026-09-16, rama
 `feature/F-045-banco-evals-revision-manual`, 22 commits de tarea). Informe

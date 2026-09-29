@@ -5,6 +5,24 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+
+## F-048 · El texto del correo como contexto de IA1 (cerrada 2026-09-29)
+
+Rama `feature/F-048-correo-contexto-ia1`. sv1 lee asunto y `uniqueBody` (solo GET) y lo guarda en el blob
+lateral `input/{id}.correo.json` (`MensajeExtraccion.correo_blob`); sv2 lo pasa a IA1 y a IA2 como DATO, IA1 lee la
+obra del correo y la del papel por separado y un resolver puro cruza con la tabla de D5 (todas las obras con
+contrato, normalización D9): manda el correo si es obra de la lista; a revisión solo discrepancia
+(`correo_obra_distinta_papel`) y correo ambiguo (`correo_obra_ambigua`, prefijo elegido para que la red de obra de
+F-002 no los borre); sv3 lo persiste en `raw_extraction_json`; sv4 pinta el aviso. El cuerpo no llega a ningún log
+(tres fugas cerradas: logger de IA, respuesta de OpenAI, `retry_policy`). Partida del correo: fuera de alcance.
+Verificado: reviews por bloques A–F aprobadas; dos campañas de mutación (410 mutantes, 0 sin justificar; 3
+equivalentes y 6 de `GestoRevisor` aceptados por el humano); cobertura 98,3 %; T40 aceptada por el humano con la
+pasada `completa` sin correo y el comparador de obra (la rama deduce bien la obra donde `dev` daba null); T36–T39
+verificadas por el humano con correos reales al buzón de dev y sv1 local. De paso: runner de evals con fallos
+aislados (`ERROR` nunca deja VERDE), `evals/comparar_obra.py`, y solo `evals/inyeccion.py` traída de F-047 (su
+cableado pendiente está anotado en la spec de F-047). Informes: `progress/impl_F-048*.md`,
+`progress/review_F-048_*.md`, `progress/analisis_evals_F-048.md`.
+
 ## F-001 — Test de estructura del monorepo (done, 2026-08-13)
 
 - Rama `feature/F-001-test-estructura` (pendiente de merge a `dev` por el
