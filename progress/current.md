@@ -7,6 +7,14 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
+**F-051 · SPEC ESCRITA** (2026-09-29, worktree `albaranes-F-051`, rama
+`feature/F-051-almacen-por-linea`): `specs/F-051-almacen-por-linea/`, estado
+`spec_ready`. Informe con hallazgos y decisiones en `progress/spec_F-051.md`.
+Hallazgo principal: **nadie crea hoy el albarán en Sigrid** (q-feedback sin
+consumidor, F-013) y sigrid-api no sabe dejar una línea sin partida. **El
+humano tiene que cerrar D1–D8** (final de `design.md`) antes de implementar,
+y decidir qué hacer con F-007 (propuesta: re-alcance a candidatas + memoria).
+
 **F-045 · CAPA 1 IMPLEMENTADA** (2026-09-16, rama
 `feature/F-045-banco-evals-revision-manual`, 22 commits de tarea). Informe
 completo en `progress/impl_F-045.md`, importación en

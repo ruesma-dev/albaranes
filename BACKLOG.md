@@ -9,7 +9,7 @@ Resumen: **48 features**, 34 abiertas, 14 terminadas.
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-051 | Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas» | 2 | pendiente | critico | `feature/F-051-almacen-por-linea` |
+| F-051 | Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas» | 2 | spec lista | critico | `feature/F-051-almacen-por-linea` |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -67,7 +67,7 @@ Resumen: **48 features**, 34 abiertas, 14 terminadas.
 
 ### F-051 · Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas»
 
-estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-051-almacen-por-linea`
+estado **spec lista** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-051-almacen-por-linea`
 
 PETICION DEL HUMANO (2026-09-29), literal: «si no hay partida se deje en blanco (almacen en el portal) o que se pueda siempre elegir almacen en la lista de partidas. si hay almacen en la lista en sigrid se crea el albaran sin partida en esa linea (el almacen es por linea, boton de asignar almacen a todas las lineas)».
 
@@ -76,6 +76,8 @@ LO QUE PIDE: (1) una linea SIN partida no se rellena con una inventada: queda en
 A INVESTIGAR EN LA SPEC: como llega hoy un albaran aprobado a Sigrid (sigrid-api es SOLO LECTURA: quien crea el albaran en Sigrid y con que datos); como se representa hoy la partida por linea en el merge y en sv4; que hacen hoy sv5/sv6 con una linea sin partida (valoracion, casa_con_contrato, revision); y como encaja con la partida ALM de F-007 (spec_ready, que proponia ALM por defecto para suministros) y con F-049 (elegir la partida de la lista de la obra). Si F-007 queda superada o absorbida, decirlo.
 
 RELACIONADAS: F-007, F-049, F-021, F-048.
+
+SPEC (2026-09-29, specs/F-051-almacen-por-linea/, informe en progress/spec_F-051.md): HALLAZGO PRINCIPAL: nadie del ecosistema crea hoy el albaran en Sigrid; aprobar publica q-feedback (solo document_id) y no hay consumidor (F-013 pending), y sigrid-api no sabe dejar una linea sin partida (sigrid/albaran copia la del contrato; albaran-directo con paride nulo hereda la de la ultima dcapro del producto). Diseno: almacen = codigo_partida_final NULL + marca en partida_action (almacen_sin_partida la pone sv6 cuando el albaran no trae partida, en vez de copiar la del contrato casado; almacen_elegido la pone sv4), sin DDL y sin tocar comun. sv4: estado partida/almacen/sin_partida, opcion fija «Almacen (sin partida)» primera en el combo de partida, boton «Almacen a todas las lineas» con confirmacion y deshacer, la fila Sigrid sigue Sigrid. Revision solo para familias destinadas sin partida. Interruptor ALMACEN_SIN_PARTIDA_ENABLED. Absorbe R1-R7 y R15 de F-007 (propuesto re-alcance). Ocho decisiones abiertas D1-D8 en design.md; sv3 sale de servicios (no se toca).
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 
