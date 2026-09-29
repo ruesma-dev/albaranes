@@ -20,7 +20,7 @@ from typing import Any
 
 import httpx
 
-from domain.ports.obras_activas_provider import ObraActiva
+from domain.ports.obras_activas_provider import CatalogoObras, ObraActiva
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +130,13 @@ class SigridApiObrasClient:
             self._max_rows, self._cod_min,
         )
 
-    def obtener(self) -> list[ObraActiva] | None:
+    def obtener_catalogo(self) -> CatalogoObras | None:
+        """UNA consulta: TODAS las obras con contrato y, de ellas, las activas.
+
+        (F-048, D5) La consulta ya traia todas las obras y el corte de
+        «activa» se aplica aqui en Python: basta con no tirar la lista
+        completa. ``None`` si falla o no llega ninguna obra.
+        """
         try:
             columnas, filas = self._consultar()
         except Exception:  # noqa: BLE001 — best-effort: el prompt sigue
@@ -152,7 +158,23 @@ class SigridApiObrasClient:
             "(cod_min=%s).",
             _LOG_PREFIX, len(filas), len(obras), len(activas), self._cod_min,
         )
-        return activas or None
+        if not obras:
+            return None
+        return CatalogoObras(activas=tuple(activas), todas=tuple(obras))
+
+    def obtener(self) -> list[ObraActiva] | None:
+        """Las obras ACTIVAS, como siempre (F-002); ``None`` si no hay ninguna."""
+        catalogo = self.obtener_catalogo()
+        if catalogo is None:
+            return None
+        return list(catalogo.activas) or None
+
+    def obtener_todas(self) -> list[ObraActiva] | None:
+        """TODAS las obras con contrato, activas o no (F-048, R18)."""
+        catalogo = self.obtener_catalogo()
+        if catalogo is None:
+            return None
+        return list(catalogo.todas or ())
 
     def _consultar(self) -> tuple[list[str], list[list[Any]]]:
         url = f"{self._base_url}/api/sql/read"

@@ -1754,6 +1754,13 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
     font-size: .8rem;
     line-height: 1.35;
 }
+
+/* F-048 (sep 2026): la cabecera cambio de obra despues de extraer.
+   El primer aviso lo dice; se marca en negrita para que no se lea como
+   uno mas. El resto del bloque queda como lo que paso al extraer. */
+.origen-datos.obra-cambiada .origen-aviso:first-of-type {
+    font-weight: 600;
+}
 .linea-razones {
     display: inline-block;
     margin-left: 6px;

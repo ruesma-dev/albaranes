@@ -7,6 +7,7 @@ from pydantic import Field
 from ruesma_comun.contratos import ClasificacionAlbaran
 
 from domain.models.contexto_linea import ContextoLinea
+from domain.models.lectura_correo import LecturaCorreo
 from domain.models.schema_base import StrictSchemaModel
 
 
@@ -67,3 +68,11 @@ class DocumentoAlbaran(StrictSchemaModel):
     # de StrictSchemaModel no estorba porque el campo esta declarado.
     # -----------------------------------------------------------------
     clasificacion: Optional[ClasificacionAlbaran] = None
+
+    # -----------------------------------------------------------------
+    # (F-048, R15) Lo que IA1 lee en el CORREO: los codigos de obra y el
+    # fragmento donde los lee. La obra del PAPEL sigue en
+    # `cabecera.obra_codigo`; las dos lecturas las cruza sv2 (D3). Default
+    # `None`: un envelope sin el bloque valida como antes (R17).
+    # -----------------------------------------------------------------
+    lectura_correo: LecturaCorreo | None = None

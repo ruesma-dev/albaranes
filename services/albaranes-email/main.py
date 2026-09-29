@@ -70,6 +70,7 @@ def main() -> int:
         mailbox=mailbox,
         orchestrator=orchestrator,
         pdf_splitter=PdfPageSplitter(),
+        correo_max_caracteres=settings.correo_max_caracteres,
     ).run_forever(settings)
     return 0
 

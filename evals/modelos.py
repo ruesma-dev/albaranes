@@ -36,6 +36,12 @@ NO_EVALUABLE = "NO_EVALUABLE"
 #: evaluarlo» (por ejemplo, falta el fichero del albarán, que no se versiona).
 OMITIDO = "OMITIDO"
 
+#: Estado de un caso que se intentó evaluar y reventó: el LLM devolvió algo
+#: inválido, el subproceso murió o no devolvió el caso. NO es un `OMITIDO`:
+#: un empeoramiento real (un prompt que rompe la salida) no puede quedar
+#: escondido, así que deja la fase como mínimo en `NO_EVALUABLE` (CR-E2).
+ERROR = "ERROR"
+
 Severidad = Literal["fallo", "aviso"]
 
 
@@ -118,7 +124,7 @@ class Discrepancia:
 
 @dataclass
 class ResultadoCaso:
-    """Veredicto de un caso: VERDE, ROJO u OMITIDO, con sus discrepancias."""
+    """Veredicto de un caso: VERDE, ROJO, OMITIDO o ERROR, con sus discrepancias."""
 
     caso_id: str
     fase: str
@@ -147,6 +153,11 @@ class ResultadoCaso:
     def omitido(cls, caso_id: str, fase: str, motivo: str) -> ResultadoCaso:
         return cls(caso_id=caso_id, fase=fase, estado=OMITIDO, motivo=motivo)
 
+    @classmethod
+    def con_error(cls, caso_id: str, fase: str, motivo: str) -> ResultadoCaso:
+        """El caso se intentó evaluar y reventó; `motivo` sin valores (R31)."""
+        return cls(caso_id=caso_id, fase=fase, estado=ERROR, motivo=motivo)
+
 
 @dataclass
 class ResultadoFase:
@@ -159,18 +170,26 @@ class ResultadoFase:
 
     @property
     def evaluados(self) -> list[ResultadoCaso]:
-        return [c for c in self.casos if c.estado != OMITIDO]
+        return [c for c in self.casos if c.estado not in (OMITIDO, ERROR)]
 
     @property
     def omitidos(self) -> list[ResultadoCaso]:
         return [c for c in self.casos if c.estado == OMITIDO]
 
+    @property
+    def con_error(self) -> list[ResultadoCaso]:
+        return [c for c in self.casos if c.estado == ERROR]
+
     def veredicto(self) -> str:
-        """Sin casos evaluados no hay evidencia: NO_EVALUABLE, nunca VERDE."""
-        if not self.evaluados:
-            return NO_EVALUABLE
+        """Sin casos evaluados no hay evidencia: NO_EVALUABLE, nunca VERDE.
+
+        Un caso con ERROR tampoco deja salir VERDE (CR-E2); ROJO sigue
+        mandando: un fallo detectado no se disfraza de «no evaluable».
+        """
         if any(c.estado == ROJO for c in self.evaluados):
             return ROJO
+        if not self.evaluados or self.con_error:
+            return NO_EVALUABLE
         return VERDE
 
 
