@@ -5,18 +5,21 @@
 > bloques de F-036, sus dos ciclos de review y los hallazgos— está en
 > `progress/history.md`. Aquí solo queda lo vivo.
 
-## F-052 · spec escrita (2026-09-29, `spec_ready`)
+## F-052 · spec v2 escrita (2026-09-29, `spec_ready`)
 
 Spec en `specs/F-052-proveedores-truncados/`, informe en
-`progress/spec_F-052.md`. Rama `feature/F-052-proveedores-truncados`
-(worktree `albaranes-F-052`). **Falta la PARADA 1**: el humano valida las
-decisiones D1–D7 del informe. Recomendaciones: D1 paginar, D2 SQL en
-`ruesma_comun`, D3 5.000 × 20, D4 opción B (rastro de búsqueda con 4
-columnas nuevas en sv3), D5 sin backfill, D6 colindantes fuera y D7 aceptar
-menos deducciones por familia. Verificaciones MANUAL (humano) previstas:
-T20 (obra 0691 contra sigrid-api, solo lectura), T21 (SS-0026122 en local)
-y T22 (SELECT de saneamiento tras desplegar). No se ha ejecutado `init.sh`
-ni ninguna suite: había una review en curso.
+`progress/spec_F-052.md` (sección «v2 (2026-09-29)», que sustituye a la v1).
+Rama `feature/F-052-proveedores-truncados` (worktree `albaranes-F-052`).
+Rehecha tras `progress/explore_F-052_grano.md`: el problema era el grano. La
+consulta de proveedores de la obra pasa a **una consulta agregada** (`WITH` +
+`FOR XML PATH`, una fila por proveedor, máx. 163) **sin paginar**; solo
+`header_and_lines` y `search_proveedores` (3.543 proveedores, hoy cortada a
+1.000) se paginan. **Falta la PARADA 1**: el humano valida D1–D7 de la v2
+(D1 agregada, D2 cada SQL la suya y solo `lectura.py` compartido, D3 paginar
+las dos con 1.000 y 5.000 por página, D4 B, D5 sin backfill, D6 fuera, D7
+efecto acotado a 74 obras y en ambos sentidos). MANUAL (humano): T20 (0691),
+T21 (equivalencia 0691 y 0696), T22 (SS-0026122), T23 (saneamiento). No se ha
+ejecutado `init.sh` ni ninguna suite.
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 

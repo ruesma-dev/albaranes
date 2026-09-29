@@ -3,6 +3,9 @@
 
 Fecha: 2026-09-29 · Rama `feature/F-052-proveedores-truncados` (worktree
 `albaranes-F-052`) · Estado: **spec_ready** · Rigor: **critico**.
+
+> **Vigente: la sección «v2 (2026-09-29)» del final.** Lo de arriba es la v1:
+> se conserva como rastro, pero D1, D2, D3 y D7 quedan sustituidas.
 Spec: `specs/F-052-proveedores-truncados/` (requirements 150/150, design
 250/250 según `python -m harness.tamano --feature F-052`; tasks: 23 tareas).
 
@@ -120,3 +123,150 @@ habrá **menos** proveedores deducidos (`det_familia_obra`) y más avisos «no
 deducible» en las obras grandes, porque el margen sobre el segundo se
 estrecha. Es conservador, pero sube la carga del revisor. Hay que
 confirmarlo como aceptable.
+
+## v2 (2026-09-29)
+
+Rehecha a partir de `progress/explore_F-052_grano.md` (medición de solo
+lectura contra sigrid-api). El humano objetó que una obra tiene 100–200
+proveedores y no debería hacer falta pedir miles de filas. Tenía razón: **el
+problema era el grano de la consulta, no el tamaño de la obra**. Topes:
+requirements 150/150, design 250/250 (`python -m harness.tamano --feature
+F-052`); tasks: 24 tareas, una por línea. No se ha ejecutado `init.sh` ni
+ninguna suite.
+
+### Qué cambia
+
+1. **`fetch_contratos_resumen_por_obra` = una consulta agregada** (`WITH` +
+   `FOR XML PATH`, una fila por proveedor; design §4), **sin paginar**, una
+   llamada, `NO_TOLERA`. En las 74 obras de más de 1.000 líneas da 0
+   diferencias de familias, máx. 163 filas, `truncated=false`, ≤ 5 s y 133 KB.
+   Se añaden dos `ORDER BY` internos para que texto y códigos sean
+   deterministas; la verificación manual T21 revalida la medición con ellos.
+   Si falla (incluido el error de XML), se trata como hoy: la red por nombre
+   dice «no se pudo consultar» (R6, R15) y el paso obra + familia cae al
+   fallback global. La alternativa sin XML (Q1 + Q2 de la exploración) queda
+   **documentada y no se implementa**. Un test con el modo `error_xml` del
+   doble fija que ese error acaba en «consulta fallida» y no en «nadie casa».
+2. **Los candidatos salen de la misma consulta.** La v1 separaba la lista
+   `DISTINCT` y el texto para que los candidatos no dependieran del texto
+   paginado. Con la agregada, la lista es completa por construcción: el puerto
+   `ProveedorReverseLookupClient` no cambia y el resolver sigue llamando a
+   `fetch_contratos_resumen_por_obra` en sus dos caminos.
+3. **Equivalencia**: `test_f052_equivalencia_familias.py` (R4, T6) compara por
+   CIF las familias del texto agregado con las del texto por líneas sobre el
+   mismo fixture. Fija la semántica en Python; que la SQL real la cumple lo
+   comprueba T21 (MANUAL, solo lectura, 0691 y 0696).
+4. **Paginan solo dos consultas**: `header_and_lines` (CIF + obra; alimenta la
+   valoración, la mayor pareja tiene 989 líneas) y `search_proveedores`.
+   **Hallazgo nuevo**: medido hoy, `search_proveedores` devuelve **3.543**
+   proveedores (`SELECT COUNT(*)` sobre su `DISTINCT`, solo lectura, script
+   `cuenta_global.py` del scratchpad), así que el fallback global por nombre
+   **ya se corta a 1.000 en producción** sin que nadie lo vea.
+5. **Sale de la v1**: `ruesma_comun.sigrid.consultas.py` (la SQL compartida
+   con sv4), `config/settings.py` y el paso por las raíces de composición, el
+   cambio de puerto y el tope de páginas del texto de familia (antiguo R4).
+6. **Saneamiento**: las obras afectadas ya se conocen, son las 74. El SELECT
+   de sospechosos de la BBDD `albaranes` pasa al Anexo de este informe para
+   que el design quepa en su tope.
+
+### Script de la exploración (para T14)
+
+Sigue en el scratchpad de la sesión:
+`C:\Users\pgris\AppData\Local\Temp\claude\C--Users-pgris-PycharmProjects-albaranes\f36c80f5-0cba-463e-95e9-161d51e3f583\scratchpad\`
+(`grano.py` es el helper `q()` y `familias_de_texto` real; `agg.py`, la
+comparación agregada frente a la consulta por líneas sin tope; `obras.py`, las
+obras de más de 1.000 líneas). No se versiona: `grano.py` lee el `.env` a mano.
+Si el scratchpad ya no existe, T14 lo rehace así:
+1. Construye el cliente de sv3 desde su `.env`, como en `composition.py`.
+2. Para cada `--obra`, lanza la consulta por líneas de hoy con
+   `max_rows=20000` y agrupa por CIF los tres campos no vacíos en orden de
+   llegada.
+3. Lanza la agregada.
+4. Por CIF, calcula `familias_de_texto` de los dos textos y la diferencia de
+   conjuntos.
+5. Compara los CIF de la agregada con los de `fetch_proveedores_por_obra`.
+6. Registra filas, `truncated`, bytes y segundos.
+
+### Decisiones para el humano (v2)
+
+**D1 · Cómo obtener proveedores y texto de familia.** Recomiendo la
+**consulta agregada en SQL**, sin paginar: 0 diferencias medidas en las 74
+obras y una llamada de ≤ 163 filas. Alternativas:
+- Paginar (v1): funciona, pero trae hasta 5.558 filas para 163 proveedores.
+- Q1 + Q2 sin XML: elimina el riesgo de XML, pero Q2 vuelve a necesitar
+  paginar. Queda documentada como salida si ese riesgo aparece.
+
+El motivo con que la v1 descartó `FOR XML PATH` era falso: con el `CAST`
+funciona a través de sigrid-api y la lista blanca no lo rechaza. Riesgos que
+se aceptan (design §10): un carácter de control en una descripción, que
+sigrid-api o su validador dejen de aceptar `WITH` o `FOR XML`, y 5 s en la
+obra más lenta. Los tres degradan igual que hoy, de forma visible y sin
+elegir mal.
+
+**D2 · SQL de proveedores de la obra compartida en `ruesma_comun`.**
+Recomiendo **no compartirla**: cada servicio se queda con la suya.
+- El selector de sv4 necesita `cif, raz`: ≤ 193 filas y unos pocos KB.
+- sv3 necesita además el texto de familia: hasta 133 KB por obra.
+- Compartir obligaría a sv4 a cargar un texto que no usa, o a sv3 a hacer dos
+  llamadas, que es lo que la agregada evita.
+
+Lo que tienen en común es **la definición de candidato** (contratos `emp=1`
+de la obra, por `con_obr.cod`). Eso se protege con T21, que exige el mismo
+conjunto de CIF en las dos, y no con código compartido. Sí se comparte
+`ruesma_comun.sigrid.lectura` (truncado y paginación), que usan sv3 y sv4
+(R28). Deuda anotada: sv3 tiene además su propio `fetch_proveedores_por_obra`
+(grounding), con la misma semántica que el de sv4. Solo recibe su política
+aquí; unificarlo iría con D6.
+
+**D3 · Paginación de `header_and_lines` y de `search_proveedores`.**
+Recomiendo **paginar las dos**, con 1.000 y 5.000 filas por página y un tope
+de 20 páginas. Van como kwargs con valor por defecto del cliente, sin
+variables de entorno.
+- `header_and_lines`: paginar es mejor que solo detectar el truncado y
+  avisar. Detectar convertiría un contrato grande en rastro `error` sin
+  contratos, y el albarán se quedaría sin valorar. Paginar no cuesta ninguna
+  llamada extra en el caso normal (989 < 1.000).
+- `search_proveedores`: 3.543 hoy. Cabe en una página de 5.000 y crece sin
+  precipicio.
+
+Alternativa mínima, si se prefiere no paginar: `NO_TOLERA` con
+`max_rows=5000` en las dos. Falla de forma visible, pero vuelve a poner un
+precipicio.
+
+**D4, D5 y D6** se mantienen como en la v1. En D5 la lista de obras ya se
+conoce (74) y el script de T14 la recalcula.
+
+**D7 · Efecto en la deducción por familia (cambia).** Fuera de las 74 obras
+grandes **no hay ningún cambio**: la lista ya estaba completa y el texto
+agregado da las mismas familias (R4, medido). Dentro de esas 74, hoy el
+resolver ve solo lo que cabe en las primeras 1.000 filas, en un orden que la
+SQL no fija, así que su resultado ya era en parte aleatorio. Con la lista
+completa, el efecto va **en los dos sentidos**:
+- **Menos deducciones** cuando aparece un competidor de la misma familia que
+  estrecha el margen.
+- **Más deducciones, y correctas**, cuando el bueno faltaba o tenía el texto
+  incompleto.
+
+La regla del margen sigue siendo conservadora: ante la duda, el albarán va a
+revisión. Pido aceptarlo sin medir el saldo, que solo se ve tras desplegar
+(T23).
+
+### Anexo · SELECT de sospechosos (BBDD `albaranes`, solo lectura; T23)
+
+`:obras_grandes` = la salida de `--listar-obras-grandes` (74 obras el 2026-09-29).
+
+```sql
+SELECT d.id, d.source_filename, d.numero_albaran, d.obra_codigo,
+       d.proveedor_cif, d.proveedor_cif_origen, d.approved, d.created_at_utc,
+       CASE WHEN d.review_notes ILIKE '%ningun proveedor con contrato en la obra casa%' THEN 'nadie_casa'
+            WHEN d.proveedor_cif_origen = 'det_familia_obra' THEN 'familia_obra'
+            WHEN d.review_notes ILIKE '%sin CIF: no deducible con seguridad%' THEN 'sin_cif_ambiguo'
+       END AS sospecha
+FROM albaran_documents_merge d
+WHERE d.is_active
+  AND ( d.review_notes ILIKE '%ningun proveedor con contrato en la obra casa%'
+     OR ( d.obra_codigo = ANY(:obras_grandes)
+          AND ( d.proveedor_cif_origen = 'det_familia_obra'
+             OR d.review_notes ILIKE '%sin CIF: no deducible con seguridad%')))
+ORDER BY sospecha, d.created_at_utc;
+```
