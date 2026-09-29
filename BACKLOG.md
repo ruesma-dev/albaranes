@@ -3,12 +3,13 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **47 features**, 33 abiertas, 14 terminadas.
+Resumen: **48 features**, 34 abiertas, 14 terminadas.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
+| F-052 | sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF) | 1 | pendiente | critico | `feature/F-052-proveedores-truncados` |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -63,6 +64,20 @@ Resumen: **47 features**, 33 abiertas, 14 terminadas.
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | critico |
 
 ## Detalle
+
+### F-052 · sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF)
+
+estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-052-proveedores-truncados`
+
+PRIORIDAD 1 por decision del humano el 2026-09-29. ORIGEN: albaran SS-0026122 de SALMEDINA (caso RES-007) en la prueba local de F-048. Diagnostico de solo lectura en progress/explore_salmedina_proveedor.md.
+
+DEFECTO 1 (sv3, en produccion desde agosto): SigridApiContratoClient.fetch_contratos_resumen_por_obra devuelve una fila por LINEA de contrato, sin DISTINCT ni ORDER BY, con max_rows=1000 y _post_sql_read ignora truncated. En la obra 0691 hay 2.083 filas de 81 proveedores: sv3 recibe 1.000 al azar y el proveedor bueno entra o no segun la ejecucion (reproducido: 36/41/41 proveedores en tres llamadas). Afecta a 74 obras de Sigrid (casi todas las activas grandes) y a DOS caminos del resolver de cabecera: (a) la propuesta por NOMBRE cuando el CIF leido no existe (F-002) y (b) el paso obra+familia cuando la IA no trae CIF, que puede ELEGIR OTRO PROVEEDOR. Intermitente: por eso ni evals ni pruebas lo destapaban. El selector de sv4 no lo sufre (SELECT DISTINCT prv.cif, prv.raz, max_rows=5000).
+
+DEFECTO 2 (sv4): guardar un CIF u obra nuevos no relanza la busqueda de contrato, y el bloque «No se encontro ningun contrato para CIF X + obra Y» pinta el CIF/obra ACTUALES aunque la busqueda se hizo con los anteriores: afirma algo que nunca se comprobo.
+
+PROPUESTA DEL DIAGNOSTICO: (1) consulta propia de proveedores de la obra (DISTINCT, como sv4) separada de la de lineas; (2) truncated=true => WARNING o error, nunca silencio (la consulta de lineas por CIF+obra ya roza el tope: 989 en la obra 0668); (3) la nota de revision distingue «consulta fallida/sin obra» de «nadie casa»; (4) sv4 rebusca al cambiar CIF u obra, o al menos dice con que se busco; (5) test con un doble de sigrid-api que devuelva truncated=true dejando fuera al bueno.
+
+RELACIONADAS: F-002 (red de proveedor por CIF), F-043, F-047 (RES-007 no cerraba ciclo por esto).
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 
