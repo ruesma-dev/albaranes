@@ -491,3 +491,35 @@ def test_f052_oc1_sin_rastro_y_sin_contratos_marca_buscando(
                      BusquedaContratosVista(estado="sin_rastro"), buscando=True)
     assert 'id="busqueda-buscando"' in bloque
     assert "no consta" in bloque
+
+
+# ------------------------------------------------------------------ #
+# CR-C3 (review del Bloque C, pasada 2): con CIF y obra guardados ambos
+# vacíos no hay nada que sv3 pueda buscar ni sellar (descarta el mensaje
+# sin dejar rastro), así que cada «Guardar» volvería a publicar. No se
+# relanza; el bloque sigue con su aviso R26 / desfase.
+# ------------------------------------------------------------------ #
+@pytest.mark.parametrize("rastro", [None, _rastro()], ids=["sin_rastro", "con_rastro"])
+@pytest.mark.parametrize(("cif", "obra"), [("", ""), (None, None), ("  ", " ")],
+                         ids=["vacios", "none", "blancos"])
+def test_f052_cr_c3_cif_y_obra_vacios_no_relanzan(rastro, cif, obra):
+    repo = _RepositorioFalso(cif=CIF_MAL, obra=OBRA, rastro=rastro)
+    refetch = _RefetchFalso()
+    for _ in range(3):
+        detalle, busqueda = _guardar(repo, refetch, cif=cif, obra=obra)
+        assert busqueda is None
+    assert refetch.llamadas == [], "sin CIF ni obra no hay búsqueda posible"
+    assert len(repo.guardados) == 3, "el guardado sí se hace"
+    assert detalle.busqueda_contratos.estado in (
+        "sin_rastro", ESTADO_BUSQUEDA_DESFASADA,
+    ), "el bloque sigue con su aviso"
+
+
+@pytest.mark.parametrize("rastro", [None, _rastro()], ids=["sin_rastro", "con_rastro"])
+@pytest.mark.parametrize(("cif", "obra"), [("", OBRA), (CIF_BUENO, "")],
+                         ids=["solo_obra", "solo_cif"])
+def test_f052_cr_c3_con_uno_de_los_dos_si_relanza(rastro, cif, obra):
+    repo = _RepositorioFalso(cif=CIF_MAL, obra=OBRA, rastro=rastro)
+    refetch = _RefetchFalso()
+    _guardar(repo, refetch, cif=cif, obra=obra)
+    assert refetch.llamadas == [DOC_ID]

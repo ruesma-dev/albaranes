@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import logging
 
-from application.services.busqueda_contratos import debe_relanzar_busqueda
+from application.services.busqueda_contratos import (
+    debe_relanzar_busqueda,
+    hay_datos_para_buscar,
+)
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
     VIEW_MODE_MERGE,
@@ -122,8 +125,9 @@ class ReviewService:
         con ``force=True``, la misma vía que «Guardar y volver a buscar»).
 
         No relanza: sin ``refetch_client`` (los demás PUT del portal), si
-        el guardado aprueba el albarán o si el rastro coincide con los
-        datos guardados (``debe_relanzar_busqueda``). Un fallo al relanzar
+        el guardado aprueba el albarán, si el rastro coincide con los
+        datos guardados (``debe_relanzar_busqueda``) o si CIF y obra están
+        los dos vacíos (``hay_datos_para_buscar``, CR-C3). Un fallo al relanzar
         no deshace el guardado: vuelve como outcome ``sigrid_error`` para
         que el portal lo diga.
         """
@@ -132,6 +136,7 @@ class ReviewService:
             refetch_client is None
             or payload.approved
             or not debe_relanzar_busqueda(detail.busqueda_contratos)
+            or not hay_datos_para_buscar(detail.proveedor_cif, detail.obra_codigo)
         ):
             return detail, None
         try:

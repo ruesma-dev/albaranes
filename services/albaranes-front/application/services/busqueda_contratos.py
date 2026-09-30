@@ -91,6 +91,17 @@ def debe_relanzar_busqueda(vista: BusquedaContratosVista | None) -> bool:
     )
 
 
+def hay_datos_para_buscar(cif: str | None, obra: str | None) -> bool:
+    """¿Hay algo con lo que sv3 pueda buscar (y sellar el rastro)?
+
+    CR-C3: con CIF y obra ambos vacíos, sv3 descarta el mensaje de
+    re-búsqueda sin sellar nada, así que relanzar al guardar publicaría en
+    cada «Guardar» sin dejar nunca rastro. Basta con que haya uno de los
+    dos: sv3 sella ``sin_datos`` y a partir de ahí rige la regla normal.
+    """
+    return bool((cif or "").strip() or (obra or "").strip())
+
+
 def aviso_de_guardado(
     *,
     aprobado: bool,
