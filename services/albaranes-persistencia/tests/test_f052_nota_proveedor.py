@@ -13,11 +13,14 @@ fake cuando lo que se prueba es el tipo de fallo.
 """
 from __future__ import annotations
 
+import logging
+
 import httpx
 import pytest
 from doble_sigrid_api import CIF_SALMEDINA, RAZ_SALMEDINA, DobleSigridApi
 from ruesma_comun.sigrid import SigridRespuestaTruncada
 
+from application.services import header_resolver_service as modulo_resolver
 from application.services.header_resolver_service import (
     _NOTA_PROVEEDOR_PREFIX,
     HeaderResolverService,
@@ -275,3 +278,83 @@ def test_f052_r19_motivo_y_prefijo_de_siempre(cliente, header):
     assert nota.startswith(
         f"{_NOTA_PROVEEDOR_PREFIX} el CIF leido {CIF_MAL_LEIDO} no existe en Sigrid",
     )
+
+
+# ------------------------------------------------------------------ #
+# R6 · paso obra + familia (T8): consulta fallida → fallback global por
+# nombre, como hoy; un truncado deja además un WARNING con la obra.
+# ------------------------------------------------------------------ #
+class _ClienteFamiliaQueFalla(_ClienteQueFalla):
+    """Sin CIF leído: la consulta de la obra lanza y el global responde."""
+
+    def __init__(self, error: Exception) -> None:
+        super().__init__(error)
+        self.consultas_globales = 0
+
+    def search_proveedores(self):
+        self.consultas_globales += 1
+        return [("A11000111", "ARIDOS DEL EBRO SA"), (CIF_SALMEDINA, RAZ_SALMEDINA)]
+
+
+def _resolver_sin_cif(cliente, caplog) -> _Repo:
+    header = MergeHeaderForResolution(
+        obra_codigo="0691", obra_nombre=None, obra_direccion=None,
+        proveedor_cif=None, proveedor_nombre="SALMEDINA",
+    )
+    repo = _Repo(header)
+    with caplog.at_level(logging.INFO, logger=modulo_resolver.logger.name):
+        _resolver(cliente, repo).resolve_merge_document(merge_document_id=DOC)
+    return repo
+
+
+def _registros_de_la_obra(caplog, nivel: int) -> list[logging.LogRecord]:
+    return [
+        r for r in caplog.records
+        if r.levelno == nivel and "obra=0691" in r.getMessage()
+        and "fetch_contratos_resumen_por_obra" in r.getMessage()
+    ]
+
+
+def test_f052_r6_familia_error_xml_degrada_al_fallback_global_por_nombre(caplog):
+    doble = DobleSigridApi(error_xml=True)
+    repo = _resolver_sin_cif(doble.cliente(), caplog)
+
+    assert len(doble.peticiones_con("FOR XML PATH")) == 1
+    assert len(doble.peticiones_con("prv.cif IS NOT NULL AND con.emp = 1")) == 1
+    assert repo.resoluciones == [(None, CIF_SALMEDINA, "deterministic")]
+    [registro] = _registros_de_la_obra(caplog, logging.ERROR)
+    assert registro.exc_info is not None  # logger.exception, con la traza
+    assert repo.marcas == []
+
+
+def test_f052_r6_familia_truncado_warning_con_la_obra_y_fallback(caplog):
+    cliente = _ClienteFamiliaQueFalla(
+        SigridRespuestaTruncada("contratos_resumen_obra_0691", 1000),
+    )
+    repo = _resolver_sin_cif(cliente, caplog)
+
+    assert cliente.consultas_obra == ["0691"]
+    assert cliente.consultas_globales == 1
+    assert repo.resoluciones == [(None, CIF_SALMEDINA, "deterministic")]
+    [aviso] = _registros_de_la_obra(caplog, logging.WARNING)
+    mensaje = aviso.getMessage()
+    assert "TRUNCADA" in mensaje
+    assert "contratos_resumen_obra_0691" in mensaje
+    assert "1000 filas" in mensaje
+    assert _registros_de_la_obra(caplog, logging.ERROR) == []
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        pytest.param(SigridRespuestaTruncada("contratos_resumen_obra_0691", 1000), id="truncado"),
+        pytest.param(RuntimeError("sigrid-api HTTP 500"), id="http"),
+    ],
+)
+def test_f052_r6_familia_consulta_fallida_no_decide_ni_deja_nota(error):
+    repo = _Repo(_header())
+    decision = _resolver(_ClienteFamiliaQueFalla(error), repo)._resolver_por_obra_y_familia(
+        proveedor_nombre="SALMEDINA", obra_codigo="0691", merge_document_id=DOC,
+    )
+    assert decision == (None, "deterministic")
+    assert repo.notas == []

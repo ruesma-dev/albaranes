@@ -4,6 +4,8 @@ from __future__ import annotations
 import logging
 import unicodedata
 
+from ruesma_comun.sigrid import SigridRespuestaTruncada
+
 from application.services.familia_detector import (
     familias_de_filas_merge,
     familias_de_texto,
@@ -611,9 +613,20 @@ class HeaderResolverService:
                     codigo_obra=obra_codigo,
                 )
             )
+        except SigridRespuestaTruncada as exc:
+            # F-052 · R6: lista de candidatos INCOMPLETA. No se puntua
+            # sobre ella (seria el bug original); se degrada al fallback
+            # global por nombre y queda constancia de que obra fue.
+            logger.warning(
+                "%s fetch_contratos_resumen_por_obra TRUNCADA obra=%s "
+                "[%s, %s filas]; se degrada al fallback global por nombre.",
+                _LOG_PREFIX, obra_codigo, exc.etiqueta, exc.filas,
+            )
+            return None, "deterministic"
         except Exception:
             logger.exception(
-                "%s fetch_contratos_resumen_por_obra fallo obra=%s.",
+                "%s fetch_contratos_resumen_por_obra fallo obra=%s; se "
+                "degrada al fallback global por nombre.",
                 _LOG_PREFIX, obra_codigo,
             )
             return None, "deterministic"
