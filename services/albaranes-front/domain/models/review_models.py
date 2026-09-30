@@ -1121,6 +1121,9 @@ class SaveResponse(BaseModel):
     approved: bool
     redirect_url: str
     message: str
+    # F-052 D4-A: «Guardar» relanzó la búsqueda de contratos (CIF u obra
+    # distintos del último rastro).
+    busqueda_relanzada: bool = False
 
 
 class HealthResponse(BaseModel):

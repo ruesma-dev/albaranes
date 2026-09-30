@@ -416,6 +416,14 @@
                                         Los datos actuales, CIF <code>{{ document.proveedor_cif or '—' }}</code> +
                                         obra <code>{{ document.obra_codigo or '—' }}</code>,
                                         <strong>todavía no se han buscado</strong>: pulsa «Solo volver a buscar».
+                                        {# F-052 D4-A: «Guardar» acaba de relanzar la búsqueda
+                                           (?buscando=1); el JS sondea y recarga al llegar
+                                           el rastro nuevo. #}
+                                        {% if buscando %}
+                                            <span id="busqueda-buscando" class="busqueda-buscando">
+                                                Buscando contratos con los datos actuales…
+                                            </span>
+                                        {% endif %}
                                     {% elif bc_estado == 'error' %}
                                         La última búsqueda de contratos, con
                                         CIF <code>{{ bc.cif or '—' }}</code> +

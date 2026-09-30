@@ -10,6 +10,7 @@ bloque a partir del rastro de la última búsqueda (R20–R22).
 from __future__ import annotations
 
 from application.services.obra_code_normalizer import normalize_obra_code
+from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
     BUSQUEDA_ENCONTRADOS,
     BUSQUEDA_ERROR,
@@ -71,3 +72,38 @@ def estado_busqueda(
         fecha=rastro.at_utc,
         resultado=rastro.resultado,
     )
+
+
+def debe_relanzar_busqueda(vista: BusquedaContratosVista | None) -> bool:
+    """D4-A: «Guardar» relanza la búsqueda solo si CIF u obra cambiaron.
+
+    «Cambiaron» = distintos (normalizados) de los del último rastro, es
+    decir, estado ``desfasada``. Sin rastro no hay con qué comparar y no
+    se relanza: el bloque ya dice que no consta con qué se buscó y ofrece
+    «Solo volver a buscar».
+    """
+    return vista is not None and vista.estado == ESTADO_BUSQUEDA_DESFASADA
+
+
+def aviso_de_guardado(
+    *,
+    aprobado: bool,
+    busqueda: ContratoRefetchOutcome | None,
+) -> tuple[str, bool]:
+    """Mensaje del «Guardar» del portal y si la ficha debe marcar «buscando…».
+
+    ``busqueda`` es el outcome de la re-búsqueda que relanzó el guardado
+    (D4-A) o ``None`` si no se relanzó. «Buscando…» solo tiene sentido
+    cuando la búsqueda va por cola (``queued``): con el fallback local
+    síncrono el resultado ya está en BBDD al recargar.
+    """
+    mensaje = "Documento guardado y aprobado" if aprobado else "Documento guardado"
+    if busqueda is None:
+        return mensaje, False
+    if busqueda.status == "queued":
+        return (
+            f"{mensaje}. CIF u obra cambiados: buscando contratos con los "
+            "datos nuevos…",
+            True,
+        )
+    return f"{mensaje}. {busqueda.message}", False
