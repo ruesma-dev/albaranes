@@ -213,6 +213,6 @@ con contratos listados, M12 el repositorio no valida el resultado.
 |---|---|
 | Tests F-052 nuevos | A **82**, B **73**, C **94**, correcciones **+46** (comun 15, sv4 31); total **295**, en verde |
 | Suites a mano tras las correcciones, una tras otra | comun `323 passed in 17.43s`; sv3 `357 passed in 2.84s`; sv4 `359 passed in 10.05s` |
-| `bash harness/init.sh` final tras las correcciones (`bc71d6e`) | ENTORNO LISTO, exit 0; raíz `1067 passed in 154.24s`; sv3 `357 passed in 5.42s`; sv4 `359 passed in 12.42s`; comun `323 passed in 23.79s`; `PUERTA COBERTURA: 96.1% de 280 líneas cambiadas cubiertas (269/280, umbral 80%, nivel critico)` (sin cubrir: cableado de `app.py` y el import/llamada renombrados en módulos que ningún test importa: `contrato_refetch_service` de sv3 y sv4, `header_grounding_service`); tamaño `impl 218/220`; ruff 1166 |
+| `bash harness/init.sh` final tras la pasada 2 (`bc02d74`) | ENTORNO LISTO, exit 0; raíz `1067 passed in 458.10s`; sv4 `372 passed in 44.65s`; sv3 y comun en verde (caché, sin cambios desde `725fcf9`: 357 y 323); `PUERTA COBERTURA: 96.2% de 287 líneas cambiadas cubiertas (276/287, umbral 80%, nivel critico)` (sin cubrir: cableado de `app.py` y el import/llamada renombrados en módulos que ningún test importa: `contrato_refetch_service` de sv3 y sv4, `header_grounding_service`); tamaño `impl 218/220`; ruff 1166 |
 | Tiempo de la suite | sv4 6–17 s; sv3 3,8–10,6 s; comun 38,5 s; raíz 257–327 s |
 | Mutación | Campaña: T19 (fuera). Manuales: A 1 (+2 review), B **7/7**, C **12/12** muertos |
