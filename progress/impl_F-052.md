@@ -137,3 +137,29 @@ FAILED ...test_f052_r4_mismas_familias_por_cif_en_todo_el_fixture[0691|0668]
 ```
 
 GREEN: `19 passed in 0.40s`; sv3 completa `284 passed in 2.36s`.
+
+### T6 · Equivalencia de familias (R4)
+
+`tests/test_f052_equivalencia_familias.py` (7): por cada CIF de las obras 0691
+y 0668 del fixture, `familias_de_texto(texto.lower())` del texto agregado que
+devuelve el cliente == el del texto por líneas (reconstruido en el test como
+el código anterior: campos no vacíos con `strip`, línea a línea); más un test
+de que el fixture no es trivial (≥ 60 CIF con familia, ≥ 5 familias) y cuatro
+casos dirigidos (duplicados, orden directo/invertido, espacios y vacíos).
+
+RED: escrito antes de T5 y lanzado contra T4 en la misma ejecución que los de
+T5 (traza de arriba: `test_f052_r4_mismas_familias_por_cif_en_todo_el_fixture[0691|0668]`
+FAILED con `SigridRespuestaTruncada ... [contratos_resumen_obra_0691]: 1000
+filas recibidas`). GREEN tras T5: `7 passed in 0.33s`.
+
+Mutante «leer `nombre` en vez de `texto`» (aplicado a mano en el cliente y
+revertido con `git checkout`): **muerto**.
+
+```
+$ sed -i 's/texto=str(fila.get("texto") or ""),/texto=str(fila.get("nombre") or ""),/' infrastructure/sigrid/sigrid_api_contrato_client.py
+$ ../../.venv/Scripts/python.exe -m pytest tests/test_f052_equivalencia_familias.py -q
+E       AssertionError: assert {'B10000000':..., set()), ...} == {}
+E         Left contains 80 more items:
+E         {'B10000000': ({'acero'}, set()), 'B10007919': ({'acero'}, set()), ...
+E       AssertionError: assert {'B00001200':...gon'}, set())} == {}
+```
