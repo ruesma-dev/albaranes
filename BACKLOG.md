@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **51 features**, 36 abiertas, 15 terminadas.
+Resumen: **52 features**, 37 abiertas, 15 terminadas.
 
 En curso: **F-052**.
 
@@ -12,6 +12,7 @@ En curso: **F-052**.
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
 | F-052 | sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF) | 1 | en curso | critico | `feature/F-052-proveedores-truncados` |
+| F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
@@ -85,6 +86,20 @@ PROPUESTA DEL DIAGNOSTICO: (1) consulta propia de proveedores de la obra (DISTIN
 RELACIONADAS: F-002 (red de proveedor por CIF), F-043, F-047 (RES-007 no cerraba ciclo por esto).
 
 DECISIONES DEL HUMANO (2026-09-30): aceptadas las recomendaciones D1-D7 de la spec v2 (consulta agregada sin paginar; no compartir con sv4; paginar solo header_and_lines y search_proveedores; D4 = B + A, es decir el bloque veraz Y «Guardar» relanza la busqueda si cambian CIF u obra; sin backfill; clientes colindantes a ficha aparte; efecto D7 aceptado).
+
+### F-055 · IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2)
+
+estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
+
+PETICION DEL HUMANO (2026-10-01): «registra f55», tras preguntar si la lista de proveedores con nombre y CIF se da a la IA para que busque entre ellos.
+
+HALLAZGO (2026-10-01): hoy la IA no recibe la lista de proveedores en ninguna fase. sv2 inyecta `GroundingNulo` (services/albaranes-api/main_worker.py:69; `interface_adapters/worker/local_stubs.py`, «placeholder hasta mover el de sv3»), asi que IA2 recibe siempre `sigrid_context=None` aunque su prompt admite el bloque `{sigrid_context}` (proveedor, obra, obras_candidatas, proveedores_candidatos). El bloque lo prepara sv3 en `POST /v1/sigrid/header-grounding` (`HeaderGroundingService`: proveedores con contrato en la obra, nombre y CIF, hasta `GROUNDING_MAX_PROVEEDORES_CANDIDATOS`=200; fallback lista global), pero quien lo llamaba era el orquestador sv7, retirado: el endpoint esta vivo y nadie lo usa. El proveedor se decide hoy de forma determinista en sv3 despues de la IA (CIF leido -> Sigrid; si no existe, red por nombre contra los candidatos de la obra que arregla F-052; luego global).
+
+ALCANCE PROPUESTO: que sv2, antes de la fase 2, obtenga el contexto de Sigrid (obra decidida por IA1/correo F-048 y proveedores con contrato en esa obra, nombre + CIF, quiza familia) y se lo pase a IA2 para que elija el proveedor de esa lista. Las reglas de sv3 se quedan como verificacion: CIF elegido fuera de la lista -> revision. Decidir en la spec: quien consulta (sv2 llama a sv3 por HTTP vs. sv2 lee sigrid-api directamente con `ruesma_comun.sigrid`, como ya hace para las obras de F-048), tamaño del bloque en el prompt (81 en 0691, 163 en 0696), coste por albaran, evals antes/despues con el banco de F-045, y que pasa si la obra no esta decidida en fase 1.
+
+CRITERIO DEL HUMANO: decide la IA (memoria «clasificacion-la-decide-la-ia»), las reglas verifican.
+
+DEPENDE DE: F-052 (lista de candidatos de la obra completa y sin truncar). RELACIONADAS: F-048 (contexto de correo y obras en IA1), F-002 (red de proveedor por nombre), F-045 (evals).
 
 ### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
 
