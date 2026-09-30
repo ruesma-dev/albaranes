@@ -16,7 +16,8 @@ los mismos datos:
   orden; códigos de contrato distintos y ordenados, unidos por ``|``;
 - ``header_and_lines`` y ``search_proveedores``, con ``OFFSET/FETCH``;
 - ``fetch_proveedor_by_cif``, ``proveedores_por_obra`` y los documentos
-  del contrato (``rcg``/``gra``).
+  del contrato (``rcg``/``gra``);
+- las obras de más de 1.000 líneas del script de verificación (T14).
 
 Como el real: ``max_rows`` por defecto 200, se devuelven como mucho
 ``max_rows`` filas y ``truncated=true`` si se alcanzó (``>=``);
@@ -332,6 +333,18 @@ class DobleSigridApi:
 
     def _despachar(self, sql: str, params: list[Any]) -> tuple[list[str], list[list[Any]], bool]:
         fx = self.fixture
+        if "HAVING COUNT(*) > 1000" in sql:
+            # Script de T14 (--listar-obras-grandes): filas de la consulta
+            # por líneas y proveedores distintos, por obra.
+            por_obra: dict[str, list[Linea]] = {}
+            for ln in fx.lineas:
+                por_obra.setdefault(ln.obra, []).append(ln)
+            filas = [
+                [obra, len(lns), len({ln.cif for ln in lns})]
+                for obra, lns in por_obra.items() if len(lns) > 1000
+            ]
+            filas.sort(key=lambda f: (-f[1], f[0]))
+            return ["obra", "lineas", "proveedores"], filas, True
         if "SELECT TOP 1 prv.cif" in sql:
             buscado = str(params[0])
             nombres = {c: n for c, n in fx.proveedores_global}
