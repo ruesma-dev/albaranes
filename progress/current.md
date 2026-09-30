@@ -9,7 +9,7 @@
 
 Bloque A (T1–T6) hecho y APROBADO (`progress/review_F-052_bloqueA.md`).
 Bloque B (T7–T10) uno a uno, un commit por tarea; trazas RED y decisiones en
-`progress/impl_F-052.md` §«Bloque B». Hecho: T7, T8. En curso: T9.
+`progress/impl_F-052.md` §«Bloque B». Hecho: T7, T8, T9. En curso: T10.
 Decisiones del Bloque B (detalle en el informe): con obra y nombre ausentes a
 la vez, el motivo es `sin_obra`.
 
