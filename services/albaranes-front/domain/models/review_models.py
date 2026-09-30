@@ -823,6 +823,10 @@ class DocumentDetailPayload(BaseModel):
     selected_contrato_codigo: str | None = None
     # NUEVO — None mientras no exista valoración en BBDD.
     valuation: ValuationPayload | None = None
+    # F-052 R27 — con qué se buscaron los contratos y si sigue valiendo
+    # para el CIF y la obra actuales. Lo rellena el repositorio en el
+    # detalle del merge; ``None`` en las vistas de proveedor.
+    busqueda_contratos: BusquedaContratosVista | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
