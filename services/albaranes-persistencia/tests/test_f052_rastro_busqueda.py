@@ -178,3 +178,237 @@ def test_f052_r20_el_repositorio_rechaza_un_resultado_desconocido(resultado):
             document_id="doc-1", cif="B1", obra="0691", resultado=resultado,
         )
     assert sesion.sentencias == []
+
+
+# ------------------------------------------------------------------ #
+# R21 · enrich_merge_document sella el rastro en cada salida
+# ------------------------------------------------------------------ #
+DOC = "doc-f052-rastro"
+
+
+def _contrato(codigo: str):
+    from domain.models.contrato_models import ContratoEnrichmentResult
+
+    return ContratoEnrichmentResult(
+        codigo_contrato=codigo, nombre_contrato=None, fecha_alta_contrato=None,
+        fecha_contrato=None, vigencia_desde=None, vigencia_hasta=None,
+        importe_total=None, cif_proveedor="B82899550",
+        nombre_proveedor="SALMEDINA, S.L.", codigo_obra="0691", nombre_obra=None,
+        gra_rep_ide=None, pdf_sharepoint_relative_path="contratos/c.pdf",
+    )
+
+
+class _RepoEnrich:
+    """Lo que ``enrich_merge_document`` usa del repositorio."""
+
+    def __init__(
+        self, cif: str | None = "B82899550", obra: str | None = "0691", *,
+        falla_sellado: bool = False, falla_replace: bool = False,
+    ) -> None:
+        self._cif, self._obra = cif, obra
+        self._falla_sellado = falla_sellado
+        self._falla_replace = falla_replace
+        self.sellos: list[tuple[str, str | None, str | None, str]] = []
+        self.guardados: list[list] = []
+
+    def get_merge_cif_and_obra(self, *, document_id):
+        return self._cif, self._obra
+
+    def get_merge_fecha(self, *, document_id):
+        return "2026-09-01"
+
+    def append_review_note(self, *, document_id, nota):
+        pass
+
+    def remove_review_note_prefix(self, *, document_id, prefijo):
+        pass
+
+    def replace_contratos(self, *, document_id, contratos):
+        if self._falla_replace:
+            raise RuntimeError("BBDD caída guardando contratos")
+        self.guardados.append(list(contratos))
+
+    def get_existing_pdf_paths(self, *, document_id):
+        return {}
+
+    def get_selected_contrato_codigo(self, *, document_id):
+        return None
+
+    def set_selected_contrato(self, *, document_id, codigo_contrato, origen=None):
+        pass
+
+    def get_merge_lines_for_scoring(self, *, document_id):
+        return []
+
+    def update_merge_proveedor_nombre(self, *, document_id, nombre_proveedor):
+        return True
+
+    def sellar_busqueda_contratos(self, *, document_id, cif, obra, resultado):
+        if self._falla_sellado:
+            raise RuntimeError("BBDD caída sellando el rastro")
+        self.sellos.append((document_id, cif, obra, resultado))
+
+
+class _ClienteContratos:
+    def __init__(self, contratos=(), error: Exception | None = None) -> None:
+        self._contratos = list(contratos)
+        self._error = error
+        self.llamadas: list[tuple[str, str]] = []
+
+    def fetch_contratos(self, *, cif_proveedor, codigo_obra_normalizado):
+        self.llamadas.append((cif_proveedor, codigo_obra_normalizado))
+        if self._error is not None:
+            raise self._error
+        return list(self._contratos)
+
+
+class _CacheConHit:
+    def find_active_contrato(self, *, codigo_obra, cif_proveedor, fecha_albaran_yyyymmdd):
+        return _contrato("CACHE/0001")
+
+    def get_pdf_paths_for_codigos(self, **_):  # pragma: no cover - solo en miss
+        return {}
+
+    def upsert_contratos(self, *, contratos):  # pragma: no cover - solo en miss
+        pass
+
+
+def _servicio(cliente, repo, **kwargs):
+    from application.services.contrato_enrichment_service import (
+        ContratoEnrichmentService,
+    )
+
+    return ContratoEnrichmentService(client=cliente, repository=repo, **kwargs)
+
+
+def _enriquecer(cliente, repo, **kwargs) -> int:
+    return _servicio(cliente, repo, **kwargs).enrich_merge_document(merge_document_id=DOC)
+
+
+@pytest.mark.parametrize(
+    "cif,obra,sellado",
+    [
+        (None, "0691", (None, "0691")),
+        (" b 82899550 ", "OBRA-X", ("B82899550", None)),
+        ("   ", None, (None, None)),
+    ],
+)
+def test_f052_r21_sin_datos_sella_sin_datos_y_no_consulta(cif, obra, sellado):
+    cliente = _ClienteContratos([_contrato("C1")])
+    repo = _RepoEnrich(cif, obra)
+    assert _enriquecer(cliente, repo) == 0
+    assert repo.sellos == [(DOC, *sellado, "sin_datos")]
+    assert cliente.llamadas == []
+
+
+def test_f052_r21_cache_hit_sella_encontrados_sin_ir_a_sigrid():
+    cliente = _ClienteContratos(error=AssertionError("no debe llamarse"))
+    repo = _RepoEnrich(" b82899550", "691")
+    assert _enriquecer(cliente, repo, cache=_CacheConHit()) == 1
+    assert repo.sellos == [(DOC, "B82899550", "0691", "encontrados")]
+    assert cliente.llamadas == []
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        pytest.param(RuntimeError("sigrid-api HTTP 500"), id="http"),
+        pytest.param(None, id="truncado"),
+    ],
+)
+def test_f052_r21_la_consulta_lanza_sella_error(error):
+    from ruesma_comun.sigrid import SigridRespuestaTruncada
+
+    error = error or SigridRespuestaTruncada("header_and_lines", 20000)
+    repo = _RepoEnrich()
+    assert _enriquecer(_ClienteContratos(error=error), repo) == 0
+    assert repo.sellos == [(DOC, "B82899550", "0691", "error")]
+    assert repo.guardados == []
+
+
+def test_f052_r13_fetch_contratos_truncado_por_tope_de_paginas_sella_error():
+    """R13 de punta a punta con el cliente real: 1.200 líneas, páginas de
+    500 y tope de 2 páginas → ``SigridRespuestaTruncada`` → rastro ``error``."""
+    from doble_sigrid_api import CIF_GRANDE_0668, DobleSigridApi
+
+    doble = DobleSigridApi()
+    repo = _RepoEnrich(CIF_GRANDE_0668, "0668")
+    cliente = doble.cliente(pagina_lineas=500, max_paginas=2)
+    assert _enriquecer(cliente, repo) == 0
+    assert repo.sellos == [(DOC, CIF_GRANDE_0668, "0668", "error")]
+    assert repo.guardados == []
+
+
+def test_f052_r21_cero_contratos_sella_ninguno():
+    repo = _RepoEnrich()
+    assert _enriquecer(_ClienteContratos([]), repo) == 0
+    assert repo.sellos == [(DOC, "B82899550", "0691", "ninguno")]
+
+
+@pytest.mark.parametrize("n", [1, 3])
+def test_f052_r21_con_contratos_sella_encontrados(n):
+    repo = _RepoEnrich()
+    contratos = [_contrato(f"C{i}") for i in range(n)]
+    assert _enriquecer(_ClienteContratos(contratos), repo) == n
+    assert repo.sellos == [(DOC, "B82899550", "0691", "encontrados")]
+
+
+def test_f052_r21_con_el_cliente_real_salmedina_encontrados_y_normalizado():
+    from doble_sigrid_api import CIF_SALMEDINA, DobleSigridApi
+
+    repo = _RepoEnrich(" b82899550 ", "691")
+    assert _enriquecer(DobleSigridApi().cliente(), repo) == 1
+    assert repo.sellos == [(DOC, CIF_SALMEDINA, "0691", "encontrados")]
+
+
+def test_f052_r21_fallo_guardando_los_contratos_sella_error():
+    """La consulta funcionó pero los contratos no se guardaron: el
+    documento se queda sin ellos y el rastro no puede decir ni
+    ``encontrados`` ni ``ninguno`` (decisión del implementer, ver
+    ``progress/impl_F-052.md``)."""
+    repo = _RepoEnrich(falla_replace=True)
+    assert _enriquecer(_ClienteContratos([_contrato("C1")]), repo) == 0
+    assert repo.sellos == [(DOC, "B82899550", "0691", "error")]
+
+
+def test_f052_r21_servicio_desactivado_no_busca_ni_sella():
+    repo = _RepoEnrich()
+    assert _enriquecer(_ClienteContratos([_contrato("C1")]), repo, enabled=False) == 0
+    assert repo.sellos == []
+
+
+_SALIDAS = [
+    pytest.param({"cif": None}, {}, {}, 0, id="sin_datos"),
+    pytest.param({}, {"contratos": [_contrato("C1")]}, {"cache": _CacheConHit()}, 1, id="cache"),
+    pytest.param({}, {"error": RuntimeError("x")}, {}, 0, id="error"),
+    pytest.param({}, {"contratos": []}, {}, 0, id="ninguno"),
+    pytest.param({}, {"contratos": [_contrato("C1"), _contrato("C2")]}, {}, 2, id="encontrados"),
+    pytest.param({"falla_replace": True}, {"contratos": [_contrato("C1")]}, {}, 0, id="fallo-guardando"),
+]
+
+
+@pytest.mark.parametrize("repo_kw,cliente_kw,servicio_kw,esperado", _SALIDAS)
+def test_f052_r21_fallo_del_sellado_no_cambia_el_valor_devuelto(
+    repo_kw, cliente_kw, servicio_kw, esperado, caplog,
+):
+    repo = _RepoEnrich(**repo_kw, falla_sellado=True)
+    with caplog.at_level("ERROR"):
+        assert _enriquecer(_ClienteContratos(**cliente_kw), repo, **servicio_kw) == esperado
+    assert repo.sellos == []
+    assert any("rastro" in r.getMessage() for r in caplog.records if r.exc_info)
+
+
+@pytest.mark.parametrize("repo_kw,cliente_kw,servicio_kw,esperado", _SALIDAS)
+def test_f052_r21_un_solo_sello_por_busqueda(repo_kw, cliente_kw, servicio_kw, esperado):
+    repo = _RepoEnrich(**repo_kw)
+    assert _enriquecer(_ClienteContratos(**cliente_kw), repo, **servicio_kw) == esperado
+    assert len(repo.sellos) == 1
+
+
+def test_f052_r21_repositorio_sin_el_metodo_no_rompe():
+    """Repositorios antiguos (o de otro servicio) sin ``sellar_...``."""
+
+    class _RepoAntiguo(_RepoEnrich):
+        sellar_busqueda_contratos = None
+
+    assert _enriquecer(_ClienteContratos([_contrato("C1")]), _RepoAntiguo()) == 1
