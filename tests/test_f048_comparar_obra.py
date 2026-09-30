@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import types
 from pathlib import Path
 
 import pytest
@@ -24,6 +25,10 @@ from evals import comparar_obra as co
 from evals.procesos import sv2_obra
 
 CENTINELA = "CENTINELA-OBRA-7731"
+
+#: `dev` de antes de F-048: inmutable, sin `{contexto_correo}`. Los tests que
+#: dependen del contenido de una rama la fijan aquí y no a `dev`, que se mueve.
+BASE_FIJA = "1807e83"
 CENTINELA_NOMBRE = "CENTINELA-NOMBRE-OBRA-7731"
 
 
@@ -60,9 +65,11 @@ class Dobles:
         self.llamadas: list[tuple] = []
         self.montajes: list[tuple] = []
         self.consultas = 0
+        self.bases: list[str] = []
         self._contador: dict[tuple, int] = {}
 
-    def prompt_de_dev(self, directorio: Path) -> Path:
+    def prompt_de_dev(self, directorio: Path, base: str) -> Path:
+        self.bases.append(base)
         ruta = Path(directorio) / "prompts_dev.yaml"
         ruta.write_text("albaran_factura_es: {}\n", encoding="utf-8")
         return ruta
@@ -435,11 +442,17 @@ def test_f048_comparar_obra_modelo_sin_campo_conserva_lo_demas():
 
 
 def test_f048_comparar_obra_prompt_de_dev_es_el_yaml_de_dev_tal_cual(tmp_path):
-    """El YAML de `dev` sale de git, sin tocar: sin el marcador del correo que trae la rama."""
+    """El YAML de la base sale de git, sin tocar: sin el marcador del correo que trae la rama.
+
+    La base es `BASE_FIJA` y no `dev`: desde que F-048 entró en `dev`, su YAML
+    ya lleva `{contexto_correo}` y la aserción dejaría de ser cierta.
+    """
     raiz = Path(__file__).resolve().parent.parent
-    ruta = sv2_obra.prompt_de_dev(tmp_path)
+    ruta = sv2_obra.prompt_de_dev(tmp_path, base=BASE_FIJA)
     esperado = subprocess.run(
-        ["git", "-C", str(raiz), "show", f"dev:{sv2_obra.RUTA_PROMPTS}"], capture_output=True, check=True
+        ["git", "-C", str(raiz), "show", f"{BASE_FIJA}:{sv2_obra.RUTA_PROMPTS}"],
+        capture_output=True,
+        check=True,
     ).stdout
     assert ruta.parent == tmp_path and ruta.read_bytes() == esperado
     texto = ruta.read_text(encoding="utf-8")
@@ -454,7 +467,7 @@ def test_f048_comparar_obra_sin_prompt_de_dev_para(tmp_path, capsys):
 
     dobles = Dobles(tmp_path, {})
 
-    def sin_dev(directorio):
+    def sin_dev(directorio, base):
         raise sv2_obra.PromptDevNoDisponible("sin rama dev")
 
     dependencias = dobles.dependencias()
@@ -497,3 +510,48 @@ def test_f048_comparar_obra_registro_sin_campo_y_obra_de():
     assert sv2_obra.obra_de({"cabecera": None}) == {"obra_codigo": None, "obra_nombre": None}
     with pytest.raises(ValueError, match="variante desconocida"):
         sv2_obra.montar_servicio("otra", "x.yaml", None, None)
+
+
+# --- La base de comparación (`--base`) -----------------------------------------
+
+
+def test_f048_comparar_obra_base_llega_a_git_show(tmp_path, monkeypatch):
+    """`base` es la referencia de `git show <base>:<ruta>`; sin ella, `dev`. Sin tocar git."""
+    llamadas: list[list[str]] = []
+
+    def run_de_mentira(argumentos, **_):
+        llamadas.append(list(argumentos))
+        return types.SimpleNamespace(returncode=0, stdout=b"albaran_factura_es: {}\n", stderr=b"")
+
+    monkeypatch.setattr(sv2_obra.subprocess, "run", run_de_mentira)
+
+    sv2_obra.prompt_de_dev(tmp_path, base="abc1234")
+    sv2_obra.prompt_de_dev(tmp_path)
+
+    assert llamadas[0][-2:] == ["show", f"abc1234:{sv2_obra.RUTA_PROMPTS}"]
+    assert llamadas[1][-2:] == ["show", f"dev:{sv2_obra.RUTA_PROMPTS}"]
+    assert sv2_obra.BASE_POR_DEFECTO == "dev"
+
+
+def test_f048_comparar_obra_cli_base_llega_al_prompt_y_al_commit(tmp_path, monkeypatch):
+    """`--base <ref>` llega al prompt de la variante `dev` y al commit de la cabecera."""
+    monkeypatch.setattr(co, "_commit", lambda referencia: f"sha-{referencia}")
+    dobles = Dobles(tmp_path, {("dev", "C-1"): ["1"], ("rama", "C-1"): ["1"]})
+
+    codigo, _, resumen = _lanzar(tmp_path, dobles, ["C-1"], "--repeticiones", "1", "--base", BASE_FIJA)
+
+    assert codigo == 0
+    assert dobles.bases == [BASE_FIJA]
+    assert f"dev `sha-{BASE_FIJA}`" in resumen.read_text(encoding="utf-8")
+
+
+def test_f048_comparar_obra_cli_sin_base_compara_con_dev(tmp_path, monkeypatch):
+    """Sin `--base`, la variante `dev` sale de la rama `dev`, como hasta ahora."""
+    monkeypatch.setattr(co, "_commit", lambda referencia: f"sha-{referencia}")
+    dobles = Dobles(tmp_path, {("dev", "C-1"): ["1"], ("rama", "C-1"): ["1"]})
+
+    codigo, _, resumen = _lanzar(tmp_path, dobles, ["C-1"], "--repeticiones", "1")
+
+    assert codigo == 0
+    assert dobles.bases == ["dev"]
+    assert "dev `sha-dev`" in resumen.read_text(encoding="utf-8")

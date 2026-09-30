@@ -1,13 +1,17 @@
 # tests/test_f048_comparar_obra_prompt_dev.py
-"""F-048 · la variante `dev` del comparador de obra le manda al LLM lo mismo que `dev`.
+"""F-048 · la variante `dev` del comparador de obra le manda al LLM lo mismo que su base.
 
-El comparador (`evals/comparar_obra.py`) no ejecuta el código de `dev`: monta
-el servicio de ESTA rama con el `prompts.yaml` de `dev` (sacado con
-`git show`) y el schema sin `lectura_correo`. Eso solo mide el prompt de
-`dev` si lo que recibe el LLM es idéntico a lo que manda `dev` de verdad.
-Este test lo comprueba byte a byte contra el código de `dev`, extraído con
+El comparador (`evals/comparar_obra.py`) no ejecuta el código de la base: monta
+el servicio de ESTA rama con el `prompts.yaml` de la base (sacado con
+`git show`) y el schema sin `lectura_correo`. Eso solo mide el prompt de la
+base si lo que recibe el LLM es idéntico a lo que manda la base de verdad.
+Este test lo comprueba byte a byte contra el código de la base, extraído con
 `git archive` a un temporal y ejecutado en su propio intérprete (sv2 y
-`ruesma_comun` de `dev`, no los de la rama).
+`ruesma_comun` de la base, no los de la rama).
+
+La base es `BASE`, el `dev` de antes de F-048, y no la rama `dev`: desde que
+F-048 entró en `dev`, su código ya trae `lectura_correo` y el test comparaba
+una referencia que se mueve.
 
 Se captura lo que llega al cliente LLM —`instructions`, `user_text` y el JSON
 Schema del modelo de respuesta, que gemini manda como `response_json_schema`—
@@ -29,6 +33,9 @@ import pytest
 RAIZ_REPO = Path(__file__).resolve().parent.parent
 
 MARCA = "<<<CAPTURA-F048>>>"
+
+#: `dev` de antes de F-048: inmutable, sin `{contexto_correo}` ni `lectura_correo`.
+BASE = "1807e83"
 
 #: Rutas de `dev` que hacen falta para montar su servicio de extracción.
 RUTAS_DEV = (
@@ -93,7 +100,7 @@ print("__MARCA__" + json.dumps(salida, ensure_ascii=False))
 
 #: Lado rama: el montaje REAL del comparador, variante `dev` y variante `rama`.
 _SCRIPT_RAMA = _COMUN + """
-raiz, temporal = sys.argv[1], sys.argv[2]
+raiz, temporal, base = sys.argv[1], sys.argv[2], sys.argv[3]
 sys.path.insert(0, raiz)
 from evals.procesos import sv2_obra
 sv2_obra._con_sv2_en_path()
@@ -102,21 +109,21 @@ from domain.ports.obras_activas_provider import ObraActiva
 
 spec = ProviderClientSpec(provider="gemini", model_name="m", client=ClienteQueCaptura())
 obras = sv2_obra.ObrasFijas([ObraActiva(codigo=c, nombre=n) for c, n in OBRAS])
-rutas = {"dev": sv2_obra.prompt_de_dev(temporal), "rama": sv2_obra.prompt_de_rama()}
+rutas = {"dev": sv2_obra.prompt_de_dev(temporal, base=base), "rama": sv2_obra.prompt_de_rama()}
 salida = {v: capturar(sv2_obra.montar_servicio(v, rutas[v], spec, obras)) for v in rutas}
 print("__MARCA__" + json.dumps(salida, ensure_ascii=False))
 """.replace("__MARCA__", MARCA)
 
 
 def _arbol_dev(destino: Path) -> Path:
-    """El código de `dev` que hace falta, extraído con `git archive` (sin tocar el árbol)."""
+    """El código de la base que hace falta, extraído con `git archive` (sin tocar el árbol)."""
     proceso = subprocess.run(
-        ["git", "-C", str(RAIZ_REPO), "archive", "--format=tar", "dev", *RUTAS_DEV],
+        ["git", "-C", str(RAIZ_REPO), "archive", "--format=tar", BASE, *RUTAS_DEV],
         capture_output=True,
         check=False,
     )
     if proceso.returncode != 0:
-        pytest.fail(f"git archive dev falló: {proceso.stderr.decode('utf-8', 'replace')}")
+        pytest.fail(f"git archive {BASE} falló: {proceso.stderr.decode('utf-8', 'replace')}")
     with tarfile.open(fileobj=io.BytesIO(proceso.stdout)) as tar:
         tar.extractall(destino, filter="data")
     return destino
@@ -142,7 +149,7 @@ def capturas(tmp_path_factory) -> dict:
     arbol = _arbol_dev(tmp_path_factory.mktemp("arbol_dev"))
     temporal = tmp_path_factory.mktemp("prompt_dev")
     dev = _ejecutar(_SCRIPT_DEV, str(arbol))
-    rama = _ejecutar(_SCRIPT_RAMA, str(RAIZ_REPO), str(temporal))
+    rama = _ejecutar(_SCRIPT_RAMA, str(RAIZ_REPO), str(temporal), BASE)
     return {"arbol": arbol, "codigo_dev": dev, "rama": rama}
 
 

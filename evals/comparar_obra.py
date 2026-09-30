@@ -2,7 +2,12 @@
 """Compara la OBRA que lee IA1 con el prompt de `dev` y con el de esta rama.
 
     python -m evals.comparar_obra --casos GEN-001,HOR-003 [--repeticiones 3]
-        [--variante dev|rama|ambas] [--salida <dir>]
+        [--variante dev|rama|ambas] [--base <ref>] [--salida <dir>]
+
+La variante `dev` usa el `prompts.yaml` de la referencia `--base` (por
+defecto la rama `dev`). Desde que F-048 está en `dev`, medir el prompt de
+antes contra el nuevo pide `--base 1807e83`, el `dev` de antes de F-048: con
+la base por defecto las dos variantes llevarían el prompt nuevo.
 
 Por qué existe: la pasada con LLM de F-048 no pudo decir si el prompt nuevo
 empeora `obra_codigo`. El banco no la compara (está a NO_COMPARAR en los 59
@@ -79,7 +84,7 @@ class Parada(RuntimeError):
 class Dependencias:
     """Lo que toca el mundo exterior; los tests pasan dobles."""
 
-    prompt_de_dev: Callable[[Path], Path] = sv2_obra.prompt_de_dev
+    prompt_de_dev: Callable[..., Path] = sv2_obra.prompt_de_dev
     prompt_de_rama: Callable[[], Path] = sv2_obra.prompt_de_rama
     consultar_obras: Callable[[dict], list | None] = sv2_obra.consultar_obras
     montar_extractor: Callable[..., Callable[[str, str, Path], dict]] = sv2_obra.montar_extractor
@@ -436,7 +441,7 @@ def ejecutar(opciones: argparse.Namespace, entorno: dict, dependencias: Dependen
     with tempfile.TemporaryDirectory(prefix="comparar_obra_") as temporal:
         prompts: dict[str, Path] = {}
         if "dev" in variantes:
-            prompts["dev"] = dependencias.prompt_de_dev(Path(temporal))
+            prompts["dev"] = dependencias.prompt_de_dev(Path(temporal), base=opciones.base)
         if "rama" in variantes:
             prompts["rama"] = dependencias.prompt_de_rama()
 
@@ -470,7 +475,7 @@ def ejecutar(opciones: argparse.Namespace, entorno: dict, dependencias: Dependen
     salida = Path(opciones.salida) if opciones.salida else directorio_por_defecto()
     resumen = Path(opciones.resumen)
     fecha = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    commits = {"rama": _commit("HEAD"), "dev": _commit(sv2_obra.RAMA_DEV)}
+    commits = {"rama": _commit("HEAD"), "dev": _commit(opciones.base)}
     escribir(corrida, salida, resumen, commits, fecha)
 
     print(f"comparar_obra: detalle con valores en {salida}")
@@ -497,6 +502,12 @@ def _analizador() -> argparse.ArgumentParser:
     analizador.add_argument("--repeticiones", type=int, default=3, help="por defecto 3")
     analizador.add_argument(
         "--variante", choices=("dev", "rama", "ambas"), default="ambas", help="por defecto ambas"
+    )
+    analizador.add_argument(
+        "--base",
+        default=sv2_obra.BASE_POR_DEFECTO,
+        help="referencia de git de la que sale el prompt de la variante dev (por defecto "
+        "dev; 1807e83 es el dev de antes de F-048)",
     )
     analizador.add_argument(
         "--salida",

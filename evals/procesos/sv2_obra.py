@@ -16,15 +16,19 @@ Qué se monta, variante a variante:
   `config/prompts.yaml`, sin correo. El marcador `{contexto_correo}` recibe la
   nota fija de «sin correo», que es lo que ve IA1 en producción cuando el
   albarán no trae correo.
-- **dev**: el MISMO código de la rama con el `prompts.yaml` de `dev` (sacado
-  con `git show`) y el schema de respuesta SIN `lectura_correo`. El YAML de
-  `dev` no lleva `{contexto_correo}` y sin correo el render no añade nada
-  (decisión 2 del bloque C1). El schema hace falta recortarlo porque los
-  clientes mandan el JSON Schema del modelo al proveedor
-  (`response_json_schema` en gemini): con el de la rama, la variante `dev`
-  pediría un campo que `dev` no conoce. Con los dos recortes, lo que recibe
-  el LLM es byte a byte lo que manda `dev`; lo fija
-  `tests/test_f048_comparar_obra_prompt_dev.py` contra el código de `dev`.
+- **dev**: el MISMO código de la rama con el `prompts.yaml` de la BASE (sacado
+  con `git show <base>:...`; la base es la rama `dev` salvo que se pida otra
+  referencia con `base`) y el schema de respuesta SIN `lectura_correo`. El
+  YAML de una base anterior a F-048 no lleva `{contexto_correo}` y sin correo
+  el render no añade nada (decisión 2 del bloque C1). El schema hace falta
+  recortarlo porque los clientes mandan el JSON Schema del modelo al
+  proveedor (`response_json_schema` en gemini): con el de la rama, la
+  variante `dev` pediría un campo que esa base no conoce. Con los dos
+  recortes, lo que recibe el LLM es byte a byte lo que manda la base; lo fija
+  `tests/test_f048_comparar_obra_prompt_dev.py` contra el código de
+  `1807e83`, el `dev` de antes de F-048. Desde que F-048 entró en `dev`, la
+  rama `dev` ya lleva el prompt nuevo: para medir el antes y el después hay
+  que pasar esa referencia como base.
 
 Las dos variantes comparten la MISMA lista de obras activas, consultada una
 sola vez a sigrid-api (solo lectura) y congelada en `ObrasFijas`.
@@ -42,8 +46,9 @@ from evals.procesos.sv2_extraccion import PROMPT_FASE_1, RAIZ_REPO, RAIZ_SV2
 #: Variantes que sabe montar este módulo.
 VARIANTES: tuple[str, ...] = ("dev", "rama")
 
-#: Rama de referencia y ruta del YAML de prompts dentro del repositorio.
-RAMA_DEV = "dev"
+#: Referencia de git de la que sale el prompt de la variante `dev` si no se
+#: pide otra, y ruta del YAML de prompts dentro del repositorio.
+BASE_POR_DEFECTO = "dev"
 RUTA_PROMPTS = "services/albaranes-api/config/prompts.yaml"
 
 #: Campo que la rama añade al schema de fase 1 y que `dev` no conoce.
@@ -62,7 +67,7 @@ MAX_OBRAS = ("OBRAS_ACTIVAS_MAX", 300)
 
 
 class PromptDevNoDisponible(RuntimeError):
-    """`git show dev:...` no devolvió el YAML de prompts."""
+    """`git show <base>:...` no devolvió el YAML de prompts."""
 
 
 def _con_sv2_en_path() -> None:
@@ -75,16 +80,18 @@ def _con_sv2_en_path() -> None:
 # --- Prompt de dev -----------------------------------------------------------
 
 
-def prompt_de_dev(directorio: Path | str, raiz: Path = RAIZ_REPO) -> Path:
-    """Escribe en `directorio` el `prompts.yaml` de `dev`, tal cual, y devuelve su ruta."""
+def prompt_de_dev(
+    directorio: Path | str, raiz: Path = RAIZ_REPO, base: str = BASE_POR_DEFECTO
+) -> Path:
+    """Escribe en `directorio` el `prompts.yaml` de `base`, tal cual, y devuelve su ruta."""
     proceso = subprocess.run(
-        ["git", "-C", str(raiz), "show", f"{RAMA_DEV}:{RUTA_PROMPTS}"],
+        ["git", "-C", str(raiz), "show", f"{base}:{RUTA_PROMPTS}"],
         capture_output=True,
         check=False,
     )
     if proceso.returncode != 0 or not proceso.stdout:
         raise PromptDevNoDisponible(
-            f"`git show {RAMA_DEV}:{RUTA_PROMPTS}` falló (código {proceso.returncode}): "
+            f"`git show {base}:{RUTA_PROMPTS}` falló (código {proceso.returncode}): "
             f"{proceso.stderr.decode('utf-8', 'replace').strip()}"
         )
     destino = Path(directorio) / "prompts_dev.yaml"
