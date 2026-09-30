@@ -5,6 +5,31 @@
 > bloques de F-036, sus dos ciclos de review y los hallazgos— está en
 > `progress/history.md`. Aquí solo queda lo vivo.
 
+## F-052 · BLOQUEADA antes de empezar el Bloque A (2026-09-30, implementer)
+
+**Motivo: `bash harness/init.sh` en rojo al arrancar, por un test ajeno a F-052.**
+No se ha escrito ni una línea de código de F-052 (T1–T6 sin empezar).
+
+- Falla `tests/test_f048_comparar_obra.py::test_f048_comparar_obra_prompt_de_dev_es_el_yaml_de_dev_tal_cual`
+  (suite raíz, 1 failed / 867 passed, 343 s). Los 7 servicios, en verde (caché).
+- Causa: el test afirma que el `prompts.yaml` de sv2 **en la rama `dev`** NO
+  contiene `{contexto_correo}`. Era cierto mientras F-048 vivía en su rama;
+  desde `2b05ba7 Merge branch 'feature/F-048-correo-contexto-ia1' into dev`,
+  `git show dev:services/albaranes-api/config/prompts.yaml` sí lo contiene
+  (comprobado: 1 aparición). Entró en esta rama con `ee3f1a5 Merge branch
+  'dev' into feature/F-052`. El test depende del estado de `dev`, no del
+  código: está en rojo en `dev` y en toda rama que lo haya mergeado.
+- No lo toco: es un test de F-048 (herramienta `evals/procesos/sv2_obra.py`,
+  comparar prompt de `dev` frente al de la rama) y cambiarlo es decidir qué
+  debe comparar esa herramienta ahora que `dev` ya lleva el marcador.
+- Para desbloquear, decide el humano/líder (ajuste `F-048:` en `dev` o aquí):
+  (a) reescribir el test para que no dependa del contenido de `dev` (p. ej.
+  que `prompt_de_dev` devuelva byte a byte `git show dev:...`, sin afirmar
+  qué marcadores lleva), o (b) retirar esa aserción si la comparación
+  dev-frente-a-rama ya no tiene sentido tras el merge.
+- Tras el arreglo: volver F-052 a `in_progress` y relanzar el implementer
+  para el Bloque A tal cual.
+
 ## F-052 · spec v2 escrita (2026-09-29, `spec_ready`)
 
 Spec en `specs/F-052-proveedores-truncados/`, informe en
