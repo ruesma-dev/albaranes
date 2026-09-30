@@ -15,6 +15,8 @@ Aquí vive lo que es igual para todos los clientes, sin HTTP ni BBDD:
   a una SQL que ya trae ``ORDER BY`` (sin orden estable, paginar repite o
   pierde filas: se rechaza).
 - :func:`leer_paginado`: encadena páginas hasta una incompleta, con tope.
+- :data:`MAX_FILAS_POR_PETICION` y :data:`PAGINA_MAXIMA`: el ``max_rows``
+  más alto que admite sigrid-api y la página que le corresponde.
 
 La SQL de cada servicio NO se comparte (decisión D2 de F-052).
 """
@@ -29,6 +31,18 @@ from typing import Any
 _RE_ORDER_BY = re.compile(r"\bORDER\s+BY\b", re.IGNORECASE)
 
 _SUFIJO_PAGINACION = "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY"
+
+#: Filas que sigrid-api acepta como ``max_rows`` en una petición: su
+#: ``MAX_ALLOWED_ROWS`` en la instancia desplegada (leído en Azure el
+#: 2026-09-30; ``azure-apps/sigrid_api.md`` §4.1). El 1.000 que cortaba las
+#: listas era el ``max_rows`` por defecto del cliente de sv3, no un tope de
+#: sigrid-api. Es un techo, no un objetivo: lo que acota una lectura es su
+#: ``timeout_s`` (por debajo del corte de 230 s del balanceador).
+MAX_FILAS_POR_PETICION = 500_000
+
+#: Mayor página con la que ``max_rows = pagina + 1`` (así se distingue una
+#: página llena de una truncada) no pasa de :data:`MAX_FILAS_POR_PETICION`.
+PAGINA_MAXIMA = MAX_FILAS_POR_PETICION - 1
 
 
 class PoliticaTruncado(Enum):
@@ -152,10 +166,17 @@ def leer_paginado(
     :class:`SigridRespuestaTruncada` y ``TOLERA`` devuelve lo leído con
     WARNING. Una página con MÁS filas que las pedidas es siempre un error
     (``RuntimeError``, con cualquier política): aceptarla repetiría filas.
+    ``pagina`` va de 1 a :data:`PAGINA_MAXIMA` (``ValueError`` si no).
     """
     politica = _validar_politica(politica)
     if pagina < 1:
         raise ValueError(f"leer_paginado: pagina debe ser >= 1, no {pagina}")
+    if pagina > PAGINA_MAXIMA:
+        raise ValueError(
+            f"leer_paginado: pagina {pagina} pediría max_rows={pagina + 1}, por "
+            f"encima del tope de sigrid-api ({MAX_FILAS_POR_PETICION}); "
+            f"máximo {PAGINA_MAXIMA}"
+        )
     if max_paginas < 1:
         raise ValueError(
             f"leer_paginado: max_paginas debe ser >= 1, no {max_paginas}"

@@ -26,6 +26,8 @@ from ruesma_comun.office import (
     pdf_a_markdown,
 )
 from ruesma_comun.sigrid import (
+    MAX_FILAS_POR_PETICION,
+    PAGINA_MAXIMA,
     PoliticaTruncado,
     comprobar_truncado,
     con_paginacion,
@@ -239,12 +241,12 @@ class SigridApiContratoClient:
         function_key: str,
         database: str,
         timeout_s: float = 30.0,
-        max_rows: int = 1000,
+        max_rows: int = MAX_FILAS_POR_PETICION,
         database_rep: str = "ruesma_rep",
         pdf_timeout_s: float = 120.0,
         word_converter=None,
         transport: httpx.BaseTransport | None = None,
-        pagina_lineas: int = 1000,
+        pagina_lineas: int = PAGINA_MAXIMA,
         max_paginas: int = 20,
     ) -> None:
         if not base_url:
@@ -253,6 +255,17 @@ class SigridApiContratoClient:
             raise ValueError("SigridApiContratoClient requiere function_key")
         if not database:
             raise ValueError("SigridApiContratoClient requiere database")
+        # (F-052) Ninguna petición puede pedir más filas de las que admite
+        # sigrid-api: ni las lecturas simples (``max_rows``) ni las páginas
+        # (``pagina_lineas + 1``).
+        if not 1 <= int(max_rows) <= MAX_FILAS_POR_PETICION:
+            raise ValueError(
+                f"max_rows debe estar entre 1 y {MAX_FILAS_POR_PETICION}, no {max_rows}"
+            )
+        if not 1 <= int(pagina_lineas) <= PAGINA_MAXIMA:
+            raise ValueError(
+                f"pagina_lineas debe estar entre 1 y {PAGINA_MAXIMA}, no {pagina_lineas}"
+            )
         self._base_url = base_url.rstrip("/")
         self._function_key = function_key
         self._database = database
@@ -278,6 +291,11 @@ class SigridApiContratoClient:
         # (F-052, D3) Lecturas paginadas (``header_and_lines`` y
         # ``search_proveedores``): filas por página de las líneas de
         # contrato y tope de páginas antes de SigridRespuestaTruncada.
+        # Página por defecto = ``PAGINA_MAXIMA`` (decisión del humano,
+        # 2026-10-01): en la práctica UNA petición (máx. medido 989 líneas
+        # y 3.543 proveedores). Lo que acota el tiempo es ``timeout_s``
+        # (30 s por defecto), no el tamaño de página: el corte del
+        # balanceador de sigrid-api es de 230 s.
         self._pagina_lineas = int(pagina_lineas)
         self._max_paginas = int(max_paginas)
         logger.info(
@@ -719,7 +737,7 @@ class SigridApiContratoClient:
     def search_proveedores(
         self,
         *,
-        max_rows: int = 5000,
+        max_rows: int = PAGINA_MAXIMA,
     ) -> list[tuple[str | None, str | None]]:
         """Devuelve (cif, nombre) de los proveedores con contrato en la
         empresa Ruesma (emp=1), para que el HeaderResolverService deduzca
@@ -733,7 +751,7 @@ class SigridApiContratoClient:
         entera, paginada con OFFSET/FETCH (3.543 proveedores el
         2026-09-29). Antes el parámetro no llegaba a sigrid-api (se
         enviaba el ``max_rows`` del cliente, 1.000) y la lista se cortaba
-        en silencio.
+        en silencio. Por defecto, ``PAGINA_MAXIMA``: una sola petición.
         """
         sql = (
             "SELECT DISTINCT prv.cif AS cif, prv.raz AS nombre "
@@ -959,7 +977,8 @@ class SigridApiContratoClient:
         (F-052) ``politica`` es obligatoria: cada consulta declara qué
         hacer si sigrid-api marca ``truncated=true`` (``NO_TOLERA`` lanza
         ``SigridRespuestaTruncada``; ``TOLERA`` usa las filas con
-        WARNING). ``max_rows`` = ``None`` usa el del cliente.
+        WARNING). ``max_rows`` = ``None`` usa el del cliente (por defecto
+        ``MAX_FILAS_POR_PETICION``, el tope de sigrid-api).
         """
         body = self._enviar_sql_read(
             sql=sql,
@@ -1029,13 +1048,19 @@ class SigridApiContratoClient:
     ) -> dict[str, Any]:
         """POST a ``/api/sql/read``: devuelve el cuerpo ya validado
         (HTTP < 400, JSON, ``ok=true``), sin mirar ``truncated``."""
+        filas_pedidas = self._max_rows if max_rows is None else int(max_rows)
+        if filas_pedidas > MAX_FILAS_POR_PETICION:
+            raise ValueError(
+                f"[{label}] max_rows={filas_pedidas} pasa del tope de sigrid-api "
+                f"({MAX_FILAS_POR_PETICION})"
+            )
         url = f"{self._base_url}/api/sql/read"
         payload = {
             "database": database,
             "sql": sql,
             "parameters": parameters,
             "timeout_seconds": int(self._timeout_s),
-            "max_rows": self._max_rows if max_rows is None else int(max_rows),
+            "max_rows": filas_pedidas,
         }
         headers = {
             "x-functions-key": self._function_key,

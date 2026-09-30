@@ -35,7 +35,7 @@ tiene `STRING_AGG` (error 195); `WITH` y `FOR XML PATH` sí pasan por sigrid-api
   las 7 consultas según §3; `fetch_contratos_resumen_por_obra` con la consulta
   agregada (§4); `transport` inyectable en `__init__` (solo para el doble; por
   defecto `httpx.HTTPTransport(retries=1)`, igual que hoy); `pagina_lineas`
-  (1000) y `max_paginas` (20) como kwargs con valor por defecto (D3);
+  (`PAGINA_MAXIMA` = 499.999) y `max_paginas` (20), kwargs con valor por defecto (D3);
   docstring falso del «tope de 10.000 filas» corregido.
 - `application/services/header_resolver_service.py` —
   `_mejor_candidato_por_nombre` devuelve `(candidato | None, motivo, n)` y
@@ -68,8 +68,8 @@ tiene `STRING_AGG` (error 195); `WITH` y `FOR XML PATH` sí pasan por sigrid-api
 
 | # | Método / etiqueta | Filas (medido) | Lectura | Política | Por qué |
 |---|---|---|---|---|---|
-| 1 | `fetch_contratos` / `header_and_lines` | líneas CIF+obra (máx. 989, 0668) | paginada, 1.000/pág. | NO_TOLERA | alimenta valoración y UPSERT por `sigrid_ide`: todas o ninguna |
-| 2 | `search_proveedores` | 3.543 global (2026-09-29) | paginada, 5.000/pág. | NO_TOLERA | hoy se corta a 1.000 en silencio |
+| 1 | `fetch_contratos` / `header_and_lines` | líneas CIF+obra (máx. 989, 0668) | paginada, 499.999/pág. | NO_TOLERA | alimenta valoración y UPSERT por `sigrid_ide`: todas o ninguna |
+| 2 | `search_proveedores` | 3.543 global (2026-09-29) | paginada, 499.999/pág. | NO_TOLERA | hoy se corta a 1.000 en silencio |
 | 3 | `fetch_proveedor_by_cif` | 1 (`TOP 1`) | simple | NO_TOLERA | no puede truncar; se declara igual |
 | 4 | `fetch_proveedores_por_obra` (grounding) | ≤ 193 | simple | NO_TOLERA | lista de candidatos de la 2ª IA |
 | 5 | `fetch_contratos_resumen_por_obra` | ≤ 163 (agregada) | simple, una llamada | NO_TOLERA | truncado = candidatos parciales |
@@ -79,7 +79,7 @@ tiene `STRING_AGG` (error 195); `WITH` y `FOR XML PATH` sí pasan por sigrid-api
 Paginación (solo 1 y 2): `max_rows = página + 1` (sigrid-api marca `truncated`
 al alcanzar `max_rows`; si aun así llega, es error); se sigue mientras la página
 venga llena; tope `max_paginas` → `SigridRespuestaTruncada` (R13). Caso normal
-de `header_and_lines`: una sola llamada, como hoy.
+de las dos: una sola llamada (humano, 2026-10-01: página `PAGINA_MAXIMA`, `max_rows` ≤ 500.000).
 
 ## 4. SQL (Sigrid, solo lectura; inline en el cliente, como todo el repo)
 

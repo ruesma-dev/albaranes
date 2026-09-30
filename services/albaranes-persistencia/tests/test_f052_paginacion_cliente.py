@@ -18,7 +18,12 @@ from doble_sigrid_api import (
     DobleSigridApi,
     fixture_por_defecto,
 )
-from ruesma_comun.sigrid import SigridRespuestaTruncada
+from ruesma_comun.sigrid import (
+    MAX_FILAS_POR_PETICION,
+    PAGINA_MAXIMA,
+    PoliticaTruncado,
+    SigridRespuestaTruncada,
+)
 
 _ORDER_BY_LINEAS = "ORDER BY con_ctr.cod, ctr.ide, ctrpro.pos, ctrpro.ide"
 _ORDER_BY_PROVEEDORES = "ORDER BY prv.cif, prv.raz"
@@ -36,8 +41,10 @@ def _peticiones_proveedores(doble: DobleSigridApi) -> list[dict]:
 # R11 · fetch_contratos trae TODAS las líneas, agrupadas y en orden
 # ------------------------------------------------------------------ #
 def test_f052_r11_fetch_contratos_1200_lineas_agrupadas_en_orden():
+    """Con páginas de 1.000 explícitas: la paginación sigue probándose
+    aunque la página por defecto la haga innecesaria en la práctica."""
     doble = DobleSigridApi()
-    contratos = doble.cliente().fetch_contratos(
+    contratos = doble.cliente(pagina_lineas=1000).fetch_contratos(
         cif_proveedor=CIF_GRANDE_0668, codigo_obra_normalizado="0668",
     )
     assert [c.codigo_contrato for c in contratos] == ["CTGR25/0001", "CTGR25/0002"]
@@ -90,8 +97,8 @@ def test_f052_r12_search_proveedores_devuelve_los_3543():
     assert proveedores == sorted(fixture_por_defecto().proveedores_global)
     [peticion] = _peticiones_proveedores(doble)
     assert _ORDER_BY_PROVEEDORES in peticion["sql"]
-    assert peticion["parameters"] == [0, 5000]
-    assert peticion["max_rows"] == 5001
+    assert peticion["parameters"] == [0, PAGINA_MAXIMA]
+    assert peticion["max_rows"] == MAX_FILAS_POR_PETICION
 
 
 def test_f052_r12_hallazgo_el_max_rows_pedido_llega_a_sigrid_api():
@@ -133,3 +140,67 @@ def test_f052_r13_search_proveedores_tope_de_paginas_lanza():
         doble.cliente(max_paginas=3).search_proveedores(max_rows=1000)
     assert info.value.etiqueta == "search_proveedores"
     assert len(_peticiones_proveedores(doble)) == 3
+
+
+# ------------------------------------------------------------------ #
+# Página por defecto = una sola petición (decisión del humano,
+# 2026-10-01): sigrid-api admite 500.000 filas por petición.
+# ------------------------------------------------------------------ #
+def test_f052_pagina_por_defecto_1200_lineas_en_una_sola_peticion():
+    doble = DobleSigridApi()
+    contratos = doble.cliente().fetch_contratos(
+        cif_proveedor=CIF_GRANDE_0668, codigo_obra_normalizado="0668",
+    )
+    assert [len(c.lines) for c in contratos] == [500, 700]
+    [peticion] = _peticiones_lineas(doble)
+    assert peticion["parameters"] == [CIF_GRANDE_0668, "0668", 0, PAGINA_MAXIMA]
+    assert peticion["max_rows"] == MAX_FILAS_POR_PETICION
+    assert peticion["sql"].rstrip().endswith("OFFSET ? ROWS FETCH NEXT ? ROWS ONLY")
+
+
+def test_f052_max_rows_por_defecto_de_las_lecturas_simples_es_el_tope():
+    """La agregada, los proveedores de la obra y el resto de lecturas
+    simples piden el tope de sigrid-api: el 1.000 de antes era el
+    precipicio que cortaba las listas."""
+    doble = DobleSigridApi()
+    cliente = doble.cliente()
+    assert len(cliente.fetch_contratos_resumen_por_obra(codigo_obra="0691")) == 81
+    assert len(cliente.fetch_proveedores_por_obra(codigo_obra="0691")) == 81
+    assert cliente.fetch_proveedor_by_cif(cif=CIF_SALMEDINA) is not None
+    assert [p["max_rows"] for p in doble.peticiones] == [MAX_FILAS_POR_PETICION] * 3
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"max_rows": MAX_FILAS_POR_PETICION + 1},
+        {"max_rows": 0},
+        {"pagina_lineas": PAGINA_MAXIMA + 1},
+        {"pagina_lineas": 0},
+    ],
+)
+def test_f052_cliente_rechaza_limites_fuera_del_tope(kwargs):
+    with pytest.raises(ValueError):
+        DobleSigridApi().cliente(**kwargs)
+
+
+def test_f052_cliente_admite_los_limites_justos():
+    doble = DobleSigridApi()
+    cliente = doble.cliente(max_rows=MAX_FILAS_POR_PETICION, pagina_lineas=PAGINA_MAXIMA)
+    cliente.fetch_contratos(cif_proveedor=CIF_SALMEDINA, codigo_obra_normalizado="0691")
+    assert [p["max_rows"] for p in _peticiones_lineas(doble)] == [MAX_FILAS_POR_PETICION]
+
+
+def test_f052_ninguna_peticion_pasa_del_tope():
+    doble = DobleSigridApi()
+    cliente = doble.cliente()
+    with pytest.raises(ValueError):
+        cliente.search_proveedores(max_rows=PAGINA_MAXIMA + 1)
+    with pytest.raises(ValueError):
+        cliente._post_sql_read(
+            sql="SELECT TOP 1 prv.cif AS cif, prv.raz AS nombre FROM prv WHERE 1 = ?",
+            parameters=[1], database="ruesma", label="prueba",
+            politica=PoliticaTruncado.NO_TOLERA,
+            max_rows=MAX_FILAS_POR_PETICION + 1,
+        )
+    assert doble.peticiones == []

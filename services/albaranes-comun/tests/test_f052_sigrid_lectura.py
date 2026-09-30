@@ -277,3 +277,38 @@ def test_f052_r14_leer_paginado_pagina_con_filas_de_mas_lanza(politica):
     assert "header_and_lines" in mensaje
     assert "11" in mensaje and "10" in mensaje
     assert fuente.llamadas == [(0, 10)]
+
+
+# ------------------------------------------------------------------ #
+# Tope de filas por petición (decisión del humano, 2026-10-01)
+# ------------------------------------------------------------------ #
+def test_f052_tope_de_sigrid_api_y_pagina_maxima():
+    """``MAX_ALLOWED_ROWS`` de la instancia desplegada (leído en Azure el
+    2026-09-30) y la mayor página con la que ``max_rows = pagina + 1``
+    no pasa de ese tope."""
+    from ruesma_comun.sigrid import MAX_FILAS_POR_PETICION, PAGINA_MAXIMA
+
+    assert MAX_FILAS_POR_PETICION == 500_000
+    assert PAGINA_MAXIMA == 499_999
+    assert PAGINA_MAXIMA + 1 == MAX_FILAS_POR_PETICION
+
+
+def test_f052_leer_paginado_admite_la_pagina_maxima_en_una_llamada():
+    from ruesma_comun.sigrid import PAGINA_MAXIMA
+
+    fuente = _Paginas(3_543)
+    columnas, filas = _leer(fuente, pagina=PAGINA_MAXIMA)
+    assert len(filas) == 3_543
+    assert fuente.llamadas == [(0, PAGINA_MAXIMA)]
+
+
+def test_f052_leer_paginado_rechaza_una_pagina_por_encima_del_tope():
+    """Con ``max_rows = pagina + 1`` pasaría del tope de sigrid-api: se
+    rechaza antes de pedir nada."""
+    from ruesma_comun.sigrid import PAGINA_MAXIMA
+
+    fuente = _Paginas(10)
+    with pytest.raises(ValueError) as info:
+        _leer(fuente, pagina=PAGINA_MAXIMA + 1)
+    assert "500000" in str(info.value).replace(".", "")
+    assert fuente.llamadas == []

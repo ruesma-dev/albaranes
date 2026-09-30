@@ -6,6 +6,8 @@ cómo encadenar páginas ``OFFSET/FETCH``. La SQL de cada servicio NO vive
 aquí (D2): cada cliente conserva la suya.
 """
 from ruesma_comun.sigrid.lectura import (
+    MAX_FILAS_POR_PETICION,
+    PAGINA_MAXIMA,
     PoliticaTruncado,
     SigridRespuestaTruncada,
     comprobar_truncado,
@@ -14,6 +16,8 @@ from ruesma_comun.sigrid.lectura import (
 )
 
 __all__ = [
+    "MAX_FILAS_POR_PETICION",
+    "PAGINA_MAXIMA",
     "PoliticaTruncado",
     "SigridRespuestaTruncada",
     "comprobar_truncado",

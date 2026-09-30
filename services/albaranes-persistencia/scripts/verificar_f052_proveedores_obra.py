@@ -57,15 +57,11 @@ from infrastructure.sigrid.sigrid_api_contrato_client import (  # noqa: E402
 )
 from pydantic import ValidationError  # noqa: E402
 from ruesma_comun.obras import normalizar_codigo_obra  # noqa: E402
-from ruesma_comun.sigrid import PoliticaTruncado  # noqa: E402
+from ruesma_comun.sigrid import MAX_FILAS_POR_PETICION, PoliticaTruncado  # noqa: E402
 
 #: Tiempo máximo aceptable de la consulta agregada (design §10: si pasara
 #: de 15 s, se abre feature para cachear).
 LIMITE_SEGUNDOS = 15.0
-
-#: ``max_rows`` de las lecturas «sin tope» del script: el ``MAX_ALLOWED_ROWS``
-#: de la instancia desplegada de sigrid-api (``azure-apps/sigrid_api.md`` §4.1).
-_MAX_FILAS = 500_000
 
 #: La consulta de resumen por obra de ANTES de F-052 (una fila por línea de
 #: contrato), sin tope: la referencia del texto por líneas (R30).
@@ -191,10 +187,11 @@ class Entorno:
         return redactar(f"{type(exc).__name__}: {exc}", self.secretos)
 
     def leer(self, sql: str, parametros: list[Any], etiqueta: str) -> list[dict[str, Any]]:
-        """Lectura sin tope y sin tolerar truncado (``NO_TOLERA``)."""
+        """Lectura «sin tope» (``max_rows`` = el tope de sigrid-api) y sin
+        tolerar truncado (``NO_TOLERA``)."""
         columnas, filas = self.cliente._post_sql_read(
             sql=sql, parameters=parametros, database=self.cliente._database,
-            label=etiqueta, politica=PoliticaTruncado.NO_TOLERA, max_rows=_MAX_FILAS,
+            label=etiqueta, politica=PoliticaTruncado.NO_TOLERA, max_rows=MAX_FILAS_POR_PETICION,
         )
         return [dict(zip(columnas, fila)) for fila in filas]
 
