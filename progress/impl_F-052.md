@@ -207,3 +207,13 @@ E       AssertionError: assert {'B00001200':...gon'}, set())} == {}
   acepta y da 81/163 filas lo verifican T20 y T21.
 
 ## Evidencias
+
+`bash harness/init.sh` (tal cual, tras el último commit de código): **ENTORNO LISTO**, exit 0.
+
+| Evidencia | Valor medido |
+|---|---|
+| Tests F-052 nuevos | 29 (comun) + 11 + 13 + 8 + 13 + 7 = **81**, todos en verde |
+| Suites | raíz `1067 passed in 197.52s`; sv3 `284 passed in 4.97s`; comun `306 passed in 29.30s` (sv1, sv2, sv4–sv6: caché; comun y sv3 también a mano, una tras otra: 306 y 284 passed) |
+| Cobertura líneas cambiadas | `PUERTA COBERTURA: 100.0% de 95 líneas cambiadas cubiertas (95/95, umbral 80%, nivel critico)` |
+| Mutación | no lanzada: es T19, fuera del Bloque A. Mutante manual de T6 («`nombre` por `texto`»): muerto |
+| Tamaño | `impl 209/220` en la puerta de `init.sh` (antes de esta tabla) |
