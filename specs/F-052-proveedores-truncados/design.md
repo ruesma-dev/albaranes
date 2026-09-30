@@ -243,8 +243,8 @@ nuevo sin las columnas falla al leer el merge. Lo lanza el humano:
   `familias.py` y prompts; sv5 y sv6 no leen nada de lo que cambia.
 - `ProveedorReverseLookupClient` (puerto) y `fetch_proveedores_por_obra` de sv3
   salvo su política (fila 4); `config/settings.py` y raíces de composición (D3).
-- `SigridApiObraClient` de sv3 y el `SigridApiContratoClient` de sv4 (fallback
-  solo-front, copia de `header_and_lines` con `max_rows=1000`): ver D6.
+- `SigridApiObraClient` de sv3 y el `SigridApiContratoClient` de sv4 (fallback solo-front, copia de `header_and_lines` con `max_rows=1000`): ver D6.
 - `static/app.js`: los dos botones de re-búsqueda se reutilizan; D4-A aceptada (2026-09-30): «Guardar» relanza la búsqueda si cambian CIF u obra (T13 bis).
+  Humano, 2026-10-01: (1) sin rastro, el primer «Guardar» busca una vez (O-C1); (2) una sola normalización de obra, la de sv3, en `ruesma_comun.obras` (CR-C1).
 
 ## 12. Decisiones abiertas (D1–D7, con recomendación: `progress/spec_F-052.md` §v2)
