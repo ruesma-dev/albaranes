@@ -53,6 +53,7 @@ from domain.models.review_models import (
     ProveedorOption,
     ProviderSnapshot,
     RastroBusquedaContratos,
+    RESULTADOS_BUSQUEDA_CONTRATOS,
     ValuationLineUpdate,
     ValuationPayload,
     VIEW_MODE_MERGE,
@@ -2975,6 +2976,37 @@ class AlbaranReviewRepository:
             if document is None:
                 return None, None
             return document.proveedor_cif, document.obra_codigo
+
+    def sellar_busqueda_contratos(
+        self,
+        *,
+        document_id: str,
+        cif: str | None,
+        obra: str | None,
+        resultado: str,
+    ) -> None:
+        """Rastro de la última búsqueda de contratos (F-052 R22).
+
+        SOLO para el fallback local de solo-front
+        (``LocalContratoRefetchClient``); en producción lo sella sv3,
+        dueño de las columnas, con la misma semántica (R21). Rechaza un
+        resultado desconocido antes de tocar la BBDD: el bloque de
+        contrato decide su mensaje por ese valor.
+        """
+        if resultado not in RESULTADOS_BUSQUEDA_CONTRATOS:
+            raise ValueError(
+                f"resultado de búsqueda de contratos desconocido: {resultado!r}"
+            )
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            document = session.get(AlbaranDocumentMergeOrm, document_id)
+            if document is None:
+                raise KeyError(f"Documento no encontrado: {document_id}")
+            document.contratos_busqueda_cif = cif
+            document.contratos_busqueda_obra = obra
+            document.contratos_busqueda_resultado = resultado
+            document.contratos_busqueda_at_utc = self._utc_iso()
+            session.commit()
 
     def replace_contratos_and_select(
         self,

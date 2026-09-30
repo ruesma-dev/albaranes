@@ -10,6 +10,10 @@ sv3 en producción).
 Se cablea como fallback en ``build_app`` SOLO cuando NO hay colas
 (publicador NULO) y SÍ hay credenciales Sigrid. Con colas se mantiene el
 ``ColasRefetchClient`` (asíncrono → sv3), que es el camino de producción.
+
+F-052 R22: deja el mismo rastro de la búsqueda que sv3 (R21) en las
+columnas ``contratos_busqueda_*`` del merge —``sin_datos``, ``error``,
+``ninguno`` o ``encontrados``, con CIF y obra normalizados—, best-effort.
 """
 from __future__ import annotations
 
@@ -18,6 +22,12 @@ from typing import TYPE_CHECKING
 
 from application.services.obra_code_normalizer import normalize_obra_code
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
+from domain.models.review_models import (
+    BUSQUEDA_ENCONTRADOS,
+    BUSQUEDA_ERROR,
+    BUSQUEDA_NINGUNO,
+    BUSQUEDA_SIN_DATOS,
+)
 from domain.ports.contrato_refetch_port import ContratoRefetchClient
 
 if TYPE_CHECKING:  # evita import circular en runtime
@@ -66,6 +76,7 @@ class LocalContratoRefetchClient(ContratoRefetchClient):
                 faltan.append(
                     f"código de obra inválido ({obra_raw!r}); debe ser 1-4 dígitos"
                 )
+            self._sellar(document_id, cif_clean, obra_norm, BUSQUEDA_SIN_DATOS)
             return ContratoRefetchOutcome(
                 status="skipped_missing_data",
                 count=0,
@@ -90,6 +101,7 @@ class LocalContratoRefetchClient(ContratoRefetchClient):
                 _LOG_PREFIX,
                 document_id,
             )
+            self._sellar(document_id, cif_clean, obra_norm, BUSQUEDA_ERROR)
             return ContratoRefetchOutcome(
                 status="sigrid_error",
                 count=0,
@@ -99,11 +111,24 @@ class LocalContratoRefetchClient(ContratoRefetchClient):
                 obra_codigo=obra_norm,
             )
 
-        selected = self._repository.replace_contratos_and_select(
-            document_id=document_id,
-            contratos=contratos,
-        )
+        try:
+            selected = self._repository.replace_contratos_and_select(
+                document_id=document_id,
+                contratos=contratos,
+            )
+        except Exception:
+            # Misma extensión de R21 que sv3: sin los contratos guardados,
+            # ni «encontrados» ni «ninguno» serían verdad. El error sigue
+            # subiendo al endpoint como antes de F-052.
+            self._sellar(document_id, cif_clean, obra_norm, BUSQUEDA_ERROR)
+            raise
         count = len(contratos)
+        self._sellar(
+            document_id,
+            cif_clean,
+            obra_norm,
+            BUSQUEDA_ENCONTRADOS if count else BUSQUEDA_NINGUNO,
+        )
         if count == 0:
             status = "no_results"
             message = (
@@ -135,3 +160,28 @@ class LocalContratoRefetchClient(ContratoRefetchClient):
             cif=cif_clean,
             obra_codigo=obra_norm,
         )
+
+    def _sellar(
+        self,
+        document_id: str,
+        cif: str | None,
+        obra: str | None,
+        resultado: str,
+    ) -> None:
+        """Rastro de la búsqueda (F-052 R22), best-effort: un fallo aquí se
+        registra y no cambia el resultado del re-fetch."""
+        try:
+            self._repository.sellar_busqueda_contratos(
+                document_id=document_id,
+                cif=cif,
+                obra=obra,
+                resultado=resultado,
+            )
+        except Exception:  # noqa: BLE001 - best-effort
+            logger.exception(
+                "%s no se pudo sellar el rastro de la búsqueda de contratos "
+                "document_id=%s resultado=%s",
+                _LOG_PREFIX,
+                document_id,
+                resultado,
+            )
