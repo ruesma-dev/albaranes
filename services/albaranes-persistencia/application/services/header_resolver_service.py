@@ -104,6 +104,42 @@ def _score_razon_social(leido: str | None, candidato: str | None) -> float:
     return max(_match_score(a, b), _match_score(b, a))
 
 
+# ------------------------------------------------------------------ #
+# Motivo de la red por nombre (F-052 · design §5 y §6). Sin propuesta,
+# la nota de revision dice POR QUE: no es lo mismo que la consulta falle
+# que que nadie case.
+# ------------------------------------------------------------------ #
+MOTIVO_PROPUESTA = "propuesta"
+MOTIVO_NADIE_CASA = "nadie_casa"
+MOTIVO_SIN_OBRA = "sin_obra"
+MOTIVO_SIN_NOMBRE = "sin_nombre"
+MOTIVO_CONSULTA_FALLIDA = "consulta_fallida"
+
+
+def _motivo_sin_propuesta(
+    motivo: str,
+    *,
+    n_candidatos: int,
+    obra: str | None,
+    nombre_leido: str | None,
+) -> str:
+    """Texto que sigue a «el CIF leido X no existe en Sigrid» cuando no
+    hay propuesta (R15–R18)."""
+    if motivo == MOTIVO_CONSULTA_FALLIDA:
+        return (
+            "y no se pudo consultar la lista de proveedores de la obra "
+            f"{obra} (fallo al consultar Sigrid): no hay propuesta"
+        )
+    if motivo == MOTIVO_SIN_OBRA:
+        return "y no hay obra válida con la que buscar candidatos"
+    if motivo == MOTIVO_SIN_NOMBRE:
+        return "y no se leyó nombre de proveedor con el que comparar"
+    return (
+        f"y ninguno de los {n_candidatos} proveedores con contrato en la "
+        f"obra {obra} casa con el nombre leído ('{nombre_leido}')"
+    )
+
+
 class _CandidatoObra:
     """Candidato puntuado (proveedor con contrato en la obra)."""
 
@@ -418,26 +454,34 @@ class HeaderResolverService:
             )
             return
 
-        candidato = self._mejor_candidato_por_nombre(
+        candidato, motivo, n_candidatos = self._mejor_candidato_por_nombre(
             proveedor_nombre=proveedor_nombre,
             obra_codigo_efectiva=obra_codigo_efectiva,
         )
+        cabeza = (
+            f"{_NOTA_PROVEEDOR_PREFIX} el CIF leido {cif_leido} no "
+            "existe en Sigrid"
+        )
         if candidato is not None:
             nota = (
-                f"{_NOTA_PROVEEDOR_PREFIX} el CIF leido {cif_leido} no "
-                f"existe en Sigrid. PROPUESTA: {candidato.cif} — "
+                f"{cabeza}. PROPUESTA: {candidato.cif} — "
                 f"{candidato.nombre or '?'}, con contrato en la obra "
                 f"{obra_codigo_efectiva} y nombre parecido al leido "
                 f"('{proveedor_nombre or '—'}'). Confirmala o corrigela "
                 "en el portal."
             )
         else:
+            # F-052 · R15–R18: la nota dice POR QUE no hay propuesta. Una
+            # consulta fallida nunca se cuenta como «nadie casa».
             nota = (
-                f"{_NOTA_PROVEEDOR_PREFIX} el CIF leido {cif_leido} no "
-                "existe en Sigrid y ningun proveedor con contrato en la "
-                "obra casa con el nombre leido "
-                f"('{proveedor_nombre or '—'}'). Revisa el proveedor en "
-                "el portal."
+                f"{cabeza} "
+                + _motivo_sin_propuesta(
+                    motivo,
+                    n_candidatos=n_candidatos,
+                    obra=obra_codigo_efectiva,
+                    nombre_leido=proveedor_nombre,
+                )
+                + ". Revisa el proveedor en el portal."
             )
         self._marcar_revision_safely(
             merge_document_id=merge_document_id,
@@ -450,25 +494,39 @@ class HeaderResolverService:
         *,
         proveedor_nombre: str | None,
         obra_codigo_efectiva: str | None,
-    ) -> ProveedorObraResumen | None:
+    ) -> tuple[ProveedorObraResumen | None, str, int]:
         """Proveedor con contrato en la obra cuyo nombre casa con el
-        leido por encima del umbral. ``None`` si no hay obra efectiva,
-        no hay nombre leido, falla la consulta o nadie llega al umbral."""
-        if not obra_codigo_efectiva or not (proveedor_nombre or "").strip():
-            return None
+        leido por encima del umbral, con el motivo y el numero de
+        candidatos (F-052 · design §5):
+
+          - ``(candidato, 'propuesta', n)``: alguno llega al umbral.
+          - ``(None, 'nadie_casa', n)``: la consulta funciono y ninguno
+            de los ``n`` proveedores devueltos llega al umbral.
+          - ``(None, 'sin_obra', 0)``: no hay obra efectiva (manda sobre
+            la falta de nombre: sin obra no hay lista que comparar).
+          - ``(None, 'sin_nombre', 0)``: no se leyo nombre.
+          - ``(None, 'consulta_fallida', 0)``: la consulta lanzo (red,
+            HTTP, ``ok=false``, truncado, error de ``FOR XML``).
+        """
+        if not obra_codigo_efectiva:
+            return None, MOTIVO_SIN_OBRA, 0
+        if not (proveedor_nombre or "").strip():
+            return None, MOTIVO_SIN_NOMBRE, 0
         try:
-            resumenes = self._proveedor_client.fetch_contratos_resumen_por_obra(
-                codigo_obra=obra_codigo_efectiva,
+            resumenes = list(
+                self._proveedor_client.fetch_contratos_resumen_por_obra(
+                    codigo_obra=obra_codigo_efectiva,
+                ) or []
             )
         except Exception:
             logger.exception(
                 "%s fetch_contratos_resumen_por_obra fallo obra=%s; la "
                 "propuesta se omite.", _LOG_PREFIX, obra_codigo_efectiva,
             )
-            return None
+            return None, MOTIVO_CONSULTA_FALLIDA, 0
         mejor: ProveedorObraResumen | None = None
         mejor_score = 0.0
-        for resumen in resumenes or []:
+        for resumen in resumenes:
             score = _score_razon_social(proveedor_nombre, resumen.nombre)
             if score > mejor_score:
                 mejor_score = score
@@ -479,13 +537,14 @@ class HeaderResolverService:
                 "obra=%s", _LOG_PREFIX, mejor.cif, mejor_score,
                 obra_codigo_efectiva,
             )
-            return mejor
+            return mejor, MOTIVO_PROPUESTA, len(resumenes)
         logger.info(
             "%s ningun candidato de la obra %s casa con el nombre leido "
-            "(mejor score=%.2f < %.2f).",
+            "(mejor score=%.2f < %.2f, %d candidatos).",
             _LOG_PREFIX, obra_codigo_efectiva, mejor_score, self._min_score,
+            len(resumenes),
         )
-        return None
+        return None, MOTIVO_NADIE_CASA, len(resumenes)
 
     def _canonizar_nombre_safely(
         self,

@@ -5,10 +5,13 @@
 > bloques de F-036, sus dos ciclos de review y los hallazgos— está en
 > `progress/history.md`. Aquí solo queda lo vivo.
 
-## F-052 · Bloque A en curso (2026-09-30, implementer)
+## F-052 · Bloque B en curso (2026-09-30, implementer)
 
-Tareas T1–T6 una a una, un commit por tarea; trazas RED y decisiones en
-`progress/impl_F-052.md` §«Bloque A». Hecho: T1–T6 y las correcciones de review CR-A1 y CR-A2 (progress/review_F-052_bloqueA.md). Siguiente: Bloque B (T7–T10), ver notas en impl_F-052.md.
+Bloque A (T1–T6) hecho y APROBADO (`progress/review_F-052_bloqueA.md`).
+Bloque B (T7–T10) uno a uno, un commit por tarea; trazas RED y decisiones en
+`progress/impl_F-052.md` §«Bloque B». Hecho: T7. En curso: T8.
+Decisiones del Bloque B (detalle en el informe): con obra y nombre ausentes a
+la vez, el motivo es `sin_obra`.
 
 ## F-052 · DESBLOQUEADA (2026-09-30, líder): el test de F-048 que dependía de `dev` se arregló en `fix/F-048-comparar-obra-base` (`c8a295e`, `--base`, tests fijados a `1807e83`), integrado en esta rama. Pendiente del humano: fusionar esa rama en `dev`.
 
