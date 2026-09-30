@@ -3,7 +3,7 @@
 
 Movida aquí desde sv3 (``application/services/obra_code_normalizer.py``)
 en F-052 CR-C1, con la semántica de sv3 intacta: sv4 tenía otra copia
-(``^\d{1,4}$`` + ``zfill``) que no coincidía y, al comparar el rastro que
+(1 a 4 dígitos + ``zfill``) que no coincidía y, al comparar el rastro que
 sella sv3, tomaba por «desfasada» una búsqueda que sv3 había descartado.
 
 No confundir con ``ruesma_comun.contratos.origen_datos.normalizar_codigo``

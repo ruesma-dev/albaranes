@@ -20,7 +20,6 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from ruesma_comun.obras import normalizar_codigo_obra
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
     BUSQUEDA_ENCONTRADOS,
@@ -29,6 +28,7 @@ from domain.models.review_models import (
     BUSQUEDA_SIN_DATOS,
 )
 from domain.ports.contrato_refetch_port import ContratoRefetchClient
+from ruesma_comun.obras import normalizar_codigo_obra
 
 if TYPE_CHECKING:  # evita import circular en runtime
     from infrastructure.database.review_repository import AlbaranReviewRepository

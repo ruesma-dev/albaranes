@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import logging
 
-from ruesma_comun.obras import normalizar_codigo_obra
 from domain.ports.obra_enrichment_port import ObraEnrichmentClient
 from domain.ports.obra_merge_repository_port import ObraMergeRepository
+from ruesma_comun.obras import normalizar_codigo_obra
 
 logger = logging.getLogger(__name__)
 

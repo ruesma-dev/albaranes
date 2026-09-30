@@ -14,7 +14,6 @@ es una forma de COMPARACIÓN sin ceros a la izquierda.
 from __future__ import annotations
 
 import pytest
-
 from ruesma_comun.obras import normalizar_codigo_obra
 
 

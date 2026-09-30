@@ -9,7 +9,6 @@ bloque a partir del rastro de la última búsqueda (R20–R22).
 """
 from __future__ import annotations
 
-from ruesma_comun.obras import normalizar_codigo_obra
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
     BUSQUEDA_ENCONTRADOS,
@@ -24,6 +23,7 @@ from domain.models.review_models import (
     BusquedaContratosVista,
     RastroBusquedaContratos,
 )
+from ruesma_comun.obras import normalizar_codigo_obra
 
 _ESTADO_POR_RESULTADO = {
     BUSQUEDA_ENCONTRADOS: ESTADO_BUSQUEDA_VIGENTE,

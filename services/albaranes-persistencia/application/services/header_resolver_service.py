@@ -8,7 +8,6 @@ from application.services.familia_detector import (
     familias_de_filas_merge,
     familias_de_texto,
 )
-from ruesma_comun.obras import normalizar_codigo_obra
 from domain.models.header_resolution_models import ProveedorObraResumen
 from domain.models.obra_models import ObraEnrichmentResult
 from domain.ports.header_resolver_ports import (
@@ -16,6 +15,7 @@ from domain.ports.header_resolver_ports import (
     ObraReverseLookupClient,
     ProveedorReverseLookupClient,
 )
+from ruesma_comun.obras import normalizar_codigo_obra
 from ruesma_comun.sigrid import SigridRespuestaTruncada
 
 logger = logging.getLogger(__name__)

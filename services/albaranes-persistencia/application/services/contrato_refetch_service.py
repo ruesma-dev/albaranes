@@ -6,9 +6,9 @@ import logging
 from application.services.contrato_enrichment_service import (
     ContratoEnrichmentService,
 )
-from ruesma_comun.obras import normalizar_codigo_obra
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.ports.contrato_merge_repository_port import ContratoMergeRepository
+from ruesma_comun.obras import normalizar_codigo_obra
 
 logger = logging.getLogger(__name__)
 

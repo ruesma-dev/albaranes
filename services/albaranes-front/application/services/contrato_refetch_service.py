@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import logging
 
-from ruesma_comun.obras import normalizar_codigo_obra
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.contrato_sigrid_models import ContratoFromSigrid
 from domain.ports.contrato_refetch_port import (
@@ -11,6 +10,7 @@ from domain.ports.contrato_refetch_port import (
     ContratoPdfStorage,
 )
 from infrastructure.database.review_repository import AlbaranReviewRepository
+from ruesma_comun.obras import normalizar_codigo_obra
 
 logger = logging.getLogger(__name__)
 
