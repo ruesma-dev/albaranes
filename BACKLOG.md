@@ -5,13 +5,13 @@
 
 Resumen: **51 features**, 36 abiertas, 15 terminadas.
 
-Bloqueadas: **F-052**.
+En curso: **F-052**.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-052 | sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF) | 1 | bloqueada | critico | `feature/F-052-proveedores-truncados` |
+| F-052 | sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF) | 1 | en curso | critico | `feature/F-052-proveedores-truncados` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
@@ -72,7 +72,7 @@ Bloqueadas: **F-052**.
 
 ### F-052 · sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF)
 
-estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-052-proveedores-truncados`
+estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-052-proveedores-truncados`
 
 PRIORIDAD 1 por decision del humano el 2026-09-29. ORIGEN: albaran SS-0026122 de SALMEDINA (caso RES-007) en la prueba local de F-048. Diagnostico de solo lectura en progress/explore_salmedina_proveedor.md.
 

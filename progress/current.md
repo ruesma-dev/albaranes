@@ -5,7 +5,9 @@
 > bloques de F-036, sus dos ciclos de review y los hallazgos— está en
 > `progress/history.md`. Aquí solo queda lo vivo.
 
-## F-052 · BLOQUEADA antes de empezar el Bloque A (2026-09-30, implementer)
+## F-052 · DESBLOQUEADA (2026-09-30, líder): el test de F-048 que dependía de `dev` se arregló en `fix/F-048-comparar-obra-base` (`c8a295e`, `--base`, tests fijados a `1807e83`), integrado en esta rama. Pendiente del humano: fusionar esa rama en `dev`.
+
+### Bloqueo original
 
 **Motivo: `bash harness/init.sh` en rojo al arrancar, por un test ajeno a F-052.**
 No se ha escrito ni una línea de código de F-052 (T1–T6 sin empezar).
