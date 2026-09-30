@@ -75,14 +75,20 @@ def estado_busqueda(
 
 
 def debe_relanzar_busqueda(vista: BusquedaContratosVista | None) -> bool:
-    """D4-A: «Guardar» relanza la búsqueda solo si CIF u obra cambiaron.
+    """D4-A: ¿«Guardar» relanza la búsqueda de contratos?
 
-    «Cambiaron» = distintos (normalizados) de los del último rastro, es
-    decir, estado ``desfasada``. Sin rastro no hay con qué comparar y no
-    se relanza: el bloque ya dice que no consta con qué se buscó y ofrece
-    «Solo volver a buscar».
+    - ``desfasada``: CIF u obra distintos (normalizados) de los del último
+      rastro ⇒ sí.
+    - ``sin_rastro`` (O-C1, decisión del humano del 2026-10-01): documento
+      anterior al despliegue ⇒ sí, una vez. La búsqueda deja rastro (aunque
+      sea ``sin_datos`` si la obra o el CIF no valen), así que el siguiente
+      «Guardar» ya sigue la regla normal y no hay bucle.
+    - Cualquier otro estado ⇒ no. ``None`` (vistas de proveedor) ⇒ no.
     """
-    return vista is not None and vista.estado == ESTADO_BUSQUEDA_DESFASADA
+    return vista is not None and vista.estado in (
+        ESTADO_BUSQUEDA_DESFASADA,
+        ESTADO_BUSQUEDA_SIN_RASTRO,
+    )
 
 
 def aviso_de_guardado(
@@ -101,9 +107,6 @@ def aviso_de_guardado(
     if busqueda is None:
         return mensaje, False
     if busqueda.status == "queued":
-        aviso = (
-            f"{mensaje}. CIF u obra cambiados: buscando contratos con los "
-            "datos nuevos…"
-        )
+        aviso = f"{mensaje}. Buscando contratos con el CIF y la obra guardados…"
         return aviso, True
     return f"{mensaje}. {busqueda.message}", False

@@ -2588,13 +2588,14 @@
     if (saveAndRefetchBtn) saveAndRefetchBtn.addEventListener("click", handleSaveAndRefetch);
     if (refetchOnlyBtn) refetchOnlyBtn.addEventListener("click", handleRefetchOnly);
 
-    // F-052 D4-A: «Guardar» relanzó la búsqueda (la ficha trae
-    // #busqueda-buscando). Sondeamos el detalle hasta que el rastro deje
-    // de estar desfasado (sv3 selló el resultado) y recargamos sin
-    // ?buscando=1. Con tope, para no quedarnos colgados si sv3 no llega.
+    // F-052 D4-A / O-C1: «Guardar» relanzó la búsqueda (la ficha trae
+    // #busqueda-buscando) por desfase o por falta de rastro. Sondeamos el
+    // detalle hasta que el estado cambie (sv3 selló el resultado) y
+    // recargamos sin ?buscando=1. Con tope, por si sv3 no llega.
     (function pollBusquedaRelanzada() {
         const marca = document.getElementById("busqueda-buscando");
         if (!marca) return;
+        const estadoInicial = marca.dataset.estadoInicial || "desfasada";
         const started = Date.now();
         const maxMs = 60000;
         async function poll() {
@@ -2606,7 +2607,7 @@
                 if (resp.ok) {
                     const doc = await resp.json();
                     const bc = doc && doc.busqueda_contratos;
-                    if (bc && bc.estado !== "desfasada") {
+                    if (bc && bc.estado !== estadoInicial) {
                         const url = new URL(window.location.href);
                         url.searchParams.delete("buscando");
                         window.location.replace(url.toString());

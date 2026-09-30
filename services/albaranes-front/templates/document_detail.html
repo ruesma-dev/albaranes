@@ -403,7 +403,8 @@
                            el JS los busca por id. #}
                         {% set bc = document.busqueda_contratos %}
                         {% set bc_estado = bc.estado if bc else 'sin_rastro' %}
-                        {% if document.contratos|length == 0 or bc_estado in ('desfasada', 'error', 'sin_datos') %}
+                        {% set bc_buscando = buscando and bc_estado in ('desfasada', 'sin_rastro') %}
+                        {% if document.contratos|length == 0 or bc_estado in ('desfasada', 'error', 'sin_datos') or bc_buscando %}
                             <div class="alert warning contrato-empty"
                                  id="busqueda-contratos-aviso"
                                  data-estado="{{ bc_estado }}">
@@ -416,14 +417,6 @@
                                         Los datos actuales, CIF <code>{{ document.proveedor_cif or '—' }}</code> +
                                         obra <code>{{ document.obra_codigo or '—' }}</code>,
                                         <strong>todavía no se han buscado</strong>: pulsa «Solo volver a buscar».
-                                        {# F-052 D4-A: «Guardar» acaba de relanzar la búsqueda
-                                           (?buscando=1); el JS sondea y recarga al llegar
-                                           el rastro nuevo. #}
-                                        {% if buscando %}
-                                            <span id="busqueda-buscando" class="busqueda-buscando">
-                                                Buscando contratos con los datos actuales…
-                                            </span>
-                                        {% endif %}
                                     {% elif bc_estado == 'error' %}
                                         La última búsqueda de contratos, con
                                         CIF <code>{{ bc.cif or '—' }}</code> +
@@ -456,6 +449,15 @@
                                         CIF <code>{{ document.proveedor_cif or '—' }}</code> +
                                         obra <code>{{ document.obra_codigo or '—' }}</code>.
                                         Si debería tener uno, vuelve a buscar.
+                                    {% endif %}
+                                    {# F-052 D4-A / O-C1: «Guardar» acaba de relanzar la búsqueda
+                                       (?buscando=1) por desfase o por falta de rastro; el JS
+                                       sondea y recarga cuando el estado cambia. #}
+                                    {% if bc_buscando %}
+                                        <span id="busqueda-buscando" class="busqueda-buscando"
+                                              data-estado-inicial="{{ bc_estado }}">
+                                            Buscando contratos con los datos actuales…
+                                        </span>
                                     {% endif %}
                                 </div>
                                 <div class="contrato-empty-actions">

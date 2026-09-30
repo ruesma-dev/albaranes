@@ -11,8 +11,9 @@ mientras llega el resultado.
 Qué es «distinto» lo decide ``estado_busqueda`` (R27): estado ``desfasada``.
 Decisiones que fija este fichero:
 
-- Sin rastro (documento anterior a F-052) no hay con qué comparar: no se
-  relanza.
+- O-C1 (decisión del humano, 2026-10-01): sin rastro (documento anterior
+  al despliegue) el PRIMER «Guardar» busca una vez; a partir de ahí hay
+  rastro (aunque sea ``sin_datos``) y rige la regla normal.
 - «Aprobar» no es «Guardar»: un guardado que aprueba no relanza.
 - Si relanzar falla, el guardado ya está hecho: se informa, no se deshace.
 - O-B4 de la review del Bloque B: el deshacer de sv4 restaura la fila
@@ -185,11 +186,9 @@ def test_f052_d4a_relanza_por_la_cola_de_persistencia_con_force():
         ("b 82890580", "691", _rastro()),  # mismo CIF y obra normalizados
         (CIF_MAL, OBRA, _rastro(resultado=BUSQUEDA_ERROR)),
         (CIF_MAL, OBRA, _rastro(resultado=BUSQUEDA_ENCONTRADOS)),
-        (CIF_BUENO, OBRA, None),  # sin rastro: no hay con qué comparar
-        (CIF_BUENO, OBRA, RastroBusquedaContratos()),
     ],
     ids=["igual", "igual_normalizado", "error_sin_cambio",
-         "encontrados_sin_cambio", "sin_rastro", "rastro_vacio"],
+         "encontrados_sin_cambio"],
 )
 def test_f052_d4a_guardar_sin_cambio_de_cif_ni_obra_no_busca(cif, obra, rastro):
     repo = _RepositorioFalso(cif=CIF_MAL, obra=OBRA, rastro=rastro)
@@ -244,14 +243,14 @@ def test_f052_d4a_guardado_normal_sigue_igual():
     ("vista", "esperado"),
     [
         (None, False),
-        (BusquedaContratosVista(estado="sin_rastro"), False),
+        (BusquedaContratosVista(estado="sin_rastro"), True),
         (BusquedaContratosVista(estado="vigente"), False),
         (BusquedaContratosVista(estado="error"), False),
         (BusquedaContratosVista(estado="sin_datos"), False),
         (BusquedaContratosVista(estado="desfasada"), True),
     ],
 )
-def test_f052_d4a_solo_el_desfase_relanza(vista, esperado):
+def test_f052_d4a_solo_el_desfase_o_la_falta_de_rastro_relanzan(vista, esperado):
     assert debe_relanzar_busqueda(vista) is esperado
 
 
@@ -409,8 +408,8 @@ def _outcome(status, message="m"):
         (False, None, "Documento guardado", False),
         (True, None, "Documento guardado y aprobado", False),
         (False, _outcome("queued"),
-         ("Documento guardado. CIF u obra cambiados: buscando contratos con "
-          "los datos nuevos…"), True),
+         "Documento guardado. Buscando contratos con el CIF y la obra guardados…",
+         True),
         # fallback local síncrono: el resultado ya está al recargar
         (False, _outcome("found_single", "1 contrato encontrado."),
          "Documento guardado. 1 contrato encontrado.", False),
@@ -435,3 +434,60 @@ def test_f052_cr_c1_guardar_con_obra_que_sv3_no_admite_no_relanza_en_bucle(obra)
     refetch = _RefetchFalso()
     _, busqueda = _guardar(repo, refetch, cif=CIF_MAL, obra=obra)
     assert refetch.llamadas == [] and busqueda is None
+
+
+# ------------------------------------------------------------------ #
+# O-C1 (decisión del humano, 2026-10-01): sin rastro, el primer «Guardar»
+# busca una vez; después rige la regla normal.
+# ------------------------------------------------------------------ #
+@pytest.mark.parametrize("rastro", [None, RastroBusquedaContratos()],
+                         ids=["sin_rastro", "rastro_vacio"])
+def test_f052_oc1_sin_rastro_el_primer_guardar_busca(rastro):
+    repo = _RepositorioFalso(cif=CIF_BUENO, obra=OBRA, rastro=rastro)
+    refetch = _RefetchFalso()
+    _, busqueda = _guardar(repo, refetch, cif=CIF_BUENO)
+    assert refetch.llamadas == [DOC_ID]
+    assert busqueda.status == "queued"
+
+
+def test_f052_oc1_sin_rastro_y_obra_invalida_busca_una_vez_y_no_en_bucle():
+    """sv3 sella `sin_datos` con la obra a None; desde ahí hay rastro y un
+    «Guardar» sin cambios no vuelve a publicar."""
+    repo = _RepositorioFalso(cif=CIF_BUENO, obra="12", rastro=None)
+    refetch = _RefetchFalso()
+    _guardar(repo, refetch, cif=CIF_BUENO, obra="12")
+    assert refetch.llamadas == [DOC_ID]
+    # sv3 procesa el mensaje y sella (CIF normalizado, obra inválida ⇒ None)
+    repo.rastro = _rastro(cif=CIF_BUENO, obra=None, resultado="sin_datos")
+    _, busqueda = _guardar(repo, refetch, cif=CIF_BUENO, obra="12")
+    _, busqueda = _guardar(repo, refetch, cif=CIF_BUENO, obra="12")
+    assert refetch.llamadas == [DOC_ID], "una sola búsqueda"
+    assert busqueda is None
+
+
+def test_f052_oc1_sin_rastro_la_vista_marca_buscando_tambien_con_contratos(
+    render_detalle, documento_detalle,
+):
+    """Documento antiguo con contratos listados: al relanzar, el aviso sale
+    con «Buscando…» aunque normalmente no se pinte."""
+    from domain.models.review_models import ContratoPayload
+
+    sin_rastro = BusquedaContratosVista(estado="sin_rastro")
+    documento = documento_detalle().model_copy(update={
+        "proveedor_cif": CIF_BUENO, "obra_codigo": OBRA,
+        "contratos": [ContratoPayload(id=1, codigo_contrato="CTSU24/0402")],
+        "busqueda_contratos": sin_rastro,
+    })
+    html = render_detalle(documento, buscando=True)
+    assert 'id="busqueda-buscando"' in html
+    assert 'data-estado-inicial="sin_rastro"' in html
+    assert 'id="busqueda-buscando"' not in render_detalle(documento)
+
+
+def test_f052_oc1_sin_rastro_y_sin_contratos_marca_buscando(
+    render_detalle, documento_detalle,
+):
+    bloque = _bloque(render_detalle, documento_detalle,
+                     BusquedaContratosVista(estado="sin_rastro"), buscando=True)
+    assert 'id="busqueda-buscando"' in bloque
+    assert "no consta" in bloque

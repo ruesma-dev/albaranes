@@ -116,15 +116,16 @@ class ReviewService:
         refetch_client: ContratoRefetchClient | None,
     ) -> tuple[DocumentDetailPayload, ContratoRefetchOutcome | None]:
         """«Guardar» del portal (F-052 D4-A): guarda y, si el CIF o la obra
-        guardados ya no son los del último rastro de búsqueda, relanza la
-        re-búsqueda de contratos por ``refetch_client`` (en producción,
-        ``q-persistencia`` con ``force=True``, la misma vía que «Guardar y
-        volver a buscar»).
+        guardados ya no son los del último rastro de búsqueda —o el
+        documento no tiene rastro (O-C1)—, relanza la re-búsqueda de
+        contratos por ``refetch_client`` (en producción, ``q-persistencia``
+        con ``force=True``, la misma vía que «Guardar y volver a buscar»).
 
         No relanza: sin ``refetch_client`` (los demás PUT del portal), si
-        el guardado aprueba el albarán o si no hay desfase (sin cambios o
-        sin rastro). Un fallo al relanzar no deshace el guardado: vuelve
-        como outcome ``sigrid_error`` para que el portal lo diga.
+        el guardado aprueba el albarán o si el rastro coincide con los
+        datos guardados (``debe_relanzar_busqueda``). Un fallo al relanzar
+        no deshace el guardado: vuelve como outcome ``sigrid_error`` para
+        que el portal lo diga.
         """
         detail = self.save_document(document_id=document_id, payload=payload)
         if (
@@ -153,8 +154,8 @@ class ReviewService:
                 obra_codigo=None,
             )
         logger.info(
-            "[contrato-refetch][guardar] CIF u obra cambiados: búsqueda "
-            "relanzada document_id=%s status=%s",
+            "[contrato-refetch][guardar] CIF u obra cambiados (o sin rastro): "
+            "búsqueda relanzada document_id=%s status=%s",
             document_id,
             outcome.status,
         )
