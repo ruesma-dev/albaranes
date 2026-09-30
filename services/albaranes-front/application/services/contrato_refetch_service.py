@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from application.services.obra_code_normalizer import normalize_obra_code
+from ruesma_comun.obras import normalizar_codigo_obra
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.contrato_sigrid_models import ContratoFromSigrid
 from domain.ports.contrato_refetch_port import (
@@ -86,7 +86,7 @@ class ContratoRefetchService:
             document_id=document_id,
         )
         cif_clean = (cif or "").strip().upper().replace(" ", "") or None
-        obra_norm = normalize_obra_code(obra_raw)
+        obra_norm = normalizar_codigo_obra(obra_raw)
 
         logger.info(
             "%s Leídos del merge: cif=%r obra_raw=%r → normalizados cif=%r obra=%r",

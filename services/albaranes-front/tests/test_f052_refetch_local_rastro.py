@@ -253,3 +253,14 @@ def test_f052_r22_el_repositorio_rechaza_un_resultado_desconocido(repo_sqlite):
             resultado="buscando",
         )
     assert _fila(motor) == (None, None, None, None)
+
+
+@pytest.mark.parametrize("obra", ["12", "1234"])
+def test_f052_cr_c1_local_sella_sin_datos_como_sv3(obra):
+    """CR-C1: obra que sv3 no admite ⇒ no se consulta y se sella sin_datos."""
+    repo = _RepositorioFalso(obra=obra)
+    sigrid = _SigridFalso()
+    outcome = _refetch(repo, sigrid)
+    assert outcome.status == "skipped_missing_data"
+    assert sigrid.llamadas == 0
+    assert repo.sellos == [(DOC_ID, "B82899550", None, BUSQUEDA_SIN_DATOS)]

@@ -5,7 +5,7 @@ import dataclasses
 import json
 import logging
 
-from application.services.obra_code_normalizer import normalize_obra_code
+from ruesma_comun.obras import normalizar_codigo_obra
 from application.services.contrato_selector import (
     elegir_contrato_probable,
 )
@@ -135,7 +135,7 @@ class ContratoEnrichmentService:
             document_id=merge_document_id,
         )
         cif_clean = (cif or "").strip().upper().replace(" ", "") or None
-        obra_norm = normalize_obra_code(obra_raw)
+        obra_norm = normalizar_codigo_obra(obra_raw)
         if not cif_clean or not obra_norm:
             logger.warning(
                 "%s Faltan datos o no validan; se OMITE. cif=%r obra=%r",

@@ -158,7 +158,7 @@ tuple[ProveedorObraResumen | None, str, int]` con motivo ∈ {`propuesta`,
 **sv4 · application** — `estado_busqueda(cif_actual, obra_actual, rastro) ->
 BusquedaContratosVista` con estado ∈ {`sin_rastro`, `vigente`, `desfasada`,
 `error`, `sin_datos`}; CIF en mayúsculas sin espacios y obra con
-`normalize_obra_code` de sv4.
+`ruesma_comun.obras.normalizar_codigo_obra`, la de sv3 (CR-C1).
 
 ## 6. Notas de revisión (R15–R19)
 

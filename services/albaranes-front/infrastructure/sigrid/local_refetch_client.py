@@ -20,7 +20,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from application.services.obra_code_normalizer import normalize_obra_code
+from ruesma_comun.obras import normalizar_codigo_obra
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
     BUSQUEDA_ENCONTRADOS,
@@ -66,7 +66,7 @@ class LocalContratoRefetchClient(ContratoRefetchClient):
             raise KeyError(document_id)
 
         cif_clean = (cif or "").strip().upper().replace(" ", "") or None
-        obra_norm = normalize_obra_code(obra_raw)
+        obra_norm = normalizar_codigo_obra(obra_raw)
 
         if not cif_clean or not obra_norm:
             faltan = []

@@ -14,7 +14,7 @@ sella sv3 (o el fallback local de sv4) y devuelve uno de cinco estados:
 - ``vigente``: coinciden y la búsqueda funcionó (``encontrados``/``ninguno``).
 
 Normalización, la misma con la que sella sv3: CIF sin espacios y en
-mayúsculas; obra con ``normalize_obra_code`` (``691`` = ``0691``).
+mayúsculas; obra con ``ruesma_comun.obras.normalizar_codigo_obra``, la de sv3 (``691`` = ``0691``).
 
 Sin red ni BBDD.
 """
@@ -152,3 +152,45 @@ def test_f052_r27_los_resultados_se_escriben_como_los_sella_sv3():
         "BUSQUEDA_ERROR": BUSQUEDA_ERROR,
         "BUSQUEDA_SIN_DATOS": BUSQUEDA_SIN_DATOS,
     }
+
+
+# --------------------------------------------------------------------- #
+# CR-C1 (review del Bloque C): la obra se compara con la MISMA
+# normalización con la que sv3 sella el rastro (`ruesma_comun.obras`).
+# Antes sv4 usaba la suya (`^\d{1,4}$` + zfill): `12` era `0012` para sv4
+# y `None` para sv3, así que un rastro `sin_datos` salía `desfasada` y cada
+# «Guardar» volvía a publicar en q-persistencia.
+# --------------------------------------------------------------------- #
+@pytest.mark.parametrize("obra", ["12", "7", "1234", "1001", "12345", "abc", ""])
+def test_f052_cr_c1_obra_que_sv3_no_admite_es_sin_datos_no_desfase(obra):
+    from application.services.busqueda_contratos import debe_relanzar_busqueda
+
+    rastro = _rastro("B82899550", None, BUSQUEDA_SIN_DATOS)
+    vista = estado_busqueda("B82899550", obra, rastro)
+    assert vista.estado == ESTADO_BUSQUEDA_SIN_DATOS
+    assert not debe_relanzar_busqueda(vista)
+
+
+@pytest.mark.parametrize("obra", ["0691", "691", " 0691 "])
+def test_f052_cr_c1_obra_valida_coincide_con_el_sello_de_sv3(obra):
+    rastro = _rastro("B82899550", "0691", BUSQUEDA_NINGUNO)
+    assert estado_busqueda("B82899550", obra, rastro).estado == (
+        ESTADO_BUSQUEDA_VIGENTE
+    )
+
+
+def test_f052_cr_c1_sv3_y_sv4_usan_la_misma_pieza_de_ruesma_comun():
+    """Una sola normalización de obra: sin copias locales en sv3 ni en sv4."""
+    servicios = Path(__file__).resolve().parents[2]
+    for copia in (
+        servicios / "albaranes-front" / "application" / "services" / "obra_code_normalizer.py",
+        servicios / "albaranes-persistencia" / "application" / "services" / "obra_code_normalizer.py",
+    ):
+        assert not copia.exists(), f"copia local de la normalización: {copia}"
+    for usuario in (
+        servicios / "albaranes-persistencia" / "application" / "services" / "contrato_enrichment_service.py",
+        servicios / "albaranes-front" / "application" / "services" / "busqueda_contratos.py",
+        servicios / "albaranes-front" / "infrastructure" / "sigrid" / "local_refetch_client.py",
+    ):
+        fuente = usuario.read_text(encoding="utf-8")
+        assert "from ruesma_comun.obras import normalizar_codigo_obra" in fuente, usuario

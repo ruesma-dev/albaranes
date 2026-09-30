@@ -8,7 +8,7 @@ from application.services.familia_detector import (
     familias_de_filas_merge,
     familias_de_texto,
 )
-from application.services.obra_code_normalizer import normalize_obra_code
+from ruesma_comun.obras import normalizar_codigo_obra
 from domain.models.header_resolution_models import ProveedorObraResumen
 from domain.models.obra_models import ObraEnrichmentResult
 from domain.ports.header_resolver_ports import (
@@ -243,7 +243,7 @@ class HeaderResolverService:
         # Obra EFECTIVA para el paso de proveedor: la recien deducida o
         # la que ya trajo la IA (si normaliza).
         obra_efectiva = (
-            obra_codigo_det or normalize_obra_code(hdr.obra_codigo)
+            obra_codigo_det or normalizar_codigo_obra(hdr.obra_codigo)
         )
         proveedor_cif_det, proveedor_origen = self._resolve_proveedor(
             proveedor_cif=hdr.proveedor_cif,
@@ -287,7 +287,7 @@ class HeaderResolverService:
     ) -> str | None:
         """Devuelve el codigo de obra deducido por texto, o None si ya
         habia codigo valido / no hay texto / no llega al umbral."""
-        if obra_codigo and normalize_obra_code(obra_codigo) is not None:
+        if obra_codigo and normalizar_codigo_obra(obra_codigo) is not None:
             return None  # la IA ya trajo un codigo valido
         textos = [t for t in (obra_nombre, obra_direccion) if (t or "").strip()]
         if not textos:

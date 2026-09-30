@@ -130,7 +130,6 @@ albaranes-persistence-api/
 │     ├─ albaran_normalizer.py                      # Texto, CIF, fecha ISO, código_imputación, números
 │     ├─ albaran_confidence_service.py              # ⭐ MERGE multi-proveedor + scoring (1400 LOC)
 │     ├─ contexto_linea_merger.py                   # Pick "más rico" entre 3 contextos
-│     ├─ obra_code_normalizer.py                    # 4 dígitos con padding cero
 │     ├─ obra_enrichment_service.py                 # Orquesta enrich obra (best-effort)
 │     └─ contrato_enrichment_service.py             # Orquesta enrich contratos + PDFs
 ├─ infrastructure/

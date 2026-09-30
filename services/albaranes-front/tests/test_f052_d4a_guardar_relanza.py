@@ -425,3 +425,13 @@ def test_f052_d4a_aviso_de_guardado(aprobado, busqueda, mensaje, buscando):
     assert aviso_de_guardado(aprobado=aprobado, busqueda=busqueda) == (
         mensaje, buscando,
     )
+
+
+@pytest.mark.parametrize("obra", ["12", "1234"])
+def test_f052_cr_c1_guardar_con_obra_que_sv3_no_admite_no_relanza_en_bucle(obra):
+    """CR-C1: sv3 ya selló `sin_datos` para esa obra; guardar sin cambios no busca."""
+    rastro = _rastro(cif=CIF_MAL, obra=None, resultado="sin_datos")
+    repo = _RepositorioFalso(cif=CIF_MAL, obra=obra, rastro=rastro)
+    refetch = _RefetchFalso()
+    _, busqueda = _guardar(repo, refetch, cif=CIF_MAL, obra=obra)
+    assert refetch.llamadas == [] and busqueda is None

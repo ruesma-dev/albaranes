@@ -9,7 +9,7 @@ bloque a partir del rastro de la última búsqueda (R20–R22).
 """
 from __future__ import annotations
 
-from application.services.obra_code_normalizer import normalize_obra_code
+from ruesma_comun.obras import normalizar_codigo_obra
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
     BUSQUEDA_ENCONTRADOS,
@@ -58,7 +58,7 @@ def estado_busqueda(
 
     coincide = (
         normalizar_cif(cif_actual) == rastro.cif
-        and normalize_obra_code(obra_actual) == rastro.obra
+        and normalizar_codigo_obra(obra_actual) == rastro.obra
     )
     estado = (
         _ESTADO_POR_RESULTADO[rastro.resultado]
