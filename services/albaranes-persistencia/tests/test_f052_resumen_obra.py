@@ -152,20 +152,41 @@ def test_f052_r5_barajado_mismo_resumen_y_mismo_orden(semilla):
 
 
 @pytest.mark.parametrize(
-    "nombre,conceptos",
+    "nombre,conceptos,decision_esperada,nota_esperada",
     [
-        pytest.param("SALMEDINA", ["CONTENEDOR 6 M3 RCD"], id="red-por-nombre"),
-        pytest.param(None, ["CONTENEDOR 6 M3 RCD"], id="familia-sin-nombre"),
-        pytest.param("PROVEEDOR", ["HORMIGON HA-25"], id="nombre-debil-y-familia"),
+        pytest.param("SALMEDINA", ["CONTENEDOR 6 M3 RCD"], (CIF_SALMEDINA, "deterministic"), None,
+                     id="red-por-nombre"),
+        pytest.param(None, ["CONTENEDOR 6 M3 RCD"], (None, "deterministic"),
+                     "Candidatos con contrato en la obra 0691", id="familia-sin-nombre"),
+        pytest.param("PROVEEDOR", ["HORMIGON HA-25"], ("B10000000", "deterministic"), None,
+                     id="nombre-debil-y-familia"),
     ],
 )
-def test_f052_r5_mismo_ganador_y_misma_nota_con_tres_barajados(nombre, conceptos):
+def test_f052_r5_mismo_ganador_y_misma_nota_con_tres_barajados(
+    nombre, conceptos, decision_esperada, nota_esperada,
+):
+    """Mismo resultado con la referencia y tres barajados, y ese resultado
+    es el ESPERADO: si el paso obra + familia fallara siempre (consulta
+    rota, lista vacía), los cuatro degradarían igual y compararlos entre
+    sí no probaría nada (CR-A1 de la review del Bloque A)."""
     resultados = []
     for semilla in (None, 11, 22, 33):
         repo = _RepoFake(conceptos)
-        resolver = _resolver(DobleSigridApi(barajar=semilla).cliente(), repo)
+        doble = DobleSigridApi(barajar=semilla)
+        resolver = _resolver(doble.cliente(), repo)
         decision = resolver._resolver_por_obra_y_familia(
             proveedor_nombre=nombre, obra_codigo="0691", merge_document_id=DOC,
         )
         resultados.append((decision, tuple(repo.notas)))
+        assert decision == decision_esperada
+        # Una sola petición (la agregada) y nunca el fallback global.
+        assert len(doble.peticiones) == 1
+        assert doble.peticiones_con("FOR XML PATH") == doble.peticiones
+        assert doble.peticiones_con("prv.cif IS NOT NULL AND con.emp = 1") == []
     assert len(set(resultados)) == 1
+    notas = resultados[0][1]
+    if nota_esperada is None:
+        assert notas == ()
+    else:
+        assert len(notas) == 1
+        assert nota_esperada in notas[0]
