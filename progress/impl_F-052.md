@@ -174,6 +174,6 @@ repositorio sin validar el resultado (4).
 | Tests F-052 nuevos | Bloque A **82** (31 comun + 51 sv3); Bloque B **73** (32 `nota_proveedor` + 41 `rastro_busqueda`); total **155**, todos en verde |
 | Suites a mano tras T10, una tras otra | comun `308 passed in 38.50s`; sv3 `357 passed in 6.07s` (284 → 357) |
 | `bash harness/init.sh` tras T10 (antes del commit de estilo) | ENTORNO LISTO, exit 0; raíz `1067 passed in 327.10s`; sv3 `357 passed in 10.62s`; comun en caché (sin cambios); `PUERTA COBERTURA: 100.0% de 148 líneas cambiadas cubiertas (148/148, umbral 80%, nivel critico)`; tamaño `impl 175/220` |
-| `bash harness/init.sh` final (tras ordenar imports según el `ruff` de la raíz) | ver línea siguiente |
+| `bash harness/init.sh` final (tras ordenar imports según el `ruff` de la raíz) | ENTORNO LISTO, exit 0; raíz `1067 passed in 256.71s`; sv3 `357 passed in 8.99s`; `PUERTA COBERTURA: 100.0% de 148 líneas cambiadas cubiertas (148/148, umbral 80%, nivel critico)`; tamaño `impl 179/220`; ruff 1167 avisos (1163 al empezar: los +4 son los `ISC004` del DDL) |
 | Tiempo de la suite | sv3 3,8–10,6 s; comun 38,5 s; raíz 327 s |
 | Mutación | Campaña: T19 (fuera del bloque). Manuales: Bloque A 1 + 2 de la review, Bloque B **7/7 muertos** |
