@@ -13,7 +13,8 @@ trazas RED, decisiones y evidencias en `progress/impl_F-052.md` §«Bloque C».
 Review del Bloque C: CAMBIOS (`progress/review_F-052_bloqueC.md`). Aplicadas las
 decisiones del humano del 2026-10-01: CR-C1 (normalizador de obra único en
 `ruesma_comun.obras`), O-C1 (sin rastro, el primer «Guardar» busca una vez) y
-CR-C2 (T22 reescrita). Siguiente: re-review; luego Bloque D (T14, T16, T18) y T19.
+CR-C2 (T22 reescrita). Pasada 2: CR-C3 (sin CIF ni obra no se relanza;
+solo-front ya no confunde vacío con inexistente) y O-C6 (R31). Siguiente: re-review; luego Bloque D (T14, T16, T18) y T19.
 
 Desviaciones respecto a `tasks.md` (justificadas en el informe):
 - **T12 antes que T11**: `estado_busqueda` devuelve `BusquedaContratosVista`

@@ -138,13 +138,16 @@ M6 proveedores `TOLERA`, M7 el desfase pinta el CIF actual, M8 «buscando» con 
 outcome, M9 sin rastro = vigente, M10 `replace` fallido sin sello, M11 sin aviso de error
 con contratos listados, M12 el repositorio no valida el resultado.
 
-## Correcciones de review (CR-C1, CR-C2, O-C1) · decisiones del humano del 2026-10-01
+## Correcciones de review (CR-C1, CR-C2, O-C1; pasada 2: CR-C3, O-C6) · humano y líder, 2026-10-01
 
 | Cambio (commit) | Qué | RED | GREEN |
 |---|---|---|---|
 | CR-C1 `a7abcff` (+ `e8c62ab` imports) | `ruesma_comun/obras/{__init__,codigo}.py::normalizar_codigo_obra` con la semántica de sv3; sv3 (5 servicios) y sv4 (`busqueda_contratos`, `LocalContratoRefetchClient`, `ContratoRefetchService` muerto) la importan; borradas las dos copias `obra_code_normalizer.py`; `sv3.md`, `sv4.md`, design §5 y T12 al día | sv4 `-k cr_c1` contra `9c43f79`: `9 failed, 6 passed`; comun `test_f052_obras_codigo.py`: `1 error` | sv4 15, comun 15 |
 | O-C1 `f034384` | `debe_relanzar_busqueda`: también `sin_rastro`; aviso con «Buscando…» también con contratos listados (`bc_buscando`, `data-estado-inicial`); el JS espera a que cambie el estado inicial; mensaje «Buscando contratos con el CIF y la obra guardados…» | `test_f052_d4a_guardar_relanza.py` contra `e8c62ab`: `7 failed, 25 passed` | 32 passed |
 | CR-C2 `9d0c258` | T22 con los dos casos (con rastro / sin rastro) y las dos decisiones en design §11 (250/250) | documental | — |
+| CR-C3 `6d593b3` | `hay_datos_para_buscar`: con CIF y obra guardados ambos vacíos (`None`, `""`, blancos) «Guardar» no relanza, con o sin rastro (sv3 descarta ese mensaje sin sellar) | `-k cr_c3` contra `ac2248a`: `6 failed, 4 passed` | 10 passed |
+| CR-C3 `3be4ecb` | Solo-front: `merge_existe` en el repositorio; `LocalContratoRefetchClient` solo lanza `KeyError` si el merge no existe; si existe sin CIF ni obra sella `sin_datos` | `test_f052_refetch_local_rastro.py` contra `6d593b3`: `2 failed, 22 passed` | 24 passed |
+| O-C6 `cc13df2` | R31 alineado con D4-A/O-C1 y remitido a T22 (requirements 150/150) | documental | — |
 
 - **CR-C1 RED**: `E       AssertionError: assert 'desfasada' == 'sin_datos'` ×4 (`12`, `7`,
   `1234`, `1001`); `E       AssertionError: assert (['f052-doc-00...00-000026122'] == []` ×2
@@ -156,37 +159,34 @@ con contratos listados, M12 el repositorio no valida el resultado.
 - **O-C1 RED**: `E       AssertionError: assert [] == ['f052-doc-00...00-000026122']` ×3 (sin
   rastro no buscaba); `where False = debe_relanzar_busqueda(BusquedaContratosVista(estado='sin_rastro', ...))`;
   `assert 'id="busqueda-buscando"' in ...` ×2; diff del mensaje de guardado.
-- **Sin bucle** (`test_f052_oc1_sin_rastro_y_obra_invalida_busca_una_vez_y_no_en_bucle`): sin
-  rastro y obra `12` → 1 búsqueda; sv3 sella `sin_datos` (obra `None`); dos «Guardar» más → 0.
-  Riesgo residual: si sv3 no sella nada (servicio con `enabled=False` o excepción antes del
-  sello, O-B1), cada «Guardar» de un documento sin rastro vuelve a publicar.
+- **CR-C3 RED**: `E           AssertionError: assert ContratoRefetchOutcome(status='queued', ...) is None`
+  ×6 (vacíos, `None` y blancos, con y sin rastro: publicaba en cada «Guardar»); pasaban los 4
+  casos con solo obra o solo CIF (1 publicación, se mantiene). Solo-front:
+  `E           KeyError: 'f052-doc-0000-0000-0000-000026122'` (merge existente con CIF y obra
+  `None`) y `AttributeError: ... no attribute 'merge_existe'`.
+- **Sin bucle**: sin rastro y obra `12` → 1 búsqueda; sv3 sella `sin_datos`; dos «Guardar» más → 0.
+  Con CIF y obra vacíos → 0 (CR-C3). Residual: si sv3 no sella (`enabled=False`, O-B1), cada
+  «Guardar» de un documento sin rastro y con algún dato vuelve a publicar.
 - **sv3 sin cambio de comportamiento**: el cuerpo de la función es el de sv3 tal cual; `357
   passed` antes y después. Los scripts `scripts/diagnose_*.py` de sv3 llevan su propia copia
   (scripts sueltos, no importan el módulo): no se tocan. `normalizar_codigo` de F-048 es otra
   cosa (forma de comparación sin ceros): test que las distingue.
-- **Pendiente para el líder**: R31 (requirements, 150/150) sigue diciendo «guardar debe mostrar
-  el aviso de R24»; T22 ya describe el flujo real. `ruesma_comun` gana `obras/`: sv3 y sv4 deben
-  reconstruirse juntos (ya era el orden sv3 → sv4).
-- Mutantes manuales de las correcciones: **5/5 muertos** (4 dígitos sin exigir `0`, `zfill` de
-  1–3 dígitos, sin rastro no relanza, «buscando» solo con desfase, aviso sin `bc_buscando`).
+- `ruesma_comun` gana `obras/`: sv3 y sv4 se reconstruyen juntos (orden sv3 → sv4, O-C7).
+- Mutantes manuales de las correcciones: **10/10 muertos** (4 dígitos sin exigir `0`, `zfill` de
+  1–3 dígitos, sin rastro no relanza, «buscando» solo con desfase, aviso sin `bc_buscando`;
+  `and` por `or`, sin `strip`, el servicio no mira los datos, el local no pregunta si existe,
+  `merge_existe` siempre `True`).
 
 ## Ficheros tocados
 
-- A: `services/albaranes-comun/ruesma_comun/sigrid/{__init__,lectura}.py` y su test; sv3
-  `infrastructure/sigrid/sigrid_api_contrato_client.py` y `tests/{doble_sigrid_api,
-  test_f052_doble_sigrid_api,test_f052_truncado_cliente,test_f052_paginacion_cliente,
-  test_f052_resumen_obra,test_f052_equivalencia_familias}.py`.
-- B (sv3): `application/services/{header_resolver_service,contrato_enrichment_service}.py`,
-  `domain/models/contrato_models.py`, `domain/ports/contrato_merge_repository_port.py`,
-  `infrastructure/database/{phase2_ddl,orm_models,sqlalchemy_albaran_repository}.py`,
-  `tests/test_f052_{nota_proveedor,rastro_busqueda}.py`.
+- A y B: `git show --stat` de los commits de sus tablas (`ruesma_comun/sigrid/`, cliente de contratos,
+  resolver, enrichment, DDL/ORM/repositorio de sv3 y sus `tests/test_f052_*`).
 - C (sv4, `services/albaranes-front/`): nuevo `application/services/busqueda_contratos.py`;
   modificados `application/services/review_service.py`, `domain/models/review_models.py`,
   `infrastructure/database/{orm_models,review_repository}.py`,
   `infrastructure/sigrid/{local_refetch_client,sigrid_lookup_client}.py`,
   `interface_adapters/web/app.py`, `templates/document_detail.html`, `static/{app.js,styles.css}`;
-  tests nuevos `tests/test_f052_{busqueda_contratos,rastro_detalle,bloque_contrato,
-  d4a_guardar_relanza,refetch_local_rastro,lookup_truncado}.py`.
+  tests nuevos `tests/test_f052_{busqueda_contratos,rastro_detalle,bloque_contrato,d4a_guardar_relanza,refetch_local_rastro,lookup_truncado}.py`.
 - Correcciones: nuevo `ruesma_comun/obras/` y `tests/test_f052_obras_codigo.py`; sv3
   `application/services/{contrato_enrichment,contrato_refetch,header_grounding,header_resolver,
   obra_enrichment}_service.py` (solo el import), `sv3.md`, `sv4.md`, spec (design, tasks).
@@ -211,7 +211,7 @@ con contratos listados, M12 el repositorio no valida el resultado.
 
 | Evidencia | Valor medido |
 |---|---|
-| Tests F-052 nuevos | A **82**, B **73**, C **94**, correcciones **+33** (comun 15, sv4 18); total **282**, en verde |
+| Tests F-052 nuevos | A **82**, B **73**, C **94**, correcciones **+46** (comun 15, sv4 31); total **295**, en verde |
 | Suites a mano tras las correcciones, una tras otra | comun `323 passed in 17.43s`; sv3 `357 passed in 2.84s`; sv4 `359 passed in 10.05s` |
 | `bash harness/init.sh` final tras las correcciones (`bc71d6e`) | ENTORNO LISTO, exit 0; raíz `1067 passed in 154.24s`; sv3 `357 passed in 5.42s`; sv4 `359 passed in 12.42s`; comun `323 passed in 23.79s`; `PUERTA COBERTURA: 96.1% de 280 líneas cambiadas cubiertas (269/280, umbral 80%, nivel critico)` (sin cubrir: cableado de `app.py` y el import/llamada renombrados en módulos que ningún test importa: `contrato_refetch_service` de sv3 y sv4, `header_grounding_service`); tamaño `impl 218/220`; ruff 1166 |
 | Tiempo de la suite | sv4 6–17 s; sv3 3,8–10,6 s; comun 38,5 s; raíz 257–327 s |
