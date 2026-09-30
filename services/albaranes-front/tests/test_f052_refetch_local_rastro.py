@@ -44,7 +44,8 @@ class _Contrato:
 
 class _RepositorioFalso:
     def __init__(self, *, cif="B82899550", obra="0691", falla_replace=None,
-                 falla_sello=None):
+                 falla_sello=None, existe=True):
+        self._existe = existe
         self._cif = cif
         self._obra = obra
         self._falla_replace = falla_replace
@@ -52,7 +53,12 @@ class _RepositorioFalso:
         self.sellos: list[tuple] = []
 
     def get_merge_cif_and_obra(self, *, document_id):
+        if not self._existe:
+            return None, None
         return self._cif, self._obra
+
+    def merge_existe(self, *, document_id):
+        return self._existe
 
     def replace_contratos_and_select(self, *, document_id, contratos):
         if self._falla_replace is not None:
@@ -151,7 +157,7 @@ def test_f052_r22_fallo_guardando_los_contratos_sella_error_y_propaga():
 
 
 def test_f052_r22_documento_inexistente_no_sella():
-    repo = _RepositorioFalso(cif=None, obra=None)
+    repo = _RepositorioFalso(existe=False)
     with pytest.raises(KeyError):
         _refetch(repo, _SigridFalso())
     assert repo.sellos == []
@@ -264,3 +270,28 @@ def test_f052_cr_c1_local_sella_sin_datos_como_sv3(obra):
     assert outcome.status == "skipped_missing_data"
     assert sigrid.llamadas == 0
     assert repo.sellos == [(DOC_ID, "B82899550", None, BUSQUEDA_SIN_DATOS)]
+
+
+# ------------------------------------------------------------------ #
+# CR-C3 (pasada 2): en solo-front, un merge que EXISTE sin CIF ni obra no
+# es «documento inexistente». Antes lanzaba ``KeyError(document_id)`` y el
+# portal mostraba «no se pudo relanzar la búsqueda: '<id>'».
+# ------------------------------------------------------------------ #
+@pytest.mark.parametrize(("cif", "obra"), [(None, None), ("", "")],
+                         ids=["none", "vacios"])
+def test_f052_cr_c3_merge_sin_cif_ni_obra_no_es_inexistente(cif, obra):
+    repo = _RepositorioFalso(cif=cif, obra=obra)
+    sigrid = _SigridFalso()
+    outcome = _refetch(repo, sigrid)
+    assert outcome.status == "skipped_missing_data"
+    assert "No se consultó el ERP" in outcome.message
+    assert DOC_ID not in outcome.message
+    assert sigrid.llamadas == 0
+    assert repo.sellos == [(DOC_ID, None, None, BUSQUEDA_SIN_DATOS)]
+
+
+def test_f052_cr_c3_el_repositorio_distingue_inexistente_de_vacio(repo_sqlite):
+    repo, _ = repo_sqlite
+    assert repo.get_merge_cif_and_obra(document_id=DOC_ID) == (None, None)
+    assert repo.merge_existe(document_id=DOC_ID) is True
+    assert repo.merge_existe(document_id="no-existe") is False

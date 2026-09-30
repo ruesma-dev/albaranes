@@ -61,8 +61,15 @@ class LocalContratoRefetchClient(ContratoRefetchClient):
         cif, obra_raw = self._repository.get_merge_cif_and_obra(
             document_id=document_id,
         )
-        if cif is None and obra_raw is None:
+        if (
+            cif is None
+            and obra_raw is None
+            and not self._repository.merge_existe(document_id=document_id)
+        ):
             # Documento inexistente → KeyError (el endpoint lo mapea a 404).
+            # Un merge que EXISTE sin CIF ni obra sigue abajo como
+            # ``sin_datos`` (F-052 CR-C3): antes también lanzaba KeyError y
+            # el portal enseñaba el id del documento como error.
             raise KeyError(document_id)
 
         cif_clean = (cif or "").strip().upper().replace(" ", "") or None

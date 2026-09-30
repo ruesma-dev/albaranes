@@ -2977,6 +2977,13 @@ class AlbaranReviewRepository:
                 return None, None
             return document.proveedor_cif, document.obra_codigo
 
+    def merge_existe(self, *, document_id: str) -> bool:
+        """¿Existe el merge? ``get_merge_cif_and_obra`` devuelve
+        ``(None, None)`` tanto si no existe como si no tiene CIF ni obra."""
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            return session.get(AlbaranDocumentMergeOrm, document_id) is not None
+
     def sellar_busqueda_contratos(
         self,
         *,
