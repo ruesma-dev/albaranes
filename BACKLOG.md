@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **48 features**, 34 abiertas, 14 terminadas.
+Resumen: **51 features**, 36 abiertas, 15 terminadas.
 
 En curso: **F-052**.
 
@@ -12,6 +12,8 @@ En curso: **F-052**.
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
 | F-052 | sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF) | 1 | en curso | critico | `feature/F-052-proveedores-truncados` |
+| F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
+| F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -54,6 +56,7 @@ En curso: **F-052**.
 | F-019 | Importe de línea: manda el unitario leído; el importe solo se despeja si faltan campos | 1 | critico |
 | F-034 | Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra | 1 | estandar |
 | F-043 | IA1 clasifica el albaran: la tipologia la decide la IA, siempre y con definiciones claras, nunca una regla determinista | 1 | critico |
+| F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel | 1 | critico |
 | F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
 | F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
 | F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | estandar |
@@ -82,6 +85,36 @@ PROPUESTA DEL DIAGNOSTICO: (1) consulta propia de proveedores de la obra (DISTIN
 RELACIONADAS: F-002 (red de proveedor por CIF), F-043, F-047 (RES-007 no cerraba ciclo por esto).
 
 DECISIONES DEL HUMANO (2026-09-30): aceptadas las recomendaciones D1-D7 de la spec v2 (consulta agregada sin paginar; no compartir con sv4; paginar solo header_and_lines y search_proveedores; D4 = B + A, es decir el bloque veraz Y «Guardar» relanza la busqueda si cambian CIF u obra; sin backfill; clientes colindantes a ficha aparte; efecto D7 aceptado).
+
+### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
+
+estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
+
+ORIGEN MEDIDO: la pasada del ciclo completo de F-047 (analisis por caso del 2026-09-18, §1.3 y §1.6, fuera de git porque lleva precios) mide que LA PARTIDA SALE MAL EN 33 DE 41 albaranes evaluados y coloca este arreglo el PRIMERO por relacion coste/beneficio: «validar la partida leida contra la lista de partidas de la obra y, si no casa, quedarse con la mas parecida». Cada partida mal arrastra de media 3 campos aguas abajo (partida_final, partida de lineas anadidas, casa_con_contrato). Es tambien lo que el humano lleva anotado CINCO veces revisando a mano los 59 albaranes: «no leer la partida a ciegas, sino buscarla en la lista de partidas de la obra».
+
+EL SUBPATRON QUE ATACA: 7 albaranes pierden o deforman el prefijo de capitulo (03.09 por P5.03.09, PJ.0304 por P5.03.04, 04.03.05 por P4.03.05, RJ.14.01.02.02 por P5.14.01.02.02...), y otros 23 dan una partida «que no sale de ningun sitio identificable». Estrechar el espacio de busqueda, no anadir reglas.
+
+DONDE, verificado al escribir la spec de F-048: la lista de partidas HOJA de una obra SOLO existe hoy en sv4 (sigrid_lookup_client.fetch_partidas_por_obra, con _SQL_PARTIDAS_POR_OBRA sobre obrparpar y el calculo de hojas en Python); sv3 solo ve las partidas de las lineas de contrato y sv2 no la tiene. Validar en sv3 NO sirve: corre despues de IA1 e IA2 y no puede devolverles nada. El sitio es SV2, que ya habla con sigrid-api (como con las obras activas de F-002) y conoce la obra en cuanto termina la fase 1 —y con F-048, mejor y antes, porque la trae el correo—. ALCANCE: mover la consulta y el calculo de hojas a ruesma_comun.sigrid.partidas (sv4 pasa a importarlo, nunca una copia), cache por obra, inyectar la lista en el prompt de fase 2 para que IA2 ELIJA en vez de leer a ciegas, y rellenar origen_datos.partida.validada, que F-048 deja siempre a null.
+
+CUIDADOS: toca los cuatro prompts de fase 2 (RUTA SENSIBLE: exige pasada de evals con LLM real, que se factura), anade una llamada a sigrid-api por documento (solo lectura, maximo 10.000 filas por peticion, el balanceador corta a 230 s) y toca sv4 al mover la consulta, asi que su suite tiene que seguir verde sin cambios de comportamiento. Ojo tambien con el formato: hay 3 albaranes cuyo unico fallo son los ceros a la izquierda (CI.04.18 vs CI.4.18), que se arreglan normalizando antes de comparar, no cambiando la lectura.
+
+RELACIONADAS: F-048 (de donde sale, con el hueco validada=null ya preparado), F-021 (eleccion de partida), F-047 (el ciclo que lo mide), F-007 (partida ALM/acopio).
+
+### F-050 · Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes
+
+estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí
+
+PETICION DEL HUMANO (2026-09-23): «añade una feature, que sea estudiar la IA jev para mejorar clasificaciones».
+
+QUE ES JEV, segun la prensa del lanzamiento (2026-09-15; NADA verificado todavia por nosotros): modelo de TypeSafe AI de la clase «System One». No genera texto: responde preguntas predefinidas sobre una entrada con valores TIPADOS (elecciones, puntuaciones, si/no) y una probabilidad o confianza por respuesta, pensados para que los consuma el software. Dicen que es hasta 200 veces mas rapido y barato que un LLM grande para este tipo de decisiones (0,042 USD por millon de tokens de entrada).
+
+POR QUE ENCAJA: la clasificacion de familia de F-043 es justo una eleccion cerrada sobre un catalogo con confianza (`ClasificacionAlbaran`: familia, confianza_pct, motivo, mixta, secundarias). Una confianza calibrada mejoraria ademas el umbral de revision del 60 % (`CLASIFICACION_CONFIANZA_MINIMA_PCT`). No contradice la decision del 2026-08-25 de que clasifica la IA y nunca una regla determinista: Jev es IA.
+
+ALCANCE: ESTUDIO, no integracion. (1) Verificar con la documentacion oficial que admite entrada (texto, imagen o PDF), limites, precio, region y tratamiento de datos. (2) Medir, con el banco de evals de F-045 y la pasada con LLM real, la clasificacion de Jev frente a IA1 en los mismos casos: acierto por familia, calibracion de la confianza, coste y latencia. (3) Informe con recomendacion: no usarlo, usarlo como segundo opinante (desempate o auditoria de IA1) o sustituir la clasificacion de fase 1. Integrarlo en sv2 seria ficha aparte.
+
+CUIDADOS: es un proveedor NUEVO, asi que el texto de los albaranes (y con F-048 el del correo, con datos personales) saldria a un tercero que hoy no lo ve; eso lo decide el humano antes de mandar un solo documento real. Las llamadas se facturan: el numero de casos y el coste se enseñan antes de lanzar. Si Jev solo acepta texto, hay que pasarle lo que ya extrajo sv2, y la comparacion con IA1 (que ve el papel) no es de igual a igual: hay que declararlo en el informe.
+
+RELACIONADAS: F-043 (clasificacion por IA1), F-045 (banco de evals), F-046 (familias nuevas del catalogo), F-047 (ciclo completo).
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 
@@ -461,6 +494,40 @@ ALCANCE PROPUESTO (a cerrar en la spec). (1) IA1 clasifica el albaran con el CAT
 A DECIDIR EN LA SPEC: si la clasificacion es POR DOCUMENTO (el humano dijo "clasifique el albaran") o POR LINEA (tipo_familia hoy es por linea). Limite real del diseno actual: el prompt se elige por documento, asi que un albaran que mezcle familias -hormigon y bombeo, o residuos y transporte- procesa las lineas de la familia minoritaria con las instrucciones equivocadas. Propuesta: IA1 clasifica el documento (elige el camino), la fase 2 afina por linea, y IA1 puede declarar explicitamente un albaran mixto.
 
 COSTE Y RIESGO: config/prompts.yaml es RUTA SENSIBLE del arnes, asi que el cierre exige pasada de evals con LLM real (python -m evals.runner --con-llm --feature F-043), que se factura. Cambiar la clasificacion mueve el enrutado de TODO el pipeline: es la feature con mayor radio de impacto del backlog y por eso el humano le puso prioridad 1. RELACIONADAS: F-036 (deja SS-0003967 dependiendo de esta), F-023 (la trampa de anadir una familia nueva), F-024 (unidad_medida).
+
+### F-048 · El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel
+
+estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-048-correo-contexto-ia1`
+
+PRIORIDAD 1 por decision del humano el 2026-09-18: «pon una feature prioridad 1, que sea leer el codigo de obra y/o partida del email (asunto o cuerpo) de forma que el texto se le pase como contexto a la IA1, para que lo procese, si viene el codigo de la obra ya no tiene que leerlo, y con la partida igual».
+
+EL MECANISMO, ya decidido y sin alternativas que discutir: el texto del correo -ASUNTO y CUERPO- se le pasa a **IA1 como CONTEXTO**, y es IA1 quien lo procesa junto con el papel. NO se extrae con una expresion regular antes de llamarla. Si el correo trae el codigo de obra, IA1 ya no tiene que leerlo del albaran; con la partida, igual.
+
+QUE MANDA: lo que venga en el correo MANDA sobre lo que se lea del papel (decision del humano del 2026-09-17: «ese dato manda luego en la lectura de obra»). El papel solo decide cuando el correo no trae el dato.
+
+POR QUE ES LO MAS PRIORITARIO. Ataca los DOS patrones que mas pesan de los nueve que el humano anoto revisando a mano los 59 albaranes:
+- Patron (1), LA PARTIDA SE LEE MAL: es el mas repetido de todos. Se pierde el prefijo del capitulo o se confunden digitos sobre el escaneo.
+- Patron (2), LA OBRA SE DEDUCE MAL cuando el albaran no la trae impresa.
+Los dos desaparecen si el dato viene escrito en el correo por quien lo envia, que ademas SABE a que obra y a que partida va. Es la fuente mas fiable que tenemos y hoy la estamos TIRANDO.
+
+LO QUE HAY QUE CAMBIAR, verificado el 2026-09-17: el texto del correo MUERE EN SV1. `MensajeExtraccion` de `ruesma_comun/colas/mensajes.py` no lleva asunto, ni cuerpo, ni remitente: sv1 lista los adjuntos, sube el PDF al blob y publica el mensaje. Hay que hacer que ese texto viaje hasta sv2, lo que es un cambio de contrato en `ruesma_comun` y toca a sus consumidores, y que sv2 lo inyecte en el prompt de IA1 como un bloque de contexto mas -igual que ya hace con las obras activas (F-002) y con el catalogo de familias (F-043)-.
+
+ROBUSTEZ: nada de reglas sobre el formato del correo, que cambia con cada remitente. Al pasar el texto como CONTEXTO y no como regla, el formato deja de importar: es la IA quien lo interpreta. Y el candidato se valida contra lo que ya conocemos -la lista de OBRAS ACTIVAS y, para la partida, la LISTA DE PARTIDAS DE LA OBRA, que es justo lo que el humano propuso para el patron 1: «no leer la partida a ciegas, sino buscarla en la lista de partidas de la obra»-. Estrechar el espacio de busqueda, no anadir reglas.
+
+DECISIONES QUE QUEDAN PARA LA SPEC:
+- Un correo con VARIOS albaranes de obras o partidas distintas: el codigo del correo no puede aplicarse a todos a ciegas. Quiza solo manda cuando trae UN codigo.
+- Dejar rastro de la DISCREPANCIA cuando el papel diga otra cosa, sin frenar el documento, para poder auditarlo si el correo se equivoca alguna vez.
+- Cuanto texto se pasa: un cuerpo largo con cadena de respuestas puede traer codigos viejos de correos anteriores.
+
+CUIDADO CON LOS DATOS: el cuerpo de un correo trae datos personales -firmas, telefonos, direcciones- y no puede acabar en fixtures versionados sin pasar por `evals/barrido.py`. El buzon M365 real es SOLO LECTURA desde local.
+
+COMO SE MIDE: ninguno de los 59 casos del banco guarda hoy el correo. Para vigilar esta feature hara falta que el banco capture tambien el texto del correo, al menos de una muestra. Ver F-047, que es donde se vera de punta a punta.
+
+RELACIONADAS: F-045 (el banco que mide los patrones 1 y 2), F-002 (las obras activas que ya se le pasan a IA1), F-021 (eleccion de partida), F-047 (el ciclo completo).
+
+DECISIONES DEL HUMANO SOBRE LA SPEC (2026-09-22), ya aplicadas en specs/F-048-correo-contexto-ia1/: (1) si el correo trae varios albaranes, el codigo se aplica a TODOS —«si hay varios albaranes aplica el codigo a todos»—, sin condicion de «solo si trae un codigo»; queda SIN DECIDIR que hacer cuando el correo menciona VARIOS codigos distintos, con la propuesta escrita en design.md D4 bis (decide el papel, los codigos quedan como candidatos y el revisor los ve). (2) La discrepancia entre el codigo del correo y la lectura del papel SE GUARDA (las dos lecturas y su origen) y SE MARCA para que el revisor la vea en la ficha de sv4 —por eso la feature toca ahora tambien sv4, solo para pintar: ni DDL ni escrituras—; el correo sigue mandando. (3) «En el futuro bajara % de fiabilidad»: FUERA DE ALCANCE, el dato queda guardado para poder hacerlo (ficha futura; bajar la confianza dispara review_required, asi que no es inocuo). Validadas ademas: la precedencia la sella el resolver de sv2, solo uniqueBody del cuerpo, el orden de despliegue sv3 -> sv2 -> sv1 y la muestra de medicion. La validacion de la partida contra la lista de partidas de la obra sale a F-049.
+
+DECISIONES DEL HUMANO DEL 2026-09-23, aplicadas en specs/F-048-correo-contexto-ia1/: (1) SOLO OBRA: «la partida de momento no se indica en correo. solo obra»; la partida sale del alcance de F-048 (ni lectura, ni precedencia, ni discrepancia, ni origen_datos.partida, que creara F-049). (2) PRECEDENCIA Y CRUCE: «el codigo indicado en el correo, ya sea en subject o en el body, manda sobre lo que elija la IA [...] va a mandar el del email, pero si no cuadra se marcara para revision»: IA1 lee el codigo del correo y el del papel y sv2 los cruza. (3) LA DISCREPANCIA MANDA A REVISION (revoca lo del 2026-09-22): se usa el del correo y sv3 anade el motivo correo_obra_distinta_papel a review_reasons; sin codigo en el papel no hay discrepancia. (4) VARIOS CODIGOS DISTINTOS EN EL CORREO: si el del papel es uno de ellos se usa y no va a revision; si no, o el papel no trae codigo, se queda la lectura del papel (o ninguna) y va a revision con correo_obra_ambigua, con los codigos del correo como candidatos visibles en la ficha de sv4. Consecuencia: iran MAS albaranes a revision; se cuenta en la muestra antes de desplegar. (5) VALIDACION CONTRA TODAS LAS OBRAS (tarde del 2026-09-23, revoca 'obras activas'): «si el codigo de correo esta en la lista de obras (aunque no activa) sigue mandando, si no esta manda IA» y «si el correo no trae codigo, no hay que mandar a revision». Los codigos del correo que no estan en la lista de obras con contrato se descartan ANTES de contar; si no queda ninguno, manda la IA sin revision (correo_fuera_de_lista, solo rastro). La lista completa sale de la misma consulta y cache de F-002. (6) NORMALIZACION: «si, normaliza todo» (mayusculas, fuera lo no alfanumerico y los ceros a la izquierda). Consecuencia: menos revisiones de las que preveia la v3.
 
 ### F-011 · Evals de IA con ground truth y puerta en el arnés
 

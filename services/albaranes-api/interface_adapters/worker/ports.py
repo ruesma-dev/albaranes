@@ -10,11 +10,17 @@ producción serán adaptadores reales y aquí (piloto) tienen stubs locales:
   fase 2 (en producción se mueve aquí desde sv3). Devuelve dict o None.
 - :class:`SumideroEnvelope` — persiste el envelope para que sv3 lo recupere
   por document_id (en producción: tabla en PostgreSQL).
+- :class:`FuenteContextoCorreo` — (F-048) resuelve el blob lateral del
+  correo (``MensajeExtraccion.correo_blob``) a su ``ContextoCorreo``.
 """
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ruesma_comun.correo import ContextoCorreo
 
 
 @dataclass(frozen=True)
@@ -42,4 +48,15 @@ class SumideroEnvelope(ABC):
     @abstractmethod
     def persistir(self, *, document_id: str, envelope: dict, fase: str) -> None:
         """Guarda el envelope (lo recupera sv3 por document_id)."""
+        raise NotImplementedError
+
+
+class FuenteContextoCorreo(ABC):
+    @abstractmethod
+    def obtener(self, nombre_blob: str) -> ContextoCorreo | None:
+        """Contexto del correo del documento (F-048, R11).
+
+        ``None`` si el blob falta o no valida: el documento se extrae sin
+        correo. Un fallo de red se propaga, para que la cola reintente.
+        """
         raise NotImplementedError

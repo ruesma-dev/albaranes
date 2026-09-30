@@ -135,6 +135,29 @@
 {% endif %}
 
 {# =========================================================== #}
+{#  Obra según el correo (F-048 R32–R34)                        #}
+{#                                                              #}
+{#  El correo manda sobre la obra y sv2 cruza su lectura con la #}
+{#  del papel. Aquí se ENSEÑA el cruce: la discrepancia con las #}
+{#  dos lecturas, o los códigos que citaba el correo. sv4 pinta #}
+{#  lo que selló sv2; el estilo de advertencia lo dispara un    #}
+{#  motivo que ya selló sv3, nunca una regla de esta plantilla. #}
+{#  Si la cabecera cambió de obra después (el revisor o sv3:    #}
+{#  aquí no se sabe quién, CR-F1), el aviso lo dice primero,    #}
+{#  sin sujeto (clase obra-cambiada, CR-D4); el motivo no se    #}
+{#  toca.                                                       #}
+{# =========================================================== #}
+{% if document.avisos_origen_datos %}
+    <div class="alert {% if document.origen_en_duda %}warning origen-duda{% else %}info{% endif %} origen-datos{% if document.obra_cambiada_tras_extraer %} obra-cambiada{% endif %}">
+        <strong>Obra según el correo</strong>
+        · Motivo: <code>{{ document.origen_datos.obra.motivo }}</code>
+        {% for aviso in document.avisos_origen_datos %}
+            <p class="origen-aviso">{{ aviso }}</p>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{# =========================================================== #}
 {#  Motivos de revisión del DOCUMENTO (F-036 R23)               #}
 {#                                                              #}
 {#  sv3 los sella en albaran_documents_merge.review_reasons_json #}

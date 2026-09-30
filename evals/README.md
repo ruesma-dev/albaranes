@@ -115,3 +115,7 @@ STDOUT su aviso de que `fitz` está deprecado. Cualquier librería puede imprimi
 ahí; el canal de datos no puede ser el mismo sitio donde todo el mundo habla. Si
 escribes un adaptador nuevo en `evals/procesos/`, usa `canal.emitir` y
 `canal.leer`: hay un test que lo vigila.
+
+Si un hijo muere, su stderr completo sale por la consola de la pasada y **no se
+redirige a `progress/`** (puede llevar valores del albarán): guárdalo tú si lo
+necesitas, porque el informe solo trae el motivo corto.

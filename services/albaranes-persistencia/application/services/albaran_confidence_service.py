@@ -19,9 +19,14 @@ from domain.models.extraction_models import (
     LineaAlbaran,
     ProviderExtractionEnvelope,
 )
-from ruesma_comun.contratos import ClasificacionAlbaran
+from ruesma_comun.contratos import ClasificacionAlbaran, OrigenDatos
 from ruesma_comun.contratos.clasificacion import ORIGEN_AUSENTE
 from ruesma_comun.contratos.familias import familia_efectiva
+from ruesma_comun.contratos.origen_datos import (
+    MOTIVO_CORREO_AMBIGUO,
+    MOTIVO_REVISION_OBRA_CORREO_AMBIGUA,
+    MOTIVO_REVISION_OBRA_CORREO_DISTINTA,
+)
 
 
 @dataclass(frozen=True)
@@ -115,6 +120,35 @@ MOTIVO_LINEA_SIN_FAMILIA_EN_MIXTO = "linea_sin_familia_en_albaran_mixto"
 # `CLASIFICACION_CONFIANZA_MINIMA_PCT`, que importa esta constante para
 # que el número viva en UN solo sitio.
 UMBRAL_CLASIFICACION_CONFIANZA_POR_DEFECTO = 60.0
+
+
+def _motivos_de_origen_datos(origen: OrigenDatos | None) -> list[str]:
+    """(F-048 · R29–R31) Motivos de revisión de la OBRA según el correo.
+
+    Solo dos disparadores, las filas 3 y 5 de la tabla de D5:
+
+    - ``obra.discrepancia``: el correo trae UNA obra de la lista y el papel
+      OTRA; manda el correo y alguien tiene que mirarlo ⇒
+      ``MOTIVO_REVISION_OBRA_CORREO_DISTINTA``.
+    - ``obra.motivo == MOTIVO_CORREO_AMBIGUO``: el correo trae VARIAS y el
+      papel no casa con ninguna (o no trae obra) ⇒
+      ``MOTIVO_REVISION_OBRA_CORREO_AMBIGUA``.
+
+    Todo lo demás —sin bloque, sin correo, sin código, fuera de lista, un
+    código que casa con el papel o varios que lo confirman— no es motivo
+    (D5: «si el correo no trae código, no hay que mandar a revisión»).
+    Como los de la clasificación, se recalculan en cada merge: reprocesar
+    no los acumula. Ni la obra ni la confianza se tocan: sv3 MARCA.
+    Los nombres son los de ``comun``: sv4 los reconoce con la misma lista.
+    """
+    if origen is None:
+        return []
+    motivos: list[str] = []
+    if origen.obra.discrepancia:
+        motivos.append(MOTIVO_REVISION_OBRA_CORREO_DISTINTA)
+    if origen.obra.motivo == MOTIVO_CORREO_AMBIGUO:
+        motivos.append(MOTIVO_REVISION_OBRA_CORREO_AMBIGUA)
+    return motivos
 
 
 def _motivos_de_linea_sin_familia(
@@ -233,6 +267,11 @@ class AlbaranConfidenceService:
             # clasificacion se pierde aqui igual que se perdia en
             # ``meta``: las seis columnas quedarian a NULL.
             clasificacion=openai.data.clasificacion,
+            # (F-048 · R27) Lo mismo con `origen_datos`: lo sella el
+            # resolver de sv2 sobre el envelope FINAL (`openai` aqui) y no
+            # se fusiona entre proveedores. Sin esta linea el merge lo
+            # perdia y no llegaba al `raw_extraction_json` del merge.
+            origen_datos=openai.data.origen_datos,
         )
         merged_envelope = ProviderExtractionEnvelope(
             meta=base_envelope.meta,
@@ -284,6 +323,7 @@ class AlbaranConfidenceService:
             coherence_flags=coherence_flags,
             provider_origin=provider_origin,
             clasificacion=merged_document.clasificacion,
+            origen_datos=merged_document.origen_datos,
         )
         review_required = doc_conf < 80.0 or bool(review_reasons)
 
@@ -553,6 +593,7 @@ class AlbaranConfidenceService:
         coherence_flags: list[str],
         provider_origin: str,
         clasificacion: ClasificacionAlbaran | None = None,
+        origen_datos: OrigenDatos | None = None,
     ) -> list[str]:
         reasons: list[str] = []
         if provider_origin == "openai_fallback":
@@ -571,6 +612,7 @@ class AlbaranConfidenceService:
         )
         reasons.extend(coherence_flags)
         reasons.extend(self._motivos_de_clasificacion(clasificacion))
+        reasons.extend(_motivos_de_origen_datos(origen_datos))
         reasons.extend(
             _motivos_de_linea_sin_familia(line_results, clasificacion)
         )

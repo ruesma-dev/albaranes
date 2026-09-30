@@ -24,6 +24,7 @@ import sys
 from pathlib import Path
 
 from evals.procesos import canal
+from evals.procesos.errores import avisar, describir_error
 from evals.procesos.sv6_build import (
     MAPA_TIPO_FAMILIA,
     _decimal,
@@ -343,34 +344,64 @@ def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:  # pragma: no cover -
         prompt_key=trabajo.get("prompt_key_ia4", "conciliacion_es"),
     )
 
-    resultados = []
-    for caso in trabajo.get("casos", []):
-        contexto_dict = caso["contexto"]
-        salida = valoracion.extract(
-            context=_contexto_de_dict(contexto_dict), pdf_attachment=None
-        )
-        resultado = salida[proveedor]
-        envelope = envelope_desde(
-            contexto_dict,
-            resultado.parsed.model_dump().get("lineas", []),
-            proveedor,
-            especificacion.model_name,
-        )
-        pendientes = lineas_no_casadas(envelope)
+    def valorar(contexto: dict) -> list:
+        salida = valoracion.extract(context=_contexto_de_dict(contexto), pdf_attachment=None)
+        return salida[proveedor].parsed.model_dump().get("lineas", [])
+
+    def construir_envelope(contexto: dict, lineas: list) -> dict:
+        return envelope_desde(contexto, lineas, proveedor, especificacion.model_name)
+
+    def conciliar(envelope: dict, contexto: dict) -> list[dict]:
         documento = conciliacion.conciliar(
-            lineas_no_casadas=pendientes,
-            lineas_contrato=contexto_dict.get("lineas_contrato", []),
+            lineas_no_casadas=lineas_no_casadas(envelope),
+            lineas_contrato=contexto.get("lineas_contrato", []),
         )
-        conciliaciones = documento.model_dump().get("conciliaciones", [])
-        aplicar_conciliacion(envelope, conciliaciones)
-        resultados.append(
-            {
-                "caso_id": caso.get("caso_id"),
-                "envelope": envelope,
-                "conciliaciones": conciliaciones,
-            }
-        )
+        return documento.model_dump().get("conciliaciones", [])
+
+    resultados = procesar_casos(
+        trabajo.get("casos", []),
+        proveedor,
+        valorar=valorar,
+        construir_envelope=construir_envelope,
+        conciliar=conciliar,
+    )
     return {"resultados": resultados, "proveedor": proveedor}
+
+
+def procesar_casos(
+    casos: list[dict], proveedor: str, *, valorar, construir_envelope, conciliar
+) -> list[dict]:
+    """IA3 y luego IA4 caso a caso, cada caso AISLADO.
+
+    El mismo agujero que tumbó la pasada del 2026-09-24 en sv2: una respuesta
+    del LLM que no valida en UN caso no puede llevarse por delante los demás.
+    El fallo queda en el resultado de ese caso (`error`: fase, tipo y motivo
+    sin valores) y el bucle sigue. Las tres piezas llegan inyectadas para que
+    los tests prueben el bucle sin sv5 ni LLM.
+    """
+    resultados = []
+    for caso in casos:
+        caso_id = caso.get("caso_id")
+        contexto = caso["contexto"]
+        fase = "IA3"
+        try:
+            envelope = construir_envelope(contexto, valorar(contexto))
+            fase = "IA4"
+            conciliaciones = conciliar(envelope, contexto)
+            aplicar_conciliacion(envelope, conciliaciones)
+        except Exception as error:  # noqa: BLE001 - se aísla el caso, no se oculta
+            fallo = describir_error(error, fase)
+            avisar(
+                "sv5_valoracion",
+                f"caso {caso_id}, proveedor {proveedor}: error en {fase} · {fallo['motivo']}",
+            )
+            resultados.append({"caso_id": caso_id, "error": fallo})
+            continue
+        avisar("sv5_valoracion", f"caso {caso_id}, proveedor {proveedor}: ok")
+        resultados.append(
+            {"caso_id": caso_id, "envelope": envelope, "conciliaciones": conciliaciones}
+        )
+    return resultados
 
 
 def ejecutar_en_subproceso(trabajo: dict, interprete: str | None = None) -> dict:  # pragma: no cover - subproceso
@@ -402,7 +433,8 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - subproceso
         comprobar_claves([trabajo.get("proveedor", "gemini")])
         salida = ejecutar_trabajo(trabajo)
     except Exception as error:  # noqa: BLE001 - la frontera devuelve el motivo
-        print(f"sv5_valoracion: {type(error).__name__}: {error}", file=sys.stderr)
+        # Sin `str(error)`: el de pydantic arrastra la respuesta del LLM.
+        avisar("sv5_valoracion", f"la corrida entera falló · {describir_error(error, '')['motivo']}")
         return 1
     canal.emitir(salida)
     return 0

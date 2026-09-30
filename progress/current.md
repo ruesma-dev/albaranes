@@ -23,6 +23,14 @@ ejecutado `init.sh` ni ninguna suite.
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
+**F-048 · CERRADA (`done`, 2026-09-29).** Resumen en `progress/history.md`. **Pendiente del humano: merge a
+`dev`, push (este repo y `azure-apps`, que no tiene remoto) y despliegue sv3 → sv2 → sv1 → sv4 con `-Only`
+uno a uno** (regla 15 de `docs/ARCHITECTURE.md`).
+
+**En spec (worktrees aparte, ramas desde `dev`):** F-051 almacén por línea (`../albaranes-F-051`, `spec_ready`
+v2, preguntas abiertas en `progress/spec_F-051.md` de esa rama) y F-052 proveedores truncados en sv3
+(`../albaranes-F-052`, prioridad 1, spec a medias: `specs/F-052-*` sin commitear en ese worktree).
+
 **F-045 · CAPA 1 IMPLEMENTADA** (2026-09-16, rama
 `feature/F-045-banco-evals-revision-manual`, 22 commits de tarea). Informe
 completo en `progress/impl_F-045.md`, importación en
@@ -819,3 +827,23 @@ gestionada no se ejercita).
 
 Siguiente paso: aprobación del humano y, con ella, el implementer sobre
 `feature/F-047-evals-ciclo-completo`.
+
+## 2026-09-24 · Aparcado y backlog
+
+**Aparcada: F-047** (`blocked` por decisión, no por fallo). **Al retomarla**: F-048 trajo y amplió `evals/inyeccion.py`; falta cablear
+`anadir_opcion_sin_correo` en el CLI del ciclo, pasar `correo=correos.cargar_correo(caso_id)` desde `ciclo.py` y
+traer `tests/test_f047_r5_seleccion_contrato.py` (`GestoRevisor`). Ver la nota al final de
+`specs/F-047-evals-ciclo-completo/tasks.md`. El ciclo completo
+FUNCIONA de punta a punta. Falta: analizar los 130 supervivientes de
+`progress/mutacion_F-047.md` (vigente, mide 2e05499), T24-T26 manuales, la
+revisión, y limpiar 28 worktrees huérfanos de mutación.
+
+**Backlog inmediato**: F-049 (validar la partida contra la lista de partidas de
+la obra; prioridad 2), F-046 (catálogo: combustible a documento, grava,
+ferretería, ferralla) y F-050 (estudiar Jev, de TypeSafe AI, para la
+clasificación).
+
+**Pendientes del humano que arrastran días**: meter un albarán por producción
+(desplegado el 16-sep, sin que haya pasado ninguno), decidir si se versionan
+los libros de `evals/ground_truth/`, y la automejora del arnés: la caché de
+`init.sh` no se invalida cuando cambia `comun` (vale para `arnes-base`).

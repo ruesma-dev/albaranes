@@ -21,3 +21,21 @@ class EmailAttachment:
     size: int
     is_inline: bool
     odata_type: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class ContenidoCorreo:
+    """Texto de un correo tal como lo da Graph (F-048, R2-R4).
+
+    ``cuerpo_unico`` es la parte NO citada del cuerpo (``uniqueBody``), ya
+    en texto plano; vacio si Graph no la trae (R3: nunca se cae al
+    ``body``, que arrastra la cadena de respuestas). ``tipo`` es el
+    ``contentType`` que devolvio Graph (``text`` o ``html``), en minusculas.
+    """
+
+    asunto: str
+    cuerpo_unico: str
+    tipo: str = "text"
+    # ``receivedDateTime`` tal cual lo da Graph (ISO UTC) o ``None``; lo
+    # guarda la captura de evals (CR-B5). El pipeline usa el del listado.
+    recibido_utc: str | None = None

@@ -6,11 +6,23 @@ from typing import Any, Literal
 
 from urllib.parse import quote
 
-from pydantic import BaseModel, Field, computed_field, field_validator
+from pydantic import BaseModel, Field, ValidationError, computed_field, field_validator
 
-from ruesma_comun.contratos import ClasificacionAlbaran
+from ruesma_comun.contratos import (
+    MOTIVOS_REVISION_ORIGEN,
+    ClasificacionAlbaran,
+    OrigenCampo,
+    OrigenDatos,
+)
 from ruesma_comun.contratos.clasificacion import ORIGEN_IA1
 from ruesma_comun.contratos.familias import obtener as obtener_familia
+from ruesma_comun.contratos.origen_datos import (
+    FUENTE_CORREO,
+    MOTIVO_CORREO_AMBIGUO,
+    MOTIVO_CORREO_CONFIRMA_PAPEL,
+    MOTIVO_CORREO_FUERA_DE_LISTA,
+    normalizar_codigo,
+)
 
 VIEW_MODE_MERGE = "merge"
 KNOWN_PROVIDER_VIEWS = ("openai", "gemini", "claude")
@@ -659,6 +671,45 @@ class DisplayLine(BaseModel):
     concilia: ConciliacionDisplay | None = None
 
 
+def _aviso_de_obra(obra: OrigenCampo) -> str | None:
+    """Texto del aviso de la obra para la ficha (F-048 R32, R33); ``None`` sin aviso."""
+    candidatos = ", ".join(obra.candidatos_correo)
+    if obra.discrepancia:
+        return (
+            f"Obra: el correo dice {obra.valor_correo} y el papel dice "
+            f"{obra.valor_papel}. Se ha usado la del correo."
+        )
+    if obra.motivo == MOTIVO_CORREO_AMBIGUO:
+        if obra.valor_papel:
+            cierre = (
+                f"ninguna es la del papel ({obra.valor_papel}). "
+                "Se ha dejado la del papel."
+            )
+        else:
+            cierre = "el papel no trae obra. Se ha dejado sin obra."
+        return f"Obra: el correo cita varias obras ({candidatos}) y {cierre}"
+    if obra.motivo == MOTIVO_CORREO_CONFIRMA_PAPEL:
+        if obra.valor_final and obra.valor_final != obra.valor_papel:
+            # Desde CR-C5 la cabecera lleva la forma de la lista (945 ⇒
+            # 0945): se citan las dos para que no parezcan dos obras.
+            return (
+                f"Obra: el correo cita varias obras ({candidatos}) y una es "
+                f"la del papel (el papel dice {obra.valor_papel}; en la lista "
+                f"de obras, {obra.valor_final}). Se ha usado {obra.valor_final}."
+            )
+        return (
+            f"Obra: el correo cita varias obras ({candidatos}) y una es "
+            f"la del papel ({obra.valor_papel}). Se ha usado esa."
+        )
+    if obra.motivo == MOTIVO_CORREO_FUERA_DE_LISTA:
+        verbo = "están" if len(obra.candidatos_correo) > 1 else "está"
+        return (
+            f"Obra: el correo cita {candidatos}, que no {verbo} en la lista "
+            "de obras de Sigrid. Se ha usado la lectura del papel."
+        )
+    return None
+
+
 class DocumentDetailPayload(BaseModel):
     id: str
     view_mode: str = Field(default=VIEW_MODE_MERGE)
@@ -800,6 +851,117 @@ class DocumentDetailPayload(BaseModel):
         """
         motivos = set(self.review_reasons)
         return any(motivo in motivos for motivo in MOTIVOS_CLASIFICACION_EN_DUDA)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def origen_datos(self) -> OrigenDatos | None:
+        """De dónde salió la OBRA —correo o papel— (F-048 R32–R35).
+
+        sv3 guarda el bloque dentro del ``raw_extraction_json`` del merge y
+        aquí solo se LEE, con el modelo de ``comun``. Todo lo que no sea un
+        bloque válido —JSON ausente, roto o que no es un objeto, sin
+        ``data``, sin bloque o un bloque que no valida— da ``None`` y la
+        ficha abre como hoy, sin aviso (R35): perder el aviso es mejor que
+        dejar al revisor sin poder abrir el documento.
+
+        Solo en la vista MERGE, como la clasificación de F-043: la vista
+        de un proveedor es su extracción cruda.
+        """
+        if self.view_mode != VIEW_MODE_MERGE or not self.raw_extraction_json:
+            return None
+        try:
+            envelope = json.loads(self.raw_extraction_json)
+        except (TypeError, ValueError):
+            return None
+        data = envelope.get("data") if isinstance(envelope, dict) else None
+        bloque = data.get("origen_datos") if isinstance(data, dict) else None
+        if not isinstance(bloque, dict):
+            return None
+        try:
+            return OrigenDatos.model_validate(bloque)
+        except ValidationError:
+            return None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def avisos_origen_datos(self) -> list[str]:
+        """Lo que el revisor tiene que saber de la obra (R32, R33).
+
+        - Discrepancia: el campo, lo que dice el correo y lo que dice el
+          papel (manda el correo).
+        - ``correo_ambiguo``, ``correo_confirma_papel`` y
+          ``correo_fuera_de_lista``: los códigos que cita el correo.
+
+        El resto de casos (sin correo, sin código, sin lectura de la IA o
+        un código que casa con el papel) no pinta nada. sv4 PINTA: el
+        cruce lo hizo sv2 y aquí no se recalcula.
+
+        Si la cabecera cambió de obra después (``obra_cambiada_tras_extraer``),
+        el primer aviso lo dice y el resto queda como lo que pasó al extraer.
+        Sin sujeto (CR-F1): la pudo cambiar el revisor o sv3, y sv4 no sabe
+        quién.
+        """
+        origen = self.origen_datos
+        if origen is None:
+            return []
+        obra = origen.obra
+        aviso = _aviso_de_obra(obra)
+        if not self.obra_cambiada_tras_extraer:
+            return [aviso] if aviso else []
+        # CR-D4 (aviso C de la review del bloque D, opción (b) del líder):
+        # la cabecera ya no es la que fijó la extracción. Se dice primero y
+        # lo demás pasa a ser historia. Sin sujeto (CR-F1, bloqueante 1 de
+        # la review del bloque F): además del revisor, la cambia sv3
+        # (``HeaderResolverService`` deduce la obra si el código no pasa su
+        # normalizador) ya en la primera persistencia, y ``update_document``
+        # no deja marca de quién fue. Solo si el correo dijo algo: sin
+        # aviso de siempre y sin obra impuesta por el correo, no hay nada
+        # «según el correo» que contar.
+        if aviso is None and obra.fuente != FUENTE_CORREO:
+            return []
+        de_donde = "la que decía el correo" if obra.fuente == FUENTE_CORREO else "la del papel"
+        cambio = (
+            f"Obra: la cabecera lleva ahora {self.obra_codigo} (cambiada "
+            f"después de extraer); al extraer se fijó {obra.valor_final}, "
+            f"{de_donde}."
+        )
+        historia = [aviso.replace("Obra: ", "Al extraer, ", 1)] if aviso else []
+        return [cambio, *historia]
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def obra_cambiada_tras_extraer(self) -> bool:
+        """¿La obra de la cabecera ya no es la que fijó la extracción? (CR-D4).
+
+        Compara la obra actual del merge con ``origen_datos.obra.valor_final``
+        con ``normalizar_codigo`` de ``comun`` (D9: ``945`` y ``0945`` son la
+        misma). Solo cuenta un cambio a OTRA obra: sin ``valor_final`` no hay
+        con qué comparar, y una obra vacía la deja la red de obra de sv3
+        (R28), que añade su propio motivo; eso no es un cambio de obra.
+        No dice QUIÉN la cambió (CR-F1): puede ser el revisor o sv3
+        (``HeaderResolverService``, al persistir, en el duplicado o al
+        «volver a buscar»), y el payload no trae con qué distinguirlos.
+        Solo pinta: no escribe nada ni toca ``review_reasons`` (R35, §6).
+        """
+        origen = self.origen_datos
+        if origen is None:
+            return False
+        final = normalizar_codigo(origen.obra.valor_final)
+        actual = normalizar_codigo(self.obra_codigo)
+        return final is not None and actual is not None and actual != final
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def origen_en_duda(self) -> bool:
+        """¿Sv3 mandó la obra a revisión por el correo? (R34).
+
+        Sale de los motivos que sv3 ya selló (``MOTIVOS_REVISION_ORIGEN``
+        de ``comun``), no del bloque: la regla vive en sv3, que es quien la
+        aplica. ``correo_confirma_papel`` y ``correo_fuera_de_lista`` son
+        informativos y no la ponen en duda.
+        """
+        motivos = set(self.review_reasons)
+        return any(motivo in motivos for motivo in MOTIVOS_REVISION_ORIGEN)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
