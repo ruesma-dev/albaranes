@@ -276,7 +276,7 @@ class _DoblesMinimos:
         self.tmp_path = tmp_path
 
     def dependencias(self) -> co.Dependencias:
-        def prompt_de_dev(directorio):
+        def prompt_de_dev(directorio, base):
             ruta = Path(directorio) / "prompts_dev.yaml"
             ruta.write_text("{}\n", encoding="utf-8")
             return ruta

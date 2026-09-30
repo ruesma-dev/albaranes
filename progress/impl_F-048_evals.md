@@ -72,6 +72,9 @@ obra que lee IA1. Solo `evals/` y `tests/`. **Commits** `a264c36` (código + tes
 ```
 python -m evals.comparar_obra --casos GEN-001,GEN-009,GEN-010,HOR-003,HOR-006,FER-003,RES-005,RES-011,RES-012,RES-015 --repeticiones 3 --variante ambas
 ```
+Desde el merge de F-048 en `dev` (`2b05ba7`), repetir esta medición pide añadir `--base 1807e83` (el `dev` de antes de
+F-048): sin `--base`, la variante `dev` sale de la rama `dev` y ya lleva el prompt nuevo
+(`progress/impl_fix_F-048_comparar_obra_base.md`).
 Entorno (solo nombres): `GEMINI_API_KEY` (o `OPENAI_API_KEY`/`ANTHROPIC_API_KEY` si `IA_PRIMERA_FASE` lo cambia),
 `SIGRID_API_BASE_URL`, `SIGRID_API_FUNCTION_KEY`, `SIGRID_API_DATABASE`. Opcionales, con los defectos de sv2:
 `IA_PRIMERA_FASE`, `GEMINI_MODEL`, `SIGRID_API_TIMEOUT_S`, `OBRAS_ACTIVAS_COD_MIN`, `OBRAS_ACTIVAS_MAX`.
