@@ -4,8 +4,6 @@ from __future__ import annotations
 import logging
 import unicodedata
 
-from ruesma_comun.sigrid import SigridRespuestaTruncada
-
 from application.services.familia_detector import (
     familias_de_filas_merge,
     familias_de_texto,
@@ -18,6 +16,7 @@ from domain.ports.header_resolver_ports import (
     ObraReverseLookupClient,
     ProveedorReverseLookupClient,
 )
+from ruesma_comun.sigrid import SigridRespuestaTruncada
 
 logger = logging.getLogger(__name__)
 

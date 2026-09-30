@@ -17,18 +17,17 @@ import logging
 
 import httpx
 import pytest
-from doble_sigrid_api import CIF_SALMEDINA, RAZ_SALMEDINA, DobleSigridApi
-from ruesma_comun.sigrid import SigridRespuestaTruncada
-
 from application.services import header_resolver_service as modulo_resolver
 from application.services.header_resolver_service import (
     _NOTA_PROVEEDOR_PREFIX,
     HeaderResolverService,
 )
+from doble_sigrid_api import CIF_SALMEDINA, RAZ_SALMEDINA, DobleSigridApi
 from domain.models.header_resolution_models import (
     MergeHeaderForResolution,
     ProveedorObraResumen,
 )
+from ruesma_comun.sigrid import SigridRespuestaTruncada
 
 DOC = "doc-f052-nota"
 #: El CIF mal leído por IA1 en SS-0026122 (no existe en Sigrid).
