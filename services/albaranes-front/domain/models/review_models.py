@@ -710,6 +710,59 @@ def _aviso_de_obra(obra: OrigenCampo) -> str | None:
     return None
 
 
+# --------------------------------------------------------------------- #
+# F-052 R20–R27 · rastro de la última búsqueda de contratos.
+#
+# Lo sella sv3 (dueño del schema) en las columnas `contratos_busqueda_*`
+# del merge, y el fallback local de sv4 con la misma semántica (R22). Los
+# literales de resultado son los de sv3 (`domain/models/contrato_models.py`):
+# sv4 no puede importarlo, así que los ata un test que lee ese fichero.
+# --------------------------------------------------------------------- #
+BUSQUEDA_ENCONTRADOS = "encontrados"  # >= 1 contrato, por Sigrid o por caché
+BUSQUEDA_NINGUNO = "ninguno"  # consulta correcta, 0 contratos
+BUSQUEDA_ERROR = "error"  # la búsqueda falló (incluido un truncado)
+BUSQUEDA_SIN_DATOS = "sin_datos"  # faltaba CIF u obra: no se buscó
+RESULTADOS_BUSQUEDA_CONTRATOS = frozenset({
+    BUSQUEDA_ENCONTRADOS, BUSQUEDA_NINGUNO, BUSQUEDA_ERROR, BUSQUEDA_SIN_DATOS,
+})
+
+# Qué mensaje pinta el bloque de contrato (R23–R26). Lo decide
+# `application.services.busqueda_contratos.estado_busqueda` (R27).
+ESTADO_BUSQUEDA_SIN_RASTRO = "sin_rastro"  # anterior a F-052: no consta
+ESTADO_BUSQUEDA_VIGENTE = "vigente"  # rastro = datos actuales, búsqueda correcta
+ESTADO_BUSQUEDA_DESFASADA = "desfasada"  # CIF u obra actuales distintos del rastro
+ESTADO_BUSQUEDA_ERROR = "error"  # rastro = datos actuales, la búsqueda falló
+ESTADO_BUSQUEDA_SIN_DATOS = "sin_datos"  # rastro = datos actuales, no se buscó
+
+EstadoBusquedaContratos = Literal[
+    "sin_rastro", "vigente", "desfasada", "error", "sin_datos",
+]
+
+
+class RastroBusquedaContratos(BaseModel):
+    """Las cuatro columnas `contratos_busqueda_*` del merge, tal cual."""
+
+    cif: str | None = None
+    obra: str | None = None
+    resultado: str | None = None
+    at_utc: str | None = None
+
+
+class BusquedaContratosVista(BaseModel):
+    """Lo que el bloque de contrato necesita para decir la verdad (R23–R27).
+
+    ``cif``, ``obra``, ``fecha`` y ``resultado`` son los del RASTRO (con
+    qué se buscó), no los actuales del albarán: esos ya viajan en el
+    propio payload.
+    """
+
+    estado: EstadoBusquedaContratos
+    cif: str | None = None
+    obra: str | None = None
+    fecha: str | None = None
+    resultado: str | None = None
+
+
 class DocumentDetailPayload(BaseModel):
     id: str
     view_mode: str = Field(default=VIEW_MODE_MERGE)
