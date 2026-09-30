@@ -312,3 +312,17 @@ def test_f052_leer_paginado_rechaza_una_pagina_por_encima_del_tope():
         _leer(fuente, pagina=PAGINA_MAXIMA + 1)
     assert "500000" in str(info.value).replace(".", "")
     assert fuente.llamadas == []
+
+
+def test_f052_version_0_7_0_en_paquete_y_pyproject():
+    """``sigrid/`` y ``obras/`` son subpaquetes nuevos sin romper API:
+    versión menor. Paquete y ``pyproject.toml`` dicen lo mismo."""
+    import re
+    from pathlib import Path
+
+    import ruesma_comun
+
+    pyproject = (Path(ruesma_comun.__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    [declarada] = re.findall(r'^version = "([^"]+)"', pyproject, flags=re.MULTILINE)
+    assert ruesma_comun.__version__ == "0.7.0"
+    assert declarada == ruesma_comun.__version__
