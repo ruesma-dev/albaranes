@@ -163,3 +163,47 @@ E         Left contains 80 more items:
 E         {'B10000000': ({'acero'}, set()), 'B10007919': ({'acero'}, set()), ...
 E       AssertionError: assert {'B00001200':...gon'}, set())} == {}
 ```
+
+### Lo que el Bloque B (T7–T10) tiene que saber de la API nueva
+
+- **Excepciones de `fetch_contratos_resumen_por_obra`**: truncado →
+  `ruesma_comun.sigrid.SigridRespuestaTruncada` (`RuntimeError`, con
+  `.etiqueta` y `.filas`); `error_xml`, HTTP ≥ 400, `ok=false`, JSON roto →
+  `RuntimeError`; transporte → la de httpx. Para R6/R15 todas son
+  «consulta fallida»: capturar `Exception`, no solo la de truncado. T8 puede
+  distinguir `SigridRespuestaTruncada` para el WARNING con la obra.
+- **Candidatos**: la lista ya viene completa (81 en 0691), ordenada por CIF y
+  deduplicada; `[]` solo si no hay obra (sin llamar) o si Sigrid no trae
+  nadie. N de R18 = `len(resumenes)`. Puerto sin cambios.
+- **`fetch_contratos`** pagina (1.000/pág.) y lanza `SigridRespuestaTruncada`
+  si pasa de `max_paginas` (20): en T10 esa excepción es rastro `error` (R13, R21).
+- **`search_proveedores()`** devuelve la lista global completa (3.543) en una
+  llamada; su `max_rows` es ahora el tamaño de página.
+- **Doble** (`tests/doble_sigrid_api.py`): `DobleSigridApi(error_xml=True)` para
+  R6/R15; `.cliente(**kwargs)` da el cliente real de sv3; `.peticiones` y
+  `.peticiones_con(fragmento)` para contar llamadas; constantes
+  `CIF_SALMEDINA`, `RAZ_SALMEDINA` (`"SALMEDINA, S.L."`), `CONTRATO_SALMEDINA`.
+  El resolver acepta el cliente real (ver `_RepoFake` en `test_f052_resumen_obra.py`).
+- R1 (T7) ya sale verde con el cliente de T5: `_mejor_candidato_por_nombre`
+  con `"SALMEDINA"` y obra 0691 encuentra B82899550. Su RED tendrá que ser la
+  del código anterior a T5 (o la de la firma nueva `(candidato, motivo, n)`).
+
+## Ficheros tocados (Bloque A)
+
+- Nuevos: `services/albaranes-comun/ruesma_comun/sigrid/{__init__,lectura}.py`,
+  `services/albaranes-comun/tests/test_f052_sigrid_lectura.py`,
+  `services/albaranes-persistencia/tests/{doble_sigrid_api,test_f052_doble_sigrid_api,
+  test_f052_truncado_cliente,test_f052_paginacion_cliente,test_f052_resumen_obra,
+  test_f052_equivalencia_familias}.py`.
+- Modificado: `services/albaranes-persistencia/infrastructure/sigrid/sigrid_api_contrato_client.py`.
+- Sin tocar (fuera del Bloque A): resolver, puertos, `composition.py`, sv4, sv2.
+
+## Fuera del alcance / pendiente
+
+- Bloque B (T7–T10), sv4 (T11–T13 bis, T15, T17), T14, T16, T18 y la campaña
+  de mutación (T19). MANUAL (humano): T20–T23. `ruesma_comun` sigue en 0.6.0
+  (módulo nuevo sin cambio de API existente; el versionado lo decide el líder).
+- La SQL agregada solo se ha probado contra el doble: que sigrid-api real la
+  acepta y da 81/163 filas lo verifican T20 y T21.
+
+## Evidencias
