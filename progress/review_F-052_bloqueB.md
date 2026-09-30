@@ -85,13 +85,12 @@ normalizar → **muerto**, `2 failed`.
   `print`, TODO ni secretos (los CIF son de proveedores del fixture, ya aprobado en A); sin
   dependencias nuevas. Trampa (2) de C3: el cambio de schema lista su lector (sv4) en el
   docstring de `phase2_ddl.py`; sv5 revisado arriba.
-- C3 bis N/A: no toca `docs/referencia/`.
+- C3 bis N/A: no toca `docs/referencia/`. C4 ter N/A: la puerta dice que no toca rutas sensibles.
 - C4 [x] R1, R5 (red por nombre), R6, R13 (rastro), R15–R21 con tests `test_f052_rN_*` en
   verde; sin red ni BBDD (doble y fakes). MANUAL T22 (escritura real del rastro) fuera del bloque.
 - C4 bis [x] rigor declarado; [x] RED real en el informe y reproducida por mí en T7–T10 y O5;
   [x] cobertura 148/148; [x] sección «Evidencias» con tests, cobertura, mutantes manuales y
   tiempos. N/A mutación y RM1–RM6: la campaña es T19, fuera del bloque; no hay campaña que revisar.
-- C4 ter N/A: la puerta dice que F-052 no toca rutas sensibles.
 - C5 N/A: review parcial; T11–T24 pendientes por plan.
 
 ## Trazabilidad requisito → test (Bloque B)
@@ -131,8 +130,7 @@ Ninguno.
   también `contratos_busqueda_*`. Deshacer un cambio de CIF devuelve CIF y rastro viejos a
   la vez (coherente), pero quien haga T13 bis debe tenerlo en cuenta al comparar CIF/obra
   con el rastro, y el Bloque C debería tener un test que lo fije.
-- **O-B5**: la cabeza sigue sin tilde («CIF leido») y la cola con tildes, frase mixta en una
-  misma nota. Documentado y fiel a design §6 («solo cambia el texto tras...»); solo estético.
+- **O-B5**: cabeza sin tilde («CIF leido») y cola con tildes; fiel a design §6, solo estético.
 
 ## Propuesta de automejora (no aplicada)
 
