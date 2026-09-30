@@ -21,9 +21,7 @@ CR-A1 `2caa1c9` (R5 fija el ganador por barajado; RED `assert (None, 'determinis
 una página trae filas de más; RED `DID NOT RAISE RuntimeError` — `2 failed, 29 passed`).
 Mutante «leer `nombre` en vez de `texto`»: muerto (80 CIF difieren).
 
-Decisiones A: el doble marca `truncated = filas >= max_rows`; `search_proveedores(max_rows=5000)`
-pasa a ser el tamaño de página; el resumen de la obra se ordena por `(cif, nombre)` y
-deduplica por CIF (independiente del orden de llegada, R5).
+Decisiones A: doble con `truncated = filas >= max_rows`; `search_proveedores(max_rows=5000)` = tamaño de página; resumen ordenado por `(cif, nombre)` y deduplicado por CIF (R5).
 
 ## Bloque B (T7–T10) · sv3 · APROBADO
 
@@ -117,25 +115,19 @@ Trazas RED (extracto literal):
   (contrato compartido reasignado por el UPSERT de sv3) → «encontró contratos, pero ahora no
   figura ninguno asociado; vuelve a buscar». La fecha pasa por `fecha_hora_local`.
 - **D4-A (T13 bis)**: la lógica vive en `ReviewService` (testeable sin FastAPI); el endpoint
-  solo la cablea. «Distinto» = estado `desfasada`. **No relanza**: sin rastro (no hay con qué
-  comparar; el bloque ya ofrece «Solo volver a buscar»), al **aprobar** (aprobar no es
-  «Guardar») y en los PUT que no mandan `?buscar_si_cambia=1`. Solo `sendSave(false)` lo
+  solo la cablea. Relanza con `desfasada` (y sin rastro desde O-C1, abajo). **No relanza**
+  al **aprobar** (aprobar no es «Guardar») ni en los PUT sin `?buscar_si_cambia=1`. Solo `sendSave(false)` lo
   manda (botón «Guardar» y el autoguardado al elegir obra/proveedor en el combo); «Guardar y
   volver a buscar», elegir contrato y «Valorar ahora» no, para no publicar dos veces en
   `q-persistencia` (sv3 podría valorar dos veces). Un fallo al relanzar no deshace el
   guardado: outcome `sigrid_error` con mensaje. «Buscando…» solo si el outcome es `queued`
-  (`?buscando=1` en la redirección); el JS sondea `GET /api/documents/{id}` cada 3 s hasta que
-  el estado deja de ser `desfasada` y recarga sin el parámetro (tope 60 s y aviso).
-- **O-B4**: `snapshot_row` + `_undo_apply_restore` restauran la fila entera, así que CIF, obra
-  y rastro vuelven juntos: tras deshacer, el estado es `vigente` con el rastro viejo y el
-  siguiente «Guardar» sin cambios no busca
-  (`test_f052_d4a_ob4_deshacer_restaura_cif_obra_y_rastro_juntos`, SQLite). Límite previo, no
-  tocado: el deshacer no restaura `albaran_contratos_merge`, así que los contratos de la
-  búsqueda nueva siguen listados tras deshacer.
-- **T15**: mismas salidas que sv3, incluida la extensión (a) de R21: `replace` fallido sella
-  `error` y **re-lanza** (el endpoint se comporta como antes). El repositorio de sv4 valida el
-  resultado antes de tocar la BBDD. `ContratoRefetchService` de sv4 no se toca (no está
-  cableado; llama a métodos que ya no existen: deuda previa).
+  (`?buscando=1`); el JS sondea `GET /api/documents/{id}` cada 3 s hasta que el estado cambia
+  y recarga sin el parámetro (tope 60 s y aviso).
+- **O-B4**: el deshacer restaura la fila entera: CIF, obra y rastro vuelven juntos y el
+  siguiente «Guardar» sin cambios no busca (`test_f052_d4a_ob4_*`, SQLite). Límite previo: no
+  restaura `albaran_contratos_merge` (los contratos nuevos siguen listados).
+- **T15**: mismas salidas que sv3, con la extensión (a) de R21 (`replace` fallido sella `error`
+  y re-lanza). `ContratoRefetchService` de sv4: no cableado, deuda previa (solo cambia su import).
 - **T17**: sin seam nuevo en el cliente; el test cambia `httpx.HTTPTransport` con `monkeypatch`.
   Un truncado de proveedores llega al endpoint como excepción → `ok=false` (ya existía).
 
@@ -145,6 +137,38 @@ M3 relanzar también con `error`, M4 aprobar relanza, M5 el local sella siempre 
 M6 proveedores `TOLERA`, M7 el desfase pinta el CIF actual, M8 «buscando» con cualquier
 outcome, M9 sin rastro = vigente, M10 `replace` fallido sin sello, M11 sin aviso de error
 con contratos listados, M12 el repositorio no valida el resultado.
+
+## Correcciones de review (CR-C1, CR-C2, O-C1) · decisiones del humano del 2026-10-01
+
+| Cambio (commit) | Qué | RED | GREEN |
+|---|---|---|---|
+| CR-C1 `a7abcff` (+ `e8c62ab` imports) | `ruesma_comun/obras/{__init__,codigo}.py::normalizar_codigo_obra` con la semántica de sv3; sv3 (5 servicios) y sv4 (`busqueda_contratos`, `LocalContratoRefetchClient`, `ContratoRefetchService` muerto) la importan; borradas las dos copias `obra_code_normalizer.py`; `sv3.md`, `sv4.md`, design §5 y T12 al día | sv4 `-k cr_c1` contra `9c43f79`: `9 failed, 6 passed`; comun `test_f052_obras_codigo.py`: `1 error` | sv4 15, comun 15 |
+| O-C1 `f034384` | `debe_relanzar_busqueda`: también `sin_rastro`; aviso con «Buscando…» también con contratos listados (`bc_buscando`, `data-estado-inicial`); el JS espera a que cambie el estado inicial; mensaje «Buscando contratos con el CIF y la obra guardados…» | `test_f052_d4a_guardar_relanza.py` contra `e8c62ab`: `7 failed, 25 passed` | 32 passed |
+| CR-C2 `9d0c258` | T22 con los dos casos (con rastro / sin rastro) y las dos decisiones en design §11 (250/250) | documental | — |
+
+- **CR-C1 RED**: `E       AssertionError: assert 'desfasada' == 'sin_datos'` ×4 (`12`, `7`,
+  `1234`, `1001`); `E       AssertionError: assert (['f052-doc-00...00-000026122'] == []` ×2
+  (cada «Guardar» relanzaba); `E       AssertionError: assert 'no_results' == 'skipped_missing_data'`
+  ×2 (el local consultaba Sigrid con `0012`/`1234`); `copia local de la normalización:
+  ...albaranes-front/application/services/obra_code_normalizer.py`. Comun:
+  `E   ModuleNotFoundError: No module named 'ruesma_comun.obras'`. Pasaban `12345`, `abc`, `""`
+  y las 3 obras válidas (iguales en las dos copias).
+- **O-C1 RED**: `E       AssertionError: assert [] == ['f052-doc-00...00-000026122']` ×3 (sin
+  rastro no buscaba); `where False = debe_relanzar_busqueda(BusquedaContratosVista(estado='sin_rastro', ...))`;
+  `assert 'id="busqueda-buscando"' in ...` ×2; diff del mensaje de guardado.
+- **Sin bucle** (`test_f052_oc1_sin_rastro_y_obra_invalida_busca_una_vez_y_no_en_bucle`): sin
+  rastro y obra `12` → 1 búsqueda; sv3 sella `sin_datos` (obra `None`); dos «Guardar» más → 0.
+  Riesgo residual: si sv3 no sella nada (servicio con `enabled=False` o excepción antes del
+  sello, O-B1), cada «Guardar» de un documento sin rastro vuelve a publicar.
+- **sv3 sin cambio de comportamiento**: el cuerpo de la función es el de sv3 tal cual; `357
+  passed` antes y después. Los scripts `scripts/diagnose_*.py` de sv3 llevan su propia copia
+  (scripts sueltos, no importan el módulo): no se tocan. `normalizar_codigo` de F-048 es otra
+  cosa (forma de comparación sin ceros): test que las distingue.
+- **Pendiente para el líder**: R31 (requirements, 150/150) sigue diciendo «guardar debe mostrar
+  el aviso de R24»; T22 ya describe el flujo real. `ruesma_comun` gana `obras/`: sv3 y sv4 deben
+  reconstruirse juntos (ya era el orden sv3 → sv4).
+- Mutantes manuales de las correcciones: **5/5 muertos** (4 dígitos sin exigir `0`, `zfill` de
+  1–3 dígitos, sin rastro no relanza, «buscando» solo con desfase, aviso sin `bc_buscando`).
 
 ## Ficheros tocados
 
@@ -162,7 +186,10 @@ con contratos listados, M12 el repositorio no valida el resultado.
   `infrastructure/sigrid/{local_refetch_client,sigrid_lookup_client}.py`,
   `interface_adapters/web/app.py`, `templates/document_detail.html`, `static/{app.js,styles.css}`;
   tests nuevos `tests/test_f052_{busqueda_contratos,rastro_detalle,bloque_contrato,
-  d4a_guardar_relanza,refetch_local_rastro,lookup_truncado}.py`. sv3 no se ha tocado en C.
+  d4a_guardar_relanza,refetch_local_rastro,lookup_truncado}.py`.
+- Correcciones: nuevo `ruesma_comun/obras/` y `tests/test_f052_obras_codigo.py`; sv3
+  `application/services/{contrato_enrichment,contrato_refetch,header_grounding,header_resolver,
+  obra_enrichment}_service.py` (solo el import), `sv3.md`, `sv4.md`, spec (design, tasks).
 
 ## Fuera del alcance / pendiente
 
@@ -171,9 +198,7 @@ con contratos listados, M12 el repositorio no valida el resultado.
 - **Sin test automático** (sv4 no tiene tests de FastAPI ni de JS): el cableado del PUT
   (`buscar_si_cambia`, `redirect_url` con `buscando=1`, `busqueda_relanzada`), el parámetro
   `buscando` de la ficha y el sondeo de `app.js` (`node --check` OK). Se ven en **T22 (MANUAL,
-  humano)**: en SS-0026122 cambiar el CIF y «Guardar» → bloque con el rastro viejo y
-  «Buscando contratos con los datos actuales…» y, al llegar el resultado, recarga con el
-  rastro nuevo; con Azurite, un solo mensaje en `q-persistencia` por guardado.
+  humano)**, reescrita en CR-C2 con los casos con rastro y sin rastro.
 - La SQL agregada solo se ha probado contra el doble: T20 y T21 (MANUAL) lo verifican.
 - **Para T16/T18**: sigrid-api tiene `MAX_ALLOWED_ROWS=500000`; el 1.000 era el `max_rows` del
   cliente de sv3. Corregir «1.000 filas por petición» en `albaranes.md`; avisar a los dueños de
@@ -181,15 +206,13 @@ con contratos listados, M12 el repositorio no valida el resultado.
   Además: 4 columnas `contratos_busqueda_*` (dueño sv3, lector y escritor del fallback sv4),
   orden de despliegue sv3 → sv4, `HeaderGroundingService` toma los 200 primeros por CIF de
   3.543 (O1 de la review A) y el lookup de sv4 lanza si los proveedores de la obra truncan.
-- `progress/current.md` arrastra sesiones anteriores: lo poda el líder.
 
 ## Evidencias
 
 | Evidencia | Valor medido |
 |---|---|
-| Tests F-052 nuevos | A **82**, B **73**, C **94** (21 + 6 + 11 + 27 + 19 + 10); total **249**, en verde |
-| Suites a mano tras T17, una tras otra | sv4 `341 passed in 12.13s` (247 → 341) |
-| `bash harness/init.sh` tras T17 (antes del commit de estilo) | ENTORNO LISTO, exit 0; raíz `1067 passed in 259.87s`; sv4 `341 passed in 19.08s`; resto en caché; `PUERTA COBERTURA: 98.0% de 251 líneas cambiadas cubiertas (246/251, umbral 80%, nivel critico)`; tamaño `impl 194/220`; ruff 1179 (+12 míos: arreglados en el commit de estilo) |
+| Tests F-052 nuevos | A **82**, B **73**, C **94**, correcciones **+33** (comun 15, sv4 18); total **282**, en verde |
+| Suites a mano tras las correcciones, una tras otra | comun `323 passed in 17.43s`; sv3 `357 passed in 2.84s`; sv4 `359 passed in 10.05s` |
 | `bash harness/init.sh` final (`1d2bcb6`) | ENTORNO LISTO, exit 0; raíz `1067 passed in 207.46s`; sv4 `341 passed in 21.12s`; resto en caché; `PUERTA COBERTURA: 98.0% de 252 líneas cambiadas cubiertas (247/252, umbral 80%, nivel critico)` (las 5 sin cubrir, cableado de `app.py`: ver «pendiente»); tamaño `impl 195/220`; ruff 1166 (1167 al empezar el bloque) |
 | Tiempo de la suite | sv4 6–17 s; sv3 3,8–10,6 s; comun 38,5 s; raíz 257–327 s |
 | Mutación | Campaña: T19 (fuera). Manuales: A 1 (+2 review), B **7/7**, C **12/12** muertos |

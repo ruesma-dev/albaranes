@@ -10,7 +10,10 @@
 Bloques A (T1–T6) y B (T7–T10) APROBADOS (`progress/review_F-052_bloque{A,B}.md`).
 Bloque C (sv4: T11, T12, T13, T13 bis, T15, T17) hecho, un commit por tarea;
 trazas RED, decisiones y evidencias en `progress/impl_F-052.md` §«Bloque C».
-Siguiente: review del Bloque C; luego Bloque D (T14, T16, T18) y T19.
+Review del Bloque C: CAMBIOS (`progress/review_F-052_bloqueC.md`). Aplicadas las
+decisiones del humano del 2026-10-01: CR-C1 (normalizador de obra único en
+`ruesma_comun.obras`), O-C1 (sin rastro, el primer «Guardar» busca una vez) y
+CR-C2 (T22 reescrita). Siguiente: re-review; luego Bloque D (T14, T16, T18) y T19.
 
 Desviaciones respecto a `tasks.md` (justificadas en el informe):
 - **T12 antes que T11**: `estado_busqueda` devuelve `BusquedaContratosVista`
@@ -18,7 +21,7 @@ Desviaciones respecto a `tasks.md` (justificadas en el informe):
 - **T13 bis** toca `static/app.js` (design §11 lo anunciaba al aceptar D4-A):
   solo «Guardar» manda `?buscar_si_cambia=1`; los otros PUT (valorar, elegir
   contrato, «Guardar y volver a buscar») no, para no publicar dos veces en
-  `q-persistencia`. «Aprobar» no relanza. Sin rastro, no relanza.
+  `q-persistencia`. «Aprobar» no relanza. Sin rastro, relanza una vez (O-C1).
 
 ## F-052 · DESBLOQUEADA (2026-09-30, líder): el test de F-048 que dependía de `dev` se arregló en `fix/F-048-comparar-obra-base` (`c8a295e`, `--base`, tests fijados a `1807e83`), integrado en esta rama. Pendiente del humano: fusionar esa rama en `dev`.
 
