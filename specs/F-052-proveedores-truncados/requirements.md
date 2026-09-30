@@ -145,6 +145,6 @@ CIF del texto agregado con las del texto por líneas (consulta sin tope) y dar
 **0 diferencias**, 81 y 163 filas y el mismo conjunto de CIF que la lista
 `DISTINCT cif, raz` del selector de sv4.
 
-R31. En local, con el documento SS-0026122: cambiar el CIF en sv4 y guardar
-debe mostrar el aviso de R24; «Solo volver a buscar» debe traer CTSU24/0402 y
-el bloque debe pasar a mostrar el rastro nuevo.
+R31. En local, con SS-0026122: cambiar el CIF y guardar debe relanzar la búsqueda
+(D4-A; sin rastro, el primer «Guardar» busca: O-C1), marcar «Buscando…» y acabar con
+CTSU24/0402 y el rastro nuevo en el bloque. Pasos y casos: T22 de `tasks.md`.
