@@ -52,3 +52,27 @@ GREEN: `11 passed in 0.28s`; suite de sv3 completa `244 passed in 2.37s`.
 `test_f052_doble_sin_transport_usa_httptransport_con_un_reintento` fija que
 sin `transport` el cliente crea un `HTTPTransport(retries=1)` por petición,
 como antes (pasaba ya en RED: es el «sin cambio de comportamiento»).
+
+### T3 · `_post_sql_read(politica=..., max_rows=None)` y política por consulta (R7–R10)
+
+`_post_sql_read` = `_enviar_sql_read` (HTTP, JSON, `ok`) + `comprobar_truncado`.
+`politica` es keyword-only sin valor por defecto; `max_rows=None` usa el del
+cliente. Políticas según design §3: `header_and_lines`, `search_proveedores`,
+`fetch_proveedor_by_cif`, `proveedores_obra_*`, `contratos_resumen_obra_*` →
+`NO_TOLERA`; `rcg_gra_for_ctr_*`, `gra_rep_for_cod_*` → `TOLERA`. Docstring del
+falso «tope de 10.000 filas» corregido. Tests: `tests/test_f052_truncado_cliente.py` (13).
+
+RED (`forzar_truncado` del doble; extracto, una línea por test):
+
+```
+$ ../../.venv/Scripts/python.exe -m pytest tests/test_f052_truncado_cliente.py -q
+E       KeyError: 'politica'
+E       TypeError: SigridApiContratoClient._post_sql_read() got an unexpected keyword argument 'politica'   (x4)
+E       Failed: DID NOT RAISE SigridRespuestaTruncada   (x5: las 5 consultas NO_TOLERA con truncated=true)
+E       assert False   (sin WARNING en rcg_gra_for_ctr_2405748)
+E       AssertionError: assert '10.000' not in 'Proveedores...' ... l tope de 10.000 filas del
+12 failed, 1 passed in 0.58s
+```
+
+GREEN: `13 passed`; sv3 completa `258 passed` (fallan solo los 7 tests de T4,
+escritos ya y sin commitear).

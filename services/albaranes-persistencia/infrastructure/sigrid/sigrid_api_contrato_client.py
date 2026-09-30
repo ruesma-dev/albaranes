@@ -25,6 +25,7 @@ from ruesma_comun.office import (
     es_word,
     pdf_a_markdown,
 )
+from ruesma_comun.sigrid import PoliticaTruncado, comprobar_truncado
 
 logger = logging.getLogger(__name__)
 
@@ -259,6 +260,7 @@ class SigridApiContratoClient:
             parameters=[cif_proveedor, codigo_obra_normalizado],
             database=self._database,
             label="header_and_lines",
+            politica=PoliticaTruncado.NO_TOLERA,
         )
         contrato_ides, results_without_pdf = self._group_rows_by_contrato(
             columns=columns,
@@ -685,6 +687,7 @@ class SigridApiContratoClient:
             parameters=[],
             database=self._database,
             label="search_proveedores",
+            politica=PoliticaTruncado.NO_TOLERA,
         )
         out: list[tuple[str | None, str | None]] = []
         for row in rows:
@@ -732,6 +735,7 @@ class SigridApiContratoClient:
             parameters=[cif_clean],
             database=self._database,
             label="fetch_proveedor_by_cif",
+            politica=PoliticaTruncado.NO_TOLERA,
         )
         if not rows:
             logger.info(
@@ -785,6 +789,7 @@ class SigridApiContratoClient:
             parameters=[codigo],
             database=self._database,
             label=f"proveedores_obra_{codigo}",
+            politica=PoliticaTruncado.NO_TOLERA,
         )
         seen: set[str] = set()
         out: list[tuple[str | None, str | None]] = []
@@ -814,10 +819,15 @@ class SigridApiContratoClient:
         FAMILIA de cada proveedor (hormigon, mortero, residuos...) con
         las mismas reglas que el selector de contratos (jul 2026).
 
-        emp=1 (Construcciones Ruesma). Una obra tiene pocos contratos,
-        asi que el volumen queda muy lejos del tope de 10.000 filas del
-        sigrid-api. Best-effort del llamante: si esto falla, el resolver
-        degrada al fallback global por nombre.
+        emp=1 (Construcciones Ruesma). Best-effort del llamante: si esto
+        falla, el resolver degrada al fallback global por nombre.
+
+        (F-052) Aquí se decía que sigrid-api tenía un tope holgado y que
+        el volumen quedaba lejos: falso. El corte lo pone el ``max_rows``
+        del cliente (1.000 por defecto; la instancia ``dev`` admite
+        500.000). Una fila por LINEA de contrato
+        pasa de 1.000 en las obras grandes (0691: 2.083); por eso la
+        respuesta truncada ya no se acepta en silencio (``NO_TOLERA``).
         """
         codigo = (codigo_obra or "").strip()
         if not codigo:
@@ -844,6 +854,7 @@ class SigridApiContratoClient:
             parameters=[codigo],
             database=self._database,
             label=f"contratos_resumen_obra_{codigo}",
+            politica=PoliticaTruncado.NO_TOLERA,
         )
         # Agrupacion por CIF conservando el orden de llegada.
         nombres: "OrderedDict[str, str | None]" = OrderedDict()
@@ -890,14 +901,46 @@ class SigridApiContratoClient:
         parameters: list[Any],
         database: str,
         label: str,
+        politica: PoliticaTruncado,
+        max_rows: int | None = None,
     ) -> tuple[list[str], list[list[Any]]]:
+        """Una lectura SQL simple: ``(columnas, filas)``.
+
+        (F-052) ``politica`` es obligatoria: cada consulta declara qué
+        hacer si sigrid-api marca ``truncated=true`` (``NO_TOLERA`` lanza
+        ``SigridRespuestaTruncada``; ``TOLERA`` usa las filas con
+        WARNING). ``max_rows`` = ``None`` usa el del cliente.
+        """
+        body = self._enviar_sql_read(
+            sql=sql,
+            parameters=parameters,
+            database=database,
+            label=label,
+            max_rows=max_rows,
+        )
+        comprobar_truncado(body, politica=politica, etiqueta=label, logger=logger)
+        columns: list[str] = list(body.get("columns") or [])
+        rows: list[list[Any]] = list(body.get("rows") or [])
+        return columns, rows
+
+    def _enviar_sql_read(
+        self,
+        *,
+        sql: str,
+        parameters: list[Any],
+        database: str,
+        label: str,
+        max_rows: int | None,
+    ) -> dict[str, Any]:
+        """POST a ``/api/sql/read``: devuelve el cuerpo ya validado
+        (HTTP < 400, JSON, ``ok=true``), sin mirar ``truncated``."""
         url = f"{self._base_url}/api/sql/read"
         payload = {
             "database": database,
             "sql": sql,
             "parameters": parameters,
             "timeout_seconds": int(self._timeout_s),
-            "max_rows": self._max_rows,
+            "max_rows": self._max_rows if max_rows is None else int(max_rows),
         }
         headers = {
             "x-functions-key": self._function_key,
@@ -948,10 +991,7 @@ class SigridApiContratoClient:
 
         if not body.get("ok", False):
             raise RuntimeError(f"sigrid-api devolvió ok=false: {body!r}")
-
-        columns: list[str] = list(body.get("columns") or [])
-        rows: list[list[Any]] = list(body.get("rows") or [])
-        return columns, rows
+        return body
 
     @staticmethod
     def _group_rows_by_contrato(
@@ -1057,6 +1097,7 @@ class SigridApiContratoClient:
             parameters=[contrato_ide],
             database=self._database,
             label=f"rcg_gra_for_ctr_{contrato_ide}",
+            politica=PoliticaTruncado.TOLERA,
         )
 
         docs: list[dict[str, Any]] = []
@@ -1138,6 +1179,7 @@ class SigridApiContratoClient:
             parameters=[cod],
             database=self._database_rep,
             label=f"gra_rep_for_cod_{cod}",
+            politica=PoliticaTruncado.TOLERA,
         )
         for row in rows_rep:
             row_map = dict(zip(cols_rep, row))
