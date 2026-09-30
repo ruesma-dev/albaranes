@@ -150,7 +150,8 @@ def leer_paginado(
     una anomalía y se trata con ``politica``. Si se leen ``max_paginas``
     páginas llenas, puede haber más: ``NO_TOLERA`` lanza
     :class:`SigridRespuestaTruncada` y ``TOLERA`` devuelve lo leído con
-    WARNING.
+    WARNING. Una página con MÁS filas que las pedidas es siempre un error
+    (``RuntimeError``, con cualquier política): aceptarla repetiría filas.
     """
     politica = _validar_politica(politica)
     if pagina < 1:
@@ -163,6 +164,14 @@ def leer_paginado(
     filas: list[list] = []
     for n in range(max_paginas):
         cols, trozo, truncated = leer_pagina(n * pagina, pagina)
+        if len(trozo) > pagina:
+            # La fuente no respetó el tamaño (FETCH no aplicado): la
+            # siguiente página repetiría filas. Nunca se acepta.
+            raise RuntimeError(
+                f"sigrid-api devolvió una página de más filas que las pedidas "
+                f"[{etiqueta}]: página {n + 1}, {len(trozo)} filas para un "
+                f"tamaño de {pagina}"
+            )
         if n == 0:
             columnas = list(cols)
         filas.extend(trozo)

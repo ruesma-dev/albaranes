@@ -254,3 +254,26 @@ def test_f052_r14_leer_paginado_parametros_invalidos(pagina, max_paginas):
 def test_f052_r7_leer_paginado_politica_invalida():
     with pytest.raises(TypeError):
         _leer(_Paginas(3), politica=None)
+
+
+class _PaginaDeMas(_Paginas):
+    """Fuente rota: ignora el tamaño pedido y sirve ``tamano + 1`` filas
+    (FETCH no aplicado, o página truncada con ``max_rows = pagina + 1``)."""
+
+    def __call__(self, offset: int, tamano: int):
+        self.llamadas.append((offset, tamano))
+        return ["n"], self.filas[offset:offset + tamano + 1], False
+
+
+@pytest.mark.parametrize("politica", list(PoliticaTruncado))
+def test_f052_r14_leer_paginado_pagina_con_filas_de_mas_lanza(politica):
+    """CR-A2: una página con más filas que las pedidas rompe el
+    encadenado (la siguiente, con ``offset = n * pagina``, repetiría
+    filas). Es una anomalía y se lanza siempre, sin aceptar nada."""
+    fuente = _PaginaDeMas(25)
+    with pytest.raises(RuntimeError) as info:
+        _leer(fuente, politica=politica)
+    mensaje = str(info.value)
+    assert "header_and_lines" in mensaje
+    assert "11" in mensaje and "10" in mensaje
+    assert fuente.llamadas == [(0, 10)]
