@@ -196,6 +196,7 @@ class SigridApiContratoClient:
         database_rep: str = "ruesma_rep",
         pdf_timeout_s: float = 120.0,
         word_converter=None,
+        transport: httpx.BaseTransport | None = None,
     ) -> None:
         if not base_url:
             raise ValueError("SigridApiContratoClient requiere base_url")
@@ -221,6 +222,10 @@ class SigridApiContratoClient:
         # defecto LibreOffice para no cambiar el comportamiento si el
         # composition root no inyecta nada.
         self._word_converter = word_converter or LibreOfficeWordConverter()
+        # (F-052) Transporte HTTP inyectable SOLO para el doble de
+        # sigrid-api de los tests. None = lo de siempre: un
+        # ``httpx.HTTPTransport(retries=1)`` nuevo por petición SQL.
+        self._transport = transport
         logger.info(
             "%s Instanciado. base_url=%s database=%s database_rep=%s "
             "max_rows=%s pdf_timeout_s=%s key_len=%s",
@@ -908,7 +913,11 @@ class SigridApiContratoClient:
             parameters,
         )
 
-        transport = httpx.HTTPTransport(retries=1)
+        transport = (
+            self._transport
+            if self._transport is not None
+            else httpx.HTTPTransport(retries=1)
+        )
         try:
             with httpx.Client(timeout=self._timeout_s, transport=transport) as client:
                 response = client.post(url, json=payload, headers=headers)
