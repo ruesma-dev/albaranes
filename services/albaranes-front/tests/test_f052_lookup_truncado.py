@@ -22,11 +22,9 @@ import logging
 
 import httpx
 import pytest
-
-from ruesma_comun.sigrid import SigridRespuestaTruncada
-
 from infrastructure.sigrid import sigrid_lookup_client as modulo
 from infrastructure.sigrid.sigrid_lookup_client import SigridLookupClient
+from ruesma_comun.sigrid import SigridRespuestaTruncada
 
 
 class _SigridApiFalsa:

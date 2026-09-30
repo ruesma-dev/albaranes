@@ -177,7 +177,7 @@ class LocalContratoRefetchClient(ContratoRefetchClient):
                 obra=obra,
                 resultado=resultado,
             )
-        except Exception:  # noqa: BLE001 - best-effort
+        except Exception:  # best-effort: el re-fetch sigue su curso
             logger.exception(
                 "%s no se pudo sellar el rastro de la búsqueda de contratos "
                 "document_id=%s resultado=%s",

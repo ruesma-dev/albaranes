@@ -27,9 +27,6 @@ import logging
 import re
 
 import pytest
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session
-
 from application.services.busqueda_contratos import (
     debe_relanzar_busqueda,
     estado_busqueda,
@@ -48,6 +45,8 @@ from domain.models.review_models import (
     RastroBusquedaContratos,
 )
 from infrastructure.colas.colas_refetch_client import ColasRefetchClient
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session
 
 DOC_ID = "f052-doc-0000-0000-0000-000026122"
 CIF_MAL = "B82890580"  # el que leyó IA1 en SS-0026122
@@ -195,7 +194,7 @@ def test_f052_d4a_relanza_por_la_cola_de_persistencia_con_force():
 def test_f052_d4a_guardar_sin_cambio_de_cif_ni_obra_no_busca(cif, obra, rastro):
     repo = _RepositorioFalso(cif=CIF_MAL, obra=OBRA, rastro=rastro)
     refetch = _RefetchFalso()
-    detalle, busqueda = _guardar(repo, refetch, cif=cif, obra=obra)
+    _, busqueda = _guardar(repo, refetch, cif=cif, obra=obra)
     assert refetch.llamadas == []
     assert busqueda is None
     assert len(repo.guardados) == 1
@@ -410,8 +409,8 @@ def _outcome(status, message="m"):
         (False, None, "Documento guardado", False),
         (True, None, "Documento guardado y aprobado", False),
         (False, _outcome("queued"),
-         "Documento guardado. CIF u obra cambiados: buscando contratos con "
-         "los datos nuevos…", True),
+         ("Documento guardado. CIF u obra cambiados: buscando contratos con "
+          "los datos nuevos…"), True),
         # fallback local síncrono: el resultado ya está al recargar
         (False, _outcome("found_single", "1 contrato encontrado."),
          "Documento guardado. 1 contrato encontrado.", False),

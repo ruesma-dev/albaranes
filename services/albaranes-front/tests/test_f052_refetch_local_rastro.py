@@ -21,11 +21,6 @@ import logging
 from datetime import datetime
 
 import pytest
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session
-
-from ruesma_comun.sigrid import SigridRespuestaTruncada
-
 from domain.models.review_models import (
     BUSQUEDA_ENCONTRADOS,
     BUSQUEDA_ERROR,
@@ -35,6 +30,9 @@ from domain.models.review_models import (
 from infrastructure.sigrid.local_refetch_client import (
     LocalContratoRefetchClient,
 )
+from ruesma_comun.sigrid import SigridRespuestaTruncada
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session
 
 DOC_ID = "f052-doc-0000-0000-0000-000026122"
 

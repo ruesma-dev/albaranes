@@ -24,7 +24,6 @@ import re
 from pathlib import Path
 
 import pytest
-
 from application.services.busqueda_contratos import estado_busqueda
 from domain.models.review_models import (
     BUSQUEDA_ENCONTRADOS,
@@ -146,7 +145,7 @@ def test_f052_r27_los_resultados_se_escriben_como_los_sella_sv3():
         Path(__file__).resolve().parents[2]
         / "albaranes-persistencia" / "domain" / "models" / "contrato_models.py"
     ).read_text(encoding="utf-8")
-    literales = dict(re.findall(r'^(BUSQUEDA_[A-Z_]+) = "([a-z_]+)"', fuente, re.M))
+    literales = dict(re.findall(r'^(BUSQUEDA_[A-Z_]+) = "([a-z_]+)"', fuente, re.MULTILINE))
     assert literales == {
         "BUSQUEDA_ENCONTRADOS": BUSQUEDA_ENCONTRADOS,
         "BUSQUEDA_NINGUNO": BUSQUEDA_NINGUNO,

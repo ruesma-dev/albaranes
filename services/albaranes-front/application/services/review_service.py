@@ -6,13 +6,13 @@ import logging
 from application.services.busqueda_contratos import debe_relanzar_busqueda
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
+    VIEW_MODE_MERGE,
     DocumentDetailPayload,
     DocumentListFilters,
     MergeDocumentUpdatePayload,
     ObraResumenItem,
     PaginatedDocuments,
     ProveedorResumenItem,
-    VIEW_MODE_MERGE,
 )
 from domain.ports.contrato_refetch_port import ContratoRefetchClient
 from infrastructure.database.review_repository import AlbaranReviewRepository
@@ -135,7 +135,7 @@ class ReviewService:
             return detail, None
         try:
             outcome = refetch_client.refetch(document_id=document_id)
-        except Exception as exc:  # noqa: BLE001 - el guardado ya está hecho
+        except Exception as exc:  # el guardado ya está hecho: no se deshace
             logger.exception(
                 "[contrato-refetch][guardar] no se pudo relanzar la búsqueda "
                 "document_id=%s",

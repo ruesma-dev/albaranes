@@ -5,13 +5,20 @@
 > bloques de F-036, sus dos ciclos de review y los hallazgos— está en
 > `progress/history.md`. Aquí solo queda lo vivo.
 
-## F-052 · Bloque B en curso (2026-09-30, implementer)
+## F-052 · Bloque C hecho (2026-09-30, implementer)
 
-Bloque A (T1–T6) hecho y APROBADO (`progress/review_F-052_bloqueA.md`).
-Bloque B (T7–T10) uno a uno, un commit por tarea; trazas RED y decisiones en
-`progress/impl_F-052.md` §«Bloque B». Hecho: T7–T10, informe e init.sh en verde. Siguiente: review del Bloque B.
-Decisiones del Bloque B (detalle en el informe): con obra y nombre ausentes a
-la vez, el motivo es `sin_obra`.
+Bloques A (T1–T6) y B (T7–T10) APROBADOS (`progress/review_F-052_bloque{A,B}.md`).
+Bloque C (sv4: T11, T12, T13, T13 bis, T15, T17) hecho, un commit por tarea;
+trazas RED, decisiones y evidencias en `progress/impl_F-052.md` §«Bloque C».
+Siguiente: review del Bloque C; luego Bloque D (T14, T16, T18) y T19.
+
+Desviaciones respecto a `tasks.md` (justificadas en el informe):
+- **T12 antes que T11**: `estado_busqueda` devuelve `BusquedaContratosVista`
+  y el repositorio de T11 la necesita para rellenar el detalle.
+- **T13 bis** toca `static/app.js` (design §11 lo anunciaba al aceptar D4-A):
+  solo «Guardar» manda `?buscar_si_cambia=1`; los otros PUT (valorar, elegir
+  contrato, «Guardar y volver a buscar») no, para no publicar dos veces en
+  `q-persistencia`. «Aprobar» no relanza. Sin rastro, no relanza.
 
 ## F-052 · DESBLOQUEADA (2026-09-30, líder): el test de F-048 que dependía de `dev` se arregló en `fix/F-048-comparar-obra-base` (`c8a295e`, `--base`, tests fijados a `1807e83`), integrado en esta rama. Pendiente del humano: fusionar esa rama en `dev`.
 

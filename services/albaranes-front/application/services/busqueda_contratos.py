@@ -101,9 +101,9 @@ def aviso_de_guardado(
     if busqueda is None:
         return mensaje, False
     if busqueda.status == "queued":
-        return (
+        aviso = (
             f"{mensaje}. CIF u obra cambiados: buscando contratos con los "
-            "datos nuevos…",
-            True,
+            "datos nuevos…"
         )
+        return aviso, True
     return f"{mensaje}. {busqueda.message}", False
