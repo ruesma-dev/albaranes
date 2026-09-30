@@ -8,7 +8,7 @@
 ## F-052 · Bloque A en curso (2026-09-30, implementer)
 
 Tareas T1–T6 una a una, un commit por tarea; trazas RED y decisiones en
-`progress/impl_F-052.md` §«Bloque A». Hecho: T1, T2, T3.
+`progress/impl_F-052.md` §«Bloque A». Hecho: T1–T4.
 
 ## F-052 · DESBLOQUEADA (2026-09-30, líder): el test de F-048 que dependía de `dev` se arregló en `fix/F-048-comparar-obra-base` (`c8a295e`, `--base`, tests fijados a `1807e83`), integrado en esta rama. Pendiente del humano: fusionar esa rama en `dev`.
 

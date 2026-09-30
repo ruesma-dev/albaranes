@@ -25,7 +25,12 @@ from ruesma_comun.office import (
     es_word,
     pdf_a_markdown,
 )
-from ruesma_comun.sigrid import PoliticaTruncado, comprobar_truncado
+from ruesma_comun.sigrid import (
+    PoliticaTruncado,
+    comprobar_truncado,
+    con_paginacion,
+    leer_paginado,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -97,8 +102,11 @@ WHERE
     prv.cif       = ?
 AND con_obr.cod   = ?
 AND con_ctr.emp   = 1
-ORDER BY con_ctr.cod, ctrpro.pos
+ORDER BY con_ctr.cod, ctr.ide, ctrpro.pos, ctrpro.ide
 """
+# (F-052) ORDER BY estable para paginar con OFFSET/FETCH: ``ctr.ide``
+# desempata contratos con el mismo código y ``ctrpro.ide`` líneas con la
+# misma ``pos``. El orden visible sigue siendo (código de contrato, pos).
 
 _SQL_GRA_COD_BY_CONTRATO = """\
 SELECT
@@ -198,6 +206,8 @@ class SigridApiContratoClient:
         pdf_timeout_s: float = 120.0,
         word_converter=None,
         transport: httpx.BaseTransport | None = None,
+        pagina_lineas: int = 1000,
+        max_paginas: int = 20,
     ) -> None:
         if not base_url:
             raise ValueError("SigridApiContratoClient requiere base_url")
@@ -227,6 +237,11 @@ class SigridApiContratoClient:
         # sigrid-api de los tests. None = lo de siempre: un
         # ``httpx.HTTPTransport(retries=1)`` nuevo por petición SQL.
         self._transport = transport
+        # (F-052, D3) Lecturas paginadas (``header_and_lines`` y
+        # ``search_proveedores``): filas por página de las líneas de
+        # contrato y tope de páginas antes de SigridRespuestaTruncada.
+        self._pagina_lineas = int(pagina_lineas)
+        self._max_paginas = int(max_paginas)
         logger.info(
             "%s Instanciado. base_url=%s database=%s database_rep=%s "
             "max_rows=%s pdf_timeout_s=%s key_len=%s",
@@ -255,12 +270,13 @@ class SigridApiContratoClient:
             codigo_obra_normalizado,
         )
 
-        columns, rows = self._post_sql_read(
+        columns, rows = self._post_sql_read_paginado(
             sql=_SQL_HEADER_AND_LINES,
             parameters=[cif_proveedor, codigo_obra_normalizado],
             database=self._database,
             label="header_and_lines",
             politica=PoliticaTruncado.NO_TOLERA,
+            pagina=self._pagina_lineas,
         )
         contrato_ides, results_without_pdf = self._group_rows_by_contrato(
             columns=columns,
@@ -674,20 +690,28 @@ class SigridApiContratoClient:
         jun 2026: el nombre es ahora la razon social CANONICA del
         maestro de proveedores (``prv.raz``), no el snapshot
         desnormalizado ``ctr.entres`` que arrastraba nombres antiguos.
+
+        (F-052) ``max_rows`` es el tamaño de PÁGINA: la lista se lee
+        entera, paginada con OFFSET/FETCH (3.543 proveedores el
+        2026-09-29). Antes el parámetro no llegaba a sigrid-api (se
+        enviaba el ``max_rows`` del cliente, 1.000) y la lista se cortaba
+        en silencio.
         """
         sql = (
             "SELECT DISTINCT prv.cif AS cif, prv.raz AS nombre "
             "FROM ctr "
             "JOIN con ON ctr.ide = con.ide "
             "JOIN prv ON ctr.entide = prv.ide "
-            "WHERE prv.cif IS NOT NULL AND con.emp = 1"
+            "WHERE prv.cif IS NOT NULL AND con.emp = 1 "
+            "ORDER BY prv.cif, prv.raz"
         )
-        columns, rows = self._post_sql_read(
+        columns, rows = self._post_sql_read_paginado(
             sql=sql,
             parameters=[],
             database=self._database,
             label="search_proveedores",
             politica=PoliticaTruncado.NO_TOLERA,
+            pagina=max_rows,
         )
         out: list[tuple[str | None, str | None]] = []
         for row in rows:
@@ -922,6 +946,51 @@ class SigridApiContratoClient:
         columns: list[str] = list(body.get("columns") or [])
         rows: list[list[Any]] = list(body.get("rows") or [])
         return columns, rows
+
+    def _post_sql_read_paginado(
+        self,
+        *,
+        sql: str,
+        parameters: list[Any],
+        database: str,
+        label: str,
+        politica: PoliticaTruncado,
+        pagina: int,
+    ) -> tuple[list[str], list[list[Any]]]:
+        """Lectura completa con OFFSET/FETCH (F-052, design §3).
+
+        ``sql`` debe traer ``ORDER BY`` estable. Cada página se pide con
+        ``max_rows = pagina + 1``: una página llena no llega a
+        ``max_rows`` y no se marca ``truncated``; si aun así llegara
+        marcada, es una anomalía y decide ``politica``. Se sigue mientras
+        la página venga llena, hasta ``self._max_paginas`` (tope →
+        ``SigridRespuestaTruncada`` si ``NO_TOLERA``). En el caso normal
+        (todo cabe en una página) es UNA sola llamada, como antes.
+        """
+        sql_paginada = con_paginacion(sql)
+
+        def leer_pagina(offset: int, tamano: int) -> tuple[list, list, bool]:
+            body = self._enviar_sql_read(
+                sql=sql_paginada,
+                parameters=[*parameters, offset, tamano],
+                database=database,
+                label=label,
+                max_rows=tamano + 1,
+            )
+            return (
+                list(body.get("columns") or []),
+                list(body.get("rows") or []),
+                bool(body.get("truncated")),
+            )
+
+        return leer_paginado(
+            leer_pagina,
+            pagina=pagina,
+            max_paginas=self._max_paginas,
+            etiqueta=label,
+            politica=politica,
+            logger=logger,
+        )
 
     def _enviar_sql_read(
         self,

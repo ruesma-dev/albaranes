@@ -76,3 +76,32 @@ E       AssertionError: assert '10.000' not in 'Proveedores...' ... l tope de 10
 
 GREEN: `13 passed`; sv3 completa `258 passed` (fallan solo los 7 tests de T4,
 escritos ya y sin commitear).
+
+### T4 · `_post_sql_read_paginado`, `header_and_lines` y `search_proveedores` paginadas (R11–R13)
+
+`_post_sql_read_paginado` = `con_paginacion` + `leer_paginado`; cada página va
+con `max_rows = pagina + 1`. `header_and_lines`: `ORDER BY con_ctr.cod,
+ctr.ide, ctrpro.pos, ctrpro.ide`, `pagina_lineas` (1.000) por página.
+`search_proveedores`: `ORDER BY prv.cif, prv.raz`; su kwarg `max_rows`
+(5.000) pasa a ser el **tamaño de página** (decisión: se conserva el nombre
+para no tocar el puerto ni a los llamantes, que no lo pasan; documentado en
+el docstring). Kwargs nuevos de `__init__`: `pagina_lineas=1000`,
+`max_paginas=20` (D3; `composition.py` no cambia). Tests:
+`tests/test_f052_paginacion_cliente.py` (8).
+
+RED — tests escritos **antes de T3**, contra el código original; aquí se ve el
+hallazgo del `max_rows` ignorado y la pérdida silenciosa de líneas:
+
+```
+$ ../../.venv/Scripts/python.exe -m pytest tests/test_f052_paginacion_cliente.py -q
+>       assert [len(c.lines) for c in contratos] == [500, 700]
+E       assert [500, 500] == [500, 700]            (200 líneas perdidas sin aviso)
+E       TypeError: SigridApiContratoClient.__init__() got an unexpected keyword argument 'pagina_lineas'
+E       AssertionError: assert 1000 == 3543        (search_proveedores cortada a 1.000)
+>       assert peticion["max_rows"] > 5000
+E       assert 1000 > 5000                         (search_proveedores(max_rows=5000) envía 1.000)
+E       TypeError: SigridApiContratoClient.__init__() got an unexpected keyword argument 'max_paginas'
+7 failed, 1 passed in 0.49s
+```
+
+GREEN: `8 passed`; sv3 completa `265 passed in 2.21s`.
