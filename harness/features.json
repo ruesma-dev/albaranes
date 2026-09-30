@@ -570,6 +570,22 @@
       "servicios": [
         "sv2-api"
       ]
+    },
+    {
+      "id": "F-053",
+      "title": "Alta en Sigrid de los albaranes aprobados",
+      "description": "PETICION DEL HUMANO (2026-09-30): «Alta en Sigrid de los albaranes aprobados». Aprobar ES registrar: los dos botones de sv4 que aprueban («Guardar y aprobar» de la ficha y «Aprobar» del listado) disparan el alta del albaran en Sigrid.\n\nDECISIONES YA TOMADAS: solo via sigrid-api y con sus endpoints de dominio (sigrid/albaran con contrato, sigrid/albaran-directo sin contrato, sigrid/concepto-grafico para adjuntar el PDF con CONTIP 14), nunca sql/write. sigrid-api ya tiene la escritura de dominio y documental abierta (comprobado en Azure el 2026-09-30, solo lectura): no se toca.\n\nPROPUESTA (spec en specs/F-053-alta-sigrid/): servicio nuevo sv9 (services/albaranes-alta-sigrid) que consume q-feedback, arranca en SIMULACION (dry-run) y solo graba de verdad cuando el humano pone ALTA_SIGRID_COMMIT=true; tabla albaran_altas_sigrid (DDL en sv3) con el estado del alta; defensa contra doble alta (sigrid-api no es idempotente); sv4 bloquea desaprobar y editar un albaran registrado; el historico no se da de alta. v1 solo registra albaranes integramente dentro de un contrato: lo demas queda 'no_admitido' (sigrid-api no permite hoy fijar partida ni precio, ni lineas fuera de contrato, y albaran-directo exige el producto de Sigrid). Preguntas abiertas en progress/spec_F-053.md.\n\nSUSTITUYE A F-013 (misma responsabilidad; F-013 hablaba de sql/write). DEPENDE DE: F-052 (CIF correcto) y F-051 (almacen por linea); orden F-052 -> F-051 -> F-053. Escribe en el ERP de produccion => rigor critico y verificaciones MANUAL del humano.",
+      "status": "spec_ready",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "servicios": [
+        "sv9-alta-sigrid",
+        "sv4-front",
+        "sv3-persistencia",
+        "comun",
+        "infra"
+      ]
     }
   ]
 }
