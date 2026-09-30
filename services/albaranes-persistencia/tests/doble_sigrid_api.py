@@ -279,7 +279,9 @@ class DobleSigridApi:
 
     def cliente(self, **kwargs):
         """``SigridApiContratoClient`` de sv3 conectado a este doble."""
-        from infrastructure.sigrid.sigrid_api_contrato_client import SigridApiContratoClient
+        from infrastructure.sigrid.sigrid_api_contrato_client import (
+            SigridApiContratoClient,
+        )
 
         return SigridApiContratoClient(
             base_url=_BASE_URL, function_key="clave-de-test", database="ruesma",

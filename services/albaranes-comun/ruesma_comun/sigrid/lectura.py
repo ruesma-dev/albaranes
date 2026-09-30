@@ -22,8 +22,9 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 
 _RE_ORDER_BY = re.compile(r"\bORDER\s+BY\b", re.IGNORECASE)
 

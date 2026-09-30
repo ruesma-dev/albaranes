@@ -12,7 +12,6 @@ Que la SQL real cumple esa semántica lo comprueba R30 (MANUAL, T21).
 from __future__ import annotations
 
 import pytest
-
 from application.services.familia_detector import familias_de_texto
 from doble_sigrid_api import DobleSigridApi, Fixture, Linea, fixture_por_defecto
 

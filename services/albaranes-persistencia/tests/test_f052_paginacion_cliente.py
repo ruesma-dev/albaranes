@@ -10,7 +10,6 @@ global de proveedores ya tiene 3.543 filas.
 from __future__ import annotations
 
 import pytest
-
 from doble_sigrid_api import (
     CIF_GRANDE_0668,
     CIF_SALMEDINA,

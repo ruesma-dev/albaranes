@@ -11,7 +11,6 @@ from __future__ import annotations
 import logging
 
 import pytest
-
 from ruesma_comun.sigrid import (
     PoliticaTruncado,
     SigridRespuestaTruncada,

@@ -13,7 +13,6 @@ import inspect
 import logging
 
 import pytest
-
 from doble_sigrid_api import CIF_SALMEDINA, DobleSigridApi
 from infrastructure.sigrid import sigrid_api_contrato_client as modulo_cliente
 from ruesma_comun.sigrid import PoliticaTruncado, SigridRespuestaTruncada
@@ -23,7 +22,7 @@ _LOGGER = modulo_cliente.logger.name
 
 
 def _leer(cliente, **kwargs):
-    base = dict(sql=_SQL_TOP1, parameters=[CIF_SALMEDINA], database="ruesma", label="prueba")
+    base = {"sql": _SQL_TOP1, "parameters": [CIF_SALMEDINA], "database": "ruesma", "label": "prueba"}
     base.update(kwargs)
     return cliente._post_sql_read(**base)
 
@@ -69,7 +68,7 @@ def test_f052_r9_truncado_tolera_devuelve_filas_y_warning(caplog):
 
 
 def test_f052_r8_sin_truncado_no_lanza():
-    columnas, filas = _leer(DobleSigridApi().cliente(), politica=PoliticaTruncado.NO_TOLERA)
+    _, filas = _leer(DobleSigridApi().cliente(), politica=PoliticaTruncado.NO_TOLERA)
     assert len(filas) == 1
 
 

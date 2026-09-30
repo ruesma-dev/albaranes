@@ -11,7 +11,6 @@ from __future__ import annotations
 import logging
 
 import pytest
-
 from application.services import header_resolver_service as modulo_resolver
 from application.services.header_resolver_service import HeaderResolverService
 from doble_sigrid_api import (

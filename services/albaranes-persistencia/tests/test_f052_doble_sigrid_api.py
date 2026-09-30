@@ -12,7 +12,6 @@ from __future__ import annotations
 from collections import Counter
 
 import httpx
-
 from doble_sigrid_api import (
     CIF_GRANDE_0668,
     CIF_SALMEDINA,
