@@ -108,6 +108,44 @@ ORDER BY con_ctr.cod, ctr.ide, ctrpro.pos, ctrpro.ide
 # desempata contratos con el mismo código y ``ctrpro.ide`` líneas con la
 # misma ``pos``. El orden visible sigue siendo (código de contrato, pos).
 
+# (F-052) Proveedores con contrato en la obra, UNA fila por proveedor,
+# con sus codigos de contrato (``|``) y el TEXTO de familia: valores
+# distintos, recortados y no vacios de nombre de contrato, descripcion de
+# linea y codigo de producto (design §4; medida en 74 obras con 0
+# diferencias de familias frente al texto por lineas). Sigrid no tiene
+# STRING_AGG (error 195): se agrega con FOR XML PATH; ``TYPE`` +
+# ``.value()`` devuelve el texto sin escapar y el ``CAST`` resuelve las
+# columnas ``text``. Los ORDER BY internos hacen deterministas texto y
+# codigos. Si sigrid-api dejara de aceptar WITH o FOR XML, la alternativa
+# documentada (sin implementar) es Q1 + Q2 de progress/explore_F-052_grano.md.
+_SQL_RESUMEN_OBRA_AGREGADO = """\
+WITH base AS (
+    SELECT prv.cif AS cif, prv.raz AS raz, con_ctr.cod AS cod_ctr,
+           con_ctr.res AS res_ctr, ctrpro.res AS res_lin, con_pro.cod AS cod_pro
+    FROM ctr
+    JOIN con AS con_ctr ON ctr.ide = con_ctr.ide
+    JOIN con AS con_obr ON ctr.obride = con_obr.ide
+    JOIN prv ON ctr.entide = prv.ide
+    LEFT JOIN ctrpro ON ctrpro.docide = ctr.ide
+    LEFT JOIN pro ON ctrpro.proide = pro.ide
+    LEFT JOIN con AS con_pro ON pro.ide = con_pro.ide
+    WHERE con_obr.cod = ? AND con_ctr.emp = 1
+),
+txt AS (
+    SELECT DISTINCT b.cif, CAST(LTRIM(RTRIM(x.v)) AS NVARCHAR(MAX)) AS v
+    FROM base b CROSS APPLY (VALUES (b.res_ctr), (b.res_lin), (b.cod_pro)) AS x(v)
+    WHERE x.v IS NOT NULL AND LTRIM(RTRIM(x.v)) <> ''
+),
+ctrs AS (SELECT DISTINCT cif, cod_ctr FROM base)
+SELECT p.cif, p.raz AS nombre,
+       STUFF((SELECT '|' + c.cod_ctr FROM ctrs c WHERE c.cif = p.cif ORDER BY c.cod_ctr
+              FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 1, '') AS codigos_contratos,
+       STUFF((SELECT ' ' + t.v FROM txt t WHERE t.cif = p.cif ORDER BY t.v
+              FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 1, '') AS texto
+FROM (SELECT DISTINCT cif, raz FROM base) AS p
+ORDER BY p.cif, p.raz
+"""
+
 _SQL_GRA_COD_BY_CONTRATO = """\
 SELECT
     rcg.pos             AS rcg_pos,
@@ -837,79 +875,67 @@ class SigridApiContratoClient:
         *,
         codigo_obra: str,
     ) -> list[ProveedorObraResumen]:
-        """Proveedores con contrato en la obra + TEXTO agregado de sus
-        contratos (nombre de contrato + descripciones de linea + codigos
-        de producto), para que el ``HeaderResolverService`` clasifique la
+        """Proveedores con contrato en la obra + TEXTO de sus contratos
+        (nombres de contrato + descripciones de linea + codigos de
+        producto), para que el ``HeaderResolverService`` clasifique la
         FAMILIA de cada proveedor (hormigon, mortero, residuos...) con
         las mismas reglas que el selector de contratos (jul 2026).
 
         emp=1 (Construcciones Ruesma). Best-effort del llamante: si esto
         falla, el resolver degrada al fallback global por nombre.
 
-        (F-052) Aquí se decía que sigrid-api tenía un tope holgado y que
-        el volumen quedaba lejos: falso. El corte lo pone el ``max_rows``
-        del cliente (1.000 por defecto; la instancia ``dev`` admite
-        500.000). Una fila por LINEA de contrato
-        pasa de 1.000 en las obras grandes (0691: 2.083); por eso la
-        respuesta truncada ya no se acepta en silencio (``NO_TOLERA``).
+        (F-052) Una sola llamada a la consulta AGREGADA
+        (``_SQL_RESUMEN_OBRA_AGREGADO``): una fila por proveedor, sin
+        paginar (maximo medido: 163 filas, obra 0696). Antes se pedia una
+        fila por LINEA de contrato (0691: 2.083) con el ``max_rows`` del
+        cliente (1.000): la lista llegaba cortada en silencio y el
+        docstring presumia un tope holgado de sigrid-api que no existe.
+        Una respuesta truncada lanza ``SigridRespuestaTruncada``
+        (``NO_TOLERA``); el error de serializacion XML llega como
+        ``RuntimeError`` (``ok=false``): ambos son «consulta fallida».
+
+        Un resumen por CIF (la SQL saca dos filas si un CIF tiene dos
+        ``raz``: se queda la primera en el orden de la SQL, ``cif, raz``).
+        La salida se ordena igual aunque sigrid-api devolviera las filas
+        en otro orden (R5).
         """
         codigo = (codigo_obra or "").strip()
         if not codigo:
             return []
-        sql = (
-            "SELECT prv.cif        AS cif, "
-            "       prv.raz        AS nombre, "
-            "       con_ctr.cod    AS codigo_contrato, "
-            "       con_ctr.res    AS nombre_contrato, "
-            "       ctrpro.res     AS descripcion_linea, "
-            "       con_pro.cod    AS codigo_producto "
-            "FROM ctr "
-            "JOIN con AS con_ctr       ON ctr.ide     = con_ctr.ide "
-            "JOIN con AS con_obr       ON ctr.obride  = con_obr.ide "
-            "JOIN prv                  ON ctr.entide  = prv.ide "
-            "LEFT JOIN ctrpro          ON ctrpro.docide = ctr.ide "
-            "LEFT JOIN pro             ON ctrpro.proide = pro.ide "
-            "LEFT JOIN con AS con_pro  ON pro.ide       = con_pro.ide "
-            "WHERE con_obr.cod = ? "
-            "  AND con_ctr.emp = 1"
-        )
         columns, rows = self._post_sql_read(
-            sql=sql,
+            sql=_SQL_RESUMEN_OBRA_AGREGADO,
             parameters=[codigo],
             database=self._database,
             label=f"contratos_resumen_obra_{codigo}",
             politica=PoliticaTruncado.NO_TOLERA,
         )
-        # Agrupacion por CIF conservando el orden de llegada.
-        nombres: "OrderedDict[str, str | None]" = OrderedDict()
-        codigos: dict[str, list[str]] = {}
-        textos: dict[str, list[str]] = {}
-        for row in rows:
-            row_map = dict(zip(columns, row))
-            cif = _opt_str(row_map.get("cif"))
-            if not cif:
-                continue
-            if cif not in nombres:
-                nombres[cif] = _opt_str(row_map.get("nombre"))
-                codigos[cif] = []
-                textos[cif] = []
-            cod_ctr = _opt_str(row_map.get("codigo_contrato"))
-            if cod_ctr and cod_ctr not in codigos[cif]:
-                codigos[cif].append(cod_ctr)
-            for campo in ("nombre_contrato", "descripcion_linea",
-                          "codigo_producto"):
-                valor = _opt_str(row_map.get(campo))
-                if valor:
-                    textos[cif].append(valor)
-        out = [
-            ProveedorObraResumen(
-                cif=cif,
-                nombre=nombres[cif],
-                codigos_contratos=tuple(codigos[cif]),
-                texto=" ".join(textos[cif]),
+        filas = [dict(zip(columns, row)) for row in rows]
+        filas.sort(
+            key=lambda f: (
+                _opt_str(f.get("cif")) or "",
+                _opt_str(f.get("nombre")) or "",
             )
-            for cif in nombres
-        ]
+        )
+        out: list[ProveedorObraResumen] = []
+        vistos: set[str] = set()
+        for fila in filas:
+            cif = _opt_str(fila.get("cif"))
+            if not cif or cif in vistos:
+                continue
+            vistos.add(cif)
+            codigos = tuple(
+                c.strip()
+                for c in str(fila.get("codigos_contratos") or "").split("|")
+                if c.strip()
+            )
+            out.append(
+                ProveedorObraResumen(
+                    cif=cif,
+                    nombre=_opt_str(fila.get("nombre")),
+                    codigos_contratos=codigos,
+                    texto=str(fila.get("texto") or ""),
+                )
+            )
         logger.info(
             "%s contratos_resumen_por_obra obra=%s -> %s proveedores",
             _LOG_PREFIX,

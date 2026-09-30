@@ -105,3 +105,35 @@ E       TypeError: SigridApiContratoClient.__init__() got an unexpected keyword 
 ```
 
 GREEN: `8 passed`; sv3 completa `265 passed in 2.21s`.
+
+### T5 · `fetch_contratos_resumen_por_obra` con la consulta agregada (R2, R3, R5)
+
+`_SQL_RESUMEN_OBRA_AGREGADO` = la SQL de design §4 literal (con los dos
+`ORDER BY` internos). Una llamada, `NO_TOLERA`, sin paginar, `max_rows` del
+cliente (1.000 ≥ 163). Python: filas ordenadas por `(cif, nombre)` y dedupe
+por CIF quedándose la primera (= la primera de la SQL, `ORDER BY p.cif,
+p.raz`); `codigos_contratos` = `split('|')` recortado y sin vacíos; `texto`
+tal cual (`None` → `""`). **Decisión**: ordenar en Python hace la salida
+independiente del orden de llegada (R5) y, con la SQL real, no cambia nada
+(ya llega en ese orden). Puerto y resolver sin cambios. Tests:
+`tests/test_f052_resumen_obra.py` (13).
+
+RED (contra T4: la consulta por líneas ya no truncaba en silencio, lanzaba):
+
+```
+$ ../../.venv/Scripts/python.exe -m pytest tests/test_f052_resumen_obra.py tests/test_f052_equivalencia_familias.py -q
+E  ruesma_comun.sigrid.lectura.SigridRespuestaTruncada: sigrid-api devolvió una respuesta truncada [contratos_resumen_obra_0691]: 1000 filas recibidas (se alcanzó max_rows)
+E  AssertionError: assert [('B2', 'ZETA...C9/01',), '')] == [('B1', 'SIN ...ON HA-25 P1')]
+E    At index 0 diff: ('B2', 'ZETA, S.L.', ('C2/01', 'C1/01'), 'HORMIGON HA-25 BOMBEO GASOLEO A P1') != ('B1', 'SIN TEXTO, S.A.', ('C9/01',), '')
+E  assert 0 == 81        (r2: el paso obra + familia no puntúa a nadie)
+ERROR application.services.header_resolver_service:header_resolver_service.py:556 [header-resolver] fetch_contratos_resumen_por_obra fallo obra=0691.
+FAILED ...test_f052_r3_una_sola_peticion_con_la_consulta_agregada
+FAILED ...test_f052_r3_un_resumen_por_cif_codigos_y_texto
+FAILED ...test_f052_r2_el_resumen_trae_los_81_con_salmedina_y_su_texto
+FAILED ...test_f052_r2_paso_obra_familia_puntua_los_81
+FAILED ...test_f052_r5_barajado_mismo_resumen_y_mismo_orden[1|2|3]
+FAILED ...test_f052_r4_mismas_familias_por_cif_en_todo_el_fixture[0691|0668]
+9 failed, 10 passed in 0.75s
+```
+
+GREEN: `19 passed in 0.40s`; sv3 completa `284 passed in 2.36s`.
