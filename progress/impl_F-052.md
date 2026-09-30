@@ -190,6 +190,6 @@ con contratos listados, M12 el repositorio no valida el resultado.
 | Tests F-052 nuevos | A **82**, B **73**, C **94** (21 + 6 + 11 + 27 + 19 + 10); total **249**, en verde |
 | Suites a mano tras T17, una tras otra | sv4 `341 passed in 12.13s` (247 → 341) |
 | `bash harness/init.sh` tras T17 (antes del commit de estilo) | ENTORNO LISTO, exit 0; raíz `1067 passed in 259.87s`; sv4 `341 passed in 19.08s`; resto en caché; `PUERTA COBERTURA: 98.0% de 251 líneas cambiadas cubiertas (246/251, umbral 80%, nivel critico)`; tamaño `impl 194/220`; ruff 1179 (+12 míos: arreglados en el commit de estilo) |
-| `bash harness/init.sh` final | PENDIENTE_INIT_FINAL |
+| `bash harness/init.sh` final (`1d2bcb6`) | ENTORNO LISTO, exit 0; raíz `1067 passed in 207.46s`; sv4 `341 passed in 21.12s`; resto en caché; `PUERTA COBERTURA: 98.0% de 252 líneas cambiadas cubiertas (247/252, umbral 80%, nivel critico)` (las 5 sin cubrir, cableado de `app.py`: ver «pendiente»); tamaño `impl 195/220`; ruff 1166 (1167 al empezar el bloque) |
 | Tiempo de la suite | sv4 6–17 s; sv3 3,8–10,6 s; comun 38,5 s; raíz 257–327 s |
 | Mutación | Campaña: T19 (fuera). Manuales: A 1 (+2 review), B **7/7**, C **12/12** muertos |
