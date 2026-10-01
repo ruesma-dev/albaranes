@@ -5,6 +5,19 @@
 > bloques de F-036, sus dos ciclos de review y los hallazgos— está en
 > `progress/history.md`. Aquí solo queda lo vivo.
 
+## F-052 · Bloque D hecho (2026-10-01, implementer)
+
+Bloques A, B y C (con sus correcciones) APROBADOS. Bloque D hecho, un commit por tarea:
+T14 (script `services/albaranes-persistencia/scripts/verificar_f052_proveedores_obra.py`,
+solo lectura, probado contra el doble; NO ejecutado contra sigrid-api), T14 bis (decisión
+del humano: página por defecto 499.999 y `max_rows` ≤ 500.000), T18 (`docs/ARCHITECTURE.md`),
+T16 (`azure-apps/albaranes.md`, commit `141f9aa` en ese repositorio) y `ruesma_comun` 0.7.0.
+Detalle y evidencias: `progress/impl_F-052.md` §«Bloque D». Siguiente: review del Bloque D;
+luego T19 (mutación) y las verificaciones MANUAL del humano (T20–T23).
+
+Desviación justificada: **T14 bis** no estaba en la spec (la pidió el humano el 2026-10-01);
+design §2/§3 actualizado en sitio y tarea añadida a `tasks.md`.
+
 ## F-052 · Bloque C hecho (2026-09-30, implementer)
 
 Bloques A (T1–T6) y B (T7–T10) APROBADOS (`progress/review_F-052_bloque{A,B}.md`).
