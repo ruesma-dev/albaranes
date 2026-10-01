@@ -174,6 +174,7 @@ por defecto a 1.000/5.000, sin guarda de `max_rows`, sin guarda de página en sv
   muertos / **2 supervivientes, ambos PROPUESTA para el humano** (`scripts/...:48` equivalente;
   `obras/codigo.py:39` falso superviviente: lo matan tests existentes). Tests nuevos en `dcca978`;
   detalle, RED y la anomalía de falsos supervivientes en `progress/impl_F-052_T19_supervivientes.md`.
+  `bash harness/init.sh` tras `988b0f9`: ENTORNO LISTO; raíz `1067 passed`; cobertura 98,2 % (590/601).
 - **MANUAL (humano)**: T20 (R29) y T21 (R30) con el script, solo lectura; T22 (R31, pipeline
   local; cubre el cableado de D4-A, sin tests de JS; las rutas PUT/GET tienen tests de FastAPI desde T19); T23 tras desplegar sv3 → sv4.
 - La SQL agregada y la de obras grandes solo se han probado contra el doble (T20, T21, T23).
