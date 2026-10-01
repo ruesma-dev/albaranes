@@ -25,48 +25,15 @@
 
 F-051, F-053 y F-054 viven en sus ramas: no constan en el `features.json` de esta rama hasta que se fusionen en `dev`.
 
-## F-052 · lo que queda tras el cierre (todo del humano)
+## F-052 · cerrada, fusionada y desplegada (2026-10-01)
 
-### 1. Merge a `dev` y despliegue sv3 → sv4
-
-- Merge de `feature/F-052-proveedores-truncados` a `dev` (el arreglo `fix/F-048-comparar-obra-base`, `c8a295e`,
-  ya está en `dev`).
-- Despliegue **sv3 primero y luego sv4**, uno a uno con `-Only` (`infra/deploy.ps1`): el DDL de las 4 columnas
-  `contratos_busqueda_*` lo crea sv3 al arrancar y el ORM de sv4 rompe sin ellas. `ruesma_comun` 0.7.0 (`sigrid/`,
-  `obras/`) va dentro de las dos imágenes. Consta en `azure-apps/albaranes.md` §3 (commit `141f9aa`, ese
-  repositorio no tiene remoto).
-
-### 2. T23 · MANUAL tras desplegar (solo lectura; no bloquea el cierre)
-
-Listar las obras grandes contra sigrid-api y buscar sospechosos en la BBDD `albaranes`; decidir el saneamiento a
-mano en sv4 (D5: sin backfill; proveedor, «Guardar y volver a buscar», contrato y revalorar).
-
-```powershell
-cd C:\Users\pgris\PycharmProjects\albaranes\services\albaranes-persistencia
-python scripts\verificar_f052_proveedores_obra.py --listar-obras-grandes
-```
-
-`:obras_grandes` = la salida del comando anterior (74 obras el 2026-09-29). SELECT (de `progress/spec_F-052.md`
-§Anexo), solo lectura:
-
-```sql
-SELECT d.id, d.source_filename, d.numero_albaran, d.obra_codigo,
-       d.proveedor_cif, d.proveedor_cif_origen, d.approved, d.created_at_utc,
-       CASE WHEN d.review_notes ILIKE '%ningun proveedor con contrato en la obra casa%' THEN 'nadie_casa'
-            WHEN d.proveedor_cif_origen = 'det_familia_obra' THEN 'familia_obra'
-            WHEN d.review_notes ILIKE '%sin CIF: no deducible con seguridad%' THEN 'sin_cif_ambiguo'
-       END AS sospecha
-FROM albaran_documents_merge d
-WHERE d.is_active
-  AND ( d.review_notes ILIKE '%ningun proveedor con contrato en la obra casa%'
-     OR ( d.obra_codigo = ANY(:obras_grandes)
-          AND ( d.proveedor_cif_origen = 'det_familia_obra'
-             OR d.review_notes ILIKE '%sin CIF: no deducible con seguridad%')))
-ORDER BY sospecha, d.created_at_utc;
-```
-
-Verde: la lista anotada aquí, con la decisión de saneamiento de cada documento. Límite conocido: el atajo por
-nombre dentro de la obra sella `deterministic` y no se distingue del fallback global.
+- Merge a `dev` por el humano (`a7a53ef`, subido a `origin/dev`). Despliegue del humano: sv3 `r20261001-1654`
+  (DDL `contratos_busqueda_*` OK en producción, comprobado en Log Analytics) → sv4 `r20261001-1657` (100 % del
+  tráfico; la revisión vieja seguía activa: `fix_revisiones.ps1 -Only sv4`).
+- **T23 cerrada por el humano (2026-10-01)**: «hemos estado probando, no hace migrar nada de albaranes antiguos.
+  da t23 por cerrada». Sin saneamiento de históricos (D5): si aparece alguno, se corrige a mano en sv4 con «Solo
+  volver a buscar» o cambiando el CIF y guardando. Comando y SELECT de sospechosos, por si se necesitan: T23 en
+  `specs/F-052-proveedores-truncados/tasks.md` y `progress/spec_F-052.md` §Anexo.
 
 ### 3. Observaciones de la review de cierre que siguen vivas
 
