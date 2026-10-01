@@ -297,7 +297,7 @@ def test_f052_leer_paginado_admite_la_pagina_maxima_en_una_llamada():
     from ruesma_comun.sigrid import PAGINA_MAXIMA
 
     fuente = _Paginas(3_543)
-    columnas, filas = _leer(fuente, pagina=PAGINA_MAXIMA)
+    _columnas, filas = _leer(fuente, pagina=PAGINA_MAXIMA)
     assert len(filas) == 3_543
     assert fuente.llamadas == [(0, PAGINA_MAXIMA)]
 

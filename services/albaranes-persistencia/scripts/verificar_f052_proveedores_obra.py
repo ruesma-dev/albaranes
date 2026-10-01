@@ -47,17 +47,19 @@ _RAIZ_SV3 = Path(__file__).resolve().parents[1]
 if str(_RAIZ_SV3) not in sys.path:
     sys.path.insert(0, str(_RAIZ_SV3))
 
-from application.services.familia_detector import familias_de_texto  # noqa: E402
-from application.services.header_resolver_service import (  # noqa: E402
+from application.services.familia_detector import familias_de_texto
+from application.services.header_resolver_service import (
     _score_razon_social,
 )
-from infrastructure.sigrid import sigrid_api_contrato_client as modulo_cliente  # noqa: E402
-from infrastructure.sigrid.sigrid_api_contrato_client import (  # noqa: E402
+from infrastructure.sigrid import (
+    sigrid_api_contrato_client as modulo_cliente,
+)
+from infrastructure.sigrid.sigrid_api_contrato_client import (
     SigridApiContratoClient,
 )
-from pydantic import ValidationError  # noqa: E402
-from ruesma_comun.obras import normalizar_codigo_obra  # noqa: E402
-from ruesma_comun.sigrid import MAX_FILAS_POR_PETICION, PoliticaTruncado  # noqa: E402
+from pydantic import ValidationError
+from ruesma_comun.obras import normalizar_codigo_obra
+from ruesma_comun.sigrid import MAX_FILAS_POR_PETICION, PoliticaTruncado
 
 #: Tiempo máximo aceptable de la consulta agregada (design §10: si pasara
 #: de 15 s, se abre feature para cachear).
@@ -179,7 +181,7 @@ class Entorno:
         desde = len(self.transporte.mediciones)
         try:
             resultado, error = funcion(), None
-        except Exception as exc:  # se informa, nunca se oculta
+        except Exception as exc:  # noqa: BLE001 - se informa, nunca se oculta
             resultado, error = None, exc
         return resultado, error, self.transporte.mediciones[desde:]
 
@@ -396,15 +398,15 @@ def comparar_familias(entorno: Entorno, *, obras: list[str], salida: Callable[[s
     for obra in obras:
         salida(f"Obra {obra}")
         agregada, error, med_agregada = entorno.llamar(
-            lambda: entorno.cliente.fetch_contratos_resumen_por_obra(codigo_obra=obra)
+            lambda o=obra: entorno.cliente.fetch_contratos_resumen_por_obra(codigo_obra=o)
         )
         if error is None:
             lineas, error, med_lineas = entorno.llamar(
-                lambda: entorno.leer(_SQL_LINEAS_OBRA, [obra], f"lineas_obra_{obra}")
+                lambda o=obra: entorno.leer(_SQL_LINEAS_OBRA, [o], f"lineas_obra_{o}")
             )
         if error is None:
             distinct, error, _ = entorno.llamar(
-                lambda: entorno.cliente.fetch_proveedores_por_obra(codigo_obra=obra)
+                lambda o=obra: entorno.cliente.fetch_proveedores_por_obra(codigo_obra=o)
             )
         if error is not None:
             salida(f"  ERROR: {entorno.error(error)}")
@@ -458,7 +460,7 @@ def listar_obras_grandes(entorno: Entorno, *, salida: Callable[[str], None]) -> 
     salida(f"Obras con más de 1.000 líneas de contrato: {len(filas)}")
     salida("  obra      líneas  proveedores")
     for f in filas:
-        salida(f"  {str(f['obra']):<6}{miles(f['lineas']):>8}{miles(f['proveedores']):>13}")
+        salida(f"  {f['obra']!s:<6}{miles(f['lineas']):>8}{miles(f['proveedores']):>13}")
     lista = ", ".join(f"'{f['obra']}'" for f in filas)
     salida(f"Lista para el SELECT de sospechosos (T23): {lista}")
     return True

@@ -22,6 +22,7 @@ from doble_sigrid_api import (
 )
 from infrastructure.sigrid.sigrid_api_contrato_client import SigridApiContratoClient
 from pydantic import BaseModel, ValidationError
+
 from scripts import verificar_f052_proveedores_obra as script
 
 _CLAVE = "clave-de-test"
