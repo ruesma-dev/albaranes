@@ -113,6 +113,13 @@ def test_f052_r29_tiempo_por_encima_de_15_s_falla():
     assert "  - la consulta agregada tardó 16,00 s (límite 15 s)" in texto
 
 
+def test_f052_r29_justo_15_s_ya_falla():
+    """design §10: «si pasara de 15 s» se abre feature; T20 exige < 15 s."""
+    codigo, texto = _ejecutar(["--obra", "0691", "--repeticiones", "1"], DobleSigridApi(), reloj=_RelojFijo(15.0))
+    assert codigo == 1
+    assert "  - la consulta agregada tardó 15,00 s (límite 15 s)" in texto
+
+
 def test_f052_r29_truncado_falla_y_lo_dice():
     doble = DobleSigridApi(forzar_truncado=True)
     codigo, texto = _ejecutar(["--obra", "0691", "--repeticiones", "2"], doble)
@@ -152,6 +159,17 @@ def test_f052_r29_nombre_que_no_casa_falla():
     assert "  - ningún proveedor llega al umbral 0,50 con el nombre 'ZZZZ QQQQ'" in texto
 
 
+def test_f052_r29_mejor_por_debajo_del_umbral_es_nadie_casa():
+    """Score 0,50 con umbral 0,60 (``HEADER_RESOLVER_MIN_SCORE``): hay
+    mejor candidato, pero no llega al umbral."""
+    codigo, texto = _ejecutar(
+        ["--obra", "0691", "--nombre", "PROVEEDOR XXXXX", "--repeticiones", "1"], DobleSigridApi(), umbral=0.6,
+    )
+    assert codigo == 1
+    assert "Mejor candidato: B10000000 (score 0,50) -> nadie casa" in texto
+    assert "  - ningún proveedor llega al umbral 0,60 con el nombre 'PROVEEDOR XXXXX'" in texto
+
+
 def test_f052_r29_el_mejor_no_es_el_cif_esperado_falla():
     doble = DobleSigridApi()
     codigo, texto = _ejecutar(
@@ -159,6 +177,9 @@ def test_f052_r29_el_mejor_no_es_el_cif_esperado_falla():
     )
     assert codigo == 1
     assert f"  - el mejor candidato por nombre no es {CIF_SALMEDINA}" in texto
+    # Empate a 1,00 entre los «PROVEEDOR OBRA xx»: gana el primero en el
+    # orden de la agregada, como en el resolver (``>`` estricto).
+    assert "Mejor candidato: B10000000 (score 1,00) -> propuesta" in texto
     assert f"Score del CIF {CIF_SALMEDINA}: 0," in texto
 
 
@@ -229,11 +250,12 @@ def test_f052_r30_detecta_cif_de_mas():
         def _despachar(self, sql, params):
             columnas, filas, ordenado = super()._despachar(sql, params)
             if "FOR XML PATH" in sql:
-                filas = [*filas, ["X9999999", "INTRUSO", "CT/1", "HORMIGON"]]
+                filas = [*filas, ["X9999999", "INTRUSO", "CT/1", None]]
             return columnas, filas, ordenado
 
     codigo, texto = _ejecutar(["--comparar-familias", "--obra", "0691"], _ConIntruso())
     assert codigo == 1
+    assert "  Diferencias de familias: 0" in texto  # falla SOLO por el CIF de más
     assert "de más 1" in texto
     assert "    de más: X9999999" in texto
 
