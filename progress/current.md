@@ -5,6 +5,19 @@
 > bloques de F-036, sus dos ciclos de review y los hallazgos— está en
 > `progress/history.md`. Aquí solo queda lo vivo.
 
+## F-052 · MANUAL T20–T22 hechos por el humano (2026-10-01, líder)
+
+T20 (R29) y T21 (R30) `OK` contra sigrid-api; T22 en local con el doc 77a0c01f (Salmedina):
+detalle en `tasks.md`. El humano: «podemos desplegar». Siguiente: review de cierre → `done`
+→ merge a `dev` (humano) → despliegue sv3 → sv4 (humano). T23 tras desplegar.
+**Mejora menor anotada (no entra en F-052):** un «Guardar» pulsado mientras la ficha está en
+«Buscando…» relanza otra búsqueda, porque el rastro aún tiene el CIF/obra de antes. Inocuo
+(sv3 y sv6 reemplazan), pero es trabajo doble. Arreglo barato: mientras busca, sv4 no relanza
+si CIF y obra son los mismos con los que lanzó la búsqueda en curso.
+
+**Escritura en Sigrid:** NO va en este despliegue. F-053 solo tiene spec (rama
+`feature/F-053-alta-sigrid`, 16 preguntas abiertas al humano).
+
 ## F-052 · T19 hecha (2026-10-01, implementer)
 
 Campaña de mutación en serie sobre `dcca978`: 220 / 218 muertos / **2 supervivientes**
