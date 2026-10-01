@@ -6,9 +6,9 @@ import logging
 from application.services.contrato_enrichment_service import (
     ContratoEnrichmentService,
 )
-from application.services.obra_code_normalizer import normalize_obra_code
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.ports.contrato_merge_repository_port import ContratoMergeRepository
+from ruesma_comun.obras import normalizar_codigo_obra
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +104,7 @@ class ContratoRefetchService:
             raise
 
         cif_clean = (cif or "").strip().upper().replace(" ", "") or None
-        obra_norm = normalize_obra_code(obra_raw)
+        obra_norm = normalizar_codigo_obra(obra_raw)
 
         # ---------------------------------------------------------- #
         # Paso 0a (jun 2026) — refrescar OBRA desde el maestro.

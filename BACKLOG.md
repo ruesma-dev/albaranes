@@ -3,14 +3,17 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **50 features**, 35 abiertas, 15 terminadas.
+Resumen: **54 features**, 38 abiertas, 16 terminadas.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
+| F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
+| F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
+| F-057 | Truncado sin comprobar en los clientes de Sigrid colindantes: header_and_lines de sv4 (max_rows=1000) y SigridApiObraClient de sv3 | 2 | pendiente | critico |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -54,6 +57,7 @@ Resumen: **50 features**, 35 abiertas, 15 terminadas.
 | F-034 | Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra | 1 | estandar |
 | F-043 | IA1 clasifica el albaran: la tipologia la decide la IA, siempre y con definiciones claras, nunca una regla determinista | 1 | critico |
 | F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel | 1 | critico |
+| F-052 | sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF) | 1 | critico |
 | F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
 | F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
 | F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | estandar |
@@ -66,6 +70,20 @@ Resumen: **50 features**, 35 abiertas, 15 terminadas.
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | critico |
 
 ## Detalle
+
+### F-055 · IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2)
+
+estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
+
+PETICION DEL HUMANO (2026-10-01): «registra f55», tras preguntar si la lista de proveedores con nombre y CIF se da a la IA para que busque entre ellos.
+
+HALLAZGO (2026-10-01): hoy la IA no recibe la lista de proveedores en ninguna fase. sv2 inyecta `GroundingNulo` (services/albaranes-api/main_worker.py:69; `interface_adapters/worker/local_stubs.py`, «placeholder hasta mover el de sv3»), asi que IA2 recibe siempre `sigrid_context=None` aunque su prompt admite el bloque `{sigrid_context}` (proveedor, obra, obras_candidatas, proveedores_candidatos). El bloque lo prepara sv3 en `POST /v1/sigrid/header-grounding` (`HeaderGroundingService`: proveedores con contrato en la obra, nombre y CIF, hasta `GROUNDING_MAX_PROVEEDORES_CANDIDATOS`=200; fallback lista global), pero quien lo llamaba era el orquestador sv7, retirado: el endpoint esta vivo y nadie lo usa. El proveedor se decide hoy de forma determinista en sv3 despues de la IA (CIF leido -> Sigrid; si no existe, red por nombre contra los candidatos de la obra que arregla F-052; luego global).
+
+ALCANCE PROPUESTO: que sv2, antes de la fase 2, obtenga el contexto de Sigrid (obra decidida por IA1/correo F-048 y proveedores con contrato en esa obra, nombre + CIF, quiza familia) y se lo pase a IA2 para que elija el proveedor de esa lista. Las reglas de sv3 se quedan como verificacion: CIF elegido fuera de la lista -> revision. Decidir en la spec: quien consulta (sv2 llama a sv3 por HTTP vs. sv2 lee sigrid-api directamente con `ruesma_comun.sigrid`, como ya hace para las obras de F-048), tamaño del bloque en el prompt (81 en 0691, 163 en 0696), coste por albaran, evals antes/despues con el banco de F-045, y que pasa si la obra no esta decidida en fase 1.
+
+CRITERIO DEL HUMANO: decide la IA (memoria «clasificacion-la-decide-la-ia»), las reglas verifican.
+
+DEPENDE DE: F-052 (lista de candidatos de la obra completa y sin truncar). RELACIONADAS: F-048 (contexto de correo y obras en IA1), F-002 (red de proveedor por nombre), F-045 (evals).
 
 ### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
 
@@ -96,6 +114,42 @@ ALCANCE: ESTUDIO, no integracion. (1) Verificar con la documentacion oficial que
 CUIDADOS: es un proveedor NUEVO, asi que el texto de los albaranes (y con F-048 el del correo, con datos personales) saldria a un tercero que hoy no lo ve; eso lo decide el humano antes de mandar un solo documento real. Las llamadas se facturan: el numero de casos y el coste se enseñan antes de lanzar. Si Jev solo acepta texto, hay que pasarle lo que ya extrajo sv2, y la comparacion con IA1 (que ve el papel) no es de igual a igual: hay que declararlo en el informe.
 
 RELACIONADAS: F-043 (clasificacion por IA1), F-045 (banco de evals), F-046 (familias nuevas del catalogo), F-047 (ciclo completo).
+
+### F-056 · sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello
+
+estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí
+
+ORIGEN: cierre de F-052 (2026-10-01), observaciones O-C2 y O-C8 de progress/review_F-052_bloqueC.md y la mejora menor que anotó el humano al hacer la MANUAL T22 de F-052. Ficha pedida por la review de cierre (progress/review_F-052.md, tabla de observaciones).
+
+CONTEXTO: desde F-052 (D4-A), «Guardar» en la ficha de sv4 relanza la re-búsqueda de contrato (re-fetch por q-persistencia) cuando el CIF o la obra difieren de los del último rastro de búsqueda (columnas contratos_busqueda_* que sella sv3), y el bloque de contrato marca «Buscando contratos con los datos actuales…» hasta que llega el rastro nuevo.
+
+DEFECTOS (inocuos para el resultado, porque sv3 lee el merge al procesar y sv6 reemplaza la valoración, pero son trabajo doble en sv3, sigrid-api y sv6):
+(1) «Guardar» durante «Buscando…» (T22): mientras la búsqueda en curso no ha sellado, el rastro conserva el CIF/obra ANTERIORES, así que un segundo «Guardar» con los mismos datos vuelve a ver un cambio y publica otra re-búsqueda. Arreglo propuesto por el humano: mientras busca, sv4 no relanza si CIF y obra son los mismos con los que lanzó la búsqueda en curso.
+(2) O-C2: el autoguardado del combo (elegir obra y luego proveedor) hace dos PUT seguidos y publica dos re-búsquedas.
+(3) O-C8: «Solo volver a buscar» con CIF y obra vacíos publica un mensaje que sv3 descarta sin sellar el rastro (comportamiento previo a F-052; una vez por clic). Alternativas señaladas por el reviewer: que sv4 no publique, o que sv3 distinga «no existe» de «sin datos» y selle sin_datos.
+
+A DECIDIR EN LA SPEC: dónde se guarda «la búsqueda en curso» (rastro pendiente en BBDD frente a estado en el front), plazo tras el que se permite relanzar si el rastro nunca llega, y si (3) se arregla en sv4 (no publicar) o en sv3 (sellar sin_datos; añadiría sv3 a los servicios).
+
+ALCANCE: services/albaranes-front (static/app.js, endpoint de guardado y su servicio de re-búsqueda). NO ENTRA: cambiar la semántica del rastro de F-052 ni el flujo de aprobación. RELACIONADAS: F-052 (D4-A, O-C1, R31), F-037 (guardado inmediato del contrato, mismo camino de PUT).
+
+### F-057 · Truncado sin comprobar en los clientes de Sigrid colindantes: header_and_lines de sv4 (max_rows=1000) y SigridApiObraClient de sv3
+
+estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
+
+ORIGEN: decisión D6 de F-052 (aceptada por el humano el 2026-09-30: «clientes colindantes a ficha aparte») y observación O-C4 de progress/review_F-052_bloqueC.md. La ficha no se había registrado; la pide la review de cierre de F-052 (progress/review_F-052.md).
+
+CONTEXTO: F-052 dejó en ruesma_comun.sigrid.lectura la política de lectura contra sigrid-api (PoliticaTruncado, comprobar_truncado, SigridRespuestaTruncada, leer_paginado; MAX_FILAS_POR_PETICION=500.000, PAGINA_MAXIMA=499.999) y la aplicó al SigridApiContratoClient de sv3 y al sigrid_lookup_client de sv4. Regla de docs/ARCHITECTURE.md «Acceso a datos»: truncated nunca en silencio; agregar en SQL antes que paginar; paginar con ruesma_comun.sigrid. El 1.000 que se creía de sigrid-api era el max_rows del cliente.
+
+QUEDAN FUERA DE ESA REGLA DOS CLIENTES:
+(1) sv4, su copia del cliente de contratos (services/albaranes-front/infrastructure/sigrid/sigrid_api_contrato_client.py, consulta header_and_lines) que usa el fallback local de re-búsqueda (LocalContratoRefetchClient, solo en local): max_rows=1000 por defecto y sin comprobar_truncado. Hoy irreal (la mayor pareja CIF+obra medida tiene 989 líneas), pero roza el tope y cortaría en silencio las líneas de contrato que alimentan la valoración.
+(2) sv3, SigridApiObraClient.search_obras (max_rows=5000, sin mirar truncated): en producción, resuelve la obra. Sin riesgo medido hoy (las obras son muchas menos de 5.000), pero es el mismo precipicio silencioso.
+Deuda relacionada (D2 de F-052): sv3 tiene su propio fetch_proveedores_por_obra (grounding) con la misma semántica que el de sv4; en F-052 solo recibió su política. Unificarlo puede entrar aquí si la spec lo justifica.
+
+PROPUESTA: pasar los dos clientes a ruesma_comun.sigrid (política por consulta: paginar o NO_TOLERA según el caso), con test sobre un doble de sigrid-api que devuelva truncated=true; en sv4, valorar si la copia de header_and_lines debe desaparecer en favor de la de sv3.
+
+RIGOR critico: mismo tipo de defecto que F-052 (lectura silenciosamente incompleta de Sigrid en un camino de producción de sv3).
+
+ALCANCE: services/albaranes-front (cliente de contratos del fallback local) y services/albaranes-persistencia (SigridApiObraClient). NO ENTRA: cambiar SQL ni semántica de las consultas ya cubiertas por F-052. RELACIONADAS: F-052 (D2, D6, O-C4), F-055.
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 
@@ -509,6 +563,22 @@ RELACIONADAS: F-045 (el banco que mide los patrones 1 y 2), F-002 (las obras act
 DECISIONES DEL HUMANO SOBRE LA SPEC (2026-09-22), ya aplicadas en specs/F-048-correo-contexto-ia1/: (1) si el correo trae varios albaranes, el codigo se aplica a TODOS —«si hay varios albaranes aplica el codigo a todos»—, sin condicion de «solo si trae un codigo»; queda SIN DECIDIR que hacer cuando el correo menciona VARIOS codigos distintos, con la propuesta escrita en design.md D4 bis (decide el papel, los codigos quedan como candidatos y el revisor los ve). (2) La discrepancia entre el codigo del correo y la lectura del papel SE GUARDA (las dos lecturas y su origen) y SE MARCA para que el revisor la vea en la ficha de sv4 —por eso la feature toca ahora tambien sv4, solo para pintar: ni DDL ni escrituras—; el correo sigue mandando. (3) «En el futuro bajara % de fiabilidad»: FUERA DE ALCANCE, el dato queda guardado para poder hacerlo (ficha futura; bajar la confianza dispara review_required, asi que no es inocuo). Validadas ademas: la precedencia la sella el resolver de sv2, solo uniqueBody del cuerpo, el orden de despliegue sv3 -> sv2 -> sv1 y la muestra de medicion. La validacion de la partida contra la lista de partidas de la obra sale a F-049.
 
 DECISIONES DEL HUMANO DEL 2026-09-23, aplicadas en specs/F-048-correo-contexto-ia1/: (1) SOLO OBRA: «la partida de momento no se indica en correo. solo obra»; la partida sale del alcance de F-048 (ni lectura, ni precedencia, ni discrepancia, ni origen_datos.partida, que creara F-049). (2) PRECEDENCIA Y CRUCE: «el codigo indicado en el correo, ya sea en subject o en el body, manda sobre lo que elija la IA [...] va a mandar el del email, pero si no cuadra se marcara para revision»: IA1 lee el codigo del correo y el del papel y sv2 los cruza. (3) LA DISCREPANCIA MANDA A REVISION (revoca lo del 2026-09-22): se usa el del correo y sv3 anade el motivo correo_obra_distinta_papel a review_reasons; sin codigo en el papel no hay discrepancia. (4) VARIOS CODIGOS DISTINTOS EN EL CORREO: si el del papel es uno de ellos se usa y no va a revision; si no, o el papel no trae codigo, se queda la lectura del papel (o ninguna) y va a revision con correo_obra_ambigua, con los codigos del correo como candidatos visibles en la ficha de sv4. Consecuencia: iran MAS albaranes a revision; se cuenta en la muestra antes de desplegar. (5) VALIDACION CONTRA TODAS LAS OBRAS (tarde del 2026-09-23, revoca 'obras activas'): «si el codigo de correo esta en la lista de obras (aunque no activa) sigue mandando, si no esta manda IA» y «si el correo no trae codigo, no hay que mandar a revision». Los codigos del correo que no estan en la lista de obras con contrato se descartan ANTES de contar; si no queda ninguno, manda la IA sin revision (correo_fuera_de_lista, solo rastro). La lista completa sale de la misma consulta y cache de F-002. (6) NORMALIZACION: «si, normaliza todo» (mayusculas, fuera lo no alfanumerico y los ceros a la izquierda). Consecuencia: menos revisiones de las que preveia la v3.
+
+### F-052 · sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF)
+
+estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-052-proveedores-truncados`
+
+PRIORIDAD 1 por decision del humano el 2026-09-29. ORIGEN: albaran SS-0026122 de SALMEDINA (caso RES-007) en la prueba local de F-048. Diagnostico de solo lectura en progress/explore_salmedina_proveedor.md.
+
+DEFECTO 1 (sv3, en produccion desde agosto): SigridApiContratoClient.fetch_contratos_resumen_por_obra devuelve una fila por LINEA de contrato, sin DISTINCT ni ORDER BY, con max_rows=1000 y _post_sql_read ignora truncated. En la obra 0691 hay 2.083 filas de 81 proveedores: sv3 recibe 1.000 al azar y el proveedor bueno entra o no segun la ejecucion (reproducido: 36/41/41 proveedores en tres llamadas). Afecta a 74 obras de Sigrid (casi todas las activas grandes) y a DOS caminos del resolver de cabecera: (a) la propuesta por NOMBRE cuando el CIF leido no existe (F-002) y (b) el paso obra+familia cuando la IA no trae CIF, que puede ELEGIR OTRO PROVEEDOR. Intermitente: por eso ni evals ni pruebas lo destapaban. El selector de sv4 no lo sufre (SELECT DISTINCT prv.cif, prv.raz, max_rows=5000).
+
+DEFECTO 2 (sv4): guardar un CIF u obra nuevos no relanza la busqueda de contrato, y el bloque «No se encontro ningun contrato para CIF X + obra Y» pinta el CIF/obra ACTUALES aunque la busqueda se hizo con los anteriores: afirma algo que nunca se comprobo.
+
+PROPUESTA DEL DIAGNOSTICO: (1) consulta propia de proveedores de la obra (DISTINCT, como sv4) separada de la de lineas; (2) truncated=true => WARNING o error, nunca silencio (la consulta de lineas por CIF+obra ya roza el tope: 989 en la obra 0668); (3) la nota de revision distingue «consulta fallida/sin obra» de «nadie casa»; (4) sv4 rebusca al cambiar CIF u obra, o al menos dice con que se busco; (5) test con un doble de sigrid-api que devuelva truncated=true dejando fuera al bueno.
+
+RELACIONADAS: F-002 (red de proveedor por CIF), F-043, F-047 (RES-007 no cerraba ciclo por esto).
+
+DECISIONES DEL HUMANO (2026-09-30): aceptadas las recomendaciones D1-D7 de la spec v2 (consulta agregada sin paginar; no compartir con sv4; paginar solo header_and_lines y search_proveedores; D4 = B + A, es decir el bloque veraz Y «Guardar» relanza la busqueda si cambian CIF u obra; sin backfill; clientes colindantes a ficha aparte; efecto D7 aceptado).
 
 ### F-011 · Evals de IA con ground truth y puerta en el arnés
 
