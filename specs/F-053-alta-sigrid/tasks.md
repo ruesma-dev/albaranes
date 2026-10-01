@@ -6,7 +6,14 @@ toda tarea con test (falla antes, pasa después; traza en `progress/impl_F-053.m
 Un commit por tarea, `F-053 Tn: ...`. Sin `git push`. Tests `test_f053_rN_*`,
 sin red ni BBDD: fakes de `AltaRepository`, `SigridAltaPort` y `PdfAlbaranPort`,
 y `httpx.MockTransport` para el cliente. **No se empieza sin la PARADA 1**
-(preguntas 1, 4 y 5 de `progress/spec_F-053.md`) y **no se fusiona en `dev` antes que F-052 y F-051** (design §8).
+(preguntas abiertas de `progress/spec_F-053.md`), **sin la medición de T0 ni con
+PRE-1 sin desplegar en sigrid-api** (design §1–§2), y **no se fusiona en `dev`
+antes que F-052 y F-051** (design §8). Los tests del cliente usan el contrato
+de PRE-1 tal como quede especificado en sigrid-api, no el de design §2 si difiere.
+
+## Bloque 0 · medición (humano, 2026-10-01: «medir antes»)
+
+- [ ] T0: Ejecutar la medición de solo lectura (script y tests ya en la rama: `services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py`) y decidir con el resultado si se sigue y con qué alcance  |  Verificación: MANUAL (humano) — comando en `progress/spec_F-053.md`; tests del script: `pytest services/albaranes-persistencia -k f053_medicion`
 
 ## Bloque A · contratos y esquema
 
@@ -17,21 +24,21 @@ y `httpx.MockTransport` para el cliente. **No se empieza sin la PARADA 1**
 
 ## Bloque B · dominio puro de sv9
 
-- [ ] T5: `validador_alta.validar_y_construir`: los 13 motivos de R10 (uno por test y uno con todos a la vez), partidas de R11, construcción de R12 y exclusión de R13  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r10 or f053_r11 or f053_r12 or f053_r13"`
-- [ ] T6: `comparador_previa.comparar`: `importe_distinto` (en el borde de la tolerancia y fuera), `lineas_distintas` (sobra y falta) y `aviso_bloqueante` (R17)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r17`
-- [ ] T7: `clasificador`: 200 ok/committed → `registrado`; 400 → `error`; 401/403 → `error`; 5xx, tiempo agotado y conexión → `incierto` (R18, R20, R21)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r18 or f053_r21"`
+- [ ] T5: `validador_alta.validar_y_construir`: los 10 motivos de R10 (uno por test y uno con todos a la vez), línea sin contrato con partida o almacén admisible (R11), petición de PRE-1 de R12 (vinculadas sumadas por `sigrid_ide`, sin contrato una por línea, `partida` o `almacen`, `referencia_externa`, `referencia_linea`, `empide`) y exclusión de R13  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r10 or f053_r11 or f053_r12 or f053_r13"`
+- [ ] T6: `comparador_previa.comparar`: `importe_distinto` (en el borde de la tolerancia y fuera), `lineas_distintas` (sobra y falta), `partida_distinta` (partida y almacén) y `aviso_bloqueante` (R17)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r17`
+- [ ] T7: `clasificador`: 200 ok con `committed` o `idempotente` → `registrado`; 400 → `error`; 401/403 → `error`; 5xx, tiempo agotado y conexión → `incierto` (R18, R20, R21)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r18 or f053_r21"`
 
 ## Bloque C · servicio de sv9
 
 - [ ] T8: `AltaSigridService`, entrada: reclamación y sus salidas `ignorar`, `solo_adjunto`, `a_incierto`, `procesar` (R5–R8) y el `finally` de R9 (excepción antes y durante la grabación)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r5 or f053_r6 or f053_r7 or f053_r8 or f053_r9"`
-- [ ] T9: No admitido sin llamadas al puerto de Sigrid, y duplicados: `ya_en_sigrid` en los dos modos y retomar `incierto` con 0, 1 y 2 resultados (R10, R14, R15)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r14 or f053_r15 or f053_r10_sin_llamadas"`
+- [ ] T9: No admitido sin llamadas al puerto de Sigrid, y duplicados: `synckey` nuestra → `registrado`, ajena → `ya_en_sigrid` (en los dos modos), y retomar `incierto`: encontrado → `registrado`, no encontrado → reenvío y `idempotente` → `registrado` (R10, R14, R15)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r14 or f053_r15 or f053_r10_sin_llamadas"`
 - [ ] T10: Previa y simulación: se guardan petición y respuesta, 400 de la previa → `error`, previa limpia → `simulado`, y en simulación ninguna llamada lleva `commit=true` (R16, R18, R19)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r16 or f053_r19"`
 - [ ] T11: Modo real: una sola grabación sin reintento, `registrado` con `con_ide`/`cod`; adjunto con `contip` 14, `gratipide` 0 y `sha256`; `idempotente` cuenta como colgado; fallo del adjunto y reintento solo del adjunto (R20–R23)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r20 or f053_r22 or f053_r23"`
 - [ ] T12: `verificar_anulacion` en sv9: `anulado` si el `con.ide` ya no existe, aviso «sigue en Sigrid» si existe, e ignorada si el alta no está `registrado` (R28)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r28`
 
 ## Bloque D · adaptadores de sv9
 
-- [ ] T13: `sigrid_api_alta_client`: cuerpos exactos de las tres rutas, reintento con tenacity en lecturas/previa/adjunto y **ninguno** en la grabación, `timeout` 240 s, la clave nunca en logs (R24, R33, R35)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r24 or f053_r33 or f053_r35"`
+- [ ] T13: `sigrid_api_alta_client`: cuerpos exactos de `sql/read`, el alta de PRE-1 y `concepto-grafico`, reintento con tenacity en lecturas/previa/adjunto y **ninguno** en la grabación, `timeout` 240 s, la clave nunca en logs (R24, R33, R35)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r24 or f053_r33 or f053_r35"`
 - [ ] T14: `sql_alta_repository`: reclamación con `FOR UPDATE`, lectura de datos, guardado con `historial_json`; tests del SQL generado y de la traducción fila → `DatosAlta`  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_repositorio` + MANUAL de T26
 - [ ] T15: `pdf_sharepoint` con `GraphSharePointClient` falso (ruta relativa del merge; sin ruta → adjunto en error)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_pdf`
 - [ ] T16: Worker, composición y `main_worker.py` sobre `COLA_FEEDBACK`: resultado de negocio confirma, fallo de infraestructura antes de reclamar reencola, mensaje de otro `tipo` a poison  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_worker`
@@ -53,8 +60,8 @@ y `httpx.MockTransport` para el cliente. **No se empieza sin la PARADA 1**
 
 ## Bloque G · verificación REAL (solo el humano; cada paso con su autorización)
 
-- [ ] T26: LOCAL (Azurite + PostgreSQL local + sigrid-api en **simulación**, `ALTA_SIGRID_COMMIT` sin poner): aprobar tres documentos —uno admisible, uno con línea fuera de contrato, uno cuyo número ya está en Sigrid— y leer `psql "$env:ALBARANES_DB_URL" -c "SELECT document_id, estado, modo, sigrid_cod, motivos_json FROM albaran_altas_sigrid;"`. VERDE si salen `simulado`, `no_admitido` (`linea_fuera_de_contrato`) y `ya_en_sigrid`, y desaprobar el primero funciona (no es bloqueante)  |  Verificación: MANUAL (humano)
+- [ ] T26: LOCAL (Azurite + PostgreSQL local + sigrid-api en **simulación**, `ALTA_SIGRID_COMMIT` sin poner): aprobar cuatro documentos —uno todo vinculado, uno con líneas sin contrato con partida, uno con una línea sin partida ni almacén, uno cuyo número ya está en Sigrid— y leer `psql "$env:ALBARANES_DB_URL" -c "SELECT document_id, estado, modo, sigrid_cod, motivos_json FROM albaran_altas_sigrid;"`. VERDE si salen `simulado`, `simulado` (partidas pedidas en la previa), `no_admitido` (`linea_sin_partida`) y `ya_en_sigrid`, y desaprobar el primero funciona (no es bloqueante)  |  Verificación: MANUAL (humano)
 - [ ] T27: Cerrojo real: con un alta puesta a mano en `registrado` en la BBDD LOCAL, probar en `http://localhost:8004` guardar, desaprobar, deshacer, borrar y revalorar; todos rechazados y la fila del merge sin cambios  |  Verificación: MANUAL (humano)
-- [ ] T28: AZURE en simulación (tras desplegar sv3 → sv9 → sv4 con DESDE puesta): revisar a diario los `simulado`/`revisar`/`no_admitido` y medir cuántos aprobados serían admisibles  |  Verificación: MANUAL (humano) — mismo SELECT contra la BBDD real, solo lectura
+- [ ] T28: AZURE en simulación (tras desplegar sv3 → sv9 → sv4 con DESDE puesta): revisar a diario los `simulado`/`revisar`/`no_admitido` y comparar con la medición de T0  |  Verificación: MANUAL (humano) — mismo SELECT contra la BBDD real, solo lectura
 - [ ] T29: PRIMERA GRABACIÓN REAL, con autorización expresa y sobre un albarán elegido por el humano: `ALTA_SIGRID_COMMIT=true`, aprobar, comprobar en la UI de Sigrid cabecera, líneas, stock, `canser` y el PDF adjunto; volver a publicar a mano en `q-feedback` el mensaje de alta de ese documento y comprobar que no se crea otro (sigue `registrado` sin cambios)  |  Verificación: MANUAL (humano)
 - [ ] T30: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`

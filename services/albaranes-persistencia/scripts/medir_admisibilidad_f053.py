@@ -1,0 +1,378 @@
+# scripts/medir_admisibilidad_f053.py
+"""Medición de SOLO LECTURA para F-053: ¿qué parte de los albaranes se podría
+dar de alta en Sigrid?
+
+Decisión del humano (2026-10-01): «medir antes» de fijar el alcance de F-053.
+Lee la PostgreSQL del pipeline con la configuración del ``.env`` de sv3 y
+clasifica cada línea con cantidad y cada albarán:
+
+- (a) **registrable con sigrid-api tal cual**: contrato en la valoración,
+  valoración ``ok`` y TODAS las líneas con cantidad casan con una línea del
+  contrato de la valoración con su misma partida (o almacén contra una línea
+  de contrato sin partida). Es el alcance de ``sigrid/albaran`` hoy.
+- (b) **registrable con el criterio del humano**: todas las líneas con
+  cantidad llevan partida o son almacén (F-051); casar con el contrato no es
+  requisito. Exige la ampliación de sigrid-api descrita en la spec de F-053.
+
+En los dos casos la cabecera debe traer obra, CIF, número de albarán y fecha
+``AAAA-MM-DD`` válida, y ninguna línea puede tener cantidad negativa.
+
+Solo ejecuta SELECT, dentro de una transacción ``READ ONLY``. No imprime la
+cadena de conexión ni ninguna credencial. Lo ejecuta el humano:
+
+    cd services\\albaranes-persistencia
+    .\\.venv\\Scripts\\python.exe -m scripts.medir_admisibilidad_f053 [--todos] [--csv salida.csv] [--env otro.env]
+
+Aviso: antes de F-051 casi ninguna línea lleva marca de almacén, así que la
+categoría «sin partida ni almacén» sale inflada con datos anteriores a F-051.
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+import re
+import sys
+from collections import Counter
+from dataclasses import dataclass, field
+from datetime import date
+from typing import Iterable, Mapping
+
+#: Valores de ``partida_action`` que marcan una línea como almacén (F-051 y
+#: los que ya existían). Solo cuentan con la partida final vacía.
+MARCAS_ALMACEN: frozenset[str] = frozenset({
+    "almacen_sin_partida",
+    "almacen_elegido",
+    "alm_new_line_created",
+    "inherited_from_base_line",
+    "alm_acopio",
+})
+
+#: Categorías de línea, excluyentes, en el orden en que se informan.
+CATEGORIAS = (
+    "casa_misma_partida",
+    "casa_partida_distinta",
+    "partida_sin_casar",
+    "almacen_sin_casar",
+    "sin_partida_ni_almacen",
+)
+
+_RE_FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+SQL_LINEAS_VALORADAS = """
+SELECT d.id AS document_id, d.approved, d.obra_codigo, d.proveedor_cif,
+       d.numero_albaran, d.fecha,
+       v.status AS valoracion_status, v.contrato_codigo AS valoracion_contrato,
+       lv.id AS lv_id, lv.cantidad_albaran, lv.cantidad_convertida,
+       lv.matched_contrato_line_id, lv.derived_contrato_line_id,
+       lv.codigo_partida_final, lv.partida_action,
+       cl.sigrid_ide AS cl_sigrid_ide, cl.codigo_contrato AS cl_contrato,
+       cl.codigo_partida AS cl_partida
+FROM albaran_documents_merge d
+LEFT JOIN albaran_valuations v ON v.document_id = d.id
+LEFT JOIN albaran_line_valuations lv ON lv.valuation_id = v.id
+LEFT JOIN albaran_contrato_lines_merge cl ON cl.id = lv.matched_contrato_line_id
+WHERE d.is_active AND (:todos OR d.approved)
+ORDER BY d.id, lv.id
+"""
+
+SQL_LINEAS_MERGE = """
+SELECT l.document_id, l.id AS linea_id, l.cantidad, l.codigo_imputacion
+FROM albaran_lines_merge l
+JOIN albaran_documents_merge d ON d.id = l.document_id
+WHERE d.is_active AND (:todos OR d.approved)
+ORDER BY l.document_id, l.id
+"""
+
+
+def _texto(valor: object) -> str | None:
+    """Recorta y devuelve ``None`` si queda vacío."""
+    if valor is None:
+        return None
+    limpio = str(valor).strip()
+    return limpio or None
+
+
+def normalizar_partida(valor: object) -> str | None:
+    """Vacío y nulo son lo mismo; mayúsculas para comparar códigos."""
+    limpio = _texto(valor)
+    return limpio.upper() if limpio else None
+
+
+def fecha_valida(valor: object) -> bool:
+    """``True`` solo para una fecha ``AAAA-MM-DD`` que exista."""
+    limpio = _texto(valor)
+    if not limpio or not _RE_FECHA.match(limpio):
+        return False
+    try:
+        date.fromisoformat(limpio)
+    except ValueError:
+        return False
+    return True
+
+
+@dataclass(frozen=True)
+class Linea:
+    """Una línea a evaluar, venga de la valoración o del merge."""
+
+    cantidad: float | None
+    partida: str | None
+    almacen: bool
+    casa: bool
+    partida_contrato: str | None = None
+
+
+@dataclass
+class Albaran:
+    """Cabecera y líneas de un albarán, ya leídas."""
+
+    document_id: str
+    approved: bool
+    obra_codigo: str | None
+    proveedor_cif: str | None
+    numero_albaran: str | None
+    fecha: str | None
+    valoracion_status: str | None
+    valoracion_contrato: str | None
+    origen_lineas: str = "valoracion"
+    lineas: list[Linea] = field(default_factory=list)
+
+
+def categoria_linea(linea: Linea) -> str:
+    """Clasifica una línea con cantidad positiva en una de ``CATEGORIAS``."""
+    if linea.partida is None and not linea.almacen:
+        return "sin_partida_ni_almacen"
+    if linea.casa:
+        if linea.almacen:
+            ok = linea.partida_contrato is None
+        else:
+            ok = linea.partida == linea.partida_contrato
+        return "casa_misma_partida" if ok else "casa_partida_distinta"
+    return "almacen_sin_casar" if linea.almacen else "partida_sin_casar"
+
+
+def linea_desde_valoracion(
+    fila: Mapping[str, object], marcas_almacen: frozenset[str] = MARCAS_ALMACEN,
+) -> Linea:
+    """Traduce una fila de ``SQL_LINEAS_VALORADAS`` (con ``lv_id``)."""
+    cantidad = fila.get("cantidad_convertida")
+    if cantidad is None:
+        cantidad = fila.get("cantidad_albaran")
+    partida = normalizar_partida(fila.get("codigo_partida_final"))
+    accion = _texto(fila.get("partida_action")) or ""
+    contrato = _texto(fila.get("valoracion_contrato"))
+    casa = (
+        fila.get("matched_contrato_line_id") is not None
+        and fila.get("derived_contrato_line_id") is None
+        and fila.get("cl_sigrid_ide") is not None
+        and contrato is not None
+        and _texto(fila.get("cl_contrato")) == contrato
+    )
+    return Linea(
+        cantidad=None if cantidad is None else float(cantidad),
+        partida=partida,
+        almacen=partida is None and accion in marcas_almacen,
+        casa=casa,
+        partida_contrato=normalizar_partida(fila.get("cl_partida")),
+    )
+
+
+def linea_desde_merge(fila: Mapping[str, object]) -> Linea:
+    """Albarán sin líneas valoradas: partida impresa, sin casar ni almacén."""
+    cantidad = fila.get("cantidad")
+    return Linea(
+        cantidad=None if cantidad is None else float(cantidad),
+        partida=normalizar_partida(fila.get("codigo_imputacion")),
+        almacen=False,
+        casa=False,
+    )
+
+
+def agrupar(
+    filas_valoradas: Iterable[Mapping[str, object]],
+    filas_merge: Iterable[Mapping[str, object]],
+    marcas_almacen: frozenset[str] = MARCAS_ALMACEN,
+) -> list[Albaran]:
+    """Junta cabecera y líneas por documento. Sin líneas valoradas, usa las
+    del merge (``origen_lineas = "merge"``)."""
+    albaranes: dict[str, Albaran] = {}
+    for fila in filas_valoradas:
+        doc = str(fila["document_id"])
+        if doc not in albaranes:
+            albaranes[doc] = Albaran(
+                document_id=doc,
+                approved=bool(fila.get("approved")),
+                obra_codigo=_texto(fila.get("obra_codigo")),
+                proveedor_cif=_texto(fila.get("proveedor_cif")),
+                numero_albaran=_texto(fila.get("numero_albaran")),
+                fecha=_texto(fila.get("fecha")),
+                valoracion_status=_texto(fila.get("valoracion_status")),
+                valoracion_contrato=_texto(fila.get("valoracion_contrato")),
+            )
+        if fila.get("lv_id") is not None:
+            albaranes[doc].lineas.append(
+                linea_desde_valoracion(fila, marcas_almacen)
+            )
+    sin_valorar = {d for d, a in albaranes.items() if not a.lineas}
+    for fila in filas_merge:
+        doc = str(fila["document_id"])
+        if doc in sin_valorar:
+            albaranes[doc].origen_lineas = "merge"
+            albaranes[doc].lineas.append(linea_desde_merge(fila))
+    return list(albaranes.values())
+
+
+def cabecera_completa(alb: Albaran) -> bool:
+    """Obra, CIF, número de albarán y fecha válida."""
+    return bool(
+        alb.obra_codigo and alb.proveedor_cif and alb.numero_albaran
+        and fecha_valida(alb.fecha)
+    )
+
+
+def evaluar(alb: Albaran) -> dict[str, object]:
+    """Cuentas por categoría y los dos veredictos de un albarán."""
+    con_cantidad = [l for l in alb.lineas if (l.cantidad or 0) > 0]
+    negativas = sum(1 for l in alb.lineas if (l.cantidad or 0) < 0)
+    cuentas = Counter(categoria_linea(l) for l in con_cantidad)
+    almacen = sum(1 for l in con_cantidad if l.almacen)
+    base = cabecera_completa(alb) and bool(con_cantidad) and negativas == 0
+    registrable_a = (
+        base
+        and alb.valoracion_status == "ok"
+        and alb.valoracion_contrato is not None
+        and cuentas["casa_misma_partida"] == len(con_cantidad)
+    )
+    registrable_b = base and cuentas["sin_partida_ni_almacen"] == 0
+    resultado: dict[str, object] = {
+        "document_id": alb.document_id,
+        "aprobado": alb.approved,
+        "origen_lineas": alb.origen_lineas,
+        "con_contrato": alb.valoracion_contrato is not None,
+        "cabecera_completa": cabecera_completa(alb),
+        "lineas_con_cantidad": len(con_cantidad),
+        "lineas_negativas": negativas,
+        "almacen": almacen,
+        "registrable_a": registrable_a,
+        "registrable_b": registrable_b,
+    }
+    for nombre in CATEGORIAS:
+        resultado[nombre] = cuentas[nombre]
+    return resultado
+
+
+def resumir(evaluaciones: list[dict[str, object]]) -> dict[str, object]:
+    """Agregado: sumas de líneas y porcentajes de albaranes."""
+    total = len(evaluaciones)
+
+    def pct(n: int) -> float:
+        return round(100.0 * n / total, 1) if total else 0.0
+
+    resumen: dict[str, object] = {"albaranes": total}
+    for clave in ("con_contrato", "cabecera_completa", "registrable_a",
+                  "registrable_b"):
+        n = sum(1 for e in evaluaciones if e[clave])
+        resumen[clave] = n
+        resumen[f"pct_{clave}"] = pct(n)
+    resumen["sin_lineas_valoradas"] = sum(
+        1 for e in evaluaciones if e["origen_lineas"] == "merge"
+    )
+    for clave in ("lineas_con_cantidad", "lineas_negativas", "almacen",
+                  *CATEGORIAS):
+        resumen[clave] = sum(int(e[clave]) for e in evaluaciones)
+    return resumen
+
+
+def _formato_es(valor: object) -> object:
+    """Coma decimal para Excel en español."""
+    if isinstance(valor, float):
+        return f"{valor}".replace(".", ",")
+    return valor
+
+
+def escribir_csv(ruta: str, evaluaciones: list[dict[str, object]]) -> None:
+    """CSV por albarán: UTF-8 con BOM, ``;`` y coma decimal."""
+    if not evaluaciones:
+        return
+    with open(ruta, "w", encoding="utf-8-sig", newline="") as fichero:
+        escritor = csv.DictWriter(
+            fichero, fieldnames=list(evaluaciones[0]), delimiter=";",
+        )
+        escritor.writeheader()
+        for fila in evaluaciones:
+            escritor.writerow({k: _formato_es(v) for k, v in fila.items()})
+
+
+def formatear_resumen(resumen: Mapping[str, object], todos: bool) -> str:
+    """Texto legible del agregado (sin datos de conexión)."""
+    ambito = "activos (aprobados o no)" if todos else "aprobados y activos"
+    lineas = [
+        f"F-053 · medición de admisibilidad · albaranes {ambito}",
+        f"Albaranes: {resumen['albaranes']}",
+        f"  con contrato en la valoración: {resumen['con_contrato']} "
+        f"({resumen['pct_con_contrato']} %)",
+        f"  cabecera completa: {resumen['cabecera_completa']} "
+        f"({resumen['pct_cabecera_completa']} %)",
+        f"  sin líneas valoradas (se usan las del merge): "
+        f"{resumen['sin_lineas_valoradas']}",
+        f"  (a) registrables con sigrid-api tal cual: "
+        f"{resumen['registrable_a']} ({resumen['pct_registrable_a']} %)",
+        f"  (b) registrables con el criterio del humano: "
+        f"{resumen['registrable_b']} ({resumen['pct_registrable_b']} %)",
+        f"Líneas con cantidad: {resumen['lineas_con_cantidad']} "
+        f"(negativas aparte: {resumen['lineas_negativas']})",
+    ]
+    for nombre in CATEGORIAS:
+        lineas.append(f"  {nombre}: {resumen[nombre]}")
+    lineas.append(f"  almacén (casen o no): {resumen['almacen']}")
+    return "\n".join(lineas)
+
+
+def leer_filas(
+    todos: bool, env: str | None = None,
+) -> tuple[list[dict], list[dict]]:
+    """Las dos consultas, en una transacción de solo lectura. ``env``: otro
+    ``.env`` de sv3 (p. ej. el del árbol principal si se lanza desde un
+    worktree, que no tiene ``.env``)."""
+    from sqlalchemy import create_engine, text
+
+    from config.settings import Settings
+
+    ajustes = Settings(_env_file=env) if env else Settings()
+    engine = create_engine(ajustes.database_url)
+    try:
+        with engine.connect() as conexion, conexion.begin():
+            conexion.execute(text("SET TRANSACTION READ ONLY"))
+            parametros = {"todos": todos}
+            valoradas = [
+                dict(f) for f in conexion.execute(
+                    text(SQL_LINEAS_VALORADAS), parametros,
+                ).mappings()
+            ]
+            merge = [
+                dict(f) for f in conexion.execute(
+                    text(SQL_LINEAS_MERGE), parametros,
+                ).mappings()
+            ]
+    finally:
+        engine.dispose()
+    return valoradas, merge
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--todos", action="store_true",
+                        help="incluir también los no aprobados (no borrados)")
+    parser.add_argument("--csv", help="ruta del CSV con el detalle por albarán")
+    parser.add_argument("--env", help="otro .env de sv3 (por defecto, el suyo)")
+    args = parser.parse_args(argv)
+    valoradas, merge = leer_filas(args.todos, args.env)
+    evaluaciones = [evaluar(a) for a in agrupar(valoradas, merge)]
+    print(formatear_resumen(resumir(evaluaciones), args.todos))
+    if args.csv:
+        escribir_csv(args.csv, evaluaciones)
+        print(f"Detalle por albarán: {args.csv}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -9,9 +9,10 @@
 
 **F-053 · SPEC ESCRITA (`spec_ready`, 2026-09-30)** en la rama `feature/F-053-alta-sigrid` (worktree
 `../albaranes-F-053`): alta en Sigrid de los albaranes aprobados, servicio nuevo sv9, arranque en simulación.
-Spec en `specs/F-053-alta-sigrid/`, hallazgos y **16 preguntas abiertas** para la PARADA 1 en
-`progress/spec_F-053.md` (las que deciden el alcance: 1 servicio nuevo, 4 límites de sigrid-api, 5 aprobar
-lo no admisible). Sustituiría a F-013. Orden: F-052 → F-051 → F-053.
+**v2 (2026-10-01)** con las respuestas del humano (medir antes; partida o almacén obligatorio, casar con el
+contrato no; empleado fijo; clave de siempre). **Depende de PRE-1, feature del repo sigrid-api.** Pendiente
+del humano: ejecutar la medición (comando en `progress/spec_F-053.md`) y las preguntas abiertas que quedan
+(nuevas 17–20). Sustituiría a F-013. Orden: medición → PRE-1 → F-052 → F-051 → F-053.
 
 **F-048 · CERRADA (`done`, 2026-09-29).** Resumen en `progress/history.md`. **Pendiente del humano: merge a
 `dev`, push (este repo y `azure-apps`, que no tiene remoto) y despliegue sv3 → sv2 → sv1 → sv4 con `-Only`
