@@ -170,10 +170,12 @@ por defecto a 1.000/5.000, sin guarda de `max_rows`, sin guarda de página en sv
 
 ## Fuera del alcance / pendiente
 
-- **T19** (campaña de mutación completa; crítico: 0 supervivientes sin justificar). Incluirá el
-  script de T14, que cuenta como producción (`scripts/` no está excluido del alcance).
+- **T19 hecha** (2026-10-01): `progress/mutacion_F-052.md` (en serie, HEAD `dcca978`): 220 / 218
+  muertos / **2 supervivientes, ambos PROPUESTA para el humano** (`scripts/...:48` equivalente;
+  `obras/codigo.py:39` falso superviviente: lo matan tests existentes). Tests nuevos en `dcca978`;
+  detalle, RED y la anomalía de falsos supervivientes en `progress/impl_F-052_T19_supervivientes.md`.
 - **MANUAL (humano)**: T20 (R29) y T21 (R30) con el script, solo lectura; T22 (R31, pipeline
-  local; cubre el cableado de D4-A, sin tests de FastAPI ni de JS); T23 tras desplegar sv3 → sv4.
+  local; cubre el cableado de D4-A, sin tests de JS; las rutas PUT/GET tienen tests de FastAPI desde T19); T23 tras desplegar sv3 → sv4.
 - La SQL agregada y la de obras grandes solo se han probado contra el doble (T20, T21, T23).
 - **Para el líder** (fuera de mi alcance): `PycharmProjects/CLAUDE.md` («como máximo 1.000 filas
   por petición») y `azure-apps/{sigrid_api,datamart_seg_anual,remesas,postventa_incidencias}.md`
@@ -189,4 +191,4 @@ por defecto a 1.000/5.000, sin guarda de `max_rows`, sin guarda de página en sv
 | Suites a mano tras el Bloque D, una tras otra | sv3 `400 passed in 8.78s`; comun `327 passed in 38.29s`; sv4 `372 passed in 18.19s` (sin cambios en sv4; comun cambió) |
 | `bash harness/init.sh` final | tras `ebd6905`: ENTORNO LISTO, exit 0; raíz `1067 passed in 378.14s`; sv3 `400 passed in 16.92s`; comun `327 passed in 62.80s`; sv4 en verde (caché); `PUERTA COBERTURA: 97.5% de 601 líneas cambiadas cubiertas (586/601, umbral 80%, nivel critico)` (las 11 de antes + 4 del script que solo corren al ejecutarlo: inserción en `sys.path`, import de `Settings` y el bloque `__main__`); tamaño `impl 192/220`; ruff 1166 (los 16 avisos nuevos del Bloque D, corregidos en `ebd6905`) |
 | Tiempo de la suite | sv3 8,5–23 s; comun 38–85 s; sv4 18 s; raíz 257–458 s |
-| Mutación | Campaña: T19 (fuera). Manuales: A 1 (+2 review), B **7/7**, C **12/12**, correcciones **10/10**, D **17/17** muertos |
+| Mutación | T19, campaña completa en serie (`--workers 1`, HEAD `dcca978`): **220 generados, 218 muertos, 2 supervivientes** (propuestas), 0 timeouts, 1.368,7 s; la 1.ª (4 workers, `07f89cf`) dio 44, de ellos 43 muertos con 32 tests nuevos (comun 5, sv4 6, sv3 21). Manuales: A 1 (+2 review), B **7/7**, C **12/12**, correcciones **10/10**, D **17/17** muertos |

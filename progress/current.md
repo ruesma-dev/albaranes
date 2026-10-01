@@ -5,6 +5,17 @@
 > bloques de F-036, sus dos ciclos de review y los hallazgos— está en
 > `progress/history.md`. Aquí solo queda lo vivo.
 
+## F-052 · T19 hecha (2026-10-01, implementer)
+
+Campaña de mutación en serie sobre `dcca978`: 220 / 218 muertos / **2 supervivientes**
+(`progress/mutacion_F-052.md`). 1.ª campaña (4 workers, `07f89cf`): 44 supervivientes; 43
+muertos con 32 tests nuevos (`dcca978`, sin cambios de producción). **Pendiente del humano**
+(T19 sigue `[ ]` hasta entonces): aceptar o no las 2 propuestas — `scripts/...:48` equivalente
+y `obras/codigo.py:39` falso superviviente (lo matan tests existentes). **Hallazgo para el
+arnés**: la herramienta da de vez en cuando un muerto como vivo (2 en paralelo, 1 en serie;
+causa no encontrada). Detalle: `progress/impl_F-052_T19_supervivientes.md`. Siguiente: review
+de T19; luego MANUAL T20–T23.
+
 ## F-052 · Bloque D hecho (2026-10-01, implementer)
 
 Bloques A, B y C (con sus correcciones) APROBADOS. Bloque D hecho, un commit por tarea:
