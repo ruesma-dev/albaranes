@@ -3,9 +3,8 @@ Revisión incremental desde ce6bbd4 (Bloque D, pasada 1): `git diff ce6bbd4..7a1
 # F-052 · Review PARCIAL del Bloque D (T14, T14 bis, T16, T18, `ruesma_comun` 0.7.0)
 
 - **Veredicto del bloque:** APROBADO. No es veredicto de cierre de F-052 (faltan T19–T23).
-- **Nivel de rigor:** `critico` (declarado en `features.json`): RED, cobertura ≥ 80 %, mutación
-  con 0 supervivientes sin justificar y MANUAL. Campaña (T19) y MANUAL (T20–T23) fuera del
-  bloque por el plan de `tasks.md`.
+- **Nivel de rigor:** `critico` (declarado): RED, cobertura ≥ 80 %, mutación con 0
+  supervivientes sin justificar y MANUAL. T19 y T20–T23 fuera del bloque por plan.
 
 ## Verificación propia
 
@@ -134,9 +133,7 @@ halla ningún `0.6.0` ni pin en requirements o Dockerfiles; un test ata paquete 
   `azure-apps` puede no conocer. Cosmético.
 - **O-D4 · R29 no compara 81 filas ni `CTSU24/0402`**: los imprime y el humano los contrasta
   con T20/T21. Aceptable en un instrumento manual.
-- Siguen abiertas, fuera del bloque: O-C4, O-C5, O-B2, T19 (incluirá `scripts/`), T20–T23, y
-  el «1.000» del `CLAUDE.md` transversal y de otros documentos de `azure-apps` (otros dueños).
+- Abiertas fuera del bloque: O-C4, O-C5, O-B2, T19 (incluirá `scripts/`), T20–T23 y el «1.000»
+  del `CLAUDE.md` transversal y de otros documentos de `azure-apps` (otros dueños).
 
-## Cambios requeridos
-
-Ninguno.
+**Cambios requeridos:** ninguno.
