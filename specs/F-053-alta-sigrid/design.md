@@ -1,16 +1,16 @@
 <!-- specs/F-053-alta-sigrid/design.md -->
 # F-053 · Alta en Sigrid de los albaranes aprobados · Diseño
 
-Requisitos: `requirements.md`. Preguntas abiertas: `progress/spec_F-053.md`.
+Requisitos: `requirements.md`. Decisiones (todas cerradas, 2026-10-01): `progress/spec_F-053.md`.
 
 ## 1. Encaje, límite de servicio y precondiciones
 
 Responsabilidad **nueva** (escribir en el ERP): **servicio nuevo sv9**
 (`services/albaranes-alta-sigrid`, `ca-sv9-alta-sigrid`), solo worker, hexagonal
-como sv6 (pregunta 1). `sv7` = orquestador retirado, `sv8` = aprendizaje
+como sv6 (decidido). `sv7` = orquestador retirado, `sv8` = aprendizaje
 (docstring de `MensajeFeedback`). Flujo: sv4 aprueba → `q-feedback` (reservada
 para esto en `docs/ARCHITECTURE.md`) → sv9 → sigrid-api → `albaran_altas_sigrid`
-← sv4 la lee (pregunta 2).
+← sv4 la lee (decidido).
 
 **Precondiciones (humano, 2026-10-01)** para `in_progress`: (1) la **medición**
 (`services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py`, solo
@@ -36,8 +36,8 @@ sin git): `domain/models/albaran_*models.py`, `application/use_cases/create_*alb
 
 **El criterio del humano no se puede expresar hoy** (vinculadas y sin vincular
 en un albarán, partida por línea, almacén explícito, negativas). F-053 depende
-de **PRE-1**, feature del repositorio sigrid-api (allí el siguiente id libre es
-F-009). Lo que necesita (ampliación compatible de `sigrid/albaran` o ruta nueva):
+de **PRE-1 = F-009 de sigrid-api** (la especifica otro agente en ese repo; si su
+contrato difiere de esta lista, manda el suyo). Lo que F-053 necesita:
 - `cod_contrato` opcional (obligatorio si hay `lineas_recibidas`).
 - `referencia_externa` (≤128) → `dca.synckey`, con idempotencia como
   `partes-reclamacion`: misma `emp` y referencia ⇒ `idempotente` con su `ide`/`cod`,
@@ -103,6 +103,8 @@ sv4: `templates/_alta_sigrid.html` (panel de la ficha, R29–R30).
 - `services/albaranes-comun/ruesma_comun/colas/mensajes.py` — `MensajeFeedback.
   accion: Literal["alta","verificar_anulacion"] = "alta"`; docstring: consumidor
   sv9. Cambiar comun obliga a reconstruir todas las imágenes (ARCHITECTURE).
+- `ruesma_comun/valoracion.py` (nuevo, puro) — `esta_valorado(status, importes)
+  -> bool` del glosario (R38): lo usan sv4 (R37) y sv9 (R10).
 - `services/albaranes-persistencia/infrastructure/database/schema_contribution.py`
   — `CREATE TABLE IF NOT EXISTS albaran_altas_sigrid` (§6).
 - `services/albaranes-front/config/settings.py` — `ALTA_SIGRID_DESDE_UTC`,
@@ -112,10 +114,10 @@ sv4: `templates/_alta_sigrid.html` (panel de la ficha, R29–R30).
   pasa a devolver si publicó; nuevo `solicitar_alta_sigrid(document_id, accion)`.
 - `.../albaranes-front/application/services/review_service.py` — recibe el
   cliente de colas y la configuración; publica en el paso a aprobado (R1–R4);
-  traduce `AlbaranBloqueadoError` (R25) y rechaza aprobar sin valoración `ok`
+  traduce `AlbaranBloqueadoError` (R25) y rechaza aprobar lo no valorado
   (`AlbaranSinValorarError`, R37) en `approve_document` y `save_document`.
 - `.../albaranes-front/infrastructure/database/review_repository.py` —
-  `leer_alta_sigrid(document_id)`, `es_aprobado`, `estado_valoracion` y
+  `leer_alta_sigrid(document_id)`, `es_aprobado`, `datos_valoracion` (status e importes) y
   `_exigir_desbloqueado(session, document_id)`: `SELECT ... FROM
   albaran_documents_merge m LEFT JOIN albaran_altas_sigrid a ... FOR UPDATE OF m`;
   la llaman al empezar, en su sesión, `update_document`, `set_approved(False)`,
@@ -137,10 +139,9 @@ sv4: `templates/_alta_sigrid.html` (panel de la ficha, R29–R30).
 
 ## 5. Flujo de sv9 (`AltaSigridService.procesar`)
 
-1. `reclamar` (R5–R8), una transacción: `SELECT ... FROM albaran_documents_merge
-   WHERE id = :id FOR UPDATE`; lee el alta; decide `ignorar` / `solo_adjunto` /
-   `a_incierto` / `procesar` / `verificar_anulacion`; si procesa, UPSERT del alta a
-   `en_curso` con `ultimo_intento_at_utc = ahora`.
+1. `reclamar` (R5–R8), en una transacción con el merge `FOR UPDATE`: decide
+   `ignorar` / `solo_adjunto` / `a_incierto` / `procesar` / `verificar_anulacion`;
+   si procesa, UPSERT a `en_curso` con `ultimo_intento_at_utc = ahora`.
 2. `verificar_anulacion` (R28): `existe_concepto(sigrid_con_ide)` → `anulado` o aviso.
 3. `leer_datos` y `validar_y_construir` → `no_admitido` si hay motivos (R10–R13).
 4. `buscar_albaranes(cif, referencia)` → `registrado` si su `synckey` es la
@@ -149,8 +150,7 @@ sv4: `templates/_alta_sigrid.html` (panel de la ficha, R29–R30).
 6. Simulación → `simulado` (R19). Real → grabación única (R20–R21).
 7. Adjunto (R22–R23). Todo el cuerpo va en `try/finally` para R9.
 
-Cada paso guarda `peticion_json`, `respuesta_json`, `motivos_json` y añade una
-entrada `{ts, estado, cod, motivos}` a `historial_json`.
+Cada paso guarda petición, respuesta y motivos, y apunta `{ts, estado, cod, motivos}` en `historial_json`.
 
 ## 6. SQL (DDL en sv3, dueño del schema; sin ficheros `.sql`: DDL inline)
 
@@ -169,10 +169,9 @@ CREATE TABLE IF NOT EXISTS albaran_altas_sigrid (
 CREATE INDEX IF NOT EXISTS ix_albaran_altas_sigrid_estado ON albaran_altas_sigrid (estado);
 ```
 
-Tabla aparte y no columnas del merge: el deshacer de sv4 restaura instantáneas
-de la fila del merge y devolvería un alta a un estado viejo. Fechas como
-`VARCHAR(64)` ISO, igual que el resto del esquema. Lectores: sv4 (leer) y sv9
-(escribir). sv5 no la lee. Lecturas de sv9: merge (cabecera), `albaran_valuations`
+Tabla aparte, no columnas del merge (el deshacer de sv4 restaura la fila del
+merge). Fechas `VARCHAR(64)` ISO como el resto. sv4 la lee, sv9 la escribe, sv5
+no la lee. Lecturas de sv9: merge (cabecera), `albaran_valuations`
 (`status`, `contrato_codigo`), `albaran_line_valuations` (cantidades, unidad,
 `precio_unitario_final`, `importe_calculado`, `matched_/derived_contrato_line_id`,
 `codigo_partida_final`, `partida_action`, `descripcion_linea`), la descripción de
@@ -202,7 +201,7 @@ En local, `ALTA_SIGRID_COMMIT` no se pone nunca (regla de solo lectura).
 fija el almacén (partida vacía + marca en `partida_action`) y su ruta de sv4
 (`asignar_almacen`) entra en R25 al fusionar. F-053 se implementa a la vez y se
 fusiona después; el modo `real`, con las tres en producción. «Solo líneas con
-importe» ya deja fuera el «solo llevar» de F-006; F-015 (tachadas), pregunta 12.
+importe» ya deja fuera el «solo llevar» de F-006; F-015 (tachadas), cuando llegue.
 Despliegue: sv3 (tabla) → sv9 (con DESDE vacía) → sv4 → DESDE en ambos
 (simulación) → días de simulación → `ALTA_SIGRID_COMMIT=true` (humano).
 
@@ -214,7 +213,7 @@ albarán y `concepto-grafico`, nunca `sql/write`, y solo con
 `ALTA_SIGRID_COMMIT=true`, que activa el humano. Desde local, nunca.» Igual en
 `docs/ARCHITECTURE.md` y `docs/referencia/dominio_negocio_albaranes.md` §5.2.
 `azure-apps/albaranes.md`: sv9, la tabla y el consumo de sigrid-api. La fila de
-`azure-apps/sigrid_api.md` §10 es de sigrid-api: se propone (pregunta 15).
+`azure-apps/sigrid_api.md` §10 es de sigrid-api: se edita con esta redacción.
 
 ## 10. Ficheros que NO se tocan
 
@@ -239,8 +238,11 @@ albarán y `concepto-grafico`, nunca `sql/write`, y solo con
 - **Carrera sv4 ↔ sv9**: ambos bloquean la fila del merge; las operaciones que
   solo publican (revalorar, re-buscar) comprueban sin cerrojo: la instantánea
   que se envía es la de `peticion_json`, y la revisión posterior la detecta.
-- **Sin valorar no se aprueba** (R37): como sv6 solo valora contra un contrato,
-  un albarán sin contrato tampoco se podrá aprobar (pregunta 21).
+- **Sin valorar no se aprueba** (R37, dentro de F-053). Sin contrato valora a mano
+  el administrativo, y **sv4 ya lo permite** (`review_repository.py`:
+  `add_standalone_valuation_line` y `add_conciliacion_for_merge_line` crean la
+  cabecera `manual` si falta; se editan partida, descripción, cantidad, unidad,
+  precio e importe). No hay hueco. Ojo: «Valorar ahora» regenera y borra lo manual.
 - Descartado: `albaran-directo` (hereda partida, exige `proide`); partir un
   albarán en dos altas; exigir casar con el contrato; elegir producto por
   familia (futuro); estado en el merge (deshacer); `sql/write`.

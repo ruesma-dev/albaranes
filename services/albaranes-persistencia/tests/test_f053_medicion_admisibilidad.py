@@ -111,6 +111,27 @@ def test_f053_medicion_no_valorado_no_es_registrable():
     assert ev["registrable_a"] is False and ev["registrable_b"] is False
 
 
+def test_f053_medicion_valoracion_manual_completa_cuenta_como_valorado():
+    for status in ("manual", "no_contract"):
+        ev = _evaluar(_fila("d1", 1, valoracion_status=status,
+                            valoracion_contrato=None,
+                            matched_contrato_line_id=None))
+        assert ev["valorado"] is True, status
+        assert ev["registrable_a"] is False and ev["registrable_b"] is True
+
+
+def test_f053_medicion_valoracion_manual_incompleta_no_cuenta():
+    con_hueco = _evaluar(_fila("d1", 1, valoracion_status="manual"),
+                         _fila("d1", 2, valoracion_status="manual",
+                               importe_calculado=None))
+    solo_ceros = _evaluar(_fila("d1", 1, valoracion_status="no_contract",
+                                importe_calculado=0.0))
+    otro_estado = _evaluar(_fila("d1", 1, valoracion_status="failed"))
+    for ev in (con_hueco, solo_ceros, otro_estado):
+        assert ev["valorado"] is False
+        assert ev["registrable_b"] is False
+
+
 def test_f053_medicion_sin_lineas_valoradas_usa_las_del_merge():
     filas = [_fila("d1", None, valoracion_status="no_contract",
                    valoracion_contrato=None)]

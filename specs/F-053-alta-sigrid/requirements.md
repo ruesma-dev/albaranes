@@ -3,22 +3,20 @@
 
 Rigor **critico** (escribe en el ERP de producción). Servicios: **sv9 nuevo**
 (`services/albaranes-alta-sigrid`), sv4, sv3 (solo DDL), `ruesma_comun`, `infra`.
-Sustituye a F-013. Preguntas: `progress/spec_F-053.md`. Decisiones del humano:
-aprobar ES registrar; solo sigrid-api con endpoints de dominio, nunca `sql/write`
-(2026-09-30). **2026-10-01**: se mide antes de implementar; solo se registran
-las líneas con importe, casen (vinculadas: consumen medición) o no (sin vincular)
-en el mismo albarán, y cada una con partida o en almacén; producto de Sigrid: el
-de la línea de contrato o, sin vincular, el genérico por defecto (MA9999); las
-negativas entran; sin valorar no se aprueba ni se registra; empleado fijo; clave
-de siempre. **Requisito previo**: **PRE-1** en sigrid-api (design §2).
+Sustituye a F-013. Decisiones: `progress/spec_F-053.md` (todas cerradas el
+2026-10-01). Aprobar ES registrar, solo con endpoints de dominio de sigrid-api;
+solo líneas con importe, vinculadas (consumen medición) o no en el mismo
+albarán, con partida o en almacén; producto del contrato o MA9999; negativas sí;
+sin valorar no se aprueba ni se registra. **Requisito previo**: **PRE-1 = F-009
+de sigrid-api** (design §2), y la medición de T0.
 
 ## Glosario
 
 - **Alta**: la fila de `albaran_altas_sigrid` de un documento (una por documento).
   Solo la escribe sv9. Estados: `en_curso`, `no_admitido`, `ya_en_sigrid`,
   `simulado`, `revisar`, `error`, `incierto`, `registrado`, `anulado`.
-- **Bloqueante**: alta en `en_curso`, `incierto` o `registrado`. **Espera**:
-  `ALTA_SIGRID_ESPERA_INCIERTO_MIN` (defecto 15) desde el último intento.
+- **Bloqueante**: `en_curso`, `incierto` o `registrado`. **Espera**: `ALTA_SIGRID_ESPERA_INCIERTO_MIN`
+  (15) minutos desde el último intento.
 - **Modo**: `simulacion` si `ALTA_SIGRID_COMMIT` no es literalmente `true`; si
   lo es, `real`. **DESDE**: `ALTA_SIGRID_DESDE_UTC`; vacía = feature apagada.
 - **Línea vinculada**: casa con una línea del contrato de la valoración que
@@ -27,6 +25,9 @@ de siempre. **Requisito previo**: **PRE-1** en sigrid-api (design §2).
   (positivo o negativo). **Cantidad**: la convertida si es vinculada; si no, la
   del albarán. **Almacén**: partida final vacía con marca de F-051.
   **Previa**: el alta de PRE-1 con `commit=false`.
+- **Valorado**: valoración de sv6 en `status` `ok`, o valoración manual completa
+  del administrativo en sv4 (cabecera `manual` o `no_contract` con alguna línea
+  con importe ≠ 0 y ninguna con importe nulo). `partial` y el resto, no.
 
 ## A. Disparo en sv4
 R1. CUANDO un documento no aprobado pasa a aprobado (POST `/documents/{id}/approve`
@@ -36,8 +37,8 @@ publicar en `q-feedback` un `MensajeFeedback` con `accion="alta"`, el
 R2. CUANDO se guarda o aprueba un documento ya aprobado, sv4 no debe publicar.
 R3. MIENTRAS DESDE esté vacía, sv4 debe comportarse como hoy: no publica ni
 pinta nada del alta (regresión de aprobar, guardar y desaprobar).
-R4. SI falla la publicación de R1, ENTONCES la aprobación debe quedar guardada y
-el mensaje al revisor debe decir que el alta en Sigrid no se ha solicitado.
+R4. SI falla la publicación de R1, ENTONCES sv4 debe mantener la aprobación y
+avisar de que el alta no se ha solicitado.
 
 ## B. Entrada en sv9
 R5. CUANDO sv9 recibe un mensaje de alta, debe, en una transacción con la fila
@@ -59,7 +60,7 @@ R10. sv9 debe declarar `no_admitido`, con **todos** los motivos a la vez, si:
 falta obra (`falta_obra`), CIF (`falta_cif`) o número de albarán
 (`falta_numero_albaran`); el número pasa de 128 caracteres
 (`numero_albaran_largo`); la fecha no es `AAAA-MM-DD` válida (`fecha_no_valida`);
-no hay valoración con `status` `ok` (`valoracion_no_ok`); no hay ninguna línea a
+el documento no está valorado (`no_valorado`); no hay ninguna línea a
 registrar (`sin_lineas`); una línea a registrar tiene cantidad nula o 0
 (`cantidad_no_valida`); una vinculada no tiene cantidad convertida
 (`cantidad_sin_convertir`); o una línea a registrar no tiene partida ni es
@@ -144,5 +145,6 @@ R34. Solo sv9 debe escribir en `albaran_altas_sigrid`; sv4 solo la lee.
 R35. Ni los logs ni el alta deben guardar la clave de sigrid-api ni el PDF.
 R36. El DDL de `albaran_altas_sigrid` debe vivir en sv3 y ser idempotente.
 R37. SI el revisor aprueba (por cualquiera de los dos caminos de R1) un documento
-sin valoración en `status` `ok`, ENTONCES sv4 debe rechazarlo sin cambiar nada,
-con el aviso «No se puede aprobar un albarán sin valorar», con DESDE vacía o no.
+no valorado, ENTONCES sv4 debe rechazarlo sin cambiar nada, con el aviso «No se
+puede aprobar un albarán sin valorar», con DESDE vacía o no.
+R38. sv4 (R37) y sv9 (R10) deben decidir «valorado» con `ruesma_comun` `esta_valorado`.

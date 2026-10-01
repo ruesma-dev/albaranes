@@ -7,12 +7,14 @@ Lee la PostgreSQL del pipeline con la configuración del ``.env`` de sv3 y
 clasifica cada línea y cada albarán. Solo cuentan las **líneas con importe**
 (``importe_calculado`` ≠ 0; humano, 2026-10-01): las demás no se registran.
 
-- (a) **registrable con sigrid-api tal cual**: valoración ``ok`` con contrato,
-  TODAS las líneas con importe casan con una línea del contrato de la
-  valoración con su misma partida (o almacén contra una línea de contrato sin
-  partida) y ninguna es negativa. Es ``sigrid/albaran`` hoy.
-- (b) **registrable con el criterio del humano**: valoración ``ok`` (un albarán
-  no valorado no se registra) y todas las líneas con importe llevan partida o
+**Valorado** (``esta_valorado``): valoración de sv6 en ``ok`` o valoración
+manual completa del administrativo en sv4; un albarán no valorado no se registra.
+
+- (a) **registrable con sigrid-api tal cual**: valorado y con contrato, TODAS
+  las líneas con importe casan con una línea del contrato de la valoración con
+  su misma partida (o almacén contra una línea de contrato sin partida) y
+  ninguna es negativa. Es ``sigrid/albaran`` hoy.
+- (b) **registrable con el criterio del humano**: valorado, y todas las líneas con importe llevan partida o
   son almacén (F-051), casen o no; negativas admitidas. Exige PRE-1 en
   sigrid-api; las que no casan irían con el producto genérico por defecto
   (MA9999; ``necesitan_producto`` dice cuántas).
@@ -239,6 +241,28 @@ def con_importe(linea: Linea) -> bool:
     return linea.importe is not None and abs(linea.importe) > 1e-9
 
 
+#: Cabeceras de valoración que puede completar a mano el administrativo en sv4:
+#: ``manual`` (la crea sv4 si no había) y ``no_contract`` (la deja sv6 vacía).
+ESTADOS_VALORACION_MANUAL = frozenset({"manual", "no_contract"})
+
+
+def esta_valorado(alb: Albaran) -> bool:
+    """Definición de «valorado» de F-053 (humano, 2026-10-01): valoración de
+    sv6 en ``ok``, o valoración manual completa del administrativo (cabecera
+    ``manual``/``no_contract`` con al menos una línea con importe y ninguna
+    línea valorada con importe nulo). ``partial`` y el resto, no. F-053 la
+    llevará a ``ruesma_comun``; esta copia es solo para medir."""
+    if alb.valoracion_status == "ok":
+        return True
+    if alb.valoracion_status not in ESTADOS_VALORACION_MANUAL:
+        return False
+    if alb.origen_lineas != "valoracion" or not alb.lineas:
+        return False
+    return any(con_importe(l) for l in alb.lineas) and all(
+        l.importe is not None for l in alb.lineas
+    )
+
+
 def cabecera_completa(alb: Albaran) -> bool:
     """Obra, CIF, número de albarán y fecha válida."""
     return bool(
@@ -256,7 +280,7 @@ def evaluar(alb: Albaran) -> dict[str, object]:
     sin_cantidad = sum(1 for l in con_imp if not l.cantidad)
     cuentas = Counter(categoria_linea(l) for l in con_imp)
     almacen = sum(1 for l in con_imp if l.almacen)
-    valorado = alb.valoracion_status == "ok"
+    valorado = esta_valorado(alb)
     base = (
         cabecera_completa(alb) and valorado and bool(con_imp)
         and sin_cantidad == 0
@@ -340,7 +364,7 @@ def formatear_resumen(resumen: Mapping[str, object], todos: bool) -> str:
     lineas = [
         f"F-053 · medición de admisibilidad · albaranes {ambito}",
         f"Albaranes: {resumen['albaranes']}",
-        f"  valorados (status ok): {resumen['valorado']} "
+        f"  valorados (ok de sv6 o manual completa): {resumen['valorado']} "
         f"({resumen['pct_valorado']} %)",
         f"  con contrato en la valoración: {resumen['con_contrato']} "
         f"({resumen['pct_con_contrato']} %)",

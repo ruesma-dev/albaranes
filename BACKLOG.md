@@ -3,12 +3,13 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **50 features**, 35 abiertas, 15 terminadas.
+Resumen: **51 features**, 36 abiertas, 15 terminadas.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
+| F-053 | Alta en Sigrid de los albaranes aprobados | 1 | spec lista | critico |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
@@ -36,7 +37,7 @@ Resumen: **50 features**, 35 abiertas, 15 terminadas.
 | F-006 | Tanda 4b — Residuos: lógica de pago LLEVAR/RETIRAR y canon | 25 | spec lista | estandar | `feature/F-006-residuos-pago` |
 | F-007 | Tanda 5 — Partida ALM por defecto y selector de candidatas en sv4 | 26 | spec lista | estandar | `feature/F-007-partida-alm-selector` |
 | F-017 | El comparativo como fuente de precio (1c) en la valoración | 27 | pendiente | estandar | `feature/F-017-comparativo-precio` |
-| F-013 | Registro del albarán aprobado en Sigrid (consumidor de q-feedback) | 28 | pendiente | critico | `feature/F-013-registro-sigrid` |
+| F-013 | [SUSTITUIDA POR F-053] Registro del albarán aprobado en Sigrid (consumidor de q-feedback) | 28 | pendiente | critico | `feature/F-013-registro-sigrid` |
 | F-008 | Lifecycle de blobs de hand-off | 29 | pendiente | estandar | `feature/F-008-blob-lifecycle` |
 | F-009 | Limpieza de la cola huérfana q-emails | 30 | pendiente | estandar | `feature/F-009-limpieza-q-emails` |
 | F-010 | Easy Auth en el portal sv4 | 31 | pendiente | critico | `feature/F-010-easy-auth-sv4` |
@@ -66,6 +67,18 @@ Resumen: **50 features**, 35 abiertas, 15 terminadas.
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | critico |
 
 ## Detalle
+
+### F-053 · Alta en Sigrid de los albaranes aprobados
+
+estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí
+
+PETICION DEL HUMANO (2026-09-30): «Alta en Sigrid de los albaranes aprobados». Aprobar ES registrar: los dos botones de sv4 que aprueban («Guardar y aprobar» de la ficha y «Aprobar» del listado) disparan el alta del albaran en Sigrid.
+
+DECISIONES (todas cerradas el 2026-10-01, detalle en progress/spec_F-053.md): solo endpoints de dominio de sigrid-api, nunca sql/write; servicio nuevo sv9 en el monorepo que consume q-feedback; arranque en SIMULACION y grabacion real solo con ALTA_SIGRID_COMMIT=true (humano); solo lineas con importe; en un mismo albaran, vinculadas a linea de contrato (consumen medicion) y sin vincular, cada una con partida o en almacen; producto del contrato o MA9999; negativas si; sin valorar (ok de sv6 o valoracion manual completa en sv4) no se aprueba ni se registra; tabla albaran_altas_sigrid con DDL en sv3; registrado = bloqueado en sv4; empleado fijo; clave de siempre.
+
+PRECONDICIONES: medicion de solo lectura (services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py, la ejecuta el humano) y PRE-1 = F-009 de sigrid-api (partida por linea, lineas sin contrato con producto por codigo, negativas, idempotencia) desplegada.
+
+SUSTITUYE A F-013. ORDEN: medicion -> F-009 de sigrid-api -> F-052 -> F-051 -> F-053. Escribe en el ERP de produccion => rigor critico y verificaciones MANUAL del humano.
 
 ### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
 
@@ -328,11 +341,13 @@ estado **pendiente** · prioridad 27 · rigor `estandar` · SDD sí · rama `fea
 
 Decisión del humano (2026-08-17) que resuelve el 'OFERTA' del ground truth: el administrativo obtiene el precio unitario/importe por este orden: (1) líneas iguales ya registradas en líneas de contrato [hoy 1a], (2) contrato en papel [hoy 1b], (3) como ÚLTIMO recurso, el precio del COMPARATIVO asociado al contrato [nuevo, 1c]. Hay que añadir esa tercera fuente: la spec debe estudiar de dónde sale el comparativo (¿Sigrid vía sigrid-api? ¿documento en SharePoint?), cómo se asocia al contrato, y ampliar precio_source en sv5/sv6 (y el modelo de conciliación 1a-vs-1b) sin romper lectores. Las 3 líneas OFERTA del lote alvaro_17082026 son los casos de referencia.
 
-### F-013 · Registro del albarán aprobado en Sigrid (consumidor de q-feedback)
+### F-013 · [SUSTITUIDA POR F-053] Registro del albarán aprobado en Sigrid (consumidor de q-feedback)
 
 estado **pendiente** · prioridad 28 · rigor `critico` · SDD sí · rama `feature/F-013-registro-sigrid`
 
-Marcada como MUY IMPORTANTE por el humano (2026-08-13). Servicio nuevo del monorepo (la responsabilidad no cabe en ninguno existente; q-feedback está reservada para esto desde el diseño): consume q-feedback y da de alta el albarán valorado y aprobado en Sigrid vía sigrid-api sql/write (única base escribible: ruesma; el guard semántico de sigrid-api existe y la escritura está off por defecto). Excluye las líneas marcadas no_registrar_sigrid (F-006). Diseño pendiente y delicado: qué tablas de Sigrid, MAX(ide)+1 con lock, idempotencia del alta (un albarán aprobado dos veces no puede duplicarse en el ERP), y autorización expresa del humano para activar la escritura. Escribe en el ERP de producción => rigor critico y verificaciones MANUAL obligatorias.
+SUSTITUIDA POR F-053 (decisión del humano, 2026-10-01): no se implementa. El alta en Sigrid la diseña F-053 con endpoints de dominio de sigrid-api, no con sql/write. Se deja en 'pending' porque el arnés no tiene estado de «sustituida» y 'done' exige init.sh en verde y review APROBADO (CLAUDE.md); el humano decide si se borra o se marca de otra forma.
+
+TEXTO ORIGINAL: Marcada como MUY IMPORTANTE por el humano (2026-08-13). Servicio nuevo del monorepo (la responsabilidad no cabe en ninguno existente; q-feedback está reservada para esto desde el diseño): consume q-feedback y da de alta el albarán valorado y aprobado en Sigrid vía sigrid-api sql/write (única base escribible: ruesma; el guard semántico de sigrid-api existe y la escritura está off por defecto). Excluye las líneas marcadas no_registrar_sigrid (F-006). Diseño pendiente y delicado: qué tablas de Sigrid, MAX(ide)+1 con lock, idempotencia del alta (un albarán aprobado dos veces no puede duplicarse en el ERP), y autorización expresa del humano para activar la escritura. Escribe en el ERP de producción => rigor critico y verificaciones MANUAL obligatorias.
 
 ### F-008 · Lifecycle de blobs de hand-off
 
