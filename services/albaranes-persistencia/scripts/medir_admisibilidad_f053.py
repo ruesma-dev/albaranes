@@ -4,18 +4,21 @@ dar de alta en Sigrid?
 
 Decisión del humano (2026-10-01): «medir antes» de fijar el alcance de F-053.
 Lee la PostgreSQL del pipeline con la configuración del ``.env`` de sv3 y
-clasifica cada línea con cantidad y cada albarán:
+clasifica cada línea y cada albarán. Solo cuentan las **líneas con importe**
+(``importe_calculado`` ≠ 0; humano, 2026-10-01): las demás no se registran.
 
-- (a) **registrable con sigrid-api tal cual**: contrato en la valoración,
-  valoración ``ok`` y TODAS las líneas con cantidad casan con una línea del
-  contrato de la valoración con su misma partida (o almacén contra una línea
-  de contrato sin partida). Es el alcance de ``sigrid/albaran`` hoy.
-- (b) **registrable con el criterio del humano**: todas las líneas con
-  cantidad llevan partida o son almacén (F-051); casar con el contrato no es
-  requisito. Exige la ampliación de sigrid-api descrita en la spec de F-053.
+- (a) **registrable con sigrid-api tal cual**: valoración ``ok`` con contrato,
+  TODAS las líneas con importe casan con una línea del contrato de la
+  valoración con su misma partida (o almacén contra una línea de contrato sin
+  partida) y ninguna es negativa. Es ``sigrid/albaran`` hoy.
+- (b) **registrable con el criterio del humano**: valoración ``ok`` (un albarán
+  no valorado no se registra) y todas las líneas con importe llevan partida o
+  son almacén (F-051), casen o no; negativas admitidas. Exige PRE-1 en
+  sigrid-api; las que no casan irían con el producto genérico por defecto
+  (MA9999; ``necesitan_producto`` dice cuántas).
 
 En los dos casos la cabecera debe traer obra, CIF, número de albarán y fecha
-``AAAA-MM-DD`` válida, y ninguna línea puede tener cantidad negativa.
+``AAAA-MM-DD`` válida, y cada línea con importe debe tener cantidad ≠ 0.
 
 Solo ejecuta SELECT, dentro de una transacción ``READ ONLY``. No imprime la
 cadena de conexión ni ninguna credencial. Lo ejecuta el humano:
@@ -63,6 +66,7 @@ SELECT d.id AS document_id, d.approved, d.obra_codigo, d.proveedor_cif,
        d.numero_albaran, d.fecha,
        v.status AS valoracion_status, v.contrato_codigo AS valoracion_contrato,
        lv.id AS lv_id, lv.cantidad_albaran, lv.cantidad_convertida,
+       lv.importe_calculado,
        lv.matched_contrato_line_id, lv.derived_contrato_line_id,
        lv.codigo_partida_final, lv.partida_action,
        cl.sigrid_ide AS cl_sigrid_ide, cl.codigo_contrato AS cl_contrato,
@@ -76,7 +80,8 @@ ORDER BY d.id, lv.id
 """
 
 SQL_LINEAS_MERGE = """
-SELECT l.document_id, l.id AS linea_id, l.cantidad, l.codigo_imputacion
+SELECT l.document_id, l.id AS linea_id, l.cantidad, l.precio_neto,
+       l.codigo_imputacion
 FROM albaran_lines_merge l
 JOIN albaran_documents_merge d ON d.id = l.document_id
 WHERE d.is_active AND (:todos OR d.approved)
@@ -90,6 +95,10 @@ def _texto(valor: object) -> str | None:
         return None
     limpio = str(valor).strip()
     return limpio or None
+
+
+def _numero(valor: object) -> float | None:
+    return None if valor is None else float(valor)
 
 
 def normalizar_partida(valor: object) -> str | None:
@@ -115,6 +124,7 @@ class Linea:
     """Una línea a evaluar, venga de la valoración o del merge."""
 
     cantidad: float | None
+    importe: float | None
     partida: str | None
     almacen: bool
     casa: bool
@@ -169,6 +179,7 @@ def linea_desde_valoracion(
     )
     return Linea(
         cantidad=None if cantidad is None else float(cantidad),
+        importe=_numero(fila.get("importe_calculado")),
         partida=partida,
         almacen=partida is None and accion in marcas_almacen,
         casa=casa,
@@ -177,10 +188,12 @@ def linea_desde_valoracion(
 
 
 def linea_desde_merge(fila: Mapping[str, object]) -> Linea:
-    """Albarán sin líneas valoradas: partida impresa, sin casar ni almacén."""
+    """Albarán sin líneas valoradas: partida impresa, sin casar ni almacén.
+    ``precio_neto`` de una línea de albarán es su IMPORTE (ARCHITECTURE, 13)."""
     cantidad = fila.get("cantidad")
     return Linea(
         cantidad=None if cantidad is None else float(cantidad),
+        importe=_numero(fila.get("precio_neto")),
         partida=normalizar_partida(fila.get("codigo_imputacion")),
         almacen=False,
         casa=False,
@@ -221,6 +234,11 @@ def agrupar(
     return list(albaranes.values())
 
 
+def con_importe(linea: Linea) -> bool:
+    """Se registra solo la línea con importe distinto de cero."""
+    return linea.importe is not None and abs(linea.importe) > 1e-9
+
+
 def cabecera_completa(alb: Albaran) -> bool:
     """Obra, CIF, número de albarán y fecha válida."""
     return bool(
@@ -231,26 +249,39 @@ def cabecera_completa(alb: Albaran) -> bool:
 
 def evaluar(alb: Albaran) -> dict[str, object]:
     """Cuentas por categoría y los dos veredictos de un albarán."""
-    con_cantidad = [l for l in alb.lineas if (l.cantidad or 0) > 0]
-    negativas = sum(1 for l in alb.lineas if (l.cantidad or 0) < 0)
-    cuentas = Counter(categoria_linea(l) for l in con_cantidad)
-    almacen = sum(1 for l in con_cantidad if l.almacen)
-    base = cabecera_completa(alb) and bool(con_cantidad) and negativas == 0
+    con_imp = [l for l in alb.lineas if con_importe(l)]
+    negativas = sum(
+        1 for l in con_imp if (l.cantidad or 0) < 0 or (l.importe or 0) < 0
+    )
+    sin_cantidad = sum(1 for l in con_imp if not l.cantidad)
+    cuentas = Counter(categoria_linea(l) for l in con_imp)
+    almacen = sum(1 for l in con_imp if l.almacen)
+    valorado = alb.valoracion_status == "ok"
+    base = (
+        cabecera_completa(alb) and valorado and bool(con_imp)
+        and sin_cantidad == 0
+    )
     registrable_a = (
         base
-        and alb.valoracion_status == "ok"
+        and negativas == 0
         and alb.valoracion_contrato is not None
-        and cuentas["casa_misma_partida"] == len(con_cantidad)
+        and cuentas["casa_misma_partida"] == len(con_imp)
     )
     registrable_b = base and cuentas["sin_partida_ni_almacen"] == 0
     resultado: dict[str, object] = {
         "document_id": alb.document_id,
         "aprobado": alb.approved,
         "origen_lineas": alb.origen_lineas,
+        "valorado": valorado,
         "con_contrato": alb.valoracion_contrato is not None,
         "cabecera_completa": cabecera_completa(alb),
-        "lineas_con_cantidad": len(con_cantidad),
+        "lineas_con_importe": len(con_imp),
+        "lineas_sin_importe": len(alb.lineas) - len(con_imp),
         "lineas_negativas": negativas,
+        "lineas_sin_cantidad": sin_cantidad,
+        "necesitan_producto": (
+            cuentas["partida_sin_casar"] + cuentas["almacen_sin_casar"]
+        ),
         "almacen": almacen,
         "registrable_a": registrable_a,
         "registrable_b": registrable_b,
@@ -268,16 +299,17 @@ def resumir(evaluaciones: list[dict[str, object]]) -> dict[str, object]:
         return round(100.0 * n / total, 1) if total else 0.0
 
     resumen: dict[str, object] = {"albaranes": total}
-    for clave in ("con_contrato", "cabecera_completa", "registrable_a",
-                  "registrable_b"):
+    for clave in ("valorado", "con_contrato", "cabecera_completa",
+                  "registrable_a", "registrable_b"):
         n = sum(1 for e in evaluaciones if e[clave])
         resumen[clave] = n
         resumen[f"pct_{clave}"] = pct(n)
     resumen["sin_lineas_valoradas"] = sum(
         1 for e in evaluaciones if e["origen_lineas"] == "merge"
     )
-    for clave in ("lineas_con_cantidad", "lineas_negativas", "almacen",
-                  *CATEGORIAS):
+    for clave in ("lineas_con_importe", "lineas_sin_importe",
+                  "lineas_negativas", "lineas_sin_cantidad", "almacen",
+                  "necesitan_producto", *CATEGORIAS):
         resumen[clave] = sum(int(e[clave]) for e in evaluaciones)
     return resumen
 
@@ -308,6 +340,8 @@ def formatear_resumen(resumen: Mapping[str, object], todos: bool) -> str:
     lineas = [
         f"F-053 · medición de admisibilidad · albaranes {ambito}",
         f"Albaranes: {resumen['albaranes']}",
+        f"  valorados (status ok): {resumen['valorado']} "
+        f"({resumen['pct_valorado']} %)",
         f"  con contrato en la valoración: {resumen['con_contrato']} "
         f"({resumen['pct_con_contrato']} %)",
         f"  cabecera completa: {resumen['cabecera_completa']} "
@@ -318,12 +352,18 @@ def formatear_resumen(resumen: Mapping[str, object], todos: bool) -> str:
         f"{resumen['registrable_a']} ({resumen['pct_registrable_a']} %)",
         f"  (b) registrables con el criterio del humano: "
         f"{resumen['registrable_b']} ({resumen['pct_registrable_b']} %)",
-        f"Líneas con cantidad: {resumen['lineas_con_cantidad']} "
-        f"(negativas aparte: {resumen['lineas_negativas']})",
+        f"Líneas con importe: {resumen['lineas_con_importe']} "
+        f"(sin importe, no se registran: {resumen['lineas_sin_importe']}; "
+        f"negativas: {resumen['lineas_negativas']}; "
+        f"con importe y sin cantidad: {resumen['lineas_sin_cantidad']})",
     ]
     for nombre in CATEGORIAS:
         lineas.append(f"  {nombre}: {resumen[nombre]}")
     lineas.append(f"  almacén (casen o no): {resumen['almacen']}")
+    lineas.append(
+        "  sin casar (irían con el producto por defecto, MA9999): "
+        f"{resumen['necesitan_producto']}"
+    )
     return "\n".join(lineas)
 
 

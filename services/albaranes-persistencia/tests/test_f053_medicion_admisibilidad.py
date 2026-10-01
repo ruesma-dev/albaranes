@@ -21,6 +21,7 @@ def _fila(doc: str, lv_id: int | None, **linea) -> dict:
     base = {
         "document_id": doc, **CABECERA, "lv_id": lv_id,
         "cantidad_albaran": 2.0, "cantidad_convertida": 2.0,
+        "importe_calculado": 10.0,
         "matched_contrato_line_id": 10, "derived_contrato_line_id": None,
         "codigo_partida_final": "16.01", "partida_action": "existing_matched",
         "cl_sigrid_ide": 555, "cl_contrato": "CT-1", "cl_partida": "16.01",
@@ -34,10 +35,13 @@ def _evaluar(*filas, merge=()):
     return m.evaluar(alb)
 
 
-def test_f053_medicion_todo_casa_es_registrable_a_y_b():
-    ev = _evaluar(_fila("d1", 1), _fila("d1", 2, cantidad_convertida=0.0))
-    assert ev["lineas_con_cantidad"] == 1
-    assert ev["casa_misma_partida"] == 1
+def test_f053_medicion_solo_cuentan_lineas_con_importe():
+    ev = _evaluar(_fila("d1", 1),
+                  _fila("d1", 2, importe_calculado=0.0, codigo_partida_final=None),
+                  _fila("d1", 3, importe_calculado=None, partida_action=None,
+                        codigo_partida_final=None))
+    assert ev["lineas_con_importe"] == 1 and ev["lineas_sin_importe"] == 2
+    assert ev["casa_misma_partida"] == 1 and ev["sin_partida_ni_almacen"] == 0
     assert ev["registrable_a"] is True and ev["registrable_b"] is True
 
 
@@ -47,12 +51,12 @@ def test_f053_medicion_partida_distinta_solo_b():
     assert ev["registrable_a"] is False and ev["registrable_b"] is True
 
 
-def test_f053_medicion_sin_casar_con_partida_solo_b():
+def test_f053_medicion_sin_casar_con_partida_solo_b_y_necesitan_producto():
     ev = _evaluar(_fila("d1", 1, matched_contrato_line_id=None),
                   _fila("d1", 2, derived_contrato_line_id=7),
                   _fila("d1", 3, cl_contrato="OTRO"),
                   _fila("d1", 4, cl_sigrid_ide=None))
-    assert ev["partida_sin_casar"] == 4
+    assert ev["partida_sin_casar"] == 4 and ev["necesitan_producto"] == 4
     assert ev["registrable_a"] is False and ev["registrable_b"] is True
 
 
@@ -62,8 +66,10 @@ def test_f053_medicion_almacen_casa_solo_con_linea_sin_partida():
               partida_action="almacen_sin_partida", cl_partida=" "),
         _fila("d1", 2, codigo_partida_final="",
               partida_action="almacen_elegido"),
+        _fila("d1", 3, codigo_partida_final=None, matched_contrato_line_id=None,
+              partida_action="alm_acopio"),
     )
-    assert ev["almacen"] == 2
+    assert ev["almacen"] == 3 and ev["almacen_sin_casar"] == 1
     assert ev["casa_misma_partida"] == 1 and ev["casa_partida_distinta"] == 1
     assert ev["registrable_a"] is False and ev["registrable_b"] is True
 
@@ -77,9 +83,20 @@ def test_f053_medicion_sin_partida_ni_almacen_no_es_registrable():
     assert ev["registrable_a"] is False and ev["registrable_b"] is False
 
 
-def test_f053_medicion_negativa_o_cabecera_incompleta_bloquean():
-    assert _evaluar(_fila("d1", 1), _fila("d1", 2, cantidad_convertida=-1.0)
-                    )["registrable_b"] is False
+def test_f053_medicion_negativas_entran_en_b_y_no_en_a():
+    ev = _evaluar(_fila("d1", 1),
+                  _fila("d1", 2, cantidad_convertida=-1.0, importe_calculado=-5.0))
+    assert ev["lineas_negativas"] == 1
+    assert ev["registrable_a"] is False and ev["registrable_b"] is True
+
+
+def test_f053_medicion_importe_sin_cantidad_bloquea():
+    ev = _evaluar(_fila("d1", 1, cantidad_convertida=None, cantidad_albaran=None))
+    assert ev["lineas_sin_cantidad"] == 1
+    assert ev["registrable_a"] is False and ev["registrable_b"] is False
+
+
+def test_f053_medicion_cabecera_incompleta_bloquea():
     for campo, valor in (("obra_codigo", ""), ("proveedor_cif", None),
                          ("numero_albaran", " "), ("fecha", "2026-02-30"),
                          ("fecha", "01/09/2026")):
@@ -88,21 +105,28 @@ def test_f053_medicion_negativa_o_cabecera_incompleta_bloquean():
         assert ev["registrable_a"] is False and ev["registrable_b"] is False
 
 
-def test_f053_medicion_a_exige_valoracion_ok_y_contrato():
+def test_f053_medicion_no_valorado_no_es_registrable():
     ev = _evaluar(_fila("d1", 1, valoracion_status="partial"))
-    assert ev["registrable_a"] is False and ev["registrable_b"] is True
+    assert ev["valorado"] is False
+    assert ev["registrable_a"] is False and ev["registrable_b"] is False
 
 
 def test_f053_medicion_sin_lineas_valoradas_usa_las_del_merge():
     filas = [_fila("d1", None, valoracion_status="no_contract",
                    valoracion_contrato=None)]
     merge = [
-        {"document_id": "d1", "linea_id": 1, "cantidad": 3, "codigo_imputacion": "16.01"},
-        {"document_id": "d1", "linea_id": 2, "cantidad": 1, "codigo_imputacion": None},
-        {"document_id": "otro", "linea_id": 3, "cantidad": 1, "codigo_imputacion": "1"},
+        {"document_id": "d1", "linea_id": 1, "cantidad": 3, "precio_neto": 9.0,
+         "codigo_imputacion": "16.01"},
+        {"document_id": "d1", "linea_id": 2, "cantidad": 1, "precio_neto": 4.0,
+         "codigo_imputacion": None},
+        {"document_id": "d1", "linea_id": 3, "cantidad": 1, "precio_neto": 0,
+         "codigo_imputacion": None},
+        {"document_id": "otro", "linea_id": 4, "cantidad": 1, "precio_neto": 1,
+         "codigo_imputacion": "1"},
     ]
     ev = _evaluar(*filas, merge=merge)
     assert ev["origen_lineas"] == "merge" and ev["con_contrato"] is False
+    assert ev["lineas_con_importe"] == 2 and ev["lineas_sin_importe"] == 1
     assert ev["partida_sin_casar"] == 1 and ev["sin_partida_ni_almacen"] == 1
     assert ev["registrable_b"] is False
 
@@ -112,7 +136,7 @@ def test_f053_medicion_resumen_y_csv(tmp_path):
            _evaluar(_fila("d2", 1, codigo_partida_final="15.01")),
            _evaluar(_fila("d3", 1, codigo_partida_final=None, partida_action=None))]
     res = m.resumir(evs)
-    assert res["albaranes"] == 3
+    assert res["albaranes"] == 3 and res["valorado"] == 3
     assert res["registrable_a"] == 1 and res["pct_registrable_a"] == 33.3
     assert res["registrable_b"] == 2 and res["pct_registrable_b"] == 66.7
     texto = m.formatear_resumen(res, todos=False)
@@ -120,8 +144,7 @@ def test_f053_medicion_resumen_y_csv(tmp_path):
     assert "(b) registrables con el criterio del humano: 2 (66.7 %)" in texto
     ruta = tmp_path / "salida.csv"
     m.escribir_csv(str(ruta), evs)
-    contenido = ruta.read_bytes()
-    assert contenido.startswith(b"\xef\xbb\xbf")
+    assert ruta.read_bytes().startswith(b"\xef\xbb\xbf")
     filas = list(csv.DictReader(ruta.open(encoding="utf-8-sig"), delimiter=";"))
     assert [f["document_id"] for f in filas] == ["d1", "d2", "d3"]
 

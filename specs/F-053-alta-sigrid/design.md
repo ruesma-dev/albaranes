@@ -6,19 +6,18 @@ Requisitos: `requirements.md`. Preguntas abiertas: `progress/spec_F-053.md`.
 ## 1. Encaje, límite de servicio y precondiciones
 
 Responsabilidad **nueva** (escribir en el ERP): **servicio nuevo sv9**
-(`services/albaranes-alta-sigrid`, Container App `ca-sv9-alta-sigrid`), solo
-worker, hexagonal como sv6; lo confirma el humano (pregunta 1; alternativa:
-proyecto aparte). `sv7` era el orquestador retirado (comentarios de sv4 y
-`ruesma_comun.workflows`) y `sv8` el aprendizaje (`ca-sv8-aprendizaje`, docstring
-de `MensajeFeedback`); `sv9` está libre. Flujo: sv4 aprueba → `q-feedback`
-(`MensajeFeedback`, ya existe y `docs/ARCHITECTURE.md` la reserva para esto) →
-sv9 → sigrid-api → `albaran_altas_sigrid` ← sv4 la lee (pregunta 2).
+(`services/albaranes-alta-sigrid`, `ca-sv9-alta-sigrid`), solo worker, hexagonal
+como sv6 (pregunta 1). `sv7` = orquestador retirado, `sv8` = aprendizaje
+(docstring de `MensajeFeedback`). Flujo: sv4 aprueba → `q-feedback` (reservada
+para esto en `docs/ARCHITECTURE.md`) → sv9 → sigrid-api → `albaran_altas_sigrid`
+← sv4 la lee (pregunta 2).
 
-**Precondiciones (humano, 2026-10-01)** para pasar a `in_progress`: (1) la
-**medición** con `services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py`
-(solo lectura; la ejecuta el humano; comando en `progress/spec_F-053.md`), que
-dice qué parte de los aprobados es registrable hoy (a) y con el criterio del
-humano (b); (2) **PRE-1** desplegada en sigrid-api (§2).
+**Precondiciones (humano, 2026-10-01)** para `in_progress`: (1) la **medición**
+(`services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py`, solo
+lectura, la ejecuta el humano; comando en `progress/spec_F-053.md`); (2) **PRE-1**
+desplegada en sigrid-api (§2). Producto: «de momento siempre va a ser suministro
+de materiales» ⇒ sin vincular, `ALTA_SIGRID_PRODUCTO_POR_DEFECTO` = `MA9999`;
+elegir entre MA9999/SM9999/SB9999/QA9999 por familia es mejora futura.
 
 ## 2. sigrid-api: lo que hay hoy y lo que hace falta (PRE-1)
 
@@ -32,36 +31,41 @@ sin git): `domain/models/albaran_*models.py`, `application/use_cases/create_*alb
 - `sigrid/albaran-directo`: exige `proide` de Sigrid por línea (el pipeline no
   lo tiene), no vincula con contrato, y con `paride` nulo **hereda** el de la
   última `dcapro` del producto (convertiría almacén en partida ajena).
-- Ninguno es idempotente (`dca.synckey` existe y no se usa); errores 400 con
-  texto libre, 500 lo inesperado. `concepto-grafico`: idempotente por `sha256`,
-  `usu` en `dbo.usu`.
+- Ninguno es idempotente (`dca.synckey` sin usar); 400 con texto libre, 500 lo
+  inesperado. `concepto-grafico`: idempotente por `sha256`, `usu` en `dbo.usu`.
 
-**El criterio del humano no se puede expresar hoy**: en un mismo albarán, líneas
-vinculadas y sin contrato, partida elegida por línea y almacén explícito.
-F-053 depende de **PRE-1**, feature del repositorio sigrid-api (allí el
-siguiente id libre es F-009; se especifica allí y no se implementa aquí).
-Lo que F-053 necesita (ampliación compatible de `sigrid/albaran` o ruta nueva):
+**El criterio del humano no se puede expresar hoy** (vinculadas y sin vincular
+en un albarán, partida por línea, almacén explícito, negativas). F-053 depende
+de **PRE-1**, feature del repositorio sigrid-api (allí el siguiente id libre es
+F-009). Lo que necesita (ampliación compatible de `sigrid/albaran` o ruta nueva):
 - `cod_contrato` opcional (obligatorio si hay `lineas_recibidas`).
 - `referencia_externa` (≤128) → `dca.synckey`, con idempotencia como
   `partes-reclamacion`: misma `emp` y referencia ⇒ `idempotente` con su `ide`/`cod`,
   comprobado también dentro de la transacción, bajo applock.
 - En cada línea: `referencia_linea` (se devuelve) y `partida` (código, resuelto
   contra las partidas de la obra) **o** `almacen: true` (`paride` 0), nunca heredado.
-- `lineas_recibidas[]` como hoy más lo anterior; `lineas_sin_contrato[]`:
-  `{descripcion, unidad, cantidad, precio, producto?}` → `dcapro` sin `docori*` ni
-  `canser`; el producto de Sigrid lo resuelve la regla de la pregunta 17.
+- `lineas_recibidas[]` (vinculadas: producto, precio y cuenta del `ctrpro`, y
+  **consumen medición**: `canser`, `ctrprodes`, `estser`) más lo anterior; varias
+  pueden ir al mismo `ctrpro`. `lineas_sin_contrato[]`: `{producto (CÓDIGO de
+  Sigrid, p. ej. MA9999, resuelto a su `proide`), descripcion, unidad, cantidad,
+  precio}` → `dcapro` sin `docori*` ni `canser`. Cuenta/IVA/naturaleza del
+  producto genérico: de su maestro o de su última `dcapro` (roadmap 2 de sigrid-api).
+- **Cantidades negativas** (devoluciones, humano 2026-10-01) en los dos tipos.
+  PRE-1 debe **medir y replicar** al escritorio de Sigrid (`dcapro` reales con
+  `can < 0` y sus `mov`): el stock baja; el PMP hoy se recalcula con `canent·pre`
+  y con `canent < 0` se movería (¿lo recalcula Sigrid o sale al PMP vigente?);
+  en vinculadas `canser += can` (baja) y se recalculan `estser/estfac`.
 - Respuesta por línea con `referencia_linea`, partida aplicada, `precio` y `total`;
   errores con código (`partida_no_encontrada`, `producto_no_encontrado`,
-  `colision_de_clave`…). Dry-run por defecto. Devoluciones: pregunta 18.
+  `colision_de_clave`…). Dry-run por defecto.
 
 ## 3. Ficheros a crear
 
 sv9, `services/albaranes-alta-sigrid/` (estructura de sv6; primera línea de
 cada fichero, su ruta):
-- `main_worker.py` — `ejecutar_worker` de `ruesma_comun.colas.arranque` sobre
-  `COLA_FEEDBACK`; log de arranque con el modo en claro.
-- `Dockerfile`, `requirements.txt`, `sv9.md`, `.env.example` (sin valores).
-- `config/settings.py` (§7), `config/logging_config.py` (copia del patrón sv6).
+- `main_worker.py` (`ejecutar_worker` sobre `COLA_FEEDBACK`; log del modo),
+  `Dockerfile`, `requirements.txt`, `sv9.md`, `.env.example` sin valores,
+  `config/settings.py` (§7) y `config/logging_config.py` (patrón sv6).
 - `domain/models/alta_models.py` — `EstadoAlta` (StrEnum de los 9 estados),
   `CabeceraAlta`, `LineaAlta`, `DatosAlta` (lo leído de BBDD), `PeticionAlbaran`,
   `LineaRecibida`, `Motivo(codigo, detalle)`, `ResultadoAlta`.
@@ -73,8 +77,8 @@ cada fichero, su ruta):
   `alta_albaran(peticion, commit) -> RespuestaSigrid` (PRE-1), `adjuntar_pdf(...)`.
   Solo esas cuatro operaciones (R33).
 - `domain/ports/pdf_port.py` — `PdfAlbaranPort.descargar(datos) -> bytes`.
-- `domain/services/validador_alta.py` — puro: `validar_y_construir(datos, empide)
-  -> PeticionAlbaran | list[Motivo]` (R10–R13).
+- `domain/services/validador_alta.py` — puro: `validar_y_construir(datos, empide,
+  producto) -> PeticionAlbaran | list[Motivo]` (R10–R13).
 - `domain/services/comparador_previa.py` — puro: `comparar(peticion, datos,
   respuesta, tolerancia_eur, avisos_bloqueantes) -> list[Motivo]` (R17).
 - `domain/services/clasificador.py` — puro: resultado HTTP de la grabación →
@@ -108,9 +112,10 @@ sv4: `templates/_alta_sigrid.html` (panel de la ficha, R29–R30).
   pasa a devolver si publicó; nuevo `solicitar_alta_sigrid(document_id, accion)`.
 - `.../albaranes-front/application/services/review_service.py` — recibe el
   cliente de colas y la configuración; publica en el paso a aprobado (R1–R4);
-  traduce `AlbaranBloqueadoError` en las operaciones de R25.
+  traduce `AlbaranBloqueadoError` (R25) y rechaza aprobar sin valoración `ok`
+  (`AlbaranSinValorarError`, R37) en `approve_document` y `save_document`.
 - `.../albaranes-front/infrastructure/database/review_repository.py` —
-  `leer_alta_sigrid(document_id)`, `es_aprobado(document_id)` y
+  `leer_alta_sigrid(document_id)`, `es_aprobado`, `estado_valoracion` y
   `_exigir_desbloqueado(session, document_id)`: `SELECT ... FROM
   albaran_documents_merge m LEFT JOIN albaran_altas_sigrid a ... FOR UPDATE OF m`;
   la llaman al empezar, en su sesión, `update_document`, `set_approved(False)`,
@@ -120,8 +125,9 @@ sv4: `templates/_alta_sigrid.html` (panel de la ficha, R29–R30).
   con mensaje (formularios) para R25; saltos de R27; rutas nuevas `POST
   /documents/{id}/alta-sigrid/solicitar` y `/alta-sigrid/verificar-anulacion`;
   revalorar y re-buscar contratos consultan el alta antes de publicar.
-- `.../templates/document_detail.html` (incluye el panel),
-  `documents_list.html` (estado en la columna Aprobado, R31).
+- `.../templates/document_detail.html` (panel; «Guardar y aprobar» deshabilitado
+  sin valoración `ok`), `documents_list.html` (estado del alta y «Aprobar»
+  deshabilitado sin valoración, R31, R37).
 - `harness/servicios.json` — `sv9-alta-sigrid`.
 - `infra/` — sv9 en `$APPS` de `deploy.ps1`/`build_images.ps1` y su
   `create_capps*.ps1`: escalado KEDA sobre `q-feedback` con **máximo 1 réplica**,
@@ -183,9 +189,8 @@ sv9: `ALTA_SIGRID_DESDE_UTC` (vacía = no hace nada), `ALTA_SIGRID_COMMIT`
 (defecto `false`; solo lo cambia el humano), `ALTA_SIGRID_ESPERA_INCIERTO_MIN`
 (15), `ALTA_SIGRID_TOLERANCIA_EUR` (0,05), `ALTA_SIGRID_AVISOS_BLOQUEANTES`
 (lista; defecto «plantilla de cabecera no es del mismo proveedor» y «sin
-historico de dcapro»), `ALTA_SIGRID_USUARIO`, `ALTA_SIGRID_EMPIDE` (fijo, decidido 2026-10-01; vacía
-= defecto de sigrid-api; «quien aprueba» será otra ficha),
-`SIGRID_API_BASE_URL`, `SIGRID_API_FUNCTION_KEY` (secreto), `SIGRID_API_DATABASE`
+historico de dcapro»), `ALTA_SIGRID_USUARIO`, `ALTA_SIGRID_EMPIDE` (fijo; vacía
+= defecto de sigrid-api), `ALTA_SIGRID_PRODUCTO_POR_DEFECTO` (`MA9999`), `SIGRID_API_BASE_URL`, `SIGRID_API_FUNCTION_KEY` (secreto), `SIGRID_API_DATABASE`
 (`ruesma`), `PG_*`, Graph/SharePoint y colas, con los nombres de sv3/sv6.
 sv4: `ALTA_SIGRID_DESDE_UTC` y `ALTA_SIGRID_ESPERA_INCIERTO_MIN`, **con el mismo
 valor que sv9** (lo fija el script de despliegue desde una sola variable).
@@ -193,25 +198,21 @@ En local, `ALTA_SIGRID_COMMIT` no se pone nunca (regla de solo lectura).
 
 ## 8. Orden y dependencias
 
-**Medición y PRE-1 → F-052 → F-051 → F-053.** F-052 garantiza el CIF correcto (sin él, la
-petición localiza mal el contrato o `ya_en_sigrid` busca con otro CIF). F-051
-fija el almacén de R10–R12 (partida vacía + marca en `partida_action`); su ruta nueva de sv4 (`asignar_almacen`) entra en R25 al
-fusionar. F-053 se puede implementar en su rama a la vez, pero se fusiona
-después de las dos, y el modo `real` no se enciende hasta que las tres estén en
-producción. F-006 (`no_registrar_sigrid`) y F-015 (tachadas) no están hechas:
-cuando lleguen, sus líneas se excluyen en R13 (pregunta 12).
+**Medición y PRE-1 → F-052 → F-051 → F-053.** F-052 da el CIF correcto; F-051
+fija el almacén (partida vacía + marca en `partida_action`) y su ruta de sv4
+(`asignar_almacen`) entra en R25 al fusionar. F-053 se implementa a la vez y se
+fusiona después; el modo `real`, con las tres en producción. «Solo líneas con
+importe» ya deja fuera el «solo llevar» de F-006; F-015 (tachadas), pregunta 12.
 Despliegue: sv3 (tabla) → sv9 (con DESDE vacía) → sv4 → DESDE en ambos
 (simulación) → días de simulación → `ALTA_SIGRID_COMMIT=true` (humano).
 
 ## 9. Reglas del repo y documentación (propuesta; NO se aplica aquí)
 
-`CLAUDE.md`, regla dura de Sigrid, redacción propuesta: «Sigrid (ERP) solo se
-consulta vía sigrid-api, nunca por SQL directo. Leer: cualquier servicio.
-Escribir: **solo sv9**, solo con el alta de albarán y `sigrid/concepto-grafico`,
-nunca `sql/write`, y solo con `ALTA_SIGRID_COMMIT=true`, que activa el humano.
-Desde local, nunca se escribe.» Mismo cambio en `docs/ARCHITECTURE.md`
-(«Acceso a datos»), en la línea de `q-feedback` y en
-`docs/referencia/dominio_negocio_albaranes.md` §5.2 (hablaba de `sql/write`).
+`CLAUDE.md`, redacción propuesta: «Sigrid solo vía sigrid-api, nunca SQL
+directo. Leer: cualquier servicio. Escribir: **solo sv9**, con el alta de
+albarán y `concepto-grafico`, nunca `sql/write`, y solo con
+`ALTA_SIGRID_COMMIT=true`, que activa el humano. Desde local, nunca.» Igual en
+`docs/ARCHITECTURE.md` y `docs/referencia/dominio_negocio_albaranes.md` §5.2.
 `azure-apps/albaranes.md`: sv9, la tabla y el consumo de sigrid-api. La fila de
 `azure-apps/sigrid_api.md` §10 es de sigrid-api: se propone (pregunta 15).
 
@@ -226,11 +227,10 @@ Desde local, nunca se escribe.» Mismo cambio en `docs/ARCHITECTURE.md`
 ## 11. Riesgos y decisiones
 
 - **Doble alta**: la cierra la idempotencia de PRE-1 (`synckey`). Además:
-  reclamación con `FOR UPDATE` y estados, una réplica, grabación sin reintento,
-  `incierto` no se retoma antes de la Espera (la Function sigue viva tras el
-  corte de 230 s) y búsqueda por CIF + referencia (altas hechas a mano).
-- **Falsos duplicados**: un proveedor que repite número bloquea el alta
-  (`ya_en_sigrid`, visible). Preferible a duplicar en el ERP.
+  `FOR UPDATE` y estados, una réplica, grabación sin reintento, `incierto` no se
+  retoma antes de la Espera (la Function sigue viva tras el corte de 230 s) y
+  búsqueda por CIF + referencia (altas a mano; un número repetido da
+  `ya_en_sigrid`, preferible a duplicar).
 - **Nunca se graba aproximado**: lo que la previa no devuelve tal cual se pidió
   (importe, partida, líneas) va a `revisar`.
 - **Clave de sigrid-api** (decidido 2026-10-01: la de siempre). Riesgo
@@ -239,7 +239,9 @@ Desde local, nunca se escribe.» Mismo cambio en `docs/ARCHITECTURE.md`
 - **Carrera sv4 ↔ sv9**: ambos bloquean la fila del merge; las operaciones que
   solo publican (revalorar, re-buscar) comprueban sin cerrojo: la instantánea
   que se envía es la de `peticion_json`, y la revisión posterior la detecta.
+- **Sin valorar no se aprueba** (R37): como sv6 solo valora contra un contrato,
+  un albarán sin contrato tampoco se podrá aprobar (pregunta 21).
 - Descartado: `albaran-directo` (hereda partida, exige `proide`); partir un
-  albarán en dos altas (una por endpoint); exigir casar con el contrato
-  (humano, 2026-10-01); estado en el merge (deshacer); `sql/write`.
+  albarán en dos altas; exigir casar con el contrato; elegir producto por
+  familia (futuro); estado en el merge (deshacer); `sql/write`.
 - Verificación con BBDD real, Azurite y sigrid-api: manual del humano (tasks).
