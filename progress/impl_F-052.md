@@ -187,6 +187,6 @@ por defecto a 1.000/5.000, sin guarda de `max_rows`, sin guarda de página en sv
 |---|---|
 | Tests F-052 nuevos | A **82**, B **73**, C **94**, correcciones **+46**, D **+47** (sv3 35 del script y 8 de paginación, comun 4); total **342**, en verde |
 | Suites a mano tras el Bloque D, una tras otra | sv3 `400 passed in 8.78s`; comun `327 passed in 38.29s`; sv4 `372 passed in 18.19s` (sin cambios en sv4; comun cambió) |
-| `bash harness/init.sh` final (tras este informe) | {INIT} |
-| Tiempo de la suite | sv3 8,5–23 s; comun 38–85 s; sv4 18 s; raíz {RAIZ} |
+| `bash harness/init.sh` final | tras `ebd6905`: ENTORNO LISTO, exit 0; raíz `1067 passed in 378.14s`; sv3 `400 passed in 16.92s`; comun `327 passed in 62.80s`; sv4 en verde (caché); `PUERTA COBERTURA: 97.5% de 601 líneas cambiadas cubiertas (586/601, umbral 80%, nivel critico)` (las 11 de antes + 4 del script que solo corren al ejecutarlo: inserción en `sys.path`, import de `Settings` y el bloque `__main__`); tamaño `impl 192/220`; ruff 1166 (los 16 avisos nuevos del Bloque D, corregidos en `ebd6905`) |
+| Tiempo de la suite | sv3 8,5–23 s; comun 38–85 s; sv4 18 s; raíz 257–458 s |
 | Mutación | Campaña: T19 (fuera). Manuales: A 1 (+2 review), B **7/7**, C **12/12**, correcciones **10/10**, D **17/17** muertos |
