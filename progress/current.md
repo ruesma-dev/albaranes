@@ -7,7 +7,7 @@
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
-**F-053 · SPEC v4 (`spec_ready`, 2026-10-01)** en la rama `feature/F-053-alta-sigrid` (worktree
+**F-053 · SPEC v5 (`spec_ready`, 2026-10-01, alineada con F-009 de sigrid-api `1bbcfc1`)** en la rama `feature/F-053-alta-sigrid` (worktree
 `../albaranes-F-053`): alta en Sigrid de los albaranes aprobados, servicio nuevo sv9, arranque en simulación.
 **Todas las decisiones cerradas** (`progress/spec_F-053.md`). Precondiciones: la medición de solo lectura (comando
 en ese informe, la ejecuta el humano) y **PRE-1 = F-009 de sigrid-api** desplegada. F-013 queda marcada como

@@ -2,15 +2,16 @@
 # Spec F-053 · Alta en Sigrid de los albaranes aprobados (spec-author)
 
 Rama `feature/F-053-alta-sigrid` (worktree `../albaranes-F-053`, desde `dev` c8a295e).
-Estado `spec_ready`, rigor `critico`, prioridad 1. v1 del 2026-09-30; v2, v3 y
-**v4 del 2026-10-01**. **Todas las decisiones están cerradas**: no quedan
-preguntas abiertas; solo la aprobación de esta v4 (PARADA 1).
+Estado `spec_ready`, rigor `critico`, prioridad 1. v1 del 2026-09-30; v2–v4 y
+**v5 del 2026-10-01** (alineada con la forma final de F-009 de sigrid-api).
+**Todas las decisiones están cerradas**: no quedan preguntas abiertas; solo la
+aprobación de esta v5 (PARADA 1).
 
 ## Qué hay en la rama
 
-- `specs/F-053-alta-sigrid/requirements.md` — R1–R38 en EARS (150/150 líneas).
-- `specs/F-053-alta-sigrid/design.md` — sv9, PRE-1 (= F-009 de sigrid-api),
-  flujo, DDL, configuración, orden y cambio de reglas (249/250).
+- `specs/F-053-alta-sigrid/requirements.md` — R1–R38 en EARS (148/150 líneas).
+- `specs/F-053-alta-sigrid/design.md` — sv9, contrato de F-009 y tabla de códigos
+  → estados (§2), flujo, DDL, configuración, orden y cambio de reglas (249/250).
 - `specs/F-053-alta-sigrid/tasks.md` — T0, T0b, T0c, T1–T30 y T21b; T0–T0c,
   T22 y T26–T29 son MANUAL del humano.
 - `services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py` y
@@ -37,7 +38,7 @@ preguntas abiertas; solo la aprobación de esta v4 (PARADA 1).
 | Empleado | Fijo y configurable (`ALTA_SIGRID_EMPIDE`) |
 | Clave | La de siempre; riesgo anotado (design §11) |
 | DDL | En sv3 |
-| Tolerancia | 0,05 € por línea; avisos bloqueantes: «plantilla de otro proveedor» y «sin histórico de dcapro» |
+| Tolerancia | 0,05 € por línea; avisos bloqueantes por código de F-009: `plantilla_de_otro_proveedor` y `producto_sin_historico` |
 | Simulados | No se graban solos al pasar a real; uno a uno desde la ficha |
 | Re-aprobación | Desaprobar y aprobar cuenta como aprobación nueva |
 | F-015 | Las tachadas se excluyen cuando llegue; el «solo llevar» de F-006 ya queda fuera por no tener importe |
@@ -71,16 +72,39 @@ Título con el prefijo `[SUSTITUIDA POR F-053]` y descripción que lo explica, p
 `CLAUDE.md`) y `blocked` haría que el protocolo la retomase la primera. El líder o
 el humano deciden si se borra la entrada o se marca de otra forma.
 
-## Requisito previo: PRE-1 = F-009 de sigrid-api
+## Requisito previo: F-009 de sigrid-api (v5 alineada con su forma final)
 
-La especifica otro agente en el repositorio sigrid-api. Lo que F-053 necesita está
-en design §2: `cod_contrato` opcional; `referencia_externa` → `dca.synckey` con
-idempotencia; por línea `partida` (código) o `almacen: true` y `referencia_linea`;
-vinculadas (`ctrpro_ide`, consumen `canser`, varias al mismo `ctrpro`) y
-`lineas_sin_contrato[]` con **producto por código**; **cantidades negativas**
-replicando al escritorio de Sigrid (stock, PMP —hay que medir si lo recalcula—,
-`canser`, `estser/estfac`); respuesta por línea y errores con código. Si el
-contrato de F-009 difiere, manda el suyo y se ajusta la petición de R12.
+Leída en solo lectura su spec v2 (`sigrid-api`, rama `feature/F-009-alta-albaran-compra`,
+commit `1bbcfc1`: `specs/F-009-alta-albaran-compra/` y `progress/spec_F-009.md`,
+«Forma final para alinear F-053», su pregunta 18). Lo que cambia en F-053:
+
+- **Ruta**: la de siempre, `POST /api/sigrid/albaran`, en **modo extendido**
+  (claves `lineas`/`referencia_externa`); nunca `lineas_recibidas` (`peticion_mixta`).
+- **Petición (R12)**: una sola lista `lineas`, cada una `ctrpro_ide` **o**
+  `producto` (código; `descripcion` obligatoria), `partida` **o** `almacen: true`,
+  `cantidad` ≠ 0 (negativa = devolución) y `precio` ≥ 0 **obligatorio también en
+  vinculadas**. Como F-009 calcula `tot = cantidad·precio` sin descuento, sv9 manda
+  el unitario **neto** (|importe| / |cantidad|) y pone el signo en la cantidad: así
+  `tot` = importe aprobado, también con descuentos y líneas de precio negativo.
+  Longitudes de F-009 (obra, CIF, contrato ≤ 24; número ≤ 128) → `campo_demasiado_largo`
+  en R10; `unidad` se recorta a 8.
+- **Respuesta (R15, R17, R20)**: `estado` `previsto`/`creado`/`idempotente`. La
+  previa ya devuelve `idempotente` si nuestro albarán existe, así que R14 solo busca
+  altas **a mano** (otro `synckey`). Avisos por **código** (bloqueantes:
+  `plantilla_de_otro_proveedor`, `producto_sin_historico`).
+- **Errores (R18)**: tabla de design §2 por `details.codigo`: datos del albarán
+  (`lineas_no_validas` con sus códigos por línea, obra, contrato, proveedor sin
+  albarán previo) → `no_admitido` con el detalle por línea en el panel de sv4;
+  `referencia_en_conflicto` → `revisar`; configuración o servicio (incluida la llave
+  cerrada, `escritura_albaranes_deshabilitada`, y `producto_no_permitido`) → `error`;
+  `colision_de_clave` → `error` reintentable; 5xx o tiempo agotado → `incierto` en
+  la grabación (reintento seguro por idempotencia tras la Espera).
+- **Configuración de sigrid-api** (la pone ese proyecto): `SIGRID_ALBARAN_WRITE_ENABLED`
+  (segunda llave; la abre el humano para T29), prefijo `ALB-` y productos `["MA9999"]`.
+- **Documentación**: la fila de F-053 en `azure-apps/sigrid_api.md` §10 la escribe
+  F-009 (su R36); F-053 actualiza `azure-apps/albaranes.md`.
+- Devoluciones: F-009 las admite aunque `canser` quede < 0 (aviso `servido_negativo`,
+  informativo) y usa la hipótesis A si su medición M5 no encuentra devoluciones reales.
 
 ## Medición (T0): comando para PowerShell
 
