@@ -15,16 +15,16 @@ de sv1 y la verificación MANUAL T12 (sección «F-054 · lo que queda» al fina
   `feature/F-054-correo-adjunto-encadenado` a `dev`, `.\deploy.ps1 -Only sv1` + `.\check_deploy.ps1` desde `infra/`
   y la **T12 MANUAL** (procedimiento al final). La T12 no bloquea el `done`.
 - **F-052 · CERRADA (`done`, 2026-10-01)**, fusionada en `dev` y desplegada (sección de abajo).
-- **F-053** (alta en Sigrid de los aprobados): `spec_ready` en `../albaranes-F-053` (rama
-  `feature/F-053-alta-sigrid`), **16 preguntas abiertas** al humano. La escritura en Sigrid NO va en el despliegue
-  de F-052.
-- **F-051** (almacén por línea): spec v2 en `../albaranes-F-051` (rama `feature/F-051-almacen-por-linea`),
-  **esperando las respuestas del humano**.
+- **F-053** (alta en Sigrid de los aprobados): spec **v5 cerrada** (`spec_ready`, sin preguntas) en
+  `../albaranes-F-053` (rama `feature/F-053-alta-sigrid`, con `dev` integrado). Precondición: **F-009 de sigrid-api**
+  (spec v4 en ese repo, rama `feature/F-009-alta-albaran-compra`), pendiente de repetir T0 `--solo M3 M7 M9 M11 M13
+  M14` (humano) y de retirar el script de T0 antes de implementar. Orden: F-009 → F-051 → F-053.
+- **F-051** (almacén por línea): spec **v3** en `../albaranes-F-051` (rama `feature/F-051-almacen-por-linea`, con `dev`
+  integrado). D8 cerrada; D1, D2, D3, D4, D5 y D7 aceptadas por omisión, a confirmar en la PARADA 1.
 - **F-055** (IA2 elige el proveedor entre los de la obra): `pending`, prioridad 1. Depende de F-052.
 - **Fichas nuevas del cierre de F-052** (`pending`, prioridad 2): **F-056** re-búsqueda doble en sv4 y **F-057**
   truncado sin comprobar en los clientes colindantes de sv4 y sv3.
-- **Crédito de OpenAI agotado el 2026-09-30.** Probablemente **3 albaranes en `q-extraccion-poison`**: comprobar y
-  reencolar cuando haya crédito (pendiente).
+- Crédito de OpenAI: resuelto. Los 3 albaranes del 2026-09-30 se procesaron hacia las 14:07 (nada en poison).
 
 F-051 y F-053 viven en sus ramas: no constan en el `features.json` de esta rama hasta que se fusionen en `dev`.
 F-054 consta aquí como `done` (esta es su rama); llega a `dev` con el merge.
