@@ -5,7 +5,7 @@
 > en `progress/historico/current_2026-10-01_cierre_F-052.md`; el resumen de F-052, en `progress/history.md`.
 > Aquí solo queda lo vivo. Lo que manda sobre el estado de cada feature es `harness/features.json`.
 
-**F-054 · `in_progress` (2026-10-02), IMPLEMENTER TRABAJANDO** en el árbol principal, rama
+**F-054 · `in_progress` (2026-10-02), IMPLEMENTADA, PENDIENTE DE REVIEW** en el árbol principal, rama
 `feature/F-054-correo-adjunto-encadenado`. Tarea en curso y desviaciones: sección «F-054 · implementación» al final.
 
 **F-054 · `spec_ready` v2 (2026-10-02)**: sv1 ingiere los PDF **e imágenes** de correos
@@ -114,7 +114,8 @@ vigente.
 ## F-054 · implementación (implementer, 2026-10-02)
 
 - Árbol principal (no el worktree `../albaranes-F-054` que cita `tasks.md`), por indicación del líder.
-- T1–T9 hechas, un commit por tarea. T10 (cobertura y mutación) en curso. Informe: `progress/impl_F-054.md`.
+- T1–T11 hechas, un commit por tarea; T13 (`init.sh`) en el informe. **Listo para el reviewer.** Informe:
+  `progress/impl_F-054.md`; mutación: `progress/mutacion_F-054.md` (19/20 muertos, 1 equivalente).
 - Desviaciones menores respecto a design §7 (justificadas en el informe): `_ingerir` recibe además `att_id`
   (para conservar el log literal `error splitting PDF` con el id del adjunto); `_submit_page_to_orchestrator`
   deja de recibir el `attachment` (no lo usaba: el `meta` sale de `prepared`, como antes); el fallo de descarga
