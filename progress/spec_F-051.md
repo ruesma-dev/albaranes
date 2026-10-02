@@ -255,3 +255,88 @@ ejecutados: «BACKLOG.md regenerado» y «PUERTA TAMAÑO: F-051 dentro de los to
 ninguna suite** por instrucción del líder (otra review corriendo en la
 máquina; dos suites a la vez tumban Windows). Cambio solo de spec, ficha y
 progress: ningún fichero de código tocado.
+
+## v3 (2026-10-02) — respuestas del humano y alineación con F-053
+
+### Decisiones del humano (2026-10-02), cerradas
+
+1. **D6 · Alta en Sigrid.** Hoy es **MANUAL**: la teclea administración
+   leyendo el portal. Por eso lo que pinta sv4 («Almacén») es lo que llega hoy a
+   Sigrid. El alta automática la hará **F-053** (spec cerrada en
+   `../albaranes-F-053`, rama `feature/F-053-alta-sigrid`; depende de **F-009**
+   de sigrid-api): una línea de almacén se da de alta **sin partida y con
+   almacén**. F-013 queda sustituida por F-053 en toda la spec.
+2. **Ejemplo confirmado**: tres líneas con «03.02» escrito solo junto a la
+   segunda ⇒ la 1.ª y la 3.ª van a **almacén** (no se aplica el código único a
+   las tres).
+3. **D9**: partida en cabecera **y** otra junto a alguna línea ⇒ las marcadas
+   llevan la suya y el resto la de cabecera (la recomendada).
+4. **Excepciones al «aplica a las marcadas»**: sí. Portes, complementos y
+   similares sin marca siguen la partida de su línea base (como ya hacen los
+   prompts de familia).
+
+### Qué cambia en la spec
+
+- **Prompt de IA1** (la IA decide; sin reglas deterministas, coherente con la
+  regla 14 de ARCHITECTURE y la decisión del 2026-08-25): la viñeta «si solo hay
+  un código claro en todo el documento, se aplica a todas las líneas» —que es la
+  que hacía copiar «03.02» a las tres— se **sustituye** por cuatro viñetas con
+  texto literal en `design.md` §sv2: (1) código de línea ⇒ solo sus líneas,
+  aunque sea el único; (2) código de documento ⇒ las líneas sin código propio, y
+  con códigos de línea además, las marcadas la suya (D9); (3) complementos sin
+  código ⇒ el de su base; (4) línea sin código propio, no complemento y sin
+  código de documento ⇒ null, sin copiar, con el ejemplo del punto 2 dentro del
+  prompt. El resto de la sección y la línea `~147` («mismo vertido o servicio»)
+  no se tocan; fase 2 lo hereda por `{prompt_fase_1}`.
+- **requirements** (150/150): R25 reescrito (código de línea y ejemplo), **R29**
+  (complementos) y **R30** (D9) nuevos, R26 amplía la regresión, R27 cubre R25,
+  R29 y R30; **R7** ampliado: una complementaria declarada sin partida con base
+  con partida hereda la de la base (ya lo hace `resolve_partida_for_
+  complementaria`; se fija con test). R24 apunta a F-053/F-009. Vocabulario con
+  «código de documento» y «código de línea».
+- **design** (250/250): contexto con el alta manual; sección sv2 con las cuatro
+  viñetas literales; sección nueva «Contrato con F-053»; riesgo «complementos no
+  declarados»; contexto y «Límite» de sigrid-api resumidos (F-009 ya resuelve
+  `almacen: true` y la partida nunca heredada).
+- **tasks** (25): T5 añade el caso (c) en R7; T7 cubre R25–R27, R29, R30 y que
+  la viñeta vieja ya no está; T8 sustituye una viñeta por cuatro; T19 docs con
+  las concreciones; **T23** pasa a cinco albaranes (cabecera, «03.02» junto a la
+  2.ª, D9, complemento sin marca, sin partida).
+- Ficha: nota v3 en la descripción; sigue `spec_ready`, servicios sin cambio
+  (sv2, sv6, sv4).
+
+### Alineación con F-053 (leída en solo lectura)
+
+- Coincide: F-053 define «Almacén = partida final vacía con marca de F-051» y
+  manda `almacen: true` sin `partida` (R12); una vinculada en almacén conserva
+  `ctrpro_ide` (coherente con R15/D4, que dejan de depender de sigrid-api: F-009
+  lo admite); una línea vacía sin marca da `no_admitido` (`linea_sin_partida`),
+  coherente con D1. Orden F-052 → F-051 → F-053.
+- **Diferencias, anotadas en `design.md` para F-053** (no se tocan desde aquí):
+  1. `services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py`
+     (`MARCAS_ALMACEN`) incluye `alm_acopio`, que es el `origen` de la derivada
+     del ALM impreso, nunca un `partida_action`. Inofensivo; conviene quitarlo.
+  2. sv9 necesitará el mismo conjunto `ACCIONES_ALMACEN` que F-051 define en sv4
+     (`domain/services/almacen.py`). Para no copiarlo entre servicios, F-053 —que
+     ya toca `ruesma_comun` y reconstruye todas las imágenes— debería moverlo a
+     `ruesma_comun.valoracion` y que sv4 lo importe. F-051 no toca `comun`.
+  3. `asignar_almacen` y los dos `POST` nuevos de sv4 entran en el bloqueo
+     R25–R26 de F-053 al fusionar (su design §8 ya lo prevé).
+
+### Preguntas que quedan
+
+Ninguna bloqueante. Para la PARADA 1, confirmar las aceptadas por omisión
+(D1, D2 en «todas las familias, revisión solo en destinadas», D3, D4, D5, D7 y
+D8). Una observación sobre **D8**: con la excepción (c) del humano (los
+complementos siguen a su base en el papel), cabría que elegir «Almacén» en sv4
+sobre una línea base arrastrase también a sus complementarias declaradas. La
+spec mantiene D8 (no arrastra; para todo el albarán está el botón): si el humano
+prefiere arrastrar, es ampliar R14 a las líneas con `ref_linea_base_merge_id` de
+esa base, sin DDL.
+
+### Estado del entorno
+
+`python -m harness.tamano --feature F-051`: «PUERTA TAMAÑO: F-051 dentro de
+los topes (requirements 150/150, design 250/250)». `python harness/backlog.py`:
+«BACKLOG.md regenerado». **No se ha ejecutado `bash harness/init.sh` ni
+ninguna suite**, por instrucción del líder. Solo spec, ficha y progress.

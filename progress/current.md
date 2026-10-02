@@ -18,6 +18,15 @@ partida marcada ⇒ null); sin campo de cabecera ni sv3. D1, D3, D4, D5, D7 y
 D8 aceptadas por omisión, **a confirmar en la PARADA 1**; **D6 abierta**
 (¿cómo se da hoy de alta el albarán en Sigrid?); **D9 nueva** (caso mixto
 documento + línea). Detalle en `progress/spec_F-051.md` §v2.
+**Spec v3 (2026-10-02)** con las respuestas del humano: D6 = alta en Sigrid
+hoy MANUAL, la automática es F-053 (sustituye a F-013; almacén = `almacen:
+true` sin partida, alineado); ejemplo «03.02» junto a la 2.ª de tres ⇒ 1.ª y
+3.ª a almacén; D9 = marcadas la suya, resto la de documento; portes y
+complementos sin marca siguen a su base. Todo en el prompt de IA1 (cuatro
+viñetas literales sustituyen la del código único). `spec_ready`, lista para la
+PARADA 1: solo quedan por confirmar las aceptadas por omisión (D1, D2 familias,
+D3, D4, D5, D7, D8). Tres diferencias con F-053 anotadas para esa feature.
+Detalle en `progress/spec_F-051.md` §v3.
 
 **F-045 · CAPA 1 IMPLEMENTADA** (2026-09-16, rama
 `feature/F-045-banco-evals-revision-manual`, 22 commits de tarea). Informe
