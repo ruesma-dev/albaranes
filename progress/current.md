@@ -5,25 +5,29 @@
 > en `progress/historico/current_2026-10-01_cierre_F-052.md`; el resumen de F-052, en `progress/history.md`.
 > Aquí solo queda lo vivo. Lo que manda sobre el estado de cada feature es `harness/features.json`.
 
+**F-054 · CERRADA (`done`, 2026-10-02)**, review de cierre APROBADA: sv1 ingiere los PDF **e imágenes** de correos
+adjuntos (`message/rfc822`). Rama `feature/F-054-correo-adjunto-encadenado`, **pendiente de merge a `dev`**, despliegue
+de sv1 y la verificación MANUAL T12 (sección «F-054 · lo que queda» al final). Resumen en `progress/history.md`.
+
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
-- **Ninguna feature `in_progress`.** **F-052 · CERRADA (`done`, 2026-10-01)**, review de cierre APROBADA.
-  Pendiente del humano: merge de `feature/F-052-proveedores-truncados` a `dev` y despliegue **sv3 → sv4** (abajo).
-- **F-054** (correo con adjunto encadenado): `spec_ready` en `../albaranes-F-054` (rama
-  `feature/F-054-correo-adjunto-encadenado`). **4 decisiones DA por confirmar** por el humano. Se implementa
-  **después de F-052** (o sea, ya puede arrancar en cuanto se confirmen las DA y F-052 esté en `dev`).
-- **F-053** (alta en Sigrid de los aprobados): `spec_ready` en `../albaranes-F-053` (rama
-  `feature/F-053-alta-sigrid`), **16 preguntas abiertas** al humano. La escritura en Sigrid NO va en el despliegue
-  de F-052.
-- **F-051** (almacén por línea): spec v2 en `../albaranes-F-051` (rama `feature/F-051-almacen-por-linea`),
-  **esperando las respuestas del humano**.
+- **F-054 · CERRADA (`done`, 2026-10-02)**. Pendiente del humano: merge de
+  `feature/F-054-correo-adjunto-encadenado` a `dev`, `.\deploy.ps1 -Only sv1` + `.\check_deploy.ps1` desde `infra/`
+  y la **T12 MANUAL** (procedimiento al final). La T12 no bloquea el `done`.
+- **F-052 · CERRADA (`done`, 2026-10-01)**, fusionada en `dev` y desplegada (sección de abajo).
+- **F-053** (alta en Sigrid de los aprobados): spec **v5 cerrada** (`spec_ready`, sin preguntas) en
+  `../albaranes-F-053` (rama `feature/F-053-alta-sigrid`, con `dev` integrado). Precondición: **F-009 de sigrid-api**
+  (spec v4 en ese repo, rama `feature/F-009-alta-albaran-compra`), pendiente de repetir T0 `--solo M3 M7 M9 M11 M13
+  M14` (humano) y de retirar el script de T0 antes de implementar. Orden: F-009 → F-051 → F-053.
+- **F-051** (almacén por línea): spec **v3** en `../albaranes-F-051` (rama `feature/F-051-almacen-por-linea`, con `dev`
+  integrado). D8 cerrada; D1, D2, D3, D4, D5 y D7 aceptadas por omisión, a confirmar en la PARADA 1.
 - **F-055** (IA2 elige el proveedor entre los de la obra): `pending`, prioridad 1. Depende de F-052.
 - **Fichas nuevas del cierre de F-052** (`pending`, prioridad 2): **F-056** re-búsqueda doble en sv4 y **F-057**
   truncado sin comprobar en los clientes colindantes de sv4 y sv3.
-- **Crédito de OpenAI agotado el 2026-09-30.** Probablemente **3 albaranes en `q-extraccion-poison`**: comprobar y
-  reencolar cuando haya crédito (pendiente).
+- Crédito de OpenAI: resuelto. Los 3 albaranes del 2026-09-30 se procesaron hacia las 14:07 (nada en poison).
 
-F-051, F-053 y F-054 viven en sus ramas: no constan en el `features.json` de esta rama hasta que se fusionen en `dev`.
+F-051 y F-053 viven en sus ramas: no constan en el `features.json` de esta rama hasta que se fusionen en `dev`.
+F-054 consta aquí como `done` (esta es su rama); llega a `dev` con el merge.
 
 ## F-052 · cerrada, fusionada y desplegada (2026-10-01)
 
@@ -102,3 +106,31 @@ vigente.
 - **Un comando de verificación guardado en `progress/` puede caducar**: guarda también de qué depende.
 - **El humano ejecuta él mismo** los `push`, los merges y las verificaciones MANUAL. Dale el comando listo para
   **PowerShell**, con `git -C <ruta>`, sin `&&` (su PowerShell 5.1 da error de parser) y con el criterio de verde.
+
+## F-054 · lo que queda (cerrada el 2026-10-02)
+
+- Informes archivados: `progress/historico/impl_F-054.md` y `progress/historico/review_F-054.md`; la campaña
+  sigue en `progress/mutacion_F-054.md` (19/20 muertos, 1 equivalente). Resumen y decisiones en `history.md`.
+- Al humano: merge de `feature/F-054-correo-adjunto-encadenado` a `dev`; luego, desde `infra/`,
+  `.\deploy.ps1 -Only sv1` y `.\check_deploy.ps1`; después la T12 de abajo.
+- Log de R23 nuevo en sv1: `sin adjuntos elegibles: ni directos ni correos adjuntos (total=N) → Errores` (sigue
+  conteniendo «sin adjuntos elegibles», el texto que busca la T12 en los logs viejos).
+- Al leer los logs de la T12 (O1 de la review): unos bytes basura no vacíos en un correo adjunto se leen como
+  `text/plain` y salen como WARNING «sin ningun documento interior valido», no como ERROR «ilegible»; el
+  destino es el mismo.
+
+### PENDIENTE DEL HUMANO · verificación MANUAL de F-054 (T12, tras merge a `dev` y despliegue de sv1)
+
+No bloquea el `done`. Procedimiento (design §10 y `tasks.md` T12):
+
+1. Desde `infra/`: `.\deploy.ps1 -Only sv1` y `.\check_deploy.ps1`.
+2. En Outlook, carpeta `Errores` del buzón de albaranes: localizar los correos cuyo único adjunto es un correo
+   (icono de sobre; en los logs viejos de sv1: «sin adjuntos elegibles»).
+3. Mover **uno** a la carpeta origen y **marcarlo como no leído** (el filtro de sv1 es `isRead eq false`).
+4. Esperar un ciclo de polling y comprobar en los logs de la Container App de sv1: la línea INFO
+   `att=<id> documentos interiores: N PDF y M imagen(es)`, el `intake encolado` de cada página y
+   `movido a Procesados`; y el albarán en el front (sv4).
+5. Si cuadra, repetir con el resto por tandas pequeñas.
+6. Los mixtos que están en `Procesados` con el interior perdido **no** se mueven en bloque (re-ingerirían los
+   PDF directos con otra `correlation_key`): uno a uno, si el humano lo decide.
+7. Anotar aquí el resultado.

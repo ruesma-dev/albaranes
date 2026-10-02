@@ -5,22 +5,33 @@ procesamiento al orquestador (sv7). sv1 ya no llama a sv2 ni a sv3.
 Flujo (run_once):
   1. Lista mensajes no leídos con adjuntos del SOURCE_FOLDER vía Graph.
   2. Para cada mensaje:
-     a. Lista adjuntos.
-     b. Filtra adjuntos no-inline tipo file (descarta inline e items).
-     b'. Si hay alguno elegible, pide UNA vez el asunto y la parte única
-         del cuerpo y construye el contexto del correo (F-048, R2-R5). Si
+     a. Lista adjuntos y los clasifica en UNA pasada, en el orden de Graph:
+        - correo adjunto (``message/rfc822``, item o file, no inline, no
+          reference, bajo el límite; F-054 R1-R2). Uno de tipo correo
+          descartado no se trata como directo;
+        - directo: la regla de siempre (descarta inline, item, reference
+          y los que exceden el límite; ningún filtro de tipo, R3).
+     b'. Si hay alguno, pide UNA vez el asunto y la parte única del cuerpo
+         del correo EXTERIOR y construye el contexto (F-048, R2-R5). Si
          falla, se sigue sin contexto: no es motivo para ir a 'Errores'.
-     c. Para cada adjunto válido:
-        i.   Descarga sus bytes vía Graph.
-        ii.  Si es PDF, lo divide por páginas (cada página es un evento
-             independiente para sv7 — la idempotencia evita procesar dos
-             veces lo mismo).
-        iii. Calcula sha256 del adjunto y de cada página.
-        iv.  POST sv7 /v1/events/email-received con multipart (meta + file).
+     c. Para cada adjunto, en orden:
+        - directo: descarga sus bytes vía Graph;
+        - correo adjunto: descarga su MIME (``$value``) y el extractor
+          inyectado saca sus PDF e imágenes válidas (5 niveles, todo o
+          nada); cada documento interior bajo el límite sigue el camino
+          del directo con ``correo_adjunto_id``/``_nivel`` en el meta.
+        Camino del directo:
+        i.   Si es PDF, lo divide por páginas (cada página es un evento
+             independiente — la idempotencia evita procesar dos veces lo
+             mismo).
+        ii.  Calcula sha256 del fichero y de cada página.
+        iii. Lo entrega al intake (dedup, blob ``input/``, q-extraccion).
      d. Mueve el email a:
-        - 'Procesados' si TODAS las páginas devolvieron 202 (accepted=true,
-          incluso si duplicate=true).
-        - 'Errores' si alguna falló o no había adjuntos válidos.
+        - 'Procesados' si nada falló (descarga, extracción, troceo, intake,
+          tope de anidamiento) y al menos una página fue aceptada
+          (accepted=true, incluso si duplicate=true).
+        - 'Errores' en otro caso, o si no había nada que procesar. Un
+          correo adjunto sin documentos válidos no es fallo (WARNING).
 
 Notas:
   - La idempotencia la garantiza sv7 (correlation_key UNIQUE):
@@ -36,8 +47,13 @@ import hashlib
 import logging
 import time
 from datetime import datetime, timezone
+from typing import NamedTuple
 
 from domain.models.email_models import EmailAttachment, EmailMessage
+from domain.ports.extractor_correo_adjunto import (
+    CorreoAdjuntoIlegible,
+    ExtractorCorreoAdjunto,
+)
 from domain.ports.mailbox_client import MailboxClient
 from domain.ports.orchestrator_port import OrchestratorClient, OrchestratorError
 from infrastructure.document.pdf_page_splitter import (
@@ -53,21 +69,39 @@ from ruesma_comun.correo import (
 logger = logging.getLogger(__name__)
 
 
+_ODATA_REFERENCE = "#microsoft.graph.referenceAttachment"
+
 # Tipos de adjunto que vienen en Graph y NO son archivos reales que
-# queramos procesar (referencias a otros items, mensajes embebidos…).
+# queramos procesar como directos (referencias a otros items, mensajes
+# embebidos…). Un itemAttachment de tipo correo NO llega aquí: lo abre la
+# rama de correos adjuntos (F-054).
 _NON_FILE_ODATA_TYPES = frozenset({
     "#microsoft.graph.itemAttachment",
-    "#microsoft.graph.referenceAttachment",
+    _ODATA_REFERENCE,
 })
+
+# ``contentType`` de Graph de un correo adjunto (F-054, R1).
+_CONTENT_TYPE_CORREO = "message/rfc822"
+_CONTENT_TYPE_PDF = "application/pdf"
+
+
+class _ResultadoAdjunto(NamedTuple):
+    """Lo que deja un adjunto (directo o correo adjunto) para R21."""
+
+    ok: bool
+    paginas_aceptadas: int
+
+
+def _es_tipo_correo(att: EmailAttachment) -> bool:
+    """El adjunto es de tipo correo (``message/rfc822``, sin mayúsculas)."""
+    return (att.content_type or "").lower() == _CONTENT_TYPE_CORREO
 
 
 class PollingPipeline:
     """Pipeline principal del sv1.
 
-    Firma del constructor IGUAL que la versión anterior — solo se
-    sustituyen `extractor` y `persistence` por `orchestrator`. Así
-    `main.py` solo tiene que cambiar el cableado, no la forma de
-    construir el pipeline.
+    ``extractor_correo`` (F-054) es obligatorio: lo construye ``main.py``
+    y el pipeline solo conoce su puerto (R27).
     """
 
     def __init__(
@@ -76,11 +110,13 @@ class PollingPipeline:
         mailbox: MailboxClient,
         orchestrator: OrchestratorClient,
         pdf_splitter: PdfPageSplitter,
+        extractor_correo: ExtractorCorreoAdjunto,
         correo_max_caracteres: int = MAX_CARACTERES_DEFECTO,
     ) -> None:
         self._mailbox = mailbox
         self._orchestrator = orchestrator
         self._splitter = pdf_splitter
+        self._extractor_correo = extractor_correo
         self._correo_max_caracteres = correo_max_caracteres
 
     # ----------------------------------------------------------- #
@@ -199,11 +235,23 @@ class PollingPipeline:
             mailbox=mailbox,
             message_id=msg.id,
         )
-        eligible = [a for a in attachments if self._is_eligible(a, max_attachment_bytes)]
 
-        if not eligible:
+        # UNA pasada en el orden de Graph (F-054, R20): cada adjunto es un
+        # correo adjunto elegible, un adjunto de tipo correo descartado
+        # (R2: no cae a la regla de los directos) o un candidato a directo
+        # con la regla de siempre (R3).
+        a_procesar: list[tuple[bool, EmailAttachment]] = []
+        for att in attachments:
+            if _es_tipo_correo(att):
+                if self._es_correo_adjunto(att, max_attachment_bytes):
+                    a_procesar.append((True, att))
+                continue
+            if self._is_eligible(att, max_attachment_bytes):
+                a_procesar.append((False, att))
+
+        if not a_procesar:
             logger.warning(
-                "msg=%s sin adjuntos elegibles (total=%d) → Errores",
+                "msg=%s sin adjuntos elegibles: ni directos ni correos adjuntos (total=%d) → Errores",
                 msg.id,
                 len(attachments),
             )
@@ -215,19 +263,32 @@ class PollingPipeline:
             return
 
         # UNA petición por mensaje: el mismo contexto va a todas las
-        # páginas de todos sus adjuntos (F-048, R6).
+        # páginas de todos sus adjuntos (F-048, R6), también a las de los
+        # documentos de un correo adjunto: el del EXTERIOR (F-054, R17).
         contexto = self._contexto_del_correo(msg=msg, mailbox=mailbox)
 
-        all_ok = True
-        for att in eligible:
-            ok = self._process_attachment(
-                msg=msg,
-                attachment=att,
-                mailbox=mailbox,
-                contexto=contexto,
-            )
-            all_ok = all_ok and ok
+        resultados: list[_ResultadoAdjunto] = []
+        for es_correo, att in a_procesar:
+            if es_correo:
+                resultado = self._process_correo_adjunto(
+                    msg=msg,
+                    attachment=att,
+                    mailbox=mailbox,
+                    contexto=contexto,
+                    max_attachment_bytes=max_attachment_bytes,
+                )
+            else:
+                resultado = self._process_attachment(
+                    msg=msg,
+                    attachment=att,
+                    mailbox=mailbox,
+                    contexto=contexto,
+                )
+            resultados.append(resultado)
 
+        # R21: Procesados si y solo si nada falló y entró al menos una página.
+        paginas_aceptadas = sum(r.paginas_aceptadas for r in resultados)
+        all_ok = all(r.ok for r in resultados) and paginas_aceptadas >= 1
         target = processed_folder_id if all_ok else errors_folder_id
         target_label = "Procesados" if all_ok else "Errores"
         self._safe_move(
@@ -235,7 +296,15 @@ class PollingPipeline:
             message_id=msg.id,
             target_folder_id=target,
         )
-        logger.info("msg=%s movido a %s", msg.id, target_label)
+        correos_adjuntos = sum(1 for es_correo, _ in a_procesar if es_correo)
+        logger.info(
+            "msg=%s movido a %s (directos=%d correos_adjuntos=%d paginas_aceptadas=%d)",
+            msg.id,
+            target_label,
+            len(a_procesar) - correos_adjuntos,
+            correos_adjuntos,
+            paginas_aceptadas,
+        )
 
     def _process_attachment(
         self,
@@ -244,8 +313,8 @@ class PollingPipeline:
         attachment: EmailAttachment,
         mailbox: str,
         contexto: ContextoCorreo | None,
-    ) -> bool:
-        """Devuelve True si TODAS las páginas se enviaron a sv7 con éxito."""
+    ) -> _ResultadoAdjunto:
+        """Adjunto directo. ``ok`` si TODAS sus páginas se aceptaron."""
         logger.info(
             "msg=%s att=%s name=%r type=%s size=%dB",
             msg.id,
@@ -268,8 +337,160 @@ class PollingPipeline:
                 attachment.id,
                 exc,
             )
-            return False
+            return _ResultadoAdjunto(ok=False, paginas_aceptadas=0)
 
+        return self._ingerir(
+            msg=msg,
+            att_id=attachment.id,
+            nombre=attachment.name,
+            content_type=attachment.content_type,
+            file_bytes=file_bytes,
+            contexto=contexto,
+            extra_meta=None,
+        )
+
+    def _process_correo_adjunto(
+        self,
+        *,
+        msg: EmailMessage,
+        attachment: EmailAttachment,
+        mailbox: str,
+        contexto: ContextoCorreo | None,
+        max_attachment_bytes: int,
+    ) -> _ResultadoAdjunto:
+        """Correo adjunto (F-054): descarga su MIME, saca sus documentos y
+        mete cada uno por el camino del directo.
+
+        Nunca se loguea ``attachment.name``: Graph pone ahí el asunto del
+        correo interior (R25, DA6).
+        """
+        logger.info(
+            "msg=%s att=%s correo adjunto type=%s size=%dB",
+            msg.id,
+            attachment.id,
+            attachment.content_type,
+            attachment.size,
+        )
+
+        try:
+            raw_mime = self._mailbox.download_attachment_value(
+                mailbox=mailbox,
+                message_id=msg.id,
+                attachment_id=attachment.id,
+            )
+        except Exception as exc:
+            # Solo el tipo: el texto del error de Graph podría citar el correo.
+            logger.error(
+                "msg=%s att=%s error descarga Graph del correo adjunto (%s)",
+                msg.id,
+                attachment.id,
+                type(exc).__name__,
+            )
+            return _ResultadoAdjunto(ok=False, paginas_aceptadas=0)
+
+        try:
+            extraccion = self._extractor_correo.extraer(raw_mime=raw_mime)
+        except CorreoAdjuntoIlegible as exc:
+            logger.error(
+                "msg=%s att=%s correo adjunto ilegible: %s",
+                msg.id,
+                attachment.id,
+                exc,
+            )
+            return _ResultadoAdjunto(ok=False, paginas_aceptadas=0)
+
+        if extraccion.tope_excedido:
+            # R9: todo o nada, tampoco entran los de niveles permitidos.
+            logger.error(
+                "msg=%s att=%s correo adjunto excede el tope de anidamiento tope=%d:"
+                " no se ingiere ningun documento",
+                msg.id,
+                attachment.id,
+                self._extractor_correo.nivel_maximo,
+            )
+            return _ResultadoAdjunto(ok=False, paginas_aceptadas=0)
+
+        documentos = []
+        for doc in extraccion.documentos:
+            if max_attachment_bytes > 0 and len(doc.file_bytes) > max_attachment_bytes:
+                logger.warning(
+                    "msg=%s att=%s documento interior name=%r tamaño %dB excede límite %dB → descartado",
+                    msg.id,
+                    attachment.id,
+                    doc.filename,
+                    len(doc.file_bytes),
+                    max_attachment_bytes,
+                )
+                continue
+            documentos.append(doc)
+
+        if not documentos:
+            # R22: no es un fallo; el destino lo decide R21(c).
+            logger.warning(
+                "msg=%s att=%s correo adjunto sin ningun documento interior valido (partes_ignoradas=%d)",
+                msg.id,
+                attachment.id,
+                extraccion.partes_ignoradas,
+            )
+            return _ResultadoAdjunto(ok=True, paginas_aceptadas=0)
+
+        pdfs = sum(1 for doc in documentos if doc.content_type == _CONTENT_TYPE_PDF)
+        logger.info(
+            "msg=%s att=%s documentos interiores: %d PDF y %d imagen(es), partes_ignoradas=%d",
+            msg.id,
+            attachment.id,
+            pdfs,
+            len(documentos) - pdfs,
+            extraccion.partes_ignoradas,
+        )
+
+        resultados: list[_ResultadoAdjunto] = []
+        for doc in documentos:
+            logger.info(
+                "msg=%s att=%s documento interior name=%r type=%s nivel=%d size=%dB",
+                msg.id,
+                attachment.id,
+                doc.filename,
+                doc.content_type,
+                doc.nivel,
+                len(doc.file_bytes),
+            )
+            resultados.append(
+                self._ingerir(
+                    msg=msg,
+                    att_id=attachment.id,
+                    nombre=doc.filename,
+                    content_type=doc.content_type,
+                    file_bytes=doc.file_bytes,
+                    contexto=contexto,
+                    extra_meta={
+                        "correo_adjunto_id": attachment.id,
+                        "correo_adjunto_nivel": doc.nivel,
+                    },
+                )
+            )
+
+        return _ResultadoAdjunto(
+            ok=all(r.ok for r in resultados),
+            paginas_aceptadas=sum(r.paginas_aceptadas for r in resultados),
+        )
+
+    def _ingerir(
+        self,
+        *,
+        msg: EmailMessage,
+        att_id: str,
+        nombre: str,
+        content_type: str,
+        file_bytes: bytes,
+        contexto: ContextoCorreo | None,
+        extra_meta: dict | None,
+    ) -> _ResultadoAdjunto:
+        """Troceo, sha256 e intake de un fichero (directo o interior).
+
+        ``ok`` si TODAS sus páginas se aceptaron; ``paginas_aceptadas``
+        cuenta las aceptadas, nuevas o duplicadas (DA7).
+        """
         attachment_sha256 = hashlib.sha256(file_bytes).hexdigest()
 
         # Splitting de PDF: si el adjunto es PDF multi-página, devuelve
@@ -277,40 +498,42 @@ class PollingPipeline:
         # PreparedDocument con was_split=False.
         try:
             prepared_pages = self._splitter.split(
-                filename=attachment.name,
-                mime_type=attachment.content_type,
+                filename=nombre,
+                mime_type=content_type,
                 file_bytes=file_bytes,
             )
         except Exception as exc:
             logger.error(
                 "msg=%s att=%s error splitting PDF: %s",
                 msg.id,
-                attachment.id,
+                att_id,
                 exc,
             )
-            return False
+            return _ResultadoAdjunto(ok=False, paginas_aceptadas=0)
 
         all_pages_ok = True
+        aceptadas = 0
         for prepared in prepared_pages:
             page_ok = self._submit_page_to_orchestrator(
                 msg=msg,
-                attachment=attachment,
                 attachment_sha256=attachment_sha256,
                 prepared=prepared,
                 contexto=contexto,
+                extra_meta=extra_meta,
             )
             all_pages_ok = all_pages_ok and page_ok
+            aceptadas += 1 if page_ok else 0
 
-        return all_pages_ok
+        return _ResultadoAdjunto(ok=all_pages_ok, paginas_aceptadas=aceptadas)
 
     def _submit_page_to_orchestrator(
         self,
         *,
         msg: EmailMessage,
-        attachment: EmailAttachment,
         attachment_sha256: str,
         prepared: PreparedDocument,
         contexto: ContextoCorreo | None,
+        extra_meta: dict | None,
     ) -> bool:
         page_sha256 = hashlib.sha256(prepared.file_bytes).hexdigest()
 
@@ -327,6 +550,10 @@ class PollingPipeline:
             "total_pages": prepared.page_count,
             "page_sha256": page_sha256,
         }
+        # F-054, R15: la página de un documento interior lleva además de
+        # qué correo adjunto sale; la de un directo, el dict de siempre (R16).
+        if extra_meta is not None:
+            meta.update(extra_meta)
 
         try:
             ack = self._orchestrator.submit_email_received(
@@ -401,6 +628,41 @@ class PollingPipeline:
             contexto.truncado,
         )
         return contexto
+
+    @staticmethod
+    def _es_correo_adjunto(att: EmailAttachment, max_bytes: int) -> bool:
+        """Un adjunto de tipo correo se abre si no es inline, ni
+        ``referenceAttachment``, ni supera el límite (F-054, R1-R2).
+
+        Los logs llevan id, tipo y tamaño, NUNCA ``att.name``: Graph pone
+        ahí el asunto del correo interior (R25).
+        """
+        if att.is_inline:
+            logger.info(
+                "att=%s correo adjunto inline type=%s size=%dB → descartado",
+                att.id,
+                att.content_type,
+                att.size,
+            )
+            return False
+        if att.odata_type == _ODATA_REFERENCE:
+            logger.info(
+                "att=%s correo adjunto referenceAttachment type=%s size=%dB → descartado",
+                att.id,
+                att.content_type,
+                att.size,
+            )
+            return False
+        if max_bytes > 0 and att.size > max_bytes:
+            logger.warning(
+                "att=%s correo adjunto type=%s tamaño %dB excede límite %dB → descartado",
+                att.id,
+                att.content_type,
+                att.size,
+                max_bytes,
+            )
+            return False
+        return True
 
     @staticmethod
     def _is_eligible(att: EmailAttachment, max_bytes: int) -> bool:

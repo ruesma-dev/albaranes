@@ -110,6 +110,16 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
    `workflow_runs` (PG). Reprocesar un email no debe crear un documento
    nuevo; el sha256 del PDF es la identidad del documento aguas abajo.
    1 página = 1 albarán (sv1 trocea los PDF multipágina).
+   **Correos adjuntos (F-054)**: un adjunto `message/rfc822` (item o file; no
+   inline, no reference, bajo `MAX_ATTACHMENT_MB`) se descarga por `$value` y
+   `MimeDocumentoExtractor` (sv1, inyectado en `main.py`) saca sus PDF y sus
+   imágenes `image/*` con disposición `attachment` (las `inline` y sin
+   disposición, no), hasta 5 niveles: uno más y no entra **ninguno**. Cada
+   documento interior bajo el límite sigue el camino del directo (troceo,
+   dedup, `q-extraccion`) con `correo_adjunto_id`/`_nivel` en el `meta`, y el
+   contexto de IA1 es el del correo **exterior**. Destino: `Procesados` solo
+   si nada falló y entró ≥ 1 página; un correo adjunto sin documentos es
+   WARNING, no fallo. Los adjuntos directos no cambian.
 10. **Añadir un `modifier_source` nuevo (sintéticas) toca 5 sitios**: prompt
     YAML de sv5, schema Pydantic de sv5, DTO del envelope de sv6, record de
     sv6 y builder de sv6. Hacerlo a medias rompe la valoración.
