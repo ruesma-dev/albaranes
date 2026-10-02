@@ -18,6 +18,7 @@ from domain.ports.orchestrator_port import (
     OrchestratorClient,
     OrchestratorError,
 )
+from infrastructure.document.mime_documento_extractor import MimeDocumentoExtractor
 from infrastructure.document.pdf_page_splitter import PdfPageSplitter
 from pypdf import PdfWriter
 from ruesma_comun.correo import ContextoCorreo
@@ -180,6 +181,9 @@ class IntakeDoble(OrchestratorClient):
 def construir_pipeline(
     buzon: MailboxClient, intake: OrchestratorClient, **opciones: object
 ) -> PollingPipeline:
+    """Pipeline con el troceador y el extractor de correos adjuntos REALES
+    (F-054); ``opciones`` puede traer otro ``extractor_correo``."""
+    opciones.setdefault("extractor_correo", MimeDocumentoExtractor())
     return PollingPipeline(
         mailbox=buzon, orchestrator=intake, pdf_splitter=PdfPageSplitter(), **opciones
     )
