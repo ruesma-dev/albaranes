@@ -138,9 +138,9 @@ directo, PDF e imagen) se escribieron y pasaron en verde **contra el pipeline si
 | Evidencia | Valor medido |
 |---|---|
 | Tests ejecutados | sv1: **205 passed** (107 nuevos de F-054); `init.sh` raíz + 7 servicios: ver línea siguiente |
-| `bash harness/init.sh` | **RESULTADO_INIT** |
+| `bash harness/init.sh` | **ENTORNO LISTO** (HEAD con el commit de ruff): raíz `1067 passed in 202.26s`; sv1 `205 passed in 30.92s`; sv2–sv6 y comun en verde (caché); ruff 1167 avisos (1166 antes: +1 `BLE001` del `except Exception` de la descarga del correo adjunto, igual que el de los directos) |
 | Cobertura de líneas cambiadas | **PUERTA COBERTURA: 100.0 % de 184 líneas cambiadas cubiertas (184/184, umbral 80 %, nivel estandar)** |
-| Mutación (muestreada, semilla `20260820`) | **77 generados, 20 evaluados, 19 muertos, 1 superviviente** (equivalente), 0 timeouts, 142,8 s, 4 workers, HEAD `3fb2bb8` |
+| Mutación (muestreada, semilla `20260820`) | **77 generados, 20 evaluados, 19 muertos, 1 superviviente** (equivalente), 0 timeouts, 142,8 s, 4 workers, HEAD `3fb2bb8` (después solo cambió una línea en blanco y el lint de tests) |
 | Tiempo de la suite de sv1 | 5,85 s en local (21,9 s dentro de `init.sh`; línea base de mutación 23,3–23,8 s por worktree) |
 
 **Supervivientes** (detalle en `progress/mutacion_F-054.md`, ninguno `PENDIENTE`):
