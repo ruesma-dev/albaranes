@@ -9,7 +9,7 @@ Resumen: **51 features**, 36 abiertas, 15 terminadas.
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-054 | sv1 ingiere los PDF de correos adjuntos encadenados (message/rfc822) | 1 | spec lista | estandar | `feature/F-054-correo-adjunto-encadenado` |
+| F-054 | sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822) | 1 | spec lista | estandar | `feature/F-054-correo-adjunto-encadenado` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
@@ -68,15 +68,15 @@ Resumen: **51 features**, 36 abiertas, 15 terminadas.
 
 ## Detalle
 
-### F-054 · sv1 ingiere los PDF de correos adjuntos encadenados (message/rfc822)
+### F-054 · sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822)
 
 estado **spec lista** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-054-correo-adjunto-encadenado`
 
 PETICION DEL HUMANO (2026-09-30): hay albaranes que llegan como CORREO ADJUNTO (itemAttachment, contentType message/rfc822) con el PDF dentro, a veces anidado. Hoy sv1 lo descarta: si es el unico adjunto el correo va a Errores ("sin adjuntos elegibles"); si va junto a un PDF directo, el interior se PIERDE EN SILENCIO y el correo va a Procesados.
 
-ALCANCE (minimo de progress/explore_F-054_encadenados.md, decisiones del humano del 2026-09-30): clasificar message/rfc822 (item o file, no inline, no reference, bajo MAX_ATTACHMENT_MB) como correo adjunto; resto de adjuntos SIN CAMBIOS; $value con el cliente Graph actual; extractor MIME puro en sv1 (infrastructure/document/ + puerto en domain/ports/, NO en ruesma_comun), 5 niveles todo o nada, solo PDF, limite por PDF interior; cada PDF interior sigue el camino normal (troceo, intake, idempotencia); Procesados sii nada fallo y hay >=1 pagina aceptada; correo adjunto sin PDF = WARNING; logs sin cabeceras ni texto del interior (R36 de F-048). Contexto de IA1 (F-048): el del correo EXTERIOR, ContextoCorreo sin cambios (decision del humano). Modelo: F-020 de partes, adaptado (se trae la logica, no se importa).
+ALCANCE (minimo de progress/explore_F-054_encadenados.md, decisiones del humano del 2026-09-30): clasificar message/rfc822 (item o file, no inline, no reference, bajo MAX_ATTACHMENT_MB) como correo adjunto; resto de adjuntos SIN CAMBIOS; $value con el cliente Graph actual; extractor MIME puro en sv1 (infrastructure/document/ + puerto en domain/ports/, NO en ruesma_comun), 5 niveles todo o nada, PDF e IMAGENES (image/* con disposicion attachment; decision del humano 2026-10-02: «si no tiene pdf pero tiene imagenes validas, tambien vale»), limite por documento interior; cada documento interior sigue el camino normal (troceo, intake, idempotencia); Procesados sii nada fallo y hay >=1 pagina aceptada; correo adjunto sin PDF ni imagen valida = WARNING (Procesados si entraron otras paginas); logs sin cabeceras ni texto del interior (R36 de F-048). Contexto de IA1 (F-048): el del correo EXTERIOR, ContextoCorreo sin cambios (decision del humano). Modelo: F-020 de partes, adaptado (se trae la logica, no se importa).
 
-FUERA: conversationId/hilo, enlaces SharePoint, .msg, imagenes interiores, cabeceras del interior en el contexto y reproceso automatico de Errores (lo hace el humano a mano tras desplegar, tarea MANUAL T12).
+FUERA: conversationId/hilo, enlaces SharePoint, .msg, cabeceras del interior en el contexto y reproceso automatico de Errores (lo hace el humano a mano tras desplegar, tarea MANUAL T12).
 
 RIGOR estandar: solo sv1, sin schema, sin contratos de cola ni blob, sin recurso compartido ni dinero (igual que F-020 de partes). Spec: specs/F-054-correo-adjunto-encadenado/, informe progress/spec_F-054.md.
 

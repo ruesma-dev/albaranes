@@ -11,10 +11,10 @@
 `dev`, push (este repo y `azure-apps`, que no tiene remoto) y despliegue sv3 → sv2 → sv1 → sv4 con `-Only`
 uno a uno** (regla 15 de `docs/ARCHITECTURE.md`).
 
-**F-054 · `spec_ready` (2026-09-30)**: sv1 ingiere los PDF de correos adjuntos (`message/rfc822`). Rama
-`feature/F-054-correo-adjunto-encadenado` (worktree `../albaranes-F-054`). Spec en
-`specs/F-054-correo-adjunto-encadenado/`; decisiones a validar (DA1–DA7) y hallazgo del `token_provider.py`
-duplicado en sv1 en `progress/spec_F-054.md`. Sin preguntas abiertas: el contexto de IA1 es el del correo exterior.
+**F-054 · `spec_ready` v2 (2026-10-02), LISTA PARA IMPLEMENTAR**: sv1 ingiere los PDF **e imágenes** de correos
+adjuntos (`message/rfc822`). Rama `feature/F-054-correo-adjunto-encadenado` (worktree `../albaranes-F-054`). Spec
+en `specs/F-054-correo-adjunto-encadenado/`; decisiones del humano DH1–DH5 (todas cerradas), DA4 v2 y DA8, riesgos
+de logos/firmas y hallazgo del `token_provider.py` duplicado en sv1 en `progress/spec_F-054.md`.
 
 **En spec (worktrees aparte, ramas desde `dev`):** F-051 almacén por línea (`../albaranes-F-051`, `spec_ready`
 v2, preguntas abiertas en `progress/spec_F-051.md` de esa rama) y F-052 proveedores truncados en sv3
