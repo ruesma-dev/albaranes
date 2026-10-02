@@ -327,12 +327,20 @@ progress: ningún fichero de código tocado.
 
 Ninguna bloqueante. Para la PARADA 1, confirmar las aceptadas por omisión
 (D1, D2 en «todas las familias, revisión solo en destinadas», D3, D4, D5, D7 y
-D8). Una observación sobre **D8**: con la excepción (c) del humano (los
+D8; D8 ya cerrada, ver abajo). Una observación sobre **D8**: con la excepción (c) del humano (los
 complementos siguen a su base en el papel), cabría que elegir «Almacén» en sv4
 sobre una línea base arrastrase también a sus complementarias declaradas. La
 spec mantiene D8 (no arrastra; para todo el albarán está el botón): si el humano
 prefiere arrastrar, es ampliar R14 a las líneas con `ref_linea_base_merge_id` de
 esa base, sin DDL.
+
+**Actualización (2026-10-02, tras el merge de `dev` 3da1d60)**: el humano
+**confirma D8 tal cual**: elegir «Almacén» en sv4 sobre una línea NO arrastra a
+sus complementarias; para todo el albarán está el botón. Cerrada. Siguen
+**pendientes de confirmar en la PARADA 1, antes de implementar**, las aceptadas
+por omisión: D1, D2 (en «todas las familias, revisión solo en destinadas»), D3,
+D4, D5 y D7. Spec ajustada (design «Decisiones», cabecera de tasks y de
+requirements); sin cambio de requisitos ni de tareas.
 
 ### Estado del entorno
 

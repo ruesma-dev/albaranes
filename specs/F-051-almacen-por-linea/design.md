@@ -216,8 +216,7 @@ ya edita in situ): el `UPDATE ... RETURNING` de `asignar_almacen`. Lectores de
 - **Complementos no declarados**: si IA1 no reconoce un porte como complemento y
   lo deja null, sv6 lo manda a almacén (no se arregla con una regla aguas
   abajo: se arregla el prompt). Lo vigila T23.
-- **Los overrides se pierden al revalorar** (D5). **Legado**: valoraciones viejas
-  con partida vacía salen «Sin partida» hasta revalorar.
+- **Overrides perdidos al revalorar** (D5); legado vacío: «Sin partida» hasta revalorar.
 - **Mutación sin tope** (rigor `critico`): la lógica nueva va en los dos módulos
   puros; el cambio de sv2 es YAML (no mutable: lo cubren las evals).
 
@@ -242,9 +241,10 @@ reconstruyen sv1, sv3 ni sv5.
 
 ## Decisiones (detalle y fechas en `progress/spec_F-051.md`)
 
-Del humano: D2 en «a qué líneas» (regla + concreciones (a) y (c)), D6 (hoy
-manual; luego F-053) y D9 (marcadas la suya, resto la de documento), 2026-10-02.
-Por omisión, a confirmar en la PARADA 1: D1 NULL + marca; D2 en «todas las
-familias, revisión solo en destinadas»; D3 el botón pisa todas; D4 la fila Sigrid
-sigue Sigrid; D5 se pierde al revalorar; D7 re-alcance de F-007; D8 elegir
-almacén en una base no arrastra a sus complementarias.
+Del humano, 2026-10-02: D2 en «a qué líneas» (regla + (a) y (c)), D6 (hoy
+manual; luego F-053), D9 (marcadas la suya, resto la de documento) y D8 (elegir
+almacén en una línea NO arrastra a sus complementarias; para todas, el botón).
+Por omisión, pendientes de confirmar en la PARADA 1 antes de implementar: D1
+NULL + marca; D2 en «todas las familias, revisión solo en destinadas»; D3 el
+botón pisa todas; D4 la fila Sigrid sigue Sigrid; D5 se pierde al revalorar; D7
+re-alcance de F-007.

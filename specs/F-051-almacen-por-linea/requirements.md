@@ -3,7 +3,7 @@
 
 Petición literal en la ficha (`harness/features.json`). Toca **sv2** (solo el
 prompt de IA1), **sv6** y **sv4**. Rigor `critico`. Hallazgos y decisiones
-(D2, D6, D9 del humano; el resto por omisión): `progress/spec_F-051.md`.
+(D2, D6, D8, D9 del humano; el resto por omisión): `progress/spec_F-051.md`.
 
 **Regla del humano** (2026-09-29; cerrada el 2026-10-02): «si hay una partida
 en el documento esta aplica a todas las lineas, si hay partidas por linea, en

@@ -1,7 +1,7 @@
 <!-- specs/F-051-almacen-por-linea/tasks.md -->
 # F-051 · Almacén por línea · Tareas
 
-Rama `feature/F-051-almacen-por-linea`. Un commit por tarea (`F-051 Tn: ...`). Rigor `critico`: cada tarea de código escribe PRIMERO sus tests y deja en `progress/impl_F-051.md` la traza de fase RED (el test fallando contra el código sin cambiar) antes de implementar. Tests sin red ni BBDD. Spec v3 (2026-10-02): D2 (a qué líneas), D6 y D9 cerradas por el humano; **no empezar hasta la PARADA 1**, donde se confirman las aceptadas por omisión (D1, D2 en lo de familias, D3, D4, D5, D7, D8; `design.md`, al final).
+Rama `feature/F-051-almacen-por-linea`. Un commit por tarea (`F-051 Tn: ...`). Rigor `critico`: cada tarea de código escribe PRIMERO sus tests y deja en `progress/impl_F-051.md` la traza de fase RED (el test fallando contra el código sin cambiar) antes de implementar. Tests sin red ni BBDD. Spec v3 (2026-10-02): D2 (a qué líneas), D6, D8 y D9 cerradas por el humano; **no empezar hasta la PARADA 1**, donde se confirman las aceptadas por omisión (D1, D2 en lo de familias, D3, D4, D5, D7; `design.md`, al final).
 
 - [ ] T1: sv6 — tests RED de la política pura (`familias_destinadas_de_csv`, `motivo_revision_almacen`) en `tests/test_f051_almacen_valoracion.py`  |  Verificación: `cd services/albaran-valoracion-persist && python -m pytest tests -k "f051 and (r4 or r5 or r9)" -q` falla por módulo inexistente (traza RED en el informe)
 - [ ] T2: sv6 — `application/services/almacen_politica.py` + ajustes `ALMACEN_SIN_PARTIDA_ENABLED` y `FAMILIAS_DESTINADAS` en `config/settings.py`  |  Verificación: el mismo comando de T1 en verde

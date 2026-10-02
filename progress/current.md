@@ -12,8 +12,8 @@ true` sin partida, alineado); ejemplo «03.02» junto a la 2.ª de tres ⇒ 1.ª
 3.ª a almacén; D9 = marcadas la suya, resto la de documento; portes y
 complementos sin marca siguen a su base. Todo en el prompt de IA1 (cuatro
 viñetas literales sustituyen la del código único). `spec_ready`, lista para la
-PARADA 1: solo quedan por confirmar las aceptadas por omisión (D1, D2 familias,
-D3, D4, D5, D7, D8). Tres diferencias con F-053 anotadas para esa feature.
+PARADA 1: D8 confirmada por el humano (2026-10-02, no arrastra); quedan por
+confirmar las aceptadas por omisión (D1, D2 familias, D3, D4, D5, D7). Tres diferencias con F-053 anotadas para esa feature.
 Detalle en `progress/spec_F-051.md` §v3.
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
