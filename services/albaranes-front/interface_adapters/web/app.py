@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, field_validator
 
+from application.services.busqueda_contratos import aviso_de_guardado
 from application.services.review_service import ReviewService
 from config.settings import Settings
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
@@ -909,6 +910,7 @@ def build_app(settings: Settings) -> FastAPI:
         document_id: str,
         view: str = Query(default=VIEW_MODE_MERGE),
         message: str | None = Query(default=None),
+        buscando: bool = Query(default=False),
     ) -> HTMLResponse:
         requested_view = normalize_view_mode(view)
         document = review_service.get_document(
@@ -947,6 +949,8 @@ def build_app(settings: Settings) -> FastAPI:
             "document": document,
             "document_json": json.dumps(document.model_dump(), ensure_ascii=False),
             "message": message,
+            # F-052 D4-A: «Guardar» relanzó la búsqueda de contratos.
+            "buscando": buscando,
             "preview_enabled": settings.preview_enabled,
             "document_preview_url": f"/documents/{document.id}/preview",
             "current_view": document.view_mode,
@@ -1107,28 +1111,35 @@ def build_app(settings: Settings) -> FastAPI:
     async def save_document_api(
         document_id: str,
         payload: MergeDocumentUpdatePayload,
+        buscar_si_cambia: bool = Query(default=False),
     ) -> SaveResponse:
+        # F-052 D4-A: solo el botón «Guardar» pide ``buscar_si_cambia``; si
+        # el CIF o la obra guardados ya no son los del último rastro, se
+        # relanza la re-búsqueda (q-persistencia, force=True). Los demás
+        # PUT del portal (valorar, elegir contrato, «Guardar y volver a
+        # buscar») no lo piden: ya buscan ellos o no deben hacerlo.
         try:
-            detail = review_service.save_document(
+            detail, busqueda = review_service.save_document_y_buscar_si_cambia(
                 document_id=document_id,
                 payload=payload,
+                refetch_client=(
+                    app.state.sv3_refetch_client if buscar_si_cambia else None
+                ),
             )
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+        message, buscando = aviso_de_guardado(
+            aprobado=detail.approved, busqueda=busqueda,
+        )
+        query = {"message": message, **({"buscando": "1"} if buscando else {})}
         return SaveResponse(
             ok=True,
             document_id=detail.id,
             approved=detail.approved,
-            redirect_url=(
-                f"/documents/{detail.id}?message="
-                f"{'Documento guardado y aprobado' if detail.approved else 'Documento guardado'}"
-            ),
-            message=(
-                "Documento guardado y aprobado"
-                if detail.approved
-                else "Documento guardado"
-            ),
+            redirect_url=f"/documents/{detail.id}?{urlencode(query)}",
+            message=message,
+            busqueda_relanzada=busqueda is not None,
         )
 
     # ------------------------------------------------------------------ #

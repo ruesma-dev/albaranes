@@ -52,6 +52,8 @@ from domain.models.review_models import (
     ProveedorResumenItem,
     ProveedorOption,
     ProviderSnapshot,
+    RastroBusquedaContratos,
+    RESULTADOS_BUSQUEDA_CONTRATOS,
     ValuationLineUpdate,
     ValuationPayload,
     VIEW_MODE_MERGE,
@@ -65,6 +67,7 @@ from infrastructure.database.orm_models import (
     AlbaranLineBaseOrm,
     AlbaranLineMergeOrm,
 )
+from application.services.busqueda_contratos import estado_busqueda
 from domain.services.confianza import compute_confianza_pct
 from infrastructure.database.session_factory import SessionFactory
 
@@ -2886,6 +2889,23 @@ class AlbaranReviewRepository:
             obras_disponibles=obras or [],
             selected_contrato_codigo=selected_contrato_codigo,
             valuation=valuation,
+            busqueda_contratos=estado_busqueda(
+                merge_doc.proveedor_cif,
+                merge_doc.obra_codigo,
+                self._rastro_busqueda(merge_doc),
+            ),
+        )
+
+    @staticmethod
+    def _rastro_busqueda(
+        merge_doc: AlbaranDocumentMergeOrm,
+    ) -> RastroBusquedaContratos:
+        """Las cuatro columnas ``contratos_busqueda_*`` (F-052 R20)."""
+        return RastroBusquedaContratos(
+            cif=merge_doc.contratos_busqueda_cif,
+            obra=merge_doc.contratos_busqueda_obra,
+            resultado=merge_doc.contratos_busqueda_resultado,
+            at_utc=merge_doc.contratos_busqueda_at_utc,
         )
 
     def _build_provider_detail(
@@ -2956,6 +2976,44 @@ class AlbaranReviewRepository:
             if document is None:
                 return None, None
             return document.proveedor_cif, document.obra_codigo
+
+    def merge_existe(self, *, document_id: str) -> bool:
+        """¿Existe el merge? ``get_merge_cif_and_obra`` devuelve
+        ``(None, None)`` tanto si no existe como si no tiene CIF ni obra."""
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            return session.get(AlbaranDocumentMergeOrm, document_id) is not None
+
+    def sellar_busqueda_contratos(
+        self,
+        *,
+        document_id: str,
+        cif: str | None,
+        obra: str | None,
+        resultado: str,
+    ) -> None:
+        """Rastro de la última búsqueda de contratos (F-052 R22).
+
+        SOLO para el fallback local de solo-front
+        (``LocalContratoRefetchClient``); en producción lo sella sv3,
+        dueño de las columnas, con la misma semántica (R21). Rechaza un
+        resultado desconocido antes de tocar la BBDD: el bloque de
+        contrato decide su mensaje por ese valor.
+        """
+        if resultado not in RESULTADOS_BUSQUEDA_CONTRATOS:
+            raise ValueError(
+                f"resultado de búsqueda de contratos desconocido: {resultado!r}"
+            )
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            document = session.get(AlbaranDocumentMergeOrm, document_id)
+            if document is None:
+                raise KeyError(f"Documento no encontrado: {document_id}")
+            document.contratos_busqueda_cif = cif
+            document.contratos_busqueda_obra = obra
+            document.contratos_busqueda_resultado = resultado
+            document.contratos_busqueda_at_utc = self._utc_iso()
+            session.commit()
 
     def replace_contratos_and_select(
         self,

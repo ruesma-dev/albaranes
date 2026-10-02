@@ -88,6 +88,17 @@ class AlbaranDocumentMergeOrm(Base):
     deleted_at_utc: Mapped[str | None] = mapped_column(String(64))
     deleted_by: Mapped[str | None] = mapped_column(String(255))
 
+    # F-052 R20 — rastro de la última búsqueda de contratos: con qué CIF y
+    # obra (normalizados) se buscó, el resultado (`encontrados`, `ninguno`,
+    # `error`, `sin_datos`) y la fecha ISO UTC. Dueño del schema: sv3
+    # (`phase2_ddl.py`), que lo sella al buscar; sv4 lo LEE para el bloque
+    # de contrato (R23–R27) y lo escribe solo en el fallback local (R22).
+    # Mismas longitudes que el DDL de sv3; sin ALTER propio en sv4.
+    contratos_busqueda_cif: Mapped[str | None] = mapped_column(String(64))
+    contratos_busqueda_obra: Mapped[str | None] = mapped_column(String(32))
+    contratos_busqueda_resultado: Mapped[str | None] = mapped_column(String(16))
+    contratos_busqueda_at_utc: Mapped[str | None] = mapped_column(String(64))
+
     lines: Mapped[list["AlbaranLineMergeOrm"]] = relationship(
         back_populates="document",
         cascade="all, delete-orphan",

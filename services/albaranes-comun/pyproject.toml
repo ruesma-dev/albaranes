@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ruesma-albaranes-comun"
-version = "0.6.0"
+version = "0.7.0"
 description = "Infraestructura y contratos compartidos del sistema de albaranes de Construcciones Ruesma"
 requires-python = ">=3.12"
 dependencies = [

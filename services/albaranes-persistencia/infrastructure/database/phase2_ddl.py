@@ -39,6 +39,17 @@ Columnas añadidas:
         Lectores acoplados a avisar si esto cambia: sv5 (SELECT con SQL
         crudo sobre el merge) y sv4 (ficha del documento).
 
+    - contratos_busqueda_cif        VARCHAR(64)
+    - contratos_busqueda_obra       VARCHAR(32)
+    - contratos_busqueda_resultado  VARCHAR(16)
+    - contratos_busqueda_at_utc     VARCHAR(64)
+        (F-052 · R20) Rastro de la última búsqueda de contratos: CIF y
+        obra normalizados, resultado ('encontrados' | 'ninguno' | 'error'
+        | 'sin_datos') y fecha ISO UTC. Lo sella ContratoEnrichmentService
+        al terminar cada búsqueda. Lector acoplado: sv4 (bloque de
+        contrato de la ficha), que se despliega DESPUÉS de sv3. NULL en
+        los documentos anteriores a F-052.
+
   En albaran_lines_merge:
     - source_phase                 VARCHAR(16) DEFAULT 'phase_1'
         'phase_1' si la línea proviene de la extracción inicial.
@@ -93,6 +104,17 @@ _PHASE2_DDL: tuple[str, ...] = (
     "CREATE INDEX IF NOT EXISTS ix_albaran_documents_merge_tipologia "
     "ON albaran_documents_merge(tipologia)",
 
+    # Rastro de la ultima busqueda de contratos (F-052 · R20). Solo en
+    # el merge; todas nullable (un documento anterior no tiene rastro).
+    "ALTER TABLE albaran_documents_merge "
+    "ADD COLUMN IF NOT EXISTS contratos_busqueda_cif VARCHAR(64)",
+    "ALTER TABLE albaran_documents_merge "
+    "ADD COLUMN IF NOT EXISTS contratos_busqueda_obra VARCHAR(32)",
+    "ALTER TABLE albaran_documents_merge "
+    "ADD COLUMN IF NOT EXISTS contratos_busqueda_resultado VARCHAR(16)",
+    "ALTER TABLE albaran_documents_merge "
+    "ADD COLUMN IF NOT EXISTS contratos_busqueda_at_utc VARCHAR(64)",
+
     # albaran_lines_merge
     "ALTER TABLE albaran_lines_merge "
     "ADD COLUMN IF NOT EXISTS source_phase VARCHAR(16) "
@@ -118,6 +140,7 @@ def apply_phase2_ddl(session_factory: SessionFactory) -> None:
                 "[svc3-ddl][phase2] DDL fase 2 OK. Columnas: "
                 "albaran_documents_merge.review_phase2_*, "
                 "albaran_documents_merge.tipologia*, "
+                "albaran_documents_merge.contratos_busqueda_*, "
                 "albaran_lines_merge.source_phase"
             )
         except Exception:

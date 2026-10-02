@@ -37,7 +37,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from application.services.obra_code_normalizer import normalize_obra_code
+from ruesma_comun.obras import normalizar_codigo_obra
 
 logger = logging.getLogger(__name__)
 
@@ -160,7 +160,7 @@ class HeaderGroundingService:
         errors: list[str],
     ) -> tuple[dict[str, Any], str | None]:
         """Devuelve (bloque_obra, codigo_validado | None)."""
-        normalized = normalize_obra_code(request.obra_codigo)
+        normalized = normalizar_codigo_obra(request.obra_codigo)
         if normalized is None:
             return (
                 {

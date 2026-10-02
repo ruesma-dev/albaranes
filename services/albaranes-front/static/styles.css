@@ -648,6 +648,14 @@ input[readonly].readonly-cell {
     border: 1px solid var(--danger-border);
 }
 
+/* F-052 D4-A: «Guardar» relanzó la búsqueda de contratos. */
+.busqueda-buscando {
+    display: block;
+    margin-top: 6px;
+    font-weight: 600;
+    color: var(--info-ink);
+}
+
 /* --------------------------------------------------------------- */
 /* Estilo del mensaje del botón "Valorar ahora" (#valuate-status). */
 /* Inline en la cabecera del panel — más compacto que refetch-status. */

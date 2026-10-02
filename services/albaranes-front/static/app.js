@@ -1830,7 +1830,11 @@
 
     async function sendSave(markApproved) {
         const payload = collectPayload(markApproved);
-        const response = await fetch(`/api/documents/${documentId}`, {
+        // F-052 D4-A: «Guardar» (no «Aprobar») pide al backend que relance
+        // la búsqueda de contratos si el CIF o la obra ya no son los del
+        // último rastro. El backend decide si cambiaron.
+        const query = markApproved ? "" : "?buscar_si_cambia=1";
+        const response = await fetch(`/api/documents/${documentId}${query}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
@@ -2583,6 +2587,44 @@
 
     if (saveAndRefetchBtn) saveAndRefetchBtn.addEventListener("click", handleSaveAndRefetch);
     if (refetchOnlyBtn) refetchOnlyBtn.addEventListener("click", handleRefetchOnly);
+
+    // F-052 D4-A / O-C1: «Guardar» relanzó la búsqueda (la ficha trae
+    // #busqueda-buscando) por desfase o por falta de rastro. Sondeamos el
+    // detalle hasta que el estado cambie (sv3 selló el resultado) y
+    // recargamos sin ?buscando=1. Con tope, por si sv3 no llega.
+    (function pollBusquedaRelanzada() {
+        const marca = document.getElementById("busqueda-buscando");
+        if (!marca) return;
+        const estadoInicial = marca.dataset.estadoInicial || "desfasada";
+        const started = Date.now();
+        const maxMs = 60000;
+        async function poll() {
+            try {
+                const resp = await fetch(
+                    `/api/documents/${documentId}`,
+                    { headers: { "Accept": "application/json" } }
+                );
+                if (resp.ok) {
+                    const doc = await resp.json();
+                    const bc = doc && doc.busqueda_contratos;
+                    if (bc && bc.estado !== estadoInicial) {
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete("buscando");
+                        window.location.replace(url.toString());
+                        return;
+                    }
+                }
+            } catch (_) { /* reintenta en el siguiente tick */ }
+            if (Date.now() - started >= maxMs) {
+                marca.textContent = "La búsqueda está tardando más de lo "
+                    + "normal: recarga la página en unos segundos o pulsa "
+                    + "«Solo volver a buscar».";
+                return;
+            }
+            setTimeout(poll, 3000);
+        }
+        setTimeout(poll, 3000);
+    })();
 })();
 
 // ===================================================================== //

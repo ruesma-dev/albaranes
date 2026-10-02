@@ -6,6 +6,62 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 ---
 
 
+## F-052 · Proveedores de la obra truncados y contrato sin re-búsqueda en sv4 (cerrada 2026-10-01)
+
+Rama `feature/F-052-proveedores-truncados`, rigor `critico`, servicios sv3 y sv4 (+ `ruesma_comun` 0.7.0).
+**Problema** (SS-0026122 de SALMEDINA, caso RES-007, obra 0691): `fetch_contratos_resumen_por_obra` de sv3 traía una
+fila por LÍNEA de contrato sin orden ni `DISTINCT`, con el `max_rows=1000` del cliente y `truncated` ignorado: 2.083
+filas de 81 proveedores, sv3 veía 1.000 al azar y el bueno (B82899550) entraba o no según la ejecución. 74 obras
+afectadas, en dos caminos del resolver (propuesta por nombre si el CIF leído no existe; obra + familia sin CIF, que
+podía elegir OTRO proveedor). Y sv4 no rebuscaba el contrato al cambiar el CIF u obra, y pintaba «no se encontró
+contrato para CIF X» con el CIF actual aunque se buscó con el anterior. El 1.000 era del cliente, no de sigrid-api.
+
+**Qué se hizo, por bloque** (spec v2, rehecha tras `explore_F-052_grano.md`: el problema era el grano):
+- **A (T1–T6, comun + sv3)**: `ruesma_comun.sigrid.lectura` (`PoliticaTruncado`, `SigridRespuestaTruncada`,
+  `comprobar_truncado`, `leer_paginado`); doble `MockTransport` de sigrid-api; `_post_sql_read` con política por
+  consulta; `header_and_lines` y `search_proveedores` (3.543 proveedores, ya cortada a 1.000) paginadas; resumen de
+  obra con UNA consulta agregada (`WITH` + `FOR XML PATH`, una fila por proveedor, ≤ 163), `NO_TOLERA`.
+- **B (T7–T10, sv3)**: nota de revisión que distingue «no se pudo consultar» de «nadie casa»; obra + familia
+  degrada con WARNING; rastro de búsqueda en 4 columnas `contratos_busqueda_*` (DDL idempotente) sellado en las 5
+  salidas de `enrich_merge_document`, best-effort.
+- **C (T11–T13 bis, T15, T17, sv4)**: el bloque de contrato dice con qué CIF y obra se buscó y marca el desfase
+  (`estado_busqueda`, 5 estados); «Guardar» relanza la búsqueda si cambian CIF u obra (D4-A); fallback local sella
+  el rastro; `sigrid_lookup_client` con `comprobar_truncado`.
+- **D (T14, T14 bis, T16, T18)**: script de verificación de solo lectura; página de 499.999 y `max_rows` ≤ 500.000;
+  `azure-apps/albaranes.md` (`141f9aa`, orden sv3 → sv4 obligatorio); `docs/ARCHITECTURE.md` «Acceso a datos».
+
+**Decisiones del humano**: D1–D7 de la spec v2 (2026-09-30): D1 consulta agregada sin paginar; D2 cada servicio su
+SQL, solo `lectura.py` compartido; D3 paginar solo `header_and_lines` y `search_proveedores`; D4 = B + A (D4-A:
+«Guardar» rebusca si cambian CIF u obra); D5 sin backfill (saneamiento manual en T23); D6 clientes colindantes a
+ficha aparte (registrada al cerrar como F-057); D7 efecto en los dos sentidos, aceptado sin medir el saldo.
+**O-C1**: sin rastro, el primer «Guardar» busca una vez. **CR-C1**: normalizador de obra único en
+`ruesma_comun.obras` (sv3 y sv4). **T14 bis** (2026-10-01): sigrid-api admite `MAX_ALLOWED_ROWS=500000`, así que
+página de 499.999 y tope de 500.000. `ruesma_comun` sube a **0.7.0**. **Mutación**: 2 supervivientes ACEPTADOS
+(«1, ok»): `scripts/verificar_f052_proveedores_obra.py:48` equivalente y `obras/codigo.py:39` falso superviviente.
+
+**Verificación**: reviews A–D aprobadas y review de cierre APPROVED (`init.sh` exit 0, raíz 1067 passed, cobertura
+98,2 %); campaña T19 220 mutantes / 218 muertos / 2 aceptados (`progress/mutacion_F-052.md`). MANUAL del humano
+(2026-10-01): **T20** (R29) 5/5 con 81 filas, `truncated=false`, B82899550 dentro con score 1,00, máx. 5,47 s,
+CTSU24/0402 con 5 líneas en 1 petición; **T21** (R30) 0691 81 filas (2.083 por líneas) y 0696 163 (5.558), 0
+diferencias de familias y 0 CIF de más o de menos; **T22** (R31) doc 77a0c01f en local: sin rastro el primer
+«Guardar» buscó, CIF leído B82805550 inexistente → propuesta B82899550 (1,00), cambio + «Guardar» → CTSU24/0402 y
+recarga sola. T23 (saneamiento) queda tras desplegar, en `current.md`.
+
+**Observaciones que quedan como historia** (review de cierre):
+- **O-B2 · decisión del implementer, compartida por el reviewer, nunca aceptada por escrito por el humano**:
+  extensiones de R21: `replace_contratos` falla tras consulta correcta → rastro `error`; `enabled=False` → sin sello.
+- **O-B1 · límite conocido**: si `get_merge_cif_and_obra` lanza (BBDD caída), se queda el rastro anterior.
+- **O-C5**: 8 scripts `diagnose_*`/`trace_*` de sv3 conservan su copia del normalizador de obra (no son runtime).
+- **O-D1**: el `timeout_s` de httpx es por operación, no un plazo total. **O-D2**: el 500.000 consta «leído el
+  2026-09-30» y `sigrid_api.md` §4.1 dice 2026-08-18. **O-D3**: `azure-apps` §8 cita «sv7 → sv3» (sv7 ya no
+  existe). **O-D4**: R29 imprime filas y contrato, no los compara solo (lo contrasta el humano). Cosméticas.
+- **O-F1**: la fila «`init.sh` final» de «Evidencias» de `impl_F-052.md` dice 97,5 %; el vigente es 98,2 %.
+- **O-F2**: `sv3.md` §6.3 y `sv4.md` §9.1 no citan `contratos_busqueda_*`; la fuente vigente es `azure-apps` §3.
+
+Informes: `progress/spec_F-052.md`, `progress/impl_F-052.md`, `progress/impl_F-052_T19_supervivientes.md`,
+`progress/review_F-052*.md`. Lo vivo tras el cierre (merge, despliegue sv3 → sv4, T23, fichas F-056 y F-057), en
+`progress/current.md`.
+
 ## F-048 · El texto del correo como contexto de IA1 (cerrada 2026-09-29)
 
 Rama `feature/F-048-correo-contexto-ia1`. sv1 lee asunto y `uniqueBody` (solo GET) y lo guarda en el blob

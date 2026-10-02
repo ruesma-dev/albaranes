@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import logging
 
-from application.services.obra_code_normalizer import normalize_obra_code
 from domain.ports.obra_enrichment_port import ObraEnrichmentClient
 from domain.ports.obra_merge_repository_port import ObraMergeRepository
+from ruesma_comun.obras import normalizar_codigo_obra
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ class ObraEnrichmentService:
             raw_codigo,
         )
 
-        normalized = normalize_obra_code(raw_codigo)
+        normalized = normalizar_codigo_obra(raw_codigo)
         logger.info(
             "%s Paso 2 — normalización: raw=%r -> normalized=%r",
             _LOG_PREFIX,

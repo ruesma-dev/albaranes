@@ -96,7 +96,7 @@ albaranes-review-web/
 │  └─ services/
 │     ├─ review_service.py                                       # Fachada delgada sobre el repo (58 LOC)
 │     ├─ contrato_refetch_service.py                             # ⭐ Orquesta refetch manual (366 LOC)
-│     └─ obra_code_normalizer.py                                 # ⚠ Réplica EXACTA del sv3
+│     └─ busqueda_contratos.py                                   # F-052: estado del rastro de búsqueda (obra: ruesma_comun.obras)
 ├─ infrastructure/
 │  ├─ database/
 │  │  ├─ session_factory.py
@@ -364,7 +364,7 @@ botones:
 3. JS llama a `POST /api/documents/{id}/re-fetch-contratos`.
 4. Backend → `ContratoRefetchService.refetch()`:
    - Lee `(cif, obra)` actuales del merge (los recién guardados).
-   - Normaliza `obra_codigo` con `normalize_obra_code()` (idéntico al sv3).
+   - Normaliza `obra_codigo` con `ruesma_comun.obras.normalizar_codigo_obra()` (la misma pieza que sv3, F-052 CR-C1).
    - Si falta CIF u obra inválida → `skipped_missing_data` (no llama a Sigrid).
    - Llama a `SigridApiContratoClient.fetch_contratos(cif, obra_norm)`.
    - **Reutilización de PDFs**: si `gra_rep_ide` nuevo == previo → reusa los
@@ -618,12 +618,10 @@ es: **conserva el id**, y la valoración asociada sobrevive.
    determinista en servidor para no depender del locale del cliente.
 6. **Proxy de SharePoint** (`/preview`) — el navegador no necesita conocer el
    token de Graph; el servidor descarga y reenvía con `Cache-Control: no-store`.
-7. **Replicación intencionada de código entre sv3 y sv4** —
-   `obra_code_normalizer` lleva el comentario explícito: *"Debe coincidir
-   EXACTAMENTE con la función homónima del servicio 3 para que re-ejecutar la
-   búsqueda desde el portal dé los mismos resultados que la búsqueda automática
-   al persistir."* Es una decisión consciente: **prefieren duplicación a
-   acoplamiento de paquetes**, y se controla con tests/inspección humana.
+7. **Replicación intencionada de código entre sv3 y sv4** — el caso de
+   `obra_code_normalizer` acabó mal: las dos copias divergieron (`12`, `1234`)
+   y F-052 (CR-C1) la movió a `ruesma_comun.obras.normalizar_codigo_obra`,
+   que usan los dos. El resto de réplicas siguen siendo decisión consciente.
 8. **`SigridApiContratoClient` y `SharePointContratoPdfStorage` también son
    réplicas focalizadas del sv3.** Mismo razonamiento: cada microservicio se
    queda con sus propias dependencias mínimas.
@@ -645,7 +643,7 @@ es: **conserva el id**, y la valoración asociada sobrevive.
 |----|---------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|
 | 1  | ⚠ **`API_PORT=8002` igual que sv5** — conflicto evidente en local                                                   | Cambiar default a 8004 (sv1 daemon, sv2: 8000, sv3: 8001, sv5: 8002, sv6: 8003 → sv4: 8004). Es un fix trivial.   |
 | 2  | 🔥 **`sv4` NO dispara la re-valoración cuando el revisor cambia `selected_contrato_codigo`**                          | Ver §13.2 — hallazgo arquitectónico crítico.                                                                      |
-| 3  | Duplicación de código sv3↔sv4 (Sigrid client, SharePoint storage, obra_code_normalizer, ORM models)                  | Extraer un paquete común `albaranes-shared` con esos módulos, o generar SDK desde el OpenAPI del sigrid-api.       |
+| 3  | Duplicación de código sv3↔sv4 (Sigrid client, SharePoint storage, ORM models; la obra ya va en `ruesma_comun.obras`)                  | Extraer un paquete común `albaranes-shared` con esos módulos, o generar SDK desde el OpenAPI del sigrid-api.       |
 | 4  | `review_repository.py` = 1581 LOC                                                                                    | Descomponer en `DocumentsListReader`, `DocumentDetailReader`, `DocumentWriter`, `ContratosWriter`, `ValuationLineEditor`. |
 | 5  | Sin auth — cualquiera con acceso al puerto puede aprobar                                                             | Easy Auth (Entra ID) en Container App + leer identidad del header `X-MS-CLIENT-PRINCIPAL-NAME` para `approved_by`.  |
 | 6  | Sin CSRF en formularios POST (`/approve`, `/unapprove`)                                                              | Añadir token CSRF (FastAPI tiene paquetes de middleware listos).                                                  |

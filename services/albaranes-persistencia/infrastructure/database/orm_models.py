@@ -192,6 +192,19 @@ class AlbaranDocumentMergeOrm(_DocumentColumnsMixin, Base):
     tipologia_mixta: Mapped[bool | None] = mapped_column(Boolean)
     tipologia_secundarias_json: Mapped[str | None] = mapped_column(Text)
 
+    # ------------------------------------------------------------------ #
+    # (F-052 · R20) Rastro de la última búsqueda de contratos: CIF y obra
+    # normalizados con los que se buscó, resultado ('encontrados' |
+    # 'ninguno' | 'error' | 'sin_datos') y fecha ISO UTC. Lo sella
+    # ContratoEnrichmentService (sv3) y lo lee sv4. Todas nullable: un
+    # documento anterior a F-052 no tiene rastro. Mismos tipos que el
+    # ALTER de phase2_ddl.py (lo vigila test_f052_r20_el_orm_*).
+    # ------------------------------------------------------------------ #
+    contratos_busqueda_cif: Mapped[str | None] = mapped_column(String(64))
+    contratos_busqueda_obra: Mapped[str | None] = mapped_column(String(32))
+    contratos_busqueda_resultado: Mapped[str | None] = mapped_column(String(16))
+    contratos_busqueda_at_utc: Mapped[str | None] = mapped_column(String(64))
+
     lines: Mapped[list["AlbaranLineMergeOrm"]] = relationship(
         back_populates="document",
         cascade="all, delete-orphan",
