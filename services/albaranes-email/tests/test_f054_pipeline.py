@@ -488,3 +488,26 @@ def test_f054_r24_fallo_del_correo_adjunto_se_registra_y_sigue_con_los_demas(cap
     assert buzon.movidos == [("msg-1", ID_ERRORES)]
     errores = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
     assert len(errores) == 1 and "msg=msg-1" in errores[0] and "att=c1" in errores[0]
+
+
+# --- Supervivientes de la campana de mutacion (T10) ----------------------- #
+def test_f054_r2_sin_limite_configurado_no_se_descarta_por_tamano():
+    """Superviviente 2: ``max_bytes`` 0 es «sin limite», como en los directos."""
+    buzon, intake = _ciclo([_correo_adjunto(size=10_000)], {"c1": _eml_bueno()}, max_bytes=0)
+
+    assert _nombres(intake) == ["dentro.pdf"]
+    assert buzon.movidos == [("msg-1", ID_PROCESADOS)]
+
+
+def test_f054_r21_el_log_final_cuenta_directos_correos_adjuntos_y_paginas(caplog):
+    """Superviviente 1: el recuento del log final de destino."""
+    eml = a_bytes(correo(adjuntos=[fichero_pdf("b.pdf", paginas=2)]))
+
+    with caplog.at_level(logging.DEBUG):
+        _ciclo(
+            [adjunto("a", "a.pdf"), _correo_adjunto(), adjunto("d", "d.pdf")],
+            {"a": pdf_de_paginas(1), "c1": eml, "d": pdf_de_paginas(1)},
+        )
+
+    (final,) = [r.getMessage() for r in caplog.records if "movido a" in r.getMessage()]
+    assert final == "msg=msg-1 movido a Procesados (directos=2 correos_adjuntos=1 paginas_aceptadas=4)"
