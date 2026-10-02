@@ -5,21 +5,16 @@
 > en `progress/historico/current_2026-10-01_cierre_F-052.md`; el resumen de F-052, en `progress/history.md`.
 > Aquí solo queda lo vivo. Lo que manda sobre el estado de cada feature es `harness/features.json`.
 
-**F-054 · `in_progress` (2026-10-02), IMPLEMENTADA, PENDIENTE DE REVIEW** en el árbol principal, rama
-`feature/F-054-correo-adjunto-encadenado`. Tarea en curso y desviaciones: sección «F-054 · implementación» al final.
-
-**F-054 · `spec_ready` v2 (2026-10-02)**: sv1 ingiere los PDF **e imágenes** de correos
-adjuntos (`message/rfc822`). Rama `feature/F-054-correo-adjunto-encadenado`. Spec en
-`specs/F-054-correo-adjunto-encadenado/`; decisiones del humano DH1–DH5 (todas cerradas), DA4 v2 y DA8, riesgos
-de logos/firmas y hallazgo del `token_provider.py` duplicado en sv1 en `progress/spec_F-054.md`.
+**F-054 · CERRADA (`done`, 2026-10-02)**, review de cierre APROBADA: sv1 ingiere los PDF **e imágenes** de correos
+adjuntos (`message/rfc822`). Rama `feature/F-054-correo-adjunto-encadenado`, **pendiente de merge a `dev`**, despliegue
+de sv1 y la verificación MANUAL T12 (sección «F-054 · lo que queda» al final). Resumen en `progress/history.md`.
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
-- **Ninguna feature `in_progress`.** **F-052 · CERRADA (`done`, 2026-10-01)**, review de cierre APROBADA.
-  Pendiente del humano: merge de `feature/F-052-proveedores-truncados` a `dev` y despliegue **sv3 → sv4** (abajo).
-- **F-054** (correo con adjunto encadenado): `spec_ready` en `../albaranes-F-054` (rama
-  `feature/F-054-correo-adjunto-encadenado`). **4 decisiones DA por confirmar** por el humano. Se implementa
-  **después de F-052** (o sea, ya puede arrancar en cuanto se confirmen las DA y F-052 esté en `dev`).
+- **F-054 · CERRADA (`done`, 2026-10-02)**. Pendiente del humano: merge de
+  `feature/F-054-correo-adjunto-encadenado` a `dev`, `.\deploy.ps1 -Only sv1` + `.\check_deploy.ps1` desde `infra/`
+  y la **T12 MANUAL** (procedimiento al final). La T12 no bloquea el `done`.
+- **F-052 · CERRADA (`done`, 2026-10-01)**, fusionada en `dev` y desplegada (sección de abajo).
 - **F-053** (alta en Sigrid de los aprobados): `spec_ready` en `../albaranes-F-053` (rama
   `feature/F-053-alta-sigrid`), **16 preguntas abiertas** al humano. La escritura en Sigrid NO va en el despliegue
   de F-052.
@@ -31,7 +26,8 @@ de logos/firmas y hallazgo del `token_provider.py` duplicado en sv1 en `progress
 - **Crédito de OpenAI agotado el 2026-09-30.** Probablemente **3 albaranes en `q-extraccion-poison`**: comprobar y
   reencolar cuando haya crédito (pendiente).
 
-F-051, F-053 y F-054 viven en sus ramas: no constan en el `features.json` de esta rama hasta que se fusionen en `dev`.
+F-051 y F-053 viven en sus ramas: no constan en el `features.json` de esta rama hasta que se fusionen en `dev`.
+F-054 consta aquí como `done` (esta es su rama); llega a `dev` con el merge.
 
 ## F-052 · cerrada, fusionada y desplegada (2026-10-01)
 
@@ -111,17 +107,17 @@ vigente.
 - **El humano ejecuta él mismo** los `push`, los merges y las verificaciones MANUAL. Dale el comando listo para
   **PowerShell**, con `git -C <ruta>`, sin `&&` (su PowerShell 5.1 da error de parser) y con el criterio de verde.
 
-## F-054 · implementación (implementer, 2026-10-02)
+## F-054 · lo que queda (cerrada el 2026-10-02)
 
-- Árbol principal (no el worktree `../albaranes-F-054` que cita `tasks.md`), por indicación del líder.
-- T1–T11 hechas, un commit por tarea; T13 (`init.sh`) en el informe. **Listo para el reviewer.** Informe:
-  `progress/impl_F-054.md`; mutación: `progress/mutacion_F-054.md` (19/20 muertos, 1 equivalente).
-- Desviaciones menores respecto a design §7 (justificadas en el informe): `_ingerir` recibe además `att_id`
-  (para conservar el log literal `error splitting PDF` con el id del adjunto); `_submit_page_to_orchestrator`
-  deja de recibir el `attachment` (no lo usaba: el `meta` sale de `prepared`, como antes); el fallo de descarga
-  de un correo adjunto loguea solo el tipo de la excepción (R25), no su texto.
-- Log de R23 nuevo: `sin adjuntos elegibles: ni directos ni correos adjuntos (total=N) → Errores` (sigue
+- Informes archivados: `progress/historico/impl_F-054.md` y `progress/historico/review_F-054.md`; la campaña
+  sigue en `progress/mutacion_F-054.md` (19/20 muertos, 1 equivalente). Resumen y decisiones en `history.md`.
+- Al humano: merge de `feature/F-054-correo-adjunto-encadenado` a `dev`; luego, desde `infra/`,
+  `.\deploy.ps1 -Only sv1` y `.\check_deploy.ps1`; después la T12 de abajo.
+- Log de R23 nuevo en sv1: `sin adjuntos elegibles: ni directos ni correos adjuntos (total=N) → Errores` (sigue
   conteniendo «sin adjuntos elegibles», el texto que busca la T12 en los logs viejos).
+- Al leer los logs de la T12 (O1 de la review): unos bytes basura no vacíos en un correo adjunto se leen como
+  `text/plain` y salen como WARNING «sin ningun documento interior valido», no como ERROR «ilegible»; el
+  destino es el mismo.
 
 ### PENDIENTE DEL HUMANO · verificación MANUAL de F-054 (T12, tras merge a `dev` y despliegue de sv1)
 
