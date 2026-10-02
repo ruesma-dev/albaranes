@@ -113,5 +113,27 @@ vigente.
 
 ## F-054 · implementación (implementer, 2026-10-02)
 
-- Tarea en curso: T1. Informe final: `progress/impl_F-054.md`.
-- Desviaciones respecto a la spec: ninguna por ahora.
+- Árbol principal (no el worktree `../albaranes-F-054` que cita `tasks.md`), por indicación del líder.
+- T1–T9 hechas, un commit por tarea. T10 (cobertura y mutación) en curso. Informe: `progress/impl_F-054.md`.
+- Desviaciones menores respecto a design §7 (justificadas en el informe): `_ingerir` recibe además `att_id`
+  (para conservar el log literal `error splitting PDF` con el id del adjunto); `_submit_page_to_orchestrator`
+  deja de recibir el `attachment` (no lo usaba: el `meta` sale de `prepared`, como antes); el fallo de descarga
+  de un correo adjunto loguea solo el tipo de la excepción (R25), no su texto.
+- Log de R23 nuevo: `sin adjuntos elegibles: ni directos ni correos adjuntos (total=N) → Errores` (sigue
+  conteniendo «sin adjuntos elegibles», el texto que busca la T12 en los logs viejos).
+
+### PENDIENTE DEL HUMANO · verificación MANUAL de F-054 (T12, tras merge a `dev` y despliegue de sv1)
+
+No bloquea el `done`. Procedimiento (design §10 y `tasks.md` T12):
+
+1. Desde `infra/`: `.\deploy.ps1 -Only sv1` y `.\check_deploy.ps1`.
+2. En Outlook, carpeta `Errores` del buzón de albaranes: localizar los correos cuyo único adjunto es un correo
+   (icono de sobre; en los logs viejos de sv1: «sin adjuntos elegibles»).
+3. Mover **uno** a la carpeta origen y **marcarlo como no leído** (el filtro de sv1 es `isRead eq false`).
+4. Esperar un ciclo de polling y comprobar en los logs de la Container App de sv1: la línea INFO
+   `att=<id> documentos interiores: N PDF y M imagen(es)`, el `intake encolado` de cada página y
+   `movido a Procesados`; y el albarán en el front (sv4).
+5. Si cuadra, repetir con el resto por tandas pequeñas.
+6. Los mixtos que están en `Procesados` con el interior perdido **no** se mueven en bloque (re-ingerirían los
+   PDF directos con otra `correlation_key`): uno a uno, si el humano lo decide.
+7. Anotar aquí el resultado.
