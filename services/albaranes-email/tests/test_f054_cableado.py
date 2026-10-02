@@ -47,7 +47,7 @@ def modulo_main(monkeypatch):
         database_url="postgresql://ejemplo.test/inventada",
         correo_max_caracteres=1234,
     )
-    nulo = lambda *a, **k: SimpleNamespace()  # noqa: E731
+    nulo = lambda *a, **k: SimpleNamespace()
     monkeypatch.setattr(modulo, "load_dotenv", lambda *a, **k: None)
     monkeypatch.setattr(modulo, "Settings", lambda: settings)
     monkeypatch.setattr(modulo, "configure_logging", lambda *a, **k: None)

@@ -11,8 +11,8 @@ from __future__ import annotations
 import ast
 import importlib
 import sys
-from email.message import MIMEPart
 from email.message import Message as MensajeMime
+from email.message import MIMEPart
 from pathlib import Path
 
 import pytest

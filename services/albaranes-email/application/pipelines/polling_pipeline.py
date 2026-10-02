@@ -47,7 +47,6 @@ import hashlib
 import logging
 import time
 from datetime import datetime, timezone
-
 from typing import NamedTuple
 
 from domain.models.email_models import EmailAttachment, EmailMessage

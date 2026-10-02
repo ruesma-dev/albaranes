@@ -110,7 +110,7 @@ def test_f054_r1_message_rfc822_no_inline_se_abre_como_correo_adjunto(odata_type
 def test_f054_r1_un_eml_como_file_attachment_tambien_se_abre():
     att = adjunto("c1", "reenviado.eml", content_type="message/rfc822", odata_type=FILE)
 
-    buzon, intake = _ciclo_con(att, _eml_con_pdf())
+    _, intake = _ciclo_con(att, _eml_con_pdf())
 
     assert [e.meta["attachment_filename"] for e in intake.envios] == ["interior.pdf"]
     assert all(e.meta["attachment_content_type"] != "message/rfc822" for e in intake.envios)
