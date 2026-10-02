@@ -48,13 +48,24 @@ def mensaje(msg_id: str = "msg-1", asunto: str = "Albaran obra") -> EmailMessage
     )
 
 
-def adjunto(att_id: str, nombre: str = "albaran.pdf", *, inline: bool = False) -> EmailAttachment:
+def adjunto(
+    att_id: str,
+    nombre: str = "albaran.pdf",
+    *,
+    inline: bool = False,
+    content_type: str = "application/pdf",
+    odata_type: str | None = None,
+    size: int = 1000,
+) -> EmailAttachment:
+    """Un adjunto de Graph. Los valores por defecto son los de F-048 (un PDF
+    directo de 1000 B); F-054 pide tipo, ``@odata.type`` y tamano a medida."""
     return EmailAttachment(
         id=att_id,
         name=nombre,
-        content_type="application/pdf",
-        size=1000,
+        content_type=content_type,
+        size=size,
         is_inline=inline,
+        odata_type=odata_type,
     )
 
 

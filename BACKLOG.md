@@ -5,11 +5,13 @@
 
 Resumen: **55 features**, 39 abiertas, 16 terminadas.
 
+En curso: **F-054**.
+
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-054 | sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822) | 1 | spec lista | estandar | `feature/F-054-correo-adjunto-encadenado` |
+| F-054 | sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822) | 1 | en curso | estandar | `feature/F-054-correo-adjunto-encadenado` |
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
@@ -74,7 +76,7 @@ Resumen: **55 features**, 39 abiertas, 16 terminadas.
 
 ### F-054 · sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822)
 
-estado **spec lista** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-054-correo-adjunto-encadenado`
+estado **en curso** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-054-correo-adjunto-encadenado`
 
 PETICION DEL HUMANO (2026-09-30): hay albaranes que llegan como CORREO ADJUNTO (itemAttachment, contentType message/rfc822) con el PDF dentro, a veces anidado. Hoy sv1 lo descarta: si es el unico adjunto el correo va a Errores ("sin adjuntos elegibles"); si va junto a un PDF directo, el interior se PIERDE EN SILENCIO y el correo va a Procesados.
 

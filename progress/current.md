@@ -5,7 +5,10 @@
 > en `progress/historico/current_2026-10-01_cierre_F-052.md`; el resumen de F-052, en `progress/history.md`.
 > Aquí solo queda lo vivo. Lo que manda sobre el estado de cada feature es `harness/features.json`.
 
-**F-054 · `spec_ready` v2 (2026-10-02), LISTA PARA IMPLEMENTAR**: sv1 ingiere los PDF **e imágenes** de correos
+**F-054 · `in_progress` (2026-10-02), IMPLEMENTER TRABAJANDO** en el árbol principal, rama
+`feature/F-054-correo-adjunto-encadenado`. Tarea en curso y desviaciones: sección «F-054 · implementación» al final.
+
+**F-054 · `spec_ready` v2 (2026-10-02)**: sv1 ingiere los PDF **e imágenes** de correos
 adjuntos (`message/rfc822`). Rama `feature/F-054-correo-adjunto-encadenado`. Spec en
 `specs/F-054-correo-adjunto-encadenado/`; decisiones del humano DH1–DH5 (todas cerradas), DA4 v2 y DA8, riesgos
 de logos/firmas y hallazgo del `token_provider.py` duplicado en sv1 en `progress/spec_F-054.md`.
@@ -107,3 +110,8 @@ vigente.
 - **Un comando de verificación guardado en `progress/` puede caducar**: guarda también de qué depende.
 - **El humano ejecuta él mismo** los `push`, los merges y las verificaciones MANUAL. Dale el comando listo para
   **PowerShell**, con `git -C <ruta>`, sin `&&` (su PowerShell 5.1 da error de parser) y con el criterio de verde.
+
+## F-054 · implementación (implementer, 2026-10-02)
+
+- Tarea en curso: T1. Informe final: `progress/impl_F-054.md`.
+- Desviaciones respecto a la spec: ninguna por ahora.
