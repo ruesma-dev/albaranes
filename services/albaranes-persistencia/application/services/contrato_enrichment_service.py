@@ -5,11 +5,17 @@ import dataclasses
 import json
 import logging
 
-from application.services.obra_code_normalizer import normalize_obra_code
+from ruesma_comun.obras import normalizar_codigo_obra
 from application.services.contrato_selector import (
     elegir_contrato_probable,
 )
-from domain.models.contrato_models import ContratoEnrichmentResult
+from domain.models.contrato_models import (
+    BUSQUEDA_ENCONTRADOS,
+    BUSQUEDA_ERROR,
+    BUSQUEDA_NINGUNO,
+    BUSQUEDA_SIN_DATOS,
+    ContratoEnrichmentResult,
+)
 from domain.ports.contrato_cache_port import ContratoCachePort
 from domain.ports.contrato_enrichment_port import ContratoEnrichmentClient
 from domain.ports.contrato_merge_repository_port import ContratoMergeRepository
@@ -129,7 +135,7 @@ class ContratoEnrichmentService:
             document_id=merge_document_id,
         )
         cif_clean = (cif or "").strip().upper().replace(" ", "") or None
-        obra_norm = normalize_obra_code(obra_raw)
+        obra_norm = normalizar_codigo_obra(obra_raw)
         if not cif_clean or not obra_norm:
             logger.warning(
                 "%s Faltan datos o no validan; se OMITE. cif=%r obra=%r",
@@ -162,6 +168,9 @@ class ContratoEnrichmentService:
                 logger.exception(
                     "%s no se pudo dejar la nota de revision.", _LOG_PREFIX
                 )
+            self._sellar_busqueda_safely(
+                merge_document_id, cif_clean, obra_norm, BUSQUEDA_SIN_DATOS,
+            )
             return 0
 
         # Llegados aqui, CIF + obra SI son validos: si habia un aviso previo
@@ -210,6 +219,10 @@ class ContratoEnrichmentService:
                     merge_document_id=merge_document_id,
                     nombre_proveedor=cached.nombre_proveedor,
                 )
+                self._sellar_busqueda_safely(
+                    merge_document_id, cif_clean, obra_norm,
+                    BUSQUEDA_ENCONTRADOS,
+                )
                 return 1
             # Cache miss → continúa al flujo original (Sigrid).
 
@@ -222,7 +235,12 @@ class ContratoEnrichmentService:
                 codigo_obra_normalizado=obra_norm,
             )
         except Exception:
+            # Incluye SigridRespuestaTruncada (R13): sin todas las lineas
+            # no se guarda nada y el rastro dice que la busqueda fallo.
             logger.exception("%s ERROR llamando a Sigrid.", _LOG_PREFIX)
+            self._sellar_busqueda_safely(
+                merge_document_id, cif_clean, obra_norm, BUSQUEDA_ERROR,
+            )
             return 0
 
         logger.info(
@@ -386,6 +404,11 @@ class ContratoEnrichmentService:
             )
         except Exception:
             logger.exception("%s ERROR guardando contratos.", _LOG_PREFIX)
+            # La consulta funciono pero el documento se queda sin los
+            # contratos: ni 'encontrados' ni 'ninguno' serian verdad.
+            self._sellar_busqueda_safely(
+                merge_document_id, cif_clean, obra_norm, BUSQUEDA_ERROR,
+            )
             return 0
 
         # Paso 7: descargar + subir PDFs pendientes, y actualizar paths.
@@ -528,7 +551,40 @@ class ContratoEnrichmentService:
             contratos=contratos_with_maybe_reused,
         )
 
+        self._sellar_busqueda_safely(
+            merge_document_id, cif_clean, obra_norm,
+            BUSQUEDA_ENCONTRADOS if contratos else BUSQUEDA_NINGUNO,
+        )
         return len(contratos)
+
+    # ------------------------------------------------------------------ #
+    # Rastro de la busqueda (F-052 · R21)
+    # ------------------------------------------------------------------ #
+    def _sellar_busqueda_safely(
+        self,
+        merge_document_id: str,
+        cif: str | None,
+        obra: str | None,
+        resultado: str,
+    ) -> None:
+        """Sella con que CIF y obra (normalizados) se busco y que salio.
+
+        Best-effort: si el sellado falla (BBDD, repositorio sin el
+        metodo), se loguea y el enrichment devuelve lo mismo que sin el.
+        """
+        try:
+            self._repository.sellar_busqueda_contratos(
+                document_id=merge_document_id,
+                cif=cif,
+                obra=obra,
+                resultado=resultado,
+            )
+        except Exception:  # best-effort: el rastro no bloquea
+            logger.exception(
+                "%s no se pudo sellar el rastro de la busqueda "
+                "(resultado=%s). doc=%s",
+                _LOG_PREFIX, resultado, merge_document_id,
+            )
 
     # ------------------------------------------------------------------ #
     # Cache lookup helper

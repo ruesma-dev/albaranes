@@ -252,8 +252,22 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
   solo `workflow_runs`. Cambios a nivel de servidor afectan a otros
   proyectos: prohibidos desde aquí.
 - **Sigrid (ERP)**: SOLO vía `sigrid-api` (function key), SOLO lectura.
-  Configurado a 10.000 filas por petición (2026-08-13; el dato de 1.000 de
-  `azure-apps` está desactualizado); el balanceador corta a los 230 s.
+  La instancia admite **500.000 filas por petición** (`MAX_ALLOWED_ROWS`,
+  leído en Azure el 2026-09-30; `azure-apps/sigrid_api.md` §4.1). El 1.000
+  que cortaba listas en silencio era el `max_rows` por defecto del cliente
+  de sv3, no un tope de sigrid-api (F-052). El balanceador corta a los
+  230 s: lo que acota una lectura es su `timeout_s` (30 s por defecto), no
+  el número de filas. Reglas de lectura (F-052):
+  - **`truncated` nunca en silencio**: cada consulta declara su
+    `PoliticaTruncado` (`NO_TOLERA` lanza `SigridRespuestaTruncada`,
+    `TOLERA` usa las filas con WARNING); se comprueba con
+    `ruesma_comun.sigrid.comprobar_truncado`.
+  - **Agregar en SQL antes que paginar**: pedir el grano que se usa (una
+    fila por proveedor con `WITH` + `FOR XML PATH`, no una por línea).
+  - **Paginar con `ruesma_comun.sigrid`** (`con_paginacion` +
+    `leer_paginado`: `ORDER BY` estable, `max_rows = página + 1`, tope de
+    páginas). Página máxima `PAGINA_MAXIMA` (499.999), para que ninguna
+    petición pase de `MAX_FILAS_POR_PETICION` (500.000).
 - **Microsoft Graph**: buzón M365 (sv1) y SharePoint (sv3/sv4/sv5) con
   `GRAPH_KEY`. SharePoint es el almacén durable de documentos.
 - **APIs LLM**: Anthropic/OpenAI/Gemini (sv2 y sv5, flags `ENABLE_*`).
@@ -274,7 +288,10 @@ rollback: `docs/referencia/dominio_negocio_albaranes.md` §6–§7.
 - **Modo single de revisiones** (dos revisiones activas = dos consumidores
   de la misma cola con imágenes distintas) y **`comun` horneado en cada
   imagen**: tocar `ruesma_comun` obliga a reconstruir sv2, sv3, sv5 y sv6
-  — un fix en comun sin rebuild no existe en Azure.
+  — un fix en comun sin rebuild no existe en Azure. Excepción conocida:
+  `ruesma_comun.sigrid` y `ruesma_comun.obras` (F-052) solo los importan
+  sv3 y sv4, que se reconstruyen juntos y en orden **sv3 → sv4** (sv3
+  aplica el DDL de `contratos_busqueda_*` que el ORM de sv4 lee).
 - Scripts en `infra/`: `fase1_infra.ps1` (provisión), `add_secrets.ps1`,
   `create_capps*.ps1`, `build_images.ps1` + `deploy.ps1` (redespliegue).
   `build_images.ps1` espera los repos como hermanos: desde el monorepo,
