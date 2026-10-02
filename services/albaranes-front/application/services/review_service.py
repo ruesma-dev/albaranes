@@ -1,16 +1,26 @@
 # application/services/review_service.py
 from __future__ import annotations
 
+import logging
+
+from application.services.busqueda_contratos import (
+    debe_relanzar_busqueda,
+    hay_datos_para_buscar,
+)
+from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
+    VIEW_MODE_MERGE,
     DocumentDetailPayload,
     DocumentListFilters,
     MergeDocumentUpdatePayload,
     ObraResumenItem,
     PaginatedDocuments,
     ProveedorResumenItem,
-    VIEW_MODE_MERGE,
 )
+from domain.ports.contrato_refetch_port import ContratoRefetchClient
 from infrastructure.database.review_repository import AlbaranReviewRepository
+
+logger = logging.getLogger(__name__)
 
 
 class ReviewService:
@@ -100,6 +110,61 @@ class ReviewService:
             restore=snaps,
         )
         return detail
+
+    def save_document_y_buscar_si_cambia(
+        self,
+        *,
+        document_id: str,
+        payload: MergeDocumentUpdatePayload,
+        refetch_client: ContratoRefetchClient | None,
+    ) -> tuple[DocumentDetailPayload, ContratoRefetchOutcome | None]:
+        """«Guardar» del portal (F-052 D4-A): guarda y, si el CIF o la obra
+        guardados ya no son los del último rastro de búsqueda —o el
+        documento no tiene rastro (O-C1)—, relanza la re-búsqueda de
+        contratos por ``refetch_client`` (en producción, ``q-persistencia``
+        con ``force=True``, la misma vía que «Guardar y volver a buscar»).
+
+        No relanza: sin ``refetch_client`` (los demás PUT del portal), si
+        el guardado aprueba el albarán, si el rastro coincide con los
+        datos guardados (``debe_relanzar_busqueda``) o si CIF y obra están
+        los dos vacíos (``hay_datos_para_buscar``, CR-C3). Un fallo al relanzar
+        no deshace el guardado: vuelve como outcome ``sigrid_error`` para
+        que el portal lo diga.
+        """
+        detail = self.save_document(document_id=document_id, payload=payload)
+        if (
+            refetch_client is None
+            or payload.approved
+            or not debe_relanzar_busqueda(detail.busqueda_contratos)
+            or not hay_datos_para_buscar(detail.proveedor_cif, detail.obra_codigo)
+        ):
+            return detail, None
+        try:
+            outcome = refetch_client.refetch(document_id=document_id)
+        except Exception as exc:  # el guardado ya está hecho: no se deshace
+            logger.exception(
+                "[contrato-refetch][guardar] no se pudo relanzar la búsqueda "
+                "document_id=%s",
+                document_id,
+            )
+            outcome = ContratoRefetchOutcome(
+                status="sigrid_error",
+                count=0,
+                selected_contrato_codigo=None,
+                message=(
+                    "Documento guardado, pero no se pudo relanzar la búsqueda "
+                    f"de contratos: {exc}. Pulsa «Solo volver a buscar»."
+                ),
+                cif=None,
+                obra_codigo=None,
+            )
+        logger.info(
+            "[contrato-refetch][guardar] CIF u obra cambiados (o sin rastro): "
+            "búsqueda relanzada document_id=%s status=%s",
+            document_id,
+            outcome.status,
+        )
+        return detail, outcome
 
     def approve_document(self, *, document_id: str, approved_by: str | None) -> None:
         self._repository.set_approved(

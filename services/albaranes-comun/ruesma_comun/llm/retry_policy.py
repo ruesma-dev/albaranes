@@ -9,9 +9,23 @@ from typing import Any, Callable, TypeVar
 
 import httpx
 
+from ruesma_comun.correo.prompt import redactar_correo
+
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+
+
+def _mensaje_para_log(exc: BaseException, limite: int) -> str:
+    """Mensaje del error para el log, SIN el texto del correo (F-048, R36).
+
+    Un SDK puede citar la peticion en su error, y la peticion lleva el
+    bloque del correo. Se redacta ANTES de recortar: recortar primero podria
+    dejar el cuerpo con la marca de inicio pero sin nada que la cierre
+    dentro del recorte (lo cubre la redaccion hasta el final) o, peor,
+    partir la marca de inicio y dejar el cuerpo sin marca que lo delate.
+    """
+    return redactar_correo(str(exc))[:limite]
 
 
 @dataclass(frozen=True)
@@ -212,7 +226,7 @@ def run_with_retry(
                     "[llm-retry] %s error NO retryable. type=%s msg=%s",
                     provider,
                     type(exc).__name__,
-                    str(exc)[:300],
+                    _mensaje_para_log(exc, 300),
                 )
                 raise
 
@@ -223,7 +237,7 @@ def run_with_retry(
                     provider,
                     total_attempts,
                     type(exc).__name__,
-                    str(exc)[:300],
+                    _mensaje_para_log(exc, 300),
                 )
                 raise
 
@@ -240,7 +254,7 @@ def run_with_retry(
                 attempt,
                 total_attempts,
                 type(exc).__name__,
-                str(exc)[:200],
+                _mensaje_para_log(exc, 200),
                 retry_after,
                 sleep_s,
             )

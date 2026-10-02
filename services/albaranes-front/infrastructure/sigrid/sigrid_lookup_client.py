@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 import httpx
+from ruesma_comun.sigrid import PoliticaTruncado, comprobar_truncado
 
 from domain.models.review_models import (
     ContratoOption,
@@ -149,6 +150,10 @@ class SigridLookupClient:
             sql=_SQL_PROVEEDORES_POR_OBRA,
             parameters=[codigo],
             label=f"proveedores_obra_{codigo}",
+            # F-052 R28: una lista de proveedores a la que le falta el
+            # bueno es peor que el aviso «Sigrid no disponible» (el front
+            # mantiene la entrada manual).
+            politica=PoliticaTruncado.NO_TOLERA,
         )
         seen: set[str] = set()
         out: list[ProveedorOption] = []
@@ -174,6 +179,7 @@ class SigridLookupClient:
             sql=_SQL_OBRAS,
             parameters=[],
             label="obras",
+            politica=PoliticaTruncado.TOLERA,
         )
         seen: set[str] = set()
         out: list[ObraOption] = []
@@ -209,6 +215,7 @@ class SigridLookupClient:
             sql=_SQL_PARTIDAS_POR_OBRA,
             parameters=[codigo],
             label=f"partidas_obra_{codigo}",
+            politica=PoliticaTruncado.TOLERA,
         )
 
         # Indexamos todas las filas por ide y registramos qué ides son
@@ -291,6 +298,7 @@ class SigridLookupClient:
             sql=_SQL_CONTRATOS_POR_OBRA,
             parameters=[codigo],
             label=f"contratos_obra_{codigo}",
+            politica=PoliticaTruncado.TOLERA,
         )
 
         def _norm_cif(value: str | None) -> str:
@@ -331,7 +339,14 @@ class SigridLookupClient:
         sql: str,
         parameters: list[Any],
         label: str,
+        politica: PoliticaTruncado,
     ) -> tuple[list[str], list[list[Any]]]:
+        """POST a ``/api/sql/read``.
+
+        ``politica`` es obligatoria (F-052 R28): ``truncated=true`` nunca
+        pasa en silencio. ``NO_TOLERA`` lanza ``SigridRespuestaTruncada``;
+        ``TOLERA`` devuelve las filas y deja un WARNING con la etiqueta.
+        """
         url = f"{self._base_url}/api/sql/read"
         payload = {
             "database": self._database,
@@ -385,6 +400,8 @@ class SigridLookupClient:
 
         if not body.get("ok", False):
             raise RuntimeError(f"sigrid-api devolvio ok=false: {body!r}")
+
+        comprobar_truncado(body, politica=politica, etiqueta=label, logger=logger)
 
         columns: list[str] = list(body.get("columns") or [])
         rows: list[list[Any]] = list(body.get("rows") or [])

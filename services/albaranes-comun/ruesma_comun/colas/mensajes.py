@@ -45,9 +45,17 @@ class MensajeExtraccion(MensajeBase):
 
     El documento YA existe en ``workflow_runs`` (lo creó sv1-intake con
     su ``correlation_key`` UNIQUE) y la página YA está en SharePoint.
+
+    ``correo_blob`` (F-048) — nombre del blob lateral
+    ``input/{document_id}.correo.json`` con el texto del correo del que
+    salió el albarán (``ruesma_comun.correo``). El texto NUNCA viaja aquí
+    (R8): solo el nombre. Opcional y nulo por defecto (R9): sin correo,
+    ``a_texto`` produce el mismo JSON que antes, y un consumidor que no
+    declare el campo lo ignora (Pydantic ignora los campos de más).
     """
 
     tipo: Literal["extraccion"] = "extraccion"
+    correo_blob: str | None = None
 
 
 class MensajePersistencia(MensajeBase):

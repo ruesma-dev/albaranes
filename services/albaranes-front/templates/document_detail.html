@@ -135,6 +135,29 @@
 {% endif %}
 
 {# =========================================================== #}
+{#  Obra según el correo (F-048 R32–R34)                        #}
+{#                                                              #}
+{#  El correo manda sobre la obra y sv2 cruza su lectura con la #}
+{#  del papel. Aquí se ENSEÑA el cruce: la discrepancia con las #}
+{#  dos lecturas, o los códigos que citaba el correo. sv4 pinta #}
+{#  lo que selló sv2; el estilo de advertencia lo dispara un    #}
+{#  motivo que ya selló sv3, nunca una regla de esta plantilla. #}
+{#  Si la cabecera cambió de obra después (el revisor o sv3:    #}
+{#  aquí no se sabe quién, CR-F1), el aviso lo dice primero,    #}
+{#  sin sujeto (clase obra-cambiada, CR-D4); el motivo no se    #}
+{#  toca.                                                       #}
+{# =========================================================== #}
+{% if document.avisos_origen_datos %}
+    <div class="alert {% if document.origen_en_duda %}warning origen-duda{% else %}info{% endif %} origen-datos{% if document.obra_cambiada_tras_extraer %} obra-cambiada{% endif %}">
+        <strong>Obra según el correo</strong>
+        · Motivo: <code>{{ document.origen_datos.obra.motivo }}</code>
+        {% for aviso in document.avisos_origen_datos %}
+            <p class="origen-aviso">{{ aviso }}</p>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{# =========================================================== #}
 {#  Motivos de revisión del DOCUMENTO (F-036 R23)               #}
 {#                                                              #}
 {#  sv3 los sella en albaran_documents_merge.review_reasons_json #}
@@ -372,16 +395,70 @@
                             </div>
                         {% endfor %}
 
-                        {# Sin contrato detectado: avisamos y ofrecemos re-buscar tras
-                           corregir CIF/obra. El combo queda en «Sin contrato». #}
-                        {% if document.contratos|length == 0 %}
-                            <div class="alert warning contrato-empty">
+                        {# F-052 R23–R27: el aviso dice con qué CIF y obra se buscó
+                           (rastro `busqueda_contratos`, estado decidido por
+                           `estado_busqueda`), no los datos actuales. Sale sin
+                           contratos y, con contratos listados, si el rastro está
+                           desfasado, falló o no se buscó. Un solo juego de botones:
+                           el JS los busca por id. #}
+                        {% set bc = document.busqueda_contratos %}
+                        {% set bc_estado = bc.estado if bc else 'sin_rastro' %}
+                        {% set bc_buscando = buscando and bc_estado in ('desfasada', 'sin_rastro') %}
+                        {% if document.contratos|length == 0 or bc_estado in ('desfasada', 'error', 'sin_datos') or bc_buscando %}
+                            <div class="alert warning contrato-empty"
+                                 id="busqueda-contratos-aviso"
+                                 data-estado="{{ bc_estado }}">
                                 <div class="contrato-empty-text">
-                                    No se encontró ningún contrato en el ERP para la combinación
-                                    CIF <code>{{ document.proveedor_cif or '—' }}</code> +
-                                    obra <code>{{ document.obra_codigo or '—' }}</code>.
-                                    Este albarán queda <strong>sin contrato</strong>. Si crees que
-                                    debería tener uno, corrige CIF u obra más abajo y vuelve a buscar.
+                                    {% if bc_estado == 'desfasada' %}
+                                        La última búsqueda de contratos se hizo con
+                                        CIF <code>{{ bc.cif or '—' }}</code> +
+                                        obra <code>{{ bc.obra or '—' }}</code>
+                                        ({{ bc.fecha | fecha_hora_local }}).
+                                        Los datos actuales, CIF <code>{{ document.proveedor_cif or '—' }}</code> +
+                                        obra <code>{{ document.obra_codigo or '—' }}</code>,
+                                        <strong>todavía no se han buscado</strong>: pulsa «Solo volver a buscar».
+                                    {% elif bc_estado == 'error' %}
+                                        La última búsqueda de contratos, con
+                                        CIF <code>{{ bc.cif or '—' }}</code> +
+                                        obra <code>{{ bc.obra or '—' }}</code>
+                                        ({{ bc.fecha | fecha_hora_local }}), <strong>falló</strong> al
+                                        consultar el ERP. Eso no significa que no haya contrato:
+                                        vuelve a buscar en unos segundos.
+                                    {% elif bc_estado == 'sin_datos' %}
+                                        En la última pasada ({{ bc.fecha | fecha_hora_local }}) no se
+                                        buscaron contratos: faltaba el CIF del proveedor o un código de
+                                        obra válido. Complétalos y vuelve a buscar.
+                                    {% elif bc_estado == 'vigente' and bc.resultado == 'ninguno' %}
+                                        No se encontró ningún contrato en el ERP para la combinación
+                                        CIF <code>{{ bc.cif or '—' }}</code> +
+                                        obra <code>{{ bc.obra or '—' }}</code>
+                                        (búsqueda del {{ bc.fecha | fecha_hora_local }}).
+                                        Este albarán queda <strong>sin contrato</strong>. Si crees que
+                                        debería tener uno, corrige CIF u obra más abajo y vuelve a buscar.
+                                    {% elif bc_estado == 'vigente' %}
+                                        La última búsqueda de contratos, con
+                                        CIF <code>{{ bc.cif or '—' }}</code> +
+                                        obra <code>{{ bc.obra or '—' }}</code>
+                                        ({{ bc.fecha | fecha_hora_local }}), encontró contratos, pero
+                                        ahora no figura ninguno asociado a este albarán. Vuelve a buscar
+                                        para traerlos de nuevo.
+                                    {% else %}
+                                        De este albarán no consta con qué CIF y obra se buscaron
+                                        contratos (se procesó antes de guardarse ese dato), así que no
+                                        se puede afirmar que no tenga contrato. Datos actuales:
+                                        CIF <code>{{ document.proveedor_cif or '—' }}</code> +
+                                        obra <code>{{ document.obra_codigo or '—' }}</code>.
+                                        Si debería tener uno, vuelve a buscar.
+                                    {% endif %}
+                                    {# F-052 D4-A / O-C1: «Guardar» acaba de relanzar la búsqueda
+                                       (?buscando=1) por desfase o por falta de rastro; el JS
+                                       sondea y recarga cuando el estado cambia. #}
+                                    {% if bc_buscando %}
+                                        <span id="busqueda-buscando" class="busqueda-buscando"
+                                              data-estado-inicial="{{ bc_estado }}">
+                                            Buscando contratos con los datos actuales…
+                                        </span>
+                                    {% endif %}
                                 </div>
                                 <div class="contrato-empty-actions">
                                     <button type="button"

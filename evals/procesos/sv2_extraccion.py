@@ -24,6 +24,7 @@ import sys
 from pathlib import Path
 
 from evals.procesos import canal
+from evals.procesos.errores import avisar, describir_error
 from evals.procesos.sv5_valoracion import (
     CLAVES_POR_PROVEEDOR,
     MODELOS_POR_PROVEEDOR,
@@ -232,30 +233,70 @@ def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:  # pragma: no cover -
         prompt_key_phase_1=PROMPT_FASE_1,
     )
 
-    resultados = []
-    for caso in trabajo.get("casos", []):
-        adjuntos = _adjuntos(Path(caso["fichero"]))
-        por_proveedor = {}
-        for proveedor in proveedores:
-            fase_1 = servicio.extract_phase_1(
-                attachments=adjuntos, provider=proveedor, prompt_key=PROMPT_FASE_1
-            )
-            documento = fase_1.parsed.model_dump()
-            fase_2 = servicio.review_phase_2(
-                attachments=adjuntos,
-                provider=proveedor,
-                prompt_key=prompt_de_fase_2(caso.get("tipologia", "")),
-                phase_1_json=documento,
-            )
-            revisado = fase_2.parsed.model_dump()
-            por_proveedor[proveedor] = {
-                "ia1": documento,
-                "ia2": revisado.get("documento_revisado") or documento,
-            }
-        resultados.append(
-            {"caso_id": caso.get("caso_id"), "proveedores": por_proveedor}
-        )
+    resultados = procesar_casos(trabajo.get("casos", []), proveedores, servicio, _adjuntos)
     return {"resultados": resultados, "proveedores": proveedores}
+
+
+def procesar_casos(casos: list[dict], proveedores: list[str], servicio, adjuntos) -> list[dict]:
+    """IA1 e IA2 caso a caso y proveedor a proveedor, cada uno AISLADO.
+
+    Una excepción en un caso —la respuesta degenerada de IA2 del 2026-09-24,
+    un 503 del proveedor, un PDF ilegible— queda escrita en el resultado de
+    ESE caso (`error`: fase, tipo y motivo sin valores) y el bucle sigue: los
+    demás casos de una pasada facturada no se pierden por uno. Lo que IA1 ya
+    devolvió se conserva aunque falle IA2.
+
+    `servicio` es el `AlbaranExtractionService` de sv2 y `adjuntos` la función
+    que preprocesa el albarán; los tests pasan dobles de los dos.
+    """
+    resultados = []
+    for caso in casos:
+        caso_id = caso.get("caso_id")
+        try:
+            material = adjuntos(Path(caso["fichero"]))
+        except Exception as error:  # noqa: BLE001 - se aísla el caso, no se oculta
+            fallo = describir_error(error, "preproceso")
+            avisar("sv2_extraccion", f"caso {caso_id}: error en preproceso · {fallo['motivo']}")
+            resultados.append({"caso_id": caso_id, "proveedores": {}, "error": fallo})
+            continue
+        por_proveedor = {
+            proveedor: _un_proveedor(servicio, material, proveedor, caso)
+            for proveedor in proveedores
+        }
+        resultados.append({"caso_id": caso_id, "proveedores": por_proveedor})
+    return resultados
+
+
+def _un_proveedor(servicio, material, proveedor: str, caso: dict) -> dict:
+    """IA1 y luego IA2 de un caso con un proveedor; el fallo, a su resultado."""
+    caso_id = caso.get("caso_id")
+    salida: dict = {"ia1": None, "ia2": None}
+    fase = "IA1"
+    try:
+        fase_1 = servicio.extract_phase_1(
+            attachments=material, provider=proveedor, prompt_key=PROMPT_FASE_1
+        )
+        documento = fase_1.parsed.model_dump()
+        salida["ia1"] = documento
+        fase = "IA2"
+        fase_2 = servicio.review_phase_2(
+            attachments=material,
+            provider=proveedor,
+            prompt_key=prompt_de_fase_2(caso.get("tipologia", "")),
+            phase_1_json=documento,
+        )
+        revisado = fase_2.parsed.model_dump()
+        salida["ia2"] = revisado.get("documento_revisado") or documento
+    except Exception as error:  # noqa: BLE001 - se aísla el caso, no se oculta
+        salida["error"] = describir_error(error, fase)
+        avisar(
+            "sv2_extraccion",
+            f"caso {caso_id}, proveedor {proveedor}: error en {fase} · "
+            f"{salida['error']['motivo']}",
+        )
+        return salida
+    avisar("sv2_extraccion", f"caso {caso_id}, proveedor {proveedor}: ok")
+    return salida
 
 
 def ejecutar_en_subproceso(trabajo: dict, interprete: str | None = None) -> dict:  # pragma: no cover - subproceso
@@ -287,7 +328,8 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - subproceso
         comprobar_claves(trabajo.get("proveedores") or ["gemini"])
         salida = ejecutar_trabajo(trabajo)
     except Exception as error:  # noqa: BLE001 - la frontera devuelve el motivo
-        print(f"sv2_extraccion: {type(error).__name__}: {error}", file=sys.stderr)
+        # Sin `str(error)`: el de pydantic arrastra la respuesta del LLM.
+        avisar("sv2_extraccion", f"la corrida entera falló · {describir_error(error, '')['motivo']}")
         return 1
     canal.emitir(salida)
     return 0

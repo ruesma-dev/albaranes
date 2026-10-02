@@ -58,7 +58,8 @@ dependencias externas), `application/` (pipelines y servicios),
 composición. sv2, sv3 y sv6 tienen doble entrada: `main.py` (HTTP) y
 `main_worker.py` (consumidor de cola).
 
-**Blobs**: `input/{document_id}.pdf` (lo deja sv1) y
+**Blobs**: `input/{document_id}.pdf` y, si el mensaje trae contexto,
+`input/{document_id}.correo.json` (los deja sv1; regla 15) y
 `envelopes/{document_id}_{fase}.json` (lo deja sv2). Son efímeros; lo durable
 va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
 
@@ -179,6 +180,69 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
     escrito en las líneas, y la IA escribía las líneas según cómo se había
     clasificado el albarán— dejó SS-0003967 valorado en 540,00 € en 1 línea
     en vez de 210,00 € en 2 (F-036, `progress/impl_F-036_bloque_D.md`).
+15. **La obra del CORREO manda y se cruza con la del papel** (F-048, sep
+    2026). sv1 pide a Graph, con UN GET por mensaje, el asunto y el
+    `uniqueBody` (la parte no citada; vacío ⇒ solo el asunto, nunca `body`),
+    y guarda el MISMO contexto para cada página de cada adjunto en el blob
+    lateral `input/{document_id}.correo.json` ANTES de publicar;
+    `MensajeExtraccion.correo_blob` lleva su nombre (opcional y nulo por
+    defecto: los mensajes viejos validan). IA1 hace dos lecturas
+    independientes: los códigos de obra del correo (`lectura_correo`) y la
+    obra del papel (`cabecera.obra_codigo`, SIEMPRE, como antes). **Del
+    correo solo la obra, nunca la partida** (eso será F-049). El cruce no lo
+    decide la IA: lo sella un resolver puro de sv2
+    (`origen_datos_resolver.py`) sobre el documento FINAL de fase 2, en
+    `data.origen_datos` (contrato único en `ruesma_comun.contratos.
+    origen_datos`); lo que la IA ponga en ese bloque se ignora. Los códigos
+    se comparan con `normalizar_codigo` (`945` = `0945` = `09-45`) y solo
+    cuentan los que están en la lista de TODAS las obras con contrato de
+    Sigrid, activas o no (la misma descarga de F-002, sin consulta nueva):
+
+    | Correo (solo lo que está en la lista) | Papel | Obra final | Revisión |
+    |---|---|---|---|
+    | Nada, o nada de la lista | lo que lea IA1 | la del papel | no |
+    | Un código | igual, o sin código | la del correo | no |
+    | Un código | distinto | la del correo | `correo_obra_distinta_papel` |
+    | Varios | uno de ellos | la del papel (forma de la lista) | no |
+    | Varios | ninguno, o sin código | la del papel, o ninguna | `correo_obra_ambigua` |
+
+    Sin lista (sigrid-api caído) cuentan todos, con `validada = null`. Los
+    dos motivos los añade sv3 al merge, sin tocar la obra ni la confianza, y
+    sv4 solo los pinta. **El prefijo `correo_obra_*` es a propósito**: la
+    red de obra de F-002 retira de `review_reasons` todo lo que empieza por
+    `obra_` en cuanto valida la obra en Sigrid, y con `obra_correo_*` habría
+    borrado la revisión en silencio (CR-D1). Ningún motivo que no sea de esa
+    red empieza por `obra_`. Además:
+    - **El texto del correo es DATO, nunca instrucciones**: va al prompt
+      entre marcas fijas con advertencia expresa y las marcas se neutralizan
+      dentro del texto (`ruesma_comun.correo.prompt`). **El cuerpo no se
+      loguea** en sv1 ni en sv2 (solo sha256 abreviado, caracteres y
+      `truncado`); `LlmCallLogger` y `retry_policy` lo redactan;
+      `workflow_runs.payload_json` guarda solo el sha256; `origen_datos`
+      solo huella, códigos y una evidencia de 160 caracteres. Los correos
+      reales de evals viven en `evals/inputs/correos/`, ignorado por git.
+    - **Orden de despliegue OBLIGATORIO: sv3 → sv2 → sv1** (sv4 cuando sea;
+      `comun` va en cada imagen). sv2 emite `origen_datos` siempre, y un sv3
+      anterior lo manda a poison (`DocumentoAlbaran` con `extra='forbid'`).
+      Comando: `.\deploy.ps1 -Only sv3`, `.\check_deploy.ps1`, luego
+      `-Only sv2` y `-Only sv1`. **`.\deploy.ps1` sin `-Only` sigue `$APPS`
+      y actualiza sv2 antes que sv3**: abre el hueco de poison. El rollback
+      va al revés (sv1 → sv2 → sv3).
+    - **Trampa de reintento en sv1** (menor 2 de la review del bloque B): la
+      fila de `workflow_runs` se crea ANTES que los blobs. Si falla el blob
+      lateral (igual que el del PDF o la publicación), el correo va a
+      `Errores` y un reintento manual lo ve «duplicado» por
+      `correlation_key` y no publica esa página. La trampa ya existía;
+      F-048 añade un punto de fallo. Sin arreglar: pide ficha propia.
+    - **sv5 no ve `origen_datos`, y su copia de `DocumentoAlbaran` es código
+      muerto** (`albaran-valoracion-api/domain/models/albaran_models.py`,
+      `extra='forbid'`). Comprobado con grep el 2026-09-24: ningún módulo
+      de producción la importa (solo `revision_models.py`, al que no
+      importa nadie, y un test de F-043); el `SchemaRegistry` de sv5 solo sirve
+      `documento_valoracion` y `documento_conciliacion`, y sv5 no lee
+      `raw_extraction_json`. Por eso no se le declara el campo (design §6).
+      Quien resucite esa copia tiene que declararlo, o rechazará el
+      documento entero (el cepo de F-043).
 
 ## Acceso a datos y sistemas externos
 
@@ -188,8 +252,22 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
   solo `workflow_runs`. Cambios a nivel de servidor afectan a otros
   proyectos: prohibidos desde aquí.
 - **Sigrid (ERP)**: SOLO vía `sigrid-api` (function key), SOLO lectura.
-  Configurado a 10.000 filas por petición (2026-08-13; el dato de 1.000 de
-  `azure-apps` está desactualizado); el balanceador corta a los 230 s.
+  La instancia admite **500.000 filas por petición** (`MAX_ALLOWED_ROWS`,
+  leído en Azure el 2026-09-30; `azure-apps/sigrid_api.md` §4.1). El 1.000
+  que cortaba listas en silencio era el `max_rows` por defecto del cliente
+  de sv3, no un tope de sigrid-api (F-052). El balanceador corta a los
+  230 s: lo que acota una lectura es su `timeout_s` (30 s por defecto), no
+  el número de filas. Reglas de lectura (F-052):
+  - **`truncated` nunca en silencio**: cada consulta declara su
+    `PoliticaTruncado` (`NO_TOLERA` lanza `SigridRespuestaTruncada`,
+    `TOLERA` usa las filas con WARNING); se comprueba con
+    `ruesma_comun.sigrid.comprobar_truncado`.
+  - **Agregar en SQL antes que paginar**: pedir el grano que se usa (una
+    fila por proveedor con `WITH` + `FOR XML PATH`, no una por línea).
+  - **Paginar con `ruesma_comun.sigrid`** (`con_paginacion` +
+    `leer_paginado`: `ORDER BY` estable, `max_rows = página + 1`, tope de
+    páginas). Página máxima `PAGINA_MAXIMA` (499.999), para que ninguna
+    petición pase de `MAX_FILAS_POR_PETICION` (500.000).
 - **Microsoft Graph**: buzón M365 (sv1) y SharePoint (sv3/sv4/sv5) con
   `GRAPH_KEY`. SharePoint es el almacén durable de documentos.
 - **APIs LLM**: Anthropic/OpenAI/Gemini (sv2 y sv5, flags `ENABLE_*`).
@@ -210,7 +288,10 @@ rollback: `docs/referencia/dominio_negocio_albaranes.md` §6–§7.
 - **Modo single de revisiones** (dos revisiones activas = dos consumidores
   de la misma cola con imágenes distintas) y **`comun` horneado en cada
   imagen**: tocar `ruesma_comun` obliga a reconstruir sv2, sv3, sv5 y sv6
-  — un fix en comun sin rebuild no existe en Azure.
+  — un fix en comun sin rebuild no existe en Azure. Excepción conocida:
+  `ruesma_comun.sigrid` y `ruesma_comun.obras` (F-052) solo los importan
+  sv3 y sv4, que se reconstruyen juntos y en orden **sv3 → sv4** (sv3
+  aplica el DDL de `contratos_busqueda_*` que el ORM de sv4 lee).
 - Scripts en `infra/`: `fase1_infra.ps1` (provisión), `add_secrets.ps1`,
   `create_capps*.ps1`, `build_images.ps1` + `deploy.ps1` (redespliegue).
   `build_images.ps1` espera los repos como hermanos: desde el monorepo,

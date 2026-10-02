@@ -21,15 +21,19 @@ import hashlib
 import logging
 import mimetypes
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 
 from application.services.albaran_extraction_service import (
     AlbaranExtractionService,
     ProviderExtractionResult,
 )
 from domain.models.llm_attachment import LlmAttachment
+
+if TYPE_CHECKING:
+    from ruesma_comun.correo import ContextoCorreo
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +43,8 @@ class ExtractAlbaranRequest:
     filename: str
     mime_type: str
     file_bytes: bytes
+    # (F-048 · R11) Texto del correo con el que llegó el albarán, o None.
+    contexto_correo: ContextoCorreo | None = None
 
 
 @dataclass(frozen=True)
@@ -55,6 +61,9 @@ class ReviewAlbaranRequest:
     # tipología (p.ej. albaran_revision_fase2_residuos). Si es None o no
     # está registrada, el pipeline cae al genérico (prompt_key_phase_2).
     prompt_key: str | None = None
+    # (F-048 · R14) El MISMO correo que la fase 1: IA2 recibe el mismo
+    # bloque dentro de `{prompt_fase_1}`.
+    contexto_correo: ContextoCorreo | None = None
 
 
 class ExtractAlbaranPipeline:
@@ -90,6 +99,7 @@ class ExtractAlbaranPipeline:
             attachments=attachments,
             provider=self._provider_phase_1,
             prompt_key=self._prompt_key_phase_1,
+            contexto_correo=request.contexto_correo,
         )
         sha256 = hashlib.sha256(request.file_bytes).hexdigest()
         return self._envelope_block(
@@ -132,6 +142,7 @@ class ExtractAlbaranPipeline:
             prompt_key=prompt_key_fase2,
             phase_1_json=request.phase_1_json,
             sigrid_context=request.sigrid_context,
+            contexto_correo=request.contexto_correo,
         )
         sha256 = hashlib.sha256(request.file_bytes).hexdigest()
         return self._envelope_block(
@@ -142,6 +153,17 @@ class ExtractAlbaranPipeline:
             sha256=sha256,
             phase_label="phase_2",
         )
+
+    # ----------------------------------------------------------- #
+    # (F-048 · R18) Lista de obras para validar el código del correo.
+    # ----------------------------------------------------------- #
+    def obras_conocidas(self) -> Mapping[str, str] | None:
+        """Normalizado -> código de la lista, o ``None`` sin lista.
+
+        Delega en el servicio (misma caché que la lista del prompt). El
+        worker la pide UNA vez por documento, y solo si hay correo.
+        """
+        return self._service.obras_conocidas()
 
     # ----------------------------------------------------------- #
     # Helpers privados.

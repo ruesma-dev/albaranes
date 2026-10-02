@@ -3,6 +3,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+# ------------------------------------------------------------------ #
+# Rastro de la busqueda de contratos (F-052 · R20, R21). Resultado de la
+# ultima busqueda de un documento, en ``contratos_busqueda_resultado``
+# (VARCHAR(16)); sv4 lo lee para decir si lo que ve esta buscado.
+# ------------------------------------------------------------------ #
+BUSQUEDA_ENCONTRADOS = "encontrados"  # >= 1 contrato, por Sigrid o por cache
+BUSQUEDA_NINGUNO = "ninguno"  # consulta correcta, 0 contratos
+BUSQUEDA_ERROR = "error"  # la busqueda fallo (incluido un truncado)
+BUSQUEDA_SIN_DATOS = "sin_datos"  # faltaba CIF u obra: no se busco
+RESULTADOS_BUSQUEDA_CONTRATOS = frozenset({
+    BUSQUEDA_ENCONTRADOS, BUSQUEDA_NINGUNO, BUSQUEDA_ERROR, BUSQUEDA_SIN_DATOS,
+})
+
 
 @dataclass(frozen=True)
 class ContratoLineFromSigrid:

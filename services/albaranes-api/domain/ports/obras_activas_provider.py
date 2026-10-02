@@ -23,5 +23,24 @@ class ObraActiva:
     nombre: str | None
 
 
+@dataclass(frozen=True)
+class CatalogoObras:
+    """Las dos listas que da UNA consulta a Sigrid (F-048, D5).
+
+    ``todas``: TODAS las obras con contrato, activas o no, con el codigo tal
+    como figura en Sigrid (contra ellas se valida el codigo del correo,
+    R18). ``activas``: las que pasan el corte provisional de F-002 (las que
+    van al prompt). ``todas`` es ``None`` cuando el proveedor solo sabe dar
+    las activas.
+    """
+
+    activas: tuple[ObraActiva, ...]
+    todas: tuple[ObraActiva, ...] | None
+
+
 class ObrasActivasProvider(Protocol):
     def obtener(self) -> list[ObraActiva] | None: ...
+
+    def obtener_todas(self) -> list[ObraActiva] | None:
+        """TODAS las obras con contrato (F-048, R18); ``None`` si no hay lista."""
+        ...

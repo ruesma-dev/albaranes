@@ -123,3 +123,19 @@ class ContratoMergeRepository(Protocol):
         documento no existe.
         """
         ...
+
+    def sellar_busqueda_contratos(
+        self,
+        *,
+        document_id: str,
+        cif: str | None,
+        obra: str | None,
+        resultado: str,
+    ) -> None:
+        """Sella el rastro de la última búsqueda de contratos (F-052 · R20,
+        R21): CIF y obra normalizados con los que se buscó, ``resultado``
+        (uno de ``RESULTADOS_BUSQUEDA_CONTRATOS``) y la fecha UTC, que pone
+        la implementación. Lo lee sv4 para decir si lo que ve está buscado.
+        Levanta ``ValueError`` con un resultado desconocido.
+        """
+        ...

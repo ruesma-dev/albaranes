@@ -9,11 +9,16 @@ persiste (SumideroEnvelope) para que sv3 lo recupere por document_id.
 Ejecuta SIEMPRE fase 1 + fase 2 (extraccion + revision/extraccion especial).
 grounding se activan cuando exista el adaptador de grounding (se mueve aquí
 desde sv3); el esqueleto ya está listo.
+
+(F-048) Si el mensaje trae ``correo_blob``, lee el texto del correo y lo pasa
+a las DOS fases; tras el envelope final sella ``origen_datos`` (de dónde sale
+la obra: correo o papel) con el resolver puro de ``application``.
 """
 from __future__ import annotations
 
 import logging
-from typing import Callable
+from collections.abc import Callable, Mapping
+from typing import TYPE_CHECKING
 
 from application.pipelines.extract_albaran_pipeline import (
     ExtractAlbaranPipeline,
@@ -24,7 +29,9 @@ from application.services.phase_merge import construir_envelope_final
 from application.services.clasificacion_resolver import (
     resolver_clasificacion,
 )
+from application.services.origen_datos_resolver import sellar_origen_datos
 from interface_adapters.worker.ports import (
+    FuenteContextoCorreo,
     FuenteDocumento,
     GroundingCabecera,
     SumideroEnvelope,
@@ -37,7 +44,17 @@ from ruesma_comun.colas import (
 )
 from ruesma_comun.contratos.familias import prompt_fase2_de
 
+if TYPE_CHECKING:
+    from ruesma_comun.correo import ContextoCorreo
+
 logger = logging.getLogger(__name__)
+
+
+def _resumen_correo(correo: ContextoCorreo | None) -> str:
+    """Caracteres y huella abreviada, nunca texto del correo (R36)."""
+    if correo is None:
+        return "NO"
+    return f"SI({correo.caracteres_originales}, {correo.sha256[:8]})"
 
 
 def construir_handler_extraccion(
@@ -47,8 +64,33 @@ def construir_handler_extraccion(
     grounding: GroundingCabecera,
     sumidero: SumideroEnvelope,
     publicador: PublicadorColas,
+    fuente_correo: FuenteContextoCorreo | None = None,
+    obras_conocidas: Callable[[], Mapping[str, str] | None] | None = None,
 ) -> Callable[[MensajeBase], None]:
-    """Crea el handler (closure) que consume q-extraccion."""
+    """Crea el handler (closure) que consume q-extraccion.
+
+    ``fuente_correo`` resuelve ``correo_blob`` (F-048); sin ella, todo
+    documento va sin correo. ``obras_conocidas`` da la lista de TODAS las
+    obras (normalizado -> código) para validar el código del correo; sin
+    ella, el correo cuenta sin validar (``validada = null``).
+    """
+
+    def _leer_correo(mensaje: MensajeBase) -> ContextoCorreo | None:
+        # `getattr`: el handler recibe `MensajeBase`, y un mensaje de antes
+        # de F-048 (o de otro modelo) no tiene el campo.
+        nombre_blob = getattr(mensaje, "correo_blob", None)
+        if not nombre_blob:
+            return None
+        if fuente_correo is None:
+            logger.warning(
+                "[sv2-worker] document_id=%s trae correo_blob=%s pero no "
+                "hay fuente de correo cableada: se sigue sin correo",
+                mensaje.document_id, nombre_blob,
+            )
+            return None
+        # Blob ausente o roto => None (R11): se extrae sin correo, nunca a
+        # poison por eso. Un fallo de red se propaga y la cola reintenta.
+        return fuente_correo.obtener(nombre_blob)
 
     def handler(mensaje: MensajeBase) -> None:
         document_id = mensaje.document_id
@@ -57,12 +99,16 @@ def construir_handler_extraccion(
         # 1) PDF del documento (SharePoint en produccion).
         doc = fuente.obtener(document_id)
 
+        # (F-048 · R11) Texto del correo, el MISMO para las dos fases.
+        correo = _leer_correo(mensaje)
+
         # 2) Fase 1 — extraccion.
         env1 = pipeline.run_phase_1(
             ExtractAlbaranRequest(
                 filename=doc.filename,
                 mime_type=doc.mime_type,
                 file_bytes=doc.file_bytes,
+                contexto_correo=correo,
             )
         )
         sumidero.persistir(document_id=document_id, envelope=env1, fase="phase_1")
@@ -98,6 +144,7 @@ def construir_handler_extraccion(
                 phase_1_json=env1,
                 sigrid_context=ctx,
                 prompt_key=prompt_fase2,
+                contexto_correo=correo,
             )
         )
         sumidero.persistir(
@@ -123,6 +170,24 @@ def construir_handler_extraccion(
             env_fase1=env1, env_fase2=env2,
             clasificacion=clasificacion,
         )
+
+        # (F-048 · R23, R25) Sello de `origen_datos` sobre el documento
+        # FINAL (la cabecera que dejo IA2), con la lectura del correo de
+        # FASE 1: la de IA2 se ignora (D3). La lista de obras se pide UNA
+        # vez y solo si hay correo: con sigrid-api caido cada consulta
+        # puede costar el timeout, y sin correo no hace falta.
+        obras = (
+            obras_conocidas()
+            if correo is not None and obras_conocidas is not None
+            else None
+        )
+        envelope_final = sellar_origen_datos(
+            envelope_final,
+            lectura=(env1.get("data") or {}).get("lectura_correo"),
+            correo=correo,
+            obras_conocidas=obras,
+        )
+        obra_origen = envelope_final["data"]["origen_datos"]["obra"]
         sumidero.persistir(
             document_id=document_id, envelope=envelope_final, fase="phase_1"
         )
@@ -137,12 +202,18 @@ def construir_handler_extraccion(
         )
         logger.info(
             "[sv2-worker] document_id=%s OK familia=%s origen=%s "
-            "confianza=%.1f prompt_fase2=%s -> q-persistencia",
+            "confianza=%.1f prompt_fase2=%s correo=%s obra=%s/%s "
+            "discrepancia=%s validada=%s -> q-persistencia",
             document_id,
             clasificacion.familia,
             clasificacion.origen,
             clasificacion.confianza_pct,
             prompt_fase2 or "(generico configurado)",
+            _resumen_correo(correo),
+            obra_origen["fuente"],
+            obra_origen["motivo"],
+            obra_origen["discrepancia"],
+            obra_origen["validada"],
         )
         # Si el handler lanza, el mensaje NO se borra: reaparece por
         # visibilidad y se reintenta (lo gestiona ConsumidorCola).

@@ -29,6 +29,7 @@ from evals.comparador import (
 )
 from evals.criticidad import Criticidad, cargar_criticidad
 from evals.procesos import canal
+from evals.procesos.errores import avisar, describir_error
 from evals.modelos import NO_COMPARAR, Discrepancia
 from ruesma_comun.contratos.contexto_linea import ContextoLinea
 
@@ -597,20 +598,40 @@ def ejecutar_trabajo(trabajo: dict) -> dict:  # pragma: no cover - subproceso
     from domain.models.valuation_envelope import ValuationEnvelope
 
     builder = _construir_builder()
-    resultados = []
-    for caso in trabajo.get("casos", []):
+
+    def construir(caso: dict) -> dict:
         envelope = ValuationEnvelope.model_validate(caso["envelope"])
         cabecera, lineas = builder.build(
             envelope=envelope, existing_document_already_valued=False
         )
-        resultados.append(
-            {
-                "caso_id": caso.get("caso_id"),
-                "header": _a_diccionario(cabecera),
-                "lineas": [_a_diccionario(linea) for linea in lineas],
-            }
-        )
-    return {"resultados": resultados}
+        return {
+            "header": _a_diccionario(cabecera),
+            "lineas": [_a_diccionario(linea) for linea in lineas],
+        }
+
+    return {"resultados": procesar_casos(trabajo.get("casos", []), construir)}
+
+
+def procesar_casos(casos: list[dict], construir) -> list[dict]:
+    """El build de cada caso EN SECUENCIA (R17) y AISLADO.
+
+    Un envelope que no valida en un caso —o un build que revienta— queda en el
+    resultado de ESE caso (`error`: fase `build`, tipo y motivo sin valores)
+    y el resto sigue: antes, uno solo tumbaba la corrida entera.
+    """
+    resultados = []
+    for caso in casos:
+        caso_id = caso.get("caso_id")
+        try:
+            construido = construir(caso)
+        except Exception as error:  # noqa: BLE001 - se aísla el caso, no se oculta
+            fallo = describir_error(error, "build")
+            avisar("sv6_build", f"caso {caso_id}: error en build · {fallo['motivo']}")
+            resultados.append({"caso_id": caso_id, "error": fallo})
+            continue
+        avisar("sv6_build", f"caso {caso_id}: ok")
+        resultados.append({"caso_id": caso_id, **construido})
+    return resultados
 
 
 def ejecutar_en_subproceso(
@@ -647,7 +668,8 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - subproceso
         trabajo = json.loads(sys.stdin.read() or "{}")
         salida = ejecutar_trabajo(trabajo)
     except Exception as error:  # noqa: BLE001 - la frontera devuelve el motivo
-        print(f"sv6_build: {type(error).__name__}: {error}", file=sys.stderr)
+        # Sin `str(error)`: el de pydantic arrastra los valores del envelope.
+        avisar("sv6_build", f"la corrida entera falló · {describir_error(error, '')['motivo']}")
         return 1
     canal.emitir(salida)
     return 0

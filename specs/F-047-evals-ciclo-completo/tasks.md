@@ -34,3 +34,11 @@ lo hacen legible; si el trabajo se corta, lo entregado hasta T8 ya vale.
 - [ ] T21: Corrida de REPROCESO sobre un caso ya procesado: la rama de duplicado y el re-fetch no pierden `contexto_linea` ni anulan las seis `tipologia*` (R22, R39)  |  Verificación: MANUAL (humano) · `python -m evals.runner --con-llm --feature F-047 --casos RES-001 --reproceso`
 - [ ] T22: Pasada de ciclo sobre los 59 casos, cuando el humano decida pagarla (R40)  |  Verificación: MANUAL (humano) · `python -m evals.runner --con-llm --feature F-047`
 - [ ] T23: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`
+
+## Nota de integración desde F-048 (2026-09-24)
+
+F-048 trajo SOLO `evals/inyeccion.py` (y `tests/test_f047_r2_r16_inyeccion.py`) y lo amplió con `correo=` y
+`Inyector(sin_correo=)`. Al integrar F-047 hay que: (1) cablear `anadir_opcion_sin_correo(analizador)` en el
+CLI del ciclo; (2) pasar `correo=correos.cargar_correo(caso_id)` desde `ciclo.py`/`montaje.py` a la inyección
+(R41 de F-048); (3) traer `tests/test_f047_r5_seleccion_contrato.py`, que cubre `GestoRevisor` y no vino.
+Detalle: `progress/impl_F-048_bloque_E.md`.

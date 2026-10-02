@@ -16,7 +16,10 @@ from application.services.albaran_confidence_service import (
     AlbaranConfidenceService,
     LineMergeResult,
 )
-from domain.models.contrato_models import ContratoEnrichmentResult
+from domain.models.contrato_models import (
+    RESULTADOS_BUSQUEDA_CONTRATOS,
+    ContratoEnrichmentResult,
+)
 from domain.models.extraction_models import (
     CabeceraAlbaran,
     ExtractionEnvelope,
@@ -2002,6 +2005,46 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
             document_id=document_id,
             nombre_proveedor=nombre,
         )
+
+    def sellar_busqueda_contratos(
+        self,
+        *,
+        document_id: str,
+        cif: str | None,
+        obra: str | None,
+        resultado: str,
+    ) -> None:
+        """Rastro de la última búsqueda de contratos (F-052 · R20, R21).
+
+        Sobrescribe las cuatro columnas ``contratos_busqueda_*`` del merge
+        con lo que se buscó, el resultado y la fecha ISO UTC de ahora.
+        Rechaza un resultado fuera de ``RESULTADOS_BUSQUEDA_CONTRATOS``
+        antes de tocar la BBDD: sv4 decide el mensaje por ese valor.
+        """
+        if resultado not in RESULTADOS_BUSQUEDA_CONTRATOS:
+            raise ValueError(
+                f"resultado de búsqueda de contratos desconocido: {resultado!r}"
+            )
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            session.execute(
+                text(
+                    "UPDATE albaran_documents_merge "
+                    "SET contratos_busqueda_cif = :cif, "
+                    "    contratos_busqueda_obra = :obra, "
+                    "    contratos_busqueda_resultado = :resultado, "
+                    "    contratos_busqueda_at_utc = :at_utc "
+                    "WHERE id = :doc_id"
+                ),
+                {
+                    "cif": cif,
+                    "obra": obra,
+                    "resultado": resultado,
+                    "at_utc": datetime.now(timezone.utc).isoformat(),
+                    "doc_id": document_id,
+                },
+            )
+            session.commit()
 
     def get_merge_fechas_para_guard(
         self, *, document_id: str,

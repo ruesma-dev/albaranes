@@ -9,6 +9,8 @@ Hand-off por Blob (adaptadores de producción, ya NO disco):
   - Lee el PDF de entrada de ``input/{document_id}.pdf`` (lo deja sv1; en el
     piloto, ``seed_input.py``).
   - Escribe el envelope en ``envelopes/{document_id}_{fase}.json`` para sv3.
+  - (F-048) Lee el texto del correo de ``input/{document_id}.correo.json`` si
+    el mensaje trae ``correo_blob``.
 
 Variables de entorno relevantes:
   - COLAS_CONNECTION_STRING (local/Azurite) o COLAS_ACCOUNT_URL (nube) para
@@ -31,6 +33,7 @@ from interface_adapters.worker.blob_adapters import (
     FuenteDocumentoBlob,
     SumideroEnvelopeBlob,
 )
+from interface_adapters.worker.correo_adapter import FuenteContextoCorreoBlob
 from interface_adapters.worker.extraction_worker import (
     construir_handler_extraccion,
 )
@@ -66,6 +69,10 @@ def main() -> int:
         grounding=GroundingNulo(),
         sumidero=SumideroEnvelopeBlob(almacen),
         publicador=publicador,
+        # (F-048) Texto del correo del blob lateral `input/{id}.correo.json`
+        # y lista de TODAS las obras (misma caché que el prompt).
+        fuente_correo=FuenteContextoCorreoBlob(almacen),
+        obras_conocidas=pipeline.obras_conocidas,
     )
     return ejecutar_worker(
         nombre_cola=COLA_EXTRACCION,

@@ -14,8 +14,10 @@ El informe cumple dos papeles a la vez y por eso tiene dos capas:
 from __future__ import annotations
 
 from evals.modelos import (
+    ERROR,
     NO_EVALUABLE,
     OMITIDO,
+    ROJO,
     ResultadoFase,
     ResultadoPasada,
 )
@@ -81,7 +83,10 @@ def _bloque_fase(fase: ResultadoFase) -> list[str]:
     lineas = [
         f"## {_NOMBRE_LARGO.get(fase.nombre, fase.nombre)} — {fase.veredicto()}",
         "",
-        f"- Casos evaluados: {len(fase.evaluados)} · omitidos: {len(fase.omitidos)}",
+        (
+            f"- Casos evaluados: {len(fase.evaluados)} · omitidos: {len(fase.omitidos)} · "
+            f"con ERROR: {len(fase.con_error)}"
+        ),
         f"- Proveedores invocados: {', '.join(fase.proveedores) or '(ninguno)'}",
     ]
     if fase.motivo:
@@ -91,8 +96,9 @@ def _bloque_fase(fase: ResultadoFase) -> list[str]:
     if not fase.casos:
         lineas.append("| (sin casos en los fixtures) | NO_EVALUABLE | — | — | — |")
     for caso in fase.casos:
-        fallos = "—" if caso.estado == OMITIDO else str(len(caso.fallos))
-        avisos = "—" if caso.estado == OMITIDO else str(len(caso.avisos))
+        sin_evaluar = caso.estado in (OMITIDO, ERROR)
+        fallos = "—" if sin_evaluar else str(len(caso.fallos))
+        avisos = "—" if sin_evaluar else str(len(caso.avisos))
         lineas.append(
             f"| {caso.caso_id} | {caso.estado} | {fallos} | {avisos} | "
             f"{caso.motivo or '—'} |"
@@ -169,18 +175,39 @@ def render(
     return "\n".join(lineas) + "\n"
 
 
+_SIN_CASOS = (
+    "Alguna parte de la corrida no tenía ni un caso en los fixtures. "
+    "Un informe sin casos no es evidencia: NO_EVALUABLE, nunca VERDE."
+)
+
+_CON_ERROR = (
+    "Un caso que revienta no es evidencia de que la fase funcione (puede ser "
+    "justo el empeoramiento que se busca): NO_EVALUABLE, nunca VERDE. El motivo "
+    "de cada uno está en su tabla y el detalle, en la salida de error de la pasada."
+)
+
+
+def _linea_errores(pasada: ResultadoPasada) -> str:
+    """«N casos con ERROR: IA2 HOR-001/openai, …», o vacío si no hay (CR-E2)."""
+    rotos = [f"{fase.nombre} {caso.caso_id}" for fase in pasada.fases for caso in fase.con_error]
+    if not rotos:
+        return ""
+    cuantos = "1 caso" if len(rotos) == 1 else f"{len(rotos)} casos"
+    return f"{cuantos} con ERROR: {', '.join(rotos)}."
+
+
 def _explicacion_veredicto(pasada: ResultadoPasada) -> str:
     veredicto = pasada.veredicto()
+    errores = _linea_errores(pasada)
+    if veredicto == ROJO:
+        rojas = [fase.nombre for fase in pasada.fases if fase.veredicto() == ROJO]
+        return " ".join(filter(None, [f"Hay fallos críticos en: {', '.join(rojas)}.", errores]))
     if veredicto == NO_EVALUABLE:
-        return (
-            "Alguna parte de la corrida no tenía ni un caso en los fixtures. "
-            "Un informe sin casos no es evidencia: NO_EVALUABLE, nunca VERDE."
+        sin_casos = not pasada.fases or any(
+            not fase.evaluados and not fase.con_error for fase in pasada.fases
         )
-    if veredicto == "ROJO":
-        rojas = [
-            fase.nombre for fase in pasada.fases if fase.veredicto() == "ROJO"
-        ]
-        return f"Hay fallos críticos en: {', '.join(rojas)}."
+        partes = [errores, _CON_ERROR if errores else "", _SIN_CASOS if sin_casos else ""]
+        return " ".join(filter(None, partes)) or _SIN_CASOS
     return "Sin fallos críticos. Los avisos laxos, si los hay, no impiden el verde."
 
 

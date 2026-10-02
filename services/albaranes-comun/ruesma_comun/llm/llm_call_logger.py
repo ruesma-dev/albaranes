@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from ruesma_comun.correo.prompt import redactar_correo
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,6 +28,13 @@ class LlmCallLogger:
           <base_dir>/<YYYYMMDD>/<HHMMSS_milis>_<provider>_<short_id>.json
       - El attachment binario (PDF, imagen) NUNCA se guarda crudo.
         Solo metadatos + sha256 para correlación con otros logs.
+      - El texto del correo (F-048, R37) tampoco, en NADA de lo que se
+        escribe: peticion, respuesta (el ``Response`` de OpenAI repite
+        ``instructions``) y error. Todo texto, a cualquier profundidad y
+        claves incluidas, pasa por ``redactar_correo`` antes de escribir,
+        que deja en su lugar un resumen (sha256, caracteres); y lo que no
+        es JSON sale por su ``str``, tambien redactado. No muta el dict
+        del llamador.
       - El response del SDK se serializa best-effort:
           1. obj.model_dump() si es Pydantic v2.
           2. obj.to_dict() si lo expone (algunos SDKs).
@@ -95,7 +104,7 @@ class LlmCallLogger:
             )
             filename = f"{ts}_{provider}_{short_id}.json"
             target = day_dir / filename
-            payload = {
+            payload = self._sin_correo({
                 "timestamp_utc": now.isoformat(),
                 "provider": provider,
                 "model": model,
@@ -104,10 +113,13 @@ class LlmCallLogger:
                 "error": error,
                 "request": request_summary,
                 "response": self._serializable(response_payload),
-            }
+            })
             target.write_text(
                 json.dumps(
-                    payload, ensure_ascii=False, indent=2, default=str,
+                    payload,
+                    ensure_ascii=False,
+                    indent=2,
+                    default=self._str_sin_correo,
                 ),
                 encoding="utf-8",
             )
@@ -135,6 +147,25 @@ class LlmCallLogger:
             "size_bytes": len(data),
             "sha256": hashlib.sha256(data).hexdigest(),
         }
+
+    @classmethod
+    def _sin_correo(cls, obj: Any) -> Any:
+        """Copia de ``obj`` con cada bloque de correo redactado (R37)."""
+        if isinstance(obj, str):
+            return redactar_correo(obj)
+        if isinstance(obj, dict):
+            return {
+                (redactar_correo(k) if isinstance(k, str) else k): cls._sin_correo(v)
+                for k, v in obj.items()
+            }
+        if isinstance(obj, (list, tuple)):
+            return [cls._sin_correo(v) for v in obj]
+        return obj
+
+    @staticmethod
+    def _str_sin_correo(obj: Any) -> str:
+        """``default`` de ``json.dumps``: lo que no es JSON, por su ``str`` redactado."""
+        return redactar_correo(str(obj))
 
     @classmethod
     def _serializable(cls, obj: Any) -> Any:

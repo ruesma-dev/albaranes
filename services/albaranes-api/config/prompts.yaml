@@ -60,6 +60,29 @@ albaran_factura_es:
 
     {obras_activas}
 
+    ## Correo con el que llegó el albarán
+
+    {contexto_correo}
+
+    - Del correo SOLO se lee el código de OBRA. NUNCA la partida ni el
+      código de imputación: esos salen solo del papel.
+    - Devuelve SIEMPRE el bloque lectura_correo:
+      - obra_codigos: TODOS los códigos de obra que leas en el asunto o
+        en el cuerpo del correo, tal y como aparecen, estén o no en la
+        lista de obras de arriba. Esa lista es solo para
+        cabecera.obra_codigo; los códigos del correo los comprueba el
+        sistema. Lista vacía si el correo no trae ninguno o si no hay
+        correo.
+      - evidencia: SOLO el fragmento corto del correo donde aparece el
+        código, como mucho 160 caracteres. null si no hay código. No
+        copies el correo entero.
+    - La obra del PAPEL es otra lectura, independiente de la del correo:
+      cabecera.obra_codigo se lee o se deduce del albarán SIEMPRE, como
+      hasta ahora, traiga o no obra el correo. Si el papel no permite
+      identificar la obra, cabecera.obra_codigo es null, como hasta
+      ahora. NO copies en cabecera.obra_codigo el código del correo: las
+      dos lecturas las cruza el sistema después.
+
     ## Reglas generales para las líneas
 
     - Identifica cada línea de concepto.
@@ -143,6 +166,12 @@ albaran_factura_es:
     nivel DOCUMENTO y con él se elige el prompt de la fase 2. Devuélvelo
     siempre, con familia, confianza_pct, motivo, mixto y
     familias_secundarias.
+
+    El bloque `lectura_correo` también es de esta fase:
+    `lectura_correo.obra_codigos` con los códigos de OBRA leídos en el
+    correo (lista vacía si no hay) y `lectura_correo.evidencia` con el
+    fragmento corto donde aparecen (160 caracteres como mucho). Es aparte
+    de `cabecera.obra_codigo`, que sigue siendo lo que dice el papel.
 
     Todas las líneas derivadas de un mismo vertido o servicio deben
     compartir el mismo `codigo_imputacion`.

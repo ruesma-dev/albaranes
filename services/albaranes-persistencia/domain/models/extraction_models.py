@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from pydantic import Field
-from ruesma_comun.contratos import ClasificacionAlbaran
+from ruesma_comun.contratos import ClasificacionAlbaran, OrigenDatos
 
 from domain.models.contexto_linea import ContextoLinea
 from domain.models.schema_base import StrictSchemaModel
@@ -75,6 +75,17 @@ class DocumentoAlbaran(StrictSchemaModel):
     # traen y tienen que seguir validando igual que hoy (R8, R27).
     # -----------------------------------------------------------------
     clasificacion: Optional[ClasificacionAlbaran] = None
+
+    # -----------------------------------------------------------------
+    # (F-048, R26) De donde sale la OBRA —correo o papel— y como cruzan
+    # las dos lecturas. Lo sella el resolver de sv2 en TODOS los
+    # envelopes, tambien sin correo: sin declararlo aqui, el
+    # `extra='forbid'` tumbaba el envelope y el mensaje iba a poison (por
+    # eso se despliega sv3 antes que sv2). Es el contrato de `comun`, no
+    # una copia; su `extra='ignore'` deja pasar los campos que anada
+    # F-049. Default `None`: los envelopes anteriores siguen validando.
+    # -----------------------------------------------------------------
+    origen_datos: OrigenDatos | None = None
 
 
 class ProviderExtractionEnvelope(StrictSchemaModel):

@@ -110,25 +110,15 @@ def corrida_determinista(
             )
         envelopes[caso_id] = envelope
 
-    salida = sv6_build.ejecutar_en_subproceso(
-        {
-            "casos": [
-                {"caso_id": caso_id, "envelope": envelope}
-                for caso_id, envelope in envelopes.items()
-            ]
-        }
-    )
-    resultados = {r["caso_id"]: r for r in salida["resultados"]}
+    resultados, motivo_muerte = _build_sv6(envelopes, (fase_ia3, fase_e2e))
 
     for caso_id, envelope in envelopes.items():
         resultado = resultados.get(caso_id)
-        if resultado is None:
-            fase_e2e.casos.append(
-                ResultadoCaso.omitido(caso_id, "E2E", "sv6 no devolvió resultado")
-            )
-            continue
-
-        if caso_id in ia3:
+        motivo_sv6 = _motivo_sv6(resultado, motivo_muerte)
+        if motivo_sv6:
+            # Sin build no hay IA3 ni E2E; IA4 no depende de sv6 y se evalúa.
+            fase_ia3.casos.append(ResultadoCaso.con_error(caso_id, "IA3", motivo_sv6))
+        elif caso_id in ia3:
             evaluacion = sv6_build.evaluar_caso_determinista(
                 caso_id=caso_id,
                 envelope=envelope,
@@ -159,7 +149,9 @@ def corrida_determinista(
                 ResultadoCaso.omitido(caso_id, "IA4", "sin caso en el libro IA4")
             )
 
-        if caso_id in final:
+        if motivo_sv6:
+            fase_e2e.casos.append(ResultadoCaso.con_error(caso_id, "E2E", motivo_sv6))
+        elif caso_id in final:
             evaluacion = sv6_build.evaluar_caso_determinista(
                 caso_id=caso_id,
                 envelope=envelope,
@@ -180,6 +172,46 @@ def corrida_determinista(
             )
 
     return [fase_ia3, fase_ia4, fase_e2e], sorted(set(no_observables))
+
+
+def _build_sv6(envelopes: dict[str, dict], fases) -> tuple[dict[str, dict], str]:
+    """El build de sv6 de todos los envelopes; si el subproceso muere, las fases
+    que dependen de él (`fases`) se quedan con el motivo y sin resultados."""
+    salida, motivo_muerte = _ejecutar_aislado(
+        "sv6",
+        sv6_build.ejecutar_en_subproceso,
+        {
+            "casos": [
+                {"caso_id": caso_id, "envelope": envelope}
+                for caso_id, envelope in envelopes.items()
+            ]
+        },
+    )
+    if salida is None:
+        for fase in fases:
+            fase.motivo = motivo_muerte
+    resultados = {r.get("caso_id"): r for r in (salida or {}).get("resultados", [])}
+    return resultados, motivo_muerte
+
+
+def _motivo_sv5(resultado: dict | None) -> str:
+    """Por qué no hay valoración de sv5 para un caso; vacío si la hay."""
+    if resultado is None:
+        return "sv5 no devolvió resultado"
+    error = resultado.get("error")
+    if error:
+        return f"ERROR en {error.get('fase') or 'sv5'} (sv5) · {error.get('motivo', '')}"
+    return ""
+
+
+def _motivo_sv6(resultado: dict | None, motivo_muerte: str) -> str:
+    """Por qué no hay build de sv6 para un caso; vacío si lo hay."""
+    if resultado is None:
+        return motivo_muerte or "sv6 no devolvió resultado"
+    error = resultado.get("error")
+    if error:
+        return f"ERROR en el build de sv6 · {error.get('motivo', '')}"
+    return ""
 
 
 def _evaluar_ia4(ia4: dict, envelope: dict, criticidad) -> list:
@@ -248,51 +280,115 @@ def corrida_completa(
         )
 
     if trabajo_sv2:
-        salida = sv2_extraccion.ejecutar_en_subproceso(
-            {
-                "casos": trabajo_sv2,
-                "proveedores": sorted(set(invocados_ia1 + invocados_ia2)),
-            }
+        _evaluar_sv2(
+            trabajo_sv2,
+            sorted(set(invocados_ia1 + invocados_ia2)),
+            {"IA1": (fase_ia1, ia1, invocados_ia1), "IA2": (fase_ia2, ia2, invocados_ia2)},
+            criticidad,
+            no_observables,
         )
-        for resultado in salida["resultados"]:
-            caso_id = resultado["caso_id"]
-            for proveedor, documentos in resultado["proveedores"].items():
-                if caso_id in ia1 and proveedor in invocados_ia1:
-                    fase_ia1.casos.append(
-                        ResultadoCaso.desde_discrepancias(
-                            f"{caso_id}/{proveedor}",
-                            "IA1",
-                            _comparar_tablas_de(
-                                ia1[caso_id],
-                                sv2_extraccion.proyectar_ia1(documentos["ia1"], caso_id),
-                                criticidad,
-                                (("cabeceras", ()), ("lineas", ("num_linea",))),
-                                "IA1",
-                                no_observables,
-                            ),
-                        )
-                    )
-                if caso_id in ia2 and proveedor in invocados_ia2:
-                    fase_ia2.casos.append(
-                        ResultadoCaso.desde_discrepancias(
-                            f"{caso_id}/{proveedor}",
-                            "IA2",
-                            _comparar_tablas_de(
-                                ia2[caso_id],
-                                sv2_extraccion.proyectar_ia2(documentos["ia2"], caso_id),
-                                criticidad,
-                                (("contexto", ("num_linea", "campo_contexto")),),
-                                "IA2",
-                                no_observables,
-                            ),
-                        )
-                    )
 
     fases_valoracion, no_observables_valoracion = _corrida_valoracion_real(
         inputs, ia3, ia4, final, criticidad, proveedores
     )
     no_observables.extend(no_observables_valoracion)
     return [fase_ia1, fase_ia2, *fases_valoracion], sorted(set(no_observables))
+
+
+#: Cómo se compara cada fase de sv2: la proyección y las tablas con sus claves.
+_COMPARACION_SV2 = {
+    "IA1": (sv2_extraccion.proyectar_ia1, (("cabeceras", ()), ("lineas", ("num_linea",)))),
+    "IA2": (sv2_extraccion.proyectar_ia2, (("contexto", ("num_linea", "campo_contexto")),)),
+}
+
+
+def _ejecutar_aislado(servicio: str, ejecutar, trabajo: dict) -> tuple[dict | None, str]:
+    """Lanza un subproceso de evals; si muere, devuelve el motivo en vez de reventar.
+
+    Hasta el 2026-09-24 el `RuntimeError` subía hasta el CLI y la pasada moría
+    sin informe. El detalle del fallo (el stderr del hijo) va a la consola y
+    NO al motivo: el motivo acaba en el informe, que se versiona sin valores
+    (R31 de F-047), y ese stderr puede traerlos.
+    """
+    try:
+        return ejecutar(trabajo), ""
+    except (RuntimeError, OSError, subprocess.SubprocessError) as error:
+        print(f"runner: el subproceso de {servicio} murió:\n{error}", file=sys.stderr)
+        return None, (
+            f"el subproceso de {servicio} murió sin devolver resultados "
+            f"({type(error).__name__}); el detalle está en la salida de error de "
+            f"la pasada, no aquí, porque puede llevar valores del albarán"
+        )
+
+
+def _evaluar_sv2(trabajo, proveedores, fases, criticidad, no_observables) -> None:
+    """IA1 e IA2 de todos los casos; un caso roto sale ERROR con su motivo.
+
+    Todos los motivos de aquí nacen de un fallo —el subproceso murió, no
+    devolvió el caso o el caso reventó—, así que ninguno es un OMITIDO (CR-E2).
+    """
+    salida, motivo_muerte = _ejecutar_aislado(
+        "sv2",
+        sv2_extraccion.ejecutar_en_subproceso,
+        {"casos": trabajo, "proveedores": proveedores},
+    )
+    if salida is None:
+        for fase, _, _ in fases.values():
+            fase.motivo = motivo_muerte
+    resultados = {r.get("caso_id"): r for r in (salida or {}).get("resultados", [])}
+
+    for pedido in trabajo:
+        caso_id = pedido["caso_id"]
+        resultado = resultados.get(caso_id)
+        for proveedor in proveedores:
+            if resultado is None:
+                motivos = dict.fromkeys(fases, motivo_muerte or "sv2 no devolvió resultado")
+            elif resultado.get("error"):
+                motivos = _motivos_de_error(resultado["error"])
+            else:
+                documentos = resultado.get("proveedores", {}).get(proveedor)
+                if documentos is None:
+                    motivos = dict.fromkeys(fases, "sv2 no devolvió resultado")
+                else:
+                    motivos = _motivos_de_error(documentos.get("error"))
+            for nombre, (fase, fixtures, invocados) in fases.items():
+                if caso_id not in fixtures or proveedor not in invocados:
+                    continue
+                etiqueta = f"{caso_id}/{proveedor}"
+                if motivos.get(nombre):
+                    fase.casos.append(ResultadoCaso.con_error(etiqueta, nombre, motivos[nombre]))
+                    continue
+                proyectar, tablas = _COMPARACION_SV2[nombre]
+                fase.casos.append(
+                    ResultadoCaso.desde_discrepancias(
+                        etiqueta,
+                        nombre,
+                        _comparar_tablas_de(
+                            fixtures[caso_id],
+                            proyectar(documentos[nombre.lower()], caso_id),
+                            criticidad,
+                            tablas,
+                            nombre,
+                            no_observables,
+                        ),
+                    )
+                )
+
+
+def _motivos_de_error(error: dict | None) -> dict[str, str]:
+    """Qué fases no se pueden evaluar por el error de sv2, y por qué.
+
+    Si falla IA1, IA2 ni se llamó; si falla IA2, lo de IA1 vale y se evalúa.
+    Un fallo antes de IA1 (el preproceso del albarán) deja fuera las dos.
+    """
+    if not error:
+        return {}
+    fase, motivo = error.get("fase", ""), error.get("motivo", "")
+    if fase == "IA2":
+        return {"IA2": f"ERROR en IA2 · {motivo}"}
+    if fase == "IA1":
+        return {"IA1": f"ERROR en IA1 · {motivo}", "IA2": f"no se evaluó: falló IA1 · {motivo}"}
+    return dict.fromkeys(("IA1", "IA2"), f"ERROR en {fase or 'sv2'} · {motivo}")
 
 
 def _comparar_tablas_de(
@@ -342,7 +438,10 @@ def _corrida_valoracion_real(
             fase.motivo = motivo
         return [fase_ia3, fase_ia4, fase_e2e], no_observables
 
-    salida_sv5 = sv5_valoracion.ejecutar_en_subproceso(
+    fases = (fase_ia3, fase_ia4, fase_e2e)
+    salida_sv5, motivo_muerte_sv5 = _ejecutar_aislado(
+        "sv5",
+        sv5_valoracion.ejecutar_en_subproceso,
         {
             "proveedor": proveedor,
             "casos": [
@@ -352,34 +451,45 @@ def _corrida_valoracion_real(
                 }
                 for caso_id, datos in sorted(inputs.items())
             ],
-        }
+        },
     )
-    envelopes = {r["caso_id"]: r["envelope"] for r in salida_sv5["resultados"]}
-    conciliaciones = {
-        r["caso_id"]: r.get("conciliaciones", []) for r in salida_sv5["resultados"]
-    }
+    if salida_sv5 is None:
+        for fase in fases:
+            fase.motivo = motivo_muerte_sv5
+            fase.casos.extend(
+                ResultadoCaso.con_error(caso_id, fase.nombre, motivo_muerte_sv5)
+                for caso_id in sorted(inputs)
+            )
+        return list(fases), no_observables
 
-    salida_sv6 = sv6_build.ejecutar_en_subproceso(
-        {
-            "casos": [
-                {"caso_id": caso_id, "envelope": envelope}
-                for caso_id, envelope in envelopes.items()
-            ]
-        }
+    por_caso = {r.get("caso_id"): r for r in salida_sv5.get("resultados", [])}
+    envelopes: dict[str, dict] = {}
+    conciliaciones: dict[str, list] = {}
+    for caso_id in sorted(inputs):
+        resultado_sv5 = por_caso.get(caso_id)
+        motivo = _motivo_sv5(resultado_sv5)
+        if motivo:
+            # Sin la valoración de sv5 no hay envelope: ni IA3, ni IA4, ni build.
+            for fase in fases:
+                fase.casos.append(ResultadoCaso.con_error(caso_id, fase.nombre, motivo))
+            continue
+        envelopes[caso_id] = resultado_sv5["envelope"]
+        conciliaciones[caso_id] = resultado_sv5.get("conciliaciones", [])
+
+    resultados, motivo_muerte = (
+        _build_sv6(envelopes, (fase_ia3, fase_e2e)) if envelopes else ({}, "")
     )
-    resultados = {r["caso_id"]: r for r in salida_sv6["resultados"]}
 
     for caso_id, envelope in envelopes.items():
         resultado = resultados.get(caso_id)
-        if resultado is None:
-            fase_e2e.casos.append(
-                ResultadoCaso.omitido(caso_id, "E2E", "sv6 no devolvió resultado")
-            )
-            continue
+        motivo_sv6 = _motivo_sv6(resultado, motivo_muerte)
         for fase, nombre, fixture in (
             (fase_ia3, "IA3", ia3.get(caso_id)),
             (fase_e2e, "E2E", final.get(caso_id)),
         ):
+            if motivo_sv6:
+                fase.casos.append(ResultadoCaso.con_error(caso_id, nombre, motivo_sv6))
+                continue
             if fixture is None:
                 fase.casos.append(
                     ResultadoCaso.omitido(caso_id, nombre, f"sin caso en el libro {nombre}")

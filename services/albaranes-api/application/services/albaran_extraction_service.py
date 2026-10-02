@@ -19,11 +19,14 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Type
 
 from pydantic import BaseModel
+from ruesma_comun.contratos import normalizar_codigo
 from ruesma_comun.contratos.familias import render_catalogo_markdown
+from ruesma_comun.correo import render_bloque_correo
 
 from application.services.schema_registry import SchemaRegistry
 from domain.models.llm_attachment import LlmAttachment
@@ -37,12 +40,24 @@ from infrastructure.prompts.revision_rules_repository import (
     RevisionRulesRepository,
 )
 
+if TYPE_CHECKING:
+    from ruesma_comun.correo import ContextoCorreo
+
 logger = logging.getLogger(__name__)
 
 # (F-043 · R6) Marcador del catalogo de familias en el task de fase 1,
 # mismo patron que ``{obras_activas}``: IA1 no puede clasificar contra un
 # catalogo que no ha leido.
 MARCADOR_CATALOGO_FAMILIAS = "{catalogo_familias}"
+
+# (F-048 · R12) Marcador del texto del correo en el task de fase 1. Lo
+# sustituye el bloque delimitado de ``ruesma_comun.correo`` (o su nota fija).
+MARCADOR_CONTEXTO_CORREO = "{contexto_correo}"
+
+# Marcadores del task de fase 2, sustituidos en UNA pasada (F-048 · R14).
+_MARCADORES_FASE_2 = re.compile(
+    r"\{(?:prompt_fase_1|revision_rules|json_fase_1|sigrid_context)\}"
+)
 
 
 @dataclass(frozen=True)
@@ -114,17 +129,20 @@ class AlbaranExtractionService:
         attachments: list[LlmAttachment],
         provider: str,
         prompt_key: str,
+        contexto_correo: ContextoCorreo | None = None,
     ) -> ProviderExtractionResult:
         spec = self._require_provider(provider)
         prompt_spec = self._prompts.get(prompt_key)
         response_model = self._schemas.get(prompt_spec.schema)
 
-        # El task de fase 1 lleva DOS marcadores propios
-        # ({obras_activas} y {catalogo_familias}) que se sustituyen en un
-        # solo sitio compartido: este mismo task viaja embebido dentro del
-        # prompt de fase 2 y allí sufría la misma fuga (ver
-        # `_render_task_fase_1`).
-        task_rendered, obras = self._render_task_fase_1(prompt_spec.task)
+        # El task de fase 1 lleva TRES marcadores propios
+        # ({obras_activas}, {catalogo_familias} y {contexto_correo}) que se
+        # sustituyen en un solo sitio compartido: este mismo task viaja
+        # embebido dentro del prompt de fase 2 y allí sufría la misma fuga
+        # (ver `_render_task_fase_1`).
+        task_rendered, obras = self._render_task_fase_1(
+            prompt_spec.task, contexto_correo,
+        )
 
         instructions = self._compose_instructions(
             system=prompt_spec.system,
@@ -138,11 +156,12 @@ class AlbaranExtractionService:
 
         logger.info(
             "Extracción FASE 1 proveedor=%s prompt_key=%s schema=%s "
-            "model=%s filename=%s obras_activas=%s",
+            "model=%s filename=%s obras_activas=%s correo=%s",
             spec.provider, prompt_key, prompt_spec.schema,
             spec.model_name,
             attachments[0].filename if attachments else "n/a",
             len(obras) if obras else "NO DISPONIBLE",
+            _resumen_correo(contexto_correo),
         )
 
         return self._invoke_provider(
@@ -160,7 +179,7 @@ class AlbaranExtractionService:
     # FASE 1 — renderizado del task (F-002 · R1, F-043 · R6).
     # ---------------------------------------------------------- #
     def _render_task_fase_1(
-        self, task: str,
+        self, task: str, correo: ContextoCorreo | None,
     ) -> tuple[str, list[ObraActiva] | None]:
         """Sustituye TODOS los marcadores del task de fase 1.
 
@@ -177,6 +196,11 @@ class AlbaranExtractionService:
 
         Se sustituye con ``str.replace`` y no con ``.format()`` porque el
         task lleva llaves de ejemplos JSON que romperían el formateo.
+
+        (F-048 · R12) ``{contexto_correo}`` va el ÚLTIMO: el texto del
+        correo es de un tercero y lo que se inserta después ya no se
+        recorre, así que un correo que escriba ``{obras_activas}`` no
+        recibe la lista dentro del bloque.
 
         Devuelve el task renderizado y la lista de obras que se usó (o
         ``None``), que la fase 1 necesita para su log.
@@ -195,7 +219,26 @@ class AlbaranExtractionService:
         # catalogo es determinista (no depende de ningun proveedor
         # externo), asi que aqui no hay caso "no disponible": o va en su
         # sitio o se anade al final.
-        return self._render_catalogo_familias(task), obras
+        task = self._render_catalogo_familias(task)
+        return self._render_contexto_correo(task, correo), obras
+
+    @staticmethod
+    def _render_contexto_correo(task: str, correo: ContextoCorreo | None) -> str:
+        """(F-048 · R12) Sustituye ``{contexto_correo}``.
+
+        Con contexto, por el bloque delimitado (asunto y cuerpo como DATO,
+        R13); sin él, por la nota fija. Si el YAML desplegado no trae el
+        marcador y HAY correo, el bloque se añade al final: mejor en
+        posición subóptima que perdido. Sin marcador y sin correo no se
+        añade nada: el task queda como el de hoy.
+        """
+        if MARCADOR_CONTEXTO_CORREO in task:
+            return task.replace(
+                MARCADOR_CONTEXTO_CORREO, render_bloque_correo(correo),
+            )
+        if correo is not None:
+            return f"{task}\n\n{render_bloque_correo(correo)}"
+        return task
 
     # ---------------------------------------------------------- #
     # FASE 1 — catálogo de familias (F-043 · R6).
@@ -240,6 +283,53 @@ class AlbaranExtractionService:
             )
             return None
 
+    def obras_conocidas(self) -> dict[str, str] | None:
+        """Obras de Sigrid para validar el código del correo (F-048, R18, D5).
+
+        Mapa ``normalizar_codigo(codigo) -> codigo tal como figura en la
+        lista``, sobre TODAS las obras con contrato (activas o no), de la
+        MISMA lista y caché que la del prompt. ``None`` si no hay lista: sin
+        proveedor, con un proveedor sin ``obtener_todas`` o si no da nada;
+        entonces el resolver cuenta todos los códigos, con ``validada=null``.
+
+        Dos códigos DISTINTOS que normalizan igual (``0945-1`` y ``9451``)
+        son ambiguos: la clave se deja fuera, en vez de elegir uno en
+        silencio, y se avisa con los códigos que chocan.
+        """
+        obtener_todas = getattr(self._obras_activas_provider, "obtener_todas", None)
+        if obtener_todas is None:
+            return None
+        try:
+            todas = obtener_todas()
+        except Exception:  # best-effort, como la del prompt
+            logger.exception(
+                "No se pudo obtener la lista de todas las obras; el código "
+                "del correo se usa sin validar.",
+            )
+            return None
+        if not todas:
+            return None
+
+        mapa: dict[str, str] = {}
+        choques: dict[str, set[str]] = {}
+        for obra in todas:
+            clave = normalizar_codigo(obra.codigo)
+            if clave is None:
+                continue
+            codigos = choques.setdefault(clave, set())
+            codigos.add(obra.codigo)
+            mapa.setdefault(clave, obra.codigo)
+        ambiguas = {clave: sorted(c) for clave, c in choques.items() if len(c) > 1}
+        for clave in ambiguas:
+            del mapa[clave]
+        if ambiguas:
+            logger.warning(
+                "Lista de obras: códigos distintos que normalizan igual, "
+                "fuera del mapa por ambiguos: %s",
+                "; ".join(f"{clave} <- {', '.join(c)}" for clave, c in sorted(ambiguas.items())),
+            )
+        return mapa or None
+
     def _render_obras_activas(self, obras: list[ObraActiva] | None) -> str:
         """Bloque DETERMINISTA de obras para el prompt.
 
@@ -283,6 +373,7 @@ class AlbaranExtractionService:
         prompt_key: str,
         phase_1_json: dict,
         sigrid_context: dict | None = None,
+        contexto_correo: ContextoCorreo | None = None,
     ) -> ProviderExtractionResult:
         """Ejecuta la revisión de fase 2.
 
@@ -321,7 +412,11 @@ class AlbaranExtractionService:
         # se renderiza igual que en la fase 1: si no, IA2 recibe los
         # literales `{catalogo_familias}` y `{obras_activas}` en vez del
         # catálogo de familias y de la lista de obras.
-        task_fase_1, _obras = self._render_task_fase_1(prompt_fase_1_spec.task)
+        # (F-048 · R14) Con el MISMO correo que la fase 1: IA2 recibe el
+        # mismo bloque, dentro de `{prompt_fase_1}`.
+        task_fase_1, _obras = self._render_task_fase_1(
+            prompt_fase_1_spec.task, contexto_correo,
+        )
         prompt_fase_1_text = self._compose_instructions(
             system=prompt_fase_1_spec.system,
             task=task_fase_1,
@@ -334,27 +429,29 @@ class AlbaranExtractionService:
         sigrid_context_text = self._render_sigrid_context(sigrid_context)
 
         # -- Renderizar el task de fase 2 con sus placeholders -- #
-        # IMPORTANTE: usamos str.replace en vez de .format() porque
-        # el task contiene llaves de ejemplos JSON ("{...}") que
-        # romperían el .format(). replace() es más robusto.
-        task_rendered = prompt_spec.task
-        task_rendered = task_rendered.replace(
-            "{prompt_fase_1}", prompt_fase_1_text,
-        )
-        task_rendered = task_rendered.replace(
-            "{revision_rules}", revision_rules_text,
-        )
-        task_rendered = task_rendered.replace(
-            "{json_fase_1}", json_fase_1_text,
+        # IMPORTANTE: no se usa .format() porque el task contiene llaves
+        # de ejemplos JSON ("{...}") que lo romperían.
+        #
+        # (F-048 · R14) Una sola pasada sobre la PLANTILLA: lo insertado
+        # no se vuelve a recorrer. Antes se encadenaban `str.replace` y el
+        # texto del correo (dentro de `{prompt_fase_1}`) o el JSON de fase
+        # 1 (que lleva la evidencia leída del correo) podían escribir
+        # `{json_fase_1}` o `{sigrid_context}` y recibir el relleno dentro:
+        # IA2 ya no vería el MISMO bloque que IA1.
+        plantilla = prompt_spec.task
+        valores = {
+            "{prompt_fase_1}": prompt_fase_1_text,
+            "{revision_rules}": revision_rules_text,
+            "{json_fase_1}": json_fase_1_text,
+            "{sigrid_context}": sigrid_context_text,
+        }
+        task_rendered = _MARCADORES_FASE_2.sub(
+            lambda m: valores[m.group(0)], plantilla,
         )
         # Compatibilidad: si el prompts.yaml desplegado aún no tiene el
         # placeholder {sigrid_context}, el bloque se APPENDEA al final
         # del task (mejor inyectarlo en posición subóptima que perderlo).
-        if "{sigrid_context}" in task_rendered:
-            task_rendered = task_rendered.replace(
-                "{sigrid_context}", sigrid_context_text,
-            )
-        elif sigrid_context is not None:
+        if "{sigrid_context}" not in plantilla and sigrid_context is not None:
             task_rendered = (
                 f"{task_rendered}\n\n{sigrid_context_text}"
             )
@@ -380,13 +477,14 @@ class AlbaranExtractionService:
         logger.info(
             "Revisión FASE 2 proveedor=%s prompt_key=%s schema=%s "
             "model=%s filename=%s json_fase1_chars=%d "
-            "rules_count=%d sigrid_grounding=%s",
+            "rules_count=%d sigrid_grounding=%s correo=%s",
             spec.provider, prompt_key, prompt_spec.schema,
             spec.model_name,
             attachments[0].filename if attachments else "n/a",
             len(json_fase_1_text),
             self._revision_rules_repo.count,
             "SI" if sigrid_context is not None else "NO",
+            _resumen_correo(contexto_correo),
         )
 
         return self._invoke_provider(
@@ -643,3 +741,10 @@ class AlbaranExtractionService:
         if len(attachments) == 1:
             return _uno(attachments[0])
         return [_uno(a) for a in attachments]
+
+
+def _resumen_correo(correo: ContextoCorreo | None) -> str:
+    """Resumen del correo para el log: caracteres y huella, nunca texto (R36)."""
+    if correo is None:
+        return "NO"
+    return f"SI({correo.caracteres_originales}, {correo.sha256[:8]})"

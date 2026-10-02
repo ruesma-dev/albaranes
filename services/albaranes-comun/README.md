@@ -20,6 +20,8 @@ Resuelve la duplicación con deriva detectada en el análisis de código
 | `ruesma_comun.contratos.contexto_linea` *(entrega 2)* | Modelo compartido `ContextoLinea` del envelope | las 4 copias de sv2/sv3/sv5/sv6 |
 | `ruesma_comun.sharepoint.GraphSharePointClient` *(entrega 3)* | Núcleo Graph/SharePoint: resolución site/drive (3 modos), carpetas, **subida** y **descarga** (bytes y texto) por path relativo, sharing link | el bloque casi idéntico de sv3 (sube) y sv5 (lee el contrato); sv4 era código muerto |
 | `ruesma_comun.markdown` *(entrega 4)* | Conversión de contratos (PDF/Word) a **Markdown** con markitdown: `a_markdown`, `combinar_a_markdown` (conserva tablas de tarifas; degrada al texto de fallback) | — (capacidad nueva) |
+| `ruesma_comun.sigrid` *(0.7.0, F-052)* | Lectura de sigrid-api sin truncados silenciosos: `PoliticaTruncado`, `SigridRespuestaTruncada`, `comprobar_truncado`, `con_paginacion`, `leer_paginado`, `MAX_FILAS_POR_PETICION` (500.000) y `PAGINA_MAXIMA` (499.999). Sin HTTP ni SQL: la SQL de cada servicio es suya | el `truncated` que nadie miraba en sv3 y sv4 |
+| `ruesma_comun.obras` *(0.7.0, F-052)* | `normalizar_codigo_obra`: el código de obra canónico que se envía a Sigrid y se sella (semántica de sv3) | las 2 copias divergentes de sv3 y sv4 |
 
 Hecho en la **entrega 2**: capa LLM y `contexto_linea` migradas como
 *reexports* de 3 líneas en los servicios. Hecho en la **entrega 3**: el
@@ -31,6 +33,10 @@ ya era código muerto (sv4 delega en sv3 vía `Sv3RefetchClient`). Los SDKs
 de IA son extra opcional: `pip install -e ".[llm]"` (sv2/sv5 ya los traen
 en sus requirements). Pendiente real para la nube (Fases 2-3): los
 adaptadores de ENTRADA por cola de cada worker.
+
+**0.7.0** (F-052, 2026-10-01): subpaquetes nuevos `sigrid` y `obras`, sin
+cambios de API en el resto. Solo los importan sv3 y sv4: se reconstruyen
+juntos, en orden sv3 → sv4.
 
 ## Instalación en local (PyCharm)
 
