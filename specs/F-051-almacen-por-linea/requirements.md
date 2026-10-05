@@ -1,9 +1,9 @@
 <!-- specs/F-051-almacen-por-linea/requirements.md -->
-# F-051 · Almacén por línea · Requisitos (v3, 2026-10-02)
+# F-051 · Almacén por línea · Requisitos (v4, 2026-10-05)
 
 Petición literal en la ficha (`harness/features.json`). Toca **sv2** (solo el
-prompt de IA1), **sv6** y **sv4**. Rigor `critico`. Hallazgos y decisiones
-(D2, D6, D8, D9 del humano; el resto por omisión): `progress/spec_F-051.md`.
+prompt de IA1), **sv6** y **sv4**. Rigor `critico`. Decisiones D1–D9, todas
+del humano (PARADA 1 del 2026-10-05; D1 rehecha): `progress/spec_F-051.md`.
 
 **Regla del humano** (2026-09-29; cerrada el 2026-10-02): «si hay una partida
 en el documento esta aplica a todas las lineas, si hay partidas por linea, en
@@ -15,16 +15,15 @@ siguen la de su línea base. Lo decide **IA1 leyendo el papel**, nunca una regla
 
 ## Vocabulario
 
-- **Almacén**: línea **sin partida** a propósito: `codigo_partida_final = NULL`
-  más una **marca** en `albaran_line_valuations.partida_action`; en Sigrid,
-  línea sin partida y con almacén (alta de F-053). Nunca un literal «ALM».
-- **Marcas de almacén** (`ACCIONES_ALMACEN`): `almacen_sin_partida` (nueva,
-  sv6: el albarán no trae partida), `almacen_elegido` (nueva, sv4: lo eligió
-  el revisor), `alm_new_line_created` (existe: el papel imprime «ALM») e
-  `inherited_from_base_line` (existe: hereda la partida vacía de su base).
-- **Línea en almacén**: partida final vacía **y** marca. **Línea sin
-  partida**: vacía **sin** marca (valoración anterior a F-051, o el revisor
-  borró el campo): fallo, se avisa y F-053 no la da de alta (`linea_sin_partida`).
+- **Almacén** (D1, humano 2026-10-05): «no se asocia a partida» y «en el visor
+  cuando una línea no tenga partida que sea almacén […] negocio ya funciona así
+  a mano». **Línea en almacén** = con valoración y `codigo_partida_final` vacío,
+  **tenga o no marca**; en Sigrid, sin partida y con almacén (F-053). Nunca «ALM».
+- **Marcas de almacén** (`partida_action`; solo trazabilidad de quién o por qué,
+  NO deciden el estado): `almacen_sin_partida` (nueva, sv6: el albarán no trae
+  partida) y `almacen_elegido` (nueva, sv4: el revisor eligió «Almacén» o vació
+  la partida); siguen `alm_new_line_created` (ALM impreso) e `inherited_from_base_line`.
+- No existe un estado «sin partida» distinto de almacén (lo había en v3).
 - **Código de documento**: partida manuscrita en cabecera, sello o margen, no
   junto a una línea. **Código de línea**: junto a una o agrupando varias.
 - **Familia destinada**: familia efectiva (`ruesma_comun.contratos.familias.
@@ -65,9 +64,9 @@ siguen la de su línea base. Lo decide **IA1 leyendo el papel**, nunca una regla
 - **R3.** CUANDO una línea del caso de R1 no tiene match de la IA, el sistema
   debe crear la derivada de respaldo (`origen = "nueva_no_match"`,
   `codigo_partida = NULL`) conservando `partida_action = "almacen_sin_partida"`.
-- **R4.** SI una línea del caso de R1 es de una familia destinada, ENTONCES el
-  sistema debe marcarla `review_required` con la razón
-  `"partida_ausente_familia_destinada"`, sin rellenar ninguna partida.
+- **R4.** SI una línea del caso de R1 es de familia destinada, ENTONCES sv6 debe
+  marcarla `review_required` con la razón `"partida_ausente_familia_destinada"`
+  sin rellenar partida: sigue en almacén (D2: aviso no bloqueante).
 - **R5.** MIENTRAS la línea sea de familia NO destinada (o sin familia), sv6
   NO debe marcar revisión por la ausencia de partida.
 - **R6 (regresión).** CUANDO la línea trae `codigo_partida_albaran`, el sistema
@@ -87,14 +86,15 @@ siguen la de su línea base. Lo decide **IA1 leyendo el papel**, nunca una regla
 
 ## sv4 — pintar, elegir y asignar almacén
 
-- **R10.** El sistema debe clasificar el estado de partida de cada línea
-  salmón con una función pura en tres valores: `partida` (código no vacío),
-  `almacen` (vacío y marca de almacén) y `sin_partida` (vacío sin marca).
-- **R11.** MIENTRAS una línea esté en almacén, la ficha debe mostrar «Almacén»
-  en la columna de partida —placeholder en filas editables, texto en las de
-  solo lectura— y NUNCA la partida de la línea de contrato casada.
-- **R12.** MIENTRAS una línea esté `sin_partida`, la ficha debe mostrar un
-  aviso («Sin partida») distinto del de almacén.
+- **R10.** El sistema debe clasificar el estado de partida de cada línea con
+  valoración con una función pura en dos valores, sin mirar `partida_action`:
+  `partida` (código final no vacío) y `almacen` (vacío o solo espacios) (D1).
+- **R11.** MIENTRAS una línea esté en almacén, toda vista de la ficha que pinte
+  su partida (fila salmón —placeholder en editables, texto en solo lectura— y
+  tabla de líneas valoradas) debe mostrar «Almacén» y NUNCA la partida de la
+  línea de contrato casada ni la leída por IA1.
+- **R12.** CUANDO el revisor guarda vacía la partida de una línea del albarán con
+  partida, el sistema debe tratarlo como elegir «Almacén» (R14, R15), sin derivada.
 - **R13.** CUANDO el revisor abre el desplegable de partida de cualquier línea
   editable, debe ofrecer como PRIMERA opción «Almacén (sin partida)», haya o no
   contrato, obra o líneas de contrato, y sea cual sea el texto del filtro.
@@ -119,8 +119,8 @@ siguen la de su línea base. Lo decide **IA1 leyendo el papel**, nunca una regla
   la línea debe dejar de estar en almacén; si coincide con la de su línea de
   contrato casada, la fila sigue siendo Sigrid.
 - **R21.** El cálculo de confianza de sv4 debe puntuar la partida de una línea
-  en almacén como resuelta (factor 1) y la de una `sin_partida` como no
-  resuelta (factor 0).
+  en almacén como resuelta (factor 1), tenga o no marca; una línea sin
+  valoración sigue puntuando 0 como hoy.
 - **R22.** SI la vista no es editable (`document.is_editable` falso) o la
   línea no tiene valoración, ENTONCES la ficha no debe ofrecer ni la opción ni
   el botón (misma regla que las demás ediciones de la fila salmón).
@@ -132,7 +132,7 @@ siguen la de su línea base. Lo decide **IA1 leyendo el papel**, nunca una regla
 - **R24.** El sistema debe documentar (`docs/ARCHITECTURE.md`, semántica de
   dominio) que una línea en almacén va a Sigrid sin partida y con almacén (F-053,
   `almacen: true` de F-009 de sigrid-api), que nadie la rellena desde el
-  contrato, la plantilla ni otra línea, y que una `sin_partida` no se da de alta.
+  contrato, la plantilla ni otra línea, y que toda partida final vacía es almacén.
 
 ## Trazabilidad requisito → test
 
@@ -143,8 +143,8 @@ siguen la de su línea base. Lo decide **IA1 leyendo el papel**, nunca una regla
 | R4, R5, R9 | `test_f051_r4_*`, `_r5_*`, `_r9_*` (política pura + builder) |
 | R6–R8, R28 | `test_f051_r6_*`…`_r8_*`, `_r28_*` (no regresión: impresa, ALM, herencia, hermanas, interruptor apagado) |
 | R10, R18, R21 | `test_f051_r10_*`, `_r18_*`, `_r21_*` puros en sv4 o del servicio con repositorio falso |
-| R11, R12 | `test_f051_r11_*`, `_r12_*` montaje del detalle con repositorio falso + MANUAL navegador |
+| R11 | `test_f051_r11_*` montaje del detalle y plantilla con repositorio falso + MANUAL navegador |
 | R13 | `test_f051_r13_*`: el JS servido contiene la opción fija + MANUAL navegador |
-| R14–R16, R19, R20, R23 | `test_f051_r14_*`… con la sesión SQL simulada (SQL emitido y parámetros) |
+| R12, R14–R16, R19, R20, R23 | `test_f051_r14_*`… con la sesión SQL simulada (SQL emitido y parámetros) |
 | R17, R22 | `test_f051_r17_*` (recuento servido), `_r22_*` (plantilla con `is_editable` falso) + MANUAL navegador |
 | R24 | revisión del reviewer (los docs dicen lo que hace el código) |

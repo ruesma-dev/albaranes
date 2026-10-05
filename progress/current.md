@@ -5,16 +5,20 @@
 > en `progress/historico/current_2026-10-01_cierre_F-052.md`; el resumen de F-052, en `progress/history.md`.
 > Aquí solo queda lo vivo. Lo que manda sobre el estado de cada feature es `harness/features.json`.
 
-**F-051 · SPEC v3 (`spec_ready`)** en la rama `feature/F-051-almacen-por-linea` (worktree `../albaranes-F-051`): almacén por línea. Informe en `progress/spec_F-051.md`.
-**Spec v3 (2026-10-02)** con las respuestas del humano: D6 = alta en Sigrid
-hoy MANUAL, la automática es F-053 (sustituye a F-013; almacén = `almacen:
-true` sin partida, alineado); ejemplo «03.02» junto a la 2.ª de tres ⇒ 1.ª y
-3.ª a almacén; D9 = marcadas la suya, resto la de documento; portes y
-complementos sin marca siguen a su base. Todo en el prompt de IA1 (cuatro
-viñetas literales sustituyen la del código único). `spec_ready`, lista para la
-PARADA 1: D8 confirmada por el humano (2026-10-02, no arrastra); quedan por
-confirmar las aceptadas por omisión (D1, D2 familias, D3, D4, D5, D7). Tres diferencias con F-053 anotadas para esa feature.
-Detalle en `progress/spec_F-051.md` §v3.
+**F-051 · SPEC v4 (`spec_ready`, PARADA 1 hecha el 2026-10-05)** en la rama `feature/F-051-almacen-por-linea`
+(worktree `../albaranes-F-051`): almacén por línea. Informe en `progress/spec_F-051.md` §v4.
+**Todas las decisiones cerradas por el humano, sin preguntas abiertas.** D1 rehecha: «en el visor cuando una línea
+no tenga partida que sea almacén» ⇒ almacén = partida final vacía, tenga o no marca (`partida_action` solo
+trazabilidad); desaparece el estado «sin partida»; vaciar la partida en sv4 = elegir almacén (sin derivada, la fila
+Sigrid sigue Sigrid); la confianza ya no resta por partida vacía. D2: cualquier familia; revisión no bloqueante en
+destinadas. D3, D4, D5 (se pierde al revalorar ⇒ **F-058**) y D7 (**F-007 a `pending`**) confirmadas. Lista para
+implementar (orden F-052 → F-051 → F-053).
+**Para otras ramas (no tocadas desde aquí)**: F-053 debe dar de alta como almacén toda partida final vacía
+(desaparece `linea_sin_partida`); F-049 bloque C (T31): «Sin partida → almacén» = partida final vacía sin mirar la
+marca (cierra su O4). Ambas cosas en `specs/F-051-almacen-por-linea/design.md`, «Contrato con F-053 y con F-049».
+**Fichas nuevas en esta rama** (`pending`): **F-058** revalorar no pierde partidas ni almacén a mano (p2, `critico`),
+**F-059** etiquetas legibles de motivos de revisión en sv4 (p3, `estandar`), **F-060** tipología de líneas
+acopiables (p2, `critico`; decidir junto con la nueva spec de F-007 o fusionarlas).
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
@@ -26,8 +30,8 @@ Detalle en `progress/spec_F-051.md` §v3.
 - **F-053** (alta en Sigrid de los aprobados): `spec_ready` en `../albaranes-F-053` (rama
   `feature/F-053-alta-sigrid`), **16 preguntas abiertas** al humano. La escritura en Sigrid NO va en el despliegue
   de F-052.
-- **F-051** (almacén por línea): spec v2 en `../albaranes-F-051` (rama `feature/F-051-almacen-por-linea`),
-  **esperando las respuestas del humano**.
+- **F-051** (almacén por línea): spec v4 en `../albaranes-F-051` (rama `feature/F-051-almacen-por-linea`),
+  `spec_ready` con todas las decisiones cerradas (2026-10-05): lista para implementar. Ver bloque de arriba.
 - **F-055** (IA2 elige el proveedor entre los de la obra): `pending`, prioridad 1. Depende de F-052.
 - **Fichas nuevas del cierre de F-052** (`pending`, prioridad 2): **F-056** re-búsqueda doble en sv4 y **F-057**
   truncado sin comprobar en los clientes colindantes de sv4 y sv3.

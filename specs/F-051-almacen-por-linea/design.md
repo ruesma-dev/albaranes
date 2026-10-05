@@ -1,51 +1,48 @@
 <!-- specs/F-051-almacen-por-linea/design.md -->
-# F-051 · Almacén por línea · Diseño (v3, 2026-10-02)
+# F-051 · Almacén por línea · Diseño (v4, 2026-10-05)
 
-Servicios: **sv2** (`services/albaranes-api`, la sección de partida del prompt
-de IA1), **sv6** (`services/albaran-valoracion-persist`, regla de valoración) y
-**sv4** (`services/albaranes-front`, pintar, elegir y asignar). **No** tocan
-código: sv1, sv3, sv5, `ruesma_comun`. **Sin DDL** ni cambio de contrato entre
-servicios: `partida_action` es `VARCHAR(32) NOT NULL` sin CHECK (sv6
-`schema_contribution.py:176`) y los dos valores nuevos caben.
+Servicios: **sv2** (`services/albaranes-api`, prompt de IA1), **sv6**
+(`services/albaran-valoracion-persist`, valoración) y **sv4** (`services/albaranes-
+front`, pintar, elegir y asignar). **No** tocan código: sv1, sv3, sv5, `ruesma_comun`.
+**Sin DDL** ni cambio de contrato: `partida_action` es `VARCHAR(32) NOT NULL` sin
+CHECK (sv6 `schema_contribution.py:176`) y los dos valores nuevos caben.
 
-## Contexto del código real (detalle en `progress/spec_F-051.md` §1–§3, v2 y v3)
+## Contexto del código real (detalle en `progress/spec_F-051.md` §1–§3, v2–v4)
 
-- **El alta en Sigrid hoy es MANUAL** (humano, 2026-10-02: la teclea
-  administración leyendo el portal). Lo que pinte sv4 es lo que llega a Sigrid
-  hasta que F-053 (sustituye a F-013) la automatice.
+- **El alta en Sigrid hoy es MANUAL** (D6: administración lee el portal): lo que
+  pinte sv4 es lo que llega a Sigrid hasta que F-053 la automatice.
 - **Partida por línea**: `albaran_lines_merge.codigo_imputacion` = la que lee
   IA1 del papel (sv5 la lee como `codigo_partida_albaran`);
   `albaran_line_valuations.codigo_partida_final` + `partida_action` = decisión
   de sv6. **No hay partida de cabecera** (`CabeceraAlbaran` no la tiene) y
   ningún código copia `codigo_imputacion` entre líneas.
 - **A qué líneas va la partida lo decide ya IA1** (`config/prompts.yaml`,
-  `albaran_factura_es.task`, «## Código de imputación manuscrito», `~81-97`).
-  Falta qué hacer con la línea sin marca cuando otras la tienen, y «si solo hay
-  un código claro en todo el documento, se aplica a todas las líneas» la empuja
-  a copiárselo. Fase 2 incrusta fase 1 (`{prompt_fase_1}`, líneas 263, 487,
-  671, 809). Fase 1 ya dice (`~147`) que las líneas de un mismo vertido o
-  servicio comparten código, y los de familia, que base y complementos también.
+  `albaran_factura_es.task`, «## Código de imputación manuscrito», `~81-97`),
+  pero la viñeta del código único empuja a copiárselo a la línea sin marca.
+  Fase 2 incrusta fase 1 (`{prompt_fase_1}`: 263, 487, 671, 809); `~147`: mismo
+  vertido o servicio, mismo código (y en los de familia, base y complementos).
 - **sv6 inventa la partida de la línea sin partida**: `PartidaMatcher.match()`
   (`partida_matcher.py:108`) da `existing_matched` con la de la línea de
-  contrato casada (`ia_match_trusted`). Sin match: `no_action` (`:79`) y el
-  fallback `nueva_no_match` (`valuation_builder.py:~1128`) deja la partida NULL
-  con el `partida_action` del matcher (`~1364`). Las complementarias declaradas
-  (`rol_linea` ≠ base, `ref_linea_base`) heredan la de su base por
-  `resolve_partida_for_complementaria` (`:178`; builder `~1094`).
+  contrato casada. Sin match: `no_action` (`:79`) y el fallback `nueva_no_match`
+  (`valuation_builder.py:~1128`) deja NULL con la acción del matcher (`~1364`).
+  Las complementarias declaradas (`rol_linea` ≠ base, `ref_linea_base`) heredan
+  la de su base (`resolve_partida_for_complementaria`, `:178`; builder `~1094`).
 - **sv4 pinta la partida de la línea de contrato**, no la de la valoración
   (`review_repository.py:~1320-1370`); `.js-partida-combo` abre el combo de
   líneas de contrato (`static/app.js:~869`); `update_line_conciliacion`
   (`:1669`) toma la de la casada si la final es NULL y un cambio de partida en
-  fila Sigrid la vuelve «Nueva». `undo_log` ya restaura snapshots.
+  fila Sigrid la vuelve «Nueva» (también vaciarla). La tabla de líneas valoradas
+  (`document_detail.html:~889`, `_build_display_lines` `~4283`) pinta `final or
+  codigo_imputacion`. `undo_log` ya restaura snapshots.
 
 ## Representación (D1) y dónde vive la regla del humano
 
-**NULL + marca**, no un literal: `codigo_partida_final = NULL` y `partida_action`
-separa «almacén» de «sin partida por fallo». Descartado «ALM» (no existe en
-`obrparpar`; F-007 D2) y una columna booleana (DDL en sv6 y sv3 para lo que ya
-expresa `partida_action`). **Qué partida marca qué línea es leer el papel: lo
-decide IA1 en el prompt** (ARCHITECTURE regla 14 y decisión del humano de
-2026-08-25: la IA decide, se mejora con definiciones claras, nunca con reglas
+**NULL, nunca un literal**: almacén = `codigo_partida_final` vacío (D1 v4: «en el
+visor cuando una línea no tenga partida que sea almacén»). `partida_action` solo
+deja rastro de quién lo decidió; nadie lo necesita para saber si es almacén.
+Descartados «ALM» (no está en `obrparpar`; F-007 D2) y una columna booleana.
+**Qué partida marca qué línea es leer el papel: lo decide IA1 en el prompt**
+(ARCHITECTURE regla 14 y decisión del 2026-08-25: la IA decide, nunca reglas
 deterministas). Descartado un campo de cabecera con propagación en sv3/sv6:
 cambia el contrato sv2 → sv3 → sv6 y seguiría necesitando leer las marcas.
 
@@ -118,12 +115,11 @@ en los márgenes sin relación clara ⇒ el primero a todo». Tampoco la línea
 
 ## sv4 — ficheros a crear
 
-- `domain/services/almacen.py` — puro: `ACCIONES_ALMACEN: frozenset[str]` =
-  {`almacen_sin_partida`, `almacen_elegido`, `alm_new_line_created`,
-  `inherited_from_base_line`}; `ACCION_ALMACEN_ELEGIDO = "almacen_elegido"`;
-  `estado_partida(partida_action: str | None, codigo_partida_final: str | None)
-  -> Literal["partida", "almacen", "sin_partida"]` (R10); `contar_con_partida(
-  lineas: Iterable[tuple[str | None, str | None]]) -> int` (R17).
+- `domain/services/almacen.py` — puro: `ACCION_ALMACEN_ELEGIDO = "almacen_elegido"`;
+  `estado_partida(codigo_partida_final: str | None) -> Literal["partida",
+  "almacen"]` (R10: vacío o espacios ⇒ almacén, sin mirar la marca);
+  `contar_con_partida(partidas: Iterable[str | None]) -> int` (R17). Sin
+  `ACCIONES_ALMACEN` (v3): con D1 v4 ninguna marca decide el estado.
 - `tests/test_f051_almacen_front.py` — R10–R23 (sesión SQL simulada, repositorio
   falso, Jinja2 sobre la plantilla real como en `test_f043_vista_clasificacion.py`).
 
@@ -132,13 +128,16 @@ en los márgenes sin relación clara ⇒ el primero a todo». Tampoco la línea
 - `domain/models/review_models.py` — `ConciliacionDisplay` += `estado_partida:
   str | None = None`; `DocumentDetailPayload` += `lineas_con_partida: int = 0`.
 - `infrastructure/database/review_repository.py`:
-  - Montaje de conciliaciones (`~1300-1400`): con `partida_action` y
-    `codigo_partida_final` de la valoración (ya los lee, `~1059`/`1172`),
-    rellenar `estado_partida`; si es `almacen`, `codigo_partida = None` y
-    `descripcion_partida = None` (R11); el origen sigue intacto para el precio.
-  - `update_line_conciliacion` (`1669`): en almacén la partida actual es `None`
-    (no la de la casada) y una recibida vacía no es cambio (R19); una real igual
-    a la de la casada no cambia la identidad (R20).
+  - Montaje de conciliaciones (`~1300-1400`): con `codigo_partida_final` de la
+    valoración (ya lo lee, `~1059`/`1172`) rellenar `estado_partida`; si es
+    `almacen`, `codigo_partida = None` y `descripcion_partida = None` (R11); el
+    origen sigue intacto para el precio. `_build_display_lines` (`~4283`): con
+    valoración y final vacía, `codigo_imputacion = None`, nunca la leída (R11).
+  - `update_line_conciliacion` (`1672`): en almacén la partida actual es `None`
+    (no la de la casada) y una recibida vacía no es cambio (R19); vaciar una
+    partida es almacén (R12): `codigo_partida_final = NULL`, `partida_action =
+    'almacen_elegido'`, fuera de `identity_changed` (sin derivada
+    `manual_override`); una real igual a la de la casada no cambia la identidad (R20).
   - Nuevo `asignar_almacen(*, document_id: str, valuation_line_ids: list[int] |
     None) -> list[int]` — `None` = todas (R16). Un único `UPDATE
     albaran_line_valuations SET codigo_partida_final = NULL, partida_action =
@@ -151,16 +150,16 @@ en los márgenes sin relación clara ⇒ el primero a todo». Tampoco la línea
   document_id, valuation_line_id) -> bool` y `asignar_almacen_todas(*,
   document_id) -> int`: snapshot → repositorio → `record_undo(action=
   "almacen", restore=[...])` UNA vez (R18).
-- `domain/services/confianza.py` — `_partida_factor`: 1.0 si `estado_partida ==
-  "almacen"`; 0.0 si vacío sin marca (R21).
+- `domain/services/confianza.py` — `_partida_factor`: 1.0 con valoración, haya
+  partida o almacén (R21); 0.0 sin valoración (`c is None`), como hoy.
 - `interface_adapters/web/app.py` — `POST
   /api/documents/{document_id}/lines/{valuation_line_id}/almacen` y `POST
   /api/documents/{document_id}/almacen-todas` (404 si no toca nada).
-- `templates/document_detail.html` — celda de partida (`~620-630`): placeholder
-  «Almacén» y clase propia si `almacen`; aviso «Sin partida» si `sin_partida`;
-  `data-valuation-line-id` para el combo. Botón «Almacén a todas las líneas» con
-  `data-con-partida="{{ document.lineas_con_partida }}"`, solo si
-  `document.is_editable` y hay valoración (R22).
+- `templates/document_detail.html` — celda de partida (`~620-630`) y tabla de
+  líneas valoradas (`~889`): «Almacén» (placeholder en editables) y clase propia
+  si `almacen` (R11); `data-valuation-line-id` para el combo. Botón «Almacén a
+  todas las líneas» con `data-con-partida="{{ document.lineas_con_partida }}"`,
+  solo si `document.is_editable` y hay valoración (R22).
 - `static/app.js` — en `attachContratoLineCombo`, **solo** para
   `.js-partida-combo`: primer ítem fijo «Almacén (sin partida)», que no se filtra
   (R13); al elegirlo, `POST .../almacen` y recarga (patrón `js-concilia-select`).
@@ -168,8 +167,10 @@ en los márgenes sin relación clara ⇒ el primero a todo». Tampoco la línea
 
 ## Ficheros que NO se tocan (colindantes que tientan)
 
-- `ruesma_comun` (ni familias ni colas): evita el rebuild de sv3/sv5 (ver
-  «Contrato con F-053» para `ACCIONES_ALMACEN`).
+- `ruesma_comun` (ni familias ni colas): evita el rebuild de sv3/sv5; con D1 v4
+  no hay conjunto de marcas que compartir con sv9 (F-053).
+- Edición de sintéticas (`~3908`, `COALESCE`: vaciar no borra): su almacén se
+  elige con la opción del combo (R13) o el botón (R16).
 - sv2: `domain/models/albaran_models.py` (sin campo de cabecera), los prompts de
   fase 2, `revision_rules.yaml` y `config/prompts/svc2_prompt_albaran_factura_es
   .yaml` (no lo carga nadie). Elegir la partida de la lista de la obra es F-049.
@@ -181,25 +182,26 @@ en los márgenes sin relación clara ⇒ el primero a todo». Tampoco la línea
 ## SQL
 
 Sin DDL. Solo DML en sv4 sobre `albaran_line_valuations` (tabla de sv6 que sv4
-ya edita in situ): el `UPDATE ... RETURNING` de `asignar_almacen`. Lectores de
-`partida_action`: sv4, sv6 (lo escribe) y, con F-053, sv9. sv5 no lo lee.
+ya edita in situ): el `UPDATE ... RETURNING` de `asignar_almacen` y `partida_action`
+en el `UPDATE` existente de `update_line_conciliacion` (R12). sv5 no lo lee.
 
-## Contrato con F-053 (alineado con su spec, rama `feature/F-053-alta-sigrid`)
+## Contrato con F-053 y con F-049 (se anotan aquí; no se tocan sus ramas)
 
-- F-053 (glosario y R10, R12): «Almacén = partida final vacía con marca de
-  F-051» ⇒ línea con `almacen: true` y sin `partida` en el modo extendido de
-  `sigrid/albaran` (F-009 de sigrid-api: partida resuelta en la obra, nunca
-  heredada). Una vinculada en almacén conserva su `ctrpro_ide` (coherente con
-  R15 y D4). Una `sin_partida` ⇒ `no_admitido` (`linea_sin_partida`): coherente
-  con D1 (borrar a mano no es elegir almacén).
-- **Diferencias anotadas para F-053** (no se tocan desde aquí): (1) su
-  `medir_admisibilidad_f053.py` cuenta `alm_acopio` como marca, pero es un
-  `origen` de derivada, nunca un `partida_action` (inofensivo); (2) sv9
-  necesitará el mismo `ACCIONES_ALMACEN` que sv4: lo correcto es que F-053, que
-  ya toca `ruesma_comun` y reconstruye todo, lo mueva a `ruesma_comun.valoracion`
-  y sv4 lo importe de ahí; (3) `asignar_almacen` y los dos `POST` de F-051 entran
-  en su bloqueo R25–R26 al fusionar (ya previsto en su design §8).
-- Orden (F-053 §8): F-052 → **F-051** → F-053.
+- **F-053** (glosario, R10, R12) dice «Almacén = partida final vacía con marca de
+  F-051» y da `no_admitido` (`linea_sin_partida`) a la vacía sin marca. **Con D1
+  v4 cambia**: toda línea con partida final vacía ⇒ `almacen: true` sin `partida`
+  (F-009); `linea_sin_partida` desaparece. Una vinculada en almacén conserva
+  `ctrpro_ide` (R15, D4). No hay `ACCIONES_ALMACEN` que mover a `ruesma_comun`
+  (diferencia (2) de v3); `MARCAS_ALMACEN` de `medir_admisibilidad_f053.py` sobra.
+  `asignar_almacen` y los dos `POST` entran en su bloqueo R25–R26 (su design §8).
+  Orden F-052 → **F-051** → F-053.
+- **F-049, bloque C (T31)**: su columna «Origen partida» (design §11) usa marcas
+  provisionales `{"almacen_sin_partida"}`. Regla al integrar: «Sin partida →
+  almacén» ⇔ la línea tiene valoración y `codigo_partida_final` vacío, **sin mirar
+  la marca** (no hay `ACCIONES_ALMACEN` que importar). Cierra su O4 por
+  construcción: un complemento `inherited_from_base_line` con partida heredada no
+  es almacén (test en T31). La fila «Sin partida» (motivo `sin_partida` sin
+  marca) desaparece; sin valoración, «Sin partida → almacén» también.
 
 ## Riesgos y decisiones
 
@@ -216,18 +218,19 @@ ya edita in situ): el `UPDATE ... RETURNING` de `asignar_almacen`. Lectores de
 - **Complementos no declarados**: si IA1 no reconoce un porte como complemento y
   lo deja null, sv6 lo manda a almacén (no se arregla con una regla aguas
   abajo: se arregla el prompt). Lo vigila T23.
-- **Overrides perdidos al revalorar** (D5); legado vacío: «Sin partida» hasta revalorar.
+- **Overrides perdidos al revalorar** (D5): F-058. **Legado**: una valoración
+  antigua con partida final vacía sale «Almacén» al desplegar sv4 (D1). **Confianza**
+  (R21): la partida vacía ya no resta; el aviso en destinadas lo da sv6 (R4).
 - **Mutación sin tope** (rigor `critico`): la lógica nueva va en los dos módulos
   puros; el cambio de sv2 es YAML (no mutable: lo cubren las evals).
 
 ## Orden de despliegue
 
-sv6 → sv4 → sv2 (`.\deploy.ps1 -Only sv6`, `.\check_deploy.ps1`, luego `-Only
-sv4` y `-Only sv2`). Cualquier orden es seguro: un sv4 viejo pinta «—» en
-almacén; un sv6 viejo no emite la marca y copia la partida del contrato; un sv2
-nuevo con un sv6 viejo solo deja más `codigo_imputacion` null, que el sv6 viejo
-rellena como hoy. sv2 el último porque mueve las métricas de evals. No se
-reconstruyen sv1, sv3 ni sv5.
+sv6 → sv4 → sv2 (`.\deploy.ps1 -Only sv6`, `.\check_deploy.ps1`, luego `-Only sv4`
+y `-Only sv2`). Cualquier orden es seguro: un sv4 viejo pinta en almacén la de la
+casada o «—»; un sv6 viejo copia la partida del contrato; un sv2 nuevo con un sv6
+viejo solo deja más `codigo_imputacion` null, que el sv6 viejo rellena como hoy.
+sv2 el último porque mueve las métricas de evals. No se reconstruyen sv1, sv3, sv5.
 
 ## Documentación (mismo trabajo)
 
@@ -239,12 +242,9 @@ reconstruyen sv1, sv3 ni sv5.
   campos: cuándo `codigo_imputacion` sale null.
 - `azure-apps/albaranes.md`: sin cambios (ni colas, ni tablas, ni endpoints).
 
-## Decisiones (detalle y fechas en `progress/spec_F-051.md`)
+## Decisiones (todas del humano; detalle en `progress/spec_F-051.md`)
 
-Del humano, 2026-10-02: D2 en «a qué líneas» (regla + (a) y (c)), D6 (hoy
-manual; luego F-053), D9 (marcadas la suya, resto la de documento) y D8 (elegir
-almacén en una línea NO arrastra a sus complementarias; para todas, el botón).
-Por omisión, pendientes de confirmar en la PARADA 1 antes de implementar: D1
-NULL + marca; D2 en «todas las familias, revisión solo en destinadas»; D3 el
-botón pisa todas; D4 la fila Sigrid sigue Sigrid; D5 se pierde al revalorar; D7
-re-alcance de F-007.
+2026-10-02: D2 «a qué líneas» ((a)–(c)), D6, D8 (no arrastra), D9. PARADA 1 (2026-10-05):
+**D1 v4** (sin partida = almacén en el visor, sin literal); D2 (cualquier familia;
+revisión no bloqueante en destinadas); D3 (el botón pisa todas); D4 (la fila Sigrid
+sigue Sigrid); D5 (se pierde al revalorar ⇒ F-058); D7 (F-007 a `pending`, junto con F-060).

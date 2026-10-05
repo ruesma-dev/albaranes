@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **55 features**, 39 abiertas, 16 terminadas.
+Resumen: **58 features**, 42 abiertas, 16 terminadas.
 
 ## Trabajo abierto
 
@@ -15,8 +15,11 @@ Resumen: **55 features**, 39 abiertas, 16 terminadas.
 | F-051 | Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas» | 2 | spec lista | critico | `feature/F-051-almacen-por-linea` |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
 | F-057 | Truncado sin comprobar en los clientes de Sigrid colindantes: header_and_lines de sv4 (max_rows=1000) y SigridApiObraClient de sv3 | 2 | pendiente | critico |  |
+| F-058 | Revalorar no pierde las partidas ni el almacén asignados a mano | 2 | pendiente | critico |  |
+| F-060 | Tipología de líneas acopiables: qué familias o tipos de línea pueden ir a almacén/acopio y cuáles se imputan siempre a partida | 2 | pendiente | critico |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
+| F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 3 | pendiente | estandar |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
 | F-028 | Con dos contratos candidatos no se elige ninguno y el albarán no llega a valorarse | 7 | pendiente | critico | `feature/F-028-selector-contrato-por-partidas` |
@@ -38,7 +41,7 @@ Resumen: **55 features**, 39 abiertas, 16 terminadas.
 | F-004 | Tanda 3 — Hormigón fino y veto de mortero | 23 | spec lista | estandar | `feature/F-004-hormigon-fino` |
 | F-005 | Tanda 4a — Tipología bombeo | 24 | spec lista | estandar | `feature/F-005-bombeo` |
 | F-006 | Tanda 4b — Residuos: lógica de pago LLEVAR/RETIRAR y canon | 25 | spec lista | estandar | `feature/F-006-residuos-pago` |
-| F-007 | Tanda 5 — Partida ALM por defecto y selector de candidatas en sv4 | 26 | spec lista | estandar | `feature/F-007-partida-alm-selector` |
+| F-007 | Tanda 5 — Partida ALM por defecto y selector de candidatas en sv4 | 26 | pendiente | estandar | `feature/F-007-partida-alm-selector` |
 | F-017 | El comparativo como fuente de precio (1c) en la valoración | 27 | pendiente | estandar | `feature/F-017-comparativo-precio` |
 | F-013 | Registro del albarán aprobado en Sigrid (consumidor de q-feedback) | 28 | pendiente | critico | `feature/F-013-registro-sigrid` |
 | F-008 | Lifecycle de blobs de hand-off | 29 | pendiente | estandar | `feature/F-008-blob-lifecycle` |
@@ -134,6 +137,8 @@ DECISION DEL HUMANO (2026-09-29), literal: «si hay una partida en el documento 
 
 SPEC v3 (2026-10-02), respuestas del humano: D6 = el alta en Sigrid hoy es MANUAL (la teclea administracion leyendo el portal); la automatica la hara F-053 (sustituye a F-013): linea en almacen = sin partida y con almacen (almacen: true del modo extendido de F-009 de sigrid-api), alineado con su spec. Ejemplo confirmado: «03.02» solo junto a la 2.a de tres lineas => 1.a y 3.a a almacen. D9: partida de documento y otra junto a alguna linea => las marcadas la suya, el resto la de documento. Excepcion: portes, complementos y similares sin marca siguen la partida de su linea base. Todo en el prompt de IA1 (la IA decide, sin reglas deterministas): la vineta del codigo unico se sustituye por cuatro vinetas literales (design.md, sv2); R29 y R30 nuevos, R7 ampliado. Quedan por confirmar en la PARADA 1 las aceptadas por omision (D1, D2 familias, D3, D4, D5, D7, D8).
 
+SPEC v4 (2026-10-05), PARADA 1 hecha, todas las decisiones del humano: D1 rehecha, literal: «no se asocia a partida» y «en el visor cuando una línea no tenga partida que sea almacén. aunque eso sea realmente que la partida está vacía. negocio ya funciona así a mano actualmente» => almacén = codigo_partida_final vacío, tenga o no marca; partida_action solo deja rastro (almacen_sin_partida sv6, almacen_elegido sv4); desaparece el estado «sin partida» de v3; vaciar la partida en sv4 = elegir almacén (R12 nuevo); la confianza ya no resta por partida vacía. D2: cualquier familia puede ir a almacén y se mantiene la revisión NO bloqueante en familias destinadas. D3, D4, D5 (se pierde al revalorar; arreglo en F-058) y D7 (F-007 a pending) confirmadas. Contrato: F-053 debe dar de alta como almacén toda partida final vacía (desaparece linea_sin_partida); F-049 bloque C: «Sin partida → almacén» = partida final vacía, sin mirar la marca (cierra su O4). Relacionadas nuevas: F-058, F-059 (de F-049), F-060.
+
 ### F-056 · sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello
 
 estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí
@@ -169,6 +174,32 @@ PROPUESTA: pasar los dos clientes a ruesma_comun.sigrid (política por consulta:
 RIGOR critico: mismo tipo de defecto que F-052 (lectura silenciosamente incompleta de Sigrid en un camino de producción de sv3).
 
 ALCANCE: services/albaranes-front (cliente de contratos del fallback local) y services/albaranes-persistencia (SigridApiObraClient). NO ENTRA: cambiar SQL ni semántica de las consultas ya cubiertas por F-052. RELACIONADAS: F-052 (D2, D6, O-C4), F-055.
+
+### F-058 · Revalorar no pierde las partidas ni el almacén asignados a mano
+
+estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
+
+ORIGEN: D5 de F-051 (PARADA 1 del 2026-10-05). El humano confirma que en F-051 el almacén elegido se pierde al revalorar, como cualquier override de sv4 hoy, y pide, literal: «al valorar no se pierdan las partidas asignadas a mano (o almacén)».
+
+PROBLEMA DE HOY: las ediciones de partida que el revisor hace en sv4 (partida cambiada en la fila salmón, derivada manual_override, y con F-051 el almacén elegido —partida_action almacen_elegido— o la partida vaciada) viven solo en albaran_line_valuations / contrato_lines_derived. «Valorar ahora» (q-valoracion) hace que sv6 reemplace la valoración entera de forma transaccional a partir del merge y de la respuesta de sv5, así que esas decisiones humanas desaparecen y la línea vuelve a la partida que decida sv6 (la leída por IA1, la del contrato o almacén).
+
+A DECIDIR EN LA SPEC: dónde se guarda la decisión humana para que sobreviva (en el merge, columna o tabla de overrides de sv3; o que sv6 la preserve al reemplazar), qué manda si el papel se vuelve a leer (re-fetch) y cambia la partida leída, cómo se ve en sv4 que una partida es «puesta a mano», y si aplica también a otros overrides (precio, unidad, descripción) o solo a partida y almacén. Probable DDL en sv3 (dueño del esquema) y cambio de contrato sv3 -> sv5 -> sv6; sv4 escribe la decisión.
+
+RIGOR critico: toca la valoración (sv6) y lo que llega a Sigrid (F-053).
+
+RELACIONADAS: F-051 (D5, R14, R12), F-049 (sv4 pone codigo_imputacion_validada a NULL cuando el revisor cambia la partida leída), F-053 (alta en Sigrid), F-007.
+
+### F-060 · Tipología de líneas acopiables: qué familias o tipos de línea pueden ir a almacén/acopio y cuáles se imputan siempre a partida
+
+estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
+
+ORIGEN: petición del humano en la PARADA 1 de F-051 (2026-10-05), literal: «añade un spec para el futuro de qué líneas son acopiables y cuáles no, o qué tipología más bien». Solo ficha: la spec se escribe más adelante.
+
+HOY (con F-051): cualquier línea de cualquier familia puede ir a almacén (D2 de F-051) y la única noción de tipología es FAMILIAS_DESTINADAS de sv6, una lista fija (hormigon, mortero, combustible, alquiler_maquinaria, residuos) que solo dispara una revisión NO bloqueante (partida_ausente_familia_destinada) cuando una línea de esas familias llega sin partida. No hay catálogo de qué es acopiable (suministro que entra en almacén y se imputa después) y qué se destina siempre a una partida en la entrada.
+
+LO QUE DEBE DEFINIR LA SPEC FUTURA: (1) la tipología o catálogo de familias/productos acopiables y no acopiables (¿por familia efectiva, por producto de Sigrid, por obra?); (2) quién lo mantiene (negocio, administración) y dónde vive (ruesma_comun, BBDD de sv3, Sigrid); (3) cómo lo usan IA1/IA2 (prompt), sv6 (valoración y revisión) y sv4 (combo de partida, botón de almacén, avisos); (4) si cambia la revisión de D2 de F-051 (p. ej. bloquear o impedir almacén en no acopiables, o solo avisar como hoy).
+
+RELACIÓN: F-007 (partida ALM/acopio por defecto para suministros + selector de candidatas + memoria obra+producto), que D7 de F-051 devuelve a pending para reescribirla tras F-051: F-060 y la nueva spec de F-007 DEBEN DECIDIRSE JUNTAS o FUSIONARSE (las dos definen qué va a almacén y qué a partida). F-051 (almacén por línea; FAMILIAS_DESTINADAS) y F-053 (alta en Sigrid: línea de almacén = sin partida y con almacen: true; una tipología podría impedir o avisar del alta en almacén de una no acopiable). Probables servicios: sv2, sv6, sv4 y comun.
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 
@@ -214,6 +245,18 @@ CUIDADOS: el ciclo necesita el pipeline LEVANTADO EN LOCAL (Azurite + Postgres, 
 LO QUE NO VIGILA, y hay que decirlo: sv1 y el buzon M365, sv4 (salvo el gesto de seleccionar contrato, que el banco simula), SharePoint real y el comportamiento contra Azure de verdad.
 
 RELACIONADAS: F-045 (el ground truth que esta ficha aprovecha), F-011 (el banco y su flujo), F-043 (el enrutado por familia que estos casos vigilan).
+
+### F-059 · Etiquetas legibles para los motivos de revisión en sv4
+
+estado **pendiente** · prioridad 3 · rigor `estandar` · SDD sí
+
+ORIGEN: review del bloque B de F-049 (progress/review_F-049_bloqueB.md en la rama feature/F-049-partida-de-la-lista, decisión 2 para el humano): la etiqueta legible de partida_fuera_de_lista no es defecto de F-049, porque sv4 pinta TODOS los motivos como código crudo; propone una ficha aparte que etiquete todos.
+
+PROBLEMA DE HOY: desde F-036 R23 sv4 muestra las razones de cada línea de valoración (albaran_line_valuations.review_reasons_json) y los motivos del documento (albaran_documents_merge.review_reasons_json) como <code> crudo (p. ej. partida_ausente_familia_destinada, almacen_sin_partida_en_albaran, partida_fuera_de_lista, residuos_*, obra_*): el revisor ve identificadores internos, no frases.
+
+PROPUESTA: un catálogo código -> etiqueta en español (con el código en el title para soporte) usado por la plantilla de sv4; un código sin etiqueta se sigue pintando crudo (nunca se oculta) y un test avisa de los motivos que emiten sv3/sv6 sin etiqueta. A decidir en la spec: si el catálogo vive en sv4 o en ruesma_comun (lo emiten sv2, sv3 y sv6).
+
+ALCANCE: services/albaranes-front (plantilla y catálogo). NO ENTRA: cambiar los códigos que emiten los servicios. RELACIONADAS: F-036 (R23), F-049, F-051.
 
 ### F-037 · sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar
 
@@ -391,9 +434,11 @@ Solo LLEVAR => no se paga y no entra en Sigrid. RETIRAR => se paga el porte + l�
 
 ### F-007 · Tanda 5 — Partida ALM por defecto y selector de candidatas en sv4
 
-estado **spec lista** · prioridad 26 · rigor `estandar` · SDD sí · rama `feature/F-007-partida-alm-selector`
+estado **pendiente** · prioridad 26 · rigor `estandar` · SDD sí · rama `feature/F-007-partida-alm-selector`
 
 Suministros NO se destinan: partida ALM (almacén) con imputación parcial mensual; indirectos SÍ se destinan a la entrada. Cuando el mismo recurso existe en varias partidas (contratos de hormigón con clones), la elección es humana: selector de partidas candidatas en sv4 + memoria por obra+producto para prerrellenar (la información de a qué tajo va el camión no está en el documento). Toca sv6 (regla ALM) y sv4 (selector + memoria).
+
+RE-ALCANCE (D7 de F-051, confirmada por el humano en la PARADA 1 del 2026-10-05): vuelve a pending. Su mitad «almacén» (R1-R7 regla ALM por defecto en sv6 y R15 pintar «Almacén» en sv4) la absorbe y supera F-051 (almacén = partida final vacía, para cualquier familia, elegible por línea y en bloque). Queda viva la otra mitad: selector de partidas CANDIDATAS (R8) y MEMORIA obra+producto (R9-R14). La spec actual (specs/F-007-*) está desfasada: se reescribe ENCIMA de F-051 cuando F-051 esté en dev, y se decide JUNTO con F-060 (tipología de líneas acopiables) o fusionada con ella. Su spec cita líneas de código de agosto que ya se han movido.
 
 ### F-017 · El comparativo como fuente de precio (1c) en la valoración
 

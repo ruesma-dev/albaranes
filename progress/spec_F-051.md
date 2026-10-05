@@ -348,3 +348,111 @@ requirements); sin cambio de requisitos ni de tareas.
 los topes (requirements 150/150, design 250/250)». `python harness/backlog.py`:
 «BACKLOG.md regenerado». **No se ha ejecutado `bash harness/init.sh` ni
 ninguna suite**, por instrucción del líder. Solo spec, ficha y progress.
+
+## v4 (2026-10-05) — PARADA 1: todas las decisiones cerradas
+
+### Decisiones del humano (2026-10-05), literales donde las hay
+
+- **D1 · rehecha.** «no se asocia a partida» (almacén = sin partida, nunca un
+  literal) y «en el visor cuando una línea no tenga partida que sea almacén.
+  aunque eso sea realmente que la partida está vacía. negocio ya funciona así a
+  mano actualmente». Sustituye a la v3, donde vaciar la partida a mano dejaba
+  «Sin partida» con aviso para distinguir fallo de decisión: **ya no se
+  distingue**.
+- **D2.** «cualquier línea puede ir a almacén» (todas las familias). Confirmado
+  por el líder con el humano: **se mantiene la revisión NO bloqueante** cuando
+  una línea sin partida es de familia destinada. Verificado en código que
+  `review_required` no impide aprobar (`approve_document` no lo mira).
+- **D3** ok (el botón pisa también las que tienen partida, con el número en la
+  confirmación y deshacer). **D4** ok (la fila Sigrid sigue Sigrid). **D5** ok (el
+  almacén elegido se pierde al revalorar) **y ficha nueva F-058**. **D7** ok
+  (F-007 vuelve a `pending` con nota de re-alcance). D6, D8, D9 y el ejemplo ya
+  estaban cerrados.
+
+### Qué cambia por la nueva D1 (consecuencias revisadas)
+
+- **Estado**: almacén = línea con valoración y `codigo_partida_final` vacío,
+  **tenga o no marca**. Desaparece el tercer estado `sin_partida` (R10 pasa a
+  dos valores y no mira `partida_action`; R12 viejo —aviso «Sin partida»— se
+  elimina).
+- **Marcas (`partida_action`)**: se siguen escribiendo (`almacen_sin_partida`
+  sv6, `almacen_elegido` sv4), pero **solo como trazabilidad** (quién o por
+  qué). Nadie las necesita para saber si una línea es almacén. Se cae
+  `ACCIONES_ALMACEN` de sv4 (y con él la propuesta de v3 de moverlo a
+  `ruesma_comun` para sv9).
+- **Vaciar la partida en sv4 = elegir almacén** (R12 nuevo): hoy, vaciar la
+  partida de una fila Sigrid la convierte en «Nueva» (derivada
+  `manual_override` con partida NULL); con v4 escribe `almacen_elegido`, no crea
+  derivada y la fila sigue Sigrid (coherente con D4). Sintéticas: su edición usa
+  `COALESCE` (vaciar no borra); su almacén se elige con la opción del combo o el
+  botón (anotado en «NO se tocan»).
+- **Visor (R11 ampliado)**: también la tabla de líneas valoradas
+  (`document_detail.html:~889` y `_build_display_lines ~4283`), que hoy pinta
+  `final or codigo_imputacion`: con final vacía mostraría la leída por IA1 tras
+  elegir almacén. Ahora «Almacén».
+- **Confianza (R21)**: con valoración la partida puntúa 1 siempre (vacía =
+  almacén resuelto); sin valoración, 0 como hoy. Consecuencia: la confianza deja
+  de castigar la partida vacía; el aviso en familias destinadas lo da sv6 (R4).
+- **Legado**: valoraciones anteriores a F-051 con partida final vacía
+  (`no_action`, sin match) salen «Almacén» en cuanto se despliega sv4, aunque sv6
+  no se haya redesplegado. Es lo que pide D1.
+- **Alta en Sigrid (R24 y F-053)**: toda línea con partida final vacía ⇒
+  `almacen: true` sin partida. **F-053 debe cambiar** su glosario, R10 y R12:
+  desaparece `no_admitido` por `linea_sin_partida`; `MARCAS_ALMACEN` de
+  `medir_admisibilidad_f053.py` sobra. Anotado en design «Contrato con F-053 y
+  con F-049»; la rama de F-053 no se toca desde aquí.
+- **F-049, bloque C** (anotado en el mismo apartado del design): la regla de su
+  columna «Origen partida» para «Sin partida → almacén» pasa a ser **valoración
+  con `codigo_partida_final` vacío, sin mirar la marca**; no hay
+  `ACCIONES_ALMACEN` que importar. Cierra su O4 por construcción (un complemento
+  `inherited_from_base_line` con partida heredada no está vacío ⇒ no es almacén;
+  test de ese caso en su T31). Su fila «Sin partida» (motivo `sin_partida` sin
+  marca) desaparece; recomendado que, sin valoración, también diga «Sin partida
+  → almacén». Sus §10 y §12 no cambian.
+
+### Qué cambia en la spec
+
+- **requirements** (150/150): cabecera v4; vocabulario (D1 literal, marcas solo
+  trazabilidad, sin estado «sin partida»); R4 dice que la línea sigue en almacén
+  (D2, aviso no bloqueante); R10 (dos valores), R11 (toda vista), R12 (vaciar =
+  almacén), R21, R24 reescritos; trazabilidad R12 con R14.
+- **design** (250/250): representación «NULL, nunca un literal», sin marca en el
+  estado; `almacen.py` sin `ACCIONES_ALMACEN` y `estado_partida(final)`;
+  repositorio (`_build_display_lines`, vaciar en `update_line_conciliacion`);
+  confianza; plantilla `~889`; sintéticas en «NO se tocan»; SQL; sección
+  «Contrato con F-053 y con F-049»; riesgos (F-058, legado, confianza); orden de
+  despliegue corregido (un sv4 viejo pinta la de la casada); decisiones.
+  Contexto comprimido para no pasar del tope.
+- **tasks** (25, sin tareas nuevas): cabecera v4; T9 (dos valores, factor de
+  confianza), T11 (+R12), T13 (sin aviso; legado y `_build_display_lines`), T14,
+  T17 (sin «Sin partida»; tabla `~889`), T19 (R24 con D1 v4), T24 (vaciar).
+
+### Fichas en `harness/features.json` (esta rama)
+
+- **F-007** → `pending`, nota de re-alcance (D7): queda candidatas + memoria; se
+  reescribe encima de F-051 y se decide junto con F-060 o fusionada.
+- **F-051** → `spec_ready` (sigue), nota v4.
+- **F-058** (nueva, `pending`, prioridad 2, `critico`; sv3, sv5, sv6, sv4):
+  «Revalorar no pierde las partidas ni el almacén asignados a mano».
+- **F-059** (nueva, `pending`, prioridad 3, `estandar`; sv4): «Etiquetas legibles
+  para los motivos de revisión en sv4» (F-036 R23; review del bloque B de F-049).
+- **F-060** (nueva, `pending`, prioridad 2, `critico`; sv2, sv6, sv4, comun),
+  pedida por el humano en la misma pasada: «Tipología de líneas acopiables».
+  Solo ficha; dice explícitamente que F-060 y la nueva spec de F-007 se deciden
+  juntas o se fusionan.
+- IDs F-058, F-059 y F-060 comprobados libres en todas las ramas locales y
+  remotas y en los worktrees `albaranes`, `albaranes-F-049` y `albaranes-F-053`.
+
+### Preguntas que quedan
+
+**Ninguna.** F-051 queda `spec_ready` lista para implementar (orden F-052 →
+F-051 → F-053). Para el humano, solo a título informativo (consecuencias
+directas de D1, no preguntas): la confianza deja de restar por partida vacía y
+las valoraciones legadas con partida vacía pasan a «Almacén» al desplegar sv4.
+
+### Estado del entorno
+
+`python -m harness.tamano --feature F-051`: «PUERTA TAMAÑO: F-051 dentro de
+los topes (requirements 150/150, design 250/250)». `python harness/backlog.py`:
+«BACKLOG.md regenerado». No se ha ejecutado `bash harness/init.sh` ni ninguna
+suite: cambio solo de spec, fichas y progress; ningún fichero de código tocado.
