@@ -1063,14 +1063,6 @@ def test_f051_r17_el_boton_todas_confirma_con_el_recuento_y_recarga():
     assert "/almacen-todas`" in bloque
 
 
-def test_f051_r12_guardar_la_fila_envia_la_partida_vaciada():
-    """Vaciar la partida y «Guardar» envía ``""`` (elegir almacén, R12),
-    no ``null`` (que el backend trata como «no viene»)."""
-    js = _app_js()
-
-    assert 'field === "codigo_partida"' in js
-
-
 def test_f051_r17_sin_valoracion_el_repositorio_cuenta_cero():
     """Superviviente 1 de la campaña de mutación (``return 0`` -> 1): el
     recuento que el repositorio sirve sin valoración es 0, no el valor
@@ -1323,3 +1315,39 @@ def test_f051_h2_guardar_solo_envia_la_partida_si_el_revisor_la_cambio(
     # El resto de campos, como siempre.
     assert cuerpos["sin_tocar"]["descripcion"] == "ARIDO"
     assert cuerpos["sin_tocar"]["cantidad"] == 2
+
+
+@_con_node
+def test_f051_r12_guardar_la_fila_envia_la_partida_vaciada(tmp_path):
+    """Vaciar la partida y guardar envía ``""`` (elegir almacén, R12), no
+    ``null`` (que el backend trata como «no viene»); y una partida sin
+    tocar NO se envía (review H2). Se ejecuta el JS real con node: la
+    versión anterior de este test buscaba una cadena y no vigilaba nada
+    (review H3)."""
+    cuerpos = _ejecutar_js(
+        tmp_path, ["parseNumEs", "partidaParaEnviar", "_conciliaBody"], """
+        console.log(JSON.stringify({
+            vaciada: _conciliaBody(fila([
+                entrada("codigo_partida", "03.02", "")])),
+            sin_tocar: _conciliaBody(fila([
+                entrada("codigo_partida", "03.02", "03.02")])),
+        }));
+    """)
+
+    assert cuerpos["vaciada"] == {"codigo_partida": ""}
+    assert cuerpos["sin_tocar"] == {"codigo_partida": None}
+
+
+def test_f051_r12_los_dos_guardados_arman_el_cuerpo_con_la_misma_funcion():
+    """«Guardar» de la fila y «Guardar todas las líneas» usan
+    ``_conciliaBody`` y nadie más arma el cuerpo por su cuenta: una copia
+    con ``v || null`` en cualquiera de los dos sitios rompería R12."""
+    js = _app_js()
+    fila_guardar = js[js.index('saveBtn.addEventListener("click"'):
+                      js.index('getElementById("save-all-lines-btn")')]
+    todas = js[js.index('saveAllLinesBtn.addEventListener("click"'):]
+
+    assert "_conciliaBody(tr)" in fila_guardar
+    assert "_conciliaBody(tr)" in todas
+    cuerpo = _funcion_js(js, "_conciliaBody")
+    assert js.count("body[field] =") == cuerpo.count("body[field] =")
