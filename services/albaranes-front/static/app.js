@@ -588,6 +588,42 @@
         });
     }
 
+    // F-051 (R16, R17): «Almacén a todas las líneas». Confirma con el
+    // número de líneas que PERDERÁN su partida (data-con-partida) y queda
+    // en el historial («Deshacer» del albarán).
+    const almacenTodasBtn = document.getElementById("almacen-todas-btn");
+    if (almacenTodasBtn) {
+        almacenTodasBtn.addEventListener("click", async function () {
+            const conPartida = parseInt(
+                almacenTodasBtn.dataset.conPartida || "0", 10
+            ) || 0;
+            const aviso = conPartida > 0
+                ? conPartida + " línea(s) perderán su partida. "
+                : "Ninguna línea tiene partida ahora mismo. ";
+            if (!window.confirm(
+                "¿Pasar TODAS las líneas a almacén (sin partida)? " + aviso +
+                "Las líneas de Sigrid seguirán siendo de Sigrid. Podrás " +
+                "deshacerlo con «Deshacer»."
+            )) return;
+            almacenTodasBtn.disabled = true;
+            try {
+                const resp = await fetch(
+                    `/api/documents/${documentId}/almacen-todas`,
+                    { method: "POST" }
+                );
+                if (!resp.ok) {
+                    window.alert("No se pudo pasar el albarán a almacén.");
+                    almacenTodasBtn.disabled = false;
+                    return;
+                }
+                window.location.reload();
+            } catch (e) {
+                window.alert("Error de red pasando el albarán a almacén.");
+                almacenTodasBtn.disabled = false;
+            }
+        });
+    }
+
     if (bulkCopyBtn) {
         bulkCopyBtn.addEventListener("click", async function () {
             const mergeIds = collectMergeIdsSinCasar();
@@ -842,6 +878,44 @@
     // Sigrid (eso sigue siendo el ✎ de Origen): al guardar, si cambió la
     // identidad de una fila Sigrid, pasará a NUEVA conservando el resto.
     // ----------------------------------------------------------------- //
+    // F-051 (R13): primer ítem FIJO del combo de PARTIDA: no se filtra por
+    // el texto tecleado y está siempre, haya o no contrato o líneas.
+    // Elegirlo pone la línea en almacén (partida vacía) sin tocar importes
+    // y la fila de Sigrid sigue siendo de Sigrid.
+    const ITEM_ALMACEN = {
+        id: null,
+        almacen: true,
+        label: "Almacén (sin partida)",
+        desc: "",
+        part: "",
+        unidad: "",
+        precio: null,
+        norm: "",
+    };
+
+    async function elegirAlmacen(input) {
+        const tr = input.closest("tr.conciliacion-row");
+        const vid = (input.dataset.valuationLineId ||
+            (tr ? tr.dataset.forValuationLineId : "") || "").trim();
+        if (!vid) { return; }
+        input.disabled = true;
+        try {
+            const resp = await fetch(
+                `/api/documents/${documentId}/lines/${vid}/almacen`,
+                { method: "POST" }
+            );
+            if (!resp.ok) {
+                window.alert("No se pudo pasar la línea a almacén.");
+                input.disabled = false;
+                return;
+            }
+            window.location.reload();
+        } catch (e) {
+            window.alert("Error de red pasando la línea a almacén.");
+            input.disabled = false;
+        }
+    }
+
     function _contratoLineItems() {
         return (CONTRATO_LINES || []).map(function (l) {
             const lab = l.label || l.desc || "";
@@ -870,6 +944,8 @@
         if (!input || input.dataset.contratoComboAttached) { return; }
         input.dataset.contratoComboAttached = "1";
         const items = _contratoLineItems();
+        // F-051 (R13): solo el combo de PARTIDA ofrece «Almacén».
+        const esPartida = input.classList.contains("js-partida-combo");
 
         const wrap = document.createElement("div");
         wrap.className = "combo combo-lines combo-concepto";
@@ -901,6 +977,11 @@
         }
         function pick(it) {
             justPicked = true;
+            if (it.almacen) {
+                close();
+                elegirAlmacen(input);
+                return;
+            }
             const tr = input.closest("tr.conciliacion-row");
             // Auto-guardado: re-conciliar con la línea de contrato elegida
             // reutilizando el <select> oculto js-concilia-select (PATCH
@@ -973,6 +1054,10 @@
                 if (!tokens.length) { return true; }
                 return tokens.every(function (t) { return it.norm.indexOf(t) !== -1; });
             });
+            if (esPartida) {
+                // F-051 (R13): «Almacén (sin partida)» SIEMPRE el primero.
+                shown = [ITEM_ALMACEN].concat(shown);
+            }
             render();
         }
 
@@ -1053,7 +1138,14 @@
                 const isSigrid = tr.classList.contains("concilia-assigned");
                 const identityChanged = [].some.call(
                     tr.querySelectorAll('.js-cedit[data-identity="1"]'),
-                    function (i) { return i.value !== i.defaultValue; }
+                    function (i) {
+                        if (i.value === i.defaultValue) { return false; }
+                        // F-051 (R12): vaciar la partida es elegir almacén;
+                        // la fila de Sigrid sigue siendo de Sigrid.
+                        if (i.dataset.field === "codigo_partida" &&
+                            !i.value.trim()) { return false; }
+                        return true;
+                    }
                 );
                 if (isSigrid && identityChanged) {
                     if (!window.confirm(
@@ -1071,7 +1163,9 @@
                         body[field] = parseNumEs(inp.value);
                     } else {
                         const v = inp.value.trim();
-                        body[field] = v || null;
+                        // F-051 (R12): la partida vacía viaja como "" (=
+                        // almacén); null sería «el campo no viene».
+                        body[field] = (field === "codigo_partida") ? v : (v || null);
                     }
                 });
 
@@ -1132,7 +1226,8 @@
                     body[field] = parseNumEs(inp.value);
                 } else {
                     const v = inp.value.trim();
-                    body[field] = v || null;
+                    // F-051 (R12): partida vacía = "" (almacén).
+                    body[field] = (field === "codigo_partida") ? v : (v || null);
                 }
             });
             return body;

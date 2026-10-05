@@ -542,6 +542,14 @@
                                 title="Borra TODAS las líneas salmón (Sigrid y Nueva). Dejarán de contar en el total">
                             Borrar todas
                         </button>
+                        {# F-051 (R16, R17, R22): todas las líneas a almacén (sin
+                           partida), también las que tienen partida. El JS pide
+                           confirmación con data-con-partida y se puede deshacer. #}
+                        <button type="button" class="btn secondary small" id="almacen-todas-btn"
+                                data-con-partida="{{ document.lineas_con_partida }}"
+                                title="Deja TODAS las líneas sin partida (van a almacén). Las filas de Sigrid siguen siendo de Sigrid. Se puede deshacer.">
+                            Almacén a todas las líneas
+                        </button>
                     {% endif %}
                     <button type="button" class="btn secondary small" id="add-line-btn" title="Añade una línea salmón suelta (a llevar a Sigrid), en blanco. No toca las líneas blancas leídas por la IA.">Añadir línea</button>
                     {# Traer líneas contrato (jul 2026): multiselección de líneas
@@ -693,13 +701,19 @@
                                             {% if c.kind == 'assigned' %}<span class="concilia-badge concilia-badge-assigned">Sigrid</span>{% else %}<span class="concilia-badge concilia-badge-derived">Nueva</span>{% endif %}
                                         {% endif %}
                                     </td>
-                                    {# Partida — combo de partidas (cambiarla convierte SIGRID→NUEVA). Descripción de partida → tooltip. #}
-                                    <td class="concilia-td" data-col="partida" data-sort-value="{{ c.codigo_partida or '' }}">
+                                    {# Partida — combo de partidas (cambiarla convierte SIGRID→NUEVA). Descripción de partida → tooltip.
+                                       F-051 (R11, R13): partida final vacía = ALMACÉN; se pinta «Almacén», nunca la
+                                       partida de la línea casada. El combo ofrece «Almacén (sin partida)» primero. #}
+                                    {% set _almacen = c.estado_partida == 'almacen' %}
+                                    <td class="concilia-td" data-col="partida" data-sort-value="{{ 'Almacén' if _almacen else (c.codigo_partida or '') }}">
                                         {% if cedit %}
-                                            <input type="text" class="cell-input js-cedit js-partida-combo{% if c.agree_partida == true %} cedit-ok{% elif c.agree_partida == false %} cedit-warn{% endif %}"
+                                            <input type="text" class="cell-input js-cedit js-partida-combo{% if _almacen %} partida-almacen{% elif c.agree_partida == true %} cedit-ok{% elif c.agree_partida == false %} cedit-warn{% endif %}"
                                                    data-field="codigo_partida" data-identity="1"
-                                                   value="{{ c.codigo_partida or '' }}" placeholder="—" autocomplete="off"
-                                                   title="{{ c.descripcion_partida or '' }}">
+                                                   data-valuation-line-id="{{ dline.valuation_line_id }}"
+                                                   value="{{ c.codigo_partida or '' }}" placeholder="{{ 'Almacén' if _almacen else '—' }}" autocomplete="off"
+                                                   title="{{ 'Va a almacén: no se imputa a ninguna partida' if _almacen else (c.descripcion_partida or '') }}">
+                                        {% elif _almacen %}
+                                            <span class="concilia-val partida-almacen" title="Va a almacén: no se imputa a ninguna partida">Almacén</span>
                                         {% elif c.agree_partida == false %}
                                             <span class="concilia-price-warn" title="{{ c.descripcion_partida or '' }}"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ c.codigo_partida or '—' }}</span>
                                         {% else %}
@@ -886,7 +900,12 @@
                     <tbody>
                     {% for line in document.lines %}
                         {% set v = val_lines.get(line.id) if line.id is not none else none %}
-                        {% set eff_codimp = (v.codigo_partida_final if v and v.codigo_partida_final) or line.codigo_imputacion %}
+                        {# F-051 (R11): con valoración, la partida es la FINAL; vacía = almacén (nunca la leída por IA1). #}
+                        {% if v %}
+                            {% set eff_codimp = ((v.codigo_partida_final or '') | trim) or 'Almacén' %}
+                        {% else %}
+                            {% set eff_codimp = line.codigo_imputacion %}
+                        {% endif %}
                         {% set eff_cantidad = (v.cantidad_convertida if v and v.cantidad_convertida is not none else line.cantidad) %}
                         {% set eff_unidad = (v.unidad_contrato if v and v.unidad_contrato) or (v.unidad_albaran if v else '') %}
                         {% set eff_precio_unit = (v.precio_unitario_final if v else none) %}
