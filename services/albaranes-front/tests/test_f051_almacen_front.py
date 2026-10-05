@@ -1069,3 +1069,14 @@ def test_f051_r12_guardar_la_fila_envia_la_partida_vaciada():
     js = _app_js()
 
     assert 'field === "codigo_partida"' in js
+
+
+def test_f051_r17_sin_valoracion_el_repositorio_cuenta_cero():
+    """Superviviente 1 de la campaña de mutación (``return 0`` -> 1): el
+    recuento que el repositorio sirve sin valoración es 0, no el valor
+    por defecto del payload."""
+    from infrastructure.database.review_repository import (
+        AlbaranReviewRepository,
+    )
+
+    assert AlbaranReviewRepository._lineas_con_partida(None) == 0
