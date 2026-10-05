@@ -601,6 +601,14 @@ class ConciliacionDisplay(BaseModel):
     # «Almacén» y nunca la partida de la linea de contrato casada.
     estado_partida: str | None = None
 
+    # (F-051, review pasada 2 · decisión del humano 2026-10-05) Fuera de
+    # almacén ``codigo_partida`` es la partida FINAL de la valoración (la
+    # que pinta el input), no la de la línea de contrato casada. La de la
+    # casada se conserva aquí, también en almacén (donde no se pinta):
+    # la usan los avisos ✓/⚠ contra el contrato y el aviso «pasará a
+    # NUEVA» del navegador (R20: la de la casada no cambia la identidad).
+    codigo_partida_casada: str | None = None
+
     # Senales para el calculo determinista de CONFIANZA (no se pintan):
     #   match_method / match_confidence_pct -> distinguir match fuerte
     #     (codigo/exacto) de semantico-familia (conf <= 50) y de manual.

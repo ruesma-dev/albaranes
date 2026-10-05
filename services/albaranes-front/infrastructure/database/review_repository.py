@@ -153,6 +153,19 @@ def _importe_de_linea(
     )
 
 
+
+def _partida_del_contrato(conc: ConciliacionDisplay) -> str | None:
+    """Partida del CONTRATO contra la que se comparan los avisos ✓/⚠.
+
+    (F-051, review pasada 2) ``codigo_partida`` es ya la partida final
+    (la que se pinta); la del contrato es la de la línea casada. En
+    almacén no hay nada que comparar (sin aviso, como antes).
+    """
+    if conc.estado_partida == "almacen":
+        return None
+    return conc.codigo_partida_casada
+
+
 class AlbaranReviewRepository:
     def __init__(self, session_factory: SessionFactory) -> None:
         self._session_factory = session_factory
@@ -1394,13 +1407,23 @@ class AlbaranReviewRepository:
         # se pinta la partida de la línea de contrato casada ni la de la
         # derivada: la ficha dice «Almacén». El resto del bloque (precio,
         # descripción, kind Sigrid/Nueva) no cambia.
+        #
+        # (Review pasada 2, decisión del humano) Fuera de almacén se pinta
+        # la partida FINAL, no la de la casada: una complementaria que
+        # hereda la partida de su base (R7) puede casar con una línea de
+        # contrato de otra partida o sin partida. La descripción de la
+        # casada solo se pinta si es de esa misma partida. La de la casada
+        # queda en ``codigo_partida_casada``.
         for vid, conc in out.items():
             _vl = vline_by_vid.get(vid)
-            conc.estado_partida = estado_partida(
-                getattr(_vl, "codigo_partida_final", None)
-            )
+            final = getattr(_vl, "codigo_partida_final", None)
+            conc.estado_partida = estado_partida(final)
+            conc.codigo_partida_casada = conc.codigo_partida
             if conc.estado_partida == "almacen":
                 conc.codigo_partida = None
+                conc.descripcion_partida = None
+            elif str(final).strip() != (conc.codigo_partida or "").strip():
+                conc.codigo_partida = str(final).strip()
                 conc.descripcion_partida = None
 
         return out
@@ -4404,7 +4427,7 @@ class AlbaranReviewRepository:
                 )
                 # partida: lo imputado en la blanca vs la partida del contrato
                 _conc.agree_partida = _agree_txt(
-                    line.codigo_imputacion, _conc.codigo_partida
+                    line.codigo_imputacion, _partida_del_contrato(_conc)
                 )
                 # cantidad: la salmon copia la de la blanca (coincide si hay)
                 _conc.agree_cantidad = _agree_num(line.cantidad, line.cantidad)
@@ -4508,7 +4531,9 @@ class AlbaranReviewRepository:
                     return None
                 return str(d).strip() == str(e).strip()
 
-            conc.agree_partida = _txt(syn.codigo_partida_final, conc.codigo_partida)
+            conc.agree_partida = _txt(
+                syn.codigo_partida_final, _partida_del_contrato(conc)
+            )
             conc.agree_cantidad = _num(_cant, _cant)
             conc.agree_unitario = _num(syn.precio_unitario_final, _unit)
             conc.agree_importe = _num(syn.importe_calculado, _exp_imp)

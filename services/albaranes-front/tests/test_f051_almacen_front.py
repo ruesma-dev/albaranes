@@ -1080,3 +1080,136 @@ def test_f051_r17_sin_valoracion_el_repositorio_cuenta_cero():
     )
 
     assert AlbaranReviewRepository._lineas_con_partida(None) == 0
+
+
+# =================================================================== #
+# Review, pasada 2 · decisión del humano (2026-10-05): fuera de almacén
+# el input de partida pinta la partida FINAL de la línea, no la de la
+# línea de contrato casada (origen del hallazgo H2).
+# =================================================================== #
+
+def _casada_sin_partida(sesion):
+    from sqlalchemy import text
+
+    sesion.execute(text(
+        "INSERT INTO albaran_contrato_lines_merge (id, codigo_contrato, "
+        "codigo_partida, descripcion_partida, descripcion_linea, "
+        "unidad_medida, precio_unitario) VALUES "
+        "(502, 'CTSU25/0051', NULL, NULL, 'PORTE', 'UD', 30.0)"
+    ))
+
+
+def test_f051_p2_fuera_de_almacen_se_pinta_la_partida_final(
+    repo_sqlite, sesion,
+):
+    """Complementaria que hereda 07.07 (R7, excepción c) casada con una
+    línea de contrato de 03.02, otra casada con una línea SIN partida y
+    una Nueva cuya derivada tiene otra partida: el input pinta la final."""
+    _casada_sin_partida(sesion)
+    _linea_valoracion(sesion, id=17, merge_line_id=707,
+                      matched_contrato_line_id=501,
+                      codigo_partida_final="07.07",
+                      partida_action="inherited_from_base_line")
+    _linea_valoracion(sesion, id=18, merge_line_id=708,
+                      matched_contrato_line_id=502,
+                      codigo_partida_final="03.02",
+                      partida_action="inherited_from_base_line")
+    _linea_valoracion(sesion, id=19, merge_line_id=709,
+                      derived_contrato_line_id=601,
+                      codigo_partida_final="08.08",
+                      partida_action="new_line_created")
+    sesion.commit()
+
+    _valoracion, mapa = _valoracion_y_mapa(repo_sqlite)
+
+    assert mapa[17].codigo_partida == "07.07"
+    assert mapa[18].codigo_partida == "03.02"
+    assert mapa[19].codigo_partida == "08.08"
+    # La descripción de la casada es de OTRA partida: no se pinta.
+    assert mapa[17].descripcion_partida is None
+    # Siguen siendo lo que eran (Sigrid / Nueva) y con partida.
+    assert (mapa[17].kind, mapa[18].kind, mapa[19].kind) == (
+        "assigned", "assigned", "derived",
+    )
+    assert {mapa[v].estado_partida for v in (17, 18, 19)} == {"partida"}
+
+
+def test_f051_p2_si_la_final_es_la_de_la_casada_nada_cambia(repo_sqlite):
+    _valoracion, mapa = _valoracion_y_mapa(repo_sqlite)
+
+    assert mapa[11].codigo_partida == "03.02"
+    assert mapa[11].descripcion_partida == "Cimentación"
+    assert mapa[12].codigo_partida == "04.05"
+
+
+def test_f051_p2_la_partida_de_la_casada_se_conserva_aparte(
+    repo_sqlite, sesion,
+):
+    """Para el aviso «pasará a NUEVA» (O2) y para los avisos ✓/⚠ contra
+    el contrato: la de la casada, también en almacén (no se pinta)."""
+    _linea_valoracion(sesion, id=17, merge_line_id=707,
+                      matched_contrato_line_id=501,
+                      codigo_partida_final="07.07")
+    sesion.commit()
+
+    _valoracion, mapa = _valoracion_y_mapa(repo_sqlite)
+
+    assert mapa[17].codigo_partida_casada == "03.02"
+    assert mapa[13].codigo_partida is None
+    assert mapa[13].codigo_partida_casada == "03.02"
+
+
+def test_f051_p2_el_input_de_la_ficha_lleva_la_partida_final(
+    repo_sqlite, sesion, render_detalle, documento_detalle, fila_detalle,
+    linea_valorada,
+):
+    """Del mapa real al HTML: el ``value`` inicial del input (el que H2
+    usa para saber si el revisor lo cambió) es la partida final."""
+    _linea_valoracion(sesion, id=17, merge_line_id=707,
+                      matched_contrato_line_id=501,
+                      codigo_partida_final="07.07")
+    sesion.commit()
+    _valoracion, mapa = _valoracion_y_mapa(repo_sqlite)
+
+    html = render_detalle(documento_detalle(
+        lineas_valoracion=[linea_valorada(codigo_partida_final="07.07")],
+        display=[fila_detalle(conciliacion=mapa[17].model_dump())],
+    ))
+    entrada = _input_partida(html)
+
+    assert 'value="07.07"' in entrada
+    assert "partida-almacen" not in entrada
+
+
+def test_f051_p2_el_aviso_de_partida_sigue_comparando_con_el_contrato(
+    repo_sqlite, sesion,
+):
+    """Los ✓/⚠ comparan lo leído del albarán con la partida del
+    CONTRATO (la de la casada), como antes; en almacén, sin aviso."""
+    from domain.models.review_models import MergeLinePayload
+    from infrastructure.database.review_repository import (
+        AlbaranReviewRepository,
+    )
+
+    _linea_valoracion(sesion, id=17, merge_line_id=707,
+                      matched_contrato_line_id=501,
+                      codigo_partida_final="07.07")
+    sesion.commit()
+    valoracion, mapa = _valoracion_y_mapa(repo_sqlite)
+    filas = AlbaranReviewRepository._build_display_lines(
+        merge_lines=[
+            MergeLinePayload(id=701, codigo_imputacion="03.02",
+                             concepto="ARIDO 20/40", cantidad=2.0),
+            MergeLinePayload(id=703, codigo_imputacion="03.02",
+                             concepto="ARIDO 20/40", cantidad=2.0),
+            MergeLinePayload(id=707, codigo_imputacion="07.07",
+                             concepto="PORTE", cantidad=1.0),
+        ],
+        valuation=valoracion,
+        conciliation_by_valuation_line_id=mapa,
+    )
+    por_merge = {f.merge_line_id: f for f in filas if f.merge_line_id}
+
+    assert por_merge[701].concilia.agree_partida is True
+    assert por_merge[707].concilia.agree_partida is False
+    assert por_merge[703].concilia.agree_partida is None
