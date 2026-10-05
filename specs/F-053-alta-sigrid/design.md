@@ -16,9 +16,9 @@ aprendizaje (docstring de `MensajeFeedback`). Flujo: sv4 aprueba → `q-feedback
 medir_admisibilidad_f053.py`, solo lectura, la ejecuta el humano; comando en `progress/spec_F-053.md`);
 (2) **F-009 de sigrid-api** desplegada con su llave y la lista blanca de §2; (3) respuestas a las [Pn].
 
-**Producto de las sin vincular (humano, 2026-10-05).** La analítica de una sin vincular sale de su par (obra,
-producto genérico), no de la partida ni del almacén (medición del líder: `progress/spec_F-053.md`; la deriva
-sigrid-api, contrato H10): el producto importa. Regla: familia `alquiler_maquinaria` → `QA9999`,
+**Producto de las sin vincular (humano, 2026-10-05).** La analítica de una sin vincular sale de la obra y de la
+naturaleza que sigrid-api asigna al producto (`MA99`, `QA99`, `XA99`), no de la partida ni del almacén (la deriva
+sigrid-api, contrato H10 y H34): el producto importa. Regla: familia `alquiler_maquinaria` → `QA9999`,
 `medios_auxiliares` → `XA9999` (andamios, puntales…), resto → `MA9999`, **por línea** (`familia_efectiva`: en un
 mixto manda la de la línea), y el administrativo lo cambia en sv4 antes de aprobar. Vinculadas: las del contrato.
 
@@ -38,7 +38,7 @@ y `lineas[]` casadas por `referencia_linea` (también en `idempotente`); en 400,
 **Configuración que pone sigrid-api** (no F-053): `SIGRID_ALBARAN_WRITE_ENABLED` (segunda llave),
 `SIGRID_ALBARAN_PREFIJOS_REFERENCIA=["ALB-"]`, `SIGRID_ALBARAN_EMPRESAS_OBRA=[1]` y
 `SIGRID_ALBARAN_PRODUCTOS_SIN_CONTRATO=["MA9999","QA9999","XA9999"]`, que debe contener los valores del mapeo
-de §7 (`XA9999` lo añade la próxima versión de F-009: contrato §8).
+de §7 (`XA9999` ya está en F-009 v7; la naturaleza por producto, contrato H34, la pone sigrid-api).
 
 **Códigos → estado del alta (R18; la tabla es un dato de `clasificador.py`) y lo que ve el revisor en sv4:**
 
@@ -47,14 +47,14 @@ de §7 (`XA9999` lo añade la próxima versión de F-009: contrato §8).
 | `lineas_no_validas` con `linea_no_es_del_contrato`, `partida_no_encontrada`, `partida_ambigua`, `partida_no_imputable`, `paride_no_valido`, `analitica_no_resuelta` | `no_admitido` | cada línea con su código y mensaje; se corrige y «Solicitar alta» |
 | `obra_no_encontrada`, `obra_ambigua`, `contrato_no_encontrado`, `contrato_ambiguo`, `proveedor_sin_albaran_previo`, `almacen_de_obra_no_resuelto` (H13), `demasiadas_lineas` (H22) | `no_admitido` | corregir obra o contrato; proveedor sin albarán previo, obra con dos almacenes o más de 100 líneas: alta a mano |
 | `referencia_en_conflicto` | `revisar` | otro albarán de Sigrid lleva nuestra referencia: mirarlo [P3] |
-| `escritura_albaranes_deshabilitada`, `base_de_datos_no_permitida`, `referencia_no_permitida`, `obra_de_empresa_no_permitida`, `usuario_no_valido`, `estado_inicial_no_encontrado`, `peticion_mixta`; línea con `producto_no_permitido`, `producto_no_encontrado` (H24) o `precio_negativo`; 400 sin código; código desconocido (H25) | `error` | «fallo de configuración o del servicio» con el código; no es del revisor |
+| `escritura_albaranes_deshabilitada`, `base_de_datos_no_permitida`, `referencia_no_permitida`, `obra_de_empresa_no_permitida`, `usuario_no_valido`, `estado_inicial_no_encontrado`, `peticion_mixta`; línea con `producto_no_permitido`, `producto_no_encontrado` (H24), `naturaleza_no_valida` (H34) o `precio_negativo`; 400 sin código; código desconocido (H25) | `error` | «fallo de configuración o del servicio» con el código; no es del revisor |
 | `colision_de_clave`, `filas_afectadas_inesperadas` | `error` | ERP intacto; «Solicitar alta» reintenta con la misma referencia |
 | 5xx, tiempo agotado, conexión | `incierto` (grabación) / `error` (previa) | tras la Espera, reintento seguro por idempotencia |
 
 En `lineas_no_validas`, si una línea trae un código de la fila `error`, gana `error`. `precio_negativo` no puede
-salir de sv9 (manda |importe| / |cantidad|): si llega, es un fallo. `analitica_no_resuelta` es la propuesta del
-contrato para la primera sin vincular de un producto en una obra (H10); si F-009 elige otra salida, se ajusta
-esa fila al implementar (los tests usan el contrato tal como quede, tasks).
+salir de sv9 (manda |importe| / |cantidad|): si llega, es un fallo. `analitica_no_resuelta`: la obra no tiene la
+cuenta `obra.sufijo` de la naturaleza (contrato H10): alta a mano o crearla. sv9 no manda `naturaleza`: si sale
+`naturaleza_no_valida`, es configuración de sigrid-api (H34). Los tests usan el contrato tal como quede (tasks).
 
 Avisos **bloqueantes** por `codigo` (R17; `ALTA_SIGRID_AVISOS_BLOQUEANTES`, defecto `producto_sin_historico`;
 `plantilla_de_otro_proveedor` ya no existe, H25) → `revisar`. Informativos, se enseñan en el panel:
@@ -234,7 +234,7 @@ activa el humano. Desde local, nunca.» Igual en `docs/ARCHITECTURE.md` y `docs/
 - **Precio neto**: F-009 calcula `tot = cantidad·precio` sin descuento: se manda el unitario **neto** (importe /
   cantidad) redondeado a 6 decimales (H14), no el bruto. El signo de los descuentos es [P2].
 - **Nunca se graba aproximado**: lo que la previa no devuelve tal cual se pidió (importe, partida, líneas) va a
-  `revisar`; una analítica sin historial en la obra no se inventa (contrato H10).
+  `revisar`; una cuenta analítica que la obra no tiene no se inventa (contrato H10).
 - **Producto calculado al leer**, no guardado: el por defecto sale de la familia en cada lectura (sv4 al pintar,
   sv9 al construir), con la misma función y el mismo mapeo; lo mandado queda en `peticion_json`. Guardar el
   defecto obligaría a sv6 a calcularlo (lógica nueva en sv6) o a reescribirlo cada vez que la IA reclasifica.

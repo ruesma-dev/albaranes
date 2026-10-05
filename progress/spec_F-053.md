@@ -16,7 +16,12 @@ F-051 v4 y huecos del contrato con sigrid-api). Estado: **vuelve a `pending`** c
 - Script de medición y sus tests (sin cambios en v6; T0a los alinea con F-051 v4). Ningún fichero de código
   tocado en v6. No se ha llamado a sigrid-api, Azure ni BBDD.
 - Contrato con sigrid-api actualizado en su repositorio (commit aparte en `sigrid-api`, rama
-  `feature/F-009-alta-albaran-compra`): `specs/F-009-alta-albaran-compra/contrato_albaranes.md` **v6.1**.
+  `feature/F-009-alta-albaran-compra`): `specs/F-009-alta-albaran-compra/contrato_albaranes.md` **v7.1**
+  (2026-10-06, commit `2631b1a`: analítica confirmada por negocio, H34 naturaleza por producto, H35 `cod2` y DNC).
+- **Retoque del 2026-10-06** (sin cambiar de versión ni de tamaño: design 250/250, requirements 149/150): design §1
+  (la analítica sale de la obra y de la naturaleza que pone sigrid-api), §2 (`naturaleza_no_valida` → `error`;
+  `analitica_no_resuelta` = la obra no tiene la cuenta, sigue `no_admitido`) y §11; tasks T29 (revisar naturaleza,
+  analítica, `cod2` y DNC en la UI). Requirements sin cambios: sv9 no manda nada nuevo.
 
 ## v6 · qué cambia y por qué
 
@@ -73,7 +78,8 @@ Ya cerrados fuera de F-053 (el encargo los listaba como del humano): **H4** (dec
 «imputable»; lo alinea F-049), **H31** (N4 aprobada en F-009: `cod_contrato` siempre que la valoración lo tenga;
 R12) y **H20** (cerrado por la decisión de producto de este 2026-10-05; queda la puerta M9, P7). `precio_negativo`
 → `error` y no `revisar`: sv9 nunca manda precio negativo, así que si llega es un fallo, no un dato que revisar.
-El nombre `analitica_no_resuelta` (H10) es propuesta del contrato a F-009; si elige otra salida, se ajusta la fila.
+`analitica_no_resuelta` (H10) está en F-009 v7 con el sentido de la v7.1 del contrato (la obra no tiene la cuenta
+`obra.sufijo`): `no_admitido`. `naturaleza_no_valida` (H34): `error`, porque sv9 no manda `naturaleza`.
 
 ## Preguntas abiertas al humano (cerradas, con recomendación)
 
@@ -120,7 +126,8 @@ El nombre `analitica_no_resuelta` (H10) es propuesta del contrato a F-009; si el
 | Alcance | «Medir antes» (T0) |
 | Líneas | Solo con importe; vinculadas y sin vincular en el mismo albarán; con partida o sin ella (= almacén, F-051 v4) |
 | Producto (**2026-10-05**) | Vinculada: el del contrato. Sin vincular: por familia de la línea (QA9999 maquinaria, XA9999 medios auxiliares, MA9999 el resto), cambiable en sv4 antes de aprobar |
-| `cod2` y planificación de compras (**2026-10-05**, pendiente de llevar a spec y contrato) | «el cod2 hay que traerlo, así como la vinculación a planificación de compras. si no viene originalmente se deja vacío». Medido en Sigrid (solo lectura, emp 1): `dcapro.cod2` («código alternativo», lo usa el jefe de obra para filtrar en el DPC) = `ctrpro.cod2` en el 99,9 % de las vinculadas que lo llevan; `dncproide` (documento de necesidades de compra) en el 86 % de las vinculadas. F-009 hoy no copia ninguno de los dos del `ctrpro`: hueco nuevo para el contrato. Sin vincular: vacíos |
+| `cod2` y planificación de compras (**2026-10-05**; **llevado al contrato v7.1, H35**) | «el cod2 hay que traerlo, así como la vinculación a planificación de compras. si no viene originalmente se deja vacío». Medido en Sigrid (solo lectura, emp 1): `dcapro.cod2` («código alternativo», lo usa el jefe de obra para filtrar en el DPC) = `ctrpro.cod2` en el 99,9 % de las vinculadas que lo llevan; enlace DNC (`dncide` → `dnc`, `dncproide` → `dncpro`) en el 86 % de las vinculadas. Regla: en vinculadas, sigrid-api copia `cod2`, `dncide` y `dncproide` del `ctrpro` (vacíos si no los tiene; hoy F-009 los heredaría de la plantilla); sin vincular, vacíos. Lo absorbe F-009 v8 (contrato §8); sv9 no manda nada nuevo |
+| Analítica y naturaleza de las sin vincular (**2026-10-05/06**; **contrato v7.1, H10 y H34**) | Confirmado por el director de Administración y Control de Costes (correo del 2026-10-05) y medido: cuenta analítica = código de obra + `.` + `auxpronat.caagascod` de la naturaleza sin el prefijo `MOD.` (`MA99` `MOD.CDSB37`, obra `0678` ⇒ `0678.CDSB37`; `QA99` ⇒ `.CDQA12`; `XA99` ⇒ `.CDXA01`); cumplimiento QA9999 99,8 %, MA9999 con `MA99` 98 %, XA9999 87 %; 38 de 39 obras recientes tienen las cuentas. Naturaleza: el maestro de MA9999 está mal (`MA1501` cerámico; a mano se cambia a `MA99` en el 81 %) ⇒ mapeo producto → naturaleza en la configuración de sigrid-api (`MA9999`→`MA99`, `QA9999`→`QA99`, `XA9999`→`XA99`). En F-053: no se manda `naturaleza`; `analitica_no_resuelta` → `no_admitido` (alta a mano o crear la cuenta); `naturaleza_no_valida` → `error`. Hallazgo para Administración: corregir el maestro de MA9999 (no es de F-009 ni de F-053) |
 | Negativas | Entran ya (signos incoherentes: P2) |
 | Sin valorar | No se aprueba ni se registra (R37); `partial` no cuenta |
 | Valorado | `ok` de sv6, o valoración manual completa (`manual`/`no_contract` con importes y ninguno nulo) |
@@ -149,8 +156,8 @@ $sv3 = "C:\Users\pgris\PycharmProjects\albaranes\services\albaranes-persistencia
 ## Orden
 
 **Medición → F-009 de sigrid-api → F-052 → F-051 → F-053** (design §8). La ficha de medios auxiliares (P1) no
-bloquea. F-009 debe absorber en su próxima versión lo del contrato §8 (lista blanca con XA9999, regla H10, M9/M11/
-M16b con XA9999, H5 cerrado).
+bloquea. F-009 v7 absorbió lo del contrato §8 de la v6.1; su v8 debe absorber lo de la v7.1 (contrato §8, puntos
+7-12: sufijo sin `MOD.`, mapeo de naturaleza, `cueide` P4, `cod2` y DNC).
 
 ## Hallazgos que siguen vigentes
 
