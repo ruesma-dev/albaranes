@@ -7,9 +7,9 @@
     "lineas_valoradas": [
       {
         "caso_id": "RES-003",
-        "codigo_partida_final": "CI.03A.7",
+        "codigo_partida_final": null,
         "codigo_producto_contrato": "C1",
-        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna | F-051 (decision del humano 2026-10-05): linea sin partida impresa => almacen, partida final vacia; antes esperaba CI.03A.7, la del contrato",
         "importe_calculado": 120,
         "match_method": "semantic",
         "num_linea": 1,
@@ -22,8 +22,8 @@
       {
         "cantidad": 1,
         "caso_id": "RES-003",
-        "codigo_partida": "CI.03A.7",
-        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
+        "codigo_partida": null,
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna | F-051 (decision del humano 2026-10-05): linea sin partida impresa => almacen, partida final vacia; antes esperaba CI.03A.7, la del contrato",
         "descripcion_esperada": "INCREMENTO LER 170802 MAT. DE CONST. A PARTIR DE YESOS-E",
         "modifier_source": "gestion_residuos",
         "num_linea_base": 1,
