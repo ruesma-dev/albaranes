@@ -710,6 +710,8 @@
                                             <input type="text" class="cell-input js-cedit js-partida-combo{% if _almacen %} partida-almacen{% elif c.agree_partida == true %} cedit-ok{% elif c.agree_partida == false %} cedit-warn{% endif %}"
                                                    data-field="codigo_partida" data-identity="1"
                                                    data-valuation-line-id="{{ dline.valuation_line_id }}"
+                                                   {#- F-051 (review O2): la de la casada de Sigrid, para no avisar «pasará a NUEVA» al ponerla (R20). #}
+                                                   {%- if c.kind == 'assigned' and c.codigo_partida_casada %} data-partida-casada="{{ c.codigo_partida_casada }}"{% endif %}
                                                    value="{{ c.codigo_partida or '' }}" placeholder="{{ 'Almacén' if _almacen else '—' }}" autocomplete="off"
                                                    title="{{ 'Va a almacén: no se imputa a ninguna partida' if _almacen else (c.descripcion_partida or '') }}">
                                         {% elif _almacen %}

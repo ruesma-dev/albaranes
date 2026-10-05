@@ -1107,6 +1107,23 @@
         return body;
     }
 
+    // ¿Este campo identitario, tal como está, hace que una fila de Sigrid
+    // pase a NUEVA al guardar? (el aviso del confirm; decide el backend).
+    function cambiaIdentidad(inp) {
+        if (inp.value === inp.defaultValue) { return false; }
+        if (inp.dataset.field === "codigo_partida") {
+            const v = inp.value.trim();
+            // F-051 (R12): vaciar la partida es elegir almacén; la fila
+            // de Sigrid sigue siendo de Sigrid.
+            if (!v) { return false; }
+            // F-051 (R20, review O2): poner la partida de la línea casada
+            // de Sigrid tampoco cambia la identidad.
+            const casada = String(inp.dataset.partidaCasada || "").trim();
+            if (casada && v === casada) { return false; }
+        }
+        return true;
+    }
+
     function wireConciliaEdit() {
         linesBody.querySelectorAll("tr.concilia-editable").forEach(function (tr) {
             const inputs = tr.querySelectorAll(".js-cedit");
@@ -1167,14 +1184,7 @@
                 const isSigrid = tr.classList.contains("concilia-assigned");
                 const identityChanged = [].some.call(
                     tr.querySelectorAll('.js-cedit[data-identity="1"]'),
-                    function (i) {
-                        if (i.value === i.defaultValue) { return false; }
-                        // F-051 (R12): vaciar la partida es elegir almacén;
-                        // la fila de Sigrid sigue siendo de Sigrid.
-                        if (i.dataset.field === "codigo_partida" &&
-                            !i.value.trim()) { return false; }
-                        return true;
-                    }
+                    cambiaIdentidad
                 );
                 if (isSigrid && identityChanged) {
                     if (!window.confirm(
