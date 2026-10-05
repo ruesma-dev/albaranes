@@ -639,3 +639,26 @@ def test_f051_r28_hermana_con_partida_no_se_copia():
     assert sin.codigo_partida_final is None
     assert sin.partida_action == "almacen_sin_partida"
     assert _por_merge(registros, 703).codigo_partida_final == "04.05"
+
+
+# =================================================================== #
+# R8, R9 · cableado: los dos puntos de entrada leen los dos ajustes
+# =================================================================== #
+
+@pytest.mark.parametrize(
+    "fichero",
+    ["interface_adapters/composition.py", "interface_adapters/api/app.py"],
+)
+def test_f051_r8_r9_worker_y_api_cablean_los_ajustes(fichero):
+    """El worker (q-valoracion) y la API HTTP construyen el builder igual.
+
+    Se lee el fuente como texto porque construirlos exige BBDD (y la API,
+    FastAPI); lo que se protege es que ninguno se quede sin el ajuste.
+    """
+    from pathlib import Path
+
+    fuente = (Path(__file__).resolve().parents[1] / fichero).read_text(
+        encoding="utf-8",
+    )
+    assert "almacen_sin_partida=settings.almacen_sin_partida_enabled" in fuente
+    assert "familias_destinadas_de_csv(\n            settings.familias_destinadas" in fuente

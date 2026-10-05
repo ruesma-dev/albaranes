@@ -16,6 +16,7 @@ from __future__ import annotations
 import logging
 
 from application.pipelines.run_valuation_pipeline import RunValuationPipeline
+from application.services.almacen_politica import familias_destinadas_de_csv
 from application.services.importe_calculator import ImporteCalculator
 from application.services.partida_matcher import PartidaMatcher
 from application.services.price_reconciler import PriceReconciler
@@ -95,10 +96,16 @@ def build_run_valuation_pipeline(settings: Settings) -> RunValuationPipeline:
         ),
         partida_matcher=PartidaMatcher(
             alm_codigo_partida=settings.alm_codigo_partida,
+            # F-051 (R1, R8): sin partida en el albarán ⇒ almacén.
+            almacen_sin_partida=settings.almacen_sin_partida_enabled,
         ),
         unit_converter=UnitConverter(registry=unit_registry),
         importe_calculator=ImporteCalculator(
             tolerance_pct=settings.importe_tolerance_pct,
+        ),
+        # F-051 (R4, R9): familias destinadas (revisión no bloqueante).
+        familias_destinadas=familias_destinadas_de_csv(
+            settings.familias_destinadas,
         ),
     )
 
