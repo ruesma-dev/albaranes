@@ -68,6 +68,7 @@ from infrastructure.database.orm_models import (
     AlbaranLineMergeOrm,
 )
 from application.services.busqueda_contratos import estado_busqueda
+from domain.services.almacen import ACCION_ALMACEN_ELEGIDO, estado_partida
 from domain.services.confianza import compute_confianza_pct
 from infrastructure.database.session_factory import SessionFactory
 
@@ -1697,6 +1698,15 @@ class AlbaranReviewRepository:
             campos tal y como estaban en ese momento (descripción,
             cantidad, descuento, etc.).
           - En una fila NUEVA (derived) se edita in situ.
+          - (F-051) Partida final vacía = ALMACÉN (D1). Vaciar la partida
+            es elegir almacén (R12): partida final NULL y
+            ``partida_action = 'almacen_elegido'``, SIN derivada (la fila
+            Sigrid sigue Sigrid, D4). En almacén, la partida actual es
+            vacía —nunca la de la casada—, así que guardar otros campos
+            no la convierte en Nueva (R19). Poner la partida de la casada
+            saca de almacén y la fila sigue Sigrid (R20).
+          - (F-051) ``codigo_partida=None`` = el campo no viene en la
+            petición (no cambia); ``""`` = vaciado.
 
         NO revalora. Como todo override manual, se pierde si después se
         pulsa "Valorar ahora". Devuelve True si actualizó algo.
@@ -1737,7 +1747,11 @@ class AlbaranReviewRepository:
             derived_id = row["derived_contrato_line_id"]
 
             # ---- estado ACTUAL de la conciliación (para comparar) ----
-            cur_codigo_partida = row["codigo_partida_final"]
+            # (F-051, D1) La partida actual es la FINAL de la valoración:
+            # vacía = almacén. Ya NO se rellena con la de la línea casada
+            # (eso hacía que guardar una línea en almacén la convirtiera
+            # en Nueva, R19).
+            cur_codigo_partida = _txt(row["codigo_partida_final"]) or None
             cur_unidad = row["unidad_contrato"]
             cur_precio = row["precio_unitario_final"]
             cur_desc = row["descripcion_linea"]  # override si lo hubiera
@@ -1760,10 +1774,9 @@ class AlbaranReviewRepository:
                     ),
                     {"id": derived_id},
                 ).mappings().first()
+            partida_casada: str | None = None
             if linea_casada is not None:
-                cur_codigo_partida = (
-                    cur_codigo_partida or linea_casada["codigo_partida"]
-                )
+                partida_casada = linea_casada["codigo_partida"]
                 cur_unidad = cur_unidad or linea_casada["unidad_medida"]
                 if cur_precio is None:
                     cur_precio = linea_casada["precio_unitario"]
@@ -1797,8 +1810,24 @@ class AlbaranReviewRepository:
                 )
             )
 
+            # (F-051 R12) Vaciar una partida = elegir almacén: no es un
+            # cambio de identidad (no crea derivada) y deja la marca.
+            elige_almacen = (
+                new_codigo_partida is None
+                and estado_partida(cur_codigo_partida) == "partida"
+            )
+            # (F-051 R20) Salir de almacén con la partida de la línea
+            # casada de Sigrid tampoco cambia la identidad: sigue Sigrid.
+            partida_cambia_identidad = (
+                new_codigo_partida is not None
+                and _txt(new_codigo_partida) != _txt(cur_codigo_partida)
+                and not (
+                    matched_id is not None
+                    and _txt(new_codigo_partida) == _txt(partida_casada)
+                )
+            )
             identity_changed = (
-                _txt(new_codigo_partida) != _txt(cur_codigo_partida)
+                partida_cambia_identidad
                 or _txt(new_unidad) != _txt(cur_unidad)
                 or not _num_eq(new_precio, cur_precio)
             )
@@ -1903,6 +1932,10 @@ class AlbaranReviewRepository:
             else:
                 return False
 
+            if elige_almacen:
+                extra_sets += ", partida_action = :accion_almacen"
+                params["accion_almacen"] = ACCION_ALMACEN_ELEGIDO
+
             session.execute(
                 text(
                     "UPDATE albaran_line_valuations SET "
@@ -1935,6 +1968,75 @@ class AlbaranReviewRepository:
             )
             session.commit()
             return True
+
+    def asignar_almacen(
+        self,
+        *,
+        document_id: str,
+        valuation_line_ids: list[int] | None,
+    ) -> list[int]:
+        """(F-051 R14-R16, R23) Pone en ALMACÉN líneas de valoración del
+        documento: partida final NULL y ``partida_action =
+        'almacen_elegido'``.
+
+        ``valuation_line_ids=None`` = TODAS las líneas de la valoración
+        del documento (base, complementarias y sintéticas), también las
+        que tenían partida. Un único UPDATE en una transacción: o todas
+        o ninguna. NO toca la casada (``matched_contrato_line_id``), la
+        derivada, los importes ni la revisión: una fila Sigrid sigue
+        siendo Sigrid (D4). Una línea ajena al documento no se toca.
+
+        Devuelve los ids tocados (ordenados); ``[]`` si no tocó nada.
+        Como todo override de sv4, se pierde al revalorar (D5, F-058).
+        """
+        if valuation_line_ids is not None and not valuation_line_ids:
+            return []
+        self.initialize()
+        sql = (
+            "UPDATE albaran_line_valuations SET "
+            "  codigo_partida_final = NULL, "
+            "  partida_action = :accion "
+            "WHERE valuation_id = ("
+            "  SELECT id FROM albaran_valuations WHERE document_id = :doc"
+            ")"
+        )
+        params: dict[str, Any] = {
+            "accion": ACCION_ALMACEN_ELEGIDO,
+            "doc": document_id,
+        }
+        if valuation_line_ids is None:
+            sentencia = text(sql + " RETURNING id")
+        else:
+            sentencia = text(sql + " AND id IN :ids RETURNING id").bindparams(
+                bindparam("ids", expanding=True),
+            )
+            params["ids"] = [int(i) for i in valuation_line_ids]
+        with self._session_factory.create_session() as session:
+            tocadas = [int(r[0]) for r in session.execute(sentencia, params)]
+            session.commit()
+        return sorted(tocadas)
+
+    def snapshot_lineas_valoracion(self, *, document_id: str) -> list[dict]:
+        """(F-051 R18) Copia completa (estado ANTERIOR) de TODAS las
+        líneas de valoración del documento, para el historial de
+        «Almacén a todas las líneas». Mismo formato que ``snapshot_row``.
+        """
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            filas = session.execute(
+                text(
+                    "SELECT * FROM albaran_line_valuations "
+                    "WHERE valuation_id = ("
+                    "  SELECT id FROM albaran_valuations "
+                    "  WHERE document_id = :doc"
+                    ") ORDER BY id"
+                ),
+                {"doc": document_id},
+            ).mappings().all()
+        return [
+            {"table": "albaran_line_valuations", "values": dict(fila)}
+            for fila in filas
+        ]
 
     def remove_line_valuation(
         self,
