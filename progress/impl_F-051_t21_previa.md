@@ -55,7 +55,7 @@ El veredicto global sigue ROJO por la deuda previa: casos sin contrato en el ban
 `PUERTA COBERTURA` 98,5 % y `PUERTA TAMAÑO` dentro. Avisos, los de siempre: ruff 1181,
 `RUTAS SENSIBLES [evals]` (falta `progress/evals_F-051.md`, que es T21), infra sin tests y `[ADAPTAR]` ajenos.
 
-**Para el humano.**
+**Para el humano.** (1 y 2 resueltos el mismo día: ver «2.ª tanda» al final.)
 1. **Los libros `.xlsx` mandan.** Hay que poner las mismas 28 celdas vacías en `IA3_valoracion.xlsx`
    (`codigo_partida_final`, `codigo_partida`) y `RESULTADO_FINAL.xlsx` (`partida_final`, `partida`). Si no,
    el próximo `python -m evals.conversor` devuelve `CI.03A.7` y el guardián de F-045 salta.
@@ -91,3 +91,72 @@ C:\Users\pgris\PycharmProjects\albaranes\services\albaranes-api\.venv\Scripts\py
 ```
 Segunda consola, por cada uno de los cinco albaranes:
 `(curl.exe -s -F "file=@C:\ruta\albaran.pdf" http://127.0.0.1:8000/v1/albaranes/extract/phase-1 | ConvertFrom-Json).data.lineas | Select-Object codigo_imputacion, descripcion`
+
+## 2.ª tanda (2026-10-05): almacén = partida vacía en el banco y libros sincronizados
+
+Decisión del humano sobre «Para el humano» 1 y 2: el literal de almacén también pasa a `null`, y los libros mandan.
+Commits `d1a061c` (fixtures de almacén) y `016b063` (fixtures regenerados desde los libros).
+
+**1. Fixtures (`d1a061c`).** Hay 10 ficheros, no 6: HOR-005 y MOR-003 llevan `almacen` en minúscula. Son 12
+líneas, 26 campos y ningún otro cambio. El motivo va al final del `comentario`, separado por « | »: «F-051 (decision
+del humano 2026-10-05): almacen = partida vacia, tambien en el banco; antes esperaba el literal ALMACEN|almacen».
+
+| Caso | Líneas | IA3 | final |
+|---|---|---|---|
+| ALQ-001 | L1-L3 | `lineas_valoradas.codigo_partida_final` | `lineas.partida_final` |
+| GEN-002 | L8 | ídem | ídem |
+| GEN-010 | L1 | ídem | ídem |
+| HOR-005 | L1-L5 + sintética (base 4) | ídem + `sinteticas_esperadas.codigo_partida` | ídem + `lineas_anadidas.partida` |
+| MOR-003 | L1-L2 | ídem | ídem |
+
+Los demás libros no tienen partida esperada para estos casos. IA1 `codigo_imputacion` está en `?`. En INPUTS,
+`contrato_lineas.codigo_partida` es entrada, no esperado, y no se toca. El guardián de F-045 solo vigila los RES:
+`5 passed`, sin regenerar `afirmado_por_el_humano_RES.json`.
+
+**2. Libros (árbol principal, no versionados).** Antes de tocar nada, comprobé que `python -m evals.conversor
+--ground-truth <libros> --fixtures <scratch>` reproducía byte a byte los fixtures de `ab73395`.
+- La copia de seguridad la hace `evals.revision.escritura.copia_de_seguridad`, la función del repo.
+  - `ground_truth/copias/IA3_valoracion.xlsx.20261005-1759.xlsx`
+  - `ground_truth/copias/RESULTADO_FINAL.xlsx.20261005-1759.xlsx`
+  - Su sha256 (`5df41714…`, `9a0869b9…`) es el `sha256_libro` que llevaban los fixtures, así que son el libro de antes.
+- La escritura usa openpyxl celda a celda (`cell.value`), sin insertar ni borrar filas. Los libros no tienen
+  fórmulas, validaciones ni formato condicional.
+- El script de un solo uso está en el scratchpad y no se versiona. Localiza las tablas por su título, igual que
+  el conversor, y empareja cada fila del libro con la de su fixture. Aborta ante cualquier diferencia que no sea
+  partida → vacía o comentario.
+- Celdas escritas: 108 (54 por libro). Sin el comentario, el conversor revertiría el motivo de los fixtures.
+
+| Libro | Partida → vacía | Comentario con motivo |
+|---|---|---|
+| `IA3_valoracion.xlsx` | 27: RES-001…007 (E y H en `Residuos`), ALQ/GEN/HOR/MOR (columna E; HOR-005 sintética H60) | 27 (J/I) |
+| `RESULTADO_FINAL.xlsx` | 27: RES-001…007 (H y F en `Residuos`), ALQ/GEN/HOR/MOR (columna H; HOR-005 añadida F95) | 27 (M/H) |
+
+Las 54 son las 28 de RES-001…007 y las 26 de almacén. Al repetir la simulación después, quedan 0 celdas pendientes.
+
+**3. Regeneración (`016b063`).** `python -m evals.conversor --ground-truth C:\...\albaranes\evals\ground_truth`,
+lanzado en el worktree. Escribe 264 ficheros. `git diff`: 120 ficheros, una línea cada uno. Solo cambia el
+`sha256_libro` de IA3 y final (59 casos + `_indice.json` cada uno; ahora `5370ea49…` y `37257822…`). IA1, IA2, IA4
+e INPUTS no cambian. Libros y fixtures quedan sincronizados. Un `git diff` sin `--strip-trailing-cr` marca enteros
+los 10 ficheros de `d1a061c`, pero es solo el fin de línea de la copia de trabajo (LF en lugar de CRLF; el índice es
+LF en ambos casos). La regeneración los deja como los demás.
+
+**4. Verificación (evals deterministas, sin LLM, `--informes <scratch>`).** Detalle FALLO/AVISO ordenado:
+- Antes (sobre `8be1f49`): 997.
+- Tras `d1a061c`: 972. Desaparecen las 26 de partida de almacén. HOR-005 suma 1 y resta 1: es la misma
+  `sinteticas_esperadas[4]`, que sigue sin casar con la producida por otro motivo y ahora enseña
+  `'codigo_partida': None` en su esperado. No hay ninguna discrepancia nueva. FALLOS por caso: ALQ-001 12→9,
+  GEN-002 23→22, GEN-010 4→3, HOR-005 21→16, MOR-003 8→6 (IA3). El resto del informe es idéntico.
+- Tras `016b063`: el detalle es idéntico byte a byte al de `d1a061c`.
+
+Guardián F-045 + tests del conversor (`test_f045_r17…`, `test_f011_r5…`, `test_f011_r1_r2_r3…`): `22 passed`.
+
+**Para el humano.**
+- **El importador puede deshacerlo.** `python -m evals.revision` funde con `fundir`, que solo se niega a degradar
+  a `?`. Si el Excel de revisión de origen sigue trayendo `CI.03A.7` o `ALMACEN` en esas filas, la próxima
+  importación los vuelve a escribir. Hay que corregirlo también en ese Excel, o revisar el diff tras importar.
+- Sigue abierto el punto 3 de arriba: el guardián no vigila que las 54 sigan vacías.
+
+**`bash harness/init.sh`** (tal cual, en el worktree, sobre `016b063` + este papeleo): **«ENTORNO LISTO»**, ningún `[KO]`. Raíz
+`1083 passed in 281.38s` (incluye el guardián de F-045 y los tests del conversor); servicios `[OK]` desde caché;
+`PUERTA COBERTURA` 98,5 %; `PUERTA TAMAÑO` dentro. Avisos, los de siempre (ruff 1181, `RUTAS SENSIBLES [evals]` = T21,
+infra sin tests, `[ADAPTAR]` ajenos).

@@ -34,10 +34,11 @@ acopiables (p2, `critico`; decidir junto con la nueva spec de F-007 o fusionarla
   partida FINAL. Falta la review de la pasada 2.
 - **Para el humano**: ¿los ✓/⚠ de partida deben comparar con la final pintada o con la de la casada (hoy, la de la
   casada)? O1 se queda como está (decisión del humano).
-- **T21 (previa) hecha** (2026-10-05, opción a del humano): RES-001…007 esperan almacén (`null`) en la línea 1;
-  evals deterministas sin las 24 discrepancias y sin ninguna nueva. Falta que el humano vacíe esas 28 celdas en
-  los libros `.xlsx` (si no, el conversor las revierte). Detalle y comandos de T21/T23:
-  `progress/impl_F-051_t21_previa.md`.
+- **T21 (previa) hecha** (2026-10-05, opción a del humano): RES-001…007 esperan almacén (`null`) en la línea 1, y
+  (2.ª tanda, decisión del humano) las 12 líneas con el literal `ALMACEN`/`almacen` también. Libros
+  `IA3_valoracion.xlsx` y `RESULTADO_FINAL.xlsx` del árbol principal ya corregidos (copia previa
+  `*.20261005-1759.xlsx`) y fixtures regenerados desde ellos: sincronizados. Evals deterministas: 1025 → 972
+  entradas FALLO/AVISO, ninguna nueva. Detalle y comandos de T21/T23: `progress/impl_F-051_t21_previa.md`.
 - Entorno del worktree: *junction* `services/albaranes-front/.venv` → venv de sv4 del árbol principal (ignorada
   por git). Se quita con `cmd /c rmdir services\albaranes-front\.venv` ANTES de `git worktree remove`.
 
