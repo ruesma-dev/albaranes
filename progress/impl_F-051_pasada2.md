@@ -156,3 +156,9 @@ envelope), así que el fixture pasa a llevar `codigo_imputacion` igual a la del 
 | Mutantes | 61 generados, 61 muertos, **0 supervivientes** (completa, `53a17ae`, 909,4 s) |
 | Tiempo de las suites | raíz 195,6 s · sv4 35,7 s (en `init.sh`) |
 | Evals deterministas (informativo) | +24 discrepancias, todas en RES-001…006 (§5); LLM: T21, del humano |
+
+## 8. T21 (previa): ground truth a almacén
+
+Hecho el 2026-10-05 (decisión del humano, opción a): RES-001…007 esperan almacén (`null`) en las cuatro
+partidas de su línea 1. En evals deterministas desaparecen las 24 discrepancias (y 4 previas de RES-007), sin
+ninguna nueva. Detalle, pendientes del humano y comandos de T21/T23: `progress/impl_F-051_t21_previa.md`.

@@ -33,8 +33,11 @@ acopiables (p2, `critico`; decidir junto con la nueva spec de F-007 o fusionarla
   NUEVA» no salta con la partida de la casada) y la **decisión del humano**: fuera de almacén el input pinta la
   partida FINAL. Falta la review de la pasada 2.
 - **Para el humano**: ¿los ✓/⚠ de partida deben comparar con la final pintada o con la de la casada (hoy, la de la
-  casada)?; el ground truth de RES-001…006 espera la partida del contrato en una línea sin partida (regla anterior a
-  F-051): decidir antes de T21. O1 se queda como está (decisión del humano).
+  casada)? O1 se queda como está (decisión del humano).
+- **T21 (previa) hecha** (2026-10-05, opción a del humano): RES-001…007 esperan almacén (`null`) en la línea 1;
+  evals deterministas sin las 24 discrepancias y sin ninguna nueva. Falta que el humano vacíe esas 28 celdas en
+  los libros `.xlsx` (si no, el conversor las revierte). Detalle y comandos de T21/T23:
+  `progress/impl_F-051_t21_previa.md`.
 - Entorno del worktree: *junction* `services/albaranes-front/.venv` → venv de sv4 del árbol principal (ignorada
   por git). Se quita con `cmd /c rmdir services\albaranes-front\.venv` ANTES de `git worktree remove`.
 
