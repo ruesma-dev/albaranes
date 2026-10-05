@@ -4,6 +4,10 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+from application.services.almacen_politica import (
+    ACCION_ALMACEN_SIN_PARTIDA,
+    MOTIVO_SIN_PARTIDA,
+)
 from domain.models.valuation_envelope import (
     ContratoLineContextDto,
     LineValuationDto,
@@ -37,10 +41,22 @@ class PartidaMatcher:
         frente a la que devolvió la IA, que podía ser de otra partida).
       - Si no existe: ``new_line_created`` y se CREA una línea derivada
         con el ``codigo_partida_albaran`` asignado.
+      - (F-051) Con ``almacen_sin_partida`` activo y el albarán SIN
+        partida: ``almacen_sin_partida``, partida final None (almacén) y
+        se conserva la línea que casó la IA. Nunca se copia la partida de
+        esa línea de contrato ni la de otra línea del albarán.
     """
 
-    def __init__(self, *, alm_codigo_partida: str) -> None:
+    def __init__(
+        self,
+        *,
+        alm_codigo_partida: str,
+        almacen_sin_partida: bool = False,
+    ) -> None:
         self._alm_literal = (alm_codigo_partida or "ALM").strip().upper()
+        # F-051 (R1, R8): apagado por defecto; lo enciende el cableado
+        # con ALMACEN_SIN_PARTIDA_ENABLED.
+        self._almacen_sin_partida = almacen_sin_partida
 
     def match(
         self,
@@ -72,6 +88,27 @@ class PartidaMatcher:
                 ),
                 codigo_partida_final=None,
                 reasons=["alm_acopio_generates_derived_line"],
+            )
+
+        # F-051 (R1-R3, R28): el albarán no trae partida ⇒ ALMACÉN. Qué
+        # línea lleva qué partida lo decide IA1 leyendo el papel; aquí no
+        # se copia la de la línea de contrato casada ni la de una hermana.
+        # Se conserva el casado (precio y concepto) si está en el sobre;
+        # sin él, el builder crea su derivada ``nueva_no_match``.
+        if partida_norm is None and self._almacen_sin_partida:
+            ia_casada = self._find_by_id(
+                contrato_lines, line.matched_contrato_line_id,
+            )
+            return PartidaMatchResult(
+                partida_action=ACCION_ALMACEN_SIN_PARTIDA,
+                matched_contrato_line_id=(
+                    ia_casada.contrato_line_id
+                    if ia_casada is not None
+                    else None
+                ),
+                derived_line=None,
+                codigo_partida_final=None,
+                reasons=[MOTIVO_SIN_PARTIDA],
             )
 
         # Si IA no casó ninguna línea de contrato y no hay partida del
