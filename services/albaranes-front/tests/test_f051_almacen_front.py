@@ -853,3 +853,219 @@ def test_f051_endpoint_almacen_a_todas_sin_lineas_da_404(monkeypatch):
     )
 
     assert respuesta.status_code == 404
+
+
+# =================================================================== #
+# Plantilla real (R11, R22) y JS servido (R13, R17)
+# =================================================================== #
+
+import re as _re
+
+_ALMACEN = {"codigo_partida": None, "descripcion_partida": None,
+            "estado_partida": "almacen"}
+
+
+def _input_partida(html):
+    encontrado = _re.search(r"<input[^>]*js-partida-combo[^>]*>", html)
+    assert encontrado, "no hay input de partida en la fila salmón"
+    return encontrado.group(0)
+
+
+def test_f051_r11_plantilla_celda_editable_en_almacen(
+    render_detalle, documento_detalle, fila_detalle, linea_valorada,
+):
+    html = render_detalle(documento_detalle(
+        lineas_valoracion=[linea_valorada(codigo_partida_final=None)],
+        display=[fila_detalle(conciliacion=_ALMACEN,
+                              codigo_imputacion="03.02")],
+    ))
+    entrada = _input_partida(html)
+
+    assert 'value=""' in entrada
+    assert 'placeholder="Almacén"' in entrada
+    assert "partida-almacen" in entrada
+    assert 'data-valuation-line-id="900"' in entrada
+    assert "03.02" not in entrada
+
+
+def test_f051_r11_plantilla_celda_editable_con_partida(
+    render_detalle, documento_detalle, fila_detalle, linea_valorada,
+):
+    html = render_detalle(documento_detalle(
+        lineas_valoracion=[linea_valorada(codigo_partida_final="01.01")],
+        display=[fila_detalle(conciliacion={"estado_partida": "partida"})],
+    ))
+    entrada = _input_partida(html)
+
+    assert 'value="01.01"' in entrada
+    assert "partida-almacen" not in entrada
+
+
+def test_f051_r11_plantilla_celda_de_solo_lectura_en_almacen(
+    render_detalle, documento_detalle, fila_detalle, linea_valorada,
+):
+    """Fila sin ``valuation_line_id``: no editable, texto «Almacén»."""
+    html = render_detalle(documento_detalle(
+        lineas_valoracion=[linea_valorada(codigo_partida_final=None)],
+        display=[fila_detalle(conciliacion=_ALMACEN,
+                              valuation_line_id=None)],
+    ))
+    celda = _re.search(
+        r'<td class="concilia-td" data-col="partida".*?</td>', html, _re.S,
+    ).group(0)
+
+    assert "js-partida-combo" not in celda
+    assert "Almacén" in celda
+    assert "partida-almacen" in celda
+
+
+def _documento_lectura(documento_detalle, linea_valorada, final):
+    from domain.models.review_models import MergeLinePayload
+
+    documento = documento_detalle(
+        lineas_valoracion=(
+            [linea_valorada(codigo_partida_final=final)]
+            if final is not False else []
+        ),
+        is_editable=False,
+    )
+    documento.view_mode = "openai"
+    documento.lines = [
+        MergeLinePayload(id=500, codigo_imputacion="03.02",
+                         concepto="RETIRADA CONTENEDOR RCD", cantidad=6.0),
+    ]
+    return documento
+
+
+def _celda_imputacion_lectura(html):
+    fila = _re.search(
+        r"<td>1</td>\s*<td>(.*?)</td>\s*<td>RETIRADA", html, _re.S,
+    )
+    assert fila, "no se encuentra la tabla de líneas de solo lectura"
+    return fila.group(1).strip()
+
+
+@pytest.mark.parametrize("final", [None, "", "  "])
+def test_f051_r11_tabla_de_lineas_valoradas_dice_almacen(
+    render_detalle, documento_detalle, linea_valorada, final,
+):
+    html = render_detalle(
+        _documento_lectura(documento_detalle, linea_valorada, final),
+    )
+
+    assert _celda_imputacion_lectura(html) == "Almacén"
+
+
+def test_f051_r11_tabla_de_lineas_valoradas_con_partida_la_pinta(
+    render_detalle, documento_detalle, linea_valorada,
+):
+    html = render_detalle(
+        _documento_lectura(documento_detalle, linea_valorada, "04.05"),
+    )
+
+    assert _celda_imputacion_lectura(html) == "04.05"
+
+
+def test_f051_r11_tabla_sin_valoracion_pinta_lo_leido(
+    render_detalle, documento_detalle, linea_valorada,
+):
+    html = render_detalle(
+        _documento_lectura(documento_detalle, linea_valorada, False),
+    )
+
+    assert _celda_imputacion_lectura(html) == "03.02"
+
+
+def test_f051_plantilla_nunca_dice_sin_partida(
+    render_detalle, documento_detalle, fila_detalle, linea_valorada,
+):
+    """D1 v4: no existe un estado «Sin partida» distinto de almacén."""
+    editable = render_detalle(documento_detalle(
+        lineas_valoracion=[linea_valorada(codigo_partida_final=None)],
+        display=[fila_detalle(conciliacion=_ALMACEN)],
+    ))
+    lectura = render_detalle(
+        _documento_lectura(documento_detalle, linea_valorada, None),
+    )
+
+    for html in (editable, lectura):
+        assert "Sin partida" not in html
+        assert "sin_partida" not in html
+
+
+def _boton_todas(html):
+    return _re.search(r"<button[^>]*id=\"almacen-todas-btn\"[^>]*>", html)
+
+
+def test_f051_r22_boton_todas_con_el_recuento(
+    render_detalle, documento_detalle, fila_detalle, linea_valorada,
+):
+    documento = documento_detalle(
+        lineas_valoracion=[linea_valorada(codigo_partida_final="01.01")],
+        display=[fila_detalle()],
+    )
+    documento.lineas_con_partida = 3
+    boton = _boton_todas(render_detalle(documento))
+
+    assert boton, "falta el botón «Almacén a todas las líneas»"
+    assert 'data-con-partida="3"' in boton.group(0)
+
+
+def test_f051_r22_sin_valoracion_no_hay_boton(
+    render_detalle, documento_detalle,
+):
+    assert _boton_todas(render_detalle(documento_detalle())) is None
+
+
+def test_f051_r22_vista_no_editable_no_ofrece_ni_boton_ni_combo(
+    render_detalle, documento_detalle, linea_valorada,
+):
+    html = render_detalle(
+        _documento_lectura(documento_detalle, linea_valorada, "01.01"),
+    )
+
+    assert _boton_todas(html) is None
+    assert "js-partida-combo" not in html
+
+
+def _app_js():
+    from pathlib import Path
+
+    return (
+        Path(__file__).resolve().parents[1] / "static" / "app.js"
+    ).read_text(encoding="utf-8")
+
+
+def test_f051_r13_el_combo_de_partida_ofrece_almacen_primero():
+    js = _app_js()
+
+    assert "Almacén (sin partida)" in js
+    # Solo en el combo de PARTIDA (no en el de concepto) y como primer
+    # ítem fijo, fuera del filtro por texto.
+    assert 'classList.contains("js-partida-combo")' in js
+    assert _re.search(r"shown\s*=\s*\[ITEM_ALMACEN\]\.concat\(", js)
+
+
+def test_f051_r13_elegir_almacen_llama_al_post_de_la_linea():
+    js = _app_js()
+
+    assert "/almacen`" in js
+    assert 'method: "POST"' in js
+
+
+def test_f051_r17_el_boton_todas_confirma_con_el_recuento_y_recarga():
+    js = _app_js()
+
+    bloque = js[js.index('getElementById("almacen-todas-btn")'):]
+    bloque = bloque[:bloque.index("window.location.reload()") + 30]
+    assert "dataset.conPartida" in bloque
+    assert "window.confirm(" in bloque
+    assert "/almacen-todas`" in bloque
+
+
+def test_f051_r12_guardar_la_fila_envia_la_partida_vaciada():
+    """Vaciar la partida y «Guardar» envía ``""`` (elegir almacén, R12),
+    no ``null`` (que el backend trata como «no viene»)."""
+    js = _app_js()
+
+    assert 'field === "codigo_partida"' in js
