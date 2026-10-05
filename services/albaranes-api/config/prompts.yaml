@@ -106,8 +106,21 @@ albaran_factura_es:
     - Es un texto manuscrito SIEMPRE.
     - Si tiene un punto separanco codigo alfanumerico SIEMPRE es un codigo de imputacion.
     - Puede estar asociado a una línea por cercanía, raya, flecha o llave.
-    - Si solo hay un código claro en todo el documento, se aplica a
-      todas las líneas.
+    - Un código escrito junto a una línea, o que agrupa varias, se aplica
+      SOLO a esas líneas, aunque sea el único código del documento.
+    - Un código de documento (en la cabecera, un sello o el margen
+      superior o inferior, sin estar junto a ninguna línea) se aplica a
+      todas las líneas que no tengan uno propio. Si además hay códigos
+      junto a algunas líneas, esas llevan el suyo y las demás el de
+      documento.
+    - Portes, bombeo, recargos, excesos y demás complementos sin código
+      propio llevan el de la línea base a la que acompañan.
+    - Una línea sin código propio, que no sea complemento de otra, en un
+      documento sin código de documento, se devuelve con
+      codigo_imputacion null: NO le copies el de otra línea. Esa línea
+      irá a almacén (sin partida). Ejemplo: tres líneas y 03.02 escrito
+      solo junto a la segunda ⇒ la segunda lleva 03.02; la primera y la
+      tercera, null.
     - Formatos válidos: XX.XX, XX.XX.XX, XX.X.X, CI.XX.XX y variantes
       con más segmentos.
     - Cuando un segmento numérico tenga un solo dígito, normalízalo con
