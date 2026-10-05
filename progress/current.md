@@ -23,15 +23,20 @@ acopiables (p2, `critico`; decidir junto con la nueva spec de F-007 o fusionarla
 
 ### F-051 · estado de la implementación
 
-- **T1–T20 y T25 hechas** (2026-10-05); informe en `progress/impl_F-051.md`. Mutación completa: 57/57 muertos.
-  **T21–T24 son del humano** (evals con LLM y MANUAL; comandos en el informe, §6). Falta la review.
-- Desviaciones justificadas (informe §2): cableado también en `api/app.py` de sv6; el JS envía la partida
-  vaciada como `""` (si no, R12 no ocurría desde la UI); motivo nuevo añadido a la congelación de F-027 R22
-  (test de otra feature, motivado). Entorno: *junction* `services/albaranes-front/.venv` → venv del árbol
-  principal en el worktree (ignorada por git) para mutación e `init.sh`.
-- **Para el humano (informe §3)**: O1 — elegir una línea de contrato (combo de partida o ✎) en una línea en
-  almacén la deja en almacén (`set_line_conciliacion` no toca la partida final); decidir si debe tomar la
-  partida de esa línea. O2 — texto del aviso «pasará a NUEVA» cuando se pone la partida de la casada.
+- **T1–T20 y T25 hechas** (2026-10-05); informe en `progress/impl_F-051.md`. **T21–T24 son del humano**
+  (evals con LLM y MANUAL; comandos en el informe, §6).
+- **Review pasada 1: CHANGES_REQUESTED** (`progress/review_F-051.md`). **Pasada 2 hecha** (2026-10-05), informe en
+  `progress/impl_F-051_pasada2.md`: H1 (el banco de evals compone sv6 con almacén y familias destinadas + test que
+  recorre todos los puntos de composición), H2 (guardar solo envía la partida si cambió), H3 (test de R12 que
+  ejecuta el JS con node), H4 (`azure-apps/albaranes.md`, commit en azure-apps), H5 (dictamen: R20 vale en
+  cualquier fila Sigrid), H6 (quitar la junction con `cmd /c rmdir`, nunca `Remove-Item`), O2 (el aviso «pasará a
+  NUEVA» no salta con la partida de la casada) y la **decisión del humano**: fuera de almacén el input pinta la
+  partida FINAL. Falta la review de la pasada 2.
+- **Para el humano**: ¿los ✓/⚠ de partida deben comparar con la final pintada o con la de la casada (hoy, la de la
+  casada)?; el ground truth de RES-001…006 espera la partida del contrato en una línea sin partida (regla anterior a
+  F-051): decidir antes de T21. O1 se queda como está (decisión del humano).
+- Entorno del worktree: *junction* `services/albaranes-front/.venv` → venv de sv4 del árbol principal (ignorada
+  por git). Se quita con `cmd /c rmdir services\albaranes-front\.venv` ANTES de `git worktree remove`.
 
 **F-054 · CERRADA (`done`, 2026-10-02)**, review de cierre APROBADA: sv1 ingiere los PDF **e imágenes** de correos
 adjuntos (`message/rfc822`). Fusionada en `dev` (`639afbb`). Pendiente del humano: despliegue de sv1 y la

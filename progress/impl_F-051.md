@@ -4,6 +4,8 @@
 Fecha: 2026-10-05. Worktree `albaranes-F-051`, rama `feature/F-051-almacen-por-linea`.
 Spec v4 aprobada por el humano en la PARADA 1 («si», 2026-10-05). Rigor `critico`.
 T1–T20 y T25 hechas; **T21–T24 son del humano** (evals con LLM y MANUAL, comandos abajo).
+**Pasada 2** (cambios de la review H1–H6, O2 y la decisión de pintar la partida final):
+`progress/impl_F-051_pasada2.md`. Aquí solo se corrigen §1 (azure-apps) y §2.6–2.7.
 
 ## 0. Fusión de `dev` (paso 0)
 
@@ -44,7 +46,8 @@ viñeta del código único se sustituye por las **cuatro viñetas literales** de
 **Docs** (T19): `docs/ARCHITECTURE.md` regla 16 (R24, IA1 decide, sv6, sv4, Sigrid);
 `dominio_negocio_albaranes.md` §10.8 y enumeración de `partida_action` (corrige `alm_acopio`,
 que es `origen`, no acción); `sv2.md` (cuándo sale null `codigo_imputacion`); `sv6.md` (dos variables).
-`azure-apps/albaranes.md`: sin cambios (ni colas, ni tablas, ni endpoints entre servicios).
+`azure-apps/albaranes.md`: **corregido en la pasada 2** (H4): vocabulario de `partida_action` y
+«`codigo_partida_final` vacío = almacén» (tabla del PostgreSQL compartido). Decir «sin cambios» fue un error.
 
 ## 2. Decisiones y desviaciones (justificadas)
 
@@ -67,8 +70,14 @@ que es `origen`, no acción); `sv2.md` (cuándo sale null `codigo_imputacion`); 
    tests de T15 nacieron en verde. El resto de T15 sí tiene RED.
 6. Entorno: *junction* `services/albaranes-front/.venv` → venv del árbol principal (ignorada
    por git), necesaria para que `harness.mutacion` e `init.sh` encuentren el venv declarado de
-   sv4. Ningún venv modificado ni nada instalado. Puede borrarse con
-   `Remove-Item services\albaranes-front\.venv` (solo quita el enlace).
+   sv4. Ningún venv modificado ni nada instalado. Para quitarla, **antes** de `git worktree
+   remove`: `cmd /c rmdir services\albaranes-front\.venv` (solo quita el enlace). **NUNCA
+   `Remove-Item`**: en PowerShell 5.1 sobre una junction borra el contenido del destino, el
+   venv de sv4 del árbol principal (review H6).
+7. **Excepción de R20 en cualquier fila Sigrid** (review H5, dictamen: se mantiene). Poner a una
+   fila Sigrid la partida de su casada la deja Sigrid esté o no en almacén. Fuera de almacén solo
+   pasa si la final difiere de la casada (herencia R7): antes pasaba a Nueva y creaba una derivada
+   que duplicaba la línea de Sigrid con su misma partida. Test `test_f051_h5_*`; el aviso coincide (O2).
 
 ## 3. Para el humano (no implementado, decide él)
 
