@@ -18,6 +18,7 @@ from domain.ports.orchestrator_port import (
     OrchestratorClient,
     OrchestratorError,
 )
+from infrastructure.document.mime_documento_extractor import MimeDocumentoExtractor
 from infrastructure.document.pdf_page_splitter import PdfPageSplitter
 from pypdf import PdfWriter
 from ruesma_comun.correo import ContextoCorreo
@@ -48,13 +49,24 @@ def mensaje(msg_id: str = "msg-1", asunto: str = "Albaran obra") -> EmailMessage
     )
 
 
-def adjunto(att_id: str, nombre: str = "albaran.pdf", *, inline: bool = False) -> EmailAttachment:
+def adjunto(
+    att_id: str,
+    nombre: str = "albaran.pdf",
+    *,
+    inline: bool = False,
+    content_type: str = "application/pdf",
+    odata_type: str | None = None,
+    size: int = 1000,
+) -> EmailAttachment:
+    """Un adjunto de Graph. Los valores por defecto son los de F-048 (un PDF
+    directo de 1000 B); F-054 pide tipo, ``@odata.type`` y tamano a medida."""
     return EmailAttachment(
         id=att_id,
         name=nombre,
-        content_type="application/pdf",
-        size=1000,
+        content_type=content_type,
+        size=size,
         is_inline=inline,
+        odata_type=odata_type,
     )
 
 
@@ -169,6 +181,9 @@ class IntakeDoble(OrchestratorClient):
 def construir_pipeline(
     buzon: MailboxClient, intake: OrchestratorClient, **opciones: object
 ) -> PollingPipeline:
+    """Pipeline con el troceador y el extractor de correos adjuntos REALES
+    (F-054); ``opciones`` puede traer otro ``extractor_correo``."""
+    opciones.setdefault("extractor_correo", MimeDocumentoExtractor())
     return PollingPipeline(
         mailbox=buzon, orchestrator=intake, pdf_splitter=PdfPageSplitter(), **opciones
     )

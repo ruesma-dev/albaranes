@@ -6,6 +6,57 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 ---
 
 
+## F-054 · sv1 ingiere los PDF e imágenes de correos adjuntos encadenados (cerrada 2026-10-02)
+
+Rama `feature/F-054-correo-adjunto-encadenado`, rigor `estandar`, solo sv1 (`services/albaranes-email`) + un párrafo
+en la regla 9 de `docs/ARCHITECTURE.md`. **Problema** (petición del humano, 2026-09-30): albaranes que llegan como
+**correo adjunto** (`message/rfc822`, a veces anidado) con el PDF dentro. sv1 los descartaba: si era el único
+adjunto, el correo iba a `Errores` («sin adjuntos elegibles»); junto a un PDF directo, el interior **se perdía en
+silencio** y el correo iba a `Procesados`; un `.eml` como `fileAttachment` viajaba opaco a sv2. Modelo: F-020 de
+`partes` (rama `dev`), con la lógica traída y adaptada, sin importar nada.
+
+**Qué se hizo**: clasificación en una pasada (correo adjunto = `message/rfc822` sin mayúsculas, item/file/sin
+`@odata.type`, no inline, no reference, bajo `MAX_ATTACHMENT_MB`; uno descartado no cae a la regla de directos; los
+directos, sin cambios); `$value` con el cliente Graph de siempre; `MimeDocumentoExtractor` (puerto en `domain/ports`,
+stdlib `email`, recursión propia con nivel) saca PDF (tipo o `.pdf`) e imágenes `image/*` con disposición
+`attachment`; tope de 5 niveles, todo o nada; cada documento interior bajo el límite sigue el camino del directo
+(troceo, intake, `correlation_key = email:{exterior}:{sha página}`) con `correo_adjunto_id` y `correo_adjunto_nivel`
+en el `meta`; `Procesados` sii nada falló y entró ≥ 1 página aceptada; logs sin `name` de Graph ni nada del
+interior. `main.py` inyecta el extractor (argumento obligatorio). Sin SQL, infra, colas ni contrato de blob;
+`azure-apps/albaranes.md` no cambia.
+
+**Decisiones del humano**: **DH1** (09-30) extractor en sv1, no en `ruesma_comun`; **DH2** (09-30) directos sin
+cambios, 5 niveles todo o nada; **DH3** (09-30) el contexto de IA1 (F-048) es el del correo **exterior**, cabeceras
+del interior fuera; **DH4** (09-30) fuera hilo/`conversationId`, enlaces SharePoint/OneDrive, `.msg` y reproceso
+automático de `Errores`; **DH5** (10-02) «si no tiene pdf pero tiene imagenes validas, tambien vale».
+**Decisiones de diseño** (aceptadas por el humano el 10-02): **DA1** `$value` y no `$expand`; **DA2** tope constante
+de 5, todo o nada; **DA3** un `fileAttachment` `.eml` también se abre; **DA4 v2** correo adjunto sin PDF ni imagen
+válida junto a otras páginas aceptadas ⇒ `Procesados` con WARNING (solo él ⇒ `Errores`); **DA5** traza en el `meta`,
+no en la cola; **DA6** no se loguea el `name` de Graph del correo adjunto (lleva el asunto del interior); **DA7** las
+páginas duplicadas cuentan como aceptadas; **DA8** imagen válida = `image/*` con disposición `attachment` (el «no
+inline» de Graph en MIME), sin filtro de tipo de imagen.
+
+**Verificación**: review de cierre APPROVED (`progress/historico/review_F-054.md`): `init.sh` exit 0, raíz 1067
+passed, sv1 **205 passed** (107 nuevos de F-054; los 98 de F-048 sin tocar aserciones), **cobertura 100 %** de 184
+líneas cambiadas. Fase RED con traza para R1, R7, R9, R15, R21 y R25; R3/R16 (no regresión de directos) escritos
+en verde contra el pipeline sin modificar. Campaña muestreada (20 de 77, semilla `20260820`): **19 muertos, 1
+equivalente** (`split("/", 1)` vs `split("/", 2)`); la primera pasada dio 2 huecos reales más, cerrados con tests.
+El reviewer reinyectó 4 mutantes a mano (RM4) con el resultado esperado.
+
+**Pendiente del humano** (en `current.md`): merge a `dev`, `.\deploy.ps1 -Only sv1` + `.\check_deploy.ps1` y la
+**T12 MANUAL** (devolver los correos de `Errores` con correo adjunto, uno primero, como no leídos). No bloquea el
+`done`.
+
+**Observaciones que quedan como historia**: **O1** · unos bytes basura no vacíos en un correo adjunto se leen como
+`text/plain` y salen por R22 (WARNING), no por R11 (ERROR); el destino es el mismo. **O2** · `Content-Type: image/`
+sin subtipo daría `documento_<n>.` sin extensión (cosmético). **Riesgos aceptados** (design §9): sin tamaño mínimo
+de imagen (un logo adjuntado como `attachment` gasta una extracción de IA); una imagen sin `Content-Disposition` se
+ignora. **Hallazgo aparte**: `services/albaranes-email/infrastructure/graph/token_provider.py` es copia literal del
+de `ruesma_comun` (ficha propia pendiente de abrir).
+
+Informes: `progress/spec_F-054.md`, `progress/explore_F-054_encadenados.md`, `progress/historico/impl_F-054.md`,
+`progress/historico/review_F-054.md`, `progress/mutacion_F-054.md`.
+
 ## F-052 · Proveedores de la obra truncados y contrato sin re-búsqueda en sv4 (cerrada 2026-10-01)
 
 Rama `feature/F-052-proveedores-truncados`, rigor `critico`, servicios sv3 y sv4 (+ `ruesma_comun` 0.7.0).
