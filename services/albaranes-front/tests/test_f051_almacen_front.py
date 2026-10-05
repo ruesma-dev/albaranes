@@ -102,3 +102,412 @@ def test_f051_r21_la_linea_en_almacen_no_resta_confianza():
                         match_confidence_pct=95.0, agree_unitario=True,
                         precio_unitario_final=10.0)
     assert _line_score(sin) == _line_score(con)
+
+
+# =================================================================== #
+# Repositorio sobre SQLite en memoria (R12, R14-R16, R19, R20, R23)
+# =================================================================== #
+
+DOC = "f051-doc-0000"
+DOC_AJENO = "f051-doc-ajeno"
+VAL = "f051-val-0000"
+VAL_AJENO = "f051-val-ajeno"
+
+#: Tablas de contrato que lee ``update_line_conciliacion`` (subconjunto:
+#: el schema real lo gobiernan sv3 y sv6).
+_DDL_CONTRATO = (
+    """
+    CREATE TABLE albaran_contrato_lines_merge (
+        id                  INTEGER PRIMARY KEY,
+        codigo_contrato     VARCHAR(64),
+        codigo_producto     VARCHAR(64),
+        codigo_partida      VARCHAR(64),
+        descripcion_partida TEXT,
+        descripcion_linea   TEXT,
+        unidad_medida       VARCHAR(32),
+        precio_unitario     DOUBLE PRECISION,
+        uds                 DOUBLE PRECISION,
+        pendiente_servir    DOUBLE PRECISION
+    )
+    """,
+    """
+    CREATE TABLE contrato_lines_derived (
+        id                       INTEGER PRIMARY KEY,
+        created_by_valuation_id  VARCHAR(64),
+        source_document_id       VARCHAR(64),
+        codigo_contrato          VARCHAR(64),
+        codigo_producto          VARCHAR(64),
+        descripcion_linea        TEXT,
+        unidad_medida            VARCHAR(32),
+        precio_unitario          DOUBLE PRECISION,
+        codigo_partida           VARCHAR(64),
+        origen                   VARCHAR(32),
+        created_at_utc           VARCHAR(40)
+    )
+    """,
+)
+
+_COLUMNAS_LINEA = (
+    "id, valuation_id, merge_line_id, matched_contrato_line_id, "
+    "derived_contrato_line_id, precio_unitario_final, unidad_contrato, "
+    "cantidad_albaran, importe_calculado, importe_source, "
+    "descuento_albaran_aplicado, codigo_partida_final, partida_action, "
+    "line_kind, review_required, review_reasons_json"
+)
+
+
+class _Factoria:
+    """``SessionFactory`` mínima: sesiones nuevas sobre el mismo motor."""
+
+    def __init__(self, motor):
+        self._motor = motor
+
+    def create_session(self):
+        from sqlalchemy.orm import Session
+
+        return Session(self._motor)
+
+
+def _linea_valoracion(sesion, **campos):
+    from sqlalchemy import text
+
+    fila = {
+        "valuation_id": VAL,
+        "merge_line_id": None,
+        "matched_contrato_line_id": None,
+        "derived_contrato_line_id": None,
+        "precio_unitario_final": 12.5,
+        "unidad_contrato": "TN",
+        "cantidad_albaran": 2.0,
+        "importe_calculado": 25.0,
+        "importe_source": "calculated",
+        "descuento_albaran_aplicado": None,
+        "codigo_partida_final": None,
+        "partida_action": "existing_matched",
+        "line_kind": "from_albaran",
+        "review_required": True,
+        "review_reasons_json": '["ia_match_trusted"]',
+        **campos,
+    }
+    sesion.execute(
+        text(
+            f"INSERT INTO albaran_line_valuations ({_COLUMNAS_LINEA}) VALUES ("
+            + ", ".join(f":{c.strip()}" for c in _COLUMNAS_LINEA.split(","))
+            + ")"
+        ),
+        fila,
+    )
+
+
+@pytest.fixture
+def repo_sqlite(sesion, monkeypatch):
+    """Repositorio real sobre SQLite con un albarán de cuatro líneas:
+
+    - 11 · Sigrid (casada con la 501, partida 03.02).
+    - 12 · Nueva (derivada 601, partida 04.05).
+    - 13 · Sigrid EN ALMACÉN (casada con la 501, partida final vacía).
+    - 14 · sintética que hereda 03.02.
+
+    Y otro albarán (``DOC_AJENO``) con la línea 21, que nadie debe tocar.
+    """
+    from sqlalchemy import text
+
+    from infrastructure.database.review_repository import (
+        AlbaranReviewRepository,
+    )
+
+    for sentencia in _DDL_CONTRATO:
+        sesion.execute(text(sentencia))
+    sesion.execute(text(
+        "INSERT INTO albaran_valuations (id, document_id, contrato_codigo, "
+        "status, total_valorado, review_required) VALUES "
+        "(:v1, :d1, 'CTSU25/0051', 'ok', 100.0, 1), "
+        "(:v2, :d2, 'CTSU25/0051', 'ok', 50.0, 0)"
+    ), {"v1": VAL, "d1": DOC, "v2": VAL_AJENO, "d2": DOC_AJENO})
+    sesion.execute(text(
+        "INSERT INTO albaran_contrato_lines_merge (id, codigo_contrato, "
+        "codigo_partida, descripcion_partida, descripcion_linea, "
+        "unidad_medida, precio_unitario) VALUES "
+        "(501, 'CTSU25/0051', '03.02', 'Cimentación', 'ARIDO 20/40', "
+        "'TN', 12.5)"
+    ))
+    sesion.execute(text(
+        "INSERT INTO contrato_lines_derived (id, created_by_valuation_id, "
+        "codigo_contrato, descripcion_linea, unidad_medida, precio_unitario, "
+        "codigo_partida, origen) VALUES "
+        "(601, :v1, 'CTSU25/0051', 'PORTE', 'UD', 40.0, '04.05', "
+        "'missing_partida')"
+    ), {"v1": VAL})
+    _linea_valoracion(sesion, id=11, merge_line_id=701,
+                      matched_contrato_line_id=501,
+                      codigo_partida_final="03.02",
+                      descuento_albaran_aplicado=5.0)
+    _linea_valoracion(sesion, id=12, merge_line_id=702,
+                      derived_contrato_line_id=601,
+                      precio_unitario_final=40.0, unidad_contrato="UD",
+                      importe_calculado=80.0,
+                      codigo_partida_final="04.05",
+                      partida_action="new_line_created")
+    _linea_valoracion(sesion, id=13, merge_line_id=703,
+                      matched_contrato_line_id=501,
+                      codigo_partida_final=None,
+                      partida_action="almacen_sin_partida")
+    _linea_valoracion(sesion, id=14, merge_line_id=None,
+                      matched_contrato_line_id=501,
+                      codigo_partida_final="03.02",
+                      partida_action="inherited_from_base_line",
+                      line_kind="synthetic_modifier")
+    _linea_valoracion(sesion, id=21, valuation_id=VAL_AJENO,
+                      merge_line_id=801, matched_contrato_line_id=501,
+                      codigo_partida_final="03.02")
+    sesion.commit()
+
+    repo = AlbaranReviewRepository(_Factoria(sesion.get_bind()))
+    monkeypatch.setattr(repo, "initialize", lambda: True)
+    return repo
+
+
+def _fila(repo, vid):
+    from sqlalchemy import text
+
+    with repo._session_factory.create_session() as s:
+        return dict(s.execute(
+            text(f"SELECT {_COLUMNAS_LINEA} FROM albaran_line_valuations "
+                 "WHERE id = :id"),
+            {"id": vid},
+        ).mappings().one())
+
+
+def _derivadas(repo):
+    from sqlalchemy import text
+
+    with repo._session_factory.create_session() as s:
+        return [dict(r) for r in s.execute(text(
+            "SELECT id, codigo_partida, origen FROM contrato_lines_derived "
+            "ORDER BY id"
+        )).mappings().all()]
+
+
+_INTOCABLES = (
+    "matched_contrato_line_id", "derived_contrato_line_id",
+    "precio_unitario_final", "cantidad_albaran", "importe_calculado",
+    "importe_source", "descuento_albaran_aplicado", "review_required",
+    "review_reasons_json", "unidad_contrato", "line_kind",
+)
+
+
+def test_f051_r14_asignar_almacen_a_una_linea(repo_sqlite):
+    antes = _fila(repo_sqlite, 11)
+
+    tocadas = repo_sqlite.asignar_almacen(
+        document_id=DOC, valuation_line_ids=[11],
+    )
+
+    despues = _fila(repo_sqlite, 11)
+    assert tocadas == [11]
+    assert despues["codigo_partida_final"] is None
+    assert despues["partida_action"] == "almacen_elegido"
+    for campo in _INTOCABLES:
+        assert despues[campo] == antes[campo], campo
+    # Las demás líneas del documento, igual.
+    assert _fila(repo_sqlite, 12)["codigo_partida_final"] == "04.05"
+
+
+def test_f051_r15_la_fila_sigrid_sigue_casada_con_su_linea_de_contrato(
+    repo_sqlite,
+):
+    repo_sqlite.asignar_almacen(document_id=DOC, valuation_line_ids=[11])
+
+    fila = _fila(repo_sqlite, 11)
+    assert fila["matched_contrato_line_id"] == 501
+    assert fila["derived_contrato_line_id"] is None
+    assert _derivadas(repo_sqlite) == [
+        {"id": 601, "codigo_partida": "04.05", "origen": "missing_partida"},
+    ]
+
+
+def test_f051_r16_almacen_a_todas_las_lineas_del_documento(repo_sqlite):
+    antes = {vid: _fila(repo_sqlite, vid) for vid in (11, 12, 13, 14)}
+
+    tocadas = repo_sqlite.asignar_almacen(
+        document_id=DOC, valuation_line_ids=None,
+    )
+
+    assert sorted(tocadas) == [11, 12, 13, 14]
+    for vid in (11, 12, 13, 14):
+        fila = _fila(repo_sqlite, vid)
+        assert fila["codigo_partida_final"] is None, vid
+        assert fila["partida_action"] == "almacen_elegido", vid
+        for campo in _INTOCABLES:
+            assert fila[campo] == antes[vid][campo], (vid, campo)
+    # El otro albarán no se toca.
+    ajena = _fila(repo_sqlite, 21)
+    assert ajena["codigo_partida_final"] == "03.02"
+    assert ajena["partida_action"] == "existing_matched"
+
+
+def test_f051_r16_todas_en_un_unico_update(repo_sqlite):
+    """Una sola sentencia UPDATE: todo o nada (una transacción)."""
+    from sqlalchemy import event
+
+    motor = repo_sqlite._session_factory._motor
+    sentencias: list[str] = []
+
+    def _espia(conn, cursor, statement, parameters, context, executemany):
+        if statement.lstrip().upper().startswith("UPDATE"):
+            sentencias.append(statement)
+
+    event.listen(motor, "before_cursor_execute", _espia)
+    try:
+        repo_sqlite.asignar_almacen(document_id=DOC, valuation_line_ids=None)
+    finally:
+        event.remove(motor, "before_cursor_execute", _espia)
+
+    assert len(sentencias) == 1
+    assert "albaran_line_valuations" in sentencias[0]
+
+
+def test_f051_r23_linea_de_otro_documento_no_se_toca(repo_sqlite):
+    tocadas = repo_sqlite.asignar_almacen(
+        document_id=DOC, valuation_line_ids=[21],
+    )
+
+    assert tocadas == []
+    assert _fila(repo_sqlite, 21)["codigo_partida_final"] == "03.02"
+    assert _fila(repo_sqlite, 21)["partida_action"] == "existing_matched"
+
+
+def test_f051_r23_mezcla_de_propias_y_ajenas_solo_toca_las_propias(
+    repo_sqlite,
+):
+    tocadas = repo_sqlite.asignar_almacen(
+        document_id=DOC, valuation_line_ids=[11, 21],
+    )
+
+    assert tocadas == [11]
+    assert _fila(repo_sqlite, 21)["codigo_partida_final"] == "03.02"
+
+
+def test_f051_r23_documento_sin_valoracion_no_toca_nada(repo_sqlite):
+    assert repo_sqlite.asignar_almacen(
+        document_id="no-existe", valuation_line_ids=None,
+    ) == []
+    assert repo_sqlite.asignar_almacen(
+        document_id="no-existe", valuation_line_ids=[11],
+    ) == []
+    assert _fila(repo_sqlite, 11)["codigo_partida_final"] == "03.02"
+
+
+def test_f051_r23_lista_vacia_no_toca_nada(repo_sqlite):
+    assert repo_sqlite.asignar_almacen(
+        document_id=DOC, valuation_line_ids=[],
+    ) == []
+    assert _fila(repo_sqlite, 11)["codigo_partida_final"] == "03.02"
+
+
+# ---- update_line_conciliacion (guardar la fila salmón) ------------- #
+
+def _guardar(repo, vid, **campos):
+    return repo.update_line_conciliacion(
+        document_id=DOC, valuation_line_id=vid, **campos,
+    )
+
+
+def test_f051_r12_vaciar_la_partida_de_una_fila_sigrid_es_almacen(
+    repo_sqlite,
+):
+    assert _guardar(repo_sqlite, 11, codigo_partida="") is True
+
+    fila = _fila(repo_sqlite, 11)
+    assert fila["codigo_partida_final"] is None
+    assert fila["partida_action"] == "almacen_elegido"
+    # Sigue Sigrid: ni derivada manual_override ni pierde su casada (D4).
+    assert fila["matched_contrato_line_id"] == 501
+    assert fila["derived_contrato_line_id"] is None
+    assert [d["origen"] for d in _derivadas(repo_sqlite)] == [
+        "missing_partida",
+    ]
+
+
+def test_f051_r12_vaciar_con_espacios_tambien_es_almacen(repo_sqlite):
+    _guardar(repo_sqlite, 11, codigo_partida="   ")
+
+    fila = _fila(repo_sqlite, 11)
+    assert fila["codigo_partida_final"] is None
+    assert fila["partida_action"] == "almacen_elegido"
+    assert fila["matched_contrato_line_id"] == 501
+
+
+def test_f051_r12_vaciar_la_partida_de_una_fila_nueva_es_almacen(
+    repo_sqlite,
+):
+    _guardar(repo_sqlite, 12, codigo_partida="")
+
+    fila = _fila(repo_sqlite, 12)
+    assert fila["codigo_partida_final"] is None
+    assert fila["partida_action"] == "almacen_elegido"
+    assert fila["derived_contrato_line_id"] == 601
+    assert _derivadas(repo_sqlite)[0]["codigo_partida"] is None
+
+
+def test_f051_r12_no_enviar_la_partida_no_la_vacia(repo_sqlite):
+    """``None`` = el campo no viene en la petición: la partida no cambia."""
+    _guardar(repo_sqlite, 11, cantidad=3.0)
+
+    fila = _fila(repo_sqlite, 11)
+    assert fila["codigo_partida_final"] == "03.02"
+    assert fila["partida_action"] == "existing_matched"
+
+
+@pytest.mark.parametrize("partida", ["", None])
+def test_f051_r19_guardar_otros_campos_en_almacen_no_la_vuelve_nueva(
+    repo_sqlite, partida,
+):
+    _guardar(repo_sqlite, 13, codigo_partida=partida, cantidad=3.0,
+             descuento=2.0)
+
+    fila = _fila(repo_sqlite, 13)
+    assert fila["codigo_partida_final"] is None
+    assert fila["matched_contrato_line_id"] == 501
+    assert fila["derived_contrato_line_id"] is None
+    assert fila["cantidad_albaran"] == 3.0
+    assert len(_derivadas(repo_sqlite)) == 1
+
+
+def test_f051_r20_partida_igual_a_la_de_la_casada_sale_de_almacen_y_sigue_sigrid(
+    repo_sqlite,
+):
+    _guardar(repo_sqlite, 13, codigo_partida="03.02")
+
+    fila = _fila(repo_sqlite, 13)
+    assert fila["codigo_partida_final"] == "03.02"
+    assert fila["matched_contrato_line_id"] == 501
+    assert fila["derived_contrato_line_id"] is None
+    assert len(_derivadas(repo_sqlite)) == 1
+
+
+def test_f051_r20_partida_distinta_sale_de_almacen_como_nueva(repo_sqlite):
+    """Como hoy al cambiar la partida de una fila Sigrid: pasa a Nueva."""
+    _guardar(repo_sqlite, 13, codigo_partida="09.09")
+
+    fila = _fila(repo_sqlite, 13)
+    assert fila["codigo_partida_final"] == "09.09"
+    assert fila["matched_contrato_line_id"] is None
+    derivada = _derivadas(repo_sqlite)[-1]
+    assert fila["derived_contrato_line_id"] == derivada["id"]
+    assert derivada == {
+        "id": derivada["id"], "codigo_partida": "09.09",
+        "origen": "manual_override",
+    }
+
+
+def test_f051_r20_cambiar_partida_real_de_sigrid_sigue_volviendola_nueva(
+    repo_sqlite,
+):
+    """Regresión: fuera de almacén, cambiar la partida es como hoy."""
+    _guardar(repo_sqlite, 11, codigo_partida="04.05")
+
+    fila = _fila(repo_sqlite, 11)
+    assert fila["codigo_partida_final"] == "04.05"
+    assert fila["matched_contrato_line_id"] is None
+    assert _derivadas(repo_sqlite)[-1]["origen"] == "manual_override"
