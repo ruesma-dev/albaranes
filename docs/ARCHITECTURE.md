@@ -291,6 +291,11 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       importes ni la casada: **una fila Sigrid sigue siendo Sigrid** (D4).
       Elegir almacén en una base no arrastra a sus complementarias (D8). Como
       todo override de sv4, **se pierde al revalorar** (D5; lo arregla F-058).
+      Fuera de almacén la ficha pinta la partida **final** de la línea, no la
+      de su línea de contrato casada, y «Guardar» / «Guardar todas» solo
+      envían la partida si el revisor la cambió (vaciarla = almacén; sin
+      tocar, no se toca). Poner la de la casada a una fila Sigrid la deja
+      Sigrid y no avisa «pasará a NUEVA» (R20).
     - **Contrato hacia Sigrid** (R24): una línea en almacén se da de alta
       **sin partida y con almacén** (`almacen: true` de F-009 de sigrid-api,
       lo implementa F-053); nadie la rellena desde el contrato, la plantilla
