@@ -253,6 +253,49 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       `raw_extraction_json`. Por eso no se le declara el campo (design §6).
       Quien resucite esa copia tiene que declararlo, o rechazará el
       documento entero (el cepo de F-043).
+16. **Almacén = partida final vacía; a qué líneas va la partida lo decide
+    IA1** (F-051, oct 2026; decisiones del humano en
+    `progress/spec_F-051.md`).
+    - **Almacén** («no se asocia a partida», D1): una línea con valoración y
+      `codigo_partida_final` vacío ES almacén, **tenga o no marca**; nunca un
+      literal («ALM» no existe en `obrparpar`). `partida_action` solo deja
+      rastro de quién o por qué: `almacen_sin_partida` (sv6: el albarán no
+      trae partida), `almacen_elegido` (sv4: el revisor eligió «Almacén» o
+      vació la partida), además de `alm_new_line_created` (ALM impreso) e
+      `inherited_from_base_line`. No hay estado «sin partida» distinto: sv4
+      pinta «Almacén» toda partida final vacía (también las valoraciones
+      legadas) y la confianza no la castiga.
+    - **A qué líneas va la partida lo decide IA1 leyendo el papel**
+      (`config/prompts.yaml` de sv2, «Código de imputación manuscrito»): un
+      código junto a una línea (o que agrupa varias) solo a esas, aunque sea
+      el único; un código de documento (cabecera, sello, margen) a las que no
+      tienen uno propio, y con códigos de línea además, cada marcada el suyo
+      (D9); portes, bombeo y demás complementos sin código, el de su base; una
+      línea sin código propio, no complemento y sin código de documento,
+      `codigo_imputacion` null (almacén). Ejemplo del humano: «03.02» escrito
+      solo junto a la 2.ª de tres líneas ⇒ la 1.ª y la 3.ª, almacén. Fase 2 lo
+      recibe por `{prompt_fase_1}`. **Ningún servicio copia partidas entre
+      líneas** salvo la herencia base → complementaria/sintética de sv6.
+    - **sv6 no inventa partida**: una línea base sin `codigo_partida_albaran`
+      va a almacén (`almacen_sin_partida`) conservando la línea de contrato
+      casada y el precio; ya no copia la partida de esa línea. Cualquier
+      familia puede ir a almacén; las de `FAMILIAS_DESTINADAS` (por defecto
+      hormigón, mortero, combustible, alquiler de maquinaria y residuos) se
+      marcan `review_required` con `partida_ausente_familia_destinada`, que
+      **no bloquea** la aprobación. Interruptor de vuelta atrás:
+      `ALMACEN_SIN_PARTIDA_ENABLED=false`.
+    - **sv4**: «Almacén (sin partida)» es la primera opción fija del combo de
+      partida; elegirla, vaciar la partida o el botón «Almacén a todas las
+      líneas» (que pisa también las que tienen partida, con confirmación y
+      deshacer) escriben partida final NULL + `almacen_elegido` sin tocar
+      importes ni la casada: **una fila Sigrid sigue siendo Sigrid** (D4).
+      Elegir almacén en una base no arrastra a sus complementarias (D8). Como
+      todo override de sv4, **se pierde al revalorar** (D5; lo arregla F-058).
+    - **Contrato hacia Sigrid** (R24): una línea en almacén se da de alta
+      **sin partida y con almacén** (`almacen: true` de F-009 de sigrid-api,
+      lo implementa F-053); nadie la rellena desde el contrato, la plantilla
+      ni otra línea. Hasta F-053 el alta es manual y administración teclea lo
+      que pinta sv4.
 
 ## Acceso a datos y sistemas externos
 

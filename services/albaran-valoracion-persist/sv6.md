@@ -688,6 +688,8 @@ Esto se ve en `/health` con el flag `schema_ready`:
 | `PRICE_TOLERANCE_PCT`            | `2.0`                  | Tolerancia % entre precio 1a y 1b para considerarlos `match`.                |
 | `IMPORTE_TOLERANCE_PCT`          | `5.0`                  | Tolerancia % entre importe declarado y calculado.                            |
 | `ALM_CODIGO_PARTIDA`             | `ALM`                  | Código literal del albarán para "almacén/acopio".                            |
+| `ALMACEN_SIN_PARTIDA_ENABLED`    | `true`                 | F-051: línea base sin partida ⇒ almacén (`almacen_sin_partida`); `false` = como antes. |
+| `FAMILIAS_DESTINADAS`            | `hormigon,mortero,combustible,alquiler_maquinaria,residuos` | F-051: CSV; su línea en almacén va a revisión no bloqueante. Vacío = ninguna. |
 | `API_HOST`                       | `127.0.0.1`            |                                                                              |
 | `API_PORT`                       | `8003`                 | (sv2: 8000, sv3: 8001, sv5: 8002, sv6: 8003)                                 |
 | `LOG_LEVEL`                      | `INFO`                 |                                                                              |
