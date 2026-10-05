@@ -120,6 +120,7 @@ El nombre `analitica_no_resuelta` (H10) es propuesta del contrato a F-009; si el
 | Alcance | «Medir antes» (T0) |
 | Líneas | Solo con importe; vinculadas y sin vincular en el mismo albarán; con partida o sin ella (= almacén, F-051 v4) |
 | Producto (**2026-10-05**) | Vinculada: el del contrato. Sin vincular: por familia de la línea (QA9999 maquinaria, XA9999 medios auxiliares, MA9999 el resto), cambiable en sv4 antes de aprobar |
+| `cod2` y planificación de compras (**2026-10-05**, pendiente de llevar a spec y contrato) | «el cod2 hay que traerlo, así como la vinculación a planificación de compras. si no viene originalmente se deja vacío». Medido en Sigrid (solo lectura, emp 1): `dcapro.cod2` («código alternativo», lo usa el jefe de obra para filtrar en el DPC) = `ctrpro.cod2` en el 99,9 % de las vinculadas que lo llevan; `dncproide` (documento de necesidades de compra) en el 86 % de las vinculadas. F-009 hoy no copia ninguno de los dos del `ctrpro`: hueco nuevo para el contrato. Sin vincular: vacíos |
 | Negativas | Entran ya (signos incoherentes: P2) |
 | Sin valorar | No se aprueba ni se registra (R37); `partial` no cuenta |
 | Valorado | `ok` de sv6, o valoración manual completa (`manual`/`no_contract` con importes y ninguno nulo) |
