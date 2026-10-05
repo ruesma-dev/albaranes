@@ -25,7 +25,8 @@ Escala 0..100, dos bloques (pesos acordados):
         "nueva" creada manualmente por el revisor        -> 0.70
         "nueva" automática (la IA no encontró nada)      -> 0.30
         sin salmón (en blanco)                           -> 0.00
-      partida: código de imputación presente -> 1.00, ausente -> 0.00
+      partida: con valoración -> 1.00 (con partida o en almacén, F-051);
+               sin valoración -> 0.00
       unitario:
         asignada y coincide con contrato   -> 1.00
         asignada pero difiere              -> 0.50
@@ -111,9 +112,13 @@ def _casado_factor(c: Any) -> float:
 
 
 def _partida_factor(c: Any) -> float:
+    """Con valoración, la partida está resuelta: o lleva una o está en
+    ALMACÉN (F-051, D1 del humano: partida vacía = almacén, que es una
+    decisión válida, no un hueco). Sin valoración, 0 como siempre (R21).
+    """
     if c is None:
         return 0.0
-    return 0.0 if _is_blank(getattr(c, "codigo_partida", None)) else 1.0
+    return 1.0
 
 
 def _unitario_factor(c: Any) -> float:
