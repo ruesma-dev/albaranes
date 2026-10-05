@@ -21,6 +21,7 @@ from application.services.residuos_incrementos import (
 )
 from application.services.almacen_politica import (
     ACCION_ALMACEN_SIN_PARTIDA,
+    MOTIVO_FAMILIA_DESTINADA,
     motivo_revision_almacen,
 )
 from application.services.partida_matcher import (
@@ -1272,14 +1273,17 @@ class ValuationBuilder:
         # F-051 (R4, R5): la línea va a almacén porque el albarán no trae
         # partida. Si su familia efectiva es destinada, se avisa al
         # revisor (no bloquea la aprobación y NO se rellena partida).
-        motivo_almacen: str | None = None
-        if partida_result.partida_action == ACCION_ALMACEN_SIN_PARTIDA:
-            motivo_almacen = motivo_revision_almacen(
+        # El motivo se escribe con su constante (no con la variable) para
+        # que la congelación de motivos de F-027 R22 lo vea.
+        revision_almacen = (
+            partida_result.partida_action == ACCION_ALMACEN_SIN_PARTIDA
+            and motivo_revision_almacen(
                 _familia_de(ctx, self._clasificacion),
                 self._familias_destinadas,
-            )
-            if motivo_almacen is not None:
-                reasons.append(motivo_almacen)
+            ) is not None
+        )
+        if revision_almacen:
+            reasons.append(MOTIVO_FAMILIA_DESTINADA)
         reasons.extend(converted.reasons)
         if _movimiento_asumido_1:
             reasons.append("movimiento_residuos_sin_cantidad_asumido_1")
@@ -1336,7 +1340,7 @@ class ValuationBuilder:
         if base_casada_con_incremento:
             review_required = True
         # (F-051 R4) Familia destinada en almacén: revisión no bloqueante.
-        if motivo_almacen is not None:
+        if revision_almacen:
             review_required = True
         # Residuos sin nº de contenedores calculable → revisión manual.
         if residuos_calc is not None and residuos_calc.num_contenedores is None:
