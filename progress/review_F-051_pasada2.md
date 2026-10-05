@@ -7,26 +7,21 @@ Revisión incremental desde 1cef691 (pasada 2): delta `1cef691..541bfe7` + commi
 ≥ 80 %, mutación completa con 0 supervivientes sin justificar. Las cuatro puertas se cumplen y los seis hallazgos
 de la pasada 1 están cerrados con código, test y control negativo que yo mismo he vuelto a aplicar.
 
-Lo aprobado en la pasada 1, salvo H1–H6, se da por bueno: no lo he vuelto a leer. El delta no cambia firmas
-públicas ni mueve ficheros. Sí amplía el alcance de mutación (entra `evals/procesos/sv6_build.py`), y por eso
-he vuelto a verificar la campaña entera (ver C4 bis).
+Lo de la pasada 1 ajeno a H1–H6 se da por bueno sin releerlo. El delta no cambia firmas ni mueve ficheros;
+sí amplía el alcance de mutación (entra `evals/procesos/sv6_build.py`), así que verifiqué la campaña (C4 bis).
 
-**Condición de cierre (para el líder):** T21–T24 siguen siendo del humano. `init.sh` avisa de
-`RUTAS SENSIBLES [evals]` porque falta `progress/evals_F-051.md`. Este APPROVED cubre el trabajo del
-implementer. No autoriza el `done` mientras T21–T24 no estén hechas o el humano no las dispense por escrito.
+**Condición de cierre (líder):** T21–T24 son del humano y falta `progress/evals_F-051.md` (aviso `RUTAS
+SENSIBLES`). Este APPROVED cubre al implementer; no autoriza el `done` sin T21–T24 hechas o dispensadas por escrito.
 
 ## Entorno (resultado real)
 
 `bash harness/init.sh` en el worktree, tal cual, sobre `541bfe7`: **EXIT=0, «ENTORNO LISTO. Puedes trabajar.»**,
 ningún `[KO]`.
-- Raíz: `1083 passed in 163.65s`. Las siete suites de servicio salieron `[OK]` desde la caché. sv4 es el único
-  servicio que cambia en el delta, así que la relancé yo sola (intérprete de su venv, `PYTHONPATH` a la comun
-  del worktree): **458 passed, 0 skipped** en 13,3 s. Los tests con node se ejecutaron, no se saltaron
-  (node v24.14.1).
+- Raíz: `1083 passed in 163.65s`. Servicios `[OK]` desde la caché; sv4 (único que cambia) la relancé yo sola:
+  **458 passed, 0 skipped** en 13,3 s (los tests con node corrieron, v24.14.1).
 - `PUERTA COBERTURA: 98.5% de 130 líneas cambiadas cubiertas (128/130, umbral 80%, nivel critico)`.
 - `PUERTA TAMAÑO` dentro.
-- Avisos: `RUTAS SENSIBLES [evals]` (T21), ruff 1181 (deuda previa), infra sin tests y `[ADAPTAR]` de
-  F-034/F-035 (ajenos). Son los mismos de la pasada 1.
+- Avisos, los de la pasada 1: `RUTAS SENSIBLES [evals]` (T21), ruff 1181, infra sin tests, `[ADAPTAR]` ajenos.
 
 ## Hallazgos de la pasada 1
 
@@ -39,7 +34,6 @@ ningún `[KO]`.
   - ejecuta el build real del banco (subproceso, sin red, BBDD ni LLM) y comprueba que una línea sin partida
     sale `almacen_sin_partida` con el motivo de familia destinada.
 
-  Además adopta la automejora que propuse.
 - **H2 · cerrado.** La partida solo se envía si el revisor la cambió. `partidaParaEnviar` compara con
   `defaultValue`: vaciada ⇒ `""`, sin tocar ⇒ `null`. Los dos guardados usan un único `_conciliaBody`, y el
   backend trata `None` como «no viene» (`review_repository.py:1828-1832`).
@@ -53,8 +47,7 @@ ningún `[KO]`.
 - **H5 · cerrado.** Hay dictamen en `impl_F-051.md` §2.7 y test guarda
   `test_f051_h5_fuera_de_almacen_poner_la_de_la_casada_sigue_sigrid`. El implementer lo comprobó en negativo
   (`and False` ⇒ 2 failed).
-- **H6 · cerrado.** `impl_F-051.md` §2.6 y `current.md` dicen ahora `cmd /c rmdir`, «antes de
-  `git worktree remove`» y «NUNCA `Remove-Item`».
+- **H6 · cerrado.** `impl_F-051.md` §2.6 y `current.md`: `cmd /c rmdir` antes de `git worktree remove`, nunca `Remove-Item`.
 
 ## Decisiones del humano
 
@@ -70,8 +63,7 @@ ningún `[KO]`.
 
 ## Controles negativos re-aplicados por mí
 
-Script en el scratchpad: cada control aplica una sustitución, lanza la suite y restaura el fichero byte a byte.
-Al terminar, `git status` limpio.
+Script en el scratchpad (sustituye, lanza la suite, restaura en bytes); al terminar, `git status` limpio.
 
 | Control | Resultado |
 |---|---|
@@ -83,9 +75,8 @@ Al terminar, `git status` limpio.
 | (a) · `elif` de la partida final → `elif False:` | 2 failed (`'03.02' == '07.07'`; `value="07.07"`) |
 | O2 · sin la excepción de la casada en `cambiaIdentidad` | 1 failed |
 
-Incidente propio, sin efecto en el resultado: la primera versión del script restauró dos ficheros con LF en
-vez de CRLF. `git diff` no mostraba ningún cambio de contenido. Los devolví con `git checkout --`, reescribí el
-script para trabajar en bytes y repetí todos los controles.
+Incidente propio, sin efecto: la primera versión restauró dos ficheros con LF en vez de CRLF (sin cambio de
+contenido); los devolví con `git checkout --` y repetí los controles con el script en bytes.
 
 ## Checkpoints
 
@@ -99,8 +90,7 @@ script para trabajar en bytes y repetí todos los controles.
 - **C4** [x] cada requisito y cada hallazgo tiene test, y pasan · [x] sin red ni BBDD (sqlite, sesión simulada;
   node y el subproceso del banco son locales) · [x] verificación real: los controles de arriba ·
   [x] T21–T24 anotadas en `current.md`.
-  - Cambio en tests de otra feature, motivado: `test_f011_r13`/`r14` reciben `codigo_imputacion`. Su objeto no
-    es la partida, y con H1 una línea sin partida va correctamente a almacén.
+  - Tests de otra feature, motivado: `test_f011_r13`/`r14` reciben `codigo_imputacion` (no tratan de partida).
 - **C4 bis**
   - [x] Rigor declarado.
   - [x] Fase RED con trazas reales por punto (`impl_F-051_pasada2.md` §2).
@@ -109,18 +99,15 @@ script para trabajar en bytes y repetí todos los controles.
     503 líneas, 61 mutantes**, igual que el informe. Comprobé que existen tal cual, con su operador y su
     texto, los mutantes nuevos `sv6_build.py:62` (`True→False`), `review_repository.py:164` (`==→!=`) y
     `:1425` (`!=→==`, `or→and`).
-  - [x] Campaña **no reejecutada: 909,4 s según el informe** (> 60 s); me quedo en el recálculo y RM1–RM6.
-  - [x] Sin «NO VÁLIDA» y 0 sin veredicto.
+  - [x] Campaña **no reejecutada: 909,4 s según el informe** (> 60 s): recálculo + RM1–RM6. Sin «NO VÁLIDA»,
+    0 sin veredicto.
   - [x] RM1: medida en `53a17ae`; hasta HEAD solo cambia `progress/`.
   - [x] RM2: 909,4 / 61 = 14,9 s, que es la media declarada. Las líneas base son de 247 s en la raíz y
     9–40 s en sv6/sv4, con 4 workers y `-x`: coherente, sin salto de orden de magnitud.
-  - RM3: ningún mutante de la lista es equivalente. Los aritméticos sobre cadenas dan `TypeError` y los demás
-    cambian salidas que se observan.
-  - [x] RM5 N/A: 0 supervivientes y 0 equivalentes.
-  - [x] RM6: el delta no quita ninguna guarda.
+  - RM3: ningún mutante es equivalente (aritméticos sobre cadenas ⇒ `TypeError`). [x] RM5 N/A: 0
+    supervivientes, 0 equivalentes. [x] RM6: el delta no quita ninguna guarda.
   - [x] Sección «Evidencias» con sus cuatro números.
-- **tasks.md**: sin cambios en la pasada (T1–T20 y T25 `[x]`; T21–T24, del humano). Los commits van como
-  `F-051 (review): …`, uno por punto.
+- **tasks.md**: T1–T20 y T25 `[x]`; T21–T24, del humano. Commits `F-051 (review): …`, uno por punto.
 
 ## Cobertura de la pasada: hallazgo → test
 
@@ -145,9 +132,8 @@ Ninguno.
    `_partida_del_contrato`, y conviene mirarlo en T24.
 2. **Ground truth RES-001…006.** Espera la partida del contrato en una línea sin partida, que es la regla
    anterior a F-051: con H1 salen 24 discrepancias en evals deterministas. Hay que decidirlo antes de T21.
-3. **Tests de JS con node.** Si node falta, se saltan con motivo, y en esa máquina `v || null` dentro de
-   `_conciliaBody` dejaría de vigilarse; el test estructural sigue vigilando las copias. Aquí node está
-   instalado.
+3. **Tests de JS con node.** Sin node se saltan con motivo y `v || null` en `_conciliaBody` dejaría de vigilarse
+   (las copias, no). Aquí node está instalado.
 
 **Automejora (propuesta):** en `reviewer.md`, regla de controles negativos: «restaura en bytes (`git checkout
 --` o copia binaria), nunca leyendo y reescribiendo en texto»; en Windows eso cambia los finales de línea.
