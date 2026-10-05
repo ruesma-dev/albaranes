@@ -161,12 +161,23 @@ sv4 su `.venv`) y `PYTHONPATH` al `ruesma_comun` del worktree (comprobado: se im
 | sv3 | 421 passed (15,6 s) |
 | sv4 | 446 passed (28,9 s) |
 | sv6 | 283 passed (8,0 s) |
-| raíz | INIT_RAIZ |
+| raíz | 1067 passed (251,2 s, dentro de `init.sh`) |
 
 La primera pasada de la raíz dio **3 KO**, los tres por F-051 y arreglados: congelación de motivos
 de F-027 R22 (2, decisión 4) e inventario de mutación de F-039 (fila de `mutacion_F-051.md`).
 
-`bash harness/init.sh` (T25): INIT_RESUMEN
+`bash harness/init.sh` (T25, en el worktree, tal cual): **salida 0, «ENTORNO LISTO», ningún
+`[KO]`**. Las 9 suites en verde (raíz 1067, sv1 205, sv2 397, sv3 421, sv4 446, sv5 43, sv6 283,
+comun 332); `PUERTA COBERTURA: 98.3% de 117 líneas cambiadas cubiertas (115/117, umbral 80%,
+nivel critico)`; `PUERTA TAMAÑO` dentro (impl 198/220). Avisos: `PUERTA RUTAS SENSIBLES [evals]`
+(falta `progress/evals_F-051.md`: T21, del humano), ruff 1181 (deuda previa), infra sin tests y
+`[ADAPTAR]` de F-034/F-035 (ajenos). Ojo: `init.sh` toma el `python` del PATH, que es el `.venv`
+de la raíz del árbol principal, y con él el `ruesma_comun` del árbol principal (en `dev`
+`639afbb`, limpio): idéntico al del worktree, porque F-051 no toca `comun` (`git diff dev --
+services/albaranes-comun` vacío). sv4 corre con su venv a través de la *junction* (decisión 6).
+`python -m harness.cobertura --base dev --config harness/rigor.json`: el mismo 98,3 %. Las 2
+líneas sin cubrir están en el cableado de sv6 (`composition.py`, `api/app.py`), que los unit
+tests no importan (BBDD/FastAPI); las vigila un test por texto.
 
 ## 6. Pendiente del humano (T21–T24)
 
@@ -191,8 +202,8 @@ de F-027 R22 (2, decisión 4) e inventario de mutación de F-039 (fila de `mutac
 | Evidencia | Valor medido |
 |---|---|
 | Tests de F-051 | 144: sv6 53, sv2 23, sv4 68 (todos verdes) |
-| Tests ejecutados | comun 332 · sv2 397 · sv3 421 · sv4 446 · sv6 283 · raíz INIT_RAIZ_N — 0 fallos |
-| Cobertura de líneas cambiadas | COBERTURA |
+| Tests ejecutados | comun 332 · sv2 397 · sv3 421 · sv4 446 · sv6 283 · raíz 1067 · (además sv1 205, sv5 43 en `init.sh`) — 0 fallos |
+| Cobertura de líneas cambiadas | **98,3 %** (115/117, umbral 80 %) — `PUERTA COBERTURA` |
 | Mutantes | 57 generados, 57 muertos, **0 supervivientes** (campaña completa, sin muestreo, `d707e9c`, 857,5 s). La primera (`3e87861`) dejó 1, hueco real cerrado con test: `progress/mutacion_F-051.md` |
-| Tiempo de las suites | comun 41,0 s · sv2 14,6 s · sv3 15,6 s · sv4 28,9 s · sv6 8,0 s · raíz INIT_RAIZ_T |
+| Tiempo de las suites | comun 41,0 s · sv2 14,6 s · sv3 15,6 s · sv4 28,9 s · sv6 8,0 s · raíz 251,2 s |
 | Evals (T21) | PENDIENTE del humano (se facturan; no lanzadas por instrucción) |
