@@ -91,9 +91,9 @@
       },
       {
         "caso_id": "GEN-002",
-        "codigo_partida_final": "ALMACEN",
+        "codigo_partida_final": null,
         "codigo_producto_contrato": null,
-        "comentario": null,
+        "comentario": "F-051 (decision del humano 2026-10-05): almacen = partida vacia, tambien en el banco; antes esperaba el literal ALMACEN",
         "importe_calculado": 180,
         "match_method": "no_match",
         "num_linea": 8,

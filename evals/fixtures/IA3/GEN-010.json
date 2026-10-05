@@ -7,9 +7,9 @@
     "lineas_valoradas": [
       {
         "caso_id": "GEN-010",
-        "codigo_partida_final": "ALMACEN",
+        "codigo_partida_final": null,
         "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": "aunque pone almacen en el albaran ha cogio 02.43 que es el unitario (que lo ha usado despues para unitario acertadamente)",
+        "comentario": "aunque pone almacen en el albaran ha cogio 02.43 que es el unitario (que lo ha usado despues para unitario acertadamente) | F-051 (decision del humano 2026-10-05): almacen = partida vacia, tambien en el banco; antes esperaba el literal ALMACEN",
         "importe_calculado": 174.96,
         "match_method": "@@NO_COMPARAR@@",
         "num_linea": 1,

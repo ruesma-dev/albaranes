@@ -7,9 +7,9 @@
     "lineas_valoradas": [
       {
         "caso_id": "ALQ-001",
-        "codigo_partida_final": "ALMACEN",
+        "codigo_partida_final": null,
         "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": "ha cogido una obra que no es (vieja), pero es que no hay obra indicada con codigo en el albaran",
+        "comentario": "ha cogido una obra que no es (vieja), pero es que no hay obra indicada con codigo en el albaran | F-051 (decision del humano 2026-10-05): almacen = partida vacia, tambien en el banco; antes esperaba el literal ALMACEN",
         "importe_calculado": 170,
         "match_method": "@@NO_COMPARAR@@",
         "num_linea": 1,
@@ -19,9 +19,9 @@
       },
       {
         "caso_id": "ALQ-001",
-        "codigo_partida_final": "ALMACEN",
+        "codigo_partida_final": null,
         "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": null,
+        "comentario": "F-051 (decision del humano 2026-10-05): almacen = partida vacia, tambien en el banco; antes esperaba el literal ALMACEN",
         "importe_calculado": 805,
         "match_method": "@@NO_COMPARAR@@",
         "num_linea": 2,
@@ -31,9 +31,9 @@
       },
       {
         "caso_id": "ALQ-001",
-        "codigo_partida_final": "ALMACEN",
+        "codigo_partida_final": null,
         "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": null,
+        "comentario": "F-051 (decision del humano 2026-10-05): almacen = partida vacia, tambien en el banco; antes esperaba el literal ALMACEN",
         "importe_calculado": 154,
         "match_method": "@@NO_COMPARAR@@",
         "num_linea": 3,
