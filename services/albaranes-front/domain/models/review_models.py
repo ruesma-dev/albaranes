@@ -595,6 +595,12 @@ class ConciliacionDisplay(BaseModel):
     descuento: float | None = None
     codigo_externo: str | None = None
 
+    # (F-051 R10, R11) 'partida' | 'almacen' segun la partida FINAL de la
+    # valoracion (vacia = almacen, sin mirar partida_action). En almacen,
+    # codigo_partida y descripcion_partida van a None: la ficha pinta
+    # «Almacén» y nunca la partida de la linea de contrato casada.
+    estado_partida: str | None = None
+
     # Senales para el calculo determinista de CONFIANZA (no se pintan):
     #   match_method / match_confidence_pct -> distinguir match fuerte
     #     (codigo/exacto) de semantico-familia (conf <= 50) y de manual.
@@ -813,6 +819,9 @@ class DocumentDetailPayload(BaseModel):
     # El template la usa en lugar de ``lines`` para pintar la tabla
     # en el detalle. ``lines`` se mantiene por compatibilidad (API).
     display_lines: list[DisplayLine] = Field(default_factory=list)
+    # (F-051 R17) Cuántas líneas de la valoración tienen partida: las que
+    # perderá el botón «Almacén a todas las líneas» (se avisa antes).
+    lineas_con_partida: int = 0
     provider_snapshots: list[ProviderSnapshot] = Field(default_factory=list)
     contratos: list[ContratoPayload] = Field(default_factory=list)
     contrato_lines: list[ContratoLinePayload] = Field(default_factory=list)

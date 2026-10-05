@@ -68,7 +68,11 @@ from infrastructure.database.orm_models import (
     AlbaranLineMergeOrm,
 )
 from application.services.busqueda_contratos import estado_busqueda
-from domain.services.almacen import ACCION_ALMACEN_ELEGIDO, estado_partida
+from domain.services.almacen import (
+    ACCION_ALMACEN_ELEGIDO,
+    contar_con_partida,
+    estado_partida,
+)
 from domain.services.confianza import compute_confianza_pct
 from infrastructure.database.session_factory import SessionFactory
 
@@ -1384,6 +1388,20 @@ class AlbaranReviewRepository:
                         vline_by_vid.get(vid), "codigo_externo", None
                     ),
                 )
+
+        # (F-051 R10, R11) Estado de partida de cada fila según la partida
+        # FINAL de su valoración. En almacén (vacía, tenga o no marca) no
+        # se pinta la partida de la línea de contrato casada ni la de la
+        # derivada: la ficha dice «Almacén». El resto del bloque (precio,
+        # descripción, kind Sigrid/Nueva) no cambia.
+        for vid, conc in out.items():
+            _vl = vline_by_vid.get(vid)
+            conc.estado_partida = estado_partida(
+                getattr(_vl, "codigo_partida_final", None)
+            )
+            if conc.estado_partida == "almacen":
+                conc.codigo_partida = None
+                conc.descripcion_partida = None
 
         return out
 
@@ -2984,6 +3002,7 @@ class AlbaranReviewRepository:
             created_at_utc=merge_doc.created_at_utc,
             lines=merge_lines_payload,
             display_lines=display_lines,
+            lineas_con_partida=self._lineas_con_partida(valuation),
             provider_snapshots=provider_snapshots,
             contratos=contratos,
             contrato_lines=contrato_lines or [],
@@ -2996,6 +3015,19 @@ class AlbaranReviewRepository:
                 merge_doc.obra_codigo,
                 self._rastro_busqueda(merge_doc),
             ),
+        )
+
+    @staticmethod
+    def _lineas_con_partida(valuation: ValuationPayload | None) -> int:
+        """(F-051 R17) Líneas de la valoración (base, complementarias y
+        sintéticas) cuya partida final no está vacía."""
+        if valuation is None:
+            return 0
+        lineas = list(valuation.lines_by_merge_line_id.values()) + list(
+            valuation.synthetic_lines
+        )
+        return contar_con_partida(
+            linea.codigo_partida_final for linea in lineas
         )
 
     @staticmethod
@@ -4315,6 +4347,11 @@ class AlbaranReviewRepository:
             # NO aqui. Asi conciliar o cambiar la linea de contrato nunca
             # pisa lo leido/escrito por el usuario.
             eff_codimp = line.codigo_imputacion
+            # (F-051 R11) Con valoración y partida final vacía la línea
+            # está en ALMACÉN: no se pinta la partida que leyó IA1 (la
+            # fila blanca del albarán sigue enseñando lo leído).
+            if v is not None and estado_partida(v.codigo_partida_final) == "almacen":
+                eff_codimp = None
             # La cantidad EDITABLE de la fila salmón vive en la LÍNEA DE
             # VALORACIÓN (cantidad_albaran / cantidad_convertida): es la que
             # el revisor edita y guarda en .../conciliacion/campos. Antes se
