@@ -5,11 +5,15 @@
 > en `progress/historico/current_2026-10-01_cierre_F-052.md`; el resumen de F-052, en `progress/history.md`.
 > Aquí solo queda lo vivo. Lo que manda sobre el estado de cada feature es `harness/features.json`.
 
-**F-053 · SPEC v5 (`spec_ready`, 2026-10-01, alineada con F-009 de sigrid-api `1bbcfc1`)** en la rama `feature/F-053-alta-sigrid` (worktree
+**F-053 · SPEC v6 (vuelve a `pending`, 2026-10-05)** en la rama `feature/F-053-alta-sigrid` (worktree
 `../albaranes-F-053`): alta en Sigrid de los albaranes aprobados, servicio nuevo sv9, arranque en simulación.
-**Todas las decisiones cerradas** (`progress/spec_F-053.md`). Precondiciones: **PRE-1 = F-009 de sigrid-api**
-desplegada (T0 de F-009 ejecutado por el humano el 2026-10-02) y F-051. F-013 queda marcada como sustituida
-(sigue `pending`: el arnés no tiene ese estado). Medición de F-053 hecha: solo 3 albaranes activos en producción.
+v6 = producto genérico **por línea** (QA9999 maquinaria, XA9999 medios auxiliares, MA9999 el resto; el
+administrativo lo cambia en sv4, columna `producto_sigrid` con DDL en **sv6**), alineada con F-051 v4 (sin partida
+= almacén, sin campo `almacen`) y con los huecos del contrato de sigrid-api que no necesitaban al humano.
+**7 preguntas abiertas** (P1–P7 de `progress/spec_F-053.md`). Contrato actualizado en sigrid-api (rama
+`feature/F-009-alta-albaran-compra`, `contrato_albaranes.md` v6.1): lo que F-009 debe absorber, en su §8.
+Precondiciones: F-009 de sigrid-api desplegada y F-051. F-013 queda marcada como sustituida (sigue `pending`).
+Medición de F-053 hecha: solo 3 albaranes activos en producción.
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
@@ -18,9 +22,10 @@ desplegada (T0 de F-009 ejecutado por el humano el 2026-10-02) y F-051. F-013 qu
 - **F-054** (correo con adjunto encadenado): `spec_ready` en `../albaranes-F-054` (rama
   `feature/F-054-correo-adjunto-encadenado`). **4 decisiones DA por confirmar** por el humano. Se implementa
   **después de F-052** (o sea, ya puede arrancar en cuanto se confirmen las DA y F-052 esté en `dev`).
-- **F-053** (alta en Sigrid de los aprobados): `spec_ready` en `../albaranes-F-053` (rama
-  `feature/F-053-alta-sigrid`), **16 preguntas abiertas** al humano. La escritura en Sigrid NO va en el despliegue
-  de F-052.
+- **F-053** (alta en Sigrid de los aprobados): **`pending`** con la spec v6 en `../albaranes-F-053` (rama
+  `feature/F-053-alta-sigrid`), **7 preguntas abiertas** al humano (P1–P7 de `progress/spec_F-053.md`; P1 =
+  familia `medios_auxiliares` en ficha propia, recomendada F-061). Para el líder: añadir «producto elegido» al
+  alcance de **F-058** (rama de F-051) y corregir en F-051 R24 «`almacen: true`» (el campo no existe en F-009).
 - **F-051** (almacén por línea): spec v2 en `../albaranes-F-051` (rama `feature/F-051-almacen-por-linea`),
   **esperando las respuestas del humano**.
 - **F-055** (IA2 elige el proveedor entre los de la obra): `pending`, prioridad 1. Depende de F-052.
