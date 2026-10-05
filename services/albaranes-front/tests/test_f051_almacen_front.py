@@ -511,3 +511,143 @@ def test_f051_r20_cambiar_partida_real_de_sigrid_sigue_volviendola_nueva(
     assert fila["codigo_partida_final"] == "04.05"
     assert fila["matched_contrato_line_id"] is None
     assert _derivadas(repo_sqlite)[-1]["origen"] == "manual_override"
+
+
+# =================================================================== #
+# Montaje de la ficha (R11, R17)
+# =================================================================== #
+
+def _valoracion_y_mapa(repo):
+    """Carga la valoración y el mapa de conciliación de ``DOC`` con el
+    código real del repositorio (los mismos pasos que la ficha)."""
+    with repo._session_factory.create_session() as s:
+        valoracion = repo._load_valuation_in_session(
+            session=s, document_id=DOC,
+        )
+        mapa = repo._load_conciliation_map_in_session(
+            session=s, valuation=valoracion,
+        )
+    return valoracion, mapa
+
+
+def test_f051_r11_el_mapa_rellena_el_estado_de_partida(repo_sqlite):
+    _valoracion, mapa = _valoracion_y_mapa(repo_sqlite)
+
+    assert mapa[11].estado_partida == "partida"
+    assert mapa[12].estado_partida == "partida"
+    assert mapa[13].estado_partida == "almacen"
+
+
+def test_f051_r11_en_almacen_no_se_pinta_la_partida_de_la_casada(
+    repo_sqlite,
+):
+    _valoracion, mapa = _valoracion_y_mapa(repo_sqlite)
+    almacen = mapa[13]
+
+    assert almacen.codigo_partida is None
+    assert almacen.descripcion_partida is None
+    # Sigue siendo Sigrid y conserva el precio de su línea (D4, R15).
+    assert almacen.kind == "assigned"
+    assert almacen.unitario == 12.5
+    # La que tiene partida, como siempre: la de su línea de contrato.
+    assert mapa[11].codigo_partida == "03.02"
+    assert mapa[11].descripcion_partida == "Cimentación"
+
+
+def test_f051_r11_valoracion_legada_sin_marca_tambien_es_almacen(
+    repo_sqlite, sesion,
+):
+    """D1 v4: una valoración anterior a F-051 con partida final vacía
+    (``existing_matched`` o ``no_action``, sin marca de almacén) sale
+    «Almacén» en cuanto se despliega sv4."""
+    _linea_valoracion(sesion, id=15, merge_line_id=705,
+                      matched_contrato_line_id=501,
+                      codigo_partida_final="",
+                      partida_action="existing_matched")
+    _linea_valoracion(sesion, id=16, merge_line_id=706,
+                      derived_contrato_line_id=601,
+                      codigo_partida_final=None,
+                      partida_action="no_action")
+    sesion.commit()
+
+    _valoracion, mapa = _valoracion_y_mapa(repo_sqlite)
+
+    assert mapa[15].estado_partida == "almacen"
+    assert mapa[15].codigo_partida is None
+    assert mapa[16].estado_partida == "almacen"
+    assert mapa[16].codigo_partida is None  # ni la de la derivada
+
+
+def test_f051_r11_la_fila_del_detalle_no_pinta_la_partida_leida_por_ia1(
+    repo_sqlite,
+):
+    """Tras elegir almacén, la partida que IA1 leyó (``codigo_imputacion``
+    del merge) NO vuelve a salir como partida de la línea valorada."""
+    from domain.models.review_models import MergeLinePayload
+    from infrastructure.database.review_repository import (
+        AlbaranReviewRepository,
+    )
+
+    repo_sqlite.asignar_almacen(document_id=DOC, valuation_line_ids=[11])
+    valoracion, mapa = _valoracion_y_mapa(repo_sqlite)
+    filas = AlbaranReviewRepository._build_display_lines(
+        merge_lines=[
+            MergeLinePayload(id=701, codigo_imputacion="03.02",
+                             concepto="ARIDO 20/40", cantidad=2.0),
+            MergeLinePayload(id=702, codigo_imputacion="04.05",
+                             concepto="PORTE", cantidad=2.0),
+            MergeLinePayload(id=799, codigo_imputacion="07.07",
+                             concepto="SIN VALORAR", cantidad=1.0),
+        ],
+        valuation=valoracion,
+        conciliation_by_valuation_line_id=mapa,
+    )
+    por_merge = {f.merge_line_id: f for f in filas if f.merge_line_id}
+
+    assert por_merge[701].codigo_imputacion is None
+    assert por_merge[701].concilia.codigo_partida is None
+    assert por_merge[701].concilia.estado_partida == "almacen"
+    # Con partida: como hoy, lo leído.
+    assert por_merge[702].codigo_imputacion == "04.05"
+    # Sin valoración: como hoy, lo leído (no es almacén: no hay valoración).
+    assert por_merge[799].codigo_imputacion == "07.07"
+
+
+def _detalle(repo):
+    from infrastructure.database.orm_models import AlbaranDocumentMergeOrm
+
+    valoracion, mapa = _valoracion_y_mapa(repo)
+    doc = AlbaranDocumentMergeOrm(
+        id=DOC, provider_origin="merge", source_filename="F051.pdf",
+        source_mime_type="application/pdf", source_sha256="0" * 64,
+        prompt_key="p", schema_name="s", model_name="m",
+        raw_extraction_json="{}", created_at_utc="2026-10-05T08:00:00+00:00",
+        is_active=True, approved=False,
+    )
+    return repo._build_merge_detail(
+        merge_doc=doc, available_views=[], provider_snapshots=[],
+        contratos=[], selected_contrato_codigo=None,
+        valuation=valoracion, conciliation_by_valuation_line_id=mapa,
+    )
+
+
+def test_f051_r17_la_ficha_sirve_cuantas_lineas_tienen_partida(repo_sqlite):
+    """11, 12 y 14 (sintética) tienen partida; 13 está en almacén."""
+    assert _detalle(repo_sqlite).lineas_con_partida == 3
+
+
+def test_f051_r17_tras_almacen_a_todas_no_queda_ninguna_con_partida(
+    repo_sqlite,
+):
+    repo_sqlite.asignar_almacen(document_id=DOC, valuation_line_ids=None)
+
+    assert _detalle(repo_sqlite).lineas_con_partida == 0
+
+
+def test_f051_r17_sin_valoracion_es_cero():
+    from domain.models.review_models import DocumentDetailPayload
+
+    assert DocumentDetailPayload(
+        id="x", source_filename="x.pdf", provider_origin="merge",
+        model_name="m", created_at_utc="2026-10-05",
+    ).lineas_con_partida == 0
