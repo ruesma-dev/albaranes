@@ -1213,3 +1213,113 @@ def test_f051_p2_el_aviso_de_partida_sigue_comparando_con_el_contrato(
     assert por_merge[701].concilia.agree_partida is True
     assert por_merge[707].concilia.agree_partida is False
     assert por_merge[703].concilia.agree_partida is None
+
+
+# =================================================================== #
+# Review, pasada 2 · el JS que arma el cuerpo del «Guardar» (H2, H3) y
+# el aviso «pasará a NUEVA» (O2), EJECUTADO con node: las funciones se
+# sacan tal cual de static/app.js y se les pasan inputs falsos.
+# =================================================================== #
+
+import json as _json
+import shutil as _shutil
+import subprocess as _subprocess
+
+_NODE = _shutil.which("node")
+_con_node = pytest.mark.skipif(
+    _NODE is None, reason="node no está instalado: el JS no se puede ejecutar",
+)
+
+
+def _funcion_js(js, nombre):
+    """Fuente de ``function <nombre>(...) {...}`` (la primera que haya)."""
+    inicio = js.index(f"function {nombre}(")
+    i = js.index("{", inicio)
+    profundidad, comilla = 0, None
+    while True:
+        c = js[i]
+        if comilla:
+            if c == "\\":
+                i += 1
+            elif c == comilla:
+                comilla = None
+        elif js.startswith("//", i):
+            i = js.index("\n", i)
+            continue
+        elif js.startswith("/*", i):
+            i = js.index("*/", i) + 2
+            continue
+        elif c in "\"'`":
+            comilla = c
+        elif c == "{":
+            profundidad += 1
+        elif c == "}":
+            profundidad -= 1
+            if profundidad == 0:
+                return js[inicio:i + 1]
+        i += 1
+
+
+def _ejecutar_js(tmp_path, funciones, programa):
+    """Ejecuta ``programa`` con las ``funciones`` de app.js y devuelve
+    lo que imprima por ``console.log`` (JSON)."""
+    js = _app_js()
+    fuente = "\n".join(_funcion_js(js, f) for f in funciones)
+    guion = tmp_path / "f051.js"
+    guion.write_text(
+        fuente + "\n" + _PRELUDIO_JS + "\n" + programa, encoding="utf-8",
+    )
+    salida = _subprocess.run(
+        [_NODE, str(guion)], capture_output=True, text=True,
+        encoding="utf-8", check=False,
+    )
+    assert salida.returncode == 0, salida.stderr
+    return _json.loads(salida.stdout)
+
+
+#: Inputs y fila falsos: lo único que leen las funciones probadas.
+_PRELUDIO_JS = """
+function entrada(field, defecto, valor, extra) {
+    return {value: valor, defaultValue: defecto,
+            dataset: Object.assign({field: field}, extra || {})};
+}
+function fila(entradas) {
+    return {querySelectorAll: function () { return entradas; }};
+}
+"""
+
+
+@_con_node
+def test_f051_h2_guardar_solo_envia_la_partida_si_el_revisor_la_cambio(
+    tmp_path,
+):
+    """Una fila que nadie tocó no se manda a almacén ni se le reescribe la
+    partida: sin cambio, ``codigo_partida`` viaja ``null`` («no viene»).
+    Vaciada a propósito, ``""`` (almacén, R12); cambiada, la nueva."""
+    cuerpos = _ejecutar_js(tmp_path, ["parseNumEs", "partidaParaEnviar", "_conciliaBody"], """
+        function partida(defecto, valor) {
+            return _conciliaBody(fila([
+                entrada("codigo_partida", defecto, valor),
+                entrada("descripcion", "ARIDO", "ARIDO"),
+                entrada("cantidad", "2", "2", {numeric: "1"}),
+            ]));
+        }
+        console.log(JSON.stringify({
+            sin_tocar: partida("03.02", "03.02"),
+            sin_tocar_vacia: partida("", ""),
+            vaciada: partida("03.02", ""),
+            vaciada_con_espacios: partida("03.02", "   "),
+            cambiada: partida("03.02", " 04.05 "),
+            puesta_en_almacen: partida("", "03.02"),
+        }));
+    """)
+
+    assert cuerpos["sin_tocar"]["codigo_partida"] is None
+    assert cuerpos["sin_tocar_vacia"]["codigo_partida"] is None
+    assert cuerpos["vaciada"]["codigo_partida"] == ""
+    assert cuerpos["vaciada_con_espacios"]["codigo_partida"] == ""
+    assert cuerpos["cambiada"]["codigo_partida"] == "04.05"
+    assert cuerpos["puesta_en_almacen"]["codigo_partida"] == "03.02"
+    # El resto de campos, como siempre.
+    assert cuerpos["sin_tocar"]["descripcion"] == "ARIDO"
+    assert cuerpos["sin_tocar"]["cantidad"] == 2

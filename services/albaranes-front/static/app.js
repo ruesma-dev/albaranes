@@ -1078,6 +1078,35 @@
     }
 
 
+    // F-051 (R12, review H2): la partida solo viaja si el revisor la
+    // cambió respecto a la que pintó la ficha (la FINAL de la línea).
+    // Vaciada a propósito => "" (almacén); sin tocar => null («el campo
+    // no viene»): guardar una fila que nadie tocó no la manda a almacén
+    // ni le reescribe la partida.
+    function partidaParaEnviar(inp) {
+        const v = inp.value.trim();
+        if (v === String(inp.defaultValue || "").trim()) { return null; }
+        return v;
+    }
+
+    // Cuerpo del PATCH .../conciliacion/campos de una fila salmón. Lo usan
+    // el «Guardar» de la fila y «Guardar todas las líneas» (una sola copia).
+    function _conciliaBody(tr) {
+        const body = {};
+        tr.querySelectorAll(".js-cedit").forEach(function (inp) {
+            const field = inp.dataset.field;
+            if (!field) return;
+            if (inp.dataset.numeric === "1") {
+                body[field] = parseNumEs(inp.value);
+            } else if (field === "codigo_partida") {
+                body[field] = partidaParaEnviar(inp);
+            } else {
+                body[field] = inp.value.trim() || null;
+            }
+        });
+        return body;
+    }
+
     function wireConciliaEdit() {
         linesBody.querySelectorAll("tr.concilia-editable").forEach(function (tr) {
             const inputs = tr.querySelectorAll(".js-cedit");
@@ -1155,19 +1184,7 @@
                     )) return;
                 }
 
-                const body = {};
-                inputs.forEach(function (inp) {
-                    const field = inp.dataset.field;
-                    if (!field) return;
-                    if (inp.dataset.numeric === "1") {
-                        body[field] = parseNumEs(inp.value);
-                    } else {
-                        const v = inp.value.trim();
-                        // F-051 (R12): la partida vacía viaja como "" (=
-                        // almacén); null sería «el campo no viene».
-                        body[field] = (field === "codigo_partida") ? v : (v || null);
-                    }
-                });
+                const body = _conciliaBody(tr);
 
                 saveBtn.disabled = true;
                 const original = saveBtn.textContent;
@@ -1217,21 +1234,6 @@
     // ------------------------------------------------------------------ //
     const saveAllLinesBtn = document.getElementById("save-all-lines-btn");
     if (saveAllLinesBtn) {
-        function _conciliaBody(tr) {
-            const body = {};
-            tr.querySelectorAll(".js-cedit").forEach(function (inp) {
-                const field = inp.dataset.field;
-                if (!field) return;
-                if (inp.dataset.numeric === "1") {
-                    body[field] = parseNumEs(inp.value);
-                } else {
-                    const v = inp.value.trim();
-                    // F-051 (R12): partida vacía = "" (almacén).
-                    body[field] = (field === "codigo_partida") ? v : (v || null);
-                }
-            });
-            return body;
-        }
         saveAllLinesBtn.addEventListener("click", async function () {
             const rows = [].slice.call(
                 linesBody.querySelectorAll("tr.concilia-editable")
