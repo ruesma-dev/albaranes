@@ -1432,3 +1432,26 @@ def test_f051_o2_el_aviso_de_guardar_usa_esa_regla():
         r"'\.js-cedit\[data-identity=\"1\"\]'\),\s*cambiaIdentidad\s*\)",
         guardar,
     )
+
+
+# --- H5 · la excepción de R20 vale fuera de almacén (dictamen) --------
+
+def test_f051_h5_fuera_de_almacen_poner_la_de_la_casada_sigue_sigrid(
+    repo_sqlite, sesion,
+):
+    """Una fila Sigrid con otra partida final (herencia R7) a la que el
+    revisor pone la de su casada sigue Sigrid: pasarla a Nueva crearía una
+    derivada que duplica la línea de Sigrid con su misma partida."""
+    _linea_valoracion(sesion, id=17, merge_line_id=707,
+                      matched_contrato_line_id=501,
+                      codigo_partida_final="07.07",
+                      partida_action="inherited_from_base_line")
+    sesion.commit()
+
+    assert _guardar(repo_sqlite, 17, codigo_partida="03.02") is True
+
+    fila = _fila(repo_sqlite, 17)
+    assert fila["codigo_partida_final"] == "03.02"
+    assert fila["matched_contrato_line_id"] == 501
+    assert fila["derived_contrato_line_id"] is None
+    assert len(_derivadas(repo_sqlite)) == 1
