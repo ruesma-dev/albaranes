@@ -23,7 +23,15 @@ acopiables (p2, `critico`; decidir junto con la nueva spec de F-007 o fusionarla
 
 ### F-051 · estado de la implementación
 
-- Tarea en curso: T1 (arranque). Decisiones y desviaciones: ninguna todavía.
+- **T1–T20 y T25 hechas** (2026-10-05); informe en `progress/impl_F-051.md`. Mutación completa: 57/57 muertos.
+  **T21–T24 son del humano** (evals con LLM y MANUAL; comandos en el informe, §6). Falta la review.
+- Desviaciones justificadas (informe §2): cableado también en `api/app.py` de sv6; el JS envía la partida
+  vaciada como `""` (si no, R12 no ocurría desde la UI); motivo nuevo añadido a la congelación de F-027 R22
+  (test de otra feature, motivado). Entorno: *junction* `services/albaranes-front/.venv` → venv del árbol
+  principal en el worktree (ignorada por git) para mutación e `init.sh`.
+- **Para el humano (informe §3)**: O1 — elegir una línea de contrato (combo de partida o ✎) en una línea en
+  almacén la deja en almacén (`set_line_conciliacion` no toca la partida final); decidir si debe tomar la
+  partida de esa línea. O2 — texto del aviso «pasará a NUEVA» cuando se pone la partida de la casada.
 
 **F-054 · CERRADA (`done`, 2026-10-02)**, review de cierre APROBADA: sv1 ingiere los PDF **e imágenes** de correos
 adjuntos (`message/rfc822`). Fusionada en `dev` (`639afbb`). Pendiente del humano: despliegue de sv1 y la
