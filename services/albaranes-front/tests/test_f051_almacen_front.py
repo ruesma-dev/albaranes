@@ -651,3 +651,205 @@ def test_f051_r17_sin_valoracion_es_cero():
         id="x", source_filename="x.pdf", provider_origin="merge",
         model_name="m", created_at_utc="2026-10-05",
     ).lineas_con_partida == 0
+
+
+# =================================================================== #
+# Servicio: una entrada de deshacer por acción (R18)
+# =================================================================== #
+
+class _RepoEspia:
+    """Doble del repositorio: guarda lo que el servicio le pide."""
+
+    def __init__(self, tocadas):
+        self.tocadas = tocadas
+        self.asignaciones: list[dict] = []
+        self.deshacer: list[dict] = []
+
+    def snapshot_row(self, *, table, row_id):
+        return {"table": table, "values": {"id": row_id, "estado": "antes"}}
+
+    def snapshot_lineas_valoracion(self, *, document_id):
+        return [
+            {"table": "albaran_line_valuations",
+             "values": {"id": vid, "estado": "antes"}}
+            for vid in (11, 12, 13, 14)
+        ]
+
+    def asignar_almacen(self, *, document_id, valuation_line_ids):
+        self.asignaciones.append(
+            {"document_id": document_id, "ids": valuation_line_ids},
+        )
+        return list(self.tocadas)
+
+    def record_undo(self, **kwargs):
+        self.deshacer.append(kwargs)
+
+    def doc_label(self, *, document_id):
+        return "alb F051"
+
+    def line_brief(self, *, valuation_line_id):
+        return {"codigo_partida_final": "03.02", "descripcion_linea": "ARIDO"}
+
+
+def _servicio(repo):
+    from application.services.review_service import ReviewService
+
+    return ReviewService(repo, None)
+
+
+def test_f051_r18_almacen_en_una_linea_deja_una_entrada_de_deshacer():
+    repo = _RepoEspia(tocadas=[11])
+
+    assert _servicio(repo).asignar_almacen_linea(
+        document_id=DOC, valuation_line_id=11,
+    ) is True
+
+    assert repo.asignaciones == [{"document_id": DOC, "ids": [11]}]
+    assert len(repo.deshacer) == 1
+    entrada = repo.deshacer[0]
+    assert entrada["action"] == "almacen"
+    assert entrada["document_id"] == DOC
+    assert entrada["restore"] == [
+        {"table": "albaran_line_valuations",
+         "values": {"id": 11, "estado": "antes"}},
+    ]
+    assert "Almacén" in entrada["description"]
+
+
+def test_f051_r18_almacen_a_todas_deja_una_sola_entrada_con_todas(
+):
+    repo = _RepoEspia(tocadas=[11, 12, 13, 14])
+
+    assert _servicio(repo).asignar_almacen_todas(document_id=DOC) == 4
+
+    assert repo.asignaciones == [{"document_id": DOC, "ids": None}]
+    assert len(repo.deshacer) == 1
+    entrada = repo.deshacer[0]
+    assert entrada["action"] == "almacen"
+    assert [s["values"]["id"] for s in entrada["restore"]] == [
+        11, 12, 13, 14,
+    ]
+
+
+def test_f051_r18_solo_se_guardan_las_lineas_que_se_tocaron():
+    repo = _RepoEspia(tocadas=[12, 14])
+
+    assert _servicio(repo).asignar_almacen_todas(document_id=DOC) == 2
+
+    assert [s["values"]["id"] for s in repo.deshacer[0]["restore"]] == [
+        12, 14,
+    ]
+
+
+@pytest.mark.parametrize("accion", ["linea", "todas"])
+def test_f051_r18_si_no_toca_nada_no_hay_entrada_de_deshacer(accion):
+    repo = _RepoEspia(tocadas=[])
+    servicio = _servicio(repo)
+
+    if accion == "linea":
+        resultado = servicio.asignar_almacen_linea(
+            document_id=DOC, valuation_line_id=21,
+        )
+        assert resultado is False
+    else:
+        assert servicio.asignar_almacen_todas(document_id=DOC) == 0
+    assert repo.deshacer == []
+
+
+def test_f051_r18_el_snapshot_restaura_las_lineas_tocadas(repo_sqlite):
+    """El formato del snapshot es el que ``undo_last`` sabe restaurar."""
+    antes = {vid: _fila(repo_sqlite, vid) for vid in (11, 12, 13, 14)}
+    instantaneas = repo_sqlite.snapshot_lineas_valoracion(document_id=DOC)
+    assert [s["values"]["id"] for s in instantaneas] == [11, 12, 13, 14]
+
+    repo_sqlite.asignar_almacen(document_id=DOC, valuation_line_ids=None)
+    with repo_sqlite._session_factory.create_session() as s:
+        for instantanea in instantaneas:
+            repo_sqlite._undo_apply_restore(s, instantanea)
+        s.commit()
+
+    for vid in (11, 12, 13, 14):
+        assert _fila(repo_sqlite, vid) == antes[vid]
+
+
+def test_f051_r18_snapshot_de_un_documento_sin_valoracion_es_vacio(
+    repo_sqlite,
+):
+    assert repo_sqlite.snapshot_lineas_valoracion(document_id="no") == []
+
+
+# =================================================================== #
+# API: los dos POST nuevos (404 si no toca nada, R23)
+# =================================================================== #
+
+class _ServicioApi:
+    def __init__(self, *, linea=True, todas=3):
+        self.linea = linea
+        self.todas = todas
+        self.llamadas: list[tuple] = []
+
+    def initialize(self):
+        return True
+
+    def asignar_almacen_linea(self, *, document_id, valuation_line_id):
+        self.llamadas.append(("linea", document_id, valuation_line_id))
+        return self.linea
+
+    def asignar_almacen_todas(self, *, document_id):
+        self.llamadas.append(("todas", document_id))
+        return self.todas
+
+
+def _cliente(monkeypatch, servicio):
+    from fastapi.testclient import TestClient
+
+    from config.settings import Settings
+    from interface_adapters.web import app as modulo_app
+
+    monkeypatch.setattr(modulo_app, "SessionFactory", lambda **_: object())
+    monkeypatch.setattr(
+        modulo_app, "AlbaranReviewRepository", lambda *_: object(),
+    )
+    monkeypatch.setattr(modulo_app, "WorkflowRunsPurger", lambda *_: object())
+    monkeypatch.setattr(modulo_app, "ReviewService", lambda *_: servicio)
+    ajustes = Settings.model_construct(pg_password="x", pg_admin_password="x")
+    return TestClient(modulo_app.build_app(ajustes))
+
+
+def test_f051_endpoint_almacen_de_una_linea(monkeypatch):
+    servicio = _ServicioApi(linea=True)
+    respuesta = _cliente(monkeypatch, servicio).post(
+        f"/api/documents/{DOC}/lines/11/almacen",
+    )
+
+    assert respuesta.status_code == 200, respuesta.text
+    assert respuesta.json()["ok"] is True
+    assert servicio.llamadas == [("linea", DOC, 11)]
+
+
+def test_f051_endpoint_linea_ajena_da_404(monkeypatch):
+    servicio = _ServicioApi(linea=False)
+    respuesta = _cliente(monkeypatch, servicio).post(
+        f"/api/documents/{DOC}/lines/21/almacen",
+    )
+
+    assert respuesta.status_code == 404
+
+
+def test_f051_endpoint_almacen_a_todas(monkeypatch):
+    servicio = _ServicioApi(todas=4)
+    respuesta = _cliente(monkeypatch, servicio).post(
+        f"/api/documents/{DOC}/almacen-todas",
+    )
+
+    assert respuesta.status_code == 200, respuesta.text
+    assert respuesta.json() == {"ok": True, "document_id": DOC, "lineas": 4}
+    assert servicio.llamadas == [("todas", DOC)]
+
+
+def test_f051_endpoint_almacen_a_todas_sin_lineas_da_404(monkeypatch):
+    respuesta = _cliente(monkeypatch, _ServicioApi(todas=0)).post(
+        f"/api/documents/{DOC}/almacen-todas",
+    )
+
+    assert respuesta.status_code == 404
