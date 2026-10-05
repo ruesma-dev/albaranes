@@ -328,3 +328,314 @@ def test_f051_r8_partida_action_admite_la_marca_nueva():
     from domain.models.valuation_records import PartidaAction
 
     assert "almacen_sin_partida" in get_args(PartidaAction)
+
+
+# =================================================================== #
+# Apoyo del builder: el ValuationBuilder real con el matcher encendido
+# =================================================================== #
+
+def builder(*, almacen_sin_partida: bool = True, destinadas=None):
+    """El cableado de ``composition.py`` con los ajustes de F-051.
+
+    ``destinadas=None`` no pasa el parámetro nuevo del builder: es como
+    se construye hoy (y como lo construyen los tests de otras features).
+    """
+    from pathlib import Path
+
+    from application.services.importe_calculator import ImporteCalculator
+    from application.services.price_reconciler import PriceReconciler
+    from application.services.unit_category_guard import UnitCategoryGuard
+    from application.services.unit_converter import UnitConverter
+    from application.services.valuation_builder import ValuationBuilder
+    from infrastructure.units.yaml_unit_registry import YamlUnitRegistry
+    from tests.conftest import TOLERANCIA_IMPORTE_PCT, TOLERANCIA_PRECIO_PCT
+
+    registro = YamlUnitRegistry(str(
+        Path(__file__).resolve().parents[1] / "config" / "unit_registry.yaml"
+    ))
+    extra = {} if destinadas is None else {"familias_destinadas": destinadas}
+    return ValuationBuilder(
+        unit_category_guard=UnitCategoryGuard(unit_registry=registro),
+        price_reconciler=PriceReconciler(tolerance_pct=TOLERANCIA_PRECIO_PCT),
+        partida_matcher=matcher(almacen_sin_partida),
+        unit_converter=UnitConverter(registry=registro),
+        importe_calculator=ImporteCalculator(
+            tolerance_pct=TOLERANCIA_IMPORTE_PCT,
+        ),
+        **extra,
+    )
+
+
+def linea(
+    merge_line_id,
+    *,
+    partida=None,
+    matched=5101,
+    precio=12.5,
+    familia=None,
+    rol=None,
+    ref_linea_base=None,
+    descripcion="ARIDO 20/40",
+    unidad="TN",
+):
+    """Una línea del albarán: (línea IA, contexto) para el sobre.
+
+    ``line_index`` = ``merge_line_id - 701``: la 701 es la línea 0.
+    """
+    from domain.models.contexto_linea import ContextoLinea
+    from domain.models.valuation_envelope import AlbaranLineContextDto
+
+    ctx = None
+    if familia is not None or rol is not None or ref_linea_base is not None:
+        ctx = ContextoLinea(
+            tipo_familia=familia, rol_linea=rol, ref_linea_base=ref_linea_base,
+        )
+    contexto = AlbaranLineContextDto(
+        merge_line_id=merge_line_id,
+        line_index=merge_line_id - 701,
+        descripcion=descripcion,
+        unidad_medida=unidad,
+        unidad_categoria="mass" if unidad == "TN" else "count",
+        cantidad=2.0,
+        codigo_partida_albaran=partida,
+        contexto_linea=ctx,
+    )
+    ia = _linea_ia(merge_line_id, matched=matched, precio=precio)
+    if unidad != "TN":
+        ia.unidad_categoria_albaran = "count"
+    return ia, contexto
+
+
+def sintetica(parent_merge_line_id, *, precio=3.0):
+    from domain.models.valuation_envelope import LineValuationDto
+
+    return LineValuationDto(
+        merge_line_id=None,
+        line_kind="synthetic_modifier",
+        parent_merge_line_id=parent_merge_line_id,
+        modifier_source="recargo_test",
+        modifier_reason="recargo de prueba",
+        descripcion_linea="RECARGO",
+        match_method="no_match",
+        precio_unitario_pdf_inferido=precio,
+    )
+
+
+def valorar(lineas, *, contrato=(CL_ARIDO_0302, CL_PORTE_0302),
+            sinteticas=(), clasificacion=None, **opciones):
+    from domain.models.valuation_envelope import (
+        DocumentoValoracionDto,
+        ValuationContextDto,
+        ValuationEnvelope,
+        ValuationEnvelopeMeta,
+    )
+
+    sobre = ValuationEnvelope(
+        status="ok",
+        meta=ValuationEnvelopeMeta(
+            document_id="doc-f051", codigo_contrato=CONTRATO,
+            numero_albaran="F051",
+        ),
+        data=DocumentoValoracionDto(
+            lineas=[ia for ia, _ in lineas] + list(sinteticas),
+        ),
+        context=ValuationContextDto(
+            lineas_albaran=[ctx for _, ctx in lineas],
+            lineas_contrato=[_cl(c) for c in contrato],
+            clasificacion=clasificacion,
+        ),
+    )
+    _cabecera, registros = builder(**opciones).build(
+        envelope=sobre, existing_document_already_valued=False,
+    )
+    return registros
+
+
+def _por_merge(registros, merge_line_id):
+    return next(r for r in registros if r.merge_line_id == merge_line_id)
+
+
+def _clasificacion(familia):
+    from ruesma_comun.contratos import ClasificacionAlbaran
+
+    return ClasificacionAlbaran(
+        familia=familia, confianza_pct=90.0, motivo="leído por IA1",
+    )
+
+
+DESTINADAS = frozenset(
+    {"hormigon", "mortero", "combustible", "alquiler_maquinaria", "residuos"},
+)
+
+
+# =================================================================== #
+# R1, R2 · en el builder: almacén sin tocar la valoración
+# =================================================================== #
+
+def test_f051_r1_builder_linea_sin_partida_queda_en_almacen():
+    registro = valorar([linea(701)])[0]
+
+    assert registro.codigo_partida_final is None
+    assert registro.partida_action == "almacen_sin_partida"
+    assert "almacen_sin_partida_en_albaran" in registro.review_reasons
+
+
+def test_f051_r2_builder_conserva_casado_precio_e_importe():
+    nuevo = valorar([linea(701)])[0]
+    antes = valorar([linea(701)], almacen_sin_partida=False)[0]
+
+    assert antes.codigo_partida_final == "03.02"  # hoy: la del contrato
+    assert nuevo.matched_contrato_line_id == 5101
+    assert nuevo.derived_contrato_line_record is None
+    assert nuevo.precio_unitario_final == antes.precio_unitario_final == 12.5
+    assert nuevo.importe_calculado == antes.importe_calculado
+    assert nuevo.review_required is antes.review_required is False
+
+
+# =================================================================== #
+# R3 · sin match de la IA: derivada de respaldo, marca conservada
+# =================================================================== #
+
+def test_f051_r3_sin_match_crea_nueva_no_match_y_conserva_la_marca():
+    registro = valorar([linea(701, matched=None, precio=None)])[0]
+
+    assert registro.partida_action == "almacen_sin_partida"
+    assert registro.codigo_partida_final is None
+    assert registro.matched_contrato_line_id is None
+    derivada = registro.derived_contrato_line_record
+    assert derivada is not None
+    assert derivada.origen == "nueva_no_match"
+    assert derivada.codigo_partida is None
+
+
+# =================================================================== #
+# R4, R5 · revisión NO bloqueante solo en familias destinadas
+# =================================================================== #
+
+@pytest.mark.parametrize("familia", ["mortero", "combustible"])
+def test_f051_r4_familia_destinada_en_la_linea_va_a_revision(familia):
+    registro = valorar(
+        [linea(701, familia=familia)], destinadas=DESTINADAS,
+    )[0]
+
+    assert registro.review_required is True
+    assert "partida_ausente_familia_destinada" in registro.review_reasons
+    # Sigue en almacén: la revisión no rellena partida (D2).
+    assert registro.codigo_partida_final is None
+    assert registro.partida_action == "almacen_sin_partida"
+
+
+def test_f051_r4_familia_destinada_heredada_del_documento():
+    """La familia es la EFECTIVA: la del documento si la línea no trae."""
+    registro = valorar(
+        [linea(701)], destinadas=DESTINADAS,
+        clasificacion=_clasificacion("combustible"),
+    )[0]
+
+    assert registro.review_required is True
+    assert "partida_ausente_familia_destinada" in registro.review_reasons
+
+
+def test_f051_r4_con_partida_impresa_no_hay_motivo_aunque_sea_destinada():
+    registro = valorar(
+        [linea(701, partida="03.02", familia="mortero")],
+        destinadas=DESTINADAS,
+    )[0]
+
+    assert "partida_ausente_familia_destinada" not in registro.review_reasons
+    assert registro.codigo_partida_final == "03.02"
+
+
+def test_f051_r4_interruptor_apagado_no_marca_revision_por_familia():
+    registro = valorar(
+        [linea(701, familia="mortero")], destinadas=DESTINADAS,
+        almacen_sin_partida=False,
+    )[0]
+
+    assert "partida_ausente_familia_destinada" not in registro.review_reasons
+    assert registro.partida_action == "existing_matched"
+
+
+@pytest.mark.parametrize("familia", ["generico", "otro", None])
+def test_f051_r5_familia_no_destinada_no_va_a_revision(familia):
+    registro = valorar(
+        [linea(701, familia=familia)], destinadas=DESTINADAS,
+    )[0]
+
+    assert registro.review_required is False
+    assert "partida_ausente_familia_destinada" not in registro.review_reasons
+    assert registro.codigo_partida_final is None
+
+
+def test_f051_r5_sin_parametro_el_builder_no_marca_ninguna_familia():
+    """Construido como hoy (sin ``familias_destinadas``): ninguna."""
+    registro = valorar([linea(701, familia="mortero")])[0]
+
+    assert "partida_ausente_familia_destinada" not in registro.review_reasons
+
+
+# =================================================================== #
+# R7 · complementarias y sintéticas siguen heredando de su base
+# =================================================================== #
+
+def _porte(merge_line_id=702):
+    return linea(
+        merge_line_id, matched=5103, rol="transporte", ref_linea_base=0,
+        descripcion="PORTE", unidad="UD", precio=40.0,
+    )
+
+
+def test_f051_r7_complementaria_de_base_en_almacen_hereda_null():
+    registros = valorar([linea(701), _porte()])
+    porte = _por_merge(registros, 702)
+
+    assert _por_merge(registros, 701).partida_action == "almacen_sin_partida"
+    assert porte.partida_action == "inherited_from_base_line"
+    assert porte.codigo_partida_final is None
+
+
+def test_f051_r7_complementaria_sin_partida_hereda_la_de_su_base():
+    """Excepción (c) del humano: el porte sin marca sigue a su base."""
+    registros = valorar([linea(701, partida="03.02"), _porte()])
+    porte = _por_merge(registros, 702)
+
+    assert porte.partida_action == "inherited_from_base_line"
+    assert porte.codigo_partida_final == "03.02"
+
+
+def test_f051_r7_sintetica_de_base_en_almacen_hereda_null():
+    registros = valorar([linea(701)], sinteticas=[sintetica(701)])
+    sint = next(r for r in registros if r.line_kind == "synthetic_modifier")
+
+    assert sint.partida_action == "inherited_from_base_line"
+    assert sint.codigo_partida_final is None
+
+
+def test_f051_r7_sintetica_de_base_con_partida_hereda_la_partida():
+    registros = valorar(
+        [linea(701, partida="03.02")], sinteticas=[sintetica(701)],
+    )
+    sint = next(r for r in registros if r.line_kind == "synthetic_modifier")
+
+    assert sint.codigo_partida_final == "03.02"
+
+
+# =================================================================== #
+# R28 · una hermana con partida no se la pasa a la que no la trae
+# =================================================================== #
+
+def test_f051_r28_hermana_con_partida_no_se_copia():
+    registros = valorar(
+        [
+            linea(701, partida="03.02"),
+            linea(702),
+            linea(703, partida="04.05", matched=5102),
+        ],
+        contrato=(CL_ARIDO_0302, CL_ARIDO_0405, CL_PORTE_0302),
+    )
+
+    assert _por_merge(registros, 701).codigo_partida_final == "03.02"
+    sin = _por_merge(registros, 702)
+    assert sin.codigo_partida_final is None
+    assert sin.partida_action == "almacen_sin_partida"
+    assert _por_merge(registros, 703).codigo_partida_final == "04.05"
