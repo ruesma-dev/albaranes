@@ -30,7 +30,6 @@ from urllib.parse import quote_plus
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
 from ruesma_comun.alta_sigrid import MAPEO_PRODUCTO_POR_DEFECTO_TEXTO, leer_mapeo
 
 _ENV_FILE = Path(__file__).resolve().parents[1] / ".env"

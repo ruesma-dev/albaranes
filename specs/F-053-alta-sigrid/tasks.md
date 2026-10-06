@@ -23,7 +23,7 @@ sigrid-api tal como esté en la spec de F-009 (v8, `8a6ecab`; códigos incluidos
 - [x] T2: DDL de `albaran_altas_sigrid` e índice en `schema_contribution.py` de sv3, idempotente (R36, design §6)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r36`
 - [x] T2b: Columna `producto_sigrid VARCHAR(24)` en `albaran_line_valuations`: `ALTER ... ADD COLUMN IF NOT EXISTS` en `schema_contribution.py` de sv6 y en `orm_valuation_models.py` (nula, sin defecto); el replace de sv6 la deja `NULL` (R36, R42)  |  Verificación: `pytest services/albaran-valoracion-persist -k "f053_r36 or f053_r42 or drift"`
 - [x] T3: Esqueleto de sv9 (`services/albaranes-alta-sigrid`): settings con los defectos de design §7 (`ALTA_SIGRID_COMMIT` solo es `true` con el literal `true`; mapeo con `leer_mapeo`, arranque fallido con mapeo inválido), logging, Dockerfile, requirements, `sv9.md`, `.env.example` sin valores, alta en `harness/servicios.json`  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r19_modo or f053_r44"` y `pytest tests/test_estructura_monorepo.py`
-- [ ] T4: Modelos de dominio y los tres puertos de sv9 (design §3)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_modelos`
+- [x] T4: Modelos de dominio y los tres puertos de sv9 (design §3)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_modelos`
 
 ## Bloque B · dominio puro de sv9
 
