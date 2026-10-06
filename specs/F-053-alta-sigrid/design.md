@@ -1,9 +1,9 @@
 <!-- specs/F-053-alta-sigrid/design.md -->
-# F-053 · Alta en Sigrid de los albaranes aprobados · Diseño (v6)
+# F-053 · Alta en Sigrid de los albaranes aprobados · Diseño (v7)
 
-Requisitos: `requirements.md`. Decisiones y preguntas **[Pn]**: `progress/spec_F-053.md`. «Contrato» =
-`sigrid-api/specs/F-009-alta-albaran-compra/contrato_albaranes.md` (dueño sigrid-api; aquí se enlaza, no se
-copia; si discrepa de la spec de F-009, manda esa spec).
+Requisitos: `requirements.md`. Decisiones (P1–P7 cerradas el 2026-10-06): `progress/spec_F-053.md`. «Contrato» =
+`sigrid-api/specs/F-009-alta-albaran-compra/contrato_albaranes.md` (**v8**, `8a6ecab`; dueño sigrid-api; aquí se
+enlaza, no se copia; si discrepa de la spec de F-009, manda esa spec).
 
 ## 1. Encaje, límite de servicio y precondiciones
 
@@ -12,21 +12,18 @@ Responsabilidad **nueva** (escribir en el ERP): **servicio nuevo sv9** (`service
 aprendizaje (docstring de `MensajeFeedback`). Flujo: sv4 aprueba → `q-feedback` (reservada para esto en
 `docs/ARCHITECTURE.md`) → sv9 → sigrid-api → `albaran_altas_sigrid` ← sv4 la lee.
 
-**Precondiciones de `in_progress`**: (1) la **medición** (`services/albaranes-persistencia/scripts/
-medir_admisibilidad_f053.py`, solo lectura, la ejecuta el humano; comando en `progress/spec_F-053.md`);
-(2) **F-009 de sigrid-api** desplegada con su llave y la lista blanca de §2; (3) respuestas a las [Pn].
+**Precondiciones**: §8 (**F-051 en `dev`** para implementar; **F-009 desplegada** para la previa y el modo real).
 
 **Producto de las sin vincular (humano, 2026-10-05).** La analítica de una sin vincular sale de la obra y de la
-naturaleza que sigrid-api asigna al producto (`MA99`, `QA99`, `XA99`), no de la partida ni del almacén (la deriva
-sigrid-api, contrato H10 y H34): el producto importa. Regla: familia `alquiler_maquinaria` → `QA9999`,
+naturaleza que sigrid-api asigna al producto por configuración (`MA99`, `QA99`, `XA99`; contrato H10 y H34), no
+de la partida ni del almacén: el producto importa. Regla: familia `alquiler_maquinaria` → `QA9999`,
 `medios_auxiliares` → `XA9999` (andamios, puntales…), resto → `MA9999`, **por línea** (`familia_efectiva`: en un
 mixto manda la de la línea), y el administrativo lo cambia en sv4 antes de aprobar. Vinculadas: las del contrato.
 
-**Familia `medios_auxiliares`**: no existe hoy en el catálogo (`ruesma_comun.contratos.familias`: generico,
-hormigon, mortero, residuos, combustible, alquiler_maquinaria, otro). Darla de alta es ruta sensible (prompt de
-IA1, `contexto_linea.TipoFamilia` copiado en sv2/sv3/sv5, evals) y **no va en F-053** [P1; recomendación: ficha
-propia, no previa]. Mientras no exista, esa clave del mapeo no casa nunca: los andamios salen `MA9999` por
-defecto y el administrativo elige `XA9999` a mano (R40–R41).
+**Familia `medios_auxiliares`**: no existe hoy en `ruesma_comun.contratos.familias`. Darla de alta es ruta sensible
+(prompt de IA1, `TipoFamilia` copiado en sv2/sv3/sv5, evals) y va en **F-061** (ficha propia, decisión del humano
+2026-10-06), ni dentro de F-053 ni antes. Mientras no exista, esa clave del mapeo no casa: los andamios salen
+`MA9999` por defecto y el administrativo elige `XA9999` a mano en sv4 (R40–R41).
 
 ## 2. sigrid-api: F-009, modo extendido de `sigrid/albaran`
 
@@ -38,7 +35,7 @@ y `lineas[]` casadas por `referencia_linea` (también en `idempotente`); en 400,
 **Configuración que pone sigrid-api** (no F-053): `SIGRID_ALBARAN_WRITE_ENABLED` (segunda llave),
 `SIGRID_ALBARAN_PREFIJOS_REFERENCIA=["ALB-"]`, `SIGRID_ALBARAN_EMPRESAS_OBRA=[1]` y
 `SIGRID_ALBARAN_PRODUCTOS_SIN_CONTRATO=["MA9999","QA9999","XA9999"]`, que debe contener los valores del mapeo
-de §7 (`XA9999` ya está en F-009 v7; la naturaleza por producto, contrato H34, la pone sigrid-api).
+de §7, y `SIGRID_ALBARAN_NATURALEZA_POR_PRODUCTO` (`MA99`, `QA99`, `XA99`; H34, F-009 v8), que debe cubrirlos.
 
 **Códigos → estado del alta (R18; la tabla es un dato de `clasificador.py`) y lo que ve el revisor en sv4:**
 
@@ -46,15 +43,16 @@ de §7 (`XA9999` ya está en F-009 v7; la naturaleza por producto, contrato H34,
 |---|---|---|
 | `lineas_no_validas` con `linea_no_es_del_contrato`, `partida_no_encontrada`, `partida_ambigua`, `partida_no_imputable`, `paride_no_valido`, `analitica_no_resuelta` | `no_admitido` | cada línea con su código y mensaje; se corrige y «Solicitar alta» |
 | `obra_no_encontrada`, `obra_ambigua`, `contrato_no_encontrado`, `contrato_ambiguo`, `proveedor_sin_albaran_previo`, `almacen_de_obra_no_resuelto` (H13), `demasiadas_lineas` (H22) | `no_admitido` | corregir obra o contrato; proveedor sin albarán previo, obra con dos almacenes o más de 100 líneas: alta a mano |
-| `referencia_en_conflicto` | `revisar` | otro albarán de Sigrid lleva nuestra referencia: mirarlo [P3] |
+| `referencia_en_conflicto` | `revisar` | otro albarán de Sigrid lleva nuestra referencia: mirarlo |
 | `escritura_albaranes_deshabilitada`, `base_de_datos_no_permitida`, `referencia_no_permitida`, `obra_de_empresa_no_permitida`, `usuario_no_valido`, `estado_inicial_no_encontrado`, `peticion_mixta`; línea con `producto_no_permitido`, `producto_no_encontrado` (H24), `naturaleza_no_valida` (H34) o `precio_negativo`; 400 sin código; código desconocido (H25) | `error` | «fallo de configuración o del servicio» con el código; no es del revisor |
 | `colision_de_clave`, `filas_afectadas_inesperadas` | `error` | ERP intacto; «Solicitar alta» reintenta con la misma referencia |
 | 5xx, tiempo agotado, conexión | `incierto` (grabación) / `error` (previa) | tras la Espera, reintento seguro por idempotencia |
 
-En `lineas_no_validas`, si una línea trae un código de la fila `error`, gana `error`. `precio_negativo` no puede
-salir de sv9 (manda |importe| / |cantidad|): si llega, es un fallo. `analitica_no_resuelta`: la obra no tiene la
-cuenta `obra.sufijo` de la naturaleza (contrato H10): alta a mano o crearla. sv9 no manda `naturaleza`: si sale
-`naturaleza_no_valida`, es configuración de sigrid-api (H34). Los tests usan el contrato tal como quede (tasks).
+En `lineas_no_validas`, si una línea trae un código de la fila `error`, gana `error`. `precio_negativo` no sale de
+sv9 (manda |importe| / |cantidad|; signos opuestos, R39). `analitica_no_resuelta`: la obra no tiene la cuenta
+`<obra>.<sufijo>` (H10): alta a mano o crearla. `naturaleza` no existe en F-009 v8 (mandarla da 400 sin código):
+`naturaleza_no_valida` es configuración de sigrid-api (H34). `fecha_no_valida` ya no existe en sigrid-api (v5.1): la
+fecha la controla sv9 (R10, R39). H9 y H20 cerrados (anular borra; `mov` según `pro.tipmov`, sin puerta dura).
 
 Avisos **bloqueantes** por `codigo` (R17; `ALTA_SIGRID_AVISOS_BLOQUEANTES`, defecto `producto_sin_historico`;
 `plantilla_de_otro_proveedor` ya no existe, H25) → `revisar`. Informativos, se enseñan en el panel:
@@ -149,7 +147,7 @@ sv4: `templates/_alta_sigrid.html` (panel de la ficha, R29–R30).
    `a_incierto` / `procesar` / `verificar_anulacion`; si procesa, UPSERT a `en_curso` con `ultimo_intento_at_utc`.
 2. `verificar_anulacion` (R28): `existe_concepto(sigrid_con_ide)` → `anulado` o aviso.
 3. `leer_datos` y `validar_y_construir` → `no_admitido` si hay motivos (R10–R13); `revisar` si la fecha no es
-   plausible (R39). Ninguno de los dos llama a sigrid-api.
+   plausible o hay signos opuestos (R39). Ninguno de los dos llama a sigrid-api.
 4. `buscar_albaranes` (CIF normalizado) → `ya_en_sigrid` si hay alta a mano (R14).
 5. Previa: 400/5xx → `clasificar` (§2); `idempotente` → `registrado` (+ `registrado_distinto`, R15); `comparar`
    → `revisar` (R16–R18). 6. Simulación → `simulado` (R19); real → grabación única (R20–R21). 7. Adjunto
@@ -202,11 +200,13 @@ sigrid-api (§2): si no, `producto_no_permitido` → `error`. En local, `ALTA_SI
 
 ## 8. Orden y dependencias
 
-**Medición y F-009 de sigrid-api → F-052 → F-051 → F-053.** F-052 da el CIF correcto; F-051 fija el almacén
-(partida final vacía, v4) y su ruta de sv4 (`asignar_almacen`) entra en R25 al fusionar. F-053 se fusiona después.
-La ficha de la familia de medios auxiliares [P1] no bloquea a F-053. «Solo líneas con importe» ya deja fuera el
-«solo llevar» de F-006; F-015 (tachadas), cuando llegue. F-058 debe añadir el producto elegido a lo que conserva
-al revalorar (anotado para el líder: la ficha vive en la rama de F-051).
+**Medición y F-052 hechas → F-051 → F-053.** La implementación empieza con **F-051 en `dev`** (almacén = partida
+final vacía; su `asignar_almacen` de sv4 entra en R25): **T0d** fusiona `dev` en la rama. Los tests no usan
+sigrid-api; la previa contra sigrid-api (T26, T28) y el modo real (T29) esperan a **F-009 desplegada** (v8; M14e no
+cambia el contrato). **Evolución, no bloqueo**: F-049, cuando conserve el `ide` de la partida elegida, deja mandar
+`paride` (H17; mientras, `partida_ambigua` → `no_admitido`: otra partida o sin partida); F-061 (`medios_auxiliares`);
+F-058 (conservar el producto elegido al revalorar; anotado para el líder); F-015 (tachadas). ALM impreso sin
+vincular (H30): vincularlo es de F-060/F-007. «Solo líneas con importe» ya excluye el «solo llevar» de F-006.
 Despliegue (comun reconstruye todas las imágenes): sv6 (columna) y sv3 (tabla) → sv9 (DESDE vacía) → sv4 → DESDE
 en ambos (simulación) → días de simulación → llave de F-009 abierta y `ALTA_SIGRID_COMMIT=true` (humano).
 
@@ -223,7 +223,7 @@ activa el humano. Desde local, nunca.» Igual en `docs/ARCHITECTURE.md` y `docs/
 - sv1, sv2, sv5; la lógica de sv6 (solo su DDL y ORM, §4).
 - `albaran_documents_merge` y `albaran_lines_merge`: ninguna columna nueva.
 - `ruesma_comun.contratos.familias`, `contexto_linea`, los prompts de IA1 y los evals: la familia
-  `medios_auxiliares` es de otra ficha [P1]. `ruesma_comun.importes`, `origen_datos`.
+  `medios_auxiliares` es de F-061. `ruesma_comun.importes`, `origen_datos`.
 - `infra/*.local.ps1`, `.env`: nada de IDs, claves ni URLs reales.
 
 ## 11. Riesgos y decisiones
@@ -232,7 +232,7 @@ activa el humano. Desde local, nunca.» Igual en `docs/ARCHITECTURE.md` y `docs/
   una réplica, grabación sin reintento automático, `incierto` no se retoma antes de la Espera y búsqueda por CIF +
   referencia (altas a mano; un número repetido da `ya_en_sigrid`, preferible a duplicar).
 - **Precio neto**: F-009 calcula `tot = cantidad·precio` sin descuento: se manda el unitario **neto** (importe /
-  cantidad) redondeado a 6 decimales (H14), no el bruto. El signo de los descuentos es [P2].
+  cantidad) a 6 decimales (H14), no el bruto. Signos opuestos (descuento) ⇒ `revisar`; a mano en Sigrid (R39, H8).
 - **Nunca se graba aproximado**: lo que la previa no devuelve tal cual se pidió (importe, partida, líneas) va a
   `revisar`; una cuenta analítica que la obra no tiene no se inventa (contrato H10).
 - **Producto calculado al leer**, no guardado: el por defecto sale de la familia en cada lectura (sv4 al pintar,

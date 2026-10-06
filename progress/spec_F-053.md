@@ -2,26 +2,74 @@
 # Spec F-053 · Alta en Sigrid de los albaranes aprobados (spec-author)
 
 Rama `feature/F-053-alta-sigrid` (worktree `../albaranes-F-053`, desde `dev` c8a295e). Rigor `critico`,
-prioridad 1. v1 del 2026-09-30; v2–v5 del 2026-10-01; **v6 del 2026-10-05** (producto genérico por línea,
-F-051 v4 y huecos del contrato con sigrid-api). Estado: **vuelve a `pending`** con las **7 preguntas** de abajo
-(P1–P7); con ellas respondidas, `spec_ready` y PARADA 1.
+prioridad 1. v1 del 2026-09-30; v2–v5 del 2026-10-01; v6 del 2026-10-05 (producto genérico por línea, F-051 v4 y
+huecos del contrato); **v7 del 2026-10-06**: respuestas del humano a P1–P7 («si» a todas las recomendaciones) y
+alineación con **F-009 v8 de sigrid-api** (`8a6ecab`, que fija la forma definitiva del contrato; solo le queda medir
+`mov.prepma`, M14e, que no la cambia). Estado: **`spec_ready`**, sin preguntas abiertas; siguiente, la PARADA 1.
 
 ## Qué hay en la rama
 
-- `specs/F-053-alta-sigrid/requirements.md` — R1–R44 en EARS (149/150 líneas).
-- `specs/F-053-alta-sigrid/design.md` — sv9, códigos → estados (§2, la forma del contrato ya no se copia: se
-  enlaza), producto, flujo, DDL, configuración, orden (250/250).
-- `specs/F-053-alta-sigrid/tasks.md` — T0a, T0b, T0c, T0, T1–T30 con T2b, T19b y T21b; T0b, T0c, T0, T22 y
+- `specs/F-053-alta-sigrid/requirements.md` — R1–R44 en EARS (**150/150** líneas).
+- `specs/F-053-alta-sigrid/design.md` — sv9, códigos → estados (§2, enlaza el contrato), producto, flujo, DDL,
+  configuración, orden (**250/250**).
+- `specs/F-053-alta-sigrid/tasks.md` — T0d, T0a, T0b, T0c, T0, T1–T30 con T2b, T19b y T21b; T0b, T0c, T0, T22 y
   T26–T29 son MANUAL del humano.
-- Script de medición y sus tests (sin cambios en v6; T0a los alinea con F-051 v4). Ningún fichero de código
-  tocado en v6. No se ha llamado a sigrid-api, Azure ni BBDD.
-- Contrato con sigrid-api actualizado en su repositorio (commit aparte en `sigrid-api`, rama
-  `feature/F-009-alta-albaran-compra`): `specs/F-009-alta-albaran-compra/contrato_albaranes.md` **v7.1**
-  (2026-10-06, commit `2631b1a`: analítica confirmada por negocio, H34 naturaleza por producto, H35 `cod2` y DNC).
-- **Retoque del 2026-10-06** (sin cambiar de versión ni de tamaño: design 250/250, requirements 149/150): design §1
-  (la analítica sale de la obra y de la naturaleza que pone sigrid-api), §2 (`naturaleza_no_valida` → `error`;
-  `analitica_no_resuelta` = la obra no tiene la cuenta, sigue `no_admitido`) y §11; tasks T29 (revisar naturaleza,
-  analítica, `cod2` y DNC en la UI). Requirements sin cambios: sv9 no manda nada nuevo.
+- `progress/propuestas_a_sigrid_api_F-053.md` (**nuevo**) — lo que el contrato de sigrid-api da aún por abierto y
+  F-053 ya ha cerrado. Conclusión: **F-053 no necesita nada nuevo de F-009 v8**. En sigrid-api no se ha editado nada
+  (regla del humano del 2026-10-06: «el contrato solo se toca para actualizar consumos»).
+- `harness/features.json` — F-053 a `spec_ready` y **F-061 registrada** (P1; id libre comprobado en `albaranes`,
+  `albaranes-F-049`, `albaranes-F-051` y en todas las ramas locales). `BACKLOG.md` regenerado.
+- Ningún fichero de código tocado. No se ha llamado a sigrid-api, Azure ni BBDD.
+
+## v7 · decisiones del humano (2026-10-06) y qué cambió
+
+| P | Decisión | Dónde |
+|---|---|---|
+| P1 | Familia `medios_auxiliares` (XA9999) en ficha propia **F-061** (`pending`, prioridad 2, `critico`; alcance de la v6: `CATALOGO`, señales, `TipoFamilia` y copias, prompt de fase 1, evals). Mientras, XA9999 a mano en sv4 | glosario, design §1, §8, §10; `features.json` |
+| P2 | Signos opuestos (cantidad > 0 e importe < 0, o al revés) ⇒ `revisar` con `signo_incoherente`, sin llamar a sigrid-api; el descuento, a mano en Sigrid (H8) | R12, R39; design §2, §5, §11; T5, T9, T26 |
+| P3 | Cerrada por M17b de F-009: anular **borra**; tras `anulado`, misma `referencia_externa`. Solo se retiran las marcas [P3] | R14, R28; design §2 |
+| P4 | Sin `paride` hasta que F-049 conserve el `ide` de la partida; `partida_ambigua` ⇒ `no_admitido` (otra partida o sin partida). Nota de evolución, no requisito condicionado (no cabe y aún no hay nada que probar) | R12; design §8 |
+| P5 | Vinculadas con cantidad y sin importe: no se mandan (H29) | R13; T5 |
+| P6 | «ALM» impreso: sin vincular, como hoy; vincularlo es de F-060/F-007 (H30) | glosario; design §8 |
+| P7 | Cerrada: XA9999 medido en T0b-ter de F-009 (`tipmov` 1, genera `mov`; cuenta = `cuacomcod` de la naturaleza, 97,9 %) | — |
+
+**Alineación con F-009 v8** (forma definitiva del contrato; mensaje de la sesión de sigrid-api del 2026-10-06):
+- sv9 no manda `naturaleza` (el campo se retira en la v8; mandarlo da 400 sin código): la pone sigrid-api con
+  `SIGRID_ALBARAN_NATURALEZA_POR_PRODUCTO` (`MA99`, `QA99`, `XA99`; H34). `naturaleza_no_valida` ⇒ `error`
+  (configuración). La App Setting nueva se cita en design §2 y en T0c.
+- `cod2`, `dncide` y `dncproide` de las vinculadas los copia sigrid-api del `ctrpro` (H35, M19: `cod2` 100 %, enlace
+  98,8 %); sin vincular, vacíos. sv9 no manda nada nuevo; T29 lo revisa en la UI.
+- `analitica_no_resuelta` ⇒ `no_admitido` (la obra no tiene `<obra>.<caagascod sin MOD.>`; XA9999 100 % desde 2025).
+- H9 cerrado (anular borra), H20 cerrado sin puerta dura (`mov` según `pro.tipmov`).
+- `fecha_no_valida` ya no existe en sigrid-api (v5.1). La validación **local** de formato de F-053 (R10) se mantiene
+  —sin fecha válida no se puede construir `fecha_albaran`, y `null` sería «hoy» en sigrid-api— pero se **renombra a
+  `fecha_ilegible`** para no confundirla con el código retirado.
+- `referencia_linea` = `str(id)` de la línea valorada (entero): siempre ≤ 24 (R12, T5).
+- Los códigos `precio_negativo`, `obra_de_empresa_no_permitida`, `paride_no_valido` y los avisos
+  `iva_de_otro_proveedor` y `sin_partida_en_linea_con_partida` ya estaban mapeados (v6); T7 los cita uno a uno.
+
+**Orden** (design §8, tasks): la implementación empieza cuando **F-051 esté en `dev`**; **T0d** (primera tarea)
+fusiona `dev` en la rama. Los tests no necesitan sigrid-api; T26 y T28 (previa contra sigrid-api) y T29 (modo
+real) esperan a **F-009 desplegada**. F-049 (`paride`) y F-061 son evolución, no bloqueo.
+
+## Plan de implementación (para la PARADA 1)
+
+1. **T0d** — con F-051 en `dev`, fusionar `dev` en la rama; `init.sh` en verde.
+2. **T0a** — script de medición sin `MARCAS_ALMACEN` (F-051 v4). T0b, T0c y T0: MANUAL del humano (solo lectura).
+3. **comun** (T1) — `MensajeFeedback.accion`, `esta_valorado`, `alta_sigrid` (mapeo y producto efectivo).
+4. **sv3 y sv6** (T2, T2b) — DDL de `albaran_altas_sigrid` (sv3) y columna `producto_sigrid` (sv6, solo DDL y ORM).
+5. **sv9 nuevo** (T3–T16) — esqueleto y modelos; dominio puro (validador con R10–R13 y R39, comparador,
+   clasificador con la tabla de design §2); servicio (reclamar, validar, duplicados, previa, simulación, grabación
+   única, adjunto, anulación); adaptadores (cliente de sigrid-api, repositorio SQL, PDF de SharePoint, worker).
+6. **sv4** (T17–T21b) — publicar al aprobar, cerrojo de R25–R27 (con `asignar_almacen` de F-051), producto
+   elegible por línea, no aprobar sin valorar, panel del alta y estado en el listado.
+7. **infra y docs** (T22, T23) — sv9 en los scripts (KEDA, 1 réplica, secreto de Key Vault); `ARCHITECTURE.md`,
+   dominio de negocio y `azure-apps/albaranes.md`.
+8. **Puertas** (T24, T25, T30) — cobertura ≥ 80 %, mutación completa, `init.sh` en verde.
+9. **Verificación real** (T26–T29, humano) — con F-009 desplegada: local en simulación, cerrojo, Azure en
+   simulación unos días y primera grabación real con autorización expresa.
+Riesgo: rigor `critico`, escribe en el ERP; ninguna escritura real hasta F-009 desplegada y `ALTA_SIGRID_COMMIT=true`.
+Fuera: F-061, `paride` (F-049), conservar el producto al revalorar (F-058), ALM impreso (F-060/F-007).
 
 ## v6 · qué cambia y por qué
 
@@ -43,7 +91,7 @@ MAQUINARIA», XA9999 «ALQUILER MEDIOS AUXILIARES (ANDAMIOS, PUNTALES…)»; SM9
 | Cómo lo manda sv9 | `producto` = el elegido o el por defecto; en vinculadas se ignora (R12, R43). Elegido fuera del mapeo ⇒ `producto_no_admitido` (R10) |
 | Al revalorar | Se pierde (el replace de sv6 inserta la fila con `NULL`), como el almacén elegido (F-051 D5). Conservarlo es de **F-058**: el líder debe añadir «producto elegido» a su alcance (la ficha vive en la rama de F-051) (R42) |
 | Lista blanca | `SIGRID_ALBARAN_PRODUCTOS_SIN_CONTRATO` = `["MA9999","QA9999","XA9999"]`; los valores del mapeo deben estar en ella |
-| Familia `medios_auxiliares` | No existe; no va en F-053 (P1). Mientras tanto la clave del mapeo no casa y los andamios salen MA9999 salvo que el administrativo elija XA9999 |
+| Familia `medios_auxiliares` | No existe; va en la ficha F-061 (P1, decidido el 2026-10-06). Mientras tanto la clave del mapeo no casa y los andamios salen MA9999 salvo que el administrativo elija XA9999 |
 
 ### 2. Alineación con F-051 v4
 
@@ -76,44 +124,15 @@ retomarla.
 
 Ya cerrados fuera de F-053 (el encargo los listaba como del humano): **H4** (decidido: F-009 conserva
 «imputable»; lo alinea F-049), **H31** (N4 aprobada en F-009: `cod_contrato` siempre que la valoración lo tenga;
-R12) y **H20** (cerrado por la decisión de producto de este 2026-10-05; queda la puerta M9, P7). `precio_negativo`
+R12) y **H20** (cerrado en F-009 v7: `mov` según `pro.tipmov`, sin puerta dura). `precio_negativo`
 → `error` y no `revisar`: sv9 nunca manda precio negativo, así que si llega es un fallo, no un dato que revisar.
-`analitica_no_resuelta` (H10) está en F-009 v7 con el sentido de la v7.1 del contrato (la obra no tiene la cuenta
-`obra.sufijo`): `no_admitido`. `naturaleza_no_valida` (H34): `error`, porque sv9 no manda `naturaleza`.
+`analitica_no_resuelta` (H10, F-009 v8: la obra no tiene la cuenta `<obra>.<sufijo>`): `no_admitido`.
+`naturaleza_no_valida` (H34): `error`, porque sv9 no manda `naturaleza` (el campo no existe en F-009 v8).
 
-## Preguntas abiertas al humano (cerradas, con recomendación)
+## Preguntas de la v6 (P1–P7)
 
-- **P1 · Familia `medios_auxiliares` (XA9999)**: ¿dentro de F-053, ficha previa propia, o con F-060?
-  **Recomendación: ficha propia** (id libre comprobado en los worktrees locales: F-061), **ni dentro de F-053 ni
-  previa ni fusionada con F-060**. Motivos: es ruta sensible (prompt de IA1, `contexto_linea.TipoFamilia`
-  copiado idéntico en sv2/sv3/sv5, evals) con otro ritmo y otro rigor; F-053 está en su tope de tamaño; F-053 no
-  la necesita (el administrativo elige XA9999 a mano y la clave del mapeo espera); F-060 (acopiables) es una
-  política **sobre** las familias y la usará, así que F-061 conviene antes de F-060 y en serie con ella (las dos
-  tocan el prompt). F-007 no se ve afectada. Alcance propuesto: entrada en `CATALOGO` (documento y línea), señales
-  (andamio, puntal, plataforma…; qué la distingue de `alquiler_maquinaria`), `TipoFamilia`, prompt de fase 1 y
-  casos de evals; sin prompt de fase 2 ni de valoración propios (cae al genérico) y fuera de
-  `FAMILIAS_DESTINADAS` hasta F-060.
-- **P2 · H8, signos**: descuento (cantidad > 0, importe < 0) o lectura incoherente (cantidad < 0, importe > 0).
-  Hoy R12 pone el signo del importe y el descuento viajaría como **devolución** (resta `canser` y stock).
-  **Recomendación**: `revisar` con motivo `signo_incoherente` sin llamar a sigrid-api (el descuento comercial, a
-  mano en Sigrid, como ya decidió el humano para F-009). Descartado: excluir la línea y grabar el resto (aproximado).
-- **P3 · H9, reintento tras anular**: depende de M17b de F-009 (¿anular en Sigrid borra el `con` o lo marca?).
-  **Recomendación**: esperar a M17b; si borra, nada cambia; si marca, F-053 usa `ALB-{document_id}-{n}` tras cada
-  `anulado` y R14/R28 excluyen la marca. Hasta entonces R14, R28 y `referencia_en_conflicto` quedan como están.
-- **P4 · H17, `paride`**: con 4.312 códigos de partida repetidos entre imputables (M3), sin `paride` puede salir
-  `partida_ambigua`. **Recomendación**: F-053 manda `paride` en cuanto F-049 conserve el `ide` de la partida
-  elegida; mientras, no lo manda y `partida_ambigua` → `no_admitido` (el revisor elige otra o la deja sin
-  partida). ¿Se acepta esa salida provisional o F-053 espera a F-049?
-- **P5 · H29**: confirmar que una **vinculada** con cantidad y sin importe (precio 0 o «solo llevar») no se manda
-  (no consume medición ni stock). **Recomendación**: sí, como ya se decidió «solo líneas con importe» (R13).
-- **P6 · H30, ALM impreso**: sv6 la deja sin vincular (va con el producto por defecto) aunque casara con el
-  contrato. **Recomendación**: dejarlo así en F-053; si debe vincular, es cambio de sv6 en F-060/F-007.
-- **P7 · H28 y puerta H20**: las mediciones pendientes de F-009 (T0b-bis: M9, M11, M14b, M16b, M17b) deben
-  cubrir ahora **XA9999** y M16b debe medir la regla del contrato H10 (analítica = la de la última sin vincular del
-  mismo producto en la misma obra). **Urgente**: en sigrid-api (`a7517af`) T0b-bis está lista para que la lance
-  el humano y su script (`scripts/medir_f009_t0.py`) **no** incluye `XA9999` (`PRODUCTOS_GENERICOS`,
-  `LISTA_BLANCA_GENERICOS`) ni esa regla en M16b. **Recomendación**: ampliarlo en sigrid-api antes de lanzar
-  T0b-bis (una sola repetición); sin M9 cerrada para los tres productos no hay modo real.
+Respondidas por el humano el 2026-10-06 («si» a todas las recomendaciones): tabla de la sección v7. El texto de las
+preguntas, con sus motivos, queda en el historial de git de este fichero (commit `07fd7a5`).
 
 ## Decisiones del humano vigentes (2026-10-01 salvo indicación)
 
@@ -126,9 +145,9 @@ R12) y **H20** (cerrado por la decisión de producto de este 2026-10-05; queda l
 | Alcance | «Medir antes» (T0) |
 | Líneas | Solo con importe; vinculadas y sin vincular en el mismo albarán; con partida o sin ella (= almacén, F-051 v4) |
 | Producto (**2026-10-05**) | Vinculada: el del contrato. Sin vincular: por familia de la línea (QA9999 maquinaria, XA9999 medios auxiliares, MA9999 el resto), cambiable en sv4 antes de aprobar |
-| `cod2` y planificación de compras (**2026-10-05**; **llevado al contrato v7.1, H35**) | «el cod2 hay que traerlo, así como la vinculación a planificación de compras. si no viene originalmente se deja vacío». Medido en Sigrid (solo lectura, emp 1): `dcapro.cod2` («código alternativo», lo usa el jefe de obra para filtrar en el DPC) = `ctrpro.cod2` en el 99,9 % de las vinculadas que lo llevan; enlace DNC (`dncide` → `dnc`, `dncproide` → `dncpro`) en el 86 % de las vinculadas. Regla: en vinculadas, sigrid-api copia `cod2`, `dncide` y `dncproide` del `ctrpro` (vacíos si no los tiene; hoy F-009 los heredaría de la plantilla); sin vincular, vacíos. Lo absorbe F-009 v8 (contrato §8); sv9 no manda nada nuevo |
-| Analítica y naturaleza de las sin vincular (**2026-10-05/06**; **contrato v7.1, H10 y H34**) | Confirmado por el director de Administración y Control de Costes (correo del 2026-10-05) y medido: cuenta analítica = código de obra + `.` + `auxpronat.caagascod` de la naturaleza sin el prefijo `MOD.` (`MA99` `MOD.CDSB37`, obra `0678` ⇒ `0678.CDSB37`; `QA99` ⇒ `.CDQA12`; `XA99` ⇒ `.CDXA01`); cumplimiento QA9999 99,8 %, MA9999 con `MA99` 98 %, XA9999 87 %; 38 de 39 obras recientes tienen las cuentas. Naturaleza: el maestro de MA9999 está mal (`MA1501` cerámico; a mano se cambia a `MA99` en el 81 %) ⇒ mapeo producto → naturaleza en la configuración de sigrid-api (`MA9999`→`MA99`, `QA9999`→`QA99`, `XA9999`→`XA99`). En F-053: no se manda `naturaleza`; `analitica_no_resuelta` → `no_admitido` (alta a mano o crear la cuenta); `naturaleza_no_valida` → `error`. Hallazgo para Administración: corregir el maestro de MA9999 (no es de F-009 ni de F-053) |
-| Negativas | Entran ya (signos incoherentes: P2) |
+| `cod2` y planificación de compras (**2026-10-05**; H35, absorbido en F-009 v8 `8a6ecab`) | «el cod2 hay que traerlo, así como la vinculación a planificación de compras. si no viene originalmente se deja vacío». Medido en Sigrid (solo lectura, emp 1): `dcapro.cod2` («código alternativo», lo usa el jefe de obra para filtrar en el DPC) = `ctrpro.cod2` en el 99,9 % de las vinculadas que lo llevan; enlace DNC (`dncide` → `dnc`, `dncproide` → `dncpro`) en el 86 % de las vinculadas. Regla: en vinculadas, sigrid-api copia `cod2`, `dncide` y `dncproide` del `ctrpro` (vacíos si no los tiene; hoy F-009 los heredaría de la plantilla); sin vincular, vacíos. Absorbido en F-009 v8 (`8a6ecab`; M19: `cod2` 100 %, enlace 98,8 %); sv9 no manda nada nuevo |
+| Analítica y naturaleza de las sin vincular (**2026-10-05/06**; H10 y H34, absorbidos en F-009 v8 `8a6ecab`) | Confirmado por el director de Administración y Control de Costes (correo del 2026-10-05) y medido: cuenta analítica = código de obra + `.` + `auxpronat.caagascod` de la naturaleza sin el prefijo `MOD.` (`MA99` `MOD.CDSB37`, obra `0678` ⇒ `0678.CDSB37`; `QA99` ⇒ `.CDQA12`; `XA99` ⇒ `.CDXA01`); cumplimiento QA9999 99,8 %, MA9999 con `MA99` 98 %, XA9999 87 %; 38 de 39 obras recientes tienen las cuentas. Naturaleza: el maestro de MA9999 está mal (`MA1501` cerámico; a mano se cambia a `MA99` en el 81 %) ⇒ mapeo producto → naturaleza en la configuración de sigrid-api (`MA9999`→`MA99`, `QA9999`→`QA99`, `XA9999`→`XA99`). En F-053: no se manda `naturaleza`; `analitica_no_resuelta` → `no_admitido` (alta a mano o crear la cuenta); `naturaleza_no_valida` → `error`. Hallazgo para Administración: corregir el maestro de MA9999 (no es de F-009 ni de F-053) |
+| Negativas | Entran (cantidad e importe negativos); signos opuestos ⇒ `revisar` `signo_incoherente` (P2, 2026-10-06) |
 | Sin valorar | No se aprueba ni se registra (R37); `partial` no cuenta |
 | Valorado | `ok` de sv6, o valoración manual completa (`manual`/`no_contract` con importes y ninguno nulo) |
 | Empleado / usuario | `ALTA_SIGRID_EMPIDE` fijo y configurable; `ALTA_SIGRID_USUARIO` (T0c) |
@@ -155,9 +174,8 @@ $sv3 = "C:\Users\pgris\PycharmProjects\albaranes\services\albaranes-persistencia
 
 ## Orden
 
-**Medición → F-009 de sigrid-api → F-052 → F-051 → F-053** (design §8). La ficha de medios auxiliares (P1) no
-bloquea. F-009 v7 absorbió lo del contrato §8 de la v6.1; su v8 debe absorber lo de la v7.1 (contrato §8, puntos
-7-12: sufijo sin `MOD.`, mapeo de naturaleza, `cueide` P4, `cod2` y DNC).
+**Medición y F-052 hechas → F-051 en `dev` → F-053** (design §8). F-009 de sigrid-api desplegada antes de T26, T28
+y T29. F-061 (medios auxiliares) y F-049 (`paride`) no bloquean.
 
 ## Hallazgos que siguen vigentes
 
@@ -165,7 +183,7 @@ bloquea. F-009 v7 absorbió lo del contrato §8 de la v6.1; su v8 debe absorber 
    aprobado (R1–R2).
 2. El deshacer de sv4 restaura filas enteras (`SELECT *`) de merge y valoración: el estado del alta va en
    `albaran_altas_sigrid`, que solo escribe sv9; el producto elegido sí va en la línea valorada (se restaura bien).
-3. `features.json` de esta rama no tiene F-051, F-052 ni F-058/F-060: conflicto trivial al fusionar.
+3. `features.json` de esta rama no tiene F-051, F-058 ni F-060 y sí F-061: conflicto trivial al fusionar (T0d).
 4. «Valorado» comprobado en código (v4): sv4 ya permite valorar a mano sin contrato
    (`add_standalone_valuation_line`, `add_conciliacion_for_merge_line`, cabecera `manual`); «Valorar ahora» borra
    lo manual.

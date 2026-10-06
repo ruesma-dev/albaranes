@@ -3,18 +3,19 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **55 features**, 39 abiertas, 16 terminadas.
+Resumen: **56 features**, 40 abiertas, 16 terminadas.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-053 | Alta en Sigrid de los albaranes aprobados | 1 | pendiente | critico |  |
+| F-053 | Alta en Sigrid de los albaranes aprobados | 1 | spec lista | critico |  |
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
 | F-057 | Truncado sin comprobar en los clientes de Sigrid colindantes: header_and_lines de sv4 (max_rows=1000) y SigridApiObraClient de sv3 | 2 | pendiente | critico |  |
+| F-061 | Familia medios_auxiliares (andamios, puntales, plataformas...) en el catalogo de familias de IA1 | 2 | pendiente | critico |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -74,17 +75,17 @@ Resumen: **55 features**, 39 abiertas, 16 terminadas.
 
 ### F-053 · Alta en Sigrid de los albaranes aprobados
 
-estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
+estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí
 
 PETICION DEL HUMANO (2026-09-30): «Alta en Sigrid de los albaranes aprobados». Aprobar ES registrar: los dos botones de sv4 que aprueban («Guardar y aprobar» de la ficha y «Aprobar» del listado) disparan el alta del albaran en Sigrid.
 
 DECISIONES (todas cerradas el 2026-10-01, detalle en progress/spec_F-053.md): solo endpoints de dominio de sigrid-api, nunca sql/write; servicio nuevo sv9 en el monorepo que consume q-feedback; arranque en SIMULACION y grabacion real solo con ALTA_SIGRID_COMMIT=true (humano); solo lineas con importe; en un mismo albaran, vinculadas a linea de contrato (consumen medicion) y sin vincular, cada una con partida o en almacen; producto del contrato o, sin vincular, generico por familia de la linea (QA9999 alquiler de maquinaria, XA9999 medios auxiliares, MA9999 el resto; decision del humano 2026-10-05), cambiable por el administrativo en sv4 antes de aprobar (columna producto_sigrid de albaran_line_valuations, DDL en sv6); linea sin partida = almacen (F-051 v4); negativas si; sin valorar (ok de sv6 o valoracion manual completa en sv4) no se aprueba ni se registra; tabla albaran_altas_sigrid con DDL en sv3; registrado = bloqueado en sv4; empleado fijo; clave de siempre.
 
-V6 (2026-10-05): vuelve a PENDING con 7 preguntas al humano (P1-P7 de progress/spec_F-053.md: familia medios_auxiliares en ficha propia, signos H8, anulacion H9, paride H17, H29, H30, mediciones de F-009 con XA9999).
+V7 (2026-10-06): SPEC_READY. El humano respondio «si» a todas las recomendaciones (P1-P7 de progress/spec_F-053.md): P1 familia medios_auxiliares en ficha propia F-061 (mientras, el administrativo elige XA9999 a mano en sv4); P2 signos opuestos (descuento: cantidad > 0 e importe < 0, o cantidad < 0 e importe > 0) => revisar con signo_incoherente sin llamar a sigrid-api, el descuento se mete a mano en Sigrid; P3 anular en Sigrid borra el albaran (M17b de F-009): se repite con la misma referencia; P4 sin paride mientras F-049 no conserve el ide de la partida (partida_ambigua => no_admitido); P5 vinculadas con cantidad y sin importe no se mandan; P6 ALM impreso sin vincular (vincularlo es de F-060/F-007); P7 XA9999 medido en F-009. Alineada con F-009 v8 de sigrid-api (8a6ecab): sin campo naturaleza (la pone sigrid-api por mapeo), cod2 y planificacion de compras de las vinculadas los copia sigrid-api del ctrpro.
 
 PRECONDICIONES: medicion de solo lectura (services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py, la ejecuta el humano) y PRE-1 = F-009 de sigrid-api (partida por linea, lineas sin contrato con producto por codigo, negativas, idempotencia) desplegada.
 
-SUSTITUYE A F-013. ORDEN: medicion -> F-009 de sigrid-api -> F-052 -> F-051 -> F-053. Escribe en el ERP de produccion => rigor critico y verificaciones MANUAL del humano.
+SUSTITUYE A F-013. ORDEN: F-052 (done) -> F-051 en dev -> implementacion de F-053 (T0d fusiona dev en la rama); la previa contra sigrid-api y el modo real esperan a F-009 desplegada; F-049 (paride) y F-061 son evolucion, no bloqueo. Escribe en el ERP de produccion => rigor critico y verificaciones MANUAL del humano.
 
 ### F-055 · IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2)
 
@@ -165,6 +166,18 @@ PROPUESTA: pasar los dos clientes a ruesma_comun.sigrid (política por consulta:
 RIGOR critico: mismo tipo de defecto que F-052 (lectura silenciosamente incompleta de Sigrid en un camino de producción de sv3).
 
 ALCANCE: services/albaranes-front (cliente de contratos del fallback local) y services/albaranes-persistencia (SigridApiObraClient). NO ENTRA: cambiar SQL ni semántica de las consultas ya cubiertas por F-052. RELACIONADAS: F-052 (D2, D6, O-C4), F-055.
+
+### F-061 · Familia medios_auxiliares (andamios, puntales, plataformas...) en el catalogo de familias de IA1
+
+estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
+
+ORIGEN: pregunta P1 de F-053 (spec v6, progress/spec_F-053.md), respondida por el humano el 2026-10-06 («si» a la recomendacion): ficha propia, ni dentro de F-053 ni previa, ni fusionada con F-060.
+
+PROBLEMA: F-053 elige el producto generico de Sigrid de cada linea sin vincular por su familia (alquiler_maquinaria -> QA9999, medios_auxiliares -> XA9999, el resto -> MA9999; mapeo ALTA_SIGRID_PRODUCTO_POR_DEFECTO). La familia medios_auxiliares no existe en ruesma_comun.contratos.familias (generico, hormigon, mortero, residuos, combustible, alquiler_maquinaria, otro): hasta que exista, los andamios y puntales salen MA9999 por defecto y el administrativo elige XA9999 a mano en sv4 (columna «Producto Sigrid» de F-053). La cuenta analitica de la linea depende del producto (naturaleza XA99, cuenta <obra>.CDXA01), asi que clasificar mal cuesta trabajo manual en cada albaran.
+
+ALCANCE PROPUESTO: entrada en CATALOGO (documento y linea) con sus senales (andamio, puntal, plataforma, encofrado alquilado...; que la distingue de alquiler_maquinaria), TipoFamilia de contexto_linea y sus copias en los modelos de sv2, sv3, sv5 y sv6, prompt de fase 1 de IA1 y casos de evals. Sin prompt de fase 2 ni de valoracion propios (cae al generico) y fuera de FAMILIAS_DESTINADAS de sv6 hasta F-060. Ruta sensible (prompt de IA1, evals) => rigor critico.
+
+ORDEN: antes de F-060 y en serie con ella (las dos tocan el prompt de IA1); no bloquea a F-053 (la clave del mapeo espera). RELACIONADAS: F-053 (producto por familia), F-060 (lineas acopiables), F-007.
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 

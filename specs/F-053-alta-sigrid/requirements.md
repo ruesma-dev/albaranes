@@ -1,10 +1,10 @@
 <!-- specs/F-053-alta-sigrid/requirements.md -->
-# F-053 · Alta en Sigrid de los albaranes aprobados · Requisitos (v6)
+# F-053 · Alta en Sigrid de los albaranes aprobados · Requisitos (v7)
 
-Rigor **critico** (escribe en el ERP). Servicios: **sv9 nuevo** (`services/albaranes-alta-sigrid`), sv4, sv3 y
-sv6 (solo DDL), `ruesma_comun`, `infra`. Sustituye a F-013. Decisiones y **[Pn]** (preguntas abiertas):
-`progress/spec_F-053.md`. «Contrato» = `sigrid-api/specs/F-009-alta-albaran-compra/contrato_albaranes.md` (dueño
-sigrid-api; huecos **Hn** de su §5). **Previos**: la medición (T0) y F-009 de sigrid-api desplegada (design §2).
+Rigor **critico** (escribe en el ERP). Servicios: **sv9 nuevo** (`services/albaranes-alta-sigrid`), sv4, sv3 y sv6
+(solo DDL), `ruesma_comun`, `infra`. Sustituye a F-013. Decisiones (P1–P7 cerradas): `progress/spec_F-053.md`.
+«Contrato» = `sigrid-api/specs/F-009-alta-albaran-compra/contrato_albaranes.md` (v8, `8a6ecab`; dueño sigrid-api;
+huecos **Hn** de su §5). **Orden**: F-051 en `dev` para implementar; F-009 desplegada para la previa y el real (design §8).
 
 ## Glosario
 
@@ -14,12 +14,12 @@ sigrid-api; huecos **Hn** de su §5). **Previos**: la medición (T0) y F-009 de 
   desde el último intento. **Modo**: `simulacion` si `ALTA_SIGRID_COMMIT` no es literalmente `true`; si lo es,
   `real`. **DESDE**: `ALTA_SIGRID_DESDE_UTC`; vacía = feature apagada.
 - **Vinculada**: casa con una línea del contrato de la valoración con `sigrid_ide`, sin `derived_contrato_line_id`.
-  Las demás: **sin vincular**. **Línea a registrar**: `importe_calculado` no nulo y ≠ 0 (positivo o negativo).
-  **Cantidad**: la convertida si es vinculada; si no, la del albarán. **Sin partida** (= almacén, F-051 v4):
-  `codigo_partida_final` vacío, tenga o no marca en `partida_action`. **Previa**: `commit=false`.
+  Las demás (también la «ALM» impresa, H30): **sin vincular**. **Línea a registrar**: `importe_calculado` no nulo
+  y ≠ 0 (positivo o negativo). **Cantidad**: la convertida si es vinculada; si no, la del albarán. **Sin partida**
+  (= almacén, F-051 v4): `codigo_partida_final` vacío, tenga o no marca en `partida_action`. **Previa**: `commit=false`.
 - **Producto** de una sin vincular: el elegido en sv4 (`producto_sigrid`) o, si no hay, el que da el **mapeo**
   `ALTA_SIGRID_PRODUCTO_POR_DEFECTO` (familia → código, clave `*` obligatoria; defecto `alquiler_maquinaria` →
-  `QA9999`, `medios_auxiliares` → `XA9999`, `*` → `MA9999`) a su `familia_efectiva` (`ruesma_comun.contratos.
+  `QA9999`, `medios_auxiliares` (F-061) → `XA9999`, `*` → `MA9999`) a su `familia_efectiva` (`ruesma_comun.contratos.
   familias`: la de la línea, si no la del documento salvo mixto; sin familia, `*`). **Admitidos**: los del mapeo.
 - **Valorado**: valoración de sv6 en `ok`, o manual completa del administrativo en sv4 (cabecera `manual` o
   `no_contract` con alguna línea con importe ≠ 0 y ninguna con importe nulo).
@@ -49,7 +49,7 @@ R10. sv9 debe declarar `no_admitido`, con **todos** los motivos a la vez, si: fa
 CIF (`falta_cif`) o número de albarán (`falta_numero_albaran`); el CIF normalizado (mayúsculas, sin espacios,
 guiones ni puntos, sin `ES` delante de 9 caracteres) no es alfanumérico (`cif_no_valido`, H21); obra, CIF,
 contrato o una partida pasan de 24 caracteres o el número de 128 (`campo_demasiado_largo`, H6); la fecha no
-es `AAAA-MM-DD` válida (`fecha_no_valida`); no está valorado (`no_valorado`); no hay líneas a registrar
+es `AAAA-MM-DD` válida (`fecha_ilegible`, local); no está valorado (`no_valorado`); no hay líneas a registrar
 (`sin_lineas`); una tiene cantidad nula o 0 (`cantidad_no_valida`); una vinculada no tiene cantidad
 convertida (`cantidad_sin_convertir`); una sin vincular no tiene descripción ni en la valoración ni en el
 merge (`falta_descripcion`, H6); o el producto de una sin vincular no es admitido (`producto_no_admitido`).
@@ -59,18 +59,18 @@ R12. CUANDO el documento es admisible, sv9 debe construir la petición del modo 
 (contrato §2): `cod_obra`, `cif_proveedor` normalizado, `cod_contrato` de la valoración si lo tiene, también
 sin vinculadas (H31), `referencia_externa` = `ALB-{document_id}`, `su_referencia` = número recortado,
 `usu` = `ALTA_SIGRID_USUARIO` (H1), `fecha_albaran` en `AAAAMMDD`, `empide` = `ALTA_SIGRID_EMPIDE` o nulo,
-nunca `lineas_recibidas`; y en `lineas`, una por línea a registrar, por `line_index` de su línea del merge y
-las que no la tienen al final por `id` (H26): `referencia_linea` = id de la línea valorada; vinculada,
-`ctrpro_ide` sin `unidad` ni `descripcion` (H7); sin vincular, su `producto`, `descripcion` recortada a 128 y
-`unidad` recortada a 8; `partida` = `codigo_partida_final` si no está vacío y, si lo está, ninguna clave de
-partida (no existe campo `almacen`; H5) [P4: `paride`]; `precio` = |importe| / |cantidad| redondeado a 6
-decimales (H14) y `cantidad` con el signo del importe [P2], de modo que `cantidad·precio` = importe.
-R13. sv9 debe dejar fuera de la petición las líneas con importe nulo o 0 [P5].
+nunca `lineas_recibidas` ni `naturaleza` (H34); y en `lineas`, una por línea a registrar, por `line_index` de su
+línea del merge y las que no la tienen al final por `id` (H26): `referencia_linea` = id de la línea valorada
+(≤ 24); vinculada, `ctrpro_ide` sin `unidad` ni `descripcion` (H7); sin vincular, su `producto`, `descripcion`
+recortada a 128 y `unidad` a 8; `partida` = `codigo_partida_final` si no está vacío y, si lo está, ninguna clave
+de partida (no hay campo `almacen`, H5); sin `paride` (H17; evolución con F-049, design §8); `precio` = |importe|
+/ |cantidad| a 6 decimales (H14) y `cantidad` con el signo del importe (opuestos: R39): `cantidad·precio` = importe.
+R13. sv9 debe dejar fuera de la petición las líneas con importe nulo o 0, también las vinculadas con cantidad (H29).
 
 ## D. Duplicados e idempotencia
-R14. Antes de la previa, sv9 debe buscar en Sigrid (`sql/read`) albaranes de compra (`con.tip` 14) con el
-mismo `dca.entcif` (normalizado) y `dca.entref` y otro `synckey` (altas a mano) [P3]; si hay alguno, el alta
-pasa a `ya_en_sigrid` con sus `ide` y `cod`, sin previa ni grabación.
+R14. Antes de la previa, sv9 debe buscar en Sigrid (`sql/read`) albaranes de compra (`con.tip` 14) con el mismo
+`dca.entcif` (normalizado) y `dca.entref` y otro `synckey` (altas a mano); si hay alguno, el alta pasa a
+`ya_en_sigrid` con sus `ide` y `cod`, sin previa ni grabación.
 R15. CUANDO la previa o la grabación respondan `estado` `idempotente`, sv9 debe pasar a `registrado` con su
 `con_ide` y `cod` sin grabar nada; SI además algún `total` por `referencia_linea` difiere de lo pedido como en
 R17, ENTONCES debe guardar el motivo `registrado_distinto` y enseñarlo en sv4 (H18; se corrige anulando,
@@ -84,17 +84,17 @@ R17. sv9 debe pasar el alta a `revisar`, con motivo, si en la previa: el `total`
 (`importe_distinto`); falta o sobra una línea (`lineas_distintas`); su `partida` no es la pedida, también nula
 frente a no nula (`partida_distinta`); o un aviso, de cabecera o de línea, tiene un `codigo` de
 `ALTA_SIGRID_AVISOS_BLOQUEANTES` (`aviso_bloqueante`). Los demás se guardan y se enseñan.
-R18. SI sigrid-api responde 400 (previa o grabación), ENTONCES sv9 debe llevar el alta al estado que fija la
-tabla de design §2 según `details.codigo` (un código que no esté en ella, `error`; H25), guardando `error`,
-`codigo` y `details.lineas`.
+R18. SI sigrid-api responde 400 (previa o grabación), ENTONCES sv9 debe llevar el alta al estado de la tabla de
+design §2 según `details.codigo` (código que no esté en ella: `error`, H25), guardando `error`, `codigo` y `details.lineas`.
 R19. MIENTRAS el modo sea `simulacion`, una previa sin motivos deja el alta `simulado` y sv9 nunca manda `commit=true`.
-R39. SI la fecha del albarán es posterior a hoy (Europe/Madrid) o anterior a hoy − 365 días y no hay motivos
-de R10, ENTONCES sv9 debe pasar el alta a `revisar` con motivo `fecha_no_plausible` sin llamar a sigrid-api (H19).
+R39. SI no hay motivos de R10 y la fecha del albarán es posterior a hoy (Europe/Madrid) o anterior a hoy − 365
+días (`fecha_no_plausible`, H19) o una línea a registrar tiene cantidad > 0 e importe < 0 (descuento) o cantidad
+< 0 e importe > 0 (`signo_incoherente`, H8, con su `referencia_linea`), ENTONCES sv9 debe pasar el alta a
+`revisar` con todos esos motivos sin llamar a sigrid-api. El descuento se da de alta a mano en Sigrid.
 
 ## F. Grabación real
-R20. DONDE el modo sea `real`, tras una previa sin motivos sv9 debe repetir la misma petición con
-`commit=true` **una sola vez**, sin reintento automático, y con `ok` y `estado` `creado` guardar `con_ide` y
-`cod` y pasar a `registrado`.
+R20. DONDE el modo sea `real`, tras una previa sin motivos sv9 debe repetir la misma petición con `commit=true`
+**una sola vez**, sin reintento automático, y con `ok` y `estado` `creado` guardar `con_ide` y `cod` y pasar a `registrado`.
 R21. SI hay tiempo agotado, error de conexión o 5xx, ENTONCES el alta pasa a `incierto` si era la grabación
 y a `error` si era la previa.
 R22. CUANDO un alta queda `registrado` en modo `real`, sv9 debe adjuntar el PDF (de SharePoint) con
@@ -113,7 +113,8 @@ fila del merge bloqueada (`FOR UPDATE`).
 R27. El borrado múltiple y el vaciado de la papelera deben saltarse los bloqueantes y decir cuántos se saltaron.
 R28. CUANDO el revisor pulsa «Ya lo he anulado en Sigrid» en un alta `registrado`, sv4 debe publicar
 `accion="verificar_anulacion"`; sv9 debe pasar el alta a `anulado` solo si `sql/read` no encuentra ese
-`con.ide`, y si lo encuentra dejarla `registrado` con el aviso «sigue en Sigrid» [P3].
+`con.ide`, y si lo encuentra dejarla `registrado` con el aviso «sigue en Sigrid». Tras `anulado`, «Solicitar alta»
+repite el alta con la misma `referencia_externa` (anular en Sigrid borra el albarán, H9).
 
 ## H. Visibilidad en sv4
 R29. MIENTRAS DESDE no esté vacía, la ficha de un documento aprobado debe enseñar el alta: estado, modo,

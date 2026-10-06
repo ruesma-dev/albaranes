@@ -5,15 +5,15 @@
 > en `progress/historico/current_2026-10-01_cierre_F-052.md`; el resumen de F-052, en `progress/history.md`.
 > Aquí solo queda lo vivo. Lo que manda sobre el estado de cada feature es `harness/features.json`.
 
-**F-053 · SPEC v6 (vuelve a `pending`, 2026-10-05)** en la rama `feature/F-053-alta-sigrid` (worktree
+**F-053 · SPEC v7, `spec_ready` (2026-10-06)** en la rama `feature/F-053-alta-sigrid` (worktree
 `../albaranes-F-053`): alta en Sigrid de los albaranes aprobados, servicio nuevo sv9, arranque en simulación.
-v6 = producto genérico **por línea** (QA9999 maquinaria, XA9999 medios auxiliares, MA9999 el resto; el
-administrativo lo cambia en sv4, columna `producto_sigrid` con DDL en **sv6**), alineada con F-051 v4 (sin partida
-= almacén, sin campo `almacen`) y con los huecos del contrato de sigrid-api que no necesitaban al humano.
-**7 preguntas abiertas** (P1–P7 de `progress/spec_F-053.md`). Contrato actualizado en sigrid-api (rama
-`feature/F-009-alta-albaran-compra`, `contrato_albaranes.md` v6.1): lo que F-009 debe absorber, en su §8.
-Precondiciones: F-009 de sigrid-api desplegada y F-051. F-013 queda marcada como sustituida (sigue `pending`).
-Medición de F-053 hecha: solo 3 albaranes activos en producción.
+v7 = respuestas del humano a P1–P7 («si» a todas las recomendaciones; tabla en `progress/spec_F-053.md`) y
+alineación con **F-009 v8** de sigrid-api (`8a6ecab`: sin campo `naturaleza`, `cod2`/DNC del `ctrpro` los pone
+sigrid-api). Nada nuevo que pedir a F-009: `progress/propuestas_a_sigrid_api_F-053.md` recoge solo el estado de huecos
+que el contrato aún da por abiertos (la sesión de sigrid-api lo incorpora si lo acepta). **F-061** registrada
+(familia `medios_auxiliares`, `pending`, prioridad 2, `critico`). Topes: requirements 150/150, design 250/250.
+**Siguiente: PARADA 1** con el plan de `progress/spec_F-053.md` §«Plan de implementación». La implementación
+empieza cuando **F-051 esté en `dev`** (T0d fusiona `dev`); T26–T29 esperan a F-009 desplegada.
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
@@ -22,10 +22,9 @@ Medición de F-053 hecha: solo 3 albaranes activos en producción.
 - **F-054** (correo con adjunto encadenado): `spec_ready` en `../albaranes-F-054` (rama
   `feature/F-054-correo-adjunto-encadenado`). **4 decisiones DA por confirmar** por el humano. Se implementa
   **después de F-052** (o sea, ya puede arrancar en cuanto se confirmen las DA y F-052 esté en `dev`).
-- **F-053** (alta en Sigrid de los aprobados): **`pending`** con la spec v6 en `../albaranes-F-053` (rama
-  `feature/F-053-alta-sigrid`), **7 preguntas abiertas** al humano (P1–P7 de `progress/spec_F-053.md`; P1 =
-  familia `medios_auxiliares` en ficha propia, recomendada F-061). Para el líder: añadir «producto elegido» al
-  alcance de **F-058** (rama de F-051) y corregir en F-051 R24 «`almacen: true`» (el campo no existe en F-009).
+- **F-053** (alta en Sigrid de los aprobados): **`spec_ready`** con la spec v7 en `../albaranes-F-053` (rama
+  `feature/F-053-alta-sigrid`); sin preguntas abiertas; falta la PARADA 1. Para el líder: añadir «producto elegido»
+  al alcance de **F-058** (rama de F-051) y corregir en F-051 R24 «`almacen: true`» (el campo no existe en F-009).
 - **F-051** (almacén por línea): spec v2 en `../albaranes-F-051` (rama `feature/F-051-almacen-por-linea`),
   **esperando las respuestas del humano**.
 - **F-055** (IA2 elige el proveedor entre los de la obra): `pending`, prioridad 1. Depende de F-052.
@@ -35,6 +34,7 @@ Medición de F-053 hecha: solo 3 albaranes activos en producción.
   reencolar cuando haya crédito (pendiente).
 
 F-051, F-053 y F-054 viven en sus ramas: no constan en el `features.json` de esta rama hasta que se fusionen en `dev`.
+F-061 (familia `medios_auxiliares`, de la P1 de F-053) está registrada en la rama de F-053.
 
 ## F-052 · cerrada, fusionada y desplegada (2026-10-01)
 
