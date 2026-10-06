@@ -22,6 +22,16 @@ exporta), `main.py` en sv9 por el test de estructura, firmas de puertos ampliada
 de T0d (`init.sh`; el worktree no tiene el venv de sv4), MANUAL T0b/T0c/T0 (comandos en el informe §8), y T17–T30.
 Mutación (T25) no lanzada: es de las puertas finales.
 
+**Fase 1 · pasada 2 HECHA (2026-10-06, implementer)** tras la review CHANGES_REQUESTED
+(`progress/review_F-053_fase1.md`). Informe: `progress/impl_F-053_fase1_pasada2.md`. Commits `e7b9c3e`…`604e918`:
+H1 (configuración inválida al log sin valores), H2 (`grafico.ide_negocio`), H3 (`branch` de F-053), O1 (visibilidad
+de `q-feedback` 1740 s), y las decisiones del humano **D1 = R45** (sv3 no borra un merge con alta bloqueante al
+reingresar su PDF) y **D2 = R46** (línea casada con otro contrato ⇒ `revisar` + WARNING `ANOMALIA`; recuento en la
+medición). Spec: R45 y R46, T31–T37 `[x]`, topes 150/150 y 250/250. Suites: sv9 448, sv3 461, comun 375, raíz 1083;
+cobertura 96,2 % (1409/1464). **Para el humano** (informe §3): la rama de duplicado de un documento ACTIVO sigue
+re-enriqueciendo y revalorando aunque el alta esté `registrado` (R45 solo cubre el borrado); sv4 permite conciliar a
+mano con una línea de otro contrato (otra fuente de R46). **Pendiente**: re-review de la pasada 2; repetir T0.
+
 **F-051 · `blocked` (2026-10-06) y FUSIONADA en `dev`.** Implementación APROBADA por el reviewer (pasada 2) e `init.sh`
 en verde. **T21 hecha** (evals con LLM, 2026-10-06 11:07 UTC, informe local `progress/evals_F-051.md`): frente a F-048,
 IA3 417→397 fallos, E2E 545→522, partida final 102→85; IA1 e IA4 iguales; los 4 casos que empeoran son variación del

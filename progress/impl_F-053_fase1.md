@@ -176,3 +176,9 @@ Los «passed» de T7/T12 son tests ya en verde de tareas anteriores que el filtr
 | Tamaño | `python -m harness.tamano --feature F-053` → dentro de los topes (requirements 150/150, design 250/250) |
 | Lint | `ruff check` limpio en todo sv9 y en lo nuevo de comun; en ficheros viejos, la misma deuda de antes (ISC004 del estilo existente) |
 | `bash harness/init.sh` | no ejecutado (motivo en §9) |
+
+## 11. Pasada 2
+
+Corrige la review de la fase 1 (H1–H3, O1) y aplica las decisiones D1 (R45) y D2 (R46) del humano. No cabe aquí
+dentro del tope: el informe completo, con la fase RED, los controles negativos y las evidencias, está en
+`progress/impl_F-053_fase1_pasada2.md`.
