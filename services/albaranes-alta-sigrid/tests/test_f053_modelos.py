@@ -209,3 +209,12 @@ def test_f053_modelos_los_puertos_no_se_instancian(clase):
     modulo = {"AltaRepository": r, "SigridAltaPort": s, "PdfAlbaranPort": p}[clase]
     with pytest.raises(TypeError):
         getattr(modulo, clase)()
+
+
+def test_f053_r45_bloqueantes_de_sv9_son_los_de_comun():
+    """sv3 (R45) y sv4 (R25) leen los bloqueantes de comun: los mismos que sv9."""
+    from ruesma_comun.alta_sigrid import ESTADOS_ALTA_BLOQUEANTES
+
+    from domain.models.alta_models import ESTADOS_BLOQUEANTES
+
+    assert {e.value for e in ESTADOS_BLOQUEANTES} == set(ESTADOS_ALTA_BLOQUEANTES)

@@ -21,6 +21,11 @@ from collections.abc import Mapping
 
 from ruesma_comun.contratos.familias import familia_efectiva
 
+#: Estados del alta (``albaran_altas_sigrid.estado``) que bloquean el documento:
+#: sv4 no deja tocarlo (R25) y sv3 no lo borra al reingresar su PDF (R45). Son
+#: los ``ESTADOS_BLOQUEANTES`` de sv9, que un test de sv9 ata a estos.
+ESTADOS_ALTA_BLOQUEANTES: frozenset[str] = frozenset({"en_curso", "incierto", "registrado"})
+
 #: Clave comodín del mapeo: la familia que no tenga clave propia (o ninguna).
 CLAVE_COMODIN = "*"
 

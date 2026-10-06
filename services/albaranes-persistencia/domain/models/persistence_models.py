@@ -79,3 +79,6 @@ class ExistingDocument:
     source_sha256: str
     sharepoint_url: str | None
     stored_lines: int
+    # (F-053 · R45) ``save`` no lo borró porque tiene un alta en Sigrid
+    # bloqueante: el pipeline no lo reprocesa (ni enriquece ni revalora).
+    conservado_por_alta: bool = False

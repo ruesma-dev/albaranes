@@ -199,6 +199,22 @@ class PersistAlbaranPipeline:
             context=request.context,
             stored_file=stored_file,
         )
+        if saved.conservado_por_alta:
+            # (F-053 · R45, D1) Tiene un alta en Sigrid bloqueante: se
+            # conserva tal cual. Ni se enriquece ni se revalora (lo mismo
+            # que sv4 impide mientras el alta bloquea, R25).
+            logger.info(
+                "[pipeline] FIN persist document_id=%s duplicate=True "
+                "conservado_por_alta=True (sin reprocesar)",
+                saved.document_id,
+            )
+            return PersistAlbaranResult(
+                ok=True,
+                document_id=saved.document_id,
+                sharepoint_url=saved.sharepoint_url,
+                duplicate=True,
+                stored_lines=saved.stored_lines,
+            )
 
         # Pipeline de enriquecimiento. ORDEN IMPORTA:
         #  1) Obra: sobrescribe nombre_obra y obra_direccion en el merge.

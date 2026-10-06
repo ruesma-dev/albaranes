@@ -182,3 +182,10 @@ def test_f053_r38_nombres_de_producto():
     }
     assert a.nombre_producto("QA9999") == "Alquiler de maquinaria"
     assert a.nombre_producto("ZZ0001") == "ZZ0001"
+
+
+# ------------------------------------------------------------------ #
+# R45 (D1) · estados bloqueantes del alta, compartidos por sv3, sv4 y sv9
+# ------------------------------------------------------------------ #
+def test_f053_r45_estados_bloqueantes_del_glosario():
+    assert a.ESTADOS_ALTA_BLOQUEANTES == frozenset({"en_curso", "incierto", "registrado"})
