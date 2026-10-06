@@ -54,6 +54,9 @@ _LOG = "[sv9-alta]"
 #: Motivo que acompaña a un adjunto que no se pudo colgar (R23, R29).
 MOTIVO_ADJUNTO = "adjunto_no_colgado"
 
+#: Motivos de la última verificación de anulación (R28): se sustituyen, no se acumulan.
+_MOTIVOS_VERIFICACION = frozenset({"sigue_en_sigrid", "verificacion_fallida"})
+
 
 def _ahora_utc() -> datetime:
     return datetime.now(UTC)
@@ -337,7 +340,34 @@ class AltaSigridService:
     # Otras decisiones
     # ------------------------------------------------------------------ #
     def _verificar_anulacion(self, document_id: str, alta: AltaActual | None) -> ResultadoProceso:
-        raise NotImplementedError("R28: T12")
+        """R28: ``anulado`` solo si ``sql/read`` ya no encuentra el ``con.ide``.
+
+        Si sigue, o no se puede comprobar, el alta se queda ``registrado`` (y
+        bloqueada en sv4) con un motivo que lo explica."""
+        if alta is None:
+            return ResultadoProceso(Decision.VERIFICAR_ANULACION, None)
+        motivos = tuple(m for m in alta.motivos if m.codigo not in _MOTIVOS_VERIFICACION)
+        if alta.sigrid_con_ide is None:
+            nuevo = alta.a_resultado(motivos=(*motivos, Motivo(
+                "verificacion_fallida", "el alta registrada no tiene con.ide")))
+        else:
+            try:
+                existe = self._sigrid.existe_concepto(alta.sigrid_con_ide)
+            except Exception as exc:  # noqa: BLE001 — sin comprobar, no se anula
+                logger.warning("%s document_id=%s no se pudo comprobar la anulación: %s",
+                               _LOG, document_id, type(exc).__name__)
+                nuevo = alta.a_resultado(motivos=(*motivos, Motivo(
+                    "verificacion_fallida", "no se pudo consultar Sigrid; vuelve a pulsar")))
+            else:
+                if existe:
+                    nuevo = alta.a_resultado(motivos=(*motivos, Motivo(
+                        "sigue_en_sigrid", f"{alta.sigrid_cod} sigue en Sigrid")))
+                else:
+                    nuevo = alta.a_resultado(estado=EstadoAlta.ANULADO, motivos=())
+        self._repo.guardar(document_id, nuevo, ahora=self._reloj())
+        logger.info("%s document_id=%s verificar_anulacion -> %s", _LOG, document_id,
+                    nuevo.estado.value)
+        return ResultadoProceso(Decision.VERIFICAR_ANULACION, nuevo.estado)
 
     def _solo_adjunto(self, document_id: str, alta: AltaActual | None) -> ResultadoProceso:
         """R23: un alta ``registrado`` sin adjunto colgado solo reintenta el adjunto,
