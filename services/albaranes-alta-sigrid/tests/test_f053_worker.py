@@ -204,6 +204,56 @@ def test_f053_r44_main_no_arranca_con_el_mapeo_roto(monkeypatch, caplog):
     assert "ALTA_SIGRID_PRODUCTO_POR_DEFECTO" in caplog.text
 
 
+#: Secretos ficticios: ninguno puede acabar en el log de arranque (R35).
+SECRETOS_FICTICIOS = {
+    "PG_PASSWORD": "PGSECRETO-de-prueba-9f3a",
+    "GRAPH_KEY": "GRAPHSECRETO-de-prueba-7b21",
+    "SIGRID_API_FUNCTION_KEY": "FKSECRETO-de-prueba-c0de",
+    "COLAS_CONNECTION_STRING": "AccountName=x;AccountKey=COLASSECRETO-de-prueba-55aa",
+}
+
+
+def test_f053_r35_configuracion_invalida_sin_secretos_en_el_log(monkeypatch, caplog):
+    """Review fase 1 · H1: el ``ValidationError`` de ``Settings`` lleva en
+    ``input_value`` TODO el entorno leído. El log de arranque dice qué campo
+    falla y por qué (R44), nunca los valores."""
+    from config.settings import Settings
+
+    for nombre, valor in {**ENTORNO, **SECRETOS_FICTICIOS}.items():
+        monkeypatch.setenv(nombre, valor)
+    monkeypatch.delenv("PG_USER")  # falta un obligatorio: input_value = el entorno entero
+    monkeypatch.setenv("ALTA_SIGRID_PRODUCTO_POR_DEFECTO", '{"sin_comodin": "MA9999"}')
+    monkeypatch.setattr(main_worker, "_cargar_entorno", lambda: None)
+    monkeypatch.setattr(main_worker, "Settings", lambda: Settings(_env_file=None))
+    monkeypatch.setattr(main_worker, "ejecutar_worker", lambda **_: pytest.fail("arrancó"))
+    caplog.set_level(logging.DEBUG)
+    assert main_worker.main() == 2
+    for secreto in SECRETOS_FICTICIOS.values():
+        assert secreto not in caplog.text
+    assert "input_value" not in caplog.text
+    # El motivo sigue en el log: qué campo falla y por qué (R44).
+    assert "PG_USER" in caplog.text and "Field required" in caplog.text
+    assert "ALTA_SIGRID_PRODUCTO_POR_DEFECTO debe tener la clave '*'" in caplog.text
+
+
+@pytest.mark.parametrize("variable", ["PG_PASSWORD", "GRAPH_KEY", "SIGRID_API_FUNCTION_KEY"])
+def test_f053_r35_secreto_solo_en_el_entorno_no_sale_en_el_log(monkeypatch, caplog, variable):
+    """Con un entorno corto pydantic no recorta ``input_value``: el secreto
+    saldría entero. Es el caso que reprodujo el reviewer."""
+    from config.settings import Settings
+
+    for alias in [c.alias for c in Settings.model_fields.values() if c.alias]:
+        monkeypatch.delenv(alias, raising=False)
+    monkeypatch.setenv(variable, "S3CR3T0")
+    monkeypatch.setattr(main_worker, "_cargar_entorno", lambda: None)
+    monkeypatch.setattr(main_worker, "Settings", lambda: Settings(_env_file=None))
+    monkeypatch.setattr(main_worker, "ejecutar_worker", lambda **_: pytest.fail("arrancó"))
+    caplog.set_level(logging.DEBUG)
+    assert main_worker.main() == 2
+    assert "S3CR3T0" not in caplog.text
+    assert "Field required" in caplog.text and "PG_USER" in caplog.text
+
+
 def test_f053_worker_main_py_delega_en_main_worker(monkeypatch):
     import main
 
