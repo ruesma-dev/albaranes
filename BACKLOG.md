@@ -5,7 +5,7 @@
 
 Resumen: **59 features**, 42 abiertas, 17 terminadas.
 
-En curso: **F-051**.
+Bloqueadas: **F-051**.
 
 ## Trabajo abierto
 
@@ -14,7 +14,7 @@ En curso: **F-051**.
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
-| F-051 | Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas» | 2 | en curso | critico | `feature/F-051-almacen-por-linea` |
+| F-051 | Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas» | 2 | bloqueada | critico | `feature/F-051-almacen-por-linea` |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
 | F-057 | Truncado sin comprobar en los clientes de Sigrid colindantes: header_and_lines de sv4 (max_rows=1000) y SigridApiObraClient de sv3 | 2 | pendiente | critico |  |
 | F-058 | Revalorar no pierde las partidas ni el almacén asignados a mano | 2 | pendiente | critico |  |
@@ -124,7 +124,7 @@ RELACIONADAS: F-043 (clasificacion por IA1), F-045 (banco de evals), F-046 (fami
 
 ### F-051 · Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas»
 
-estado **en curso** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-051-almacen-por-linea`
+estado **bloqueada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-051-almacen-por-linea`
 
 PETICION DEL HUMANO (2026-09-29), literal: «si no hay partida se deje en blanco (almacen en el portal) o que se pueda siempre elegir almacen en la lista de partidas. si hay almacen en la lista en sigrid se crea el albaran sin partida en esa linea (el almacen es por linea, boton de asignar almacen a todas las lineas)».
 
