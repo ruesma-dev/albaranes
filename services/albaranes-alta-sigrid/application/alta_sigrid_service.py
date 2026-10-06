@@ -21,6 +21,7 @@ from datetime import UTC, date, datetime, timedelta
 
 from domain.models.alta_models import (
     AccionAlta,
+    AdjuntoEstado,
     AltaActual,
     DatosAlta,
     Decision,
@@ -30,6 +31,7 @@ from domain.models.alta_models import (
     Motivo,
     PeticionAlbaran,
     RespuestaAlta,
+    ResultadoAdjunto,
     ResultadoAlta,
 )
 from domain.ports.alta_repository import AltaRepository
@@ -38,6 +40,7 @@ from domain.ports.sigrid_alta_port import SigridAltaPort
 from domain.services.clasificador import clasificar, motivos_de_error
 from domain.services.comparador_previa import comparar
 from domain.services.validador_alta import (
+    PREFIJO_REFERENCIA,
     ConfigAlta,
     estado_de_motivos,
     importes_por_referencia,
@@ -47,6 +50,9 @@ from domain.services.validador_alta import (
 logger = logging.getLogger(__name__)
 
 _LOG = "[sv9-alta]"
+
+#: Motivo que acompaña a un adjunto que no se pudo colgar (R23, R29).
+MOTIVO_ADJUNTO = "adjunto_no_colgado"
 
 
 def _ahora_utc() -> datetime:
@@ -252,7 +258,18 @@ class AltaSigridService:
                 avisos=_avisos(respuesta), respuesta=respuesta.a_dict(),
             ))
             return
-        raise NotImplementedError("grabación real: T11")
+        # 5. Real: la MISMA petición con commit=true, una sola vez (R20). Desde
+        #    aquí, una excepción deja el alta en incierto (R9).
+        paso.en_vuelo = True
+        grabada = self._sigrid.alta_albaran(peticion, commit=True)
+        estado = clasificar(grabada, grabacion=True)
+        if isinstance(grabada, ErrorAlta):
+            self._guardar_error(document_id, paso, estado, grabada)
+            return
+        if estado is EstadoAlta.REGISTRADO:
+            self._registrar(document_id, paso, peticion, grabada, importes, datos)
+            return
+        self._guardar_inesperada(document_id, paso, estado, grabada)
 
     def _guardar_error(
         self, document_id: str, paso: _Paso, estado: EstadoAlta, error: ErrorAlta,
@@ -290,6 +307,31 @@ class AltaSigridService:
         )
         self._guardar(document_id, paso, resultado)
         paso.en_vuelo = False
+        # 6. Adjunto, solo en real (R22).
+        if self._modo is ModoAlta.REAL:
+            self._adjuntar(document_id, datos, resultado)
+
+    def _adjuntar(self, document_id: str, datos: DatosAlta, resultado: ResultadoAlta) -> None:
+        """Cuelga el PDF; si falla, el alta sigue ``registrado`` con el adjunto
+        en error (R23). Nunca lanza."""
+        motivos = tuple(m for m in resultado.motivos if m.codigo != MOTIVO_ADJUNTO)
+        nombre = f"{PREFIJO_REFERENCIA}{document_id}.pdf"
+        try:
+            contenido = self._pdf.descargar(datos)
+            adjunto = self._sigrid.adjuntar_pdf(resultado.sigrid_con_ide, nombre, contenido)
+        except Exception as exc:  # noqa: BLE001 — el adjunto nunca tumba el alta
+            logger.warning("%s document_id=%s adjunto fallido: %s", _LOG, document_id,
+                           type(exc).__name__)
+            adjunto = ResultadoAdjunto(False, codigo=type(exc).__name__, mensaje=str(exc)[:200])
+        if adjunto.colgado:
+            nuevo = replace(resultado, adjunto_estado=AdjuntoEstado.COLGADO,
+                            sigrid_gra_ide=adjunto.gra_ide, motivos=motivos)
+        else:
+            detalle = f"{adjunto.codigo or ''}: {adjunto.mensaje}".strip(": ")
+            nuevo = replace(resultado, adjunto_estado=AdjuntoEstado.ERROR,
+                            motivos=(*motivos, Motivo(MOTIVO_ADJUNTO, detalle)))
+        self._repo.guardar(document_id, nuevo, ahora=self._reloj())
+        logger.info("%s document_id=%s adjunto=%s", _LOG, document_id, nuevo.adjunto_estado)
 
     # ------------------------------------------------------------------ #
     # Otras decisiones
@@ -298,7 +340,15 @@ class AltaSigridService:
         raise NotImplementedError("R28: T12")
 
     def _solo_adjunto(self, document_id: str, alta: AltaActual | None) -> ResultadoProceso:
-        raise NotImplementedError("R23: T11")
+        """R23: un alta ``registrado`` sin adjunto colgado solo reintenta el adjunto,
+        y solo en real (R22)."""
+        if self._modo is not ModoAlta.REAL or alta is None:
+            logger.info("%s document_id=%s registrado sin adjunto: en simulación no se adjunta",
+                        _LOG, document_id)
+            return ResultadoProceso(Decision.SOLO_ADJUNTO, alta.estado if alta else None)
+        datos = self._repo.leer_datos(document_id)
+        self._adjuntar(document_id, datos, alta.a_resultado())
+        return ResultadoProceso(Decision.SOLO_ADJUNTO, EstadoAlta.REGISTRADO)
 
 
 # ---------------------------------------------------------------------- #
