@@ -12,6 +12,16 @@ T1, T2, T2b y T3–T16 (comun, DDL de sv3 y sv6 y sv9 completo). `dev` fusionado
 trae **F-051** (merge `e7d7507`), así que la regla «partida final vacía = almacén» está disponible. T17 en adelante
 (sv4, infra, docs, puertas) quedan fuera de esta fase. Informe de la fase: `progress/impl_F-053_fase1.md`.
 
+**Fase 1 TERMINADA (2026-10-06, implementer)**: T0a, T1, T2, T2b y T3–T16 hechas, un commit por tarea
+(`618227e`…`ca6dde7`), con fase RED y controles negativos. Suites en verde, una tras otra: comun 374, sv3 444, sv6 289,
+sv9 430 (nuevo) y raíz 1083; cobertura de líneas cambiadas 96,1 % (1346/1401). Contrato citado: F-009 v8.2 `13fd99d`
+(misma forma que `8a6ecab`). **Desviaciones justificadas** (detalle en el informe, §4): el DDL de
+`albaran_altas_sigrid` va en `phase2_ddl._PHASE2_DDL` (lo que sv3 aplica al arrancar; `schema_contribution` lo
+exporta), `main.py` en sv9 por el test de estructura, firmas de puertos ampliadas (`accion`, `referencia_externa`,
+`ahora`), petición guardada en `en_curso` y reenviada tal cual al retomar un `incierto`. **Pendiente**: verificación
+de T0d (`init.sh`; el worktree no tiene el venv de sv4), MANUAL T0b/T0c/T0 (comandos en el informe §8), y T17–T30.
+Mutación (T25) no lanzada: es de las puertas finales.
+
 **F-051 · `blocked` (2026-10-06) y FUSIONADA en `dev`.** Implementación APROBADA por el reviewer (pasada 2) e `init.sh`
 en verde. **T21 hecha** (evals con LLM, 2026-10-06 11:07 UTC, informe local `progress/evals_F-051.md`): frente a F-048,
 IA3 417→397 fallos, E2E 545→522, partida final 102→85; IA1 e IA4 iguales; los 4 casos que empeoran son variación del
@@ -63,10 +73,11 @@ verificación MANUAL T12 (sección «F-054 · lo que queda» al final). Resumen 
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
-- **F-053 `in_progress`** (fase 1; bloque de arriba e informe `progress/impl_F-053_fase1.md`). Es la única
-  `in_progress`. Siguiente: T0d ya no hace falta como merge (F-051 está en `dev`); queda comprobar `asignar_almacen` de
-  F-051 para R25 al hacer T19–T20, y T17–T30. Para el líder: añadir «producto elegido» al alcance de **F-058** y
-  corregir en F-051 R24 «`almacen: true`» (el campo no existe en F-009).
+- **F-053 `in_progress`**, fase 1 terminada (bloque de arriba e informe `progress/impl_F-053_fase1.md`). Es la única
+  `in_progress`. Siguiente: fase 2 (T17–T30: sv4, infra, docs, puertas). `dev` ya fusionado con F-051 y comprobadas
+  sus rutas `asignar_almacen_linea_api` / `asignar_almacen_todas_api` para R25 (T19–T20); falta la verificación de
+  T0d con `init.sh`. Para el líder: añadir «producto elegido» al alcance de **F-058** y corregir en F-051 R24
+  «`almacen: true`» (el campo no existe en F-009).
 - **F-051 `blocked`** y fusionada en `dev`: solo esperan T22–T24 (pruebas manuales del humano, aplazadas).
 - **F-054 · CERRADA (`done`, 2026-10-02)** y fusionada en `dev`. Pendiente del humano: `.\deploy.ps1 -Only sv1` +
   `.\check_deploy.ps1` desde `infra/` y la **T12 MANUAL** (procedimiento al final). La T12 no bloquea el `done`.
