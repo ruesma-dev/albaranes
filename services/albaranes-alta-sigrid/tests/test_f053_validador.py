@@ -18,7 +18,16 @@ from domain.services.validador_alta import (
     normalizar_cif,
     validar_y_construir,
 )
-from tests.f053_datos import CONFIG, CONTRATO, DOCUMENT_ID, HOY, MAPEO, datos, sin_vincular, vinculada
+from tests.f053_datos import (
+    CONFIG,
+    CONTRATO,
+    DOCUMENT_ID,
+    HOY,
+    MAPEO,
+    datos,
+    sin_vincular,
+    vinculada,
+)
 
 
 def _motivos(resultado) -> list[Motivo]:

@@ -33,6 +33,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, timedelta
 
+from ruesma_comun.alta_sigrid import producto_efectivo, productos_admitidos
+from ruesma_comun.valoracion import esta_valorado
+
 from domain.models.alta_models import (
     DatosAlta,
     EstadoAlta,
@@ -41,8 +44,6 @@ from domain.models.alta_models import (
     Motivo,
     PeticionAlbaran,
 )
-from ruesma_comun.alta_sigrid import producto_efectivo, productos_admitidos
-from ruesma_comun.valoracion import esta_valorado
 
 #: Longitudes máximas (contrato §2.1-§2.2; H6).
 MAX_CODIGO = 24          # obra, CIF, contrato, partida
