@@ -61,6 +61,12 @@ SQL_EXISTE_CONCEPTO = "SELECT ide FROM dbo.con WHERE ide = ? AND tip = 14"
 
 #: Timeout de la grabación: por encima del corte de 230 s del balanceador.
 TIMEOUT_GRABACION_S = 240.0
+#: Reintentos (R24) de lecturas, previa y adjunto: intentos y espera
+#: exponencial (``base * 2**(n-1)``, con tope). ``main_worker`` los usa para
+#: calcular la visibilidad de la cola.
+INTENTOS_POR_DEFECTO = 3
+ESPERA_BASE_S = 1.0
+ESPERA_MAX_S = 30.0
 #: ``contip`` de un albarán de compra y clase de gráfico «sin clase».
 CONTIP_ALBARAN_COMPRA = 14
 GRATIPIDE_SIN_CLASE = 0
@@ -94,8 +100,8 @@ class SigridApiAltaClient(SigridAltaPort):
         usuario: str,
         timeout_s: float = 60.0,
         timeout_grabacion_s: float = TIMEOUT_GRABACION_S,
-        intentos: int = 3,
-        espera_base_s: float = 1.0,
+        intentos: int = INTENTOS_POR_DEFECTO,
+        espera_base_s: float = ESPERA_BASE_S,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         if not base_url:
@@ -145,7 +151,7 @@ class SigridApiAltaClient(SigridAltaPort):
 
         reintentos = Retrying(
             stop=stop_after_attempt(self._intentos),
-            wait=wait_exponential(multiplier=self._espera_base, max=30),
+            wait=wait_exponential(multiplier=self._espera_base, max=ESPERA_MAX_S),
             retry=retry_if_exception_type(_EXCEPCIONES_TRANSITORIAS),
             before_sleep=lambda estado: logger.warning(
                 "%s %s intento %s fallido (%s); reintento", _LOG, ruta,

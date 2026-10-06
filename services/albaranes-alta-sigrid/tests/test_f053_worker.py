@@ -190,6 +190,65 @@ def test_f053_worker_main_arranca_sobre_q_feedback(monkeypatch, tmp_path, caplog
     assert "clave-de-mentira" not in caplog.text
 
 
+def _visibilidad_con(monkeypatch, tmp_path, **cambios) -> int:
+    ajustes = _settings(monkeypatch, LOG_DIR=str(tmp_path), **cambios)
+    monkeypatch.setattr(main_worker, "_cargar_entorno", lambda: None)
+    monkeypatch.setattr(main_worker, "Settings", lambda: ajustes)
+    monkeypatch.setattr(main_worker, "configure_logging", lambda *a, **k: None)
+    capturado = {}
+
+    def ejecutar_worker(**kwargs):
+        capturado.update(kwargs)
+        return 0
+
+    monkeypatch.setattr(main_worker, "ejecutar_worker", ejecutar_worker)
+    assert main_worker.main() == 0
+    return capturado["visibilidad_s"]
+
+
+def _peor_caso_s(t_sigrid: float, t_graph: float) -> float:
+    """Peor caso de UN mensaje, contado a mano (review fase 1 · O1).
+
+    sigrid-api con reintentos (lectura R14, previa y adjunto): 3 intentos de
+    ``t_sigrid`` y esperas de 1 s y 2 s (tenacity, ``wait_exponential``).
+    Grabación: una vez, 240 s. PDF: el token de Graph (5 intentos de
+    ``t_graph`` con hasta 20 s entre ellos) y 4 peticiones (sitio, drive,
+    descarga y redirección, en el peor modo)."""
+    con_reintentos = 3 * t_sigrid + 1 + 2
+    pdf = (5 * t_graph + 4 * 20) + 4 * t_graph
+    return con_reintentos + con_reintentos + 240 + pdf + con_reintentos
+
+
+def test_f053_o1_visibilidad_por_encima_del_peor_caso(monkeypatch, tmp_path):
+    peor = _peor_caso_s(60, 60)
+    assert peor == 1409  # 23,5 min: la visibilidad común de 600 s no basta
+    visibilidad = _visibilidad_con(monkeypatch, tmp_path)
+    assert visibilidad >= peor + 300  # con margen para la BBDD y el arranque
+    assert visibilidad < 7 * 24 * 3600  # máximo de Azure Storage Queues
+
+
+def test_f053_o1_la_visibilidad_sigue_a_los_timeouts_configurados(monkeypatch, tmp_path):
+    peor = _peor_caso_s(120, 90)
+    visibilidad = _visibilidad_con(monkeypatch, tmp_path, SIGRID_API_TIMEOUT_S="120",
+                                   GRAPH_TIMEOUT_S="90")
+    assert visibilidad >= peor + 300
+
+
+def test_f053_o1_las_constantes_del_calculo_son_las_del_codigo(monkeypatch):
+    """El cálculo usa los reintentos REALES del cliente y del token de Graph."""
+    from ruesma_comun.graph.token_provider import GraphTokenProvider
+
+    from infrastructure.sigrid import sigrid_api_alta_client as cliente
+
+    servicio_sigrid = cliente.construir_desde_settings(_settings(monkeypatch))
+    assert servicio_sigrid._intentos == cliente.INTENTOS_POR_DEFECTO == 3
+    assert servicio_sigrid._espera_base == cliente.ESPERA_BASE_S == 1.0
+    assert servicio_sigrid._timeout_grabacion == cliente.TIMEOUT_GRABACION_S == 240.0
+    token = GraphTokenProvider("token-de-mentira", 60)
+    assert token._max_attempts == main_worker.GRAPH_TOKEN_INTENTOS
+    assert token._backoff_cap_s == main_worker.GRAPH_TOKEN_ESPERA_MAX_S
+
+
 def test_f053_r44_main_no_arranca_con_el_mapeo_roto(monkeypatch, caplog):
     from config.settings import Settings
 

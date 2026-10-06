@@ -45,6 +45,10 @@ nombres de sv3/sv6 (`.env.example`, sin valores).
 - La grabación no se reintenta sola; un `incierto` se retoma tras la Espera
   reenviando la misma petición (la idempotencia de F-009 devuelve `idempotente`).
 - Máximo una réplica (KEDA sobre `q-feedback`).
+- Visibilidad de `q-feedback` por encima del peor caso de un mensaje (1740 s con los
+  timeouts por defecto; `main_worker.visibilidad_cola_s`): un mensaje largo no se
+  vuelve a entregar mientras se procesa.
+- Una configuración inválida se registra con el campo y el motivo, nunca con los valores.
 - Ni la clave de sigrid-api, ni el PDF, ni datos bancarios en logs ni en la tabla.
 
 ## Arranque local
