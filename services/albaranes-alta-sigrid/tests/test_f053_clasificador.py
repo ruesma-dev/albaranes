@@ -184,3 +184,43 @@ def test_f053_r21_fallo_transitorio_incierto_en_grabacion_error_en_previa(tipo):
     error = ErrorAlta(tipo=tipo, status=500 if tipo is TipoFallo.SERVIDOR else None)
     assert clasificar(error, grabacion=True) is EstadoAlta.INCIERTO
     assert clasificar(error, grabacion=False) is ERROR
+
+
+# ------------------------------------------------------------------ #
+# R18 · una misma línea con varios fallos (coordinación con sigrid-api,
+# 2026-10-06): en ``details.lineas`` una ``referencia_linea`` puede salir
+# VARIAS veces, una por fallo independiente (origen, partida y precio, en ese
+# orden). No se indexa por referencia: cuenta cada entrada.
+# ------------------------------------------------------------------ #
+def _misma_linea(referencia: str, *codigos: str) -> ErrorAlta:
+    return ErrorAlta(
+        tipo=TipoFallo.RECHAZO, status=400, codigo="lineas_no_validas",
+        lineas=tuple({"indice": 0, "referencia_linea": referencia, "codigo": c,
+                      "mensaje": f"fallo {c}"} for c in codigos),
+        mensaje="Hay líneas…",
+    )
+
+
+def test_f053_r18_misma_linea_con_tres_fallos_gana_error_y_tres_motivos():
+    error = _misma_linea("7", "linea_no_es_del_contrato", "partida_no_encontrada",
+                         "precio_negativo")
+    assert clasificar(error, grabacion=False) is ERROR
+    motivos = motivos_de_error(error)
+    assert [(m.codigo, m.referencia_linea) for m in motivos[1:]] == [
+        ("linea_no_es_del_contrato", "7"), ("partida_no_encontrada", "7"),
+        ("precio_negativo", "7"),
+    ]
+
+
+def test_f053_r18_misma_linea_con_error_de_origen_antes_que_el_de_partida():
+    """El código de ``error`` va primero: si se indexara por referencia (se
+    queda el último), saldría ``no_admitido``."""
+    error = _misma_linea("8", "producto_no_encontrado", "partida_no_encontrada")
+    assert clasificar(error, grabacion=False) is ERROR
+    assert len(motivos_de_error(error)) == 3
+
+
+def test_f053_r18_misma_linea_con_dos_codigos_no_admitido():
+    error = _misma_linea("9", "linea_no_es_del_contrato", "partida_no_encontrada")
+    assert clasificar(error, grabacion=False) is NO_ADMITIDO
+    assert [m.referencia_linea for m in motivos_de_error(error)[1:]] == ["9", "9"]
