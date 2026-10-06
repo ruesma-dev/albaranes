@@ -272,10 +272,41 @@ def test_f053_r24_lectura_que_agota_los_reintentos_lanza():
 PDF = b"%PDF-1.4 contenido de mentira"
 
 
+def _respuesta_adjunto(*, committed: bool, idempotente: bool, ide_documental: int | None,
+                       ide_negocio: int | None) -> dict:
+    """Forma REAL de ``AttachConceptoGraficoResponse`` en sigrid-api ``13fd99d``
+    (``domain/models/concepto_grafico_models.py``: ``GraficoPreview`` :115, con
+    ``ide_documental`` :123 e ``ide_negocio`` :124, SIN ``ide``; la respuesta,
+    :156). El ``gra`` que enlaza ``rcg`` con el concepto es el de NEGOCIO
+    (``EnlacePreview.gra``); en la idempotente solo viene ese
+    (``application/use_cases/attach_concepto_grafico_use_case.py`` :404 y :406;
+    en la grabación, :556-:557 y :564)."""
+    return {
+        "ok": True, "committed": committed, "dry_run": False, "idempotente": idempotente,
+        "database": "ruesma", "database_documental": "ruesma_doc",
+        "concepto": {"ide": 9123461, "tip": 14, "emp": 2425207, "cod": "AC26/1", "res": None},
+        "grafico": {
+            "ide_documental": ide_documental, "ide_negocio": ide_negocio, "cod": "G1",
+            "emp": 2425207, "nom": "ALB-d1.pdf", "fec": 20261006, "usu": "USU_ALTA",
+            "res": "ALB-d1.pdf", "gratipide": 0, "vin": 1, "bytes": len(PDF),
+            "sha256": hashlib.sha256(PDF).hexdigest(), "content_type": "application/pdf",
+            "fila_documental": {}, "fila_negocio": {},
+        },
+        "enlace": {"ide": 31, "con": 9123461, "gra": ide_negocio, "pos": None, "cla": 0,
+                   "feclee": 0, "fecalt": 0},
+        "filas_afectadas": 3 if committed else 0, "avisos": [],
+    }
+
+
+ADJUNTO_COLGADO = _respuesta_adjunto(committed=True, idempotente=False, ide_documental=880011,
+                                     ide_negocio=4455)
+
+
 def test_f053_r22_adjunto_cuerpo_exacto_y_colgado():
-    servidor = Servidor(_json(200, {"ok": True, "committed": True, "idempotente": False,
-                                    "grafico": {"ide": 4455, "bytes": len(PDF)}}))
+    servidor = Servidor(_json(200, _respuesta_adjunto(
+        committed=True, idempotente=False, ide_documental=880011, ide_negocio=4455)))
     resultado = _cliente(servidor).adjuntar_pdf(9123461, "ALB-d1.pdf", PDF)
+    # Se guarda el gra de NEGOCIO, no el documental.
     assert resultado.colgado is True and resultado.gra_ide == 4455
     (peticion,) = servidor.peticiones
     assert str(peticion.url) == f"{BASE}/api/sigrid/concepto-grafico"
@@ -289,13 +320,16 @@ def test_f053_r22_adjunto_cuerpo_exacto_y_colgado():
 
 
 def test_f053_r22_adjunto_idempotente_cuenta_como_colgado():
-    servidor = Servidor(_json(200, {"ok": True, "committed": False, "idempotente": True,
-                                    "grafico": {"ide": 7}}))
-    assert _cliente(servidor).adjuntar_pdf(1, "a.pdf", PDF).colgado is True
+    servidor = Servidor(_json(200, _respuesta_adjunto(
+        committed=False, idempotente=True, ide_documental=None, ide_negocio=7)))
+    resultado = _cliente(servidor).adjuntar_pdf(1, "a.pdf", PDF)
+    assert resultado.colgado is True and resultado.gra_ide == 7
 
 
 @pytest.mark.parametrize("cuerpo", [
-    {"ok": True, "committed": False, "idempotente": False},
+    # Forma real sin escribir nada (ni grabado ni idempotente).
+    _respuesta_adjunto(committed=False, idempotente=False, ide_documental=None, ide_negocio=None),
+    # Defensivo: un 200 con ok=false no es la forma del contrato.
     {"ok": False, "committed": True},
 ])
 def test_f053_r22_adjunto_sin_escribir_no_esta_colgado(cuerpo):
@@ -311,7 +345,7 @@ def test_f053_r22_adjunto_rechazado():
 
 
 def test_f053_r24_adjunto_reintenta_ante_5xx_y_luego_se_rinde():
-    servidor = Servidor(_json(500, {}), _json(200, {"ok": True, "committed": True}))
+    servidor = Servidor(_json(500, {}), _json(200, ADJUNTO_COLGADO))
     assert _cliente(servidor).adjuntar_pdf(1, "a.pdf", PDF).colgado is True
     agotado = Servidor(_json(500, {}), _json(500, {}), _json(500, {}))
     resultado = _cliente(agotado).adjuntar_pdf(1, "a.pdf", PDF)
@@ -319,7 +353,7 @@ def test_f053_r24_adjunto_reintenta_ante_5xx_y_luego_se_rinde():
 
 
 def test_f053_r22_nombre_largo_recortado_en_res_y_nom():
-    servidor = Servidor(_json(200, {"ok": True, "committed": True}))
+    servidor = Servidor(_json(200, ADJUNTO_COLGADO))
     _cliente(servidor).adjuntar_pdf(1, "N" * 300 + ".pdf", PDF)
     cuerpo = servidor.cuerpos()[0]
     assert len(cuerpo["res"]) == 48 and len(cuerpo["nom"]) == 255
@@ -331,7 +365,7 @@ def test_f053_r22_nombre_largo_recortado_en_res_y_nom():
 def test_f053_r33_solo_las_tres_rutas_permitidas():
     servidor = Servidor(_lectura([]), _lectura([], columnas=("ide",)), _json(200, PREVISTO),
                         _json(200, {**PREVISTO, "estado": "creado"}),
-                        _json(200, {"ok": True, "committed": True}))
+                        _json(200, ADJUNTO_COLGADO))
     cliente = _cliente(servidor)
     cliente.buscar_albaranes("B1", "N", "ALB-d")
     cliente.existe_concepto(1)
@@ -350,7 +384,7 @@ def test_f053_r35_la_clave_y_el_pdf_nunca_en_los_logs(caplog):
     caplog.set_level(logging.DEBUG)
     servidor = Servidor(_json(503, {"error": CLAVE}), _json(200, PREVISTO), _json(500, {}),
                         _json(400, {"error": "x"}), _lectura([]),
-                        _json(200, {"ok": True, "committed": True}))
+                        _json(200, ADJUNTO_COLGADO))
     cliente = _cliente(servidor)
     cliente.alta_albaran(PETICION, False)
     cliente.alta_albaran(PETICION, True)

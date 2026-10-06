@@ -253,7 +253,10 @@ class SigridApiAltaClient(SigridAltaPort):
             )
         colgado = datos.get("ok") is True and bool(datos.get("committed") or datos.get("idempotente"))
         grafico = datos.get("grafico") if isinstance(datos.get("grafico"), dict) else {}
-        gra_ide = grafico.get("ide")
+        # El ``gra`` de NEGOCIO (el que ``rcg`` enlaza con el ``con``): ``GraficoPreview``
+        # no trae ``ide``, sino ``ide_documental`` e ``ide_negocio``, y en la respuesta
+        # idempotente solo viene el de negocio (sigrid-api ``13fd99d``).
+        gra_ide = grafico.get("ide_negocio")
         logger.info("%s concepto-grafico colgado=%s", _LOG, colgado)
         return ResultadoAdjunto(
             colgado, gra_ide=None if gra_ide is None else int(gra_ide),
