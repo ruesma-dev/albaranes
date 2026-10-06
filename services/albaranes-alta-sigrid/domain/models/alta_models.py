@@ -234,6 +234,23 @@ class PeticionAlbaran:
             "lineas": [linea.a_dict() for linea in self.lineas],
         }
 
+    @classmethod
+    def desde_dict(cls, datos: dict[str, Any]) -> PeticionAlbaran:
+        """La petición tal como se guardó en ``peticion_json`` (para retomar un
+        ``incierto`` con la MISMA petición, R15)."""
+        empide = datos.get("empide")
+        return cls(
+            cod_obra=str(datos["cod_obra"]),
+            cif_proveedor=str(datos["cif_proveedor"]),
+            cod_contrato=datos.get("cod_contrato"),
+            referencia_externa=str(datos["referencia_externa"]),
+            su_referencia=str(datos["su_referencia"]),
+            usu=str(datos["usu"]),
+            fecha_albaran=int(datos["fecha_albaran"]),
+            empide=None if empide is None else int(empide),
+            lineas=tuple(LineaPeticion(**linea) for linea in datos["lineas"]),
+        )
+
 
 @dataclass(frozen=True)
 class RespuestaAlta:

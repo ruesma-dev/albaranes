@@ -22,16 +22,26 @@ from datetime import UTC, date, datetime, timedelta
 from domain.models.alta_models import (
     AccionAlta,
     AltaActual,
+    DatosAlta,
     Decision,
     EstadoAlta,
     ModoAlta,
     Motivo,
+    PeticionAlbaran,
+    RespuestaAlta,
     ResultadoAlta,
 )
 from domain.ports.alta_repository import AltaRepository
 from domain.ports.pdf_port import PdfAlbaranPort
 from domain.ports.sigrid_alta_port import SigridAltaPort
-from domain.services.validador_alta import ConfigAlta
+from domain.services.clasificador import clasificar
+from domain.services.comparador_previa import comparar
+from domain.services.validador_alta import (
+    ConfigAlta,
+    estado_de_motivos,
+    importes_por_referencia,
+    validar_y_construir,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -178,9 +188,63 @@ class AltaSigridService:
                 resultado.sigrid_cod, [m.codigo for m in resultado.motivos],
             )
 
+    def _resultado(self, estado: EstadoAlta, paso: _Paso, **campos) -> ResultadoAlta:
+        return ResultadoAlta(estado=estado, modo=self._modo.value, peticion=paso.peticion, **campos)
+
     def _flujo(self, document_id: str, previa: AltaActual | None, paso: _Paso) -> None:
-        self._repo.leer_datos(document_id)
-        raise NotImplementedError("flujo del alta: T9-T11")
+        datos = self._repo.leer_datos(document_id)
+
+        # 1. Petición: la guardada si se retoma un incierto (R15), o una nueva
+        #    tras validar en local (R10–R13, R39; sin llamar a nadie).
+        peticion = _peticion_retomada(previa)
+        if peticion is None:
+            validada = validar_y_construir(datos, self._config, hoy_en_madrid(self._reloj()))
+            if isinstance(validada, list):
+                self._guardar(document_id, paso, self._resultado(
+                    estado_de_motivos(validada), paso, motivos=tuple(validada),
+                ))
+                return
+            peticion = validada
+        paso.peticion = peticion.a_dict()
+        self._guardar(document_id, paso, self._resultado(EstadoAlta.EN_CURSO, paso))
+
+        # 2. Alta a mano del mismo albarán en Sigrid (R14).
+        encontrados = self._sigrid.buscar_albaranes(
+            peticion.cif_proveedor, peticion.su_referencia, peticion.referencia_externa,
+        )
+        if encontrados:
+            primero = encontrados[0]
+            self._guardar(document_id, paso, self._resultado(
+                EstadoAlta.YA_EN_SIGRID, paso,
+                sigrid_con_ide=primero.ide, sigrid_cod=primero.cod,
+                motivos=tuple(
+                    Motivo("alta_a_mano", f"{a.cod} (con.ide {a.ide})") for a in encontrados
+                ),
+            ))
+            return
+
+        # 3. Previa (en los dos modos).
+        importes = _importes(datos, peticion)
+        respuesta = self._sigrid.alta_albaran(peticion, commit=False)
+        estado = clasificar(respuesta, grabacion=False)
+        if isinstance(respuesta, RespuestaAlta) and estado is EstadoAlta.REGISTRADO:
+            self._registrar(document_id, paso, peticion, respuesta, importes, datos)
+            return
+        raise NotImplementedError("previa previsto o con error: T10")
+
+    def _registrar(
+        self, document_id: str, paso: _Paso, peticion: PeticionAlbaran,
+        respuesta: RespuestaAlta, importes: dict[str, float], datos: DatosAlta,
+    ) -> None:
+        """``creado`` o ``idempotente`` ⇒ ``registrado`` (R15, R20)."""
+        motivos = comparar(peticion, respuesta, importes, self._tolerancia, self._bloqueantes)
+        resultado = self._resultado(
+            EstadoAlta.REGISTRADO, paso,
+            sigrid_con_ide=respuesta.con_ide, sigrid_cod=respuesta.cod,
+            motivos=tuple(motivos), avisos=_avisos(respuesta), respuesta=respuesta.a_dict(),
+        )
+        self._guardar(document_id, paso, resultado)
+        paso.en_vuelo = False
 
     # ------------------------------------------------------------------ #
     # Otras decisiones
@@ -190,3 +254,31 @@ class AltaSigridService:
 
     def _solo_adjunto(self, document_id: str, alta: AltaActual | None) -> ResultadoProceso:
         raise NotImplementedError("R23: T11")
+
+
+# ---------------------------------------------------------------------- #
+# Ayudas puras
+# ---------------------------------------------------------------------- #
+def _peticion_retomada(previa: AltaActual | None) -> PeticionAlbaran | None:
+    """La petición ya mandada de un ``incierto`` que se retoma (R15)."""
+    if previa is None or previa.estado is not EstadoAlta.INCIERTO or not previa.peticion:
+        return None
+    return PeticionAlbaran.desde_dict(previa.peticion)
+
+
+def _importes(datos: DatosAlta, peticion: PeticionAlbaran) -> dict[str, float]:
+    """Importe aprobado por ``referencia_linea``; si una línea pedida ya no está
+    en los datos (petición retomada), el que implica la propia petición."""
+    importes = importes_por_referencia(datos)
+    for linea in peticion.lineas:
+        importes.setdefault(linea.referencia_linea, round(linea.cantidad * linea.precio, 2))
+    return importes
+
+
+def _avisos(respuesta: RespuestaAlta) -> tuple[dict, ...]:
+    """Avisos de cabecera y de línea (estos con su ``referencia_linea``)."""
+    avisos = [dict(a) for a in respuesta.avisos]
+    for linea in respuesta.lineas:
+        for aviso in linea.get("avisos") or ():
+            avisos.append({**aviso, "referencia_linea": linea.get("referencia_linea")})
+    return tuple(avisos)
