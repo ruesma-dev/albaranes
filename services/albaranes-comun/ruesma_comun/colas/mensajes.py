@@ -91,14 +91,23 @@ class MensajeValoracion(MensajeBase):
 
 
 class MensajeFeedback(MensajeBase):
-    """q-feedback → ca-sv8-aprendizaje.
+    """q-feedback → ca-sv9-alta-sigrid (F-053).
 
-    Lo emite sv4 al aprobar un documento. sv8 reconstruye los diffs
-    IA↔humano leyendo BBDD; aquí solo viaja el disparador.
+    Lo emite sv4 al aprobar un documento (y desde la ficha, con «Solicitar
+    alta en Sigrid» o «Ya lo he anulado en Sigrid»). Lo consume **sv9**
+    (``services/albaranes-alta-sigrid``), que da de alta el albarán en
+    Sigrid vía sigrid-api leyendo merge y valoración de la BBDD; aquí solo
+    viaja el disparador. (La cola se reservó para un sv8 de aprendizaje que
+    nunca se construyó; sv7 es el orquestador retirado.)
+
+    ``accion`` (R32): ``alta`` (defecto, también para los mensajes de antes
+    de F-053, que no la traen) o ``verificar_anulacion`` (el revisor dice
+    que ya anuló en Sigrid el albarán registrado).
     """
 
     tipo: Literal["feedback"] = "feedback"
     approved_by: str | None = None
+    accion: Literal["alta", "verificar_anulacion"] = "alta"
 
 
 # ------------------------------------------------------------------ #
