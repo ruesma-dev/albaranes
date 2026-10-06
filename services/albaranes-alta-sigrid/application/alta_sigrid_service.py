@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta
 
 from domain.models.alta_models import (
@@ -24,6 +24,7 @@ from domain.models.alta_models import (
     AltaActual,
     DatosAlta,
     Decision,
+    ErrorAlta,
     EstadoAlta,
     ModoAlta,
     Motivo,
@@ -34,7 +35,7 @@ from domain.models.alta_models import (
 from domain.ports.alta_repository import AltaRepository
 from domain.ports.pdf_port import PdfAlbaranPort
 from domain.ports.sigrid_alta_port import SigridAltaPort
-from domain.services.clasificador import clasificar
+from domain.services.clasificador import clasificar, motivos_de_error
 from domain.services.comparador_previa import comparar
 from domain.services.validador_alta import (
     ConfigAlta,
@@ -227,17 +228,61 @@ class AltaSigridService:
         importes = _importes(datos, peticion)
         respuesta = self._sigrid.alta_albaran(peticion, commit=False)
         estado = clasificar(respuesta, grabacion=False)
-        if isinstance(respuesta, RespuestaAlta) and estado is EstadoAlta.REGISTRADO:
+        if isinstance(respuesta, ErrorAlta):
+            self._guardar_error(document_id, paso, estado, respuesta)
+            return
+        if estado is EstadoAlta.REGISTRADO:
             self._registrar(document_id, paso, peticion, respuesta, importes, datos)
             return
-        raise NotImplementedError("previa previsto o con error: T10")
+        if estado is not None:
+            self._guardar_inesperada(document_id, paso, estado, respuesta)
+            return
+        motivos = comparar(peticion, respuesta, importes, self._tolerancia, self._bloqueantes)
+        if motivos:
+            self._guardar(document_id, paso, self._resultado(
+                EstadoAlta.REVISAR, paso, motivos=tuple(motivos), avisos=_avisos(respuesta),
+                respuesta=respuesta.a_dict(),
+            ))
+            return
+
+        # 4. Simulación: aquí termina; nunca commit=true (R19).
+        if self._modo is ModoAlta.SIMULACION:
+            self._guardar(document_id, paso, self._resultado(
+                EstadoAlta.SIMULADO, paso, sigrid_cod=respuesta.cod,
+                avisos=_avisos(respuesta), respuesta=respuesta.a_dict(),
+            ))
+            return
+        raise NotImplementedError("grabación real: T11")
+
+    def _guardar_error(
+        self, document_id: str, paso: _Paso, estado: EstadoAlta, error: ErrorAlta,
+    ) -> None:
+        """400/5xx/tiempo agotado: estado de la tabla y sus motivos (R18, R21)."""
+        self._guardar(document_id, paso, self._resultado(
+            estado, paso, motivos=tuple(motivos_de_error(error)), respuesta=error.a_dict(),
+        ))
+
+    def _guardar_inesperada(
+        self, document_id: str, paso: _Paso, estado: EstadoAlta, respuesta: RespuestaAlta,
+    ) -> None:
+        """Un 200 con un ``estado`` que no toca en ese paso."""
+        self._guardar(document_id, paso, self._resultado(
+            estado, paso, motivos=(Motivo("respuesta_inesperada", respuesta.estado),),
+            respuesta=respuesta.a_dict(),
+        ))
 
     def _registrar(
         self, document_id: str, paso: _Paso, peticion: PeticionAlbaran,
         respuesta: RespuestaAlta, importes: dict[str, float], datos: DatosAlta,
     ) -> None:
-        """``creado`` o ``idempotente`` ⇒ ``registrado`` (R15, R20)."""
-        motivos = comparar(peticion, respuesta, importes, self._tolerancia, self._bloqueantes)
+        """``creado`` o ``idempotente`` ⇒ ``registrado`` (R15, R20).
+
+        Lo registrado se compara con lo pedido como en ``idempotente``: si
+        difiere, el motivo es ``registrado_distinto`` (se corrige anulando, R28)."""
+        motivos = comparar(
+            peticion, replace(respuesta, estado="idempotente"), importes,
+            self._tolerancia, self._bloqueantes,
+        )
         resultado = self._resultado(
             EstadoAlta.REGISTRADO, paso,
             sigrid_con_ide=respuesta.con_ide, sigrid_cod=respuesta.cod,
