@@ -2,7 +2,7 @@
   "caso_id": "GEN-002",
   "fase": "IA3",
   "libro": "IA3_valoracion.xlsx",
-  "sha256_libro": "5df41714a4b2116fc74a154a641a2f75952b1dd3a09cabe411a63bed56d97de1",
+  "sha256_libro": "5370ea490c6e6d5c0345ca6f706294d672b7804097efffe67ebcdfd6628c1b60",
   "tablas": {
     "lineas_valoradas": [
       {
@@ -91,9 +91,9 @@
       },
       {
         "caso_id": "GEN-002",
-        "codigo_partida_final": "ALMACEN",
+        "codigo_partida_final": null,
         "codigo_producto_contrato": null,
-        "comentario": null,
+        "comentario": "F-051 (decision del humano 2026-10-05): almacen = partida vacia, tambien en el banco; antes esperaba el literal ALMACEN",
         "importe_calculado": 180,
         "match_method": "no_match",
         "num_linea": 8,

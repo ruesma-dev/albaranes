@@ -289,7 +289,7 @@ provoca error de validación.
 | `precio`             | `float \| None`         | Precio unitario.                                           |
 | `descuento`          | `float \| None`         |                                                            |
 | `precio_neto`        | `float \| None`         | Total línea.                                               |
-| `codigo_imputacion`  | `str \| None`           | Código de partida (anotación manual del jefe de obra).     |
+| `codigo_imputacion`  | `str \| None`           | Código de partida (anotación manual del jefe de obra). Null si la línea no tiene código propio, no es complemento de otra y el documento no trae código de documento (F-051: irá a almacén). Un código junto a una línea solo va a esa; uno de documento, a las que no tienen el suyo; un complemento sin código lleva el de su base. |
 | `confianza_pct`      | `float \| None` (`0..100`) | Solo Document AI lo rellena (vía `entity.confidence`).  |
 | `contexto_linea`     | `ContextoLinea \| None` | Bloque opcional — ver abajo.                               |
 

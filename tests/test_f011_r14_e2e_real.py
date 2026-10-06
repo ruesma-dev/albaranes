@@ -35,6 +35,9 @@ _INPUTS = {
                 "unidad": "m3",
                 "precio_unitario": 60.0,
                 "importe": 240.0,
+                # F-051: el albarán trae su partida. Sin ella la línea iría a
+                # almacén (R1) y este test no trata de la partida.
+                "codigo_imputacion": "02.01.01",
             },
             {
                 "caso_id": "MOR-001",

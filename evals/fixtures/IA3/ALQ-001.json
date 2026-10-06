@@ -2,14 +2,14 @@
   "caso_id": "ALQ-001",
   "fase": "IA3",
   "libro": "IA3_valoracion.xlsx",
-  "sha256_libro": "5df41714a4b2116fc74a154a641a2f75952b1dd3a09cabe411a63bed56d97de1",
+  "sha256_libro": "5370ea490c6e6d5c0345ca6f706294d672b7804097efffe67ebcdfd6628c1b60",
   "tablas": {
     "lineas_valoradas": [
       {
         "caso_id": "ALQ-001",
-        "codigo_partida_final": "ALMACEN",
+        "codigo_partida_final": null,
         "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": "ha cogido una obra que no es (vieja), pero es que no hay obra indicada con codigo en el albaran",
+        "comentario": "ha cogido una obra que no es (vieja), pero es que no hay obra indicada con codigo en el albaran | F-051 (decision del humano 2026-10-05): almacen = partida vacia, tambien en el banco; antes esperaba el literal ALMACEN",
         "importe_calculado": 170,
         "match_method": "@@NO_COMPARAR@@",
         "num_linea": 1,
@@ -19,9 +19,9 @@
       },
       {
         "caso_id": "ALQ-001",
-        "codigo_partida_final": "ALMACEN",
+        "codigo_partida_final": null,
         "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": null,
+        "comentario": "F-051 (decision del humano 2026-10-05): almacen = partida vacia, tambien en el banco; antes esperaba el literal ALMACEN",
         "importe_calculado": 805,
         "match_method": "@@NO_COMPARAR@@",
         "num_linea": 2,
@@ -31,9 +31,9 @@
       },
       {
         "caso_id": "ALQ-001",
-        "codigo_partida_final": "ALMACEN",
+        "codigo_partida_final": null,
         "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": null,
+        "comentario": "F-051 (decision del humano 2026-10-05): almacen = partida vacia, tambien en el banco; antes esperaba el literal ALMACEN",
         "importe_calculado": 154,
         "match_method": "@@NO_COMPARAR@@",
         "num_linea": 3,

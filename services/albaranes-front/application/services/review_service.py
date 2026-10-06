@@ -260,6 +260,64 @@ class ReviewService:
             )
         return ok
 
+    def asignar_almacen_linea(
+        self,
+        *,
+        document_id: str,
+        valuation_line_id: int,
+    ) -> bool:
+        """(F-051 R14, R15, R18) «Almacén (sin partida)» en UNA línea:
+        partida final vacía y marca ``almacen_elegido``; la fila Sigrid
+        sigue Sigrid. Una entrada de deshacer con su estado anterior.
+        ``False`` si la línea no es del documento (R23)."""
+        etiqueta = self._undo_line_desc(valuation_line_id)
+        snap_line = self._undo_snap_line(valuation_line_id)
+        tocadas = self._repository.asignar_almacen(
+            document_id=document_id,
+            valuation_line_ids=[valuation_line_id],
+        )
+        if not tocadas:
+            return False
+        self._repository.record_undo(
+            document_id=document_id,
+            action="almacen",
+            description=(
+                f"Almacén · {etiqueta} "
+                f"({self._repository.doc_label(document_id=document_id)})"
+            ),
+            restore=[snap_line],
+        )
+        return True
+
+    def asignar_almacen_todas(self, *, document_id: str) -> int:
+        """(F-051 R16, R18) «Almacén a todas las líneas»: todas las líneas
+        de la valoración del documento, también las que tenían partida,
+        en una transacción. UNA entrada de deshacer que restaura todas las
+        tocadas. Devuelve cuántas se tocaron (0 = ninguna, R23)."""
+        snaps = self._repository.snapshot_lineas_valoracion(
+            document_id=document_id,
+        )
+        tocadas = self._repository.asignar_almacen(
+            document_id=document_id,
+            valuation_line_ids=None,
+        )
+        if not tocadas:
+            return 0
+        ids_tocados = set(tocadas)
+        self._repository.record_undo(
+            document_id=document_id,
+            action="almacen",
+            description=(
+                f"Almacén a todas las líneas ({len(tocadas)}) "
+                f"({self._repository.doc_label(document_id=document_id)})"
+            ),
+            restore=[
+                snap for snap in snaps
+                if snap["values"].get("id") in ids_tocados
+            ],
+        )
+        return len(tocadas)
+
     def remove_line_conciliacion(
         self,
         *,

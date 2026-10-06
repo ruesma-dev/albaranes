@@ -59,6 +59,28 @@ class Settings(BaseSettings):
     alm_codigo_partida: str = Field("ALM", alias="ALM_CODIGO_PARTIDA")
 
     # ----------------------------------------------------------------- #
+    # F-051 · almacén por línea.
+    #
+    # Una línea base sin partida en el albarán va a ALMACÉN
+    # (codigo_partida_final vacío, partida_action 'almacen_sin_partida')
+    # en vez de copiar la partida de la línea de contrato casada. False
+    # = valorar exactamente como antes de F-051 (interruptor de vuelta
+    # atrás sin desplegar).
+    #
+    # FAMILIAS_DESTINADAS (CSV, sin distinguir mayúsculas ni espacios;
+    # vacío = ninguna): una línea en almacén de esas familias se marca
+    # para revisión NO bloqueante (partida_ausente_familia_destinada).
+    # ----------------------------------------------------------------- #
+    almacen_sin_partida_enabled: bool = Field(
+        True,
+        alias="ALMACEN_SIN_PARTIDA_ENABLED",
+    )
+    familias_destinadas: str = Field(
+        "hormigon,mortero,combustible,alquiler_maquinaria,residuos",
+        alias="FAMILIAS_DESTINADAS",
+    )
+
+    # ----------------------------------------------------------------- #
     # Bloque 1 (may 2026): CONCILIACIÓN de modificadores (líneas
     # sintéticas) contra la tabla de líneas de contrato de Sigrid.
     #

@@ -397,6 +397,14 @@ MOTIVOS_DEL_BUILDER = {
     # afirma la cadena sobre el HTML), sin lista blanca que ampliar.
     "residuos_ler_sin_tarifa_en_contrato",
     "residuos_sintetica_sin_cantidad",
+    # (oct 2026 · F-051 R4) Línea base sin partida (almacén) de una familia
+    # destinada (FAMILIAS_DESTINADAS de sv6): revisión NO bloqueante. Motivo
+    # NUEVO, añadido aquí a conciencia (cambio de un test de otra feature,
+    # motivado en progress/impl_F-051.md). Se escribe desde la constante
+    # `MOTIVO_FAMILIA_DESTINADA` de `almacen_politica`. Consumidores
+    # comprobados: sv6 solo lo escribe; sv4 pinta `review_reasons_json` en
+    # crudo, sin lista blanca que ampliar (etiquetas legibles: F-059).
+    "partida_ausente_familia_destinada",
 }
 
 #: Ídem para el conversor. Los cuatro de la tabla de R19 salen de aquí.

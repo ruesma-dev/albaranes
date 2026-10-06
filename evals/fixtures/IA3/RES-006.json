@@ -2,14 +2,14 @@
   "caso_id": "RES-006",
   "fase": "IA3",
   "libro": "IA3_valoracion.xlsx",
-  "sha256_libro": "5df41714a4b2116fc74a154a641a2f75952b1dd3a09cabe411a63bed56d97de1",
+  "sha256_libro": "5370ea490c6e6d5c0345ca6f706294d672b7804097efffe67ebcdfd6628c1b60",
   "tablas": {
     "lineas_valoradas": [
       {
         "caso_id": "RES-006",
-        "codigo_partida_final": "CI.03A.7",
+        "codigo_partida_final": null,
         "codigo_producto_contrato": "C1",
-        "comentario": "hay que guardar el codigo ler en bbdd, lo ha hecho? En codigo existente no sale, y no hay columna de LER en la vista detallada.",
+        "comentario": "hay que guardar el codigo ler en bbdd, lo ha hecho? En codigo existente no sale, y no hay columna de LER en la vista detallada. | F-051 (decision del humano 2026-10-05): linea sin partida impresa => almacen, partida final vacia; antes esperaba CI.03A.7, la del contrato",
         "importe_calculado": 136,
         "match_method": "semantic",
         "num_linea": 1,
@@ -22,8 +22,8 @@
       {
         "cantidad": 1,
         "caso_id": "RES-006",
-        "codigo_partida": "CI.03A.7",
-        "comentario": "CTSU24/0402 no tarifa ningun incremento LER: sintetica sin precio (R16/R17, decision del 2026-08-22).",
+        "codigo_partida": null,
+        "comentario": "CTSU24/0402 no tarifa ningun incremento LER: sintetica sin precio (R16/R17, decision del 2026-08-22). | F-051 (decision del humano 2026-10-05): linea sin partida impresa => almacen, partida final vacia; antes esperaba CI.03A.7, la del contrato",
         "descripcion_esperada": "INCREMENTO LER 170904",
         "modifier_source": "gestion_residuos",
         "num_linea_base": 1,

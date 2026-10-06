@@ -245,7 +245,7 @@ created_at_utc · updated_at_utc
 | Unidades | `unidad_albaran` · `unidad_contrato` · `unidad_categoria` · `unidad_category_match` |
 | Cantidades | `cantidad_albaran` · `cantidad_convertida` · `cantidad_factor_conversion` |
 | Importes | `importe_calculado` · `importe_albaran_declarado` · `importe_source` |
-| Partida | `codigo_partida_albaran` · `codigo_partida_final` · `partida_action` ∈ {existing_matched, new_line_created, inherited_from_base_line, alm_acopio, no_action} |
+| Partida | `codigo_partida_albaran` · `codigo_partida_final` · `partida_action` ∈ {existing_matched, new_line_created, alm_new_line_created, inherited_from_base_line, no_action, almacen_sin_partida (sv6, F-051), almacen_elegido (sv4, F-051)}. `alm_acopio` es el `origen` de la derivada del «ALM» impreso, no una acción. Partida final vacía = almacén, tenga o no marca (F-051) |
 | Matching | `match_method` ∈ {exact_concept, semantic, price_only, no_match} · `match_confidence_pct` · `tarifa_pdf_encontrada` |
 | Roles | `rol_linea` (base, incremento_year/consistencia/arido/aditivo/residuos/tiempo/carga_incompleta/otro, extra_tiempo…) · `ref_linea_base_merge_id` |
 | Sintéticas | `line_kind` ∈ {from_albaran, synthetic_modifier} · `parent_merge_line_id` · `modifier_source` ∈ {codigo_producto, observaciones, year_contract, year_albaran, tiempo_exceso, gestion_residuos, carga_incompleta, otro} · `modifier_reason` · `descripcion_linea` |
@@ -796,6 +796,22 @@ sufijos:
   memoria por obra+producto para prerrellenar. La IA no puede saberlo: la
   información (a qué tajo va el camión) no está en el documento.
 - ✅ `codigo_partida_final` auditado con `partida_action`.
+- ✅ **Almacén por línea** (F-051, oct 2026): partida final vacía = almacén
+  («no se asocia a partida»), tenga o no marca; nunca un literal. Si el
+  albarán no trae partida, sv6 deja la línea en almacén
+  (`almacen_sin_partida`) en vez de copiar la de la línea de contrato
+  casada, y conserva casado y precio. Cualquier familia puede ir a almacén;
+  hormigón, mortero, combustible, alquiler de maquinaria y residuos sin
+  partida van a revisión NO bloqueante. En sv4 «Almacén (sin partida)» es
+  la primera opción del combo de partida, vaciar la partida equivale a
+  elegirla y hay un botón «Almacén a todas las líneas» (con deshacer); la
+  fila Sigrid sigue siendo Sigrid. Se pierde al revalorar (F-058). En
+  Sigrid, sin partida y con almacén (F-053).
+- ✅ **A qué líneas va la partida lo decide IA1** (F-051): código junto a
+  una línea ⇒ solo a esa, aunque sea el único; código de documento ⇒ a las
+  que no tienen uno propio (las marcadas, el suyo); complementos sin código
+  ⇒ el de su base; el resto, null (almacén). Ejemplo del humano: «03.02»
+  solo junto a la 2.ª de tres líneas ⇒ 1.ª y 3.ª en almacén.
 
 ### 10.9 Decisiones de arquitectura y operación
 

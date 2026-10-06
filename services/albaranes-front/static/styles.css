@@ -1032,6 +1032,13 @@ tr.conciliacion-row.concilia-add > td.concilia-td:first-child {
     color: var(--ink);
     overflow-wrap: anywhere;
 }
+/* F-051: línea en almacén (sin partida). El placeholder se lee como valor. */
+.concilia-td .concilia-val.partida-almacen,
+.concilia-td input.partida-almacen::placeholder {
+    color: var(--ink);
+    font-style: italic;
+    opacity: 1;
+}
 .concilia-td .concilia-sub {
     display: block;
     margin-left: 0;

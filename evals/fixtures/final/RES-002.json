@@ -2,7 +2,7 @@
   "caso_id": "RES-002",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "9a0869b9fdd4a4d65b7792062d6a02f11615c9cc339ec2097442efdc558a85ea",
+  "sha256_libro": "372578227f547f69b420f2d0f392c8885da3995575e99f7cf590ae81f914ccf3",
   "tablas": {
     "datos_generales": [
       {
@@ -25,13 +25,13 @@
         "cantidad_final": 1,
         "casa_con_contrato": "SI",
         "caso_id": "RES-002",
-        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna",
+        "comentario": "No hay codigo de obra en albaran, no ha cogido ninguna | F-051 (decision del humano 2026-10-05): linea sin partida impresa => almacen, partida final vacia; antes esperaba CI.03A.7, la del contrato",
         "descripcion": "CAMBIO CONTENEDOR 6M3",
         "importe_final": 120,
         "linea_a_revision": "@@NO_COMPARAR@@",
         "linea_contrato": "C1",
         "num_linea": 1,
-        "partida_final": "CI.03A.7",
+        "partida_final": null,
         "precio_source": "contrato_db",
         "precio_unitario_final": 120,
         "unidad_final": "UD"
@@ -41,11 +41,11 @@
       {
         "cantidad": 1,
         "caso_id": "RES-002",
-        "comentario": "LER 170107 no tarifado en CTSU24/0228: sintetica sin precio (R16/R17, decision del 2026-08-22).",
+        "comentario": "LER 170107 no tarifado en CTSU24/0228: sintetica sin precio (R16/R17, decision del 2026-08-22). | F-051 (decision del humano 2026-10-05): linea sin partida impresa => almacen, partida final vacia; antes esperaba CI.03A.7, la del contrato",
         "concepto": "INCREMENTO LER 170107",
         "importe": "@@ESPERA_REVISION@@",
         "num_linea_base": 1,
-        "partida": "CI.03A.7",
+        "partida": null,
         "precio_unitario": "@@ESPERA_REVISION@@"
       }
     ]
