@@ -39,3 +39,32 @@ class ContenidoCorreo:
     # ``receivedDateTime`` tal cual lo da Graph (ISO UTC) o ``None``; lo
     # guarda la captura de evals (CR-B5). El pipeline usa el del listado.
     recibido_utc: str | None = None
+
+
+@dataclass(frozen=True)
+class DocumentoInterior:
+    """PDF o imagen valida hallada dentro de un correo adjunto (F-054, R7).
+
+    ``filename`` es el nombre base de R10; ``content_type`` es
+    ``application/pdf`` para un PDF o el ``image/*`` de la parte, en
+    minusculas; ``file_bytes`` son los bytes ya decodificados; ``nivel`` es
+    el del correo que lo contiene (el correo adjunto es el 1).
+    """
+
+    filename: str
+    content_type: str
+    file_bytes: bytes
+    nivel: int
+
+
+@dataclass(frozen=True)
+class ExtraccionCorreoAdjunto:
+    """Resultado de recorrer un correo adjunto (F-054, R6-R9).
+
+    ``documentos`` va en el orden de aparicion de R6. Con
+    ``tope_excedido`` el pipeline no ingiere ninguno (R9, todo o nada).
+    """
+
+    documentos: tuple[DocumentoInterior, ...]
+    tope_excedido: bool
+    partes_ignoradas: int

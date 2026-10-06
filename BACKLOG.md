@@ -3,13 +3,15 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **56 features**, 40 abiertas, 16 terminadas.
+Resumen: **57 features**, 40 abiertas, 17 terminadas.
+
+En curso: **F-053**.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-053 | Alta en Sigrid de los albaranes aprobados | 1 | spec lista | critico |  |
+| F-053 | Alta en Sigrid de los albaranes aprobados | 1 | en curso | critico |  |
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
@@ -60,6 +62,7 @@ Resumen: **56 features**, 40 abiertas, 16 terminadas.
 | F-043 | IA1 clasifica el albaran: la tipologia la decide la IA, siempre y con definiciones claras, nunca una regla determinista | 1 | critico |
 | F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel | 1 | critico |
 | F-052 | sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF) | 1 | critico |
+| F-054 | sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822) | 1 | estandar |
 | F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
 | F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
 | F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | estandar |
@@ -75,7 +78,7 @@ Resumen: **56 features**, 40 abiertas, 16 terminadas.
 
 ### F-053 · Alta en Sigrid de los albaranes aprobados
 
-estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí
+estado **en curso** · prioridad 1 · rigor `critico` · SDD sí
 
 PETICION DEL HUMANO (2026-09-30): «Alta en Sigrid de los albaranes aprobados». Aprobar ES registrar: los dos botones de sv4 que aprueban («Guardar y aprobar» de la ficha y «Aprobar» del listado) disparan el alta del albaran en Sigrid.
 
@@ -609,6 +612,18 @@ PROPUESTA DEL DIAGNOSTICO: (1) consulta propia de proveedores de la obra (DISTIN
 RELACIONADAS: F-002 (red de proveedor por CIF), F-043, F-047 (RES-007 no cerraba ciclo por esto).
 
 DECISIONES DEL HUMANO (2026-09-30): aceptadas las recomendaciones D1-D7 de la spec v2 (consulta agregada sin paginar; no compartir con sv4; paginar solo header_and_lines y search_proveedores; D4 = B + A, es decir el bloque veraz Y «Guardar» relanza la busqueda si cambian CIF u obra; sin backfill; clientes colindantes a ficha aparte; efecto D7 aceptado).
+
+### F-054 · sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822)
+
+estado **terminada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-054-correo-adjunto-encadenado`
+
+PETICION DEL HUMANO (2026-09-30): hay albaranes que llegan como CORREO ADJUNTO (itemAttachment, contentType message/rfc822) con el PDF dentro, a veces anidado. Hoy sv1 lo descarta: si es el unico adjunto el correo va a Errores ("sin adjuntos elegibles"); si va junto a un PDF directo, el interior se PIERDE EN SILENCIO y el correo va a Procesados.
+
+ALCANCE (minimo de progress/explore_F-054_encadenados.md, decisiones del humano del 2026-09-30): clasificar message/rfc822 (item o file, no inline, no reference, bajo MAX_ATTACHMENT_MB) como correo adjunto; resto de adjuntos SIN CAMBIOS; $value con el cliente Graph actual; extractor MIME puro en sv1 (infrastructure/document/ + puerto en domain/ports/, NO en ruesma_comun), 5 niveles todo o nada, PDF e IMAGENES (image/* con disposicion attachment; decision del humano 2026-10-02: «si no tiene pdf pero tiene imagenes validas, tambien vale»), limite por documento interior; cada documento interior sigue el camino normal (troceo, intake, idempotencia); Procesados sii nada fallo y hay >=1 pagina aceptada; correo adjunto sin PDF ni imagen valida = WARNING (Procesados si entraron otras paginas); logs sin cabeceras ni texto del interior (R36 de F-048). Contexto de IA1 (F-048): el del correo EXTERIOR, ContextoCorreo sin cambios (decision del humano). Modelo: F-020 de partes, adaptado (se trae la logica, no se importa).
+
+FUERA: conversationId/hilo, enlaces SharePoint, .msg, cabeceras del interior en el contexto y reproceso automatico de Errores (lo hace el humano a mano tras desplegar, tarea MANUAL T12).
+
+RIGOR estandar: solo sv1, sin schema, sin contratos de cola ni blob, sin recurso compartido ni dinero (igual que F-020 de partes). Spec: specs/F-054-correo-adjunto-encadenado/, informe progress/spec_F-054.md.
 
 ### F-011 · Evals de IA con ground truth y puerta en el arnés
 

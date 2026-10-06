@@ -29,6 +29,7 @@ from dobles_sv1 import (
     pdf_de_paginas,
 )
 from infrastructure.colas.intake_cola_adapter import IntakeColaClient
+from infrastructure.document.mime_documento_extractor import MimeDocumentoExtractor
 from infrastructure.document.pdf_page_splitter import PdfPageSplitter
 from infrastructure.graph.mail_client import GraphMailClient
 
@@ -107,6 +108,7 @@ def _ciclo(
             publicador=publicador,
         ),
         pdf_splitter=PdfPageSplitter(),
+        extractor_correo=MimeDocumentoExtractor(),
     )
     ejecutar_ciclo(pipeline)
     return almacen, publicador
@@ -195,6 +197,7 @@ def test_f048_r36_el_destino_del_ciclo_completo_es_procesados():
             publicador=PublicadorDoble(llamadas),
         ),
         pdf_splitter=PdfPageSplitter(),
+        extractor_correo=MimeDocumentoExtractor(),
     )
     ejecutar_ciclo(pipeline)
 

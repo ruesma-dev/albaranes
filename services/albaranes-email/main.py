@@ -11,6 +11,7 @@ from application.pipelines.polling_pipeline import PollingPipeline
 from config.logging_config import configure_logging
 from config.settings import Settings
 from infrastructure.colas.intake_cola_adapter import IntakeColaClient
+from infrastructure.document.mime_documento_extractor import MimeDocumentoExtractor
 from infrastructure.document.pdf_page_splitter import PdfPageSplitter
 from infrastructure.graph.mail_client import GraphMailClient
 from infrastructure.graph.token_provider import GraphTokenProvider
@@ -70,6 +71,9 @@ def main() -> int:
         mailbox=mailbox,
         orchestrator=orchestrator,
         pdf_splitter=PdfPageSplitter(),
+        # F-054: abre los correos adjuntos (message/rfc822) y saca sus PDF e
+        # imagenes validas; el pipeline solo conoce el puerto (R27).
+        extractor_correo=MimeDocumentoExtractor(),
         correo_max_caracteres=settings.correo_max_caracteres,
     ).run_forever(settings)
     return 0
