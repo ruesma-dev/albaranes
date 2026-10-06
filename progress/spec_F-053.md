@@ -54,6 +54,9 @@ real) esperan a **F-009 desplegada**. F-049 (`paride`) y F-061 son evolución, n
 
 ## Plan de implementación (para la PARADA 1)
 
+**PARADA 1 aprobada por el humano (2026-10-06, «adelante»).** Arranca la implementación en cuanto F-051 esté en `dev` (T0d).
+
+
 1. **T0d** — con F-051 en `dev`, fusionar `dev` en la rama; `init.sh` en verde.
 2. **T0a** — script de medición sin `MARCAS_ALMACEN` (F-051 v4). T0b, T0c y T0: MANUAL del humano (solo lectura).
 3. **comun** (T1) — `MensajeFeedback.accion`, `esta_valorado`, `alta_sigrid` (mapeo y producto efectivo).
