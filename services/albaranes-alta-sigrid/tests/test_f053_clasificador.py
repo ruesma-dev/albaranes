@@ -2,7 +2,8 @@
 """F-053 · T7 · ``clasificador``: respuesta de sigrid-api → estado del alta.
 
 La tabla de códigos (design §2) es un DATO del módulo y se prueba código a
-código con el contrato tal como está en F-009 v8 (``8a6ecab``, §3.3 y §3.4).
+código con el contrato tal como está en F-009 v8.2 (``13fd99d``; códigos sin cambios desde
+la v8 ``8a6ecab``), §3.3 y §3.4.
 R15 (``idempotente``), R18 (400 por ``details.codigo``), R20 (``creado``) y
 R21 (5xx, tiempo agotado y conexión: ``incierto`` en la grabación, ``error`` en
 la previa). Puro: sin red.

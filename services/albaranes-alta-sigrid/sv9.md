@@ -2,7 +2,7 @@
 
 > F-053 · alta en Sigrid de los albaranes aprobados. Spec: `specs/F-053-alta-sigrid/`.
 > Contrato con sigrid-api: `sigrid-api/specs/F-009-alta-albaran-compra/contrato_albaranes.md`
-> (v8, `8a6ecab`; dueño sigrid-api, aquí se enlaza, no se copia).
+> (v8.2, `13fd99d`, misma forma que la v8 `8a6ecab`; dueño sigrid-api, aquí se enlaza, no se copia).
 
 ## Qué hace
 

@@ -85,6 +85,31 @@ def test_f053_t3_defectos_del_diseno(monkeypatch):
     }
 
 
+def test_f053_r17_precio_distinto_del_contrato_es_informativo_por_defecto(monkeypatch):
+    """Aviso previo de sigrid-api (2026-10-06): con el precio neto de sv9 saldrán
+    más ``precio_distinto_del_contrato``; es informativo y no manda a revisar.
+    (``plantilla_de_otro_proveedor`` ya no existe en F-009, H25: fuera del defecto.)"""
+    from domain.models.alta_models import LineaPeticion, PeticionAlbaran, RespuestaAlta
+    from domain.services.comparador_previa import comparar
+
+    ajustes = _settings(monkeypatch)
+    assert "precio_distinto_del_contrato" not in ajustes.avisos_bloqueantes
+    assert "plantilla_de_otro_proveedor" not in ajustes.avisos_bloqueantes
+    peticion = PeticionAlbaran(
+        cod_obra="0404", cif_proveedor="B1", cod_contrato="C", referencia_externa="ALB-d",
+        su_referencia="1", usu="U", fecha_albaran=20261001, empide=None,
+        lineas=(LineaPeticion(referencia_linea="1", cantidad=3.0, precio=33.333333,
+                              ctrpro_ide=7),),
+    )
+    aviso = {"codigo": "precio_distinto_del_contrato", "mensaje": "pre = tar = precio"}
+    respuesta = RespuestaAlta(estado="previsto", lineas=({
+        "referencia_linea": "1", "total": round(3.0 * 33.333333, 2), "partida": None,
+        "avisos": [aviso],
+    },))
+    assert comparar(peticion, respuesta, {"1": 100.0}, ajustes.tolerancia_eur,
+                    ajustes.avisos_bloqueantes) == []
+
+
 def test_f053_t3_desde_se_lee_como_instante_utc(monkeypatch):
     ajustes = _settings(monkeypatch, ALTA_SIGRID_DESDE_UTC="2026-10-01T00:00:00Z")
     assert ajustes.desde == datetime(2026, 10, 1, tzinfo=UTC)
