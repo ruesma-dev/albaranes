@@ -638,7 +638,8 @@
         "sv6-valoracion-persist",
         "comun",
         "infra"
-      ]
+      ],
+      "branch": "feature/F-053-alta-sigrid"
     },
     {
       "id": "F-061",
