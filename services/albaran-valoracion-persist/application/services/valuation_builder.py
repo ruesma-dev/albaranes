@@ -19,6 +19,11 @@ from application.services.residuos_incrementos import (
     claves_dedupe,
     es_linea_incremento_ler,
 )
+from application.services.almacen_politica import (
+    ACCION_ALMACEN_SIN_PARTIDA,
+    MOTIVO_FAMILIA_DESTINADA,
+    motivo_revision_almacen,
+)
 from application.services.partida_matcher import (
     PartidaMatcher,
     PartidaMatchResult,
@@ -416,8 +421,13 @@ class ValuationBuilder:
         partida_matcher: PartidaMatcher,
         unit_converter: UnitConverter,
         importe_calculator: ImporteCalculator,
+        familias_destinadas: frozenset[str] = frozenset(),
     ) -> None:
         self._guard = unit_category_guard
+        # F-051 (R4, R5): familias cuya línea en almacén va a revisión NO
+        # bloqueante. Vacío (por defecto) = ninguna: el builder se
+        # comporta como antes para quien no lo pase.
+        self._familias_destinadas = familias_destinadas
         self._reconciler = price_reconciler
         self._partida_matcher = partida_matcher
         self._converter = unit_converter
@@ -1260,6 +1270,20 @@ class ValuationBuilder:
         reasons.extend(guard_reasons)
         reasons.extend(reconciliation.reasons)
         reasons.extend(partida_result.reasons)
+        # F-051 (R4, R5): la línea va a almacén porque el albarán no trae
+        # partida. Si su familia efectiva es destinada, se avisa al
+        # revisor (no bloquea la aprobación y NO se rellena partida).
+        # El motivo se escribe con su constante (no con la variable) para
+        # que la congelación de motivos de F-027 R22 lo vea.
+        revision_almacen = (
+            partida_result.partida_action == ACCION_ALMACEN_SIN_PARTIDA
+            and motivo_revision_almacen(
+                _familia_de(ctx, self._clasificacion),
+                self._familias_destinadas,
+            ) is not None
+        )
+        if revision_almacen:
+            reasons.append(MOTIVO_FAMILIA_DESTINADA)
         reasons.extend(converted.reasons)
         if _movimiento_asumido_1:
             reasons.append("movimiento_residuos_sin_cantidad_asumido_1")
@@ -1314,6 +1338,9 @@ class ValuationBuilder:
         # (F-036 R15) Anular el match manda la línea a revisión SIEMPRE,
         # con independencia de lo que opinen el resto de señales.
         if base_casada_con_incremento:
+            review_required = True
+        # (F-051 R4) Familia destinada en almacén: revisión no bloqueante.
+        if revision_almacen:
             review_required = True
         # Residuos sin nº de contenedores calculable → revisión manual.
         if residuos_calc is not None and residuos_calc.num_contenedores is None:

@@ -29,6 +29,8 @@ PartidaAction = Literal[
     "alm_new_line_created",
     "no_action",
     "inherited_from_base_line",
+    # F-051: el albarán no trae partida ⇒ almacén (partida final vacía).
+    "almacen_sin_partida",
 ]
 
 ValuationStatus = Literal[

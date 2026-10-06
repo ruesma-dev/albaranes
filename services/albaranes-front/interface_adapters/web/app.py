@@ -1468,6 +1468,43 @@ def build_app(settings: Settings) -> FastAPI:
             "matched_contrato_line_id": payload.matched_contrato_line_id,
         }
 
+    # F-051 (R14-R16, R23): «Almacén (sin partida)» en una línea y
+    # «Almacén a todas las líneas». 404 si no se toca nada (línea ajena
+    # al documento o documento sin valoración).
+    @app.post(
+        "/api/documents/{document_id}/lines/{valuation_line_id}/almacen"
+    )
+    def asignar_almacen_linea_api(
+        document_id: str,
+        valuation_line_id: int,
+    ) -> dict:
+        ok = review_service.asignar_almacen_linea(
+            document_id=document_id,
+            valuation_line_id=valuation_line_id,
+        )
+        if not ok:
+            raise HTTPException(
+                status_code=404,
+                detail="Línea de valoración no encontrada en este albarán.",
+            )
+        return {
+            "ok": True,
+            "document_id": document_id,
+            "valuation_line_id": valuation_line_id,
+        }
+
+    @app.post("/api/documents/{document_id}/almacen-todas")
+    def asignar_almacen_todas_api(document_id: str) -> dict:
+        lineas = review_service.asignar_almacen_todas(
+            document_id=document_id,
+        )
+        if not lineas:
+            raise HTTPException(
+                status_code=404,
+                detail="El albarán no tiene líneas valoradas.",
+            )
+        return {"ok": True, "document_id": document_id, "lineas": lineas}
+
     @app.post("/api/documents/{document_id}/lines/standalone")
     def add_standalone_line_api(document_id: str) -> dict:
         # Crea una linea salmon SUELTA (sin linea blanca): una valuation

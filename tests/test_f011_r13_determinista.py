@@ -49,7 +49,9 @@ _INPUTS = {
                 "precio_unitario": 72.5,
                 "descuentos": None,
                 "importe": 580.0,
-                "codigo_imputacion": None,
+                # F-051: el albarán trae su partida. Sin ella la línea iría a
+                # almacén (R1) y este test no trata de la partida.
+                "codigo_imputacion": "01.02.03",
                 "observaciones_albaran": None,
             }
         ],

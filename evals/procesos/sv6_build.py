@@ -55,6 +55,12 @@ RAIZ_SV6 = RAIZ_REPO / "services" / "albaran-valoracion-persist"
 TOLERANCIA_PRECIO_PCT = 2.0
 TOLERANCIA_IMPORTE_PCT = 5.0
 CODIGO_PARTIDA_ALM = "ALM"
+#: F-051 (R1, R4, R8, R9): almacén por línea y familias destinadas. Sin
+#: ellos el banco valoraría como antes de F-051 (el constructor los trae
+#: apagados). `tests/test_f051_puntos_de_composicion.py` vigila que sigan
+#: iguales a los de `Settings` y que se pasen.
+ALMACEN_SIN_PARTIDA = True
+FAMILIAS_DESTINADAS = "hormigon,mortero,combustible,alquiler_maquinaria,residuos"
 
 #: Del vocabulario de sv6 al de los libros (`contrato_db` 1a / `pdf` 1b).
 MAPA_PRECIO_SOURCE = {
@@ -567,6 +573,7 @@ def evaluar_caso_determinista(
 
 def _construir_builder():  # pragma: no cover - solo corre dentro del subproceso
     """Compone `ValuationBuilder` con las redes reales y el registro de unidades."""
+    from application.services.almacen_politica import familias_destinadas_de_csv
     from application.services.importe_calculator import ImporteCalculator
     from application.services.partida_matcher import PartidaMatcher
     from application.services.price_reconciler import PriceReconciler
@@ -579,9 +586,13 @@ def _construir_builder():  # pragma: no cover - solo corre dentro del subproceso
     return ValuationBuilder(
         unit_category_guard=UnitCategoryGuard(unit_registry=registro),
         price_reconciler=PriceReconciler(tolerance_pct=TOLERANCIA_PRECIO_PCT),
-        partida_matcher=PartidaMatcher(alm_codigo_partida=CODIGO_PARTIDA_ALM),
+        partida_matcher=PartidaMatcher(
+            alm_codigo_partida=CODIGO_PARTIDA_ALM,
+            almacen_sin_partida=ALMACEN_SIN_PARTIDA,
+        ),
         unit_converter=UnitConverter(registry=registro),
         importe_calculator=ImporteCalculator(tolerance_pct=TOLERANCIA_IMPORTE_PCT),
+        familias_destinadas=familias_destinadas_de_csv(FAMILIAS_DESTINADAS),
     )
 
 

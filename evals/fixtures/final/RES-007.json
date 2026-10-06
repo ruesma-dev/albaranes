@@ -2,7 +2,7 @@
   "caso_id": "RES-007",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "9a0869b9fdd4a4d65b7792062d6a02f11615c9cc339ec2097442efdc558a85ea",
+  "sha256_libro": "372578227f547f69b420f2d0f392c8885da3995575e99f7cf590ae81f914ccf3",
   "tablas": {
     "datos_generales": [
       {
@@ -25,13 +25,13 @@
         "cantidad_final": 1,
         "casa_con_contrato": "NO",
         "caso_id": "RES-007",
-        "comentario": "leido mal la obra (no sale en albaran, la habra cogido po rdireccion, ver como lo ha hecho). Coge mal el CIF proveedor (no encuentro de donde lo ha sacado, en la obra si que estra salmedina). Podriamos hacer que proveedores ya identificados claramente, como salmedina, al leer el nombre ya coja todo?. estudiar como ha llegado a la info que ha recogido. no ha encontrado contrato porque no hay en la obra que eligio (que estaba mal)\nNo ha metido el precio unitario del incremento LER",
+        "comentario": "leido mal la obra (no sale en albaran, la habra cogido po rdireccion, ver como lo ha hecho). Coge mal el CIF proveedor (no encuentro de donde lo ha sacado, en la obra si que estra salmedina). Podriamos hacer que proveedores ya identificados claramente, como salmedina, al leer el nombre ya coja todo?. estudiar como ha llegado a la info que ha recogido. no ha encontrado contrato porque no hay en la obra que eligio (que estaba mal)\nNo ha metido el precio unitario del incremento LER | F-051 (decision del humano 2026-10-05): linea sin partida impresa => almacen, partida final vacia; antes esperaba CI.03A.7, la del contrato",
         "descripcion": "CONTENEDOR DE RESIDUOS 9 M3",
         "importe_final": 183,
         "linea_a_revision": "@@NO_COMPARAR@@",
         "linea_contrato": null,
         "num_linea": 1,
-        "partida_final": "CI.03A.7",
+        "partida_final": null,
         "precio_source": "oferta",
         "precio_unitario_final": 183,
         "unidad_final": "UD"
@@ -41,11 +41,11 @@
       {
         "cantidad": 1,
         "caso_id": "RES-007",
-        "comentario": "leido mal la obra (no sale en albaran, la habra cogido po rdireccion, ver como lo ha hecho). Coge mal el CIF proveedor (no encuentro de donde lo ha sacado, en la obra si que estra salmedina). Podriamos hacer que proveedores ya identificados claramente, como salmedina, al leer el nombre ya coja todo?. estudiar como ha llegado a la info que ha recogido. no ha encontrado contrato porque no hay en la obra que eligio (que estaba mal). El ler esta en el contrato y no ha cogido el precio",
+        "comentario": "leido mal la obra (no sale en albaran, la habra cogido po rdireccion, ver como lo ha hecho). Coge mal el CIF proveedor (no encuentro de donde lo ha sacado, en la obra si que estra salmedina). Podriamos hacer que proveedores ya identificados claramente, como salmedina, al leer el nombre ya coja todo?. estudiar como ha llegado a la info que ha recogido. no ha encontrado contrato porque no hay en la obra que eligio (que estaba mal). El ler esta en el contrato y no ha cogido el precio | F-051 (decision del humano 2026-10-05): linea sin partida impresa => almacen, partida final vacia; antes esperaba CI.03A.7, la del contrato",
         "concepto": "INCREMENTO LEER 17 08 02",
         "importe": 77,
         "num_linea_base": 1,
-        "partida": "CI.03A.7",
+        "partida": null,
         "precio_unitario": 77
       }
     ]
