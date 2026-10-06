@@ -44,6 +44,7 @@ from domain.services.validador_alta import (
     ConfigAlta,
     estado_de_motivos,
     importes_por_referencia,
+    lineas_de_otro_contrato,
     validar_y_construir,
 )
 
@@ -71,6 +72,19 @@ def hoy_en_madrid(instante: datetime) -> date:
         return instante.astimezone(ZoneInfo("Europe/Madrid")).date()
     except Exception:  # noqa: BLE001 — sin tzdata: hora local del sistema
         return instante.astimezone().date()
+
+
+def _avisar_lineas_de_otro_contrato(document_id: str, datos: DatosAlta) -> None:
+    """R46 (D2): una línea casada con OTRO contrato es una anomalía aguas arriba.
+    Se deja en el log siempre que se valida (también si R10 manda a
+    ``no_admitido``), sin precios ni importes."""
+    contrato = datos.cabecera.contrato_codigo or "sin contrato"
+    for linea in lineas_de_otro_contrato(datos):
+        logger.warning(
+            "%s ANOMALIA document_id=%s linea=%s casada con una línea del contrato %s y la "
+            "valoración es de %s (R46: fallo aguas arriba en sv5/sv6 o conciliación manual en sv4)",
+            _LOG, document_id, linea.referencia_linea, linea.contrato_linea, contrato,
+        )
 
 
 @dataclass(frozen=True)
@@ -208,6 +222,7 @@ class AltaSigridService:
         #    tras validar en local (R10–R13, R39; sin llamar a nadie).
         peticion = _peticion_retomada(previa)
         if peticion is None:
+            _avisar_lineas_de_otro_contrato(document_id, datos)
             validada = validar_y_construir(datos, self._config, hoy_en_madrid(self._reloj()))
             if isinstance(validada, list):
                 self._guardar(document_id, paso, self._resultado(

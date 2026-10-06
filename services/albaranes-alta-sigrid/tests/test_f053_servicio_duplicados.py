@@ -10,6 +10,7 @@
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import replace
 from datetime import timedelta
 
@@ -94,6 +95,41 @@ def test_f053_r39_sin_llamadas_signo_incoherente():
         ("signo_incoherente", "4"),
     ]
     assert sigrid.llamadas == []
+
+
+@pytest.mark.parametrize("modo", MODOS)
+def test_f053_r46_otro_contrato_revisar_sin_llamadas_y_anomalia_en_el_log(modo, caplog):
+    caplog.set_level(logging.INFO)
+    sigrid = SigridFalso()
+    d = datos(vinculada(1), vinculada(2, contrato_linea="CTOTRO/9", importe_calculado=987.65))
+    repo, doc, resultado = _procesar(d, sigrid, modo)
+    assert resultado.estado is EstadoAlta.REVISAR
+    assert [(m.codigo, m.referencia_linea) for m in repo.ultimo(doc).motivos] == [
+        ("linea_de_otro_contrato", "2"),
+    ]
+    assert sigrid.llamadas == []
+    (aviso,) = [r for r in caplog.records if "ANOMALIA" in r.getMessage()]
+    assert aviso.levelno == logging.WARNING
+    texto = aviso.getMessage()
+    assert DOCUMENT_ID in texto and "linea=2" in texto
+    assert "CTOTRO/9" in texto and "CTSU16/0206" in texto
+    assert "987" not in caplog.text and "410" not in caplog.text  # sin precios ni importes
+
+
+def test_f053_r46_la_anomalia_se_registra_aunque_haya_motivos_de_r10(caplog):
+    """El alta queda ``no_admitido`` por R10 (R46 no se evalúa), pero el fallo
+    aguas arriba se deja en el log igualmente."""
+    caplog.set_level(logging.WARNING)
+    d = datos(vinculada(2, contrato_linea="CTOTRO/9"), obra_codigo=None)
+    _repo, _doc, resultado = _procesar(d, SigridFalso())
+    assert resultado.estado is EstadoAlta.NO_ADMITIDO
+    assert "ANOMALIA" in caplog.text and "CTOTRO/9" in caplog.text
+
+
+def test_f053_r46_sin_anomalia_no_hay_aviso(caplog):
+    caplog.set_level(logging.WARNING)
+    _procesar(datos(vinculada(1), sin_vincular(2)), SigridFalso())
+    assert "ANOMALIA" not in caplog.text
 
 
 # ------------------------------------------------------------------ #

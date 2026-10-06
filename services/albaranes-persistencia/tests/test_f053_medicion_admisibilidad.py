@@ -198,6 +198,56 @@ def test_f053_medicion_resumen_y_csv(tmp_path):
     assert [f["document_id"] for f in filas] == ["d1", "d2", "d3"]
 
 
+# ------------------------------------------------------------------ #
+# R46 (D2): ¿ya hay líneas casadas con una línea de OTRO contrato?
+# ------------------------------------------------------------------ #
+def test_f053_medicion_r46_cuenta_las_lineas_de_otro_contrato():
+    ev = _evaluar(
+        _fila("d1", 1),                                          # su contrato
+        _fila("d1", 2, cl_contrato="OTRO"),                      # otro
+        _fila("d1", 3, cl_contrato="OTRO", importe_calculado=0.0),  # otro, sin importe
+        _fila("d1", 4, matched_contrato_line_id=None, cl_contrato=None),  # sin casar
+        _fila("d1", 5, cl_contrato=" CT-1 "),                    # el suyo, con espacios
+        _fila("d1", 6, cl_contrato=None),                        # casada sin código
+    )
+    assert ev["lineas_de_otro_contrato"] == 2
+
+
+def test_f053_medicion_r46_valoracion_sin_contrato_y_linea_casada():
+    ev = _evaluar(_fila("d1", 1, valoracion_contrato=None))
+    assert ev["lineas_de_otro_contrato"] == 1
+
+
+def test_f053_medicion_r46_lineas_del_merge_no_cuentan():
+    filas = [_fila("d1", None, valoracion_status="no_contract", valoracion_contrato=None)]
+    merge = [{"document_id": "d1", "linea_id": 1, "cantidad": 3, "precio_neto": 9.0,
+              "codigo_imputacion": "16.01"}]
+    assert _evaluar(*filas, merge=merge)["lineas_de_otro_contrato"] == 0
+
+
+def test_f053_medicion_r46_resumen_con_recuento_y_documentos_sin_valores(tmp_path):
+    evs = [_evaluar(_fila("d1", 1)),
+           _evaluar(_fila("d2", 1, cl_contrato="OTRO", importe_calculado=1234.5),
+                    _fila("d2", 2, cl_contrato="OTRO")),
+           _evaluar(_fila("d3", 1, cl_contrato="OTRO"))]
+    res = m.resumir(evs)
+    assert res["lineas_de_otro_contrato"] == 3
+    assert res["documentos_de_otro_contrato"] == ["d2", "d3"]
+    texto = m.formatear_resumen(res, todos=False)
+    assert "casadas con una línea de OTRO contrato (R46): 3" in texto
+    assert "d2, d3" in texto and "1234" not in texto
+    ruta = tmp_path / "salida.csv"
+    m.escribir_csv(str(ruta), evs)
+    filas = list(csv.DictReader(ruta.open(encoding="utf-8-sig"), delimiter=";"))
+    assert [f["lineas_de_otro_contrato"] for f in filas] == ["0", "2", "1"]
+
+
+def test_f053_medicion_r46_sin_ninguna_lo_dice():
+    texto = m.formatear_resumen(m.resumir([_evaluar(_fila("d1", 1))]), todos=False)
+    assert "casadas con una línea de OTRO contrato (R46): 0" in texto
+    assert "documentos:" not in texto
+
+
 def test_f053_medicion_consultas_solo_lectura():
     for sql in (m.SQL_LINEAS_VALORADAS, m.SQL_LINEAS_MERGE):
         palabras = set(sql.upper().split())

@@ -32,6 +32,12 @@ cadena de conexión ni ninguna credencial. Lo ejecuta el humano:
 tenga o no marca en ``partida_action``. Por eso el script no conoce marcas y
 «almacén sin casar» y «sin partida ni almacén» son una sola categoría,
 ``sin_partida_sin_casar``, que no impide el alta.
+
+**Línea de otro contrato** (R46, decisión D2 del humano, 2026-10-06): línea
+valorada casada con una línea de contrato cuyo contrato no es el de la
+valoración (o la valoración no tiene). «No debería ocurrir nunca»: en F-053 va
+a ``revisar``. Se cuentan todas las valoradas (con importe o sin él) y se dan
+los ``document_id``, sin ningún valor; no cambia los veredictos (a) y (b).
 """
 from __future__ import annotations
 
@@ -121,6 +127,7 @@ class Linea:
     partida: str | None
     casa: bool
     partida_contrato: str | None = None
+    otro_contrato: bool = False
 
     @property
     def almacen(self) -> bool:
@@ -166,12 +173,18 @@ def linea_desde_valoracion(fila: Mapping[str, object]) -> Linea:
         and contrato is not None
         and _texto(fila.get("cl_contrato")) == contrato
     )
+    contrato_linea = _texto(fila.get("cl_contrato"))
     return Linea(
         cantidad=None if cantidad is None else float(cantidad),
         importe=_numero(fila.get("importe_calculado")),
         partida=partida,
         casa=casa,
         partida_contrato=normalizar_partida(fila.get("cl_partida")),
+        otro_contrato=(
+            fila.get("matched_contrato_line_id") is not None
+            and contrato_linea is not None
+            and contrato_linea != contrato
+        ),
     )
 
 
@@ -291,6 +304,7 @@ def evaluar(alb: Albaran) -> dict[str, object]:
             cuentas["partida_sin_casar"] + cuentas["sin_partida_sin_casar"]
         ),
         "almacen": almacen,
+        "lineas_de_otro_contrato": sum(1 for l in alb.lineas if l.otro_contrato),
         "registrable_a": registrable_a,
         "registrable_b": registrable_b,
     }
@@ -317,8 +331,11 @@ def resumir(evaluaciones: list[dict[str, object]]) -> dict[str, object]:
     )
     for clave in ("lineas_con_importe", "lineas_sin_importe",
                   "lineas_negativas", "lineas_sin_cantidad", "almacen",
-                  "necesitan_producto", *CATEGORIAS):
+                  "necesitan_producto", "lineas_de_otro_contrato", *CATEGORIAS):
         resumen[clave] = sum(int(e[clave]) for e in evaluaciones)
+    resumen["documentos_de_otro_contrato"] = [
+        str(e["document_id"]) for e in evaluaciones if e["lineas_de_otro_contrato"]
+    ]
     return resumen
 
 
@@ -372,6 +389,14 @@ def formatear_resumen(resumen: Mapping[str, object], todos: bool) -> str:
         "  sin casar (irían con un producto genérico de la lista blanca): "
         f"{resumen['necesitan_producto']}"
     )
+    lineas.append(
+        "Líneas valoradas casadas con una línea de OTRO contrato (R46): "
+        f"{resumen['lineas_de_otro_contrato']}"
+    )
+    if resumen["documentos_de_otro_contrato"]:
+        lineas.append(
+            "  documentos: " + ", ".join(resumen["documentos_de_otro_contrato"])
+        )
     return "\n".join(lineas)
 
 

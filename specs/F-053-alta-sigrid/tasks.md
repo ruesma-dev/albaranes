@@ -53,8 +53,8 @@ sigrid-api tal como esté en la spec de F-009 (v8, `8a6ecab`; códigos incluidos
 - [x] T33 (H3): `branch` de F-053 en `harness/features.json` y `BACKLOG.md` regenerado  |  Verificación: `python -m harness.rutas_sensibles --puerta --base dev` resuelve F-053
 - [x] T34 (O1): visibilidad de `q-feedback` = peor caso de un mensaje (timeouts de la configuración) + 300 s, al minuto  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_o1`
 - [x] T35 (D1): `ESTADOS_ALTA_BLOQUEANTES` en comun; `save` de sv3 no borra un merge con alta bloqueante (lo devuelve con `conservado_por_alta`, log WARNING) y el pipeline no lo reprocesa; sin alta, con alta no bloqueante o sin tabla, como hoy (R45)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r45` y `pytest services/albaranes-comun services/albaranes-alta-sigrid -k f053_r45` (por separado)
-- [ ] T36 (D2): `linea_de_otro_contrato` ⇒ `revisar` sin llamar a sigrid-api, con su `referencia_linea`, y WARNING de anomalía (documento, línea, los dos contratos, sin precios) (R46)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r46`
-- [ ] T37 (D2): recuento `lineas_de_otro_contrato` (y sus `document_id`) en `medir_admisibilidad_f053.py`, sin valores  |  Verificación: `pytest services/albaranes-persistencia -k f053_medicion` + MANUAL: repetir T0
+- [x] T36 (D2): `linea_de_otro_contrato` ⇒ `revisar` sin llamar a sigrid-api, con su `referencia_linea`, y WARNING de anomalía (documento, línea, los dos contratos, sin precios) (R46)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r46`
+- [x] T37 (D2): recuento `lineas_de_otro_contrato` (y sus `document_id`) en `medir_admisibilidad_f053.py`, sin valores  |  Verificación: `pytest services/albaranes-persistencia -k f053_medicion` + MANUAL: repetir T0
 
 ## Bloque E · sv4
 

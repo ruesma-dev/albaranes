@@ -4,8 +4,9 @@
 Puro: ni red ni BBDD. Si hay motivos, sv9 NO llama a sigrid-api:
 
 - Motivos de R10 ⇒ ``no_admitido`` (se corrige en sv4 y «Solicitar alta»).
-- Si no los hay, los de R39 (fecha no plausible, signos opuestos) ⇒
-  ``revisar``. R39 no se evalúa si hay motivos de R10.
+- Si no los hay, los de R39 (fecha no plausible, signos opuestos) y R46
+  (línea casada con una línea de OTRO contrato, decisión D2 del humano) ⇒
+  ``revisar``. No se evalúan si hay motivos de R10.
 
 Sin motivos, devuelve la :class:`PeticionAlbaran` del modo extendido de
 ``POST /api/sigrid/albaran`` (contrato §2, v8 de F-009):
@@ -55,7 +56,9 @@ MAX_UNIDAD = 8
 DIAS_ATRAS_PLAUSIBLES = 365
 
 #: Motivos locales que llevan a ``revisar`` (R39); el resto, a ``no_admitido``.
-MOTIVOS_REVISAR_LOCAL = frozenset({"fecha_no_plausible", "signo_incoherente"})
+MOTIVOS_REVISAR_LOCAL = frozenset(
+    {"fecha_no_plausible", "signo_incoherente", "linea_de_otro_contrato"},
+)
 
 PREFIJO_REFERENCIA = "ALB-"
 
@@ -135,6 +138,20 @@ def lineas_a_registrar(datos: DatosAlta) -> list[LineaAlta]:
 def importes_por_referencia(datos: DatosAlta) -> dict[str, float]:
     """``importe_calculado`` de cada línea a registrar, por ``referencia_linea``."""
     return {l.referencia_linea: float(l.importe_calculado) for l in lineas_a_registrar(datos)}
+
+
+def lineas_de_otro_contrato(datos: DatosAlta) -> list[LineaAlta]:
+    """R46 (D2): líneas a registrar casadas con una línea de contrato cuyo
+    contrato no es el de la valoración (también si la valoración no tiene).
+    «No debería ocurrir nunca» (humano, 2026-10-06): es un fallo aguas arriba.
+    Sin código de contrato en la línea casada no se puede afirmar: no cuenta."""
+    contrato = _texto(datos.cabecera.contrato_codigo)
+    return [
+        linea for linea in lineas_a_registrar(datos)
+        if linea.matched_contrato_line_id is not None
+        and _texto(linea.contrato_linea)
+        and _texto(linea.contrato_linea) != contrato
+    ]
 
 
 def estado_de_motivos(motivos: list[Motivo]) -> EstadoAlta:
@@ -225,6 +242,13 @@ def _motivos_r39(datos: DatosAlta, hoy: date) -> list[Motivo]:
                 "signo_incoherente", f"cantidad {cantidad}, importe {importe}",
                 linea.referencia_linea,
             ))
+    contrato = _texto(cab.contrato_codigo) or "sin contrato"
+    for linea in lineas_de_otro_contrato(datos):
+        motivos.append(Motivo(
+            "linea_de_otro_contrato",
+            f"{_texto(linea.contrato_linea)} (valoración: {contrato})",
+            linea.referencia_linea,
+        ))
     return motivos
 
 

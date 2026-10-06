@@ -1,6 +1,6 @@
 # tests/test_f053_validador.py
 """F-053 · T5 · ``validador_alta``: validación local y construcción de la
-petición del modo extendido (R10–R13, R39, R43).
+petición del modo extendido (R10–R13, R39, R43, R46).
 
 Puro: ni red ni BBDD. Lo que la validación rechaza no llega a sigrid-api.
 """
@@ -15,6 +15,7 @@ from domain.services.validador_alta import (
     ConfigAlta,
     estado_de_motivos,
     importes_por_referencia,
+    lineas_de_otro_contrato,
     normalizar_cif,
     validar_y_construir,
 )
@@ -295,7 +296,9 @@ def test_f053_r12_vinculada_usa_la_cantidad_convertida():
         vinculada(1, matched_contrato_line_id=None),
         vinculada(1, derived_contrato_line_id=9),
         vinculada(1, ctrpro_ide=None),
-        vinculada(1, contrato_linea="OTRO/1"),
+        # Casada con una línea de contrato sin código de contrato: no se puede
+        # decir que sea de otro (R46), así que va sin vincular como antes.
+        vinculada(1, contrato_linea=None),
     ],
 )
 def test_f053_r12_lo_que_no_casa_del_todo_va_sin_vincular(linea):
@@ -306,7 +309,8 @@ def test_f053_r12_lo_que_no_casa_del_todo_va_sin_vincular(linea):
 
 
 def test_f053_r12_sin_contrato_en_la_valoracion_nada_es_vinculada():
-    enviada = _peticion(_validar(datos(vinculada(1), contrato_codigo=None))).lineas[0]
+    enviada = _peticion(_validar(datos(vinculada(1, contrato_linea=None),
+                                       contrato_codigo=None))).lineas[0]
     assert enviada.ctrpro_ide is None and enviada.producto == "MA9999"
 
 
@@ -442,6 +446,46 @@ def test_f053_r39_los_dos_motivos_a_la_vez():
     assert sorted(_codigos(_validar(d))) == [
         "fecha_no_plausible", "signo_incoherente", "signo_incoherente",
     ]
+
+
+def test_f053_r46_linea_de_otro_contrato_va_a_revisar():
+    """D2 (humano, 2026-10-06): casar con OTRO contrato «no debería ocurrir
+    nunca». Antes iba sin vincular, en silencio (desviación 8)."""
+    resultado = _validar(datos(vinculada(1), vinculada(2, contrato_linea="CTOTRO/9")))
+    assert _motivos(resultado) == [
+        Motivo("linea_de_otro_contrato", f"CTOTRO/9 (valoración: {CONTRATO})", "2"),
+    ]
+    assert estado_de_motivos(resultado) is EstadoAlta.REVISAR
+
+
+def test_f053_r46_valoracion_sin_contrato_con_una_linea_casada():
+    resultado = _validar(datos(vinculada(1), contrato_codigo=None))
+    assert _motivos(resultado) == [
+        Motivo("linea_de_otro_contrato", f"{CONTRATO} (valoración: sin contrato)", "1"),
+    ]
+
+
+def test_f053_r46_junto_a_los_de_r39():
+    d = datos(vinculada(2, contrato_linea="CTOTRO/9", importe_calculado=-5.0))
+    assert sorted(_codigos(_validar(d))) == ["linea_de_otro_contrato", "signo_incoherente"]
+    assert estado_de_motivos(_validar(d)) is EstadoAlta.REVISAR
+
+
+def test_f053_r46_no_se_evalua_si_hay_motivos_de_r10():
+    d = datos(vinculada(2, contrato_linea="CTOTRO/9"), obra_codigo=None)
+    assert _codigos(_validar(d)) == ["falta_obra"]
+
+
+def test_f053_r46_solo_cuentan_las_lineas_a_registrar():
+    d = datos(vinculada(1), vinculada(2, contrato_linea="CTOTRO/9", importe_calculado=0.0))
+    assert [l.referencia_linea for l in _peticion(_validar(d)).lineas] == ["1"]
+    assert lineas_de_otro_contrato(d) == []
+
+
+def test_f053_r46_lineas_de_otro_contrato_las_devuelve_en_orden():
+    d = datos(vinculada(3, contrato_linea="CTOTRO/9"), vinculada(1),
+              vinculada(2, contrato_linea=" CTSU16/0206 "))  # mismo contrato, con espacios
+    assert [l.id for l in lineas_de_otro_contrato(d)] == [3]
 
 
 def test_f053_r39_no_se_evalua_si_hay_motivos_de_r10():
