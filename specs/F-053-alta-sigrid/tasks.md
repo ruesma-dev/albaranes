@@ -46,6 +46,16 @@ sigrid-api tal como esté en la spec de F-009 (v8, `8a6ecab`; códigos incluidos
 - [x] T15: `pdf_sharepoint` con `GraphSharePointClient` falso (ruta relativa del merge; sin ruta → adjunto en error)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_pdf`
 - [x] T16: Worker, composición y `main_worker.py` sobre `COLA_FEEDBACK`: resultado de negocio confirma, fallo de infraestructura antes de reclamar reencola, mensaje de otro `tipo` a poison  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_worker`
 
+## Bloque D bis · review de la fase 1 (`progress/review_F-053_fase1.md`) y decisiones D1–D2 del humano (2026-10-06)
+
+- [x] T31 (H1): el `ValidationError` de `Settings` se registra solo con `loc` y `msg` (`errors(include_input=False)`), nunca con los valores del entorno; motivo de R44 intacto (R35)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r35`
+- [x] T32 (H2): el adjunto guarda `grafico.ide_negocio` (`AttachConceptoGraficoResponse` de sigrid-api `13fd99d`); tests con la forma real (R22)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r22`
+- [x] T33 (H3): `branch` de F-053 en `harness/features.json` y `BACKLOG.md` regenerado  |  Verificación: `python -m harness.rutas_sensibles --puerta --base dev` resuelve F-053
+- [x] T34 (O1): visibilidad de `q-feedback` = peor caso de un mensaje (timeouts de la configuración) + 300 s, al minuto  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_o1`
+- [ ] T35 (D1): `ESTADOS_ALTA_BLOQUEANTES` en comun; `save` de sv3 no borra un merge con alta bloqueante (lo devuelve con `conservado_por_alta`, log WARNING) y el pipeline no lo reprocesa; sin alta, con alta no bloqueante o sin tabla, como hoy (R45)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r45` y `pytest services/albaranes-comun services/albaranes-alta-sigrid -k f053_r45` (por separado)
+- [ ] T36 (D2): `linea_de_otro_contrato` ⇒ `revisar` sin llamar a sigrid-api, con su `referencia_linea`, y WARNING de anomalía (documento, línea, los dos contratos, sin precios) (R46)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r46`
+- [ ] T37 (D2): recuento `lineas_de_otro_contrato` (y sus `document_id`) en `medir_admisibilidad_f053.py`, sin valores  |  Verificación: `pytest services/albaranes-persistencia -k f053_medicion` + MANUAL: repetir T0
+
 ## Bloque E · sv4
 
 - [ ] T17: Settings de sv4 (DESDE, Espera y mapeo con `leer_mapeo`; arranque fallido con mapeo inválido) y puerto/cliente de colas: `notify_document_approved` devuelve si publicó y `solicitar_alta_sigrid(document_id, accion)`  |  Verificación: `pytest services/albaranes-front -k "f053_colas or f053_r44"`

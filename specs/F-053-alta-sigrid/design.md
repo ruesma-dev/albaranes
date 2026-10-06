@@ -74,7 +74,7 @@ sv9, `services/albaranes-alta-sigrid/` (estructura de sv6; primera línea de cad
   ErrorAlta` (§2), `adjuntar_pdf`. Solo esas cuatro operaciones (R33).
 - `domain/ports/pdf_port.py` — `PdfAlbaranPort.descargar(datos) -> bytes`.
 - `domain/services/validador_alta.py` — puro: `normalizar_cif(cif) -> str` y `validar_y_construir(datos,
-  config, hoy) -> PeticionAlbaran | list[Motivo]` (R10–R13, R39, R43); `config` = `usu`, `empide` y mapeo.
+  config, hoy) -> PeticionAlbaran | list[Motivo]` (R10–R13, R39, R43, R46); `config` = `usu`, `empide` y mapeo.
 - `domain/services/comparador_previa.py` — puro: `comparar(peticion, respuesta, importes, tolerancia_eur,
   avisos_bloqueantes) -> list[Motivo]` (R17; con `idempotente`, solo `registrado_distinto` de R15).
 - `domain/services/clasificador.py` — puro: respuesta de sigrid-api → estado, con la tabla de §2 como dato
@@ -105,13 +105,13 @@ sv4: `templates/_alta_sigrid.html` (panel de la ficha, R29–R30).
 
 - `services/albaranes-comun/ruesma_comun/colas/mensajes.py` — `MensajeFeedback.accion: Literal["alta",
   "verificar_anulacion"] = "alta"`; docstring: consumidor sv9. Tocar comun obliga a reconstruir todas las imágenes.
-- `services/albaranes-persistencia/infrastructure/database/schema_contribution.py` — `CREATE TABLE IF NOT EXISTS
-  albaran_altas_sigrid` (§6).
+- sv3 `infrastructure/database/` — `albaran_altas_sigrid` (§6) en `phase2_ddl`; `save` no borra el merge con un alta
+  bloqueante (`ESTADOS_ALTA_BLOQUEANTES` de comun, `FOR UPDATE OF m`) y el pipeline no lo reprocesa (R45, D1).
 - `services/albaran-valoracion-persist/infrastructure/database/schema_contribution.py` y `orm_valuation_models.py`
   — columna `producto_sigrid` (§6) en DDL y ORM (nula, sin defecto: el replace la deja `NULL`, R42). Ninguna
   lógica de sv6 cambia. sv6 es el dueño de las tablas de valoración (`docs/ARCHITECTURE.md`), no sv3.
-- `services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py` y su test — fuera `MARCAS_ALMACEN`
-  (F-051 v4): `almacen_sin_casar` y `sin_partida_ni_almacen` se funden en `sin_partida_sin_casar`, registrable.
+- sv3 `scripts/medir_admisibilidad_f053.py` y su test — fuera `MARCAS_ALMACEN` (F-051 v4: `sin_partida_sin_casar`,
+  registrable) y recuento `lineas_de_otro_contrato` con sus `document_id` (R46, D2).
 - `services/albaranes-front/config/settings.py` — `ALTA_SIGRID_DESDE_UTC`, `ALTA_SIGRID_ESPERA_INCIERTO_MIN` y
   `ALTA_SIGRID_PRODUCTO_POR_DEFECTO` (con `leer_mapeo`; R44).
 - `.../albaranes-front/domain/ports/orchestrator_port.py` y `infrastructure/colas/colas_orchestrator_client.py`
@@ -147,7 +147,7 @@ sv4: `templates/_alta_sigrid.html` (panel de la ficha, R29–R30).
    `a_incierto` / `procesar` / `verificar_anulacion`; si procesa, UPSERT a `en_curso` con `ultimo_intento_at_utc`.
 2. `verificar_anulacion` (R28): `existe_concepto(sigrid_con_ide)` → `anulado` o aviso.
 3. `leer_datos` y `validar_y_construir` → `no_admitido` si hay motivos (R10–R13); `revisar` si la fecha no es
-   plausible o hay signos opuestos (R39). Ninguno de los dos llama a sigrid-api.
+   plausible, hay signos opuestos (R39) o una línea casa con otro contrato (R46, con WARNING). Sin llamar a sigrid-api.
 4. `buscar_albaranes` (CIF normalizado) → `ya_en_sigrid` si hay alta a mano (R14).
 5. Previa: 400/5xx → `clasificar` (§2); `idempotente` → `registrado` (+ `registrado_distinto`, R15); `comparar`
    → `revisar` (R16–R18). 6. Simulación → `simulado` (R19); real → grabación única (R20–R21). 7. Adjunto

@@ -161,6 +161,8 @@ preguntas, con sus motivos, queda en el historial de git de este fichero (commit
 | Re-aprobación | Desaprobar y aprobar cuenta como aprobación nueva |
 | Registrado | Bloqueado en sv4; se corrige anulando en Sigrid y «Ya lo he anulado» |
 | Documentación ajena | Redacción propuesta de design §9 |
+| Reingreso con alta (**D1**, 2026-10-06) | Opción a: sv3 no borra un merge con alta bloqueante (`en_curso`, `incierto`, `registrado`) al reingresar su PDF (mismo `source_sha256`); lo trata como duplicado, conserva documento, merge y alta, no lo reprocesa y lo deja en el log. Sin alta o con otro estado, como hoy (R45, T35) |
+| Línea de otro contrato (**D2**, 2026-10-06) | Opción a, con el matiz del humano: «no debería ocurrir nunca lo de casar con otro contrato diferente». Una línea casada con una línea de otro contrato ⇒ `revisar` con `linea_de_otro_contrato`, sin llamar a sigrid-api, y ANOMALÍA en el log (fallo aguas arriba, sv5/sv6; no se tocan). La medición cuenta cuántas hay ya (R46, T36, T37) |
 
 ## Medición (T0): comando para PowerShell
 

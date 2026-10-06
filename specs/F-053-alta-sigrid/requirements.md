@@ -1,10 +1,9 @@
 <!-- specs/F-053-alta-sigrid/requirements.md -->
 # F-053 · Alta en Sigrid de los albaranes aprobados · Requisitos (v7)
 
-Rigor **critico** (escribe en el ERP). Servicios: **sv9 nuevo** (`services/albaranes-alta-sigrid`), sv4, sv3 y sv6
-(solo DDL), `ruesma_comun`, `infra`. Sustituye a F-013. Decisiones (P1–P7 cerradas): `progress/spec_F-053.md`.
-«Contrato» = `sigrid-api/specs/F-009-alta-albaran-compra/contrato_albaranes.md` (v8, `8a6ecab`; dueño sigrid-api;
-huecos **Hn** de su §5). **Orden**: F-051 en `dev` para implementar; F-009 desplegada para la previa y el real (design §8).
+Rigor **critico** (escribe en el ERP). Servicios: **sv9 nuevo** (`services/albaranes-alta-sigrid`), sv4, sv3 (DDL
+y R45), sv6 (DDL), `ruesma_comun`, `infra`. Sustituye a F-013. Decisiones (P1–P7, D1–D2): `progress/spec_F-053.md`.
+«Contrato» = `sigrid-api/specs/F-009-alta-albaran-compra/contrato_albaranes.md` (v8.2, `13fd99d`; huecos **Hn**, §5).
 
 ## Glosario
 
@@ -76,7 +75,7 @@ R15. CUANDO la previa o la grabación respondan `estado` `idempotente`, sv9 debe
 R17, ENTONCES debe guardar el motivo `registrado_distinto` y enseñarlo en sv4 (H18; se corrige anulando,
 R28). Un alta `incierto` pasada la Espera se retoma reenviando la misma petición.
 
-## E. Previa y comparación
+## E. Previa, comparación y grabación real
 R16. sv9 debe hacer la previa en los dos modos y guardar la petición y, de la respuesta, solo `estado`, `con_ide`,
 `cod`, `avisos`, `lineas` y `totales`; nunca `cabecera` ni `filas` (H16).
 R17. sv9 debe pasar el alta a `revisar`, con motivo, si en la previa: el `total` de una línea (por
@@ -91,8 +90,9 @@ R39. SI no hay motivos de R10 y la fecha del albarán es posterior a hoy (Europe
 días (`fecha_no_plausible`, H19) o una línea a registrar tiene cantidad > 0 e importe < 0 (descuento) o cantidad
 < 0 e importe > 0 (`signo_incoherente`, H8, con su `referencia_linea`), ENTONCES sv9 debe pasar el alta a
 `revisar` con todos esos motivos sin llamar a sigrid-api. El descuento se da de alta a mano en Sigrid.
-
-## F. Grabación real
+R46. SI una línea a registrar casa con una línea de contrato de un contrato distinto del de la valoración (D2), ENTONCES
+es un motivo de R39 (`linea_de_otro_contrato`, con su `referencia_linea`) y sv9 debe dejar una ANOMALÍA en el log
+(WARNING con documento, línea y los dos contratos; sin precios): indica un fallo aguas arriba (sv5/sv6).
 R20. DONDE el modo sea `real`, tras una previa sin motivos sv9 debe repetir la misma petición con `commit=true`
 **una sola vez**, sin reintento automático, y con `ok` y `estado` `creado` guardar `con_ide` y `cod` y pasar a `registrado`.
 R21. SI hay tiempo agotado, error de conexión o 5xx, ENTONCES el alta pasa a `incierto` si era la grabación
@@ -104,7 +104,7 @@ R23. SI el adjunto falla, ENTONCES el alta sigue `registrado` con el adjunto en 
 alta solo reintenta el adjunto.
 R24. sv9 debe reintentar con espera creciente lecturas, previas y adjunto ante fallos transitorios; nunca la grabación.
 
-## G. Bloqueo en sv4
+## G. Bloqueo y visibilidad en sv4
 R25. MIENTRAS el alta sea bloqueante, sv4 debe rechazar desaprobar, guardar, deshacer, borrar, purgar, revalorar,
 volver a buscar contratos, elegir producto (R41) y toda edición de líneas, sin cambiar nada y con el aviso
 «Registrado en Sigrid como {cod}: corrígelo en Sigrid y pulsa "Ya lo he anulado en Sigrid"» (sin `cod` si no hay).
@@ -115,8 +115,6 @@ R28. CUANDO el revisor pulsa «Ya lo he anulado en Sigrid» en un alta `registra
 `accion="verificar_anulacion"`; sv9 debe pasar el alta a `anulado` solo si `sql/read` no encuentra ese
 `con.ide`, y si lo encuentra dejarla `registrado` con el aviso «sigue en Sigrid». Tras `anulado`, «Solicitar alta»
 repite el alta con la misma `referencia_externa` (anular en Sigrid borra el albarán, H9).
-
-## H. Visibilidad en sv4
 R29. MIENTRAS DESDE no esté vacía, la ficha de un documento aprobado debe enseñar el alta: estado, modo,
 `cod` (en simulación, «se habría creado» con el código provisional), líneas (con su producto) y total de la
 previa, motivos (también los de cada línea de `details.lineas`), avisos y adjunto.
@@ -125,7 +123,7 @@ R30. La ficha debe ofrecer «Solicitar alta en Sigrid» (`accion="alta"`) si el 
 pasó la Espera en `incierto`/`en_curso`.
 R31. El listado debe mostrar el estado del alta en cada documento aprobado que la tenga.
 
-## I. Producto de las sin vincular (decisión del humano, 2026-10-05)
+## H. Producto de las sin vincular (decisión del humano, 2026-10-05)
 R40. MIENTRAS DESDE no esté vacía, la tabla de líneas valoradas de la ficha debe enseñar en cada sin
 vincular a registrar su producto (código y nombre, «por defecto» si no se ha elegido) con un selector de los
 admitidos, y en cada vinculada el producto de su línea de contrato, sin selector.
@@ -138,7 +136,7 @@ R43. sv9 debe ignorar `producto_sigrid` en una vinculada (manda `ctrpro_ide`).
 R44. SI `ALTA_SIGRID_PRODUCTO_POR_DEFECTO` no es un objeto JSON de textos con clave `*`, ENTONCES sv9 y sv4
 no deben arrancar, con el motivo en el log.
 
-## J. Contratos y seguridad
+## I. Contratos y seguridad
 R32. `MensajeFeedback` debe aceptar `accion` ∈ {`alta`, `verificar_anulacion`}, con defecto `alta`.
 R33. sv9 solo debe llamar a `sql/read`, a `sigrid/albaran` (modo extendido) y a `concepto-grafico`.
 R34. Solo sv9 debe escribir en `albaran_altas_sigrid`; sv4 solo la lee.
@@ -148,3 +146,5 @@ R37. SI el revisor aprueba (por cualquiera de los dos caminos de R1) un document
 debe rechazarlo sin cambiar nada, con el aviso «No se puede aprobar un albarán sin valorar», con DESDE vacía o no.
 R38. sv4 y sv9 deben decidir «valorado» con `ruesma_comun` `esta_valorado` (R37, R10) y el producto con
 `ruesma_comun.alta_sigrid.producto_efectivo` (R40, R43).
+R45. SI sv3 reingresa un PDF (mismo `source_sha256`) cuyo merge tiene un alta bloqueante, ENTONCES no debe borrarlo
+ni reprocesarlo: lo devuelve como duplicado, conserva documento, merge y alta, y lo deja en el log (D1).
