@@ -18,60 +18,42 @@ mutación T25) ni `init.sh` (decisión del humano en F-049: suites sustitutas en
   sv3 **444** (25,0 s) · sv6 **289** (19,2 s) · raíz **1083** (253,3 s). Todo bajo `coverage`.
 - `python -m harness.cobertura --base dev --config harness/rigor.json` →
   `PUERTA COBERTURA: 96.1% de 1401 líneas cambiadas cubiertas (1346/1401, umbral 80%, nivel critico)`.
-- `harness.tamano`: dentro de los topes. `ruff check .` desde sv9: limpio. Desde la raíz salen 19 I001, que son un
-  artefacto de configuración. Primera línea con la ruta en los 40 ficheros nuevos; sin `print`.
-- Contrato F-009 v8.2 (`13fd99d`, solo lectura con `git show`, nada editado). Coteja con `contrato_albaranes.md`
-  §2–§4 y además con el código vivo de esa rama: `albaran_compra_models.py`, `sql_models.py` y
-  `concepto_grafico_models.py`.
-- Árbol limpio al terminar (`git status --porcelain` vacío). Los controles se restauraron byte a byte, comprobado con
-  `git diff --quiet` después de cada uno.
+- `harness.tamano` en topes; `ruff check .` desde sv9 limpio (los 19 I001 desde la raíz son de configuración); ruta en
+  la primera línea de los 40 ficheros nuevos; sin `print`.
+- Contrato F-009 v8.2 (`13fd99d`, solo lectura con `git show`): `contrato_albaranes.md` §2–§4 y el código de esa rama
+  (`albaran_compra_models.py`, `sql_models.py`, `concepto_grafico_models.py`).
+- Árbol limpio al terminar; cada control restaurado byte a byte y comprobado con `git diff --quiet`.
 
 ## Controles negativos propios (sv9 entera tras cada uno; todos cazados)
 
-| # | Qué rompí | Resultado |
-|---|---|---|
-| NC1 | La simulación sigue hasta la grabación (sin el `return` de R19) | 3 failed |
-| NC2 | La grabación con `_post_con_reintentos` | 5 failed |
-| NC3 / NC13 | 5xx o estado desconocido en la grabación → `error` en vez de `incierto` | 7 / 2 failed |
-| NC4 | `idempotente` sin comparar totales (R15) | 3 failed |
-| NC5 | Sin buscar altas a mano (R14) | 3 failed |
-| NC6 / NC7 | Se manda una línea de importe 0 (R13) / sin `signo_incoherente` (R39) | 4 / 4 failed |
-| NC8 | Un `incierto` no reenvía la petición guardada | 1 failed |
-| NC9 | `ALTA_SIGRID_COMMIT` sin distinguir mayúsculas (`True` sería real) | 4 failed |
-| NC10 / NC11 | `naturaleza_no_valida` → `no_admitido` / en `lineas_no_validas` gana `no_admitido` | 5 / 6 failed |
-| NC12 | `en_vuelo` marcado después de la grabación (R9) | 1 failed |
-| NC14 / NC15 / NC16 | Vinculada con `descripcion` (H7) / partida vacía mandada como `'ALM'` / precio con signo | 2 / 2 / 1 failed |
-| NC17 / NC18 | Adjunto también en simulación / la previa no compara partidas | 2 / 6 failed |
+NC1 simulación sigue a la grabación 3 · NC2 grabación con reintentos 5 · NC3/NC13 5xx o estado desconocido en la
+grabación → `error` 7/2 · NC4 `idempotente` sin comparar totales 3 · NC5 sin R14 3 · NC6 importe 0 se manda 4 · NC7 sin
+`signo_incoherente` 4 · NC8 `incierto` sin la petición guardada 1 · NC9 `COMMIT` sin mayúsculas 4 · NC10
+`naturaleza_no_valida` → `no_admitido` 5 · NC11 gana `no_admitido` en líneas 6 · NC12 `en_vuelo` tras grabar 1 · NC14
+vinculada con `descripcion` 2 · NC15 partida vacía como `'ALM'` 2 · NC16 precio con signo 1 · NC17 adjunto en
+simulación 2 · NC18 la previa no compara partidas 6 (failed sobre 430).
 
 ## Lo que se miró con especial cuidado (conforme salvo lo que se dice)
 
-- **Nada graba sin `ALTA_SIGRID_COMMIT=true`.** Solo hay dos escrituras en el ERP: `alta_albaran(commit=True)`
-  (`alta_sigrid_service.py:267`, después del corte de simulación de la :258) y `concepto-grafico`, que solo se llama
-  con `ModoAlta.REAL` (:314, :375). Solo el literal `true` activa el modo real; una variable vacía vale su defecto.
-  Además, una previa que no responde `previsto` no llega a grabar: también protege si sv9 se apunta por error a un
-  sigrid-api sin F-009.
-- **Grabación única.** La grabación usa `_post` con un cliente nuevo, sin tenacity y con un timeout de 240 s. Los
-  5xx, el tiempo agotado, los fallos de conexión, un 200 ilegible o un estado desconocido llevan a `incierto`.
-  `previsto` en la grabación lleva a `error`, porque sigrid-api declara que no escribió. El `incierto` se retoma tras
-  la Espera con la petición guardada, y la idempotencia (`synckey` bajo applock) devuelve `idempotente`. Se comparan
-  los totales por `referencia_linea` y lo distinto queda en `registrado_distinto`, también si vuelve `creado`.
-- **Duplicados.** La SQL de R14 es idéntica a la del contrato §7 y lleva `NO_TOLERA truncado`. La reclamación hace
-  `FOR UPDATE OF m` sobre el merge y además guarda el estado, así que una segunda entrega con `en_curso` dentro de la
-  Espera se ignora.
-- **Validación local.** Solo se mandan las líneas con importe ≠ 0. Una vinculada sin importe no se manda. Signos
-  opuestos llevan a `revisar` sin llamar a nadie. Sin partida = ninguna clave `partida`. La petición casa con el
-  modelo Pydantic real: `extra="forbid"`; `strict` en cantidad, precio, ints y fecha; las claves nulas no se mandan;
-  `referencia_linea` = `str(id)`. No se mandan `naturaleza`, `almacen`, `paride` ni `lineas_recibidas`.
-- **Clasificador.** Coincide con la tabla de design §2 y con los `CODIGOS_CABECERA`/`CODIGOS_LINEA` del código de
-  F-009: 17 + 1 códigos de cabecera y 10 de línea. Una misma línea repetida en `details.lineas` da un motivo por
-  entrada, y gana `error`. Un `lineas[].producto` nulo no se lee. `precio_distinto_del_contrato` es informativo,
-  porque el defecto solo bloquea `producto_sin_historico`.
-- **DDL (desviación 1): dictamen favorable.** sv3 aplica `apply_phase2_ddl` al arrancar la API (`app.py:109`) y el
-  worker (`composition.py:74`). `schema_contribution` solo exporta (lo usaba sv7) e incluye `_PHASE2_DDL` y la tabla
-  en `owned_tables`. El fallo se registra y no tumba sv3. sv6 sí aplica su `schema_contribution` (el ALTER va ahí).
-  Orden de despliegue: con DESDE vacía sv9 no llega a reclamar, así que el orden de design §8 (sv6 y sv3 → sv9 →
-  sv4 → DESDE) es seguro.
-- **Las demás desviaciones (2–14) de §4 del informe del implementer: aceptadas.** La 8 queda condicionada a D2.
+- **Nada graba sin `ALTA_SIGRID_COMMIT=true`**: solo dos escrituras, `alta_albaran(commit=True)` (`alta_sigrid_service.py:267`,
+  tras el corte de simulación de :258) y `concepto-grafico` (solo `ModoAlta.REAL`, :314 y :375); real solo con el
+  literal `true`. Una previa que no responde `previsto` nunca graba (protege también ante un sigrid-api sin F-009).
+- **Grabación única**: `_post` sin tenacity, cliente nuevo, 240 s; 5xx/tiempo/conexión/200 ilegible/estado desconocido
+  ⇒ `incierto`; `previsto` ⇒ `error`. El `incierto` se retoma con la petición guardada (idempotencia por `synckey` bajo
+  applock) y se comparan totales por `referencia_linea` (`registrado_distinto`, también con `creado`).
+- **Duplicados**: SQL de R14 idéntica a la del contrato §7, `NO_TOLERA truncado`; `FOR UPDATE OF m` más el estado
+  hacen que una segunda entrega con `en_curso` dentro de la Espera se ignore.
+- **Validación local**: solo líneas con importe ≠ 0; vinculada sin importe fuera; signos opuestos ⇒ `revisar` sin
+  llamadas; sin partida = sin clave. La petición casa con el Pydantic real (`extra="forbid"`, `strict`, nulos omitidos);
+  nunca `naturaleza`, `almacen`, `paride` ni `lineas_recibidas`.
+- **Clasificador**: igual a design §2 y a los `CODIGOS_CABECERA`/`CODIGOS_LINEA` del código de F-009 (18 + 10). Línea
+  repetida en `details.lineas`: un motivo por entrada y gana `error`. `lineas[].producto` nulo no se lee;
+  `precio_distinto_del_contrato` informativo.
+- **DDL (desviación 1): favorable.** sv3 aplica `apply_phase2_ddl` al arrancar la API (`app.py:109`) y el worker
+  (`composition.py:74`); `schema_contribution` solo exporta (incluye `_PHASE2_DDL` y la tabla en `owned_tables`); un
+  fallo se registra sin tumbar sv3. sv6 aplica su `schema_contribution`. Con DESDE vacía sv9 no reclama: el orden de
+  design §8 (sv6 y sv3 → sv9 → sv4 → DESDE) es seguro.
+- **Desviaciones 2–14 del implementer: aceptadas** (la 8, condicionada a D2).
 
 ## Hallazgos
 
@@ -89,8 +71,7 @@ Analytics. Ningún otro servicio hace esto: es nuevo de sv9.
 
 **H3 · BAJA · la entrada de F-053 en `features.json` no tiene `branch`.** Por eso
 `python -m harness.rutas_sensibles --puerta` sale `N/A (sin feature en curso con rama...)`; F-051 sí lo lleva.
-Mirado a mano, el diff no toca ninguna ruta sensible, así que C4 ter es N/A esta vez, pero la puerta de cierre
-(T30) tiene que funcionar sola.
+El diff no toca rutas sensibles (C4 ter N/A), pero la puerta de cierre (T30) debe funcionar sola.
 
 **O1 · observación.** La cola tiene una visibilidad de 600 s y el peor caso de un mensaje ronda los 13 min: tres
 reintentos de lectura y de previa de 60 s, 240 s de grabación y el adjunto. Si un mensaje acaba en `error` o
@@ -100,11 +81,9 @@ deja el ERP intacto e intervienen la idempotencia y el applock), pero relaja «u
 
 ## Cambios requeridos
 
-1. `services/albaranes-alta-sigrid/main_worker.py:48-51`: no registrar `str(exc)`. Registrar
-   `[(e["loc"], e["msg"]) for e in exc.errors(include_input=False)]`, que conserva el motivo de R44 sin los valores.
-   Añadir un test con `caplog` que fije secretos ficticios en el entorno, provoque el fallo de configuración y
-   compruebe que ninguno aparece en el log y que el motivo del mapeo sí. Control negativo: volver a `%s, exc` → el
-   test falla.
+1. `services/albaranes-alta-sigrid/main_worker.py:48-51`: registrar `[(e["loc"], e["msg"]) for e in
+   exc.errors(include_input=False)]` en vez de `exc` (conserva el motivo de R44). Test con `caplog` y secretos
+   ficticios en el entorno: ninguno en el log, el motivo del mapeo sí. Control negativo: volver a `exc` ⇒ falla.
 2. `sigrid_api_alta_client.py:255-256`: leer `grafico.ide_negocio` (el `gra` de negocio que enlaza `rcg`; si se
    prefiere el documental, que se justifique) y ajustar los tests de `concepto-grafico` a la forma real de
    `AttachConceptoGraficoResponse` en `13fd99d`, citando el fichero.
@@ -116,8 +95,7 @@ deja el ERP intacto e intervienen la idempotencia y el applock), pero relaja «u
 
 - C1 · N/A justificado: `init.sh` en el worktree no es exigible en esta review intermedia (decisión del humano, como
   en F-049). Lo sustituyen las 5 suites y la cobertura de arriba. Se exige en T30. Los ficheros del arnés existen.
-- C2 · [x] Solo F-053 está `in_progress`; la rama es `feature/F-053-alta-sigrid`; `current.md` está al día; F-051
-  sigue `blocked` y no `done`.
+- C2 · [x] Solo F-053 `in_progress`; rama `feature/F-053-alta-sigrid`; `current.md` al día; F-051 `blocked`.
 - C3 · [ ] Hexagonal [x] (el dominio solo importa los puros de comun), primera línea [x], sin prints [x],
   dependencias previstas [x] (httpx, tenacity, sqlalchemy y psycopg, que ya estaban en el venv). **Sin secretos:
   [ ] por H1.** Trampas del monorepo: (1) [x] solo lee tablas merge; (2) [x] `producto_sigrid` declara sus lectores
@@ -131,26 +109,16 @@ deja el ERP intacto e intervienen la idempotencia y el applock), pero relaja «u
   medida por mí. Mutación, RM1–RM6 y supervivientes: **N/A justificado** porque la campaña es T25, fuera de esta fase
   por encargo del líder; al cierre se exige completa, con cero supervivientes. [x] «Evidencias» presente, con el
   número de workers N/A por no haber campaña.
-- C4 ter · N/A: el diff no toca ninguna ruta de `harness/rutas_sensibles.json`. Comprobado a mano, porque la puerta
-  no resuelve la feature (H3).
+- C4 ter · N/A: el diff no toca rutas de `harness/rutas_sensibles.json` (comprobado a mano; la puerta no resuelve, H3).
 - C5 · [x] Un commit `F-053 Tn:` por tarea (T0a, T1, T2, T2b, T3–T16) y `[x]` en `tasks.md`. T0d sigue `[ ]` con
   motivo: su verificación es `init.sh`. [x] Sin temporales trackeados (los `coverage.json` están ignorados).
   [x] `features.json` coherente.
 
 ## Cobertura requisito → tests (fase 1; R1–R4, R25–R27, R29–R31, R37, R40, R41 son de sv4, T17+)
 
-| Req | Tests (nº) | Req | Tests (nº) | Req | Tests (nº) |
-|---|---|---|---|---|---|
-| R5 | `servicio_entrada` (5) | R14 | `servicio_duplicados` (4) | R23 | `servicio_real` (4) |
-| R6 | ídem (3) | R15 | duplicados, comparador, clasificador (12) | R24 | `cliente_sigrid` (8) |
-| R7 | ídem (4) | R16 | `servicio_previa` (1 + R35) | R28 | `servicio_anulacion` (9) |
-| R8 | ídem (2) | R17 | comparador, previa (15) | R32 | comun (5) |
-| R9 | entrada, real (5) | R18 | clasificador, previa (21) | R33 | cliente (12) |
-| R10 | `validador` (19) | R19 | previa, esqueleto (5) | R34 | sv3 `no_escribe` (1) |
-| R11 | ídem (3) | R20 | real, clasificador (10) | R35 | cliente, previa (3) |
-| R12 | ídem (21) | R21 | ídem (2) | R36 | sv3 y sv6 DDL (9) |
-| R13 | ídem (2) | R22 | real, cliente (8) | R38 | comun (13) |
-| R39 | validador, duplicados (7) | R42 | sv6 (2) | R43 / R44 | validador (1) / settings y comun (7) |
+R5 5 · R6 3 · R7 4 · R8 2 · R9 5 (`servicio_entrada`, `servicio_real`) · R10 19 · R11 3 · R12 21 · R13 2 · R39 7 · R43 1
+(`validador`) · R14 4 · R15 12 (duplicados, comparador, clasificador) · R16 1 · R17 15 · R18 21 · R19 5 · R20 10 · R21 2
+· R22 8 · R23 4 · R24 8 · R28 9 · R33 12 · R35 3 · R32 5 y R38 13 (comun) · R34 1 y R36 9 (sv3/sv6) · R42 2 (sv6) · R44 7.
 
 ## Decisiones para el humano (no bloquean esta fase)
 
