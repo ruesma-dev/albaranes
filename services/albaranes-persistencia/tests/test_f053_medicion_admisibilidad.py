@@ -41,7 +41,7 @@ def test_f053_medicion_solo_cuentan_lineas_con_importe():
                   _fila("d1", 3, importe_calculado=None, partida_action=None,
                         codigo_partida_final=None))
     assert ev["lineas_con_importe"] == 1 and ev["lineas_sin_importe"] == 2
-    assert ev["casa_misma_partida"] == 1 and ev["sin_partida_ni_almacen"] == 0
+    assert ev["casa_misma_partida"] == 1 and ev["sin_partida_sin_casar"] == 0
     assert ev["registrable_a"] is True and ev["registrable_b"] is True
 
 
@@ -69,18 +69,45 @@ def test_f053_medicion_almacen_casa_solo_con_linea_sin_partida():
         _fila("d1", 3, codigo_partida_final=None, matched_contrato_line_id=None,
               partida_action="alm_acopio"),
     )
-    assert ev["almacen"] == 3 and ev["almacen_sin_casar"] == 1
+    assert ev["almacen"] == 3 and ev["sin_partida_sin_casar"] == 1
     assert ev["casa_misma_partida"] == 1 and ev["casa_partida_distinta"] == 1
     assert ev["registrable_a"] is False and ev["registrable_b"] is True
 
 
-def test_f053_medicion_sin_partida_ni_almacen_no_es_registrable():
+def test_f053_medicion_t0a_sin_marcas_de_almacen():
+    """F-051 v4: almacén = partida final vacía, tenga o no marca. El script ya
+    no conoce marcas y las dos categorías viejas se funden en una."""
+    assert not hasattr(m, "MARCAS_ALMACEN")
+    assert m.CATEGORIAS == (
+        "casa_misma_partida", "casa_partida_distinta",
+        "partida_sin_casar", "sin_partida_sin_casar",
+    )
+
+
+def test_f053_medicion_t0a_partida_vacia_es_almacen_sin_mirar_la_marca():
+    for accion in (None, "no_action", "existing_matched", "almacen_elegido"):
+        ev = _evaluar(_fila("d1", 1, codigo_partida_final="  ",
+                            matched_contrato_line_id=None,
+                            partida_action=accion))
+        assert ev["almacen"] == 1, accion
+        assert ev["sin_partida_sin_casar"] == 1, accion
+        assert ev["necesitan_producto"] == 1, accion
+
+
+def test_f053_medicion_t0a_sin_partida_sin_casar_es_registrable():
     ev = _evaluar(_fila("d1", 1, codigo_partida_final=None,
                         partida_action="no_action"),
                   _fila("d1", 2, matched_contrato_line_id=None,
                         codigo_partida_final="  ", partida_action=None))
-    assert ev["sin_partida_ni_almacen"] == 2
-    assert ev["registrable_a"] is False and ev["registrable_b"] is False
+    assert ev["sin_partida_sin_casar"] == 1 and ev["casa_partida_distinta"] == 1
+    assert ev["registrable_a"] is False and ev["registrable_b"] is True
+
+
+def test_f053_medicion_t0a_sin_partida_casada_a_linea_sin_partida_es_a():
+    ev = _evaluar(_fila("d1", 1, codigo_partida_final=None,
+                        partida_action="no_action", cl_partida=None))
+    assert ev["casa_misma_partida"] == 1 and ev["almacen"] == 1
+    assert ev["registrable_a"] is True and ev["registrable_b"] is True
 
 
 def test_f053_medicion_negativas_entran_en_b_y_no_en_a():
@@ -148,8 +175,9 @@ def test_f053_medicion_sin_lineas_valoradas_usa_las_del_merge():
     ev = _evaluar(*filas, merge=merge)
     assert ev["origen_lineas"] == "merge" and ev["con_contrato"] is False
     assert ev["lineas_con_importe"] == 2 and ev["lineas_sin_importe"] == 1
-    assert ev["partida_sin_casar"] == 1 and ev["sin_partida_ni_almacen"] == 1
-    assert ev["registrable_b"] is False
+    assert ev["partida_sin_casar"] == 1 and ev["sin_partida_sin_casar"] == 1
+    assert ev["almacen"] == 1
+    assert ev["registrable_b"] is False  # sin líneas valoradas no está valorado
 
 
 def test_f053_medicion_resumen_y_csv(tmp_path):
@@ -159,10 +187,10 @@ def test_f053_medicion_resumen_y_csv(tmp_path):
     res = m.resumir(evs)
     assert res["albaranes"] == 3 and res["valorado"] == 3
     assert res["registrable_a"] == 1 and res["pct_registrable_a"] == 33.3
-    assert res["registrable_b"] == 2 and res["pct_registrable_b"] == 66.7
+    assert res["registrable_b"] == 3 and res["pct_registrable_b"] == 100.0
     texto = m.formatear_resumen(res, todos=False)
     assert "(a) registrables con sigrid-api tal cual: 1 (33.3 %)" in texto
-    assert "(b) registrables con el criterio del humano: 2 (66.7 %)" in texto
+    assert "(b) registrables con el criterio del humano: 3 (100.0 %)" in texto
     ruta = tmp_path / "salida.csv"
     m.escribir_csv(str(ruta), evs)
     assert ruta.read_bytes().startswith(b"\xef\xbb\xbf")

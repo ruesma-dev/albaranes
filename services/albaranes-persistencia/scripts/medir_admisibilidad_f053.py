@@ -14,10 +14,10 @@ manual completa del administrativo en sv4; un albarán no valorado no se registr
   las líneas con importe casan con una línea del contrato de la valoración con
   su misma partida (o almacén contra una línea de contrato sin partida) y
   ninguna es negativa. Es ``sigrid/albaran`` hoy.
-- (b) **registrable con el criterio del humano**: valorado, y todas las líneas con importe llevan partida o
-  son almacén (F-051), casen o no; negativas admitidas. Exige PRE-1 en
-  sigrid-api; las que no casan irían con el producto genérico por defecto
-  (MA9999; ``necesitan_producto`` dice cuántas).
+- (b) **registrable con el criterio del humano**: valorado, con o sin partida
+  (sin partida = almacén, F-051 v4), casen o no; negativas admitidas. Exige
+  F-009 en sigrid-api; las que no casan irían con un producto genérico
+  (``necesitan_producto`` dice cuántas).
 
 En los dos casos la cabecera debe traer obra, CIF, número de albarán y fecha
 ``AAAA-MM-DD`` válida, y cada línea con importe debe tener cantidad ≠ 0.
@@ -28,8 +28,10 @@ cadena de conexión ni ninguna credencial. Lo ejecuta el humano:
     cd services\\albaranes-persistencia
     .\\.venv\\Scripts\\python.exe -m scripts.medir_admisibilidad_f053 [--todos] [--csv salida.csv] [--env otro.env]
 
-Aviso: antes de F-051 casi ninguna línea lleva marca de almacén, así que la
-categoría «sin partida ni almacén» sale inflada con datos anteriores a F-051.
+**Almacén** (F-051 v4, T0a de F-053): toda línea con la partida final vacía,
+tenga o no marca en ``partida_action``. Por eso el script no conoce marcas y
+«almacén sin casar» y «sin partida ni almacén» son una sola categoría,
+``sin_partida_sin_casar``, que no impide el alta.
 """
 from __future__ import annotations
 
@@ -42,23 +44,12 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Iterable, Mapping
 
-#: Valores de ``partida_action`` que marcan una línea como almacén (F-051 y
-#: los que ya existían). Solo cuentan con la partida final vacía.
-MARCAS_ALMACEN: frozenset[str] = frozenset({
-    "almacen_sin_partida",
-    "almacen_elegido",
-    "alm_new_line_created",
-    "inherited_from_base_line",
-    "alm_acopio",
-})
-
 #: Categorías de línea, excluyentes, en el orden en que se informan.
 CATEGORIAS = (
     "casa_misma_partida",
     "casa_partida_distinta",
     "partida_sin_casar",
-    "almacen_sin_casar",
-    "sin_partida_ni_almacen",
+    "sin_partida_sin_casar",
 )
 
 _RE_FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -70,7 +61,7 @@ SELECT d.id AS document_id, d.approved, d.obra_codigo, d.proveedor_cif,
        lv.id AS lv_id, lv.cantidad_albaran, lv.cantidad_convertida,
        lv.importe_calculado,
        lv.matched_contrato_line_id, lv.derived_contrato_line_id,
-       lv.codigo_partida_final, lv.partida_action,
+       lv.codigo_partida_final,
        cl.sigrid_ide AS cl_sigrid_ide, cl.codigo_contrato AS cl_contrato,
        cl.codigo_partida AS cl_partida
 FROM albaran_documents_merge d
@@ -128,9 +119,13 @@ class Linea:
     cantidad: float | None
     importe: float | None
     partida: str | None
-    almacen: bool
     casa: bool
     partida_contrato: str | None = None
+
+    @property
+    def almacen(self) -> bool:
+        """Sin partida es almacén (F-051 v4), sin mirar marcas."""
+        return self.partida is None
 
 
 @dataclass
@@ -150,27 +145,19 @@ class Albaran:
 
 
 def categoria_linea(linea: Linea) -> str:
-    """Clasifica una línea con cantidad positiva en una de ``CATEGORIAS``."""
-    if linea.partida is None and not linea.almacen:
-        return "sin_partida_ni_almacen"
+    """Clasifica una línea con importe en una de ``CATEGORIAS``."""
     if linea.casa:
-        if linea.almacen:
-            ok = linea.partida_contrato is None
-        else:
-            ok = linea.partida == linea.partida_contrato
+        ok = linea.partida == linea.partida_contrato
         return "casa_misma_partida" if ok else "casa_partida_distinta"
-    return "almacen_sin_casar" if linea.almacen else "partida_sin_casar"
+    return "sin_partida_sin_casar" if linea.almacen else "partida_sin_casar"
 
 
-def linea_desde_valoracion(
-    fila: Mapping[str, object], marcas_almacen: frozenset[str] = MARCAS_ALMACEN,
-) -> Linea:
+def linea_desde_valoracion(fila: Mapping[str, object]) -> Linea:
     """Traduce una fila de ``SQL_LINEAS_VALORADAS`` (con ``lv_id``)."""
     cantidad = fila.get("cantidad_convertida")
     if cantidad is None:
         cantidad = fila.get("cantidad_albaran")
     partida = normalizar_partida(fila.get("codigo_partida_final"))
-    accion = _texto(fila.get("partida_action")) or ""
     contrato = _texto(fila.get("valoracion_contrato"))
     casa = (
         fila.get("matched_contrato_line_id") is not None
@@ -183,21 +170,19 @@ def linea_desde_valoracion(
         cantidad=None if cantidad is None else float(cantidad),
         importe=_numero(fila.get("importe_calculado")),
         partida=partida,
-        almacen=partida is None and accion in marcas_almacen,
         casa=casa,
         partida_contrato=normalizar_partida(fila.get("cl_partida")),
     )
 
 
 def linea_desde_merge(fila: Mapping[str, object]) -> Linea:
-    """Albarán sin líneas valoradas: partida impresa, sin casar ni almacén.
+    """Albarán sin líneas valoradas: partida impresa, sin casar.
     ``precio_neto`` de una línea de albarán es su IMPORTE (ARCHITECTURE, 13)."""
     cantidad = fila.get("cantidad")
     return Linea(
         cantidad=None if cantidad is None else float(cantidad),
         importe=_numero(fila.get("precio_neto")),
         partida=normalizar_partida(fila.get("codigo_imputacion")),
-        almacen=False,
         casa=False,
     )
 
@@ -205,7 +190,6 @@ def linea_desde_merge(fila: Mapping[str, object]) -> Linea:
 def agrupar(
     filas_valoradas: Iterable[Mapping[str, object]],
     filas_merge: Iterable[Mapping[str, object]],
-    marcas_almacen: frozenset[str] = MARCAS_ALMACEN,
 ) -> list[Albaran]:
     """Junta cabecera y líneas por documento. Sin líneas valoradas, usa las
     del merge (``origen_lineas = "merge"``)."""
@@ -225,7 +209,7 @@ def agrupar(
             )
         if fila.get("lv_id") is not None:
             albaranes[doc].lineas.append(
-                linea_desde_valoracion(fila, marcas_almacen)
+                linea_desde_valoracion(fila)
             )
     sin_valorar = {d for d, a in albaranes.items() if not a.lineas}
     for fila in filas_merge:
@@ -291,7 +275,7 @@ def evaluar(alb: Albaran) -> dict[str, object]:
         and alb.valoracion_contrato is not None
         and cuentas["casa_misma_partida"] == len(con_imp)
     )
-    registrable_b = base and cuentas["sin_partida_ni_almacen"] == 0
+    registrable_b = base
     resultado: dict[str, object] = {
         "document_id": alb.document_id,
         "aprobado": alb.approved,
@@ -304,7 +288,7 @@ def evaluar(alb: Albaran) -> dict[str, object]:
         "lineas_negativas": negativas,
         "lineas_sin_cantidad": sin_cantidad,
         "necesitan_producto": (
-            cuentas["partida_sin_casar"] + cuentas["almacen_sin_casar"]
+            cuentas["partida_sin_casar"] + cuentas["sin_partida_sin_casar"]
         ),
         "almacen": almacen,
         "registrable_a": registrable_a,
@@ -385,7 +369,7 @@ def formatear_resumen(resumen: Mapping[str, object], todos: bool) -> str:
         lineas.append(f"  {nombre}: {resumen[nombre]}")
     lineas.append(f"  almacén (casen o no): {resumen['almacen']}")
     lineas.append(
-        "  sin casar (irían con el producto por defecto, MA9999): "
+        "  sin casar (irían con un producto genérico de la lista blanca): "
         f"{resumen['necesitan_producto']}"
     )
     return "\n".join(lineas)
