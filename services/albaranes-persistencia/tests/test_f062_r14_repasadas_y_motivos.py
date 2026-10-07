@@ -284,3 +284,137 @@ def test_f062_r13_repo_la_cabecera_trae_el_origen_del_cif():
     hdr = repo.get_merge_header_for_resolution(document_id="doc-f062")
     assert hdr.proveedor_cif_origen == "manual"
     assert hdr.proveedor_cif == LEIDO
+
+
+# ------------------------------------------------------------------ #
+# Resolver · pasadas sucesivas sobre un merge en memoria (T7)
+# ------------------------------------------------------------------ #
+from doble_sigrid_api import (  # noqa: E402
+    CIF_HORMIGONERA_EMPATE,
+    CIF_HORMIGONES_MAT,
+    CIF_LEIDO_19407,
+    RAZ_HORMIGONES_MAT,
+    DobleSigridApi,
+    fixture_f062,
+)
+from f062_dobles import RepoRed, pasada  # noqa: E402
+
+_CORREGIDO_19407 = f"proveedor_cif_corregido:{CIF_LEIDO_19407}>{CIF_HORMIGONES_MAT}"
+
+
+def _cliente():
+    return DobleSigridApi(fixture_f062()).cliente()
+
+
+def _merge_19407(**kwargs) -> RepoRed:
+    return RepoRed(cif=CIF_LEIDO_19407, nombre="Hormigones Mat SL", obra="0720", **kwargs)
+
+
+def _notas_corregido(repo: RepoRed) -> list[str]:
+    return [n for n in repo.lineas_notas() if n.startswith(NOTA_PROVEEDOR_CORREGIDO_PREFIJO)]
+
+
+def test_f062_r14_la_repasada_no_duplica_y_conserva_la_nota_corregida():
+    repo = _merge_19407()
+    pasada(_cliente(), repo)
+    nota = _notas_corregido(repo)
+
+    pasada(_cliente(), repo)  # duplicado o «Solo volver a buscar»
+    pasada(_cliente(), repo)
+
+    assert len(repo.aplicadas) == 1  # la 2.ª y la 3.ª encuentran el CIF en prv
+    assert (repo.cif, repo.nombre) == (CIF_HORMIGONES_MAT, RAZ_HORMIGONES_MAT)
+    assert repo.lista_motivos() == [_CORREGIDO_19407]
+    assert _notas_corregido(repo) == nota and len(nota) == 1
+    assert repo.review_required is True
+    assert repo.marcas == []
+
+
+def test_f062_r14_la_nota_corregida_sobrevive_al_borrado_de_avisos_de_proveedor():
+    """D6: cada pasada borra lo que empieza por «[AVISO] Proveedor»; la
+    nota de la corrección lleva prefijo propio y no cae."""
+    repo = _merge_19407()
+    pasada(_cliente(), repo)
+    repo.notas = f"[AVISO] Proveedor algo viejo\n{repo.notas}"
+
+    pasada(_cliente(), repo)
+
+    assert repo.lineas_notas() == _notas_corregido(repo)
+    assert len(repo.lineas_notas()) == 1
+
+
+def test_f062_r15_el_revisor_elige_otro_y_se_retira_la_correccion():
+    repo = _merge_19407()
+    pasada(_cliente(), repo)
+    # «Elegir proveedor» en sv4: escribe un prv.cif (existe) y relanza.
+    repo.cif, repo.nombre = CIF_HORMIGONERA_EMPATE, "otra"
+    repo.notas = f"{repo.notas}\n[AVISO] Obra algo"
+
+    pasada(_cliente(), repo)
+
+    assert repo.lista_motivos() == []
+    assert _notas_corregido(repo) == []
+    assert repo.lineas_notas() == ["[AVISO] Obra algo"]
+    assert repo.review_required is True  # D7 de F-002: no se baja
+    assert len(repo.aplicadas) == 1
+
+
+def test_f062_r15_tambien_sin_candidato_claro_se_retira_la_correccion_caducada():
+    """Un merge cuyo CIF (manual, inexistente) ya no es el aplicado: la
+    corrección vieja cae y queda la marca de hoy."""
+    repo = _merge_19407(origen="manual")
+    repo.motivos = _json(_CORREGIDO_19407)
+    repo.notas = f"{NOTA_PROVEEDOR_CORREGIDO_PREFIJO}: leído X → Y"
+
+    pasada(_cliente(), repo)
+
+    assert repo.aplicadas == []
+    assert repo.lista_motivos() == [f"proveedor_cif_no_casa:{CIF_LEIDO_19407}"]
+    assert _notas_corregido(repo) == []
+
+
+def test_f062_r16_aplicar_retira_el_no_casa_y_el_aviso_de_una_pasada_anterior():
+    repo = _merge_19407()
+    pasada(_cliente(), repo, correccion_enabled=False)  # antes de F-062
+    assert repo.lista_motivos() == [f"proveedor_cif_no_casa:{CIF_LEIDO_19407}"]
+
+    pasada(_cliente(), repo)  # con F-062
+
+    assert repo.lista_motivos() == [_CORREGIDO_19407]
+    assert repo.lineas_notas() == _notas_corregido(repo)
+
+
+def test_f062_r16_cif_existente_retira_no_casa_de_otro_cif():
+    repo = RepoRed(cif=CIF_HORMIGONES_MAT, nombre="x", obra="0720")
+    repo.motivos = _json(
+        f"proveedor_cif_no_casa:{CIF_LEIDO_19407}", "obra_no_existe:0937",
+        f"proveedor_cif_no_casa:{CIF_HORMIGONES_MAT.lower()}",
+    )
+    repo.review_required = True
+
+    pasada(_cliente(), repo)
+
+    assert repo.retiradas == [CIF_HORMIGONES_MAT]
+    assert repo.lista_motivos() == [
+        "obra_no_existe:0937", f"proveedor_cif_no_casa:{CIF_HORMIGONES_MAT.lower()}",
+    ]
+    assert repo.review_required is True
+
+
+def test_f062_r14_sin_candidato_claro_dos_pasadas_un_motivo_y_una_nota():
+    repo = RepoRed(cif=CIF_LEIDO_19407, nombre="TRANSPORTES MACOTRAN", obra="0720")
+    pasada(_cliente(), repo)
+    pasada(_cliente(), repo)
+    assert repo.lista_motivos() == [f"proveedor_cif_no_casa:{CIF_LEIDO_19407}"]
+    assert len(repo.lineas_notas()) == 1
+
+
+def test_f062_r15_si_retirar_falla_la_pasada_sigue():
+    class _RepoQueFallaAlRetirar(RepoRed):
+        def retirar_motivos_proveedor(self, *, document_id, cif_actual):
+            raise RuntimeError("BBDD caida")
+
+    repo = _RepoQueFallaAlRetirar(cif=CIF_HORMIGONES_MAT, nombre="x", obra="0720")
+    pasada(_cliente(), repo)
+    assert repo.canonizados == [RAZ_HORMIGONES_MAT]
+    assert repo.resoluciones == [(None, None, "deterministic")]
