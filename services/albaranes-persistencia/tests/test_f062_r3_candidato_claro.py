@@ -13,10 +13,22 @@ pasada (``_candidatos_puntuados``) y la propuesta de F-052 sale de ahí.
 from __future__ import annotations
 
 import pytest
-from application.services.header_resolver_service import HeaderResolverService
+from application.services.header_resolver_service import (
+    HeaderResolverService,
+    _distancia_edicion,
+)
 from domain.models.header_resolution_models import ProveedorObraResumen
 
-from doble_sigrid_api import CIF_HORMIGONES_MAT
+from doble_sigrid_api import (
+    CIF_ARIDOS_ANFERSA,
+    CIF_HORMIGONERA_EMPATE,
+    CIF_HORMIGONES_MAT,
+    CIF_LEIDO_19394,
+    CIF_LEIDO_19407,
+    CIF_LEIDO_1790636816,
+    DobleSigridApi,
+    fixture_f062,
+)
 
 
 class _Obras:
@@ -85,3 +97,173 @@ def test_f062_t4_el_umbral_de_la_propuesta_es_inclusivo():
         proveedor_nombre="HORMIGONES DEL EBRO", obra="0720",
     )
     assert motivo == "propuesta"  # 0,5 >= 0,5
+
+
+# ------------------------------------------------------------------ #
+# T5 · distancia de edición (Levenshtein)
+# ------------------------------------------------------------------ #
+@pytest.mark.parametrize(
+    ("a", "b", "distancia"),
+    [
+        ("", "", 0),
+        ("", "B66056201", 9),
+        ("B66056201", "B66056201", 0),
+        ("kitten", "sitting", 3),
+        ("B6605620", "B66056201", 1),  # inserción
+        ("B660562011", "B66056201", 1),  # borrado
+        ("AB", "BA", 2),
+        (CIF_LEIDO_19407, CIF_HORMIGONES_MAT, 1),
+        (CIF_LEIDO_19394, CIF_HORMIGONES_MAT, 4),
+        (CIF_LEIDO_1790636816, CIF_ARIDOS_ANFERSA, 1),
+        (CIF_LEIDO_19407, CIF_HORMIGONERA_EMPATE, 9),
+        (CIF_LEIDO_19394, CIF_HORMIGONERA_EMPATE, 9),
+    ],
+)
+def test_f062_r4_distancia_edicion(a, b, distancia):
+    assert _distancia_edicion(a, b) == distancia
+    assert _distancia_edicion(b, a) == distancia
+
+
+# ------------------------------------------------------------------ #
+# R3–R5 · candidato claro
+# ------------------------------------------------------------------ #
+#: CIF con control VÁLIDO (comprobado en T1).
+V1 = "B66056201"
+V2 = "B18487421"
+V3 = "A28123453"
+#: Válido y a distancia 2 de V1.
+V1_A_2 = "B66056219"
+#: Control INVÁLIDO y a distancia 1 de V1.
+V1_INVALIDO = "B66056291"
+
+
+def _claro(cif_leido, puntuados, **kwargs):
+    return _resolver(_Cliente(), **kwargs)._candidato_claro(
+        cif_leido=cif_leido, puntuados=puntuados,
+    )
+
+
+def test_f062_r4_un_solo_elegible_es_claro_por_unico():
+    cand = _r(V1, "HORMIGONES MAT, S.L.U.")
+    assert _claro("B86056201", [(cand, 1.0), (_r(V2, "OTRO"), 0.5)]) == (cand, "unico")
+
+
+def test_f062_r4_unico_aunque_su_cif_quede_lejos_del_leido():
+    """La distancia solo desempata: con un elegible, no se mira."""
+    cand = _r(V3, "HORMIGONES Y MATERIALES DEL NORTE, S.A.")
+    assert _claro("B86056201", [(cand, 1.0)]) == (cand, "unico")
+
+
+def test_f062_r3_sin_elegibles_no_hay_claro():
+    assert _claro("B86056201", []) == (None, None)
+    assert _claro("B86056201", [(_r(V1, "HORMIGONES MAT"), 0.99)]) == (None, None)
+
+
+def test_f062_r3_el_umbral_de_nombre_es_inclusivo_y_configurable():
+    cand = _r(V1, "HORMIGONES MAT")
+    assert _claro("B86056201", [(cand, 0.5)]) == (None, None)
+    assert _claro("B86056201", [(cand, 0.5)], correccion_score_min=0.5) == (cand, "unico")
+    assert _claro("B86056201", [(cand, 0.49)], correccion_score_min=0.5) == (None, None)
+
+
+def test_f062_r3_un_candidato_con_el_control_invalido_no_es_elegible():
+    """Ficha de Sigrid mal tecleada: se propone, no se aplica (D2), por
+    cerca que quede del leído."""
+    assert _claro(V1, [(_r(V1_INVALIDO, "HORMIGONES MAT"), 1.0)]) == (None, None)
+
+
+def test_f062_r3_extranjero_no_es_elegible():
+    assert _claro("B86056201", [(_r("PT123456789", "HORMIGONES MAT"), 1.0)]) == (None, None)
+
+
+def test_f062_r3_dos_filas_del_mismo_cif_normalizado_son_un_candidato():
+    a = _r(V1, "HORMIGONES MAT, S.L.U.")
+    b = _r(" b-66056201", "HORMIGONES MAT SLU")
+    assert _claro("B86056201", [(a, 1.0), (b, 1.0)]) == (a, "unico")
+
+
+def test_f062_r4_empate_desempatado_por_el_cif_mas_cercano():
+    bueno = _r(V1, "HORMIGONES MAT, S.L.U.")
+    otro = _r(V3, "HORMIGONES Y MATERIALES DEL NORTE, S.A.")
+    # 19407: distancias 1 y 9; 19394: 4 y 9. El orden de llegada no cuenta.
+    assert _claro(CIF_LEIDO_19407, [(otro, 1.0), (bueno, 1.0)]) == (bueno, "cif_cercano")
+    assert _claro(CIF_LEIDO_19394, [(bueno, 1.0), (otro, 1.0)]) == (bueno, "cif_cercano")
+
+
+def test_f062_r4_margen_exacto_es_claro():
+    a = _r(V1, "HORMIGONES MAT")
+    b = _r(V1_A_2, "HORMIGONES MAT")
+    # leído = V1: 0 frente a 2 ⇒ margen 2 (inclusivo) ⇒ claro.
+    assert _claro(V1, [(b, 1.0), (a, 1.0)]) == (a, "cif_cercano")
+
+
+def test_f062_r4_sin_margen_suficiente_no_hay_claro():
+    a = _r(V1, "HORMIGONES MAT")
+    b = _r(V1_A_2, "HORMIGONES MAT")
+    # leído = V1_INVALIDO: 1 frente a 2 ⇒ margen 1 < 2 ⇒ nadie.
+    assert _claro(V1_INVALIDO, [(a, 1.0), (b, 1.0)]) == (None, None)
+    # Empate exacto de distancia (9 y 9).
+    c = _r(V3, "X")
+    d = _r("A28123461", "X")
+    assert _distancia_edicion("ZZZZZZZZZ", V3) == _distancia_edicion("ZZZZZZZZZ", "A28123461")
+    assert _claro("ZZZZZZZZZ", [(c, 1.0), (d, 1.0)]) == (None, None)
+
+
+def test_f062_r4_el_margen_es_configurable():
+    a = _r(V1, "HORMIGONES MAT")
+    b = _r(V1_A_2, "HORMIGONES MAT")
+    puntuados = [(a, 1.0), (b, 1.0)]
+    assert _claro(V1_INVALIDO, puntuados, correccion_margen_distancia=1) == (a, "cif_cercano")
+    assert _claro(V1, puntuados, correccion_margen_distancia=3) == (None, None)
+
+
+def test_f062_r4_con_tres_elegibles_compara_el_primero_con_el_segundo():
+    a = _r(V1, "X")
+    b = _r(V1_A_2, "X")
+    c = _r(V3, "X")
+    # leído = V1: 0, 2 y 9 ⇒ margen 2 con el segundo ⇒ claro.
+    assert _claro(V1, [(c, 1.0), (b, 1.0), (a, 1.0)]) == (a, "cif_cercano")
+    # leído a 1 de V1 y a 2 de V1_A_2: margen 1 con el segundo ⇒ nadie,
+    # aunque el tercero quede lejísimos.
+    assert _claro(V1_INVALIDO, [(c, 1.0), (b, 1.0), (a, 1.0)]) == (None, None)
+
+
+def test_f062_r4_la_distancia_no_hace_elegible_a_quien_no_lo_es():
+    lejano = _r(V3, "HORMIGONES Y MATERIALES DEL NORTE, S.A.")
+    cercano_debil = _r(V1, "HORMIGONES MAT")
+    assert _claro(CIF_LEIDO_19407, [(lejano, 1.0), (cercano_debil, 0.5)]) == (lejano, "unico")
+
+
+@pytest.mark.parametrize("leido", [CIF_LEIDO_19407, V1_A_2], ids=["control-invalido", "control-valido"])
+def test_f062_r5_el_control_del_leido_no_cambia_la_regla(leido):
+    """Q4: con el control del leído válido o inválido, el claro es el mismo."""
+    cand = _r(V1, "HORMIGONES MAT, S.L.U.")
+    otro = _r(V3, "HORMIGONES Y MATERIALES DEL NORTE, S.A.")
+    assert _claro(leido, [(cand, 1.0)]) == (cand, "unico")
+    assert _claro(leido, [(otro, 1.0), (cand, 1.0)]) == (cand, "cif_cercano")
+
+
+def test_f062_r4_leido_sin_caracteres_utiles_no_rompe():
+    cand = _r(V1, "X")
+    assert _claro("---", [(cand, 1.0)]) == (cand, "unico")
+    assert _claro("---", [(cand, 1.0), (_r(V3, "X"), 1.0)]) == (None, None)
+
+
+# ------------------------------------------------------------------ #
+# Los tres casos medidos, con el cliente real sobre el doble
+# ------------------------------------------------------------------ #
+@pytest.mark.parametrize(
+    ("leido", "nombre", "obra", "esperado", "via"),
+    [
+        (CIF_LEIDO_19407, "Hormigones Mat SL", "0720", CIF_HORMIGONES_MAT, "cif_cercano"),
+        (CIF_LEIDO_19394, "Hormigones Mat SL", "0720", CIF_HORMIGONES_MAT, "cif_cercano"),
+        (CIF_LEIDO_1790636816, "ARIDOS ANFERSA SL", "0678", CIF_ARIDOS_ANFERSA, "unico"),
+    ],
+    ids=["19407", "19394", "1790636816"],
+)
+def test_f062_r4_los_tres_casos_medidos_tienen_candidato_claro(leido, nombre, obra, esperado, via):
+    resolver = _resolver(DobleSigridApi(fixture_f062()).cliente())
+    puntuados, motivo = resolver._candidatos_puntuados(proveedor_nombre=nombre, obra=obra)
+    candidato, obtenida = resolver._candidato_claro(cif_leido=leido, puntuados=puntuados)
+    assert (candidato.cif, obtenida) == (esperado, via)
+    assert motivo == "propuesta"

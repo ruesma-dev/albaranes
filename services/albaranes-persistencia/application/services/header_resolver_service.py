@@ -16,6 +16,10 @@ from domain.ports.header_resolver_ports import (
     ProveedorReverseLookupClient,
 )
 from ruesma_comun.obras import normalizar_codigo_obra
+from ruesma_comun.proveedores import (
+    identificador_fiscal_valido,
+    normalizar_cif,
+)
 from ruesma_comun.sigrid import SigridRespuestaTruncada
 
 logger = logging.getLogger(__name__)
@@ -105,6 +109,25 @@ def _score_razon_social(leido: str | None, candidato: str | None) -> float:
     return max(_match_score(a, b), _match_score(b, a))
 
 
+def _distancia_edicion(a: str, b: str) -> int:
+    """Distancia de Levenshtein (inserciones, borrados y sustituciones).
+
+    F-062 · R4: desempata entre candidatos claros por cercania al CIF
+    leido. Pura y sin dependencias: los CIF tienen 9 caracteres.
+    """
+    anterior = list(range(len(b) + 1))
+    for i, ca in enumerate(a, start=1):
+        actual = [i]
+        for j, cb in enumerate(b, start=1):
+            actual.append(min(
+                anterior[j] + 1,
+                actual[j - 1] + 1,
+                anterior[j - 1] + (ca != cb),
+            ))
+        anterior = actual
+    return anterior[-1]
+
+
 # ------------------------------------------------------------------ #
 # Motivo de la red por nombre (F-052 · design §5 y §6). Sin propuesta,
 # la nota de revision dice POR QUE: no es lo mismo que la consulta falle
@@ -115,6 +138,12 @@ MOTIVO_NADIE_CASA = "nadie_casa"
 MOTIVO_SIN_OBRA = "sin_obra"
 MOTIVO_SIN_NOMBRE = "sin_nombre"
 MOTIVO_CONSULTA_FALLIDA = "consulta_fallida"
+
+# ------------------------------------------------------------------ #
+# Candidato claro (F-062 · R4): por que se aplica. Va en la nota.
+# ------------------------------------------------------------------ #
+VIA_UNICO = "unico"
+VIA_CIF_CERCANO = "cif_cercano"
 
 
 def _motivo_sin_propuesta(
@@ -208,6 +237,9 @@ class HeaderResolverService:
         familia_enabled: bool = True,
         nota_max_candidatos: int = 5,
         cif_enabled: bool = True,
+        correccion_enabled: bool = True,
+        correccion_score_min: float = 1.0,
+        correccion_margen_distancia: int = 2,
     ) -> None:
         self._obra_client = obra_client
         self._proveedor_client = proveedor_client
@@ -217,10 +249,17 @@ class HeaderResolverService:
         self._familia_enabled = bool(familia_enabled)
         self._nota_max_candidatos = max(1, int(nota_max_candidatos))
         self._cif_enabled = bool(cif_enabled)
+        # F-062: la red APLICA el candidato claro (interruptor de vuelta
+        # atras: con False, D3 de F-002 tal cual).
+        self._correccion_enabled = bool(correccion_enabled)
+        self._correccion_score_min = float(correccion_score_min)
+        self._correccion_margen = int(correccion_margen_distancia)
         logger.info(
-            "%s INSTANCIADO (enabled=%s min_score=%s familia=%s cif=%s)",
+            "%s INSTANCIADO (enabled=%s min_score=%s familia=%s cif=%s "
+            "correccion=%s score_min=%s margen=%s)",
             _LOG_PREFIX, enabled, self._min_score, self._familia_enabled,
-            self._cif_enabled,
+            self._cif_enabled, self._correccion_enabled,
+            self._correccion_score_min, self._correccion_margen,
         )
 
     def resolve_merge_document(self, *, merge_document_id: str) -> None:
@@ -586,6 +625,52 @@ class HeaderResolverService:
                 len(puntuados),
             )
         return None
+
+    def _candidato_claro(
+        self,
+        *,
+        cif_leido: str,
+        puntuados: list[tuple[ProveedorObraResumen, float]],
+    ) -> tuple[ProveedorObraResumen | None, str | None]:
+        """Candidato claro de la obra (F-062 · R3, R4, R5) y por que.
+
+        Elegibles: identificador fiscal valido y ``score >=
+        correccion_score_min``, agrupados por CIF normalizado (dos filas
+        del mismo CIF son un candidato, no un empate). Uno solo ⇒
+        ``(el, 'unico')``. Varios ⇒ el de CIF mas cercano al leido, si su
+        distancia es al menos ``correccion_margen_distancia`` menor que la
+        del siguiente ⇒ ``(el, 'cif_cercano')``. Si no, ``(None, None)``.
+        La distancia solo desempata y el control del leido no cuenta (R5).
+        """
+        elegibles: dict[str, ProveedorObraResumen] = {}
+        for resumen, score in puntuados:
+            cif = normalizar_cif(resumen.cif)
+            if (
+                cif is None
+                or cif in elegibles
+                or score < self._correccion_score_min
+                or not identificador_fiscal_valido(cif)
+            ):
+                continue
+            elegibles[cif] = resumen
+        if not elegibles:
+            return None, None
+        if len(elegibles) == 1:
+            [unico] = elegibles.values()
+            return unico, VIA_UNICO
+        leido = normalizar_cif(cif_leido) or ""
+        por_distancia = sorted(
+            (_distancia_edicion(leido, cif), cif) for cif in elegibles
+        )
+        (primera, cif_primero), (segunda, _) = por_distancia[0], por_distancia[1]
+        if segunda - primera >= self._correccion_margen:
+            return elegibles[cif_primero], VIA_CIF_CERCANO
+        logger.info(
+            "%s %d candidatos elegibles sin margen de CIF (%d frente a %d, "
+            "margen %d): no hay candidato claro.", _LOG_PREFIX,
+            len(elegibles), primera, segunda, self._correccion_margen,
+        )
+        return None, None
 
     def _canonizar_nombre_safely(
         self,
