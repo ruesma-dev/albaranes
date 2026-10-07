@@ -8,7 +8,12 @@ from application.services.familia_detector import (
     familias_de_filas_merge,
     familias_de_texto,
 )
-from domain.models.header_resolution_models import ProveedorObraResumen
+from domain.models.header_resolution_models import (
+    MOTIVO_PROVEEDOR_CORREGIDO,
+    MOTIVO_PROVEEDOR_NO_CASA,
+    NOTA_PROVEEDOR_CORREGIDO_PREFIJO,
+    ProveedorObraResumen,
+)
 from domain.models.obra_models import ObraEnrichmentResult
 from domain.ports.header_resolver_ports import (
     HeaderMergeRepository,
@@ -289,6 +294,7 @@ class HeaderResolverService:
             proveedor_nombre=hdr.proveedor_nombre,
             obra_codigo_efectiva=obra_efectiva,
             merge_document_id=merge_document_id,
+            proveedor_cif_origen=hdr.proveedor_cif_origen,
         )
 
         # Siempre llamamos al repo: ademas de escribir lo resuelto,
@@ -375,6 +381,7 @@ class HeaderResolverService:
         proveedor_nombre: str | None,
         obra_codigo_efectiva: str | None,
         merge_document_id: str,
+        proveedor_cif_origen: str | None = None,
     ) -> tuple[str | None, str]:
         """Devuelve ``(cif_deducido | None, origen)``.
 
@@ -390,11 +397,15 @@ class HeaderResolverService:
             self._remove_nota_proveedor_safely(merge_document_id)
             # RED DE PROVEEDOR (F-002, R8-R10): el CIF manda, pero hay
             # que comprobarlo contra el maestro prv.
+            # (F-062) Con candidato claro, la red APLICA el proveedor en el
+            # merge ANTES de que el pipeline busque contratos, que leen el
+            # CIF del merge: no hay nada que devolver al llamador.
             self._red_proveedor_por_cif(
                 cif_leido=cif_leido,
                 proveedor_nombre=proveedor_nombre,
                 obra_codigo_efectiva=obra_codigo_efectiva,
                 merge_document_id=merge_document_id,
+                origen=proveedor_cif_origen,
             )
             return None, "deterministic"
 
@@ -451,19 +462,27 @@ class HeaderResolverService:
         proveedor_nombre: str | None,
         obra_codigo_efectiva: str | None,
         merge_document_id: str,
+        origen: str | None = None,
     ) -> None:
         """Contrasta el CIF leido con el maestro ``prv`` de Sigrid.
 
           - Existe -> ``proveedor_nombre`` pasa a ser la razon social
-            canonica (R8). Es un dato determinista del maestro, no una
-            conjetura; el literal leido queda auditado en las tablas raw.
-          - No existe -> se marca revision con motivo
-            ``proveedor_cif_no_casa:<cif>`` y, si algun proveedor CON
-            CONTRATO en la obra casa por nombre, se PROPONE en la nota
-            (R9). Sin candidato, la marca va sin propuesta (R10).
+            canonica (R8 de F-002) y se retiran los motivos de proveedor
+            caducados (F-062 · R15, R16). Un CIF que existe nunca se
+            sustituye (R13).
+          - No existe y hay CANDIDATO CLARO en la obra (F-062 · R3–R5) ->
+            se APLICA: CIF y razon social de Sigrid en el merge, a revision
+            con motivo ``proveedor_cif_corregido:<leido>><aplicado>`` y nota
+            ``[CORREGIDO] Proveedor`` (R6, R7). Salvo origen ``manual``
+            (R13) o ``RED_PROVEEDOR_CORRECCION_ENABLED=false`` (R12).
+          - No existe y no hay candidato claro -> como antes de F-062: se
+            marca revision con motivo ``proveedor_cif_no_casa:<cif>`` y la
+            nota PROPONE el mejor por nombre si lo hay (R9/R10 de F-002,
+            F-052); si el control del leido no es valido, la nota lo dice
+            (F-062 · R11).
 
-        En ningun caso se sobrescriben el CIF ni el nombre leidos: lo
-        decide el humano en sv4 (decision D3). Best-effort completo (R16).
+        Con la correccion apagada, exactamente D3 de F-002: se propone y no
+        se sobrescribe nada. Best-effort completo (R16 de F-002).
         """
         if not self._cif_enabled:
             logger.info(
@@ -492,11 +511,34 @@ class HeaderResolverService:
                 razon_social=razon_social,
                 cif_leido=cif_leido,
             )
+            if self._correccion_enabled:
+                self._retirar_motivos_safely(
+                    merge_document_id=merge_document_id, cif_actual=cif_leido,
+                )
             return
 
-        candidato, motivo, n_candidatos = self._mejor_candidato_por_nombre(
-            proveedor_nombre=proveedor_nombre,
-            obra_codigo_efectiva=obra_codigo_efectiva,
+        puntuados, motivo = self._candidatos_puntuados(
+            proveedor_nombre=proveedor_nombre, obra=obra_codigo_efectiva,
+        )
+        control_invalido = not identificador_fiscal_valido(cif_leido)
+        if self._correccion_enabled:
+            if self._aplicar_candidato_claro(
+                cif_leido=cif_leido,
+                proveedor_nombre=proveedor_nombre,
+                obra=obra_codigo_efectiva,
+                merge_document_id=merge_document_id,
+                origen=origen,
+                puntuados=puntuados,
+                control_invalido=control_invalido,
+            ):
+                return
+            # R15: una correccion anterior que ya no es el CIF del merge.
+            self._retirar_motivos_safely(
+                merge_document_id=merge_document_id, cif_actual=cif_leido,
+            )
+
+        candidato = self._mejor_de(
+            puntuados, motivo=motivo, obra=obra_codigo_efectiva,
         )
         cabeza = (
             f"{_NOTA_PROVEEDOR_PREFIX} el CIF leido {cif_leido} no "
@@ -517,17 +559,106 @@ class HeaderResolverService:
                 f"{cabeza} "
                 + _motivo_sin_propuesta(
                     motivo,
-                    n_candidatos=n_candidatos,
+                    n_candidatos=len(puntuados),
                     obra=obra_codigo_efectiva,
                     nombre_leido=proveedor_nombre,
                 )
                 + ". Revisa el proveedor en el portal."
             )
+        if self._correccion_enabled and control_invalido:
+            # F-062 · R11. Al FINAL: las consultas de vigilancia del humano
+            # buscan «no existe en Sigrid. PROPUESTA:» tal cual.
+            nota += (
+                f" El carácter de control del CIF leído {cif_leido} no es "
+                "válido: es una lectura errónea."
+            )
         self._marcar_revision_safely(
             merge_document_id=merge_document_id,
-            motivo=f"proveedor_cif_no_casa:{cif_leido}",
+            motivo=f"{MOTIVO_PROVEEDOR_NO_CASA}{cif_leido}",
             nota=nota,
         )
+
+    def _aplicar_candidato_claro(
+        self,
+        *,
+        cif_leido: str,
+        proveedor_nombre: str | None,
+        obra: str | None,
+        merge_document_id: str,
+        origen: str | None,
+        puntuados: list[tuple[ProveedorObraResumen, float]],
+        control_invalido: bool,
+    ) -> bool:
+        """Aplica el candidato claro si lo hay (F-062 · R6, R7, R13).
+
+        Devuelve ``True`` solo si quedo aplicado; si no hay candidato, el
+        revisor fijo el CIF (``manual``) o la escritura falla, ``False`` y
+        la red sigue como antes de F-062.
+        """
+        if (origen or "").strip() == "manual":
+            logger.info(
+                "%s CIF %s fijado por el revisor (origen manual): no se "
+                "corrige. document_id=%s", _LOG_PREFIX, cif_leido,
+                merge_document_id,
+            )
+            return False
+        candidato, via = self._candidato_claro(
+            cif_leido=cif_leido, puntuados=puntuados,
+        )
+        if candidato is None:
+            return False
+        cif = normalizar_cif(candidato.cif)
+        nombre = (candidato.nombre or "").strip()
+        por_que = (
+            "es el único candidato" if via == VIA_UNICO
+            else "es el candidato con el CIF más cercano al leído"
+        )
+        control = (
+            " y el carácter de control del CIF leído no es válido "
+            "(lectura errónea)" if control_invalido else ""
+        )
+        nota = (
+            f"{NOTA_PROVEEDOR_CORREGIDO_PREFIJO}: leído {cif_leido} → {cif} "
+            f"({nombre}). Nombre leído: '{proveedor_nombre or '—'}'. El CIF "
+            f"leído no existe en Sigrid{control}; se aplica porque {por_que} "
+            f"con contrato en la obra {obra} y nombre completo. Si no es el "
+            "proveedor, cámbialo con «Elegir proveedor»."
+        )
+        try:
+            self._repository.aplicar_correccion_proveedor(
+                document_id=merge_document_id,
+                cif=cif,
+                nombre=nombre,
+                motivo=f"{MOTIVO_PROVEEDOR_CORREGIDO}{cif_leido}>{cif}",
+                nota=nota,
+            )
+        except Exception:  # noqa: BLE001 — best-effort
+            logger.exception(
+                "%s no se pudo aplicar el proveedor %s; se marca revision "
+                "como antes. document_id=%s", _LOG_PREFIX, cif,
+                merge_document_id,
+            )
+            return False
+        logger.warning(
+            "%s proveedor CORREGIDO %s -> %s (%s, via=%s, control_leido=%s) "
+            "obra=%s document_id=%s", _LOG_PREFIX, cif_leido, cif, nombre,
+            via, "invalido" if control_invalido else "valido", obra,
+            merge_document_id,
+        )
+        return True
+
+    def _retirar_motivos_safely(
+        self, *, merge_document_id: str, cif_actual: str,
+    ) -> None:
+        try:
+            self._repository.retirar_motivos_proveedor(
+                document_id=merge_document_id, cif_actual=cif_actual,
+            )
+        except Exception:  # noqa: BLE001 — best-effort
+            logger.exception(
+                "%s no se pudieron retirar los motivos de proveedor "
+                "caducados. document_id=%s", _LOG_PREFIX, merge_document_id,
+            )
 
     def _mejor_candidato_por_nombre(
         self,

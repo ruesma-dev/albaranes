@@ -114,6 +114,11 @@ def build_persist_pipeline(
             familia_enabled=settings.header_resolver_familia_enabled,
             nota_max_candidatos=settings.header_resolver_nota_max_candidatos,
             cif_enabled=settings.red_proveedor_cif_enabled,
+            correccion_enabled=settings.red_proveedor_correccion_enabled,
+            correccion_score_min=settings.red_proveedor_correccion_score_min,
+            correccion_margen_distancia=(
+                settings.red_proveedor_correccion_margen_distancia
+            ),
         )
         obra_enrichment_service = ObraEnrichmentService(
             client=sigrid_obra_client,
