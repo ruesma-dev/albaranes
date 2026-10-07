@@ -135,3 +135,75 @@ D2 medición (sv3, -k f053_medicion): 5 failed, 17 passed
 | Lint | `ruff check .` limpio en sv9; en sv3, los ficheros tocados tienen las mismas faltas previas (I001, ISC004, UP035), ninguna nueva |
 | Mutación | No ejecutada: es T25, puerta final (igual que en la fase 1) |
 | `bash harness/init.sh` | No ejecutado en el worktree (mismo motivo que la fase 1: falta el venv de sv4); se sustituye por las suites de arriba |
+
+## 8. Remate (implementer, 2026-10-07): decisiones D3 y D4 del humano sobre los hallazgos del §3
+
+Decisiones: **1a** «un albarán no se puede pisar» (el duplicado ACTIVO con alta bloqueante no se reprocesa), **1c** la
+mirada del alta va **antes de subir el PDF a SharePoint** (activo y papelera) = **D3**; **1b** sv4 no se cambia, R46
+sigue de red = **D4**. Mismo entorno que arriba (`.venv` raíz del árbol principal, `PYTHONPATH` a la comun del
+worktree, comprobado: `ruesma_comun` se importa de `albaranes-F-053\services\albaranes-comun`). Solo sv3.
+
+| Commit | Punto | Cambio |
+|---|---|---|
+| `80a3d5d` | spec | R45 reescrito (activo o papelera, antes de SharePoint, sin tocar nada; D1, D3); R21 y R23 compactados para seguir en 150/150; design §4 (250/250); T38–T39; D3 y D4 en `progress/spec_F-053.md` |
+| `a7d0df1` | 1a (T38) | Método nuevo del puerto `buscar_conservado_por_alta(sha)`: reutiliza `_conservar_por_alta` (misma consulta `FOR UPDATE OF m`, `to_regclass`, WARNING) en su propia sesión, sin escribir. La rama de duplicado lo mira primero y devuelve `_devolver_conservado` (duplicado, sin contratos ni selección) |
+| `8e7e680` | 1c (T39) | La mirada sube al principio de `run`, antes de `get_by_sha256` y de `document_storage.upload`: un conservado activo o en la papelera no sube nada ni llama a `save`. `save` mantiene su mirada (carrera con sv9) |
+| `73d9707` | lint | Los dobles nuevos sin `return None` (ruff) |
+
+**Decisiones de diseño.** (a) Método **obligatorio** del puerto (abstracto) y llamada directa, no `getattr` con
+alternativa: es una salvaguarda y debe fallar cerrada; si la BBDD falla, la excepción sube como la de `get_by_sha256`
+y el mensaje se reintenta. Por eso los dobles viejos (`test_f043_t31_*` ×4, `test_f048_r26_modelo`) aprenden el
+método devolviendo `None`; los dos tests «repositorio sin el método» siguen probando lo suyo (la clasificación y el
+contexto son opcionales). (b) Una sola consulta para las dos miradas: la previa y la de `save` comparten
+`_conservar_por_alta`, así que no pueden divergir en estados ni en «sin tabla». El `FOR UPDATE` de la previa se
+suelta al cerrar la sesión (serializa con `reclamar` de sv9; no bloquea más). (c) El orden del pipeline no obliga a
+nada distinto: la mirada solo necesita el `sha256`, que se calcula antes de todo.
+
+**Fase RED** (`python -m pytest -q -p no:cacheprovider -k f053_r45 tests/test_f053_r45_reingreso_con_alta.py`, sv3):
+```
+1a: 13 failed, 13 passed
+  E  AttributeError: 'SqlAlchemyAlbaranRepository' object has no attribute 'buscar_conservado_por_alta'. Did you mean: '_conservar_por_alta'?
+  E  Left contains 9 more items, first extra item: 'repo.update_merge_clasificacion'   (activo con alta, force_refetch False/True)
+1c: 2 failed, 26 passed
+  E  AssertionError: assert ['sharepoint...., 'repo.save'] == []      (papelera con alta: sube el PDF y llama a save)
+  E    Left contains 2 more items, first extra item: 'sharepoint.upload'
+  E  AssertionError: assert ['sharepoint....rge_document'] == ['repo.buscar..., 'repo.save']   (la mirada no va primero)
+```
+Tests nuevos (+16 en sv3): mirada del repositorio con alta bloqueante ×3 (devuelve el conservado, solo lectura,
+`FOR UPDATE`, log con documento, estado y `cod`), sin alta o no bloqueante ×7, sin tabla; activo con alta ×2
+(`llamadas == []`: ni clasificación, ni contexto, ni cabecera, ni obra, ni contratos, ni fecha, ni valoración, ni
+SharePoint); activo sin alta se reprocesa como hoy; papelera con alta no sube nada ni llama a `save`; documento nuevo:
+orden `buscar → upload → save`. El test viejo del pipeline conservado pasa a cubrir la carrera (la previa no ve el
+alta y `save` la conserva).
+
+**Controles negativos** (suite entera de sv3; restaurado con `git checkout --`, `git diff --quiet` y `sha256sum -c`
+de los ficheros mutados = OK):
+
+| Qué se rompió | Resultado |
+|---|---|
+| 1a: el duplicado no mira el alta · `buscar` siempre `None` · la mirada tras escribir la clasificación · el conservado devuelve `contratos_count=1` | 2 · 3 · 2 · 2 failed |
+| 1c: la mirada vuelve a la rama de duplicado (papelera sin cubrir) · la mirada entre SharePoint y `save` · sin la mirada previa (solo `save`) · `save` deja de conservar (carrera) | 2 · 4 · 4 · 1 failed |
+
+**Seguridad (aviso del 2026-10-07).** Revisado sv9: `commit=true` solo sale en la grabación tras `ModoAlta.REAL`
+(`alta_sigrid_service.py`:273/282) y el adjunto (`concepto-grafico`, que manda `commit: true`) solo con
+`self._modo is ModoAlta.REAL` (:329 y :390); `ModoAlta.REAL` solo si `ALTA_SIGRID_COMMIT == "true"`
+(`config/settings.py`:159). **Ninguna ruta graba sin la llave.** Nada arrancado contra sigrid-api.
+
+**Hallazgos para el humano (no implementados, fuera de lo decidido):**
+1. **Carrera residual en la rama de duplicado**: si sv9 reclama el alta entre la mirada previa y los pasos de la
+   rama (cada uno en su transacción), el documento se re-enriquece igual. Ventana pequeña (el documento tiene que
+   estar ya aprobado y con el alta pidiéndose en ese instante); cerrarla exigiría la mirada con cerrojo en cada paso.
+2. **`POST /v1/albaranes/persist` (API HTTP de sv3)**, tras `run`, escribe los metadatos de fase 2
+   (`review_phase2_*` del merge y `source_phase` de líneas) también sobre un conservado. El worker de colas no lo
+   hace. No cambia lo registrado en Sigrid, pero «no tocar nada» no se cumple por esa vía.
+3. **`reenrich_by_merge_id` y `POST /v1/albaranes/{id}/re-fetch-contratos`** de sv3 no miran el alta: dependen de
+   que sv4 rechace el re-fetch y la revaloración (R25/R26, T19 de la fase 2, pendiente).
+
+**Evidencias del remate.** Suites, una tras otra y bajo `coverage`: sv3 **477 passed** (42,86 s) · raíz **1083
+passed** (593,65 s; la máquina iba cargada, en la pasada 2 fueron 273 s). sv9, comun y sv6 no se tocan (no se
+relanzan; sus `coverage.json` de la pasada 2 siguen valiendo). `python -m harness.cobertura --base dev --config
+harness/rigor.json` → `PUERTA COBERTURA: 96.2% de 1477 líneas cambiadas cubiertas (1421/1477, umbral 80%, nivel
+critico)`. `PUERTA TAMAÑO: F-053 dentro de los topes (requirements 150/150, design 250/250)`. Rutas sensibles: N/A.
+Lint: los ficheros tocados tienen las mismas faltas que antes (recuento igual fichero a fichero); el test nuevo,
+limpio. Mutación: no ejecutada (T25, puerta final). `bash harness/init.sh`: no ejecutado en el worktree (falta el
+venv de sv4, como en la fase 1).

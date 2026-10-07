@@ -32,6 +32,16 @@ cobertura 96,2 % (1409/1464). **Para el humano** (informe §3): la rama de dupli
 re-enriqueciendo y revalorando aunque el alta esté `registrado` (R45 solo cubre el borrado); sv4 permite conciliar a
 mano con una línea de otro contrato (otra fuente de R46). **Pendiente**: re-review de la pasada 2; repetir T0.
 
+**Fase 1 · remate HECHO (2026-10-07, implementer)** con las decisiones del humano sobre esos hallazgos: **D3** (1a y
+1c) «un albarán no se puede pisar»: sv3 mira el alta (`buscar_conservado_por_alta`, método nuevo del puerto) al
+principio de `run`, antes de SharePoint, y un duplicado con alta bloqueante (activo o en la papelera) se devuelve sin
+tocar nada; `save` conserva su mirada para la carrera con sv9. **D4** (1b): sv4 no se cambia, R46 sigue de red. Spec:
+R45 reescrito, T38–T39 `[x]`, topes 150/150 y 250/250. Commits `80a3d5d`…`73d9707`. Suites: sv3 477, raíz 1083;
+cobertura 96,2 % (1421/1477). Seguridad: ninguna ruta de sv9 graba sin `ALTA_SIGRID_COMMIT=true`. Informe: §8 de
+`progress/impl_F-053_fase1_pasada2.md`, con tres hallazgos nuevos para el humano (carrera residual en la rama de
+duplicado; la API `/persist` de sv3 escribe metadatos de fase 2 sobre un conservado; el re-fetch de sv3 depende de
+T19). **Pendiente**: re-review de la pasada 2 + remate; repetir T0.
+
 **F-051 · `blocked` (2026-10-06) y FUSIONADA en `dev`.** Implementación APROBADA por el reviewer (pasada 2) e `init.sh`
 en verde. **T21 hecha** (evals con LLM, 2026-10-06 11:07 UTC, informe local `progress/evals_F-051.md`): frente a F-048,
 IA3 417→397 fallos, E2E 545→522, partida final 102→85; IA1 e IA4 iguales; los 4 casos que empeoran son variación del
