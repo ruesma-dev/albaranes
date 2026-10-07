@@ -26,7 +26,12 @@ from domain.models.extraction_models import (
     LineaAlbaran,
     ProviderExtractionEnvelope,
 )
-from domain.models.header_resolution_models import MergeHeaderForResolution
+from domain.models.header_resolution_models import (
+    MOTIVO_PROVEEDOR_CORREGIDO,
+    MOTIVO_PROVEEDOR_NO_CASA,
+    NOTA_PROVEEDOR_CORREGIDO_PREFIJO,
+    MergeHeaderForResolution,
+)
 from domain.models.persistence_models import ExistingDocument, StoredFile
 from domain.ports.albaran_repository import AlbaranRepository
 from infrastructure.database.orm_contrato_models import (
@@ -42,6 +47,7 @@ from infrastructure.database.orm_models import (
 )
 from infrastructure.database.session_factory import SessionFactory
 from ruesma_comun.contratos import ClasificacionAlbaran
+from ruesma_comun.proveedores import normalizar_cif
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +211,45 @@ def quitar_motivos_con_prefijo(
     if not motivos:
         return None
     return json.dumps(motivos, ensure_ascii=False, indent=2)
+
+
+def depurar_motivos_proveedor(
+    reasons_json: str | None, cif_actual: str | None,
+) -> tuple[str | None, bool]:
+    """Motivos de proveedor que siguen vivos para el CIF actual del merge.
+
+    (F-062 · R15, R16) Quita ``proveedor_cif_no_casa:<x>`` y
+    ``proveedor_cif_corregido:<leido>><aplicado>`` cuyo CIF (``x`` o el
+    aplicado, tras el ULTIMO ``>``) normalizado no es ``cif_actual``
+    normalizado. Los demas motivos no se tocan.
+
+    Devuelve ``(json, retiro_correccion)``. Sin nada que quitar devuelve
+    el JSON tal cual llego (el llamador no escribe); si no queda ningun
+    motivo, ``None`` (como ``quitar_motivos_con_prefijo``).
+    """
+    actual = normalizar_cif(cif_actual)
+    vivos: list[str] = []
+    retirados = 0
+    retiro_correccion = False
+    for motivo in _motivos_de_json(reasons_json):
+        if motivo.startswith(MOTIVO_PROVEEDOR_NO_CASA):
+            cif = motivo[len(MOTIVO_PROVEEDOR_NO_CASA):]
+        elif motivo.startswith(MOTIVO_PROVEEDOR_CORREGIDO):
+            cif = motivo[len(MOTIVO_PROVEEDOR_CORREGIDO):].rsplit(">", 1)[-1]
+        else:
+            vivos.append(motivo)
+            continue
+        if normalizar_cif(cif) == actual:
+            vivos.append(motivo)
+            continue
+        retirados += 1
+        if motivo.startswith(MOTIVO_PROVEEDOR_CORREGIDO):
+            retiro_correccion = True
+    if not retirados:
+        return reasons_json, False
+    if not vivos:
+        return None, retiro_correccion
+    return json.dumps(vivos, ensure_ascii=False, indent=2), retiro_correccion
 
 
 def sustituir_nota_por_prefijo(
@@ -969,6 +1014,7 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
                 obra_direccion=document.obra_direccion,
                 proveedor_cif=document.proveedor_cif,
                 proveedor_nombre=document.proveedor_nombre,
+                proveedor_cif_origen=document.proveedor_cif_origen,
             )
 
     def update_merge_resolved_header(
@@ -1921,6 +1967,83 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
                 "[revision][repo] doc=%s marcado a revision motivo=%s",
                 document_id, motivo,
             )
+
+    def aplicar_correccion_proveedor(
+        self,
+        *,
+        document_id: str,
+        cif: str,
+        nombre: str,
+        motivo: str,
+        nota: str,
+    ) -> None:
+        """Aplica el candidato claro de la red de proveedor (F-062 · R6, R7,
+        R16), en UNA transaccion.
+
+        ``proveedor_cif`` y ``proveedor_nombre`` pasan a los de Sigrid con
+        origen ``deterministic`` (D5: sv4 ya lo pesa en la confianza),
+        ``review_required=true`` (Q1), los motivos de proveedor caducados se
+        retiran, se anade ``motivo`` sin duplicar y la nota ``[CORREGIDO]
+        Proveedor`` sustituye a la anterior. Lo leido por la IA queda en el
+        motivo, en la nota y en la fila cruda, que no se toca (R9).
+        """
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            document = session.get(AlbaranDocumentMergeOrm, document_id)
+            if document is None:
+                raise KeyError(f"Documento merge no encontrado: {document_id}")
+            document.proveedor_cif = cif
+            document.proveedor_nombre = nombre
+            document.proveedor_cif_origen = "deterministic"
+            document.review_required = True
+            depurados, _ = depurar_motivos_proveedor(
+                document.review_reasons_json, cif,
+            )
+            document.review_reasons_json = anadir_motivo_revision(
+                depurados, motivo,
+            )
+            session.flush()
+            self._sustituir_nota(
+                session=session,
+                document_id=document_id,
+                prefijo=NOTA_PROVEEDOR_CORREGIDO_PREFIJO,
+                nota=nota,
+            )
+            session.commit()
+            logger.warning(
+                "[revision][repo] doc=%s proveedor CORREGIDO motivo=%s",
+                document_id, motivo,
+            )
+
+    def retirar_motivos_proveedor(
+        self, *, document_id: str, cif_actual: str | None,
+    ) -> None:
+        """Retira los motivos de proveedor que ya no valen para el CIF
+        actual (F-062 · R15, R16) y, si cae una correccion, su nota
+        ``[CORREGIDO] Proveedor``.
+
+        ``review_required`` NO baja: puede haber otros motivos vivos y
+        cerrarlos es del revisor (D7 de F-002).
+        """
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            document = session.get(AlbaranDocumentMergeOrm, document_id)
+            if document is None:
+                return
+            nuevos, retiro_correccion = depurar_motivos_proveedor(
+                document.review_reasons_json, cif_actual,
+            )
+            if nuevos != document.review_reasons_json:
+                document.review_reasons_json = nuevos
+                session.flush()
+            if retiro_correccion:
+                self._sustituir_nota(
+                    session=session,
+                    document_id=document_id,
+                    prefijo=NOTA_PROVEEDOR_CORREGIDO_PREFIJO,
+                    nota=None,
+                )
+            session.commit()
 
     def descartar_obra_no_valida(
         self,
