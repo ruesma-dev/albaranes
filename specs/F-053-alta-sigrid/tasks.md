@@ -58,6 +58,10 @@ sigrid-api tal como esté en la spec de F-009 (v8, `8a6ecab`; códigos incluidos
 - [x] T38 (D3, 1a): sv3 mira el alta del `source_sha256` (`buscar_conservado_por_alta`, sesión propia, misma consulta que `save`) en la rama de duplicado de `run`: con un alta bloqueante devuelve duplicado sin reescribir clasificación ni contexto de líneas, sin resolver cabecera, sin enriquecer obra ni contratos y sin revalorar, con log (R45)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r45`
 - [x] T39 (D3, 1c): esa mirada va antes de subir el PDF a SharePoint y cubre también el documento en la papelera: en un duplicado conservado no se sube nada ni se llama a `save`; `save` mantiene su mirada con `FOR UPDATE` para la carrera con sv9 (R45)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r45`
 
+## Bloque D ter · review de la fase 1, pasada 2 (`progress/review_F-053_fase1_pasada2.md`)
+
+- [x] T40 (H4, C9): `_conservar_por_alta` (las dos miradas) en DOS sentencias: primero `SELECT id FROM albaran_documents_merge WHERE source_sha256 = :sha FOR UPDATE` y después, ya con el cerrojo, `SELECT document_id, estado, sigrid_cod FROM albaran_altas_sigrid WHERE document_id = ANY(:ids)` (instantánea nueva en READ COMMITTED); sin merges no se lee el alta; ninguna filtra por `is_active` (R45 incluye la papelera); motivo en design §4; tests con una sesión doble que toma la instantánea al arrancar la sentencia (carrera de H4 en `save` y en la mirada previa, cerrojo en sentencia anterior y distinta, papelera)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r45` + MANUAL de T27b
+
 ## Bloque E · sv4
 
 - [ ] T17: Settings de sv4 (DESDE, Espera y mapeo con `leer_mapeo`; arranque fallido con mapeo inválido) y puerto/cliente de colas: `notify_document_approved` devuelve si publicó y `solicitar_alta_sigrid(document_id, accion)`  |  Verificación: `pytest services/albaranes-front -k "f053_colas or f053_r44"`
@@ -79,6 +83,49 @@ sigrid-api tal como esté en la spec de F-009 (v8, `8a6ecab`; códigos incluidos
 
 - [ ] T26: (espera a F-009 desplegada) LOCAL (Azurite + PostgreSQL local + sigrid-api en **simulación**, `ALTA_SIGRID_COMMIT` sin poner): aprobar siete documentos —uno todo vinculado, uno con líneas sin vincular con partida (producto por defecto `MA9999` en la previa), uno con una línea de alquiler de maquinaria (`QA9999`) y otra cambiada a mano en sv4 a `XA9999`, uno con una línea negativa, uno sin contrato valorado a mano con una línea sin partida, uno cuyo número ya está en Sigrid, uno con un descuento (cantidad > 0, importe < 0)— e intentar aprobar uno sin valorar (rechazado); leer `psql "$env:ALBARANES_DB_URL" -c "SELECT document_id, estado, modo, sigrid_cod, motivos_json FROM albaran_altas_sigrid;"`. VERDE si salen `simulado` ×5 (con partidas o sin ellas, productos y signo pedidos en la previa), `ya_en_sigrid` y `revisar` con `signo_incoherente` (sin llamada a sigrid-api), y desaprobar el primero funciona (no es bloqueante)  |  Verificación: MANUAL (humano)
 - [ ] T27: Cerrojo real: con un alta puesta a mano en `registrado` en la BBDD LOCAL, probar en `http://localhost:8004` guardar, desaprobar, deshacer, borrar, revalorar y cambiar el producto de una línea; todos rechazados y las filas del merge y de la valoración sin cambios  |  Verificación: MANUAL (humano)
+- [ ] T27b (H4, R45; con T26/T27, mismo PostgreSQL LOCAL, nunca Azure): carrera de dos sesiones. Terminal A hace de sv9 (bloquea el merge e inserta `en_curso` SIN confirmar); terminal B lanza la mirada REAL de sv3 (`buscar_conservado_por_alta`), que debe quedarse esperando; A confirma; B debe imprimir `ExistingDocument(document_id='<ID>', ..., conservado_por_alta=True)`. ROJO si imprime `None` o si no espera. Al terminar, A borra el alta de prueba. Comandos exactos debajo  |  Verificación: MANUAL (humano)
+
+Terminal A (`$env:ALBARANES_DB_URL` = `postgresql://<usuario>:<clave>@localhost:5432/<bbdd>`, la LOCAL):
+
+```sql
+-- psql "$env:ALBARANES_DB_URL"
+SELECT m.id, m.source_sha256 FROM albaran_documents_merge m
+ WHERE NOT EXISTS (SELECT 1 FROM albaran_altas_sigrid a WHERE a.document_id = m.id) LIMIT 1;  -- apunta <ID> y <SHA>
+BEGIN;
+SELECT m.id FROM albaran_documents_merge m LEFT JOIN albaran_altas_sigrid a ON a.document_id = m.id
+ WHERE m.id = '<ID>' FOR UPDATE OF m;                       -- el cerrojo de reclamar (sv9)
+INSERT INTO albaran_altas_sigrid (document_id, estado, creado_at_utc)
+ VALUES ('<ID>', 'en_curso', '2026-10-07T00:00:00+00:00');  -- SIN COMMIT todavía
+-- (ahora, terminal B; cuando B esté esperando:)
+COMMIT;
+-- (al terminar la prueba:)
+DELETE FROM albaran_altas_sigrid WHERE document_id = '<ID>';
+```
+
+Terminal B (PowerShell, en el worktree; el script se niega si la URL no es `localhost`):
+
+```powershell
+@'
+import os, sys
+from urllib.parse import urlsplit
+from infrastructure.database.phase2_ddl import apply_phase2_ddl
+from infrastructure.database.session_factory import SessionFactory
+from infrastructure.database.sqlalchemy_albaran_repository import SqlAlchemyAlbaranRepository
+url = os.environ["ALBARANES_DB_URL"].replace("postgresql://", "postgresql+psycopg://", 1)
+assert urlsplit(url).hostname in ("localhost", "127.0.0.1"), "solo contra el PostgreSQL LOCAL"
+base, bbdd = url.rsplit("/", 1)
+fabrica = SessionFactory(url, base + "/postgres", bbdd)
+repo = SqlAlchemyAlbaranRepository(session_factory=fabrica)
+repo.initialize(); apply_phase2_ddl(fabrica)  # el DDL ANTES de que A abra su transaccion
+input("Terminal A: BEGIN, FOR UPDATE e INSERT en_curso SIN COMMIT. Luego pulsa Enter aqui. ")
+print("Mirando el alta: debe quedarse esperando hasta el COMMIT de A...")
+print(repo.buscar_conservado_por_alta(sys.argv[1]))
+'@ | Set-Content -Encoding utf8 "$env:TEMP\h4_r45.py"
+cd C:\Users\pgris\PycharmProjects\albaranes-F-053\services\albaranes-persistencia
+$env:PYTHONPATH = "$PWD;$PWD\..\albaranes-comun"
+C:\Users\pgris\PycharmProjects\albaranes\.venv\Scripts\python.exe "$env:TEMP\h4_r45.py" '<SHA>'
+```
+
 - [ ] T28: AZURE en simulación (con F-009 desplegada y tras desplegar sv6 y sv3 → sv9 → sv4 con DESDE puesta): revisar a diario los `simulado`/`revisar`/`no_admitido` y comparar con la medición de T0  |  Verificación: MANUAL (humano) — mismo SELECT contra la BBDD real, solo lectura
 - [ ] T29: PRIMERA GRABACIÓN REAL, con autorización expresa y sobre un albarán elegido por el humano: llave `SIGRID_ALBARAN_WRITE_ENABLED` de F-009 abierta (la abre el proyecto sigrid-api), `ALTA_SIGRID_COMMIT=true`, aprobar, comprobar en la UI de Sigrid cabecera, líneas (vinculadas y genéricas), partidas, naturaleza y cuenta analítica de las genéricas (`MA99`/`QA99`/`XA99` y `<obra>.<sufijo>`; contrato H10, H34), `cod2` y enlace a planificación de compras de las vinculadas (H35), stock, `canser` y el PDF adjunto; volver a publicar a mano en `q-feedback` el mensaje de alta de ese documento y comprobar que no se crea otro (sigue `registrado` sin cambios)  |  Verificación: MANUAL (humano)
 - [ ] T30: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`

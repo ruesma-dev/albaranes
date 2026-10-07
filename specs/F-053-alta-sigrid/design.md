@@ -79,8 +79,7 @@ sv9, `services/albaranes-alta-sigrid/` (estructura de sv6; primera línea de cad
   avisos_bloqueantes) -> list[Motivo]` (R17; con `idempotente`, solo `registrado_distinto` de R15).
 - `domain/services/clasificador.py` — puro: respuesta de sigrid-api → estado, con la tabla de §2 como dato
   (R15, R18, R20, R21).
-- `application/alta_sigrid_service.py` — `AltaSigridService.procesar(mensaje)`: orquesta §5; única clase que
-  conoce el modo.
+- `application/alta_sigrid_service.py` — `AltaSigridService.procesar(mensaje)`: orquesta §5; única que conoce el modo.
 - `infrastructure/database/sql_alta_repository.py` — SQL con `text()` de SQLAlchemy y `ruesma_comun.db`.
 - `infrastructure/sigrid/sigrid_api_alta_client.py` — httpx + tenacity (R24); la grabación usa un cliente sin
   reintentos y `timeout` 240 s (> 230 s del balanceador). Guarda de la respuesta solo lo de R16.
@@ -106,7 +105,8 @@ sv4: `templates/_alta_sigrid.html` (panel de la ficha, R29–R30).
 - `services/albaranes-comun/ruesma_comun/colas/mensajes.py` — `MensajeFeedback.accion: Literal["alta",
   "verificar_anulacion"] = "alta"`; docstring: consumidor sv9. Tocar comun obliga a reconstruir todas las imágenes.
 - sv3 — `albaran_altas_sigrid` (§6) en `phase2_ddl`. R45: `run` mira el alta (`buscar_conservado_por_alta`, con los
-  `ESTADOS_ALTA_BLOQUEANTES` de comun) antes de SharePoint y de las dos ramas; `save` repite con `FOR UPDATE OF m`.
+  `ESTADOS_ALTA_BLOQUEANTES`) antes de SharePoint y de las dos ramas, y `save` repite: `FOR UPDATE` de los merges y
+  luego, en otra sentencia, el alta (una sola, en READ COMMITTED, no ve lo que sv9 confirma mientras espera; H4).
 - `services/albaran-valoracion-persist/infrastructure/database/schema_contribution.py` y `orm_valuation_models.py`
   — columna `producto_sigrid` (§6) en DDL y ORM (nula, sin defecto: el replace la deja `NULL`, R42). Ninguna
   lógica de sv6 cambia. sv6 es el dueño de las tablas de valoración (`docs/ARCHITECTURE.md`), no sv3.
