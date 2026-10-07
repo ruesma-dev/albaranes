@@ -42,6 +42,16 @@ cobertura 96,2 % (1421/1477). Seguridad: ninguna ruta de sv9 graba sin `ALTA_SIG
 duplicado; la API `/persist` de sv3 escribe metadatos de fase 2 sobre un conservado; el re-fetch de sv3 depende de
 T19). **Pendiente**: re-review de la pasada 2 + remate; repetir T0.
 
+**Fase 1 · pasada 3 HECHA (2026-10-07, implementer)** tras la review CHANGES_REQUESTED de la pasada 2
+(`progress/review_F-053_fase1_pasada2.md`, **H4**: la mirada de R45 en UNA sentencia no veía el alta que sv9 confirma
+mientras sv3 espera el cerrojo). Commits `3963164` (T40: `_conservar_por_alta` en dos sentencias, primero el `FOR
+UPDATE` de los merges y luego el alta con `ANY(:ids)`; tests de la carrera, de la papelera (C9) y sin merges) y
+`538f746` (T41: design §4 con el motivo, T40 `[x]` y **T27b**, la prueba MANUAL de dos sesiones en el PostgreSQL
+LOCAL, con sus comandos). Fase RED 9 failed; controles N1–N5 cazados (9, 9, 2, 2, 1). Suites: sv3 482, raíz 1083;
+cobertura 96,2 % (1425/1481); topes 150/150 y 250/250. Informe: `progress/impl_F-053_fase1_pasada3.md`, con dos
+observaciones para el líder (§7: el design de sv4 `_exigir_desbloqueado` repite el patrón de H4; `SQL_RECLAMAR` de
+sv9 también, cubierto por el consumidor secuencial). **Pendiente**: re-review de la pasada 3; MANUAL T27b (humano).
+
 **F-051 · `blocked` (2026-10-06) y FUSIONADA en `dev`.** Implementación APROBADA por el reviewer (pasada 2) e `init.sh`
 en verde. **T21 hecha** (evals con LLM, 2026-10-06 11:07 UTC, informe local `progress/evals_F-051.md`): frente a F-048,
 IA3 417→397 fallos, E2E 545→522, partida final 102→85; IA1 e IA4 iguales; los 4 casos que empeoran son variación del
