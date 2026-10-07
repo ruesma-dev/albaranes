@@ -684,8 +684,11 @@ pendiente de implementar.
   una obra no válida (casos: 0937 inventada; 4 MACOTRAN en 4 obras erróneas).
 - 🔶 **Proveedor = razón social del bloque fiscal (con CIF), nunca la marca
   del logotipo.** Red en sv3: resolución por CIF contra Sigrid; si el CIF no
-  casa pero el nombre contiene un proveedor con contrato en la obra →
-  propuesta a revisión. (Caso "GRUPO OTTO HORPRESOL" vs HORPRESOL, S.L.)
+  casa y hay un candidato claro con contrato en la obra (CIF válido, nombre
+  completo; ante empate, el de CIF más cercano al leído) → **se aplica y va
+  a revisión** (F-062: el CIF mal leído por la IA ya no deja el albarán sin
+  contrato); si no hay candidato claro → propuesta a revisión. (Casos
+  "GRUPO OTTO HORPRESOL" vs HORPRESOL, S.L.; 19407, 19394 y 1790636816.)
 - 🔶 **Guard de año en fechas**: `fecha_albaran` a >1 año de la recepción del
   email → revisión (caso 2023 vs 2026 en foto).
 - ✅ 1 página = 1 albarán (split en sv1).
