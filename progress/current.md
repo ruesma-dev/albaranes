@@ -18,6 +18,16 @@ están `blocked` en las suyas. Entorno del worktree: venvs del árbol principal 
 ### F-062 · estado de la implementación
 
 - Arranque: `bash harness/init.sh` en verde en el worktree (2026-10-07). F-062 → `in_progress`, `BACKLOG.md` regenerado.
+- **T1–T10 hechas** (un commit por tarea). En curso: T11 (cobertura y campaña de mutación) y T13 (`init.sh`).
+- **Desviaciones (justificadas en `progress/impl_F-062.md` §2)**: (1) los tests de la nota de F-052
+  (`test_f052_nota_proveedor.py`) también pasan a `correccion_enabled=False`, como los de D3 de F-002 (el design solo
+  nombraba F-002; SALMEDINA en la 0691 es candidato claro y con la corrección encendida esos tests pasaban por el
+  camino «aplicar falla»); (2) R15 también en la rama «sin candidato claro» (se retiran correcciones caducadas);
+  (3) con el interruptor apagado no se retira nada ni se añade la frase del control (R12 «exactamente como antes»);
+  (4) `.env.example` de sv3 documenta los tres `RED_PROVEEDOR_CORRECCION_*`.
+- **KO de entorno conocido**: `test_f052_t19_script_arranca_como_script_desde_otra_carpeta` lanza el script SIN
+  `PYTHONPATH` y el venv del árbol principal importa `ruesma_comun` de `../albaranes` (sin `proveedores`): falla solo
+  en el worktree; en `dev`/árbol principal con comun fusionado pasa.
 
 **F-051 · `blocked` (2026-10-06) y FUSIONADA en `dev`.** Implementación APROBADA por el reviewer (pasada 2) e `init.sh`
 en verde. **T21 hecha** (evals con LLM, 2026-10-06 11:07 UTC, informe local `progress/evals_F-051.md`): frente a F-048,
