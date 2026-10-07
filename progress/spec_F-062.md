@@ -60,6 +60,8 @@ seguridad determinista y sigue valiendo después: verifica lo que elija la IA.
 
 ## 4. Preguntas para la PARADA 1 (cerradas, con recomendación)
 
+**Respuesta del humano (2026-10-07): «si me vale»: Q0–Q6 aceptadas con la recomendación; PARADA 1 aprobada; implementar ya y fusionar en `dev` antes que F-053.** F-062 pasa a `spec_ready`.
+
 - **Q0 · «Que proponga uno» = aplicarlo** (CIF y razón social de Sigrid en el merge antes de buscar contratos;
   lo leído queda en la nota y el motivo). *Recomendación: sí.* Hoy la nota ya propone uno: si el humano solo
   quería eso, F-062 sobra.
