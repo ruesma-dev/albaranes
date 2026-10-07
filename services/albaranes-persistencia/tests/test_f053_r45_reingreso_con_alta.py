@@ -262,3 +262,153 @@ def test_f053_r45_el_pipeline_no_reprocesa_el_documento_conservado(caplog):
     assert resultado.ok and resultado.duplicate is True
     assert resultado.document_id == _MERGE_ID and resultado.stored_lines == 4
     assert _MERGE_ID in caplog.text
+
+
+# ------------------------------------------------------------------ #
+# D3 (decisión del humano, 2026-10-07): «un albarán no se puede pisar».
+# La mirada del alta tiene su propio método del repositorio, para que el
+# pipeline la haga ANTES de tocar nada (también en la rama de duplicado).
+# ------------------------------------------------------------------ #
+def _buscar(sesion: _Sesion):
+    repositorio = SqlAlchemyAlbaranRepository(session_factory=_Fabrica(sesion))
+    repositorio._initialized_generation = _Fabrica.generation  # sin crear tablas
+    return repositorio.buscar_conservado_por_alta(_SHA)
+
+
+@pytest.mark.parametrize("estado", ["en_curso", "incierto", "registrado"])
+def test_f053_r45_buscar_conservado_con_alta_bloqueante_lo_devuelve_sin_escribir(estado, caplog):
+    caplog.set_level(logging.WARNING)
+    sesion = _Sesion(estado_alta=estado)
+    conservado = _buscar(sesion)
+    assert conservado == ExistingDocument(
+        document_id=_MERGE_ID, source_sha256=_SHA, sharepoint_url="https://sp/albaran.pdf",
+        stored_lines=4, conservado_por_alta=True,
+    )
+    # Solo lectura: ni borra, ni añade, ni confirma; la misma consulta que ``save``.
+    assert sesion.borrados == [] and sesion.anadidos == [] and not sesion.confirmada
+    assert not any(s.lstrip().upper().startswith(("DELETE", "UPDATE", "INSERT")) for s in sesion.sql)
+    (consulta,) = [s for s in sesion.sql if "albaran_altas_sigrid" in s and "to_regclass" not in s]
+    assert "FOR UPDATE" in consulta
+    assert _MERGE_ID in caplog.text and estado in caplog.text and "AC26/0001" in caplog.text
+
+
+@pytest.mark.parametrize("estado", [
+    None, "no_admitido", "ya_en_sigrid", "simulado", "revisar", "error", "anulado",
+])
+def test_f053_r45_buscar_conservado_sin_alta_bloqueante_es_none(estado):
+    sesion = _Sesion(estado_alta=estado)
+    assert _buscar(sesion) is None
+    assert sesion.borrados == [] and sesion.anadidos == [] and not sesion.confirmada
+
+
+def test_f053_r45_buscar_conservado_sin_tabla_de_altas_es_none():
+    sesion = _Sesion(estado_alta="registrado", hay_tabla_altas=False)
+    assert _buscar(sesion) is None
+    assert not any("albaran_altas_sigrid" in s and "to_regclass" not in s for s in sesion.sql)
+
+
+class _Espia:
+    """Doble que apunta cualquier método al que se le llame (los pasos del
+    pipeline son best-effort: una excepción se la tragarían)."""
+
+    def __init__(self, nombre: str, llamadas: list[str]) -> None:
+        self._nombre = nombre
+        self._llamadas = llamadas
+
+    def __getattr__(self, metodo):
+        def _apuntar(*_args, **_kwargs):
+            self._llamadas.append(f"{self._nombre}.{metodo}")
+            return None
+        return _apuntar
+
+
+class _RepoActivoConservado:
+    """El documento está ACTIVO (``get_by_sha256`` lo ve) y tiene un alta
+    bloqueante. Apunta todo lo que el pipeline le pida además de mirar."""
+
+    def __init__(self, llamadas: list[str], *, activo: bool = True,
+                 conservado: bool = True) -> None:
+        self.llamadas = llamadas
+        self.activo = activo
+        self.conservado = conservado
+
+    def get_by_sha256(self, source_sha256: str):
+        assert source_sha256 == _SHA
+        if not self.activo:
+            return None
+        return ExistingDocument(document_id=_MERGE_ID, source_sha256=_SHA,
+                                sharepoint_url="https://sp/albaran.pdf", stored_lines=4)
+
+    def buscar_conservado_por_alta(self, source_sha256: str):
+        assert source_sha256 == _SHA
+        if not self.conservado:
+            return None
+        return ExistingDocument(document_id=_MERGE_ID, source_sha256=_SHA,
+                                sharepoint_url="https://sp/albaran.pdf", stored_lines=4,
+                                conservado_por_alta=True)
+
+    def has_selected_contrato_with_lines(self, *, document_id: str):
+        self.llamadas.append("repo.has_selected_contrato_with_lines")
+        return True, "CTSU24/0228"
+
+    def __getattr__(self, nombre):
+        def _apuntar(*_args, **_kwargs):
+            self.llamadas.append(f"repo.{nombre}")
+            return None
+        return _apuntar
+
+
+def _pipeline_espiado(repo, llamadas: list[str]) -> PersistAlbaranPipeline:
+    return PersistAlbaranPipeline(
+        repository=repo, document_storage=_Espia("sharepoint", llamadas),
+        normalizer=_Normalizador(),
+        header_resolver_service=_Espia("cabecera", llamadas),
+        obra_enrichment_service=_Espia("obra", llamadas),
+        contrato_enrichment_service=_Espia("contratos", llamadas),
+        valuation_trigger=_Espia("valoracion", llamadas),
+        fecha_guard_service=_Espia("fecha", llamadas),
+    )
+
+
+def _reingresar(pipeline: PersistAlbaranPipeline, *, force_refetch: bool = False):
+    envelope = _envelope_dict()
+    envelope["data"]["clasificacion"] = {"familia": "residuos", "confianza_pct": 100.0, "motivo": "LER",
+                                         "mixto": False, "familias_secundarias": [], "origen": "ia2"}
+    envelope["data"]["lineas"][0]["contexto_linea"] = {"tipo_familia": "residuos", "rol_linea": "base",
+                                                       "codigo_ler": "170604", "volumen_m3": 6.0}
+    return pipeline.run(PersistAlbaranRequest(
+        filename="ALB.pdf", mime_type="application/pdf", file_bytes=_PDF,
+        extraction_envelope=envelope, context={}, force_refetch=force_refetch,
+    ))
+
+
+@pytest.mark.parametrize("force_refetch", [False, True])
+def test_f053_r45_d3_reingreso_de_un_activo_con_alta_no_toca_nada(force_refetch, caplog):
+    """1a: la rama de duplicado no reescribe clasificación ni contexto de
+    líneas, no resuelve cabecera, no re-enriquece obra ni contratos y no
+    revalora (aunque el reingreso venga con ``force_refetch``)."""
+    caplog.set_level(logging.INFO)
+    llamadas: list[str] = []
+    resultado = _reingresar(
+        _pipeline_espiado(_RepoActivoConservado(llamadas), llamadas), force_refetch=force_refetch,
+    )
+    assert llamadas == []
+    assert resultado.ok and resultado.duplicate is True
+    assert resultado.document_id == _MERGE_ID and resultado.stored_lines == 4
+    assert resultado.sharepoint_url == "https://sp/albaran.pdf"
+    assert resultado.contratos_count == 0 and resultado.selected_contrato_codigo is None
+    assert any(_MERGE_ID in r.getMessage() and "conservado_por_alta=True" in r.getMessage()
+               for r in caplog.records)
+
+
+def test_f053_r45_d3_reingreso_de_un_activo_sin_alta_bloqueante_se_reprocesa_como_hoy():
+    llamadas: list[str] = []
+    resultado = _reingresar(
+        _pipeline_espiado(_RepoActivoConservado(llamadas, conservado=False), llamadas),
+    )
+    assert resultado.duplicate is True
+    for paso in ("repo.update_merge_clasificacion", "repo.update_merge_lineas_contexto",
+                 "cabecera.resolve_merge_document", "obra.enrich_merge_document",
+                 "valoracion.trigger_async"):
+        assert paso in llamadas, (paso, llamadas)
+    assert not any(c.startswith("sharepoint.") for c in llamadas)

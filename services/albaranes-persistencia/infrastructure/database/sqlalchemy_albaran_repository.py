@@ -2080,6 +2080,19 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
                 return None, None
             return document.fecha, document.email_received_datetime
 
+    def buscar_conservado_por_alta(
+        self, source_sha256: str
+    ) -> ExistingDocument | None:
+        """(F-053 · R45, decisión D3 del humano) La mirada de
+        ``_conservar_por_alta`` en su propia sesión, para que el pipeline
+        la haga antes de tocar nada. Solo lectura: la sesión se cierra sin
+        confirmar (el ``FOR UPDATE`` se suelta al cerrarla)."""
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            return self._conservar_por_alta(
+                session=session, source_sha256=source_sha256,
+            )
+
     def _conservar_por_alta(
         self, *, session: Any, source_sha256: str
     ) -> ExistingDocument | None:

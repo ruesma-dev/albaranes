@@ -105,6 +105,12 @@ class PersistAlbaranPipeline:
                 sha256,
                 existing.document_id,
             )
+            # (F-053 · R45, D3) «Un albarán no se puede pisar»: con un alta
+            # en Sigrid bloqueante no se reescribe, no se re-enriquece y
+            # no se revalora nada (lo mismo que sv4 impide, R25).
+            conservado = self._repository.buscar_conservado_por_alta(sha256)
+            if conservado is not None:
+                return self._devolver_conservado(conservado)
             # (F-043 · R22, T31) La clasificación que trae ESTE envelope
             # va a las seis columnas del merge ANTES de re-enriquecer y,
             # sobre todo, antes de disparar la valoración: sv6 las lee
@@ -203,18 +209,7 @@ class PersistAlbaranPipeline:
             # (F-053 · R45, D1) Tiene un alta en Sigrid bloqueante: se
             # conserva tal cual. Ni se enriquece ni se revalora (lo mismo
             # que sv4 impide mientras el alta bloquea, R25).
-            logger.info(
-                "[pipeline] FIN persist document_id=%s duplicate=True "
-                "conservado_por_alta=True (sin reprocesar)",
-                saved.document_id,
-            )
-            return PersistAlbaranResult(
-                ok=True,
-                document_id=saved.document_id,
-                sharepoint_url=saved.sharepoint_url,
-                duplicate=True,
-                stored_lines=saved.stored_lines,
-            )
+            return self._devolver_conservado(saved)
 
         # Pipeline de enriquecimiento. ORDEN IMPORTA:
         #  1) Obra: sobrescribe nombre_obra y obra_direccion en el merge.
@@ -262,6 +257,23 @@ class PersistAlbaranPipeline:
             stored_lines=saved.stored_lines,
             contratos_count=contratos_count,
             selected_contrato_codigo=selected_codigo,
+        )
+
+    @staticmethod
+    def _devolver_conservado(conservado: Any) -> PersistAlbaranResult:
+        """(F-053 · R45) Duplicado conservado por su alta en Sigrid: se
+        devuelve tal cual, sin enriquecer ni revalorar."""
+        logger.info(
+            "[pipeline] FIN persist document_id=%s duplicate=True "
+            "conservado_por_alta=True (sin reprocesar)",
+            conservado.document_id,
+        )
+        return PersistAlbaranResult(
+            ok=True,
+            document_id=conservado.document_id,
+            sharepoint_url=conservado.sharepoint_url,
+            duplicate=True,
+            stored_lines=conservado.stored_lines,
         )
 
     def _persist_clasificacion_safely(
