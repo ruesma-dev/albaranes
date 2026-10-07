@@ -76,6 +76,9 @@ class _Filas:
     def mappings(self):
         return self
 
+    def scalars(self):
+        return self
+
     def __iter__(self):
         return iter(self._filas)
 
@@ -83,10 +86,29 @@ class _Filas:
         return self._filas[0] if self._filas else None
 
 
+_IGUAL = object()
+
+
 class _Sesion:
-    def __init__(self, *, estado_alta: str | None, hay_tabla_altas: bool = True) -> None:
+    """Simula READ COMMITTED lo justo para la carrera con sv9 (H4): la
+    instantánea de una sentencia se toma AL EMPEZAR, también si luego espera
+    un cerrojo. ``estado_antes_del_cerrojo`` es el alta que ve una sentencia
+    que arranca antes de tener el cerrojo de los merges (sv9 aún sin
+    confirmar); ``estado_alta``, la que ve una sentencia lanzada ya con él.
+    ``en_papelera``: el merge tiene ``is_active = false`` y una sentencia que
+    filtre por ``is_active`` no lo ve (C9)."""
+
+    def __init__(self, *, estado_alta: str | None, hay_tabla_altas: bool = True,
+                 estado_antes_del_cerrojo=_IGUAL, en_papelera: bool = False,
+                 hay_merge: bool = True) -> None:
         self.estado_alta = estado_alta
+        self.estado_antes_del_cerrojo = (
+            estado_alta if estado_antes_del_cerrojo is _IGUAL else estado_antes_del_cerrojo
+        )
         self.hay_tabla_altas = hay_tabla_altas
+        self.en_papelera = en_papelera
+        self.hay_merge = hay_merge
+        self.con_cerrojo = False
         self.merge_previo = AlbaranDocumentMergeOrm(
             id=_MERGE_ID, source_sha256=_SHA, sharepoint_share_url="https://sp/albaran.pdf",
         )
@@ -108,11 +130,21 @@ class _Sesion:
         self.sql.append(texto)
         if "to_regclass" in texto:
             return _Filas([self.hay_tabla_altas])
-        if "albaran_altas_sigrid" in texto:
+        bloquea = "FOR UPDATE" in texto and "albaran_documents_merge" in texto
+        lee_alta = "albaran_altas_sigrid" in texto
+        if not (bloquea or lee_alta):
+            return _Filas([])  # el DELETE de contratos
+        # Instantánea del ARRANQUE de la sentencia (antes de esperar el cerrojo).
+        estado = self.estado_alta if self.con_cerrojo else self.estado_antes_del_cerrojo
+        if bloquea:
+            self.con_cerrojo = True
+        visible = self.hay_merge and not (self.en_papelera and "is_active" in texto)
+        if not lee_alta:  # solo el cerrojo de los merges: sus ``id``
             assert parametros == {"sha": _SHA}
-            return _Filas([{"document_id": _MERGE_ID, "estado": self.estado_alta,
-                            "sigrid_cod": "AC26/0001"}])
-        return _Filas([])  # el DELETE de contratos
+            return _Filas([_MERGE_ID] if visible else [])
+        assert parametros in ({"sha": _SHA}, {"ids": [_MERGE_ID]}), parametros
+        return _Filas([{"document_id": _MERGE_ID, "estado": estado,
+                        "sigrid_cod": "AC26/0001"}] if visible else [])
 
     def scalars(self, consulta):
         entidad = consulta.column_descriptions[0]["entity"]
@@ -168,6 +200,29 @@ def _guardar(sesion: _Sesion) -> ExistingDocument:
     )
 
 
+def _buscar(sesion: _Sesion):
+    repositorio = SqlAlchemyAlbaranRepository(session_factory=_Fabrica(sesion))
+    repositorio._initialized_generation = _Fabrica.generation  # sin crear tablas
+    return repositorio.buscar_conservado_por_alta(_SHA)
+
+
+def _sentencias_r45(sql: list[str]) -> tuple[list[int], list[int]]:
+    """Posiciones del cerrojo de los merges y de la lectura del alta."""
+    cerrojos = [i for i, s in enumerate(sql) if "FOR UPDATE" in s and "albaran_documents_merge" in s]
+    lecturas = [i for i, s in enumerate(sql) if "albaran_altas_sigrid" in s and "to_regclass" not in s]
+    return cerrojos, lecturas
+
+
+def _comprobar_cerrojo_antes_de_leer_el_alta(sql: list[str]) -> None:
+    """H4: el cerrojo de los merges va en una sentencia ANTERIOR y DISTINTA a
+    la lectura de ``albaran_altas_sigrid``. En READ COMMITTED la instantánea
+    se toma al empezar la sentencia: si una sola esperase el cerrojo, no vería
+    el alta que sv9 confirma mientras tanto."""
+    cerrojos, lecturas = _sentencias_r45(sql)
+    assert len(cerrojos) == 1 and len(lecturas) == 1, sql
+    assert cerrojos[0] < lecturas[0], sql
+
+
 @pytest.mark.parametrize("estado", ["en_curso", "incierto", "registrado"])
 def test_f053_r45_reingreso_con_alta_bloqueante_no_borra_y_conserva(estado, caplog):
     caplog.set_level(logging.WARNING)
@@ -182,9 +237,8 @@ def test_f053_r45_reingreso_con_alta_bloqueante_no_borra_y_conserva(estado, capl
         document_id=_MERGE_ID, source_sha256=_SHA, sharepoint_url="https://sp/albaran.pdf",
         stored_lines=4, conservado_por_alta=True,
     )
-    # El merge queda bloqueado mientras se mira el alta (carrera con sv9).
-    (consulta,) = [s for s in sesion.sql if "albaran_altas_sigrid" in s and "to_regclass" not in s]
-    assert "FOR UPDATE" in consulta
+    # El merge queda bloqueado ANTES de mirar el alta (carrera con sv9, H4).
+    _comprobar_cerrojo_antes_de_leer_el_alta(sesion.sql)
     # Log claro: documento, estado y código de Sigrid.
     assert _MERGE_ID in caplog.text and estado in caplog.text and "AC26/0001" in caplog.text
 
@@ -199,6 +253,44 @@ def test_f053_r45_sin_alta_o_no_bloqueante_se_borra_y_se_guarda_como_hoy(estado)
     assert sesion.confirmada and not sesion.deshecha
     assert any(isinstance(d, AlbaranDocumentMergeOrm) for d in sesion.anadidos)
     assert guardado.document_id != _MERGE_ID and guardado.conservado_por_alta is False
+
+
+@pytest.mark.parametrize("mirada", ["save", "buscar"])
+def test_f053_r45_h4_alta_confirmada_mientras_espera_el_cerrojo_se_conserva(mirada):
+    """H4 (review pasada 2): sv9 bloquea el merge e inserta ``en_curso`` sin
+    confirmar; sv3 lanza la mirada y espera el cerrojo; sv9 confirma. sv3
+    tiene que ver ``en_curso`` y conservar, no borrar (el CASCADE se llevaría
+    el alta mientras sv9 sigue hacia la grabación)."""
+    sesion = _Sesion(estado_alta="en_curso", estado_antes_del_cerrojo=None)
+    resultado = _guardar(sesion) if mirada == "save" else _buscar(sesion)
+    assert resultado is not None and resultado.conservado_por_alta is True
+    assert resultado.document_id == _MERGE_ID
+    assert sesion.borrados == [] and sesion.anadidos == [] and not sesion.confirmada
+    _comprobar_cerrojo_antes_de_leer_el_alta(sesion.sql)
+
+
+@pytest.mark.parametrize("mirada", ["save", "buscar"])
+def test_f053_r45_c9_merge_en_la_papelera_con_alta_se_conserva(mirada):
+    """C9 (review pasada 2): R45 cubre también el merge en la papelera
+    (``is_active = false``, D3). Ni el cerrojo ni la lectura del alta filtran
+    por ``is_active``."""
+    sesion = _Sesion(estado_alta="registrado", en_papelera=True)
+    resultado = _guardar(sesion) if mirada == "save" else _buscar(sesion)
+    assert resultado is not None and resultado.conservado_por_alta is True
+    assert resultado.document_id == _MERGE_ID
+    assert sesion.borrados == [] and not sesion.confirmada
+    cerrojos, lecturas = _sentencias_r45(sesion.sql)
+    assert cerrojos and lecturas
+    assert not any("is_active" in sesion.sql[i] for i in cerrojos + lecturas), sesion.sql
+
+
+def test_f053_r45_sin_merges_del_sha_no_lee_el_alta():
+    """Sin merges con ese ``source_sha256`` no hay alta que mirar: no se lanza
+    la segunda sentencia."""
+    sesion = _Sesion(estado_alta="registrado", hay_merge=False)
+    assert _buscar(sesion) is None
+    cerrojos, lecturas = _sentencias_r45(sesion.sql)
+    assert len(cerrojos) == 1 and lecturas == []
 
 
 def test_f053_r45_sin_tabla_de_altas_se_borra_como_hoy():
@@ -279,12 +371,6 @@ def test_f053_r45_el_pipeline_no_reprocesa_el_documento_conservado(caplog):
 # La mirada del alta tiene su propio método del repositorio, para que el
 # pipeline la haga ANTES de tocar nada (también en la rama de duplicado).
 # ------------------------------------------------------------------ #
-def _buscar(sesion: _Sesion):
-    repositorio = SqlAlchemyAlbaranRepository(session_factory=_Fabrica(sesion))
-    repositorio._initialized_generation = _Fabrica.generation  # sin crear tablas
-    return repositorio.buscar_conservado_por_alta(_SHA)
-
-
 @pytest.mark.parametrize("estado", ["en_curso", "incierto", "registrado"])
 def test_f053_r45_buscar_conservado_con_alta_bloqueante_lo_devuelve_sin_escribir(estado, caplog):
     caplog.set_level(logging.WARNING)
@@ -297,8 +383,7 @@ def test_f053_r45_buscar_conservado_con_alta_bloqueante_lo_devuelve_sin_escribir
     # Solo lectura: ni borra, ni añade, ni confirma; la misma consulta que ``save``.
     assert sesion.borrados == [] and sesion.anadidos == [] and not sesion.confirmada
     assert not any(s.lstrip().upper().startswith(("DELETE", "UPDATE", "INSERT")) for s in sesion.sql)
-    (consulta,) = [s for s in sesion.sql if "albaran_altas_sigrid" in s and "to_regclass" not in s]
-    assert "FOR UPDATE" in consulta
+    _comprobar_cerrojo_antes_de_leer_el_alta(sesion.sql)
     assert _MERGE_ID in caplog.text and estado in caplog.text and "AC26/0001" in caplog.text
 
 

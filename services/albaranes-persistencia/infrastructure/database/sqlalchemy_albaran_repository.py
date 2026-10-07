@@ -50,16 +50,21 @@ DocumentOrmType = Type[AlbaranDocumentOrm] | Type[AlbaranDocumentMergeOrm]
 LineOrmType = Type[AlbaranLineOrm] | Type[AlbaranLineMergeOrm]
 
 # (F-053 · R45) Alta en Sigrid de los merges de un PDF, en solo lectura y con
-# los merges bloqueados: ``save`` no borra uno con un alta bloqueante.
+# los merges bloqueados: ``save`` no borra uno con un alta bloqueante. Son DOS
+# sentencias a propósito (H4): en READ COMMITTED la instantánea se toma al
+# empezar la sentencia, así que una sola que esperase el cerrojo no vería el
+# alta que sv9 confirma mientras tanto. Primero el cerrojo; después, ya con
+# él, la lectura del alta con instantánea nueva. Ninguna filtra por
+# ``is_active``: R45 cubre también la papelera.
 _SQL_EXISTE_TABLA_ALTAS = text(
     "SELECT to_regclass('albaran_altas_sigrid') IS NOT NULL"
 )
-_SQL_ALTAS_DEL_SHA = text(
-    "SELECT m.id AS document_id, a.estado AS estado, a.sigrid_cod AS sigrid_cod "
-    "FROM albaran_documents_merge m "
-    "LEFT JOIN albaran_altas_sigrid a ON a.document_id = m.id "
-    "WHERE m.source_sha256 = :sha "
-    "FOR UPDATE OF m"
+_SQL_BLOQUEAR_MERGES_DEL_SHA = text(
+    "SELECT id FROM albaran_documents_merge WHERE source_sha256 = :sha FOR UPDATE"
+)
+_SQL_ALTAS_DE_LOS_MERGES = text(
+    "SELECT document_id, estado, sigrid_cod FROM albaran_altas_sigrid "
+    "WHERE document_id = ANY(:ids)"
 )
 
 
@@ -2104,12 +2109,20 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
         ``None`` y ``save`` sigue como hoy.
 
         Lee ``albaran_altas_sigrid`` (la escribe sv9; su DDL es de sv3) en
-        solo lectura, con los merges bloqueados (``FOR UPDATE OF m``, como
-        sv9 al reclamar) para no cruzarse con un alta que empieza. Si la
-        tabla no existe (DDL de la fase 2 sin aplicar), no se consulta."""
+        solo lectura, DESPUÉS de bloquear los merges (``FOR UPDATE``, como
+        sv9 al reclamar) y en otra sentencia, para ver el alta que sv9
+        confirme mientras se espera el cerrojo (H4). Si la tabla no existe
+        (DDL de la fase 2 sin aplicar), no se consulta."""
         if not session.execute(_SQL_EXISTE_TABLA_ALTAS).scalar():
             return None
-        filas = session.execute(_SQL_ALTAS_DEL_SHA, {"sha": source_sha256}).mappings()
+        ids = [
+            str(i) for i in session.execute(
+                _SQL_BLOQUEAR_MERGES_DEL_SHA, {"sha": source_sha256}
+            ).scalars()
+        ]
+        if not ids:
+            return None
+        filas = session.execute(_SQL_ALTAS_DE_LOS_MERGES, {"ids": ids}).mappings()
         bloqueante = next(
             (f for f in filas if f["estado"] in ESTADOS_ALTA_BLOQUEANTES), None
         )
