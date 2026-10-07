@@ -509,43 +509,83 @@ class HeaderResolverService:
           - ``(None, 'consulta_fallida', 0)``: la consulta lanzo (red,
             HTTP, ``ok=false``, truncado, error de ``FOR XML``).
         """
-        if not obra_codigo_efectiva:
-            return None, MOTIVO_SIN_OBRA, 0
+        puntuados, motivo = self._candidatos_puntuados(
+            proveedor_nombre=proveedor_nombre, obra=obra_codigo_efectiva,
+        )
+        return (
+            self._mejor_de(puntuados, motivo=motivo, obra=obra_codigo_efectiva),
+            motivo,
+            len(puntuados),
+        )
+
+    def _candidatos_puntuados(
+        self,
+        *,
+        proveedor_nombre: str | None,
+        obra: str | None,
+    ) -> tuple[list[tuple[ProveedorObraResumen, float]], str]:
+        """Proveedores con contrato en la obra, cada uno con su score de
+        nombre frente al leido, y el motivo de F-052 (design §5).
+
+        Es la UNICA llamada a ``fetch_contratos_resumen_por_obra`` de la
+        pasada de la red (F-062 · design §5.2): de ella salen la propuesta
+        de F-052 y el candidato claro de F-062. Sin obra, sin nombre o con
+        la consulta fallida (incluido el truncado) la lista va vacia.
+        """
+        if not obra:
+            return [], MOTIVO_SIN_OBRA
         if not (proveedor_nombre or "").strip():
-            return None, MOTIVO_SIN_NOMBRE, 0
+            return [], MOTIVO_SIN_NOMBRE
         try:
             resumenes = list(
                 self._proveedor_client.fetch_contratos_resumen_por_obra(
-                    codigo_obra=obra_codigo_efectiva,
+                    codigo_obra=obra,
                 ) or []
             )
         except Exception:
             logger.exception(
                 "%s fetch_contratos_resumen_por_obra fallo obra=%s; la "
-                "propuesta se omite.", _LOG_PREFIX, obra_codigo_efectiva,
+                "propuesta se omite.", _LOG_PREFIX, obra,
             )
-            return None, MOTIVO_CONSULTA_FALLIDA, 0
+            return [], MOTIVO_CONSULTA_FALLIDA
+        puntuados = [
+            (resumen, _score_razon_social(proveedor_nombre, resumen.nombre))
+            for resumen in resumenes
+        ]
+        mejor_score = max((score for _, score in puntuados), default=0.0)
+        if mejor_score > 0.0 and mejor_score >= self._min_score:
+            return puntuados, MOTIVO_PROPUESTA
+        return puntuados, MOTIVO_NADIE_CASA
+
+    def _mejor_de(
+        self,
+        puntuados: list[tuple[ProveedorObraResumen, float]],
+        *,
+        motivo: str,
+        obra: str | None,
+    ) -> ProveedorObraResumen | None:
+        """La propuesta de F-052: el de mayor score; ante un empate, el
+        primero (la propuesta tiene que ser estable entre pasadas)."""
         mejor: ProveedorObraResumen | None = None
         mejor_score = 0.0
-        for resumen in resumenes:
-            score = _score_razon_social(proveedor_nombre, resumen.nombre)
+        for resumen, score in puntuados:
             if score > mejor_score:
                 mejor_score = score
                 mejor = resumen
-        if mejor is not None and mejor_score >= self._min_score:
+        if motivo == MOTIVO_PROPUESTA:
             logger.info(
                 "%s candidato de proveedor por nombre: cif=%s score=%.2f "
-                "obra=%s", _LOG_PREFIX, mejor.cif, mejor_score,
-                obra_codigo_efectiva,
+                "obra=%s", _LOG_PREFIX, mejor.cif, mejor_score, obra,
             )
-            return mejor, MOTIVO_PROPUESTA, len(resumenes)
-        logger.info(
-            "%s ningun candidato de la obra %s casa con el nombre leido "
-            "(mejor score=%.2f < %.2f, %d candidatos).",
-            _LOG_PREFIX, obra_codigo_efectiva, mejor_score, self._min_score,
-            len(resumenes),
-        )
-        return None, MOTIVO_NADIE_CASA, len(resumenes)
+            return mejor
+        if motivo == MOTIVO_NADIE_CASA:
+            logger.info(
+                "%s ningun candidato de la obra %s casa con el nombre leido "
+                "(mejor score=%.2f < %.2f, %d candidatos).",
+                _LOG_PREFIX, obra, mejor_score, self._min_score,
+                len(puntuados),
+            )
+        return None
 
     def _canonizar_nombre_safely(
         self,
