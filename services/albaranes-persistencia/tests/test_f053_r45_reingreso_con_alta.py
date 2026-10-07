@@ -10,6 +10,12 @@ sv3 lo trata como duplicado: conserva documento, merge y alta, no lo
 reprocesa (ni enriquece ni revalora) y lo deja en el log. Con un alta en otro
 estado, o sin alta, todo sigue como hoy.
 
+D3 (decisión del humano, 2026-10-07: «un albarán no se puede pisar»): el
+pipeline mira el alta (``buscar_conservado_por_alta``) ANTES de nada, así que
+ni el documento activo se reprocesa (rama de duplicado) ni se sube el PDF a
+SharePoint en ninguno de los dos caminos. ``save`` conserva su mirada para la
+carrera con sv9.
+
 ``save`` REAL del repositorio sobre una sesión doble (sin BBDD) y el pipeline
 con dobles. Sin red ni BBDD.
 """
@@ -209,11 +215,15 @@ def test_f053_r45_sin_tabla_de_altas_se_borra_como_hoy():
 # Pipeline: el conservado no se reprocesa.
 # ------------------------------------------------------------------ #
 class _RepoConservado:
-    """``get_by_sha256`` no lo ve (p. ej. está en la papelera) y ``save`` lo
-    conserva por su alta. Cualquier otro método del repositorio es un fallo."""
+    """Carrera con sv9: la mirada previa (D3) no ve alta bloqueante, el alta
+    empieza antes de ``save`` y ``save`` lo conserva en su transacción.
+    Cualquier otro método del repositorio es un fallo."""
 
     def __init__(self) -> None:
         self.guardados = 0
+
+    def buscar_conservado_por_alta(self, source_sha256: str):
+        return None
 
     def get_by_sha256(self, source_sha256: str):
         return None
@@ -351,6 +361,11 @@ class _RepoActivoConservado:
         self.llamadas.append("repo.has_selected_contrato_with_lines")
         return True, "CTSU24/0228"
 
+    def save(self, **_kwargs) -> ExistingDocument:
+        """Como el ``save`` real: lo conservaría dentro de su transacción."""
+        self.llamadas.append("repo.save")
+        return self.buscar_conservado_por_alta(_SHA)
+
     def __getattr__(self, nombre):
         def _apuntar(*_args, **_kwargs):
             self.llamadas.append(f"repo.{nombre}")
@@ -412,3 +427,46 @@ def test_f053_r45_d3_reingreso_de_un_activo_sin_alta_bloqueante_se_reprocesa_com
                  "valoracion.trigger_async"):
         assert paso in llamadas, (paso, llamadas)
     assert not any(c.startswith("sharepoint.") for c in llamadas)
+
+
+# ------------------------------------------------------------------ #
+# D3 · 1c: la mirada va ANTES de subir el PDF a SharePoint, y también
+# para el documento en la papelera (``get_by_sha256`` no lo ve).
+# ------------------------------------------------------------------ #
+def test_f053_r45_d3_reingreso_de_uno_en_la_papelera_con_alta_no_sube_nada(caplog):
+    caplog.set_level(logging.INFO)
+    llamadas: list[str] = []
+    resultado = _reingresar(
+        _pipeline_espiado(_RepoActivoConservado(llamadas, activo=False), llamadas),
+    )
+    # Ni SharePoint, ni ``save``, ni enriquecer, ni revalorar.
+    assert llamadas == []
+    assert resultado.ok and resultado.duplicate is True
+    assert resultado.document_id == _MERGE_ID and resultado.stored_lines == 4
+    assert resultado.sharepoint_url == "https://sp/albaran.pdf"
+    assert any(_MERGE_ID in r.getMessage() and "conservado_por_alta=True" in r.getMessage()
+               for r in caplog.records)
+
+
+class _RepoNuevo(_RepoActivoConservado):
+    """Sin documento activo; apunta también la mirada del alta y ``save``."""
+
+    def __init__(self, llamadas: list[str]) -> None:
+        super().__init__(llamadas, activo=False, conservado=False)
+
+    def buscar_conservado_por_alta(self, source_sha256: str):
+        self.llamadas.append("repo.buscar_conservado_por_alta")
+        return super().buscar_conservado_por_alta(source_sha256)
+
+    def save(self, **_kwargs) -> ExistingDocument:
+        self.llamadas.append("repo.save")
+        return ExistingDocument(document_id="merge-nuevo", source_sha256=_SHA,
+                                sharepoint_url=None, stored_lines=1)
+
+
+def test_f053_r45_d3_la_mirada_va_antes_de_sharepoint_y_sin_alta_se_guarda_como_hoy():
+    llamadas: list[str] = []
+    resultado = _reingresar(_pipeline_espiado(_RepoNuevo(llamadas), llamadas))
+    assert resultado.duplicate is False and resultado.document_id == "merge-nuevo"
+    assert llamadas[:3] == ["repo.buscar_conservado_por_alta", "sharepoint.upload", "repo.save"]
+    assert llamadas.count("repo.buscar_conservado_por_alta") == 1

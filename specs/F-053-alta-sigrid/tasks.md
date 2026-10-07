@@ -56,7 +56,7 @@ sigrid-api tal como esté en la spec de F-009 (v8, `8a6ecab`; códigos incluidos
 - [x] T36 (D2): `linea_de_otro_contrato` ⇒ `revisar` sin llamar a sigrid-api, con su `referencia_linea`, y WARNING de anomalía (documento, línea, los dos contratos, sin precios) (R46)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r46`
 - [x] T37 (D2): recuento `lineas_de_otro_contrato` (y sus `document_id`) en `medir_admisibilidad_f053.py`, sin valores  |  Verificación: `pytest services/albaranes-persistencia -k f053_medicion` + MANUAL: repetir T0
 - [x] T38 (D3, 1a): sv3 mira el alta del `source_sha256` (`buscar_conservado_por_alta`, sesión propia, misma consulta que `save`) en la rama de duplicado de `run`: con un alta bloqueante devuelve duplicado sin reescribir clasificación ni contexto de líneas, sin resolver cabecera, sin enriquecer obra ni contratos y sin revalorar, con log (R45)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r45`
-- [ ] T39 (D3, 1c): esa mirada va antes de subir el PDF a SharePoint y cubre también el documento en la papelera: en un duplicado conservado no se sube nada ni se llama a `save`; `save` mantiene su mirada con `FOR UPDATE` para la carrera con sv9 (R45)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r45`
+- [x] T39 (D3, 1c): esa mirada va antes de subir el PDF a SharePoint y cubre también el documento en la papelera: en un duplicado conservado no se sube nada ni se llama a `save`; `save` mantiene su mirada con `FOR UPDATE` para la carrera con sv9 (R45)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r45`
 
 ## Bloque E · sv4
 
