@@ -228,24 +228,23 @@ def depurar_motivos_proveedor(
     motivo, ``None`` (como ``quitar_motivos_con_prefijo``).
     """
     actual = normalizar_cif(cif_actual)
+    motivos = _motivos_de_json(reasons_json)
     vivos: list[str] = []
-    retirados = 0
     retiro_correccion = False
-    for motivo in _motivos_de_json(reasons_json):
+    for motivo in motivos:
         if motivo.startswith(MOTIVO_PROVEEDOR_NO_CASA):
             cif = motivo[len(MOTIVO_PROVEEDOR_NO_CASA):]
         elif motivo.startswith(MOTIVO_PROVEEDOR_CORREGIDO):
-            cif = motivo[len(MOTIVO_PROVEEDOR_CORREGIDO):].rsplit(">", 1)[-1]
+            cif = motivo[len(MOTIVO_PROVEEDOR_CORREGIDO):].rpartition(">")[2]
         else:
             vivos.append(motivo)
             continue
         if normalizar_cif(cif) == actual:
             vivos.append(motivo)
             continue
-        retirados += 1
         if motivo.startswith(MOTIVO_PROVEEDOR_CORREGIDO):
             retiro_correccion = True
-    if not retirados:
+    if len(vivos) == len(motivos):
         return reasons_json, False
     if not vivos:
         return None, retiro_correccion

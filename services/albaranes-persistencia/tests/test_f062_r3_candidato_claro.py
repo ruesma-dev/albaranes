@@ -267,3 +267,47 @@ def test_f062_r4_los_tres_casos_medidos_tienen_candidato_claro(leido, nombre, ob
     candidato, obtenida = resolver._candidato_claro(cif_leido=leido, puntuados=puntuados)
     assert (candidato.cif, obtenida) == (esperado, via)
     assert motivo == "propuesta"
+
+
+# ------------------------------------------------------------------ #
+# T11 · supervivientes de la 1.ª campaña de mutación
+# ------------------------------------------------------------------ #
+def test_f062_t4_con_umbral_cero_un_score_cero_no_es_propuesta():
+    """Equivalencia con F-052: «propuesta» exige que alguien case algo
+    (score > 0), aunque ``HEADER_RESOLVER_MIN_SCORE`` sea 0. Sin esa
+    condición, ``_mejor_de`` no tendría a quién proponer."""
+    cliente = _Cliente([_r("B1", "GRUAS, S.L.")])
+    resolver = _resolver(cliente, min_score=0.0)
+    puntuados, motivo = resolver._candidatos_puntuados(
+        proveedor_nombre="TRANSPORTES MACOTRAN", obra="0720",
+    )
+    assert [s for _, s in puntuados] == [0.0]
+    assert motivo == "nadie_casa"
+    assert resolver._mejor_candidato_por_nombre(
+        proveedor_nombre="TRANSPORTES MACOTRAN", obra_codigo_efectiva="0720",
+    ) == (None, "nadie_casa", 1)
+
+
+def test_f062_t4_el_log_de_nadie_casa_solo_sale_cuando_nadie_casa(caplog):
+    """El INFO «ningun candidato de la obra … casa» es el rastro de F-052
+    para «nadie casa»; con una consulta fallida o sin obra no se emite
+    (eso lo cuentan sus propios logs)."""
+    import logging
+
+    from application.services import header_resolver_service as modulo
+
+    def _logs(cliente, **kwargs) -> list[str]:
+        caplog.clear()
+        with caplog.at_level(logging.INFO, logger=modulo.logger.name):
+            _resolver(cliente)._mejor_candidato_por_nombre(**kwargs)
+        return [r.getMessage() for r in caplog.records if "casa con el nombre leido" in r.getMessage()]
+
+    nadie = _logs(_Cliente([_r("B1", "GRUAS, S.L.")]),
+                  proveedor_nombre="TRANSPORTES MACOTRAN", obra_codigo_efectiva="0720")
+    assert nadie == [
+        "[header-resolver] ningun candidato de la obra 0720 casa con el nombre leido "
+        "(mejor score=0.00 < 0.50, 1 candidatos).",
+    ]
+    assert _logs(_Cliente(error=RuntimeError("500")),
+                 proveedor_nombre="X", obra_codigo_efectiva="0720") == []
+    assert _logs(_Cliente(), proveedor_nombre="X", obra_codigo_efectiva=None) == []

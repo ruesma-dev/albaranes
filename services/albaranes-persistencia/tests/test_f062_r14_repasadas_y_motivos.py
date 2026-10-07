@@ -418,3 +418,26 @@ def test_f062_r15_si_retirar_falla_la_pasada_sigue():
     pasada(_cliente(), repo)
     assert repo.canonizados == [RAZ_HORMIGONES_MAT]
     assert repo.resoluciones == [(None, None, "deterministic")]
+
+
+# ------------------------------------------------------------------ #
+# T11 · supervivientes de la 1.ª campaña de mutación (función pura)
+# ------------------------------------------------------------------ #
+def test_f062_r16_puro_escribe_el_json_con_el_formato_de_la_columna():
+    """Mismo formato que ``anadir_motivo_revision`` (UTF-8 sin escapar y
+    sangría 2): el repositorio compara el JSON nuevo con el guardado para
+    decidir si escribe, y sv4 lo enseña tal cual en el detalle."""
+    nuevos, _ = depurar_motivos_proveedor(
+        _json("obra_no_válida:0937", "partida_ausente_familia_destinada", NO_CASA), REAL,
+    )
+    assert nuevos == (
+        '[\n  "obra_no_válida:0937",\n  "partida_ausente_familia_destinada"\n]'
+    )
+
+
+def test_f062_r15_puro_un_leido_con_mayor_que_no_se_toma_por_el_aplicado():
+    """Con ``>`` dentro del leído, el aplicado sigue siendo lo que va tras
+    el ÚLTIMO ``>``: ni el trozo del medio ni el leído entero."""
+    motivo = f"proveedor_cif_corregido:B8>{OTRO}>{REAL}"
+    assert depurar_motivos_proveedor(_json(motivo), REAL) == (_json(motivo), False)
+    assert depurar_motivos_proveedor(_json(motivo), OTRO) == (None, True)
