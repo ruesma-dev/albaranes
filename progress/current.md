@@ -5,13 +5,19 @@
 > en `progress/historico/current_2026-10-01_cierre_F-052.md`; el resumen de F-052, en `progress/history.md`.
 > Aquí solo queda lo vivo. Lo que manda sobre el estado de cada feature es `harness/features.json`.
 
-**F-062 · spec v1 escrita (2026-10-07), `pending` hasta la PARADA 1** en la rama `feature/F-062-proveedor-aplicado`
+**F-062 · IMPLEMENTACIÓN EN CURSO (`in_progress`, desde 2026-10-07)** en la rama `feature/F-062-proveedor-aplicado`
 (worktree `../albaranes-F-062`): sv3 aplica el proveedor propuesto (candidato claro con contrato en la obra) antes de
-buscar contratos. Datos del humano: 3 casos, los 3 CIF mal leídos por la IA con el dígito de control inválido; 0 de
-formato y 0 `error` ⇒ normalización única y reintento quedan fuera. Spec en `specs/F-062-proveedor-aplicado/`;
-informe, plan y **preguntas Q0–Q6 con recomendación** en `progress/spec_F-062.md` (§4). Para el humano: confirmar
-que «que proponga uno» = aplicar (Q0), revisión al corregir (Q1), la regla de «candidato claro» (Q3) y el CIF con
-control válido inexistente (Q4). Consultas de solo lectura A.1–A.3: `diag_f062.py` en el scratchpad del líder.
+buscar contratos. PARADA 1 aprobada por el humano (Q0–Q6 con la recomendación, `progress/spec_F-062.md` §4). Spec en
+`specs/F-062-proveedor-aplicado/`; informe del implementer en `progress/impl_F-062.md`. Convivencia autorizada por el
+humano: **F-053 sigue `in_progress` en su rama** (fase 1 aprobada) y F-062 se fusiona en `dev` antes; F-051 y F-049
+están `blocked` en las suyas. Entorno del worktree: venvs del árbol principal con `PYTHONPATH` al comun del worktree;
+*junction* `services/albaranes-front/.venv` → venv de sv4 del árbol principal (ignorada por git; se quita con
+`cmd /c rmdir services\albaranes-front\.venv` ANTES de `git worktree remove`).
+- Tarea en curso y desviaciones: sección «F-062 · estado de la implementación» (abajo, se actualiza por tarea).
+
+### F-062 · estado de la implementación
+
+- Arranque: `bash harness/init.sh` en verde en el worktree (2026-10-07). F-062 → `in_progress`, `BACKLOG.md` regenerado.
 
 **F-051 · `blocked` (2026-10-06) y FUSIONADA en `dev`.** Implementación APROBADA por el reviewer (pasada 2) e `init.sh`
 en verde. **T21 hecha** (evals con LLM, 2026-10-06 11:07 UTC, informe local `progress/evals_F-051.md`): frente a F-048,

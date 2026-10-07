@@ -5,6 +5,8 @@
 
 Resumen: **60 features**, 43 abiertas, 17 terminadas.
 
+En curso: **F-062**.
+
 Bloqueadas: **F-051**.
 
 ## Trabajo abierto
@@ -12,7 +14,7 @@ Bloqueadas: **F-051**.
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
-| F-062 | sv3 aplica el proveedor propuesto antes de buscar contratos: CIF mal leído + candidato claro con contrato en la obra ⇒ se corrige y se busca con el bueno | 1 | spec lista | critico | `feature/F-062-proveedor-aplicado` |
+| F-062 | sv3 aplica el proveedor propuesto antes de buscar contratos: CIF mal leído + candidato claro con contrato en la obra ⇒ se corrige y se busca con el bueno | 1 | en curso | critico | `feature/F-062-proveedor-aplicado` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-051 | Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas» | 2 | bloqueada | critico | `feature/F-051-almacen-por-linea` |
@@ -95,7 +97,7 @@ DEPENDE DE: F-052 (lista de candidatos de la obra completa y sin truncar). RELAC
 
 ### F-062 · sv3 aplica el proveedor propuesto antes de buscar contratos: CIF mal leído + candidato claro con contrato en la obra ⇒ se corrige y se busca con el bueno
 
-estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-062-proveedor-aplicado`
+estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-062-proveedor-aplicado`
 
 SÍNTOMA (humano, 2026-10-07): «ya ha pasado varias veces que el CIF y el nombre están bien traídos por la IA pero luego no encuentra el contrato; si vuelvo a meter el mismo proveedor, entonces ya sí». CAUSA: la red de proveedor de sv3 (F-002 R8–R10, F-052 R15–R19; header_resolver_service._red_proveedor_por_cif) encuentra el proveedor bueno con contrato en la obra pero solo lo PROPONE en una nota (D3 de F-002) y la búsqueda de contratos se hace con el CIF leído ⇒ `ninguno`.
 
