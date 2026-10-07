@@ -328,7 +328,6 @@ class _Espia:
     def __getattr__(self, metodo):
         def _apuntar(*_args, **_kwargs):
             self._llamadas.append(f"{self._nombre}.{metodo}")
-            return None
         return _apuntar
 
 
@@ -369,7 +368,6 @@ class _RepoActivoConservado:
     def __getattr__(self, nombre):
         def _apuntar(*_args, **_kwargs):
             self.llamadas.append(f"repo.{nombre}")
-            return None
         return _apuntar
 
 
