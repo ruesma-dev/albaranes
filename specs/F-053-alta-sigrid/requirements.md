@@ -2,7 +2,7 @@
 # F-053 · Alta en Sigrid de los albaranes aprobados · Requisitos (v7)
 
 Rigor **critico** (escribe en el ERP). Servicios: **sv9 nuevo** (`services/albaranes-alta-sigrid`), sv4, sv3 (DDL
-y R45), sv6 (DDL), `ruesma_comun`, `infra`. Sustituye a F-013. Decisiones (P1–P7, D1–D2): `progress/spec_F-053.md`.
+y R45), sv6 (DDL), `ruesma_comun`, `infra`. Sustituye a F-013. Decisiones (P1–P7, D1–D4): `progress/spec_F-053.md`.
 «Contrato» = `sigrid-api/specs/F-009-alta-albaran-compra/contrato_albaranes.md` (v8.2, `13fd99d`; huecos **Hn**, §5).
 
 ## Glosario
@@ -95,13 +95,11 @@ es un motivo de R39 (`linea_de_otro_contrato`, con su `referencia_linea`) y sv9 
 (WARNING con documento, línea y los dos contratos; sin precios): indica un fallo aguas arriba (sv5/sv6).
 R20. DONDE el modo sea `real`, tras una previa sin motivos sv9 debe repetir la misma petición con `commit=true`
 **una sola vez**, sin reintento automático, y con `ok` y `estado` `creado` guardar `con_ide` y `cod` y pasar a `registrado`.
-R21. SI hay tiempo agotado, error de conexión o 5xx, ENTONCES el alta pasa a `incierto` si era la grabación
-y a `error` si era la previa.
+R21. SI hay tiempo agotado, error de conexión o 5xx, ENTONCES el alta pasa a `incierto` (grabación) o `error` (previa).
 R22. CUANDO un alta queda `registrado` en modo `real`, sv9 debe adjuntar el PDF (de SharePoint) con
 `concepto-grafico` (`contip` 14, `gratipide` 0, `usu` = `ALTA_SIGRID_USUARIO`, `sha256`); colgado = `ok` y
 (`committed` o `idempotente`).
-R23. SI el adjunto falla, ENTONCES el alta sigue `registrado` con el adjunto en error, y un nuevo mensaje de
-alta solo reintenta el adjunto.
+R23. SI el adjunto falla, ENTONCES el alta sigue `registrado` con el adjunto en error y otro mensaje de alta solo lo reintenta.
 R24. sv9 debe reintentar con espera creciente lecturas, previas y adjunto ante fallos transitorios; nunca la grabación.
 
 ## G. Bloqueo y visibilidad en sv4
@@ -146,5 +144,7 @@ R37. SI el revisor aprueba (por cualquiera de los dos caminos de R1) un document
 debe rechazarlo sin cambiar nada, con el aviso «No se puede aprobar un albarán sin valorar», con DESDE vacía o no.
 R38. sv4 y sv9 deben decidir «valorado» con `ruesma_comun` `esta_valorado` (R37, R10) y el producto con
 `ruesma_comun.alta_sigrid.producto_efectivo` (R40, R43).
-R45. SI sv3 reingresa un PDF (mismo `source_sha256`) cuyo merge tiene un alta bloqueante, ENTONCES no debe borrarlo
-ni reprocesarlo: lo devuelve como duplicado, conserva documento, merge y alta, y lo deja en el log (D1).
+R45. SI sv3 reingresa un PDF (mismo `source_sha256`) y un merge con ese hash, activo o en la papelera, tiene un alta
+bloqueante, ENTONCES, antes de subir nada a SharePoint, sv3 debe devolverlo como duplicado sin tocar nada: ni borrar,
+ni reescribir clasificación o contexto de líneas, ni resolver cabecera, ni enriquecer obra o contratos, ni revalorar;
+conserva documento, merge y alta, y lo deja en el log («un albarán no se puede pisar»; D1, D3).

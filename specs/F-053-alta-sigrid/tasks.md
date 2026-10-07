@@ -46,7 +46,7 @@ sigrid-api tal como esté en la spec de F-009 (v8, `8a6ecab`; códigos incluidos
 - [x] T15: `pdf_sharepoint` con `GraphSharePointClient` falso (ruta relativa del merge; sin ruta → adjunto en error)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_pdf`
 - [x] T16: Worker, composición y `main_worker.py` sobre `COLA_FEEDBACK`: resultado de negocio confirma, fallo de infraestructura antes de reclamar reencola, mensaje de otro `tipo` a poison  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_worker`
 
-## Bloque D bis · review de la fase 1 (`progress/review_F-053_fase1.md`) y decisiones D1–D2 del humano (2026-10-06)
+## Bloque D bis · review de la fase 1 (`progress/review_F-053_fase1.md`) y decisiones D1–D4 del humano (2026-10-06/07)
 
 - [x] T31 (H1): el `ValidationError` de `Settings` se registra solo con `loc` y `msg` (`errors(include_input=False)`), nunca con los valores del entorno; motivo de R44 intacto (R35)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r35`
 - [x] T32 (H2): el adjunto guarda `grafico.ide_negocio` (`AttachConceptoGraficoResponse` de sigrid-api `13fd99d`); tests con la forma real (R22)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r22`
@@ -55,6 +55,8 @@ sigrid-api tal como esté en la spec de F-009 (v8, `8a6ecab`; códigos incluidos
 - [x] T35 (D1): `ESTADOS_ALTA_BLOQUEANTES` en comun; `save` de sv3 no borra un merge con alta bloqueante (lo devuelve con `conservado_por_alta`, log WARNING) y el pipeline no lo reprocesa; sin alta, con alta no bloqueante o sin tabla, como hoy (R45)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r45` y `pytest services/albaranes-comun services/albaranes-alta-sigrid -k f053_r45` (por separado)
 - [x] T36 (D2): `linea_de_otro_contrato` ⇒ `revisar` sin llamar a sigrid-api, con su `referencia_linea`, y WARNING de anomalía (documento, línea, los dos contratos, sin precios) (R46)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r46`
 - [x] T37 (D2): recuento `lineas_de_otro_contrato` (y sus `document_id`) en `medir_admisibilidad_f053.py`, sin valores  |  Verificación: `pytest services/albaranes-persistencia -k f053_medicion` + MANUAL: repetir T0
+- [ ] T38 (D3, 1a): sv3 mira el alta del `source_sha256` (`buscar_conservado_por_alta`, sesión propia, misma consulta que `save`) en la rama de duplicado de `run`: con un alta bloqueante devuelve duplicado sin reescribir clasificación ni contexto de líneas, sin resolver cabecera, sin enriquecer obra ni contratos y sin revalorar, con log (R45)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r45`
+- [ ] T39 (D3, 1c): esa mirada va antes de subir el PDF a SharePoint y cubre también el documento en la papelera: en un duplicado conservado no se sube nada ni se llama a `save`; `save` mantiene su mirada con `FOR UPDATE` para la carrera con sv9 (R45)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r45`
 
 ## Bloque E · sv4
 

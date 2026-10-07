@@ -105,8 +105,8 @@ sv4: `templates/_alta_sigrid.html` (panel de la ficha, R29–R30).
 
 - `services/albaranes-comun/ruesma_comun/colas/mensajes.py` — `MensajeFeedback.accion: Literal["alta",
   "verificar_anulacion"] = "alta"`; docstring: consumidor sv9. Tocar comun obliga a reconstruir todas las imágenes.
-- sv3 `infrastructure/database/` — `albaran_altas_sigrid` (§6) en `phase2_ddl`; `save` no borra el merge con un alta
-  bloqueante (`ESTADOS_ALTA_BLOQUEANTES` de comun, `FOR UPDATE OF m`) y el pipeline no lo reprocesa (R45, D1).
+- sv3 — `albaran_altas_sigrid` (§6) en `phase2_ddl`. R45: `run` mira el alta (`buscar_conservado_por_alta`, con los
+  `ESTADOS_ALTA_BLOQUEANTES` de comun) antes de SharePoint y de las dos ramas; `save` repite con `FOR UPDATE OF m`.
 - `services/albaran-valoracion-persist/infrastructure/database/schema_contribution.py` y `orm_valuation_models.py`
   — columna `producto_sigrid` (§6) en DDL y ORM (nula, sin defecto: el replace la deja `NULL`, R42). Ninguna
   lógica de sv6 cambia. sv6 es el dueño de las tablas de valoración (`docs/ARCHITECTURE.md`), no sv3.
