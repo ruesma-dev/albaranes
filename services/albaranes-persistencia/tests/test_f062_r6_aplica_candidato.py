@@ -310,3 +310,16 @@ def test_f062_r12_el_resolver_usa_los_umbrales_que_recibe():
     pasada(_doble().cliente(), repo, correccion_margen_distancia=10)
     assert repo.aplicadas == []
     assert repo.marcas[0][0] == f"proveedor_cif_no_casa:{CIF_LEIDO_19407}"
+
+
+def test_f062_r6_el_caso_salmedina_de_f052_ahora_se_aplica():
+    """SS-0026122 (F-052): IA1 leyó B82890580 (control inválido); SALMEDINA
+    es el único de los 81 proveedores de la 0691 que casa entero. Con
+    F-062 deja de ser una propuesta y se aplica."""
+    from doble_sigrid_api import CIF_SALMEDINA, RAZ_SALMEDINA
+
+    repo = RepoRed(cif="B82890580", nombre="SALMEDINA", obra="0691")
+    pasada(DobleSigridApi().cliente(), repo)
+    [aplicada] = repo.aplicadas
+    assert (aplicada["cif"], aplicada["nombre"]) == (CIF_SALMEDINA, RAZ_SALMEDINA)
+    assert "es el único candidato" in aplicada["nota"]

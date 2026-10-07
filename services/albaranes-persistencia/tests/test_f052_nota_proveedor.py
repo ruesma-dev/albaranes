@@ -10,6 +10,13 @@ nota se redacta por motivo (design §6).
 
 Sin red ni BBDD: el cliente es el real sobre el doble de sigrid-api, o un
 fake cuando lo que se prueba es el tipo de fallo.
+
+(F-062 · R12) Esta nota es la de la red que PROPONE (D3 de F-002). Desde
+F-062, un candidato claro (SALMEDINA en la 0691 lo es: CIF válido y nombre
+completo) se aplica; por eso el resolver de estos tests va con
+``correccion_enabled=False``: así siguen probando la nota de la vuelta
+atrás y no un fallo de aplicación disfrazado. La aplicación sobre este
+mismo caso la prueba ``test_f062_r6_aplica_candidato.py``.
 """
 from __future__ import annotations
 
@@ -115,7 +122,10 @@ def _header(*, nombre: str | None = "SALMEDINA", obra: str | None = "0691") -> M
 
 
 def _resolver(cliente, repo) -> HeaderResolverService:
-    return HeaderResolverService(obra_client=_Obras(), proveedor_client=cliente, repository=repo)
+    return HeaderResolverService(
+        obra_client=_Obras(), proveedor_client=cliente, repository=repo,
+        correccion_enabled=False,
+    )
 
 
 def _nota_tras_resolver(cliente, **header) -> str:
