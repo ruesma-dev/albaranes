@@ -140,7 +140,7 @@ reglas:
 #  - id: obra_codigo_4_digitos
 #    titulo: El código de obra siempre tiene 4 dígitos empezando por 0
 #    descripcion: |
-#      En Construcciones Ruesma el obra_codigo es 4 dígitos con cero
+#      En la constructora el obra_codigo es 4 dígitos con cero
 #      a la izquierda (ej. "0695", "0721"). Si fase 1 extrajo:
 #        - "695" (3 dígitos) → normaliza a "0695".
 #        - "06952" (5+ dígitos) → probablemente cogió un dígito de
