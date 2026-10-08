@@ -244,16 +244,12 @@ def build_app(settings: Settings) -> FastAPI:
         auto_create_database=settings.auto_create_database,
     )
     repository = AlbaranReviewRepository(session_factory)
-    review_service = ReviewService(repository, settings.default_reviewer)
-    tables_ready = review_service.initialize()
 
     app = FastAPI(
         title=settings.app_title,
         version=settings.service_version,
     )
     app.state.settings = settings
-    app.state.review_service = review_service
-    app.state.tables_ready = tables_ready
     app.state.graph_token_provider = (
         GraphTokenProvider(settings.graph_key, settings.graph_timeout_s)
         if settings.preview_enabled and settings.graph_key
@@ -350,6 +346,23 @@ def build_app(settings: Settings) -> FastAPI:
     logger.info(
         "[colas][wiring] publicador best-effort + adapters de cola "
         "CABLEADOS (emitido_por=ca-sv4-front)"
+    )
+
+    # F-053: el servicio de revisión publica el alta en Sigrid al pasar a
+    # aprobado (R1-R4) con la configuración del alta (DESDE, Espera, mapeo;
+    # DESDE vacía = feature apagada, R3). Posicionales a propósito.
+    config_alta = settings.config_alta_sigrid
+    review_service = ReviewService(
+        repository, settings.default_reviewer, orchestrator_client, config_alta,
+    )
+    app.state.review_service = review_service
+    app.state.config_alta = config_alta
+    app.state.tables_ready = review_service.initialize()
+    logger.info(
+        "[alta-sigrid][wiring] %s (desde=%s espera_min=%s productos=%s)",
+        "ACTIVA" if config_alta.activa else "APAGADA (DESDE vacía)",
+        config_alta.desde, settings.alta_sigrid_espera_incierto_min,
+        sorted(config_alta.admitidos),
     )
 
     # ------------------------------------------------------------------ #

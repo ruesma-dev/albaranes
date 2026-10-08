@@ -22,7 +22,9 @@ from sqlalchemy import (
     text,
 )
 
+from ruesma_comun.alta_sigrid import ESTADOS_ALTA_BLOQUEANTES
 from ruesma_comun.importes import clasificar_descuento, importe_de_linea
+from ruesma_comun.valoracion import esta_valorado
 
 # F-036: la reproducibilidad de la conversión y la comparación numérica
 # viven en el dominio (`review_models`) porque las necesitan los DOS
@@ -72,6 +74,11 @@ from domain.services.almacen import (
     ACCION_ALMACEN_ELEGIDO,
     contar_con_partida,
     estado_partida,
+)
+from domain.models.alta_sigrid_models import (
+    AlbaranBloqueadoError,
+    AlbaranSinValorarError,
+    AltaSigridVista,
 )
 from domain.services.confianza import compute_confianza_pct
 from infrastructure.database.session_factory import SessionFactory
@@ -152,6 +159,47 @@ def _importe_de_linea(
         descuento_pct=descuento_pct,
     )
 
+
+
+#: (F-053) Tabla del alta en Sigrid: la crea sv3 (DDL) y la escribe SOLO sv9
+#: (R34); sv4 solo la lee.
+TABLA_ALTAS_SIGRID = "albaran_altas_sigrid"
+
+#: (F-053 R26) Lectura del alta de UN documento, en su propia sentencia y
+#: DESPUÉS del cerrojo del merge (ver ``_exigir_desbloqueado``).
+_SQL_ALTA_DEL_DOCUMENTO = text(
+    "SELECT estado, sigrid_cod FROM albaran_altas_sigrid WHERE document_id = :id"
+)
+
+#: (F-053 R29) El alta entera, para pintarla (sin cerrojo: solo lectura).
+_SQL_ALTA_COMPLETA = text(
+    "SELECT estado, modo, sigrid_con_ide, sigrid_cod, adjunto_estado, "
+    "       motivos_json, avisos_json, peticion_json, respuesta_json, intentos, "
+    "       approved_at_utc, ultimo_intento_at_utc, actualizado_at_utc "
+    "FROM albaran_altas_sigrid WHERE document_id = :id"
+)
+
+#: (F-053 R37) Estado de la valoración e importe de cada línea valorada.
+_SQL_DATOS_VALORACION = text(
+    "SELECT v.status AS status, lv.id AS linea_id, "
+    "       lv.importe_calculado AS importe_calculado "
+    "FROM albaran_valuations v "
+    "LEFT JOIN albaran_line_valuations lv ON lv.valuation_id = v.id "
+    "WHERE v.document_id = :id "
+    "ORDER BY v.id, lv.id"
+)
+
+
+def _json_o(valor: Any, defecto: Any, tipo: type) -> Any:
+    """JSON de una columna de texto, o ``defecto`` si falta, no se lee o no es
+    del ``tipo`` esperado: un JSON roto no puede dejar sin abrir la ficha."""
+    if valor in (None, ""):
+        return defecto
+    try:
+        leido = json.loads(valor)
+    except (TypeError, ValueError):
+        return defecto
+    return leido if isinstance(leido, tipo) else defecto
 
 
 def _partida_del_contrato(conc: ConciliacionDisplay) -> str | None:
@@ -1553,6 +1601,8 @@ class AlbaranReviewRepository:
         """
         self.initialize()
         with self._session_factory.create_session() as session:
+            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
+            self._exigir_desbloqueado(session, document_id)
             row = session.execute(
                 text(
                     "SELECT lv.id, lv.merge_line_id, lv.valuation_id, "
@@ -1765,6 +1815,8 @@ class AlbaranReviewRepository:
             return (v or "").strip()
 
         with self._session_factory.create_session() as session:
+            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
+            self._exigir_desbloqueado(session, document_id)
             row = session.execute(
                 text(
                     "SELECT lv.id, lv.merge_line_id, lv.valuation_id, "
@@ -2053,6 +2105,8 @@ class AlbaranReviewRepository:
             )
             params["ids"] = [int(i) for i in valuation_line_ids]
         with self._session_factory.create_session() as session:
+            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
+            self._exigir_desbloqueado(session, document_id)
             tocadas = [int(r[0]) for r in session.execute(sentencia, params)]
             session.commit()
         return sorted(tocadas)
@@ -2094,6 +2148,8 @@ class AlbaranReviewRepository:
         """
         self.initialize()
         with self._session_factory.create_session() as session:
+            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
+            self._exigir_desbloqueado(session, document_id)
             row = session.execute(
                 text(
                     "SELECT lv.id, lv.valuation_id, "
@@ -2161,6 +2217,8 @@ class AlbaranReviewRepository:
 
         self.initialize()
         with self._session_factory.create_session() as session:
+            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
+            self._exigir_desbloqueado(session, document_id)
             ml = session.execute(
                 text(
                     "SELECT id, document_id, cantidad, concepto, "
@@ -2379,6 +2437,8 @@ class AlbaranReviewRepository:
 
         self.initialize()
         with self._session_factory.create_session() as session:
+            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
+            self._exigir_desbloqueado(session, document_id)
             doc = session.execute(
                 text(
                     "SELECT id FROM albaran_documents_merge WHERE id = :id"
@@ -2504,6 +2564,8 @@ class AlbaranReviewRepository:
 
         self.initialize()
         with self._session_factory.create_session() as session:
+            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
+            self._exigir_desbloqueado(session, document_id)
             doc = session.execute(
                 text(
                     "SELECT id FROM albaran_documents_merge WHERE id = :id"
@@ -2780,6 +2842,8 @@ class AlbaranReviewRepository:
         lo modificado. La marca undone."""
         self.initialize()
         with self._session_factory.create_session() as session:
+            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
+            self._exigir_desbloqueado(session, document_id)
             self._ensure_undo_table(session)
             row = session.execute(
                 text(
@@ -3288,11 +3352,30 @@ class AlbaranReviewRepository:
         document_id: str,
         payload: MergeDocumentUpdatePayload,
     ) -> DocumentDetailPayload:
+        detail, _ = self.update_document_y_transicion(
+            document_id=document_id, payload=payload,
+        )
+        return detail
+
+    def update_document_y_transicion(
+        self,
+        *,
+        document_id: str,
+        payload: MergeDocumentUpdatePayload,
+    ) -> tuple[DocumentDetailPayload, bool]:
+        """Guarda el documento y dice si PASÓ a aprobado en esta transacción
+        (F-053 R1, R2). Con el merge bloqueado: con un alta bloqueante no se
+        guarda nada (R25, R26), y si pasa a aprobado sin estar valorado,
+        tampoco (R37), comprobado DESPUÉS de aplicar las ediciones de líneas
+        del propio guardado («Guardar y aprobar» de una valoración manual)."""
         self.initialize()
         with self._session_factory.create_session() as session:
+            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
+            self._exigir_desbloqueado(session, document_id)
             document = session.get(AlbaranDocumentMergeOrm, document_id)
             if document is None:
                 raise KeyError(f"Documento no encontrado: {document_id}")
+            estaba_aprobado = bool(document.approved)
 
             document.proveedor_nombre = self._clean_text(payload.proveedor_nombre)
             document.proveedor_cif = self._clean_text(payload.proveedor_cif)
@@ -3475,12 +3558,18 @@ class AlbaranReviewRepository:
                 cif_actual=document.proveedor_cif,
             )
 
+            # (F-053 R37) No se aprueba lo no valorado: la sesión se cierra
+            # sin confirmar y no cambia nada.
+            paso_a_aprobado = bool(payload.approved) and not estaba_aprobado
+            if paso_a_aprobado and not self._valorado_in_session(session, document.id):
+                raise AlbaranSinValorarError(document_id)
+
             session.commit()
 
         detail = self.get_document_detail(document_id)
         if detail is None:
             raise KeyError(f"Documento no encontrado tras guardar: {document_id}")
-        return detail
+        return detail, paso_a_aprobado
 
     # ------------------------------------------------------------------ #
     # Recálculo de importes en la valoración tras guardar cambios del
@@ -4089,18 +4178,131 @@ class AlbaranReviewRepository:
                 },
             )
 
+    # ------------------------------------------------------------------ #
+    # F-053 · Alta en Sigrid: cerrojo (R25, R26), valorado (R37) y lectura
+    # del alta (R29-R31). sv4 NUNCA escribe ``albaran_altas_sigrid`` (R34).
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _existe_tabla_altas(session: Any) -> bool:
+        """Sin la tabla (DDL de sv3 sin aplicar) no hay alta: como hoy."""
+        return inspect(session.connection()).has_table(TABLA_ALTAS_SIGRID)
+
+    def _exigir_desbloqueado(self, session: Any, document_id: str) -> None:
+        """(F-053 R25, R26) Lanza :class:`AlbaranBloqueadoError` si el
+        documento tiene un alta bloqueante (``en_curso``, ``incierto`` o
+        ``registrado``). Se llama al EMPEZAR la sesión de cada método que
+        escribe, antes de tocar nada; el cerrojo dura hasta su ``commit``.
+
+        DOS sentencias a propósito (review fase 1, pasada 3, §7.1; como H4 y
+        T40 en sv3): primero ``SELECT ... FOR UPDATE`` del merge, que espera
+        a sv9 si está reclamando (``reclamar`` bloquea la misma fila); y
+        DESPUÉS, ya con el cerrojo, la lectura del alta. En READ COMMITTED la
+        instantánea se toma al empezar cada sentencia: una sola con ``FOR
+        UPDATE`` + ``LEFT JOIN`` no vería el ``en_curso`` que sv9 confirma
+        mientras se espera, y dejaría editar mientras sv9 graba en Sigrid.
+        """
+        session.execute(
+            select(AlbaranDocumentMergeOrm.id)
+            .where(AlbaranDocumentMergeOrm.id == document_id)
+            .with_for_update()
+        ).first()
+        if not self._existe_tabla_altas(session):
+            return
+        fila = session.execute(
+            _SQL_ALTA_DEL_DOCUMENTO, {"id": document_id},
+        ).mappings().first()
+        if fila is not None and fila["estado"] in ESTADOS_ALTA_BLOQUEANTES:
+            logger.info(
+                "[alta-sigrid][R25] rechazado: document_id=%s alta=%s cod=%s",
+                document_id, fila["estado"], fila["sigrid_cod"],
+            )
+            raise AlbaranBloqueadoError(
+                document_id, str(fila["estado"]), fila["sigrid_cod"],
+            )
+
+    @staticmethod
+    def _valorado_in_session(session: Any, document_id: str) -> bool:
+        """(F-053 R37, R38) «Valorado» con ``ruesma_comun.valoracion``:
+        ``ok`` de sv6 o valoración manual completa. Sin tabla de
+        valoración o sin valoración: no."""
+        if not inspect(session.connection()).has_table("albaran_valuations"):
+            return False
+        filas = session.execute(
+            _SQL_DATOS_VALORACION, {"id": document_id},
+        ).mappings().all()
+        if not filas:
+            return False
+        status = filas[0]["status"]
+        importes = [
+            f["importe_calculado"] for f in filas
+            if f["linea_id"] is not None and f["status"] == status
+        ]
+        return esta_valorado(status, importes)
+
+    def leer_alta_sigrid(self, document_id: str) -> AltaSigridVista | None:
+        """(F-053 R29-R31) El alta del documento, o ``None`` si no hay (o
+        no existe la tabla). Solo lectura, sin cerrojo."""
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            if not self._existe_tabla_altas(session):
+                return None
+            fila = session.execute(
+                _SQL_ALTA_COMPLETA, {"id": document_id},
+            ).mappings().first()
+        if fila is None:
+            return None
+        return AltaSigridVista(
+            estado=str(fila["estado"]),
+            modo=fila["modo"],
+            sigrid_con_ide=fila["sigrid_con_ide"],
+            sigrid_cod=fila["sigrid_cod"],
+            adjunto_estado=fila["adjunto_estado"],
+            motivos=[
+                m for m in _json_o(fila["motivos_json"], [], list)
+                if isinstance(m, dict)
+            ],
+            avisos=[
+                a for a in _json_o(fila["avisos_json"], [], list)
+                if isinstance(a, dict)
+            ],
+            peticion=_json_o(fila["peticion_json"], None, dict),
+            respuesta=_json_o(fila["respuesta_json"], None, dict),
+            intentos=int(fila["intentos"] or 0),
+            approved_at_utc=fila["approved_at_utc"],
+            ultimo_intento_at_utc=fila["ultimo_intento_at_utc"],
+            actualizado_at_utc=fila["actualizado_at_utc"],
+        )
+
     def set_approved(
         self,
         *,
         document_id: str,
         approved: bool,
         approved_by: str | None,
-    ) -> None:
+    ) -> bool:
+        """Aprueba o desaprueba. Devuelve si el documento PASÓ a aprobado en
+        esta transacción (F-053 R1, R2): solo entonces se pide el alta.
+
+        Con el merge bloqueado: desaprobar se rechaza con un alta
+        bloqueante (R25, R26) y aprobar lo no valorado, también (R37); en
+        los dos casos sin cambiar nada."""
         self.initialize()
         with self._session_factory.create_session() as session:
+            if approved:
+                session.execute(
+                    select(AlbaranDocumentMergeOrm.id)
+                    .where(AlbaranDocumentMergeOrm.id == document_id)
+                    .with_for_update()
+                ).first()
+            else:
+                # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
+                self._exigir_desbloqueado(session, document_id)
             document = session.get(AlbaranDocumentMergeOrm, document_id)
             if document is None:
                 raise KeyError(f"Documento no encontrado: {document_id}")
+            paso_a_aprobado = bool(approved) and not bool(document.approved)
+            if paso_a_aprobado and not self._valorado_in_session(session, document_id):
+                raise AlbaranSinValorarError(document_id)
             document.approved = approved
             document.reviewed_at_utc = document.reviewed_at_utc or self._utc_iso()
             document.last_modified_at_utc = self._utc_iso()
@@ -4111,6 +4313,7 @@ class AlbaranReviewRepository:
                 document.approved_at_utc = None
                 document.approved_by = None
             session.commit()
+            return paso_a_aprobado
 
     # ------------------------------------------------------------------ #
     # Soft-delete (jun 2026): borrar / restaurar desde la portada.
@@ -4129,6 +4332,8 @@ class AlbaranReviewRepository:
     ) -> None:
         self.initialize()
         with self._session_factory.create_session() as session:
+            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
+            self._exigir_desbloqueado(session, document_id)
             document = session.get(AlbaranDocumentMergeOrm, document_id)
             if document is None:
                 raise KeyError(f"Documento no encontrado: {document_id}")
@@ -4168,6 +4373,8 @@ class AlbaranReviewRepository:
     def hard_delete_document(self, *, document_id: str) -> str | None:
         self.initialize()
         with self._session_factory.create_session() as session:
+            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
+            self._exigir_desbloqueado(session, document_id)
             document = session.get(AlbaranDocumentMergeOrm, document_id)
             if document is None:
                 raise KeyError(f"Documento no encontrado: {document_id}")

@@ -2,10 +2,15 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 
 from application.services.busqueda_contratos import (
     debe_relanzar_busqueda,
     hay_datos_para_buscar,
+)
+from domain.models.alta_sigrid_models import (
+    ConfigAltaSigrid,
+    ResultadoAprobacion,
 )
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
@@ -18,15 +23,42 @@ from domain.models.review_models import (
     ProveedorResumenItem,
 )
 from domain.ports.contrato_refetch_port import ContratoRefetchClient
+from domain.ports.orchestrator_port import OrchestratorClient
 from infrastructure.database.review_repository import AlbaranReviewRepository
 
 logger = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class ResultadoGuardado:
+    """«Guardar» del portal: el detalle guardado, la re-búsqueda de
+    contratos relanzada (F-052 D4-A) y lo que pasó con la aprobación
+    (F-053 R1–R4)."""
+
+    detail: DocumentDetailPayload
+    busqueda: ContratoRefetchOutcome | None
+    aprobacion: ResultadoAprobacion
+
+
 class ReviewService:
-    def __init__(self, repository: AlbaranReviewRepository, default_reviewer: str | None) -> None:
+    def __init__(
+        self,
+        repository: AlbaranReviewRepository,
+        default_reviewer: str | None,
+        orchestrator: OrchestratorClient | None = None,
+        config_alta: ConfigAltaSigrid | None = None,
+    ) -> None:
+        """``orchestrator`` y ``config_alta`` (F-053) son posicionales y
+        opcionales: sin ellos, la feature está apagada (R3) y el servicio
+        se comporta como antes."""
         self._repository = repository
         self._default_reviewer = (default_reviewer or "").strip() or None
+        self._orchestrator = orchestrator
+        self._config_alta = config_alta or ConfigAltaSigrid()
+
+    @property
+    def config_alta(self) -> ConfigAltaSigrid:
+        return self._config_alta
 
     def initialize(self) -> bool:
         return self._repository.initialize()
@@ -81,6 +113,17 @@ class ReviewService:
         document_id: str,
         payload: MergeDocumentUpdatePayload,
     ) -> DocumentDetailPayload:
+        """Guarda (y, si pasa a aprobado, pide el alta: R1). Compatibilidad:
+        devuelve solo el detalle; el portal usa :meth:`guardar`."""
+        detail, _ = self._guardar_y_aprobar(document_id=document_id, payload=payload)
+        return detail
+
+    def _guardar_y_aprobar(
+        self,
+        *,
+        document_id: str,
+        payload: MergeDocumentUpdatePayload,
+    ) -> tuple[DocumentDetailPayload, ResultadoAprobacion]:
         if payload.approved and not payload.approved_by:
             payload.approved_by = self._default_reviewer
         # Historial: estado previo de cabecera, valoración y las líneas
@@ -93,7 +136,10 @@ class ReviewService:
         ]
         for upd in (payload.valuation_line_updates or []):
             snaps.append(self._undo_snap_line(upd.valuation_line_id))
-        detail = self._repository.update_document(
+        # F-053: el repositorio comprueba el alta (R26), no deja aprobar lo
+        # no valorado (R37) y dice si el documento PASÓ a aprobado en esta
+        # transacción (R1, R2).
+        detail, paso_a_aprobado = self._repository.update_document_y_transicion(
             document_id=document_id, payload=payload,
         )
         n_lineas = len(payload.valuation_line_updates or [])
@@ -109,7 +155,32 @@ class ReviewService:
             ),
             restore=snaps,
         )
-        return detail
+        aprobacion = self._pedir_alta_si_toca(
+            document_id=document_id,
+            approved_by=payload.approved_by,
+            paso_a_aprobado=paso_a_aprobado,
+        )
+        return detail, aprobacion
+
+    def guardar(
+        self,
+        *,
+        document_id: str,
+        payload: MergeDocumentUpdatePayload,
+        refetch_client: ContratoRefetchClient | None,
+    ) -> ResultadoGuardado:
+        """«Guardar» / «Guardar y aprobar» del portal (PUT): guarda, pide el
+        alta si el documento pasó a aprobado (F-053 R1–R4) y, si toca,
+        relanza la búsqueda de contratos (F-052 D4-A, ver
+        :meth:`save_document_y_buscar_si_cambia`)."""
+        detail, aprobacion = self._guardar_y_aprobar(
+            document_id=document_id, payload=payload,
+        )
+        busqueda = self._relanzar_busqueda_si_cambia(
+            document_id=document_id, payload=payload, detail=detail,
+            refetch_client=refetch_client,
+        )
+        return ResultadoGuardado(detail=detail, busqueda=busqueda, aprobacion=aprobacion)
 
     def save_document_y_buscar_si_cambia(
         self,
@@ -131,14 +202,26 @@ class ReviewService:
         no deshace el guardado: vuelve como outcome ``sigrid_error`` para
         que el portal lo diga.
         """
-        detail = self.save_document(document_id=document_id, payload=payload)
+        resultado = self.guardar(
+            document_id=document_id, payload=payload, refetch_client=refetch_client,
+        )
+        return resultado.detail, resultado.busqueda
+
+    def _relanzar_busqueda_si_cambia(
+        self,
+        *,
+        document_id: str,
+        payload: MergeDocumentUpdatePayload,
+        detail: DocumentDetailPayload,
+        refetch_client: ContratoRefetchClient | None,
+    ) -> ContratoRefetchOutcome | None:
         if (
             refetch_client is None
             or payload.approved
             or not debe_relanzar_busqueda(detail.busqueda_contratos)
             or not hay_datos_para_buscar(detail.proveedor_cif, detail.obra_codigo)
         ):
-            return detail, None
+            return None
         try:
             outcome = refetch_client.refetch(document_id=document_id)
         except Exception as exc:  # el guardado ya está hecho: no se deshace
@@ -164,14 +247,60 @@ class ReviewService:
             document_id,
             outcome.status,
         )
-        return detail, outcome
+        return outcome
 
-    def approve_document(self, *, document_id: str, approved_by: str | None) -> None:
-        self._repository.set_approved(
+    def approve_document(
+        self, *, document_id: str, approved_by: str | None,
+    ) -> ResultadoAprobacion:
+        """«Aprobar» del listado. El repositorio no deja aprobar lo no
+        valorado (R37) y dice si el documento PASÓ a aprobado; solo
+        entonces se pide el alta en Sigrid (R1, R2)."""
+        quien = approved_by or self._default_reviewer
+        paso_a_aprobado = self._repository.set_approved(
             document_id=document_id,
             approved=True,
-            approved_by=approved_by or self._default_reviewer,
+            approved_by=quien,
         )
+        return self._pedir_alta_si_toca(
+            document_id=document_id,
+            approved_by=quien,
+            paso_a_aprobado=bool(paso_a_aprobado),
+        )
+
+    def _pedir_alta_si_toca(
+        self,
+        *,
+        document_id: str,
+        approved_by: str | None,
+        paso_a_aprobado: bool,
+    ) -> ResultadoAprobacion:
+        """F-053 R1–R4: solo en el PASO a aprobado y con DESDE puesta se
+        publica el alta. Si no se puede publicar, la aprobación se queda
+        (ya está confirmada en BBDD) y el resultado lo dice (R4)."""
+        if not paso_a_aprobado or not self._config_alta.activa:
+            return ResultadoAprobacion(paso_a_aprobado=paso_a_aprobado)
+        publicado = False
+        if self._orchestrator is None:
+            logger.warning(
+                "[alta-sigrid][aprobar] sin cliente de colas: no se pide el "
+                "alta de document_id=%s", document_id,
+            )
+        else:
+            try:
+                publicado = bool(self._orchestrator.notify_document_approved(
+                    document_id=document_id, approved_by=approved_by,
+                ))
+            except Exception:  # noqa: BLE001 — R4: la aprobación se queda
+                logger.exception(
+                    "[alta-sigrid][aprobar] fallo publicando el alta "
+                    "document_id=%s", document_id,
+                )
+        if not publicado:
+            logger.warning(
+                "[alta-sigrid][aprobar] aprobado, pero el alta en Sigrid NO "
+                "se pidió document_id=%s (R4)", document_id,
+            )
+        return ResultadoAprobacion(paso_a_aprobado=True, alta_pedida=publicado)
 
     def delete_document(
         self, *, document_id: str, deleted_by: str | None
