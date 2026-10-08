@@ -7,10 +7,11 @@ valoración (``status``, ``contrato_codigo``), las líneas valoradas (con
 ``line_index`` y el ``contexto_linea_json``, y de ``albaran_contrato_lines_merge``
 el ``sigrid_ide``. ESCRIBE solo ``albaran_altas_sigrid`` (R34), que crea sv3.
 
-``reclamar`` va en UNA transacción con la fila del merge bloqueada
-(``FOR UPDATE OF m``, el mismo cerrojo que toma sv4 al editar, R26): lee el
-documento y el alta, decide con ``domain.services.reclamacion.decidir`` y
-aplica el efecto antes de soltarlo.
+``reclamar`` va en UNA transacción con la fila del merge bloqueada (``FOR
+UPDATE``, el mismo cerrojo que toma sv4 al editar, R26) y en DOS sentencias
+(T24b): primero el cerrojo y después, ya con él, la lectura del alta; decide
+con ``domain.services.reclamacion.decidir`` y aplica el efecto antes de
+soltarlo.
 """
 from __future__ import annotations
 
@@ -46,13 +47,13 @@ _COLUMNAS_ALTA = """
     a.intentos, a.ultimo_intento_at_utc
 """
 
-SQL_RECLAMAR = f"""
-SELECT m.id, m.is_active, m.approved, m.approved_at_utc, m.approved_by,
-{_COLUMNAS_ALTA}
+#: (T24b) Primera de las DOS sentencias de ``reclamar``: el cerrojo del merge.
+#: Sin el alta a propósito (ver ``SqlAltaRepository.reclamar``).
+SQL_RECLAMAR = """
+SELECT m.id, m.is_active, m.approved, m.approved_at_utc, m.approved_by
 FROM albaran_documents_merge m
-LEFT JOIN albaran_altas_sigrid a ON a.document_id = m.id
 WHERE m.id = :document_id
-FOR UPDATE OF m
+FOR UPDATE
 """
 
 SQL_UPSERT_EN_CURSO = """
@@ -275,9 +276,19 @@ class SqlAltaRepository(AltaRepository):
         modo: str,
     ) -> Reclamacion:
         with self._sesiones.create_session() as sesion, sesion.begin():
-            fila = sesion.execute(
+            # T24b (decisión del humano, 2026-10-07): DOS sentencias, como T40
+            # en sv3 y T19 en sv4. En READ COMMITTED la instantánea se toma al
+            # EMPEZAR cada sentencia: una sola con FOR UPDATE + LEFT JOIN que
+            # esperase el cerrojo de otro ``reclamar`` del mismo documento (dos
+            # réplicas en un relevo de revisión) no vería su ``en_curso`` y
+            # volvería a procesar. Primero el cerrojo; después, el alta.
+            merge = sesion.execute(
                 text(SQL_RECLAMAR), {"document_id": document_id},
             ).mappings().first()
+            fila_alta = None if merge is None else sesion.execute(
+                text(SQL_LEER_ALTA), {"document_id": document_id},
+            ).mappings().first()
+            fila = None if merge is None else {**dict(merge), **dict(fila_alta or {})}
             alta = _alta_de_fila(fila)
             reclamacion = decidir(
                 _documento_de_fila(fila), alta, accion=AccionAlta(accion), ahora=ahora,

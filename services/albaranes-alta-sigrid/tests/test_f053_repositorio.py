@@ -124,7 +124,21 @@ def _fila_merge(**cambios) -> dict:
     return fila
 
 
+_CAMPOS_MERGE = ("id", "is_active", "approved", "approved_at_utc", "approved_by")
+
+
 def _repo(respuestas, rowcount=1):
+    # T24b: ``reclamar`` lee el merge y, en otra sentencia, el alta. Las filas
+    # «merge + alta» de los tests se reparten entre las dos lecturas.
+    merges = respuestas.get("FROM albaran_documents_merge m")
+    if merges and "FROM albaran_altas_sigrid a" not in respuestas:
+        respuestas = {
+            **respuestas,
+            "FROM albaran_altas_sigrid a": [
+                {k: v for k, v in f.items() if k not in _CAMPOS_MERGE}
+                for f in merges if f.get("estado") is not None
+            ],
+        }
     sesion = SesionFalsa(respuestas, rowcount)
     return SqlAltaRepository(FabricaFalsa(sesion)), sesion
 
@@ -142,9 +156,12 @@ def test_f053_repositorio_reclamar_bloquea_el_merge_en_una_transaccion():
     _reclamar(repo)
     sql, params = sesion.ejecutadas[0]
     texto = _normal(sql)
-    assert "FROM albaran_documents_merge m LEFT JOIN albaran_altas_sigrid a ON a.document_id = m.id" in texto
-    assert texto.endswith("FOR UPDATE OF m")
+    # T24b: el cerrojo, solo; el alta se lee en la sentencia siguiente.
+    assert "FROM albaran_documents_merge m WHERE m.id = :document_id" in texto
+    assert texto.endswith("FOR UPDATE") and "albaran_altas_sigrid" not in texto
     assert params == {"document_id": "d1"}
+    alta, params_alta = sesion.ejecutadas[1]
+    assert "FROM albaran_altas_sigrid a" in _normal(alta) and params_alta == {"document_id": "d1"}
     assert sesion.transacciones == 1 and sesion.confirmadas == 1
 
 
@@ -195,7 +212,9 @@ def test_f053_repositorio_reclamar_traduce_el_alta_existente():
 def test_f053_repositorio_reclamar_ignorar_no_escribe(fila):
     repo, sesion = _repo({"FROM albaran_documents_merge m": [] if fila is None else [fila]})
     assert _reclamar(repo).decision is Decision.IGNORAR
-    assert len(sesion.ejecutadas) == 1  # solo el SELECT ... FOR UPDATE
+    # el SELECT ... FOR UPDATE y, si hay documento, la lectura del alta (T24b)
+    assert len(sesion.ejecutadas) == (1 if fila is None else 2)
+    assert sesion.sql("INSERT INTO") == [] and sesion.sql("UPDATE ") == []
 
 
 def test_f053_repositorio_reclamar_a_incierto():
