@@ -9,7 +9,9 @@ cliente impreso), Q5 CIF normalizado en IA1, Q6 razón social de serie sin cambi
 Coordinación de suites: F-053 fase 2 ejecuta suites en otra copia; aquí solo tests de un fichero hasta que el
 líder diga «puedes lanzar suites». Entorno: venv raíz del árbol principal (sv2 no declara venv propio) con
 `PYTHONPATH` al comun del worktree. Alcance del implementer: T1–T8 y T11; T9, T10 y T12 del humano.
-- Tarea en curso, decisiones y desviaciones: `progress/impl_F-064.md`.
+- **T1–T7 hechas** (2026-10-09, un commit por tarea; tests fichero a fichero en verde). **Siguiente: T8 (cobertura
+  y mutación) y T11 (`init.sh`) cuando el líder diga «puedes lanzar suites»**; después review. T9, T10 y T12 del
+  humano, con sus comandos en `progress/impl_F-064.md` §6. Decisiones y desviaciones: ese informe, §3.
 
 **F-064 · SPEC ESCRITA (`spec_ready`, 2026-10-08)** en la rama `feature/F-064-proveedor-en-prompts` (worktree
 `../albaranes-F-064`, desde `dev` `544113b`): IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2
