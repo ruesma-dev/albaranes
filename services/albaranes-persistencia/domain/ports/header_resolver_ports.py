@@ -127,6 +127,16 @@ class HeaderMergeRepository(Protocol):
         """
         ...
 
+    def descartar_cif_propio(
+        self, *, document_id: str, motivo: str, nota: str,
+    ) -> None:
+        """(F-063 · R4) Descarta el CIF propio leido como proveedor en UNA
+        transaccion: CIF y origen a NULL, ``review_required=true``,
+        ``motivo`` sin duplicar y la nota ``[AVISO] CIF del cliente``
+        sustituyendo a la anterior. No toca el nombre leido.
+        """
+        ...
+
     def retirar_motivos_proveedor(
         self, *, document_id: str, cif_actual: str | None,
     ) -> None:
