@@ -3,7 +3,7 @@
 Rama `feature/F-063-cif-propio-no-es-proveedor`. Una tarea = un commit `F-063 Tn: …`. Rigor `critico`: fase RED registrada en `progress/impl_F-063.md`. Tests de sv3 con `services/albaranes-persistencia` como raíz; los de comun, con `services/albaranes-comun`.
 
 - [x] T0: spec, alta de F-063 en `harness/features.json` (`in_progress`) y `BACKLOG.md` regenerado  |  Verificación: `python harness/backlog.py --check` (o `init.sh`) sin diferencias
-- [ ] T1: comun — `ruesma_comun/proveedores/propios.py` con `CIFS_PROPIOS_POR_DEFECTO`, `cifs_propios` y `es_cif_propio` (R1, R2)  |  Verificación: `pytest tests/test_f063_cifs_propios.py` (comun)
+- [x] T1: comun — `ruesma_comun/proveedores/propios.py` con `CIFS_PROPIOS_POR_DEFECTO`, `cifs_propios` y `es_cif_propio` (R1, R2)  |  Verificación: `pytest tests/test_f063_cifs_propios.py` (comun)
 - [ ] T2: sv3 — constantes de dominio, puerto y `descartar_cif_propio` del repositorio (R4, R10, R13)  |  Verificación: `pytest tests/test_f063_cif_propio.py -k repo`
 - [ ] T3: sv3 — resolver: descarte al principio de `_resolve_proveedor`, respeto al `manual`, best-effort; setting `CIFS_PROPIOS` y cableado (R3–R8, R10)  |  Verificación: `pytest tests/test_f063_cif_propio.py -k resolver`
 - [ ] T4: sv3 — resolver: los CIF propios nunca son candidatos (paso 1, paso 2 y red por CIF) (R9)  |  Verificación: `pytest tests/test_f063_cif_propio.py -k candidato`
