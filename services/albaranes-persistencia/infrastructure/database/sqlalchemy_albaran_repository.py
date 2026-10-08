@@ -29,6 +29,7 @@ from domain.models.extraction_models import (
 from domain.models.header_resolution_models import (
     MOTIVO_PROVEEDOR_CORREGIDO,
     MOTIVO_PROVEEDOR_NO_CASA,
+    NOTA_CIF_PROPIO_PREFIJO,
     NOTA_PROVEEDOR_CORREGIDO_PREFIJO,
     MergeHeaderForResolution,
 )
@@ -2011,6 +2012,41 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
             session.commit()
             logger.warning(
                 "[revision][repo] doc=%s proveedor CORREGIDO motivo=%s",
+                document_id, motivo,
+            )
+
+    def descartar_cif_propio(
+        self, *, document_id: str, motivo: str, nota: str,
+    ) -> None:
+        """Descarta un CIF PROPIO leido como CIF del proveedor (F-063 · R4).
+
+        En UNA transaccion: ``proveedor_cif`` y su origen a NULL,
+        ``review_required=true``, ``motivo`` anadido sin duplicar y la nota
+        ``[AVISO] CIF del cliente`` sustituyendo a la anterior. El
+        ``proveedor_nombre`` leido NO se toca (con el se busca el proveedor
+        bueno) y lo leido queda en motivo, nota y filas crudas (R13).
+        """
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            document = session.get(AlbaranDocumentMergeOrm, document_id)
+            if document is None:
+                raise KeyError(f"Documento merge no encontrado: {document_id}")
+            document.proveedor_cif = None
+            document.proveedor_cif_origen = None
+            document.review_required = True
+            document.review_reasons_json = anadir_motivo_revision(
+                document.review_reasons_json, motivo,
+            )
+            session.flush()
+            self._sustituir_nota(
+                session=session,
+                document_id=document_id,
+                prefijo=NOTA_CIF_PROPIO_PREFIJO,
+                nota=nota,
+            )
+            session.commit()
+            logger.warning(
+                "[revision][repo] doc=%s CIF propio descartado motivo=%s",
                 document_id, motivo,
             )
 
