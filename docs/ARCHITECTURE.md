@@ -301,6 +301,42 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       lo implementa F-053); nadie la rellena desde el contrato, la plantilla
       ni otra línea. Hasta F-053 el alta es manual y administración teclea lo
       que pinta sv4.
+17. **Proveedor: el candidato claro se aplica** (F-062, oct 2026; decisión
+    del humano «que proponga uno, salvo que no haya ningún candidato claro»,
+    Q0–Q6 en `progress/spec_F-062.md`). Sustituye a la D3 de F-002 mientras
+    `RED_PROVEEDOR_CORRECCION_ENABLED=true` (defecto).
+    - Cuando el CIF leído **no existe** en `prv`, la red de proveedor de sv3
+      busca un **candidato claro** entre los proveedores con contrato en la
+      obra (la misma consulta agregada de F-052, una vez por pasada):
+      **elegible** = identificador fiscal válido (`ruesma_comun.proveedores`:
+      CIF/NIF/NIE con su carácter de control) y nombre que casa con el leído
+      (score de F-052 ≥ `RED_PROVEEDOR_CORRECCION_SCORE_MIN`, 1,0: un nombre
+      contiene al otro o todas las palabras de 3+ letras de uno aparecen
+      como subcadena en el otro; **no** exige el nombre completo:
+      «Transportes» casa con «TRANSPORTES PEREZ GARCIA, S.L.»). Aceptado por
+      el humano (2026-10-08): es la red de seguridad; la defensa de fondo es
+      F-055 (IA2 elige de los proveedores con contrato en la obra). Uno
+      solo ⇒ claro; varios ⇒
+      el de CIF más cercano al leído (Levenshtein) si saca
+      `RED_PROVEEDOR_CORRECCION_MARGEN_DISTANCIA` (2) al siguiente. La
+      distancia solo desempata; el control del leído no cambia la regla
+      (solo se cuenta en la nota).
+    - Con candidato claro, sv3 escribe su CIF y su razón social de Sigrid en
+      el merge (origen `deterministic`) **antes** de buscar contratos, en las
+      tres rutas (nuevo, duplicado y `MensajePersistencia(force=True)` de
+      sv4), y lo manda a revisión con el motivo
+      `proveedor_cif_corregido:<leído>><aplicado>` y la nota `[CORREGIDO]
+      Proveedor` (prefijo propio: la red borra `[AVISO] Proveedor` en cada
+      pasada). Lo leído queda en motivo y nota; la fila cruda no se toca.
+    - Sin candidato claro, como F-002/F-052: motivo
+      `proveedor_cif_no_casa:<leído>` y nota `[AVISO] Proveedor` con o sin
+      propuesta, más «el carácter de control del CIF leído no es válido»
+      cuando lo es.
+    - **Nunca se pisa al revisor**: solo se corrige un CIF que no existe
+      (el desplegable de sv4 solo escribe `prv.cif`) y nunca con origen
+      `manual`. Elegir otro proveedor retira motivo y nota de la corrección
+      en la siguiente pasada; los `proveedor_cif_no_casa` de otro CIF
+      también caen. `review_required` no baja nunca solo.
 
 ## Acceso a datos y sistemas externos
 

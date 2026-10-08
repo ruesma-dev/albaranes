@@ -33,6 +33,10 @@ de la consulta antigua. Trae descripciones repetidas, espacios sobrantes,
 vacíos y ``NULL`` (R4) y un proveedor con un contrato sin líneas.
 Obra «0668»: un proveedor con 1.200 líneas (R11). Lista global de
 proveedores: 3.543 (R12).
+
+Fixture «F-062» (``fixture_f062``, aparte): obras 0720 y 0678 de los tres
+albaranes medidos el 2026-10-07 (HORMIGONES MAT y ARIDOS ANFERSA, con una
+hormigonera que empata por nombre).
 """
 from __future__ import annotations
 
@@ -216,6 +220,61 @@ def fixture_por_defecto() -> Fixture:
     todos = en_obras + globales
     rng.shuffle(todos)
     return Fixture(lineas=lineas, proveedores_global=tuple(todos))
+
+
+# ------------------------------------------------------------------ #
+# Fixture de F-062 (design §8): los tres albaranes medidos por el humano
+# el 2026-10-07. Aparte del de F-052, que no se toca.
+# ------------------------------------------------------------------ #
+#: Proveedor real de 19407 y 19394 (obra 0720). CIF con control válido.
+CIF_HORMIGONES_MAT = "B66056201"
+RAZ_HORMIGONES_MAT = "HORMIGONES MAT, S.L.U."
+CONTRATO_HORMIGONES_MAT = "CTSU26/0208"
+#: Otra hormigonera de la 0720 cuyo nombre EMPATA a 1,0 con «Hormigones
+#: Mat SL» («mat» casa con «materiales»), con CIF válido y lejano de los
+#: dos leídos: solo la distancia de CIF la separa del bueno.
+CIF_HORMIGONERA_EMPATE = "A28123453"
+RAZ_HORMIGONERA_EMPATE = "HORMIGONES Y MATERIALES DEL NORTE, S.A."
+#: Proveedor real de 1790636816 (obra 0678).
+CIF_ARIDOS_ANFERSA = "B18487421"
+RAZ_ARIDOS_ANFERSA = "ARIDOS ANFERSA, S.L."
+CONTRATO_ARIDOS_ANFERSA = "CTSU24/0176"
+#: Otro proveedor de la 0678 que se parece a medias (0,5): no es elegible.
+CIF_ARIDOS_SUR = "B11111119"
+RAZ_ARIDOS_SUR = "ARIDOS DEL SUR, S.L."
+
+#: Los tres CIF mal leídos por la IA (control inválido; no existen en prv).
+CIF_LEIDO_19407 = "B86056201"
+CIF_LEIDO_19394 = "B86056095"
+CIF_LEIDO_1790636816 = "B18437421"
+
+
+@lru_cache(maxsize=1)
+def fixture_f062() -> Fixture:
+    contador = {"linea": 700000}
+
+    def contrato(obra, cif, raz, ide, cod, res, descripciones) -> list[Linea]:
+        out = []
+        for pos, desc in enumerate(descripciones, start=1):
+            contador["linea"] += 1
+            out.append(Linea(obra, cif, raz, ide, cod, res, contador["linea"], pos, desc, None))
+        return out
+
+    lineas = tuple(
+        contrato("0720", CIF_HORMIGONES_MAT, RAZ_HORMIGONES_MAT, 2600208, CONTRATO_HORMIGONES_MAT,
+                 "SUMINISTRO HORMIGON OBRA 0720",
+                 ("HORMIGON HA-25/B/20/IIa", "BOMBEO DE HORMIGON"))
+        + contrato("0720", CIF_HORMIGONERA_EMPATE, RAZ_HORMIGONERA_EMPATE, 2600301, "CTSU26/0301",
+                   "SUMINISTRO HORMIGON", ("HORMIGON HM-20/P/20/I",))
+        + contrato("0678", CIF_ARIDOS_ANFERSA, RAZ_ARIDOS_ANFERSA, 2400176, CONTRATO_ARIDOS_ANFERSA,
+                   "SUMINISTRO ARIDOS OBRA 0678", ("ZAHORRA ARTIFICIAL", "GRAVA 20/40"))
+        + contrato("0678", CIF_ARIDOS_SUR, RAZ_ARIDOS_SUR, 2400177, "CTSU24/0177",
+                   "ARIDOS", ("ARENA LAVADA",))
+    )
+    globales = tuple(sorted({(ln.cif, ln.raz) for ln in lineas} | {
+        ("A30000001", "PROVEEDOR GLOBAL 0001"),
+    }))
+    return Fixture(lineas=lineas, proveedores_global=globales)
 
 
 # ------------------------------------------------------------------ #

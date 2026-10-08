@@ -20,6 +20,10 @@ producto + proveedores con contrato en la OBRA:
   - ``update_merge_resolved_header`` acepta el ORIGEN del CIF deducido
     ('deterministic' clasico o 'det_familia_obra'), que sv4 usa para
     penalizar la confianza.
+
+(oct 2026, F-062) La red de proveedor APLICA el candidato claro: el
+repositorio aporta ``aplicar_correccion_proveedor`` y
+``retirar_motivos_proveedor``.
 """
 from __future__ import annotations
 
@@ -103,5 +107,31 @@ class HeaderMergeRepository(Protocol):
 
         El motivo no se duplica en ``review_reasons_json`` y la nota
         sustituye a la anterior del mismo ``nota_prefijo``.
+        """
+        ...
+
+    def aplicar_correccion_proveedor(
+        self,
+        *,
+        document_id: str,
+        cif: str,
+        nombre: str,
+        motivo: str,
+        nota: str,
+    ) -> None:
+        """(F-062 · R6, R7, R16) Aplica el candidato claro en UNA
+        transaccion: CIF y razon social de Sigrid, origen
+        ``deterministic``, ``review_required=true``, motivos de proveedor
+        caducados fuera, ``motivo`` sin duplicar y la nota ``[CORREGIDO]
+        Proveedor`` sustituyendo a la anterior.
+        """
+        ...
+
+    def retirar_motivos_proveedor(
+        self, *, document_id: str, cif_actual: str | None,
+    ) -> None:
+        """(F-062 · R15, R16) Retira los motivos de proveedor cuyo CIF ya no
+        es el del merge y, si cae una correccion, su nota. No baja
+        ``review_required``.
         """
         ...

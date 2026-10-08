@@ -164,8 +164,17 @@ class Settings(BaseSettings):
     #   - RED_OBRA_ENABLED: una obra que no existe en Sigrid no se
     #     persiste (se descarta y el documento va a revisión).
     #   - RED_PROVEEDOR_CIF_ENABLED: el proveedor se canoniza por CIF
-    #     contra el maestro ``prv``; si el CIF no existe, se PROPONE
-    #     candidato y se marca revisión (nunca se sobrescribe solo).
+    #     contra el maestro ``prv``; si el CIF no existe, se marca
+    #     revisión y, desde F-062, se APLICA el candidato claro de la obra
+    #     (abajo) o, si no lo hay, se PROPONE el mejor por nombre.
+    #   - RED_PROVEEDOR_CORRECCION_ENABLED (F-062, oct 2026): con un CIF
+    #     leído que no existe y UN candidato claro con contrato en la obra
+    #     (identificador fiscal válido y nombre con score >=
+    #     RED_PROVEEDOR_CORRECCION_SCORE_MIN; varios ⇒ gana el de CIF más
+    #     cercano al leído si saca RED_PROVEEDOR_CORRECCION_MARGEN_DISTANCIA
+    #     al siguiente), sv3 escribe su CIF y razón social en el merge
+    #     ANTES de buscar contratos y lo manda a revisión. A false, la D3
+    #     de F-002 tal cual: solo se propone.
     #   - FECHA_GUARD_ENABLED: fecha del albarán a más de
     #     FECHA_GUARD_MAX_DIAS de la recepción del email -> revisión.
     # ------------------------------------------------------------ #
@@ -187,6 +196,18 @@ class Settings(BaseSettings):
     red_proveedor_cif_enabled: bool = Field(
         True,
         alias="RED_PROVEEDOR_CIF_ENABLED",
+    )
+    red_proveedor_correccion_enabled: bool = Field(
+        True,
+        alias="RED_PROVEEDOR_CORRECCION_ENABLED",
+    )
+    red_proveedor_correccion_score_min: float = Field(
+        1.0,
+        alias="RED_PROVEEDOR_CORRECCION_SCORE_MIN",
+    )
+    red_proveedor_correccion_margen_distancia: int = Field(
+        2,
+        alias="RED_PROVEEDOR_CORRECCION_MARGEN_DISTANCIA",
     )
     fecha_guard_enabled: bool = Field(True, alias="FECHA_GUARD_ENABLED")
     fecha_guard_max_dias: int = Field(365, alias="FECHA_GUARD_MAX_DIAS")
