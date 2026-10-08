@@ -74,7 +74,7 @@ sigrid-api tal como esté en la spec de F-009 (v8, `8a6ecab`; códigos incluidos
 
 ## Bloque F · documentación, infra y puertas
 
-- [ ] T22: `infra/`: sv9 en `$APPS`, build y `create_capps` (KEDA sobre `q-feedback`, máximo 1 réplica, secreto de Key Vault), DESDE, Espera y mapeo a sv4 y sv9 desde una sola variable, redactado  |  Verificación: MANUAL (humano) — leer el diff; `.\deploy.ps1 -Only sv9 -WhatIf` si el script lo admite
+- [x] T22: `infra/`: sv9 en `$APPS`, build y `create_capps` (KEDA sobre `q-feedback`, máximo 1 réplica, secreto de Key Vault), DESDE, Espera y mapeo a sv4 y sv9 desde una sola variable, redactado  |  Verificación: MANUAL (humano) — leer el diff; `.\deploy.ps1 -Only sv9 -WhatIf` si el script lo admite
 - [ ] T23: `docs/ARCHITECTURE.md` (sv9, tabla y columna nuevas), `docs/referencia/dominio_negocio_albaranes.md` §5.2 y `azure-apps/albaranes.md` (commit aparte en ese repo) según design §9; NO `CLAUDE.md` ni `sigrid_api.md` (los decide el humano)  |  Verificación: revisión del reviewer
 - [ ] T24: Cobertura de líneas cambiadas ≥ 80 %  |  Verificación: `python -m harness.cobertura --base dev --config harness/rigor.json`
 - [x] T24b: sv9 `SQL_RECLAMAR` en DOS sentencias (cerrojo y, después, lectura con instantánea nueva), como T40; decisión del humano (2026-10-07) tras la review fase 1 pasada 3 §7.2: no depender de la réplica única  |  Verificación: test con control negativo (sentencia única ⇒ falla) y suite de sv9

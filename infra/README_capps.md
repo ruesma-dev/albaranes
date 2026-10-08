@@ -119,3 +119,29 @@ Sube un PDF a `input/<id>.pdf` (seed) y encola en `q-extraccion` (puedes usar
 los scripts seed_input.py / encolar_extraccion.py apuntando con
 BLOBS_ACCOUNT_URL/COLAS_ACCOUNT_URL a la cuenta real en vez de Azurite), o
 espera a tener sv1 (productor) en la siguiente entrega.
+
+## sv9 · alta en Sigrid (F-053) — solo el humano, en este orden
+
+sv9 (`ca-sv9-alta-sigrid`) consume `q-feedback` y ESCRIBE en el ERP vía
+sigrid-api. Ningún agente lanza estos comandos. Orden (design §8 de F-053):
+
+1. Toca `ruesma_comun` ⇒ se reconstruyen TODAS las imágenes. Primero **sv6**
+   (columna `producto_sigrid`) y **sv3** (tabla `albaran_altas_sigrid`):
+   `.\deploy.ps1 -Only sv6,sv3`.
+2. **sv9** con DESDE vacía: `. .\00_capps_vars.ps1` (revisa el bloque F-053;
+   `ALTA_SIGRID_USUARIO` sale de la MANUAL T0c), `.\build_images.ps1 -Only sv9`
+   y `.\create_capps_sv9.ps1` (crea la app con **`ALTA_SIGRID_COMMIT=false`**,
+   KEDA sobre `q-feedback`, **máximo 1 réplica**, secretos de Key Vault). Las
+   siguientes veces, `.\deploy.ps1 -Only sv9` (avisa si sv9 está en modo real).
+3. **sv4**: `.\deploy.ps1 -Only sv4` (sale con DESDE vacía: como antes).
+4. Encender en **simulación**: pon `ALTA_SIGRID_DESDE_UTC` en el bloque F-053
+   y `.\set_alta_sigrid.ps1` (mismos valores en sv9 y sv4; no toca
+   `ALTA_SIGRID_COMMIT`; relee y compara).
+5. Días de simulación (MANUAL T28). Grabación real (T29): llave
+   `SIGRID_ALBARAN_WRITE_ENABLED` de sigrid-api (es de ese proyecto) y
+   `az containerapp update -n ca-sv9-alta-sigrid -g $RG --set-env-vars ALTA_SIGRID_COMMIT=true`,
+   con autorización expresa. Solo el literal `true` abre.
+
+Una sola réplica no es la única defensa contra el doble alta: `reclamar` bloquea
+el merge y lee el alta en otra sentencia (T24b) y sigrid-api es idempotente por
+referencia (`ALB-{document_id}`).
