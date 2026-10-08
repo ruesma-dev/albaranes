@@ -23,10 +23,6 @@ from pathlib import Path
 
 import pytest
 import yaml
-from ruesma_comun.colas import COLA_PERSISTENCIA, MensajeExtraccion
-from ruesma_comun.contratos import familias as cat
-from ruesma_comun.contratos.origen_datos import OrigenDatos
-
 from application.services.albaran_extraction_service import (
     AlbaranExtractionService,
     ProviderClientSpec,
@@ -46,6 +42,9 @@ from infrastructure.prompts.revision_rules_repository import (
 from infrastructure.prompts.yaml_prompt_repository import YamlPromptRepository
 from interface_adapters.worker.extraction_worker import construir_handler_extraccion
 from interface_adapters.worker.ports import DocumentoPdf
+from ruesma_comun.colas import COLA_PERSISTENCIA, MensajeExtraccion
+from ruesma_comun.contratos import familias as cat
+from ruesma_comun.contratos.origen_datos import OrigenDatos
 
 RAIZ = Path(__file__).resolve().parents[1]
 PROMPTS_REALES = RAIZ / "config" / "prompts.yaml"

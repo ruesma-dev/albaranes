@@ -297,9 +297,9 @@ def test_f064_r16_mayoritaria(categorias, mayoria):
 def _clasif(base: dict, rama: dict) -> dict:
     """`base[caso] = (ia1 [cats], ia2 [cats])` → la forma que da `clasificar`."""
     resultado = {}
-    for caso in base:
+    for caso, datos_base in base.items():
         resultado[caso] = {}
-        for variante, datos in (("base", base[caso]), ("rama", rama[caso])):
+        for variante, datos in (("base", datos_base), ("rama", rama[caso])):
             ia1, ia2 = datos
             resultado[caso][variante] = {
                 "ia1": ia1, "ia2": ia2,
@@ -429,7 +429,7 @@ def test_f064_r16_un_caso_roto_no_para_la_corrida_y_el_error_va_sin_valores(tmp_
     respuestas[("rama", "GEN-002")] = [ValueError(f"respuesta con {CIF_CLIENTE}")] + [(CIF_EMISOR, CIF_EMISOR)] * 2
     dobles = Dobles(tmp_path, respuestas)
 
-    codigo, salida, resumen = _lanzar(tmp_path, dobles, ["FER-001", "GEN-002"])
+    codigo, _salida, resumen = _lanzar(tmp_path, dobles, ["FER-001", "GEN-002"])
 
     assert codigo == 0
     assert len(dobles.llamadas) == 12

@@ -22,14 +22,6 @@ import re
 from pathlib import Path
 
 import yaml
-from ruesma_comun.contratos.familias import render_catalogo_markdown
-from ruesma_comun.correo import (
-    MARCA_FIN,
-    MARCA_INICIO,
-    construir_contexto_correo,
-    render_bloque_correo,
-)
-
 from application.services.albaran_extraction_service import (
     AlbaranExtractionService,
     ProviderClientSpec,
@@ -48,6 +40,13 @@ from infrastructure.prompts.revision_rules_repository import (
     RevisionRulesRepository,
 )
 from infrastructure.prompts.yaml_prompt_repository import YamlPromptRepository
+from ruesma_comun.contratos.familias import render_catalogo_markdown
+from ruesma_comun.correo import (
+    MARCA_FIN,
+    MARCA_INICIO,
+    construir_contexto_correo,
+    render_bloque_correo,
+)
 
 RAIZ = Path(__file__).resolve().parents[1]
 PROMPTS_REALES = RAIZ / "config" / "prompts.yaml"

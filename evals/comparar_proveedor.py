@@ -50,10 +50,15 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ruesma_comun.proveedores import cifs_propios, es_cif_propio, normalizar_cif
+
 from evals.procesos import sv2_extraccion, sv2_proveedor
 from evals.procesos.errores import avisar, describir_error
-from evals.procesos.sv5_valoracion import MODELOS_POR_PROVEEDOR, ClavesAusentes, comprobar_claves
-from ruesma_comun.proveedores import cifs_propios, es_cif_propio, normalizar_cif
+from evals.procesos.sv5_valoracion import (
+    MODELOS_POR_PROVEEDOR,
+    ClavesAusentes,
+    comprobar_claves,
+)
 
 RAIZ_REPO = sv2_extraccion.RAIZ_REPO
 

@@ -21,15 +21,14 @@ import ast
 from pathlib import Path
 
 import pytest
-from ruesma_comun import proveedores
-from ruesma_comun.proveedores import CIFS_PROPIOS_POR_DEFECTO
-
 from application.services.empresas_cliente import (
     MARCADOR_EMPRESAS_CLIENTE,
     EmpresaCliente,
     empresas_cliente,
     render_empresas_cliente,
 )
+from ruesma_comun import proveedores
+from ruesma_comun.proveedores import CIFS_PROPIOS_POR_DEFECTO
 
 RAIZ = Path(__file__).resolve().parents[1]
 CABECERA = "EMPRESAS DEL CLIENTE (CIF — razón social):"
