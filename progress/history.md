@@ -748,3 +748,10 @@ separado, nadie recorriendo el camino entero—:
 - Review APROBADA (pasada 2); mutación 104/104; `init.sh` en verde en `dev` tras fusionar (`d052106`).
 - Pendiente del humano: desplegar solo sv3 y vigilar con la consulta A.3 (T12); T0b opcional. Notas bajas B1, B2, B4 en el backlog.
 
+## F-063 · El CIF de Construcciones Ruesma nunca es el proveedor (done, 2026-10-08, urgente)
+
+- Incidencia: la IA leyó el CIF del cliente (A81873903) en un albarán de FEYMACO (obra 0694); sv3 lo canonizó a Construcciones Ruesma y no
+  encontró contrato. Arreglo: lista `CIFS_PROPIOS` (A81873903 de serie) en comun; sv3 descarta el CIF propio antes de la canonización y
+  de la red de proveedor en las tres rutas, deja nota `[AVISO] CIF del cliente` y resuelve por nombre en la obra; el revisor manda.
+- Review APROBADA; mutación 14/14; `init.sh` en verde en `dev` (`92ff1e1`). Despliegue: solo sv3.
+
