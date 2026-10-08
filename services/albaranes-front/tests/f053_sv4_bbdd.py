@@ -219,6 +219,6 @@ def foto(motor) -> dict[str, list[tuple]]:
     )
     with Session(motor) as s:
         return {
-            t: sorted((tuple(r) for r in s.execute(text(f"SELECT * FROM {t}")).all()), key=repr)  # noqa: S608
+            t: sorted((tuple(r) for r in s.execute(text(f"SELECT * FROM {t}")).all()), key=repr)
             for t in tablas
         }

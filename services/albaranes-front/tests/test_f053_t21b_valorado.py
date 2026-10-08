@@ -14,12 +14,12 @@ Repositorio real sobre SQLite y plantillas reales.
 from __future__ import annotations
 
 import pytest
+from f053_sv4_bbdd import DOC, construir, foto, repositorio
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from domain.models.alta_sigrid_models import AVISO_SIN_VALORAR, AlbaranSinValorarError
 from domain.models.review_models import MergeDocumentUpdatePayload
-from f053_sv4_bbdd import DOC, construir, foto, repositorio
 
 
 def _importes(motor, **por_linea):
@@ -97,7 +97,7 @@ def test_f053_r37_valorado_se_aprueba(monkeypatch, status, camino):
 
 def test_f053_r37_guardar_uno_ya_aprobado_sin_valorar_no_se_rechaza(monkeypatch):
     motor = construir(status="partial", aprobado=True)
-    detalle, paso = _guardar_y_aprobar(repositorio(motor), monkeypatch)
+    _, paso = _guardar_y_aprobar(repositorio(motor), monkeypatch)
     assert paso is False
 
 

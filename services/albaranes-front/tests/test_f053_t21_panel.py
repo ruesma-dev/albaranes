@@ -69,7 +69,7 @@ def _con_alta(documento, alta, *, puede=False, aprobado=True, productos=None):
 
 
 def _panel(html):
-    encontrado = re.search(r'<section[^>]*id="alta-sigrid".*?</section>', html, re.S)
+    encontrado = re.search(r'<section[^>]*id="alta-sigrid".*?</section>', html, re.DOTALL)
     return encontrado.group(0) if encontrado else None
 
 
@@ -90,8 +90,6 @@ def test_f053_r3_servicio_sin_desde_no_lee_el_alta():
     from application.services.review_service import ReviewService
 
     class _Repo:
-        llamadas: list[str] = []
-
         def get_document_detail(self, document_id, *, view_mode):
             return "detalle"
 
@@ -247,9 +245,9 @@ def test_f053_r25_panel_avisa_del_bloqueo(render_detalle, documento_detalle, est
 # =================================================================== #
 def _celda_producto(html, vid):
     fila = re.search(
-        rf'<tr[^>]*data-for-valuation-line-id="{vid}"[^>]*>.*?</tr>', html, re.S,
+        rf'<tr[^>]*data-for-valuation-line-id="{vid}"[^>]*>.*?</tr>', html, re.DOTALL,
     ).group(0)
-    celda = re.search(r'<td[^>]*data-col="producto"[^>]*>(.*?)</td>', fila, re.S)
+    celda = re.search(r'<td[^>]*data-col="producto"[^>]*>(.*?)</td>', fila, re.DOTALL)
     return celda.group(1) if celda else None
 
 
@@ -345,7 +343,7 @@ def _listado(monkeypatch, *, desde, alta_estado, aprobado=True):
 @pytest.mark.parametrize("estado", ESTADOS)
 def test_f053_r31_listado_ensena_el_estado_del_alta(monkeypatch, estado):
     html = _listado(monkeypatch, desde="2026-10-01T00:00:00Z", alta_estado=estado)
-    pastilla = re.search(r'<span class="alta-sigrid-pill[^"]*"[^>]*>(.*?)</span>', html, re.S)
+    pastilla = re.search(r'<span class="alta-sigrid-pill[^"]*"[^>]*>(.*?)</span>', html, re.DOTALL)
     assert pastilla is not None
     assert f"estado-{estado}" in pastilla.group(0)
     assert "Sigrid" in pastilla.group(1)

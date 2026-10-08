@@ -19,7 +19,6 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from pydantic import ValidationError
-
 from ruesma_comun.alta_sigrid import MAPEO_PRODUCTO_POR_DEFECTO
 from ruesma_comun.colas import COLA_FEEDBACK
 from ruesma_comun.colas.mensajes import MensajeFeedback

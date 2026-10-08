@@ -23,7 +23,6 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from pydantic import BaseModel, Field, computed_field
-
 from ruesma_comun.alta_sigrid import (
     ESTADOS_ALTA_BLOQUEANTES,
     MAPEO_PRODUCTO_POR_DEFECTO,

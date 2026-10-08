@@ -274,7 +274,10 @@ def _alta(estado, ultimo=None):
     return AltaSigridVista(estado=estado, sigrid_cod="AC26/7", ultimo_intento_at_utc=ultimo)
 
 
-def _servicio_alta(repo, orq, config=ConfigAltaSigrid(desde=DESDE)):
+ACTIVA = ConfigAltaSigrid(desde=DESDE)
+
+
+def _servicio_alta(repo, orq, config=ACTIVA):
     from application.services.review_service import ReviewService
 
     return ReviewService(repo, "r", orq, config)

@@ -18,11 +18,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
+from f053_sv4_bbdd import DOC, DOC_AJENO, construir, foto, poner_alta, repositorio
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from domain.models.alta_sigrid_models import AlbaranBloqueadoError, ConfigAltaSigrid
-from f053_sv4_bbdd import DOC, DOC_AJENO, construir, foto, poner_alta, repositorio
 
 ACTIVA = ConfigAltaSigrid(desde=datetime(2026, 10, 1, tzinfo=UTC))
 CLASIFICACION = {"familia": "generico", "mixto": False}

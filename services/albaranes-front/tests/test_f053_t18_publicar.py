@@ -23,7 +23,10 @@ from domain.models.alta_sigrid_models import (
     ConfigAltaSigrid,
     ResultadoAprobacion,
 )
-from domain.models.review_models import DocumentDetailPayload, MergeDocumentUpdatePayload
+from domain.models.review_models import (
+    DocumentDetailPayload,
+    MergeDocumentUpdatePayload,
+)
 
 DOC = "f053-t18-doc"
 ACTIVA = ConfigAltaSigrid(desde=datetime(2026, 10, 1, tzinfo=UTC))
@@ -189,7 +192,7 @@ def test_f053_r3_sin_configuracion_es_feature_apagada():
     """Un ``ReviewService`` construido como antes de F-053 no publica nada."""
     from application.services.review_service import ReviewService
 
-    repo, orq = _Repo(paso=True), _Orquestador()
+    repo = _Repo(paso=True)
     servicio = ReviewService(repo, "revisor")
     resultado = servicio.approve_document(document_id=DOC, approved_by="ana")
     assert resultado.alta_pedida is None

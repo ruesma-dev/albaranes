@@ -24,10 +24,6 @@ import re
 from pathlib import Path
 
 import pytest
-from sqlalchemy.dialects import postgresql
-
-from domain.models.alta_sigrid_models import AlbaranBloqueadoError, AltaSigridVista
-from domain.models.review_models import MergeDocumentUpdatePayload
 from f053_sv4_bbdd import (
     DOC,
     DOC_AJENO,
@@ -36,6 +32,10 @@ from f053_sv4_bbdd import (
     poner_alta,
     repositorio,
 )
+from sqlalchemy.dialects import postgresql
+
+from domain.models.alta_sigrid_models import AlbaranBloqueadoError, AltaSigridVista
+from domain.models.review_models import MergeDocumentUpdatePayload
 
 BLOQUEANTES = ("en_curso", "incierto", "registrado")
 NO_BLOQUEANTES = ("no_admitido", "ya_en_sigrid", "simulado", "revisar", "error", "anulado")
