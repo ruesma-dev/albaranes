@@ -699,6 +699,8 @@ def build_app(settings: Settings) -> FastAPI:
             "result": result,
             "message": message,
             "current_query": current_query,
+            # F-053 R31 / R3: el estado del alta solo se pinta con DESDE.
+            "alta_sigrid_activa": app.state.config_alta.activa,
             "build_sort_query": lambda column: _query_string(
                 filters,
                 {

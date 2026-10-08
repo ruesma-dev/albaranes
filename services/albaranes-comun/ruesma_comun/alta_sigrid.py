@@ -146,6 +146,19 @@ def es_linea_a_registrar(importe_calculado: float | None) -> bool:
     return importe_calculado is not None and abs(float(importe_calculado)) > _EPSILON
 
 
+def clasificacion_documento(
+    tipologia: str | None, tipologia_mixta: bool | None,
+) -> dict[str, object] | None:
+    """Clasificación del documento para ``producto_efectivo`` desde las
+    columnas del merge (``tipologia``, ``tipologia_mixta``): ``None`` sin
+    familia (documento anterior a F-043). La usan sv9 al construir la
+    petición y sv4 al pintar el producto (R38, R40)."""
+    familia = (tipologia or "").strip()
+    if not familia:
+        return None
+    return {"familia": familia, "mixto": bool(tipologia_mixta)}
+
+
 def productos_admitidos(mapeo: Mapping[str, str]) -> frozenset[str]:
     """Productos que se pueden elegir o mandar: los valores del mapeo."""
     return frozenset(mapeo.values())

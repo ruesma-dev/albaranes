@@ -40,6 +40,27 @@ AVISO_ALTA_NO_PEDIDA = (
 )
 
 
+#: R29, R31: cómo se lee cada estado del alta en el portal.
+ETIQUETAS_ESTADO_ALTA: dict[str, str] = {
+    "en_curso": "En curso",
+    "no_admitido": "No admitido",
+    "ya_en_sigrid": "Ya estaba en Sigrid",
+    "simulado": "Simulado (no grabado)",
+    "revisar": "A revisar",
+    "error": "Error",
+    "incierto": "Incierto (pendiente de confirmar)",
+    "registrado": "Registrado en Sigrid",
+    "anulado": "Anulado",
+}
+
+
+def etiqueta_estado_alta(estado: str | None) -> str | None:
+    """Texto del estado; uno desconocido se enseña tal cual."""
+    if estado is None:
+        return None
+    return ETIQUETAS_ESTADO_ALTA.get(estado, estado)
+
+
 def aviso_bloqueo(cod: str | None) -> str:
     """R25: «Registrado en Sigrid como {cod}: corrígelo en Sigrid y pulsa
     "Ya lo he anulado en Sigrid"» (sin ``cod`` si no lo hay)."""
@@ -134,6 +155,8 @@ class ProductoLinea(BaseModel):
     a_registrar: bool
     elegido: str | None = None
     codigo: str | None = None
+    #: El que llevaría sin elegir nada (familia + mapeo); ``None`` en vinculadas.
+    defecto: str | None = None
     por_defecto: bool = False
 
     @computed_field  # type: ignore[prop-decorator]
@@ -168,6 +191,17 @@ class AltaSigridVista(BaseModel):
     @property
     def bloqueante(self) -> bool:
         return self.estado in ESTADOS_ALTA_BLOQUEANTES
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def estado_texto(self) -> str:
+        return etiqueta_estado_alta(self.estado) or self.estado
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def aviso(self) -> str | None:
+        """R25: el aviso del bloqueo, si lo es."""
+        return aviso_bloqueo(self.sigrid_cod) if self.bloqueante else None
 
     @computed_field  # type: ignore[prop-decorator]
     @property

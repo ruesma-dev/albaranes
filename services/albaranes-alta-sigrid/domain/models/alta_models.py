@@ -21,6 +21,8 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
+from ruesma_comun.alta_sigrid import clasificacion_documento
+
 
 class EstadoAlta(StrEnum):
     """Los nueve estados del alta (glosario)."""
@@ -130,11 +132,9 @@ class CabeceraAlta:
 
     @property
     def clasificacion(self) -> dict[str, Any] | None:
-        """Clasificación del documento para ``familia_efectiva`` (o ``None``)."""
-        familia = (self.tipologia or "").strip()
-        if not familia:
-            return None
-        return {"familia": familia, "mixto": bool(self.tipologia_mixta)}
+        """Clasificación del documento para ``familia_efectiva`` (o ``None``);
+        la regla es la de comun, la misma con la que sv4 pinta el producto."""
+        return clasificacion_documento(self.tipologia, self.tipologia_mixta)
 
 
 @dataclass(frozen=True)

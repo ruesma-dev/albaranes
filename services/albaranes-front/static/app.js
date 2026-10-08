@@ -3286,3 +3286,37 @@
     });
     refrescar();
 })();
+
+// ------------------------------------------------------------------- //
+// F-053 R41: producto Sigrid de una línea sin vincular. Al cambiar el
+// selector se guarda (null = por defecto) y se recarga para ver el
+// deshacer. Con alta bloqueante el servidor responde 409 con el aviso.
+// ------------------------------------------------------------------- //
+(function () {
+    [].forEach.call(document.querySelectorAll(".js-producto-sigrid"), function (sel) {
+        sel.addEventListener("change", async function () {
+            const doc = sel.dataset.documentId;
+            const vid = sel.dataset.valuationLineId;
+            sel.disabled = true;
+            try {
+                const resp = await fetch(
+                    `/api/documents/${doc}/lineas-valoradas/${vid}/producto-sigrid`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                        body: JSON.stringify({ producto: sel.value || null }),
+                    }
+                );
+                if (!resp.ok) {
+                    let msg = "No se pudo guardar el producto.";
+                    try { const j = await resp.json(); if (j && j.detail) msg = j.detail; } catch (e) {}
+                    window.alert(msg);
+                }
+                window.location.reload();
+            } catch (e) {
+                window.alert("Error de red guardando el producto.");
+                sel.disabled = false;
+            }
+        });
+    });
+})();

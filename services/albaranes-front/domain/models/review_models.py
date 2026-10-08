@@ -25,6 +25,13 @@ from ruesma_comun.contratos.origen_datos import (
 )
 from ruesma_comun.valoracion import esta_valorado
 
+from domain.models.alta_sigrid_models import (
+    AltaSigridVista,
+    ProductoLinea,
+    ProductoOpcion,
+    etiqueta_estado_alta,
+)
+
 VIEW_MODE_MERGE = "merge"
 KNOWN_PROVIDER_VIEWS = ("openai", "gemini", "claude")
 ALLOWED_VIEW_MODES = (VIEW_MODE_MERGE, *KNOWN_PROVIDER_VIEWS)
@@ -240,6 +247,11 @@ class DocumentListItem(BaseModel):
     valorado: bool = False
     # F-053 R31: estado del alta en Sigrid (None = sin alta o DESDE vacía).
     alta_estado: str | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def alta_estado_texto(self) -> str | None:
+        return etiqueta_estado_alta(self.alta_estado)
 
 
 class ProviderSnapshot(BaseModel):
@@ -849,6 +861,13 @@ class DocumentDetailPayload(BaseModel):
     # para el CIF y la obra actuales. Lo rellena el repositorio en el
     # detalle del merge; ``None`` en las vistas de proveedor.
     busqueda_contratos: BusquedaContratosVista | None = None
+    # F-053 — alta en Sigrid (R29-R30) y producto de cada línea (R40). Lo
+    # rellena el servicio en la vista merge SOLO con DESDE puesta (R3).
+    alta_sigrid_activa: bool = False
+    alta_sigrid: AltaSigridVista | None = None
+    alta_puede_solicitar: bool = False
+    productos_sigrid: dict[int, ProductoLinea] = Field(default_factory=dict)
+    productos_admitidos: list[ProductoOpcion] = Field(default_factory=list)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

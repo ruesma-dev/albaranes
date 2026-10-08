@@ -103,6 +103,11 @@
     </div>
 {% endif %}
 
+{# F-053 R29-R30: alta en Sigrid del documento aprobado (solo con DESDE, R3). #}
+{% if document.alta_sigrid_activa and document.approved %}
+    {% include "_alta_sigrid.html" %}
+{% endif %}
+
 {# =========================================================== #}
 {#  Clasificación del albarán (F-043 R30)                       #}
 {#                                                              #}
@@ -666,6 +671,7 @@
                             <col data-col="importe" data-w="128">
                             <col data-col="descuento" data-w="80">
                             <col data-col="codigo" data-w="110">
+                            {% if document.alta_sigrid_activa %}<col data-col="producto" data-w="170">{% endif %}
                             <col data-col="acciones" data-w="156">
                         </colgroup>
                         <thead>
@@ -679,6 +685,8 @@
                             <th data-col="importe" data-sort-type="num" draggable="true"><span class="th-label">Importe</span><span class="th-sub">cant × precio − dto%</span><span class="th-sort"></span><span class="col-resizer"></span></th>
                             <th data-col="descuento" data-sort-type="num" draggable="true"><span class="th-label">Dto (%)</span><span class="th-sort"></span><span class="col-resizer"></span></th>
                             <th data-col="codigo" draggable="true"><span class="th-label">Cód. externo</span><span class="th-sort"></span><span class="col-resizer"></span></th>
+                            {# F-053 R40: producto con el que se dará de alta en Sigrid (solo con DESDE). #}
+                            {% if document.alta_sigrid_activa %}<th data-col="producto" draggable="true"><span class="th-label">Producto Sigrid</span><span class="th-sub">sin vincular: genérico</span><span class="th-sort"></span><span class="col-resizer"></span></th>{% endif %}
                             <th data-col="acciones" draggable="true"><span class="th-label">Acciones</span><span class="col-resizer"></span></th>
                         </tr>
                         </thead>
@@ -822,6 +830,25 @@
                                             <input type="text" class="cell-input cell-short js-cedit" data-field="codigo_externo" value="{{ c.codigo_externo or '' }}" placeholder="—">
                                         {% else %}{{ c.codigo_externo or '' }}{% endif %}
                                     </td>
+                                    {# F-053 R40-R41: producto Sigrid de la línea. Selector solo en las
+                                       sin vincular a registrar; vinculadas, el de su línea de contrato. #}
+                                    {% if document.alta_sigrid_activa %}
+                                        {% set ps = document.productos_sigrid.get(dline.valuation_line_id) if dline.valuation_line_id is not none else none %}
+                                        <td class="concilia-td td-producto" data-col="producto" data-sort-value="{{ ps.codigo if ps and ps.codigo else '' }}">
+                                            {% if not ps %}<span class="muted">—</span>
+                                            {% elif ps.vinculada %}<span class="concilia-val" title="Línea vinculada al contrato: Sigrid usa el producto de su línea de contrato">{{ ps.codigo or '—' }} <span class="muted small">(del contrato)</span></span>
+                                            {% elif not ps.a_registrar %}<span class="muted small" title="Sin importe: no se registra en Sigrid">{{ ps.codigo }} · no se registra</span>
+                                            {% elif cedit %}
+                                                <select class="cell-input js-producto-sigrid" data-document-id="{{ document.id }}" data-valuation-line-id="{{ ps.valuation_line_id }}" title="Producto genérico de Sigrid para esta línea sin vincular">
+                                                    <option value="" {{ 'selected' if ps.elegido is none else '' }}>Por defecto ({{ ps.defecto }} · {{ document.productos_admitidos | selectattr('codigo', 'equalto', ps.defecto) | map(attribute='nombre') | first | default(ps.defecto) }})</option>
+                                                    {% for op in document.productos_admitidos %}
+                                                        <option value="{{ op.codigo }}"{{ ' selected' if ps.elegido == op.codigo else '' }}>{{ op.codigo }} · {{ op.nombre }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            {% else %}<span class="concilia-val">{{ ps.codigo }} · {{ ps.nombre }}{% if ps.por_defecto %} <span class="muted small">(por defecto)</span>{% endif %}</span>
+                                            {% endif %}
+                                        </td>
+                                    {% endif %}
                                     {# Acciones — Borrar + Guardar (a la derecha). #}
                                     <td class="concilia-td td-acciones" data-col="acciones">
                                         {% if cedit %}
@@ -832,7 +859,7 @@
                                 </tr>
                             {% endif %}
                         {% else %}
-                            <tr class="salmon-empty"><td colspan="10" class="empty-cell">Aún no hay líneas salmón. Usa «+ a Sigrid» en una línea del albarán, o «Añadir línea».</td></tr>
+                            <tr class="salmon-empty"><td colspan="{{ 11 if document.alta_sigrid_activa else 10 }}" class="empty-cell">Aún no hay líneas salmón. Usa «+ a Sigrid» en una línea del albarán, o «Añadir línea».</td></tr>
                         {% endfor %}
                         </tbody>
                     </table>

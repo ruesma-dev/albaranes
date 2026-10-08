@@ -138,3 +138,12 @@ def test_f053_r43_sin_vincular(cambio):
 ])
 def test_f053_r40_linea_a_registrar(importe, esperado):
     assert a.es_linea_a_registrar(importe) is esperado
+
+
+@pytest.mark.parametrize("tipologia, mixta, esperado", [
+    (None, None, None), ("", True, None), ("  ", False, None),
+    ("residuos", None, {"familia": "residuos", "mixto": False}),
+    (" alquiler_maquinaria ", 1, {"familia": "alquiler_maquinaria", "mixto": True}),
+])
+def test_f053_r40_clasificacion_documento(tipologia, mixta, esperado):
+    assert a.clasificacion_documento(tipologia, mixta) == esperado

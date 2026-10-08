@@ -7,8 +7,10 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from ruesma_comun.alta_sigrid import (
+    clasificacion_documento,
     es_linea_a_registrar,
     es_linea_vinculada,
+    nombre_producto,
     producto_efectivo,
 )
 
@@ -20,6 +22,7 @@ from domain.models.alta_sigrid_models import (
     AlbaranBloqueadoError,
     ConfigAltaSigrid,
     ProductoLinea,
+    ProductoOpcion,
     ResultadoAprobacion,
 )
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
@@ -128,10 +131,31 @@ class ReviewService:
         *,
         view_mode: str = VIEW_MODE_MERGE,
     ) -> DocumentDetailPayload | None:
-        return self._repository.get_document_detail(
+        detalle = self._repository.get_document_detail(
             document_id,
             view_mode=view_mode,
         )
+        # F-053: con DESDE puesta, la ficha (vista merge) lleva el alta y el
+        # producto de cada línea (R29, R30, R40). Con DESDE vacía, nada (R3).
+        if (
+            detalle is None
+            or not self._config_alta.activa
+            or detalle.view_mode != VIEW_MODE_MERGE
+        ):
+            return detalle
+        return detalle.model_copy(update={
+            "alta_sigrid_activa": True,
+            "alta_sigrid": self._repository.leer_alta_sigrid(document_id),
+            "alta_puede_solicitar": self.puede_solicitar_alta(document_id),
+            "productos_sigrid": self.productos_sigrid(
+                document_id,
+                clasificacion_documento(detalle.tipologia, detalle.tipologia_mixta),
+            ),
+            "productos_admitidos": [
+                ProductoOpcion(codigo=codigo, nombre=nombre_producto(codigo))
+                for codigo in sorted(self._config_alta.admitidos)
+            ],
+        })
 
     def get_contrato_pdf_url(self, document_id: str) -> str | None:
         """URL del PDF del contrato en SharePoint para abrir desde el front.
@@ -718,11 +742,12 @@ class ReviewService:
             elegido = (fila["producto_sigrid"] or "").strip() or None
             if vinculada:
                 codigo, por_defecto, elegido = fila["codigo_producto"], False, None
+                defecto = None
             else:
-                codigo = producto_efectivo(
-                    elegido, _familia_de_la_linea(fila["contexto_linea_json"]),
-                    clasificacion, self._config_alta.mapeo,
-                )
+                familia = _familia_de_la_linea(fila["contexto_linea_json"])
+                mapeo = self._config_alta.mapeo
+                codigo = producto_efectivo(elegido, familia, clasificacion, mapeo)
+                defecto = producto_efectivo(None, familia, clasificacion, mapeo)
                 por_defecto = elegido is None
             productos[int(fila["id"])] = ProductoLinea(
                 valuation_line_id=int(fila["id"]),
@@ -730,6 +755,7 @@ class ReviewService:
                 a_registrar=es_linea_a_registrar(fila["importe_calculado"]),
                 elegido=elegido,
                 codigo=codigo,
+                defecto=defecto,
                 por_defecto=por_defecto,
             )
         return productos

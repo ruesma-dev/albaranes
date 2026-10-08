@@ -1792,3 +1792,17 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
     background: var(--warn-soft);
     color: var(--warn-strong);
 }
+
+/* F-053 · Alta en Sigrid: panel de la ficha (R29) y estado en el listado (R31). */
+.alta-sigrid .alta-sigrid-lineas { margin-top: 8px; font-size: 0.9em; }
+.alta-sigrid .alta-sigrid-bloqueo { margin-top: 6px; }
+.alta-sigrid .alta-sigrid-acciones { margin-top: 8px; display: flex; gap: 8px; }
+.alta-sigrid .inline-form { display: inline; }
+.alta-sigrid-pill { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 10px;
+    font-size: 0.8em; background: #e5e7eb; color: #1f2937; }
+.alta-sigrid-pill.estado-registrado, .alta-sigrid-pill.estado-ya_en_sigrid { background: #d1fae5; color: #065f46; }
+.alta-sigrid-pill.estado-simulado { background: #dbeafe; color: #1e40af; }
+.alta-sigrid-pill.estado-en_curso, .alta-sigrid-pill.estado-incierto,
+.alta-sigrid-pill.estado-revisar { background: #fef3c7; color: #92400e; }
+.alta-sigrid-pill.estado-error, .alta-sigrid-pill.estado-no_admitido { background: #fee2e2; color: #991b1b; }
+.td-producto select { max-width: 100%; }
