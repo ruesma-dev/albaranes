@@ -448,7 +448,11 @@ class HeaderResolverService:
         if not (proveedor_nombre or "").strip():
             return None, "deterministic"
         try:
-            proveedores = self._proveedor_client.search_proveedores()
+            proveedores = [
+                (cif, nombre)
+                for cif, nombre in self._proveedor_client.search_proveedores()
+                if self._no_es_propio(cif)  # F-063 · R9
+            ]
         except Exception:
             logger.exception("%s search_proveedores fallo.", _LOG_PREFIX)
             return None, "deterministic"
@@ -535,6 +539,10 @@ class HeaderResolverService:
             merge_document_id,
         )
         return True
+
+    def _no_es_propio(self, cif: str | None) -> bool:
+        """F-063 · R9: filtro de candidatos; un CIF propio nunca lo es."""
+        return not es_cif_propio(cif, self._cifs_propios)
 
     # ----------------------------------------------------------------- #
     # RED DE PROVEEDOR POR CIF (F-002 · R8, R9, R10)
@@ -791,11 +799,15 @@ class HeaderResolverService:
         if not (proveedor_nombre or "").strip():
             return [], MOTIVO_SIN_NOMBRE
         try:
-            resumenes = list(
-                self._proveedor_client.fetch_contratos_resumen_por_obra(
-                    codigo_obra=obra,
-                ) or []
-            )
+            resumenes = [
+                resumen
+                for resumen in (
+                    self._proveedor_client.fetch_contratos_resumen_por_obra(
+                        codigo_obra=obra,
+                    ) or []
+                )
+                if self._no_es_propio(resumen.cif)  # F-063 · R9
+            ]
         except Exception:
             logger.exception(
                 "%s fetch_contratos_resumen_por_obra fallo obra=%s; la "
@@ -969,6 +981,9 @@ class HeaderResolverService:
                 _LOG_PREFIX, obra_codigo,
             )
             return None, "deterministic"
+        # F-063 · R9: un CIF propio nunca es candidato. Sin nadie mas, la
+        # obra cuenta como «sin proveedores con contrato».
+        resumenes = [r for r in resumenes if self._no_es_propio(r.cif)]
         if not resumenes:
             logger.info(
                 "%s obra %s sin proveedores con contrato; paso familia "

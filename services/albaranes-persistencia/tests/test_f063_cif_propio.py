@@ -277,3 +277,67 @@ def test_f063_r3_los_dos_puntos_de_composicion_cablean_los_cif_propios(modulo):
 
     fuente = " ".join((Path(__file__).resolve().parents[1] / modulo).read_text(encoding="utf-8").split())
     assert "cifs_propios=cifs_propios(settings.cifs_propios)" in fuente
+
+
+# ------------------------------------------------------------------ #
+# R9 · un CIF propio nunca es candidato (paso 1, paso 2 y red por CIF)
+# ------------------------------------------------------------------ #
+NOMBRE_RUESMA_LEIDO = "CONSTRUCCIONES RUESMA, S.A."
+
+
+def test_f063_r9_candidato_paso1_la_obra_nunca_devuelve_el_cif_propio():
+    """Un merge ya canonizado al cliente (el nombre es el de Ruesma): el
+    atajo por nombre de la obra lo devolvería si Ruesma estuviera en la
+    lista."""
+    cliente = ClienteFalso(obra=[_resumen(RUESMA, RAZ_RUESMA), _resumen(OTRO, RAZ_OTRO)])
+    repo = RepoF063(cif=None, nombre=NOMBRE_RUESMA_LEIDO)
+
+    pasada(cliente, repo)
+
+    assert repo.cif is None
+    assert RUESMA not in (repo.notas or "")  # ni en la lista de candidatos de la nota
+    assert OTRO in (repo.notas or "")
+
+
+def test_f063_r9_candidato_paso1_obra_con_solo_el_cif_propio_es_obra_sin_candidatos():
+    cliente = ClienteFalso(obra=[_resumen(RUESMA, RAZ_RUESMA)])
+    repo = RepoF063(cif=None, nombre=NOMBRE_RUESMA_LEIDO)
+
+    pasada(cliente, repo)
+
+    assert repo.cif is None
+    assert repo.notas is None
+
+
+def test_f063_r9_candidato_paso2_la_busqueda_global_nunca_devuelve_el_cif_propio():
+    cliente = ClienteFalso(globales=[(RUESMA, RAZ_RUESMA), (OTRO, RAZ_OTRO)])
+    repo = RepoF063(cif=None, nombre=NOMBRE_RUESMA_LEIDO, obra=None)
+
+    pasada(cliente, repo)
+
+    assert repo.cif is None
+
+
+def test_f063_r9_candidato_paso2_control_otro_proveedor_global_si_se_resuelve():
+    cliente = ClienteFalso(globales=[(RUESMA, RAZ_RUESMA), (OTRO, RAZ_OTRO)])
+    repo = RepoF063(cif=None, nombre="HORMIGONES DEL CENTRO", obra=None)
+
+    pasada(cliente, repo)
+
+    assert repo.cif == OTRO
+
+
+def test_f063_r9_candidato_red_por_cif_ni_aplica_ni_propone_el_cif_propio():
+    """CIF leído que no existe en prv y Ruesma, con CIF válido y nombre
+    que casa, en la lista de la obra: F-062 lo aplicaría como candidato
+    claro."""
+    cliente = ClienteFalso(obra=[_resumen(RUESMA, RAZ_RUESMA), _resumen(OTRO, RAZ_OTRO)])
+    repo = RepoF063(cif="B86056201", nombre=NOMBRE_RUESMA_LEIDO)
+
+    pasada(cliente, repo)
+
+    assert repo.aplicadas == []
+    [(motivo, nota, _)] = repo.marcas
+    assert motivo == "proveedor_cif_no_casa:B86056201"
+    assert "PROPUESTA" not in nota
+    assert repo.cif == "B86056201"
