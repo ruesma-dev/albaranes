@@ -18,7 +18,12 @@ están `blocked` en las suyas. Entorno del worktree: venvs del árbol principal 
 ### F-062 · estado de la implementación
 
 - Arranque: `bash harness/init.sh` en verde en el worktree (2026-10-07). F-062 → `in_progress`, `BACKLOG.md` regenerado.
-- **T1–T10 hechas** (un commit por tarea). En curso: T11 (cobertura y campaña de mutación) y T13 (`init.sh`).
+- **T1–T11 hechas** (2026-10-08, un commit por tarea). Informe: `progress/impl_F-062.md`. Cobertura de líneas
+  cambiadas 100 % (203/203); mutación completa en serie 104/104 muertos, 0 supervivientes (`progress/mutacion_F-062.md`,
+  fila añadida al inventario de F-039). **Siguiente paso: review** (líder → reviewer).
+- **T13 (`init.sh`) sin marcar**: en el worktree da 2 KO, ambos de entorno (el test de abajo y, por él, la puerta de
+  cobertura a 59,6 % porque `-x` corta antes de los `test_f062_*`); deseleccionando solo ese test, `ENTORNO LISTO`.
+  Repetir `bash harness/init.sh` en el árbol principal tras fusionar. Pendientes del humano: T0b (opcional) y T12.
 - **Desviaciones (justificadas en `progress/impl_F-062.md` §2)**: (1) los tests de la nota de F-052
   (`test_f052_nota_proveedor.py`) también pasan a `correccion_enabled=False`, como los de D3 de F-002 (el design solo
   nombraba F-002; SALMEDINA en la 0691 es candidato claro y con la corrección encendida esos tests pasaban por el
