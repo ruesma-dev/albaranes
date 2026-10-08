@@ -4300,6 +4300,20 @@ class AlbaranReviewRepository:
             actualizado_at_utc=fila["actualizado_at_utc"],
         )
 
+    def estado_aprobacion(self, document_id: str) -> dict[str, Any] | None:
+        """(F-053 R30) ``approved``, ``approved_at_utc`` e ``is_active`` del
+        merge, o ``None`` si no existe. Solo lectura."""
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            document = session.get(AlbaranDocumentMergeOrm, document_id)
+            if document is None:
+                return None
+            return {
+                "approved": bool(document.approved),
+                "approved_at_utc": document.approved_at_utc,
+                "is_active": bool(document.is_active),
+            }
+
     def lineas_producto_sigrid(self, document_id: str) -> list[dict[str, Any]]:
         """(F-053 R40, R43) Por línea valorada del documento: producto
         elegido, importe, casada (con ``sigrid_ide``, contrato y producto de

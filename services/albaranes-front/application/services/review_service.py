@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from ruesma_comun.alta_sigrid import (
     es_linea_a_registrar,
@@ -15,6 +16,7 @@ from application.services.busqueda_contratos import (
     hay_datos_para_buscar,
 )
 from domain.models.alta_sigrid_models import (
+    AlbaranBloqueadoError,
     ConfigAltaSigrid,
     ProductoLinea,
     ResultadoAprobacion,
@@ -31,6 +33,7 @@ from domain.models.review_models import (
 )
 from domain.ports.contrato_refetch_port import ContratoRefetchClient
 from domain.ports.orchestrator_port import OrchestratorClient
+from domain.services.alta_sigrid import puede_solicitar_alta
 from infrastructure.database.review_repository import AlbaranReviewRepository
 
 logger = logging.getLogger(__name__)
@@ -45,6 +48,15 @@ class ResultadoGuardado:
     detail: DocumentDetailPayload
     busqueda: ContratoRefetchOutcome | None
     aprobacion: ResultadoAprobacion
+
+
+@dataclass(frozen=True)
+class ResultadoBorradoMultiple:
+    """Borrado en bloque (F-053 R27): movidos a la papelera y saltados por
+    tener un alta en Sigrid bloqueante."""
+
+    movidos: int
+    saltados: int
 
 
 class ReviewService:
@@ -326,7 +338,17 @@ class ReviewService:
         (uno corrupto no frena al resto). Devuelve cuantos se
         movieron a la papelera. Restaurables desde alli, como el
         borrado individual."""
+        return self.bulk_delete_documents_con_saltos(
+            document_ids=document_ids, deleted_by=deleted_by,
+        ).movidos
+
+    def bulk_delete_documents_con_saltos(
+        self, *, document_ids: list[str], deleted_by: str | None
+    ) -> ResultadoBorradoMultiple:
+        """Como :meth:`bulk_delete_documents`, contando aparte los que se
+        saltan por tener un alta en Sigrid bloqueante (F-053 R27)."""
         movidos = 0
+        saltados = 0
         for document_id in document_ids:
             try:
                 self._repository.soft_delete_document(
@@ -334,12 +356,11 @@ class ReviewService:
                     deleted_by=deleted_by or self._default_reviewer,
                 )
                 movidos += 1
+            except AlbaranBloqueadoError:
+                saltados += 1
             except Exception:  # noqa: BLE001 - best-effort
-                import logging
-                logging.getLogger(__name__).exception(
-                    "[bulk-delete] fallo con id=%s", document_id,
-                )
-        return movidos
+                logger.exception("[bulk-delete] fallo con id=%s", document_id)
+        return ResultadoBorradoMultiple(movidos=movidos, saltados=saltados)
 
     def restore_document(self, *, document_id: str) -> None:
         """Restaura un albarán desde la papelera (is_active=True)."""
@@ -735,6 +756,79 @@ class ReviewService:
                 restore=[snap_line],
             )
         return resultado
+
+    # ------------------------------------------------------------------ #
+    # F-053 · Alta en Sigrid desde la ficha (R25, R28, R30)
+    # ------------------------------------------------------------------ #
+    def comprobar_desbloqueado(self, document_id: str) -> None:
+        """R25 para lo que solo PUBLICA (revalorar, volver a buscar
+        contratos): mira el alta sin cerrojo (design §11) y lanza
+        :class:`AlbaranBloqueadoError` si es bloqueante."""
+        alta = self._repository.leer_alta_sigrid(document_id)
+        if alta is not None and alta.bloqueante:
+            raise AlbaranBloqueadoError(document_id, alta.estado, alta.sigrid_cod)
+
+    def puede_solicitar_alta(
+        self, document_id: str, *, ahora: datetime | None = None,
+    ) -> bool:
+        """R30: ¿se ofrece «Solicitar alta en Sigrid» para el documento?"""
+        if not self._config_alta.activa:
+            return False
+        estado = self._repository.estado_aprobacion(document_id)
+        if estado is None:
+            return False
+        return puede_solicitar_alta(
+            aprobado=estado["approved"],
+            activo=estado["is_active"],
+            approved_at_utc=estado["approved_at_utc"],
+            alta=self._repository.leer_alta_sigrid(document_id),
+            config=self._config_alta,
+            ahora=ahora or datetime.now(UTC),
+        )
+
+    def solicitar_alta_sigrid(
+        self,
+        *,
+        document_id: str,
+        solicitado_por: str | None,
+        ahora: datetime | None = None,
+    ) -> str:
+        """R30: publica ``accion="alta"`` solo cuando procede. Devuelve
+        ``pedida``, ``no_publicada``, ``no_procede`` o ``apagada`` (R3)."""
+        if not self._config_alta.activa:
+            return "apagada"
+        if not self.puede_solicitar_alta(document_id, ahora=ahora):
+            return "no_procede"
+        return self._publicar_feedback(document_id, "alta", solicitado_por)
+
+    def verificar_anulacion_sigrid(
+        self, *, document_id: str, solicitado_por: str | None,
+    ) -> str:
+        """R28: «Ya lo he anulado en Sigrid» publica
+        ``accion="verificar_anulacion"`` solo con un alta ``registrado``;
+        quien decide si pasa a ``anulado`` es sv9 (lo busca en Sigrid)."""
+        if not self._config_alta.activa:
+            return "apagada"
+        alta = self._repository.leer_alta_sigrid(document_id)
+        if alta is None or alta.estado != "registrado":
+            return "no_procede"
+        return self._publicar_feedback(document_id, "verificar_anulacion", solicitado_por)
+
+    def _publicar_feedback(
+        self, document_id: str, accion: str, solicitado_por: str | None,
+    ) -> str:
+        if self._orchestrator is None:
+            return "no_publicada"
+        try:
+            publicado = self._orchestrator.solicitar_alta_sigrid(
+                document_id=document_id, accion=accion, solicitado_por=solicitado_por,
+            )
+        except Exception:  # noqa: BLE001 — best-effort: se avisa al revisor
+            logger.exception(
+                "[alta-sigrid][%s] fallo publicando document_id=%s", accion, document_id,
+            )
+            publicado = False
+        return "pedida" if publicado else "no_publicada"
 
     def list_trash_document_ids(self) -> list[str]:
         """Ids de los albaranes en la papelera (para vaciarla)."""

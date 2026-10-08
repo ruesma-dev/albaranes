@@ -612,7 +612,10 @@
                     { method: "POST" }
                 );
                 if (!resp.ok) {
-                    window.alert("No se pudo pasar el albarán a almacén.");
+                    // F-053 R25: con alta en Sigrid bloqueante llega el aviso (409).
+                    let msg = "No se pudo pasar el albarán a almacén.";
+                    try { const j = await resp.json(); if (j && j.detail) msg = j.detail; } catch (e) {}
+                    window.alert(msg);
                     almacenTodasBtn.disabled = false;
                     return;
                 }
@@ -905,7 +908,10 @@
                 { method: "POST" }
             );
             if (!resp.ok) {
-                window.alert("No se pudo pasar la línea a almacén.");
+                // F-053 R25: con alta en Sigrid bloqueante llega el aviso (409).
+                let msg = "No se pudo pasar la línea a almacén.";
+                try { const j = await resp.json(); if (j && j.detail) msg = j.detail; } catch (e) {}
+                window.alert(msg);
                 input.disabled = false;
                 return;
             }
@@ -3158,6 +3164,8 @@
             linea_add: "Añadir",
             conciliar: "Casar",
             guardar: "Guardar",
+            almacen: "Almacén",
+            producto: "Producto",
         })[a] || "Cambio";
     }
 
