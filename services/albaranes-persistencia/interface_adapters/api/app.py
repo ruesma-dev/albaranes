@@ -71,6 +71,7 @@ from infrastructure.database.sqlalchemy_contrato_cache_repository import (
     SqlAlchemyContratoCacheRepository,
 )
 from ruesma_comun.office import build_word_converter
+from ruesma_comun.proveedores import cifs_propios
 from infrastructure.sigrid.sigrid_api_contrato_client import (
     SigridApiContratoClient,
 )
@@ -181,6 +182,7 @@ def build_app(settings: Settings) -> FastAPI:
             correccion_margen_distancia=(
                 settings.red_proveedor_correccion_margen_distancia
             ),
+            cifs_propios=cifs_propios(settings.cifs_propios),
         )
 
         obra_enrichment_service = ObraEnrichmentService(

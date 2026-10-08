@@ -44,6 +44,7 @@ from infrastructure.sigrid.sigrid_api_obra_client import SigridApiObraClient
 from infrastructure.storage.sharepoint_document_storage import (
     SharePointDocumentStorage,
 )
+from ruesma_comun.proveedores import cifs_propios
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +120,7 @@ def build_persist_pipeline(
             correccion_margen_distancia=(
                 settings.red_proveedor_correccion_margen_distancia
             ),
+            cifs_propios=cifs_propios(settings.cifs_propios),
         )
         obra_enrichment_service = ObraEnrichmentService(
             client=sigrid_obra_client,

@@ -9,8 +9,10 @@ from application.services.familia_detector import (
     familias_de_texto,
 )
 from domain.models.header_resolution_models import (
+    MOTIVO_PROVEEDOR_CIF_PROPIO,
     MOTIVO_PROVEEDOR_CORREGIDO,
     MOTIVO_PROVEEDOR_NO_CASA,
+    NOTA_CIF_PROPIO_PREFIJO,
     NOTA_PROVEEDOR_CORREGIDO_PREFIJO,
     ProveedorObraResumen,
 )
@@ -22,6 +24,9 @@ from domain.ports.header_resolver_ports import (
 )
 from ruesma_comun.obras import normalizar_codigo_obra
 from ruesma_comun.proveedores import (
+    CIFS_PROPIOS_POR_DEFECTO,
+    cifs_propios,
+    es_cif_propio,
     identificador_fiscal_valido,
     normalizar_cif,
 )
@@ -54,6 +59,11 @@ _PENALIZACION_OTRA_FAMILIA = 2
 # debajo del umbral). OJO: la columna proveedor_cif_origen es VARCHAR(24);
 # el valor debe caber. sv4 lo penaliza en la confianza (factor 0.5).
 ORIGEN_DET_FAMILIA_OBRA = "det_familia_obra"
+
+
+def _cifs_propios_de_serie() -> frozenset[str]:
+    """Los CIF propios sin configuracion (F-063 · R3)."""
+    return cifs_propios(None)
 
 
 def _norm(value: str | None) -> str:
@@ -245,6 +255,7 @@ class HeaderResolverService:
         correccion_enabled: bool = True,
         correccion_score_min: float = 1.0,
         correccion_margen_distancia: int = 2,
+        cifs_propios: frozenset[str] | None = None,
     ) -> None:
         self._obra_client = obra_client
         self._proveedor_client = proveedor_client
@@ -259,12 +270,17 @@ class HeaderResolverService:
         self._correccion_enabled = bool(correccion_enabled)
         self._correccion_score_min = float(correccion_score_min)
         self._correccion_margen = int(correccion_margen_distancia)
+        # F-063: CIF propios (el del cliente, Ruesma): nunca son proveedor.
+        self._cifs_propios = (
+            _cifs_propios_de_serie() if cifs_propios is None else cifs_propios
+        )
         logger.info(
             "%s INSTANCIADO (enabled=%s min_score=%s familia=%s cif=%s "
-            "correccion=%s score_min=%s margen=%s)",
+            "correccion=%s score_min=%s margen=%s cifs_propios=%s)",
             _LOG_PREFIX, enabled, self._min_score, self._familia_enabled,
             self._cif_enabled, self._correccion_enabled,
             self._correccion_score_min, self._correccion_margen,
+            sorted(self._cifs_propios),
         )
 
     def resolve_merge_document(self, *, merge_document_id: str) -> None:
@@ -390,6 +406,14 @@ class HeaderResolverService:
         (decidio la familia con nombre debil).
         """
         cif_leido = (proveedor_cif or "").strip()
+        if cif_leido and self._descartar_cif_propio(
+            cif_leido=cif_leido,
+            origen=proveedor_cif_origen,
+            merge_document_id=merge_document_id,
+        ):
+            # F-063 · R5: el camino «sin CIF», como si la IA no lo hubiera
+            # leido (el que resolvio bien a FEYMACO el 2026-10-08).
+            cif_leido = ""
         if cif_leido:
             # CIF ya presente (IA o revisor): si quedo un aviso de
             # candidatos de un intento anterior, se retira para no
@@ -451,6 +475,66 @@ class HeaderResolverService:
             _LOG_PREFIX, best_score, self._min_score,
         )
         return None, "deterministic"
+
+    # ----------------------------------------------------------------- #
+    # CIF PROPIO (F-063 · R4, R6, R7)
+    # ----------------------------------------------------------------- #
+    def _descartar_cif_propio(
+        self,
+        *,
+        cif_leido: str,
+        origen: str | None,
+        merge_document_id: str,
+    ) -> bool:
+        """``True`` si el CIF leido es PROPIO (el del cliente) y hay que
+        seguir como si no se hubiera leido CIF.
+
+        Ruesma es el cliente de todos los albaranes y su CIF va impreso en
+        ellos: en el campo de proveedor es SIEMPRE una lectura equivocada
+        (incidencia FEYMACO, 2026-10-08). Se descarta en el merge (CIF y
+        origen a NULL, nombre leido intacto, a revision con motivo y nota
+        propios) ANTES de la red por CIF: ni se consulta ``prv`` con el ni
+        se canoniza el nombre al del cliente.
+
+        Salvo origen ``manual`` (R6: lo eligio el revisor y se respeta). Si
+        la escritura falla, se loguea y se descarta igual (R7): el camino
+        «sin CIF» escribe el CIF que deduzca, porque el origen no es
+        ``manual``.
+        """
+        if not es_cif_propio(cif_leido, self._cifs_propios):
+            return False
+        cif = normalizar_cif(cif_leido)
+        if (origen or "").strip() == "manual":
+            logger.warning(
+                "%s CIF propio %s fijado por el revisor (origen manual): se "
+                "respeta. document_id=%s", _LOG_PREFIX, cif, merge_document_id,
+            )
+            return False
+        nombre = CIFS_PROPIOS_POR_DEFECTO.get(cif, "CIF propio")
+        nota = (
+            f"{NOTA_CIF_PROPIO_PREFIJO}: la IA leyó el CIF del cliente "
+            f"({cif}, {nombre}) como CIF del proveedor; se descarta y el "
+            "proveedor se busca por nombre."
+        )
+        try:
+            self._repository.descartar_cif_propio(
+                document_id=merge_document_id,
+                motivo=f"{MOTIVO_PROVEEDOR_CIF_PROPIO}{cif}",
+                nota=nota,
+            )
+        except Exception:  # noqa: BLE001 — best-effort
+            logger.exception(
+                "%s no se pudo descartar el CIF propio %s en el merge; se "
+                "busca el proveedor por nombre igualmente. document_id=%s",
+                _LOG_PREFIX, cif, merge_document_id,
+            )
+            return True
+        logger.warning(
+            "%s CIF propio %s (%s) leido como proveedor: DESCARTADO; se busca "
+            "por nombre. document_id=%s", _LOG_PREFIX, cif, nombre,
+            merge_document_id,
+        )
+        return True
 
     # ----------------------------------------------------------------- #
     # RED DE PROVEEDOR POR CIF (F-002 · R8, R9, R10)
