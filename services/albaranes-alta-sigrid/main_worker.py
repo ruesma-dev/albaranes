@@ -26,6 +26,7 @@ from pathlib import Path
 from pydantic import ValidationError
 from ruesma_comun.colas import COLA_FEEDBACK
 from ruesma_comun.colas.arranque import ejecutar_worker
+from ruesma_comun.configuracion import motivos_configuracion
 
 from config.logging_config import configure_logging
 from config.settings import Settings
@@ -84,19 +85,6 @@ def _cargar_entorno() -> None:
     except ImportError:
         return
     load_dotenv(Path(__file__).resolve().parent / ".env")
-
-
-def motivos_configuracion(exc: ValidationError) -> str:
-    """Qué campo falla y por qué, SIN los valores (R35, review fase 1 · H1).
-
-    ``str(exc)`` vuelca ``input_value``: con un obligatorio ausente es el
-    diccionario de TODO el entorno leído (``PG_PASSWORD``, ``GRAPH_KEY``,
-    ``SIGRID_API_FUNCTION_KEY``...). Aquí solo van ``loc`` y ``msg``; el motivo
-    de R44 viaja en ``msg`` (el ``ValueError`` del validador)."""
-    return "; ".join(
-        f"{'.'.join(str(parte) for parte in error['loc'])}: {error['msg']}"
-        for error in exc.errors(include_input=False, include_url=False)
-    )
 
 
 def main() -> int:

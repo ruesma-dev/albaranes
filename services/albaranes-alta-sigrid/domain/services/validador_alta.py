@@ -34,7 +34,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from ruesma_comun.alta_sigrid import producto_efectivo, productos_admitidos
+from ruesma_comun.alta_sigrid import (
+    es_linea_a_registrar,
+    es_linea_vinculada,
+    producto_efectivo,
+    productos_admitidos,
+)
 from ruesma_comun.valoracion import esta_valorado
 
 from domain.models.alta_models import (
@@ -91,18 +96,20 @@ def _texto(valor: str | None) -> str:
 
 
 def _con_importe(linea: LineaAlta) -> bool:
-    return linea.importe_calculado is not None and abs(linea.importe_calculado) > _EPSILON
+    return es_linea_a_registrar(linea.importe_calculado)
 
 
 def es_vinculada(linea: LineaAlta, contrato: str | None) -> bool:
     """Casa con una línea del contrato de la valoración con ``sigrid_ide`` y
-    sin línea derivada (glosario). Lo demás es sin vincular."""
-    return (
-        linea.matched_contrato_line_id is not None
-        and linea.derived_contrato_line_id is None
-        and linea.ctrpro_ide is not None
-        and bool(_texto(contrato))
-        and _texto(linea.contrato_linea) == _texto(contrato)
+    sin línea derivada (glosario). Lo demás es sin vincular. La regla vive en
+    ``comun`` (``es_linea_vinculada``): sv4 la usa para el selector de
+    producto (R40, R41)."""
+    return es_linea_vinculada(
+        matched_contrato_line_id=linea.matched_contrato_line_id,
+        derived_contrato_line_id=linea.derived_contrato_line_id,
+        sigrid_ide=linea.ctrpro_ide,
+        contrato_linea=linea.contrato_linea,
+        contrato_valoracion=contrato,
     )
 
 

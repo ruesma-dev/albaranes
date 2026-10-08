@@ -21,6 +21,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
+from ruesma_comun.alta_sigrid import ESTADOS_ALTA_REPETIBLES, espera_pasada
+
 from domain.models.alta_models import (
     AccionAlta,
     AdjuntoEstado,
@@ -31,17 +33,15 @@ from domain.models.alta_models import (
     Reclamacion,
 )
 
-_REPETIBLES = frozenset({
-    EstadoAlta.NO_ADMITIDO, EstadoAlta.REVISAR, EstadoAlta.ERROR,
-    EstadoAlta.SIMULADO, EstadoAlta.ANULADO,
-})
+#: Los mismos que ofrece sv4 para «Solicitar alta» (R30): ``comun``.
+_REPETIBLES = frozenset(EstadoAlta(e) for e in ESTADOS_ALTA_REPETIBLES)
 
 
 def paso_la_espera(alta: AltaActual, ahora: datetime, espera: timedelta) -> bool:
-    """Sin último intento conocido, la Espera se da por pasada."""
-    if alta.ultimo_intento_at_utc is None:
-        return True
-    return ahora - alta.ultimo_intento_at_utc >= espera
+    """Sin último intento conocido, la Espera se da por pasada. La regla es
+    la de ``comun`` (``espera_pasada``), la misma con la que sv4 ofrece
+    «Solicitar alta» (R30)."""
+    return espera_pasada(alta.ultimo_intento_at_utc, ahora, espera)
 
 
 def _motivo_r6(documento: EstadoDocumento | None, desde: datetime | None) -> str:

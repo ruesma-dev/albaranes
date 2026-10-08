@@ -23,14 +23,18 @@ y log. Las colas se leen del entorno en ``ruesma_comun.colas.arranque``.
 """
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 from urllib.parse import quote_plus
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from ruesma_comun.alta_sigrid import MAPEO_PRODUCTO_POR_DEFECTO_TEXTO, leer_mapeo
+from ruesma_comun.alta_sigrid import (
+    MAPEO_PRODUCTO_POR_DEFECTO_TEXTO,
+    leer_instante_utc,
+    leer_mapeo,
+)
 
 _ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 
@@ -38,17 +42,6 @@ SharePointMode = Literal["drive_id", "folder_url", "site_path"]
 
 #: Único valor de ``ALTA_SIGRID_COMMIT`` que activa el modo real.
 LITERAL_COMMIT_REAL = "true"
-
-
-def leer_instante_utc(texto: str) -> datetime | None:
-    """ISO 8601 a instante UTC; vacío = ``None``; sin zona = UTC."""
-    limpio = (texto or "").strip()
-    if not limpio:
-        return None
-    instante = datetime.fromisoformat(limpio.replace("Z", "+00:00"))
-    if instante.tzinfo is None:
-        instante = instante.replace(tzinfo=UTC)
-    return instante.astimezone(UTC)
 
 
 class Settings(BaseSettings):
