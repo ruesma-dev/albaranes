@@ -20,10 +20,11 @@ están `blocked` en las suyas. Entorno del worktree: venvs del árbol principal 
 - Arranque: `bash harness/init.sh` en verde en el worktree (2026-10-07). F-062 → `in_progress`, `BACKLOG.md` regenerado.
 - **T1–T11 hechas** (2026-10-08, un commit por tarea). Informe: `progress/impl_F-062.md`. Cobertura de líneas
   cambiadas 100 % (203/203); mutación completa en serie 104/104 muertos, 0 supervivientes (`progress/mutacion_F-062.md`,
-  fila añadida al inventario de F-039). **Siguiente paso: review** (líder → reviewer).
+  fila añadida al inventario de F-039). Review pasada 1 hecha (abajo).
 - **T13 (`init.sh`) sin marcar**: en el worktree da 2 KO, ambos de entorno (el test de abajo y, por él, la puerta de
   cobertura a 59,6 % porque `-x` corta antes de los `test_f062_*`); deseleccionando solo ese test, `ENTORNO LISTO`.
-  Repetir `bash harness/init.sh` en el árbol principal tras fusionar. Pendientes del humano: T0b (opcional) y T12.
+  Repetir `bash harness/init.sh` en el árbol principal tras fusionar. Pendientes del humano: T0b (opcional) y T12,
+  con sus comandos en «F-062 · MANUAL del humano» (abajo).
 - **Desviaciones (justificadas en `progress/impl_F-062.md` §2)**: (1) los tests de la nota de F-052
   (`test_f052_nota_proveedor.py`) también pasan a `correccion_enabled=False`, como los de D3 de F-002 (el design solo
   nombraba F-002; SALMEDINA en la 0691 es candidato claro y con la corrección encendida esos tests pasaban por el
@@ -33,6 +34,39 @@ están `blocked` en las suyas. Entorno del worktree: venvs del árbol principal 
 - **KO de entorno conocido**: `test_f052_t19_script_arranca_como_script_desde_otra_carpeta` lanza el script SIN
   `PYTHONPATH` y el venv del árbol principal importa `ruesma_comun` de `../albaranes` (sin `proveedores`): falla solo
   en el worktree; en `dev`/árbol principal con comun fusionado pasa.
+- **Review pasada 1 (2026-10-08): CHANGES_REQUESTED** (`progress/review_F-062.md`: H1 y M1). **H1 = opción B**
+  por decisión del humano (2026-10-08): la comparación no cambia, F-062 es la red de seguridad de F-055; se
+  corrigieron R3, D2, ARCHITECTURE 17, dominio §10.1 y la nota, con test que lo fija. M1: comandos abajo.
+  Correcciones en `progress/impl_F-062_pasada2.md`. **Siguiente paso: review pasada 2.**
+
+### F-062 · MANUAL del humano (comandos exactos, PowerShell)
+
+**T0b (opcional, recomendable antes de desplegar) · Anexo A.1 de `progress/spec_F-062.md`, SOLO LECTURA.** El
+script del líder `diag_f062.py` abre la sesión con `default_transaction_read_only=on`, comprueba que
+`SHOW transaction_read_only` da `on` antes de consultar (si no, aborta), no imprime credenciales ni precios y
+lanza A.1, A.2 y A.3 seguidas. Con el venv de sv3 del árbol principal (trae `psycopg`) y el mismo `.env` con los
+`PG_*` de la BBDD `albaranes` de Azure que usaste para `diag_proveedor.py` (6.1–6.3):
+```powershell
+& "C:\Users\pgris\PycharmProjects\albaranes\services\albaranes-persistencia\.venv\Scripts\python.exe" "C:\Users\pgris\AppData\Local\Temp\claude\C--Users-pgris-PycharmProjects-albaranes\f36c80f5-0cba-463e-95e9-161d51e3f583\scratchpad\diag_f062.py" "<ruta del .env con los PG_* de Azure>"
+```
+Si el scratchpad ya no existe, el SQL íntegro está en el Anexo de `progress/spec_F-062.md`. Criterio: en
+`==== A.1`, ningún `otro_proveedor` en un documento que la regla de R3–R4 habría dado por candidato claro (eso
+sería una corrección equivocada). Anotar el resultado en `progress/spec_F-062.md` §2; si sale alguno, volver a
+la spec antes de desplegar.
+
+**T12 (tras fusionar en `dev` y con `init.sh` en verde en el árbol principal) · desplegar SOLO sv3:**
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+. .\00_vars.ps1
+.\deploy.ps1 -Only sv3
+.\check_deploy.ps1
+```
+Criterio: `check_deploy.ps1` muestra sv3 con la revisión y el tag recién construidos, réplicas arriba, y el resto
+de apps sin cambios. Después, **unos días de vigilancia con la consulta A.3** (solo lectura, mismo script y mismo
+comando que T0b: su bloque `==== A.3 correcciones F-062` lista cada merge activo con `proveedor_cif_corregido`).
+Revisar en sv4 cada documento listado: CIF aplicado = proveedor real y `contratos_busqueda_resultado` =
+`encontrados`. Un caso mal aplicado ⇒ `RED_PROVEEDOR_CORRECCION_ENABLED=false` en la Container App de sv3 (la
+decide y la aplica el humano) y volver a la spec. No bloquea el `done`.
 
 **F-051 · `blocked` (2026-10-06) y FUSIONADA en `dev`.** Implementación APROBADA por el reviewer (pasada 2) e `init.sh`
 en verde. **T21 hecha** (evals con LLM, 2026-10-06 11:07 UTC, informe local `progress/evals_F-051.md`): frente a F-048,
