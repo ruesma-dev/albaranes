@@ -1,6 +1,16 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-064 · IMPLEMENTACIÓN EN CURSO (`in_progress`, 2026-10-08)** en la rama `feature/F-064-proveedor-en-prompts`
+(worktree `../albaranes-F-064`). PARADA 1 aprobada por el humano («continua»): Q1 sin campo nuevo, Q2 sin `if` en
+sv2, Q3 sv2 lee `CIFS_PROPIOS`, Q4 **no** se añade de momento el albarán real (se usan los 11 casos del banco con el
+cliente impreso), Q5 CIF normalizado en IA1, Q6 razón social de serie sin cambios. Convivencia: **F-053 sigue
+`in_progress` en su rama** (el humano lleva varias a la vez; en el `features.json` de esta rama no consta).
+Coordinación de suites: F-053 fase 2 ejecuta suites en otra copia; aquí solo tests de un fichero hasta que el
+líder diga «puedes lanzar suites». Entorno: venv raíz del árbol principal (sv2 no declara venv propio) con
+`PYTHONPATH` al comun del worktree. Alcance del implementer: T1–T8 y T11; T9, T10 y T12 del humano.
+- Tarea en curso, decisiones y desviaciones: `progress/impl_F-064.md`.
+
 **F-064 · SPEC ESCRITA (`spec_ready`, 2026-10-08)** en la rama `feature/F-064-proveedor-en-prompts` (worktree
 `../albaranes-F-064`, desde `dev` `544113b`): IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2
 confirma el proveedor. Spec en `specs/F-064-proveedor-en-prompts/`; informe, hallazgos y plan en

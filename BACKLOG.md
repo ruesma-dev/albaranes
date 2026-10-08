@@ -5,6 +5,8 @@
 
 Resumen: **62 features**, 43 abiertas, 19 terminadas.
 
+En curso: **F-064**.
+
 Bloqueadas: **F-051**.
 
 ## Trabajo abierto
@@ -12,7 +14,7 @@ Bloqueadas: **F-051**.
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
-| F-064 | IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor | 1 | spec lista | critico | `feature/F-064-proveedor-en-prompts` |
+| F-064 | IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor | 1 | en curso | critico | `feature/F-064-proveedor-en-prompts` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-051 | Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas» | 2 | bloqueada | critico | `feature/F-051-almacen-por-linea` |
@@ -97,7 +99,7 @@ DEPENDE DE: F-052 (lista de candidatos de la obra completa y sin truncar). RELAC
 
 ### F-064 · IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor
 
-estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-064-proveedor-en-prompts`
+estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-064-proveedor-en-prompts`
 
 PETICIÓN DEL HUMANO (2026-10-08), tras la incidencia de FEYMACO (obra 0694) que arregló F-063 en sv3: «añade en el prompt de sv2 que estos CIF y empresas son los del cliente, y debe ignorarlos y buscar otros» y «F-064 será para IA 1 y 2. Ambas deben confirmar proveedor». Empresas del cliente: «de momento esa» (Construcciones Ruesma, A81873903).
 
