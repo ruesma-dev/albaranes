@@ -706,6 +706,20 @@
         "comun"
       ],
       "branch": "feature/F-062-proveedor-aplicado"
+    },
+    {
+      "id": "F-063",
+      "title": "El CIF de Construcciones Ruesma nunca es el proveedor: sv3 lo descarta y busca el proveedor por nombre",
+      "description": "ARREGLO URGENTE DE PRODUCCIÓN (humano, 2026-10-08: «arregla urgente esto»). INCIDENCIA (logs de Azure): albarán de FEYMACO, obra 0694 (merges b1d3e179-… y 401d9c00-…). sv2 devolvió proveedor_nombre «FERRETERÍA Y MAQUINARIA PARA LA CONSTRUCCIÓN, S. A.» (bien) y proveedor_cif A81873903, el CIF de CONSTRUCCIONES RUESMA (el cliente impreso en el albarán). sv3 lo validó porque existe en Sigrid, canonizó el nombre a «CONSTRUCCIONES RUESMA, S.A.» y buscó contratos con ese CIF ⇒ 0. El mismo albarán llegó sin CIF (0bd5d331-…) y sv3 lo resolvió bien por nombre dentro de la obra (FEYMACO, A28733558).\n\nARREGLO: lista de CIF propios en ruesma_comun.proveedores (por defecto A81873903, ampliable con CIFS_PROPIOS en sv3, nunca reducible). En sv3, al principio de la resolución del proveedor (rutas nuevo, duplicado y reenrich_by_merge_id), un CIF propio con origen distinto de manual se DESCARTA (CIF y origen a NULL, nombre leído intacto, a revisión con motivo proveedor_cif_propio:<cif> y nota «[AVISO] CIF del cliente: …») y se sigue por el camino «sin CIF» (resolución por nombre dentro de la obra). Un CIF propio nunca sale como candidato. El revisor (origen manual) manda.\n\nFUERA: backfill de los merges ya canonizados a Ruesma (los corrige el revisor en sv4); la IA leyendo también el NOMBRE del cliente. Spec: specs/F-063-cif-propio-no-es-proveedor/.",
+      "status": "in_progress",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "servicios": [
+        "sv3-persistencia",
+        "comun"
+      ],
+      "branch": "feature/F-063-cif-propio-no-es-proveedor"
     }
   ]
 }
