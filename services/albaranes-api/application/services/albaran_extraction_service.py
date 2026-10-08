@@ -21,13 +21,21 @@ import json
 import logging
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Sequence, Type
 
 from pydantic import BaseModel
 from ruesma_comun.contratos import normalizar_codigo
 from ruesma_comun.contratos.familias import render_catalogo_markdown
 from ruesma_comun.correo import render_bloque_correo
 
+from application.services.empresas_cliente import (
+    MARCADOR_EMPRESAS_CLIENTE,
+    EmpresaCliente,
+    render_empresas_cliente,
+)
+from application.services.empresas_cliente import (
+    empresas_cliente as empresas_cliente_de_serie,
+)
 from application.services.schema_registry import SchemaRegistry
 from domain.models.llm_attachment import LlmAttachment
 from domain.ports.llm_client import LlmVisionClient
@@ -98,6 +106,7 @@ class AlbaranExtractionService:
         prompt_key_phase_1: str,
         obras_activas_provider: ObrasActivasProvider | None = None,
         obras_activas_max: int = 300,
+        empresas_cliente: Sequence[EmpresaCliente] | None = None,
     ) -> None:
         self._providers_by_name: Dict[str, ProviderClientSpec] = {
             spec.provider: spec for spec in providers
@@ -114,6 +123,14 @@ class AlbaranExtractionService:
         # comporta exactamente como antes.
         self._obras_activas_provider = obras_activas_provider
         self._obras_activas_max = max(1, int(obras_activas_max))
+        # (F-064 · R2) Empresas del CLIENTE para `{empresas_cliente}`. Las
+        # composiciones (worker y API) pasan las de `CIFS_PROPIOS`; sin
+        # argumento (evals), las de serie de `ruesma_comun.proveedores`.
+        self._empresas_cliente: tuple[EmpresaCliente, ...] = (
+            empresas_cliente_de_serie(None)
+            if empresas_cliente is None
+            else tuple(empresas_cliente)
+        )
 
     # ---------------------------------------------------------- #
     # FASE 1 — extracción inicial.
@@ -135,8 +152,9 @@ class AlbaranExtractionService:
         prompt_spec = self._prompts.get(prompt_key)
         response_model = self._schemas.get(prompt_spec.schema)
 
-        # El task de fase 1 lleva TRES marcadores propios
-        # ({obras_activas}, {catalogo_familias} y {contexto_correo}) que se
+        # El task de fase 1 lleva CUATRO marcadores propios
+        # ({obras_activas}, {catalogo_familias}, {empresas_cliente} y
+        # {contexto_correo}) que se
         # sustituyen en un solo sitio compartido: este mismo task viaja
         # embebido dentro del prompt de fase 2 y allí sufría la misma fuga
         # (ver `_render_task_fase_1`).
@@ -220,6 +238,15 @@ class AlbaranExtractionService:
         # externo), asi que aqui no hay caso "no disponible": o va en su
         # sitio o se anade al final.
         task = self._render_catalogo_familias(task)
+        # (F-064 · R6, R7) Empresas del cliente, ANTES del correo (que
+        # sigue siendo el último). Sin marcador no se añade nada: así un
+        # YAML anterior a F-064 (la variante «base» del comparador) se
+        # renderiza byte a byte como antes.
+        if MARCADOR_EMPRESAS_CLIENTE in task:
+            task = task.replace(
+                MARCADOR_EMPRESAS_CLIENTE,
+                render_empresas_cliente(self._empresas_cliente),
+            )
         return self._render_contexto_correo(task, correo), obras
 
     @staticmethod

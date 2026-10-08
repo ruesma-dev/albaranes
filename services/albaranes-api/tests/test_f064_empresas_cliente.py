@@ -198,3 +198,81 @@ def test_f064_modulo_puro_solo_importa_comun_proveedores() -> None:
 def test_f064_r3_empresa_es_inmutable(empresa) -> None:
     with pytest.raises(AttributeError):
         empresa.cif = "B99999999"  # type: ignore[misc]
+
+
+# ------------------------------------------------------------------ #
+# R2 · sv2 lee CIFS_PROPIOS y se la pasa al servicio
+# ------------------------------------------------------------------ #
+_COMPOSICIONES = (
+    RAIZ / "interface_adapters" / "composition.py",
+    RAIZ / "interface_adapters" / "api" / "app.py",
+)
+
+
+def _settings(**entorno):
+    from config.settings import Settings
+
+    return Settings(
+        _env_file=None,
+        ENABLE_OPENAI=False,
+        ENABLE_CLAUDE=False,
+        GEMINI_API_KEY="x",
+        IA_SEGUNDA_FASE="gemini",
+        **entorno,
+    )
+
+
+def test_f064_r2_cifs_propios_es_opcional_y_vacio_por_defecto() -> None:
+    assert _settings().cifs_propios == ""
+
+
+def test_f064_r2_cifs_propios_se_lee_del_entorno(monkeypatch) -> None:
+    monkeypatch.setenv("CIFS_PROPIOS", "B99999999")
+
+    assert _settings().cifs_propios == "B99999999"
+
+
+def _argumento_empresas(ruta: Path) -> list[str]:
+    """Lo que pasa cada ``AlbaranExtractionService(...)`` de ``ruta`` como
+    ``empresas_cliente`` (``ast.unparse``), o ``"FALTA"``."""
+    valores = []
+    for nodo in ast.walk(ast.parse(ruta.read_text(encoding="utf-8"))):
+        if not (isinstance(nodo, ast.Call) and getattr(nodo.func, "id", None) == "AlbaranExtractionService"):
+            continue
+        argumento = next((k for k in nodo.keywords if k.arg == "empresas_cliente"), None)
+        valores.append(ast.unparse(argumento.value) if argumento else "FALTA")
+    return valores
+
+
+def test_f064_r2_worker_y_api_pasan_la_lista_de_cifs_propios() -> None:
+    for ruta in _COMPOSICIONES:
+        assert _argumento_empresas(ruta) == ["empresas_cliente(settings.cifs_propios)"], ruta.name
+
+
+def test_f064_r2_sin_argumento_el_servicio_usa_la_lista_de_serie() -> None:
+    from test_f064_prompt_ia1_proveedor import _instructions_fase_1
+
+    assert render_empresas_cliente(empresas_cliente(None)) in _instructions_fase_1()
+
+
+def test_f064_r2_con_cifs_propios_la_anadida_llega_al_prompt() -> None:
+    from test_f064_prompt_ia1_proveedor import _instructions_fase_1
+
+    instructions = _instructions_fase_1(empresas_cliente=empresas_cliente("B99999999"))
+
+    assert f"  - B99999999 — {SIN_RAZON}" in instructions
+
+
+# ------------------------------------------------------------------ #
+# R4 · una empresa nueva de serie llega a IA1 y a IA2 sin tocar YAML
+# ------------------------------------------------------------------ #
+def test_f064_r4_una_de_serie_nueva_llega_a_ia1_y_a_ia2(monkeypatch) -> None:
+    from test_f064_prompt_ia1_proveedor import _instructions_fase_1
+    from test_f064_prompt_ia2_proveedor import CLAVES_FASE_2, _instructions_fase_2
+
+    monkeypatch.setitem(CIFS_PROPIOS_POR_DEFECTO, "B99999999", "Grupo Demo")
+    linea = "  - B99999999 — Grupo Demo"
+
+    assert linea in _instructions_fase_1()
+    for clave in CLAVES_FASE_2:
+        assert linea in _instructions_fase_2(clave), clave

@@ -18,6 +18,7 @@ from application.services.albaran_extraction_service import (
     AlbaranExtractionService,
     ProviderClientSpec,
 )
+from application.services.empresas_cliente import empresas_cliente
 from application.services.schema_registry import SchemaRegistry
 from config.settings import Settings
 from infrastructure.llm.azure_document_intelligence_client import (
@@ -243,6 +244,7 @@ def build_app(settings: Settings) -> FastAPI:
         prompt_key_phase_1=settings.prompt_key_fase1,
         obras_activas_provider=obras_activas_provider,
         obras_activas_max=settings.obras_activas_max,
+        empresas_cliente=empresas_cliente(settings.cifs_propios),
     )
     pipeline = ExtractAlbaranPipeline(
         extraction_service=extraction_service,
