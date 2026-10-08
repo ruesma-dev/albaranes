@@ -27,7 +27,11 @@ v8: `usu`, sin `almacen` ni `naturaleza`, producto de la lista blanca `["MA9999"
 | §0 | «Humano … abiertos como preguntas de F-053 v6: H8 (P2), H17 (P4), H29 (P5), H30 (P6), H28 (P7)» | Todas cerradas el 2026-10-06 (F-053 v7, `spec_ready`) |
 | Fuentes | F-053 «v6 … `pending` con 7 preguntas» | F-053 **v7** (2026-10-06, `spec_ready`, alineada con F-009 v8 `8a6ecab`) |
 
-## B. Lo que F-053 actualizará en el contrato al implementar (consumo; no se toca ahora)
+## B. Lo que F-053 actualiza en el contrato como consumo (redactado para el líder, 2026-10-08)
+
+Implementación de F-053 terminada (fases 1 y 2, rama `feature/F-053-alta-sigrid`). Regla del humano: desde
+albaranes NO se edita el contrato; estos cambios de las columnas de consumo los aplica la sesión de sigrid-api,
+coordinada por el líder. Contra `contrato_albaranes.md` en `13fd99d` (v8.2). Ninguno cambia la forma de F-009.
 
 1. §2.4 punto 3: «La familia `medios_auxiliares` … (ficha propia, F-053 P1)» ⇒ «ficha **F-061**».
 2. §2.4 punto 4: «Signos incoherentes: H8» ⇒ «signos opuestos ⇒ `revisar` local `signo_incoherente` (F-053 R39)».
@@ -35,3 +39,19 @@ v8: `usu`, sin `almacen` ni `naturaleza`, producto de la lista blanca `["MA9999"
    `fecha_no_valida`, nombre que coincidía con el código retirado de sigrid-api en la v5.1).
 4. §7, fila de R14: quitar «H9 si anular no borra» (H9 cerrado: anular borra; misma referencia tras `anulado`).
 5. §3.3, columna «Estado en F-053»: sin cambios de estado; quitar las referencias a «pregunta P2/P4 de F-053 v6».
+6. §2.1, fila `paride`: «F-053 v6 aún no lo manda (pregunta P4: provisionalmente `partida_ambigua` ⇒
+   `no_admitido`)» ⇒ «F-053 v7 no lo manda (P4 decidida el 2026-10-06: `partida_ambigua` ⇒ `no_admitido`); lo
+   mandará cuando F-049 conserve el `ide` de la partida (evolución, sin cambio en F-009)».
+7. Tabla «Fuentes» (fila de albaranes F-053): «v7 (2026-10-06, `spec_ready`…)» ⇒ «v7 **implementada**
+   (2026-10-08; fases 1 y 2 en `feature/F-053-alta-sigrid`, pendiente de fusionar y de las MANUAL T26–T29);
+   arranca en simulación (`ALTA_SIGRID_DESDE_UTC` vacía y `ALTA_SIGRID_COMMIT=false` al crear sv9)».
+8. §2.4 (o junto a la idempotencia de §7): las defensas de albaranes contra el doble alta son, además de la
+   idempotencia de F-009, `reclamar` de sv9 con el merge bloqueado y el alta leída en OTRA sentencia (T24b:
+   un segundo `reclamar` que esperó el cerrojo ve el `en_curso` y no vuelve a llamar), sv9 con una sola
+   réplica, la grabación sin reintento automático y `incierto` sin retomar antes de la Espera.
+9. §2.4 punto 1 (o la fila de `ALTA_SIGRID_DESDE_UTC`): sv4 publica el alta solo en el PASO a aprobado y no
+   deja aprobar lo no valorado (F-053 R1, R2, R37); el revisor la repite desde la ficha con «Solicitar alta
+   en Sigrid» (R30) y, tras anular en Sigrid, «Ya lo he anulado en Sigrid» (R28: sv9 comprueba con `sql/read`
+   que el `con.ide` ya no existe).
+
+Nada de esto pide cambios a F-009: sigue valiendo la conclusión de arriba.

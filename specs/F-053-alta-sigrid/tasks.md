@@ -74,8 +74,8 @@ sigrid-api tal como esté en la spec de F-009 (v8, `8a6ecab`; códigos incluidos
 
 ## Bloque F · documentación, infra y puertas
 
-- [x] T22: `infra/`: sv9 en `$APPS`, build y `create_capps` (KEDA sobre `q-feedback`, máximo 1 réplica, secreto de Key Vault), DESDE, Espera y mapeo a sv4 y sv9 desde una sola variable, redactado  |  Verificación: MANUAL (humano) — leer el diff; `.\deploy.ps1 -Only sv9 -WhatIf` si el script lo admite
-- [ ] T23: `docs/ARCHITECTURE.md` (sv9, tabla y columna nuevas), `docs/referencia/dominio_negocio_albaranes.md` §5.2 y `azure-apps/albaranes.md` (commit aparte en ese repo) según design §9; NO `CLAUDE.md` ni `sigrid_api.md` (los decide el humano)  |  Verificación: revisión del reviewer
+- [x] T22 (falta su MANUAL): `infra/`: sv9 en `$APPS`, build y `create_capps` (KEDA sobre `q-feedback`, máximo 1 réplica, secreto de Key Vault), DESDE, Espera y mapeo a sv4 y sv9 desde una sola variable, redactado  |  Verificación: MANUAL (humano) — leer el diff; `.\deploy.ps1 -Only sv9 -WhatIf` si el script lo admite
+- [x] T23: `docs/ARCHITECTURE.md` (sv9, tabla y columna nuevas), `docs/referencia/dominio_negocio_albaranes.md` §5.2 y `azure-apps/albaranes.md` (commit aparte en ese repo) según design §9; NO `CLAUDE.md` ni `sigrid_api.md` (los decide el humano)  |  Verificación: revisión del reviewer
 - [ ] T24: Cobertura de líneas cambiadas ≥ 80 %  |  Verificación: `python -m harness.cobertura --base dev --config harness/rigor.json`
 - [x] T24b: sv9 `SQL_RECLAMAR` en DOS sentencias (cerrojo y, después, lectura con instantánea nueva), como T40; decisión del humano (2026-10-07) tras la review fase 1 pasada 3 §7.2: no depender de la réplica única  |  Verificación: test con control negativo (sentencia única ⇒ falla) y suite de sv9
 - [ ] T25: Campaña de mutación COMPLETA, 0 supervivientes sin test nuevo o justificación aceptada  |  Verificación: `python -m harness.mutacion --feature F-053`
@@ -93,8 +93,8 @@ Terminal A (`$env:ALBARANES_DB_URL` = `postgresql://<usuario>:<clave>@localhost:
 SELECT m.id, m.source_sha256 FROM albaran_documents_merge m
  WHERE NOT EXISTS (SELECT 1 FROM albaran_altas_sigrid a WHERE a.document_id = m.id) LIMIT 1;  -- apunta <ID> y <SHA>
 BEGIN;
-SELECT m.id FROM albaran_documents_merge m LEFT JOIN albaran_altas_sigrid a ON a.document_id = m.id
- WHERE m.id = '<ID>' FOR UPDATE OF m;                       -- el cerrojo de reclamar (sv9)
+SELECT m.id FROM albaran_documents_merge m
+ WHERE m.id = '<ID>' FOR UPDATE;                            -- el cerrojo de reclamar (sv9, T24b)
 INSERT INTO albaran_altas_sigrid (document_id, estado, creado_at_utc)
  VALUES ('<ID>', 'en_curso', '2026-10-07T00:00:00+00:00');  -- SIN COMMIT todavía
 -- (ahora, terminal B; cuando B esté esperando:)
@@ -127,6 +127,7 @@ $env:PYTHONPATH = "$PWD;$PWD\..\albaranes-comun"
 C:\Users\pgris\PycharmProjects\albaranes\.venv\Scripts\python.exe "$env:TEMP\h4_r45.py" '<SHA>'
 ```
 
+- [ ] T27c (T19, R26; con T27, mismo PostgreSQL LOCAL): carrera sv9 ↔ sv4. Terminal A como en T27b (`BEGIN`, el `FOR UPDATE` e `INSERT ... 'en_curso'` SIN `COMMIT`); con sv4 local arrancado contra esa BBDD, en `http://localhost:8004` pulsar «Borrar» en ese albarán: el navegador se queda esperando; `COMMIT` en A ⇒ la bandeja vuelve con el aviso «Registrado en Sigrid: corrígelo en Sigrid…» y el albarán sigue activo (`SELECT is_active FROM albaran_documents_merge WHERE id = '<ID>'` ⇒ `t`). ROJO si lo borra. Al terminar, A borra el alta de prueba  |  Verificación: MANUAL (humano)
 - [ ] T28: AZURE en simulación (con F-009 desplegada y tras desplegar sv6 y sv3 → sv9 → sv4 con DESDE puesta): revisar a diario los `simulado`/`revisar`/`no_admitido` y comparar con la medición de T0  |  Verificación: MANUAL (humano) — mismo SELECT contra la BBDD real, solo lectura
 - [ ] T29: PRIMERA GRABACIÓN REAL, con autorización expresa y sobre un albarán elegido por el humano: llave `SIGRID_ALBARAN_WRITE_ENABLED` de F-009 abierta (la abre el proyecto sigrid-api), `ALTA_SIGRID_COMMIT=true`, aprobar, comprobar en la UI de Sigrid cabecera, líneas (vinculadas y genéricas), partidas, naturaleza y cuenta analítica de las genéricas (`MA99`/`QA99`/`XA99` y `<obra>.<sufijo>`; contrato H10, H34), `cod2` y enlace a planificación de compras de las vinculadas (H35), stock, `canser` y el PDF adjunto; volver a publicar a mano en `q-feedback` el mensaje de alta de ese documento y comprobar que no se crea otro (sigue `registrado` sin cambios)  |  Verificación: MANUAL (humano)
 - [ ] T30: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`

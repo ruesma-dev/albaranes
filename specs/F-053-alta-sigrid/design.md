@@ -122,8 +122,8 @@ sv4: `templates/_alta_sigrid.html` (panel de la ficha, R29–R30).
   `elegir_producto_sigrid(document_id, valuation_line_id, producto)` con el patrón de deshacer (foto antes,
   registro después) y validación contra `productos_admitidos` (R41).
 - `.../albaranes-front/infrastructure/database/review_repository.py` — `leer_alta_sigrid(document_id)`,
-  `es_aprobado`, `datos_valoracion` (status e importes), `_exigir_desbloqueado(session, document_id)`: `SELECT ...
-  FROM albaran_documents_merge m LEFT JOIN albaran_altas_sigrid a ... FOR UPDATE OF m`, llamada al empezar, en su
+  `estado_aprobacion`, «valorado» en la transacción (R37), `_exigir_desbloqueado(session, document_id)` en DOS
+  sentencias (T19, como H4): `SELECT id ... FOR UPDATE` del merge y después el alta; llamada al empezar, en su
   sesión, por `update_document`, `set_approved(False)`, `soft_delete_document`, purga, restaurar del deshacer,
   los métodos de conciliación y alta de líneas y el nuevo `guardar_producto_sigrid` (R26; sin tabla = sin alta);
   `guardar_producto_sigrid` comprueba que la línea es del documento y no vinculada y hace el `UPDATE`; la lectura

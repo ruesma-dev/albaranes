@@ -40,15 +40,17 @@ Spain Central, colas de Azure Storage, workers KEDA; se gestiona con
 | sv4 | `services/albaranes-front` | Front humano de revisión/aprobación | — | `q-persistencia`, `q-valoracion`, `q-feedback` | :8004 |
 | sv5 | `services/albaran-valoracion-api` | Motor IA de valoración (stateless, no persiste) | — | — | :8002 |
 | sv6 | `services/albaran-valoracion-persist` | Valorador: llama a sv5, reglas deterministas, persiste | `q-valoracion` | — (fin de cadena) | :8003 |
+| sv9 | `services/albaranes-alta-sigrid` | Alta en Sigrid de los albaranes aprobados (F-053; ÚNICO que escribe en el ERP) | `q-feedback` | — (escribe `albaran_altas_sigrid`) | — (solo worker) |
 
 Los nombres canónicos de colas (`q-emails`, `q-extraccion`, `q-persistencia`,
 `q-valoracion`, `q-feedback`), los contratos Pydantic de mensajes y el runtime
 de colas/blobs viven en **`services/albaranes-comun`** (`ruesma_comun`), que
-cada servicio instala como paquete. Dos colas especiales: **`q-feedback`**
-está reservada para el futuro servicio de entrada al ERP (aprobado → alta en
-Sigrid vía sigrid-api `sql/write`; el consumidor NO está construido) y
-**`q-emails`** es una huérfana del diseño original, pendiente de limpieza
-(F-009). El encadenado HTTP directo sv1→sv2→sv3 está **muerto**: en local
+cada servicio instala como paquete. **`q-feedback`** la consume **sv9**
+(F-053): sv4 publica `MensajeFeedback` (`accion` `alta` al pasar a aprobado o
+desde «Solicitar alta en Sigrid»; `verificar_anulacion` desde «Ya lo he
+anulado en Sigrid») y sv9 da de alta el albarán vía los endpoints de dominio
+de sigrid-api (nunca `sql/write`; regla 19). **`q-emails`** es una huérfana
+del diseño original, pendiente de limpieza (F-009). El encadenado HTTP directo sv1→sv2→sv3 está **muerto**: en local
 también se trabaja con colas (Azurite).
 
 **Nivel servicio** — hexagonal: `domain/` (modelos y puertos, sin
@@ -56,7 +58,8 @@ dependencias externas), `application/` (pipelines y servicios),
 `infrastructure/` (adaptadores: BBDD, colas, Graph, Sigrid, LLM),
 `interface_adapters/` (`api`/`web`/`worker`) y `composition.py` como raíz de
 composición. sv2, sv3 y sv6 tienen doble entrada: `main.py` (HTTP) y
-`main_worker.py` (consumidor de cola).
+`main_worker.py` (consumidor de cola); sv9 es solo worker (`main.py` delega en
+`main_worker.py`).
 
 **Blobs**: `input/{document_id}.pdf` y, si el mensaje trae contexto,
 `input/{document_id}.correo.json` (los deja sv1; regla 15) y
@@ -297,10 +300,10 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       tocar, no se toca). Poner la de la casada a una fila Sigrid la deja
       Sigrid y no avisa «pasará a NUEVA» (R20).
     - **Contrato hacia Sigrid** (R24): una línea en almacén se da de alta
-      **sin partida y con almacén** (`almacen: true` de F-009 de sigrid-api,
-      lo implementa F-053); nadie la rellena desde el contrato, la plantilla
-      ni otra línea. Hasta F-053 el alta es manual y administración teclea lo
-      que pinta sv4.
+      **sin partida**: sv9 (F-053) no manda ninguna clave de partida y
+      sigrid-api la lleva al almacén de la obra (F-009 v5.1 no tiene campo
+      `almacen`); nadie la rellena desde el contrato, la plantilla ni otra
+      línea.
 17. **Proveedor: el candidato claro se aplica** (F-062, oct 2026; decisión
     del humano «que proponga uno, salvo que no haya ningún candidato claro»,
     Q0–Q6 en `progress/spec_F-062.md`). Sustituye a la D3 de F-002 mientras
@@ -355,15 +358,53 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
     - Un CIF propio nunca es candidato: se excluye de la lista de la obra,
       de la búsqueda global y de la propuesta/candidato claro de la regla 17.
     - Si el revisor elige a mano un CIF propio (origen `manual`), se respeta.
+19. **Aprobar es registrar en Sigrid** (F-053, oct 2026). Spec:
+    `specs/F-053-alta-sigrid/`; decisiones P1–P7 y D1–D4 en
+    `progress/spec_F-053.md`.
+    - **Disparo (sv4)**: solo el PASO a aprobado (por «Aprobar» del listado o
+      «Guardar y aprobar») publica el alta, y solo con
+      `ALTA_SIGRID_DESDE_UTC` puesta (vacía = feature apagada: sv4 como
+      antes). Sin valorar no se aprueba (`ruesma_comun.valoracion.
+      esta_valorado`: `ok` de sv6 o manual completa), con DESDE o sin ella.
+    - **sv9**: reclama el documento con el merge bloqueado (`FOR UPDATE`) y
+      lee el alta en OTRA sentencia; valida en local (`no_admitido` /
+      `revisar` sin llamar a sigrid-api), busca altas a mano por CIF +
+      número (`ya_en_sigrid`), hace la previa (`commit=false`) y la compara
+      con lo aprobado; en **simulación** se queda en `simulado`; en modo
+      **real** (`ALTA_SIGRID_COMMIT` = literal `true`, lo pone el humano)
+      graba UNA vez, sin reintento, y adjunta el PDF. Líneas: vinculadas por
+      `ctrpro_ide`; sin vincular con producto genérico por familia
+      (`QA9999` alquiler de maquinaria, `XA9999` medios auxiliares,
+      `MA9999` el resto; `ALTA_SIGRID_PRODUCTO_POR_DEFECTO`), que el
+      administrativo cambia en sv4 (`albaran_line_valuations.
+      producto_sigrid`; se pierde al revalorar, F-058).
+    - **Bloqueo**: con el alta `en_curso`, `incierto` o `registrado`
+      (`ruesma_comun.alta_sigrid.ESTADOS_ALTA_BLOQUEANTES`) sv4 rechaza
+      desaprobar, guardar, deshacer, borrar, purgar, revalorar, volver a
+      buscar contratos, elegir producto y toda edición de líneas (409 / aviso
+      «Registrado en Sigrid como {cod}…»), comprobándolo dentro de su
+      transacción con el merge bloqueado y el alta leída en otra sentencia;
+      sv3 no borra ni reprocesa un PDF reingresado con alta bloqueante (R45).
+      Se desbloquea anulando en Sigrid y pulsando «Ya lo he anulado en
+      Sigrid» (sv9 comprueba que el `con.ide` ya no existe ⇒ `anulado`).
+    - **Las reglas compartidas viven en comun** (`ruesma_comun.alta_sigrid`):
+      DESDE, Espera, «vinculada», «línea a registrar», producto efectivo y
+      estados; sv4 y sv9 deciden con las mismas funciones.
 
 ## Acceso a datos y sistemas externos
 
 - **PostgreSQL `albaranes`** (Azure Flexible Server compartido
-  `psql-albaranes-rs9k2`): sv3 dueño del schema; sv4 lectura+escritura de
-  revisión; sv5 SOLO lectura; sv6 dueño de las 3 tablas de valoración; sv1
-  solo `workflow_runs`. Cambios a nivel de servidor afectan a otros
+  `psql-albaranes-rs9k2`): sv3 dueño del schema (también del DDL de
+  `albaran_altas_sigrid`, F-053); sv4 lectura+escritura de revisión (lee el
+  alta, nunca la escribe); sv5 SOLO lectura; sv6 dueño de las 3 tablas de
+  valoración (columna `producto_sigrid`, que escribe sv4); sv9 lee merge y
+  valoración y escribe SOLO `albaran_altas_sigrid`; sv1 solo `workflow_runs`. Cambios a nivel de servidor afectan a otros
   proyectos: prohibidos desde aquí.
-- **Sigrid (ERP)**: SOLO vía `sigrid-api` (function key), SOLO lectura.
+- **Sigrid (ERP)**: SOLO vía `sigrid-api` (function key), nunca SQL directo.
+  Leer: cualquier servicio. **Escribir: SOLO sv9** (F-053), con el alta de
+  albarán (`sigrid/albaran`, modo extendido) y `concepto-grafico`, nunca
+  `sql/write`, y solo con `ALTA_SIGRID_COMMIT=true`, que activa el humano;
+  desde local, nunca (en local `ALTA_SIGRID_COMMIT` no se pone).
   La instancia admite **500.000 filas por petición** (`MAX_ALLOWED_ROWS`,
   leído en Azure el 2026-09-30; `azure-apps/sigrid_api.md` §4.1). El 1.000
   que cortaba listas en silencio era el `max_rows` por defecto del cliente
@@ -403,7 +444,12 @@ rollback: `docs/referencia/dominio_negocio_albaranes.md` §6–§7.
   — un fix en comun sin rebuild no existe en Azure. Excepción conocida:
   `ruesma_comun.sigrid` y `ruesma_comun.obras` (F-052) solo los importan
   sv3 y sv4, que se reconstruyen juntos y en orden **sv3 → sv4** (sv3
-  aplica el DDL de `contratos_busqueda_*` que el ORM de sv4 lee).
+  aplica el DDL de `contratos_busqueda_*` que el ORM de sv4 lee). F-053 toca
+  comun ⇒ todas las imágenes, en orden **sv6 y sv3 → sv9 → sv4** (sv6 la
+  columna `producto_sigrid`, sv3 la tabla del alta; sv9 sale con DESDE vacía
+  y `ALTA_SIGRID_COMMIT=false`, `create_capps_sv9.ps1`, máximo 1 réplica);
+  DESDE se pone después en sv9 y sv4 a la vez con `set_alta_sigrid.ps1`
+  (`infra/README_capps.md`).
 - Scripts en `infra/`: `fase1_infra.ps1` (provisión), `add_secrets.ps1`,
   `create_capps*.ps1`, `build_images.ps1` + `deploy.ps1` (redespliegue).
   `build_images.ps1` espera los repos como hermanos: desde el monorepo,
