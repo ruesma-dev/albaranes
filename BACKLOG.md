@@ -3,9 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **60 features**, 43 abiertas, 17 terminadas.
-
-En curso: **F-062**.
+Resumen: **60 features**, 42 abiertas, 18 terminadas.
 
 Bloqueadas: **F-051**.
 
@@ -14,7 +12,6 @@ Bloqueadas: **F-051**.
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
-| F-062 | sv3 aplica el proveedor propuesto antes de buscar contratos: CIF mal leído + candidato claro con contrato en la obra ⇒ se corrige y se busca con el bueno | 1 | en curso | critico | `feature/F-062-proveedor-aplicado` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-051 | Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas» | 2 | bloqueada | critico | `feature/F-051-almacen-por-linea` |
@@ -68,6 +65,7 @@ Bloqueadas: **F-051**.
 | F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel | 1 | critico |
 | F-052 | sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF) | 1 | critico |
 | F-054 | sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822) | 1 | estandar |
+| F-062 | sv3 aplica el proveedor propuesto antes de buscar contratos: CIF mal leído + candidato claro con contrato en la obra ⇒ se corrige y se busca con el bueno | 1 | critico |
 | F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
 | F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
 | F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | estandar |
@@ -94,18 +92,6 @@ ALCANCE PROPUESTO: que sv2, antes de la fase 2, obtenga el contexto de Sigrid (o
 CRITERIO DEL HUMANO: decide la IA (memoria «clasificacion-la-decide-la-ia»), las reglas verifican.
 
 DEPENDE DE: F-052 (lista de candidatos de la obra completa y sin truncar). RELACIONADAS: F-048 (contexto de correo y obras en IA1), F-002 (red de proveedor por nombre), F-045 (evals).
-
-### F-062 · sv3 aplica el proveedor propuesto antes de buscar contratos: CIF mal leído + candidato claro con contrato en la obra ⇒ se corrige y se busca con el bueno
-
-estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-062-proveedor-aplicado`
-
-SÍNTOMA (humano, 2026-10-07): «ya ha pasado varias veces que el CIF y el nombre están bien traídos por la IA pero luego no encuentra el contrato; si vuelvo a meter el mismo proveedor, entonces ya sí». CAUSA: la red de proveedor de sv3 (F-002 R8–R10, F-052 R15–R19; header_resolver_service._red_proveedor_por_cif) encuentra el proveedor bueno con contrato en la obra pero solo lo PROPONE en una nota (D3 de F-002) y la búsqueda de contratos se hace con el CIF leído ⇒ `ninguno`.
-
-DATOS (consultas de solo lectura del humano, 2026-10-07): 3 casos, los 3 CIF mal leídos por la IA con el DÍGITO DE CONTROL INVÁLIDO: 19407 B86056201→B66056201 y 19394 B86056095→B66056201 (HORMIGONES MAT, obra 0720), 1790636816 B18437421→B18487421 (ARIDOS ANFERSA, obra 0678). 0 casos de formato del CIF ni de prefijo ES; 0 búsquedas en `error`.
-
-DECISIÓN DEL HUMANO (2026-10-07), literal: «que proponga uno, salvo que no haya ningún candidato claro». Interpretación de la spec v1 (Q0, a confirmar en la PARADA 1): con candidato claro (proveedor con contrato en la obra, CIF válido, nombre que casa con el leído según la comparación de F-052 —score 1,0—, sin empate o con empate desempatado por cercanía del CIF), sv3 lo APLICA (CIF y razón social de Sigrid en el merge) antes de buscar contratos, conserva lo leído en motivo `proveedor_cif_corregido` y nota `[CORREGIDO] Proveedor`, y manda a revisión. Sin candidato claro, como hoy. Validación del control de CIF/NIF/NIE en ruesma_comun.proveedores. Interruptor RED_PROVEEDOR_CORRECCION_ENABLED.
-
-FUERA (por los datos): normalización única del CIF y SQL normalizada, reintento tras `error`, CIF existente sin contrato en la obra con homónimo. RELACIONADAS: F-055 (IA2 elige el proveedor: solución de fondo; F-062 queda como red de seguridad), F-030 (se solapa: propuesta de cerrarla como absorbida al terminar F-062), F-002 (D3 sustituida), F-052, F-059. Spec: specs/F-062-proveedor-aplicado/; informe y preguntas Q0–Q6: progress/spec_F-062.md. DECISIÓN DEL HUMANO SOBRE LA COMPARACIÓN (2026-10-08, review H1, opción B): «la comparación que hace actualmente está bien, el tema es que no debe quedarse en informativa sino cambiar el proveedor. Este paso será solo defensa, porque en la revisión del sv2 le pasaremos los proveedores filtrados» (F-055). Notas bajas de la review pendientes: B1 (se aplica el CIF normalizado en vez del literal de prv), B2 (retirada de proveedor_cif_no_casa en la rama sin candidato, sin declarar), B4 (el comando de T0b apunta a un script del scratchpad efímero).
 
 ### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
 
@@ -673,6 +659,18 @@ ALCANCE (minimo de progress/explore_F-054_encadenados.md, decisiones del humano 
 FUERA: conversationId/hilo, enlaces SharePoint, .msg, cabeceras del interior en el contexto y reproceso automatico de Errores (lo hace el humano a mano tras desplegar, tarea MANUAL T12).
 
 RIGOR estandar: solo sv1, sin schema, sin contratos de cola ni blob, sin recurso compartido ni dinero (igual que F-020 de partes). Spec: specs/F-054-correo-adjunto-encadenado/, informe progress/spec_F-054.md.
+
+### F-062 · sv3 aplica el proveedor propuesto antes de buscar contratos: CIF mal leído + candidato claro con contrato en la obra ⇒ se corrige y se busca con el bueno
+
+estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-062-proveedor-aplicado`
+
+SÍNTOMA (humano, 2026-10-07): «ya ha pasado varias veces que el CIF y el nombre están bien traídos por la IA pero luego no encuentra el contrato; si vuelvo a meter el mismo proveedor, entonces ya sí». CAUSA: la red de proveedor de sv3 (F-002 R8–R10, F-052 R15–R19; header_resolver_service._red_proveedor_por_cif) encuentra el proveedor bueno con contrato en la obra pero solo lo PROPONE en una nota (D3 de F-002) y la búsqueda de contratos se hace con el CIF leído ⇒ `ninguno`.
+
+DATOS (consultas de solo lectura del humano, 2026-10-07): 3 casos, los 3 CIF mal leídos por la IA con el DÍGITO DE CONTROL INVÁLIDO: 19407 B86056201→B66056201 y 19394 B86056095→B66056201 (HORMIGONES MAT, obra 0720), 1790636816 B18437421→B18487421 (ARIDOS ANFERSA, obra 0678). 0 casos de formato del CIF ni de prefijo ES; 0 búsquedas en `error`.
+
+DECISIÓN DEL HUMANO (2026-10-07), literal: «que proponga uno, salvo que no haya ningún candidato claro». Interpretación de la spec v1 (Q0, a confirmar en la PARADA 1): con candidato claro (proveedor con contrato en la obra, CIF válido, nombre que casa con el leído según la comparación de F-052 —score 1,0—, sin empate o con empate desempatado por cercanía del CIF), sv3 lo APLICA (CIF y razón social de Sigrid en el merge) antes de buscar contratos, conserva lo leído en motivo `proveedor_cif_corregido` y nota `[CORREGIDO] Proveedor`, y manda a revisión. Sin candidato claro, como hoy. Validación del control de CIF/NIF/NIE en ruesma_comun.proveedores. Interruptor RED_PROVEEDOR_CORRECCION_ENABLED.
+
+FUERA (por los datos): normalización única del CIF y SQL normalizada, reintento tras `error`, CIF existente sin contrato en la obra con homónimo. RELACIONADAS: F-055 (IA2 elige el proveedor: solución de fondo; F-062 queda como red de seguridad), F-030 (se solapa: propuesta de cerrarla como absorbida al terminar F-062), F-002 (D3 sustituida), F-052, F-059. Spec: specs/F-062-proveedor-aplicado/; informe y preguntas Q0–Q6: progress/spec_F-062.md. DECISIÓN DEL HUMANO SOBRE LA COMPARACIÓN (2026-10-08, review H1, opción B): «la comparación que hace actualmente está bien, el tema es que no debe quedarse en informativa sino cambiar el proveedor. Este paso será solo defensa, porque en la revisión del sv2 le pasaremos los proveedores filtrados» (F-055). Notas bajas de la review pendientes: B1 (se aplica el CIF normalizado en vez del literal de prv), B2 (retirada de proveedor_cif_no_casa en la rama sin candidato, sin declarar), B4 (el comando de T0b apunta a un script del scratchpad efímero).
 
 ### F-011 · Evals de IA con ground truth y puerta en el arnés
 
