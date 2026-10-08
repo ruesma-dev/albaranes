@@ -92,12 +92,12 @@ def test_f063_r4_repo_descartar_sobre_un_merge_que_no_existe_lanza():
 # Resolver · descarte al principio de la resolución del proveedor
 # (R3–R8, R10)
 # ------------------------------------------------------------------ #
-from f062_dobles import DOC, RepoRed, pasada  # noqa: E402
+from f062_dobles import DOC, RepoRed, pasada
+from ruesma_comun.proveedores import cifs_propios
 
-from domain.models.header_resolution_models import (  # noqa: E402
+from domain.models.header_resolution_models import (
     ProveedorObraResumen,
 )
-from ruesma_comun.proveedores import cifs_propios  # noqa: E402
 
 OBRA = "0694"
 RAZ_FEYMACO = "FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A."
@@ -134,15 +134,11 @@ class ClienteFalso:
         return list(self.globales)
 
 
-class RepoF063(RepoRed):
-    """``RepoRed`` de F-062 con la escritura del descarte (F-063 · R4)."""
+class _ConDescarte:
+    """La escritura del descarte (F-063 · R4) sobre el merge en memoria de
+    los dobles de F-062."""
 
-    def __init__(self, *, falla_descartar: bool = False, **kwargs) -> None:
-        kwargs.setdefault("nombre", NOMBRE_LEIDO)
-        kwargs.setdefault("obra", OBRA)
-        super().__init__(**kwargs)
-        self.falla_descartar = falla_descartar
-        self.descartes: list[tuple[str, str]] = []
+    falla_descartar = False
 
     def descartar_cif_propio(self, *, document_id: str, motivo: str, nota: str) -> None:
         assert document_id == DOC
@@ -157,6 +153,15 @@ class RepoF063(RepoRed):
         )
         lineas = [ln for ln in self.lineas_notas() if not ln.startswith(NOTA_CIF_PROPIO_PREFIJO)]
         self.notas = "\n".join([*lineas, nota])
+
+
+class RepoF063(_ConDescarte, RepoRed):
+    def __init__(self, *, falla_descartar: bool = False, **kwargs) -> None:
+        kwargs.setdefault("nombre", NOMBRE_LEIDO)
+        kwargs.setdefault("obra", OBRA)
+        super().__init__(**kwargs)
+        self.falla_descartar = falla_descartar
+        self.descartes: list[tuple[str, str]] = []
 
 
 @pytest.mark.parametrize("leido", [RUESMA, " a-81873903", "ESA81873903"])
@@ -341,3 +346,113 @@ def test_f063_r9_candidato_red_por_cif_ni_aplica_ni_propone_el_cif_propio():
     assert motivo == "proveedor_cif_no_casa:B86056201"
     assert "PROPUESTA" not in nota
     assert repo.cif == "B86056201"
+
+
+# ------------------------------------------------------------------ #
+# R11, R12 · pipeline: el caso real en las tres rutas (doble de sigrid-api)
+# ------------------------------------------------------------------ #
+from doble_sigrid_api import (
+    CIF_FEYMACO,
+    CIF_RUESMA,
+    CONTRATO_FEYMACO,
+    NOMBRE_LEIDO_FEYMACO,
+    DobleSigridApi,
+    fixture_f063,
+)
+from test_f062_r8_pipeline_tres_casos import (
+    MergeEnMemoria,
+    _pipeline,
+    _request,
+)
+
+
+class MergeF063(_ConDescarte, MergeEnMemoria):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.descartes: list[tuple[str, str]] = []
+
+
+def _cifs_preguntados(doble) -> set[str]:
+    """Todo CIF con el que sv3 preguntó a sigrid-api (prv y contratos)."""
+    return {
+        p["parameters"][0]
+        for p in doble.peticiones_con("SELECT TOP 1 prv.cif") + doble.peticiones_con("AS contrato_ide")
+    }
+
+
+def _ruta(ruta, merge, doble, cif, nombre, obra, **kwargs):
+    pipeline = _pipeline(merge, doble, **kwargs)
+    if ruta == "reenrich":
+        assert pipeline.reenrich_by_merge_id(merge_document_id=DOC, force_refetch=True)
+    else:
+        pipeline.run(_request(cif, nombre, obra))
+
+
+def _merge(ruta, cif, nombre, obra) -> MergeF063:
+    if ruta == "nuevo":
+        return MergeF063(existe=False, cif=None, nombre=None, obra=None)
+    return MergeF063(existe=True, cif=cif, nombre=nombre, obra=obra, origen="ia")
+
+
+RUTAS = ["nuevo", "duplicado", "reenrich"]
+
+
+@pytest.mark.parametrize("ruta", RUTAS)
+def test_f063_r11_pipeline_el_albaran_de_feymaco_acaba_con_feymaco_y_su_contrato(ruta):
+    doble = DobleSigridApi(fixture_f063())
+    merge = _merge(ruta, CIF_RUESMA, NOMBRE_LEIDO_FEYMACO, OBRA)
+
+    _ruta(ruta, merge, doble, CIF_RUESMA, NOMBRE_LEIDO_FEYMACO, OBRA)
+
+    assert (merge.cif, merge.nombre, merge.origen) == (CIF_FEYMACO, RAZ_FEYMACO, "deterministic")
+    assert merge.rastro[-1] == (CIF_FEYMACO, OBRA, "encontrados")
+    assert [c.codigo_contrato for c in merge.contratos] == [CONTRATO_FEYMACO]
+    # Ni prv ni contratos se consultan nunca con el CIF del cliente.
+    assert CIF_RUESMA not in _cifs_preguntados(doble)
+    assert {p["parameters"][0] for p in doble.peticiones_con("AS contrato_ide")} == {CIF_FEYMACO}
+    assert merge.review_required is True
+    assert merge.lista_motivos() == [MOTIVO]
+    assert NOTA in merge.lineas_notas()
+
+
+@pytest.mark.parametrize("ruta", RUTAS)
+def test_f063_r12_pipeline_sin_candidato_queda_sin_cif_con_nota_y_motivo(ruta):
+    doble = DobleSigridApi(fixture_f063())
+    merge = _merge(ruta, CIF_RUESMA, "SUMINISTROS XYZ", "0699")
+
+    _ruta(ruta, merge, doble, CIF_RUESMA, "SUMINISTROS XYZ", "0699")
+
+    assert merge.cif is None
+    assert merge.nombre == "SUMINISTROS XYZ"  # el nombre leído, sin canonizar
+    assert merge.contratos == []
+    assert CIF_RUESMA not in _cifs_preguntados(doble)
+    assert merge.lista_motivos() == [MOTIVO]
+    assert NOTA in merge.lineas_notas()
+
+
+@pytest.mark.parametrize("ruta", RUTAS)
+def test_f063_r11_control_negativo_sin_la_regla_se_reproduce_la_incidencia(ruta):
+    """Con la lista de CIF propios vacía, el pipeline hace lo que hizo en
+    producción el 2026-10-08: canoniza al cliente y no encuentra contrato."""
+    doble = DobleSigridApi(fixture_f063())
+    merge = _merge(ruta, CIF_RUESMA, NOMBRE_LEIDO_FEYMACO, OBRA)
+
+    _ruta(ruta, merge, doble, CIF_RUESMA, NOMBRE_LEIDO_FEYMACO, OBRA, cifs_propios=frozenset())
+
+    assert (merge.cif, merge.nombre) == (CIF_RUESMA, RAZ_RUESMA)
+    assert merge.rastro[-1] == (CIF_RUESMA, OBRA, "ninguno")
+    assert merge.contratos == []
+    assert merge.descartes == []
+
+
+@pytest.mark.parametrize("ruta", RUTAS)
+def test_f063_r8_control_un_albaran_con_el_cif_de_feymaco_no_cambia(ruta):
+    doble = DobleSigridApi(fixture_f063())
+    merge = _merge(ruta, CIF_FEYMACO, NOMBRE_LEIDO_FEYMACO, OBRA)
+
+    _ruta(ruta, merge, doble, CIF_FEYMACO, NOMBRE_LEIDO_FEYMACO, OBRA)
+
+    assert (merge.cif, merge.nombre) == (CIF_FEYMACO, RAZ_FEYMACO)
+    assert merge.rastro[-1] == (CIF_FEYMACO, OBRA, "encontrados")
+    assert merge.descartes == []
+    assert merge.lista_motivos() == []

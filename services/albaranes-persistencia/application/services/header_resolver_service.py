@@ -526,7 +526,7 @@ class HeaderResolverService:
                 motivo=f"{MOTIVO_PROVEEDOR_CIF_PROPIO}{cif}",
                 nota=nota,
             )
-        except Exception:  # noqa: BLE001 — best-effort
+        except Exception:  # best-effort (R7)
             logger.exception(
                 "%s no se pudo descartar el CIF propio %s en el merge; se "
                 "busca el proveedor por nombre igualmente. document_id=%s",
