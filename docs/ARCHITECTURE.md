@@ -337,6 +337,24 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       `manual`. Elegir otro proveedor retira motivo y nota de la corrección
       en la siguiente pasada; los `proveedor_cif_no_casa` de otro CIF
       también caen. `review_required` no baja nunca solo.
+18. **El CIF de Construcciones Ruesma nunca es el proveedor** (F-063, oct
+    2026; incidencia de FEYMACO del 2026-10-08). Ruesma es el cliente de
+    todos los albaranes y su CIF (A81873903) va impreso en ellos: leído en
+    el campo de proveedor es siempre un error de la IA, aunque exista en
+    `prv`. La lista de CIF propios vive en `ruesma_comun.proveedores`
+    (`cifs_propios`, `es_cif_propio`); sv3 la amplía con `CIFS_PROPIOS`
+    (separados por comas) y no se puede reducir.
+    - Al empezar la resolución del proveedor (tres rutas: nuevo, duplicado y
+      `MensajePersistencia(force=True)`), ANTES de la red por CIF de la regla
+      17, un CIF propio se descarta: CIF y origen a NULL, nombre leído
+      intacto, a revisión con motivo `proveedor_cif_propio:<cif>` y nota
+      `[AVISO] CIF del cliente` (prefijo propio, como `[CORREGIDO]
+      Proveedor`). Después sigue el camino «sin CIF» (proveedores con
+      contrato en la obra por nombre y familia; luego global por nombre).
+      Ni se consulta `prv` con él ni se canoniza el nombre al del cliente.
+    - Un CIF propio nunca es candidato: se excluye de la lista de la obra,
+      de la búsqueda global y de la propuesta/candidato claro de la regla 17.
+    - Si el revisor elige a mano un CIF propio (origen `manual`), se respeta.
 
 ## Acceso a datos y sistemas externos
 

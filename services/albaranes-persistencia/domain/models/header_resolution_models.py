@@ -7,7 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 # ------------------------------------------------------------------ #
-# Marcas de la red de proveedor (F-002, F-062). Las escribe el
+# Marcas de la red de proveedor (F-002, F-062, F-063). Las escribe el
 # repositorio y las redacta el resolver: viven en el dominio para que
 # ninguna de las dos capas importe a la otra.
 # ------------------------------------------------------------------ #
@@ -20,6 +20,12 @@ MOTIVO_PROVEEDOR_CORREGIDO = "proveedor_cif_corregido:"
 #: por prefijo ``[AVISO] Proveedor`` al empezar cada pasada y con ese
 #: prefijo la nota desapareceria en la primera re-pasada.
 NOTA_PROVEEDOR_CORREGIDO_PREFIJO = "[CORREGIDO] Proveedor"
+#: Motivo de revision: la IA leyo un CIF PROPIO (el del cliente, Ruesma)
+#: como CIF del proveedor y sv3 lo descarto (F-063 · R4). Sella el CIF.
+MOTIVO_PROVEEDOR_CIF_PROPIO = "proveedor_cif_propio:"
+#: Prefijo PROPIO de su nota (F-063 · D1, R10): con ``[AVISO] Proveedor``
+#: la borraria la propia pasada en cuanto se resuelve por nombre.
+NOTA_CIF_PROPIO_PREFIJO = "[AVISO] CIF del cliente"
 
 
 @dataclass(frozen=True)

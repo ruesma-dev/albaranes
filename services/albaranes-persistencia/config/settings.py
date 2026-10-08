@@ -209,6 +209,12 @@ class Settings(BaseSettings):
         2,
         alias="RED_PROVEEDOR_CORRECCION_MARGEN_DISTANCIA",
     )
+    # F-063 (oct 2026): CIF PROPIOS que nunca son el proveedor, ADEMAS del
+    # de Construcciones Ruesma (A81873903), que va siempre de serie
+    # (ruesma_comun.proveedores). Separados por comas; vacio = solo el de
+    # serie. Un CIF propio leido como proveedor se descarta y el proveedor
+    # se busca por nombre (salvo que lo eligiera el revisor).
+    cifs_propios: str = Field("", alias="CIFS_PROPIOS")
     fecha_guard_enabled: bool = Field(True, alias="FECHA_GUARD_ENABLED")
     fecha_guard_max_dias: int = Field(365, alias="FECHA_GUARD_MAX_DIAS")
 
