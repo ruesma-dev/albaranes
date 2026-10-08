@@ -8,7 +8,6 @@ cliente impreso en el albarán de FEYMACO) como CIF del proveedor.
 from __future__ import annotations
 
 import pytest
-
 from ruesma_comun.proveedores import (
     CIFS_PROPIOS_POR_DEFECTO,
     cifs_propios,

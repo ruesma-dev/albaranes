@@ -16,12 +16,11 @@ from __future__ import annotations
 import json
 
 import pytest
-from test_f062_r14_repasadas_y_motivos import _documento, _json, _repo
-
 from domain.models.header_resolution_models import (
     MOTIVO_PROVEEDOR_CIF_PROPIO,
     NOTA_CIF_PROPIO_PREFIJO,
 )
+from test_f062_r14_repasadas_y_motivos import _documento, _json, _repo
 
 RUESMA = "A81873903"
 FEYMACO = "A28733558"
@@ -92,12 +91,11 @@ def test_f063_r4_repo_descartar_sobre_un_merge_que_no_existe_lanza():
 # Resolver · descarte al principio de la resolución del proveedor
 # (R3–R8, R10)
 # ------------------------------------------------------------------ #
-from f062_dobles import DOC, RepoRed, pasada
-from ruesma_comun.proveedores import cifs_propios
-
 from domain.models.header_resolution_models import (
     ProveedorObraResumen,
 )
+from f062_dobles import DOC, RepoRed, pasada
+from ruesma_comun.proveedores import cifs_propios
 
 OBRA = "0694"
 RAZ_FEYMACO = "FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A."
