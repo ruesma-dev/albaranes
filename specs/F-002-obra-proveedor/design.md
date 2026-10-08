@@ -278,6 +278,10 @@ el merge con SQL crudo pero NO lee ninguna de estas columnas de revisión
   tamaño del prompt.
 - **D3** — la red de proveedor con CIF que no casa PROPONE y marca revisión;
   no sobrescribe (lo decide el humano en sv4). Coherente con §10.1.
+  **Sustituida por F-062 con el interruptor encendido**
+  (`RED_PROVEEDOR_CORRECCION_ENABLED=true`): un candidato claro se aplica y
+  va a revisión; D3 solo rige sin candidato claro o con el interruptor
+  apagado.
 - **D4** — la canonicalización por CIF (R8) SÍ sobrescribe
   `proveedor_nombre` (dato determinista del maestro, no una conjetura). El
   literal leído queda en las tablas raw.

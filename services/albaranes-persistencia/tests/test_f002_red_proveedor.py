@@ -6,6 +6,11 @@ logotipo. Cuando el CIF leído existe en el maestro ``prv`` de Sigrid, el
 nombre se canoniza; cuando no existe, se PROPONE candidato y se marca
 revisión, pero NUNCA se sobrescribe lo leído (decisión D3).
 
+(F-062 · R12) Desde F-062, con un candidato CLARO la red lo aplica: D3
+solo rige con ``RED_PROVEEDOR_CORRECCION_ENABLED=false``. Los tests que
+afirman D3 se ejecutan con ``correccion_enabled=False`` y siguen siendo la
+prueba de la vuelta atrás.
+
 Sin red ni BBDD: cliente de sigrid-api y repositorio son dobles.
 """
 from __future__ import annotations
@@ -34,6 +39,8 @@ class RepoProveedorFake:
         self.notas: list[str] = []
         self.prefijos_retirados: list[str] = []
         self.resoluciones: list[tuple[str | None, str | None, str]] = []
+        self.aplicadas: list[tuple[str, str]] = []
+        self.retiradas: list[str | None] = []
 
     def get_merge_header_for_resolution(self, *, document_id: str):
         return self._header
@@ -70,6 +77,17 @@ class RepoProveedorFake:
         if self._falla_marca:
             raise RuntimeError("BBDD caida")
         self.marcas.append((motivo, nota, nota_prefijo))
+
+    # F-062: escrituras de la red que aplica el candidato claro.
+    def aplicar_correccion_proveedor(
+        self, *, document_id: str, cif: str, nombre: str, motivo: str, nota: str,
+    ) -> None:
+        self.aplicadas.append((cif, nombre))
+
+    def retirar_motivos_proveedor(
+        self, *, document_id: str, cif_actual: str | None,
+    ) -> None:
+        self.retiradas.append(cif_actual)
 
 
 class ClienteProveedorFake:
@@ -183,7 +201,9 @@ def test_f002_r9_horpresol_deja_propuesta_a_revision() -> None:
         ],
     )
 
-    _servicio(repo, cliente).resolve_merge_document(merge_document_id=DOC)
+    _servicio(repo, cliente, correccion_enabled=False).resolve_merge_document(
+        merge_document_id=DOC,
+    )
 
     assert len(repo.marcas) == 1
     motivo, nota, prefijo = repo.marcas[0]
@@ -199,13 +219,19 @@ def test_f002_r9_no_sobrescribe_el_cif_ni_el_nombre_leidos() -> None:
     repo = RepoProveedorFake(_header())
     cliente = ClienteProveedorFake(
         por_cif=None,
-        candidatos_obra=[_candidato("B99111222", "HORPRESOL, S.L.")],
+        # F-062: con CIF válido sería un candidato CLARO y, con la
+        # corrección encendida, se aplicaría. D3 = interruptor apagado.
+        candidatos_obra=[_candidato("B66056201", "HORPRESOL, S.L.")],
     )
 
-    _servicio(repo, cliente).resolve_merge_document(merge_document_id=DOC)
+    _servicio(repo, cliente, correccion_enabled=False).resolve_merge_document(
+        merge_document_id=DOC,
+    )
 
     assert repo.nombre_canonico is None
     assert repo.resoluciones == [(None, None, "deterministic")]
+    assert repo.aplicadas == []
+    assert "PROPUESTA: B66056201" in repo.marcas[0][1]
 
 
 # ---------------------------------------------------------------- #
@@ -284,7 +310,9 @@ def test_f002_r9_ante_un_empate_gana_el_primer_candidato() -> None:
         ],
     )
 
-    _servicio(repo, cliente).resolve_merge_document(merge_document_id=DOC)
+    _servicio(repo, cliente, correccion_enabled=False).resolve_merge_document(
+        merge_document_id=DOC,
+    )
 
     nota = repo.marcas[0][1]
     assert "B66000666" in nota

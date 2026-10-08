@@ -736,3 +736,15 @@ separado, nadie recorriendo el camino entero—:
   motivos de revisión por confianza baja ni por albarán mixto; y cuando
   `calcular_contenedores_residuos` no puede contar, el builder **cae a la
   cantidad cruda** y la valora (los 720,00 €), aunque va a revisión.
+
+## F-062 · sv3 aplica el proveedor propuesto antes de buscar contratos (done, 2026-10-08)
+
+- Síntoma: CIF mal leído por la IA (dígito de control inválido) ⇒ la red de F-002/F-052 proponía el bueno solo en una nota y la búsqueda de
+  contratos fallaba. Casos reales: 19407 y 19394 (HORMIGONES MAT, 0720) y 1790636816 (ARIDOS ANFERSA, 0678).
+- Hecho: validación del dígito de control en `ruesma_comun.proveedores`; con candidato claro (contrato en la obra, CIF válido, nombre
+  que casa según F-052, desempate por cercanía del CIF) sv3 aplica CIF y razón social antes de buscar contratos, con nota
+  `[CORREGIDO] Proveedor` y a revisión; interruptor `RED_PROVEEDOR_CORRECCION_ENABLED`.
+- Decisión del humano (H1 = B): la comparación de F-052 se mantiene; F-062 es defensa; el arreglo de fondo es F-055.
+- Review APROBADA (pasada 2); mutación 104/104; `init.sh` en verde en `dev` tras fusionar (`d052106`).
+- Pendiente del humano: desplegar solo sv3 y vigilar con la consulta A.3 (T12); T0b opcional. Notas bajas B1, B2, B4 en el backlog.
+
