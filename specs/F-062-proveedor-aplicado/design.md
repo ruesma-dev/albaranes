@@ -140,10 +140,15 @@ def retirar_motivos_proveedor(*, document_id, cif_actual: str | None) -> None
 
 - **D1 · Aplicar, no solo proponer** (humano; Q0). Descartado mantener D3 de F-002: los tres
   albaranes medidos se quedan sin contrato por una lectura que sv3 ya sabe corregir.
-- **D2 · Elegible = identificador válido + nombre completo** (R3; Q3). Con el umbral de hoy (0,5)
-  «MAT» casaría con «MATERIALES …» (`_match_score` busca subcadenas) y bastaría una palabra.
-  El identificador válido descarta fichas de Sigrid mal tecleadas y extranjeras: se proponen, no
-  se aplican.
+- **D2 · Elegible = identificador válido + score de nombre 1,0** (R3; Q3; opción B de H1). El
+  score es el de F-052 sin tocar (simétrico, por subcadenas): 1,0 pide que casen **todas** las
+  palabras de 3+ letras de uno de los dos nombres, no media; pero **no es el nombre completo**:
+  «Hormigones Mat SL» saca 1,0 frente a «HORMIGONES MATERIALES, S.A.» («mat» es subcadena),
+  «Transportes» frente a «TRANSPORTES PEREZ GARCIA, S.L.» y «S.L.» frente a cualquier «…, S.L.».
+  El revisor lo señaló (H1) y el humano lo aceptó el 2026-10-08: la comparación vale; lo que
+  cambia es que se aplica en vez de proponer, y la defensa de fondo es F-055 (IA2 elige de los
+  proveedores con contrato en la obra). Lo fija `test_f062_r3_opcion_b_*`. El identificador válido
+  descarta fichas de Sigrid mal tecleadas y extranjeras: se proponen, no se aplican.
 - **D3 · La distancia de CIF solo desempata, con margen** (R4; Q3). Solo con distancia ≤ 2 se
   perdería el 19394 (distancia 4 al bueno); sin margen, 4 frente a 5 decidiría a cara o cruz.
   Que la distancia sola baste (sin nombre) se descarta: dos empresas reales pueden distar un

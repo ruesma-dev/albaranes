@@ -52,8 +52,12 @@ sin comprobar control). `B66056201` y `B18487421` son válidos; `B86056201`, `B8
 
 R3. MIENTRAS el CIF del merge no existe en `prv` y la consulta de candidatos de la obra funcionó,
 el sistema debe llamar **elegibles** a los candidatos con identificador válido (R2) y
-`score >= RED_PROVEEDOR_CORRECCION_SCORE_MIN` (defecto 1,0: todas las palabras del nombre),
-agrupados por CIF normalizado.
+`score >= RED_PROVEEDOR_CORRECCION_SCORE_MIN` (defecto 1,0), agrupados por CIF normalizado.
+El score es el de F-052 sin cambios: tras quitar acentos y puntuación, 1,0 si un nombre contiene
+al otro o si todas las palabras de 3+ letras de **cualquiera de los dos** aparecen como
+subcadena en el otro. **No exige el nombre completo**: «Transportes» casa con «TRANSPORTES PEREZ
+GARCIA, S.L.» y «S.L.» con «ARIDOS ANFERSA, S.L.». Aceptado por el humano (opción B de H1,
+2026-10-08): F-062 es la red de seguridad de F-055, que dará a IA2 los proveedores filtrados.
 
 R4. El sistema debe declarar **candidato claro**: (a) el elegible, si hay uno solo; (b) si hay
 varios, el de menor distancia de CIF al leído cuando esa distancia es al menos

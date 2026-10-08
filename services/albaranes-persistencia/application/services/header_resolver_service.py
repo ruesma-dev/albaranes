@@ -621,8 +621,8 @@ class HeaderResolverService:
             f"{NOTA_PROVEEDOR_CORREGIDO_PREFIJO}: leído {cif_leido} → {cif} "
             f"({nombre}). Nombre leído: '{proveedor_nombre or '—'}'. El CIF "
             f"leído no existe en Sigrid{control}; se aplica porque {por_que} "
-            f"con contrato en la obra {obra} y nombre completo. Si no es el "
-            "proveedor, cámbialo con «Elegir proveedor»."
+            f"con contrato en la obra {obra} y nombre que casa con el leído. "
+            "Si no es el proveedor, cámbialo con «Elegir proveedor»."
         )
         try:
             self._repository.aplicar_correccion_proveedor(

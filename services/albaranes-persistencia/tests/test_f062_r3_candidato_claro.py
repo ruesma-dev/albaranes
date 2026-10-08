@@ -2,7 +2,8 @@
 """F-062 · R3, R4, R5 — qué es un «candidato claro» de la obra.
 
 Elegibles: candidatos con contrato en la obra, identificador fiscal válido
-y nombre completo (``score >= 1,0`` por defecto), agrupados por CIF
+y nombre que casa con el leído (``score >= 1,0`` por defecto, el score de
+F-052: no es «nombre completo», ver la opción B al final), agrupados por CIF
 normalizado. Uno solo ⇒ claro. Varios ⇒ gana el de CIF más cercano al
 leído si saca al siguiente un margen de distancia (2 por defecto). La
 distancia solo desempata; el control del CIF leído no cambia la regla.
@@ -23,10 +24,12 @@ from doble_sigrid_api import (
     DobleSigridApi,
     fixture_f062,
 )
+from f062_dobles import RepoRed, pasada
 
 from application.services.header_resolver_service import (
     HeaderResolverService,
     _distancia_edicion,
+    _score_razon_social,
 )
 from domain.models.header_resolution_models import ProveedorObraResumen
 
@@ -247,6 +250,46 @@ def test_f062_r4_leido_sin_caracteres_utiles_no_rompe():
     cand = _r(V1, "X")
     assert _claro("---", [(cand, 1.0)]) == (cand, "unico")
     assert _claro("---", [(cand, 1.0), (_r(V3, "X"), 1.0)]) == (None, None)
+
+
+# ------------------------------------------------------------------ #
+# R3 · semántica ACEPTADA por el humano (opción B de H1, 2026-10-08)
+# ------------------------------------------------------------------ #
+#: Tabla de la review de F-062 (H1): con el score de F-052 (simétrico y por
+#: subcadenas) estos nombres sacan 1,0 sin ser el nombre completo. El humano
+#: decidió NO endurecer la comparación: «la comparación que hace actualmente
+#: está bien, el tema es que no debe quedarse en informativa sino cambiar el
+#: proveedor. Este paso será solo defensa, porque en la revisión del sv2 le
+#: pasaremos los proveedores filtrados» (F-055). Este test FIJA esa decisión:
+#: si alguien endurece el score o la elegibilidad, tiene que romper aquí y
+#: volver al humano.
+CASOS_OPCION_B = [
+    pytest.param("Hormigones Mat SL", "HORMIGONES MATERIALES, S.A.", id="subcadena-mat"),
+    pytest.param("Transportes", "TRANSPORTES PEREZ GARCIA, S.L.", id="una-palabra"),
+    pytest.param("Grupo Hormigones Mat", "HORMIGONES, S.A.", id="contiene-al-otro"),
+    pytest.param("S.L.", "ARIDOS ANFERSA, S.L.", id="solo-forma-juridica"),
+]
+
+
+@pytest.mark.parametrize(("leido", "razon_social"), CASOS_OPCION_B)
+def test_f062_r3_opcion_b_un_unico_candidato_con_nombre_que_casa_se_aplica(leido, razon_social):
+    assert _score_razon_social(leido, razon_social) == 1.0
+
+    class _Cliente:
+        def fetch_proveedor_by_cif(self, *, cif):
+            return None  # el CIF leído no existe en Sigrid
+
+        def fetch_contratos_resumen_por_obra(self, *, codigo_obra):
+            return [_r(V1, razon_social)]
+
+    repo = RepoRed(cif=CIF_LEIDO_19407, nombre=leido, obra="0720")
+    pasada(_Cliente(), repo)
+
+    [aplicada] = repo.aplicadas
+    assert (aplicada["cif"], aplicada["nombre"]) == (V1, razon_social)
+    assert "es el único candidato" in aplicada["nota"]
+    assert "nombre que casa con el leído" in aplicada["nota"]
+    assert repo.review_required is True
 
 
 # ------------------------------------------------------------------ #

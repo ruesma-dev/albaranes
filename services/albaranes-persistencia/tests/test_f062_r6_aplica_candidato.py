@@ -106,9 +106,13 @@ def test_f062_r7_motivo_y_nota_de_la_correccion(leido, nombre, obra, real, raz, 
         "carácter de control del CIF leído no es válido",  # los tres lo tienen inválido
         f"obra {obra}",
         por_que,
+        "nombre que casa con el leído",
         "«Elegir proveedor»",
     ):
         assert trozo in nota, trozo
+    # Opción B del humano (2026-10-08): el score 1,0 no es «nombre
+    # completo» (contención o palabras como subcadena); la nota no lo promete.
+    assert "nombre completo" not in nota
     assert not nota.startswith(_NOTA_PROVEEDOR_PREFIX)
     assert repo.review_required is True
     assert repo.lista_motivos() == [aplicada["motivo"]]

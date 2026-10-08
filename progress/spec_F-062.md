@@ -82,6 +82,21 @@ seguridad determinista y sigue valiendo después: verifica lo que elija la IA.
 - **Q6 · Recorte por datos**: normalización única y reintento tras `error`, fuera sin ficha nueva (anotados en
   «fuera» de la spec). *Recomendación: de acuerdo*; si 6.2 o 6.3 cambian, se reabre.
 
+### Q3 revisada tras la review (H1 de `progress/review_F-062.md`, 2026-10-08)
+
+El revisor demostró que «nombre completo (score 1,0)» no es lo que hace el score de F-052 (simétrico y por
+subcadenas): con un único candidato de CIF válido se aplican «Hormigones Mat SL» → «HORMIGONES MATERIALES, S.A.»,
+«Transportes» → «TRANSPORTES PEREZ GARCIA, S.L.», «Grupo Hormigones Mat» → «HORMIGONES, S.A.» y «S.L.» →
+«ARIDOS ANFERSA, S.L.». Ofreció A (elegibilidad más estricta) o B (aceptar la semántica y corregir los textos).
+
+**Decisión del humano (2026-10-08): opción B.** Literal: «la comparación que hace actualmente está bien, el tema
+es que no debe quedarse en informativa sino cambiar el proveedor. Este paso será solo defensa, porque en la
+revisión del sv2 le pasaremos los proveedores filtrados». Es decir: **F-062 es la red de seguridad de F-055**
+(IA2 elegirá de la lista de proveedores con contrato en la obra); la comparación y la regla de aplicación no
+cambian. Se corrigen R3, D2, ARCHITECTURE regla 17, dominio §10.1 y la nota `[CORREGIDO] Proveedor` («nombre que
+casa con el leído» en vez de «nombre completo»), y `test_f062_r3_opcion_b_*` fija los cuatro casos como
+comportamiento aceptado. Donde arriba se lee «nombre completo» (§3 y Q3), léase «score 1,0 de F-052».
+
 ## 5. Plan de implementación (para la PARADA 1)
 
 1. T0 hecha (datos de §2). T0b opcional: Anexo A.1 contrasta la regla de Q3 con las propuestas que ya aceptó el revisor.

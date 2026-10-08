@@ -64,7 +64,7 @@ def _marca_unica(repo: RepoRed) -> str:
 # R10 · cada forma de «no hay candidato claro»
 # ------------------------------------------------------------------ #
 def test_f062_r10_empate_sin_margen_propone_como_hoy():
-    """Dos hormigoneras con CIF válido y nombre completo, sin margen de
+    """Dos hormigoneras con CIF válido y nombre que casa (1,0), sin margen de
     distancia al leído: se propone la primera, no se aplica nada."""
     a = _r("B66056201", "HORMIGONES MAT, S.L.U.")
     b = _r("B66056219", "HORMIGONES MAT DEL NORTE, S.L.")

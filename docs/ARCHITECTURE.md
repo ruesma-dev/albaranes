@@ -309,8 +309,14 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       busca un **candidato claro** entre los proveedores con contrato en la
       obra (la misma consulta agregada de F-052, una vez por pasada):
       **elegible** = identificador fiscal válido (`ruesma_comun.proveedores`:
-      CIF/NIF/NIE con su carácter de control) y nombre completo (score ≥
-      `RED_PROVEEDOR_CORRECCION_SCORE_MIN`, 1,0); uno solo ⇒ claro; varios ⇒
+      CIF/NIF/NIE con su carácter de control) y nombre que casa con el leído
+      (score de F-052 ≥ `RED_PROVEEDOR_CORRECCION_SCORE_MIN`, 1,0: un nombre
+      contiene al otro o todas las palabras de 3+ letras de uno aparecen
+      como subcadena en el otro; **no** exige el nombre completo:
+      «Transportes» casa con «TRANSPORTES PEREZ GARCIA, S.L.»). Aceptado por
+      el humano (2026-10-08): es la red de seguridad; la defensa de fondo es
+      F-055 (IA2 elige de los proveedores con contrato en la obra). Uno
+      solo ⇒ claro; varios ⇒
       el de CIF más cercano al leído (Levenshtein) si saca
       `RED_PROVEEDOR_CORRECCION_MARGEN_DISTANCIA` (2) al siguiente. La
       distancia solo desempata; el control del leído no cambia la regla
