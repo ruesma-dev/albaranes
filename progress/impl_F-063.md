@@ -16,7 +16,7 @@ humano): `specs/F-063-cif-propio-no-es-proveedor/` (requirements 94 líneas, des
 | T4 | `72c7ebf` | sv3: `_no_es_propio` filtra candidatos en paso 1 (obra), paso 2 (global) y `_candidatos_puntuados` (red) |
 | T5 | `78bbdcc` | Doble `fixture_f063` (obra 0694, FEYMACO, Ruesma en `prv`) y tests de pipeline en las tres rutas |
 | T6 | `9af7766` | `docs/ARCHITECTURE.md` regla 18 y `CIFS_PROPIOS=` en `services/albaranes-persistencia/.env.example` |
-| T7 | (este informe) | Cobertura, mutación, `init.sh` |
+| T7 | `cd21caa`, `7d799e7` | Cobertura, mutación (`progress/mutacion_F-063.md`), este informe, orden de imports de los tests |
 
 Ficheros de producción: `services/albaranes-comun/ruesma_comun/proveedores/{__init__,propios}.py`;
 `services/albaranes-persistencia/` → `application/services/header_resolver_service.py`, `config/settings.py`,
@@ -165,7 +165,20 @@ $ git checkout -- application/services/header_resolver_service.py ; git diff -- 
 
 ## 6. `bash harness/init.sh`
 
-Pendiente de ejecutar al cerrar (se rellena con el resultado real).
+Tal cual (con `PYTHONPATH` al comun del worktree), sobre `cd21caa`: **2 KO, los dos de entorno del worktree, los
+mismos que F-062 §6**: raíz 1083 passed; comun 433 passed, 3 skipped; sv1/sv2/sv4/sv5/sv6 en verde (caché);
+`[KO] sv3: 1 failed, 394 passed` (`test_f052_t19_script_arranca_como_script_desde_otra_carpeta`: lanza el script de
+F-052 **sin** `PYTHONPATH` y el venv del árbol principal importa el comun de `../albaranes`, que aún no tiene
+`propios.py` ⇒ `ImportError: cannot import name 'CIFS_PROPIOS_POR_DEFECTO'`) y, por el `-x`, `[KO] PUERTA COBERTURA:
+50.8%` (el `coverage.json` de sv3 queda a medias). Ruff subió a 1193 por el orden de imports de los dos tests
+nuevos; corregido en `7d799e7` (vuelve a 1190, como `dev`).
+
+Contraprueba sobre `7d799e7`, misma orden con `PYTEST_ADDOPTS="--deselect <ese test>"`: raíz 1083 passed; sv3 583
+passed, 1 deselected; comun 433 passed, 3 skipped; `[OK] PUERTA COBERTURA: 96.6% de 59 líneas cambiadas cubiertas
+(57/59, umbral 80%, nivel critico)`; `[OK] PUERTA TAMAÑO (requirements 94/150, design 83/250, impl 194/220)`;
+**`ENTORNO LISTO. Puedes trabajar.`** Después se borró `.arnes_cache/suite_sv3-persistencia.ok` para que un `init.sh`
+posterior no dé sv3 por verde con esa deselección. **T9 queda sin marcar**: repetir `bash harness/init.sh` tal cual
+en el árbol principal tras fusionar en `dev` (con comun fusionado, el test de entorno pasa).
 
 ## 7. MANUAL pendiente (humano)
 

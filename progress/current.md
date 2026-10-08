@@ -8,7 +8,13 @@ aprobada por el humano («arregla urgente esto»). Spec en `specs/F-063-cif-prop
 `progress/impl_F-063.md`. Entorno: venvs del árbol principal, `PYTHONPATH` al comun del worktree y *junction*
 `services/albaranes-front/.venv` → venv de sv4 del árbol principal (quitar con `cmd /c rmdir
 services\albaranes-front\.venv` ANTES de `git worktree remove`). F-053 tiene sus suites en pausa mientras tanto.
-- Tarea en curso y desviaciones: `progress/impl_F-063.md` (se actualiza por tarea).
+- **T0–T7 hechas** (2026-10-08, un commit por tarea). Informe: `progress/impl_F-063.md`. Cobertura de lo cambiado
+  96,6 % (57/59); mutación completa 14/14 muertos (`progress/mutacion_F-063.md`). Desviación justificada (§3 del
+  informe): la nota usa el prefijo propio `[AVISO] CIF del cliente` (con `[AVISO] Proveedor` la borraba la misma pasada).
+- **T9 (`init.sh`) sin marcar**: en el worktree da 2 KO de entorno (los de F-062: `test_f052_t19_script_arranca…` y,
+  por él, la cobertura); deseleccionando solo ese test, `ENTORNO LISTO`. Repetir en el árbol principal tras fusionar.
+  **T8 (MANUAL del humano)**: desplegar solo sv3 y re-procesar el albarán de FEYMACO (comandos en el informe §7).
+  **Siguiente paso: review.**
 
 **F-062 · `done` (2026-10-08)**, fusionada en `dev` (`d052106`) con `init.sh` en verde. Pendiente del humano: despliegue de solo sv3 y vigilancia T12 (comandos abajo).
 
