@@ -1,9 +1,11 @@
 # domain/ports/orchestrator_port.py — NUEVO sv4
 """Puerto de salida hacia sv7 (orchestrator-api).
 
-sv4 emite tres tipos de evento al orquestador:
+sv4 emite estos eventos (hoy por colas, ver ``ColasOrchestratorClient``):
   - contract-selected: el revisor cambió/eligió el contrato.
-  - document-approved: el revisor aprobó el documento.
+  - document-approved: el revisor aprobó el documento (F-053: pide el
+    alta en Sigrid a sv9 por ``q-feedback``); y, desde la ficha,
+    ``solicitar_alta_sigrid`` (repetir el alta o verificar la anulación).
   - document-purged:   el revisor PURGÓ (hard-delete) el documento
     (jun 2026). Sin este evento, los workflow_runs del sv7 seguían
     vivos y el dedup por attachment_sha256 bloqueaba el reprocesado
@@ -57,10 +59,29 @@ class OrchestratorClient(ABC):
         *,
         document_id: str,
         approved_by: str | None,
-        approved_at_utc: str,
-        review_notes: str | None,
-    ) -> dict[str, Any] | None:
-        """POST /v1/events/document-approved. Idempotente en sv7."""
+        approved_at_utc: str | None = None,
+        review_notes: str | None = None,
+    ) -> bool:
+        """F-053 R1: el documento acaba de pasar a aprobado; pide su alta en
+        Sigrid (``MensajeFeedback`` con ``accion="alta"`` en ``q-feedback``).
+
+        Best-effort: nunca lanza. Devuelve si publicó (R4: si no, la
+        aprobación se mantiene y el portal avisa de que el alta no se pidió).
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def solicitar_alta_sigrid(
+        self,
+        *,
+        document_id: str,
+        accion: str,
+        solicitado_por: str | None,
+    ) -> bool:
+        """F-053 R28/R30: «Solicitar alta en Sigrid» (``accion="alta"``) o
+        «Ya lo he anulado en Sigrid» (``accion="verificar_anulacion"``)
+        desde la ficha. ``ValueError`` con otra acción; si no, best-effort:
+        devuelve si publicó."""
         raise NotImplementedError
 
     @abstractmethod

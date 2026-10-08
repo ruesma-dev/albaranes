@@ -1,11 +1,19 @@
 # config/settings.py
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import quote_plus
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from ruesma_comun.alta_sigrid import (
+    MAPEO_PRODUCTO_POR_DEFECTO_TEXTO,
+    leer_instante_utc,
+    leer_mapeo,
+)
+
+from domain.models.alta_sigrid_models import ConfigAltaSigrid
 
 _ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 
@@ -119,6 +127,75 @@ class Settings(BaseSettings):
         default=None, alias="SIGRID_API_DATABASE",
     )
     sigrid_api_timeout_s: float = Field(30.0, alias="SIGRID_API_TIMEOUT_S")
+
+    # ------------------------------------------------------------ #
+    # F-053 · Alta en Sigrid (design §7). MISMO valor que en sv9 (el
+    # script de despliegue las pone desde una sola variable):
+    #   - ALTA_SIGRID_DESDE_UTC: vacía = feature apagada (R3): sv4 no
+    #     publica ni pinta nada del alta ni del producto.
+    #   - ALTA_SIGRID_ESPERA_INCIERTO_MIN: minutos tras el último
+    #     intento para ofrecer «Solicitar alta» en en_curso/incierto (R30).
+    #   - ALTA_SIGRID_PRODUCTO_POR_DEFECTO: JSON familia -> producto con
+    #     clave '*' (R40, R41); mal formado = sv4 no arranca (R44).
+    # Una variable vacía vale su defecto, como en sv9.
+    # ------------------------------------------------------------ #
+    alta_sigrid_desde_utc: str = Field("", alias="ALTA_SIGRID_DESDE_UTC")
+    alta_sigrid_espera_incierto_min: int = Field(
+        15, alias="ALTA_SIGRID_ESPERA_INCIERTO_MIN", ge=0,
+    )
+    alta_sigrid_producto_por_defecto: str = Field(
+        MAPEO_PRODUCTO_POR_DEFECTO_TEXTO, alias="ALTA_SIGRID_PRODUCTO_POR_DEFECTO",
+    )
+
+    @field_validator("alta_sigrid_espera_incierto_min", mode="before")
+    @classmethod
+    def _espera_vacia_es_defecto(cls, valor: object) -> object:
+        return 15 if isinstance(valor, str) and not valor.strip() else valor
+
+    @field_validator("alta_sigrid_producto_por_defecto", mode="before")
+    @classmethod
+    def _mapeo_vacio_es_defecto(cls, valor: object) -> object:
+        if isinstance(valor, str) and not valor.strip():
+            return MAPEO_PRODUCTO_POR_DEFECTO_TEXTO
+        return valor
+
+    @field_validator("alta_sigrid_producto_por_defecto")
+    @classmethod
+    def _mapeo_valido(cls, valor: str) -> str:
+        # R44: el motivo viaja en el ValueError (y de ahí al log de arranque).
+        leer_mapeo(valor)
+        return valor
+
+    @field_validator("alta_sigrid_desde_utc")
+    @classmethod
+    def _desde_legible(cls, valor: str) -> str:
+        try:
+            leer_instante_utc(valor)
+        except ValueError as exc:
+            raise ValueError(
+                "ALTA_SIGRID_DESDE_UTC no es una fecha ISO 8601",
+            ) from exc
+        return valor
+
+    @property
+    def alta_sigrid_desde(self) -> datetime | None:
+        return leer_instante_utc(self.alta_sigrid_desde_utc)
+
+    @property
+    def alta_sigrid_espera(self) -> timedelta:
+        return timedelta(minutes=self.alta_sigrid_espera_incierto_min)
+
+    @property
+    def mapeo_producto(self) -> dict[str, str]:
+        return leer_mapeo(self.alta_sigrid_producto_por_defecto)
+
+    @property
+    def config_alta_sigrid(self) -> ConfigAltaSigrid:
+        return ConfigAltaSigrid(
+            desde=self.alta_sigrid_desde,
+            espera=self.alta_sigrid_espera,
+            mapeo=self.mapeo_producto,
+        )
 
     @property
     def sigrid_lookup_enabled(self) -> bool:

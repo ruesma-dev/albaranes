@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
+from datetime import UTC, datetime, timedelta
 
 from ruesma_comun.contratos.familias import familia_efectiva
 
@@ -25,6 +26,15 @@ from ruesma_comun.contratos.familias import familia_efectiva
 #: sv4 no deja tocarlo (R25) y sv3 no lo borra al reingresar su PDF (R45). Son
 #: los ``ESTADOS_BLOQUEANTES`` de sv9, que un test de sv9 ata a estos.
 ESTADOS_ALTA_BLOQUEANTES: frozenset[str] = frozenset({"en_curso", "incierto", "registrado"})
+
+#: Estados desde los que un alta se puede repetir: sv9 la reprocesa (R5) y sv4
+#: ofrece «Solicitar alta en Sigrid» (R30). Los ``_REPETIBLES`` de sv9.
+ESTADOS_ALTA_REPETIBLES: frozenset[str] = frozenset({
+    "no_admitido", "revisar", "error", "simulado", "anulado",
+})
+
+#: Por debajo de esto un importe cuenta como cero (glosario: «línea a registrar»).
+_EPSILON = 1e-9
 
 #: Clave comodín del mapeo: la familia que no tenga clave propia (o ninguna).
 CLAVE_COMODIN = "*"
@@ -79,6 +89,61 @@ def leer_mapeo(texto: str) -> dict[str, str]:
             f"ALTA_SIGRID_PRODUCTO_POR_DEFECTO debe tener la clave {CLAVE_COMODIN!r}"
         )
     return dict(datos)
+
+
+def leer_instante_utc(texto: str | None) -> datetime | None:
+    """``ALTA_SIGRID_DESDE_UTC`` (ISO 8601) a instante UTC, igual en sv4 y sv9.
+
+    Vacío = ``None`` (feature apagada); sin zona = UTC. Ilegible:
+    ``ValueError`` (los ``settings`` no arrancan)."""
+    limpio = (texto or "").strip()
+    if not limpio:
+        return None
+    instante = datetime.fromisoformat(limpio.replace("Z", "+00:00"))
+    if instante.tzinfo is None:
+        instante = instante.replace(tzinfo=UTC)
+    return instante.astimezone(UTC)
+
+
+def espera_pasada(
+    ultimo_intento: datetime | None, ahora: datetime, espera: timedelta,
+) -> bool:
+    """¿Pasó la Espera desde el último intento? (R7, R8, R30). Sin último
+    intento conocido, se da por pasada. sv9 decide con esto si retoma un
+    ``en_curso``/``incierto``, y sv4 si ofrece «Solicitar alta»."""
+    if ultimo_intento is None:
+        return True
+    return ahora - ultimo_intento >= espera
+
+
+def es_linea_vinculada(
+    *,
+    matched_contrato_line_id: int | None,
+    derived_contrato_line_id: int | None,
+    sigrid_ide: int | None,
+    contrato_linea: str | None,
+    contrato_valoracion: str | None,
+) -> bool:
+    """Vinculada (glosario): casa con una línea del contrato de la valoración
+    que tiene ``sigrid_ide``, sin línea derivada. Lo demás es sin vincular.
+
+    sv9 manda la vinculada por ``ctrpro_ide`` (R12, R43) y sv4 solo deja
+    elegir producto en las sin vincular (R40, R41): las dos puntas deciden
+    con esta función."""
+    contrato = (contrato_valoracion or "").strip()
+    return (
+        matched_contrato_line_id is not None
+        and derived_contrato_line_id is None
+        and sigrid_ide is not None
+        and bool(contrato)
+        and (contrato_linea or "").strip() == contrato
+    )
+
+
+def es_linea_a_registrar(importe_calculado: float | None) -> bool:
+    """Línea a registrar (glosario): ``importe_calculado`` no nulo y ≠ 0
+    (positivo o negativo). Las demás no van en la petición (R13)."""
+    return importe_calculado is not None and abs(float(importe_calculado)) > _EPSILON
 
 
 def productos_admitidos(mapeo: Mapping[str, str]) -> frozenset[str]:
