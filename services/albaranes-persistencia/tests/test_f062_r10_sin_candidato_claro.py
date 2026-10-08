@@ -10,13 +10,6 @@ leído no es un identificador válido, la nota lo dice.
 from __future__ import annotations
 
 import pytest
-from application.services.header_resolver_service import (
-    _NOTA_PROVEEDOR_PREFIX,
-    _distancia_edicion,
-)
-from domain.models.header_resolution_models import ProveedorObraResumen
-from ruesma_comun.sigrid import SigridRespuestaTruncada
-
 from doble_sigrid_api import (
     CIF_HORMIGONERA_EMPATE,
     CIF_HORMIGONES_MAT,
@@ -25,6 +18,13 @@ from doble_sigrid_api import (
     fixture_f062,
 )
 from f062_dobles import RepoRed, pasada
+from ruesma_comun.sigrid import SigridRespuestaTruncada
+
+from application.services.header_resolver_service import (
+    _NOTA_PROVEEDOR_PREFIX,
+    _distancia_edicion,
+)
+from domain.models.header_resolution_models import ProveedorObraResumen
 
 FRASE_CONTROL = (
     f"El carácter de control del CIF leído {CIF_LEIDO_19407} no es válido: "

@@ -10,6 +10,7 @@ son elegibles para aplicarse (R3).
 from __future__ import annotations
 
 import pytest
+
 from ruesma_comun.proveedores import (
     identificador_fiscal_valido,
     normalizar_cif,

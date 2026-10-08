@@ -13,12 +13,6 @@ pasada (``_candidatos_puntuados``) y la propuesta de F-052 sale de ahí.
 from __future__ import annotations
 
 import pytest
-from application.services.header_resolver_service import (
-    HeaderResolverService,
-    _distancia_edicion,
-)
-from domain.models.header_resolution_models import ProveedorObraResumen
-
 from doble_sigrid_api import (
     CIF_ARIDOS_ANFERSA,
     CIF_HORMIGONERA_EMPATE,
@@ -29,6 +23,12 @@ from doble_sigrid_api import (
     DobleSigridApi,
     fixture_f062,
 )
+
+from application.services.header_resolver_service import (
+    HeaderResolverService,
+    _distancia_edicion,
+)
+from domain.models.header_resolution_models import ProveedorObraResumen
 
 
 class _Obras:
@@ -304,10 +304,10 @@ def test_f062_t4_el_log_de_nadie_casa_solo_sale_cuando_nadie_casa(caplog):
 
     nadie = _logs(_Cliente([_r("B1", "GRUAS, S.L.")]),
                   proveedor_nombre="TRANSPORTES MACOTRAN", obra_codigo_efectiva="0720")
-    assert nadie == [
+    assert nadie == [(
         "[header-resolver] ningun candidato de la obra 0720 casa con el nombre leido "
-        "(mejor score=0.00 < 0.50, 1 candidatos).",
-    ]
+        "(mejor score=0.00 < 0.50, 1 candidatos)."
+    )]
     assert _logs(_Cliente(error=RuntimeError("500")),
                  proveedor_nombre="X", obra_codigo_efectiva="0720") == []
     assert _logs(_Cliente(), proveedor_nombre="X", obra_codigo_efectiva=None) == []

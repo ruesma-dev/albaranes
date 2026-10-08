@@ -14,9 +14,6 @@ Cliente real de sv3 sobre el doble de sigrid-api (fixture de F-062).
 from __future__ import annotations
 
 import pytest
-from application.services.header_resolver_service import _NOTA_PROVEEDOR_PREFIX
-from domain.models.header_resolution_models import NOTA_PROVEEDOR_CORREGIDO_PREFIJO
-
 from doble_sigrid_api import (
     CIF_ARIDOS_ANFERSA,
     CIF_HORMIGONES_MAT,
@@ -29,6 +26,9 @@ from doble_sigrid_api import (
     fixture_f062,
 )
 from f062_dobles import RepoRed, pasada
+
+from application.services.header_resolver_service import _NOTA_PROVEEDOR_PREFIX
+from domain.models.header_resolution_models import NOTA_PROVEEDOR_CORREGIDO_PREFIJO
 
 CASOS = [
     pytest.param(CIF_LEIDO_19407, "Hormigones Mat SL", "0720", CIF_HORMIGONES_MAT,
@@ -159,8 +159,9 @@ def test_f062_r9_lo_leido_queda_en_motivo_y_nota():
 def test_f062_r9_el_repositorio_solo_toca_el_merge():
     """``aplicar_correccion_proveedor`` pide la fila del MERGE y nada más:
     la fila cruda de ``albaran_documents`` no se toca."""
-    from infrastructure.database.orm_models import AlbaranDocumentMergeOrm
     from test_f062_r14_repasadas_y_motivos import _documento, _repo
+
+    from infrastructure.database.orm_models import AlbaranDocumentMergeOrm
 
     repo, sesion = _repo(_documento())
     pedidas: list[type] = []

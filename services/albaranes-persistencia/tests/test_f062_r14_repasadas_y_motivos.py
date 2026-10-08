@@ -15,6 +15,7 @@ import json
 from types import SimpleNamespace
 
 import pytest
+
 from domain.models.header_resolution_models import (
     NOTA_PROVEEDOR_CORREGIDO_PREFIJO,
 )
@@ -144,12 +145,12 @@ class _Fabrica:
 
 
 def _documento(**campos):
-    base = dict(
-        id="doc-f062", obra_codigo="0720", obra_nombre=None, obra_direccion=None,
-        proveedor_cif=LEIDO, proveedor_nombre="Hormigones Mat SL",
-        proveedor_cif_origen="ia", review_required=False,
-        review_reasons_json=None, review_notes=None,
-    )
+    base = {
+        "id": "doc-f062", "obra_codigo": "0720", "obra_nombre": None, "obra_direccion": None,
+        "proveedor_cif": LEIDO, "proveedor_nombre": "Hormigones Mat SL",
+        "proveedor_cif_origen": "ia", "review_required": False,
+        "review_reasons_json": None, "review_notes": None,
+    }
     base.update(campos)
     return SimpleNamespace(**base)
 
@@ -289,7 +290,7 @@ def test_f062_r13_repo_la_cabecera_trae_el_origen_del_cif():
 # ------------------------------------------------------------------ #
 # Resolver · pasadas sucesivas sobre un merge en memoria (T7)
 # ------------------------------------------------------------------ #
-from doble_sigrid_api import (  # noqa: E402
+from doble_sigrid_api import (
     CIF_HORMIGONERA_EMPATE,
     CIF_HORMIGONES_MAT,
     CIF_LEIDO_19407,
@@ -297,7 +298,7 @@ from doble_sigrid_api import (  # noqa: E402
     DobleSigridApi,
     fixture_f062,
 )
-from f062_dobles import RepoRed, pasada  # noqa: E402
+from f062_dobles import RepoRed, pasada
 
 _CORREGIDO_19407 = f"proveedor_cif_corregido:{CIF_LEIDO_19407}>{CIF_HORMIGONES_MAT}"
 

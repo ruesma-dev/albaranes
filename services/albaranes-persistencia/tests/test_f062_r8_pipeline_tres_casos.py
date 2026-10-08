@@ -12,8 +12,6 @@ Sin red ni BBDD.
 """
 from __future__ import annotations
 
-from ruesma_comun.proveedores import identificador_fiscal_valido
-
 from doble_sigrid_api import (
     CIF_ARIDOS_ANFERSA,
     CIF_ARIDOS_SUR,
@@ -28,6 +26,7 @@ from doble_sigrid_api import (
     DobleSigridApi,
     fixture_f062,
 )
+from ruesma_comun.proveedores import identificador_fiscal_valido
 
 
 def _doble() -> DobleSigridApi:
@@ -79,21 +78,21 @@ def test_f062_t2_contratos_con_lineas_del_cif_real_y_ninguno_del_leido():
 # ------------------------------------------------------------------ #
 # R8 · las tres rutas del pipeline (T9)
 # ------------------------------------------------------------------ #
-import hashlib  # noqa: E402
+import hashlib
 
-import pytest  # noqa: E402
-from application.pipelines.persist_albaran_pipeline import (  # noqa: E402
+import pytest
+from doble_sigrid_api import RAZ_ARIDOS_ANFERSA
+from f062_dobles import DOC, RepoRed, resolver
+
+from application.pipelines.persist_albaran_pipeline import (
     PersistAlbaranPipeline,
     PersistAlbaranRequest,
 )
-from application.services.albaran_normalizer import AlbaranNormalizer  # noqa: E402
-from application.services.contrato_enrichment_service import (  # noqa: E402
+from application.services.albaran_normalizer import AlbaranNormalizer
+from application.services.contrato_enrichment_service import (
     ContratoEnrichmentService,
 )
-from domain.models.persistence_models import ExistingDocument, StoredFile  # noqa: E402
-
-from doble_sigrid_api import RAZ_ARIDOS_ANFERSA  # noqa: E402
-from f062_dobles import DOC, RepoRed, resolver  # noqa: E402
+from domain.models.persistence_models import ExistingDocument, StoredFile
 
 CASOS = [
     pytest.param(CIF_LEIDO_19407, "Hormigones Mat SL", "0720", CIF_HORMIGONES_MAT,
