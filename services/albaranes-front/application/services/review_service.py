@@ -4,12 +4,19 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+from ruesma_comun.alta_sigrid import (
+    es_linea_a_registrar,
+    es_linea_vinculada,
+    producto_efectivo,
+)
+
 from application.services.busqueda_contratos import (
     debe_relanzar_busqueda,
     hay_datos_para_buscar,
 )
 from domain.models.alta_sigrid_models import (
     ConfigAltaSigrid,
+    ProductoLinea,
     ResultadoAprobacion,
 )
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
@@ -652,6 +659,82 @@ class ReviewService:
                 ],
             )
         return len(creadas)
+
+    # ------------------------------------------------------------------ #
+    # F-053 · Producto Sigrid de las líneas sin vincular (R40-R43)
+    # ------------------------------------------------------------------ #
+    def productos_sigrid(
+        self, document_id: str, clasificacion: object,
+    ) -> dict[int, ProductoLinea]:
+        """Producto de cada línea valorada, por ``valuation_line_id`` (R40):
+        vinculada, el de su línea de contrato (R43, se ignora el elegido);
+        sin vincular, el elegido o el por defecto de su familia con el mismo
+        mapeo y la misma función que sv9 (R38). Con DESDE vacía, nada (R3).
+        ``clasificacion``: la del documento (``familia`` y ``mixto``)."""
+        if not self._config_alta.activa:
+            return {}
+        productos: dict[int, ProductoLinea] = {}
+        for fila in self._repository.lineas_producto_sigrid(document_id):
+            vinculada = es_linea_vinculada(
+                matched_contrato_line_id=fila["matched_contrato_line_id"],
+                derived_contrato_line_id=fila["derived_contrato_line_id"],
+                sigrid_ide=fila["sigrid_ide"],
+                contrato_linea=fila["contrato_linea"],
+                contrato_valoracion=fila["contrato_valoracion"],
+            )
+            elegido = (fila["producto_sigrid"] or "").strip() or None
+            if vinculada:
+                codigo, por_defecto, elegido = fila["codigo_producto"], False, None
+            else:
+                codigo = producto_efectivo(
+                    elegido, fila["tipo_familia"], clasificacion, self._config_alta.mapeo,
+                )
+                por_defecto = elegido is None
+            productos[int(fila["id"])] = ProductoLinea(
+                valuation_line_id=int(fila["id"]),
+                vinculada=vinculada,
+                a_registrar=es_linea_a_registrar(fila["importe_calculado"]),
+                elegido=elegido,
+                codigo=codigo,
+                por_defecto=por_defecto,
+            )
+        return productos
+
+    def elegir_producto_sigrid(
+        self,
+        *,
+        document_id: str,
+        valuation_line_id: int,
+        producto: str | None,
+    ) -> str:
+        """R41: guarda el producto elegido en una sin vincular (``None`` o
+        vacío = por defecto) con su entrada de deshacer. Devuelve
+        ``guardado``; o, sin cambiar nada, ``apagada`` (DESDE vacía, R3),
+        ``no_admitido`` (no está en el mapeo), ``linea_ajena`` o
+        ``vinculada``. Con alta bloqueante, ``AlbaranBloqueadoError`` (R25)."""
+        if not self._config_alta.activa:
+            return "apagada"
+        codigo = (producto or "").strip() or None
+        if codigo is not None and codigo not in self._config_alta.admitidos:
+            return "no_admitido"
+        etiqueta = self._undo_line_desc(valuation_line_id)
+        snap_line = self._undo_snap_line(valuation_line_id)
+        resultado = self._repository.guardar_producto_sigrid(
+            document_id=document_id,
+            valuation_line_id=valuation_line_id,
+            producto=codigo,
+        )
+        if resultado == "guardado":
+            self._repository.record_undo(
+                document_id=document_id,
+                action="producto",
+                description=(
+                    f"Producto Sigrid {codigo or 'por defecto'} · {etiqueta} "
+                    f"({self._repository.doc_label(document_id=document_id)})"
+                ),
+                restore=[snap_line],
+            )
+        return resultado
 
     def list_trash_document_ids(self) -> list[str]:
         """Ids de los albaranes en la papelera (para vaciarla)."""

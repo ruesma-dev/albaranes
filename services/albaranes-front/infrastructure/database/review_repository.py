@@ -22,7 +22,7 @@ from sqlalchemy import (
     text,
 )
 
-from ruesma_comun.alta_sigrid import ESTADOS_ALTA_BLOQUEANTES
+from ruesma_comun.alta_sigrid import ESTADOS_ALTA_BLOQUEANTES, es_linea_vinculada
 from ruesma_comun.importes import clasificar_descuento, importe_de_linea
 from ruesma_comun.valoracion import esta_valorado
 
@@ -187,6 +187,33 @@ _SQL_DATOS_VALORACION = text(
     "LEFT JOIN albaran_line_valuations lv ON lv.valuation_id = v.id "
     "WHERE v.document_id = :id "
     "ORDER BY v.id, lv.id"
+)
+
+
+#: (F-053 R40, R41, R43) Lo que decide el producto de cada línea valorada: lo
+#: mismo que lee sv9 al construir la petición (``SQL_LINEAS`` de sv9).
+_SQL_LINEAS_PRODUCTO = text(
+    "SELECT lv.id, lv.producto_sigrid, lv.importe_calculado, "
+    "       lv.matched_contrato_line_id, lv.derived_contrato_line_id, "
+    "       cl.sigrid_ide, cl.codigo_contrato AS contrato_linea, "
+    "       cl.codigo_producto, l.contexto_linea_json, "
+    "       v.contrato_codigo AS contrato_valoracion "
+    "FROM albaran_valuations v "
+    "JOIN albaran_line_valuations lv ON lv.valuation_id = v.id "
+    "LEFT JOIN albaran_contrato_lines_merge cl ON cl.id = lv.matched_contrato_line_id "
+    "LEFT JOIN albaran_lines_merge l ON l.id = lv.merge_line_id "
+    "WHERE v.document_id = :doc "
+    "ORDER BY lv.id"
+)
+
+_SQL_LINEA_PRODUCTO = text(
+    "SELECT lv.id, lv.matched_contrato_line_id, lv.derived_contrato_line_id, "
+    "       cl.sigrid_ide, cl.codigo_contrato AS contrato_linea, "
+    "       v.contrato_codigo AS contrato_valoracion "
+    "FROM albaran_line_valuations lv "
+    "JOIN albaran_valuations v ON v.id = lv.valuation_id "
+    "LEFT JOIN albaran_contrato_lines_merge cl ON cl.id = lv.matched_contrato_line_id "
+    "WHERE lv.id = :lv AND v.document_id = :doc"
 )
 
 
@@ -4272,6 +4299,66 @@ class AlbaranReviewRepository:
             ultimo_intento_at_utc=fila["ultimo_intento_at_utc"],
             actualizado_at_utc=fila["actualizado_at_utc"],
         )
+
+    def lineas_producto_sigrid(self, document_id: str) -> list[dict[str, Any]]:
+        """(F-053 R40, R43) Por línea valorada del documento: producto
+        elegido, importe, casada (con ``sigrid_ide``, contrato y producto de
+        la línea de contrato), contrato de la valoración y familia de la
+        línea (``contexto_linea_json.tipo_familia``). Solo lectura."""
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            filas = session.execute(
+                _SQL_LINEAS_PRODUCTO, {"doc": document_id},
+            ).mappings().all()
+        lineas = []
+        for fila in filas:
+            contexto = _json_o(fila["contexto_linea_json"], {}, dict)
+            familia = contexto.get("tipo_familia")
+            lineas.append({
+                **dict(fila),
+                "tipo_familia": str(familia) if familia else None,
+            })
+        return lineas
+
+    def guardar_producto_sigrid(
+        self,
+        *,
+        document_id: str,
+        valuation_line_id: int,
+        producto: str | None,
+    ) -> str:
+        """(F-053 R41) Guarda el producto elegido (``None`` = por defecto) en
+        una línea SIN VINCULAR del documento. Devuelve ``guardado``,
+        ``linea_ajena`` (no es del documento o no existe) o ``vinculada``
+        (manda el ``ctrpro_ide``, R43); en los dos últimos no cambia nada.
+        Con el merge bloqueado: con alta bloqueante, ``AlbaranBloqueadoError``
+        (R25, R26). Validar que el código es admitido es del servicio."""
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
+            self._exigir_desbloqueado(session, document_id)
+            fila = session.execute(
+                _SQL_LINEA_PRODUCTO, {"lv": valuation_line_id, "doc": document_id},
+            ).mappings().first()
+            if fila is None:
+                return "linea_ajena"
+            if es_linea_vinculada(
+                matched_contrato_line_id=fila["matched_contrato_line_id"],
+                derived_contrato_line_id=fila["derived_contrato_line_id"],
+                sigrid_ide=fila["sigrid_ide"],
+                contrato_linea=fila["contrato_linea"],
+                contrato_valoracion=fila["contrato_valoracion"],
+            ):
+                return "vinculada"
+            session.execute(
+                text(
+                    "UPDATE albaran_line_valuations SET producto_sigrid = :p "
+                    "WHERE id = :lv"
+                ),
+                {"p": producto, "lv": valuation_line_id},
+            )
+            session.commit()
+            return "guardado"
 
     def set_approved(
         self,
