@@ -1,6 +1,15 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-064 · SPEC ESCRITA (`spec_ready`, 2026-10-08)** en la rama `feature/F-064-proveedor-en-prompts` (worktree
+`../albaranes-F-064`, desde `dev` `544113b`): IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2
+confirma el proveedor. Spec en `specs/F-064-proveedor-en-prompts/`; informe, hallazgos y plan en
+`progress/spec_F-064.md`. **Decisiones a validar por el humano (PARADA 1)**: Q1 IA2 sin campo nuevo
+(corrige en `documento_revisado.cabecera`), Q2 sv2 sin filtro determinista (F-063 verifica), Q3 sv2 también
+lee `CIFS_PROPIOS`, Q4 añadir el albarán real del incidente al banco (FER-004), Q5 CIF del emisor
+normalizado en IA1, Q6 la razón social de serie no cambia. Hallazgo: el banco no mide hoy el CIF ⇒ comparador
+nuevo `evals/comparar_proveedor.py`. Evals con LLM (T9, T10) y despliegue de solo sv2 (T12): del humano.
+
 **F-063 · `done` (2026-10-08)**, fusionada en `dev` con `init.sh` en verde. Pendiente del humano: desplegar solo sv3; en los merges `b1d3e179` y `401d9c00`, «Elegir proveedor» FEYMACO a mano.
 
 **F-063 · IMPLEMENTACIÓN EN CURSO (`in_progress`, 2026-10-08, arreglo URGENTE de producción)** en la rama

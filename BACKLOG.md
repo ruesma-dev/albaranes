@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **61 features**, 42 abiertas, 19 terminadas.
+Resumen: **62 features**, 43 abiertas, 19 terminadas.
 
 Bloqueadas: **F-051**.
 
@@ -12,6 +12,7 @@ Bloqueadas: **F-051**.
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
+| F-064 | IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor | 1 | spec lista | critico | `feature/F-064-proveedor-en-prompts` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-051 | Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas» | 2 | bloqueada | critico | `feature/F-051-almacen-por-linea` |
@@ -93,6 +94,18 @@ ALCANCE PROPUESTO: que sv2, antes de la fase 2, obtenga el contexto de Sigrid (o
 CRITERIO DEL HUMANO: decide la IA (memoria «clasificacion-la-decide-la-ia»), las reglas verifican.
 
 DEPENDE DE: F-052 (lista de candidatos de la obra completa y sin truncar). RELACIONADAS: F-048 (contexto de correo y obras en IA1), F-002 (red de proveedor por nombre), F-045 (evals).
+
+### F-064 · IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor
+
+estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-064-proveedor-en-prompts`
+
+PETICIÓN DEL HUMANO (2026-10-08), tras la incidencia de FEYMACO (obra 0694) que arregló F-063 en sv3: «añade en el prompt de sv2 que estos CIF y empresas son los del cliente, y debe ignorarlos y buscar otros» y «F-064 será para IA 1 y 2. Ambas deben confirmar proveedor». Empresas del cliente: «de momento esa» (Construcciones Ruesma, A81873903).
+
+CAUSA EN EL PROMPT: en albaran_factura_es la frase sobre Ruesma está escrita a mano y solo en la viñeta del nombre, y la del CIF manda buscar «un campo que ponga CIF o NIF o NIE»: en FEYMACO la única casilla rotulada así es la del cliente (el CIF del emisor solo está en el pie, junto a la inscripción en el Registro Mercantil).
+
+ALCANCE (sv2 + evals): (1) IA1: las viñetas proveedor_nombre/proveedor_cif dicen que el proveedor es el EMISOR y que las empresas del cliente se ignoran (CIF null si el único CIF es del cliente); la lista se inyecta con el marcador {empresas_cliente} desde ruesma_comun.proveedores (CIFS_PROPIOS_POR_DEFECTO + CIFS_PROPIOS, la misma fuente que el descarte de F-063). (2) IA2: regla proveedor_emisor en revision_rules.yaml (llega a los cuatro prompts de fase 2 sin editarlos): confirma nombre y CIF de fase 1 contra el documento; si son del cliente o no del emisor, los corrige o deja el CIF null; prevalece sobre el contexto de Sigrid. Sin campos nuevos: IA2 devuelve el proveedor en documento_revisado.cabecera; sv2 no filtra (la red de F-063 en sv3 sigue siendo la verificación y su motivo, la métrica). sv3 y comun no cambian. (3) evals/comparar_proveedor.py: el banco no mide hoy el CIF (NO_COMPARAR en IA1, no observable en E2E); compara base/rama en 11 casos con el cliente impreso (FER-001…003, HOR-005…011, MOR-003) y 8 controles.
+
+FUERA: la lista de proveedores con contrato en la obra para IA2 (F-055, sobre ContextoSigridFase2 de F-049); el endpoint header-grounding de sv3 que valida el CIF propio. RUTA SENSIBLE: exige evals con LLM real del humano. Spec: specs/F-064-proveedor-en-prompts/; informe y preguntas: progress/spec_F-064.md.
 
 ### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
 
