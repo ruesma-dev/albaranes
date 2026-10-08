@@ -1,6 +1,8 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-063 · `done` (2026-10-08)**, fusionada en `dev` con `init.sh` en verde. Pendiente del humano: desplegar solo sv3; en los merges `b1d3e179` y `401d9c00`, «Elegir proveedor» FEYMACO a mano.
+
 **F-063 · IMPLEMENTACIÓN EN CURSO (`in_progress`, 2026-10-08, arreglo URGENTE de producción)** en la rama
 `feature/F-063-cif-propio-no-es-proveedor` (worktree `../albaranes-F-063`, desde `dev` `ba72f0a`): el CIF de
 Construcciones Ruesma (A81873903, el cliente) nunca es el proveedor; sv3 lo descarta y busca por nombre. Propuesta

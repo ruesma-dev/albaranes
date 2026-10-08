@@ -3,9 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **61 features**, 43 abiertas, 18 terminadas.
-
-En curso: **F-063**.
+Resumen: **61 features**, 42 abiertas, 19 terminadas.
 
 Bloqueadas: **F-051**.
 
@@ -14,7 +12,6 @@ Bloqueadas: **F-051**.
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
-| F-063 | El CIF de Construcciones Ruesma nunca es el proveedor: sv3 lo descarta y busca el proveedor por nombre | 1 | en curso | critico | `feature/F-063-cif-propio-no-es-proveedor` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-051 | Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas» | 2 | bloqueada | critico | `feature/F-051-almacen-por-linea` |
@@ -69,6 +66,7 @@ Bloqueadas: **F-051**.
 | F-052 | sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF) | 1 | critico |
 | F-054 | sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822) | 1 | estandar |
 | F-062 | sv3 aplica el proveedor propuesto antes de buscar contratos: CIF mal leído + candidato claro con contrato en la obra ⇒ se corrige y se busca con el bueno | 1 | critico |
+| F-063 | El CIF de Construcciones Ruesma nunca es el proveedor: sv3 lo descarta y busca el proveedor por nombre | 1 | critico |
 | F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
 | F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
 | F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | estandar |
@@ -95,16 +93,6 @@ ALCANCE PROPUESTO: que sv2, antes de la fase 2, obtenga el contexto de Sigrid (o
 CRITERIO DEL HUMANO: decide la IA (memoria «clasificacion-la-decide-la-ia»), las reglas verifican.
 
 DEPENDE DE: F-052 (lista de candidatos de la obra completa y sin truncar). RELACIONADAS: F-048 (contexto de correo y obras en IA1), F-002 (red de proveedor por nombre), F-045 (evals).
-
-### F-063 · El CIF de Construcciones Ruesma nunca es el proveedor: sv3 lo descarta y busca el proveedor por nombre
-
-estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-063-cif-propio-no-es-proveedor`
-
-ARREGLO URGENTE DE PRODUCCIÓN (humano, 2026-10-08: «arregla urgente esto»). INCIDENCIA (logs de Azure): albarán de FEYMACO, obra 0694 (merges b1d3e179-… y 401d9c00-…). sv2 devolvió proveedor_nombre «FERRETERÍA Y MAQUINARIA PARA LA CONSTRUCCIÓN, S. A.» (bien) y proveedor_cif A81873903, el CIF de CONSTRUCCIONES RUESMA (el cliente impreso en el albarán). sv3 lo validó porque existe en Sigrid, canonizó el nombre a «CONSTRUCCIONES RUESMA, S.A.» y buscó contratos con ese CIF ⇒ 0. El mismo albarán llegó sin CIF (0bd5d331-…) y sv3 lo resolvió bien por nombre dentro de la obra (FEYMACO, A28733558).
-
-ARREGLO: lista de CIF propios en ruesma_comun.proveedores (por defecto A81873903, ampliable con CIFS_PROPIOS en sv3, nunca reducible). En sv3, al principio de la resolución del proveedor (rutas nuevo, duplicado y reenrich_by_merge_id), un CIF propio con origen distinto de manual se DESCARTA (CIF y origen a NULL, nombre leído intacto, a revisión con motivo proveedor_cif_propio:<cif> y nota «[AVISO] CIF del cliente: …») y se sigue por el camino «sin CIF» (resolución por nombre dentro de la obra). Un CIF propio nunca sale como candidato. El revisor (origen manual) manda.
-
-FUERA: backfill de los merges ya canonizados a Ruesma (los corrige el revisor en sv4); la IA leyendo también el NOMBRE del cliente. Spec: specs/F-063-cif-propio-no-es-proveedor/.
 
 ### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
 
@@ -684,6 +672,16 @@ DATOS (consultas de solo lectura del humano, 2026-10-07): 3 casos, los 3 CIF mal
 DECISIÓN DEL HUMANO (2026-10-07), literal: «que proponga uno, salvo que no haya ningún candidato claro». Interpretación de la spec v1 (Q0, a confirmar en la PARADA 1): con candidato claro (proveedor con contrato en la obra, CIF válido, nombre que casa con el leído según la comparación de F-052 —score 1,0—, sin empate o con empate desempatado por cercanía del CIF), sv3 lo APLICA (CIF y razón social de Sigrid en el merge) antes de buscar contratos, conserva lo leído en motivo `proveedor_cif_corregido` y nota `[CORREGIDO] Proveedor`, y manda a revisión. Sin candidato claro, como hoy. Validación del control de CIF/NIF/NIE en ruesma_comun.proveedores. Interruptor RED_PROVEEDOR_CORRECCION_ENABLED.
 
 FUERA (por los datos): normalización única del CIF y SQL normalizada, reintento tras `error`, CIF existente sin contrato en la obra con homónimo. RELACIONADAS: F-055 (IA2 elige el proveedor: solución de fondo; F-062 queda como red de seguridad), F-030 (se solapa: propuesta de cerrarla como absorbida al terminar F-062), F-002 (D3 sustituida), F-052, F-059. Spec: specs/F-062-proveedor-aplicado/; informe y preguntas Q0–Q6: progress/spec_F-062.md. DECISIÓN DEL HUMANO SOBRE LA COMPARACIÓN (2026-10-08, review H1, opción B): «la comparación que hace actualmente está bien, el tema es que no debe quedarse en informativa sino cambiar el proveedor. Este paso será solo defensa, porque en la revisión del sv2 le pasaremos los proveedores filtrados» (F-055). Notas bajas de la review pendientes: B1 (se aplica el CIF normalizado en vez del literal de prv), B2 (retirada de proveedor_cif_no_casa en la rama sin candidato, sin declarar), B4 (el comando de T0b apunta a un script del scratchpad efímero).
+
+### F-063 · El CIF de Construcciones Ruesma nunca es el proveedor: sv3 lo descarta y busca el proveedor por nombre
+
+estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-063-cif-propio-no-es-proveedor`
+
+ARREGLO URGENTE DE PRODUCCIÓN (humano, 2026-10-08: «arregla urgente esto»). INCIDENCIA (logs de Azure): albarán de FEYMACO, obra 0694 (merges b1d3e179-… y 401d9c00-…). sv2 devolvió proveedor_nombre «FERRETERÍA Y MAQUINARIA PARA LA CONSTRUCCIÓN, S. A.» (bien) y proveedor_cif A81873903, el CIF de CONSTRUCCIONES RUESMA (el cliente impreso en el albarán). sv3 lo validó porque existe en Sigrid, canonizó el nombre a «CONSTRUCCIONES RUESMA, S.A.» y buscó contratos con ese CIF ⇒ 0. El mismo albarán llegó sin CIF (0bd5d331-…) y sv3 lo resolvió bien por nombre dentro de la obra (FEYMACO, A28733558).
+
+ARREGLO: lista de CIF propios en ruesma_comun.proveedores (por defecto A81873903, ampliable con CIFS_PROPIOS en sv3, nunca reducible). En sv3, al principio de la resolución del proveedor (rutas nuevo, duplicado y reenrich_by_merge_id), un CIF propio con origen distinto de manual se DESCARTA (CIF y origen a NULL, nombre leído intacto, a revisión con motivo proveedor_cif_propio:<cif> y nota «[AVISO] CIF del cliente: …») y se sigue por el camino «sin CIF» (resolución por nombre dentro de la obra). Un CIF propio nunca sale como candidato. El revisor (origen manual) manda.
+
+FUERA: backfill de los merges ya canonizados a Ruesma (los corrige el revisor en sv4); la IA leyendo también el NOMBRE del cliente. Spec: specs/F-063-cif-propio-no-es-proveedor/. CIERRE (2026-10-08): review APROBADA; init.sh en verde en dev tras fusionar (92ff1e1). Pendiente aparte: el endpoint `header-grounding` de sv3 aún valida el CIF propio (ningún servicio actual lo consume; ficha futura). F-064 (prompts de IA1 e IA2: el cliente Construcciones Ruesma se ignora y la IA2 confirma el proveedor) va a continuación.
 
 ### F-011 · Evals de IA con ground truth y puerta en el arnés
 
