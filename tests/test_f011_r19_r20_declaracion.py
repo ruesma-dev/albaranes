@@ -198,6 +198,10 @@ RUTAS_DE_LA_SPEC: frozenset[str] = frozenset(
 #:   del prompt de IA1 entra el correo. Sustituir `{contexto_correo}` el
 #:   último es la defensa ante la inyección de R12, y eso ningún test
 #:   unitario lo mide: solo las evals.
+#: - F-064 (T7, R18): la lista de empresas del cliente (`proveedores/
+#:   propios.py`, con su razón social) y el módulo de sv2 que la pinta en el
+#:   prompt de IA1 (`empresas_cliente.py`). Su texto lo lee la IA como las
+#:   empresas que nunca son el proveedor: solo los evals dicen si la ignora.
 RUTAS_ANADIDAS_DESPUES: frozenset[str] = frozenset(
     {
         "services/albaranes-comun/ruesma_comun/contratos/familias.py",
@@ -206,6 +210,8 @@ RUTAS_ANADIDAS_DESPUES: frozenset[str] = frozenset(
         "services/albaranes-comun/ruesma_comun/contratos/origen_datos.py",
         "services/albaranes-api/application/services/origen_datos_resolver.py",
         "services/albaranes-api/application/services/albaran_extraction_service.py",
+        "services/albaranes-comun/ruesma_comun/proveedores/propios.py",
+        "services/albaranes-api/application/services/empresas_cliente.py",
     }
 )
 
