@@ -1,6 +1,7 @@
 # application/services/review_service.py
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -37,6 +38,17 @@ from domain.services.alta_sigrid import puede_solicitar_alta
 from infrastructure.database.review_repository import AlbaranReviewRepository
 
 logger = logging.getLogger(__name__)
+
+
+def _familia_de_la_linea(contexto_linea_json: str | None) -> str | None:
+    """``tipo_familia`` del contexto de línea que escribe sv3 (F-043), como
+    lo lee sv9; JSON ausente o roto = sin familia (se usa la del documento)."""
+    try:
+        contexto = json.loads(contexto_linea_json) if contexto_linea_json else {}
+    except (TypeError, ValueError):
+        return None
+    familia = contexto.get("tipo_familia") if isinstance(contexto, dict) else None
+    return str(familia) if familia else None
 
 
 @dataclass(frozen=True)
@@ -708,7 +720,8 @@ class ReviewService:
                 codigo, por_defecto, elegido = fila["codigo_producto"], False, None
             else:
                 codigo = producto_efectivo(
-                    elegido, fila["tipo_familia"], clasificacion, self._config_alta.mapeo,
+                    elegido, _familia_de_la_linea(fila["contexto_linea_json"]),
+                    clasificacion, self._config_alta.mapeo,
                 )
                 por_defecto = elegido is None
             productos[int(fila["id"])] = ProductoLinea(

@@ -212,3 +212,17 @@ def test_f053_r41_lectura_con_desde_vacia_no_lee_nada():
 def test_f053_r41_lectura_de_documento_ajeno_solo_trae_las_suyas():
     motor = construir()
     assert set(_servicio(motor).productos_sigrid(DOC_AJENO, CLASIFICACION)) == {21}
+
+
+@pytest.mark.parametrize("contexto", ["{roto", "[1, 2]", '{"tipo_familia": ""}'])
+def test_f053_r41_lectura_contexto_de_linea_ilegible_usa_la_del_documento(contexto):
+    motor = construir()
+    with Session(motor) as s:
+        s.execute(text("UPDATE albaran_lines_merge SET contexto_linea_json = :c WHERE id = 702"),
+                  {"c": contexto})
+        s.commit()
+    productos = _servicio(motor).productos_sigrid(
+        DOC, {"familia": "alquiler_maquinaria", "mixto": False})
+    assert productos[12].codigo == "QA9999"
+    productos = _servicio(motor).productos_sigrid(DOC, CLASIFICACION)
+    assert productos[12].codigo == "MA9999"

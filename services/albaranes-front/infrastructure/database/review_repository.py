@@ -490,19 +490,25 @@ class AlbaranReviewRepository:
             # (por codigo, busqueda compartida). Dos consultas batch.
             doc_ids = [r.id for r in rows]
             totals_by_doc: dict[str, float | None] = {}
+            # F-053 R37: estado de la valoración e importes, para «valorado».
+            status_by_doc: dict[str, str | None] = {}
+            importes_by_doc: dict[str, list[float | None]] = {}
+            # F-053 R31: estado del alta en Sigrid de cada fila.
+            alta_by_doc: dict[str, str] = {}
             names_by_code: dict[str, str | None] = {}
             lines_by_doc: dict[str, list[DocumentLineSummary]] = {}
             if doc_ids:
                 try:
                     for vr in session.execute(
                         text(
-                            "SELECT document_id, total_valorado "
+                            "SELECT document_id, total_valorado, status "
                             "FROM albaran_valuations "
                             "WHERE document_id IN :ids"
                         ).bindparams(bindparam("ids", expanding=True)),
                         {"ids": doc_ids},
                     ).mappings():
                         totals_by_doc[vr["document_id"]] = vr["total_valorado"]
+                        status_by_doc[vr["document_id"]] = vr["status"]
                 except Exception:
                     session.rollback()
                 codes = sorted({
@@ -565,6 +571,9 @@ class AlbaranReviewRepository:
                         {"ids": doc_ids},
                     ).mappings():
                         _did = lr["document_id"]
+                        importes_by_doc.setdefault(_did, []).append(
+                            lr["importe_calculado"]
+                        )
                         _cant = lr["cantidad_convertida"]
                         if _cant is None:
                             _cant = lr["cantidad_albaran"]
@@ -588,6 +597,16 @@ class AlbaranReviewRepository:
                 except Exception:
                     session.rollback()
 
+                if self._existe_tabla_altas(session):
+                    for ar in session.execute(
+                        text(
+                            "SELECT document_id, estado FROM albaran_altas_sigrid "
+                            "WHERE document_id IN :ids"
+                        ).bindparams(bindparam("ids", expanding=True)),
+                        {"ids": doc_ids},
+                    ).mappings():
+                        alta_by_doc[ar["document_id"]] = str(ar["estado"])
+
         items = [
             self._to_list_item(
                 row,
@@ -597,7 +616,12 @@ class AlbaranReviewRepository:
                     getattr(row, "selected_contrato_codigo", None)
                 ),
                 lines=lines_by_doc.get(row.id),
-            )
+            ).model_copy(update={
+                "valorado": esta_valorado(
+                    status_by_doc.get(row.id), importes_by_doc.get(row.id, []),
+                ),
+                "alta_estado": alta_by_doc.get(row.id),
+            })
             for row in rows
         ]
         total_pages = math.ceil(total / filters.page_size) if total else 0
@@ -4317,22 +4341,16 @@ class AlbaranReviewRepository:
     def lineas_producto_sigrid(self, document_id: str) -> list[dict[str, Any]]:
         """(F-053 R40, R43) Por línea valorada del documento: producto
         elegido, importe, casada (con ``sigrid_ide``, contrato y producto de
-        la línea de contrato), contrato de la valoración y familia de la
-        línea (``contexto_linea_json.tipo_familia``). Solo lectura."""
+        la línea de contrato), contrato de la valoración y el
+        ``contexto_linea_json`` de su línea del albarán. Solo lectura."""
         self.initialize()
         with self._session_factory.create_session() as session:
             filas = session.execute(
                 _SQL_LINEAS_PRODUCTO, {"doc": document_id},
             ).mappings().all()
-        lineas = []
-        for fila in filas:
-            contexto = _json_o(fila["contexto_linea_json"], {}, dict)
-            familia = contexto.get("tipo_familia")
-            lineas.append({
-                **dict(fila),
-                "tipo_familia": str(familia) if familia else None,
-            })
-        return lineas
+        # La familia de la línea (``contexto_linea_json``) la interpreta el
+        # servicio: este repositorio no decide nada por familia (F-036 R6).
+        return [dict(fila) for fila in filas]
 
     def guardar_producto_sigrid(
         self,

@@ -236,7 +236,12 @@
                     <h2>Campos extraídos · {{ view_label(document.view_mode) }}</h2>
                     <div class="header-actions">
                         <button type="button" class="btn secondary" id="save-btn">Guardar</button>
+                        {# F-053 R37: sin valorar no se aprueba (el servidor lo rechaza igual). #}
+                        {% if document.approved or document.valorado %}
                         <button type="button" class="btn success" id="approve-btn">Guardar y aprobar</button>
+                        {% else %}
+                        <button type="button" class="btn success" id="approve-btn" disabled title="No se puede aprobar un albarán sin valorar: guarda la valoración primero">Guardar y aprobar</button>
+                        {% endif %}
                     </div>
                 </div>
 
