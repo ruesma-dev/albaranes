@@ -32,6 +32,7 @@ from ruesma_comun.valoracion import esta_valorado
 # la llama el resto de este módulo.
 from domain.models.review_models import (
     AlbaranAprobadoError,
+    cantidades_tras_editar,
     ConciliacionDisplay,
     ConciliacionSibling,
     ContratoLinePayload,
@@ -143,6 +144,19 @@ def _importe_de_linea(
         descuento_pct=descuento_pct,
     )
 
+
+
+def _mismo_numero(a: Any, b: Any) -> bool:
+    """(F-065 R8) ¿Es el mismo número? Para decidir si un campo editado
+    cambia: tolerancia de coma flotante, no de dinero (``numeros_iguales``
+    admite 5 milésimas y se tragaría un precio de 4 decimales o una cantidad
+    de 3). Un valor ilegible no es igual a nada."""
+    if a is None or b is None:
+        return a is None and b is None
+    try:
+        return abs(float(a) - float(b)) < 1e-9
+    except (TypeError, ValueError):
+        return False
 
 
 #: (F-053) Tabla del alta en Sigrid: la crea sv3 (DDL) y la escribe SOLO sv9
@@ -1819,50 +1833,39 @@ class AlbaranReviewRepository:
         *,
         document_id: str,
         valuation_line_id: int,
-        codigo_partida: str | None = None,
-        descripcion: str | None = None,
-        cantidad: float | None = None,
-        unidad: str | None = None,
-        precio_unitario: float | None = None,
-        descuento: float | None = None,
-        codigo_externo: str | None = None,
+        campos: dict[str, Any] | None = None,
+        bloquear: bool = False,
     ) -> bool:
-        """Edición de la fila salmon (jun 2026): la línea que se
-        insertará como albarán en Sigrid.
+        """Edición de UNA fila (la línea que se dará de alta en Sigrid).
 
-        Regla pactada con el cliente:
-          - Todos los campos son editables.
-          - descuento y codigo_externo NO existen en Sigrid: se guardan
-            en la valoración sea cual sea el tipo de la línea.
-          - cantidad: por defecto la leída del albarán (recepciones
-            parciales); editarla actualiza cantidad_albaran y el importe.
-          - Si cambian codigo_partida (imputación), unidad o
-            precio_unitario en una fila SIGRID (matched), la línea se
-            CONVIERTE en NUEVA (derivada manual) conservando el resto de
-            campos tal y como estaban en ese momento (descripción,
-            cantidad, descuento, etc.).
-          - En una fila NUEVA (derived) se edita in situ.
-          - (F-051) Partida final vacía = ALMACÉN (D1). Vaciar la partida
-            es elegir almacén (R12): partida final NULL y
-            ``partida_action = 'almacen_elegido'``, SIN derivada (la fila
-            Sigrid sigue Sigrid, D4). En almacén, la partida actual es
-            vacía —nunca la de la casada—, así que guardar otros campos
-            no la convierte en Nueva (R19). Poner la partida de la casada
-            saca de almacén y la fila sigue Sigrid (R20).
-          - (F-051) ``codigo_partida=None`` = el campo no viene en la
-            petición (no cambia); ``""`` = vaciado.
+        (F-065 R6–R11, R13) ``campos`` son SOLO los que el administrativo
+        cambió (``ConciliacionEditBody.campos``): un campo ausente no cambia
+        y uno presente a ``None`` se vacía. Claves: ``codigo_partida``,
+        ``descripcion``, ``cantidad`` (Q, en la unidad del precio),
+        ``unidad``, ``precio_unitario``, ``descuento``, ``codigo_externo``.
 
-        NO revalora. Como todo override manual, se pierde si después se
-        pulsa "Valorar ahora". Devuelve True si actualizó algo.
+        - Lo que llega igual a lo que ya hay se descarta (R8). Si no queda
+          nada, no se escribe lo valorado (importe, su origen, descuento ni
+          revisión): solo se completa una ``cantidad_convertida`` nula con la
+          del albarán (R10) y, con ``bloquear``, se marca la fila.
+        - Las cantidades salen de ``cantidades_tras_editar`` (R6, R7); la
+          convertida nunca queda nula si hay cantidad (R10).
+        - El importe se recalcula (``precio × Q × (1 − dto/100)``) solo si
+          cambia lo que entra en él: cantidad, precio o descuento. Editar la
+          descripción, la partida o el código externo no reetiqueta un
+          importe declarado (F-019 R24). Lo que cambia el administrativo pisa
+          lo valorado y la fila sale de revisión (R11).
+        - (F-051, regla vigente hasta la fase 2) Cambiar partida (salvo
+          vaciarla = almacén, R12, o poner la de la casada, R20), unidad o
+          precio de una fila Contrato la convierte en Nueva (derivada
+          ``manual_override``); en una Nueva se edita la derivada in situ.
+        - ``bloquear`` (R13): «Guardar» = aplicar y bloquear, en la misma
+          transacción, aunque no haya cambios.
+
+        NO revalora. Devuelve True si la fila es del documento.
         """
         self.initialize()
-
-        def _num_eq(a: float | None, b: float | None) -> bool:
-            if a is None and b is None:
-                return True
-            if a is None or b is None:
-                return False
-            return abs(float(a) - float(b)) < 1e-9
+        cambios_pedidos = dict(campos or {})
 
         def _txt(v: str | None) -> str:
             return (v or "").strip()
@@ -1873,12 +1876,14 @@ class AlbaranReviewRepository:
             self._exigir_editable(session, document_id, valuation_line_id)
             row = session.execute(
                 text(
-                    "SELECT lv.id, lv.merge_line_id, lv.valuation_id, "
+                    "SELECT lv.id, lv.valuation_id, "
                     "       lv.matched_contrato_line_id, "
                     "       lv.derived_contrato_line_id, "
                     "       lv.cantidad_albaran, lv.cantidad_convertida, "
+                    "       lv.factor_conversion, "
                     "       lv.codigo_partida_final, lv.descripcion_linea, "
                     "       lv.precio_unitario_final, lv.unidad_contrato, "
+                    "       lv.descuento_albaran_aplicado, lv.codigo_externo, "
                     "       v.document_id, v.contrato_codigo "
                     "FROM albaran_line_valuations lv "
                     "JOIN albaran_valuations v ON v.id = lv.valuation_id "
@@ -1892,35 +1897,27 @@ class AlbaranReviewRepository:
             valuation_id = row["valuation_id"]
             matched_id = row["matched_contrato_line_id"]
             derived_id = row["derived_contrato_line_id"]
+            if matched_id is None and derived_id is None:
+                return False
 
-            # ---- estado ACTUAL de la conciliación (para comparar) ----
-            # (F-051, D1) La partida actual es la FINAL de la valoración:
-            # vacía = almacén. Ya NO se rellena con la de la línea casada
-            # (eso hacía que guardar una línea en almacén la convirtiera
-            # en Nueva, R19).
-            cur_codigo_partida = _txt(row["codigo_partida_final"]) or None
+            # ---- estado ACTUAL (lo que pinta la ficha) ----
+            # (F-051 D1) La partida actual es la FINAL: vacía = almacén.
+            cur_partida = _txt(row["codigo_partida_final"]) or None
             cur_unidad = row["unidad_contrato"]
             cur_precio = row["precio_unitario_final"]
             cur_desc = row["descripcion_linea"]  # override si lo hubiera
-            linea_casada = None
-            if matched_id is not None:
-                linea_casada = session.execute(
-                    text(
-                        "SELECT codigo_partida, descripcion_linea, "
-                        "       unidad_medida, precio_unitario "
-                        "FROM albaran_contrato_lines_merge WHERE id = :id"
-                    ),
-                    {"id": matched_id},
-                ).mappings().first()
-            elif derived_id is not None:
-                linea_casada = session.execute(
-                    text(
-                        "SELECT codigo_partida, descripcion_linea, "
-                        "       unidad_medida, precio_unitario "
-                        "FROM contrato_lines_derived WHERE id = :id"
-                    ),
-                    {"id": derived_id},
-                ).mappings().first()
+            tabla_casada = (
+                "albaran_contrato_lines_merge" if matched_id is not None
+                else "contrato_lines_derived"
+            )
+            linea_casada = session.execute(
+                text(
+                    "SELECT codigo_partida, descripcion_linea, "
+                    "       unidad_medida, precio_unitario "
+                    f"FROM {tabla_casada} WHERE id = :id"  # noqa: S608
+                ),
+                {"id": matched_id if matched_id is not None else derived_id},
+            ).mappings().first()
             partida_casada: str | None = None
             if linea_casada is not None:
                 partida_casada = linea_casada["codigo_partida"]
@@ -1929,85 +1926,122 @@ class AlbaranReviewRepository:
                     cur_precio = linea_casada["precio_unitario"]
                 if not cur_desc:
                     cur_desc = linea_casada["descripcion_linea"]
-
-            # ---- valores RESULTANTES (editado o actual) ----
-            new_codigo_partida = (
-                _txt(codigo_partida) or None
-                if codigo_partida is not None
-                else cur_codigo_partida
+            q_actual = (
+                row["cantidad_convertida"]
+                if row["cantidad_convertida"] is not None
+                else row["cantidad_albaran"]
             )
-            new_unidad = (
-                _txt(unidad) or None if unidad is not None else cur_unidad
-            )
-            new_precio = (
-                precio_unitario if precio_unitario is not None else cur_precio
-            )
-            new_desc = (
-                _txt(descripcion) or None
-                if descripcion is not None
-                else cur_desc
-            )
-            new_cantidad = (
-                cantidad
-                if cantidad is not None
-                else (
-                    row["cantidad_convertida"]
-                    if row["cantidad_convertida"] is not None
-                    else row["cantidad_albaran"]
-                )
-            )
-
-            # (F-051 R12) Vaciar una partida = elegir almacén: no es un
-            # cambio de identidad (no crea derivada) y deja la marca.
-            elige_almacen = (
-                new_codigo_partida is None
-                and estado_partida(cur_codigo_partida) == "partida"
-            )
-            # (F-051 R20) Salir de almacén con la partida de la línea
-            # casada de Sigrid tampoco cambia la identidad: sigue Sigrid.
-            partida_cambia_identidad = (
-                new_codigo_partida is not None
-                and _txt(new_codigo_partida) != _txt(cur_codigo_partida)
-                and not (
-                    matched_id is not None
-                    and _txt(new_codigo_partida) == _txt(partida_casada)
-                )
-            )
-            identity_changed = (
-                partida_cambia_identidad
-                or _txt(new_unidad) != _txt(cur_unidad)
-                or not _num_eq(new_precio, cur_precio)
-            )
-
-            if new_precio is not None and new_cantidad is not None:
-                # 'descuento' es un PORCENTAJE (p.ej. 3 = 3%): descuenta del
-                # importe de la línea (importe = base × (1 − dto/100)).
-                # Único punto del servicio que ya lo hacía bien; ahora
-                # comparte la fórmula con los demás (F-019 R23).
-                importe = _importe_de_linea(
-                    precio_unitario=new_precio,
-                    cantidad=new_cantidad,
-                    descuento_pct=descuento,
-                )
-            else:
-                importe = None
-
-            extra_sets = ""
-            params: dict[str, Any] = {
-                "vid": valuation_line_id,
-                "cant": new_cantidad,
-                "pu": new_precio,
-                "imp": importe,
-                "part": new_codigo_partida,
-                "uni": new_unidad,
-                "dto": descuento,
-                "codext": _txt(codigo_externo) or None,
+            actual: dict[str, Any] = {
+                "codigo_partida": cur_partida,
+                "descripcion": _txt(cur_desc) or None,
+                "cantidad": q_actual,
+                "unidad": _txt(cur_unidad) or None,
+                "precio_unitario": cur_precio,
+                "descuento": _sanear_descuento(row["descuento_albaran_aplicado"]),
+                "codigo_externo": _txt(row["codigo_externo"]) or None,
             }
 
-            if matched_id is not None and identity_changed:
-                # SIGRID → NUEVA: derivada manual con los valores
+            # ---- solo lo que de verdad cambia (R8) ----
+            cambios: dict[str, Any] = {}
+            for campo, valor in cambios_pedidos.items():
+                if campo not in actual:
+                    continue
+                if campo in ("cantidad", "precio_unitario"):
+                    nuevo = valor
+                    igual = _mismo_numero(nuevo, actual[campo])
+                elif campo == "descuento":
+                    nuevo = _sanear_descuento(valor)
+                    igual = _mismo_numero(nuevo, actual[campo])
+                else:
+                    nuevo = _txt(valor) or None
+                    igual = nuevo == actual[campo]
+                if not igual:
+                    cambios[campo] = nuevo
+
+            if not cambios:
+                # (R10) Completar la convertida y (R13) bloquear: nada más.
+                session.execute(
+                    text(
+                        "UPDATE albaran_line_valuations SET "
+                        "  cantidad_convertida = COALESCE("
+                        "    cantidad_convertida, cantidad_albaran)"
+                        + (", bloqueada = TRUE" if bloquear else "")
+                        + " WHERE id = :vid"
+                    ),
+                    {"vid": valuation_line_id},
+                )
+                session.commit()
+                return True
+
+            nuevo = {**actual, **cambios}
+
+            # ---- cantidades (R6, R7, R10) ----
+            if "cantidad" in cambios and cambios["cantidad"] is None:
+                cantidad_albaran, cantidad_convertida = None, None
+            else:
+                cantidad_albaran, cantidad_convertida = cantidades_tras_editar(
+                    q_nueva=cambios.get("cantidad"),
+                    cantidad_albaran=row["cantidad_albaran"],
+                    cantidad_convertida=row["cantidad_convertida"],
+                    factor=row["factor_conversion"],
+                )
+                if cantidad_convertida is None:
+                    cantidad_convertida = cantidad_albaran
+            params: dict[str, Any] = {
+                "vid": valuation_line_id,
+                "ca": cantidad_albaran,
+                "cc": cantidad_convertida,
+                "pu": nuevo["precio_unitario"],
+                "uni": nuevo["unidad"],
+                "part": nuevo["codigo_partida"],
+                "codext": nuevo["codigo_externo"],
+            }
+            sets = [
+                "cantidad_albaran = :ca", "cantidad_convertida = :cc",
+                "precio_unitario_final = :pu", "unidad_contrato = :uni",
+                "codigo_partida_final = :part", "codigo_externo = :codext",
+                "review_required = FALSE",
+            ]
+            if bloquear:
+                sets.append("bloqueada = TRUE")
+
+            # ---- importe: solo si cambia lo que entra en él (R11) ----
+            cambia_importe = bool({"cantidad", "precio_unitario", "descuento"} & set(cambios))
+            if cambia_importe:
+                params["dto"] = nuevo["descuento"]
+                params["imp"] = _importe_de_linea(
+                    precio_unitario=nuevo["precio_unitario"],
+                    cantidad=cantidad_convertida,
+                    descuento_pct=nuevo["descuento"],
+                )
+                sets += [
+                    "descuento_albaran_aplicado = :dto",
+                    "importe_calculado = :imp",
+                    "importe_source = 'calculated'",
+                ]
+
+            # ---- origen (F-051: vaciar = almacén; la de la casada, sigue) ----
+            elige_almacen = (
+                "codigo_partida" in cambios and nuevo["codigo_partida"] is None
+            )
+            partida_cambia_identidad = (
+                "codigo_partida" in cambios
+                and nuevo["codigo_partida"] is not None
+                and not (
+                    matched_id is not None
+                    and nuevo["codigo_partida"] == _txt(partida_casada)
+                )
+            )
+            identidad_cambia = (
+                partida_cambia_identidad
+                or "unidad" in cambios
+                or "precio_unitario" in cambios
+            )
+
+            if matched_id is not None and identidad_cambia:
+                # CONTRATO → NUEVA: derivada manual con los valores
                 # resultantes; se conserva todo lo demás tal cual.
-                new_derived_id = session.execute(
+                params["did"] = session.execute(
                     text(
                         "INSERT INTO contrato_lines_derived ("
                         "  created_by_valuation_id, source_document_id, "
@@ -2023,21 +2057,20 @@ class AlbaranReviewRepository:
                         "vid": valuation_id,
                         "doc": document_id,
                         "cod": row["contrato_codigo"] or "",
-                        "desc": new_desc,
-                        "uni": new_unidad,
-                        "pu": new_precio,
-                        "part": new_codigo_partida,
+                        "desc": nuevo["descripcion"],
+                        "uni": nuevo["unidad"],
+                        "pu": nuevo["precio_unitario"],
+                        "part": nuevo["codigo_partida"],
                         "now": self._utc_iso(),
                     },
                 ).scalar_one()
-                extra_sets = (
-                    ", matched_contrato_line_id = NULL"
-                    ", derived_contrato_line_id = :did"
-                    ", precio_unitario_source = 'manual_derived'"
-                    ", precio_unitario_agreement = 'manual'"
-                    ", descripcion_linea = NULL"
-                )
-                params["did"] = new_derived_id
+                sets += [
+                    "matched_contrato_line_id = NULL",
+                    "derived_contrato_line_id = :did",
+                    "precio_unitario_source = 'manual_derived'",
+                    "precio_unitario_agreement = 'manual'",
+                    "descripcion_linea = NULL",
+                ]
             elif derived_id is not None:
                 # NUEVA: edición in situ de la derivada.
                 session.execute(
@@ -2050,71 +2083,93 @@ class AlbaranReviewRepository:
                         "WHERE id = :did"
                     ),
                     {
-                        "part": new_codigo_partida,
-                        "desc": new_desc,
-                        "uni": new_unidad,
-                        "pu": new_precio,
+                        "part": nuevo["codigo_partida"],
+                        "desc": nuevo["descripcion"],
+                        "uni": nuevo["unidad"],
+                        "pu": nuevo["precio_unitario"],
                         "did": derived_id,
                     },
                 )
-                extra_sets = (
-                    ", precio_unitario_source = 'manual_derived'"
-                    ", precio_unitario_agreement = 'manual'"
-                    ", descripcion_linea = NULL"
+                sets += [
+                    "precio_unitario_source = 'manual_derived'",
+                    "precio_unitario_agreement = 'manual'",
+                    "descripcion_linea = NULL",
+                ]
+            elif "descripcion" in cambios:
+                # CONTRATO sin cambio de identidad: la descripción, si difiere
+                # de la de la línea de contrato, se guarda como override.
+                desc_contrato = (
+                    _txt(linea_casada["descripcion_linea"]) if linea_casada else ""
                 )
-            elif matched_id is not None:
-                # SIGRID sin cambio identitario: solo cantidad,
-                # descuento, código y (si difiere) override de
-                # descripción; la línea SIGUE siendo Sigrid.
-                desc_override = (
-                    new_desc
-                    if _txt(new_desc)
-                    and linea_casada is not None
-                    and _txt(new_desc)
-                    != _txt(linea_casada["descripcion_linea"])
+                params["descov"] = (
+                    nuevo["descripcion"]
+                    if nuevo["descripcion"] != desc_contrato
                     else None
                 )
-                extra_sets = ", descripcion_linea = :descov"
-                params["descov"] = desc_override
-            else:
-                return False
+                sets.append("descripcion_linea = :descov")
 
             if elige_almacen:
-                extra_sets += ", partida_action = :accion_almacen"
+                sets.append("partida_action = :accion_almacen")
                 params["accion_almacen"] = ACCION_ALMACEN_ELEGIDO
 
             session.execute(
                 text(
                     "UPDATE albaran_line_valuations SET "
-                    "  cantidad_albaran = :cant, "
-                    "  cantidad_convertida = NULL, "
-                    "  precio_unitario_final = :pu, "
-                    "  unidad_contrato = :uni, "
-                    "  codigo_partida_final = :part, "
-                    "  importe_calculado = :imp, "
-                    "  importe_source = 'calculated', "
-                    "  descuento_albaran_aplicado = :dto, "
-                    "  codigo_externo = :codext, "
-                    "  review_required = FALSE "
-                    + extra_sets
+                    + ", ".join(sets)
                     + " WHERE id = :vid"
                 ),
                 params,
             )
-
-            # Recalcular total de la cabecera.
-            session.execute(
-                text(
-                    "UPDATE albaran_valuations SET "
-                    "  total_valorado = COALESCE((SELECT SUM(importe_calculado) "
-                    "    FROM albaran_line_valuations WHERE valuation_id = :vid), 0), "
-                    "  updated_at_utc = :now "
-                    "WHERE id = :vid"
-                ),
-                {"vid": valuation_id, "now": self._utc_iso()},
-            )
+            if cambia_importe:
+                self._recalcular_total_in_session(session, valuation_id)
             session.commit()
             return True
+
+    def _recalcular_total_in_session(self, session: Any, valuation_id: str) -> None:
+        """Total de la cabecera = suma de los importes de sus filas, en
+        céntimos (F-019 R26: ``ROUND``, que la suma en coma flotante arrastra
+        cola binaria y el total se compara por igualdad con Sigrid)."""
+        session.execute(
+            text(
+                "UPDATE albaran_valuations SET "
+                "total_valorado = ROUND(CAST(COALESCE(("
+                "  SELECT SUM(importe_calculado) "
+                "  FROM albaran_line_valuations "
+                "  WHERE valuation_id = :vid"
+                "), 0) AS numeric), 2), "
+                "updated_at_utc = :now "
+                "WHERE id = :vid"
+            ),
+            {"vid": valuation_id, "now": self._utc_iso()},
+        )
+
+    def bloquear_linea(self, *, document_id: str, valuation_line_id: int) -> bool:
+        """(F-065 R13) Marca la fila guardada. ``False`` si no es del documento."""
+        return self._marcar_bloqueada(document_id, valuation_line_id, True)
+
+    def desbloquear_linea(self, *, document_id: str, valuation_line_id: int) -> bool:
+        """(F-065 R15) La vuelve editable. ``False`` si no es del documento.
+        No exige permiso especial (P13): cualquiera que edite."""
+        return self._marcar_bloqueada(document_id, valuation_line_id, False)
+
+    def _marcar_bloqueada(
+        self, document_id: str, valuation_line_id: int, bloqueada: bool,
+    ) -> bool:
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            # F-053 R26 (alta, con el merge bloqueado) y F-065 R4 (aprobado).
+            self._exigir_editable(session, document_id)
+            tocadas = session.execute(
+                text(
+                    "UPDATE albaran_line_valuations SET bloqueada = :b "
+                    "WHERE id = :vid AND valuation_id IN ("
+                    "  SELECT id FROM albaran_valuations WHERE document_id = :doc"
+                    ") RETURNING id"
+                ),
+                {"b": bloqueada, "vid": int(valuation_line_id), "doc": document_id},
+            ).all()
+            session.commit()
+            return bool(tocadas)
 
     def asignar_almacen(
         self,

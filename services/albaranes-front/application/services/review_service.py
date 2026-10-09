@@ -411,39 +411,61 @@ class ReviewService:
         *,
         document_id: str,
         valuation_line_id: int,
-        codigo_partida: str | None = None,
-        descripcion: str | None = None,
-        cantidad: float | None = None,
-        unidad: str | None = None,
-        precio_unitario: float | None = None,
-        descuento: float | None = None,
-        codigo_externo: str | None = None,
+        campos: dict | None = None,
+        bloquear: bool = False,
     ) -> bool:
-        """Edición de la fila salmon (ver repositorio para la regla
-        SIGRID→NUEVA al cambiar imputación/unidad/precio)."""
+        """Edición de una fila con SOLO los campos cambiados (F-065 R8) y,
+        con ``bloquear``, «Guardar» = aplicar y bloquear (R13). Una entrada
+        de deshacer que devuelve la fila (y el total) a como estaba."""
         etiqueta = self._undo_line_desc(valuation_line_id)
         snap_line = self._undo_snap_line(valuation_line_id)
         snap_val = self._undo_snap_valuation(document_id)
         ok = self._repository.update_line_conciliacion(
             document_id=document_id,
             valuation_line_id=valuation_line_id,
-            codigo_partida=codigo_partida,
-            descripcion=descripcion,
-            cantidad=cantidad,
-            unidad=unidad,
-            precio_unitario=precio_unitario,
-            descuento=descuento,
-            codigo_externo=codigo_externo,
+            campos=campos,
+            bloquear=bloquear,
         )
         if ok:
             self._repository.record_undo(
                 document_id=document_id,
                 action="linea_edit",
                 description=(
-                    f"Editar línea · {etiqueta} "
+                    f"{'Guardar' if bloquear else 'Editar'} línea · {etiqueta} "
                     f"({self._repository.doc_label(document_id=document_id)})"
                 ),
                 restore=[snap_line, snap_val],
+            )
+        return ok
+
+    def bloquear_linea(self, *, document_id: str, valuation_line_id: int) -> bool:
+        """(F-065 R13, R15) Bloquea la fila, con su entrada de deshacer."""
+        return self._marcar_bloqueada(document_id, valuation_line_id, True)
+
+    def desbloquear_linea(self, *, document_id: str, valuation_line_id: int) -> bool:
+        """(F-065 R15) Desbloquea la fila, con su entrada de deshacer."""
+        return self._marcar_bloqueada(document_id, valuation_line_id, False)
+
+    def _marcar_bloqueada(
+        self, document_id: str, valuation_line_id: int, bloqueada: bool,
+    ) -> bool:
+        etiqueta = self._undo_line_desc(valuation_line_id)
+        snap_line = self._undo_snap_line(valuation_line_id)
+        metodo = (
+            self._repository.bloquear_linea if bloqueada
+            else self._repository.desbloquear_linea
+        )
+        ok = metodo(document_id=document_id, valuation_line_id=valuation_line_id)
+        if ok:
+            accion = "bloquear" if bloqueada else "desbloquear"
+            self._repository.record_undo(
+                document_id=document_id,
+                action=accion,
+                description=(
+                    f"{accion.capitalize()} línea · {etiqueta} "
+                    f"({self._repository.doc_label(document_id=document_id)})"
+                ),
+                restore=[snap_line],
             )
         return ok
 

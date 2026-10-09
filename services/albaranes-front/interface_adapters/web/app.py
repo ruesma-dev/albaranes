@@ -1455,17 +1455,15 @@ def build_app(settings: Settings) -> FastAPI:
         document_id: str,
         valuation_line_id: int,
         payload: ConciliacionEditBody = Body(...),
+        bloquear: bool = Query(default=False),
     ) -> dict:
+        # F-065 R8: solo los campos que vinieron (ausente = no cambia; null =
+        # vaciar). R13: «Guardar» de la fila manda ``?bloquear=1``.
         ok = review_service.update_line_conciliacion(
             document_id=document_id,
             valuation_line_id=valuation_line_id,
-            codigo_partida=payload.codigo_partida,
-            descripcion=payload.descripcion,
-            cantidad=payload.cantidad,
-            unidad=payload.unidad,
-            precio_unitario=payload.precio_unitario,
-            descuento=payload.descuento,
-            codigo_externo=payload.codigo_externo,
+            campos=payload.campos(),
+            bloquear=bloquear,
         )
         if not ok:
             raise HTTPException(
@@ -1477,6 +1475,22 @@ def build_app(settings: Settings) -> FastAPI:
             "document_id": document_id,
             "valuation_line_id": valuation_line_id,
         }
+
+    # F-065 R13, R15: bloquear (guardar sin cambios) y desbloquear una fila.
+    @app.post("/api/documents/{document_id}/lines/{valuation_line_id}/bloquear")
+    def bloquear_linea_api(document_id: str, valuation_line_id: int) -> dict:
+        return _bloqueo(document_id, valuation_line_id, review_service.bloquear_linea)
+
+    @app.post("/api/documents/{document_id}/lines/{valuation_line_id}/desbloquear")
+    def desbloquear_linea_api(document_id: str, valuation_line_id: int) -> dict:
+        return _bloqueo(document_id, valuation_line_id, review_service.desbloquear_linea)
+
+    def _bloqueo(document_id: str, valuation_line_id: int, accion: Any) -> dict:
+        if not accion(document_id=document_id, valuation_line_id=valuation_line_id):
+            raise HTTPException(
+                status_code=404, detail="Línea de valoración no encontrada en este albarán.",
+            )
+        return {"ok": True, "document_id": document_id, "valuation_line_id": valuation_line_id}
 
     @app.delete(
         "/api/documents/{document_id}/lines/{valuation_line_id}/conciliacion"

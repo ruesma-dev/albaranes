@@ -178,7 +178,7 @@ OPERACIONES = {
     "purgar": lambda r: r.hard_delete_document(document_id=DOC),
     "deshacer": lambda r: r.undo_last(document_id=DOC),
     "editar_linea": lambda r: r.update_line_conciliacion(
-        document_id=DOC, valuation_line_id=11, descripcion="OTRA"),
+        document_id=DOC, valuation_line_id=11, campos={"descripcion": "OTRA"}),
     "conciliar": lambda r: r.set_line_conciliacion(
         document_id=DOC, valuation_line_id=12, mode="contract_line",
         matched_contrato_line_id=501),
@@ -252,7 +252,7 @@ def test_f053_r26_el_alta_de_otro_documento_no_bloquea():
     poner_alta(motor, "registrado", document_id=DOC_AJENO)
     repo = repositorio(motor)
     assert repo.update_line_conciliacion(
-        document_id=DOC, valuation_line_id=11, descripcion="OTRA") is True
+        document_id=DOC, valuation_line_id=11, campos={"descripcion": "OTRA"}) is True
 
 
 def test_f053_r26_todos_los_metodos_que_escriben_llaman_al_cerrojo():

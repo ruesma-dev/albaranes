@@ -30,7 +30,8 @@ total de la cabecera (R25, R26). La tabla caso viejo -> caso nuevo esta en
 from __future__ import annotations
 
 import pytest
-from f065_bbdd import ejecutar, fila, fila_nueva, motor_con_valoracion, repositorio, total
+from f065_bbdd import ejecutar, fila, fila_nueva, motor_con_valoracion, repositorio
+from f065_bbdd import total as _total
 
 VALUATION_ID = "97bfe72e-a7a4-48ff-a6bc-2ccb9cb59f3b"
 DOCUMENT_ID = "99b4adcc-fe03-4d4c-a115-b2aa40ed9e6f"
@@ -67,6 +68,10 @@ def _sembrar(lineas=LINEAS_2137569, total_inicial=TOTAL_CORRECTO):
             review_reasons_json=None, review_required=False,
         )
     return motor
+
+
+def total(motor):
+    return _total(motor, VALUATION_ID)
 
 
 def _editar(motor, fila_id, **campos):

@@ -408,8 +408,9 @@ def test_f051_r23_lista_vacia_no_toca_nada(repo_sqlite):
 # ---- update_line_conciliacion (guardar la fila salmón) ------------- #
 
 def _guardar(repo, vid, **campos):
+    # F-065 R8: el PATCH lleva solo los campos presentes (``campos=``).
     return repo.update_line_conciliacion(
-        document_id=DOC, valuation_line_id=vid, **campos,
+        document_id=DOC, valuation_line_id=vid, campos=campos,
     )
 
 
