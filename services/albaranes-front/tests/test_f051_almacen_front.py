@@ -800,6 +800,14 @@ class _ServicioApi:
         self.llamadas.append(("todas", document_id))
         return self.todas
 
+    def asignar_almacen_todas_con_saltos(self, *, document_id):
+        # F-065 R14: el portal usa la variante que cuenta las saltadas.
+        from application.services.review_service import ResultadoAlmacenTodas
+
+        return ResultadoAlmacenTodas(
+            tocadas=self.asignar_almacen_todas(document_id=document_id), saltadas=0,
+        )
+
 
 def _cliente(monkeypatch, servicio):
     from fastapi.testclient import TestClient
@@ -844,7 +852,8 @@ def test_f051_endpoint_almacen_a_todas(monkeypatch):
     )
 
     assert respuesta.status_code == 200, respuesta.text
-    assert respuesta.json() == {"ok": True, "document_id": DOC, "lineas": 4}
+    assert respuesta.json() == {
+        "ok": True, "document_id": DOC, "lineas": 4, "saltadas": 0}
     assert servicio.llamadas == [("todas", DOC)]
 
 

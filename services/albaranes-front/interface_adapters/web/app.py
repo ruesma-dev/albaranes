@@ -36,6 +36,7 @@ from domain.models.review_models import (
     LineasIncompletasError,
     MergeDocumentUpdatePayload,
     SaveResponse,
+    TraerLineasBody,
     VIEW_MODE_MERGE,
     normalize_view_mode,
 )
@@ -736,8 +737,9 @@ def build_app(settings: Settings) -> FastAPI:
                 document_id=document_id,
                 approved_by=approved_by.strip() or _reviewer_from_request(request),
             )
-        except AlbaranSinValorarError as exc:
-            # F-053 R37: no se aprueba lo no valorado; nada cambia.
+        except (AlbaranSinValorarError, LineasIncompletasError) as exc:
+            # F-053 R37 y F-065 R20: no se aprueba lo no valorado ni con
+            # filas sin cantidad o importe; nada cambia.
             return _redirigir_a_lista(redirect_query, exc.aviso)
         aviso = getattr(resultado, "aviso", None)
         texto = f"Documento aprobado, pero {aviso}" if aviso else "Documento aprobado"
@@ -1585,15 +1587,19 @@ def build_app(settings: Settings) -> FastAPI:
 
     @app.post("/api/documents/{document_id}/almacen-todas")
     def asignar_almacen_todas_api(document_id: str) -> dict:
-        lineas = review_service.asignar_almacen_todas(
+        # F-065 R14: las filas guardadas se saltan y se dice cuántas.
+        resultado = review_service.asignar_almacen_todas_con_saltos(
             document_id=document_id,
         )
-        if not lineas:
+        if not resultado.tocadas and not resultado.saltadas:
             raise HTTPException(
                 status_code=404,
                 detail="El albarán no tiene líneas valoradas.",
             )
-        return {"ok": True, "document_id": document_id, "lineas": lineas}
+        return {
+            "ok": True, "document_id": document_id,
+            "lineas": resultado.tocadas, "saltadas": resultado.saltadas,
+        }
 
     @app.post("/api/documents/{document_id}/lines/standalone")
     def add_standalone_line_api(document_id: str) -> dict:
@@ -1672,29 +1678,14 @@ def build_app(settings: Settings) -> FastAPI:
     @app.post("/api/documents/{document_id}/lines/from-contrato")
     def add_lines_from_contrato_api(
         document_id: str,
-        payload: dict = Body(...),
+        payload: TraerLineasBody = Body(...),
     ) -> dict:
-        # Traer líneas contrato (jul 2026): crea una línea salmón YA
-        # casada (badge Sigrid) por cada línea de contrato seleccionada
-        # en el desplegable multiselección del detalle, prefijada con
-        # partida/descripción/unidad/precio del contrato. La cantidad
-        # queda en blanco para el revisor.
-        raw_ids = payload.get("contrato_line_ids") or []
-        try:
-            ids = [int(x) for x in raw_ids]
-        except (TypeError, ValueError):
-            raise HTTPException(
-                status_code=400,
-                detail="contrato_line_ids debe ser una lista de enteros.",
-            )
-        if not ids:
-            raise HTTPException(
-                status_code=400,
-                detail="Selecciona al menos una línea de contrato.",
-            )
+        # (F-065 R23) Una fila Contrato por cada línea de contrato elegida,
+        # con su cantidad (obligatoria y ≠ 0: si falta, 422 de la
+        # validación), partida, descripción, unidad y precio del contrato.
         creadas = review_service.add_valuation_lines_from_contrato(
             document_id=document_id,
-            contrato_line_ids=ids,
+            lineas=[(linea.contrato_line_id, linea.cantidad) for linea in payload.lineas],
         )
         if creadas == 0:
             raise HTTPException(

@@ -44,6 +44,7 @@ from domain.models.review_models import (
     DocumentListItem,
     KNOWN_PROVIDER_VIEWS,
     LineaBloqueadaError,
+    LineasIncompletasError,
     LineValuationPayload,
     MergeDocumentUpdatePayload,
     MergeLinePayload,
@@ -60,6 +61,8 @@ from domain.models.review_models import (
     ValuationPayload,
     VIEW_MODE_MERGE,
     normalize_view_mode,
+    es_fila_manual,
+    orden_filas_ficha,
 )
 from infrastructure.database.orm_models import (
     AlbaranContratoLineMergeOrm,
@@ -214,6 +217,22 @@ _SQL_LINEA_PRODUCTO = text(
     "WHERE lv.id = :lv AND v.document_id = :doc"
 )
 
+
+#: (F-065 R20) Las blancas del documento en el orden de la ficha.
+_SQL_BLANCAS_EN_ORDEN = text(
+    "SELECT id FROM albaran_lines_merge WHERE document_id = :doc "
+    "ORDER BY line_index, id"
+)
+
+#: (F-065 R20) Lo que decide si una fila se puede aprobar y su posición.
+_SQL_FILAS_PARA_APROBAR = text(
+    "SELECT lv.id, lv.merge_line_id, lv.parent_merge_line_id, lv.line_kind, "
+    "       lv.matched_contrato_line_id, lv.derived_contrato_line_id, "
+    "       lv.cantidad_albaran, lv.cantidad_convertida, lv.importe_calculado "
+    "FROM albaran_line_valuations lv "
+    "JOIN albaran_valuations v ON v.id = lv.valuation_id "
+    "WHERE v.document_id = :doc"
+)
 
 #: (F-065 R14) ¿Está guardada (bloqueada) esta fila del documento?
 _SQL_FILA_BLOQUEADA = text(
@@ -1446,8 +1465,15 @@ class AlbaranReviewRepository:
             # Todas las líneas de valoración que casaron con ESTA línea de
             # contrato reciben su propio bloque de conciliación (uno-a-varios).
             for vid in matched_to_vlines.get(row["id"], []):
-                unitario = row.get("precio_unitario")
+                # (F-065 R9) La ficha pinta y edita el precio APLICADO (el de
+                # la valoración: sv6 deja la fila casada con el precio que
+                # declara el albarán aunque el contrato diga otro); el de la
+                # línea de contrato va aparte, para el title y los avisos.
+                unitario_contrato = row.get("precio_unitario")
                 precio_final = precio_final_by_vline.get(vid)
+                unitario = (
+                    precio_final if precio_final is not None else unitario_contrato
+                )
                 _vl = vline_by_vid.get(vid)
                 # Edición salmon (jun 2026): si el revisor editó la
                 # descripción de una fila Sigrid SIN convertirla a Nueva,
@@ -1458,12 +1484,15 @@ class AlbaranReviewRepository:
                     kind="assigned",
                     descripcion=_desc_override or row.get("descripcion_linea"),
                     unitario=unitario,
+                    unitario_contrato=unitario_contrato,
                     medicion_total=row.get("uds"),
                     medicion_pendiente=row.get("pendiente_servir"),
                     unidad=row.get("unidad_medida"),
                     codigo_partida=row.get("codigo_partida"),
                     descripcion_partida=row.get("descripcion_partida"),
-                    price_agreement=self._price_agreement(unitario, precio_final),
+                    price_agreement=self._price_agreement(
+                        unitario_contrato, precio_final,
+                    ),
                     precio_unitario_final=precio_final,
                     sibling=None,
                     match_method=getattr(vline_by_vid.get(vid), "match_method", None),
@@ -1490,6 +1519,7 @@ class AlbaranReviewRepository:
                     kind="derived",
                     descripcion=row.get("descripcion_linea"),
                     unitario=unitario,
+                    unitario_contrato=unitario,
                     medicion_total=row.get("uds"),
                     medicion_pendiente=None,  # derived: no hay pendiente
                     unidad=row.get("unidad_medida"),
@@ -2653,27 +2683,25 @@ class AlbaranReviewRepository:
         self,
         *,
         document_id: str,
-        contrato_line_ids: list[int],
+        lineas: list[tuple[int, float]],
     ) -> list[int]:
-        """Crea UNA línea salmón por cada línea de contrato seleccionada,
-        ya enganchada a ella (``matched_contrato_line_id`` → badge Sigrid)
-        y prefijada con su partida, descripción, unidad y precio unitario.
-        La cantidad queda en blanco para que el revisor la rellene (el
-        importe se recalcula al guardar, como en el resto de salmón).
+        """(F-065 R23) Crea UNA fila Contrato por cada ``(línea de contrato,
+        cantidad)``: casada con ella (``matched_contrato_line_id``), con su
+        partida, descripción, unidad y precio, ``cantidad_albaran =
+        cantidad_convertida = Q``, ``factor`` 1 e importe calculado (válida
+        para sv9 sin más edición). La cantidad es obligatoria y ≠ 0
+        (``ValueError`` sin tocar nada).
 
-        Mismos literales que ``set_line_conciliacion`` modo
-        'contract_line' (``manual_contract``/'manual') y misma creación
-        de cabecera que ``add_standalone_valuation_line``.
-
-        Solo admite líneas de contratos DEL PROPIO documento (defensa
-        ante ids arbitrarios). Devuelve los ids de las líneas de
-        valoración creadas (jul 2026: lista en vez de contador, para que
-        el historial de deshacer pueda borrarlas).
+        Solo admite líneas de contratos DEL PROPIO documento (las ajenas se
+        ignoran). Crea la cabecera de valoración si no existe y recalcula su
+        total. Devuelve los ids creados (el deshacer los borra).
         """
         import uuid
 
-        ids = [int(i) for i in (contrato_line_ids or []) if i is not None]
-        if not ids:
+        pares = [(int(cid), cantidad) for cid, cantidad in (lineas or [])]
+        if any(cantidad is None or float(cantidad) == 0 for _, cantidad in pares):
+            raise ValueError("Cada línea traída necesita su cantidad (distinta de 0).")
+        if not pares:
             return []
 
         self.initialize()
@@ -2696,12 +2724,12 @@ class AlbaranReviewRepository:
                     "SELECT l.id, l.codigo_partida, l.descripcion_linea, "
                     "       l.precio_unitario, l.unidad_medida "
                     "FROM albaran_contrato_lines_merge l "
-                    "WHERE l.id = ANY(:ids) "
+                    "WHERE l.id IN :ids "
                     "  AND l.contrato_id IN ("
                     "    SELECT id FROM albaran_contratos_merge "
                     "    WHERE document_id = :doc)"
-                ),
-                {"ids": ids, "doc": document_id},
+                ).bindparams(bindparam("ids", expanding=True)),
+                {"ids": [cid for cid, _ in pares], "doc": document_id},
             ).mappings().all()
             por_id = {int(r["id"]): r for r in rows}
 
@@ -2727,7 +2755,7 @@ class AlbaranReviewRepository:
                 valuation_id = hdr["id"]
 
             creadas: list[int] = []
-            for cid in ids:
+            for cid, cantidad in pares:
                 cl = por_id.get(cid)
                 if cl is None:
                     logger.warning(
@@ -2755,7 +2783,7 @@ class AlbaranReviewRepository:
                         "VALUES ("
                         "  :v, NULL, :cid, NULL, :precio, :precio, "
                         "  'manual_contract', 'manual', NULL, :unidad, "
-                        "  'manual', TRUE, NULL, NULL, 1.0, NULL, "
+                        "  'manual', TRUE, :q, :q, 1.0, :imp, "
                         "  'calculated', NULL, :partida, 'manual', "
                         "  :descr, 'manual', 100.0, 'manual', FALSE, :now) "
                         "RETURNING id"
@@ -2765,6 +2793,12 @@ class AlbaranReviewRepository:
                         "cid": cid,
                         "precio": cl["precio_unitario"],
                         "unidad": cl["unidad_medida"],
+                        "q": float(cantidad),
+                        "imp": _importe_de_linea(
+                            precio_unitario=cl["precio_unitario"],
+                            cantidad=float(cantidad),
+                            descuento_pct=None,
+                        ),
                         "partida": cl["codigo_partida"],
                         "descr": cl["descripcion_linea"],
                         "now": now,
@@ -2773,13 +2807,7 @@ class AlbaranReviewRepository:
                 creadas.append(int(nuevo_id))
 
             if creadas:
-                session.execute(
-                    text(
-                        "UPDATE albaran_valuations SET updated_at_utc = :now "
-                        "WHERE id = :v"
-                    ),
-                    {"v": valuation_id, "now": now},
-                )
+                self._recalcular_total_in_session(session, valuation_id)
             session.commit()
             return creadas
 
@@ -3160,6 +3188,22 @@ class AlbaranReviewRepository:
             valuation=valuation,
             conciliation_by_valuation_line_id=conciliation_by_valuation_line_id or {},
         )
+        filas = (
+            list(valuation.lines_by_valuation_line_id.values()) if valuation else []
+        )
+        conc_map = conciliation_by_valuation_line_id or {}
+        importes_filas = [f.importe_calculado for f in filas if f.importe_calculado is not None]
+        importes_leidos = [m.precio_neto for m in merge_lines_payload if m.precio_neto is not None]
+        n_filas_manuales = sum(
+            1 for f in filas
+            if es_fila_manual(
+                line_kind=f.line_kind,
+                bloqueada=f.bloqueada,
+                derivada_origen=getattr(conc_map.get(f.valuation_line_id), "derived_origen", None),
+                precio_unitario_agreement=f.precio_unitario_agreement,
+                partida_action=f.partida_action,
+            )
+        )
         return DocumentDetailPayload(
             id=merge_doc.id,
             view_mode=VIEW_MODE_MERGE,
@@ -3204,6 +3248,10 @@ class AlbaranReviewRepository:
             lines=merge_lines_payload,
             display_lines=display_lines,
             lineas_con_partida=self._lineas_con_partida(valuation),
+            # (F-065 R21, R22)
+            suma_filas=round(sum(importes_filas), 2) if importes_filas else None,
+            suma_leida=round(sum(importes_leidos), 2) if importes_leidos else None,
+            n_filas_manuales=n_filas_manuales,
             provider_snapshots=provider_snapshots,
             contratos=contratos,
             contrato_lines=contrato_lines or [],
@@ -3564,6 +3612,9 @@ class AlbaranReviewRepository:
             paso_a_aprobado = bool(payload.approved) and not estaba_aprobado
             if paso_a_aprobado and not self._valorado_in_session(session, document.id):
                 raise AlbaranSinValorarError(document_id)
+            # (F-065 R20) Ni con filas sin cantidad o importe.
+            if paso_a_aprobado:
+                self._exigir_lineas_completas(session, document.id)
 
             session.commit()
 
@@ -3731,6 +3782,42 @@ class AlbaranReviewRepository:
             raise LineaBloqueadaError(document_id, int(valuation_line_id))
 
     @staticmethod
+    def _exigir_lineas_completas(session: Any, document_id: str) -> None:
+        """(F-065 R20, P12) :class:`LineasIncompletasError` si alguna fila de
+        la tabla de la ficha no tiene cantidad (Q) o importe: sv9 no la daría
+        de alta y se perdería en silencio. Las posiciones son las de la tabla
+        (``orden_filas_ficha``), que solo pinta las filas con línea de
+        contrato o derivada."""
+        merge_line_ids = [
+            int(r[0]) for r in session.execute(
+                _SQL_BLANCAS_EN_ORDEN, {"doc": document_id},
+            ).all()
+        ]
+        filas = [
+            dict(r) for r in session.execute(
+                _SQL_FILAS_PARA_APROBAR, {"doc": document_id},
+            ).mappings().all()
+        ]
+        posiciones: list[int] = []
+        posicion = 0
+        for fila in orden_filas_ficha(merge_line_ids, filas):
+            if (
+                fila["matched_contrato_line_id"] is None
+                and fila["derived_contrato_line_id"] is None
+            ):
+                continue
+            posicion += 1
+            q = (
+                fila["cantidad_convertida"]
+                if fila["cantidad_convertida"] is not None
+                else fila["cantidad_albaran"]
+            )
+            if q is None or fila["importe_calculado"] is None:
+                posiciones.append(posicion)
+        if posiciones:
+            raise LineasIncompletasError(document_id, posiciones)
+
+    @staticmethod
     def _valorado_in_session(session: Any, document_id: str) -> bool:
         """(F-053 R37, R38) «Valorado» con ``ruesma_comun.valoracion``:
         ``ok`` de sv6 o valoración manual completa. Sin tabla de
@@ -3882,6 +3969,9 @@ class AlbaranReviewRepository:
             paso_a_aprobado = bool(approved) and not bool(document.approved)
             if paso_a_aprobado and not self._valorado_in_session(session, document_id):
                 raise AlbaranSinValorarError(document_id)
+            # (F-065 R20) Ni con filas sin cantidad o importe.
+            if paso_a_aprobado:
+                self._exigir_lineas_completas(session, document_id)
             document.approved = approved
             document.reviewed_at_utc = document.reviewed_at_utc or self._utc_iso()
             document.last_modified_at_utc = self._utc_iso()
@@ -4207,8 +4297,9 @@ class AlbaranReviewRepository:
             )
             if _conc is not None:
                 _exp_imp = (
-                    line.cantidad * _conc.unitario
-                    if line.cantidad is not None and _conc.unitario is not None
+                    line.cantidad * _conc.unitario_contrato
+                    if line.cantidad is not None
+                    and _conc.unitario_contrato is not None
                     else None
                 )
                 # partida: lo imputado en la blanca vs la partida del contrato
@@ -4218,7 +4309,9 @@ class AlbaranReviewRepository:
                 # cantidad: la salmon copia la de la blanca (coincide si hay)
                 _conc.agree_cantidad = _agree_num(line.cantidad, line.cantidad)
                 # unitario: precio declarado del albaran vs precio de contrato
-                _conc.agree_unitario = _agree_num(line.precio, _conc.unitario)
+                _conc.agree_unitario = _agree_num(
+                    line.precio, _conc.unitario_contrato,
+                )
                 # importe: importe declarado vs cantidad x unitario de contrato
                 _conc.agree_importe = _agree_num(line.precio_neto, _exp_imp)
 
@@ -4295,7 +4388,7 @@ class AlbaranReviewRepository:
                 if syn.cantidad_convertida is not None
                 else syn.cantidad_albaran
             )
-            _unit = conc.unitario
+            _unit = conc.unitario_contrato
             _exp_imp = (
                 _cant * _unit
                 if _cant is not None and _unit is not None

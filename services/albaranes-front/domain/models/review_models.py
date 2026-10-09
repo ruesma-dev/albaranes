@@ -577,6 +577,50 @@ def aviso_suma_importes(
     )
 
 
+def _numero_es(valor: object) -> object:
+    """Número tecleado en la ficha: admite coma decimal (``1.234,5``); vacío
+    o «—» es ``None``; uno ilegible o no finito es un error de validación
+    (422), nunca un ``None`` silencioso. Lo que no es texto pasa tal cual a
+    la validación de Pydantic."""
+    if not isinstance(valor, str):
+        return valor
+    texto = valor.strip()
+    if texto in ("", "—"):  # vacío o «—»
+        return None
+    if "," in texto:
+        texto = texto.replace(".", "").replace(",", ".")
+    numero = float(texto)
+    if not math.isfinite(numero):
+        raise ValueError("número no finito")
+    return numero
+
+
+class LineaATraer(BaseModel):
+    """(R23) Una línea de contrato a traer, con su cantidad (obligatoria, ≠ 0)."""
+
+    contrato_line_id: int
+    cantidad: float
+
+    @field_validator("cantidad", mode="before")
+    @classmethod
+    def _cantidad(cls, valor: object) -> object:
+        return _numero_es(valor)
+
+    @field_validator("cantidad")
+    @classmethod
+    def _no_cero(cls, valor: float) -> float:
+        if valor == 0:
+            raise ValueError("la cantidad no puede ser 0")
+        return valor
+
+
+class TraerLineasBody(BaseModel):
+    """(R23) Cuerpo de «Traer líneas contrato»: al menos una, cada una con su
+    cantidad. El cuerpo viejo (``contrato_line_ids`` sin cantidades) es un 422."""
+
+    lineas: list[LineaATraer] = Field(min_length=1)
+
+
 class ConciliacionEditBody(BaseModel):
     """(R8) Cuerpo del PATCH de edición de una fila.
 
@@ -600,17 +644,7 @@ class ConciliacionEditBody(BaseModel):
     @field_validator("cantidad", "precio_unitario", "descuento", mode="before")
     @classmethod
     def _numero(cls, valor: object) -> object:
-        if not isinstance(valor, str):
-            return valor
-        texto = valor.strip()
-        if texto in ("", "—"):  # vacío o «—»
-            return None
-        if "," in texto:
-            texto = texto.replace(".", "").replace(",", ".")
-        numero = float(texto)
-        if not math.isfinite(numero):
-            raise ValueError("número no finito")
-        return numero
+        return _numero_es(valor)
 
     @field_validator(
         "codigo_partida", "descripcion", "unidad", "codigo_externo", mode="before",
@@ -813,6 +847,11 @@ class ConciliacionDisplay(BaseModel):
     #                 derived sin hermana de Sigrid)
     price_agreement: str | None = None
     precio_unitario_final: float | None = None  # el de la valoración
+
+    # (F-065 R9) ``unitario`` es el precio APLICADO (el de la valoración, el
+    # que pinta y edita la ficha); el de la línea de contrato va aquí (para
+    # el ``title`` y los avisos ✓/⚠ contra el contrato).
+    unitario_contrato: float | None = None
 
     # Avisos por campo de la fila salmon, comparando lo DECLARADO en la
     # linea blanca (lo leido del albaran) contra la referencia de contrato:
@@ -1084,11 +1123,23 @@ class DocumentDetailPayload(BaseModel):
     busqueda_contratos: BusquedaContratosVista | None = None
     # F-053 — alta en Sigrid (R29-R30) y producto de cada línea (R40). Lo
     # rellena el servicio en la vista merge SOLO con DESDE puesta (R3).
+    # F-065 R21: suma de importes de las filas y de lo leído en las blancas
+    # (None si no hay ninguno); R22: filas tocadas a mano (revalorar las
+    # descarta). Los rellena el repositorio en el detalle del merge.
+    suma_filas: float | None = None
+    suma_leida: float | None = None
+    n_filas_manuales: int = 0
     alta_sigrid_activa: bool = False
     alta_sigrid: AltaSigridVista | None = None
     alta_puede_solicitar: bool = False
     productos_sigrid: dict[int, ProductoLinea] = Field(default_factory=dict)
     productos_admitidos: list[ProductoOpcion] = Field(default_factory=list)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def aviso_suma(self) -> str | None:
+        """(F-065 R21) Confirmación antes de aprobar si las sumas no cuadran."""
+        return aviso_suma_importes(self.suma_filas, self.suma_leida)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

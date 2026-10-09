@@ -253,7 +253,7 @@ def test_f065_r4_el_cerrojo_comprueba_aprobado_en_todos_los_metodos_que_escriben
         "update_document_y_transicion", "undo_last", "update_line_conciliacion",
         "set_line_conciliacion", "remove_line_valuation", "add_conciliacion_for_merge_line",
         "add_standalone_valuation_line", "add_valuation_lines_from_contrato",
-        "asignar_almacen", "guardar_producto_sigrid", "bloquear_linea", "desbloquear_linea",
+        "asignar_almacen", "guardar_producto_sigrid", "_marcar_bloqueada",
     ):
         fuente = inspect.getsource(getattr(AlbaranReviewRepository, metodo))
         assert "self._exigir_editable(session, document_id" in fuente, metodo

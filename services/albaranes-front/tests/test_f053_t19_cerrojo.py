@@ -187,7 +187,7 @@ OPERACIONES = {
         document_id=DOC, merge_line_id=703, mode="nueva"),
     "linea_suelta": lambda r: r.add_standalone_valuation_line(document_id=DOC),
     "lineas_de_contrato": lambda r: r.add_valuation_lines_from_contrato(
-        document_id=DOC, contrato_line_ids=[501]),
+        document_id=DOC, lineas=[(501, 2.0)]),
     "almacen": lambda r: r.asignar_almacen(document_id=DOC, valuation_line_ids=[12]),
     "almacen_todas": lambda r: r.asignar_almacen(document_id=DOC, valuation_line_ids=None),
 }

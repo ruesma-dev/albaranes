@@ -67,6 +67,15 @@ class ResultadoGuardado:
 
 
 @dataclass(frozen=True)
+class ResultadoAlmacenTodas:
+    """«Almacén a todas las líneas» (F-051 R16): las que pasaron a almacén y
+    las que se saltó por estar guardadas (F-065 R14)."""
+
+    tocadas: int
+    saltadas: int
+
+
+@dataclass(frozen=True)
 class ResultadoBorradoMultiple:
     """Borrado en bloque (F-053 R27): movidos a la papelera y saltados por
     tener un alta en Sigrid bloqueante."""
@@ -498,6 +507,22 @@ class ReviewService:
         )
         return True
 
+    def asignar_almacen_todas_con_saltos(
+        self, *, document_id: str,
+    ) -> ResultadoAlmacenTodas:
+        """(F-065 R14) Como :meth:`asignar_almacen_todas`, diciendo cuántas
+        filas se saltó por estar guardadas (bloqueadas)."""
+        saltadas = sum(
+            1 for snap in self._repository.snapshot_lineas_valoracion(
+                document_id=document_id,
+            )
+            if snap["values"].get("bloqueada")
+        )
+        return ResultadoAlmacenTodas(
+            tocadas=self.asignar_almacen_todas(document_id=document_id),
+            saltadas=saltadas,
+        )
+
     def asignar_almacen_todas(self, *, document_id: str) -> int:
         """(F-051 R16, R18) «Almacén a todas las líneas»: todas las líneas
         de la valoración del documento, también las que tenían partida,
@@ -709,14 +734,15 @@ class ReviewService:
         self,
         *,
         document_id: str,
-        contrato_line_ids: list[int],
+        lineas: list[tuple[int, float]],
     ) -> int:
-        """Trae líneas del contrato a la tabla salmón (jul 2026): crea
-        una línea salmón ya casada por cada línea de contrato elegida.
-        Devuelve cuántas se crearon."""
+        """Trae líneas del contrato a la tabla (F-065 R23): una fila Contrato
+        por cada ``(línea de contrato, cantidad)``, ya válida para sv9; con
+        su entrada de deshacer. Devuelve cuántas se crearon."""
+        snap_val = self._undo_snap_valuation(document_id)
         creadas = self._repository.add_valuation_lines_from_contrato(
             document_id=document_id,
-            contrato_line_ids=contrato_line_ids,
+            lineas=lineas,
         )
         if creadas:
             self._repository.record_undo(
@@ -726,6 +752,7 @@ class ReviewService:
                     f"Traer {len(creadas)} línea(s) de contrato "
                     f"({self._repository.doc_label(document_id=document_id)})"
                 ),
+                restore=[snap_val],
                 delete_created=[
                     {"table": "albaran_line_valuations", "id": i}
                     for i in creadas
