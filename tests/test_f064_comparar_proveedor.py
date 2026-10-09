@@ -767,3 +767,59 @@ def test_f064_r14_sv2_va_el_primero_en_el_path(monkeypatch):
     sv2_proveedor._con_sv2_en_path()
 
     assert sv2_proveedor.sys.path == [str(sv2_proveedor.RAIZ_SV2), "otro", "y-otro"]
+
+
+def test_f064_demostracion_el_mutante_28_es_equivalente():
+    """Demostración EJECUTABLE de la equivalencia del superviviente #28 (RM5), diferencial.
+
+    `ejecutar` decide si alguna ejecución salió con
+    `"error" not in (resultado.get("ia1") or {"error": True})`. El mutante
+    cambia el centinela a `{"error": False}`. Se toma la expresión del
+    `comparar_proveedor.py` real, se fabrica «la otra forma» sustituyendo el
+    texto (el mutante si el fichero trae el original y al revés, para que una
+    campaña que lo inyecte en el propio fichero lo siga viendo equivalente) y
+    se comparan las dos sobre un dominio amplio de `resultado`: cero
+    discrepancias. El control (centinela sin la clave `error`) NO es
+    equivalente y tiene que discrepar: la comparación no es ciega. Si la línea
+    cambia y no queda ninguna de las dos formas, el test avisa.
+    """
+    import itertools
+    from pathlib import Path
+
+    fuente = Path(cp.__file__).read_text(encoding="utf-8")
+    original = '"error" not in (resultado.get("ia1") or {"error": True})'
+    mutado = '"error" not in (resultado.get("ia1") or {"error": False})'
+    control = '"error" not in (resultado.get("ia1") or {"ok": True})'
+    forma = {fuente.count(original), fuente.count(mutado)}
+    assert forma == {0, 1}, "la línea del #28 cambió: rehacer la justificación"
+    presente, otra = (original, mutado) if original in fuente else (mutado, original)
+
+    def _cargar(expresion: str):
+        funcion = eval(f"lambda resultado: {expresion}")  # noqa: S307 — fuente propia
+
+        def salida(resultado):
+            # El resultado O la excepción: un valor no iterable rompe igual a las dos.
+            try:
+                return funcion(resultado)
+            except Exception as error:  # noqa: BLE001 - se compara también el fallo
+                return type(error).__name__
+
+        return salida
+
+    real, variante, ciego = _cargar(presente), _cargar(otra), _cargar(control)
+
+    valores_ia1 = [
+        None, {}, "", 0, [], False,
+        {"error": True}, {"error": False}, {"error": None}, {"error": {"fase": "IA1", "tipo": "X", "motivo": "m"}},
+        {"nombre": None, "cif": None}, {"nombre": "N", "cif": CIF_EMISOR}, {"cif": CIF_CLIENTE, "error": 0},
+        {"Error": True}, {"errores": True}, "error", "sin fallo", ["error"], 1, True,
+    ]
+    resultados = [{}]
+    resultados += [{"ia1": valor} for valor in valores_ia1]
+    resultados += [{"ia1": valor, "ia2": otro} for valor, otro in itertools.product(valores_ia1, [None, {"error": True}])]
+    resultados += [{"ia2": {"cif": CIF_EMISOR}}, {"error": True}]
+
+    discrepancias = [r for r in resultados if real(r) != variante(r)]
+    assert len(resultados) == 63
+    assert discrepancias == []
+    assert any(real(r) != ciego(r) for r in resultados), "el control tenía que discrepar"

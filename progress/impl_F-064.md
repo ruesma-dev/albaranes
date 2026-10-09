@@ -154,7 +154,7 @@ E   ImportError: cannot import name 'comparar_proveedor' from 'evals' (...\albar
   `git show` vacío, posición de sv2 en `sys.path`) y se cierran con tests nuevos en `tests/test_f064_comparar_
   proveedor.py`; **verificado reinyectando cada uno a mano** y corriendo ese fichero (bytes restaurados, `git diff`
   vacío): 29 MUERTO. El **#28 es equivalente** (`"error" not in (x or {"error": True})` frente a `{"error": False}`:
-  se comprueba la clave, no el valor) — **pide la aceptación del humano** (nivel `critico`: «justificación escrita
+  se comprueba la clave, no el valor; demostración ejecutable RM5 en `test_f064_demostracion_el_mutante_28_es_equivalente`) — **pide la aceptación del humano** (nivel `critico`: «justificación escrita
   aceptada por el humano»). Una primera campaña en serie se paró a mano (≈ 2 h estimadas) tras 2 supervivientes
   (`_categoria`, cerrados con `test_f064_r14_clasificar_…`); `--restaurar` y `git diff` vacío antes de relanzar.
 
