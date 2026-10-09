@@ -5,13 +5,13 @@
 
 Resumen: **64 features**, 44 abiertas, 20 terminadas.
 
-En curso: **F-053**.
+Bloqueadas: **F-053**.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-053 | Alta en Sigrid de los albaranes aprobados | 1 | en curso | critico | `feature/F-053-alta-sigrid` |
+| F-053 | Alta en Sigrid de los albaranes aprobados | 1 | bloqueada | critico | `feature/F-053-alta-sigrid` |
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
 | F-065 | Las líneas editadas en sv4 se respetan al guardar/aprobar, cambiar la partida no rompe el vínculo con el contrato, y una línea se puede repartir entre varias partidas | 1 | spec lista | critico | `feature/F-065-lineas-editadas-y-reparto` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
@@ -85,7 +85,7 @@ En curso: **F-053**.
 
 ### F-053 · Alta en Sigrid de los albaranes aprobados
 
-estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-053-alta-sigrid`
+estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-053-alta-sigrid`
 
 PETICION DEL HUMANO (2026-09-30): «Alta en Sigrid de los albaranes aprobados». Aprobar ES registrar: los dos botones de sv4 que aprueban («Guardar y aprobar» de la ficha y «Aprobar» del listado) disparan el alta del albaran en Sigrid.
 
