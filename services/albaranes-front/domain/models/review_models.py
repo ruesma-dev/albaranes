@@ -526,19 +526,22 @@ def orden_filas_ficha(
 ) -> list[dict[str, Any]]:
     """(R20) Las filas de valoración en el orden en que las pinta la ficha.
 
-    Replica ``_load_valuation_in_session`` (sintéticas al final, por
-    ``merge_line_id`` y ``id``) y ``_build_display_lines`` (cada blanca, en el
-    orden de ``merge_line_ids``, con sus sintéticas detrás; después las
-    huérfanas, agrupadas por padre en orden de aparición). Cada fila lleva
-    ``id``, ``merge_line_id``, ``parent_merge_line_id`` y ``line_kind``.
+    Replica ``_load_valuation_in_session`` (sintéticas al final, el resto por
+    ``id``) y ``_build_display_lines`` (cada blanca, en el orden de
+    ``merge_line_ids``, con sus sintéticas detrás; después las huérfanas,
+    agrupadas por padre en orden de aparición). Cada fila lleva ``id``,
+    ``merge_line_id``, ``parent_merge_line_id`` y ``line_kind``.
+
+    El cargador ordena además por ``merge_line_id``; aquí no hace falta: las
+    blancas se recorren en el orden de ``merge_line_ids`` y las sintéticas y
+    sueltas tienen ``merge_line_id`` nulo (sv6 nunca lo pone en una
+    sintética), así que el ``id`` decide lo mismo.
     """
 
     def _sintetica(fila: dict[str, Any]) -> bool:
         return fila.get("line_kind") == "synthetic_modifier"
 
-    ordenadas = sorted(filas, key=lambda f: (
-        _sintetica(f), f.get("merge_line_id") is None, f.get("merge_line_id") or 0, f["id"],
-    ))
+    ordenadas = sorted(filas, key=lambda f: (_sintetica(f), f["id"]))
     base: dict[int, dict[str, Any]] = {}
     por_padre: dict[int | None, list[dict[str, Any]]] = {}
     for fila in ordenadas:

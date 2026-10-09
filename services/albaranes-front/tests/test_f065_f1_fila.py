@@ -439,3 +439,114 @@ def test_f065_r8_una_fila_sin_linea_de_contrato_ni_derivada_no_se_edita():
     assert _editar(motor, 29, cantidad=3.0) is False
 
     assert fila(motor, 29) == antes
+
+
+# --- mutación (campaña 1): lo igual no es un cambio ------------------ #
+@pytest.mark.parametrize(("a", "b", "igual"), [
+    (None, None, True), (1.0, None, False), (None, 1.0, False),
+    (1e-9, 0.0, False), (5e-10, 0.0, True), ("x", 1.0, False), (2, 2.0, True),
+])
+def test_f065_r8_mismo_numero(a, b, igual):
+    from infrastructure.database.review_repository import _mismo_numero
+
+    assert _mismo_numero(a, b) is igual
+
+
+def test_f065_r8_la_misma_descripcion_no_es_un_cambio():
+    """La de la línea de contrato que pinta la ficha, reenviada tal cual."""
+    motor = construir()
+
+    _editar(motor, 11, descripcion=" PUERTA CORTAFUEGOS EI2-60 ")
+
+    f = fila(motor, 11)
+    assert f["review_required"] in (1, True)
+    assert f["descripcion_linea"] is None
+
+
+def test_f065_r8_el_mismo_codigo_externo_no_es_un_cambio():
+    motor = construir()
+    ejecutar(motor, "UPDATE albaran_line_valuations SET codigo_externo = 'EXT-1' WHERE id = 11")
+
+    _editar(motor, 11, codigo_externo="EXT-1")
+
+    assert fila(motor, 11)["review_required"] in (1, True)
+
+
+def test_f065_r8_editar_otra_cosa_en_almacen_no_toca_la_marca_de_almacen():
+    """F-051 R19: en almacén, guardar otro campo no reescribe la marca."""
+    motor = construir()
+    ejecutar(motor, "UPDATE albaran_line_valuations SET codigo_partida_final = NULL, "
+             "partida_action = 'almacen_sin_partida' WHERE id = 11")
+
+    _editar(motor, 11, cantidad=6.0)
+
+    f = fila(motor, 11)
+    assert f["partida_action"] == "almacen_sin_partida"
+    assert f["codigo_partida_final"] is None
+
+
+def test_f065_r8_cambiar_el_precio_o_la_unidad_de_una_fila_contrato_la_hace_nueva():
+    """Regla de F-051 que sigue vigente en la fase 1 (la fase 2 la revisa):
+    precio o unidad distintos convierten la fila Contrato en Nueva."""
+    for campos in ({"precio_unitario": 120.0}, {"unidad": "M2"}):
+        motor = construir()
+
+        _editar(motor, 11, **campos)
+
+        f = fila(motor, 11)
+        assert f["matched_contrato_line_id"] is None, campos
+        assert f["derived_contrato_line_id"] is not None, campos
+
+
+def test_f065_r8_la_descripcion_de_una_fila_contrato_se_guarda_aparte():
+    """Distinta de la de su línea de contrato: override; igual: sin override."""
+    motor = construir()
+
+    _editar(motor, 11, descripcion="PUERTA EI2-60 IZQUIERDA")
+    assert fila(motor, 11)["descripcion_linea"] == "PUERTA EI2-60 IZQUIERDA"
+
+    _editar(motor, 11, descripcion="PUERTA CORTAFUEGOS EI2-60")
+    f = fila(motor, 11)
+    assert f["descripcion_linea"] is None
+    assert f["matched_contrato_line_id"] == 501
+
+
+# --- R9: los avisos ✓/⚠ siguen comparando con el precio del contrato -- #
+def _blanca(**campos):
+    from domain.models.review_models import MergeLinePayload
+
+    return MergeLinePayload(**{"id": 701, "cantidad": 8.0, "precio": 115.0,
+                               "precio_neto": 920.0, **campos})
+
+
+def _avisos(blanca, unitario_contrato):
+    from domain.models.review_models import (
+        ConciliacionDisplay,
+        LineValuationPayload,
+        ValuationPayload,
+    )
+    from infrastructure.database.review_repository import AlbaranReviewRepository
+
+    linea_v = LineValuationPayload(valuation_line_id=11, merge_line_id=701,
+                                   precio_unitario_final=120.0)
+    valoracion = ValuationPayload(valuation_id="v", status="ok",
+                                  lines_by_merge_line_id={701: linea_v})
+    conc = ConciliacionDisplay(kind="assigned", unitario=120.0,
+                               unitario_contrato=unitario_contrato)
+    (fila_display,) = AlbaranReviewRepository._build_display_lines(
+        merge_lines=[blanca], valuation=valoracion,
+        conciliation_by_valuation_line_id={11: conc},
+    )
+    return fila_display.concilia.agree_unitario, fila_display.concilia.agree_importe
+
+
+@pytest.mark.parametrize(("blanca", "contrato", "esperado"), [
+    ({}, 115.0, (True, True)),
+    ({"precio": 120.0, "precio_neto": 960.0}, 115.0, (False, False)),
+    ({"cantidad": None}, 115.0, (True, None)),
+    ({}, None, (None, None)),
+], ids=["cuadra", "no_cuadra", "sin_cantidad", "sin_precio_de_contrato"])
+def test_f065_r9_los_avisos_comparan_con_el_precio_del_contrato(blanca, contrato, esperado):
+    """La ficha pinta el precio aplicado (120), pero ✓/⚠ siguen contra el del
+    contrato (115): lo declarado (8 × 115 = 920) cuadra con el contrato."""
+    assert _avisos(_blanca(**blanca), contrato) == esperado

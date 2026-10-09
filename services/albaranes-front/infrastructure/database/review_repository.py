@@ -154,12 +154,11 @@ def _mismo_numero(a: Any, b: Any) -> bool:
     cambia: tolerancia de coma flotante, no de dinero (``numeros_iguales``
     admite 5 milésimas y se tragaría un precio de 4 decimales o una cantidad
     de 3). Un valor ilegible no es igual a nada."""
-    if a is None or b is None:
-        return a is None and b is None
     try:
         return abs(float(a) - float(b)) < 1e-9
     except (TypeError, ValueError):
-        return False
+        # ``float(None)`` también cae aquí: dos vacíos son el mismo «número».
+        return a is None and b is None
 
 
 #: (F-053) Tabla del alta en Sigrid: la crea sv3 (DDL) y la escribe SOLO sv9
@@ -3249,8 +3248,9 @@ class AlbaranReviewRepository:
             display_lines=display_lines,
             lineas_con_partida=self._lineas_con_partida(valuation),
             # (F-065 R21, R22)
-            suma_filas=round(sum(importes_filas), 2) if importes_filas else None,
-            suma_leida=round(sum(importes_leidos), 2) if importes_leidos else None,
+            # (sin redondear: el aviso redondea la diferencia y pinta 2 decimales)
+            suma_filas=sum(importes_filas) if importes_filas else None,
+            suma_leida=sum(importes_leidos) if importes_leidos else None,
             n_filas_manuales=n_filas_manuales,
             provider_snapshots=provider_snapshots,
             contratos=contratos,

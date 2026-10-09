@@ -184,6 +184,9 @@ def test_f036_r2_una_conversion_reproducible_si_se_rehace():
     assert linea["cantidad_albaran"] == pytest.approx(3.0)
     assert linea["cantidad_convertida"] == pytest.approx(3000.0)
     assert linea["importe_calculado"] == pytest.approx(150.0)
+    # (antes F-036 R3) una conversión reproducible no va a revisión ni
+    # recibe razones.
+    assert _traza(motor) == (False, [])
 
 
 def test_f036_r2_sin_convertida_guardada_manda_la_cantidad_editada():

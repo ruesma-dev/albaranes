@@ -167,6 +167,7 @@ def test_f065_r20_el_portal_responde_409_al_guardar_y_aprobar(monkeypatch):
     (1890.0, 2120.0, True),
     (2120.0, 2120.0, False),
     (2120.004, 2120.0, False),
+    (2120.006, 2120.0, True),
     (2120.01, 2120.0, True),
     (2119.99, 2120.0, True),
     (2120.0, None, False),
@@ -370,3 +371,15 @@ def test_f065_r23_el_servicio_deja_deshacer_lo_traido():
     assert [d["table"] for d in entrada["delete_created"]] == ["albaran_line_valuations"]
     assert [r["table"] for r in entrada["restore"]] == ["albaran_valuations"]
     assert entrada["restore"][0]["values"]["total_valorado"] == 2120.0
+
+
+def test_f065_r22_sin_valoracion_no_hay_filas_manuales():
+    from domain.models.review_models import DocumentDetailPayload
+
+    detalle = DocumentDetailPayload(
+        id="x", source_filename="x.pdf", provider_origin="merge", model_name="m",
+        created_at_utc="2026-10-09",
+    )
+
+    assert detalle.n_filas_manuales == 0
+    assert detalle.suma_filas is None and detalle.suma_leida is None

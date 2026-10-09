@@ -296,3 +296,54 @@ def test_f065_r17_plantilla_aprobado_no_ofrece_desbloquear(
     html = render_detalle(doc.model_copy(update={"approved": True}))
 
     assert "js-desbloquear" not in html
+
+
+def test_f065_r14_el_resultado_de_almacen_a_todas_no_se_modifica():
+    """Inmutable, como ``ResultadoBorradoMultiple`` (mutación, campaña 1)."""
+    import dataclasses
+
+    from application.services.review_service import ResultadoAlmacenTodas
+
+    resultado = ResultadoAlmacenTodas(tocadas=1, saltadas=2)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        resultado.saltadas = 0  # type: ignore[misc]
+
+
+def test_f065_r13_el_servicio_sin_bloquear_no_bloquea():
+    """Por defecto, editar una fila no la bloquea: solo «Guardar» (R13)."""
+    from application.services.review_service import ReviewService
+
+    motor = construir()
+
+    assert ReviewService(repositorio(motor), "ana").update_line_conciliacion(
+        document_id=DOC, valuation_line_id=11, campos={"cantidad": 6.0})
+
+    assert fila(motor, 11)["bloqueada"] in (0, False)
+    assert fila(motor, 11)["cantidad_convertida"] == 6.0
+
+
+@pytest.mark.parametrize("ruta, bloquear", [
+    ("conciliacion/campos", False), ("conciliacion/campos?bloquear=1", True),
+])
+def test_f065_r13_el_patch_solo_bloquea_si_se_pide(monkeypatch, ruta, bloquear):
+    class _Servicio:
+        def __init__(self):
+            self.llamadas = []
+
+        def initialize(self):
+            return True
+
+        def update_line_conciliacion(self, **kwargs):
+            self.llamadas.append(kwargs)
+            return True
+
+    from test_f065_f1_cabecera import _cliente
+
+    servicio = _Servicio()
+
+    respuesta = _cliente(monkeypatch, servicio).patch(
+        f"/api/documents/{DOC}/lines/11/{ruta}", json={"cantidad": "6"})
+
+    assert respuesta.status_code == 200
+    assert servicio.llamadas == [{"document_id": DOC, "valuation_line_id": 11,
+                                  "campos": {"cantidad": 6.0}, "bloquear": bloquear}]
