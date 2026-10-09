@@ -411,6 +411,7 @@ def test_f064_r16_corrida_con_dobles_escribe_detalle_y_resumen(tmp_path):
     assert "C1 · OK" in texto and "C2 · OK" in texto and "C3 · OK" in texto
     detalle = (salida / "resumen.md").read_text(encoding="utf-8")
     assert CIF_EMISOR in detalle and NOMBRE in detalle
+    assert detalle.endswith("## Errores\n\n(ninguno)\n")
 
 
 def test_f064_r16_resumen_versionable_sin_cif_ni_nombres(tmp_path):
@@ -694,11 +695,16 @@ def test_f064_r16_detalle_con_los_valores_de_cada_ejecucion(tmp_path):
 
     detalle = (salida / "resumen.md").read_text(encoding="utf-8")
     assert (
+        "| caso | esperado | base r1 IA1 | base r1 IA2 | rama r1 IA1 | rama r1 IA2 "
+        "| base IA1 | base IA2 | rama IA1 | rama IA2 |"
+    ) in detalle
+    assert (
         f"| C-1 | `{CIF_EMISOR}` | `{CIF_CLIENTE}` | null | ERROR (ValueError) | ERROR (ValueError) "
         "| cliente | nulo | error | error |"
     ) in detalle
     nombres = detalle[detalle.index("## proveedor_nombre leído"): detalle.index("## Errores")]
     assert nombres.count(NOMBRE) == 2 and "rama" not in nombres
+    assert f"- C-1 · base r1 IA1: '{NOMBRE}'" in nombres
     errores = detalle[detalle.index("## Errores"):]
     assert "C-1 · rama r1 IA1: ValueError" in errores and "base" not in errores
 
@@ -713,3 +719,40 @@ def test_f064_r15_git_show_vacio_tambien_para(tmp_path, monkeypatch):
 
     with pytest.raises(sv2_proveedor.BaseNoDisponible):
         sv2_proveedor.ficheros_de_base(tmp_path, base="abc1234")
+
+
+def test_f064_r16_un_solo_cliente_en_la_base_ya_reproduce_el_incidente():
+    clasificacion = _clasif({"A": (["cliente", "emisor", "emisor"], E3)}, {"A": (E3, E3)})
+
+    assert cp.veredicto(clasificacion, ["base", "rama"])["reproduce_incidente"] is True
+
+
+def test_f064_r16_cabecera_con_y_sin_commits():
+    corrida = cp.Corrida(
+        casos=[], variantes=["base", "rama"], repeticiones=1,
+        proveedores={"IA1": "gemini", "IA2": "openai"}, modelos={"IA1": "m1", "IA2": "m2"},
+    )
+
+    con = cp._cabecera(corrida, {"rama": "aaaaaaa", "base": "bbbbbbb"}, "dev", "F")[0]
+    sin = cp._cabecera(corrida, {}, "dev", "F")[0]
+
+    assert con == "- Fecha: F · rama `aaaaaaa` · base `dev` (`bbbbbbb`)"
+    assert sin == "- Fecha: F · rama `?` · base `dev` (`?`)"
+
+
+def test_f064_r16_escribir_crea_directorios_anidados_y_reescribe(tmp_path):
+    corrida = cp.Corrida(
+        casos=["A"], variantes=["rama"], repeticiones=1,
+        proveedores={"IA1": "gemini", "IA2": "openai"}, modelos={"IA1": "m", "IA2": "m"},
+        resultados={"rama": [{"A": {"ia1": {"nombre": "Ñ", "cif": CIF_EMISOR}, "ia2": {"nombre": "Ñ", "cif": None}}}]},
+    )
+    salida = tmp_path / "a" / "b" / "salida"
+    resumen = tmp_path / "c" / "d" / "resumen.md"
+
+    for _vez in range(2):
+        cp.escribir(corrida, {"A": CIF_EMISOR}, salida, resumen, {}, "dev", "F")
+
+    texto = (salida / "rama_r1.json").read_text(encoding="utf-8")
+    assert texto.startswith('{\n  "variante": "rama",\n  "repeticion": 1,')
+    assert '"nombre": "Ñ"' in texto
+    assert resumen.is_file()
