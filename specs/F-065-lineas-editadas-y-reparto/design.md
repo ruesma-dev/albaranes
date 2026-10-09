@@ -1,164 +1,159 @@
-# F-065 · diseño
+# F-065 · diseño (v2)
 
 Rutas relativas a `services/albaranes-front/` (sv4) salvo indicación. Diagnóstico con fichero:línea en
-`progress/explore_F-065.md` (rama `dev` b380b43). Se diseña con las opciones recomendadas de §7.
+`progress/explore_F-065.md` y `progress/explore_front_detalle.md` (F1–F25). Decisiones: §7.
 
 ## 1. Encaje y límite de servicio
 
-- Todo es **revisión humana de la valoración**: responsabilidad de sv4, que ya escribe `albaran_line_valuations`
-  y `contrato_lines_derived` en cada edición de fila salmón (ARCHITECTURE, «Acceso a datos»). No hace falta
-  servicio nuevo ni cambiar el contrato con sigrid-api: F-009 v8 ya admite vinculada con partida distinta de la
-  del `ctrpro` (aviso informativo `partida_distinta_del_contrato`) y varias líneas al mismo `ctrpro` sin sumarse
-  (`sigrid-api/specs/F-009-alta-albaran-compra/contrato_albaranes.md`, §2.2 tabla de casos, líneas 214 y 219).
-- **sv9 no cambia**: `SQL_LINEAS` ya lee todas las filas de la valoración, también las de `merge_line_id` nulo
-  (`sql_alta_repository.py:93-106`); `es_linea_vinculada` (comun) no mira `line_kind`; una vinculada usa
-  `cantidad_convertida` (`validador_alta.py:116-117`). Solo se añaden tests de contrato en sv9 (R9, R30).
-- **comun no cambia**: el importe sale de `ruesma_comun.importes` como siempre (regla 13).
-- **Sin DDL** (modelo M1, P4): `line_kind` (VARCHAR 32) y `parent_merge_line_id` ya existen (DDL de sv6,
-  `schema_contribution.py:231-235`); `partida_action` es VARCHAR(32) sin CHECK. La `UNIQUE (valuation_id,
-  merge_line_id)` no estorba porque las partes llevan `merge_line_id` nulo, como las líneas `manual` de hoy.
-- sv5 no lee `albaran_line_valuations` de la BBDD (solo la devuelve como respuesta): nada que listar.
+- Todo es **revisión humana de la valoración**: sv4 ya escribe `albaran_line_valuations` y
+  `contrato_lines_derived` en cada edición. Sin servicio nuevo y sin cambio de contrato con sigrid-api: una Nueva
+  va sin vincular con producto genérico (F-053), una Contrato vinculada por `ctrpro_ide`, y N filas al mismo
+  `ctrpro` son N líneas (F-009 v8, `contrato_albaranes.md` §2.2).
+- **sv6** solo pone la columna `bloqueada` (dueño del esquema de valoración, como `producto_sigrid` en F-053). El
+  replace de sv6 no la escribe: vale `false` tras revalorar (F-058).
+- **sv9 no cambia**: `SQL_LINEAS` lee todas las filas, también las de `merge_line_id` nulo; no lee `bloqueada`
+  (R16). Solo tests de contrato (R10, R36). **comun no cambia** (importes, `es_linea_vinculada`, `esta_valorado`).
+- **Partidas de la obra (R27)**: se reutiliza lo que sv4 ya tiene, `SigridLookupClient.fetch_partidas_por_obra` y
+  `GET /api/sigrid/partidas` (hojas de `obrparpar`, hoy sin uso: F19). **No se mueve nada a comun**: lo hace F-049
+  (rama sin fusionar: T1 lleva la consulta a `ruesma_comun.sigrid.partidas` con `con_obr.emp = 1`, T16–T17 hacen
+  que sv4 delegue y lea `NO_TOLERA`). F-065 solo consume el endpoint y trata `ok = false` como «Sigrid no
+  responde»; al fusionar F-049 el endpoint conserva su forma (`items[]` con `codigo`, `descripcion`,
+  `descripcion_agregada`), así que no hay conflicto de lógica, solo de fichero en `sigrid_lookup_client.py` si
+  alguna de las dos lo tocara (F-065 no lo toca).
+- sv5 no lee `albaran_line_valuations` de BBDD: nada que listar. Lectores de `bloqueada`: solo sv4.
 
-## 2. Ficheros a modificar
+## 2. Fases y despliegue
+
+1. **Fase 1** (R1–R23): sv6 (DDL) → sv4. Se despliega sola y antes de pasar F-053 a real (`ALTA_SIGRID_COMMIT`)
+   y de poner `ALTA_SIGRID_DESDE`. Sin ella, lo que se aprueba no es lo que el administrativo dejó.
+2. **Fase 2** (R24–R28): solo sv4. 3. **Fase 3** (R29–R36): solo sv4 + test de sv9. R37 en cada fase.
+Una revisión del reviewer por fase, como F-053.
+
+## 3. Ficheros a modificar
 
 | Fichero | Qué cambia | R |
 |---|---|---|
-| `infrastructure/database/review_repository.py` | `update_document_y_transicion`: captura `{id: (cantidad, dto saneado)}` del merge ANTES del update in-place y pasa al recálculo solo las blancas que cambiaron; devuelve los ids de filas salmón recalculadas | R1–R4, R8 |
-| ídem | `_cantidades_del_payload` / `_descuentos_del_payload` → `_cambios_de_blancas(payload, previas)` (un solo sitio; el `None` de descuento sigue significando «borrado» cuando antes había uno) | R1, R10 |
-| ídem | `update_line_conciliacion`: regla de cantidades (§5.1), sin `cantidad_convertida = NULL` fijo; no-op (R7); partida sin cambio de identidad en SIGRID (`partida_cambia_identidad` solo para NUEVA) y `partida_action = 'partida_elegida'` | R5–R7, R13, R14 |
-| ídem | `dividir_linea(...)` nuevo (§5.2); `_build_display_lines` / `_synthetic_to_display`: las `reparto` cuelgan de su original con «Parte k de N» y `line_kind = 'reparto'` | R18–R29 |
-| ídem | `contar_lineas_a_mano(document_id)` (filas `manual` + `reparto`) para R31; aviso de familia (R29) en el detalle | R29, R31 |
-| `application/services/review_service.py` | `_guardar_y_aprobar`: snapshot de las filas salmón ANTES y `restore` de las recalculadas (R8); `dividir_linea` con su entrada de deshacer (`restore` original + cabecera, `delete_created` partes y derivadas) | R8, R27 |
-| `interface_adapters/web/app.py` | `POST /api/documents/{id}/lines/{vid}/dividir` (`DivisionBody` a nivel de módulo, como `ConciliacionEditBody`), 404/409/422 | R18–R21 |
-| `domain/models/review_models.py` | `ParteDivision`, `DivisionBody`; `DisplayLine` con `parte_k`, `parte_n`, `aviso_reparto`; constantes `LINE_KIND_REPARTO`, `ACCION_PARTIDA_ELEGIDA`; función pura `cantidades_tras_editar(...)` (§5.1) y `repartir(...)` (§5.2) | R5, R22–R26 |
-| `static/app.js` | «Guardar todas» solo filas sucias + confirm de NUEVA (R11, R17); guarda de filas sucias en Guardar/aprobar (R12); `cambiaIdentidad` ya no cuenta la partida en SIGRID (R13); combo de partida con partidas, no líneas (`_partidaItems`, `pick` → PATCH campos) (R15); confirm de revalorar (R31); diálogo «Dividir» (R28) | R11–R17, R28, R31 |
-| `templates/document_detail.html` | botón «Dividir», badge «Parte k de N», aviso de familia, `title` del «Guardar» de fila y ayuda del combo de concepto | R14, R16, R28, R29 |
-| `services/albaranes-alta-sigrid/tests/test_f065_partes.py` (nuevo, solo test) | fixtures de `DatosAlta` con partes vinculadas y una SIGRID editada | R9, R30 |
-| `docs/ARCHITECTURE.md` | regla 20 | R32 |
-| `../azure-apps/albaranes.md` (otro repo, commit propio) | `line_kind`, `partida_action` | R32 |
+| `domain/models/review_models.py` | `MergeDocumentUpdatePayload`: `lines` y `valuation_line_updates` se aceptan y se ignoran (compatibilidad con un `app.js` en caché); `ConciliacionEditBody` → modelo de dominio con `model_fields_set`; función pura `cantidades_tras_editar` (§5.1); `es_fila_manual` (definición de requirements); `DisplayLine.bloqueada`; fase 3: `ParteDivision`, `DivisionBody`, `repartir` | R1, R6–R8, R13, R22, R29–R33 |
+| `infrastructure/database/review_repository.py` | `update_document_y_transicion`: sin bloque de líneas, sin `_apply_valuation_line_updates_in_session`, sin recálculo; nunca `approved = False`; R20 antes de aprobar. Retira `_recalc_valuation_importes`, `_cantidades_del_payload`, `_descuentos_del_payload` (y lo que solo usan ellos) | R1–R3, R11, R20 |
+| ídem | `_exigir_editable(session, document_id, valuation_line_id=None)`: `_exigir_desbloqueado` (F-053) + aprobado (R4, `AlbaranAprobadoError`) + fila bloqueada (R14, `LineaBloqueadaError`). Sustituye a `_exigir_desbloqueado` en todos los métodos de escritura salvo `set_approved(False)` (desaprobar) | R4, R14 |
+| ídem | `update_line_conciliacion(..., campos: dict, bloquear: bool)`: solo los campos presentes; cantidades por §5.1; no-op; `bloqueada = TRUE` si `bloquear`. `bloquear_linea`/`desbloquear_linea` | R6–R10, R13, R15 |
+| ídem | `asignar_almacen` (todas) y el borrado masivo: excluyen `bloqueada` y devuelven cuántas saltaron; `set_approved(True)` con R20; `contar_filas_manuales`; `lineas_sin_cantidad_o_importe`; suma leída de las blancas (`precio_neto`) en el detalle | R14, R20–R22 |
+| ídem | `add_valuation_lines_from_contrato(..., lineas: list[(contrato_line_id, cantidad)])`: cc = ca = Q, factor 1, importe con `_importe_de_linea` | R23 |
+| ídem | `_load_conciliation_map_in_session`: `unitario` de una fila Contrato = `precio_unitario_final`; el del contrato, aparte (`unitario_contrato`) para el `title` | R9 |
+| `application/services/review_service.py` | entradas de deshacer de bloquear/desbloquear; `_guardar_y_aprobar` sin snapshots de líneas; errores nuevos | R13, R15 |
+| `interface_adapters/web/app.py` | 409 para `AlbaranAprobadoError` y `LineaBloqueadaError` en todas las rutas de escritura (incluidas `valuate`, `re-fetch-contratos`, `/api/undo`, producto); `POST .../lines/{vid}/bloquear` y `.../desbloquear`; `from-contrato` con cantidades (422 si falta); el PATCH de campos con `?bloquear=1`; el aprobar del listado devuelve el aviso de R20; «Desaprobar» desde la ficha vuelve a la ficha (`?volver=ficha`) | R4, R5, R13–R15, R20, R23 |
+| `static/app.js` | §5.2 | R1, R8, R9, R12, R13, R18, R19, R21–R23 |
+| `templates/document_detail.html` | ficha aprobada en solo lectura + «Desaprobar para editar»; fila bloqueada en solo lectura + «Desbloquear»; precio aplicado; cantidades en el panel «Traer»; datos para R21–R22 | R5, R9, R13, R21–R23 |
+| `services/albaran-valoracion-persist/infrastructure/database/schema_contribution.py` (+ ORM si lo declara) | `ALTER TABLE albaran_line_valuations ADD COLUMN IF NOT EXISTS bloqueada BOOLEAN NOT NULL DEFAULT FALSE` | R17 |
+| `docs/ARCHITECTURE.md`, `../azure-apps/albaranes.md` | regla 20; columna `bloqueada`, `line_kind` `manual`/`reparto` | R37 |
 
-Tests nuevos en `services/albaranes-front/tests/`: `test_f065_a_put_respeta.py`, `test_f065_a_patch_cantidades.py`,
-`test_f065_b_partida.py`, `test_f065_c_dividir.py`, `test_f065_js.py` (JS real con node, patrón `_ejecutar_js` de
-`test_f051_almacen_front.py`; se saltan sin node como allí). BBDD: el SQLite en memoria de `conftest.py`.
+Fase 2 toca `app.js` (combo de partidas, origen, sin `confirm` de NUEVA), la plantilla («Contrato») y en el
+repositorio `update_line_conciliacion` (regla de origen, §5.3) y `set_line_conciliacion` (`contract_line` copia
+partida y precio, R28). Fase 3: `dividir_linea` en el repositorio, ruta y servicio, diálogo F6 (§5.4).
 
-## 3. Ficheros que NO se tocan
+Tests nuevos (`services/albaranes-front/tests/`, SQLite en memoria de `conftest.py`; JS real con node, patrón
+`_ejecutar_js` de `test_f051_almacen_front.py`): `test_f065_f1_cabecera.py` (R1–R5), `test_f065_f1_fila.py`
+(R6–R12), `test_f065_f1_bloqueo.py` (R13–R17), `test_f065_f1_aprobar.py` (R18–R23), `test_f065_f1_js.py`,
+`test_f065_f2_origen.py`, `test_f065_f3_dividir.py`; sv6 `tests/test_f065_bloqueada_ddl.py`; sv9
+`tests/test_f065_partes.py`.
 
-- `services/albaranes-alta-sigrid/**` salvo el test; `services/albaranes-comun/**` (ni `alta_sigrid`, ni
-  `importes`); sv6 (`schema_contribution.py`, el replace de la valoración); sv3; sv5; sv2.
-- `_recalc_valuation_importes` por dentro: su lógica F-019/F-036 queda igual; solo cambia lo que recibe.
-- `set_line_conciliacion` (`mode=contract_line`/`nueva`) y `add_valuation_lines_from_contrato`: siguen como hoy;
-  el combo de partida deja de llamar al primero (R15).
-- `asignar_almacen` / «Almacén a todas» (F-051): ya trata las partes como cualquier fila.
-- El merge (`albaran_lines_merge`): las blancas siguen siendo lo leído; ni el reparto ni la partida las tocan.
+## 4. Ficheros que NO se tocan
 
-## 4. Fases (una revisión del reviewer por fase, como F-053)
-
-1. **Fase 1 · A + R11, R12** (sv4). Desplegable sola y ANTES de poner `ALTA_SIGRID_DESDE` (F-053): sin ella, la
-   primera aprobación con filas editadas manda a Sigrid cantidades falsas o sale `no_admitido`.
-2. **Fase 2 · B** (sv4). Requiere P1 respondida.
-3. **Fase 3 · C + R32** (sv4 + test de sv9 + docs + azure-apps).
+- sv9 (salvo test), comun, sv5, sv3, sv2; en sv6, solo `schema_contribution.py` (y su ORM).
+- `sigrid_lookup_client.py` y la ruta `/api/sigrid/partidas` (F-049 los cambia; F-065 solo los usa).
+- La propuesta automática de obra y proveedor (X4, fuera de alcance): en un aprobado ya no guarda por R4, y el
+  front no la lanza en la ficha de solo lectura.
+- El merge (`albaran_lines_merge`): ninguna ruta de F-065 lo escribe.
+- La bandeja salvo el aviso de R20 en «Aprobar» (el flujo de bandeja es F-066).
 
 ## 5. Funciones
 
-### 5.1 `cantidades_tras_editar` (dominio, pura) — R5–R7
+### 5.1 `cantidades_tras_editar(*, q_nueva, cantidad_albaran, cantidad_convertida, factor) -> (ca, cc)` (pura)
 
-```
-cantidades_tras_editar(*, q_nueva, cantidad_albaran, cantidad_convertida, factor) -> tuple[ca, cc]
-```
-- `q_nueva is None` ⇒ `(cantidad_albaran, cantidad_convertida)` sin tocar (R6).
-- reproducible y `factor ≠ 0` ⇒ `(q / factor, q)` (a); `cantidad_convertida is None` y `factor in (None, 1)`
-  ⇒ `(q, q)` (b); si no ⇒ `(cantidad_albaran, q)` (c). Igualdad con `numeros_iguales`.
-- `update_line_conciliacion` decide el no-op (R7) comparando cada valor resultante con el actual
-  (`numeros_iguales`, textos con `strip`, descuento con `_sanear_descuento`): si nada cambia, solo escribe
-  `cantidad_convertida` cuando era nula, y nada más. El importe, cuando sí cambia algo, sale de
-  `_importe_de_linea(precio, Q, dto)` como hoy.
-- Ojo con (c) en filas legadas: el PATCH viejo dejó `cantidad_albaran = Q` (en la unidad del precio) y
-  `cantidad_convertida` nula; (c) fija `cc = Q`, que es lo correcto, y no arregla la `ca` vieja (§8).
+`q_nueva is None` ⇒ sin tocar (R7). Reproducible y `factor ≠ 0` ⇒ `(q/factor, q)`; `cantidad_convertida is None`
+y `factor in (None, 1)` ⇒ `(q, q)`; si no ⇒ `(cantidad_albaran, q)` (R6). `update_line_conciliacion` compara
+cada campo presente con el actual (`numeros_iguales`, `strip`, `_sanear_descuento`): lo igual se descarta; si no
+queda nada, solo completa `cantidad_convertida` nula y, con `bloquear`, marca `bloqueada` (R8, R13). El importe,
+cuando algo cambia, sale de `_importe_de_linea(precio, Q, dto)`. Filas legadas (el PATCH viejo dejó `ca = Q` y
+`cc` nula): el caso (c) fija `cc = Q`, correcto; la `ca` vieja no se repara (§8).
 
-### 5.2 `repartir` (dominio, pura) y `dividir_linea` (repositorio) — R18–R27
+### 5.2 Front de la fase 1
 
-```
-repartir(*, q, ca0, importe0, precio, descuento, partes: list[ParteDivision]) -> list[ParteCalculada]
-    # ParteCalculada(cantidad_convertida, cantidad_albaran, importe, codigo_partida | None, partida_action)
-    # lanza RepartoInvalido(motivo) para R20–R21
-dividir_linea(*, document_id, valuation_line_id, partes) -> list[int]   # ids de las partes creadas
-```
-- `dividir_linea`: sesión → `_exigir_desbloqueado` (F-053 R26) → lee la fila y su valoración (404 si no es del
-  documento) → `repartir` → UPDATE de la original con la parte 1 → por cada parte k ≥ 2: si la original es NUEVA,
-  `INSERT contrato_lines_derived` copiando la suya con la partida de la parte; `INSERT albaran_line_valuations`
-  con las columnas de R23 (las NOT NULL: `precio_unitario_source`, `precio_unitario_agreement`,
-  `unidad_categoria`, `unidad_category_match`, `importe_source = 'calculated'`, `partida_action`,
-  `match_method`, `match_confidence_pct`, `created_at_utc`, copiadas de la original salvo las indicadas) →
-  `total_valorado` con `ROUND` → commit. Errores de dominio ⇒ 422 en `app.py`.
-- Importe (R26): `round(importe0 × qk / q, 2)` para k < N, la última `importe0 − Σ`, la parte 1 incluida en el
-  reparto. `importe0` nulo ⇒ `_importe_de_linea(precio, qk, descuento)`.
-- Display: las `reparto` se agrupan por `parent_merge_line_id` igual que las sintéticas (`_build_display_lines`),
-  pero `_synthetic_to_display` conserva `line_kind = 'reparto'` (hoy todo lo que no es `manual` se pinta como
-  sintética). k/N se numera por `id` dentro de la familia, con la original como 1.
-- Aviso de familia (R29): por cada blanca con partes, `Σ cantidad_albaran` (original + partes) frente a
-  `blanca.cantidad` con `numeros_iguales`.
+- `collectPayload` sin `lines` ni `valuation_line_updates` (R1).
+- `_camposCambiados(tr)` sustituye a `_conciliaBody`: solo inputs con valor distinto del inicial, números con
+  `parseNumEs` y comparados con tolerancia (F16), partida `""` = almacén. El `data-default` del precio es el
+  aplicado (R9). Lo usan «Guardar» de fila (`?bloquear=1`) y «Guardar todas» (solo filas sucias, también
+  `?bloquear=1`) (R8, R13, R18).
+- La celda de importe enseña siempre el `importe_calculado` guardado; al teclear, `syncImporteUnitario` lo
+  repinta con `Q × pu × (1 − dto)`, que es lo que guardará el backend (R12), también en las no reproducibles.
+- Filas bloqueadas: inputs `readonly`, sin combos, botón «Desbloquear» (POST y `reload`).
+- R19: `sendSave` cuenta filas sucias antes del PUT. R21: con `suma_valorada` y `suma_leida` del detalle,
+  `confirm` antes de aprobar. R22: `n_filas_manuales` del detalle, `confirm` en «Valorar ahora», «Guardar y volver
+  a buscar» y el `change` del combo de contrato (antes del PUT).
+- «Traer líneas contrato»: un input de cantidad por casilla marcada; «Incorporar» deshabilitado si falta (R23).
 
-### 5.3 Front (R11–R17, R28, R31)
+### 5.3 Fase 2: regla de origen al editar (R24–R28)
 
-- `_filaSucia(tr)`: alguna `.js-cedit` con `value !== defaultValue`. «Guardar todas» filtra por ella; si alguna
-  fila `concilia-assigned` tiene `cambiaIdentidad`, un `confirm` con cuántas; cancelar ⇒ `return` sin fetch.
-- `sendSave` y el botón de aprobar: si hay filas sucias, `alert` y `return` (R12). «Valorar ahora» no (reescribe
-  la valoración; R31 ya avisa).
-- `_partidaItems()`: `Almacén` + `Set` de `CONTRATO_LINES[].part` no vacíos, ordenados. `pick` ⇒ PATCH
-  `.../conciliacion/campos` `{codigo_partida}` y `reload` (como `elegirAlmacen`). El comentario de `app.js:992-996`
-  se corrige.
-- Diálogo «Dividir»: `<dialog>` nativo; N filas (cantidad, partida con el mismo combo); «Aceptar» deshabilitado
-  mientras `|Σ − Q| ≥ 0,005`; POST y `reload`; el 422 se enseña tal cual.
-- R31: el detalle expone `n_lineas_a_mano`; si > 0, `confirm` antes de «Valorar ahora» y «Guardar y volver a
-  buscar».
+- `cambia_origen(fila, cambios) -> bool` (pura): Contrato y (partida no vacía ≠ `partida_casada` y ≠ la actual, o
+  precio ≠ el actual, o unidad ≠ la actual) ⇒ Nueva. Vaciar = almacén (F-051 R12, sigue Contrato); poner la de la
+  casada = sigue Contrato (F-051 R20). Descripción, cantidad, descuento y código externo nunca cambian el origen.
+  `update_line_conciliacion` ya convierte en Nueva con `manual_override`; lo que cambia es el `confirm` (fuera) y
+  que la decisión use solo los campos presentes (R8) con el precio aplicado (R9).
+- Combo de partida: `fetch('/api/sigrid/partidas?obra=…')` una vez; `items` + «Almacén» primero; filtro por
+  código y `descripcion_agregada`; teclado con el patrón de `makeLineCombo` (flechas, Enter, Esc); un texto que no
+  es de la lista no se guarda. `ok = false` o lista vacía ⇒ solo «Almacén» (+ aviso si `ok = false`).
+- «Origen ✎»: `mode=contract_line` copia ahora también `codigo_partida_final` y `precio_unitario_final` de la
+  línea elegida (Contrato «cuadra»). El combo de concepto queda como input de texto.
+
+### 5.4 Fase 3: dividir (R29–R36), modelo M1 sin DDL
+
+- `repartir(*, q, ca0, importe0, precio, descuento, partes) -> list[ParteCalculada]` (pura; `RepartoInvalido`
+  para R30). `dividir_linea(document_id, valuation_line_id, partes) -> list[int]`: `_exigir_editable` (alta,
+  aprobado, bloqueada) → original = parte 1 → por parte k ≥ 2, `INSERT` copiando de la original precio y su
+  origen y acuerdo, unidades y su categoría, `factor_conversion`, descuento, `producto_sigrid`, `codigo_externo`,
+  `match_method`, `match_confidence_pct`, la descripción (`descripcion_linea` o el concepto de su blanca), con
+  `line_kind = 'reparto'`, `merge_line_id` nulo, `parent_merge_line_id`, `importe_source = 'calculated'`; si la
+  parte cambia de partida (R32), su propia derivada `manual_override` y `matched` nulo; vacía ⇒
+  `almacen_elegido` → `total_valorado` con `ROUND` → commit. Deshacer: `restore` original + cabecera,
+  `delete_created` partes y derivadas.
+- Display: las `reparto` se agrupan por `parent_merge_line_id` como las sintéticas, pero `_synthetic_to_display`
+  conserva `line_kind = 'reparto'` (hoy todo lo no `manual` sale como sintética); «Parte k de N» por `id`.
+- F6: `<dialog>` con N (2–20), cantidad y partida (combo de §5.3) por parte, «Falta: X»; F7 y su código se quitan.
 
 ## 6. SQL
 
-Sin DDL (M1). Solo DML de sv4 sobre tablas que ya escribe: UPDATE/INSERT en `albaran_line_valuations`, INSERT en
-`contrato_lines_derived` (partes de NUEVA), UPDATE de `albaran_valuations.total_valorado`. Valores nuevos (sin
-CHECK en BBDD): `line_kind = 'reparto'`, `partida_action = 'partida_elegida'`. Con M2 (si el humano lo elige):
-`ALTER TABLE albaran_line_valuations ADD COLUMN IF NOT EXISTS reparto_de_id INTEGER` en sv6
-(`schema_contribution.py`) **y** en sv3 (que crea también las tablas de sv6, `azure-apps/albaranes.md` §5, regla 3),
-despliegue sv6 y sv3 → sv4.
+- **DDL** (sv6, dueño): `ALTER TABLE albaran_line_valuations ADD COLUMN IF NOT EXISTS bloqueada BOOLEAN NOT NULL
+  DEFAULT FALSE`; sv4 la misma sentencia en su lista defensiva (`_review_schema_statements`, como
+  `codigo_externo`). Lector acoplado: solo sv4. Sin backfill (todas nacen desbloqueadas).
+- **DML** de sv4 sobre lo que ya escribe. Valores nuevos sin CHECK: `line_kind = 'reparto'`.
 
-## 7. Decisiones abiertas para el humano (detalle y alternativas: `progress/spec_F-065.md` §3)
+## 7. Decisiones (PARADA 1 del 2026-10-09 y recomendaciones aceptadas)
 
-- **P1 · ¿Fila vinculada a un `ctrpro` imputada a otra partida?** Técnicamente sí (F-009 v8: `paride` = la pedida,
-  el `ctrpro` no se toca, aviso informativo; M4: el 5,3 % de las líneas del escritorio ya lo hacen). Falta el sí
-  de negocio: consume medición del `ctrpro` desde otra partida. **Recomendado: sí** (R13). Si no: cambiar la
-  partida = NUEVA con confirmación en todos los guardados, y el reparto solo con la partida de la línea casada
-  (fases 2 y 3 se rehacen).
-- **P2 · PUT**: (a) recalcular solo las blancas que cambiaron (**recomendado**, R1) o (b) dejar de recalcular desde
-  el PUT (las blancas son de solo lectura desde la TANDA 2A).
-- **P3 · Cantidad de la salmón = unidad del precio**, con la regla (a)/(b)/(c) de R5 (**recomendado**). Alternativa:
-  prohibir editar la cantidad en filas con conversión no reproducible.
-- **P4 · Modelo de las partes**: **M1** filas `reparto` sin DDL (**recomendado**); M2 igual con columna
-  `reparto_de_id` (DDL en sv6 y sv3); M3 partir la blanca en el merge, como F-049 R23 (sobreviviría a revalorar,
-  pero toca lo leído y deja que IA3 re-case cada parte).
-- **P5 · Suma que no cuadra**: al dividir, 422 (**recomendado**, R21); después de editar una parte, aviso no
-  bloqueante (**recomendado**, R29) o bloquear la aprobación.
-- **P6 · Importe de las partes**: prorrateo del importe con la última absorbiendo el redondeo, el total no cambia
-  (**recomendado**, R26); o fórmula por parte (el total puede moverse unos céntimos).
-- **P7 · Revalorar**: confirmación en F-065 (R31) y ampliar F-058 a partes y cantidades editadas
-  (**recomendado**); o que F-065 haga sobrevivir el reparto (pasa a necesitar M2/M3 y sv6).
-- **P8 · F-016**: **absorbida** (aplicado en su ficha, reversible): el caso Feymaco «P4/P5.36.01» lo reparte
-  F-049 R23 sola; el reparto a mano es la fase 3 de esta.
-- **P9 · Fases**: tres fases dentro de F-065 (**recomendado**, §4) o partir C en una ficha propia.
+- **Resueltas por el humano**: cambiar la partida ⇒ Nueva (resp. 1; deja de valer P1 de la v1); al editar no se
+  llama a la IA (resp. 2); aprobar no exige filas bloqueadas (resp. 3); combo con todas las partidas de la obra y,
+  sin partidas, solo «Almacén» (resp. 4); P2 = separar guardados (R1).
+- **Recomendación aceptada**: P3 regla de cantidades (R6); P4 M1 sin DDL para las partes; P5 422 al dividir y
+  aviso después (R30, R35); P6 importe prorrateado (R33); P7 confirmación y F-058 amplía (R22); P8 F-016
+  absorbida; P9 tres fases.
+- **Nuevas, decididas por defecto (a confirmar en la revisión del humano)**: **P10** vaciar la partida (almacén) o
+  volver a la de la casada no cambia el origen (F-051 D4/R20, decisiones del humano del 2026-10-05; si ahora
+  debiera ser Nueva, se cambia `cambia_origen`); **P11** el combo solo admite partidas de la lista (sigrid-api
+  rechazaría otra con `partida_no_encontrada`); con Sigrid caído, solo «Almacén»; **P12** R20 bloquea la
+  aprobación con filas sin cantidad o importe (sv9 no las mandaría: hoy se pierden en silencio); **P13** desbloquear
+  una fila no exige permiso especial (cualquiera que edite).
 
 ## 8. Riesgos y alternativas descartadas
 
-- **Hallazgo adicional (por lectura de código, a fijar con test RED)**: hoy «Guardar todas» re-guarda TODAS las
-  filas; en una con conversión (kg→t, `factor` 0,001) copia Q (t) en `cantidad_albaran` y anula la convertida, y
-  el siguiente PUT multiplica el precio por la cantidad de la blanca en kg (×1000). En contenedores de residuos
-  (`factor` nulo, 6 m³ → 1 ud) resucita el ×6 de F-036. Además reetiqueta como `calculated` y recalcula importes
-  declarados que nadie tocó (contra la regla 13). R5–R7 y R11 lo cierran.
-- **Datos ya dañados** (filas editadas antes del despliegue): quedan con `cantidad_convertida` nula ⇒ sv9 las
-  deja en `no_admitido` (`cantidad_sin_convertir`), fallo seguro; volver a guardar la fila las completa (R7). Sin
-  backfill. El albarán de METALFIRE lo corrige la usuaria.
-- **Partes al final en Sigrid**: sv9 ordena las de `merge_line_id` nulo detrás (`validador_alta.py:134-142`). Es
-  orden de presentación, sin efecto contable; cambiarlo tocaría sv9 (descartado).
-- **Descartado reapuntar la partida por línea de contrato** (lo que hace hoy el combo): cambia el producto y el
-  precio, que es justo lo que la usuaria no quería.
-- **Descartado partir la blanca** (M3) por defecto: rompe «la fila salmón nunca modifica la blanca» y el
-  re-fetch la rehace desde el PDF.
-- Conflicto previsible de `harness/features.json` y `BACKLOG.md` con la rama de F-064 (ficha añadida en paralelo).
+- **Retirar el recálculo del PUT** borra código con tests (F-019, F-036). Las garantías no se pierden: pasan a
+  la fila (R6–R8, R11) y T6 las reescribe caso por caso. Descartado mantenerlo «solo si la blanca cambió» (v1):
+  ninguna pantalla edita ya las blancas y el humano eligió separar guardados.
+- **Hallazgo de la v1, ahora cerrado por R1, R6–R8 y R18**: «Guardar todas» + PUT multiplicaba el importe en
+  filas con conversión (×1000 kg→t, ×6 contenedores) y reetiquetaba importes declarados.
+- **Datos ya dañados** (O2 de la tabla): filas con `cantidad_convertida` nula ⇒ sv9 `no_admitido`, fallo seguro;
+  filas pasadas a Nueva por F3 no se detectan solas. Consulta de solo lectura en producción y decisión del humano:
+  fuera de la spec (anotada en F-067).
+- **Aprobado = solo lectura**: un administrativo que hoy corrige sobre aprobados tendrá que desaprobar (F-053 R25
+  lo impide con alta bloqueante: entonces se corrige en Sigrid). Es lo que pide X3.
+- **Partes al final en Sigrid**: sv9 ordena las de `merge_line_id` nulo detrás; sin efecto contable.
+- **Conflictos de fusión** previsibles: `features.json`/`BACKLOG.md` con F-064; `review_models.py`, `app.py` y la
+  plantilla con F-049 (bloque C toca sv4) — resolver al fusionar, sin solaparse en lógica.

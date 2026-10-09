@@ -79,3 +79,67 @@ spec, sin código:
 - Validar con el humano P1–P9 (P1 es la única de negocio pura; conviene preguntarla a Administración).
 - Tras la PARADA 1, si cambia alguna P, reescribir los R que la citan (requirements, cabecera).
 - F-058: al especificarla, incluir las partes `reparto`, las `manual` y las cantidades editadas en sv4.
+
+---
+
+## v2 · tras la PARADA 1 (2026-10-09)
+
+La rama trae `dev` fusionado (ae86bfb; F-053 pasó a `blocked`, así que F-065 podrá ir a `in_progress`). Entran en el
+commit `progress/propuestas_ficha_detalle.md` (tabla M/X/R/O y modelo del humano) y `progress/explore_front_detalle.md`
+(inventario de la ficha, F1–F25). La v1 de arriba queda como historia: **P1 y el bloque B de la v1 están revocados**
+(la v1 dejaba la fila vinculada al cambiar la partida; el humano decidió lo contrario).
+
+### Modelo del humano y respuestas
+
+- Origen «Sigrid» ⇒ **«Contrato»**: lo es si cuadran partida, unitario y concepto (equivalencia de significado,
+  la decide la IA al valorar); si no, **Nueva**.
+- (1) **Cambiar la partida ⇒ Nueva.** (2) Al editar **no se llama a la IA**: la descripción no reevalúa el origen; si
+  hace falta, el usuario lo cambia a mano («Origen ✎»). (3) **Aprobar no exige líneas bloqueadas.** (4) Combo con
+  **todas las partidas hoja de la obra** + «Almacén»; obra sin partidas ⇒ solo «Almacén».
+- Lo que cambia el administrativo pisa lo valorado; ningún guardado vuelve a lo valorado. **P2 = separar guardados**:
+  el PUT de cabecera no toca las líneas. Guardar una línea la **bloquea**; se desbloquea a mano.
+- Alcance: filas «F-065» de la tabla (M1–M4, X1–X3, X5–X11, X22, R6) **menos X4**; sumatorio X12 a F-066.
+
+### Qué cambia en la spec (requirements 149/150, design 159/250, tasks T0–T28)
+
+- **Fase 1 (R1–R23), sv6 → sv4**, se despliega sola antes de pasar F-053 a real: PUT sin líneas y sin
+  desaprobar (R1–R3; se retiran `_recalc_valuation_importes` y los mapas del payload, R11); **aprobado = solo
+  lectura** con «Desaprobar para editar» y 409 en toda escritura (R4–R5); PATCH **solo de los campos cambiados**,
+  con cantidades coherentes (R6–R8, la regla P3 de la v1) y **precio aplicado** en filas Contrato (R9, F3 del
+  inventario); **guardar = bloquear** (R13–R17, columna `bloqueada` con DDL en sv6 + sentencia defensiva en sv4);
+  «Guardar todas» solo filas sucias (R18); aviso de filas sin guardar (R19); **no se aprueba con filas sin cantidad
+  o importe** (R20) y confirmación si la suma no cuadra con lo leído (R21); confirmación antes de revalorar o
+  cambiar de contrato (R22); traer líneas de contrato con cantidad (R23).
+- **Fase 2 (R24–R28), sv4**: «Contrato»; partida/unitario/unidad ⇒ Nueva **sin confirmación**; combo de partidas de
+  la obra; «Origen ✎» única vía de reapuntar (copia partida y precio de la línea elegida); concepto como texto.
+- **Fase 3 (R29–R36), sv4 + test de sv9**: F6 dividir (sustituye a F7); partes `reparto` sin DDL (M1); la parte
+  con otra partida sale Nueva (respuesta 1), con la misma o en almacén conserva el vínculo.
+- **Servicios**: `sv4-front` y `sv6-valoracion-persist` (solo DDL). sv9 y comun sin código.
+- **Partidas de la obra (LÍMITE DE SERVICIO)**: se reutiliza el endpoint de sv4 que ya existe
+  (`GET /api/sigrid/partidas`, hojas de `obrparpar`, hoy sin uso). No se mueve nada a comun: lo hace F-049 (rama
+  sin fusionar, T1/T16/T17), y el endpoint conserva su forma; F-065 no toca `sigrid_lookup_client.py`.
+
+### Decisiones nuevas, tomadas por defecto (design §7; a confirmar por el humano)
+
+- **P10** Vaciar la partida (almacén) o volver a la de la línea casada **no** cambia el origen (F-051 D4 y R20,
+  decisiones del humano del 2026-10-05). Si con el modelo nuevo almacén debe ser Nueva, solo cambia `cambia_origen`.
+- **P11** El combo solo admite partidas de la lista (sigrid-api rechazaría otra); con Sigrid caído, solo «Almacén».
+- **P12** R20 **bloquea** aprobar con filas sin cantidad o importe (hoy sv9 no las manda y se pierden en silencio).
+- **P13** Desbloquear una línea no exige permiso especial.
+
+### Backlog (en este commit)
+
+- **F-066** «Edición de líneas tipo hoja de cálculo en la ficha de detalle» (X12–X21, R4): `pending`, prioridad 1,
+  `critico`, sin spec; depende de F-065.
+- **F-067** «Limpieza de la ficha de detalle» (X25, X26, R1–R3, R5, R7–R12): `pending`, prioridad 1, `estandar`,
+  sin spec; lleva las notas de **X4** (fuera de F-065, pendiente de sitio) y **O2** (consulta de solo lectura de
+  líneas ya dañadas en producción).
+- **F-058** y **F-059** a prioridad 1, con X23 y X24 en su descripción (F-058 incluye ahora líneas bloqueadas,
+  cantidades editadas, traídas y partes de F6).
+- F-016 sigue absorbida (P8). F-065 sigue `spec_ready` y pasa a `servicios` `sv4-front` + `sv6-valoracion-persist`.
+
+### Para el líder
+
+- Confirmar con el humano P10–P13 en la siguiente conversación (no bloquean empezar la fase 1, salvo P12).
+- Conflictos previsibles: `features.json`/`BACKLOG.md` con F-064; `review_models.py`, `app.py` y la plantilla con
+  F-049 (bloque C toca sv4).
