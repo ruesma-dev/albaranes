@@ -16,6 +16,8 @@ from __future__ import annotations
 import re
 
 import pytest
+from domain.models.alta_sigrid_models import AlbaranBloqueadoError
+from domain.models.review_models import MergeDocumentUpdatePayload
 from f053_sv4_bbdd import foto, poner_alta
 from f065_bbdd import (
     DOC,
@@ -27,9 +29,6 @@ from f065_bbdd import (
     repositorio,
     total,
 )
-
-from domain.models.alta_sigrid_models import AlbaranBloqueadoError
-from domain.models.review_models import MergeDocumentUpdatePayload
 
 AVISO_APROBADO = "Albarán aprobado: desapruébalo para editar"
 
@@ -152,7 +151,9 @@ def test_f065_r3_put_sin_aprobar_sobre_un_aprobado_no_lo_desaprueba(monkeypatch)
     motor = construir(aprobado=True)
     antes = documento(motor)
 
-    with pytest.raises(Exception):
+    from domain.models.review_models import AlbaranAprobadoError
+
+    with pytest.raises(AlbaranAprobadoError):
         _guardar(repositorio(motor), monkeypatch, numero_albaran="OTRO", approved=False)
 
     assert documento(motor) == antes
@@ -286,9 +287,8 @@ class _ServicioAprobado:
 
 
 def _cliente(monkeypatch, servicio):
-    from fastapi.testclient import TestClient
-
     from config.settings import Settings
+    from fastapi.testclient import TestClient
     from interface_adapters.web import app as modulo_app
 
     monkeypatch.setattr(modulo_app, "SessionFactory", lambda **_: object())

@@ -13,7 +13,6 @@ Puro: ni red ni BBDD.
 from __future__ import annotations
 
 import pytest
-
 from domain.models.alta_models import Motivo, PeticionAlbaran
 from domain.services.validador_alta import validar_y_construir
 from tests.f053_datos import CONFIG, HOY, datos, vinculada

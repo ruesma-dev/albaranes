@@ -85,9 +85,8 @@ def test_f065_r17_la_fila_nueva_del_replace_no_trae_valor_de_bloqueada():
 
 def test_f065_r17_ddl_en_sqlite_las_filas_nacen_desbloqueadas():
     """La columna del ORM, creada en una BBDD, deja ``false`` a quien no la da."""
-    from sqlalchemy import create_engine, text
-
     from infrastructure.database.orm_valuation_models import AlbaranLineValuationOrm
+    from sqlalchemy import create_engine, text
 
     motor = create_engine("sqlite://")
     columna = AlbaranLineValuationOrm.__table__.columns["bloqueada"]

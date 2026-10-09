@@ -16,11 +16,19 @@ from __future__ import annotations
 import re
 
 import pytest
-from f053_sv4_bbdd import foto
-from f065_bbdd import DOC, construir, documento, ejecutar, fila, linea, repositorio, total
-from sqlalchemy.orm import Session
-
 from domain.models.review_models import MergeDocumentUpdatePayload
+from f053_sv4_bbdd import foto
+from f065_bbdd import (
+    DOC,
+    construir,
+    documento,
+    ejecutar,
+    fila,
+    linea,
+    repositorio,
+    total,
+)
+from sqlalchemy.orm import Session
 
 
 def _sin_importe(motor, vid):
