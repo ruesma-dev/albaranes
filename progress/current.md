@@ -1,6 +1,13 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-065 · `spec_ready` (2026-10-09), spec v1 en la rama `feature/F-065-lineas-editadas-y-reparto`** (worktree
+`../albaranes-F-065`): las ediciones de las filas salmón se respetan en todo PUT, cambiar la partida no rompe el
+vínculo con el contrato y «Dividir» una línea en varias partidas (absorbe F-016). Prioridad 1, `critico`, solo
+sv4. Informe y **decisiones abiertas P1–P9 para la PARADA 1** en `progress/spec_F-065.md` §3 (P1, de negocio:
+¿una línea vinculada a un `ctrpro` puede imputarse a otra partida? sigrid-api ya lo admite). **La fase 1 debería
+desplegarse antes de poner `ALTA_SIGRID_DESDE` de F-053.**
+
 **F-063 · `done` (2026-10-08)**, fusionada en `dev` con `init.sh` en verde. Pendiente del humano: desplegar solo sv3; en los merges `b1d3e179` y `401d9c00`, «Elegir proveedor» FEYMACO a mano. Comandos de la MANUAL T8 en `progress/impl_F-063.md` §7.
 
 **F-062 · `done` (2026-10-08)**, fusionada en `dev` (`d052106`) con `init.sh` en verde. Pendiente del humano: despliegue de solo sv3 y vigilancia T12 (comandos abajo).

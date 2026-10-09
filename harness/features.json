@@ -184,8 +184,8 @@
     },
     {
       "id": "F-016",
-      "title": "Reparto de una línea del albarán entre varias partidas",
-      "description": "Caso real (Feymaco 2137569): una línea impresa de 108 uds repartida a mano entre dos partidas (54 a P4.36.01 y 54 a P5.36.01, anotación 'P4/P5.36.01'). El pipeline actual modela una línea -> una partida. La spec debe decidir el modelo: ¿la valoración soporta líneas hijas con cantidades parciales por partida, o el reparto es una acción manual del revisor en sv4 (split de línea) previa al registro? Impacto potencial en schema (listar lectores: sv5 SQL crudo) y en el futuro registro en Sigrid (F-013).",
+      "title": "[ABSORBIDA POR F-065] Reparto de una línea del albarán entre varias partidas",
+      "description": "ABSORBIDA POR F-065 (spec-author, 2026-10-09; pendiente de que el humano lo confirme en la PARADA 1 de F-065, pregunta P8): el reparto A MANO de una línea entre varias partidas conservando el vínculo al contrato es la fase 3 de F-065 (specs/F-065-lineas-editadas-y-reparto/); el caso Feymaco con anotación compuesta «P4/P5.36.01» lo reparte sola F-049 R23 (sv2, N líneas a partes iguales). No se implementa. Se deja en pending porque el arnés no tiene estado de «absorbida», como F-013.\n\nTEXTO ORIGINAL: Caso real (Feymaco 2137569): una línea impresa de 108 uds repartida a mano entre dos partidas (54 a P4.36.01 y 54 a P5.36.01, anotación 'P4/P5.36.01'). El pipeline actual modela una línea -> una partida. La spec debe decidir el modelo: ¿la valoración soporta líneas hijas con cantidades parciales por partida, o el reparto es una acción manual del revisor en sv4 (split de línea) previa al registro? Impacto potencial en schema (listar lectores: sv5 SQL crudo) y en el futuro registro en Sigrid (F-013).",
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
@@ -754,6 +754,19 @@
         "comun"
       ],
       "branch": "feature/F-063-cif-propio-no-es-proveedor"
+    },
+    {
+      "id": "F-065",
+      "title": "Las líneas editadas en sv4 se respetan al guardar/aprobar, cambiar la partida no rompe el vínculo con el contrato, y una línea se puede repartir entre varias partidas",
+      "description": "ORIGEN (humano, 2026-10-09: «mételo todo en una spec de prioridad 1, y luego lo analizamos juntos»): correo de administración de obra sobre un albarán de METALFIRE (contrato CTSU25/0359): «Las unidades del albarán tengo que repartirlas en 3 partidas distintas»; «Si le cambio las partidas me arrastra del contrato, si le doy que no me la cambie me la pone como nueva»; puso 6 y 7 en dos líneas de 8 y 10 y trajo una tercera de 5 del contrato: «Guardar todas» dejó 18 y «Guardar y aprobar» volvió a 8+10+5 = 23 unidades.\n\nDIAGNÓSTICO (progress/explore_F-065.md): todo PUT del documento reenvía las blancas y _recalc_valuation_importes pisa con su cantidad y descuento las filas salmón editadas; «Deshacer» no lo recupera; el PATCH de fila deja cantidad_convertida a NULL, así que sv9 (F-053) pondría no_admitido a toda vinculada editada (y, arreglado solo eso, mandaría las cantidades falsas); el combo de partida reapunta la línea de contrato sin cambiar la partida y teclear otra partida la convierte en NUEVA, también sin confirmación desde «Guardar todas»; no hay forma de repartir una línea conservando el vínculo. Hallazgo adicional por lectura de código: «Guardar todas» + cualquier PUT multiplica el importe en líneas con conversión (×1000 kg→t, ×6 contenedores).\n\nSPEC v1 (2026-10-09, specs/F-065-lineas-editadas-y-reparto/, informe progress/spec_F-065.md): solo sv4 (sv9 y comun sin código; tests de contrato en sv9); sin DDL con el modelo recomendado. Fase 1 (A, urgente, desplegar antes de poner ALTA_SIGRID_DESDE de F-053): el PUT solo recalcula blancas que cambiaron de verdad; la cantidad de la salmón está en la unidad del precio y fija cantidad_convertida; PATCH sin cambios no toca nada; deshacer del PUT; «Guardar todas» solo filas modificadas y no se aprueba con filas sin guardar. Fase 2 (B): cambiar la partida de una fila SIGRID la deja vinculada (F-009 v8 lo admite con aviso partida_distinta_del_contrato), combo de partidas en vez de líneas de contrato, confirmación también en «Guardar todas». Fase 3 (C): «Dividir» en N partes (cantidad + partida) con suma = original, partes line_kind='reparto' con el mismo vínculo, importe prorrateado, deshacer, confirmación antes de revalorar (la persistencia al revalorar queda para F-058). ABSORBE F-016. PREGUNTAS ABIERTAS P1–P9 para la PARADA 1 (design §7): P1 vinculada en otra partida (negocio), P2 PUT, P3 regla de cantidades, P4 modelo de las partes (M1 sin DDL / M2 DDL sv6+sv3 / M3 en el merge), P5 suma que no cuadra, P6 importe de las partes, P7 revalorar, P8 F-016, P9 fases.\n\nRELACIONADAS: F-053 (alta en Sigrid; su despliegue espera a la fase 1), F-058 (revalorar no pierde lo manual), F-051 (almacén, R12/R19/R20), F-049 R23 (reparto automático de compuestas), F-016 (absorbida), F-019 y F-036 (recálculo de importes).",
+      "status": "spec_ready",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "servicios": [
+        "sv4-front"
+      ],
+      "branch": "feature/F-065-lineas-editadas-y-reparto"
     }
   ]
 }
