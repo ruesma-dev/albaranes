@@ -92,6 +92,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 > vuelve a leer `en_vuelo` (el adjunto nunca lanza y, si su `guardar` fallase, el `finally` ve el paso
 > cerrado). La asignación documenta que la grabación terminó; su valor no cambia ninguna salida.
 > Decisión: mutante equivalente justificado; sin test nuevo (ningún test puede distinguirlos).
+> Demostración: `services/albaranes-alta-sigrid/tests/test_f053_t25_equivalentes.py::test_f053_t25_rm5_equivalente_1_en_vuelo_tras_registrar` (diferencial con control no equivalente, RM5).
 
 ### 2. `services/albaranes-alta-sigrid/domain/services/validador_alta.py:140` [entero]
 
@@ -105,6 +106,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 > orden relativo (merge por `line_index`, manuales al final por `id`) es idéntico para cualquier
 > entrada. Lo fija `test_f053_t25_h26_orden_merge_por_line_index_y_manuales_al_final`.
 > Decisión: mutante equivalente justificado; sin test nuevo (ningún test puede distinguirlos).
+> Demostración: `services/albaranes-alta-sigrid/tests/test_f053_t25_equivalentes.py::test_f053_t25_rm5_equivalentes_2_y_3_orden_de_las_manuales[equivalente_2]` (diferencial con control no equivalente, RM5).
 
 ### 3. `services/albaranes-alta-sigrid/domain/services/validador_alta.py:140` [entero]
 
@@ -117,6 +119,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 > las manuales solo desempataría dos líneas con el mismo `id`, y `id` es la clave primaria de
 > `albaran_line_valuations`: nunca se repite dentro de un documento.
 > Decisión: mutante equivalente justificado; sin test nuevo (ningún test puede distinguirlos).
+> Demostración: `services/albaranes-alta-sigrid/tests/test_f053_t25_equivalentes.py::test_f053_t25_rm5_equivalentes_2_y_3_orden_de_las_manuales[equivalente_3]` (diferencial con control no equivalente, RM5).
 
 ### 4. `services/albaranes-alta-sigrid/domain/services/validador_alta.py:247` [comparacion]
 
@@ -129,6 +132,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 > `lineas_a_registrar` (importe no nulo y |importe| > 1e-9, R13): un importe 0 no llega nunca a esta
 > comparación, así que `importe < 0` e `importe <= 0` dan lo mismo para todo lo que llega.
 > Decisión: mutante equivalente justificado; sin test nuevo (ningún test puede distinguirlos).
+> Demostración: `services/albaranes-alta-sigrid/tests/test_f053_t25_equivalentes.py::test_f053_t25_rm5_equivalentes_4_5_6_importe_cero[equivalente_4]` (diferencial con control no equivalente, RM5).
 
 ### 5. `services/albaranes-alta-sigrid/domain/services/validador_alta.py:247` [comparacion]
 
@@ -141,6 +145,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 > `cantidad < 0`, `importe > 0` e `importe >= 0` solo difieren con importe 0, que `lineas_a_registrar`
 > ya ha excluido (R13).
 > Decisión: mutante equivalente justificado; sin test nuevo (ningún test puede distinguirlos).
+> Demostración: `services/albaranes-alta-sigrid/tests/test_f053_t25_equivalentes.py::test_f053_t25_rm5_equivalentes_4_5_6_importe_cero[equivalente_5]` (diferencial con control no equivalente, RM5).
 
 ### 6. `services/albaranes-alta-sigrid/domain/services/validador_alta.py:267` [comparacion]
 
@@ -154,6 +159,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 > cambiaría con importe 0, que no llega. El caso «importe positivo pequeño» (0,5) lo fija
 > `test_f053_t25_r12_importe_positivo_pequeno_mantiene_el_signo`.
 > Decisión: mutante equivalente justificado; sin test nuevo (ningún test puede distinguirlos).
+> Demostración: `services/albaranes-alta-sigrid/tests/test_f053_t25_equivalentes.py::test_f053_t25_rm5_equivalentes_4_5_6_importe_cero[equivalente_6]` (diferencial con control no equivalente, RM5).
 
 ### 7. `services/albaranes-alta-sigrid/infrastructure/database/sql_alta_repository.py:162` [logico]
 
@@ -167,6 +173,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 > ValueError)` de la línea siguiente devuelve el mismo `defecto`. `None` sigue cortando igual
 > (`json.loads(None)` lanza `TypeError`, también capturado). El resultado es idéntico en todos los casos.
 > Decisión: mutante equivalente justificado; sin test nuevo (ningún test puede distinguirlos).
+> Demostración: `services/albaranes-alta-sigrid/tests/test_f053_t25_equivalentes.py::test_f053_t25_rm5_equivalente_7_json_vacio` (diferencial con control no equivalente, RM5).
 
 ### 8. `services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py:275` [entero]
 
@@ -179,6 +186,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 > `(l.cantidad or 1) < 0`: solo difieren cuando la cantidad es nula o 0, y entonces las dos dan
 > `False` (0 < 0 y 1 < 0 son falsos). El resto de cantidades no pasa por el `or`.
 > Decisión: mutante equivalente justificado; sin test nuevo (ningún test puede distinguirlos).
+> Demostración: `services/albaranes-persistencia/tests/test_f053_t25_equivalentes.py::test_f053_t25_rm5_equivalentes_8_9_10_lineas_negativas[equivalente_8]` (diferencial con control no equivalente, RM5).
 
 ### 9. `services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py:275` [entero]
 
@@ -191,6 +199,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 > importe no nulo y distinto de cero (`con_importe`), así que `l.importe or 0` y `l.importe or 1`
 > devuelven siempre el propio importe: el `or` nunca llega a evaluar su segundo término.
 > Decisión: mutante equivalente justificado; sin test nuevo (ningún test puede distinguirlos).
+> Demostración: `services/albaranes-persistencia/tests/test_f053_t25_equivalentes.py::test_f053_t25_rm5_equivalentes_8_9_10_lineas_negativas[equivalente_9]` (diferencial con control no equivalente, RM5).
 
 ### 10. `services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py:275` [comparacion]
 
@@ -202,6 +211,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 > Por qué ningún test lo caza: es un **mutante equivalente**. `(l.importe or 0) < 0` y `<= 0` solo
 > difieren con importe 0, y `con_imp` excluye las líneas de importe 0 (`con_importe`, |importe| > 1e-9).
 > Decisión: mutante equivalente justificado; sin test nuevo (ningún test puede distinguirlos).
+> Demostración: `services/albaranes-persistencia/tests/test_f053_t25_equivalentes.py::test_f053_t25_rm5_equivalentes_8_9_10_lineas_negativas[equivalente_10]` (diferencial con control no equivalente, RM5).
 
 ## Historia de la campaña
 
