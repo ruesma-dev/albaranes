@@ -402,3 +402,40 @@ def test_f065_r12_plantilla_el_importe_es_el_guardado_tambien_si_es_reproducible
     celda = re.search(r'<td[^>]*data-col="importe"[^>]*>.*?</td>', html, re.DOTALL).group(0)
     assert 'value="19.99"' in celda
     assert "20.00" not in celda
+
+
+def test_f065_r8_dominio_un_numero_no_finito_es_un_error():
+    from domain.models.review_models import ConciliacionEditBody
+
+    for texto in ("inf", "nan", "-inf"):
+        with pytest.raises(ValidationError):
+            ConciliacionEditBody(precio_unitario=texto)
+
+
+def test_f065_r8_dominio_un_texto_a_null_se_vacia():
+    from domain.models.review_models import ConciliacionEditBody
+
+    assert ConciliacionEditBody(descripcion=None, codigo_externo="  ").campos() == {
+        "codigo_externo": None, "descripcion": None}
+
+
+def test_f065_r8_un_campo_desconocido_no_cuenta_como_cambio():
+    """El ``importe`` (u otra clave) no es un campo de la fila: no hay cambio."""
+    motor = construir()
+    antes = fila(motor, 11)
+
+    assert _editar(motor, 11, importe=1.0) is True
+
+    assert fila(motor, 11) == antes
+
+
+def test_f065_r8_una_fila_sin_linea_de_contrato_ni_derivada_no_se_edita():
+    motor = construir()
+    with Session(motor) as s:
+        linea(s, id=29, merge_line_id=None, line_kind="manual")
+        s.commit()
+    antes = fila(motor, 29)
+
+    assert _editar(motor, 29, cantidad=3.0) is False
+
+    assert fila(motor, 29) == antes

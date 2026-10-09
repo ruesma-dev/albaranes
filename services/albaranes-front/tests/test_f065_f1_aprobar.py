@@ -349,3 +349,24 @@ def test_f065_r23_el_portal_pasa_cada_linea_con_su_cantidad(monkeypatch):
     assert respuesta.status_code == 200, respuesta.text
     assert respuesta.json()["created"] == 2
     assert servicio.lineas == [(503, 5.5), (501, 2.0)]
+
+
+def test_f065_r23_el_servicio_deja_deshacer_lo_traido():
+    import json
+
+    from application.services.review_service import ReviewService
+    from sqlalchemy import text
+
+    motor = construir()
+
+    creadas = ReviewService(repositorio(motor), "ana").add_valuation_lines_from_contrato(
+        document_id=DOC, lineas=[(503, 5.0)])
+
+    assert creadas == 1
+    with Session(motor) as s:
+        (payload,) = s.execute(text(
+            "SELECT payload FROM undo_log WHERE document_id = :d"), {"d": DOC}).scalars().all()
+    entrada = json.loads(payload)
+    assert [d["table"] for d in entrada["delete_created"]] == ["albaran_line_valuations"]
+    assert [r["table"] for r in entrada["restore"]] == ["albaran_valuations"]
+    assert entrada["restore"][0]["values"]["total_valorado"] == 2120.0

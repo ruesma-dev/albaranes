@@ -421,3 +421,74 @@ def test_f065_r5_desaprobar_desde_el_listado_vuelve_al_listado(monkeypatch):
         f"/documents/{DOC}/unapprove", data={"redirect_query": "approved=all"})
 
     assert respuesta.headers["location"].startswith("/documents?approved=all&")
+
+
+# --- R4 en lo que solo publica (revalorar, volver a buscar) ---------- #
+class _RepoEstado:
+    def __init__(self, estado):
+        self.estado = estado
+
+    def leer_alta_sigrid(self, document_id):
+        return None
+
+    def estado_aprobacion(self, document_id):
+        return self.estado
+
+
+@pytest.mark.parametrize("estado, lanza", [
+    ({"approved": True}, True), ({"approved": False}, False), (None, False),
+])
+def test_f065_r4_comprobar_editable_mira_si_esta_aprobado(estado, lanza):
+    from application.services.review_service import ReviewService
+    from domain.models.review_models import AlbaranAprobadoError
+
+    servicio = ReviewService(_RepoEstado(estado), "ana")
+    if lanza:
+        with pytest.raises(AlbaranAprobadoError):
+            servicio.comprobar_editable(DOC)
+    else:
+        servicio.comprobar_editable(DOC)
+
+
+def test_f065_r5_desaprobar_desde_la_ficha_con_alta_bloqueante_vuelve_a_la_ficha(monkeypatch):
+    class _Servicio:
+        def initialize(self):
+            return True
+
+        def unapprove_document(self, *, document_id):
+            raise AlbaranBloqueadoError(document_id, "registrado", "AC26/7")
+
+    respuesta = _cliente(monkeypatch, _Servicio()).post(
+        f"/documents/{DOC}/unapprove", data={"volver": "ficha"})
+
+    destino = respuesta.headers["location"]
+    assert destino.startswith(f"/documents/{DOC}?message=")
+    assert "AC26%2F7" in destino
+
+
+@pytest.mark.parametrize("accion", ["bloquear", "desbloquear"])
+@pytest.mark.parametrize("ok, codigo", [(True, 200), (False, 404)])
+def test_f065_r13_el_portal_bloquea_y_desbloquea(monkeypatch, accion, ok, codigo):
+    class _Servicio:
+        def __init__(self):
+            self.llamadas = []
+
+        def initialize(self):
+            return True
+
+        def bloquear_linea(self, *, document_id, valuation_line_id):
+            self.llamadas.append(("bloquear", document_id, valuation_line_id))
+            return ok
+
+        def desbloquear_linea(self, *, document_id, valuation_line_id):
+            self.llamadas.append(("desbloquear", document_id, valuation_line_id))
+            return ok
+
+    servicio = _Servicio()
+
+    respuesta = _cliente(monkeypatch, servicio).post(f"/api/documents/{DOC}/lines/12/{accion}")
+
+    assert respuesta.status_code == codigo
+    assert servicio.llamadas == [(accion, DOC, 12)]
+    if ok:
+        assert respuesta.json() == {"ok": True, "document_id": DOC, "valuation_line_id": 12}
