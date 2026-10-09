@@ -178,3 +178,36 @@ def documento(motor, document_id: str = DOC) -> dict[str, Any]:
                  "FROM albaran_documents_merge WHERE id = :id"),
             {"id": document_id},
         ).mappings().one())
+
+
+def motor_con_valoracion(*, document_id: str, valuation_id: str, total: float = 0.0):
+    """Motor con un documento pendiente y su valoración vacía (sin líneas):
+    para los tests que siembran sus propias filas (F-019, F-036)."""
+    from infrastructure.database.orm_models import Base
+
+    motor = create_engine("sqlite://")
+    Base.metadata.create_all(motor)
+    with Session(motor) as s:
+        for sentencia in _VALORACION:
+            s.execute(text(sentencia))
+        _merge(s, document_id)
+        s.execute(text(
+            "INSERT INTO albaran_valuations (id, document_id, status, total_valorado, "
+            "updated_at_utc) VALUES (:v, :d, 'ok', :t, '2026-08-18T13:24:26Z')"),
+            {"v": valuation_id, "d": document_id, "t": total})
+        s.commit()
+    return motor
+
+
+def fila_nueva(motor, *, valuation_id: str, id: int, **campos: Any) -> None:
+    """Una fila Nueva (con su derivada ``id + 5000`` al mismo precio)."""
+    with Session(motor) as s:
+        s.execute(text(
+            "INSERT INTO contrato_lines_derived (id, created_by_valuation_id, "
+            "descripcion_linea, unidad_medida, precio_unitario, codigo_partida, origen) "
+            "VALUES (:id, :v, 'LINEA', 'UD', :pu, '01.01', 'nueva_no_match')"),
+            {"id": id + 5000, "v": valuation_id,
+             "pu": campos.get("precio_unitario_final", 115.0)})
+        linea(s, id=id, valuation_id=valuation_id, derived_contrato_line_id=id + 5000,
+              **campos)
+        s.commit()
