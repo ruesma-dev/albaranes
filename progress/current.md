@@ -59,7 +59,7 @@ Revisar en sv4 cada documento listado: CIF aplicado = proveedor real y `contrato
 `encontrados`. Un caso mal aplicado ⇒ `RED_PROVEEDOR_CORRECCION_ENABLED=false` en la Container App de sv3 (la
 decide y la aplica el humano) y volver a la spec. No bloquea el `done`.
 
-**F-051 · `blocked` (2026-10-06) y FUSIONADA en `dev`.** Implementación APROBADA por el reviewer (pasada 2) e `init.sh`
+**F-051 · CERRADA (`done`, 2026-10-09): T22–T24 hechas por el humano (`progress/impl_F-051.md` §6 bis).** Antes: `blocked` (2026-10-06) y FUSIONADA en `dev`. Implementación APROBADA por el reviewer (pasada 2) e `init.sh`
 en verde. **T21 hecha** (evals con LLM, 2026-10-06 11:07 UTC, informe local `progress/evals_F-051.md`): frente a F-048,
 IA3 417→397 fallos, E2E 545→522, partida final 102→85; IA1 e IA4 iguales; los 4 casos que empeoran son variación del
 modelo o recuento (GEN-005, RES-009, MOR-004). **Bloqueo:** T22, T23 y T24 (pruebas manuales en local y navegador)
@@ -112,7 +112,7 @@ verificación MANUAL T12 (sección «F-054 · lo que queda» al final). Resumen 
 
 - **F-053 `in_progress`**, fases 1 y 2 implementadas (bloque de arriba, `progress/impl_F-053_fase2.md`). Es la única
   `in_progress`. Siguiente: review de la fase 2; luego fusionar en `dev` e `init.sh` en el árbol principal.
-- **F-051 `blocked`** y fusionada en `dev`: solo esperan T22–T24 (pruebas manuales del humano, aplazadas).
+- **F-051 · CERRADA (`done`, 2026-10-09)** tras T22–T24. Despliegue (lo pide el humano): sv6 → sv4 → sv2, junto con F-053.
 - **F-054 · CERRADA (`done`, 2026-10-02)** y fusionada en `dev`. Pendiente del humano: `.\deploy.ps1 -Only sv1` +
   `.\check_deploy.ps1` desde `infra/` y la **T12 MANUAL** (procedimiento al final). La T12 no bloquea el `done`.
 - **F-052 · CERRADA (`done`, 2026-10-01)**, fusionada en `dev` y desplegada (sección de abajo).

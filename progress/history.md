@@ -755,3 +755,8 @@ separado, nadie recorriendo el camino entero—:
   de la red de proveedor en las tres rutas, deja nota `[AVISO] CIF del cliente` y resuelve por nombre en la obra; el revisor manda.
 - Review APROBADA; mutación 14/14; `init.sh` en verde en `dev` (`92ff1e1`). Despliegue: solo sv3.
 
+
+## F-051 · Almacén por línea (done, 2026-10-09)
+- Línea sin partida = almacén (partida final vacía) en sv6 y sv4, elegible siempre en el combo y «Almacén a todas» con deshacer;
+  interruptor `ALMACEN_SIN_PARTIDA_ENABLED` en sv6. Review APROBADA (pasada 2); mutación 57/57; evals T21 mejoran IA3 y partida final.
+- T22–T24 manuales hechas por el humano en local (`progress/impl_F-051.md` §6 bis). Despliegue: sv6 → sv4 → sv2.
