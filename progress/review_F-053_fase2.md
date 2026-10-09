@@ -1,13 +1,32 @@
-Revisión incremental desde `e4f57fb` (fase 1 aprobada; fase 2, pasada 1): `e4f57fb..97f70ce` sin las fusiones de `dev`
+Revisión incremental desde `44d5d86` (fase 2, pasada 2): `44d5d86..c5ed909`. La pasada 1, abajo, fue desde `e4f57fb`
 <!-- progress/review_F-053_fase2.md -->
-# Review F-053 · fase 2 · pasada 1 · reviewer, 2026-10-09
+# Review F-053 · fase 2 · reviewer, 2026-10-09
 
-**Veredicto: CHANGES_REQUESTED.** Un solo cambio requerido, barato: **RM5**. En `critico` cada equivalente trae
-demostración ejecutable, y los 10 de la campaña solo traen prosa. El código de la fase 2 está bien:
-- las tres carreras usan el patrón de dos sentencias y mis controles las cazan;
-- ninguna ruta manda `commit=true` sin el literal `true`;
-- los 10 equivalentes lo son (los leí todos y reproduje uno al pie de la letra).
+## Pasada 2 · veredicto: APPROVED (fase 2)
 
+El delta arregla el único cambio requerido (RM5) y además O3 y O5. No toca código de producción: `6e29784` solo
+añade tests y la línea «Demostración:», así que la campaña sigue valiendo (RM1). Restricción de máquina igual que en
+la pasada 1: solo ficheros sueltos, uno por pytest.
+- **[x] RM5.** sv9 `tests/test_f053_t25_equivalentes.py` (#1–#7) da **7 passed** y sv3 (#8–#10) **3 passed**. Cada
+  test carga el módulo REAL y fabrica la variante sustituyendo el texto. Antes normaliza la fuente, así que un
+  equivalente inyectado no sale muerto (RM3). Los dominios son amplios: #1, 2688 escenarios del servicio; #2 y #3,
+  3000 lotes; #4–#6, 338 casos por `validar_y_construir`; #7, 76 entradas; #8–#10, 1644 albaranes. Cada uno lleva un
+  control no equivalente con `> 0`.
+- **Lo comprobé falseando los tests en una COPIA del scratchpad** (el árbol quedó limpio): metí como «equivalente» un
+  mutante que no lo es, y en los cinco casos el test **falla**. F1: #1 con el control como mutado. F2: #6 con
+  `con_signo … importe < 1`; esto prueba además que la línea `:267` se ejercita. F3: #7 con `is not None`. F4: #2 y #3
+  con `(-1, …)`. F5: sv3 con `(l.importe or 0) < 1`.
+- **[x]** Las 10 secciones de `mutacion_F-053.md` enlazan su test por nombre (con su `[equivalente_N]`).
+- **[x] O3**: el README pone `Set-DeployTag` antes del build de sv9. **[x] O5**: `current.md` ya no tiene los bloques
+  «EN CURSO» de F-062 y F-063.
+- Sigue abierto para el cierre: O1 (humano, antes de T29), O2, O4, O6 y O7 (no bloquean), la aceptación del humano de
+  los 10 equivalentes, T0d, T30 (`init.sh` en el árbol principal) y las MANUAL.
+
+## Pasada 1 (`e4f57fb..97f70ce`)
+
+**Veredicto de la pasada 1: CHANGES_REQUESTED**, solo por RM5: en `critico` cada equivalente trae demostración
+ejecutable, y los 10 solo traían prosa. El código de la fase 2 está bien: las tres carreras usan dos sentencias y mis
+controles las cazan, ninguna ruta manda `commit=true` sin el literal `true`, y los 10 equivalentes lo son.
 Lo aprobado en la fase 1 (hasta `e4f57fb`) queda dado por bueno. Las fusiones `7ec02a6` y `d53d059` no tocan sv9 ni
 R45 de sv3: `_conservar_por_alta` sigue en dos sentencias y `save` lo llama (`:840`).
 
@@ -51,20 +70,15 @@ marcha: **no** ejecuté `init.sh`, suites completas, la campaña ni coverage glo
    `_guardar(REGISTRADO)` ya puso `paso.cerrado`; #2 y #3, la clave `(0,…)` frente a `(1|2,…)` conserva el orden y el
    tercer elemento es igual en todas; #4, #5 y #6, solo llega `|importe| > 1e-9` (ni 0, ni -0.0, ni NaN); #7, `None`
    y `""` caen en el mismo `except`; #8, #9 y #10, `con_importe` excluye el 0 y el nulo.
-   - **Mi muestra (RM5), la #7:** `rm5_json.py` del scratchpad compara la `_json` real con la mutada (`:162`,
-     `or` → `and`) sobre 17 entradas (`None`, `""`, JSON válidos y rotos, `0`, `b""`, `[]`, `{}`, `"\x00"`…):
-     **17/17 IGUAL**.
-5. **R30 y el adjunto en error · decisión pendiente del humano, no incumplimiento.**
-   - R30 enumera sus estados y `registrado` no está entre ellos: sv4 lo cumple al pie de la letra.
-   - R23 describe a sv9, y sv9 lo hace (`SOLO_ADJUNTO`). Es un hueco entre R23 y R30, no un fallo del código.
-   - Solo afecta al modo real. Decidir **antes de T29**: (a) añadir a R30 «`registrado` con adjunto en `error`»
-     (barato, sv9 ya lo soporta), o (b) reintentar a mano.
-6. **KO de `init.sh` en el worktree · de entorno, confirmado.**
-   - En los venvs de sv3 y sv4, `ruesma_comun.__file__` apunta al árbol principal, que está en `dev` y no tiene
-     `alta_sigrid`, `valoracion` ni `configuracion` (comprobado con `ls`). De ahí los tres `ModuleNotFoundError`, y de
-     ellos la cobertura del 4,4 %.
-   - Con `PYTHONPATH` al worktree mis ficheros pasan. Como en la fase 1: C1 N/A y `init.sh` en el árbol principal
-     tras fusionar.
+   - **Mi muestra (RM5), la #7:** la `_json` real frente a la mutada (`:162`, `or` → `and`), 17 entradas: **17/17
+     IGUAL**.
+5. **R30 y el adjunto en error · decisión pendiente del humano, no incumplimiento.** `registrado` no está en la lista
+   de R30, y sv4 la cumple al pie de la letra; R23 describe a sv9, que lo hace (`SOLO_ADJUNTO`). Es un hueco entre R23
+   y R30. Solo afecta al modo real: decidir **antes de T29** entre (a) añadir a R30 «`registrado` con adjunto en
+   `error`» (barato) y (b) reintentar a mano.
+6. **KO de `init.sh` en el worktree · de entorno, confirmado.** En los venvs de sv3 y sv4, `ruesma_comun.__file__`
+   apunta al árbol principal, en `dev`, sin `alta_sigrid`, `valoracion` ni `configuracion`: de ahí los tres
+   `ModuleNotFoundError` y la cobertura del 4,4 %. Con `PYTHONPATH` al worktree pasan. C1 N/A, como en la fase 1.
 
 ## Checkpoints
 
@@ -101,17 +115,10 @@ marcha: **no** ejecuté `init.sh`, suites completas, la campaña ni coverage glo
 - **C5 · [x] en el alcance de la fase.** T17–T25 y T24b `[x]`, un commit `F-053 Tn` por tarea (T18 y T19 juntas,
   justificado en §3). T0d, T30 y las MANUAL son del cierre. Árbol limpio (`coverage.json` y `__pycache__`, ignorados).
 
-## Cambios requeridos
+## Cambios requeridos (pasada 1; resueltos en la pasada 2)
 
-1. **RM5 · media, bloquea por `critico`.** Demostración ejecutable versionada de los 10 equivalentes de
-   `progress/mutacion_F-053.md`, como F-048 (`7b8adab`).
-   - Por grupo, un test diferencial: carga la función real, fabrica la mutada sustituyendo el texto y compara las
-     salidas sobre un dominio amplio, con un control no equivalente que sí se detecte. Grupos: #1
-     (`alta_sigrid_service.py:327`); #2 y #3 (`validador_alta.py:140`, orden); #4, #5 y #6 (`validador_alta.py:247`
-     y `:267`, sobre `validar_y_construir`); #7 (`sql_alta_repository.py:162`); #8, #9 y #10
-     (`medir_admisibilidad_f053.py:275`).
-   - Cada sección del informe de mutación enlaza su test. Si el código cambia y deja de ser equivalente, el test
-     salta (RM3).
+1. **RM5 · media.** Un test diferencial versionado por grupo de equivalentes, como F-048 (`7b8adab`): función real
+   frente a variante mutada, dominio amplio y control no equivalente; cada sección de `mutacion_F-053.md`, enlazada.
 
 ## Observaciones (no bloquean)
 
@@ -120,21 +127,12 @@ marcha: **no** ejecuté `init.sh`, suites completas, la campaña ni coverage glo
   aunque el alta sea bloqueante (`review_repository.py:4428-4430`); guardar con `approved=true` en estados no
   bloqueantes, igual (`:3475-3478`, ya existía). R25 no cubre «aprobar». Efecto: un aprobado antes de DESDE y vuelto
   a guardar pasa a ofrecer «Solicitar alta» (acción humana; R14 caza las altas a mano). Sugerencia: no tocarlo.
-- **O3 · baja.** Sin `Set-DeployTag`, `build_images.ps1 -Only sv9` (README, paso 2) construye la etiqueta fija
-  `sv9-alta-sigrid:sin-desplegar` (`00_vars.ps1:97`), y si se repite la reescribe (contra `:44`). Sugerencia: poner
-  `Set-DeployTag` en el paso 2.
-- **O4 · informativa.** El log del wiring de `app.py` incluye DESDE, la Espera y los productos. No es secreto (R35) y
-  sv9 hace lo mismo, pero lo que dice el informe §7 es inexacto. H1 se cumple: los errores de `Settings` van sin
-  valores.
+- **O3 · baja (resuelta en la pasada 2).** Faltaba `Set-DeployTag` antes de construir sv9 (`00_vars.ps1:97`).
+- **O4 · informativa.** El wiring de `app.py` escribe en el log DESDE, la Espera y los productos: no es secreto (R35),
+  pero el §7 del informe es inexacto. Los errores de `Settings` van sin valores (H1).
 - **O5.** Podar los bloques heredados de `current.md` al cerrar. **O6 · cosmética.** `ruff` desde la raíz da 13
   `I001` en ficheros nuevos (desde cada servicio, limpio). **O7 · informativa.** Un `deploy.ps1` completo antes de
   crear sv9 da FALLO en sv9 y sigue con sv4 (DESDE vacía): es seguro.
 
-**Pendiente para cerrar la feature:** cambio 1, la aceptación de los equivalentes por el humano, T0d y T30
-(`init.sh` en el árbol principal), las MANUAL (T0b, T0c, T0, T22, T26, T27, T27b, T27c, T28, T29), la Parte B de
-sigrid-api y la decisión O1.
-
-## Automejora (propuesta, no aplicada)
-
-1. **Para `CHECKPOINTS.md` RM5 y `arnes-base`:** en `critico`, que `harness.mutacion` exija una línea `Demostración:
-   <test>` en cada equivalente y que `init.sh` avise si falta. Así RM5 no se descubre en la review.
+**Automejora (no aplicada; `CHECKPOINTS.md` RM5 y `arnes-base`):** en `critico`, que `harness.mutacion` exija una
+línea `Demostración: <test>` en cada equivalente y que `init.sh` avise si falta.
