@@ -59,6 +59,13 @@ Revisar en sv4 cada documento listado: CIF aplicado = proveedor real y `contrato
 `encontrados`. Un caso mal aplicado ⇒ `RED_PROVEEDOR_CORRECCION_ENABLED=false` en la Container App de sv3 (la
 decide y la aplica el humano) y volver a la spec. No bloquea el `done`.
 
+**F-053 · `blocked` (2026-10-09) — esperando al humano, código terminado y en `dev`.** Fases 1 y 2 APROBADAS
+(`progress/review_F-053_fase2.md`), fusionada en `dev` (`039a118`, `cb125af`) con `init.sh` en verde (T0d, T30).
+Falta solo lo del humano: decisión O1 (reintento del adjunto), aceptar los 10 equivalentes, T0b, T0c
+(`ALTA_SIGRID_USUARIO`), despliegue en simulación (sv6, sv3 → sv9 con `ALTA_SIGRID_COMMIT=false` → sv4 → resto),
+T26–T28 y, con autorización, T29. Recomendación: no pasar a real (T29) hasta desplegar F-065 fase 1. Se bloquea para
+dejar paso a F-065 (máximo una `in_progress`).
+
 **F-051 · CERRADA (`done`, 2026-10-09): T22–T24 hechas por el humano (`progress/impl_F-051.md` §6 bis).** Antes: `blocked` (2026-10-06) y FUSIONADA en `dev`. Implementación APROBADA por el reviewer (pasada 2) e `init.sh`
 en verde. **T21 hecha** (evals con LLM, 2026-10-06 11:07 UTC, informe local `progress/evals_F-051.md`): frente a F-048,
 IA3 417→397 fallos, E2E 545→522, partida final 102→85; IA1 e IA4 iguales; los 4 casos que empeoran son variación del
