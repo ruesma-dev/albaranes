@@ -5,6 +5,8 @@
 
 Resumen: **66 features**, 46 abiertas, 20 terminadas.
 
+En curso: **F-065**.
+
 Bloqueadas: **F-053**.
 
 ## Trabajo abierto
@@ -15,7 +17,7 @@ Bloqueadas: **F-053**.
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
 | F-058 | Revalorar no pierde las partidas ni el almacén asignados a mano | 1 | pendiente | critico |  |
 | F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 1 | pendiente | estandar |  |
-| F-065 | Lo editado en las líneas de sv4 manda (guardados separados, guardar = bloquear la línea, aprobado = solo lectura), la partida se elige entre las de la obra y una línea se divide con F6 | 1 | spec lista | critico | `feature/F-065-lineas-editadas-y-reparto` |
+| F-065 | Lo editado en las líneas de sv4 manda (guardados separados, guardar = bloquear la línea, aprobado = solo lectura), la partida se elige entre las de la obra y una línea se divide con F6 | 1 | en curso | critico | `feature/F-065-lineas-editadas-y-reparto` |
 | F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 1 | pendiente | critico |  |
 | F-067 | Limpieza de la ficha de detalle (sv4) | 1 | pendiente | estandar |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
@@ -145,7 +147,7 @@ X24 (2026-10-09, progress/propuestas_ficha_detalle.md): motivos de revisión en 
 
 ### F-065 · Lo editado en las líneas de sv4 manda (guardados separados, guardar = bloquear la línea, aprobado = solo lectura), la partida se elige entre las de la obra y una línea se divide con F6
 
-estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-065-lineas-editadas-y-reparto`
+estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-065-lineas-editadas-y-reparto`
 
 ORIGEN (humano, 2026-10-09: «mételo todo en una spec de prioridad 1, y luego lo analizamos juntos»): correo de administración de obra sobre un albarán de METALFIRE (contrato CTSU25/0359): «Las unidades del albarán tengo que repartirlas en 3 partidas distintas»; «Si le cambio las partidas me arrastra del contrato, si le doy que no me la cambie me la pone como nueva»; puso 6 y 7 en dos líneas de 8 y 10 y trajo una tercera de 5 del contrato: «Guardar todas» dejó 18 y «Guardar y aprobar» volvió a 8+10+5 = 23 unidades.
 

@@ -1,12 +1,12 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-065 · `spec_ready` (2026-10-09), spec v2 tras la PARADA 1** en la rama `feature/F-065-lineas-editadas-y-reparto`
-(worktree `../albaranes-F-065`, con `dev` fusionado): modelo del humano (origen «Contrato»/Nueva; cambiar la partida ⇒
-Nueva; guardados separados; guardar = bloquear la línea; aprobado = solo lectura; combo con las partidas de la obra;
-F6 dividir). Tres fases; **la fase 1 (sv6 → sv4) se despliega antes de pasar F-053 a real**. Informe en
-`progress/spec_F-065.md` §v2; decisiones por defecto P10–P13 a confirmar. Nuevas fichas `pending` prioridad 1: F-066
-(edición tipo hoja de cálculo) y F-067 (limpieza de la ficha, con las notas de X4 y O2); F-058 y F-059 a prioridad 1.
+**F-065 · `in_progress` (2026-10-09), implementación de la FASE 1 (T1–T12)** en la rama
+`feature/F-065-lineas-editadas-y-reparto` (worktree `../albaranes-F-065`). Spec v2 aprobada en la PARADA 1 (P10–P13
+por defecto). Implementer en curso; informe al terminar en `progress/impl_F-065_fase1.md`.
+- Entorno del worktree: *junction* `services/albaranes-front/.venv` → venv de sv4 del árbol principal (ignorada por
+  git; quitarla con `cmd /c rmdir serviceslbaranes-front\.venv` ANTES de `git worktree remove`).
+- Tarea en curso y desviaciones: ver `progress/impl_F-065_fase1.md` (se completa al terminar).
 
 **F-063 · `done` (2026-10-08)**, fusionada en `dev` con `init.sh` en verde. Pendiente del humano: desplegar solo sv3; en los merges `b1d3e179` y `401d9c00`, «Elegir proveedor» FEYMACO a mano. Comandos de la MANUAL T8 en `progress/impl_F-063.md` §7.
 
