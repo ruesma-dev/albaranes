@@ -1,6 +1,20 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-065 · `in_progress` (2026-10-09): FASE 1 IMPLEMENTADA (T1–T12)** en la rama
+`feature/F-065-lineas-editadas-y-reparto` (worktree `../albaranes-F-065`). Informe: **`progress/impl_F-065_fase1.md`**
+(decisiones D1–D9 a confirmar con el humano, junto con P10–P13). `init.sh` en verde en el worktree; cobertura 100 %
+(309/309); mutación 131/131 (`progress/mutacion_F-065_fase1.md`). Siguiente: **review de la fase 1 (T14)**; después,
+fusionar en `dev`, `init.sh` en el árbol principal y desplegar **sv6 → sv4** antes de pasar F-053 a real.
+- Entorno del worktree: *junction* `services/albaranes-front/.venv` → venv de sv4 del árbol principal (ignorada por
+  git; quitarla con `cmd /c rmdir services\albaranes-front\.venv` ANTES de `git worktree remove`).
+- **MANUAL T13 (humano, pipeline LOCAL)**, comandos exactos en `progress/impl_F-065_fase1.md` §9: en
+  `http://localhost:8004`, dos filas Contrato a 6 y 7 con «Guardar», «Traer líneas contrato» una con 5, «Guardar y
+  aprobar»; luego, solo lectura:
+  `psql -h localhost -U <usuario_local> -d albaranes -c "SELECT lv.id, lv.cantidad_albaran, lv.cantidad_convertida, lv.importe_calculado, lv.bloqueada FROM albaran_line_valuations lv JOIN albaran_valuations v ON v.id = lv.valuation_id WHERE v.document_id = '<ID>' ORDER BY lv.id;"`
+  Criterio: 6, 7 y 5 con convertida igual a la cantidad, total = suma, aprobado en solo lectura hasta «Desaprobar para
+  editar».
+
 **F-063 · `done` (2026-10-08)**, fusionada en `dev` con `init.sh` en verde. Pendiente del humano: desplegar solo sv3; en los merges `b1d3e179` y `401d9c00`, «Elegir proveedor» FEYMACO a mano. Comandos de la MANUAL T8 en `progress/impl_F-063.md` §7.
 
 **F-062 · `done` (2026-10-08)**, fusionada en `dev` (`d052106`) con `init.sh` en verde. Pendiente del humano: despliegue de solo sv3 y vigilancia T12 (comandos abajo).

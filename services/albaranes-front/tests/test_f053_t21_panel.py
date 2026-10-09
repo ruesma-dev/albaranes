@@ -253,7 +253,9 @@ def _celda_producto(html, vid):
 
 def _ficha_con_producto(documento_detalle, linea_valorada, fila_detalle, producto):
     documento = documento_detalle(lineas_valoracion=[linea_valorada()], display=[fila_detalle()])
-    return _con_alta(documento, None, productos={900: producto})
+    # F-065 R4: el producto se elige con el albarán pendiente (un aprobado es
+    # de solo lectura).
+    return _con_alta(documento, None, aprobado=False, productos={900: producto})
 
 
 def test_f053_r40_sin_vincular_a_registrar_tiene_selector(render_detalle, documento_detalle,

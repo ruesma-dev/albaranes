@@ -28,6 +28,7 @@ from domain.models.alta_sigrid_models import (
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
     VIEW_MODE_MERGE,
+    AlbaranAprobadoError,
     DocumentDetailPayload,
     DocumentListFilters,
     MergeDocumentUpdatePayload,
@@ -63,6 +64,15 @@ class ResultadoGuardado:
     detail: DocumentDetailPayload
     busqueda: ContratoRefetchOutcome | None
     aprobacion: ResultadoAprobacion
+
+
+@dataclass(frozen=True)
+class ResultadoAlmacenTodas:
+    """«Almacén a todas las líneas» (F-051 R16): las que pasaron a almacén y
+    las que se saltó por estar guardadas (F-065 R14)."""
+
+    tocadas: int
+    saltadas: int
 
 
 @dataclass(frozen=True)
@@ -181,31 +191,24 @@ class ReviewService:
     ) -> tuple[DocumentDetailPayload, ResultadoAprobacion]:
         if payload.approved and not payload.approved_by:
             payload.approved_by = self._default_reviewer
-        # Historial: estado previo de cabecera, valoración y las líneas
-        # que este guardado va a tocar.
+        # Historial: estado previo de la cabecera, lo único que toca el
+        # guardado (F-065 R1: las líneas del payload se ignoran).
         snaps = [
             self._repository.snapshot_row(
                 table="albaran_documents_merge", row_id=document_id,
             ),
-            self._undo_snap_valuation(document_id),
         ]
-        for upd in (payload.valuation_line_updates or []):
-            snaps.append(self._undo_snap_line(upd.valuation_line_id))
         # F-053: el repositorio comprueba el alta (R26), no deja aprobar lo
         # no valorado (R37) y dice si el documento PASÓ a aprobado en esta
         # transacción (R1, R2).
         detail, paso_a_aprobado = self._repository.update_document_y_transicion(
             document_id=document_id, payload=payload,
         )
-        n_lineas = len(payload.valuation_line_updates or [])
-        que = "cabecera" if not n_lineas else (
-            f"cabecera + {n_lineas} línea(s)"
-        )
         self._repository.record_undo(
             document_id=document_id,
             action="guardar",
             description=(
-                f"Guardar {que} "
+                "Guardar cabecera "
                 f"({self._repository.doc_label(document_id=document_id)})"
             ),
             restore=snaps,
@@ -417,39 +420,61 @@ class ReviewService:
         *,
         document_id: str,
         valuation_line_id: int,
-        codigo_partida: str | None = None,
-        descripcion: str | None = None,
-        cantidad: float | None = None,
-        unidad: str | None = None,
-        precio_unitario: float | None = None,
-        descuento: float | None = None,
-        codigo_externo: str | None = None,
+        campos: dict | None = None,
+        bloquear: bool = False,
     ) -> bool:
-        """Edición de la fila salmon (ver repositorio para la regla
-        SIGRID→NUEVA al cambiar imputación/unidad/precio)."""
+        """Edición de una fila con SOLO los campos cambiados (F-065 R8) y,
+        con ``bloquear``, «Guardar» = aplicar y bloquear (R13). Una entrada
+        de deshacer que devuelve la fila (y el total) a como estaba."""
         etiqueta = self._undo_line_desc(valuation_line_id)
         snap_line = self._undo_snap_line(valuation_line_id)
         snap_val = self._undo_snap_valuation(document_id)
         ok = self._repository.update_line_conciliacion(
             document_id=document_id,
             valuation_line_id=valuation_line_id,
-            codigo_partida=codigo_partida,
-            descripcion=descripcion,
-            cantidad=cantidad,
-            unidad=unidad,
-            precio_unitario=precio_unitario,
-            descuento=descuento,
-            codigo_externo=codigo_externo,
+            campos=campos,
+            bloquear=bloquear,
         )
         if ok:
             self._repository.record_undo(
                 document_id=document_id,
                 action="linea_edit",
                 description=(
-                    f"Editar línea · {etiqueta} "
+                    f"{'Guardar' if bloquear else 'Editar'} línea · {etiqueta} "
                     f"({self._repository.doc_label(document_id=document_id)})"
                 ),
                 restore=[snap_line, snap_val],
+            )
+        return ok
+
+    def bloquear_linea(self, *, document_id: str, valuation_line_id: int) -> bool:
+        """(F-065 R13, R15) Bloquea la fila, con su entrada de deshacer."""
+        return self._marcar_bloqueada(document_id, valuation_line_id, True)
+
+    def desbloquear_linea(self, *, document_id: str, valuation_line_id: int) -> bool:
+        """(F-065 R15) Desbloquea la fila, con su entrada de deshacer."""
+        return self._marcar_bloqueada(document_id, valuation_line_id, False)
+
+    def _marcar_bloqueada(
+        self, document_id: str, valuation_line_id: int, bloqueada: bool,
+    ) -> bool:
+        etiqueta = self._undo_line_desc(valuation_line_id)
+        snap_line = self._undo_snap_line(valuation_line_id)
+        metodo = (
+            self._repository.bloquear_linea if bloqueada
+            else self._repository.desbloquear_linea
+        )
+        ok = metodo(document_id=document_id, valuation_line_id=valuation_line_id)
+        if ok:
+            accion = "bloquear" if bloqueada else "desbloquear"
+            self._repository.record_undo(
+                document_id=document_id,
+                action=accion,
+                description=(
+                    f"{accion.capitalize()} línea · {etiqueta} "
+                    f"({self._repository.doc_label(document_id=document_id)})"
+                ),
+                restore=[snap_line],
             )
         return ok
 
@@ -481,6 +506,22 @@ class ReviewService:
             restore=[snap_line],
         )
         return True
+
+    def asignar_almacen_todas_con_saltos(
+        self, *, document_id: str,
+    ) -> ResultadoAlmacenTodas:
+        """(F-065 R14) Como :meth:`asignar_almacen_todas`, diciendo cuántas
+        filas se saltó por estar guardadas (bloqueadas)."""
+        saltadas = sum(
+            1 for snap in self._repository.snapshot_lineas_valoracion(
+                document_id=document_id,
+            )
+            if snap["values"].get("bloqueada")
+        )
+        return ResultadoAlmacenTodas(
+            tocadas=self.asignar_almacen_todas(document_id=document_id),
+            saltadas=saltadas,
+        )
 
     def asignar_almacen_todas(self, *, document_id: str) -> int:
         """(F-051 R16, R18) «Almacén a todas las líneas»: todas las líneas
@@ -693,14 +734,15 @@ class ReviewService:
         self,
         *,
         document_id: str,
-        contrato_line_ids: list[int],
+        lineas: list[tuple[int, float]],
     ) -> int:
-        """Trae líneas del contrato a la tabla salmón (jul 2026): crea
-        una línea salmón ya casada por cada línea de contrato elegida.
-        Devuelve cuántas se crearon."""
+        """Trae líneas del contrato a la tabla (F-065 R23): una fila Contrato
+        por cada ``(línea de contrato, cantidad)``, ya válida para sv9; con
+        su entrada de deshacer. Devuelve cuántas se crearon."""
+        snap_val = self._undo_snap_valuation(document_id)
         creadas = self._repository.add_valuation_lines_from_contrato(
             document_id=document_id,
-            contrato_line_ids=contrato_line_ids,
+            lineas=lineas,
         )
         if creadas:
             self._repository.record_undo(
@@ -710,6 +752,7 @@ class ReviewService:
                     f"Traer {len(creadas)} línea(s) de contrato "
                     f"({self._repository.doc_label(document_id=document_id)})"
                 ),
+                restore=[snap_val],
                 delete_created=[
                     {"table": "albaran_line_valuations", "id": i}
                     for i in creadas
@@ -806,6 +849,16 @@ class ReviewService:
         alta = self._repository.leer_alta_sigrid(document_id)
         if alta is not None and alta.bloqueante:
             raise AlbaranBloqueadoError(document_id, alta.estado, alta.sigrid_cod)
+
+    def comprobar_editable(self, document_id: str) -> None:
+        """F-065 R4 para lo que solo PUBLICA (revalorar, volver a buscar
+        contratos): con alta bloqueante, :class:`AlbaranBloqueadoError` (F-053
+        R25); con el albarán aprobado, :class:`AlbaranAprobadoError`. Sin
+        cerrojo, como :meth:`comprobar_desbloqueado`."""
+        self.comprobar_desbloqueado(document_id)
+        estado = self._repository.estado_aprobacion(document_id)
+        if estado is not None and estado["approved"]:
+            raise AlbaranAprobadoError(document_id)
 
     def puede_solicitar_alta(
         self, document_id: str, *, ahora: datetime | None = None,

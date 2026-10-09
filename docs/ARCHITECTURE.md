@@ -390,6 +390,50 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
     - **Las reglas compartidas viven en comun** (`ruesma_comun.alta_sigrid`):
       DESDE, Espera, «vinculada», «línea a registrar», producto efectivo y
       estados; sv4 y sv9 deciden con las mismas funciones.
+20. **Lo editado en las líneas manda** (F-065 fase 1, oct 2026). Spec:
+    `specs/F-065-lineas-editadas-y-reparto/`; decisiones en
+    `progress/spec_F-065.md` §v2. Lo aprobado es lo que sv9 da de alta, así
+    que lo que deja el administrativo en una fila no lo deshace ningún otro
+    guardado.
+    - **Guardados separados**: el PUT del documento guarda SOLO la cabecera;
+      `lines` y `valuation_line_updates` se aceptan (un `app.js` en caché) y se
+      ignoran, y no se recalcula nada (se retiró `_recalc_valuation_importes`,
+      que devolvía las filas a la cantidad leída: METALFIRE, 23 puertas en vez
+      de 18). El PUT nunca desaprueba. Cada fila se edita con su PATCH, que
+      lleva **solo los campos cambiados** (ausente = no cambia; `null` =
+      vaciar); sin cambios no se escribe importe, su origen, descuento ni
+      revisión. El importe solo se recalcula si cambia cantidad, precio o
+      descuento (editar la descripción no reetiqueta un importe declarado).
+    - **Q en la unidad del precio**: la ficha enseña y edita Q =
+      `cantidad_convertida ?? cantidad_albaran` e `importe = precio × Q × (1 −
+      dto/100)`. Al editar Q, la convertida es Q y la del albarán se deriva
+      (`Q / factor` si la conversión es reproducible; Q si no hay conversión; la
+      de antes en otro caso, p. ej. contenedores de residuos):
+      `review_models.cantidades_tras_editar`. Una fila editada nunca queda con
+      la convertida nula (sv9 rechaza una vinculada sin ella). La ficha pinta
+      el precio **aplicado** (`precio_unitario_final`), con el del contrato en
+      el `title`.
+    - **Aprobado = solo lectura**: toda escritura de sv4 sobre un aprobado
+      (cabecera, filas, alta y borrado de filas, almacén, producto, traer,
+      bloquear, revalorar, volver a buscar, deshacer) responde 409 «Albarán
+      aprobado: desapruébalo para editar», comprobado en la misma sesión que el
+      cerrojo de la regla 19 (`_exigir_editable`). La ficha sale en solo
+      lectura con «Desaprobar para editar». Mover a la papelera y purgar no
+      son edición y siguen con solo el cerrojo de la regla 19.
+    - **Guardar = bloquear**: «Guardar» (o «Guardar todas», solo filas con
+      cambios) aplica y marca `albaran_line_valuations.bloqueada` (DDL de sv6,
+      sentencia defensiva en sv4); una fila bloqueada no se edita, reapunta,
+      pasa a almacén, cambia de producto ni se borra (409 «Línea guardada:
+      desbloquéala para editarla») y los masivos se la saltan. «Desbloquear»
+      la libera; las dos acciones tienen «Deshacer». Aprobar no exige filas
+      bloqueadas. Revalorar las deja desbloqueadas (F-058).
+    - **Aprobar valida**: no se aprueba (ficha ni listado) con filas sin
+      cantidad o importe («Líneas sin cantidad o importe: 3, 5», posiciones de
+      la tabla de la ficha); si la suma de las filas no cuadra con la de lo
+      leído, la ficha pide confirmación (no bloquea). Revalorar, «Guardar y
+      volver a buscar» o elegir otro contrato piden confirmación si hay filas
+      tocadas a mano (`review_models.es_fila_manual`). «Traer líneas contrato»
+      exige la cantidad de cada línea y crea filas válidas para sv9.
 
 ## Acceso a datos y sistemas externos
 

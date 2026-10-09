@@ -108,14 +108,17 @@ RUTAS_API = [
     ("post", f"/api/documents/{DOC}/lines/by-merge/703/conciliacion", {"mode": "nueva"},
      "add_conciliacion_for_merge_line"),
     ("post", f"/api/documents/{DOC}/lines/12/almacen", None, "asignar_almacen_linea"),
-    ("post", f"/api/documents/{DOC}/almacen-todas", None, "asignar_almacen_todas"),
+    ("post", f"/api/documents/{DOC}/almacen-todas", None, "asignar_almacen_todas_con_saltos"),
     ("post", f"/api/documents/{DOC}/lines/standalone", None, "add_standalone_valuation_line"),
-    ("post", f"/api/documents/{DOC}/lines/from-contrato", {"contrato_line_ids": [501]},
+    # F-065 R23: cada línea con su cantidad.
+    ("post", f"/api/documents/{DOC}/lines/from-contrato",
+     {"lineas": [{"contrato_line_id": 501, "cantidad": 2}]},
      "add_valuation_lines_from_contrato"),
     ("post", f"/api/documents/{DOC}/lineas-valoradas/12/producto-sigrid", {"producto": "XA9999"},
      "elegir_producto_sigrid"),
-    ("post", f"/api/documents/{DOC}/re-fetch-contratos", None, "comprobar_desbloqueado"),
-    ("post", f"/api/documents/{DOC}/valuate", None, "comprobar_desbloqueado"),
+    # F-065 R4: revalorar y volver a buscar miran también si está aprobado.
+    ("post", f"/api/documents/{DOC}/re-fetch-contratos", None, "comprobar_editable"),
+    ("post", f"/api/documents/{DOC}/valuate", None, "comprobar_editable"),
 ]
 
 

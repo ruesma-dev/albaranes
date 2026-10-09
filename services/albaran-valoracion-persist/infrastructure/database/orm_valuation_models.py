@@ -13,6 +13,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy import text as sa_text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -300,6 +301,15 @@ class AlbaranLineValuationOrm(Base):
     # el replace deja NULL al revalorar, como el almacén elegido (F-051 D5).
     # -----------------------------------------------------------------
     producto_sigrid: Mapped[str | None] = mapped_column(String(24))
+
+    # -----------------------------------------------------------------
+    # F-065 · R17 — fila guardada (bloqueada) por el administrativo en sv4.
+    # Defecto en BBDD (``false``): sv6 no la escribe y el replace al
+    # revalorar deja las filas desbloqueadas (conservarlas es F-058).
+    # -----------------------------------------------------------------
+    bloqueada: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=sa_text("false"),
+    )
 
     valuation: Mapped[AlbaranValuationOrm] = relationship(
         back_populates="lines",

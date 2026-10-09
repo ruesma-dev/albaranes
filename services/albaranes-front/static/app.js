@@ -73,11 +73,10 @@
             try { return JSON.parse(dataTag.textContent).id; } catch (_) { return null; }
         })();
 
-    // TANDA 2A: datos completos del documento (incluye document.lines, las
-    // líneas BLANCAS del albarán). Ahora las blancas son SOLO LECTURA y ya
-    // NO viven en el grid editable; las reenviamos intactas en el PUT desde
-    // aquí, porque update_document BORRA las líneas merge que no lleguen en
-    // payload.lines. Sin esto, guardar la cabecera vaciaría el albarán.
+    // Datos completos del documento (JSON incrustado). F-065 R1: el PUT de la
+    // cabecera ya NO reenvía las blancas (el backend ignora las líneas); de
+    // aquí se lee, p. ej., cuántas filas tocadas a mano descartaría
+    // revalorar (n_filas_manuales, R22).
     let DOC_DATA = {};
     try { DOC_DATA = JSON.parse(dataTag.textContent) || {}; } catch (_) { DOC_DATA = {}; }
     window.__documentData = DOC_DATA;
@@ -166,6 +165,36 @@
             window.location.reload();
         } catch (e) {
             window.alert("Error de red borrando la línea.");
+            btn.disabled = false;
+        }
+    });
+
+    // F-065 R15: «Desbloquear» una fila guardada (con su «Deshacer»).
+    linesBody.addEventListener("click", async function (evt) {
+        const btn = evt.target.closest
+            ? evt.target.closest(".js-desbloquear")
+            : null;
+        if (!btn) return;
+        const vid = btn.dataset.valuationLineId;
+        btn.disabled = true;
+        try {
+            const resp = await fetch(
+                `/api/documents/${documentId}/lines/${vid}/desbloquear`,
+                { method: "POST" }
+            );
+            if (resp.ok) {
+                window.location.reload();
+                return;
+            }
+            let msg = "No se pudo desbloquear la línea.";
+            try {
+                const j = await resp.json();
+                if (j && j.detail) msg = j.detail;
+            } catch (e) { /* sin cuerpo JSON */ }
+            window.alert(msg);
+            btn.disabled = false;
+        } catch (e) {
+            window.alert("Error de red desbloqueando la línea.");
             btn.disabled = false;
         }
     });
@@ -524,6 +553,8 @@
             "tr.conciliacion-row[data-for-valuation-line-id]"
         ).forEach(function (row) {
             if (row.classList.contains("concilia-add")) return;
+            // F-065 R14: una fila guardada no se borra (se salta).
+            if (row.getAttribute("data-bloqueada") === "1") return;
             const vid = (row.dataset.forValuationLineId || "").trim();
             if (vid) out.push(vid);
         });
@@ -569,14 +600,21 @@
     if (bulkDeleteBtn) {
         bulkDeleteBtn.addEventListener("click", async function () {
             const vids = collectVidsCasadas();
+            // F-065 R14: las filas guardadas se saltan y se dice cuántas.
+            const guardadas = linesBody.querySelectorAll(
+                'tr.conciliacion-row[data-bloqueada="1"]'
+            ).length;
+            const saltan = guardadas
+                ? " Se saltan " + guardadas + " línea(s) guardadas (desbloquéalas para borrarlas)."
+                : "";
             if (!vids.length) {
-                window.alert("No hay líneas casadas que borrar.");
+                window.alert("No hay líneas casadas que borrar." + saltan);
                 return;
             }
             if (!window.confirm(
                 "¿Borrar las " + vids.length + " línea(s) casada(s) (Sigrid y " +
                 "Nueva)? Dejarán de contar en el total y reaparecerá el botón " +
-                "+ en cada línea."
+                "+ en cada línea." + saltan
             )) return;
             await runBulk(bulkDeleteBtn, vids, "Borrando", async function (vid) {
                 const resp = await fetch(
@@ -618,6 +656,15 @@
                     window.alert(msg);
                     almacenTodasBtn.disabled = false;
                     return;
+                }
+                // F-065 R14: las filas guardadas se saltan; se dice cuántas.
+                let saltadas = 0;
+                try { saltadas = (await resp.json()).saltadas || 0; } catch (e) {}
+                if (saltadas) {
+                    window.alert(
+                        saltadas + " línea(s) guardadas no se han pasado a almacén " +
+                        "(desbloquéalas para hacerlo)."
+                    );
                 }
                 window.location.reload();
             } catch (e) {
@@ -1095,22 +1142,89 @@
         return v;
     }
 
-    // Cuerpo del PATCH .../conciliacion/campos de una fila salmón. Lo usan
-    // el «Guardar» de la fila y «Guardar todas las líneas» (una sola copia).
-    function _conciliaBody(tr) {
+    // F-065 R8: ¿el mismo número? Tolerancia de coma flotante, no de dinero
+    // (un precio de 4 decimales o una cantidad de 3 cuentan).
+    function numerosIguales(a, b) {
+        if (a === null || b === null) { return a === b; }
+        return Math.abs(a - b) < 1e-9;
+    }
+
+    // F-065 R8, R9: cuerpo del PATCH .../conciliacion/campos de una fila:
+    // SOLO los campos que el administrativo cambió respecto a lo que pintó la
+    // ficha (números comparados como números: «115,0» = «115.0000»). Un
+    // campo que no viene no cambia; uno vaciado viaja como null (la partida,
+    // como "" = almacén). El importe no viaja: al teclearlo se ajusta el
+    // precio (que sí viaja si cambió). Lo usan «Guardar» y «Guardar todas».
+    function _camposCambiados(tr) {
+        const CAMPOS = ["codigo_partida", "descripcion", "cantidad", "unidad",
+                        "precio_unitario", "descuento", "codigo_externo"];
         const body = {};
         tr.querySelectorAll(".js-cedit").forEach(function (inp) {
             const field = inp.dataset.field;
-            if (!field) return;
+            if (CAMPOS.indexOf(field) === -1) return;
             if (inp.dataset.numeric === "1") {
-                body[field] = parseNumEs(inp.value);
+                const valor = parseNumEs(inp.value);
+                if (!numerosIguales(valor, parseNumEs(inp.defaultValue))) {
+                    body[field] = valor;
+                }
             } else if (field === "codigo_partida") {
-                body[field] = partidaParaEnviar(inp);
+                const valor = partidaParaEnviar(inp);
+                if (valor !== null) { body[field] = valor; }
             } else {
-                body[field] = inp.value.trim() || null;
+                const valor = inp.value.trim();
+                if (valor !== String(inp.defaultValue || "").trim()) {
+                    body[field] = valor || null;
+                }
             }
         });
         return body;
+    }
+
+    // F-065 R18, R19: cuántas filas tienen cambios sin guardar.
+    function contarFilasConCambios(filas) {
+        return filas.filter(function (tr) {
+            return Object.keys(_camposCambiados(tr)).length > 0;
+        }).length;
+    }
+
+    // F-065 R19: aviso antes de «Guardar» / «Guardar y aprobar».
+    function avisoFilasSinGuardar(n) {
+        if (!n) { return null; }
+        return n === 1
+            ? "Hay 1 línea con cambios sin guardar"
+            : "Hay " + n + " líneas con cambios sin guardar";
+    }
+
+    // F-065 R22: revalorar (o cambiar de contrato) descarta lo hecho a mano.
+    function avisoRevalorar(n) {
+        if (!n) { return null; }
+        return n === 1
+            ? "Revalorar descarta 1 línea tocada a mano. ¿Continuar?"
+            : "Revalorar descarta " + n + " líneas tocadas a mano. ¿Continuar?";
+    }
+
+    function confirmarRevalorar() {
+        const aviso = avisoRevalorar(DOC_DATA.n_filas_manuales);
+        return !aviso || window.confirm(aviso);
+    }
+
+    // F-065 R12: el importe que guardará el backend, Q × precio × (1 − dto).
+    function importeDeFila(cant, pu, dto) {
+        if (cant === null || pu === null) { return null; }
+        return Math.round(cant * pu * (1 - (dto || 0) / 100) * 100) / 100;
+    }
+
+    // F-065 R23: las líneas a traer con su cantidad (obligatoria, ≠ 0), o
+    // null si falta alguna (entonces «Incorporar» no se habilita).
+    function lineasATraer(seleccion) {
+        if (!seleccion.length) { return null; }
+        const lineas = [];
+        for (let i = 0; i < seleccion.length; i++) {
+            const cantidad = parseNumEs(seleccion[i].valor);
+            if (cantidad === null || cantidad === 0) { return null; }
+            lineas.push({ contrato_line_id: seleccion[i].id, cantidad: cantidad });
+        }
+        return lineas;
     }
 
     // ¿Este campo identitario, tal como está, hace que una fila de Sigrid
@@ -1160,11 +1274,8 @@
                     // Cambió cantidad / precio / descuento -> recomputamos importe.
                     if (!impEl) return;
                     const pu = puEl ? parseNumEs(puEl.value) : null;
-                    if (cant !== null && pu !== null) {
-                        impEl.value = String(Math.round(cant * pu * factor * 100) / 100);
-                    } else {
-                        impEl.value = "";
-                    }
+                    const importe = importeDeFila(cant, pu, dto);
+                    impEl.value = importe === null ? "" : String(importe);
                 }
             }
 
@@ -1185,12 +1296,18 @@
                 const vid = (tr.dataset.forValuationLineId || "").trim();
                 if (!vid) return;
 
-                // Aviso de conversión SIGRID → NUEVA si cambió un campo
-                // identitario en una fila assigned.
+                // F-065 R8, R13: solo lo cambiado; «Guardar» bloquea la fila
+                // (también sin cambios).
+                const body = _camposCambiados(tr);
+
+                // Aviso de conversión SIGRID → NUEVA si cambió (de verdad: está
+                // en el cuerpo) un campo identitario en una fila assigned.
                 const isSigrid = tr.classList.contains("concilia-assigned");
                 const identityChanged = [].some.call(
                     tr.querySelectorAll('.js-cedit[data-identity="1"]'),
-                    cambiaIdentidad
+                    function (inp) {
+                        return inp.dataset.field in body && cambiaIdentidad(inp);
+                    }
                 );
                 if (isSigrid && identityChanged) {
                     if (!window.confirm(
@@ -1200,14 +1317,12 @@
                     )) return;
                 }
 
-                const body = _conciliaBody(tr);
-
                 saveBtn.disabled = true;
                 const original = saveBtn.textContent;
                 saveBtn.textContent = "Guardando…";
                 try {
                     const resp = await fetch(
-                        `/api/documents/${documentId}/lines/${vid}/conciliacion/campos`,
+                        `/api/documents/${documentId}/lines/${vid}/conciliacion/campos?bloquear=1`,
                         {
                             method: "PATCH",
                             headers: { "Content-Type": "application/json" },
@@ -1243,36 +1358,38 @@
     wireConceptoCombos();
 
     // ------------------------------------------------------------------ //
-    // "Guardar todas las líneas": guarda de una vez TODAS las filas salmón
-    // (concilia-editable), hayas tocado o no cada campo, con el mismo PATCH
-    // que el "Guardar" de cada fila. (Re-guardar una línea sin cambios es
-    // inocuo: el backend reaplica los mismos valores.) Recarga al terminar.
+    // «Guardar todas» (F-065 R18): guarda y BLOQUEA solo las filas con
+    // cambios, cada una con solo sus campos cambiados (el mismo PATCH que el
+    // «Guardar» de la fila). Sin ninguna, lo dice. Recarga al terminar.
     // ------------------------------------------------------------------ //
     const saveAllLinesBtn = document.getElementById("save-all-lines-btn");
     if (saveAllLinesBtn) {
         saveAllLinesBtn.addEventListener("click", async function () {
-            const rows = [].slice.call(
-                linesBody.querySelectorAll("tr.concilia-editable")
-            );
-            if (!rows.length) {
-                window.alert("No hay líneas de albarán que guardar.");
+            const envios = [];
+            linesBody.querySelectorAll("tr.concilia-editable").forEach(function (tr) {
+                const vid = (tr.dataset.forValuationLineId || "").trim();
+                const cuerpo = _camposCambiados(tr);
+                if (vid && Object.keys(cuerpo).length) {
+                    envios.push({ vid: vid, cuerpo: cuerpo });
+                }
+            });
+            if (!envios.length) {
+                window.alert("No hay cambios en las líneas.");
                 return;
             }
             saveAllLinesBtn.disabled = true;
             const original = saveAllLinesBtn.textContent;
             saveAllLinesBtn.textContent = "Guardando…";
             const errores = [];
-            for (let i = 0; i < rows.length; i++) {
-                const tr = rows[i];
-                const vid = (tr.dataset.forValuationLineId || "").trim();
-                if (!vid) continue;
+            for (let i = 0; i < envios.length; i++) {
+                const vid = envios[i].vid;
                 try {
                     const resp = await fetch(
-                        `/api/documents/${documentId}/lines/${vid}/conciliacion/campos`,
+                        `/api/documents/${documentId}/lines/${vid}/conciliacion/campos?bloquear=1`,
                         {
                             method: "PATCH",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(_conciliaBody(tr)),
+                            body: JSON.stringify(envios[i].cuerpo),
                         }
                     );
                     if (!resp.ok) {
@@ -1359,11 +1476,20 @@
         } catch (_) { contratoLines = []; }
 
         const seleccion = new Set();
+        // F-065 R23: la cantidad de cada línea elegida (obligatoria, ≠ 0).
+        const cantidades = new Map();
+
+        function lineasElegidas() {
+            return lineasATraer(Array.from(seleccion).map(function (id) {
+                return { id: id, valor: cantidades.get(id) || "" };
+            }));
+        }
 
         function pintarContador() {
             const n = seleccion.size;
-            contador.textContent = n + " seleccionada" + (n === 1 ? "" : "s");
-            aplicar.disabled = n === 0;
+            contador.textContent = n + " seleccionada" + (n === 1 ? "" : "s") +
+                (n && lineasElegidas() === null ? " · falta la cantidad" : "");
+            aplicar.disabled = lineasElegidas() === null;
             aplicar.textContent = n ? ("Incorporar (" + n + ")") : "Incorporar";
         }
 
@@ -1390,15 +1516,31 @@
                 const chk = document.createElement("input");
                 chk.type = "checkbox";
                 chk.checked = seleccion.has(cl.id);
+                const cant = document.createElement("input");
+                cant.type = "text";
+                cant.inputMode = "decimal";
+                cant.className = "traer-contrato-cantidad";
+                cant.placeholder = "Cantidad";
+                cant.title = "Cantidad de esta línea (obligatoria)";
+                cant.value = cantidades.get(cl.id) || "";
+                cant.hidden = !chk.checked;
+                cant.addEventListener("click", function (ev) { ev.preventDefault(); });
+                cant.addEventListener("input", function () {
+                    cantidades.set(cl.id, cant.value);
+                    pintarContador();
+                });
                 chk.addEventListener("change", function () {
                     if (chk.checked) seleccion.add(cl.id);
                     else seleccion.delete(cl.id);
+                    cant.hidden = !chk.checked;
+                    if (chk.checked) cant.focus();
                     pintarContador();
                 });
                 const span = document.createElement("span");
                 span.textContent = cl.label || (cl.part + " · " + cl.desc);
                 fila.appendChild(chk);
                 fila.appendChild(span);
+                fila.appendChild(cant);
                 lista.appendChild(fila);
             });
             if (!visibles) {
@@ -1427,7 +1569,8 @@
         });
 
         aplicar.addEventListener("click", async function () {
-            if (!seleccion.size) return;
+            const lineas = lineasElegidas();
+            if (lineas === null) return;
             aplicar.disabled = true;
             try {
                 const resp = await fetch(
@@ -1438,9 +1581,7 @@
                             "Content-Type": "application/json",
                             "Accept": "application/json",
                         },
-                        body: JSON.stringify({
-                            contrato_line_ids: Array.from(seleccion),
-                        }),
+                        body: JSON.stringify({ lineas: lineas }),
                     }
                 );
                 if (!resp.ok) {
@@ -1832,80 +1973,6 @@
         return value || null;
     }
 
-    // --------------------------------------------------------------- //
-    // Recolectar líneas para enviar al backend.
-    //
-    // Sub-tanda 2D: diferenciamos dos tipos de fila por data-line-kind:
-    //
-    //   - "from_albaran": líneas reales del albarán-merge. Se envían en
-    //     payload.lines tal como antes. data-line-id lleva el id en
-    //     albaran_lines_merge.
-    //
-    //   - "synthetic_modifier": líneas sintéticas de valoración
-    //     (incrementos por año, consistencia, árido, aditivo, residuos,
-    //     tiempo). No viven en el merge sino en albaran_line_valuations.
-    //     Se envían en payload.valuation_line_updates identificadas por
-    //     data-valuation-line-id.
-    //
-    // Si una fila no tiene data-line-kind (caso raro: código antiguo)
-    // la tratamos como from_albaran por compatibilidad.
-    //
-    // Los campos 'unidad_display' y 'precio_unitario_display' siguen
-    // siendo puramente informativos y no se envían.
-    //
-    // Nota sobre nombres: el backend ``MergeLinePayload`` usa
-    // 'precio_neto' como nombre de campo para el importe de la línea
-    // (herencia del modelo extraído). El template V3 usa data-field=
-    // "importe" como nombre más claro para el revisor; al recolectar
-    // lo mapeamos: importe → precio_neto.
-    // --------------------------------------------------------------- //
-    function collectLinesAndValuationUpdates() {
-        // TANDA 2A: las líneas BLANCAS (merge) ya no se editan en el grid
-        // (son solo lectura en su bloque colapsable). Las reenviamos TAL CUAL
-        // desde el JSON embebido del documento para que el PUT NO las borre
-        // (update_document elimina las merge que no lleguen en payload.lines).
-        // Las líneas SALMÓN (valoración) NO van por el PUT: se guardan con su
-        // PATCH propio (.../conciliacion/campos) vía «Guardar» de fila /
-        // «Guardar todas». Por eso valuation_line_updates va vacío.
-        const merge_lines = [];
-        const src = (window.__documentData && Array.isArray(window.__documentData.lines))
-            ? window.__documentData.lines
-            : [];
-        let idx = 0;
-        src.forEach(function (ln) {
-            idx += 1;
-            const pick = function (k) {
-                return (ln && ln[k] !== undefined && ln[k] !== null) ? ln[k] : null;
-            };
-            merge_lines.push({
-                id: (ln && ln.id !== undefined && ln.id !== null) ? Number(ln.id) : null,
-                line_index: idx,
-                external_line_id: pick("external_line_id"),
-                cabecera_id: pick("cabecera_id"),
-                codigo: pick("codigo"),
-                cantidad: pick("cantidad"),
-                concepto: pick("concepto"),
-                precio: pick("precio"),
-                descuento: pick("descuento"),
-                precio_neto: pick("precio_neto"),
-                codigo_imputacion: pick("codigo_imputacion"),
-                confianza_pct: pick("confianza_pct"),
-                confidence_pct_calc: pick("confidence_pct_calc"),
-                line_match_score: pick("line_match_score"),
-                comparison_status_json: pick("comparison_status_json"),
-                field_scores_json: pick("field_scores_json"),
-            });
-        });
-        return { merge_lines: merge_lines, valuation_updates: [] };
-    }
-
-    // Compatibilidad hacia atrás: algún código externo podría llamar
-    // collectLines(). Exponemos una versión reducida que devuelve solo
-    // las líneas del merge.
-    function collectLines() {
-        return collectLinesAndValuationUpdates().merge_lines;
-    }
-
     function collectSelectedContratoCodigo() {
         const el = document.getElementById("selected_contrato_codigo");
         if (!el) return null;
@@ -1920,9 +1987,8 @@
             const value = (el.value || "").trim();
             return value || null;
         };
-        // Sub-tanda 2D: una sola lectura del DOM para obtener tanto
-        // las líneas del merge como las ediciones de sintéticas.
-        const collected = collectLinesAndValuationUpdates();
+        // F-065 R1: guardar la cabecera solo guarda la cabecera: ni las
+        // blancas ni las filas viajan (las filas tienen su PATCH).
         return {
             proveedor_nombre: getInput("proveedor_nombre"),
             proveedor_cif: getInput("proveedor_cif"),
@@ -1936,8 +2002,6 @@
             approved_by: getInput("approved_by"),
             approved: Boolean(markApproved),
             selected_contrato_codigo: collectSelectedContratoCodigo(),
-            lines: collected.merge_lines,
-            valuation_line_updates: collected.valuation_updates,
         };
     }
 
@@ -1966,8 +2030,24 @@
         return true;
     }
 
-    if (saveBtn) saveBtn.addEventListener("click", function () { sendSave(false); });
-    if (approveBtn) approveBtn.addEventListener("click", function () { sendSave(true); });
+    // F-065 R19, R21: antes del PUT, nada de filas con cambios sin guardar
+    // y, al aprobar, confirmación si la suma de las filas no cuadra con lo
+    // leído en el albarán.
+    function guardarCabecera(markApproved) {
+        let aviso = avisoFilasSinGuardar(contarFilasConCambios(
+            [].slice.call(linesBody.querySelectorAll("tr.concilia-editable"))
+        ));
+        if (aviso) {
+            window.alert(aviso);
+            return;
+        }
+        aviso = markApproved && approveBtn ? approveBtn.dataset.avisoSuma : "";
+        if (aviso && !window.confirm(aviso)) { return; }
+        sendSave(markApproved);
+    }
+
+    if (saveBtn) saveBtn.addEventListener("click", function () { guardarCabecera(false); });
+    if (approveBtn) approveBtn.addEventListener("click", function () { guardarCabecera(true); });
 
     // --------------------------------------------------------------- //
     // Botón "Valorar ahora" — dispara la valoración (sv7 → sv6 → sv5)
@@ -2126,6 +2206,7 @@
     if (valuateBtn) {
         valuateBtn.addEventListener("click", function (event) {
             event.preventDefault();
+            if (!confirmarRevalorar()) return;
             triggerValuate();
         });
     }
@@ -2388,6 +2469,8 @@
         async function onPick(codigo) {
             close();
             const sinContrato = (codigo === SIN || !codigo);
+            // F-065 R22: otro contrato = revalorar (descarta lo hecho a mano).
+            if (!sinContrato && !confirmarRevalorar()) return;
             const real = sinContrato ? "" : codigo;
 
             hidden.value = real;
@@ -2517,6 +2600,8 @@
     }
 
     async function handleSaveAndRefetch() {
+        // F-065 R22: volver a buscar revalora (descarta lo hecho a mano).
+        if (!confirmarRevalorar()) return;
         setButtonsDisabled(true);
         paintStatus("info", "Guardando cambios…");
         try {

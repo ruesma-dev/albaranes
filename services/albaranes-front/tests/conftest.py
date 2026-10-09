@@ -111,18 +111,21 @@ _DDL = (
         modifier_reason               TEXT,
         descripcion_linea             TEXT,
         review_required               BOOLEAN NOT NULL DEFAULT 0,
-        review_reasons_json           TEXT
+        review_reasons_json           TEXT,
+        bloqueada                     BOOLEAN NOT NULL DEFAULT 0
     )
     """,
     # F-036: la trazabilidad (R23, R24) toca tambien la cabecera del
     # merge. Solo las tres columnas que interviene la purga de motivos
-    # (`_depurar_motivos_documento_in_session`): la tabla real la
-    # gobierna sv3 y tiene cuarenta y pico.
+    # (`_depurar_motivos_documento_in_session`) mas `approved`, que lee el
+    # cerrojo de F-065 (R4): la tabla real la gobierna sv3 y tiene
+    # cuarenta y pico.
     """
     CREATE TABLE albaran_documents_merge (
         id                   VARCHAR(64) PRIMARY KEY,
         proveedor_cif        VARCHAR(64),
-        review_reasons_json  TEXT
+        review_reasons_json  TEXT,
+        approved             BOOLEAN NOT NULL DEFAULT 0
     )
     """,
 )

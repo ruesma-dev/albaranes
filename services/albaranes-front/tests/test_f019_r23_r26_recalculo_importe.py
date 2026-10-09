@@ -15,19 +15,23 @@ el front y ``albaran_valuations.updated_at_utc`` paso de 13:24:26 a
     importe_source       calculated  (era 'declared_albaran')
     descuento_albaran_aplicado  40   (intacto: el UPDATE no lo toca)
 
-La contradiccion aparente —descuento 40 registrado y no aplicado— es la
-firma del culpable: ``_recalc_valuation_importes`` reescribe importe y
-fuente pero no toca ni el descuento ni los motivos, que siguen siendo
-los que dejo sv6. El albaran 2.139.643 se salvo por no haberse abierto
-en el front: conserva 19,41 EUR y ``declared_albaran``.
-
-Los numeros de este fichero son los MEDIDOS en la BBDD local, no
-reconstruidos.
+F-065 (T6) — DONDE VIVEN AHORA ESTAS GARANTIAS
+----------------------------------------------
+El recalculo que pisaba los importes era ``_recalc_valuation_importes``,
+llamado desde el PUT del documento. F-065 R1 lo retira: guardar la cabecera
+ya no toca las lineas (``test_f065_f1_cabecera.py``). Lo que el revisor
+cambia de una linea viaja por el PATCH de la fila, que manda SOLO los campos
+que cambio (R8). Por eso cada caso de abajo se ejerce ahora contra
+``update_line_conciliacion`` (con los mismos numeros medidos): la formula
+canonica con el descuento (R23), «lo que no se toca no se toca» (R24) y el
+total de la cabecera (R25, R26). La tabla caso viejo -> caso nuevo esta en
+``progress/impl_F-065_fase1.md``.
 """
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import text
+from f065_bbdd import ejecutar, fila, fila_nueva, motor_con_valoracion, repositorio
+from f065_bbdd import total as _total
 
 VALUATION_ID = "97bfe72e-a7a4-48ff-a6bc-2ccb9cb59f3b"
 DOCUMENT_ID = "99b4adcc-fe03-4d4c-a115-b2aa40ed9e6f"
@@ -46,458 +50,252 @@ TOTAL_CORRECTO = 139.66
 
 #: Lo que midio el humano tras guardar desde el front.
 TOTAL_PISADO = 232.76
-IMPORTES_PISADOS = {370: 58.64, 371: 34.22, 372: 92.71, 373: 21.99, 374: 25.20}
+IMPORTES_PISADOS = {600: 58.64, 601: 34.22, 602: 92.71, 603: 21.99, 604: 25.20}
 
 
-def _sembrar(sesion, lineas=LINEAS_2137569, total=TOTAL_CORRECTO):
-    """Deja la valoracion tal cual la escribio sv6."""
-    sesion.execute(
-        text(
-            "INSERT INTO albaran_valuations "
-            "(id, document_id, total_valorado, updated_at_utc) "
-            "VALUES (:id, :doc, :tot, '2026-08-18T13:24:26Z')"
-        ),
-        {"id": VALUATION_ID, "doc": DOCUMENT_ID, "tot": total},
+def _sembrar(lineas=LINEAS_2137569, total_inicial=TOTAL_CORRECTO):
+    """Deja la valoracion tal cual la escribio sv6 (sin conversion de unidad)."""
+    motor = motor_con_valoracion(
+        document_id=DOCUMENT_ID, valuation_id=VALUATION_ID, total=total_inicial,
     )
-    for fila_id, merge_id, _, cantidad, unitario, dto, importe in lineas:
-        sesion.execute(
-            text(
-                "INSERT INTO albaran_line_valuations ("
-                "  id, valuation_id, merge_line_id, precio_unitario_final, "
-                "  factor_conversion, cantidad_albaran, cantidad_convertida, "
-                "  importe_calculado, importe_albaran_declarado, "
-                "  importe_source, descuento_albaran_aplicado) "
-                "VALUES (:id, :vid, :mid, :pu, NULL, :ca, NULL, "
-                "        :imp, :decl, 'declared_albaran', :dto)"
-            ),
-            {
-                "id": fila_id,
-                "vid": VALUATION_ID,
-                "mid": merge_id,
-                "pu": unitario,
-                "ca": cantidad,
-                "imp": importe,
-                "decl": importe,
-                "dto": dto,
-            },
+    for fila_id, merge_id, concepto, cantidad, unitario, dto, importe in lineas:
+        fila_nueva(
+            motor, valuation_id=VALUATION_ID, id=fila_id, merge_line_id=merge_id,
+            precio_unitario_final=unitario, factor_conversion=None,
+            cantidad_albaran=cantidad, cantidad_convertida=None,
+            importe_calculado=importe, importe_source="declared_albaran",
+            descuento_albaran_aplicado=dto, descripcion_linea=concepto,
+            review_reasons_json=None, review_required=False,
         )
-    sesion.flush()
+    return motor
 
 
-def _leer_lineas(sesion):
-    filas = sesion.execute(
-        text(
-            "SELECT merge_line_id, importe_calculado, importe_source, "
-            "       cantidad_albaran, descuento_albaran_aplicado "
-            "FROM albaran_line_valuations WHERE valuation_id = :v"
-        ),
-        {"v": VALUATION_ID},
-    ).mappings().all()
-    return {int(f["merge_line_id"]): f for f in filas}
+def total(motor):
+    return _total(motor, VALUATION_ID)
 
 
-def _leer_total(sesion):
-    return sesion.execute(
-        text("SELECT total_valorado FROM albaran_valuations WHERE id = :v"),
-        {"v": VALUATION_ID},
-    ).scalar_one()
+def _editar(motor, fila_id, **campos):
+    return repositorio(motor).update_line_conciliacion(
+        document_id=DOCUMENT_ID, valuation_line_id=fila_id, campos=campos,
+    )
 
 
 # ------------------------------------------------------------------ #
 # R23 — la formula canonica lleva el descuento
 # ------------------------------------------------------------------ #
-def test_f019_r23_guardar_sin_tocar_nada_no_infla_el_total(
-    repositorio, sesion,
-):
-    """El caso EXACTO del incidente: guardar sin cambiar cantidades.
+def test_f019_r23_guardar_sin_tocar_nada_no_infla_el_total():
+    """El caso EXACTO del incidente: el revisor cambio algo que no era una
+    cantidad (una partida) y guardo. Ahora solo viaja la partida, y el
+    importe y el total se quedan como los dejo sv6."""
+    motor = _sembrar()
 
-    El revisor abrio el 2.137.569, cambio algo que no era una cantidad
-    (una partida) y guardo. El recalculo recorrio las cinco lineas
-    igualmente y las dejo en 232,76 EUR.
-    """
-    _sembrar(sesion)
+    _editar(motor, 600, codigo_partida="02.02")
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={},
-    )
-
-    assert _leer_total(sesion) != pytest.approx(TOTAL_PISADO)
-    assert _leer_total(sesion) == pytest.approx(TOTAL_CORRECTO)
+    assert total(motor) != pytest.approx(TOTAL_PISADO)
+    assert total(motor) == pytest.approx(TOTAL_CORRECTO)
 
 
 @pytest.mark.parametrize(
     "linea", LINEAS_2137569, ids=[linea[2] for linea in LINEAS_2137569]
 )
-def test_f019_r23_cada_linea_conserva_su_importe_con_descuento(
-    repositorio, sesion, linea,
-):
-    """Linea a linea, con el numero equivocado que midio el humano."""
-    _, merge_id, concepto, _, _, _, importe_bueno = linea
-    _sembrar(sesion)
+def test_f019_r23_cada_linea_conserva_su_importe_con_descuento(linea):
+    """Linea a linea: guardarla sin cambios no la toca."""
+    fila_id, _, concepto, _, _, _, importe_bueno = linea
+    motor = _sembrar()
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={},
-    )
+    _editar(motor, fila_id)
 
-    resultado = _leer_lineas(sesion)[merge_id]
-    assert resultado["importe_calculado"] != pytest.approx(
-        IMPORTES_PISADOS[merge_id]
-    ), concepto
-    assert resultado["importe_calculado"] == pytest.approx(
-        importe_bueno
-    ), concepto
+    resultado = fila(motor, fila_id)["importe_calculado"]
+    assert resultado != pytest.approx(IMPORTES_PISADOS[fila_id]), concepto
+    assert resultado == pytest.approx(importe_bueno), concepto
 
 
-def test_f019_r23_el_descuento_se_aplica_a_la_cantidad_nueva(
-    repositorio, sesion,
-):
-    """Si el revisor SI cambia la cantidad, manda la suya — con descuento.
+def test_f019_r23_el_descuento_se_aplica_a_la_cantidad_nueva():
+    """100 x 0,543 x 0,6 = 32,58. Sin descuento saldrian 54,30."""
+    motor = _sembrar()
 
-    100 x 0,543 x 0,6 = 32,58. Sin descuento saldrian 54,30.
-    """
-    _sembrar(sesion)
+    _editar(motor, 600, cantidad=100.0)
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={370: 100.0},
-    )
-
-    linea = _leer_lineas(sesion)[370]
+    linea = fila(motor, 600)
     assert linea["cantidad_albaran"] == pytest.approx(100.0)
     assert linea["importe_calculado"] == pytest.approx(32.58)
     assert linea["importe_calculado"] != pytest.approx(54.30)
 
 
-def test_f019_r23_sin_descuento_la_formula_no_cambia(repositorio, sesion):
+def test_f019_r23_sin_descuento_la_formula_no_cambia():
     """Regresion: una linea sin descuento sigue valiendo cantidad x precio."""
-    _sembrar(
-        sesion,
-        lineas=((600, 370, "SIN DTO", 10.0, 2.5, None, 25.0),),
-        total=25.0,
-    )
+    motor = _sembrar(lineas=((600, 370, "SIN DTO", 10.0, 2.5, None, 25.0),),
+                     total_inicial=25.0)
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={370: 8.0},
-    )
+    _editar(motor, 600, cantidad=8.0)
 
-    assert _leer_lineas(sesion)[370]["importe_calculado"] == pytest.approx(
-        20.0
-    )
+    assert fila(motor, 600)["importe_calculado"] == pytest.approx(20.0)
 
 
-def test_f019_r23_descuento_fuera_de_rango_se_ignora(repositorio, sesion):
-    """Un descuento absurdo no debe convertir el importe en basura.
+def test_f019_r23_descuento_fuera_de_rango_se_ignora():
+    """Misma regla que ``ImporteCalculator._sanitize_descuento`` en sv6:
+    fuera de (0, 100] no se aplica, no se inventa un importe negativo."""
+    motor = _sembrar(lineas=((600, 370, "DTO ABSURDO", 10.0, 2.5, 150.0, 25.0),),
+                     total_inicial=25.0)
 
-    Misma regla que ``ImporteCalculator._sanitize_descuento`` en sv6:
-    fuera de (0, 100] no se aplica, no se inventa un importe negativo.
-    """
-    _sembrar(
-        sesion,
-        lineas=((600, 370, "DTO ABSURDO", 10.0, 2.5, 150.0, 25.0),),
-        total=25.0,
-    )
+    _editar(motor, 600, cantidad=8.0)
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={370: 8.0},
-    )
-
-    importe = _leer_lineas(sesion)[370]["importe_calculado"]
+    importe = fila(motor, 600)["importe_calculado"]
     assert importe == pytest.approx(20.0)
     assert importe > 0
 
 
-def test_f019_r23_el_descuento_editado_por_el_revisor_manda(
-    repositorio, sesion,
-):
-    """Si el revisor corrige el descuento, el importe lo recoge.
+def test_f019_r23_el_descuento_editado_por_el_revisor_manda():
+    """108 x 0,543 al 25 % = 43,98 EUR, no los 35,19 del 40 % viejo."""
+    motor = _sembrar()
 
-    Antes el descuento nuevo se guardaba en la linea blanca y el importe
-    valorado se quedaba con el anterior: 108 x 0,543 al 25 % = 43,98 EUR,
-    no los 35,19 del 40 % viejo.
-    """
-    _sembrar(sesion)
+    _editar(motor, 600, descuento=25.0)
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={},
-        new_line_discounts={370: 25.0},
-    )
-
-    linea = _leer_lineas(sesion)[370]
+    linea = fila(motor, 600)
     assert linea["importe_calculado"] == pytest.approx(43.98)
     assert linea["descuento_albaran_aplicado"] == pytest.approx(25.0)
     assert linea["importe_source"] == "calculated"
 
 
-def test_f019_r23_una_linea_ilegible_no_rompe_el_guardado(
-    repositorio, sesion,
-):
-    """Un precio que no es un numero se salta; el resto se recalcula.
+def test_f019_r23_una_linea_ilegible_no_rompe_el_guardado_de_otra():
+    """Un precio que no es un numero en OTRA linea no impide guardar esta,
+    ni se valora a cualquier cosa: se queda como estaba y el total suma."""
+    motor = _sembrar()
+    ejecutar(motor, "UPDATE albaran_line_valuations SET precio_unitario_final = 'ilegible' "
+             "WHERE id = 600")
 
-    SQLite acepta texto en una columna DOUBLE y la BBDD real tampoco
-    garantiza que no haya llegado basura por otra via. El guardado del
-    revisor no puede caerse por eso, ni valorar la linea a cualquier
-    cosa: se deja como estaba y el total suma las demas.
-    """
-    _sembrar(sesion)
-    sesion.execute(
-        text(
-            "UPDATE albaran_line_valuations "
-            "SET precio_unitario_final = 'ilegible' WHERE merge_line_id = 370"
-        )
-    )
-    sesion.flush()
+    _editar(motor, 601, cantidad=5.0)
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={},
-    )
-
-    # La linea rota conserva su importe anterior, sin inventar nada.
-    assert _leer_lineas(sesion)[370]["importe_calculado"] == pytest.approx(
-        35.19
-    )
-    assert _leer_total(sesion) == pytest.approx(TOTAL_CORRECTO)
+    assert fila(motor, 600)["importe_calculado"] == pytest.approx(35.19)
+    assert fila(motor, 601)["importe_calculado"] == pytest.approx(10.27)
+    assert total(motor) == pytest.approx(TOTAL_CORRECTO - 20.53 + 10.27)
 
 
 # ------------------------------------------------------------------ #
 # R24 — lo que el revisor no ha tocado, no se toca
 # ------------------------------------------------------------------ #
-def test_f019_r24_una_linea_intacta_conserva_su_importe_source(
-    repositorio, sesion,
-):
-    """No degradar 'declared_albaran' a 'calculated' porque si.
+def test_f019_r24_una_linea_intacta_conserva_su_importe_source():
+    """Editar un campo que no entra en el importe (la descripcion) no
+    reetiqueta el importe declarado como calculado."""
+    motor = _sembrar()
 
-    El albaran DECLARA 35,19 EUR. Que el revisor guarde el documento sin
-    tocar esa linea no es motivo para reetiquetar el dato como calculado
-    por nosotros: es la misma regla de jul 2026 que sostiene
-    ``ImporteCalculator`` (lo leido en el albaran no se pisa).
-    """
-    _sembrar(sesion)
+    _editar(motor, 600, descripcion="PAPEL HIGIENICO")
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={},
-    )
-
-    for linea in _leer_lineas(sesion).values():
-        assert linea["importe_source"] == "declared_albaran"
+    for fila_id in (600, 601, 602, 603, 604):
+        assert fila(motor, fila_id)["importe_source"] == "declared_albaran"
 
 
-def test_f019_r24_cambiar_la_cantidad_si_marca_la_linea_como_calculada(
-    repositorio, sesion,
-):
+def test_f019_r24_cambiar_la_cantidad_si_marca_la_linea_como_calculada():
     """Lo contrario tambien: si el revisor interviene, consta."""
-    _sembrar(sesion)
+    motor = _sembrar()
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={370: 100.0},
-    )
+    _editar(motor, 600, cantidad=100.0)
 
-    lineas = _leer_lineas(sesion)
-    assert lineas[370]["importe_source"] == "calculated"
-    # Las otras cuatro no las ha tocado nadie.
-    for merge_id in (371, 372, 373, 374):
-        assert lineas[merge_id]["importe_source"] == "declared_albaran"
+    assert fila(motor, 600)["importe_source"] == "calculated"
+    for fila_id in (601, 602, 603, 604):
+        assert fila(motor, fila_id)["importe_source"] == "declared_albaran"
 
 
 # ------------------------------------------------------------------ #
 # R25 / R26 — el total del documento
 # ------------------------------------------------------------------ #
-def test_f019_r25_el_total_lo_recalcula_sv4_y_vale_13966(
-    repositorio, sesion,
-):
+def test_f019_r25_el_total_lo_recalcula_sv4_al_guardar_la_fila():
     """El agregado, que es lo que se sumara y lo que ira a Sigrid."""
-    _sembrar(sesion, total=0.0)
+    motor = _sembrar(total_inicial=0.0)
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={},
-    )
+    _editar(motor, 600, cantidad=100.0)
 
-    assert _leer_total(sesion) == pytest.approx(TOTAL_CORRECTO)
+    assert total(motor) == pytest.approx(32.58 + 20.53 + 55.63 + 13.19 + 15.12)
 
 
-def test_f019_r26_el_total_recalculado_no_arrastra_ruido_float(
-    repositorio, sesion,
-):
+def test_f019_r26_el_total_recalculado_no_arrastra_ruido_float():
     """El total persistido es una cantidad monetaria de 2 decimales.
 
-    ``sum([549.34, 882.62, 818.64, 863.26, 278.86])`` da
-    3392.7200000000003 en coma flotante. sv6 ya redondea su total
-    (``ValuationBuilder._build_header``); el ``SUM()`` de sv4 no lo
-    hacia, asi que el mismo documento acababa con un total distinto
-    segun quien lo hubiera escrito el ultimo.
+    ``sum([549.34, 882.62, 818.64, 863.26, 557.72])`` arrastra cola binaria
+    en coma flotante. sv6 ya redondea su total; el de sv4 tambien.
     """
     lineas = tuple(
         (600 + i, 370 + i, f"LINEA {i}", 1.0, importe, None, importe)
-        for i, importe in enumerate(
-            (549.34, 882.62, 818.64, 863.26, 278.86)
-        )
+        for i, importe in enumerate((549.34, 882.62, 818.64, 863.26, 278.86))
     )
-    _sembrar(sesion, lineas=lineas, total=0.0)
+    motor = _sembrar(lineas=lineas, total_inicial=0.0)
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={},
-    )
+    _editar(motor, 604, cantidad=2.0)
 
-    total = _leer_total(sesion)
-    assert total == 3392.72
-    assert total == round(total, 2)
+    resultado = total(motor)
+    assert resultado == 3671.58
+    assert resultado == round(resultado, 2)
 
 
 # ------------------------------------------------------------------ #
-# R24 · el caso DIFICIL (round trip 3)
-#
-# El reviewer demostro con una sonda que el guardian de R24 decidia por
-# el RESULTADO (importe guardado vs importe recalculado) y no por las
-# ENTRADAS (cantidad y descuento). Una linea que sv6 dejo en
-# 'declared_albaran' con un importe declarado que NO coincide con
-# cantidad x precio x (1 - dto/100) se pisaba en el primer guardado
-# aunque el revisor no la tocara.
-#
-# Y sv6 produce esas filas A PROPOSITO: ImporteCalculator.compute
-# devuelve el importe DECLARADO cuando declarado y calculado discrepan,
-# dejando el motivo 'declared_vs_calculated_mismatch'
-# (importe_calculator.py:150-170). Es la regla de jul 2026 y la regla 13
-# de docs/ARCHITECTURE.md: si ambos existen y discrepan, gana el
-# declarado y la linea va a revision.
-#
-# Los tests anteriores no lo veian porque las cinco lineas del Feymaco
-# 2.137.569 cuadran al centimo: ahi resultado y entradas dicen lo mismo.
+# R24 · el caso DIFICIL (round trip 3): sv6 deja a proposito filas
+# 'declared_albaran' cuyo importe declarado NO cuadra con
+# cantidad x precio x (1 - dto/100) (motivo
+# 'declared_vs_calculated_mismatch'; regla 13 de docs/ARCHITECTURE.md).
 # ------------------------------------------------------------------ #
 
-#: Linea del reviewer: cantidad 100, unitario 1,00, dto 40 % => el
-#: recalculo da 60,00, pero el albaran DECLARA 100,00 (redondeos del
-#: proveedor, descuentos en cascada... basta con que difiera medio
-#: centimo).
+#: Cantidad 100, unitario 1,00, dto 40 % => el calculo da 60,00, pero el
+#: albaran DECLARA 100,00.
 LINEA_DECLARADO_DISCREPANTE = ((600, 370, "DECLARADO != CALCULADO",
                                 100.0, 1.0, 40.0, 100.0),)
 
 
-def test_f019_r24_el_declarado_discrepante_no_se_pisa(repositorio, sesion):
-    """El caso dificil: declarado != recalculado y el revisor no toca nada.
+def test_f019_r24_el_declarado_discrepante_no_se_pisa():
+    """Guardar la fila sin cambiar nada de lo que entra en el importe."""
+    motor = _sembrar(lineas=LINEA_DECLARADO_DISCREPANTE, total_inicial=100.0)
 
-    Es la sonda del reviewer. Antes devolvia
-    {'importe_calculado': 60.0, 'importe_source': 'calculated'}.
-    """
-    _sembrar(sesion, lineas=LINEA_DECLARADO_DISCREPANTE, total=100.0)
+    _editar(motor, 600, codigo_externo="X-1")
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={},
-    )
-
-    linea = _leer_lineas(sesion)[370]
+    linea = fila(motor, 600)
     assert linea["importe_calculado"] == pytest.approx(100.0), (
         "R24: el importe declarado fue pisado"
     )
     assert linea["importe_source"] == "declared_albaran"
-    assert _leer_total(sesion) == pytest.approx(100.0)
+    assert total(motor) == pytest.approx(100.0)
 
 
-def test_f019_r24_el_declarado_discrepante_si_cede_si_cambia_la_cantidad(
-    repositorio, sesion,
-):
-    """Lo contrario: en cuanto el revisor toca la cantidad, manda el calculo.
+def test_f019_r24_el_declarado_discrepante_si_cede_si_cambia_la_cantidad():
+    """50 x 1,00 x 0,6 = 30,00: la linea ha cambiado."""
+    motor = _sembrar(lineas=LINEA_DECLARADO_DISCREPANTE, total_inicial=100.0)
 
-    50 x 1,00 x 0,6 = 30,00. El declarado del albaran ya no describe esta
-    linea, porque la linea ha cambiado.
-    """
-    _sembrar(sesion, lineas=LINEA_DECLARADO_DISCREPANTE, total=100.0)
+    _editar(motor, 600, cantidad=50.0)
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={370: 50.0},
-    )
-
-    linea = _leer_lineas(sesion)[370]
+    linea = fila(motor, 600)
     assert linea["importe_calculado"] == pytest.approx(30.0)
     assert linea["importe_source"] == "calculated"
 
 
-def test_f019_r24_el_declarado_discrepante_si_cede_si_cambia_el_descuento(
-    repositorio, sesion,
-):
+def test_f019_r24_el_declarado_discrepante_si_cede_si_cambia_el_descuento():
     """Y con el descuento igual: 100 x 1,00 x 0,75 = 75,00."""
-    _sembrar(sesion, lineas=LINEA_DECLARADO_DISCREPANTE, total=100.0)
+    motor = _sembrar(lineas=LINEA_DECLARADO_DISCREPANTE, total_inicial=100.0)
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={},
-        new_line_discounts={370: 25.0},
-    )
+    _editar(motor, 600, descuento=25.0)
 
-    linea = _leer_lineas(sesion)[370]
+    linea = fila(motor, 600)
     assert linea["importe_calculado"] == pytest.approx(75.0)
     assert linea["importe_source"] == "calculated"
 
 
-def test_f019_r24_reenviar_el_mismo_descuento_no_es_un_cambio(
-    repositorio, sesion,
-):
-    """El front reenvia el descuento en cada guardado; eso no es tocarlo.
+def test_f019_r24_reenviar_el_mismo_descuento_no_es_un_cambio():
+    """Un cliente que reenvia el mismo 40 % y la misma cantidad no esta
+    tocando nada."""
+    motor = _sembrar(lineas=LINEA_DECLARADO_DISCREPANTE, total_inicial=100.0)
 
-    Si reenviar el mismo 40 % contara como cambio, el guardian de R24 no
-    protegeria nada en la practica: el payload SIEMPRE trae descuento.
-    """
-    _sembrar(sesion, lineas=LINEA_DECLARADO_DISCREPANTE, total=100.0)
+    _editar(motor, 600, descuento=40.0, cantidad=100.0)
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={},
-        new_line_discounts={370: 40.0},
-    )
-
-    linea = _leer_lineas(sesion)[370]
+    linea = fila(motor, 600)
     assert linea["importe_calculado"] == pytest.approx(100.0)
     assert linea["importe_source"] == "declared_albaran"
 
 
 @pytest.mark.parametrize("descuento_reenviado", [0.0, None])
-def test_f019_r24_cero_y_nulo_son_el_mismo_descuento(
-    repositorio, sesion, descuento_reenviado,
-):
-    """Sin descuento es sin descuento, venga como 0 o como NULL.
+def test_f019_r24_cero_y_nulo_son_el_mismo_descuento(descuento_reenviado):
+    """Sin descuento es sin descuento, venga como 0 o como NULL."""
+    motor = _sembrar(lineas=((600, 370, "SIN DTO DECLARADO", 10.0, 2.5, None, 30.0),),
+                     total_inicial=30.0)
 
-    sv6 persiste NULL cuando no hay descuento y el front puede reenviar
-    0. Si los dos no se compararan ya saneados, cada guardado veria un
-    cambio inexistente y pisaria la fila.
-    """
-    _sembrar(
-        sesion,
-        lineas=((600, 370, "SIN DTO DECLARADO", 10.0, 2.5, None, 30.0),),
-        total=30.0,
-    )
+    _editar(motor, 600, descuento=descuento_reenviado)
 
-    repositorio._recalc_valuation_importes(
-        session=sesion,
-        document_id=DOCUMENT_ID,
-        new_line_quantities={},
-        new_line_discounts={370: descuento_reenviado},
-    )
-
-    linea = _leer_lineas(sesion)[370]
+    linea = fila(motor, 600)
     assert linea["importe_calculado"] == pytest.approx(30.0)
     assert linea["importe_source"] == "declared_albaran"
