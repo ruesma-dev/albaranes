@@ -371,11 +371,14 @@ def test_f065_r5_plantilla_aprobado_en_solo_lectura(
     assert 'id="valuate-btn"' not in html
     assert 'id="add-line-btn"' not in html
     assert 'id="save-all-lines-btn"' not in html
-    formulario = re.search(r'<form[^>]*action="/documents/[^"]*/unapprove"[^>]*>.*?</form>',
-                           html, re.DOTALL)
+    formulario = re.search(r'<form id="([^"]+)"[^>]*action="/documents/[^"]*/unapprove"'
+                           r'[^>]*>.*?</form>', html, re.DOTALL)
     assert formulario, "no está el formulario de desaprobar"
-    assert "Desaprobar para editar" in formulario.group(0)
     assert 'name="volver" value="ficha"' in formulario.group(0)
+    # El botón va en la cabecera de la ficha (un form no puede ir dentro de
+    # otro): apunta al formulario con ``form=``.
+    boton = re.search(rf'<button[^>]*form="{formulario.group(1)}"[^>]*>([^<]*)</button>', html)
+    assert boton and boton.group(1) == "Desaprobar para editar"
     assert re.search(r'<input[^>]*id="numero_albaran"[^>]*readonly', html)
 
 
