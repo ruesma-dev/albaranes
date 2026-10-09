@@ -756,3 +756,14 @@ def test_f064_r16_escribir_crea_directorios_anidados_y_reescribe(tmp_path):
     assert texto.startswith('{\n  "variante": "rama",\n  "repeticion": 1,')
     assert '"nombre": "Ñ"' in texto
     assert resumen.is_file()
+
+
+def test_f064_r14_sv2_va_el_primero_en_el_path(monkeypatch):
+    """Los paquetes de primer nivel de sv2 (`application`, `domain`) tienen que
+    ganar a cualquier otro `application` del path: sv2 va en la posición 0."""
+    monkeypatch.setattr(sv2_proveedor.sys, "path", ["otro", "y-otro"])
+
+    sv2_proveedor._con_sv2_en_path()
+    sv2_proveedor._con_sv2_en_path()
+
+    assert sv2_proveedor.sys.path == [str(sv2_proveedor.RAIZ_SV2), "otro", "y-otro"]
