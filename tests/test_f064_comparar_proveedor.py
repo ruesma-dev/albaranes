@@ -14,6 +14,7 @@ Dobles con centinelas: ``CENTINELA-NOMBRE-F064`` y CIF inventados.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -641,3 +642,74 @@ def test_f064_r14_clasificar_categoriza_cada_ejecucion_y_su_mayoria():
     assert clasificacion["ia1"] == ["cliente", "nulo", "cliente"]
     assert clasificacion["ia2"] == ["emisor", "error", "error"]
     assert clasificacion["mayoria"] == {"ia1": "cliente", "ia2": "error"}
+
+
+# --- Detalle de los informes (fijado tras la campaña de mutación) ---------------
+
+
+def test_f064_r16_informes_cabecera_modelos_y_llamadas(tmp_path, capsys):
+    dobles = Dobles(tmp_path, _respuestas_tipicas())
+
+    _codigo, salida, resumen = _lanzar(tmp_path, dobles, ["FER-001", "GEN-002"])
+
+    assert "comparar_proveedor: 24 llamadas (IA1 gemini · IA2 openai) · variantes base, rama" in capsys.readouterr().err
+    carga = json.loads((salida / "base_r2.json").read_text(encoding="utf-8"))
+    assert carga["modelos"] == {"IA1": "gemini-2.5-flash", "IA2": "gpt-5"}
+    assert carga["repeticion"] == 2 and carga["variante"] == "base"
+    texto = resumen.read_text(encoding="utf-8")
+    assert re.search(r"rama `[0-9a-f]{7,}`", texto)
+    assert "## Ejecuciones con error\n\n(ninguno)\n" in texto
+    assert "AVISO" not in texto  # la base sí dio un CIF cliente (FER-001)
+    assert "| cliente | 1 | 1 | 0 | 0 |" in texto
+    assert "- **base tras IA1** · emisor: GEN-002 · cliente: FER-001" in texto
+
+
+def test_f064_r16_el_modelo_sale_del_entorno(tmp_path):
+    dobles = Dobles(tmp_path, {("rama", "C-1"): [(CIF_EMISOR, CIF_EMISOR)]})
+
+    _codigo, salida, _r = _lanzar(
+        tmp_path, dobles, ["C-1"], "--variante", "rama", "--repeticiones", "1",
+        entorno=_entorno(GEMINI_MODEL="modelo-de-mentira"),
+    )
+
+    carga = json.loads((salida / "rama_r1.json").read_text(encoding="utf-8"))
+    assert carga["modelos"] == {"IA1": "modelo-de-mentira", "IA2": "gpt-5"}
+
+
+def test_f064_r16_sin_cliente_en_la_base_el_resumen_avisa(tmp_path):
+    respuestas = {("base", "C-1"): [(CIF_EMISOR, CIF_EMISOR)], ("rama", "C-1"): [(CIF_EMISOR, CIF_EMISOR)]}
+
+    _codigo, _s, resumen = _lanzar(tmp_path, Dobles(tmp_path, respuestas), ["C-1"], "--repeticiones", "1")
+
+    assert "AVISO: la base no dio ningún CIF cliente" in resumen.read_text(encoding="utf-8")
+
+
+def test_f064_r16_detalle_con_los_valores_de_cada_ejecucion(tmp_path):
+    respuestas = {
+        ("base", "C-1"): [(CIF_CLIENTE, None)],
+        ("rama", "C-1"): [ValueError("x")],
+    }
+
+    _codigo, salida, _r = _lanzar(tmp_path, Dobles(tmp_path, respuestas), ["C-1"], "--repeticiones", "1")
+
+    detalle = (salida / "resumen.md").read_text(encoding="utf-8")
+    assert (
+        f"| C-1 | `{CIF_EMISOR}` | `{CIF_CLIENTE}` | null | ERROR (ValueError) | ERROR (ValueError) "
+        "| cliente | nulo | error | error |"
+    ) in detalle
+    nombres = detalle[detalle.index("## proveedor_nombre leído"): detalle.index("## Errores")]
+    assert nombres.count(NOMBRE) == 2 and "rama" not in nombres
+    errores = detalle[detalle.index("## Errores"):]
+    assert "C-1 · rama r1 IA1: ValueError" in errores and "base" not in errores
+
+
+def test_f064_r15_git_show_vacio_tambien_para(tmp_path, monkeypatch):
+    class Vacio:
+        returncode = 0
+        stdout = b""
+        stderr = b""
+
+    monkeypatch.setattr(sv2_proveedor.subprocess, "run", lambda *_a, **_k: Vacio())
+
+    with pytest.raises(sv2_proveedor.BaseNoDisponible):
+        sv2_proveedor.ficheros_de_base(tmp_path, base="abc1234")
