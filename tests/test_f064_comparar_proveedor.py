@@ -621,3 +621,23 @@ def test_f064_r16_un_caso_sin_albaran_va_a_error_sin_llamar_al_llm(tmp_path):
 def test_f064_r17_un_caso_sin_fixture_para(tmp_path):
     assert cp.esperado_de("NO-EXISTE", tmp_path) is None
     assert cp.tipologia_de("NO-EXISTE", tmp_path) == ""
+
+
+def test_f064_r14_clasificar_categoriza_cada_ejecucion_y_su_mayoria():
+    """Un resultado válido se clasifica por su CIF; uno con error o ausente es `error`."""
+    error = {"error": {"fase": "IA2", "tipo": "X", "motivo": "m"}}
+    corrida = cp.Corrida(
+        casos=["A"], variantes=["rama"], repeticiones=3,
+        proveedores={"IA1": "gemini", "IA2": "openai"}, modelos={"IA1": "m", "IA2": "m"},
+        resultados={"rama": [
+            {"A": {"ia1": {"nombre": NOMBRE, "cif": CIF_CLIENTE}, "ia2": {"nombre": NOMBRE, "cif": CIF_EMISOR}}},
+            {"A": {"ia1": {"nombre": NOMBRE, "cif": None}, "ia2": error}},
+            {"A": {"ia1": {"nombre": NOMBRE, "cif": CIF_CLIENTE}, "ia2": None}},
+        ]},
+    )
+
+    clasificacion = cp.clasificar(corrida, {"A": CIF_EMISOR}, PROPIOS)["A"]["rama"]
+
+    assert clasificacion["ia1"] == ["cliente", "nulo", "cliente"]
+    assert clasificacion["ia2"] == ["emisor", "error", "error"]
+    assert clasificacion["mayoria"] == {"ia1": "cliente", "ia2": "error"}
