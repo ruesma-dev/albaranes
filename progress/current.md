@@ -17,8 +17,8 @@ APROBADA por el reviewer en su pasada 3 (`progress/review_F-053_fase1_pasada3.md
 T0d (dos fusiones de `dev`: F-062 y F-063), T17–T21b (sv4: settings, publicar en el paso a aprobado, cerrojo en dos
 sentencias, producto, rutas, panel, R37), T24b (`reclamar` de sv9 en dos sentencias), T22 (infra, solo scripts:
 `create_capps_sv9.ps1` con `ALTA_SIGRID_COMMIT=false`, `set_alta_sigrid.ps1`), T23 (docs y `azure-apps` `d43f200`),
-T24 (cobertura 96,2 %) y T25 (mutación). Informe: **`progress/impl_F-053_fase2.md`**. Siguiente: **review de la
-fase 2**; después, fusionar y `init.sh` en el árbol principal.
+T24 (cobertura 96,2 %) y T25 (mutación). Informe: **`progress/impl_F-053_fase2.md`**. Review de la fase 2 (`44d5d86`): CHANGES_REQUESTED por RM5,
+hecho en la pasada 2 (§12 del informe). Siguiente: **re-review**; después, fusionar y `init.sh` en el árbol principal.
 - **Entorno del worktree**: venvs del árbol principal con `PYTHONPATH` a la comun del worktree; *junction*
   `services/albaranes-front/.venv` → venv de sv4 del árbol principal (ignorada por git): quitarla con
   `cmd /c rmdir services\albaranes-front\.venv` ANTES de `git worktree remove`.

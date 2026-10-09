@@ -193,3 +193,20 @@ comun del worktree, lanzada desacoplada (`Start-Process`) para que sobreviva a l
 | Mutación | campaña completa: **628 mutantes, 618 muertos, 10 supervivientes equivalentes justificados**, 0 timeouts, 5625 s (`progress/mutacion_F-053.md`) |
 | Tamaño | requirements 150/150, design 250/250 (sin crecer) |
 | Lint | `ruff` limpio en lo nuevo de sv4 (tests, `alta_sigrid_models`, `alta_sigrid`), sv9 y comun nuevo |
+
+## 12. Pasada 2 · RM5 (review `progress/review_F-053_fase2.md`, `44d5d86`: CHANGES_REQUESTED)
+
+Restricción de máquina (F-064 con suites): sin suites completas, `init.sh`, coverage ni campañas; solo ficheros sueltos.
+- **RM5** (`6e29784`): demostración ejecutable y versionada de los 10 equivalentes, patrón de F-048 (`7b8adab`). Cada
+  test carga el módulo REAL desde una fuente normalizada (si una campaña inyectó el equivalente, la línea vuelve a su
+  original), fabrica la variante y compara salidas, con un control NO equivalente que sí se detecta:
+  sv9 `test_f053_t25_equivalentes.py` — #1 2688 escenarios del servicio (modo, previa, grabación, adjunto, fallos de
+  BBDD, incierto retomado; control: `en_vuelo` de la grabación), #2/#3 3000 lotes de líneas (control: manuales
+  primero), #4–#6 338 casos por `validar_y_construir` (control: `importe < 1`), #7 76 entradas de `_json` (control:
+  `and` sin capturar el `ValueError`); sv3 `test_f053_t25_equivalentes.py` — #8–#10 1644 albaranes por `evaluar`
+  (control: `<= 0` en la cantidad). Resultados (un fichero por pytest): sv9 **7 passed**, sv3 **3 passed**; con cada
+  uno de los 10 equivalentes inyectado en su fichero (y restaurado en bytes), siguen **en verde**. Cada sección de
+  `progress/mutacion_F-053.md` enlaza su test («Demostración: …»; `analisis_escritos` sigue leyendo los 10).
+- **O3** (`b15ca64`): `infra/README_capps.md` paso 2, `Set-DeployTag` antes de `build_images.ps1 -Only sv9`.
+- **O5** (`7daa879`): `progress/current.md` sin los bloques «EN CURSO» de F-062 y F-063.
+- **O1** (R30 con el adjunto en error): no se toca; la decide el humano antes de T29.
