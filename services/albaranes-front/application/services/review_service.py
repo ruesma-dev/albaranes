@@ -28,6 +28,7 @@ from domain.models.alta_sigrid_models import (
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
     VIEW_MODE_MERGE,
+    AlbaranAprobadoError,
     DocumentDetailPayload,
     DocumentListFilters,
     MergeDocumentUpdatePayload,
@@ -799,6 +800,16 @@ class ReviewService:
         alta = self._repository.leer_alta_sigrid(document_id)
         if alta is not None and alta.bloqueante:
             raise AlbaranBloqueadoError(document_id, alta.estado, alta.sigrid_cod)
+
+    def comprobar_editable(self, document_id: str) -> None:
+        """F-065 R4 para lo que solo PUBLICA (revalorar, volver a buscar
+        contratos): con alta bloqueante, :class:`AlbaranBloqueadoError` (F-053
+        R25); con el albarán aprobado, :class:`AlbaranAprobadoError`. Sin
+        cerrojo, como :meth:`comprobar_desbloqueado`."""
+        self.comprobar_desbloqueado(document_id)
+        estado = self._repository.estado_aprobacion(document_id)
+        if estado is not None and estado["approved"]:
+            raise AlbaranAprobadoError(document_id)
 
     def puede_solicitar_alta(
         self, document_id: str, *, ahora: datetime | None = None,

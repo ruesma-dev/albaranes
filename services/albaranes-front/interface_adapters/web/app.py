@@ -26,11 +26,14 @@ from domain.models.alta_sigrid_models import (
 )
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
+    AlbaranAprobadoError,
     ConciliacionEditBody,
     ConciliacionOverridePayload,
     DocumentDetailPayload,
     DocumentListFilters,
     HealthResponse,
+    LineaBloqueadaError,
+    LineasIncompletasError,
     MergeDocumentUpdatePayload,
     SaveResponse,
     VIEW_MODE_MERGE,
@@ -199,6 +202,14 @@ MENSAJES_PRODUCTO = {
     "vinculada": "La línea está vinculada al contrato: lleva el producto de su línea de contrato.",
     "apagada": "El alta en Sigrid está desactivada (ALTA_SIGRID_DESDE_UTC vacía).",
 }
+
+
+def _a_la_ficha(document_id: str, texto: str) -> RedirectResponse:
+    """Vuelve a la ficha del documento con un mensaje."""
+    return RedirectResponse(
+        url=f"/documents/{document_id}?{urlencode({'message': texto})}",
+        status_code=303,
+    )
 
 
 def _redirigir_a_lista(redirect_query: str, texto: str) -> RedirectResponse:
@@ -736,12 +747,19 @@ def build_app(settings: Settings) -> FastAPI:
     def unapprove_from_list(
         document_id: str,
         redirect_query: str = Form(default=""),
+        volver: str = Form(default=""),
     ) -> RedirectResponse:
+        # F-065 R5: «Desaprobar para editar» de la ficha vuelve a la ficha.
+        a_la_ficha = volver == "ficha"
         try:
             review_service.unapprove_document(document_id=document_id)
         except AlbaranBloqueadoError as exc:
             # F-053 R25: desaprobar un albarán con alta bloqueante, no.
+            if a_la_ficha:
+                return _a_la_ficha(document_id, exc.aviso)
             return _redirigir_a_lista(redirect_query, exc.aviso)
+        if a_la_ficha:
+            return _a_la_ficha(document_id, "Documento desaprobado: ya se puede editar")
         query = redirect_query.strip()
         message = urlencode({"message": "Documento marcado como pendiente"})
         if query:
@@ -1218,8 +1236,9 @@ def build_app(settings: Settings) -> FastAPI:
                 detail="Documento no encontrado",
             )
         # F-053 R25: volver a buscar re-enriquece y revalora; con alta
-        # bloqueante, no se publica (design §11: se mira sin cerrojo).
-        review_service.comprobar_desbloqueado(document_id)
+        # bloqueante, no se publica (design §11: se mira sin cerrojo). F-065
+        # R4: tampoco sobre un aprobado.
+        review_service.comprobar_editable(document_id)
 
         client: ContratoRefetchClient = app.state.sv3_refetch_client
         try:
@@ -1282,8 +1301,9 @@ def build_app(settings: Settings) -> FastAPI:
                 detail="Documento no encontrado",
             )
         # F-053 R25: revalorar reemplaza la valoración; con alta bloqueante,
-        # no se publica (design §11: se mira sin cerrojo).
-        review_service.comprobar_desbloqueado(document_id)
+        # no se publica (design §11: se mira sin cerrojo). F-065 R4: tampoco
+        # sobre un aprobado.
+        review_service.comprobar_editable(document_id)
 
         # 2) Leer el contrato seleccionado directamente de BBDD (no del
         #    payload, para evitar que el front mande algo distinto).
@@ -1623,8 +1643,9 @@ def build_app(settings: Settings) -> FastAPI:
             res = review_service.undo_last(
                 document_id=document_id.strip(),
             )
-        except AlbaranBloqueadoError as exc:
-            # F-053 R25: deshacer en un albarán con alta bloqueante, no.
+        except (AlbaranBloqueadoError, AlbaranAprobadoError) as exc:
+            # F-053 R25 y F-065 R4: deshacer con alta bloqueante o en un
+            # aprobado, no.
             return JSONResponse(
                 status_code=409,
                 content={"ok": False, "error": exc.aviso, "detail": exc.aviso},
@@ -1678,12 +1699,6 @@ def build_app(settings: Settings) -> FastAPI:
     # ------------------------------------------------------------------ #
     # F-053 · Alta en Sigrid desde la ficha y producto de las líneas.
     # ------------------------------------------------------------------ #
-    def _a_la_ficha(document_id: str, texto: str) -> RedirectResponse:
-        return RedirectResponse(
-            url=f"/documents/{document_id}?{urlencode({'message': texto})}",
-            status_code=303,
-        )
-
     @app.post("/documents/{document_id}/alta-sigrid/solicitar", include_in_schema=False)
     def solicitar_alta_sigrid(document_id: str, request: Request) -> RedirectResponse:
         """R30: «Solicitar alta en Sigrid» (``accion="alta"``)."""
@@ -1728,11 +1743,19 @@ def build_app(settings: Settings) -> FastAPI:
 
     @app.exception_handler(AlbaranBloqueadoError)
     @app.exception_handler(AlbaranSinValorarError)
+    @app.exception_handler(AlbaranAprobadoError)
+    @app.exception_handler(LineaBloqueadaError)
+    @app.exception_handler(LineasIncompletasError)
     async def alta_sigrid_error_handler(
-        request: Request, exc: AlbaranBloqueadoError | AlbaranSinValorarError,
+        request: Request,
+        exc: (
+            AlbaranBloqueadoError | AlbaranSinValorarError | AlbaranAprobadoError
+            | LineaBloqueadaError | LineasIncompletasError
+        ),
     ) -> Response:
-        """F-053 R25/R37: nada cambió (el repositorio no confirmó). En la API,
-        409 con el aviso; en un formulario, de vuelta a la ficha con él."""
+        """F-053 R25/R37 y F-065 R4/R14/R20: nada cambió (el repositorio no
+        confirmó). En la API, 409 con el aviso; en un formulario, de vuelta a
+        la ficha con él."""
         if request.url.path.startswith("/api/"):
             return JSONResponse(status_code=409, content={"detail": exc.aviso})
         return _a_la_ficha(exc.document_id, exc.aviso)

@@ -217,10 +217,16 @@ QUE_FUNCIONAN_EN_SQLITE = (
 )
 
 
+def _aprobado_para(operacion):
+    """(F-065 R4) Un aprobado solo admite desaprobarlo: el resto de
+    operaciones se prueban sobre un pendiente."""
+    return operacion == "desaprobar"
+
+
 @pytest.mark.parametrize("estado", NO_BLOQUEANTES)
 @pytest.mark.parametrize("operacion", QUE_FUNCIONAN_EN_SQLITE)
 def test_f053_r26_con_alta_no_bloqueante_se_hace(operacion, estado):
-    motor = construir(aprobado=True)
+    motor = construir(aprobado=_aprobado_para(operacion))
     _undo_de_doc(motor)
     poner_alta(motor, estado)
     antes = foto(motor)
@@ -232,7 +238,7 @@ def test_f053_r26_con_alta_no_bloqueante_se_hace(operacion, estado):
 
 @pytest.mark.parametrize("operacion", QUE_FUNCIONAN_EN_SQLITE)
 def test_f053_r26_sin_tabla_del_alta_se_hace_como_hoy(operacion):
-    motor = construir(con_altas=False, aprobado=True)
+    motor = construir(con_altas=False, aprobado=_aprobado_para(operacion))
     _undo_de_doc(motor)
     antes = foto(motor)
 
@@ -242,7 +248,7 @@ def test_f053_r26_sin_tabla_del_alta_se_hace_como_hoy(operacion):
 
 
 def test_f053_r26_el_alta_de_otro_documento_no_bloquea():
-    motor = construir(aprobado=True)
+    motor = construir()
     poner_alta(motor, "registrado", document_id=DOC_AJENO)
     repo = repositorio(motor)
     assert repo.update_line_conciliacion(
@@ -250,12 +256,16 @@ def test_f053_r26_el_alta_de_otro_documento_no_bloquea():
 
 
 def test_f053_r26_todos_los_metodos_que_escriben_llaman_al_cerrojo():
-    """Guardián estructural: cada método de R26 llama a ``_exigir_desbloqueado``
-    (``guardar_producto_sigrid`` lo comprueba su propio test, T19b)."""
+    """Guardián estructural: cada método de R26 llama a ``_exigir_desbloqueado``,
+    directamente o a través de ``_exigir_editable`` de F-065 (que lo llama lo
+    primero); ``guardar_producto_sigrid`` lo comprueba su propio test, T19b."""
     import inspect
 
     from infrastructure.database.review_repository import AlbaranReviewRepository
 
+    editable = inspect.getsource(AlbaranReviewRepository._exigir_editable)
+    cuerpo = editable[editable.index('"""', editable.index('"""') + 3) + 3:]
+    assert cuerpo.strip().startswith("self._exigir_desbloqueado(session, document_id)")
     for metodo in (
         "update_document_y_transicion", "soft_delete_document", "hard_delete_document",
         "undo_last", "update_line_conciliacion", "set_line_conciliacion",
@@ -264,7 +274,8 @@ def test_f053_r26_todos_los_metodos_que_escriben_llaman_al_cerrojo():
         "asignar_almacen", "set_approved",
     ):
         fuente = inspect.getsource(getattr(AlbaranReviewRepository, metodo))
-        assert "self._exigir_desbloqueado(session, document_id)" in fuente, metodo
+        assert ("self._exigir_desbloqueado(session, document_id)" in fuente
+                or "self._exigir_editable(session, document_id" in fuente), metodo
 
 
 # =================================================================== #
@@ -287,7 +298,7 @@ def test_f053_r2_repositorio_aprobar_con_alta_bloqueante_no_lo_rechaza():
 
 
 @pytest.mark.parametrize("antes, aprueba, paso", [
-    (False, True, True), (True, True, False), (False, False, False), (True, False, False),
+    (False, True, True), (False, False, False),
 ])
 def test_f053_r2_repositorio_guardar_dice_si_paso_a_aprobado(monkeypatch, antes, aprueba, paso):
     motor = construir(aprobado=antes)
@@ -351,3 +362,17 @@ def test_f053_r34_sv4_nunca_escribe_la_tabla_del_alta():
         and escritura.search(f.read_text(encoding="utf-8"))
     ]
     assert culpables == []
+
+
+@pytest.mark.parametrize("aprueba", [True, False])
+def test_f053_r2_guardar_un_aprobado_ya_no_se_puede(monkeypatch, aprueba):
+    """(F-065 R4) Antes: guardar un aprobado decía «no pasó a aprobado» (y,
+    sin aprobar, lo desaprobaba). Ahora un aprobado es de solo lectura."""
+    from domain.models.review_models import AlbaranAprobadoError
+
+    repo = repositorio(construir(aprobado=True))
+    monkeypatch.setattr(repo, "get_document_detail", lambda document_id: "detalle")
+
+    with pytest.raises(AlbaranAprobadoError):
+        repo.update_document_y_transicion(
+            document_id=DOC, payload=MergeDocumentUpdatePayload(approved=aprueba))

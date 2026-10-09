@@ -83,7 +83,8 @@ def test_f053_r41_repositorio_llama_al_cerrojo():
     from infrastructure.database.review_repository import AlbaranReviewRepository
 
     fuente = inspect.getsource(AlbaranReviewRepository.guardar_producto_sigrid)
-    assert "self._exigir_desbloqueado(session, document_id)" in fuente
+    # F-065: a través de ``_exigir_editable`` (alta + aprobado + fila guardada).
+    assert "self._exigir_editable(session, document_id, valuation_line_id)" in fuente
 
 
 def test_f053_r41_una_linea_de_otro_contrato_es_sin_vincular():

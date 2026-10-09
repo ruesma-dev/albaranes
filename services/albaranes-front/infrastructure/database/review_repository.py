@@ -31,6 +31,7 @@ from ruesma_comun.valoracion import esta_valorado
 # `cantidades_tras_editar`). Se importa con el nombre privado con el que
 # la llama el resto de este módulo.
 from domain.models.review_models import (
+    AlbaranAprobadoError,
     ConciliacionDisplay,
     ConciliacionSibling,
     ContratoLinePayload,
@@ -41,6 +42,7 @@ from domain.models.review_models import (
     DocumentLineSummary,
     DocumentListItem,
     KNOWN_PROVIDER_VIEWS,
+    LineaBloqueadaError,
     LineValuationPayload,
     MergeDocumentUpdatePayload,
     MergeLinePayload,
@@ -196,6 +198,14 @@ _SQL_LINEA_PRODUCTO = text(
     "JOIN albaran_valuations v ON v.id = lv.valuation_id "
     "LEFT JOIN albaran_contrato_lines_merge cl ON cl.id = lv.matched_contrato_line_id "
     "WHERE lv.id = :lv AND v.document_id = :doc"
+)
+
+
+#: (F-065 R14) ¿Está guardada (bloqueada) esta fila del documento?
+_SQL_FILA_BLOQUEADA = text(
+    "SELECT lv.bloqueada FROM albaran_line_valuations lv "
+    "JOIN albaran_valuations v ON v.id = lv.valuation_id "
+    "WHERE lv.id = :vid AND v.document_id = :doc"
 )
 
 
@@ -1643,8 +1653,9 @@ class AlbaranReviewRepository:
         """
         self.initialize()
         with self._session_factory.create_session() as session:
-            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
-            self._exigir_desbloqueado(session, document_id)
+            # F-053 R26 (alta, con el merge bloqueado), F-065 R4 (aprobado) y
+            # R14 (fila guardada).
+            self._exigir_editable(session, document_id, valuation_line_id)
             row = session.execute(
                 text(
                     "SELECT lv.id, lv.merge_line_id, lv.valuation_id, "
@@ -1857,8 +1868,9 @@ class AlbaranReviewRepository:
             return (v or "").strip()
 
         with self._session_factory.create_session() as session:
-            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
-            self._exigir_desbloqueado(session, document_id)
+            # F-053 R26 (alta, con el merge bloqueado), F-065 R4 (aprobado) y
+            # R14 (fila guardada).
+            self._exigir_editable(session, document_id, valuation_line_id)
             row = session.execute(
                 text(
                     "SELECT lv.id, lv.merge_line_id, lv.valuation_id, "
@@ -2133,7 +2145,7 @@ class AlbaranReviewRepository:
             "  partida_action = :accion "
             "WHERE valuation_id = ("
             "  SELECT id FROM albaran_valuations WHERE document_id = :doc"
-            ")"
+            ") AND NOT bloqueada"
         )
         params: dict[str, Any] = {
             "accion": ACCION_ALMACEN_ELEGIDO,
@@ -2147,8 +2159,12 @@ class AlbaranReviewRepository:
             )
             params["ids"] = [int(i) for i in valuation_line_ids]
         with self._session_factory.create_session() as session:
-            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
-            self._exigir_desbloqueado(session, document_id)
+            # F-053 R26 (alta, con el merge bloqueado) y F-065 R4 (aprobado).
+            self._exigir_editable(session, document_id)
+            # (F-065 R14) Una fila guardada no pasa a almacén (409); «todas»
+            # se la salta (``NOT bloqueada`` en la sentencia).
+            for valuation_line_id in params.get("ids", []):
+                self._exigir_linea_desbloqueada(session, document_id, valuation_line_id)
             tocadas = [int(r[0]) for r in session.execute(sentencia, params)]
             session.commit()
         return sorted(tocadas)
@@ -2190,8 +2206,9 @@ class AlbaranReviewRepository:
         """
         self.initialize()
         with self._session_factory.create_session() as session:
-            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
-            self._exigir_desbloqueado(session, document_id)
+            # F-053 R26 (alta, con el merge bloqueado), F-065 R4 (aprobado) y
+            # R14 (fila guardada).
+            self._exigir_editable(session, document_id, valuation_line_id)
             row = session.execute(
                 text(
                     "SELECT lv.id, lv.valuation_id, "
@@ -2259,8 +2276,8 @@ class AlbaranReviewRepository:
 
         self.initialize()
         with self._session_factory.create_session() as session:
-            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
-            self._exigir_desbloqueado(session, document_id)
+            # F-053 R26 (alta, con el merge bloqueado) y F-065 R4 (aprobado).
+            self._exigir_editable(session, document_id)
             ml = session.execute(
                 text(
                     "SELECT id, document_id, cantidad, concepto, "
@@ -2479,8 +2496,8 @@ class AlbaranReviewRepository:
 
         self.initialize()
         with self._session_factory.create_session() as session:
-            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
-            self._exigir_desbloqueado(session, document_id)
+            # F-053 R26 (alta, con el merge bloqueado) y F-065 R4 (aprobado).
+            self._exigir_editable(session, document_id)
             doc = session.execute(
                 text(
                     "SELECT id FROM albaran_documents_merge WHERE id = :id"
@@ -2606,8 +2623,8 @@ class AlbaranReviewRepository:
 
         self.initialize()
         with self._session_factory.create_session() as session:
-            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
-            self._exigir_desbloqueado(session, document_id)
+            # F-053 R26 (alta, con el merge bloqueado) y F-065 R4 (aprobado).
+            self._exigir_editable(session, document_id)
             doc = session.execute(
                 text(
                     "SELECT id FROM albaran_documents_merge WHERE id = :id"
@@ -2884,8 +2901,8 @@ class AlbaranReviewRepository:
         lo modificado. La marca undone."""
         self.initialize()
         with self._session_factory.create_session() as session:
-            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
-            self._exigir_desbloqueado(session, document_id)
+            # F-053 R26 (alta, con el merge bloqueado) y F-065 R4 (aprobado).
+            self._exigir_editable(session, document_id)
             self._ensure_undo_table(session)
             row = session.execute(
                 text(
@@ -3412,8 +3429,8 @@ class AlbaranReviewRepository:
         del propio guardado («Guardar y aprobar» de una valoración manual)."""
         self.initialize()
         with self._session_factory.create_session() as session:
-            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
-            self._exigir_desbloqueado(session, document_id)
+            # F-053 R26 (alta, con el merge bloqueado) y F-065 R4 (aprobado).
+            self._exigir_editable(session, document_id)
             document = session.get(AlbaranDocumentMergeOrm, document_id)
             if document is None:
                 raise KeyError(f"Documento no encontrado: {document_id}")
@@ -3625,6 +3642,39 @@ class AlbaranReviewRepository:
                 document_id, str(fila["estado"]), fila["sigrid_cod"],
             )
 
+    def _exigir_editable(
+        self, session: Any, document_id: str, valuation_line_id: int | None = None,
+    ) -> None:
+        """(F-065 R4, R14) Lo que toda escritura de sv4 comprueba al empezar su
+        sesión, antes de tocar nada: el alta de F-053 (con el merge bloqueado,
+        :meth:`_exigir_desbloqueado`), que el albarán NO esté aprobado
+        (:class:`AlbaranAprobadoError`) y, si se escribe una fila, que no esté
+        guardada (:class:`LineaBloqueadaError`). Desaprobar es lo único que no
+        pasa por aquí: es justo lo que hace editable un aprobado."""
+        self._exigir_desbloqueado(session, document_id)
+        aprobado = session.execute(
+            select(AlbaranDocumentMergeOrm.approved)
+            .where(AlbaranDocumentMergeOrm.id == document_id)
+        ).scalar()
+        if aprobado:
+            raise AlbaranAprobadoError(document_id)
+        if valuation_line_id is not None:
+            self._exigir_linea_desbloqueada(session, document_id, valuation_line_id)
+
+    @staticmethod
+    def _exigir_linea_desbloqueada(
+        session: Any, document_id: str, valuation_line_id: int,
+    ) -> None:
+        """(F-065 R14) :class:`LineaBloqueadaError` si la fila del documento
+        está guardada. Una fila ajena o que no existe no se rechaza aquí: el
+        método que escribe ya la trata como «no es de este albarán»."""
+        bloqueada = session.execute(
+            _SQL_FILA_BLOQUEADA,
+            {"vid": int(valuation_line_id), "doc": document_id},
+        ).scalar()
+        if bloqueada:
+            raise LineaBloqueadaError(document_id, int(valuation_line_id))
+
     @staticmethod
     def _valorado_in_session(session: Any, document_id: str) -> bool:
         """(F-053 R37, R38) «Valorado» con ``ruesma_comun.valoracion``:
@@ -3721,8 +3771,9 @@ class AlbaranReviewRepository:
         (R25, R26). Validar que el código es admitido es del servicio."""
         self.initialize()
         with self._session_factory.create_session() as session:
-            # F-053 R26: el alta, con el merge bloqueado (dos sentencias).
-            self._exigir_desbloqueado(session, document_id)
+            # F-053 R26 (alta, con el merge bloqueado), F-065 R4 (aprobado) y
+            # R14 (fila guardada).
+            self._exigir_editable(session, document_id, valuation_line_id)
             fila = session.execute(
                 _SQL_LINEA_PRODUCTO, {"lv": valuation_line_id, "doc": document_id},
             ).mappings().first()

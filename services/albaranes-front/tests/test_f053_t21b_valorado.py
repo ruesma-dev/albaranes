@@ -95,10 +95,14 @@ def test_f053_r37_valorado_se_aprueba(monkeypatch, status, camino):
                          {"d": DOC}).scalar() in (1, True)
 
 
-def test_f053_r37_guardar_uno_ya_aprobado_sin_valorar_no_se_rechaza(monkeypatch):
+def test_f053_r37_guardar_uno_ya_aprobado_sin_valorar_lo_rechaza_f065_r4(monkeypatch):
+    """Antes no se rechazaba (no PASABA a aprobado). Con F-065 R4 un aprobado
+    es de solo lectura: el rechazo es por aprobado, no por sin valorar."""
+    from domain.models.review_models import AlbaranAprobadoError
+
     motor = construir(status="partial", aprobado=True)
-    _, paso = _guardar_y_aprobar(repositorio(motor), monkeypatch)
-    assert paso is False
+    with pytest.raises(AlbaranAprobadoError):
+        _guardar_y_aprobar(repositorio(motor), monkeypatch)
 
 
 def test_f053_r37_aprobar_uno_ya_aprobado_sin_valorar_no_se_rechaza():

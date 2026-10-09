@@ -114,8 +114,9 @@ RUTAS_API = [
      "add_valuation_lines_from_contrato"),
     ("post", f"/api/documents/{DOC}/lineas-valoradas/12/producto-sigrid", {"producto": "XA9999"},
      "elegir_producto_sigrid"),
-    ("post", f"/api/documents/{DOC}/re-fetch-contratos", None, "comprobar_desbloqueado"),
-    ("post", f"/api/documents/{DOC}/valuate", None, "comprobar_desbloqueado"),
+    # F-065 R4: revalorar y volver a buscar miran también si está aprobado.
+    ("post", f"/api/documents/{DOC}/re-fetch-contratos", None, "comprobar_editable"),
+    ("post", f"/api/documents/{DOC}/valuate", None, "comprobar_editable"),
 ]
 
 
