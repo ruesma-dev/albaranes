@@ -602,3 +602,22 @@ def test_f064_r15_la_base_del_cli_llega_a_los_ficheros(tmp_path):
 
     assert dobles.bases == ["abc1234"]
     assert dobles.montajes[0][0] == ("base", "rama")
+
+
+def test_f064_r16_un_caso_sin_albaran_va_a_error_sin_llamar_al_llm(tmp_path):
+    respuestas = {("base", "C-1"): [(CIF_EMISOR, CIF_EMISOR)], ("rama", "C-1"): [(CIF_EMISOR, CIF_EMISOR)]}
+    dobles = Dobles(tmp_path, respuestas)
+
+    codigo, salida, resumen = _lanzar(tmp_path, dobles, ["C-1", "C-2"], "--repeticiones", "1", con_pdf=["C-1"])
+
+    assert codigo == 0
+    assert {(v, c) for v, c, _i, _t in dobles.llamadas} == {("base", "C-1"), ("rama", "C-1")}
+    assert "C-2 (base r1: preproceso · SinAlbaran; rama r1: preproceso · SinAlbaran)" in resumen.read_text(
+        encoding="utf-8"
+    )
+    assert "ERROR (SinAlbaran)" in (salida / "resumen.md").read_text(encoding="utf-8")
+
+
+def test_f064_r17_un_caso_sin_fixture_para(tmp_path):
+    assert cp.esperado_de("NO-EXISTE", tmp_path) is None
+    assert cp.tipologia_de("NO-EXISTE", tmp_path) == ""

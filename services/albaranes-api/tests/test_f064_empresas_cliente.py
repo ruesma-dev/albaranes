@@ -275,3 +275,10 @@ def test_f064_r4_una_de_serie_nueva_llega_a_ia1_y_a_ia2(monkeypatch) -> None:
     assert linea in _instructions_fase_1()
     for clave in CLAVES_FASE_2:
         assert linea in _instructions_fase_2(clave), clave
+
+
+def test_f064_r3_dos_de_serie_que_normalizan_igual_salen_una_vez(monkeypatch) -> None:
+    """La primera manda (con su razón social); la repetida no duplica el CIF."""
+    monkeypatch.setitem(CIFS_PROPIOS_POR_DEFECTO, "a-81873903", "Otra razón")
+
+    assert empresas_cliente(None) == DE_SERIE[:1]
