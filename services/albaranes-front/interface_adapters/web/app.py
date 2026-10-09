@@ -15,7 +15,7 @@ from fastapi import Body, FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 
 from application.services.busqueda_contratos import aviso_de_guardado
 from application.services.review_service import ReviewService
@@ -26,6 +26,7 @@ from domain.models.alta_sigrid_models import (
 )
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
+    ConciliacionEditBody,
     ConciliacionOverridePayload,
     DocumentDetailPayload,
     DocumentListFilters,
@@ -162,57 +163,6 @@ def _format_hora_local(value: Any) -> str:
 # que lo hace durante el refetch (a través del endpoint
 # /v1/albaranes/{id}/re-fetch-contratos). El sv4 solo conserva la
 # preview del PDF del albarán propio, no del contrato asociado.
-
-
-class ConciliacionEditBody(BaseModel):
-    """Body del PATCH de edición de la fila salmon (jun 2026).
-
-    Todos los campos opcionales: el front manda los visibles. Los
-    numéricos llegan ya como número (el JS convierte coma decimal), pero
-    por robustez toleramos cadena vacía, "—" o números con coma decimal.
-
-    IMPORTANTE: definido a NIVEL DE MÓDULO (no dentro de build_app). Una
-    clase Pydantic local provoca un ForwardRef que Pydantic 2.12 no puede
-    resolver al usarla como Body(...), dando un 500 al guardar.
-    """
-
-    codigo_partida: str | None = None
-    descripcion: str | None = None
-    cantidad: float | None = None
-    unidad: str | None = None
-    precio_unitario: float | None = None
-    descuento: float | None = None
-    codigo_externo: str | None = None
-
-    @field_validator(
-        "cantidad", "precio_unitario", "descuento", mode="before"
-    )
-    @classmethod
-    def _num_or_none(cls, v: object) -> float | None:
-        if v is None:
-            return None
-        if isinstance(v, (int, float)):
-            return float(v)
-        s = str(v).strip()
-        if not s or s == "\u2014":  # "" o "—"
-            return None
-        if "," in s:
-            s = s.replace(".", "").replace(",", ".")
-        try:
-            return float(s)
-        except ValueError:
-            return None
-
-    @field_validator(
-        "codigo_partida", "descripcion", "unidad", "codigo_externo",
-        mode="before",
-    )
-    @classmethod
-    def _str_or_none(cls, v: object) -> str | None:
-        if v is None:
-            return None
-        s = str(v).strip()
-        return s or None
 
 
 class ProductoSigridBody(BaseModel):
