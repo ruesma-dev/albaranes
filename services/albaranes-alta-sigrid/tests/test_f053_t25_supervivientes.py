@@ -30,7 +30,15 @@ from domain.models.alta_models import (
 from domain.services.clasificador import clasificar
 from domain.services.comparador_previa import comparar
 from tests.f053_datos import CONFIG, datos, sin_vincular, vinculada
-from tests.f053_fakes import AHORA, DESDE, ESPERA, PdfFalso, RepoFalso, SigridFalso, previa_ok
+from tests.f053_fakes import (
+    AHORA,
+    DESDE,
+    ESPERA,
+    PdfFalso,
+    RepoFalso,
+    SigridFalso,
+    previa_ok,
+)
 
 D = datos(vinculada(1), sin_vincular(2))
 
@@ -100,7 +108,7 @@ def _registrado_con_adjunto_que_falla(sigrid):
     guardado = repo.ultimo(doc)
     assert guardado.estado is EstadoAlta.REGISTRADO
     assert guardado.adjunto_estado is AdjuntoEstado.ERROR
-    return [m.detalle for m in guardado.motivos if m.codigo == "adjunto_no_colgado"][0]
+    return next(m.detalle for m in guardado.motivos if m.codigo == "adjunto_no_colgado")
 
 
 def test_f053_t25_r23_detalle_del_adjunto_con_codigo():
