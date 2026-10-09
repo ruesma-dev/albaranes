@@ -23,6 +23,14 @@ from ruesma_comun.contratos.origen_datos import (
     MOTIVO_CORREO_FUERA_DE_LISTA,
     normalizar_codigo,
 )
+from ruesma_comun.valoracion import esta_valorado
+
+from domain.models.alta_sigrid_models import (
+    AltaSigridVista,
+    ProductoLinea,
+    ProductoOpcion,
+    etiqueta_estado_alta,
+)
 
 VIEW_MODE_MERGE = "merge"
 KNOWN_PROVIDER_VIEWS = ("openai", "gemini", "claude")
@@ -235,6 +243,15 @@ class DocumentListItem(BaseModel):
     created_at_utc: str
     document_url: str | None = None
     lines: list[DocumentLineSummary] = []
+    # F-053 R37: ¿se puede aprobar? (``esta_valorado`` de comun).
+    valorado: bool = False
+    # F-053 R31: estado del alta en Sigrid (None = sin alta o DESDE vacía).
+    alta_estado: str | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def alta_estado_texto(self) -> str | None:
+        return etiqueta_estado_alta(self.alta_estado)
 
 
 class ProviderSnapshot(BaseModel):
@@ -844,6 +861,27 @@ class DocumentDetailPayload(BaseModel):
     # para el CIF y la obra actuales. Lo rellena el repositorio en el
     # detalle del merge; ``None`` en las vistas de proveedor.
     busqueda_contratos: BusquedaContratosVista | None = None
+    # F-053 — alta en Sigrid (R29-R30) y producto de cada línea (R40). Lo
+    # rellena el servicio en la vista merge SOLO con DESDE puesta (R3).
+    alta_sigrid_activa: bool = False
+    alta_sigrid: AltaSigridVista | None = None
+    alta_puede_solicitar: bool = False
+    productos_sigrid: dict[int, ProductoLinea] = Field(default_factory=dict)
+    productos_admitidos: list[ProductoOpcion] = Field(default_factory=list)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def valorado(self) -> bool:
+        """(F-053 R37, R38) ¿Está valorado? Con ``esta_valorado`` de comun,
+        la misma regla que aplica el repositorio al aprobar y sv9 al dar de
+        alta: ``ok`` de sv6 o valoración manual completa."""
+        valoracion = self.valuation
+        if valoracion is None:
+            return False
+        lineas = list(valoracion.lines_by_merge_line_id.values()) + list(
+            valoracion.synthetic_lines
+        )
+        return esta_valorado(valoracion.status, [l.importe_calculado for l in lineas])
 
     @computed_field  # type: ignore[prop-decorator]
     @property

@@ -93,7 +93,13 @@ $ENVVARS = @(
   "AZURE_CLIENT_ID=$MI_CLIENTID",
   "SIGRID_API_BASE_URL=$SIGRID_URL",
   "SIGRID_API_FUNCTION_KEY=secretref:sigrid-key",
-  "SIGRID_API_DATABASE=$SIGRID_DB"
+  "SIGRID_API_DATABASE=$SIGRID_DB",
+  # F-053: alta en Sigrid APAGADA al crear (DESDE vacia). Para encenderla en
+  # sv4 Y sv9 con los MISMOS valores: .\set_alta_sigrid.ps1 (lee
+  # 00_capps_vars.ps1). Sin ALTA_SIGRID_PRODUCTO_POR_DEFECTO: vale el defecto
+  # del codigo, el mismo que sv9.
+  "ALTA_SIGRID_DESDE_UTC=",
+  "ALTA_SIGRID_ESPERA_INCIERTO_MIN=15"
 )
 
 az containerapp create `

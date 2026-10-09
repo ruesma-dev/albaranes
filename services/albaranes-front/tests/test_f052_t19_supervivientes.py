@@ -82,6 +82,20 @@ class _ServicioFalso:
         )
         return detalle, self.busqueda
 
+    def guardar(self, *, document_id, payload, refetch_client):
+        # F-053 (T20): el PUT guarda por ``ReviewService.guardar`` (que dice
+        # además qué pasó con el alta en Sigrid). Estos tests no la miran.
+        from application.services.review_service import ResultadoGuardado
+        from domain.models.alta_sigrid_models import ResultadoAprobacion
+
+        detalle, busqueda = self.save_document_y_buscar_si_cambia(
+            document_id=document_id, payload=payload, refetch_client=refetch_client,
+        )
+        return ResultadoGuardado(
+            detail=detalle, busqueda=busqueda,
+            aprobacion=ResultadoAprobacion(paso_a_aprobado=False),
+        )
+
     def get_document(self, document_id, view_mode=None):
         return self.documento
 

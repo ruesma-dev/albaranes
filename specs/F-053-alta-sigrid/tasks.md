@@ -1,0 +1,133 @@
+<!-- specs/F-053-alta-sigrid/tasks.md -->
+# F-053 · Tareas (v7)
+
+Rama `feature/F-053-alta-sigrid`. Rigor `critico`: **fase RED obligatoria** en toda tarea con test (falla antes,
+pasa después; traza en `progress/impl_F-053.md`). Un commit por tarea, `F-053 Tn: ...`. Sin `git push`. Tests
+`test_f053_rN_*`, sin red ni BBDD: fakes de `AltaRepository`, `SigridAltaPort` y `PdfAlbaranPort`, y
+`httpx.MockTransport` para el cliente. **No se empieza sin la PARADA 1** (aprobar esta v7; P1–P7 cerradas en
+`progress/spec_F-053.md`) **ni antes de que F-051 esté en `dev`** (T0d es la primera tarea); T26, T28 y T29 esperan además a
+**F-009 de sigrid-api desplegada** (design §8). Los tests del cliente y del clasificador usan el contrato de
+sigrid-api tal como esté en la spec de F-009 (v8, `8a6ecab`; códigos incluidos), no el de design §2 si difiere.
+
+## Bloque 0 · rama al día y medición (humano, 2026-10-01: «medir antes»)
+
+- [ ] T0d (fusiones hechas: `7ec02a6`, `d53d059`; falta su `init.sh` en el árbol principal) (primera tarea de implementación): con F-051 ya en `dev`, fusionar `dev` en `feature/F-053-alta-sigrid` (`git merge dev`; conflictos esperables en `harness/features.json`, `BACKLOG.md`, `progress/current.md` y, si F-051 los toca, `review_repository.py` y `app.py` de sv4: se conserva lo de los dos lados); comprobar que la ruta `asignar_almacen` de F-051 existe para meterla en R25 (T19, T20)  |  Verificación: `bash harness/init.sh` en verde tras el merge
+- [x] T0a: Script de medición alineado con F-051 v4: fuera `MARCAS_ALMACEN`; `almacen_sin_casar` y `sin_partida_ni_almacen` se funden en `sin_partida_sin_casar`, registrable en (a) y (b); tests del script ajustados  |  Verificación: `pytest services/albaranes-persistencia -k f053_medicion`
+- [ ] T0b: Verificación de solo lectura (antigua pregunta 6): ¿las altas manuales llevan el número del proveedor en «Referencia» (`dca.entref`)? Propuesta por defecto: sí, y se busca por CIF + `entref` (R14). Comprobarlo con `sql/read` (`SELECT TOP 50 c.cod, d.entcif, d.entref FROM dbo.con c JOIN dbo.dca d ON d.ide = c.ide WHERE c.tip = 14 AND c.fec >= 20260901 ORDER BY c.ide DESC`) contra 5 albaranes en papel  |  Verificación: MANUAL (humano), con autorización; si no se cumple, se para y se replantea R14
+- [ ] T0c: Verificación de solo lectura (antigua pregunta 9): fijar el login de Sigrid para `ALTA_SIGRID_USUARIO` (va en `usu` del alta y en el adjunto; debe existir en `dbo.usu`; propuesta: un usuario de servicio del área de compras) y comprobar en las App Settings de sigrid-api que `SIGRID_DOCUMENT_ALLOWED_GRATIPIDE` incluye `0`, `SIGRID_DOCUMENT_ALLOWED_MAGIC` la firma de PDF y `SIGRID_ALBARAN_PRODUCTOS_SIN_CONTRATO` los tres genéricos y `SIGRID_ALBARAN_NATURALEZA_POR_PRODUCTO` sus naturalezas (`MA99`, `QA99`, `XA99`)  |  Verificación: MANUAL (humano) — `az functionapp config appsettings list` (solo lectura); si falta alguno, cambiarlo es del proyecto sigrid-api
+- [ ] T0: Ejecutar (o repetir tras T0a; según `progress/current.md` ya se ejecutó con solo 3 albaranes activos) la medición de solo lectura `services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py` y decidir con el resultado si se sigue y con qué alcance  |  Verificación: MANUAL (humano) — comando en `progress/spec_F-053.md`
+
+## Bloque A · contratos y esquema
+
+- [x] T1: `MensajeFeedback.accion` (`alta` | `verificar_anulacion`, defecto `alta`), docstring con sv9 como consumidor (R32); `ruesma_comun/valoracion.py` con `esta_valorado` (cada caso del glosario: `ok`, manual completa, `manual`/`no_contract` con importe nulo o sin importes, `partial`, `failed`, sin valoración) y `ruesma_comun/alta_sigrid.py` (`leer_mapeo` con JSON roto, sin `*` o con valores no texto; `productos_admitidos`; `producto_efectivo` con elegido, familia de línea, familia del documento, documento mixto, sin clasificación y familia sin clave; `NOMBRES_PRODUCTO`) (R38, R44)  |  Verificación: `pytest services/albaranes-comun -k f053`
+- [x] T2: DDL de `albaran_altas_sigrid` e índice en `schema_contribution.py` de sv3, idempotente (R36, design §6)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r36`
+- [x] T2b: Columna `producto_sigrid VARCHAR(24)` en `albaran_line_valuations`: `ALTER ... ADD COLUMN IF NOT EXISTS` en `schema_contribution.py` de sv6 y en `orm_valuation_models.py` (nula, sin defecto); el replace de sv6 la deja `NULL` (R36, R42)  |  Verificación: `pytest services/albaran-valoracion-persist -k "f053_r36 or f053_r42 or drift"`
+- [x] T3: Esqueleto de sv9 (`services/albaranes-alta-sigrid`): settings con los defectos de design §7 (`ALTA_SIGRID_COMMIT` solo es `true` con el literal `true`; mapeo con `leer_mapeo`, arranque fallido con mapeo inválido), logging, Dockerfile, requirements, `sv9.md`, `.env.example` sin valores, alta en `harness/servicios.json`  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r19_modo or f053_r44"` y `pytest tests/test_estructura_monorepo.py`
+- [x] T4: Modelos de dominio y los tres puertos de sv9 (design §3)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_modelos`
+
+## Bloque B · dominio puro de sv9
+
+- [x] T5: `validador_alta`: `normalizar_cif` y los motivos de R10 (con `no_valorado` vía `esta_valorado`; `cif_no_valido`, `fecha_ilegible`, `falta_descripcion`, `producto_no_admitido` y la partida > 24 en `campo_demasiado_largo`) uno por test y uno con todos a la vez; sin vincular, sin partida y negativas admisibles, ninguna línea sin partida da motivo (R11); petición de R12 tal como el contrato §2 (`usu`, CIF normalizado, `cod_contrato` también sin vinculadas, sin `lineas_recibidas` ni claves `almacen`, `naturaleza` ni `paride`; `referencia_linea` = `str(id)` ≤ 24; orden por `line_index` y manuales al final por `id`; vinculada solo con `ctrpro_ide` sin `unidad` ni `descripcion`; sin vincular con `producto` efectivo (por defecto según familia, elegido, mixto), `descripcion` a 128 y `unidad` a 8; `partida` solo si no está vacía; `precio` neto ≥ 0 a 6 decimales y signo del importe en la cantidad, devolución con cantidad e importe negativos); exclusión de las de importe nulo o 0, también vinculadas con cantidad (R13); `producto_sigrid` ignorado en vinculadas (R43); R39: `fecha_no_plausible` en el borde (hoy, hoy+1, hoy−365, hoy−366), `signo_incoherente` con cantidad > 0 e importe < 0 y con cantidad < 0 e importe > 0 (con su `referencia_linea`), los dos motivos a la vez, y R39 no se evalúa si hay motivos de R10  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r10 or f053_r11 or f053_r12 or f053_r13 or f053_r39 or f053_r43"`
+- [x] T6: `comparador_previa.comparar`: `importe_distinto` (en el borde de la tolerancia y fuera), `lineas_distintas` (sobra y falta), `partida_distinta` (partida cambiada, nula frente a no nula y al revés) y `aviso_bloqueante` por `codigo` de cabecera y de línea; los informativos (incluido `sin_partida_en_linea_con_partida`) no bloquean (R17); en `idempotente`, `registrado_distinto` si un total difiere (R15)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r17 or f053_r15_distinto"`
+- [x] T7: `clasificador` con la tabla de design §2 como dato (parametrizado: cada `details.codigo` a su estado, incluidos `partida_ambigua`, `paride_no_valido` y `analitica_no_resuelta` → `no_admitido` y `naturaleza_no_valida`, `precio_negativo` y `obra_de_empresa_no_permitida` → `error`; `lineas_no_validas` con y sin un código de la fila `error`; código desconocido, 400 sin código, 401/403 → `error`); 200 `creado` o `idempotente` → `registrado`; 5xx, tiempo agotado y conexión → `incierto` en grabación y `error` en previa (R15, R18, R20, R21)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r15 or f053_r18 or f053_r20 or f053_r21"`
+
+## Bloque C · servicio de sv9
+
+- [x] T8: `AltaSigridService`, entrada: reclamación y sus salidas `ignorar`, `solo_adjunto`, `a_incierto`, `procesar` (R5–R8) y el `finally` de R9 (excepción antes y durante la grabación)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r5 or f053_r6 or f053_r7 or f053_r8 or f053_r9"`
+- [x] T9: No admitido, fecha no plausible y signo incoherente sin llamadas al puerto de Sigrid; duplicados: alta a mano (otro `synckey`, CIF normalizado) → `ya_en_sigrid` en los dos modos; previa `idempotente` → `registrado` sin grabar (y con `registrado_distinto`); retomar `incierto` reenvía la misma petición (R10, R14, R15, R39)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r14 or f053_r15 or f053_r10_sin_llamadas or f053_r39_sin_llamadas"`
+- [x] T10: Previa y simulación: se guardan la petición y de la respuesta solo lo de R16 (sin `cabecera` ni `filas`), 400 de la previa → su estado, previa limpia → `simulado`, y en simulación ninguna llamada lleva `commit=true` (R16, R18, R19, R35)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r16 or f053_r19"`
+- [x] T11: Modo real: una sola grabación sin reintento, `registrado` con `con_ide`/`cod`; adjunto con `contip` 14, `gratipide` 0 y `sha256`; `idempotente` cuenta como colgado; fallo del adjunto y reintento solo del adjunto (R20–R23)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r20 or f053_r22 or f053_r23"`
+- [x] T12: `verificar_anulacion` en sv9: `anulado` si el `con.ide` ya no existe, aviso «sigue en Sigrid» si existe, e ignorada si el alta no está `registrado` (R28)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r28`
+
+## Bloque D · adaptadores de sv9
+
+- [x] T13: `sigrid_api_alta_client`: cuerpos exactos de `sql/read` (con `truncated` comprobado), `sigrid/albaran` en modo extendido (con `usu`; nunca `lineas_recibidas`, `almacen` ni `naturaleza`) y `concepto-grafico`, lectura de `details.codigo` y `details.lineas`, reintento con tenacity en lecturas/previa/adjunto y **ninguno** en la grabación, `timeout` 240 s, la clave nunca en logs (R24, R33, R35)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f053_r24 or f053_r33 or f053_r35"`
+- [x] T14: `sql_alta_repository`: reclamación con `FOR UPDATE`, lectura de datos (con `tipologia`, `tipologia_mixta`, `contexto_linea_json`, `line_index` y `producto_sigrid`), guardado con `historial_json`; tests del SQL generado y de la traducción fila → `DatosAlta`  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_repositorio` + MANUAL de T26
+- [x] T15: `pdf_sharepoint` con `GraphSharePointClient` falso (ruta relativa del merge; sin ruta → adjunto en error)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_pdf`
+- [x] T16: Worker, composición y `main_worker.py` sobre `COLA_FEEDBACK`: resultado de negocio confirma, fallo de infraestructura antes de reclamar reencola, mensaje de otro `tipo` a poison  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_worker`
+
+## Bloque D bis · review de la fase 1 (`progress/review_F-053_fase1.md`) y decisiones D1–D4 del humano (2026-10-06/07)
+
+- [x] T31 (H1): el `ValidationError` de `Settings` se registra solo con `loc` y `msg` (`errors(include_input=False)`), nunca con los valores del entorno; motivo de R44 intacto (R35)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r35`
+- [x] T32 (H2): el adjunto guarda `grafico.ide_negocio` (`AttachConceptoGraficoResponse` de sigrid-api `13fd99d`); tests con la forma real (R22)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r22`
+- [x] T33 (H3): `branch` de F-053 en `harness/features.json` y `BACKLOG.md` regenerado  |  Verificación: `python -m harness.rutas_sensibles --puerta --base dev` resuelve F-053
+- [x] T34 (O1): visibilidad de `q-feedback` = peor caso de un mensaje (timeouts de la configuración) + 300 s, al minuto  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_o1`
+- [x] T35 (D1): `ESTADOS_ALTA_BLOQUEANTES` en comun; `save` de sv3 no borra un merge con alta bloqueante (lo devuelve con `conservado_por_alta`, log WARNING) y el pipeline no lo reprocesa; sin alta, con alta no bloqueante o sin tabla, como hoy (R45)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r45` y `pytest services/albaranes-comun services/albaranes-alta-sigrid -k f053_r45` (por separado)
+- [x] T36 (D2): `linea_de_otro_contrato` ⇒ `revisar` sin llamar a sigrid-api, con su `referencia_linea`, y WARNING de anomalía (documento, línea, los dos contratos, sin precios) (R46)  |  Verificación: `pytest services/albaranes-alta-sigrid -k f053_r46`
+- [x] T37 (D2): recuento `lineas_de_otro_contrato` (y sus `document_id`) en `medir_admisibilidad_f053.py`, sin valores  |  Verificación: `pytest services/albaranes-persistencia -k f053_medicion` + MANUAL: repetir T0
+- [x] T38 (D3, 1a): sv3 mira el alta del `source_sha256` (`buscar_conservado_por_alta`, sesión propia, misma consulta que `save`) en la rama de duplicado de `run`: con un alta bloqueante devuelve duplicado sin reescribir clasificación ni contexto de líneas, sin resolver cabecera, sin enriquecer obra ni contratos y sin revalorar, con log (R45)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r45`
+- [x] T39 (D3, 1c): esa mirada va antes de subir el PDF a SharePoint y cubre también el documento en la papelera: en un duplicado conservado no se sube nada ni se llama a `save`; `save` mantiene su mirada con `FOR UPDATE` para la carrera con sv9 (R45)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r45`
+
+## Bloque D ter · review de la fase 1, pasada 2 (`progress/review_F-053_fase1_pasada2.md`)
+
+- [x] T40 (H4, C9): `_conservar_por_alta` (las dos miradas) en DOS sentencias: primero `SELECT id FROM albaran_documents_merge WHERE source_sha256 = :sha FOR UPDATE` y después, ya con el cerrojo, `SELECT document_id, estado, sigrid_cod FROM albaran_altas_sigrid WHERE document_id = ANY(:ids)` (instantánea nueva en READ COMMITTED); sin merges no se lee el alta; ninguna filtra por `is_active` (R45 incluye la papelera); motivo en design §4; tests con una sesión doble que toma la instantánea al arrancar la sentencia (carrera de H4 en `save` y en la mirada previa, cerrojo en sentencia anterior y distinta, papelera)  |  Verificación: `pytest services/albaranes-persistencia -k f053_r45` + MANUAL de T27b
+
+## Bloque E · sv4
+
+- [x] T17: Settings de sv4 (DESDE, Espera y mapeo con `leer_mapeo`; arranque fallido con mapeo inválido) y puerto/cliente de colas: `notify_document_approved` devuelve si publicó y `solicitar_alta_sigrid(document_id, accion)`  |  Verificación: `pytest services/albaranes-front -k "f053_colas or f053_r44"`
+- [x] T18: `ReviewService` publica solo en el paso a aprobado, por los dos caminos; nada con DESDE vacía; fallo al publicar no deshace la aprobación y se avisa (R1–R4)  |  Verificación: `pytest services/albaranes-front -k "f053_r1 or f053_r2 or f053_r3 or f053_r4"`
+- [x] T19: (OJO, review fase 1 pasada 3 §7.1: `_exigir_desbloqueado` en DOS sentencias —primero el cerrojo del merge, después la lectura del alta con instantánea nueva—, nunca `FOR UPDATE` + `LEFT JOIN` en una sola, como H4/T40) Repositorio de sv4: `leer_alta_sigrid`, `es_aprobado` y `_exigir_desbloqueado` llamado en la sesión de cada método de R26 (también `guardar_producto_sigrid`); sin tabla = sin alta; sv4 no escribe la tabla (R26, R34)  |  Verificación: `pytest services/albaranes-front -k "f053_r26 or f053_r34"` + MANUAL de T26
+- [x] T19b: Producto en sv4: `guardar_producto_sigrid` y `ReviewService.elegir_producto_sigrid` (guarda el elegido o `NULL`, entrada de deshacer, 400 si la línea es de otro documento, vinculada o el código no es admitido, sin cambiar nada) y lectura de líneas valoradas con su producto efectivo (R41)  |  Verificación: `pytest services/albaranes-front -k f053_r41`
+- [x] T20: `app.py`: las rutas que escriben o publican, incluida la del producto, rechazan con alta bloqueante (parametrizado: 409 en API, redirección con aviso en formularios, nada cambia); saltos de R27; rutas nuevas de R28, R30 y R41  |  Verificación: `pytest services/albaranes-front -k "f053_r25 or f053_r27 or f053_r28 or f053_r30 or f053_r41_ruta"`
+- [x] T21b: No se aprueba un albarán no valorado (`esta_valorado`; uno valorado a mano sin contrato sí) por ninguno de los dos caminos, con DESDE vacía o no, sin cambiar nada; botones deshabilitados en ficha y listado (R37)  |  Verificación: `pytest services/albaranes-front -k f053_r37`
+- [x] T21: Panel `_alta_sigrid.html` en la ficha (con el producto y los motivos por línea), columna «Producto Sigrid» de la tabla de líneas valoradas (selector solo en sin vincular a registrar, «por defecto», vinculadas sin selector, nada con DESDE vacía) y estado en el listado, con cada estado y los dos modos (R3, R29–R31, R40)  |  Verificación: `pytest services/albaranes-front -k "f053_r29 or f053_r31 or f053_r40 or f053_r3"`
+
+## Bloque F · documentación, infra y puertas
+
+- [x] T22 (falta su MANUAL): `infra/`: sv9 en `$APPS`, build y `create_capps` (KEDA sobre `q-feedback`, máximo 1 réplica, secreto de Key Vault), DESDE, Espera y mapeo a sv4 y sv9 desde una sola variable, redactado  |  Verificación: MANUAL (humano) — leer el diff; `.\deploy.ps1 -Only sv9 -WhatIf` si el script lo admite
+- [x] T23: `docs/ARCHITECTURE.md` (sv9, tabla y columna nuevas), `docs/referencia/dominio_negocio_albaranes.md` §5.2 y `azure-apps/albaranes.md` (commit aparte en ese repo) según design §9; NO `CLAUDE.md` ni `sigrid_api.md` (los decide el humano)  |  Verificación: revisión del reviewer
+- [x] T24: Cobertura de líneas cambiadas ≥ 80 %  |  Verificación: `python -m harness.cobertura --base dev --config harness/rigor.json`
+- [x] T24b: sv9 `SQL_RECLAMAR` en DOS sentencias (cerrojo y, después, lectura con instantánea nueva), como T40; decisión del humano (2026-10-07) tras la review fase 1 pasada 3 §7.2: no depender de la réplica única  |  Verificación: test con control negativo (sentencia única ⇒ falla) y suite de sv9
+- [x] T25: Campaña de mutación COMPLETA, 0 supervivientes sin test nuevo o justificación aceptada  |  Verificación: `python -m harness.mutacion --feature F-053`
+
+## Bloque G · verificación REAL (solo el humano; cada paso con su autorización)
+
+- [ ] T26: (espera a F-009 desplegada) LOCAL (Azurite + PostgreSQL local + sigrid-api en **simulación**, `ALTA_SIGRID_COMMIT` sin poner): aprobar siete documentos —uno todo vinculado, uno con líneas sin vincular con partida (producto por defecto `MA9999` en la previa), uno con una línea de alquiler de maquinaria (`QA9999`) y otra cambiada a mano en sv4 a `XA9999`, uno con una línea negativa, uno sin contrato valorado a mano con una línea sin partida, uno cuyo número ya está en Sigrid, uno con un descuento (cantidad > 0, importe < 0)— e intentar aprobar uno sin valorar (rechazado); leer `psql "$env:ALBARANES_DB_URL" -c "SELECT document_id, estado, modo, sigrid_cod, motivos_json FROM albaran_altas_sigrid;"`. VERDE si salen `simulado` ×5 (con partidas o sin ellas, productos y signo pedidos en la previa), `ya_en_sigrid` y `revisar` con `signo_incoherente` (sin llamada a sigrid-api), y desaprobar el primero funciona (no es bloqueante)  |  Verificación: MANUAL (humano)
+- [ ] T27: Cerrojo real: con un alta puesta a mano en `registrado` en la BBDD LOCAL, probar en `http://localhost:8004` guardar, desaprobar, deshacer, borrar, revalorar y cambiar el producto de una línea; todos rechazados y las filas del merge y de la valoración sin cambios  |  Verificación: MANUAL (humano)
+- [ ] T27b (H4, R45; con T26/T27, mismo PostgreSQL LOCAL, nunca Azure): carrera de dos sesiones. Terminal A hace de sv9 (bloquea el merge e inserta `en_curso` SIN confirmar); terminal B lanza la mirada REAL de sv3 (`buscar_conservado_por_alta`), que debe quedarse esperando; A confirma; B debe imprimir `ExistingDocument(document_id='<ID>', ..., conservado_por_alta=True)`. ROJO si imprime `None` o si no espera. Al terminar, A borra el alta de prueba. Comandos exactos debajo  |  Verificación: MANUAL (humano)
+
+Terminal A (`$env:ALBARANES_DB_URL` = `postgresql://<usuario>:<clave>@localhost:5432/<bbdd>`, la LOCAL):
+
+```sql
+-- psql "$env:ALBARANES_DB_URL"
+SELECT m.id, m.source_sha256 FROM albaran_documents_merge m
+ WHERE NOT EXISTS (SELECT 1 FROM albaran_altas_sigrid a WHERE a.document_id = m.id) LIMIT 1;  -- apunta <ID> y <SHA>
+BEGIN;
+SELECT m.id FROM albaran_documents_merge m
+ WHERE m.id = '<ID>' FOR UPDATE;                            -- el cerrojo de reclamar (sv9, T24b)
+INSERT INTO albaran_altas_sigrid (document_id, estado, creado_at_utc)
+ VALUES ('<ID>', 'en_curso', '2026-10-07T00:00:00+00:00');  -- SIN COMMIT todavía
+-- (ahora, terminal B; cuando B esté esperando:)
+COMMIT;
+-- (al terminar la prueba:)
+DELETE FROM albaran_altas_sigrid WHERE document_id = '<ID>';
+```
+
+Terminal B (PowerShell, en el worktree; el script se niega si la URL no es `localhost`):
+
+```powershell
+@'
+import os, sys
+from urllib.parse import urlsplit
+from infrastructure.database.phase2_ddl import apply_phase2_ddl
+from infrastructure.database.session_factory import SessionFactory
+from infrastructure.database.sqlalchemy_albaran_repository import SqlAlchemyAlbaranRepository
+url = os.environ["ALBARANES_DB_URL"].replace("postgresql://", "postgresql+psycopg://", 1)
+assert urlsplit(url).hostname in ("localhost", "127.0.0.1"), "solo contra el PostgreSQL LOCAL"
+base, bbdd = url.rsplit("/", 1)
+fabrica = SessionFactory(url, base + "/postgres", bbdd)
+repo = SqlAlchemyAlbaranRepository(session_factory=fabrica)
+repo.initialize(); apply_phase2_ddl(fabrica)  # el DDL ANTES de que A abra su transaccion
+input("Terminal A: BEGIN, FOR UPDATE e INSERT en_curso SIN COMMIT. Luego pulsa Enter aqui. ")
+print("Mirando el alta: debe quedarse esperando hasta el COMMIT de A...")
+print(repo.buscar_conservado_por_alta(sys.argv[1]))
+'@ | Set-Content -Encoding utf8 "$env:TEMP\h4_r45.py"
+cd C:\Users\pgris\PycharmProjects\albaranes-F-053\services\albaranes-persistencia
+$env:PYTHONPATH = "$PWD;$PWD\..\albaranes-comun"
+C:\Users\pgris\PycharmProjects\albaranes\.venv\Scripts\python.exe "$env:TEMP\h4_r45.py" '<SHA>'
+```
+
+- [ ] T27c (T19, R26; con T27, mismo PostgreSQL LOCAL): carrera sv9 ↔ sv4. Terminal A como en T27b (`BEGIN`, el `FOR UPDATE` e `INSERT ... 'en_curso'` SIN `COMMIT`); con sv4 local arrancado contra esa BBDD, en `http://localhost:8004` pulsar «Borrar» en ese albarán: el navegador se queda esperando; `COMMIT` en A ⇒ la bandeja vuelve con el aviso «Registrado en Sigrid: corrígelo en Sigrid…» y el albarán sigue activo (`SELECT is_active FROM albaran_documents_merge WHERE id = '<ID>'` ⇒ `t`). ROJO si lo borra. Al terminar, A borra el alta de prueba  |  Verificación: MANUAL (humano)
+- [ ] T28: AZURE en simulación (con F-009 desplegada y tras desplegar sv6 y sv3 → sv9 → sv4 con DESDE puesta): revisar a diario los `simulado`/`revisar`/`no_admitido` y comparar con la medición de T0  |  Verificación: MANUAL (humano) — mismo SELECT contra la BBDD real, solo lectura
+- [ ] T29: PRIMERA GRABACIÓN REAL, con autorización expresa y sobre un albarán elegido por el humano: llave `SIGRID_ALBARAN_WRITE_ENABLED` de F-009 abierta (la abre el proyecto sigrid-api), `ALTA_SIGRID_COMMIT=true`, aprobar, comprobar en la UI de Sigrid cabecera, líneas (vinculadas y genéricas), partidas, naturaleza y cuenta analítica de las genéricas (`MA99`/`QA99`/`XA99` y `<obra>.<sufijo>`; contrato H10, H34), `cod2` y enlace a planificación de compras de las vinculadas (H35), stock, `canser` y el PDF adjunto; volver a publicar a mano en `q-feedback` el mensaje de alta de ese documento y comprobar que no se crea otro (sigue `registrado` sin cambios)  |  Verificación: MANUAL (humano)
+- [ ] T30 (en el worktree: 4 KO de entorno, ver `progress/impl_F-053_fase2.md` §10; pendiente en el árbol principal tras fusionar): Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`

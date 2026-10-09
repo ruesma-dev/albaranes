@@ -86,6 +86,21 @@ Write-Host " DESPLIEGUE  tag=$Tag  RG=$RG" -ForegroundColor Cyan
 Write-Host " servicios: $($svcs -join ', ')" -ForegroundColor Cyan
 Write-Host "=========================================================" -ForegroundColor Cyan
 
+# --- 0) F-053: sv9 escribe en Sigrid ---------------------------------------
+# Antes de tocar sv9 se ENSENA su ALTA_SIGRID_COMMIT (solo lectura). Este
+# script nunca lo cambia: la imagen nueva hereda el entorno de la app.
+if ($svcs -contains "sv9") {
+    $commit = az containerapp show -n $AppMap["sv9"] -g $RG `
+        --query "properties.template.containers[0].env[?name=='ALTA_SIGRID_COMMIT'].value | [0]" -o tsv 2>$null
+    if ($commit -eq "true") {
+        Write-Host "`n*** sv9 esta en MODO REAL (ALTA_SIGRID_COMMIT=true): la imagen nueva GRABARA en Sigrid ***" -ForegroundColor Red
+    } elseif ($commit) {
+        Write-Host "`n[sv9] ALTA_SIGRID_COMMIT=$commit -> simulacion (no graba)." -ForegroundColor DarkGray
+    } else {
+        Write-Host "`n[sv9] la app no existe todavia o no tiene ALTA_SIGRID_COMMIT: creala con create_capps_sv9.ps1 (lo pone a false)." -ForegroundColor Yellow
+    }
+}
+
 # --- 1) Build en ACR --------------------------------------------------------
 if ($SkipBuild) {
     Write-Host "`n[1/3] BUILD omitido (-SkipBuild)." -ForegroundColor DarkGray

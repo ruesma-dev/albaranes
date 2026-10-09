@@ -120,6 +120,11 @@ class MergeEnMemoria(RepoRed):
         self.guardados = 0
 
     # --- pipeline ---------------------------------------------------- #
+    def buscar_conservado_por_alta(self, source_sha256: str):
+        # (F-053 · R45, fusión de `dev` en la rama de F-053) Sin alta en
+        # Sigrid, el pipeline sigue como hoy: nada que conservar.
+        return None
+
     def get_by_sha256(self, source_sha256: str):
         if not self.existe:
             return None

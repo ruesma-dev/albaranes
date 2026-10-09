@@ -567,8 +567,13 @@ def test_f036_r24_la_depuracion_esta_cableada_en_update_document():
         AlbaranReviewRepository,
     )
 
-    fuente = inspect.getsource(AlbaranReviewRepository.update_document)
+    # F-053 (T18): el cuerpo del guardado vive en
+    # ``update_document_y_transicion`` (dice además si el documento pasó a
+    # aprobado); ``update_document`` delega en él.
+    fuente = inspect.getsource(AlbaranReviewRepository.update_document_y_transicion)
     assert "_depurar_motivos_documento_in_session" in fuente
+    delegado = inspect.getsource(AlbaranReviewRepository.update_document)
+    assert "self.update_document_y_transicion(" in delegado
 
 
 def test_f036_r24_un_documento_que_no_existe_no_rompe_nada(

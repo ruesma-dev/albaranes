@@ -612,7 +612,10 @@
                     { method: "POST" }
                 );
                 if (!resp.ok) {
-                    window.alert("No se pudo pasar el albarán a almacén.");
+                    // F-053 R25: con alta en Sigrid bloqueante llega el aviso (409).
+                    let msg = "No se pudo pasar el albarán a almacén.";
+                    try { const j = await resp.json(); if (j && j.detail) msg = j.detail; } catch (e) {}
+                    window.alert(msg);
                     almacenTodasBtn.disabled = false;
                     return;
                 }
@@ -905,7 +908,10 @@
                 { method: "POST" }
             );
             if (!resp.ok) {
-                window.alert("No se pudo pasar la línea a almacén.");
+                // F-053 R25: con alta en Sigrid bloqueante llega el aviso (409).
+                let msg = "No se pudo pasar la línea a almacén.";
+                try { const j = await resp.json(); if (j && j.detail) msg = j.detail; } catch (e) {}
+                window.alert(msg);
                 input.disabled = false;
                 return;
             }
@@ -3158,6 +3164,8 @@
             linea_add: "Añadir",
             conciliar: "Casar",
             guardar: "Guardar",
+            almacen: "Almacén",
+            producto: "Producto",
         })[a] || "Cambio";
     }
 
@@ -3277,4 +3285,38 @@
         form.submit();
     });
     refrescar();
+})();
+
+// ------------------------------------------------------------------- //
+// F-053 R41: producto Sigrid de una línea sin vincular. Al cambiar el
+// selector se guarda (null = por defecto) y se recarga para ver el
+// deshacer. Con alta bloqueante el servidor responde 409 con el aviso.
+// ------------------------------------------------------------------- //
+(function () {
+    [].forEach.call(document.querySelectorAll(".js-producto-sigrid"), function (sel) {
+        sel.addEventListener("change", async function () {
+            const doc = sel.dataset.documentId;
+            const vid = sel.dataset.valuationLineId;
+            sel.disabled = true;
+            try {
+                const resp = await fetch(
+                    `/api/documents/${doc}/lineas-valoradas/${vid}/producto-sigrid`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                        body: JSON.stringify({ producto: sel.value || null }),
+                    }
+                );
+                if (!resp.ok) {
+                    let msg = "No se pudo guardar el producto.";
+                    try { const j = await resp.json(); if (j && j.detail) msg = j.detail; } catch (e) {}
+                    window.alert(msg);
+                }
+                window.location.reload();
+            } catch (e) {
+                window.alert("Error de red guardando el producto.");
+                sel.disabled = false;
+            }
+        });
+    });
 })();

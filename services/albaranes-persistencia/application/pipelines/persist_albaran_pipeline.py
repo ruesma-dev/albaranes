@@ -98,6 +98,16 @@ class PersistAlbaranPipeline:
         sha256 = hashlib.sha256(request.file_bytes).hexdigest()
         self._validate_sha256(envelope=envelope, sha256=sha256)
 
+        # (F-053 · R45, D3) «Un albarán no se puede pisar»: si el PDF es de
+        # un documento (activo o en la papelera) con un alta en Sigrid
+        # bloqueante, se devuelve como duplicado ANTES de tocar nada: ni se
+        # sube a SharePoint, ni se guarda, ni se reescribe, ni se
+        # re-enriquece, ni se revalora (lo mismo que sv4 impide, R25).
+        # ``save`` repite la mirada en su transacción (carrera con sv9).
+        conservado = self._repository.buscar_conservado_por_alta(sha256)
+        if conservado is not None:
+            return self._devolver_conservado(conservado)
+
         existing = self._repository.get_by_sha256(sha256)
         if existing is not None:
             logger.info(
@@ -199,6 +209,11 @@ class PersistAlbaranPipeline:
             context=request.context,
             stored_file=stored_file,
         )
+        if saved.conservado_por_alta:
+            # (F-053 · R45, D1) Tiene un alta en Sigrid bloqueante: se
+            # conserva tal cual. Ni se enriquece ni se revalora (lo mismo
+            # que sv4 impide mientras el alta bloquea, R25).
+            return self._devolver_conservado(saved)
 
         # Pipeline de enriquecimiento. ORDEN IMPORTA:
         #  1) Obra: sobrescribe nombre_obra y obra_direccion en el merge.
@@ -246,6 +261,23 @@ class PersistAlbaranPipeline:
             stored_lines=saved.stored_lines,
             contratos_count=contratos_count,
             selected_contrato_codigo=selected_codigo,
+        )
+
+    @staticmethod
+    def _devolver_conservado(conservado: Any) -> PersistAlbaranResult:
+        """(F-053 · R45) Duplicado conservado por su alta en Sigrid: se
+        devuelve tal cual, sin enriquecer ni revalorar."""
+        logger.info(
+            "[pipeline] FIN persist document_id=%s duplicate=True "
+            "conservado_por_alta=True (sin subir a SharePoint ni reprocesar)",
+            conservado.document_id,
+        )
+        return PersistAlbaranResult(
+            ok=True,
+            document_id=conservado.document_id,
+            sharepoint_url=conservado.sharepoint_url,
+            duplicate=True,
+            stored_lines=conservado.stored_lines,
         )
 
     def _persist_clasificacion_safely(

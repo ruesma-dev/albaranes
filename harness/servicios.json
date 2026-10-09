@@ -6,6 +6,7 @@
     { "nombre": "sv4-front",              "ruta": "services/albaranes-front",            "lenguaje": "python", "venv": "services/albaranes-front/.venv" },
     { "nombre": "sv5-valoracion-api",     "ruta": "services/albaran-valoracion-api",     "lenguaje": "python" },
     { "nombre": "sv6-valoracion-persist", "ruta": "services/albaran-valoracion-persist", "lenguaje": "python" },
+    { "nombre": "sv9-alta-sigrid",        "ruta": "services/albaranes-alta-sigrid",      "lenguaje": "python" },
     { "nombre": "comun",                  "ruta": "services/albaranes-comun",            "lenguaje": "python" },
     { "nombre": "infra",                  "ruta": "infra",                               "lenguaje": "otro" }
   ]

@@ -50,9 +50,13 @@
 >   **reparto de una línea impresa entre varias partidas** con cantidades
 >   parciales (F-016; caso Feymaco 108 uds = 54+54); (5) el descuento del
 >   ground truth va en fracción (0.4 = 40 %).
-> - **§5.2**: `q-feedback` está **reservada** para el futuro servicio de
->   entrada al ERP (aprobado en sv4 → alta en Sigrid vía `sql/write`); el
->   consumidor no está construido y nada externo la consume. `q-emails` es
+> - **§5.2**: `q-feedback` la consume **sv9** (`ca-sv9-alta-sigrid`, F-053,
+>   oct 2026): aprobado en sv4 → alta en Sigrid vía los endpoints de dominio
+>   de sigrid-api (nunca `sql/write`). Escribir en Sigrid: SOLO sv9, con el
+>   alta de albarán y `concepto-grafico`, y solo con `ALTA_SIGRID_COMMIT=true`,
+>   que activa el humano; desde local, nunca. Arranca en simulación (DESDE
+>   vacía y `ALTA_SIGRID_COMMIT=false`). Detalle: `docs/ARCHITECTURE.md`,
+>   regla 19. `q-emails` es
 >   una cola huérfana del diseño original (intake partido en receptor+worker,
 >   luego colapsado en sv1): candidata a limpieza.
 
@@ -301,6 +305,7 @@ RG y recursos de albaranes centralizados en `00_vars.ps1` (`$RG`, `$ACR`,
 | `ca-sv4-front` | `sv4-front` ⚠ | web | **externo** | 1 | Easy Auth pendiente |
 | `ca-sv5-valuation` | `sv5` | API HTTP | interno | **min 1** | FQDN interno fijo |
 | `ca-sv6-valorador` | `sv6` | worker KEDA | ninguno | 0→N | Scaler `q-valoracion-scaler` (len 5, poll 30 s) |
+| `ca-sv9-alta-sigrid` | `sv9-alta-sigrid` ⚠ | worker KEDA | ninguno | 0→**1** | F-053: `q-feedback-scaler`; único que escribe en Sigrid; `ALTA_SIGRID_COMMIT=false` al crear |
 
 ⚠ repos con nombre ≠ servicio. ⚠ En `rg-partes-dev` existen apps homónimas de
 otro proyecto: operar siempre con `-g $RG`.

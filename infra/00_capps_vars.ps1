@@ -35,6 +35,44 @@ $Global:SP = [ordered]@{
 # --- Sigrid (no secreto) ----------------------------------------------------
 $Global:SIGRID_DB = "ruesma"   # SIGRID_API_DATABASE del piloto
 
+# --- F-053 · Alta en Sigrid (sv9 y sv4) -------------------------------------
+# UNA sola fuente para sv4 y sv9: create_capps_sv9.ps1 y set_alta_sigrid.ps1
+# leen de aqui, y set_alta_sigrid.ps1 pone LOS MISMOS valores en las dos apps
+# (design §7: DESDE, Espera y mapeo deben coincidir).
+#   - ALTA_SIGRID_DESDE_UTC vacia = feature APAGADA (sv9 confirma sin hacer
+#     nada y sv4 no publica ni pinta nada). La pone el humano.
+#   - ALTA_SIGRID_USUARIO: login de dbo.usu (MANUAL T0c). Sin el, sigrid-api
+#     rechaza las altas.
+# ALTA_SIGRID_COMMIT NO esta aqui a proposito: create_capps_sv9.ps1 crea sv9
+# con ALTA_SIGRID_COMMIT=false (simulacion) y SOLO el humano lo cambia, a
+# mano y con autorizacion (MANUAL T29). Ningun script lo pone a true.
+$Global:ALTA_SIGRID_DESDE_UTC            = ""
+$Global:ALTA_SIGRID_ESPERA_INCIERTO_MIN  = "15"
+# Mapeo familia -> producto (JSON con clave "*"). VACIO = el defecto del codigo,
+# igual en sv4 y sv9: {"alquiler_maquinaria": "QA9999", "medios_auxiliares":
+# "XA9999", "*": "MA9999"}. Si lo cambias, set_alta_sigrid.ps1 lo pasa con las
+# comillas escapadas y lo RELEE de las dos apps: un JSON roto no arranca (R44).
+$Global:ALTA_SIGRID_PRODUCTO_POR_DEFECTO = ""
+$Global:ALTA_SIGRID_USUARIO              = ""   # <-- T0c
+$Global:ALTA_SIGRID_EMPIDE               = ""   # vacia = defecto de sigrid-api
+
+# Pares CLAVE=valor comunes a sv4 y sv9 (los tres que deben coincidir).
+# Windows PowerShell 5.1 (y 7.x en modo Legacy) se come las comillas dobles de
+# los argumentos a programas nativos: el JSON del mapeo se escapa a mano.
+function Global:AltaSigridEnvComun() {
+    $pares = @(
+        "ALTA_SIGRID_DESDE_UTC=$($Global:ALTA_SIGRID_DESDE_UTC)",
+        "ALTA_SIGRID_ESPERA_INCIERTO_MIN=$($Global:ALTA_SIGRID_ESPERA_INCIERTO_MIN)"
+    )
+    $mapeo = [string]$Global:ALTA_SIGRID_PRODUCTO_POR_DEFECTO
+    if ($mapeo) {
+        $legacy = ($PSVersionTable.PSVersion.Major -lt 7) -or ($PSNativeCommandArgumentPassing -eq "Legacy")
+        if ($legacy) { $mapeo = $mapeo -replace '"', '\"' }
+        $pares += "ALTA_SIGRID_PRODUCTO_POR_DEFECTO=$mapeo"
+    }
+    $pares
+}
+
 # --- Escalado KEDA ----------------------------------------------------------
 $Global:KEDA_QUEUE_LENGTH = 5   # mensajes objetivo por réplica
 $Global:WORKER_MAX_REPLICAS = 5

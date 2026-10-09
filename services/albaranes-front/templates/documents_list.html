@@ -183,7 +183,12 @@
                                 <form method="post" action="/documents/{{ item.id }}/approve">
                                     <input type="hidden" name="redirect_query" value="{{ current_query }}">
                                     <input type="hidden" name="approved_by" value="">
+                                    {# F-053 R37: sin valorar no se aprueba. #}
+                                    {% if item.valorado %}
                                     <button type="submit" class="btn small success">Aprobar</button>
+                                    {% else %}
+                                    <button type="submit" class="btn small success" disabled title="No se puede aprobar un albarán sin valorar">Aprobar</button>
+                                    {% endif %}
                                 </form>
                             {% endif %}
                             <form method="post" action="/documents/{{ item.id }}/delete"
@@ -253,6 +258,10 @@
                     <td data-col="aprobado">
                         {% if item.approved %}
                             <span class="status-pill approved">Aprobado</span>
+                            {# F-053 R31: estado del alta en Sigrid (solo con DESDE, R3). #}
+                            {% if alta_sigrid_activa and item.alta_estado %}
+                                <div><span class="alta-sigrid-pill estado-{{ item.alta_estado }}" title="Alta en Sigrid">Sigrid: {{ item.alta_estado_texto }}</span></div>
+                            {% endif %}
                         {% else %}
                             <span class="status-pill pending">Pendiente</span>
                         {% endif %}

@@ -293,6 +293,14 @@ class AlbaranLineValuationOrm(Base):
     # -----------------------------------------------------------------
     descuento_albaran_aplicado: Mapped[float | None] = mapped_column(Float)
 
+    # -----------------------------------------------------------------
+    # F-053 · R36/R42 — producto genérico de Sigrid elegido en sv4 para una
+    # línea sin vincular. NULL = por defecto (se calcula al leer con
+    # ``ruesma_comun.alta_sigrid.producto_efectivo``). sv6 NO la escribe:
+    # el replace deja NULL al revalorar, como el almacén elegido (F-051 D5).
+    # -----------------------------------------------------------------
+    producto_sigrid: Mapped[str | None] = mapped_column(String(24))
+
     valuation: Mapped[AlbaranValuationOrm] = relationship(
         back_populates="lines",
     )

@@ -136,6 +136,7 @@ $services = [ordered]@{
     "sv4" = "albaranes-front"
     "sv5" = "albaran-valoracion-api"
     "sv6" = "albaran-valoracion-persist"
+    "sv9" = "albaranes-alta-sigrid"      # F-053
 }
 
 # --- Filtro -Only -----------------------------------------------------------

@@ -1,0 +1,4 @@
+# Entorno local de sv9: nunca al repositorio.
+.env
+.venv/
+logs/

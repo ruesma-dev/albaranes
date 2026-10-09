@@ -91,6 +91,11 @@ class _RepositorioFalso:
             busqueda_contratos=estado_busqueda(self.cif, self.obra, self.rastro),
         )
 
+    def update_document_y_transicion(self, *, document_id, payload):
+        # F-053 (T18): el servicio guarda por aquí para saber si el documento
+        # pasó a aprobado. Estos tests no miran el alta: sin paso.
+        return self.update_document(document_id=document_id, payload=payload), False
+
     def doc_label(self, *, document_id):
         return "SS-0026122"
 
