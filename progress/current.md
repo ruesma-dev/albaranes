@@ -1,22 +1,7 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-063 · `done` (2026-10-08)**, fusionada en `dev` con `init.sh` en verde. Pendiente del humano: desplegar solo sv3; en los merges `b1d3e179` y `401d9c00`, «Elegir proveedor» FEYMACO a mano.
-
-**F-063 · IMPLEMENTACIÓN EN CURSO (`in_progress`, 2026-10-08, arreglo URGENTE de producción)** en la rama
-`feature/F-063-cif-propio-no-es-proveedor` (worktree `../albaranes-F-063`, desde `dev` `ba72f0a`): el CIF de
-Construcciones Ruesma (A81873903, el cliente) nunca es el proveedor; sv3 lo descarta y busca por nombre. Propuesta
-aprobada por el humano («arregla urgente esto»). Spec en `specs/F-063-cif-propio-no-es-proveedor/`; informe en
-`progress/impl_F-063.md`. Entorno: venvs del árbol principal, `PYTHONPATH` al comun del worktree y *junction*
-`services/albaranes-front/.venv` → venv de sv4 del árbol principal (quitar con `cmd /c rmdir
-services\albaranes-front\.venv` ANTES de `git worktree remove`). F-053 tiene sus suites en pausa mientras tanto.
-- **T0–T7 hechas** (2026-10-08, un commit por tarea). Informe: `progress/impl_F-063.md`. Cobertura de lo cambiado
-  96,6 % (57/59); mutación completa 14/14 muertos (`progress/mutacion_F-063.md`). Desviación justificada (§3 del
-  informe): la nota usa el prefijo propio `[AVISO] CIF del cliente` (con `[AVISO] Proveedor` la borraba la misma pasada).
-- **T9 (`init.sh`) sin marcar**: en el worktree da 2 KO de entorno (los de F-062: `test_f052_t19_script_arranca…` y,
-  por él, la cobertura); deseleccionando solo ese test, `ENTORNO LISTO`. Repetir en el árbol principal tras fusionar.
-  **T8 (MANUAL del humano)**: desplegar solo sv3 y re-procesar el albarán de FEYMACO (comandos en el informe §7).
-  **Siguiente paso: review.**
+**F-063 · `done` (2026-10-08)**, fusionada en `dev` con `init.sh` en verde. Pendiente del humano: desplegar solo sv3; en los merges `b1d3e179` y `401d9c00`, «Elegir proveedor» FEYMACO a mano. Comandos de la MANUAL T8 en `progress/impl_F-063.md` §7.
 
 **F-062 · `done` (2026-10-08)**, fusionada en `dev` (`d052106`) con `init.sh` en verde. Pendiente del humano: despliegue de solo sv3 y vigilancia T12 (comandos abajo).
 
@@ -44,40 +29,6 @@ fase 2**; después, fusionar y `init.sh` en el árbol principal.
 - **Para el líder**: coordinar con sigrid-api la Parte B de `progress/propuestas_a_sigrid_api_F-053.md` (consumo; el
   contrato no se edita desde aquí); propuesta de `CLAUDE.md` de design §9 sin aplicar; «producto elegido» al alcance
   de F-058; hallazgo menor de R23/R30 (adjunto en error sin botón) en el informe §9.
-
-**F-062 · IMPLEMENTACIÓN EN CURSO (`in_progress`, desde 2026-10-07)** en la rama `feature/F-062-proveedor-aplicado`
-(worktree `../albaranes-F-062`): sv3 aplica el proveedor propuesto (candidato claro con contrato en la obra) antes de
-buscar contratos. PARADA 1 aprobada por el humano (Q0–Q6 con la recomendación, `progress/spec_F-062.md` §4). Spec en
-`specs/F-062-proveedor-aplicado/`; informe del implementer en `progress/impl_F-062.md`. Convivencia autorizada por el
-humano: **F-053 sigue `in_progress` en su rama** (fase 1 aprobada) y F-062 se fusiona en `dev` antes; F-051 y F-049
-están `blocked` en las suyas. Entorno del worktree: venvs del árbol principal con `PYTHONPATH` al comun del worktree;
-*junction* `services/albaranes-front/.venv` → venv de sv4 del árbol principal (ignorada por git; se quita con
-`cmd /c rmdir services\albaranes-front\.venv` ANTES de `git worktree remove`).
-- Tarea en curso y desviaciones: sección «F-062 · estado de la implementación» (abajo, se actualiza por tarea).
-
-### F-062 · estado de la implementación
-
-- Arranque: `bash harness/init.sh` en verde en el worktree (2026-10-07). F-062 → `in_progress`, `BACKLOG.md` regenerado.
-- **T1–T11 hechas** (2026-10-08, un commit por tarea). Informe: `progress/impl_F-062.md`. Cobertura de líneas
-  cambiadas 100 % (203/203); mutación completa en serie 104/104 muertos, 0 supervivientes (`progress/mutacion_F-062.md`,
-  fila añadida al inventario de F-039). Review pasada 1 hecha (abajo).
-- **T13 (`init.sh`) sin marcar**: en el worktree da 2 KO, ambos de entorno (el test de abajo y, por él, la puerta de
-  cobertura a 59,6 % porque `-x` corta antes de los `test_f062_*`); deseleccionando solo ese test, `ENTORNO LISTO`.
-  Repetir `bash harness/init.sh` en el árbol principal tras fusionar. Pendientes del humano: T0b (opcional) y T12,
-  con sus comandos en «F-062 · MANUAL del humano» (abajo).
-- **Desviaciones (justificadas en `progress/impl_F-062.md` §2)**: (1) los tests de la nota de F-052
-  (`test_f052_nota_proveedor.py`) también pasan a `correccion_enabled=False`, como los de D3 de F-002 (el design solo
-  nombraba F-002; SALMEDINA en la 0691 es candidato claro y con la corrección encendida esos tests pasaban por el
-  camino «aplicar falla»); (2) R15 también en la rama «sin candidato claro» (se retiran correcciones caducadas);
-  (3) con el interruptor apagado no se retira nada ni se añade la frase del control (R12 «exactamente como antes»);
-  (4) `.env.example` de sv3 documenta los tres `RED_PROVEEDOR_CORRECCION_*`.
-- **KO de entorno conocido**: `test_f052_t19_script_arranca_como_script_desde_otra_carpeta` lanza el script SIN
-  `PYTHONPATH` y el venv del árbol principal importa `ruesma_comun` de `../albaranes` (sin `proveedores`): falla solo
-  en el worktree; en `dev`/árbol principal con comun fusionado pasa.
-- **Review pasada 1 (2026-10-08): CHANGES_REQUESTED** (`progress/review_F-062.md`: H1 y M1). **H1 = opción B**
-  por decisión del humano (2026-10-08): la comparación no cambia, F-062 es la red de seguridad de F-055; se
-  corrigieron R3, D2, ARCHITECTURE 17, dominio §10.1 y la nota, con test que lo fija. M1: comandos abajo.
-  Correcciones en `progress/impl_F-062_pasada2.md`. **Siguiente paso: review pasada 2.**
 
 ### F-062 · MANUAL del humano (comandos exactos, PowerShell)
 
