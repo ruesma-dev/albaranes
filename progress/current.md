@@ -24,52 +24,26 @@ services\albaranes-front\.venv` ANTES de `git worktree remove`). F-053 tiene sus
 > en `progress/historico/current_2026-10-01_cierre_F-052.md`; el resumen de F-052, en `progress/history.md`.
 > Aquí solo queda lo vivo. Lo que manda sobre el estado de cada feature es `harness/features.json`.
 
-**F-053 · IMPLEMENTACIÓN, FASE 1 (`in_progress`, 2026-10-06)** en la rama `feature/F-053-alta-sigrid` (worktree
-`../albaranes-F-053`): alta en Sigrid de los albaranes aprobados, servicio nuevo sv9, arranque en simulación. Spec v7,
-PARADA 1 aprobada por el humano («adelante», 2026-10-06) con un cambio de orden también aprobado: la fase 1 hace T0a,
-T1, T2, T2b y T3–T16 (comun, DDL de sv3 y sv6 y sv9 completo). `dev` fusionado dos veces en la rama: la segunda ya
-trae **F-051** (merge `e7d7507`), así que la regla «partida final vacía = almacén» está disponible. T17 en adelante
-(sv4, infra, docs, puertas) quedan fuera de esta fase. Informe de la fase: `progress/impl_F-053_fase1.md`.
-
-**Fase 1 TERMINADA (2026-10-06, implementer)**: T0a, T1, T2, T2b y T3–T16 hechas, un commit por tarea
-(`618227e`…`ca6dde7`), con fase RED y controles negativos. Suites en verde, una tras otra: comun 374, sv3 444, sv6 289,
-sv9 430 (nuevo) y raíz 1083; cobertura de líneas cambiadas 96,1 % (1346/1401). Contrato citado: F-009 v8.2 `13fd99d`
-(misma forma que `8a6ecab`). **Desviaciones justificadas** (detalle en el informe, §4): el DDL de
-`albaran_altas_sigrid` va en `phase2_ddl._PHASE2_DDL` (lo que sv3 aplica al arrancar; `schema_contribution` lo
-exporta), `main.py` en sv9 por el test de estructura, firmas de puertos ampliadas (`accion`, `referencia_externa`,
-`ahora`), petición guardada en `en_curso` y reenviada tal cual al retomar un `incierto`. **Pendiente**: verificación
-de T0d (`init.sh`; el worktree no tiene el venv de sv4), MANUAL T0b/T0c/T0 (comandos en el informe §8), y T17–T30.
-Mutación (T25) no lanzada: es de las puertas finales.
-
-**Fase 1 · pasada 2 HECHA (2026-10-06, implementer)** tras la review CHANGES_REQUESTED
-(`progress/review_F-053_fase1.md`). Informe: `progress/impl_F-053_fase1_pasada2.md`. Commits `e7b9c3e`…`604e918`:
-H1 (configuración inválida al log sin valores), H2 (`grafico.ide_negocio`), H3 (`branch` de F-053), O1 (visibilidad
-de `q-feedback` 1740 s), y las decisiones del humano **D1 = R45** (sv3 no borra un merge con alta bloqueante al
-reingresar su PDF) y **D2 = R46** (línea casada con otro contrato ⇒ `revisar` + WARNING `ANOMALIA`; recuento en la
-medición). Spec: R45 y R46, T31–T37 `[x]`, topes 150/150 y 250/250. Suites: sv9 448, sv3 461, comun 375, raíz 1083;
-cobertura 96,2 % (1409/1464). **Para el humano** (informe §3): la rama de duplicado de un documento ACTIVO sigue
-re-enriqueciendo y revalorando aunque el alta esté `registrado` (R45 solo cubre el borrado); sv4 permite conciliar a
-mano con una línea de otro contrato (otra fuente de R46). **Pendiente**: re-review de la pasada 2; repetir T0.
-
-**Fase 1 · remate HECHO (2026-10-07, implementer)** con las decisiones del humano sobre esos hallazgos: **D3** (1a y
-1c) «un albarán no se puede pisar»: sv3 mira el alta (`buscar_conservado_por_alta`, método nuevo del puerto) al
-principio de `run`, antes de SharePoint, y un duplicado con alta bloqueante (activo o en la papelera) se devuelve sin
-tocar nada; `save` conserva su mirada para la carrera con sv9. **D4** (1b): sv4 no se cambia, R46 sigue de red. Spec:
-R45 reescrito, T38–T39 `[x]`, topes 150/150 y 250/250. Commits `80a3d5d`…`73d9707`. Suites: sv3 477, raíz 1083;
-cobertura 96,2 % (1421/1477). Seguridad: ninguna ruta de sv9 graba sin `ALTA_SIGRID_COMMIT=true`. Informe: §8 de
-`progress/impl_F-053_fase1_pasada2.md`, con tres hallazgos nuevos para el humano (carrera residual en la rama de
-duplicado; la API `/persist` de sv3 escribe metadatos de fase 2 sobre un conservado; el re-fetch de sv3 depende de
-T19). **Pendiente**: re-review de la pasada 2 + remate; repetir T0.
-
-**Fase 1 · pasada 3 HECHA (2026-10-07, implementer)** tras la review CHANGES_REQUESTED de la pasada 2
-(`progress/review_F-053_fase1_pasada2.md`, **H4**: la mirada de R45 en UNA sentencia no veía el alta que sv9 confirma
-mientras sv3 espera el cerrojo). Commits `3963164` (T40: `_conservar_por_alta` en dos sentencias, primero el `FOR
-UPDATE` de los merges y luego el alta con `ANY(:ids)`; tests de la carrera, de la papelera (C9) y sin merges) y
-`538f746` (T41: design §4 con el motivo, T40 `[x]` y **T27b**, la prueba MANUAL de dos sesiones en el PostgreSQL
-LOCAL, con sus comandos). Fase RED 9 failed; controles N1–N5 cazados (9, 9, 2, 2, 1). Suites: sv3 482, raíz 1083;
-cobertura 96,2 % (1425/1481); topes 150/150 y 250/250. Informe: `progress/impl_F-053_fase1_pasada3.md`, con dos
-observaciones para el líder (§7: el design de sv4 `_exigir_desbloqueado` repite el patrón de H4; `SQL_RECLAMAR` de
-sv9 también, cubierto por el consumidor secuencial). **Pendiente**: re-review de la pasada 3; MANUAL T27b (humano).
+**F-053 · IMPLEMENTACIÓN TERMINADA, FASES 1 y 2 (`in_progress`, 2026-10-08)** en la rama
+`feature/F-053-alta-sigrid` (worktree `../albaranes-F-053`): alta en Sigrid de los albaranes aprobados, servicio nuevo
+sv9, arranque en simulación. Spec v7. Fase 1 (T0a, T1–T16, T31–T41: comun, DDL de sv3 y sv6, sv9 completo, R45/R46)
+APROBADA por el reviewer en su pasada 3 (`progress/review_F-053_fase1_pasada3.md`); informes
+`progress/impl_F-053_fase1*.md`. **Fase 2** (aprobada por el humano, «si», 2026-10-08) hecha por el implementer:
+T0d (dos fusiones de `dev`: F-062 y F-063), T17–T21b (sv4: settings, publicar en el paso a aprobado, cerrojo en dos
+sentencias, producto, rutas, panel, R37), T24b (`reclamar` de sv9 en dos sentencias), T22 (infra, solo scripts:
+`create_capps_sv9.ps1` con `ALTA_SIGRID_COMMIT=false`, `set_alta_sigrid.ps1`), T23 (docs y `azure-apps` `d43f200`),
+T24 (cobertura 96,2 %) y T25 (mutación). Informe: **`progress/impl_F-053_fase2.md`**. Siguiente: **review de la
+fase 2**; después, fusionar y `init.sh` en el árbol principal.
+- **Entorno del worktree**: venvs del árbol principal con `PYTHONPATH` a la comun del worktree; *junction*
+  `services/albaranes-front/.venv` → venv de sv4 del árbol principal (ignorada por git): quitarla con
+  `cmd /c rmdir services\albaranes-front\.venv` ANTES de `git worktree remove`.
+- **MANUAL del humano pendientes** (comandos exactos en `specs/F-053-alta-sigrid/tasks.md`): T0b, T0c (fija
+  `ALTA_SIGRID_USUARIO`), T0 (repetir la medición), T22 (leer el diff de `infra/`), T26, T27, T27b, **T27c** (nueva:
+  carrera sv9 ↔ sv4 en el PostgreSQL local), T28 (simulación en Azure, desplegando sv6 y sv3 → sv9 → sv4 según
+  `infra/README_capps.md`) y T29 (grabación real, con autorización).
+- **Para el líder**: coordinar con sigrid-api la Parte B de `progress/propuestas_a_sigrid_api_F-053.md` (consumo; el
+  contrato no se edita desde aquí); propuesta de `CLAUDE.md` de design §9 sin aplicar; «producto elegido» al alcance
+  de F-058; hallazgo menor de R23/R30 (adjunto en error sin botón) en el informe §9.
 
 **F-062 · IMPLEMENTACIÓN EN CURSO (`in_progress`, desde 2026-10-07)** en la rama `feature/F-062-proveedor-aplicado`
 (worktree `../albaranes-F-062`): sv3 aplica el proveedor propuesto (candidato claro con contrato en la obra) antes de
@@ -185,11 +159,8 @@ verificación MANUAL T12 (sección «F-054 · lo que queda» al final). Resumen 
 
 ## LO PRIMERO AL ABRIR LA PRÓXIMA SESIÓN
 
-- **F-053 `in_progress`**, fase 1 terminada (bloque de arriba e informe `progress/impl_F-053_fase1.md`). Es la única
-  `in_progress`. Siguiente: fase 2 (T17–T30: sv4, infra, docs, puertas). `dev` ya fusionado con F-051 y comprobadas
-  sus rutas `asignar_almacen_linea_api` / `asignar_almacen_todas_api` para R25 (T19–T20); falta la verificación de
-  T0d con `init.sh`. Para el líder: añadir «producto elegido» al alcance de **F-058** y corregir en F-051 R24
-  «`almacen: true`» (el campo no existe en F-009).
+- **F-053 `in_progress`**, fases 1 y 2 implementadas (bloque de arriba, `progress/impl_F-053_fase2.md`). Es la única
+  `in_progress`. Siguiente: review de la fase 2; luego fusionar en `dev` e `init.sh` en el árbol principal.
 - **F-051 `blocked`** y fusionada en `dev`: solo esperan T22–T24 (pruebas manuales del humano, aplazadas).
 - **F-054 · CERRADA (`done`, 2026-10-02)** y fusionada en `dev`. Pendiente del humano: `.\deploy.ps1 -Only sv1` +
   `.\check_deploy.ps1` desde `infra/` y la **T12 MANUAL** (procedimiento al final). La T12 no bloquea el `done`.
