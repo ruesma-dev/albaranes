@@ -13,5 +13,5 @@ Rama `feature/F-064-proveedor-en-prompts` (worktree `../albaranes-F-064`, desde 
 - [x] T8: cobertura de lo cambiado ≥ 80 % y campaña de mutación completa (`critico`)  |  Verificación: `python -m harness.cobertura --base dev --config harness/rigor.json` y `progress/mutacion_F-064.md` válido, 0 supervivientes sin test o justificación
 - [ ] T9: MANUAL (humano, se factura ≈ 228 llamadas) — comparador base/rama con el comando de `progress/spec_F-064.md` §5  |  Verificación: MANUAL (humano): `progress/comparar_proveedor_F-064.md` con C1, C2 y C3 en verde
 - [ ] T10: MANUAL (humano, se factura ≈ 190 llamadas) — pasada completa de la puerta, comando en `progress/spec_F-064.md` §5  |  Verificación: MANUAL (humano): `progress/evals_F-064.md` con IA1 ≤ 154 e IA2 ≤ 4 fallos críticos
-- [ ] T11: `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh` termina en verde
+- [x] T11: `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh` termina en verde
 - [ ] T12: MANUAL (humano, tras fusionar en `dev`) — desplegar SOLO sv2 y vigilar el motivo `proveedor_cif_propio:` en merges nuevos (consulta de solo lectura en `progress/spec_F-064.md` §5)  |  Verificación: MANUAL (humano): 0 merges nuevos con ese motivo en una semana, o se vuelve a la spec

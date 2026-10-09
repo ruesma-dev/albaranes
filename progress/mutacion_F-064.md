@@ -166,10 +166,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis (completado)
 
 > Por qué ningún test lo caza: sin errores, nadie miraba que la sección dijera `(ninguno)`.
-> Decisión: `test_f064_r16_corrida_con_dobles_escribe_detalle_y_resumen` exige que el detalle acabe en `## Errores
-
-(ninguno)
-`. (comprobado: 67 passed sin mutar; aplicado a mano, el fichero de tests falla; `tests/test_f064_comparar_proveedor.py`, commit posterior a `0ffa0d4`).
+> Decisión: `test_f064_r16_corrida_con_dobles_escribe_detalle_y_resumen` exige que el detalle acabe en la sección `## Errores` con `(ninguno)`. (comprobado: 67 passed sin mutar; aplicado a mano, el fichero de tests falla; `tests/test_f064_comparar_proveedor.py`, commit posterior a `0ffa0d4`).
 
 ### 13. `evals/comparar_proveedor.py:462` [booleano]
 
@@ -209,8 +206,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis (completado)
 
 > Por qué ningún test lo caza: nadie leía el JSON en bruto (solo `json.loads`).
-> Decisión: ídem: fija el comienzo `{
-  "variante"…` (sangría 2). (comprobado: 67 passed sin mutar; aplicado a mano, el fichero de tests falla; `tests/test_f064_comparar_proveedor.py`, commit posterior a `0ffa0d4`).
+> Decisión: ídem: fija el comienzo del JSON en bruto (sangría de 2 espacios). (comprobado: 67 passed sin mutar; aplicado a mano, el fichero de tests falla; `tests/test_f064_comparar_proveedor.py`, commit posterior a `0ffa0d4`).
 
 ### 17. `evals/comparar_proveedor.py:478` [booleano]
 

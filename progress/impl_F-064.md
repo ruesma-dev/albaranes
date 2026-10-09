@@ -4,9 +4,9 @@
 Rama `feature/F-064-proveedor-en-prompts` (worktree `../albaranes-F-064`, spec `4b71baa`). Rigor `critico`, RUTA
 SENSIBLE (prompts de sv2). PARADA 1 aprobada (Q1–Q6 según el encargo; Q4: sin albarán nuevo en el banco).
 
-**ESTADO: T1–T7 hechas y commiteadas. T8 (cobertura y mutación) y T11 (`init.sh`) ESPERAN la señal «puedes lanzar
-suites» del líder** (F-053 ejecuta suites en otra copia; regla dura: nunca dos a la vez). Hasta ahora solo se han
-lanzado tests fichero a fichero. T9, T10 y T12 son del humano (§6).
+**ESTADO: T1–T8 y T11 hechas. `bash harness/init.sh` en verde en el worktree («ENTORNO LISTO», §5 bis).** T1–T7 se
+hicieron con tests fichero a fichero (F-053 tenía la máquina); las suites, tras «puedes lanzar suites». Pendiente:
+review, y del humano T9, T10 y T12 (§6) y aceptar el mutante equivalente (§5 bis).
 
 Entorno: venv raíz del árbol principal (`albaranes/.venv`: sv2 no declara venv en `harness/servicios.json`, así que
 init.sh usa el del arnés) con `PYTHONPATH=…\albaranes-F-064\services\albaranes-comun` (verificado:
@@ -25,6 +25,8 @@ init.sh usa el del arnés) con `PYTHONPATH=…\albaranes-F-064\services\albarane
 | `c437e49` | T6 · `evals/comparar_proveedor.py` + `evals/procesos/sv2_proveedor.py` |
 | `8814e4f` | T7 · rutas sensibles + ARCHITECTURE regla 18 |
 | `576ad6a` | orden de imports (ruff I001) en los ficheros nuevos |
+| `ef44381`…`910b59b` | T8 · tests de líneas sin cubrir y de los supervivientes; informe de mutación analizado |
+| `+1` | T8 · fila de F-064 en `progress/inventario_mutacion_F-039.md` (lo exige `test_f039_r2`) |
 
 ## 2. Ficheros tocados
 
@@ -132,9 +134,29 @@ E   ImportError: cannot import name 'comparar_proveedor' from 'evals' (...\albar
 | raíz `f011_r19_r20` (tras registrar las rutas), `f011_r21_r22`, `f011_r23_r25`, `f027_r18_r22`, `estructura_monorepo` | 16, 6, 16, 34, 4 passed |
 | sv3 F-063/F-062 (R13): `f063_cif_propio`, `f062_r3`, `r6`, `r8`, `r10`, `r14` | 35, 44, 26, 16, 16, 26 passed |
 
-`python -m harness.rutas_sensibles --validar`: `1 verificación(es), 22 ruta(s) sensible(s) declaradas: evals (aviso)`.
-ruff en los ficheros nuevos: quedan 19 `ISC004` (concatenación implícita en tuplas de frases, el mismo patrón que
-`test_f051_prompt_partida.py`); ruff no bloquea en este repo.
+`harness.rutas_sensibles --validar`: 22 rutas, en verde. ruff: 19 `ISC004` en tuplas de frases (patrón de F-051).
+
+## 5 bis. T8 y T11 (suites, tras la señal del líder)
+
+- **Entorno**: el primer `init.sh` dio KO en `harness/servicios.json` (el worktree no tiene el venv de sv4). Se creó
+  la *junction* de F-062/F-063 `services\albaranes-front\.venv` → la del árbol principal (ignorada por git); **quitarla
+  con `cmd /c rmdir services\albaranes-front\.venv` ANTES de `git worktree remove`.** Sin `PYTHONPATH` (comun no
+  cambia); el KO de entorno de F-062/F-063 (`test_f052_t19…`) ya no aparece.
+- **`bash harness/init.sh` final** (tras `910b59b` + inventario): `ENTORNO LISTO. Puedes trabajar.` Raíz `1162 passed
+  in 109.69s`; servicios en verde (última medición sin caché: sv1 205, sv2 462, sv3 584, sv4 458, sv5 43, sv6 283,
+  comun 433 + 3 skipped); `PUERTA COBERTURA: 98.9% de 354 líneas cambiadas cubiertas (350/354, umbral 80%, nivel
+  critico)`; AVISO (no bloquea) de `PUERTA RUTAS SENSIBLES [evals]`: falta `progress/evals_F-064.md` (T10, humano).
+  Las 4 líneas sin cubrir: `montar_servicio → _servicio` (solo en el subproceso del test de la base) y su import.
+- **Mutación** (`python -m harness.mutacion --feature F-064`, 4 workers, sobre `0ffa0d4`): **145 mutantes, 115
+  muertos, 30 supervivientes**, 0 timeouts, 5711,7 s. **Ningún superviviente en el código de sv2** (todos en
+  `evals/`). Análisis completo en `progress/mutacion_F-064.md` (0 `PENDIENTE`): 29 eran huecos de los informes del
+  comparador (aviso, cabecera con commits, celdas del detalle, directorios anidados, recuento de llamadas, modelos,
+  `git show` vacío, posición de sv2 en `sys.path`) y se cierran con tests nuevos en `tests/test_f064_comparar_
+  proveedor.py`; **verificado reinyectando cada uno a mano** y corriendo ese fichero (bytes restaurados, `git diff`
+  vacío): 29 MUERTO. El **#28 es equivalente** (`"error" not in (x or {"error": True})` frente a `{"error": False}`:
+  se comprueba la clave, no el valor) — **pide la aceptación del humano** (nivel `critico`: «justificación escrita
+  aceptada por el humano»). Una primera campaña en serie se paró a mano (≈ 2 h estimadas) tras 2 supervivientes
+  (`_categoria`, cerrados con `test_f064_r14_clasificar_…`); `--restaurar` y `git diff` vacío antes de relanzar.
 
 ## 6. MANUAL del humano (PowerShell; claves por `Read-Host`, nunca del `.env`)
 
@@ -181,19 +203,18 @@ ORDER BY m.created_at_utc DESC;
 
 ## 7. Qué falta (orden)
 
-1. Con «puedes lanzar suites»: T8 (`python -m harness.cobertura --base dev --config harness/rigor.json` y
-   `python -m harness.mutacion --feature F-064` → `progress/mutacion_F-064.md`, análisis de supervivientes) y T11
-   (`bash harness/init.sh`). KO de entorno conocido en worktrees (F-062/F-063): `test_f052_t19_script_arranca…`.
-2. Review (reviewer contra `CHECKPOINTS.md`).
-3. Humano: T9, T10 (antes de fusionar) y T12 (tras fusionar).
+1. Review (reviewer contra `CHECKPOINTS.md`).
+2. Humano: aceptar el mutante equivalente #28; T9 y T10 (antes de fusionar); T12 (tras fusionar).
+3. Tras fusionar: `bash harness/init.sh` en el árbol principal y quitar la *junction* de sv4 antes de borrar el worktree.
 Fuera de alcance (spec): lista de proveedores de la obra para IA2 (F-055), `header-grounding`, comun, sv3, backfill.
 
 ## Evidencias
 
 | Evidencia | Valor |
 |---|---|
-| Tests nuevos ejecutados | 131 (sv2 64 + raíz 67), todos en verde, fichero a fichero |
-| Suites completas / `init.sh` | NO ejecutadas todavía: esperan «puedes lanzar suites» (T8, T11) |
-| Cobertura de líneas cambiadas | por medir (T8) |
-| Mutantes generados / supervivientes | por medir (T8) |
-| Tiempo de la suite | por medir (T11); ficheros sueltos entre 0,1 s y 6,8 s |
+| Tests nuevos de F-064 | 144 (sv2 65 + raíz 79), en verde |
+| Suite raíz / servicios | `1162 passed in 109.69s`; sv2 `462 passed in 12.22s`, sv3 `584 passed in 14.82s` y resto en verde |
+| `bash harness/init.sh` | `ENTORNO LISTO. Puedes trabajar.` (0 KO) |
+| Cobertura de líneas cambiadas | **98,9 %** (350/354; umbral 80 %, `critico`) |
+| Mutantes generados / supervivientes | **145 / 30** en la campaña; tras los tests nuevos, 29 cazados (verificado uno a uno) y 1 equivalente |
+| Tiempo de la campaña de mutación | 5711,7 s con 4 workers |
