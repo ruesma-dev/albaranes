@@ -401,10 +401,10 @@ class MergeDocumentUpdatePayload(BaseModel):
     review_notes: str | None = None
     approved: bool = False
     approved_by: str | None = None
+    # (F-065 R1) ``lines`` y ``valuation_line_updates`` se ACEPTAN y se
+    # IGNORAN: guardar la cabecera no toca las líneas. Siguen en el modelo
+    # para que un ``app.js`` en caché (que aún las manda) no reciba un 422.
     lines: list[MergeLinePayload] = Field(default_factory=list)
-    # Sub-tanda 2D — ediciones del revisor sobre filas sintéticas.
-    # Se aplican a ``albaran_line_valuations`` por valuation_line_id.
-    # Si la lista llega vacía o ausente, no se toca ninguna sintética.
     valuation_line_updates: list[ValuationLineUpdate] = Field(
         default_factory=list,
     )

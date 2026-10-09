@@ -181,31 +181,24 @@ class ReviewService:
     ) -> tuple[DocumentDetailPayload, ResultadoAprobacion]:
         if payload.approved and not payload.approved_by:
             payload.approved_by = self._default_reviewer
-        # Historial: estado previo de cabecera, valoración y las líneas
-        # que este guardado va a tocar.
+        # Historial: estado previo de la cabecera, lo único que toca el
+        # guardado (F-065 R1: las líneas del payload se ignoran).
         snaps = [
             self._repository.snapshot_row(
                 table="albaran_documents_merge", row_id=document_id,
             ),
-            self._undo_snap_valuation(document_id),
         ]
-        for upd in (payload.valuation_line_updates or []):
-            snaps.append(self._undo_snap_line(upd.valuation_line_id))
         # F-053: el repositorio comprueba el alta (R26), no deja aprobar lo
         # no valorado (R37) y dice si el documento PASÓ a aprobado en esta
         # transacción (R1, R2).
         detail, paso_a_aprobado = self._repository.update_document_y_transicion(
             document_id=document_id, payload=payload,
         )
-        n_lineas = len(payload.valuation_line_updates or [])
-        que = "cabecera" if not n_lineas else (
-            f"cabecera + {n_lineas} línea(s)"
-        )
         self._repository.record_undo(
             document_id=document_id,
             action="guardar",
             description=(
-                f"Guardar {que} "
+                "Guardar cabecera "
                 f"({self._repository.doc_label(document_id=document_id)})"
             ),
             restore=snaps,
