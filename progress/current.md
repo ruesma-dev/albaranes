@@ -12,7 +12,7 @@ líder diga «puedes lanzar suites». Entorno: venv raíz del árbol principal (
 - **T1–T8 y T11 hechas** (2026-10-09). `bash harness/init.sh` en verde en el worktree (cobertura de lo cambiado
   98,9 %; mutación 145 mutantes, 30 supervivientes: 29 cazados con tests nuevos y 1 equivalente que debe aceptar el
   humano, `progress/mutacion_F-064.md` #28). **Siguiente: review.** Humano: T9, T10 (antes de fusionar) y T12
-  (después), con sus comandos en `progress/impl_F-064.md` §6. *Junction* `serviceslbaranes-front\.venv` creada en
+  (después), con sus comandos en `progress/impl_F-064.md` §6. *Junction* `services\albaranes-front\.venv` creada en
   el worktree: quitarla con `cmd /c rmdir` ANTES de `git worktree remove`.
 
 **F-064 · SPEC ESCRITA (`spec_ready`, 2026-10-08)** en la rama `feature/F-064-proveedor-en-prompts` (worktree
