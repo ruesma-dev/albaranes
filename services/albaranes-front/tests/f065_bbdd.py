@@ -2,8 +2,8 @@
 """F-065 · BBDD SQLite en memoria de la fase 1: el albarán de METALFIRE.
 
 Mismo esquema que ``f053_sv4_bbdd`` (tablas del ORM de sv4, las de
-valoración de sv6, ``contrato_lines_derived`` y ``undo_log``) más la columna
-``bloqueada`` de F-065 (R17). Sin red ni BBDD real.
+valoración de sv6 con la columna ``bloqueada`` de F-065 R17,
+``contrato_lines_derived`` y ``undo_log``). Sin red ni BBDD real.
 
 El documento ``DOC`` (contrato ``CTSU25/0359``):
 
@@ -27,12 +27,6 @@ DOC_AJENO = "f065-doc-0000-0000-000000000999"
 VAL = "f065-val-1"
 VAL_AJENO = "f065-val-2"
 CONTRATO = "CTSU25/0359"
-
-#: R17: la columna que pone sv6 (y sv4 de forma defensiva).
-DDL_BLOQUEADA = (
-    "ALTER TABLE albaran_line_valuations "
-    "ADD COLUMN bloqueada BOOLEAN NOT NULL DEFAULT 0"
-)
 
 COLUMNAS = (
     "id", "valuation_id", "merge_line_id", "matched_contrato_line_id",
@@ -76,7 +70,6 @@ def construir(*, aprobado: bool = False, con_altas: bool = False, status: str = 
     with Session(motor) as s:
         for sentencia in _VALORACION:
             s.execute(text(sentencia))
-        s.execute(text(DDL_BLOQUEADA))
         if con_altas:
             s.execute(text(DDL_ALTAS))
         _merge(s, DOC, approved=aprobado, approved_by="ana" if aprobado else None,

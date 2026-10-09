@@ -111,7 +111,8 @@ _DDL = (
         modifier_reason               TEXT,
         descripcion_linea             TEXT,
         review_required               BOOLEAN NOT NULL DEFAULT 0,
-        review_reasons_json           TEXT
+        review_reasons_json           TEXT,
+        bloqueada                     BOOLEAN NOT NULL DEFAULT 0
     )
     """,
     # F-036: la trazabilidad (R23, R24) toca tambien la cabecera del

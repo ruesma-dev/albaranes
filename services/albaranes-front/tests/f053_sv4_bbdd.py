@@ -58,7 +58,8 @@ _VALORACION = (
         codigo_externo VARCHAR(64), line_kind VARCHAR(32), parent_merge_line_id INTEGER,
         modifier_source VARCHAR(32), modifier_reason TEXT, descripcion_linea TEXT,
         review_required BOOLEAN NOT NULL DEFAULT 0, review_reasons_json TEXT,
-        producto_sigrid VARCHAR(24), created_at_utc VARCHAR(64)
+        producto_sigrid VARCHAR(24), created_at_utc VARCHAR(64),
+        bloqueada BOOLEAN NOT NULL DEFAULT 0
     )
     """,
     """

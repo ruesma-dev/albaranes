@@ -338,6 +338,12 @@ class AlbaranReviewRepository:
             # exclusiva de sv4 (sv6 no la toca: queda NULL al re-valorar).
             "ALTER TABLE albaran_line_valuations ADD COLUMN IF NOT EXISTS descuento_albaran_aplicado DOUBLE PRECISION",
             "ALTER TABLE albaran_line_valuations ADD COLUMN IF NOT EXISTS codigo_externo VARCHAR(64)",
+            # (F-065 R17) Fila guardada = bloqueada. La declara sv6 (dueño
+            # del esquema de valoración); aquí, defensiva como las de arriba.
+            (
+                "ALTER TABLE albaran_line_valuations ADD COLUMN IF NOT EXISTS bloqueada "
+                "BOOLEAN NOT NULL DEFAULT FALSE"
+            ),
             (
                 "ALTER TABLE albaran_contratos_merge "
                 "ADD COLUMN IF NOT EXISTS pdf_sharepoint_relative_path VARCHAR(1024)"
@@ -1188,7 +1194,9 @@ class AlbaranReviewRepository:
                     "       modifier_source, modifier_reason, "
                     "       descripcion_linea, "
                     # ----- edición salmon (jun 2026) -----
-                    "       descuento_albaran_aplicado, codigo_externo "
+                    "       descuento_albaran_aplicado, codigo_externo, "
+                    # ----- F-065 R17: fila guardada (bloqueada) -----
+                    "       bloqueada "
                     "FROM albaran_line_valuations "
                     "WHERE valuation_id = :vid "
                     # from_albaran primero (para poder iterar base, luego
@@ -1307,6 +1315,7 @@ class AlbaranReviewRepository:
                 ) if hasattr(row, "get") else row["descuento_albaran_aplicado"],
                 codigo_externo=row.get("codigo_externo")
                 if hasattr(row, "get") else row["codigo_externo"],
+                bloqueada=bool(row["bloqueada"]),
             )
 
             if line_kind == "synthetic_modifier":

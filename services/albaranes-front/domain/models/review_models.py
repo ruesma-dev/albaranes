@@ -463,6 +463,8 @@ class LineValuationPayload(BaseModel):
     descuento_albaran_aplicado: float | None = None
     codigo_externo: str | None = None
     partida_action: str | None = None
+    # ---- F-065 R13–R17: el administrativo la guardó (guardar = bloquear) ----
+    bloqueada: bool = False
 
     match_confidence_pct: float | None = None
     match_method: str | None = None
