@@ -32,6 +32,7 @@ from ruesma_comun.valoracion import esta_valorado
 # la llama el resto de este módulo.
 from domain.models.review_models import (
     AlbaranAprobadoError,
+    cambia_origen,
     cantidades_tras_editar,
     ConciliacionDisplay,
     ConciliacionSibling,
@@ -1681,18 +1682,20 @@ class AlbaranReviewRepository:
         descripcion: str | None = None,
         precio_unitario: float | None = None,
     ) -> bool:
-        """Override manual de la conciliacion de UNA linea de valoracion.
+        """«Origen ✎» (F-065 R28): la ÚNICA vía de reapuntar una fila.
 
-        mode='contract_line': apunta la linea a matched_contrato_line_id
-          (linea de albaran_contrato_lines_merge), trae su precio y
-          recalcula el importe. Limpia la derivada previa.
-        mode='nueva': crea una linea en contrato_lines_derived en la
-          partida de la linea (descripcion/precio por defecto los de la
-          propia linea), la enlaza y recalcula el importe. Limpia el match.
+        mode='contract_line': la fila pasa a ser Contrato de
+          ``matched_contrato_line_id`` y «cuadra» con ella: se trae su partida,
+          su unidad y su precio (o ``precio_unitario`` si viene), la
+          descripción vuelve a ser la de la línea (sin override) y el importe
+          se recalcula con la cantidad de la fila. Se limpia la derivada.
+        mode='nueva': la fila pasa a Nueva con SUS valores actuales (partida
+          final, descripción, unidad y precio que pinta la ficha; ``descripcion``
+          y ``precio_unitario`` los sustituyen si vienen). Si el precio no
+          cambia, el importe tampoco.
 
-        NO revalora: solo toca esta linea y el total de la cabecera. La
-        correccion se pierde si luego se pulsa "Valorar ahora" (reemplazo
-        completo). Devuelve True si actualizo algo.
+        NO revalora ni llama a la IA. Se pierde con «Valorar ahora» (F-058).
+        Devuelve True si actualizó algo.
         """
         self.initialize()
         with self._session_factory.create_session() as session:
@@ -1701,10 +1704,12 @@ class AlbaranReviewRepository:
             self._exigir_editable(session, document_id, valuation_line_id)
             row = session.execute(
                 text(
-                    "SELECT lv.id, lv.merge_line_id, lv.valuation_id, "
+                    "SELECT lv.id, lv.valuation_id, "
+                    "       lv.matched_contrato_line_id, "
+                    "       lv.derived_contrato_line_id, "
                     "       lv.cantidad_albaran, lv.cantidad_convertida, "
                     "       lv.codigo_partida_final, lv.descripcion_linea, "
-                    "       lv.precio_unitario_final, "
+                    "       lv.precio_unitario_final, lv.unidad_contrato, "
                     "       lv.descuento_albaran_aplicado, v.document_id, "
                     "       v.contrato_codigo "
                     "FROM albaran_line_valuations lv "
@@ -1723,24 +1728,12 @@ class AlbaranReviewRepository:
                 else row["cantidad_albaran"]
             )
 
-            # (F-019 R23) El descuento de la línea sigue vigente aunque
-            # el revisor reapunte la conciliación a otra línea de
-            # contrato: cambia el precio, no el trato con el proveedor.
-            descuento_linea = row["descuento_albaran_aplicado"]
-
-            def _importe(precio):
-                return _importe_de_linea(
-                    precio_unitario=precio,
-                    cantidad=cantidad,
-                    descuento_pct=descuento_linea,
-                )
-
             if mode == "contract_line":
                 if matched_contrato_line_id is None:
                     return False
                 cl = session.execute(
                     text(
-                        "SELECT precio_unitario "
+                        "SELECT precio_unitario, codigo_partida, unidad_medida "
                         "FROM albaran_contrato_lines_merge WHERE id = :id"
                     ),
                     {"id": matched_contrato_line_id},
@@ -1760,6 +1753,9 @@ class AlbaranReviewRepository:
                         "  precio_unitario_final = :pu, "
                         "  precio_unitario_source = 'manual_contract', "
                         "  precio_unitario_agreement = 'manual', "
+                        "  codigo_partida_final = :part, "
+                        "  unidad_contrato = :uni, "
+                        "  descripcion_linea = NULL, "
                         "  importe_calculado = :imp, "
                         "  importe_source = 'calculated', "
                         "  review_required = FALSE "
@@ -1768,37 +1764,39 @@ class AlbaranReviewRepository:
                     {
                         "mid": matched_contrato_line_id,
                         "pu": precio,
-                        "imp": _importe(precio),
+                        "part": cl["codigo_partida"],
+                        "uni": cl["unidad_medida"],
+                        "imp": _importe_de_linea(
+                            precio_unitario=precio,
+                            cantidad=cantidad,
+                            descuento_pct=row["descuento_albaran_aplicado"],
+                        ),
                         "vid": valuation_line_id,
                     },
                 )
             elif mode == "nueva":
-                # "Nueva" COPIA de la linea blanca (merge), no de la
-                # valoracion: concepto y precio declarados del albaran como
-                # defaults. (Para el total cuenta esta linea salmon.)
-                ml_nueva = None
-                if row["merge_line_id"] is not None:
-                    ml_nueva = session.execute(
-                        text(
-                            "SELECT concepto, precio "
-                            "FROM albaran_lines_merge WHERE id = :mid"
-                        ),
-                        {"mid": row["merge_line_id"]},
-                    ).mappings().first()
-                precio = (
-                    precio_unitario
-                    if precio_unitario is not None
-                    else (
-                        ml_nueva["precio"]
-                        if ml_nueva and ml_nueva["precio"] is not None
-                        else row["precio_unitario_final"]
-                    )
+                # Los valores ACTUALES de la fila: los de su línea (de contrato
+                # o derivada) donde la valoración no tenga los suyos.
+                tabla = (
+                    "albaran_contrato_lines_merge"
+                    if row["matched_contrato_line_id"] is not None
+                    else "contrato_lines_derived"
                 )
-                desc = descripcion or (
-                    ml_nueva["concepto"]
-                    if ml_nueva and ml_nueva["concepto"]
-                    else row["descripcion_linea"]
+                casada = session.execute(
+                    text(
+                        "SELECT descripcion_linea, unidad_medida, precio_unitario "
+                        f"FROM {tabla} WHERE id = :id"  # noqa: S608
+                    ),
+                    {"id": row["matched_contrato_line_id"]
+                     if row["matched_contrato_line_id"] is not None
+                     else row["derived_contrato_line_id"]},
+                ).mappings().first() or {}
+                actual = (
+                    row["precio_unitario_final"]
+                    if row["precio_unitario_final"] is not None
+                    else casada.get("precio_unitario")
                 )
+                precio = precio_unitario if precio_unitario is not None else actual
                 new_id = session.execute(
                     text(
                         "INSERT INTO contrato_lines_derived ("
@@ -1806,7 +1804,7 @@ class AlbaranReviewRepository:
                         "  codigo_contrato, codigo_producto, descripcion_linea, "
                         "  unidad_medida, precio_unitario, codigo_partida, "
                         "  origen, created_at_utc) "
-                        "VALUES (:vid, :doc, :cod, NULL, :desc, NULL, :pu, "
+                        "VALUES (:vid, :doc, :cod, NULL, :desc, :uni, :pu, "
                         "  :part, 'manual_override', :now) "
                         "RETURNING id"
                     ),
@@ -1814,46 +1812,43 @@ class AlbaranReviewRepository:
                         "vid": valuation_id,
                         "doc": document_id,
                         "cod": row["contrato_codigo"] or "",
-                        "desc": desc,
+                        "desc": (
+                            descripcion or row["descripcion_linea"]
+                            or casada.get("descripcion_linea")
+                        ),
+                        "uni": row["unidad_contrato"] or casada.get("unidad_medida"),
                         "pu": precio,
                         "part": row["codigo_partida_final"],
                         "now": self._utc_iso(),
                     },
                 ).scalar_one()
+                sets = (
+                    "matched_contrato_line_id = NULL, "
+                    "derived_contrato_line_id = :did, "
+                    "precio_unitario_final = :pu, "
+                    "precio_unitario_source = 'manual_derived', "
+                    "precio_unitario_agreement = 'manual', "
+                    "descripcion_linea = NULL, "
+                    "review_required = FALSE"
+                )
+                parametros: dict[str, Any] = {
+                    "did": new_id, "pu": precio, "vid": valuation_line_id,
+                }
+                if not _mismo_numero(precio, actual):
+                    sets += ", importe_calculado = :imp, importe_source = 'calculated'"
+                    parametros["imp"] = _importe_de_linea(
+                        precio_unitario=precio,
+                        cantidad=cantidad,
+                        descuento_pct=row["descuento_albaran_aplicado"],
+                    )
                 session.execute(
-                    text(
-                        "UPDATE albaran_line_valuations SET "
-                        "  matched_contrato_line_id = NULL, "
-                        "  derived_contrato_line_id = :did, "
-                        "  precio_unitario_final = :pu, "
-                        "  precio_unitario_source = 'manual_derived', "
-                        "  precio_unitario_agreement = 'manual', "
-                        "  importe_calculado = :imp, "
-                        "  importe_source = 'calculated', "
-                        "  review_required = FALSE "
-                        "WHERE id = :vid"
-                    ),
-                    {
-                        "did": new_id,
-                        "pu": precio,
-                        "imp": _importe(precio),
-                        "vid": valuation_line_id,
-                    },
+                    text(f"UPDATE albaran_line_valuations SET {sets} WHERE id = :vid"),
+                    parametros,
                 )
             else:
                 return False
 
-            # Recalcular total de la cabecera.
-            session.execute(
-                text(
-                    "UPDATE albaran_valuations SET "
-                    "  total_valorado = COALESCE((SELECT SUM(importe_calculado) "
-                    "    FROM albaran_line_valuations WHERE valuation_id = :vid), 0), "
-                    "  updated_at_utc = :now "
-                    "WHERE id = :vid"
-                ),
-                {"vid": valuation_id, "now": self._utc_iso()},
-            )
+            self._recalcular_total_in_session(session, valuation_id)
             session.commit()
             return True
 
@@ -2049,25 +2044,17 @@ class AlbaranReviewRepository:
                     "importe_source = 'calculated'",
                 ]
 
-            # ---- origen (F-051: vaciar = almacén; la de la casada, sigue) ----
+            # ---- origen ----
             elige_almacen = (
                 "codigo_partida" in cambios and nuevo["codigo_partida"] is None
             )
-            partida_cambia_identidad = (
-                "codigo_partida" in cambios
-                and nuevo["codigo_partida"] is not None
-                and not (
-                    matched_id is not None
-                    and nuevo["codigo_partida"] == _txt(partida_casada)
-                )
-            )
-            identidad_cambia = (
-                partida_cambia_identidad
-                or "unidad" in cambios
-                or "precio_unitario" in cambios
-            )
-
-            if matched_id is not None and identidad_cambia:
+            # (F-065 R25, R26) partida, precio o unidad ⇒ Nueva, sin
+            # confirmación; vaciar (almacén) o la de su línea, no.
+            if cambia_origen(
+                es_contrato=matched_id is not None,
+                partida_casada=partida_casada,
+                cambios=cambios,
+            ):
                 # CONTRATO → NUEVA: derivada manual con los valores
                 # resultantes; se conserva todo lo demás tal cual.
                 params["did"] = session.execute(
@@ -2320,16 +2307,7 @@ class AlbaranReviewRepository:
                 )
 
             # Recalcular total de la cabecera (la linea borrada ya no suma).
-            session.execute(
-                text(
-                    "UPDATE albaran_valuations SET "
-                    "  total_valorado = COALESCE((SELECT SUM(importe_calculado) "
-                    "    FROM albaran_line_valuations WHERE valuation_id = :vid), 0), "
-                    "  updated_at_utc = :now "
-                    "WHERE id = :vid"
-                ),
-                {"vid": valuation_id, "now": self._utc_iso()},
-            )
+            self._recalcular_total_in_session(session, valuation_id)
             session.commit()
             return True
 
@@ -2545,16 +2523,7 @@ class AlbaranReviewRepository:
                 )
 
             # Recalcular total de la cabecera.
-            session.execute(
-                text(
-                    "UPDATE albaran_valuations SET "
-                    "  total_valorado = COALESCE((SELECT SUM(importe_calculado) "
-                    "    FROM albaran_line_valuations WHERE valuation_id = :v), 0), "
-                    "  updated_at_utc = :now "
-                    "WHERE id = :v"
-                ),
-                {"v": valuation_id, "now": now},
-            )
+            self._recalcular_total_in_session(session, valuation_id)
             session.commit()
             return True
 
@@ -3800,11 +3769,14 @@ class AlbaranReviewRepository:
         ]
         posiciones: list[int] = []
         posicion = 0
+        huerfanas = 0
         for fila in orden_filas_ficha(merge_line_ids, filas):
             if (
                 fila["matched_contrato_line_id"] is None
                 and fila["derived_contrato_line_id"] is None
             ):
+                # (O2, humano 2026-10-11) La ficha no la pinta: «revalora».
+                huerfanas += 1
                 continue
             posicion += 1
             q = (
@@ -3814,8 +3786,8 @@ class AlbaranReviewRepository:
             )
             if q is None or fila["importe_calculado"] is None:
                 posiciones.append(posicion)
-        if posiciones:
-            raise LineasIncompletasError(document_id, posiciones)
+        if posiciones or huerfanas:
+            raise LineasIncompletasError(document_id, posiciones, huerfanas)
 
     @staticmethod
     def _valorado_in_session(session: Any, document_id: str) -> bool:
@@ -3966,6 +3938,10 @@ class AlbaranReviewRepository:
             document = session.get(AlbaranDocumentMergeOrm, document_id)
             if document is None:
                 raise KeyError(f"Documento no encontrado: {document_id}")
+            if approved and document.approved:
+                # (F-065, O5 de la review) Aprobar un aprobado es un no-op real:
+                # no reescribe ni la fecha ni quién lo aprobó.
+                return False
             paso_a_aprobado = bool(approved) and not bool(document.approved)
             if paso_a_aprobado and not self._valorado_in_session(session, document_id):
                 raise AlbaranSinValorarError(document_id)

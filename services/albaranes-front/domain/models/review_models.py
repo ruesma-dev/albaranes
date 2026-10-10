@@ -454,18 +454,36 @@ class LineaBloqueadaError(Exception):
 
 class LineasIncompletasError(Exception):
     """(R20) Hay filas sin cantidad o sin importe: no se aprueba. ``posiciones``
-    son las de la tabla de la ficha (1, 2, ...), las que ve el administrativo."""
+    son las de la tabla de la ficha (1, 2, ...), las que ve el administrativo.
 
-    def __init__(self, document_id: str, posiciones: list[int]) -> None:
+    ``huerfanas`` (decisión del humano del 2026-10-11, O2 de la review de la
+    fase 1): filas sin línea de contrato NI derivada. La ficha no las pinta y
+    sv9 las mandaría sin vincular: tampoco se aprueba con ellas, y se pide
+    revalorar. Una fila en almacén (partida final vacía) NO es ninguna de las
+    dos cosas: el almacén nunca impide aprobar."""
+
+    def __init__(
+        self, document_id: str, posiciones: list[int], huerfanas: int = 0,
+    ) -> None:
         self.document_id = document_id
         self.posiciones = list(posiciones)
+        self.huerfanas = huerfanas
         super().__init__(self.aviso)
 
     @property
     def aviso(self) -> str:
-        return "Líneas sin cantidad o importe: " + ", ".join(
-            str(posicion) for posicion in self.posiciones
-        )
+        partes = []
+        if self.posiciones:
+            partes.append("Líneas sin cantidad o importe: " + ", ".join(
+                str(posicion) for posicion in self.posiciones
+            ))
+        if self.huerfanas:
+            lineas = "línea" if self.huerfanas == 1 else "líneas"
+            partes.append(
+                f"Hay {self.huerfanas} {lineas} sin línea de contrato ni Nueva "
+                "que la ficha no enseña: revalora el albarán"
+            )
+        return ". ".join(partes)
 
 
 def cantidades_tras_editar(
@@ -499,6 +517,33 @@ def cantidades_tras_editar(
     if cantidad_convertida is None and (factor is None or float(factor) == 1):
         return q_nueva, q_nueva
     return cantidad_albaran, q_nueva
+
+
+def cambia_origen(
+    *,
+    es_contrato: bool,
+    partida_casada: str | None,
+    cambios: dict[str, Any],
+) -> bool:
+    """(R25, R26) ¿Pasa la fila Contrato a Nueva con estos cambios?
+
+    ``cambios`` son SOLO los campos que de verdad cambian (ya normalizados: la
+    partida sin espacios y vacía = ``None``). Una fila Contrato pasa a Nueva,
+    sin confirmación, si cambia la partida a una no vacía distinta de la de su
+    línea de contrato, el precio unitario o la unidad. Vaciar la partida
+    (almacén) o poner la de su línea de contrato no cambia el origen (F-051 D4,
+    R20; P10), ni la descripción, la cantidad, el descuento o el código
+    externo. Una fila Nueva sigue Nueva (se edita su derivada). Nunca se llama
+    a la IA: el origen solo lo vuelve a decidir «Origen ✎» o revalorar.
+    """
+    if not es_contrato:
+        return False
+    partida = cambios.get("codigo_partida")
+    return (
+        (partida is not None and partida != (partida_casada or "").strip())
+        or "precio_unitario" in cambios
+        or "unidad" in cambios
+    )
 
 
 def es_fila_manual(

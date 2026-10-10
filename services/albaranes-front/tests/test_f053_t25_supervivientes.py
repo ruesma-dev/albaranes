@@ -183,7 +183,15 @@ def test_f053_t25_r37_solo_cuentan_las_lineas_de_la_primera_valoracion():
             "INSERT INTO albaran_line_valuations (id, valuation_id, importe_calculado, "
             "importe_source) VALUES (99, 'zz-otra', NULL, 'calculated')"))
         s.commit()
-    assert repositorio(motor).set_approved(document_id=DOC, approved=True, approved_by="a") is True
+    repo = repositorio(motor)
+    with Session(motor) as s:
+        assert repo._valorado_in_session(s, DOC) is True
+    # (F-065 R20/O2) Aprobar, en cambio, mira TODAS las filas, como sv9 al dar
+    # de alta: la 99 (sin línea de contrato ni derivada) lo impide.
+    from domain.models.review_models import LineasIncompletasError
+
+    with pytest.raises(LineasIncompletasError):
+        repo.set_approved(document_id=DOC, approved=True, approved_by="a")
 
 
 def test_f053_t25_alta_con_cero_intentos_y_documento_inexistente():
