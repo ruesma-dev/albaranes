@@ -721,19 +721,19 @@
                                     data-line-kind="{{ dline.line_kind }}"{% if bloqueada %} data-bloqueada="1"{% endif %}
                                     data-for-line-id="{{ dline.merge_line_id if dline.merge_line_id is not none else '' }}"
                                     data-for-valuation-line-id="{{ dline.valuation_line_id if dline.valuation_line_id is not none else '' }}">
-                                    {# Origen — SOLO badge Sigrid/Nueva. El ✎ abre/cierra el selector de línea de contrato (oculto por defecto). #}
-                                    <td class="concilia-td td-origen" data-col="origen" data-sort-value="{{ 'Sigrid' if c.kind == 'assigned' else 'Nueva' }}">
+                                    {# Origen — SOLO badge Contrato/Nueva (F-065 R24; antes «Sigrid»). El ✎ abre/cierra el selector de línea de contrato (oculto por defecto). #}
+                                    <td class="concilia-td td-origen" data-col="origen" data-sort-value="{{ 'Contrato' if c.kind == 'assigned' else 'Nueva' }}">
                                         {% if cedit %}
                                             {% if c.kind == 'assigned' %}
-                                            <button type="button" class="concilia-badge concilia-badge-assigned js-concilia-edit" title="Cambiar la línea de contrato a la que se imputa">Sigrid ✎</button>
+                                            <button type="button" class="concilia-badge concilia-badge-assigned js-concilia-edit" title="Cambiar la línea de contrato a la que se imputa (o pasarla a Nueva)">Contrato ✎</button>
                                             {% else %}
-                                            <button type="button" class="concilia-badge concilia-badge-derived js-concilia-edit" title="Cambiar la línea de contrato a la que se imputa">Nueva ✎</button>
+                                            <button type="button" class="concilia-badge concilia-badge-derived js-concilia-edit" title="Cambiar la línea de contrato a la que se imputa (o pasarla a Nueva)">Nueva ✎</button>
                                             {% endif %}
                                         {% else %}
-                                            {% if c.kind == 'assigned' %}<span class="concilia-badge concilia-badge-assigned">Sigrid</span>{% else %}<span class="concilia-badge concilia-badge-derived">Nueva</span>{% endif %}
+                                            {% if c.kind == 'assigned' %}<span class="concilia-badge concilia-badge-assigned">Contrato</span>{% else %}<span class="concilia-badge concilia-badge-derived">Nueva</span>{% endif %}
                                         {% endif %}
                                     </td>
-                                    {# Partida — combo de partidas (cambiarla convierte SIGRID→NUEVA). Descripción de partida → tooltip.
+                                    {# Partida — combo de partidas de la OBRA (F-065 R27; cambiarla a otra que la de su línea convierte CONTRATO→NUEVA, R25). Descripción de partida → tooltip.
                                        F-051 (R11, R13): partida final vacía = ALMACÉN; se pinta «Almacén», nunca la
                                        partida de la línea casada. El combo ofrece «Almacén (sin partida)» primero. #}
                                     {% set _almacen = c.estado_partida == 'almacen' %}
@@ -742,8 +742,6 @@
                                             <input type="text" class="cell-input js-cedit js-partida-combo{% if _almacen %} partida-almacen{% elif c.agree_partida == true %} cedit-ok{% elif c.agree_partida == false %} cedit-warn{% endif %}"
                                                    data-field="codigo_partida" data-identity="1"
                                                    data-valuation-line-id="{{ dline.valuation_line_id }}"
-                                                   {#- F-051 (review O2): la de la casada de Sigrid, para no avisar «pasará a NUEVA» al ponerla (R20). #}
-                                                   {%- if c.kind == 'assigned' and c.codigo_partida_casada %} data-partida-casada="{{ c.codigo_partida_casada }}"{% endif %}
                                                    value="{{ c.codigo_partida or '' }}" placeholder="{{ 'Almacén' if _almacen else '—' }}" autocomplete="off"
                                                    title="{{ 'Va a almacén: no se imputa a ninguna partida' if _almacen else (c.descripcion_partida or '') }}">
                                         {% elif _almacen %}
@@ -758,11 +756,11 @@
                                     <td class="concilia-td" data-col="concepto" data-sort-value="{{ c.descripcion or '' }}">
                                         {% set _med = ('Medición ' ~ ('%.2f'|format(c.medicion_total)) ~ (' ' ~ c.unidad if c.unidad else '')) if c.medicion_total is not none else '' %}
                                         {% if cedit %}
-                                            <input type="text" class="cell-input js-cedit js-concepto-combo" data-field="descripcion"
+                                            <input type="text" class="cell-input js-cedit" data-field="descripcion"
                                                    value="{{ c.descripcion or '' }}" placeholder="—" title="{{ _med }}" autocomplete="off">
                                             <select class="concilia-select js-concilia-select" data-vid="{{ dline.valuation_line_id }}" hidden>
                                                 <option value="" disabled selected>— elegir línea de contrato —</option>
-                                                <option value="nueva">➕ Nueva — derivar a {{ dline.codigo_imputacion or c.codigo_partida or 'la partida' }}</option>
+                                                <option value="nueva">➕ Nueva — con los valores actuales de la fila</option>
                                                 {% for cl in document.contrato_lines %}
                                                 <option value="{{ cl.id }}">{{ cl.codigo_partida or '—' }} · {{ cl.descripcion or '' }} · {{ '%.2f'|format(cl.precio_unitario) if cl.precio_unitario is not none else '—' }} €</option>
                                                 {% endfor %}
@@ -792,7 +790,7 @@
                                             {% if c.agree_cantidad == false %}<span class="concilia-price-warn"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ dline.cantidad }}</span>{% else %}<span class="concilia-val">{{ dline.cantidad }}</span>{% endif %}
                                         {% else %}—{% endif %}
                                     </td>
-                                    {# Unidad — editable; cambiarla convierte SIGRID→NUEVA. #}
+                                    {# Unidad — editable; cambiarla convierte CONTRATO→NUEVA (R25). #}
                                     <td class="concilia-td" data-col="unidad" data-sort-value="{{ c.unidad or '' }}">
                                         {% if cedit %}
                                             <input type="text" class="cell-input cell-short js-cedit" data-field="unidad" data-identity="1"
@@ -876,7 +874,7 @@
                                     <td class="concilia-td td-acciones" data-col="acciones">
                                         {% if cedit %}
                                             <button type="button" class="btn small danger js-concilia-remove" title="Borrar esta línea salmón (no se llevará a Sigrid; deja de sumar al total)">Borrar ✕</button>
-                                            <button type="button" class="btn small success js-cedit-save" title="Guardar los cambios de esta línea y bloquearla. Si cambias imputación, unidad o precio, pasará de Sigrid a Nueva conservando el resto.">Guardar</button>
+                                            <button type="button" class="btn small success js-cedit-save" title="Guardar los cambios de esta línea y bloquearla. Si cambias la partida, la unidad o el precio, pasará de Contrato a Nueva conservando el resto.">Guardar</button>
                                         {% elif editable and bloqueada %}
                                             <button type="button" class="btn small secondary js-desbloquear" data-valuation-line-id="{{ dline.valuation_line_id }}" title="Línea guardada: desbloquéala para editarla">Desbloquear</button>
                                         {% endif %}
@@ -890,14 +888,6 @@
                     </table>
                     {# Líneas de contrato disponibles para el desplegable del «+». #}
                     <script type="application/json" id="contrato-lines-json">[{% for cl in document.contrato_lines %}{"id": {{ cl.id }}, "label": {{ ((cl.codigo_partida or '—') ~ ' · ' ~ (cl.descripcion or '') ~ ' · ' ~ (('%.2f'|format(cl.precio_unitario) ~ ' €') if cl.precio_unitario is not none else '—')) | tojson }}, "desc": {{ (cl.descripcion or '') | tojson }}, "part": {{ (cl.codigo_partida or '') | tojson }}, "unidad": {{ (cl.unidad_medida or '') | tojson }}, "precio": {{ cl.precio_unitario if cl.precio_unitario is not none else 'null' }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
-                    {# Partidas DISTINTAS del contrato, para el combo de partida. #}
-                    {%- set _pns = namespace(parts=[]) -%}
-                    {%- for cl in document.contrato_lines -%}
-                      {%- if cl.codigo_partida and cl.codigo_partida not in _pns.parts -%}
-                        {%- set _pns.parts = _pns.parts + [cl.codigo_partida] -%}
-                      {%- endif -%}
-                    {%- endfor -%}
-                    <script type="application/json" id="partidas-json">{{ _pns.parts | sort | tojson }}</script>
                 </div>
             </form>
         {% else %}

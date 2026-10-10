@@ -1,19 +1,14 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-065 · `in_progress` (2026-10-09): FASE 1 IMPLEMENTADA (T1–T12)** en la rama
-`feature/F-065-lineas-editadas-y-reparto` (worktree `../albaranes-F-065`). Informe: **`progress/impl_F-065_fase1.md`**
-(decisiones D1–D9 a confirmar con el humano, junto con P10–P13). `init.sh` en verde en el worktree; cobertura 100 %
-(309/309); mutación 131/131 (`progress/mutacion_F-065_fase1.md`). Siguiente: **review de la fase 1 (T14)**; después,
-fusionar en `dev`, `init.sh` en el árbol principal y desplegar **sv6 → sv4** antes de pasar F-053 a real.
+**F-065 · `in_progress` (2026-10-11): fase 1 HECHA y DESPLEGADA; FASE 2 (T15–T18) en curso** en la rama
+`feature/F-065-lineas-editadas-y-reparto` (worktree `../albaranes-F-065`, con `dev` fusionado). Fase 1: review
+APROBADA (`progress/review_F-065_fase1.md`), en `dev` (`8c180b0`), desplegada el 2026-10-11 (sv6 r20261011-0025, sv4
+r20261011-0043), T13 hecha por el humano (OK). Fase 2: informe al terminar en `progress/impl_F-065_fase2.md`, con las
+decisiones del humano del 2026-10-11 (O1 «Solo volver a buscar» confirma; el almacén nunca impide aprobar y las filas
+sin línea de contrato ni derivada sí; O3, O5, O7).
 - Entorno del worktree: *junction* `services/albaranes-front/.venv` → venv de sv4 del árbol principal (ignorada por
   git; quitarla con `cmd /c rmdir services\albaranes-front\.venv` ANTES de `git worktree remove`).
-- **MANUAL T13 (humano, pipeline LOCAL)**, comandos exactos en `progress/impl_F-065_fase1.md` §9: en
-  `http://localhost:8004`, dos filas Contrato a 6 y 7 con «Guardar», «Traer líneas contrato» una con 5, «Guardar y
-  aprobar»; luego, solo lectura:
-  `psql -h localhost -U <usuario_local> -d albaranes -c "SELECT lv.id, lv.cantidad_albaran, lv.cantidad_convertida, lv.importe_calculado, lv.bloqueada FROM albaran_line_valuations lv JOIN albaran_valuations v ON v.id = lv.valuation_id WHERE v.document_id = '<ID>' ORDER BY lv.id;"`
-  Criterio: 6, 7 y 5 con convertida igual a la cantidad, total = suma, aprobado en solo lectura hasta «Desaprobar para
-  editar».
 
 **F-063 · `done` (2026-10-08)**, fusionada en `dev` con `init.sh` en verde. Pendiente del humano: desplegar solo sv3; en los merges `b1d3e179` y `401d9c00`, «Elegir proveedor» FEYMACO a mano. Comandos de la MANUAL T8 en `progress/impl_F-063.md` §7.
 
@@ -22,27 +17,6 @@ fusionar en `dev`, `init.sh` en el árbol principal y desplegar **sv6 → sv4** 
 > Podado el 2026-10-01 al cerrar F-052 (C2 de `progress/review_F-052.md`). El `current.md` anterior, íntegro, está
 > en `progress/historico/current_2026-10-01_cierre_F-052.md`; el resumen de F-052, en `progress/history.md`.
 > Aquí solo queda lo vivo. Lo que manda sobre el estado de cada feature es `harness/features.json`.
-
-**F-053 · IMPLEMENTACIÓN TERMINADA, FASES 1 y 2 (`in_progress`, 2026-10-08)** en la rama
-`feature/F-053-alta-sigrid` (worktree `../albaranes-F-053`): alta en Sigrid de los albaranes aprobados, servicio nuevo
-sv9, arranque en simulación. Spec v7. Fase 1 (T0a, T1–T16, T31–T41: comun, DDL de sv3 y sv6, sv9 completo, R45/R46)
-APROBADA por el reviewer en su pasada 3 (`progress/review_F-053_fase1_pasada3.md`); informes
-`progress/impl_F-053_fase1*.md`. **Fase 2** (aprobada por el humano, «si», 2026-10-08) hecha por el implementer:
-T0d (dos fusiones de `dev`: F-062 y F-063), T17–T21b (sv4: settings, publicar en el paso a aprobado, cerrojo en dos
-sentencias, producto, rutas, panel, R37), T24b (`reclamar` de sv9 en dos sentencias), T22 (infra, solo scripts:
-`create_capps_sv9.ps1` con `ALTA_SIGRID_COMMIT=false`, `set_alta_sigrid.ps1`), T23 (docs y `azure-apps` `d43f200`),
-T24 (cobertura 96,2 %) y T25 (mutación). Informe: **`progress/impl_F-053_fase2.md`**. Review de la fase 2 (`44d5d86`): CHANGES_REQUESTED por RM5,
-hecho en la pasada 2 (§12 del informe). Siguiente: **re-review**; después, fusionar y `init.sh` en el árbol principal.
-- **Entorno del worktree**: venvs del árbol principal con `PYTHONPATH` a la comun del worktree; *junction*
-  `services/albaranes-front/.venv` → venv de sv4 del árbol principal (ignorada por git): quitarla con
-  `cmd /c rmdir services\albaranes-front\.venv` ANTES de `git worktree remove`.
-- **MANUAL del humano pendientes** (comandos exactos en `specs/F-053-alta-sigrid/tasks.md`): T0b, T0c (fija
-  `ALTA_SIGRID_USUARIO`), T0 (repetir la medición), T22 (leer el diff de `infra/`), T26, T27, T27b, **T27c** (nueva:
-  carrera sv9 ↔ sv4 en el PostgreSQL local), T28 (simulación en Azure, desplegando sv6 y sv3 → sv9 → sv4 según
-  `infra/README_capps.md`) y T29 (grabación real, con autorización).
-- **Para el líder**: coordinar con sigrid-api la Parte B de `progress/propuestas_a_sigrid_api_F-053.md` (consumo; el
-  contrato no se edita desde aquí); propuesta de `CLAUDE.md` de design §9 sin aplicar; «producto elegido» al alcance
-  de F-058; hallazgo menor de R23/R30 (adjunto en error sin botón) en el informe §9.
 
 ### F-062 · MANUAL del humano (comandos exactos, PowerShell)
 
@@ -79,6 +53,10 @@ Falta solo lo del humano: decisión O1 (reintento del adjunto), aceptar los 10 e
 (`ALTA_SIGRID_USUARIO`), despliegue en simulación (sv6, sv3 → sv9 con `ALTA_SIGRID_COMMIT=false` → sv4 → resto),
 T26–T28 y, con autorización, T29. Recomendación: no pasar a real (T29) hasta desplegar F-065 fase 1. Se bloquea para
 dejar paso a F-065 (máximo una `in_progress`).
+- MANUAL pendientes y comandos: `specs/F-053-alta-sigrid/tasks.md` (T0b, T0c, T0, T22, T26, T27, T27b, T27c, T28, T29).
+- Para el líder: Parte B de `progress/propuestas_a_sigrid_api_F-053.md` con sigrid-api; propuesta de `CLAUDE.md` de
+  design §9 sin aplicar; hallazgo menor R23/R30 (adjunto en error sin botón) en `progress/impl_F-053_fase2.md` §9.
+  (Podado el 2026-10-11 el bloque viejo «`in_progress`» de F-053, O7 de `progress/review_F-065_fase1.md`.)
 
 **F-051 · CERRADA (`done`, 2026-10-09): T22–T24 hechas por el humano (`progress/impl_F-051.md` §6 bis).** Antes: `blocked` (2026-10-06) y FUSIONADA en `dev`. Implementación APROBADA por el reviewer (pasada 2) e `init.sh`
 en verde. **T21 hecha** (evals con LLM, 2026-10-06 11:07 UTC, informe local `progress/evals_F-051.md`): frente a F-048,

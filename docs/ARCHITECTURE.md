@@ -432,8 +432,23 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       la tabla de la ficha); si la suma de las filas no cuadra con la de lo
       leído, la ficha pide confirmación (no bloquea). Revalorar, «Guardar y
       volver a buscar» o elegir otro contrato piden confirmación si hay filas
-      tocadas a mano (`review_models.es_fila_manual`). «Traer líneas contrato»
-      exige la cantidad de cada línea y crea filas válidas para sv9.
+      tocadas a mano (`review_models.es_fila_manual`); también «Solo volver a
+      buscar». «Traer líneas contrato» exige la cantidad de cada línea y crea
+      filas válidas para sv9. El almacén (partida final vacía) nunca impide
+      aprobar; una fila sin línea de contrato NI derivada sí («revalora»), porque
+      la ficha no la pinta y sv9 la mandaría sin vincular.
+    - **Origen Contrato / Nueva** (fase 2): la ficha dice «Contrato» (antes
+      «Sigrid»). Cambiar la partida a una distinta de la de su línea de
+      contrato, el precio unitario (también al editar el importe) o la unidad
+      de una fila Contrato la pasa a Nueva (derivada `manual_override`) **sin
+      confirmación**; vaciar la partida (almacén) o poner la de su línea no
+      cambia el origen, ni la descripción, cantidad, descuento o código externo
+      (`review_models.cambia_origen`). Al editar nunca se llama a la IA. El
+      combo de partida ofrece «Almacén» y las partidas hoja de la OBRA
+      (`/api/sigrid/partidas`, solo valores de la lista; sin partidas o con
+      Sigrid caído, solo «Almacén»). «Origen ✎» es la única vía de reapuntar:
+      una línea de contrato deja la fila Contrato con su partida, unidad y
+      precio; «Nueva», Nueva con los valores actuales.
 
 ## Acceso a datos y sistemas externos
 

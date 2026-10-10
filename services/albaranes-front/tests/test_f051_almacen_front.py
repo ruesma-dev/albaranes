@@ -1050,10 +1050,11 @@ def test_f051_r13_el_combo_de_partida_ofrece_almacen_primero():
     js = _app_js()
 
     assert "Almacén (sin partida)" in js
-    # Solo en el combo de PARTIDA (no en el de concepto) y como primer
-    # ítem fijo, fuera del filtro por texto.
-    assert 'classList.contains("js-partida-combo")' in js
-    assert _re.search(r"shown\s*=\s*\[ITEM_ALMACEN\]\.concat\(", js)
+    # F-065 R27: el combo de PARTIDA (el de concepto ya no existe) pone
+    # «Almacén» como primer ítem fijo, fuera del filtro por texto.
+    opciones = _funcion_js(js, "opcionesPartida")
+    assert "Almacén (sin partida)" in opciones
+    assert _re.search(r"return\s*\[ALMACEN\]\.concat\(", opciones)
 
 
 def test_f051_r13_elegir_almacen_llama_al_post_de_la_linea():
@@ -1362,88 +1363,25 @@ def test_f051_r12_los_dos_guardados_arman_el_cuerpo_con_la_misma_funcion():
     assert js.count("body[field] =") == cuerpo.count("body[field] =")
 
 
-# --- O2 · el aviso «pasará a NUEVA» y la excepción de R20 -------------
+# --- O2 · el aviso «pasará a NUEVA» (retirado por F-065 R25) -----------
+# F-065 fase 2: cambiar partida, precio o unidad pasa la fila a Nueva SIN
+# confirmación, así que el confirm, ``cambiaIdentidad`` y el
+# ``data-partida-casada`` que lo alimentaba ya no existen. La excepción de R20
+# (poner la partida de la casada sigue Sigrid/Contrato) la decide el backend
+# (``cambia_origen``) y la vigilan H5 de abajo y ``test_f065_f2_origen.py``.
 
-def test_f051_o2_el_input_de_una_fila_sigrid_lleva_la_partida_de_la_casada(
+def test_f051_o2_ya_no_hay_aviso_de_nueva_ni_partida_de_casada_en_la_ficha(
     render_detalle, documento_detalle, fila_detalle, linea_valorada,
 ):
-    """En almacén la de la casada no se pinta, pero el JS la necesita para
-    no avisar «pasará a NUEVA» cuando el revisor la pone (R20)."""
     html = render_detalle(documento_detalle(
         lineas_valoracion=[linea_valorada(codigo_partida_final=None)],
         display=[fila_detalle(conciliacion={
             **_ALMACEN, "codigo_partida_casada": "03.02",
         })],
     ))
-    entrada = _input_partida(html)
-
-    assert 'data-partida-casada="03.02"' in entrada
-    assert 'value=""' in entrada
-
-
-def test_f051_o2_una_fila_nueva_no_lleva_partida_de_casada(
-    render_detalle, documento_detalle, fila_detalle, linea_valorada,
-):
-    """R20 solo vale para la casada de Sigrid: en una fila Nueva, no."""
-    html = render_detalle(documento_detalle(
-        lineas_valoracion=[linea_valorada(codigo_partida_final="04.05")],
-        display=[fila_detalle(conciliacion={
-            "kind": "derived", "codigo_partida": "04.05",
-            "codigo_partida_casada": "04.05", "estado_partida": "partida",
-        })],
-    ))
 
     assert "data-partida-casada" not in _input_partida(html)
-
-
-@_con_node
-def test_f051_o2_que_cambia_la_identidad_de_una_fila_sigrid(tmp_path):
-    casos = _ejecutar_js(tmp_path, ["cambiaIdentidad"], """
-        const casada = {partidaCasada: "03.02"};
-        console.log(JSON.stringify({
-            pone_la_de_la_casada: cambiaIdentidad(
-                entrada("codigo_partida", "", " 03.02 ", casada)),
-            pone_otra: cambiaIdentidad(
-                entrada("codigo_partida", "", "04.05", casada)),
-            cambia_a_otra_desde_la_final: cambiaIdentidad(
-                entrada("codigo_partida", "07.07", "04.05", casada)),
-            vacia: cambiaIdentidad(
-                entrada("codigo_partida", "03.02", "", casada)),
-            sin_tocar: cambiaIdentidad(
-                entrada("codigo_partida", "03.02", "03.02", casada)),
-            casada_sin_partida: cambiaIdentidad(
-                entrada("codigo_partida", "", "03.02", {partidaCasada: ""})),
-            unidad: cambiaIdentidad(entrada("unidad", "TN", "M3", casada)),
-            unidad_igual_que_la_casada: cambiaIdentidad(
-                entrada("unidad", "TN", "03.02", casada)),
-        }));
-    """)
-
-    assert casos == {
-        "pone_la_de_la_casada": False,
-        "pone_otra": True,
-        "cambia_a_otra_desde_la_final": True,
-        "vacia": False,
-        "sin_tocar": False,
-        "casada_sin_partida": True,
-        "unidad": True,
-        "unidad_igual_que_la_casada": True,
-    }
-
-
-def test_f051_o2_el_aviso_de_guardar_usa_esa_regla():
-    """El confirm «pasará a NUEVA» usa ``cambiaIdentidad``, y desde F-065 solo
-    sobre los campos que de verdad viajan en el cuerpo."""
-    js = _app_js()
-    guardar = js[js.index('saveBtn.addEventListener("click"'):
-                 js.index('getElementById("save-all-lines-btn")')]
-
-    assert _re.search(
-        r"\[\]\.some\.call\(\s*tr\.querySelectorAll\("
-        r"'\.js-cedit\[data-identity=\"1\"\]'\),\s*function \(inp\) \{\s*"
-        r"return inp\.dataset\.field in body && cambiaIdentidad\(inp\);",
-        guardar,
-    )
+    assert "function cambiaIdentidad(" not in _app_js()
 
 
 # --- H5 · la excepción de R20 vale fuera de almacén (dictamen) --------
