@@ -15,7 +15,7 @@ from __future__ import annotations
 import pytest
 from domain.models.alta_models import Motivo, PeticionAlbaran
 from domain.services.validador_alta import validar_y_construir
-from tests.f053_datos import CONFIG, HOY, datos, vinculada
+from tests.f053_datos import CONFIG, HOY, datos, sin_vincular, vinculada
 
 
 def _linea_unica(linea):
@@ -60,3 +60,48 @@ def test_f065_r10_la_fila_legada_sin_convertida_es_la_que_se_rechaza():
     )
 
     assert resultado == [Motivo("cantidad_sin_convertir", "", "11")]
+
+
+# ------------------------------------------------------------------ #
+# CR1 y H1 (pasada 2 de la fase 2): la descripción de las Nuevas
+# ------------------------------------------------------------------ #
+def test_f065_cr1_traida_pasada_a_nueva_se_admite_sin_vincular_con_su_descripcion():
+    """Como la deja sv4: fila traída del contrato (sin blanca) con otra partida ⇒
+    Nueva (derivada propia, sin línea de contrato) y su descripción en la
+    valoración."""
+    enviada = _linea_unica(sin_vincular(
+        77, merge_line_id=None, line_index=None, descripcion_merge=None,
+        descripcion_linea="PUERTA CORTAFUEGOS EI2-120", derived_contrato_line_id=602,
+        codigo_partida_final="09.09", cantidad_albaran=5.0, cantidad_convertida=5.0,
+        importe_calculado=575.0,
+    ))
+
+    assert enviada.ctrpro_ide is None
+    assert enviada.descripcion == "PUERTA CORTAFUEGOS EI2-120"
+    assert enviada.partida == "09.09"
+    assert (enviada.cantidad, enviada.precio) == (5.0, 115.0)
+    assert enviada.producto == "MA9999"
+
+
+def test_f065_cr1_sin_descripcion_ni_blanca_no_se_admite():
+    """Lo que dejaba sv4 antes de la pasada 2: el albarán entero, ``no_admitido``."""
+    resultado = validar_y_construir(datos(sin_vincular(
+        77, merge_line_id=None, line_index=None, descripcion_merge=None,
+        descripcion_linea=None, derived_contrato_line_id=602,
+    )), CONFIG, HOY)
+
+    assert resultado == [Motivo("falta_descripcion", "", "77")]
+
+
+def test_f065_h1_la_descripcion_editada_manda_sobre_el_concepto_leido():
+    enviada = _linea_unica(sin_vincular(
+        12, descripcion_linea="PORTES URGENTES", descripcion_merge="PORTES",
+    ))
+
+    assert enviada.descripcion == "PORTES URGENTES"
+
+
+def test_f065_h1_sin_descripcion_editada_va_el_concepto_leido():
+    enviada = _linea_unica(sin_vincular(12, descripcion_linea=None, descripcion_merge="PORTES"))
+
+    assert enviada.descripcion == "PORTES"
