@@ -29,7 +29,7 @@ consultas de comprobación son de solo lectura.
 
 ## Fase 2 · origen y partida (sv4)
 
-- [ ] T15: tests RED de la fase 2: «Contrato» (R24), regla de origen sin confirm (R25, R26), combo con partidas de la obra, obra sin partidas y Sigrid caído (R27), «Origen ✎» única vía con partida y precio de la línea (R28)  |  Verificación: `pytest tests/test_f065_f2_origen.py` falla como se espera
+- [x] T15: tests RED de la fase 2: «Contrato» (R24), regla de origen sin confirm (R25, R26), combo con partidas de la obra, obra sin partidas y Sigrid caído (R27), «Origen ✎» única vía con partida y precio de la línea (R28)  |  Verificación: `pytest tests/test_f065_f2_origen.py` falla como se espera
 - [ ] T16: dominio y repositorio — `cambia_origen`; `update_line_conciliacion` decide con los campos presentes y el precio aplicado; `set_line_conciliacion(contract_line)` copia partida y precio (R25, R26, R28)  |  Verificación: `pytest tests/test_f065_f2_origen.py -k "not js"` y `pytest tests/test_f051_almacen_front.py`
 - [ ] T17: front — combo de partidas de la obra con teclado, sin `confirm` de NUEVA, concepto como texto, «Contrato» en la plantilla (R24, R25, R27, R28)  |  Verificación: `pytest tests/test_f065_f2_origen.py -k js`
 - [ ] T18: cobertura y campaña de mutación de la fase 2  |  Verificación: como T12 (`progress/mutacion_F-065_fase2.md`)
