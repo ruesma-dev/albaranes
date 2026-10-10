@@ -448,3 +448,73 @@ def test_f065_o5_aprobar_un_aprobado_es_un_no_op_real():
 
     assert foto(motor) == antes
     assert documento(motor)["approved_by"] == "ana"
+
+
+# --- R28 · bordes de «Origen ✎» ---------------------------------------- #
+def test_f065_r28_nueva_con_otro_precio_recalcula_el_importe():
+    motor = construir()
+
+    assert repositorio(motor).set_line_conciliacion(
+        document_id=DOC, valuation_line_id=11, mode="nueva", precio_unitario=100.0,
+        descripcion="PUERTA A MEDIDA")
+
+    f = fila(motor, 11)
+    derivada = _derivada(motor, f["derived_contrato_line_id"])
+    assert (derivada["precio_unitario"], derivada["descripcion_linea"]) == (
+        100.0, "PUERTA A MEDIDA")
+    assert f["importe_calculado"] == pytest.approx(800.0)
+    assert f["importe_source"] == "calculated"
+    assert total(motor) == pytest.approx(800 + 1150 + 50)
+
+
+def test_f065_r28_nueva_desde_una_nueva_toma_los_valores_de_su_derivada():
+    """Fila 13 (Nueva, derivada 601 «PORTES», UD, 50 €) sin override propio."""
+    motor = construir()
+    ejecutar(motor, "UPDATE albaran_line_valuations SET unidad_contrato = NULL, "
+             "precio_unitario_final = NULL WHERE id = 13")
+
+    repositorio(motor).set_line_conciliacion(document_id=DOC, valuation_line_id=13, mode="nueva")
+
+    f = fila(motor, 13)
+    assert f["derived_contrato_line_id"] not in (None, 601)
+    derivada = _derivada(motor, f["derived_contrato_line_id"])
+    assert derivada == {"descripcion_linea": "PORTES", "unidad_medida": "UD",
+                        "precio_unitario": 50.0, "codigo_partida": "03.01",
+                        "origen": "manual_override"}
+    assert f["importe_calculado"] == pytest.approx(50.0)
+    assert f["importe_source"] == "declared_albaran"
+
+
+def test_f065_r28_linea_de_contrato_con_precio_propio():
+    motor = construir()
+
+    repositorio(motor).set_line_conciliacion(
+        document_id=DOC, valuation_line_id=12, mode="contract_line",
+        matched_contrato_line_id=503, precio_unitario=110.0)
+
+    f = fila(motor, 12)
+    assert (f["matched_contrato_line_id"], f["precio_unitario_final"]) == (503, 110.0)
+    assert f["importe_calculado"] == pytest.approx(1100.0)
+
+
+@pytest.mark.parametrize("mode, linea_id", [("contract_line", None), ("contract_line", 999),
+                                            ("otro", None)])
+def test_f065_r28_reapuntar_mal_no_cambia_nada(mode, linea_id):
+    motor = construir()
+    antes = foto(motor)
+
+    assert repositorio(motor).set_line_conciliacion(
+        document_id=DOC, valuation_line_id=11, mode=mode,
+        matched_contrato_line_id=linea_id) is False
+
+    assert foto(motor) == antes
+
+
+def test_f065_r28_reapuntar_una_fila_ajena_no_cambia_nada():
+    motor = construir()
+    antes = foto(motor)
+
+    assert repositorio(motor).set_line_conciliacion(
+        document_id=DOC, valuation_line_id=21, mode="nueva") is False
+
+    assert foto(motor) == antes
