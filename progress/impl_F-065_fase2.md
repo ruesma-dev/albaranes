@@ -9,8 +9,8 @@ O7).
 ## 1. Commits
 
 `14d8b99` T13/T14 marcadas (MANUAL de la fase 1 OK, review aprobada, desplegada) · `02d3524` T15 RED · `7cb686c` T16
-dominio y repositorio · `ccf5643` T17 front, docs y `current.md` · `<<SHA_T18>>` T18 tests de bordes · <<SHA_INF>>
-mutación e informe.
+dominio y repositorio · `ccf5643` T17 front, docs y `current.md` · `488b432` T18 tests de bordes · `db31771` T18
+mutación, inventario e informe · el commit de este informe.
 
 ## 2. Qué cambió
 
@@ -92,16 +92,16 @@ que ya hacía bien (partida/precio/unidad ⇒ Nueva, R26, almacén aprueba, tota
 
 - Criterios de las tareas: T16 `pytest tests/test_f065_f2_origen.py -k "not js"` (backend) y
   `pytest tests/test_f051_almacen_front.py` en verde; T17 los `js`/plantilla en verde (node v24).
-- Suite completa de sv4 (sola): **1059 passed** (<<TIEMPO_SV4>>).
-- **`bash harness/init.sh`** (tal cual, worktree): <<INIT>>
+- Suite completa de sv4 (sola): **1061 passed** (91,8 s con coverage dentro de `init.sh`).
+- **`bash harness/init.sh`** (tal cual, worktree): sobre `db31771`: raíz `1083 passed`; sv4 `1061 passed`; el resto en verde (caché: sin cambios); **`PUERTA COBERTURA: 100.0% de 33 líneas cambiadas cubiertas (33/33, umbral 80%, nivel critico)`**; rutas sensibles N/A; tamaño dentro de topes; **`ENTORNO LISTO. Puedes trabajar.`** Avisos previos (ruff, F-053 `blocked`, `[ADAPTAR]`). Entorno: la misma *junction* de sv4 de la fase 1. Sin KO de entorno.
 
 ## 6. Cobertura y mutación (T18)
 
-- `PUERTA COBERTURA`: <<COB>>. La primera medida (93,9 %, 31/33) dejaba sin cubrir la rama de «Nueva con otro precio»;
+- `PUERTA COBERTURA`: `100.0% de 33 líneas cambiadas cubiertas (33/33, umbral 80%, nivel critico)`. La primera medida (93,9 %, 31/33) dejaba sin cubrir la rama de «Nueva con otro precio»;
   la cubren los tests de bordes de T18.
 - **Mutación** `python -m harness.mutacion --feature F-065 --salida progress/mutacion_F-065_fase2.md` (alcance:
   `8c180b0..rama`, 2 ficheros, 147 líneas de sv4; el JS y la plantilla no los muta la herramienta: los vigilan los tests
-  con node y de render). <<MUT>>
+  con node y de render). **`progress/mutacion_F-065_fase2.md`: SHA `488b432`, 29 mutantes, 29 muertos, 0 supervivientes, 0 timeouts, 0 sin veredicto, 695,4 s**, 4 workers, media 24,0 s × 4 = 96 s por mutante frente a una línea base de sv4 de 106,5–107,4 s (coherente, RM2). Una primera pasada sobre el mismo SHA dio lo mismo (29/29, 758,7 s; archivada fuera de git). Después de `488b432` solo entran el informe, el inventario y `tasks.md`.
 - Sin supervivientes ni equivalentes: RM5 no aplica.
 
 ## 7. MANUAL T19 (humano, pipeline LOCAL; solo lecturas en BBDD)
@@ -137,7 +137,7 @@ aprobado.
 
 | Evidencia | Valor real |
 |---|---|
-| Tests ejecutados | sv4 **1059 passed** (49 nuevos en `test_f065_f2_origen.py`); <<EVID_INIT>> |
-| Cobertura de las líneas cambiadas | <<COB>> |
-| Mutación | <<MUT_EVID>> |
-| Tiempo de la suite | <<TIEMPOS>> |
+| Tests ejecutados | sv4 **1059 passed** (49 nuevos en `test_f065_f2_origen.py`); raíz 1083 passed; sv6, sv9, comun, sv1–sv3, sv5 sin cambios (caché verde) |
+| Cobertura de las líneas cambiadas | `100.0% de 33 líneas cambiadas cubiertas (33/33, umbral 80%, nivel critico)` |
+| Mutación | `progress/mutacion_F-065_fase2.md`: **29 generados, 29 muertos, 0 supervivientes**, 0 timeouts, campaña completa, **4 workers**, 695,4 s, media 24,0 s/mutante, base sv4 ≈ 107 s, SHA `488b432` |
+| Tiempo de la suite | sv4 91,8 s con coverage (≈ 60 s sin); raíz 168,7 s |

@@ -1,10 +1,12 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-065 · `in_progress` (2026-10-11): fase 1 HECHA y DESPLEGADA; FASE 2 (T15–T18) en curso** en la rama
+**F-065 · `in_progress` (2026-10-11): fase 1 HECHA y DESPLEGADA; FASE 2 (T15–T18) IMPLEMENTADA** en la rama
 `feature/F-065-lineas-editadas-y-reparto` (worktree `../albaranes-F-065`, con `dev` fusionado). Fase 1: review
 APROBADA (`progress/review_F-065_fase1.md`), en `dev` (`8c180b0`), desplegada el 2026-10-11 (sv6 r20261011-0025, sv4
-r20261011-0043), T13 hecha por el humano (OK). Fase 2: informe al terminar en `progress/impl_F-065_fase2.md`, con las
+r20261011-0043), T13 hecha por el humano (OK). Fase 2: informe **`progress/impl_F-065_fase2.md`** (`init.sh` verde,
+cobertura 33/33, mutación 29/29; decisiones E1–E5 a confirmar). Siguiente: review de la fase 2 (T20); MANUAL **T19**
+del humano con los comandos de §7 del informe; después, fusionar, `init.sh` en el árbol principal y desplegar solo sv4. Con las
 decisiones del humano del 2026-10-11 (O1 «Solo volver a buscar» confirma; el almacén nunca impide aprobar y las filas
 sin línea de contrato ni derivada sí; O3, O5, O7).
 - Entorno del worktree: *junction* `services/albaranes-front/.venv` → venv de sv4 del árbol principal (ignorada por
