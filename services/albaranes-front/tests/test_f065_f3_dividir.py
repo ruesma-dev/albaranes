@@ -1128,16 +1128,15 @@ def test_f065_cr1p2_los_tres_cuerpos_rechazan_no_finitos(raro):
     for modelo, cuerpo in (
         # CR1b (pasada 3): «Origen ✎» y casar una blanca.
         (ConciliacionOverridePayload,
-         '{{"mode": "nueva", "precio_unitario": {}}}'.format(raro)),
+         f'{{"mode": "nueva", "precio_unitario": {raro}}}'),
         # El PUT las ignora (R1), pero tampoco las admite.
         (MergeDocumentUpdatePayload,
-         '{{"valuation_line_updates": [{{"valuation_line_id": 1, '
-         '"importe_calculado": {}}}]}}'.format(raro)),
-        (DivisionBody, '{{"partes": [{{"cantidad": {}}}, {{"cantidad": 1}}]}}'.format(raro)),
-        (ConciliacionEditBody, '{{"cantidad": {}}}'.format(raro)),
-        (ConciliacionEditBody, '{{"precio_unitario": {}}}'.format(raro)),
-        (ConciliacionEditBody, '{{"descuento": {}}}'.format(raro)),
-        (TraerLineasBody, '{{"lineas": [{{"contrato_line_id": 1, "cantidad": {}}}]}}'.format(raro)),
+         f'{{"valuation_line_updates": [{{"valuation_line_id": 1, "importe_calculado": {raro}}}]}}'),
+        (DivisionBody, f'{{"partes": [{{"cantidad": {raro}}}, {{"cantidad": 1}}]}}'),
+        (ConciliacionEditBody, f'{{"cantidad": {raro}}}'),
+        (ConciliacionEditBody, f'{{"precio_unitario": {raro}}}'),
+        (ConciliacionEditBody, f'{{"descuento": {raro}}}'),
+        (TraerLineasBody, f'{{"lineas": [{{"contrato_line_id": 1, "cantidad": {raro}}}]}}'),
     ):
         with pytest.raises(ValidationError):
             modelo.model_validate_json(cuerpo)

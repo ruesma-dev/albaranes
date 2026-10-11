@@ -47,9 +47,7 @@ repositorio, servicio y ruta · `860b6c5` T24 detalle y front · `966b16b` T25 s
   admite `opciones.alElegirAlmacen`: en la ventana «Almacén» solo vacía la partida), «Falta: X» / «Sobra: X» /
   «Reparto completo.», «Aceptar» habilitado solo si vale, Enter acepta, error del servidor dentro de la ventana.
   **F7 quitado** (y su `duplicateRow`/`camposBody`); F8 se queda. Etiqueta «Dividir» en el historial de «Deshacer».
-- **sv9** (sin código): `tests/test_f065_partes.py` + 4 tests R36 con el validador real.
-- **Docs**: `docs/ARCHITECTURE.md` regla 20 (viñeta «Dividir»); `azure-apps/albaranes.md` §4 (`line_kind` `reparto`
-  y lo que escribe sv4 al dividir) y su pie.
+- **sv9** (sin código): 4 tests R36 con el validador real. **Docs**: `ARCHITECTURE.md` regla 20; `azure-apps` §4.
 
 ## 3. Decisiones (a confirmar en la review)
 
@@ -71,9 +69,8 @@ repositorio, servicio y ruta · `860b6c5` T24 detalle y front · `966b16b` T25 s
   N» ni aviso, que no hay con qué comparar). Una parte se puede volver a dividir: sus partes cuelgan de la misma blanca.
 - **D6 · El aviso de familia compara en la unidad del albarán** (`cantidad_albaran`, o la convertida si no hay) contra
   la cantidad de la blanca, con la tolerancia de R30: con conversión (t → kg) la Q de la ficha no es la de la blanca.
-- **D7 · `partida_action`** de una parte: `almacen_elegido` si va a almacén; si no, la de la original (es rastro: nadie
-  la lee para decidir). Las partes nacen sin `review_reasons_json` ni `importe_albaran_declarado` (el declarado era de
-  la línea entera).
+- **D7 · `partida_action`** de una parte: `almacen_elegido` si va a almacén; si no, la de la original (rastro). Sin
+  `review_reasons_json` ni `importe_albaran_declarado` (el declarado era de la línea entera).
 
 ## 4. Fase RED (traza real)
 
@@ -106,16 +103,14 @@ servicio que NO cambia (R36 «sin código»), su valor es fijar lo que sv9 hace 
 
 ## 5. Verificación (resultado real)
 
-- Criterios de las tareas: T22 `-k dominio`, T23 `-k "repositorio or ruta or deshacer"`, T24 `-k "pintado or js"`
-  (node v24) y T25 `pytest services/albaranes-alta-sigrid/tests/test_f065_partes.py -k r36` (4 passed), en verde.
+- Criterios de T22–T25 (`-k dominio`, `repositorio or ruta or deshacer`, `pintado or js`, sv9 `-k r36`), en verde.
 - `tests/test_f065_f3_dividir.py`: **92 passed**. Suite de sv4 (sola): **1196 passed** (72,8 s). Suite de sv9
   (sola): **534 passed** (25,0 s).
 - **`bash harness/init.sh`** (tal cual, worktree, salida a un log) sobre el árbol de este informe: **exit 0**; raíz `1083 passed`; sv4 `1196 passed`; sv9 `534 passed`; sv1–sv3, sv5, sv6 y comun en verde (caché: sin cambios); **`PUERTA COBERTURA: 100.0% de 147 líneas cambiadas cubiertas (147/147, umbral 80%, nivel critico)`**; rutas sensibles N/A; `PUERTA TAMAÑO` dentro de topes; **`ENTORNO LISTO. Puedes trabajar.`** Avisos previos (ruff 1250, F-053 `blocked`, infra sin tests, `[ADAPTAR]` de otras specs). T28 (el `init.sh` de cierre) se deja sin marcar: va después de T27.
 
 ## 6. Cobertura y mutación (T26)
 
-- `PUERTA COBERTURA` (sobre `966b16b`, antes de T26): `100.0% de 146 líneas cambiadas cubiertas (146/146, umbral
-  80%, nivel critico)`; la de `init.sh` final, en §5.
+- `PUERTA COBERTURA` antes de T26 (`966b16b`): 146/146 (100 %); la de `init.sh`, en §5.
 - **Mutación** `python -m harness.mutacion --feature F-065 --salida progress/mutacion_F-065_fase3.md` (alcance
   `7b46bd8..rama`: `review_models.py` 146, `review_repository.py` 350, `review_service.py` 42, `app.py` 31 = 569
   líneas de sv4; el JS y la plantilla no los muta la herramienta: los vigilan los tests con node y de render).
@@ -135,18 +130,15 @@ servicio que NO cambia (R36 «sin código»), su valor es fijar lo que sv9 hace 
     `valuation_line_id or 0`→`or 1` del orden de las hijas ⇒ fuera el `sorted` (el cargador ya ordena así); `casada
     … or descripcion`→`and` en la derivada de una Nueva ⇒ la derivada lleva `descripcion` (la misma que la fila, más
     coherente). El umbral pasó de `round(…, 6)` a `0,005 − 1e-9` (ver arriba; JS igual).
-- RM5: sin equivalentes en la campaña final, no aplica.
 
 ## 7. MANUAL T27
 
-Comandos en `progress/current.md` (bloque F-065): F6 sobre una fila Contrato de 18 ⇒ 6 (su partida) / 7 (otra) / 5
-(almacén), «Guardar y aprobar», la `SELECT` de T27, desaprobar, «Deshacer» y repetir.
+Comandos y criterio en `progress/current.md` (bloque F-065).
 
 ## 8. Fuera de alcance y lo que falta
 
-- Fuera: X4, X12 (F-066), conservar lo manual al revalorar (F-058: revalorar descarta las partes, y lo avisa R22
-  porque `reparto` cuenta como fila manual); dividir las sintéticas de sv6; atajo Ctrl+D (P1 del explore; F6 es el de
-  la spec). sv9 sin código.
+- Fuera: X4, X12 (F-066), conservar lo manual al revalorar (F-058; R22 avisa: `reparto` es fila manual), dividir
+  las sintéticas de sv6, atajo Ctrl+D. sv9 sin código.
 - Falta: MANUAL T27 (humano), review de la fase 3, fusionar en `dev`, `init.sh` en el árbol principal y desplegar
   **solo sv4** (después del despliegue de la fase 2) y T28 (`init.sh` de cierre).
 
@@ -181,9 +173,7 @@ Commit `556afae` (código y tests) y el de este informe. sv4 solo; sin DDL; desp
 - **O3 (texto)**: la descripción de las partes es la que enseña la original: la fijada, la de su línea (contrato o
   derivada) y, solo si no hay, el concepto de la blanca (antes iba el concepto antes que la de su línea). La derivada de
   una parte Nueva lleva la misma. `docs/ARCHITECTURE.md` regla 20 al día (también 0,00 € y no finitos).
-- **O2 (producto de una parte Nueva)**: anotado, sin cambio. Sin blanca no hay `tipo_familia`, así que en un documento
-  mixto la parte Nueva toma el producto por defecto del documento salvo que se elija (se copia `producto_sigrid`); es
-  el comportamiento de F-053 para cualquier Nueva sin blanca.
+- **O2 (producto de una parte Nueva)**: anotado, sin cambio (F-053: cualquier Nueva sin blanca toma el del documento).
 
 **RED** (los tests nuevos contra el código de `3516c40`, `pytest tests/test_f065_f3_dividir.py --tb=line`, ficheros
 restaurados después) ⇒ **`17 failed, 97 passed`**:
@@ -198,7 +188,6 @@ restaurados después) ⇒ **`17 failed, 97 passed`**:
 :1226  Failed: DID NOT RAISE RepartoInvalido   ×3  (partes a 0,00 €)
 :270   AssertionError: assert 'PUERTA EI2-90' == 'PUERTA CORTAFUEGOS EI2-90'   (O3)
 ```
-Los de O1 y los de O3 con descripción fijada o sin la de su línea pasaban ya (guardas de lo que estaba bien).
 
 **Verificación**: `test_f065_f3_dividir.py` **114 passed**; suite de sv4 sola **1218 passed** (44,8 s);
 `bash harness/init.sh`: **exit 0**; raíz `1083 passed`; sv4 `1218 passed`; el resto en verde (caché); **`PUERTA COBERTURA: 100.0% de 171 líneas cambiadas cubiertas (171/171, umbral 80%, nivel critico)`**; rutas sensibles N/A; tamaño dentro de topes; **`ENTORNO LISTO. Puedes trabajar.`** (ruff 1254 avisos de deuda previa; los 12 que añadían los tests nuevos, corregidos con `ruff --fix` en el mismo commit).
@@ -208,3 +197,24 @@ progress/mutacion_F-065_fase3_pasada2.md` (alcance `3516c40..556afae`: 74 línea
 `review_repository.py` y `app.py`): **28 mutantes, 28 muertos, 0 supervivientes, 0 timeouts, 746,8 s**, 4 workers
 (líneas base 91,0–94,1 s; media 26,7 s × 4). Sin equivalentes (RM5: la única reescritura, el signo, queda demostrada
 arriba). La campaña completa de la fase (`mutacion_F-065_fase3.md`, 99/99 sobre `0606240`) sigue siendo la de T26.
+
+## Pasada 3 (review `c1578c2`: CR1b)
+
+Commit `e4ac55a` (código y tests) y el de este informe. `ConciliacionOverridePayload` («Origen ✎» y casar una blanca:
+`PATCH …/conciliacion` y `POST …/by-merge/{id}/conciliacion`) y `ValuationLineUpdate` (filas del PUT del documento,
+que las ignora, R1) con `model_config = ConfigDict(allow_inf_nan=False)`; el manejador de 422 de la pasada 2 ya los
+devuelve como texto. Tests ampliados: el de cuerpos (+2 modelos) y el de rutas (+3: `origen_nan`, `casar_blanca_inf`,
+`put_ignoradas_nan`, 422 `finite_number` sin llamar al servicio).
+**Auditoría de los cuerpos de escritura de sv4** (las 25 rutas `post/put/patch/delete` de `app.py`): con números y
+protegidos, `ParteDivision`, `ConciliacionEditBody`, `LineaATraer`, `ConciliacionOverridePayload` y
+`ValuationLineUpdate`; `MergeDocumentUpdatePayload.lines` (`MergeLinePayload`) se ignora en el PUT y es también el
+modelo de LECTURA de la BBDD (protegerlo rompería el detalle si una fila tuviera `NaN`): sin cambio, no escribe nada.
+Sin números: `ProductoSigridBody`, los `Form` (texto), `bloquear/desbloquear/almacen/standalone/undo/valuate/…`
+(sin cuerpo). `_parse_optional_float` es de los filtros del listado (GET, lectura).
+**RED** (tests nuevos contra `c1578c2`, `pytest … -k cr1p2 --tb=line`) ⇒ **`6 failed, 11 passed`**: `:1142 Failed:
+DID NOT RAISE ValidationError` ×3 (NaN, Infinity, -Infinity en `ConciliacionOverridePayload`), `:1219 assert 200 ==
+422` ×2 (Origen ✎ y casar una blanca aceptaban el `NaN`) y `AttributeError: 'bool' object has no attribute 'detail'`
+(el PUT con `NaN` llegaba al servicio).
+**Verificación**: `test_f065_f3_dividir.py` **117 passed**; sv4 sola **1221 passed** (56,3 s); `bash harness/init.sh`:
+**exit 0**, raíz `1083 passed`, sv4 `1221 passed`, **`PUERTA COBERTURA: 100.0% de 173 líneas cambiadas cubiertas (173/173)`**, `ENTORNO LISTO`. **Mutación de lo nuevo** (`--base c1578c2 --rama HEAD`, `progress/mutacion_F-065_fase3_pasada3.md`, sobre
+`e4ac55a`): **2 mutantes (`allow_inf_nan=False`→`True` en los dos modelos), 2 muertos, 0 supervivientes, 201,4 s**.

@@ -8,7 +8,8 @@ aprobada, en `dev` y desplegada (sv6 r20261011-0025, sv4 r20261011-0043). Fase 2
 humano y el despliegue de sv4 va después. Fase 3: informe **`progress/impl_F-065_fase3.md`** (`init.sh` verde,
 mutación 99/99; decisiones D1–D7 a confirmar, D1: una fila con «revisa la cantidad» no se divide). Review de la fase 3
 (`progress/review_F-065_fase3.md`, `3516c40`): CHANGES_REQUESTED por CR1 (números no finitos); **pasada 2 hecha**
-(CR1, O1, O3, O4; O2 anotada: §«Pasada 2» del informe; mutación de lo nuevo 28/28). Siguiente: re-review; MANUAL
+(CR1, O1, O3, O4; O2 anotada: §«Pasada 2» del informe; mutación de lo nuevo 28/28); **pasada 3 hecha** (CR1b,
+«Origen ✎» y el PUT también rechazan `NaN`: §«Pasada 3»). Siguiente: re-review; MANUAL
 **T27** (abajo); después, fusionar, `init.sh` en el árbol principal y desplegar **solo sv4**.
 - **MANUAL T27 (humano, pipeline LOCAL con sv4 de la rama; solo lecturas en BBDD)**, en PowerShell:
   ```powershell
