@@ -186,6 +186,27 @@ def test_f065_r30_dominio_reparto_valido_en_el_limite(cantidades):
                         partes=cantidades)) == len(cantidades)
 
 
+def test_f065_r30_dominio_la_tolerancia_es_estricta_sin_ruido():
+    """Difiere en «0,005 o más»: el umbral exacto ya no vale; una diezmilésima
+    de millonésima menos, sí."""
+    from domain.models.review_models import _UMBRAL_REPARTO, _fuera_de_tolerancia, repartir
+
+    assert _fuera_de_tolerancia(_UMBRAL_REPARTO, 0.0)
+    assert not _fuera_de_tolerancia(0.00499994, 0.0)
+    assert len(repartir(q=10.0, ca0=10.0, importe0=None, precio=1.0, descuento=None,
+                        partes=[4.0, 6.00499994])) == 2
+
+
+def test_f065_r33_dominio_la_ultima_tambien_en_centimos():
+    """Un importe con más de dos decimales: la última parte sale en céntimos."""
+    from domain.models.review_models import repartir
+
+    partes = repartir(q=2.0, ca0=2.0, importe0=10.006, precio=None, descuento=None,
+                      partes=[1.0, 1.0])
+
+    assert [p.importe for p in partes] == [5.0, 5.01]
+
+
 def test_f065_r30_dominio_los_mensajes_dicen_que_falla():
     from domain.models.review_models import RepartoInvalido, repartir
 
@@ -352,6 +373,8 @@ def test_f065_r32_repositorio_la_parte_1_con_otra_partida_pasa_a_nueva():
 
     original, parte = fila(motor, 12), fila(motor, hecha.partes[0])
     assert original["matched_contrato_line_id"] is None
+    # Con blanca y sin descripción fijada: sv9 manda el concepto leído (CR1/H1).
+    assert original["descripcion_linea"] is None
     assert hecha.derivadas == [original["derived_contrato_line_id"]]
     assert _derivada(motor, original["derived_contrato_line_id"])["codigo_partida"] == "01.03"
     assert (original["codigo_partida_final"], original["precio_unitario_agreement"]) == (
@@ -431,6 +454,48 @@ def test_f065_r31_repositorio_una_fila_sin_blanca_reparte_sin_padre():
     parte = fila(motor, p2)
     assert (parte["line_kind"], parte["parent_merge_line_id"], parte["descripcion_linea"]) == (
         "reparto", None, "PUERTA CORTAFUEGOS EI2-120")
+
+
+def test_f065_r31_repositorio_la_descripcion_de_su_linea_si_no_hay_otra():
+    motor = construir()
+    (vid,) = repositorio(motor).add_valuation_lines_from_contrato(
+        document_id=DOC, lineas=[(503, 5.0)])
+    ejecutar(motor, "UPDATE albaran_line_valuations SET descripcion_linea = NULL "
+             "WHERE id = :v", v=vid)
+
+    (p2,) = _dividir(motor, vid, (2, "01.03"), (3, "01.03")).partes
+
+    assert fila(motor, p2)["descripcion_linea"] == "PUERTA CORTAFUEGOS EI2-120"
+
+
+def test_f065_r31_repositorio_sin_descripcion_ninguna_queda_nula():
+    motor = construir()
+    vid = repositorio(motor).add_standalone_valuation_line(document_id=DOC)
+    ejecutar(motor, "UPDATE albaran_line_valuations SET cantidad_albaran = 2, "
+             "cantidad_convertida = 2, importe_calculado = 10 WHERE id = :v", v=vid)
+
+    (p2,) = _dividir(motor, vid, (1, None), (1, None)).partes
+
+    assert fila(motor, p2)["descripcion_linea"] is None
+
+
+@pytest.mark.parametrize(("precio", "unidad", "esperado"), [
+    (120.0, "M2", (120.0, "M2", [480.0, 720.0])),
+    (None, None, (115.0, "UD", [460.0, 690.0])),
+], ids=["los_de_la_fila", "los_de_su_linea"])
+def test_f065_r31_repositorio_precio_y_unidad_de_la_fila_o_de_su_linea(precio, unidad, esperado):
+    """La derivada de la parte que pasa a Nueva y el importe sin ``importe0``
+    salen del precio y la unidad de la fila; si no los tiene, de su línea."""
+    motor = construir()
+    ejecutar(motor, "UPDATE albaran_line_valuations SET precio_unitario_final = :p, "
+             "unidad_contrato = :u, importe_calculado = NULL WHERE id = 12",
+             p=precio, u=unidad)
+
+    hecha = _dividir(motor, 12, (4, "01.02"), (6, "01.03"))
+
+    derivada = _derivada(motor, hecha.derivadas[0])
+    importes = [fila(motor, vid)["importe_calculado"] for vid in [12, *hecha.partes]]
+    assert (derivada["precio_unitario"], derivada["unidad_medida"], importes) == esperado
 
 
 def _sintetica(motor):
@@ -735,7 +800,7 @@ def test_f065_r30_ruta_422_del_cuerpo_sin_llamar_al_servicio(monkeypatch, cuerpo
 # =================================================================== #
 # T24 · el detalle: partes bajo su original y aviso de familia (R35)
 # =================================================================== #
-def _mostrar(cantidades_partes, *, cantidad_blanca=10.0, ca=None):
+def _mostrar(cantidades_partes, *, cantidad_blanca=10.0, ca=None, sin_ca=False):
     from domain.models.review_models import (
         LineValuationPayload,
         MergeLinePayload,
@@ -748,19 +813,22 @@ def _mostrar(cantidades_partes, *, cantidad_blanca=10.0, ca=None):
                                 cantidad=cantidad_blanca)]
     q1, *resto = cantidades_partes
     original = LineValuationPayload(valuation_line_id=12, merge_line_id=702,
-                                    cantidad_convertida=q1, cantidad_albaran=ca or q1)
+                                    cantidad_convertida=q1,
+                                    cantidad_albaran=None if sin_ca else ca or q1)
     otra = LineValuationPayload(valuation_line_id=11, merge_line_id=701,
                                 cantidad_convertida=8.0, cantidad_albaran=8.0)
     partes = [LineValuationPayload(valuation_line_id=40 + i, merge_line_id=None,
                                    line_kind="reparto", parent_merge_line_id=702,
-                                   cantidad_convertida=q, cantidad_albaran=ca or q)
+                                   cantidad_convertida=q,
+                                   cantidad_albaran=None if sin_ca else ca or q)
               for i, q in enumerate(resto)]
     portes = LineValuationPayload(valuation_line_id=14, merge_line_id=None,
                                   line_kind="synthetic_modifier", parent_merge_line_id=702,
                                   cantidad_convertida=1.0)
     valoracion = ValuationPayload(
         valuation_id="v", status="ok", lines_by_merge_line_id={701: otra, 702: original},
-        synthetic_lines=[*reversed(partes), portes])
+        # El orden del cargador: las de sv6 al final, cada grupo por id.
+        synthetic_lines=[*partes, portes])
     return AlbaranReviewRepository._build_display_lines(merge_lines=blancas,
                                                        valuation=valoracion)
 
@@ -802,6 +870,25 @@ def test_f065_r35_pintado_menos_de_media_milesima_cuadra():
     lineas = _mostrar([4.0, 5.996])
 
     assert [d.aviso_reparto for d in lineas if d.aviso_reparto] == []
+
+
+def test_f065_r35_pintado_sin_cantidad_del_albaran_suma_la_convertida():
+    lineas = _mostrar([4.0, 3.0, 2.0], sin_ca=True)
+
+    assert [d.aviso_reparto for d in lineas if d.aviso_reparto] == [
+        "Las partes de la línea 2 suman 9; el albarán dice 10"]
+
+
+def test_f065_r35_pintado_la_blanca_sin_valorar_no_esta_valorada():
+    from domain.models.review_models import MergeLinePayload, ValuationPayload
+    from infrastructure.database.review_repository import AlbaranReviewRepository
+
+    (sola,) = AlbaranReviewRepository._build_display_lines(
+        merge_lines=[MergeLinePayload(id=709, line_index=1, concepto="X", cantidad=1.0)],
+        valuation=ValuationPayload(valuation_id="v", status="ok"))
+    valorada = _mostrar([7.0])[1]
+
+    assert (sola.is_valued, sola.parte, valorada.is_valued) == (False, None, True)
 
 
 def test_f065_r35_pintado_sin_partes_no_hay_parte_ni_aviso():
@@ -924,6 +1011,7 @@ def test_f065_r29_js_aceptar_solo_si_el_reparto_vale(tmp_path):
             repartoValido(10, ["4", "6,004"]),
             repartoValido(10, ["4", "6,005"]),
             repartoValido(10, ["4", "5,995"]),
+            repartoValido(10, ["4", "6,00499994"]),
             repartoValido(-10, ["-4", "-6"]),
             repartoValido(0, ["1", "-1"]),
             repartoValido(null, ["1", "1"]),
@@ -931,7 +1019,7 @@ def test_f065_r29_js_aceptar_solo_si_el_reparto_vale(tmp_path):
     """)
 
     assert casos == [True, False, False, False, False, False, True, False, True, False,
-                     False, True, False, False]
+                     False, True, True, False, False]
 
 
 @con_node

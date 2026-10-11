@@ -3009,10 +3009,7 @@ class AlbaranReviewRepository:
                             else casada.get("codigo_contrato")
                         ),
                         "prod": None if es_contrato else casada.get("codigo_producto"),
-                        "desc": (
-                            descripcion if es_contrato
-                            else casada.get("descripcion_linea") or descripcion
-                        ),
+                        "desc": descripcion,
                         "uni": unidad,
                         "pu": precio,
                         "part": partida,
@@ -4665,16 +4662,11 @@ class AlbaranReviewRepository:
             )
             display.append(base_dl)
 
-            # Sintéticas que cuelgan de esta base: (F-065 R35) primero las
-            # partes de un reparto y las manuales, después las de sv6, cada
-            # grupo por id (el orden de ``orden_filas_ficha``, el de aprobar).
-            hijas = sorted(
-                synth_by_parent.get(line.id, []),
-                key=lambda syn: (
-                    syn.line_kind == "synthetic_modifier",
-                    syn.valuation_line_id or 0,
-                ),
-            )
+            # Sintéticas que cuelgan de esta base, en el orden del cargador
+            # (las de sv6 al final, cada grupo por id: el de
+            # ``orden_filas_ficha``); (F-065 R35) las partes de un reparto van
+            # así detrás de su original.
+            hijas = synth_by_parent.get(line.id, [])
             hijas_dl = [
                 AlbaranReviewRepository._synthetic_to_display(
                     syn=syn,

@@ -1174,7 +1174,8 @@
             if (n === null || n === 0 || (n > 0) !== (q > 0)) { return false; }
             suma += n;
         }
-        return Math.round(Math.abs(suma - q) * 1e6) / 1e6 < 0.005;
+        // «0,005 o más» no vale (R30), sin el ruido de la coma flotante.
+        return Math.abs(suma - q) < 0.005 - 1e-9;
     }
 
     function cuerpoDivision(valores, partidas) {

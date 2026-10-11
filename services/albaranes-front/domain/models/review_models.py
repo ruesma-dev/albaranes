@@ -754,6 +754,9 @@ class TraerLineasBody(BaseModel):
 # ------------------------------------------------------------------ #
 #: (R30) La suma de las partes puede diferir de Q en menos de media milésima.
 TOLERANCIA_REPARTO = 0.005
+#: Lo que cuenta como «0,005 o más»: la tolerancia menos el ruido de coma
+#: flotante (``4 + 6,005 − 10`` es 0,004999999999999005 y difiere en 0,005).
+_UMBRAL_REPARTO = TOLERANCIA_REPARTO - 1e-9
 #: (R29) Entre 2 y 20 partes.
 MIN_PARTES, MAX_PARTES = 2, 20
 
@@ -810,7 +813,7 @@ def _cantidad_es(valor: float) -> str:
 
 
 def _fuera_de_tolerancia(a: float, b: float) -> bool:
-    return round(abs(a - b), 6) >= TOLERANCIA_REPARTO
+    return abs(a - b) >= _UMBRAL_REPARTO
 
 
 def repartir(
@@ -844,7 +847,7 @@ def repartir(
     for numero, cantidad in enumerate(partes, start=1):
         if cantidad is None or cantidad == 0:
             raise RepartoInvalido(f"La parte {numero} no tiene cantidad (o es 0).")
-        if (cantidad > 0) != (q > 0):
+        if math.copysign(1.0, cantidad) != math.copysign(1.0, q):
             raise RepartoInvalido(
                 f"La parte {numero} tiene otro signo que la línea ({_cantidad_es(q)})."
             )
