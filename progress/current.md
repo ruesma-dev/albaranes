@@ -1,15 +1,34 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-065 · `in_progress` (2026-10-11): fase 1 HECHA y DESPLEGADA; FASE 2 (T15–T18) IMPLEMENTADA** en la rama
-`feature/F-065-lineas-editadas-y-reparto` (worktree `../albaranes-F-065`, con `dev` fusionado). Fase 1: review
-APROBADA (`progress/review_F-065_fase1.md`), en `dev` (`8c180b0`), desplegada el 2026-10-11 (sv6 r20261011-0025, sv4
-r20261011-0043), T13 hecha por el humano (OK). Fase 2: informe **`progress/impl_F-065_fase2.md`** (`init.sh` verde,
-cobertura 33/33, mutación 29/29; decisiones E1–E5 a confirmar). Review de la fase 2 (`progress/review_F-065_fase2.md`): CHANGES_REQUESTED; **pasada 2
-hecha** (CR1, CR2, H1, H2, H4: §«Pasada 2» del informe). Siguiente: re-review (T20); MANUAL **T19** (abajo); después,
-fusionar, `init.sh` en el árbol principal y desplegar **solo sv4**. Con las decisiones del humano del 2026-10-11 (O1
-«Solo volver a buscar» confirma; el almacén nunca impide aprobar y las filas sin línea de contrato ni derivada sí; O3,
-O5, O7).
+**F-065 · `in_progress` (2026-10-11): fases 1 y 2 HECHAS; FASE 3 (T21–T26, dividir) IMPLEMENTADA** en la rama
+`feature/F-065-lineas-editadas-y-reparto` (worktree `../albaranes-F-065`, con `dev` fusionado en `7b46bd8`). Fase 1:
+aprobada, en `dev` y desplegada (sv6 r20261011-0025, sv4 r20261011-0043). Fase 2: review APROBADA (pasada 3,
+`progress/review_F-065_fase2.md`, `c836eb4`), en `dev` (`7b46bd8`); su MANUAL **T19** (abajo) lo está haciendo el
+humano y el despliegue de sv4 va después. Fase 3: informe **`progress/impl_F-065_fase3.md`** (`init.sh` verde,
+mutación 99/99; decisiones D1–D7 a confirmar, D1: una fila con «revisa la cantidad» no se divide). Siguiente: review
+de la fase 3; MANUAL **T27** (abajo); después, fusionar, `init.sh` en el árbol principal y desplegar **solo sv4**.
+- **MANUAL T27 (humano, pipeline LOCAL con sv4 de la rama; solo lecturas en BBDD)**, en PowerShell:
+  ```powershell
+  cd C:\Users\pgris\PycharmProjects\albaranes
+  .\infra\local\arrancar_local.ps1
+  # http://localhost:8004, un albarán PENDIENTE con una fila Contrato de 18 (o la Q que tenga) y obra con partidas:
+  #  1) Foco en una celda de la fila y F6 (o «Dividir»): «Número de líneas» 3; 6 con SU partida, 7 con OTRA partida
+  #     del combo y 5 con «Almacén (sin partida)». «Falta» baja hasta «Reparto completo.» y solo entonces se habilita
+  #     «Aceptar» (con 6 + 7 + 4 no). Enter o «Aceptar».
+  #  2) La ficha pinta «Parte 1 de 3», «Parte 2 de 3», «Parte 3 de 3» bajo la original: la 2 «Nueva», la 3 «Contrato»
+  #     en almacén; el total del albarán no cambia; sin aviso de familia. F7 ya no hace nada.
+  #  3) «Guardar y aprobar».
+  $doc = '<ID del documento>'
+  psql -h localhost -U <usuario_local> -d albaranes -c "SELECT lv.id, lv.line_kind, lv.parent_merge_line_id, lv.matched_contrato_line_id, lv.derived_contrato_line_id, lv.cantidad_convertida, lv.importe_calculado, lv.codigo_partida_final FROM albaran_line_valuations lv JOIN albaran_valuations v ON v.id = lv.valuation_id WHERE v.document_id = '$doc' ORDER BY lv.id;"
+  #  4) «Desaprobar para editar»; «Deshacer» hasta la entrada «Dividir en 3 · …» (el panel del widget dice cuál va
+  #     primero) y repetir la SELECT.
+  #  5) (Opcional) Dividir otra vez, cambiar a mano la cantidad de una parte y «Guardar»: sale «Las partes de la línea
+  #     N suman X; el albarán dice Y», que no impide aprobar.
+  ```
+  Criterio: tras 3), la original con 6, su `matched` y su partida; dos filas `reparto` con `parent_merge_line_id` = la
+  blanca de la original: la de 7 con `matched` nulo, `derived` nuevo y la otra partida; la de 5 con el mismo `matched`
+  y partida nula; los tres importes suman el de antes. Tras 4), solo la original, con 18 y su importe.
 - **MANUAL T19 (humano, pipeline LOCAL; solo lecturas en BBDD)**, en PowerShell:
   ```powershell
   cd C:\Users\pgris\PycharmProjects\albaranes
