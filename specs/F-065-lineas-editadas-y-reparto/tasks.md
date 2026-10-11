@@ -34,7 +34,7 @@ consultas de comprobación son de solo lectura.
 - [x] T17: front — combo de partidas de la obra con teclado, sin `confirm` de NUEVA, concepto como texto, «Contrato» en la plantilla (R24, R25, R27, R28)  |  Verificación: `pytest tests/test_f065_f2_origen.py -k js`
 - [x] T18: cobertura y campaña de mutación de la fase 2  |  Verificación: como T12 (`progress/mutacion_F-065_fase2.md`)
 - [ ] T19: MANUAL fase 2 (humano, local): en una fila Contrato elegir otra partida de la obra (pasa a Nueva sin aviso), «Almacén» (sigue Contrato) y, en una obra sin partidas, ver solo «Almacén»; `SELECT lv.matched_contrato_line_id, lv.derived_contrato_line_id, lv.codigo_partida_final FROM albaran_line_valuations lv WHERE lv.id = <VID>;`  |  Verificación: MANUAL (humano): derivada `manual_override` con la partida elegida; en almacén, la misma línea de contrato
-- [ ] T20: (humano) review de la fase 2  |  Verificación: `progress/review_F-065_fase2.md` APROBADO
+- [x] T20: (humano) review de la fase 2  |  Verificación: `progress/review_F-065_fase2.md` APROBADO · APROBADA (pasada 3, `c836eb4`); fusionada en `dev` (`7b46bd8`) con `init.sh` verde
 
 ## Fase 3 · dividir (sv4 + test de sv9)
 
