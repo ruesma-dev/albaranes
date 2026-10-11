@@ -456,11 +456,15 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       alta bloqueante, aprobado o fila guardada, 422 sin cambios si es
       sintética, sin línea de contrato ni derivada, con «revisa la cantidad»
       (se resuelve antes: la Q no es de fiar), Q nula o 0, una parte nula, 0 o
-      de otro signo, o la suma difiere de Q en 0,005 o más. Modelo M1, **sin
+      de otro signo, la suma difiere de Q en 0,005 o más, o una parte saldría a
+      0,00 € con importe en la original (sv9 no registra importes 0). Un `NaN` o
+      `Infinity` en el JSON de dividir, editar una fila o traer líneas es 422
+      (`allow_inf_nan=False`; el manejador de 422 los devuelve como texto). Modelo M1, **sin
       DDL**: la original es la parte 1 y cada parte k ≥ 2 es una fila
       `line_kind = 'reparto'` con `merge_line_id` nulo y `parent_merge_line_id`
-      de la blanca de la original, sus campos copiados y su descripción en la
-      valoración (sv9 no tiene concepto de blanca que leer); `cantidad_convertida
+      de la blanca de la original, sus campos copiados y en la valoración la
+      descripción que enseña la original (la fijada, la de su línea o el concepto
+      de su blanca: sv9 no tiene blanca que leer); `cantidad_convertida
       = qk`, `cantidad_albaran = ca0 × qk / Q` e importe `round(importe0 × qk /
       Q, 2)` (la última absorbe el redondeo: la familia suma lo de antes). El
       origen sigue la regla de editar: con la partida de la original, la de su

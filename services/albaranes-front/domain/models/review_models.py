@@ -7,7 +7,14 @@ from typing import Any, Literal
 
 from urllib.parse import quote
 
-from pydantic import BaseModel, Field, ValidationError, computed_field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    computed_field,
+    field_validator,
+)
 
 from ruesma_comun.contratos import (
     MOTIVOS_REVISION_ORIGEN,
@@ -726,6 +733,10 @@ def _numero_es(valor: object) -> object:
 class LineaATraer(BaseModel):
     """(R23) Una línea de contrato a traer, con su cantidad (obligatoria, ≠ 0)."""
 
+    #: (F-065 CR1, pasada 2 de la fase 3) ``NaN`` e ``±Infinity`` del JSON son un
+    #: 422: acabarían en cantidades, importes y ``total_valorado``.
+    model_config = ConfigDict(allow_inf_nan=False)
+
     contrato_line_id: int
     cantidad: float
 
@@ -770,6 +781,10 @@ class ParteDivision(BaseModel):
     """(R29) Una parte: su cantidad (en la unidad del precio, como la Q de la
     ficha) y su partida (vacía = almacén). Una cantidad nula o 0 se acepta
     aquí y la rechaza ``repartir`` diciendo qué parte es."""
+
+    #: (F-065 CR1, pasada 2 de la fase 3) ``NaN`` e ``±Infinity`` del JSON son un
+    #: 422: acabarían en cantidades, importes y ``total_valorado``.
+    model_config = ConfigDict(allow_inf_nan=False)
 
     cantidad: float | None = None
     codigo_partida: str | None = None
@@ -834,19 +849,29 @@ def repartir(
     - Importe: ``round(importe0 × qk / q, 2)`` y la última absorbe el
       redondeo, así la familia suma ``importe0``; sin ``importe0``, la fórmula
       canónica con el precio y el descuento de la original.
-    - ``RepartoInvalido`` si ``q`` es nula o 0, no hay de 2 a 20 partes, una es
-      nula, 0 o de otro signo que ``q``, o suman ``q`` ± 0,005 o más.
+    - ``RepartoInvalido`` si ``q`` es nula, 0 o no finita, el importe no es
+      finito, no hay de 2 a 20 partes, una es nula, 0, no finita o de otro signo
+      que ``q``, suman ``q`` ± 0,005 o más, o una saldría a 0,00 € con un
+      importe que no lo es.
     """
-    if q is None or q == 0:
+    if q is None or q == 0 or not math.isfinite(q):
         raise RepartoInvalido("La línea está sin cantidad: no se puede dividir.")
+    if importe0 is not None and not math.isfinite(importe0):
+        raise RepartoInvalido(
+            "El importe de la línea no es un número: corrígelo antes de dividirla."
+        )
     if not MIN_PARTES <= len(partes) <= MAX_PARTES:
         raise RepartoInvalido(
             f"Se divide en entre {MIN_PARTES} y {MAX_PARTES} líneas "
             f"(llegaron {len(partes)})."
         )
     for numero, cantidad in enumerate(partes, start=1):
-        if cantidad is None or cantidad == 0:
-            raise RepartoInvalido(f"La parte {numero} no tiene cantidad (o es 0).")
+        if cantidad is None or cantidad == 0 or not math.isfinite(cantidad):
+            raise RepartoInvalido(
+                f"La parte {numero} no tiene cantidad (vacía, 0 o no numérica)."
+            )
+        # Con las guardas de arriba (finita y ≠ 0) es lo mismo que
+        # ``(cantidad > 0) != (q > 0)``: lo demuestra el test del signo reescrito.
         if math.copysign(1.0, cantidad) != math.copysign(1.0, q):
             raise RepartoInvalido(
                 f"La parte {numero} tiene otro signo que la línea ({_cantidad_es(q)})."
@@ -866,6 +891,16 @@ def repartir(
     else:
         importes = [round(importe0 * cantidad / q, 2) for cantidad in partes[:-1]]
         importes.append(round(importe0 - sum(importes), 2))
+        # sv9 no registra las líneas de importe 0 (F-053 R13): una parte a
+        # 0,00 € de una línea con importe se perdería al darla de alta.
+        if importe0 != 0:
+            for numero, importe in enumerate(importes, start=1):
+                if importe == 0:
+                    raise RepartoInvalido(
+                        f"La parte {numero} saldría a 0,00 € (la línea tiene "
+                        f"{_euros(importe0)}) y Sigrid no registra líneas de importe "
+                        "0: repártela en menos partes."
+                    )
     return [
         ParteCalculada(
             cantidad_convertida=cantidad,
@@ -899,6 +934,10 @@ class ConciliacionEditBody(BaseModel):
     A nivel de módulo (no dentro de ``build_app``): una clase local provoca un
     ForwardRef que Pydantic 2.12 no resuelve como ``Body(...)``.
     """
+
+    #: (F-065 CR1, pasada 2 de la fase 3) ``NaN`` e ``±Infinity`` del JSON son un
+    #: 422: acabarían en cantidades, importes y ``total_valorado``.
+    model_config = ConfigDict(allow_inf_nan=False)
 
     codigo_partida: str | None = None
     descripcion: str | None = None

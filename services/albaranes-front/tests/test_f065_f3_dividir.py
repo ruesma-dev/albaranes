@@ -265,11 +265,13 @@ def test_f065_r31_r32_repositorio_divide_18_en_6_7_5():
         assert (parte["line_kind"], parte["merge_line_id"], parte["parent_merge_line_id"],
                 parte["importe_source"], parte["bloqueada"]) == (
             "reparto", None, 702, "calculated", 0)
-        assert parte["descripcion_linea"] == "PUERTA EI2-90"  # CR1: sv9 la necesita
+        # CR1 (sv9 la necesita) y O3 de la review: el texto que enseña la original
+        # (una fila Contrato enseña el de su línea de contrato).
+        assert parte["descripcion_linea"] == "PUERTA CORTAFUEGOS EI2-90"
     assert nueva["matched_contrato_line_id"] is None
     assert hecha.derivadas == [nueva["derived_contrato_line_id"]]
     assert _derivada(motor, nueva["derived_contrato_line_id"]) == {
-        "codigo_contrato": CONTRATO, "descripcion_linea": "PUERTA EI2-90",
+        "codigo_contrato": CONTRATO, "descripcion_linea": "PUERTA CORTAFUEGOS EI2-90",
         "unidad_medida": "UD", "precio_unitario": 115.0, "codigo_partida": "01.03",
         "origen": "manual_override", "created_by_valuation_id": "f065-val-1",
         "source_document_id": DOC}
@@ -1050,3 +1052,233 @@ def test_f065_r29_js_el_combo_de_la_ventana_no_manda_a_almacen_al_elegir():
 
     assert "function attachPartidaCombo(input, opciones)" in js
     assert "alElegirAlmacen" in js
+
+
+# =================================================================== #
+# Pasada 2 de la review de la fase 3
+# =================================================================== #
+_NO_FINITOS = [float("nan"), float("inf"), float("-inf")]
+
+
+@pytest.mark.parametrize("raro", _NO_FINITOS, ids=["nan", "inf", "menos_inf"])
+def test_f065_cr1p2_dominio_no_reparte_numeros_no_finitos(raro):
+    """CR1: ni en una parte, ni en Q, ni en el importe de la línea."""
+    from domain.models.review_models import RepartoInvalido, repartir
+
+    casos = [
+        dict(q=10.0, ca0=10.0, importe0=100.0, partes=[raro, 10.0]),
+        dict(q=10.0, ca0=10.0, importe0=100.0, partes=[10.0, raro]),
+        dict(q=raro, ca0=10.0, importe0=100.0, partes=[4.0, 6.0]),
+        dict(q=10.0, ca0=10.0, importe0=raro, partes=[4.0, 6.0]),
+    ]
+    for caso in casos:
+        with pytest.raises(RepartoInvalido):
+            repartir(precio=10.0, descuento=None, **caso)
+
+
+def test_f065_cr1p2_dominio_los_mensajes_de_lo_no_finito():
+    from domain.models.review_models import RepartoInvalido, repartir
+
+    def mensaje(**caso):
+        with pytest.raises(RepartoInvalido) as error:
+            repartir(ca0=10.0, precio=10.0, descuento=None, **caso)
+        return str(error.value)
+
+    assert "parte 1" in mensaje(q=10.0, importe0=None, partes=[float("nan"), 10.0])
+    assert "sin cantidad" in mensaje(q=float("inf"), importe0=None, partes=[4.0, 6.0])
+    assert "importe" in mensaje(q=10.0, importe0=float("nan"), partes=[4.0, 6.0])
+
+
+def test_f065_cr1p2_dominio_el_signo_reescrito_es_el_de_antes():
+    """RM5, demostración ejecutable de la reescritura del signo (T26): para todo
+    lo que llega a esa comprobación (Q y la parte finitas y distintas de 0, ±0
+    incluido, porque ``== 0`` lo rechaza antes) ``copysign`` decide lo mismo que
+    la versión original ``(cantidad > 0) != (q > 0)``; lo demás (``NaN``, ±inf,
+    ±0) lo rechazan las guardas de antes, que es lo que la reescritura perdía."""
+    import itertools
+    import math
+
+    from domain.models.review_models import RepartoInvalido, repartir
+
+    valores = [-1e9, -18.0, -0.5, -1e-9, 1e-9, 0.5, 18.0, 1e9]
+    for cantidad, q in itertools.product(valores, valores):
+        original = (cantidad > 0) != (q > 0)
+        assert (math.copysign(1.0, cantidad) != math.copysign(1.0, q)) == original
+    for raro in (*_NO_FINITOS, 0.0, -0.0):
+        for caso in (dict(q=10.0, partes=[raro, 10.0]), dict(q=raro, partes=[4.0, 6.0])):
+            with pytest.raises(RepartoInvalido):
+                repartir(ca0=10.0, importe0=None, precio=1.0, descuento=None, **caso)
+
+
+@pytest.mark.parametrize("raro", ["NaN", "Infinity", "-Infinity"])
+def test_f065_cr1p2_los_tres_cuerpos_rechazan_no_finitos(raro):
+    from domain.models.review_models import (
+        ConciliacionEditBody,
+        DivisionBody,
+        TraerLineasBody,
+    )
+    from pydantic import ValidationError
+
+    for modelo, cuerpo in (
+        (DivisionBody, '{"partes": [{"cantidad": %s}, {"cantidad": 1}]}' % raro),
+        (ConciliacionEditBody, '{"cantidad": %s}' % raro),
+        (ConciliacionEditBody, '{"precio_unitario": %s}' % raro),
+        (ConciliacionEditBody, '{"descuento": %s}' % raro),
+        (TraerLineasBody, '{"lineas": [{"contrato_line_id": 1, "cantidad": %s}]}' % raro),
+    ):
+        with pytest.raises(ValidationError):
+            modelo.model_validate_json(cuerpo)
+    # Como texto (coma decimal de la ficha) tampoco.
+    with pytest.raises(ValidationError):
+        DivisionBody(partes=[{"cantidad": raro.lower()}, {"cantidad": 1}])
+
+
+def test_f065_cr1p2_los_cuerpos_siguen_admitiendo_numeros_finitos():
+    from domain.models.review_models import (
+        ConciliacionEditBody,
+        DivisionBody,
+        TraerLineasBody,
+    )
+
+    assert DivisionBody.model_validate_json(
+        '{"partes": [{"cantidad": 6.5}, {"cantidad": "11,5"}]}').partes[1].cantidad == 11.5
+    assert ConciliacionEditBody.model_validate_json(
+        '{"cantidad": 7, "precio_unitario": 115.5, "descuento": 10}').campos() == {
+        "cantidad": 7.0, "precio_unitario": 115.5, "descuento": 10.0}
+    assert TraerLineasBody.model_validate_json(
+        '{"lineas": [{"contrato_line_id": 1, "cantidad": -2}]}').lineas[0].cantidad == -2.0
+
+
+def test_f065_cr1p2_la_ruta_responde_422_a_nan_sin_llamar_al_servicio(monkeypatch):
+    servicio = _Servicio(None)
+
+    respuesta = _cliente(monkeypatch, servicio).post(
+        _ruta(), content='{"partes": [{"cantidad": NaN}, {"cantidad": 10}]}',
+        headers={"Content-Type": "application/json"})
+
+    assert respuesta.status_code == 422
+    assert servicio.llamadas == []
+    (error,) = respuesta.json()["detail"]
+    assert (error["type"], error["input"]) == ("finite_number", "nan")
+
+
+class _Anota:
+    """Servicio falso que anota qué método se llamó (no debería ninguno)."""
+
+    def __init__(self):
+        self.llamadas = []
+
+    def initialize(self):
+        return True
+
+    def __getattr__(self, nombre):
+        def _anota(*args, **kwargs):
+            self.llamadas.append(nombre)
+            return True
+        return _anota
+
+
+@pytest.mark.parametrize(("ruta", "cuerpo"), [
+    (f"/api/documents/{DOC}/lines/12/conciliacion/campos", '{"cantidad": NaN}'),
+    (f"/api/documents/{DOC}/lines/12/conciliacion/campos", '{"precio_unitario": Infinity}'),
+    (f"/api/documents/{DOC}/lines/from-contrato",
+     '{"lineas": [{"contrato_line_id": 503, "cantidad": -Infinity}]}'),
+], ids=["campos_nan", "campos_inf", "traer_menos_inf"])
+def test_f065_cr1p2_editar_y_traer_responden_422_a_no_finitos(monkeypatch, ruta, cuerpo):
+    servicio = _Anota()
+    cliente = _cliente(monkeypatch, servicio)
+    metodo = cliente.patch if "campos" in ruta else cliente.post
+
+    respuesta = metodo(ruta, content=cuerpo, headers={"Content-Type": "application/json"})
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["detail"][0]["type"] == "finite_number"
+    assert servicio.llamadas == []
+
+
+def test_f065_cr1p2_el_error_se_puede_devolver_en_json():
+    import json as _json
+
+    from interface_adapters.web.app import sin_no_finitos
+
+    errores = [{"input": float("nan"), "loc": ("body", 0),
+                "ctx": {"lista": [float("inf"), 1.5, (float("-inf"),)]}}, 2.5, "x"]
+
+    limpio = sin_no_finitos(errores)
+
+    assert limpio == [{"input": "nan", "loc": ["body", 0],
+                       "ctx": {"lista": ["inf", 1.5, ["-inf"]]}}, 2.5, "x"]
+    assert _json.dumps(limpio, allow_nan=False)
+
+
+# --- (b) una parte a 0,00 € con importe en la original ----------------- #
+@pytest.mark.parametrize(("importe0", "cantidades", "parte"), [
+    (0.01, [1.0, 1.0, 1.0], "parte 1"),
+    (0.02, [1.0, 1.0, 1.0], "parte 3"),
+    (-0.01, [1.0, 2.0], "parte 1"),
+], ids=["un_centimo", "la_ultima_a_cero", "abono"])
+def test_f065_obs4_dominio_no_deja_una_parte_a_cero_euros(importe0, cantidades, parte):
+    """sv9 no registra las líneas de importe 0 (F-053 R13): repartir no puede
+    dejar una parte a 0,00 € si la original tenía importe."""
+    from domain.models.review_models import RepartoInvalido, repartir
+
+    q = sum(cantidades)
+    with pytest.raises(RepartoInvalido) as error:
+        repartir(q=q, ca0=q, importe0=importe0, precio=None, descuento=None,
+                 partes=cantidades)
+
+    assert "0,00 €" in str(error.value) and parte in str(error.value)
+
+
+def test_f065_obs4_dominio_una_linea_a_cero_euros_se_reparte_a_cero():
+    from domain.models.review_models import repartir
+
+    partes = repartir(q=2.0, ca0=2.0, importe0=0.0, precio=0.0, descuento=None,
+                      partes=[1.0, 1.0])
+
+    assert [p.importe for p in partes] == [0.0, 0.0]
+
+
+def test_f065_obs4_dominio_sin_importe_la_formula_puede_dar_cero():
+    """Sin ``importe0`` no hay importe que perder: la fórmula canónica manda."""
+    from domain.models.review_models import repartir
+
+    partes = repartir(q=2.0, ca0=2.0, importe0=None, precio=0.0, descuento=None,
+                      partes=[1.0, 1.0])
+
+    assert [p.importe for p in partes] == [0.0, 0.0]
+
+
+# --- (c) el texto de las partes ------------------------------------------ #
+def test_f065_obs3_una_nueva_sin_texto_propio_toma_el_concepto_de_la_blanca():
+    motor = construir()
+    ejecutar(motor, "UPDATE contrato_lines_derived SET descripcion_linea = NULL WHERE id = 601")
+
+    (p2,) = _dividir(motor, 13, (0.5, "03.01"), (0.5, "03.01")).partes
+
+    assert fila(motor, p2)["descripcion_linea"] == "PORTES"
+
+
+def test_f065_obs3_la_descripcion_fijada_de_la_original_manda():
+    motor = construir()
+    ejecutar(motor, "UPDATE albaran_line_valuations SET descripcion_linea = 'PUERTA HOJA DOBLE' "
+             "WHERE id = 12")
+
+    (p2,) = _dividir(motor, 12, (4, "01.02"), (6, "01.02")).partes
+
+    assert fila(motor, p2)["descripcion_linea"] == "PUERTA HOJA DOBLE"
+
+
+# --- (a) P5: una familia que no suma se aprueba ------------------------- #
+def test_f065_p5_una_familia_que_no_suma_avisa_pero_se_aprueba():
+    """R35/P5: el aviso de familia no bloquea (una recepción parcial es legítima)."""
+    motor = construir()
+    repo = repositorio(motor)
+    (p2,) = _dividir(motor, 12, (4, "01.02"), (6, "01.02")).partes
+    assert repo.update_line_conciliacion(
+        document_id=DOC, valuation_line_id=p2, campos={"cantidad": 5.0})
+
+    detalle = _mostrar([4.0, 5.0])
+    assert [d.aviso_reparto for d in detalle if d.aviso_reparto] == [
+        "Las partes de la línea 2 suman 9; el albarán dice 10"]
+    assert repo.set_approved(document_id=DOC, approved=True, approved_by="ana") is True

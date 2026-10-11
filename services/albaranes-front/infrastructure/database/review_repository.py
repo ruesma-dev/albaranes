@@ -2953,10 +2953,12 @@ class AlbaranReviewRepository:
                 text("SELECT concepto FROM albaran_lines_merge WHERE id = :id"),
                 {"id": padre},
             ).scalar() if padre is not None else None
+            # (O3 de la review) El texto que enseña la original: el fijado, el de
+            # su línea (de contrato o derivada) o, si no hay, el de su blanca.
             descripcion = (
                 (row["descripcion_linea"] or "").strip()
-                or (concepto or "").strip()
                 or (casada.get("descripcion_linea") or "").strip()
+                or (concepto or "").strip()
                 or None
             )
             precio = (

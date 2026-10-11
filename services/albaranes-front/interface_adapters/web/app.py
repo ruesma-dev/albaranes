@@ -5,6 +5,7 @@ import calendar
 import html
 import json
 import logging
+import math
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,8 @@ from urllib.parse import quote, urlencode
 
 import httpx
 from fastapi import Body, FastAPI, Form, HTTPException, Query, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -1796,11 +1799,34 @@ def build_app(settings: Settings) -> FastAPI:
             return JSONResponse(status_code=409, content={"detail": exc.aviso})
         return _a_la_ficha(exc.document_id, exc.aviso)
 
+    @app.exception_handler(RequestValidationError)
+    async def validacion_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+        """El 422 de siempre, pero sin romperse con un ``NaN``/``Infinity`` en el
+        cuerpo (F-065 CR1): el error lo devuelve en ``input`` y el JSON de la
+        respuesta no admite números no finitos (sería un 500)."""
+        return JSONResponse(
+            status_code=422,
+            content={"detail": jsonable_encoder(sin_no_finitos(exc.errors()))},
+        )
+
     @app.exception_handler(KeyError)
     async def key_error_handler(_: Request, exc: KeyError) -> JSONResponse:
         return JSONResponse(status_code=404, content={"detail": str(exc)})
 
     return app
+
+
+def sin_no_finitos(valor: Any) -> Any:
+    """(F-065 CR1) ``valor`` con cada ``NaN``/``±inf`` (en listas, tuplas y
+    diccionarios, a cualquier profundidad) cambiado por su texto, para poder
+    devolverlo en JSON."""
+    if isinstance(valor, float) and not math.isfinite(valor):
+        return str(valor)
+    if isinstance(valor, dict):
+        return {clave: sin_no_finitos(v) for clave, v in valor.items()}
+    if isinstance(valor, (list, tuple)):
+        return [sin_no_finitos(v) for v in valor]
+    return valor
 
 
 def _parse_optional_float(value: str | None, *, field_name: str) -> float | None:
