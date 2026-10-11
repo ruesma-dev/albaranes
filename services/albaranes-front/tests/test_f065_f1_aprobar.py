@@ -86,8 +86,8 @@ def test_f065_r20_la_convertida_basta_aunque_falte_la_del_albaran():
 
 
 def test_f065_r20_las_filas_que_la_ficha_no_pinta_no_cuentan_ni_numeran():
-    """Una fila sin línea de contrato ni derivada no sale en la tabla: ni se
-    puede corregir ni ocupa posición."""
+    """Una fila sin línea de contrato ni derivada no sale en la tabla: no ocupa
+    posición (desde la fase 2, O2, sí impide aprobar con su propio aviso)."""
     from domain.models.review_models import LineasIncompletasError
 
     motor = construir()
@@ -101,6 +101,7 @@ def test_f065_r20_las_filas_que_la_ficha_no_pinta_no_cuentan_ni_numeran():
         repositorio(motor).set_approved(document_id=DOC, approved=True, approved_by="ana")
 
     assert error.value.posiciones == [4]
+    assert error.value.huerfanas == 1
 
 
 def test_f065_r20_orden_de_la_ficha_base_sus_sinteticas_y_luego_las_sueltas():

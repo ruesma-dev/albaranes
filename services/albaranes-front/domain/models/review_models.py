@@ -454,18 +454,50 @@ class LineaBloqueadaError(Exception):
 
 class LineasIncompletasError(Exception):
     """(R20) Hay filas sin cantidad o sin importe: no se aprueba. ``posiciones``
-    son las de la tabla de la ficha (1, 2, ...), las que ve el administrativo."""
+    son las de la tabla de la ficha (1, 2, ...), las que ve el administrativo.
 
-    def __init__(self, document_id: str, posiciones: list[int]) -> None:
+    ``huerfanas`` (decisión del humano del 2026-10-11, O2 de la review de la
+    fase 1): filas sin línea de contrato NI derivada. La ficha no las pinta y
+    sv9 las mandaría sin vincular: tampoco se aprueba con ellas, y se pide
+    revalorar. Una fila en almacén (partida final vacía) NO es ninguna de las
+    dos cosas: el almacén nunca impide aprobar.
+
+    ``unidad_cambiada`` (CR3, pasada 3 de la review de la fase 2): posiciones
+    de las filas con la marca ``MOTIVO_UNIDAD_CAMBIADA`` («Origen ✎» a otra
+    unidad sin poder convertir la cantidad). sv9 la mandaría tal cual (8 ud
+    como 8 t): no se aprueba hasta revisar la cantidad."""
+
+    def __init__(
+        self,
+        document_id: str,
+        posiciones: list[int],
+        huerfanas: int = 0,
+        unidad_cambiada: list[int] | None = None,
+    ) -> None:
         self.document_id = document_id
         self.posiciones = list(posiciones)
+        self.huerfanas = huerfanas
+        self.unidad_cambiada = list(unidad_cambiada or [])
         super().__init__(self.aviso)
 
     @property
     def aviso(self) -> str:
-        return "Líneas sin cantidad o importe: " + ", ".join(
-            str(posicion) for posicion in self.posiciones
-        )
+        partes = []
+        if self.posiciones:
+            partes.append("Líneas sin cantidad o importe: " + ", ".join(
+                str(posicion) for posicion in self.posiciones
+            ))
+        if self.unidad_cambiada:
+            partes.append("Líneas con la unidad cambiada: revisa la cantidad: " + ", ".join(
+                str(posicion) for posicion in self.unidad_cambiada
+            ))
+        if self.huerfanas:
+            lineas = "línea" if self.huerfanas == 1 else "líneas"
+            partes.append(
+                f"Hay {self.huerfanas} {lineas} sin línea de contrato ni Nueva "
+                "que la ficha no enseña: revalora el albarán"
+            )
+        return ". ".join(partes)
 
 
 def cantidades_tras_editar(
@@ -499,6 +531,98 @@ def cantidades_tras_editar(
     if cantidad_convertida is None and (factor is None or float(factor) == 1):
         return q_nueva, q_nueva
     return cantidad_albaran, q_nueva
+
+
+def cambia_origen(
+    *,
+    es_contrato: bool,
+    partida_casada: str | None,
+    cambios: dict[str, Any],
+) -> bool:
+    """(R25, R26) ¿Pasa la fila Contrato a Nueva con estos cambios?
+
+    ``cambios`` son SOLO los campos que de verdad cambian (ya normalizados: la
+    partida sin espacios y vacía = ``None``). Una fila Contrato pasa a Nueva,
+    sin confirmación, si cambia la partida a una no vacía distinta de la de su
+    línea de contrato, el precio unitario o la unidad. Vaciar la partida
+    (almacén) o poner la de su línea de contrato no cambia el origen (F-051 D4,
+    R20; P10), ni la descripción, la cantidad, el descuento o el código
+    externo. Una fila Nueva sigue Nueva (se edita su derivada). Nunca se llama
+    a la IA: el origen solo lo vuelve a decidir «Origen ✎» o revalorar.
+    """
+    if not es_contrato:
+        return False
+    partida = cambios.get("codigo_partida")
+    return (
+        (partida is not None and partida != (partida_casada or "").strip())
+        or "precio_unitario" in cambios
+        or "unidad" in cambios
+    )
+
+
+#: (F-065 H2) «Origen ✎» llevó la fila a una línea de contrato de OTRA unidad y
+#: sv4 no sabe convertir la cantidad: se deja, sin bloquear, y se avisa.
+MOTIVO_UNIDAD_CAMBIADA = "front_unidad_cambiada_revisa_cantidad"
+
+
+def _unidad(valor: str | None) -> str:
+    return (valor or "").strip().upper()
+
+
+def cantidades_tras_reapuntar(
+    *,
+    unidad_actual: str | None,
+    unidad_nueva: str | None,
+    unidad_albaran: str | None,
+    cantidad_albaran: float | None,
+    cantidad_convertida: float | None,
+    factor: float | None,
+) -> tuple[float | None, float | None, float | None, bool]:
+    """(F-065 H2) ``(ca, cc, factor, aviso)`` al reapuntar a una línea de
+    contrato con ``unidad_nueva``.
+
+    Q (la convertida) está en la unidad del precio, así que si la unidad cambia
+    Q deja de valer. sv4 no tiene el conversor de unidades (es de sv6): solo
+    sabe rehacer el caso en que la unidad nueva es la del ALBARÁN, en el que Q
+    es la cantidad leída (factor 1). Unidad nueva desconocida o la misma: nada
+    cambia. Otra unidad, también si la actual se desconoce (P2-2): se deja la
+    cantidad y ``aviso`` (la fila queda marcada para revisar la cantidad, nunca
+    bloqueada, y no se aprueba hasta revisarla, CR3).
+    """
+    nueva = _unidad(unidad_nueva)
+    if not nueva or nueva == _unidad(unidad_actual):
+        return cantidad_albaran, cantidad_convertida, factor, False
+    if nueva == _unidad(unidad_albaran) and cantidad_albaran is not None:
+        return cantidad_albaran, cantidad_albaran, 1.0, False
+    return cantidad_albaran, cantidad_convertida, factor, True
+
+
+def motivos_con(valor: Any, motivo: str, presente: bool) -> str:
+    """``review_reasons_json`` con ``motivo`` puesto o quitado, sin tocar los
+    demás (los de sv6 se conservan; sv4 solo gestiona los suyos)."""
+    motivos = [m for m in motivos_de_json(valor) if m != motivo]
+    if presente:
+        motivos.append(motivo)
+    return json.dumps(motivos, ensure_ascii=False)
+
+
+def descripcion_para_valoracion(
+    *,
+    descripcion: str | None,
+    sin_blanca: bool,
+    editada: bool,
+    ya_fijada: bool,
+) -> str | None:
+    """(F-065 CR1, H1) Descripción que guarda la VALORACIÓN de una fila Nueva
+    (``albaran_line_valuations.descripcion_linea``), que es la que sv9 manda a
+    Sigrid antes que el concepto leído de la blanca.
+
+    - Sin blanca (traída del contrato, «Añadir línea»): siempre la de la fila;
+      si no, sv9 no tendría ninguna y el albarán saldría ``no_admitido``.
+    - Con blanca: solo si el administrativo la editó (ahora o antes); sin
+      editar, ``None`` y sv9 manda lo leído del albarán (diseño de F-053).
+    """
+    return descripcion if (sin_blanca or editada or ya_fijada) else None
 
 
 def es_fila_manual(

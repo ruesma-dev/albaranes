@@ -105,7 +105,7 @@
     // --------------------------------------------------------------- //
     // Conciliacion editable.
     //
-    // El badge Sigrid/Nueva de la fila de conciliacion es un boton que
+    // El badge Contrato/Nueva de la fila de conciliacion es un boton que
     // revela un <select> con las lineas del contrato (+ opcion "Nueva").
     // Al elegir una opcion se hace PATCH al endpoint de override y se
     // recarga la pagina para reflejar precio/importe/badge actualizados.
@@ -421,7 +421,7 @@
             const combo = makeLineCombo({
                 lines: CONTRATO_LINES,
                 nuevaValue: "nueva",
-                nuevaLabel: "➕ Nueva (derivar a la partida)",
+                nuevaLabel: "➕ Nueva (con los valores actuales de la fila)",
                 onPick: function (value) {
                     sel.value = value;
                     sel.dispatchEvent(new Event("change", { bubbles: true }));
@@ -612,7 +612,7 @@
                 return;
             }
             if (!window.confirm(
-                "¿Borrar las " + vids.length + " línea(s) casada(s) (Sigrid y " +
+                "¿Borrar las " + vids.length + " línea(s) casada(s) (Contrato y " +
                 "Nueva)? Dejarán de contar en el total y reaparecerá el botón " +
                 "+ en cada línea." + saltan
             )) return;
@@ -721,73 +721,71 @@
     }
 
     // --------------------------------------------------------------- //
-    // Combo de PARTIDA sobre la fila salmon (jun 2026).
+    // Combo de PARTIDA de la fila (F-065 R27).
     //
-    // El campo "Código imputación" (partida) de la fila salmon era un
-    // input de texto libre. Ahora se le monta un desplegable con las
-    // partidas que existen en el contrato de Sigrid (deduplicadas) para
-    // elegir en vez de teclear. Reutiliza el CSS del combo de líneas y
-    // el MISMO arreglo de scroll del panel.
-    //
-    // A diferencia de makeLineCombo (que crea su propio input), aquí el
-    // combo se ENGANCHA al input existente .js-partida-combo para que el
-    // valor siga fluyendo por el flujo js-cedit (dirty + guardar PATCH).
-    // Al elegir, se escribe el código y se dispara 'input' para que
-    // wireConciliaEdit detecte el cambio.
+    // Ofrece «Almacén (sin partida)» primero y las partidas HOJA del
+    // presupuesto de la OBRA en Sigrid (GET /api/sigrid/partidas?obra=, una
+    // carga por ficha), con filtro por código y por descripción agregada.
+    // Solo admite valores de la lista: un texto que no es de la lista no se
+    // guarda (al salir vuelve al que tenía). Obra sin partidas ⇒ solo
+    // «Almacén»; Sigrid no responde ⇒ solo «Almacén» y el aviso. Elegir una
+    // partida solo cambia la partida (la fila sigue Contrato si es la de su
+    // línea de contrato; si no, pasa a Nueva al guardar, R25): ya NO reapunta
+    // la línea de contrato (eso es solo «Origen ✎», R28). Teclado: flechas,
+    // Enter elige, Esc cierra y deshace lo tecleado.
     // --------------------------------------------------------------- //
-    // Partidas del CONTRATO (Postgres) embebidas: SOLO como fallback si
-    // Sigrid no responde o la obra no está fijada.
-    let PARTIDAS_FALLBACK = [];
-    (function () {
-        const el = document.getElementById("partidas-json");
-        if (el) {
-            try { PARTIDAS_FALLBACK = JSON.parse(el.textContent || "[]") || []; }
-            catch (_) { PARTIDAS_FALLBACK = []; }
-        }
-    })();
-
-    // Carga (una sola vez) las partidas HOJA del presupuesto de la obra
-    // desde Sigrid (GET /api/sigrid/partidas?obra=). Devuelve un array
-    // [{code,label,norm}] con label = "codigo · descripción agregada".
-    // Si Sigrid falla, no hay obra, o devuelve vacío, cae a las partidas
-    // del contrato embebidas.
-    let _partidasItems = null;
-    let _partidasPromise = null;
-    function _fallbackPartidas() {
-        return (PARTIDAS_FALLBACK || []).map(function (p) {
-            const c = String(p);
-            return { code: c, label: c, norm: _normLine(c) };
+    function partidasDeRespuesta(data) {
+        if (!data || data.ok === false) { return { items: [], error: true }; }
+        const items = (data.items || []).map(function (p) {
+            const desc = p.descripcion_agregada || p.descripcion || "";
+            const label = desc ? (p.codigo + " · " + desc) : p.codigo;
+            return { code: p.codigo, label: label, norm: _normLine(label) };
         });
+        return { items: items, error: false };
     }
-    function loadPartidas() {
-        if (_partidasItems) { return Promise.resolve(_partidasItems); }
-        if (_partidasPromise) { return _partidasPromise; }
+
+    function opcionesPartida(items, texto) {
+        const ALMACEN = { almacen: true, code: "", label: "Almacén (sin partida)" };
+        const tokens = _normLine(texto).split(/\s+/).filter(Boolean);
+        return [ALMACEN].concat(items.filter(function (it) {
+            return tokens.every(function (t) { return it.norm.indexOf(t) !== -1; });
+        }));
+    }
+
+    function partidaValida(valor, items) {
+        const v = String(valor || "").trim();
+        return v === "" || items.some(function (it) { return it.code === v; });
+    }
+
+    function siguienteActivo(actual, tecla, total) {
+        if (tecla === "ArrowDown") { return Math.min(actual + 1, total - 1); }
+        if (tecla === "ArrowUp") { return Math.max(actual - 1, 0); }
+        return actual;
+    }
+
+    // Una carga por OBRA (la comparten todas las filas). F-065 H4: sin obra no
+    // se guarda nada en caché, y si la obra cambia se vuelve a pedir.
+    let _partidasObra = null;
+    let _partidasObraCodigo = null;
+    function cargarPartidasObra() {
         const obraEl = document.getElementById("obra_codigo");
         const obra = obraEl ? (obraEl.value || "").trim() : "";
         if (!obra) {
-            _partidasItems = _fallbackPartidas();
-            return Promise.resolve(_partidasItems);
+            return Promise.resolve({ items: [], error: false });
         }
-        const url = "/api/sigrid/partidas?obra=" + encodeURIComponent(obra);
-        _partidasPromise = fetch(url, { headers: { "Accept": "application/json" } })
+        if (_partidasObra && _partidasObraCodigo === obra) { return _partidasObra; }
+        _partidasObraCodigo = obra;
+        _partidasObra = fetch(
+            "/api/sigrid/partidas?obra=" + encodeURIComponent(obra),
+            { headers: { "Accept": "application/json" } }
+        )
             .then(function (r) { return r.json(); })
-            .then(function (data) {
-                const items = ((data && data.items) || []).map(function (p) {
-                    const desc = p.descripcion_agregada || p.descripcion || "";
-                    const label = desc ? (p.codigo + "  ·  " + desc) : p.codigo;
-                    return { code: p.codigo, label: label, norm: _normLine(label) };
-                });
-                _partidasItems = items.length ? items : _fallbackPartidas();
-                return _partidasItems;
-            })
-            .catch(function () {
-                _partidasItems = _fallbackPartidas();
-                return _partidasItems;
-            });
-        return _partidasPromise;
+            .then(function (data) { return partidasDeRespuesta(data); })
+            .catch(function () { return { items: [], error: true }; });
+        return _partidasObra;
     }
 
-    function attachInputCombo(input) {
+    function attachPartidaCombo(input) {
         if (!input || input.dataset.comboAttached) { return; }
         input.dataset.comboAttached = "1";
 
@@ -800,19 +798,22 @@
         panel.hidden = true;
         wrap.appendChild(panel);
 
+        let partidas = { items: [], error: false };
         let shown = [];
+        let activo = -1;
+        let alAbrir = input.value;
         let repos = null;
-        let justPicked = false;
 
         function place() {
             const r = input.getBoundingClientRect();
             panel.style.top = (r.bottom + 4) + "px";
             panel.style.left = r.left + "px";
-            panel.style.minWidth = Math.max(r.width, 200) + "px";
-            panel.style.maxWidth = "480px";
+            panel.style.minWidth = Math.max(r.width, 260) + "px";
+            panel.style.maxWidth = "520px";
         }
         function close() {
             panel.hidden = true;
+            activo = -1;
             if (repos) {
                 window.removeEventListener("scroll", repos, true);
                 window.removeEventListener("resize", repos);
@@ -820,38 +821,37 @@
             }
         }
         function pick(it) {
-            justPicked = true;
-            input.value = it.code;
             close();
-            // Notificar a wireConciliaEdit: marca dirty, muestra Guardar.
+            if (it.almacen) {
+                elegirAlmacen(input);
+                return;
+            }
+            input.value = it.code;
+            alAbrir = it.code;
+            // Notifica a wireConciliaEdit: la fila queda con cambios.
             input.dispatchEvent(new Event("input", { bubbles: true }));
-            input.focus();
         }
         function render() {
             panel.innerHTML = "";
-            if (!shown.length) {
+            shown.forEach(function (it, idx) {
+                const d = document.createElement("div");
+                d.className = "combo-item" + (idx === activo ? " active" : "");
+                d.textContent = it.label;
+                d.addEventListener("mousedown", function (e) {
+                    e.preventDefault();
+                    pick(it);
+                });
+                panel.appendChild(d);
+            });
+            if (partidas.error) {
                 const d = document.createElement("div");
                 d.className = "combo-msg";
-                d.textContent = "Sin coincidencias";
+                d.textContent = "No se pudieron cargar las partidas";
                 panel.appendChild(d);
-            } else {
-                shown.forEach(function (it) {
-                    const d = document.createElement("div");
-                    d.className = "combo-item";
-                    d.textContent = it.label;
-                    d.addEventListener("mousedown", function (e) {
-                        e.preventDefault();
-                        pick(it);
-                    });
-                    panel.appendChild(d);
-                });
             }
             panel.hidden = false;
             place();
             if (!repos) {
-                // Mismo arreglo que el combo de líneas: el scroll DENTRO
-                // del panel (rueda/slider) no debe cerrarlo; solo el
-                // scroll de la página/tabla de detrás.
                 repos = function (e) {
                     if (e && e.type === "scroll" && e.target &&
                         panel.contains(e.target)) { return; }
@@ -860,47 +860,51 @@
                 window.addEventListener("scroll", repos, true);
                 window.addEventListener("resize", repos);
             }
-        }
-        function filterAndRender() {
-            const items = _partidasItems || [];
-            const tokens = _normLine(input.value).split(/\s+/).filter(Boolean);
-            shown = items.filter(function (it) {
-                if (!tokens.length) { return true; }
-                const nl = it.norm || _normLine(it.label);
-                return tokens.every(function (t) { return nl.indexOf(t) !== -1; });
-            });
-            render();
         }
         function open() {
-            if (justPicked) { justPicked = false; return; }
-            if (_partidasItems) { filterAndRender(); return; }
-            // Aún no cargadas: panel con "Cargando…" y disparamos la carga.
-            panel.innerHTML = "";
-            const msg = document.createElement("div");
-            msg.className = "combo-msg";
-            msg.textContent = "Cargando partidas de Sigrid\u2026";
-            panel.appendChild(msg);
-            panel.hidden = false;
-            place();
-            if (!repos) {
-                repos = function (e) {
-                    if (e && e.type === "scroll" && e.target &&
-                        panel.contains(e.target)) { return; }
-                    close();
-                };
-                window.addEventListener("scroll", repos, true);
-                window.addEventListener("resize", repos);
-            }
-            loadPartidas().then(function () {
-                if (!panel.hidden) { filterAndRender(); }
+            if (panel.hidden) { alAbrir = input.value; }
+            cargarPartidasObra().then(function (res) {
+                partidas = res;
+                shown = opcionesPartida(res.items, input.value);
+                activo = Math.min(activo, shown.length - 1);
+                render();
             });
         }
 
         input.addEventListener("focus", open);
         input.addEventListener("click", open);
-        input.addEventListener("input", open);
-        // Nota: NO interceptamos Enter; lo gestiona wireConciliaEdit
-        // (Enter = guardar). El picking es por click en la opción.
+        input.addEventListener("input", function () {
+            if (document.activeElement === input) { open(); }
+        });
+        // Va ANTES que el Enter = «Guardar» de wireConciliaEdit
+        // (wirePartidaCombos se llama primero): con el panel abierto, las
+        // teclas son del combo.
+        input.addEventListener("keydown", function (e) {
+            if (panel.hidden) { return; }
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                e.preventDefault();
+                activo = siguienteActivo(activo, e.key, shown.length);
+                render();
+                _scrollActive(panel);
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                const elegido = shown[activo >= 0 ? activo : 0];
+                if (elegido) { pick(elegido); }
+            } else if (e.key === "Escape") {
+                e.preventDefault();
+                input.value = alAbrir;
+                close();
+            }
+        });
+        // Solo valores de la lista: lo demás vuelve al valor de antes.
+        input.addEventListener("blur", function () {
+            if (!partidaValida(input.value, partidas.items)) {
+                input.value = alAbrir;
+                input.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+            close();
+        });
         document.addEventListener("click", function (e) {
             if (!wrap.contains(e.target)) { close(); }
         });
@@ -910,39 +914,12 @@
         document.querySelectorAll(
             "tr.concilia-editable .js-partida-combo"
         ).forEach(function (inp) {
-            attachContratoLineCombo(inp);
+            attachPartidaCombo(inp);
         });
     }
 
-    // ----------------------------------------------------------------- //
-    // Combo de LÍNEA DE CONTRATO sobre la fila salmón (jun 2026).
-    //
-    // Se engancha TANTO al input de PARTIDA (.js-partida-combo) como al de
-    // CONCEPTO (.js-concepto-combo). Busca en las LÍNEAS DE CONTRATO de
-    // Sigrid (embebidas en CONTRATO_LINES) filtrando por código o por
-    // descripción. Al ELEGIR una línea, en lugar de escribir solo un campo,
-    // RELLENA los cuatro: partida, concepto (descripción), unidad y precio
-    // unitario, y recalcula el importe. (La cantidad NO se toca: es la
-    // recibida del albarán.) Dispara 'input' en cada campo para que
-    // wireConciliaEdit marque dirty y sincronice importe. No reconcilia con
-    // Sigrid (eso sigue siendo el ✎ de Origen): al guardar, si cambió la
-    // identidad de una fila Sigrid, pasará a NUEVA conservando el resto.
-    // ----------------------------------------------------------------- //
-    // F-051 (R13): primer ítem FIJO del combo de PARTIDA: no se filtra por
-    // el texto tecleado y está siempre, haya o no contrato o líneas.
-    // Elegirlo pone la línea en almacén (partida vacía) sin tocar importes
-    // y la fila de Sigrid sigue siendo de Sigrid.
-    const ITEM_ALMACEN = {
-        id: null,
-        almacen: true,
-        label: "Almacén (sin partida)",
-        desc: "",
-        part: "",
-        unidad: "",
-        precio: null,
-        norm: "",
-    };
-
+    // F-051 (R13): «Almacén (sin partida)» pone la línea en almacén (partida
+    // vacía) sin tocar importes; la fila Contrato sigue siendo Contrato.
     async function elegirAlmacen(input) {
         const tr = input.closest("tr.conciliacion-row");
         const vid = (input.dataset.valuationLineId ||
@@ -968,168 +945,6 @@
             input.disabled = false;
         }
     }
-
-    function _contratoLineItems() {
-        return (CONTRATO_LINES || []).map(function (l) {
-            const lab = l.label || l.desc || "";
-            return {
-                id: (l.id != null ? l.id : null),
-                label: lab,
-                desc: (l.desc != null ? l.desc : ""),
-                part: (l.part != null ? l.part : ""),
-                unidad: (l.unidad != null ? l.unidad : ""),
-                precio: (l.precio != null ? l.precio : null),
-                norm: _normLine(lab),
-            };
-        }).filter(function (it) { return it.label !== ""; });
-    }
-
-    function _setRowField(tr, field, val) {
-        const el = tr.querySelector('[data-field="' + field + '"]');
-        if (!el) { return; }
-        el.value = (val === null || val === undefined) ? "" : String(val);
-        // Notifica a wireConciliaEdit (dirty + sincroniza importe). El combo
-        // de cada input ignora este 'input' si el campo no tiene el foco.
-        el.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-
-    function attachContratoLineCombo(input) {
-        if (!input || input.dataset.contratoComboAttached) { return; }
-        input.dataset.contratoComboAttached = "1";
-        const items = _contratoLineItems();
-        // F-051 (R13): solo el combo de PARTIDA ofrece «Almacén».
-        const esPartida = input.classList.contains("js-partida-combo");
-
-        const wrap = document.createElement("div");
-        wrap.className = "combo combo-lines combo-concepto";
-        input.parentNode.insertBefore(wrap, input);
-        wrap.appendChild(input);
-        const panel = document.createElement("div");
-        panel.className = "combo-panel";
-        panel.hidden = true;
-        wrap.appendChild(panel);
-
-        let shown = [];
-        let repos = null;
-        let justPicked = false;
-
-        function place() {
-            const r = input.getBoundingClientRect();
-            panel.style.top = (r.bottom + 4) + "px";
-            panel.style.left = r.left + "px";
-            panel.style.minWidth = Math.max(r.width, 280) + "px";
-            panel.style.maxWidth = "560px";
-        }
-        function close() {
-            panel.hidden = true;
-            if (repos) {
-                window.removeEventListener("scroll", repos, true);
-                window.removeEventListener("resize", repos);
-                repos = null;
-            }
-        }
-        function pick(it) {
-            justPicked = true;
-            if (it.almacen) {
-                close();
-                elegirAlmacen(input);
-                return;
-            }
-            const tr = input.closest("tr.conciliacion-row");
-            // Auto-guardado: re-conciliar con la línea de contrato elegida
-            // reutilizando el <select> oculto js-concilia-select (PATCH
-            // mode=contract_line: rellena partida/concepto/unidad/precio
-            // desde Sigrid, conserva la cantidad, deja la fila SIGRID y
-            // recarga). Sin pulsar «Guardar».
-            const sel = tr ? tr.querySelector(".js-concilia-select") : null;
-            if (sel && it.id != null) {
-                sel.value = String(it.id);
-                if (sel.value === String(it.id)) {
-                    close();
-                    sel.dispatchEvent(new Event("change", { bubbles: true }));
-                    return;
-                }
-            }
-            // Fallback (sin <select>/opción): rellenar campos en cliente.
-            if (tr) {
-                _setRowField(tr, "codigo_partida", it.part);
-                _setRowField(tr, "descripcion", it.desc);
-                _setRowField(tr, "unidad", it.unidad);
-                _setRowField(tr, "precio_unitario",
-                    it.precio != null ? it.precio : "");
-            } else {
-                input.value = it.desc;
-                input.dispatchEvent(new Event("input", { bubbles: true }));
-            }
-            close();
-            input.focus();
-        }
-        function render() {
-            panel.innerHTML = "";
-            if (!shown.length) {
-                const d = document.createElement("div");
-                d.className = "combo-msg";
-                d.textContent = items.length ? "Sin coincidencias" : "Sin líneas de contrato";
-                panel.appendChild(d);
-            } else {
-                shown.forEach(function (it) {
-                    const d = document.createElement("div");
-                    d.className = "combo-item";
-                    d.textContent = it.label;
-                    d.addEventListener("mousedown", function (e) {
-                        e.preventDefault();
-                        pick(it);
-                    });
-                    panel.appendChild(d);
-                });
-            }
-            panel.hidden = false;
-            place();
-            if (!repos) {
-                repos = function (e) {
-                    if (e && e.type === "scroll" && e.target &&
-                        panel.contains(e.target)) { return; }
-                    close();
-                };
-                window.addEventListener("scroll", repos, true);
-                window.addEventListener("resize", repos);
-            }
-        }
-        function open() {
-            // Solo se abre si el input tiene el foco: así, cuando se
-            // rellenan programáticamente otros campos con combo (p.ej. al
-            // elegir desde concepto se rellena también partida), su combo
-            // NO se despliega.
-            if (document.activeElement !== input) { return; }
-            if (justPicked) { justPicked = false; return; }
-            const tokens = _normLine(input.value).split(/\s+/).filter(Boolean);
-            shown = items.filter(function (it) {
-                if (!tokens.length) { return true; }
-                return tokens.every(function (t) { return it.norm.indexOf(t) !== -1; });
-            });
-            if (esPartida) {
-                // F-051 (R13): «Almacén (sin partida)» SIEMPRE el primero.
-                shown = [ITEM_ALMACEN].concat(shown);
-            }
-            render();
-        }
-
-        input.addEventListener("focus", open);
-        input.addEventListener("click", open);
-        input.addEventListener("input", open);
-        document.addEventListener("click", function (e) {
-            if (!wrap.contains(e.target)) { close(); }
-        });
-    }
-
-    function wireConceptoCombos() {
-        document.querySelectorAll(
-            "tr.concilia-editable .js-concepto-combo"
-        ).forEach(function (inp) {
-            attachContratoLineCombo(inp);
-        });
-    }
-
 
     // F-051 (R12, review H2): la partida solo viaja si el revisor la
     // cambió respecto a la que pintó la ficha (la FINAL de la línea).
@@ -1227,23 +1042,6 @@
         return lineas;
     }
 
-    // ¿Este campo identitario, tal como está, hace que una fila de Sigrid
-    // pase a NUEVA al guardar? (el aviso del confirm; decide el backend).
-    function cambiaIdentidad(inp) {
-        if (inp.value === inp.defaultValue) { return false; }
-        if (inp.dataset.field === "codigo_partida") {
-            const v = inp.value.trim();
-            // F-051 (R12): vaciar la partida es elegir almacén; la fila
-            // de Sigrid sigue siendo de Sigrid.
-            if (!v) { return false; }
-            // F-051 (R20, review O2): poner la partida de la línea casada
-            // de Sigrid tampoco cambia la identidad.
-            const casada = String(inp.dataset.partidaCasada || "").trim();
-            if (casada && v === casada) { return false; }
-        }
-        return true;
-    }
-
     function wireConciliaEdit() {
         linesBody.querySelectorAll("tr.concilia-editable").forEach(function (tr) {
             const inputs = tr.querySelectorAll(".js-cedit");
@@ -1297,25 +1095,9 @@
                 if (!vid) return;
 
                 // F-065 R8, R13: solo lo cambiado; «Guardar» bloquea la fila
-                // (también sin cambios).
+                // (también sin cambios). R25: si cambian partida, unidad o
+                // precio de una fila Contrato, pasa a Nueva SIN confirmación.
                 const body = _camposCambiados(tr);
-
-                // Aviso de conversión SIGRID → NUEVA si cambió (de verdad: está
-                // en el cuerpo) un campo identitario en una fila assigned.
-                const isSigrid = tr.classList.contains("concilia-assigned");
-                const identityChanged = [].some.call(
-                    tr.querySelectorAll('.js-cedit[data-identity="1"]'),
-                    function (inp) {
-                        return inp.dataset.field in body && cambiaIdentidad(inp);
-                    }
-                );
-                if (isSigrid && identityChanged) {
-                    if (!window.confirm(
-                        "Has cambiado imputación, unidad o precio: la línea " +
-                        "dejará de ser de Sigrid y pasará a NUEVA (conservando " +
-                        "el resto de campos). ¿Continuar?"
-                    )) return;
-                }
 
                 saveBtn.disabled = true;
                 const original = saveBtn.textContent;
@@ -1353,9 +1135,11 @@
             });
         });
     }
-    wireConciliaEdit();
+    // F-065 R27: el combo de partida primero, para que con su panel abierto
+    // Enter elija la partida y no dispare el «Guardar» de la fila. R28: el
+    // concepto es texto (reapuntar es solo «Origen ✎»).
     wirePartidaCombos();
-    wireConceptoCombos();
+    wireConciliaEdit();
 
     // ------------------------------------------------------------------ //
     // «Guardar todas» (F-065 R18): guarda y BLOQUEA solo las filas con
@@ -2631,6 +2415,9 @@
     }
 
     async function handleRefetchOnly() {
+        // F-065 (O1, humano 2026-10-11): volver a buscar revalora y descarta lo
+        // hecho a mano: misma confirmación que R22.
+        if (!confirmarRevalorar()) return;
         setButtonsDisabled(true);
         paintStatus("info", "Consultando ERP…");
         try {

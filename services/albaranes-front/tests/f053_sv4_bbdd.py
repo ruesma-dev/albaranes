@@ -177,11 +177,20 @@ def construir(*, con_altas: bool = True, status: str = "ok", aprobado: bool = Fa
             "total_valorado, review_required) VALUES "
             "(:v1, :d1, 'CT/1', :st, 60.0, 0), (:v2, :d2, 'CT/1', 'ok', 5.0, 0)"),
             {"v1": VAL, "d1": DOC, "st": status, "v2": VAL_AJENO, "d2": DOC_AJENO})
+        # (F-065, O2) Las sin vincular son Nuevas, como las deja sv6: con su
+        # derivada (una fila sin línea de contrato NI derivada no se aprueba).
+        s.execute(text(
+            "INSERT INTO contrato_lines_derived (id, created_by_valuation_id, codigo_contrato, "
+            "descripcion_linea, precio_unitario, codigo_partida, origen) VALUES "
+            "(901, :v, 'CT/1', 'NUEVA', 10.0, '04.01', 'nueva_no_match')"), {"v": VAL})
         linea_valorada(s, id=11, merge_line_id=701, matched_contrato_line_id=501)
-        linea_valorada(s, id=12, merge_line_id=702, codigo_partida_final="04.01")
-        linea_valorada(s, id=13, merge_line_id=703, importe_calculado=0.0)
+        linea_valorada(s, id=12, merge_line_id=702, codigo_partida_final="04.01",
+                       derived_contrato_line_id=901)
+        linea_valorada(s, id=13, merge_line_id=703, importe_calculado=0.0,
+                       derived_contrato_line_id=901)
         linea_valorada(s, id=14, merge_line_id=None, line_kind="manual",
-                       importe_calculado=20.0, codigo_partida_final=None)
+                       importe_calculado=20.0, codigo_partida_final=None,
+                       derived_contrato_line_id=901)
         linea_valorada(s, id=21, valuation_id=VAL_AJENO, merge_line_id=None)
         s.commit()
     return motor
