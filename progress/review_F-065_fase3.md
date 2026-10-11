@@ -1,10 +1,10 @@
 <!-- progress/review_F-065_fase3.md -->
-Revisión incremental desde 3516c40 (pasada 2) hasta `1d967bf`; la pasada 1 fue completa, de `7b46bd8` a `357732b`
+Revisión incremental desde c1578c2 (pasada 3) hasta `8b940a8`; la 2, de `3516c40`; la 1, completa desde `7b46bd8`
 
 # F-065 · fase 3 (R29–R37, dividir con F6) · review
 
-- **Veredicto (pasada 2, al final): CHANGES_REQUESTED** por CR1b, que es CR1 en un cuarto cuerpo que no vi. La
-  pasada 1 lo fue por CR1.
+- **Veredicto (pasada 3, al final): APPROVED.** Antes: CHANGES_REQUESTED por CR1 (pasada 1) y CR1b (pasada 2),
+  resueltos.
 - **Nivel de rigor:** `critico` (declarado). Exige fase RED, cobertura ≥ 80 %, mutación con 0 supervivientes sin
   justificación aceptada y MANUAL con su comando exacto.
 - Servicios: sv4 (código) y sv9 (solo test). Sin DDL. `azure-apps` `a9aa68d` y `ARCHITECTURE.md` regla 20 al día.
@@ -34,27 +34,12 @@ Revisión incremental desde 3516c40 (pasada 2) hasta `1d967bf`; la pasada 1 fue 
   - Ni «no válida» ni «sin veredicto». RM5 N/A. RM6: no se quitó ninguna guarda.
   - **RM3 / equivalentes:** uno de los cuatro reescritos no es equivalente para todas las entradas (CR1).
 
-## Cambio requerido
+## Cambio requerido en la pasada 1 (resuelto en las pasadas 2 y 3)
 
-1. **CR1 · Media · números no finitos.** La reescritura del «equivalente» del signo admite `NaN`, y los cuerpos JSON
-   aceptan `NaN`/`Infinity`.
-   - **El cambio de comportamiento**: la primera versión de `repartir` rechazaba un `NaN` con Q positiva:
-     `(NaN > 0) != (q > 0)`. La reescrita (`review_models.py:850`, `math.copysign`) lo deja pasar. Se reprodujo:
-     `repartir(q=10, …, partes=[nan, 10])` ⇒ `ParteCalculada(cantidad_convertida=nan, …, importe=nan)`, sin error.
-   - **Por qué llega**: `DivisionBody.model_validate_json('{"partes":[{"cantidad":NaN},{"cantidad":1}]}')` **lo
-     acepta**. `_numero_es` solo filtra lo que llega como texto.
-   - **Ya pasaba desde la fase 1**, que se me escapó en su review:
-     - `ConciliacionEditBody` acepta `{"cantidad": NaN}`;
-     - `TraerLineasBody` acepta `Infinity`.
-   - **El efecto en BBDD**: escribe `NaN` en cantidades, importe y `total_valorado`. sv9 descartaría la línea en
-     silencio, porque `abs(NaN) > ε` es falso.
-   - **Alcance**: el front nunca lo manda (`JSON.stringify(NaN)` es `null`); hace falta una petición hecha a mano. Es
-     barato de cerrar y el nivel es `critico`.
-   - **Qué hacer**:
-     - `allow_inf_nan=False` (o `math.isfinite` en `_numero_es` también para números) en `ParteDivision`,
-       `ConciliacionEditBody` y `LineaATraer` ⇒ 422;
-     - una guarda `math.isfinite` en `repartir`, para el dominio puro;
-     - tests de los tres cuerpos y del dominio.
+1. **CR1 · Media · números no finitos.** La reescritura del signo de `repartir` (`math.copysign`) dejaba pasar `NaN`,
+   y los cuerpos JSON (`DivisionBody`, `ConciliacionEditBody`, `TraerLineasBody`) aceptaban `NaN`/`Infinity`. Así se
+   escribían `NaN` en cantidades, importes y `total_valorado`, y sv9 habría descartado la línea en silencio. Detalle en
+   `git show 3516c40:progress/review_F-065_fase3.md`.
 
 ## Lo que pidió el líder (pasada 1, resumen; íntegro en `git show 3516c40:progress/review_F-065_fase3.md`)
 
@@ -101,40 +86,46 @@ Revisión incremental desde 3516c40 (pasada 2) hasta `1d967bf`; la pasada 1 fue 
   entradas límite que el resto del código no filtra (`NaN`, `±inf`, `-0.0`). «Inalcanzable» suele significar «no lo
   manda la UI».
 
-## Pasada 2 · incremental desde `3516c40` hasta `1d967bf`
+## Pasada 2 · incremental desde `3516c40` hasta `1d967bf` (resumen)
 
-- **Veredicto pasada 2: CHANGES_REQUESTED** por **CR1b** (media, una línea y su test). Lo demás está resuelto.
-- **Verificación**: `init.sh` exit 0, `PUERTA COBERTURA: 100.0% de 171 líneas (171/171)`; sv4 sin caché **1218
-  passed**.
+Íntegra en `git show c1578c2:progress/review_F-065_fase3.md`. CHANGES_REQUESTED por **CR1b**:
+`ConciliacionOverridePayload` («Origen ✎») seguía admitiendo `NaN`. Probado en una copia: la fila se quedaba sin
+precio ni importe y el total bajaba de 2120 a 1200. Quedaron resueltos y falseados en una copia:
+- CR1 en los tres cuerpos, el manejador del 422 sin el 500 y `repartir` con no finitos;
+- el signo reescrito, que equivale en todo lo que llega;
+- O1 (familia que no suma y se aprueba), O4 (ninguna parte a 0,00 €) y O3 (el texto de la original).
+La mutación de lo nuevo, 28/28, se recalculó y cuadra.
+
+## Pasada 3 · incremental desde `c1578c2` hasta `8b940a8`
+
+- **Veredicto pasada 3: APPROVED.** CR1b resuelto y la auditoría de los cuerpos de escritura es completa. No quedan
+  cambios requeridos en la fase 3.
+- **Verificación**: `init.sh` exit 0, `PUERTA COBERTURA: 100.0% de 173 líneas (173/173)`; sv4 sin caché **1221
+  passed**. Árbol limpio.
+- **CR1b, falseado en una copia** (`sv4_copia8`):
+  - Sin `allow_inf_nan=False` en `ConciliacionOverridePayload` ⇒ **5 failed**: el test de los cuerpos ×3 más las
+    rutas `origen_nan` y `casar_blanca_inf`.
+  - Sin él en `ValuationLineUpdate` ⇒ **4 failed**: los cuerpos ×3 más `put_ignoradas_nan`.
+  - Las rutas responden 422 `finite_number` sin llamar al servicio, a través del manejador de la pasada 2.
+- **Auditoría (comprobada)**: `app.py` tiene **25** rutas `post/put/patch/delete`.
+  - Las que llevan cuerpo con números están todas protegidas: `ParteDivision`, `ConciliacionEditBody`,
+    `LineaATraer`, `ConciliacionOverridePayload` (`PATCH …/conciliacion` y `POST …/by-merge/{id}/conciliacion`) y
+    `ValuationLineUpdate` (PUT).
+  - El resto son `Form` de texto, sin cuerpo o `ProductoSigridBody` (texto). Ninguna lee `request.json()` a mano.
+    `_parse_optional_float` solo la usan los filtros del listado (GET).
+- **`MergeLinePayload` sin proteger es correcto**:
+  - Solo entra por `MergeDocumentUpdatePayload.lines` del PUT, y ni el repositorio ni el servicio leen
+    `payload.lines` (grep sin resultados).
+  - Que el PUT no toca las blancas ni las filas lo fija `test_f065_r1_put_con_las_blancas_no_toca_las_filas`, que
+    compara la BBDD entera.
+  - Además es el modelo con que se LEEN las blancas (`_merge_line_to_payload`): protegerlo rompería el detalle si una
+    fila trajera `NaN`.
+  - Un `NaN` ahí se valida y se descarta sin escribir nada.
 - **Mutación (RM1)**:
-  - Recalculé `3516c40..HEAD`: **74 líneas, 28 mutantes** (23 + 2 + 3), los mismos sobre el SHA medido `556afae`.
-    Después solo hay estilo en los tests y `progress/`.
-  - **No reejecuté la campaña: dura 746,8 s.** RM2: 746,8 × 4 ÷ 28 = 106,7 s frente a una línea base de 91–94 s;
-    coherente.
-- **Lo resuelto**, cada punto falseado en una copia (`sv4_copia7`) contra `test_f065_f3_dividir.py`:
-  - **CR1, los tres cuerpos**: `allow_inf_nan=False` ⇒ 422. Quitado en `ParteDivision`: 4 failed.
-  - **CR1, el manejador del 422**: devuelve los no finitos como texto, sin el 500 de `JSONResponse`. Quitado: 4 failed.
-  - **CR1, `repartir`**: rechaza Q, importe y partes no finitos. Sin `isfinite` en la parte: 3 failed.
-- **El signo reescrito (RM5)**:
-  - El test ejecuta una rejilla de finitos ≠ 0 frente a `(cantidad > 0) != (q > 0)`, y `NaN`, ±inf y ±0 quedan
-    rechazados antes por las guardas.
-  - Además es exacto: para un `x` finito y ≠ 0, `copysign(1, x) = 1` ⇔ `x > 0`. Equivale en todo lo que llega.
-- **Los otros puntos**:
-  - **O1**: `test_f065_p5_una_familia_que_no_suma_avisa_pero_se_aprueba`.
-  - **O4 (ninguna parte a 0,00 €)**: 422 con mensaje que dice la parte y el importe. Quitada la guarda: 3 failed.
-  - **O3**: las partes llevan el texto que enseña la original (la fijada, luego la de su línea, luego el concepto). Con
-    el orden viejo: 1 failed.
-  - **O2**: anotado sin cambio; es el comportamiento de F-053 para toda Nueva sin blanca. Razonable.
-
-### CR1b · Media · `ConciliacionOverridePayload` («Origen ✎») sigue admitiendo `NaN`
-
-- Es el mismo defecto que CR1, en el cuerpo de `PATCH …/conciliacion`. Tiene `precio_unitario: float | None`
-  (`review_models.py:396`, sin `allow_inf_nan=False`), y la ruta (`app.py:1428`) lo pasa a `set_line_conciliacion`.
-- Mi lista de CR1 nombraba tres cuerpos y se me pasó este; es de las escrituras el único con números que quedaba
-  (los filtros del listado solo leen).
-- Reproducido en la copia: `{"mode": "nueva", "precio_unitario": NaN}` se valida. La fila 11 se queda sin precio ni
-  importe (SQLite guarda `NaN` como NULL) y el total baja de 2120 a 1200.
-- En PostgreSQL quedaría `NaN`, que R20 no ve como vacío, y sv9 descartaría la línea en silencio.
-- La UI no lo manda (el selector solo envía `mode` y la línea). **Qué hacer**: el mismo `model_config` en
-  `ConciliacionOverridePayload`, y añadirlo al test de los cuerpos y al de la ruta, que debe dar 422 sin 500.
-
+  - Recalculé `c1578c2..HEAD`: **9 líneas, 2 mutantes** (`allow_inf_nan` → `True` en los dos modelos). Coincide.
+    Después de `e4ac55a` solo hay estilo en los tests y `progress/`.
+  - **No reejecuté la campaña: dura 201,4 s** (2 workers). RM2: 201,4 × 2 ÷ 2 = 201 s, frente a una línea base de
+    ~70 s más la propia medición de la base: no es sospechoso, porque está por encima.
+  - 0 supervivientes y 0 «sin veredicto». RM5 N/A.
+- **Checkpoints**: [x] C1–C5, C4 bis completo (RED `6 failed, 11 passed`). La fase 3 queda pendiente de la MANUAL T27
+  del humano (`current.md`), de fusionar, de `init.sh` en el árbol principal, de desplegar solo sv4 y de T28.
