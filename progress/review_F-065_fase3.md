@@ -1,10 +1,10 @@
 <!-- progress/review_F-065_fase3.md -->
-Revisión completa (pasada 1) de la fase 3, desde `7b46bd8` (dev con la fase 2) hasta `357732b` (HEAD)
+Revisión incremental desde 3516c40 (pasada 2) hasta `1d967bf`; la pasada 1 fue completa, de `7b46bd8` a `357732b`
 
 # F-065 · fase 3 (R29–R37, dividir con F6) · review
 
-- **Veredicto: CHANGES_REQUESTED.** Un único cambio (CR1, media), pequeño. Lo demás, incluido todo lo que va a Sigrid,
-  está bien y verificado de punta a punta.
+- **Veredicto (pasada 2, al final): CHANGES_REQUESTED** por CR1b, que es CR1 en un cuarto cuerpo que no vi. La
+  pasada 1 lo fue por CR1.
 - **Nivel de rigor:** `critico` (declarado). Exige fase RED, cobertura ≥ 80 %, mutación con 0 supervivientes sin
   justificación aceptada y MANUAL con su comando exacto.
 - Servicios: sv4 (código) y sv9 (solo test). Sin DDL. `azure-apps` `a9aa68d` y `ARCHITECTURE.md` regla 20 al día.
@@ -56,33 +56,14 @@ Revisión completa (pasada 1) de la fase 3, desde `7b46bd8` (dev con la fase 2) 
      - una guarda `math.isfinite` en `repartir`, para el dominio puro;
      - tests de los tres cuerpos y del dominio.
 
-## Lo que pidió el líder
+## Lo que pidió el líder (pasada 1, resumen; íntegro en `git show 3516c40:progress/review_F-065_fase3.md`)
 
-- **Qué va a Sigrid**: lo comprobé de punta a punta, como se describe arriba.
-  - `cantidad_convertida = qk`; `cantidad_albaran = ca0 × qk / Q` mantiene la conversión reproducible con el factor
-    copiado; en contenedores no reproducibles se prorratean los m³.
-  - Importe `round(importe0 × qk / Q, 2)`; la última parte absorbe el redondeo y la familia suma el original.
-- **Deshacer**: una sola entrada; restaura la original, su derivada y la cabecera, y borra las partes y las derivadas
-  nuevas. Los tests comparan **toda la BBDD** (`foto`) antes y después en tres repartos y en una Nueva.
-- **No se divide**:
-  - albarán aprobado (409) o fila bloqueada (409);
-  - fila con la marca de unidad (422, D1), huérfana (422, D5), sintética, sin Q;
-  - partes 0, nulas, de otro signo o que no suman (422 sin cambios).
-  - La plantilla no pinta «Dividir» en esos casos.
-- **Aviso de familia (D6)**: compara en la unidad del albarán; es aviso, no bloqueo. R20, O2 y CR3 siguen bloqueando lo
-  suyo.
-- **F7 eliminado sin romper nada**:
-  - fuera `duplicateRow`/`camposBody` (que además mandaba todos los campos, la O6 de la fase 1);
-  - F8 se queda;
-  - en `app.js`/plantilla no quedan referencias a F7, salvo el comentario que lo explica.
-- **D1–D7**: todas razonables.
-  - D1 es lo más seguro: una Q en otra unidad no se multiplica en N filas.
-  - D2 evita que dos filas compartan derivada.
-  - D3 aplica a la parte 1 la misma regla que al editar.
-  - D4 lo necesita el deshacer.
-  - D5: la traída sí se divide; la huérfana, «revalora».
-  - D6 compara en la unidad correcta.
-  - D7: no copiar el declarado ni las razones es lo correcto, porque eran de la línea entera.
+- **Sigrid**: lo comprobé de punta a punta (arriba). Cantidades `qk` y `ca0 × qk / Q`; importes prorrateados, con la
+  última parte absorbiendo el redondeo.
+- **Deshacer**: una entrada; los tests comparan la BBDD entera antes y después.
+- **No se divide**: aprobado o bloqueada (409); con la marca de unidad, huérfana, sintética, sin Q o con partes
+  inválidas (422).
+- **Lo demás**: el aviso de familia no bloquea (P5); F7 fuera y F8 se queda; D1–D7 razonables.
 
 ## Checkpoints
 
@@ -119,3 +100,41 @@ Revisión completa (pasada 1) de la fase 3, desde `7b46bd8` (dev con la fase 2) 
 - `reviewer.md` (RM3): cuando un «equivalente» se elimina reescribiendo el código, probar la reescritura también con
   entradas límite que el resto del código no filtra (`NaN`, `±inf`, `-0.0`). «Inalcanzable» suele significar «no lo
   manda la UI».
+
+## Pasada 2 · incremental desde `3516c40` hasta `1d967bf`
+
+- **Veredicto pasada 2: CHANGES_REQUESTED** por **CR1b** (media, una línea y su test). Lo demás está resuelto.
+- **Verificación**: `init.sh` exit 0, `PUERTA COBERTURA: 100.0% de 171 líneas (171/171)`; sv4 sin caché **1218
+  passed**.
+- **Mutación (RM1)**:
+  - Recalculé `3516c40..HEAD`: **74 líneas, 28 mutantes** (23 + 2 + 3), los mismos sobre el SHA medido `556afae`.
+    Después solo hay estilo en los tests y `progress/`.
+  - **No reejecuté la campaña: dura 746,8 s.** RM2: 746,8 × 4 ÷ 28 = 106,7 s frente a una línea base de 91–94 s;
+    coherente.
+- **Lo resuelto**, cada punto falseado en una copia (`sv4_copia7`) contra `test_f065_f3_dividir.py`:
+  - **CR1, los tres cuerpos**: `allow_inf_nan=False` ⇒ 422. Quitado en `ParteDivision`: 4 failed.
+  - **CR1, el manejador del 422**: devuelve los no finitos como texto, sin el 500 de `JSONResponse`. Quitado: 4 failed.
+  - **CR1, `repartir`**: rechaza Q, importe y partes no finitos. Sin `isfinite` en la parte: 3 failed.
+- **El signo reescrito (RM5)**:
+  - El test ejecuta una rejilla de finitos ≠ 0 frente a `(cantidad > 0) != (q > 0)`, y `NaN`, ±inf y ±0 quedan
+    rechazados antes por las guardas.
+  - Además es exacto: para un `x` finito y ≠ 0, `copysign(1, x) = 1` ⇔ `x > 0`. Equivale en todo lo que llega.
+- **Los otros puntos**:
+  - **O1**: `test_f065_p5_una_familia_que_no_suma_avisa_pero_se_aprueba`.
+  - **O4 (ninguna parte a 0,00 €)**: 422 con mensaje que dice la parte y el importe. Quitada la guarda: 3 failed.
+  - **O3**: las partes llevan el texto que enseña la original (la fijada, luego la de su línea, luego el concepto). Con
+    el orden viejo: 1 failed.
+  - **O2**: anotado sin cambio; es el comportamiento de F-053 para toda Nueva sin blanca. Razonable.
+
+### CR1b · Media · `ConciliacionOverridePayload` («Origen ✎») sigue admitiendo `NaN`
+
+- Es el mismo defecto que CR1, en el cuerpo de `PATCH …/conciliacion`. Tiene `precio_unitario: float | None`
+  (`review_models.py:396`, sin `allow_inf_nan=False`), y la ruta (`app.py:1428`) lo pasa a `set_line_conciliacion`.
+- Mi lista de CR1 nombraba tres cuerpos y se me pasó este; es de las escrituras el único con números que quedaba
+  (los filtros del listado solo leen).
+- Reproducido en la copia: `{"mode": "nueva", "precio_unitario": NaN}` se valida. La fila 11 se queda sin precio ni
+  importe (SQLite guarda `NaN` como NULL) y el total baja de 2120 a 1200.
+- En PostgreSQL quedaría `NaN`, que R20 no ve como vacío, y sv9 descartaría la línea en silencio.
+- La UI no lo manda (el selector solo envía `mode` y la línea). **Qué hacer**: el mismo `model_config` en
+  `ConciliacionOverridePayload`, y añadirlo al test de los cuerpos y al de la ruta, que debe dar 422 sin 500.
+
