@@ -24,6 +24,7 @@ from ruesma_comun.contratos.origen_datos import (
     MOTIVO_CORREO_FUERA_DE_LISTA,
     normalizar_codigo,
 )
+from ruesma_comun.importes import importe_de_linea
 from ruesma_comun.valoracion import esta_valorado
 
 from domain.models.alta_sigrid_models import (
@@ -746,6 +747,142 @@ class TraerLineasBody(BaseModel):
     cantidad. El cuerpo viejo (``contrato_line_ids`` sin cantidades) es un 422."""
 
     lineas: list[LineaATraer] = Field(min_length=1)
+
+
+# ------------------------------------------------------------------ #
+# F-065 fase 3 · dividir una fila (R29–R35), modelo M1 sin DDL
+# ------------------------------------------------------------------ #
+#: (R30) La suma de las partes puede diferir de Q en menos de media milésima.
+TOLERANCIA_REPARTO = 0.005
+#: (R29) Entre 2 y 20 partes.
+MIN_PARTES, MAX_PARTES = 2, 20
+
+
+class RepartoInvalido(ValueError):
+    """(R30) La división no se hace (422, sin cambios). El mensaje es para el
+    administrativo: dice qué parte o qué suma falla."""
+
+
+class ParteDivision(BaseModel):
+    """(R29) Una parte: su cantidad (en la unidad del precio, como la Q de la
+    ficha) y su partida (vacía = almacén). Una cantidad nula o 0 se acepta
+    aquí y la rechaza ``repartir`` diciendo qué parte es."""
+
+    cantidad: float | None = None
+    codigo_partida: str | None = None
+
+    @field_validator("cantidad", mode="before")
+    @classmethod
+    def _cantidad(cls, valor: object) -> object:
+        return _numero_es(valor)
+
+    @field_validator("codigo_partida")
+    @classmethod
+    def _partida(cls, valor: str | None) -> str | None:
+        return (valor or "").strip() or None
+
+
+class DivisionBody(BaseModel):
+    """(R29, R30) Cuerpo de ``POST .../lines/{vid}/dividir``: de 2 a 20 partes."""
+
+    partes: list[ParteDivision] = Field(min_length=MIN_PARTES, max_length=MAX_PARTES)
+
+
+class ParteCalculada(BaseModel):
+    """(R31, R33) Cantidades e importe de una parte."""
+
+    cantidad_convertida: float
+    cantidad_albaran: float | None
+    importe: float | None
+
+
+class DivisionHecha(BaseModel):
+    """(R34) Lo que creó una división: las filas ``reparto`` (partes 2..N) y
+    las derivadas ``manual_override`` nuevas. El «Deshacer» borra las dos."""
+
+    partes: list[int]
+    derivadas: list[int]
+
+
+def _cantidad_es(valor: float) -> str:
+    """Una cantidad como la escribe el administrativo: «9,5», «10»."""
+    return f"{valor:.3f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
+def _fuera_de_tolerancia(a: float, b: float) -> bool:
+    return round(abs(a - b), 6) >= TOLERANCIA_REPARTO
+
+
+def repartir(
+    *,
+    q: float | None,
+    ca0: float | None,
+    importe0: float | None,
+    precio: float | None,
+    descuento: float | None,
+    partes: list[float | None],
+) -> list[ParteCalculada]:
+    """(R30, R31, R33) Reparte una fila de cantidad ``q`` (la convertida, o la
+    del albarán si no hay) entre ``partes`` (sus cantidades, la 1 es la que se
+    queda la original). Pura: no toca nada.
+
+    - Cada parte: ``cantidad_convertida = qk`` y ``cantidad_albaran = ca0 × qk
+      / q`` (``None`` si la original no la tiene).
+    - Importe: ``round(importe0 × qk / q, 2)`` y la última absorbe el
+      redondeo, así la familia suma ``importe0``; sin ``importe0``, la fórmula
+      canónica con el precio y el descuento de la original.
+    - ``RepartoInvalido`` si ``q`` es nula o 0, no hay de 2 a 20 partes, una es
+      nula, 0 o de otro signo que ``q``, o suman ``q`` ± 0,005 o más.
+    """
+    if q is None or q == 0:
+        raise RepartoInvalido("La línea está sin cantidad: no se puede dividir.")
+    if not MIN_PARTES <= len(partes) <= MAX_PARTES:
+        raise RepartoInvalido(
+            f"Se divide en entre {MIN_PARTES} y {MAX_PARTES} líneas "
+            f"(llegaron {len(partes)})."
+        )
+    for numero, cantidad in enumerate(partes, start=1):
+        if cantidad is None or cantidad == 0:
+            raise RepartoInvalido(f"La parte {numero} no tiene cantidad (o es 0).")
+        if (cantidad > 0) != (q > 0):
+            raise RepartoInvalido(
+                f"La parte {numero} tiene otro signo que la línea ({_cantidad_es(q)})."
+            )
+    suma = sum(partes)  # type: ignore[arg-type]
+    if _fuera_de_tolerancia(suma, q):
+        raise RepartoInvalido(
+            f"Las partes suman {_cantidad_es(suma)}; la línea tiene {_cantidad_es(q)}."
+        )
+
+    if importe0 is None:
+        importes = [
+            importe_de_linea(cantidad=cantidad, precio_unitario=precio,
+                             descuento_pct=descuento)
+            for cantidad in partes
+        ]
+    else:
+        importes = [round(importe0 * cantidad / q, 2) for cantidad in partes[:-1]]
+        importes.append(round(importe0 - sum(importes), 2))
+    return [
+        ParteCalculada(
+            cantidad_convertida=cantidad,
+            cantidad_albaran=None if ca0 is None else ca0 * cantidad / q,
+            importe=importe,
+        )
+        for cantidad, importe in zip(partes, importes)
+    ]
+
+
+def aviso_reparto(numero_linea: int, suma: float | None, leida: float | None) -> str | None:
+    """(R35) Aviso no bloqueante mientras las partes de una blanca no sumen lo
+    que dice el albarán (comparado en la unidad del albarán); ``None`` si
+    cuadra o falta alguna de las dos."""
+    if suma is None or leida is None or not _fuera_de_tolerancia(suma, leida):
+        return None
+    return (
+        f"Las partes de la línea {numero_linea} suman {_cantidad_es(suma)}; "
+        f"el albarán dice {_cantidad_es(leida)}"
+    )
 
 
 class ConciliacionEditBody(BaseModel):
