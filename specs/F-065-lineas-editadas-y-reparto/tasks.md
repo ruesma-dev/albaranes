@@ -38,7 +38,7 @@ consultas de comprobación son de solo lectura.
 
 ## Fase 3 · dividir (sv4 + test de sv9)
 
-- [ ] T21: tests RED de la fase 3: validaciones (R30), partes y origen (R31, R32), importes (R33), transacción y deshacer (R34), pintado y aviso (R35), F6 y sin F7 (R29)  |  Verificación: `pytest tests/test_f065_f3_dividir.py` falla como se espera
+- [x] T21: tests RED de la fase 3: validaciones (R30), partes y origen (R31, R32), importes (R33), transacción y deshacer (R34), pintado y aviso (R35), F6 y sin F7 (R29)  |  Verificación: `pytest tests/test_f065_f3_dividir.py` falla como se espera
 - [ ] T22: dominio `repartir`, `ParteDivision`, `DivisionBody`, `RepartoInvalido` (R30, R31, R33)  |  Verificación: `pytest tests/test_f065_f3_dividir.py -k dominio`
 - [ ] T23: repositorio `dividir_linea`, ruta y servicio con deshacer (R30–R34)  |  Verificación: `pytest tests/test_f065_f3_dividir.py -k "repositorio or ruta or deshacer"`
 - [ ] T24: detalle y front — partes bajo su original, aviso de familia, diálogo F6, quitar F7 (R29, R35)  |  Verificación: `pytest tests/test_f065_f3_dividir.py -k "pintado or js"`
