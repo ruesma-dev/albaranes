@@ -1,9 +1,9 @@
 <!-- progress/review_F-065_fase2.md -->
-Revisión completa (pasada 1) de la fase 2, desde `8c180b0` (dev con la fase 1) hasta `2783230` (HEAD)
+Revisión incremental desde 6748c63 (pasada 2) hasta `fb4944c`; la pasada 1 fue completa, de `8c180b0` a `2783230`
 
 # F-065 · fase 2 (R24–R28 + decisiones del humano del 2026-10-11) · review
 
-- **Veredicto: CHANGES_REQUESTED.** Dos cambios: CR1, alta, y CR2, menor. Lo demás está bien hecho y verificado.
+- **Veredicto (pasada 2, abajo): CHANGES_REQUESTED** por CR3. En la pasada 1 lo fue por CR1 y CR2, ya resueltos.
 - **Nivel de rigor:** `critico` (declarado). Exige fase RED, cobertura ≥ 80 %, mutación con 0 supervivientes sin
   justificación aceptada y MANUAL con su comando exacto.
 - Servicio: solo sv4. Sin DDL, sin tocar `sigrid_lookup_client.py` ni la ruta `/api/sigrid/partidas` (LÍMITE DE
@@ -67,61 +67,72 @@ Revisión completa (pasada 1) de la fase 2, desde `8c180b0` (dev con la fase 1) 
   Corregirlo de paso. La herramienta no muta el JS ni la plantilla: los vigilan los tests con node y de render (H3).
 - **C5** [x] T15–T18 `[x]` con commits `F-065 Tn:` · [x] árbol limpio · [x] `features.json` = `in_progress`.
 
-## Cobertura requisito → test
+## Pasada 1: cobertura, puntos del líder y observaciones (resumen)
 
-| R / decisión | Tests (`test_f065_f2_origen.py` salvo indicación) |
-|---|---|
-| R24 «Contrato» | `test_f065_r24_plantilla_*` (editable y solo lectura) |
-| R25 partida/precio/unidad ⇒ Nueva, sin confirm | `test_f065_r25_dominio_cambia_origen` (10 casos), `..._hacen_nueva_la_fila_contrato` (×3), `..._ya_no_pregunta_si_pasa_a_nueva` |
-| R26 almacén / la de su línea / lo demás no cambia | `test_f065_r26_*` (×4, incl. `cambia_origen(` en el repositorio) |
-| R27 combo de la obra | `test_f065_r27_js_*` (respuesta, Almacén primero y filtro, solo de la lista, flechas) y estructurales (endpoint, aviso, Enter antes que Guardar) |
-| R28 «Origen ✎» única vía | `test_f065_r28_*` (×7: copia partida/unidad/precio, Nueva con valores actuales, bordes, concepto sin combo) |
-| O1, O2, O3, O5, almacén | `test_f065_o1_*`, `test_f065_o2_*` (×2), `test_f065_o3_*` (×2), `test_f065_o5_*`, `test_f065_almacen_*` |
+Íntegro en `git show 6748c63:progress/review_F-065_fase2.md`. R24–R28 y O1/O2/O3/O5/almacén con tests trazables;
+`cambia_origen` correcta (P10); almacén sigue vinculada; combo solo de la lista con «Almacén» primero; «Origen ✎» única
+vía; F-051/F-053 adaptados con motivo; E1, E3, E5, E6 razonables, E2 y E4 con matiz. Observaciones: H1 (descripción
+editada con blanca), H2 (Origen ✎ a otra unidad sin convertir Q), H3 (combo DOM solo estructural), H4 (caché sin obra).
 
-## Lo que pidió el líder
+## Pasada 2 · revisión incremental desde `6748c63` hasta `fb4944c`
 
-- **`cambia_origen`**: correcta y exhaustiva. Partida distinta de la de su línea, precio o unidad ⇒ Nueva. Vaciar
-  (almacén) o volver a la de su línea no cambia el origen (P10), ni descripción, cantidad, descuento o código. Una
-  Nueva sigue Nueva.
-- **Para sv9**:
-  - La Contrato que pasa a Nueva queda sin vincular (`matched` nulo, derivada `manual_override` con partida, unidad y
-    precio), con el producto genérico de F-053 y `precio = importe / ca`. Falla la descripción en las filas sin
-    blanca (**CR1**).
-  - La fila en almacén conserva `matched_contrato_line_id`: sigue vinculada con `partida = None` (F-051).
-- **Combo de partidas**:
-  - Solo admite valores de la lista: con otro texto, al salir vuelve al de antes. «Almacén» siempre va primero.
-  - Obra sin partidas, `ok: false` o red caída ⇒ solo «Almacén». En los dos últimos casos sale además el aviso.
-  - Una sola carga por ficha.
-- **«Origen ✎» única vía**: el combo de concepto y el reapunte desde la partida desaparecen. Las únicas llamadas
-  `PATCH .../conciliacion` con `mode` son el selector de «Origen ✎» y el «+» de una blanca sin fila (que crea, no
-  reapunta).
-- **Almacén total se aprueba**: lo falseé arriba. Las huérfanas (O2) bloquean con «revalora», y sv6 garantiza que no
-  nacen (`valuation_builder.py:1131-1180`).
-- **Tests adaptados**:
-  - F-051: los de `cambiaIdentidad` y `data-partida-casada` se retiran con la regla. Sus casos (la de la casada,
-    otra, vaciar, casada sin partida, unidad) los cubren `cambia_origen` y sus tests.
-  - F-053: el fixture pone su derivada a las sin vincular, como hace sv6. `t25` deja claro que «valorado» y «aprobable»
-    ya no coinciden con una huérfana.
-  - Todo está justificado.
-- **E1–E5**:
-  - Razonables: E1 (coherente con guardar = bloquear y con «solo manda `codigo_partida`»), E3 (como D3), E5 (fallo
-    seguro, igual que `SQL_LINEAS` de sv9) y E6 (SQLite ≥ 3.43 suma con compensación; vale el estructural).
-  - Razonables con matiz: E2 (H2) y E4 (H4).
+- **Veredicto pasada 2: CHANGES_REQUESTED**: CR1, CR2, H1 y H4 están resueltos; H2 queda a medias (**CR3**, alta).
+- **Verificación**:
+  - `bash harness/init.sh`: exit 0, raíz `1083 passed`, `PUERTA COBERTURA: 100.0% de 61 líneas (61/61)`.
+  - Sin caché: **sv4 1091 passed**, **sv9 530 passed**. Árbol limpio.
+- **CR1 resuelto, falseado en copias**:
+  - `descripcion_para_valoracion` se aplica en las tres escrituras (`review_repository.py:1863`, `:2107` → `:2150` y
+    `:2174`). «Añadir línea» queda cubierta por la rama in situ (`sin_blanca`).
+  - Falseo en sv4 (la función devuelve siempre `None`): `test_f065_f2_pasada2.py` ⇒ **8 failed**.
+  - Falseo en sv9 (`_descripcion` solo con el concepto): `test_f065_partes.py` ⇒ **2 failed**. Uno es `no admitida:
+    [Motivo('falta_descripcion', ...)]` y el otro `'PORTES' == 'PORTES URGENTES'`. El validador es el real.
+- **H1 resuelto sin tocar sv9**:
+  - El diff de sv9 es solo `tests/test_f065_partes.py`. `_descripcion` ya prefería `descripcion_linea`.
+  - `SQL_LINEAS`, la previa y el comparador de F-053 no cambian, y sus 530 tests están en verde.
+  - Con blanca y sin editar sigue yendo lo leído (`ya_fijada` / `editada`).
+- **H4 resuelto**: caché por obra, sin obra no se guarda y otra obra se vuelve a pedir; test con node. **CR2 resuelto**:
+  T19 está en `current.md` con pasos, las dos consultas de solo lectura y el criterio.
+- **H2, lo que está bien**:
+  - `cantidades_tras_reapuntar`: con la unidad nueva = la del albarán, Q = ca y factor 1. Misma unidad o desconocida:
+    nada cambia.
+  - Otra unidad: cantidad intacta, fila sin bloquear, `review_required` y el motivo
+    `front_unidad_cambiada_revisa_cantidad` (los de sv6 se conservan). El aviso es visible en la celda de cantidad y se
+    limpia al cambiar la cantidad o al «Guardar».
+- **Mutación (RM1)**:
+  - Recalculé `8c180b0..rama`: **2 ficheros, 276 líneas, 54 mutantes** (28 + 26). Coincide con el informe.
+  - Desde `9da7e4b` solo cambia `progress/`. **No reejecuté la campaña: dura 1138,4 s según el informe**.
+  - RM2: 1138,4 × 4 ÷ 54 = **84,3 s por mutante** frente a una línea base de 87,0–87,5 s; coherente.
+  - Ni «no válida» ni «sin veredicto». Los 4 supervivientes de la campaña intermedia eran huecos de test, no
+    equivalentes. RM5 N/A, RM6 sin guardas quitadas.
 
-## Observaciones (no bloquean)
+### CR3 · Alta · una fila marcada «revisa la cantidad» se aprueba y sv9 la manda con la cantidad incoherente
 
-1. **H1 · Decisión del humano.** Con blanca, sv9 manda como descripción de una sin vincular el concepto leído del
-   albarán, no la descripción editada en la ficha. Así lo diseñó F-053 y la fase no lo cambia. Decidir si «lo aprobado
-   es lo que se ve» incluye la descripción.
-2. **H2 · Media · E2.** «Origen ✎» a una línea de otra unidad copia la unidad y el precio, pero **no convierte Q**
-   (`review_repository.py:1753-1773`). Si la fila tenía kg y la línea elegida va en t, el importe sale ×1000. Es un
-   riesgo previo: antes ni siquiera se cambiaba la unidad. R21 lo avisaría al aprobar. Propuesta: si la unidad cambia,
-   avisar en la ficha o dejar la fila marcada para revisar la cantidad.
-3. **H3 · Baja.** El comportamiento DOM del combo (blur que revierte, Esc, Enter) se vigila solo con tests
-   estructurales; la lógica pura sí corre con node. La MANUAL T19 cubre lo demás. Opcional: un test de «Guardar y
-   aprobar» con todo en almacén por la vía del PUT, aunque hoy ya lo cazan los de F-053.
-4. **H4 · Baja · E4.** `cargarPartidasObra` guarda en caché la primera respuesta de la página. Si el combo se abre
-   antes de elegir la obra, se queda solo con «Almacén» hasta recargar. Basta con no guardar la carga «sin obra».
+- **Lo pedido**: que sv9 no admita una fila marcada así si la cantidad quedó incoherente. Nadie mira la marca:
+  - ni `_exigir_lineas_completas` (los dos aprobar);
+  - ni sv9 (`validador_alta` no lee `review_required` ni `review_reasons_json`).
+- **Reproducido en una copia** (`sv4_copia4`):
+  - Fila 11, `unidad_albaran = 'KG'` y `unidad_contrato = 'UD'`. «Origen ✎» a la 503, que va en `TN` a 90.
+  - Queda `cc = 8`, `importe = 720`, `review_required = 1` y el motivo puesto, sin bloquear.
+  - `set_approved(True)` ⇒ **`True`**. El validador real de sv9, con esa fila vinculada, devuelve
+    `PeticionAlbaran [(8.0, 90.0, 700101)]`: 8 t donde había 8 ud.
+- **Qué hacer**:
+  - En sv4, igual que R20/O2: mientras alguna fila tenga `MOTIVO_UNIDAD_CAMBIADA`, aprobar (ficha y listado) lanza
+    `LineasIncompletasError` con su posición y un aviso propio, p. ej. «Líneas con la unidad cambiada: revisa la
+    cantidad: 3».
+  - Tests por las dos vías, y otro de que, quitada la marca (cantidad cambiada o «Guardar»), se aprueba.
+  - sv9 no cambia: aprobar es la puerta de entrada al alta.
+
+### Observaciones de la pasada 2 (no bloquean)
+
+- **P2-1 · Baja.** Un «Guardar» sin cambios quita el motivo pero deja `review_required = TRUE`
+  (`review_repository.py:2037-2047`). Con cambios sí lo baja. Conviene bajarlo también.
+- **P2-2 · Baja.** Si la fila no tiene unidad (ni la suya ni la de su línea), reapuntar a otra unidad no avisa
+  (`cantidades_tras_reapuntar`, «desconocida»). Es raro, pero es justo el caso silencioso. Propuesta: avisar también
+  cuando la actual es desconocida y la nueva no es la del albarán.
+- **C4 / C4 bis de la pasada 2**:
+  - [x] RED con traza (`13 failed, 8 passed`, sv9 roto en copia: `2 failed`); [x] cobertura; [x] mutación;
+    [x] Evidencias; [x] T19 en `current.md`.
+  - **[ ] H2 incompleto (CR3)**.
 
 ## Automejora (propuesta, no aplicada)
 
