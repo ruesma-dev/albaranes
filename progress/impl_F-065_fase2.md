@@ -137,7 +137,59 @@ aprobado.
 
 | Evidencia | Valor real |
 |---|---|
-| Tests ejecutados | sv4 **1059 passed** (49 nuevos en `test_f065_f2_origen.py`); raíz 1083 passed; sv6, sv9, comun, sv1–sv3, sv5 sin cambios (caché verde) |
+| Tests ejecutados | sv4 **1061 passed** (49 nuevos en `test_f065_f2_origen.py`); raíz 1083 passed; sv6, sv9, comun, sv1–sv3, sv5 sin cambios (caché verde) |
 | Cobertura de las líneas cambiadas | `100.0% de 33 líneas cambiadas cubiertas (33/33, umbral 80%, nivel critico)` |
 | Mutación | `progress/mutacion_F-065_fase2.md`: **29 generados, 29 muertos, 0 supervivientes**, 0 timeouts, campaña completa, **4 workers**, 695,4 s, media 24,0 s/mutante, base sv4 ≈ 107 s, SHA `488b432` |
 | Tiempo de la suite | sv4 91,8 s con coverage (≈ 60 s sin); raíz 168,7 s |
+
+## Pasada 2 (review `progress/review_F-065_fase2.md`, CHANGES_REQUESTED)
+
+**Commits**: `2fa3b5b` tests RED · `7bd9656` CR1+H1 · `69b26c3` H2 · `3d6f26f` H4 · `2d8af88` CR2 · `9da7e4b` tests de
+los supervivientes · el de este informe (mutación, inventario). Nota de la review: las evidencias decían «1059»; lo real
+era 1061 (corregido arriba).
+
+- **CR1 (alta)**: al pasar a Nueva, o al editar una Nueva, la valoración guardaba `descripcion_linea = NULL` y sv9 no lee
+  la derivada: una fila **sin blanca** (traída del contrato, «Añadir línea») se quedaba sin descripción y el albarán
+  entero salía `no_admitido` (`falta_descripcion`). Ahora la función pura `descripcion_para_valoracion` decide qué se
+  escribe en las tres escrituras (Contrato → Nueva y Nueva in situ en `update_line_conciliacion`; «Origen ✎» → Nueva en
+  `set_line_conciliacion`): **sin blanca, siempre la de la fila**; con blanca, la editada (ahora o antes).
+- **H1**: sv9 **ya** prefiere `descripcion_linea` al concepto leído (`validador_alta._descripcion`); lo que lo impedía era
+  que sv4 la ponía a NULL. Por eso **no cambia el código de sv9** (ni `SQL_LINEAS`, ni la previa, ni el comparador) y sv9
+  no se añade a `servicios`: con blanca, la descripción **editada** viaja; sin editar sigue yendo lo leído (diseño de
+  F-053, `valuation_builder.py:1407`). No rompe F-053 (sus 526 tests en verde).
+- **Tests de contrato en sv9** (`test_f065_partes.py`, patrón de T10, validador real): la fila traída pasada a Nueva
+  (sin blanca, derivada propia, partida 09.09, su descripción) se admite y se manda sin vincular con esa descripción,
+  `MA9999`, 5 × 115; sin descripción ni blanca ⇒ `[Motivo('falta_descripcion', '', '77')]`; la editada manda sobre el
+  concepto; sin editar va el concepto.
+- **H2**: `cantidades_tras_reapuntar` (pura). «Origen ✎» a una línea de **otra unidad**: si la nueva es la del ALBARÁN,
+  Q pasa a ser la cantidad leída (factor 1; p. ej. t → kg: 1 t ⇒ 1000 kg y 1000 × 0,12 = 120 €); misma unidad o alguna
+  desconocida, nada cambia; **otra cualquiera**, se deja la cantidad, la fila **no se bloquea**, `review_required` y el
+  motivo `front_unidad_cambiada_revisa_cantidad` (helper `motivos_con`, que conserva los de sv6), y la ficha pinta en la
+  celda de cantidad «⚠ revisa la cantidad: cambió la unidad». El aviso se va al cambiar la cantidad o al «Guardar» la
+  fila (revisada). sv4 no tiene el conversor de unidades (es de sv6, LÍMITE DE SERVICIO): por eso solo convierte hacia
+  la unidad del albarán.
+- **H4**: `cargarPartidasObra` guarda la carga **por obra**; sin obra no guarda nada; otra obra se vuelve a pedir.
+- **CR2**: los pasos y comandos exactos de T19 están en `progress/current.md` (incluyen las comprobaciones de CR1 y H2).
+
+**Fase RED** (sobre `2fa3b5b`): `pytest tests/test_f065_f2_pasada2.py --tb=line` ⇒ `13 failed, 8 passed`:
+```
+test_f065_f2_pasada2.py:56: AssertionError: assert None == 'PUERTA CORTAFUEGOS EI2-120'   (CR1, traída + partida; también :65, :75)
+test_f065_f2_pasada2.py:85: AssertionError: assert None == 'TORNILLERIA M8'               (CR1, «Añadir línea»)
+test_f065_f2_pasada2.py:107: AssertionError: assert None == 'PORTES URGENTES'             (H1; también :116, :127, :144)
+test_f065_f2_pasada2.py:170: assert 0 in (1, True)                                        (H2: no marcaba la fila)
+test_f065_f2_pasada2.py:190: assert (1000.0, 1.0, 0.001) == (1000.0, 1000.0, 1.0)         (H2: no rehacía hacia el albarán)
+test_f065_f2_pasada2.py:232: AssertionError: assert 'front_unidad_cambiada_revisa_cantidad' in ['ia_match_trusted']
+test_f065_f2_pasada2.py:243: assert 'revisa la cantidad: cambió la unidad' in '<td ... data-col="cantidad" ...'
+test_f065_f2_pasada2.py:282: assert {... 'pedidas': []} == {... 'pedidas': ['/api/sigrid/partidas?obra=0404', '...=0505']}  (H4)
+```
+sv9 (sus 4 tests pasan con el código real: el entregable es el test) se rompió A PROPÓSITO en una copia aislada,
+haciendo que `_descripcion` mandara siempre el concepto: `2 failed, 6 passed` (`assert 'PORTES' == 'PORTES URGENTES'`
+y la traída sin descripción).
+
+**Verificación**: sv4 **1086 passed** (sola); sv9 **530 passed**; `PUERTA COBERTURA: 100.0% de 61 líneas cambiadas
+cubiertas (61/61)`. **Mutación** (`progress/mutacion_F-065_fase2.md`, reemplaza la de la pasada 1): **SHA `9da7e4b`,
+54 mutantes, 54 muertos, 0 supervivientes, 0 timeouts, 0 sin veredicto, 1138,4 s, 4 workers** (media 21,1 × 4 = 84 s
+por mutante frente a una base de 87,0–87,5 s: coherente). La campaña intermedia (`2d8af88`, 54 mutantes) dejó **4
+supervivientes**, todos huecos de test (ninguno equivalente) y comprobados aplicando el mutante a mano sobre `9da7e4b`:
+`not nueva or not actual → and` (unidad desconocida: 2 fallos), `ensure_ascii=False → True` (1), `unidad_contrato or
+la de su línea → and` (2), `cc if cc is not None → is None` (1). `bash harness/init.sh` (tal cual): ver abajo.
