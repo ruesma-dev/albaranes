@@ -281,3 +281,55 @@ def test_f065_h4_js_la_cache_de_partidas_es_por_obra(tmp_path):
 
     assert casos == {"sin": 0, "con": 1, "pedidas": [
         "/api/sigrid/partidas?obra=0404", "/api/sigrid/partidas?obra=0505"]}
+
+
+# --- mutación (pasada 2, campaña 1) ------------------------------------ #
+@pytest.mark.parametrize(("actual", "nueva", "albaran", "esperado"), [
+    (None, "M2", "M2", (6.0, 1.0, None, False)),   # unidad actual desconocida: nada
+    ("T", None, "KG", (6.0, 1.0, None, False)),    # unidad nueva desconocida: nada
+    ("T", "M2", "KG", (6.0, 1.0, None, True)),     # otra: se deja y se avisa
+    ("T", " kg ", "KG", (6.0, 6.0, 1.0, False)),   # la del albarán: su cantidad
+    ("T", "t", "KG", (6.0, 1.0, None, False)),     # la misma
+])
+def test_f065_h2_dominio_cantidades_tras_reapuntar(actual, nueva, albaran, esperado):
+    from domain.models.review_models import cantidades_tras_reapuntar
+
+    assert cantidades_tras_reapuntar(
+        unidad_actual=actual, unidad_nueva=nueva, unidad_albaran=albaran,
+        cantidad_albaran=6.0, cantidad_convertida=1.0, factor=None,
+    ) == esperado
+
+
+def test_f065_h2_dominio_motivos_con_no_escapa_ni_pierde_los_demas():
+    from domain.models.review_models import MOTIVO_UNIDAD_CAMBIADA, motivos_con
+
+    assert motivos_con('["camión"]', MOTIVO_UNIDAD_CAMBIADA, True) == (
+        '["camión", "front_unidad_cambiada_revisa_cantidad"]')
+    assert motivos_con(
+        '["camión", "front_unidad_cambiada_revisa_cantidad"]', MOTIVO_UNIDAD_CAMBIADA, False,
+    ) == '["camión"]'
+
+
+@pytest.mark.parametrize(("unidad_fila", "esperado"), [("M2", True), (None, True)])
+def test_f065_h2_la_unidad_actual_es_la_de_la_fila_o_la_de_su_linea(unidad_fila, esperado):
+    """La fila guarda «M2» (o nada, y entonces vale la de su línea, «UD») y se
+    reapunta a una línea en «UD» (sin nada) o «M2» respectivamente."""
+    motor = construir()
+    ejecutar(motor, "UPDATE albaran_line_valuations SET unidad_contrato = :u WHERE id = 11",
+             u=unidad_fila)
+    nueva = "UD" if unidad_fila else "M2"
+    ejecutar(motor, "UPDATE albaran_contrato_lines_merge SET unidad_medida = :u WHERE id = 503",
+             u=nueva)
+
+    _reapuntar(motor, 11, 503)
+
+    assert (AVISO_UNIDAD in _razones(fila(motor, 11))) is esperado
+
+
+def test_f065_h2_sin_convertida_el_importe_sale_de_la_cantidad_del_albaran():
+    motor = construir()
+    ejecutar(motor, "UPDATE albaran_line_valuations SET cantidad_convertida = NULL WHERE id = 11")
+
+    _reapuntar(motor, 11, 503)
+
+    assert fila(motor, 11)["importe_calculado"] == pytest.approx(8 * 115.0)
