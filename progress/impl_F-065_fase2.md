@@ -186,10 +186,16 @@ sv9 (sus 4 tests pasan con el código real: el entregable es el test) se rompió
 haciendo que `_descripcion` mandara siempre el concepto: `2 failed, 6 passed` (`assert 'PORTES' == 'PORTES URGENTES'`
 y la traída sin descripción).
 
-**Verificación**: sv4 **1086 passed** (sola); sv9 **530 passed**; `PUERTA COBERTURA: 100.0% de 61 líneas cambiadas
+**Verificación**: sv4 **1091 passed**; sv9 **530 passed**; `PUERTA COBERTURA: 100.0% de 61 líneas cambiadas
 cubiertas (61/61)`. **Mutación** (`progress/mutacion_F-065_fase2.md`, reemplaza la de la pasada 1): **SHA `9da7e4b`,
 54 mutantes, 54 muertos, 0 supervivientes, 0 timeouts, 0 sin veredicto, 1138,4 s, 4 workers** (media 21,1 × 4 = 84 s
 por mutante frente a una base de 87,0–87,5 s: coherente). La campaña intermedia (`2d8af88`, 54 mutantes) dejó **4
 supervivientes**, todos huecos de test (ninguno equivalente) y comprobados aplicando el mutante a mano sobre `9da7e4b`:
 `not nueva or not actual → and` (unidad desconocida: 2 fallos), `ensure_ascii=False → True` (1), `unidad_contrato or
-la de su línea → and` (2), `cc if cc is not None → is None` (1). `bash harness/init.sh` (tal cual): ver abajo.
+la de su línea → and` (2), `cc if cc is not None → is None` (1).
+
+**`bash harness/init.sh`** (tal cual, worktree, sobre `bdb795a`): exit 0; raíz `1083 passed`; sv4 `1091 passed`
+(109,9 s con coverage); sv9 `530 passed`; el resto en verde (caché); **`PUERTA COBERTURA: 100.0% de 61 líneas
+cambiadas cubiertas (61/61, umbral 80%, nivel critico)`**; tamaño dentro de topes; **`ENTORNO LISTO. Puedes
+trabajar.`** Falta: re-review (T20), MANUAL T19 (comandos en `progress/current.md`), fusionar, `init.sh` en el árbol
+principal y desplegar **solo sv4**.
