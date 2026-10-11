@@ -34,6 +34,7 @@ from domain.models.review_models import (
     AlbaranAprobadoError,
     cambia_origen,
     cantidades_tras_editar,
+    descripcion_para_valoracion,
     ConciliacionDisplay,
     ConciliacionSibling,
     ContratoLinePayload,
@@ -1704,7 +1705,7 @@ class AlbaranReviewRepository:
             self._exigir_editable(session, document_id, valuation_line_id)
             row = session.execute(
                 text(
-                    "SELECT lv.id, lv.valuation_id, "
+                    "SELECT lv.id, lv.valuation_id, lv.merge_line_id, "
                     "       lv.matched_contrato_line_id, "
                     "       lv.derived_contrato_line_id, "
                     "       lv.cantidad_albaran, lv.cantidad_convertida, "
@@ -1797,6 +1798,10 @@ class AlbaranReviewRepository:
                     else casada.get("precio_unitario")
                 )
                 precio = precio_unitario if precio_unitario is not None else actual
+                desc = (
+                    descripcion or row["descripcion_linea"]
+                    or casada.get("descripcion_linea")
+                )
                 new_id = session.execute(
                     text(
                         "INSERT INTO contrato_lines_derived ("
@@ -1812,10 +1817,7 @@ class AlbaranReviewRepository:
                         "vid": valuation_id,
                         "doc": document_id,
                         "cod": row["contrato_codigo"] or "",
-                        "desc": (
-                            descripcion or row["descripcion_linea"]
-                            or casada.get("descripcion_linea")
-                        ),
+                        "desc": desc,
                         "uni": row["unidad_contrato"] or casada.get("unidad_medida"),
                         "pu": precio,
                         "part": row["codigo_partida_final"],
@@ -1828,11 +1830,18 @@ class AlbaranReviewRepository:
                     "precio_unitario_final = :pu, "
                     "precio_unitario_source = 'manual_derived', "
                     "precio_unitario_agreement = 'manual', "
-                    "descripcion_linea = NULL, "
+                    "descripcion_linea = :descval, "
                     "review_required = FALSE"
                 )
                 parametros: dict[str, Any] = {
                     "did": new_id, "pu": precio, "vid": valuation_line_id,
+                    # (F-065 CR1, H1) la que lee sv9 antes que la blanca.
+                    "descval": descripcion_para_valoracion(
+                        descripcion=desc,
+                        sin_blanca=row["merge_line_id"] is None,
+                        editada=bool(descripcion),
+                        ya_fijada=bool(row["descripcion_linea"]),
+                    ),
                 }
                 if not _mismo_numero(precio, actual):
                     sets += ", importe_calculado = :imp, importe_source = 'calculated'"
@@ -1900,7 +1909,7 @@ class AlbaranReviewRepository:
             self._exigir_editable(session, document_id, valuation_line_id)
             row = session.execute(
                 text(
-                    "SELECT lv.id, lv.valuation_id, "
+                    "SELECT lv.id, lv.valuation_id, lv.merge_line_id, "
                     "       lv.matched_contrato_line_id, "
                     "       lv.derived_contrato_line_id, "
                     "       lv.cantidad_albaran, lv.cantidad_convertida, "
@@ -2048,6 +2057,14 @@ class AlbaranReviewRepository:
             elige_almacen = (
                 "codigo_partida" in cambios and nuevo["codigo_partida"] is None
             )
+            # (F-065 CR1, H1) La descripción de una Nueva en la valoración: la
+            # que lee sv9 antes que el concepto de la blanca.
+            params["descval"] = descripcion_para_valoracion(
+                descripcion=nuevo["descripcion"],
+                sin_blanca=row["merge_line_id"] is None,
+                editada="descripcion" in cambios,
+                ya_fijada=bool(row["descripcion_linea"]),
+            )
             # (F-065 R25, R26) partida, precio o unidad ⇒ Nueva, sin
             # confirmación; vaciar (almacén) o la de su línea, no.
             if cambia_origen(
@@ -2085,7 +2102,7 @@ class AlbaranReviewRepository:
                     "derived_contrato_line_id = :did",
                     "precio_unitario_source = 'manual_derived'",
                     "precio_unitario_agreement = 'manual'",
-                    "descripcion_linea = NULL",
+                    "descripcion_linea = :descval",
                 ]
             elif derived_id is not None:
                 # NUEVA: edición in situ de la derivada.
@@ -2109,7 +2126,7 @@ class AlbaranReviewRepository:
                 sets += [
                     "precio_unitario_source = 'manual_derived'",
                     "precio_unitario_agreement = 'manual'",
-                    "descripcion_linea = NULL",
+                    "descripcion_linea = :descval",
                 ]
             elif "descripcion" in cambios:
                 # CONTRATO sin cambio de identidad: la descripción, si difiere
