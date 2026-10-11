@@ -232,7 +232,8 @@ _SQL_BLANCAS_EN_ORDEN = text(
 _SQL_FILAS_PARA_APROBAR = text(
     "SELECT lv.id, lv.merge_line_id, lv.parent_merge_line_id, lv.line_kind, "
     "       lv.matched_contrato_line_id, lv.derived_contrato_line_id, "
-    "       lv.cantidad_albaran, lv.cantidad_convertida, lv.importe_calculado "
+    "       lv.cantidad_albaran, lv.cantidad_convertida, lv.importe_calculado, "
+    "       lv.review_reasons_json "
     "FROM albaran_line_valuations lv "
     "JOIN albaran_valuations v ON v.id = lv.valuation_id "
     "WHERE v.document_id = :doc"
@@ -2041,6 +2042,8 @@ class AlbaranReviewRepository:
                         "    cantidad_convertida, cantidad_albaran)"
                         + (", bloqueada = TRUE" if bloquear else "")
                         + (", review_reasons_json = :razones" if quita_aviso else "")
+                        + (", review_required = FALSE"
+                           if quita_aviso and not motivos_de_json(razones) else "")
                         + " WHERE id = :vid"
                     ),
                     {"vid": valuation_line_id, "razones": razones},
@@ -3830,6 +3833,7 @@ class AlbaranReviewRepository:
             ).mappings().all()
         ]
         posiciones: list[int] = []
+        unidad_cambiada: list[int] = []
         posicion = 0
         huerfanas = 0
         for fila in orden_filas_ficha(merge_line_ids, filas):
@@ -3848,8 +3852,13 @@ class AlbaranReviewRepository:
             )
             if q is None or fila["importe_calculado"] is None:
                 posiciones.append(posicion)
-        if posiciones or huerfanas:
-            raise LineasIncompletasError(document_id, posiciones, huerfanas)
+            # (CR3) «Origen ✎» cambió la unidad y nadie ha revisado la cantidad.
+            if MOTIVO_UNIDAD_CAMBIADA in motivos_de_json(fila["review_reasons_json"]):
+                unidad_cambiada.append(posicion)
+        if posiciones or huerfanas or unidad_cambiada:
+            raise LineasIncompletasError(
+                document_id, posiciones, huerfanas, unidad_cambiada,
+            )
 
     @staticmethod
     def _valorado_in_session(session: Any, document_id: str) -> bool:

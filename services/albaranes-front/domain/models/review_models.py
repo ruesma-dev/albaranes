@@ -460,14 +460,24 @@ class LineasIncompletasError(Exception):
     fase 1): filas sin línea de contrato NI derivada. La ficha no las pinta y
     sv9 las mandaría sin vincular: tampoco se aprueba con ellas, y se pide
     revalorar. Una fila en almacén (partida final vacía) NO es ninguna de las
-    dos cosas: el almacén nunca impide aprobar."""
+    dos cosas: el almacén nunca impide aprobar.
+
+    ``unidad_cambiada`` (CR3, pasada 3 de la review de la fase 2): posiciones
+    de las filas con la marca ``MOTIVO_UNIDAD_CAMBIADA`` («Origen ✎» a otra
+    unidad sin poder convertir la cantidad). sv9 la mandaría tal cual (8 ud
+    como 8 t): no se aprueba hasta revisar la cantidad."""
 
     def __init__(
-        self, document_id: str, posiciones: list[int], huerfanas: int = 0,
+        self,
+        document_id: str,
+        posiciones: list[int],
+        huerfanas: int = 0,
+        unidad_cambiada: list[int] | None = None,
     ) -> None:
         self.document_id = document_id
         self.posiciones = list(posiciones)
         self.huerfanas = huerfanas
+        self.unidad_cambiada = list(unidad_cambiada or [])
         super().__init__(self.aviso)
 
     @property
@@ -476,6 +486,10 @@ class LineasIncompletasError(Exception):
         if self.posiciones:
             partes.append("Líneas sin cantidad o importe: " + ", ".join(
                 str(posicion) for posicion in self.posiciones
+            ))
+        if self.unidad_cambiada:
+            partes.append("Líneas con la unidad cambiada: revisa la cantidad: " + ", ".join(
+                str(posicion) for posicion in self.unidad_cambiada
             ))
         if self.huerfanas:
             lineas = "línea" if self.huerfanas == 1 else "líneas"
@@ -570,14 +584,14 @@ def cantidades_tras_reapuntar(
     Q (la convertida) está en la unidad del precio, así que si la unidad cambia
     Q deja de valer. sv4 no tiene el conversor de unidades (es de sv6): solo
     sabe rehacer el caso en que la unidad nueva es la del ALBARÁN, en el que Q
-    es la cantidad leída (factor 1). Misma unidad, o alguna de las dos
-    desconocida: nada cambia. Otra unidad: se deja la cantidad y ``aviso``
-    (la fila queda marcada para revisar la cantidad, nunca bloqueada).
+    es la cantidad leída (factor 1). Unidad nueva desconocida o la misma: nada
+    cambia. Otra unidad, también si la actual se desconoce (P2-2): se deja la
+    cantidad y ``aviso`` (la fila queda marcada para revisar la cantidad, nunca
+    bloqueada, y no se aprueba hasta revisarla, CR3).
     """
-    sin_cambio = (cantidad_albaran, cantidad_convertida, factor, False)
     nueva = _unidad(unidad_nueva)
-    if not nueva or not _unidad(unidad_actual) or nueva == _unidad(unidad_actual):
-        return sin_cambio
+    if not nueva or nueva == _unidad(unidad_actual):
+        return cantidad_albaran, cantidad_convertida, factor, False
     if nueva == _unidad(unidad_albaran) and cantidad_albaran is not None:
         return cantidad_albaran, cantidad_albaran, 1.0, False
     return cantidad_albaran, cantidad_convertida, factor, True
