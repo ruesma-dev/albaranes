@@ -158,3 +158,53 @@ Comandos en `progress/current.md` (bloque F-065): F6 sobre una fila Contrato de 
 | Cobertura de las líneas cambiadas | **100,0 % (147/147)**, `PUERTA COBERTURA` de `init.sh` |
 | Mutantes | **99 generados, 99 muertos, 0 supervivientes** (`progress/mutacion_F-065_fase3.md`, `0606240`); primera campaña 107/15 supervivientes, cerrados |
 | Tiempo de la suite | sv4 72,8 s sola; sv9 25,0 s; mutación 2780,6 s (4 workers) |
+
+## Pasada 2 (review `3516c40`: CHANGES_REQUESTED por CR1)
+
+Commit `556afae` (código y tests) y el de este informe. sv4 solo; sin DDL; despliegue igual (**solo sv4**).
+
+- **CR1 · números no finitos.** `ParteDivision`, `ConciliacionEditBody` y `LineaATraer` con `model_config =
+  ConfigDict(allow_inf_nan=False)`: `NaN`/`±Infinity` del JSON son 422 (como texto ya lo eran: `_numero_es`). El 422
+  por defecto de FastAPI devolvía el `NaN` en `input` y `JSONResponse` no sabe serializarlo (habría sido un 500):
+  manejador de `RequestValidationError` en `app.py` que da el mismo 422 con los no finitos como texto
+  (`sin_no_finitos`, recursiva). `repartir` rechaza Q no finita («sin cantidad»), importe no finito («El importe de la
+  línea no es un número…») y una parte no finita («La parte k no tiene cantidad (vacía, 0 o no numérica).»).
+- **El signo reescrito (RM5)**: se queda `math.copysign`, ahora detrás de las guardas (`== 0` y `isfinite`), y
+  `test_f065_cr1p2_dominio_el_signo_reescrito_es_el_de_antes` lo demuestra ejecutando: sobre una rejilla de Q y parte
+  finitas y ≠ 0 (de −1e9 a 1e9, ±1e-9 incluidos) decide igual que `(cantidad > 0) != (q > 0)`, y `NaN`, ±inf, 0 y −0,0
+  (en Q y en la parte) los rechazan antes las guardas, que es lo que la reescritura había perdido.
+- **O1 (P5)**: `test_f065_p5_una_familia_que_no_suma_avisa_pero_se_aprueba` (dividir 10 en 4 + 6, editar la parte a 5:
+  aviso «suman 9; el albarán dice 10» y `set_approved` aprueba).
+- **O4 (0,00 €)**: con `importe0 ≠ 0`, una parte que saldría a 0,00 € es 422 «La parte k saldría a 0,00 € (la línea
+  tiene X €) y Sigrid no registra líneas de importe 0: repártela en menos partes.» Una línea a 0 € se reparte a 0 y,
+  sin `importe0`, manda la fórmula (no hay importe que perder). Elegido el rechazo: es lo más simple y no esconde nada.
+- **O3 (texto)**: la descripción de las partes es la que enseña la original: la fijada, la de su línea (contrato o
+  derivada) y, solo si no hay, el concepto de la blanca (antes iba el concepto antes que la de su línea). La derivada de
+  una parte Nueva lleva la misma. `docs/ARCHITECTURE.md` regla 20 al día (también 0,00 € y no finitos).
+- **O2 (producto de una parte Nueva)**: anotado, sin cambio. Sin blanca no hay `tipo_familia`, así que en un documento
+  mixto la parte Nueva toma el producto por defecto del documento salvo que se elija (se copia `producto_sigrid`); es
+  el comportamiento de F-053 para cualquier Nueva sin blanca.
+
+**RED** (los tests nuevos contra el código de `3516c40`, `pytest tests/test_f065_f3_dividir.py --tb=line`, ficheros
+restaurados después) ⇒ **`17 failed, 97 passed`**:
+```
+:1075  Failed: DID NOT RAISE RepartoInvalido   ×3  (NaN, inf, -inf en una parte)
+:1083  Failed: DID NOT RAISE RepartoInvalido       (mensajes de lo no finito)
+:1109  Failed: DID NOT RAISE RepartoInvalido       (el signo reescrito: NaN pasaba)
+:1129  Failed: DID NOT RAISE ValidationError   ×3  (los tres cuerpos)
+:1159  assert 404 == 422                           (dividir con NaN llegaba al servicio)
+:1194  assert 200 == 422                       ×3  (editar con NaN/Infinity y traer con -Infinity: 200)
+:1202  ImportError: cannot import name 'sin_no_finitos'
+:1226  Failed: DID NOT RAISE RepartoInvalido   ×3  (partes a 0,00 €)
+:270   AssertionError: assert 'PUERTA EI2-90' == 'PUERTA CORTAFUEGOS EI2-90'   (O3)
+```
+Los de O1 y los de O3 con descripción fijada o sin la de su línea pasaban ya (guardas de lo que estaba bien).
+
+**Verificación**: `test_f065_f3_dividir.py` **114 passed**; suite de sv4 sola **1218 passed** (44,8 s);
+`bash harness/init.sh`: **exit 0**; raíz `1083 passed`; sv4 `1218 passed`; el resto en verde (caché); **`PUERTA COBERTURA: 100.0% de 171 líneas cambiadas cubiertas (171/171, umbral 80%, nivel critico)`**; rutas sensibles N/A; tamaño dentro de topes; **`ENTORNO LISTO. Puedes trabajar.`** (ruff 1254 avisos de deuda previa; los 12 que añadían los tests nuevos, corregidos con `ruff --fix` en el mismo commit).
+
+**Mutación de lo nuevo** `python -m harness.mutacion --feature F-065 --base 3516c40 --rama HEAD --salida
+progress/mutacion_F-065_fase3_pasada2.md` (alcance `3516c40..556afae`: 74 líneas de `review_models.py`,
+`review_repository.py` y `app.py`): **28 mutantes, 28 muertos, 0 supervivientes, 0 timeouts, 746,8 s**, 4 workers
+(líneas base 91,0–94,1 s; media 26,7 s × 4). Sin equivalentes (RM5: la única reescritura, el signo, queda demostrada
+arriba). La campaña completa de la fase (`mutacion_F-065_fase3.md`, 99/99 sobre `0606240`) sigue siendo la de T26.

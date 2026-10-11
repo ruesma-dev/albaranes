@@ -189,7 +189,11 @@ def test_f065_r30_dominio_reparto_valido_en_el_limite(cantidades):
 def test_f065_r30_dominio_la_tolerancia_es_estricta_sin_ruido():
     """Difiere en «0,005 o más»: el umbral exacto ya no vale; una diezmilésima
     de millonésima menos, sí."""
-    from domain.models.review_models import _UMBRAL_REPARTO, _fuera_de_tolerancia, repartir
+    from domain.models.review_models import (
+        _UMBRAL_REPARTO,
+        _fuera_de_tolerancia,
+        repartir,
+    )
 
     assert _fuera_de_tolerancia(_UMBRAL_REPARTO, 0.0)
     assert not _fuera_de_tolerancia(0.00499994, 0.0)
@@ -1066,10 +1070,10 @@ def test_f065_cr1p2_dominio_no_reparte_numeros_no_finitos(raro):
     from domain.models.review_models import RepartoInvalido, repartir
 
     casos = [
-        dict(q=10.0, ca0=10.0, importe0=100.0, partes=[raro, 10.0]),
-        dict(q=10.0, ca0=10.0, importe0=100.0, partes=[10.0, raro]),
-        dict(q=raro, ca0=10.0, importe0=100.0, partes=[4.0, 6.0]),
-        dict(q=10.0, ca0=10.0, importe0=raro, partes=[4.0, 6.0]),
+        {"q": 10.0, "ca0": 10.0, "importe0": 100.0, "partes": [raro, 10.0]},
+        {"q": 10.0, "ca0": 10.0, "importe0": 100.0, "partes": [10.0, raro]},
+        {"q": raro, "ca0": 10.0, "importe0": 100.0, "partes": [4.0, 6.0]},
+        {"q": 10.0, "ca0": 10.0, "importe0": raro, "partes": [4.0, 6.0]},
     ]
     for caso in casos:
         with pytest.raises(RepartoInvalido):
@@ -1105,7 +1109,7 @@ def test_f065_cr1p2_dominio_el_signo_reescrito_es_el_de_antes():
         original = (cantidad > 0) != (q > 0)
         assert (math.copysign(1.0, cantidad) != math.copysign(1.0, q)) == original
     for raro in (*_NO_FINITOS, 0.0, -0.0):
-        for caso in (dict(q=10.0, partes=[raro, 10.0]), dict(q=raro, partes=[4.0, 6.0])):
+        for caso in ({"q": 10.0, "partes": [raro, 10.0]}, {"q": raro, "partes": [4.0, 6.0]}):
             with pytest.raises(RepartoInvalido):
                 repartir(ca0=10.0, importe0=None, precio=1.0, descuento=None, **caso)
 
@@ -1120,11 +1124,11 @@ def test_f065_cr1p2_los_tres_cuerpos_rechazan_no_finitos(raro):
     from pydantic import ValidationError
 
     for modelo, cuerpo in (
-        (DivisionBody, '{"partes": [{"cantidad": %s}, {"cantidad": 1}]}' % raro),
-        (ConciliacionEditBody, '{"cantidad": %s}' % raro),
-        (ConciliacionEditBody, '{"precio_unitario": %s}' % raro),
-        (ConciliacionEditBody, '{"descuento": %s}' % raro),
-        (TraerLineasBody, '{"lineas": [{"contrato_line_id": 1, "cantidad": %s}]}' % raro),
+        (DivisionBody, '{{"partes": [{{"cantidad": {}}}, {{"cantidad": 1}}]}}'.format(raro)),
+        (ConciliacionEditBody, '{{"cantidad": {}}}'.format(raro)),
+        (ConciliacionEditBody, '{{"precio_unitario": {}}}'.format(raro)),
+        (ConciliacionEditBody, '{{"descuento": {}}}'.format(raro)),
+        (TraerLineasBody, '{{"lineas": [{{"contrato_line_id": 1, "cantidad": {}}}]}}'.format(raro)),
     ):
         with pytest.raises(ValidationError):
             modelo.model_validate_json(cuerpo)
