@@ -763,16 +763,18 @@
         return actual;
     }
 
-    // Una sola carga por ficha (la comparten todas las filas).
+    // Una carga por OBRA (la comparten todas las filas). F-065 H4: sin obra no
+    // se guarda nada en caché, y si la obra cambia se vuelve a pedir.
     let _partidasObra = null;
+    let _partidasObraCodigo = null;
     function cargarPartidasObra() {
-        if (_partidasObra) { return _partidasObra; }
         const obraEl = document.getElementById("obra_codigo");
         const obra = obraEl ? (obraEl.value || "").trim() : "";
         if (!obra) {
-            _partidasObra = Promise.resolve({ items: [], error: false });
-            return _partidasObra;
+            return Promise.resolve({ items: [], error: false });
         }
+        if (_partidasObra && _partidasObraCodigo === obra) { return _partidasObra; }
+        _partidasObraCodigo = obra;
         _partidasObra = fetch(
             "/api/sigrid/partidas?obra=" + encodeURIComponent(obra),
             { headers: { "Accept": "application/json" } }
