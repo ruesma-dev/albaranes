@@ -5,10 +5,34 @@
 `feature/F-065-lineas-editadas-y-reparto` (worktree `../albaranes-F-065`, con `dev` fusionado). Fase 1: review
 APROBADA (`progress/review_F-065_fase1.md`), en `dev` (`8c180b0`), desplegada el 2026-10-11 (sv6 r20261011-0025, sv4
 r20261011-0043), T13 hecha por el humano (OK). Fase 2: informe **`progress/impl_F-065_fase2.md`** (`init.sh` verde,
-cobertura 33/33, mutación 29/29; decisiones E1–E5 a confirmar). Siguiente: review de la fase 2 (T20); MANUAL **T19**
-del humano con los comandos de §7 del informe; después, fusionar, `init.sh` en el árbol principal y desplegar solo sv4. Con las
-decisiones del humano del 2026-10-11 (O1 «Solo volver a buscar» confirma; el almacén nunca impide aprobar y las filas
-sin línea de contrato ni derivada sí; O3, O5, O7).
+cobertura 33/33, mutación 29/29; decisiones E1–E5 a confirmar). Review de la fase 2 (`progress/review_F-065_fase2.md`): CHANGES_REQUESTED; **pasada 2
+hecha** (CR1, CR2, H1, H2, H4: §«Pasada 2» del informe). Siguiente: re-review (T20); MANUAL **T19** (abajo); después,
+fusionar, `init.sh` en el árbol principal y desplegar **solo sv4**. Con las decisiones del humano del 2026-10-11 (O1
+«Solo volver a buscar» confirma; el almacén nunca impide aprobar y las filas sin línea de contrato ni derivada sí; O3,
+O5, O7).
+- **MANUAL T19 (humano, pipeline LOCAL; solo lecturas en BBDD)**, en PowerShell:
+  ```powershell
+  cd C:\Users\pgris\PycharmProjects\albaranes
+  .\infra\local\arrancar_local.ps1
+  # http://localhost:8004, un albarán pendiente con filas Contrato y una obra con partidas en Sigrid:
+  #  1) Partida de una fila Contrato: el combo ofrece «Almacén (sin partida)» y las partidas de la OBRA; con flechas y
+  #     Enter elegir otra (la fila queda con cambios) y «Guardar» SIN ningún aviso -> la fila sale «Nueva».
+  #  2) En otra fila Contrato elegir «Almacén (sin partida)» -> sigue «Contrato», partida vacía.
+  #  3) Teclear «zzz» en una partida y salir con Tab -> vuelve la partida de antes (no se guarda).
+  #  4) «Contrato ✎» -> elegir otra línea de contrato -> la fila toma su partida y su precio. Si la línea va en otra
+  #     unidad (y no es la del albarán) sale «⚠ revisa la cantidad: cambió la unidad» y la fila no se bloquea.
+  #  5) «Traer líneas contrato» una con 5, cambiarle la partida y «Guardar» -> Nueva y la descripción sigue (CR1).
+  #  6) En un albarán de una obra SIN partidas, el combo solo ofrece «Almacén».
+  #  7) «Solo volver a buscar» con filas guardadas -> pide «Revalorar descarta N líneas…».
+  #  8) Pasar TODAS las filas a almacén y «Guardar y aprobar» -> se aprueba.
+  $vid = <id de la fila>
+  psql -h localhost -U <usuario_local> -d albaranes -c "SELECT lv.matched_contrato_line_id, lv.derived_contrato_line_id, lv.codigo_partida_final, lv.precio_unitario_final, lv.cantidad_convertida, lv.descripcion_linea, lv.review_reasons_json FROM albaran_line_valuations lv WHERE lv.id = $vid;"
+  psql -h localhost -U <usuario_local> -d albaranes -c "SELECT id, codigo_partida, origen FROM contrato_lines_derived WHERE id = (SELECT derived_contrato_line_id FROM albaran_line_valuations WHERE id = $vid);"
+  ```
+  Criterio: 1) derivada `manual_override` con la partida elegida y `matched` nulo; 2) la misma línea de contrato y
+  partida final nula; 4) `matched` = la línea elegida y su partida y precio (con otra unidad, el motivo
+  `front_unidad_cambiada_revisa_cantidad` en `review_reasons_json`); 5) `descripcion_linea` no nula; 6), 7) y 8) como
+  se describe.
 - Entorno del worktree: *junction* `services/albaranes-front/.venv` → venv de sv4 del árbol principal (ignorada por
   git; quitarla con `cmd /c rmdir services\albaranes-front\.venv` ANTES de `git worktree remove`).
 
