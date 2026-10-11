@@ -285,7 +285,7 @@ def test_f065_h4_js_la_cache_de_partidas_es_por_obra(tmp_path):
 
 # --- mutación (pasada 2, campaña 1) ------------------------------------ #
 @pytest.mark.parametrize(("actual", "nueva", "albaran", "esperado"), [
-    (None, "M2", "M2", (6.0, 1.0, None, False)),   # unidad actual desconocida: nada
+    (None, "M2", "M2", (6.0, 6.0, 1.0, False)),   # actual desconocida, la del albarán: su cantidad
     ("T", None, "KG", (6.0, 1.0, None, False)),    # unidad nueva desconocida: nada
     ("T", "M2", "KG", (6.0, 1.0, None, True)),     # otra: se deja y se avisa
     ("T", " kg ", "KG", (6.0, 6.0, 1.0, False)),   # la del albarán: su cantidad
@@ -333,3 +333,108 @@ def test_f065_h2_sin_convertida_el_importe_sale_de_la_cantidad_del_albaran():
     _reapuntar(motor, 11, 503)
 
     assert fila(motor, 11)["importe_calculado"] == pytest.approx(8 * 115.0)
+
+
+# =================================================================== #
+# Pasada 3 · CR3: con la marca «revisa la cantidad» no se aprueba
+# =================================================================== #
+def _marcada(motor):
+    """Fila 11 (UD) reapuntada a la 503 en TN: queda marcada (posición 1)."""
+    ejecutar(motor, "UPDATE albaran_contrato_lines_merge SET unidad_medida = 'TN', "
+             "precio_unitario = 90 WHERE id = 503")
+    _reapuntar(motor, 11, 503)
+    assert AVISO_UNIDAD in _razones(fila(motor, 11))
+
+
+def _aprobar(motor, via, monkeypatch):
+    from domain.models.review_models import MergeDocumentUpdatePayload
+
+    repo = repositorio(motor)
+    if via == "listado":
+        return repo.set_approved(document_id=DOC, approved=True, approved_by="ana")
+    monkeypatch.setattr(repo, "get_document_detail", lambda document_id: "detalle")
+    return repo.update_document_y_transicion(
+        document_id=DOC, payload=MergeDocumentUpdatePayload(approved=True))[1]
+
+
+@pytest.mark.parametrize("via", ["listado", "guardar_y_aprobar"])
+def test_f065_cr3_con_la_marca_no_se_aprueba(via, monkeypatch):
+    from f053_sv4_bbdd import foto
+
+    from domain.models.review_models import LineasIncompletasError
+
+    motor = construir()
+    _marcada(motor)
+    antes = foto(motor)
+
+    with pytest.raises(LineasIncompletasError) as error:
+        _aprobar(motor, via, monkeypatch)
+
+    assert error.value.unidad_cambiada == [1]
+    assert error.value.aviso == "Líneas con la unidad cambiada: revisa la cantidad: 1"
+    assert foto(motor) == antes
+
+
+@pytest.mark.parametrize("via", ["listado", "guardar_y_aprobar"])
+@pytest.mark.parametrize("como", ["cantidad", "guardar"])
+def test_f065_cr3_quitada_la_marca_se_aprueba(via, como, monkeypatch):
+    motor = construir()
+    _marcada(motor)
+    if como == "cantidad":
+        _editar(motor, 11, cantidad=0.8)
+    else:
+        _editar(motor, 11, bloquear=True)
+
+    assert _aprobar(motor, via, monkeypatch) is True
+
+
+def test_f065_cr3_el_aviso_junta_los_tres_motivos():
+    from domain.models.review_models import LineasIncompletasError
+
+    error = LineasIncompletasError(DOC, [2], huerfanas=1, unidad_cambiada=[1, 3])
+
+    assert error.aviso == (
+        "Líneas sin cantidad o importe: 2. Líneas con la unidad cambiada: revisa la "
+        "cantidad: 1, 3. Hay 1 línea sin línea de contrato ni Nueva que la ficha no "
+        "enseña: revalora el albarán")
+
+
+# --- P2-1 · el «Guardar» que quita la marca deja review_required coherente --- #
+@pytest.mark.parametrize(("otros", "revision"), [(None, False), ('["ia_match_trusted"]', True)])
+def test_f065_p2_1_guardar_quita_la_marca_y_la_revision_si_no_queda_otro_motivo(otros, revision):
+    motor = construir()
+    ejecutar(motor, "UPDATE albaran_line_valuations SET review_reasons_json = :r WHERE id = 11",
+             r=otros)
+    _marcada(motor)
+
+    _editar(motor, 11, bloquear=True)
+
+    f = fila(motor, 11)
+    assert AVISO_UNIDAD not in _razones(f)
+    assert bool(f["review_required"]) is revision
+
+
+# --- P2-2 · fila sin unidad reapuntada a una línea con unidad: también avisa --- #
+def test_f065_p2_2_sin_unidad_y_otra_que_no_es_la_del_albaran_avisa():
+    motor = construir()
+    ejecutar(motor, "UPDATE albaran_line_valuations SET unidad_contrato = NULL WHERE id = 11")
+    ejecutar(motor, "UPDATE albaran_contrato_lines_merge SET unidad_medida = NULL WHERE id = 501")
+    ejecutar(motor, "UPDATE albaran_contrato_lines_merge SET unidad_medida = 'M2' WHERE id = 503")
+
+    _reapuntar(motor, 11, 503)
+
+    assert AVISO_UNIDAD in _razones(fila(motor, 11))
+
+
+@pytest.mark.parametrize(("actual", "nueva", "albaran", "esperado"), [
+    (None, "M2", "KG", (6.0, 1.0, None, True)),     # sin unidad y otra: avisa
+    (None, "kg", "KG", (6.0, 6.0, 1.0, False)),     # sin unidad y la del albarán: su cantidad
+    (None, None, "KG", (6.0, 1.0, None, False)),    # sin unidad nueva: nada
+])
+def test_f065_p2_2_dominio_sin_unidad_actual(actual, nueva, albaran, esperado):
+    from domain.models.review_models import cantidades_tras_reapuntar
+
+    assert cantidades_tras_reapuntar(
+        unidad_actual=actual, unidad_nueva=nueva, unidad_albaran=albaran,
+        cantidad_albaran=6.0, cantidad_convertida=1.0, factor=None,
+    ) == esperado
