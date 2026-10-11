@@ -1806,3 +1806,15 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
 .alta-sigrid-pill.estado-revisar { background: #fef3c7; color: #92400e; }
 .alta-sigrid-pill.estado-error, .alta-sigrid-pill.estado-no_admitido { background: #fee2e2; color: #991b1b; }
 .td-producto select { max-width: 100%; }
+
+/* F-065 R29, R35: «Dividir» (F6) y las partes de un reparto. */
+.dividir-dialog { border: 1px solid #d0d7de; border-radius: 8px; padding: 16px 20px; min-width: 420px; max-width: 640px; }
+.dividir-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
+.dividir-dialog h3 { margin: 0 0 8px; }
+.dividir-dialog .dividir-n { display: inline-flex; gap: 8px; align-items: center; margin: 8px 0; }
+.dividir-dialog .dividir-partes { width: 100%; margin: 8px 0; }
+.dividir-dialog .dividir-partes td:first-child { width: 2em; text-align: right; }
+.dividir-dialog .dividir-falta { font-weight: 600; margin: 4px 0; }
+.dividir-dialog .dividir-acciones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.salmon-table .parte-reparto { display: block; margin-top: 2px; }
+.salmon-table .aviso-reparto { display: block; margin-top: 2px; }

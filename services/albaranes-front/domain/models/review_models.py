@@ -1197,7 +1197,7 @@ class DisplayLine(BaseModel):
     """Una fila visible en la tabla de líneas del detalle."""
 
     # Identificación
-    line_kind: str  # 'from_albaran' | 'synthetic_modifier'
+    line_kind: str  # 'from_albaran' | 'synthetic_modifier' | 'manual' | 'reparto'
     merge_line_id: int | None = None       # solo si from_albaran
     valuation_line_id: int | None = None   # solo si synthetic_modifier
     line_index: int | None = None          # orden visual (para base y
@@ -1224,6 +1224,11 @@ class DisplayLine(BaseModel):
     # 'from_albaran' que tienen una valoración (matched o derived).
     # El template lo renderiza en una fila expandible bajo la línea.
     concilia: ConciliacionDisplay | None = None
+
+    # (F-065 R35) Reparto: «Parte k de N» y, en la primera fila de la familia,
+    # el aviso mientras las partes no sumen lo que dice el albarán.
+    parte: str | None = None
+    aviso_reparto: str | None = None
 
 
 def _aviso_de_obra(obra: OrigenCampo) -> str | None:

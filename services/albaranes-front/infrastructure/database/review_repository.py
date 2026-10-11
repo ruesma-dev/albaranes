@@ -4645,36 +4645,56 @@ class AlbaranReviewRepository:
                 # importe: importe declarado vs cantidad x unitario de contrato
                 _conc.agree_importe = _agree_num(line.precio_neto, _exp_imp)
 
-            display.append(
-                DisplayLine(
-                    line_kind="from_albaran",
-                    merge_line_id=line.id,
-                    valuation_line_id=(v.valuation_line_id if v else None),
-                    line_index=idx,
-                    codigo_imputacion=eff_codimp,
-                    concepto=line.concepto,
-                    cantidad=eff_cantidad,
-                    unidad=eff_unidad,
-                    precio_unitario=eff_precio_unit,
-                    importe=eff_importe,
-                    descuento=line.descuento,
-                    codigo=line.codigo,
-                    confianza_pct=line.confianza_pct,
-                    is_valued=v is not None,
-                    parent_merge_line_id=None,
-                    concilia=_conc,
-                )
+            base_dl = DisplayLine(
+                line_kind="from_albaran",
+                merge_line_id=line.id,
+                valuation_line_id=(v.valuation_line_id if v else None),
+                line_index=idx,
+                codigo_imputacion=eff_codimp,
+                concepto=line.concepto,
+                cantidad=eff_cantidad,
+                unidad=eff_unidad,
+                precio_unitario=eff_precio_unit,
+                importe=eff_importe,
+                descuento=line.descuento,
+                codigo=line.codigo,
+                confianza_pct=line.confianza_pct,
+                is_valued=v is not None,
+                parent_merge_line_id=None,
+                concilia=_conc,
             )
+            display.append(base_dl)
 
-            # Sintéticas que cuelgan de esta base.
-            for syn in synth_by_parent.get(line.id, []):
-                display.append(
-                    AlbaranReviewRepository._synthetic_to_display(
-                        syn=syn,
-                        line_index=idx,
-                        conc_map=conc_map,
-                    )
+            # Sintéticas que cuelgan de esta base: (F-065 R35) primero las
+            # partes de un reparto y las manuales, después las de sv6, cada
+            # grupo por id (el orden de ``orden_filas_ficha``, el de aprobar).
+            hijas = sorted(
+                synth_by_parent.get(line.id, []),
+                key=lambda syn: (
+                    syn.line_kind == "synthetic_modifier",
+                    syn.valuation_line_id or 0,
+                ),
+            )
+            hijas_dl = [
+                AlbaranReviewRepository._synthetic_to_display(
+                    syn=syn,
+                    line_index=idx,
+                    conc_map=conc_map,
                 )
+                for syn in hijas
+            ]
+            display.extend(hijas_dl)
+            AlbaranReviewRepository._marcar_reparto(
+                numero_linea=idx,
+                leida=line.cantidad,
+                familia=(
+                    ([(v, base_dl)] if v is not None else [])
+                    + [
+                        (syn, dl) for syn, dl in zip(hijas, hijas_dl)
+                        if syn.line_kind == "reparto"
+                    ]
+                ),
+            )
 
         # Sintéticas huérfanas (parent no encontrado). Raro, pero no
         # podemos silenciarlas sin avisar: las colocamos al final.
@@ -4693,6 +4713,30 @@ class AlbaranReviewRepository:
             )
 
         return display
+
+    @staticmethod
+    def _marcar_reparto(
+        *,
+        numero_linea: int,
+        leida: float | None,
+        familia: list[tuple[LineValuationPayload, DisplayLine]],
+    ) -> None:
+        """(F-065 R35) «Parte k de N» en cada fila de una blanca repartida (la
+        original es la 1; las ``reparto``, por id) y, en la primera, el aviso
+        mientras la familia no sume lo que dice el albarán. Se compara en la
+        unidad del ALBARÁN (``cantidad_albaran``, o la convertida si no hay):
+        con conversión (t → kg) la Q de la ficha no es la de la blanca."""
+        if not any(v.line_kind == "reparto" for v, _ in familia):
+            return
+        total = len(familia)
+        for k, (_, dl) in enumerate(familia, start=1):
+            dl.parte = f"Parte {k} de {total}"
+        suma = sum(
+            v.cantidad_albaran if v.cantidad_albaran is not None
+            else (v.cantidad_convertida or 0.0)
+            for v, _ in familia
+        )
+        familia[0][1].aviso_reparto = aviso_reparto(numero_linea, suma, leida)
 
     @staticmethod
     def _synthetic_to_display(
@@ -4748,9 +4792,11 @@ class AlbaranReviewRepository:
             conc.agree_importe = _num(syn.importe_calculado, _exp_imp)
 
         return DisplayLine(
+            # (F-065 R35) ``manual`` y ``reparto`` se conservan; lo demás sin
+            # blanca es una sintética de sv6.
             line_kind=(
-                "manual"
-                if (getattr(syn, "line_kind", "") or "") == "manual"
+                syn.line_kind
+                if syn.line_kind in ("manual", "reparto")
                 else "synthetic_modifier"
             ),
             merge_line_id=None,

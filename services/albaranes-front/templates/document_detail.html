@@ -779,6 +779,9 @@
                                                   title="{{ razones | join('\n') }}"
                                                   data-razones="{{ razones | join(' ') }}">⚑ {{ razones | length }}</span>
                                         {% endif %}
+                                        {# F-065 R35: reparto (F6) — la parte y, en la primera, el aviso mientras no sume la blanca. #}
+                                        {% if dline.parte %}<span class="parte-reparto muted small">{{ dline.parte }}</span>{% endif %}
+                                        {% if dline.aviso_reparto %}<span class="concilia-price-warn aviso-reparto" title="Aviso, no bloquea: una recepción parcial es legítima"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ dline.aviso_reparto }}</span>{% endif %}
                                     </td>
                                     {# Cantidad — la leída del albarán (recepciones parciales). Editable. #}
                                     <td class="concilia-td td-num" data-col="cantidad" data-sort-value="{{ dline.cantidad if dline.cantidad is not none else '' }}">
@@ -879,6 +882,10 @@
                                         {% if cedit %}
                                             <button type="button" class="btn small danger js-concilia-remove" title="Borrar esta línea salmón (no se llevará a Sigrid; deja de sumar al total)">Borrar ✕</button>
                                             <button type="button" class="btn small success js-cedit-save" title="Guardar los cambios de esta línea y bloquearla. Si cambias la partida, la unidad o el precio, pasará de Contrato a Nueva conservando el resto.">Guardar</button>
+                                            {# F-065 R29: dividir (F6). No en las sintéticas de sv6 ni con «revisa la cantidad» (antes, resolverla). #}
+                                            {% if dline.line_kind != 'synthetic_modifier' and 'front_unidad_cambiada_revisa_cantidad' not in razones and dline.cantidad %}
+                                            <button type="button" class="btn small secondary js-dividir" data-valuation-line-id="{{ dline.valuation_line_id }}" data-q="{{ dline.cantidad }}" data-partida="{{ '' if _almacen else (c.codigo_partida or '') }}" title="Dividir esta línea en varias, cada una con su cantidad y su partida (F6)">Dividir</button>
+                                            {% endif %}
                                         {% elif editable and bloqueada %}
                                             <button type="button" class="btn small secondary js-desbloquear" data-valuation-line-id="{{ dline.valuation_line_id }}" title="Línea guardada: desbloquéala para editarla">Desbloquear</button>
                                         {% endif %}
@@ -890,6 +897,28 @@
                         {% endfor %}
                         </tbody>
                     </table>
+                    {# F-065 R29: ventana de «Dividir» (F6). La rellena app.js (wireDividir). #}
+                    {% if editable %}
+                    <dialog id="dividir-dialog" class="dividir-dialog" aria-labelledby="dividir-titulo">
+                        <form method="dialog" class="dividir-form">
+                            <h3 id="dividir-titulo">Dividir la línea</h3>
+                            <p class="muted small">Cantidad de la línea: <strong class="js-dividir-q"></strong>. Cada parte, con su cantidad y su partida (vacía = almacén).</p>
+                            <label class="dividir-n">Número de líneas
+                                <input type="number" min="2" max="20" step="1" value="2" class="cell-input cell-short js-dividir-n">
+                            </label>
+                            <table class="table dividir-partes">
+                                <thead><tr><th>#</th><th>Cantidad</th><th>Partida</th></tr></thead>
+                                <tbody class="js-dividir-partes"></tbody>
+                            </table>
+                            <p class="dividir-falta js-dividir-falta"></p>
+                            <p class="error js-dividir-error" hidden></p>
+                            <div class="dividir-acciones">
+                                <button type="button" class="btn secondary js-dividir-cancelar">Cancelar</button>
+                                <button type="button" class="btn success js-dividir-aceptar" disabled>Aceptar</button>
+                            </div>
+                        </form>
+                    </dialog>
+                    {% endif %}
                     {# Líneas de contrato disponibles para el desplegable del «+». #}
                     <script type="application/json" id="contrato-lines-json">[{% for cl in document.contrato_lines %}{"id": {{ cl.id }}, "label": {{ ((cl.codigo_partida or '—') ~ ' · ' ~ (cl.descripcion or '') ~ ' · ' ~ (('%.2f'|format(cl.precio_unitario) ~ ' €') if cl.precio_unitario is not none else '—')) | tojson }}, "desc": {{ (cl.descripcion or '') | tojson }}, "part": {{ (cl.codigo_partida or '') | tojson }}, "unidad": {{ (cl.unidad_medida or '') | tojson }}, "precio": {{ cl.precio_unitario if cl.precio_unitario is not none else 'null' }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
                 </div>
