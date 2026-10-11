@@ -782,6 +782,10 @@
                                     </td>
                                     {# Cantidad — la leída del albarán (recepciones parciales). Editable. #}
                                     <td class="concilia-td td-num" data-col="cantidad" data-sort-value="{{ dline.cantidad if dline.cantidad is not none else '' }}">
+                                        {# F-065 H2: «Origen ✎» cambió la unidad y sv4 no sabe convertir la cantidad. #}
+                                        {% if 'front_unidad_cambiada_revisa_cantidad' in razones %}
+                                            <span class="concilia-price-warn aviso-unidad" title="La línea de contrato elegida va en otra unidad: comprueba que la cantidad está en esa unidad y guarda la fila"><span class="concilia-icon" aria-hidden="true">⚠</span> revisa la cantidad: cambió la unidad</span>
+                                        {% endif %}
                                         {% if cedit %}
                                             <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit{% if c.agree_cantidad == true %} cedit-ok{% elif c.agree_cantidad == false %} cedit-warn{% endif %}"
                                                    data-field="cantidad" data-numeric="1"

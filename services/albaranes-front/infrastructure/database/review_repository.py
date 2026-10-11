@@ -34,7 +34,10 @@ from domain.models.review_models import (
     AlbaranAprobadoError,
     cambia_origen,
     cantidades_tras_editar,
+    cantidades_tras_reapuntar,
     descripcion_para_valoracion,
+    MOTIVO_UNIDAD_CAMBIADA,
+    motivos_con,
     ConciliacionDisplay,
     ConciliacionSibling,
     ContratoLinePayload,
@@ -1711,6 +1714,8 @@ class AlbaranReviewRepository:
                     "       lv.cantidad_albaran, lv.cantidad_convertida, "
                     "       lv.codigo_partida_final, lv.descripcion_linea, "
                     "       lv.precio_unitario_final, lv.unidad_contrato, "
+                    "       lv.unidad_albaran, lv.factor_conversion, "
+                    "       lv.review_reasons_json, "
                     "       lv.descuento_albaran_aplicado, v.document_id, "
                     "       v.contrato_codigo "
                     "FROM albaran_line_valuations lv "
@@ -1729,6 +1734,23 @@ class AlbaranReviewRepository:
                 else row["cantidad_albaran"]
             )
 
+            # Su línea actual (de contrato o derivada): lo que pinta la ficha
+            # donde la valoración no tiene lo suyo.
+            tabla = (
+                "albaran_contrato_lines_merge"
+                if row["matched_contrato_line_id"] is not None
+                else "contrato_lines_derived"
+            )
+            casada = session.execute(
+                text(
+                    "SELECT descripcion_linea, unidad_medida, precio_unitario "
+                    f"FROM {tabla} WHERE id = :id"  # noqa: S608
+                ),
+                {"id": row["matched_contrato_line_id"]
+                 if row["matched_contrato_line_id"] is not None
+                 else row["derived_contrato_line_id"]},
+            ).mappings().first() or {}
+
             if mode == "contract_line":
                 if matched_contrato_line_id is None:
                     return False
@@ -1746,6 +1768,17 @@ class AlbaranReviewRepository:
                     if precio_unitario is not None
                     else cl["precio_unitario"]
                 )
+                # (F-065 H2) Otra unidad: la cantidad solo se rehace hacia la
+                # del albarán; si no se sabe, se deja y se avisa.
+                unidad_actual = row["unidad_contrato"] or casada.get("unidad_medida")
+                ca, cc, factor, aviso = cantidades_tras_reapuntar(
+                    unidad_actual=unidad_actual,
+                    unidad_nueva=cl["unidad_medida"],
+                    unidad_albaran=row["unidad_albaran"],
+                    cantidad_albaran=row["cantidad_albaran"],
+                    cantidad_convertida=row["cantidad_convertida"],
+                    factor=row["factor_conversion"],
+                )
                 session.execute(
                     text(
                         "UPDATE albaran_line_valuations SET "
@@ -1756,42 +1789,39 @@ class AlbaranReviewRepository:
                         "  precio_unitario_agreement = 'manual', "
                         "  codigo_partida_final = :part, "
                         "  unidad_contrato = :uni, "
+                        "  cantidad_albaran = :ca, "
+                        "  cantidad_convertida = :cc, "
+                        "  factor_conversion = :factor, "
                         "  descripcion_linea = NULL, "
                         "  importe_calculado = :imp, "
                         "  importe_source = 'calculated', "
-                        "  review_required = FALSE "
+                        "  review_required = :revisar, "
+                        "  review_reasons_json = :razones "
                         "WHERE id = :vid"
                     ),
                     {
                         "mid": matched_contrato_line_id,
                         "pu": precio,
                         "part": cl["codigo_partida"],
-                        "uni": cl["unidad_medida"],
+                        "uni": cl["unidad_medida"] or unidad_actual,
+                        "ca": ca,
+                        "cc": cc,
+                        "factor": factor,
                         "imp": _importe_de_linea(
                             precio_unitario=precio,
-                            cantidad=cantidad,
+                            cantidad=cc if cc is not None else ca,
                             descuento_pct=row["descuento_albaran_aplicado"],
+                        ),
+                        "revisar": aviso,
+                        "razones": motivos_con(
+                            row["review_reasons_json"], MOTIVO_UNIDAD_CAMBIADA, aviso,
                         ),
                         "vid": valuation_line_id,
                     },
                 )
             elif mode == "nueva":
-                # Los valores ACTUALES de la fila: los de su línea (de contrato
-                # o derivada) donde la valoración no tenga los suyos.
-                tabla = (
-                    "albaran_contrato_lines_merge"
-                    if row["matched_contrato_line_id"] is not None
-                    else "contrato_lines_derived"
-                )
-                casada = session.execute(
-                    text(
-                        "SELECT descripcion_linea, unidad_medida, precio_unitario "
-                        f"FROM {tabla} WHERE id = :id"  # noqa: S608
-                    ),
-                    {"id": row["matched_contrato_line_id"]
-                     if row["matched_contrato_line_id"] is not None
-                     else row["derived_contrato_line_id"]},
-                ).mappings().first() or {}
+                # Los valores ACTUALES de la fila (``casada`` donde la
+                # valoración no tiene los suyos).
                 actual = (
                     row["precio_unitario_final"]
                     if row["precio_unitario_final"] is not None
@@ -1917,6 +1947,7 @@ class AlbaranReviewRepository:
                     "       lv.codigo_partida_final, lv.descripcion_linea, "
                     "       lv.precio_unitario_final, lv.unidad_contrato, "
                     "       lv.descuento_albaran_aplicado, lv.codigo_externo, "
+                    "       lv.review_reasons_json, "
                     "       v.document_id, v.contrato_codigo "
                     "FROM albaran_line_valuations lv "
                     "JOIN albaran_valuations v ON v.id = lv.valuation_id "
@@ -1991,6 +2022,16 @@ class AlbaranReviewRepository:
                 if not igual:
                     cambios[campo] = nuevo
 
+            # (F-065 H2) El aviso «revisa la cantidad» se va cuando la cantidad
+            # se revisa: al cambiarla o al guardar la fila.
+            quita_aviso = (
+                (bloquear or "cantidad" in cambios)
+                and MOTIVO_UNIDAD_CAMBIADA in motivos_de_json(row["review_reasons_json"])
+            )
+            razones = motivos_con(
+                row["review_reasons_json"], MOTIVO_UNIDAD_CAMBIADA, False,
+            )
+
             if not cambios:
                 # (R10) Completar la convertida y (R13) bloquear: nada más.
                 session.execute(
@@ -1999,9 +2040,10 @@ class AlbaranReviewRepository:
                         "  cantidad_convertida = COALESCE("
                         "    cantidad_convertida, cantidad_albaran)"
                         + (", bloqueada = TRUE" if bloquear else "")
+                        + (", review_reasons_json = :razones" if quita_aviso else "")
                         + " WHERE id = :vid"
                     ),
-                    {"vid": valuation_line_id},
+                    {"vid": valuation_line_id, "razones": razones},
                 )
                 session.commit()
                 return True
@@ -2037,6 +2079,9 @@ class AlbaranReviewRepository:
             ]
             if bloquear:
                 sets.append("bloqueada = TRUE")
+            if quita_aviso:
+                sets.append("review_reasons_json = :razones")
+                params["razones"] = razones
 
             # ---- importe: solo si cambia lo que entra en él (R11) ----
             cambia_importe = bool({"cantidad", "precio_unitario", "descuento"} & set(cambios))

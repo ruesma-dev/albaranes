@@ -546,6 +546,52 @@ def cambia_origen(
     )
 
 
+#: (F-065 H2) «Origen ✎» llevó la fila a una línea de contrato de OTRA unidad y
+#: sv4 no sabe convertir la cantidad: se deja, sin bloquear, y se avisa.
+MOTIVO_UNIDAD_CAMBIADA = "front_unidad_cambiada_revisa_cantidad"
+
+
+def _unidad(valor: str | None) -> str:
+    return (valor or "").strip().upper()
+
+
+def cantidades_tras_reapuntar(
+    *,
+    unidad_actual: str | None,
+    unidad_nueva: str | None,
+    unidad_albaran: str | None,
+    cantidad_albaran: float | None,
+    cantidad_convertida: float | None,
+    factor: float | None,
+) -> tuple[float | None, float | None, float | None, bool]:
+    """(F-065 H2) ``(ca, cc, factor, aviso)`` al reapuntar a una línea de
+    contrato con ``unidad_nueva``.
+
+    Q (la convertida) está en la unidad del precio, así que si la unidad cambia
+    Q deja de valer. sv4 no tiene el conversor de unidades (es de sv6): solo
+    sabe rehacer el caso en que la unidad nueva es la del ALBARÁN, en el que Q
+    es la cantidad leída (factor 1). Misma unidad, o alguna de las dos
+    desconocida: nada cambia. Otra unidad: se deja la cantidad y ``aviso``
+    (la fila queda marcada para revisar la cantidad, nunca bloqueada).
+    """
+    sin_cambio = (cantidad_albaran, cantidad_convertida, factor, False)
+    nueva = _unidad(unidad_nueva)
+    if not nueva or not _unidad(unidad_actual) or nueva == _unidad(unidad_actual):
+        return sin_cambio
+    if nueva == _unidad(unidad_albaran) and cantidad_albaran is not None:
+        return cantidad_albaran, cantidad_albaran, 1.0, False
+    return cantidad_albaran, cantidad_convertida, factor, True
+
+
+def motivos_con(valor: Any, motivo: str, presente: bool) -> str:
+    """``review_reasons_json`` con ``motivo`` puesto o quitado, sin tocar los
+    demás (los de sv6 se conservan; sv4 solo gestiona los suyos)."""
+    motivos = [m for m in motivos_de_json(valor) if m != motivo]
+    if presente:
+        motivos.append(motivo)
+    return json.dumps(motivos, ensure_ascii=False)
+
+
 def descripcion_para_valoracion(
     *,
     descripcion: str | None,
