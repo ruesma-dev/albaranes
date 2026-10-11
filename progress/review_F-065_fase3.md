@@ -64,7 +64,7 @@ Revisión incremental desde c1578c2 (pasada 3) hasta `8b940a8`; la 2, de `3516c4
 - **C4 bis**:
   - [x] RED real (`81 failed, 2 passed`, y la ruta repetida aparte: `15 failed, 1 passed`) · [x] cobertura 147/147 ·
     [x] mutación recalculada · [x] RM1/RM2/RM6 · RM5 N/A · [x] Evidencias con 4 workers.
-  - **[ ] RM3/equivalentes: el reescrito del signo cambia el comportamiento con `NaN` (CR1).**
+  - [x] RM3/equivalentes: en la pasada 1 era `[ ]` (el signo reescrito admitía `NaN`, CR1); resuelto en la pasada 2.
 - **C5** [x] T21–T26 `[x]` con un commit `F-065 Tn:` por tarea · [x] árbol limpio · [x] `features.json` = `in_progress`.
 
 ## Observaciones (no bloquean)
