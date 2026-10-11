@@ -1,9 +1,9 @@
 <!-- progress/review_F-065_fase2.md -->
-Revisión incremental desde 6748c63 (pasada 2) hasta `fb4944c`; la pasada 1 fue completa, de `8c180b0` a `2783230`
+Revisión incremental desde 1942485 (pasada 3) hasta `f45d297`; la pasada 2, de `6748c63`; la 1, completa desde `8c180b0`
 
 # F-065 · fase 2 (R24–R28 + decisiones del humano del 2026-10-11) · review
 
-- **Veredicto (pasada 2, abajo): CHANGES_REQUESTED** por CR3. En la pasada 1 lo fue por CR1 y CR2, ya resueltos.
+- **Veredicto (pasada 3, abajo): APPROVED.** Antes: pasada 1 CHANGES_REQUESTED (CR1, CR2) y pasada 2 (CR3), corregidos.
 - **Nivel de rigor:** `critico` (declarado). Exige fase RED, cobertura ≥ 80 %, mutación con 0 supervivientes sin
   justificación aceptada y MANUAL con su comando exacto.
 - Servicio: solo sv4. Sin DDL, sin tocar `sigrid_lookup_client.py` ni la ruta `/api/sigrid/partidas` (LÍMITE DE
@@ -74,65 +74,49 @@ Revisión incremental desde 6748c63 (pasada 2) hasta `fb4944c`; la pasada 1 fue 
 vía; F-051/F-053 adaptados con motivo; E1, E3, E5, E6 razonables, E2 y E4 con matiz. Observaciones: H1 (descripción
 editada con blanca), H2 (Origen ✎ a otra unidad sin convertir Q), H3 (combo DOM solo estructural), H4 (caché sin obra).
 
-## Pasada 2 · revisión incremental desde `6748c63` hasta `fb4944c`
+## Pasada 2 · incremental desde `6748c63` hasta `fb4944c` (resumen)
 
-- **Veredicto pasada 2: CHANGES_REQUESTED**: CR1, CR2, H1 y H4 están resueltos; H2 queda a medias (**CR3**, alta).
+Íntegra en `git show 1942485:progress/review_F-065_fase2.md`. CHANGES_REQUESTED por **CR3**. CR1 y H1 quedaron
+resueltos y verificados: falseado en copias, 8 tests fallan en sv4 y 2 en sv9 contra el validador real; sv9 sin cambios
+de código. CR2, H4 y H2 (conversión hacia la unidad del albarán, aviso visible) también quedaron resueltos. CR3: una
+fila con la marca «revisa la cantidad» se aprobaba y sv9 la admitía. Caso reproducido: 8 ud mandadas como 8 t,
+`PeticionAlbaran [(8.0, 90.0, 700101)]`. Observaciones bajas: P2-1 (`review_required` tras quitar la marca) y P2-2 (fila
+sin unidad).
+
+## Pasada 3 · revisión incremental desde `1942485` hasta `f45d297`
+
+- **Veredicto pasada 3: APPROVED.** CR3, P2-1 y P2-2 corregidos; no quedan cambios requeridos de la fase 2.
 - **Verificación**:
-  - `bash harness/init.sh`: exit 0, raíz `1083 passed`, `PUERTA COBERTURA: 100.0% de 61 líneas (61/61)`.
-  - Sin caché: **sv4 1091 passed**, **sv9 530 passed**. Árbol limpio.
-- **CR1 resuelto, falseado en copias**:
-  - `descripcion_para_valoracion` se aplica en las tres escrituras (`review_repository.py:1863`, `:2107` → `:2150` y
-    `:2174`). «Añadir línea» queda cubierta por la rama in situ (`sin_blanca`).
-  - Falseo en sv4 (la función devuelve siempre `None`): `test_f065_f2_pasada2.py` ⇒ **8 failed**.
-  - Falseo en sv9 (`_descripcion` solo con el concepto): `test_f065_partes.py` ⇒ **2 failed**. Uno es `no admitida:
-    [Motivo('falta_descripcion', ...)]` y el otro `'PORTES' == 'PORTES URGENTES'`. El validador es el real.
-- **H1 resuelto sin tocar sv9**:
-  - El diff de sv9 es solo `tests/test_f065_partes.py`. `_descripcion` ya prefería `descripcion_linea`.
-  - `SQL_LINEAS`, la previa y el comparador de F-053 no cambian, y sus 530 tests están en verde.
-  - Con blanca y sin editar sigue yendo lo leído (`ya_fijada` / `editada`).
-- **H4 resuelto**: caché por obra, sin obra no se guarda y otra obra se vuelve a pedir; test con node. **CR2 resuelto**:
-  T19 está en `current.md` con pasos, las dos consultas de solo lectura y el criterio.
-- **H2, lo que está bien**:
-  - `cantidades_tras_reapuntar`: con la unidad nueva = la del albarán, Q = ca y factor 1. Misma unidad o desconocida:
-    nada cambia.
-  - Otra unidad: cantidad intacta, fila sin bloquear, `review_required` y el motivo
-    `front_unidad_cambiada_revisa_cantidad` (los de sv6 se conservan). El aviso es visible en la celda de cantidad y se
-    limpia al cambiar la cantidad o al «Guardar».
+  - `bash harness/init.sh`: **exit 0**, raíz `1083 passed`, `PUERTA COBERTURA: 100.0% de 66 líneas (66/66)`,
+    `ENTORNO LISTO`.
+  - Sin caché: **sv4 1104 passed**. sv9 no cambia desde la pasada 2, donde dio 530 passed. Árbol limpio.
+- **CR3, mi caso reproducido sobre el código actual** (copia `sv4_copia5`, el mismo 8 ud → 8 t):
+  - Aprobar desde el listado ⇒ `LineasIncompletasError` «Líneas con la unidad cambiada: revisa la cantidad: 1».
+  - «Guardar y aprobar» (PUT) ⇒ el mismo rechazo.
+  - En los dos casos el documento sigue sin aprobar.
+  - Tras «Guardar» la fila, la marca se va y `set_approved` ⇒ `True`.
+- **CR3 falseado**: quitar la comprobación de `_exigir_lineas_completas` (`review_repository.py:3855-3857`) ⇒ **4
+  failed**. Son `test_f065_cr3_con_la_marca_no_se_aprueba[listado|guardar_y_aprobar]` y mis dos casos: las dos vías
+  quedan vigiladas.
+- **P2-1**: el «Guardar» que quita la marca baja `review_required` solo si no queda ningún otro motivo (`:2045`).
+  - En mi caso queda a 1 porque sv6 dejó `ia_match_trusted`, que es lo acordado: sv4 no toca los motivos ajenos.
+  - Ese motivo es informativo, así que el humano puede querer que no cuente. Queda anotado, no bloquea.
+- **P2-2**: si la actual se desconoce y la nueva no es la del albarán, avisa; si es la del albarán, convierte. Lo
+  cubren los tests de dominio y de repositorio, con la traza RED `:426`/`:437`.
 - **Mutación (RM1)**:
-  - Recalculé `8c180b0..rama`: **2 ficheros, 276 líneas, 54 mutantes** (28 + 26). Coincide con el informe.
-  - Desde `9da7e4b` solo cambia `progress/`. **No reejecuté la campaña: dura 1138,4 s según el informe**.
-  - RM2: 1138,4 × 4 ÷ 54 = **84,3 s por mutante** frente a una línea base de 87,0–87,5 s; coherente.
-  - Ni «no válida» ni «sin veredicto». Los 4 supervivientes de la campaña intermedia eran huecos de test, no
-    equivalentes. RM5 N/A, RM6 sin guardas quitadas.
-
-### CR3 · Alta · una fila marcada «revisa la cantidad» se aprueba y sv9 la manda con la cantidad incoherente
-
-- **Lo pedido**: que sv9 no admita una fila marcada así si la cantidad quedó incoherente. Nadie mira la marca:
-  - ni `_exigir_lineas_completas` (los dos aprobar);
-  - ni sv9 (`validador_alta` no lee `review_required` ni `review_reasons_json`).
-- **Reproducido en una copia** (`sv4_copia4`):
-  - Fila 11, `unidad_albaran = 'KG'` y `unidad_contrato = 'UD'`. «Origen ✎» a la 503, que va en `TN` a 90.
-  - Queda `cc = 8`, `importe = 720`, `review_required = 1` y el motivo puesto, sin bloquear.
-  - `set_approved(True)` ⇒ **`True`**. El validador real de sv9, con esa fila vinculada, devuelve
-    `PeticionAlbaran [(8.0, 90.0, 700101)]`: 8 t donde había 8 ud.
-- **Qué hacer**:
-  - En sv4, igual que R20/O2: mientras alguna fila tenga `MOTIVO_UNIDAD_CAMBIADA`, aprobar (ficha y listado) lanza
-    `LineasIncompletasError` con su posición y un aviso propio, p. ej. «Líneas con la unidad cambiada: revisa la
-    cantidad: 3».
-  - Tests por las dos vías, y otro de que, quitada la marca (cantidad cambiada o «Guardar»), se aprueba.
-  - sv9 no cambia: aprobar es la puerta de entrada al alta.
-
-### Observaciones de la pasada 2 (no bloquean)
-
-- **P2-1 · Baja.** Un «Guardar» sin cambios quita el motivo pero deja `review_required = TRUE`
-  (`review_repository.py:2037-2047`). Con cambios sí lo baja. Conviene bajarlo también.
-- **P2-2 · Baja.** Si la fila no tiene unidad (ni la suya ni la de su línea), reapuntar a otra unidad no avisa
-  (`cantidades_tras_reapuntar`, «desconocida»). Es raro, pero es justo el caso silencioso. Propuesta: avisar también
-  cuando la actual es desconocida y la nueva no es la del albarán.
-- **C4 / C4 bis de la pasada 2**:
-  - [x] RED con traza (`13 failed, 8 passed`, sv9 roto en copia: `2 failed`); [x] cobertura; [x] mutación;
-    [x] Evidencias; [x] T19 en `current.md`.
-  - **[ ] H2 incompleto (CR3)**.
+  - Recalculé `8c180b0..rama`: **2 ficheros, 301 líneas, 58 mutantes** (28 + 30). Coincide con el informe.
+  - Desde el SHA medido (`ead57a4`) solo cambian `progress/` y el inventario.
+  - **No reejecuté la campaña: dura 1071,2 s según el informe** (> 60 s).
+  - RM2: 1071,2 × 4 ÷ 58 = **73,9 s por mutante** frente a una línea base de 66,0–66,5 s (1,1×). No hay salto de orden
+    de magnitud.
+  - 0 supervivientes, ni «no válida» ni «sin veredicto». RM5 N/A sin equivalentes; RM6 sin guardas quitadas.
+- **Checkpoints de la pasada 3**:
+  - [x] C1 · [x] C2 · [x] C3: el aviso nuevo vive en el dominio y el repositorio solo lo usa · C3 bis / C4 ter N/A
+    (sin `docs/referencia/` ni rutas sensibles).
+  - [x] C4: CR3, P2-1 y P2-2 con tests en verde; T19 en `current.md` · [x] C4 bis: RED `8 failed, 35 passed`,
+    cobertura 66/66, mutación 58/58 verificada, Evidencias con 4 workers · [x] C5.
+- **Para cerrar la fase 2** (humano): la MANUAL T19 de `current.md`. Al paso 4 conviene añadir «Guardar y aprobar» con
+  la fila marcada, que debe rechazarse. Después: fusionar, `init.sh` en el árbol principal y desplegar solo sv4.
 
 ## Automejora (propuesta, no aplicada)
 
