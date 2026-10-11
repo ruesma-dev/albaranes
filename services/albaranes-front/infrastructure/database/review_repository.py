@@ -32,6 +32,7 @@ from ruesma_comun.valoracion import esta_valorado
 # la llama el resto de este módulo.
 from domain.models.review_models import (
     AlbaranAprobadoError,
+    aviso_reparto,
     cambia_origen,
     cantidades_tras_editar,
     cantidades_tras_reapuntar,
@@ -43,6 +44,7 @@ from domain.models.review_models import (
     ContratoLinePayload,
     ContratoPayload,
     DisplayLine,
+    DivisionHecha,
     DocumentDetailPayload,
     DocumentListFilters,
     DocumentLineSummary,
@@ -68,6 +70,9 @@ from domain.models.review_models import (
     normalize_view_mode,
     es_fila_manual,
     orden_filas_ficha,
+    ParteDivision,
+    RepartoInvalido,
+    repartir,
 )
 from infrastructure.database.orm_models import (
     AlbaranContratoLineMergeOrm,
@@ -2845,6 +2850,283 @@ class AlbaranReviewRepository:
             return creadas
 
     # ------------------------------------------------------------------ #
+    # F-065 fase 3 · dividir una fila (R30–R34), modelo M1 sin DDL.
+    # ------------------------------------------------------------------ #
+    #: (R31, design §5.4) Lo que cada parte k ≥ 2 copia tal cual de la original.
+    _COPIADAS_AL_DIVIDIR = (
+        "valuation_id", "precio_unitario_contrato_db", "precio_unitario_final",
+        "unidad_albaran", "unidad_contrato", "unidad_categoria",
+        "unidad_category_match", "factor_conversion", "codigo_partida_albaran",
+        "match_confidence_pct", "match_method", "descuento_albaran_aplicado",
+        "codigo_externo", "producto_sigrid",
+    )
+
+    def dividir_linea(
+        self,
+        *,
+        document_id: str,
+        valuation_line_id: int,
+        partes: list[ParteDivision],
+    ) -> DivisionHecha | None:
+        """(F-065 R30–R34) Divide una fila en ``partes`` (la 1 se la queda la
+        original). ``None`` si la fila no es del documento (404).
+
+        - 409 (excepciones de ``_exigir_editable``): alta bloqueante, albarán
+          aprobado o fila guardada.
+        - 422 (``RepartoInvalido``, sin cambios): fila sintética, sin línea de
+          contrato ni derivada, con la marca «revisa la cantidad» (la Q no es
+          de fiar: se resuelve antes, como una Q nula), y lo que rechaza
+          ``repartir``.
+        - Cada parte k ≥ 2 nace ``reparto``, sin blanca propia y colgando de la
+          de la original (``parent_merge_line_id``), con los campos de
+          ``_COPIADAS_AL_DIVIDIR``, su descripción (la de la original, el
+          concepto de su blanca o el de su línea) para sv9 (CR1), sus
+          cantidades e importe (``repartir``), sin revisión y desbloqueada.
+        - Origen (R32, la regla de editar): con la partida de la original, la
+          de su línea de contrato o vacía (almacén), conserva origen y vínculo;
+          con otra, una Contrato pasa a Nueva con derivada ``manual_override``
+          propia. Las partes de una Nueva llevan SIEMPRE derivada propia (una
+          derivada compartida se editaría in situ desde dos filas).
+        - Una transacción: partes, derivadas, original y total, o nada.
+        """
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            # F-053 R26 (alta), F-065 R4 (aprobado) y R14 (fila guardada).
+            self._exigir_editable(session, document_id, valuation_line_id)
+            row = session.execute(
+                text(
+                    "SELECT lv.valuation_id, lv.merge_line_id, "
+                    "       lv.parent_merge_line_id, lv.line_kind, "
+                    "       lv.matched_contrato_line_id, "
+                    "       lv.derived_contrato_line_id, "
+                    "       lv.cantidad_albaran, lv.cantidad_convertida, "
+                    "       lv.importe_calculado, lv.precio_unitario_final, "
+                    "       lv.precio_unitario_source, lv.precio_unitario_agreement, "
+                    "       lv.unidad_contrato, lv.descuento_albaran_aplicado, "
+                    "       lv.codigo_partida_final, lv.partida_action, "
+                    "       lv.descripcion_linea, lv.review_reasons_json, "
+                    "       v.document_id, v.contrato_codigo "
+                    "FROM albaran_line_valuations lv "
+                    "JOIN albaran_valuations v ON v.id = lv.valuation_id "
+                    "WHERE lv.id = :vid"
+                ),
+                {"vid": valuation_line_id},
+            ).mappings().first()
+            if row is None or row["document_id"] != document_id:
+                return None
+            if row["line_kind"] == "synthetic_modifier":
+                raise RepartoInvalido(
+                    "Una línea sintética (portes, incrementos…) no se divide: "
+                    "la genera la valoración."
+                )
+            matched_id = row["matched_contrato_line_id"]
+            derived_id = row["derived_contrato_line_id"]
+            if matched_id is None and derived_id is None:
+                raise RepartoInvalido(
+                    "La línea no tiene línea de contrato ni es Nueva: "
+                    "revalora antes de dividirla."
+                )
+            if MOTIVO_UNIDAD_CAMBIADA in motivos_de_json(row["review_reasons_json"]):
+                raise RepartoInvalido(
+                    "Antes de dividir, revisa la cantidad: cambió la unidad "
+                    "(corrígela o guarda la fila)."
+                )
+
+            es_contrato = matched_id is not None
+            casada = session.execute(
+                text(
+                    "SELECT codigo_partida, descripcion_linea, unidad_medida, "
+                    "       precio_unitario, codigo_contrato, codigo_producto "
+                    + (
+                        "FROM albaran_contrato_lines_merge" if es_contrato
+                        else "FROM contrato_lines_derived"
+                    )
+                    + " WHERE id = :id"
+                ),
+                {"id": matched_id if es_contrato else derived_id},
+            ).mappings().first() or {}
+            padre = (
+                row["merge_line_id"] if row["merge_line_id"] is not None
+                else row["parent_merge_line_id"]
+            )
+            concepto = session.execute(
+                text("SELECT concepto FROM albaran_lines_merge WHERE id = :id"),
+                {"id": padre},
+            ).scalar() if padre is not None else None
+            # (O3 de la review) El texto que enseña la original: el fijado, el de
+            # su línea (de contrato o derivada) o, si no hay, el de su blanca.
+            descripcion = (
+                (row["descripcion_linea"] or "").strip()
+                or (casada.get("descripcion_linea") or "").strip()
+                or (concepto or "").strip()
+                or None
+            )
+            precio = (
+                row["precio_unitario_final"] if row["precio_unitario_final"] is not None
+                else casada.get("precio_unitario")
+            )
+            unidad = (row["unidad_contrato"] or "").strip() or casada.get("unidad_medida")
+            q = (
+                row["cantidad_convertida"] if row["cantidad_convertida"] is not None
+                else row["cantidad_albaran"]
+            )
+            calculadas = repartir(
+                q=q,
+                ca0=row["cantidad_albaran"],
+                importe0=row["importe_calculado"],
+                precio=precio,
+                descuento=_sanear_descuento(row["descuento_albaran_aplicado"]),
+                partes=[parte.cantidad for parte in partes],
+            )
+
+            partida_actual = (row["codigo_partida_final"] or "").strip() or None
+            now = self._utc_iso()
+
+            def _pasa_a_nueva(partida: str | None) -> bool:
+                return partida != partida_actual and cambia_origen(
+                    es_contrato=es_contrato,
+                    partida_casada=casada.get("codigo_partida"),
+                    cambios={"codigo_partida": partida},
+                )
+
+            def _derivada(partida: str | None) -> int:
+                """Derivada ``manual_override`` con los valores de la fila."""
+                return int(session.execute(
+                    text(
+                        "INSERT INTO contrato_lines_derived ("
+                        "  created_by_valuation_id, source_document_id, "
+                        "  codigo_contrato, codigo_producto, "
+                        "  descripcion_linea, unidad_medida, "
+                        "  precio_unitario, codigo_partida, "
+                        "  origen, created_at_utc) "
+                        "VALUES (:vid, :doc, :cod, :prod, :desc, :uni, :pu, "
+                        "  :part, 'manual_override', :now) "
+                        "RETURNING id"
+                    ),
+                    {
+                        "vid": row["valuation_id"],
+                        "doc": document_id,
+                        "cod": (
+                            row["contrato_codigo"] or "" if es_contrato
+                            else casada.get("codigo_contrato")
+                        ),
+                        "prod": None if es_contrato else casada.get("codigo_producto"),
+                        "desc": descripcion,
+                        "uni": unidad,
+                        "pu": precio,
+                        "part": partida,
+                        "now": now,
+                    },
+                ).scalar_one())
+
+            derivadas: list[int] = []
+
+            # ---- parte 1: la original ----
+            primera, calc = partes[0], calculadas[0]
+            params: dict[str, Any] = {
+                "vid": valuation_line_id,
+                "ca": calc.cantidad_albaran,
+                "cc": calc.cantidad_convertida,
+                "imp": calc.importe,
+                "part": primera.codigo_partida,
+                "almacen": ACCION_ALMACEN_ELEGIDO,
+            }
+            sets = [
+                "cantidad_albaran = :ca", "cantidad_convertida = :cc",
+                "importe_calculado = :imp", "importe_source = 'calculated'",
+            ]
+            if primera.codigo_partida != partida_actual:
+                sets.append("codigo_partida_final = :part")
+                if primera.codigo_partida is None:
+                    sets.append("partida_action = :almacen")
+                if _pasa_a_nueva(primera.codigo_partida):
+                    params["did"] = _derivada(primera.codigo_partida)
+                    derivadas.append(params["did"])
+                    params["descval"] = descripcion_para_valoracion(
+                        descripcion=descripcion,
+                        sin_blanca=row["merge_line_id"] is None,
+                        editada=False,
+                        ya_fijada=bool(row["descripcion_linea"]),
+                    )
+                    sets += [
+                        "matched_contrato_line_id = NULL",
+                        "derived_contrato_line_id = :did",
+                        "precio_unitario_source = 'manual_derived'",
+                        "precio_unitario_agreement = 'manual'",
+                        "descripcion_linea = :descval",
+                    ]
+                elif not es_contrato:
+                    # NUEVA: su partida vive también en su derivada.
+                    session.execute(
+                        text(
+                            "UPDATE contrato_lines_derived SET codigo_partida = :part "
+                            "WHERE id = :did"
+                        ),
+                        {"part": primera.codigo_partida, "did": derived_id},
+                    )
+            session.execute(
+                text(
+                    "UPDATE albaran_line_valuations SET " + ", ".join(sets)
+                    + " WHERE id = :vid"
+                ),
+                params,
+            )
+
+            # ---- partes 2..N: filas «reparto» ----
+            copiadas = dict(session.execute(
+                text(
+                    f"SELECT {', '.join(self._COPIADAS_AL_DIVIDIR)} "  # noqa: S608
+                    "FROM albaran_line_valuations WHERE id = :vid"
+                ),
+                {"vid": valuation_line_id},
+            ).mappings().one())
+            creadas: list[int] = []
+            for parte, calc in zip(partes[1:], calculadas[1:]):
+                nueva = not es_contrato or _pasa_a_nueva(parte.codigo_partida)
+                did = _derivada(parte.codigo_partida) if nueva else None
+                if did is not None:
+                    derivadas.append(did)
+                valores = {
+                    **copiadas,
+                    "merge_line_id": None,
+                    "matched_contrato_line_id": None if nueva else matched_id,
+                    "derived_contrato_line_id": did,
+                    "precio_unitario_source": (
+                        "manual_derived" if nueva else row["precio_unitario_source"]
+                    ),
+                    "precio_unitario_agreement": (
+                        "manual" if nueva else row["precio_unitario_agreement"]
+                    ),
+                    "cantidad_albaran": calc.cantidad_albaran,
+                    "cantidad_convertida": calc.cantidad_convertida,
+                    "importe_calculado": calc.importe,
+                    "importe_source": "calculated",
+                    "codigo_partida_final": parte.codigo_partida,
+                    "partida_action": (
+                        ACCION_ALMACEN_ELEGIDO if parte.codigo_partida is None
+                        else row["partida_action"]
+                    ),
+                    "descripcion_linea": descripcion,
+                    "line_kind": "reparto",
+                    "parent_merge_line_id": padre,
+                    "review_required": False,
+                    "review_reasons_json": None,
+                    "bloqueada": False,
+                    "created_at_utc": now,
+                }
+                creadas.append(int(session.execute(
+                    text(
+                        f"INSERT INTO albaran_line_valuations ({', '.join(valores)}) "  # noqa: S608
+                        f"VALUES ({', '.join(':' + c for c in valores)}) RETURNING id"
+                    ),
+                    valores,
+                ).scalar_one()))
+
+            self._recalcular_total_in_session(session, row["valuation_id"])
+            session.commit()
+            return DivisionHecha(partes=creadas, derivadas=derivadas)
+
+    # ------------------------------------------------------------------ #
     # Vaciar papelera (jul 2026): ids de los borrados, para purgarlos
     # uno a uno reutilizando hard_delete_document (y su limpieza de
     # dedup vía orquestador, que gestiona la ruta web por documento).
@@ -4362,36 +4644,51 @@ class AlbaranReviewRepository:
                 # importe: importe declarado vs cantidad x unitario de contrato
                 _conc.agree_importe = _agree_num(line.precio_neto, _exp_imp)
 
-            display.append(
-                DisplayLine(
-                    line_kind="from_albaran",
-                    merge_line_id=line.id,
-                    valuation_line_id=(v.valuation_line_id if v else None),
-                    line_index=idx,
-                    codigo_imputacion=eff_codimp,
-                    concepto=line.concepto,
-                    cantidad=eff_cantidad,
-                    unidad=eff_unidad,
-                    precio_unitario=eff_precio_unit,
-                    importe=eff_importe,
-                    descuento=line.descuento,
-                    codigo=line.codigo,
-                    confianza_pct=line.confianza_pct,
-                    is_valued=v is not None,
-                    parent_merge_line_id=None,
-                    concilia=_conc,
-                )
+            base_dl = DisplayLine(
+                line_kind="from_albaran",
+                merge_line_id=line.id,
+                valuation_line_id=(v.valuation_line_id if v else None),
+                line_index=idx,
+                codigo_imputacion=eff_codimp,
+                concepto=line.concepto,
+                cantidad=eff_cantidad,
+                unidad=eff_unidad,
+                precio_unitario=eff_precio_unit,
+                importe=eff_importe,
+                descuento=line.descuento,
+                codigo=line.codigo,
+                confianza_pct=line.confianza_pct,
+                is_valued=v is not None,
+                parent_merge_line_id=None,
+                concilia=_conc,
             )
+            display.append(base_dl)
 
-            # Sintéticas que cuelgan de esta base.
-            for syn in synth_by_parent.get(line.id, []):
-                display.append(
-                    AlbaranReviewRepository._synthetic_to_display(
-                        syn=syn,
-                        line_index=idx,
-                        conc_map=conc_map,
-                    )
+            # Sintéticas que cuelgan de esta base, en el orden del cargador
+            # (las de sv6 al final, cada grupo por id: el de
+            # ``orden_filas_ficha``); (F-065 R35) las partes de un reparto van
+            # así detrás de su original.
+            hijas = synth_by_parent.get(line.id, [])
+            hijas_dl = [
+                AlbaranReviewRepository._synthetic_to_display(
+                    syn=syn,
+                    line_index=idx,
+                    conc_map=conc_map,
                 )
+                for syn in hijas
+            ]
+            display.extend(hijas_dl)
+            AlbaranReviewRepository._marcar_reparto(
+                numero_linea=idx,
+                leida=line.cantidad,
+                familia=(
+                    ([(v, base_dl)] if v is not None else [])
+                    + [
+                        (syn, dl) for syn, dl in zip(hijas, hijas_dl)
+                        if syn.line_kind == "reparto"
+                    ]
+                ),
+            )
 
         # Sintéticas huérfanas (parent no encontrado). Raro, pero no
         # podemos silenciarlas sin avisar: las colocamos al final.
@@ -4410,6 +4707,30 @@ class AlbaranReviewRepository:
             )
 
         return display
+
+    @staticmethod
+    def _marcar_reparto(
+        *,
+        numero_linea: int,
+        leida: float | None,
+        familia: list[tuple[LineValuationPayload, DisplayLine]],
+    ) -> None:
+        """(F-065 R35) «Parte k de N» en cada fila de una blanca repartida (la
+        original es la 1; las ``reparto``, por id) y, en la primera, el aviso
+        mientras la familia no sume lo que dice el albarán. Se compara en la
+        unidad del ALBARÁN (``cantidad_albaran``, o la convertida si no hay):
+        con conversión (t → kg) la Q de la ficha no es la de la blanca."""
+        if not any(v.line_kind == "reparto" for v, _ in familia):
+            return
+        total = len(familia)
+        for k, (_, dl) in enumerate(familia, start=1):
+            dl.parte = f"Parte {k} de {total}"
+        suma = sum(
+            v.cantidad_albaran if v.cantidad_albaran is not None
+            else (v.cantidad_convertida or 0.0)
+            for v, _ in familia
+        )
+        familia[0][1].aviso_reparto = aviso_reparto(numero_linea, suma, leida)
 
     @staticmethod
     def _synthetic_to_display(
@@ -4465,9 +4786,11 @@ class AlbaranReviewRepository:
             conc.agree_importe = _num(syn.importe_calculado, _exp_imp)
 
         return DisplayLine(
+            # (F-065 R35) ``manual`` y ``reparto`` se conservan; lo demás sin
+            # blanca es una sintética de sv6.
             line_kind=(
-                "manual"
-                if (getattr(syn, "line_kind", "") or "") == "manual"
+                syn.line_kind
+                if syn.line_kind in ("manual", "reparto")
                 else "synthetic_modifier"
             ),
             merge_line_id=None,

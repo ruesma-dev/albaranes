@@ -449,6 +449,34 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       Sigrid caído, solo «Almacén»). «Origen ✎» es la única vía de reapuntar:
       una línea de contrato deja la fila Contrato con su partida, unidad y
       precio; «Nueva», Nueva con los valores actuales.
+    - **Dividir** (fase 3; absorbe F-016): «Dividir» (o F6) reparte una fila
+      en 2–20 partes, cada una con su cantidad y su partida (combo de la obra;
+      vacía = almacén); «Aceptar» solo si suman Q. `POST
+      .../lines/{vid}/dividir`: 404 si la fila no es del documento, 409 con
+      alta bloqueante, aprobado o fila guardada, 422 sin cambios si es
+      sintética, sin línea de contrato ni derivada, con «revisa la cantidad»
+      (se resuelve antes: la Q no es de fiar), Q nula o 0, una parte nula, 0 o
+      de otro signo, la suma difiere de Q en 0,005 o más, o una parte saldría a
+      0,00 € con importe en la original (sv9 no registra importes 0). Un `NaN` o
+      `Infinity` en el JSON de dividir, editar una fila o traer líneas es 422
+      (`allow_inf_nan=False`; el manejador de 422 los devuelve como texto). Modelo M1, **sin
+      DDL**: la original es la parte 1 y cada parte k ≥ 2 es una fila
+      `line_kind = 'reparto'` con `merge_line_id` nulo y `parent_merge_line_id`
+      de la blanca de la original, sus campos copiados y en la valoración la
+      descripción que enseña la original (la fijada, la de su línea o el concepto
+      de su blanca: sv9 no tiene blanca que leer); `cantidad_convertida
+      = qk`, `cantidad_albaran = ca0 × qk / Q` e importe `round(importe0 × qk /
+      Q, 2)` (la última absorbe el redondeo: la familia suma lo de antes). El
+      origen sigue la regla de editar: con la partida de la original, la de su
+      línea de contrato o vacía, conserva origen y vínculo; con otra, Nueva con
+      derivada `manual_override` propia (las partes de una Nueva siempre llevan
+      la suya). Una transacción, total con `ROUND` y UNA entrada de «Deshacer»
+      que borra partes y derivadas y devuelve la original. La ficha pinta
+      «Parte k de N» bajo la original y, mientras la familia no sume lo que dice
+      la blanca (en la unidad del albarán), un aviso que no bloquea. sv9 no
+      cambia: una parte Contrato va vinculada a su `ctrpro_ide` (N partes al
+      mismo `ctrpro` son N líneas, al final de la petición) y una Nueva sin
+      vincular con producto genérico. F7 (duplicar) desapareció.
 
 ## Acceso a datos y sistemas externos
 

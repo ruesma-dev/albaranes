@@ -29,11 +29,13 @@ from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
     VIEW_MODE_MERGE,
     AlbaranAprobadoError,
+    DivisionHecha,
     DocumentDetailPayload,
     DocumentListFilters,
     MergeDocumentUpdatePayload,
     ObraResumenItem,
     PaginatedDocuments,
+    ParteDivision,
     ProveedorResumenItem,
 )
 from domain.ports.contrato_refetch_port import ContratoRefetchClient
@@ -759,6 +761,46 @@ class ReviewService:
                 ],
             )
         return len(creadas)
+
+    def dividir_linea(
+        self,
+        *,
+        document_id: str,
+        valuation_line_id: int,
+        partes: list[ParteDivision],
+    ) -> DivisionHecha | None:
+        """(F-065 R29–R34) Divide una fila en ``partes`` con UNA entrada de
+        deshacer: borra las partes y las derivadas creadas y devuelve la
+        original (con su derivada, si era Nueva) y el total a como estaban.
+        ``None`` si la fila no es del documento."""
+        etiqueta = self._undo_line_desc(valuation_line_id)
+        snap_line = self._undo_snap_line(valuation_line_id)
+        derivada = (snap_line or {}).get("values", {}).get("derived_contrato_line_id")
+        snap_derivada = (
+            self._repository.snapshot_row(table="contrato_lines_derived", row_id=derivada)
+            if derivada is not None else None
+        )
+        snap_val = self._undo_snap_valuation(document_id)
+        hecha = self._repository.dividir_linea(
+            document_id=document_id,
+            valuation_line_id=valuation_line_id,
+            partes=partes,
+        )
+        if hecha is not None:
+            self._repository.record_undo(
+                document_id=document_id,
+                action="dividir",
+                description=(
+                    f"Dividir en {len(partes)} · {etiqueta} "
+                    f"({self._repository.doc_label(document_id=document_id)})"
+                ),
+                restore=[snap_line, snap_derivada, snap_val],
+                delete_created=(
+                    [{"table": "albaran_line_valuations", "id": i} for i in hecha.partes]
+                    + [{"table": "contrato_lines_derived", "id": i} for i in hecha.derivadas]
+                ),
+            )
+        return hecha
 
     # ------------------------------------------------------------------ #
     # F-053 · Producto Sigrid de las líneas sin vincular (R40-R43)

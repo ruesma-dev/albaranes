@@ -785,7 +785,9 @@
         return _partidasObra;
     }
 
-    function attachPartidaCombo(input) {
+    // ``opciones.alElegirAlmacen`` (F-065 R29): en la ventana de «Dividir»,
+    // «Almacén» solo deja la partida vacía; en la fila, la manda a almacén.
+    function attachPartidaCombo(input, opciones) {
         if (!input || input.dataset.comboAttached) { return; }
         input.dataset.comboAttached = "1";
 
@@ -823,7 +825,11 @@
         function pick(it) {
             close();
             if (it.almacen) {
-                elegirAlmacen(input);
+                if (opciones && opciones.alElegirAlmacen) {
+                    opciones.alElegirAlmacen(input);
+                } else {
+                    elegirAlmacen(input);
+                }
                 return;
             }
             input.value = it.code;
@@ -1140,6 +1146,190 @@
     // concepto es texto (reapuntar es solo «Origen ✎»).
     wirePartidaCombos();
     wireConciliaEdit();
+
+    // ------------------------------------------------------------------ //
+    // «Dividir» (F-065 R29): el botón de la fila o F6 abren una ventana con
+    // el número de líneas (2–20) y la cantidad y la partida de cada una
+    // (combo de partidas de la obra; vacía = almacén) con lo que falta por
+    // repartir. «Aceptar» solo se habilita si las partes suman la Q de la
+    // fila (± 0,005), ninguna es 0 ni de otro signo. Sustituye a F7
+    // (duplicar), que creaba una «Nueva» sin vínculo.
+    // ------------------------------------------------------------------ //
+    function faltaPorRepartir(q, valores) {
+        let suma = 0;
+        valores.forEach(function (v) {
+            const n = parseNumEs(v);
+            if (n !== null) { suma += n; }
+        });
+        return Math.round((q - suma) * 1000) / 1000;
+    }
+
+    function repartoValido(q, valores) {
+        if (q === null || q === 0 || valores.length < 2 || valores.length > 20) {
+            return false;
+        }
+        let suma = 0;
+        for (let i = 0; i < valores.length; i++) {
+            const n = parseNumEs(valores[i]);
+            if (n === null || n === 0 || (n > 0) !== (q > 0)) { return false; }
+            suma += n;
+        }
+        // «0,005 o más» no vale (R30), sin el ruido de la coma flotante.
+        return Math.abs(suma - q) < 0.005 - 1e-9;
+    }
+
+    function cuerpoDivision(valores, partidas) {
+        return {
+            partes: valores.map(function (v, i) {
+                const partida = String(partidas[i] || "").trim();
+                return { cantidad: parseNumEs(v), codigo_partida: partida || null };
+            })
+        };
+    }
+
+    function wireDividir() {
+        const dialogo = document.getElementById("dividir-dialog");
+        if (!dialogo || !linesBody) { return; }
+        const qEl = dialogo.querySelector(".js-dividir-q");
+        const nEl = dialogo.querySelector(".js-dividir-n");
+        const cuerpo = dialogo.querySelector(".js-dividir-partes");
+        const faltaEl = dialogo.querySelector(".js-dividir-falta");
+        const errorEl = dialogo.querySelector(".js-dividir-error");
+        const aceptar = dialogo.querySelector(".js-dividir-aceptar");
+        const cancelar = dialogo.querySelector(".js-dividir-cancelar");
+        let actual = null;
+
+        function valoresDe(clase) {
+            return [].map.call(cuerpo.querySelectorAll(clase), function (inp) {
+                return inp.value;
+            });
+        }
+        function cantidades() { return valoresDe(".js-dividir-cantidad"); }
+        function partidas() { return valoresDe(".js-dividir-partida"); }
+
+        function refrescar() {
+            const falta = faltaPorRepartir(actual.q, cantidades());
+            faltaEl.textContent = falta === 0
+                ? "Reparto completo."
+                : (falta > 0 ? "Falta: " : "Sobra: ") + String(Math.abs(falta)).replace(".", ",");
+            aceptar.disabled = !repartoValido(actual.q, cantidades());
+        }
+
+        function pintarPartes() {
+            let n = parseInt(nEl.value, 10);
+            n = Math.max(2, Math.min(20, isNaN(n) ? 2 : n));
+            const previas = cantidades();
+            const previasPartida = partidas();
+            cuerpo.innerHTML = "";
+            for (let i = 0; i < n; i++) {
+                const tr = document.createElement("tr");
+                const tdNum = document.createElement("td");
+                tdNum.textContent = String(i + 1);
+                const tdCant = document.createElement("td");
+                const cant = document.createElement("input");
+                cant.type = "text";
+                cant.inputMode = "decimal";
+                cant.className = "cell-input cell-num js-dividir-cantidad";
+                cant.value = i < previas.length ? previas[i] : "";
+                cant.addEventListener("input", refrescar);
+                tdCant.appendChild(cant);
+                const tdPartida = document.createElement("td");
+                const partida = document.createElement("input");
+                partida.type = "text";
+                partida.autocomplete = "off";
+                partida.placeholder = "Almacén";
+                partida.className = "cell-input js-dividir-partida";
+                partida.value = i < previasPartida.length ? previasPartida[i] : actual.partida;
+                tdPartida.appendChild(partida);
+                tr.appendChild(tdNum);
+                tr.appendChild(tdCant);
+                tr.appendChild(tdPartida);
+                cuerpo.appendChild(tr);
+                attachPartidaCombo(partida, {
+                    alElegirAlmacen: function (inp) { inp.value = ""; }
+                });
+            }
+            refrescar();
+        }
+
+        function abrir(boton) {
+            const filas = [].slice.call(linesBody.querySelectorAll("tr.concilia-editable"));
+            const aviso = avisoFilasSinGuardar(contarFilasConCambios(filas));
+            if (aviso && !window.confirm(
+                aviso + ": dividir recarga la ficha y se perderán. ¿Continuar?"
+            )) { return; }
+            actual = {
+                vid: boton.dataset.valuationLineId,
+                q: parseNumEs(boton.dataset.q),
+                partida: boton.dataset.partida || ""
+            };
+            qEl.textContent = String(actual.q).replace(".", ",");
+            nEl.value = "2";
+            cuerpo.innerHTML = "";
+            errorEl.hidden = true;
+            pintarPartes();
+            dialogo.showModal();
+            const primera = cuerpo.querySelector(".js-dividir-cantidad");
+            if (primera) { primera.focus(); }
+        }
+
+        async function enviar() {
+            if (!actual || !repartoValido(actual.q, cantidades())) { return; }
+            aceptar.disabled = true;
+            try {
+                const resp = await fetch(
+                    `/api/documents/${documentId}/lines/${actual.vid}/dividir`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(cuerpoDivision(cantidades(), partidas())),
+                    }
+                );
+                if (!resp.ok) {
+                    // 409 (aprobado, fila guardada, alta) y 422 traen el motivo.
+                    let msg = "No se pudo dividir la línea.";
+                    try {
+                        const j = await resp.json();
+                        if (j && typeof j.detail === "string") { msg = j.detail; }
+                    } catch (e) {}
+                    errorEl.textContent = msg;
+                    errorEl.hidden = false;
+                    aceptar.disabled = false;
+                    return;
+                }
+                window.location.reload();
+            } catch (e) {
+                errorEl.textContent = "Error de red dividiendo la línea.";
+                errorEl.hidden = false;
+                aceptar.disabled = false;
+            }
+        }
+
+        nEl.addEventListener("input", pintarPartes);
+        aceptar.addEventListener("click", enviar);
+        cancelar.addEventListener("click", function () { dialogo.close(); });
+        // Enter acepta (con el combo de partida abierto, Enter es del combo).
+        dialogo.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && e.target !== aceptar && e.target !== cancelar) {
+                e.preventDefault();
+                enviar();
+            }
+        });
+        linesBody.querySelectorAll(".js-dividir").forEach(function (boton) {
+            boton.addEventListener("click", function () { abrir(boton); });
+        });
+        // F6 en una fila abre su «Dividir».
+        document.addEventListener("keydown", function (ev) {
+            if (ev.key !== "F6" || dialogo.open) { return; }
+            const activo = document.activeElement;
+            const tr = activo && activo.closest ? activo.closest("tr.conciliacion-row") : null;
+            const boton = tr ? tr.querySelector(".js-dividir") : null;
+            if (!boton) { return; }
+            ev.preventDefault();
+            abrir(boton);
+        });
+    }
+    wireDividir();
 
     // ------------------------------------------------------------------ //
     // «Guardar todas» (F-065 R18): guarda y BLOQUEA solo las filas con
@@ -2613,359 +2803,16 @@
 })();
 
 // ===================================================================== //
-//  TANDA 2B — Columnas de tabla GENÉRICAS: reordenar + ancho + orden.    //
-//                                                                         //
-//  Reutilizable en cualquier <table> que declare:                        //
-//    data-cols-store="clave"   -> prefijo localStorage (por usuario)      //
-//    data-resizable="1"        -> permite redimensionar (requiere         //
-//                                 <colgroup> con <col data-col data-w>)   //
-//    data-sortable="1"         -> orden por columna en cliente (▲▼)       //
-//  y, en cada <th>/<td>/<col>, data-col="clave". Columnas con            //
-//  data-col-fixed no se mueven (p.ej. la columna sticky de acciones).     //
-//  El ORDEN, ANCHO y ORDENACIÓN se guardan por usuario en localStorage    //
-//  (claves distintas por tabla), de modo que el grid de líneas y la       //
-//  tabla de la bandeja recuerdan su configuración por separado.          //
-// ===================================================================== //
-(function () {
-    "use strict";
-    var MIN_W = 56;
-
-    function rj(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
-    function wj(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
-
-    function enhanceTable(table) {
-        if (!table) { return null; }
-        var store = table.getAttribute("data-cols-store");
-        if (!store) { return null; }
-        var resizable = table.getAttribute("data-resizable") === "1";
-        var sortable = table.getAttribute("data-sortable") === "1";
-        var colgroup = table.querySelector("colgroup");
-        var theadRows = [].slice.call(table.querySelectorAll("thead tr"));
-        var headRow = null;
-        for (var i = 0; i < theadRows.length; i++) {
-            if (theadRows[i].querySelector("th[data-col]")) { headRow = theadRows[i]; break; }
-        }
-        if (!headRow) { return null; }
-        var tbody = table.querySelector("tbody");
-
-        var DEFAULT_ORDER = [].map.call(headRow.querySelectorAll("th[data-col]"),
-            function (th) { return th.getAttribute("data-col"); });
-        var FIXED = {};
-        [].forEach.call(headRow.querySelectorAll("th[data-col]"), function (th) {
-            if (th.hasAttribute("data-col-fixed")) { FIXED[th.getAttribute("data-col")] = true; }
-        });
-        var MOVABLE = DEFAULT_ORDER.filter(function (k) { return !FIXED[k]; });
-
-        var LS_ORDER = store + ".order.v1";
-        var LS_WIDTH = store + ".width.v1";
-        var LS_SORT = store + ".sort.v1";
-
-        function movableOrder() {
-            var saved = rj(LS_ORDER);
-            if (!Array.isArray(saved)) { return MOVABLE.slice(); }
-            var known = {}; MOVABLE.forEach(function (k) { known[k] = true; });
-            var out = saved.filter(function (k) { return known[k]; });
-            MOVABLE.forEach(function (k) { if (out.indexOf(k) === -1) { out.push(k); } });
-            return out;
-        }
-        function sequence() {
-            var mo = movableOrder(); var mi = 0; var seq = [];
-            DEFAULT_ORDER.forEach(function (k) {
-                if (FIXED[k]) { seq.push(k); } else { seq.push(mo[mi++]); }
-            });
-            return seq;
-        }
-        function reorderParent(parent, seq) {
-            if (!parent) { return; }
-            var byCol = {};
-            [].forEach.call(parent.children, function (n) {
-                var k = n.getAttribute && n.getAttribute("data-col");
-                if (k) { byCol[k] = n; }
-            });
-            seq.forEach(function (k) { if (byCol[k]) { parent.appendChild(byCol[k]); } });
-        }
-        function applyOrder() {
-            var seq = sequence();
-            reorderParent(colgroup, seq);
-            theadRows.forEach(function (tr) { reorderParent(tr, seq); });
-            if (tbody) {
-                [].forEach.call(tbody.querySelectorAll("tr"), function (tr) {
-                    if (tr.classList.contains("concilia-add") ||
-                        tr.classList.contains("salmon-empty")) { return; }
-                    if (tr.querySelector("td[data-col]")) { reorderParent(tr, seq); }
-                });
-            }
-        }
-
-        // ---------------- Anchos (solo resizable + colgroup) ------------- //
-        function defW(k) {
-            var col = colgroup && colgroup.querySelector('col[data-col="' + k + '"]');
-            var d = col && Number(col.getAttribute("data-w"));
-            return (isFinite(d) && d > 0) ? d : 120;
-        }
-        function widths() {
-            var saved = rj(LS_WIDTH) || {}; var out = {};
-            DEFAULT_ORDER.forEach(function (k) {
-                var w = Number(saved[k]);
-                out[k] = (isFinite(w) && w >= MIN_W) ? w : defW(k);
-            });
-            return out;
-        }
-        function applyWidths() {
-            if (!colgroup) { return; }
-            var W = widths(); var total = 0;
-            DEFAULT_ORDER.forEach(function (k) {
-                var w = W[k]; total += w;
-                var col = colgroup.querySelector('col[data-col="' + k + '"]');
-                if (col) { col.style.width = w + "px"; }
-                var th = headRow.querySelector('th[data-col="' + k + '"]');
-                if (th) { th.style.width = w + "px"; }
-            });
-            table.style.width = total + "px";
-        }
-        function syncTableWidth() {
-            if (!colgroup) { return; }
-            var total = 0;
-            [].forEach.call(colgroup.querySelectorAll("col[data-col]"), function (col) {
-                total += parseFloat(col.style.width) || 0;
-            });
-            if (total) { table.style.width = total + "px"; }
-        }
-
-        // ---------------- Ordenación cliente (▲▼) ------------------------ //
-        function getSort() { var s = rj(LS_SORT); return (s && s.col) ? s : null; }
-        function cellVal(tr, col, type) {
-            var td = tr.querySelector('td[data-col="' + col + '"]');
-            if (!td) { return type === "num" ? -Infinity : ""; }
-            var inp = td.querySelector("input");
-            var raw = inp ? inp.value : td.getAttribute("data-sort-value");
-            if (raw === null || raw === undefined) { raw = td.textContent || ""; }
-            if (type === "num") {
-                var n = parseFloat(String(raw).replace(",", "."));
-                return isFinite(n) ? n : -Infinity;
-            }
-            return String(raw).trim().toLowerCase();
-        }
-        function sortRows(col, dir) {
-            if (!tbody) { return; }
-            var th = headRow.querySelector('th[data-col="' + col + '"]');
-            var type = (th && th.getAttribute("data-sort-type") === "num") ? "num" : "text";
-            var rows = [].slice.call(tbody.querySelectorAll("tr")).filter(function (tr) {
-                return tr.querySelector("td[data-col]") &&
-                    !tr.classList.contains("salmon-empty") &&
-                    !tr.classList.contains("concilia-add");
-            });
-            rows.sort(function (a, b) {
-                var va = cellVal(a, col, type), vb = cellVal(b, col, type);
-                if (va < vb) { return dir === "asc" ? -1 : 1; }
-                if (va > vb) { return dir === "asc" ? 1 : -1; }
-                return 0;
-            });
-            rows.forEach(function (tr) { tbody.appendChild(tr); });
-        }
-        function applySortIndicator() {
-            [].forEach.call(headRow.querySelectorAll("th[data-col]"), function (th) {
-                th.classList.remove("sorted-asc", "sorted-desc");
-            });
-            var s = getSort(); if (!s) { return; }
-            var th = headRow.querySelector('th[data-col="' + s.col + '"]');
-            if (!th) { return; }
-            th.classList.add(s.dir === "asc" ? "sorted-asc" : "sorted-desc");
-            sortRows(s.col, s.dir);
-        }
-
-        // ---------------- Cableado de interacciones ---------------------- //
-        function wireResize() {
-            var rz = null;
-            headRow.addEventListener("mousedown", function (ev) {
-                var h = ev.target.closest ? ev.target.closest(".col-resizer") : null;
-                if (!h) { return; }
-                var th = h.closest("th[data-col]"); if (!th) { return; }
-                ev.preventDefault();
-                var k = th.getAttribute("data-col");
-                var col = colgroup.querySelector('col[data-col="' + k + '"]');
-                rz = { k: k, col: col, th: th, x: ev.clientX, w: th.getBoundingClientRect().width };
-                document.body.classList.add("col-resizing");
-            });
-            document.addEventListener("mousemove", function (ev) {
-                if (!rz) { return; }
-                var w = Math.max(MIN_W, Math.round(rz.w + (ev.clientX - rz.x)));
-                if (rz.col) { rz.col.style.width = w + "px"; }
-                rz.th.style.width = w + "px"; rz._w = w;
-                syncTableWidth();
-            });
-            document.addEventListener("mouseup", function () {
-                if (!rz) { return; }
-                if (rz._w) { var W = widths(); W[rz.k] = rz._w; wj(LS_WIDTH, W); }
-                rz = null; document.body.classList.remove("col-resizing");
-            });
-        }
-        function wireReorder() {
-            var dragKey = null;
-            function cleanup() {
-                dragKey = null;
-                [].forEach.call(headRow.querySelectorAll("th"), function (t) {
-                    t.classList.remove("col-dragging"); t.classList.remove("col-drop-target");
-                });
-            }
-            headRow.addEventListener("dragstart", function (ev) {
-                var th = ev.target.closest ? ev.target.closest("th[data-col]") : null;
-                if (!th) { return; }
-                if (FIXED[th.getAttribute("data-col")]) { ev.preventDefault(); return; }
-                if (ev.target.closest && ev.target.closest(".col-resizer")) { ev.preventDefault(); return; }
-                dragKey = th.getAttribute("data-col");
-                th.classList.add("col-dragging");
-                headRow._didDrag = false;
-                try { ev.dataTransfer.effectAllowed = "move"; ev.dataTransfer.setData("text/plain", dragKey); } catch (e) {}
-            });
-            headRow.addEventListener("dragover", function (ev) {
-                if (!dragKey) { return; }
-                ev.preventDefault();
-                try { ev.dataTransfer.dropEffect = "move"; } catch (e) {}
-                var th = ev.target.closest ? ev.target.closest("th[data-col]") : null;
-                [].forEach.call(headRow.querySelectorAll("th"), function (t) { t.classList.remove("col-drop-target"); });
-                if (th && !FIXED[th.getAttribute("data-col")] &&
-                    th.getAttribute("data-col") !== dragKey) { th.classList.add("col-drop-target"); }
-            });
-            headRow.addEventListener("drop", function (ev) {
-                if (!dragKey) { return; }
-                ev.preventDefault();
-                var th = ev.target.closest ? ev.target.closest("th[data-col]") : null;
-                if (th && !FIXED[th.getAttribute("data-col")]) {
-                    var target = th.getAttribute("data-col");
-                    if (target && target !== dragKey) {
-                        var mo = movableOrder();
-                        var from = mo.indexOf(dragKey), to = mo.indexOf(target);
-                        if (from !== -1 && to !== -1) {
-                            mo.splice(from, 1); mo.splice(to, 0, dragKey);
-                            wj(LS_ORDER, mo); applyOrder();
-                            if (resizable && colgroup) { applyWidths(); }
-                        }
-                    }
-                }
-                headRow._didDrag = true;
-                setTimeout(function () { headRow._didDrag = false; }, 0);
-                cleanup();
-            });
-            headRow.addEventListener("dragend", function () {
-                headRow._didDrag = true;
-                setTimeout(function () { headRow._didDrag = false; }, 0);
-                cleanup();
-            });
-        }
-        function wireSort() {
-            headRow.addEventListener("click", function (ev) {
-                if (ev.target.closest && ev.target.closest(".col-resizer")) { return; }
-                if (headRow._didDrag) { return; }
-                var th = ev.target.closest ? ev.target.closest("th[data-col]") : null;
-                if (!th) { return; }
-                var col = th.getAttribute("data-col");
-                var s = getSort(); var dir = "asc";
-                if (s && s.col === col) { dir = s.dir === "asc" ? "desc" : "asc"; }
-                wj(LS_SORT, { col: col, dir: dir });
-                applySortIndicator();
-            });
-        }
-
-        // ---------------- Arranque --------------------------------------- //
-        applyOrder();
-        if (resizable && colgroup) { applyWidths(); }
-        if (sortable) { applySortIndicator(); }
-        wireReorder();
-        if (resizable && colgroup) { wireResize(); }
-        if (sortable) { wireSort(); }
-
-        return {
-            reset: function () {
-                try {
-                    localStorage.removeItem(LS_ORDER);
-                    localStorage.removeItem(LS_WIDTH);
-                    localStorage.removeItem(LS_SORT);
-                } catch (e) {}
-                applyOrder();
-                if (resizable && colgroup) { applyWidths(); }
-                if (sortable) { applySortIndicator(); }
-            }
-        };
-    }
-
-    // Aplicar a las tablas con configuración: grid de líneas (detalle) y
-    // tabla de la bandeja (lista). Cada una recuerda su layout por separado.
-    var gridApi = enhanceTable(document.getElementById("lines-table"));
-    [].forEach.call(document.querySelectorAll('table[data-cols-store]'), function (t) {
-        if (t.id === "lines-table") { return; }
-        enhanceTable(t);
-    });
-
-    // Botón «↺ Columnas» del detalle: restablece el grid de líneas.
-    var resetBtn = document.getElementById("reset-cols-btn");
-    if (resetBtn && gridApi) {
-        resetBtn.addEventListener("click", function () { gridApi.reset(); });
-    }
-})();
-
-// ===================================================================== //
-//  TANDA 2B — Atajos de teclado del grid de líneas: F7 / F8.            //
-//    F7 = duplicar la línea salmón en foco (crea una «Nueva» con los     //
-//         mismos valores: POST standalone + PATCH campos).               //
+//  TANDA 2B — Atajo de teclado del grid de líneas: F8.                  //
 //    F8 = copiar a la celda en foco el valor de la celda de ARRIBA       //
 //         (misma columna, fila salmón anterior). Marca la fila como       //
 //         editada (no guarda hasta pulsar «Guardar»).                    //
+//    F7 (duplicar) se quitó en F-065 R29: lo sustituye «Dividir» (F6).   //
 // ===================================================================== //
 (function () {
     "use strict";
     var table = document.getElementById("lines-table");
     if (!table) { return; }
-    var tbody = table.querySelector("tbody");
-    if (!tbody) { return; }
-    var dataTag = document.getElementById("document-data");
-    if (!dataTag) { return; }
-    var documentId;
-    try { documentId = JSON.parse(dataTag.textContent).id; }
-    catch (e) { documentId = (dataTag.dataset && dataTag.dataset.documentId) || null; }
-    if (!documentId) { return; }
-
-    function parseNumEs(value) {
-        var s = String(value || "").trim();
-        if (!s) { return null; }
-        var n = parseFloat(s.replace(/\./g, function (m, off, str) {
-            return str.indexOf(",") !== -1 ? "" : m;
-        }).replace(",", "."));
-        return isNaN(n) ? null : n;
-    }
-
-    // Cuerpo para .../conciliacion/campos a partir de los inputs de la fila.
-    function camposBody(tr) {
-        var out = {
-            codigo_partida: null, descripcion: null, cantidad: null,
-            unidad: null, precio_unitario: null, descuento: null, codigo_externo: null
-        };
-        [].forEach.call(tr.querySelectorAll(".js-cedit"), function (inp) {
-            var f = inp.dataset.field;
-            if (!f || !(f in out)) { return; }
-            if (inp.dataset.numeric === "1") { out[f] = parseNumEs(inp.value); }
-            else { var t = (inp.value || "").trim(); out[f] = t || null; }
-        });
-        return out;
-    }
-
-    function duplicateRow(tr) {
-        var body = camposBody(tr);
-        fetch("/api/documents/" + documentId + "/lines/standalone",
-            { method: "POST", headers: { "Accept": "application/json" } })
-            .then(function (r) {
-                if (!r.ok) { throw new Error("standalone"); }
-                return r.json();
-            })
-            .then(function (j) {
-                var nid = j && j.valuation_line_id;
-                if (!nid) { window.location.reload(); return null; }
-                return fetch("/api/documents/" + documentId + "/lines/" + nid + "/conciliacion/campos",
-                    { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-            })
-            .then(function () { window.location.reload(); })
-            .catch(function () { window.alert("No se pudo duplicar la línea."); });
-    }
 
     function prevSalmonRow(tr) {
         var p = tr.previousElementSibling;
@@ -2980,16 +2827,7 @@
         var inGridInput = active && active.classList &&
             active.classList.contains("js-cedit") && table.contains(active);
 
-        if (ev.key === "F7") {
-            var tr = active && active.closest ? active.closest("tr.conciliacion-row") : null;
-            if (!tr || !table.contains(tr)) { return; }
-            ev.preventDefault();
-            if (!window.confirm(
-                "¿Duplicar esta línea salmón? Se creará una copia «Nueva» con " +
-                "los mismos valores (partida, concepto, cantidad, precio…)."
-            )) { return; }
-            duplicateRow(tr);
-        } else if (ev.key === "F8") {
+        if (ev.key === "F8") {
             if (!inGridInput) { return; }
             var td = active.closest("td[data-col]");
             var row = active.closest("tr.conciliacion-row");
@@ -3038,6 +2876,7 @@
             guardar: "Guardar",
             almacen: "Almacén",
             producto: "Producto",
+            dividir: "Dividir",
         })[a] || "Cambio";
     }
 

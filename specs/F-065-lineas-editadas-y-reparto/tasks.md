@@ -34,15 +34,15 @@ consultas de comprobación son de solo lectura.
 - [x] T17: front — combo de partidas de la obra con teclado, sin `confirm` de NUEVA, concepto como texto, «Contrato» en la plantilla (R24, R25, R27, R28)  |  Verificación: `pytest tests/test_f065_f2_origen.py -k js`
 - [x] T18: cobertura y campaña de mutación de la fase 2  |  Verificación: como T12 (`progress/mutacion_F-065_fase2.md`)
 - [ ] T19: MANUAL fase 2 (humano, local): en una fila Contrato elegir otra partida de la obra (pasa a Nueva sin aviso), «Almacén» (sigue Contrato) y, en una obra sin partidas, ver solo «Almacén»; `SELECT lv.matched_contrato_line_id, lv.derived_contrato_line_id, lv.codigo_partida_final FROM albaran_line_valuations lv WHERE lv.id = <VID>;`  |  Verificación: MANUAL (humano): derivada `manual_override` con la partida elegida; en almacén, la misma línea de contrato
-- [ ] T20: (humano) review de la fase 2  |  Verificación: `progress/review_F-065_fase2.md` APROBADO
+- [x] T20: (humano) review de la fase 2  |  Verificación: `progress/review_F-065_fase2.md` APROBADO · APROBADA (pasada 3, `c836eb4`); fusionada en `dev` (`7b46bd8`) con `init.sh` verde
 
 ## Fase 3 · dividir (sv4 + test de sv9)
 
-- [ ] T21: tests RED de la fase 3: validaciones (R30), partes y origen (R31, R32), importes (R33), transacción y deshacer (R34), pintado y aviso (R35), F6 y sin F7 (R29)  |  Verificación: `pytest tests/test_f065_f3_dividir.py` falla como se espera
-- [ ] T22: dominio `repartir`, `ParteDivision`, `DivisionBody`, `RepartoInvalido` (R30, R31, R33)  |  Verificación: `pytest tests/test_f065_f3_dividir.py -k dominio`
-- [ ] T23: repositorio `dividir_linea`, ruta y servicio con deshacer (R30–R34)  |  Verificación: `pytest tests/test_f065_f3_dividir.py -k "repositorio or ruta or deshacer"`
-- [ ] T24: detalle y front — partes bajo su original, aviso de familia, diálogo F6, quitar F7 (R29, R35)  |  Verificación: `pytest tests/test_f065_f3_dividir.py -k "pintado or js"`
-- [ ] T25: test de contrato en sv9 (R36) y `ARCHITECTURE.md` / `azure-apps` con `line_kind = 'reparto'` (R37)  |  Verificación: `pytest services/albaranes-alta-sigrid/tests/test_f065_partes.py -k r36` y lectura del reviewer
-- [ ] T26: cobertura y campaña de mutación de la fase 3  |  Verificación: como T12 (`progress/mutacion_F-065_fase3.md`)
+- [x] T21: tests RED de la fase 3: validaciones (R30), partes y origen (R31, R32), importes (R33), transacción y deshacer (R34), pintado y aviso (R35), F6 y sin F7 (R29)  |  Verificación: `pytest tests/test_f065_f3_dividir.py` falla como se espera
+- [x] T22: dominio `repartir`, `ParteDivision`, `DivisionBody`, `RepartoInvalido` (R30, R31, R33)  |  Verificación: `pytest tests/test_f065_f3_dividir.py -k dominio`
+- [x] T23: repositorio `dividir_linea`, ruta y servicio con deshacer (R30–R34)  |  Verificación: `pytest tests/test_f065_f3_dividir.py -k "repositorio or ruta or deshacer"`
+- [x] T24: detalle y front — partes bajo su original, aviso de familia, diálogo F6, quitar F7 (R29, R35)  |  Verificación: `pytest tests/test_f065_f3_dividir.py -k "pintado or js"`
+- [x] T25: test de contrato en sv9 (R36) y `ARCHITECTURE.md` / `azure-apps` con `line_kind = 'reparto'` (R37)  |  Verificación: `pytest services/albaranes-alta-sigrid/tests/test_f065_partes.py -k r36` y lectura del reviewer
+- [x] T26: cobertura y campaña de mutación de la fase 3  |  Verificación: como T12 (`progress/mutacion_F-065_fase3.md`)
 - [ ] T27: MANUAL fase 3 (humano, local): F6 sobre una fila Contrato de 18 ⇒ 6 (su partida) / 7 (otra) / 5 (almacén), «Guardar y aprobar»; `SELECT lv.id, lv.line_kind, lv.parent_merge_line_id, lv.matched_contrato_line_id, lv.derived_contrato_line_id, lv.cantidad_convertida, lv.importe_calculado, lv.codigo_partida_final FROM albaran_line_valuations lv JOIN albaran_valuations v ON v.id = lv.valuation_id WHERE v.document_id = '<ID>' ORDER BY lv.id;`; desaprobar, «Deshacer» y repetir  |  Verificación: MANUAL (humano): 6 y 5 con la línea de contrato, 7 Nueva, importes que suman el original; tras deshacer, una fila de 18
 - [ ] T28: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh` termina con código 0

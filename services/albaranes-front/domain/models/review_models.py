@@ -7,7 +7,14 @@ from typing import Any, Literal
 
 from urllib.parse import quote
 
-from pydantic import BaseModel, Field, ValidationError, computed_field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    computed_field,
+    field_validator,
+)
 
 from ruesma_comun.contratos import (
     MOTIVOS_REVISION_ORIGEN,
@@ -24,6 +31,7 @@ from ruesma_comun.contratos.origen_datos import (
     MOTIVO_CORREO_FUERA_DE_LISTA,
     normalizar_codigo,
 )
+from ruesma_comun.importes import importe_de_linea
 from ruesma_comun.valoracion import esta_valorado
 
 from domain.models.alta_sigrid_models import (
@@ -369,6 +377,11 @@ class ContratoLinePayload(BaseModel):
 # ====================================================================== #
 
 class ValuationLineUpdate(BaseModel):
+    """Solo llega en el PUT del documento, que la ignora (F-065 R1)."""
+
+    #: (F-065 CR1b, pasada 3 de la fase 3) ``NaN``/``±Infinity`` del JSON, 422.
+    model_config = ConfigDict(allow_inf_nan=False)
+
     valuation_line_id: int
     codigo_partida_final: str | None = None
     descripcion_linea: str | None = None
@@ -382,6 +395,10 @@ class ConciliacionOverridePayload(BaseModel):
     """Override manual de la conciliacion de UNA linea de valoracion.
     mode='contract_line' apunta a otra linea del contrato;
     mode='nueva' deriva una linea nueva en la partida de la linea."""
+
+    #: (F-065 CR1b, pasada 3 de la fase 3) ``NaN``/``±Infinity`` del JSON, 422.
+    model_config = ConfigDict(allow_inf_nan=False)
+
     mode: Literal["contract_line", "nueva"]
     matched_contrato_line_id: int | None = None
     descripcion: str | None = None
@@ -725,6 +742,10 @@ def _numero_es(valor: object) -> object:
 class LineaATraer(BaseModel):
     """(R23) Una línea de contrato a traer, con su cantidad (obligatoria, ≠ 0)."""
 
+    #: (F-065 CR1, pasada 2 de la fase 3) ``NaN`` e ``±Infinity`` del JSON son un
+    #: 422: acabarían en cantidades, importes y ``total_valorado``.
+    model_config = ConfigDict(allow_inf_nan=False)
+
     contrato_line_id: int
     cantidad: float
 
@@ -748,6 +769,169 @@ class TraerLineasBody(BaseModel):
     lineas: list[LineaATraer] = Field(min_length=1)
 
 
+# ------------------------------------------------------------------ #
+# F-065 fase 3 · dividir una fila (R29–R35), modelo M1 sin DDL
+# ------------------------------------------------------------------ #
+#: (R30) La suma de las partes puede diferir de Q en menos de media milésima.
+TOLERANCIA_REPARTO = 0.005
+#: Lo que cuenta como «0,005 o más»: la tolerancia menos el ruido de coma
+#: flotante (``4 + 6,005 − 10`` es 0,004999999999999005 y difiere en 0,005).
+_UMBRAL_REPARTO = TOLERANCIA_REPARTO - 1e-9
+#: (R29) Entre 2 y 20 partes.
+MIN_PARTES, MAX_PARTES = 2, 20
+
+
+class RepartoInvalido(ValueError):
+    """(R30) La división no se hace (422, sin cambios). El mensaje es para el
+    administrativo: dice qué parte o qué suma falla."""
+
+
+class ParteDivision(BaseModel):
+    """(R29) Una parte: su cantidad (en la unidad del precio, como la Q de la
+    ficha) y su partida (vacía = almacén). Una cantidad nula o 0 se acepta
+    aquí y la rechaza ``repartir`` diciendo qué parte es."""
+
+    #: (F-065 CR1, pasada 2 de la fase 3) ``NaN`` e ``±Infinity`` del JSON son un
+    #: 422: acabarían en cantidades, importes y ``total_valorado``.
+    model_config = ConfigDict(allow_inf_nan=False)
+
+    cantidad: float | None = None
+    codigo_partida: str | None = None
+
+    @field_validator("cantidad", mode="before")
+    @classmethod
+    def _cantidad(cls, valor: object) -> object:
+        return _numero_es(valor)
+
+    @field_validator("codigo_partida")
+    @classmethod
+    def _partida(cls, valor: str | None) -> str | None:
+        return (valor or "").strip() or None
+
+
+class DivisionBody(BaseModel):
+    """(R29, R30) Cuerpo de ``POST .../lines/{vid}/dividir``: de 2 a 20 partes."""
+
+    partes: list[ParteDivision] = Field(min_length=MIN_PARTES, max_length=MAX_PARTES)
+
+
+class ParteCalculada(BaseModel):
+    """(R31, R33) Cantidades e importe de una parte."""
+
+    cantidad_convertida: float
+    cantidad_albaran: float | None
+    importe: float | None
+
+
+class DivisionHecha(BaseModel):
+    """(R34) Lo que creó una división: las filas ``reparto`` (partes 2..N) y
+    las derivadas ``manual_override`` nuevas. El «Deshacer» borra las dos."""
+
+    partes: list[int]
+    derivadas: list[int]
+
+
+def _cantidad_es(valor: float) -> str:
+    """Una cantidad como la escribe el administrativo: «9,5», «10»."""
+    return f"{valor:.3f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
+def _fuera_de_tolerancia(a: float, b: float) -> bool:
+    return abs(a - b) >= _UMBRAL_REPARTO
+
+
+def repartir(
+    *,
+    q: float | None,
+    ca0: float | None,
+    importe0: float | None,
+    precio: float | None,
+    descuento: float | None,
+    partes: list[float | None],
+) -> list[ParteCalculada]:
+    """(R30, R31, R33) Reparte una fila de cantidad ``q`` (la convertida, o la
+    del albarán si no hay) entre ``partes`` (sus cantidades, la 1 es la que se
+    queda la original). Pura: no toca nada.
+
+    - Cada parte: ``cantidad_convertida = qk`` y ``cantidad_albaran = ca0 × qk
+      / q`` (``None`` si la original no la tiene).
+    - Importe: ``round(importe0 × qk / q, 2)`` y la última absorbe el
+      redondeo, así la familia suma ``importe0``; sin ``importe0``, la fórmula
+      canónica con el precio y el descuento de la original.
+    - ``RepartoInvalido`` si ``q`` es nula, 0 o no finita, el importe no es
+      finito, no hay de 2 a 20 partes, una es nula, 0, no finita o de otro signo
+      que ``q``, suman ``q`` ± 0,005 o más, o una saldría a 0,00 € con un
+      importe que no lo es.
+    """
+    if q is None or q == 0 or not math.isfinite(q):
+        raise RepartoInvalido("La línea está sin cantidad: no se puede dividir.")
+    if importe0 is not None and not math.isfinite(importe0):
+        raise RepartoInvalido(
+            "El importe de la línea no es un número: corrígelo antes de dividirla."
+        )
+    if not MIN_PARTES <= len(partes) <= MAX_PARTES:
+        raise RepartoInvalido(
+            f"Se divide en entre {MIN_PARTES} y {MAX_PARTES} líneas "
+            f"(llegaron {len(partes)})."
+        )
+    for numero, cantidad in enumerate(partes, start=1):
+        if cantidad is None or cantidad == 0 or not math.isfinite(cantidad):
+            raise RepartoInvalido(
+                f"La parte {numero} no tiene cantidad (vacía, 0 o no numérica)."
+            )
+        # Con las guardas de arriba (finita y ≠ 0) es lo mismo que
+        # ``(cantidad > 0) != (q > 0)``: lo demuestra el test del signo reescrito.
+        if math.copysign(1.0, cantidad) != math.copysign(1.0, q):
+            raise RepartoInvalido(
+                f"La parte {numero} tiene otro signo que la línea ({_cantidad_es(q)})."
+            )
+    suma = sum(partes)  # type: ignore[arg-type]
+    if _fuera_de_tolerancia(suma, q):
+        raise RepartoInvalido(
+            f"Las partes suman {_cantidad_es(suma)}; la línea tiene {_cantidad_es(q)}."
+        )
+
+    if importe0 is None:
+        importes = [
+            importe_de_linea(cantidad=cantidad, precio_unitario=precio,
+                             descuento_pct=descuento)
+            for cantidad in partes
+        ]
+    else:
+        importes = [round(importe0 * cantidad / q, 2) for cantidad in partes[:-1]]
+        importes.append(round(importe0 - sum(importes), 2))
+        # sv9 no registra las líneas de importe 0 (F-053 R13): una parte a
+        # 0,00 € de una línea con importe se perdería al darla de alta.
+        if importe0 != 0:
+            for numero, importe in enumerate(importes, start=1):
+                if importe == 0:
+                    raise RepartoInvalido(
+                        f"La parte {numero} saldría a 0,00 € (la línea tiene "
+                        f"{_euros(importe0)}) y Sigrid no registra líneas de importe "
+                        "0: repártela en menos partes."
+                    )
+    return [
+        ParteCalculada(
+            cantidad_convertida=cantidad,
+            cantidad_albaran=None if ca0 is None else ca0 * cantidad / q,
+            importe=importe,
+        )
+        for cantidad, importe in zip(partes, importes)
+    ]
+
+
+def aviso_reparto(numero_linea: int, suma: float | None, leida: float | None) -> str | None:
+    """(R35) Aviso no bloqueante mientras las partes de una blanca no sumen lo
+    que dice el albarán (comparado en la unidad del albarán); ``None`` si
+    cuadra o falta alguna de las dos."""
+    if suma is None or leida is None or not _fuera_de_tolerancia(suma, leida):
+        return None
+    return (
+        f"Las partes de la línea {numero_linea} suman {_cantidad_es(suma)}; "
+        f"el albarán dice {_cantidad_es(leida)}"
+    )
+
+
 class ConciliacionEditBody(BaseModel):
     """(R8) Cuerpo del PATCH de edición de una fila.
 
@@ -759,6 +943,10 @@ class ConciliacionEditBody(BaseModel):
     A nivel de módulo (no dentro de ``build_app``): una clase local provoca un
     ForwardRef que Pydantic 2.12 no resuelve como ``Body(...)``.
     """
+
+    #: (F-065 CR1, pasada 2 de la fase 3) ``NaN`` e ``±Infinity`` del JSON son un
+    #: 422: acabarían en cantidades, importes y ``total_valorado``.
+    model_config = ConfigDict(allow_inf_nan=False)
 
     codigo_partida: str | None = None
     descripcion: str | None = None
@@ -1060,7 +1248,7 @@ class DisplayLine(BaseModel):
     """Una fila visible en la tabla de líneas del detalle."""
 
     # Identificación
-    line_kind: str  # 'from_albaran' | 'synthetic_modifier'
+    line_kind: str  # 'from_albaran' | 'synthetic_modifier' | 'manual' | 'reparto'
     merge_line_id: int | None = None       # solo si from_albaran
     valuation_line_id: int | None = None   # solo si synthetic_modifier
     line_index: int | None = None          # orden visual (para base y
@@ -1087,6 +1275,11 @@ class DisplayLine(BaseModel):
     # 'from_albaran' que tienen una valoración (matched o derived).
     # El template lo renderiza en una fila expandible bajo la línea.
     concilia: ConciliacionDisplay | None = None
+
+    # (F-065 R35) Reparto: «Parte k de N» y, en la primera fila de la familia,
+    # el aviso mientras las partes no sumen lo que dice el albarán.
+    parte: str | None = None
+    aviso_reparto: str | None = None
 
 
 def _aviso_de_obra(obra: OrigenCampo) -> str | None:
