@@ -210,10 +210,10 @@ principal y desplegar **solo sv4**.
 `:370` `DID NOT RAISE LineasIncompletasError` (CR3, las dos vías); `:394` `TypeError: ... unexpected keyword argument
 'unidad_cambiada'`; `:414` `assert True is False` (P2-1); `:426` el motivo no se ponía (P2-2); `:437`
 `(6.0, 1.0, None, False) == (6.0, 1.0, None, True)` (P2-2, dominio); `:297` actual desconocida y la del albarán.
-Los cuatro «quitada la marca se aprueba» (cantidad / Guardar × listado / Guardar y aprobar) pasaban ya: son la guarda de
-que el rechazo de CR3 no se queda pegado.
+Los cuatro «quitada la marca se aprueba» (cantidad o Guardar, por las dos vías) ya pasaban: guardan que CR3 no se pega.
 
-**Verificación**: sv4 **1104 passed** (sola); `PUERTA COBERTURA: 100.0% de 66 líneas cambiadas cubiertas (66/66)`.
+**Verificación**: sv4 **1104 passed**; `bash harness/init.sh` (tal cual, sobre `3a86e2c`) exit 0, raíz 1083 passed,
+`PUERTA COBERTURA: 100.0% de 66 líneas cambiadas cubiertas (66/66)`, `ENTORNO LISTO`.
 **Mutación** (`progress/mutacion_F-065_fase2.md`, reemplaza la de la pasada 2): **SHA `ead57a4`, 58 mutantes, 58
 muertos, 0 supervivientes, 0 timeouts, 0 sin veredicto, 1071,2 s, 4 workers** (media 18,5 × 4 = 74 s por mutante frente
 a una base de 66,0–66,5 s: coherente). Otra pasada idéntica sobre el mismo SHA dio 58/58 (1093,1 s; archivada fuera de
