@@ -377,6 +377,11 @@ class ContratoLinePayload(BaseModel):
 # ====================================================================== #
 
 class ValuationLineUpdate(BaseModel):
+    """Solo llega en el PUT del documento, que la ignora (F-065 R1)."""
+
+    #: (F-065 CR1b, pasada 3 de la fase 3) ``NaN``/``±Infinity`` del JSON, 422.
+    model_config = ConfigDict(allow_inf_nan=False)
+
     valuation_line_id: int
     codigo_partida_final: str | None = None
     descripcion_linea: str | None = None
@@ -390,6 +395,10 @@ class ConciliacionOverridePayload(BaseModel):
     """Override manual de la conciliacion de UNA linea de valoracion.
     mode='contract_line' apunta a otra linea del contrato;
     mode='nueva' deriva una linea nueva en la partida de la linea."""
+
+    #: (F-065 CR1b, pasada 3 de la fase 3) ``NaN``/``±Infinity`` del JSON, 422.
+    model_config = ConfigDict(allow_inf_nan=False)
+
     mode: Literal["contract_line", "nueva"]
     matched_contrato_line_id: int | None = None
     descripcion: str | None = None

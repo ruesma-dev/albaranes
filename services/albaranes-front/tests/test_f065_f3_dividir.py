@@ -1118,12 +1118,21 @@ def test_f065_cr1p2_dominio_el_signo_reescrito_es_el_de_antes():
 def test_f065_cr1p2_los_tres_cuerpos_rechazan_no_finitos(raro):
     from domain.models.review_models import (
         ConciliacionEditBody,
+        ConciliacionOverridePayload,
         DivisionBody,
+        MergeDocumentUpdatePayload,
         TraerLineasBody,
     )
     from pydantic import ValidationError
 
     for modelo, cuerpo in (
+        # CR1b (pasada 3): «Origen ✎» y casar una blanca.
+        (ConciliacionOverridePayload,
+         '{{"mode": "nueva", "precio_unitario": {}}}'.format(raro)),
+        # El PUT las ignora (R1), pero tampoco las admite.
+        (MergeDocumentUpdatePayload,
+         '{{"valuation_line_updates": [{{"valuation_line_id": 1, '
+         '"importe_calculado": {}}}]}}'.format(raro)),
         (DivisionBody, '{{"partes": [{{"cantidad": {}}}, {{"cantidad": 1}}]}}'.format(raro)),
         (ConciliacionEditBody, '{{"cantidad": {}}}'.format(raro)),
         (ConciliacionEditBody, '{{"precio_unitario": {}}}'.format(raro)),
@@ -1187,11 +1196,23 @@ class _Anota:
     (f"/api/documents/{DOC}/lines/12/conciliacion/campos", '{"precio_unitario": Infinity}'),
     (f"/api/documents/{DOC}/lines/from-contrato",
      '{"lineas": [{"contrato_line_id": 503, "cantidad": -Infinity}]}'),
-], ids=["campos_nan", "campos_inf", "traer_menos_inf"])
+    (f"/api/documents/{DOC}/lines/12/conciliacion",
+     '{"mode": "nueva", "precio_unitario": NaN}'),
+    (f"/api/documents/{DOC}/lines/by-merge/703/conciliacion",
+     '{"mode": "nueva", "precio_unitario": Infinity}'),
+    (f"/api/documents/{DOC}",
+     '{"valuation_line_updates": [{"valuation_line_id": 1, "cantidad_albaran": NaN}]}'),
+], ids=["campos_nan", "campos_inf", "traer_menos_inf", "origen_nan", "casar_blanca_inf",
+        "put_ignoradas_nan"])
 def test_f065_cr1p2_editar_y_traer_responden_422_a_no_finitos(monkeypatch, ruta, cuerpo):
     servicio = _Anota()
     cliente = _cliente(monkeypatch, servicio)
-    metodo = cliente.patch if "campos" in ruta else cliente.post
+    metodo = (
+        cliente.put if ruta.endswith(DOC)
+        else cliente.patch if ruta.endswith("conciliacion/campos")
+        or (ruta.endswith("/conciliacion") and "by-merge" not in ruta)
+        else cliente.post
+    )
 
     respuesta = metodo(ruta, content=cuerpo, headers={"Content-Type": "application/json"})
 
