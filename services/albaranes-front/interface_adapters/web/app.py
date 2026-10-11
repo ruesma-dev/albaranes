@@ -29,12 +29,14 @@ from domain.models.review_models import (
     AlbaranAprobadoError,
     ConciliacionEditBody,
     ConciliacionOverridePayload,
+    DivisionBody,
     DocumentDetailPayload,
     DocumentListFilters,
     HealthResponse,
     LineaBloqueadaError,
     LineasIncompletasError,
     MergeDocumentUpdatePayload,
+    RepartoInvalido,
     SaveResponse,
     TraerLineasBody,
     VIEW_MODE_MERGE,
@@ -1699,6 +1701,35 @@ def build_app(settings: Settings) -> FastAPI:
             "ok": True,
             "document_id": document_id,
             "created": creadas,
+        }
+
+    @app.post("/api/documents/{document_id}/lines/{valuation_line_id}/dividir")
+    def dividir_linea_api(
+        document_id: str,
+        valuation_line_id: int,
+        payload: DivisionBody = Body(...),
+    ) -> Any:
+        # (F-065 R29, R30) De 2 a 20 partes (si no, 422 de la validación).
+        # 404 si la fila no es del documento; 409 con alta bloqueante,
+        # aprobado o fila guardada (manejador común); 422 con el motivo si
+        # el reparto no vale (``RepartoInvalido``), sin cambios.
+        try:
+            hecha = review_service.dividir_linea(
+                document_id=document_id,
+                valuation_line_id=valuation_line_id,
+                partes=payload.partes,
+            )
+        except RepartoInvalido as exc:
+            return JSONResponse(status_code=422, content={"detail": str(exc)})
+        if hecha is None:
+            raise HTTPException(
+                status_code=404, detail="Línea de valoración no encontrada en este albarán.",
+            )
+        return {
+            "ok": True,
+            "document_id": document_id,
+            "valuation_line_id": valuation_line_id,
+            "partes": hecha.partes,
         }
 
     # ------------------------------------------------------------------ #

@@ -459,7 +459,14 @@ def _marcada(motor):
     return 12
 
 
+def _huerfana(motor):
+    ejecutar(motor, "UPDATE albaran_line_valuations SET matched_contrato_line_id = NULL "
+             "WHERE id = 12")
+    return 12
+
+
 @pytest.mark.parametrize(("preparar", "pares", "texto"), [
+    (_huerfana, [(4, "01.02"), (6, "01.02")], "revalora"),
     (_sintetica, [(0.5, "03.01"), (0.5, "03.01")], "sintética"),
     (_sin_q, [(4, "01.02"), (6, "01.02")], "sin cantidad"),
     (_q_cero, [(4, "01.02"), (-4, "01.02")], "sin cantidad"),
@@ -468,7 +475,7 @@ def _marcada(motor):
     (lambda m: 12, [(12, "01.02"), (-2, "01.02")], "parte 2"),
     (lambda m: 12, [(4, "01.02"), (None, "01.02")], "parte 2"),
     (_marcada, [(4, "01.02"), (6, "01.02")], "revisa la cantidad"),
-], ids=["sintetica", "q_nula", "q_cero", "no_suma", "parte_cero", "signo", "parte_nula",
+], ids=["huerfana", "sintetica", "q_nula", "q_cero", "no_suma", "parte_cero", "signo", "parte_nula",
         "unidad_cambiada"])
 def test_f065_r30_repositorio_422_sin_cambiar_nada(preparar, pares, texto):
     from domain.models.review_models import RepartoInvalido
@@ -520,7 +527,7 @@ def test_f065_r30_repositorio_409_alta_bloqueante():
     from domain.models.alta_sigrid_models import AlbaranBloqueadoError
 
     motor = construir(con_altas=True)
-    poner_alta(motor, "registrado")
+    poner_alta(motor, "registrado", document_id=DOC)
     antes = foto(motor)
 
     with pytest.raises(AlbaranBloqueadoError):
@@ -643,6 +650,9 @@ def test_f065_r34_deshacer_sin_division_no_hay_entrada():
 class _Servicio:
     def __init__(self, resultado=None, error=None):
         self.resultado, self.error, self.llamadas = resultado, error, []
+
+    def initialize(self):
+        return True
 
     def dividir_linea(self, *, document_id, valuation_line_id, partes):
         self.llamadas.append((document_id, valuation_line_id,
