@@ -171,17 +171,10 @@ era 1061 (corregido arriba).
 - **H4**: `cargarPartidasObra` guarda la carga **por obra**; sin obra no guarda nada; otra obra se vuelve a pedir.
 - **CR2**: los pasos y comandos exactos de T19 están en `progress/current.md` (incluyen las comprobaciones de CR1 y H2).
 
-**Fase RED** (sobre `2fa3b5b`): `pytest tests/test_f065_f2_pasada2.py --tb=line` ⇒ `13 failed, 8 passed`:
-```
-test_f065_f2_pasada2.py:56: AssertionError: assert None == 'PUERTA CORTAFUEGOS EI2-120'   (CR1, traída + partida; también :65, :75)
-test_f065_f2_pasada2.py:85: AssertionError: assert None == 'TORNILLERIA M8'               (CR1, «Añadir línea»)
-test_f065_f2_pasada2.py:107: AssertionError: assert None == 'PORTES URGENTES'             (H1; también :116, :127, :144)
-test_f065_f2_pasada2.py:170: assert 0 in (1, True)                                        (H2: no marcaba la fila)
-test_f065_f2_pasada2.py:190: assert (1000.0, 1.0, 0.001) == (1000.0, 1000.0, 1.0)         (H2: no rehacía hacia el albarán)
-test_f065_f2_pasada2.py:232: AssertionError: assert 'front_unidad_cambiada_revisa_cantidad' in ['ia_match_trusted']
-test_f065_f2_pasada2.py:243: assert 'revisa la cantidad: cambió la unidad' in '<td ... data-col="cantidad" ...'
-test_f065_f2_pasada2.py:282: assert {... 'pedidas': []} == {... 'pedidas': ['/api/sigrid/partidas?obra=0404', '...=0505']}  (H4)
-```
+**Fase RED** (sobre `2fa3b5b`): `pytest tests/test_f065_f2_pasada2.py --tb=line` ⇒ `13 failed, 8 passed`: CR1 y H1
+`assert None == 'PUERTA CORTAFUEGOS EI2-120'` (:56, :65, :75), `== 'TORNILLERIA M8'` (:85), `== 'PORTES URGENTES'`
+(:107, :116, :127, :144); H2 `assert 0 in (1, True)` (:170), `(1000.0, 1.0, 0.001) == (1000.0, 1000.0, 1.0)` (:190),
+el motivo ausente (:232) y la celda sin aviso (:243); H4 `'pedidas': []` (:282).
 sv9 (sus 4 tests pasan con el código real: el entregable es el test) se rompió A PROPÓSITO en una copia aislada,
 haciendo que `_descripcion` mandara siempre el concepto: `2 failed, 6 passed` (`assert 'PORTES' == 'PORTES URGENTES'`
 y la traída sin descripción).
@@ -199,3 +192,29 @@ la de su línea → and` (2), `cc if cc is not None → is None` (1).
 cambiadas cubiertas (61/61, umbral 80%, nivel critico)`**; tamaño dentro de topes; **`ENTORNO LISTO. Puedes
 trabajar.`** Falta: re-review (T20), MANUAL T19 (comandos en `progress/current.md`), fusionar, `init.sh` en el árbol
 principal y desplegar **solo sv4**.
+
+## Pasada 3 (review «Pasada 2», CHANGES_REQUESTED por CR3)
+
+**Commits**: `d25c7c3` tests RED · `ead57a4` CR3 + P2-1 + P2-2 · el de este informe (mutación, inventario).
+- **CR3 (alta)**: una fila con la marca `front_unidad_cambiada_revisa_cantidad` se podía aprobar y sv9 la mandaba con la
+  cantidad incoherente (8 ud como 8 t). Ahora `_exigir_lineas_completas` (los DOS aprobar: listado y «Guardar y
+  aprobar») la rechaza con su posición en la tabla de la ficha y su aviso, junto a R20 y O2:
+  `LineasIncompletasError.unidad_cambiada` ⇒ «Líneas con la unidad cambiada: revisa la cantidad: 1». En cuanto se
+  quita la marca (cambiando la cantidad o con «Guardar» de la fila) se aprueba. sv9 no se toca: aprobar es la puerta.
+- **P2-1**: el «Guardar» sin cambios que quita la marca pone `review_required = FALSE` si no queda ningún otro motivo en
+  la fila (con otros motivos, p. ej. de sv6, no la toca). Con cambios ya la bajaba (R11).
+- **P2-2**: `cantidades_tras_reapuntar` avisa también cuando la unidad actual se desconoce y la nueva no es la del
+  albarán (si es la del albarán, Q pasa a ser la cantidad leída). Unidad nueva desconocida o la misma: nada cambia.
+
+**Fase RED** (sobre `d25c7c3`): `pytest tests/test_f065_f2_pasada2.py --tb=line` ⇒ `8 failed, 35 passed`:
+`:370` `DID NOT RAISE LineasIncompletasError` (CR3, las dos vías); `:394` `TypeError: ... unexpected keyword argument
+'unidad_cambiada'`; `:414` `assert True is False` (P2-1); `:426` el motivo no se ponía (P2-2); `:437`
+`(6.0, 1.0, None, False) == (6.0, 1.0, None, True)` (P2-2, dominio); `:297` actual desconocida y la del albarán.
+Los cuatro «quitada la marca se aprueba» (cantidad / Guardar × listado / Guardar y aprobar) pasaban ya: son la guarda de
+que el rechazo de CR3 no se queda pegado.
+
+**Verificación**: sv4 **1104 passed** (sola); `PUERTA COBERTURA: 100.0% de 66 líneas cambiadas cubiertas (66/66)`.
+**Mutación** (`progress/mutacion_F-065_fase2.md`, reemplaza la de la pasada 2): **SHA `ead57a4`, 58 mutantes, 58
+muertos, 0 supervivientes, 0 timeouts, 0 sin veredicto, 1071,2 s, 4 workers** (media 18,5 × 4 = 74 s por mutante frente
+a una base de 66,0–66,5 s: coherente). Otra pasada idéntica sobre el mismo SHA dio 58/58 (1093,1 s; archivada fuera de
+git). Sin supervivientes ni equivalentes: RM5 N/A.
