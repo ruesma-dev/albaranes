@@ -459,6 +459,25 @@ def test_f065_cr1_foco_esc_teclear_y_salir_vuelve_la_original(tmp_path):
 
 
 @con_node
+def test_f065_cr1_tras_elegir_teclear_vuelve_a_abrir_la_lista(tmp_path):
+    """Elegir no deja el combo «mudo»: la tecla siguiente abre la lista filtrada."""
+    casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
+        inp.focus();
+        await tiempo();
+        panel.children[2].dispatchEvent(new Event("mousedown"));
+        await tiempo();
+        const cerrado = panel.hidden;
+        teclear(inp, "puer");
+        await tiempo();
+        console.log(JSON.stringify({cerrado, abierto: !panel.hidden,
+                                    opciones: panel.children.map(function (d) { return d.textContent; })}));
+    """)
+
+    assert casos == {"cerrado": True, "abierto": True,
+                     "opciones": ["Almacén (sin partida)", "02.03 · Puertas"]}
+
+
+@con_node
 def test_f065_cr1_teclear_una_valida_y_salir_la_deja(tmp_path):
     """La otra cara: lo que SÍ es de la lista se queda al salir."""
     casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
@@ -498,7 +517,6 @@ def test_f065_r29v3_acciones_siempre_a_la_vista():
     boton = _regla_css(css, ".salmon-table td.td-acciones .btn")
     for regla in (celda, cabecera):
         assert "position: sticky" in regla and "right: 0" in regla and "z-index" in regla
-    assert "background: var(--paper" in celda  # lo de debajo no se transparenta
     assert "white-space: normal" in celda and "nowrap" not in celda
     assert "overflow: visible" in celda
     assert "white-space: nowrap" in boton  # cada botón entero
@@ -629,6 +647,8 @@ def test_f065_cr2_la_cabecera_de_acciones_gana_la_cascada():
     assert _gana(css, _CABECERA, "right")[0] == "0"
     assert _gana(css, _CABECERA, "z-index")[0] == "3"
     assert _gana(css, _CABECERA, "background")[0].startswith("var(--brand")  # opaca
+    assert _gana(css, _CABECERA, "cursor")[0] == "default"  # fija: no se arrastra
+    assert "rgba" in _gana(css, _CABECERA, "box-shadow")[0]
 
 
 def test_f065_cr2_la_celda_de_acciones_gana_la_cascada():
@@ -638,8 +658,14 @@ def test_f065_cr2_la_celda_de_acciones_gana_la_cascada():
     assert _gana(css, _CELDA, "right")[0] == "0"
     assert _gana(css, _CELDA, "overflow")[0] == "visible"
     assert _gana(css, _CELDA, "white-space")[0] == "normal"
-    fondo = _gana(css, _CELDA, "background")[0]
-    assert fondo not in ("transparent", "none") and "rgba" not in fondo  # opaca
+    assert _gana(css, _CELDA, "z-index")[0] == "2"
+    assert _gana(css, _CELDA, "text-align")[0] == "right"
+    assert "rgba" in _gana(css, _CELDA, "box-shadow")[0]
+    # Opaca: el fondo que manda es el de la fila (#f7f4f5), sin transparencia.
+    fondo, selector = _gana(css, _CELDA, "background")
+    assert fondo == "#f7f4f5" and selector == "tr.conciliacion-row > td.concilia-td"
+    boton = [{"tag": "button", "clases": {"btn", "small", "success", "js-cedit-save"}}] + _CELDA
+    assert _gana(css, boton, "white-space")[0] == "nowrap"  # cada botón entero
 
 
 def test_f065_r29v3_acciones_ancho_estable_y_botones_compactos():

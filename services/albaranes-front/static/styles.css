@@ -1614,15 +1614,16 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
    y opaca (con una fila «Desbloquear» la tabla se ensanchaba y «Guardar» y
    «Dividir» quedaban fuera de la vista). Columna fija de ancho estable (no
    depende de qué botones salgan); si se estrecha, los botones bajan de
-   línea en vez de recortarse. El fondo de las filas (zebra, hover,
-   conciliación) manda sobre este por especificidad: siempre opaco. La
-   cabecera lleva «tr.salmon-head» para ganar a «.salmon-table thead
-   tr.salmon-head th» (0,2,3), que le pone position: relative (pasada 2, CR2). */
+   línea en vez de recortarse. El fondo opaco lo ponen las reglas de la fila
+   (conciliación, zebra, hover: todas opacas y más específicas que esta; un
+   fondo aquí no se aplicaría nunca). La cabecera lleva «tr.salmon-head» para
+   ganar a «.salmon-table thead tr.salmon-head th» (0,2,3), que le pone
+   position: relative (pasada 2, CR2). Lo vigila un motor de cascada en
+   tests/test_f065_f3bis_front.py. */
 .salmon-table td.td-acciones {
     position: sticky;
     right: 0;
     z-index: 2;
-    background: var(--paper, #ffffff);
     box-shadow: -6px 0 6px -6px rgba(0, 0, 0, 0.3);
     white-space: normal;
     overflow: visible;
