@@ -26,11 +26,15 @@ desplegar **solo sv4**.
   #     poder escribirla; «Reparto completo.» y «Aceptar» activo. Poner 20 en la primera -> la última sale -2 en ROJO,
   #     «Sobra: 2» y «Aceptar» apagado; poner 18 -> la última 0 en rojo. Pasar a 3 líneas: se conserva lo tecleado.
   #  3) Combo de partida de una fila (y el de la ventana): elegir una partida con el ratón y luego otra con flechas +
-  #     Enter -> la lista se CIERRA en los dos casos (antes volvía a salir con solo la elegida).
+  #     Enter -> la lista se CIERRA en los dos casos (antes volvía a salir con solo la elegida). Justo después de
+  #     elegir, teclear algo que no es de la lista (p. ej. «02.0x») y salir con Tab (o Esc) -> vuelve la elegida.
   #  4) Bajar con flechas por la lista y teclear «al» -> la lista vuelve arriba y «Almacén (sin partida)» queda
   #     marcada; Enter la elige (la fila va a almacén). Igual con «alm» y «Almacén».
   #  5) Guardar una fila (sale «Desbloquear») y estrechar la ventana del navegador: la columna «Acciones» sigue pegada
-  #     a la derecha, opaca, con «✕ · Guardar · Dividir» (o «Desbloquear») a la vista.
+  #     a la derecha, opaca, con «✕ · Guardar · Dividir» (o «Desbloquear») a la vista; al desplazar en horizontal, la
+  #     cabecera «Acciones» sigue ENCIMA de sus botones (no se va con el scroll).
+  #     Ojo (O1): quien guardó anchos de columna antes verá «Acciones» a 156 px (los botones bajan de línea); «↺
+  #     Columnas» la deja en los 200 px nuevos.
   #  6) «↺ Columnas», ordenar pinchando una cabecera, arrastrar una columna y ensanchar con el borde vuelven a
   #     funcionar (también en la bandeja); «Acciones» no se puede arrastrar.
   ```
