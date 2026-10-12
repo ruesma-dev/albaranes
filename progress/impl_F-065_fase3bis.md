@@ -192,5 +192,6 @@ casilla. **Final: 57 mutantes, 57 muertos, 0 supervivientes, 0 equivalentes**; l
 los dos tests textuales (solo con el motor de cascada). Inventario actualizado. Nota en el informe de mutación sobre la
 guarda `dialogo.open` (#2): muere por conducta; en el navegador el modal hace inalcanzable ese estado.
 
-**Verificación**: `test_f065_f3bis_front.py` **26 passed**; los tres ficheros, 192 passed; `bash harness/init.sh`: ver
-la línea final.
+**Verificación**: `test_f065_f3bis_front.py` **26 passed**; los tres ficheros, 192 passed; **`bash harness/init.sh`**
+(tal cual, worktree, `376d37a`): **exit 0**, raíz `1083 passed`, sv4 **`1247 passed`** (71,6 s, sin caché: sv4 cambió),
+`PUERTA COBERTURA: N/A` (sin Python de producción), rutas sensibles N/A, tamaño dentro, **`ENTORNO LISTO`**.
