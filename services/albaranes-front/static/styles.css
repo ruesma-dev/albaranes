@@ -1615,7 +1615,9 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
    «Dividir» quedaban fuera de la vista). Columna fija de ancho estable (no
    depende de qué botones salgan); si se estrecha, los botones bajan de
    línea en vez de recortarse. El fondo de las filas (zebra, hover,
-   conciliación) manda sobre este por especificidad: siempre opaco. */
+   conciliación) manda sobre este por especificidad: siempre opaco. La
+   cabecera lleva «tr.salmon-head» para ganar a «.salmon-table thead
+   tr.salmon-head th» (0,2,3), que le pone position: relative (pasada 2, CR2). */
 .salmon-table td.td-acciones {
     position: sticky;
     right: 0;
@@ -1626,7 +1628,7 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
     overflow: visible;
     text-align: right;
 }
-.salmon-table thead th[data-col="acciones"] {
+.salmon-table thead tr.salmon-head th[data-col="acciones"] {
     position: sticky;
     right: 0;
     z-index: 3;
