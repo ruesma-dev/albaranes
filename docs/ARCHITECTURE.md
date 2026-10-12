@@ -446,12 +446,15 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       (`review_models.cambia_origen`). Al editar nunca se llama a la IA. El
       combo de partida ofrece «Almacén» y las partidas hoja de la OBRA
       (`/api/sigrid/partidas`, solo valores de la lista; sin partidas o con
-      Sigrid caído, solo «Almacén»). «Origen ✎» es la única vía de reapuntar:
+      Sigrid caído, solo «Almacén»; elegir cierra la lista y teclear «al»,
+      «alm»… deja «Almacén» marcada). «Origen ✎» es la única vía de reapuntar:
       una línea de contrato deja la fila Contrato con su partida, unidad y
       precio; «Nueva», Nueva con los valores actuales.
-    - **Dividir** (fase 3; absorbe F-016): «Dividir» (o F6) reparte una fila
-      en 2–20 partes, cada una con su cantidad y su partida (combo de la obra;
-      vacía = almacén); «Aceptar» solo si suman Q. `POST
+    - **Dividir** (fase 3; absorbe F-016): «Dividir» (o F7; F6 es del
+      navegador) reparte una fila en 2–20 partes, cada una con su cantidad y
+      su partida (combo de la obra; vacía = almacén); la última se rellena
+      sola con lo que falta (solo lectura, en rojo si queda a 0 o de otro
+      signo) y «Aceptar» solo si suman Q. `POST
       .../lines/{vid}/dividir`: 404 si la fila no es del documento, 409 con
       alta bloqueante, aprobado o fila guardada, 422 sin cambios si es
       sintética, sin línea de contrato ni derivada, con «revisa la cantidad»
@@ -476,7 +479,9 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       la blanca (en la unidad del albarán), un aviso que no bloquea. sv9 no
       cambia: una parte Contrato va vinculada a su `ctrpro_ide` (N partes al
       mismo `ctrpro` son N líneas, al final de la petición) y una Nueva sin
-      vincular con producto genérico. F7 (duplicar) desapareció.
+      vincular con producto genérico. El F7 de antes (duplicar) desapareció.
+      La columna «Acciones» de la ficha va fija y pegada a la derecha
+      (sticky): sus botones no salen nunca de la vista.
 
 ## Acceso a datos y sistemas externos
 
