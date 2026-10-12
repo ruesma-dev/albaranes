@@ -106,7 +106,11 @@ passed**; tras cerrar supervivientes, **17 passed**.
   de T24 se adapta: `"F7"` sí, `"F6"` no, sin `duplicateRow`).
 - Suite de sv4 sola (tras T33): **1237 passed** (43,8 s; 1221 de antes + 16).
 - `node --check static/app.js` OK; bloque restaurado: `diff` con `860b6c5^:…/app.js` líneas 2615–2905 ⇒ idéntico.
-- **`bash harness/init.sh`** (tal cual, worktree): ver §8 (resultado al cerrar este informe).
+- **`bash harness/init.sh`** (tal cual, worktree, sobre `32facbc`): **exit 0**, raíz `1083 passed`, sv4 `1238 passed`
+  (177 s), el resto en verde, `PUERTA COBERTURA: N/A`, rutas sensibles N/A, `PUERTA TAMAÑO` dentro (requirements
+  150/150, design 175/250), **`ENTORNO LISTO. Puedes trabajar.`** La pasada anterior (sobre `1c0b76d`) salió en ROJO
+  por `test_f039_r2_todo_informe_de_mutacion_figura_en_el_inventario`: faltaba la fila de
+  `mutacion_F-065_fase3bis.md` en `progress/inventario_mutacion_F-039.md`; añadida (`VÁLIDA`, «a mano»).
 - No verificado en un navegador real (sticky, tabla y teclado): es la MANUAL T35.
 
 ## 6. Cobertura y mutación
@@ -132,8 +136,8 @@ passed**; tras cerrar supervivientes, **17 passed**.
 
 | Evidencia | Valor real |
 |---|---|
-| Tests ejecutados | sv4 **1237 passed** (17 nuevos en `test_f065_f3bis_front.py`; el de F6/F7 de T24, adaptado) |
+| Tests ejecutados | sv4 **1238 passed** (17 nuevos en `test_f065_f3bis_front.py`; el de F6/F7 de T24, adaptado) |
 | Cobertura de las líneas cambiadas | **N/A** (`PUERTA COBERTURA`: sin Python de producción cambiado; JS cubierto por tests con node) |
 | Mutantes | arnés: alcance vacío (0 Python); **a mano: 44 generados, 44 muertos, 0 supervivientes** (primera 43/5, cerrados) |
-| Tiempo de la suite | sv4 43,8 s sola; campaña a mano ≈ 2 min (44 × ~2,5 s) |
-| `bash harness/init.sh` | PENDIENTE_INIT |
+| Tiempo de la suite | sv4 43,8 s sola (177 s dentro de `init.sh`); campaña a mano ≈ 2 min (44 × ~2,5 s) |
+| `bash harness/init.sh` | **exit 0**, `ENTORNO LISTO` (raíz 1083 passed, sv4 1238 passed) |
