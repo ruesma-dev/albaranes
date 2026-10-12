@@ -882,8 +882,12 @@
         // ``textoNuevo`` (R27 v3): con otro texto la lista vuelve arriba y la
         // marcada se recalcula: «Almacén» si es lo tecleado, si no ninguna
         // (antes seguía marcada la misma posición, ya con otra partida).
+        // ``alAbrir`` (lo que vuelve con Esc o al salir con algo que no es de
+        // la lista) se toma al ABRIR por foco o clic, nunca de lo que se está
+        // tecleando (pasada 2, CR1: tras elegir, la lista queda cerrada con el
+        // foco dentro y la tecla siguiente no es «el valor de antes»).
         function open(textoNuevo) {
-            if (panel.hidden) { alAbrir = input.value; }
+            if (panel.hidden && !textoNuevo) { alAbrir = input.value; }
             cargarPartidasObra().then(function (res) {
                 partidas = res;
                 shown = opcionesPartida(res.items, input.value);
