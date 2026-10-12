@@ -538,7 +538,7 @@ def test_f065_r29v3_acciones_siempre_a_la_vista():
     boton = _regla_css(css, ".salmon-table td.td-acciones .btn")
     for regla in (celda, cabecera):
         assert "position: sticky" in regla and "right: 0" in regla and "z-index" in regla
-    assert "white-space: normal" in celda and "nowrap" not in celda
+    assert "nowrap" not in celda
     assert "overflow: visible" in celda
     assert "white-space: nowrap" in boton  # cada botón entero
 
@@ -611,8 +611,9 @@ def _casa(selector, cadena):
     return desde(len(compuestos) - 1, 0)
 
 
-def _gana(css, cadena, propiedad):
-    """Valor de ``propiedad`` que manda en el elemento de ``cadena`` y su selector."""
+def _gana(css, cadena, propiedad, *, puede_faltar=False):
+    """Valor de ``propiedad`` que manda en el elemento de ``cadena`` y su
+    selector; ``(None, None)`` si ninguna regla la fija y ``puede_faltar``."""
     css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
     candidatos = []
     for orden, m in enumerate(re.finditer(r"([^{}@]+)\{([^{}]*)\}", css)):
@@ -623,6 +624,8 @@ def _gana(css, cadena, propiedad):
             selector = selector.strip()
             if selector and _casa(selector, cadena):
                 candidatos.append((_especificidad(selector), orden, valores[-1].strip(), selector))
+    if not candidatos and puede_faltar:
+        return None, None
     assert candidatos, propiedad
     ganador = max(candidatos)
     return ganador[2], ganador[3]
@@ -678,7 +681,10 @@ def test_f065_cr2_la_celda_de_acciones_gana_la_cascada():
     assert _gana(css, _CELDA, "position")[0] == "sticky"
     assert _gana(css, _CELDA, "right")[0] == "0"
     assert _gana(css, _CELDA, "overflow")[0] == "visible"
-    assert _gana(css, _CELDA, "white-space")[0] == "normal"
+    # Sin nowrap (los botones bajan de línea): ninguna regla se lo pone a la celda.
+    assert _gana(css, _CELDA, "white-space", puede_faltar=True)[0] in (None, "normal")
+    for k in range(1, len(_CELDA)):  # ni la hereda de la fila, el tbody o la tabla
+        assert _gana(css, _CELDA[k:], "white-space", puede_faltar=True)[0] in (None, "normal")
     assert _gana(css, _CELDA, "z-index")[0] == "2"
     assert _gana(css, _CELDA, "text-align")[0] == "right"
     assert "rgba" in _gana(css, _CELDA, "box-shadow")[0]
