@@ -1,9 +1,9 @@
 # tests/test_f065_f3_dividir.py
-"""F-065 · fase 3 · R29–R35: dividir una fila (F6) en varias partes.
+"""F-065 · fase 3 · R29–R35: dividir una fila (F7 desde la fase 3 bis) en varias partes.
 
-- R29: F6 (o «Dividir») abre una ventana con el número de líneas (2–20), la
-  cantidad y la partida de cada una y lo que falta por repartir; «Aceptar»
-  solo con la suma = Q. F7 (duplicar) desaparece.
+- R29: F7 (o «Dividir»; F6 hasta la fase 3 bis) abre una ventana con el
+  número de líneas (2–20), la cantidad y la partida de cada una y lo que
+  falta por repartir; «Aceptar» solo con la suma = Q. El duplicar desaparece.
 - R30: 404 si la fila no es del documento; 409 con alta bloqueante, aprobado
   o fila bloqueada; 422 sin cambios si es sintética, Q es nula o 0, una parte
   es nula, 0 o de otro signo, o la suma difiere de Q en 0,005 o más.
@@ -981,7 +981,7 @@ def test_f065_r29_pintado_sin_dividir_en_una_fila_bloqueada(
 
 
 # =================================================================== #
-# T24 · el front: la ventana de F6 y sin F7 (R29)
+# T24 · el front: la ventana de «Dividir» y sin el duplicar (R29; F7 desde la fase 3 bis)
 # =================================================================== #
 _DIVIDIR = ["parseNumEs", "faltaPorRepartir", "repartoValido", "cuerpoDivision"]
 
@@ -1041,11 +1041,11 @@ def test_f065_r29_js_cuerpo_de_la_division(tmp_path):
     ]}
 
 
-def test_f065_r29_js_f6_abre_la_ventana_y_f7_ya_no_existe():
+def test_f065_r29_js_f7_abre_la_ventana_y_el_duplicar_ya_no_existe():
     js = _app_js()
 
-    assert '"F6"' in js and "wireDividir" in js
-    assert '"F7"' not in js and "duplicateRow" not in js
+    assert '"F7"' in js and "wireDividir" in js  # fase 3 bis: F7, no F6
+    assert '"F6"' not in js and "duplicateRow" not in js
     assert "/dividir" in js
     assert 'dividir: "Dividir"' in js  # la etiqueta del historial de «Deshacer»
 

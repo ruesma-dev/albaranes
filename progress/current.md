@@ -9,18 +9,47 @@ humano y el despliegue de sv4 va después. Fase 3: informe **`progress/impl_F-06
 mutación 99/99; decisiones D1–D7 a confirmar, D1: una fila con «revisa la cantidad» no se divide). Review de la fase 3
 (`progress/review_F-065_fase3.md`, `3516c40`): CHANGES_REQUESTED por CR1 (números no finitos); **pasada 2 hecha**
 (CR1, O1, O3, O4; O2 anotada: §«Pasada 2» del informe; mutación de lo nuevo 28/28); **pasada 3 hecha** (CR1b,
-«Origen ✎» y el PUT también rechazan `NaN`: §«Pasada 3»). Siguiente: re-review; MANUAL
-**T27** (abajo); después, fusionar, `init.sh` en el árbol principal y desplegar **solo sv4**.
+«Origen ✎» y el PUT también rechazan `NaN`: §«Pasada 3»). Fase 3 APROBADA y en `dev` (`f83acd4`).
+**Fase 3 bis (T29–T34, 2026-10-12) IMPLEMENTADA**: ajustes de front de las MANUAL T19/T27 (F7 divide, última parte
+automática, combo de partida que se cierra al elegir y «al» → «Almacén», «Acciones» fija a la derecha y el bloque de
+columnas que T24 borró por error, de vuelta). Informe **`progress/impl_F-065_fase3bis.md`**. Siguiente: review de la
+fase 3 bis; MANUAL **T35** y **T27** (abajo, ya con F7); después, fusionar, `init.sh` en el árbol principal y
+desplegar **solo sv4**.
+- **MANUAL T35 (humano, pipeline LOCAL con sv4 de la rama; en BBDD, nada más que lo que haga la propia ficha)**, en
+  PowerShell:
+  ```powershell
+  cd C:\Users\pgris\PycharmProjects\albaranes
+  .\infra\local\arrancar_local.ps1
+  # http://localhost:8004 (Ctrl+F5 para no tirar del app.js en caché), un albarán PENDIENTE con filas Contrato:
+  #  1) Foco en una celda de una fila: F6 NO abre nada (el navegador hace lo suyo); F7 abre «Dividir».
+  #  2) En la ventana, con 2 líneas: teclear solo la primera (p. ej. 6 de 18) -> la segunda pone 12 sola, en gris y sin
+  #     poder escribirla; «Reparto completo.» y «Aceptar» activo. Poner 20 en la primera -> la última sale -2 en ROJO,
+  #     «Sobra: 2» y «Aceptar» apagado; poner 18 -> la última 0 en rojo. Pasar a 3 líneas: se conserva lo tecleado.
+  #  3) Combo de partida de una fila (y el de la ventana): elegir una partida con el ratón y luego otra con flechas +
+  #     Enter -> la lista se CIERRA en los dos casos (antes volvía a salir con solo la elegida). Justo después de
+  #     elegir, teclear algo que no es de la lista (p. ej. «02.0x») y salir con Tab (o Esc) -> vuelve la elegida.
+  #  4) Bajar con flechas por la lista y teclear «al» -> la lista vuelve arriba y «Almacén (sin partida)» queda
+  #     marcada; Enter la elige (la fila va a almacén). Igual con «alm» y «Almacén».
+  #  5) Guardar una fila (sale «Desbloquear») y estrechar la ventana del navegador: la columna «Acciones» sigue pegada
+  #     a la derecha, opaca, con «✕ · Guardar · Dividir» (o «Desbloquear») a la vista; al desplazar en horizontal, la
+  #     cabecera «Acciones» sigue ENCIMA de sus botones (no se va con el scroll).
+  #     Ojo (O1): quien guardó anchos de columna antes verá «Acciones» a 156 px (los botones bajan de línea); «↺
+  #     Columnas» la deja en los 200 px nuevos.
+  #  6) «↺ Columnas», ordenar pinchando una cabecera, arrastrar una columna y ensanchar con el borde vuelven a
+  #     funcionar (también en la bandeja); «Acciones» no se puede arrastrar.
+  ```
+  Criterio: todo como se describe; si algo no, anotar el paso y lo que se vio. (El arranque local usa el código del
+  árbol principal: antes, `dev` con la rama fusionada, o arrancar sv4 desde este worktree.)
 - **MANUAL T27 (humano, pipeline LOCAL con sv4 de la rama; solo lecturas en BBDD)**, en PowerShell:
   ```powershell
   cd C:\Users\pgris\PycharmProjects\albaranes
   .\infra\local\arrancar_local.ps1
   # http://localhost:8004, un albarán PENDIENTE con una fila Contrato de 18 (o la Q que tenga) y obra con partidas:
-  #  1) Foco en una celda de la fila y F6 (o «Dividir»): «Número de líneas» 3; 6 con SU partida, 7 con OTRA partida
-  #     del combo y 5 con «Almacén (sin partida)». «Falta» baja hasta «Reparto completo.» y solo entonces se habilita
-  #     «Aceptar» (con 6 + 7 + 4 no). Enter o «Aceptar».
+  #  1) Foco en una celda de la fila y F7 (o «Dividir»): «Número de líneas» 3; 6 con SU partida, 7 con OTRA partida
+  #     del combo y la tercera (se rellena sola con 5) con «Almacén (sin partida)». «Reparto completo.» y «Aceptar»
+  #     activo (con 6 + 12 la última queda a 0, en rojo, y no). Enter o «Aceptar».
   #  2) La ficha pinta «Parte 1 de 3», «Parte 2 de 3», «Parte 3 de 3» bajo la original: la 2 «Nueva», la 3 «Contrato»
-  #     en almacén; el total del albarán no cambia; sin aviso de familia. F7 ya no hace nada.
+  #     en almacén; el total del albarán no cambia; sin aviso de familia. F6 no hace nada en la ficha.
   #  3) «Guardar y aprobar».
   $doc = '<ID del documento>'
   psql -h localhost -U <usuario_local> -d albaranes -c "SELECT lv.id, lv.line_kind, lv.parent_merge_line_id, lv.matched_contrato_line_id, lv.derived_contrato_line_id, lv.cantidad_convertida, lv.importe_calculado, lv.codigo_partida_final FROM albaran_line_valuations lv JOIN albaran_valuations v ON v.id = lv.valuation_id WHERE v.document_id = '$doc' ORDER BY lv.id;"

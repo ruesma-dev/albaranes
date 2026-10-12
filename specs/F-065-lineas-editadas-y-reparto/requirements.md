@@ -1,4 +1,4 @@
-# F-065 · Lo editado en las líneas manda, la partida se elige de la obra y una línea se divide — requisitos (v2)
+# F-065 · Lo editado en las líneas manda, la partida se elige de la obra y una línea se divide — requisitos (v3)
 
 Rigor **critico** (lo aprobado es lo que sv9 da de alta en Sigrid, F-053). Servicios: **sv4-front** y
 **sv6-valoracion-persist** (solo el DDL de `bloqueada`); sv9 y comun sin código (tests de contrato en sv9).
@@ -110,7 +110,7 @@ Editar descripción, cantidad, descuento o código externo no cambia el origen; 
 R27. El combo de partida debe ofrecer «Almacén» primero y las partidas hoja de la obra (`/api/sigrid/partidas`,
 una carga por ficha) con filtro predictivo por código y descripción; solo admite valores de la lista. Obra sin
 partidas ⇒ solo «Almacén»; Sigrid no responde ⇒ solo «Almacén» y el aviso «No se pudieron cargar las partidas».
-Elegir una solo manda `codigo_partida` (R25–R26).
+Elegir una solo manda `codigo_partida` (R25–R26) y cierra la lista; al teclear, vuelve arriba y «al» marca «Almacén».
 
 R28. «Origen ✎» debe ser la única vía de reapuntar: elegir una línea de contrato deja la fila Contrato con la
 partida y el precio de esa línea; elegir «Nueva», Nueva con los valores actuales. El combo de concepto pasa a texto
@@ -118,9 +118,10 @@ partida y el precio de esa línea; elegir «Nueva», Nueva con los valores actua
 
 ## Fase 3 · dividir (M1, X22; absorbe F-016) — detalle en design §5.4
 
-R29. CUANDO el administrativo pulsa F6 en una fila (o su botón «Dividir»), la ficha debe abrir una ventana con el
-número de líneas (2–20) y la cantidad y la partida (combo de R27) de cada una, con lo que falta por repartir;
-«Aceptar» solo se habilita si la suma es Q. F7 (duplicar) desaparece.
+R29. (v3, fase 3 bis) CUANDO el administrativo pulsa F7 en una fila (o su botón «Dividir»; F6 queda para el navegador),
+la ficha debe abrir una ventana con el número de líneas (2–20) y la cantidad y la partida (combo de R27) de cada una; la
+última se rellena sola (Q − las demás, en vivo, de solo lectura; en rojo si sale 0 o de otro signo) y «Aceptar» solo se
+habilita si el reparto vale (R30). La columna «Acciones» no oculta nunca sus botones.
 
 R30. `POST /api/documents/{id}/lines/{vid}/dividir {"partes": [{"cantidad", "codigo_partida"}]}`: 404 si la fila
 no es del documento; 409 con alta bloqueante, aprobado (R4) o fila bloqueada (R14); 422 sin cambios si es

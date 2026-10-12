@@ -752,6 +752,13 @@
         }));
     }
 
+    // «a», «al», «alm», «almacén»… (o «Almacén (sin partida)» entero): lo
+    // tecleado es «Almacén», sin acentos ni mayúsculas (R27 v3).
+    function esAlmacenTecleado(texto) {
+        const t = _normLine(texto).trim();
+        return t !== "" && ("almacen".indexOf(t) === 0 || t.indexOf("almacen") === 0);
+    }
+
     function partidaValida(valor, items) {
         const v = String(valor || "").trim();
         return v === "" || items.some(function (it) { return it.code === v; });
@@ -805,6 +812,9 @@
         let activo = -1;
         let alAbrir = input.value;
         let repos = null;
+        // Mientras ``pick`` avisa del cambio (su «input»), el combo no se
+        // reabre (R27 v3: antes el panel volvía, filtrado con la elegida).
+        let eligiendo = false;
 
         function place() {
             const r = input.getBoundingClientRect();
@@ -835,7 +845,9 @@
             input.value = it.code;
             alAbrir = it.code;
             // Notifica a wireConciliaEdit: la fila queda con cambios.
+            eligiendo = true;
             input.dispatchEvent(new Event("input", { bubbles: true }));
+            eligiendo = false;
         }
         function render() {
             panel.innerHTML = "";
@@ -867,20 +879,32 @@
                 window.addEventListener("resize", repos);
             }
         }
-        function open() {
-            if (panel.hidden) { alAbrir = input.value; }
+        // ``textoNuevo`` (R27 v3): con otro texto la lista vuelve arriba y la
+        // marcada se recalcula: «Almacén» si es lo tecleado, si no ninguna
+        // (antes seguía marcada la misma posición, ya con otra partida).
+        // ``alAbrir`` (lo que vuelve con Esc o al salir con algo que no es de
+        // la lista) se toma al ABRIR por foco o clic, nunca de lo que se está
+        // tecleando (pasada 2, CR1: tras elegir, la lista queda cerrada con el
+        // foco dentro y la tecla siguiente no es «el valor de antes»).
+        function open(textoNuevo) {
+            if (panel.hidden && !textoNuevo) { alAbrir = input.value; }
             cargarPartidasObra().then(function (res) {
                 partidas = res;
                 shown = opcionesPartida(res.items, input.value);
-                activo = Math.min(activo, shown.length - 1);
+                if (textoNuevo) {
+                    activo = esAlmacenTecleado(input.value) ? 0 : -1;
+                } else {
+                    activo = Math.min(activo, shown.length - 1);
+                }
                 render();
+                if (textoNuevo) { panel.scrollTop = 0; }
             });
         }
 
-        input.addEventListener("focus", open);
-        input.addEventListener("click", open);
+        input.addEventListener("focus", function () { open(false); });
+        input.addEventListener("click", function () { open(false); });
         input.addEventListener("input", function () {
-            if (document.activeElement === input) { open(); }
+            if (!eligiendo && document.activeElement === input) { open(true); }
         });
         // Va ANTES que el Enter = «Guardar» de wireConciliaEdit
         // (wirePartidaCombos se llama primero): con el panel abierto, las
@@ -1148,20 +1172,52 @@
     wireConciliaEdit();
 
     // ------------------------------------------------------------------ //
-    // «Dividir» (F-065 R29): el botón de la fila o F6 abren una ventana con
+    // «Dividir» (F-065 R29 v3): el botón de la fila o F7 abren una ventana con
     // el número de líneas (2–20) y la cantidad y la partida de cada una
     // (combo de partidas de la obra; vacía = almacén) con lo que falta por
     // repartir. «Aceptar» solo se habilita si las partes suman la Q de la
-    // fila (± 0,005), ninguna es 0 ni de otro signo. Sustituye a F7
-    // (duplicar), que creaba una «Nueva» sin vínculo.
+    // fila (± 0,005), ninguna es 0 ni de otro signo. Sustituye al F7 de
+    // antes (duplicar), que creaba una «Nueva» sin vínculo; F6 no hace nada
+    // en la ficha (queda para el navegador).
     // ------------------------------------------------------------------ //
+    // Lo que falta por repartir: Q − la suma de ``valores`` (los vacíos no
+    // cuentan). Es la cantidad de la última parte (R29 v3), así que se
+    // redondea a 1e-6 (solo quita el ruido de la coma flotante), no a
+    // milésimas.
     function faltaPorRepartir(q, valores) {
         let suma = 0;
         valores.forEach(function (v) {
             const n = parseNumEs(v);
             if (n !== null) { suma += n; }
         });
-        return Math.round((q - suma) * 1000) / 1000;
+        return Math.round((q - suma) * 1e6) / 1e6;
+    }
+
+    // Estado de la ventana con la última parte automática (R29 v3): su
+    // cantidad (``resto`` = Q − las demás), si va en rojo (0 o de otro signo
+    // que Q) y el mensaje. «Aceptar» lo sigue decidiendo ``repartoValido``.
+    function estadoReparto(q, demas) {
+        const resto = faltaPorRepartir(q, demas);
+        const ultimaMal = resto * q <= 0;  // 0 o de otro signo que Q
+        let mensaje = "Reparto completo.";
+        if (ultimaMal) {
+            mensaje = resto === 0
+                ? "La última parte quedaría a 0."
+                : "Sobra: " + String(Math.abs(resto)).replace(".", ",");
+        } else {
+            for (let i = 0; i < demas.length; i++) {
+                const n = parseNumEs(demas[i]);
+                if (n === null) {
+                    mensaje = "Falta la cantidad de la parte " + (i + 1) + ".";
+                    break;
+                }
+                if (n * q <= 0) {  // 0 o de otro signo que Q
+                    mensaje = "La parte " + (i + 1) + " no puede ser 0 ni de otro signo.";
+                    break;
+                }
+            }
+        }
+        return { resto: resto, ultimaMal: ultimaMal, mensaje: mensaje };
     }
 
     function repartoValido(q, valores) {
@@ -1207,18 +1263,22 @@
         function cantidades() { return valoresDe(".js-dividir-cantidad"); }
         function partidas() { return valoresDe(".js-dividir-partida"); }
 
+        // La última parte se rellena sola con lo que falta (R29 v3).
         function refrescar() {
-            const falta = faltaPorRepartir(actual.q, cantidades());
-            faltaEl.textContent = falta === 0
-                ? "Reparto completo."
-                : (falta > 0 ? "Falta: " : "Sobra: ") + String(Math.abs(falta)).replace(".", ",");
+            const inputs = cuerpo.querySelectorAll(".js-dividir-cantidad");
+            const ultima = inputs[inputs.length - 1];
+            const estado = estadoReparto(actual.q, cantidades().slice(0, -1));
+            ultima.value = String(estado.resto).replace(".", ",");
+            ultima.classList.toggle("dividir-resto-mal", estado.ultimaMal);
+            faltaEl.textContent = estado.mensaje;
             aceptar.disabled = !repartoValido(actual.q, cantidades());
         }
 
         function pintarPartes() {
             let n = parseInt(nEl.value, 10);
             n = Math.max(2, Math.min(20, isNaN(n) ? 2 : n));
-            const previas = cantidades();
+            // Solo las que tecleó el administrativo: el resto de antes no.
+            const previas = cantidades().slice(0, -1);
             const previasPartida = partidas();
             cuerpo.innerHTML = "";
             for (let i = 0; i < n; i++) {
@@ -1231,7 +1291,14 @@
                 cant.inputMode = "decimal";
                 cant.className = "cell-input cell-num js-dividir-cantidad";
                 cant.value = i < previas.length ? previas[i] : "";
-                cant.addEventListener("input", refrescar);
+                if (i === n - 1) {
+                    cant.readOnly = true;
+                    cant.tabIndex = -1;
+                    cant.classList.add("dividir-auto");
+                    cant.title = "Se rellena sola: la cantidad de la línea menos las demás partes.";
+                } else {
+                    cant.addEventListener("input", refrescar);
+                }
                 tdCant.appendChild(cant);
                 const tdPartida = document.createElement("td");
                 const partida = document.createElement("input");
@@ -1318,9 +1385,9 @@
         linesBody.querySelectorAll(".js-dividir").forEach(function (boton) {
             boton.addEventListener("click", function () { abrir(boton); });
         });
-        // F6 en una fila abre su «Dividir».
+        // F7 en una fila abre su «Dividir».
         document.addEventListener("keydown", function (ev) {
-            if (ev.key !== "F6" || dialogo.open) { return; }
+            if (ev.key !== "F7" || dialogo.open) { return; }
             const activo = document.activeElement;
             const tr = activo && activo.closest ? activo.closest("tr.conciliacion-row") : null;
             const boton = tr ? tr.querySelector(".js-dividir") : null;
@@ -2803,11 +2870,303 @@
 })();
 
 // ===================================================================== //
+//  TANDA 2B — Columnas de tabla GENÉRICAS: reordenar + ancho + orden.    //
+//                                                                         //
+//  Reutilizable en cualquier <table> que declare:                        //
+//    data-cols-store="clave"   -> prefijo localStorage (por usuario)      //
+//    data-resizable="1"        -> permite redimensionar (requiere         //
+//                                 <colgroup> con <col data-col data-w>)   //
+//    data-sortable="1"         -> orden por columna en cliente (▲▼)       //
+//  y, en cada <th>/<td>/<col>, data-col="clave". Columnas con            //
+//  data-col-fixed no se mueven (p.ej. la columna sticky de acciones).     //
+//  El ORDEN, ANCHO y ORDENACIÓN se guardan por usuario en localStorage    //
+//  (claves distintas por tabla), de modo que el grid de líneas y la       //
+//  tabla de la bandeja recuerdan su configuración por separado.          //
+// ===================================================================== //
+(function () {
+    "use strict";
+    var MIN_W = 56;
+
+    function rj(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+    function wj(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+    function enhanceTable(table) {
+        if (!table) { return null; }
+        var store = table.getAttribute("data-cols-store");
+        if (!store) { return null; }
+        var resizable = table.getAttribute("data-resizable") === "1";
+        var sortable = table.getAttribute("data-sortable") === "1";
+        var colgroup = table.querySelector("colgroup");
+        var theadRows = [].slice.call(table.querySelectorAll("thead tr"));
+        var headRow = null;
+        for (var i = 0; i < theadRows.length; i++) {
+            if (theadRows[i].querySelector("th[data-col]")) { headRow = theadRows[i]; break; }
+        }
+        if (!headRow) { return null; }
+        var tbody = table.querySelector("tbody");
+
+        var DEFAULT_ORDER = [].map.call(headRow.querySelectorAll("th[data-col]"),
+            function (th) { return th.getAttribute("data-col"); });
+        var FIXED = {};
+        [].forEach.call(headRow.querySelectorAll("th[data-col]"), function (th) {
+            if (th.hasAttribute("data-col-fixed")) { FIXED[th.getAttribute("data-col")] = true; }
+        });
+        var MOVABLE = DEFAULT_ORDER.filter(function (k) { return !FIXED[k]; });
+
+        var LS_ORDER = store + ".order.v1";
+        var LS_WIDTH = store + ".width.v1";
+        var LS_SORT = store + ".sort.v1";
+
+        function movableOrder() {
+            var saved = rj(LS_ORDER);
+            if (!Array.isArray(saved)) { return MOVABLE.slice(); }
+            var known = {}; MOVABLE.forEach(function (k) { known[k] = true; });
+            var out = saved.filter(function (k) { return known[k]; });
+            MOVABLE.forEach(function (k) { if (out.indexOf(k) === -1) { out.push(k); } });
+            return out;
+        }
+        function sequence() {
+            var mo = movableOrder(); var mi = 0; var seq = [];
+            DEFAULT_ORDER.forEach(function (k) {
+                if (FIXED[k]) { seq.push(k); } else { seq.push(mo[mi++]); }
+            });
+            return seq;
+        }
+        function reorderParent(parent, seq) {
+            if (!parent) { return; }
+            var byCol = {};
+            [].forEach.call(parent.children, function (n) {
+                var k = n.getAttribute && n.getAttribute("data-col");
+                if (k) { byCol[k] = n; }
+            });
+            seq.forEach(function (k) { if (byCol[k]) { parent.appendChild(byCol[k]); } });
+        }
+        function applyOrder() {
+            var seq = sequence();
+            reorderParent(colgroup, seq);
+            theadRows.forEach(function (tr) { reorderParent(tr, seq); });
+            if (tbody) {
+                [].forEach.call(tbody.querySelectorAll("tr"), function (tr) {
+                    if (tr.classList.contains("concilia-add") ||
+                        tr.classList.contains("salmon-empty")) { return; }
+                    if (tr.querySelector("td[data-col]")) { reorderParent(tr, seq); }
+                });
+            }
+        }
+
+        // ---------------- Anchos (solo resizable + colgroup) ------------- //
+        function defW(k) {
+            var col = colgroup && colgroup.querySelector('col[data-col="' + k + '"]');
+            var d = col && Number(col.getAttribute("data-w"));
+            return (isFinite(d) && d > 0) ? d : 120;
+        }
+        function widths() {
+            var saved = rj(LS_WIDTH) || {}; var out = {};
+            DEFAULT_ORDER.forEach(function (k) {
+                var w = Number(saved[k]);
+                out[k] = (isFinite(w) && w >= MIN_W) ? w : defW(k);
+            });
+            return out;
+        }
+        function applyWidths() {
+            if (!colgroup) { return; }
+            var W = widths(); var total = 0;
+            DEFAULT_ORDER.forEach(function (k) {
+                var w = W[k]; total += w;
+                var col = colgroup.querySelector('col[data-col="' + k + '"]');
+                if (col) { col.style.width = w + "px"; }
+                var th = headRow.querySelector('th[data-col="' + k + '"]');
+                if (th) { th.style.width = w + "px"; }
+            });
+            table.style.width = total + "px";
+        }
+        function syncTableWidth() {
+            if (!colgroup) { return; }
+            var total = 0;
+            [].forEach.call(colgroup.querySelectorAll("col[data-col]"), function (col) {
+                total += parseFloat(col.style.width) || 0;
+            });
+            if (total) { table.style.width = total + "px"; }
+        }
+
+        // ---------------- Ordenación cliente (▲▼) ------------------------ //
+        function getSort() { var s = rj(LS_SORT); return (s && s.col) ? s : null; }
+        function cellVal(tr, col, type) {
+            var td = tr.querySelector('td[data-col="' + col + '"]');
+            if (!td) { return type === "num" ? -Infinity : ""; }
+            var inp = td.querySelector("input");
+            var raw = inp ? inp.value : td.getAttribute("data-sort-value");
+            if (raw === null || raw === undefined) { raw = td.textContent || ""; }
+            if (type === "num") {
+                var n = parseFloat(String(raw).replace(",", "."));
+                return isFinite(n) ? n : -Infinity;
+            }
+            return String(raw).trim().toLowerCase();
+        }
+        function sortRows(col, dir) {
+            if (!tbody) { return; }
+            var th = headRow.querySelector('th[data-col="' + col + '"]');
+            var type = (th && th.getAttribute("data-sort-type") === "num") ? "num" : "text";
+            var rows = [].slice.call(tbody.querySelectorAll("tr")).filter(function (tr) {
+                return tr.querySelector("td[data-col]") &&
+                    !tr.classList.contains("salmon-empty") &&
+                    !tr.classList.contains("concilia-add");
+            });
+            rows.sort(function (a, b) {
+                var va = cellVal(a, col, type), vb = cellVal(b, col, type);
+                if (va < vb) { return dir === "asc" ? -1 : 1; }
+                if (va > vb) { return dir === "asc" ? 1 : -1; }
+                return 0;
+            });
+            rows.forEach(function (tr) { tbody.appendChild(tr); });
+        }
+        function applySortIndicator() {
+            [].forEach.call(headRow.querySelectorAll("th[data-col]"), function (th) {
+                th.classList.remove("sorted-asc", "sorted-desc");
+            });
+            var s = getSort(); if (!s) { return; }
+            var th = headRow.querySelector('th[data-col="' + s.col + '"]');
+            if (!th) { return; }
+            th.classList.add(s.dir === "asc" ? "sorted-asc" : "sorted-desc");
+            sortRows(s.col, s.dir);
+        }
+
+        // ---------------- Cableado de interacciones ---------------------- //
+        function wireResize() {
+            var rz = null;
+            headRow.addEventListener("mousedown", function (ev) {
+                var h = ev.target.closest ? ev.target.closest(".col-resizer") : null;
+                if (!h) { return; }
+                var th = h.closest("th[data-col]"); if (!th) { return; }
+                ev.preventDefault();
+                var k = th.getAttribute("data-col");
+                var col = colgroup.querySelector('col[data-col="' + k + '"]');
+                rz = { k: k, col: col, th: th, x: ev.clientX, w: th.getBoundingClientRect().width };
+                document.body.classList.add("col-resizing");
+            });
+            document.addEventListener("mousemove", function (ev) {
+                if (!rz) { return; }
+                var w = Math.max(MIN_W, Math.round(rz.w + (ev.clientX - rz.x)));
+                if (rz.col) { rz.col.style.width = w + "px"; }
+                rz.th.style.width = w + "px"; rz._w = w;
+                syncTableWidth();
+            });
+            document.addEventListener("mouseup", function () {
+                if (!rz) { return; }
+                if (rz._w) { var W = widths(); W[rz.k] = rz._w; wj(LS_WIDTH, W); }
+                rz = null; document.body.classList.remove("col-resizing");
+            });
+        }
+        function wireReorder() {
+            var dragKey = null;
+            function cleanup() {
+                dragKey = null;
+                [].forEach.call(headRow.querySelectorAll("th"), function (t) {
+                    t.classList.remove("col-dragging"); t.classList.remove("col-drop-target");
+                });
+            }
+            headRow.addEventListener("dragstart", function (ev) {
+                var th = ev.target.closest ? ev.target.closest("th[data-col]") : null;
+                if (!th) { return; }
+                if (FIXED[th.getAttribute("data-col")]) { ev.preventDefault(); return; }
+                if (ev.target.closest && ev.target.closest(".col-resizer")) { ev.preventDefault(); return; }
+                dragKey = th.getAttribute("data-col");
+                th.classList.add("col-dragging");
+                headRow._didDrag = false;
+                try { ev.dataTransfer.effectAllowed = "move"; ev.dataTransfer.setData("text/plain", dragKey); } catch (e) {}
+            });
+            headRow.addEventListener("dragover", function (ev) {
+                if (!dragKey) { return; }
+                ev.preventDefault();
+                try { ev.dataTransfer.dropEffect = "move"; } catch (e) {}
+                var th = ev.target.closest ? ev.target.closest("th[data-col]") : null;
+                [].forEach.call(headRow.querySelectorAll("th"), function (t) { t.classList.remove("col-drop-target"); });
+                if (th && !FIXED[th.getAttribute("data-col")] &&
+                    th.getAttribute("data-col") !== dragKey) { th.classList.add("col-drop-target"); }
+            });
+            headRow.addEventListener("drop", function (ev) {
+                if (!dragKey) { return; }
+                ev.preventDefault();
+                var th = ev.target.closest ? ev.target.closest("th[data-col]") : null;
+                if (th && !FIXED[th.getAttribute("data-col")]) {
+                    var target = th.getAttribute("data-col");
+                    if (target && target !== dragKey) {
+                        var mo = movableOrder();
+                        var from = mo.indexOf(dragKey), to = mo.indexOf(target);
+                        if (from !== -1 && to !== -1) {
+                            mo.splice(from, 1); mo.splice(to, 0, dragKey);
+                            wj(LS_ORDER, mo); applyOrder();
+                            if (resizable && colgroup) { applyWidths(); }
+                        }
+                    }
+                }
+                headRow._didDrag = true;
+                setTimeout(function () { headRow._didDrag = false; }, 0);
+                cleanup();
+            });
+            headRow.addEventListener("dragend", function () {
+                headRow._didDrag = true;
+                setTimeout(function () { headRow._didDrag = false; }, 0);
+                cleanup();
+            });
+        }
+        function wireSort() {
+            headRow.addEventListener("click", function (ev) {
+                if (ev.target.closest && ev.target.closest(".col-resizer")) { return; }
+                if (headRow._didDrag) { return; }
+                var th = ev.target.closest ? ev.target.closest("th[data-col]") : null;
+                if (!th) { return; }
+                var col = th.getAttribute("data-col");
+                var s = getSort(); var dir = "asc";
+                if (s && s.col === col) { dir = s.dir === "asc" ? "desc" : "asc"; }
+                wj(LS_SORT, { col: col, dir: dir });
+                applySortIndicator();
+            });
+        }
+
+        // ---------------- Arranque --------------------------------------- //
+        applyOrder();
+        if (resizable && colgroup) { applyWidths(); }
+        if (sortable) { applySortIndicator(); }
+        wireReorder();
+        if (resizable && colgroup) { wireResize(); }
+        if (sortable) { wireSort(); }
+
+        return {
+            reset: function () {
+                try {
+                    localStorage.removeItem(LS_ORDER);
+                    localStorage.removeItem(LS_WIDTH);
+                    localStorage.removeItem(LS_SORT);
+                } catch (e) {}
+                applyOrder();
+                if (resizable && colgroup) { applyWidths(); }
+                if (sortable) { applySortIndicator(); }
+            }
+        };
+    }
+
+    // Aplicar a las tablas con configuración: grid de líneas (detalle) y
+    // tabla de la bandeja (lista). Cada una recuerda su layout por separado.
+    var gridApi = enhanceTable(document.getElementById("lines-table"));
+    [].forEach.call(document.querySelectorAll('table[data-cols-store]'), function (t) {
+        if (t.id === "lines-table") { return; }
+        enhanceTable(t);
+    });
+
+    // Botón «↺ Columnas» del detalle: restablece el grid de líneas.
+    var resetBtn = document.getElementById("reset-cols-btn");
+    if (resetBtn && gridApi) {
+        resetBtn.addEventListener("click", function () { gridApi.reset(); });
+    }
+})();
+
+// ===================================================================== //
 //  TANDA 2B — Atajo de teclado del grid de líneas: F8.                  //
 //    F8 = copiar a la celda en foco el valor de la celda de ARRIBA       //
 //         (misma columna, fila salmón anterior). Marca la fila como       //
 //         editada (no guarda hasta pulsar «Guardar»).                    //
-//    F7 (duplicar) se quitó en F-065 R29: lo sustituye «Dividir» (F6).   //
+//    F7 ya no duplica (F-065 R29): abre «Dividir» (wireDividir).       //
 // ===================================================================== //
 (function () {
     "use strict";
