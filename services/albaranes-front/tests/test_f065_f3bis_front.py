@@ -537,7 +537,7 @@ def test_f065_r29v3_acciones_siempre_a_la_vista():
     cabecera = _regla_css(css, '.salmon-table thead tr.salmon-head th[data-col="acciones"]')
     boton = _regla_css(css, ".salmon-table td.td-acciones .btn")
     for regla in (celda, cabecera):
-        assert "position: sticky" in regla and "right: 0" in regla and "z-index" in regla
+        assert "position: sticky" in regla and "right: 0" in regla
     assert "nowrap" not in celda
     assert "overflow: visible" in celda
     assert "white-space: nowrap" in boton  # cada botón entero
@@ -669,7 +669,6 @@ def test_f065_cr2_la_cabecera_de_acciones_gana_la_cascada():
 
     assert _gana(css, _CABECERA, "position")[0] == "sticky"
     assert _gana(css, _CABECERA, "right")[0] == "0"
-    assert _gana(css, _CABECERA, "z-index")[0] == "3"
     assert _gana(css, _CABECERA, "background")[0].startswith("var(--brand")  # opaca
     assert _gana(css, _CABECERA, "cursor")[0] == "default"  # fija: no se arrastra
     assert "rgba" in _gana(css, _CABECERA, "box-shadow")[0]
@@ -685,7 +684,6 @@ def test_f065_cr2_la_celda_de_acciones_gana_la_cascada():
     assert _gana(css, _CELDA, "white-space", puede_faltar=True)[0] in (None, "normal")
     for k in range(1, len(_CELDA)):  # ni la hereda de la fila, el tbody o la tabla
         assert _gana(css, _CELDA[k:], "white-space", puede_faltar=True)[0] in (None, "normal")
-    assert _gana(css, _CELDA, "z-index")[0] == "2"
     assert _gana(css, _CELDA, "text-align")[0] == "right"
     assert "rgba" in _gana(css, _CELDA, "box-shadow")[0]
     # Opaca: el fondo que manda es el de la fila (#f7f4f5), sin transparencia.

@@ -1619,11 +1619,12 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
    fondo aquí no se aplicaría nunca). La cabecera lleva «tr.salmon-head» para
    ganar a «.salmon-table thead tr.salmon-head th» (0,2,3), que le pone
    position: relative (pasada 2, CR2). Lo vigila un motor de cascada en
-   tests/test_f065_f3bis_front.py. */
+   tests/test_f065_f3bis_front.py. Sin z-index: al ir detrás en el DOM ya
+   pinta encima de lo que se desplaza por debajo (comprobado en Chrome; ninguna
+   regla da z-index a lo que hay en las celdas de la ficha). */
 .salmon-table td.td-acciones {
     position: sticky;
     right: 0;
-    z-index: 2;
     box-shadow: -6px 0 6px -6px rgba(0, 0, 0, 0.3);
     overflow: visible;
     text-align: right;
@@ -1631,7 +1632,6 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
 .salmon-table thead tr.salmon-head th[data-col="acciones"] {
     position: sticky;
     right: 0;
-    z-index: 3;
     cursor: default;
     box-shadow: -6px 0 6px -6px rgba(0, 0, 0, 0.3);
 }
