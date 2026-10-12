@@ -143,6 +143,20 @@ def test_f065_r29v3_f7_en_titulos_y_nada_del_duplicar_antiguo():
 
 
 @con_node
+def test_f065_r29v3_f7_con_la_ventana_abierta_no_la_reinicia(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _DIVIDIR, _ficha(), """
+        celda.focus();
+        tecla(celda, "F7");
+        teclear(cantidades()[0], "6");
+        celda.focus();
+        const otra = tecla(celda, "F7");
+        console.log(JSON.stringify({valores: foto().valores, prevenida: otra.defaultPrevented}));
+    """)
+
+    assert casos == {"valores": ["6", "12"], "prevenida": False}
+
+
+@con_node
 def test_f065_r29v3_ultima_parte_se_rellena_sola(tmp_path):
     casos = _ejecutar_dom(tmp_path, _DIVIDIR, _ficha(), """
         boton.dispatchEvent(new Event("click"));
@@ -222,6 +236,9 @@ def test_f065_r29v3_estado_del_reparto(tmp_path):
             estadoReparto(-10, ["4"]),
             estadoReparto(-10, ["-12"]),
             estadoReparto(1, ["0,1", "0,2"]),
+            estadoReparto(-10, ["-10"]),
+            estadoReparto(-10, ["0"]),
+            estadoReparto(-10, ["-4", "1"]),
         ]));
     """)
 
@@ -240,6 +257,9 @@ def test_f065_r29v3_estado_del_reparto(tmp_path):
         e(-14, False, "La parte 1 no puede ser 0 ni de otro signo."),
         e(2, True, "Sobra: 2"),
         e(0.7, False, "Reparto completo."),
+        e(0, True, "La última parte quedaría a 0."),
+        e(-10, False, "La parte 1 no puede ser 0 ni de otro signo."),
+        e(-7, False, "La parte 2 no puede ser 0 ni de otro signo."),
     ]
 
 
@@ -375,12 +395,12 @@ def test_f065_r27v3_que_cuenta_como_almacen(tmp_path):
     casos = _ejecutar_dom(tmp_path, ["_normLine", "esAlmacenTecleado"], "", """
         console.log(JSON.stringify([
             "a", "al", "AL", " alm ", "almacén", "ALMACEN", "Almacén (sin partida)", "almacenes",
-            "", "  ", "01", "cal", "ala", "alb", "almacenar"
+            "", "  ", "01", "cal", "ala", "alb", "almacenar", "macen", "cen", "lmac"
         ].map(esAlmacenTecleado)));
     """)
 
     assert casos == [True, True, True, True, True, True, True, True,
-                     False, False, False, False, False, False, True]
+                     False, False, False, False, False, False, True, False, False, False]
 
 
 # =================================================================== #

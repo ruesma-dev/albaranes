@@ -1194,7 +1194,7 @@
     // que Q) y el mensaje. «Aceptar» lo sigue decidiendo ``repartoValido``.
     function estadoReparto(q, demas) {
         const resto = faltaPorRepartir(q, demas);
-        const ultimaMal = resto === 0 || (resto > 0) !== (q > 0);
+        const ultimaMal = resto * q <= 0;  // 0 o de otro signo que Q
         let mensaje = "Reparto completo.";
         if (ultimaMal) {
             mensaje = resto === 0
@@ -1207,7 +1207,7 @@
                     mensaje = "Falta la cantidad de la parte " + (i + 1) + ".";
                     break;
                 }
-                if (n === 0 || (n > 0) !== (q > 0)) {
+                if (n * q <= 0) {  // 0 o de otro signo que Q
                     mensaje = "La parte " + (i + 1) + " no puede ser 0 ni de otro signo.";
                     break;
                 }
