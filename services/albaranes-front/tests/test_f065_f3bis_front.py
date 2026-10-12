@@ -403,6 +403,79 @@ def test_f065_r27v3_que_cuenta_como_almacen(tmp_path):
                      False, False, False, False, False, False, True, False, False, False]
 
 
+# Pasada 2, CR1 · R27 «solo admite valores de la lista» también tras elegir:
+# el combo queda cerrado con el foco dentro y lo siguiente que se teclea NO
+# es «el valor de antes» (antes de CR1, open(true) lo capturaba como tal y el
+# blur o el Esc lo dejaban puesto).
+@con_node
+def test_f065_cr1_elegir_y_teclear_algo_fuera_de_la_lista_vuelve_la_elegida_al_salir(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
+        inp.focus();
+        await tiempo();
+        panel.children[2].dispatchEvent(new Event("mousedown"));
+        await tiempo();
+        teclear(inp, "02.0x");
+        await tiempo();
+        inp.blur();
+        await tiempo();
+        console.log(JSON.stringify({valor: inp.value, cerrado: panel.hidden}));
+    """)
+
+    assert casos == {"valor": "02.03", "cerrado": True}
+
+
+@con_node
+def test_f065_cr1_elegir_teclear_y_esc_vuelve_la_elegida(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
+        inp.focus();
+        await tiempo();
+        panel.children[2].dispatchEvent(new Event("mousedown"));
+        await tiempo();
+        teclear(inp, "02.0x");
+        await tiempo();
+        const esc = tecla(inp, "Escape");
+        await tiempo();
+        console.log(JSON.stringify({valor: inp.value, cerrado: panel.hidden, prevenido: esc.defaultPrevented}));
+    """)
+
+    assert casos == {"valor": "02.03", "cerrado": True, "prevenido": True}
+
+
+@con_node
+def test_f065_cr1_foco_esc_teclear_y_salir_vuelve_la_original(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
+        inp.value = "01.01";
+        inp.focus();
+        await tiempo();
+        tecla(inp, "Escape");
+        teclear(inp, "zz");
+        await tiempo();
+        inp.blur();
+        await tiempo();
+        console.log(JSON.stringify({valor: inp.value, cerrado: panel.hidden}));
+    """)
+
+    assert casos == {"valor": "01.01", "cerrado": True}
+
+
+@con_node
+def test_f065_cr1_teclear_una_valida_y_salir_la_deja(tmp_path):
+    """La otra cara: lo que SÍ es de la lista se queda al salir."""
+    casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
+        inp.focus();
+        await tiempo();
+        panel.children[2].dispatchEvent(new Event("mousedown"));
+        await tiempo();
+        teclear(inp, "05.01");
+        await tiempo();
+        inp.blur();
+        await tiempo();
+        console.log(JSON.stringify({valor: inp.value}));
+    """)
+
+    assert casos == {"valor": "05.01"}
+
+
 # =================================================================== #
 # «Acciones» sin recortar y las columnas de vuelta (R29 v3)
 # =================================================================== #
@@ -421,7 +494,7 @@ def test_f065_r29v3_acciones_siempre_a_la_vista():
     css = (_RAIZ / "static" / "styles.css").read_text(encoding="utf-8")
 
     celda = _regla_css(css, ".salmon-table td.td-acciones")
-    cabecera = _regla_css(css, '.salmon-table thead th[data-col="acciones"]')
+    cabecera = _regla_css(css, '.salmon-table thead tr.salmon-head th[data-col="acciones"]')
     boton = _regla_css(css, ".salmon-table td.td-acciones .btn")
     for regla in (celda, cabecera):
         assert "position: sticky" in regla and "right: 0" in regla and "z-index" in regla
@@ -429,6 +502,144 @@ def test_f065_r29v3_acciones_siempre_a_la_vista():
     assert "white-space: normal" in celda and "nowrap" not in celda
     assert "overflow: visible" in celda
     assert "white-space: nowrap" in boton  # cada botón entero
+
+
+# Pasada 2, CR2 · que la regla no solo EXISTA sino que GANE la cascada. Un
+# mini motor de cascada: qué reglas de styles.css casan con la celda y la
+# cabecera de «Acciones» tal como las pinta la plantilla, y cuál manda en cada
+# propiedad (especificidad y, a igualdad, la última). Simplificaciones, del
+# lado prudente para lo que se mira aquí: sin !important; una pseudoclase
+# (:hover, :nth-child…), un pseudoelemento (::before), un atributo con otro
+# operador que «=» o un combinador «+»/«~» hacen que la regla NO case (en
+# styles.css ninguna de esas fija position, right, z-index, overflow ni
+# white-space en estas celdas); las @media se toman como si aplicaran.
+_SIMPLE = r"::?[\w-]+(?:\([^)]*\))?|[#.][\w-]+|\[[^\]]+\]"
+_COMPUESTO = re.compile(r"^([a-z*]+)?((?:" + _SIMPLE + r")*)$", re.I)
+
+
+def _partes(compuesto):
+    m = _COMPUESTO.match(compuesto)
+    assert m, compuesto
+    return (m.group(1) or "").lower(), re.findall(_SIMPLE, m.group(2))
+
+
+def _especificidad(selector):
+    a = b = c = 0
+    for compuesto in re.split(r"\s*>\s*|\s+", selector.strip()):
+        tag, simples = _partes(compuesto)
+        c += 1 if tag and tag != "*" else 0
+        a += sum(1 for s in simples if s.startswith("#"))
+        b += sum(1 for s in simples if not s.startswith("#"))
+    return (a, b, c)
+
+
+def _casa_compuesto(compuesto, nodo):
+    tag, simples = _partes(compuesto)
+    if tag and tag != "*" and tag != nodo["tag"]:
+        return False
+    for s in simples:
+        if s.startswith("#") and nodo.get("id") != s[1:]:
+            return False
+        if s.startswith(".") and s[1:] not in nodo.get("clases", ()):
+            return False
+        if s.startswith(":"):
+            return False
+        if s.startswith("["):
+            m = re.match(r'^\[([\w-]+)(?:="([^"]*)")?\]$', s)
+            atributos = nodo.get("atributos", {})
+            if not m or m.group(1) not in atributos or (
+                    m.group(2) is not None and atributos[m.group(1)] != m.group(2)):
+                return False
+    return True
+
+
+def _casa(selector, cadena):
+    """``cadena``: del elemento hacia arriba ([elemento, padre, abuelo…])."""
+    if re.search(r"[+~]", selector):
+        return False
+    tokens = re.split(r"(\s*>\s*|\s+)", selector.strip())
+    compuestos, combinadores = tokens[0::2], [x.strip() or " " for x in tokens[1::2]]
+
+    def desde(i_comp, i_nodo):
+        if not _casa_compuesto(compuestos[i_comp], cadena[i_nodo]):
+            return False
+        if i_comp == 0:
+            return True
+        if combinadores[i_comp - 1] == ">":
+            return i_nodo + 1 < len(cadena) and desde(i_comp - 1, i_nodo + 1)
+        return any(desde(i_comp - 1, j) for j in range(i_nodo + 1, len(cadena)))
+
+    return desde(len(compuestos) - 1, 0)
+
+
+def _gana(css, cadena, propiedad):
+    """Valor de ``propiedad`` que manda en el elemento de ``cadena`` y su selector."""
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    candidatos = []
+    for orden, m in enumerate(re.finditer(r"([^{}@]+)\{([^{}]*)\}", css)):
+        valores = re.findall(r"(?:^|;)\s*" + re.escape(propiedad) + r"\s*:\s*([^;]+)", m.group(2))
+        if not valores:
+            continue
+        for selector in m.group(1).split(","):
+            selector = selector.strip()
+            if selector and _casa(selector, cadena):
+                candidatos.append((_especificidad(selector), orden, valores[-1].strip(), selector))
+    assert candidatos, propiedad
+    ganador = max(candidatos)
+    return ganador[2], ganador[3]
+
+
+_TABLA = {"tag": "table", "id": "lines-table", "clases": {"table", "editable-table", "salmon-table"}}
+_CABECERA = [
+    {"tag": "th", "atributos": {"data-col": "acciones", "data-col-fixed": ""}},
+    {"tag": "tr", "clases": {"salmon-head"}},
+    {"tag": "thead"},
+    _TABLA,
+]
+_CELDA = [
+    {"tag": "td", "clases": {"concilia-td", "td-acciones"}, "atributos": {"data-col": "acciones"}},
+    {"tag": "tr", "clases": {"conciliacion-row", "salmon-row", "concilia-contract", "concilia-editable"}},
+    {"tag": "tbody"},
+    _TABLA,
+]
+
+
+def test_f065_cr2_el_motor_de_cascada_se_comporta():
+    """El motor en sí: especificidad, combinadores y orden."""
+    assert _especificidad(".salmon-table thead tr.salmon-head th") == (0, 2, 3)
+    assert _especificidad('.salmon-table thead th[data-col="acciones"]') == (0, 2, 2)
+    assert _especificidad("#lines-table td.line-index-cell") == (1, 1, 1)
+    assert _casa("tr.conciliacion-row > td.concilia-td", _CELDA)
+    assert not _casa("thead > td.concilia-td", _CELDA)
+    assert not _casa(".docs-table td", _CELDA)
+    assert not _casa(".salmon-table tbody tr:hover td.concilia-td", _CELDA)
+    css = (".a td { position: relative; } .salmon-table td.td-acciones { position: sticky; } "
+           "td.td-acciones { position: static; } .x::before { position: fixed; } td + td { position: fixed; }")
+    assert _gana(css, _CELDA, "position") == ("sticky", ".salmon-table td.td-acciones")
+    css = ".salmon-table td { position: sticky; } table td { position: static; } .salmon-table td { position: fixed; }"
+    assert _gana(css, _CELDA, "position")[0] == "fixed"
+
+
+def test_f065_cr2_la_cabecera_de_acciones_gana_la_cascada():
+    """Antes, ``.salmon-table thead tr.salmon-head th`` (0,2,3) le ganaba con
+    ``position: relative`` y la cabecera se iba con el scroll."""
+    css = (_RAIZ / "static" / "styles.css").read_text(encoding="utf-8")
+
+    assert _gana(css, _CABECERA, "position")[0] == "sticky"
+    assert _gana(css, _CABECERA, "right")[0] == "0"
+    assert _gana(css, _CABECERA, "z-index")[0] == "3"
+    assert _gana(css, _CABECERA, "background")[0].startswith("var(--brand")  # opaca
+
+
+def test_f065_cr2_la_celda_de_acciones_gana_la_cascada():
+    css = (_RAIZ / "static" / "styles.css").read_text(encoding="utf-8")
+
+    assert _gana(css, _CELDA, "position")[0] == "sticky"
+    assert _gana(css, _CELDA, "right")[0] == "0"
+    assert _gana(css, _CELDA, "overflow")[0] == "visible"
+    assert _gana(css, _CELDA, "white-space")[0] == "normal"
+    fondo = _gana(css, _CELDA, "background")[0]
+    assert fondo not in ("transparent", "none") and "rgba" not in fondo  # opaca
 
 
 def test_f065_r29v3_acciones_ancho_estable_y_botones_compactos():

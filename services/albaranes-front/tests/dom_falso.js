@@ -184,6 +184,11 @@ class Elemento {
         document.activeElement = this;
         this.dispatchEvent(new Event("focus"));
     }
+    blur() {
+        if (document.activeElement !== this) { return; }
+        document.activeElement = document.body;
+        this.dispatchEvent(new Event("blur"));
+    }
     showModal() { this.open = true; }
     close() { this.open = false; }
 }
