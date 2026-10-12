@@ -478,6 +478,27 @@ def test_f065_cr1_tras_elegir_teclear_vuelve_a_abrir_la_lista(tmp_path):
 
 
 @con_node
+def test_f065_cr1_teclear_pinchar_en_la_casilla_y_salir_vuelve_la_original(tmp_path):
+    """Con la lista ABIERTA, pinchar otra vez en la casilla no convierte lo
+    tecleado en «el valor de antes» (solo se toma al abrirla)."""
+    casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
+        inp.value = "01.01";
+        inp.focus();
+        await tiempo();
+        teclear(inp, "zz");
+        await tiempo();
+        inp.dispatchEvent(new Event("click", {bubbles: true}));
+        await tiempo();
+        const abierto = !panel.hidden;
+        inp.blur();
+        await tiempo();
+        console.log(JSON.stringify({abierto, valor: inp.value}));
+    """)
+
+    assert casos == {"abierto": True, "valor": "01.01"}
+
+
+@con_node
 def test_f065_cr1_teclear_una_valida_y_salir_la_deja(tmp_path):
     """La otra cara: lo que SÍ es de la lista se queda al salir."""
     casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
