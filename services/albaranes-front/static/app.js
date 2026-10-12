@@ -752,6 +752,13 @@
         }));
     }
 
+    // «a», «al», «alm», «almacén»… (o «Almacén (sin partida)» entero): lo
+    // tecleado es «Almacén», sin acentos ni mayúsculas (R27 v3).
+    function esAlmacenTecleado(texto) {
+        const t = _normLine(texto).trim();
+        return t !== "" && ("almacen".indexOf(t) === 0 || t.indexOf("almacen") === 0);
+    }
+
     function partidaValida(valor, items) {
         const v = String(valor || "").trim();
         return v === "" || items.some(function (it) { return it.code === v; });
@@ -805,6 +812,9 @@
         let activo = -1;
         let alAbrir = input.value;
         let repos = null;
+        // Mientras ``pick`` avisa del cambio (su «input»), el combo no se
+        // reabre (R27 v3: antes el panel volvía, filtrado con la elegida).
+        let eligiendo = false;
 
         function place() {
             const r = input.getBoundingClientRect();
@@ -835,7 +845,9 @@
             input.value = it.code;
             alAbrir = it.code;
             // Notifica a wireConciliaEdit: la fila queda con cambios.
+            eligiendo = true;
             input.dispatchEvent(new Event("input", { bubbles: true }));
+            eligiendo = false;
         }
         function render() {
             panel.innerHTML = "";
@@ -867,20 +879,28 @@
                 window.addEventListener("resize", repos);
             }
         }
-        function open() {
+        // ``textoNuevo`` (R27 v3): con otro texto la lista vuelve arriba y la
+        // marcada se recalcula: «Almacén» si es lo tecleado, si no ninguna
+        // (antes seguía marcada la misma posición, ya con otra partida).
+        function open(textoNuevo) {
             if (panel.hidden) { alAbrir = input.value; }
             cargarPartidasObra().then(function (res) {
                 partidas = res;
                 shown = opcionesPartida(res.items, input.value);
-                activo = Math.min(activo, shown.length - 1);
+                if (textoNuevo) {
+                    activo = esAlmacenTecleado(input.value) ? 0 : -1;
+                } else {
+                    activo = Math.min(activo, shown.length - 1);
+                }
                 render();
+                if (textoNuevo) { panel.scrollTop = 0; }
             });
         }
 
-        input.addEventListener("focus", open);
-        input.addEventListener("click", open);
+        input.addEventListener("focus", function () { open(false); });
+        input.addEventListener("click", function () { open(false); });
         input.addEventListener("input", function () {
-            if (document.activeElement === input) { open(); }
+            if (!eligiendo && document.activeElement === input) { open(true); }
         });
         // Va ANTES que el Enter = «Guardar» de wireConciliaEdit
         // (wirePartidaCombos se llama primero): con el panel abierto, las
