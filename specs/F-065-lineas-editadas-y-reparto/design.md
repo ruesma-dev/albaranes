@@ -131,8 +131,9 @@ cuando algo cambia, sale de `_importe_de_linea(precio, Q, dto)`. Filas legadas (
 - **Combo de partida** (`attachPartidaCombo`): `pick` avisa con el `input` de siempre (wireConciliaEdit) sin reabrir
   (el `input` del propio combo lo ignora mientras elige). Con texto nuevo: `scrollTop = 0` y activa = «Almacén» si
   `esAlmacenTecleado` (prefijo de «almacen» sin acentos, o lo trae entero); si no, ninguna (como antes).
-- **Acciones**: la celda deja `nowrap` y `overflow: hidden` (los botones bajan de línea y no se recortan) y su ancho por
-  defecto pasa a 230 px. Causa hallada: T24 borró por error el bloque «Columnas de tabla GENÉRICAS» de `app.js`
+- **Acciones** (dato del humano: con una fila «Desbloquear» la tabla se ensanchaba y «Guardar»/«Dividir» salían de la
+  vista): columna `sticky` a la derecha, opaca, fija (`data-col-fixed`, no se arrastra) y de 200 px; «Borrar» compacto
+  («✕» con `title`); sin `nowrap` ni `overflow: hidden` (si se estrecha, los botones bajan de línea). Causa hallada: T24 borró por error el bloque «Columnas de tabla GENÉRICAS» de `app.js`
   (anchos, orden, reordenar, «↺ Columnas»; también la tabla de la bandeja); se restaura tal cual era antes de T24.
 
 ## 6. SQL

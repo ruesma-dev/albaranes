@@ -689,7 +689,7 @@
                             <col data-col="descuento" data-w="80">
                             <col data-col="codigo" data-w="110">
                             {% if document.alta_sigrid_activa %}<col data-col="producto" data-w="170">{% endif %}
-                            <col data-col="acciones" data-w="156">
+                            <col data-col="acciones" data-w="200">
                         </colgroup>
                         <thead>
                         <tr class="salmon-head">
@@ -704,7 +704,7 @@
                             <th data-col="codigo" draggable="true"><span class="th-label">Cód. externo</span><span class="th-sort"></span><span class="col-resizer"></span></th>
                             {# F-053 R40: producto con el que se dará de alta en Sigrid (solo con DESDE). #}
                             {% if document.alta_sigrid_activa %}<th data-col="producto" draggable="true"><span class="th-label">Producto Sigrid</span><span class="th-sub">sin vincular: genérico</span><span class="th-sort"></span><span class="col-resizer"></span></th>{% endif %}
-                            <th data-col="acciones" draggable="true"><span class="th-label">Acciones</span><span class="col-resizer"></span></th>
+                            <th data-col="acciones" data-col-fixed><span class="th-label">Acciones</span><span class="col-resizer"></span></th>
                         </tr>
                         </thead>
                         <tbody>
@@ -877,10 +877,10 @@
                                             {% endif %}
                                         </td>
                                     {% endif %}
-                                    {# Acciones — Borrar + Guardar (a la derecha). #}
+                                    {# Acciones — ✕ (borrar) + Guardar + Dividir, o Desbloquear. F-065 R29 v3: columna fija pegada a la derecha (sticky, styles.css). #}
                                     <td class="concilia-td td-acciones" data-col="acciones">
                                         {% if cedit %}
-                                            <button type="button" class="btn small danger js-concilia-remove" title="Borrar esta línea salmón (no se llevará a Sigrid; deja de sumar al total)">Borrar ✕</button>
+                                            <button type="button" class="btn small danger js-concilia-remove" aria-label="Borrar" title="Borrar esta línea salmón (no se llevará a Sigrid; deja de sumar al total)">✕</button>
                                             <button type="button" class="btn small success js-cedit-save" title="Guardar los cambios de esta línea y bloquearla. Si cambias la partida, la unidad o el precio, pasará de Contrato a Nueva conservando el resto.">Guardar</button>
                                             {# F-065 R29: dividir (F7). No en las sintéticas de sv6 ni con «revisa la cantidad» (antes, resolverla). #}
                                             {% if dline.line_kind != 'synthetic_modifier' and 'front_unidad_cambiada_revisa_cantidad' not in razones and dline.cantidad %}

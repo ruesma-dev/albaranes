@@ -1610,9 +1610,30 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
 /* Origen: solo el badge. */
 .salmon-table td.td-origen { text-align: center; }
 
-/* Acciones: Borrar + Guardar a la DERECHA. */
-.salmon-table td.td-acciones { white-space: nowrap; text-align: right; }
-.salmon-table td.td-acciones .btn { margin-left: 4px; }
+/* Acciones (F-065 R29 v3): SIEMPRE a la vista, pegada a la derecha del scroll
+   y opaca (con una fila «Desbloquear» la tabla se ensanchaba y «Guardar» y
+   «Dividir» quedaban fuera de la vista). Columna fija de ancho estable (no
+   depende de qué botones salgan); si se estrecha, los botones bajan de
+   línea en vez de recortarse. El fondo de las filas (zebra, hover,
+   conciliación) manda sobre este por especificidad: siempre opaco. */
+.salmon-table td.td-acciones {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: var(--paper, #ffffff);
+    box-shadow: -6px 0 6px -6px rgba(0, 0, 0, 0.3);
+    white-space: normal;
+    overflow: visible;
+    text-align: right;
+}
+.salmon-table thead th[data-col="acciones"] {
+    position: sticky;
+    right: 0;
+    z-index: 3;
+    cursor: default;
+    box-shadow: -6px 0 6px -6px rgba(0, 0, 0, 0.3);
+}
+.salmon-table td.td-acciones .btn { white-space: nowrap; margin: 2px 0 2px 4px; }
 
 /* Selector de línea de contrato OCULTO por defecto (concepto = 1 línea);
    el ✎ de Origen lo abre/cierra. */

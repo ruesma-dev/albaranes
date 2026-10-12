@@ -2866,6 +2866,298 @@
 })();
 
 // ===================================================================== //
+//  TANDA 2B — Columnas de tabla GENÉRICAS: reordenar + ancho + orden.    //
+//                                                                         //
+//  Reutilizable en cualquier <table> que declare:                        //
+//    data-cols-store="clave"   -> prefijo localStorage (por usuario)      //
+//    data-resizable="1"        -> permite redimensionar (requiere         //
+//                                 <colgroup> con <col data-col data-w>)   //
+//    data-sortable="1"         -> orden por columna en cliente (▲▼)       //
+//  y, en cada <th>/<td>/<col>, data-col="clave". Columnas con            //
+//  data-col-fixed no se mueven (p.ej. la columna sticky de acciones).     //
+//  El ORDEN, ANCHO y ORDENACIÓN se guardan por usuario en localStorage    //
+//  (claves distintas por tabla), de modo que el grid de líneas y la       //
+//  tabla de la bandeja recuerdan su configuración por separado.          //
+// ===================================================================== //
+(function () {
+    "use strict";
+    var MIN_W = 56;
+
+    function rj(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+    function wj(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+    function enhanceTable(table) {
+        if (!table) { return null; }
+        var store = table.getAttribute("data-cols-store");
+        if (!store) { return null; }
+        var resizable = table.getAttribute("data-resizable") === "1";
+        var sortable = table.getAttribute("data-sortable") === "1";
+        var colgroup = table.querySelector("colgroup");
+        var theadRows = [].slice.call(table.querySelectorAll("thead tr"));
+        var headRow = null;
+        for (var i = 0; i < theadRows.length; i++) {
+            if (theadRows[i].querySelector("th[data-col]")) { headRow = theadRows[i]; break; }
+        }
+        if (!headRow) { return null; }
+        var tbody = table.querySelector("tbody");
+
+        var DEFAULT_ORDER = [].map.call(headRow.querySelectorAll("th[data-col]"),
+            function (th) { return th.getAttribute("data-col"); });
+        var FIXED = {};
+        [].forEach.call(headRow.querySelectorAll("th[data-col]"), function (th) {
+            if (th.hasAttribute("data-col-fixed")) { FIXED[th.getAttribute("data-col")] = true; }
+        });
+        var MOVABLE = DEFAULT_ORDER.filter(function (k) { return !FIXED[k]; });
+
+        var LS_ORDER = store + ".order.v1";
+        var LS_WIDTH = store + ".width.v1";
+        var LS_SORT = store + ".sort.v1";
+
+        function movableOrder() {
+            var saved = rj(LS_ORDER);
+            if (!Array.isArray(saved)) { return MOVABLE.slice(); }
+            var known = {}; MOVABLE.forEach(function (k) { known[k] = true; });
+            var out = saved.filter(function (k) { return known[k]; });
+            MOVABLE.forEach(function (k) { if (out.indexOf(k) === -1) { out.push(k); } });
+            return out;
+        }
+        function sequence() {
+            var mo = movableOrder(); var mi = 0; var seq = [];
+            DEFAULT_ORDER.forEach(function (k) {
+                if (FIXED[k]) { seq.push(k); } else { seq.push(mo[mi++]); }
+            });
+            return seq;
+        }
+        function reorderParent(parent, seq) {
+            if (!parent) { return; }
+            var byCol = {};
+            [].forEach.call(parent.children, function (n) {
+                var k = n.getAttribute && n.getAttribute("data-col");
+                if (k) { byCol[k] = n; }
+            });
+            seq.forEach(function (k) { if (byCol[k]) { parent.appendChild(byCol[k]); } });
+        }
+        function applyOrder() {
+            var seq = sequence();
+            reorderParent(colgroup, seq);
+            theadRows.forEach(function (tr) { reorderParent(tr, seq); });
+            if (tbody) {
+                [].forEach.call(tbody.querySelectorAll("tr"), function (tr) {
+                    if (tr.classList.contains("concilia-add") ||
+                        tr.classList.contains("salmon-empty")) { return; }
+                    if (tr.querySelector("td[data-col]")) { reorderParent(tr, seq); }
+                });
+            }
+        }
+
+        // ---------------- Anchos (solo resizable + colgroup) ------------- //
+        function defW(k) {
+            var col = colgroup && colgroup.querySelector('col[data-col="' + k + '"]');
+            var d = col && Number(col.getAttribute("data-w"));
+            return (isFinite(d) && d > 0) ? d : 120;
+        }
+        function widths() {
+            var saved = rj(LS_WIDTH) || {}; var out = {};
+            DEFAULT_ORDER.forEach(function (k) {
+                var w = Number(saved[k]);
+                out[k] = (isFinite(w) && w >= MIN_W) ? w : defW(k);
+            });
+            return out;
+        }
+        function applyWidths() {
+            if (!colgroup) { return; }
+            var W = widths(); var total = 0;
+            DEFAULT_ORDER.forEach(function (k) {
+                var w = W[k]; total += w;
+                var col = colgroup.querySelector('col[data-col="' + k + '"]');
+                if (col) { col.style.width = w + "px"; }
+                var th = headRow.querySelector('th[data-col="' + k + '"]');
+                if (th) { th.style.width = w + "px"; }
+            });
+            table.style.width = total + "px";
+        }
+        function syncTableWidth() {
+            if (!colgroup) { return; }
+            var total = 0;
+            [].forEach.call(colgroup.querySelectorAll("col[data-col]"), function (col) {
+                total += parseFloat(col.style.width) || 0;
+            });
+            if (total) { table.style.width = total + "px"; }
+        }
+
+        // ---------------- Ordenación cliente (▲▼) ------------------------ //
+        function getSort() { var s = rj(LS_SORT); return (s && s.col) ? s : null; }
+        function cellVal(tr, col, type) {
+            var td = tr.querySelector('td[data-col="' + col + '"]');
+            if (!td) { return type === "num" ? -Infinity : ""; }
+            var inp = td.querySelector("input");
+            var raw = inp ? inp.value : td.getAttribute("data-sort-value");
+            if (raw === null || raw === undefined) { raw = td.textContent || ""; }
+            if (type === "num") {
+                var n = parseFloat(String(raw).replace(",", "."));
+                return isFinite(n) ? n : -Infinity;
+            }
+            return String(raw).trim().toLowerCase();
+        }
+        function sortRows(col, dir) {
+            if (!tbody) { return; }
+            var th = headRow.querySelector('th[data-col="' + col + '"]');
+            var type = (th && th.getAttribute("data-sort-type") === "num") ? "num" : "text";
+            var rows = [].slice.call(tbody.querySelectorAll("tr")).filter(function (tr) {
+                return tr.querySelector("td[data-col]") &&
+                    !tr.classList.contains("salmon-empty") &&
+                    !tr.classList.contains("concilia-add");
+            });
+            rows.sort(function (a, b) {
+                var va = cellVal(a, col, type), vb = cellVal(b, col, type);
+                if (va < vb) { return dir === "asc" ? -1 : 1; }
+                if (va > vb) { return dir === "asc" ? 1 : -1; }
+                return 0;
+            });
+            rows.forEach(function (tr) { tbody.appendChild(tr); });
+        }
+        function applySortIndicator() {
+            [].forEach.call(headRow.querySelectorAll("th[data-col]"), function (th) {
+                th.classList.remove("sorted-asc", "sorted-desc");
+            });
+            var s = getSort(); if (!s) { return; }
+            var th = headRow.querySelector('th[data-col="' + s.col + '"]');
+            if (!th) { return; }
+            th.classList.add(s.dir === "asc" ? "sorted-asc" : "sorted-desc");
+            sortRows(s.col, s.dir);
+        }
+
+        // ---------------- Cableado de interacciones ---------------------- //
+        function wireResize() {
+            var rz = null;
+            headRow.addEventListener("mousedown", function (ev) {
+                var h = ev.target.closest ? ev.target.closest(".col-resizer") : null;
+                if (!h) { return; }
+                var th = h.closest("th[data-col]"); if (!th) { return; }
+                ev.preventDefault();
+                var k = th.getAttribute("data-col");
+                var col = colgroup.querySelector('col[data-col="' + k + '"]');
+                rz = { k: k, col: col, th: th, x: ev.clientX, w: th.getBoundingClientRect().width };
+                document.body.classList.add("col-resizing");
+            });
+            document.addEventListener("mousemove", function (ev) {
+                if (!rz) { return; }
+                var w = Math.max(MIN_W, Math.round(rz.w + (ev.clientX - rz.x)));
+                if (rz.col) { rz.col.style.width = w + "px"; }
+                rz.th.style.width = w + "px"; rz._w = w;
+                syncTableWidth();
+            });
+            document.addEventListener("mouseup", function () {
+                if (!rz) { return; }
+                if (rz._w) { var W = widths(); W[rz.k] = rz._w; wj(LS_WIDTH, W); }
+                rz = null; document.body.classList.remove("col-resizing");
+            });
+        }
+        function wireReorder() {
+            var dragKey = null;
+            function cleanup() {
+                dragKey = null;
+                [].forEach.call(headRow.querySelectorAll("th"), function (t) {
+                    t.classList.remove("col-dragging"); t.classList.remove("col-drop-target");
+                });
+            }
+            headRow.addEventListener("dragstart", function (ev) {
+                var th = ev.target.closest ? ev.target.closest("th[data-col]") : null;
+                if (!th) { return; }
+                if (FIXED[th.getAttribute("data-col")]) { ev.preventDefault(); return; }
+                if (ev.target.closest && ev.target.closest(".col-resizer")) { ev.preventDefault(); return; }
+                dragKey = th.getAttribute("data-col");
+                th.classList.add("col-dragging");
+                headRow._didDrag = false;
+                try { ev.dataTransfer.effectAllowed = "move"; ev.dataTransfer.setData("text/plain", dragKey); } catch (e) {}
+            });
+            headRow.addEventListener("dragover", function (ev) {
+                if (!dragKey) { return; }
+                ev.preventDefault();
+                try { ev.dataTransfer.dropEffect = "move"; } catch (e) {}
+                var th = ev.target.closest ? ev.target.closest("th[data-col]") : null;
+                [].forEach.call(headRow.querySelectorAll("th"), function (t) { t.classList.remove("col-drop-target"); });
+                if (th && !FIXED[th.getAttribute("data-col")] &&
+                    th.getAttribute("data-col") !== dragKey) { th.classList.add("col-drop-target"); }
+            });
+            headRow.addEventListener("drop", function (ev) {
+                if (!dragKey) { return; }
+                ev.preventDefault();
+                var th = ev.target.closest ? ev.target.closest("th[data-col]") : null;
+                if (th && !FIXED[th.getAttribute("data-col")]) {
+                    var target = th.getAttribute("data-col");
+                    if (target && target !== dragKey) {
+                        var mo = movableOrder();
+                        var from = mo.indexOf(dragKey), to = mo.indexOf(target);
+                        if (from !== -1 && to !== -1) {
+                            mo.splice(from, 1); mo.splice(to, 0, dragKey);
+                            wj(LS_ORDER, mo); applyOrder();
+                            if (resizable && colgroup) { applyWidths(); }
+                        }
+                    }
+                }
+                headRow._didDrag = true;
+                setTimeout(function () { headRow._didDrag = false; }, 0);
+                cleanup();
+            });
+            headRow.addEventListener("dragend", function () {
+                headRow._didDrag = true;
+                setTimeout(function () { headRow._didDrag = false; }, 0);
+                cleanup();
+            });
+        }
+        function wireSort() {
+            headRow.addEventListener("click", function (ev) {
+                if (ev.target.closest && ev.target.closest(".col-resizer")) { return; }
+                if (headRow._didDrag) { return; }
+                var th = ev.target.closest ? ev.target.closest("th[data-col]") : null;
+                if (!th) { return; }
+                var col = th.getAttribute("data-col");
+                var s = getSort(); var dir = "asc";
+                if (s && s.col === col) { dir = s.dir === "asc" ? "desc" : "asc"; }
+                wj(LS_SORT, { col: col, dir: dir });
+                applySortIndicator();
+            });
+        }
+
+        // ---------------- Arranque --------------------------------------- //
+        applyOrder();
+        if (resizable && colgroup) { applyWidths(); }
+        if (sortable) { applySortIndicator(); }
+        wireReorder();
+        if (resizable && colgroup) { wireResize(); }
+        if (sortable) { wireSort(); }
+
+        return {
+            reset: function () {
+                try {
+                    localStorage.removeItem(LS_ORDER);
+                    localStorage.removeItem(LS_WIDTH);
+                    localStorage.removeItem(LS_SORT);
+                } catch (e) {}
+                applyOrder();
+                if (resizable && colgroup) { applyWidths(); }
+                if (sortable) { applySortIndicator(); }
+            }
+        };
+    }
+
+    // Aplicar a las tablas con configuración: grid de líneas (detalle) y
+    // tabla de la bandeja (lista). Cada una recuerda su layout por separado.
+    var gridApi = enhanceTable(document.getElementById("lines-table"));
+    [].forEach.call(document.querySelectorAll('table[data-cols-store]'), function (t) {
+        if (t.id === "lines-table") { return; }
+        enhanceTable(t);
+    });
+
+    // Botón «↺ Columnas» del detalle: restablece el grid de líneas.
+    var resetBtn = document.getElementById("reset-cols-btn");
+    if (resetBtn && gridApi) {
+        resetBtn.addEventListener("click", function () { gridApi.reset(); });
+    }
+})();
+
+// ===================================================================== //
 //  TANDA 2B — Atajo de teclado del grid de líneas: F8.                  //
 //    F8 = copiar a la celda en foco el valor de la celda de ARRIBA       //
 //         (misma columna, fila salmón anterior). Marca la fila como       //
