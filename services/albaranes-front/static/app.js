@@ -1148,12 +1148,13 @@
     wireConciliaEdit();
 
     // ------------------------------------------------------------------ //
-    // «Dividir» (F-065 R29): el botón de la fila o F6 abren una ventana con
+    // «Dividir» (F-065 R29 v3): el botón de la fila o F7 abren una ventana con
     // el número de líneas (2–20) y la cantidad y la partida de cada una
     // (combo de partidas de la obra; vacía = almacén) con lo que falta por
     // repartir. «Aceptar» solo se habilita si las partes suman la Q de la
-    // fila (± 0,005), ninguna es 0 ni de otro signo. Sustituye a F7
-    // (duplicar), que creaba una «Nueva» sin vínculo.
+    // fila (± 0,005), ninguna es 0 ni de otro signo. Sustituye al F7 de
+    // antes (duplicar), que creaba una «Nueva» sin vínculo; F6 no hace nada
+    // en la ficha (queda para el navegador).
     // ------------------------------------------------------------------ //
     function faltaPorRepartir(q, valores) {
         let suma = 0;
@@ -1318,9 +1319,9 @@
         linesBody.querySelectorAll(".js-dividir").forEach(function (boton) {
             boton.addEventListener("click", function () { abrir(boton); });
         });
-        // F6 en una fila abre su «Dividir».
+        // F7 en una fila abre su «Dividir».
         document.addEventListener("keydown", function (ev) {
-            if (ev.key !== "F6" || dialogo.open) { return; }
+            if (ev.key !== "F7" || dialogo.open) { return; }
             const activo = document.activeElement;
             const tr = activo && activo.closest ? activo.closest("tr.conciliacion-row") : null;
             const boton = tr ? tr.querySelector(".js-dividir") : null;
@@ -2807,7 +2808,7 @@
 //    F8 = copiar a la celda en foco el valor de la celda de ARRIBA       //
 //         (misma columna, fila salmón anterior). Marca la fila como       //
 //         editada (no guarda hasta pulsar «Guardar»).                    //
-//    F7 (duplicar) se quitó en F-065 R29: lo sustituye «Dividir» (F6).   //
+//    F7 ya no duplica (F-065 R29): abre «Dividir» (wireDividir).       //
 // ===================================================================== //
 (function () {
     "use strict";
