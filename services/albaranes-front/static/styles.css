@@ -1816,5 +1816,8 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
 .dividir-dialog .dividir-partes td:first-child { width: 2em; text-align: right; }
 .dividir-dialog .dividir-falta { font-weight: 600; margin: 4px 0; }
 .dividir-dialog .dividir-acciones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+/* F-065 R29 v3: la última parte se rellena sola (solo lectura) y va en rojo si queda a 0 o de otro signo. */
+.dividir-dialog .cell-input.dividir-auto { background: var(--paper-soft, #fafbfb); color: var(--steel, #7b868c); font-style: italic; cursor: default; }
+.dividir-dialog .cell-input.dividir-auto.dividir-resto-mal { color: var(--danger, #b42318); border-color: var(--danger, #b42318); background: #fdecea; font-style: normal; font-weight: 600; }
 .salmon-table .parte-reparto { display: block; margin-top: 2px; }
 .salmon-table .aviso-reparto { display: block; margin-top: 2px; }

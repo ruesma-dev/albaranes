@@ -1156,13 +1156,44 @@
     // antes (duplicar), que creaba una «Nueva» sin vínculo; F6 no hace nada
     // en la ficha (queda para el navegador).
     // ------------------------------------------------------------------ //
+    // Lo que falta por repartir: Q − la suma de ``valores`` (los vacíos no
+    // cuentan). Es la cantidad de la última parte (R29 v3), así que se
+    // redondea a 1e-6 (solo quita el ruido de la coma flotante), no a
+    // milésimas.
     function faltaPorRepartir(q, valores) {
         let suma = 0;
         valores.forEach(function (v) {
             const n = parseNumEs(v);
             if (n !== null) { suma += n; }
         });
-        return Math.round((q - suma) * 1000) / 1000;
+        return Math.round((q - suma) * 1e6) / 1e6;
+    }
+
+    // Estado de la ventana con la última parte automática (R29 v3): su
+    // cantidad (``resto`` = Q − las demás), si va en rojo (0 o de otro signo
+    // que Q) y el mensaje. «Aceptar» lo sigue decidiendo ``repartoValido``.
+    function estadoReparto(q, demas) {
+        const resto = faltaPorRepartir(q, demas);
+        const ultimaMal = resto === 0 || (resto > 0) !== (q > 0);
+        let mensaje = "Reparto completo.";
+        if (ultimaMal) {
+            mensaje = resto === 0
+                ? "La última parte quedaría a 0."
+                : "Sobra: " + String(Math.abs(resto)).replace(".", ",");
+        } else {
+            for (let i = 0; i < demas.length; i++) {
+                const n = parseNumEs(demas[i]);
+                if (n === null) {
+                    mensaje = "Falta la cantidad de la parte " + (i + 1) + ".";
+                    break;
+                }
+                if (n === 0 || (n > 0) !== (q > 0)) {
+                    mensaje = "La parte " + (i + 1) + " no puede ser 0 ni de otro signo.";
+                    break;
+                }
+            }
+        }
+        return { resto: resto, ultimaMal: ultimaMal, mensaje: mensaje };
     }
 
     function repartoValido(q, valores) {
@@ -1208,18 +1239,22 @@
         function cantidades() { return valoresDe(".js-dividir-cantidad"); }
         function partidas() { return valoresDe(".js-dividir-partida"); }
 
+        // La última parte se rellena sola con lo que falta (R29 v3).
         function refrescar() {
-            const falta = faltaPorRepartir(actual.q, cantidades());
-            faltaEl.textContent = falta === 0
-                ? "Reparto completo."
-                : (falta > 0 ? "Falta: " : "Sobra: ") + String(Math.abs(falta)).replace(".", ",");
+            const inputs = cuerpo.querySelectorAll(".js-dividir-cantidad");
+            const ultima = inputs[inputs.length - 1];
+            const estado = estadoReparto(actual.q, cantidades().slice(0, -1));
+            ultima.value = String(estado.resto).replace(".", ",");
+            ultima.classList.toggle("dividir-resto-mal", estado.ultimaMal);
+            faltaEl.textContent = estado.mensaje;
             aceptar.disabled = !repartoValido(actual.q, cantidades());
         }
 
         function pintarPartes() {
             let n = parseInt(nEl.value, 10);
             n = Math.max(2, Math.min(20, isNaN(n) ? 2 : n));
-            const previas = cantidades();
+            // Solo las que tecleó el administrativo: el resto de antes no.
+            const previas = cantidades().slice(0, -1);
             const previasPartida = partidas();
             cuerpo.innerHTML = "";
             for (let i = 0; i < n; i++) {
@@ -1232,7 +1267,14 @@
                 cant.inputMode = "decimal";
                 cant.className = "cell-input cell-num js-dividir-cantidad";
                 cant.value = i < previas.length ? previas[i] : "";
-                cant.addEventListener("input", refrescar);
+                if (i === n - 1) {
+                    cant.readOnly = true;
+                    cant.tabIndex = -1;
+                    cant.classList.add("dividir-auto");
+                    cant.title = "Se rellena sola: la cantidad de la línea menos las demás partes.";
+                } else {
+                    cant.addEventListener("input", refrescar);
+                }
                 tdCant.appendChild(cant);
                 const tdPartida = document.createElement("td");
                 const partida = document.createElement("input");
