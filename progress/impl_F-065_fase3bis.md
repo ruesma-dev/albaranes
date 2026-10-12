@@ -141,3 +141,56 @@ passed**; tras cerrar supervivientes, **17 passed**.
 | Mutantes | arnés: alcance vacío (0 Python); **a mano: 44 generados, 44 muertos, 0 supervivientes** (primera 43/5, cerrados) |
 | Tiempo de la suite | sv4 43,8 s sola (177 s dentro de `init.sh`); campaña a mano ≈ 2 min (44 × ~2,5 s) |
 | `bash harness/init.sh` | **exit 0**, `ENTORNO LISTO` (raíz 1083 passed, sv4 1238 passed) |
+
+## Pasada 2 (review `1bc0e5f`: CHANGES_REQUESTED por CR1, CR2 y CR3)
+
+Commits `02b65d1` (RED) · `15fae04` CR1 · `6bcd932` CR2 · `7b879ec` MANUAL · `333edf0`, `8f67a2a`, `3f904f5`, `1b60541`
+(CR3: superviviente cerrado y CSS sin declaraciones muertas) · el de este informe. Solo sv4 y solo front. H1 sin tocar.
+
+- **CR1 · el combo volvía a un texto fuera de la lista.** `open(textoNuevo)`: `alAbrir` solo se toma al abrir por foco
+  o clic (`if (panel.hidden && !textoNuevo)`), nunca de lo tecleado. Cubre: elegir → teclear «02.0x» → blur (o Esc)
+  ⇒ vuelve «02.03»; foco → Esc → teclear «zz» → blur ⇒ vuelve la original; y (de la campaña) teclear con la lista
+  abierta → pinchar otra vez en la casilla → blur ⇒ vuelve la original. Más dos de control: lo válido tecleado se
+  queda, y tras elegir, teclear vuelve a abrir la lista. `dom_falso.js` gana `blur()` (el foco pasa a `body` antes de
+  disparar «blur», como el navegador).
+- **CR2 · cabecera sticky.** Selector `.salmon-table thead tr.salmon-head th[data-col="acciones"]` (0,3,3), que gana a
+  `.salmon-table thead tr.salmon-head th` (0,2,3, `position: relative`). Test nuevo con un **motor de cascada** (en el
+  propio test): modela la celda y la cabecera como las pinta la plantilla (tabla, `tbody`/`thead`, fila con sus clases,
+  celda con sus atributos), recorre `styles.css` y decide qué regla GANA cada propiedad por especificidad y orden
+  (`test_f065_cr2_el_motor_de_cascada_se_comporta` lo prueba con casos propios). Comprueba en cabecera `position`,
+  `right`, `cursor`, `box-shadow` y fondo; en la celda `position`, `right`, `overflow`, `text-align`, `box-shadow`, el
+  fondo opaco que manda (`tr.conciliacion-row > td.concilia-td`, `#f7f4f5`), que ni la celda ni sus antepasados reciban
+  `nowrap`, y el `nowrap` de cada botón.
+- **Comprobado en un navegador de verdad** (Chrome sin cabeza, `--dump-dom` de una página de prueba con el
+  `styles.css` real, una tabla de 1349 px en una caja de 700 px y la medida con `getComputedStyle` y
+  `getBoundingClientRect`): con el CSS de la pasada 1 la cabecera salía `relative` y, sin desplazar, su borde derecho
+  estaba en 1369 px frente a 720 de sus botones; con el de ahora, `sticky`, 720 y 720, con y sin desplazar; los tres
+  botones dentro de la caja y fondo `rgb(247, 244, 245)`. Y con `elementFromPoint` en 12 puntos de la columna
+  desplazada, la columna queda encima con `z-index` y **sin** él: los dos `z-index` eran equivalentes y se quitaron.
+- **Quitado por no hacer nada** (habrían sido mutantes equivalentes, RM3): `background` de la celda (lo pone la fila,
+  más específica), `white-space: normal` (es el heredado) y los `z-index` (arriba). El comentario del CSS lo explica.
+- **MANUAL T35**: paso 3, teclear fuera de la lista tras elegir y salir; paso 5, la cabecera «Acciones» sigue encima
+  de sus botones al desplazar, y **O1** (anchos guardados de antes: «Acciones» a 156 px; «↺ Columnas» la deja en 200).
+
+**RED** (tests nuevos, `02b65d1`, contra el código de la pasada 1, `1bc0e5f`; `pytest tests/test_f065_f3bis_front.py -k "cr1
+or cr2" -vv`) ⇒ **`4 failed, 3 passed`**:
+```
+cr1_elegir_y_teclear_..._al_salir     {'valor': '02.0x'} != {'valor': '02.03'}
+cr1_elegir_teclear_y_esc              {'valor': '02.0x'} != {'valor': '02.03'}
+cr1_foco_esc_teclear_y_salir          {'valor': 'zz'} != {'valor': '01.01'}
+cr2_la_cabecera_..._gana_la_cascada   assert 'relative' == 'sticky'
+```
+(pasan los de control: lo válido se queda, el motor se comporta y la celda ya ganaba). El de pinchar en la casilla,
+añadido por la campaña, contra el código con la guarda mutada: `{'valor': 'zz'} != {'valor': '01.01'}`.
+
+**Mutación (CR3)**, rehecha entera, detalle y script en `progress/mutacion_F-065_fase3bis.md`: **HEAD
+`1b605415b0b4dd6f2ca99dfced7d8af94eb8fea0`**; línea base de los tres ficheros de tests **192 passed, 7,8 s**; por fila
+`fichero:línea`, original→mutado y nº de fallos (sin `-x`). Nuevos: 4 de la guarda de `alAbrir`, el del selector de la
+cabecera, el del reinicio de `eligiendo` y los de cada declaración de «Acciones». Intermedia (`333edf0…`): 59
+mutantes, **1 superviviente** (`panel.hidden && !textoNuevo` → `!textoNuevo`), cerrado con el test de pinchar en la
+casilla. **Final: 57 mutantes, 57 muertos, 0 supervivientes, 0 equivalentes**; los 12 de CSS mueren también **sin**
+los dos tests textuales (solo con el motor de cascada). Inventario actualizado. Nota en el informe de mutación sobre la
+guarda `dialogo.open` (#2): muere por conducta; en el navegador el modal hace inalcanzable ese estado.
+
+**Verificación**: `test_f065_f3bis_front.py` **26 passed**; los tres ficheros, 192 passed; `bash harness/init.sh`: ver
+la línea final.
