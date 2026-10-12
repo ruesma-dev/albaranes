@@ -1,4 +1,4 @@
-# F-065 · tareas (v2)
+# F-065 · tareas (v3: fase 3 bis, T29–T35)
 
 Rama `feature/F-065-lineas-editadas-y-reparto` (worktree `../albaranes-F-065`, con `dev` fusionado en ae86bfb).
 Rigor `critico`: **fase RED obligatoria** en toda tarea con test (falla antes, pasa después; traza en
@@ -46,3 +46,15 @@ consultas de comprobación son de solo lectura.
 - [x] T26: cobertura y campaña de mutación de la fase 3  |  Verificación: como T12 (`progress/mutacion_F-065_fase3.md`)
 - [ ] T27: MANUAL fase 3 (humano, local): F6 sobre una fila Contrato de 18 ⇒ 6 (su partida) / 7 (otra) / 5 (almacén), «Guardar y aprobar»; `SELECT lv.id, lv.line_kind, lv.parent_merge_line_id, lv.matched_contrato_line_id, lv.derived_contrato_line_id, lv.cantidad_convertida, lv.importe_calculado, lv.codigo_partida_final FROM albaran_line_valuations lv JOIN albaran_valuations v ON v.id = lv.valuation_id WHERE v.document_id = '<ID>' ORDER BY lv.id;`; desaprobar, «Deshacer» y repetir  |  Verificación: MANUAL (humano): 6 y 5 con la línea de contrato, 7 Nueva, importes que suman el original; tras deshacer, una fila de 18
 - [ ] T28: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh` termina con código 0
+
+## Fase 3 bis · ajustes de front de las MANUAL T19/T27 (solo sv4: `app.js`, plantilla, CSS; design §5.5)
+
+Plan aprobado por el humano en la PARADA 1 del 2026-10-12. Sin servidor. Informe: `progress/impl_F-065_fase3bis.md`.
+
+- [ ] T29: tests RED de la fase 3 bis: F7 divide y F6 no (R29 v3), última parte automática y en rojo (R29 v3), el combo no se reabre al elegir y «al» marca «Almacén» arriba (R27 v3), «Acciones» sin recortar y el grid de columnas de vuelta (R29 v3)  |  Verificación: `pytest tests/test_f065_f3bis_front.py` falla como se espera; traza en el informe
+- [ ] T30: F7 abre «Dividir», F6 libre; «(F7)» en títulos y comentarios (R29 v3)  |  Verificación: `pytest tests/test_f065_f3bis_front.py -k f7 tests/test_f065_f3_dividir.py -k js`
+- [ ] T31: la última parte de la ventana se rellena sola (Q − las demás), de solo lectura, en rojo si sale 0 o de otro signo; «Aceptar» con la regla de siempre (R29 v3)  |  Verificación: `pytest tests/test_f065_f3bis_front.py -k ultima`
+- [ ] T32: combo de partida: elegir (ratón o Enter) lo deja cerrado sin perder el aviso de cambios; texto nuevo ⇒ arriba y «al»/«alm»/«almacén» marcan «Almacén» (R27 v3)  |  Verificación: `pytest tests/test_f065_f3bis_front.py -k combo tests/test_f065_f2_origen.py`
+- [ ] T33: «Acciones» sin recortar (ajuste de línea, ancho por defecto 230) y restaurar el bloque «Columnas de tabla GENÉRICAS» que T24 borró por error (R29 v3)  |  Verificación: `pytest tests/test_f065_f3bis_front.py -k "acciones or columnas"`
+- [ ] T34: `docs/ARCHITECTURE.md` (F7), MANUAL de re-prueba en `progress/current.md` e informe con RED, cobertura y mutación  |  Verificación: `bash harness/init.sh` en verde
+- [ ] T35: MANUAL fase 3 bis (humano, local): F7 divide y F6 no; la última parte se rellena sola y sale en rojo si las demás se pasan; el combo se cierra al elegir; «al» marca «Almacén»; «Acciones» con sus botones; «↺ Columnas», ordenar y redimensionar vuelven a funcionar  |  Verificación: MANUAL (humano), comandos en `progress/current.md`

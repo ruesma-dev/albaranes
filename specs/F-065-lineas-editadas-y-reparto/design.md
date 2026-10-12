@@ -1,4 +1,4 @@
-# F-065 · diseño (v2)
+# F-065 · diseño (v3: §5.5, fase 3 bis)
 
 Rutas relativas a `services/albaranes-front/` (sv4) salvo indicación. Diagnóstico con fichero:línea en
 `progress/explore_F-065.md` y `progress/explore_front_detalle.md` (F1–F25). Decisiones: §7.
@@ -119,6 +119,21 @@ cuando algo cambia, sale de `_importe_de_linea(precio, Q, dto)`. Filas legadas (
 - Display: las `reparto` se agrupan por `parent_merge_line_id` como las sintéticas, pero `_synthetic_to_display`
   conserva `line_kind = 'reparto'` (hoy todo lo no `manual` sale como sintética); «Parte k de N» por `id`.
 - F6: `<dialog>` con N (2–20), cantidad y partida (combo de §5.3) por parte, «Falta: X»; F7 y su código se quitan.
+
+### 5.5 Fase 3 bis: ajustes de las MANUAL T19/T27 (v3, 2026-10-12; solo `app.js`, plantilla y CSS de sv4)
+
+- **F7 divide** (antes F6); F6 no hace nada en la ficha (vuelve a ser del navegador). Títulos «(F7)».
+- **Última parte automática**: `faltaPorRepartir(q, demás)` (redondeo a 1e-6, no a 1e-3: es la cantidad que se manda)
+  la rellena en vivo; input `readonly`, sin tabulación y con otro fondo; `estadoReparto` da el mensaje («Reparto
+  completo.», «Sobra: X», «La última parte quedaría a 0.», «Falta la cantidad de la parte k.», «La parte k no puede ser 0
+  ni de otro signo.») y si la última va en rojo (0 o de otro signo que Q). «Aceptar» sigue con `repartoValido` sobre
+  todas. Al cambiar N se conservan las editables (no el resto viejo). El servidor no cambia.
+- **Combo de partida** (`attachPartidaCombo`): `pick` avisa con el `input` de siempre (wireConciliaEdit) sin reabrir
+  (el `input` del propio combo lo ignora mientras elige). Con texto nuevo: `scrollTop = 0` y activa = «Almacén» si
+  `esAlmacenTecleado` (prefijo de «almacen» sin acentos, o lo trae entero); si no, ninguna (como antes).
+- **Acciones**: la celda deja `nowrap` y `overflow: hidden` (los botones bajan de línea y no se recortan) y su ancho por
+  defecto pasa a 230 px. Causa hallada: T24 borró por error el bloque «Columnas de tabla GENÉRICAS» de `app.js`
+  (anchos, orden, reordenar, «↺ Columnas»; también la tabla de la bandeja); se restaura tal cual era antes de T24.
 
 ## 6. SQL
 
