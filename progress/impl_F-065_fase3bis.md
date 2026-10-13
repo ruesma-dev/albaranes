@@ -56,10 +56,7 @@ parte · `9cffa6c` T32 combo · `bb3d250` T33 Acciones y columnas · `2380376` T
   aparte, es el commit `bb3d250` (y su test `test_f065_r29v3_columnas_*`).
 - **D2 · `resto · Q ≤ 0` y `n · Q ≤ 0`** en vez de `=== 0 || signos distintos`: la mutación sacó que con Q > 0 media
   condición sobraba y con Q < 0 nadie la probaba (§6). Q nunca es 0 en la ventana (sin Q no hay botón, R30).
-- **H1 (sin cambiar, recomiendo decidir)**: con texto que NO es «almacén» y ninguna marcada, **Enter elige la primera
-  de la lista, que siempre es «Almacén»** (código previo: `shown[activo >= 0 ? activo : 0]`). En una fila eso es un POST
-  inmediato a `/almacen`: quien teclee «02.0» + Enter manda la línea a almacén. Lo natural sería marcar la primera
-  partida que coincide. No lo toqué: cambia el teclado de R27 más allá de lo aprobado.
+- **H1**: Enter sin marcada caía en «Almacén» (POST `/almacen`). No se tocó aquí; resuelto en la pasada 3 (R27 v4).
 - **H2**: en la cabecera, «Guardar y aprobar» y «Desaprobar para editar» viven fuera de la tabla; no encontré nada que
   los oculte.
 - **H3**: el arranque local (`infra/local/arrancar_local.ps1`) toma el código del árbol PRINCIPAL ($PSScriptRoot): la
@@ -102,45 +99,30 @@ passed**; tras cerrar supervivientes, **17 passed**.
 
 ## 5. Verificación (resultado real)
 
-- `tests/test_f065_f3bis_front.py` **17 passed**; `test_f065_f3_dividir.py` y `test_f065_f2_origen.py` en verde (el test
-  de T24 se adapta: `"F7"` sí, `"F6"` no, sin `duplicateRow`).
-- Suite de sv4 sola (tras T33): **1237 passed** (43,8 s; 1221 de antes + 16).
-- `node --check static/app.js` OK; bloque restaurado: `diff` con `860b6c5^:…/app.js` líneas 2615–2905 ⇒ idéntico.
-- **`bash harness/init.sh`** (tal cual, worktree, sobre `32facbc`): **exit 0**, raíz `1083 passed`, sv4 `1238 passed`
-  (177 s), el resto en verde, `PUERTA COBERTURA: N/A`, rutas sensibles N/A, `PUERTA TAMAÑO` dentro (requirements
-  150/150, design 175/250), **`ENTORNO LISTO. Puedes trabajar.`** La pasada anterior (sobre `1c0b76d`) salió en ROJO
-  por `test_f039_r2_todo_informe_de_mutacion_figura_en_el_inventario`: faltaba la fila de
-  `mutacion_F-065_fase3bis.md` en `progress/inventario_mutacion_F-039.md`; añadida (`VÁLIDA`, «a mano»).
-- No verificado en un navegador real (sticky, tabla y teclado): es la MANUAL T35.
+- `test_f065_f3bis_front.py` 17 passed; sv4 sola 1237 passed (43,8 s); `node --check` OK; bloque restaurado idéntico
+  a `860b6c5^` (`diff`). `bash harness/init.sh` (`32facbc`): **exit 0**, sv4 1238 passed, `ENTORNO LISTO` (la vuelta
+  anterior, en rojo por la fila del inventario de mutación que faltaba: añadida).
 
 ## 6. Cobertura y mutación
 
-- **Cobertura de líneas cambiadas**: `PUERTA COBERTURA: N/A` (la fase 3 bis no cambia Python de producción: JS, CSS y
-  plantilla). El JS nuevo lo ejercitan los tests con node; no hay medidor de cobertura de JS en el arnés.
-- **Mutación**: `python -m harness.mutacion --feature F-065 --base cd3baf1 --rama HEAD` ⇒ **ALCANCE VACÍO** (0 líneas
-  Python; no escribe informe). Campaña **a mano** sobre lo nuevo (y lo restaurado) de JS, CSS y plantilla, detalle y
-  script en **`progress/mutacion_F-065_fase3bis.md`**: primera, **43 aplicados, 5 supervivientes** (F7 con la ventana
-  abierta; `resto === 0` y `>`→`>=` del resto; `n === 0` de la parte; «contiene» en vez de «prefijo» de almacén), todos
-  huecos reales o código redundante, cerrados en `2380376` con tests y reescribiendo los signos (D2); **final: 44
-  mutantes, 44 muertos, 0 supervivientes, 0 equivalentes**.
+- Cobertura de líneas cambiadas: **N/A** (sin Python de producción; el JS lo ejercitan los tests con node).
+- Mutación: el generador del arnés da ALCANCE VACÍO (0 líneas Python); campañas **a mano** en
+  `progress/mutacion_F-065_fase3bis.md` (la de la pasada 1, 44/44, no valía: la rehízo la pasada 2; ver cada pasada).
 
-## 7. MANUAL T35 y fuera de alcance
+## 7. MANUAL y fuera de alcance
 
-- MANUAL **T35** (y T27 ya con F7): comandos y criterio en `progress/current.md` (bloque F-065).
-- Fuera: H1 (Enter sin marcada ⇒ «Almacén»), mover «Acciones» a otra posición, cobertura de JS, el servidor (sin
-  cambios: reparto, importes y la validación de la suma siguen igual).
-- Falta: review de la fase 3 bis, MANUAL T35 y T27 (humano), fusionar en `dev`, `init.sh` en el árbol principal,
-  desplegar **solo sv4** y T28.
+- MANUAL T35 (hecha por el humano) y sus pasos 4 bis y 4 ter, en `progress/current.md`. Fuera: el servidor (no valida
+  la partida contra la obra, P11), cobertura de JS. Falta: review, fusionar, `init.sh` en el principal, desplegar sv4.
 
-## 8. Evidencias
+## 8. Evidencias (las últimas, pasada 5)
 
 | Evidencia | Valor real |
 |---|---|
-| Tests ejecutados | sv4 **1238 passed** (17 nuevos en `test_f065_f3bis_front.py`; el de F6/F7 de T24, adaptado) |
-| Cobertura de las líneas cambiadas | **N/A** (`PUERTA COBERTURA`: sin Python de producción cambiado; JS cubierto por tests con node) |
-| Mutantes | arnés: alcance vacío (0 Python); **a mano: 44 generados, 44 muertos, 0 supervivientes** (primera 43/5, cerrados) |
-| Tiempo de la suite | sv4 43,8 s sola (177 s dentro de `init.sh`); campaña a mano ≈ 2 min (44 × ~2,5 s) |
-| `bash harness/init.sh` | **exit 0**, `ENTORNO LISTO` (raíz 1083 passed, sv4 1238 passed) |
+| Tests ejecutados | sv4 **1287 passed** (`test_f065_f3bis_front.py`: 66) |
+| Cobertura de las líneas cambiadas | **N/A** (`PUERTA COBERTURA`: sin Python de producción; JS cubierto por tests con node) |
+| Mutantes | arnés: alcance vacío; **a mano, pasada 5: 19/19, 0 supervivientes** (pasadas 2, 3 y 4: 57/57, 15/15, 38/38) |
+| Tiempo de la suite | sv4 235,8 s dentro de `init.sh` (máquina cargada); línea base de la campaña 33,2 s |
+| `bash harness/init.sh` | **exit 0** (`b2c6730`), raíz 1083 passed, sv4 1287 passed, `ENTORNO LISTO` |
 
 ## Pasada 2 (review `1bc0e5f`: CHANGES_REQUESTED por CR1, CR2 y CR3)
 
@@ -154,19 +136,11 @@ Commits `02b65d1` (RED) · `15fae04` CR1 · `6bcd932` CR2 · `7b879ec` MANUAL ·
   queda, y tras elegir, teclear vuelve a abrir la lista. `dom_falso.js` gana `blur()` (el foco pasa a `body` antes de
   disparar «blur», como el navegador).
 - **CR2 · cabecera sticky.** Selector `.salmon-table thead tr.salmon-head th[data-col="acciones"]` (0,3,3), que gana a
-  `.salmon-table thead tr.salmon-head th` (0,2,3, `position: relative`). Test nuevo con un **motor de cascada** (en el
-  propio test): modela la celda y la cabecera como las pinta la plantilla (tabla, `tbody`/`thead`, fila con sus clases,
-  celda con sus atributos), recorre `styles.css` y decide qué regla GANA cada propiedad por especificidad y orden
-  (`test_f065_cr2_el_motor_de_cascada_se_comporta` lo prueba con casos propios). Comprueba en cabecera `position`,
-  `right`, `cursor`, `box-shadow` y fondo; en la celda `position`, `right`, `overflow`, `text-align`, `box-shadow`, el
-  fondo opaco que manda (`tr.conciliacion-row > td.concilia-td`, `#f7f4f5`), que ni la celda ni sus antepasados reciban
-  `nowrap`, y el `nowrap` de cada botón.
-- **Comprobado en un navegador de verdad** (Chrome sin cabeza, `--dump-dom` de una página de prueba con el
-  `styles.css` real, una tabla de 1349 px en una caja de 700 px y la medida con `getComputedStyle` y
-  `getBoundingClientRect`): con el CSS de la pasada 1 la cabecera salía `relative` y, sin desplazar, su borde derecho
-  estaba en 1369 px frente a 720 de sus botones; con el de ahora, `sticky`, 720 y 720, con y sin desplazar; los tres
-  botones dentro de la caja y fondo `rgb(247, 244, 245)`. Y con `elementFromPoint` en 12 puntos de la columna
-  desplazada, la columna queda encima con `z-index` y **sin** él: los dos `z-index` eran equivalentes y se quitaron.
+  `.salmon-table thead tr.salmon-head th` (0,2,3, `relative`). Test con un **motor de cascada** (en el propio test):
+  modela celda y cabecera como las pinta la plantilla y decide qué regla GANA cada propiedad (especificidad y orden).
+- **Chrome sin cabeza** (`--dump-dom`, página de prueba con el `styles.css` real): con el CSS de la pasada 1 la
+  cabecera salía `relative` (borde derecho en 1369 px frente a 720 de sus botones); ahora `sticky`, 720 y 720; botones
+  dentro y fondo opaco; con `elementFromPoint`, la columna queda encima con y SIN `z-index` (equivalentes: fuera).
 - **Quitado por no hacer nada** (habrían sido mutantes equivalentes, RM3): `background` de la celda (lo pone la fila,
   más específica), `white-space: normal` (es el heredado) y los `z-index` (arriba). El comentario del CSS lo explica.
 - **MANUAL T35**: paso 3, teclear fuera de la lista tras elegir y salir; paso 5, la cabecera «Acciones» sigue encima
@@ -196,23 +170,50 @@ guarda `dialogo.open` (#2): muere por conducta; en el navegador el modal hace in
 (tal cual, worktree, `376d37a`): **exit 0**, raíz `1083 passed`, sv4 **`1247 passed`** (71,6 s, sin caché: sv4 cambió),
 `PUERTA COBERTURA: N/A` (sin Python de producción), rutas sensibles N/A, tamaño dentro, **`ENTORNO LISTO`**.
 
-## Pasada 3 (H1, R27 v4; aprobada por el humano el 2026-10-13, opción «a», antes de desplegar sv4)
+## Pasada 3 (H1, R27 v4; aprobada por el humano el 2026-10-13, opción «a»)
 
-Commits `2d64bc2` spec v4 · `0034080` T36 RED · `440beb6` T37 · `77b1f97`, `3f3aeff`, `0075ce4` T38 · el del informe.
-Solo `static/app.js` (`attachPartidaCombo`: fila y «Dividir») y tests. `marcadaAlTeclear(shown, texto)`: «Almacén» (0)
-si `esAlmacenTecleado`; si no, la primera partida que coincide (1); sin texto o sin coincidencias, -1. **Enter elige la
-marcada; sin ella, nada** (ni POST `/almacen` ni cambio de valor) y **la lista sigue abierta**: así un segundo Enter
-tampoco guarda la fila ni acepta «Dividir» con un texto que no es de la lista; Esc o Tab devuelven el de antes. Foco o
-clic sin teclear: ninguna marcada. Docs: R27 v4 (150/150), design §5.5, ARCHITECTURE, T35 hecha, T36–T38, MANUAL 4 bis.
+Commits `2d64bc2`, `0034080` RED, `440beb6`, `77b1f97`, `3f3aeff`, `0075ce4`. `marcadaAlTeclear`: «Almacén» si
+`esAlmacenTecleado`, si no la primera partida que coincide, si no ninguna; **Enter elige la marcada y, sin ella, nada**
+(la lista sigue abierta). **RED** (`0034080` contra `2d64bc2`): `19 failed, 17 passed`; de conducta
+(`scratchpad/red_v4.py`): «alba», «02.0», «zzz» y foco + Enter ⇒ `'almacen': 1` (la fila iba a almacén); «Dividir»
+dejaba la partida vacía. **Verificación**: `init.sh` exit 0 (`e181863`, sv4 1259 passed). **Mutación a mano**: HEAD
+`0075ce4900a27867ec0c1e6c0c80f46dcf5d5711`, línea base 204 passed, **15/15**; sin el test de la función pura vive #5
+(`shown.length > 1`), equivalente en el combo y demostrado ejecutando (§«Pasada 3» de la ficha de mutación).
 
-**RED** (`0034080` contra el código de `2d64bc2`): `19 failed, 17 passed` (`marcadaAlTeclear` no existe). De
-conducta, sin extraerla (`scratchpad/red_v4.py`), salida real: «alba», «02.0», «zzz» y foco + Enter ⇒ `'almacen': 1`
-(la fila iba a almacén; p. ej. `{'marcada': None, 'valor': 'alba', 'almacen': 1, 'cerrado': True}`); flechas ⇒
-`{'marcada': None, 'bajada': 'Almacén (sin partida)', 'elegida': '0', 'almacen': 2}`; «Dividir» ⇒ foco + Enter y
-«alba» + Enter dejaban la partida VACÍA (`partes [6 → None, 12 → '01.01']`); «al» + Enter ya pasaba.
+## Pasada 4 (R27 v5; aprobada por el humano el 2026-10-13; fallo de la MANUAL)
 
-**Verificación**: `test_f065_f3bis_front.py` **38 passed**; los tres ficheros **204 passed**; **`bash harness/init.sh`**
-(`e181863`): **exit 0**, raíz 1083 passed, sv4 **1259 passed** (sin caché), cobertura N/A, **`ENTORNO LISTO`**.
-**Mutación a mano** (`progress/mutacion_F-065_fase3bis.md` §«Pasada 3»): HEAD `0075ce4900a27867ec0c1e6c0c80f46dcf5d5711`,
-línea base 204 passed, **15/15 muertos, 0 supervivientes**, por fila `fichero:línea`, original→mutado y fallos; sin el
-test de la función pura vive #5 (quitar `shown.length > 1`), equivalente en el combo y demostrado ejecutando.
+**El fallo**: «zzzz» o «al» + Enter en la partida GUARDABA la fila: la primera vez las partidas tardan (Sigrid), la lista
+seguía cerrada, el combo soltaba el Enter (`if (panel.hidden) return;`) y llegaba al «Guardar» de `wireConciliaEdit`.
+Con la lista abierta y sin marcada no había otro camino (v4 ya paraba el Enter). Commits `137fe8e` RED · `4c4fedb`
+código · `f85ee2e` spec v5 y docs · `e1563f5` sin código redundante · el de este informe. Solo sv4 front; servidor igual.
+- **Combo**: en la partida, Enter SIEMPRE es del combo: elige la marcada o nada; nunca guarda ni acepta «Dividir». La
+  lista sale al momento con «Cargando partidas…»; `abierta` evita que una respuesta tardía reabra una lista cerrada.
+- **`partidasInvalidas`** (+ `marcarPartida`: `partida-invalida`, `aria-invalid`, `title`): una partida CAMBIADA fuera
+  de la lista no se envía por «Guardar», Enter en otra celda, «Guardar todas», «Aceptar» de «Dividir»; el aviso de
+  «Guardar y aprobar» la marca. CSS en rojo, comprobado con el motor de cascada.
+- **RED** (`137fe8e` contra `553604d`): `17 failed, 37 passed`; de conducta (`scratchpad/red_v5.py`): «zzzz»/«al» +
+  Enter cargando ⇒ 1 PATCH; lista cerrada + Enter ⇒ 1 PATCH; Esc cargando ⇒ se reabría; «Guardar», Enter en la
+  cantidad, Sigrid caído, «Guardar todas» y «Dividir» mandaban la partida mala.
+- **Mutación a mano**: HEAD `e1563f565d582368e2a1ed549166bbb41b500a3f`, línea base 239 passed, **38/38**, también sin
+  ningún test textual. `init.sh` exit 0 (`642da6d`, sv4 1275 passed).
+
+## Pasada 5 (CR4 de la review, pasada 4; más O6 y O7)
+
+**CR4**: «Guardar» y «Guardar todas» armaban el cuerpo ANTES de esperar la lista y validaban DESPUÉS: si la casilla
+cambiaba mientras Sigrid tardaba, se validaba una cosa y se enviaba otra. Ahora desactivan el botón ya, esperan la lista
+y en el mismo tick validan (`partidasMalas(filas, items)`, síncrona; `partidasInvalidas` queda para marcar en el aviso de
+la cabecera) y arman el cuerpo; «Guardar todas» cuenta las filas con cambios tras la espera (una que vuelve a como
+estaba no se manda). Si algo no vale, el botón vuelve a servir. **O6**: salir de la partida antes de que llegue la lista
+ya no la deshace a ciegas: se decide al llegar (`volverSiNoVale`, que no toca lo que ya era el valor de antes). **O7**: en
+`enviar` de «Dividir», «Aceptar» desactivado (reparto que no vale o envío en curso) es el cerrojo: dos Enter, un POST.
+Sin tocar O3/O4 (observaciones sin petición). El `dom_falso.js` no deja hacer clic en un botón desactivado (como el
+navegador). Commits `20a6909` RED · `2fa95e3` código y 2 tests de control · el de este informe.
+
+**RED** (`20a6909` contra `edb8475`, `-k "cr4 or o6 or o7"`) ⇒ `6 failed, 4 passed`: la carrera mandaba
+`{'codigo_partida': 'zzzz'}` (con «Guardar» y con «Guardar todas»); dos clics ⇒ `[{'cantidad': 6}, {'cantidad': 6}]`
+(los dos botones); O6 ⇒ `{'alSalir': '01.01', 'alLlegar': '01.01'}` (deshacía «02.03»); O7 ⇒ `{'envios': 2}`. Pasaban
+(control): lo que se vuelve malo durante la carga no se envía (×2), «zzzz» al salir vuelve al llegar, Esc con la vieja.
+**Mutación a mano** (`progress/mutacion_F-065_fase3bis.md` §«Pasada 5»): HEAD `2fa95e378b369c760c1959fee671bbde95279361`,
+línea base de los cuatro ficheros 251 passed, **19 mutantes, 19 muertos, 0 supervivientes** (entre ellos, el propio
+fallo de CR4 como un solo mutante en cada botón); solo con conducta (62 tests, sin textuales): **19/19**.
+**Verificación**: `bash harness/init.sh` (`b2c6730`): **exit 0**, raíz 1083, sv4 **1287 passed**, `ENTORNO LISTO`.

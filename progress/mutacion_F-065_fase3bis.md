@@ -290,3 +290,248 @@ M = [
     ("static/app.js", "if (elegido) { pick(elegido); }" + NL + "            } else if (e.key === \"Escape\")", "" + NL + "            } else if (e.key === \"Escape\")"),
 ]
 ```
+
+## Pasada 4 (R27 v5): mutación a mano de lo nuevo
+
+Mismo script con otra lista `M` y un fichero de tests más (`tests/test_f065_f1_js.py`: los guardados de la fila);
+abajo. Lo nuevo: carga y `abierta` del combo, Enter siempre del combo, `marcarPartida`, `partidasInvalidas`, su uso en
+«Guardar», «Guardar todas», el aviso de «Guardar y aprobar» y «Dividir», y la regla CSS `partida-invalida`.
+
+- **HEAD medido: `e1563f565d582368e2a1ed549166bbb41b500a3f`** (árbol de sv4 limpio).
+- **Línea base** de los cuatro ficheros: **239 passed** en 18,6 s (20,4 s con el arranque).
+- **Resultado: 38 mutantes, 38 muertos, 0 supervivientes, 0 sin aplicar, 0 equivalentes.**
+- **Sin tests textuales**: repetida con solo `tests/test_f065_f3bis_front.py` y `-k "not acciones_siempre_a_la_vista and
+  not acciones_ancho_estable and not el_bloque_esta_cableado and not f7_en_titulos"` (50 tests: conducta con node y el
+  motor de cascada): **38 de 38 muertos**.
+- Antes de medir se quitó lo que habría dado equivalentes: el `return` tras el Enter (pasa a cadena `if/else`), la
+  guarda `if (!inp)` de `partidasInvalidas` (toda fila editable tiene su casilla de partida) y la rama de plural del
+  aviso de «Guardar todas» (un solo texto).
+
+
+| # | fichero:línea | original | mutado | fallos | veredicto |
+|---|---|---|---|---|---|
+| 1 | static/app.js:841 | `            panel.hidden = true;⏎            abierta = false;` | `            panel.hidden = true;` | 1 | MUERTO |
+| 2 | static/app.js:907 | `            abierta = true;⏎            if (!cargadas)` | `            if (!cargadas)` | 19 | MUERTO |
+| 3 | static/app.js:908 | `if (!cargadas) { render(); }  // ya, con «Cargando partidas…»` | *(nada)* | 2 | MUERTO |
+| 4 | static/app.js:911 | `                cargadas = true;⏎                if (!abierta)` | `                if (!abierta)` | 5 | MUERTO |
+| 5 | static/app.js:912 | `                if (!abierta) { return; }⏎` | *(nada)* | 1 | MUERTO |
+| 6 | static/app.js:879 | `if (!cargadas \|\| partidas.error) {` | `if (partidas.error) {` | 1 | MUERTO |
+| 7 | static/app.js:879 | `if (!cargadas \|\| partidas.error) {` | `if (!cargadas && partidas.error) {` | 1 | MUERTO |
+| 8 | static/app.js:882 | `d.textContent = cargadas ? "No se pudieron cargar las partidas" : "Cargando partidas…";` | `d.textContent = !cargadas ? "No se pudieron cargar las partidas" : "Cargando partidas…";` | 1 | MUERTO |
+| 9 | static/app.js:927 | `            marcarPartida(input, false);  // al cambiarla, fuera el rojo (R27 v5)⏎` | *(nada)* | 1 | MUERTO |
+| 10 | static/app.js:941 | `                e.preventDefault();⏎                e.stopImmediatePropagation();⏎                const elegido = shown[activo];` | `                e.stopImmediatePropagation();⏎                const elegido = shown[activo];` | 9 | MUERTO |
+| 11 | static/app.js:941 | `                e.preventDefault();⏎                e.stopImmediatePropagation();⏎                const elegido = shown[activo];` | `                e.preventDefault();⏎                const elegido = shown[activo];` | 5 | MUERTO |
+| 12 | static/app.js:933 | `if (e.key === "Enter") {⏎                // R27 v5` | `if (e.key === "Enter" && !panel.hidden) {⏎                // R27 v5` | 3 | MUERTO |
+| 13 | static/app.js:1021 | `if (mal && !inp.classList.contains("partida-invalida")) {` | `if (mal) {` | 1 | MUERTO |
+| 14 | static/app.js:1024 | `} else if (!mal && inp.classList.contains("partida-invalida")) {⏎            inp.title = inp.dataset.tituloAntes;⏎` | `} else if (!mal && inp.classList.contains("partida-invalida")) {⏎` | 1 | MUERTO |
+| 15 | static/app.js:1022 | `inp.dataset.tituloAntes = inp.title \|\| "";` | *(nada)* | 1 | MUERTO |
+| 16 | static/app.js:1027 | `inp.classList.toggle("partida-invalida", mal);` | `inp.classList.toggle("partida-invalida", true);` | 5 | MUERTO |
+| 17 | static/app.js:1028 | `if (mal) { inp.setAttribute("aria-invalid", "true"); } else { inp.removeAttribute("aria-invalid"); }` | `if (mal) { inp.setAttribute("aria-invalid", "true"); }` | 1 | MUERTO |
+| 18 | static/app.js:1028 | `if (mal) { inp.setAttribute("aria-invalid", "true"); } else { inp.removeAttribute("aria-invalid"); }` | `if (!mal) { inp.removeAttribute("aria-invalid"); }` | 1 | MUERTO |
+| 19 | static/app.js:1040 | `const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, res.items);` | `const mal = !partidaValida(inp.value, res.items);` | 1 | MUERTO |
+| 20 | static/app.js:1040 | `const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, res.items);` | `const mal = partidaParaEnviar(inp) !== null && partidaValida(inp.value, res.items);` | 7 | MUERTO |
+| 21 | static/app.js:1040 | `const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, res.items);` | `const mal = partidaParaEnviar(inp) !== null \|\| !partidaValida(inp.value, res.items);` | 6 | MUERTO |
+| 22 | static/app.js:1041 | `            marcarPartida(inp, mal);⏎            if (mal) { malas.push(inp); }` | `            if (mal) { malas.push(inp); }` | 5 | MUERTO |
+| 23 | static/app.js:1042 | `            if (mal) { malas.push(inp); }⏎` | *(nada)* | 4 | MUERTO |
+| 24 | static/app.js:1189 | `if ((await partidasInvalidas([tr])).length) { return; }` | *(nada)* | 3 | MUERTO |
+| 25 | static/app.js:1489 | `                    filas.push(tr);⏎` | *(nada)* | 1 | MUERTO |
+| 26 | static/app.js:1497 | `if ((await partidasInvalidas(filas)).length) {⏎                window.alert("Hay partidas` | `if (false) {⏎                window.alert("Hay partidas` | 1 | MUERTO |
+| 27 | static/app.js:2161 | `            await partidasInvalidas(filas);  // R27 v5: las que no valen, en rojo⏎` | *(nada)* | 1 | MUERTO |
+| 28 | static/app.js:1409 | `const mal = inp.value.trim() !== actual.partida && !partidaValida(inp.value, res.items);` | `const mal = !partidaValida(inp.value, res.items);` | 2 | MUERTO |
+| 29 | static/app.js:1409 | `const mal = inp.value.trim() !== actual.partida && !partidaValida(inp.value, res.items);` | `const mal = inp.value.trim() !== actual.partida && partidaValida(inp.value, res.items);` | 2 | MUERTO |
+| 30 | static/app.js:1410 | `                marcarPartida(inp, mal);⏎                if (mal) { malas += 1; }` | `                if (mal) { malas += 1; }` | 1 | MUERTO |
+| 31 | static/app.js:1411 | `                if (mal) { malas += 1; }⏎` | *(nada)* | 1 | MUERTO |
+| 32 | static/app.js:1415 | `                errorEl.hidden = false;⏎                return;⏎            }⏎            aceptar.disabled = true;` | `                return;⏎            }⏎            aceptar.disabled = true;` | 1 | MUERTO |
+| 33 | static/app.js:1415 | `                errorEl.hidden = false;⏎                return;⏎            }⏎            aceptar.disabled = true;` | `                errorEl.hidden = false;⏎            }⏎            aceptar.disabled = true;` | 1 | MUERTO |
+| 34 | static/styles.css:1846 | `.conciliacion-row .cell-input.partida-invalida,⏎` | *(nada)* | 1 | MUERTO |
+| 35 | static/styles.css:1846 | `.conciliacion-row .cell-input.partida-invalida,⏎.dividir-dialog .cell-input.partida-invalida {` | `.conciliacion-row .cell-input.partida-invalida {` | 1 | MUERTO |
+| 36 | static/styles.css:1848 | `    border-color: var(--danger, #b42318);⏎    background: #fdecea;⏎    color: var(--danger, #b42318);` | `    background: #fdecea;⏎    color: var(--danger, #b42318);` | 1 | MUERTO |
+| 37 | static/styles.css:1848 | `    border-color: var(--danger, #b42318);⏎    background: #fdecea;⏎    color: var(--danger, #b42318);` | `    border-color: var(--danger, #b42318);⏎    color: var(--danger, #b42318);` | 1 | MUERTO |
+| 38 | static/styles.css:1848 | `    border-color: var(--danger, #b42318);⏎    background: #fdecea;⏎    color: var(--danger, #b42318);` | `    border-color: var(--danger, #b42318);⏎    background: #fdecea;` | 1 | MUERTO |
+
+TOTAL 38 mutantes, 0 vivos
+
+```python
+TESTS = ["tests/test_f065_f3bis_front.py", "tests/test_f065_f3_dividir.py", "tests/test_f065_f2_origen.py", "tests/test_f065_f1_js.py"]
+M = [
+    # --- combo: carga y «abierta» (R27 v5) ---
+    ("static/app.js", "            panel.hidden = true;" + NL + "            abierta = false;", "            panel.hidden = true;"),
+    ("static/app.js", "            abierta = true;" + NL + "            if (!cargadas)", "            if (!cargadas)"),
+    ("static/app.js", "if (!cargadas) { render(); }  // ya, con «Cargando partidas…»", ""),
+    ("static/app.js", "                cargadas = true;" + NL + "                if (!abierta)", "                if (!abierta)"),
+    ("static/app.js", "                if (!abierta) { return; }" + NL, ""),
+    ("static/app.js", "if (!cargadas || partidas.error) {", "if (partidas.error) {"),
+    ("static/app.js", "if (!cargadas || partidas.error) {", "if (!cargadas && partidas.error) {"),
+    ("static/app.js", 'd.textContent = cargadas ? "No se pudieron cargar las partidas" : "Cargando partidas…";',
+     'd.textContent = !cargadas ? "No se pudieron cargar las partidas" : "Cargando partidas…";'),
+    ("static/app.js", "            marcarPartida(input, false);  // al cambiarla, fuera el rojo (R27 v5)" + NL, ""),
+    # --- combo: Enter siempre del combo ---
+    ("static/app.js", "                e.preventDefault();" + NL + "                e.stopImmediatePropagation();" + NL + "                const elegido = shown[activo];",
+     "                e.stopImmediatePropagation();" + NL + "                const elegido = shown[activo];"),
+    ("static/app.js", "                e.preventDefault();" + NL + "                e.stopImmediatePropagation();" + NL + "                const elegido = shown[activo];",
+     "                e.preventDefault();" + NL + "                const elegido = shown[activo];"),
+    ("static/app.js", 'if (e.key === "Enter") {' + NL + "                // R27 v5", 'if (e.key === "Enter" && !panel.hidden) {' + NL + "                // R27 v5"),
+    # --- marcarPartida ---
+    ("static/app.js", 'if (mal && !inp.classList.contains("partida-invalida")) {', "if (mal) {"),
+    ("static/app.js", '} else if (!mal && inp.classList.contains("partida-invalida")) {' + NL + "            inp.title = inp.dataset.tituloAntes;" + NL,
+     '} else if (!mal && inp.classList.contains("partida-invalida")) {' + NL),
+    ("static/app.js", 'inp.dataset.tituloAntes = inp.title || "";', ""),
+    ("static/app.js", 'inp.classList.toggle("partida-invalida", mal);', 'inp.classList.toggle("partida-invalida", true);'),
+    ("static/app.js", 'if (mal) { inp.setAttribute("aria-invalid", "true"); } else { inp.removeAttribute("aria-invalid"); }',
+     'if (mal) { inp.setAttribute("aria-invalid", "true"); }'),
+    ("static/app.js", 'if (mal) { inp.setAttribute("aria-invalid", "true"); } else { inp.removeAttribute("aria-invalid"); }',
+     'if (!mal) { inp.removeAttribute("aria-invalid"); }'),
+    # --- partidasInvalidas ---
+    ("static/app.js", "const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, res.items);",
+     "const mal = !partidaValida(inp.value, res.items);"),
+    ("static/app.js", "const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, res.items);",
+     "const mal = partidaParaEnviar(inp) !== null && partidaValida(inp.value, res.items);"),
+    ("static/app.js", "const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, res.items);",
+     "const mal = partidaParaEnviar(inp) !== null || !partidaValida(inp.value, res.items);"),
+    ("static/app.js", "            marcarPartida(inp, mal);" + NL + "            if (mal) { malas.push(inp); }", "            if (mal) { malas.push(inp); }"),
+    ("static/app.js", "            if (mal) { malas.push(inp); }" + NL, ""),
+    # --- los guardados ---
+    ("static/app.js", "if ((await partidasInvalidas([tr])).length) { return; }", ""),
+    ("static/app.js", "                    filas.push(tr);" + NL, ""),
+    ("static/app.js", "if ((await partidasInvalidas(filas)).length) {" + NL + '                window.alert("Hay partidas',
+     "if (false) {" + NL + '                window.alert("Hay partidas'),
+    ("static/app.js", "            await partidasInvalidas(filas);  // R27 v5: las que no valen, en rojo" + NL, ""),
+    # --- «Dividir» ---
+    ("static/app.js", "const mal = inp.value.trim() !== actual.partida && !partidaValida(inp.value, res.items);",
+     "const mal = !partidaValida(inp.value, res.items);"),
+    ("static/app.js", "const mal = inp.value.trim() !== actual.partida && !partidaValida(inp.value, res.items);",
+     "const mal = inp.value.trim() !== actual.partida && partidaValida(inp.value, res.items);"),
+    ("static/app.js", "                marcarPartida(inp, mal);" + NL + "                if (mal) { malas += 1; }", "                if (mal) { malas += 1; }"),
+    ("static/app.js", "                if (mal) { malas += 1; }" + NL, ""),
+    ("static/app.js", "                errorEl.hidden = false;" + NL + "                return;" + NL + "            }" + NL + "            aceptar.disabled = true;",
+     "                return;" + NL + "            }" + NL + "            aceptar.disabled = true;"),
+    ("static/app.js", "                errorEl.hidden = false;" + NL + "                return;" + NL + "            }" + NL + "            aceptar.disabled = true;",
+     "                errorEl.hidden = false;" + NL + "            }" + NL + "            aceptar.disabled = true;"),
+    # --- CSS (gana la cascada: motor de cascada) ---
+    ("static/styles.css", ".conciliacion-row .cell-input.partida-invalida," + NL, ""),
+    ("static/styles.css", ".conciliacion-row .cell-input.partida-invalida," + NL + ".dividir-dialog .cell-input.partida-invalida {",
+     ".conciliacion-row .cell-input.partida-invalida {"),
+    ("static/styles.css", "    border-color: var(--danger, #b42318);" + NL + "    background: #fdecea;" + NL + "    color: var(--danger, #b42318);",
+     "    background: #fdecea;" + NL + "    color: var(--danger, #b42318);"),
+    ("static/styles.css", "    border-color: var(--danger, #b42318);" + NL + "    background: #fdecea;" + NL + "    color: var(--danger, #b42318);",
+     "    border-color: var(--danger, #b42318);" + NL + "    color: var(--danger, #b42318);"),
+    ("static/styles.css", "    border-color: var(--danger, #b42318);" + NL + "    background: #fdecea;" + NL + "    color: var(--danger, #b42318);",
+     "    border-color: var(--danger, #b42318);" + NL + "    background: #fdecea;"),
+]
+```
+
+## Pasada 5 (CR4, O6, O7): mutación a mano de lo nuevo
+
+Mismo script con otra lista `M` (abajo) y los cuatro ficheros de tests de la pasada 4. Lo nuevo y lo movido: el orden
+de «Guardar» y «Guardar todas» (desactivar, esperar la lista, validar y armar en el mismo tick), `partidasMalas` y su
+envoltorio, `volverSiNoVale` (O6) y el cerrojo de `enviar` en «Dividir» (O7). El propio fallo de CR4 (armar antes de
+esperar) es un mutante en cada botón (#3 y #8; el de «Guardar todas», con los textos de `p5_original.txt` y
+`p5_mutado.txt`, copiados abajo).
+
+- **HEAD medido: `2fa95e378b369c760c1959fee671bbde95279361`** (árbol de sv4 limpio).
+- **Línea base** de los cuatro ficheros: **251 passed** (33,2 s).
+- **Resultado: 19 mutantes, 19 muertos, 0 supervivientes, 0 sin aplicar, 0 equivalentes.**
+- **Sin tests textuales** (solo `tests/test_f065_f3bis_front.py` con el mismo `-k` de la pasada 4; 62 tests): **19/19**.
+- Primera vuelta: el #19 no aplicaba (texto repetido en otra rama de `enviar`); se le dio más contexto y se repitió todo.
+
+
+| # | fichero:línea | original | mutado | fallos | veredicto |
+|---|---|---|---|---|---|
+| 1 | static/app.js:1206 | `                saveBtn.disabled = true;⏎                const lista = await cargarPartidasObra();` | `                const lista = await cargarPartidasObra();` | 1 | MUERTO |
+| 2 | static/app.js:1209 | `                    saveBtn.disabled = false;⏎                    return;⏎                }⏎                const body` | `                    return;⏎                }⏎                const body` | 3 | MUERTO |
+| 3 | static/app.js:1207 | `                const lista = await cargarPartidasObra();⏎                if (partidasMalas([tr], lista.items).length) {⏎                    saveBtn.disabled = false;⏎                    return;⏎                }⏎                const body = _camposCambiados(tr);` | `                const body = _camposCambiados(tr);⏎                const lista = await cargarPartidasObra();⏎                if (partidasMalas([tr], lista.items).length) {⏎                    saveBtn.disabled = false;⏎                    return;⏎                }` | 1 | MUERTO |
+| 4 | static/app.js:1208 | `if (partidasMalas([tr], lista.items).length) {` | `if (false) {` | 4 | MUERTO |
+| 5 | static/app.js:1521 | `            saveAllLinesBtn.disabled = true;⏎            const lista = await cargarPartidasObra();` | `            const lista = await cargarPartidasObra();` | 1 | MUERTO |
+| 6 | static/app.js:1526 | `                saveAllLinesBtn.disabled = false;⏎                return;⏎            }⏎            const envios` | `                return;⏎            }⏎            const envios` | 2 | MUERTO |
+| 7 | static/app.js:1521 | `            saveAllLinesBtn.disabled = true;⏎            const lista = await cargarPartidasObra();⏎            const filas = conCambios();` | `            const filas = conCambios();⏎            saveAllLinesBtn.disabled = true;⏎            const lista = await cargarPartidasObra();` | 1 | MUERTO |
+| 8 | static/app.js:1522 | `            const lista = await cargarPartidasObra();⏎            const filas = conCambios();⏎            if (partidasMalas(filas, lista.items).length) {⏎                window.alert("Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).");⏎                saveAllLinesBtn.disabled = false;⏎                return;⏎            }⏎            const envios = filas.map(function (tr) {⏎                return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };⏎            });⏎` | `            const filas = conCambios();⏎            const envios = filas.map(function (tr) {⏎                return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };⏎            });⏎            const lista = await cargarPartidasObra();⏎            if (partidasMalas(filas, lista.items).length) {⏎                window.alert("Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).");⏎                saveAllLinesBtn.disabled = false;⏎                return;⏎            }⏎` | 2 | MUERTO |
+| 9 | static/app.js:1530 | `return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };` | `return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: {} };` | 3 | MUERTO |
+| 10 | static/app.js:1511 | `return vid && Object.keys(cuerpo).length;` | `return vid;` | 3 | MUERTO |
+| 11 | static/app.js:1524 | `if (partidasMalas(filas, lista.items).length) {` | `if (false) {` | 2 | MUERTO |
+| 12 | static/app.js:1059 | `return partidasMalas(filas, (await cargarPartidasObra()).items);` | `return [];` | 1 | MUERTO |
+| 13 | static/app.js:971 | `if (cargadas) { volverSiNoVale(); }` | `volverSiNoVale();` | 1 | MUERTO |
+| 14 | static/app.js:913 | `                    volverSiNoVale();  // O6: se salió antes de que llegara⏎` | *(nada)* | 1 | MUERTO |
+| 15 | static/app.js:965 | `if (input.value !== alAbrir && !partidaValida(input.value, partidas.items)) {` | `if (!partidaValida(input.value, partidas.items)) {` | 1 | MUERTO |
+| 16 | static/app.js:965 | `if (input.value !== alAbrir && !partidaValida(input.value, partidas.items)) {` | `if (input.value !== alAbrir && partidaValida(input.value, partidas.items)) {` | 7 | MUERTO |
+| 17 | static/app.js:1427 | `if (!actual \|\| aceptar.disabled) { return; }` | `if (!actual) { return; }` | 1 | MUERTO |
+| 18 | static/app.js:1427 | `            if (!actual \|\| aceptar.disabled) { return; }⏎            aceptar.disabled = true;⏎` | `            if (!actual \|\| aceptar.disabled) { return; }⏎` | 1 | MUERTO |
+| 19 | static/app.js:1440 | `                errorEl.hidden = false;⏎                aceptar.disabled = false;⏎                return;⏎            }⏎            try {` | `                errorEl.hidden = false;⏎                return;⏎            }⏎            try {` | 1 | MUERTO |
+
+TOTAL 19 mutantes, 0 vivos
+
+`p5_original.txt` (#8, original):
+```js
+            const lista = await cargarPartidasObra();
+            const filas = conCambios();
+            if (partidasMalas(filas, lista.items).length) {
+                window.alert("Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).");
+                saveAllLinesBtn.disabled = false;
+                return;
+            }
+            const envios = filas.map(function (tr) {
+                return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };
+            });
+```
+`p5_mutado.txt` (#8, mutado):
+```js
+            const filas = conCambios();
+            const envios = filas.map(function (tr) {
+                return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };
+            });
+            const lista = await cargarPartidasObra();
+            if (partidasMalas(filas, lista.items).length) {
+                window.alert("Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).");
+                saveAllLinesBtn.disabled = false;
+                return;
+            }
+```
+
+```python
+TESTS = ["tests/test_f065_f3bis_front.py", "tests/test_f065_f3_dividir.py", "tests/test_f065_f2_origen.py", "tests/test_f065_f1_js.py"]
+M = [
+    # --- «Guardar» de la fila (CR4) ---
+    ("static/app.js", "                saveBtn.disabled = true;" + NL + "                const lista = await cargarPartidasObra();",
+     "                const lista = await cargarPartidasObra();"),
+    ("static/app.js", "                    saveBtn.disabled = false;" + NL + "                    return;" + NL + "                }" + NL + "                const body",
+     "                    return;" + NL + "                }" + NL + "                const body"),
+    # el cuerpo armado ANTES de esperar la lista (el fallo de CR4), en un solo mutante
+    ("static/app.js", "                const lista = await cargarPartidasObra();" + NL
+     + "                if (partidasMalas([tr], lista.items).length) {" + NL
+     + "                    saveBtn.disabled = false;" + NL + "                    return;" + NL + "                }" + NL
+     + "                const body = _camposCambiados(tr);",
+     "                const body = _camposCambiados(tr);" + NL
+     + "                const lista = await cargarPartidasObra();" + NL
+     + "                if (partidasMalas([tr], lista.items).length) {" + NL
+     + "                    saveBtn.disabled = false;" + NL + "                    return;" + NL + "                }"),
+    ("static/app.js", "if (partidasMalas([tr], lista.items).length) {", "if (false) {"),
+    # --- «Guardar todas» (CR4) ---
+    ("static/app.js", "            saveAllLinesBtn.disabled = true;" + NL + "            const lista = await cargarPartidasObra();",
+     "            const lista = await cargarPartidasObra();"),
+    ("static/app.js", "                saveAllLinesBtn.disabled = false;" + NL + "                return;" + NL + "            }" + NL + "            const envios",
+     "                return;" + NL + "            }" + NL + "            const envios"),
+    ("static/app.js", "            saveAllLinesBtn.disabled = true;" + NL + "            const lista = await cargarPartidasObra();" + NL + "            const filas = conCambios();",
+     "            const filas = conCambios();" + NL + "            saveAllLinesBtn.disabled = true;" + NL + "            const lista = await cargarPartidasObra();"),
+    # los cuerpos armados ANTES de esperar la lista (el fallo de CR4), en un solo mutante
+    ("static/app.js", (pathlib.Path(__file__).parent / "p5_original.txt").read_text(encoding="utf-8"),
+     (pathlib.Path(__file__).parent / "p5_mutado.txt").read_text(encoding="utf-8")),
+    ("static/app.js", "return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };",
+     "return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: {} };"),
+    ("static/app.js", "return vid && Object.keys(cuerpo).length;", "return vid;"),
+    ("static/app.js", "if (partidasMalas(filas, lista.items).length) {", "if (false) {"),
+    # --- partidasInvalidas (solo marca) ---
+    ("static/app.js", "return partidasMalas(filas, (await cargarPartidasObra()).items);", "return [];"),
+    # --- O6 ---
+    ("static/app.js", "if (cargadas) { volverSiNoVale(); }", "volverSiNoVale();"),
+    ("static/app.js", "                    volverSiNoVale();  // O6: se salió antes de que llegara" + NL, ""),
+    ("static/app.js", "if (input.value !== alAbrir && !partidaValida(input.value, partidas.items)) {",
+     "if (!partidaValida(input.value, partidas.items)) {"),
+    ("static/app.js", "if (input.value !== alAbrir && !partidaValida(input.value, partidas.items)) {",
+     "if (input.value !== alAbrir && partidaValida(input.value, partidas.items)) {"),
+    # --- O7 ---
+    ("static/app.js", "if (!actual || aceptar.disabled) { return; }", "if (!actual) { return; }"),
+    ("static/app.js", "            if (!actual || aceptar.disabled) { return; }" + NL + "            aceptar.disabled = true;" + NL,
+     "            if (!actual || aceptar.disabled) { return; }" + NL),
+    ("static/app.js", "                errorEl.hidden = false;" + NL + "                aceptar.disabled = false;" + NL + "                return;" + NL + "            }" + NL + "            try {",
+     "                errorEl.hidden = false;" + NL + "                return;" + NL + "            }" + NL + "            try {"),
+]
+```

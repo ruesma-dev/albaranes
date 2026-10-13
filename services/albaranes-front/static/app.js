@@ -820,6 +820,12 @@
         let activo = -1;
         let alAbrir = input.value;
         let repos = null;
+        // R27 v5: hasta la primera respuesta, la lista dice «Cargando
+        // partidas…» (y Enter no elige nada); ``abierta`` evita que una
+        // respuesta que llega tarde reabra una lista ya cerrada (Esc, salir,
+        // elegir).
+        let cargadas = false;
+        let abierta = false;
         // Mientras ``pick`` avisa del cambio (su «input»), el combo no se
         // reabre (R27 v3: antes el panel volvía, filtrado con la elegida).
         let eligiendo = false;
@@ -833,6 +839,7 @@
         }
         function close() {
             panel.hidden = true;
+            abierta = false;
             activo = -1;
             if (repos) {
                 window.removeEventListener("scroll", repos, true);
@@ -869,10 +876,10 @@
                 });
                 panel.appendChild(d);
             });
-            if (partidas.error) {
+            if (!cargadas || partidas.error) {
                 const d = document.createElement("div");
                 d.className = "combo-msg";
-                d.textContent = "No se pudieron cargar las partidas";
+                d.textContent = cargadas ? "No se pudieron cargar las partidas" : "Cargando partidas…";
                 panel.appendChild(d);
             }
             panel.hidden = false;
@@ -897,8 +904,15 @@
         // foco dentro y la tecla siguiente no es «el valor de antes»).
         function open(textoNuevo) {
             if (panel.hidden && !textoNuevo) { alAbrir = input.value; }
+            abierta = true;
+            if (!cargadas) { render(); }  // ya, con «Cargando partidas…»
             cargarPartidasObra().then(function (res) {
                 partidas = res;
+                cargadas = true;
+                if (!abierta) {
+                    volverSiNoVale();  // O6: se salió antes de que llegara
+                    return;
+                }
                 shown = opcionesPartida(res.items, input.value);
                 if (textoNuevo) {
                     activo = marcadaAlTeclear(shown, input.value);
@@ -913,28 +927,31 @@
         input.addEventListener("focus", function () { open(false); });
         input.addEventListener("click", function () { open(false); });
         input.addEventListener("input", function () {
+            marcarPartida(input, false);  // al cambiarla, fuera el rojo (R27 v5)
             if (!eligiendo && document.activeElement === input) { open(true); }
         });
         // Va ANTES que el Enter = «Guardar» de wireConciliaEdit
-        // (wirePartidaCombos se llama primero): con el panel abierto, las
-        // teclas son del combo.
+        // (wirePartidaCombos se llama primero).
         input.addEventListener("keydown", function (e) {
-            if (panel.hidden) { return; }
-            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            if (e.key === "Enter") {
+                // R27 v5: en la partida, Enter NUNCA guarda la fila ni acepta
+                // «Dividir», esté la lista abierta, cerrada o cargando (antes,
+                // con la lista aún cerrada mientras llegaban las partidas, el
+                // Enter guardaba la fila con lo tecleado). Solo elige la
+                // marcada; sin marcada (-1, o lista cerrada: close() la pone a
+                // -1), nada (R27 v4). Para guardar: «Guardar» o Enter en otra
+                // celda de la fila.
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                const elegido = shown[activo];
+                if (elegido) { pick(elegido); }
+            } else if (panel.hidden) {
+                // Lista cerrada: el resto de teclas no son del combo.
+            } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                 e.preventDefault();
                 activo = siguienteActivo(activo, e.key, shown.length);
                 render();
                 _scrollActive(panel);
-            } else if (e.key === "Enter") {
-                // Elige la marcada. SIN marcada no elige nada (R27 v4, H1:
-                // antes caía en «Almacén», la primera, y la fila iba a almacén):
-                // la lista sigue abierta y el Enter no llega al «Guardar» de la
-                // fila ni al «Aceptar» de «Dividir» (no se guarda un texto que no
-                // es de la lista; Esc o salir devuelven el de antes).
-                e.preventDefault();
-                e.stopImmediatePropagation();
-                const elegido = shown[activo];  // sin marcada (-1): undefined
-                if (elegido) { pick(elegido); }
             } else if (e.key === "Escape") {
                 e.preventDefault();
                 input.value = alAbrir;
@@ -942,11 +959,16 @@
             }
         });
         // Solo valores de la lista: lo demás vuelve al valor de antes.
-        input.addEventListener("blur", function () {
-            if (!partidaValida(input.value, partidas.items)) {
+        // Solo valores de la lista: lo demás vuelve al valor de antes. Sin la
+        // lista aún no se decide a ciegas (O6): se decide al llegar.
+        function volverSiNoVale() {
+            if (input.value !== alAbrir && !partidaValida(input.value, partidas.items)) {
                 input.value = alAbrir;
                 input.dispatchEvent(new Event("input", { bubbles: true }));
             }
+        }
+        input.addEventListener("blur", function () {
+            if (cargadas) { volverSiNoVale(); }
             close();
         });
         document.addEventListener("click", function (e) {
@@ -999,6 +1021,42 @@
         const v = inp.value.trim();
         if (v === String(inp.defaultValue || "").trim()) { return null; }
         return v;
+    }
+
+    // F-065 R27 v5: la casilla de partida en rojo (o ya no) con su aviso; el
+    // ``title`` de antes (la descripción de la partida) vuelve al quitarlo.
+    function marcarPartida(inp, mal) {
+        if (mal && !inp.classList.contains("partida-invalida")) {
+            inp.dataset.tituloAntes = inp.title || "";
+            inp.title = "Partida no válida: elige una de la lista (vacía = almacén)";
+        } else if (!mal && inp.classList.contains("partida-invalida")) {
+            inp.title = inp.dataset.tituloAntes;
+        }
+        inp.classList.toggle("partida-invalida", mal);
+        if (mal) { inp.setAttribute("aria-invalid", "true"); } else { inp.removeAttribute("aria-invalid"); }
+    }
+
+    // F-065 R27 v5: una partida CAMBIADA que no es de la lista de la obra no
+    // se guarda nunca (vacía = almacén vale; si Sigrid no respondió, solo
+    // almacén; la que la fila ya tenía no viaja y no se mira). Marca en rojo
+    // las de ``filas`` que no valen contra ``items`` y las devuelve. Síncrona
+    // (pasada 5, CR4): quien guarda espera la lista, valida y arma el cuerpo en
+    // el mismo tick, así lo validado es exactamente lo enviado.
+    function partidasMalas(filas, items) {
+        const malas = [];
+        filas.forEach(function (tr) {
+            const inp = tr.querySelector(".js-partida-combo");  // toda fila editable la tiene
+            const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, items);
+            marcarPartida(inp, mal);
+            if (mal) { malas.push(inp); }
+        });
+        return malas;
+    }
+
+    // Lo mismo esperando la lista (solo para marcar: el aviso de «Guardar» de
+    // la cabecera no envía filas).
+    async function partidasInvalidas(filas) {
+        return partidasMalas(filas, (await cargarPartidasObra()).items);
     }
 
     // F-065 R8: ¿el mismo número? Tolerancia de coma flotante, no de dinero
@@ -1141,9 +1199,17 @@
                 // F-065 R8, R13: solo lo cambiado; «Guardar» bloquea la fila
                 // (también sin cambios). R25: si cambian partida, unidad o
                 // precio de una fila Contrato, pasa a Nueva SIN confirmación.
-                const body = _camposCambiados(tr);
-
+                // CR4: desactivado YA (un segundo clic durante la espera no
+                // manda otro PATCH); tras la espera, validar y armar el cuerpo
+                // sin nada entre medias: lo validado es lo enviado. R27 v5:
+                // con una partida fuera de la lista, nada (en rojo).
                 saveBtn.disabled = true;
+                const lista = await cargarPartidasObra();
+                if (partidasMalas([tr], lista.items).length) {
+                    saveBtn.disabled = false;
+                    return;
+                }
+                const body = _camposCambiados(tr);
                 const original = saveBtn.textContent;
                 saveBtn.textContent = "Guardando…";
                 try {
@@ -1355,8 +1421,26 @@
         }
 
         async function enviar() {
-            if (!actual || !repartoValido(actual.q, cantidades())) { return; }
+            // «Aceptar» desactivado = reparto que no vale (``refrescar`` lo
+            // pone con ``repartoValido`` en cada tecla) o un envío en curso
+            // (O7: dos Enter seguidos ya no mandan dos POST).
+            if (!actual || aceptar.disabled) { return; }
             aceptar.disabled = true;
+            // R27 v5: cada partida, de la lista, vacía (almacén) o la de la
+            // propia fila; si no, en rojo y no se envía.
+            const res = await cargarPartidasObra();
+            let malas = 0;
+            cuerpo.querySelectorAll(".js-dividir-partida").forEach(function (inp) {
+                const mal = inp.value.trim() !== actual.partida && !partidaValida(inp.value, res.items);
+                marcarPartida(inp, mal);
+                if (mal) { malas += 1; }
+            });
+            if (malas) {
+                errorEl.textContent = "Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).";
+                errorEl.hidden = false;
+                aceptar.disabled = false;
+                return;
+            }
             try {
                 const resp = await fetch(
                     `/api/documents/${documentId}/lines/${actual.vid}/dividir`,
@@ -1420,19 +1504,31 @@
     const saveAllLinesBtn = document.getElementById("save-all-lines-btn");
     if (saveAllLinesBtn) {
         saveAllLinesBtn.addEventListener("click", async function () {
-            const envios = [];
-            linesBody.querySelectorAll("tr.concilia-editable").forEach(function (tr) {
-                const vid = (tr.dataset.forValuationLineId || "").trim();
-                const cuerpo = _camposCambiados(tr);
-                if (vid && Object.keys(cuerpo).length) {
-                    envios.push({ vid: vid, cuerpo: cuerpo });
-                }
-            });
-            if (!envios.length) {
+            function conCambios() {
+                return [].filter.call(linesBody.querySelectorAll("tr.concilia-editable"), function (tr) {
+                    const vid = (tr.dataset.forValuationLineId || "").trim();
+                    const cuerpo = _camposCambiados(tr);
+                    return vid && Object.keys(cuerpo).length;
+                });
+            }
+            if (!conCambios().length) {
                 window.alert("No hay cambios en las líneas.");
                 return;
             }
+            // CR4: desactivado ya; tras esperar la lista, filas, validación y
+            // cuerpos en el mismo tick (lo validado es lo enviado). R27 v5:
+            // con alguna partida fuera de la lista no se guarda NADA.
             saveAllLinesBtn.disabled = true;
+            const lista = await cargarPartidasObra();
+            const filas = conCambios();
+            if (partidasMalas(filas, lista.items).length) {
+                window.alert("Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).");
+                saveAllLinesBtn.disabled = false;
+                return;
+            }
+            const envios = filas.map(function (tr) {
+                return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };
+            });
             const original = saveAllLinesBtn.textContent;
             saveAllLinesBtn.textContent = "Guardando…";
             const errores = [];
@@ -2088,11 +2184,11 @@
     // F-065 R19, R21: antes del PUT, nada de filas con cambios sin guardar
     // y, al aprobar, confirmación si la suma de las filas no cuadra con lo
     // leído en el albarán.
-    function guardarCabecera(markApproved) {
-        let aviso = avisoFilasSinGuardar(contarFilasConCambios(
-            [].slice.call(linesBody.querySelectorAll("tr.concilia-editable"))
-        ));
+    async function guardarCabecera(markApproved) {
+        const filas = [].slice.call(linesBody.querySelectorAll("tr.concilia-editable"));
+        let aviso = avisoFilasSinGuardar(contarFilasConCambios(filas));
         if (aviso) {
+            await partidasInvalidas(filas);  // R27 v5: las que no valen, en rojo
             window.alert(aviso);
             return;
         }

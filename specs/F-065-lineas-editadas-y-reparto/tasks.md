@@ -1,4 +1,4 @@
-# F-065 · tareas (v4: fase 3 bis, T29–T38)
+# F-065 · tareas (v5: fase 3 bis, T29–T44)
 
 Rama `feature/F-065-lineas-editadas-y-reparto` (worktree `../albaranes-F-065`, con `dev` fusionado en ae86bfb).
 Rigor `critico`: **fase RED obligatoria** en toda tarea con test (falla antes, pasa después; traza en
@@ -64,3 +64,15 @@ Plan aprobado por el humano en la PARADA 1 del 2026-10-12. Sin servidor. Informe
 - [x] T36: tests RED de R27 v4: «alba» y «02.0» + Enter eligen la primera partida que coincide (nunca POST a `/almacen`), «al» + Enter = «Almacén», «zzz» + Enter y foco + Enter no eligen nada, las flechas mandan; lo mismo en la ventana «Dividir»  |  Verificación: `pytest tests/test_f065_f3bis_front.py -k r27v4` falla como se espera
 - [x] T37: `marcadaAlTeclear` y Enter sin marcada = nada en `attachPartidaCombo` (R27 v4)  |  Verificación: `pytest tests/test_f065_f3bis_front.py tests/test_f065_f2_origen.py tests/test_f065_f3_dividir.py`
 - [x] T38: ARCHITECTURE, MANUAL en `current.md`, mutación a mano de lo nuevo e informe (§«Pasada 3»)  |  Verificación: `bash harness/init.sh` en verde
+
+### Pasada 4 de la fase 3 bis · R27 v5 (aprobada por el humano el 2026-10-13; fallo de la MANUAL: «zzzz»/«al» + Enter guardaba la fila mientras cargaban las partidas)
+
+- [x] T39: tests RED de R27 v5: Enter en la partida (lista cargando, abierta o cerrada) nunca guarda ni acepta «Dividir»; «Cargando partidas…» al momento; botón «Guardar», Enter en otra celda, «Guardar todas», el aviso de «Guardar y aprobar» y «Aceptar» de «Dividir» no envían una partida fuera de la lista (en rojo); lo válido se sigue guardando  |  Verificación: `pytest tests/test_f065_f3bis_front.py -k r27v5` falla como se espera
+- [x] T40: combo (carga, `abierta`, Enter siempre del combo), `marcarPartida`, `partidasInvalidas` y su uso en los cuatro guardados y en «Dividir»; CSS `partida-invalida` (R27 v5)  |  Verificación: `pytest tests/test_f065_f3bis_front.py tests/test_f065_f3_dividir.py tests/test_f065_f2_origen.py tests/test_f065_f1_js.py`
+- [x] T41: ARCHITECTURE, MANUAL en `current.md`, mutación a mano de lo nuevo e informe (§«Pasada 4»)  |  Verificación: `bash harness/init.sh` en verde
+
+### Pasada 5 de la fase 3 bis · CR4 de la review (dentro de R27 v5) y observaciones O6 y O7
+
+- [x] T42: tests RED: lo validado es lo enviado aunque la casilla cambie mientras llega la lista («Guardar» y «Guardar todas»); dos clics, un PATCH; salir antes de la lista (O6); dos Enter en «Dividir», un POST (O7)  |  Verificación: `pytest tests/test_f065_f3bis_front.py -k "cr4 or o6 or o7"` falla como se espera
+- [x] T43: `partidasMalas` síncrona; «Guardar» y «Guardar todas» desactivan ya y validan y arman en el mismo tick; `volverSiNoVale` al salir o al llegar; «Aceptar» de «Dividir» como cerrojo  |  Verificación: `pytest tests/test_f065_f3bis_front.py tests/test_f065_f3_dividir.py tests/test_f065_f2_origen.py tests/test_f065_f1_js.py`
+- [x] T44: mutación a mano de lo nuevo, MANUAL e informe (§«Pasada 5»)  |  Verificación: `bash harness/init.sh` en verde
