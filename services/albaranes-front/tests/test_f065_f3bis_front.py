@@ -20,6 +20,7 @@ import re
 import subprocess
 from pathlib import Path
 
+import pytest
 from test_f051_almacen_front import _app_js, _funcion_js
 from test_f065_f1_js import _NODE, con_node
 
@@ -626,6 +627,28 @@ def test_f065_r27v4_foco_vacio_y_enter_no_manda_a_almacen(tmp_path):
     casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, _enter_tras(None))
 
     assert casos["almacen"] == 0 and casos["valor"] == "" and casos["marcada"] is None
+
+
+@con_node
+@pytest.mark.parametrize("borrado", ["", "   "])
+def test_f065_r27v4_borrar_lo_tecleado_y_enter_no_elige_nada(tmp_path, borrado):
+    """Sin texto (o solo espacios) la lista enseña todas, pero ninguna marcada."""
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, """
+        inp.value = "01.01";
+        inp.focus();
+        await tiempo();
+        teclear(inp, "0");
+        await tiempo();
+        teclear(inp, """ + json.dumps(borrado) + """);
+        await tiempo();
+        const marcada = activa();
+        const opciones = panel.children.length;
+        tecla(inp, "Enter");
+        await tiempo();
+        console.log(JSON.stringify({marcada, opciones, valor: inp.value, almacen, cerrado: panel.hidden}));
+    """)
+
+    assert casos == {"marcada": None, "opciones": 7, "valor": borrado, "almacen": 0, "cerrado": False}
 
 
 @con_node
