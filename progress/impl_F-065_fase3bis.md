@@ -114,15 +114,15 @@ passed**; tras cerrar supervivientes, **17 passed**.
 - MANUAL T35 (hecha por el humano) y sus pasos 4 bis y 4 ter, en `progress/current.md`. Fuera: el servidor (no valida
   la partida contra la obra, P11), cobertura de JS. Falta: review, fusionar, `init.sh` en el principal, desplegar sv4.
 
-## 8. Evidencias (las últimas, pasada 4)
+## 8. Evidencias (las últimas, pasada 5)
 
 | Evidencia | Valor real |
 |---|---|
-| Tests ejecutados | sv4 **1275 passed** (`test_f065_f3bis_front.py`: 54) |
+| Tests ejecutados | sv4 **1287 passed** (`test_f065_f3bis_front.py`: 66) |
 | Cobertura de las líneas cambiadas | **N/A** (`PUERTA COBERTURA`: sin Python de producción; JS cubierto por tests con node) |
-| Mutantes | arnés: alcance vacío; **a mano, pasada 4: 38 generados, 38 muertos, 0 supervivientes** (pasadas 2 y 3: 57/57, 15/15) |
-| Tiempo de la suite | sv4 99,7 s dentro de `init.sh`; línea base de la campaña 18,6 s |
-| `bash harness/init.sh` | **exit 0** (`642da6d`), raíz 1083 passed, sv4 1275 passed, `ENTORNO LISTO` |
+| Mutantes | arnés: alcance vacío; **a mano, pasada 5: 19/19, 0 supervivientes** (pasadas 2, 3 y 4: 57/57, 15/15, 38/38) |
+| Tiempo de la suite | sv4 235,8 s dentro de `init.sh` (máquina cargada); línea base de la campaña 33,2 s |
+| `bash harness/init.sh` | **exit 0** (`b2c6730`), raíz 1083 passed, sv4 1287 passed, `ENTORNO LISTO` |
 
 ## Pasada 2 (review `1bc0e5f`: CHANGES_REQUESTED por CR1, CR2 y CR3)
 
@@ -216,4 +216,4 @@ navegador). Commits `20a6909` RED · `2fa95e3` código y 2 tests de control · e
 **Mutación a mano** (`progress/mutacion_F-065_fase3bis.md` §«Pasada 5»): HEAD `2fa95e378b369c760c1959fee671bbde95279361`,
 línea base de los cuatro ficheros 251 passed, **19 mutantes, 19 muertos, 0 supervivientes** (entre ellos, el propio
 fallo de CR4 como un solo mutante en cada botón); solo con conducta (62 tests, sin textuales): **19/19**.
-**Verificación**: `bash harness/init.sh`: PENDIENTE_P5.
+**Verificación**: `bash harness/init.sh` (`b2c6730`): **exit 0**, raíz 1083, sv4 **1287 passed**, `ENTORNO LISTO`.
