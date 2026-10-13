@@ -33,7 +33,7 @@ consultas de comprobación son de solo lectura.
 - [x] T16: dominio y repositorio — `cambia_origen`; `update_line_conciliacion` decide con los campos presentes y el precio aplicado; `set_line_conciliacion(contract_line)` copia partida y precio (R25, R26, R28)  |  Verificación: `pytest tests/test_f065_f2_origen.py -k "not js"` y `pytest tests/test_f051_almacen_front.py`
 - [x] T17: front — combo de partidas de la obra con teclado, sin `confirm` de NUEVA, concepto como texto, «Contrato» en la plantilla (R24, R25, R27, R28)  |  Verificación: `pytest tests/test_f065_f2_origen.py -k js`
 - [x] T18: cobertura y campaña de mutación de la fase 2  |  Verificación: como T12 (`progress/mutacion_F-065_fase2.md`)
-- [ ] T19: MANUAL fase 2 (humano, local): en una fila Contrato elegir otra partida de la obra (pasa a Nueva sin aviso), «Almacén» (sigue Contrato) y, en una obra sin partidas, ver solo «Almacén»; `SELECT lv.matched_contrato_line_id, lv.derived_contrato_line_id, lv.codigo_partida_final FROM albaran_line_valuations lv WHERE lv.id = <VID>;`  |  Verificación: MANUAL (humano): derivada `manual_override` con la partida elegida; en almacén, la misma línea de contrato
+- [x] T19: MANUAL fase 2 (humano, local): en una fila Contrato elegir otra partida de la obra (pasa a Nueva sin aviso), «Almacén» (sigue Contrato) y, en una obra sin partidas, ver solo «Almacén»; `SELECT lv.matched_contrato_line_id, lv.derived_contrato_line_id, lv.codigo_partida_final FROM albaran_line_valuations lv WHERE lv.id = <VID>;`  |  Verificación: MANUAL (humano): derivada `manual_override` con la partida elegida; en almacén, la misma línea de contrato
 - [x] T20: (humano) review de la fase 2  |  Verificación: `progress/review_F-065_fase2.md` APROBADO · APROBADA (pasada 3, `c836eb4`); fusionada en `dev` (`7b46bd8`) con `init.sh` verde
 
 ## Fase 3 · dividir (sv4 + test de sv9)
@@ -44,8 +44,8 @@ consultas de comprobación son de solo lectura.
 - [x] T24: detalle y front — partes bajo su original, aviso de familia, diálogo F6, quitar F7 (R29, R35)  |  Verificación: `pytest tests/test_f065_f3_dividir.py -k "pintado or js"`
 - [x] T25: test de contrato en sv9 (R36) y `ARCHITECTURE.md` / `azure-apps` con `line_kind = 'reparto'` (R37)  |  Verificación: `pytest services/albaranes-alta-sigrid/tests/test_f065_partes.py -k r36` y lectura del reviewer
 - [x] T26: cobertura y campaña de mutación de la fase 3  |  Verificación: como T12 (`progress/mutacion_F-065_fase3.md`)
-- [ ] T27: MANUAL fase 3 (humano, local): F6 sobre una fila Contrato de 18 ⇒ 6 (su partida) / 7 (otra) / 5 (almacén), «Guardar y aprobar»; `SELECT lv.id, lv.line_kind, lv.parent_merge_line_id, lv.matched_contrato_line_id, lv.derived_contrato_line_id, lv.cantidad_convertida, lv.importe_calculado, lv.codigo_partida_final FROM albaran_line_valuations lv JOIN albaran_valuations v ON v.id = lv.valuation_id WHERE v.document_id = '<ID>' ORDER BY lv.id;`; desaprobar, «Deshacer» y repetir  |  Verificación: MANUAL (humano): 6 y 5 con la línea de contrato, 7 Nueva, importes que suman el original; tras deshacer, una fila de 18
-- [ ] T28: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh` termina con código 0
+- [x] T27: MANUAL fase 3 (humano, local): F6 sobre una fila Contrato de 18 ⇒ 6 (su partida) / 7 (otra) / 5 (almacén), «Guardar y aprobar»; `SELECT lv.id, lv.line_kind, lv.parent_merge_line_id, lv.matched_contrato_line_id, lv.derived_contrato_line_id, lv.cantidad_convertida, lv.importe_calculado, lv.codigo_partida_final FROM albaran_line_valuations lv JOIN albaran_valuations v ON v.id = lv.valuation_id WHERE v.document_id = '<ID>' ORDER BY lv.id;`; desaprobar, «Deshacer» y repetir  |  Verificación: MANUAL (humano): 6 y 5 con la línea de contrato, 7 Nueva, importes que suman el original; tras deshacer, una fila de 18
+- [x] T28: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh` termina con código 0
 
 ## Fase 3 bis · ajustes de front de las MANUAL T19/T27 (solo sv4: `app.js`, plantilla, CSS; design §5.5)
 
@@ -76,3 +76,7 @@ Plan aprobado por el humano en la PARADA 1 del 2026-10-12. Sin servidor. Informe
 - [x] T42: tests RED: lo validado es lo enviado aunque la casilla cambie mientras llega la lista («Guardar» y «Guardar todas»); dos clics, un PATCH; salir antes de la lista (O6); dos Enter en «Dividir», un POST (O7)  |  Verificación: `pytest tests/test_f065_f3bis_front.py -k "cr4 or o6 or o7"` falla como se espera
 - [x] T43: `partidasMalas` síncrona; «Guardar» y «Guardar todas» desactivan ya y validan y arman en el mismo tick; `volverSiNoVale` al salir o al llegar; «Aceptar» de «Dividir» como cerrojo  |  Verificación: `pytest tests/test_f065_f3bis_front.py tests/test_f065_f3_dividir.py tests/test_f065_f2_origen.py tests/test_f065_f1_js.py`
 - [x] T44: mutación a mano de lo nuevo, MANUAL e informe (§«Pasada 5»)  |  Verificación: `bash harness/init.sh` en verde
+
+> Cierre (2026-10-13): T19 hecha por el humano salvo el punto «obra sin partidas ⇒ solo «Almacén»», cubierto solo por
+> tests automáticos; T27 hecha (con F7, fase 3 bis); T28: `init.sh` en verde en `dev` (`53515de`); MANUAL T35 (pasos
+> 1–6, 4 bis, 4 ter y 4 quater) hecha por el humano, la última en producción tras desplegar sv4 `r20261013-1836`.
