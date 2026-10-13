@@ -1,135 +1,138 @@
 <!-- progress/review_F-065_fase3bis.md -->
-Revisión incremental desde `ee13554` (pasada 3), hasta `8b2d404`; la 2 desde `1bc0e5f`; la 1, completa `cd3baf1..321b572`
+Revisión incremental desde `553604d` (pasada 4) hasta `9e30765`; la 3 desde `ee13554`, la 2 desde `1bc0e5f`, la 1 completa
 
-# F-065 · fase 3 bis (R27 v3–v4, R29 v3; design §5.5; T29–T38) · review
+# F-065 · fase 3 bis (R27 v3–v5, R29 v3; design §5.5; T29–T41) · review
 
-- **Veredicto (pasada 3, al final): APPROVED.**
-  - La pasada 1 fue CHANGES_REQUESTED por CR1, CR2 y CR3; la 2 los dio por resueltos y fue APPROVED.
-  - La pasada 3 es H1, aprobado por el humano como R27 v4.
+- **Veredicto (pasada 4, al final): CHANGES_REQUESTED** por CR4: una carrera que deja enviar una partida fuera de la
+  lista en «Guardar» y en «Guardar todas».
+  - La pasada 1 fue CHANGES_REQUESTED por CR1–CR3.
+  - Las pasadas 2 y 3 fueron APPROVED.
 - **Nivel de rigor:** `critico` (declarado). Exige fase RED, cobertura (o N/A con motivo), mutación con 0
   supervivientes y MANUAL con su comando.
-- **Alcance:** solo sv4 y solo front (`app.js`, `styles.css`, `document_detail.html`) más tests y docs. La pasada 3
-  toca solo `app.js` (`attachPartidaCombo`, que sirve a la fila y a «Dividir»).
+- **Alcance:** solo sv4 y solo front. El servidor no cambia: el diff no toca Python de producción.
 
-## Pasada 1 (resumen; detalle en `1bc0e5f`)
-- **`init.sh`** exit 0; sv4 sin caché, 1238 passed. RED reproducido: 17 failed contra `cd3baf1`.
-- **D1**: el bloque «Columnas de tabla GENÉRICAS» es **idéntico** al de `860b6c5^` (290 líneas). No trae nada del
-  duplicar ni de F7, y la bandeja (`sv4.listCols`) lo vuelve a usar.
-- **Comprobado**: `pick` sigue marcando la fila; «Dividir» manda las cantidades exactas (6/7/**5**); `repartoValido` no
-  cambió. Campaña 44/44 reejecutada.
-- **Pedí tres cambios:**
-  - **CR1**: el combo admitía texto fuera de la lista tras elegir.
-  - **CR2**: la cabecera de «Acciones» no era sticky, porque perdía ante una regla con especificidad (0,2,3).
-  - **CR3**: había un equivalente MUERTO (RM3) y faltaban el SHA, la línea y los fallos por fila.
+## Pasadas 1–3 (resumen; detalle en `1bc0e5f`, `ee13554` y `553604d`)
+- **Pasada 1**: D1 verificado (el bloque de columnas es idéntico al de `860b6c5^`) y la campaña 44/44 reejecutada.
+  Pedí tres cambios:
+  - **CR1**: el combo admitía texto fuera de la lista tras elegir;
+  - **CR2**: la cabecera de «Acciones» no era sticky, por especificidad;
+  - **CR3**: un mutante equivalente salía MUERTO y a la campaña le faltaban datos.
+- **Pasada 2**: los tres, resueltos. Medí en Chrome sin cabeza que la cabecera queda sticky; el CSS quitado era
+  equivalente; el motor de cascada es válido para lo que mira; reproduje la campaña 57/57 fila a fila.
+- **Pasada 3** (R27 v4): Enter sin marcada no elige nada; un doble Enter no guarda la fila ni acepta «Dividir»; CR1
+  sigue en pie; reproduje la campaña 15/15 fila a fila y demostré ejecutando el equivalente #5.
 
-## Pasada 2 (resumen; detalle en `ee13554`)
-- **`init.sh`** exit 0; sv4 sin caché, 1247 passed. RED contra `1bc0e5f`: los 3 de CR1 y el de la cabecera fallan.
-- **CR1**: `alAbrir` solo se toma al abrir por foco o clic.
-- **CR2**: el selector lleva `tr.salmon-head`.
-  - **Medido por mí en Chrome sin cabeza**: con el CSS anterior la cabecera era `relative` y estaba fuera de la caja;
-    ahora la cabecera y la celda son `sticky`, pegadas al borde, opacas y encima en 9/9 puntos.
-  - **Lo quitado del CSS era equivalente**: el `background` lo pisa la fila, que es más específica; `white-space:
-    normal` es el valor heredado; los `z-index` son prescindibles en el orden del DOM. Chrome da las medidas
-    idénticas con y sin ellos.
-  - **El motor de cascada del test es válido para lo que mira.** Límites: sin longhands y la cadena de antepasados
-    acaba en la tabla; los cubrí a mano.
-- **CR3**: campaña reejecutada, **57/57 con las 57 filas iguales** (línea y fallos incluidos). RM1:
-  `1b605415b0b4dd6f2ca99dfced7d8af94eb8fea0`. El #2 (`dialogo.open`) muere solo en el DOM falso; lo acepto, declarado.
+## Pasada 4 · R27 v5: verificación ejecutada por el reviewer (resultado real)
+- **`bash harness/init.sh`** (tal cual, en `9e30765`):
+  **exit 0**, `ENTORNO LISTO`, raíz `1083 passed`, `PUERTA COBERTURA: N/A (F-065 no cambia líneas Python de
+  producción frente a dev)`, rutas sensibles N/A, tamaño dentro (150/150, 190/250). sv4 salió de la caché, así que lo
+  corrí sin ella: **1275 passed** (44 s).
+- **Fase RED**: los tests de `137fe8e` contra `app.js` y `styles.css` de `553604d` dan **17 failed, 37 passed**,
+  exactamente lo que dice el informe.
+- **El código, revisado:**
+  - en la partida, Enter es siempre del combo: va en una cadena `if/else` antes de mirar `panel.hidden`;
+  - la lista se pinta al momento con «Cargando partidas…» (`cargadas`);
+  - `abierta` evita que una respuesta tardía reabra una lista que ya se cerró;
+  - `marcarPartida` y `partidasInvalidas` se usan en «Guardar» (el botón, y Enter en otra celda vía
+    `saveBtn.click()`), en «Guardar todas», en el aviso de «Guardar»/«Guardar y aprobar» y en `enviar` de
+    «Dividir».
+- **Caminos buscados a propósito.** Script mío sobre `_FILA_GUARDAR` (combo y `wireConciliaEdit`), con una respuesta
+  de Sigrid que se suelta a mano. Todos se portan bien:
+  - **Tab o blur durante la carga**: «zzzz» vuelve a «01.01» y la lista no se reabre al llegar la respuesta.
+    «Guardar» manda solo `{cantidad: 6}`.
+  - **«Guardar» con la carga pendiente y «zzzz» en la partida**: 0 peticiones antes de llegar la lista y 0 después.
+    La partida queda en rojo.
+  - **Sigrid caído**: «02.03» queda en rojo y no se hace ninguna petición. Vaciarla (almacén) manda
+    `{codigo_partida: ""}`.
+  - **Partida vieja fuera de la lista («99.99»), sin tocarla**: se manda `{cantidad: 6}` y no se pinta en rojo.
+  - **Lo válido sigue guardándose**: elegir con «puer» + Enter y pulsar «Guardar» manda
+    `{codigo_partida: "02.03"}`.
+- **«Guardar y aprobar» y «Guardar» de la cabecera**: con filas cambiadas, `guardarCabecera` avisa y vuelve sin hacer el
+  PUT. Además, `collectPayload` no lleva líneas (R1).
+- **Otros caminos que escriben la partida**, todos sin texto tecleado: «Origen ✎» (`mode` e id de la línea de
+  contrato), «Almacén» (POST `/almacen`), «Almacén a todas» y copiar las sin casar.
+- **«Dividir»**: lee y valida después del `await`, y el cuerpo se arma en ese mismo tick: correcto.
+- **RM6** (se quitó la guarda `if (!inp)` de `partidasInvalidas`). Verifiqué el invariante en quien construye el
+  dato:
+  - en `document_detail.html`, la clase `concilia-editable` de la fila (`:720`) y el `<input … js-partida-combo>`
+    (`:742`) dependen de la MISMA condición `cedit` (`:718`), sin más ramas;
+  - ningún JS añade `concilia-editable`.
+- **Campaña** (`progress/mutacion_F-065_fase3bis.md` §«Pasada 4»), reejecutada ENTERA sobre una copia de HEAD en el
+  scratchpad:
+  - **Con los cuatro ficheros de tests**: línea base `239 passed`; **38/38 muertos**. Las **38 filas coinciden una a
+    una** con la tabla del informe: línea, original, mutado, fallos y veredicto.
+  - **Sin tests textuales** (el filtro `-k` del informe): línea base `50 passed`; **38/38 muertos**.
+  - **RM1**: `e1563f565d582368e2a1ed549166bbb41b500a3f` es `e1563f5`; lo posterior es solo `impl`, `mutacion`,
+    `inventario` y `current`.
+  - **RM3**: los mutantes son de conducta o de cascada; no veo ningún equivalente.
 
-## Pasada 3 · H1 → R27 v4: verificación ejecutada por el reviewer (resultado real)
-- **`bash harness/init.sh`** (tal cual, `8b2d404`): **exit 0**, raíz `1083 passed`, `PUERTA COBERTURA: N/A (F-065 no
-  cambia líneas Python de producción frente a dev)`, rutas sensibles N/A, `PUERTA TAMAÑO` dentro (150/150, 179/250),
-  `ENTORNO LISTO`. sv4 salió de caché, así que lo corrí sin caché: **1259 passed** (77 s).
-- **RED**: los tests de HEAD contra `app.js` de `2d64bc2` dan **21 failed, 17 passed**. Son los 19 del informe más los
-  2 parametrizados de «borrar lo tecleado», añadidos en `0075ce4`. Casa con la traza del informe.
-- **El código, comprobado:**
-  - `marcadaAlTeclear(shown, texto)` devuelve 0 si `esAlmacenTecleado`. Si no, 1 si hay texto y alguna partida
-    coincide, y -1 en otro caso.
-  - Se usa solo con `textoNuevo`; al abrir por foco o clic, `activo` sigue a -1 tras `close`: **ninguna marcada**.
-  - El Enter elige `shown[activo]` (con -1, `undefined`: nada; la guarda `activo >= 0` quitada era redundante), con
-    `preventDefault` y `stopImmediatePropagation`. Las flechas siguen con `siguienteActivo`.
-- **Conducta, reproducida con mi propio script** (DOM falso con las funciones reales de `app.js`):
-  - **En la fila** añadí, en el MISMO input y registrado después, un oyente de Enter que cuenta guardados, como hace
-    `wireConciliaEdit` (`app.js:1133`, cableado tras `wirePartidaCombos`, `:1185`).
-  - Con «zzz», con «02.0x» y con foco sin teclear (valor «01.01»), **dos Enter** dan: **0 guardados, 0 POST
-    `/almacen`**, lista abierta, y al salir vuelve «01.01».
-  - Con «alba», el primer Enter elige «05.01» y cierra la lista; el segundo guarda la fila, que es lo esperado porque
-    el valor es de la lista.
-  - **CR1 sigue en pie**: elegir «02.03» con el ratón, teclear «02.0x» y salir ⇒ vuelve «02.03».
-  - **En «Dividir»**, con el combo de verdad: teclear «zzz» en la partida 1 y pulsar Enter dos veces ⇒ `enviado =
-    null` y los dos Enter quedan prevenidos; al salir vuelve «01.01».
-  - Foco y Enter dos veces sin teclear ⇒ `enviado = null`. El test del implementer cubre «alba» + Enter ⇒ «05.01» y
-    el Enter siguiente acepta `[6 → 05.01, 12 → 01.01]`; el «Almacén» de la fila nunca se llama desde la ventana.
-- **Tests nuevos (`r27v4_*`)**, todos de conducta: «alba», «02.0» y «al» + Enter; sin coincidencias (Enter y al
-  salir); foco + Enter, con y sin valor; borrar lo tecleado (`""` y `"   "`); las flechas mandan; la ventana «Dividir»;
-  y la función pura como contrato. El de «otro texto» pasó a v4: ahora se marca la primera que coincide.
-- **Campaña de la pasada 3**: reejecutada ENTERA sobre una copia de sv4 de HEAD en scratchpad, con el script base del
-  informe y la lista `M` de la pasada 3.
-  - Línea base `204 passed` (21 s). **15 mutantes, 15 muertos, 0 vivos**, en 5 min 26 s.
-  - **Las 15 filas coinciden una a una** con la tabla del informe: `fichero:línea`, original, mutado, **nº de fallos**
-    y veredicto (comparación automática).
-  - **RM1**: `0075ce4900a27867ec0c1e6c0c80f46dcf5d5711` es `0075ce4`. De ahí a HEAD solo cambian `impl`, `mutacion`,
-    `inventario` y `tasks`.
-- **RM5, el equivalente #5** (quitar `shown.length > 1`), **demostrado ejecutando por mí**:
-  - con el mutante aplicado en la copia, los tres ficheros sin `que_marca_al_teclear` dan **203 passed**: sobrevive;
-  - con ese test, **1 failed** (`[1, 1, 0, 0, 0, 1, …] != [1, 1, 0, 0, 0, -1, …]`).
-- **Por qué es equivalente en el combo**: sin coincidencias, `shown` solo tiene «Almacén»; la posición 1 no existe
-  (`render` no marca nada y `shown[1]` es `undefined`), y con las flechas `siguienteActivo` lleva el 1 y el -1 al 0.
-- **RM3, mismo criterio que el #2 de la pasada 2**: lo mata un test que fija el **contrato de la función** (-1 =
-  ninguna), no un test textual, y el informe lo declara. Lo acepto, y no lo trato como equivalente muerto.
+## Cambios requeridos
+1. **CR4 · Lo que se valida no es lo que se envía.**
+   - **Dónde**: `static/app.js:1187-1189` («Guardar») y `:1483-1497` («Guardar todas»).
+   - **Qué pasa**: «Guardar» arma `body = _camposCambiados(tr)` ANTES de `await partidasInvalidas([tr])`, que valida
+     lo que haya en la casilla DESPUÉS de esperar a Sigrid. «Guardar todas» hace lo mismo con `envios`.
+   - **Reproducido** (DOM falso, con la carga pendiente):
+     1. `part.value = "zzzz"` sin pasar por el combo. Es justo el caso que el test
+        `boton_guardar_con_partida_fuera_de_la_lista_no_envia` llama «la última barrera».
+     2. `guardar.click()`.
+     3. Durante la espera, la casilla pasa a «02.03».
+     4. Llega la lista ⇒ **`PATCH … {"codigo_partida": "zzzz"}`**.
+   - **Por qué lo pido aunque cueste llegar ahí**: en un navegador, el blur del combo ya devuelve lo inválido antes del
+     clic. Pero R27 v5 promete «por ningún camino», y la barrera que lo cubre falla justo cuando Sigrid tarda, que es la
+     condición del fallo de la MANUAL.
+   - **Arreglo**: validar primero y armar el cuerpo después, sin `await` entre medias; en «Guardar todas», armar
+     `envios` tras la validación. Recomendado: desactivar el botón antes del `await` (hoy dos clics durante la carga
+     mandan dos PATCH).
+   - **Verificación que pido**: un test RED con esa secuencia para «Guardar» y para «Guardar todas», y mutación a mano
+     de las líneas movidas (incremental, con SHA completo, línea base y fallos por fila).
 
-## Checkpoints (estado final)
-- C1 [x] init exit 0 · [x] ficheros del arnés.
-- C2 [x] solo F-065 `in_progress` · [x] rama `feature/F-065-lineas-editadas-y-reparto` · [x] `current.md` = sesión
-  F-065 · [x] sin `done` nuevas.
-- C3:
-  - [x] hexagonal: no aplica a estático, no hay Python de producción.
-  - [x] primera línea con ruta.
-  - [x] sin prints (los `console.log` son la salida de los tests con node), sin secretos, sin dependencias.
-  - [x] regla 20 de ARCHITECTURE al día (R27 v4).
-- C3 bis **N/A**: no toca `docs/referencia/`.
-- C4 [x] cada requisito con test que pasa (tabla) · [x] sin red ni BBDD · [x] MANUAL en `current.md` (paso 4 bis de
-  T35 para R27 v4; T35 hecha por el humano).
-- C4 bis:
-  - [x] rigor `critico`.
-  - [x] fase RED con salida real, en las tres pasadas.
-  - [x] cobertura N/A con el motivo impreso: sin Python de producción.
-  - [x] alcance de la herramienta vacío por lenguaje (recalculado en la pasada 1).
-  - [x] campañas manuales reejecutadas enteras · [x] el tiempo cuadra · [x] sin «NO VÁLIDA».
-  - [x] RM1, RM2 y RM3 (arriba).
-  - [x] RM5: el equivalente #5, reproducido.
-  - **RM6 N/A**: no se quitó ninguna guarda defensiva; `activo >= 0` era redundante, porque `shown[-1]` es
-    `undefined`, y `if (elegido)` sigue.
-  - [x] tablas con línea, texto exacto y fallos · [x] 0 supervivientes · [x] «Evidencias» · [x] N/A justificados.
-- C4 ter **N/A**: la puerta de rutas sensibles da N/A.
-- C5:
-  - [x] T29–T38 `[x]` con sus commits `F-065 Tn:`; T35 hecha por el humano. T27 y T28 son MANUAL o posteriores.
-  - [x] árbol limpio · [x] `features.json` (`in_progress`).
+## Checkpoints (estado en la pasada 4)
+- **C1**: [x] init exit 0 · [x] ficheros del arnés.
+- **C2**: [x] solo F-065 `in_progress` · [x] rama de la feature · [x] `current.md` = sesión F-065 · [x] sin `done`
+  nuevas.
+- **C3**: [x] hexagonal: no aplica a estático, no hay Python de producción · [x] primera línea con ruta · [x] sin
+  prints, sin secretos, sin dependencias · [x] ARCHITECTURE al día (R27 v5).
+- **C3 bis** N/A: no toca `docs/referencia/`.
+- **C4**:
+  - [ ] **R27 v5, «no se guarda por ningún camino»**: el test de la última barrera existe y pasa, pero no cubre la
+    carrera (CR4).
+  - [x] sin red ni BBDD.
+  - [x] MANUAL: paso 4 ter de T35.
+- **C4 bis**:
+  - [x] rigor `critico` · [x] RED con salida real · [x] cobertura N/A con el motivo impreso · [x] alcance de la
+    herramienta vacío por lenguaje.
+  - [x] campaña reejecutada entera, también sin textuales · [x] RM1, RM2 y RM3 · [x] RM6: invariante verificado
+    (arriba).
+  - RM5 N/A: no hay equivalentes declarados en la pasada 4.
+  - [x] tabla con línea, texto exacto y fallos · [x] 0 supervivientes · [x] «Evidencias» · [x] N/A justificados.
+- **C4 ter** N/A: la puerta de rutas sensibles da N/A.
+- **C5**: [x] T39–T41 con sus commits `F-065 Tn:` y los de la pasada · [x] árbol limpio · [x] `features.json`.
 
-## Cobertura requisito → test (`tests/test_f065_f3bis_front.py` salvo indicación)
+## Cobertura requisito → test (`tests/test_f065_f3bis_front.py`)
 | Requisito | Tests |
 |---|---|
-| R29 v3 F7 sí, F6 no | `r29v3_f7_*` (4); `test_f065_f3_dividir::r29_js_f7_abre_la_ventana...` |
-| R29 v3 última parte automática, roja, «Aceptar» | `r29v3_ultima_parte_*` (incluye el POST 6/7/5), `r29v3_estado_del_reparto`; `repartoValido` (T24) |
-| R29 v3 «Acciones» a la vista | `cr2_la_cabecera_…_gana_la_cascada`, `cr2_la_celda_…_gana_la_cascada`, `r29v3_acciones_*` |
-| D1 columnas y bandeja | `r29v3_columnas_el_bloque_esta_cableado`, `r29v3_columnas_anchos_orden_y_restablecer` |
-| R27 v3 cerrar al elegir, «al» → Almacén | `r27v3_combo_*`, `r27v3_que_cuenta_como_almacen`, `cr1_tras_elegir_teclear_vuelve_a_abrir_la_lista` |
-| R27 v4 marcada y Enter (fila y «Dividir») | `r27v4_*` (12 tests, 13 casos) |
-| R27 solo valores de la lista | `cr1_*` (5), `r27v4_sin_coincidencias_*`; `test_f065_f2_origen` (`partidaValida`) |
+| R29 v3 (F7, última parte, «Acciones») y D1 | `r29v3_*`, `cr2_*`, `test_f065_f3_dividir::r29_js_*` |
+| R27 v3/v4 (cerrar al elegir, marcada, Enter) | `r27v3_*`, `r27v4_*`, `cr1_*` |
+| R27 v5: Enter nunca guarda ni acepta; «Cargando…» | `r27v5_la_lista_se_abre_ya_cargando…`, `r27v5_al_y_enter_cargando…`, `r27v5_esc_mientras_carga…`, `r27v5_enter_con_la_lista_cerrada…`, `r27v4_en_la_ventana_dividir_lo_mismo` |
+| R27 v5: fuera de la lista no se guarda | `r27v5_boton_guardar…`, `r27v5_enter_en_otra_celda…`, `r27v5_guardar_todas…`, `r27v5_guardar_y_aprobar…`, `r27v5_dividir_*`, `r27v5_sin_lista_de_sigrid…`, `r27v5_la_partida_mala_se_ve_en_rojo` — **falta la carrera (CR4)** |
+| R27 v5: lo válido se guarda | `r27v5_lo_valido_se_sigue_guardando` (3 casos), `r27v5_una_partida_vieja_sin_tocar_no_se_valida` |
 
 ## Observaciones (no bloquean)
-- **O1 · Anchos guardados** (`acciones` a 156 px): anotado en la MANUAL; «↺ Columnas» lo arregla.
-- **O3 · «Dividir», «Almacén» y luego texto inválido.** En la ventana, elegir «Almacén» deja la partida vacía sin
-  actualizar `alAbrir`. Si luego se teclea algo inválido y se sale, vuelve la partida de antes. Sigue siendo un valor de
-  la lista.
-- **O4 · El código exacto no tiene prioridad (R27 v4).** La marcada es la PRIMERA que coincide por código **o
-  descripción**, en el orden de sigrid-api. Si una partida anterior lleva el texto en la descripción, teclear un código
-  exacto y pulsar Enter elegiría esa otra. La marcada se ve antes del Enter, y es lo que pidió el humano. Si molesta en
-  la práctica, la mejora es priorizar el código exacto o el prefijo de código.
-- **O5 · Teclado en la fila.** Con foco en la partida y sin teclear, el primer Enter ya no guarda la fila: la lista
-  está abierta y no hay marcada. Hay que pulsar Esc y luego Enter. Es la consecuencia buscada de «sin marcada, nada»
-  (el humano lo ha aprobado); conviene decirlo al desplegar.
+- **O1 · Anchos guardados**: «Acciones» se queda a 156 px; está anotado en la MANUAL.
+- **O3 · «Dividir»**: tras elegir «Almacén», un texto inválido vuelve a la partida anterior, no a la vacía.
+- **O4 · R27 v4**: el código exacto no tiene prioridad sobre una descripción que coincida antes.
+- **O5 · Teclado**: en la partida, Enter ya no guarda nunca (R27 v5, aprobado). Conviene decirlo al desplegar.
+- **O6 · Validar contra una lista que aún no ha llegado**: si se teclea un código VÁLIDO y se sale con Tab antes de que
+  lleguen las partidas, la casilla vuelve a la partida de antes sin avisar, porque el blur valida contra la lista
+  vacía. Es seguro, pero confunde. Una vez arreglado CR4, se podría no revertir en el blur mientras `!cargadas` y dejar
+  la decisión a la barrera del guardado.
+- **O7 · Doble envío en «Dividir»** (previo a esta pasada): Enter en una cantidad llama a `enviar` aunque «Aceptar»
+  esté desactivado.
+  - Dos Enter seguidos pueden mandar dos POST `/dividir`, y la espera de las partidas agranda esa ventana.
+  - El servidor rechaza el segundo si la suma ya no cuadra con Q.
+  - Recomendado: en `enviar`, salir si `aceptar.disabled` o si ya hay un envío en curso.
 
-## Automejora (propuesta de la pasada 1, sigue en pie)
-- En `CHECKPOINTS.md` (C4 bis, campaña manual): un mutante de CSS que solo mata un test textual no cuenta como muerto;
-  exigir un test de cascada o una medida en navegador.
+## Automejora (propuesta)
+- **En `CHECKPOINTS.md`** (C4, front asíncrono): cuando un guardado valida tras un `await`, el reviewer comprueba que lo
+  enviado se arma DESPUÉS de validar.
+- **Por qué**: es un hueco tipo TOCTOU (validar una cosa y enviar otra) y lo reproduce cualquier validación asíncrona.
