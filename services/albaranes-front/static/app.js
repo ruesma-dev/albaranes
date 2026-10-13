@@ -759,6 +759,14 @@
         return t !== "" && ("almacen".indexOf(t) === 0 || t.indexOf("almacen") === 0);
     }
 
+    // La marcada al teclear (R27 v4): «Almacén» (posición 0) si es lo
+    // tecleado; si no, la primera partida que coincide (posición 1: la 0 es
+    // siempre «Almacén»); sin texto o sin coincidencias, ninguna (-1).
+    function marcadaAlTeclear(shown, texto) {
+        if (esAlmacenTecleado(texto)) { return 0; }
+        return String(texto || "").trim() !== "" && shown.length > 1 ? 1 : -1;
+    }
+
     function partidaValida(valor, items) {
         const v = String(valor || "").trim();
         return v === "" || items.some(function (it) { return it.code === v; });
@@ -879,9 +887,10 @@
                 window.addEventListener("resize", repos);
             }
         }
-        // ``textoNuevo`` (R27 v3): con otro texto la lista vuelve arriba y la
-        // marcada se recalcula: «Almacén» si es lo tecleado, si no ninguna
-        // (antes seguía marcada la misma posición, ya con otra partida).
+        // ``textoNuevo`` (R27 v3, v4): con otro texto la lista vuelve arriba y
+        // la marcada se recalcula (``marcadaAlTeclear``: «Almacén» o la primera
+        // que coincide; antes seguía marcada la misma posición, ya con otra
+        // partida).
         // ``alAbrir`` (lo que vuelve con Esc o al salir con algo que no es de
         // la lista) se toma al ABRIR por foco o clic, nunca de lo que se está
         // tecleando (pasada 2, CR1: tras elegir, la lista queda cerrada con el
@@ -892,7 +901,7 @@
                 partidas = res;
                 shown = opcionesPartida(res.items, input.value);
                 if (textoNuevo) {
-                    activo = esAlmacenTecleado(input.value) ? 0 : -1;
+                    activo = marcadaAlTeclear(shown, input.value);
                 } else {
                     activo = Math.min(activo, shown.length - 1);
                 }
@@ -917,10 +926,14 @@
                 render();
                 _scrollActive(panel);
             } else if (e.key === "Enter") {
+                // Elige la marcada. SIN marcada no elige nada (R27 v4, H1:
+                // antes caía en «Almacén», la primera, y la fila iba a almacén):
+                // la lista sigue abierta y el Enter no llega al «Guardar» de la
+                // fila ni al «Aceptar» de «Dividir» (no se guarda un texto que no
+                // es de la lista; Esc o salir devuelven el de antes).
                 e.preventDefault();
                 e.stopImmediatePropagation();
-                const elegido = shown[activo >= 0 ? activo : 0];
-                if (elegido) { pick(elegido); }
+                if (activo >= 0 && shown[activo]) { pick(shown[activo]); }
             } else if (e.key === "Escape") {
                 e.preventDefault();
                 input.value = alAbrir;

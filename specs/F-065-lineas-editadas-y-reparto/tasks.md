@@ -61,6 +61,6 @@ Plan aprobado por el humano en la PARADA 1 del 2026-10-12. Sin servidor. Informe
 
 ### Pasada 3 de la fase 3 bis · H1 (R27 v4; aprobada por el humano el 2026-10-13, opción «a», antes de desplegar sv4)
 
-- [ ] T36: tests RED de R27 v4: «alba» y «02.0» + Enter eligen la primera partida que coincide (nunca POST a `/almacen`), «al» + Enter = «Almacén», «zzz» + Enter y foco + Enter no eligen nada, las flechas mandan; lo mismo en la ventana «Dividir»  |  Verificación: `pytest tests/test_f065_f3bis_front.py -k r27v4` falla como se espera
-- [ ] T37: `marcadaAlTeclear` y Enter sin marcada = nada en `attachPartidaCombo` (R27 v4)  |  Verificación: `pytest tests/test_f065_f3bis_front.py tests/test_f065_f2_origen.py tests/test_f065_f3_dividir.py`
+- [x] T36: tests RED de R27 v4: «alba» y «02.0» + Enter eligen la primera partida que coincide (nunca POST a `/almacen`), «al» + Enter = «Almacén», «zzz» + Enter y foco + Enter no eligen nada, las flechas mandan; lo mismo en la ventana «Dividir»  |  Verificación: `pytest tests/test_f065_f3bis_front.py -k r27v4` falla como se espera
+- [x] T37: `marcadaAlTeclear` y Enter sin marcada = nada en `attachPartidaCombo` (R27 v4)  |  Verificación: `pytest tests/test_f065_f3bis_front.py tests/test_f065_f2_origen.py tests/test_f065_f3_dividir.py`
 - [ ] T38: ARCHITECTURE, MANUAL en `current.md`, mutación a mano de lo nuevo e informe (§«Pasada 3»)  |  Verificación: `bash harness/init.sh` en verde
