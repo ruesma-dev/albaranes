@@ -739,7 +739,7 @@ def test_f065_r27v4_en_la_ventana_dividir_lo_mismo(tmp_path):
 # cambiada que no es de la lista no se guarda por ningún camino.
 # =================================================================== #
 _GUARDAR = ["parseNumEs", "numerosIguales", "partidaParaEnviar", "_camposCambiados", "importeDeFila",
-            "marcarPartida", "partidasInvalidas", "wireConciliaEdit"]
+            "marcarPartida", "partidasMalas", "partidasInvalidas", "wireConciliaEdit"]
 
 # Una fila editable de verdad: combo de partida + wireConciliaEdit (Enter =
 # «Guardar», botón «Guardar» con su PATCH). Las partidas llegan cuando el test
@@ -1130,6 +1130,35 @@ def test_f065_cr4_dos_clics_durante_la_carga_un_solo_patch(tmp_path, boton):
     """)
 
     assert casos == {"cuerpos": [{"cantidad": 6}]}
+
+
+@con_node
+def test_f065_cr4_guardar_todas_sin_cambios_avisa_y_no_envia(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar() + _todas(), """
+        lista();
+        todas.click();
+        await tiempo();
+        console.log(JSON.stringify({peticiones: peticiones.length, alertas}));
+    """)
+
+    assert casos == {"peticiones": 0, "alertas": ["No hay cambios en las líneas."]}
+
+
+@con_node
+def test_f065_cr4_guardar_todas_si_durante_la_carga_se_deshace_no_envia(tmp_path):
+    """Las filas con cambios se cuentan tras la espera: una que volvió a como estaba no se manda (ni bloquea)."""
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar() + _todas(), """
+        cant.value = "6";
+        todas.click();
+        await tiempo();
+        cant.value = "8";
+        lista();
+        await tiempo();
+        await tiempo();
+        console.log(JSON.stringify({peticiones: peticiones.length}));
+    """)
+
+    assert casos == {"peticiones": 0}
 
 
 @con_node

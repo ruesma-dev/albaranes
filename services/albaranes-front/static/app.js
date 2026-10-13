@@ -909,7 +909,10 @@
             cargarPartidasObra().then(function (res) {
                 partidas = res;
                 cargadas = true;
-                if (!abierta) { return; }
+                if (!abierta) {
+                    volverSiNoVale();  // O6: se salió antes de que llegara
+                    return;
+                }
                 shown = opcionesPartida(res.items, input.value);
                 if (textoNuevo) {
                     activo = marcadaAlTeclear(shown, input.value);
@@ -956,11 +959,16 @@
             }
         });
         // Solo valores de la lista: lo demás vuelve al valor de antes.
-        input.addEventListener("blur", function () {
-            if (!partidaValida(input.value, partidas.items)) {
+        // Solo valores de la lista: lo demás vuelve al valor de antes. Sin la
+        // lista aún no se decide a ciegas (O6): se decide al llegar.
+        function volverSiNoVale() {
+            if (input.value !== alAbrir && !partidaValida(input.value, partidas.items)) {
                 input.value = alAbrir;
                 input.dispatchEvent(new Event("input", { bubbles: true }));
             }
+        }
+        input.addEventListener("blur", function () {
+            if (cargadas) { volverSiNoVale(); }
             close();
         });
         document.addEventListener("click", function (e) {
@@ -1031,17 +1039,24 @@
     // F-065 R27 v5: una partida CAMBIADA que no es de la lista de la obra no
     // se guarda nunca (vacía = almacén vale; si Sigrid no respondió, solo
     // almacén; la que la fila ya tenía no viaja y no se mira). Marca en rojo
-    // las de ``filas`` que no valen y las devuelve.
-    async function partidasInvalidas(filas) {
-        const res = await cargarPartidasObra();
+    // las de ``filas`` que no valen contra ``items`` y las devuelve. Síncrona
+    // (pasada 5, CR4): quien guarda espera la lista, valida y arma el cuerpo en
+    // el mismo tick, así lo validado es exactamente lo enviado.
+    function partidasMalas(filas, items) {
         const malas = [];
         filas.forEach(function (tr) {
             const inp = tr.querySelector(".js-partida-combo");  // toda fila editable la tiene
-            const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, res.items);
+            const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, items);
             marcarPartida(inp, mal);
             if (mal) { malas.push(inp); }
         });
         return malas;
+    }
+
+    // Lo mismo esperando la lista (solo para marcar: el aviso de «Guardar» de
+    // la cabecera no envía filas).
+    async function partidasInvalidas(filas) {
+        return partidasMalas(filas, (await cargarPartidasObra()).items);
     }
 
     // F-065 R8: ¿el mismo número? Tolerancia de coma flotante, no de dinero
@@ -1184,11 +1199,17 @@
                 // F-065 R8, R13: solo lo cambiado; «Guardar» bloquea la fila
                 // (también sin cambios). R25: si cambian partida, unidad o
                 // precio de una fila Contrato, pasa a Nueva SIN confirmación.
-                const body = _camposCambiados(tr);
-                // R27 v5: con una partida fuera de la lista, nada (en rojo).
-                if ((await partidasInvalidas([tr])).length) { return; }
-
+                // CR4: desactivado YA (un segundo clic durante la espera no
+                // manda otro PATCH); tras la espera, validar y armar el cuerpo
+                // sin nada entre medias: lo validado es lo enviado. R27 v5:
+                // con una partida fuera de la lista, nada (en rojo).
                 saveBtn.disabled = true;
+                const lista = await cargarPartidasObra();
+                if (partidasMalas([tr], lista.items).length) {
+                    saveBtn.disabled = false;
+                    return;
+                }
+                const body = _camposCambiados(tr);
                 const original = saveBtn.textContent;
                 saveBtn.textContent = "Guardando…";
                 try {
@@ -1400,7 +1421,11 @@
         }
 
         async function enviar() {
-            if (!actual || !repartoValido(actual.q, cantidades())) { return; }
+            // «Aceptar» desactivado = reparto que no vale (``refrescar`` lo
+            // pone con ``repartoValido`` en cada tecla) o un envío en curso
+            // (O7: dos Enter seguidos ya no mandan dos POST).
+            if (!actual || aceptar.disabled) { return; }
+            aceptar.disabled = true;
             // R27 v5: cada partida, de la lista, vacía (almacén) o la de la
             // propia fila; si no, en rojo y no se envía.
             const res = await cargarPartidasObra();
@@ -1413,9 +1438,9 @@
             if (malas) {
                 errorEl.textContent = "Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).";
                 errorEl.hidden = false;
+                aceptar.disabled = false;
                 return;
             }
-            aceptar.disabled = true;
             try {
                 const resp = await fetch(
                     `/api/documents/${documentId}/lines/${actual.vid}/dividir`,
@@ -1479,26 +1504,31 @@
     const saveAllLinesBtn = document.getElementById("save-all-lines-btn");
     if (saveAllLinesBtn) {
         saveAllLinesBtn.addEventListener("click", async function () {
-            const envios = [];
-            const filas = [];
-            linesBody.querySelectorAll("tr.concilia-editable").forEach(function (tr) {
-                const vid = (tr.dataset.forValuationLineId || "").trim();
-                const cuerpo = _camposCambiados(tr);
-                if (vid && Object.keys(cuerpo).length) {
-                    envios.push({ vid: vid, cuerpo: cuerpo });
-                    filas.push(tr);
-                }
-            });
-            if (!envios.length) {
+            function conCambios() {
+                return [].filter.call(linesBody.querySelectorAll("tr.concilia-editable"), function (tr) {
+                    const vid = (tr.dataset.forValuationLineId || "").trim();
+                    const cuerpo = _camposCambiados(tr);
+                    return vid && Object.keys(cuerpo).length;
+                });
+            }
+            if (!conCambios().length) {
                 window.alert("No hay cambios en las líneas.");
                 return;
             }
-            // R27 v5: con alguna partida fuera de la lista no se guarda NADA.
-            if ((await partidasInvalidas(filas)).length) {
+            // CR4: desactivado ya; tras esperar la lista, filas, validación y
+            // cuerpos en el mismo tick (lo validado es lo enviado). R27 v5:
+            // con alguna partida fuera de la lista no se guarda NADA.
+            saveAllLinesBtn.disabled = true;
+            const lista = await cargarPartidasObra();
+            const filas = conCambios();
+            if (partidasMalas(filas, lista.items).length) {
                 window.alert("Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).");
+                saveAllLinesBtn.disabled = false;
                 return;
             }
-            saveAllLinesBtn.disabled = true;
+            const envios = filas.map(function (tr) {
+                return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };
+            });
             const original = saveAllLinesBtn.textContent;
             saveAllLinesBtn.textContent = "Guardando…";
             const errores = [];
