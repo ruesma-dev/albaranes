@@ -933,7 +933,8 @@
                 // es de la lista; Esc o salir devuelven el de antes).
                 e.preventDefault();
                 e.stopImmediatePropagation();
-                if (activo >= 0 && shown[activo]) { pick(shown[activo]); }
+                const elegido = shown[activo];  // sin marcada (-1): undefined
+                if (elegido) { pick(elegido); }
             } else if (e.key === "Escape") {
                 e.preventDefault();
                 input.value = alAbrir;
