@@ -1,4 +1,4 @@
-# F-065 · diseño (v3: §5.5, fase 3 bis)
+# F-065 · diseño (v4: §5.5, fase 3 bis y su pasada 3)
 
 Rutas relativas a `services/albaranes-front/` (sv4) salvo indicación. Diagnóstico con fichero:línea en
 `progress/explore_F-065.md` y `progress/explore_front_detalle.md` (F1–F25). Decisiones: §7.
@@ -129,8 +129,12 @@ cuando algo cambia, sale de `_importe_de_linea(precio, Q, dto)`. Filas legadas (
   ni de otro signo.») y si la última va en rojo (0 o de otro signo que Q). «Aceptar» sigue con `repartoValido` sobre
   todas. Al cambiar N se conservan las editables (no el resto viejo). El servidor no cambia.
 - **Combo de partida** (`attachPartidaCombo`): `pick` avisa con el `input` de siempre (wireConciliaEdit) sin reabrir
-  (el `input` del propio combo lo ignora mientras elige). Con texto nuevo: `scrollTop = 0` y activa = «Almacén» si
-  `esAlmacenTecleado` (prefijo de «almacen» sin acentos, o lo trae entero); si no, ninguna (como antes).
+  (el `input` del propio combo lo ignora mientras elige). Con texto nuevo: `scrollTop = 0` y la marcada la da
+  `marcadaAlTeclear`: «Almacén» si `esAlmacenTecleado` (prefijo de «almacen» sin acentos, o lo trae entero); si no, la
+  primera partida que coincide; si ninguna, ninguna. **v4 (H1, humano 2026-10-13)**: Enter elige la marcada y, sin
+  marcada (abrir por foco o clic, o un texto sin coincidencias), NO elige nada: ni POST a `/almacen` ni cambio de
+  valor; la lista sigue abierta (así un segundo Enter tampoco guarda la fila ni acepta «Dividir» con un texto que no es
+  de la lista); Esc o salir devuelven el valor de antes. Las flechas mandan sobre la marcada.
 - **Acciones** (dato del humano: con una fila «Desbloquear» la tabla se ensanchaba y «Guardar»/«Dividir» salían de la
   vista): columna `sticky` a la derecha, opaca, fija (`data-col-fixed`, no se arrastra) y de 200 px; «Borrar» compacto
   («✕» con `title`); sin `nowrap` ni `overflow: hidden` (si se estrecha, los botones bajan de línea). Causa hallada: T24 borró por error el bloque «Columnas de tabla GENÉRICAS» de `app.js`

@@ -1,4 +1,4 @@
-# F-065 · tareas (v3: fase 3 bis, T29–T35)
+# F-065 · tareas (v4: fase 3 bis, T29–T38)
 
 Rama `feature/F-065-lineas-editadas-y-reparto` (worktree `../albaranes-F-065`, con `dev` fusionado en ae86bfb).
 Rigor `critico`: **fase RED obligatoria** en toda tarea con test (falla antes, pasa después; traza en
@@ -57,4 +57,10 @@ Plan aprobado por el humano en la PARADA 1 del 2026-10-12. Sin servidor. Informe
 - [x] T32: combo de partida: elegir (ratón o Enter) lo deja cerrado sin perder el aviso de cambios; texto nuevo ⇒ arriba y «al»/«alm»/«almacén» marcan «Almacén» (R27 v3)  |  Verificación: `pytest tests/test_f065_f3bis_front.py -k combo tests/test_f065_f2_origen.py`
 - [x] T33: «Acciones» siempre a la vista (sticky a la derecha, opaca, columna fija de 200 px, «✕» compacto, botones que bajan de línea; dato del humano: con «Desbloquear» la tabla se ensanchaba) y restaurar el bloque «Columnas de tabla GENÉRICAS» que T24 borró por error (R29 v3)  |  Verificación: `pytest tests/test_f065_f3bis_front.py -k "acciones or columnas"`
 - [x] T34: `docs/ARCHITECTURE.md` (F7), MANUAL de re-prueba en `progress/current.md` e informe con RED, cobertura y mutación  |  Verificación: `bash harness/init.sh` en verde
-- [ ] T35: MANUAL fase 3 bis (humano, local): F7 divide y F6 no; la última parte se rellena sola y sale en rojo si las demás se pasan; el combo se cierra al elegir; «al» marca «Almacén»; «Acciones» con sus botones; «↺ Columnas», ordenar y redimensionar vuelven a funcionar  |  Verificación: MANUAL (humano), comandos en `progress/current.md`
+- [x] T35: MANUAL fase 3 bis (humano, local): F7 divide y F6 no; la última parte se rellena sola y sale en rojo si las demás se pasan; el combo se cierra al elegir; «al» marca «Almacén»; «Acciones» con sus botones; «↺ Columnas», ordenar y redimensionar vuelven a funcionar  |  Verificación: MANUAL (humano), comandos en `progress/current.md` · HECHA por el humano (2026-10-13): OK; rama fusionada en `dev` (`eb0b968`)
+
+### Pasada 3 de la fase 3 bis · H1 (R27 v4; aprobada por el humano el 2026-10-13, opción «a», antes de desplegar sv4)
+
+- [x] T36: tests RED de R27 v4: «alba» y «02.0» + Enter eligen la primera partida que coincide (nunca POST a `/almacen`), «al» + Enter = «Almacén», «zzz» + Enter y foco + Enter no eligen nada, las flechas mandan; lo mismo en la ventana «Dividir»  |  Verificación: `pytest tests/test_f065_f3bis_front.py -k r27v4` falla como se espera
+- [x] T37: `marcadaAlTeclear` y Enter sin marcada = nada en `attachPartidaCombo` (R27 v4)  |  Verificación: `pytest tests/test_f065_f3bis_front.py tests/test_f065_f2_origen.py tests/test_f065_f3_dividir.py`
+- [x] T38: ARCHITECTURE, MANUAL en `current.md`, mutación a mano de lo nuevo e informe (§«Pasada 3»)  |  Verificación: `bash harness/init.sh` en verde

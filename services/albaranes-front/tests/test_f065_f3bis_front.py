@@ -20,6 +20,7 @@ import re
 import subprocess
 from pathlib import Path
 
+import pytest
 from test_f051_almacen_front import _app_js, _funcion_js
 from test_f065_f1_js import _NODE, con_node
 
@@ -268,6 +269,8 @@ def test_f065_r29v3_estado_del_reparto(tmp_path):
 # =================================================================== #
 _COMBO = ["_normLine", "opcionesPartida", "partidaValida", "siguienteActivo", "_scrollActive",
           "attachPartidaCombo"]
+# Con lo que hace falta al teclear (R27 v3 y v4).
+_COMBO_V4 = _COMBO + ["esAlmacenTecleado", "marcadaAlTeclear"]
 
 # Una fila con su partida; las partidas de la obra (algunas con «al»), sin
 # red; «Almacén» de la fila, con un doble que cuenta.
@@ -332,7 +335,7 @@ def test_f065_r27v3_combo_elegir_con_enter_lo_deja_cerrado(tmp_path):
 
 @con_node
 def test_f065_r27v3_combo_teclear_sigue_abriendo_la_lista(tmp_path):
-    casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, """
         inp.focus();
         await tiempo();
         tecla(inp, "Escape");
@@ -349,7 +352,7 @@ def test_f065_r27v3_combo_teclear_sigue_abriendo_la_lista(tmp_path):
 
 @con_node
 def test_f065_r27v3_combo_al_marca_almacen_arriba(tmp_path):
-    casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, """
         inp.focus();
         await tiempo();
         tecla(inp, "ArrowDown");
@@ -375,8 +378,8 @@ def test_f065_r27v3_combo_al_marca_almacen_arriba(tmp_path):
 
 
 @con_node
-def test_f065_r27v3_combo_otro_texto_vuelve_arriba_sin_marcar(tmp_path):
-    casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
+def test_f065_r27v4_combo_otro_texto_vuelve_arriba_y_marca_la_primera(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, """
         inp.focus();
         await tiempo();
         tecla(inp, "ArrowDown");
@@ -387,7 +390,8 @@ def test_f065_r27v3_combo_otro_texto_vuelve_arriba_sin_marcar(tmp_path):
         console.log(JSON.stringify({activa: activa(), arriba: panel.scrollTop}));
     """)
 
-    assert casos == {"activa": None, "arriba": 0}
+    # R27 v4: con «0» la marcada es la primera partida que coincide (antes, ninguna).
+    assert casos == {"activa": "01.01 · Cimentación", "arriba": 0}
 
 
 @con_node
@@ -409,7 +413,7 @@ def test_f065_r27v3_que_cuenta_como_almacen(tmp_path):
 # blur o el Esc lo dejaban puesto).
 @con_node
 def test_f065_cr1_elegir_y_teclear_algo_fuera_de_la_lista_vuelve_la_elegida_al_salir(tmp_path):
-    casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, """
         inp.focus();
         await tiempo();
         panel.children[2].dispatchEvent(new Event("mousedown"));
@@ -426,7 +430,7 @@ def test_f065_cr1_elegir_y_teclear_algo_fuera_de_la_lista_vuelve_la_elegida_al_s
 
 @con_node
 def test_f065_cr1_elegir_teclear_y_esc_vuelve_la_elegida(tmp_path):
-    casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, """
         inp.focus();
         await tiempo();
         panel.children[2].dispatchEvent(new Event("mousedown"));
@@ -443,7 +447,7 @@ def test_f065_cr1_elegir_teclear_y_esc_vuelve_la_elegida(tmp_path):
 
 @con_node
 def test_f065_cr1_foco_esc_teclear_y_salir_vuelve_la_original(tmp_path):
-    casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, """
         inp.value = "01.01";
         inp.focus();
         await tiempo();
@@ -461,7 +465,7 @@ def test_f065_cr1_foco_esc_teclear_y_salir_vuelve_la_original(tmp_path):
 @con_node
 def test_f065_cr1_tras_elegir_teclear_vuelve_a_abrir_la_lista(tmp_path):
     """Elegir no deja el combo «mudo»: la tecla siguiente abre la lista filtrada."""
-    casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, """
         inp.focus();
         await tiempo();
         panel.children[2].dispatchEvent(new Event("mousedown"));
@@ -481,7 +485,7 @@ def test_f065_cr1_tras_elegir_teclear_vuelve_a_abrir_la_lista(tmp_path):
 def test_f065_cr1_teclear_pinchar_en_la_casilla_y_salir_vuelve_la_original(tmp_path):
     """Con la lista ABIERTA, pinchar otra vez en la casilla no convierte lo
     tecleado en «el valor de antes» (solo se toma al abrirla)."""
-    casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, """
         inp.value = "01.01";
         inp.focus();
         await tiempo();
@@ -501,7 +505,7 @@ def test_f065_cr1_teclear_pinchar_en_la_casilla_y_salir_vuelve_la_original(tmp_p
 @con_node
 def test_f065_cr1_teclear_una_valida_y_salir_la_deja(tmp_path):
     """La otra cara: lo que SÍ es de la lista se queda al salir."""
-    casos = _ejecutar_dom(tmp_path, _COMBO + ["esAlmacenTecleado"], _FILA_COMBO, """
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, """
         inp.focus();
         await tiempo();
         panel.children[2].dispatchEvent(new Event("mousedown"));
@@ -514,6 +518,203 @@ def test_f065_cr1_teclear_una_valida_y_salir_la_deja(tmp_path):
     """)
 
     assert casos == {"valor": "05.01"}
+
+
+# =================================================================== #
+# Pasada 3 · H1 · R27 v4: al teclear se marca «Almacén» («al»…) o la primera
+# partida que coincide; Enter elige la marcada y, SIN marcada, nada (antes caía
+# en «Almacén», la primera de la lista, y la fila iba a almacén con un POST).
+# =================================================================== #
+@con_node
+def test_f065_r27v4_que_marca_al_teclear(tmp_path):
+    casos = _ejecutar_dom(tmp_path, ["_normLine", "esAlmacenTecleado", "marcadaAlTeclear"], "", """
+        const ALM = {almacen: true, code: ""};
+        const P = {code: "05.01"}, Q = {code: "05.02"};
+        console.log(JSON.stringify([
+            marcadaAlTeclear([ALM, P, Q], "alba"),
+            marcadaAlTeclear([ALM, P], "05"),
+            marcadaAlTeclear([ALM, P], "al"),
+            marcadaAlTeclear([ALM, P], "Almacén"),
+            marcadaAlTeclear([ALM], "al"),
+            marcadaAlTeclear([ALM], "zzz"),
+            marcadaAlTeclear([ALM, P, Q], ""),
+            marcadaAlTeclear([ALM, P, Q], "   "),
+        ]));
+    """)
+
+    assert casos == [1, 1, 0, 0, 0, -1, -1, -1]
+
+
+def _enter_tras(texto, *, valor_inicial=""):
+    """Programa: foco, teclear ``texto`` (si lo hay), foto de la marcada y Enter."""
+    teclea = f'teclear(inp, {json.dumps(texto)});' if texto is not None else ""
+    return f"""
+        inp.value = {json.dumps(valor_inicial)};
+        inp.focus();
+        await tiempo();
+        {teclea}
+        await tiempo();
+        const marcada = activa();
+        const antes = avisos;
+        const enter = tecla(inp, "Enter");
+        await tiempo();
+        console.log(JSON.stringify({{marcada, valor: inp.value, almacen, cerrado: panel.hidden,
+                                     prevenido: enter.defaultPrevented, avisos: avisos - antes}}));
+    """
+
+
+@con_node
+def test_f065_r27v4_alba_y_enter_elige_la_primera_que_coincide_no_almacen(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, _enter_tras("alba"))
+
+    assert casos == {"marcada": "05.01 · Albañilería", "valor": "05.01", "almacen": 0, "cerrado": True,
+                     "prevenido": True, "avisos": 1}
+
+
+@con_node
+def test_f065_r27v4_codigo_y_enter_elige_la_primera_que_coincide(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, _enter_tras("02.0"))
+
+    assert casos == {"marcada": "02.03 · Puertas", "valor": "02.03", "almacen": 0, "cerrado": True,
+                     "prevenido": True, "avisos": 1}
+
+
+@con_node
+def test_f065_r27v4_al_y_enter_elige_almacen(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, _enter_tras("al"))
+
+    assert casos["marcada"] == "Almacén (sin partida)" and casos["almacen"] == 1 and casos["cerrado"] is True
+
+
+@con_node
+def test_f065_r27v4_sin_coincidencias_enter_no_elige_nada(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, _enter_tras("zzz", valor_inicial="01.01"))
+
+    # Nada: ni almacén, ni aviso de cambios; la lista sigue abierta (un segundo
+    # Enter tampoco guardaría «zzz») y el Enter no llega al «Guardar» de la fila.
+    assert casos == {"marcada": None, "valor": "zzz", "almacen": 0, "cerrado": False,
+                     "prevenido": True, "avisos": 0}
+
+
+@con_node
+def test_f065_r27v4_sin_coincidencias_al_salir_vuelve_la_de_antes(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, """
+        inp.value = "01.01";
+        inp.focus();
+        await tiempo();
+        teclear(inp, "zzz");
+        await tiempo();
+        tecla(inp, "Enter");
+        tecla(inp, "Enter");
+        inp.blur();
+        await tiempo();
+        console.log(JSON.stringify({valor: inp.value, almacen}));
+    """)
+
+    assert casos == {"valor": "01.01", "almacen": 0}
+
+
+@con_node
+def test_f065_r27v4_foco_y_enter_sin_teclear_no_elige_nada(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, _enter_tras(None, valor_inicial="01.01"))
+
+    assert casos == {"marcada": None, "valor": "01.01", "almacen": 0, "cerrado": False,
+                     "prevenido": True, "avisos": 0}
+
+
+@con_node
+def test_f065_r27v4_foco_vacio_y_enter_no_manda_a_almacen(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, _enter_tras(None))
+
+    assert casos["almacen"] == 0 and casos["valor"] == "" and casos["marcada"] is None
+
+
+@con_node
+@pytest.mark.parametrize("borrado", ["", "   "])
+def test_f065_r27v4_borrar_lo_tecleado_y_enter_no_elige_nada(tmp_path, borrado):
+    """Sin texto (o solo espacios) la lista enseña todas, pero ninguna marcada."""
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, """
+        inp.value = "01.01";
+        inp.focus();
+        await tiempo();
+        teclear(inp, "0");
+        await tiempo();
+        teclear(inp, """ + json.dumps(borrado) + """);
+        await tiempo();
+        const marcada = activa();
+        const opciones = panel.children.length;
+        tecla(inp, "Enter");
+        await tiempo();
+        console.log(JSON.stringify({marcada, opciones, valor: inp.value, almacen, cerrado: panel.hidden}));
+    """)
+
+    assert casos == {"marcada": None, "opciones": 7, "valor": borrado, "almacen": 0, "cerrado": False}
+
+
+@con_node
+def test_f065_r27v4_las_flechas_mandan_sobre_la_marcada(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4, _FILA_COMBO, """
+        inp.focus();
+        await tiempo();
+        teclear(inp, "0");
+        await tiempo();
+        const marcada = activa();
+        tecla(inp, "ArrowDown");
+        const bajada = activa();
+        tecla(inp, "Enter");
+        await tiempo();
+        const elegida = inp.value;
+        teclear(inp, "0");
+        await tiempo();
+        tecla(inp, "ArrowUp");
+        const subida = activa();
+        tecla(inp, "Enter");
+        await tiempo();
+        console.log(JSON.stringify({marcada, bajada, elegida, subida, almacen}));
+    """)
+
+    assert casos == {"marcada": "01.01 · Cimentación", "bajada": "02.03 · Puertas", "elegida": "02.03",
+                     "subida": "Almacén (sin partida)", "almacen": 1}
+
+
+# En la ventana «Dividir», con el combo de verdad (no el doble de _FICHA).
+_FICHA_CON_COMBO = _ficha().replace("function attachPartidaCombo() {}", "") + """
+    let almacen = 0;
+    function elegirAlmacen() { almacen += 1; }
+    const ITEMS = ["01.01 · Cimentación", "02.03 · Puertas", "05.01 · Albañilería"]
+        .map(function (l) { return {code: l.split(" · ")[0], label: l, norm: _normLine(l)}; });
+    function cargarPartidasObra() { return Promise.resolve({items: ITEMS, error: false}); }
+    function partidasVentana() { return cuerpo.querySelectorAll(".js-dividir-partida"); }
+"""
+
+
+@con_node
+def test_f065_r27v4_en_la_ventana_dividir_lo_mismo(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _DIVIDIR + _COMBO_V4, _FICHA_CON_COMBO, """
+        boton.dispatchEvent(new Event("click"));
+        teclear(cantidades()[0], "6");
+        const p1 = partidasVentana()[0];
+        p1.focus();
+        await tiempo();
+        const sinTeclear = tecla(p1, "Enter");
+        await tiempo();
+        const trasFocoEnter = {valor: p1.value, enviado: enviado, prevenido: sinTeclear.defaultPrevented};
+        teclear(p1, "alba");
+        await tiempo();
+        tecla(p1, "Enter");
+        await tiempo();
+        const trasAlba = {valor: p1.value, enviado: enviado};
+        tecla(p1, "Enter");  // lista cerrada: ahora el Enter es de la ventana y acepta
+        await tiempo();
+        console.log(JSON.stringify({trasFocoEnter, trasAlba, almacen,
+                                    partes: enviado && enviado.cuerpo.partes}));
+    """)
+
+    assert casos["trasFocoEnter"] == {"valor": "01.01", "enviado": None, "prevenido": True}
+    assert casos["trasAlba"] == {"valor": "05.01", "enviado": None}
+    assert casos["almacen"] == 0  # el «Almacén» de la fila nunca se llama en la ventana
+    assert casos["partes"] == [{"cantidad": 6, "codigo_partida": "05.01"},
+                               {"cantidad": 12, "codigo_partida": "01.01"}]
 
 
 # =================================================================== #
