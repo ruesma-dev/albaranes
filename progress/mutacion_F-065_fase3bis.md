@@ -227,3 +227,66 @@ for i, (f, v, n) in enumerate(M, 1):
 print()
 print(f"TOTAL {len(M)} mutantes, {vivos} vivos")
 ```
+
+## Pasada 3 (H1, R27 v4): mutación a mano de lo nuevo
+
+Mismo script que arriba con otra lista `M` (abajo; el resto del script, igual). Solo lo nuevo de la pasada 3:
+`marcadaAlTeclear`, su uso al teclear y el Enter sin marcada (`static/app.js`; ni CSS ni plantilla cambian).
+
+- **HEAD medido: `0075ce4900a27867ec0c1e6c0c80f46dcf5d5711`** (árbol de sv4 limpio).
+- **Línea base** de los tres ficheros: **204 passed**.
+- **Resultado: 15 mutantes, 15 muertos, 0 supervivientes.**
+- Primera vuelta sobre `3f3aeff3254ed3f143270038114b0433b83a060b`: 15/15, pero #3, #4 y #9 morían solo por el test de
+  la función pura; se añadió `test_f065_r27v4_borrar_lo_tecleado_y_enter_no_elige_nada` (`""` y `"   "`, conducta en
+  el combo) y ahora mueren también por conducta.
+- **Repetida sin el test de la función pura** (`-k "not que_marca_al_teclear"`): 14 de 15 muertos; vive **#5** (quitar
+  `shown.length > 1`). Es **equivalente en el combo** y queda demostrado así, ejecutando: sin coincidencias `shown` solo
+  tiene «Almacén», la marcada 1 no existe (`render` no marca nada, `shown[1]` es `undefined` y Enter no elige) y
+  `siguienteActivo` lleva 1 y -1 al mismo 0 con las flechas. Lo mata el test de la función, que fija su contrato
+  (-1 = ninguna). Se deja: devolver una posición que no existe sería un contrato peor. No hay tests textuales en juego
+  (todo es JS ejecutado con node).
+- Línea anterior: el `activo >= 0 &&` del Enter se quitó antes de medir (`3f3aeff`): `shown[-1]` es `undefined`, así que
+  era redundante y habría dado un mutante equivalente.
+
+
+| # | fichero:línea | original | mutado | fallos | veredicto |
+|---|---|---|---|---|---|
+| 1 | static/app.js:766 | `if (esAlmacenTecleado(texto)) { return 0; }` | *(nada)* | 3 | MUERTO |
+| 2 | static/app.js:766 | `if (esAlmacenTecleado(texto)) { return 0; }` | `if (esAlmacenTecleado(texto)) { return 1; }` | 3 | MUERTO |
+| 3 | static/app.js:767 | `return String(texto \|\| "").trim() !== "" && shown.length > 1 ? 1 : -1;` | `return shown.length > 1 ? 1 : -1;` | 3 | MUERTO |
+| 4 | static/app.js:767 | `return String(texto \|\| "").trim() !== "" && shown.length > 1 ? 1 : -1;` | `return String(texto \|\| "") !== "" && shown.length > 1 ? 1 : -1;` | 2 | MUERTO |
+| 5 | static/app.js:767 | `return String(texto \|\| "").trim() !== "" && shown.length > 1 ? 1 : -1;` | `return String(texto \|\| "").trim() !== "" ? 1 : -1;` | 1 | MUERTO |
+| 6 | static/app.js:767 | `return String(texto \|\| "").trim() !== "" && shown.length > 1 ? 1 : -1;` | `return String(texto \|\| "").trim() !== "" && shown.length > 2 ? 1 : -1;` | 4 | MUERTO |
+| 7 | static/app.js:767 | `return String(texto \|\| "").trim() !== "" && shown.length > 1 ? 1 : -1;` | `return String(texto \|\| "").trim() !== "" && shown.length > 1 ? 2 : -1;` | 6 | MUERTO |
+| 8 | static/app.js:767 | `return String(texto \|\| "").trim() !== "" && shown.length > 1 ? 1 : -1;` | `return String(texto \|\| "").trim() !== "" && shown.length > 1 ? 1 : 0;` | 5 | MUERTO |
+| 9 | static/app.js:767 | `return String(texto \|\| "").trim() !== "" && shown.length > 1 ? 1 : -1;` | `return String(texto \|\| "").trim() !== "" \|\| shown.length > 1 ? 1 : -1;` | 3 | MUERTO |
+| 10 | static/app.js:904 | `activo = marcadaAlTeclear(shown, input.value);` | `activo = esAlmacenTecleado(input.value) ? 0 : -1;` | 5 | MUERTO |
+| 11 | static/app.js:904 | `activo = marcadaAlTeclear(shown, input.value);` | `activo = -1;` | 7 | MUERTO |
+| 12 | static/app.js:936 | `const elegido = shown[activo];  // sin marcada (-1): undefined` | `const elegido = shown[activo >= 0 ? activo : 0];` | 7 | MUERTO |
+| 13 | static/app.js:936 | `const elegido = shown[activo];  // sin marcada (-1): undefined` | `const elegido = shown[0];` | 11 | MUERTO |
+| 14 | static/app.js:937 | `if (elegido) { pick(elegido); }⏎            } else if (e.key === "Escape")` | `pick(elegido);⏎            } else if (e.key === "Escape")` | 7 | MUERTO |
+| 15 | static/app.js:937 | `if (elegido) { pick(elegido); }⏎            } else if (e.key === "Escape")` | `⏎            } else if (e.key === "Escape")` | 7 | MUERTO |
+
+TOTAL 15 mutantes, 0 vivos
+
+```python
+M = [
+    # --- R27 v4 (pasada 3, H1): marcadaAlTeclear ---
+    ("static/app.js", "if (esAlmacenTecleado(texto)) { return 0; }", ""),
+    ("static/app.js", "if (esAlmacenTecleado(texto)) { return 0; }", "if (esAlmacenTecleado(texto)) { return 1; }"),
+    ("static/app.js", 'return String(texto || "").trim() !== "" && shown.length > 1 ? 1 : -1;', "return shown.length > 1 ? 1 : -1;"),
+    ("static/app.js", 'return String(texto || "").trim() !== "" && shown.length > 1 ? 1 : -1;', 'return String(texto || "") !== "" && shown.length > 1 ? 1 : -1;'),
+    ("static/app.js", 'return String(texto || "").trim() !== "" && shown.length > 1 ? 1 : -1;', 'return String(texto || "").trim() !== "" ? 1 : -1;'),
+    ("static/app.js", 'return String(texto || "").trim() !== "" && shown.length > 1 ? 1 : -1;', 'return String(texto || "").trim() !== "" && shown.length > 2 ? 1 : -1;'),
+    ("static/app.js", 'return String(texto || "").trim() !== "" && shown.length > 1 ? 1 : -1;', 'return String(texto || "").trim() !== "" && shown.length > 1 ? 2 : -1;'),
+    ("static/app.js", 'return String(texto || "").trim() !== "" && shown.length > 1 ? 1 : -1;', 'return String(texto || "").trim() !== "" && shown.length > 1 ? 1 : 0;'),
+    ("static/app.js", 'return String(texto || "").trim() !== "" && shown.length > 1 ? 1 : -1;', 'return String(texto || "").trim() !== "" || shown.length > 1 ? 1 : -1;'),
+    # --- uso en el combo ---
+    ("static/app.js", "activo = marcadaAlTeclear(shown, input.value);", "activo = esAlmacenTecleado(input.value) ? 0 : -1;"),
+    ("static/app.js", "activo = marcadaAlTeclear(shown, input.value);", "activo = -1;"),
+    ("static/app.js", "const elegido = shown[activo];  // sin marcada (-1): undefined", "const elegido = shown[activo >= 0 ? activo : 0];"),
+    ("static/app.js", "const elegido = shown[activo];  // sin marcada (-1): undefined", "const elegido = shown[0];"),
+    ("static/app.js", "if (elegido) { pick(elegido); }" + NL + "            } else if (e.key === \"Escape\")", "pick(elegido);" + NL + "            } else if (e.key === \"Escape\")"),
+    ("static/app.js", "if (elegido) { pick(elegido); }" + NL + "            } else if (e.key === \"Escape\")", "" + NL + "            } else if (e.key === \"Escape\")"),
+]
+```

@@ -195,3 +195,23 @@ guarda `dialogo.open` (#2): muere por conducta; en el navegador el modal hace in
 **Verificación**: `test_f065_f3bis_front.py` **26 passed**; los tres ficheros, 192 passed; **`bash harness/init.sh`**
 (tal cual, worktree, `376d37a`): **exit 0**, raíz `1083 passed`, sv4 **`1247 passed`** (71,6 s, sin caché: sv4 cambió),
 `PUERTA COBERTURA: N/A` (sin Python de producción), rutas sensibles N/A, tamaño dentro, **`ENTORNO LISTO`**.
+
+## Pasada 3 (H1, R27 v4; aprobada por el humano el 2026-10-13, opción «a», antes de desplegar sv4)
+
+Commits `2d64bc2` spec v4 · `0034080` T36 RED · `440beb6` T37 · `77b1f97`, `3f3aeff`, `0075ce4` T38 · el del informe.
+Solo `static/app.js` (`attachPartidaCombo`: fila y «Dividir») y tests. `marcadaAlTeclear(shown, texto)`: «Almacén» (0)
+si `esAlmacenTecleado`; si no, la primera partida que coincide (1); sin texto o sin coincidencias, -1. **Enter elige la
+marcada; sin ella, nada** (ni POST `/almacen` ni cambio de valor) y **la lista sigue abierta**: así un segundo Enter
+tampoco guarda la fila ni acepta «Dividir» con un texto que no es de la lista; Esc o Tab devuelven el de antes. Foco o
+clic sin teclear: ninguna marcada. Docs: R27 v4 (150/150), design §5.5, ARCHITECTURE, T35 hecha, T36–T38, MANUAL 4 bis.
+
+**RED** (`0034080` contra el código de `2d64bc2`): `19 failed, 17 passed` (`marcadaAlTeclear` no existe). De
+conducta, sin extraerla (`scratchpad/red_v4.py`), salida real: «alba», «02.0», «zzz» y foco + Enter ⇒ `'almacen': 1`
+(la fila iba a almacén; p. ej. `{'marcada': None, 'valor': 'alba', 'almacen': 1, 'cerrado': True}`); flechas ⇒
+`{'marcada': None, 'bajada': 'Almacén (sin partida)', 'elegida': '0', 'almacen': 2}`; «Dividir» ⇒ foco + Enter y
+«alba» + Enter dejaban la partida VACÍA (`partes [6 → None, 12 → '01.01']`); «al» + Enter ya pasaba.
+
+**Verificación**: `test_f065_f3bis_front.py` **38 passed**; los tres ficheros **204 passed**; `init.sh`: abajo.
+**Mutación a mano** (`progress/mutacion_F-065_fase3bis.md` §«Pasada 3»): HEAD `0075ce4900a27867ec0c1e6c0c80f46dcf5d5711`,
+línea base 204 passed, **15/15 muertos, 0 supervivientes**, por fila `fichero:línea`, original→mutado y fallos; sin el
+test de la función pura vive #5 (quitar `shown.length > 1`), equivalente en el combo y demostrado ejecutando.
