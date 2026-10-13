@@ -189,6 +189,7 @@ class Elemento {
         document.activeElement = document.body;
         this.dispatchEvent(new Event("blur"));
     }
+    click() { this.dispatchEvent(new Event("click", { bubbles: true })); }
     showModal() { this.open = true; }
     close() { this.open = false; }
 }

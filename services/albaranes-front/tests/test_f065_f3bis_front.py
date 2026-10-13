@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 from test_f051_almacen_front import _app_js, _funcion_js
-from test_f065_f1_js import _NODE, con_node
+from test_f065_f1_js import _NODE, _bloque, con_node
 
 _RAIZ = Path(__file__).resolve().parent.parent
 _DOM = (Path(__file__).resolve().parent / "dom_falso.js").read_text(encoding="utf-8")
@@ -693,6 +693,7 @@ def test_f065_r27v4_en_la_ventana_dividir_lo_mismo(tmp_path):
     casos = _ejecutar_dom(tmp_path, _DIVIDIR + _COMBO_V4, _FICHA_CON_COMBO, """
         boton.dispatchEvent(new Event("click"));
         teclear(cantidades()[0], "6");
+        const aceptar = dlg.querySelector(".js-dividir-aceptar");
         const p1 = partidasVentana()[0];
         p1.focus();
         await tiempo();
@@ -704,17 +705,349 @@ def test_f065_r27v4_en_la_ventana_dividir_lo_mismo(tmp_path):
         tecla(p1, "Enter");
         await tiempo();
         const trasAlba = {valor: p1.value, enviado: enviado};
-        tecla(p1, "Enter");  // lista cerrada: ahora el Enter es de la ventana y acepta
+        const otro = tecla(p1, "Enter");  // lista cerrada: R27 v5, en la partida Enter NUNCA acepta
         await tiempo();
-        console.log(JSON.stringify({trasFocoEnter, trasAlba, almacen,
+        const trasOtroEnter = {enviado: enviado, prevenido: otro.defaultPrevented};
+        aceptar.click();  // se acepta con el botón (o Enter en una cantidad)
+        await tiempo();
+        console.log(JSON.stringify({trasFocoEnter, trasAlba, trasOtroEnter, almacen,
                                     partes: enviado && enviado.cuerpo.partes}));
     """)
 
     assert casos["trasFocoEnter"] == {"valor": "01.01", "enviado": None, "prevenido": True}
     assert casos["trasAlba"] == {"valor": "05.01", "enviado": None}
+    assert casos["trasOtroEnter"] == {"enviado": None, "prevenido": True}
     assert casos["almacen"] == 0  # el «Almacén» de la fila nunca se llama en la ventana
     assert casos["partes"] == [{"cantidad": 6, "codigo_partida": "05.01"},
                                {"cantidad": 12, "codigo_partida": "01.01"}]
+
+
+# =================================================================== #
+# Pasada 4 · R27 v5: en la partida, Enter NUNCA guarda la fila ni acepta
+# «Dividir»; la lista se abre al momento («Cargando partidas…»); una partida
+# cambiada que no es de la lista no se guarda por ningún camino.
+# =================================================================== #
+_GUARDAR = ["parseNumEs", "numerosIguales", "partidaParaEnviar", "_camposCambiados", "importeDeFila",
+            "marcarPartida", "partidasInvalidas", "wireConciliaEdit"]
+
+# Una fila editable de verdad: combo de partida + wireConciliaEdit (Enter =
+# «Guardar», botón «Guardar» con su PATCH). Las partidas llegan cuando el test
+# llama a soltar(...): hasta entonces, «cargando» (Sigrid tarda segundos).
+_FILA_GUARDAR = """
+    const tbody = el("tbody", "", document.body);
+    var linesBody = tbody;
+    var documentId = "DOC";
+    const tr = el("tr", "conciliacion-row concilia-editable", tbody);
+    tr.dataset.forValuationLineId = "12";
+    const part = el("input", "cell-input js-cedit js-partida-combo", el("td", "concilia-td", tr));
+    part.dataset.field = "codigo_partida";
+    part.value = PARTIDA;
+    part.defaultValue = PARTIDA;
+    part.title = "Cimentación";
+    const cant = el("input", "cell-input js-cedit", el("td", "concilia-td", tr));
+    cant.dataset.field = "cantidad";
+    cant.dataset.numeric = "1";
+    cant.value = "8";
+    cant.defaultValue = "8";
+    const guardar = el("button", "js-cedit-save", el("td", "concilia-td td-acciones", tr));
+    const peticiones = [];
+    function fetch(url, init) {
+        peticiones.push({url: url, metodo: init && init.method,
+                         cuerpo: init && init.body ? JSON.parse(init.body) : null});
+        return Promise.resolve({ok: true, json: function () { return Promise.resolve({}); }});
+    }
+    let almacen = 0;
+    function elegirAlmacen() { almacen += 1; }
+    const alertas = [];
+    window.alert = function (m) { alertas.push(m); };
+    let soltar = null;
+    const respuesta = new Promise(function (r) { soltar = r; });
+    function cargarPartidasObra() { return respuesta; }
+    const ITEMS = ["01.01 · Cimentación", "02.03 · Puertas", "05.01 · Albañilería"]
+        .map(function (l) { return {code: l.split(" · ")[0], label: l, norm: _normLine(l)}; });
+    function lista() { soltar({items: ITEMS, error: false}); }
+    attachPartidaCombo(part);
+    wireConciliaEdit();
+    const panel = tr.querySelector(".combo-panel");
+    function textos() { return panel.children.map(function (d) { return d.textContent; }); }
+    function activa() {
+        const a = panel.children.filter(function (d) { return d.classList.contains("active"); });
+        return a.length ? a[0].textContent : null;
+    }
+    function marca() {
+        return {roja: part.classList.contains("partida-invalida"), aria: part.getAttribute("aria-invalid"),
+                titulo: part.title};
+    }
+"""
+
+
+def _fila_guardar(partida="01.01"):
+    return "const PARTIDA = " + json.dumps(partida) + ";\n" + _FILA_GUARDAR
+
+
+_NO_VALIDA = "Partida no válida: elige una de la lista (vacía = almacén)"
+
+
+@con_node
+def test_f065_r27v5_la_lista_se_abre_ya_cargando_y_enter_no_guarda(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar(), """
+        part.focus();
+        const cargando = {visible: !panel.hidden, textos: textos()};
+        teclear(part, "zzzz");
+        const enter = tecla(part, "Enter");
+        await tiempo();
+        const antes = peticiones.length;
+        lista();
+        await tiempo();
+        console.log(JSON.stringify({cargando, antes, despues: peticiones.length, prevenido: enter.defaultPrevented,
+                                    abierta: !panel.hidden, textos: textos()}));
+    """)
+
+    assert casos == {"cargando": {"visible": True, "textos": ["Cargando partidas…"]}, "antes": 0, "despues": 0,
+                     "prevenido": True, "abierta": True, "textos": ["Almacén (sin partida)"]}
+
+
+@con_node
+def test_f065_r27v5_al_y_enter_cargando_no_hace_nada_y_al_llegar_marca_almacen(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar(), """
+        part.focus();
+        teclear(part, "al");
+        tecla(part, "Enter");
+        await tiempo();
+        const durante = {peticiones: peticiones.length, almacen: almacen};
+        lista();
+        await tiempo();
+        const marcada = activa();
+        tecla(part, "Enter");
+        await tiempo();
+        console.log(JSON.stringify({durante, marcada, almacen, peticiones: peticiones.length}));
+    """)
+
+    assert casos == {"durante": {"peticiones": 0, "almacen": 0}, "marcada": "Almacén (sin partida)",
+                     "almacen": 1, "peticiones": 0}
+
+
+@con_node
+def test_f065_r27v5_esc_mientras_carga_la_lista_no_vuelve_sola(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar(), """
+        part.focus();
+        tecla(part, "Escape");
+        lista();
+        await tiempo();
+        console.log(JSON.stringify({cerrada: panel.hidden, valor: part.value}));
+    """)
+
+    assert casos == {"cerrada": True, "valor": "01.01"}
+
+
+@con_node
+def test_f065_r27v5_enter_con_la_lista_cerrada_tampoco_guarda(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar(), """
+        lista();
+        part.focus();
+        await tiempo();
+        teclear(part, "02");
+        await tiempo();
+        panel.children[1].dispatchEvent(new Event("mousedown"));  // 02.03: la lista se cierra
+        await tiempo();
+        const enter = tecla(part, "Enter");
+        await tiempo();
+        console.log(JSON.stringify({valor: part.value, cerrada: panel.hidden, peticiones: peticiones.length,
+                                    prevenido: enter.defaultPrevented}));
+    """)
+
+    assert casos == {"valor": "02.03", "cerrada": True, "peticiones": 0, "prevenido": True}
+
+
+@con_node
+def test_f065_r27v5_boton_guardar_con_partida_fuera_de_la_lista_no_envia(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar(), """
+        lista();
+        part.value = "zzzz";  // sin pasar por el combo (F8, pegar…): el botón es la última barrera
+        part.dispatchEvent(new Event("input", {bubbles: true}));
+        guardar.click();
+        await tiempo();
+        const mala = {peticiones: peticiones.length, marca: marca()};
+        teclear(part, "02.03");  // corregirla quita el rojo
+        const corregida = marca();
+        guardar.click();
+        await tiempo();
+        console.log(JSON.stringify({mala, corregida, peticiones: peticiones}));
+    """)
+
+    assert casos["mala"] == {"peticiones": 0, "marca": {"roja": True, "aria": "true", "titulo": _NO_VALIDA}}
+    assert casos["corregida"] == {"roja": False, "aria": None, "titulo": "Cimentación"}
+    assert casos["peticiones"] == [{"url": "/api/documents/DOC/lines/12/conciliacion/campos?bloquear=1",
+                                    "metodo": "PATCH", "cuerpo": {"codigo_partida": "02.03"}}]
+
+
+@con_node
+def test_f065_r27v5_enter_en_otra_celda_con_partida_mala_no_envia(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar(), """
+        lista();
+        part.value = "al";
+        cant.focus();
+        teclear(cant, "6");
+        const enter = tecla(cant, "Enter");
+        await tiempo();
+        console.log(JSON.stringify({peticiones: peticiones.length, roja: marca().roja,
+                                    prevenido: enter.defaultPrevented}));
+    """)
+
+    assert casos == {"peticiones": 0, "roja": True, "prevenido": True}
+
+
+@con_node
+@pytest.mark.parametrize("partida, cuerpo", [
+    ("02.03", {"codigo_partida": "02.03", "cantidad": 6}),
+    ("", {"codigo_partida": "", "cantidad": 6}),          # vacía = almacén: vale
+    ("01.01", {"cantidad": 6}),                             # sin cambiar: no viaja
+])
+def test_f065_r27v5_lo_valido_se_sigue_guardando(tmp_path, partida, cuerpo):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar(), """
+        lista();
+        part.value = """ + json.dumps(partida) + """;
+        cant.focus();
+        teclear(cant, "6");
+        tecla(cant, "Enter");
+        await tiempo();
+        console.log(JSON.stringify({cuerpos: peticiones.map(function (p) { return p.cuerpo; }), roja: marca().roja}));
+    """)
+
+    assert casos == {"cuerpos": [cuerpo], "roja": False}
+
+
+@con_node
+def test_f065_r27v5_una_partida_vieja_sin_tocar_no_se_valida(tmp_path):
+    """La que ya tenía la fila (aunque no esté en la lista de hoy) no viaja: se guarda la fila."""
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar("99.99"), """
+        lista();
+        cant.value = "6";
+        guardar.click();
+        await tiempo();
+        console.log(JSON.stringify({cuerpos: peticiones.map(function (p) { return p.cuerpo; }), roja: marca().roja}));
+    """)
+
+    assert casos == {"cuerpos": [{"cantidad": 6}], "roja": False}
+
+
+@con_node
+def test_f065_r27v5_sin_lista_de_sigrid_solo_vale_almacen(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar(), """
+        soltar({items: [], error: true});
+        part.value = "02.03";
+        guardar.click();
+        await tiempo();
+        const mala = {peticiones: peticiones.length, roja: marca().roja};
+        part.value = "";
+        guardar.click();
+        await tiempo();
+        console.log(JSON.stringify({mala, cuerpos: peticiones.map(function (p) { return p.cuerpo; })}));
+    """)
+
+    assert casos == {"mala": {"peticiones": 0, "roja": True}, "cuerpos": [{"codigo_partida": ""}]}
+
+
+@con_node
+def test_f065_r27v5_guardar_todas_con_una_partida_mala_no_envia_nada(tmp_path):
+    js = _app_js()
+    bloque = _bloque(js, 'const saveAllLinesBtn = document.getElementById("save-all-lines-btn");', "if (addLineBtn)")
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar() + """
+        const todas = el("button", "", document.body);
+        todas.id = "save-all-lines-btn";
+    """ + bloque, """
+        lista();
+        part.value = "zzzz";
+        cant.value = "6";
+        todas.click();
+        await tiempo();
+        const mala = {peticiones: peticiones.length, roja: marca().roja, alertas: alertas.slice()};
+        part.value = "02.03";
+        todas.click();
+        await tiempo();
+        console.log(JSON.stringify({mala, cuerpos: peticiones.map(function (p) { return p.cuerpo; })}));
+    """)
+
+    assert casos["mala"] == {"peticiones": 0, "roja": True, "alertas": [
+        "Hay 1 partida no válida (en rojo): elige una de la lista o déjala vacía (almacén)."]}
+    assert casos["cuerpos"] == [{"codigo_partida": "02.03", "cantidad": 6}]
+
+
+@con_node
+def test_f065_r27v5_guardar_y_aprobar_marca_la_partida_mala(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR + ["contarFilasConCambios", "avisoFilasSinGuardar",
+                                                            "guardarCabecera"], _fila_guardar() + """
+        var approveBtn = null;
+        let guardados = 0;
+        function sendSave() { guardados += 1; }
+    """, """
+        lista();
+        part.value = "zzzz";
+        await guardarCabecera(true);
+        console.log(JSON.stringify({guardados, roja: marca().roja, alertas, peticiones: peticiones.length}));
+    """)
+
+    assert casos == {"guardados": 0, "roja": True, "alertas": ["Hay 1 línea con cambios sin guardar"],
+                     "peticiones": 0}
+
+
+@con_node
+def test_f065_r27v5_dividir_con_una_partida_mala_no_acepta(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _DIVIDIR + _COMBO_V4 + ["marcarPartida"], _FICHA_CON_COMBO, """
+        boton.dispatchEvent(new Event("click"));
+        teclear(cantidades()[0], "6");
+        const aceptar = dlg.querySelector(".js-dividir-aceptar");
+        const errorEl = dlg.querySelector(".js-dividir-error");
+        const p2 = partidasVentana()[1];
+        p2.value = "zzzz";
+        aceptar.click();
+        await tiempo();
+        const mala = {enviado: enviado, roja: p2.classList.contains("partida-invalida"),
+                      error: errorEl.hidden ? null : errorEl.textContent};
+        p2.value = "";
+        aceptar.click();
+        await tiempo();
+        console.log(JSON.stringify({mala, partes: enviado && enviado.cuerpo.partes}));
+    """)
+
+    assert casos["mala"] == {"enviado": None, "roja": True,
+                             "error": "Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén)."}
+    assert casos["partes"] == [{"cantidad": 6, "codigo_partida": "01.01"}, {"cantidad": 12, "codigo_partida": None}]
+
+
+@con_node
+def test_f065_r27v5_dividir_la_partida_de_la_propia_fila_vale(tmp_path):
+    """La de la fila (aunque ya no esté en la lista de la obra) se puede repartir tal cual."""
+    casos = _ejecutar_dom(tmp_path, _DIVIDIR + _COMBO_V4 + ["marcarPartida"],
+                          _FICHA_CON_COMBO.replace('boton.dataset.partida = "01.01";',
+                                                   'boton.dataset.partida = "99.99";'), """
+        boton.dispatchEvent(new Event("click"));
+        teclear(cantidades()[0], "6");
+        dlg.querySelector(".js-dividir-aceptar").click();
+        await tiempo();
+        console.log(JSON.stringify({partes: enviado && enviado.cuerpo.partes}));
+    """)
+
+    assert casos["partes"] == [{"cantidad": 6, "codigo_partida": "99.99"}, {"cantidad": 12, "codigo_partida": "99.99"}]
+
+
+def test_f065_r27v5_la_partida_mala_se_ve_en_rojo():
+    """Que la regla GANE la cascada (motor de la pasada 2) en la fila y en «Dividir»."""
+    css = (_RAIZ / "static" / "styles.css").read_text(encoding="utf-8")
+    fila = [{"tag": "input", "clases": {"cell-input", "js-cedit", "js-partida-combo", "cedit-ok", "cedit-dirty",
+                                         "partida-invalida"}},
+            {"tag": "div", "clases": {"combo", "combo-lines", "combo-partida"}},
+            {"tag": "td", "clases": {"concilia-td"}, "atributos": {"data-col": "partida"}},
+            {"tag": "tr", "clases": {"conciliacion-row", "salmon-row", "concilia-editable"}},
+            {"tag": "tbody"}, _TABLA]
+    ventana = [{"tag": "input", "clases": {"cell-input", "js-dividir-partida", "partida-invalida"}},
+               {"tag": "div", "clases": {"combo", "combo-lines", "combo-partida"}},
+               {"tag": "td"}, {"tag": "tr"}, {"tag": "tbody", "clases": {"js-dividir-partes"}},
+               {"tag": "table", "clases": {"table", "dividir-partes"}},
+               {"tag": "form", "clases": {"dividir-form"}}, {"tag": "dialog", "clases": {"dividir-dialog"}}]
+    for cadena in (fila, ventana):
+        assert _gana(css, cadena, "border-color")[0] == "var(--danger, #b42318)"
+        assert _gana(css, cadena, "background")[0] == "#fdecea"
 
 
 # =================================================================== #
