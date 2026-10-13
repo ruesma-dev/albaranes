@@ -942,10 +942,9 @@
                 e.stopImmediatePropagation();
                 const elegido = shown[activo];
                 if (elegido) { pick(elegido); }
-                return;
-            }
-            if (panel.hidden) { return; }
-            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            } else if (panel.hidden) {
+                // Lista cerrada: el resto de teclas no son del combo.
+            } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                 e.preventDefault();
                 activo = siguienteActivo(activo, e.key, shown.length);
                 render();
@@ -1037,8 +1036,7 @@
         const res = await cargarPartidasObra();
         const malas = [];
         filas.forEach(function (tr) {
-            const inp = tr.querySelector(".js-partida-combo");
-            if (!inp) { return; }
+            const inp = tr.querySelector(".js-partida-combo");  // toda fila editable la tiene
             const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, res.items);
             marcarPartida(inp, mal);
             if (mal) { malas.push(inp); }
@@ -1496,10 +1494,8 @@
                 return;
             }
             // R27 v5: con alguna partida fuera de la lista no se guarda NADA.
-            const malas = (await partidasInvalidas(filas)).length;
-            if (malas) {
-                window.alert((malas === 1 ? "Hay 1 partida no válida" : "Hay " + malas + " partidas no válidas") +
-                    " (en rojo): elige una de la lista o déjala vacía (almacén).");
+            if ((await partidasInvalidas(filas)).length) {
+                window.alert("Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).");
                 return;
             }
             saveAllLinesBtn.disabled = true;

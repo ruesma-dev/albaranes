@@ -876,6 +876,8 @@ def test_f065_r27v5_boton_guardar_con_partida_fuera_de_la_lista_no_envia(tmp_pat
         part.dispatchEvent(new Event("input", {bubbles: true}));
         guardar.click();
         await tiempo();
+        guardar.click();  // dos intentos: el title de antes no se pierde
+        await tiempo();
         const mala = {peticiones: peticiones.length, marca: marca()};
         teclear(part, "02.03");  // corregirla quita el rojo
         const corregida = marca();
@@ -978,7 +980,7 @@ def test_f065_r27v5_guardar_todas_con_una_partida_mala_no_envia_nada(tmp_path):
     """)
 
     assert casos["mala"] == {"peticiones": 0, "roja": True, "alertas": [
-        "Hay 1 partida no válida (en rojo): elige una de la lista o déjala vacía (almacén)."]}
+        "Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén)."]}
     assert casos["cuerpos"] == [{"codigo_partida": "02.03", "cantidad": 6}]
 
 
@@ -1057,6 +1059,7 @@ def test_f065_r27v5_la_partida_mala_se_ve_en_rojo():
     for cadena in (fila, ventana):
         assert _gana(css, cadena, "border-color")[0] == "var(--danger, #b42318)"
         assert _gana(css, cadena, "background")[0] == "#fdecea"
+        assert _gana(css, cadena, "color")[0] == "var(--danger, #b42318)"
 
 
 # =================================================================== #
@@ -1096,7 +1099,7 @@ def test_f065_r29v3_acciones_siempre_a_la_vista():
 # styles.css ninguna de esas fija position, right, z-index, overflow ni
 # white-space en estas celdas); las @media se toman como si aplicaran.
 _SIMPLE = r"::?[\w-]+(?:\([^)]*\))?|[#.][\w-]+|\[[^\]]+\]"
-_COMPUESTO = re.compile(r"^([a-z*]+)?((?:" + _SIMPLE + r")*)$", re.I)
+_COMPUESTO = re.compile(r"^([a-z][a-z0-9]*|\*)?((?:" + _SIMPLE + r")*)$", re.I)
 
 
 def _partes(compuesto):
