@@ -148,13 +148,21 @@ decide y la aplica el humano) y volver a la spec. No bloquea el `done`.
 
 **F-053 · `blocked` (2026-10-09) — esperando al humano, código terminado y en `dev`.** Fases 1 y 2 APROBADAS
 (`progress/review_F-053_fase2.md`), fusionada en `dev` (`039a118`, `cb125af`) con `init.sh` en verde (T0d, T30).
-Falta solo lo del humano: decisión O1 (reintento del adjunto), aceptar los 10 equivalentes, T0b, T0c
-(`ALTA_SIGRID_USUARIO`), despliegue en simulación (sv6, sv3 → sv9 con `ALTA_SIGRID_COMMIT=false` → sv4 → resto),
-T26–T28 y, con autorización, T29. Recomendación: no pasar a real (T29) hasta desplegar F-065 fase 1. Se bloquea para
-dejar paso a F-065 (máximo una `in_progress`).
-- MANUAL pendientes y comandos: `specs/F-053-alta-sigrid/tasks.md` (T0b, T0c, T0, T22, T26, T27, T27b, T27c, T28, T29).
+O1, los equivalentes, T0b y T0c quedaron resueltos el 2026-10-13 (abajo, v8). Falta: aprobar la v8 e implementarla
+(Bloque H), despliegue en simulación (sv6, sv3 → sv9 con `ALTA_SIGRID_COMMIT=false` → sv4 → DESDE), T26–T28, T51 y,
+con autorización, T29. F-065 fase 1 ya está desplegada (2026-10-11). Se bloqueó para dejar paso a F-065 (máximo una
+`in_progress`).
+- **2026-10-13 · spec v8 escrita (spec-author), PARADA 1 pendiente** (`progress/spec_F-053.md` §«v8»; rama
+  `feature/F-053-alta-sigrid` con `dev` fusionado, `53515de`). El humano resolvió: `usu` = usuario del correo de
+  Ruesma de quien usa la app (respaldo, el suyo), O1 = a (botón «Reintentar adjunto»), 10 equivalentes aceptados,
+  permiso para T0b/T0c. **Hechas T0b y T0c** (solo lectura): `pgris` existe en `dbo.usu` y `pgros` no; App Settings
+  de sigrid-api conformes; `entref` sí es el número del proveedor pero con formato libre (U6: normalizar en R14).
+  Hallazgo: la ficha de sv4 nunca guarda quién aprueba (el PUT no lee la cabecera de Easy Auth); el listado sí.
+  Propuesta: cambian R12, R14, R22, R23, R29, R30; nuevas R47–R49; Bloque H (T41–T50), MANUAL T51, T52.
+  **Decisiones del humano U1–U7** en esa sección. Sin código tocado; F-053 sigue `blocked` en `features.json`.
+- MANUAL pendientes y comandos: `specs/F-053-alta-sigrid/tasks.md` (T0, T22, T26, T27, T27b, T27c, T28, T29, T51).
 - Para el líder: Parte B de `progress/propuestas_a_sigrid_api_F-053.md` con sigrid-api; propuesta de `CLAUDE.md` de
-  design §9 sin aplicar; hallazgo menor R23/R30 (adjunto en error sin botón) en `progress/impl_F-053_fase2.md` §9.
+  design §9 sin aplicar; el hallazgo R23/R30 (adjunto en error sin botón) lo cierra la v8 (O1 = a, T47).
   (Podado el 2026-10-11 el bloque viejo «`in_progress`» de F-053, O7 de `progress/review_F-065_fase1.md`.)
 
 **F-051 · CERRADA (`done`, 2026-10-09): T22–T24 hechas por el humano (`progress/impl_F-051.md` §6 bis).** Antes: `blocked` (2026-10-06) y FUSIONADA en `dev`. Implementación APROBADA por el reviewer (pasada 2) e `init.sh`
