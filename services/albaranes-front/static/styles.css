@@ -1842,5 +1842,12 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
 /* F-065 R29 v3: la última parte se rellena sola (solo lectura) y va en rojo si queda a 0 o de otro signo. */
 .dividir-dialog .cell-input.dividir-auto { background: var(--paper-soft, #fafbfb); color: var(--steel, #7b868c); font-style: italic; cursor: default; }
 .dividir-dialog .cell-input.dividir-auto.dividir-resto-mal { color: var(--danger, #b42318); border-color: var(--danger, #b42318); background: #fdecea; font-style: normal; font-weight: 600; }
+/* F-065 R27 v5: partida que no es de la lista (no se guarda): en rojo, en la fila y en «Dividir». */
+.conciliacion-row .cell-input.partida-invalida,
+.dividir-dialog .cell-input.partida-invalida {
+    border-color: var(--danger, #b42318);
+    background: #fdecea;
+    color: var(--danger, #b42318);
+}
 .salmon-table .parte-reparto { display: block; margin-top: 2px; }
 .salmon-table .aviso-reparto { display: block; margin-top: 2px; }

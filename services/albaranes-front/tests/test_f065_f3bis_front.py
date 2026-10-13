@@ -28,13 +28,20 @@ _RAIZ = Path(__file__).resolve().parent.parent
 _DOM = (Path(__file__).resolve().parent / "dom_falso.js").read_text(encoding="utf-8")
 
 
+def _fuente(js, nombre):
+    """``_funcion_js`` con su ``async`` delante, si lo lleva."""
+    fuente = _funcion_js(js, nombre)
+    inicio = js.index(f"function {nombre}(")
+    return ("async " + fuente) if js[max(0, inicio - 6):inicio] == "async " else fuente
+
+
 def _ejecutar_dom(tmp_path, funciones, preparacion, programa):
     """Ejecuta ``programa`` (cuerpo de una función ``async``) con el DOM falso,
     las ``funciones`` de ``app.js`` y la ``preparacion`` (dobles y elementos,
     en el ámbito global: es donde las funciones de ``app.js`` los buscan);
     devuelve el JSON que imprime."""
     js = _app_js()
-    fuente = "\n".join(_funcion_js(js, f) for f in funciones)
+    fuente = "\n".join(_fuente(js, f) for f in dict.fromkeys(funciones))
     guion = tmp_path / "f065_3bis.js"
     guion.write_text(
         _DOM + "\n" + fuente + "\n" + preparacion + "\n(async function () {\n" + programa + "\n})()"
@@ -52,7 +59,7 @@ def _ejecutar_dom(tmp_path, funciones, preparacion, programa):
 # La ventana de «Dividir»: F7 y la última parte automática (R29 v3)
 # =================================================================== #
 _DIVIDIR = ["parseNumEs", "faltaPorRepartir", "repartoValido", "cuerpoDivision",
-            "estadoReparto", "wireDividir"]
+            "estadoReparto", "partidaValida", "marcarPartida", "wireDividir"]
 
 # Una fila con su «Dividir» (Q y partida en data-*) y la ventana de la
 # plantilla, vacía. Lo que wireDividir usa y no es suyo, con dobles.
@@ -76,6 +83,7 @@ _FICHA = """
     var linesBody = tabla;
     var documentId = "DOC";
     function attachPartidaCombo() {}
+    function cargarPartidasObra() { return Promise.resolve({items: [], error: false}); }
     function contarFilasConCambios() { return 0; }
     function avisoFilasSinGuardar() { return ""; }
     let enviado = null;
@@ -268,7 +276,7 @@ def test_f065_r29v3_estado_del_reparto(tmp_path):
 # El combo de partida (R27 v3)
 # =================================================================== #
 _COMBO = ["_normLine", "opcionesPartida", "partidaValida", "siguienteActivo", "_scrollActive",
-          "attachPartidaCombo"]
+          "marcarPartida", "attachPartidaCombo"]
 # Con lo que hace falta al teclear (R27 v3 y v4).
 _COMBO_V4 = _COMBO + ["esAlmacenTecleado", "marcadaAlTeclear"]
 
@@ -321,7 +329,8 @@ def test_f065_r27v3_combo_elegir_con_enter_lo_deja_cerrado(tmp_path):
         const enter = tecla(inp, "Enter");
         await tiempo();
         const tras = {cerrado: panel.hidden, valor: inp.value, avisos, prevenido: enter.defaultPrevented};
-        // Con la lista cerrada, el siguiente Enter ya no es del combo (es el «Guardar» de la fila).
+        // Con la lista cerrada, el siguiente Enter sigue siendo del combo (R27 v5: en la partida, Enter nunca
+        // guarda la fila) y no hace nada.
         const otro = tecla(inp, "Enter");
         await tiempo();
         console.log(JSON.stringify({tras, otro: {prevenido: otro.defaultPrevented, cerrado: panel.hidden}}));
@@ -329,7 +338,7 @@ def test_f065_r27v3_combo_elegir_con_enter_lo_deja_cerrado(tmp_path):
 
     assert casos == {
         "tras": {"cerrado": True, "valor": "01.01", "avisos": 1, "prevenido": True},
-        "otro": {"prevenido": False, "cerrado": True},
+        "otro": {"prevenido": True, "cerrado": True},
     }
 
 
