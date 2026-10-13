@@ -290,3 +290,132 @@ M = [
     ("static/app.js", "if (elegido) { pick(elegido); }" + NL + "            } else if (e.key === \"Escape\")", "" + NL + "            } else if (e.key === \"Escape\")"),
 ]
 ```
+
+## Pasada 4 (R27 v5): mutación a mano de lo nuevo
+
+Mismo script con otra lista `M` y un fichero de tests más (`tests/test_f065_f1_js.py`: los guardados de la fila);
+abajo. Lo nuevo: carga y `abierta` del combo, Enter siempre del combo, `marcarPartida`, `partidasInvalidas`, su uso en
+«Guardar», «Guardar todas», el aviso de «Guardar y aprobar» y «Dividir», y la regla CSS `partida-invalida`.
+
+- **HEAD medido: `e1563f565d582368e2a1ed549166bbb41b500a3f`** (árbol de sv4 limpio).
+- **Línea base** de los cuatro ficheros: **239 passed** en 18,6 s (20,4 s con el arranque).
+- **Resultado: 38 mutantes, 38 muertos, 0 supervivientes, 0 sin aplicar, 0 equivalentes.**
+- **Sin tests textuales**: repetida con solo `tests/test_f065_f3bis_front.py` y `-k "not acciones_siempre_a_la_vista and
+  not acciones_ancho_estable and not el_bloque_esta_cableado and not f7_en_titulos"` (50 tests: conducta con node y el
+  motor de cascada): **38 de 38 muertos**.
+- Antes de medir se quitó lo que habría dado equivalentes: el `return` tras el Enter (pasa a cadena `if/else`), la
+  guarda `if (!inp)` de `partidasInvalidas` (toda fila editable tiene su casilla de partida) y la rama de plural del
+  aviso de «Guardar todas» (un solo texto).
+
+
+| # | fichero:línea | original | mutado | fallos | veredicto |
+|---|---|---|---|---|---|
+| 1 | static/app.js:841 | `            panel.hidden = true;⏎            abierta = false;` | `            panel.hidden = true;` | 1 | MUERTO |
+| 2 | static/app.js:907 | `            abierta = true;⏎            if (!cargadas)` | `            if (!cargadas)` | 19 | MUERTO |
+| 3 | static/app.js:908 | `if (!cargadas) { render(); }  // ya, con «Cargando partidas…»` | *(nada)* | 2 | MUERTO |
+| 4 | static/app.js:911 | `                cargadas = true;⏎                if (!abierta)` | `                if (!abierta)` | 5 | MUERTO |
+| 5 | static/app.js:912 | `                if (!abierta) { return; }⏎` | *(nada)* | 1 | MUERTO |
+| 6 | static/app.js:879 | `if (!cargadas \|\| partidas.error) {` | `if (partidas.error) {` | 1 | MUERTO |
+| 7 | static/app.js:879 | `if (!cargadas \|\| partidas.error) {` | `if (!cargadas && partidas.error) {` | 1 | MUERTO |
+| 8 | static/app.js:882 | `d.textContent = cargadas ? "No se pudieron cargar las partidas" : "Cargando partidas…";` | `d.textContent = !cargadas ? "No se pudieron cargar las partidas" : "Cargando partidas…";` | 1 | MUERTO |
+| 9 | static/app.js:927 | `            marcarPartida(input, false);  // al cambiarla, fuera el rojo (R27 v5)⏎` | *(nada)* | 1 | MUERTO |
+| 10 | static/app.js:941 | `                e.preventDefault();⏎                e.stopImmediatePropagation();⏎                const elegido = shown[activo];` | `                e.stopImmediatePropagation();⏎                const elegido = shown[activo];` | 9 | MUERTO |
+| 11 | static/app.js:941 | `                e.preventDefault();⏎                e.stopImmediatePropagation();⏎                const elegido = shown[activo];` | `                e.preventDefault();⏎                const elegido = shown[activo];` | 5 | MUERTO |
+| 12 | static/app.js:933 | `if (e.key === "Enter") {⏎                // R27 v5` | `if (e.key === "Enter" && !panel.hidden) {⏎                // R27 v5` | 3 | MUERTO |
+| 13 | static/app.js:1021 | `if (mal && !inp.classList.contains("partida-invalida")) {` | `if (mal) {` | 1 | MUERTO |
+| 14 | static/app.js:1024 | `} else if (!mal && inp.classList.contains("partida-invalida")) {⏎            inp.title = inp.dataset.tituloAntes;⏎` | `} else if (!mal && inp.classList.contains("partida-invalida")) {⏎` | 1 | MUERTO |
+| 15 | static/app.js:1022 | `inp.dataset.tituloAntes = inp.title \|\| "";` | *(nada)* | 1 | MUERTO |
+| 16 | static/app.js:1027 | `inp.classList.toggle("partida-invalida", mal);` | `inp.classList.toggle("partida-invalida", true);` | 5 | MUERTO |
+| 17 | static/app.js:1028 | `if (mal) { inp.setAttribute("aria-invalid", "true"); } else { inp.removeAttribute("aria-invalid"); }` | `if (mal) { inp.setAttribute("aria-invalid", "true"); }` | 1 | MUERTO |
+| 18 | static/app.js:1028 | `if (mal) { inp.setAttribute("aria-invalid", "true"); } else { inp.removeAttribute("aria-invalid"); }` | `if (!mal) { inp.removeAttribute("aria-invalid"); }` | 1 | MUERTO |
+| 19 | static/app.js:1040 | `const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, res.items);` | `const mal = !partidaValida(inp.value, res.items);` | 1 | MUERTO |
+| 20 | static/app.js:1040 | `const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, res.items);` | `const mal = partidaParaEnviar(inp) !== null && partidaValida(inp.value, res.items);` | 7 | MUERTO |
+| 21 | static/app.js:1040 | `const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, res.items);` | `const mal = partidaParaEnviar(inp) !== null \|\| !partidaValida(inp.value, res.items);` | 6 | MUERTO |
+| 22 | static/app.js:1041 | `            marcarPartida(inp, mal);⏎            if (mal) { malas.push(inp); }` | `            if (mal) { malas.push(inp); }` | 5 | MUERTO |
+| 23 | static/app.js:1042 | `            if (mal) { malas.push(inp); }⏎` | *(nada)* | 4 | MUERTO |
+| 24 | static/app.js:1189 | `if ((await partidasInvalidas([tr])).length) { return; }` | *(nada)* | 3 | MUERTO |
+| 25 | static/app.js:1489 | `                    filas.push(tr);⏎` | *(nada)* | 1 | MUERTO |
+| 26 | static/app.js:1497 | `if ((await partidasInvalidas(filas)).length) {⏎                window.alert("Hay partidas` | `if (false) {⏎                window.alert("Hay partidas` | 1 | MUERTO |
+| 27 | static/app.js:2161 | `            await partidasInvalidas(filas);  // R27 v5: las que no valen, en rojo⏎` | *(nada)* | 1 | MUERTO |
+| 28 | static/app.js:1409 | `const mal = inp.value.trim() !== actual.partida && !partidaValida(inp.value, res.items);` | `const mal = !partidaValida(inp.value, res.items);` | 2 | MUERTO |
+| 29 | static/app.js:1409 | `const mal = inp.value.trim() !== actual.partida && !partidaValida(inp.value, res.items);` | `const mal = inp.value.trim() !== actual.partida && partidaValida(inp.value, res.items);` | 2 | MUERTO |
+| 30 | static/app.js:1410 | `                marcarPartida(inp, mal);⏎                if (mal) { malas += 1; }` | `                if (mal) { malas += 1; }` | 1 | MUERTO |
+| 31 | static/app.js:1411 | `                if (mal) { malas += 1; }⏎` | *(nada)* | 1 | MUERTO |
+| 32 | static/app.js:1415 | `                errorEl.hidden = false;⏎                return;⏎            }⏎            aceptar.disabled = true;` | `                return;⏎            }⏎            aceptar.disabled = true;` | 1 | MUERTO |
+| 33 | static/app.js:1415 | `                errorEl.hidden = false;⏎                return;⏎            }⏎            aceptar.disabled = true;` | `                errorEl.hidden = false;⏎            }⏎            aceptar.disabled = true;` | 1 | MUERTO |
+| 34 | static/styles.css:1846 | `.conciliacion-row .cell-input.partida-invalida,⏎` | *(nada)* | 1 | MUERTO |
+| 35 | static/styles.css:1846 | `.conciliacion-row .cell-input.partida-invalida,⏎.dividir-dialog .cell-input.partida-invalida {` | `.conciliacion-row .cell-input.partida-invalida {` | 1 | MUERTO |
+| 36 | static/styles.css:1848 | `    border-color: var(--danger, #b42318);⏎    background: #fdecea;⏎    color: var(--danger, #b42318);` | `    background: #fdecea;⏎    color: var(--danger, #b42318);` | 1 | MUERTO |
+| 37 | static/styles.css:1848 | `    border-color: var(--danger, #b42318);⏎    background: #fdecea;⏎    color: var(--danger, #b42318);` | `    border-color: var(--danger, #b42318);⏎    color: var(--danger, #b42318);` | 1 | MUERTO |
+| 38 | static/styles.css:1848 | `    border-color: var(--danger, #b42318);⏎    background: #fdecea;⏎    color: var(--danger, #b42318);` | `    border-color: var(--danger, #b42318);⏎    background: #fdecea;` | 1 | MUERTO |
+
+TOTAL 38 mutantes, 0 vivos
+
+```python
+TESTS = ["tests/test_f065_f3bis_front.py", "tests/test_f065_f3_dividir.py", "tests/test_f065_f2_origen.py", "tests/test_f065_f1_js.py"]
+M = [
+    # --- combo: carga y «abierta» (R27 v5) ---
+    ("static/app.js", "            panel.hidden = true;" + NL + "            abierta = false;", "            panel.hidden = true;"),
+    ("static/app.js", "            abierta = true;" + NL + "            if (!cargadas)", "            if (!cargadas)"),
+    ("static/app.js", "if (!cargadas) { render(); }  // ya, con «Cargando partidas…»", ""),
+    ("static/app.js", "                cargadas = true;" + NL + "                if (!abierta)", "                if (!abierta)"),
+    ("static/app.js", "                if (!abierta) { return; }" + NL, ""),
+    ("static/app.js", "if (!cargadas || partidas.error) {", "if (partidas.error) {"),
+    ("static/app.js", "if (!cargadas || partidas.error) {", "if (!cargadas && partidas.error) {"),
+    ("static/app.js", 'd.textContent = cargadas ? "No se pudieron cargar las partidas" : "Cargando partidas…";',
+     'd.textContent = !cargadas ? "No se pudieron cargar las partidas" : "Cargando partidas…";'),
+    ("static/app.js", "            marcarPartida(input, false);  // al cambiarla, fuera el rojo (R27 v5)" + NL, ""),
+    # --- combo: Enter siempre del combo ---
+    ("static/app.js", "                e.preventDefault();" + NL + "                e.stopImmediatePropagation();" + NL + "                const elegido = shown[activo];",
+     "                e.stopImmediatePropagation();" + NL + "                const elegido = shown[activo];"),
+    ("static/app.js", "                e.preventDefault();" + NL + "                e.stopImmediatePropagation();" + NL + "                const elegido = shown[activo];",
+     "                e.preventDefault();" + NL + "                const elegido = shown[activo];"),
+    ("static/app.js", 'if (e.key === "Enter") {' + NL + "                // R27 v5", 'if (e.key === "Enter" && !panel.hidden) {' + NL + "                // R27 v5"),
+    # --- marcarPartida ---
+    ("static/app.js", 'if (mal && !inp.classList.contains("partida-invalida")) {', "if (mal) {"),
+    ("static/app.js", '} else if (!mal && inp.classList.contains("partida-invalida")) {' + NL + "            inp.title = inp.dataset.tituloAntes;" + NL,
+     '} else if (!mal && inp.classList.contains("partida-invalida")) {' + NL),
+    ("static/app.js", 'inp.dataset.tituloAntes = inp.title || "";', ""),
+    ("static/app.js", 'inp.classList.toggle("partida-invalida", mal);', 'inp.classList.toggle("partida-invalida", true);'),
+    ("static/app.js", 'if (mal) { inp.setAttribute("aria-invalid", "true"); } else { inp.removeAttribute("aria-invalid"); }',
+     'if (mal) { inp.setAttribute("aria-invalid", "true"); }'),
+    ("static/app.js", 'if (mal) { inp.setAttribute("aria-invalid", "true"); } else { inp.removeAttribute("aria-invalid"); }',
+     'if (!mal) { inp.removeAttribute("aria-invalid"); }'),
+    # --- partidasInvalidas ---
+    ("static/app.js", "const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, res.items);",
+     "const mal = !partidaValida(inp.value, res.items);"),
+    ("static/app.js", "const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, res.items);",
+     "const mal = partidaParaEnviar(inp) !== null && partidaValida(inp.value, res.items);"),
+    ("static/app.js", "const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, res.items);",
+     "const mal = partidaParaEnviar(inp) !== null || !partidaValida(inp.value, res.items);"),
+    ("static/app.js", "            marcarPartida(inp, mal);" + NL + "            if (mal) { malas.push(inp); }", "            if (mal) { malas.push(inp); }"),
+    ("static/app.js", "            if (mal) { malas.push(inp); }" + NL, ""),
+    # --- los guardados ---
+    ("static/app.js", "if ((await partidasInvalidas([tr])).length) { return; }", ""),
+    ("static/app.js", "                    filas.push(tr);" + NL, ""),
+    ("static/app.js", "if ((await partidasInvalidas(filas)).length) {" + NL + '                window.alert("Hay partidas',
+     "if (false) {" + NL + '                window.alert("Hay partidas'),
+    ("static/app.js", "            await partidasInvalidas(filas);  // R27 v5: las que no valen, en rojo" + NL, ""),
+    # --- «Dividir» ---
+    ("static/app.js", "const mal = inp.value.trim() !== actual.partida && !partidaValida(inp.value, res.items);",
+     "const mal = !partidaValida(inp.value, res.items);"),
+    ("static/app.js", "const mal = inp.value.trim() !== actual.partida && !partidaValida(inp.value, res.items);",
+     "const mal = inp.value.trim() !== actual.partida && partidaValida(inp.value, res.items);"),
+    ("static/app.js", "                marcarPartida(inp, mal);" + NL + "                if (mal) { malas += 1; }", "                if (mal) { malas += 1; }"),
+    ("static/app.js", "                if (mal) { malas += 1; }" + NL, ""),
+    ("static/app.js", "                errorEl.hidden = false;" + NL + "                return;" + NL + "            }" + NL + "            aceptar.disabled = true;",
+     "                return;" + NL + "            }" + NL + "            aceptar.disabled = true;"),
+    ("static/app.js", "                errorEl.hidden = false;" + NL + "                return;" + NL + "            }" + NL + "            aceptar.disabled = true;",
+     "                errorEl.hidden = false;" + NL + "            }" + NL + "            aceptar.disabled = true;"),
+    # --- CSS (gana la cascada: motor de cascada) ---
+    ("static/styles.css", ".conciliacion-row .cell-input.partida-invalida," + NL, ""),
+    ("static/styles.css", ".conciliacion-row .cell-input.partida-invalida," + NL + ".dividir-dialog .cell-input.partida-invalida {",
+     ".conciliacion-row .cell-input.partida-invalida {"),
+    ("static/styles.css", "    border-color: var(--danger, #b42318);" + NL + "    background: #fdecea;" + NL + "    color: var(--danger, #b42318);",
+     "    background: #fdecea;" + NL + "    color: var(--danger, #b42318);"),
+    ("static/styles.css", "    border-color: var(--danger, #b42318);" + NL + "    background: #fdecea;" + NL + "    color: var(--danger, #b42318);",
+     "    border-color: var(--danger, #b42318);" + NL + "    color: var(--danger, #b42318);"),
+    ("static/styles.css", "    border-color: var(--danger, #b42318);" + NL + "    background: #fdecea;" + NL + "    color: var(--danger, #b42318);",
+     "    border-color: var(--danger, #b42318);" + NL + "    background: #fdecea;"),
+]
+```

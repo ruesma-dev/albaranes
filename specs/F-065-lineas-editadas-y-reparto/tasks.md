@@ -69,4 +69,4 @@ Plan aprobado por el humano en la PARADA 1 del 2026-10-12. Sin servidor. Informe
 
 - [x] T39: tests RED de R27 v5: Enter en la partida (lista cargando, abierta o cerrada) nunca guarda ni acepta «Dividir»; «Cargando partidas…» al momento; botón «Guardar», Enter en otra celda, «Guardar todas», el aviso de «Guardar y aprobar» y «Aceptar» de «Dividir» no envían una partida fuera de la lista (en rojo); lo válido se sigue guardando  |  Verificación: `pytest tests/test_f065_f3bis_front.py -k r27v5` falla como se espera
 - [x] T40: combo (carga, `abierta`, Enter siempre del combo), `marcarPartida`, `partidasInvalidas` y su uso en los cuatro guardados y en «Dividir»; CSS `partida-invalida` (R27 v5)  |  Verificación: `pytest tests/test_f065_f3bis_front.py tests/test_f065_f3_dividir.py tests/test_f065_f2_origen.py tests/test_f065_f1_js.py`
-- [ ] T41: ARCHITECTURE, MANUAL en `current.md`, mutación a mano de lo nuevo e informe (§«Pasada 4»)  |  Verificación: `bash harness/init.sh` en verde
+- [x] T41: ARCHITECTURE, MANUAL en `current.md`, mutación a mano de lo nuevo e informe (§«Pasada 4»)  |  Verificación: `bash harness/init.sh` en verde
