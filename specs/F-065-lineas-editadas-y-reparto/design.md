@@ -1,4 +1,4 @@
-# F-065 · diseño (v4: §5.5, fase 3 bis y su pasada 3)
+# F-065 · diseño (v5: §5.5, fase 3 bis y sus pasadas 3 y 4)
 
 Rutas relativas a `services/albaranes-front/` (sv4) salvo indicación. Diagnóstico con fichero:línea en
 `progress/explore_F-065.md` y `progress/explore_front_detalle.md` (F1–F25). Decisiones: §7.
@@ -135,6 +135,17 @@ cuando algo cambia, sale de `_importe_de_linea(precio, Q, dto)`. Filas legadas (
   marcada (abrir por foco o clic, o un texto sin coincidencias), NO elige nada: ni POST a `/almacen` ni cambio de
   valor; la lista sigue abierta (así un segundo Enter tampoco guarda la fila ni acepta «Dividir» con un texto que no es
   de la lista); Esc o salir devuelven el valor de antes. Las flechas mandan sobre la marcada.
+- **v5 (pasada 4, humano 2026-10-13; fallo de la MANUAL: con las partidas aún llegando de Sigrid la lista seguía
+  cerrada, el combo soltaba el Enter y el «Guardar» de la fila guardaba lo tecleado)**: en la partida, Enter SIEMPRE es
+  del combo (`preventDefault` + `stopImmediatePropagation`, lista abierta, cerrada o cargando): elige la marcada o nada;
+  nunca guarda la fila ni acepta «Dividir» (para eso, «Guardar» o Enter en otra celda). La lista se abre al momento con
+  «Cargando partidas…» (sin opciones: Enter no elige) y, al llegar, se pinta con la marcada de lo tecleado; si se cerró
+  mientras (Esc, salir), no se reabre. `partidasInvalidas(filas)`: antes de «Guardar» de la fila (botón o Enter en otra
+  celda), de «Guardar todas» (no envía NADA si alguna falla) y del aviso de «Guardar»/«Guardar y aprobar» con filas
+  sin guardar, una partida CAMBIADA que no es de la lista (vacía = almacén vale; Sigrid caído ⇒ solo almacén; la que la
+  fila ya tenía no viaja y no se mira) se marca en rojo (`partida-invalida`, `aria-invalid`, `title` «Partida no
+  válida…») y no se envía; al cambiarla, el rojo se quita. En «Aceptar» de «Dividir», lo mismo con la de la propia fila
+  también válida. El servidor no cambia (P11).
 - **Acciones** (dato del humano: con una fila «Desbloquear» la tabla se ensanchaba y «Guardar»/«Dividir» salían de la
   vista): columna `sticky` a la derecha, opaca, fija (`data-col-fixed`, no se arrastra) y de 200 px; «Borrar» compacto
   («✕» con `title`); sin `nowrap` ni `overflow: hidden` (si se estrecha, los botones bajan de línea). Causa hallada: T24 borró por error el bloque «Columnas de tabla GENÉRICAS» de `app.js`

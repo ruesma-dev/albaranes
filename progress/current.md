@@ -18,6 +18,10 @@ desplegar **solo sv4**. **Fase 3 bis APROBADA** (pasada 2), en `dev` (`eb0b968`)
 (2026-10-13). **Pasada 3 (H1, R27 v4, 2026-10-13) IMPLEMENTADA**: Enter en el combo de partida elige la marcada
 («Almacén» con «al»…, si no la primera partida que coincide) y, sin marcada, nada. Informe: §«Pasada 3» de
 `progress/impl_F-065_fase3bis.md`. Siguiente: review, el paso 4 bis de la MANUAL T35 (abajo), fusionar y desplegar sv4.
+**Pasada 3 aprobada y en `dev` (`6d5da51`). Pasada 4 (R27 v5, 2026-10-13) IMPLEMENTADA**: la MANUAL encontró que
+«zzzz»/«al» + Enter GUARDABA la fila mientras llegaban las partidas. Ahora, en la partida, Enter nunca guarda; la lista
+sale al momento con «Cargando partidas…»; una partida fuera de la lista no se guarda por ningún camino (en rojo).
+Informe: §«Pasada 4». Siguiente: review, el paso 4 ter de la MANUAL T35 (abajo), fusionar y desplegar sv4.
 - **MANUAL T35 (humano, pipeline LOCAL con sv4 de la rama; en BBDD, nada más que lo que haga la propia ficha)**, en
   PowerShell:
   ```powershell
@@ -36,6 +40,12 @@ desplegar **solo sv4**. **Fase 3 bis APROBADA** (pasada 2), en `dev` (`eb0b968`)
   #  4 bis) (pasada 3, R27 v4) En otra fila Contrato: teclear «alba» (o «02.0») -> queda marcada la primera partida
   #     que coincide y Enter ELIGE ESA partida (no manda la fila a almacén). Pinchar en la partida y pulsar Enter sin
   #     teclear -> no pasa nada (no va a almacén). Teclear «zzz» + Enter -> nada; Tab -> vuelve la de antes.
+  #  4 ter) (pasada 4, R27 v5) Recién abierta la ficha (Ctrl+F5), en una fila: pinchar en la partida -> la lista sale YA
+  #     con «Cargando partidas…»; teclear «zzzz» + Enter enseguida -> NO se guarda la fila (sigue editable, sin
+  #     «Desbloquear»). Igual con «al» + Enter: no guarda y, al llegar las partidas, queda marcada «Almacén» (otro Enter
+  #     la elige). Con la lista ya cargada, elegir una partida y pulsar Enter otra vez -> no guarda (para guardar: botón
+  #     «Guardar» o Enter en la cantidad). Botón «Guardar» con una partida que no es de la lista (p. ej. pegada sin
+  #     elegirla) -> la casilla en rojo y no se guarda; al corregirla se quita el rojo.
   #  5) Guardar una fila (sale «Desbloquear») y estrechar la ventana del navegador: la columna «Acciones» sigue pegada
   #     a la derecha, opaca, con «✕ · Guardar · Dividir» (o «Desbloquear») a la vista; al desplazar en horizontal, la
   #     cabecera «Acciones» sigue ENCIMA de sus botones (no se va con el scroll).

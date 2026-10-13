@@ -1,4 +1,4 @@
-# F-065 · Lo editado en las líneas manda, la partida se elige de la obra y una línea se divide — requisitos (v4)
+# F-065 · Lo editado en las líneas manda, la partida se elige de la obra y una línea se divide — requisitos (v5)
 
 Rigor **critico** (lo aprobado es lo que sv9 da de alta en Sigrid, F-053). Servicios: **sv4-front** y
 **sv6-valoracion-persist** (solo el DDL de `bloqueada`); sv9 y comun sin código (tests de contrato en sv9).
@@ -107,10 +107,10 @@ al editar el importe, que reajusta el unitario) o la unidad de una fila Contrato
 R26. Vaciar la partida (almacén) o poner la de su línea de contrato no cambia el origen (F-051 D4 y R20; P10).
 Editar descripción, cantidad, descuento o código externo no cambia el origen; ninguna edición llama a la IA.
 
-R27. (v4) El combo de partida ofrece «Almacén» primero y las partidas hoja de la obra (`/api/sigrid/partidas`, una
-carga por ficha), filtradas por código y descripción; solo admite valores de la lista; sin partidas, solo «Almacén», y
-si Sigrid no responde, además el aviso «No se pudieron cargar las partidas». Elegir solo manda `codigo_partida` (R25–R26)
-y cierra la lista; al teclear marca «Almacén» («al»…) o la primera que coincide; Enter elige la marcada (sin ella, nada).
+R27. (v5) El combo de partida ofrece «Almacén» y las partidas hoja de la obra (una carga; mientras, «Cargando partidas…»;
+sin partidas, solo «Almacén»; con Sigrid caído, además el aviso), filtradas por código y descripción. Al teclear marca
+«Almacén» («al»…) o la primera que coincide; en la partida, Enter elige la marcada (sin ella, nada) y nunca guarda la fila
+ni acepta «Dividir»; elegir solo manda `codigo_partida` (R25–R26). Una partida fuera de la lista no se guarda (en rojo).
 
 R28. «Origen ✎» debe ser la única vía de reapuntar: elegir una línea de contrato deja la fila Contrato con la
 partida y el precio de esa línea; elegir «Nueva», Nueva con los valores actuales. El combo de concepto pasa a texto
