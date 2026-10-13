@@ -211,7 +211,8 @@ conducta, sin extraerla (`scratchpad/red_v4.py`), salida real: «alba», «02.0�
 `{'marcada': None, 'bajada': 'Almacén (sin partida)', 'elegida': '0', 'almacen': 2}`; «Dividir» ⇒ foco + Enter y
 «alba» + Enter dejaban la partida VACÍA (`partes [6 → None, 12 → '01.01']`); «al» + Enter ya pasaba.
 
-**Verificación**: `test_f065_f3bis_front.py` **38 passed**; los tres ficheros **204 passed**; `init.sh`: abajo.
+**Verificación**: `test_f065_f3bis_front.py` **38 passed**; los tres ficheros **204 passed**; **`bash harness/init.sh`**
+(`e181863`): **exit 0**, raíz 1083 passed, sv4 **1259 passed** (sin caché), cobertura N/A, **`ENTORNO LISTO`**.
 **Mutación a mano** (`progress/mutacion_F-065_fase3bis.md` §«Pasada 3»): HEAD `0075ce4900a27867ec0c1e6c0c80f46dcf5d5711`,
 línea base 204 passed, **15/15 muertos, 0 supervivientes**, por fila `fichero:línea`, original→mutado y fallos; sin el
 test de la función pura vive #5 (quitar `shown.length > 1`), equivalente en el combo y demostrado ejecutando.
