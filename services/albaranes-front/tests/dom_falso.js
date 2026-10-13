@@ -189,7 +189,11 @@ class Elemento {
         document.activeElement = document.body;
         this.dispatchEvent(new Event("blur"));
     }
-    click() { this.dispatchEvent(new Event("click", { bubbles: true })); }
+    click() {
+        // Como el navegador: un botón desactivado no recibe el clic (tampoco el de .click()).
+        if (this.disabled) { return; }
+        this.dispatchEvent(new Event("click", { bubbles: true }));
+    }
     showModal() { this.open = true; }
     close() { this.open = false; }
 }

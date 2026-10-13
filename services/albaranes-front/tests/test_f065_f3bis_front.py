@@ -87,8 +87,10 @@ _FICHA = """
     function contarFilasConCambios() { return 0; }
     function avisoFilasSinGuardar() { return ""; }
     let enviado = null;
+    let envios = 0;
     function fetch(url, init) {
         enviado = {url: url, cuerpo: JSON.parse(init.body)};
+        envios += 1;
         return Promise.resolve({ok: true});
     }
     wireDividir();
@@ -1060,6 +1062,133 @@ def test_f065_r27v5_la_partida_mala_se_ve_en_rojo():
         assert _gana(css, cadena, "border-color")[0] == "var(--danger, #b42318)"
         assert _gana(css, cadena, "background")[0] == "#fdecea"
         assert _gana(css, cadena, "color")[0] == "var(--danger, #b42318)"
+
+
+# =================================================================== #
+# Pasada 5 · CR4 (review, pasada 4): lo que se valida es EXACTAMENTE lo que
+# se envía, también si la casilla cambia mientras llegan las partidas; un
+# segundo clic durante la espera no manda otro PATCH. O6: salir de la partida
+# antes de que llegue la lista no deshace lo tecleado a ciegas (se decide al
+# llegar). O7: «Dividir» no manda dos POST con dos Enter seguidos.
+# =================================================================== #
+def _todas():
+    bloque = _bloque(_app_js(), 'const saveAllLinesBtn = document.getElementById("save-all-lines-btn");',
+                     "if (addLineBtn)")
+    return """
+        const todas = el("button", "", document.body);
+        todas.id = "save-all-lines-btn";
+    """ + bloque
+
+
+@con_node
+@pytest.mark.parametrize("boton", ["guardar", "todas"])
+def test_f065_cr4_lo_validado_es_lo_enviado_aunque_cambie_durante_la_carga(tmp_path, boton):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar() + _todas(), """
+        part.value = "zzzz";  // fuera de la lista, sin pasar por el combo
+        """ + boton + """.click();
+        await tiempo();
+        part.value = "02.03";  // cambia mientras Sigrid tarda
+        lista();
+        await tiempo();
+        await tiempo();
+        console.log(JSON.stringify({cuerpos: peticiones.map(function (p) { return p.cuerpo; }), roja: marca().roja}));
+    """)
+
+    # Se valida «02.03» y se manda «02.03» (antes: se validaba «02.03» y se mandaba «zzzz»).
+    assert casos == {"cuerpos": [{"codigo_partida": "02.03"}], "roja": False}
+
+
+@con_node
+@pytest.mark.parametrize("boton", ["guardar", "todas"])
+def test_f065_cr4_lo_que_se_vuelve_malo_durante_la_carga_no_se_envia(tmp_path, boton):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar() + _todas(), """
+        part.value = "02.03";
+        """ + boton + """.click();
+        await tiempo();
+        part.value = "zzzz";
+        lista();
+        await tiempo();
+        await tiempo();
+        console.log(JSON.stringify({peticiones: peticiones.length, roja: marca().roja,
+                                    activo: !""" + boton + """.disabled}));
+    """)
+
+    assert casos == {"peticiones": 0, "roja": True, "activo": True}  # y el botón vuelve a servir
+
+
+@con_node
+@pytest.mark.parametrize("boton", ["guardar", "todas"])
+def test_f065_cr4_dos_clics_durante_la_carga_un_solo_patch(tmp_path, boton):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar() + _todas(), """
+        cant.value = "6";
+        """ + boton + """.click();
+        """ + boton + """.click();
+        lista();
+        await tiempo();
+        await tiempo();
+        console.log(JSON.stringify({cuerpos: peticiones.map(function (p) { return p.cuerpo; })}));
+    """)
+
+    assert casos == {"cuerpos": [{"cantidad": 6}]}
+
+
+@con_node
+def test_f065_o6_salir_con_una_valida_antes_de_la_lista_la_deja(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar(), """
+        part.focus();
+        teclear(part, "02.03");
+        part.blur();
+        const alSalir = part.value;
+        lista();
+        await tiempo();
+        console.log(JSON.stringify({alSalir, alLlegar: part.value, cerrada: panel.hidden}));
+    """)
+
+    assert casos == {"alSalir": "02.03", "alLlegar": "02.03", "cerrada": True}
+
+
+@con_node
+def test_f065_o6_salir_con_una_mala_antes_de_la_lista_vuelve_al_llegar(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar(), """
+        part.focus();
+        teclear(part, "zzzz");
+        part.blur();
+        lista();
+        await tiempo();
+        console.log(JSON.stringify({valor: part.value, cerrada: panel.hidden}));
+    """)
+
+    assert casos == {"valor": "01.01", "cerrada": True}
+
+
+@con_node
+def test_f065_o6_esc_cargando_con_una_partida_vieja_no_reabre(tmp_path):
+    """Con la de antes fuera de la lista («99.99») y el foco dentro: al llegar, ni cambia ni se abre."""
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR, _fila_guardar("99.99"), """
+        part.focus();
+        tecla(part, "Escape");
+        lista();
+        await tiempo();
+        await tiempo();
+        console.log(JSON.stringify({valor: part.value, cerrada: panel.hidden}));
+    """)
+
+    assert casos == {"valor": "99.99", "cerrada": True}
+
+
+@con_node
+def test_f065_o7_dividir_dos_enter_seguidos_un_solo_post(tmp_path):
+    casos = _ejecutar_dom(tmp_path, _DIVIDIR + _COMBO_V4, _FICHA_CON_COMBO, """
+        boton.dispatchEvent(new Event("click"));
+        teclear(cantidades()[0], "6");
+        tecla(cantidades()[0], "Enter");
+        tecla(cantidades()[0], "Enter");
+        await tiempo();
+        await tiempo();
+        console.log(JSON.stringify({envios}));
+    """)
+
+    assert casos == {"envios": 1}
 
 
 # =================================================================== #
