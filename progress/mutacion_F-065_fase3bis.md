@@ -419,3 +419,119 @@ M = [
      "    border-color: var(--danger, #b42318);" + NL + "    background: #fdecea;"),
 ]
 ```
+
+## Pasada 5 (CR4, O6, O7): mutación a mano de lo nuevo
+
+Mismo script con otra lista `M` (abajo) y los cuatro ficheros de tests de la pasada 4. Lo nuevo y lo movido: el orden
+de «Guardar» y «Guardar todas» (desactivar, esperar la lista, validar y armar en el mismo tick), `partidasMalas` y su
+envoltorio, `volverSiNoVale` (O6) y el cerrojo de `enviar` en «Dividir» (O7). El propio fallo de CR4 (armar antes de
+esperar) es un mutante en cada botón (#3 y #8; el de «Guardar todas», con los textos de `p5_original.txt` y
+`p5_mutado.txt`, copiados abajo).
+
+- **HEAD medido: `2fa95e378b369c760c1959fee671bbde95279361`** (árbol de sv4 limpio).
+- **Línea base** de los cuatro ficheros: **251 passed** (33,2 s).
+- **Resultado: 19 mutantes, 19 muertos, 0 supervivientes, 0 sin aplicar, 0 equivalentes.**
+- **Sin tests textuales** (solo `tests/test_f065_f3bis_front.py` con el mismo `-k` de la pasada 4; 62 tests): **19/19**.
+- Primera vuelta: el #19 no aplicaba (texto repetido en otra rama de `enviar`); se le dio más contexto y se repitió todo.
+
+
+| # | fichero:línea | original | mutado | fallos | veredicto |
+|---|---|---|---|---|---|
+| 1 | static/app.js:1206 | `                saveBtn.disabled = true;⏎                const lista = await cargarPartidasObra();` | `                const lista = await cargarPartidasObra();` | 1 | MUERTO |
+| 2 | static/app.js:1209 | `                    saveBtn.disabled = false;⏎                    return;⏎                }⏎                const body` | `                    return;⏎                }⏎                const body` | 3 | MUERTO |
+| 3 | static/app.js:1207 | `                const lista = await cargarPartidasObra();⏎                if (partidasMalas([tr], lista.items).length) {⏎                    saveBtn.disabled = false;⏎                    return;⏎                }⏎                const body = _camposCambiados(tr);` | `                const body = _camposCambiados(tr);⏎                const lista = await cargarPartidasObra();⏎                if (partidasMalas([tr], lista.items).length) {⏎                    saveBtn.disabled = false;⏎                    return;⏎                }` | 1 | MUERTO |
+| 4 | static/app.js:1208 | `if (partidasMalas([tr], lista.items).length) {` | `if (false) {` | 4 | MUERTO |
+| 5 | static/app.js:1521 | `            saveAllLinesBtn.disabled = true;⏎            const lista = await cargarPartidasObra();` | `            const lista = await cargarPartidasObra();` | 1 | MUERTO |
+| 6 | static/app.js:1526 | `                saveAllLinesBtn.disabled = false;⏎                return;⏎            }⏎            const envios` | `                return;⏎            }⏎            const envios` | 2 | MUERTO |
+| 7 | static/app.js:1521 | `            saveAllLinesBtn.disabled = true;⏎            const lista = await cargarPartidasObra();⏎            const filas = conCambios();` | `            const filas = conCambios();⏎            saveAllLinesBtn.disabled = true;⏎            const lista = await cargarPartidasObra();` | 1 | MUERTO |
+| 8 | static/app.js:1522 | `            const lista = await cargarPartidasObra();⏎            const filas = conCambios();⏎            if (partidasMalas(filas, lista.items).length) {⏎                window.alert("Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).");⏎                saveAllLinesBtn.disabled = false;⏎                return;⏎            }⏎            const envios = filas.map(function (tr) {⏎                return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };⏎            });⏎` | `            const filas = conCambios();⏎            const envios = filas.map(function (tr) {⏎                return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };⏎            });⏎            const lista = await cargarPartidasObra();⏎            if (partidasMalas(filas, lista.items).length) {⏎                window.alert("Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).");⏎                saveAllLinesBtn.disabled = false;⏎                return;⏎            }⏎` | 2 | MUERTO |
+| 9 | static/app.js:1530 | `return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };` | `return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: {} };` | 3 | MUERTO |
+| 10 | static/app.js:1511 | `return vid && Object.keys(cuerpo).length;` | `return vid;` | 3 | MUERTO |
+| 11 | static/app.js:1524 | `if (partidasMalas(filas, lista.items).length) {` | `if (false) {` | 2 | MUERTO |
+| 12 | static/app.js:1059 | `return partidasMalas(filas, (await cargarPartidasObra()).items);` | `return [];` | 1 | MUERTO |
+| 13 | static/app.js:971 | `if (cargadas) { volverSiNoVale(); }` | `volverSiNoVale();` | 1 | MUERTO |
+| 14 | static/app.js:913 | `                    volverSiNoVale();  // O6: se salió antes de que llegara⏎` | *(nada)* | 1 | MUERTO |
+| 15 | static/app.js:965 | `if (input.value !== alAbrir && !partidaValida(input.value, partidas.items)) {` | `if (!partidaValida(input.value, partidas.items)) {` | 1 | MUERTO |
+| 16 | static/app.js:965 | `if (input.value !== alAbrir && !partidaValida(input.value, partidas.items)) {` | `if (input.value !== alAbrir && partidaValida(input.value, partidas.items)) {` | 7 | MUERTO |
+| 17 | static/app.js:1427 | `if (!actual \|\| aceptar.disabled) { return; }` | `if (!actual) { return; }` | 1 | MUERTO |
+| 18 | static/app.js:1427 | `            if (!actual \|\| aceptar.disabled) { return; }⏎            aceptar.disabled = true;⏎` | `            if (!actual \|\| aceptar.disabled) { return; }⏎` | 1 | MUERTO |
+| 19 | static/app.js:1440 | `                errorEl.hidden = false;⏎                aceptar.disabled = false;⏎                return;⏎            }⏎            try {` | `                errorEl.hidden = false;⏎                return;⏎            }⏎            try {` | 1 | MUERTO |
+
+TOTAL 19 mutantes, 0 vivos
+
+`p5_original.txt` (#8, original):
+```js
+            const lista = await cargarPartidasObra();
+            const filas = conCambios();
+            if (partidasMalas(filas, lista.items).length) {
+                window.alert("Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).");
+                saveAllLinesBtn.disabled = false;
+                return;
+            }
+            const envios = filas.map(function (tr) {
+                return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };
+            });
+```
+`p5_mutado.txt` (#8, mutado):
+```js
+            const filas = conCambios();
+            const envios = filas.map(function (tr) {
+                return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };
+            });
+            const lista = await cargarPartidasObra();
+            if (partidasMalas(filas, lista.items).length) {
+                window.alert("Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).");
+                saveAllLinesBtn.disabled = false;
+                return;
+            }
+```
+
+```python
+TESTS = ["tests/test_f065_f3bis_front.py", "tests/test_f065_f3_dividir.py", "tests/test_f065_f2_origen.py", "tests/test_f065_f1_js.py"]
+M = [
+    # --- «Guardar» de la fila (CR4) ---
+    ("static/app.js", "                saveBtn.disabled = true;" + NL + "                const lista = await cargarPartidasObra();",
+     "                const lista = await cargarPartidasObra();"),
+    ("static/app.js", "                    saveBtn.disabled = false;" + NL + "                    return;" + NL + "                }" + NL + "                const body",
+     "                    return;" + NL + "                }" + NL + "                const body"),
+    # el cuerpo armado ANTES de esperar la lista (el fallo de CR4), en un solo mutante
+    ("static/app.js", "                const lista = await cargarPartidasObra();" + NL
+     + "                if (partidasMalas([tr], lista.items).length) {" + NL
+     + "                    saveBtn.disabled = false;" + NL + "                    return;" + NL + "                }" + NL
+     + "                const body = _camposCambiados(tr);",
+     "                const body = _camposCambiados(tr);" + NL
+     + "                const lista = await cargarPartidasObra();" + NL
+     + "                if (partidasMalas([tr], lista.items).length) {" + NL
+     + "                    saveBtn.disabled = false;" + NL + "                    return;" + NL + "                }"),
+    ("static/app.js", "if (partidasMalas([tr], lista.items).length) {", "if (false) {"),
+    # --- «Guardar todas» (CR4) ---
+    ("static/app.js", "            saveAllLinesBtn.disabled = true;" + NL + "            const lista = await cargarPartidasObra();",
+     "            const lista = await cargarPartidasObra();"),
+    ("static/app.js", "                saveAllLinesBtn.disabled = false;" + NL + "                return;" + NL + "            }" + NL + "            const envios",
+     "                return;" + NL + "            }" + NL + "            const envios"),
+    ("static/app.js", "            saveAllLinesBtn.disabled = true;" + NL + "            const lista = await cargarPartidasObra();" + NL + "            const filas = conCambios();",
+     "            const filas = conCambios();" + NL + "            saveAllLinesBtn.disabled = true;" + NL + "            const lista = await cargarPartidasObra();"),
+    # los cuerpos armados ANTES de esperar la lista (el fallo de CR4), en un solo mutante
+    ("static/app.js", (pathlib.Path(__file__).parent / "p5_original.txt").read_text(encoding="utf-8"),
+     (pathlib.Path(__file__).parent / "p5_mutado.txt").read_text(encoding="utf-8")),
+    ("static/app.js", "return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };",
+     "return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: {} };"),
+    ("static/app.js", "return vid && Object.keys(cuerpo).length;", "return vid;"),
+    ("static/app.js", "if (partidasMalas(filas, lista.items).length) {", "if (false) {"),
+    # --- partidasInvalidas (solo marca) ---
+    ("static/app.js", "return partidasMalas(filas, (await cargarPartidasObra()).items);", "return [];"),
+    # --- O6 ---
+    ("static/app.js", "if (cargadas) { volverSiNoVale(); }", "volverSiNoVale();"),
+    ("static/app.js", "                    volverSiNoVale();  // O6: se salió antes de que llegara" + NL, ""),
+    ("static/app.js", "if (input.value !== alAbrir && !partidaValida(input.value, partidas.items)) {",
+     "if (!partidaValida(input.value, partidas.items)) {"),
+    ("static/app.js", "if (input.value !== alAbrir && !partidaValida(input.value, partidas.items)) {",
+     "if (input.value !== alAbrir && partidaValida(input.value, partidas.items)) {"),
+    # --- O7 ---
+    ("static/app.js", "if (!actual || aceptar.disabled) { return; }", "if (!actual) { return; }"),
+    ("static/app.js", "            if (!actual || aceptar.disabled) { return; }" + NL + "            aceptar.disabled = true;" + NL,
+     "            if (!actual || aceptar.disabled) { return; }" + NL),
+    ("static/app.js", "                errorEl.hidden = false;" + NL + "                aceptar.disabled = false;" + NL + "                return;" + NL + "            }" + NL + "            try {",
+     "                errorEl.hidden = false;" + NL + "                return;" + NL + "            }" + NL + "            try {"),
+]
+```

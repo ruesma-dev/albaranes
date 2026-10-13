@@ -170,26 +170,15 @@ guarda `dialogo.open` (#2): muere por conducta; en el navegador el modal hace in
 (tal cual, worktree, `376d37a`): **exit 0**, raíz `1083 passed`, sv4 **`1247 passed`** (71,6 s, sin caché: sv4 cambió),
 `PUERTA COBERTURA: N/A` (sin Python de producción), rutas sensibles N/A, tamaño dentro, **`ENTORNO LISTO`**.
 
-## Pasada 3 (H1, R27 v4; aprobada por el humano el 2026-10-13, opción «a», antes de desplegar sv4)
+## Pasada 3 (H1, R27 v4; aprobada por el humano el 2026-10-13, opción «a»)
 
-Commits `2d64bc2` spec v4 · `0034080` T36 RED · `440beb6` T37 · `77b1f97`, `3f3aeff`, `0075ce4` T38 · el del informe.
-Solo `static/app.js` (`attachPartidaCombo`: fila y «Dividir») y tests. `marcadaAlTeclear(shown, texto)`: «Almacén» (0)
-si `esAlmacenTecleado`; si no, la primera partida que coincide (1); sin texto o sin coincidencias, -1. **Enter elige la
-marcada; sin ella, nada** (ni POST `/almacen` ni cambio de valor) y **la lista sigue abierta**: así un segundo Enter
-tampoco guarda la fila ni acepta «Dividir» con un texto que no es de la lista; Esc o Tab devuelven el de antes. Foco o
-clic sin teclear: ninguna marcada. Docs: R27 v4 (150/150), design §5.5, ARCHITECTURE, T35 hecha, T36–T38, MANUAL 4 bis.
-
-**RED** (`0034080` contra el código de `2d64bc2`): `19 failed, 17 passed` (`marcadaAlTeclear` no existe). De
-conducta, sin extraerla (`scratchpad/red_v4.py`), salida real: «alba», «02.0», «zzz» y foco + Enter ⇒ `'almacen': 1`
-(la fila iba a almacén; p. ej. `{'marcada': None, 'valor': 'alba', 'almacen': 1, 'cerrado': True}`); flechas ⇒
-`{'marcada': None, 'bajada': 'Almacén (sin partida)', 'elegida': '0', 'almacen': 2}`; «Dividir» ⇒ foco + Enter y
-«alba» + Enter dejaban la partida VACÍA (`partes [6 → None, 12 → '01.01']`); «al» + Enter ya pasaba.
-
-**Verificación**: `test_f065_f3bis_front.py` **38 passed**; los tres ficheros **204 passed**; **`bash harness/init.sh`**
-(`e181863`): **exit 0**, raíz 1083 passed, sv4 **1259 passed** (sin caché), cobertura N/A, **`ENTORNO LISTO`**.
-**Mutación a mano** (`progress/mutacion_F-065_fase3bis.md` §«Pasada 3»): HEAD `0075ce4900a27867ec0c1e6c0c80f46dcf5d5711`,
-línea base 204 passed, **15/15 muertos, 0 supervivientes**, por fila `fichero:línea`, original→mutado y fallos; sin el
-test de la función pura vive #5 (quitar `shown.length > 1`), equivalente en el combo y demostrado ejecutando.
+Commits `2d64bc2`, `0034080` RED, `440beb6`, `77b1f97`, `3f3aeff`, `0075ce4`. `marcadaAlTeclear`: «Almacén» si
+`esAlmacenTecleado`, si no la primera partida que coincide, si no ninguna; **Enter elige la marcada y, sin ella, nada**
+(la lista sigue abierta). **RED** (`0034080` contra `2d64bc2`): `19 failed, 17 passed`; de conducta
+(`scratchpad/red_v4.py`): «alba», «02.0», «zzz» y foco + Enter ⇒ `'almacen': 1` (la fila iba a almacén); «Dividir»
+dejaba la partida vacía. **Verificación**: `init.sh` exit 0 (`e181863`, sv4 1259 passed). **Mutación a mano**: HEAD
+`0075ce4900a27867ec0c1e6c0c80f46dcf5d5711`, línea base 204 passed, **15/15**; sin el test de la función pura vive #5
+(`shown.length > 1`), equivalente en el combo y demostrado ejecutando (§«Pasada 3» de la ficha de mutación).
 
 ## Pasada 4 (R27 v5; aprobada por el humano el 2026-10-13; fallo de la MANUAL)
 
@@ -197,24 +186,34 @@ test de la función pura vive #5 (quitar `shown.length > 1`), equivalente en el 
 seguía cerrada, el combo soltaba el Enter (`if (panel.hidden) return;`) y llegaba al «Guardar» de `wireConciliaEdit`.
 Con la lista abierta y sin marcada no había otro camino (v4 ya paraba el Enter). Commits `137fe8e` RED · `4c4fedb`
 código · `f85ee2e` spec v5 y docs · `e1563f5` sin código redundante · el de este informe. Solo sv4 front; servidor igual.
-- **Combo**: en la partida, Enter SIEMPRE es del combo (`preventDefault` + `stopImmediatePropagation`): elige la marcada
-  o nada; nunca guarda ni acepta «Dividir» (guardar: botón o Enter en otra celda). La lista sale al momento con
-  «Cargando partidas…» (Enter no elige) y al llegar se pinta con la marcada de lo tecleado; `abierta` evita que una
-  respuesta tardía reabra una lista cerrada (Esc, salir, elegir). Al cambiar la partida se quita el rojo.
-- **`partidasInvalidas(filas)`** (+ `marcarPartida`: clase `partida-invalida`, `aria-invalid`, `title` «Partida no
-  válida…» y el de antes de vuelta): una partida CAMBIADA fuera de la lista (vacía = almacén vale; Sigrid caído ⇒ solo
-  almacén; la que ya tenía la fila no viaja ni se mira) no se envía: botón «Guardar» y Enter en otra celda, «Guardar
-  todas» (no envía NADA si alguna falla), el aviso de «Guardar»/«Guardar y aprobar» (R19 ya no enviaba: ahora además la
-  marca) y «Aceptar» de «Dividir» (vale también la de la propia fila). CSS en rojo, comprobado con el motor de cascada.
-- **RED** (`137fe8e` contra `553604d`): `17 failed, 37 passed` (las funciones nuevas no existen). De conducta, sin
-  extraerlas (`scratchpad/red_v5.py`): «zzzz» + Enter cargando ⇒ `{'cargando': {'visible': False}, 'antes': 1}` (un
-  PATCH); «al» + Enter cargando ⇒ `{'durante': {'peticiones': 1}}`; lista cerrada + Enter ⇒ `'peticiones': 1`; Esc
-  cargando ⇒ `{'cerrada': False}` (se reabría); botón «Guardar» / Enter en la cantidad / Sigrid caído con partida mala ⇒
-  1 petición y sin rojo; «Guardar todas» ⇒ mandaba `'zzzz'`; «Dividir» ⇒ mandaba `'codigo_partida': 'zzzz'`; y el
-  segundo Enter de la v4 en «Dividir» aceptaba la ventana. Pasaban (control): lo válido, la partida vieja sin tocar y la
-  propia de la fila en «Dividir».
-- **Mutación a mano** (`progress/mutacion_F-065_fase3bis.md` §«Pasada 4»): HEAD
-  `e1563f565d582368e2a1ed549166bbb41b500a3f`, línea base de los cuatro ficheros de tests 239 passed (18,6 s), **38
-  mutantes, 38 muertos, 0 supervivientes**; repetida solo con los tests de conducta y el motor de cascada (sin ningún
-  test textual): **38 de 38 muertos**. Antes de medir se quitó lo redundante (el `return` tras el Enter, la guarda de
-  fila sin partida, la rama de plural del aviso). Inventario actualizado.
+- **Combo**: en la partida, Enter SIEMPRE es del combo: elige la marcada o nada; nunca guarda ni acepta «Dividir». La
+  lista sale al momento con «Cargando partidas…»; `abierta` evita que una respuesta tardía reabra una lista cerrada.
+- **`partidasInvalidas`** (+ `marcarPartida`: `partida-invalida`, `aria-invalid`, `title`): una partida CAMBIADA fuera
+  de la lista no se envía por «Guardar», Enter en otra celda, «Guardar todas», «Aceptar» de «Dividir»; el aviso de
+  «Guardar y aprobar» la marca. CSS en rojo, comprobado con el motor de cascada.
+- **RED** (`137fe8e` contra `553604d`): `17 failed, 37 passed`; de conducta (`scratchpad/red_v5.py`): «zzzz»/«al» +
+  Enter cargando ⇒ 1 PATCH; lista cerrada + Enter ⇒ 1 PATCH; Esc cargando ⇒ se reabría; «Guardar», Enter en la
+  cantidad, Sigrid caído, «Guardar todas» y «Dividir» mandaban la partida mala.
+- **Mutación a mano**: HEAD `e1563f565d582368e2a1ed549166bbb41b500a3f`, línea base 239 passed, **38/38**, también sin
+  ningún test textual. `init.sh` exit 0 (`642da6d`, sv4 1275 passed).
+
+## Pasada 5 (CR4 de la review, pasada 4; más O6 y O7)
+
+**CR4**: «Guardar» y «Guardar todas» armaban el cuerpo ANTES de esperar la lista y validaban DESPUÉS: si la casilla
+cambiaba mientras Sigrid tardaba, se validaba una cosa y se enviaba otra. Ahora desactivan el botón ya, esperan la lista
+y en el mismo tick validan (`partidasMalas(filas, items)`, síncrona; `partidasInvalidas` queda para marcar en el aviso de
+la cabecera) y arman el cuerpo; «Guardar todas» cuenta las filas con cambios tras la espera (una que vuelve a como
+estaba no se manda). Si algo no vale, el botón vuelve a servir. **O6**: salir de la partida antes de que llegue la lista
+ya no la deshace a ciegas: se decide al llegar (`volverSiNoVale`, que no toca lo que ya era el valor de antes). **O7**: en
+`enviar` de «Dividir», «Aceptar» desactivado (reparto que no vale o envío en curso) es el cerrojo: dos Enter, un POST.
+Sin tocar O3/O4 (observaciones sin petición). El `dom_falso.js` no deja hacer clic en un botón desactivado (como el
+navegador). Commits `20a6909` RED · `2fa95e3` código y 2 tests de control · el de este informe.
+
+**RED** (`20a6909` contra `edb8475`, `-k "cr4 or o6 or o7"`) ⇒ `6 failed, 4 passed`: la carrera mandaba
+`{'codigo_partida': 'zzzz'}` (con «Guardar» y con «Guardar todas»); dos clics ⇒ `[{'cantidad': 6}, {'cantidad': 6}]`
+(los dos botones); O6 ⇒ `{'alSalir': '01.01', 'alLlegar': '01.01'}` (deshacía «02.03»); O7 ⇒ `{'envios': 2}`. Pasaban
+(control): lo que se vuelve malo durante la carga no se envía (×2), «zzzz» al salir vuelve al llegar, Esc con la vieja.
+**Mutación a mano** (`progress/mutacion_F-065_fase3bis.md` §«Pasada 5»): HEAD `2fa95e378b369c760c1959fee671bbde95279361`,
+línea base de los cuatro ficheros 251 passed, **19 mutantes, 19 muertos, 0 supervivientes** (entre ellos, el propio
+fallo de CR4 como un solo mutante en cada botón); solo con conducta (62 tests, sin textuales): **19/19**.
+**Verificación**: `bash harness/init.sh`: PENDIENTE_P5.

@@ -146,6 +146,11 @@ cuando algo cambia, sale de `_importe_de_linea(precio, Q, dto)`. Filas legadas (
   fila ya tenía no viaja y no se mira) se marca en rojo (`partida-invalida`, `aria-invalid`, `title` «Partida no
   válida…») y no se envía; al cambiarla, el rojo se quita. En «Aceptar» de «Dividir», lo mismo con la de la propia fila
   también válida. El servidor no cambia (P11).
+- **Pasada 5 (CR4 de la review)**: «Guardar» y «Guardar todas» desactivan el botón YA, esperan la lista y, en el mismo
+  tick, validan (`partidasMalas(filas, items)`, síncrona) y arman el cuerpo: lo validado es lo enviado aunque la
+  casilla cambie durante la espera, y un segundo clic no manda otro PATCH. Salir de la partida antes de que llegue la
+  lista no deshace a ciegas: se decide al llegar (O6). «Dividir»: «Aceptar» desactivado = reparto que no vale o envío
+  en curso; dos Enter seguidos, un POST (O7).
 - **Acciones** (dato del humano: con una fila «Desbloquear» la tabla se ensanchaba y «Guardar»/«Dividir» salían de la
   vista): columna `sticky` a la derecha, opaca, fija (`data-col-fixed`, no se arrastra) y de 200 px; «Borrar» compacto
   («✕» con `title`); sin `nowrap` ni `overflow: hidden` (si se estrecha, los botones bajan de línea). Causa hallada: T24 borró por error el bloque «Columnas de tabla GENÉRICAS» de `app.js`
