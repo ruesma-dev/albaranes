@@ -118,11 +118,11 @@ passed**; tras cerrar supervivientes, **17 passed**.
 
 | Evidencia | Valor real |
 |---|---|
-| Tests ejecutados | sv4 **SV4_PASADA4 passed** (`test_f065_f3bis_front.py`: 54) |
+| Tests ejecutados | sv4 **1275 passed** (`test_f065_f3bis_front.py`: 54) |
 | Cobertura de las líneas cambiadas | **N/A** (`PUERTA COBERTURA`: sin Python de producción; JS cubierto por tests con node) |
 | Mutantes | arnés: alcance vacío; **a mano, pasada 4: 38 generados, 38 muertos, 0 supervivientes** (pasadas 2 y 3: 57/57, 15/15) |
-| Tiempo de la suite | sv4 SV4_TIEMPO dentro de `init.sh`; línea base de la campaña 18,6 s |
-| `bash harness/init.sh` | INIT_PASADA4 |
+| Tiempo de la suite | sv4 99,7 s dentro de `init.sh`; línea base de la campaña 18,6 s |
+| `bash harness/init.sh` | **exit 0** (`642da6d`), raíz 1083 passed, sv4 1275 passed, `ENTORNO LISTO` |
 
 ## Pasada 2 (review `1bc0e5f`: CHANGES_REQUESTED por CR1, CR2 y CR3)
 
