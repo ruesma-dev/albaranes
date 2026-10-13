@@ -760,3 +760,15 @@ separado, nadie recorriendo el camino entero—:
 - Línea sin partida = almacén (partida final vacía) en sv6 y sv4, elegible siempre en el combo y «Almacén a todas» con deshacer;
   interruptor `ALMACEN_SIN_PARTIDA_ENABLED` en sv6. Review APROBADA (pasada 2); mutación 57/57; evals T21 mejoran IA3 y partida final.
 - T22–T24 manuales hechas por el humano en local (`progress/impl_F-051.md` §6 bis). Despliegue: sv6 → sv4 → sv2.
+
+## F-065 · Lo editado en las líneas manda, partida de la obra y dividir (done, 2026-10-13)
+- Origen: correo de METALFIRE (CTSU25/0359): las ediciones de líneas se perdían al guardar o aprobar (18 ⇒ 23 unidades).
+- Fase 1: el PUT de cabecera no toca líneas; PATCH solo de lo cambiado con cantidades coherentes; guardar = bloquear
+  (`bloqueada`, DDL en sv6); aprobado = solo lectura con «Desaprobar para editar»; aprobar sin cantidad/importe se rechaza.
+- Fase 2: «Sigrid» pasa a «Contrato»; cambiar partida, precio o unidad ⇒ Nueva (sin IA); combo con «Almacén» y las
+  partidas hoja de la obra; «Origen ✎» única vía de reapuntar.
+- Fase 3 y 3 bis: «Dividir» (F7 o botón) en 2–20 partes `line_kind='reparto'`, última parte automática, deshacer
+  entero; Enter en la partida nunca guarda; partida fuera de la lista no se envía; columna «Acciones» fija.
+- Decisiones del humano: sin X4; aprobar con todo en almacén; F7 en vez de F6. Reviews APROBADAS en todas las fases;
+  mutación a mano en cada pasada (fase 3 bis: 44, 57, 15, 38 y 19 mutantes, 0 supervivientes).
+- Desplegado: sv6 `r20261011-0025`, sv4 `r20261013-1836`. Aplazado a F-068 (F7 y Edge, O8, O9).
