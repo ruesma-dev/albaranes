@@ -446,8 +446,10 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       (`review_models.cambia_origen`). Al editar nunca se llama a la IA. El
       combo de partida ofrece «Almacén» y las partidas hoja de la OBRA
       (`/api/sigrid/partidas`, solo valores de la lista; sin partidas o con
-      Sigrid caído, solo «Almacén»; elegir cierra la lista y teclear «al»,
-      «alm»… deja «Almacén» marcada). «Origen ✎» es la única vía de reapuntar:
+      Sigrid caído, solo «Almacén»; elegir cierra la lista; al teclear queda
+      marcada «Almacén» («al», «alm»…) o la primera partida que coincide, y
+      Enter elige la marcada: sin marcada no elige nada, nunca cae en
+      «Almacén»). «Origen ✎» es la única vía de reapuntar:
       una línea de contrato deja la fila Contrato con su partida, unidad y
       precio; «Nueva», Nueva con los valores actuales.
     - **Dividir** (fase 3; absorbe F-016): «Dividir» (o F7; F6 es del

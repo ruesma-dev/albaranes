@@ -14,7 +14,10 @@ mutación 99/99; decisiones D1–D7 a confirmar, D1: una fila con «revisa la ca
 automática, combo de partida que se cierra al elegir y «al» → «Almacén», «Acciones» fija a la derecha y el bloque de
 columnas que T24 borró por error, de vuelta). Informe **`progress/impl_F-065_fase3bis.md`**. Siguiente: review de la
 fase 3 bis; MANUAL **T35** y **T27** (abajo, ya con F7); después, fusionar, `init.sh` en el árbol principal y
-desplegar **solo sv4**.
+desplegar **solo sv4**. **Fase 3 bis APROBADA** (pasada 2), en `dev` (`eb0b968`) y MANUAL T35 pasada por el humano
+(2026-10-13). **Pasada 3 (H1, R27 v4, 2026-10-13) IMPLEMENTADA**: Enter en el combo de partida elige la marcada
+(«Almacén» con «al»…, si no la primera partida que coincide) y, sin marcada, nada. Informe: §«Pasada 3» de
+`progress/impl_F-065_fase3bis.md`. Siguiente: review, el paso 4 bis de la MANUAL T35 (abajo), fusionar y desplegar sv4.
 - **MANUAL T35 (humano, pipeline LOCAL con sv4 de la rama; en BBDD, nada más que lo que haga la propia ficha)**, en
   PowerShell:
   ```powershell
@@ -30,6 +33,9 @@ desplegar **solo sv4**.
   #     elegir, teclear algo que no es de la lista (p. ej. «02.0x») y salir con Tab (o Esc) -> vuelve la elegida.
   #  4) Bajar con flechas por la lista y teclear «al» -> la lista vuelve arriba y «Almacén (sin partida)» queda
   #     marcada; Enter la elige (la fila va a almacén). Igual con «alm» y «Almacén».
+  #  4 bis) (pasada 3, R27 v4) En otra fila Contrato: teclear «alba» (o «02.0») -> queda marcada la primera partida
+  #     que coincide y Enter ELIGE ESA partida (no manda la fila a almacén). Pinchar en la partida y pulsar Enter sin
+  #     teclear -> no pasa nada (no va a almacén). Teclear «zzz» + Enter -> nada; Tab -> vuelve la de antes.
   #  5) Guardar una fila (sale «Desbloquear») y estrechar la ventana del navegador: la columna «Acciones» sigue pegada
   #     a la derecha, opaca, con «✕ · Guardar · Dividir» (o «Desbloquear») a la vista; al desplazar en horizontal, la
   #     cabecera «Acciones» sigue ENCIMA de sus botones (no se va con el scroll).
