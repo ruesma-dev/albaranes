@@ -131,3 +131,18 @@ FAILED tests/test_f070_obra_canonica.py::test_f070_r12_guardar_cabecera_guarda_l
 4 failed, 5 passed, 39 deselected in 2.82s
 ```
 GREEN: **48 passed** (fichero entero).
+
+### T8 · sv4: `estado_busqueda` con VAR/POSTV2 (R13, sin código nuevo)
+
+Tests: merge `VAR`/` var `/`POSTV2` con rastro igual ⇒ `vigente` y no relanza; `686` con rastro `0686` ⇒ `vigente`;
+rastro viejo `sin_datos` sin obra frente a `VAR` ⇒ `desfasada` y «Guardar» relanza (D4-A); `VAR`≠`POSTV2`,
+`686`≠`0687` y `GG` (no canónica) ⇒ `desfasada`. RED — retirando temporalmente de la comun la rama de T1, como en T5,
+`.venv\Scripts\python -m pytest -q tests/test_f070_obra_canonica.py -k r13`:
+```
+E       AssertionError: assert ('desfasada', True) == ('vigente', False)
+FAILED tests/test_f070_obra_canonica.py::test_f070_r13_merge_y_rastro_canonicos_coinciden[VAR-VAR]
+FAILED tests/test_f070_obra_canonica.py::test_f070_r13_merge_y_rastro_canonicos_coinciden[ var -VAR]
+FAILED tests/test_f070_obra_canonica.py::test_f070_r13_merge_y_rastro_canonicos_coinciden[POSTV2-POSTV2]
+3 failed, 6 passed, 48 deselected in 1.48s
+```
+Comun restaurada. GREEN: **9 passed**. Suite de sv4 entera: **1423 passed** (95,1 s).

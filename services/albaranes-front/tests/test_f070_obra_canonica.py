@@ -156,3 +156,52 @@ def _obra_guardada(monkeypatch, obra_codigo):
 )
 def test_f070_r12_guardar_cabecera_guarda_la_obra_canonica(monkeypatch, enviado, guardado):
     assert _obra_guardada(monkeypatch, enviado) == guardado
+
+
+# ================================================================ #
+# R13 — el estado de la búsqueda de contratos compara con la misma regla
+# ================================================================ #
+def _estado(obra_actual, rastro_obra, resultado="encontrados"):
+    from application.services.busqueda_contratos import (
+        debe_relanzar_busqueda,
+        estado_busqueda,
+    )
+    from domain.models.review_models import RastroBusquedaContratos
+
+    vista = estado_busqueda(
+        "B82899550", obra_actual,
+        RastroBusquedaContratos(
+            cif=None if resultado == "sin_datos" else "B82899550",
+            obra=rastro_obra, resultado=resultado, at_utc="2026-10-14T10:00:00+00:00",
+        ),
+    )
+    return vista.estado, debe_relanzar_busqueda(vista)
+
+
+@pytest.mark.parametrize(
+    ("obra_actual", "rastro_obra"),
+    [
+        ("VAR", "VAR"),
+        (" var ", "VAR"),
+        ("POSTV2", "POSTV2"),
+        ("686", "0686"),
+        ("0686", "0686"),
+    ],
+)
+def test_f070_r13_merge_y_rastro_canonicos_coinciden(obra_actual, rastro_obra):
+    assert _estado(obra_actual, rastro_obra) == ("vigente", False)
+
+
+def test_f070_r13_rastro_viejo_sin_obra_frente_a_var_esta_desfasado():
+    """Antes de F-070 sv3 sellaba ``sin_datos`` con obra nula para un merge
+    ``VAR``: ahora el merge ``VAR`` es buscable y «Guardar» relanza (D4-A)."""
+    assert _estado("VAR", None, resultado="sin_datos") == ("desfasada", True)
+
+
+@pytest.mark.parametrize(
+    ("obra_actual", "rastro_obra"),
+    [("VAR", "POSTV2"), ("686", "0687"), ("GG", "GG")],
+)
+def test_f070_r13_obras_distintas_o_no_canonicas_no_coinciden(obra_actual, rastro_obra):
+    estado, _ = _estado(obra_actual, rastro_obra)
+    assert estado == "desfasada"
