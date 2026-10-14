@@ -1,6 +1,15 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-070 · `spec_ready` (2026-10-14), urgente, prioridad 1, rigor `critico`** — la obra siempre con el 0 inicial
+salvo VAR y POSTV2 (HERMANOS SAN JUAN: merge con `686`, combos de sv4 vacíos). Spec en
+`specs/F-070-obra-con-cero-inicial/`, informe en `progress/spec_F-070.md`; rama `feature/F-070-obra-con-cero-inicial`,
+worktree `../albaranes-F-070` (*junction* `.venv` de sv4; quitarla con `cmd /c rmdir` antes de `git worktree remove`).
+**Para validar por el humano (PARADA 1)**: P1 obra `900` de Sigrid (recomendación: regla tal cual), P2 otros códigos no
+numéricos (recomendación: solo VAR y POSTV2), P3 no corregir los merges ya guardados (recomendación: no; T0 opcional,
+solo lectura). Coordinación con la rama de F-053 v8 en design §7 (conflictos seguros: `features.json`, `BACKLOG.md`, este
+fichero). Orden de despliegue: sv4 → sv3; sv9 con F-053.
+
 **F-065 · CERRADA (`done`, 2026-10-13)**: fases 1, 2, 3 y 3 bis (pasadas 1–5) APROBADAS, en `dev` (`53515de`) con
 `init.sh` en verde (raíz 1083, sv4 1287) y sv4 desplegado (`r20261013-1836`). MANUAL T19, T27 y T35 hechas por el
 humano (T19 punto 6, obra sin partidas, solo con tests). Resumen en `progress/history.md`. Lo aplazado: **F-068**
