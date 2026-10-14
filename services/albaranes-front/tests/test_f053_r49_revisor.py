@@ -35,16 +35,16 @@ class _Publicador:
         return True
 
 
-def _cliente(monkeypatch):
+def _cliente(monkeypatch, defecto=DEFECTO):
     repo, orq = _RepoR49(paso=True), _Orquestador()
-    servicio = ReviewService(repo, DEFECTO, orq, ACTIVA)
+    servicio = ReviewService(repo, defecto, orq, ACTIVA)
     monkeypatch.setattr(modulo_app, "SessionFactory", lambda **_: object())
     monkeypatch.setattr(modulo_app, "AlbaranReviewRepository", lambda *_: object())
     monkeypatch.setattr(modulo_app, "WorkflowRunsPurger", lambda *_: object())
     monkeypatch.setattr(modulo_app, "ReviewService", lambda *_: servicio)
     monkeypatch.setattr(modulo_app, "construir_publicador", lambda **_: _Publicador())
     ajustes = Settings.model_construct(pg_password="x", pg_admin_password="x",
-                                       default_reviewer=DEFECTO)
+                                       default_reviewer=defecto)
     cliente = TestClient(modulo_app.build_app(ajustes), follow_redirects=False)
     return cliente, repo, orq
 
@@ -114,3 +114,23 @@ def test_f053_r49_ficha_sin_aprobar_no_publica_ni_cambia_nada_mas(monkeypatch):
     assert respuesta.status_code == 200
     assert [p.approved for p in repo.guardados] == [False]
     assert orq.aprobados == []
+
+
+# ------------------------------------------------------------------ #
+# DEFAULT_REVIEWER con espacios (review v8, cambio 3; mutante 38)
+# ------------------------------------------------------------------ #
+@pytest.mark.parametrize("propuesto", [None, "", "   "])
+@pytest.mark.parametrize("camino", ["listado", "ficha"])
+def test_f053_r49_default_reviewer_recortado(monkeypatch, camino, propuesto):
+    """Sin cabecera ni formulario/cuerpo útil, ``DEFAULT_REVIEWER`` va RECORTADO
+    al merge y al mensaje de ``q-feedback``, por los dos caminos."""
+    cliente, repo, orq = _cliente(monkeypatch, defecto=" revisor-local ")
+    if camino == "listado":
+        respuesta = _aprobar_listado(cliente, formulario=propuesto)
+        guardado = [a[2] for a in repo.aprobaciones]
+    else:
+        respuesta = _aprobar_ficha(cliente, cuerpo=propuesto)
+        guardado = [p.approved_by for p in repo.guardados]
+    assert respuesta.status_code in (200, 303)
+    assert guardado == ["revisor-local"]
+    assert [a["approved_by"] for a in orq.aprobados] == ["revisor-local"]

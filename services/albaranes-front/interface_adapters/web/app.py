@@ -468,7 +468,9 @@ def build_app(settings: Settings) -> FastAPI:
             return principal.strip()
         if propuesto and propuesto.strip():
             return propuesto.strip()
-        return settings.default_reviewer
+        # Recortado como en el servicio: lo que se publica en q-feedback es
+        # lo mismo que queda en el merge (review v8, cambio 3).
+        return (settings.default_reviewer or "").strip() or None
 
     @app.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:
