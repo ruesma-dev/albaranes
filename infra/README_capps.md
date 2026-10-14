@@ -129,7 +129,9 @@ sigrid-api. Ningún agente lanza estos comandos. Orden (design §8 de F-053):
    (columna `producto_sigrid`) y **sv3** (tabla `albaran_altas_sigrid`):
    `.\deploy.ps1 -Only sv6,sv3`.
 2. **sv9** con DESDE vacía: `. .\00_capps_vars.ps1` (revisa el bloque F-053;
-   `ALTA_SIGRID_USUARIO` sale de la MANUAL T0c), `Set-DeployTag` (tag por fecha; sin él se
+   `ALTA_SIGRID_USUARIO_RESPALDO` es `pgris`, F-053 v8; si la app ya existía con la
+   variable de nombre anterior (v7), `set_alta_sigrid.ps1` pone la nueva y la anterior
+   deja de leerse), `Set-DeployTag` (tag por fecha; sin él se
    construiría la etiqueta fija `sin-desplegar` de `00_vars.ps1`), `.\build_images.ps1 -Only sv9`
    y `.\create_capps_sv9.ps1` en la MISMA consola (usa el `$IMG` que acaba de fijar `Set-DeployTag`) (crea la app con **`ALTA_SIGRID_COMMIT=false`**,
    KEDA sobre `q-feedback`, **máximo 1 réplica**, secretos de Key Vault). Las

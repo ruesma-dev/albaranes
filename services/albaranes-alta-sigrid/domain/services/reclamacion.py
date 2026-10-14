@@ -16,9 +16,13 @@ merge (``FOR UPDATE``), con lo que acaba de leer del documento y del alta.
   - ``en_curso``/``incierto`` sin pasar la Espera desde el último intento ⇒
     ``ignorar`` (R7); pasada, ``en_curso`` ⇒ ``a_incierto`` (R8) e
     ``incierto`` ⇒ ``procesar`` (se retoma con la misma petición, R15).
+
+La reclamación lleva el ``approved_by`` del merge leído bajo el cerrojo: es la
+ÚNICA fuente del ``usu`` del alta (v8, R47; el del mensaje no se usa).
 """
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta
 
 from ruesma_comun.alta_sigrid import ESTADOS_ALTA_REPETIBLES, espera_pasada
@@ -59,6 +63,22 @@ def _motivo_r6(documento: EstadoDocumento | None, desde: datetime | None) -> str
 
 
 def decidir(
+    documento: EstadoDocumento | None,
+    alta: AltaActual | None,
+    *,
+    accion: AccionAlta,
+    ahora: datetime,
+    desde: datetime | None,
+    espera: timedelta,
+) -> Reclamacion:
+    reclamacion = _decidir(documento, alta, accion=accion, ahora=ahora, desde=desde,
+                           espera=espera)
+    if documento is None:
+        return reclamacion
+    return replace(reclamacion, approved_by=documento.approved_by)
+
+
+def _decidir(
     documento: EstadoDocumento | None,
     alta: AltaActual | None,
     *,

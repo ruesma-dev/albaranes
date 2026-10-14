@@ -40,7 +40,7 @@ from domain.models.review_models import (
 )
 from domain.ports.contrato_refetch_port import ContratoRefetchClient
 from domain.ports.orchestrator_port import OrchestratorClient
-from domain.services.alta_sigrid import puede_solicitar_alta
+from domain.services.alta_sigrid import puede_reintentar_adjunto, puede_solicitar_alta
 from infrastructure.database.review_repository import AlbaranReviewRepository
 
 logger = logging.getLogger(__name__)
@@ -159,6 +159,7 @@ class ReviewService:
             "alta_sigrid_activa": True,
             "alta_sigrid": self._repository.leer_alta_sigrid(document_id),
             "alta_puede_solicitar": self.puede_solicitar_alta(document_id),
+            "alta_puede_reintentar_adjunto": self.puede_reintentar_adjunto(document_id),
             "productos_sigrid": self.productos_sigrid(
                 document_id,
                 clasificacion_documento(detalle.tipologia, detalle.tipologia_mixta),
@@ -932,6 +933,34 @@ class ReviewService:
         if not self._config_alta.activa:
             return "apagada"
         if not self.puede_solicitar_alta(document_id, ahora=ahora):
+            return "no_procede"
+        return self._publicar_feedback(document_id, "alta", solicitado_por)
+
+    def puede_reintentar_adjunto(self, document_id: str) -> bool:
+        """R30 (v8, O1 = a): ¿se ofrece «Reintentar adjunto»? Alta
+        ``registrado`` en ``real`` con el PDF sin colgar."""
+        if not self._config_alta.activa:
+            return False
+        estado = self._repository.estado_aprobacion(document_id)
+        if estado is None:
+            return False
+        return puede_reintentar_adjunto(
+            aprobado=estado["approved"],
+            activo=estado["is_active"],
+            approved_at_utc=estado["approved_at_utc"],
+            alta=self._repository.leer_alta_sigrid(document_id),
+            config=self._config_alta,
+        )
+
+    def reintentar_adjunto_sigrid(
+        self, *, document_id: str, solicitado_por: str | None,
+    ) -> str:
+        """R30/R23: publica ``accion="alta"`` (sv9 solo reintenta el adjunto)
+        cuando procede. No escribe en BBDD: R25 no la bloquea. Devuelve
+        ``pedida``, ``no_publicada``, ``no_procede`` o ``apagada``."""
+        if not self._config_alta.activa:
+            return "apagada"
+        if not self.puede_reintentar_adjunto(document_id):
             return "no_procede"
         return self._publicar_feedback(document_id, "alta", solicitado_por)
 

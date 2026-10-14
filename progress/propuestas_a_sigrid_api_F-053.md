@@ -55,3 +55,39 @@ coordinada por el líder. Contra `contrato_albaranes.md` en `13fd99d` (v8.2). Ni
    que el `con.ide` ya no existe).
 
 Nada de esto pide cambios a F-009: sigue valiendo la conclusión de arriba.
+
+## C. F-053 v8 (2026-10-14): filas de consumo que cambian (para el líder; NO aplicado en sigrid-api)
+
+Implementación del Bloque H (T41–T48) en `feature/F-053-alta-sigrid`. Contra `contrato_albaranes.md` tal como está
+en sigrid-api (`838a94a`, el fichero sin cambios desde `13fd99d`, v8.2), leído en solo lectura. **Ninguna cambia la
+forma de F-009**: `usu` sigue siendo el mismo campo (str, 1-24, debe existir en `dbo.usu`; `usuario_no_valido` ⇒
+`error`), y las dos lecturas nuevas o cambiadas van por `POST /api/sql/read`, que ya consume sv9. Lo aplica la
+sesión de sigrid-api (regla del 2026-10-06: el contrato solo se toca para actualizar consumos).
+
+1. **§2.1, fila `usu`** (línea 189), columna de origen. Hoy: «`ALTA_SIGRID_USUARIO` de sv9 (fijado en F-053 T0c,
+   debe existir en `dbo.usu`)». Propuesta: «el login de quien aprobó en sv4 (parte antes de la @ del UPN de Easy
+   Auth `@ruesma.es`, casada con `dbo.usu.cod` por `sql/read`; se manda el `cod` devuelto) o, si no casa, el respaldo
+   `ALTA_SIGRID_USUARIO_RESPALDO` de sv9 (`pgris`). F-053 v8, R47–R48: sin poder leer `dbo.usu` o sin respaldo, sv9
+   no llama (`error` `usuario_no_resuelto`)». Columna de estado: «**H1 cerrado**: F-053 v6 lo manda (R12); v8 por
+   documento (R47)».
+2. **§2.4 punto 9** (línea 254). Hoy: «`usu` = `ALTA_SIGRID_USUARIO` (H1)». Propuesta: «`usu` = login de quien
+   aprobó o el respaldo `ALTA_SIGRID_USUARIO_RESPALDO` (H1; F-053 v8, R47); un `incierto` retomado reenvía el suyo».
+3. **§7, fila R14** (línea 1077). La consulta cambia (U6: `entref` se teclea a mano en formato libre). Hoy:
+   `... AND d.entref = ? AND ...` con `[cif, numero, "ALB-{document_id}"]`. Propuesta (texto exacto que manda sv9):
+   `SELECT c.ide, c.cod, c.fec FROM dbo.con c JOIN dbo.dca d ON d.ide = c.ide WHERE c.tip = 14 AND d.entcif = ? AND
+   UPPER(REPLACE(REPLACE(REPLACE(REPLACE(d.entref, ' ', ''), '.', ''), '-', ''), '/', '')) = ? AND
+   ISNULL(d.synckey, '') <> ?` con `[cif, numero normalizado (mayúsculas, sin espacio, «.», «-» ni «/»),
+   "ALB-{document_id}"]`; si el número normalizado queda vacío, sv9 no consulta. Y quitar «H9 si anular no borra»
+   (ya pedido en B.4). Nota para sigrid-api: la función sobre `entref` impide usar un índice de esa columna; el
+   filtro por `entcif` va delante (si `dca` no tiene índice por `entcif`, avisad: la consulta va una vez por alta).
+4. **§7, fila nueva** (después de la de R28): `POST /api/sql/read` · «R47 (F-053 v8): login de Sigrid de quien
+   aprobó» · `SELECT TOP (1) cod FROM dbo.usu WHERE cod = ?` (la misma con la que valida sigrid-api
+   `usuario_no_valido`); comprobar `truncated`.
+5. **§7, fila `concepto-grafico`** (línea 1079). Hoy: «`usu` = `ALTA_SIGRID_USUARIO`». Propuesta: «`usu` = el de la
+   petición del alta (`peticion_json`), también al reintentarlo con «Reintentar adjunto» (F-053 v8, R22, R23, R30)».
+6. **H1** (§ Bloqueantes, línea 485): es histórico (ya cerrado); si se retoca, añadir al final «F-053 v8: por
+   documento, R47».
+7. **Fuentes** (fila de albaranes F-053): «v8 (2026-10-14): `usu` por quien aprueba, respaldo
+   `ALTA_SIGRID_USUARIO_RESPALDO`, R14 normalizado; implementada en la rama, sin desplegar».
+
+Configuración de sigrid-api: **nada que cambiar** (T0c, 2026-10-13: `pgris` existe en `dbo.usu`).

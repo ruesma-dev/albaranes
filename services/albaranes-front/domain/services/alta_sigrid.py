@@ -1,5 +1,6 @@
 # domain/services/alta_sigrid.py
-"""¿Ofrece sv4 «Solicitar alta en Sigrid»? (F-053 R30). Puro, sin E/S.
+"""¿Ofrece sv4 «Solicitar alta en Sigrid» o «Reintentar adjunto»? (F-053 R30).
+Puro, sin E/S.
 
 Un documento aprobado, activo y con ``approved_at_utc`` ≥ DESDE, cuyo alta
 falta, está en un estado repetible (``no_admitido``, ``revisar``, ``error``,
@@ -7,6 +8,10 @@ falta, está en un estado repetible (``no_admitido``, ``revisar``, ``error``,
 Espera desde el último intento. Las reglas de estado y de Espera son las de
 ``ruesma_comun.alta_sigrid``, las mismas con las que sv9 decide si procesa
 (R5–R8): si sv4 ofrece el botón, sv9 no ignorará el mensaje.
+
+«Reintentar adjunto» (v8, O1 = a; R23): mismas condiciones del documento y un
+alta ``registrado`` en modo ``real`` cuyo PDF no está colgado. Publica
+``accion="alta"``, que sv9 trata como ``solo_adjunto`` (R7).
 """
 from __future__ import annotations
 
@@ -31,6 +36,16 @@ def _instante(texto: str | None) -> datetime | None:
         return None
 
 
+def _documento_admite_alta(
+    *, aprobado: bool, activo: bool, approved_at_utc: str | None, config: ConfigAltaSigrid,
+) -> bool:
+    """Feature activa y documento aprobado, activo y aprobado desde DESDE (R6)."""
+    if not config.activa or not aprobado or not activo:
+        return False
+    aprobado_en = _instante(approved_at_utc)
+    return not (aprobado_en is None or config.desde is None or aprobado_en < config.desde)
+
+
 def puede_solicitar_alta(
     *,
     aprobado: bool,
@@ -40,13 +55,30 @@ def puede_solicitar_alta(
     config: ConfigAltaSigrid,
     ahora: datetime,
 ) -> bool:
-    if not config.activa or not aprobado or not activo:
-        return False
-    aprobado_en = _instante(approved_at_utc)
-    if aprobado_en is None or config.desde is None or aprobado_en < config.desde:
+    if not _documento_admite_alta(aprobado=aprobado, activo=activo,
+                                  approved_at_utc=approved_at_utc, config=config):
         return False
     if alta is None or alta.estado in ESTADOS_ALTA_REPETIBLES:
         return True
     if alta.estado in ESTADOS_TRAS_LA_ESPERA:
         return espera_pasada(_instante(alta.ultimo_intento_at_utc), ahora, config.espera)
     return False
+
+
+def puede_reintentar_adjunto(
+    *,
+    aprobado: bool,
+    activo: bool,
+    approved_at_utc: str | None,
+    alta: AltaSigridVista | None,
+    config: ConfigAltaSigrid,
+) -> bool:
+    if not _documento_admite_alta(aprobado=aprobado, activo=activo,
+                                  approved_at_utc=approved_at_utc, config=config):
+        return False
+    return (
+        alta is not None
+        and alta.estado == "registrado"
+        and alta.modo == "real"
+        and alta.adjunto_estado != "colgado"
+    )

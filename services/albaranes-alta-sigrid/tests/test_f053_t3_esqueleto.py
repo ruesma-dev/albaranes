@@ -32,6 +32,7 @@ ENTORNO_MINIMO = {
 VARIABLES_ALTA = (
     "ALTA_SIGRID_DESDE_UTC", "ALTA_SIGRID_COMMIT", "ALTA_SIGRID_ESPERA_INCIERTO_MIN",
     "ALTA_SIGRID_TOLERANCIA_EUR", "ALTA_SIGRID_AVISOS_BLOQUEANTES", "ALTA_SIGRID_USUARIO",
+    "ALTA_SIGRID_USUARIO_RESPALDO",
     "ALTA_SIGRID_EMPIDE", "ALTA_SIGRID_PRODUCTO_POR_DEFECTO", "SIGRID_API_DATABASE",
 )
 
@@ -77,7 +78,7 @@ def test_f053_t3_defectos_del_diseno(monkeypatch):
     assert ajustes.espera_incierto_min == 15
     assert ajustes.tolerancia_eur == pytest.approx(0.05)
     assert ajustes.avisos_bloqueantes == frozenset({"producto_sin_historico"})
-    assert ajustes.usuario == ""
+    assert ajustes.usuario_respaldo == ""
     assert ajustes.empide is None
     assert ajustes.sigrid_api_database == "ruesma"
     assert ajustes.mapeo_producto == {
@@ -129,13 +130,13 @@ def test_f053_t3_avisos_bloqueantes_y_empide(monkeypatch):
         monkeypatch,
         ALTA_SIGRID_AVISOS_BLOQUEANTES=" producto_sin_historico , stock_negativo ,",
         ALTA_SIGRID_EMPIDE="2425207",
-        ALTA_SIGRID_USUARIO="USU_ALTA",
+        ALTA_SIGRID_USUARIO_RESPALDO="USU_ALTA",
     )
     assert ajustes.avisos_bloqueantes == frozenset(
         {"producto_sin_historico", "stock_negativo"},
     )
     assert ajustes.empide == 2425207
-    assert ajustes.usuario == "USU_ALTA"
+    assert ajustes.usuario_respaldo == "USU_ALTA"
     # Vacías valen su defecto (env_ignore_empty), como en .env.example.
     vacio = _settings(monkeypatch, ALTA_SIGRID_AVISOS_BLOQUEANTES="", ALTA_SIGRID_EMPIDE="")
     assert vacio.avisos_bloqueantes == frozenset({"producto_sin_historico"})

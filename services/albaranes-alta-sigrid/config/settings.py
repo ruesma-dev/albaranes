@@ -11,8 +11,9 @@ Llaves propias del alta (con sus defectos):
   Lo cambia el humano; en local no se pone nunca.
 - ``ALTA_SIGRID_ESPERA_INCIERTO_MIN`` (15), ``ALTA_SIGRID_TOLERANCIA_EUR``
   (0,05), ``ALTA_SIGRID_AVISOS_BLOQUEANTES`` (CSV; ``producto_sin_historico``),
-  ``ALTA_SIGRID_USUARIO`` (login de ``dbo.usu``, va en ``usu`` y en el
-  adjunto), ``ALTA_SIGRID_EMPIDE`` (vacía = defecto de sigrid-api) y
+  ``ALTA_SIGRID_USUARIO_RESPALDO`` (v8, R47: login de ``dbo.usu`` que va en
+  ``usu`` cuando quien aprobó no casa con uno; SIN defecto en código: vacía,
+  esas altas van a ``error``, R48), ``ALTA_SIGRID_EMPIDE`` (vacía = defecto de sigrid-api) y
   ``ALTA_SIGRID_PRODUCTO_POR_DEFECTO`` (JSON familia → producto, con ``*``;
   mal formado = no arranca, R44). DESDE, Espera y mapeo llevan el MISMO valor
   en sv4.
@@ -57,7 +58,7 @@ class Settings(BaseSettings):
     alta_sigrid_avisos_bloqueantes: str = Field(
         "producto_sin_historico", alias="ALTA_SIGRID_AVISOS_BLOQUEANTES",
     )
-    usuario: str = Field("", alias="ALTA_SIGRID_USUARIO")
+    usuario_respaldo: str = Field("", alias="ALTA_SIGRID_USUARIO_RESPALDO")
     alta_sigrid_empide: str = Field("", alias="ALTA_SIGRID_EMPIDE")
     alta_sigrid_producto_por_defecto: str = Field(
         MAPEO_PRODUCTO_POR_DEFECTO_TEXTO, alias="ALTA_SIGRID_PRODUCTO_POR_DEFECTO",

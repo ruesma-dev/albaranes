@@ -228,14 +228,19 @@ class _ServicioRevisor:
         self.revisores.append(deleted_by)
 
 
-@pytest.mark.parametrize("ruta, campo", [("approve", "approved_by"), ("delete", "deleted_by")])
-def test_f053_t25_revisor_del_formulario_o_de_la_cabecera(monkeypatch, ruta, campo):
+@pytest.mark.parametrize("ruta, campo, con_formulario", [
+    # F-053 v8 (R49): al aprobar manda la cabecera; borrar sigue como estaba.
+    ("approve", "approved_by", "ana@ruesma.es"),
+    ("delete", "deleted_by", "pepe"),
+])
+def test_f053_t25_revisor_del_formulario_o_de_la_cabecera(monkeypatch, ruta, campo,
+                                                          con_formulario):
     servicio = _ServicioRevisor()
     cliente, _ = _cliente(monkeypatch, servicio)
     cabecera = {"X-MS-CLIENT-PRINCIPAL-NAME": "ana@ruesma.es"}
     cliente.post(f"/documents/{DOC}/{ruta}", data={campo: "pepe"}, headers=cabecera)
     cliente.post(f"/documents/{DOC}/{ruta}", data={campo: ""}, headers=cabecera)
-    assert servicio.revisores == ["pepe", "ana@ruesma.es"]
+    assert servicio.revisores == [con_formulario, "ana@ruesma.es"]
 
 
 def test_f053_t25_aprobar_sin_filtros_redirige_con_303(monkeypatch):

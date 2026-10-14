@@ -3,15 +3,15 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **67 features**, 46 abiertas, 21 terminadas.
+Resumen: **68 features**, 47 abiertas, 21 terminadas.
 
-Bloqueadas: **F-053**.
+En curso: **F-053**.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-053 | Alta en Sigrid de los albaranes aprobados | 1 | bloqueada | critico | `feature/F-053-alta-sigrid` |
+| F-053 | Alta en Sigrid de los albaranes aprobados | 1 | en curso | critico | `feature/F-053-alta-sigrid` |
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
 | F-058 | Revalorar no pierde las partidas ni el almacén asignados a mano | 1 | pendiente | critico |  |
 | F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 1 | pendiente | estandar |  |
@@ -24,6 +24,7 @@ Bloqueadas: **F-053**.
 | F-060 | Tipología de líneas acopiables: qué familias o tipos de línea pueden ir a almacén/acopio y cuáles se imputan siempre a partida | 2 | pendiente | critico |  |
 | F-061 | Familia medios_auxiliares (andamios, puntales, plataformas...) en el catalogo de familias de IA1 | 2 | pendiente | critico |  |
 | F-068 | F7 en la ficha: divide la última fila pulsada y Edge no pregunta por la exploración con el símbolo de intercalación (sv4) | 2 | pendiente | estandar |  |
+| F-069 | Lista de equivalencias usuario de la app ↔ usuario de Sigrid para el alta (sv9) | 2 | pendiente | critico |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -88,7 +89,7 @@ Bloqueadas: **F-053**.
 
 ### F-053 · Alta en Sigrid de los albaranes aprobados
 
-estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-053-alta-sigrid`
+estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-053-alta-sigrid`
 
 PETICION DEL HUMANO (2026-09-30): «Alta en Sigrid de los albaranes aprobados». Aprobar ES registrar: los dos botones de sv4 que aprueban («Guardar y aprobar» de la ficha y «Aprobar» del listado) disparan el alta del albaran en Sigrid.
 
@@ -253,6 +254,12 @@ ORDEN: antes de F-060 y en serie con ella (las dos tocan el prompt de IA1); no b
 estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí
 
 ORIGEN (correo de administración de obra, asunto «F7», 2026-10-13 12:37, captura en Edge): al pulsar F7 en una ficha, Edge abre su diálogo «¿Quieres activar la exploración mediante el símbolo de intercalación?» y no se abre «Dividir». Causa (líder, por lectura de código): el manejador de F7 de F-065 R29 (`wireDividir`, app.js) solo actúa —y solo hace preventDefault— si el foco está dentro de una casilla de la fila; con el foco fuera, F7 llega al navegador. PROPUESTA (2026-10-13, aplazada por el humano: «déjalo para feature más adelante»): (1) la última fila pulsada queda como fila activa (resaltado suave) y F7 la divide aunque el foco no esté en una casilla; (2) en la ficha editable F7 se captura siempre, con aviso corto si no hay fila activa, está bloqueada o el albarán está aprobado; (3) verificación MANUAL en Edge de que el preventDefault evita el diálogo (si no, instrucción a los usuarios: «No volver a preguntarme» + Cancelar). Arrastra las observaciones no bloqueantes de `progress/review_F-065_fase3bis.md` §«Pasada 5»: O8 (O6 revierte la partida con el foco dentro si la lista se cierra por scroll durante la primera carga) y O9 (el cerrojo de «Dividir» lo reabre `refrescar`: un segundo POST que el servidor rechaza), y el comentario repetido de app.js. Mientras tanto, el borrador de guía de uso dice: clic en una casilla de la línea antes de F7.
+
+### F-069 · Lista de equivalencias usuario de la app ↔ usuario de Sigrid para el alta (sv9)
+
+estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
+
+PETICIÓN DEL HUMANO (2026-10-14, PARADA 1 de F-053 v8): «en el futuro habrá una lista de mapeo usuario vs usuario sigrid para los casos raros». F-053 v8 (R47) resuelve el `usu` del alta con la parte local del correo @ruesma.es de quien aprueba contra `dbo.usu.cod` y, si no casa, usa `ALTA_SIGRID_USUARIO_RESPALDO` (pgris). Esta feature añade una lista de equivalencias (correo → login de Sigrid) que se consulta ANTES de la parte local, para los usuarios cuyo login no coincide con su correo. Dónde vive (variable, tabla propia o fichero) y quién la mantiene, a decidir en su PARADA 1. Depende de F-053.
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 

@@ -25,7 +25,7 @@ from domain.models.alta_models import (
     ModoAlta,
 )
 from domain.services.reclamacion import decidir
-from tests.f053_datos import CONFIG, datos, sin_vincular
+from tests.f053_datos import CONFIG, USU, datos, sin_vincular
 from tests.f053_fakes import (
     AHORA,
     APROBADO,
@@ -51,7 +51,7 @@ def _alta(estado: EstadoAlta, minutos: float | None = None, **cambios) -> AltaAc
 
 def servicio(repo, sigrid=None, *, modo=ModoAlta.SIMULACION, desde=DESDE, pdf=None):
     return AltaSigridService(
-        repo=repo, sigrid=sigrid or SigridFalso(), pdf=pdf or PdfFalso(), config=CONFIG,
+        repo=repo, sigrid=sigrid or SigridFalso(), pdf=pdf or PdfFalso(), config=CONFIG, usuario_respaldo=USU,
         modo=modo, desde=desde, espera=ESPERA, tolerancia_eur=0.05,
         avisos_bloqueantes=frozenset({"producto_sin_historico"}), reloj=lambda: AHORA,
     )

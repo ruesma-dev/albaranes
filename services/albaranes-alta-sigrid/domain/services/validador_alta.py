@@ -13,7 +13,8 @@ Sin motivos, devuelve la :class:`PeticionAlbaran` del modo extendido de
 
 - Cabecera: ``cod_obra``, CIF normalizado (H21), ``cod_contrato`` de la
   valoración si lo tiene (también sin vinculadas, H31), ``referencia_externa``
-  ``ALB-{document_id}``, ``su_referencia`` = número recortado, ``usu`` (H1),
+  ``ALB-{document_id}``, ``su_referencia`` = número recortado, ``usu`` (H1; v8:
+  el de quien aprobó o el Respaldo, R47, lo resuelve el servicio y llega aquí),
   ``fecha_albaran`` ``AAAAMMDD`` y ``empide``. Nunca ``lineas_recibidas`` ni
   ``naturaleza`` (H34).
 - Una línea por cada línea con importe ≠ 0 (R13), por ``line_index`` y las que
@@ -75,9 +76,9 @@ _EPSILON = 1e-9
 
 @dataclass(frozen=True)
 class ConfigAlta:
-    """Lo que el validador toma de la configuración (design §3)."""
+    """Lo que el validador toma de la configuración (design §3). El ``usu``
+    ya no: es por documento (v8, R47) y llega como argumento."""
 
-    usu: str
     empide: int | None
     mapeo: Mapping[str, str]
 
@@ -89,6 +90,21 @@ def normalizar_cif(cif: str | None) -> str:
     if len(limpio) == 11 and limpio.startswith("ES"):
         limpio = limpio[2:]
     return limpio
+
+
+#: R14 (v8, U6): lo que se quita al comparar el número del proveedor con
+#: ``dca.entref``. El SQL de la búsqueda quita LOS MISMOS (``REPLACE`` anidados).
+SEPARADORES_REFERENCIA = (" ", ".", "-", "/")
+
+
+def normalizar_referencia(numero: str | None) -> str:
+    """Número del proveedor para casarlo con ``dca.entref`` (R14, T0b): en
+    mayúsculas y sin espacio, ``.``, ``-`` ni ``/``. ``2.172.946`` y ``2172946``
+    dan lo mismo; una errata (``2.2168.320``), no."""
+    texto = (numero or "").upper()
+    for separador in SEPARADORES_REFERENCIA:
+        texto = texto.replace(separador, "")
+    return texto
 
 
 def _texto(valor: str | None) -> str:
@@ -289,9 +305,10 @@ def _linea_peticion(linea: LineaAlta, datos: DatosAlta, config: ConfigAlta) -> L
 
 
 def validar_y_construir(
-    datos: DatosAlta, config: ConfigAlta, hoy: date,
+    datos: DatosAlta, config: ConfigAlta, hoy: date, usu: str,
 ) -> PeticionAlbaran | list[Motivo]:
-    """Motivos de R10 (o, si no hay, de R39) o la petición de R12."""
+    """Motivos de R10 (o, si no hay, de R39) o la petición de R12, con ``usu``
+    (el login ya resuelto, R47)."""
     motivos = _motivos_cabecera(datos) + _motivos_lineas(datos, config.mapeo)
     if motivos:
         return motivos
@@ -307,7 +324,7 @@ def validar_y_construir(
         cod_contrato=_texto(cab.contrato_codigo) or None,
         referencia_externa=f"{PREFIJO_REFERENCIA}{cab.document_id}",
         su_referencia=_texto(cab.numero_albaran),
-        usu=config.usu,
+        usu=usu,
         fecha_albaran=int(fecha.strftime("%Y%m%d")),
         empide=config.empide,
         lineas=tuple(_linea_peticion(l, datos, config) for l in lineas_a_registrar(datos)),

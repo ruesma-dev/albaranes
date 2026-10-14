@@ -1452,6 +1452,8 @@ class DocumentDetailPayload(BaseModel):
     alta_sigrid_activa: bool = False
     alta_sigrid: AltaSigridVista | None = None
     alta_puede_solicitar: bool = False
+    #: F-053 v8 (R30, O1 = a): «Reintentar adjunto».
+    alta_puede_reintentar_adjunto: bool = False
     productos_sigrid: dict[int, ProductoLinea] = Field(default_factory=dict)
     productos_admitidos: list[ProductoOpcion] = Field(default_factory=list)
 

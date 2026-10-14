@@ -190,6 +190,12 @@ MENSAJES_ALTA = {
         "no_procede": "El alta en Sigrid no procede ahora (mira su estado en la ficha).",
         "apagada": "El alta en Sigrid está desactivada (ALTA_SIGRID_DESDE_UTC vacía).",
     },
+    "reintentar_adjunto": {
+        "pedida": "Reintento del adjunto pedido: refresca en unos segundos para ver el resultado.",
+        "no_publicada": "El reintento del adjunto no se pudo pedir (cola no disponible): reintenta.",
+        "no_procede": "El reintento del adjunto no procede (mira el estado del alta en la ficha).",
+        "apagada": "El alta en Sigrid está desactivada (ALTA_SIGRID_DESDE_UTC vacía).",
+    },
     "verificar_anulacion": {
         "pedida": (
             "Comprobación pedida: si ya no está en Sigrid, el alta pasará a «anulado». "
@@ -450,12 +456,21 @@ def build_app(settings: Settings) -> FastAPI:
     # usamos para atribuir quién aprueba/purga/valora/elimina. Fallback a
     # ``default_reviewer`` en local (sin Easy Auth) o si la cabecera no
     # llega.
+    #
+    # F-053 v8 (R49): la cabecera MANDA. El navegador no puede ponerla (la
+    # inyecta la plataforma), pero sí el formulario o el cuerpo: ``propuesto``
+    # (lo que trae la petición) solo cuenta sin cabecera, en local. De
+    # ``approved_by`` sale el usuario de Sigrid del alta (sv9, R47).
     # ------------------------------------------------------------------ #
-    def _reviewer_from_request(request: Request) -> str | None:
+    def _reviewer_from_request(request: Request, propuesto: str | None = None) -> str | None:
         principal = request.headers.get("X-MS-CLIENT-PRINCIPAL-NAME")
         if principal and principal.strip():
             return principal.strip()
-        return settings.default_reviewer
+        if propuesto and propuesto.strip():
+            return propuesto.strip()
+        # Recortado como en el servicio: lo que se publica en q-feedback es
+        # lo mismo que queda en el merge (review v8, cambio 3).
+        return (settings.default_reviewer or "").strip() or None
 
     @app.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:
@@ -740,7 +755,8 @@ def build_app(settings: Settings) -> FastAPI:
         try:
             resultado = review_service.approve_document(
                 document_id=document_id,
-                approved_by=approved_by.strip() or _reviewer_from_request(request),
+                # R49: cabecera de Easy Auth > formulario > DEFAULT_REVIEWER.
+                approved_by=_reviewer_from_request(request, approved_by),
             )
         except (AlbaranSinValorarError, LineasIncompletasError) as exc:
             # F-053 R37 y F-065 R20: no se aprueba lo no valorado ni con
@@ -1180,6 +1196,7 @@ def build_app(settings: Settings) -> FastAPI:
     async def save_document_api(
         document_id: str,
         payload: MergeDocumentUpdatePayload,
+        request: Request,
         buscar_si_cambia: bool = Query(default=False),
     ) -> SaveResponse:
         # F-052 D4-A: solo el botón «Guardar» pide ``buscar_si_cambia``; si
@@ -1189,6 +1206,9 @@ def build_app(settings: Settings) -> FastAPI:
         # buscar») no lo piden: ya buscan ellos o no deben hacerlo.
         # F-053: con alta bloqueante (R25) o al aprobar sin valorar (R37)
         # el servicio lanza y el manejador responde 409 con el aviso.
+        # F-053 v8 (R49): quien aprueba es la cabecera de Easy Auth; el
+        # ``approved_by`` del cuerpo solo cuenta sin ella (local).
+        payload.approved_by = _reviewer_from_request(request, payload.approved_by)
         try:
             resultado = review_service.guardar(
                 document_id=document_id,
@@ -1745,6 +1765,18 @@ def build_app(settings: Settings) -> FastAPI:
             document_id=document_id, solicitado_por=_reviewer_from_request(request),
         )
         return _a_la_ficha(document_id, MENSAJES_ALTA["alta"][resultado])
+
+    @app.post(
+        "/documents/{document_id}/alta-sigrid/reintentar-adjunto",
+        include_in_schema=False,
+    )
+    def reintentar_adjunto_sigrid(document_id: str, request: Request) -> RedirectResponse:
+        """R30/R23 (v8, O1 = a): «Reintentar adjunto» (``accion="alta"``).
+        Solo publica: R25 no la bloquea."""
+        resultado = review_service.reintentar_adjunto_sigrid(
+            document_id=document_id, solicitado_por=_reviewer_from_request(request),
+        )
+        return _a_la_ficha(document_id, MENSAJES_ALTA["reintentar_adjunto"][resultado])
 
     @app.post(
         "/documents/{document_id}/alta-sigrid/verificar-anulacion",
