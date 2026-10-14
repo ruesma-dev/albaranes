@@ -183,8 +183,30 @@ class AltaSigridVista(BaseModel):
     respuesta: dict[str, Any] | None = None
     intentos: int = 0
     approved_at_utc: str | None = None
+    #: Quien aprobó, tal como lo guardó sv9 al reclamar (R5); de ahí el ``usu`` (R47).
+    approved_by: str | None = None
     ultimo_intento_at_utc: str | None = None
     actualizado_at_utc: str | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def usu(self) -> str | None:
+        """R29 (v8): el usuario de Sigrid con el que se pidió el alta (el de la
+        petición guardada); sin petición, ``None``."""
+        valor = (self.peticion or {}).get("usu")
+        texto = "" if valor is None else str(valor).strip()
+        return texto or None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def usu_respaldo(self) -> bool:
+        """R29 (v8): el ``usu`` no es la parte local del correo de quien aprobó
+        (sin distinguir mayúsculas): salió del Respaldo de sv9 (R47)."""
+        if self.usu is None:
+            return False
+        texto = (self.approved_by or "").strip()
+        parte_local = texto.split("@")[0] if "@" in texto else ""
+        return self.usu.casefold() != parte_local.casefold()
 
     @computed_field  # type: ignore[prop-decorator]
     @property
