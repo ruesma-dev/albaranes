@@ -60,14 +60,11 @@ las coordine. No cambia la forma de F-009 ni la configuración de sigrid-api.
    `validar_y_construir` recibe el `usu` ya resuelto y nada puede usar el respaldo por error.
 3. La parte local NO se pasa a minúsculas: se manda el `cod` que devuelve Sigrid (si la intercalación es CI, como
    es lo habitual, `PGris` encuentra `pgris`). El `cod` devuelto se recorta (por si `cod` fuera `CHAR`).
-4. `max_rows` 2 en `buscar_usuario` (como `existe_concepto`), para no depender de cómo marca `truncated` sigrid-api
-   al llegar justo al tope.
+4. `max_rows` 2 en `buscar_usuario` (como `existe_concepto`): no depende de cómo marca `truncated` sigrid-api.
 5. Adjunto sin `usu` en la petición guardada (no debería pasar: toda alta registrada tiene petición): no se llama y
    queda `adjunto_no_colgado` con detalle `usuario_no_resuelto`, en vez de llamar con un `usu` vacío.
-6. sv4 `usu_respaldo`: un `approved_by` sin @ (p. ej. `DEFAULT_REVIEWER`) nunca casa ⇒ «(respaldo)», igual que en
-   sv9.
-7. Desviación menor: en T42 el servicio pasó un commit con `usu=self._config.usu` para el adjunto (un paso
-   intermedio para que la suite siguiera en verde); T43 lo sustituyó por el `usu` de la petición, con su RED.
+6. sv4 `usu_respaldo`: un `approved_by` sin @ (p. ej. `DEFAULT_REVIEWER`) nunca casa ⇒ «(respaldo)», como en sv9.
+7. Desviación menor: T42 dejó un paso intermedio (`usu=self._config.usu` en el adjunto); T43 lo sustituyó, con RED.
 
 ## 3. Fase RED (comandos y salida real, recortada)
 
@@ -143,26 +140,17 @@ Todas en verde tras su código (salidas en los commits de cada tarea).
 
 ## 5. Mutación (T50) y cobertura
 
-Campaña a mano, `progress/mutacion_F-053_v8.md` (tabla completa con `fichero:línea`, original→mutado y fallos por
-fila). HEAD `1b3c8e51db2692d9e1bc0c8ef395b8cba833f077`; línea base sv9 619 passed (24,5 s), sv4 (7 ficheros de
-F-053) 225 passed (45,4 s). **64 mutantes: 57 muertos y 7 vivos en la pasada 1; con 5 tests nuevos
-(`77b6257`), 62 muertos, 2 equivalentes justificados (38 y 50), 0 vivos.** Ningún mutante muere solo por tests
-textuales (el script separa los que leen código o forma). Cuatro (10, 11, 12, 16) mueren solo por el cuerpo exacto
-de la petición: es conducta del cliente, pero en SQL Server podrían ser equivalentes según intercalación y unicidad
-de `cod` (no medido; explicado en el informe). Cobertura de líneas cambiadas: `PUERTA COBERTURA: 100.0% de 128
-líneas cambiadas cubiertas`.
+Pasada 1: solo la campaña a mano (`progress/mutacion_F-053_v8.md`, 64 mutantes). La review pidió además la de la
+herramienta, la tabla reproducible y las demostraciones de los equivalentes: ver §«Pasada 2». Cobertura de líneas
+cambiadas: `PUERTA COBERTURA: 100.0% de 128 líneas cambiadas cubiertas`.
 
 ## 6. Fuera del alcance y lo que falta
 
-- **T51 (MANUAL del humano)**: comandos exactos en `progress/current.md` (despliegue sv6, sv3 → sv9 → sv4 con DESDE
-  vacía, `set_alta_sigrid.ps1`, aprobar por ficha y listado, `SELECT` de solo lectura). Antes, review y fusión.
-- La propuesta de filas de consumo del contrato (§C de `propuestas_a_sigrid_api_F-053.md`) la coordina el líder
-  con la sesión de sigrid-api.
+- **T51 (MANUAL del humano)**: comandos exactos en `progress/current.md`; antes, review y fusión. La §C de
+  `propuestas_a_sigrid_api_F-053.md` la coordina el líder con la sesión de sigrid-api.
 - F-069 (lista de equivalencias correo → login): no implementada; entrará en `_resolver_usuario`.
-- Riesgos aceptados de la v8 (spec §v8): UPN que no es `cod` ⇒ respaldo `pgris` (visible en el panel); la
-  intercalación de `dbo.usu`/`dca.entref` no se ha medido (si fuera CS, un login en mayúsculas no casaría y caería
-  al respaldo; `UPPER` cubre `entref`). La función sobre `d.entref` impide usar un índice de esa columna (va detrás
-  de `entcif`; una consulta por alta).
+- Riesgos (spec §v8): UPN que no es `cod` ⇒ respaldo `pgris` (visible en el panel); intercalación de `dbo.usu` y
+  `dca.entref` sin medir; la función sobre `d.entref` impide su índice (va tras `entcif`, una consulta por alta).
 - Siguen pendientes de antes: T26–T28, T27b, T27c, T29 (MANUAL) y la propuesta de `CLAUDE.md` de design §9.
 
 ## 7. `bash harness/init.sh` (T52)
@@ -177,11 +165,56 @@ F-034/F-035). La pasada anterior salió en rojo por un único test de la raíz,
 `test_f039_r2_todo_informe_de_mutacion_figura_en_el_inventario`: faltaba la fila de `mutacion_F-053_v8.md` en
 `progress/inventario_mutacion_F-039.md`; añadida (recuento 33).
 
+## Pasada 2 (review `progress/review_F-053_v8.md`, CHANGES_REQUESTED solo por la mutación)
+
+Commits `4be8eb2` (cambio 3), `a558b02` (cambios 1 y 4) y el de informes. O1, O2 y F-070 sin tocar.
+
+**Cambio 3 · el mutante 38 no era equivalente.** `_reviewer_from_request` devolvía `DEFAULT_REVIEWER` sin recortar:
+el merge quedaba igual, el `MensajeFeedback` no. Arreglo en `app.py`: `return (settings.default_reviewer or
+"").strip() or None`. RED — `.venv\Scripts\python -m pytest -q tests/test_f053_r49_revisor.py` con el test nuevo y
+el código viejo:
+```
+E       AssertionError: assert [' revisor-local '] == ['revisor-local']
+FAILED tests/test_f053_r49_revisor.py::test_f053_r49_default_reviewer_recortado[listado-None]
+FAILED tests/test_f053_r49_revisor.py::test_f053_r49_default_reviewer_recortado[ficha-   ]
+6 failed, 17 passed, 1 warning in 26.30s
+```
+(listado y ficha × sin propuesta, vacía, en blanco; merge Y mensaje). Tras el arreglo, 23 passed.
+
+**Cambio 1 · campaña de la herramienta** (`python -m harness.mutacion --feature F-053 --salida
+progress/mutacion_F-053_v8_arnes.md`, completa, 4 workers). Primera sobre `4be8eb2`: 66 mutantes, **63 muertos, 3
+supervivientes**, 1864,5 s. Los tres eran huecos de test (ningún equivalente); `test_f053_v8_supervivientes_arnes.py`
+los mata. RED de cada uno, con su mutante aplicado al código y el fichero nuevo:
+```
+review_models.py:1456 bool = False -> True       E   AssertionError: assert True is False      2 failed, 6 passed
+app.py:473 .strip() or None -> .strip() and None E   AssertionError: assert [{... 'solicitado_por': None}] == [{... 'revisor-local'}]   4 failed, 4 passed
+app.py:1771 include_in_schema=False -> True      E   AssertionError: assert '/documents/{document_id}/alta-sigrid/reintentar-adjunto' not in {...}   1 failed, 7 passed
+```
+(#1: con DESDE vacía o en una vista de proveedor la ficha no ofrece «Reintentar adjunto»; #2: «Solicitar alta» sin
+cabecera publica el defecto recortado, el servicio no lo rellena en ese camino; #3: las rutas de formulario del alta
+no salen en el OpenAPI). **Campaña final sobre `a558b02460d113e41dbc4bacb53f4a6b4ccf84ab`: 66 mutantes, 66 muertos,
+0 supervivientes, 0 timeouts, 2416,6 s, 4 workers.** Es la evidencia de C4 bis.
+
+**Cambio 2 · tabla manual reproducible** (`progress/mutacion_F-053_v8.md`): texto completo original → mutado en las
+64 filas (sin «…»), anexo JSON con cada sustitución exacta, fila 25 de «Supervivientes … cerrados» corregida,
+tiempo total **2965,6 s en serie, 1 worker** (más 347,0 s de la re-medida de los 7 vivos). Se conserva como
+complemento (plantilla y texto SQL).
+
+**Cambio 4 · RM5.** `services/albaranes-front/tests/test_f053_v8_equivalentes.py`, patrón de
+`test_f053_t25_equivalentes.py` (módulo real, variante con el texto exacto, fuente normalizada, control): **#50**
+sobre 320 combinaciones de `desde` × aprobado × activo × 8 `approved_at_utc` × 5 altas en las tres funciones,
+idénticas; control `<` → `<=` distinto. **#38** (tras el cambio 3) con `app.py` real y su variante en `build_app`,
+cabecera × formulario/cuerpo × `DEFAULT_REVIEWER` (5 × 5 × 5) por listado y PUT: mismo merge y mismos mensajes;
+control `return propuesto` distinto. 2 passed (54 s). Los dos equivalentes esperan la aceptación escrita del humano.
+
+**Verificación**: `bash harness/init.sh` ⇒ `ENTORNO LISTO` (exit 0): raíz 1083 passed; **sv4 1366 passed** (502,3 s,
+entera); sv9 621 (caché: sin cambios desde la pasada 1); `PUERTA COBERTURA: 100.0% de 129 líneas` (critico).
+
 ## Evidencias
 
 | Evidencia | Valor |
 |---|---|
-| Tests ejecutados | sv9 621 passed; sv4 1350 passed; raíz 1083 passed; resto de servicios en verde (caché) |
+| Tests ejecutados | pasada 2: sv9 621 passed; sv4 1366 passed; raíz 1083 passed; resto en verde (caché) |
 | Cobertura de líneas cambiadas | 100.0 % (128/128), umbral 80 %, nivel critico |
-| Mutantes generados / supervivientes | 64 generados; 62 muertos, 2 equivalentes justificados, 0 supervivientes sin test (`progress/mutacion_F-053_v8.md`) |
-| Tiempo de la suite | sv9 48,8 s; sv4 196,6 s; raíz 241,1 s (con cobertura, en `init.sh`) |
+| Mutantes generados / supervivientes | **Herramienta**: 66 generados, 66 muertos, 0 supervivientes (`progress/mutacion_F-053_v8_arnes.md`, 4 workers, 2416,6 s; la primera, 63/66). **A mano** (complemento): 64, 62 muertos, 2 equivalentes demostrados (`progress/mutacion_F-053_v8.md`, 1 worker, 2965,6 s) |
+| Tiempo de la suite | pasada 2 (máquina cargada): sv4 502,3 s; raíz 753,6 s; sv9 48,8 s (pasada 1). Pasada 1: sv4 196,6 s; raíz 241,1 s |
