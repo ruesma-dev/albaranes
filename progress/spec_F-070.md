@@ -118,3 +118,11 @@ ORDER BY m.created_at_utc DESC;
 Criterio: `validada` nula con `motivo = correo_unico` confirma el camino «sin lista» del resolver de
 sv2; `motivo` de papel (`correo_sin_dato`, `sin_correo`…) indica lectura del papel. Anotar los
 recuentos aquí, sin datos de proveedor.
+
+## PARADA 1 · APROBADA (humano, 2026-10-14)
+
+- P1: regla tal cual; `900` ⇒ `0900`, sin excepción.
+- P2: solo VAR y POSTV2 en `CODIGOS_OBRA_SIN_CERO`.
+- P3: los merges ya guardados con 3 cifras no se corrigen.
+- Implementación tras fusionar F-053 v8 (pasada 2) y pasarla a `blocked` por la T51 (máximo una `in_progress`).
+- Fuera: el filtro por empresa del combo de partidas (propuesta del §9, sin ficha todavía).
