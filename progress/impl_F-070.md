@@ -77,3 +77,25 @@ FAILED tests/test_f070_obra_canonica.py::test_f070_r7_obra_deducida_por_texto_ca
 ```
 GREEN: **25 passed** (fichero entero). Además fija que la obra escrita es la obra efectiva con la que se piden los
 proveedores de la obra (`GG` ⇒ `GG`, como hoy).
+
+### T5 · sv3: VAR/POSTV2 válidas, sin código nuevo (R8)
+
+Tests: la red de obra consulta `VAR`/`POSTV2` (también `var`, ` Postv2 `) y no descarta; el resolver no deduce otra
+obra por texto aunque el nombre case y usa `VAR` como obra efectiva para los proveedores; la búsqueda de contratos
+pide `(cif, "VAR")` y sella `VAR` (y `686` ⇒ `0686`), sin nota `[ACCION REQUERIDA]`. RED — sin código nuevo que
+quitar en sv3, se retira temporalmente de la comun la rama de T1 (`if limpio.upper() in CODIGOS_OBRA_SIN_CERO`) y
+se ejecuta `python -m pytest -q tests/test_f070_obra_canonica.py -k r8`:
+```
+E       AssertionError: assert False is True          (la red descarta VAR: enrich_merge_document devuelve False)
+E       assert 1 == 0                                 (el resolver busca obra por texto: busquedas == 1)
+E       AssertionError: assert [] == [('B82899550', 'VAR')]   (la búsqueda de contratos no consulta)
+FAILED ...::test_f070_r8_la_red_de_obra_consulta_var_y_no_la_descarta[VAR-VAR]   (y POSTV2, var, Postv2)
+FAILED ...::test_f070_r8_el_resolver_respeta_var_y_la_usa_como_obra_efectiva[VAR]  (y POSTV2)
+FAILED ...::test_f070_r8_la_busqueda_de_contratos_busca_en_var_y_lo_sella[VAR-VAR] (y POSTV2, var)
+9 failed, 1 passed, 25 deselected in 0.92s
+```
+(el que pasa es `686` ⇒ `0686`, que ya funcionaba). Comun restaurada (`git status` limpio). GREEN: **10 passed**.
+Suite de sv3 entera: **702 passed, 1 failed**: `test_f052_t19_script_arranca_como_script_desde_otra_carpeta` lanza
+el script en un subproceso **quitando `PYTHONPATH`** a propósito, así que importa la comun del árbol principal
+(`dev`), sin `canonizar_codigo_obra` (`ImportError ... from 'C:\...\albaranes\services\albaranes-comun\...'`).
+Es el entorno del worktree (§0), no el código: en el árbol principal, tras fusionar, la comun editable es la nueva.

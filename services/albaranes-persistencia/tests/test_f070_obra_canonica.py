@@ -348,3 +348,103 @@ def test_f070_r7_sin_coincidencia_no_escribe_obra():
     repo, _, _ = _resolver(_hdr(None, obra_nombre="NADA PARECIDO"), [_obra("227", "ZZZ QQQ")])
     [resuelto] = repo.resueltos
     assert resuelto["obra_codigo_det"] is None
+
+
+# ================================================================ #
+# R8 — VAR y POSTV2 son obras válidas para sv3 (sin código nuevo en sv3:
+# lo heredan de ``normalizar_codigo_obra``)
+# ================================================================ #
+@pytest.mark.parametrize(
+    ("en_merge", "consultado"),
+    [("VAR", "VAR"), ("POSTV2", "POSTV2"), ("var", "VAR"), (" Postv2 ", "POSTV2")],
+)
+def test_f070_r8_la_red_de_obra_consulta_var_y_no_la_descarta(en_merge, consultado):
+    repo = RepoObraFake(codigo=en_merge)
+    cliente = ClienteObraFake(_obra(consultado, "OBRAS VARIAS"))
+    assert ObraEnrichmentService(client=cliente, repository=repo).enrich_merge_document(
+        merge_document_id=DOC,
+    ) is True
+    assert cliente.llamadas == [consultado]
+    assert repo.descartes == []
+    assert repo.campos_actualizados[0] == "OBRAS VARIAS"
+
+
+@pytest.mark.parametrize("obra", ["VAR", "POSTV2"])
+def test_f070_r8_el_resolver_respeta_var_y_la_usa_como_obra_efectiva(obra):
+    """Con VAR la obra ya es válida: no se deduce otra por texto (aunque el
+    nombre case con una obra de Sigrid) y es la obra en la que se buscan los
+    proveedores."""
+    repo, obras, proveedores = _resolver(
+        _hdr(obra), [_obra("0900", "CONSERVATORIO MARIEMMA")],
+    )
+    assert obras.busquedas == 0
+    [resuelto] = repo.resueltos
+    assert resuelto["obra_codigo_det"] is None
+    assert proveedores.obras_consultadas == [obra]
+
+
+class RepoContratosFake:
+    """Lo que ``ContratoEnrichmentService.enrich_merge_document`` usa del
+    repositorio; el resto del puerto, no-op."""
+
+    def __init__(self, cif: str, obra: str | None) -> None:
+        self._cif, self._obra = cif, obra
+        self.sellos: list[tuple] = []
+        self.notas: list[str] = []
+
+    def get_merge_cif_and_obra(self, *, document_id):
+        return self._cif, self._obra
+
+    def get_merge_fecha(self, *, document_id):
+        return "2026-10-14"
+
+    def append_review_note(self, *, document_id, nota):
+        self.notas.append(nota)
+
+    def get_existing_pdf_paths(self, *, document_id):
+        return {}
+
+    def get_selected_contrato_codigo(self, *, document_id):
+        return None
+
+    def get_merge_lines_for_scoring(self, *, document_id):
+        return []
+
+    def update_merge_proveedor_nombre(self, *, document_id, nombre_proveedor):
+        return True
+
+    def sellar_busqueda_contratos(self, *, document_id, cif, obra, resultado):
+        self.sellos.append((cif, obra, resultado))
+
+    def __getattr__(self, nombre):
+        def _no_op(**kwargs):
+            return None
+        return _no_op
+
+
+class ClienteContratosFake:
+    def __init__(self) -> None:
+        self.llamadas: list[tuple[str, str]] = []
+
+    def fetch_contratos(self, *, cif_proveedor, codigo_obra_normalizado):
+        self.llamadas.append((cif_proveedor, codigo_obra_normalizado))
+        return []
+
+
+@pytest.mark.parametrize(
+    ("en_merge", "sellada"),
+    [("VAR", "VAR"), ("POSTV2", "POSTV2"), (" var ", "VAR"), ("686", "0686")],
+)
+def test_f070_r8_la_busqueda_de_contratos_busca_en_var_y_lo_sella(en_merge, sellada):
+    from application.services.contrato_enrichment_service import (
+        ContratoEnrichmentService,
+    )
+
+    repo = RepoContratosFake("B82899550", en_merge)
+    cliente = ClienteContratosFake()
+    ContratoEnrichmentService(client=cliente, repository=repo).enrich_merge_document(
+        merge_document_id=DOC,
+    )
+    assert cliente.llamadas == [("B82899550", sellada)]
+    assert repo.sellos == [("B82899550", sellada, "ninguno")]
+    assert not any("[ACCION REQUERIDA]" in n for n in repo.notas)
