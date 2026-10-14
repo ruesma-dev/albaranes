@@ -6,7 +6,11 @@ salvo VAR y POSTV2 (HERMANOS SAN JUAN: merge con `686`, combos de sv4 vacíos). 
 `specs/F-070-obra-con-cero-inicial/`, informe en `progress/spec_F-070.md` (PARADA 1 APROBADA: P1 regla tal cual, `900`
 ⇒ `0900`; P2 solo VAR y POSTV2; P3 sin corregir merges guardados). Rama `feature/F-070-obra-con-cero-inicial`, worktree
 `../albaranes-F-070` (*junction* `.venv` de sv4; quitarla con `cmd /c rmdir` antes de `git worktree remove`). `dev`
-(`4f1e802`, F-053 v8) fusionado en la rama. Implementación en curso por el implementer: ver `progress/impl_F-070.md`.
+(`4f1e802`, F-053 v8) fusionado en la rama. **IMPLEMENTADA (2026-10-15), pendiente de review**: T1–T12 y T14 hechas
+(informe `progress/impl_F-070.md`; mutación 4/4 de la herramienta y 18/18 a mano; cobertura 100 % de 28 líneas;
+`azure-apps` `0136e1a`, sin push). `init.sh` tal cual en el worktree sale KO solo porque sv3/sv4/sv9 importan la comun
+del árbol principal (`dev`); con la comun de la rama, `ENTORNO LISTO` (detalle en el informe, T14). Pendientes del
+humano: T0 (opcional) y T13 (despliegue sv4 → sv3 tras fusionar).
 Orden de despliegue: sv4 → sv3; sv9 con F-053.
 
 ### F-070 · MANUAL T0 del humano (opcional, SOLO LECTURA, no bloquea)
