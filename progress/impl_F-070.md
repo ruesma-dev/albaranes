@@ -176,3 +176,9 @@ sv4 en las tres consultas y al guardar, sv9 en el alta), efecto de VAR/POSTV2 en
 de comparación, SQL, esquemas) y que los merges viejos no se migran. En «Infra y despliegue», la excepción pasa a
 «`ruesma_comun.sigrid` y `ruesma_comun.obras` solo los importan sv3, sv4 y sv9» con el orden de design §6 (sv4 → sv3,
 cualquier orden vale; sv9 con F-053). Sin test (verificación del reviewer contra R1–R17).
+
+### T11 · docs: `azure-apps/albaranes.md` (R18)
+
+Bajo las columnas de cabecera de `albaran_documents_merge`: `obra_codigo` canónico desde F-070 (0 inicial salvo
+VAR/POSTV2, lo que no encaja recortado; lo sellan sv3 y sv4 con `canonizar_codigo_obra`; merges viejos sin migrar,
+sv4 y sv9 canonizan al consultar y dar de alta). Commit **`0136e1a`** en `azure-apps` (sin push).
