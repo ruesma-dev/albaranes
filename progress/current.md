@@ -1,113 +1,13 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-065 · `in_progress` (2026-10-11): fases 1 y 2 HECHAS; FASE 3 (T21–T26, dividir) IMPLEMENTADA** en la rama
-`feature/F-065-lineas-editadas-y-reparto` (worktree `../albaranes-F-065`, con `dev` fusionado en `7b46bd8`). Fase 1:
-aprobada, en `dev` y desplegada (sv6 r20261011-0025, sv4 r20261011-0043). Fase 2: review APROBADA (pasada 3,
-`progress/review_F-065_fase2.md`, `c836eb4`), en `dev` (`7b46bd8`); su MANUAL **T19** (abajo) lo está haciendo el
-humano y el despliegue de sv4 va después. Fase 3: informe **`progress/impl_F-065_fase3.md`** (`init.sh` verde,
-mutación 99/99; decisiones D1–D7 a confirmar, D1: una fila con «revisa la cantidad» no se divide). Review de la fase 3
-(`progress/review_F-065_fase3.md`, `3516c40`): CHANGES_REQUESTED por CR1 (números no finitos); **pasada 2 hecha**
-(CR1, O1, O3, O4; O2 anotada: §«Pasada 2» del informe; mutación de lo nuevo 28/28); **pasada 3 hecha** (CR1b,
-«Origen ✎» y el PUT también rechazan `NaN`: §«Pasada 3»). Fase 3 APROBADA y en `dev` (`f83acd4`).
-**Fase 3 bis (T29–T34, 2026-10-12) IMPLEMENTADA**: ajustes de front de las MANUAL T19/T27 (F7 divide, última parte
-automática, combo de partida que se cierra al elegir y «al» → «Almacén», «Acciones» fija a la derecha y el bloque de
-columnas que T24 borró por error, de vuelta). Informe **`progress/impl_F-065_fase3bis.md`**. Siguiente: review de la
-fase 3 bis; MANUAL **T35** y **T27** (abajo, ya con F7); después, fusionar, `init.sh` en el árbol principal y
-desplegar **solo sv4**. **Fase 3 bis APROBADA** (pasada 2), en `dev` (`eb0b968`) y MANUAL T35 pasada por el humano
-(2026-10-13). **Pasada 3 (H1, R27 v4, 2026-10-13) IMPLEMENTADA**: Enter en el combo de partida elige la marcada
-(«Almacén» con «al»…, si no la primera partida que coincide) y, sin marcada, nada. Informe: §«Pasada 3» de
-`progress/impl_F-065_fase3bis.md`. Siguiente: review, el paso 4 bis de la MANUAL T35 (abajo), fusionar y desplegar sv4.
-**Pasada 3 aprobada y en `dev` (`6d5da51`). Pasada 4 (R27 v5, 2026-10-13) IMPLEMENTADA**: la MANUAL encontró que
-«zzzz»/«al» + Enter GUARDABA la fila mientras llegaban las partidas. Ahora, en la partida, Enter nunca guarda; la lista
-sale al momento con «Cargando partidas…»; una partida fuera de la lista no se guarda por ningún camino (en rojo).
-Informe: §«Pasada 4». Siguiente: review, el paso 4 ter de la MANUAL T35 (abajo), fusionar y desplegar sv4.
-**Pasada 5 (CR4 de la review, 2026-10-13) IMPLEMENTADA**: «Guardar»/«Guardar todas» validan y arman el cuerpo en el
-mismo instante tras esperar las partidas (lo validado es lo enviado) y un doble clic manda un solo PATCH; salir de la
-partida antes de que lleguen ya no la deshace a ciegas (O6); «Dividir» no manda dos POST (O7). Informe: §«Pasada 5».
-- **MANUAL T35 (humano, pipeline LOCAL con sv4 de la rama; en BBDD, nada más que lo que haga la propia ficha)**, en
-  PowerShell:
-  ```powershell
-  cd C:\Users\pgris\PycharmProjects\albaranes
-  .\infra\local\arrancar_local.ps1
-  # http://localhost:8004 (Ctrl+F5 para no tirar del app.js en caché), un albarán PENDIENTE con filas Contrato:
-  #  1) Foco en una celda de una fila: F6 NO abre nada (el navegador hace lo suyo); F7 abre «Dividir».
-  #  2) En la ventana, con 2 líneas: teclear solo la primera (p. ej. 6 de 18) -> la segunda pone 12 sola, en gris y sin
-  #     poder escribirla; «Reparto completo.» y «Aceptar» activo. Poner 20 en la primera -> la última sale -2 en ROJO,
-  #     «Sobra: 2» y «Aceptar» apagado; poner 18 -> la última 0 en rojo. Pasar a 3 líneas: se conserva lo tecleado.
-  #  3) Combo de partida de una fila (y el de la ventana): elegir una partida con el ratón y luego otra con flechas +
-  #     Enter -> la lista se CIERRA en los dos casos (antes volvía a salir con solo la elegida). Justo después de
-  #     elegir, teclear algo que no es de la lista (p. ej. «02.0x») y salir con Tab (o Esc) -> vuelve la elegida.
-  #  4) Bajar con flechas por la lista y teclear «al» -> la lista vuelve arriba y «Almacén (sin partida)» queda
-  #     marcada; Enter la elige (la fila va a almacén). Igual con «alm» y «Almacén».
-  #  4 bis) (pasada 3, R27 v4) En otra fila Contrato: teclear «alba» (o «02.0») -> queda marcada la primera partida
-  #     que coincide y Enter ELIGE ESA partida (no manda la fila a almacén). Pinchar en la partida y pulsar Enter sin
-  #     teclear -> no pasa nada (no va a almacén). Teclear «zzz» + Enter -> nada; Tab -> vuelve la de antes.
-  #  4 ter) (pasada 4, R27 v5) Recién abierta la ficha (Ctrl+F5), en una fila: pinchar en la partida -> la lista sale YA
-  #     con «Cargando partidas…»; teclear «zzzz» + Enter enseguida -> NO se guarda la fila (sigue editable, sin
-  #     «Desbloquear»). Igual con «al» + Enter: no guarda y, al llegar las partidas, queda marcada «Almacén» (otro Enter
-  #     la elige). Con la lista ya cargada, elegir una partida y pulsar Enter otra vez -> no guarda (para guardar: botón
-  #     «Guardar» o Enter en la cantidad). Botón «Guardar» con una partida que no es de la lista (p. ej. pegada sin
-  #     elegirla) -> la casilla en rojo y no se guarda; al corregirla se quita el rojo.
-  #  4 quater) (pasada 5) Recién abierta la ficha: teclear una partida VÁLIDA completa (p. ej. «02.03») y salir con Tab
-  #     antes de que salgan las partidas -> se queda (antes volvía a la de antes); con «zzzz» -> al llegar, vuelve.
-  #     Doble clic rápido en «Guardar» -> una sola línea guardada (un solo «Desbloquear», sin error).
-  #  5) Guardar una fila (sale «Desbloquear») y estrechar la ventana del navegador: la columna «Acciones» sigue pegada
-  #     a la derecha, opaca, con «✕ · Guardar · Dividir» (o «Desbloquear») a la vista; al desplazar en horizontal, la
-  #     cabecera «Acciones» sigue ENCIMA de sus botones (no se va con el scroll).
-  #     Ojo (O1): quien guardó anchos de columna antes verá «Acciones» a 156 px (los botones bajan de línea); «↺
-  #     Columnas» la deja en los 200 px nuevos.
-  #  6) «↺ Columnas», ordenar pinchando una cabecera, arrastrar una columna y ensanchar con el borde vuelven a
-  #     funcionar (también en la bandeja); «Acciones» no se puede arrastrar.
-  ```
-  Criterio: todo como se describe; si algo no, anotar el paso y lo que se vio. (El arranque local usa el código del
-  árbol principal: antes, `dev` con la rama fusionada, o arrancar sv4 desde este worktree.)
-- **MANUAL T27 (humano, pipeline LOCAL con sv4 de la rama; solo lecturas en BBDD)**, en PowerShell:
-  ```powershell
-  cd C:\Users\pgris\PycharmProjects\albaranes
-  .\infra\local\arrancar_local.ps1
-  # http://localhost:8004, un albarán PENDIENTE con una fila Contrato de 18 (o la Q que tenga) y obra con partidas:
-  #  1) Foco en una celda de la fila y F7 (o «Dividir»): «Número de líneas» 3; 6 con SU partida, 7 con OTRA partida
-  #     del combo y la tercera (se rellena sola con 5) con «Almacén (sin partida)». «Reparto completo.» y «Aceptar»
-  #     activo (con 6 + 12 la última queda a 0, en rojo, y no). Enter o «Aceptar».
-  #  2) La ficha pinta «Parte 1 de 3», «Parte 2 de 3», «Parte 3 de 3» bajo la original: la 2 «Nueva», la 3 «Contrato»
-  #     en almacén; el total del albarán no cambia; sin aviso de familia. F6 no hace nada en la ficha.
-  #  3) «Guardar y aprobar».
-  $doc = '<ID del documento>'
-  psql -h localhost -U <usuario_local> -d albaranes -c "SELECT lv.id, lv.line_kind, lv.parent_merge_line_id, lv.matched_contrato_line_id, lv.derived_contrato_line_id, lv.cantidad_convertida, lv.importe_calculado, lv.codigo_partida_final FROM albaran_line_valuations lv JOIN albaran_valuations v ON v.id = lv.valuation_id WHERE v.document_id = '$doc' ORDER BY lv.id;"
-  #  4) «Desaprobar para editar»; «Deshacer» hasta la entrada «Dividir en 3 · …» (el panel del widget dice cuál va
-  #     primero) y repetir la SELECT.
-  #  5) (Opcional) Dividir otra vez, cambiar a mano la cantidad de una parte y «Guardar»: sale «Las partes de la línea
-  #     N suman X; el albarán dice Y», que no impide aprobar.
-  ```
-  Criterio: tras 3), la original con 6, su `matched` y su partida; dos filas `reparto` con `parent_merge_line_id` = la
-  blanca de la original: la de 7 con `matched` nulo, `derived` nuevo y la otra partida; la de 5 con el mismo `matched`
-  y partida nula; los tres importes suman el de antes. Tras 4), solo la original, con 18 y su importe.
-- **MANUAL T19 (humano, pipeline LOCAL; solo lecturas en BBDD)**, en PowerShell:
-  ```powershell
-  cd C:\Users\pgris\PycharmProjects\albaranes
-  .\infra\local\arrancar_local.ps1
-  # http://localhost:8004, un albarán pendiente con filas Contrato y una obra con partidas en Sigrid:
-  #  1) Partida de una fila Contrato: el combo ofrece «Almacén (sin partida)» y las partidas de la OBRA; con flechas y
-  #     Enter elegir otra (la fila queda con cambios) y «Guardar» SIN ningún aviso -> la fila sale «Nueva».
-  #  2) En otra fila Contrato elegir «Almacén (sin partida)» -> sigue «Contrato», partida vacía.
-  #  3) Teclear «zzz» en una partida y salir con Tab -> vuelve la partida de antes (no se guarda).
-  #  4) «Contrato ✎» -> elegir otra línea de contrato -> la fila toma su partida y su precio. Si la línea va en otra
-  #     unidad (y no es la del albarán) sale «⚠ revisa la cantidad: cambió la unidad» y la fila no se bloquea.
-  #  5) «Traer líneas contrato» una con 5, cambiarle la partida y «Guardar» -> Nueva y la descripción sigue (CR1).
-  #  6) En un albarán de una obra SIN partidas, el combo solo ofrece «Almacén».
-  #  7) «Solo volver a buscar» con filas guardadas -> pide «Revalorar descarta N líneas…».
-  #  8) Pasar TODAS las filas a almacén y «Guardar y aprobar» -> se aprueba.
-  $vid = <id de la fila>
-  psql -h localhost -U <usuario_local> -d albaranes -c "SELECT lv.matched_contrato_line_id, lv.derived_contrato_line_id, lv.codigo_partida_final, lv.precio_unitario_final, lv.cantidad_convertida, lv.descripcion_linea, lv.review_reasons_json FROM albaran_line_valuations lv WHERE lv.id = $vid;"
-  psql -h localhost -U <usuario_local> -d albaranes -c "SELECT id, codigo_partida, origen FROM contrato_lines_derived WHERE id = (SELECT derived_contrato_line_id FROM albaran_line_valuations WHERE id = $vid);"
-  ```
-  Criterio: 1) derivada `manual_override` con la partida elegida y `matched` nulo; 2) la misma línea de contrato y
-  partida final nula; 4) `matched` = la línea elegida y su partida y precio (con otra unidad, el motivo
-  `front_unidad_cambiada_revisa_cantidad` en `review_reasons_json`); 5) `descripcion_linea` no nula; 6), 7) y 8) como
-  se describe.
-- Entorno del worktree: *junction* `services/albaranes-front/.venv` → venv de sv4 del árbol principal (ignorada por
-  git; quitarla con `cmd /c rmdir services\albaranes-front\.venv` ANTES de `git worktree remove`).
+**F-065 · CERRADA (`done`, 2026-10-13)**: fases 1, 2, 3 y 3 bis (pasadas 1–5) APROBADAS, en `dev` (`53515de`) con
+`init.sh` en verde (raíz 1083, sv4 1287) y sv4 desplegado (`r20261013-1836`). MANUAL T19, T27 y T35 hechas por el
+humano (T19 punto 6, obra sin partidas, solo con tests). Resumen en `progress/history.md`. Lo aplazado: **F-068**
+(F7 con el foco fuera de la fila abre el diálogo de Edge; O8/O9 de la review). Guía de uso para los administrativos:
+borrador en el Outlook del humano (2026-10-13). Siguiente: F-053 (usuario del alta = correo de quien usa la app,
+respaldo el del humano; T0b/T0c autorizadas; O1 = botón de reintento; 10 equivalentes aceptados) y revisar con el
+humano F-066, F-067, F-058, F-059 y X4.
 
 **F-063 · `done` (2026-10-08)**, fusionada en `dev` con `init.sh` en verde. Pendiente del humano: desplegar solo sv3; en los merges `b1d3e179` y `401d9c00`, «Elegir proveedor» FEYMACO a mano. Comandos de la MANUAL T8 en `progress/impl_F-063.md` §7.
 

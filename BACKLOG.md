@@ -3,9 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **66 features**, 46 abiertas, 20 terminadas.
-
-En curso: **F-065**.
+Resumen: **67 features**, 46 abiertas, 21 terminadas.
 
 Bloqueadas: **F-053**.
 
@@ -17,7 +15,6 @@ Bloqueadas: **F-053**.
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
 | F-058 | Revalorar no pierde las partidas ni el almacén asignados a mano | 1 | pendiente | critico |  |
 | F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 1 | pendiente | estandar |  |
-| F-065 | Lo editado en las líneas de sv4 manda (guardados separados, guardar = bloquear la línea, aprobado = solo lectura), la partida se elige entre las de la obra y una línea se divide con F6 | 1 | en curso | critico | `feature/F-065-lineas-editadas-y-reparto` |
 | F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 1 | pendiente | critico |  |
 | F-067 | Limpieza de la ficha de detalle (sv4) | 1 | pendiente | estandar |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
@@ -26,6 +23,7 @@ Bloqueadas: **F-053**.
 | F-057 | Truncado sin comprobar en los clientes de Sigrid colindantes: header_and_lines de sv4 (max_rows=1000) y SigridApiObraClient de sv3 | 2 | pendiente | critico |  |
 | F-060 | Tipología de líneas acopiables: qué familias o tipos de línea pueden ir a almacén/acopio y cuáles se imputan siempre a partida | 2 | pendiente | critico |  |
 | F-061 | Familia medios_auxiliares (andamios, puntales, plataformas...) en el catalogo de familias de IA1 | 2 | pendiente | critico |  |
+| F-068 | F7 en la ficha: divide la última fila pulsada y Edge no pregunta por la exploración con el símbolo de intercalación (sv4) | 2 | pendiente | estandar |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -73,6 +71,7 @@ Bloqueadas: **F-053**.
 | F-054 | sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822) | 1 | estandar |
 | F-062 | sv3 aplica el proveedor propuesto antes de buscar contratos: CIF mal leído + candidato claro con contrato en la obra ⇒ se corrige y se busca con el bueno | 1 | critico |
 | F-063 | El CIF de Construcciones Ruesma nunca es el proveedor: sv3 lo descarta y busca el proveedor por nombre | 1 | critico |
+| F-065 | Lo editado en las líneas de sv4 manda (guardados separados, guardar = bloquear la línea, aprobado = solo lectura), la partida se elige entre las de la obra y una línea se divide con F6 | 1 | critico |
 | F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
 | F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
 | F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | estandar |
@@ -144,20 +143,6 @@ PROPUESTA: un catálogo código -> etiqueta en español (con el código en el ti
 ALCANCE: services/albaranes-front (plantilla y catálogo). NO ENTRA: cambiar los códigos que emiten los servicios. RELACIONADAS: F-036 (R23), F-049, F-051.
 
 X24 (2026-10-09, progress/propuestas_ficha_detalle.md): motivos de revisión en código interno y bandera en casi todas las filas; textos en castellano y bandera solo en avisos reales (los informativos no cuentan en el ⚑).
-
-### F-065 · Lo editado en las líneas de sv4 manda (guardados separados, guardar = bloquear la línea, aprobado = solo lectura), la partida se elige entre las de la obra y una línea se divide con F6
-
-estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-065-lineas-editadas-y-reparto`
-
-ORIGEN (humano, 2026-10-09: «mételo todo en una spec de prioridad 1, y luego lo analizamos juntos»): correo de administración de obra sobre un albarán de METALFIRE (contrato CTSU25/0359): «Las unidades del albarán tengo que repartirlas en 3 partidas distintas»; «Si le cambio las partidas me arrastra del contrato, si le doy que no me la cambie me la pone como nueva»; puso 6 y 7 en dos líneas de 8 y 10 y trajo una tercera de 5 del contrato: «Guardar todas» dejó 18 y «Guardar y aprobar» volvió a 8+10+5 = 23 unidades.
-
-DIAGNÓSTICO (progress/explore_F-065.md): todo PUT del documento reenvía las blancas y _recalc_valuation_importes pisa con su cantidad y descuento las filas salmón editadas; «Deshacer» no lo recupera; el PATCH de fila deja cantidad_convertida a NULL, así que sv9 (F-053) pondría no_admitido a toda vinculada editada (y, arreglado solo eso, mandaría las cantidades falsas); el combo de partida reapunta la línea de contrato sin cambiar la partida y teclear otra partida la convierte en NUEVA, también sin confirmación desde «Guardar todas»; no hay forma de repartir una línea conservando el vínculo. Hallazgo adicional por lectura de código: «Guardar todas» + cualquier PUT multiplica el importe en líneas con conversión (×1000 kg→t, ×6 contenedores).
-
-SPEC v1 (2026-10-09, specs/F-065-lineas-editadas-y-reparto/, informe progress/spec_F-065.md): solo sv4 (sv9 y comun sin código; tests de contrato en sv9); sin DDL con el modelo recomendado. Fase 1 (A, urgente, desplegar antes de poner ALTA_SIGRID_DESDE de F-053): el PUT solo recalcula blancas que cambiaron de verdad; la cantidad de la salmón está en la unidad del precio y fija cantidad_convertida; PATCH sin cambios no toca nada; deshacer del PUT; «Guardar todas» solo filas modificadas y no se aprueba con filas sin guardar. Fase 2 (B): cambiar la partida de una fila SIGRID la deja vinculada (F-009 v8 lo admite con aviso partida_distinta_del_contrato), combo de partidas en vez de líneas de contrato, confirmación también en «Guardar todas». Fase 3 (C): «Dividir» en N partes (cantidad + partida) con suma = original, partes line_kind='reparto' con el mismo vínculo, importe prorrateado, deshacer, confirmación antes de revalorar (la persistencia al revalorar queda para F-058). ABSORBE F-016. PREGUNTAS ABIERTAS P1–P9 para la PARADA 1 (design §7): P1 vinculada en otra partida (negocio), P2 PUT, P3 regla de cantidades, P4 modelo de las partes (M1 sin DDL / M2 DDL sv6+sv3 / M3 en el merge), P5 suma que no cuadra, P6 importe de las partes, P7 revalorar, P8 F-016, P9 fases.
-
-RELACIONADAS: F-053 (alta en Sigrid; su despliegue espera a la fase 1), F-058 (revalorar no pierde lo manual), F-051 (almacén, R12/R19/R20), F-049 R23 (reparto automático de compuestas), F-016 (absorbida), F-019 y F-036 (recálculo de importes).
-
-SPEC v2 (2026-10-09, PARADA 1 resuelta por el humano; informe progress/spec_F-065.md §v2): modelo del humano en progress/propuestas_ficha_detalle.md (origen «Sigrid» pasa a «Contrato»: es de contrato si cuadran partida, unitario y concepto, lo decide la IA al valorar; si no, Nueva). Respuestas: (1) cambiar la partida ⇒ Nueva; (2) al editar no se llama a la IA; (3) aprobar no exige líneas bloqueadas; (4) combo con todas las partidas hoja de la obra + «Almacén», solo «Almacén» si no hay. P2 = separar guardados (el PUT de cabecera no toca líneas); P3–P9 con la recomendación. Alcance: filas F-065 de la tabla (M1–M4, X1–X3, X5–X11, X22, R6) salvo X4. Fase 1 (sv6 DDL bloqueada → sv4; desplegar antes de pasar F-053 a real): PUT sin líneas y sin desaprobar, aprobado = solo lectura con «Desaprobar», PATCH solo de lo cambiado con cantidades coherentes y precio aplicado, guardar = bloquear la línea, validación al aprobar, confirmación antes de revalorar o cambiar de contrato, traer líneas con cantidad. Fase 2: «Contrato», regla de origen sin avisos, combo de partidas de la obra (endpoint de sv4 existente; F-049 lo moverá a comun), «Origen ✎» única vía de reapuntar. Fase 3: F6 dividir (sustituye a F7). Nuevas decididas por defecto: P10–P13 (design §7).
 
 ### F-066 · Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4)
 
@@ -262,6 +247,12 @@ PROBLEMA: F-053 elige el producto generico de Sigrid de cada linea sin vincular 
 ALCANCE PROPUESTO: entrada en CATALOGO (documento y linea) con sus senales (andamio, puntal, plataforma, encofrado alquilado...; que la distingue de alquiler_maquinaria), TipoFamilia de contexto_linea y sus copias en los modelos de sv2, sv3, sv5 y sv6, prompt de fase 1 de IA1 y casos de evals. Sin prompt de fase 2 ni de valoracion propios (cae al generico) y fuera de FAMILIAS_DESTINADAS de sv6 hasta F-060. Ruta sensible (prompt de IA1, evals) => rigor critico.
 
 ORDEN: antes de F-060 y en serie con ella (las dos tocan el prompt de IA1); no bloquea a F-053 (la clave del mapeo espera). RELACIONADAS: F-053 (producto por familia), F-060 (lineas acopiables), F-007.
+
+### F-068 · F7 en la ficha: divide la última fila pulsada y Edge no pregunta por la exploración con el símbolo de intercalación (sv4)
+
+estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí
+
+ORIGEN (correo de administración de obra, asunto «F7», 2026-10-13 12:37, captura en Edge): al pulsar F7 en una ficha, Edge abre su diálogo «¿Quieres activar la exploración mediante el símbolo de intercalación?» y no se abre «Dividir». Causa (líder, por lectura de código): el manejador de F7 de F-065 R29 (`wireDividir`, app.js) solo actúa —y solo hace preventDefault— si el foco está dentro de una casilla de la fila; con el foco fuera, F7 llega al navegador. PROPUESTA (2026-10-13, aplazada por el humano: «déjalo para feature más adelante»): (1) la última fila pulsada queda como fila activa (resaltado suave) y F7 la divide aunque el foco no esté en una casilla; (2) en la ficha editable F7 se captura siempre, con aviso corto si no hay fila activa, está bloqueada o el albarán está aprobado; (3) verificación MANUAL en Edge de que el preventDefault evita el diálogo (si no, instrucción a los usuarios: «No volver a preguntarme» + Cancelar). Arrastra las observaciones no bloqueantes de `progress/review_F-065_fase3bis.md` §«Pasada 5»: O8 (O6 revierte la partida con el foco dentro si la lista se cierra por scroll durante la primera carga) y O9 (el cerrojo de «Dividir» lo reabre `refrescar`: un segundo POST que el servidor rechaza), y el comentario repetido de app.js. Mientras tanto, el borrador de guía de uso dice: clic en una casilla de la línea antes de F7.
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 
@@ -731,6 +722,20 @@ ARREGLO URGENTE DE PRODUCCIÓN (humano, 2026-10-08: «arregla urgente esto»). I
 ARREGLO: lista de CIF propios en ruesma_comun.proveedores (por defecto A81873903, ampliable con CIFS_PROPIOS en sv3, nunca reducible). En sv3, al principio de la resolución del proveedor (rutas nuevo, duplicado y reenrich_by_merge_id), un CIF propio con origen distinto de manual se DESCARTA (CIF y origen a NULL, nombre leído intacto, a revisión con motivo proveedor_cif_propio:<cif> y nota «[AVISO] CIF del cliente: …») y se sigue por el camino «sin CIF» (resolución por nombre dentro de la obra). Un CIF propio nunca sale como candidato. El revisor (origen manual) manda.
 
 FUERA: backfill de los merges ya canonizados a Ruesma (los corrige el revisor en sv4); la IA leyendo también el NOMBRE del cliente. Spec: specs/F-063-cif-propio-no-es-proveedor/. CIERRE (2026-10-08): review APROBADA; init.sh en verde en dev tras fusionar (92ff1e1). Pendiente aparte: el endpoint `header-grounding` de sv3 aún valida el CIF propio (ningún servicio actual lo consume; ficha futura). F-064 (prompts de IA1 e IA2: el cliente Construcciones Ruesma se ignora y la IA2 confirma el proveedor) va a continuación.
+
+### F-065 · Lo editado en las líneas de sv4 manda (guardados separados, guardar = bloquear la línea, aprobado = solo lectura), la partida se elige entre las de la obra y una línea se divide con F6
+
+estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-065-lineas-editadas-y-reparto`
+
+ORIGEN (humano, 2026-10-09: «mételo todo en una spec de prioridad 1, y luego lo analizamos juntos»): correo de administración de obra sobre un albarán de METALFIRE (contrato CTSU25/0359): «Las unidades del albarán tengo que repartirlas en 3 partidas distintas»; «Si le cambio las partidas me arrastra del contrato, si le doy que no me la cambie me la pone como nueva»; puso 6 y 7 en dos líneas de 8 y 10 y trajo una tercera de 5 del contrato: «Guardar todas» dejó 18 y «Guardar y aprobar» volvió a 8+10+5 = 23 unidades.
+
+DIAGNÓSTICO (progress/explore_F-065.md): todo PUT del documento reenvía las blancas y _recalc_valuation_importes pisa con su cantidad y descuento las filas salmón editadas; «Deshacer» no lo recupera; el PATCH de fila deja cantidad_convertida a NULL, así que sv9 (F-053) pondría no_admitido a toda vinculada editada (y, arreglado solo eso, mandaría las cantidades falsas); el combo de partida reapunta la línea de contrato sin cambiar la partida y teclear otra partida la convierte en NUEVA, también sin confirmación desde «Guardar todas»; no hay forma de repartir una línea conservando el vínculo. Hallazgo adicional por lectura de código: «Guardar todas» + cualquier PUT multiplica el importe en líneas con conversión (×1000 kg→t, ×6 contenedores).
+
+SPEC v1 (2026-10-09, specs/F-065-lineas-editadas-y-reparto/, informe progress/spec_F-065.md): solo sv4 (sv9 y comun sin código; tests de contrato en sv9); sin DDL con el modelo recomendado. Fase 1 (A, urgente, desplegar antes de poner ALTA_SIGRID_DESDE de F-053): el PUT solo recalcula blancas que cambiaron de verdad; la cantidad de la salmón está en la unidad del precio y fija cantidad_convertida; PATCH sin cambios no toca nada; deshacer del PUT; «Guardar todas» solo filas modificadas y no se aprueba con filas sin guardar. Fase 2 (B): cambiar la partida de una fila SIGRID la deja vinculada (F-009 v8 lo admite con aviso partida_distinta_del_contrato), combo de partidas en vez de líneas de contrato, confirmación también en «Guardar todas». Fase 3 (C): «Dividir» en N partes (cantidad + partida) con suma = original, partes line_kind='reparto' con el mismo vínculo, importe prorrateado, deshacer, confirmación antes de revalorar (la persistencia al revalorar queda para F-058). ABSORBE F-016. PREGUNTAS ABIERTAS P1–P9 para la PARADA 1 (design §7): P1 vinculada en otra partida (negocio), P2 PUT, P3 regla de cantidades, P4 modelo de las partes (M1 sin DDL / M2 DDL sv6+sv3 / M3 en el merge), P5 suma que no cuadra, P6 importe de las partes, P7 revalorar, P8 F-016, P9 fases.
+
+RELACIONADAS: F-053 (alta en Sigrid; su despliegue espera a la fase 1), F-058 (revalorar no pierde lo manual), F-051 (almacén, R12/R19/R20), F-049 R23 (reparto automático de compuestas), F-016 (absorbida), F-019 y F-036 (recálculo de importes).
+
+SPEC v2 (2026-10-09, PARADA 1 resuelta por el humano; informe progress/spec_F-065.md §v2): modelo del humano en progress/propuestas_ficha_detalle.md (origen «Sigrid» pasa a «Contrato»: es de contrato si cuadran partida, unitario y concepto, lo decide la IA al valorar; si no, Nueva). Respuestas: (1) cambiar la partida ⇒ Nueva; (2) al editar no se llama a la IA; (3) aprobar no exige líneas bloqueadas; (4) combo con todas las partidas hoja de la obra + «Almacén», solo «Almacén» si no hay. P2 = separar guardados (el PUT de cabecera no toca líneas); P3–P9 con la recomendación. Alcance: filas F-065 de la tabla (M1–M4, X1–X3, X5–X11, X22, R6) salvo X4. Fase 1 (sv6 DDL bloqueada → sv4; desplegar antes de pasar F-053 a real): PUT sin líneas y sin desaprobar, aprobado = solo lectura con «Desaprobar», PATCH solo de lo cambiado con cantidades coherentes y precio aplicado, guardar = bloquear la línea, validación al aprobar, confirmación antes de revalorar o cambiar de contrato, traer líneas con cantidad. Fase 2: «Contrato», regla de origen sin avisos, combo de partidas de la obra (endpoint de sv4 existente; F-049 lo moverá a comun), «Origen ✎» única vía de reapuntar. Fase 3: F6 dividir (sustituye a F7). Nuevas decididas por defecto: P10–P13 (design §7).
 
 ### F-011 · Evals de IA con ground truth y puerta en el arnés
 
