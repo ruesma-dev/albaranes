@@ -110,9 +110,12 @@ def test_f053_r33_buscar_albaranes_cuerpo_exacto():
     assert cuerpo["database"] == "ruesma"
     assert cuerpo["sql"] == (
         "SELECT c.ide, c.cod, c.fec FROM dbo.con c JOIN dbo.dca d ON d.ide = c.ide "
-        "WHERE c.tip = 14 AND d.entcif = ? AND d.entref = ? AND ISNULL(d.synckey, '') <> ?"
+        "WHERE c.tip = 14 AND d.entcif = ? AND "
+        "UPPER(REPLACE(REPLACE(REPLACE(REPLACE(d.entref, ' ', ''), '.', ''), '-', ''), '/', '')) = ? "
+        "AND ISNULL(d.synckey, '') <> ?"
     )
-    assert cuerpo["parameters"] == ["B00000000", "ALB-58260", "ALB-d1"]
+    # v8 (U6): el número va normalizado como en el SQL.
+    assert cuerpo["parameters"] == ["B00000000", "ALB58260", "ALB-d1"]
     assert isinstance(cuerpo["max_rows"], int) and isinstance(cuerpo["timeout_seconds"], int)
 
 

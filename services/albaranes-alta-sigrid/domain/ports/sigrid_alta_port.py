@@ -31,7 +31,8 @@ class SigridAltaPort(ABC):
         self, cif: str, referencia: str, referencia_externa: str,
     ) -> list[AlbaranSigrid]:
         """Albaranes de compra (``con.tip`` 14) con ese CIF y esa referencia
-        del proveedor y otro ``synckey`` que ``referencia_externa`` (R14)."""
+        del proveedor (comparada normalizada, v8) y otro ``synckey`` que
+        ``referencia_externa`` (R14)."""
 
     @abstractmethod
     def existe_concepto(self, ide: int) -> bool:

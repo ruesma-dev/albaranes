@@ -42,6 +42,7 @@ from domain.models.alta_models import (
     TipoFallo,
 )
 from domain.ports.sigrid_alta_port import SigridAltaPort
+from domain.services.validador_alta import SEPARADORES_REFERENCIA, normalizar_referencia
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +53,16 @@ RUTA_ALBARAN = "/api/sigrid/albaran"
 RUTA_CONCEPTO_GRAFICO = "/api/sigrid/concepto-grafico"
 
 #: R14: albaranes de compra con el mismo CIF y número del proveedor y otra
-#: referencia externa (altas a mano). Design §6.
+#: referencia externa (altas a mano). Design §6. v8 (U6): ``entref`` se teclea
+#: a mano en formato libre; se compara normalizado (mayúsculas, sin los
+#: ``SEPARADORES_REFERENCIA``) con el número normalizado igual en Python.
+_ENTREF_NORMALIZADO = "d.entref"
+for _separador in SEPARADORES_REFERENCIA:
+    _ENTREF_NORMALIZADO = f"REPLACE({_ENTREF_NORMALIZADO}, '{_separador}', '')"
 SQL_BUSCAR_ALBARANES = (
     "SELECT c.ide, c.cod, c.fec FROM dbo.con c JOIN dbo.dca d ON d.ide = c.ide "
-    "WHERE c.tip = 14 AND d.entcif = ? AND d.entref = ? AND ISNULL(d.synckey, '') <> ?"
+    f"WHERE c.tip = 14 AND d.entcif = ? AND UPPER({_ENTREF_NORMALIZADO}) = ? "
+    "AND ISNULL(d.synckey, '') <> ?"
 )
 #: R28: ¿sigue en Sigrid el albarán de compra?
 SQL_EXISTE_CONCEPTO = "SELECT ide FROM dbo.con WHERE ide = ? AND tip = 14"
@@ -188,8 +195,12 @@ class SigridApiAltaClient(SigridAltaPort):
     def buscar_albaranes(
         self, cif: str, referencia: str, referencia_externa: str,
     ) -> list[AlbaranSigrid]:
+        numero = normalizar_referencia(referencia)
+        if not numero:
+            # Solo separadores: casaría con cualquier ``entref`` vacío.
+            return []
         filas = self._leer(
-            SQL_BUSCAR_ALBARANES, [cif, referencia, referencia_externa],
+            SQL_BUSCAR_ALBARANES, [cif, numero, referencia_externa],
             "f053-altas-a-mano", MAX_FILAS_BUSQUEDA,
         )
         return [

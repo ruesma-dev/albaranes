@@ -92,6 +92,21 @@ def normalizar_cif(cif: str | None) -> str:
     return limpio
 
 
+#: R14 (v8, U6): lo que se quita al comparar el número del proveedor con
+#: ``dca.entref``. El SQL de la búsqueda quita LOS MISMOS (``REPLACE`` anidados).
+SEPARADORES_REFERENCIA = (" ", ".", "-", "/")
+
+
+def normalizar_referencia(numero: str | None) -> str:
+    """Número del proveedor para casarlo con ``dca.entref`` (R14, T0b): en
+    mayúsculas y sin espacio, ``.``, ``-`` ni ``/``. ``2.172.946`` y ``2172946``
+    dan lo mismo; una errata (``2.2168.320``), no."""
+    texto = (numero or "").upper()
+    for separador in SEPARADORES_REFERENCIA:
+        texto = texto.replace(separador, "")
+    return texto
+
+
 def _texto(valor: str | None) -> str:
     return (valor or "").strip()
 
