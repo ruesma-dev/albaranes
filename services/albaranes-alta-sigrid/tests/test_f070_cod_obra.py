@@ -87,3 +87,30 @@ def test_f070_r15_motivos_usan_la_misma_funcion_que_la_peticion():
     assert fuente.count("cab.obra_codigo") == 1
     assert "def _cod_obra(" in fuente
     assert validador_alta._cod_obra(datos().cabecera) == "0404"
+
+
+@pytest.mark.parametrize(
+    "obra",
+    [None, "", "   ", "686", " 686 ", "0686", "var", " Postv2 ", "GG", "1234",
+     "9" * MAX_CODIGO, "9" * (MAX_CODIGO + 1), " " + "9" * MAX_CODIGO + " ", "900"],
+)
+def test_f070_r15_motivos_de_obra_equivalentes_a_los_de_antes(obra):
+    """RM5 · el mutante «motivos con ``_texto`` en vez de ``_cod_obra``» es
+    equivalente en COMPORTAMIENTO: los dos motivos de la obra solo miran si
+    queda vacía y si pasa de ``MAX_CODIGO``, y canonizar solo añade un ``0`` a
+    3 cifras o cambia la caja de VAR/POSTV2. Lo mata solo el test estructural
+    de arriba (un único lector), a propósito."""
+    from domain.services.validador_alta import _cod_obra, _texto
+
+    cab = datos(obra_codigo=obra).cabecera
+    nuevo, viejo = _cod_obra(cab), _texto(cab.obra_codigo)
+    assert (not nuevo) == (not viejo)
+    assert (len(nuevo) > MAX_CODIGO) == (len(viejo) > MAX_CODIGO)
+
+
+def test_f070_r15_control_la_demostracion_distingue_codigos():
+    """Control: la petición sí cambia (``686`` ≠ ``0686``)."""
+    from domain.services.validador_alta import _cod_obra, _texto
+
+    cab = datos(obra_codigo="686").cabecera
+    assert _cod_obra(cab) != _texto(cab.obra_codigo)
