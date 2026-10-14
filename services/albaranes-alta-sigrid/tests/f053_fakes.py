@@ -53,10 +53,11 @@ class RepoFalso(AltaRepository):
     fallar_al_guardar: set[EstadoAlta] = field(default_factory=set)
 
     def anadir(self, datos: DatosAlta, *, aprobado: bool = True, activo: bool = True,
-               approved_at: datetime | None = APROBADO, alta: AltaActual | None = None) -> str:
+               approved_at: datetime | None = APROBADO, alta: AltaActual | None = None,
+               approved_by: str | None = "ana") -> str:
         document_id = datos.cabecera.document_id
         self.documentos[document_id] = EstadoDocumento(
-            activo=activo, aprobado=aprobado, approved_at_utc=approved_at, approved_by="ana",
+            activo=activo, aprobado=aprobado, approved_at_utc=approved_at, approved_by=approved_by,
         )
         self.datos[document_id] = datos
         if alta is not None:
@@ -119,6 +120,8 @@ class SigridFalso(SigridAltaPort):
     previa: RespuestaAlta | ErrorAlta | None = None
     grabacion: RespuestaAlta | ErrorAlta | None = None
     existe: bool = True
+    #: R47: logins de ``dbo.usu`` (clave sin distinguir mayúsculas → ``cod``).
+    usuarios: dict[str, str] = field(default_factory=dict)
     adjunto: ResultadoAdjunto = field(default_factory=lambda: ResultadoAdjunto(True, gra_ide=555))
     llamadas: list[tuple] = field(default_factory=list)
     fallar_en: set[str] = field(default_factory=set)
@@ -135,14 +138,20 @@ class SigridFalso(SigridAltaPort):
             raise Explota("sql/read caído")
         return self.existe
 
+    def buscar_usuario(self, cod):
+        self.llamadas.append(("buscar_usuario", cod))
+        if "buscar_usuario" in self.fallar_en:
+            raise Explota("sql/read caído")
+        return self.usuarios.get(cod.lower())
+
     def alta_albaran(self, peticion: PeticionAlbaran, commit: bool):
         self.llamadas.append(("alta_albaran", peticion, commit))
         if ("grabacion" if commit else "previa") in self.fallar_en:
             raise Explota("fallo inesperado en la llamada")
         return self.grabacion if commit else self.previa
 
-    def adjuntar_pdf(self, con_ide, nombre, contenido):
-        self.llamadas.append(("adjuntar_pdf", con_ide, nombre, contenido))
+    def adjuntar_pdf(self, con_ide, nombre, contenido, *, usu):
+        self.llamadas.append(("adjuntar_pdf", con_ide, nombre, contenido, usu))
         if "adjuntar_pdf" in self.fallar_en:
             raise Explota("concepto-grafico caído")
         return self.adjunto

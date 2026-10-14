@@ -40,7 +40,7 @@ from domain.models.alta_models import (
     TipoFallo,
 )
 from domain.services.validador_alta import validar_y_construir
-from tests.f053_datos import CONFIG, HOY, datos, sin_vincular, vinculada
+from tests.f053_datos import CONFIG, USU, HOY, datos, sin_vincular, vinculada
 from tests.f053_fakes import (
     AHORA,
     DESDE,
@@ -87,7 +87,7 @@ D = datos(vinculada(1), sin_vincular(2))
 
 
 def _peticion() -> PeticionAlbaran:
-    return validar_y_construir(D, CONFIG, HOY)
+    return validar_y_construir(D, CONFIG, HOY, USU)
 
 
 class _RepoQueFallaEnElAdjunto(RepoFalso):
@@ -152,7 +152,7 @@ def _ejecutar(modulo, escenario):
         repo.fallar_al_guardar = {EstadoAlta.INCIERTO, EstadoAlta.REGISTRADO}
     doc = repo.anadir(D, alta=alta)
     servicio = modulo.AltaSigridService(
-        repo=repo, sigrid=sigrid, pdf=PdfFalso(sin_ruta=adjunto == "sin_pdf"), config=CONFIG,
+        repo=repo, sigrid=sigrid, pdf=PdfFalso(sin_ruta=adjunto == "sin_pdf"), config=CONFIG, usuario_respaldo=USU,
         modo=modo, desde=DESDE, espera=ESPERA, tolerancia_eur=0.05,
         avisos_bloqueantes=frozenset({"producto_sin_historico"}), reloj=lambda: AHORA,
     )
@@ -254,7 +254,7 @@ def test_f053_t25_rm5_equivalentes_4_5_6_importe_cero(original, mutado):
             casos.append(datos(linea, sin_vincular(2)))
 
     def salida(modulo, caso):
-        resultado = modulo.validar_y_construir(caso, CONFIG, HOY)
+        resultado = modulo.validar_y_construir(caso, CONFIG, HOY, USU)
         return resultado if isinstance(resultado, list) else resultado.a_dict()
 
     assert len(casos) == 338

@@ -21,7 +21,7 @@ import main_worker
 from domain.models.alta_models import ErrorAlta, Motivo, TipoFallo
 from domain.services import validador_alta as v
 from infrastructure.database import sql_alta_repository as repo
-from tests.f053_datos import CONFIG, HOY, datos, sin_vincular, vinculada
+from tests.f053_datos import CONFIG, USU, HOY, datos, sin_vincular, vinculada
 from tests.test_f053_cliente_sigrid import (
     PETICION,
     Servidor,
@@ -49,7 +49,7 @@ def test_f053_t25_h26_orden_merge_por_line_index_y_manuales_al_final():
 
 def test_f053_t25_r10_cantidad_en_el_borde_del_cero_no_es_valida():
     linea = sin_vincular(1, cantidad_albaran=1e-9)
-    resultado = v.validar_y_construir(datos(linea), CONFIG, HOY)
+    resultado = v.validar_y_construir(datos(linea), CONFIG, HOY, USU)
     assert isinstance(resultado, list)
     assert ("cantidad_no_valida", "1") in [(m.codigo, m.referencia_linea) for m in resultado]
 
@@ -62,7 +62,7 @@ def test_f053_t25_r10_cantidad_en_el_borde_del_cero_no_es_valida():
 ])
 def test_f053_t25_r39_signos_cerca_de_uno(cantidad, importe, incoherente):
     linea = sin_vincular(1, cantidad_albaran=cantidad, importe_calculado=importe)
-    resultado = v.validar_y_construir(datos(linea), CONFIG, HOY)
+    resultado = v.validar_y_construir(datos(linea), CONFIG, HOY, USU)
     codigos = [m.codigo for m in resultado] if isinstance(resultado, list) else []
     assert ("signo_incoherente" in codigos) is incoherente
 
@@ -82,7 +82,7 @@ def test_f053_t25_r39_vinculada_sin_convertida_no_rompe():
 
 def test_f053_t25_r12_importe_positivo_pequeno_mantiene_el_signo():
     linea = sin_vincular(1, cantidad_albaran=1.0, importe_calculado=0.5)
-    peticion = v.validar_y_construir(datos(linea), CONFIG, HOY)
+    peticion = v.validar_y_construir(datos(linea), CONFIG, HOY, USU)
     (pedida,) = peticion.lineas
     assert pedida.cantidad == 1.0 and pedida.precio == 0.5
 
@@ -133,13 +133,13 @@ def test_f053_t25_fila_mas_corta_que_las_columnas_no_rompe():
 @pytest.mark.parametrize("fallo", [httpx.ConnectTimeout("t"), httpx.ConnectError("c")])
 def test_f053_t25_adjunto_caido_no_esta_colgado(fallo):
     servidor = Servidor(fallo, fallo, fallo)
-    adjunto = _cliente(servidor).adjuntar_pdf(9, "ALB-d.pdf", b"%PDF")
+    adjunto = _cliente(servidor).adjuntar_pdf(9, "ALB-d.pdf", b"%PDF", usu="U")
     assert adjunto.colgado is False and adjunto.codigo == type(fallo).__name__
 
 
 def test_f053_t25_adjunto_rechazado_trae_el_error_recortado():
     servidor = Servidor(_json(400, {"error": "e" * 300, "details": {"codigo": "usuario_no_valido"}}))
-    adjunto = _cliente(servidor).adjuntar_pdf(9, "ALB-d.pdf", b"%PDF")
+    adjunto = _cliente(servidor).adjuntar_pdf(9, "ALB-d.pdf", b"%PDF", usu="U")
     assert adjunto.colgado is False and adjunto.codigo == "usuario_no_valido"
     assert adjunto.mensaje == "e" * 200
 
@@ -190,16 +190,16 @@ def test_f053_t25_o1_redondeo_al_minuto(monkeypatch, tmp_path):
     assert _visibilidad_con(monkeypatch, tmp_path, SIGRID_API_TIMEOUT_S="71") == 1860
 
 
-@pytest.mark.parametrize("desde, usuario, aviso_desde, aviso_usuario", [
+@pytest.mark.parametrize("desde, respaldo, aviso_desde, aviso_usuario", [
     ("", "", True, False),
     ("", "USU", True, False),
     ("2026-10-01T00:00:00Z", "", False, True),
     ("2026-10-01T00:00:00Z", "USU", False, False),
 ])
-def test_f053_t25_avisos_de_arranque(monkeypatch, tmp_path, caplog, desde, usuario,
+def test_f053_t25_avisos_de_arranque(monkeypatch, tmp_path, caplog, desde, respaldo,
                                      aviso_desde, aviso_usuario):
     ajustes = _settings(monkeypatch, LOG_DIR=str(tmp_path))
-    ajustes = ajustes.model_copy(update={"alta_sigrid_desde_utc": desde, "usuario": usuario})
+    ajustes = ajustes.model_copy(update={"alta_sigrid_desde_utc": desde, "usuario_respaldo": respaldo})
     monkeypatch.setattr(main_worker, "_cargar_entorno", lambda: None)
     monkeypatch.setattr(main_worker, "Settings", lambda: ajustes)
     monkeypatch.setattr(main_worker, "configure_logging", lambda *a, **k: None)
@@ -207,7 +207,7 @@ def test_f053_t25_avisos_de_arranque(monkeypatch, tmp_path, caplog, desde, usuar
     caplog.set_level(logging.INFO)
     assert main_worker.main() == 0
     assert ("ALTA_SIGRID_DESDE_UTC vacía" in caplog.text) is aviso_desde
-    assert ("ALTA_SIGRID_USUARIO vacío" in caplog.text) is aviso_usuario
+    assert ("ALTA_SIGRID_USUARIO_RESPALDO vacío" in caplog.text) is aviso_usuario
 
 
 def test_f053_t25_vuelca_json_valido():

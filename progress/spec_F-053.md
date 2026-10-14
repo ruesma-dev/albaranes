@@ -5,11 +5,116 @@ Rama `feature/F-053-alta-sigrid` (worktree `../albaranes-F-053`, desde `dev` c8a
 prioridad 1. v1 del 2026-09-30; v2–v5 del 2026-10-01; v6 del 2026-10-05 (producto genérico por línea, F-051 v4 y
 huecos del contrato); **v7 del 2026-10-06**: respuestas del humano a P1–P7 («si» a todas las recomendaciones) y
 alineación con **F-009 v8 de sigrid-api** (`8a6ecab`, que fija la forma definitiva del contrato; solo le queda medir
-`mov.prepma`, M14e, que no la cambia). Estado: **`spec_ready`**, sin preguntas abiertas; siguiente, la PARADA 1.
+`mov.prepma`, M14e, que no la cambia). **v8 del 2026-10-13** (sección siguiente): usuario de Sigrid por quien aprueba,
+«Reintentar adjunto» (O1 = a), equivalentes aceptados, T0b y T0c hechas. Estado: código v7 en `dev`; **la v8 espera
+su PARADA 1** (decisiones U1–U7).
+
+## v8 · 2026-10-13 · PARADA 1 (propuesta; no se ha tocado código)
+
+> **APROBADA por el humano (2026-10-14): «ok» a U1–U7 con las recomendaciones** (respaldo `pgris`; `usu` = quien
+> aprobó; aprobados antiguos o sin usuario ⇒ respaldo y DESDE solo tras desplegar sv4 y sv9 v8;
+> `ALTA_SIGRID_USUARIO_RESPALDO`; `pgris` en `00_capps_vars.ps1`; `entref` normalizado; manda la cabecera de Easy
+> Auth). Añadido: «en el futuro habrá una lista de mapeo usuario vs usuario Sigrid para los casos raros» ⇒ **F-069**
+> (pending). La resolución de R47 debe quedar en un único punto donde esa lista pueda entrar antes de la parte local.
+
+### Lo que ha resuelto el humano (2026-10-13)
+
+1. **Usuario del alta**: «los albaranes se darán de alta con el usuario del correo de Ruesma que esté usando la app.
+   Coinciden. Si no coinciden, usa el mío de momento, pgros, y luego cambiaremos más adelante».
+2. Permiso para hacer T0b (`sql/read`) y T0c (App Settings de sigrid-api, solo las claves citadas).
+3. **O1** (reintento del adjunto): opción a, un botón de reintentar.
+4. **Acepta los 10 equivalentes** de la campaña de mutación (`progress/mutacion_F-053.md`; anotado en T25).
+
+### T0b y T0c (hechas por el spec-author, solo lectura, 2026-10-13)
+
+Cómo: un script en el scratchpad que lee URL y clave de sigrid-api del `.env` de sv3 del árbol principal **sin
+imprimirlas ni copiarlas** y llama a `POST /api/sql/read`; `az functionapp config appsettings list` filtrado por
+nombre. Ninguna escritura. En ningún fichero ni en el chat ha quedado un secreto, una fila de usuario ni un CIF.
+
+**T0b** — la consulta de tasks.md (50 últimos albaranes de compra desde 2026-09-01): `entref` relleno en 50/50; unos
+37 son números de albarán del proveedor (`101535`, `2.172.946`, `26/28193`, `2026/40/011764`, `7 00004`…) y 13
+referencias internas (`PROF0926_…`, `PREV…`, `IMPUT…`). En todo 2026 (agregados): 30.429 albaranes de compra, 1 sin
+`entref`, **10.072 (33 %) internas** `PROF`/`PREV`/`IMPUT`; de las otras, 2.716 con punto, 1.545 con espacio, 2.834 con
+guion o barra; **solo 2 pares (CIF, `entref`) repetidos**; ninguno con `synckey`. Conclusión: **sí, las altas a mano
+llevan el número del proveedor en `entref`** y casi nunca se repite (buena clave para R14), **pero tecleado a mano en
+formato libre** (`2.172.946` frente a `2172946`, incluso erratas como `2.2168.320`): con la comparación exacta de
+hoy, un duplicado con otro formato se escaparía y daría doble alta ⇒ **U6**. La comparación con 5 albaranes en papel
+que pedía la tarea es del humano (opcional ya: la forma de los datos responde a la pregunta).
+
+**T0c** — usuario: **`pgris` existe en `dbo.usu`; `pgros` no** ⇒ el respaldo es `pgris`, sin ambigüedad (el «pgros»
+del mensaje era una errata). `dbo.usu` (233 usuarios, columnas `ide, cod, res, cla, rol, …, ele, …`) **no tiene el
+correo**: `ele` está vacío en todos; por eso se casa la parte antes de la @ con `dbo.usu.cod`, que es además lo que
+valida sigrid-api (`SELECT TOP (1) cod FROM dbo.usu WHERE cod = ?` ⇒ `usuario_no_valido`). App Settings de
+`func-sigridapi-dev-huyke` (es Function App, no Container App): `SIGRID_DOCUMENT_ALLOWED_GRATIPIDE` = `[35,0]` (incluye
+0) ✔; `SIGRID_DOCUMENT_ALLOWED_MAGIC` **no está puesta** ⇒ el defecto del código de sigrid-api (`["%PDF-"]`,
+`config/settings.py`, `838a94a`) ✔; `SIGRID_ALBARAN_PRODUCTOS_SIN_CONTRATO` = MA9999, QA9999, XA9999 ✔;
+`SIGRID_ALBARAN_NATURALEZA_POR_PRODUCTO` = MA99/QA99/XA99 ✔. Además se leyó `SIGRID_DOCUMENT_ALLOWED_CONTIP` (no la
+citaba T0c, sí el contrato para el adjunto): incluye 14 ✔. Nada que cambiar en sigrid-api. De paso: `ca-sv9-alta-sigrid`
+ya existe en `rg-albaranes-dev` (no se han leído sus variables): al desplegar la v8 hay que ponerle el respaldo (T44).
+
+### Cómo sabe hoy sv4 quién usa la app y si llega a sv9
+
+- sv4 está detrás de **Easy Auth** (Entra ID; `infra/create_capps_sv4.ps1`, `RedirectToLoginPage`): toda petición
+  trae `X-MS-CLIENT-PRINCIPAL-NAME` con el UPN (`nombre@ruesma.es`). La plataforma la inyecta y **no deja que la ponga
+  el cliente**. `app.py` la lee en `_reviewer_from_request` (cabecera o `DEFAULT_REVIEWER`).
+- **Listado** (`POST /documents/{id}/approve`): `approved_by = formulario.strip() or _reviewer_from_request(request)`;
+  el formulario lleva `approved_by` vacío ⇒ **hoy sí guarda el UPN**. Pero un POST fabricado con otro valor ganaría
+  a la cabecera.
+- **Ficha** («Guardar y aprobar», `PUT /api/documents/{id}`): el cuerpo lleva `approved_by` de `getInput("approved_by")`,
+  y la ficha no tiene ese campo ⇒ `null` ⇒ `ReviewService._guardar_y_aprobar` pone `DEFAULT_REVIEWER`. **Hoy la ficha
+  nunca guarda quién aprobó** (la ruta ni recibe `Request`). Hay que tocarlo (R49, T46).
+- «Solicitar alta» y «Ya lo he anulado» publican con la cabecera (`solicitado_por`), pero **sv9 no usa el
+  `approved_by` del mensaje**: `reclamar` lee `m.approved_by` del merge bajo el `FOR UPDATE` y lo guarda en el alta
+  (R5). Esa es la fuente que propone la v8: una sola, consistente y no manipulable desde la cola.
+- `usu` hoy: `ALTA_SIGRID_USUARIO` fijo en `Settings`, inyectado en `ValidadorConfig.usu` y en el cliente para el
+  adjunto (`sigrid_api_alta_client.py`, `self._usuario`). La v8 lo hace por documento.
+
+### Propuesta v8 (en la spec; tamaños 150/150 y 250/250)
+
+| Pieza | Cambio | Dónde |
+|---|---|---|
+| Origen de `usu` | Login de quien aprobó: parte antes de la @ de `approved_by` (correo `@ruesma.es`, sin distinguir mayúsculas, ≤ 24) casada con `dbo.usu.cod` por `sql/read`; se manda el `cod` que devuelve Sigrid. Si no casa (o no es correo de Ruesma), el **respaldo** `ALTA_SIGRID_USUARIO_RESPALDO` (`pgris`) | R12, R47; design §1, §3, §5, §6; T41–T43 |
+| Fallos | Lectura de `dbo.usu` caída tras reintentos, o respaldo vacío ⇒ `error` `usuario_no_resuelto`, sin previa | R48; T43 |
+| Retomar / adjunto | `incierto` reenvía la petición con su `usu` (no relee `dbo.usu`); el adjunto, también el reintento, usa el `usu` de `peticion_json` | R15, R22; T43 |
+| sv4 | Cabecera de Easy Auth > formulario/cuerpo > `DEFAULT_REVIEWER`, por los dos caminos (el PUT pasa a leer la cabecera) | R49; design §4; T46 |
+| Panel | Enseña el `usu` y «respaldo» si no es el de quien aprobó (sin DDL: está en `peticion_json`) | R29; T48 |
+| O1 = a | Botón «Reintentar adjunto» con alta `registrado`, modo `real` y adjunto no colgado; ruta nueva que publica `accion="alta"`; sv9 ya lo trata como `solo_adjunto` | R23, R30; T47, T48 |
+| R14 | `entref` normalizado (mayúsculas, sin espacio, `.`, `-`, `/`) en los dos lados (T0b) | R14; design §6, §11; T45 |
+| Config | `ALTA_SIGRID_USUARIO` → `ALTA_SIGRID_USUARIO_RESPALDO`, sin defecto en código; `pgris` en `infra/00_capps_vars.ps1` | design §7; T44 |
+| Docs | `sv4.md`, `sv9.md`, `azure-apps/albaranes.md`; filas de consumo del contrato que citan `ALTA_SIGRID_USUARIO` | design §9; T49 |
+| Puertas | Cobertura, mutación de lo nuevo, `init.sh`; MANUAL T51 (aprobar por ficha y listado y ver `usu`) | T50–T52 |
+
+Para caber en los topes se resumieron, sin quitar requisitos, el glosario del producto, R1, R26, R38, R44, R45 y
+partes de design §2–§8 (lo ya implementado enlaza al código: `SQL_CABECERA`/`SQL_LINEAS`, docstrings de comun).
+
+### Decisiones que necesita el humano (U1–U7)
+
+| U | Pregunta | Recomendación |
+|---|---|---|
+| U1 | Respaldo = **`pgris`** (existe; `pgros` no). ¿Confirmas? | Sí |
+| U2 | ¿`usu` = **quien aprobó** (el `approved_by` del merge) o quien pulsa «Solicitar alta» / «Reintentar adjunto»? | Quien aprobó: una sola fuente, leída bajo el cerrojo; para cambiarlo hay que desaprobar y aprobar (R25 lo exige igual). Si no se puede comprobar en `dbo.usu` (sigrid-api caída), `error` y no el respaldo, para no atribuir mal |
+| U3 | **Aprobados antiguos o sin usuario** (aprobados por la ficha antes de R49 guardan `DEFAULT_REVIEWER` o nada; `approved_by` de texto libre): ¿respaldo o no se dan de alta? | Respaldo, visible en el panel. En la práctica casi no habrá: R6 ignora lo aprobado antes de DESDE, y DESDE se pone **después** de desplegar sv4 y sv9 con la v8 (orden de design §8 y T51) |
+| U4 | ¿Renombrar `ALTA_SIGRID_USUARIO` a `ALTA_SIGRID_USUARIO_RESPALDO`? | Sí: el nombre viejo diría «el usuario» y ya no lo es. Si se despliega sin ponerla, las altas sin coincidencia van a `error` (fallo seguro) |
+| U5 | ¿El valor `pgris` en `infra/00_capps_vars.ps1` (versionado) o en `infra/*.local.ps1`? | Versionado: un login no es secreto según `CLAUDE.md`, y así el cambio «más adelante» queda en git |
+| U6 | ¿Normalizar `entref` en R14 (T0b)? Un falso positivo (dos números que solo difieren en puntos o barras, mismo CIF) daría `ya_en_sigrid`: no se registra y se ve en el panel | Sí: es preferible a duplicar (design §11) |
+| U7 | ¿La cabecera de Easy Auth **manda** sobre el formulario y el cuerpo (R49)? Hoy un POST fabricado podría aprobar «como otro» y, con la v8, dar de alta en Sigrid a nombre de otro | Sí; formulario, cuerpo y `DEFAULT_REVIEWER` solo cuentan en local (sin cabecera) |
+
+**Riesgos que acepta la propuesta**: (1) un UPN que no es un `cod` (p. ej. `nombre.apellido@ruesma.es`, o un
+usuario cuyo login de Sigrid es otro) cae al respaldo sin avisar más que en el panel; el humano dijo «coinciden»,
+pero `dbo.usu` no tiene correo y no se puede medir desde aquí. Comprobación opcional (humano, solo lectura, BBDD de
+Azure): `SELECT approved_by, COUNT(*) FROM albaran_documents_merge WHERE approved GROUP BY 1;` y mirar si cada parte
+antes de la @ es un login de Sigrid. (2) Mientras dure el respaldo, en el `log` de Sigrid los albaranes de quien no
+case figuran como creados por `pgris`. (3) Easy Auth protege la cabecera en la entrada pública; si algún día otro
+servicio llamara a sv4 por dentro del entorno saltándose la autenticación, la cabecera podría venir de él (hoy nadie
+lo hace). (4) Aprobar desde el listado sigue funcionando igual (ya lee la cabecera); solo cambia que el formulario
+deja de poder sustituirla.
+
+**Fuera de la v8**: cambiar `DEFAULT_REVIEWER` en Azure (no se ha leído su valor); conservar el producto al revalorar
+(F-058); que sigrid-api valide el respaldo al arrancar (no le toca).
 
 ## Qué hay en la rama
 
-- `specs/F-053-alta-sigrid/requirements.md` — R1–R44 en EARS (**150/150** líneas).
+- `specs/F-053-alta-sigrid/requirements.md` — R1–R49 en EARS (v8; **150/150** líneas).
 - `specs/F-053-alta-sigrid/design.md` — sv9, códigos → estados (§2, enlaza el contrato), producto, flujo, DDL,
   configuración, orden (**250/250**).
 - `specs/F-053-alta-sigrid/tasks.md` — T0d, T0a, T0b, T0c, T0, T1–T30 con T2b, T19b y T21b; T0b, T0c, T0, T22 y

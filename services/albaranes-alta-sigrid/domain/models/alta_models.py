@@ -393,3 +393,5 @@ class Reclamacion:
     decision: Decision
     alta: AltaActual | None = None
     motivo: str = ""
+    #: ``approved_by`` del merge, leído bajo el cerrojo (R5): fuente del ``usu`` (R47).
+    approved_by: str | None = None

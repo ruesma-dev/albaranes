@@ -127,7 +127,7 @@ ENTORNO = {
     "ALTA_SIGRID_DESDE_UTC": "2026-10-01T00:00:00Z", "ALTA_SIGRID_COMMIT": "true",
     "ALTA_SIGRID_ESPERA_INCIERTO_MIN": "20", "ALTA_SIGRID_TOLERANCIA_EUR": "0.1",
     "ALTA_SIGRID_AVISOS_BLOQUEANTES": "producto_sin_historico,stock_negativo",
-    "ALTA_SIGRID_USUARIO": "USU_ALTA", "ALTA_SIGRID_EMPIDE": "2425207",
+    "ALTA_SIGRID_USUARIO_RESPALDO": "USU_ALTA", "ALTA_SIGRID_EMPIDE": "2425207",
     "ALTA_SIGRID_PRODUCTO_POR_DEFECTO": '{"*": "MA9999", "alquiler_maquinaria": "QA9999"}',
 }
 
@@ -149,7 +149,7 @@ def test_f053_worker_composicion_pasa_toda_la_configuracion(monkeypatch):
     assert servicio._espera == timedelta(minutes=20)
     assert servicio._tolerancia == pytest.approx(0.1)
     assert servicio._bloqueantes == frozenset({"producto_sin_historico", "stock_negativo"})
-    assert servicio._config.usu == "USU_ALTA" and servicio._config.empide == 2425207
+    assert servicio._respaldo == "USU_ALTA" and servicio._config.empide == 2425207
     assert dict(servicio._config.mapeo) == {"*": "MA9999", "alquiler_maquinaria": "QA9999"}
     assert type(servicio._repo).__name__ == "SqlAltaRepository"
     assert type(servicio._sigrid).__name__ == "SigridApiAltaClient"

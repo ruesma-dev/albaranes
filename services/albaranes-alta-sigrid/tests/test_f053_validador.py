@@ -24,6 +24,7 @@ from tests.f053_datos import (
     CONTRATO,
     DOCUMENT_ID,
     HOY,
+    USU,
     MAPEO,
     datos,
     sin_vincular,
@@ -46,7 +47,7 @@ def _peticion(resultado) -> PeticionAlbaran:
 
 
 def _validar(d, hoy=HOY, config=CONFIG):
-    return validar_y_construir(d, config, hoy)
+    return validar_y_construir(d, config, hoy, USU)
 
 
 # ------------------------------------------------------------------ #
@@ -247,8 +248,8 @@ def test_f053_r12_nunca_claves_prohibidas():
 def test_f053_r12_cabecera_recorta_y_usa_la_configuracion():
     d = datos(sin_vincular(1), obra_codigo=" 0404 ", numero_albaran="  N-1  ",
               contrato_codigo=f" {CONTRATO} ")
-    config = ConfigAlta(usu="OTRO", empide=2425207, mapeo=MAPEO)
-    peticion = _peticion(validar_y_construir(d, config, HOY))
+    config = ConfigAlta(empide=2425207, mapeo=MAPEO)
+    peticion = _peticion(validar_y_construir(d, config, HOY, "OTRO"))
     assert peticion.cod_obra == "0404" and peticion.su_referencia == "N-1"
     assert peticion.cod_contrato == CONTRATO
     assert peticion.usu == "OTRO" and peticion.empide == 2425207

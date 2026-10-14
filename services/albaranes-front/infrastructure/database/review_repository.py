@@ -185,7 +185,7 @@ _SQL_ALTA_DEL_DOCUMENTO = text(
 _SQL_ALTA_COMPLETA = text(
     "SELECT estado, modo, sigrid_con_ide, sigrid_cod, adjunto_estado, "
     "       motivos_json, avisos_json, peticion_json, respuesta_json, intentos, "
-    "       approved_at_utc, ultimo_intento_at_utc, actualizado_at_utc "
+    "       approved_at_utc, approved_by, ultimo_intento_at_utc, actualizado_at_utc "
     "FROM albaran_altas_sigrid WHERE document_id = :id"
 )
 
@@ -4191,6 +4191,7 @@ class AlbaranReviewRepository:
             respuesta=_json_o(fila["respuesta_json"], None, dict),
             intentos=int(fila["intentos"] or 0),
             approved_at_utc=fila["approved_at_utc"],
+            approved_by=fila["approved_by"],
             ultimo_intento_at_utc=fila["ultimo_intento_at_utc"],
             actualizado_at_utc=fila["actualizado_at_utc"],
         )

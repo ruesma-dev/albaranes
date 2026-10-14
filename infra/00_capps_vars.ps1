@@ -41,8 +41,10 @@ $Global:SIGRID_DB = "ruesma"   # SIGRID_API_DATABASE del piloto
 # (design §7: DESDE, Espera y mapeo deben coincidir).
 #   - ALTA_SIGRID_DESDE_UTC vacia = feature APAGADA (sv9 confirma sin hacer
 #     nada y sv4 no publica ni pinta nada). La pone el humano.
-#   - ALTA_SIGRID_USUARIO: login de dbo.usu (MANUAL T0c). Sin el, sigrid-api
-#     rechaza las altas.
+#   - ALTA_SIGRID_USUARIO_RESPALDO (F-053 v8, U1/U5): login de dbo.usu con el
+#     que se da de alta cuando quien aprobo no casa con un login de Sigrid
+#     (R47). Es pgris (existe en dbo.usu, T0c); no es secreto. Vacio = esas
+#     altas van a error (usuario_no_resuelto, R48).
 # ALTA_SIGRID_COMMIT NO esta aqui a proposito: create_capps_sv9.ps1 crea sv9
 # con ALTA_SIGRID_COMMIT=false (simulacion) y SOLO el humano lo cambia, a
 # mano y con autorizacion (MANUAL T29). Ningun script lo pone a true.
@@ -53,7 +55,7 @@ $Global:ALTA_SIGRID_ESPERA_INCIERTO_MIN  = "15"
 # "XA9999", "*": "MA9999"}. Si lo cambias, set_alta_sigrid.ps1 lo pasa con las
 # comillas escapadas y lo RELEE de las dos apps: un JSON roto no arranca (R44).
 $Global:ALTA_SIGRID_PRODUCTO_POR_DEFECTO = ""
-$Global:ALTA_SIGRID_USUARIO              = ""   # <-- T0c
+$Global:ALTA_SIGRID_USUARIO_RESPALDO     = "pgris"   # U5: versionado, no es secreto
 $Global:ALTA_SIGRID_EMPIDE               = ""   # vacia = defecto de sigrid-api
 
 # Pares CLAVE=valor comunes a sv4 y sv9 (los tres que deben coincidir).

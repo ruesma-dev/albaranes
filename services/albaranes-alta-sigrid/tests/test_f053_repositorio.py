@@ -373,3 +373,10 @@ def test_f053_r34_solo_escribe_albaran_altas_sigrid():
         escritas |= {tabla for _, tabla in escrituras.findall(texto)}
         assert "DROP " not in texto and "ALTER " not in texto and "TRUNCATE" not in texto
     assert escritas == {"ALBARAN_ALTAS_SIGRID"}
+
+
+def test_f053_r47_repositorio_reclamar_devuelve_el_approved_by_del_merge():
+    """v8: el ``usu`` sale del ``approved_by`` leído bajo el cerrojo (R5, R47)."""
+    repo, _ = _repo({"FROM albaran_documents_merge m": [
+        {**_fila_merge(), "approved_by": "ana@ruesma.es"}]})
+    assert _reclamar(repo).approved_by == "ana@ruesma.es"

@@ -7,7 +7,9 @@
    excepción AQUÍ se propaga: el worker deja el mensaje en la cola (reintento).
 2. Según la decisión: ``ignorar`` / ``a_incierto`` (ya resueltos al reclamar),
    ``verificar_anulacion`` (R28), ``solo_adjunto`` (R23) o ``procesar``.
-3. ``procesar``: todo dentro de ``try/finally`` (R9). Tras dejar el alta en
+3. ``procesar``: todo dentro de ``try/finally`` (R9). Una petición nueva lleva
+   el ``usu`` de quien aprobó o el Respaldo (v8, R47–R48:
+   ``_resolver_usuario``). Tras dejar el alta en
    ``en_curso``, ninguna salida —tampoco una excepción— la deja ahí: queda
    ``incierto`` si la grabación estaba en vuelo y ``error`` si no. Las
    excepciones de esta fase NO se propagan (el mensaje se confirma).
@@ -39,6 +41,7 @@ from domain.ports.pdf_port import PdfAlbaranPort
 from domain.ports.sigrid_alta_port import SigridAltaPort
 from domain.services.clasificador import clasificar, motivos_de_error
 from domain.services.comparador_previa import comparar
+from domain.services.usuario_sigrid import candidato_usuario
 from domain.services.validador_alta import (
     PREFIJO_REFERENCIA,
     ConfigAlta,
@@ -54,6 +57,8 @@ _LOG = "[sv9-alta]"
 
 #: Motivo que acompaña a un adjunto que no se pudo colgar (R23, R29).
 MOTIVO_ADJUNTO = "adjunto_no_colgado"
+#: R48: sin ``usu`` no se sigue (lectura de ``dbo.usu`` caída o Respaldo vacío).
+MOTIVO_USUARIO = "usuario_no_resuelto"
 
 #: Motivos de la última verificación de anulación (R28): se sustituyen, no se acumulan.
 _MOTIVOS_VERIFICACION = frozenset({"sigue_en_sigrid", "verificacion_fallida"})
@@ -106,6 +111,10 @@ class _Paso:
     peticion: dict | None = None
 
 
+class UsuarioNoResuelto(Exception):
+    """R48: no hay ``usu`` con el que pedir el alta (o colgar el adjunto)."""
+
+
 class AltaSigridService:
     def __init__(
         self,
@@ -114,6 +123,7 @@ class AltaSigridService:
         sigrid: SigridAltaPort,
         pdf: PdfAlbaranPort,
         config: ConfigAlta,
+        usuario_respaldo: str,
         modo: ModoAlta,
         desde: datetime | None,
         espera: timedelta,
@@ -125,6 +135,7 @@ class AltaSigridService:
         self._sigrid = sigrid
         self._pdf = pdf
         self._config = config
+        self._respaldo = (usuario_respaldo or "").strip()
         self._modo = ModoAlta(modo)
         self._desde = desde
         self._espera = espera
@@ -165,15 +176,17 @@ class AltaSigridService:
             return self._verificar_anulacion(document_id, reclamacion.alta)
         if decision is Decision.SOLO_ADJUNTO:
             return self._solo_adjunto(document_id, reclamacion.alta)
-        return self._procesar_alta(document_id, reclamacion.alta)
+        return self._procesar_alta(document_id, reclamacion.alta, reclamacion.approved_by)
 
     # ------------------------------------------------------------------ #
     # procesar (R9)
     # ------------------------------------------------------------------ #
-    def _procesar_alta(self, document_id: str, previa: AltaActual | None) -> ResultadoProceso:
+    def _procesar_alta(
+        self, document_id: str, previa: AltaActual | None, approved_by: str | None,
+    ) -> ResultadoProceso:
         paso = _Paso()
         try:
-            self._flujo(document_id, previa, paso)
+            self._flujo(document_id, previa, approved_by, paso)
         except Exception as exc:
             logger.exception("%s document_id=%s fallo inesperado", _LOG, document_id)
             self._cerrar_por_excepcion(document_id, paso, exc)
@@ -215,15 +228,56 @@ class AltaSigridService:
     def _resultado(self, estado: EstadoAlta, paso: _Paso, **campos) -> ResultadoAlta:
         return ResultadoAlta(estado=estado, modo=self._modo.value, peticion=paso.peticion, **campos)
 
-    def _flujo(self, document_id: str, previa: AltaActual | None, paso: _Paso) -> None:
+    def _resolver_usuario(self, document_id: str, approved_by: str | None) -> str:
+        """R47–R48: el ``usu`` de una petición nueva. ÚNICO punto que lo decide.
+
+        El ``cod`` de ``dbo.usu`` para la parte local del correo ``@ruesma.es``
+        de quien aprobó; si no es correo de Ruesma o no casa, el Respaldo
+        (``ALTA_SIGRID_USUARIO_RESPALDO``). Lanza :class:`UsuarioNoResuelto` si
+        la lectura cae tras sus reintentos o hace falta el Respaldo y está
+        vacío. (F-069, la lista de equivalencias correo → login, entrará aquí,
+        antes de la parte local.)"""
+        candidato = candidato_usuario(approved_by)
+        if candidato is not None:
+            try:
+                cod = self._sigrid.buscar_usuario(candidato)
+            except Exception as exc:  # noqa: BLE001 — R48: sin comprobar, no se atribuye
+                raise UsuarioNoResuelto(
+                    f"no se pudo leer dbo.usu: {type(exc).__name__}",
+                ) from exc
+            if cod:
+                logger.info("%s document_id=%s usu=%s (quien aprobó)", _LOG, document_id, cod)
+                return cod
+        if not self._respaldo:
+            raise UsuarioNoResuelto(
+                "quien aprobó no casa con un login de Sigrid y "
+                "ALTA_SIGRID_USUARIO_RESPALDO está vacío",
+            )
+        logger.info("%s document_id=%s usu=%s (respaldo)", _LOG, document_id, self._respaldo)
+        return self._respaldo
+
+    def _flujo(
+        self, document_id: str, previa: AltaActual | None, approved_by: str | None,
+        paso: _Paso,
+    ) -> None:
         datos = self._repo.leer_datos(document_id)
 
-        # 1. Petición: la guardada si se retoma un incierto (R15), o una nueva
-        #    tras validar en local (R10–R13, R39; sin llamar a nadie).
+        # 1. Petición: la guardada si se retoma un incierto (R15, con su usu), o
+        #    una nueva con el usu de quien aprobó (R47–R48; solo lee dbo.usu) y
+        #    validada en local (R10–R13, R39; sin llamar a nadie más).
         peticion = _peticion_retomada(previa)
         if peticion is None:
+            try:
+                usu = self._resolver_usuario(document_id, approved_by)
+            except UsuarioNoResuelto as exc:
+                self._guardar(document_id, paso, self._resultado(
+                    EstadoAlta.ERROR, paso, motivos=(Motivo(MOTIVO_USUARIO, str(exc)),),
+                ))
+                return
             _avisar_lineas_de_otro_contrato(document_id, datos)
-            validada = validar_y_construir(datos, self._config, hoy_en_madrid(self._reloj()))
+            validada = validar_y_construir(
+                datos, self._config, hoy_en_madrid(self._reloj()), usu,
+            )
             if isinstance(validada, list):
                 self._guardar(document_id, paso, self._resultado(
                     estado_de_motivos(validada), paso, motivos=tuple(validada),
@@ -334,9 +388,18 @@ class AltaSigridService:
         en error (R23). Nunca lanza."""
         motivos = tuple(m for m in resultado.motivos if m.codigo != MOTIVO_ADJUNTO)
         nombre = f"{PREFIJO_REFERENCIA}{document_id}.pdf"
+        # R22 (v8): a nombre del usu de la petición, también en solo_adjunto.
+        usu = str((resultado.peticion or {}).get("usu") or "").strip()
         try:
+            if not usu:
+                raise UsuarioNoResuelto("la petición guardada no lleva usu")
             contenido = self._pdf.descargar(datos)
-            adjunto = self._sigrid.adjuntar_pdf(resultado.sigrid_con_ide, nombre, contenido)
+            adjunto = self._sigrid.adjuntar_pdf(
+                resultado.sigrid_con_ide, nombre, contenido, usu=usu,
+            )
+        except UsuarioNoResuelto as exc:
+            logger.warning("%s document_id=%s adjunto sin usu", _LOG, document_id)
+            adjunto = ResultadoAdjunto(False, codigo=MOTIVO_USUARIO, mensaje=str(exc))
         except Exception as exc:  # noqa: BLE001 — el adjunto nunca tumba el alta
             logger.warning("%s document_id=%s adjunto fallido: %s", _LOG, document_id,
                            type(exc).__name__)

@@ -111,9 +111,11 @@ def main() -> int:
                        NOMBRE_WORKER)
     if settings.commit_real:
         logger.warning("[%s] MODO REAL: las altas se GRABAN en Sigrid", NOMBRE_WORKER)
-    if settings.desde is not None and not settings.usuario:
-        logger.warning("[%s] ALTA_SIGRID_USUARIO vacío: sigrid-api rechazará las altas",
-                       NOMBRE_WORKER)
+    if settings.desde is not None and not settings.usuario_respaldo.strip():
+        logger.warning(
+            "[%s] ALTA_SIGRID_USUARIO_RESPALDO vacío: las altas de quien no case con un "
+            "login de Sigrid irán a error (usuario_no_resuelto, R48)", NOMBRE_WORKER,
+        )
 
     servicio = construir_servicio(settings)
     return ejecutar_worker(

@@ -10,7 +10,8 @@
 #     una vez creada la app).
 #   - Secretos en Key Vault: PG-PASSWORD, GRAPH-KEY, SIGRID-API-FUNCTION-KEY
 #     (la clave de siempre de sigrid-api, decision del 2026-10-01).
-#   - Bloque F-053 de 00_capps_vars.ps1 revisado (ALTA_SIGRID_USUARIO: T0c).
+#   - Bloque F-053 de 00_capps_vars.ps1 revisado (ALTA_SIGRID_USUARIO_RESPALDO,
+#     pgris; F-053 v8).
 #
 # Uso:
 #     . .\00_vars.ps1
@@ -39,8 +40,8 @@ if ($SP["SHAREPOINT_DRIVE_ID"] -eq "RELLENA") { throw "Rellena el bloque `$SP (S
 if (-not (Get-Command AltaSigridEnvComun -ErrorAction SilentlyContinue)) {
     throw "Falta el bloque F-053 de 00_capps_vars.ps1. Haz:  . .\00_capps_vars.ps1"
 }
-if (-not $Global:ALTA_SIGRID_USUARIO) {
-    Write-Warning "ALTA_SIGRID_USUARIO vacio (MANUAL T0c): sigrid-api rechazara las altas cuando DESDE se ponga."
+if (-not $Global:ALTA_SIGRID_USUARIO_RESPALDO) {
+    Write-Warning "ALTA_SIGRID_USUARIO_RESPALDO vacio: las altas de quien no case con un login de Sigrid iran a error cuando DESDE se ponga."
 }
 az account set --subscription $SUBSCRIPTION
 
@@ -65,7 +66,7 @@ $sv9Env = @("AZURE_CLIENT_ID=$MI_CLIENTID", "COLAS_ACCOUNT_URL=$QUEUE_URL",
             "SIGRID_API_FUNCTION_KEY=secretref:sigrid-key",
             "SIGRID_API_DATABASE=$SIGRID_DB",
             "ALTA_SIGRID_COMMIT=false",
-            "ALTA_SIGRID_USUARIO=$($Global:ALTA_SIGRID_USUARIO)",
+            "ALTA_SIGRID_USUARIO_RESPALDO=$($Global:ALTA_SIGRID_USUARIO_RESPALDO)",
             "ALTA_SIGRID_EMPIDE=$($Global:ALTA_SIGRID_EMPIDE)") + (AltaSigridEnvComun) + (SpEnv)
 if (($sv9Env -match "^ALTA_SIGRID_COMMIT=") -ne "ALTA_SIGRID_COMMIT=false") {
     throw "sv9 solo se crea en simulacion (ALTA_SIGRID_COMMIT=false)."

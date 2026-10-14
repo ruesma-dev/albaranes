@@ -387,6 +387,11 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       sv3 no borra ni reprocesa un PDF reingresado con alta bloqueante (R45).
       Se desbloquea anulando en Sigrid y pulsando «Ya lo he anulado en
       Sigrid» (sv9 comprueba que el `con.ide` ya no existe ⇒ `anulado`).
+    - **Usuario de Sigrid** (v8): el alta va a nombre de quien aprobó (UPN de
+      Easy Auth, que manda sobre formulario y cuerpo en sv4; parte local
+      casada con `dbo.usu.cod`) o, si no casa, del Respaldo
+      `ALTA_SIGRID_USUARIO_RESPALDO` (`pgris`). El número del proveedor se
+      compara normalizado con `dca.entref` al buscar altas a mano.
     - **Las reglas compartidas viven en comun** (`ruesma_comun.alta_sigrid`):
       DESDE, Espera, «vinculada», «línea a registrar», producto efectivo y
       estados; sv4 y sv9 deciden con las mismas funciones.
