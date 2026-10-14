@@ -190,6 +190,12 @@ MENSAJES_ALTA = {
         "no_procede": "El alta en Sigrid no procede ahora (mira su estado en la ficha).",
         "apagada": "El alta en Sigrid está desactivada (ALTA_SIGRID_DESDE_UTC vacía).",
     },
+    "reintentar_adjunto": {
+        "pedida": "Reintento del adjunto pedido: refresca en unos segundos para ver el resultado.",
+        "no_publicada": "El reintento del adjunto no se pudo pedir (cola no disponible): reintenta.",
+        "no_procede": "El reintento del adjunto no procede (mira el estado del alta en la ficha).",
+        "apagada": "El alta en Sigrid está desactivada (ALTA_SIGRID_DESDE_UTC vacía).",
+    },
     "verificar_anulacion": {
         "pedida": (
             "Comprobación pedida: si ya no está en Sigrid, el alta pasará a «anulado». "
@@ -1757,6 +1763,18 @@ def build_app(settings: Settings) -> FastAPI:
             document_id=document_id, solicitado_por=_reviewer_from_request(request),
         )
         return _a_la_ficha(document_id, MENSAJES_ALTA["alta"][resultado])
+
+    @app.post(
+        "/documents/{document_id}/alta-sigrid/reintentar-adjunto",
+        include_in_schema=False,
+    )
+    def reintentar_adjunto_sigrid(document_id: str, request: Request) -> RedirectResponse:
+        """R30/R23 (v8, O1 = a): «Reintentar adjunto» (``accion="alta"``).
+        Solo publica: R25 no la bloquea."""
+        resultado = review_service.reintentar_adjunto_sigrid(
+            document_id=document_id, solicitado_por=_reviewer_from_request(request),
+        )
+        return _a_la_ficha(document_id, MENSAJES_ALTA["reintentar_adjunto"][resultado])
 
     @app.post(
         "/documents/{document_id}/alta-sigrid/verificar-anulacion",
