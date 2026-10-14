@@ -11,6 +11,12 @@ su PARADA 1** (decisiones U1–U7).
 
 ## v8 · 2026-10-13 · PARADA 1 (propuesta; no se ha tocado código)
 
+> **APROBADA por el humano (2026-10-14): «ok» a U1–U7 con las recomendaciones** (respaldo `pgris`; `usu` = quien
+> aprobó; aprobados antiguos o sin usuario ⇒ respaldo y DESDE solo tras desplegar sv4 y sv9 v8;
+> `ALTA_SIGRID_USUARIO_RESPALDO`; `pgris` en `00_capps_vars.ps1`; `entref` normalizado; manda la cabecera de Easy
+> Auth). Añadido: «en el futuro habrá una lista de mapeo usuario vs usuario Sigrid para los casos raros» ⇒ **F-069**
+> (pending). La resolución de R47 debe quedar en un único punto donde esa lista pueda entrar antes de la parte local.
+
 ### Lo que ha resuelto el humano (2026-10-13)
 
 1. **Usuario del alta**: «los albaranes se darán de alta con el usuario del correo de Ruesma que esté usando la app.
