@@ -1,7 +1,8 @@
 # infrastructure/sigrid/sigrid_api_alta_client.py
 """Cliente HTTP de sigrid-api para sv9 (F-053; contrato F-009 v8.2, ``13fd99d``).
 
-Solo tres rutas (R33): ``POST /api/sql/read`` (altas a mano y anulación),
+Solo tres rutas (R33): ``POST /api/sql/read`` (altas a mano, anulación y, v8,
+el login de ``dbo.usu``),
 ``POST /api/sigrid/albaran`` en modo extendido (previa y grabación) y
 ``POST /api/sigrid/concepto-grafico`` (adjunto). Nunca la escritura genérica de
 SQL, ni el modo clásico, ni el alta directa.
@@ -58,6 +59,9 @@ SQL_BUSCAR_ALBARANES = (
 )
 #: R28: ¿sigue en Sigrid el albarán de compra?
 SQL_EXISTE_CONCEPTO = "SELECT ide FROM dbo.con WHERE ide = ? AND tip = 14"
+#: R47 (v8): el login de Sigrid; la MISMA consulta con la que valida sigrid-api
+#: (``usuario_no_valido``). Se manda el ``cod`` que devuelve, no el pedido.
+SQL_BUSCAR_USUARIO = "SELECT TOP (1) cod FROM dbo.usu WHERE cod = ?"
 
 #: Timeout de la grabación: por encima del corte de 230 s del balanceador.
 TIMEOUT_GRABACION_S = 240.0
@@ -97,7 +101,6 @@ class SigridApiAltaClient(SigridAltaPort):
         base_url: str,
         function_key: str,
         database: str,
-        usuario: str,
         timeout_s: float = 60.0,
         timeout_grabacion_s: float = TIMEOUT_GRABACION_S,
         intentos: int = INTENTOS_POR_DEFECTO,
@@ -113,7 +116,6 @@ class SigridApiAltaClient(SigridAltaPort):
         self._base_url = base_url.rstrip("/")
         self._clave = function_key
         self._database = database
-        self._usuario = usuario
         self._timeout = float(timeout_s)
         self._timeout_grabacion = float(timeout_grabacion_s)
         self._intentos = max(1, int(intentos))
@@ -201,6 +203,11 @@ class SigridApiAltaClient(SigridAltaPort):
     def existe_concepto(self, ide: int) -> bool:
         return bool(self._leer(SQL_EXISTE_CONCEPTO, [int(ide)], "f053-anulacion", 2))
 
+    def buscar_usuario(self, cod: str) -> str | None:
+        filas = self._leer(SQL_BUSCAR_USUARIO, [cod], "f053-usuario", 2)
+        encontrado = str(filas[0].get("cod") or "").strip() if filas else ""
+        return encontrado or None
+
     # ------------------------------------------------------------------ #
     # sigrid/albaran
     # ------------------------------------------------------------------ #
@@ -230,7 +237,9 @@ class SigridApiAltaClient(SigridAltaPort):
     # ------------------------------------------------------------------ #
     # concepto-grafico
     # ------------------------------------------------------------------ #
-    def adjuntar_pdf(self, con_ide: int, nombre: str, contenido: bytes) -> ResultadoAdjunto:
+    def adjuntar_pdf(
+        self, con_ide: int, nombre: str, contenido: bytes, *, usu: str,
+    ) -> ResultadoAdjunto:
         cuerpo = {
             "database": self._database,
             "conide": int(con_ide),
@@ -238,7 +247,7 @@ class SigridApiAltaClient(SigridAltaPort):
             "gratipide": GRATIPIDE_SIN_CLASE,
             "res": nombre[:MAX_RES],
             "nom": nombre[:MAX_NOM],
-            "usu": self._usuario,
+            "usu": usu,
             "contenido_base64": base64.b64encode(contenido).decode("ascii"),
             "sha256": hashlib.sha256(contenido).hexdigest(),
             "commit": True,
@@ -311,7 +320,6 @@ def construir_desde_settings(settings: Any, *, transport: httpx.BaseTransport | 
         base_url=settings.sigrid_api_base_url,
         function_key=settings.sigrid_api_function_key,
         database=settings.sigrid_api_database,
-        usuario=settings.usuario,
         timeout_s=settings.sigrid_api_timeout_s,
         transport=transport,
     )

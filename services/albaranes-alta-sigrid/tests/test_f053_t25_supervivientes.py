@@ -121,7 +121,7 @@ def test_f053_t25_r23_detalle_del_adjunto_con_codigo():
 
 def test_f053_t25_r23_excepcion_del_adjunto_recorta_el_mensaje_a_200():
     class _Largo(SigridFalso):
-        def adjuntar_pdf(self, con_ide, nombre, contenido):
+        def adjuntar_pdf(self, con_ide, nombre, contenido, *, usu):
             raise RuntimeError("x" * 300)
 
     detalle = _registrado_con_adjunto_que_falla(_Largo())

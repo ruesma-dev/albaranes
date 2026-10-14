@@ -336,7 +336,9 @@ class AltaSigridService:
         nombre = f"{PREFIJO_REFERENCIA}{document_id}.pdf"
         try:
             contenido = self._pdf.descargar(datos)
-            adjunto = self._sigrid.adjuntar_pdf(resultado.sigrid_con_ide, nombre, contenido)
+            adjunto = self._sigrid.adjuntar_pdf(
+                resultado.sigrid_con_ide, nombre, contenido, usu=self._config.usu,
+            )
         except Exception as exc:  # noqa: BLE001 — el adjunto nunca tumba el alta
             logger.warning("%s document_id=%s adjunto fallido: %s", _LOG, document_id,
                            type(exc).__name__)

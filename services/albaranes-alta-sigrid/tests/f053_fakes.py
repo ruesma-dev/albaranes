@@ -119,6 +119,8 @@ class SigridFalso(SigridAltaPort):
     previa: RespuestaAlta | ErrorAlta | None = None
     grabacion: RespuestaAlta | ErrorAlta | None = None
     existe: bool = True
+    #: R47: logins de ``dbo.usu`` (clave sin distinguir mayúsculas → ``cod``).
+    usuarios: dict[str, str] = field(default_factory=lambda: {"ana": "ana"})
     adjunto: ResultadoAdjunto = field(default_factory=lambda: ResultadoAdjunto(True, gra_ide=555))
     llamadas: list[tuple] = field(default_factory=list)
     fallar_en: set[str] = field(default_factory=set)
@@ -135,14 +137,20 @@ class SigridFalso(SigridAltaPort):
             raise Explota("sql/read caído")
         return self.existe
 
+    def buscar_usuario(self, cod):
+        self.llamadas.append(("buscar_usuario", cod))
+        if "buscar_usuario" in self.fallar_en:
+            raise Explota("sql/read caído")
+        return self.usuarios.get(cod.lower())
+
     def alta_albaran(self, peticion: PeticionAlbaran, commit: bool):
         self.llamadas.append(("alta_albaran", peticion, commit))
         if ("grabacion" if commit else "previa") in self.fallar_en:
             raise Explota("fallo inesperado en la llamada")
         return self.grabacion if commit else self.previa
 
-    def adjuntar_pdf(self, con_ide, nombre, contenido):
-        self.llamadas.append(("adjuntar_pdf", con_ide, nombre, contenido))
+    def adjuntar_pdf(self, con_ide, nombre, contenido, *, usu):
+        self.llamadas.append(("adjuntar_pdf", con_ide, nombre, contenido, usu))
         if "adjuntar_pdf" in self.fallar_en:
             raise Explota("concepto-grafico caído")
         return self.adjunto

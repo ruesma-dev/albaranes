@@ -133,13 +133,13 @@ def test_f053_t25_fila_mas_corta_que_las_columnas_no_rompe():
 @pytest.mark.parametrize("fallo", [httpx.ConnectTimeout("t"), httpx.ConnectError("c")])
 def test_f053_t25_adjunto_caido_no_esta_colgado(fallo):
     servidor = Servidor(fallo, fallo, fallo)
-    adjunto = _cliente(servidor).adjuntar_pdf(9, "ALB-d.pdf", b"%PDF")
+    adjunto = _cliente(servidor).adjuntar_pdf(9, "ALB-d.pdf", b"%PDF", usu="U")
     assert adjunto.colgado is False and adjunto.codigo == type(fallo).__name__
 
 
 def test_f053_t25_adjunto_rechazado_trae_el_error_recortado():
     servidor = Servidor(_json(400, {"error": "e" * 300, "details": {"codigo": "usuario_no_valido"}}))
-    adjunto = _cliente(servidor).adjuntar_pdf(9, "ALB-d.pdf", b"%PDF")
+    adjunto = _cliente(servidor).adjuntar_pdf(9, "ALB-d.pdf", b"%PDF", usu="U")
     assert adjunto.colgado is False and adjunto.codigo == "usuario_no_valido"
     assert adjunto.mensaje == "e" * 200
 

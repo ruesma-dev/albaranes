@@ -183,7 +183,8 @@ def test_f053_r22_adjunta_el_pdf_al_registrado():
     repo, doc, resultado = _procesar(sigrid, pdf=pdf)
     assert resultado.estado is EstadoAlta.REGISTRADO
     adjuntos = [c for c in sigrid.llamadas if c[0] == "adjuntar_pdf"]
-    assert adjuntos == [("adjuntar_pdf", 9123461, f"ALB-{DOCUMENT_ID}.pdf", b"%PDF-1.7 de mentira")]
+    assert adjuntos == [("adjuntar_pdf", 9123461, f"ALB-{DOCUMENT_ID}.pdf", b"%PDF-1.7 de mentira",
+                         "USU_ALTA")]
     guardado = repo.ultimo(doc)
     assert guardado.estado is EstadoAlta.REGISTRADO
     assert guardado.adjunto_estado is AdjuntoEstado.COLGADO and guardado.sigrid_gra_ide == 777

@@ -77,7 +77,7 @@ def _json(status: int, cuerpo) -> httpx.Response:
 
 def _cliente(servidor: Servidor, **extra) -> SigridApiAltaClient:
     return SigridApiAltaClient(
-        base_url=BASE + "/", function_key=CLAVE, database="ruesma", usuario="USU_ALTA",
+        base_url=BASE + "/", function_key=CLAVE, database="ruesma",
         transport=httpx.MockTransport(servidor), espera_base_s=0, **extra,
     )
 
@@ -305,7 +305,7 @@ ADJUNTO_COLGADO = _respuesta_adjunto(committed=True, idempotente=False, ide_docu
 def test_f053_r22_adjunto_cuerpo_exacto_y_colgado():
     servidor = Servidor(_json(200, _respuesta_adjunto(
         committed=True, idempotente=False, ide_documental=880011, ide_negocio=4455)))
-    resultado = _cliente(servidor).adjuntar_pdf(9123461, "ALB-d1.pdf", PDF)
+    resultado = _cliente(servidor).adjuntar_pdf(9123461, "ALB-d1.pdf", PDF, usu="USU_ALTA")
     # Se guarda el gra de NEGOCIO, no el documental.
     assert resultado.colgado is True and resultado.gra_ide == 4455
     (peticion,) = servidor.peticiones
@@ -322,7 +322,7 @@ def test_f053_r22_adjunto_cuerpo_exacto_y_colgado():
 def test_f053_r22_adjunto_idempotente_cuenta_como_colgado():
     servidor = Servidor(_json(200, _respuesta_adjunto(
         committed=False, idempotente=True, ide_documental=None, ide_negocio=7)))
-    resultado = _cliente(servidor).adjuntar_pdf(1, "a.pdf", PDF)
+    resultado = _cliente(servidor).adjuntar_pdf(1, "a.pdf", PDF, usu="U")
     assert resultado.colgado is True and resultado.gra_ide == 7
 
 
@@ -333,28 +333,28 @@ def test_f053_r22_adjunto_idempotente_cuenta_como_colgado():
     {"ok": False, "committed": True},
 ])
 def test_f053_r22_adjunto_sin_escribir_no_esta_colgado(cuerpo):
-    assert _cliente(Servidor(_json(200, cuerpo))).adjuntar_pdf(1, "a.pdf", PDF).colgado is False
+    assert _cliente(Servidor(_json(200, cuerpo))).adjuntar_pdf(1, "a.pdf", PDF, usu="U").colgado is False
 
 
 def test_f053_r22_adjunto_rechazado():
     servidor = Servidor(_json(400, {"ok": False, "error": "usuario", "details": {
         "codigo": "usuario_no_valido"}}))
-    resultado = _cliente(servidor).adjuntar_pdf(1, "a.pdf", PDF)
+    resultado = _cliente(servidor).adjuntar_pdf(1, "a.pdf", PDF, usu="U")
     assert resultado.colgado is False and resultado.codigo == "usuario_no_valido"
     assert len(servidor.peticiones) == 1
 
 
 def test_f053_r24_adjunto_reintenta_ante_5xx_y_luego_se_rinde():
     servidor = Servidor(_json(500, {}), _json(200, ADJUNTO_COLGADO))
-    assert _cliente(servidor).adjuntar_pdf(1, "a.pdf", PDF).colgado is True
+    assert _cliente(servidor).adjuntar_pdf(1, "a.pdf", PDF, usu="U").colgado is True
     agotado = Servidor(_json(500, {}), _json(500, {}), _json(500, {}))
-    resultado = _cliente(agotado).adjuntar_pdf(1, "a.pdf", PDF)
+    resultado = _cliente(agotado).adjuntar_pdf(1, "a.pdf", PDF, usu="U")
     assert resultado.colgado is False and len(agotado.peticiones) == 3
 
 
 def test_f053_r22_nombre_largo_recortado_en_res_y_nom():
     servidor = Servidor(_json(200, ADJUNTO_COLGADO))
-    _cliente(servidor).adjuntar_pdf(1, "N" * 300 + ".pdf", PDF)
+    _cliente(servidor).adjuntar_pdf(1, "N" * 300 + ".pdf", PDF, usu="U")
     cuerpo = servidor.cuerpos()[0]
     assert len(cuerpo["res"]) == 48 and len(cuerpo["nom"]) == 255
 
@@ -371,7 +371,7 @@ def test_f053_r33_solo_las_tres_rutas_permitidas():
     cliente.existe_concepto(1)
     cliente.alta_albaran(PETICION, False)
     cliente.alta_albaran(PETICION, True)
-    cliente.adjuntar_pdf(1, "a.pdf", PDF)
+    cliente.adjuntar_pdf(1, "a.pdf", PDF, usu="U")
     assert set(servidor.rutas()) == {
         "/api/sql/read", "/api/sigrid/albaran", "/api/sigrid/concepto-grafico",
     }
@@ -390,7 +390,7 @@ def test_f053_r35_la_clave_y_el_pdf_nunca_en_los_logs(caplog):
     cliente.alta_albaran(PETICION, True)
     cliente.alta_albaran(PETICION, False)
     cliente.buscar_albaranes("B1", "N", "ALB-d")
-    cliente.adjuntar_pdf(1, "a.pdf", PDF)
+    cliente.adjuntar_pdf(1, "a.pdf", PDF, usu="U")
     texto = caplog.text + repr(cliente)
     assert CLAVE not in texto
     assert base64.b64encode(PDF).decode("ascii") not in texto and "%PDF" not in texto
@@ -398,4 +398,4 @@ def test_f053_r35_la_clave_y_el_pdf_nunca_en_los_logs(caplog):
 
 def test_f053_r35_sin_clave_no_se_construye():
     with pytest.raises(ValueError):
-        SigridApiAltaClient(base_url=BASE, function_key="", database="ruesma", usuario="U")
+        SigridApiAltaClient(base_url=BASE, function_key="", database="ruesma")
