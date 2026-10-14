@@ -114,3 +114,45 @@ def test_f070_r11_lo_que_no_encaja_va_tal_cual_recortado(
 def test_f070_r11_sin_obra_no_consulta(sigrid_api, consulta, vacio):
     assert _consultar(consulta, vacio) == []
     assert sigrid_api.parametros == []
+
+
+# ================================================================ #
+# R12 — guardar la cabecera guarda la obra canonizada
+# ================================================================ #
+def _obra_guardada(monkeypatch, obra_codigo):
+    from f065_bbdd import DOC, construir, repositorio
+    from sqlalchemy import text
+    from sqlalchemy.orm import Session
+
+    from domain.models.review_models import MergeDocumentUpdatePayload
+
+    motor = construir()
+    repo = repositorio(motor)
+    monkeypatch.setattr(repo, "get_document_detail", lambda document_id: "detalle")
+    repo.update_document_y_transicion(
+        document_id=DOC,
+        payload=MergeDocumentUpdatePayload(obra_codigo=obra_codigo, numero_albaran="A-1"),
+    )
+    with Session(motor) as sesion:
+        return sesion.execute(
+            text("SELECT obra_codigo FROM albaran_documents_merge WHERE id = :id"),
+            {"id": DOC},
+        ).scalar_one()
+
+
+@pytest.mark.parametrize(
+    ("enviado", "guardado"),
+    [
+        ("686", "0686"),
+        (" 686 ", "0686"),
+        ("0686", "0686"),
+        ("var", "VAR"),
+        (" Postv2 ", "POSTV2"),
+        (" GG ", "GG"),       # no encaja: recortado, como hoy
+        ("1234", "1234"),
+        ("   ", None),
+        (None, None),
+    ],
+)
+def test_f070_r12_guardar_cabecera_guarda_la_obra_canonica(monkeypatch, enviado, guardado):
+    assert _obra_guardada(monkeypatch, enviado) == guardado

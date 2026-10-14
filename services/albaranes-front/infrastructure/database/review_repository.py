@@ -24,6 +24,7 @@ from sqlalchemy import (
 
 from ruesma_comun.alta_sigrid import ESTADOS_ALTA_BLOQUEANTES, es_linea_vinculada
 from ruesma_comun.importes import clasificar_descuento, importe_de_linea
+from ruesma_comun.obras import canonizar_codigo_obra
 from ruesma_comun.valoracion import esta_valorado
 
 # F-036: la comparación numérica vive en el dominio (`review_models`),
@@ -3860,7 +3861,11 @@ class AlbaranReviewRepository:
             document.fecha = self._clean_text(payload.fecha)
             document.numero_albaran = self._clean_text(payload.numero_albaran)
             document.forma_pago = self._clean_text(payload.forma_pago)
-            document.obra_codigo = self._clean_text(payload.obra_codigo)
+            # F-070 · R12: obra canónica (``686`` ⇒ ``0686``); lo que no
+            # encaja, recortado como hoy.
+            document.obra_codigo = canonizar_codigo_obra(
+                self._clean_text(payload.obra_codigo),
+            )
             document.obra_nombre = self._clean_text(payload.obra_nombre)
             document.obra_direccion = self._clean_text(payload.obra_direccion)
             document.review_notes = self._clean_text(payload.review_notes)

@@ -115,3 +115,19 @@ FAILED tests/test_f070_obra_canonica.py::test_f070_r10_consulta_con_la_obra_cano
 ```
 (los 27 que pasan fijan lo que no cambia: `GG`, `gg`, `1234`, `0578-B` tal cual recortados; vacío o `None` sin
 petición; `0686` igual). GREEN: **39 passed**.
+
+### T7 · sv4: `update_document_y_transicion` guarda la obra canonizada (R12)
+
+Repositorio real sobre el SQLite de `f065_bbdd` (patrón de `test_f065_f1_cabecera.py`). RED —
+`.venv\Scripts\python -m pytest -q tests/test_f070_obra_canonica.py -k r12` con el código de `dev`:
+```
+E       AssertionError: assert '686' == '0686'
+E       AssertionError: assert 'var' == 'VAR'
+E       AssertionError: assert 'Postv2' == 'POSTV2'
+FAILED tests/test_f070_obra_canonica.py::test_f070_r12_guardar_cabecera_guarda_la_obra_canonica[686-0686]
+FAILED tests/test_f070_obra_canonica.py::test_f070_r12_guardar_cabecera_guarda_la_obra_canonica[ 686 -0686]
+FAILED tests/test_f070_obra_canonica.py::test_f070_r12_guardar_cabecera_guarda_la_obra_canonica[var-VAR]
+FAILED tests/test_f070_obra_canonica.py::test_f070_r12_guardar_cabecera_guarda_la_obra_canonica[ Postv2 -POSTV2]
+4 failed, 5 passed, 39 deselected in 2.82s
+```
+GREEN: **48 passed** (fichero entero).
