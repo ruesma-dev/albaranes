@@ -31,7 +31,7 @@ sv9, la lee sv4). Producto de las líneas sin vincular: columna
 | `ALTA_SIGRID_ESPERA_INCIERTO_MIN` | 15 | antes, un `en_curso`/`incierto` no se retoma |
 | `ALTA_SIGRID_TOLERANCIA_EUR` | 0,05 | por línea, al comparar la previa |
 | `ALTA_SIGRID_AVISOS_BLOQUEANTES` | `producto_sin_historico` | CSV |
-| `ALTA_SIGRID_USUARIO` | — | login de `dbo.usu` (T0c) |
+| `ALTA_SIGRID_USUARIO_RESPALDO` | — (sin defecto; `pgris` en `infra/00_capps_vars.ps1`) | login de `dbo.usu` cuando quien aprobó no casa con uno (v8, R47); vacía = esas altas a `error` (R48) |
 | `ALTA_SIGRID_EMPIDE` | vacía | vacía = defecto de sigrid-api |
 | `ALTA_SIGRID_PRODUCTO_POR_DEFECTO` | `{"alquiler_maquinaria":"QA9999","medios_auxiliares":"XA9999","*":"MA9999"}` | mal formado = no arranca (R44); mismo valor en sv4 |
 

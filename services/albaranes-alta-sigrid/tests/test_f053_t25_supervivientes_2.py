@@ -190,16 +190,16 @@ def test_f053_t25_o1_redondeo_al_minuto(monkeypatch, tmp_path):
     assert _visibilidad_con(monkeypatch, tmp_path, SIGRID_API_TIMEOUT_S="71") == 1860
 
 
-@pytest.mark.parametrize("desde, usuario, aviso_desde, aviso_usuario", [
+@pytest.mark.parametrize("desde, respaldo, aviso_desde, aviso_usuario", [
     ("", "", True, False),
     ("", "USU", True, False),
     ("2026-10-01T00:00:00Z", "", False, True),
     ("2026-10-01T00:00:00Z", "USU", False, False),
 ])
-def test_f053_t25_avisos_de_arranque(monkeypatch, tmp_path, caplog, desde, usuario,
+def test_f053_t25_avisos_de_arranque(monkeypatch, tmp_path, caplog, desde, respaldo,
                                      aviso_desde, aviso_usuario):
     ajustes = _settings(monkeypatch, LOG_DIR=str(tmp_path))
-    ajustes = ajustes.model_copy(update={"alta_sigrid_desde_utc": desde, "usuario": usuario})
+    ajustes = ajustes.model_copy(update={"alta_sigrid_desde_utc": desde, "usuario_respaldo": respaldo})
     monkeypatch.setattr(main_worker, "_cargar_entorno", lambda: None)
     monkeypatch.setattr(main_worker, "Settings", lambda: ajustes)
     monkeypatch.setattr(main_worker, "configure_logging", lambda *a, **k: None)
@@ -207,7 +207,7 @@ def test_f053_t25_avisos_de_arranque(monkeypatch, tmp_path, caplog, desde, usuar
     caplog.set_level(logging.INFO)
     assert main_worker.main() == 0
     assert ("ALTA_SIGRID_DESDE_UTC vacía" in caplog.text) is aviso_desde
-    assert ("ALTA_SIGRID_USUARIO vacío" in caplog.text) is aviso_usuario
+    assert ("ALTA_SIGRID_USUARIO_RESPALDO vacío" in caplog.text) is aviso_usuario
 
 
 def test_f053_t25_vuelca_json_valido():

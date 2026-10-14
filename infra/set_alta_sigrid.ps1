@@ -2,7 +2,7 @@
 # F-053: pone EN CALIENTE los ajustes del alta en Sigrid en sv4 Y sv9 con
 # LOS MISMOS valores (design §7), leidos de un solo sitio: el bloque F-053 de
 # 00_capps_vars.ps1 (ALTA_SIGRID_DESDE_UTC, _ESPERA_INCIERTO_MIN y
-# _PRODUCTO_POR_DEFECTO; en sv9 tambien _USUARIO y _EMPIDE). NO lo ejecuta
+# _PRODUCTO_POR_DEFECTO; en sv9 tambien _USUARIO_RESPALDO y _EMPIDE). NO lo ejecuta
 # ningun agente.
 #
 #   . .\00_vars.ps1
@@ -27,7 +27,7 @@ $Sv9 = [string]$Global:APPS["sv9"]
 $Sv4 = [string]$Global:APPS["sv4"]
 
 $comun = @(AltaSigridEnvComun)
-$soloSv9 = @("ALTA_SIGRID_USUARIO=$($Global:ALTA_SIGRID_USUARIO)",
+$soloSv9 = @("ALTA_SIGRID_USUARIO_RESPALDO=$($Global:ALTA_SIGRID_USUARIO_RESPALDO)",
              "ALTA_SIGRID_EMPIDE=$($Global:ALTA_SIGRID_EMPIDE)")
 if (($comun + $soloSv9) -match "^ALTA_SIGRID_COMMIT") { throw "set_alta_sigrid.ps1 no toca ALTA_SIGRID_COMMIT." }
 
@@ -51,6 +51,9 @@ foreach ($nombre in @("ALTA_SIGRID_DESDE_UTC", "ALTA_SIGRID_ESPERA_INCIERTO_MIN"
     Write-Host ("  {0,-34} sv9='{1}'  sv4='{2}'  {3}" -f $nombre, $v9, $v4, $marca)
     if ($v9 -ne $v4) { $fallos += "$nombre distinto" }
 }
+$respaldo = Leer $Sv9 "ALTA_SIGRID_USUARIO_RESPALDO"
+Write-Host "  ALTA_SIGRID_USUARIO_RESPALDO (sv9): '$respaldo'"
+if (-not $respaldo) { $fallos += "ALTA_SIGRID_USUARIO_RESPALDO vacio en sv9" }
 $commit = Leer $Sv9 "ALTA_SIGRID_COMMIT"
 $color = if ($commit -eq "true") { "Red" } else { "Green" }
 Write-Host "  ALTA_SIGRID_COMMIT (sv9, no se toca): '$commit'" -ForegroundColor $color
