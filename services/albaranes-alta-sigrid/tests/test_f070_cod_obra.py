@@ -114,3 +114,72 @@ def test_f070_r15_control_la_demostracion_distingue_codigos():
 
     cab = datos(obra_codigo="686").cabecera
     assert _cod_obra(cab) != _texto(cab.obra_codigo)
+
+
+# ================================================================ #
+# RM5 (pasada 2, CR1) · el superviviente #17 de la campaña a mano, fabricado
+# desde el módulo REAL (patrón de ``test_f053_v8_equivalentes.py``)
+# ================================================================ #
+ORIGINAL_17 = "    obra = _cod_obra(cab)\n"
+MUTADO_17 = "    obra = _texto(cab.obra_codigo)\n"
+CONTROL_17 = '    obra = (cab.obra_codigo or "")\n'
+
+
+def _variante_validador(*cambios: tuple[str, str]):
+    """Módulo real de ``validador_alta`` (fuente normalizada a la original) con
+    los cambios exactos aplicados."""
+    import sys
+    import types
+    from pathlib import Path
+
+    from domain.services import validador_alta
+
+    fuente = Path(validador_alta.__file__).read_text(encoding="utf-8").replace("\r\n", "\n")
+    fuente = fuente.replace(MUTADO_17, ORIGINAL_17)
+    assert fuente.count(ORIGINAL_17) == 1, "la línea cambió: rehacer la demostración"
+    for de, a in cambios:
+        assert fuente.count(de) == 1, de
+        fuente = fuente.replace(de, a)
+    nombre = f"{validador_alta.__name__}__variante_{abs(hash(fuente))}"
+    modulo = types.ModuleType(nombre)
+    modulo.__file__ = validador_alta.__file__
+    sys.modules[nombre] = modulo
+    try:
+        exec(compile(fuente, validador_alta.__file__, "exec"), modulo.__dict__)  # noqa: S102
+    finally:
+        sys.modules.pop(nombre, None)
+    return modulo
+
+
+def _obras_de_prueba() -> list:
+    import random
+
+    azar = random.Random(20261015)
+    alfabeto = "0123456789VARPOSTvarpost -B\t"
+    obras = [None, "", " ", "\t"]
+    obras += [str(n) for n in range(10000)] + [f"{n:04d}" for n in range(1000)]
+    obras += [f"{pre}{c}{suf}" for c in ("VAR", "var", "POSTV2", "Postv2", "POSTV", "GG")
+              for pre in ("", " ", "  ") for suf in ("", " ", "\t")]
+    obras += ["9" * n for n in range(20, 30)] + [" " + "9" * MAX_CODIGO + " "]
+    obras += ["".join(azar.choice(alfabeto) for _ in range(azar.randint(0, 30))) for _ in range(5000)]
+    return obras
+
+
+def _motivos(modulo, obras) -> list:
+    return [modulo._motivos_cabecera(datos(vinculada(1), obra_codigo=o)) for o in obras]
+
+
+def test_f070_rm5_superviviente_17_equivalente_desde_el_modulo_real():
+    obras = _obras_de_prueba()
+    original = _variante_validador()
+    mutado = _variante_validador((ORIGINAL_17, MUTADO_17))
+    assert len(obras) > 16000
+    assert _motivos(mutado, obras) == _motivos(original, obras)
+
+
+def test_f070_rm5_control_la_comparacion_no_es_ciega():
+    """Control no equivalente (sin recortar): la misma comparación lo detecta."""
+    obras = _obras_de_prueba()
+    original = _variante_validador()
+    control = _variante_validador((ORIGINAL_17, CONTROL_17))
+    assert _motivos(control, obras) != _motivos(original, obras)
