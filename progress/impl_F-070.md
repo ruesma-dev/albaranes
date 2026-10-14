@@ -47,3 +47,18 @@ RED — en `dev` no hay literales que cazar, así que se planta uno temporal (`_
 E       AssertionError: VAR/POSTV2 repetidos fuera de ruesma_comun/obras/codigo.py: {'albaranes-front\infrastructure\sigrid\sigrid_lookup_client.py': [419]}. Usa CODIGOS_OBRA_SIN_CERO.
 ```
 Fichero restaurado (`git status` limpio en sv4). GREEN: **2 passed, 60 deselected**.
+
+### T3 · sv3: `AlbaranNormalizer.normalize_obra_codigo` en `normalize_header` (R6, R9)
+
+Suites de sv3 con `PYTHONPATH=…/albaranes-F-070/services/albaranes-comun` (§0). RED —
+`python -m pytest -q tests/test_f070_obra_canonica.py -k "r6 or r9"` con el código de `dev`:
+```
+E       AttributeError: type object 'AlbaranNormalizer' has no attribute 'normalize_obra_codigo'
+E       AssertionError: assert '686' == '0686'
+FAILED tests/test_f070_obra_canonica.py::test_f070_r6_normalize_header_sella_la_obra_canonica
+FAILED tests/test_f070_obra_canonica.py::test_f070_r6_pipeline_sella_0686_en_el_merge_y_en_cada_proveedor
+FAILED tests/test_f070_obra_canonica.py::test_f070_r9_el_normalizador_solo_cambia_la_obra
+14 failed, 4 passed in 0.82s
+```
+(los 4 que ya pasaban fijan lo que no cambia: VAR ya salía en mayúsculas, `1234`/`GG` como hoy, la red descarta `1234`
+y no reescribe un `686` guardado). GREEN: **18 passed**; suite de sv3 entera **686 passed** (9,8 s).
