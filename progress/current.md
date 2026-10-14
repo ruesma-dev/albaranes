@@ -1,6 +1,56 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-053 · `in_progress` · v8 (Bloque H) IMPLEMENTADA (2026-10-14), pendiente de review.** T41–T50 y T52 hechas en
+`feature/F-053-alta-sigrid` (`usu` del alta = login de quien aprobó o respaldo `pgris`; R49 la cabecera de Easy Auth
+manda; «Reintentar adjunto»; R14 normalizado). Informe: `progress/impl_F-053_v8.md`; mutación:
+`progress/mutacion_F-053_v8.md` (64 mutantes, 62 muertos, 2 equivalentes). `azure-apps` `77c6bf6` (sin push).
+Para el líder: review; propuesta de filas de consumo del contrato para la sesión de sigrid-api en
+`progress/propuestas_a_sigrid_api_F-053.md` §C (en sigrid-api no se ha tocado nada). Falta la MANUAL **T51** (abajo),
+tras APPROVED y fusión. El bloque «F-053 · `blocked`» de más abajo es anterior a la v8.
+
+### F-053 v8 · MANUAL T51 del humano (comandos exactos, PowerShell)
+
+Cuándo: tras el APPROVED del reviewer, la fusión de `feature/F-053-alta-sigrid` en `dev` y `init.sh` en verde en el
+árbol principal. Orden de design §8: sv6 y sv3 → sv9 → sv4, **con DESDE vacía**; DESDE solo después (R6 ignora lo
+aprobado antes de DESDE, U3). Nadie toca `ALTA_SIGRID_COMMIT` (sigue `false`: simulación).
+
+1. Desplegar (misma consola; `Set-DeployTag` fija el tag por fecha):
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+. .\00_vars.ps1
+. .\00_capps_vars.ps1
+Set-DeployTag
+.\deploy.ps1 -Only sv6,sv3
+.\deploy.ps1 -Only sv9
+.\deploy.ps1 -Only sv4
+.\check_deploy.ps1
+```
+   `ca-sv9-alta-sigrid` ya existe (T0c); si no existiera, en vez de `.\deploy.ps1 -Only sv9`:
+   `.\build_images.ps1 -Only sv9` y `.\create_capps_sv9.ps1`. `deploy.ps1` enseña `ALTA_SIGRID_COMMIT` de sv9: debe
+   decir `simulacion`.
+2. Encender en simulación: en `infra\00_capps_vars.ps1` pon `$Global:ALTA_SIGRID_DESDE_UTC` a la hora UTC de ahora
+   (p. ej. `"2026-10-20T08:00:00Z"`; `$Global:ALTA_SIGRID_USUARIO_RESPALDO` ya es `"pgris"`) y, en la misma consola:
+```powershell
+. .\00_capps_vars.ps1
+.\set_alta_sigrid.ps1
+```
+   VERDE si la comprobación final dice `OK` en las tres variables comunes, `ALTA_SIGRID_USUARIO_RESPALDO (sv9):
+   'pgris'`, `ALTA_SIGRID_COMMIT (sv9, no se toca): 'false'` y termina en «Ajustes del alta aplicados a sv9 y sv4.».
+3. En `https://<sv4>` con tu usuario: aprueba UN albarán valorado desde la ficha («Guardar y aprobar») y OTRO desde
+   el listado («Aprobar»). Espera unos segundos y refresca las dos fichas.
+4. Lectura (solo lectura, BBDD `albaranes` de Azure, con la URL que uses para `psql`):
+```powershell
+psql "$env:ALBARANES_DB_URL" -c "SET default_transaction_read_only = on; SELECT document_id, estado, modo, approved_by, peticion_json::json->>'usu' AS usu FROM albaran_altas_sigrid ORDER BY creado_at_utc DESC LIMIT 5;"
+```
+   VERDE si en las dos filas `approved_by` = tu correo (`pgris@ruesma.es`), `usu` = `pgris`, `modo` = `simulacion`,
+   y el panel «Alta en Sigrid» de las dos fichas dice «Usuario de Sigrid: pgris» **sin** «(respaldo)». ROJO si
+   `approved_by` sale vacío o con `DEFAULT_REVIEWER` (la ficha no leyó la cabecera, R49), si `usu` no es `pgris`, o
+   si el estado es `error` con `usuario_no_resuelto` (lectura de `dbo.usu` caída o respaldo sin poner).
+5. Opcional (riesgo 1 de la v8): `SELECT approved_by, COUNT(*) FROM albaran_documents_merge WHERE approved GROUP BY 1;`
+   (misma forma, solo lectura) y mirar si la parte antes de la @ de cada uno es un login de Sigrid; los que no, caen al
+   respaldo hasta F-069.
+
 **F-065 · CERRADA (`done`, 2026-10-13)**: fases 1, 2, 3 y 3 bis (pasadas 1–5) APROBADAS, en `dev` (`53515de`) con
 `init.sh` en verde (raíz 1083, sv4 1287) y sv4 desplegado (`r20261013-1836`). MANUAL T19, T27 y T35 hechas por el
 humano (T19 punto 6, obra sin partidas, solo con tests). Resumen en `progress/history.md`. Lo aplazado: **F-068**
