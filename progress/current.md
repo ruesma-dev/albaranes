@@ -13,6 +13,23 @@ del árbol principal (`dev`); con la comun de la rama, `ENTORNO LISTO` (detalle 
 humano: T0 (opcional) y T13 (despliegue sv4 → sv3 tras fusionar).
 Orden de despliegue: sv4 → sv3; sv9 con F-053.
 
+### F-070 · MANUAL T13 del humano (tras el APPROVED, la fusión en `dev` e `init.sh` en verde en el árbol principal)
+
+Desplegar sv4 y después sv3 (design §6; sin DDL, cualquier orden vale). sv9 NO: sale con F-053 desde un `dev` con F-070.
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+. .\00_vars.ps1
+. .\00_capps_vars.ps1
+Set-DeployTag
+.\deploy.ps1 -Only sv4
+.\check_deploy.ps1
+.\deploy.ps1 -Only sv3
+.\check_deploy.ps1
+```
+VERDE si `check_deploy.ps1` muestra sv4 y sv3 con el tag recién construido y réplicas arriba, y en `https://<sv4>` un
+albarán pendiente de HERMANOS SAN JUAN (merge con `686`) ofrece en el combo de partida las partidas de la 0686 (no
+solo «Almacén») y «Solo volver a buscar» encuentra CTSU24/0524. ROJO si el combo sigue con solo «Almacén».
+
 ### F-070 · MANUAL T0 del humano (opcional, SOLO LECTURA, no bloquea)
 
 Medir en la BBDD `albaranes` de Azure los merges activos con obra de 3 cifras y de dónde salió su obra. Sesión con
