@@ -77,6 +77,16 @@ def test_f053_r30_reintentar_adjunto_con_desde_vacia_no_publica():
     assert orq.pedidas == []
 
 
+def test_f053_r30_reintentar_adjunto_con_desde_vacia_no_lee_nada():
+    """R3 y T50 (mutante 54): con DESDE vacía, sv4 no lee ni el merge ni el alta."""
+    class _RepoQueNoSeLee:
+        def __getattr__(self, nombre):
+            raise AssertionError(f"con DESDE vacía no se llama a {nombre}")
+
+    servicio = _servicio_alta(_RepoQueNoSeLee(), _Orq(), ConfigAltaSigrid())
+    assert servicio.puede_reintentar_adjunto(DOC) is False
+
+
 def test_f053_r30_reintentar_adjunto_que_no_se_publica_lo_dice():
     servicio = _servicio_alta(_RepoAlta(_registrado()), _Orq(publica=False))
     assert servicio.reintentar_adjunto_sigrid(document_id=DOC, solicitado_por="ana") \

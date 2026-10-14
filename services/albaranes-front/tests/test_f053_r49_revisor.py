@@ -74,6 +74,7 @@ def _aprobar_ficha(cliente, *, cabecera=None, cuerpo=None):
     ("   ", "pepe", "pepe"),                                  # cabecera en blanco = no llega
     (None, "", DEFECTO),                                      # local sin nada
     (None, None, DEFECTO),
+    (None, "   ", DEFECTO),                                   # T50 (mutante 38): solo espacios
 ])
 def test_f053_r49_listado(monkeypatch, cabecera, formulario, esperado):
     cliente, repo, orq = _cliente(monkeypatch)
@@ -94,6 +95,7 @@ def test_f053_r49_listado(monkeypatch, cabecera, formulario, esperado):
     ("", "pepe@ruesma.es", "pepe@ruesma.es"),
     (None, None, DEFECTO),                                    # local sin nada
     (None, "", DEFECTO),
+    (None, "   ", DEFECTO),                                   # T50 (mutante 38): solo espacios
 ])
 def test_f053_r49_ficha(monkeypatch, cabecera, cuerpo, esperado):
     cliente, repo, orq = _cliente(monkeypatch)

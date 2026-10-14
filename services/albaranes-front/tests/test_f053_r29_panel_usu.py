@@ -36,6 +36,7 @@ BOTON = r'<form[^>]*action="/documents/[^"]+/alta-sigrid/reintentar-adjunto"'
     ("reviewer", "pgris", True),             # DEFAULT_REVIEWER: no es correo
     (None, "pgris", True),
     ("", "pgris", True),
+    ("pgris", "pgris", True),                # T50 (mutante 57): sin @ no hay parte local
 ])
 def test_f053_r29_usu_y_respaldo(approved_by, usu, respaldo):
     alta = AltaSigridVista(estado="simulado", approved_by=approved_by,
@@ -44,10 +45,18 @@ def test_f053_r29_usu_y_respaldo(approved_by, usu, respaldo):
     assert alta.usu_respaldo is respaldo
 
 
-@pytest.mark.parametrize("peticion", [None, {}, {"usu": ""}, {"lineas": []}])
+@pytest.mark.parametrize("peticion", [None, {}, {"usu": ""}, {"usu": "   "}, {"lineas": []}])
 def test_f053_r29_sin_peticion_no_hay_usu(peticion):
     alta = AltaSigridVista(estado="no_admitido", approved_by="x@ruesma.es", peticion=peticion)
     assert alta.usu is None
+    assert alta.usu_respaldo is False
+
+
+def test_f053_r29_usu_recortado():
+    """T50 (mutante 59): el ``usu`` se enseña y se compara sin espacios."""
+    alta = AltaSigridVista(estado="simulado", approved_by="pgris@ruesma.es",
+                           peticion={"usu": " pgris "})
+    assert alta.usu == "pgris"
     assert alta.usu_respaldo is False
 
 

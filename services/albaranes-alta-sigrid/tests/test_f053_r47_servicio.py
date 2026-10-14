@@ -172,6 +172,17 @@ def test_f053_r48_respaldo_vacio_sin_correo_es_error_sin_llamar_a_nadie():
     _sin_usuario(repo, doc, resultado, sigrid, [])
 
 
+def test_f053_r48_sin_usuario_no_sigue_ni_deja_un_fallo_inesperado(caplog):
+    """T50 (mutante 25): tras guardar el ``error`` el flujo TERMINA; no sigue a
+    validar sin ``usu`` (que acabaría en «fallo inesperado» en el log)."""
+    sigrid = _sigrid(fallar_en={"buscar_usuario"})
+    caplog.set_level("INFO")
+    repo, doc, resultado = _procesar(sigrid)
+    _sin_usuario(repo, doc, resultado, sigrid, ["buscar_usuario"])
+    assert "fallo inesperado" not in caplog.text
+    assert [r.levelname for r in caplog.records if r.levelname in ("ERROR", "CRITICAL")] == []
+
+
 def test_f053_r48_se_resuelve_antes_de_validar():
     """design §5.3: el usuario va antes que la validación local."""
     sigrid = _sigrid(fallar_en={"buscar_usuario"})

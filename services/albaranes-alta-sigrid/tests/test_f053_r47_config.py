@@ -51,6 +51,7 @@ def test_f053_r47_config_llega_al_servicio_como_respaldo(monkeypatch):
 @pytest.mark.parametrize("desde, respaldo, aviso", [
     ("", "", False),
     ("2026-10-01T00:00:00Z", "", True),
+    ("2026-10-01T00:00:00Z", "   ", True),   # T50 (mutante 35): solo espacios = vacío
     ("2026-10-01T00:00:00Z", "pgris", False),
 ])
 def test_f053_r47_config_aviso_de_arranque_sin_respaldo(monkeypatch, tmp_path, caplog,
