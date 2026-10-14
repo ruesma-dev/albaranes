@@ -99,3 +99,19 @@ Suite de sv3 entera: **702 passed, 1 failed**: `test_f052_t19_script_arranca_com
 el script en un subproceso **quitando `PYTHONPATH`** a propósito, así que importa la comun del árbol principal
 (`dev`), sin `canonizar_codigo_obra` (`ImportError ... from 'C:\...\albaranes\services\albaranes-comun\...'`).
 Es el entorno del worktree (§0), no el código: en el árbol principal, tras fusionar, la comun editable es la nueva.
+
+### T6 · sv4: `SigridLookupClient` canoniza en las tres consultas por obra (R10, R11)
+
+Con `httpx.MockTransport` (patrón de `test_f052_lookup_truncado.py`); sv4 con su `.venv` y el `PYTHONPATH` de §0.
+RED — `.venv\Scripts\python -m pytest -q tests/test_f070_obra_canonica.py` con el código de `dev`:
+```
+E       AssertionError: assert [('proveedores', ['686'])] == [('proveedores', ['0686'])]
+E       AssertionError: assert [('contratos', ['686'])] == [('contratos', ['0686'])]
+E       AssertionError: assert [('partidas', ['686'])] == [('partidas', ['0686'])]
+E       AssertionError: assert [('proveedores', ['var'])] == [('proveedores', ['VAR'])]
+FAILED tests/test_f070_obra_canonica.py::test_f070_r10_consulta_con_la_obra_canonica[686-0686-proveedores]
+… (686, " 686 ", " var ", "Postv2" × proveedores, contratos, partidas)
+12 failed, 27 passed in 1.88s
+```
+(los 27 que pasan fijan lo que no cambia: `GG`, `gg`, `1234`, `0578-B` tal cual recortados; vacío o `None` sin
+petición; `0686` igual). GREEN: **39 passed**.
