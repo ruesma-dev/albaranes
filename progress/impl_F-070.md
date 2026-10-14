@@ -167,3 +167,12 @@ FAILED tests/test_f070_cod_obra.py::test_f070_r15_motivos_usan_la_misma_funcion_
 R15 no tiene caso de comportamiento distinto (canonizar solo añade un `0` a 3 cifras: ni vacía ni pasa de 24), así
 que se fija por estructura (un solo lector) y por los bordes `falta_obra` y `campo_demasiado_largo`. GREEN:
 `test_f070_cod_obra.py` + `test_f053_validador.py` **105 passed**; suite de sv9 entera **637 passed** (30,3 s).
+
+### T10 · docs: `docs/ARCHITECTURE.md` regla 21 y excepción de comun (R18)
+
+Regla **21. El código de obra es canónico** tras la 20: regla del humano, `ruesma_comun.obras` como único punto
+(qué es canónico, `900` ⇒ `0900`, `CODIGOS_OBRA_SIN_CERO` con su test), dónde se aplica (sv3 al sellar y al deducir,
+sv4 en las tres consultas y al guardar, sv9 en el alta), efecto de VAR/POSTV2 en sv3, qué no cambia (sv2 y su forma
+de comparación, SQL, esquemas) y que los merges viejos no se migran. En «Infra y despliegue», la excepción pasa a
+«`ruesma_comun.sigrid` y `ruesma_comun.obras` solo los importan sv3, sv4 y sv9» con el orden de design §6 (sv4 → sv3,
+cualquier orden vale; sv9 con F-053). Sin test (verificación del reviewer contra R1–R17).

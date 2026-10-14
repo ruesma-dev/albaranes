@@ -492,6 +492,29 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       vincular con producto genérico. El F7 de antes (duplicar) desapareció.
       La columna «Acciones» de la ficha va fija y pegada a la derecha
       (sticky): sus botones no salen nunca de la vista.
+21. **El código de obra es canónico** (F-070, oct 2026). Spec:
+    `specs/F-070-obra-con-cero-inicial/`; decisiones en `progress/spec_F-070.md`.
+    Regla del humano: «es crucial que añada el 0 inicial si no es VAR ni
+    POSTV2» (HERMANOS SAN JUAN: merge con `686`, los combos de sv4 vacíos).
+    - **Un único punto**, `ruesma_comun.obras`: `normalizar_codigo_obra` da el
+      canónico o `None` (3 cifras ⇒ `0` delante, también `900` ⇒ `0900`; 4
+      cifras con `0` ⇒ igual; `VAR` y `POSTV2` en cualquier caja ⇒ en
+      mayúsculas; lo demás ⇒ `None`) y `canonizar_codigo_obra` el canónico o,
+      si no lo hay, el valor recortado. Los códigos sin cero viven solo en
+      `CODIGOS_OBRA_SIN_CERO` (un test impide repetir los literales); otros no
+      numéricos de Sigrid (`GG`, `POSTV`, `0578-B`…) no son canónicos.
+    - **Dónde se aplica**: sv3 al SELLAR el merge y las crudas
+      (`AlbaranNormalizer.normalize_obra_codigo`, obra del correo y del papel)
+      y al escribir la obra deducida por texto; sv4 en las tres consultas a
+      Sigrid por obra (proveedores, contratos y partidas: lo que no encaja va
+      tal cual, el vacío no consulta) y al guardar la cabecera; sv9 en
+      `cod_obra` del alta y sus motivos locales. Con VAR/POSTV2 válidas, la red
+      de obra de sv3 ya no las descarta, el resolver no las sustituye y la
+      búsqueda de contratos las busca y sella.
+    - **Lo que no cambia**: sv2 y `ruesma_comun.contratos.origen_datos.normalizar_codigo`
+      (forma de COMPARACIÓN de F-048, sin ceros), las SQL de Sigrid y los
+      esquemas. Los merges ya guardados con 3 cifras **no se migran** (P3):
+      los cubren sv4 al consultar y guardar y sv9 al dar de alta.
 
 ## Acceso a datos y sistemas externos
 
@@ -544,9 +567,12 @@ rollback: `docs/referencia/dominio_negocio_albaranes.md` §6–§7.
   de la misma cola con imágenes distintas) y **`comun` horneado en cada
   imagen**: tocar `ruesma_comun` obliga a reconstruir sv2, sv3, sv5 y sv6
   — un fix en comun sin rebuild no existe en Azure. Excepción conocida:
-  `ruesma_comun.sigrid` y `ruesma_comun.obras` (F-052) solo los importan
-  sv3 y sv4, que se reconstruyen juntos y en orden **sv3 → sv4** (sv3
-  aplica el DDL de `contratos_busqueda_*` que el ORM de sv4 lee). F-053 toca
+  `ruesma_comun.sigrid` y `ruesma_comun.obras` (F-052, F-070) solo los
+  importan sv3, sv4 y sv9. En F-052 se reconstruyeron en orden **sv3 → sv4**
+  (sv3 aplica el DDL de `contratos_busqueda_*` que el ORM de sv4 lee); el
+  cambio de `obras` de F-070 no lleva DDL ni contrato de mensajes y vale en
+  cualquier orden: recomendado **sv4 → sv3**, y sv9 sale con F-053 desde un
+  `dev` que ya contenga F-070 (regla 21). F-053 toca
   comun ⇒ todas las imágenes, en orden **sv6 y sv3 → sv9 → sv4** (sv6 la
   columna `producto_sigrid`, sv3 la tabla del alta; sv9 sale con DESDE vacía
   y `ALTA_SIGRID_COMMIT=false`, `create_capps_sv9.ps1`, máximo 1 réplica);
