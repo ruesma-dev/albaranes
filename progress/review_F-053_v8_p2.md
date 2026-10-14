@@ -127,3 +127,8 @@ Ninguno.
 **Automejora (propuesta, no aplicada):** en `CHECKPOINTS.md` C4 bis, aclarar que los equivalentes de una campaña
 manual COMPLEMENTARIA no cuentan como supervivientes de la puerta `critico` si la de la herramienta da 0, pero sí
 necesitan demostración ejecutable (RM5) y aceptación del humano antes de `done`.
+
+## Aceptación del humano (2026-10-14)
+
+El humano acepta por escrito («ok») los equivalentes **38 y 50** de la campaña manual de la v8, con su
+demostración en `services/albaranes-front/tests/test_f053_v8_equivalentes.py`.
