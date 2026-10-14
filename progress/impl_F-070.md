@@ -35,3 +35,15 @@ AssertionError: None
 ```
 GREEN — `python -m pytest -q tests/test_f070_codigo_obra.py tests/test_f052_obras_codigo.py`: **77 passed**; doctests
 de `ruesma_comun/obras`: 2 passed.
+
+### T2 · comun: lista única de VAR/POSTV2 (R5)
+
+Test por AST (constantes de texto `VAR`/`POSTV2` en cualquier caja) sobre `services/**/*.py` sin `tests/`, `.venv`,
+`venv`, `__pycache__`; guarda propia: el recorrido ve sv3, sv4 y sv9 y encuentra la constante en `codigo.py`.
+RED — en `dev` no hay literales que cazar, así que se planta uno temporal (`_PLANTADO = "var"` al final de
+`albaranes-front/infrastructure/sigrid/sigrid_lookup_client.py`) y se ejecuta
+`python -m pytest -q tests/test_f070_codigo_obra.py -k r5`:
+```
+E       AssertionError: VAR/POSTV2 repetidos fuera de ruesma_comun/obras/codigo.py: {'albaranes-front\infrastructure\sigrid\sigrid_lookup_client.py': [419]}. Usa CODIGOS_OBRA_SIN_CERO.
+```
+Fichero restaurado (`git status` limpio en sv4). GREEN: **2 passed, 60 deselected**.

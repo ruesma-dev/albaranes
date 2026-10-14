@@ -8,6 +8,9 @@ sv4 y sv9 lo importan, nadie repite los literales (R5).
 """
 from __future__ import annotations
 
+import ast
+from pathlib import Path
+
 import pytest
 
 from ruesma_comun.obras import (
@@ -115,3 +118,57 @@ def test_f070_r4_canonizar_entero():
 def test_f070_r4_canonizar_es_idempotente(valor):
     una = canonizar_codigo_obra(valor)
     assert canonizar_codigo_obra(una) == una
+
+
+# ---------------------------------------------------------------- #
+# R5 — VAR y POSTV2 definidos UNA sola vez, en ruesma_comun.obras.
+# ---------------------------------------------------------------- #
+_RAIZ_SERVICIOS = Path(__file__).resolve().parents[2]
+_UNICO_SITIO = (
+    _RAIZ_SERVICIOS / "albaranes-comun" / "ruesma_comun" / "obras" / "codigo.py"
+)
+_EXCLUIDOS = {"tests", ".venv", "venv", "__pycache__", "node_modules"}
+
+
+def _ficheros_de_produccion() -> list[Path]:
+    ficheros = []
+    for ruta in _RAIZ_SERVICIOS.rglob("*.py"):
+        relativa = ruta.relative_to(_RAIZ_SERVICIOS)
+        if any(parte in _EXCLUIDOS for parte in relativa.parts):
+            continue
+        ficheros.append(ruta)
+    return ficheros
+
+
+def _literales_prohibidos(ruta: Path) -> list[int]:
+    arbol = ast.parse(ruta.read_text(encoding="utf-8-sig"), filename=str(ruta))
+    return [
+        nodo.lineno
+        for nodo in ast.walk(arbol)
+        if isinstance(nodo, ast.Constant)
+        and isinstance(nodo.value, str)
+        and nodo.value.strip().upper() in {"VAR", "POSTV2"}
+    ]
+
+
+def test_f070_r5_recorre_los_servicios():
+    """Guarda del propio test: si el recorrido no viera nada, pasaría en falso."""
+    ficheros = _ficheros_de_produccion()
+    assert _UNICO_SITIO in ficheros
+    servicios = {f.relative_to(_RAIZ_SERVICIOS).parts[0] for f in ficheros}
+    assert {
+        "albaranes-persistencia", "albaranes-front", "albaranes-alta-sigrid",
+    } <= servicios
+    assert _literales_prohibidos(_UNICO_SITIO), "la constante debe vivir aquí"
+
+
+def test_f070_r5_var_y_postv2_solo_en_ruesma_comun_obras():
+    repetidos = {
+        str(ruta.relative_to(_RAIZ_SERVICIOS)): lineas
+        for ruta in _ficheros_de_produccion()
+        if ruta != _UNICO_SITIO and (lineas := _literales_prohibidos(ruta))
+    }
+    assert repetidos == {}, (
+        "VAR/POSTV2 repetidos fuera de ruesma_comun/obras/codigo.py: "
+        f"{repetidos}. Usa CODIGOS_OBRA_SIN_CERO."
+    )
