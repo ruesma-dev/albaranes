@@ -205,3 +205,50 @@ def test_f070_r13_rastro_viejo_sin_obra_frente_a_var_esta_desfasado():
 def test_f070_r13_obras_distintas_o_no_canonicas_no_coinciden(obra_actual, rastro_obra):
     estado, _ = _estado(obra_actual, rastro_obra)
     assert estado == "desfasada"
+
+
+# ================================================================ #
+# R10 (O3 de la review) — el re-fetch local de contratos de sv4 consulta
+# VAR/POSTV2 y sella el rastro con ellas (lo hereda de comun)
+# ================================================================ #
+class _RepoRefetch:
+    def __init__(self, obra) -> None:
+        self._obra = obra
+        self.sellos: list[tuple] = []
+
+    def get_merge_cif_and_obra(self, *, document_id):
+        return "B82899550", self._obra
+
+    def merge_existe(self, *, document_id):
+        return True
+
+    def replace_contratos_and_select(self, *, document_id, contratos):
+        return None
+
+    def sellar_busqueda_contratos(self, *, document_id, cif, obra, resultado):
+        self.sellos.append((cif, obra, resultado))
+
+
+class _SigridRefetch:
+    def __init__(self) -> None:
+        self.obras: list[str] = []
+
+    def fetch_contratos(self, *, cif_proveedor, codigo_obra_normalizado):
+        self.obras.append(codigo_obra_normalizado)
+        return []
+
+
+@pytest.mark.parametrize(
+    ("en_merge", "consultada"),
+    [("VAR", "VAR"), (" var ", "VAR"), ("Postv2", "POSTV2"), ("686", "0686")],
+)
+def test_f070_r10_refetch_local_consulta_var_y_sella(en_merge, consultada):
+    from infrastructure.sigrid.local_refetch_client import LocalContratoRefetchClient
+
+    repo, sigrid = _RepoRefetch(en_merge), _SigridRefetch()
+    outcome = LocalContratoRefetchClient(sigrid_client=sigrid, repository=repo).refetch(
+        document_id="f070-doc",
+    )
+    assert outcome.status != "skipped_missing_data"
+    assert sigrid.obras == [consultada]
+    assert repo.sellos == [("B82899550", consultada, "ninguno")]
