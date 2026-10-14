@@ -41,9 +41,11 @@ from ruesma_comun.alta_sigrid import (
     producto_efectivo,
     productos_admitidos,
 )
+from ruesma_comun.obras import canonizar_codigo_obra
 from ruesma_comun.valoracion import esta_valorado
 
 from domain.models.alta_models import (
+    CabeceraAlta,
     DatosAlta,
     EstadoAlta,
     LineaAlta,
@@ -109,6 +111,13 @@ def normalizar_referencia(numero: str | None) -> str:
 
 def _texto(valor: str | None) -> str:
     return (valor or "").strip()
+
+
+def _cod_obra(cab: CabeceraAlta) -> str:
+    """(F-070 · R14, R15) ``cod_obra`` canónico: ``686`` ⇒ ``0686``, ``var`` ⇒
+    ``VAR``; lo que no encaja, recortado como hoy. Único punto de sv9 que lee
+    la obra: motivos locales y petición la ven igual."""
+    return canonizar_codigo_obra(cab.obra_codigo) or ""
 
 
 def _con_importe(linea: LineaAlta) -> bool:
@@ -188,7 +197,7 @@ def _motivos_cabecera(datos: DatosAlta) -> list[Motivo]:
     cab = datos.cabecera
     motivos: list[Motivo] = []
 
-    obra = _texto(cab.obra_codigo)
+    obra = _cod_obra(cab)
     if not obra:
         motivos.append(Motivo("falta_obra"))
     elif len(obra) > MAX_CODIGO:
@@ -319,7 +328,7 @@ def validar_y_construir(
     cab = datos.cabecera
     fecha = _fecha(cab.fecha)
     return PeticionAlbaran(
-        cod_obra=_texto(cab.obra_codigo),
+        cod_obra=_cod_obra(cab),
         cif_proveedor=normalizar_cif(cab.proveedor_cif),
         cod_contrato=_texto(cab.contrato_codigo) or None,
         referencia_externa=f"{PREFIJO_REFERENCIA}{cab.document_id}",

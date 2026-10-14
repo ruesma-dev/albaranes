@@ -146,3 +146,24 @@ FAILED tests/test_f070_obra_canonica.py::test_f070_r13_merge_y_rastro_canonicos_
 3 failed, 6 passed, 48 deselected in 1.48s
 ```
 Comun restaurada. GREEN: **9 passed**. Suite de sv4 entera: **1423 passed** (95,1 s).
+
+### T9 · sv9: `_cod_obra` para motivos y petición (R14, R15)
+
+`_cod_obra(cab) = canonizar_codigo_obra(cab.obra_codigo) or ""`, único lector de la obra en `validador_alta.py`
+(`_motivos_cabecera` y `PeticionAlbaran(cod_obra=…)`); docstring del módulo sin tocar (design §7). El test llama a
+`validar_y_construir` desde un único `_validar(d)` con la firma de la v8 (`CONFIG`, `HOY`, `USU` de `f053_datos`).
+RED — `python -m pytest -q tests/test_f070_cod_obra.py` con el código de `dev`:
+```
+E       AssertionError: assert '686' == '0686'
+E       AssertionError: assert 'var' == 'VAR'
+E       AssertionError: assert 'postv2' == 'POSTV2'
+E           cod_obra: '686' != '0686'...
+E       assert 2 == 1      (dos lectores de cab.obra_codigo)
+FAILED tests/test_f070_cod_obra.py::test_f070_r14_cod_obra_canonico[686-0686]   (y " 686 ", var, " Var ", postv2)
+FAILED tests/test_f070_cod_obra.py::test_f070_r14_el_resto_de_la_peticion_no_cambia
+FAILED tests/test_f070_cod_obra.py::test_f070_r15_motivos_usan_la_misma_funcion_que_la_peticion
+7 failed, 9 passed in 0.77s
+```
+R15 no tiene caso de comportamiento distinto (canonizar solo añade un `0` a 3 cifras: ni vacía ni pasa de 24), así
+que se fija por estructura (un solo lector) y por los bordes `falta_obra` y `campo_demasiado_largo`. GREEN:
+`test_f070_cod_obra.py` + `test_f053_validador.py` **105 passed**; suite de sv9 entera **637 passed** (30,3 s).
