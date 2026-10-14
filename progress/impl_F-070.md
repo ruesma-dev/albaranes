@@ -62,3 +62,18 @@ FAILED tests/test_f070_obra_canonica.py::test_f070_r9_el_normalizador_solo_cambi
 ```
 (los 4 que ya pasaban fijan lo que no cambia: VAR ya salía en mayúsculas, `1234`/`GG` como hoy, la red descarta `1234`
 y no reescribe un `686` guardado). GREEN: **18 passed**; suite de sv3 entera **686 passed** (9,8 s).
+
+### T4 · sv3: `_resolve_obra` devuelve la obra canonizada (R7)
+
+Tests de punta a punta por `resolve_merge_document` con dobles del puerto (repositorio, `search_obras`, resumen de
+proveedores por obra). RED — `python -m pytest -q tests/test_f070_obra_canonica.py -k r7` con el código de `dev`:
+```
+E       AssertionError: assert '227' == '0227'
+E       AssertionError: assert 'var' == 'VAR'
+FAILED tests/test_f070_obra_canonica.py::test_f070_r7_obra_deducida_por_texto_canonizada[227-0227]
+FAILED tests/test_f070_obra_canonica.py::test_f070_r7_obra_deducida_por_texto_canonizada[ 227 -0227]
+FAILED tests/test_f070_obra_canonica.py::test_f070_r7_obra_deducida_por_texto_canonizada[var-VAR]
+3 failed, 4 passed, 18 deselected in 0.94s
+```
+GREEN: **25 passed** (fichero entero). Además fija que la obra escrita es la obra efectiva con la que se piden los
+proveedores de la obra (`GG` ⇒ `GG`, como hoy).

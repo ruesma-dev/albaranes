@@ -244,3 +244,107 @@ def test_f070_r9_el_normalizador_solo_cambia_la_obra():
     despues = normalizador.normalize_header(cabecera)
     assert despues == antes
     assert "obra_codigo_origen" not in CabeceraAlbaran.model_fields
+
+
+# ================================================================ #
+# Resolver determinista de cabecera: dobles (R7, R8)
+# ================================================================ #
+class RepoResolverFake:
+    """Doble de ``HeaderMergeRepository``: cabecera fija y registro de lo
+    que el resolver escribe. Cualquier otro método del puerto, no-op."""
+
+    def __init__(self, hdr) -> None:
+        self._hdr = hdr
+        self.resueltos: list[dict] = []
+
+    def get_merge_header_for_resolution(self, *, document_id):
+        return self._hdr
+
+    def update_merge_resolved_header(self, **kwargs) -> None:
+        self.resueltos.append(kwargs)
+
+    def get_merge_lines_for_scoring(self, *, document_id):
+        return [{"codigo": "", "concepto": "ARIDO 0/4", "contexto_linea_json": None}]
+
+    def __getattr__(self, nombre):
+        def _no_op(**kwargs):
+            return None
+        return _no_op
+
+
+class ObraClientFake:
+    def __init__(self, candidatos) -> None:
+        self._candidatos = candidatos
+        self.busquedas = 0
+
+    def search_obras(self):
+        self.busquedas += 1
+        return list(self._candidatos)
+
+
+class ProveedorClientFake:
+    def __init__(self) -> None:
+        self.obras_consultadas: list[str] = []
+
+    def search_proveedores(self):
+        return []
+
+    def fetch_contratos_resumen_por_obra(self, *, codigo_obra):
+        self.obras_consultadas.append(codigo_obra)
+        return []
+
+    def fetch_proveedor_by_cif(self, *, cif):
+        return None
+
+
+def _hdr(obra_codigo, obra_nombre="CONSERVATORIO MARIEMMA", proveedor_cif=None):
+    from domain.models.header_resolution_models import MergeHeaderForResolution
+
+    return MergeHeaderForResolution(
+        obra_codigo=obra_codigo, obra_nombre=obra_nombre, obra_direccion=None,
+        proveedor_cif=proveedor_cif, proveedor_nombre="HERMANOS SAN JUAN",
+    )
+
+
+def _resolver(hdr, candidatos):
+    from application.services.header_resolver_service import HeaderResolverService
+
+    repo = RepoResolverFake(hdr)
+    obras = ObraClientFake(candidatos)
+    proveedores = ProveedorClientFake()
+    servicio = HeaderResolverService(
+        obra_client=obras, proveedor_client=proveedores, repository=repo,
+    )
+    servicio.resolve_merge_document(merge_document_id=DOC)
+    return repo, obras, proveedores
+
+
+# ================================================================ #
+# R7 — la obra deducida por texto se escribe canonizada
+# ================================================================ #
+@pytest.mark.parametrize(
+    ("de_sigrid", "escrito"),
+    [
+        ("227", "0227"),
+        (" 227 ", "0227"),
+        ("0691", "0691"),
+        ("var", "VAR"),
+        ("GG", "GG"),          # no encaja: tal cual, recortado (como hoy)
+        (" 0578-B ", "0578-B"),
+    ],
+)
+def test_f070_r7_obra_deducida_por_texto_canonizada(de_sigrid, escrito):
+    repo, obras, proveedores = _resolver(
+        _hdr(None), [_obra(de_sigrid, "CONSERVATORIO MARIEMMA")],
+    )
+    assert obras.busquedas == 1
+    [resuelto] = repo.resueltos
+    assert resuelto["obra_codigo_det"] == escrito
+    # y es la obra efectiva con la que se buscan los proveedores de la obra
+    assert proveedores.obras_consultadas == [escrito]
+
+
+def test_f070_r7_sin_coincidencia_no_escribe_obra():
+    repo, _, _ = _resolver(_hdr(None, obra_nombre="NADA PARECIDO"), [_obra("227", "ZZZ QQQ")])
+    [resuelto] = repo.resueltos
+    assert resuelto["obra_codigo_det"] is None
