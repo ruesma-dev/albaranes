@@ -53,10 +53,11 @@ class RepoFalso(AltaRepository):
     fallar_al_guardar: set[EstadoAlta] = field(default_factory=set)
 
     def anadir(self, datos: DatosAlta, *, aprobado: bool = True, activo: bool = True,
-               approved_at: datetime | None = APROBADO, alta: AltaActual | None = None) -> str:
+               approved_at: datetime | None = APROBADO, alta: AltaActual | None = None,
+               approved_by: str | None = "ana") -> str:
         document_id = datos.cabecera.document_id
         self.documentos[document_id] = EstadoDocumento(
-            activo=activo, aprobado=aprobado, approved_at_utc=approved_at, approved_by="ana",
+            activo=activo, aprobado=aprobado, approved_at_utc=approved_at, approved_by=approved_by,
         )
         self.datos[document_id] = datos
         if alta is not None:
@@ -120,7 +121,7 @@ class SigridFalso(SigridAltaPort):
     grabacion: RespuestaAlta | ErrorAlta | None = None
     existe: bool = True
     #: R47: logins de ``dbo.usu`` (clave sin distinguir mayúsculas → ``cod``).
-    usuarios: dict[str, str] = field(default_factory=lambda: {"ana": "ana"})
+    usuarios: dict[str, str] = field(default_factory=dict)
     adjunto: ResultadoAdjunto = field(default_factory=lambda: ResultadoAdjunto(True, gra_ide=555))
     llamadas: list[tuple] = field(default_factory=list)
     fallar_en: set[str] = field(default_factory=set)

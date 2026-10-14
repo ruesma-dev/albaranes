@@ -21,7 +21,7 @@ import main_worker
 from domain.models.alta_models import ErrorAlta, Motivo, TipoFallo
 from domain.services import validador_alta as v
 from infrastructure.database import sql_alta_repository as repo
-from tests.f053_datos import CONFIG, HOY, datos, sin_vincular, vinculada
+from tests.f053_datos import CONFIG, USU, HOY, datos, sin_vincular, vinculada
 from tests.test_f053_cliente_sigrid import (
     PETICION,
     Servidor,
@@ -49,7 +49,7 @@ def test_f053_t25_h26_orden_merge_por_line_index_y_manuales_al_final():
 
 def test_f053_t25_r10_cantidad_en_el_borde_del_cero_no_es_valida():
     linea = sin_vincular(1, cantidad_albaran=1e-9)
-    resultado = v.validar_y_construir(datos(linea), CONFIG, HOY)
+    resultado = v.validar_y_construir(datos(linea), CONFIG, HOY, USU)
     assert isinstance(resultado, list)
     assert ("cantidad_no_valida", "1") in [(m.codigo, m.referencia_linea) for m in resultado]
 
@@ -62,7 +62,7 @@ def test_f053_t25_r10_cantidad_en_el_borde_del_cero_no_es_valida():
 ])
 def test_f053_t25_r39_signos_cerca_de_uno(cantidad, importe, incoherente):
     linea = sin_vincular(1, cantidad_albaran=cantidad, importe_calculado=importe)
-    resultado = v.validar_y_construir(datos(linea), CONFIG, HOY)
+    resultado = v.validar_y_construir(datos(linea), CONFIG, HOY, USU)
     codigos = [m.codigo for m in resultado] if isinstance(resultado, list) else []
     assert ("signo_incoherente" in codigos) is incoherente
 
@@ -82,7 +82,7 @@ def test_f053_t25_r39_vinculada_sin_convertida_no_rompe():
 
 def test_f053_t25_r12_importe_positivo_pequeno_mantiene_el_signo():
     linea = sin_vincular(1, cantidad_albaran=1.0, importe_calculado=0.5)
-    peticion = v.validar_y_construir(datos(linea), CONFIG, HOY)
+    peticion = v.validar_y_construir(datos(linea), CONFIG, HOY, USU)
     (pedida,) = peticion.lineas
     assert pedida.cantidad == 1.0 and pedida.precio == 0.5
 

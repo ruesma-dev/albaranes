@@ -20,11 +20,11 @@ from __future__ import annotations
 import pytest
 from domain.models.alta_models import Motivo, PeticionAlbaran
 from domain.services.validador_alta import validar_y_construir
-from tests.f053_datos import CONFIG, HOY, datos, sin_vincular, vinculada
+from tests.f053_datos import CONFIG, USU, HOY, datos, sin_vincular, vinculada
 
 
 def _linea_unica(linea):
-    peticion = validar_y_construir(datos(linea), CONFIG, HOY)
+    peticion = validar_y_construir(datos(linea), CONFIG, HOY, USU)
     assert isinstance(peticion, PeticionAlbaran), f"no admitida: {peticion!r}"
     (enviada,) = peticion.lineas
     return enviada
@@ -61,7 +61,7 @@ def test_f065_r10_la_fila_legada_sin_convertida_es_la_que_se_rechaza():
     resultado = validar_y_construir(
         datos(vinculada(11, cantidad_albaran=7.0, cantidad_convertida=None,
                         importe_calculado=805.0)),
-        CONFIG, HOY,
+        CONFIG, HOY, USU,
     )
 
     assert resultado == [Motivo("cantidad_sin_convertir", "", "11")]
@@ -93,7 +93,7 @@ def test_f065_cr1_sin_descripcion_ni_blanca_no_se_admite():
     resultado = validar_y_construir(datos(sin_vincular(
         77, merge_line_id=None, line_index=None, descripcion_merge=None,
         descripcion_linea=None, derived_contrato_line_id=602,
-    )), CONFIG, HOY)
+    )), CONFIG, HOY, USU)
 
     assert resultado == [Motivo("falta_descripcion", "", "77")]
 
@@ -137,7 +137,7 @@ def _reparto_18_en_6_7_5():
 
 
 def test_f065_r36_las_partes_pasan_el_validador_real():
-    peticion = validar_y_construir(datos(*_reparto_18_en_6_7_5()), CONFIG, HOY)
+    peticion = validar_y_construir(datos(*_reparto_18_en_6_7_5()), CONFIG, HOY, USU)
 
     assert isinstance(peticion, PeticionAlbaran), f"no admitida: {peticion!r}"
     original, nueva, almacen = peticion.lineas
@@ -159,7 +159,7 @@ def test_f065_r36_las_partes_van_detras_de_las_lineas_del_albaran():
     otra = vinculada(13, cantidad_albaran=1.0, cantidad_convertida=1.0,
                      importe_calculado=115.0)
 
-    peticion = validar_y_construir(datos(almacen, nueva, otra, original), CONFIG, HOY)
+    peticion = validar_y_construir(datos(almacen, nueva, otra, original), CONFIG, HOY, USU)
 
     assert [linea.referencia_linea for linea in peticion.lineas] == [
         original.referencia_linea, otra.referencia_linea,
@@ -179,7 +179,7 @@ def test_f065_r36_con_conversion_cada_parte_en_su_unidad():
         importe_calculado=100.0,
     )
 
-    peticion = validar_y_construir(datos(original, nueva), CONFIG, HOY)
+    peticion = validar_y_construir(datos(original, nueva), CONFIG, HOY, USU)
 
     vinc, sin = peticion.lineas
     assert (vinc.cantidad, vinc.precio) == (1000.0, 0.05)
@@ -197,7 +197,7 @@ def test_f065_r36_el_redondeo_lo_absorbe_la_ultima_parte():
                   cantidad_convertida=1.0, importe_calculado=33.34),
     ]
 
-    peticion = validar_y_construir(datos(*partes), CONFIG, HOY)
+    peticion = validar_y_construir(datos(*partes), CONFIG, HOY, USU)
 
     assert [linea.precio for linea in peticion.lineas] == [33.33, 33.33, 33.34]
     assert round(sum(linea.precio for linea in peticion.lineas), 2) == 100.0

@@ -149,7 +149,7 @@ def test_f053_worker_composicion_pasa_toda_la_configuracion(monkeypatch):
     assert servicio._espera == timedelta(minutes=20)
     assert servicio._tolerancia == pytest.approx(0.1)
     assert servicio._bloqueantes == frozenset({"producto_sin_historico", "stock_negativo"})
-    assert servicio._config.usu == "USU_ALTA" and servicio._config.empide == 2425207
+    assert servicio._respaldo == "USU_ALTA" and servicio._config.empide == 2425207
     assert dict(servicio._config.mapeo) == {"*": "MA9999", "alquiler_maquinaria": "QA9999"}
     assert type(servicio._repo).__name__ == "SqlAltaRepository"
     assert type(servicio._sigrid).__name__ == "SigridApiAltaClient"

@@ -25,7 +25,7 @@ from domain.models.alta_models import (
     TipoFallo,
 )
 from domain.services.validador_alta import validar_y_construir
-from tests.f053_datos import CONFIG, HOY, datos, sin_vincular, vinculada
+from tests.f053_datos import CONFIG, USU, HOY, datos, sin_vincular, vinculada
 from tests.f053_fakes import (
     AHORA,
     DESDE,
@@ -40,7 +40,7 @@ D = datos(vinculada(1), sin_vincular(2, codigo_partida_final=None))
 
 
 def _peticion() -> PeticionAlbaran:
-    peticion = validar_y_construir(D, CONFIG, HOY)
+    peticion = validar_y_construir(D, CONFIG, HOY, USU)
     assert isinstance(peticion, PeticionAlbaran)
     return peticion
 
@@ -49,7 +49,7 @@ def _procesar(sigrid, modo=ModoAlta.SIMULACION):
     repo = RepoFalso()
     doc = repo.anadir(D)
     servicio = AltaSigridService(
-        repo=repo, sigrid=sigrid, pdf=PdfFalso(), config=CONFIG, modo=modo, desde=DESDE,
+        repo=repo, sigrid=sigrid, pdf=PdfFalso(), config=CONFIG, usuario_respaldo=USU, modo=modo, desde=DESDE,
         espera=ESPERA, tolerancia_eur=0.05,
         avisos_bloqueantes=frozenset({"producto_sin_historico"}), reloj=lambda: AHORA,
     )

@@ -24,7 +24,7 @@ from domain.models.alta_models import (
     ModoAlta,
     Motivo,
 )
-from tests.f053_datos import CONFIG, DOCUMENT_ID, datos, sin_vincular
+from tests.f053_datos import CONFIG, USU, DOCUMENT_ID, datos, sin_vincular
 from tests.f053_fakes import (
     AHORA,
     DESDE,
@@ -46,7 +46,7 @@ def _verificar(alta, sigrid, modo=ModoAlta.REAL, accion=AccionAlta.VERIFICAR_ANU
     repo = RepoFalso()
     doc = repo.anadir(datos(sin_vincular(1)), alta=alta)
     servicio = AltaSigridService(
-        repo=repo, sigrid=sigrid, pdf=PdfFalso(), config=CONFIG, modo=modo, desde=DESDE,
+        repo=repo, sigrid=sigrid, pdf=PdfFalso(), config=CONFIG, usuario_respaldo=USU, modo=modo, desde=DESDE,
         espera=ESPERA, tolerancia_eur=0.05,
         avisos_bloqueantes=frozenset({"producto_sin_historico"}), reloj=lambda: AHORA,
     )

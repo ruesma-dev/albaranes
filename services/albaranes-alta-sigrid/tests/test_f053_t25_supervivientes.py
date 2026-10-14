@@ -29,7 +29,7 @@ from domain.models.alta_models import (
 )
 from domain.services.clasificador import clasificar
 from domain.services.comparador_previa import comparar
-from tests.f053_datos import CONFIG, datos, sin_vincular, vinculada
+from tests.f053_datos import CONFIG, USU, datos, sin_vincular, vinculada
 from tests.f053_fakes import (
     AHORA,
     DESDE,
@@ -45,7 +45,7 @@ D = datos(vinculada(1), sin_vincular(2))
 
 def _servicio(repo, sigrid=None, *, modo=ModoAlta.REAL, pdf=None):
     return AltaSigridService(
-        repo=repo, sigrid=sigrid or SigridFalso(), pdf=pdf or PdfFalso(), config=CONFIG,
+        repo=repo, sigrid=sigrid or SigridFalso(), pdf=pdf or PdfFalso(), config=CONFIG, usuario_respaldo=USU,
         modo=modo, desde=DESDE, espera=ESPERA, tolerancia_eur=0.05,
         avisos_bloqueantes=frozenset({"producto_sin_historico"}),
         reloj=lambda: AHORA,
@@ -77,7 +77,7 @@ def test_f053_t25_r9_salida_sin_estado_final_deja_error(monkeypatch):
     repo = RepoFalso()
     doc = repo.anadir(D)
     servicio = _servicio(repo, modo=ModoAlta.SIMULACION)
-    monkeypatch.setattr(servicio, "_flujo", lambda document_id, previa, paso: None)
+    monkeypatch.setattr(servicio, "_flujo", lambda document_id, previa, approved_by, paso: None)
 
     resultado = servicio.procesar(doc, AccionAlta.ALTA)
 
@@ -96,7 +96,7 @@ def _peticion():
     from domain.services.validador_alta import validar_y_construir
     from tests.f053_datos import HOY
 
-    return validar_y_construir(D, CONFIG, HOY)
+    return validar_y_construir(D, CONFIG, HOY, USU)
 
 
 def _registrado_con_adjunto_que_falla(sigrid):
