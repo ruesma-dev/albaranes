@@ -2,13 +2,13 @@
 # Trabajo en curso
 
 **F-064 · `in_progress` (2026-10-15): review pasada 1 APPROVED (`progress/review_F-064.md`), cierre condicionado a
-T9, T10 y la aceptación del equivalente #28.** Rama `feature/F-064-proveedor-en-prompts`, worktree `../albaranes-F-064`
+T9 y T10 (el equivalente #28 ya está aceptado).** Rama `feature/F-064-proveedor-en-prompts`, worktree `../albaranes-F-064`
 (*junction* `services\albaranes-front\.venv`: quitarla con `cmd /c rmdir` ANTES de `git worktree remove`). Decisiones
 del humano (2026-10-15): **#28 aceptado por escrito** («Acepto los dos») y **O1 aprobada** (cláusula «emisor
 ilegible» en la regla `proveedor_emisor` de IA2). **`dev` (`d79b3d9`) fusionado en la rama** (conflictos en
 `features.json`, `BACKLOG.md`, `current.md`, `ARCHITECTURE.md` e inventario de mutación: se conserva todo lo de `dev`
 y F-064 queda como única `in_progress`). **Pasada O1 hecha, pendiente de review** (`progress/impl_F-064.md`
-§«Pasada O1»). Humano: T9 y T10 (evals con LLM real, tras la review de O1 y sobre `bea97f4` o posterior: O1 toca
+§8 «Pasada O1»). Humano: T9 y T10 (evals con LLM real, tras la review de O1 y sobre `bea97f4` o posterior: O1 toca
 `revision_rules.yaml`, ruta sensible) y T12 (desplegar solo sv2 tras fusionar);
 comandos en `progress/impl_F-064.md` §6. Historia de la spec (PARADA 1, Q1–Q6) en `progress/spec_F-064.md`.
 
