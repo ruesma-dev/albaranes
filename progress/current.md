@@ -1,6 +1,14 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-072 · `spec_ready` · spec escrita (2026-10-15), pendiente de la PARADA 1.** La caché de suites de `init.sh` §7
+bis tiene en cuenta las dependencias de cada servicio (origen: O1 de la review de F-070). Spec en
+`specs/F-072-cache-con-dependencias/`, rama `feature/F-072-cache-con-dependencias` y worktree
+`C:\Users\pgris\PycharmProjects\albaranes-F-072`. Rigor `critico`; se porta a `arnes-base` como 1.7.16.
+Decisiones abiertas para el humano, P1–P5 con recomendación, en `progress/spec_F-072.md`: AVISO o KO con un módulo de
+fuera; feature aparte para la comun de los worktrees; permiso para `ARNES_SIN_CACHE=1`; alcance de la huella del
+`.env`; destino del porte y la F-028 del taller.
+
 **F-053 · `in_progress` · v8 (Bloque H) IMPLEMENTADA (2026-10-14), pendiente de review.** T41–T50 y T52 hechas en
 `feature/F-053-alta-sigrid` (`usu` del alta = login de quien aprobó o respaldo `pgris`; R49 la cabecera de Easy Auth
 manda; «Reintentar adjunto»; R14 normalizado). Informe: `progress/impl_F-053_v8.md`; mutación:

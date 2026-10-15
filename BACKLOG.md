@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **68 features**, 47 abiertas, 21 terminadas.
+Resumen: **69 features**, 48 abiertas, 21 terminadas.
 
 En curso: **F-053**.
 
@@ -17,6 +17,7 @@ En curso: **F-053**.
 | F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 1 | pendiente | estandar |  |
 | F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 1 | pendiente | critico |  |
 | F-067 | Limpieza de la ficha de detalle (sv4) | 1 | pendiente | estandar |  |
+| F-072 | Arnés: la caché de suites de init.sh tiene en cuenta las dependencias de cada servicio | 1 | spec lista | critico | `feature/F-072-cache-con-dependencias` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
@@ -158,6 +159,12 @@ estado **pendiente** · prioridad 1 · rigor `estandar` · SDD sí
 PETICIÓN DEL HUMANO (2026-10-09, PARADA 1 de F-065): ficha para revisar después, sin spec. Filas X25, X26, R1–R3, R5 y R7–R12 de progress/propuestas_ficha_detalle.md (detalle en progress/explore_front_detalle.md §3–§4): el ✓ de la cantidad compara con lo leído (X25); ordenación por albarán y no persistente (X26); proveedor en un solo desplegable «Nombre — CIF» (R1); obra en un desplegable con la dirección debajo (R2); contrato en una línea: desplegable + PDF + importe (R3); crear líneas solo con traer, añadir y F6 (quitar duplicar y «Copiar sin casar», R5); lo leído como referencia plegada o tooltip (R7); franja única de estado y avisos (R8); un solo «Deshacer» y una navegación (R9); bloques técnicos a «Detalles técnicos» (R10); ficha más ligera: una lista compartida, sin JSON incrustado, caché del PDF (R11); ocultar «Abrir contrato» sin PDF y corregir textos de «Borrar» (R12).
 
 NOTAS QUE QUEDAN AQUÍ: X4 (al abrir la ficha se guardan solas una obra o un proveedor «sugeridos» por parecido de texto; propuesta: proponer sin guardar) quedó FUERA de F-065 por decisión del humano y está pendiente de decidir dónde va. O2 (operativo): posibles líneas ya dañadas en producción por X1 y X2 (cantidad convertida nula; filas pasadas a Nueva con el precio del contrato): consulta de solo lectura en producción y decisión del humano.
+
+### F-072 · Arnés: la caché de suites de init.sh tiene en cuenta las dependencias de cada servicio
+
+estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-072-cache-con-dependencias`
+
+ORIGEN: review de F-070, observación O1 (progress/review_F-070.md de su rama, §Automejora). La clave de la caché de suites de init.sh §7 bis (.arnes_cache/suite_<svc>.ok) es solo `git rev-parse HEAD:<ruta del servicio>`. Fallos reales: (a) un cambio en services/albaranes-comun no invalida la caché de sv1-sv9, que la importan, y un verde viejo tapa una rotura; (b) en un worktree los intérpretes importan la comun editable del árbol principal, e init.sh dio verde por caché con sv3/sv4/sv9 rotos (ImportError: canonizar_codigo_obra). PETICIÓN DEL HUMANO: «arregla la caché». ARREGLO: dependencias declaradas por servicio en servicios.json (depende_de, importa, entradas_no_versionadas), clave calculada en Python (harness/cache_suites.py) con el hash de servicio y dependencias, intérprete, ruta real de los módulos importados y huella por metadatos de las entradas no versionadas; módulo importado desde fuera del repositorio en curso = [AVISO] visible y sin caché; fecha del verde reutilizado; ARNES_SIN_CACHE=1. Un servicios.json sin los campos nuevos funciona igual. Genérico: se porta a arnes-base como 1.7.16 en el mismo trabajo (cubre F-028 del taller y el encargo 1.7.12). Spec: specs/F-072-cache-con-dependencias/.
 
 ### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
 
