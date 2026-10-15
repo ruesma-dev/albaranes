@@ -65,3 +65,14 @@ silencioso. El taller ya la clasificó `critico`. El módulo es pequeño, así q
 ## Verificación que no puede hacer el implementer
 T16 es MANUAL del humano, tras fusionar en `dev`: comprobar en el árbol principal que un commit en la comun invalida la
 caché de sv1–sv9.
+
+## PARADA 1 · APROBADA (humano, 2026-10-15)
+
+- P1: `[AVISO]` visible y sin caché cuando el módulo importado está fuera del repositorio en curso.
+- P2: arreglar qué comun prueban las suites en un worktree queda para una feature aparte, después de F-072.
+- P3: el humano autoriza el permiso `Bash(ARNES_SIN_CACHE=1 bash harness/init.sh)`; lo añade el líder en
+  `.claude/settings.json` en esta rama (llega a `dev` con la fusión).
+- P4: se mantiene la huella del `.env` por metadatos (cierra la F-028 del taller entera).
+- P5 sin respuesta explícita: se aplica la recomendación (porte a `main` de `arnes-base` como 1.7.16; la F-028 del
+  taller la cierra su sesión).
+- Implementación cuando F-064 deje de estar `in_progress` (una sola en curso).
