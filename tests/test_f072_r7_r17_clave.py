@@ -17,6 +17,7 @@ import builtins
 import hashlib
 import io
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -53,6 +54,7 @@ def _git(raiz: Path, *args: str) -> str:
         ["git", "-c", "user.name=Arnes", "-c", "user.email=arnes@ejemplo.invalid",
          "-C", str(raiz), *args],
         capture_output=True, text=True, encoding="utf-8", check=True,
+        env={k: v for k, v in os.environ.items() if not k.startswith("GIT_")},
     ).stdout
 
 
@@ -68,10 +70,10 @@ def _commit(raiz: Path, mensaje: str = "cambio") -> None:
     _git(raiz, "commit", "-q", "-m", mensaje)
 
 
-@pytest.fixture
-def repo(tmp_path: Path) -> Path:
-    """Repositorio con `services/svc`, `services/comun` y `services/otro`."""
-    raiz = tmp_path / "repo"
+@pytest.fixture(scope="module")
+def _plantilla(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Se crea una vez por módulo: en Windows, cada proceso git cuesta."""
+    raiz = tmp_path_factory.mktemp("plantilla_f072") / "repo"
     raiz.mkdir()
     _git(raiz, "init", "-q")
     _escribir(raiz, ".gitignore", ".env\n__pycache__/\nlocal/\n")
@@ -79,6 +81,14 @@ def repo(tmp_path: Path) -> Path:
     _escribir(raiz, "services/comun/pkg/__init__.py", "Y = 1\n")
     _escribir(raiz, "services/otro/otro.py", "Z = 1\n")
     _commit(raiz, "inicial")
+    return raiz
+
+
+@pytest.fixture
+def repo(_plantilla: Path, tmp_path: Path) -> Path:
+    """Repositorio con `services/svc`, `services/comun` y `services/otro`."""
+    raiz = tmp_path / "repo"
+    shutil.copytree(_plantilla, raiz)
     return raiz
 
 
@@ -242,10 +252,10 @@ def test_f072_r8_clave_independiente_del_orden(repo: Path) -> None:
 
 def test_f072_r9_huella_local_es_nombre_tamano_y_mtime(repo: Path) -> None:
     fichero = _escribir(repo, "services/svc/.env", "CLAVE=1\n")
-    os.utime(fichero, ns=(1_700_000_000_000_000_000, 1_700_000_000_123_456_789))
+    os.utime(fichero, ns=(1_700_000_000_000_000_000, 1_700_000_000_123_456_700))
 
     assert huella_local("services/svc/.env", str(repo)) == (
-        f"services/svc/.env@{fichero.stat().st_size}:1700000000123456789")
+        f"services/svc/.env@{fichero.stat().st_size}:1700000000123456700")
     assert huella_local("services/svc/no.env", str(repo)) == "services/svc/no.env@ausente"
 
 
@@ -467,14 +477,15 @@ def test_f072_r16_sonda_con_el_interprete_y_la_carpeta_del_servicio(
         vistos["orden"] = orden
         vistos.update(kwargs)
         return subprocess.CompletedProcess(
-            orden, 0, stdout='{"origenes": {"pkg": "/x/pkg"}, "coverage": true}\n',
+            orden, 0, stdout='{"origenes": {"pkg": "/x/pkg", "otro.sub": null}, "coverage": true}\n',
             stderr="")
 
     monkeypatch.setattr(cache_suites.subprocess, "run", _falso)
 
     sondeo = sondear("/ruta/del/python", ("pkg", "otro.sub"), tmp_path)
 
-    assert sondeo == Sondeo(origenes={"pkg": "/x/pkg"}, tiene_coverage=True)
+    assert sondeo == Sondeo(origenes={"pkg": "/x/pkg", "otro.sub": None},
+                            tiene_coverage=True)
     assert vistos["orden"][0] == "/ruta/del/python"
     assert vistos["orden"][1] == "-c"
     assert "-I" not in vistos["orden"]
