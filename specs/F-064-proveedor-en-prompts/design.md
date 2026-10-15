@@ -87,6 +87,9 @@ clave, no el párrafo entero (el reviewer contrasta el literal con esta sección
 
 ## 5. Regla de IA2 (literal propuesto, `revision_rules.yaml`)
 
+La viñeta «Si no puedes leer con seguridad al emisor…» es la O1 de `progress/review_F-064.md`, aprobada por el
+humano el 2026-10-15 (en la duda, IA2 no reescribe un proveedor correcto de fase 1).
+
 ```
   - id: proveedor_emisor
     titulo: El proveedor es el EMISOR del albarán, nunca una empresa del cliente
@@ -105,6 +108,9 @@ clave, no el párrafo entero (el reviewer contrasta el literal con esta sección
           son los del emisor, corrígelos con los del emisor leídos en el
           documento. Si el CIF del emisor no aparece, deja proveedor_cif en
           null: el sistema buscará el proveedor por su nombre.
+        - Si no puedes leer con seguridad al emisor, conserva lo de fase 1,
+          salvo que sea una empresa del cliente: entonces deja proveedor_cif
+          en null.
         - Si son correctos, cópialos tal cual y no añadas razonamiento.
         - Cada cambio lleva su razonamiento con campo "cabecera.proveedor_cif"
           o "cabecera.proveedor_nombre" y patron_aplicado "proveedor_emisor".

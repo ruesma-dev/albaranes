@@ -127,6 +127,9 @@ reglas:
           son los del emisor, corrígelos con los del emisor leídos en el
           documento. Si el CIF del emisor no aparece, deja proveedor_cif en
           null: el sistema buscará el proveedor por su nombre.
+        - Si no puedes leer con seguridad al emisor, conserva lo de fase 1,
+          salvo que sea una empresa del cliente: entonces deja proveedor_cif
+          en null.
         - Si son correctos, cópialos tal cual y no añadas razonamiento.
         - Cada cambio lleva su razonamiento con campo "cabecera.proveedor_cif"
           o "cabecera.proveedor_nombre" y patron_aplicado "proveedor_emisor".

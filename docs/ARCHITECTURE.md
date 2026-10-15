@@ -371,7 +371,9 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       `revision_rules.yaml` (los cuatro prompts de fase 2, sin editarlos):
       confirma SIEMPRE nombre y CIF, los corrige en `documento_revisado.
       cabecera` (razonamiento `patron_aplicado=proveedor_emisor`, sin campos
-      nuevos) y prevalece sobre el contexto de Sigrid. sv2 **no filtra** el
+      nuevos; si no lee con seguridad al emisor, conserva lo de fase 1 salvo
+      que sea una empresa del cliente, y entonces CIF null) y prevalece sobre
+      el contexto de Sigrid. sv2 **no filtra** el
       CIF propio: si la IA falla, llega a sv3 y el descarte de arriba deja
       su motivo `proveedor_cif_propio:`, que es la métrica de producción.
       Ningún YAML escribe a mano el nombre ni el CIF del cliente. Para

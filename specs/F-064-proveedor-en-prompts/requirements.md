@@ -74,7 +74,9 @@ R9. `config/revision_rules.yaml` debe llevar la regla `proveedor_emisor`, que pi
 familia: revisar SIEMPRE `cabecera.proveedor_nombre` y `cabecera.proveedor_cif` de fase 1 contra el
 documento; si son de una empresa del cliente (las del bloque de las reglas de fase 1) o no corresponden al
 emisor, corregirlos con el nombre y el CIF del emisor leídos en el documento, o dejar `proveedor_cif` null
-si el del emisor no aparece; si son correctos, copiarlos tal cual sin razonamiento; cada cambio, con un
+si el del emisor no aparece; si no puede leer con seguridad al emisor, conservar lo de fase 1 salvo
+que sea una empresa del cliente (entonces `proveedor_cif` null; O1, aprobada el 2026-10-15); si son
+correctos, copiarlos tal cual sin razonamiento; cada cambio, con un
 razonamiento de `campo` `cabecera.proveedor_cif` o `cabecera.proveedor_nombre` y `patron_aplicado`
 `proveedor_emisor`. La regla prevalece sobre el contexto de Sigrid: un CIF del cliente nunca es el
 proveedor, aunque ese contexto lo dé por validado.

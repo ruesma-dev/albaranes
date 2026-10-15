@@ -88,6 +88,13 @@ FRASES_REGLA = (
 )
 TITULO_REGLA = "El proveedor es el EMISOR del albarán, nunca una empresa del cliente"
 
+#: O1 de la review (aprobada por el humano el 2026-10-15): en la duda sobre
+#: el emisor, IA2 conserva lo de fase 1, salvo una empresa del cliente.
+FRASE_O1 = (
+    "Si no puedes leer con seguridad al emisor, conserva lo de fase 1, salvo "
+    "que sea una empresa del cliente: entonces deja proveedor_cif en null."
+)
+
 #: Cualquier marcador conocido de fase 1 o de fase 2 sin sustituir.
 _MARCADORES = re.compile(
     r"\{(?:prompt_fase_1|revision_rules|json_fase_1|sigrid_context|"
@@ -173,6 +180,43 @@ def test_f064_r9_la_regla_llega_renderizada_a_la_checklist() -> None:
     assert f"3. {TITULO_REGLA} *(id: `{ID_REGLA}`)*" in texto
     for frase in FRASES_REGLA:
         assert frase in texto, frase[:50]
+
+
+# ------------------------------------------------------------------ #
+# O1 · en la duda sobre el emisor, se conserva lo de fase 1
+# ------------------------------------------------------------------ #
+def _accion(texto: str) -> str:
+    """Lo que va tras «Acción:» (las viñetas que dicen qué hacer)."""
+    assert texto.count("Acción:") == 1
+    return texto.split("Acción:", 1)[1]
+
+
+def test_f064_o1_la_regla_conserva_lo_de_fase_1_si_el_emisor_es_ilegible() -> None:
+    """La cláusula es una viñeta propia de «Acción:», entre la de corregir y
+    la de copiar tal cual: matiza cuándo corregir, no sustituye a ninguna."""
+    accion = _plano(_accion(_regla_cruda()["descripcion"]))
+
+    assert accion.count(FRASE_O1) == 1
+    assert f"- {FRASE_O1}" in accion
+    assert accion.index(FRASES_REGLA[5]) < accion.index(FRASE_O1) < accion.index(FRASES_REGLA[6])
+
+
+def test_f064_o1_la_clausula_llega_renderizada_a_la_checklist() -> None:
+    texto = _plano(RevisionRulesRepository(yaml_path=REGLAS_REALES).render_for_prompt())
+
+    assert texto.count(FRASE_O1) == 1
+
+
+@pytest.mark.parametrize("clave", CLAVES_FASE_2)
+def test_f064_o1_la_clausula_llega_a_los_cuatro_prompts_de_fase_2(clave) -> None:
+    """Efecto en el prompt renderizado que recibe IA2, con y sin contexto de
+    Sigrid: la cláusula aparece una vez y dentro de la regla del proveedor."""
+    contexto = {"proveedor": {"status": "validated", "cif": CIF_CLIENTE, "nombre_canonico": "CNES. DEMO"}}
+    for sigrid_context in (None, contexto):
+        plano = _plano(_instructions_fase_2(clave, sigrid_context=sigrid_context))
+
+        assert plano.count(FRASE_O1) == 1
+        assert plano.index(FRASES_REGLA[0]) < plano.index(FRASE_O1) < plano.index(FRASES_REGLA[7])
 
 
 # ------------------------------------------------------------------ #
