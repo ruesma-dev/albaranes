@@ -3,11 +3,9 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **69 features**, 48 abiertas, 21 terminadas.
+Resumen: **70 features**, 49 abiertas, 21 terminadas.
 
-En curso: **F-070**.
-
-Bloqueadas: **F-053**.
+Bloqueadas: **F-053, F-070**.
 
 ## Trabajo abierto
 
@@ -19,7 +17,8 @@ Bloqueadas: **F-053**.
 | F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 1 | pendiente | estandar |  |
 | F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 1 | pendiente | critico |  |
 | F-067 | Limpieza de la ficha de detalle (sv4) | 1 | pendiente | estandar |  |
-| F-070 | La obra siempre con el 0 inicial (salvo VAR y POSTV2): sv3 la sella canónica, sv4 consulta y guarda canónica, sv9 da de alta canónica | 1 | en curso | critico | `feature/F-070-obra-con-cero-inicial` |
+| F-070 | La obra siempre con el 0 inicial (salvo VAR y POSTV2): sv3 la sella canónica, sv4 consulta y guarda canónica, sv9 da de alta canónica | 1 | bloqueada | critico | `feature/F-070-obra-con-cero-inicial` |
+| F-073 | Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate | 1 | spec lista | critico | `feature/F-073-proveedor-por-similitud` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
@@ -164,9 +163,19 @@ NOTAS QUE QUEDAN AQUÍ: X4 (al abrir la ficha se guardan solas una obra o un pro
 
 ### F-070 · La obra siempre con el 0 inicial (salvo VAR y POSTV2): sv3 la sella canónica, sv4 consulta y guarda canónica, sv9 da de alta canónica
 
-estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-070-obra-con-cero-inicial`
+estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-070-obra-con-cero-inicial`
 
 ORIGEN (diagnóstico del líder, 2026-10-14, en producción y solo lectura): en los albaranes de HERMANOS SAN JUAN (obra 0686, contrato CTSU24/0524) el combo de partida de sv4 solo ofrece «Almacén». El merge tiene obra_codigo = "686" y sv4 llama a sigrid-api con "686": /api/sigrid/partidas?obra=686 devuelve ok y 0 partidas (con 0686, 2412); contratos 0 frente a 117; proveedores 0 frente a 115. En la bandeja hay 5 pendientes con obra de 3 cifras (686, 711, 723). sv9 (F-053, validador_alta.py) mandaría cod_obra = "686" sin completar y el alta fallaría. CAUSA SEGÚN EL HUMANO (literal): «el error es que al leer la obra del correo ha leído 686 y no ha normalizado. Es crucial que añada el 0 inicial si no es VAR ni POSTV2». REGLA: todo código de obra lleva el 0 inicial, salvo VAR y POSTV2, códigos válidos que se dejan tal cual (comprobado en Sigrid: existen como con.cod de obra). ALCANCE (spec 2026-10-14, progress/spec_F-070.md): normalización en un único punto de comun (ruesma_comun.obras: CODIGOS_OBRA_SIN_CERO, normalizar_codigo_obra con VAR/POSTV2 y canonizar_codigo_obra); sv3 canoniza la obra al sellar el merge (correo y papel) y al deducirla por texto, y deja de descartar VAR/POSTV2; sv4 canoniza en las tres consultas a Sigrid por obra (si no encaja, tal cual) y al guardar la cabecera; sv9 canoniza cod_obra antes del alta. Sin migración ni escrituras en producción: los merges ya guardados con 3 cifras los cubren sv4 y sv9. sv2 no cambia. Orden de despliegue: sv4 -> sv3; sv9 con F-053 desde un dev que ya tenga F-070. Coordinación con la rama de F-053 (v8) en design §7.
+
+### F-073 · Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate
+
+estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-073-proveedor-por-similitud`
+
+INCIDENCIA DE PRODUCCIÓN (2026-10-15, correo «0694» de administración de obra, obra 0694, 5 albaranes de FEYMACO): en 3 la IA leyó el CIF de Ruesma (A81873903), sv3 lo descartó (F-063) y buscó por nombre «FEYMACO, S.A.» / «TEYMACO, S.A.». Log de sv3 (merge 54b82479-…): A19004589 (HIERROS RODRIGO, S.A.) y A28733558 (FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)) empatan a nombre=0.50 y el atajo «por NOMBRE dentro de la obra» elige el primero ⇒ 3 albaranes con HIERROS RODRIGO y CTSU26/0001.
+
+CAUSA (verificada en header_resolver_service.py): _match_score no separa la puntuación («feymaco,» no está en «(feymaco)»), no admite una letra mal leída y cuenta «s.a.» como palabra (0,50 = min_score para cualquier S.A.); el atajo del paso 1 y el fallback global del paso 2 eligen el máximo sin mirar empates. Hay dos criterios de nombre (_match_score y _score_razon_social de F-052/F-062).
+
+SPEC (specs/F-073-proveedor-por-similitud/, informe progress/spec_F-073.md): criterio ÚNICO en sv3 (application/services/similitud_proveedor.py) para los cuatro sitios (atajo, global, propuesta F-052, candidato claro F-062): puntuación como separador, fuera formas jurídicas y palabras vacías, subcadena de hoy más distancia de edición ≤ 1 en palabras de ≥ 5 caracteres; elegir por nombre solo con ≥ min_score y margen 0,25 sobre el segundo CIF; empate ⇒ paso por puntos sin cambios y, si no decide, revisión con motivo proveedor_nombre_ambiguo y nota con los empatados; paso 2 en empate no elige. Medición: corpus de 19 razones sociales reales y 31 lecturas, hoy 23 aciertos y 7 errores, con F-073 31 y 0. La obra (_resolve_obra) no cambia. Sin comun, sin DDL; despliegue solo sv3. FUERA: corregir los 3 merges (revisor en sv4), la propuesta de sv4 (X4 de F-067), que la propuesta de F-052 deje de proponer en empate. PREGUNTAS P0–P6 para la PARADA 1; P0 bloquea: el caso «S.L.» de la opción B de F-062 pasa de 1 a 0. RELACIONADAS: F-063, F-062, F-052, F-055, F-067 (X4).
 
 ### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
 

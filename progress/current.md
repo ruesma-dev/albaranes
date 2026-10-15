@@ -1,6 +1,8 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-073 · `spec_ready` (2026-10-15), prioridad 1, rigor `critico`** — proveedor por nombre en sv3 con un criterio único (similitud: TEYMACO casa con FEYMACO) y sin elegir en empates (incidencia 0694: 3 albaranes de FEYMACO asignados a HIERROS RODRIGO). Spec en `specs/F-073-proveedor-por-similitud/`, informe y preguntas P0–P7 en `progress/spec_F-073.md`; rama `feature/F-073-proveedor-por-similitud`, worktree `../albaranes-F-073`. **Pendiente de la PARADA 1**: P0 bloquea (el caso «S.L.» de la opción B de F-062 pasa de 1 a 0); P7 operativa: corregir ya en sv4 los 3 merges con «Elegir proveedor».
+
 **F-070 · `blocked` (2026-10-15): review APPROVED (pasada 2), equivalente #17 aceptado por el humano, fusionada en `dev`.** Espera la MANUAL T13 del humano (desplegar sv4 y luego sv3; comando en el bloque «F-070 · MANUAL T13»). Al verificarla en pantalla, pasa a `done`.
 
 **F-070 · `in_progress` (2026-10-14), urgente, prioridad 1, rigor `critico`** — la obra siempre con el 0 inicial
