@@ -71,3 +71,12 @@ El prototipo vivió en el scratchpad; T8 lo versiona como test (no hay comando q
 - No ejecuté suites (había otra feature implementándose); solo el prototipo, de lectura.
 - `feature/F-049-partida-de-la-lista` toca la firma del constructor del mismo fichero (design §8).
 - El fixture de F-063 usa la razón de FEYMACO sin «(FEYMACO)»; la real va en `fixture_f073`.
+
+## PARADA 1 · APROBADA (humano, 2026-10-15)
+
+- P0: aceptado; una forma jurídica sola no casa con nadie (cambia la decisión del 2026-10-08 de F-062 sobre «S.L.»).
+- P6: empate por nombre que la familia separa ⇒ deduce por familia con aviso (`det_familia_obra`).
+- P4: el mismo defecto en sv4 (`_proposeBest`) va a F-067.
+- P1, P2, P3, P5 y P7 sin respuesta explícita: se aplica la recomendación (criterio en sv3; umbrales fijos; sin
+  interruptor; propuesta de F-052 fuera; los 3 merges los corrige el revisor con «Elegir proveedor»).
+- Cola: tras F-072; F-053 tiene prioridad del humano.
