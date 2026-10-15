@@ -1,6 +1,59 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-070 · `blocked` (2026-10-15): review APPROVED (pasada 2), equivalente #17 aceptado por el humano, fusionada en `dev`.** Espera la MANUAL T13 del humano (desplegar sv4 y luego sv3; comando en el bloque «F-070 · MANUAL T13»). Al verificarla en pantalla, pasa a `done`.
+
+**F-070 · `in_progress` (2026-10-14), urgente, prioridad 1, rigor `critico`** — la obra siempre con el 0 inicial
+salvo VAR y POSTV2 (HERMANOS SAN JUAN: merge con `686`, combos de sv4 vacíos). Spec en
+`specs/F-070-obra-con-cero-inicial/`, informe en `progress/spec_F-070.md` (PARADA 1 APROBADA: P1 regla tal cual, `900`
+⇒ `0900`; P2 solo VAR y POSTV2; P3 sin corregir merges guardados). Rama `feature/F-070-obra-con-cero-inicial`, worktree
+`../albaranes-F-070` (*junction* `.venv` de sv4; quitarla con `cmd /c rmdir` antes de `git worktree remove`). `dev`
+(`4f1e802`, F-053 v8) fusionado en la rama. **Pasada 2 hecha (2026-10-15, CR1 de `progress/review_F-070.md`), pendiente de review**: campaña a mano rehecha, 17/18 muertos y el #17 superviviente equivalente **pendiente de la aceptación escrita del humano**; O2, O3 y O4 aplicadas (O1 no). Pasada 1: T1–T12 y T14 hechas
+(informe `progress/impl_F-070.md`; mutación 4/4 de la herramienta y 18/18 a mano; cobertura 100 % de 28 líneas;
+`azure-apps` `0136e1a`, sin push). `init.sh` tal cual en el worktree sale KO solo porque sv3/sv4/sv9 importan la comun
+del árbol principal (`dev`); con la comun de la rama, `ENTORNO LISTO` (detalle en el informe, T14). Pendientes del
+humano: T0 (opcional) y T13 (despliegue sv4 → sv3 tras fusionar).
+Orden de despliegue: sv4 → sv3; sv9 con F-053.
+
+### F-070 · MANUAL T13 del humano (tras el APPROVED, la fusión en `dev` e `init.sh` en verde en el árbol principal)
+
+Desplegar sv4 y después sv3 (design §6; sin DDL, cualquier orden vale). sv9 NO: sale con F-053 desde un `dev` con F-070.
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+. .\00_vars.ps1
+. .\00_capps_vars.ps1
+Set-DeployTag
+.\deploy.ps1 -Only sv4
+.\check_deploy.ps1
+.\deploy.ps1 -Only sv3
+.\check_deploy.ps1
+```
+VERDE si `check_deploy.ps1` muestra sv4 y sv3 con el tag recién construido y réplicas arriba, y en `https://<sv4>` un
+albarán pendiente de HERMANOS SAN JUAN (merge con `686`) ofrece en el combo de partida las partidas de la 0686 (no
+solo «Almacén») y «Solo volver a buscar» encuentra CTSU24/0524. ROJO si el combo sigue con solo «Almacén».
+
+### F-070 · MANUAL T0 del humano (opcional, SOLO LECTURA, no bloquea)
+
+Medir en la BBDD `albaranes` de Azure los merges activos con obra de 3 cifras y de dónde salió su obra. Sesión con
+`default_transaction_read_only=on` (como `diag_f062.py`, que aborta si `SHOW transaction_read_only` no da `on`):
+```sql
+SELECT m.id, m.obra_codigo, m.obra_codigo_origen, m.approved, m.created_at_utc,
+       COALESCE(j #>> '{data,origen_datos,obra,motivo}',      j #>> '{origen_datos,obra,motivo}')      AS motivo,
+       COALESCE(j #>> '{data,origen_datos,obra,validada}',    j #>> '{origen_datos,obra,validada}')    AS validada,
+       COALESCE(j #>> '{data,origen_datos,obra,valor_correo}', j #>> '{origen_datos,obra,valor_correo}') AS valor_correo,
+       COALESCE(j #>> '{data,origen_datos,obra,valor_papel}', j #>> '{origen_datos,obra,valor_papel}') AS valor_papel
+FROM albaran_documents_merge m
+CROSS JOIN LATERAL (SELECT m.raw_extraction_json::jsonb AS j) x
+WHERE m.is_active AND m.obra_codigo ~ '^[0-9]{3}$'
+ORDER BY m.created_at_utc DESC;
+```
+Anotar los recuentos en `progress/spec_F-070.md` §2 (criterio en su Anexo A). El arreglo no depende del resultado.
+
+**F-053 · `blocked` (2026-10-14) — v8 APROBADA (review pasada 2) y fusionada en `dev` (`4f1e802`); espera la MANUAL
+T51 del humano** (despliegue sv6, sv3 → sv9 con `ALTA_SIGRID_COMMIT=false` → sv4, y aprobaciones de prueba; comandos
+abajo). Pasada a `blocked` para dejar paso a F-070 (máximo una `in_progress`); el párrafo siguiente es el estado de la
+v8 antes de la review.
+
 **F-053 · `in_progress` · v8 (Bloque H) IMPLEMENTADA (2026-10-14), pendiente de review.** T41–T50 y T52 hechas en
 `feature/F-053-alta-sigrid` (`usu` del alta = login de quien aprobó o respaldo `pgris`; R49 la cabecera de Easy Auth
 manda; «Reintentar adjunto»; R14 normalizado). Informe: `progress/impl_F-053_v8.md`; mutación:
