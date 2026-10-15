@@ -11,6 +11,7 @@ verde; y el del encargo 1.7.12 del taller: un `.env` que cambia.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -35,6 +36,7 @@ def _git(raiz: Path, *args: str) -> None:
         ["git", "-c", "user.name=Arnes", "-c", "user.email=arnes@ejemplo.invalid",
          "-C", str(raiz), *args],
         capture_output=True, text=True, encoding="utf-8", check=True,
+        env={k: v for k, v in os.environ.items() if not k.startswith("GIT_")},
     )
 
 
@@ -50,9 +52,10 @@ def _commit(raiz: Path) -> None:
     _git(raiz, "commit", "-q", "-m", "cambio")
 
 
-@pytest.fixture
-def repo(tmp_path: Path) -> Path:
-    raiz = tmp_path / "repo"
+@pytest.fixture(scope="module")
+def _plantilla(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Se crea una vez por módulo: en Windows, cada proceso git cuesta."""
+    raiz = tmp_path_factory.mktemp("plantilla_f072_escenarios") / "repo"
     raiz.mkdir()
     _git(raiz, "init", "-q")
     _escribir(raiz, ".gitignore", ".env\n__pycache__/\n")
@@ -60,6 +63,13 @@ def repo(tmp_path: Path) -> Path:
     _escribir(raiz, "services/comun/comunlib/__init__.py", "VALOR = 1\n")
     _escribir(raiz, "services/solo/main.py", "X = 1\n")
     _commit(raiz)
+    return raiz
+
+
+@pytest.fixture
+def repo(_plantilla: Path, tmp_path: Path) -> Path:
+    raiz = tmp_path / "repo"
+    shutil.copytree(_plantilla, raiz)
     return raiz
 
 

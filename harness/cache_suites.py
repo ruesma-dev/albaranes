@@ -27,13 +27,17 @@ avisan: un verde que no se puede reutilizar debe decir por qué.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
 import subprocess
+import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from harness import servicios
 from harness.servicios import Servicio
 
 #: Marca de formato: entra en el texto de la clave. Cambiarla invalida todas.
@@ -79,6 +83,18 @@ class Sondeo:
     tiene_coverage: bool
 
 
+@dataclass(frozen=True)
+class Decision:
+    """Servir la suite de caché o ejecutarla (y con qué clave guardar el verde)."""
+
+    servir: bool
+    #: `None` = no se guarda caché tras el verde.
+    clave: str | None
+    #: `AAAA-MM-DD HH:MM` (hora local) del verde que se reutiliza; solo si `servir`.
+    fecha_verde: str | None
+    avisos: tuple[str, ...]
+
+
 class ErrorDeSonda(Exception):
     """La sonda no pudo responder: no hay clave."""
 
@@ -95,6 +111,7 @@ def _git(args: list[str], raiz: str) -> subprocess.CompletedProcess:
         encoding="utf-8",
         errors="replace",
         stdin=subprocess.DEVNULL,
+        check=False,
     )
 
 
@@ -152,6 +169,7 @@ def sondear(
             errors="replace",
             stdin=subprocess.DEVNULL,
             timeout=limite_s,
+            check=False,
         )
     except subprocess.TimeoutExpired as error:
         raise ErrorDeSonda(f"la sonda tardó más de {limite_s} s") from error
@@ -282,3 +300,95 @@ def clave_de(
     if texto is None:
         return None, avisos
     return hashlib.sha256(texto.encode("utf-8")).hexdigest(), avisos
+
+
+# --- Decisión y CLI ---------------------------------------------------------------
+
+
+def decidir(
+    servicio: Servicio,
+    raiz: str = ".",
+    *,
+    sin_cache: bool = False,
+    sondear=sondear,
+) -> Decision:
+    """¿Se sirve la suite de caché? `sondear` es inyectable para los tests."""
+    interprete = servicios.interprete(servicio, raiz)
+    try:
+        sondeo = sondear(interprete, servicio.importa, Path(raiz) / servicio.ruta)
+    except ErrorDeSonda as error:
+        aviso = f"no se pudo sondear el intérprete de `{servicio.nombre}`: {error}; no se cachea"
+        return Decision(servir=False, clave=None, fecha_verde=None, avisos=(aviso,))
+
+    clave, avisos = clave_de(servicio, raiz, interprete, sondeo)
+    fichero = Path(raiz) / ".arnes_cache" / f"suite_{servicio.nombre}.ok"
+    servir = (
+        not sin_cache
+        and clave is not None
+        and fichero.is_file()
+        and fichero.read_text(encoding="utf-8").strip() == clave
+        and (
+            not sondeo.tiene_coverage
+            or (Path(raiz) / servicio.ruta / "coverage.json").is_file()
+        )
+    )
+    fecha_verde = (
+        time.strftime("%Y-%m-%d %H:%M", time.localtime(fichero.stat().st_mtime))
+        if servir
+        else None
+    )
+    return Decision(
+        servir=servir, clave=clave, fecha_verde=fecha_verde, avisos=tuple(avisos)
+    )
+
+
+def lineas_de_salida(decision: Decision) -> list[str]:
+    """Protocolo para init.sh: `AVISO|...` y al final `SERVIR|` o `EJECUTAR|`."""
+    lineas = [f"AVISO|{' '.join(aviso.split())}" for aviso in decision.avisos]
+    if decision.servir:
+        lineas.append(f"SERVIR|{decision.fecha_verde}")
+    else:
+        lineas.append(f"EJECUTAR|{decision.clave or ''}")
+    return lineas
+
+
+def main(argv: list[str] | None = None) -> int:
+    """`--servicio NOMBRE [--sin-cache] [--raiz .]`: decide la caché de un servicio."""
+    analizador = argparse.ArgumentParser(
+        prog="python -m harness.cache_suites",
+        description="Decide si la suite de un servicio se sirve de caché.",
+    )
+    analizador.add_argument("--servicio", required=True)
+    analizador.add_argument("--sin-cache", action="store_true")
+    analizador.add_argument("--raiz", default=".")
+    opciones = analizador.parse_args(argv)
+
+    try:
+        declarados = servicios.cargar_servicios(raiz=opciones.raiz)
+        servicio = next(
+            (s for s in declarados if s.nombre == opciones.servicio), None
+        )
+        if servicio is None:
+            raise ValueError(
+                f"el servicio '{opciones.servicio}' no está declarado en "
+                f"harness/servicios.json"
+            )
+        if servicio.lenguaje != "python":
+            raise ValueError(
+                f"el servicio '{servicio.nombre}' no es de lenguaje 'python': "
+                f"su suite no pasa por esta caché"
+            )
+        decision = decidir(
+            servicio, opciones.raiz, sin_cache=opciones.sin_cache, sondear=sondear
+        )
+    except ValueError as error:
+        print(str(error), file=sys.stderr)
+        return 1
+
+    for linea in lineas_de_salida(decision):
+        print(linea)
+    return 0
+
+
+if __name__ == "__main__":  # pragma: no cover
+    raise SystemExit(main())

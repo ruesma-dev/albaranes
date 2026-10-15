@@ -18,7 +18,7 @@ import re
 import shutil
 import subprocess
 import sys
-from datetime import datetime
+import time
 from pathlib import Path
 
 import pytest
@@ -110,7 +110,7 @@ def test_f072_r18_sirve_con_la_clave_guardada_y_sin_coverage(repo: Path) -> None
 
     decision = decidir(SVC, str(repo), sondear=_sonda(coverage=False))
 
-    esperada = datetime.fromtimestamp(1_760_000_000).strftime("%Y-%m-%d %H:%M")
+    esperada = time.strftime("%Y-%m-%d %H:%M", time.localtime(1_760_000_000))
     assert decision == Decision(servir=True, clave=_clave(repo), fecha_verde=esperada,
                                 avisos=())
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}", decision.fecha_verde)
@@ -353,7 +353,7 @@ def test_f072_r22_modulo_ejecutable_con_python_m(repo: Path) -> None:
     proceso = subprocess.run(
         [PY, "-m", "harness.cache_suites", "--servicio", "svc", "--raiz", str(repo)],
         cwd=raiz_arnes, capture_output=True, text=True, encoding="utf-8",
-        stdin=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL, check=False,
     )
 
     assert proceso.returncode == 0, proceso.stderr
