@@ -1,6 +1,8 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-064 · `blocked` (2026-10-15): review pasada O1 APPROVED; espera las evals T9 y T10 del humano** (el runner exige las claves en la sesión: comandos en `progress/spec_F-064.md` §5 con `Read-Host`; `evals/inputs` ya copiado). Con T9 y T10 en verde: fusionar en `dev` y desplegar solo sv2 (T12).
+
 **F-064 · `in_progress` (2026-10-15): review pasada 1 APPROVED (`progress/review_F-064.md`), cierre condicionado a
 T9 y T10 (el equivalente #28 ya está aceptado).** Rama `feature/F-064-proveedor-en-prompts`, worktree `../albaranes-F-064`
 (*junction* `services\albaranes-front\.venv`: quitarla con `cmd /c rmdir` ANTES de `git worktree remove`). Decisiones
