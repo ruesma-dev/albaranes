@@ -48,7 +48,7 @@ $Global:SIGRID_DB = "ruesma"   # SIGRID_API_DATABASE del piloto
 # ALTA_SIGRID_COMMIT NO esta aqui a proposito: create_capps_sv9.ps1 crea sv9
 # con ALTA_SIGRID_COMMIT=false (simulacion) y SOLO el humano lo cambia, a
 # mano y con autorizacion (MANUAL T29). Ningun script lo pone a true.
-$Global:ALTA_SIGRID_DESDE_UTC            = ""
+$Global:ALTA_SIGRID_DESDE_UTC            = "2026-10-15T11:55:00Z"   # T51 paso 2 (2026-10-15, por el lider a peticion del humano): simulacion encendida
 $Global:ALTA_SIGRID_ESPERA_INCIERTO_MIN  = "15"
 # Mapeo familia -> producto (JSON con clave "*"). VACIO = el defecto del codigo,
 # igual en sv4 y sv9: {"alquiler_maquinaria": "QA9999", "medios_auxiliares":
