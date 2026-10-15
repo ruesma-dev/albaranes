@@ -1,5 +1,8 @@
 # F-075 · Informe de spec (spec-author, 2026-10-15)
 
+> **v2 vigente (§v2, al final).** El humano rechazó la recomendación de la v1 en su PARADA 1. Las secciones
+> §1–§4 y el Anexo A se quedan como historia y como investigación de partida.
+
 Spec: `specs/F-075-importe-leido/` (requirements 21 R, design, tasks T0–T12). Rama
 `feature/F-075-importe-leido` desde `dev` 28c9997, worktree `C:\Users\pgris\PycharmProjects\albaranes-F-075`.
 F-075 estaba libre en `dev` y en las ramas de F-064 y F-071 a F-073. Alta en `harness/features.json`:
@@ -85,4 +88,95 @@ SELECT COUNT(*) FILTER (WHERE con = 0) AS sin_importe,
 FROM (SELECT d.id, COUNT(l.id) AS n, COUNT(l.precio_neto) AS con
       FROM albaran_documents_merge d LEFT JOIN albaran_lines_merge l ON l.document_id = d.id
       WHERE d.is_active GROUP BY d.id) t;
+```
+
+---
+
+## v2 · El importe del albarán manda (2026-10-15)
+
+### v2.0 Respuestas del humano a la PARADA 1 de la v1 (literales)
+
+- P1: «como ya hay importe, no hay que valorar con contrato, manda el albarán y pisa».
+- P2: «que lea el pie y sirva para revisar».
+- P3: aceptada.
+- Sin contrato: «si trae importes no hace valorar ni contrato, pasa directo».
+
+La spec está reescrita en `specs/F-075-importe-leido/`: 27 R, design en 12 apartados y tareas T0–T19. El slug se
+mantiene. En `harness/features.json` cambian el título, la descripción, el rigor (pasa a `critico`) y los servicios.
+
+### v2.1 Hallazgos del código que cambian la lectura de P1
+
+1. **Con contrato, lo leído ya manda línea a línea.** En sv6 manda el unitario declarado (`PriceReconciler`, F-019)
+   y también el importe declarado (`ImporteCalculator`, «el DECLARADO MANDA SIEMPRE», jul 2026). El contrato aporta
+   el **vínculo** (`ctrpro`), la partida y la conversión de unidades, y su precio solo se usa cuando el papel no trae
+   importe. Lo que la valoración añade por encima del papel son las **sintéticas** (M1–M7).
+2. **Sin contrato, nadie valora.** sv3 no publica `q-valoracion` (`persist_albaran_pipeline`, «SKIP: no hay contrato
+   seleccionado con líneas»). sv4 tampoco deja revalorar: responde 409 «Elige un contrato antes de valorar». Si se
+   publicara, sv5 ya devuelve `no_contract` con las líneas del albarán en `context`, y sv6 guarda una cabecera vacía.
+3. **sv9 ya sabe dar de alta sin contrato.** Una valoración `no_contract` cuyas líneas tienen todas importe es
+   «valorada» (`esta_valorado`). Va con las líneas sin vincular, el producto del mapeo por familia (`MA9999`…), sin
+   `cod_contrato` y con `precio = |importe|/|cantidad|`. sigrid-api no recalcula desde el contrato (F-009, H14):
+   `tot = cantidad·precio`, y en una vinculada con otro precio solo deja el aviso informativo
+   `precio_distinto_del_contrato`. **El paso directo no necesita código en sv9.**
+4. **IA1 no lee el pie.** IA2 devuelve el documento completo, y su cabecera sustituye a la de fase 1
+   (`phase_merge._doc_final`): un pie que IA2 olvide se perdería si no se conserva el de fase 1.
+5. **Evals.** Hay 59 casos IA1 y ninguno mide el pie. Tocar `prompts.yaml` o `domain/models` activa la puerta de
+   rutas sensibles: pasada completa con LLM, de pago. F-064 está `blocked` justo a la espera de esa pasada (T9, T10)
+   y reescribe la cabecera del prompt de IA1. F-071 también pide F-064 primero.
+6. **Varias páginas.** sv1 trocea: 1 página = 1 albarán. El pie de la última página suma todas y no cuadra con la
+   suya.
+
+### v2.2 Resultado del T0 (humano)
+
+Pendiente. Anexo A (v1) y Anexo B.
+
+### v2.3 Propuesta
+
+- **Sin contrato y con importes ⇒ paso directo.** sv3 publica igualmente. sv6 construye una valoración directa
+  desde las líneas del albarán: sin IA, sin contrato, sin sintéticas, con el importe leído y una derivada
+  `nueva_no_match`. Queda «valorada» si todas las líneas traen importe, así que se aprueba y sv9 la da de alta sin
+  vincular. Si alguna línea no trae importe (P3), es parcial: no se aprueba hasta completarla.
+- **Con contrato ⇒ como hoy** (lo leído ya manda línea a línea), más un aviso a revisión si el total valorado se
+  aparta del importe del albarán.
+- **Pie ⇒ control.** IA1 lo lee, sv3 lo guarda y lo compara con la suma de las líneas, y si no cuadra lo manda a
+  revisión sin bloquear.
+- **sv4 ⇒ una columna «Importe».** Muestra el importe del albarán si trae importes y, si no, el valorado, con rótulo
+  de origen y la marca ≠. Lo mismo en tarjetas, Obras, Proveedores y la ficha.
+- **Rigor `critico`.** Lo aprobado acaba como dinero en el ERP (sv9). Cambia qué documentos se valoran y cómo, cambia
+  lo que lee IA1 en producción para todos los albaranes, y sv3 cambia lo que va a revisión.
+
+### v2.4 Preguntas nuevas (PARADA 1 v2). La spec implementa la recomendación
+
+| # | Pregunta | Recomendación |
+|---|---|---|
+| v2-P1 | Con contrato **y** con importes, ¿se sigue valorando contra el contrato o se salta («no hay que valorar con contrato»)? | **Se sigue valorando.** El importe ya es el del papel línea a línea. Si se salta el contrato, en Sigrid la línea no se vincula a su `ctrpro`: no consume medición, va sin `cod_contrato`, con producto genérico y con otra analítica. El «pisa» ya se cumple; lo nuevo es el aviso si el total se aparta (R12). |
+| v2-P2 | «Pasa directo», ¿es quedar listo para aprobar o aprobarse solo? | **Listo para aprobar.** Aprueba una persona: el alta usa `approved_by` (F-053 R47) y aprobar es el último control. |
+| v2-P3 | Con contrato, las sintéticas (portes o recargos del contrato que no están en el papel), ¿se crean? | **Se crean, pero el documento va a revisión** si el total ya no es el del papel (R12). Quitarlas cambia sv6 y las expectativas IA3 del banco de evals. |
+| v2-P4 | Si el pie solo trae el total con IVA, ¿se compara suponiendo el 21 %? | **No.** Se compara con la base o con total − cuota. Con solo el total es «no comparable» y no hay aviso. |
+| v2-P5 | Albaranes de varias páginas: el pie de la última no cuadra con su página. ¿Se acepta el aviso? | **Sí, con el texto** «puede ser un albarán de varias páginas». Tolerancia `PIE_TOLERANCIA_EUR` = 0,02 €, configurable. |
+| v2-P6 | Los merges sin contrato ya guardados que traen importes (DISCOIN), ¿cómo se valoran? | **Uno a uno con «Revalorar»** en sv4 (R10, que con F-075 ya lo permite sin contrato). El Anexo B dice cuántos son. Con un script se escribiría en producción, y eso solo con autorización expresa. |
+| v2-P7 | En la bandeja, ¿una columna «Importe» (albarán si trae, si no valorado, con rótulo de origen y ≠) o dos columnas como en la v1? | **Una.** «Manda el albarán y pisa»: la otra cifra queda en la marca ≠ y en la ficha. |
+| v2-P8 | ¿Se parte en dos features? | **Sí.** **F-075 = paso directo e importe que manda** (comun, sv3 disparo, sv6, sv4, tests sv9): no toca prompts, resuelve DISCOIN y no espera a F-064. **F-0XX = el pie como control** (sv2, DDL sv3, guard, sv4 pie, evals): va detrás de F-064. No conviene partir por sv9, porque no lleva código. Corte exacto en design §1 y en la cabecera de tasks. |
+
+### v2.5 Riesgos que el humano debe conocer
+
+- **Alta sin contrato.** Se registra con producto genérico y la analítica `<obra>.<sufijo>` de su naturaleza. Si esa
+  analítica no existe en la obra, el alta va a `error` (`analitica_no_resuelta`), visible en el panel. Antes de poner
+  `ALTA_SIGRID_COMMIT=true`, conviene revisar en simulación 3 altas directas (T18).
+- **Partida impresa sin validar.** Sigrid la valida. F-049 la validará antes, contra la lista de la obra.
+- `no_contract` pasa a cubrir también «sin contrato, con líneas» (design D2). Se eligió para no redesplegar sv9.
+
+### Anexo B · T0 v2 (humano, opcional, SOLO LECTURA, `default_transaction_read_only=on`)
+
+```sql
+-- Candidatos al paso directo y al backfill: activos, no aprobados, sin valoración, con algún importe leído.
+SELECT d.id, d.proveedor_nombre, d.obra_codigo, d.created_at_utc,
+       COUNT(l.id) AS lineas, COUNT(l.precio_neto) AS con_importe, SUM(l.precio_neto) AS importe_albaran
+FROM albaran_documents_merge d
+JOIN albaran_lines_merge l ON l.document_id = d.id
+LEFT JOIN albaran_valuations v ON v.document_id = d.id
+WHERE d.is_active AND NOT d.approved AND v.id IS NULL
+GROUP BY d.id, d.proveedor_nombre, d.obra_codigo, d.created_at_utc
+HAVING COUNT(l.precio_neto) > 0
+ORDER BY d.created_at_utc DESC;
 ```
