@@ -127,3 +127,8 @@ La caché de suites de `init.sh` §7 bis usa como clave `HEAD:<servicio>` y no v
 dio verde con sv3, sv4 y sv9 rotos. Propuesta: añadir a la clave el hash de `HEAD:services/albaranes-comun` (y la ruta de
 `ruesma_comun.__file__`) para los servicios que la importan. Si se aprueba, se porta a `arnes-base` como «dependencias
 declaradas» en `servicios.json`.
+
+## Aceptación del humano (2026-10-15)
+
+El humano acepta por escrito el equivalente **#17** de la campaña a mano («Acepto los dos»), con su demostración en
+`services/albaranes-alta-sigrid/tests/test_f070_cod_obra.py` (RM5 desde el módulo real, con control).

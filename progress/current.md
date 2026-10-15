@@ -1,6 +1,8 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-070 · `blocked` (2026-10-15): review APPROVED (pasada 2), equivalente #17 aceptado por el humano, fusionada en `dev`.** Espera la MANUAL T13 del humano (desplegar sv4 y luego sv3; comando en el bloque «F-070 · MANUAL T13»). Al verificarla en pantalla, pasa a `done`.
+
 **F-070 · `in_progress` (2026-10-14), urgente, prioridad 1, rigor `critico`** — la obra siempre con el 0 inicial
 salvo VAR y POSTV2 (HERMANOS SAN JUAN: merge con `686`, combos de sv4 vacíos). Spec en
 `specs/F-070-obra-con-cero-inicial/`, informe en `progress/spec_F-070.md` (PARADA 1 APROBADA: P1 regla tal cual, `900`
