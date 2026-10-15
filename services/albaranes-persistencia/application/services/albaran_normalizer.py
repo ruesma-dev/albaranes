@@ -5,6 +5,8 @@ import re
 from datetime import datetime
 from typing import Iterable
 
+from ruesma_comun.obras import canonizar_codigo_obra
+
 from domain.models.extraction_models import (
     CabeceraAlbaran,
     DocumentoAlbaran,
@@ -53,7 +55,7 @@ class AlbaranNormalizer:
                     header.numero_albaran,
                 ),
                 "forma_pago": self.normalize_text(header.forma_pago),
-                "obra_codigo": self.normalize_identifier(header.obra_codigo),
+                "obra_codigo": self.normalize_obra_codigo(header.obra_codigo),
                 "obra_nombre": self.normalize_text(header.obra_nombre),
                 "obra_direccion": self.normalize_text(header.obra_direccion),
                 "id": self.normalize_identifier(header.id),
@@ -99,6 +101,16 @@ class AlbaranNormalizer:
         if cleaned is None:
             return None
         return cleaned.upper()
+
+    @staticmethod
+    def normalize_obra_codigo(value: str | None) -> str | None:
+        """(F-070 · R6) Obra canónica sobre la forma limpia de siempre.
+
+        Aquí se SELLA el merge (y las crudas): ``686`` ⇒ ``0686``, ``var`` ⇒
+        ``VAR``. Lo que no encaja (``1234``, ``GG``) queda como hoy y la red
+        de obra lo sigue descartando.
+        """
+        return canonizar_codigo_obra(AlbaranNormalizer.normalize_identifier(value))
 
 
     @classmethod
