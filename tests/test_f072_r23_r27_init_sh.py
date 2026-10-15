@@ -178,80 +178,94 @@ def _leer(caso: Path, fichero: str) -> str:
 necesita_bash = pytest.mark.skipif(BASH is None, reason="sin bash utilizable")
 
 
+#: Corrida normal: cinco servicios, uno por caso. El falso se come stdin en cada
+#: llamada: sin `</dev/null`, el bucle perdería todos los servicios tras `a`.
+NORMAL = {
+    "a": ("AVISO|importa `x` desde /otro/arbol\nEJECUTAR|clave-a\n", 0),
+    "b": ("SERVIR|2026-10-15 09:30\n", 0),
+    "c": ("EJECUTAR|\n", 0),
+    "d": ("EJECUTAR|clave-d\n", 0),
+    "e": ("SERVIR|2026-10-15 09:30\n", 1),
+}
+
+
+@pytest.fixture(scope="module")
+def normal(tmp_path_factory: pytest.TempPathFactory) -> tuple[str, Path]:
+    return _caso(tmp_path_factory.mktemp("f072_normal"), NORMAL, pytest_rojo=("d",))
+
+
+@pytest.fixture(scope="module")
+def sin_cache(tmp_path_factory: pytest.TempPathFactory) -> tuple[str, Path]:
+    return _caso(tmp_path_factory.mktemp("f072_sin_cache"),
+                 {"a": ("EJECUTAR|k1\n", 0), "b": ("EJECUTAR|k2\n", 0)}, sin_cache="1")
+
+
 @necesita_bash
-def test_f072_r24_r27_avisos_servir_ejecutar_y_guardar(tmp_path: Path) -> None:
-    salida, caso = _caso(tmp_path, {
-        "a": ("AVISO|importa `x` desde /otro/arbol\nEJECUTAR|clave-a\n", 0),
-        "b": ("SERVIR|2026-10-15 09:30\n", 0),
-    })
+def test_f072_r24_aviso_y_guardado_con_clave(normal: tuple[str, Path]) -> None:
+    salida, caso = normal
 
     assert "[AVISO] servicio a (svc_a): importa `x` desde /otro/arbol" in salida
     assert "[OK] servicio a (svc_a): pytest en verde" in salida
+    assert _leer(caso, ".arnes_cache/suite_a.ok") == "clave-a"
+
+
+@necesita_bash
+def test_f072_r24_servir_con_la_fecha_y_sin_ejecutar(normal: tuple[str, Path]) -> None:
+    salida, caso = normal
+
     assert ("[OK] servicio b (svc_b): pytest en verde (caché: ni el servicio ni sus "
             "dependencias han cambiado desde el verde del 2026-10-15 09:30)") in salida
-    assert _leer(caso, "suites.txt").split() == ["svc_a"]
-    assert _leer(caso, ".arnes_cache/suite_a.ok") == "clave-a"
+    assert "svc_b" not in _leer(caso, "suites.txt").split()
     assert not (caso / ".arnes_cache" / "suite_b.ok").exists()
-    assert "FALLOS=0" in salida
-    assert "ARNES_SIN_CACHE" not in salida
 
 
 @necesita_bash
-def test_f072_r24_sin_clave_no_se_guarda(tmp_path: Path) -> None:
-    salida, caso = _caso(tmp_path, {"a": ("EJECUTAR|\n", 0)})
+def test_f072_r24_sin_clave_no_se_guarda(normal: tuple[str, Path]) -> None:
+    salida, caso = normal
 
-    assert "[OK] servicio a (svc_a): pytest en verde" in salida
-    assert not (caso / ".arnes_cache" / "suite_a.ok").exists()
+    assert "[OK] servicio c (svc_c): pytest en verde" in salida
+    assert not (caso / ".arnes_cache" / "suite_c.ok").exists()
 
 
 @necesita_bash
-def test_f072_r24_suite_en_rojo_no_se_guarda(tmp_path: Path) -> None:
-    salida, caso = _caso(tmp_path, {"a": ("EJECUTAR|clave-a\n", 0)}, pytest_rojo=("a",))
+def test_f072_r24_suite_en_rojo_no_se_guarda(normal: tuple[str, Path]) -> None:
+    salida, caso = normal
 
-    assert "[KO] servicio a (svc_a): pytest en rojo" in salida
+    assert "[KO] servicio d (svc_d): pytest en rojo" in salida
     assert "FALLOS=1" in salida
-    assert not (caso / ".arnes_cache" / "suite_a.ok").exists()
+    assert not (caso / ".arnes_cache" / "suite_d.ok").exists()
 
 
 @necesita_bash
-def test_f072_r25_sin_cache_avisa_una_vez_y_pasa_la_opcion(tmp_path: Path) -> None:
-    salida, caso = _caso(tmp_path, {"a": ("EJECUTAR|k1\n", 0), "b": ("EJECUTAR|k2\n", 0)},
-                         sin_cache="1")
+def test_f072_r26_fallo_del_modulo_avisa_ejecuta_y_no_guarda(
+    normal: tuple[str, Path],
+) -> None:
+    salida, caso = normal
+
+    assert re.search(r"\[AVISO\] servicio e \(svc_e\): no se pudo decidir la caché", salida)
+    assert "servicio e (svc_e): pytest en verde (caché" not in salida
+    assert "svc_e" in _leer(caso, "suites.txt").split()
+    assert not (caso / ".arnes_cache" / "suite_e.ok").exists()
+
+
+@necesita_bash
+def test_f072_r27_todos_los_servicios_se_procesan(normal: tuple[str, Path]) -> None:
+    salida, caso = normal
+
+    assert len(_leer(caso, "llamadas.txt").splitlines()) == 5
+    assert _leer(caso, "suites.txt").split() == ["svc_a", "svc_c", "svc_d", "svc_e"]
+    assert "ARNES_SIN_CACHE" not in salida
+    assert "--sin-cache" not in _leer(caso, "llamadas.txt")
+
+
+@necesita_bash
+def test_f072_r25_sin_cache_avisa_una_vez_y_pasa_la_opcion(
+    sin_cache: tuple[str, Path],
+) -> None:
+    salida, caso = sin_cache
 
     assert salida.count("ARNES_SIN_CACHE=1") == 1
     llamadas = _leer(caso, "llamadas.txt").splitlines()
     assert len(llamadas) == 2
     assert all(linea.endswith("--sin-cache") for linea in llamadas)
     assert _leer(caso, ".arnes_cache/suite_b.ok") == "k2"
-
-
-@necesita_bash
-def test_f072_r25_sin_sin_cache_no_se_pasa_la_opcion(tmp_path: Path) -> None:
-    _, caso = _caso(tmp_path, {"a": ("EJECUTAR|k1\n", 0)})
-
-    assert "--sin-cache" not in _leer(caso, "llamadas.txt")
-
-
-@necesita_bash
-def test_f072_r26_fallo_del_modulo_avisa_ejecuta_y_no_guarda(tmp_path: Path) -> None:
-    salida, caso = _caso(tmp_path, {
-        "a": ("SERVIR|2026-10-15 09:30\n", 1),
-        "b": ("EJECUTAR|k2\n", 0),
-    })
-
-    assert re.search(r"\[AVISO\] servicio a \(svc_a\): no se pudo decidir la caché", salida)
-    assert "verde del" not in salida
-    assert _leer(caso, "suites.txt").split() == ["svc_a", "svc_b"]
-    assert not (caso / ".arnes_cache" / "suite_a.ok").exists()
-    assert _leer(caso, ".arnes_cache/suite_b.ok") == "k2"
-
-
-@necesita_bash
-def test_f072_r27_los_tres_servicios_se_procesan(tmp_path: Path) -> None:
-    """El falso se come stdin: sin `</dev/null`, el bucle perdería b y c."""
-    _, caso = _caso(tmp_path, {
-        "a": ("EJECUTAR|k1\n", 0), "b": ("EJECUTAR|k2\n", 0), "c": ("EJECUTAR|k3\n", 0),
-    })
-
-    assert len(_leer(caso, "llamadas.txt").splitlines()) == 3
-    assert _leer(caso, "suites.txt").split() == ["svc_a", "svc_b", "svc_c"]
