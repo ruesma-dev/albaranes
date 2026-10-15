@@ -8,7 +8,8 @@ del humano (2026-10-15): **#28 aceptado por escrito** («Acepto los dos») y **O
 ilegible» en la regla `proveedor_emisor` de IA2). **`dev` (`d79b3d9`) fusionado en la rama** (conflictos en
 `features.json`, `BACKLOG.md`, `current.md`, `ARCHITECTURE.md` e inventario de mutación: se conserva todo lo de `dev`
 y F-064 queda como única `in_progress`). **Pasada O1 hecha, pendiente de review** (`progress/impl_F-064.md`
-§«Pasada O1»). Humano: T9 y T10 (evals con LLM real, tras la review de O1) y T12 (desplegar solo sv2 tras fusionar);
+§«Pasada O1»). Humano: T9 y T10 (evals con LLM real, tras la review de O1 y sobre `bea97f4` o posterior: O1 toca
+`revision_rules.yaml`, ruta sensible) y T12 (desplegar solo sv2 tras fusionar);
 comandos en `progress/impl_F-064.md` §6. Historia de la spec (PARADA 1, Q1–Q6) en `progress/spec_F-064.md`.
 
 **F-070 · `blocked` (2026-10-15): review APPROVED (pasada 2), equivalente #17 aceptado por el humano, fusionada en `dev`.** Espera la MANUAL T13 del humano (desplegar sv4 y luego sv3; comando en el bloque «F-070 · MANUAL T13»). Al verificarla en pantalla, pasa a `done`.

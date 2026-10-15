@@ -38,8 +38,7 @@ raíz `test_f064_comparar_proveedor` 68, `_base` 7, `test_f064_r18_rutas_sensibl
    versionable va sin valores y `evals/salidas/` está ignorado (`.gitignore:53`).
 5. **#28 y RM5.** Es el único equivalente declarado. `"error" not in {...}` mira la clave, no el valor. Reproducido
    en un clon (`git clone --shared`, scratchpad): con el mutante, 68 passed; con el control `{"ok": True}`, la
-   demostración falla, así que discrimina. **Falta que el humano lo acepte** (nivel `critico`).
-6. **Puerta de rutas sensibles.** El AVISO por falta de `progress/evals_F-064.md` es el esperado: T9 y T10 son del
+   demostración falla, así que discrimina. **Falta que el humano lo acepte** (nivel `critico`). 6. **Puerta de rutas sensibles.** El AVISO por falta de `progress/evals_F-064.md` es el esperado: T9 y T10 son del
    humano. Por eso el cierre queda condicionado (§5).
 
 ## 2. Checkpoints
@@ -97,13 +96,10 @@ regla cambiado. Los textos de IA1 e IA2 coinciden al pie de la letra con design 
   (`git diff --stat 0ffa0d4..HEAD`), así que el alcance es el mismo. **RM2:** la media de 39,4 s × 4 workers da 157,6
   s reales por mutante, frente a una base de ~190 s (raíz) + ~15 s (sv2). Es coherente con `-x`, y 145 × 39,4 ≈
   5712 s.
-- **Muestra de supervivientes:** #1 (245 `entero`), #2 (298 `logico`), #10 (440 `logico`) y #28 (577 `booleano`)
-  existen como mutantes reales, con el mismo texto original→mutado.
-- **RM4 (reinyección en el clon):** #1, #10, #29 y #30 caen, cada uno con el test que el informe dice que lo mata.
-  #28 sobrevive, como debe.
+- **Muestra de supervivientes:** #1 (245 `entero`), #2 (298 `logico`), #10 (440 `logico`) y #28 (577 `booleano`) existen como mutantes reales, con el mismo texto original→mutado.
+- **RM4 (reinyección en el clon):** #1, #10, #29 y #30 caen, cada uno con el test que el informe dice que lo mata. #28 sobrevive, como debe.
 - **RM3:** los 19 mutantes de sv2 y `sv2_proveedor.py` cambian algo observable; ningún equivalente sale muerto.
-- **RM5:** reproducido (§1.5). **RM6:** N/A justificado: tras T6 solo hay `576ad6a` (imports) y tests; no se quitó
-  ninguna guarda.
+- **RM5:** reproducido (§1.5). **RM6:** N/A justificado: tras T6 solo hay `576ad6a` (imports) y tests; no se quitó ninguna guarda.
 
 ## 5. Condiciones de cierre (no se marca `done` sin ellas)
 
@@ -111,7 +107,7 @@ regla cambiado. Los textos de IA1 e IA2 coinciden al pie de la letra con design 
    AVISO «la base no dio ningún CIF cliente», el VERDE no prueba la incidencia: hace falta la decisión escrita del
    humano o añadir el albarán real (design §7).
 2. **T10** (humano): `progress/evals_F-064.md` con IA1 ≤ 154 e IA2 ≤ 4 fallos críticos, con commit posterior a `8814e4f`.
-3. **Aceptación escrita del humano del equivalente #28** (rigor `critico`).
+3. **Aceptación escrita del humano del equivalente #28** (rigor `critico`). **Cumplida el 2026-10-15** (sección «Aceptación del humano»).
 4. Tras fusionar, `init.sh` en verde en el árbol principal; quitar la junction antes de `git worktree remove`.
 
 ## 6. Observaciones (no bloquean; numeradas con su severidad)
@@ -138,3 +134,7 @@ regla cambiado. Los textos de IA1 e IA2 coinciden al pie de la letra con design 
 
 **Automejora (propuesta, sin aplicar):** en `reviewer.md`, exigir que toda regla de IA2 que mande «corregir» un
 campo diga qué hacer en la duda (la asimetría de O1, que ningún test unitario ve).
+
+## Aceptación del humano
+
+- **Equivalente #28** (`evals/comparar_proveedor.py:577`, `{"error": True}` → `{"error": False}`): **aceptado por escrito por el humano el 2026-10-15** («Acepto los dos», transmitido por el líder). Condición 3 de §5 cumplida; anotado también en `progress/mutacion_F-064.md`. La O1 (§6) quedó aprobada el mismo día y aplicada en `bea97f4` (pendiente de review).

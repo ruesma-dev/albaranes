@@ -328,6 +328,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 > Por qué ningún test lo caza: EQUIVALENTE: `"error" not in {...}` comprueba la CLAVE, no el valor; `{"error": True}` y `{"error": False}` dan lo mismo. El diccionario es solo un centinela para `ia1` ausente.
 > Decisión: mutante equivalente justificado; ningún test puede matarlo. (comprobado: con el mutante aplicado, 67 passed (equivalente); `tests/test_f064_comparar_proveedor.py`, commit posterior a `0ffa0d4`).
 > Demostración: `tests/test_f064_comparar_proveedor.py::test_f064_demostracion_el_mutante_28_es_equivalente` (diferencial: la expresión real contra «la otra forma» sobre 63 valores de `resultado`, excepciones incluidas, 0 discrepancias; el control `{"ok": True}` discrepa; con el mutante inyectado en el fichero sigue en verde).
+> Aceptación del humano: **aceptado por escrito el 2026-10-15** («Acepto los dos», transmitido por el líder; ver `progress/review_F-064.md` §«Aceptación del humano»). Equivalente cerrado.
 
 ### 29. `evals/procesos/sv2_proveedor.py:62` [entero]
 
