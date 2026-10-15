@@ -5,6 +5,17 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-070 · La obra siempre con el 0 inicial, salvo VAR y POSTV2 (cerrada 2026-10-15)
+
+Rama `feature/F-070-obra-con-cero-inicial`, rigor `critico`, comun + sv3 + sv4 + sv9. **Problema**: HERMANOS SAN JUAN con
+obra `686` en el merge; sv4 consultaba Sigrid con `686` y el combo de partidas solo daba «Almacén». **Arreglo**: regla
+única en `ruesma_comun.obras` (`CODIGOS_OBRA_SIN_CERO`, `canonizar_codigo_obra`); sv3 sella la obra canónica, sv4 la
+usa en las tres consultas y al guardar la cabecera, sv9 en el alta. VAR y POSTV2 pasan a ser obras válidas. Review
+APROBADA en la pasada 2 (CR1: campaña a mano sin tests textuales; #17 equivalente aceptado por el humano). Desplegada
+el 2026-10-15 (sv6, sv3, sv9, sv4 r20261015-0947, lanzado por el líder a petición del humano); verificada en pantalla.
+Los merges antiguos con 3 cifras los corrigió el humano a mano en la BBDD. Fuera: filtro por empresa del combo de
+partidas (VAR, POSTV2, 0711 mezclan la empresa 28), sin ficha todavía.
+
 
 ## F-054 · sv1 ingiere los PDF e imágenes de correos adjuntos encadenados (cerrada 2026-10-02)
 
