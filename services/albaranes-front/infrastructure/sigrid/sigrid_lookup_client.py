@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 import httpx
+from ruesma_comun.obras import canonizar_codigo_obra
 from ruesma_comun.sigrid import PoliticaTruncado, comprobar_truncado
 
 from domain.models.review_models import (
@@ -143,7 +144,9 @@ class SigridLookupClient:
         *,
         codigo_obra: str,
     ) -> list[ProveedorOption]:
-        codigo = (codigo_obra or "").strip()
+        # F-070 · R10/R11: obra canónica (``686`` ⇒ ``0686``, ``var`` ⇒
+        # ``VAR``); lo que no encaja, recortado como hoy.
+        codigo = canonizar_codigo_obra(codigo_obra)
         if not codigo:
             return []
         columns, rows = self._post_sql_read(
@@ -208,7 +211,9 @@ class SigridLookupClient:
         (capítulo › subcapítulo › … › partida), construida en Python a
         partir de la cadena ``padide``.
         """
-        codigo = (codigo_obra or "").strip()
+        # F-070 · R10/R11: obra canónica (``686`` ⇒ ``0686``, ``var`` ⇒
+        # ``VAR``); lo que no encaja, recortado como hoy.
+        codigo = canonizar_codigo_obra(codigo_obra)
         if not codigo:
             return []
         columns, rows = self._post_sql_read(
@@ -291,7 +296,9 @@ class SigridLookupClient:
         ese proveedor; si no, devuelve todos los de la obra. Deduplica por
         codigo de contrato.
         """
-        codigo = (codigo_obra or "").strip()
+        # F-070 · R10/R11: obra canónica (``686`` ⇒ ``0686``, ``var`` ⇒
+        # ``VAR``); lo que no encaja, recortado como hoy.
+        codigo = canonizar_codigo_obra(codigo_obra)
         if not codigo:
             return []
         columns, rows = self._post_sql_read(

@@ -206,6 +206,27 @@ tests no importan (BBDD/FastAPI); las vigila un test por texto.
 - Despliegue (lo pide el humano): sv6 → sv4 → sv2 (`.\deploy.ps1 -Only sv6`, `.\check_deploy.ps1`,
   luego `-Only sv4` y `-Only sv2`). Para F-053 y F-049: design §«Contrato con F-053 y con F-049».
 
+## 6 bis. T22, T23 y T24 hechas por el humano (2026-10-09, pipeline local sin sv1)
+
+Guía: `progress/pruebas_F-051_T22_T24.md` (no versionada). Inyección con el `Inyector` de `evals/inyeccion.py`
+(pasada `f051-20261009-103242`) de HOR-004, GEN-002, FER-002, MOR-002 y HOR-017; IA real en sv2 y sv5 (autorizada).
+
+- **T22 · OK.** HOR-017 (contrato CTSU24/0452): la base sale `almacen_sin_partida`, `codigo_partida_final` NULL,
+  `matched_contrato_line_id` conservado (partida de la casada `02.01.02`) y motivos `almacen_sin_partida_en_albaran` y
+  `partida_ausente_familia_destinada`; las cuatro sintéticas heredan el almacén (`inherited_from_base_no_partida`).
+- **T23 · OK en lo que mide F-051.** `codigo_imputacion` de sv2 (envelope final): HOR-004 `03.03.07`; GEN-002 las
+  siete líneas con código y **EUROPALET `null`**; FER-002 sin nulos; MOR-002 `01.02.02`; HOR-017 `null`. En sv6 solo
+  van a almacén las `null` (EUROPALET de GEN-002 y la base de HOR-017). **Fallos de lectura, ajenos a F-051 y
+  evidencia para F-049:** GEN-002 lee `PS.09.03` donde el papel dice `P5.09.03` y FER-002 pierde el prefijo de
+  «P4/5 36.01» (y el jabón cae en el grupo `CI.04.18`, como el 18-sep): esas líneas salen `new_line_created` con
+  partidas que no existen. MOR-002 no extrae la carga incompleta como línea (el patrón (d) queda sin probar en
+  real; lo cubren los tests). No hay caso exacto del patrón (c) en el banco.
+- **T24 · OK (puntos 1–11).** «Almacén» en la fila; «Almacén (sin partida)» primera opción; elegirla o vaciar la
+  partida deja «Almacén» y «Sigrid»; «Almacén a todas» con recuento y «Deshacer» lo revierte. O1: el humano da por
+  bueno que re-conciliar no toque la partida final. Interruptor: con `ALMACEN_SIN_PARTIDA_ENABLED=false` HOR-017
+  sale como antes (`existing_matched`, `02.01.02`, sin motivos de almacén); al volver a encenderlo, otra vez
+  `almacen_sin_partida`.
+
 ## Evidencias
 
 | Evidencia | Valor medido |

@@ -55,6 +55,14 @@ Columnas añadidas:
         'phase_1' si la línea proviene de la extracción inicial.
         'phase_2' si la línea fue modificada o introducida por la
         fase 2 (revisión).
+
+  Tabla nueva albaran_altas_sigrid (F-053 · R36):
+        Estado del alta en Sigrid de cada documento aprobado (una fila por
+        documento, FK al merge con ON DELETE CASCADE). Tabla aparte y no
+        columnas del merge porque el deshacer de sv4 restaura filas enteras
+        del merge. La crea sv3 (dueño del schema del merge), la ESCRIBE
+        SOLO sv9 (albaranes-alta-sigrid) y la LEE sv4. sv5 no la lee.
+        Fechas en VARCHAR(64) ISO UTC, como el resto del merge.
 """
 from __future__ import annotations
 
@@ -121,6 +129,31 @@ _PHASE2_DDL: tuple[str, ...] = (
     "NOT NULL DEFAULT 'phase_1'",
     "CREATE INDEX IF NOT EXISTS ix_albaran_lines_merge_source_phase "
     "ON albaran_lines_merge(source_phase)",
+
+    # Alta en Sigrid de los aprobados (F-053 · R36, design §6). Va al final:
+    # su FK apunta al merge, que ya existe cuando se aplica este DDL.
+    "CREATE TABLE IF NOT EXISTS albaran_altas_sigrid ("
+    "document_id VARCHAR(36) PRIMARY KEY "
+    "REFERENCES albaran_documents_merge(id) ON DELETE CASCADE, "
+    "estado VARCHAR(24) NOT NULL, "
+    "modo VARCHAR(12), "
+    "sigrid_con_ide INTEGER, "
+    "sigrid_cod VARCHAR(24), "
+    "adjunto_estado VARCHAR(16), "
+    "sigrid_gra_ide INTEGER, "
+    "motivos_json TEXT, "
+    "avisos_json TEXT, "
+    "peticion_json TEXT, "
+    "respuesta_json TEXT, "
+    "historial_json TEXT, "
+    "intentos INTEGER NOT NULL DEFAULT 0, "
+    "approved_at_utc VARCHAR(64), "
+    "approved_by VARCHAR(255), "
+    "ultimo_intento_at_utc VARCHAR(64), "
+    "creado_at_utc VARCHAR(64) NOT NULL, "
+    "actualizado_at_utc VARCHAR(64))",
+    "CREATE INDEX IF NOT EXISTS ix_albaran_altas_sigrid_estado "
+    "ON albaran_altas_sigrid (estado)",
 )
 
 
@@ -141,7 +174,7 @@ def apply_phase2_ddl(session_factory: SessionFactory) -> None:
                 "albaran_documents_merge.review_phase2_*, "
                 "albaran_documents_merge.tipologia*, "
                 "albaran_documents_merge.contratos_busqueda_*, "
-                "albaran_lines_merge.source_phase"
+                "albaran_lines_merge.source_phase; tabla albaran_altas_sigrid"
             )
         except Exception:
             session.rollback()

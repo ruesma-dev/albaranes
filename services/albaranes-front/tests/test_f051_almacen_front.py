@@ -408,8 +408,9 @@ def test_f051_r23_lista_vacia_no_toca_nada(repo_sqlite):
 # ---- update_line_conciliacion (guardar la fila salmón) ------------- #
 
 def _guardar(repo, vid, **campos):
+    # F-065 R8: el PATCH lleva solo los campos presentes (``campos=``).
     return repo.update_line_conciliacion(
-        document_id=DOC, valuation_line_id=vid, **campos,
+        document_id=DOC, valuation_line_id=vid, campos=campos,
     )
 
 
@@ -799,6 +800,14 @@ class _ServicioApi:
         self.llamadas.append(("todas", document_id))
         return self.todas
 
+    def asignar_almacen_todas_con_saltos(self, *, document_id):
+        # F-065 R14: el portal usa la variante que cuenta las saltadas.
+        from application.services.review_service import ResultadoAlmacenTodas
+
+        return ResultadoAlmacenTodas(
+            tocadas=self.asignar_almacen_todas(document_id=document_id), saltadas=0,
+        )
+
 
 def _cliente(monkeypatch, servicio):
     from fastapi.testclient import TestClient
@@ -843,7 +852,8 @@ def test_f051_endpoint_almacen_a_todas(monkeypatch):
     )
 
     assert respuesta.status_code == 200, respuesta.text
-    assert respuesta.json() == {"ok": True, "document_id": DOC, "lineas": 4}
+    assert respuesta.json() == {
+        "ok": True, "document_id": DOC, "lineas": 4, "saltadas": 0}
     assert servicio.llamadas == [("todas", DOC)]
 
 
@@ -1040,10 +1050,11 @@ def test_f051_r13_el_combo_de_partida_ofrece_almacen_primero():
     js = _app_js()
 
     assert "Almacén (sin partida)" in js
-    # Solo en el combo de PARTIDA (no en el de concepto) y como primer
-    # ítem fijo, fuera del filtro por texto.
-    assert 'classList.contains("js-partida-combo")' in js
-    assert _re.search(r"shown\s*=\s*\[ITEM_ALMACEN\]\.concat\(", js)
+    # F-065 R27: el combo de PARTIDA (el de concepto ya no existe) pone
+    # «Almacén» como primer ítem fijo, fuera del filtro por texto.
+    opciones = _funcion_js(js, "opcionesPartida")
+    assert "Almacén (sin partida)" in opciones
+    assert _re.search(r"return\s*\[ALMACEN\]\.concat\(", opciones)
 
 
 def test_f051_r13_elegir_almacen_llama_al_post_de_la_linea():
@@ -1286,14 +1297,16 @@ def test_f051_h2_guardar_solo_envia_la_partida_si_el_revisor_la_cambio(
     tmp_path,
 ):
     """Una fila que nadie tocó no se manda a almacén ni se le reescribe la
-    partida: sin cambio, ``codigo_partida`` viaja ``null`` («no viene»).
-    Vaciada a propósito, ``""`` (almacén, R12); cambiada, la nueva."""
-    cuerpos = _ejecutar_js(tmp_path, ["parseNumEs", "partidaParaEnviar", "_conciliaBody"], """
+    partida: sin cambio, ``codigo_partida`` NO viaja (F-065 R8: ausente = no
+    cambia). Vaciada a propósito, ``""`` (almacén, R12); cambiada, la nueva."""
+    cuerpos = _ejecutar_js(tmp_path, [
+        "parseNumEs", "numerosIguales", "partidaParaEnviar", "_camposCambiados",
+    ], """
         function partida(defecto, valor) {
-            return _conciliaBody(fila([
+            return _camposCambiados(fila([
                 entrada("codigo_partida", defecto, valor),
                 entrada("descripcion", "ARIDO", "ARIDO"),
-                entrada("cantidad", "2", "2", {numeric: "1"}),
+                entrada("cantidad", "2", "3", {numeric: "1"}),
             ]));
         }
         console.log(JSON.stringify({
@@ -1306,132 +1319,69 @@ def test_f051_h2_guardar_solo_envia_la_partida_si_el_revisor_la_cambio(
         }));
     """)
 
-    assert cuerpos["sin_tocar"]["codigo_partida"] is None
-    assert cuerpos["sin_tocar_vacia"]["codigo_partida"] is None
+    assert "codigo_partida" not in cuerpos["sin_tocar"]
+    assert "codigo_partida" not in cuerpos["sin_tocar_vacia"]
     assert cuerpos["vaciada"]["codigo_partida"] == ""
     assert cuerpos["vaciada_con_espacios"]["codigo_partida"] == ""
     assert cuerpos["cambiada"]["codigo_partida"] == "04.05"
     assert cuerpos["puesta_en_almacen"]["codigo_partida"] == "03.02"
-    # El resto de campos, como siempre.
-    assert cuerpos["sin_tocar"]["descripcion"] == "ARIDO"
-    assert cuerpos["sin_tocar"]["cantidad"] == 2
+    # El resto, solo si cambió (F-065 R8): la cantidad sí, la descripción no.
+    assert cuerpos["sin_tocar"] == {"cantidad": 3}
 
 
 @_con_node
 def test_f051_r12_guardar_la_fila_envia_la_partida_vaciada(tmp_path):
-    """Vaciar la partida y guardar envía ``""`` (elegir almacén, R12), no
-    ``null`` (que el backend trata como «no viene»); y una partida sin
-    tocar NO se envía (review H2). Se ejecuta el JS real con node: la
-    versión anterior de este test buscaba una cadena y no vigilaba nada
-    (review H3)."""
-    cuerpos = _ejecutar_js(
-        tmp_path, ["parseNumEs", "partidaParaEnviar", "_conciliaBody"], """
+    """Vaciar la partida y guardar envía ``""`` (elegir almacén, R12); una
+    partida sin tocar NO se envía (review H2; F-065 R8). JS real con node."""
+    cuerpos = _ejecutar_js(tmp_path, [
+        "parseNumEs", "numerosIguales", "partidaParaEnviar", "_camposCambiados",
+    ], """
         console.log(JSON.stringify({
-            vaciada: _conciliaBody(fila([
+            vaciada: _camposCambiados(fila([
                 entrada("codigo_partida", "03.02", "")])),
-            sin_tocar: _conciliaBody(fila([
+            sin_tocar: _camposCambiados(fila([
                 entrada("codigo_partida", "03.02", "03.02")])),
         }));
     """)
 
     assert cuerpos["vaciada"] == {"codigo_partida": ""}
-    assert cuerpos["sin_tocar"] == {"codigo_partida": None}
+    assert cuerpos["sin_tocar"] == {}
 
 
 def test_f051_r12_los_dos_guardados_arman_el_cuerpo_con_la_misma_funcion():
-    """«Guardar» de la fila y «Guardar todas las líneas» usan
-    ``_conciliaBody`` y nadie más arma el cuerpo por su cuenta: una copia
-    con ``v || null`` en cualquiera de los dos sitios rompería R12."""
+    """«Guardar» de la fila y «Guardar todas» usan ``_camposCambiados`` (F-065,
+    antes ``_conciliaBody``) y nadie más arma el cuerpo por su cuenta: una
+    copia con ``v || null`` en cualquiera de los dos sitios rompería R12."""
     js = _app_js()
     fila_guardar = js[js.index('saveBtn.addEventListener("click"'):
                       js.index('getElementById("save-all-lines-btn")')]
     todas = js[js.index('saveAllLinesBtn.addEventListener("click"'):]
 
-    assert "_conciliaBody(tr)" in fila_guardar
-    assert "_conciliaBody(tr)" in todas
-    cuerpo = _funcion_js(js, "_conciliaBody")
+    assert "_camposCambiados(tr)" in fila_guardar
+    assert "_camposCambiados(tr)" in todas
+    cuerpo = _funcion_js(js, "_camposCambiados")
     assert js.count("body[field] =") == cuerpo.count("body[field] =")
 
 
-# --- O2 · el aviso «pasará a NUEVA» y la excepción de R20 -------------
+# --- O2 · el aviso «pasará a NUEVA» (retirado por F-065 R25) -----------
+# F-065 fase 2: cambiar partida, precio o unidad pasa la fila a Nueva SIN
+# confirmación, así que el confirm, ``cambiaIdentidad`` y el
+# ``data-partida-casada`` que lo alimentaba ya no existen. La excepción de R20
+# (poner la partida de la casada sigue Sigrid/Contrato) la decide el backend
+# (``cambia_origen``) y la vigilan H5 de abajo y ``test_f065_f2_origen.py``.
 
-def test_f051_o2_el_input_de_una_fila_sigrid_lleva_la_partida_de_la_casada(
+def test_f051_o2_ya_no_hay_aviso_de_nueva_ni_partida_de_casada_en_la_ficha(
     render_detalle, documento_detalle, fila_detalle, linea_valorada,
 ):
-    """En almacén la de la casada no se pinta, pero el JS la necesita para
-    no avisar «pasará a NUEVA» cuando el revisor la pone (R20)."""
     html = render_detalle(documento_detalle(
         lineas_valoracion=[linea_valorada(codigo_partida_final=None)],
         display=[fila_detalle(conciliacion={
             **_ALMACEN, "codigo_partida_casada": "03.02",
         })],
     ))
-    entrada = _input_partida(html)
-
-    assert 'data-partida-casada="03.02"' in entrada
-    assert 'value=""' in entrada
-
-
-def test_f051_o2_una_fila_nueva_no_lleva_partida_de_casada(
-    render_detalle, documento_detalle, fila_detalle, linea_valorada,
-):
-    """R20 solo vale para la casada de Sigrid: en una fila Nueva, no."""
-    html = render_detalle(documento_detalle(
-        lineas_valoracion=[linea_valorada(codigo_partida_final="04.05")],
-        display=[fila_detalle(conciliacion={
-            "kind": "derived", "codigo_partida": "04.05",
-            "codigo_partida_casada": "04.05", "estado_partida": "partida",
-        })],
-    ))
 
     assert "data-partida-casada" not in _input_partida(html)
-
-
-@_con_node
-def test_f051_o2_que_cambia_la_identidad_de_una_fila_sigrid(tmp_path):
-    casos = _ejecutar_js(tmp_path, ["cambiaIdentidad"], """
-        const casada = {partidaCasada: "03.02"};
-        console.log(JSON.stringify({
-            pone_la_de_la_casada: cambiaIdentidad(
-                entrada("codigo_partida", "", " 03.02 ", casada)),
-            pone_otra: cambiaIdentidad(
-                entrada("codigo_partida", "", "04.05", casada)),
-            cambia_a_otra_desde_la_final: cambiaIdentidad(
-                entrada("codigo_partida", "07.07", "04.05", casada)),
-            vacia: cambiaIdentidad(
-                entrada("codigo_partida", "03.02", "", casada)),
-            sin_tocar: cambiaIdentidad(
-                entrada("codigo_partida", "03.02", "03.02", casada)),
-            casada_sin_partida: cambiaIdentidad(
-                entrada("codigo_partida", "", "03.02", {partidaCasada: ""})),
-            unidad: cambiaIdentidad(entrada("unidad", "TN", "M3", casada)),
-            unidad_igual_que_la_casada: cambiaIdentidad(
-                entrada("unidad", "TN", "03.02", casada)),
-        }));
-    """)
-
-    assert casos == {
-        "pone_la_de_la_casada": False,
-        "pone_otra": True,
-        "cambia_a_otra_desde_la_final": True,
-        "vacia": False,
-        "sin_tocar": False,
-        "casada_sin_partida": True,
-        "unidad": True,
-        "unidad_igual_que_la_casada": True,
-    }
-
-
-def test_f051_o2_el_aviso_de_guardar_usa_esa_regla():
-    js = _app_js()
-    guardar = js[js.index('saveBtn.addEventListener("click"'):
-                 js.index('getElementById("save-all-lines-btn")')]
-
-    assert _re.search(
-        r"\[\]\.some\.call\(\s*tr\.querySelectorAll\("
-        r"'\.js-cedit\[data-identity=\"1\"\]'\),\s*cambiaIdentidad\s*\)",
-        guardar,
-    )
+    assert "function cambiaIdentidad(" not in _app_js()
 
 
 # --- H5 · la excepción de R20 vale fuera de almacén (dictamen) --------

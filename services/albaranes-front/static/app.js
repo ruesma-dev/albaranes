@@ -73,11 +73,10 @@
             try { return JSON.parse(dataTag.textContent).id; } catch (_) { return null; }
         })();
 
-    // TANDA 2A: datos completos del documento (incluye document.lines, las
-    // líneas BLANCAS del albarán). Ahora las blancas son SOLO LECTURA y ya
-    // NO viven en el grid editable; las reenviamos intactas en el PUT desde
-    // aquí, porque update_document BORRA las líneas merge que no lleguen en
-    // payload.lines. Sin esto, guardar la cabecera vaciaría el albarán.
+    // Datos completos del documento (JSON incrustado). F-065 R1: el PUT de la
+    // cabecera ya NO reenvía las blancas (el backend ignora las líneas); de
+    // aquí se lee, p. ej., cuántas filas tocadas a mano descartaría
+    // revalorar (n_filas_manuales, R22).
     let DOC_DATA = {};
     try { DOC_DATA = JSON.parse(dataTag.textContent) || {}; } catch (_) { DOC_DATA = {}; }
     window.__documentData = DOC_DATA;
@@ -106,7 +105,7 @@
     // --------------------------------------------------------------- //
     // Conciliacion editable.
     //
-    // El badge Sigrid/Nueva de la fila de conciliacion es un boton que
+    // El badge Contrato/Nueva de la fila de conciliacion es un boton que
     // revela un <select> con las lineas del contrato (+ opcion "Nueva").
     // Al elegir una opcion se hace PATCH al endpoint de override y se
     // recarga la pagina para reflejar precio/importe/badge actualizados.
@@ -166,6 +165,36 @@
             window.location.reload();
         } catch (e) {
             window.alert("Error de red borrando la línea.");
+            btn.disabled = false;
+        }
+    });
+
+    // F-065 R15: «Desbloquear» una fila guardada (con su «Deshacer»).
+    linesBody.addEventListener("click", async function (evt) {
+        const btn = evt.target.closest
+            ? evt.target.closest(".js-desbloquear")
+            : null;
+        if (!btn) return;
+        const vid = btn.dataset.valuationLineId;
+        btn.disabled = true;
+        try {
+            const resp = await fetch(
+                `/api/documents/${documentId}/lines/${vid}/desbloquear`,
+                { method: "POST" }
+            );
+            if (resp.ok) {
+                window.location.reload();
+                return;
+            }
+            let msg = "No se pudo desbloquear la línea.";
+            try {
+                const j = await resp.json();
+                if (j && j.detail) msg = j.detail;
+            } catch (e) { /* sin cuerpo JSON */ }
+            window.alert(msg);
+            btn.disabled = false;
+        } catch (e) {
+            window.alert("Error de red desbloqueando la línea.");
             btn.disabled = false;
         }
     });
@@ -392,7 +421,7 @@
             const combo = makeLineCombo({
                 lines: CONTRATO_LINES,
                 nuevaValue: "nueva",
-                nuevaLabel: "➕ Nueva (derivar a la partida)",
+                nuevaLabel: "➕ Nueva (con los valores actuales de la fila)",
                 onPick: function (value) {
                     sel.value = value;
                     sel.dispatchEvent(new Event("change", { bubbles: true }));
@@ -524,6 +553,8 @@
             "tr.conciliacion-row[data-for-valuation-line-id]"
         ).forEach(function (row) {
             if (row.classList.contains("concilia-add")) return;
+            // F-065 R14: una fila guardada no se borra (se salta).
+            if (row.getAttribute("data-bloqueada") === "1") return;
             const vid = (row.dataset.forValuationLineId || "").trim();
             if (vid) out.push(vid);
         });
@@ -569,14 +600,21 @@
     if (bulkDeleteBtn) {
         bulkDeleteBtn.addEventListener("click", async function () {
             const vids = collectVidsCasadas();
+            // F-065 R14: las filas guardadas se saltan y se dice cuántas.
+            const guardadas = linesBody.querySelectorAll(
+                'tr.conciliacion-row[data-bloqueada="1"]'
+            ).length;
+            const saltan = guardadas
+                ? " Se saltan " + guardadas + " línea(s) guardadas (desbloquéalas para borrarlas)."
+                : "";
             if (!vids.length) {
-                window.alert("No hay líneas casadas que borrar.");
+                window.alert("No hay líneas casadas que borrar." + saltan);
                 return;
             }
             if (!window.confirm(
-                "¿Borrar las " + vids.length + " línea(s) casada(s) (Sigrid y " +
+                "¿Borrar las " + vids.length + " línea(s) casada(s) (Contrato y " +
                 "Nueva)? Dejarán de contar en el total y reaparecerá el botón " +
-                "+ en cada línea."
+                "+ en cada línea." + saltan
             )) return;
             await runBulk(bulkDeleteBtn, vids, "Borrando", async function (vid) {
                 const resp = await fetch(
@@ -612,9 +650,21 @@
                     { method: "POST" }
                 );
                 if (!resp.ok) {
-                    window.alert("No se pudo pasar el albarán a almacén.");
+                    // F-053 R25: con alta en Sigrid bloqueante llega el aviso (409).
+                    let msg = "No se pudo pasar el albarán a almacén.";
+                    try { const j = await resp.json(); if (j && j.detail) msg = j.detail; } catch (e) {}
+                    window.alert(msg);
                     almacenTodasBtn.disabled = false;
                     return;
+                }
+                // F-065 R14: las filas guardadas se saltan; se dice cuántas.
+                let saltadas = 0;
+                try { saltadas = (await resp.json()).saltadas || 0; } catch (e) {}
+                if (saltadas) {
+                    window.alert(
+                        saltadas + " línea(s) guardadas no se han pasado a almacén " +
+                        "(desbloquéalas para hacerlo)."
+                    );
                 }
                 window.location.reload();
             } catch (e) {
@@ -671,73 +721,88 @@
     }
 
     // --------------------------------------------------------------- //
-    // Combo de PARTIDA sobre la fila salmon (jun 2026).
+    // Combo de PARTIDA de la fila (F-065 R27).
     //
-    // El campo "Código imputación" (partida) de la fila salmon era un
-    // input de texto libre. Ahora se le monta un desplegable con las
-    // partidas que existen en el contrato de Sigrid (deduplicadas) para
-    // elegir en vez de teclear. Reutiliza el CSS del combo de líneas y
-    // el MISMO arreglo de scroll del panel.
-    //
-    // A diferencia de makeLineCombo (que crea su propio input), aquí el
-    // combo se ENGANCHA al input existente .js-partida-combo para que el
-    // valor siga fluyendo por el flujo js-cedit (dirty + guardar PATCH).
-    // Al elegir, se escribe el código y se dispara 'input' para que
-    // wireConciliaEdit detecte el cambio.
+    // Ofrece «Almacén (sin partida)» primero y las partidas HOJA del
+    // presupuesto de la OBRA en Sigrid (GET /api/sigrid/partidas?obra=, una
+    // carga por ficha), con filtro por código y por descripción agregada.
+    // Solo admite valores de la lista: un texto que no es de la lista no se
+    // guarda (al salir vuelve al que tenía). Obra sin partidas ⇒ solo
+    // «Almacén»; Sigrid no responde ⇒ solo «Almacén» y el aviso. Elegir una
+    // partida solo cambia la partida (la fila sigue Contrato si es la de su
+    // línea de contrato; si no, pasa a Nueva al guardar, R25): ya NO reapunta
+    // la línea de contrato (eso es solo «Origen ✎», R28). Teclado: flechas,
+    // Enter elige, Esc cierra y deshace lo tecleado.
     // --------------------------------------------------------------- //
-    // Partidas del CONTRATO (Postgres) embebidas: SOLO como fallback si
-    // Sigrid no responde o la obra no está fijada.
-    let PARTIDAS_FALLBACK = [];
-    (function () {
-        const el = document.getElementById("partidas-json");
-        if (el) {
-            try { PARTIDAS_FALLBACK = JSON.parse(el.textContent || "[]") || []; }
-            catch (_) { PARTIDAS_FALLBACK = []; }
-        }
-    })();
-
-    // Carga (una sola vez) las partidas HOJA del presupuesto de la obra
-    // desde Sigrid (GET /api/sigrid/partidas?obra=). Devuelve un array
-    // [{code,label,norm}] con label = "codigo · descripción agregada".
-    // Si Sigrid falla, no hay obra, o devuelve vacío, cae a las partidas
-    // del contrato embebidas.
-    let _partidasItems = null;
-    let _partidasPromise = null;
-    function _fallbackPartidas() {
-        return (PARTIDAS_FALLBACK || []).map(function (p) {
-            const c = String(p);
-            return { code: c, label: c, norm: _normLine(c) };
+    function partidasDeRespuesta(data) {
+        if (!data || data.ok === false) { return { items: [], error: true }; }
+        const items = (data.items || []).map(function (p) {
+            const desc = p.descripcion_agregada || p.descripcion || "";
+            const label = desc ? (p.codigo + " · " + desc) : p.codigo;
+            return { code: p.codigo, label: label, norm: _normLine(label) };
         });
+        return { items: items, error: false };
     }
-    function loadPartidas() {
-        if (_partidasItems) { return Promise.resolve(_partidasItems); }
-        if (_partidasPromise) { return _partidasPromise; }
+
+    function opcionesPartida(items, texto) {
+        const ALMACEN = { almacen: true, code: "", label: "Almacén (sin partida)" };
+        const tokens = _normLine(texto).split(/\s+/).filter(Boolean);
+        return [ALMACEN].concat(items.filter(function (it) {
+            return tokens.every(function (t) { return it.norm.indexOf(t) !== -1; });
+        }));
+    }
+
+    // «a», «al», «alm», «almacén»… (o «Almacén (sin partida)» entero): lo
+    // tecleado es «Almacén», sin acentos ni mayúsculas (R27 v3).
+    function esAlmacenTecleado(texto) {
+        const t = _normLine(texto).trim();
+        return t !== "" && ("almacen".indexOf(t) === 0 || t.indexOf("almacen") === 0);
+    }
+
+    // La marcada al teclear (R27 v4): «Almacén» (posición 0) si es lo
+    // tecleado; si no, la primera partida que coincide (posición 1: la 0 es
+    // siempre «Almacén»); sin texto o sin coincidencias, ninguna (-1).
+    function marcadaAlTeclear(shown, texto) {
+        if (esAlmacenTecleado(texto)) { return 0; }
+        return String(texto || "").trim() !== "" && shown.length > 1 ? 1 : -1;
+    }
+
+    function partidaValida(valor, items) {
+        const v = String(valor || "").trim();
+        return v === "" || items.some(function (it) { return it.code === v; });
+    }
+
+    function siguienteActivo(actual, tecla, total) {
+        if (tecla === "ArrowDown") { return Math.min(actual + 1, total - 1); }
+        if (tecla === "ArrowUp") { return Math.max(actual - 1, 0); }
+        return actual;
+    }
+
+    // Una carga por OBRA (la comparten todas las filas). F-065 H4: sin obra no
+    // se guarda nada en caché, y si la obra cambia se vuelve a pedir.
+    let _partidasObra = null;
+    let _partidasObraCodigo = null;
+    function cargarPartidasObra() {
         const obraEl = document.getElementById("obra_codigo");
         const obra = obraEl ? (obraEl.value || "").trim() : "";
         if (!obra) {
-            _partidasItems = _fallbackPartidas();
-            return Promise.resolve(_partidasItems);
+            return Promise.resolve({ items: [], error: false });
         }
-        const url = "/api/sigrid/partidas?obra=" + encodeURIComponent(obra);
-        _partidasPromise = fetch(url, { headers: { "Accept": "application/json" } })
+        if (_partidasObra && _partidasObraCodigo === obra) { return _partidasObra; }
+        _partidasObraCodigo = obra;
+        _partidasObra = fetch(
+            "/api/sigrid/partidas?obra=" + encodeURIComponent(obra),
+            { headers: { "Accept": "application/json" } }
+        )
             .then(function (r) { return r.json(); })
-            .then(function (data) {
-                const items = ((data && data.items) || []).map(function (p) {
-                    const desc = p.descripcion_agregada || p.descripcion || "";
-                    const label = desc ? (p.codigo + "  ·  " + desc) : p.codigo;
-                    return { code: p.codigo, label: label, norm: _normLine(label) };
-                });
-                _partidasItems = items.length ? items : _fallbackPartidas();
-                return _partidasItems;
-            })
-            .catch(function () {
-                _partidasItems = _fallbackPartidas();
-                return _partidasItems;
-            });
-        return _partidasPromise;
+            .then(function (data) { return partidasDeRespuesta(data); })
+            .catch(function () { return { items: [], error: true }; });
+        return _partidasObra;
     }
 
-    function attachInputCombo(input) {
+    // ``opciones.alElegirAlmacen`` (F-065 R29): en la ventana de «Dividir»,
+    // «Almacén» solo deja la partida vacía; en la fila, la manda a almacén.
+    function attachPartidaCombo(input, opciones) {
         if (!input || input.dataset.comboAttached) { return; }
         input.dataset.comboAttached = "1";
 
@@ -750,19 +815,32 @@
         panel.hidden = true;
         wrap.appendChild(panel);
 
+        let partidas = { items: [], error: false };
         let shown = [];
+        let activo = -1;
+        let alAbrir = input.value;
         let repos = null;
-        let justPicked = false;
+        // R27 v5: hasta la primera respuesta, la lista dice «Cargando
+        // partidas…» (y Enter no elige nada); ``abierta`` evita que una
+        // respuesta que llega tarde reabra una lista ya cerrada (Esc, salir,
+        // elegir).
+        let cargadas = false;
+        let abierta = false;
+        // Mientras ``pick`` avisa del cambio (su «input»), el combo no se
+        // reabre (R27 v3: antes el panel volvía, filtrado con la elegida).
+        let eligiendo = false;
 
         function place() {
             const r = input.getBoundingClientRect();
             panel.style.top = (r.bottom + 4) + "px";
             panel.style.left = r.left + "px";
-            panel.style.minWidth = Math.max(r.width, 200) + "px";
-            panel.style.maxWidth = "480px";
+            panel.style.minWidth = Math.max(r.width, 260) + "px";
+            panel.style.maxWidth = "520px";
         }
         function close() {
             panel.hidden = true;
+            abierta = false;
+            activo = -1;
             if (repos) {
                 window.removeEventListener("scroll", repos, true);
                 window.removeEventListener("resize", repos);
@@ -770,66 +848,40 @@
             }
         }
         function pick(it) {
-            justPicked = true;
-            input.value = it.code;
             close();
-            // Notificar a wireConciliaEdit: marca dirty, muestra Guardar.
+            if (it.almacen) {
+                if (opciones && opciones.alElegirAlmacen) {
+                    opciones.alElegirAlmacen(input);
+                } else {
+                    elegirAlmacen(input);
+                }
+                return;
+            }
+            input.value = it.code;
+            alAbrir = it.code;
+            // Notifica a wireConciliaEdit: la fila queda con cambios.
+            eligiendo = true;
             input.dispatchEvent(new Event("input", { bubbles: true }));
-            input.focus();
+            eligiendo = false;
         }
         function render() {
             panel.innerHTML = "";
-            if (!shown.length) {
+            shown.forEach(function (it, idx) {
+                const d = document.createElement("div");
+                d.className = "combo-item" + (idx === activo ? " active" : "");
+                d.textContent = it.label;
+                d.addEventListener("mousedown", function (e) {
+                    e.preventDefault();
+                    pick(it);
+                });
+                panel.appendChild(d);
+            });
+            if (!cargadas || partidas.error) {
                 const d = document.createElement("div");
                 d.className = "combo-msg";
-                d.textContent = "Sin coincidencias";
+                d.textContent = cargadas ? "No se pudieron cargar las partidas" : "Cargando partidas…";
                 panel.appendChild(d);
-            } else {
-                shown.forEach(function (it) {
-                    const d = document.createElement("div");
-                    d.className = "combo-item";
-                    d.textContent = it.label;
-                    d.addEventListener("mousedown", function (e) {
-                        e.preventDefault();
-                        pick(it);
-                    });
-                    panel.appendChild(d);
-                });
             }
-            panel.hidden = false;
-            place();
-            if (!repos) {
-                // Mismo arreglo que el combo de líneas: el scroll DENTRO
-                // del panel (rueda/slider) no debe cerrarlo; solo el
-                // scroll de la página/tabla de detrás.
-                repos = function (e) {
-                    if (e && e.type === "scroll" && e.target &&
-                        panel.contains(e.target)) { return; }
-                    close();
-                };
-                window.addEventListener("scroll", repos, true);
-                window.addEventListener("resize", repos);
-            }
-        }
-        function filterAndRender() {
-            const items = _partidasItems || [];
-            const tokens = _normLine(input.value).split(/\s+/).filter(Boolean);
-            shown = items.filter(function (it) {
-                if (!tokens.length) { return true; }
-                const nl = it.norm || _normLine(it.label);
-                return tokens.every(function (t) { return nl.indexOf(t) !== -1; });
-            });
-            render();
-        }
-        function open() {
-            if (justPicked) { justPicked = false; return; }
-            if (_partidasItems) { filterAndRender(); return; }
-            // Aún no cargadas: panel con "Cargando…" y disparamos la carga.
-            panel.innerHTML = "";
-            const msg = document.createElement("div");
-            msg.className = "combo-msg";
-            msg.textContent = "Cargando partidas de Sigrid\u2026";
-            panel.appendChild(msg);
             panel.hidden = false;
             place();
             if (!repos) {
@@ -841,16 +893,84 @@
                 window.addEventListener("scroll", repos, true);
                 window.addEventListener("resize", repos);
             }
-            loadPartidas().then(function () {
-                if (!panel.hidden) { filterAndRender(); }
+        }
+        // ``textoNuevo`` (R27 v3, v4): con otro texto la lista vuelve arriba y
+        // la marcada se recalcula (``marcadaAlTeclear``: «Almacén» o la primera
+        // que coincide; antes seguía marcada la misma posición, ya con otra
+        // partida).
+        // ``alAbrir`` (lo que vuelve con Esc o al salir con algo que no es de
+        // la lista) se toma al ABRIR por foco o clic, nunca de lo que se está
+        // tecleando (pasada 2, CR1: tras elegir, la lista queda cerrada con el
+        // foco dentro y la tecla siguiente no es «el valor de antes»).
+        function open(textoNuevo) {
+            if (panel.hidden && !textoNuevo) { alAbrir = input.value; }
+            abierta = true;
+            if (!cargadas) { render(); }  // ya, con «Cargando partidas…»
+            cargarPartidasObra().then(function (res) {
+                partidas = res;
+                cargadas = true;
+                if (!abierta) {
+                    volverSiNoVale();  // O6: se salió antes de que llegara
+                    return;
+                }
+                shown = opcionesPartida(res.items, input.value);
+                if (textoNuevo) {
+                    activo = marcadaAlTeclear(shown, input.value);
+                } else {
+                    activo = Math.min(activo, shown.length - 1);
+                }
+                render();
+                if (textoNuevo) { panel.scrollTop = 0; }
             });
         }
 
-        input.addEventListener("focus", open);
-        input.addEventListener("click", open);
-        input.addEventListener("input", open);
-        // Nota: NO interceptamos Enter; lo gestiona wireConciliaEdit
-        // (Enter = guardar). El picking es por click en la opción.
+        input.addEventListener("focus", function () { open(false); });
+        input.addEventListener("click", function () { open(false); });
+        input.addEventListener("input", function () {
+            marcarPartida(input, false);  // al cambiarla, fuera el rojo (R27 v5)
+            if (!eligiendo && document.activeElement === input) { open(true); }
+        });
+        // Va ANTES que el Enter = «Guardar» de wireConciliaEdit
+        // (wirePartidaCombos se llama primero).
+        input.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") {
+                // R27 v5: en la partida, Enter NUNCA guarda la fila ni acepta
+                // «Dividir», esté la lista abierta, cerrada o cargando (antes,
+                // con la lista aún cerrada mientras llegaban las partidas, el
+                // Enter guardaba la fila con lo tecleado). Solo elige la
+                // marcada; sin marcada (-1, o lista cerrada: close() la pone a
+                // -1), nada (R27 v4). Para guardar: «Guardar» o Enter en otra
+                // celda de la fila.
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                const elegido = shown[activo];
+                if (elegido) { pick(elegido); }
+            } else if (panel.hidden) {
+                // Lista cerrada: el resto de teclas no son del combo.
+            } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                e.preventDefault();
+                activo = siguienteActivo(activo, e.key, shown.length);
+                render();
+                _scrollActive(panel);
+            } else if (e.key === "Escape") {
+                e.preventDefault();
+                input.value = alAbrir;
+                close();
+            }
+        });
+        // Solo valores de la lista: lo demás vuelve al valor de antes.
+        // Solo valores de la lista: lo demás vuelve al valor de antes. Sin la
+        // lista aún no se decide a ciegas (O6): se decide al llegar.
+        function volverSiNoVale() {
+            if (input.value !== alAbrir && !partidaValida(input.value, partidas.items)) {
+                input.value = alAbrir;
+                input.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+        }
+        input.addEventListener("blur", function () {
+            if (cargadas) { volverSiNoVale(); }
+            close();
+        });
         document.addEventListener("click", function (e) {
             if (!wrap.contains(e.target)) { close(); }
         });
@@ -860,39 +980,12 @@
         document.querySelectorAll(
             "tr.concilia-editable .js-partida-combo"
         ).forEach(function (inp) {
-            attachContratoLineCombo(inp);
+            attachPartidaCombo(inp);
         });
     }
 
-    // ----------------------------------------------------------------- //
-    // Combo de LÍNEA DE CONTRATO sobre la fila salmón (jun 2026).
-    //
-    // Se engancha TANTO al input de PARTIDA (.js-partida-combo) como al de
-    // CONCEPTO (.js-concepto-combo). Busca en las LÍNEAS DE CONTRATO de
-    // Sigrid (embebidas en CONTRATO_LINES) filtrando por código o por
-    // descripción. Al ELEGIR una línea, en lugar de escribir solo un campo,
-    // RELLENA los cuatro: partida, concepto (descripción), unidad y precio
-    // unitario, y recalcula el importe. (La cantidad NO se toca: es la
-    // recibida del albarán.) Dispara 'input' en cada campo para que
-    // wireConciliaEdit marque dirty y sincronice importe. No reconcilia con
-    // Sigrid (eso sigue siendo el ✎ de Origen): al guardar, si cambió la
-    // identidad de una fila Sigrid, pasará a NUEVA conservando el resto.
-    // ----------------------------------------------------------------- //
-    // F-051 (R13): primer ítem FIJO del combo de PARTIDA: no se filtra por
-    // el texto tecleado y está siempre, haya o no contrato o líneas.
-    // Elegirlo pone la línea en almacén (partida vacía) sin tocar importes
-    // y la fila de Sigrid sigue siendo de Sigrid.
-    const ITEM_ALMACEN = {
-        id: null,
-        almacen: true,
-        label: "Almacén (sin partida)",
-        desc: "",
-        part: "",
-        unidad: "",
-        precio: null,
-        norm: "",
-    };
-
+    // F-051 (R13): «Almacén (sin partida)» pone la línea en almacén (partida
+    // vacía) sin tocar importes; la fila Contrato sigue siendo Contrato.
     async function elegirAlmacen(input) {
         const tr = input.closest("tr.conciliacion-row");
         const vid = (input.dataset.valuationLineId ||
@@ -905,7 +998,10 @@
                 { method: "POST" }
             );
             if (!resp.ok) {
-                window.alert("No se pudo pasar la línea a almacén.");
+                // F-053 R25: con alta en Sigrid bloqueante llega el aviso (409).
+                let msg = "No se pudo pasar la línea a almacén.";
+                try { const j = await resp.json(); if (j && j.detail) msg = j.detail; } catch (e) {}
+                window.alert(msg);
                 input.disabled = false;
                 return;
             }
@@ -915,168 +1011,6 @@
             input.disabled = false;
         }
     }
-
-    function _contratoLineItems() {
-        return (CONTRATO_LINES || []).map(function (l) {
-            const lab = l.label || l.desc || "";
-            return {
-                id: (l.id != null ? l.id : null),
-                label: lab,
-                desc: (l.desc != null ? l.desc : ""),
-                part: (l.part != null ? l.part : ""),
-                unidad: (l.unidad != null ? l.unidad : ""),
-                precio: (l.precio != null ? l.precio : null),
-                norm: _normLine(lab),
-            };
-        }).filter(function (it) { return it.label !== ""; });
-    }
-
-    function _setRowField(tr, field, val) {
-        const el = tr.querySelector('[data-field="' + field + '"]');
-        if (!el) { return; }
-        el.value = (val === null || val === undefined) ? "" : String(val);
-        // Notifica a wireConciliaEdit (dirty + sincroniza importe). El combo
-        // de cada input ignora este 'input' si el campo no tiene el foco.
-        el.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-
-    function attachContratoLineCombo(input) {
-        if (!input || input.dataset.contratoComboAttached) { return; }
-        input.dataset.contratoComboAttached = "1";
-        const items = _contratoLineItems();
-        // F-051 (R13): solo el combo de PARTIDA ofrece «Almacén».
-        const esPartida = input.classList.contains("js-partida-combo");
-
-        const wrap = document.createElement("div");
-        wrap.className = "combo combo-lines combo-concepto";
-        input.parentNode.insertBefore(wrap, input);
-        wrap.appendChild(input);
-        const panel = document.createElement("div");
-        panel.className = "combo-panel";
-        panel.hidden = true;
-        wrap.appendChild(panel);
-
-        let shown = [];
-        let repos = null;
-        let justPicked = false;
-
-        function place() {
-            const r = input.getBoundingClientRect();
-            panel.style.top = (r.bottom + 4) + "px";
-            panel.style.left = r.left + "px";
-            panel.style.minWidth = Math.max(r.width, 280) + "px";
-            panel.style.maxWidth = "560px";
-        }
-        function close() {
-            panel.hidden = true;
-            if (repos) {
-                window.removeEventListener("scroll", repos, true);
-                window.removeEventListener("resize", repos);
-                repos = null;
-            }
-        }
-        function pick(it) {
-            justPicked = true;
-            if (it.almacen) {
-                close();
-                elegirAlmacen(input);
-                return;
-            }
-            const tr = input.closest("tr.conciliacion-row");
-            // Auto-guardado: re-conciliar con la línea de contrato elegida
-            // reutilizando el <select> oculto js-concilia-select (PATCH
-            // mode=contract_line: rellena partida/concepto/unidad/precio
-            // desde Sigrid, conserva la cantidad, deja la fila SIGRID y
-            // recarga). Sin pulsar «Guardar».
-            const sel = tr ? tr.querySelector(".js-concilia-select") : null;
-            if (sel && it.id != null) {
-                sel.value = String(it.id);
-                if (sel.value === String(it.id)) {
-                    close();
-                    sel.dispatchEvent(new Event("change", { bubbles: true }));
-                    return;
-                }
-            }
-            // Fallback (sin <select>/opción): rellenar campos en cliente.
-            if (tr) {
-                _setRowField(tr, "codigo_partida", it.part);
-                _setRowField(tr, "descripcion", it.desc);
-                _setRowField(tr, "unidad", it.unidad);
-                _setRowField(tr, "precio_unitario",
-                    it.precio != null ? it.precio : "");
-            } else {
-                input.value = it.desc;
-                input.dispatchEvent(new Event("input", { bubbles: true }));
-            }
-            close();
-            input.focus();
-        }
-        function render() {
-            panel.innerHTML = "";
-            if (!shown.length) {
-                const d = document.createElement("div");
-                d.className = "combo-msg";
-                d.textContent = items.length ? "Sin coincidencias" : "Sin líneas de contrato";
-                panel.appendChild(d);
-            } else {
-                shown.forEach(function (it) {
-                    const d = document.createElement("div");
-                    d.className = "combo-item";
-                    d.textContent = it.label;
-                    d.addEventListener("mousedown", function (e) {
-                        e.preventDefault();
-                        pick(it);
-                    });
-                    panel.appendChild(d);
-                });
-            }
-            panel.hidden = false;
-            place();
-            if (!repos) {
-                repos = function (e) {
-                    if (e && e.type === "scroll" && e.target &&
-                        panel.contains(e.target)) { return; }
-                    close();
-                };
-                window.addEventListener("scroll", repos, true);
-                window.addEventListener("resize", repos);
-            }
-        }
-        function open() {
-            // Solo se abre si el input tiene el foco: así, cuando se
-            // rellenan programáticamente otros campos con combo (p.ej. al
-            // elegir desde concepto se rellena también partida), su combo
-            // NO se despliega.
-            if (document.activeElement !== input) { return; }
-            if (justPicked) { justPicked = false; return; }
-            const tokens = _normLine(input.value).split(/\s+/).filter(Boolean);
-            shown = items.filter(function (it) {
-                if (!tokens.length) { return true; }
-                return tokens.every(function (t) { return it.norm.indexOf(t) !== -1; });
-            });
-            if (esPartida) {
-                // F-051 (R13): «Almacén (sin partida)» SIEMPRE el primero.
-                shown = [ITEM_ALMACEN].concat(shown);
-            }
-            render();
-        }
-
-        input.addEventListener("focus", open);
-        input.addEventListener("click", open);
-        input.addEventListener("input", open);
-        document.addEventListener("click", function (e) {
-            if (!wrap.contains(e.target)) { close(); }
-        });
-    }
-
-    function wireConceptoCombos() {
-        document.querySelectorAll(
-            "tr.concilia-editable .js-concepto-combo"
-        ).forEach(function (inp) {
-            attachContratoLineCombo(inp);
-        });
-    }
-
 
     // F-051 (R12, review H2): la partida solo viaja si el revisor la
     // cambió respecto a la que pintó la ficha (la FINAL de la línea).
@@ -1089,39 +1023,125 @@
         return v;
     }
 
-    // Cuerpo del PATCH .../conciliacion/campos de una fila salmón. Lo usan
-    // el «Guardar» de la fila y «Guardar todas las líneas» (una sola copia).
-    function _conciliaBody(tr) {
+    // F-065 R27 v5: la casilla de partida en rojo (o ya no) con su aviso; el
+    // ``title`` de antes (la descripción de la partida) vuelve al quitarlo.
+    function marcarPartida(inp, mal) {
+        if (mal && !inp.classList.contains("partida-invalida")) {
+            inp.dataset.tituloAntes = inp.title || "";
+            inp.title = "Partida no válida: elige una de la lista (vacía = almacén)";
+        } else if (!mal && inp.classList.contains("partida-invalida")) {
+            inp.title = inp.dataset.tituloAntes;
+        }
+        inp.classList.toggle("partida-invalida", mal);
+        if (mal) { inp.setAttribute("aria-invalid", "true"); } else { inp.removeAttribute("aria-invalid"); }
+    }
+
+    // F-065 R27 v5: una partida CAMBIADA que no es de la lista de la obra no
+    // se guarda nunca (vacía = almacén vale; si Sigrid no respondió, solo
+    // almacén; la que la fila ya tenía no viaja y no se mira). Marca en rojo
+    // las de ``filas`` que no valen contra ``items`` y las devuelve. Síncrona
+    // (pasada 5, CR4): quien guarda espera la lista, valida y arma el cuerpo en
+    // el mismo tick, así lo validado es exactamente lo enviado.
+    function partidasMalas(filas, items) {
+        const malas = [];
+        filas.forEach(function (tr) {
+            const inp = tr.querySelector(".js-partida-combo");  // toda fila editable la tiene
+            const mal = partidaParaEnviar(inp) !== null && !partidaValida(inp.value, items);
+            marcarPartida(inp, mal);
+            if (mal) { malas.push(inp); }
+        });
+        return malas;
+    }
+
+    // Lo mismo esperando la lista (solo para marcar: el aviso de «Guardar» de
+    // la cabecera no envía filas).
+    async function partidasInvalidas(filas) {
+        return partidasMalas(filas, (await cargarPartidasObra()).items);
+    }
+
+    // F-065 R8: ¿el mismo número? Tolerancia de coma flotante, no de dinero
+    // (un precio de 4 decimales o una cantidad de 3 cuentan).
+    function numerosIguales(a, b) {
+        if (a === null || b === null) { return a === b; }
+        return Math.abs(a - b) < 1e-9;
+    }
+
+    // F-065 R8, R9: cuerpo del PATCH .../conciliacion/campos de una fila:
+    // SOLO los campos que el administrativo cambió respecto a lo que pintó la
+    // ficha (números comparados como números: «115,0» = «115.0000»). Un
+    // campo que no viene no cambia; uno vaciado viaja como null (la partida,
+    // como "" = almacén). El importe no viaja: al teclearlo se ajusta el
+    // precio (que sí viaja si cambió). Lo usan «Guardar» y «Guardar todas».
+    function _camposCambiados(tr) {
+        const CAMPOS = ["codigo_partida", "descripcion", "cantidad", "unidad",
+                        "precio_unitario", "descuento", "codigo_externo"];
         const body = {};
         tr.querySelectorAll(".js-cedit").forEach(function (inp) {
             const field = inp.dataset.field;
-            if (!field) return;
+            if (CAMPOS.indexOf(field) === -1) return;
             if (inp.dataset.numeric === "1") {
-                body[field] = parseNumEs(inp.value);
+                const valor = parseNumEs(inp.value);
+                if (!numerosIguales(valor, parseNumEs(inp.defaultValue))) {
+                    body[field] = valor;
+                }
             } else if (field === "codigo_partida") {
-                body[field] = partidaParaEnviar(inp);
+                const valor = partidaParaEnviar(inp);
+                if (valor !== null) { body[field] = valor; }
             } else {
-                body[field] = inp.value.trim() || null;
+                const valor = inp.value.trim();
+                if (valor !== String(inp.defaultValue || "").trim()) {
+                    body[field] = valor || null;
+                }
             }
         });
         return body;
     }
 
-    // ¿Este campo identitario, tal como está, hace que una fila de Sigrid
-    // pase a NUEVA al guardar? (el aviso del confirm; decide el backend).
-    function cambiaIdentidad(inp) {
-        if (inp.value === inp.defaultValue) { return false; }
-        if (inp.dataset.field === "codigo_partida") {
-            const v = inp.value.trim();
-            // F-051 (R12): vaciar la partida es elegir almacén; la fila
-            // de Sigrid sigue siendo de Sigrid.
-            if (!v) { return false; }
-            // F-051 (R20, review O2): poner la partida de la línea casada
-            // de Sigrid tampoco cambia la identidad.
-            const casada = String(inp.dataset.partidaCasada || "").trim();
-            if (casada && v === casada) { return false; }
+    // F-065 R18, R19: cuántas filas tienen cambios sin guardar.
+    function contarFilasConCambios(filas) {
+        return filas.filter(function (tr) {
+            return Object.keys(_camposCambiados(tr)).length > 0;
+        }).length;
+    }
+
+    // F-065 R19: aviso antes de «Guardar» / «Guardar y aprobar».
+    function avisoFilasSinGuardar(n) {
+        if (!n) { return null; }
+        return n === 1
+            ? "Hay 1 línea con cambios sin guardar"
+            : "Hay " + n + " líneas con cambios sin guardar";
+    }
+
+    // F-065 R22: revalorar (o cambiar de contrato) descarta lo hecho a mano.
+    function avisoRevalorar(n) {
+        if (!n) { return null; }
+        return n === 1
+            ? "Revalorar descarta 1 línea tocada a mano. ¿Continuar?"
+            : "Revalorar descarta " + n + " líneas tocadas a mano. ¿Continuar?";
+    }
+
+    function confirmarRevalorar() {
+        const aviso = avisoRevalorar(DOC_DATA.n_filas_manuales);
+        return !aviso || window.confirm(aviso);
+    }
+
+    // F-065 R12: el importe que guardará el backend, Q × precio × (1 − dto).
+    function importeDeFila(cant, pu, dto) {
+        if (cant === null || pu === null) { return null; }
+        return Math.round(cant * pu * (1 - (dto || 0) / 100) * 100) / 100;
+    }
+
+    // F-065 R23: las líneas a traer con su cantidad (obligatoria, ≠ 0), o
+    // null si falta alguna (entonces «Incorporar» no se habilita).
+    function lineasATraer(seleccion) {
+        if (!seleccion.length) { return null; }
+        const lineas = [];
+        for (let i = 0; i < seleccion.length; i++) {
+            const cantidad = parseNumEs(seleccion[i].valor);
+            if (cantidad === null || cantidad === 0) { return null; }
+            lineas.push({ contrato_line_id: seleccion[i].id, cantidad: cantidad });
         }
-        return true;
+        return lineas;
     }
 
     function wireConciliaEdit() {
@@ -1154,11 +1174,8 @@
                     // Cambió cantidad / precio / descuento -> recomputamos importe.
                     if (!impEl) return;
                     const pu = puEl ? parseNumEs(puEl.value) : null;
-                    if (cant !== null && pu !== null) {
-                        impEl.value = String(Math.round(cant * pu * factor * 100) / 100);
-                    } else {
-                        impEl.value = "";
-                    }
+                    const importe = importeDeFila(cant, pu, dto);
+                    impEl.value = importe === null ? "" : String(importe);
                 }
             }
 
@@ -1179,29 +1196,25 @@
                 const vid = (tr.dataset.forValuationLineId || "").trim();
                 if (!vid) return;
 
-                // Aviso de conversión SIGRID → NUEVA si cambió un campo
-                // identitario en una fila assigned.
-                const isSigrid = tr.classList.contains("concilia-assigned");
-                const identityChanged = [].some.call(
-                    tr.querySelectorAll('.js-cedit[data-identity="1"]'),
-                    cambiaIdentidad
-                );
-                if (isSigrid && identityChanged) {
-                    if (!window.confirm(
-                        "Has cambiado imputación, unidad o precio: la línea " +
-                        "dejará de ser de Sigrid y pasará a NUEVA (conservando " +
-                        "el resto de campos). ¿Continuar?"
-                    )) return;
-                }
-
-                const body = _conciliaBody(tr);
-
+                // F-065 R8, R13: solo lo cambiado; «Guardar» bloquea la fila
+                // (también sin cambios). R25: si cambian partida, unidad o
+                // precio de una fila Contrato, pasa a Nueva SIN confirmación.
+                // CR4: desactivado YA (un segundo clic durante la espera no
+                // manda otro PATCH); tras la espera, validar y armar el cuerpo
+                // sin nada entre medias: lo validado es lo enviado. R27 v5:
+                // con una partida fuera de la lista, nada (en rojo).
                 saveBtn.disabled = true;
+                const lista = await cargarPartidasObra();
+                if (partidasMalas([tr], lista.items).length) {
+                    saveBtn.disabled = false;
+                    return;
+                }
+                const body = _camposCambiados(tr);
                 const original = saveBtn.textContent;
                 saveBtn.textContent = "Guardando…";
                 try {
                     const resp = await fetch(
-                        `/api/documents/${documentId}/lines/${vid}/conciliacion/campos`,
+                        `/api/documents/${documentId}/lines/${vid}/conciliacion/campos?bloquear=1`,
                         {
                             method: "PATCH",
                             headers: { "Content-Type": "application/json" },
@@ -1232,41 +1245,302 @@
             });
         });
     }
-    wireConciliaEdit();
+    // F-065 R27: el combo de partida primero, para que con su panel abierto
+    // Enter elija la partida y no dispare el «Guardar» de la fila. R28: el
+    // concepto es texto (reapuntar es solo «Origen ✎»).
     wirePartidaCombos();
-    wireConceptoCombos();
+    wireConciliaEdit();
 
     // ------------------------------------------------------------------ //
-    // "Guardar todas las líneas": guarda de una vez TODAS las filas salmón
-    // (concilia-editable), hayas tocado o no cada campo, con el mismo PATCH
-    // que el "Guardar" de cada fila. (Re-guardar una línea sin cambios es
-    // inocuo: el backend reaplica los mismos valores.) Recarga al terminar.
+    // «Dividir» (F-065 R29 v3): el botón de la fila o F7 abren una ventana con
+    // el número de líneas (2–20) y la cantidad y la partida de cada una
+    // (combo de partidas de la obra; vacía = almacén) con lo que falta por
+    // repartir. «Aceptar» solo se habilita si las partes suman la Q de la
+    // fila (± 0,005), ninguna es 0 ni de otro signo. Sustituye al F7 de
+    // antes (duplicar), que creaba una «Nueva» sin vínculo; F6 no hace nada
+    // en la ficha (queda para el navegador).
+    // ------------------------------------------------------------------ //
+    // Lo que falta por repartir: Q − la suma de ``valores`` (los vacíos no
+    // cuentan). Es la cantidad de la última parte (R29 v3), así que se
+    // redondea a 1e-6 (solo quita el ruido de la coma flotante), no a
+    // milésimas.
+    function faltaPorRepartir(q, valores) {
+        let suma = 0;
+        valores.forEach(function (v) {
+            const n = parseNumEs(v);
+            if (n !== null) { suma += n; }
+        });
+        return Math.round((q - suma) * 1e6) / 1e6;
+    }
+
+    // Estado de la ventana con la última parte automática (R29 v3): su
+    // cantidad (``resto`` = Q − las demás), si va en rojo (0 o de otro signo
+    // que Q) y el mensaje. «Aceptar» lo sigue decidiendo ``repartoValido``.
+    function estadoReparto(q, demas) {
+        const resto = faltaPorRepartir(q, demas);
+        const ultimaMal = resto * q <= 0;  // 0 o de otro signo que Q
+        let mensaje = "Reparto completo.";
+        if (ultimaMal) {
+            mensaje = resto === 0
+                ? "La última parte quedaría a 0."
+                : "Sobra: " + String(Math.abs(resto)).replace(".", ",");
+        } else {
+            for (let i = 0; i < demas.length; i++) {
+                const n = parseNumEs(demas[i]);
+                if (n === null) {
+                    mensaje = "Falta la cantidad de la parte " + (i + 1) + ".";
+                    break;
+                }
+                if (n * q <= 0) {  // 0 o de otro signo que Q
+                    mensaje = "La parte " + (i + 1) + " no puede ser 0 ni de otro signo.";
+                    break;
+                }
+            }
+        }
+        return { resto: resto, ultimaMal: ultimaMal, mensaje: mensaje };
+    }
+
+    function repartoValido(q, valores) {
+        if (q === null || q === 0 || valores.length < 2 || valores.length > 20) {
+            return false;
+        }
+        let suma = 0;
+        for (let i = 0; i < valores.length; i++) {
+            const n = parseNumEs(valores[i]);
+            if (n === null || n === 0 || (n > 0) !== (q > 0)) { return false; }
+            suma += n;
+        }
+        // «0,005 o más» no vale (R30), sin el ruido de la coma flotante.
+        return Math.abs(suma - q) < 0.005 - 1e-9;
+    }
+
+    function cuerpoDivision(valores, partidas) {
+        return {
+            partes: valores.map(function (v, i) {
+                const partida = String(partidas[i] || "").trim();
+                return { cantidad: parseNumEs(v), codigo_partida: partida || null };
+            })
+        };
+    }
+
+    function wireDividir() {
+        const dialogo = document.getElementById("dividir-dialog");
+        if (!dialogo || !linesBody) { return; }
+        const qEl = dialogo.querySelector(".js-dividir-q");
+        const nEl = dialogo.querySelector(".js-dividir-n");
+        const cuerpo = dialogo.querySelector(".js-dividir-partes");
+        const faltaEl = dialogo.querySelector(".js-dividir-falta");
+        const errorEl = dialogo.querySelector(".js-dividir-error");
+        const aceptar = dialogo.querySelector(".js-dividir-aceptar");
+        const cancelar = dialogo.querySelector(".js-dividir-cancelar");
+        let actual = null;
+
+        function valoresDe(clase) {
+            return [].map.call(cuerpo.querySelectorAll(clase), function (inp) {
+                return inp.value;
+            });
+        }
+        function cantidades() { return valoresDe(".js-dividir-cantidad"); }
+        function partidas() { return valoresDe(".js-dividir-partida"); }
+
+        // La última parte se rellena sola con lo que falta (R29 v3).
+        function refrescar() {
+            const inputs = cuerpo.querySelectorAll(".js-dividir-cantidad");
+            const ultima = inputs[inputs.length - 1];
+            const estado = estadoReparto(actual.q, cantidades().slice(0, -1));
+            ultima.value = String(estado.resto).replace(".", ",");
+            ultima.classList.toggle("dividir-resto-mal", estado.ultimaMal);
+            faltaEl.textContent = estado.mensaje;
+            aceptar.disabled = !repartoValido(actual.q, cantidades());
+        }
+
+        function pintarPartes() {
+            let n = parseInt(nEl.value, 10);
+            n = Math.max(2, Math.min(20, isNaN(n) ? 2 : n));
+            // Solo las que tecleó el administrativo: el resto de antes no.
+            const previas = cantidades().slice(0, -1);
+            const previasPartida = partidas();
+            cuerpo.innerHTML = "";
+            for (let i = 0; i < n; i++) {
+                const tr = document.createElement("tr");
+                const tdNum = document.createElement("td");
+                tdNum.textContent = String(i + 1);
+                const tdCant = document.createElement("td");
+                const cant = document.createElement("input");
+                cant.type = "text";
+                cant.inputMode = "decimal";
+                cant.className = "cell-input cell-num js-dividir-cantidad";
+                cant.value = i < previas.length ? previas[i] : "";
+                if (i === n - 1) {
+                    cant.readOnly = true;
+                    cant.tabIndex = -1;
+                    cant.classList.add("dividir-auto");
+                    cant.title = "Se rellena sola: la cantidad de la línea menos las demás partes.";
+                } else {
+                    cant.addEventListener("input", refrescar);
+                }
+                tdCant.appendChild(cant);
+                const tdPartida = document.createElement("td");
+                const partida = document.createElement("input");
+                partida.type = "text";
+                partida.autocomplete = "off";
+                partida.placeholder = "Almacén";
+                partida.className = "cell-input js-dividir-partida";
+                partida.value = i < previasPartida.length ? previasPartida[i] : actual.partida;
+                tdPartida.appendChild(partida);
+                tr.appendChild(tdNum);
+                tr.appendChild(tdCant);
+                tr.appendChild(tdPartida);
+                cuerpo.appendChild(tr);
+                attachPartidaCombo(partida, {
+                    alElegirAlmacen: function (inp) { inp.value = ""; }
+                });
+            }
+            refrescar();
+        }
+
+        function abrir(boton) {
+            const filas = [].slice.call(linesBody.querySelectorAll("tr.concilia-editable"));
+            const aviso = avisoFilasSinGuardar(contarFilasConCambios(filas));
+            if (aviso && !window.confirm(
+                aviso + ": dividir recarga la ficha y se perderán. ¿Continuar?"
+            )) { return; }
+            actual = {
+                vid: boton.dataset.valuationLineId,
+                q: parseNumEs(boton.dataset.q),
+                partida: boton.dataset.partida || ""
+            };
+            qEl.textContent = String(actual.q).replace(".", ",");
+            nEl.value = "2";
+            cuerpo.innerHTML = "";
+            errorEl.hidden = true;
+            pintarPartes();
+            dialogo.showModal();
+            const primera = cuerpo.querySelector(".js-dividir-cantidad");
+            if (primera) { primera.focus(); }
+        }
+
+        async function enviar() {
+            // «Aceptar» desactivado = reparto que no vale (``refrescar`` lo
+            // pone con ``repartoValido`` en cada tecla) o un envío en curso
+            // (O7: dos Enter seguidos ya no mandan dos POST).
+            if (!actual || aceptar.disabled) { return; }
+            aceptar.disabled = true;
+            // R27 v5: cada partida, de la lista, vacía (almacén) o la de la
+            // propia fila; si no, en rojo y no se envía.
+            const res = await cargarPartidasObra();
+            let malas = 0;
+            cuerpo.querySelectorAll(".js-dividir-partida").forEach(function (inp) {
+                const mal = inp.value.trim() !== actual.partida && !partidaValida(inp.value, res.items);
+                marcarPartida(inp, mal);
+                if (mal) { malas += 1; }
+            });
+            if (malas) {
+                errorEl.textContent = "Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).";
+                errorEl.hidden = false;
+                aceptar.disabled = false;
+                return;
+            }
+            try {
+                const resp = await fetch(
+                    `/api/documents/${documentId}/lines/${actual.vid}/dividir`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(cuerpoDivision(cantidades(), partidas())),
+                    }
+                );
+                if (!resp.ok) {
+                    // 409 (aprobado, fila guardada, alta) y 422 traen el motivo.
+                    let msg = "No se pudo dividir la línea.";
+                    try {
+                        const j = await resp.json();
+                        if (j && typeof j.detail === "string") { msg = j.detail; }
+                    } catch (e) {}
+                    errorEl.textContent = msg;
+                    errorEl.hidden = false;
+                    aceptar.disabled = false;
+                    return;
+                }
+                window.location.reload();
+            } catch (e) {
+                errorEl.textContent = "Error de red dividiendo la línea.";
+                errorEl.hidden = false;
+                aceptar.disabled = false;
+            }
+        }
+
+        nEl.addEventListener("input", pintarPartes);
+        aceptar.addEventListener("click", enviar);
+        cancelar.addEventListener("click", function () { dialogo.close(); });
+        // Enter acepta (con el combo de partida abierto, Enter es del combo).
+        dialogo.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && e.target !== aceptar && e.target !== cancelar) {
+                e.preventDefault();
+                enviar();
+            }
+        });
+        linesBody.querySelectorAll(".js-dividir").forEach(function (boton) {
+            boton.addEventListener("click", function () { abrir(boton); });
+        });
+        // F7 en una fila abre su «Dividir».
+        document.addEventListener("keydown", function (ev) {
+            if (ev.key !== "F7" || dialogo.open) { return; }
+            const activo = document.activeElement;
+            const tr = activo && activo.closest ? activo.closest("tr.conciliacion-row") : null;
+            const boton = tr ? tr.querySelector(".js-dividir") : null;
+            if (!boton) { return; }
+            ev.preventDefault();
+            abrir(boton);
+        });
+    }
+    wireDividir();
+
+    // ------------------------------------------------------------------ //
+    // «Guardar todas» (F-065 R18): guarda y BLOQUEA solo las filas con
+    // cambios, cada una con solo sus campos cambiados (el mismo PATCH que el
+    // «Guardar» de la fila). Sin ninguna, lo dice. Recarga al terminar.
     // ------------------------------------------------------------------ //
     const saveAllLinesBtn = document.getElementById("save-all-lines-btn");
     if (saveAllLinesBtn) {
         saveAllLinesBtn.addEventListener("click", async function () {
-            const rows = [].slice.call(
-                linesBody.querySelectorAll("tr.concilia-editable")
-            );
-            if (!rows.length) {
-                window.alert("No hay líneas de albarán que guardar.");
+            function conCambios() {
+                return [].filter.call(linesBody.querySelectorAll("tr.concilia-editable"), function (tr) {
+                    const vid = (tr.dataset.forValuationLineId || "").trim();
+                    const cuerpo = _camposCambiados(tr);
+                    return vid && Object.keys(cuerpo).length;
+                });
+            }
+            if (!conCambios().length) {
+                window.alert("No hay cambios en las líneas.");
                 return;
             }
+            // CR4: desactivado ya; tras esperar la lista, filas, validación y
+            // cuerpos en el mismo tick (lo validado es lo enviado). R27 v5:
+            // con alguna partida fuera de la lista no se guarda NADA.
             saveAllLinesBtn.disabled = true;
+            const lista = await cargarPartidasObra();
+            const filas = conCambios();
+            if (partidasMalas(filas, lista.items).length) {
+                window.alert("Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).");
+                saveAllLinesBtn.disabled = false;
+                return;
+            }
+            const envios = filas.map(function (tr) {
+                return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };
+            });
             const original = saveAllLinesBtn.textContent;
             saveAllLinesBtn.textContent = "Guardando…";
             const errores = [];
-            for (let i = 0; i < rows.length; i++) {
-                const tr = rows[i];
-                const vid = (tr.dataset.forValuationLineId || "").trim();
-                if (!vid) continue;
+            for (let i = 0; i < envios.length; i++) {
+                const vid = envios[i].vid;
                 try {
                     const resp = await fetch(
-                        `/api/documents/${documentId}/lines/${vid}/conciliacion/campos`,
+                        `/api/documents/${documentId}/lines/${vid}/conciliacion/campos?bloquear=1`,
                         {
                             method: "PATCH",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(_conciliaBody(tr)),
+                            body: JSON.stringify(envios[i].cuerpo),
                         }
                     );
                     if (!resp.ok) {
@@ -1353,11 +1627,20 @@
         } catch (_) { contratoLines = []; }
 
         const seleccion = new Set();
+        // F-065 R23: la cantidad de cada línea elegida (obligatoria, ≠ 0).
+        const cantidades = new Map();
+
+        function lineasElegidas() {
+            return lineasATraer(Array.from(seleccion).map(function (id) {
+                return { id: id, valor: cantidades.get(id) || "" };
+            }));
+        }
 
         function pintarContador() {
             const n = seleccion.size;
-            contador.textContent = n + " seleccionada" + (n === 1 ? "" : "s");
-            aplicar.disabled = n === 0;
+            contador.textContent = n + " seleccionada" + (n === 1 ? "" : "s") +
+                (n && lineasElegidas() === null ? " · falta la cantidad" : "");
+            aplicar.disabled = lineasElegidas() === null;
             aplicar.textContent = n ? ("Incorporar (" + n + ")") : "Incorporar";
         }
 
@@ -1384,15 +1667,31 @@
                 const chk = document.createElement("input");
                 chk.type = "checkbox";
                 chk.checked = seleccion.has(cl.id);
+                const cant = document.createElement("input");
+                cant.type = "text";
+                cant.inputMode = "decimal";
+                cant.className = "traer-contrato-cantidad";
+                cant.placeholder = "Cantidad";
+                cant.title = "Cantidad de esta línea (obligatoria)";
+                cant.value = cantidades.get(cl.id) || "";
+                cant.hidden = !chk.checked;
+                cant.addEventListener("click", function (ev) { ev.preventDefault(); });
+                cant.addEventListener("input", function () {
+                    cantidades.set(cl.id, cant.value);
+                    pintarContador();
+                });
                 chk.addEventListener("change", function () {
                     if (chk.checked) seleccion.add(cl.id);
                     else seleccion.delete(cl.id);
+                    cant.hidden = !chk.checked;
+                    if (chk.checked) cant.focus();
                     pintarContador();
                 });
                 const span = document.createElement("span");
                 span.textContent = cl.label || (cl.part + " · " + cl.desc);
                 fila.appendChild(chk);
                 fila.appendChild(span);
+                fila.appendChild(cant);
                 lista.appendChild(fila);
             });
             if (!visibles) {
@@ -1421,7 +1720,8 @@
         });
 
         aplicar.addEventListener("click", async function () {
-            if (!seleccion.size) return;
+            const lineas = lineasElegidas();
+            if (lineas === null) return;
             aplicar.disabled = true;
             try {
                 const resp = await fetch(
@@ -1432,9 +1732,7 @@
                             "Content-Type": "application/json",
                             "Accept": "application/json",
                         },
-                        body: JSON.stringify({
-                            contrato_line_ids: Array.from(seleccion),
-                        }),
+                        body: JSON.stringify({ lineas: lineas }),
                     }
                 );
                 if (!resp.ok) {
@@ -1826,80 +2124,6 @@
         return value || null;
     }
 
-    // --------------------------------------------------------------- //
-    // Recolectar líneas para enviar al backend.
-    //
-    // Sub-tanda 2D: diferenciamos dos tipos de fila por data-line-kind:
-    //
-    //   - "from_albaran": líneas reales del albarán-merge. Se envían en
-    //     payload.lines tal como antes. data-line-id lleva el id en
-    //     albaran_lines_merge.
-    //
-    //   - "synthetic_modifier": líneas sintéticas de valoración
-    //     (incrementos por año, consistencia, árido, aditivo, residuos,
-    //     tiempo). No viven en el merge sino en albaran_line_valuations.
-    //     Se envían en payload.valuation_line_updates identificadas por
-    //     data-valuation-line-id.
-    //
-    // Si una fila no tiene data-line-kind (caso raro: código antiguo)
-    // la tratamos como from_albaran por compatibilidad.
-    //
-    // Los campos 'unidad_display' y 'precio_unitario_display' siguen
-    // siendo puramente informativos y no se envían.
-    //
-    // Nota sobre nombres: el backend ``MergeLinePayload`` usa
-    // 'precio_neto' como nombre de campo para el importe de la línea
-    // (herencia del modelo extraído). El template V3 usa data-field=
-    // "importe" como nombre más claro para el revisor; al recolectar
-    // lo mapeamos: importe → precio_neto.
-    // --------------------------------------------------------------- //
-    function collectLinesAndValuationUpdates() {
-        // TANDA 2A: las líneas BLANCAS (merge) ya no se editan en el grid
-        // (son solo lectura en su bloque colapsable). Las reenviamos TAL CUAL
-        // desde el JSON embebido del documento para que el PUT NO las borre
-        // (update_document elimina las merge que no lleguen en payload.lines).
-        // Las líneas SALMÓN (valoración) NO van por el PUT: se guardan con su
-        // PATCH propio (.../conciliacion/campos) vía «Guardar» de fila /
-        // «Guardar todas». Por eso valuation_line_updates va vacío.
-        const merge_lines = [];
-        const src = (window.__documentData && Array.isArray(window.__documentData.lines))
-            ? window.__documentData.lines
-            : [];
-        let idx = 0;
-        src.forEach(function (ln) {
-            idx += 1;
-            const pick = function (k) {
-                return (ln && ln[k] !== undefined && ln[k] !== null) ? ln[k] : null;
-            };
-            merge_lines.push({
-                id: (ln && ln.id !== undefined && ln.id !== null) ? Number(ln.id) : null,
-                line_index: idx,
-                external_line_id: pick("external_line_id"),
-                cabecera_id: pick("cabecera_id"),
-                codigo: pick("codigo"),
-                cantidad: pick("cantidad"),
-                concepto: pick("concepto"),
-                precio: pick("precio"),
-                descuento: pick("descuento"),
-                precio_neto: pick("precio_neto"),
-                codigo_imputacion: pick("codigo_imputacion"),
-                confianza_pct: pick("confianza_pct"),
-                confidence_pct_calc: pick("confidence_pct_calc"),
-                line_match_score: pick("line_match_score"),
-                comparison_status_json: pick("comparison_status_json"),
-                field_scores_json: pick("field_scores_json"),
-            });
-        });
-        return { merge_lines: merge_lines, valuation_updates: [] };
-    }
-
-    // Compatibilidad hacia atrás: algún código externo podría llamar
-    // collectLines(). Exponemos una versión reducida que devuelve solo
-    // las líneas del merge.
-    function collectLines() {
-        return collectLinesAndValuationUpdates().merge_lines;
-    }
-
     function collectSelectedContratoCodigo() {
         const el = document.getElementById("selected_contrato_codigo");
         if (!el) return null;
@@ -1914,9 +2138,8 @@
             const value = (el.value || "").trim();
             return value || null;
         };
-        // Sub-tanda 2D: una sola lectura del DOM para obtener tanto
-        // las líneas del merge como las ediciones de sintéticas.
-        const collected = collectLinesAndValuationUpdates();
+        // F-065 R1: guardar la cabecera solo guarda la cabecera: ni las
+        // blancas ni las filas viajan (las filas tienen su PATCH).
         return {
             proveedor_nombre: getInput("proveedor_nombre"),
             proveedor_cif: getInput("proveedor_cif"),
@@ -1930,8 +2153,6 @@
             approved_by: getInput("approved_by"),
             approved: Boolean(markApproved),
             selected_contrato_codigo: collectSelectedContratoCodigo(),
-            lines: collected.merge_lines,
-            valuation_line_updates: collected.valuation_updates,
         };
     }
 
@@ -1960,8 +2181,24 @@
         return true;
     }
 
-    if (saveBtn) saveBtn.addEventListener("click", function () { sendSave(false); });
-    if (approveBtn) approveBtn.addEventListener("click", function () { sendSave(true); });
+    // F-065 R19, R21: antes del PUT, nada de filas con cambios sin guardar
+    // y, al aprobar, confirmación si la suma de las filas no cuadra con lo
+    // leído en el albarán.
+    async function guardarCabecera(markApproved) {
+        const filas = [].slice.call(linesBody.querySelectorAll("tr.concilia-editable"));
+        let aviso = avisoFilasSinGuardar(contarFilasConCambios(filas));
+        if (aviso) {
+            await partidasInvalidas(filas);  // R27 v5: las que no valen, en rojo
+            window.alert(aviso);
+            return;
+        }
+        aviso = markApproved && approveBtn ? approveBtn.dataset.avisoSuma : "";
+        if (aviso && !window.confirm(aviso)) { return; }
+        sendSave(markApproved);
+    }
+
+    if (saveBtn) saveBtn.addEventListener("click", function () { guardarCabecera(false); });
+    if (approveBtn) approveBtn.addEventListener("click", function () { guardarCabecera(true); });
 
     // --------------------------------------------------------------- //
     // Botón "Valorar ahora" — dispara la valoración (sv7 → sv6 → sv5)
@@ -2120,6 +2357,7 @@
     if (valuateBtn) {
         valuateBtn.addEventListener("click", function (event) {
             event.preventDefault();
+            if (!confirmarRevalorar()) return;
             triggerValuate();
         });
     }
@@ -2382,6 +2620,8 @@
         async function onPick(codigo) {
             close();
             const sinContrato = (codigo === SIN || !codigo);
+            // F-065 R22: otro contrato = revalorar (descarta lo hecho a mano).
+            if (!sinContrato && !confirmarRevalorar()) return;
             const real = sinContrato ? "" : codigo;
 
             hidden.value = real;
@@ -2511,6 +2751,8 @@
     }
 
     async function handleSaveAndRefetch() {
+        // F-065 R22: volver a buscar revalora (descarta lo hecho a mano).
+        if (!confirmarRevalorar()) return;
         setButtonsDisabled(true);
         paintStatus("info", "Guardando cambios…");
         try {
@@ -2540,6 +2782,9 @@
     }
 
     async function handleRefetchOnly() {
+        // F-065 (O1, humano 2026-10-11): volver a buscar revalora y descarta lo
+        // hecho a mano: misma confirmación que R22.
+        if (!confirmarRevalorar()) return;
         setButtonsDisabled(true);
         paintStatus("info", "Consultando ERP…");
         try {
@@ -3027,67 +3272,16 @@
 })();
 
 // ===================================================================== //
-//  TANDA 2B — Atajos de teclado del grid de líneas: F7 / F8.            //
-//    F7 = duplicar la línea salmón en foco (crea una «Nueva» con los     //
-//         mismos valores: POST standalone + PATCH campos).               //
+//  TANDA 2B — Atajo de teclado del grid de líneas: F8.                  //
 //    F8 = copiar a la celda en foco el valor de la celda de ARRIBA       //
 //         (misma columna, fila salmón anterior). Marca la fila como       //
 //         editada (no guarda hasta pulsar «Guardar»).                    //
+//    F7 ya no duplica (F-065 R29): abre «Dividir» (wireDividir).       //
 // ===================================================================== //
 (function () {
     "use strict";
     var table = document.getElementById("lines-table");
     if (!table) { return; }
-    var tbody = table.querySelector("tbody");
-    if (!tbody) { return; }
-    var dataTag = document.getElementById("document-data");
-    if (!dataTag) { return; }
-    var documentId;
-    try { documentId = JSON.parse(dataTag.textContent).id; }
-    catch (e) { documentId = (dataTag.dataset && dataTag.dataset.documentId) || null; }
-    if (!documentId) { return; }
-
-    function parseNumEs(value) {
-        var s = String(value || "").trim();
-        if (!s) { return null; }
-        var n = parseFloat(s.replace(/\./g, function (m, off, str) {
-            return str.indexOf(",") !== -1 ? "" : m;
-        }).replace(",", "."));
-        return isNaN(n) ? null : n;
-    }
-
-    // Cuerpo para .../conciliacion/campos a partir de los inputs de la fila.
-    function camposBody(tr) {
-        var out = {
-            codigo_partida: null, descripcion: null, cantidad: null,
-            unidad: null, precio_unitario: null, descuento: null, codigo_externo: null
-        };
-        [].forEach.call(tr.querySelectorAll(".js-cedit"), function (inp) {
-            var f = inp.dataset.field;
-            if (!f || !(f in out)) { return; }
-            if (inp.dataset.numeric === "1") { out[f] = parseNumEs(inp.value); }
-            else { var t = (inp.value || "").trim(); out[f] = t || null; }
-        });
-        return out;
-    }
-
-    function duplicateRow(tr) {
-        var body = camposBody(tr);
-        fetch("/api/documents/" + documentId + "/lines/standalone",
-            { method: "POST", headers: { "Accept": "application/json" } })
-            .then(function (r) {
-                if (!r.ok) { throw new Error("standalone"); }
-                return r.json();
-            })
-            .then(function (j) {
-                var nid = j && j.valuation_line_id;
-                if (!nid) { window.location.reload(); return null; }
-                return fetch("/api/documents/" + documentId + "/lines/" + nid + "/conciliacion/campos",
-                    { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-            })
-            .then(function () { window.location.reload(); })
-            .catch(function () { window.alert("No se pudo duplicar la línea."); });
-    }
 
     function prevSalmonRow(tr) {
         var p = tr.previousElementSibling;
@@ -3102,16 +3296,7 @@
         var inGridInput = active && active.classList &&
             active.classList.contains("js-cedit") && table.contains(active);
 
-        if (ev.key === "F7") {
-            var tr = active && active.closest ? active.closest("tr.conciliacion-row") : null;
-            if (!tr || !table.contains(tr)) { return; }
-            ev.preventDefault();
-            if (!window.confirm(
-                "¿Duplicar esta línea salmón? Se creará una copia «Nueva» con " +
-                "los mismos valores (partida, concepto, cantidad, precio…)."
-            )) { return; }
-            duplicateRow(tr);
-        } else if (ev.key === "F8") {
+        if (ev.key === "F8") {
             if (!inGridInput) { return; }
             var td = active.closest("td[data-col]");
             var row = active.closest("tr.conciliacion-row");
@@ -3158,6 +3343,9 @@
             linea_add: "Añadir",
             conciliar: "Casar",
             guardar: "Guardar",
+            almacen: "Almacén",
+            producto: "Producto",
+            dividir: "Dividir",
         })[a] || "Cambio";
     }
 
@@ -3277,4 +3465,38 @@
         form.submit();
     });
     refrescar();
+})();
+
+// ------------------------------------------------------------------- //
+// F-053 R41: producto Sigrid de una línea sin vincular. Al cambiar el
+// selector se guarda (null = por defecto) y se recarga para ver el
+// deshacer. Con alta bloqueante el servidor responde 409 con el aviso.
+// ------------------------------------------------------------------- //
+(function () {
+    [].forEach.call(document.querySelectorAll(".js-producto-sigrid"), function (sel) {
+        sel.addEventListener("change", async function () {
+            const doc = sel.dataset.documentId;
+            const vid = sel.dataset.valuationLineId;
+            sel.disabled = true;
+            try {
+                const resp = await fetch(
+                    `/api/documents/${doc}/lineas-valoradas/${vid}/producto-sigrid`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                        body: JSON.stringify({ producto: sel.value || null }),
+                    }
+                );
+                if (!resp.ok) {
+                    let msg = "No se pudo guardar el producto.";
+                    try { const j = await resp.json(); if (j && j.detail) msg = j.detail; } catch (e) {}
+                    window.alert(msg);
+                }
+                window.location.reload();
+            } catch (e) {
+                window.alert("Error de red guardando el producto.");
+                sel.disabled = false;
+            }
+        });
+    });
 })();

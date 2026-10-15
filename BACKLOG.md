@@ -3,28 +3,34 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **62 features**, 43 abiertas, 19 terminadas.
+Resumen: **70 features**, 49 abiertas, 21 terminadas.
 
 En curso: **F-064**.
 
-Bloqueadas: **F-051**.
+Bloqueadas: **F-053, F-070**.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
+| F-053 | Alta en Sigrid de los albaranes aprobados | 1 | bloqueada | critico | `feature/F-053-alta-sigrid` |
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
+| F-058 | Revalorar no pierde las partidas ni el almacén asignados a mano | 1 | pendiente | critico |  |
+| F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 1 | pendiente | estandar |  |
 | F-064 | IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor | 1 | en curso | critico | `feature/F-064-proveedor-en-prompts` |
+| F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 1 | pendiente | critico |  |
+| F-067 | Limpieza de la ficha de detalle (sv4) | 1 | pendiente | estandar |  |
+| F-070 | La obra siempre con el 0 inicial (salvo VAR y POSTV2): sv3 la sella canónica, sv4 consulta y guarda canónica, sv9 da de alta canónica | 1 | bloqueada | critico | `feature/F-070-obra-con-cero-inicial` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
-| F-051 | Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas» | 2 | bloqueada | critico | `feature/F-051-almacen-por-linea` |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
 | F-057 | Truncado sin comprobar en los clientes de Sigrid colindantes: header_and_lines de sv4 (max_rows=1000) y SigridApiObraClient de sv3 | 2 | pendiente | critico |  |
-| F-058 | Revalorar no pierde las partidas ni el almacén asignados a mano | 2 | pendiente | critico |  |
 | F-060 | Tipología de líneas acopiables: qué familias o tipos de línea pueden ir a almacén/acopio y cuáles se imputan siempre a partida | 2 | pendiente | critico |  |
+| F-061 | Familia medios_auxiliares (andamios, puntales, plataformas...) en el catalogo de familias de IA1 | 2 | pendiente | critico |  |
+| F-068 | F7 en la ficha: divide la última fila pulsada y Edge no pregunta por la exploración con el símbolo de intercalación (sv4) | 2 | pendiente | estandar |  |
+| F-069 | Lista de equivalencias usuario de la app ↔ usuario de Sigrid para el alta (sv9) | 2 | pendiente | critico |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
-| F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 3 | pendiente | estandar |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
 | F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 6 | pendiente | estandar | `feature/F-024-unidad-medida` |
 | F-028 | Con dos contratos candidatos no se elige ninguno y el albarán no llega a valorarse | 7 | pendiente | critico | `feature/F-028-selector-contrato-por-partidas` |
@@ -36,7 +42,7 @@ Bloqueadas: **F-051**.
 | F-023 | Mortero: las sintéticas de contrato no se emiten porque IA3 y sv6 las vetan por tipo_familia | 13 | pendiente | critico | `feature/F-023-mortero-incrementos` |
 | F-015 | Líneas tachadas del albarán: no se registran | 14 | pendiente | estandar | `feature/F-015-lineas-tachadas` |
 | F-021 | Partida: validación contra el catálogo del contrato y elección asistida entre candidatas | 15 | pendiente | estandar | `feature/F-021-partida-catalogo-candidatas` |
-| F-016 | Reparto de una línea del albarán entre varias partidas | 16 | pendiente | estandar | `feature/F-016-linea-multipartida` |
+| F-016 | [ABSORBIDA POR F-065] Reparto de una línea del albarán entre varias partidas | 16 | pendiente | estandar | `feature/F-016-linea-multipartida` |
 | F-026 | Guard de partida de la línea BASE antes de escribir en contrato_lines_derived | 17 | pendiente | estandar | `feature/F-026-guard-partida-base` |
 | F-025 | El motivo no_quantity_in_albaran es una falsa alarma sistemática cuando se omite la conversión de unidad | 18 | pendiente | estandar | `feature/F-025-motivo-conversion-omitida` |
 | F-020 | El pipeline es agnóstico al proveedor de IA: ninguna fase privilegia a OpenAI | 19 | pendiente | estandar | `feature/F-020-proveedor-agnostico` |
@@ -48,7 +54,7 @@ Bloqueadas: **F-051**.
 | F-006 | Tanda 4b — Residuos: lógica de pago LLEVAR/RETIRAR y canon | 25 | spec lista | estandar | `feature/F-006-residuos-pago` |
 | F-007 | Tanda 5 — Partida ALM por defecto y selector de candidatas en sv4 | 26 | pendiente | estandar | `feature/F-007-partida-alm-selector` |
 | F-017 | El comparativo como fuente de precio (1c) en la valoración | 27 | pendiente | estandar | `feature/F-017-comparativo-precio` |
-| F-013 | Registro del albarán aprobado en Sigrid (consumidor de q-feedback) | 28 | pendiente | critico | `feature/F-013-registro-sigrid` |
+| F-013 | [SUSTITUIDA POR F-053] Registro del albarán aprobado en Sigrid (consumidor de q-feedback) | 28 | pendiente | critico | `feature/F-013-registro-sigrid` |
 | F-008 | Lifecycle de blobs de hand-off | 29 | pendiente | estandar | `feature/F-008-blob-lifecycle` |
 | F-009 | Limpieza de la cola huérfana q-emails | 30 | pendiente | estandar | `feature/F-009-limpieza-q-emails` |
 | F-010 | Easy Auth en el portal sv4 | 31 | pendiente | critico | `feature/F-010-easy-auth-sv4` |
@@ -70,18 +76,34 @@ Bloqueadas: **F-051**.
 | F-054 | sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822) | 1 | estandar |
 | F-062 | sv3 aplica el proveedor propuesto antes de buscar contratos: CIF mal leído + candidato claro con contrato en la obra ⇒ se corrige y se busca con el bueno | 1 | critico |
 | F-063 | El CIF de Construcciones Ruesma nunca es el proveedor: sv3 lo descarta y busca el proveedor por nombre | 1 | critico |
+| F-065 | Lo editado en las líneas de sv4 manda (guardados separados, guardar = bloquear la línea, aprobado = solo lectura), la partida se elige entre las de la obra y una línea se divide con F6 | 1 | critico |
 | F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
 | F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
 | F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | estandar |
 | F-039 | Arnes: estabilizar la suite de la raiz y remedir las campanas juzgadas con la invocacion rota | 2 | estandar |
 | F-040 | Arnes: la campana de mutacion se dimensiona sola y deja de mentir sobre lo que ha medido | 2 | estandar |
 | F-045 | El banco de evals recoge la revision manual de los 32 albaranes: convertir los comentarios del humano en casos que se comprueban solos | 2 | critico |
+| F-051 | Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas» | 2 | critico |
 | F-012 | Campaña de mutación en paralelo | 3 | estandar |
 | F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | estandar |
 | F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | critico |
 
 ## Detalle
+
+### F-053 · Alta en Sigrid de los albaranes aprobados
+
+estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-053-alta-sigrid`
+
+PETICION DEL HUMANO (2026-09-30): «Alta en Sigrid de los albaranes aprobados». Aprobar ES registrar: los dos botones de sv4 que aprueban («Guardar y aprobar» de la ficha y «Aprobar» del listado) disparan el alta del albaran en Sigrid.
+
+DECISIONES (todas cerradas el 2026-10-01, detalle en progress/spec_F-053.md): solo endpoints de dominio de sigrid-api, nunca sql/write; servicio nuevo sv9 en el monorepo que consume q-feedback; arranque en SIMULACION y grabacion real solo con ALTA_SIGRID_COMMIT=true (humano); solo lineas con importe; en un mismo albaran, vinculadas a linea de contrato (consumen medicion) y sin vincular, cada una con partida o en almacen; producto del contrato o, sin vincular, generico por familia de la linea (QA9999 alquiler de maquinaria, XA9999 medios auxiliares, MA9999 el resto; decision del humano 2026-10-05), cambiable por el administrativo en sv4 antes de aprobar (columna producto_sigrid de albaran_line_valuations, DDL en sv6); linea sin partida = almacen (F-051 v4); negativas si; sin valorar (ok de sv6 o valoracion manual completa en sv4) no se aprueba ni se registra; tabla albaran_altas_sigrid con DDL en sv3; registrado = bloqueado en sv4; empleado fijo; clave de siempre.
+
+V7 (2026-10-06): SPEC_READY. El humano respondio «si» a todas las recomendaciones (P1-P7 de progress/spec_F-053.md): P1 familia medios_auxiliares en ficha propia F-061 (mientras, el administrativo elige XA9999 a mano en sv4); P2 signos opuestos (descuento: cantidad > 0 e importe < 0, o cantidad < 0 e importe > 0) => revisar con signo_incoherente sin llamar a sigrid-api, el descuento se mete a mano en Sigrid; P3 anular en Sigrid borra el albaran (M17b de F-009): se repite con la misma referencia; P4 sin paride mientras F-049 no conserve el ide de la partida (partida_ambigua => no_admitido); P5 vinculadas con cantidad y sin importe no se mandan; P6 ALM impreso sin vincular (vincularlo es de F-060/F-007); P7 XA9999 medido en F-009. Alineada con F-009 v8 de sigrid-api (8a6ecab): sin campo naturaleza (la pone sigrid-api por mapeo), cod2 y planificacion de compras de las vinculadas los copia sigrid-api del ctrpro.
+
+PRECONDICIONES: medicion de solo lectura (services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py, la ejecuta el humano) y PRE-1 = F-009 de sigrid-api (partida por linea, lineas sin contrato con producto por codigo, negativas, idempotencia) desplegada.
+
+SUSTITUYE A F-013. ORDEN: F-052 (done) -> F-051 en dev -> implementacion de F-053 (T0d fusiona dev en la rama); la previa contra sigrid-api y el modo real esperan a F-009 desplegada; F-049 (paride) y F-061 son evolucion, no bloqueo. Escribe en el ERP de produccion => rigor critico y verificaciones MANUAL del humano.
 
 ### F-055 · IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2)
 
@@ -97,6 +119,36 @@ CRITERIO DEL HUMANO: decide la IA (memoria «clasificacion-la-decide-la-ia»), l
 
 DEPENDE DE: F-052 (lista de candidatos de la obra completa y sin truncar). RELACIONADAS: F-048 (contexto de correo y obras en IA1), F-002 (red de proveedor por nombre), F-045 (evals).
 
+### F-058 · Revalorar no pierde las partidas ni el almacén asignados a mano
+
+estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
+
+ORIGEN: D5 de F-051 (PARADA 1 del 2026-10-05). El humano confirma que en F-051 el almacén elegido se pierde al revalorar, como cualquier override de sv4 hoy, y pide, literal: «al valorar no se pierdan las partidas asignadas a mano (o almacén)».
+
+PROBLEMA DE HOY: las ediciones de partida que el revisor hace en sv4 (partida cambiada en la fila salmón, derivada manual_override, y con F-051 el almacén elegido —partida_action almacen_elegido— o la partida vaciada) viven solo en albaran_line_valuations / contrato_lines_derived. «Valorar ahora» (q-valoracion) hace que sv6 reemplace la valoración entera de forma transaccional a partir del merge y de la respuesta de sv5, así que esas decisiones humanas desaparecen y la línea vuelve a la partida que decida sv6 (la leída por IA1, la del contrato o almacén).
+
+A DECIDIR EN LA SPEC: dónde se guarda la decisión humana para que sobreviva (en el merge, columna o tabla de overrides de sv3; o que sv6 la preserve al reemplazar), qué manda si el papel se vuelve a leer (re-fetch) y cambia la partida leída, cómo se ve en sv4 que una partida es «puesta a mano», y si aplica también a otros overrides (precio, unidad, descripción) o solo a partida y almacén. Probable DDL en sv3 (dueño del esquema) y cambio de contrato sv3 -> sv5 -> sv6; sv4 escribe la decisión.
+
+RIGOR critico: toca la valoración (sv6) y lo que llega a Sigrid (F-053).
+
+RELACIONADAS: F-051 (D5, R14, R12), F-049 (sv4 pone codigo_imputacion_validada a NULL cuando el revisor cambia la partida leída), F-053 (alta en Sigrid), F-007.
+
+X23 (2026-10-09, progress/propuestas_ficha_detalle.md): revalorar o cambiar de contrato borra lo manual; que lo manual sobreviva. Con F-065 lo manual incluye también las líneas bloqueadas (guardadas), las cantidades editadas, las líneas traídas del contrato y las partes de F6 (line_kind reparto); F-065 solo pide confirmación antes de revalorar.
+
+### F-059 · Etiquetas legibles para los motivos de revisión en sv4
+
+estado **pendiente** · prioridad 1 · rigor `estandar` · SDD sí
+
+ORIGEN: review del bloque B de F-049 (progress/review_F-049_bloqueB.md en la rama feature/F-049-partida-de-la-lista, decisión 2 para el humano): la etiqueta legible de partida_fuera_de_lista no es defecto de F-049, porque sv4 pinta TODOS los motivos como código crudo; propone una ficha aparte que etiquete todos.
+
+PROBLEMA DE HOY: desde F-036 R23 sv4 muestra las razones de cada línea de valoración (albaran_line_valuations.review_reasons_json) y los motivos del documento (albaran_documents_merge.review_reasons_json) como <code> crudo (p. ej. partida_ausente_familia_destinada, almacen_sin_partida_en_albaran, partida_fuera_de_lista, residuos_*, obra_*): el revisor ve identificadores internos, no frases.
+
+PROPUESTA: un catálogo código -> etiqueta en español (con el código en el title para soporte) usado por la plantilla de sv4; un código sin etiqueta se sigue pintando crudo (nunca se oculta) y un test avisa de los motivos que emiten sv3/sv6 sin etiqueta. A decidir en la spec: si el catálogo vive en sv4 o en ruesma_comun (lo emiten sv2, sv3 y sv6).
+
+ALCANCE: services/albaranes-front (plantilla y catálogo). NO ENTRA: cambiar los códigos que emiten los servicios. RELACIONADAS: F-036 (R23), F-049, F-051.
+
+X24 (2026-10-09, progress/propuestas_ficha_detalle.md): motivos de revisión en código interno y bandera en casi todas las filas; textos en castellano y bandera solo en avisos reales (los informativos no cuentan en el ⚑).
+
 ### F-064 · IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor
 
 estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-064-proveedor-en-prompts`
@@ -108,6 +160,26 @@ CAUSA EN EL PROMPT: en albaran_factura_es la frase sobre Ruesma está escrita a 
 ALCANCE (sv2 + evals): (1) IA1: las viñetas proveedor_nombre/proveedor_cif dicen que el proveedor es el EMISOR y que las empresas del cliente se ignoran (CIF null si el único CIF es del cliente); la lista se inyecta con el marcador {empresas_cliente} desde ruesma_comun.proveedores (CIFS_PROPIOS_POR_DEFECTO + CIFS_PROPIOS, la misma fuente que el descarte de F-063). (2) IA2: regla proveedor_emisor en revision_rules.yaml (llega a los cuatro prompts de fase 2 sin editarlos): confirma nombre y CIF de fase 1 contra el documento; si son del cliente o no del emisor, los corrige o deja el CIF null; prevalece sobre el contexto de Sigrid. Sin campos nuevos: IA2 devuelve el proveedor en documento_revisado.cabecera; sv2 no filtra (la red de F-063 en sv3 sigue siendo la verificación y su motivo, la métrica). sv3 y comun no cambian. (3) evals/comparar_proveedor.py: el banco no mide hoy el CIF (NO_COMPARAR en IA1, no observable en E2E); compara base/rama en 11 casos con el cliente impreso (FER-001…003, HOR-005…011, MOR-003) y 8 controles.
 
 FUERA: la lista de proveedores con contrato en la obra para IA2 (F-055, sobre ContextoSigridFase2 de F-049); el endpoint header-grounding de sv3 que valida el CIF propio. RUTA SENSIBLE: exige evals con LLM real del humano. Spec: specs/F-064-proveedor-en-prompts/; informe y preguntas: progress/spec_F-064.md.
+
+### F-066 · Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4)
+
+estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
+
+PETICIÓN DEL HUMANO (2026-10-09, PARADA 1 de F-065): ficha para revisar después, sin spec. Filas X12–X21 y R4 de progress/propuestas_ficha_detalle.md (detalle y fichero:línea en progress/explore_front_detalle.md §4–§6): sumatorio del importe al pie frente al total del albarán (X12); guardado sin recarga repintando fila y sumatorio (X13); combos con teclado completo (X14); Enter guarda y baja, flechas entre filas, Tab solo por editables (X15); «Aprobar y siguiente» (Ctrl+Enter) con filtros conservados (X16); aviso al salir con cambios pendientes (X17); PDF fijo y redimensionable, columnas poco usadas ocultas (X18); borrar sin confirmación con «Deshacer» en línea (X19); deshacer agrupado y sin recarga (X20); error del producto Sigrid en la fila (X21); un solo modelo de guardado: guardar por línea (bloquea) + «Aprobar», desaparece «Guardar todas» (R4). DEPENDE de F-065 (fases 1 y 2): sobre el modelo anterior, guardar más a menudo multiplicaba los fallos de integridad.
+
+### F-067 · Limpieza de la ficha de detalle (sv4)
+
+estado **pendiente** · prioridad 1 · rigor `estandar` · SDD sí
+
+PETICIÓN DEL HUMANO (2026-10-09, PARADA 1 de F-065): ficha para revisar después, sin spec. Filas X25, X26, R1–R3, R5 y R7–R12 de progress/propuestas_ficha_detalle.md (detalle en progress/explore_front_detalle.md §3–§4): el ✓ de la cantidad compara con lo leído (X25); ordenación por albarán y no persistente (X26); proveedor en un solo desplegable «Nombre — CIF» (R1); obra en un desplegable con la dirección debajo (R2); contrato en una línea: desplegable + PDF + importe (R3); crear líneas solo con traer, añadir y F6 (quitar duplicar y «Copiar sin casar», R5); lo leído como referencia plegada o tooltip (R7); franja única de estado y avisos (R8); un solo «Deshacer» y una navegación (R9); bloques técnicos a «Detalles técnicos» (R10); ficha más ligera: una lista compartida, sin JSON incrustado, caché del PDF (R11); ocultar «Abrir contrato» sin PDF y corregir textos de «Borrar» (R12).
+
+NOTAS QUE QUEDAN AQUÍ: X4 (al abrir la ficha se guardan solas una obra o un proveedor «sugeridos» por parecido de texto; propuesta: proponer sin guardar) quedó FUERA de F-065 por decisión del humano y está pendiente de decidir dónde va. O2 (operativo): posibles líneas ya dañadas en producción por X1 y X2 (cantidad convertida nula; filas pasadas a Nueva con el precio del contrato): consulta de solo lectura en producción y decisión del humano.
+
+### F-070 · La obra siempre con el 0 inicial (salvo VAR y POSTV2): sv3 la sella canónica, sv4 consulta y guarda canónica, sv9 da de alta canónica
+
+estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-070-obra-con-cero-inicial`
+
+ORIGEN (diagnóstico del líder, 2026-10-14, en producción y solo lectura): en los albaranes de HERMANOS SAN JUAN (obra 0686, contrato CTSU24/0524) el combo de partida de sv4 solo ofrece «Almacén». El merge tiene obra_codigo = "686" y sv4 llama a sigrid-api con "686": /api/sigrid/partidas?obra=686 devuelve ok y 0 partidas (con 0686, 2412); contratos 0 frente a 117; proveedores 0 frente a 115. En la bandeja hay 5 pendientes con obra de 3 cifras (686, 711, 723). sv9 (F-053, validador_alta.py) mandaría cod_obra = "686" sin completar y el alta fallaría. CAUSA SEGÚN EL HUMANO (literal): «el error es que al leer la obra del correo ha leído 686 y no ha normalizado. Es crucial que añada el 0 inicial si no es VAR ni POSTV2». REGLA: todo código de obra lleva el 0 inicial, salvo VAR y POSTV2, códigos válidos que se dejan tal cual (comprobado en Sigrid: existen como con.cod de obra). ALCANCE (spec 2026-10-14, progress/spec_F-070.md): normalización en un único punto de comun (ruesma_comun.obras: CODIGOS_OBRA_SIN_CERO, normalizar_codigo_obra con VAR/POSTV2 y canonizar_codigo_obra); sv3 canoniza la obra al sellar el merge (correo y papel) y al deducirla por texto, y deja de descartar VAR/POSTV2; sv4 canoniza en las tres consultas a Sigrid por obra (si no encaja, tal cual) y al guardar la cabecera; sv9 canoniza cod_obra antes del alta. Sin migración ni escrituras en producción: los merges ya guardados con 3 cifras los cubren sv4 y sv9. sv2 no cambia. Orden de despliegue: sv4 -> sv3; sv9 con F-053 desde un dev que ya tenga F-070. Coordinación con la rama de F-053 (v8) en design §7.
 
 ### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
 
@@ -138,26 +210,6 @@ ALCANCE: ESTUDIO, no integracion. (1) Verificar con la documentacion oficial que
 CUIDADOS: es un proveedor NUEVO, asi que el texto de los albaranes (y con F-048 el del correo, con datos personales) saldria a un tercero que hoy no lo ve; eso lo decide el humano antes de mandar un solo documento real. Las llamadas se facturan: el numero de casos y el coste se enseñan antes de lanzar. Si Jev solo acepta texto, hay que pasarle lo que ya extrajo sv2, y la comparacion con IA1 (que ve el papel) no es de igual a igual: hay que declararlo en el informe.
 
 RELACIONADAS: F-043 (clasificacion por IA1), F-045 (banco de evals), F-046 (familias nuevas del catalogo), F-047 (ciclo completo).
-
-### F-051 · Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas»
-
-estado **bloqueada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-051-almacen-por-linea`
-
-PETICION DEL HUMANO (2026-09-29), literal: «si no hay partida se deje en blanco (almacen en el portal) o que se pueda siempre elegir almacen en la lista de partidas. si hay almacen en la lista en sigrid se crea el albaran sin partida en esa linea (el almacen es por linea, boton de asignar almacen a todas las lineas)».
-
-LO QUE PIDE: (1) una linea SIN partida no se rellena con una inventada: queda en blanco y el portal (sv4) la muestra como ALMACEN; (2) en la lista de partidas de cada linea de sv4 la opcion ALMACEN esta SIEMPRE disponible, sea cual sea la obra o el contrato; (3) el almacen es POR LINEA, no por albaran; (4) un boton en la ficha asigna almacen a TODAS las lineas de una vez; (5) una linea en almacen llega a Sigrid SIN partida: el albaran se crea en Sigrid con esa linea sin imputar.
-
-A INVESTIGAR EN LA SPEC: como llega hoy un albaran aprobado a Sigrid (sigrid-api es SOLO LECTURA: quien crea el albaran en Sigrid y con que datos); como se representa hoy la partida por linea en el merge y en sv4; que hacen hoy sv5/sv6 con una linea sin partida (valoracion, casa_con_contrato, revision); y como encaja con la partida ALM de F-007 (spec_ready, que proponia ALM por defecto para suministros) y con F-049 (elegir la partida de la lista de la obra). Si F-007 queda superada o absorbida, decirlo.
-
-RELACIONADAS: F-007, F-049, F-021, F-048.
-
-SPEC (2026-09-29, specs/F-051-almacen-por-linea/, informe en progress/spec_F-051.md): HALLAZGO PRINCIPAL: nadie del ecosistema crea hoy el albaran en Sigrid; aprobar publica q-feedback (solo document_id) y no hay consumidor (F-013 pending), y sigrid-api no sabe dejar una linea sin partida (sigrid/albaran copia la del contrato; albaran-directo con paride nulo hereda la de la ultima dcapro del producto). Diseno: almacen = codigo_partida_final NULL + marca en partida_action (almacen_sin_partida la pone sv6 cuando el albaran no trae partida, en vez de copiar la del contrato casado; almacen_elegido la pone sv4), sin DDL y sin tocar comun. sv4: estado partida/almacen/sin_partida, opcion fija «Almacen (sin partida)» primera en el combo de partida, boton «Almacen a todas las lineas» con confirmacion y deshacer, la fila Sigrid sigue Sigrid. Revision solo para familias destinadas sin partida. Interruptor ALMACEN_SIN_PARTIDA_ENABLED. Absorbe R1-R7 y R15 de F-007 (propuesto re-alcance). Ocho decisiones abiertas D1-D8 en design.md; sv3 sale de servicios (no se toca).
-
-DECISION DEL HUMANO (2026-09-29), literal: «si hay una partida en el documento esta aplica a todas las lineas, si hay partidas por linea, en general aplica a las que esten marcadas» y «hasta ahora ia1 lo hace como decimos excepto que no sabe qué hacer con línea sin partida». Spec v2: entra sv2 SOLO con dos frases del prompt de IA1 (config/prompts.yaml, «Código de imputación manuscrito»): la linea sin partida marcada sale null y no se le copia la de otra, y el codigo unico se aplica a todas solo si no esta junto a una linea; sin campo de cabecera ni cambio de contrato, sin sv3. D1, D3, D4, D5, D7 y D8 aceptadas por omision (a confirmar en la PARADA 1); D6 abierta; D9 nueva (caso mixto documento + linea). Despliegue sv6 -> sv4 -> sv2.
-
-SPEC v3 (2026-10-02), respuestas del humano: D6 = el alta en Sigrid hoy es MANUAL (la teclea administracion leyendo el portal); la automatica la hara F-053 (sustituye a F-013): linea en almacen = sin partida y con almacen (almacen: true del modo extendido de F-009 de sigrid-api), alineado con su spec. Ejemplo confirmado: «03.02» solo junto a la 2.a de tres lineas => 1.a y 3.a a almacen. D9: partida de documento y otra junto a alguna linea => las marcadas la suya, el resto la de documento. Excepcion: portes, complementos y similares sin marca siguen la partida de su linea base. Todo en el prompt de IA1 (la IA decide, sin reglas deterministas): la vineta del codigo unico se sustituye por cuatro vinetas literales (design.md, sv2); R29 y R30 nuevos, R7 ampliado. Quedan por confirmar en la PARADA 1 las aceptadas por omision (D1, D2 familias, D3, D4, D5, D7, D8).
-
-SPEC v4 (2026-10-05), PARADA 1 hecha, todas las decisiones del humano: D1 rehecha, literal: «no se asocia a partida» y «en el visor cuando una línea no tenga partida que sea almacén. aunque eso sea realmente que la partida está vacía. negocio ya funciona así a mano actualmente» => almacén = codigo_partida_final vacío, tenga o no marca; partida_action solo deja rastro (almacen_sin_partida sv6, almacen_elegido sv4); desaparece el estado «sin partida» de v3; vaciar la partida en sv4 = elegir almacén (R12 nuevo); la confianza ya no resta por partida vacía. D2: cualquier familia puede ir a almacén y se mantiene la revisión NO bloqueante en familias destinadas. D3, D4, D5 (se pierde al revalorar; arreglo en F-058) y D7 (F-007 a pending) confirmadas. Contrato: F-053 debe dar de alta como almacén toda partida final vacía (desaparece linea_sin_partida); F-049 bloque C: «Sin partida → almacén» = partida final vacía, sin mirar la marca (cierra su O4). Relacionadas nuevas: F-058, F-059 (de F-049), F-060.
 
 ### F-056 · sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello
 
@@ -195,20 +247,6 @@ RIGOR critico: mismo tipo de defecto que F-052 (lectura silenciosamente incomple
 
 ALCANCE: services/albaranes-front (cliente de contratos del fallback local) y services/albaranes-persistencia (SigridApiObraClient). NO ENTRA: cambiar SQL ni semántica de las consultas ya cubiertas por F-052. RELACIONADAS: F-052 (D2, D6, O-C4), F-055.
 
-### F-058 · Revalorar no pierde las partidas ni el almacén asignados a mano
-
-estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
-
-ORIGEN: D5 de F-051 (PARADA 1 del 2026-10-05). El humano confirma que en F-051 el almacén elegido se pierde al revalorar, como cualquier override de sv4 hoy, y pide, literal: «al valorar no se pierdan las partidas asignadas a mano (o almacén)».
-
-PROBLEMA DE HOY: las ediciones de partida que el revisor hace en sv4 (partida cambiada en la fila salmón, derivada manual_override, y con F-051 el almacén elegido —partida_action almacen_elegido— o la partida vaciada) viven solo en albaran_line_valuations / contrato_lines_derived. «Valorar ahora» (q-valoracion) hace que sv6 reemplace la valoración entera de forma transaccional a partir del merge y de la respuesta de sv5, así que esas decisiones humanas desaparecen y la línea vuelve a la partida que decida sv6 (la leída por IA1, la del contrato o almacén).
-
-A DECIDIR EN LA SPEC: dónde se guarda la decisión humana para que sobreviva (en el merge, columna o tabla de overrides de sv3; o que sv6 la preserve al reemplazar), qué manda si el papel se vuelve a leer (re-fetch) y cambia la partida leída, cómo se ve en sv4 que una partida es «puesta a mano», y si aplica también a otros overrides (precio, unidad, descripción) o solo a partida y almacén. Probable DDL en sv3 (dueño del esquema) y cambio de contrato sv3 -> sv5 -> sv6; sv4 escribe la decisión.
-
-RIGOR critico: toca la valoración (sv6) y lo que llega a Sigrid (F-053).
-
-RELACIONADAS: F-051 (D5, R14, R12), F-049 (sv4 pone codigo_imputacion_validada a NULL cuando el revisor cambia la partida leída), F-053 (alta en Sigrid), F-007.
-
 ### F-060 · Tipología de líneas acopiables: qué familias o tipos de línea pueden ir a almacén/acopio y cuáles se imputan siempre a partida
 
 estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
@@ -220,6 +258,30 @@ HOY (con F-051): cualquier línea de cualquier familia puede ir a almacén (D2 d
 LO QUE DEBE DEFINIR LA SPEC FUTURA: (1) la tipología o catálogo de familias/productos acopiables y no acopiables (¿por familia efectiva, por producto de Sigrid, por obra?); (2) quién lo mantiene (negocio, administración) y dónde vive (ruesma_comun, BBDD de sv3, Sigrid); (3) cómo lo usan IA1/IA2 (prompt), sv6 (valoración y revisión) y sv4 (combo de partida, botón de almacén, avisos); (4) si cambia la revisión de D2 de F-051 (p. ej. bloquear o impedir almacén en no acopiables, o solo avisar como hoy).
 
 RELACIÓN: F-007 (partida ALM/acopio por defecto para suministros + selector de candidatas + memoria obra+producto), que D7 de F-051 devuelve a pending para reescribirla tras F-051: F-060 y la nueva spec de F-007 DEBEN DECIDIRSE JUNTAS o FUSIONARSE (las dos definen qué va a almacén y qué a partida). F-051 (almacén por línea; FAMILIAS_DESTINADAS) y F-053 (alta en Sigrid: línea de almacén = sin partida y con almacen: true; una tipología podría impedir o avisar del alta en almacén de una no acopiable). Probables servicios: sv2, sv6, sv4 y comun.
+
+### F-061 · Familia medios_auxiliares (andamios, puntales, plataformas...) en el catalogo de familias de IA1
+
+estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
+
+ORIGEN: pregunta P1 de F-053 (spec v6, progress/spec_F-053.md), respondida por el humano el 2026-10-06 («si» a la recomendacion): ficha propia, ni dentro de F-053 ni previa, ni fusionada con F-060.
+
+PROBLEMA: F-053 elige el producto generico de Sigrid de cada linea sin vincular por su familia (alquiler_maquinaria -> QA9999, medios_auxiliares -> XA9999, el resto -> MA9999; mapeo ALTA_SIGRID_PRODUCTO_POR_DEFECTO). La familia medios_auxiliares no existe en ruesma_comun.contratos.familias (generico, hormigon, mortero, residuos, combustible, alquiler_maquinaria, otro): hasta que exista, los andamios y puntales salen MA9999 por defecto y el administrativo elige XA9999 a mano en sv4 (columna «Producto Sigrid» de F-053). La cuenta analitica de la linea depende del producto (naturaleza XA99, cuenta <obra>.CDXA01), asi que clasificar mal cuesta trabajo manual en cada albaran.
+
+ALCANCE PROPUESTO: entrada en CATALOGO (documento y linea) con sus senales (andamio, puntal, plataforma, encofrado alquilado...; que la distingue de alquiler_maquinaria), TipoFamilia de contexto_linea y sus copias en los modelos de sv2, sv3, sv5 y sv6, prompt de fase 1 de IA1 y casos de evals. Sin prompt de fase 2 ni de valoracion propios (cae al generico) y fuera de FAMILIAS_DESTINADAS de sv6 hasta F-060. Ruta sensible (prompt de IA1, evals) => rigor critico.
+
+ORDEN: antes de F-060 y en serie con ella (las dos tocan el prompt de IA1); no bloquea a F-053 (la clave del mapeo espera). RELACIONADAS: F-053 (producto por familia), F-060 (lineas acopiables), F-007.
+
+### F-068 · F7 en la ficha: divide la última fila pulsada y Edge no pregunta por la exploración con el símbolo de intercalación (sv4)
+
+estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí
+
+ORIGEN (correo de administración de obra, asunto «F7», 2026-10-13 12:37, captura en Edge): al pulsar F7 en una ficha, Edge abre su diálogo «¿Quieres activar la exploración mediante el símbolo de intercalación?» y no se abre «Dividir». Causa (líder, por lectura de código): el manejador de F7 de F-065 R29 (`wireDividir`, app.js) solo actúa —y solo hace preventDefault— si el foco está dentro de una casilla de la fila; con el foco fuera, F7 llega al navegador. PROPUESTA (2026-10-13, aplazada por el humano: «déjalo para feature más adelante»): (1) la última fila pulsada queda como fila activa (resaltado suave) y F7 la divide aunque el foco no esté en una casilla; (2) en la ficha editable F7 se captura siempre, con aviso corto si no hay fila activa, está bloqueada o el albarán está aprobado; (3) verificación MANUAL en Edge de que el preventDefault evita el diálogo (si no, instrucción a los usuarios: «No volver a preguntarme» + Cancelar). Arrastra las observaciones no bloqueantes de `progress/review_F-065_fase3bis.md` §«Pasada 5»: O8 (O6 revierte la partida con el foco dentro si la lista se cierra por scroll durante la primera carga) y O9 (el cerrojo de «Dividir» lo reabre `refrescar`: un segundo POST que el servidor rechaza), y el comentario repetido de app.js. Mientras tanto, el borrador de guía de uso dice: clic en una casilla de la línea antes de F7.
+
+### F-069 · Lista de equivalencias usuario de la app ↔ usuario de Sigrid para el alta (sv9)
+
+estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
+
+PETICIÓN DEL HUMANO (2026-10-14, PARADA 1 de F-053 v8): «en el futuro habrá una lista de mapeo usuario vs usuario sigrid para los casos raros». F-053 v8 (R47) resuelve el `usu` del alta con la parte local del correo @ruesma.es de quien aprueba contra `dbo.usu.cod` y, si no casa, usa `ALTA_SIGRID_USUARIO_RESPALDO` (pgris). Esta feature añade una lista de equivalencias (correo → login de Sigrid) que se consulta ANTES de la parte local, para los usuarios cuyo login no coincide con su correo. Dónde vive (variable, tabla propia o fichero) y quién la mantiene, a decidir en su PARADA 1. Depende de F-053.
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 
@@ -265,18 +327,6 @@ CUIDADOS: el ciclo necesita el pipeline LEVANTADO EN LOCAL (Azurite + Postgres, 
 LO QUE NO VIGILA, y hay que decirlo: sv1 y el buzon M365, sv4 (salvo el gesto de seleccionar contrato, que el banco simula), SharePoint real y el comportamiento contra Azure de verdad.
 
 RELACIONADAS: F-045 (el ground truth que esta ficha aprovecha), F-011 (el banco y su flujo), F-043 (el enrutado por familia que estos casos vigilan).
-
-### F-059 · Etiquetas legibles para los motivos de revisión en sv4
-
-estado **pendiente** · prioridad 3 · rigor `estandar` · SDD sí
-
-ORIGEN: review del bloque B de F-049 (progress/review_F-049_bloqueB.md en la rama feature/F-049-partida-de-la-lista, decisión 2 para el humano): la etiqueta legible de partida_fuera_de_lista no es defecto de F-049, porque sv4 pinta TODOS los motivos como código crudo; propone una ficha aparte que etiquete todos.
-
-PROBLEMA DE HOY: desde F-036 R23 sv4 muestra las razones de cada línea de valoración (albaran_line_valuations.review_reasons_json) y los motivos del documento (albaran_documents_merge.review_reasons_json) como <code> crudo (p. ej. partida_ausente_familia_destinada, almacen_sin_partida_en_albaran, partida_fuera_de_lista, residuos_*, obra_*): el revisor ve identificadores internos, no frases.
-
-PROPUESTA: un catálogo código -> etiqueta en español (con el código en el title para soporte) usado por la plantilla de sv4; un código sin etiqueta se sigue pintando crudo (nunca se oculta) y un test avisa de los motivos que emiten sv3/sv6 sin etiqueta. A decidir en la spec: si el catálogo vive en sv4 o en ruesma_comun (lo emiten sv2, sv3 y sv6).
-
-ALCANCE: services/albaranes-front (plantilla y catálogo). NO ENTRA: cambiar los códigos que emiten los servicios. RELACIONADAS: F-036 (R23), F-049, F-051.
 
 ### F-037 · sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar
 
@@ -376,11 +426,13 @@ estado **pendiente** · prioridad 15 · rigor `estandar` · SDD sí · rama `fea
 
 Origen: prueba local del 2026-08-18 con el albarán Feymaco 2.137.569. El código de imputación manuscrito «P4/P5.36.01» se leyó primero como «PJ.36.01» y, tras F-019, como «36.01» a secas: la IA se comió el prefijo. Hoy NADIE valida que el código leído exista, así que una imputación contable inventada entra sin un solo aviso. ALCANCE EN TRES PASOS, en este orden (decisión del humano, 2026-08-18): (1) VALIDACIÓN DETERMINISTA, sin IA: comprobar el código leído contra el catálogo de partidas del contrato, que YA viaja en el contexto de sv6 a sv5 (albaran_contrato_lines_merge.codigo_partida). Comprobado en el contrato CTSU24/0454: 3 prefijos de primer nivel (P5 con 218 líneas, P4 con 188, CI con 36) y las partidas P4.36.01 y P5.36.01 EXISTEN, así que con el «36.01» leído a medias el catálogo devuelve solos los dos candidatos correctos, sin salir a ningún sistema externo. Casar por sufijo y por prefijo, no solo por igualdad. (2) ELECCIÓN ASISTIDA: solo si el código no valida y hay más de un candidato, la IA elige POR DESCRIPCIÓN entre los candidatos del catálogo, devolviendo confianza y motivo. La IA no decide en silencio: una imputación contable equivocada es un asiento mal hecho. (3) POR DEBAJO DEL UMBRAL DE CONFIANZA, la línea va al selector de candidatas de sv4, que ya especifica F-007: esta feature se apoya en aquella, no la duplica. AMPLIACIÓN FUTURA (fuera de alcance aquí): cuando el código no aparezca en el contrato, consultar las partidas de la obra en Sigrid vía sigrid-api (solo lectura); el documento de sigrid-api menciona el desglose por partidas pero no consta expuesto como endpoint. NO ENTRA: la lectura del separador «/» como reparto en varias partidas, que es F-016, ni el reparto en sí. Relación con otras features: F-016 (multipartida) depende de que el código se lea y valide bien; F-007 aporta el selector humano. Toca sv5 y sv6, con verificación en sv4. Detalle del incidente en progress/prueba_local_feymaco_20260818.md.
 
-### F-016 · Reparto de una línea del albarán entre varias partidas
+### F-016 · [ABSORBIDA POR F-065] Reparto de una línea del albarán entre varias partidas
 
 estado **pendiente** · prioridad 16 · rigor `estandar` · SDD sí · rama `feature/F-016-linea-multipartida`
 
-Caso real (Feymaco 2137569): una línea impresa de 108 uds repartida a mano entre dos partidas (54 a P4.36.01 y 54 a P5.36.01, anotación 'P4/P5.36.01'). El pipeline actual modela una línea -> una partida. La spec debe decidir el modelo: ¿la valoración soporta líneas hijas con cantidades parciales por partida, o el reparto es una acción manual del revisor en sv4 (split de línea) previa al registro? Impacto potencial en schema (listar lectores: sv5 SQL crudo) y en el futuro registro en Sigrid (F-013).
+ABSORBIDA POR F-065 (spec-author, 2026-10-09; pendiente de que el humano lo confirme en la PARADA 1 de F-065, pregunta P8): el reparto A MANO de una línea entre varias partidas conservando el vínculo al contrato es la fase 3 de F-065 (specs/F-065-lineas-editadas-y-reparto/); el caso Feymaco con anotación compuesta «P4/P5.36.01» lo reparte sola F-049 R23 (sv2, N líneas a partes iguales). No se implementa. Se deja en pending porque el arnés no tiene estado de «absorbida», como F-013.
+
+TEXTO ORIGINAL: Caso real (Feymaco 2137569): una línea impresa de 108 uds repartida a mano entre dos partidas (54 a P4.36.01 y 54 a P5.36.01, anotación 'P4/P5.36.01'). El pipeline actual modela una línea -> una partida. La spec debe decidir el modelo: ¿la valoración soporta líneas hijas con cantidades parciales por partida, o el reparto es una acción manual del revisor en sv4 (split de línea) previa al registro? Impacto potencial en schema (listar lectores: sv5 SQL crudo) y en el futuro registro en Sigrid (F-013).
 
 ### F-026 · Guard de partida de la línea BASE antes de escribir en contrato_lines_derived
 
@@ -466,11 +518,13 @@ estado **pendiente** · prioridad 27 · rigor `estandar` · SDD sí · rama `fea
 
 Decisión del humano (2026-08-17) que resuelve el 'OFERTA' del ground truth: el administrativo obtiene el precio unitario/importe por este orden: (1) líneas iguales ya registradas en líneas de contrato [hoy 1a], (2) contrato en papel [hoy 1b], (3) como ÚLTIMO recurso, el precio del COMPARATIVO asociado al contrato [nuevo, 1c]. Hay que añadir esa tercera fuente: la spec debe estudiar de dónde sale el comparativo (¿Sigrid vía sigrid-api? ¿documento en SharePoint?), cómo se asocia al contrato, y ampliar precio_source en sv5/sv6 (y el modelo de conciliación 1a-vs-1b) sin romper lectores. Las 3 líneas OFERTA del lote alvaro_17082026 son los casos de referencia.
 
-### F-013 · Registro del albarán aprobado en Sigrid (consumidor de q-feedback)
+### F-013 · [SUSTITUIDA POR F-053] Registro del albarán aprobado en Sigrid (consumidor de q-feedback)
 
 estado **pendiente** · prioridad 28 · rigor `critico` · SDD sí · rama `feature/F-013-registro-sigrid`
 
-Marcada como MUY IMPORTANTE por el humano (2026-08-13). Servicio nuevo del monorepo (la responsabilidad no cabe en ninguno existente; q-feedback está reservada para esto desde el diseño): consume q-feedback y da de alta el albarán valorado y aprobado en Sigrid vía sigrid-api sql/write (única base escribible: ruesma; el guard semántico de sigrid-api existe y la escritura está off por defecto). Excluye las líneas marcadas no_registrar_sigrid (F-006). Diseño pendiente y delicado: qué tablas de Sigrid, MAX(ide)+1 con lock, idempotencia del alta (un albarán aprobado dos veces no puede duplicarse en el ERP), y autorización expresa del humano para activar la escritura. Escribe en el ERP de producción => rigor critico y verificaciones MANUAL obligatorias.
+SUSTITUIDA POR F-053 (decisión del humano, 2026-10-01): no se implementa. El alta en Sigrid la diseña F-053 con endpoints de dominio de sigrid-api, no con sql/write. Se deja en 'pending' porque el arnés no tiene estado de «sustituida» y 'done' exige init.sh en verde y review APROBADO (CLAUDE.md); el humano decide si se borra o se marca de otra forma.
+
+TEXTO ORIGINAL: Marcada como MUY IMPORTANTE por el humano (2026-08-13). Servicio nuevo del monorepo (la responsabilidad no cabe en ninguno existente; q-feedback está reservada para esto desde el diseño): consume q-feedback y da de alta el albarán valorado y aprobado en Sigrid vía sigrid-api sql/write (única base escribible: ruesma; el guard semántico de sigrid-api existe y la escritura está off por defecto). Excluye las líneas marcadas no_registrar_sigrid (F-006). Diseño pendiente y delicado: qué tablas de Sigrid, MAX(ide)+1 con lock, idempotencia del alta (un albarán aprobado dos veces no puede duplicarse en el ERP), y autorización expresa del humano para activar la escritura. Escribe en el ERP de producción => rigor critico y verificaciones MANUAL obligatorias.
 
 ### F-008 · Lifecycle de blobs de hand-off
 
@@ -698,6 +752,20 @@ ARREGLO: lista de CIF propios en ruesma_comun.proveedores (por defecto A81873903
 
 FUERA: backfill de los merges ya canonizados a Ruesma (los corrige el revisor en sv4); la IA leyendo también el NOMBRE del cliente. Spec: specs/F-063-cif-propio-no-es-proveedor/. CIERRE (2026-10-08): review APROBADA; init.sh en verde en dev tras fusionar (92ff1e1). Pendiente aparte: el endpoint `header-grounding` de sv3 aún valida el CIF propio (ningún servicio actual lo consume; ficha futura). F-064 (prompts de IA1 e IA2: el cliente Construcciones Ruesma se ignora y la IA2 confirma el proveedor) va a continuación.
 
+### F-065 · Lo editado en las líneas de sv4 manda (guardados separados, guardar = bloquear la línea, aprobado = solo lectura), la partida se elige entre las de la obra y una línea se divide con F6
+
+estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-065-lineas-editadas-y-reparto`
+
+ORIGEN (humano, 2026-10-09: «mételo todo en una spec de prioridad 1, y luego lo analizamos juntos»): correo de administración de obra sobre un albarán de METALFIRE (contrato CTSU25/0359): «Las unidades del albarán tengo que repartirlas en 3 partidas distintas»; «Si le cambio las partidas me arrastra del contrato, si le doy que no me la cambie me la pone como nueva»; puso 6 y 7 en dos líneas de 8 y 10 y trajo una tercera de 5 del contrato: «Guardar todas» dejó 18 y «Guardar y aprobar» volvió a 8+10+5 = 23 unidades.
+
+DIAGNÓSTICO (progress/explore_F-065.md): todo PUT del documento reenvía las blancas y _recalc_valuation_importes pisa con su cantidad y descuento las filas salmón editadas; «Deshacer» no lo recupera; el PATCH de fila deja cantidad_convertida a NULL, así que sv9 (F-053) pondría no_admitido a toda vinculada editada (y, arreglado solo eso, mandaría las cantidades falsas); el combo de partida reapunta la línea de contrato sin cambiar la partida y teclear otra partida la convierte en NUEVA, también sin confirmación desde «Guardar todas»; no hay forma de repartir una línea conservando el vínculo. Hallazgo adicional por lectura de código: «Guardar todas» + cualquier PUT multiplica el importe en líneas con conversión (×1000 kg→t, ×6 contenedores).
+
+SPEC v1 (2026-10-09, specs/F-065-lineas-editadas-y-reparto/, informe progress/spec_F-065.md): solo sv4 (sv9 y comun sin código; tests de contrato en sv9); sin DDL con el modelo recomendado. Fase 1 (A, urgente, desplegar antes de poner ALTA_SIGRID_DESDE de F-053): el PUT solo recalcula blancas que cambiaron de verdad; la cantidad de la salmón está en la unidad del precio y fija cantidad_convertida; PATCH sin cambios no toca nada; deshacer del PUT; «Guardar todas» solo filas modificadas y no se aprueba con filas sin guardar. Fase 2 (B): cambiar la partida de una fila SIGRID la deja vinculada (F-009 v8 lo admite con aviso partida_distinta_del_contrato), combo de partidas en vez de líneas de contrato, confirmación también en «Guardar todas». Fase 3 (C): «Dividir» en N partes (cantidad + partida) con suma = original, partes line_kind='reparto' con el mismo vínculo, importe prorrateado, deshacer, confirmación antes de revalorar (la persistencia al revalorar queda para F-058). ABSORBE F-016. PREGUNTAS ABIERTAS P1–P9 para la PARADA 1 (design §7): P1 vinculada en otra partida (negocio), P2 PUT, P3 regla de cantidades, P4 modelo de las partes (M1 sin DDL / M2 DDL sv6+sv3 / M3 en el merge), P5 suma que no cuadra, P6 importe de las partes, P7 revalorar, P8 F-016, P9 fases.
+
+RELACIONADAS: F-053 (alta en Sigrid; su despliegue espera a la fase 1), F-058 (revalorar no pierde lo manual), F-051 (almacén, R12/R19/R20), F-049 R23 (reparto automático de compuestas), F-016 (absorbida), F-019 y F-036 (recálculo de importes).
+
+SPEC v2 (2026-10-09, PARADA 1 resuelta por el humano; informe progress/spec_F-065.md §v2): modelo del humano en progress/propuestas_ficha_detalle.md (origen «Sigrid» pasa a «Contrato»: es de contrato si cuadran partida, unitario y concepto, lo decide la IA al valorar; si no, Nueva). Respuestas: (1) cambiar la partida ⇒ Nueva; (2) al editar no se llama a la IA; (3) aprobar no exige líneas bloqueadas; (4) combo con todas las partidas hoja de la obra + «Almacén», solo «Almacén» si no hay. P2 = separar guardados (el PUT de cabecera no toca líneas); P3–P9 con la recomendación. Alcance: filas F-065 de la tabla (M1–M4, X1–X3, X5–X11, X22, R6) salvo X4. Fase 1 (sv6 DDL bloqueada → sv4; desplegar antes de pasar F-053 a real): PUT sin líneas y sin desaprobar, aprobado = solo lectura con «Desaprobar», PATCH solo de lo cambiado con cantidades coherentes y precio aplicado, guardar = bloquear la línea, validación al aprobar, confirmación antes de revalorar o cambiar de contrato, traer líneas con cantidad. Fase 2: «Contrato», regla de origen sin avisos, combo de partidas de la obra (endpoint de sv4 existente; F-049 lo moverá a comun), «Origen ✎» única vía de reapuntar. Fase 3: F6 dividir (sustituye a F7). Nuevas decididas por defecto: P10–P13 (design §7).
+
 ### F-011 · Evals de IA con ground truth y puerta en el arnés
 
 estado **terminada** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-011-evals-ia`
@@ -790,6 +858,26 @@ ALCANCE PROPUESTO PARA ESTA FICHA -sembrar, no arreglar-: llevar los 32 albarane
 CUIDADOS: los PDF y los .xlsx NO se versionan -son documentos de proveedor y llevan precios-; solo entran los fixtures JSON y tras el barrido de datos sensibles que describe evals/README.md. El ground truth es del humano y NO se inventa: lo que el Excel no diga, no se compara. Y conviene separar lo que es fallo de EXTRACCION (IA1/IA2) de lo que es fallo de VALORACION (IA3/IA4), porque el Excel los mezcla en la misma fila.
 
 RELACIONADAS: F-011 (el banco y su flujo), F-043 (el enrutado por familia que estos casos vigilan), F-017 (la fuente OFERTA, que explica varias lineas del Excel), F-021 (eleccion de partida, que es el patron 1), F-024 (unidad_medida).
+
+### F-051 · Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas»
+
+estado **terminada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-051-almacen-por-linea`
+
+PETICION DEL HUMANO (2026-09-29), literal: «si no hay partida se deje en blanco (almacen en el portal) o que se pueda siempre elegir almacen en la lista de partidas. si hay almacen en la lista en sigrid se crea el albaran sin partida en esa linea (el almacen es por linea, boton de asignar almacen a todas las lineas)».
+
+LO QUE PIDE: (1) una linea SIN partida no se rellena con una inventada: queda en blanco y el portal (sv4) la muestra como ALMACEN; (2) en la lista de partidas de cada linea de sv4 la opcion ALMACEN esta SIEMPRE disponible, sea cual sea la obra o el contrato; (3) el almacen es POR LINEA, no por albaran; (4) un boton en la ficha asigna almacen a TODAS las lineas de una vez; (5) una linea en almacen llega a Sigrid SIN partida: el albaran se crea en Sigrid con esa linea sin imputar.
+
+A INVESTIGAR EN LA SPEC: como llega hoy un albaran aprobado a Sigrid (sigrid-api es SOLO LECTURA: quien crea el albaran en Sigrid y con que datos); como se representa hoy la partida por linea en el merge y en sv4; que hacen hoy sv5/sv6 con una linea sin partida (valoracion, casa_con_contrato, revision); y como encaja con la partida ALM de F-007 (spec_ready, que proponia ALM por defecto para suministros) y con F-049 (elegir la partida de la lista de la obra). Si F-007 queda superada o absorbida, decirlo.
+
+RELACIONADAS: F-007, F-049, F-021, F-048.
+
+SPEC (2026-09-29, specs/F-051-almacen-por-linea/, informe en progress/spec_F-051.md): HALLAZGO PRINCIPAL: nadie del ecosistema crea hoy el albaran en Sigrid; aprobar publica q-feedback (solo document_id) y no hay consumidor (F-013 pending), y sigrid-api no sabe dejar una linea sin partida (sigrid/albaran copia la del contrato; albaran-directo con paride nulo hereda la de la ultima dcapro del producto). Diseno: almacen = codigo_partida_final NULL + marca en partida_action (almacen_sin_partida la pone sv6 cuando el albaran no trae partida, en vez de copiar la del contrato casado; almacen_elegido la pone sv4), sin DDL y sin tocar comun. sv4: estado partida/almacen/sin_partida, opcion fija «Almacen (sin partida)» primera en el combo de partida, boton «Almacen a todas las lineas» con confirmacion y deshacer, la fila Sigrid sigue Sigrid. Revision solo para familias destinadas sin partida. Interruptor ALMACEN_SIN_PARTIDA_ENABLED. Absorbe R1-R7 y R15 de F-007 (propuesto re-alcance). Ocho decisiones abiertas D1-D8 en design.md; sv3 sale de servicios (no se toca).
+
+DECISION DEL HUMANO (2026-09-29), literal: «si hay una partida en el documento esta aplica a todas las lineas, si hay partidas por linea, en general aplica a las que esten marcadas» y «hasta ahora ia1 lo hace como decimos excepto que no sabe qué hacer con línea sin partida». Spec v2: entra sv2 SOLO con dos frases del prompt de IA1 (config/prompts.yaml, «Código de imputación manuscrito»): la linea sin partida marcada sale null y no se le copia la de otra, y el codigo unico se aplica a todas solo si no esta junto a una linea; sin campo de cabecera ni cambio de contrato, sin sv3. D1, D3, D4, D5, D7 y D8 aceptadas por omision (a confirmar en la PARADA 1); D6 abierta; D9 nueva (caso mixto documento + linea). Despliegue sv6 -> sv4 -> sv2.
+
+SPEC v3 (2026-10-02), respuestas del humano: D6 = el alta en Sigrid hoy es MANUAL (la teclea administracion leyendo el portal); la automatica la hara F-053 (sustituye a F-013): linea en almacen = sin partida y con almacen (almacen: true del modo extendido de F-009 de sigrid-api), alineado con su spec. Ejemplo confirmado: «03.02» solo junto a la 2.a de tres lineas => 1.a y 3.a a almacen. D9: partida de documento y otra junto a alguna linea => las marcadas la suya, el resto la de documento. Excepcion: portes, complementos y similares sin marca siguen la partida de su linea base. Todo en el prompt de IA1 (la IA decide, sin reglas deterministas): la vineta del codigo unico se sustituye por cuatro vinetas literales (design.md, sv2); R29 y R30 nuevos, R7 ampliado. Quedan por confirmar en la PARADA 1 las aceptadas por omision (D1, D2 familias, D3, D4, D5, D7, D8).
+
+SPEC v4 (2026-10-05), PARADA 1 hecha, todas las decisiones del humano: D1 rehecha, literal: «no se asocia a partida» y «en el visor cuando una línea no tenga partida que sea almacén. aunque eso sea realmente que la partida está vacía. negocio ya funciona así a mano actualmente» => almacén = codigo_partida_final vacío, tenga o no marca; partida_action solo deja rastro (almacen_sin_partida sv6, almacen_elegido sv4); desaparece el estado «sin partida» de v3; vaciar la partida en sv4 = elegir almacén (R12 nuevo); la confianza ya no resta por partida vacía. D2: cualquier familia puede ir a almacén y se mantiene la revisión NO bloqueante en familias destinadas. D3, D4, D5 (se pierde al revalorar; arreglo en F-058) y D7 (F-007 a pending) confirmadas. Contrato: F-053 debe dar de alta como almacén toda partida final vacía (desaparece linea_sin_partida); F-049 bloque C: «Sin partida → almacén» = partida final vacía, sin mirar la marca (cierra su O4). Relacionadas nuevas: F-058, F-059 (de F-049), F-060.
 
 ### F-012 · Campaña de mutación en paralelo
 

@@ -500,7 +500,7 @@ dispare en ningún despliegue real.
 | `APP_TITLE`                  | `Revisión de Albaranes IA` | Se usa en `<title>` y header.                                          |
 | `DEFAULT_PAGE_SIZE`          | `25`                   |                                                                            |
 | `MAX_PAGE_SIZE`              | `100`                  |                                                                            |
-| `DEFAULT_REVIEWER`           | *opcional*             | Pre-rellena `approved_by` si no se pasa explícitamente.                    |
+| `DEFAULT_REVIEWER`           | *opcional*             | Solo en local (sin Easy Auth): `approved_by` cuando no llega la cabecera ni el formulario o el cuerpo (F-053 R49). |
 
 > **`preview_enabled`** es una propiedad calculada: `bool(graph_key AND sharepoint_drive_id)`. Si cualquiera falta, el endpoint `/preview` devuelve un HTML de error con link a SharePoint como fallback (sin cascar).
 
@@ -628,9 +628,12 @@ es: **conserva el id**, y la valoración asociada sobrevive.
 9. **5 outcomes explícitos del refetch** (`skipped_missing_data`, `no_results`,
    `found_single`, `found_multiple`, `sigrid_error`) con mensajes pensados para
    pintarse directamente en el front, sin ramas adicionales en JS.
-10. **`approved_by` es texto libre** — el revisor escribe su nombre. No hay
-    auth ni Entra ID. Decisión consciente del cliente para esta fase del
-    proyecto. Lo dejo como mejora #5.
+10. **`approved_by` sale de Easy Auth** (F-053 v8, R49; antes era texto libre).
+    En Azure, por los dos caminos de aprobar («Aprobar» del listado y el PUT
+    de la ficha), es la cabecera `X-MS-CLIENT-PRINCIPAL-NAME` (el UPN, la
+    inyecta la plataforma y el navegador no la puede poner); el formulario o
+    el cuerpo solo cuentan sin ella (local) y, sin ellos, `DEFAULT_REVIEWER`.
+    De ese valor saca sv9 el usuario de Sigrid del alta (R47). Cierra §13.5.
 11. **Mix form-based + JSON API** para acciones simples vs complejas.
     Aprobar desde la lista es un POST de formulario; editar desde el detalle es
     un PUT JSON desde JS.
@@ -645,7 +648,7 @@ es: **conserva el id**, y la valoración asociada sobrevive.
 | 2  | 🔥 **`sv4` NO dispara la re-valoración cuando el revisor cambia `selected_contrato_codigo`**                          | Ver §13.2 — hallazgo arquitectónico crítico.                                                                      |
 | 3  | Duplicación de código sv3↔sv4 (Sigrid client, SharePoint storage, ORM models; la obra ya va en `ruesma_comun.obras`)                  | Extraer un paquete común `albaranes-shared` con esos módulos, o generar SDK desde el OpenAPI del sigrid-api.       |
 | 4  | `review_repository.py` = 1581 LOC                                                                                    | Descomponer en `DocumentsListReader`, `DocumentDetailReader`, `DocumentWriter`, `ContratosWriter`, `ValuationLineEditor`. |
-| 5  | Sin auth — cualquiera con acceso al puerto puede aprobar                                                             | Easy Auth (Entra ID) en Container App + leer identidad del header `X-MS-CLIENT-PRINCIPAL-NAME` para `approved_by`.  |
+| 5  | ~~Sin auth — cualquiera con acceso al puerto puede aprobar~~ **Cerrado**: Easy Auth (Entra ID) en la Container App y `approved_by` = cabecera `X-MS-CLIENT-PRINCIPAL-NAME` por los dos caminos (F-053 v8, R49) | — |
 | 6  | Sin CSRF en formularios POST (`/approve`, `/unapprove`)                                                              | Añadir token CSRF (FastAPI tiene paquetes de middleware listos).                                                  |
 | 7  | Sin paginación de líneas en el detalle                                                                                | Si una factura llega con 200+ líneas, virtualizar la tabla (ej. con Intersection Observer o paginación servidor). |
 | 8  | El proxy `/preview` no cachea — cada visualización son 2 llamadas a Graph                                            | Cache LRU en memoria por `(drive_id, relative_path, sha256)` con TTL corto (5 min).                               |

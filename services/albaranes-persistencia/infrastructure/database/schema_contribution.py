@@ -15,6 +15,7 @@ Pertenencia (qué tablas son propias de sv3 / schema ``albaran_persist``):
     - albaran_contrato_lines_merge
     - contratos_cache
     - contrato_cache_lines
+    - albaran_altas_sigrid (F-053; DDL en ``phase2_ddl``, la escribe sv9)
 
 NO incluye las tablas de valoración (``albaran_valuations``,
 ``albaran_line_valuations``, ``contrato_lines_derived``): esas son
@@ -124,6 +125,8 @@ _OWNED_TABLE_NAMES: Tuple[str, ...] = (
     "albaran_contrato_lines_merge",
     "contratos_cache",
     "contrato_cache_lines",
+    # F-053 · R36: la crea sv3 (DDL en phase2_ddl), la escribe solo sv9.
+    "albaran_altas_sigrid",
 )
 
 

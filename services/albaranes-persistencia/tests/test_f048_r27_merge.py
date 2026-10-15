@@ -102,6 +102,10 @@ class _Resultado:
     def all(self):
         return []
 
+    def scalar(self):
+        # F-053 · R45: ``to_regclass('albaran_altas_sigrid')`` sin tabla.
+        return None
+
 
 class _Sesion:
     """Sesion doble: sin nada previo que borrar; registra lo que se anade."""
@@ -119,8 +123,8 @@ class _Sesion:
     def scalars(self, consulta):
         return _Resultado()
 
-    def execute(self, sentencia):  # pragma: no cover - no hay merges previos que borrar
-        return None
+    def execute(self, sentencia, parametros=None):
+        return _Resultado()
 
     def delete(self, objeto):  # pragma: no cover
         pass

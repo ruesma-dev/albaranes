@@ -1610,9 +1610,32 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
 /* Origen: solo el badge. */
 .salmon-table td.td-origen { text-align: center; }
 
-/* Acciones: Borrar + Guardar a la DERECHA. */
-.salmon-table td.td-acciones { white-space: nowrap; text-align: right; }
-.salmon-table td.td-acciones .btn { margin-left: 4px; }
+/* Acciones (F-065 R29 v3): SIEMPRE a la vista, pegada a la derecha del scroll
+   y opaca (con una fila «Desbloquear» la tabla se ensanchaba y «Guardar» y
+   «Dividir» quedaban fuera de la vista). Columna fija de ancho estable (no
+   depende de qué botones salgan); si se estrecha, los botones bajan de
+   línea en vez de recortarse. El fondo opaco lo ponen las reglas de la fila
+   (conciliación, zebra, hover: todas opacas y más específicas que esta; un
+   fondo aquí no se aplicaría nunca). La cabecera lleva «tr.salmon-head» para
+   ganar a «.salmon-table thead tr.salmon-head th» (0,2,3), que le pone
+   position: relative (pasada 2, CR2). Lo vigila un motor de cascada en
+   tests/test_f065_f3bis_front.py. Sin z-index: al ir detrás en el DOM ya
+   pinta encima de lo que se desplaza por debajo (comprobado en Chrome; ninguna
+   regla da z-index a lo que hay en las celdas de la ficha). */
+.salmon-table td.td-acciones {
+    position: sticky;
+    right: 0;
+    box-shadow: -6px 0 6px -6px rgba(0, 0, 0, 0.3);
+    overflow: visible;
+    text-align: right;
+}
+.salmon-table thead tr.salmon-head th[data-col="acciones"] {
+    position: sticky;
+    right: 0;
+    cursor: default;
+    box-shadow: -6px 0 6px -6px rgba(0, 0, 0, 0.3);
+}
+.salmon-table td.td-acciones .btn { white-space: nowrap; margin: 2px 0 2px 4px; }
 
 /* Selector de línea de contrato OCULTO por defecto (concepto = 1 línea);
    el ✎ de Origen lo abre/cierra. */
@@ -1792,3 +1815,39 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
     background: var(--warn-soft);
     color: var(--warn-strong);
 }
+
+/* F-053 · Alta en Sigrid: panel de la ficha (R29) y estado en el listado (R31). */
+.alta-sigrid .alta-sigrid-lineas { margin-top: 8px; font-size: 0.9em; }
+.alta-sigrid .alta-sigrid-bloqueo { margin-top: 6px; }
+.alta-sigrid .alta-sigrid-acciones { margin-top: 8px; display: flex; gap: 8px; }
+.alta-sigrid .inline-form { display: inline; }
+.alta-sigrid-pill { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 10px;
+    font-size: 0.8em; background: #e5e7eb; color: #1f2937; }
+.alta-sigrid-pill.estado-registrado, .alta-sigrid-pill.estado-ya_en_sigrid { background: #d1fae5; color: #065f46; }
+.alta-sigrid-pill.estado-simulado { background: #dbeafe; color: #1e40af; }
+.alta-sigrid-pill.estado-en_curso, .alta-sigrid-pill.estado-incierto,
+.alta-sigrid-pill.estado-revisar { background: #fef3c7; color: #92400e; }
+.alta-sigrid-pill.estado-error, .alta-sigrid-pill.estado-no_admitido { background: #fee2e2; color: #991b1b; }
+.td-producto select { max-width: 100%; }
+
+/* F-065 R29, R35: «Dividir» (F7) y las partes de un reparto. */
+.dividir-dialog { border: 1px solid #d0d7de; border-radius: 8px; padding: 16px 20px; min-width: 420px; max-width: 640px; }
+.dividir-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
+.dividir-dialog h3 { margin: 0 0 8px; }
+.dividir-dialog .dividir-n { display: inline-flex; gap: 8px; align-items: center; margin: 8px 0; }
+.dividir-dialog .dividir-partes { width: 100%; margin: 8px 0; }
+.dividir-dialog .dividir-partes td:first-child { width: 2em; text-align: right; }
+.dividir-dialog .dividir-falta { font-weight: 600; margin: 4px 0; }
+.dividir-dialog .dividir-acciones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+/* F-065 R29 v3: la última parte se rellena sola (solo lectura) y va en rojo si queda a 0 o de otro signo. */
+.dividir-dialog .cell-input.dividir-auto { background: var(--paper-soft, #fafbfb); color: var(--steel, #7b868c); font-style: italic; cursor: default; }
+.dividir-dialog .cell-input.dividir-auto.dividir-resto-mal { color: var(--danger, #b42318); border-color: var(--danger, #b42318); background: #fdecea; font-style: normal; font-weight: 600; }
+/* F-065 R27 v5: partida que no es de la lista (no se guarda): en rojo, en la fila y en «Dividir». */
+.conciliacion-row .cell-input.partida-invalida,
+.dividir-dialog .cell-input.partida-invalida {
+    border-color: var(--danger, #b42318);
+    background: #fdecea;
+    color: var(--danger, #b42318);
+}
+.salmon-table .parte-reparto { display: block; margin-top: 2px; }
+.salmon-table .aviso-reparto { display: block; margin-top: 2px; }

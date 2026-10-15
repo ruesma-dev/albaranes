@@ -255,6 +255,24 @@ _DDL_STATEMENTS: Tuple[Tuple[str, str], ...] = (
     ("ALTER albaran_line_valuations.descuento_albaran_aplicado",
      "ALTER TABLE albaran_line_valuations "
      "ADD COLUMN IF NOT EXISTS descuento_albaran_aplicado DOUBLE PRECISION"),
+
+    # F-053 · R36 — producto genérico de Sigrid elegido en sv4 para una
+    # línea sin vincular (MA9999, QA9999, XA9999...). NULL = el por defecto,
+    # que se calcula al leer (no se guarda). Nula y sin defecto: sv6 no la
+    # escribe, así que el replace al revalorar la deja NULL (R42). Lectores
+    # acoplados: sv4 (la escribe y la pinta) y sv9 (la manda a Sigrid).
+    ("ALTER albaran_line_valuations.producto_sigrid",
+     "ALTER TABLE albaran_line_valuations "
+     "ADD COLUMN IF NOT EXISTS producto_sigrid VARCHAR(24)"),
+
+    # F-065 · R17 — la fila que el administrativo guardó en sv4 queda
+    # BLOQUEADA (guardar = bloquear) hasta que la desbloquea. La escribe solo
+    # sv4; sv6 no la nombra, así que el replace al revalorar inserta las filas
+    # con el defecto (``false``): conservar lo bloqueado es F-058. Lector
+    # acoplado: solo sv4 (sv9 no la lee).
+    ("ALTER albaran_line_valuations.bloqueada",
+     "ALTER TABLE albaran_line_valuations "
+     "ADD COLUMN IF NOT EXISTS bloqueada BOOLEAN NOT NULL DEFAULT FALSE"),
 )
 
 

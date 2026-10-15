@@ -1,32 +1,110 @@
 # application/services/review_service.py
 from __future__ import annotations
 
+import json
 import logging
+from dataclasses import dataclass
+from datetime import UTC, datetime
+
+from ruesma_comun.alta_sigrid import (
+    clasificacion_documento,
+    es_linea_a_registrar,
+    es_linea_vinculada,
+    nombre_producto,
+    producto_efectivo,
+)
 
 from application.services.busqueda_contratos import (
     debe_relanzar_busqueda,
     hay_datos_para_buscar,
 )
+from domain.models.alta_sigrid_models import (
+    AlbaranBloqueadoError,
+    ConfigAltaSigrid,
+    ProductoLinea,
+    ProductoOpcion,
+    ResultadoAprobacion,
+)
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
     VIEW_MODE_MERGE,
+    AlbaranAprobadoError,
+    DivisionHecha,
     DocumentDetailPayload,
     DocumentListFilters,
     MergeDocumentUpdatePayload,
     ObraResumenItem,
     PaginatedDocuments,
+    ParteDivision,
     ProveedorResumenItem,
 )
 from domain.ports.contrato_refetch_port import ContratoRefetchClient
+from domain.ports.orchestrator_port import OrchestratorClient
+from domain.services.alta_sigrid import puede_reintentar_adjunto, puede_solicitar_alta
 from infrastructure.database.review_repository import AlbaranReviewRepository
 
 logger = logging.getLogger(__name__)
 
 
+def _familia_de_la_linea(contexto_linea_json: str | None) -> str | None:
+    """``tipo_familia`` del contexto de línea que escribe sv3 (F-043), como
+    lo lee sv9; JSON ausente o roto = sin familia (se usa la del documento)."""
+    try:
+        contexto = json.loads(contexto_linea_json) if contexto_linea_json else {}
+    except (TypeError, ValueError):
+        return None
+    familia = contexto.get("tipo_familia") if isinstance(contexto, dict) else None
+    return str(familia) if familia else None
+
+
+@dataclass(frozen=True)
+class ResultadoGuardado:
+    """«Guardar» del portal: el detalle guardado, la re-búsqueda de
+    contratos relanzada (F-052 D4-A) y lo que pasó con la aprobación
+    (F-053 R1–R4)."""
+
+    detail: DocumentDetailPayload
+    busqueda: ContratoRefetchOutcome | None
+    aprobacion: ResultadoAprobacion
+
+
+@dataclass(frozen=True)
+class ResultadoAlmacenTodas:
+    """«Almacén a todas las líneas» (F-051 R16): las que pasaron a almacén y
+    las que se saltó por estar guardadas (F-065 R14)."""
+
+    tocadas: int
+    saltadas: int
+
+
+@dataclass(frozen=True)
+class ResultadoBorradoMultiple:
+    """Borrado en bloque (F-053 R27): movidos a la papelera y saltados por
+    tener un alta en Sigrid bloqueante."""
+
+    movidos: int
+    saltados: int
+
+
 class ReviewService:
-    def __init__(self, repository: AlbaranReviewRepository, default_reviewer: str | None) -> None:
+    def __init__(
+        self,
+        repository: AlbaranReviewRepository,
+        default_reviewer: str | None,
+        orchestrator: OrchestratorClient | None = None,
+        config_alta: ConfigAltaSigrid | None = None,
+    ) -> None:
+        """``orchestrator`` y ``config_alta`` (F-053) son posicionales y
+        opcionales: sin ellos, la feature está apagada (R3) y el servicio
+        se comporta como antes."""
         self._repository = repository
         self._default_reviewer = (default_reviewer or "").strip() or None
+        self._orchestrator = orchestrator
+        self._config_alta = config_alta or ConfigAltaSigrid()
+
+    @property
+    def config_alta(self) -> ConfigAltaSigrid:
+        return self._config_alta
 
     def initialize(self) -> bool:
         return self._repository.initialize()
@@ -65,10 +143,32 @@ class ReviewService:
         *,
         view_mode: str = VIEW_MODE_MERGE,
     ) -> DocumentDetailPayload | None:
-        return self._repository.get_document_detail(
+        detalle = self._repository.get_document_detail(
             document_id,
             view_mode=view_mode,
         )
+        # F-053: con DESDE puesta, la ficha (vista merge) lleva el alta y el
+        # producto de cada línea (R29, R30, R40). Con DESDE vacía, nada (R3).
+        if (
+            detalle is None
+            or not self._config_alta.activa
+            or detalle.view_mode != VIEW_MODE_MERGE
+        ):
+            return detalle
+        return detalle.model_copy(update={
+            "alta_sigrid_activa": True,
+            "alta_sigrid": self._repository.leer_alta_sigrid(document_id),
+            "alta_puede_solicitar": self.puede_solicitar_alta(document_id),
+            "alta_puede_reintentar_adjunto": self.puede_reintentar_adjunto(document_id),
+            "productos_sigrid": self.productos_sigrid(
+                document_id,
+                clasificacion_documento(detalle.tipologia, detalle.tipologia_mixta),
+            ),
+            "productos_admitidos": [
+                ProductoOpcion(codigo=codigo, nombre=nombre_producto(codigo))
+                for codigo in sorted(self._config_alta.admitidos)
+            ],
+        })
 
     def get_contrato_pdf_url(self, document_id: str) -> str | None:
         """URL del PDF del contrato en SharePoint para abrir desde el front.
@@ -81,35 +181,67 @@ class ReviewService:
         document_id: str,
         payload: MergeDocumentUpdatePayload,
     ) -> DocumentDetailPayload:
+        """Guarda (y, si pasa a aprobado, pide el alta: R1). Compatibilidad:
+        devuelve solo el detalle; el portal usa :meth:`guardar`."""
+        detail, _ = self._guardar_y_aprobar(document_id=document_id, payload=payload)
+        return detail
+
+    def _guardar_y_aprobar(
+        self,
+        *,
+        document_id: str,
+        payload: MergeDocumentUpdatePayload,
+    ) -> tuple[DocumentDetailPayload, ResultadoAprobacion]:
         if payload.approved and not payload.approved_by:
             payload.approved_by = self._default_reviewer
-        # Historial: estado previo de cabecera, valoración y las líneas
-        # que este guardado va a tocar.
+        # Historial: estado previo de la cabecera, lo único que toca el
+        # guardado (F-065 R1: las líneas del payload se ignoran).
         snaps = [
             self._repository.snapshot_row(
                 table="albaran_documents_merge", row_id=document_id,
             ),
-            self._undo_snap_valuation(document_id),
         ]
-        for upd in (payload.valuation_line_updates or []):
-            snaps.append(self._undo_snap_line(upd.valuation_line_id))
-        detail = self._repository.update_document(
+        # F-053: el repositorio comprueba el alta (R26), no deja aprobar lo
+        # no valorado (R37) y dice si el documento PASÓ a aprobado en esta
+        # transacción (R1, R2).
+        detail, paso_a_aprobado = self._repository.update_document_y_transicion(
             document_id=document_id, payload=payload,
-        )
-        n_lineas = len(payload.valuation_line_updates or [])
-        que = "cabecera" if not n_lineas else (
-            f"cabecera + {n_lineas} línea(s)"
         )
         self._repository.record_undo(
             document_id=document_id,
             action="guardar",
             description=(
-                f"Guardar {que} "
+                "Guardar cabecera "
                 f"({self._repository.doc_label(document_id=document_id)})"
             ),
             restore=snaps,
         )
-        return detail
+        aprobacion = self._pedir_alta_si_toca(
+            document_id=document_id,
+            approved_by=payload.approved_by,
+            paso_a_aprobado=paso_a_aprobado,
+        )
+        return detail, aprobacion
+
+    def guardar(
+        self,
+        *,
+        document_id: str,
+        payload: MergeDocumentUpdatePayload,
+        refetch_client: ContratoRefetchClient | None,
+    ) -> ResultadoGuardado:
+        """«Guardar» / «Guardar y aprobar» del portal (PUT): guarda, pide el
+        alta si el documento pasó a aprobado (F-053 R1–R4) y, si toca,
+        relanza la búsqueda de contratos (F-052 D4-A, ver
+        :meth:`save_document_y_buscar_si_cambia`)."""
+        detail, aprobacion = self._guardar_y_aprobar(
+            document_id=document_id, payload=payload,
+        )
+        busqueda = self._relanzar_busqueda_si_cambia(
+            document_id=document_id, payload=payload, detail=detail,
+            refetch_client=refetch_client,
+        )
+        return ResultadoGuardado(detail=detail, busqueda=busqueda, aprobacion=aprobacion)
 
     def save_document_y_buscar_si_cambia(
         self,
@@ -131,14 +263,26 @@ class ReviewService:
         no deshace el guardado: vuelve como outcome ``sigrid_error`` para
         que el portal lo diga.
         """
-        detail = self.save_document(document_id=document_id, payload=payload)
+        resultado = self.guardar(
+            document_id=document_id, payload=payload, refetch_client=refetch_client,
+        )
+        return resultado.detail, resultado.busqueda
+
+    def _relanzar_busqueda_si_cambia(
+        self,
+        *,
+        document_id: str,
+        payload: MergeDocumentUpdatePayload,
+        detail: DocumentDetailPayload,
+        refetch_client: ContratoRefetchClient | None,
+    ) -> ContratoRefetchOutcome | None:
         if (
             refetch_client is None
             or payload.approved
             or not debe_relanzar_busqueda(detail.busqueda_contratos)
             or not hay_datos_para_buscar(detail.proveedor_cif, detail.obra_codigo)
         ):
-            return detail, None
+            return None
         try:
             outcome = refetch_client.refetch(document_id=document_id)
         except Exception as exc:  # el guardado ya está hecho: no se deshace
@@ -164,14 +308,60 @@ class ReviewService:
             document_id,
             outcome.status,
         )
-        return detail, outcome
+        return outcome
 
-    def approve_document(self, *, document_id: str, approved_by: str | None) -> None:
-        self._repository.set_approved(
+    def approve_document(
+        self, *, document_id: str, approved_by: str | None,
+    ) -> ResultadoAprobacion:
+        """«Aprobar» del listado. El repositorio no deja aprobar lo no
+        valorado (R37) y dice si el documento PASÓ a aprobado; solo
+        entonces se pide el alta en Sigrid (R1, R2)."""
+        quien = approved_by or self._default_reviewer
+        paso_a_aprobado = self._repository.set_approved(
             document_id=document_id,
             approved=True,
-            approved_by=approved_by or self._default_reviewer,
+            approved_by=quien,
         )
+        return self._pedir_alta_si_toca(
+            document_id=document_id,
+            approved_by=quien,
+            paso_a_aprobado=bool(paso_a_aprobado),
+        )
+
+    def _pedir_alta_si_toca(
+        self,
+        *,
+        document_id: str,
+        approved_by: str | None,
+        paso_a_aprobado: bool,
+    ) -> ResultadoAprobacion:
+        """F-053 R1–R4: solo en el PASO a aprobado y con DESDE puesta se
+        publica el alta. Si no se puede publicar, la aprobación se queda
+        (ya está confirmada en BBDD) y el resultado lo dice (R4)."""
+        if not paso_a_aprobado or not self._config_alta.activa:
+            return ResultadoAprobacion(paso_a_aprobado=paso_a_aprobado)
+        publicado = False
+        if self._orchestrator is None:
+            logger.warning(
+                "[alta-sigrid][aprobar] sin cliente de colas: no se pide el "
+                "alta de document_id=%s", document_id,
+            )
+        else:
+            try:
+                publicado = bool(self._orchestrator.notify_document_approved(
+                    document_id=document_id, approved_by=approved_by,
+                ))
+            except Exception:  # noqa: BLE001 — R4: la aprobación se queda
+                logger.exception(
+                    "[alta-sigrid][aprobar] fallo publicando el alta "
+                    "document_id=%s", document_id,
+                )
+        if not publicado:
+            logger.warning(
+                "[alta-sigrid][aprobar] aprobado, pero el alta en Sigrid NO "
+                "se pidió document_id=%s (R4)", document_id,
+            )
+        return ResultadoAprobacion(paso_a_aprobado=True, alta_pedida=publicado)
 
     def delete_document(
         self, *, document_id: str, deleted_by: str | None
@@ -190,7 +380,17 @@ class ReviewService:
         (uno corrupto no frena al resto). Devuelve cuantos se
         movieron a la papelera. Restaurables desde alli, como el
         borrado individual."""
+        return self.bulk_delete_documents_con_saltos(
+            document_ids=document_ids, deleted_by=deleted_by,
+        ).movidos
+
+    def bulk_delete_documents_con_saltos(
+        self, *, document_ids: list[str], deleted_by: str | None
+    ) -> ResultadoBorradoMultiple:
+        """Como :meth:`bulk_delete_documents`, contando aparte los que se
+        saltan por tener un alta en Sigrid bloqueante (F-053 R27)."""
         movidos = 0
+        saltados = 0
         for document_id in document_ids:
             try:
                 self._repository.soft_delete_document(
@@ -198,12 +398,11 @@ class ReviewService:
                     deleted_by=deleted_by or self._default_reviewer,
                 )
                 movidos += 1
+            except AlbaranBloqueadoError:
+                saltados += 1
             except Exception:  # noqa: BLE001 - best-effort
-                import logging
-                logging.getLogger(__name__).exception(
-                    "[bulk-delete] fallo con id=%s", document_id,
-                )
-        return movidos
+                logger.exception("[bulk-delete] fallo con id=%s", document_id)
+        return ResultadoBorradoMultiple(movidos=movidos, saltados=saltados)
 
     def restore_document(self, *, document_id: str) -> None:
         """Restaura un albarán desde la papelera (is_active=True)."""
@@ -224,39 +423,61 @@ class ReviewService:
         *,
         document_id: str,
         valuation_line_id: int,
-        codigo_partida: str | None = None,
-        descripcion: str | None = None,
-        cantidad: float | None = None,
-        unidad: str | None = None,
-        precio_unitario: float | None = None,
-        descuento: float | None = None,
-        codigo_externo: str | None = None,
+        campos: dict | None = None,
+        bloquear: bool = False,
     ) -> bool:
-        """Edición de la fila salmon (ver repositorio para la regla
-        SIGRID→NUEVA al cambiar imputación/unidad/precio)."""
+        """Edición de una fila con SOLO los campos cambiados (F-065 R8) y,
+        con ``bloquear``, «Guardar» = aplicar y bloquear (R13). Una entrada
+        de deshacer que devuelve la fila (y el total) a como estaba."""
         etiqueta = self._undo_line_desc(valuation_line_id)
         snap_line = self._undo_snap_line(valuation_line_id)
         snap_val = self._undo_snap_valuation(document_id)
         ok = self._repository.update_line_conciliacion(
             document_id=document_id,
             valuation_line_id=valuation_line_id,
-            codigo_partida=codigo_partida,
-            descripcion=descripcion,
-            cantidad=cantidad,
-            unidad=unidad,
-            precio_unitario=precio_unitario,
-            descuento=descuento,
-            codigo_externo=codigo_externo,
+            campos=campos,
+            bloquear=bloquear,
         )
         if ok:
             self._repository.record_undo(
                 document_id=document_id,
                 action="linea_edit",
                 description=(
-                    f"Editar línea · {etiqueta} "
+                    f"{'Guardar' if bloquear else 'Editar'} línea · {etiqueta} "
                     f"({self._repository.doc_label(document_id=document_id)})"
                 ),
                 restore=[snap_line, snap_val],
+            )
+        return ok
+
+    def bloquear_linea(self, *, document_id: str, valuation_line_id: int) -> bool:
+        """(F-065 R13, R15) Bloquea la fila, con su entrada de deshacer."""
+        return self._marcar_bloqueada(document_id, valuation_line_id, True)
+
+    def desbloquear_linea(self, *, document_id: str, valuation_line_id: int) -> bool:
+        """(F-065 R15) Desbloquea la fila, con su entrada de deshacer."""
+        return self._marcar_bloqueada(document_id, valuation_line_id, False)
+
+    def _marcar_bloqueada(
+        self, document_id: str, valuation_line_id: int, bloqueada: bool,
+    ) -> bool:
+        etiqueta = self._undo_line_desc(valuation_line_id)
+        snap_line = self._undo_snap_line(valuation_line_id)
+        metodo = (
+            self._repository.bloquear_linea if bloqueada
+            else self._repository.desbloquear_linea
+        )
+        ok = metodo(document_id=document_id, valuation_line_id=valuation_line_id)
+        if ok:
+            accion = "bloquear" if bloqueada else "desbloquear"
+            self._repository.record_undo(
+                document_id=document_id,
+                action=accion,
+                description=(
+                    f"{accion.capitalize()} línea · {etiqueta} "
+                    f"({self._repository.doc_label(document_id=document_id)})"
+                ),
+                restore=[snap_line],
             )
         return ok
 
@@ -288,6 +509,22 @@ class ReviewService:
             restore=[snap_line],
         )
         return True
+
+    def asignar_almacen_todas_con_saltos(
+        self, *, document_id: str,
+    ) -> ResultadoAlmacenTodas:
+        """(F-065 R14) Como :meth:`asignar_almacen_todas`, diciendo cuántas
+        filas se saltó por estar guardadas (bloqueadas)."""
+        saltadas = sum(
+            1 for snap in self._repository.snapshot_lineas_valoracion(
+                document_id=document_id,
+            )
+            if snap["values"].get("bloqueada")
+        )
+        return ResultadoAlmacenTodas(
+            tocadas=self.asignar_almacen_todas(document_id=document_id),
+            saltadas=saltadas,
+        )
 
     def asignar_almacen_todas(self, *, document_id: str) -> int:
         """(F-051 R16, R18) «Almacén a todas las líneas»: todas las líneas
@@ -500,14 +737,15 @@ class ReviewService:
         self,
         *,
         document_id: str,
-        contrato_line_ids: list[int],
+        lineas: list[tuple[int, float]],
     ) -> int:
-        """Trae líneas del contrato a la tabla salmón (jul 2026): crea
-        una línea salmón ya casada por cada línea de contrato elegida.
-        Devuelve cuántas se crearon."""
+        """Trae líneas del contrato a la tabla (F-065 R23): una fila Contrato
+        por cada ``(línea de contrato, cantidad)``, ya válida para sv9; con
+        su entrada de deshacer. Devuelve cuántas se crearon."""
+        snap_val = self._undo_snap_valuation(document_id)
         creadas = self._repository.add_valuation_lines_from_contrato(
             document_id=document_id,
-            contrato_line_ids=contrato_line_ids,
+            lineas=lineas,
         )
         if creadas:
             self._repository.record_undo(
@@ -517,12 +755,243 @@ class ReviewService:
                     f"Traer {len(creadas)} línea(s) de contrato "
                     f"({self._repository.doc_label(document_id=document_id)})"
                 ),
+                restore=[snap_val],
                 delete_created=[
                     {"table": "albaran_line_valuations", "id": i}
                     for i in creadas
                 ],
             )
         return len(creadas)
+
+    def dividir_linea(
+        self,
+        *,
+        document_id: str,
+        valuation_line_id: int,
+        partes: list[ParteDivision],
+    ) -> DivisionHecha | None:
+        """(F-065 R29–R34) Divide una fila en ``partes`` con UNA entrada de
+        deshacer: borra las partes y las derivadas creadas y devuelve la
+        original (con su derivada, si era Nueva) y el total a como estaban.
+        ``None`` si la fila no es del documento."""
+        etiqueta = self._undo_line_desc(valuation_line_id)
+        snap_line = self._undo_snap_line(valuation_line_id)
+        derivada = (snap_line or {}).get("values", {}).get("derived_contrato_line_id")
+        snap_derivada = (
+            self._repository.snapshot_row(table="contrato_lines_derived", row_id=derivada)
+            if derivada is not None else None
+        )
+        snap_val = self._undo_snap_valuation(document_id)
+        hecha = self._repository.dividir_linea(
+            document_id=document_id,
+            valuation_line_id=valuation_line_id,
+            partes=partes,
+        )
+        if hecha is not None:
+            self._repository.record_undo(
+                document_id=document_id,
+                action="dividir",
+                description=(
+                    f"Dividir en {len(partes)} · {etiqueta} "
+                    f"({self._repository.doc_label(document_id=document_id)})"
+                ),
+                restore=[snap_line, snap_derivada, snap_val],
+                delete_created=(
+                    [{"table": "albaran_line_valuations", "id": i} for i in hecha.partes]
+                    + [{"table": "contrato_lines_derived", "id": i} for i in hecha.derivadas]
+                ),
+            )
+        return hecha
+
+    # ------------------------------------------------------------------ #
+    # F-053 · Producto Sigrid de las líneas sin vincular (R40-R43)
+    # ------------------------------------------------------------------ #
+    def productos_sigrid(
+        self, document_id: str, clasificacion: object,
+    ) -> dict[int, ProductoLinea]:
+        """Producto de cada línea valorada, por ``valuation_line_id`` (R40):
+        vinculada, el de su línea de contrato (R43, se ignora el elegido);
+        sin vincular, el elegido o el por defecto de su familia con el mismo
+        mapeo y la misma función que sv9 (R38). Con DESDE vacía, nada (R3).
+        ``clasificacion``: la del documento (``familia`` y ``mixto``)."""
+        if not self._config_alta.activa:
+            return {}
+        productos: dict[int, ProductoLinea] = {}
+        for fila in self._repository.lineas_producto_sigrid(document_id):
+            vinculada = es_linea_vinculada(
+                matched_contrato_line_id=fila["matched_contrato_line_id"],
+                derived_contrato_line_id=fila["derived_contrato_line_id"],
+                sigrid_ide=fila["sigrid_ide"],
+                contrato_linea=fila["contrato_linea"],
+                contrato_valoracion=fila["contrato_valoracion"],
+            )
+            elegido = (fila["producto_sigrid"] or "").strip() or None
+            if vinculada:
+                codigo, por_defecto, elegido = fila["codigo_producto"], False, None
+                defecto = None
+            else:
+                familia = _familia_de_la_linea(fila["contexto_linea_json"])
+                mapeo = self._config_alta.mapeo
+                codigo = producto_efectivo(elegido, familia, clasificacion, mapeo)
+                defecto = producto_efectivo(None, familia, clasificacion, mapeo)
+                por_defecto = elegido is None
+            productos[int(fila["id"])] = ProductoLinea(
+                valuation_line_id=int(fila["id"]),
+                vinculada=vinculada,
+                a_registrar=es_linea_a_registrar(fila["importe_calculado"]),
+                elegido=elegido,
+                codigo=codigo,
+                defecto=defecto,
+                por_defecto=por_defecto,
+            )
+        return productos
+
+    def elegir_producto_sigrid(
+        self,
+        *,
+        document_id: str,
+        valuation_line_id: int,
+        producto: str | None,
+    ) -> str:
+        """R41: guarda el producto elegido en una sin vincular (``None`` o
+        vacío = por defecto) con su entrada de deshacer. Devuelve
+        ``guardado``; o, sin cambiar nada, ``apagada`` (DESDE vacía, R3),
+        ``no_admitido`` (no está en el mapeo), ``linea_ajena`` o
+        ``vinculada``. Con alta bloqueante, ``AlbaranBloqueadoError`` (R25)."""
+        if not self._config_alta.activa:
+            return "apagada"
+        codigo = (producto or "").strip() or None
+        if codigo is not None and codigo not in self._config_alta.admitidos:
+            return "no_admitido"
+        etiqueta = self._undo_line_desc(valuation_line_id)
+        snap_line = self._undo_snap_line(valuation_line_id)
+        resultado = self._repository.guardar_producto_sigrid(
+            document_id=document_id,
+            valuation_line_id=valuation_line_id,
+            producto=codigo,
+        )
+        if resultado == "guardado":
+            self._repository.record_undo(
+                document_id=document_id,
+                action="producto",
+                description=(
+                    f"Producto Sigrid {codigo or 'por defecto'} · {etiqueta} "
+                    f"({self._repository.doc_label(document_id=document_id)})"
+                ),
+                restore=[snap_line],
+            )
+        return resultado
+
+    # ------------------------------------------------------------------ #
+    # F-053 · Alta en Sigrid desde la ficha (R25, R28, R30)
+    # ------------------------------------------------------------------ #
+    def comprobar_desbloqueado(self, document_id: str) -> None:
+        """R25 para lo que solo PUBLICA (revalorar, volver a buscar
+        contratos): mira el alta sin cerrojo (design §11) y lanza
+        :class:`AlbaranBloqueadoError` si es bloqueante."""
+        alta = self._repository.leer_alta_sigrid(document_id)
+        if alta is not None and alta.bloqueante:
+            raise AlbaranBloqueadoError(document_id, alta.estado, alta.sigrid_cod)
+
+    def comprobar_editable(self, document_id: str) -> None:
+        """F-065 R4 para lo que solo PUBLICA (revalorar, volver a buscar
+        contratos): con alta bloqueante, :class:`AlbaranBloqueadoError` (F-053
+        R25); con el albarán aprobado, :class:`AlbaranAprobadoError`. Sin
+        cerrojo, como :meth:`comprobar_desbloqueado`."""
+        self.comprobar_desbloqueado(document_id)
+        estado = self._repository.estado_aprobacion(document_id)
+        if estado is not None and estado["approved"]:
+            raise AlbaranAprobadoError(document_id)
+
+    def puede_solicitar_alta(
+        self, document_id: str, *, ahora: datetime | None = None,
+    ) -> bool:
+        """R30: ¿se ofrece «Solicitar alta en Sigrid» para el documento?"""
+        if not self._config_alta.activa:
+            return False
+        estado = self._repository.estado_aprobacion(document_id)
+        if estado is None:
+            return False
+        return puede_solicitar_alta(
+            aprobado=estado["approved"],
+            activo=estado["is_active"],
+            approved_at_utc=estado["approved_at_utc"],
+            alta=self._repository.leer_alta_sigrid(document_id),
+            config=self._config_alta,
+            ahora=ahora or datetime.now(UTC),
+        )
+
+    def solicitar_alta_sigrid(
+        self,
+        *,
+        document_id: str,
+        solicitado_por: str | None,
+        ahora: datetime | None = None,
+    ) -> str:
+        """R30: publica ``accion="alta"`` solo cuando procede. Devuelve
+        ``pedida``, ``no_publicada``, ``no_procede`` o ``apagada`` (R3)."""
+        if not self._config_alta.activa:
+            return "apagada"
+        if not self.puede_solicitar_alta(document_id, ahora=ahora):
+            return "no_procede"
+        return self._publicar_feedback(document_id, "alta", solicitado_por)
+
+    def puede_reintentar_adjunto(self, document_id: str) -> bool:
+        """R30 (v8, O1 = a): ¿se ofrece «Reintentar adjunto»? Alta
+        ``registrado`` en ``real`` con el PDF sin colgar."""
+        if not self._config_alta.activa:
+            return False
+        estado = self._repository.estado_aprobacion(document_id)
+        if estado is None:
+            return False
+        return puede_reintentar_adjunto(
+            aprobado=estado["approved"],
+            activo=estado["is_active"],
+            approved_at_utc=estado["approved_at_utc"],
+            alta=self._repository.leer_alta_sigrid(document_id),
+            config=self._config_alta,
+        )
+
+    def reintentar_adjunto_sigrid(
+        self, *, document_id: str, solicitado_por: str | None,
+    ) -> str:
+        """R30/R23: publica ``accion="alta"`` (sv9 solo reintenta el adjunto)
+        cuando procede. No escribe en BBDD: R25 no la bloquea. Devuelve
+        ``pedida``, ``no_publicada``, ``no_procede`` o ``apagada``."""
+        if not self._config_alta.activa:
+            return "apagada"
+        if not self.puede_reintentar_adjunto(document_id):
+            return "no_procede"
+        return self._publicar_feedback(document_id, "alta", solicitado_por)
+
+    def verificar_anulacion_sigrid(
+        self, *, document_id: str, solicitado_por: str | None,
+    ) -> str:
+        """R28: «Ya lo he anulado en Sigrid» publica
+        ``accion="verificar_anulacion"`` solo con un alta ``registrado``;
+        quien decide si pasa a ``anulado`` es sv9 (lo busca en Sigrid)."""
+        if not self._config_alta.activa:
+            return "apagada"
+        alta = self._repository.leer_alta_sigrid(document_id)
+        if alta is None or alta.estado != "registrado":
+            return "no_procede"
+        return self._publicar_feedback(document_id, "verificar_anulacion", solicitado_por)
+
+    def _publicar_feedback(
+        self, document_id: str, accion: str, solicitado_por: str | None,
+    ) -> str:
+        if self._orchestrator is None:
+            return "no_publicada"
+        try:
+            publicado = self._orchestrator.solicitar_alta_sigrid(
+                document_id=document_id, accion=accion, solicitado_por=solicitado_por,
+            )
+        except Exception:  # noqa: BLE001 — best-effort: se avisa al revisor
+            logger.exception(
+                "[alta-sigrid][%s] fallo publicando document_id=%s", accion, document_id,
+            )
+            publicado = False
+        return "pedida" if publicado else "no_publicada"
 
     def list_trash_document_ids(self) -> list[str]:
         """Ids de los albaranes en la papelera (para vaciarla)."""

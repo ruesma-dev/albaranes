@@ -1,0 +1,104 @@
+{# templates/_alta_sigrid.html
+   F-053 · Alta en Sigrid de un documento aprobado (R25, R28-R30; v8: usu y
+   «Reintentar adjunto»).
+   Solo se incluye con ALTA_SIGRID_DESDE_UTC puesta y el documento aprobado
+   (R3). sv4 PINTA lo que sv9 dejó en albaran_altas_sigrid: no lo escribe
+   (R34). Los botones publican en q-feedback y sv9 decide. #}
+{% set alta = document.alta_sigrid %}
+<section class="alert alta-sigrid {{ 'warning' if alta and (alta.bloqueante or alta.estado in ('revisar', 'error', 'no_admitido')) else 'info' }}"
+         id="alta-sigrid" data-estado="{{ alta.estado if alta else 'sin_alta' }}">
+    <strong>Alta en Sigrid</strong>
+    {% if alta %}
+        · Estado: <strong class="alta-sigrid-estado estado-{{ alta.estado }}">{{ alta.estado_texto }}</strong>
+        · Modo: <strong>{{ 'Simulación' if alta.simulacion else ('Real' if alta.modo == 'real' else (alta.modo or '—')) }}</strong>
+        {% if alta.sigrid_cod %}
+            {% if alta.simulacion %}
+                · se habría creado como <code>{{ alta.sigrid_cod }}</code> <span class="muted small">(código provisional de la previa)</span>
+            {% elif alta.estado == 'registrado' %}
+                · Registrado en Sigrid como <code>{{ alta.sigrid_cod }}</code>
+            {% else %}
+                · Código en Sigrid: <code>{{ alta.sigrid_cod }}</code>
+            {% endif %}
+        {% endif %}
+        {% if alta.intentos %}· Intentos: {{ alta.intentos }}{% endif %}
+        {% if alta.ultimo_intento_at_utc %}· Último intento: {{ alta.ultimo_intento_at_utc | fecha_hora_local }}{% endif %}
+        {% if alta.adjunto_estado %}· Adjunto (PDF): <strong>{{ alta.adjunto_estado }}</strong>{% endif %}
+        {% if alta.usu %}· <span class="alta-sigrid-usu">Usuario de Sigrid: <code>{{ alta.usu }}</code>{% if alta.usu_respaldo %} (respaldo){% endif %}</span>{% endif %}
+
+        {% if alta.aviso %}
+            <div class="alta-sigrid-bloqueo"><strong>{{ alta.aviso }}.</strong>
+                Mientras tanto no se puede editar, desaprobar, borrar, revalorar ni volver a buscar contratos.</div>
+        {% endif %}
+
+        {% if alta.motivos_documento %}
+            <ul class="alta-sigrid-motivos">
+                {% for m in alta.motivos_documento %}
+                    <li><code>{{ m.codigo }}</code>{% if m.detalle %} · {{ m.detalle }}{% endif %}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% if alta.lineas %}
+            <table class="table alta-sigrid-lineas">
+                <thead>
+                <tr>
+                    <th>Línea</th><th>Producto</th><th>Descripción</th><th>Partida</th>
+                    <th>Cantidad</th><th>Precio</th><th>Total previa</th><th>Motivos</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for l in alta.lineas %}
+                    <tr>
+                        <td>{{ l.referencia_linea }}</td>
+                        <td>{% if l.ctrpro_ide %}contrato (ctrpro {{ l.ctrpro_ide }}){% else %}{{ l.producto or '—' }}{% endif %}</td>
+                        <td>{{ l.descripcion or '—' }}</td>
+                        <td>{{ l.partida or 'almacén' }}</td>
+                        <td>{{ l.cantidad if l.cantidad is not none else '—' }}</td>
+                        <td>{{ l.precio if l.precio is not none else '—' }}</td>
+                        <td>{{ l.total | importe_eur }}</td>
+                        <td>
+                            {% for m in l.motivos %}
+                                <div><code>{{ m.codigo }}</code>{% if m.detalle %} · {{ m.detalle }}{% endif %}</div>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+        {% if alta.total_previa is not none or alta.total_documento is not none %}
+            <div>Total de la previa: <strong>{{ alta.total_previa | importe_eur }}</strong>
+                (con IVA: {{ alta.total_documento | importe_eur }})</div>
+        {% endif %}
+
+        {% if alta.avisos %}
+            <div class="muted small">Avisos de Sigrid:</div>
+            <ul class="alta-sigrid-avisos">
+                {% for a in alta.avisos %}
+                    <li><code>{{ a.codigo }}</code>{% if a.mensaje %} · {{ a.mensaje }}{% endif %}{% if a.referencia_linea %} (línea {{ a.referencia_linea }}){% endif %}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% else %}
+        · Sin alta en Sigrid todavía.
+    {% endif %}
+
+    <div class="alta-sigrid-acciones">
+        {% if document.alta_puede_solicitar %}
+            <form method="post" action="/documents/{{ document.id }}/alta-sigrid/solicitar" class="inline-form">
+                <button type="submit" class="btn small success">Solicitar alta en Sigrid</button>
+            </form>
+        {% endif %}
+        {% if document.alta_puede_reintentar_adjunto %}
+            <form method="post" action="/documents/{{ document.id }}/alta-sigrid/reintentar-adjunto" class="inline-form">
+                <button type="submit" class="btn small">Reintentar adjunto</button>
+            </form>
+        {% endif %}
+        {% if alta and alta.estado == 'registrado' %}
+            <form method="post" action="/documents/{{ document.id }}/alta-sigrid/verificar-anulacion" class="inline-form"
+                  onsubmit="return confirm('¿Ya has anulado (borrado) este albarán en Sigrid? sv9 lo comprobará en Sigrid antes de desbloquearlo.');">
+                <button type="submit" class="btn small secondary">Ya lo he anulado en Sigrid</button>
+            </form>
+        {% endif %}
+    </div>
+</section>

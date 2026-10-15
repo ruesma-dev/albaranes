@@ -40,15 +40,17 @@ Spain Central, colas de Azure Storage, workers KEDA; se gestiona con
 | sv4 | `services/albaranes-front` | Front humano de revisión/aprobación | — | `q-persistencia`, `q-valoracion`, `q-feedback` | :8004 |
 | sv5 | `services/albaran-valoracion-api` | Motor IA de valoración (stateless, no persiste) | — | — | :8002 |
 | sv6 | `services/albaran-valoracion-persist` | Valorador: llama a sv5, reglas deterministas, persiste | `q-valoracion` | — (fin de cadena) | :8003 |
+| sv9 | `services/albaranes-alta-sigrid` | Alta en Sigrid de los albaranes aprobados (F-053; ÚNICO que escribe en el ERP) | `q-feedback` | — (escribe `albaran_altas_sigrid`) | — (solo worker) |
 
 Los nombres canónicos de colas (`q-emails`, `q-extraccion`, `q-persistencia`,
 `q-valoracion`, `q-feedback`), los contratos Pydantic de mensajes y el runtime
 de colas/blobs viven en **`services/albaranes-comun`** (`ruesma_comun`), que
-cada servicio instala como paquete. Dos colas especiales: **`q-feedback`**
-está reservada para el futuro servicio de entrada al ERP (aprobado → alta en
-Sigrid vía sigrid-api `sql/write`; el consumidor NO está construido) y
-**`q-emails`** es una huérfana del diseño original, pendiente de limpieza
-(F-009). El encadenado HTTP directo sv1→sv2→sv3 está **muerto**: en local
+cada servicio instala como paquete. **`q-feedback`** la consume **sv9**
+(F-053): sv4 publica `MensajeFeedback` (`accion` `alta` al pasar a aprobado o
+desde «Solicitar alta en Sigrid»; `verificar_anulacion` desde «Ya lo he
+anulado en Sigrid») y sv9 da de alta el albarán vía los endpoints de dominio
+de sigrid-api (nunca `sql/write`; regla 19). **`q-emails`** es una huérfana
+del diseño original, pendiente de limpieza (F-009). El encadenado HTTP directo sv1→sv2→sv3 está **muerto**: en local
 también se trabaja con colas (Azurite).
 
 **Nivel servicio** — hexagonal: `domain/` (modelos y puertos, sin
@@ -56,7 +58,8 @@ dependencias externas), `application/` (pipelines y servicios),
 `infrastructure/` (adaptadores: BBDD, colas, Graph, Sigrid, LLM),
 `interface_adapters/` (`api`/`web`/`worker`) y `composition.py` como raíz de
 composición. sv2, sv3 y sv6 tienen doble entrada: `main.py` (HTTP) y
-`main_worker.py` (consumidor de cola).
+`main_worker.py` (consumidor de cola); sv9 es solo worker (`main.py` delega en
+`main_worker.py`).
 
 **Blobs**: `input/{document_id}.pdf` y, si el mensaje trae contexto,
 `input/{document_id}.correo.json` (los deja sv1; regla 15) y
@@ -297,10 +300,10 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       tocar, no se toca). Poner la de la casada a una fila Sigrid la deja
       Sigrid y no avisa «pasará a NUEVA» (R20).
     - **Contrato hacia Sigrid** (R24): una línea en almacén se da de alta
-      **sin partida y con almacén** (`almacen: true` de F-009 de sigrid-api,
-      lo implementa F-053); nadie la rellena desde el contrato, la plantilla
-      ni otra línea. Hasta F-053 el alta es manual y administración teclea lo
-      que pinta sv4.
+      **sin partida**: sv9 (F-053) no manda ninguna clave de partida y
+      sigrid-api la lleva al almacén de la obra (F-009 v5.1 no tiene campo
+      `almacen`); nadie la rellena desde el contrato, la plantilla ni otra
+      línea.
 17. **Proveedor: el candidato claro se aplica** (F-062, oct 2026; decisión
     del humano «que proponga uno, salvo que no haya ningún candidato claro»,
     Q0–Q6 en `progress/spec_F-062.md`). Sustituye a la D3 de F-002 mientras
@@ -374,15 +377,178 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       Ningún YAML escribe a mano el nombre ni el CIF del cliente. Para
       añadir una empresa del grupo: entrada en `CIFS_PROPIOS_POR_DEFECTO`
       (reconstruir sv2 y sv3). Medición: `python -m evals.comparar_proveedor`.
+19. **Aprobar es registrar en Sigrid** (F-053, oct 2026). Spec:
+    `specs/F-053-alta-sigrid/`; decisiones P1–P7 y D1–D4 en
+    `progress/spec_F-053.md`.
+    - **Disparo (sv4)**: solo el PASO a aprobado (por «Aprobar» del listado o
+      «Guardar y aprobar») publica el alta, y solo con
+      `ALTA_SIGRID_DESDE_UTC` puesta (vacía = feature apagada: sv4 como
+      antes). Sin valorar no se aprueba (`ruesma_comun.valoracion.
+      esta_valorado`: `ok` de sv6 o manual completa), con DESDE o sin ella.
+    - **sv9**: reclama el documento con el merge bloqueado (`FOR UPDATE`) y
+      lee el alta en OTRA sentencia; valida en local (`no_admitido` /
+      `revisar` sin llamar a sigrid-api), busca altas a mano por CIF +
+      número (`ya_en_sigrid`), hace la previa (`commit=false`) y la compara
+      con lo aprobado; en **simulación** se queda en `simulado`; en modo
+      **real** (`ALTA_SIGRID_COMMIT` = literal `true`, lo pone el humano)
+      graba UNA vez, sin reintento, y adjunta el PDF. Líneas: vinculadas por
+      `ctrpro_ide`; sin vincular con producto genérico por familia
+      (`QA9999` alquiler de maquinaria, `XA9999` medios auxiliares,
+      `MA9999` el resto; `ALTA_SIGRID_PRODUCTO_POR_DEFECTO`), que el
+      administrativo cambia en sv4 (`albaran_line_valuations.
+      producto_sigrid`; se pierde al revalorar, F-058).
+    - **Bloqueo**: con el alta `en_curso`, `incierto` o `registrado`
+      (`ruesma_comun.alta_sigrid.ESTADOS_ALTA_BLOQUEANTES`) sv4 rechaza
+      desaprobar, guardar, deshacer, borrar, purgar, revalorar, volver a
+      buscar contratos, elegir producto y toda edición de líneas (409 / aviso
+      «Registrado en Sigrid como {cod}…»), comprobándolo dentro de su
+      transacción con el merge bloqueado y el alta leída en otra sentencia;
+      sv3 no borra ni reprocesa un PDF reingresado con alta bloqueante (R45).
+      Se desbloquea anulando en Sigrid y pulsando «Ya lo he anulado en
+      Sigrid» (sv9 comprueba que el `con.ide` ya no existe ⇒ `anulado`).
+    - **Usuario de Sigrid** (v8): el alta va a nombre de quien aprobó (UPN de
+      Easy Auth, que manda sobre formulario y cuerpo en sv4; parte local
+      casada con `dbo.usu.cod`) o, si no casa, del Respaldo
+      `ALTA_SIGRID_USUARIO_RESPALDO` (`pgris`). El número del proveedor se
+      compara normalizado con `dca.entref` al buscar altas a mano.
+    - **Las reglas compartidas viven en comun** (`ruesma_comun.alta_sigrid`):
+      DESDE, Espera, «vinculada», «línea a registrar», producto efectivo y
+      estados; sv4 y sv9 deciden con las mismas funciones.
+20. **Lo editado en las líneas manda** (F-065 fase 1, oct 2026). Spec:
+    `specs/F-065-lineas-editadas-y-reparto/`; decisiones en
+    `progress/spec_F-065.md` §v2. Lo aprobado es lo que sv9 da de alta, así
+    que lo que deja el administrativo en una fila no lo deshace ningún otro
+    guardado.
+    - **Guardados separados**: el PUT del documento guarda SOLO la cabecera;
+      `lines` y `valuation_line_updates` se aceptan (un `app.js` en caché) y se
+      ignoran, y no se recalcula nada (se retiró `_recalc_valuation_importes`,
+      que devolvía las filas a la cantidad leída: METALFIRE, 23 puertas en vez
+      de 18). El PUT nunca desaprueba. Cada fila se edita con su PATCH, que
+      lleva **solo los campos cambiados** (ausente = no cambia; `null` =
+      vaciar); sin cambios no se escribe importe, su origen, descuento ni
+      revisión. El importe solo se recalcula si cambia cantidad, precio o
+      descuento (editar la descripción no reetiqueta un importe declarado).
+    - **Q en la unidad del precio**: la ficha enseña y edita Q =
+      `cantidad_convertida ?? cantidad_albaran` e `importe = precio × Q × (1 −
+      dto/100)`. Al editar Q, la convertida es Q y la del albarán se deriva
+      (`Q / factor` si la conversión es reproducible; Q si no hay conversión; la
+      de antes en otro caso, p. ej. contenedores de residuos):
+      `review_models.cantidades_tras_editar`. Una fila editada nunca queda con
+      la convertida nula (sv9 rechaza una vinculada sin ella). La ficha pinta
+      el precio **aplicado** (`precio_unitario_final`), con el del contrato en
+      el `title`.
+    - **Aprobado = solo lectura**: toda escritura de sv4 sobre un aprobado
+      (cabecera, filas, alta y borrado de filas, almacén, producto, traer,
+      bloquear, revalorar, volver a buscar, deshacer) responde 409 «Albarán
+      aprobado: desapruébalo para editar», comprobado en la misma sesión que el
+      cerrojo de la regla 19 (`_exigir_editable`). La ficha sale en solo
+      lectura con «Desaprobar para editar». Mover a la papelera y purgar no
+      son edición y siguen con solo el cerrojo de la regla 19.
+    - **Guardar = bloquear**: «Guardar» (o «Guardar todas», solo filas con
+      cambios) aplica y marca `albaran_line_valuations.bloqueada` (DDL de sv6,
+      sentencia defensiva en sv4); una fila bloqueada no se edita, reapunta,
+      pasa a almacén, cambia de producto ni se borra (409 «Línea guardada:
+      desbloquéala para editarla») y los masivos se la saltan. «Desbloquear»
+      la libera; las dos acciones tienen «Deshacer». Aprobar no exige filas
+      bloqueadas. Revalorar las deja desbloqueadas (F-058).
+    - **Aprobar valida**: no se aprueba (ficha ni listado) con filas sin
+      cantidad o importe («Líneas sin cantidad o importe: 3, 5», posiciones de
+      la tabla de la ficha); si la suma de las filas no cuadra con la de lo
+      leído, la ficha pide confirmación (no bloquea). Revalorar, «Guardar y
+      volver a buscar» o elegir otro contrato piden confirmación si hay filas
+      tocadas a mano (`review_models.es_fila_manual`); también «Solo volver a
+      buscar». «Traer líneas contrato» exige la cantidad de cada línea y crea
+      filas válidas para sv9. El almacén (partida final vacía) nunca impide
+      aprobar; una fila sin línea de contrato NI derivada sí («revalora»), porque
+      la ficha no la pinta y sv9 la mandaría sin vincular.
+    - **Origen Contrato / Nueva** (fase 2): la ficha dice «Contrato» (antes
+      «Sigrid»). Cambiar la partida a una distinta de la de su línea de
+      contrato, el precio unitario (también al editar el importe) o la unidad
+      de una fila Contrato la pasa a Nueva (derivada `manual_override`) **sin
+      confirmación**; vaciar la partida (almacén) o poner la de su línea no
+      cambia el origen, ni la descripción, cantidad, descuento o código externo
+      (`review_models.cambia_origen`). Al editar nunca se llama a la IA. El
+      combo de partida ofrece «Almacén» y las partidas hoja de la OBRA
+      (`/api/sigrid/partidas`, solo valores de la lista; sin partidas o con
+      Sigrid caído, solo «Almacén»; mientras llegan, «Cargando partidas…»;
+      elegir cierra la lista; al teclear queda marcada «Almacén» («al»…) o la
+      primera partida que coincide, y Enter elige la marcada: sin marcada no
+      elige nada. En la partida, Enter nunca guarda la fila ni acepta
+      «Dividir»; una partida cambiada que no es de la lista no se envía por
+      ningún guardado: queda en rojo; el servidor no la valida contra la
+      obra). «Origen ✎» es la única vía de reapuntar:
+      una línea de contrato deja la fila Contrato con su partida, unidad y
+      precio; «Nueva», Nueva con los valores actuales.
+    - **Dividir** (fase 3; absorbe F-016): «Dividir» (o F7; F6 es del
+      navegador) reparte una fila en 2–20 partes, cada una con su cantidad y
+      su partida (combo de la obra; vacía = almacén); la última se rellena
+      sola con lo que falta (solo lectura, en rojo si queda a 0 o de otro
+      signo) y «Aceptar» solo si suman Q. `POST
+      .../lines/{vid}/dividir`: 404 si la fila no es del documento, 409 con
+      alta bloqueante, aprobado o fila guardada, 422 sin cambios si es
+      sintética, sin línea de contrato ni derivada, con «revisa la cantidad»
+      (se resuelve antes: la Q no es de fiar), Q nula o 0, una parte nula, 0 o
+      de otro signo, la suma difiere de Q en 0,005 o más, o una parte saldría a
+      0,00 € con importe en la original (sv9 no registra importes 0). Un `NaN` o
+      `Infinity` en el JSON de dividir, editar una fila o traer líneas es 422
+      (`allow_inf_nan=False`; el manejador de 422 los devuelve como texto). Modelo M1, **sin
+      DDL**: la original es la parte 1 y cada parte k ≥ 2 es una fila
+      `line_kind = 'reparto'` con `merge_line_id` nulo y `parent_merge_line_id`
+      de la blanca de la original, sus campos copiados y en la valoración la
+      descripción que enseña la original (la fijada, la de su línea o el concepto
+      de su blanca: sv9 no tiene blanca que leer); `cantidad_convertida
+      = qk`, `cantidad_albaran = ca0 × qk / Q` e importe `round(importe0 × qk /
+      Q, 2)` (la última absorbe el redondeo: la familia suma lo de antes). El
+      origen sigue la regla de editar: con la partida de la original, la de su
+      línea de contrato o vacía, conserva origen y vínculo; con otra, Nueva con
+      derivada `manual_override` propia (las partes de una Nueva siempre llevan
+      la suya). Una transacción, total con `ROUND` y UNA entrada de «Deshacer»
+      que borra partes y derivadas y devuelve la original. La ficha pinta
+      «Parte k de N» bajo la original y, mientras la familia no sume lo que dice
+      la blanca (en la unidad del albarán), un aviso que no bloquea. sv9 no
+      cambia: una parte Contrato va vinculada a su `ctrpro_ide` (N partes al
+      mismo `ctrpro` son N líneas, al final de la petición) y una Nueva sin
+      vincular con producto genérico. El F7 de antes (duplicar) desapareció.
+      La columna «Acciones» de la ficha va fija y pegada a la derecha
+      (sticky): sus botones no salen nunca de la vista.
+21. **El código de obra es canónico** (F-070, oct 2026). Spec:
+    `specs/F-070-obra-con-cero-inicial/`; decisiones en `progress/spec_F-070.md`.
+    Regla del humano: «es crucial que añada el 0 inicial si no es VAR ni
+    POSTV2» (HERMANOS SAN JUAN: merge con `686`, los combos de sv4 vacíos).
+    - **Un único punto**, `ruesma_comun.obras`: `normalizar_codigo_obra` da el
+      canónico o `None` (3 cifras ⇒ `0` delante, también `900` ⇒ `0900`; 4
+      cifras con `0` ⇒ igual; `VAR` y `POSTV2` en cualquier caja ⇒ en
+      mayúsculas; lo demás ⇒ `None`) y `canonizar_codigo_obra` el canónico o,
+      si no lo hay, el valor recortado. Los códigos sin cero viven solo en
+      `CODIGOS_OBRA_SIN_CERO` (un test impide repetir los literales); otros no
+      numéricos de Sigrid (`GG`, `POSTV`, `0578-B`…) no son canónicos.
+    - **Dónde se aplica**: sv3 al SELLAR el merge y las crudas
+      (`AlbaranNormalizer.normalize_obra_codigo`, obra del correo y del papel)
+      y al escribir la obra deducida por texto; sv4 en las tres consultas a
+      Sigrid por obra (proveedores, contratos y partidas: lo que no encaja va
+      tal cual, el vacío no consulta) y al guardar la cabecera; sv9 en
+      `cod_obra` del alta y sus motivos locales. Con VAR/POSTV2 válidas, la red
+      de obra de sv3 ya no las descarta, el resolver no las sustituye y la
+      búsqueda de contratos las busca y sella.
+    - **Lo que no cambia**: sv2 y `ruesma_comun.contratos.origen_datos.normalizar_codigo`
+      (forma de COMPARACIÓN de F-048, sin ceros), las SQL de Sigrid y los
+      esquemas. Los merges ya guardados con 3 cifras **no se migran** (P3):
+      los cubren sv4 al consultar y guardar y sv9 al dar de alta.
 
 ## Acceso a datos y sistemas externos
 
 - **PostgreSQL `albaranes`** (Azure Flexible Server compartido
-  `psql-albaranes-rs9k2`): sv3 dueño del schema; sv4 lectura+escritura de
-  revisión; sv5 SOLO lectura; sv6 dueño de las 3 tablas de valoración; sv1
-  solo `workflow_runs`. Cambios a nivel de servidor afectan a otros
+  `psql-albaranes-rs9k2`): sv3 dueño del schema (también del DDL de
+  `albaran_altas_sigrid`, F-053); sv4 lectura+escritura de revisión (lee el
+  alta, nunca la escribe); sv5 SOLO lectura; sv6 dueño de las 3 tablas de
+  valoración (columna `producto_sigrid`, que escribe sv4); sv9 lee merge y
+  valoración y escribe SOLO `albaran_altas_sigrid`; sv1 solo `workflow_runs`. Cambios a nivel de servidor afectan a otros
   proyectos: prohibidos desde aquí.
-- **Sigrid (ERP)**: SOLO vía `sigrid-api` (function key), SOLO lectura.
+- **Sigrid (ERP)**: SOLO vía `sigrid-api` (function key), nunca SQL directo.
+  Leer: cualquier servicio. **Escribir: SOLO sv9** (F-053), con el alta de
+  albarán (`sigrid/albaran`, modo extendido) y `concepto-grafico`, nunca
+  `sql/write`, y solo con `ALTA_SIGRID_COMMIT=true`, que activa el humano;
+  desde local, nunca (en local `ALTA_SIGRID_COMMIT` no se pone).
   La instancia admite **500.000 filas por petición** (`MAX_ALLOWED_ROWS`,
   leído en Azure el 2026-09-30; `azure-apps/sigrid_api.md` §4.1). El 1.000
   que cortaba listas en silencio era el `max_rows` por defecto del cliente
@@ -420,9 +586,17 @@ rollback: `docs/referencia/dominio_negocio_albaranes.md` §6–§7.
   de la misma cola con imágenes distintas) y **`comun` horneado en cada
   imagen**: tocar `ruesma_comun` obliga a reconstruir sv2, sv3, sv5 y sv6
   — un fix en comun sin rebuild no existe en Azure. Excepción conocida:
-  `ruesma_comun.sigrid` y `ruesma_comun.obras` (F-052) solo los importan
-  sv3 y sv4, que se reconstruyen juntos y en orden **sv3 → sv4** (sv3
-  aplica el DDL de `contratos_busqueda_*` que el ORM de sv4 lee).
+  `ruesma_comun.sigrid` y `ruesma_comun.obras` (F-052, F-070) solo los
+  importan sv3, sv4 y sv9. En F-052 se reconstruyeron en orden **sv3 → sv4**
+  (sv3 aplica el DDL de `contratos_busqueda_*` que el ORM de sv4 lee); el
+  cambio de `obras` de F-070 no lleva DDL ni contrato de mensajes y vale en
+  cualquier orden: recomendado **sv4 → sv3**, y sv9 sale con F-053 desde un
+  `dev` que ya contenga F-070 (regla 21). F-053 toca
+  comun ⇒ todas las imágenes, en orden **sv6 y sv3 → sv9 → sv4** (sv6 la
+  columna `producto_sigrid`, sv3 la tabla del alta; sv9 sale con DESDE vacía
+  y `ALTA_SIGRID_COMMIT=false`, `create_capps_sv9.ps1`, máximo 1 réplica);
+  DESDE se pone después en sv9 y sv4 a la vez con `set_alta_sigrid.ps1`
+  (`infra/README_capps.md`).
 - Scripts en `infra/`: `fase1_infra.ps1` (provisión), `add_secrets.ps1`,
   `create_capps*.ps1`, `build_images.ps1` + `deploy.ps1` (redespliegue).
   `build_images.ps1` espera los repos como hermanos: desde el monorepo,

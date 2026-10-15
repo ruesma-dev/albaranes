@@ -5,6 +5,7 @@ import calendar
 import html
 import json
 import logging
+import math
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -12,22 +13,35 @@ from urllib.parse import quote, urlencode
 
 import httpx
 from fastapi import Body, FastAPI, Form, HTTPException, Query, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 
 from application.services.busqueda_contratos import aviso_de_guardado
 from application.services.review_service import ReviewService
 from config.settings import Settings
+from domain.models.alta_sigrid_models import (
+    AlbaranBloqueadoError,
+    AlbaranSinValorarError,
+)
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
+    AlbaranAprobadoError,
+    ConciliacionEditBody,
     ConciliacionOverridePayload,
+    DivisionBody,
     DocumentDetailPayload,
     DocumentListFilters,
     HealthResponse,
+    LineaBloqueadaError,
+    LineasIncompletasError,
     MergeDocumentUpdatePayload,
+    RepartoInvalido,
     SaveResponse,
+    TraerLineasBody,
     VIEW_MODE_MERGE,
     normalize_view_mode,
 )
@@ -160,55 +174,66 @@ def _format_hora_local(value: Any) -> str:
 # preview del PDF del albarán propio, no del contrato asociado.
 
 
-class ConciliacionEditBody(BaseModel):
-    """Body del PATCH de edición de la fila salmon (jun 2026).
+class ProductoSigridBody(BaseModel):
+    """(F-053 R41) Body del POST del producto de una línea sin vincular:
+    el código elegido o ``null`` = por defecto. A nivel de módulo por lo
+    mismo que ``ConciliacionEditBody``."""
 
-    Todos los campos opcionales: el front manda los visibles. Los
-    numéricos llegan ya como número (el JS convierte coma decimal), pero
-    por robustez toleramos cadena vacía, "—" o números con coma decimal.
+    producto: str | None = None
 
-    IMPORTANTE: definido a NIVEL DE MÓDULO (no dentro de build_app). Una
-    clase Pydantic local provoca un ForwardRef que Pydantic 2.12 no puede
-    resolver al usarla como Body(...), dando un 500 al guardar.
-    """
 
-    codigo_partida: str | None = None
-    descripcion: str | None = None
-    cantidad: float | None = None
-    unidad: str | None = None
-    precio_unitario: float | None = None
-    descuento: float | None = None
-    codigo_externo: str | None = None
+#: (F-053 R30, R28) Mensaje de la ficha según lo que pasó al pedir el alta.
+MENSAJES_ALTA = {
+    "alta": {
+        "pedida": "Alta en Sigrid pedida: refresca en unos segundos para ver el resultado.",
+        "no_publicada": "El alta en Sigrid no se pudo pedir (cola no disponible): reintenta.",
+        "no_procede": "El alta en Sigrid no procede ahora (mira su estado en la ficha).",
+        "apagada": "El alta en Sigrid está desactivada (ALTA_SIGRID_DESDE_UTC vacía).",
+    },
+    "reintentar_adjunto": {
+        "pedida": "Reintento del adjunto pedido: refresca en unos segundos para ver el resultado.",
+        "no_publicada": "El reintento del adjunto no se pudo pedir (cola no disponible): reintenta.",
+        "no_procede": "El reintento del adjunto no procede (mira el estado del alta en la ficha).",
+        "apagada": "El alta en Sigrid está desactivada (ALTA_SIGRID_DESDE_UTC vacía).",
+    },
+    "verificar_anulacion": {
+        "pedida": (
+            "Comprobación pedida: si ya no está en Sigrid, el alta pasará a «anulado». "
+            "Refresca en unos segundos."
+        ),
+        "no_publicada": "La comprobación no se pudo pedir (cola no disponible): reintenta.",
+        "no_procede": "La comprobación no procede: el alta no está registrada en Sigrid.",
+        "apagada": "El alta en Sigrid está desactivada (ALTA_SIGRID_DESDE_UTC vacía).",
+    },
+}
 
-    @field_validator(
-        "cantidad", "precio_unitario", "descuento", mode="before"
+#: (F-053 R41) Por qué no se guardó el producto (400).
+MENSAJES_PRODUCTO = {
+    "no_admitido": "Producto no admitido: elige uno de la lista.",
+    "linea_ajena": "La línea no es de este albarán.",
+    "vinculada": "La línea está vinculada al contrato: lleva el producto de su línea de contrato.",
+    "apagada": "El alta en Sigrid está desactivada (ALTA_SIGRID_DESDE_UTC vacía).",
+}
+
+
+def _a_la_ficha(document_id: str, texto: str) -> RedirectResponse:
+    """Vuelve a la ficha del documento con un mensaje."""
+    return RedirectResponse(
+        url=f"/documents/{document_id}?{urlencode({'message': texto})}",
+        status_code=303,
     )
-    @classmethod
-    def _num_or_none(cls, v: object) -> float | None:
-        if v is None:
-            return None
-        if isinstance(v, (int, float)):
-            return float(v)
-        s = str(v).strip()
-        if not s or s == "\u2014":  # "" o "—"
-            return None
-        if "," in s:
-            s = s.replace(".", "").replace(",", ".")
-        try:
-            return float(s)
-        except ValueError:
-            return None
 
-    @field_validator(
-        "codigo_partida", "descripcion", "unidad", "codigo_externo",
-        mode="before",
-    )
-    @classmethod
-    def _str_or_none(cls, v: object) -> str | None:
-        if v is None:
-            return None
-        s = str(v).strip()
-        return s or None
+
+def _redirigir_a_lista(redirect_query: str, texto: str) -> RedirectResponse:
+    """Vuelve a la bandeja con sus filtros y un mensaje."""
+    query = redirect_query.strip()
+    message = urlencode({"message": texto})
+    if query:
+        return RedirectResponse(
+            url=f"/documents?{query}&{message}".replace("?&", "?"),
+            status_code=303,
+        )
+    return RedirectResponse(url=f"/documents?{message}", status_code=303)
 
 
 class _PublicadorColasNulo:
@@ -244,16 +269,12 @@ def build_app(settings: Settings) -> FastAPI:
         auto_create_database=settings.auto_create_database,
     )
     repository = AlbaranReviewRepository(session_factory)
-    review_service = ReviewService(repository, settings.default_reviewer)
-    tables_ready = review_service.initialize()
 
     app = FastAPI(
         title=settings.app_title,
         version=settings.service_version,
     )
     app.state.settings = settings
-    app.state.review_service = review_service
-    app.state.tables_ready = tables_ready
     app.state.graph_token_provider = (
         GraphTokenProvider(settings.graph_key, settings.graph_timeout_s)
         if settings.preview_enabled and settings.graph_key
@@ -352,6 +373,23 @@ def build_app(settings: Settings) -> FastAPI:
         "CABLEADOS (emitido_por=ca-sv4-front)"
     )
 
+    # F-053: el servicio de revisión publica el alta en Sigrid al pasar a
+    # aprobado (R1-R4) con la configuración del alta (DESDE, Espera, mapeo;
+    # DESDE vacía = feature apagada, R3). Posicionales a propósito.
+    config_alta = settings.config_alta_sigrid
+    review_service = ReviewService(
+        repository, settings.default_reviewer, orchestrator_client, config_alta,
+    )
+    app.state.review_service = review_service
+    app.state.config_alta = config_alta
+    app.state.tables_ready = review_service.initialize()
+    logger.info(
+        "[alta-sigrid][wiring] %s (desde=%s espera_min=%s productos=%s)",
+        "ACTIVA" if config_alta.activa else "APAGADA (DESDE vacía)",
+        config_alta.desde, settings.alta_sigrid_espera_incierto_min,
+        sorted(config_alta.admitidos),
+    )
+
     # ------------------------------------------------------------------ #
     # Cliente de SOLO LECTURA a Sigrid para los desplegables de cabecera
     # (elegir proveedor con contrato en la obra / elegir obra). Se
@@ -418,12 +456,21 @@ def build_app(settings: Settings) -> FastAPI:
     # usamos para atribuir quién aprueba/purga/valora/elimina. Fallback a
     # ``default_reviewer`` en local (sin Easy Auth) o si la cabecera no
     # llega.
+    #
+    # F-053 v8 (R49): la cabecera MANDA. El navegador no puede ponerla (la
+    # inyecta la plataforma), pero sí el formulario o el cuerpo: ``propuesto``
+    # (lo que trae la petición) solo cuenta sin cabecera, en local. De
+    # ``approved_by`` sale el usuario de Sigrid del alta (sv9, R47).
     # ------------------------------------------------------------------ #
-    def _reviewer_from_request(request: Request) -> str | None:
+    def _reviewer_from_request(request: Request, propuesto: str | None = None) -> str | None:
         principal = request.headers.get("X-MS-CLIENT-PRINCIPAL-NAME")
         if principal and principal.strip():
             return principal.strip()
-        return settings.default_reviewer
+        if propuesto and propuesto.strip():
+            return propuesto.strip()
+        # Recortado como en el servicio: lo que se publica en q-feedback es
+        # lo mismo que queda en el merge (review v8, cambio 3).
+        return (settings.default_reviewer or "").strip() or None
 
     @app.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:
@@ -634,6 +681,8 @@ def build_app(settings: Settings) -> FastAPI:
             "result": result,
             "message": message,
             "current_query": current_query,
+            # F-053 R31 / R3: el estado del alta solo se pinta con DESDE.
+            "alta_sigrid_activa": app.state.config_alta.activa,
             "build_sort_query": lambda column: _query_string(
                 filters,
                 {
@@ -703,26 +752,37 @@ def build_app(settings: Settings) -> FastAPI:
         redirect_query: str = Form(default=""),
         approved_by: str = Form(default=""),
     ) -> RedirectResponse:
-        review_service.approve_document(
-            document_id=document_id,
-            approved_by=approved_by.strip() or _reviewer_from_request(request),
-        )
-        query = redirect_query.strip()
-        message = urlencode({"message": "Documento aprobado"})
-        if query:
-            glue = "&" if query else ""
-            return RedirectResponse(
-                url=f"/documents?{query}{glue}&{message}".replace("?&", "?"),
-                status_code=303,
+        try:
+            resultado = review_service.approve_document(
+                document_id=document_id,
+                # R49: cabecera de Easy Auth > formulario > DEFAULT_REVIEWER.
+                approved_by=_reviewer_from_request(request, approved_by),
             )
-        return RedirectResponse(url=f"/documents?{message}", status_code=303)
+        except (AlbaranSinValorarError, LineasIncompletasError) as exc:
+            # F-053 R37 y F-065 R20: no se aprueba lo no valorado ni con
+            # filas sin cantidad o importe; nada cambia.
+            return _redirigir_a_lista(redirect_query, exc.aviso)
+        aviso = getattr(resultado, "aviso", None)
+        texto = f"Documento aprobado, pero {aviso}" if aviso else "Documento aprobado"
+        return _redirigir_a_lista(redirect_query, texto)
 
     @app.post("/documents/{document_id}/unapprove", include_in_schema=False)
     def unapprove_from_list(
         document_id: str,
         redirect_query: str = Form(default=""),
+        volver: str = Form(default=""),
     ) -> RedirectResponse:
-        review_service.unapprove_document(document_id=document_id)
+        # F-065 R5: «Desaprobar para editar» de la ficha vuelve a la ficha.
+        a_la_ficha = volver == "ficha"
+        try:
+            review_service.unapprove_document(document_id=document_id)
+        except AlbaranBloqueadoError as exc:
+            # F-053 R25: desaprobar un albarán con alta bloqueante, no.
+            if a_la_ficha:
+                return _a_la_ficha(document_id, exc.aviso)
+            return _redirigir_a_lista(redirect_query, exc.aviso)
+        if a_la_ficha:
+            return _a_la_ficha(document_id, "Documento desaprobado: ya se puede editar")
         query = redirect_query.strip()
         message = urlencode({"message": "Documento marcado como pendiente"})
         if query:
@@ -742,10 +802,14 @@ def build_app(settings: Settings) -> FastAPI:
         redirect_query: str = Form(default=""),
         deleted_by: str = Form(default=""),
     ) -> RedirectResponse:
-        review_service.delete_document(
-            document_id=document_id,
-            deleted_by=deleted_by.strip() or _reviewer_from_request(request),
-        )
+        try:
+            review_service.delete_document(
+                document_id=document_id,
+                deleted_by=deleted_by.strip() or _reviewer_from_request(request),
+            )
+        except AlbaranBloqueadoError as exc:
+            # F-053 R25: borrar un albarán con alta bloqueante, no.
+            return _redirigir_a_lista(redirect_query, exc.aviso)
         query = redirect_query.strip()
         message = urlencode({"message": "Albarán movido a la papelera"})
         if query:
@@ -765,22 +829,29 @@ def build_app(settings: Settings) -> FastAPI:
         # Borrado en BLOQUE (jul 2026): la bandeja envia los ids
         # seleccionados separados por comas. Soft-delete (papelera),
         # igual que el borrado individual.
+        # F-053 R27: los que tienen un alta en Sigrid bloqueante se saltan
+        # y se dice cuántos.
         id_list = [i.strip() for i in ids.split(",") if i.strip()]
-        movidos = 0
+        movidos = saltados = 0
         if id_list:
-            movidos = review_service.bulk_delete_documents(
+            resultado = review_service.bulk_delete_documents_con_saltos(
                 document_ids=id_list,
                 deleted_by=(
                     deleted_by.strip() or _reviewer_from_request(request)
                 ),
             )
+            movidos, saltados = resultado.movidos, resultado.saltados
+        if movidos or saltados:
+            texto = f"{movidos} albarán(es) movidos a la papelera"
+            if saltados:
+                texto += (
+                    f"; {saltados} saltado(s) por estar registrados en "
+                    "Sigrid (o con el alta en curso)"
+                )
+        else:
+            texto = "Ningún albarán seleccionado"
         query = redirect_query.strip()
-        message = urlencode({
-            "message": (
-                f"{movidos} albarán(es) movidos a la papelera"
-                if movidos else "Ningún albarán seleccionado"
-            ),
-        })
+        message = urlencode({"message": texto})
         if query:
             return RedirectResponse(
                 url=f"/documents?{query}&{message}".replace("?&", "?"),
@@ -818,11 +889,16 @@ def build_app(settings: Settings) -> FastAPI:
         ids = review_service.list_trash_document_ids()
         purgados = 0
         fallidos = 0
+        saltados = 0
         for doc_id in ids:
             try:
                 source_sha256 = review_service.hard_delete_document(
                     document_id=doc_id,
                 )
+            except AlbaranBloqueadoError:
+                # F-053 R27: un alta en Sigrid bloqueante no se purga.
+                saltados += 1
+                continue
             except Exception:  # noqa: BLE001 - seguir con el resto
                 logger.exception(
                     "[empty-trash] fallo purgando doc=%s; se continúa",
@@ -851,6 +927,11 @@ def build_app(settings: Settings) -> FastAPI:
             )
         else:
             texto = f"Papelera vaciada: {purgados} albarán(es) eliminados."
+        if saltados:
+            texto += (
+                f" {saltados} saltado(s) por estar registrados en Sigrid "
+                "(o con el alta en curso)."
+            )
         message = urlencode({"message": texto})
         return RedirectResponse(
             url=f"/documents?vista=papelera&approved=all&{message}",
@@ -864,9 +945,13 @@ def build_app(settings: Settings) -> FastAPI:
         redirect_query: str = Form(default=""),
     ) -> RedirectResponse:
         # Hard-delete: borrado físico irreversible. Solo desde la papelera.
-        source_sha256 = review_service.hard_delete_document(
-            document_id=document_id,
-        )
+        try:
+            source_sha256 = review_service.hard_delete_document(
+                document_id=document_id,
+            )
+        except AlbaranBloqueadoError as exc:
+            # F-053 R25: purgar un albarán con alta bloqueante, no.
+            return _redirigir_a_lista(redirect_query, exc.aviso)
 
         # ------------------------------------------------------------ #
         # Limpieza del dedup tras la purga.
@@ -1111,6 +1196,7 @@ def build_app(settings: Settings) -> FastAPI:
     async def save_document_api(
         document_id: str,
         payload: MergeDocumentUpdatePayload,
+        request: Request,
         buscar_si_cambia: bool = Query(default=False),
     ) -> SaveResponse:
         # F-052 D4-A: solo el botón «Guardar» pide ``buscar_si_cambia``; si
@@ -1118,8 +1204,13 @@ def build_app(settings: Settings) -> FastAPI:
         # relanza la re-búsqueda (q-persistencia, force=True). Los demás
         # PUT del portal (valorar, elegir contrato, «Guardar y volver a
         # buscar») no lo piden: ya buscan ellos o no deben hacerlo.
+        # F-053: con alta bloqueante (R25) o al aprobar sin valorar (R37)
+        # el servicio lanza y el manejador responde 409 con el aviso.
+        # F-053 v8 (R49): quien aprueba es la cabecera de Easy Auth; el
+        # ``approved_by`` del cuerpo solo cuenta sin ella (local).
+        payload.approved_by = _reviewer_from_request(request, payload.approved_by)
         try:
-            detail, busqueda = review_service.save_document_y_buscar_si_cambia(
+            resultado = review_service.guardar(
                 document_id=document_id,
                 payload=payload,
                 refetch_client=(
@@ -1128,10 +1219,14 @@ def build_app(settings: Settings) -> FastAPI:
             )
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
+        detail, busqueda = resultado.detail, resultado.busqueda
 
         message, buscando = aviso_de_guardado(
             aprobado=detail.approved, busqueda=busqueda,
         )
+        if resultado.aprobacion.aviso:
+            # F-053 R4: aprobado, pero el alta no se pidió.
+            message = f"{message} Atención: {resultado.aprobacion.aviso}."
         query = {"message": message, **({"buscando": "1"} if buscando else {})}
         return SaveResponse(
             ok=True,
@@ -1167,6 +1262,10 @@ def build_app(settings: Settings) -> FastAPI:
                 status_code=404,
                 detail="Documento no encontrado",
             )
+        # F-053 R25: volver a buscar re-enriquece y revalora; con alta
+        # bloqueante, no se publica (design §11: se mira sin cerrojo). F-065
+        # R4: tampoco sobre un aprobado.
+        review_service.comprobar_editable(document_id)
 
         client: ContratoRefetchClient = app.state.sv3_refetch_client
         try:
@@ -1228,6 +1327,10 @@ def build_app(settings: Settings) -> FastAPI:
                 status_code=404,
                 detail="Documento no encontrado",
             )
+        # F-053 R25: revalorar reemplaza la valoración; con alta bloqueante,
+        # no se publica (design §11: se mira sin cerrojo). F-065 R4: tampoco
+        # sobre un aprobado.
+        review_service.comprobar_editable(document_id)
 
         # 2) Leer el contrato seleccionado directamente de BBDD (no del
         #    payload, para evitar que el front mande algo distinto).
@@ -1379,17 +1482,15 @@ def build_app(settings: Settings) -> FastAPI:
         document_id: str,
         valuation_line_id: int,
         payload: ConciliacionEditBody = Body(...),
+        bloquear: bool = Query(default=False),
     ) -> dict:
+        # F-065 R8: solo los campos que vinieron (ausente = no cambia; null =
+        # vaciar). R13: «Guardar» de la fila manda ``?bloquear=1``.
         ok = review_service.update_line_conciliacion(
             document_id=document_id,
             valuation_line_id=valuation_line_id,
-            codigo_partida=payload.codigo_partida,
-            descripcion=payload.descripcion,
-            cantidad=payload.cantidad,
-            unidad=payload.unidad,
-            precio_unitario=payload.precio_unitario,
-            descuento=payload.descuento,
-            codigo_externo=payload.codigo_externo,
+            campos=payload.campos(),
+            bloquear=bloquear,
         )
         if not ok:
             raise HTTPException(
@@ -1401,6 +1502,22 @@ def build_app(settings: Settings) -> FastAPI:
             "document_id": document_id,
             "valuation_line_id": valuation_line_id,
         }
+
+    # F-065 R13, R15: bloquear (guardar sin cambios) y desbloquear una fila.
+    @app.post("/api/documents/{document_id}/lines/{valuation_line_id}/bloquear")
+    def bloquear_linea_api(document_id: str, valuation_line_id: int) -> dict:
+        return _bloqueo(document_id, valuation_line_id, review_service.bloquear_linea)
+
+    @app.post("/api/documents/{document_id}/lines/{valuation_line_id}/desbloquear")
+    def desbloquear_linea_api(document_id: str, valuation_line_id: int) -> dict:
+        return _bloqueo(document_id, valuation_line_id, review_service.desbloquear_linea)
+
+    def _bloqueo(document_id: str, valuation_line_id: int, accion: Any) -> dict:
+        if not accion(document_id=document_id, valuation_line_id=valuation_line_id):
+            raise HTTPException(
+                status_code=404, detail="Línea de valoración no encontrada en este albarán.",
+            )
+        return {"ok": True, "document_id": document_id, "valuation_line_id": valuation_line_id}
 
     @app.delete(
         "/api/documents/{document_id}/lines/{valuation_line_id}/conciliacion"
@@ -1495,15 +1612,19 @@ def build_app(settings: Settings) -> FastAPI:
 
     @app.post("/api/documents/{document_id}/almacen-todas")
     def asignar_almacen_todas_api(document_id: str) -> dict:
-        lineas = review_service.asignar_almacen_todas(
+        # F-065 R14: las filas guardadas se saltan y se dice cuántas.
+        resultado = review_service.asignar_almacen_todas_con_saltos(
             document_id=document_id,
         )
-        if not lineas:
+        if not resultado.tocadas and not resultado.saltadas:
             raise HTTPException(
                 status_code=404,
                 detail="El albarán no tiene líneas valoradas.",
             )
-        return {"ok": True, "document_id": document_id, "lineas": lineas}
+        return {
+            "ok": True, "document_id": document_id,
+            "lineas": resultado.tocadas, "saltadas": resultado.saltadas,
+        }
 
     @app.post("/api/documents/{document_id}/lines/standalone")
     def add_standalone_line_api(document_id: str) -> dict:
@@ -1567,6 +1688,13 @@ def build_app(settings: Settings) -> FastAPI:
             res = review_service.undo_last(
                 document_id=document_id.strip(),
             )
+        except (AlbaranBloqueadoError, AlbaranAprobadoError) as exc:
+            # F-053 R25 y F-065 R4: deshacer con alta bloqueante o en un
+            # aprobado, no.
+            return JSONResponse(
+                status_code=409,
+                content={"ok": False, "error": exc.aviso, "detail": exc.aviso},
+            )
         except Exception as exc:  # noqa: BLE001
             logger.exception("[undo] fallo al deshacer")
             res = {"ok": False, "error": str(exc)}
@@ -1575,29 +1703,14 @@ def build_app(settings: Settings) -> FastAPI:
     @app.post("/api/documents/{document_id}/lines/from-contrato")
     def add_lines_from_contrato_api(
         document_id: str,
-        payload: dict = Body(...),
+        payload: TraerLineasBody = Body(...),
     ) -> dict:
-        # Traer líneas contrato (jul 2026): crea una línea salmón YA
-        # casada (badge Sigrid) por cada línea de contrato seleccionada
-        # en el desplegable multiselección del detalle, prefijada con
-        # partida/descripción/unidad/precio del contrato. La cantidad
-        # queda en blanco para el revisor.
-        raw_ids = payload.get("contrato_line_ids") or []
-        try:
-            ids = [int(x) for x in raw_ids]
-        except (TypeError, ValueError):
-            raise HTTPException(
-                status_code=400,
-                detail="contrato_line_ids debe ser una lista de enteros.",
-            )
-        if not ids:
-            raise HTTPException(
-                status_code=400,
-                detail="Selecciona al menos una línea de contrato.",
-            )
+        # (F-065 R23) Una fila Contrato por cada línea de contrato elegida,
+        # con su cantidad (obligatoria y ≠ 0: si falta, 422 de la
+        # validación), partida, descripción, unidad y precio del contrato.
         creadas = review_service.add_valuation_lines_from_contrato(
             document_id=document_id,
-            contrato_line_ids=ids,
+            lineas=[(linea.contrato_line_id, linea.cantidad) for linea in payload.lineas],
         )
         if creadas == 0:
             raise HTTPException(
@@ -1613,11 +1726,139 @@ def build_app(settings: Settings) -> FastAPI:
             "created": creadas,
         }
 
+    @app.post("/api/documents/{document_id}/lines/{valuation_line_id}/dividir")
+    def dividir_linea_api(
+        document_id: str,
+        valuation_line_id: int,
+        payload: DivisionBody = Body(...),
+    ) -> Any:
+        # (F-065 R29, R30) De 2 a 20 partes (si no, 422 de la validación).
+        # 404 si la fila no es del documento; 409 con alta bloqueante,
+        # aprobado o fila guardada (manejador común); 422 con el motivo si
+        # el reparto no vale (``RepartoInvalido``), sin cambios.
+        try:
+            hecha = review_service.dividir_linea(
+                document_id=document_id,
+                valuation_line_id=valuation_line_id,
+                partes=payload.partes,
+            )
+        except RepartoInvalido as exc:
+            return JSONResponse(status_code=422, content={"detail": str(exc)})
+        if hecha is None:
+            raise HTTPException(
+                status_code=404, detail="Línea de valoración no encontrada en este albarán.",
+            )
+        return {
+            "ok": True,
+            "document_id": document_id,
+            "valuation_line_id": valuation_line_id,
+            "partes": hecha.partes,
+        }
+
+    # ------------------------------------------------------------------ #
+    # F-053 · Alta en Sigrid desde la ficha y producto de las líneas.
+    # ------------------------------------------------------------------ #
+    @app.post("/documents/{document_id}/alta-sigrid/solicitar", include_in_schema=False)
+    def solicitar_alta_sigrid(document_id: str, request: Request) -> RedirectResponse:
+        """R30: «Solicitar alta en Sigrid» (``accion="alta"``)."""
+        resultado = review_service.solicitar_alta_sigrid(
+            document_id=document_id, solicitado_por=_reviewer_from_request(request),
+        )
+        return _a_la_ficha(document_id, MENSAJES_ALTA["alta"][resultado])
+
+    @app.post(
+        "/documents/{document_id}/alta-sigrid/reintentar-adjunto",
+        include_in_schema=False,
+    )
+    def reintentar_adjunto_sigrid(document_id: str, request: Request) -> RedirectResponse:
+        """R30/R23 (v8, O1 = a): «Reintentar adjunto» (``accion="alta"``).
+        Solo publica: R25 no la bloquea."""
+        resultado = review_service.reintentar_adjunto_sigrid(
+            document_id=document_id, solicitado_por=_reviewer_from_request(request),
+        )
+        return _a_la_ficha(document_id, MENSAJES_ALTA["reintentar_adjunto"][resultado])
+
+    @app.post(
+        "/documents/{document_id}/alta-sigrid/verificar-anulacion",
+        include_in_schema=False,
+    )
+    def verificar_anulacion_sigrid(document_id: str, request: Request) -> RedirectResponse:
+        """R28: «Ya lo he anulado en Sigrid» (``accion="verificar_anulacion"``)."""
+        resultado = review_service.verificar_anulacion_sigrid(
+            document_id=document_id, solicitado_por=_reviewer_from_request(request),
+        )
+        return _a_la_ficha(document_id, MENSAJES_ALTA["verificar_anulacion"][resultado])
+
+    @app.post("/api/documents/{document_id}/lineas-valoradas/{valuation_line_id}/producto-sigrid")
+    def elegir_producto_sigrid_api(
+        document_id: str,
+        valuation_line_id: int,
+        payload: ProductoSigridBody = Body(...),
+    ) -> dict:
+        """R41: producto de una sin vincular (``null`` = por defecto); 400
+        si la línea es ajena o vinculada, el código no es admitido o la
+        feature está apagada; 409 con alta bloqueante (R25)."""
+        resultado = review_service.elegir_producto_sigrid(
+            document_id=document_id,
+            valuation_line_id=valuation_line_id,
+            producto=payload.producto,
+        )
+        if resultado != "guardado":
+            raise HTTPException(status_code=400, detail=MENSAJES_PRODUCTO[resultado])
+        return {
+            "ok": True,
+            "document_id": document_id,
+            "valuation_line_id": valuation_line_id,
+            "producto": payload.producto,
+        }
+
+    @app.exception_handler(AlbaranBloqueadoError)
+    @app.exception_handler(AlbaranSinValorarError)
+    @app.exception_handler(AlbaranAprobadoError)
+    @app.exception_handler(LineaBloqueadaError)
+    @app.exception_handler(LineasIncompletasError)
+    async def alta_sigrid_error_handler(
+        request: Request,
+        exc: (
+            AlbaranBloqueadoError | AlbaranSinValorarError | AlbaranAprobadoError
+            | LineaBloqueadaError | LineasIncompletasError
+        ),
+    ) -> Response:
+        """F-053 R25/R37 y F-065 R4/R14/R20: nada cambió (el repositorio no
+        confirmó). En la API, 409 con el aviso; en un formulario, de vuelta a
+        la ficha con él."""
+        if request.url.path.startswith("/api/"):
+            return JSONResponse(status_code=409, content={"detail": exc.aviso})
+        return _a_la_ficha(exc.document_id, exc.aviso)
+
+    @app.exception_handler(RequestValidationError)
+    async def validacion_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+        """El 422 de siempre, pero sin romperse con un ``NaN``/``Infinity`` en el
+        cuerpo (F-065 CR1): el error lo devuelve en ``input`` y el JSON de la
+        respuesta no admite números no finitos (sería un 500)."""
+        return JSONResponse(
+            status_code=422,
+            content={"detail": jsonable_encoder(sin_no_finitos(exc.errors()))},
+        )
+
     @app.exception_handler(KeyError)
     async def key_error_handler(_: Request, exc: KeyError) -> JSONResponse:
         return JSONResponse(status_code=404, content={"detail": str(exc)})
 
     return app
+
+
+def sin_no_finitos(valor: Any) -> Any:
+    """(F-065 CR1) ``valor`` con cada ``NaN``/``±inf`` (en listas, tuplas y
+    diccionarios, a cualquier profundidad) cambiado por su texto, para poder
+    devolverlo en JSON."""
+    if isinstance(valor, float) and not math.isfinite(valor):
+        return str(valor)
+    if isinstance(valor, dict):
+        return {clave: sin_no_finitos(v) for clave, v in valor.items()}
+    if isinstance(valor, (list, tuple)):
+        return [sin_no_finitos(v) for v in valor]
+    return valor
 
 
 def _parse_optional_float(value: str | None, *, field_name: str) -> float | None:

@@ -133,6 +133,9 @@ class _Repositorio:
     def get_by_sha256(self, sha256):
         return None
 
+    def buscar_conservado_por_alta(self, sha256):
+        return None  # (F-053 · R45) sin alta en Sigrid bloqueante
+
     def save(self, *, envelope, context, stored_file):
         self.guardados.append(envelope)
         return ExistingDocument(document_id="merge-1", source_sha256=SHA, sharepoint_url=None, stored_lines=1)

@@ -22,7 +22,7 @@ from domain.ports.header_resolver_ports import (
     ObraReverseLookupClient,
     ProveedorReverseLookupClient,
 )
-from ruesma_comun.obras import normalizar_codigo_obra
+from ruesma_comun.obras import canonizar_codigo_obra, normalizar_codigo_obra
 from ruesma_comun.proveedores import (
     CIFS_PROPIOS_POR_DEFECTO,
     cifs_propios,
@@ -380,7 +380,9 @@ class HeaderResolverService:
                 "%s obra resuelta por texto: codigo=%s score=%.2f",
                 _LOG_PREFIX, best.codigo_obra, best_score,
             )
-            return (best.codigo_obra or "").strip() or None
+            # F-070 · R7: la obra deducida se escribe canónica
+            # (``227`` ⇒ ``0227``); lo que no encaja, recortado como hoy.
+            return canonizar_codigo_obra(best.codigo_obra)
         logger.info(
             "%s obra NO resuelta (mejor score=%.2f < %.2f).",
             _LOG_PREFIX, best_score, self._min_score,

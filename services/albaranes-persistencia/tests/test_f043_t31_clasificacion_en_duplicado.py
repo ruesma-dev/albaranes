@@ -107,6 +107,9 @@ class RepoDuplicadoFake:
             stored_lines=1,
         )
 
+    def buscar_conservado_por_alta(self, source_sha256: str):
+        return None  # (F-053 · R45) sin alta en Sigrid bloqueante
+
     def save(self, **_kwargs):  # pragma: no cover — el duplicado no guarda
         self.guardados += 1
         raise AssertionError("La rama de duplicado no debe llamar a save().")
@@ -253,11 +256,16 @@ def test_f043_r22_una_escritura_que_revienta_no_rompe_el_duplicado():
 
 def test_f043_r22_un_repositorio_sin_el_metodo_no_rompe_el_duplicado():
     """Duck-typing: el puerto ``AlbaranRepository`` solo declara
-    ``save`` y ``get_by_sha256``. Un doble viejo no puede reventar."""
+    ``save`` y ``get_by_sha256`` (y, desde F-053 · R45, la mirada
+    obligatoria ``buscar_conservado_por_alta``). Un doble viejo no puede
+    reventar."""
 
     class RepoSinMetodo:
         def initialize(self) -> None:
             return None
+
+        def buscar_conservado_por_alta(self, source_sha256: str):
+            return None  # (F-053 · R45) sin alta en Sigrid bloqueante
 
         def get_by_sha256(self, source_sha256: str) -> ExistingDocument:
             return ExistingDocument(

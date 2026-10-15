@@ -52,19 +52,26 @@ $Global:REPO = [ordered]@{
   "sv4" = "sv4-front"
   "sv5" = "sv5"
   "sv6" = "sv6"
+  "sv9" = "sv9-alta-sigrid"   # F-053: alta en Sigrid (worker de q-feedback)
 }
 
 # CONTAINER APP por servicio. OJO: rg-partes-dev tiene apps con nombres
 # IDENTICOS (ca-sv2-extraccion, ca-sv3-persistencia, ca-sv4-front) para
 # el pipeline de PARTES. Todos los scripts pasan -g $RG explicito; no
 # lances updates sin resource group o cruzaras las imagenes.
+#
+# ORDEN = orden del despliegue completo (deploy.ps1 sin -Only). F-053
+# (design §8): sv6 (columna producto_sigrid) y sv3 (tabla
+# albaran_altas_sigrid) ANTES que sv9, y sv9 antes que sv4 (que es quien
+# publica en q-feedback al aprobar). Por eso sv4 va el ultimo.
 $Global:APPS = [ordered]@{
   "sv1" = "ca-sv1-intake"
   "sv2" = "ca-sv2-extraccion"
   "sv3" = "ca-sv3-persistencia"
-  "sv4" = "ca-sv4-front"
   "sv5" = "ca-sv5-valuation"
   "sv6" = "ca-sv6-valorador"
+  "sv9" = "ca-sv9-alta-sigrid"
+  "sv4" = "ca-sv4-front"
 }
 
 # Mapa repo:tag EFECTIVO que consumen build_images.ps1 y create_*.ps1.
@@ -87,6 +94,7 @@ $Global:IMG = [ordered]@{
   "sv4" = "sv4-front:r20260724-0942"
   "sv5" = "sv5:r20260724-0942"
   "sv6" = "sv6:r20260724-0942"
+  "sv9" = "sv9-alta-sigrid:sin-desplegar"   # lo reescribe Set-DeployTag
 }
 
 # Genera un tag de despliegue por FECHA y reescribe $IMG con el.

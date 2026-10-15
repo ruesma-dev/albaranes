@@ -8,7 +8,10 @@ BBDD antes de notificar; la publicación/limpieza es solo el disparador.
 Mapeo de eventos:
   - contract-selected → ``MensajePersistencia(force=True)`` → q-persistencia
     (sv3 re-enriquece el merge: PDF/MD del contrato + valoracion).
-  - document-approved → ``MensajeFeedback`` → q-feedback.
+  - document-approved → ``MensajeFeedback(accion="alta")`` → q-feedback
+    (F-053: lo consume sv9, que da de alta el albarán en Sigrid); y
+    ``solicitar_alta_sigrid`` desde la ficha (``alta`` o
+    ``verificar_anulacion``). Devuelven si publicaron.
   - document-purged   → limpieza directa de ``workflow_runs`` (BBDD), que
     desbloquea el dedup por contenido tras un hard-delete.
 
@@ -24,7 +27,7 @@ ese contrato sin sv7, devolvemos un dict equivalente al ``EventApplyResult``:
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, get_args
 
 from ruesma_comun.colas import (
     COLA_FEEDBACK,
@@ -42,6 +45,11 @@ from domain.ports.orchestrator_port import OrchestratorClient
 from infrastructure.database.workflow_runs_purger import WorkflowRunsPurger
 
 logger = logging.getLogger(__name__)
+
+#: Acciones de ``MensajeFeedback`` (R32): ``alta`` y ``verificar_anulacion``.
+ACCIONES_FEEDBACK: frozenset[str] = frozenset(
+    get_args(MensajeFeedback.model_fields["accion"].annotation)
+)
 
 
 class ColasOrchestratorClient(OrchestratorClient):
@@ -99,23 +107,33 @@ class ColasOrchestratorClient(OrchestratorClient):
         *,
         document_id: str,
         approved_by: str | None,
-        approved_at_utc: str,
-        review_notes: str | None,
-    ) -> dict[str, Any] | None:
+        approved_at_utc: str | None = None,
+        review_notes: str | None = None,
+    ) -> bool:
+        """F-053 R1: el documento pasó a aprobado ⇒ alta en Sigrid (sv9).
+        Devuelve si publicó (R4)."""
+        return self.solicitar_alta_sigrid(
+            document_id=document_id, accion="alta", solicitado_por=approved_by,
+        )
+
+    def solicitar_alta_sigrid(
+        self,
+        *,
+        document_id: str,
+        accion: str,
+        solicitado_por: str | None,
+    ) -> bool:
+        """F-053 R28/R30: ``MensajeFeedback`` con su ``accion`` a
+        ``q-feedback``. ``ValueError`` (sin publicar) si la acción no es de
+        las de R32."""
+        if accion not in ACCIONES_FEEDBACK:
+            raise ValueError(f"accion de q-feedback no valida: {accion!r}")
         mensaje = MensajeFeedback(
             document_id=document_id,
-            approved_by=approved_by,
+            approved_by=solicitado_por,
+            accion=accion,
         )
-        publicado = self._pub.publicar(self._cola_feedback, mensaje)
-        if not publicado:
-            return None
-        return {
-            "action": "queued",
-            "detail": f"publicado en {self._cola_feedback}",
-            "previous_state": None,
-            "new_state": "approved",
-            "workflow_id": None,
-        }
+        return bool(self._pub.publicar(self._cola_feedback, mensaje))
 
     # --------------------------------------------------------------- #
     # document-purged → limpieza directa de workflow_runs (BBDD)

@@ -2,11 +2,19 @@
 from __future__ import annotations
 
 import json
+import math
 from typing import Any, Literal
 
 from urllib.parse import quote
 
-from pydantic import BaseModel, Field, ValidationError, computed_field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    computed_field,
+    field_validator,
+)
 
 from ruesma_comun.contratos import (
     MOTIVOS_REVISION_ORIGEN,
@@ -23,6 +31,16 @@ from ruesma_comun.contratos.origen_datos import (
     MOTIVO_CORREO_FUERA_DE_LISTA,
     normalizar_codigo,
 )
+from ruesma_comun.importes import importe_de_linea
+from ruesma_comun.valoracion import esta_valorado
+
+from domain.models.alta_sigrid_models import (
+    AltaSigridVista,
+    ProductoLinea,
+    ProductoOpcion,
+    etiqueta_estado_alta,
+)
+from domain.services.almacen import ACCION_ALMACEN_ELEGIDO
 
 VIEW_MODE_MERGE = "merge"
 KNOWN_PROVIDER_VIEWS = ("openai", "gemini", "claude")
@@ -235,6 +253,15 @@ class DocumentListItem(BaseModel):
     created_at_utc: str
     document_url: str | None = None
     lines: list[DocumentLineSummary] = []
+    # F-053 R37: ¿se puede aprobar? (``esta_valorado`` de comun).
+    valorado: bool = False
+    # F-053 R31: estado del alta en Sigrid (None = sin alta o DESDE vacía).
+    alta_estado: str | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def alta_estado_texto(self) -> str | None:
+        return etiqueta_estado_alta(self.alta_estado)
 
 
 class ProviderSnapshot(BaseModel):
@@ -350,6 +377,11 @@ class ContratoLinePayload(BaseModel):
 # ====================================================================== #
 
 class ValuationLineUpdate(BaseModel):
+    """Solo llega en el PUT del documento, que la ignora (F-065 R1)."""
+
+    #: (F-065 CR1b, pasada 3 de la fase 3) ``NaN``/``±Infinity`` del JSON, 422.
+    model_config = ConfigDict(allow_inf_nan=False)
+
     valuation_line_id: int
     codigo_partida_final: str | None = None
     descripcion_linea: str | None = None
@@ -363,6 +395,10 @@ class ConciliacionOverridePayload(BaseModel):
     """Override manual de la conciliacion de UNA linea de valoracion.
     mode='contract_line' apunta a otra linea del contrato;
     mode='nueva' deriva una linea nueva en la partida de la linea."""
+
+    #: (F-065 CR1b, pasada 3 de la fase 3) ``NaN``/``±Infinity`` del JSON, 422.
+    model_config = ConfigDict(allow_inf_nan=False)
+
     mode: Literal["contract_line", "nueva"]
     matched_contrato_line_id: int | None = None
     descripcion: str | None = None
@@ -382,13 +418,562 @@ class MergeDocumentUpdatePayload(BaseModel):
     review_notes: str | None = None
     approved: bool = False
     approved_by: str | None = None
+    # (F-065 R1) ``lines`` y ``valuation_line_updates`` se ACEPTAN y se
+    # IGNORAN: guardar la cabecera no toca las líneas. Siguen en el modelo
+    # para que un ``app.js`` en caché (que aún las manda) no reciba un 422.
     lines: list[MergeLinePayload] = Field(default_factory=list)
-    # Sub-tanda 2D — ediciones del revisor sobre filas sintéticas.
-    # Se aplican a ``albaran_line_valuations`` por valuation_line_id.
-    # Si la lista llega vacía o ausente, no se toca ninguna sintética.
     valuation_line_updates: list[ValuationLineUpdate] = Field(
         default_factory=list,
     )
+
+
+# ====================================================================== #
+# F-065 · fase 1 — lo editado en las líneas manda.
+#
+# Q de una fila = ``cantidad_convertida ?? cantidad_albaran``: la que enseña
+# y edita la ficha, en la unidad del precio (``importe = precio × Q × (1 −
+# dto/100)``). Guardar la cabecera no toca las líneas (R1), un aprobado es de
+# solo lectura (R4), una fila guardada queda bloqueada (R13–R15) y no se
+# aprueba con filas sin cantidad o importe (R20).
+# ====================================================================== #
+
+#: (R4) Aviso de toda escritura sobre un albarán aprobado.
+AVISO_ALBARAN_APROBADO = "Albarán aprobado: desapruébalo para editar"
+
+#: (R14) Aviso de toda escritura sobre una fila guardada (bloqueada).
+AVISO_LINEA_BLOQUEADA = "Línea guardada: desbloquéala para editarla"
+
+
+class AlbaranAprobadoError(Exception):
+    """(R4) El albarán está aprobado: no se escribe nada hasta desaprobarlo."""
+
+    def __init__(self, document_id: str) -> None:
+        self.document_id = document_id
+        super().__init__(AVISO_ALBARAN_APROBADO)
+
+    @property
+    def aviso(self) -> str:
+        return AVISO_ALBARAN_APROBADO
+
+
+class LineaBloqueadaError(Exception):
+    """(R14) La fila está guardada (bloqueada): no se toca hasta desbloquearla."""
+
+    def __init__(self, document_id: str, valuation_line_id: int) -> None:
+        self.document_id = document_id
+        self.valuation_line_id = valuation_line_id
+        super().__init__(AVISO_LINEA_BLOQUEADA)
+
+    @property
+    def aviso(self) -> str:
+        return AVISO_LINEA_BLOQUEADA
+
+
+class LineasIncompletasError(Exception):
+    """(R20) Hay filas sin cantidad o sin importe: no se aprueba. ``posiciones``
+    son las de la tabla de la ficha (1, 2, ...), las que ve el administrativo.
+
+    ``huerfanas`` (decisión del humano del 2026-10-11, O2 de la review de la
+    fase 1): filas sin línea de contrato NI derivada. La ficha no las pinta y
+    sv9 las mandaría sin vincular: tampoco se aprueba con ellas, y se pide
+    revalorar. Una fila en almacén (partida final vacía) NO es ninguna de las
+    dos cosas: el almacén nunca impide aprobar.
+
+    ``unidad_cambiada`` (CR3, pasada 3 de la review de la fase 2): posiciones
+    de las filas con la marca ``MOTIVO_UNIDAD_CAMBIADA`` («Origen ✎» a otra
+    unidad sin poder convertir la cantidad). sv9 la mandaría tal cual (8 ud
+    como 8 t): no se aprueba hasta revisar la cantidad."""
+
+    def __init__(
+        self,
+        document_id: str,
+        posiciones: list[int],
+        huerfanas: int = 0,
+        unidad_cambiada: list[int] | None = None,
+    ) -> None:
+        self.document_id = document_id
+        self.posiciones = list(posiciones)
+        self.huerfanas = huerfanas
+        self.unidad_cambiada = list(unidad_cambiada or [])
+        super().__init__(self.aviso)
+
+    @property
+    def aviso(self) -> str:
+        partes = []
+        if self.posiciones:
+            partes.append("Líneas sin cantidad o importe: " + ", ".join(
+                str(posicion) for posicion in self.posiciones
+            ))
+        if self.unidad_cambiada:
+            partes.append("Líneas con la unidad cambiada: revisa la cantidad: " + ", ".join(
+                str(posicion) for posicion in self.unidad_cambiada
+            ))
+        if self.huerfanas:
+            lineas = "línea" if self.huerfanas == 1 else "líneas"
+            partes.append(
+                f"Hay {self.huerfanas} {lineas} sin línea de contrato ni Nueva "
+                "que la ficha no enseña: revalora el albarán"
+            )
+        return ". ".join(partes)
+
+
+def cantidades_tras_editar(
+    *,
+    q_nueva: float | None,
+    cantidad_albaran: float | None,
+    cantidad_convertida: float | None,
+    factor: float | None,
+) -> tuple[float | None, float | None]:
+    """(R6, R7) ``(cantidad_albaran, cantidad_convertida)`` tras teclear Q.
+
+    Lo tecleado YA es la convertida (la ficha enseña Q en la unidad del
+    precio); lo que se deriva es la del albarán:
+
+    - sin Q nueva (``None``), ninguna cambia (R7);
+    - conversión reproducible (``cc = factor × ca``) y ``factor ≠ 0``: la del
+      albarán es ``Q / factor`` (a);
+    - sin conversión (``cc`` nula y ``factor`` nulo o 1): las dos son Q (b);
+    - en otro caso (contenedores de residuos, regla de sv6 que sv4 no sabe
+      rehacer, o filas legadas) la del albarán se conserva y la convertida
+      es Q (c).
+    """
+    if q_nueva is None:
+        return cantidad_albaran, cantidad_convertida
+    if conversion_reproducible(
+        factor=factor,
+        cantidad_albaran=cantidad_albaran,
+        cantidad_convertida=cantidad_convertida,
+    ) and float(factor) != 0:
+        return q_nueva / float(factor), q_nueva
+    if cantidad_convertida is None and (factor is None or float(factor) == 1):
+        return q_nueva, q_nueva
+    return cantidad_albaran, q_nueva
+
+
+def cambia_origen(
+    *,
+    es_contrato: bool,
+    partida_casada: str | None,
+    cambios: dict[str, Any],
+) -> bool:
+    """(R25, R26) ¿Pasa la fila Contrato a Nueva con estos cambios?
+
+    ``cambios`` son SOLO los campos que de verdad cambian (ya normalizados: la
+    partida sin espacios y vacía = ``None``). Una fila Contrato pasa a Nueva,
+    sin confirmación, si cambia la partida a una no vacía distinta de la de su
+    línea de contrato, el precio unitario o la unidad. Vaciar la partida
+    (almacén) o poner la de su línea de contrato no cambia el origen (F-051 D4,
+    R20; P10), ni la descripción, la cantidad, el descuento o el código
+    externo. Una fila Nueva sigue Nueva (se edita su derivada). Nunca se llama
+    a la IA: el origen solo lo vuelve a decidir «Origen ✎» o revalorar.
+    """
+    if not es_contrato:
+        return False
+    partida = cambios.get("codigo_partida")
+    return (
+        (partida is not None and partida != (partida_casada or "").strip())
+        or "precio_unitario" in cambios
+        or "unidad" in cambios
+    )
+
+
+#: (F-065 H2) «Origen ✎» llevó la fila a una línea de contrato de OTRA unidad y
+#: sv4 no sabe convertir la cantidad: se deja, sin bloquear, y se avisa.
+MOTIVO_UNIDAD_CAMBIADA = "front_unidad_cambiada_revisa_cantidad"
+
+
+def _unidad(valor: str | None) -> str:
+    return (valor or "").strip().upper()
+
+
+def cantidades_tras_reapuntar(
+    *,
+    unidad_actual: str | None,
+    unidad_nueva: str | None,
+    unidad_albaran: str | None,
+    cantidad_albaran: float | None,
+    cantidad_convertida: float | None,
+    factor: float | None,
+) -> tuple[float | None, float | None, float | None, bool]:
+    """(F-065 H2) ``(ca, cc, factor, aviso)`` al reapuntar a una línea de
+    contrato con ``unidad_nueva``.
+
+    Q (la convertida) está en la unidad del precio, así que si la unidad cambia
+    Q deja de valer. sv4 no tiene el conversor de unidades (es de sv6): solo
+    sabe rehacer el caso en que la unidad nueva es la del ALBARÁN, en el que Q
+    es la cantidad leída (factor 1). Unidad nueva desconocida o la misma: nada
+    cambia. Otra unidad, también si la actual se desconoce (P2-2): se deja la
+    cantidad y ``aviso`` (la fila queda marcada para revisar la cantidad, nunca
+    bloqueada, y no se aprueba hasta revisarla, CR3).
+    """
+    nueva = _unidad(unidad_nueva)
+    if not nueva or nueva == _unidad(unidad_actual):
+        return cantidad_albaran, cantidad_convertida, factor, False
+    if nueva == _unidad(unidad_albaran) and cantidad_albaran is not None:
+        return cantidad_albaran, cantidad_albaran, 1.0, False
+    return cantidad_albaran, cantidad_convertida, factor, True
+
+
+def motivos_con(valor: Any, motivo: str, presente: bool) -> str:
+    """``review_reasons_json`` con ``motivo`` puesto o quitado, sin tocar los
+    demás (los de sv6 se conservan; sv4 solo gestiona los suyos)."""
+    motivos = [m for m in motivos_de_json(valor) if m != motivo]
+    if presente:
+        motivos.append(motivo)
+    return json.dumps(motivos, ensure_ascii=False)
+
+
+def descripcion_para_valoracion(
+    *,
+    descripcion: str | None,
+    sin_blanca: bool,
+    editada: bool,
+    ya_fijada: bool,
+) -> str | None:
+    """(F-065 CR1, H1) Descripción que guarda la VALORACIÓN de una fila Nueva
+    (``albaran_line_valuations.descripcion_linea``), que es la que sv9 manda a
+    Sigrid antes que el concepto leído de la blanca.
+
+    - Sin blanca (traída del contrato, «Añadir línea»): siempre la de la fila;
+      si no, sv9 no tendría ninguna y el albarán saldría ``no_admitido``.
+    - Con blanca: solo si el administrativo la editó (ahora o antes); sin
+      editar, ``None`` y sv9 manda lo leído del albarán (diseño de F-053).
+    """
+    return descripcion if (sin_blanca or editada or ya_fijada) else None
+
+
+def es_fila_manual(
+    *,
+    line_kind: str | None,
+    bloqueada: bool,
+    derivada_origen: str | None,
+    precio_unitario_agreement: str | None,
+    partida_action: str | None,
+) -> bool:
+    """(R22) ¿La tocó el administrativo? (definición de requirements): línea
+    ``manual`` o ``reparto``, bloqueada, con derivada ``manual_override``,
+    con precio fijado a mano o con el almacén elegido. Revalorar la descarta."""
+    return (
+        line_kind in ("manual", "reparto")
+        or bool(bloqueada)
+        or derivada_origen == "manual_override"
+        or precio_unitario_agreement == "manual"
+        or partida_action == ACCION_ALMACEN_ELEGIDO
+    )
+
+
+def orden_filas_ficha(
+    merge_line_ids: list[int], filas: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """(R20) Las filas de valoración en el orden en que las pinta la ficha.
+
+    Replica ``_load_valuation_in_session`` (sintéticas al final, el resto por
+    ``id``) y ``_build_display_lines`` (cada blanca, en el orden de
+    ``merge_line_ids``, con sus sintéticas detrás; después las huérfanas,
+    agrupadas por padre en orden de aparición). Cada fila lleva ``id``,
+    ``merge_line_id``, ``parent_merge_line_id`` y ``line_kind``.
+
+    El cargador ordena además por ``merge_line_id``; aquí no hace falta: las
+    blancas se recorren en el orden de ``merge_line_ids`` y las sintéticas y
+    sueltas tienen ``merge_line_id`` nulo (sv6 nunca lo pone en una
+    sintética), así que el ``id`` decide lo mismo.
+    """
+
+    def _sintetica(fila: dict[str, Any]) -> bool:
+        return fila.get("line_kind") == "synthetic_modifier"
+
+    ordenadas = sorted(filas, key=lambda f: (_sintetica(f), f["id"]))
+    base: dict[int, dict[str, Any]] = {}
+    por_padre: dict[int | None, list[dict[str, Any]]] = {}
+    for fila in ordenadas:
+        if not _sintetica(fila) and fila.get("merge_line_id") is not None:
+            base[fila["merge_line_id"]] = fila
+        else:
+            por_padre.setdefault(fila.get("parent_merge_line_id"), []).append(fila)
+    salida: list[dict[str, Any]] = []
+    for merge_line_id in merge_line_ids:
+        if merge_line_id in base:
+            salida.append(base[merge_line_id])
+        salida.extend(por_padre.pop(merge_line_id, []))
+    for huerfanas in por_padre.values():
+        salida.extend(huerfanas)
+    return salida
+
+
+def _euros(valor: float) -> str:
+    entero, _, decimales = f"{valor:,.2f}".partition(".")
+    return f"{entero.replace(',', '.')},{decimales} €"
+
+
+def aviso_suma_importes(
+    suma_filas: float | None, suma_leida: float | None,
+) -> str | None:
+    """(R21) Confirmación antes de aprobar si la suma de las filas difiere en
+    0,01 € o más de la de lo leído en el albarán; ``None`` si cuadra o falta
+    alguna de las dos. No bloquea: una recepción parcial es legítima."""
+    if suma_filas is None or suma_leida is None:
+        return None
+    if round(abs(suma_filas - suma_leida), 2) < 0.01:
+        return None
+    return (
+        f"La suma de las líneas ({_euros(suma_filas)}) no cuadra con la del "
+        f"albarán ({_euros(suma_leida)}). ¿Aprobar igualmente?"
+    )
+
+
+def _numero_es(valor: object) -> object:
+    """Número tecleado en la ficha: admite coma decimal (``1.234,5``); vacío
+    o «—» es ``None``; uno ilegible o no finito es un error de validación
+    (422), nunca un ``None`` silencioso. Lo que no es texto pasa tal cual a
+    la validación de Pydantic."""
+    if not isinstance(valor, str):
+        return valor
+    texto = valor.strip()
+    if texto in ("", "—"):  # vacío o «—»
+        return None
+    if "," in texto:
+        texto = texto.replace(".", "").replace(",", ".")
+    numero = float(texto)
+    if not math.isfinite(numero):
+        raise ValueError("número no finito")
+    return numero
+
+
+class LineaATraer(BaseModel):
+    """(R23) Una línea de contrato a traer, con su cantidad (obligatoria, ≠ 0)."""
+
+    #: (F-065 CR1, pasada 2 de la fase 3) ``NaN`` e ``±Infinity`` del JSON son un
+    #: 422: acabarían en cantidades, importes y ``total_valorado``.
+    model_config = ConfigDict(allow_inf_nan=False)
+
+    contrato_line_id: int
+    cantidad: float
+
+    @field_validator("cantidad", mode="before")
+    @classmethod
+    def _cantidad(cls, valor: object) -> object:
+        return _numero_es(valor)
+
+    @field_validator("cantidad")
+    @classmethod
+    def _no_cero(cls, valor: float) -> float:
+        if valor == 0:
+            raise ValueError("la cantidad no puede ser 0")
+        return valor
+
+
+class TraerLineasBody(BaseModel):
+    """(R23) Cuerpo de «Traer líneas contrato»: al menos una, cada una con su
+    cantidad. El cuerpo viejo (``contrato_line_ids`` sin cantidades) es un 422."""
+
+    lineas: list[LineaATraer] = Field(min_length=1)
+
+
+# ------------------------------------------------------------------ #
+# F-065 fase 3 · dividir una fila (R29–R35), modelo M1 sin DDL
+# ------------------------------------------------------------------ #
+#: (R30) La suma de las partes puede diferir de Q en menos de media milésima.
+TOLERANCIA_REPARTO = 0.005
+#: Lo que cuenta como «0,005 o más»: la tolerancia menos el ruido de coma
+#: flotante (``4 + 6,005 − 10`` es 0,004999999999999005 y difiere en 0,005).
+_UMBRAL_REPARTO = TOLERANCIA_REPARTO - 1e-9
+#: (R29) Entre 2 y 20 partes.
+MIN_PARTES, MAX_PARTES = 2, 20
+
+
+class RepartoInvalido(ValueError):
+    """(R30) La división no se hace (422, sin cambios). El mensaje es para el
+    administrativo: dice qué parte o qué suma falla."""
+
+
+class ParteDivision(BaseModel):
+    """(R29) Una parte: su cantidad (en la unidad del precio, como la Q de la
+    ficha) y su partida (vacía = almacén). Una cantidad nula o 0 se acepta
+    aquí y la rechaza ``repartir`` diciendo qué parte es."""
+
+    #: (F-065 CR1, pasada 2 de la fase 3) ``NaN`` e ``±Infinity`` del JSON son un
+    #: 422: acabarían en cantidades, importes y ``total_valorado``.
+    model_config = ConfigDict(allow_inf_nan=False)
+
+    cantidad: float | None = None
+    codigo_partida: str | None = None
+
+    @field_validator("cantidad", mode="before")
+    @classmethod
+    def _cantidad(cls, valor: object) -> object:
+        return _numero_es(valor)
+
+    @field_validator("codigo_partida")
+    @classmethod
+    def _partida(cls, valor: str | None) -> str | None:
+        return (valor or "").strip() or None
+
+
+class DivisionBody(BaseModel):
+    """(R29, R30) Cuerpo de ``POST .../lines/{vid}/dividir``: de 2 a 20 partes."""
+
+    partes: list[ParteDivision] = Field(min_length=MIN_PARTES, max_length=MAX_PARTES)
+
+
+class ParteCalculada(BaseModel):
+    """(R31, R33) Cantidades e importe de una parte."""
+
+    cantidad_convertida: float
+    cantidad_albaran: float | None
+    importe: float | None
+
+
+class DivisionHecha(BaseModel):
+    """(R34) Lo que creó una división: las filas ``reparto`` (partes 2..N) y
+    las derivadas ``manual_override`` nuevas. El «Deshacer» borra las dos."""
+
+    partes: list[int]
+    derivadas: list[int]
+
+
+def _cantidad_es(valor: float) -> str:
+    """Una cantidad como la escribe el administrativo: «9,5», «10»."""
+    return f"{valor:.3f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
+def _fuera_de_tolerancia(a: float, b: float) -> bool:
+    return abs(a - b) >= _UMBRAL_REPARTO
+
+
+def repartir(
+    *,
+    q: float | None,
+    ca0: float | None,
+    importe0: float | None,
+    precio: float | None,
+    descuento: float | None,
+    partes: list[float | None],
+) -> list[ParteCalculada]:
+    """(R30, R31, R33) Reparte una fila de cantidad ``q`` (la convertida, o la
+    del albarán si no hay) entre ``partes`` (sus cantidades, la 1 es la que se
+    queda la original). Pura: no toca nada.
+
+    - Cada parte: ``cantidad_convertida = qk`` y ``cantidad_albaran = ca0 × qk
+      / q`` (``None`` si la original no la tiene).
+    - Importe: ``round(importe0 × qk / q, 2)`` y la última absorbe el
+      redondeo, así la familia suma ``importe0``; sin ``importe0``, la fórmula
+      canónica con el precio y el descuento de la original.
+    - ``RepartoInvalido`` si ``q`` es nula, 0 o no finita, el importe no es
+      finito, no hay de 2 a 20 partes, una es nula, 0, no finita o de otro signo
+      que ``q``, suman ``q`` ± 0,005 o más, o una saldría a 0,00 € con un
+      importe que no lo es.
+    """
+    if q is None or q == 0 or not math.isfinite(q):
+        raise RepartoInvalido("La línea está sin cantidad: no se puede dividir.")
+    if importe0 is not None and not math.isfinite(importe0):
+        raise RepartoInvalido(
+            "El importe de la línea no es un número: corrígelo antes de dividirla."
+        )
+    if not MIN_PARTES <= len(partes) <= MAX_PARTES:
+        raise RepartoInvalido(
+            f"Se divide en entre {MIN_PARTES} y {MAX_PARTES} líneas "
+            f"(llegaron {len(partes)})."
+        )
+    for numero, cantidad in enumerate(partes, start=1):
+        if cantidad is None or cantidad == 0 or not math.isfinite(cantidad):
+            raise RepartoInvalido(
+                f"La parte {numero} no tiene cantidad (vacía, 0 o no numérica)."
+            )
+        # Con las guardas de arriba (finita y ≠ 0) es lo mismo que
+        # ``(cantidad > 0) != (q > 0)``: lo demuestra el test del signo reescrito.
+        if math.copysign(1.0, cantidad) != math.copysign(1.0, q):
+            raise RepartoInvalido(
+                f"La parte {numero} tiene otro signo que la línea ({_cantidad_es(q)})."
+            )
+    suma = sum(partes)  # type: ignore[arg-type]
+    if _fuera_de_tolerancia(suma, q):
+        raise RepartoInvalido(
+            f"Las partes suman {_cantidad_es(suma)}; la línea tiene {_cantidad_es(q)}."
+        )
+
+    if importe0 is None:
+        importes = [
+            importe_de_linea(cantidad=cantidad, precio_unitario=precio,
+                             descuento_pct=descuento)
+            for cantidad in partes
+        ]
+    else:
+        importes = [round(importe0 * cantidad / q, 2) for cantidad in partes[:-1]]
+        importes.append(round(importe0 - sum(importes), 2))
+        # sv9 no registra las líneas de importe 0 (F-053 R13): una parte a
+        # 0,00 € de una línea con importe se perdería al darla de alta.
+        if importe0 != 0:
+            for numero, importe in enumerate(importes, start=1):
+                if importe == 0:
+                    raise RepartoInvalido(
+                        f"La parte {numero} saldría a 0,00 € (la línea tiene "
+                        f"{_euros(importe0)}) y Sigrid no registra líneas de importe "
+                        "0: repártela en menos partes."
+                    )
+    return [
+        ParteCalculada(
+            cantidad_convertida=cantidad,
+            cantidad_albaran=None if ca0 is None else ca0 * cantidad / q,
+            importe=importe,
+        )
+        for cantidad, importe in zip(partes, importes)
+    ]
+
+
+def aviso_reparto(numero_linea: int, suma: float | None, leida: float | None) -> str | None:
+    """(R35) Aviso no bloqueante mientras las partes de una blanca no sumen lo
+    que dice el albarán (comparado en la unidad del albarán); ``None`` si
+    cuadra o falta alguna de las dos."""
+    if suma is None or leida is None or not _fuera_de_tolerancia(suma, leida):
+        return None
+    return (
+        f"Las partes de la línea {numero_linea} suman {_cantidad_es(suma)}; "
+        f"el albarán dice {_cantidad_es(leida)}"
+    )
+
+
+class ConciliacionEditBody(BaseModel):
+    """(R8) Cuerpo del PATCH de edición de una fila.
+
+    Un campo AUSENTE no cambia; uno presente a ``null`` (o vacío) se vacía.
+    El front manda solo lo que el administrativo cambió; :meth:`campos`
+    devuelve exactamente eso (``model_fields_set``). Los numéricos admiten
+    coma decimal; uno ilegible es un error (422), nunca un vaciado.
+
+    A nivel de módulo (no dentro de ``build_app``): una clase local provoca un
+    ForwardRef que Pydantic 2.12 no resuelve como ``Body(...)``.
+    """
+
+    #: (F-065 CR1, pasada 2 de la fase 3) ``NaN`` e ``±Infinity`` del JSON son un
+    #: 422: acabarían en cantidades, importes y ``total_valorado``.
+    model_config = ConfigDict(allow_inf_nan=False)
+
+    codigo_partida: str | None = None
+    descripcion: str | None = None
+    cantidad: float | None = None
+    unidad: str | None = None
+    precio_unitario: float | None = None
+    descuento: float | None = None
+    codigo_externo: str | None = None
+
+    @field_validator("cantidad", "precio_unitario", "descuento", mode="before")
+    @classmethod
+    def _numero(cls, valor: object) -> object:
+        return _numero_es(valor)
+
+    @field_validator(
+        "codigo_partida", "descripcion", "unidad", "codigo_externo", mode="before",
+    )
+    @classmethod
+    def _texto(cls, valor: object) -> str | None:
+        if valor is None:
+            return None
+        return str(valor).strip() or None
+
+    def campos(self) -> dict[str, Any]:
+        """Los campos que vinieron en el cuerpo, con su valor (``None`` =
+        vaciar)."""
+        return {nombre: getattr(self, nombre) for nombre in sorted(self.model_fields_set)}
 
 
 # ====================================================================== #
@@ -446,6 +1031,8 @@ class LineValuationPayload(BaseModel):
     descuento_albaran_aplicado: float | None = None
     codigo_externo: str | None = None
     partida_action: str | None = None
+    # ---- F-065 R13–R17: el administrativo la guardó (guardar = bloquear) ----
+    bloqueada: bool = False
 
     match_confidence_pct: float | None = None
     match_method: str | None = None
@@ -576,6 +1163,11 @@ class ConciliacionDisplay(BaseModel):
     price_agreement: str | None = None
     precio_unitario_final: float | None = None  # el de la valoración
 
+    # (F-065 R9) ``unitario`` es el precio APLICADO (el de la valoración, el
+    # que pinta y edita la ficha); el de la línea de contrato va aquí (para
+    # el ``title`` y los avisos ✓/⚠ contra el contrato).
+    unitario_contrato: float | None = None
+
     # Avisos por campo de la fila salmon, comparando lo DECLARADO en la
     # linea blanca (lo leido del albaran) contra la referencia de contrato:
     #   True  -> declarado presente y coincide      (✓)
@@ -656,7 +1248,7 @@ class DisplayLine(BaseModel):
     """Una fila visible en la tabla de líneas del detalle."""
 
     # Identificación
-    line_kind: str  # 'from_albaran' | 'synthetic_modifier'
+    line_kind: str  # 'from_albaran' | 'synthetic_modifier' | 'manual' | 'reparto'
     merge_line_id: int | None = None       # solo si from_albaran
     valuation_line_id: int | None = None   # solo si synthetic_modifier
     line_index: int | None = None          # orden visual (para base y
@@ -683,6 +1275,11 @@ class DisplayLine(BaseModel):
     # 'from_albaran' que tienen una valoración (matched o derived).
     # El template lo renderiza en una fila expandible bajo la línea.
     concilia: ConciliacionDisplay | None = None
+
+    # (F-065 R35) Reparto: «Parte k de N» y, en la primera fila de la familia,
+    # el aviso mientras las partes no sumen lo que dice el albarán.
+    parte: str | None = None
+    aviso_reparto: str | None = None
 
 
 def _aviso_de_obra(obra: OrigenCampo) -> str | None:
@@ -844,6 +1441,41 @@ class DocumentDetailPayload(BaseModel):
     # para el CIF y la obra actuales. Lo rellena el repositorio en el
     # detalle del merge; ``None`` en las vistas de proveedor.
     busqueda_contratos: BusquedaContratosVista | None = None
+    # F-053 — alta en Sigrid (R29-R30) y producto de cada línea (R40). Lo
+    # rellena el servicio en la vista merge SOLO con DESDE puesta (R3).
+    # F-065 R21: suma de importes de las filas y de lo leído en las blancas
+    # (None si no hay ninguno); R22: filas tocadas a mano (revalorar las
+    # descarta). Los rellena el repositorio en el detalle del merge.
+    suma_filas: float | None = None
+    suma_leida: float | None = None
+    n_filas_manuales: int = 0
+    alta_sigrid_activa: bool = False
+    alta_sigrid: AltaSigridVista | None = None
+    alta_puede_solicitar: bool = False
+    #: F-053 v8 (R30, O1 = a): «Reintentar adjunto».
+    alta_puede_reintentar_adjunto: bool = False
+    productos_sigrid: dict[int, ProductoLinea] = Field(default_factory=dict)
+    productos_admitidos: list[ProductoOpcion] = Field(default_factory=list)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def aviso_suma(self) -> str | None:
+        """(F-065 R21) Confirmación antes de aprobar si las sumas no cuadran."""
+        return aviso_suma_importes(self.suma_filas, self.suma_leida)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def valorado(self) -> bool:
+        """(F-053 R37, R38) ¿Está valorado? Con ``esta_valorado`` de comun,
+        la misma regla que aplica el repositorio al aprobar y sv9 al dar de
+        alta: ``ok`` de sv6 o valoración manual completa."""
+        valoracion = self.valuation
+        if valoracion is None:
+            return False
+        lineas = list(valoracion.lines_by_merge_line_id.values()) + list(
+            valoracion.synthetic_lines
+        )
+        return esta_valorado(valoracion.status, [l.importe_calculado for l in lineas])
 
     @computed_field  # type: ignore[prop-decorator]
     @property

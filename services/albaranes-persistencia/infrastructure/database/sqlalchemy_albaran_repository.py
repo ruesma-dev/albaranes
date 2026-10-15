@@ -47,6 +47,7 @@ from infrastructure.database.orm_models import (
     Base,
 )
 from infrastructure.database.session_factory import SessionFactory
+from ruesma_comun.alta_sigrid import ESTADOS_ALTA_BLOQUEANTES
 from ruesma_comun.contratos import ClasificacionAlbaran
 from ruesma_comun.proveedores import normalizar_cif
 
@@ -54,6 +55,24 @@ logger = logging.getLogger(__name__)
 
 DocumentOrmType = Type[AlbaranDocumentOrm] | Type[AlbaranDocumentMergeOrm]
 LineOrmType = Type[AlbaranLineOrm] | Type[AlbaranLineMergeOrm]
+
+# (F-053 · R45) Alta en Sigrid de los merges de un PDF, en solo lectura y con
+# los merges bloqueados: ``save`` no borra uno con un alta bloqueante. Son DOS
+# sentencias a propósito (H4): en READ COMMITTED la instantánea se toma al
+# empezar la sentencia, así que una sola que esperase el cerrojo no vería el
+# alta que sv9 confirma mientras tanto. Primero el cerrojo; después, ya con
+# él, la lectura del alta con instantánea nueva. Ninguna filtra por
+# ``is_active``: R45 cubre también la papelera.
+_SQL_EXISTE_TABLA_ALTAS = text(
+    "SELECT to_regclass('albaran_altas_sigrid') IS NOT NULL"
+)
+_SQL_BLOQUEAR_MERGES_DEL_SHA = text(
+    "SELECT id FROM albaran_documents_merge WHERE source_sha256 = :sha FOR UPDATE"
+)
+_SQL_ALTAS_DE_LOS_MERGES = text(
+    "SELECT document_id, estado, sigrid_cod FROM albaran_altas_sigrid "
+    "WHERE document_id = ANY(:ids)"
+)
 
 
 def campos_clasificacion_merge(
@@ -815,6 +834,15 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
 
         with self._session_factory.create_session() as session:
             try:
+                # (F-053 · R45, D1) Un merge con un alta en Sigrid
+                # bloqueante NO se borra: el FK ON DELETE CASCADE se
+                # llevaría el alta (también ``registrado``).
+                conservado = self._conservar_por_alta(
+                    session=session,
+                    source_sha256=envelope.meta.source_sha256,
+                )
+                if conservado is not None:
+                    return conservado
                 self._delete_existing_records(
                     session=session,
                     source_sha256=envelope.meta.source_sha256,
@@ -2214,6 +2242,75 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
             if document is None:
                 return None, None
             return document.fecha, document.email_received_datetime
+
+    def buscar_conservado_por_alta(
+        self, source_sha256: str
+    ) -> ExistingDocument | None:
+        """(F-053 · R45, decisión D3 del humano) La mirada de
+        ``_conservar_por_alta`` en su propia sesión, para que el pipeline
+        la haga antes de tocar nada. Solo lectura: la sesión se cierra sin
+        confirmar (el ``FOR UPDATE`` se suelta al cerrarla)."""
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            return self._conservar_por_alta(
+                session=session, source_sha256=source_sha256,
+            )
+
+    def _conservar_por_alta(
+        self, *, session: Any, source_sha256: str
+    ) -> ExistingDocument | None:
+        """(F-053 · R45, decisión D1 del humano) Si algún merge con este
+        ``source_sha256`` tiene un alta en Sigrid bloqueante (``en_curso``,
+        ``incierto`` o ``registrado``), el reingreso lo trata como duplicado:
+        no se borra nada, se deshace la transacción y se devuelve ese
+        documento con ``conservado_por_alta``. Con otro estado, o sin alta,
+        ``None`` y ``save`` sigue como hoy.
+
+        Lee ``albaran_altas_sigrid`` (la escribe sv9; su DDL es de sv3) en
+        solo lectura, DESPUÉS de bloquear los merges (``FOR UPDATE``, como
+        sv9 al reclamar) y en otra sentencia, para ver el alta que sv9
+        confirme mientras se espera el cerrojo (H4). Si la tabla no existe
+        (DDL de la fase 2 sin aplicar), no se consulta."""
+        if not session.execute(_SQL_EXISTE_TABLA_ALTAS).scalar():
+            return None
+        ids = [
+            str(i) for i in session.execute(
+                _SQL_BLOQUEAR_MERGES_DEL_SHA, {"sha": source_sha256}
+            ).scalars()
+        ]
+        if not ids:
+            return None
+        filas = session.execute(_SQL_ALTAS_DE_LOS_MERGES, {"ids": ids}).mappings()
+        bloqueante = next(
+            (f for f in filas if f["estado"] in ESTADOS_ALTA_BLOQUEANTES), None
+        )
+        if bloqueante is None:
+            return None
+        document_id = str(bloqueante["document_id"])
+        documento = session.get(AlbaranDocumentMergeOrm, document_id)
+        lineas = session.scalar(
+            select(func.count(AlbaranLineMergeOrm.id)).where(
+                AlbaranLineMergeOrm.document_id == document_id
+            )
+        )
+        session.rollback()
+        logger.warning(
+            "[persist][F-053 R45] reingreso del PDF sha256=%s: el documento %s "
+            "tiene un alta en Sigrid %s (cod=%s); se conserva como duplicado "
+            "(ni se borra ni se reprocesa)",
+            source_sha256, document_id, bloqueante["estado"],
+            bloqueante["sigrid_cod"] or "-",
+        )
+        return ExistingDocument(
+            document_id=document_id,
+            source_sha256=source_sha256,
+            sharepoint_url=(
+                (documento.sharepoint_share_url or documento.sharepoint_web_url)
+                if documento is not None else None
+            ),
+            stored_lines=int(lineas or 0),
+            conservado_por_alta=True,
+        )
 
     def _delete_existing_records(self, *, session: Any, source_sha256: str) -> None:
         merge_docs = session.scalars(
