@@ -180,3 +180,12 @@ GROUP BY d.id, d.proveedor_nombre, d.obra_codigo, d.created_at_utc
 HAVING COUNT(l.precio_neto) > 0
 ORDER BY d.created_at_utc DESC;
 ```
+
+## PARADA 1 v2 · APROBADA (humano, 2026-10-15)
+
+- v2-P1: con contrato y con importes se sigue vinculando al contrato; manda el importe (como hoy) + aviso si el total
+  valorado se aparta (R12).
+- v2-P2: «pasa directo» = listo para aprobar; aprueba una persona.
+- v2-P7: una sola columna «Importe» con rótulo de origen y ≠.
+- v2-P8: **NO se parte**: todo en F-075 (pie incluido). Consecuencia: F-075 toca prompts y evals y va detrás de F-064.
+- v2-P3, P4, P5 y P6 sin respuesta explícita: se aplica la recomendación.
