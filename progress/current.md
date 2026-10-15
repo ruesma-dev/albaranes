@@ -1,6 +1,8 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-075 · `spec_ready` (2026-10-15), prioridad 1, rigor `estandar`, solo sv4.** La bandeja, la ficha y las vistas Obras y Proveedores muestran el importe leído del albarán (suma de `precio_neto` del merge, sin IVA), con o sin contrato, junto al valorado. Origen: DISCOIN, obra 0686. Spec en `specs/F-075-importe-leido/`; informe y preguntas P1–P7 para la PARADA 1 en `progress/spec_F-075.md` §4 (P1 añadir o sustituir, P2 sin IVA o total del papel, P3 líneas sin importe, P4 «Líneas valoradas», P5 tarjetas, P6 Proveedores, P7 orden guardado de columnas). Rama `feature/F-075-importe-leido`, worktree `../albaranes-F-075`. T0 opcional del humano (solo lectura) en el Anexo A del informe.
+
 **F-070 · `blocked` (2026-10-15): review APPROVED (pasada 2), equivalente #17 aceptado por el humano, fusionada en `dev`.** Espera la MANUAL T13 del humano (desplegar sv4 y luego sv3; comando en el bloque «F-070 · MANUAL T13»). Al verificarla en pantalla, pasa a `done`.
 
 **F-070 · `in_progress` (2026-10-14), urgente, prioridad 1, rigor `critico`** — la obra siempre con el 0 inicial

@@ -832,6 +832,19 @@
         "sv9-alta-sigrid"
       ],
       "branch": "feature/F-070-obra-con-cero-inicial"
+    },
+    {
+      "id": "F-075",
+      "title": "La bandeja, la ficha y las vistas de sv4 muestran el importe leído del albarán (sin IVA), tenga o no contrato, junto al valorado",
+      "description": "ORIGEN (correo de administración de obra, obra 0686, 2026-10-15): un albarán de DISCOIN con precios sale en la bandeja con «Importe valorado —» y «Sin valoración»: DISCOIN no tiene contrato en la obra (sv3: 0 contratos, no dispara q-valoracion) y sv6 no valora. La vista «Obras» y la tarjeta «Importe pendiente» también suman solo lo valorado. Merges de ejemplo: dfdc8aab-08e1-49f0-978d-bb906515e748 y 5dea6509-4a81-4192-b8b0-3a21041931ca. DECISIÓN DEL HUMANO (2026-10-15, literal): «aunque tenga contrato, el importe leído».\n\nINVESTIGACIÓN (progress/spec_F-075.md §2): IA1 no lee totales de cabecera (ni total, ni base imponible, ni IVA); por línea lee precio (unitario sin IVA), descuento y precio_neto (IMPORTE de la línea tras descuento, ARCHITECTURE §13; si el papel no lo trae, lo calcula la IA). sv3 lo persiste en albaran_lines_merge.precio_neto y sv4 ya no escribe esas líneas desde F-065: el dato está persistido y es utilizable; ningún servicio tiene que guardar nada nuevo.\n\nSPEC (2026-10-15, specs/F-075-importe-leido/): solo sv4, sin DDL ni escrituras. Importe del albarán = suma de precio_neto de las líneas del merge, sin IVA, con «—» si ninguna lo trae y marca «parcial» si faltan algunas (no se completan). Bandeja: columna «Importe albarán» junto a «Importe valorado» (que no cambia), marca ≠ con la diferencia, orden y filtro mín/máx propios, tarjeta «Pendiente según albarán» junto a la actual. Ficha: bloque «Importe del albarán (sin IVA, leído)» siempre, con valorado y diferencia si hay valoración, y pie «Total leído» en las líneas leídas; el aviso de F-065 R21 usa la misma función. Vistas Obras y Proveedores: columna «Importe albarán» y «N sin importe». SQL de esas vistas reescrito portable (sin LATERAL ni DISTINCT ON) para probar sobre SQLite. PREGUNTAS P1–P7 para la PARADA 1 en progress/spec_F-075.md §4 (P1 añadir vs sustituir, P2 sin IVA / leer el total del papel en otra feature de sv2+sv3, P3 líneas sin importe, P4 líneas leídas en la columna «Líneas valoradas», P5 tarjetas, P6 vistas, P7 orden de columnas guardado). FUERA: leer total/base/IVA de la cabecera; valorar o aprobar sin contrato; F-066 X12 (sumatorio al pie, al que F-075 deja la cifra); F-071 y F-073.",
+      "status": "spec_ready",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 1,
+      "servicios": [
+        "sv4-front"
+      ],
+      "branch": "feature/F-075-importe-leido"
     }
   ]
 }
