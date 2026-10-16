@@ -147,7 +147,7 @@ FAILED tests/test_f072_r18_r22_decision_y_cli.py::test_f072_r22_sin_servicio_es_
 - 2 **equivalentes** (3 y 5: `text=True`→`False` en `_git` y `sondear`, que ya pasan `encoding=`): en CPython
   `text_mode = encoding or errors or text`. Demostración RM5 ejecutable en el informe de mutación (el `subprocess.run`
   con `text=False` y `encoding` devuelve `str 'ñ\n'`) y los dos mutantes aplicados a la vez dejan los 154 tests de
-  F-072 en `154 passed`. **Pendientes de la aceptación escrita del humano.**
+  F-072 (ya con los 6 nuevos) en `154 passed`. **Pendientes de la aceptación escrita del humano.**
 - No se relanzó la campaña: los tests nuevos no tocan producción y cada muerte se reprodujo a mano. Ningún test se
   consiguió quitando código defensivo (RM6 no aplica).
 
@@ -182,7 +182,7 @@ tests/test_cache_suites_init_sh.py -q` → `142 passed in 45.25s` (154 menos los
 
 | Evidencia | Valor medido |
 |---|---|
-| Tests de F-072 | 160 (`tests/test_f072_*.py`, con los 6 de la mutación); los 154 previos, `154 passed in 20.76s` |
+| Tests de F-072 | 154 (`tests/test_f072_*.py`: 50 + 43 + 26 + 14 + 12 + 9), con los 6 de la mutación; antes de ellos, 148. `154 passed in 20.76s` |
 | Suite de la raíz | 1237 passed en T17 (1083 antes de F-072); servicios: sv1 205, sv2 397, sv3 703, sv4 1427, sv5 43, sv6 295, sv9 654, comun 578 (+3 skipped) |
 | Cobertura de líneas cambiadas | `PUERTA COBERTURA: 100.0% de 202 líneas cambiadas cubiertas (202/202, umbral 80%, nivel critico)` |
 | Mutantes | 72 generados, 65 muertos, 7 supervivientes → 5 muertos con tests nuevos (a mano) y 2 equivalentes RM5 |
@@ -192,3 +192,14 @@ tests/test_cache_suites_init_sh.py -q` → `142 passed in 45.25s` (154 menos los
 T17 salió en rojo la primera vez (`test_f039_r2_todo_informe_de_mutacion_figura_en_el_inventario`: faltaba la fila de
 `mutacion_F-072_arnes.md` en `progress/inventario_mutacion_F-039.md`, y la puerta de cobertura cayó al 38,6 % por el
 `-x`). Añadida la fila (commit `7c0661f`) y relanzado: verde.
+
+## Pasada 2 (CHANGES_REQUESTED de `progress/review_F-072.md`)
+
+Producción sin tocar; ni campaña ni `init.sh` larga nuevas (lo dice el reviewer).
+1. `arnes-base`: la sección 1.7.16 de `GUIA_INSTALACION.md` pasa a «(1.7.16, 2026-10-16)», igual que `VERSION`.
+2. `arnes-base/tests/test_servicios_dependencias.py`: `ruesma_comun` → `comun` (líneas 118, 232, 234, 245, 256, 263,
+   266). (1) y (2) en el commit local `8f72cdc` en `main` (sin push). Suite del payload:
+   `cd arnes-base\arnes-base; python -m pytest tests -q -p no:cacheprovider` → `509 passed, 2 skipped in 78.25s`.
+3. Este informe: 154 tests de F-072 con los 6 nuevos (148 antes), en «Evidencias» y en la sección de mutación.
+4. `design.md:203`: el literal de la marca de adaptación reescrito como «la cabecera adaptable»; el design sigue en
+   250/250 líneas.

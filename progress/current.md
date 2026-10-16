@@ -6,10 +6,10 @@ las dependencias de cada servicio (origen: O1 de la review de F-070). Spec en `s
 PARADA 1 APROBADA en `progress/spec_F-072.md` (P1 AVISO, P2 fuera, P3 permiso añadido, P4 huella del `.env` por
 metadatos, P5 porte a `main` de `arnes-base` como 1.7.16). Rama `feature/F-072-cache-con-dependencias`, worktree
 `C:\Users\pgris\PycharmProjects\albaranes-F-072`; `dev` (`d79b3d9`, F-053 v8 y F-070) fusionado en la rama.
-**Implementada (2026-10-16), pendiente de review**: T1–T15 y T17 hechas (informe `progress/impl_F-072.md`). Cobertura
+**Implementada (2026-10-16); review pasada 1 CHANGES_REQUESTED, los 4 cambios aplicados (pasada 2), pendiente de review**: T1–T15 y T17 hechas (informe `progress/impl_F-072.md`). Cobertura
 100 % de 202 líneas; mutación 72 → 65 muertos, 5 supervivientes muertos con 6 tests nuevos y **2 equivalentes
 (`text=False` con `encoding=`) pendientes de la aceptación escrita del humano** (`progress/mutacion_F-072_arnes.md`).
-Porte a `arnes-base` 1.7.16: commit local `78a67aa` en `main`, sin push. Pendiente del humano: T16 (abajo).
+Porte a `arnes-base` 1.7.16: commits locales `78a67aa` y `8f72cdc` en `main`, sin push. Pendiente del humano: T16 (abajo).
 *Junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
 Desviaciones respecto a la spec: ninguna. `dev` avanzó a `a87d040`; no se ha vuelto a fusionar en la rama.
 

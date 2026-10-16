@@ -200,7 +200,7 @@ principal → aviso de R13 y suite siempre ejecutada (D7).
 Medido el 2026-10-15: albaranes va por la 1.7.2 y `arnes-base` por la 1.7.15, pero
 `servicios.py`, `servicios.ejemplo.json` y la §7 bis de `init.sh` son **idénticos**
 (`diff --strip-trailing-cr`). El resto de `init.sh` difiere en la cabecera
-`[ADAPTAR]`, el venv del proyecto (1.7.4) y comentarios. Porte **pieza a pieza**,
+adaptable, el venv del proyecto (1.7.4) y comentarios. Porte **pieza a pieza**,
 como la 1.7.15, no por el instalador.
 
 - **Destino:** `C:\Users\pgris\PycharmProjects\arnes-base`, rama `main`, commit local
