@@ -3,7 +3,7 @@
 
 **F-077 · `spec_ready` (2026-10-16).** Spec en `specs/F-077-guardar-y-aprobar/` (rama `feature/F-077-guardar-y-aprobar`,
 worktree `albaranes-F-077`); resumen, decisiones y preguntas P1–P4 con su opción por defecto en `progress/spec_F-077.md`.
-Solo sv4, rigor `estandar`. El humano debe validar P1 (cota de «Alta en curso…»: estados repetibles y Espera) antes de implementar.
+Solo sv4, rigor `estandar`. PARADA 1 APROBADA (2026-10-16) con P1–P4 resueltas (spec v2); lista para el implementer.
 
 **F-070 · CERRADA (`done`, 2026-10-15).** Desplegada en sv3, sv4 y sv9 (r20261015-0947) y verificada en pantalla por el
 humano (T13). Los merges antiguos con obra de 3 cifras los corrigió el humano a mano en la BBDD. Resumen en `history.md`.
