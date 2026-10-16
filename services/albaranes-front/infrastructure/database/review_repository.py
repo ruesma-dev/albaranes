@@ -22,7 +22,11 @@ from sqlalchemy import (
     text,
 )
 
-from ruesma_comun.alta_sigrid import ESTADOS_ALTA_BLOQUEANTES, es_linea_vinculada
+from ruesma_comun.alta_sigrid import (
+    ESTADOS_ALTA_BLOQUEANTES,
+    es_linea_a_registrar,
+    es_linea_vinculada,
+)
 from ruesma_comun.importes import clasificar_descuento, importe_de_linea
 from ruesma_comun.linea_valorada import (
     CamposFila,
@@ -240,14 +244,18 @@ _SQL_BLANCAS_EN_ORDEN = text(
     "ORDER BY line_index, id"
 )
 
-#: (F-065 R20) Lo que decide si una fila se puede aprobar y su posición.
+#: (F-065 R20) Lo que decide si una fila se puede aprobar y su posición; (F-078
+#: R17) con su descripción y lo que dice si va vinculada (lo mismo que sv9).
 _SQL_FILAS_PARA_APROBAR = text(
     "SELECT lv.id, lv.merge_line_id, lv.parent_merge_line_id, lv.line_kind, "
     "       lv.matched_contrato_line_id, lv.derived_contrato_line_id, "
     "       lv.cantidad_albaran, lv.cantidad_convertida, lv.importe_calculado, "
-    "       lv.review_reasons_json "
+    "       lv.review_reasons_json, lv.descripcion_linea, "
+    "       cl.sigrid_ide, cl.codigo_contrato AS contrato_linea, "
+    "       v.contrato_codigo AS contrato_valoracion "
     "FROM albaran_line_valuations lv "
     "JOIN albaran_valuations v ON v.id = lv.valuation_id "
+    "LEFT JOIN albaran_contrato_lines_merge cl ON cl.id = lv.matched_contrato_line_id "
     "WHERE v.document_id = :doc"
 )
 
@@ -4202,6 +4210,7 @@ class AlbaranReviewRepository:
         ]
         posiciones: list[int] = []
         unidad_cambiada: list[int] = []
+        sin_descripcion: list[int] = []
         posicion = 0
         huerfanas = 0
         for fila in orden_filas_ficha(merge_line_ids, filas):
@@ -4220,12 +4229,27 @@ class AlbaranReviewRepository:
             )
             if q is None or fila["importe_calculado"] is None:
                 posiciones.append(posicion)
+            # (F-078 R17) Sin vincular, a registrar y sin descripción: sv9 no
+            # tendría concepto que mandar (``falta_descripcion``).
+            if (
+                es_linea_a_registrar(fila["importe_calculado"])
+                and not es_linea_vinculada(
+                    matched_contrato_line_id=fila["matched_contrato_line_id"],
+                    derived_contrato_line_id=fila["derived_contrato_line_id"],
+                    sigrid_ide=fila["sigrid_ide"],
+                    contrato_linea=fila["contrato_linea"],
+                    contrato_valoracion=fila["contrato_valoracion"],
+                )
+                and not (fila["descripcion_linea"] or "").strip()
+            ):
+                sin_descripcion.append(posicion)
             # (CR3) «Origen ✎» cambió la unidad y nadie ha revisado la cantidad.
             if MOTIVO_UNIDAD_CAMBIADA in motivos_de_json(fila["review_reasons_json"]):
                 unidad_cambiada.append(posicion)
-        if posiciones or huerfanas or unidad_cambiada:
+        if posiciones or huerfanas or unidad_cambiada or sin_descripcion:
             raise LineasIncompletasError(
                 document_id, posiciones, huerfanas, unidad_cambiada,
+                sin_descripcion=sin_descripcion,
             )
 
     @staticmethod

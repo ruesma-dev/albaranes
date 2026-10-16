@@ -83,7 +83,8 @@ def test_f078_r6_nueva_pinta_la_fila_y_no_la_derivada():
 def test_f078_r7_nueva_sin_descripcion_ni_unidad_en_la_fila_se_pintan_vacias():
     """Antes: «PORTES» y «UD» de la derivada 601 (el caso de la 386)."""
     motor = construir()
-    ejecutar(motor, "UPDATE albaran_line_valuations SET unidad_contrato = NULL WHERE id = 13")
+    ejecutar(motor, "UPDATE albaran_line_valuations SET unidad_contrato = NULL, "
+             "descripcion_linea = NULL WHERE id = 13")
 
     conc = _mapa(motor)[13]
 

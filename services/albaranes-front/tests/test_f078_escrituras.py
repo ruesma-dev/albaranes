@@ -357,6 +357,8 @@ def test_f078_r15_nueva_con_blanca_divide_con_el_concepto_del_papel():
     motor = construir()
     ejecutar(motor, "UPDATE contrato_lines_derived SET descripcion_linea = 'TRANSPORTE' "
              "WHERE id = 601")
+    ejecutar(motor, "UPDATE albaran_line_valuations SET descripcion_linea = NULL "
+             "WHERE id = 13")
 
     (p2,) = _dividir(motor, 13, (0.5, "03.01"), (0.5, "03.01")).partes
 

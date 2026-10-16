@@ -482,7 +482,11 @@ class LineasIncompletasError(Exception):
     ``unidad_cambiada`` (CR3, pasada 3 de la review de la fase 2): posiciones
     de las filas con la marca ``MOTIVO_UNIDAD_CAMBIADA`` («Origen ✎» a otra
     unidad sin poder convertir la cantidad). sv9 la mandaría tal cual (8 ud
-    como 8 t): no se aprueba hasta revisar la cantidad."""
+    como 8 t): no se aprueba hasta revisar la cantidad.
+
+    ``sin_descripcion`` (F-078 R17): posiciones de las filas a registrar SIN
+    vincular sin descripción. sv9 no tendría concepto que mandar
+    (``falta_descripcion``): no se aprueba hasta escribirla."""
 
     def __init__(
         self,
@@ -490,11 +494,14 @@ class LineasIncompletasError(Exception):
         posiciones: list[int],
         huerfanas: int = 0,
         unidad_cambiada: list[int] | None = None,
+        *,
+        sin_descripcion: list[int] | None = None,
     ) -> None:
         self.document_id = document_id
         self.posiciones = list(posiciones)
         self.huerfanas = huerfanas
         self.unidad_cambiada = list(unidad_cambiada or [])
+        self.sin_descripcion = list(sin_descripcion or [])
         super().__init__(self.aviso)
 
     @property
@@ -503,6 +510,10 @@ class LineasIncompletasError(Exception):
         if self.posiciones:
             partes.append("Líneas sin cantidad o importe: " + ", ".join(
                 str(posicion) for posicion in self.posiciones
+            ))
+        if self.sin_descripcion:
+            partes.append("Líneas sin descripción: " + ", ".join(
+                str(posicion) for posicion in self.sin_descripcion
             ))
         if self.unidad_cambiada:
             partes.append("Líneas con la unidad cambiada: revisa la cantidad: " + ", ".join(
