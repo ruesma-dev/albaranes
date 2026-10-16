@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **69 features**, 47 abiertas, 22 terminadas.
+Resumen: **70 features**, 48 abiertas, 22 terminadas.
 
 Bloqueadas: **F-053**.
 
@@ -25,6 +25,7 @@ Bloqueadas: **F-053**.
 | F-061 | Familia medios_auxiliares (andamios, puntales, plataformas...) en el catalogo de familias de IA1 | 2 | pendiente | critico |  |
 | F-068 | F7 en la ficha: divide la última fila pulsada y Edge no pregunta por la exploración con el símbolo de intercalación (sv4) | 2 | pendiente | estandar |  |
 | F-069 | Lista de equivalencias usuario de la app ↔ usuario de Sigrid para el alta (sv9) | 2 | pendiente | critico |  |
+| F-079 | Avisar en la ficha cuando se edita la descripción de una línea vinculada a contrato (Sigrid usa la del contrato) | 2 | pendiente | estandar |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -261,6 +262,12 @@ ORIGEN (correo de administración de obra, asunto «F7», 2026-10-13 12:37, capt
 estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
 
 PETICIÓN DEL HUMANO (2026-10-14, PARADA 1 de F-053 v8): «en el futuro habrá una lista de mapeo usuario vs usuario sigrid para los casos raros». F-053 v8 (R47) resuelve el `usu` del alta con la parte local del correo @ruesma.es de quien aprueba contra `dbo.usu.cod` y, si no casa, usa `ALTA_SIGRID_USUARIO_RESPALDO` (pgris). Esta feature añade una lista de equivalencias (correo → login de Sigrid) que se consulta ANTES de la parte local, para los usuarios cuyo login no coincide con su correo. Dónde vive (variable, tabla propia o fichero) y quién la mantiene, a decidir en su PARADA 1. Depende de F-053.
+
+### F-079 · Avisar en la ficha cuando se edita la descripción de una línea vinculada a contrato (Sigrid usa la del contrato)
+
+estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí
+
+PETICIÓN DEL HUMANO (2026-10-16, P8 de la PARADA 1 de F-078): en una línea Contrato vinculada, la descripción editada en la ficha no llega a Sigrid: sigrid-api usa la de su línea de contrato (hoy 2 filas en producción). Esta feature hace que la ficha lo avise (o lo impida) al editar esa descripción. Alcance exacto a decidir en su PARADA 1. Depende de F-078.
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 
