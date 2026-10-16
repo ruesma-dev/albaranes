@@ -623,25 +623,6 @@ def motivos_con(valor: Any, motivo: str, presente: bool) -> str:
     return json.dumps(motivos, ensure_ascii=False)
 
 
-def descripcion_para_valoracion(
-    *,
-    descripcion: str | None,
-    sin_blanca: bool,
-    editada: bool,
-    ya_fijada: bool,
-) -> str | None:
-    """(F-065 CR1, H1) Descripción que guarda la VALORACIÓN de una fila Nueva
-    (``albaran_line_valuations.descripcion_linea``), que es la que sv9 manda a
-    Sigrid antes que el concepto leído de la blanca.
-
-    - Sin blanca (traída del contrato, «Añadir línea»): siempre la de la fila;
-      si no, sv9 no tendría ninguna y el albarán saldría ``no_admitido``.
-    - Con blanca: solo si el administrativo la editó (ahora o antes); sin
-      editar, ``None`` y sv9 manda lo leído del albarán (diseño de F-053).
-    """
-    return descripcion if (sin_blanca or editada or ya_fijada) else None
-
-
 def es_fila_manual(
     *,
     line_kind: str | None,

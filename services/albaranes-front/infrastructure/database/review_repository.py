@@ -24,7 +24,13 @@ from sqlalchemy import (
 
 from ruesma_comun.alta_sigrid import ESTADOS_ALTA_BLOQUEANTES, es_linea_vinculada
 from ruesma_comun.importes import clasificar_descuento, importe_de_linea
-from ruesma_comun.linea_valorada import sin_conversion
+from ruesma_comun.linea_valorada import (
+    CamposFila,
+    LineaDeLaFila,
+    cambios_a_guardar,
+    fila_a_guardar,
+    sin_conversion,
+)
 from ruesma_comun.obras import canonizar_codigo_obra
 from ruesma_comun.valoracion import esta_valorado
 
@@ -38,7 +44,6 @@ from domain.models.review_models import (
     cambia_origen,
     cantidades_tras_editar,
     cantidades_tras_reapuntar,
-    descripcion_para_valoracion,
     MOTIVO_UNIDAD_CAMBIADA,
     motivos_con,
     ConciliacionDisplay,
@@ -245,6 +250,47 @@ _SQL_FILAS_PARA_APROBAR = text(
     "JOIN albaran_valuations v ON v.id = lv.valuation_id "
     "WHERE v.document_id = :doc"
 )
+
+#: (F-078 R16) La fila, su línea (de contrato o derivada) y el concepto de su
+#: blanca: lo que decide ``fila_a_guardar``.
+_SQL_FILA_A_MATERIALIZAR = text(
+    "SELECT lv.descripcion_linea, lv.unidad_contrato, lv.unidad_albaran, "
+    "       lv.precio_unitario_final, lv.cantidad_albaran, lv.cantidad_convertida, "
+    "       lv.factor_conversion, "
+    "       cl.id AS cl_id, cl.descripcion_linea AS cl_descripcion, "
+    "       cl.unidad_medida AS cl_unidad, cl.precio_unitario AS cl_precio, "
+    "       d.id AS d_id, d.descripcion_linea AS d_descripcion, "
+    "       d.unidad_medida AS d_unidad, d.precio_unitario AS d_precio, "
+    "       l.concepto AS concepto_blanca "
+    "FROM albaran_line_valuations lv "
+    "LEFT JOIN albaran_contrato_lines_merge cl ON cl.id = lv.matched_contrato_line_id "
+    "LEFT JOIN contrato_lines_derived d ON d.id = lv.derived_contrato_line_id "
+    "LEFT JOIN albaran_lines_merge l ON l.id = lv.merge_line_id "
+    "WHERE lv.id = :vid"
+)
+
+#: Las columnas de la fila que decide ``fila_a_guardar`` (las de ``CamposFila``).
+_COLUMNAS_FILA_A_GUARDAR = (
+    "descripcion_linea", "unidad_contrato", "unidad_albaran", "precio_unitario_final",
+    "cantidad_albaran", "cantidad_convertida", "factor_conversion",
+)
+
+
+def _linea_de_la_fila(fila: Any) -> LineaDeLaFila | None:
+    """(F-078) Su línea: la de contrato si la tiene; si no, su derivada (el
+    mismo orden con el que la ficha decide Contrato / Nueva)."""
+    if fila["cl_id"] is not None:
+        return LineaDeLaFila(
+            es_contrato=True, descripcion=fila["cl_descripcion"],
+            unidad=fila["cl_unidad"], precio_unitario=fila["cl_precio"],
+        )
+    if fila["d_id"] is not None:
+        return LineaDeLaFila(
+            es_contrato=False, descripcion=fila["d_descripcion"],
+            unidad=fila["d_unidad"], precio_unitario=fila["d_precio"],
+        )
+    return None
+
 
 #: (F-065 R14) ¿Está guardada (bloqueada) esta fila del documento?
 _SQL_FILA_BLOQUEADA = text(
@@ -1694,12 +1740,15 @@ class AlbaranReviewRepository:
         mode='contract_line': la fila pasa a ser Contrato de
           ``matched_contrato_line_id`` y «cuadra» con ella: se trae su partida,
           su unidad y su precio (o ``precio_unitario`` si viene), la
-          descripción vuelve a ser la de la línea (sin override) y el importe
-          se recalcula con la cantidad de la fila. Se limpia la derivada.
+          descripción pasa a ser la de la línea (si está vacía, la que tenía;
+          F-078 R12) y el importe se recalcula con la cantidad de la fila. Se
+          limpia la derivada.
         mode='nueva': la fila pasa a Nueva con SUS valores actuales (partida
           final, descripción, unidad y precio que pinta la ficha; ``descripcion``
           y ``precio_unitario`` los sustituyen si vienen). Si el precio no
           cambia, el importe tampoco.
+        En los dos modos la fila acaba con ``fila_a_guardar`` aplicada
+        (F-078 R16), en la misma transacción.
 
         NO revalora ni llama a la IA. Se pierde con «Valorar ahora» (F-058).
         Devuelve True si actualizó algo.
@@ -1759,7 +1808,8 @@ class AlbaranReviewRepository:
                     return False
                 cl = session.execute(
                     text(
-                        "SELECT precio_unitario, codigo_partida, unidad_medida "
+                        "SELECT precio_unitario, codigo_partida, unidad_medida, "
+                        "       descripcion_linea "
                         "FROM albaran_contrato_lines_merge WHERE id = :id"
                     ),
                     {"id": matched_contrato_line_id},
@@ -1782,6 +1832,9 @@ class AlbaranReviewRepository:
                     cantidad_convertida=row["cantidad_convertida"],
                     factor=row["factor_conversion"],
                 )
+                # (F-078 R12) La fila queda con la descripción de esa línea (si
+                # está vacía, la que tenía) y su unidad, también en
+                # ``unidad_albaran`` sin conversión.
                 session.execute(
                     text(
                         "UPDATE albaran_line_valuations SET "
@@ -1792,10 +1845,11 @@ class AlbaranReviewRepository:
                         "  precio_unitario_agreement = 'manual', "
                         "  codigo_partida_final = :part, "
                         "  unidad_contrato = :uni, "
-                        "  cantidad_albaran = :ca, "
+                        + ("  unidad_albaran = :uni, " if sin_conversion(factor) else "")
+                        + "  cantidad_albaran = :ca, "
                         "  cantidad_convertida = :cc, "
                         "  factor_conversion = :factor, "
-                        "  descripcion_linea = NULL, "
+                        "  descripcion_linea = :desc, "
                         "  importe_calculado = :imp, "
                         "  importe_source = 'calculated', "
                         "  review_required = :revisar, "
@@ -1806,6 +1860,10 @@ class AlbaranReviewRepository:
                         "mid": matched_contrato_line_id,
                         "pu": precio,
                         "part": cl["codigo_partida"],
+                        "desc": (
+                            (cl["descripcion_linea"] or "").strip()
+                            or row["descripcion_linea"]
+                        ),
                         "uni": cl["unidad_medida"] or unidad_actual,
                         "ca": ca,
                         "cc": cc,
@@ -1863,18 +1921,14 @@ class AlbaranReviewRepository:
                     "precio_unitario_final = :pu, "
                     "precio_unitario_source = 'manual_derived', "
                     "precio_unitario_agreement = 'manual', "
-                    "descripcion_linea = :descval, "
+                    "descripcion_linea = :desc, "
                     "review_required = FALSE"
                 )
+                # (F-078 R12) La descripción que tenía la fila (o la tecleada),
+                # con o sin blanca: sustituye a F-065 CR1/H1.
                 parametros: dict[str, Any] = {
                     "did": new_id, "pu": precio, "vid": valuation_line_id,
-                    # (F-065 CR1, H1) la que lee sv9 antes que la blanca.
-                    "descval": descripcion_para_valoracion(
-                        descripcion=desc,
-                        sin_blanca=row["merge_line_id"] is None,
-                        editada=bool(descripcion),
-                        ya_fijada=bool(row["descripcion_linea"]),
-                    ),
+                    "desc": desc,
                 }
                 if not _mismo_numero(precio, actual):
                     sets += ", importe_calculado = :imp, importe_source = 'calculated'"
@@ -1890,6 +1944,7 @@ class AlbaranReviewRepository:
             else:
                 return False
 
+            self._materializar_fila_in_session(session, valuation_line_id)
             self._recalcular_total_in_session(session, valuation_id)
             session.commit()
             return True
@@ -2194,6 +2249,34 @@ class AlbaranReviewRepository:
             session.commit()
             return True
 
+    @staticmethod
+    def _materializar_fila_in_session(session: Any, valuation_line_id: int) -> None:
+        """(F-078 R16) Lee la fila, su línea y su blanca; aplica
+        ``fila_a_guardar`` y escribe SOLO las columnas que cambian. Misma
+        transacción que el llamador (no confirma). Toda vía que crea o
+        reapunta una fila la llama al final; el PATCH no (lo vaciado se ve
+        vacío)."""
+        fila = session.execute(
+            _SQL_FILA_A_MATERIALIZAR, {"vid": valuation_line_id},
+        ).mappings().first()
+        if fila is None:
+            return
+        cambios = cambios_a_guardar(
+            CamposFila(**{c: fila[c] for c in _COLUMNAS_FILA_A_GUARDAR}),
+            _linea_de_la_fila(fila),
+            fila["concepto_blanca"],
+        )
+        if not cambios:
+            return
+        session.execute(
+            text(
+                "UPDATE albaran_line_valuations SET "
+                + ", ".join(f"{c} = :{c}" for c in cambios)
+                + " WHERE id = :vid"
+            ),
+            {**cambios, "vid": valuation_line_id},
+        )
+
     def _recalcular_total_in_session(self, session: Any, valuation_id: str) -> None:
         """Total de la cabecera = suma de los importes de sus filas, en
         céntimos (F-019 R26: ``ROUND``, que la suma en coma flotante arrastra
@@ -2396,7 +2479,7 @@ class AlbaranReviewRepository:
             ml = session.execute(
                 text(
                     "SELECT id, document_id, cantidad, concepto, "
-                    "       codigo_imputacion, precio, descuento "
+                    "       codigo_imputacion, precio, descuento, unidad_medida "
                     "FROM albaran_lines_merge WHERE id = :id"
                 ),
                 {"id": merge_line_id},
@@ -2446,7 +2529,8 @@ class AlbaranReviewRepository:
                 )
                 desc = descripcion or ml["concepto"]
                 partida = ml["codigo_imputacion"]
-                unidad_contrato = None
+                # (F-078 R13) En Nueva, la unidad de la blanca (fila y derivada).
+                unidad_contrato = ml["unidad_medida"]
                 source = "manual_derived"
                 did_val = session.execute(
                     text(
@@ -2455,7 +2539,7 @@ class AlbaranReviewRepository:
                         "  codigo_contrato, codigo_producto, descripcion_linea, "
                         "  unidad_medida, precio_unitario, codigo_partida, "
                         "  origen, created_at_utc) "
-                        "VALUES (:vid, :doc, :cod, NULL, :desc, NULL, :pu, "
+                        "VALUES (:vid, :doc, :cod, NULL, :desc, :uni, :pu, "
                         "  :part, 'manual_override', :now) "
                         "RETURNING id"
                     ),
@@ -2464,6 +2548,7 @@ class AlbaranReviewRepository:
                         "doc": document_id,
                         "cod": contrato_codigo or "",
                         "desc": desc,
+                        "uni": unidad_contrato,
                         "pu": precio,
                         "part": partida,
                         "now": now,
@@ -2512,7 +2597,7 @@ class AlbaranReviewRepository:
             if existing is None:
                 # Crear la linea de valoracion completa (todas las columnas
                 # NOT NULL cubiertas). line_kind=from_albaran.
-                session.execute(
+                fila_id = session.execute(
                     text(
                         "INSERT INTO albaran_line_valuations ("
                         "  valuation_id, merge_line_id, matched_contrato_line_id, "
@@ -2530,7 +2615,8 @@ class AlbaranReviewRepository:
                         "  :v, :m, :mid, :did, :pu, :pu, :src, 'manual', "
                         "  NULL, :uc, 'manual', TRUE, :can, :can, 1.0, :imp, "
                         "  'calculated', :part, :part, 'manual', :desc, "
-                        "  'from_albaran', 100.0, 'manual', FALSE, :dto, :now)"
+                        "  'from_albaran', 100.0, 'manual', FALSE, :dto, :now) "
+                        "RETURNING id"
                     ),
                     {
                         "v": valuation_id,
@@ -2547,11 +2633,12 @@ class AlbaranReviewRepository:
                         "dto": _sanear_descuento(ml["descuento"]),
                         "now": now,
                     },
-                )
+                ).scalar_one()
             else:
                 # Ya habia valoracion para esa linea: la re-apuntamos
                 # (al contrato o a la derivada nueva) como en
-                # set_line_conciliacion.
+                # set_line_conciliacion, con su concepto y su unidad (F-078 R13).
+                fila_id = existing["id"]
                 session.execute(
                     text(
                         "UPDATE albaran_line_valuations SET "
@@ -2560,6 +2647,8 @@ class AlbaranReviewRepository:
                         "  precio_unitario_final = :pu, "
                         "  precio_unitario_source = :src, "
                         "  precio_unitario_agreement = 'manual', "
+                        "  unidad_contrato = :uc, "
+                        "  descripcion_linea = :desc, "
                         "  importe_calculado = :imp, "
                         "  importe_source = 'calculated', "
                         "  review_required = FALSE "
@@ -2570,11 +2659,15 @@ class AlbaranReviewRepository:
                         "did": did_val,
                         "pu": precio,
                         "src": source,
+                        "uc": unidad_contrato,
+                        "desc": desc,
                         "imp": importe,
-                        "id": existing["id"],
+                        "id": fila_id,
                     },
                 )
 
+            # (F-078 R13, R16) La fila nace con lo que se va a ver.
+            self._materializar_fila_in_session(session, int(fila_id))
             # Recalcular total de la cabecera.
             self._recalcular_total_in_session(session, valuation_id)
             session.commit()
@@ -2825,6 +2918,8 @@ class AlbaranReviewRepository:
                         "now": now,
                     },
                 ).scalar_one()
+                # (F-078 R14, R16) Con la unidad de su línea en ``unidad_albaran``.
+                self._materializar_fila_in_session(session, int(nuevo_id))
                 creadas.append(int(nuevo_id))
 
             if creadas:
@@ -2863,7 +2958,7 @@ class AlbaranReviewRepository:
         - Cada parte k ≥ 2 nace ``reparto``, sin blanca propia y colgando de la
           de la original (``parent_merge_line_id``), con los campos de
           ``_COPIADAS_AL_DIVIDIR``, su descripción (la de la original, el
-          concepto de su blanca o el de su línea) para sv9 (CR1), sus
+          concepto de su blanca o el de su línea; ``fila_a_guardar``, F-078 R15), sus
           cantidades e importe (``repartir``), sin revisión y desbloqueada.
         - Origen (R32, la regla de editar): con la partida de la original, la
           de su línea de contrato o vacía (almacén), conserva origen y vínculo;
@@ -2885,7 +2980,8 @@ class AlbaranReviewRepository:
                     "       lv.cantidad_albaran, lv.cantidad_convertida, "
                     "       lv.importe_calculado, lv.precio_unitario_final, "
                     "       lv.precio_unitario_source, lv.precio_unitario_agreement, "
-                    "       lv.unidad_contrato, lv.descuento_albaran_aplicado, "
+                    "       lv.unidad_contrato, lv.unidad_albaran, "
+                    "       lv.factor_conversion, lv.descuento_albaran_aplicado, "
                     "       lv.codigo_partida_final, lv.partida_action, "
                     "       lv.descripcion_linea, lv.review_reasons_json, "
                     "       v.document_id, v.contrato_codigo "
@@ -2936,19 +3032,22 @@ class AlbaranReviewRepository:
                 text("SELECT concepto FROM albaran_lines_merge WHERE id = :id"),
                 {"id": padre},
             ).scalar() if padre is not None else None
-            # (O3 de la review) El texto que enseña la original: el fijado, el de
-            # su línea (de contrato o derivada) o, si no hay, el de su blanca.
-            descripcion = (
-                (row["descripcion_linea"] or "").strip()
-                or (casada.get("descripcion_linea") or "").strip()
-                or (concepto or "").strip()
-                or None
+            # (F-078 R15) Descripción, precio y unidad de la original: los que se
+            # guardan (``fila_a_guardar``: la regla con la que la ficha la enseña;
+            # una ``reparto`` no tiene blanca propia). Las partes nacen con ellos.
+            vista = fila_a_guardar(
+                CamposFila(**{c: row[c] for c in _COLUMNAS_FILA_A_GUARDAR}),
+                LineaDeLaFila(
+                    es_contrato=es_contrato,
+                    descripcion=casada.get("descripcion_linea"),
+                    unidad=casada.get("unidad_medida"),
+                    precio_unitario=casada.get("precio_unitario"),
+                ) if casada else None,
+                concepto if row["merge_line_id"] is not None else None,
             )
-            precio = (
-                row["precio_unitario_final"] if row["precio_unitario_final"] is not None
-                else casada.get("precio_unitario")
-            )
-            unidad = (row["unidad_contrato"] or "").strip() or casada.get("unidad_medida")
+            descripcion = vista.descripcion_linea
+            precio = vista.precio_unitario_final
+            unidad = vista.unidad_contrato
             q = (
                 row["cantidad_convertida"] if row["cantidad_convertida"] is not None
                 else row["cantidad_albaran"]
@@ -3014,9 +3113,13 @@ class AlbaranReviewRepository:
                 "part": primera.codigo_partida,
                 "almacen": ACCION_ALMACEN_ELEGIDO,
             }
+            # (F-078 R15) La original queda con su descripción (también si pasa
+            # a Nueva: la que se veía, R12).
+            params["desc"] = descripcion
             sets = [
                 "cantidad_albaran = :ca", "cantidad_convertida = :cc",
                 "importe_calculado = :imp", "importe_source = 'calculated'",
+                "descripcion_linea = :desc",
             ]
             if primera.codigo_partida != partida_actual:
                 sets.append("codigo_partida_final = :part")
@@ -3025,18 +3128,11 @@ class AlbaranReviewRepository:
                 if _pasa_a_nueva(primera.codigo_partida):
                     params["did"] = _derivada(primera.codigo_partida)
                     derivadas.append(params["did"])
-                    params["descval"] = descripcion_para_valoracion(
-                        descripcion=descripcion,
-                        sin_blanca=row["merge_line_id"] is None,
-                        editada=False,
-                        ya_fijada=bool(row["descripcion_linea"]),
-                    )
                     sets += [
                         "matched_contrato_line_id = NULL",
                         "derived_contrato_line_id = :did",
                         "precio_unitario_source = 'manual_derived'",
                         "precio_unitario_agreement = 'manual'",
-                        "descripcion_linea = :descval",
                     ]
                 elif not es_contrato:
                     # NUEVA: su partida vive también en su derivada.
@@ -3054,6 +3150,8 @@ class AlbaranReviewRepository:
                 ),
                 params,
             )
+            # (F-078 R16) Antes de copiarla: las partes heredan sus unidades.
+            self._materializar_fila_in_session(session, valuation_line_id)
 
             # ---- partes 2..N: filas «reparto» ----
             copiadas = dict(session.execute(
@@ -3104,6 +3202,7 @@ class AlbaranReviewRepository:
                     ),
                     valores,
                 ).scalar_one()))
+                self._materializar_fila_in_session(session, creadas[-1])
 
             self._recalcular_total_in_session(session, row["valuation_id"])
             session.commit()

@@ -204,3 +204,231 @@ def test_f078_r11_sin_cambiar_la_unidad_no_se_toca_unidad_albaran():
     _editar(motor, 11, cantidad=7.0)
 
     assert _columnas(motor, 11, "unidad_contrato", "unidad_albaran") == ("UD", "UDS")
+
+
+# =================================================================== #
+# R12 · «Origen ✎»
+# =================================================================== #
+def _reapuntar(motor, vid, **opciones):
+    return repositorio(motor).set_line_conciliacion(
+        document_id=DOC, valuation_line_id=vid, **opciones,
+    )
+
+
+def test_f078_r12_a_una_linea_de_contrato_trae_su_descripcion_y_su_unidad():
+    """Antes la descripción quedaba a NULL a propósito y la ficha pintaba la de la
+    línea; sv9 mandaba el concepto leído."""
+    motor = construir()
+
+    _reapuntar(motor, 12, mode="contract_line", matched_contrato_line_id=503)
+
+    assert _columnas(motor, 12, "matched_contrato_line_id", "descripcion_linea",
+                     "unidad_contrato", "unidad_albaran") == (
+        503, "PUERTA CORTAFUEGOS EI2-120", "UD", "UD")
+
+
+def test_f078_r12_si_su_linea_no_tiene_descripcion_conserva_la_que_tenia():
+    motor = construir()
+    ejecutar(motor, "UPDATE albaran_contrato_lines_merge SET descripcion_linea = '  ' "
+             "WHERE id = 503")
+    ejecutar(motor, "UPDATE albaran_line_valuations SET descripcion_linea = 'PUERTA "
+             "EI2-90 HOJA' WHERE id = 12")
+
+    _reapuntar(motor, 12, mode="contract_line", matched_contrato_line_id=503)
+
+    assert fila(motor, 12)["descripcion_linea"] == "PUERTA EI2-90 HOJA"
+
+
+def test_f078_r12_a_nueva_con_blanca_guarda_la_descripcion_que_se_veia():
+    """Sustituye a F-065 H1 («con blanca sin editar no fija descripción»)."""
+    motor = construir()
+
+    _reapuntar(motor, 11, mode="nueva")
+
+    f = fila(motor, 11)
+    assert f["derived_contrato_line_id"] is not None
+    assert f["descripcion_linea"] == "PUERTA CORTAFUEGOS EI2-60"
+    assert _columnas(motor, 11, "unidad_contrato", "unidad_albaran") == ("UD", "UD")
+
+
+def test_f078_r12_a_nueva_con_descripcion_tecleada_la_guarda():
+    motor = construir()
+
+    _reapuntar(motor, 11, mode="nueva", descripcion="PUERTA ESPECIAL")
+
+    assert fila(motor, 11)["descripcion_linea"] == "PUERTA ESPECIAL"
+
+
+# =================================================================== #
+# R13 · «+ a Sigrid» (y «Copiar sin casar → Nueva»)
+# =================================================================== #
+def _blanca_sin_valorar(motor):
+    ejecutar(motor, "INSERT INTO albaran_lines_merge (id, document_id, provider_origin, "
+             "line_index, concepto, cantidad, precio, precio_neto, unidad_medida, "
+             "codigo_imputacion) VALUES (704, :d, 'merge', 4, ' TORNILLOS M8 ', 2.0, "
+             "10.0, 20.0, 'CAJA', '05.01')", d=DOC)
+
+
+def _fila_de_blanca(motor, merge_line_id):
+    with Session(motor) as s:
+        return s.execute(text(
+            "SELECT id FROM albaran_line_valuations WHERE merge_line_id = :m"),
+            {"m": merge_line_id}).scalar_one()
+
+
+def test_f078_r13_contrato_nace_con_concepto_unidad_y_cantidades():
+    motor = construir()
+    _blanca_sin_valorar(motor)
+
+    assert repositorio(motor).add_conciliacion_for_merge_line(
+        document_id=DOC, merge_line_id=704, mode="contract_line",
+        matched_contrato_line_id=503) is True
+
+    vid = _fila_de_blanca(motor, 704)
+    assert _columnas(motor, vid, "descripcion_linea", "unidad_contrato", "unidad_albaran",
+                     "cantidad_albaran", "cantidad_convertida") == (
+        "TORNILLOS M8", "UD", "UD", 2.0, 2.0)
+
+
+def test_f078_r13_nueva_nace_con_la_unidad_de_la_blanca_tambien_en_la_derivada():
+    motor = construir()
+    _blanca_sin_valorar(motor)
+
+    repositorio(motor).add_conciliacion_for_merge_line(
+        document_id=DOC, merge_line_id=704, mode="nueva")
+
+    vid = _fila_de_blanca(motor, 704)
+    f = fila(motor, vid)
+    assert _columnas(motor, vid, "descripcion_linea", "unidad_contrato", "unidad_albaran",
+                     "cantidad_convertida") == ("TORNILLOS M8", "CAJA", "CAJA", 2.0)
+    d = _derivada(motor, f["derived_contrato_line_id"])
+    assert (d["descripcion_linea"].strip(), d["unidad_medida"]) == ("TORNILLOS M8", "CAJA")
+
+
+# =================================================================== #
+# R14 · «Traer líneas contrato»
+# =================================================================== #
+def test_f078_r14_traer_lineas_nacen_con_unidad_albaran():
+    motor = construir()
+
+    (vid,) = repositorio(motor).add_valuation_lines_from_contrato(
+        document_id=DOC, lineas=[(503, 5.0)])
+
+    assert _columnas(motor, vid, "descripcion_linea", "unidad_contrato", "unidad_albaran",
+                     "cantidad_convertida") == ("PUERTA CORTAFUEGOS EI2-120", "UD", "UD", 5.0)
+
+
+# =================================================================== #
+# R15 · «Dividir»
+# =================================================================== #
+def _dividir(motor, vid, *pares):
+    from domain.models.review_models import ParteDivision
+
+    return repositorio(motor).dividir_linea(
+        document_id=DOC, valuation_line_id=vid,
+        partes=[ParteDivision(cantidad=q, codigo_partida=p) for q, p in pares],
+    )
+
+
+def test_f078_r15_la_original_y_las_partes_quedan_con_su_descripcion_y_unidades():
+    motor = construir()
+
+    hecha = _dividir(motor, 11, (3.0, "01.01"), (5.0, "01.01"))
+
+    for vid in (11, *hecha.partes):
+        assert _columnas(motor, vid, "descripcion_linea", "unidad_contrato",
+                         "unidad_albaran") == ("PUERTA CORTAFUEGOS EI2-60", "UD", "UD"), vid
+
+
+def test_f078_r15_la_original_que_pasa_a_nueva_guarda_la_descripcion_que_se_veia():
+    """Sustituye a F-065 R32 («con blanca y sin descripción fijada: nula»)."""
+    motor = construir()
+
+    _dividir(motor, 12, (4.0, "01.03"), (6.0, "01.02"))
+
+    f = fila(motor, 12)
+    assert f["matched_contrato_line_id"] is None
+    assert f["descripcion_linea"] == "PUERTA CORTAFUEGOS EI2-90"
+
+
+def test_f078_r15_nueva_con_blanca_divide_con_el_concepto_del_papel():
+    """P1 = (b): la Nueva 13 (blanca «PORTES»), sin descripción propia y con una
+    derivada que dice otra cosa, se reparte con el concepto del papel."""
+    motor = construir()
+    ejecutar(motor, "UPDATE contrato_lines_derived SET descripcion_linea = 'TRANSPORTE' "
+             "WHERE id = 601")
+
+    (p2,) = _dividir(motor, 13, (0.5, "03.01"), (0.5, "03.01")).partes
+
+    assert fila(motor, 13)["descripcion_linea"] == "PORTES"
+    assert fila(motor, p2)["descripcion_linea"] == "PORTES"
+
+
+# =================================================================== #
+# R16 · toda vía que crea o reapunta deja la fila con fila_a_guardar aplicada
+# =================================================================== #
+def _pendiente(motor, vid):
+    """Lo que ``fila_a_guardar`` cambiaría en la fila tal como quedó."""
+    from ruesma_comun.linea_valorada import CamposFila, LineaDeLaFila, cambios_a_guardar
+
+    with Session(motor) as s:
+        r = s.execute(text(
+            "SELECT lv.descripcion_linea, lv.unidad_contrato, lv.unidad_albaran, "
+            "lv.precio_unitario_final, lv.cantidad_albaran, lv.cantidad_convertida, "
+            "lv.factor_conversion, cl.id AS cl_id, cl.descripcion_linea AS cl_d, "
+            "cl.unidad_medida AS cl_u, cl.precio_unitario AS cl_p, d.id AS d_id, "
+            "d.descripcion_linea AS d_d, d.unidad_medida AS d_u, d.precio_unitario AS d_p, "
+            "l.concepto FROM albaran_line_valuations lv "
+            "LEFT JOIN albaran_contrato_lines_merge cl ON cl.id = lv.matched_contrato_line_id "
+            "LEFT JOIN contrato_lines_derived d ON d.id = lv.derived_contrato_line_id "
+            "LEFT JOIN albaran_lines_merge l ON l.id = lv.merge_line_id WHERE lv.id = :id"),
+            {"id": vid}).mappings().one()
+    if r["cl_id"] is not None:
+        linea = LineaDeLaFila(True, r["cl_d"], r["cl_u"], r["cl_p"])
+    elif r["d_id"] is not None:
+        linea = LineaDeLaFila(False, r["d_d"], r["d_u"], r["d_p"])
+    else:
+        linea = None
+    campos = CamposFila(**{c: r[c] for c in (
+        "descripcion_linea", "unidad_contrato", "unidad_albaran", "precio_unitario_final",
+        "cantidad_albaran", "cantidad_convertida", "factor_conversion")})
+    return cambios_a_guardar(campos, linea, r["concepto"])
+
+
+def test_f078_r16_cada_via_deja_la_fila_materializada():
+    motor = construir()
+    _blanca_sin_valorar(motor)
+    repo = repositorio(motor)
+    ejecutar(motor, "UPDATE albaran_line_valuations SET factor_conversion = 1.0, "
+             "unidad_albaran = NULL, cantidad_convertida = NULL WHERE id = 13")
+
+    tocadas = []
+    repo.set_line_conciliacion(document_id=DOC, valuation_line_id=12, mode="contract_line",
+                               matched_contrato_line_id=503)
+    tocadas.append(12)
+    repo.set_line_conciliacion(document_id=DOC, valuation_line_id=13, mode="nueva")
+    tocadas.append(13)
+    repo.add_conciliacion_for_merge_line(document_id=DOC, merge_line_id=704, mode="nueva")
+    tocadas.append(_fila_de_blanca(motor, 704))
+    tocadas += repo.add_valuation_lines_from_contrato(document_id=DOC, lineas=[(501, 2.0)])
+    tocadas += [11, *_dividir(motor, 11, (2.0, "01.01"), (6.0, "07.07")).partes]
+
+    assert {vid: _pendiente(motor, vid) for vid in tocadas} == {vid: {} for vid in tocadas}
+
+
+def test_f078_r16_anadir_linea_nace_vacia_y_asi_se_ve():
+    motor = construir()
+
+    vid = repositorio(motor).add_standalone_valuation_line(document_id=DOC)
+
+    assert _columnas(motor, vid, "descripcion_linea", "unidad_contrato", "unidad_albaran",
+                     "precio_unitario_final") == (None, None, None, None)
+
+
+def test_f078_r16_el_patch_no_materializa_lo_vaciado():
+    motor = construir()
+    ejecutar(motor, "UPDATE albaran_line_valuations SET descripcion_linea = 'X' WHERE id = 11")
+
+    _editar(motor, 11, descripcion=None)
+
+    assert fila(motor, 11)["descripcion_linea"] is None
