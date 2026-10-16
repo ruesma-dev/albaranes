@@ -1,6 +1,15 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-076 · spec v1 escrita (2026-10-16, spec-author), PARADA 1 pendiente** — rama `feature/F-076-normalizar-partidas`
+(worktree `../albaranes-F-076`). Spec en `specs/F-076-normalizar-partidas/`; medición, propuesta y preguntas
+**P1–P11** en `progress/spec_F-076.md`. Hipótesis confirmada (0678 tiene `CI.4.18`; los dos albaranes de T51 ya los
+corrigió el humano a mano y están `simulado`). Medido: 35 de 74 finales no existen en su obra, 29 se arreglan con los
+ceros a la izquierda, 6 sin candidata. Propuesta por defecto: normalizar en sv6 al valorar con el subconjunto aprobado
+de F-049 portado a comun; sv4 lee la lista de comun; sv9 sin código. Decisiones abiertas para el humano: dónde (P1),
+reglas (P2), 0/>1 candidatas (P3), Sigrid caído (P4), lo existente (P5), relación con F-049 (P6), cambios de sv4
+(P7), evals (P8), rigor (P9), infra (P10), rastro (P11). Sin código tocado.
+
 **F-070 · CERRADA (`done`, 2026-10-15).** Desplegada en sv3, sv4 y sv9 (r20261015-0947) y verificada en pantalla por el
 humano (T13). Los merges antiguos con obra de 3 cifras los corrigió el humano a mano en la BBDD. Resumen en `history.md`.
 
