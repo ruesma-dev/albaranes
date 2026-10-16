@@ -826,15 +826,13 @@
                                        producto de aquí pintaba 6 × 120 = 720 €, un número que no
                                        está en la BBDD y que no cuadra con el total del documento.
                                        En ese caso se muestra el `importe_calculado` persistido,
-                                       que ya lleva su descuento aplicado. Si no lo hubiera, se
-                                       cae al producto: mejor eso que un hueco. #}
+                                       que ya lleva su descuento aplicado (sin él, vacío: F-078 R7). #}
                                     {# F-065 R12: SIEMPRE el importe guardado (también si la conversión es
-                                       reproducible); al teclear lo repinta el JS con la fórmula del backend. #}
-                                    {% set _imp_persistido = v.importe_calculado if (v and v.importe_calculado is not none) else none %}
-                                    {% set _imp_jinja = (dline.cantidad * c.unitario * (1 - (c.descuento or 0) / 100)) if (dline.cantidad is not none and c.unitario is not none) else none %}
-                                    <td class="concilia-td td-num" data-col="importe" data-sort-value="{{ (_imp_persistido if _imp_persistido is not none else _imp_jinja) if (_imp_persistido is not none or _imp_jinja is not none) else '' }}">
-                                        {% if _imp_persistido is not none or _imp_jinja is not none %}
-                                            {% set _imp = _imp_persistido if _imp_persistido is not none else _imp_jinja %}
+                                       reproducible); al teclear lo repinta el JS con la fórmula del backend.
+                                       F-078 R7: importe nulo = vacío; la plantilla ya no lo calcula. #}
+                                    {% set _imp = v.importe_calculado if (v and v.importe_calculado is not none) else none %}
+                                    <td class="concilia-td td-num" data-col="importe" data-sort-value="{{ _imp if _imp is not none else '' }}">
+                                        {% if _imp is not none %}
                                             {% if cedit %}
                                                 <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit" data-field="importe" data-numeric="1" value="{{ '%.2f'|format(_imp) }}" placeholder="—">
                                             {% elif c.agree_importe == false %}

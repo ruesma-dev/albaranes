@@ -1477,28 +1477,21 @@ class AlbaranReviewRepository:
             # contrato reciben su propio bloque de conciliación (uno-a-varios).
             for vid in matched_to_vlines.get(row["id"], []):
                 # (F-065 R9) La ficha pinta y edita el precio APLICADO (el de
-                # la valoración: sv6 deja la fila casada con el precio que
-                # declara el albarán aunque el contrato diga otro); el de la
-                # línea de contrato va aparte, para el title y los avisos.
+                # la valoración); el de la línea de contrato va aparte, para el
+                # title y los avisos.
+                # (F-078 R6–R8) Concepto, unidad y precio salen SOLO de la
+                # fila (vacío = vacío); su línea, para lo que no es de la fila.
                 unitario_contrato = row.get("precio_unitario")
                 precio_final = precio_final_by_vline.get(vid)
-                unitario = (
-                    precio_final if precio_final is not None else unitario_contrato
-                )
                 _vl = vline_by_vid.get(vid)
-                # Edición salmon (jun 2026): si el revisor editó la
-                # descripción de una fila Sigrid SIN convertirla a Nueva,
-                # quedó guardada en lv.descripcion_linea (sv6 la deja a
-                # NULL en líneas from_albaran, así que no hay colisión).
-                _desc_override = getattr(_vl, "descripcion_linea", None)
                 out[vid] = ConciliacionDisplay(
                     kind="assigned",
-                    descripcion=_desc_override or row.get("descripcion_linea"),
-                    unitario=unitario,
+                    descripcion=getattr(_vl, "descripcion_linea", None),
+                    unitario=precio_final,
                     unitario_contrato=unitario_contrato,
                     medicion_total=row.get("uds"),
                     medicion_pendiente=row.get("pendiente_servir"),
-                    unidad=row.get("unidad_medida"),
+                    unidad=getattr(_vl, "unidad_contrato", None),
                     codigo_partida=row.get("codigo_partida"),
                     descripcion_partida=row.get("descripcion_partida"),
                     price_agreement=self._price_agreement(
@@ -1524,16 +1517,18 @@ class AlbaranReviewRepository:
             session, list(derived_to_vlines.keys())
         ):
             for vid in derived_to_vlines.get(row["id"], []):
+                # (F-078 R6–R8) Lo de la fila; la derivada, solo referencia.
                 unitario = row.get("precio_unitario")
                 precio_final = precio_final_by_vline.get(vid)
+                _vl = vline_by_vid.get(vid)
                 out[vid] = ConciliacionDisplay(
                     kind="derived",
-                    descripcion=row.get("descripcion_linea"),
-                    unitario=unitario,
+                    descripcion=getattr(_vl, "descripcion_linea", None),
+                    unitario=precio_final,
                     unitario_contrato=unitario,
                     medicion_total=row.get("uds"),
                     medicion_pendiente=None,  # derived: no hay pendiente
-                    unidad=row.get("unidad_medida"),
+                    unidad=getattr(_vl, "unidad_contrato", None),
                     codigo_partida=row.get("codigo_partida"),
                     descripcion_partida=row.get("descripcion_partida"),
                     price_agreement=self._price_agreement(unitario, precio_final),
