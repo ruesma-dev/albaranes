@@ -1,14 +1,29 @@
-Revisión completa (pasada 1): `dev...e214dec` (base de alcance `d79b3d9`) y el commit `78a67aa` de `arnes-base` (`main`, sin push)
+Revisión incremental desde 09dbfd1 (pasada 2): `09dbfd1..4b42f32` y `arnes-base` `78a67aa..8f72cdc`. La pasada 1 (completa) va debajo
 <!-- progress/review_F-072.md -->
 # F-072 · La caché de suites tiene en cuenta las dependencias · review
 
-## Veredicto: CHANGES_REQUESTED
+## Pasada 2 · veredicto: APPROVED
+**Condición de cierre (`critico`), NO cumplida todavía:** falta la **aceptación escrita del humano de los equivalentes
+3 y 5** (`text=False` con `encoding=`) antes de marcar `done`. Después, la MANUAL T16 en el árbol principal tras fusionar.
 
-El código de producción está bien y **no hay que tocarlo**. Lo que se rechaza son cuatro arreglos pequeños de papeleo y
-del porte, dos de ellos justo lo que el líder pidió vigilar: coherencia de versión en `arnes-base` y porte genérico.
-Ninguno obliga a repetir la campaña de mutación. La pasada 2 será incremental.
-**Condición de cierre que sigue en pie** (`critico`): la aceptación escrita del humano de los equivalentes 3 y 5, y
-después la MANUAL T16.
+- **Delta:** `4b42f32` solo toca `progress/impl_F-072.md`, `progress/current.md` y una línea de `design.md`.
+  `git diff 09dbfd1..HEAD -- harness services tests` está **vacío**: no cambia producción ni ningún test, así que lo
+  aprobado en la pasada 1 sigue en pie (campaña sobre `576f464`, RM1 intacto, sin campaña nueva).
+- **CR1** [x] `GUIA_INSTALACION.md`: «(1.7.16, 2026-10-16)», igual que `ARNES_FECHA=2026-10-16` de `VERSION`.
+- **CR2** [x] `test_servicios_dependencias.py` de `arnes-base`: 0 apariciones de `ruesma_comun` (`comun` en su lugar).
+  Commit `8f72cdc` en `main`, local, sin push, y solo con esos 2 ficheros. Los tres ficheros portados siguen idénticos
+  (`diff --strip-trailing-cr`). La suite entera del payload, ejecutada por mí: `509 passed, 2 skipped`.
+- **CR3** [x] «Evidencias»: 154 tests (50 + 43 + 26 + 14 + 12 + 9) con los 6 nuevos, 148 antes. La sección de
+  mutación lo aclara.
+- **CR4** [x] `design.md` sin la marca: 250/250 líneas. En `init.sh`, «Marcas … sin resolver» ya no lista F-072
+  (solo F-034 y F-035).
+- **`bash harness/init.sh` entero en el worktree:** `ENTORNO LISTO`, exit 0. Raíz `1237 passed`; sv1 205, sv2 397,
+  sv3 703, sv4 1427, sv5 43, sv6 295, sv9 654, todas con el AVISO de R13 (7 de 7); comun de caché; cobertura `[OK]`
+  100 % (202/202); tamaño impl 205/220 y review dentro del tope. `git status` limpio.
+- Checkpoints: los de la pasada 1 siguen igual, y el `[ ]` de Evidencias pasa a `[x]`. Todos marcados. Queda abierta la
+  aceptación del humano, que es la condición de cierre de arriba y no se da por hecha.
+
+## Pasada 1 · veredicto: CHANGES_REQUESTED (resuelto en la pasada 2)
 
 ## Nivel de rigor
 
@@ -110,15 +125,10 @@ temporales (`git status` limpio) · [x] `features.json` en `in_progress`.
    `done` (pasa igual con F-034 y F-035). Hay que reescribirlo sin la marca (por ejemplo, «la cabecera adaptable») y
    comprobar que el design sigue ≤ 250 líneas.
 
-No hay que repetir la campaña: ningún cambio toca `harness/cache_suites.py` ni `harness/servicios.py`. Tampoco hace
-falta otra corrida de `init.sh` larga más allá de la de cierre del implementer.
-
 ## Observaciones (no bloquean)
 
 - La clave no cambia si se actualizan paquetes dentro del mismo venv (`pip install`), porque la ruta del intérprete es
   la misma. Ni la spec ni el encargo 1.7.12 lo piden. Lo anoto como posible mejora del taller.
-- `ruff` sigue con 1272 avisos (1271 en `dev`); el nuevo es el `TRY004` de `_lista`, que R3 obliga a lanzar como
-  `ValueError`.
 
 ## Automejora (propuesta, no aplicada)
 
