@@ -24,6 +24,7 @@ from sqlalchemy import (
 
 from ruesma_comun.alta_sigrid import ESTADOS_ALTA_BLOQUEANTES, es_linea_vinculada
 from ruesma_comun.importes import clasificar_descuento, importe_de_linea
+from ruesma_comun.linea_valorada import sin_conversion
 from ruesma_comun.obras import canonizar_codigo_obra
 from ruesma_comun.valoracion import esta_valorado
 
@@ -1926,6 +1927,11 @@ class AlbaranReviewRepository:
           ``manual_override``); en una Nueva se edita la derivada in situ.
         - ``bloquear`` (R13): «Guardar» = aplicar y bloquear, en la misma
           transacción, aunque no haya cambios.
+        - (F-078 R9–R11) El estado actual es el de la FILA (no se completa con
+          su línea); la descripción cambiada va a ``descripcion_linea`` en toda
+          fila y la unidad cambiada, sin conversión, también a
+          ``unidad_albaran``. No aplica ``fila_a_guardar``: lo vaciado se ve
+          vacío (R16).
 
         NO revalora. Devuelve True si la fila es del documento.
         """
@@ -1966,32 +1972,26 @@ class AlbaranReviewRepository:
             if matched_id is None and derived_id is None:
                 return False
 
-            # ---- estado ACTUAL (lo que pinta la ficha) ----
+            # ---- estado ACTUAL: el de la FILA (F-078 R9) ----
+            # Lo que la fila no tiene no se completa con su línea: la ficha lo
+            # pinta vacío (R7) y así se guarda.
             # (F-051 D1) La partida actual es la FINAL: vacía = almacén.
             cur_partida = _txt(row["codigo_partida_final"]) or None
             cur_unidad = row["unidad_contrato"]
             cur_precio = row["precio_unitario_final"]
-            cur_desc = row["descripcion_linea"]  # override si lo hubiera
+            cur_desc = row["descripcion_linea"]
             tabla_casada = (
                 "albaran_contrato_lines_merge" if matched_id is not None
                 else "contrato_lines_derived"
             )
-            linea_casada = session.execute(
+            # Su línea, solo por su partida (R20/R25: poner la de su línea no
+            # cambia el origen).
+            partida_casada: str | None = session.execute(
                 text(
-                    "SELECT codigo_partida, descripcion_linea, "
-                    "       unidad_medida, precio_unitario "
-                    f"FROM {tabla_casada} WHERE id = :id"  # noqa: S608
+                    f"SELECT codigo_partida FROM {tabla_casada} WHERE id = :id"  # noqa: S608
                 ),
                 {"id": matched_id if matched_id is not None else derived_id},
-            ).mappings().first()
-            partida_casada: str | None = None
-            if linea_casada is not None:
-                partida_casada = linea_casada["codigo_partida"]
-                cur_unidad = cur_unidad or linea_casada["unidad_medida"]
-                if cur_precio is None:
-                    cur_precio = linea_casada["precio_unitario"]
-                if not cur_desc:
-                    cur_desc = linea_casada["descripcion_linea"]
+            ).scalar()
             q_actual = (
                 row["cantidad_convertida"]
                 if row["cantidad_convertida"] is not None
@@ -2086,6 +2086,15 @@ class AlbaranReviewRepository:
             if quita_aviso:
                 sets.append("review_reasons_json = :razones")
                 params["razones"] = razones
+            # (F-078 R10) La descripción cambiada va a la fila en TODA fila
+            # (Contrato o Nueva, con o sin blanca); vaciarla la deja vacía.
+            if "descripcion" in cambios:
+                sets.append("descripcion_linea = :desc")
+                params["desc"] = nuevo["descripcion"]
+            # (F-078 R11) La unidad cambiada, también la del albarán sin
+            # conversión (la que manda sv9 en una sin vincular).
+            if "unidad" in cambios and sin_conversion(row["factor_conversion"]):
+                sets.append("unidad_albaran = :uni")
 
             # ---- importe: solo si cambia lo que entra en él (R11) ----
             cambia_importe = bool({"cantidad", "precio_unitario", "descuento"} & set(cambios))
@@ -2105,14 +2114,6 @@ class AlbaranReviewRepository:
             # ---- origen ----
             elige_almacen = (
                 "codigo_partida" in cambios and nuevo["codigo_partida"] is None
-            )
-            # (F-065 CR1, H1) La descripción de una Nueva en la valoración: la
-            # que lee sv9 antes que el concepto de la blanca.
-            params["descval"] = descripcion_para_valoracion(
-                descripcion=nuevo["descripcion"],
-                sin_blanca=row["merge_line_id"] is None,
-                editada="descripcion" in cambios,
-                ya_fijada=bool(row["descripcion_linea"]),
             )
             # (F-065 R25, R26) partida, precio o unidad ⇒ Nueva, sin
             # confirmación; vaciar (almacén) o la de su línea, no.
@@ -2151,7 +2152,6 @@ class AlbaranReviewRepository:
                     "derived_contrato_line_id = :did",
                     "precio_unitario_source = 'manual_derived'",
                     "precio_unitario_agreement = 'manual'",
-                    "descripcion_linea = :descval",
                 ]
             elif derived_id is not None:
                 # NUEVA: edición in situ de la derivada.
@@ -2175,20 +2175,7 @@ class AlbaranReviewRepository:
                 sets += [
                     "precio_unitario_source = 'manual_derived'",
                     "precio_unitario_agreement = 'manual'",
-                    "descripcion_linea = :descval",
                 ]
-            elif "descripcion" in cambios:
-                # CONTRATO sin cambio de identidad: la descripción, si difiere
-                # de la de la línea de contrato, se guarda como override.
-                desc_contrato = (
-                    _txt(linea_casada["descripcion_linea"]) if linea_casada else ""
-                )
-                params["descov"] = (
-                    nuevo["descripcion"]
-                    if nuevo["descripcion"] != desc_contrato
-                    else None
-                )
-                sets.append("descripcion_linea = :descov")
 
             if elige_almacen:
                 sets.append("partida_action = :accion_almacen")
