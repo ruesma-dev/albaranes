@@ -3,7 +3,7 @@
 
 El portero (`harness/init.sh`, sección 7 bis) se salta la suite de un servicio
 si nada de lo que puede cambiar su resultado ha cambiado desde su último verde.
-Hasta F-072 la clave era solo el árbol del servicio en `HEAD`, y eso dejaba
+Antes de la 1.7.16 la clave era solo el árbol del servicio en `HEAD`, y eso dejaba
 fuera lo que el servicio importa de otras carpetas: un commit en la librería
 común no invalidaba la caché de quien la usa, y en un worktree la suite
 importaba la común de OTRO árbol mientras el portero daba verde por caché.

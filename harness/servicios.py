@@ -53,13 +53,13 @@ class Servicio:
     lenguaje: str
     venv: str | None = None
     comando_tests: str | None = None
-    #: Rutas del repositorio de las que depende su suite (F-072): un commit en
+    #: Rutas del repositorio de las que depende su suite (1.7.16): un commit en
     #: cualquiera de ellas invalida la caché del servicio.
     depende_de: tuple[str, ...] = ()
-    #: Módulos cuya ruta real se comprueba antes de servir la caché (F-072).
+    #: Módulos cuya ruta real se comprueba antes de servir la caché (1.7.16).
     importa: tuple[str, ...] = ()
     #: Ficheros no versionados cuya huella (metadatos, nunca contenido) entra
-    #: en la clave de la caché (F-072).
+    #: en la clave de la caché (1.7.16).
     entradas_no_versionadas: tuple[str, ...] = ()
 
 
