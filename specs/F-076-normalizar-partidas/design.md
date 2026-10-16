@@ -43,6 +43,7 @@ Alternativas descartadas (detalle en `progress/spec_F-076.md` §3):
 | `services/albaran-valoracion-persist/infrastructure/sigrid/__init__.py` + `sigrid_api_lector.py` | `SigridApiLector` (§5.3) |
 | `services/albaran-valoracion-persist/tests/test_f076_*.py` | R7–R14, R17, R18 (sobres de fixture, puertos falsos) |
 | `services/albaranes-front/tests/test_f076_partidas_sv4.py` | R15 (mismas filas ⇒ mismos `items`) |
+| `services/albaranes-front/tests/test_f076_aviso_partida.py` | R23–R25 (función pura + render de la plantilla) |
 | `services/albaranes-alta-sigrid/tests/test_f076_partida_final.py` | R16 |
 | `infra/set_partidas_sv6.ps1` | R19 (UTF-8 BOM, CRLF; patrón de `set_alta_sigrid.ps1`) |
 | `services/albaran-valoracion-persist/scripts/medir_f076_partidas.py` | R22: script puntual de medición (`print` permitido) |
@@ -59,6 +60,9 @@ Alternativas descartadas (detalle en `progress/spec_F-076.md` §3):
 | `services/albaran-valoracion-persist/interface_adapters/composition.py` y `interface_adapters/api/app.py` | cablear lector, caché y normalizador (los dos puntos de entrada) |
 | `services/albaran-valoracion-persist/sv6.md` | sección corta F-076 |
 | `services/albaranes-front/infrastructure/sigrid/sigrid_lookup_client.py` | `fetch_partidas_por_obra` usa comun (R15); fuera `_SQL_PARTIDAS_POR_OBRA` y el cálculo de hojas |
+| `services/albaranes-front/domain/models/review_models.py` | `coincide_partida` (§5.4) y campo `partida_normalizada_desde` en `ConciliacionDisplay` |
+| `services/albaranes-front/infrastructure/database/review_repository.py` | `_agree_txt` (~L4567, uso ~L4641) y `_txt` (~L4780, uso ~L4787) solo para la partida: `coincide_partida` |
+| `services/albaranes-front/templates/document_detail.html` | `title` de la casilla de partida (~L742 editable, ~L750 y ~L752 solo lectura): nota de R24 |
 | `infra/create_capps.ps1` | bloque sv6: secreto `sigrid-key` y variables de R17 |
 | `docs/ARCHITECTURE.md` | regla 22 (nueva) y «Acceso a datos» |
 | `harness/features.json`, `progress/` | estado e informes |
@@ -67,7 +71,7 @@ Alternativas descartadas (detalle en `progress/spec_F-076.md` §3):
 **NO se tocan**: `partida_matcher.py` y `valuation_builder.py` (reciben el sobre ya normalizado: cero cambios en
 sus reglas); sv5 (sus modelos y prompts); sv9 (`validador_alta.py` ya manda `codigo_partida_final`); sv3 y sv2;
 `ruesma_comun.obras` (se usa `canonizar_codigo_obra` de F-070 tal cual); `ruesma_comun.alta_sigrid`; los combos y
-el guardado de sv4 (F-065); `harness/rutas_sensibles.json` (ya cubre `application/services/**` de sv6).
+el guardado de sv4 (F-065), el JS de la ficha (✓/⚠ los pinta el servidor) y los demás `agree_*`; `harness/rutas_sensibles.json` (ya cubre `application/services/**` de sv6).
 
 ## 4. SQL
 
@@ -130,6 +134,17 @@ class NormalizadorPartidas:
   la clave ni el cuerpo (R18).
 - `ValuationRepository.obra_del_documento`: §4; sin fila ⇒ `None`.
 
+### 5.4 sv4 · aviso ✓/⚠ por la clave (ampliación aprobada, R23–R25)
+
+`review_models.coincide_partida(declarada, esperada) -> tuple[bool | None, str | None]` (pura, dominio de sv4):
+vacías ⇒ `(None, None)`; `normalizar_partida(d) == normalizar_partida(e)` ⇒ `(True, d.strip())` si difieren
+literalmente, `(True, None)` si son iguales; si no ⇒ `(False, None)`. El repositorio la usa para la partida en los
+dos sitios (`agree_partida` y `partida_normalizada_desde`); `_agree_txt` y `_txt` siguen para los otros campos. La
+plantilla compone el `title`: `descripcion_partida` y, si hay `partida_normalizada_desde`, « · Normalizada:
+{desde} → {codigo_partida}» (escapado por Jinja). Por qué en sv4 y no en sv6: el aviso compara la leída del merge,
+que F-076 conserva a propósito (regla 6); la clave es la de comun, así que ✓ significa lo mismo que lo que sv6
+normaliza. Sin lista de la obra: no hace falta, compara dos códigos entre sí.
+
 ## 6. Flujo en `RunValuationPipeline.run`
 
 1. (igual) duplicado sin `force` ⇒ devuelve la existente; llamada a sv5 y sus errores.
@@ -165,6 +180,12 @@ ese secreto (sv3, sv4 y sv9 lo usan). Lo lanza el humano.
   `n.envelope` porque el paso 2 va antes de la rama `no_contract`; debe llamar a `anotar` con sus líneas. Quien
   fusione segundo lo integra (nota en `progress/spec_F-076.md`).
 - **F-058**: revalorar para corregir lo existente pierde lo manual (P5). **F-067**: sin solape (no tiene código).
+- **F-077** (`../albaranes-F-077`, solo sv4, `spec_ready`): sus R20–R22 ponen en el ⚠ de partida el `title` «No
+  coincide con la partida leída en el albarán (X)» con `aviso_partida` y dicen que «el cálculo de `agree_partida` no
+  cambia». F-076 sí lo cambia (R23): con las dos, el ⚠ (y su texto de F-077) sale solo con clave distinta y el ✓
+  normalizado lleva la nota de R24. Mismas líneas de `review_repository.py` y `document_detail.html`: quien fusione
+  segundo compone los dos `title` (⚠ ⇒ el de F-077; ✓ normalizado ⇒ el de R24) y ajusta R22 de F-077. F-077 no
+  se toca desde aquí.
 
 ## 9. Despliegue
 

@@ -1,7 +1,7 @@
 <!-- specs/F-076-normalizar-partidas/requirements.md -->
 # F-076 · La partida se normaliza contra las de la obra · Requisitos (v1, 2026-10-16)
 
-Servicios: **comun**, **sv6** (normaliza al valorar) y **sv4** (solo refactor: lee la lista de comun). sv9 sin código.
+Servicios: **comun**, **sv6** (normaliza al valorar) y **sv4** (lee la lista de comun; aviso ✓/⚠ por la clave). sv9 sin código.
 Rigor `critico` (lo que sv6 fija es lo que sv9 escribe en Sigrid). Decisiones abiertas P1–P11 en
 `progress/spec_F-076.md` §4; aquí va la opción por defecto de cada una.
 
@@ -64,6 +64,18 @@ Vocabulario: **lista** = partidas HOJA de la obra en Sigrid (`obrparpar`, empres
 - R15. `/api/sigrid/partidas` debe devolver, para las mismas filas, los mismos `items` que hoy, construidos con
   comun (sin SQL ni cálculo de hojas propios en sv4). Cambios aceptados (P7): solo partidas de la empresa 1, y SI la
   lista llega truncada, ENTONCES `ok=false`.
+
+## C2. sv4 · el aviso ✓/⚠ de la partida compara por la clave (ampliación aprobada, 2026-10-16)
+
+- R23. El aviso de partida de la fila de conciliación (`agree_partida`: con línea del albarán, la leída frente a la
+  partida de su línea de contrato o derivada; sin ella, la final frente a esa misma) debe comparar con
+  `normalizar_partida` de comun, sin copia: misma clave ⇒ `true` (✓); clave distinta ⇒ `false` (⚠); una de las dos
+  vacía ⇒ `None` (sin icono, como hoy). Leída `CI.04.18` frente a `CI.4.18` ⇒ ✓.
+- R24. CUANDO coinciden por la clave pero NO literalmente (sin espacios exteriores), la fila debe llevar
+  `partida_normalizada_desde` = la leída (o la final, sin línea del albarán) y la ficha añadir al `title` de la casilla
+  de partida (editable y de solo lectura) «Normalizada: {X} → {Y}» tras la descripción de hoy. Literalmente
+  iguales o ⚠ ⇒ sin nota (el ⚠ queda solo cuando de verdad no coinciden).
+- R25. Los avisos de cantidad, unitario e importe no deben cambiar.
 
 ## D. sv9 · sin código
 

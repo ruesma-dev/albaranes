@@ -1,7 +1,7 @@
 <!-- progress/spec_F-076.md -->
 # F-076 · Normalizar partidas contra las de la obra · Spec v1 y PARADA 1 (2026-10-16)
 
-Spec: `specs/F-076-normalizar-partidas/` (requirements 97/150, design 185/250, tasks T1–T20). Rama
+Spec: `specs/F-076-normalizar-partidas/` (requirements 106/150, design 205/250, tasks T1–T20 + T5b). Rama
 `feature/F-076-normalizar-partidas`, worktree `../albaranes-F-076`, desde `dev` `148b1e9`. Sin código tocado.
 `features.json`: F-076 `spec_ready`, rigor `critico`, prioridad 1, servicios comun, sv6, sv4.
 
@@ -136,3 +136,30 @@ migración por script.
 ## 6. PARADA 1: APROBADA (2026-10-16)
 
 El humano aprueba la propuesta con las opciones por defecto de P1 a P11 («si. apruebo»). La implementación espera turno: máximo una feature `in_progress` (ahora F-072).
+
+## 6. Ampliación aprobada (2026-10-16)
+
+**Petición del humano** (vía el líder): si la partida final es la versión normalizada de la leída (leída `CI.04.18`,
+final `CI.4.18`), el aviso de la ficha de sv4 debe salir ✓ y no ⚠; nota «normalizada» opcional en el `title`; el ⚠
+solo cuando de verdad no coinciden; con la clave de comun, sin copia.
+
+**Hallazgo al leer el código**: `agree_partida` no compara leída con final, sino la **leída** (`codigo_imputacion`
+del merge) con la partida de la **línea de contrato o derivada casada** (`codigo_partida_casada`); en las filas sin
+línea del albarán, la **final** con esa misma. Compara literal (`strip() ==`) en dos sitios de `review_repository.py`
+(`_agree_txt` ~L4567/L4641 y `_txt` ~L4780/L4787). Con F-076 la casada queda en la forma de la lista (`CI.4.18`) y la
+leída se conserva (`CI.04.18`): sin este cambio, cada línea normalizada saldría ⚠.
+
+**Qué se añade a la spec**:
+- R23–R25 (requirements §C2): la partida compara por `normalizar_partida`; misma clave ⇒ ✓, distinta ⇒ ⚠, vacía
+  ⇒ sin icono; con nota «Normalizada: X → Y» en el `title` solo si difieren literalmente; los demás avisos, igual.
+- Diseño §5.4: función pura `review_models.coincide_partida` (sv4, dominio) que usa la clave de comun; campo
+  `partida_normalizada_desde` en `ConciliacionDisplay`; plantilla ~L742–L752. ✓/⚠ los pinta el servidor (el JS no
+  los recalcula).
+- Tarea **T5b** con su fase RED (`test_f076_r23_leida_normalizada_es_coincidente`: hoy da False, debe dar True).
+- sv4 pasa a tener cambio de comportamiento visible, además del refactor de R15: P9 sigue siendo `critico`.
+
+**Solape con F-077** (`../albaranes-F-077`, solo sv4, `spec_ready`, sin código): sus R20–R22 ponen sobre ese mismo
+⚠ el `title` «No coincide con la partida leída en el albarán (X)» y su R22 dice que el cálculo de `agree_partida` no
+cambia. F-076 lo cambia. Compatibles en conducta (⚠ y su texto solo con clave distinta; ✓ normalizado con la nota de
+F-076), pero tocan las mismas líneas de `review_repository.py` y `document_detail.html`: **quien fusione segundo
+compone los dos `title` y ajusta R22 de F-077** (design §8). F-077 no se ha tocado.
