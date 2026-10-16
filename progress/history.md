@@ -5,6 +5,30 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-072 · Arnés: la caché de suites de init.sh tiene en cuenta las dependencias (cerrada 2026-10-16)
+
+Rama `feature/F-072-cache-con-dependencias`, rigor `critico`, arnés (`harness/cache_suites.py`, `init.sh` §7 bis,
+`servicios.json`). **Problema**: la caché por servicio solo miraba la carpeta del servicio; un cambio en la comun no
+invalidaba sv1–sv9. **Arreglo**: la clave de cada suite incluye sus dependencias declaradas (`depende_de`, `importa`,
+`entradas_no_versionadas`), el intérprete y la huella del `.env` por metadatos; `[AVISO]` sin caché si un módulo viene
+de fuera del repo; `ARNES_SIN_CACHE=1` para forzar. Review APROBADA en la pasada 2 (equivalentes 3 y 5 aceptados por el
+humano). Porte a `arnes-base` 1.7.16 (commits locales `78a67aa` y `8f72cdc`, sin push). MANUAL T16 del humano en verde
+(2026-10-16): en `dev`, sv1–sv9 y comun desde caché; con un comentario en la comun, los ocho vuelven a ejecutar su suite.
+
+
+## F-053 · Alta en Sigrid de los albaranes aprobados (cerrada 2026-10-16)
+
+Rama `feature/F-053-alta-sigrid`, rigor `critico`, servicio nuevo **sv9** (`ca-sv9-alta-sigrid`, consume `q-feedback`)
+más sv4 (panel «Alta en Sigrid», bloqueo de lo registrado), sv6, sv3 y comun. Al aprobar, sv9 da de alta el albarán
+en Sigrid vía sigrid-api (previa y commit, idempotente por `referencia_externa`), cuelga el PDF y guarda el
+resultado en `albaran_altas_sigrid`; lo registrado queda bloqueado en la app. v8: `usu` = login de quien aprueba o
+respaldo `pgris`. Fases 1, 2 y v8 APROBADAS. Pruebas: T26–T27c en local (agente, por delegación); T51 y T29 en Azure
+por el humano: primera grabación real `AC26/29714` correcta e idempotencia en verde (2026-10-16). T0 y T28
+descartadas por el humano. Hallazgos que abren features: partida con cero a la izquierda (F-076), líneas cuya
+descripción no estaba guardada (F-078), ficha desfasada tras aprobar y motivos invisibles (F-077), aviso de
+descripción en líneas vinculadas (F-079). **Escritura apagada** (`COMMIT=false`) hasta desplegar F-078, F-076 y F-077.
+
+
 ## F-070 · La obra siempre con el 0 inicial, salvo VAR y POSTV2 (cerrada 2026-10-15)
 
 Rama `feature/F-070-obra-con-cero-inicial`, rigor `critico`, comun + sv3 + sv4 + sv9. **Problema**: HERMANOS SAN JUAN con
