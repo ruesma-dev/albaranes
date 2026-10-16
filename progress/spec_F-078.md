@@ -112,8 +112,8 @@ por defecto, conversiones reales en filas sin vincular, la descripción de las v
 
 ## 6. Riesgos
 
-- sv4 desplegado antes del relleno pintaría vacías 93 descripciones (por eso el orden). - Cambia lo que iría a
-  Sigrid en 16 filas (P1). - «Deshacer» de acciones anteriores restaura filas con huecos (se ven vacías; relleno
+- sv4 desplegado antes del relleno pintaría vacías 93 descripciones (por eso el orden). - Con P1 = (b) (aprobada) no
+  cambia lo que va a Sigrid; la ficha pasa a enseñar el concepto del papel en 16 filas (antes, el de la derivada). - «Deshacer» de acciones anteriores restaura filas con huecos (se ven vacías; relleno
   idempotente). - El relleno escribe en documentos aprobados (35 filas) sin cambiar lo que enseña la ficha.
 
 ## 7. Preguntas (opción por defecto en negrita; la spec está escrita con ella)
@@ -139,3 +139,22 @@ por defecto, conversiones reales en filas sin vincular, la descripción de las v
 9. **P9 · Último respaldo del concepto**: si ni la fila ni su línea tienen texto, **sv6 y el relleno guardan el
    concepto de la blanca (lo que sv9 manda hoy)** (1 fila hoy). Alternativa: dejarla vacía.
 10. **P10 · Alcance y rigor**: **servicios comun, sv6 y sv4; sv9 sin código; rigor `critico`; prioridad 1**.
+
+## PARADA 1: APROBADA (2026-10-16)
+
+Decisiones del humano (vía el líder):
+
+- **P1 = (b)**: en las Nueva que sv6 crea desde una línea de contrato (y, por la misma regla, toda Nueva con blanca
+  sin descripción propia) se guarda el **concepto del papel** (p. ej. «DISCO C/ACERO 230 BOSCH»); la ficha pasa a
+  enseñar ese y es el que va a Sigrid. La spec, escrita con (a), queda ajustada: glosario «Lo que se guarda» y
+  función `fila_a_guardar` (antes `fila_como_se_ve`), R2, R19, R25; design §3 y D1; tasks T2 y T13. Efecto en las
+  **16 filas** de §3: lo que manda sv9 no cambia (ya mandaba el concepto del papel); lo que pinta la ficha sí (la
+  385 pasa de «MORTERO M-5» a «Mortero M-5»; las 13 de ferretería, de «MATERIAL DE FERRETERIA» a su concepto; la 545,
+  a «Puesta de contenedor de 6 m3 (Nº contenedor 947)»). Las Nueva sin blanca (manual, reparto, sintéticas) siguen
+  con la descripción de su derivada.
+- **P8**: fuera de F-078; registrada en `dev` como **F-079** (pending, sv4: avisar al editar la descripción de una
+  línea vinculada a contrato). Referenciada en design D5.
+- **P2–P7, P9, P10**: opción por defecto (la que ya fijaba la spec).
+
+Estado: `spec_ready` (aprobada). No se implementa todavía: espera turno (F-072 está `in_progress`).
+

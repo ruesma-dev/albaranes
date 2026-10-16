@@ -1,15 +1,14 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-078 · spec v1 escrita (2026-10-16, spec-author), PARADA 1 pendiente** — rama `feature/F-078-linea-guarda-lo-que-se-ve`
+**F-078 · spec v1 APROBADA (PARADA 1, 2026-10-16: P1 = (b) concepto del papel en las Nueva con blanca; P8 → F-079; resto por defecto); espera turno (F-072 `in_progress`)** — rama `feature/F-078-linea-guarda-lo-que-se-ve`
 (worktree `../albaranes-F-078`). Spec en `specs/F-078-linea-guarda-lo-que-se-ve/`; caso, inventario, medición, propuesta
 y preguntas **P1–P10** en `progress/spec_F-078.md`. Medido (solo lectura, 105 filas de 42 documentos): 93 filas sin
 descripción que la ficha rellena (6 que sv9 rechazaría, 16 en que mandaría otro texto que el visible), 7 sin unidad
 para sv9 y 6 vinculadas sin cantidad convertida; precio, importe, partida y unidad de Q sin huecos. Propuesta por
 defecto: regla única en comun, sv6 guarda la fila completa, sv4 pinta solo la fila y guarda lo que se verá, relleno
 con script de sv6 (`--aplicar` lo lanza el humano con autorización aparte), sv9 sin código, sin DDL; orden sv6 →
-relleno → sv4. Decisiones abiertas: descripción de las Nueva de sv6 (P1), F-065 CR1 (P2), cantidad convertida (P3),
-unidad (P4), producto (P5), aprobar sin descripción (P6), relleno (P7), vinculadas (P8), respaldo (P9), alcance (P10).
+relleno → sv4. Decisiones: ver «PARADA 1: APROBADA» al final de `progress/spec_F-078.md`.
 Sin código tocado. `init.sh` en el worktree: 1083 tests en verde y PUERTA TAMAÑO ok (108/150, 176/250); un KO de
 entorno, no de la spec: el worktree nuevo no tiene `.venv` de sv4 (tampoco los de F-076 y F-077; el implementer lo crea).
 

@@ -1,5 +1,5 @@
 <!-- specs/F-078-linea-guarda-lo-que-se-ve/design.md -->
-# F-078 · La línea valorada guarda lo que se ve · Diseño técnico (v1, 2026-10-16)
+# F-078 · La línea valorada guarda lo que se ve · Diseño técnico (v1, APROBADO 2026-10-16)
 
 Inventario completo (vías × campos) y medición en producción: `progress/spec_F-078.md` §2–§3. Aquí, lo que se hace.
 
@@ -7,7 +7,7 @@ Inventario completo (vías × campos) y medición en producción: `progress/spec
 
 | Pieza | Servicio | Por qué ahí |
 |---|---|---|
-| Regla «lo que se veía» (`fila_como_se_ve`) | comun | La usan sv6 (al valorar), sv4 (al crear/reapuntar) y el relleno: una sola copia (ARCHITECTURE §13 y §19 hacen lo mismo con importes y producto) |
+| Regla «lo que se guarda» (`fila_a_guardar`) | comun | La usan sv6 (al valorar), sv4 (al crear/reapuntar) y el relleno: una sola copia (ARCHITECTURE §13 y §19 hacen lo mismo con importes y producto) |
 | Guardar la fila completa al valorar | sv6 | Dueño de `albaran_line_valuations` y `contrato_lines_derived` (ARCHITECTURE «Acceso a datos»); el replace es suyo |
 | Ficha que pinta la fila; escrituras que la guardan entera; validar al aprobar | sv4 | Es quien edita las filas (F-065) |
 | Relleno de lo existente | sv6 (`scripts/`) | Dueño de la tabla (sv3 no la crea: su DDL de valoración se retiró en may 2026) |
@@ -22,7 +22,7 @@ sv5 no lee estas tablas (grep 2026-10-16); sv3 tampoco escribe en ellas.
 
 | Ruta | Qué |
 |---|---|
-| `services/albaranes-comun/ruesma_comun/linea_valorada.py` | `CamposFila`, `LineaDeLaFila`, `fila_como_se_ve` (§3) |
+| `services/albaranes-comun/ruesma_comun/linea_valorada.py` | `CamposFila`, `LineaDeLaFila`, `fila_a_guardar` (§3) |
 | `services/albaranes-comun/tests/test_f078_linea_valorada.py` | R1–R3 |
 | `services/albaran-valoracion-persist/application/services/fila_completa.py` | `completar_registros` (§4) |
 | `services/albaran-valoracion-persist/scripts/rellenar_filas_f078.py` | Relleno (§6) |
@@ -62,14 +62,15 @@ class CamposFila:            # columnas de la fila que decide la regla
 class LineaDeLaFila:         # su línea de contrato o su derivada
     es_contrato: bool; descripcion: str | None; unidad: str | None; precio_unitario: float | None
 
-def fila_como_se_ve(fila: CamposFila, linea: LineaDeLaFila | None,
+def fila_a_guardar(fila: CamposFila, linea: LineaDeLaFila | None,
                     concepto_blanca: str | None) -> CamposFila: ...
 def sin_conversion(factor: float | None) -> bool: ...   # factor == 1 (tolerancia 1e-9)
 ```
 
 Implementa el glosario de requirements tal cual. Textos recortados; vacío = `None`. Es la regla de la ficha de
-antes, escrita UNA vez: sv6 la aplica a registros, sv4 a la fila que acaba de crear o reapuntar, el relleno a lo
-guardado. Tests con tabla de casos (Contrato/Nueva × campo lleno/vacío × factor 1/nulo/≠1 × blanca sí/no).
+antes con el concepto del papel en las Nueva con blanca (P1 = (b)), escrita UNA vez: sv6 la aplica a registros, sv4 a la fila que acaba de crear o reapuntar, el relleno a lo
+guardado. Tests con tabla de casos (Contrato/Nueva × campo lleno/vacío × factor 1/nulo/≠1 × blanca sí/no), incluida una Nueva con
+blanca cuya derivada dice «MATERIAL DE FERRETERIA» ⇒ concepto del papel.
 
 ## 4. sv6 · `application/services/fila_completa.py`
 
@@ -103,12 +104,12 @@ cuando `"descripcion" in cambios` (sustituye `descval` y `descov`); en las ramas
 
 ```python
 def _materializar_fila_in_session(self, session, valuation_line_id: int) -> None:
-    """(F-078 R16) Lee la fila, su línea y su blanca; aplica fila_como_se_ve y
+    """(F-078 R16) Lee la fila, su línea y su blanca; aplica fila_a_guardar y
     escribe SOLO las columnas que cambian. Misma transacción que el llamador."""
 ```
 
 Se llama al final de `set_line_conciliacion` (tras su UPDATE; en `contract_line` además se escribe
-`descripcion_linea = cl.descripcion_linea` en vez de `NULL`, y en `nueva` la descripción que se veía),
+`descripcion_linea = cl.descripcion_linea` en vez de `NULL`, y en `nueva` la descripción que tenía la fila),
 `add_conciliacion_for_merge_line` (la consulta de la blanca añade `unidad_medida`; en Nueva la derivada nace con esa
 unidad y la fila con `unidad_contrato` = esa unidad), `add_valuation_lines_from_contrato` (cada id creado),
 `dividir_linea` (la original y cada parte). «Añadir línea» no lo necesita (nace vacía: R7 la pinta vacía). Con eso,
@@ -131,7 +132,7 @@ cd services\albaran-valoracion-persist
   `medir_admisibilidad_f053.py`.
 - Lee en una consulta las filas de valoraciones de documentos activos sin alta bloqueante (`NOT EXISTS` sobre
   `albaran_altas_sigrid` con `estado = ANY(ESTADOS_ALTA_BLOQUEANTES)`; la tabla puede no existir en local), con su
-  línea de contrato, su derivada y el concepto de su blanca. Para cada una, `fila_como_se_ve`; difiere ⇒ cambio.
+  línea de contrato, su derivada y el concepto de su blanca. Para cada una, `fila_a_guardar`; difiere ⇒ cambio.
 - Informe: totales por columna × `line_kind` × aprobado/pendiente, y los `id` (sin textos de proveedor: solo ids y
   nombres de columna).
 - `--aplicar`: un `UPDATE albaran_line_valuations SET <solo las columnas que cambian> WHERE id = :id` por fila, todo
@@ -140,8 +141,9 @@ cd services\albaran-valoracion-persist
 - La lógica (selección + decisión + sentencias) vive en funciones importables; el `main` solo cablea. Tests con
   SQLite en memoria creando las tablas mínimas (como `f065_bbdd.py`).
 
-Lo que haría hoy en producción (medido, §3 de `progress/spec_F-078.md`): 93 descripciones, 7 `unidad_albaran`, 6
-`cantidad_convertida`, en 105 filas de 42 documentos; 0 unidades, 0 precios.
+Lo que haría hoy en producción (medido, §3 de `progress/spec_F-078.md`): 93 descripciones (16 con un texto distinto
+del que pintaba la ficha: el del papel, D1), 7 `unidad_albaran`, 6 `cantidad_convertida`, en 105 filas de 42
+documentos; 0 unidades, 0 precios.
 
 ## 7. Despliegue (lo pide el humano)
 
@@ -152,10 +154,12 @@ rebuild, como `ruesma_comun.obras`). Tras el relleno, «Solicitar alta en Sigrid
 
 ## 8. Riesgos y decisiones
 
-- **D1 (P1) Descripción de las Nueva de sv6 con línea de contrato**: se guarda la que se ve (la de la derivada, p. ej.
-  «MATERIAL DE FERRETERIA»), no el concepto del papel que sv9 mandaba hasta hoy. 16 filas cambian lo que iría a
-  Sigrid (2 de documentos aprobados). Alternativa (que sv6 guarde y la ficha enseñe el concepto del papel) cambiaría
-  lo que el administrativo ve y ya revisó: descartada por defecto, la decide el humano.
+- **D1 (P1 = (b), humano 2026-10-16) Descripción de las Nueva con blanca**: se guarda el concepto del papel (p. ej.
+  «DISCO C/ACERO 230 BOSCH»), no la de su derivada («MATERIAL DE FERRETERIA», la de la línea de contrato), y la ficha
+  pasa a enseñar ese. Es el texto que sv9 ya mandaba: no cambia lo que va a Sigrid; cambia lo que pinta la ficha en
+  16 filas (2 de documentos aprobados; la 385 pasa de «MORTERO M-5» a «Mortero M-5»). La derivada no se toca: su
+  descripción deja de pintarse en esas filas. Las Nueva sin blanca (manual, reparto, sintéticas) siguen con la de
+  su derivada, que es la que se escribió a mano o la de sv6 («— AÑO 2026»).
 - **D2 (P3, P4) Sin conversión**: `cantidad_convertida` nula ⇒ Q; `unidad_albaran` vacía ⇒ la unidad que se ve.
   Factor nulo no cuenta como «sin conversión» (la conversión falló: la fila ya va a revisión y sv9 la rechaza con
   `cantidad_sin_convertir`, que es lo seguro).
@@ -166,7 +170,7 @@ rebuild, como `ruesma_comun.obras`). Tras el relleno, «Solicitar alta en Sigrid
   exigiría el mapeo `ALTA_SIGRID_PRODUCTO_POR_DEFECTO` en sv6 (otra variable que sincronizar) y re-guardarlo si
   cambia la familia.
 - **D5 (P8) Descripción editada en una fila Contrato vinculada**: sv9 la manda por `ctrpro_ide` y Sigrid usa la de
-  su línea; editarla no llega a Sigrid. 2 filas. Fuera de F-078 (ficha nueva si el humano quiere avisarlo).
+  su línea; editarla no llega a Sigrid. 2 filas. Fuera de F-078: es **F-079** (pending, sv4, registrada en `dev`).
 - **Riesgo · «Deshacer» de una acción anterior a F-078** restaura la fila de entonces (con huecos) y se verá vacía.
   Aceptado: el hueco se ve y se corrige; el relleno puede repetirse (idempotente).
 - **Riesgo · F-058** (revalorar conserva lo manual): cuando llegue, lo conservado ya está completo en la fila.

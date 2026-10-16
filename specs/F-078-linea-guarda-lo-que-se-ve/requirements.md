@@ -1,9 +1,9 @@
 <!-- specs/F-078-linea-guarda-lo-que-se-ve/requirements.md -->
-# F-078 · La línea valorada guarda lo que se ve · Requisitos (v1, 2026-10-16)
+# F-078 · La línea valorada guarda lo que se ve · Requisitos (v1, APROBADA 2026-10-16)
 
 Servicios: **comun**, **sv6** (dueño de las tablas de valoración y del relleno) y **sv4**. **sv9 sin código** (tests
 de contrato). Rigor `critico`: lo que guarda la fila es lo que sv9 graba en Sigrid. Medición, inventario y preguntas
-P1–P9 en `progress/spec_F-078.md`; los valores por defecto de esas preguntas son los que fija esta spec.
+P1–P10 en `progress/spec_F-078.md`; PARADA 1 aprobada el 2026-10-16: P1 = (b), P8 fuera (F-079), el resto por defecto.
 
 Principio del humano (2026-10-16), literal: «Lo que está en la tabla es lo que debería estar guardado en BBDD, ya que
 lo ha puesto el humano. No es que sv9 tenga que buscar en muchos sitios, sino que esté bien guardado todo.»
@@ -19,26 +19,29 @@ lo ha puesto el humano. No es que sv9 tenga que buscar en muchos sitios, sino qu
   `codigo_partida_final` (vacía = almacén, F-051). Producto Sigrid: `producto_sigrid` o el por defecto (R20).
 - **Sin conversión**: `factor_conversion` = 1 exactamente (nulo o ≠ 1 = con conversión o desconocida).
 - **Vacío**: nulo o solo espacios. Los textos se guardan recortados.
-- **Lo que se veía** (`fila_como_se_ve`, regla de la ficha hasta F-078; la usan sv6 y el relleno):
-  - concepto: Nueva ⇒ el de su derivada; si vacío, el de la fila. Contrato ⇒ el de la fila; si vacío, el de su
-    línea. Si aún vacío, el concepto de su blanca (lo que sv9 manda hoy).
+- **Lo que se guarda** (`fila_a_guardar`; la usan sv6, sv4 al crear/reapuntar y el relleno). Es lo que pintaba la
+  ficha hasta F-078 salvo el concepto de las Nueva con blanca (P1 = (b)):
+  - concepto: Nueva CON blanca ⇒ el de la fila; si vacío, el concepto del papel (su blanca), no el de su derivada.
+    Nueva SIN blanca (manual, reparto, sintética) ⇒ el de su derivada; si vacío, el de la fila. Contrato ⇒ el de la
+    fila; si vacío, el de su línea. Si aún vacío, el concepto de su blanca (P9).
   - unidad: la de su línea; si vacía, la de la fila.
   - precio: el de la fila; si vacío, el de su línea.
   - sin conversión: `unidad_albaran` vacía ⇒ la unidad de arriba; `cantidad_convertida` nula ⇒ `cantidad_albaran`.
 
 ## A. Regla común (comun)
 
-- R1. El sistema debe ofrecer en `ruesma_comun.linea_valorada` una función pura `fila_como_se_ve` que, con los
+- R1. El sistema debe ofrecer en `ruesma_comun.linea_valorada` una función pura `fila_a_guardar` que, con los
   valores de la fila, los de su línea (o ninguna) y el concepto de su blanca, devuelva concepto, unidad, precio,
-  `unidad_albaran` y `cantidad_convertida` según «Lo que se veía».
-- R2. `fila_como_se_ve` nunca debe devolver vacío un campo que la fila tiene lleno, salvo concepto y unidad de una
-  Nueva cuando su derivada tiene otros (es lo que pintaba la ficha).
-- R3. CON conversión (factor nulo o ≠ 1), `fila_como_se_ve` no debe tocar `unidad_albaran` ni `cantidad_convertida`.
+  `unidad_albaran` y `cantidad_convertida` según «Lo que se guarda».
+- R2. `fila_a_guardar` nunca debe devolver vacío un campo que la fila tiene lleno, salvo el concepto de una
+  Nueva SIN blanca y la unidad de cualquier fila cuando su línea (derivada o de contrato) tiene otros: es lo que
+  pintaba la ficha.
+- R3. CON conversión (factor nulo o ≠ 1), `fila_a_guardar` no debe tocar `unidad_albaran` ni `cantidad_convertida`.
 
 ## B. sv6 guarda lo que se verá
 
 - R4. CUANDO sv6 persiste una valoración, cada fila (`from_albaran` y `synthetic_modifier`, de cualquier builder)
-  debe llevar los valores de `fila_como_se_ve` calculados con su línea de contrato del sobre o con su derivada del
+  debe llevar los valores de `fila_a_guardar` calculados con su línea de contrato del sobre o con su derivada del
   propio registro y con el concepto de su blanca del sobre.
 - R5. El paso de R4 no debe cambiar importes, precio final lleno, partida, `partida_action`, cantidades con
   conversión, motivos ni `review_required`.
@@ -63,7 +66,7 @@ lo ha puesto el humano. No es que sv9 tenga que buscar en muchos sitios, sino qu
   `unidad_albaran` (y en la derivada si es Nueva, como hoy).
 - R12. CUANDO «Origen ✎» reapunta a una línea de contrato, la fila debe quedar con la descripción de esa línea (si
   está vacía, la que tenía) en `descripcion_linea`, su unidad en `unidad_contrato` y, sin conversión, en
-  `unidad_albaran`. CUANDO la pasa a Nueva, con la descripción que se veía (o la tecleada) en `descripcion_linea`.
+  `unidad_albaran`. CUANDO la pasa a Nueva, con la descripción que tenía la fila (o la tecleada) en `descripcion_linea`.
 - R13. CUANDO «+ a Sigrid» trae una blanca (Contrato o Nueva, también desde «Copiar sin casar → Nueva»), la fila
   debe nacer con concepto, unidad (la de la línea de contrato; en Nueva, la de la blanca, también en la derivada),
   `unidad_albaran` (sin conversión) y `cantidad_convertida` = la cantidad.
@@ -71,7 +74,7 @@ lo ha puesto el humano. No es que sv9 tenga que buscar en muchos sitios, sino qu
 - R15. CUANDO «Dividir» crea partes o pasa la original a Nueva, cada fila tocada debe quedar con su descripción en
   `descripcion_linea` (la de R12 si pasa a Nueva) y las unidades de la original.
 - R16. Toda vía de sv4 que crea o reapunta una fila (R12–R15; «Añadir línea» nace vacía y así se ve) debe dejarla,
-  en la misma transacción, con `fila_como_se_ve` aplicada. El PATCH (R9–R11) no la aplica: lo vaciado se ve vacío.
+  en la misma transacción, con `fila_a_guardar` aplicada. El PATCH (R9–R11) no la aplica: lo vaciado se ve vacío.
 - R17. SI al aprobar (ficha o listado) alguna fila a registrar SIN vincular (`es_linea_vinculada` de comun) no tiene
   descripción, ENTONCES sv4 no debe aprobar y debe responder «Líneas sin descripción: 3, 5» (posiciones de la tabla,
   como F-065 R20), sin publicar el alta.
@@ -81,8 +84,9 @@ lo ha puesto el humano. No es que sv9 tenga que buscar en muchos sitios, sino qu
 - R18. Con una fila manual sin blanca y una Nueva con blanca guardadas según F-078, sv9 (sin código nuevo) debe
   construir la petición con la descripción, la unidad y la cantidad de la fila (tests de contrato con filas como la
   386 y la 385 del caso).
-- R19. Una fila Nueva con su derivada de otra descripción debe ir a Sigrid con la de la fila (`descripcion_linea`
-  manda sobre la blanca en sv9: ya es así).
+- R19. Una fila Nueva de sv6 creada desde una línea de contrato (derivada `missing_partida` con «MATERIAL DE
+  FERRETERIA») debe guardarse, pintarse e ir a Sigrid con el concepto del papel (P1 = (b)); sv9 manda
+  `descripcion_linea`, que ya es ese.
 - R20. El producto por defecto NO se guarda (F-053 se mantiene, P5): sv4 y sv9 lo siguen calculando con
   `producto_efectivo` y los mismos datos; un test de sv4 comprueba que el pintado y el de sv9 coinciden en una fila
   `manual`, una `reparto` y una `from_albaran` sin elegido.
@@ -92,14 +96,15 @@ lo ha puesto el humano. No es que sv9 tenga que buscar en muchos sitios, sino qu
 - R21. El sistema debe ofrecer `services/albaran-valoracion-persist/scripts/rellenar_filas_f078.py` que, por
   defecto, solo lee (transacción `READ ONLY`) e informa, por campo, `line_kind` y estado del documento (aprobado /
   pendiente), cuántas filas cambiarían, y lista sus `id`.
-- R22. CUANDO se lanza con `--aplicar`, el script debe escribir en UNA transacción los valores de `fila_como_se_ve`
+- R22. CUANDO se lanza con `--aplicar`, el script debe escribir en UNA transacción los valores de `fila_a_guardar`
   solo en las filas y columnas que difieren, y volver a contar al final; una segunda ejecución debe dar 0 cambios.
 - R23. El script debe saltarse las filas de documentos en la papelera (`is_active` falso) y las de documentos con
   alta bloqueante (`ESTADOS_ALTA_BLOQUEANTES`); incluye aprobados y pendientes.
 - R24. El script no debe imprimir la cadena de conexión ni credenciales; lee la conexión del `.env` de sv6. Lanzarlo
   con `--aplicar` contra producción es MANUAL del humano, con autorización expresa aparte.
 - R25. Tras el relleno, lo que pinta la ficha nueva (R6) debe ser igual a lo que pintaba la de antes en cada fila
-  rellenada (test sobre filas como las medidas).
+  rellenada, salvo el concepto de las Nueva con blanca sin descripción propia, que pasa a ser el del papel (P1 = (b);
+  16 filas medidas, el texto que ya mandaba sv9). Test sobre filas como las medidas.
 
 ## G. Documentación
 
