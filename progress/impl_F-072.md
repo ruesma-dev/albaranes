@@ -182,9 +182,13 @@ tests/test_cache_suites_init_sh.py -q` → `142 passed in 45.25s` (154 menos los
 
 | Evidencia | Valor medido |
 |---|---|
-| Tests de F-072 | 154 (`tests/test_f072_*.py`), `154 passed in 20.76s` con la máquina libre |
-| Suite de la raíz | 1231 passed (antes 1083); servicios: sv1 205, sv2 397, sv3 703, sv4 1427, sv5 43, sv6 295, sv9 654, comun 578 (+3 skipped) |
+| Tests de F-072 | 160 (`tests/test_f072_*.py`, con los 6 de la mutación); los 154 previos, `154 passed in 20.76s` |
+| Suite de la raíz | 1237 passed en T17 (1083 antes de F-072); servicios: sv1 205, sv2 397, sv3 703, sv4 1427, sv5 43, sv6 295, sv9 654, comun 578 (+3 skipped) |
 | Cobertura de líneas cambiadas | `PUERTA COBERTURA: 100.0% de 202 líneas cambiadas cubiertas (202/202, umbral 80%, nivel critico)` |
 | Mutantes | 72 generados, 65 muertos, 7 supervivientes → 5 muertos con tests nuevos (a mano) y 2 equivalentes RM5 |
-| Tiempo de la suite de la raíz | 143,09 s (3.ª ejecución) / 205,53 s (2.ª); `init.sh` completo 423–466 s |
-| `bash harness/init.sh` final (T17) | ver la línea siguiente |
+| Tiempo de la suite de la raíz | 169,01 s en T17 (143,09 s en la 3.ª de T12); `init.sh` completo 408–466 s |
+| `bash harness/init.sh` final (T17) | `ENTORNO LISTO. Puedes trabajar.` en 408 s; cobertura 100 % (202/202); tamaño impl 190/220; comun servida de caché («verde del 2026-10-16 18:44») |
+
+T17 salió en rojo la primera vez (`test_f039_r2_todo_informe_de_mutacion_figura_en_el_inventario`: faltaba la fila de
+`mutacion_F-072_arnes.md` en `progress/inventario_mutacion_F-039.md`, y la puerta de cobertura cayó al 38,6 % por el
+`-x`). Añadida la fila (commit `7c0661f`) y relanzado: verde.
