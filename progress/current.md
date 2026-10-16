@@ -1,26 +1,7 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-072 · `blocked` (2026-10-16): review APPROVED (pasada 2), equivalentes 3 y 5 aceptados por el humano, fusionada en
-`dev`.** La caché de suites de `init.sh` §7 bis tiene en cuenta las dependencias de cada servicio (comun en sv1–sv9,
-intérprete, módulos importados, huella del `.env` por metadatos; `[AVISO]` sin caché si el módulo viene de fuera del
-repo; `ARNES_SIN_CACHE=1`). Porte a `arnes-base` 1.7.16: commits locales `78a67aa` y `8f72cdc` en `main`, sin push.
-Informes: `progress/impl_F-072.md`, `progress/review_F-072.md`. Espera la MANUAL T16 del humano; con su verde, `done`.
-*Junction* `.venv` de sv4 en el worktree `../albaranes-F-072` (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
-
-### F-072 · MANUAL T16 del humano (en el árbol principal, en `dev`)
-
-```powershell
-cd C:\Users\pgris\PycharmProjects\albaranes
-bash harness/init.sh          # 1.ª: sv1–sv9 y comun ejecutan su suite (la caché antigua no vale, R20)
-bash harness/init.sh          # 2.ª: sv1–sv9 y comun salen «caché: ... desde el verde del <fecha>»
-git switch -c prueba/f072-cache dev
-# añadir una línea de comentario en services/albaranes-comun/ruesma_comun/__init__.py y commitearla
-git commit -am "prueba F-072: comentario en la comun"
-bash harness/init.sh          # sv1–sv9 y comun vuelven a ejecutar su suite
-git switch dev; git branch -D prueba/f072-cache
-```
-VERDE si en la rama de prueba sv1–sv9 y comun ejecutan su suite (sin línea «caché»). ROJO si alguno sale «caché».
+**F-072 · CERRADA (`done`, 2026-10-16).** MANUAL T16 en verde. Resumen en `history.md`.
 
 **Siguiente (orden del humano, 2026-10-16):** F-078 → F-076 → F-077 → F-073 → F-064 (evals del humano) → F-074; F-071 y
 F-075 tras F-064. Specs de F-076, F-077 y F-078 APROBADAS en sus ramas. Escritura en Sigrid apagada (`COMMIT=false`)
