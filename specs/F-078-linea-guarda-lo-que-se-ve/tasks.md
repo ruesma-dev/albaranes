@@ -1,7 +1,7 @@
 <!-- specs/F-078-linea-guarda-lo-que-se-ve/tasks.md -->
 # F-078 · Tareas (v1, APROBADAS 2026-10-16)
 
-- [ ] T1: comun `ruesma_comun/linea_valorada.py` (`CamposFila`, `LineaDeLaFila`, `fila_a_guardar`, `sin_conversion`) con tests de tabla R1–R3  |  Verificación: `pytest services/albaranes-comun/tests/test_f078_linea_valorada.py`
+- [x] T1: comun `ruesma_comun/linea_valorada.py` (`CamposFila`, `LineaDeLaFila`, `fila_a_guardar`, `sin_conversion`) con tests de tabla R1–R3  |  Verificación: `pytest services/albaranes-comun/tests/test_f078_linea_valorada.py`
 - [ ] T2: sv6 `application/services/fila_completa.py` (`completar_registros`) con tests R4, R5 y R19 (Contrato, Nueva de sv6 con y sin línea de contrato —con línea, concepto del papel, P1 = (b)—, sintética casada y derivada, factor 1/nulo/≠1)  |  Verificación: `pytest services/albaran-valoracion-persist/tests/test_f078_fila_completa.py -k "r4 or r5 or r19"`
 - [ ] T3: sv6 `run_valuation_pipeline.py` llama a `completar_registros` antes de todo `replace_valuation` con líneas, más el test que lo exige por grep  |  Verificación: `pytest services/albaran-valoracion-persist/tests/test_f078_fila_completa.py -k pipeline` y la suite de sv6 en verde
 - [ ] T4: sv4 pinta la fila: `_load_conciliation_map_in_session` (descripción, unidad, precio de la fila) y la plantilla sin `_imp_jinja` (R6–R8), tests con `f065_bbdd.py`  |  Verificación: `pytest services/albaranes-front/tests/test_f078_ficha_pinta_fila.py`

@@ -1,6 +1,11 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-078 · `in_progress` (implementer, 2026-10-16)** en `feature/F-078-linea-guarda-lo-que-se-ve` (worktree
+`../albaranes-F-078`). Tarea en curso y decisiones en `progress/impl_F-078.md`. Entorno: suites de la rama con
+`PYTHONPATH` a la comun del worktree; *junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de
+`git worktree remove`).
+
 **F-072 · CERRADA (`done`, 2026-10-16).** MANUAL T16 en verde. Resumen en `history.md`.
 
 **Siguiente (orden del humano, 2026-10-16):** F-078 → F-076 → F-077 → F-073 → F-064 (evals del humano) → F-074; F-071 y
