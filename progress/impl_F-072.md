@@ -147,7 +147,7 @@ FAILED tests/test_f072_r18_r22_decision_y_cli.py::test_f072_r22_sin_servicio_es_
 - 2 **equivalentes** (3 y 5: `text=True`→`False` en `_git` y `sondear`, que ya pasan `encoding=`): en CPython
   `text_mode = encoding or errors or text`. Demostración RM5 ejecutable en el informe de mutación (el `subprocess.run`
   con `text=False` y `encoding` devuelve `str 'ñ\n'`) y los dos mutantes aplicados a la vez dejan los 154 tests de
-  F-072 (ya con los 6 nuevos) en `154 passed`. **Pendientes de la aceptación escrita del humano.**
+  F-072 (ya con los 6 nuevos) en `154 passed`. **ACEPTADOS por escrito por el humano el 2026-10-16** («acepto los mutantes»).
 - No se relanzó la campaña: los tests nuevos no tocan producción y cada muerte se reprodujo a mano. Ningún test se
   consiguió quitando código defensivo (RM6 no aplica).
 

@@ -5,9 +5,7 @@
 
 Resumen: **70 features**, 49 abiertas, 21 terminadas.
 
-En curso: **F-072**.
-
-Bloqueadas: **F-053, F-070**.
+Bloqueadas: **F-053, F-070, F-072**.
 
 ## Trabajo abierto
 
@@ -20,7 +18,7 @@ Bloqueadas: **F-053, F-070**.
 | F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 1 | pendiente | critico |  |
 | F-067 | Limpieza de la ficha de detalle (sv4) | 1 | pendiente | estandar |  |
 | F-070 | La obra siempre con el 0 inicial (salvo VAR y POSTV2): sv3 la sella canónica, sv4 consulta y guarda canónica, sv9 da de alta canónica | 1 | bloqueada | critico | `feature/F-070-obra-con-cero-inicial` |
-| F-072 | Arnés: la caché de suites de init.sh tiene en cuenta las dependencias de cada servicio | 1 | en curso | critico | `feature/F-072-cache-con-dependencias` |
+| F-072 | Arnés: la caché de suites de init.sh tiene en cuenta las dependencias de cada servicio | 1 | bloqueada | critico | `feature/F-072-cache-con-dependencias` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
@@ -171,7 +169,7 @@ ORIGEN (diagnóstico del líder, 2026-10-14, en producción y solo lectura): en 
 
 ### F-072 · Arnés: la caché de suites de init.sh tiene en cuenta las dependencias de cada servicio
 
-estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-072-cache-con-dependencias`
+estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-072-cache-con-dependencias`
 
 ORIGEN: review de F-070, observación O1 (progress/review_F-070.md de su rama, §Automejora). La clave de la caché de suites de init.sh §7 bis (.arnes_cache/suite_<svc>.ok) es solo `git rev-parse HEAD:<ruta del servicio>`. Fallos reales: (a) un cambio en services/albaranes-comun no invalida la caché de sv1-sv9, que la importan, y un verde viejo tapa una rotura; (b) en un worktree los intérpretes importan la comun editable del árbol principal, e init.sh dio verde por caché con sv3/sv4/sv9 rotos (ImportError: canonizar_codigo_obra). PETICIÓN DEL HUMANO: «arregla la caché». ARREGLO: dependencias declaradas por servicio en servicios.json (depende_de, importa, entradas_no_versionadas), clave calculada en Python (harness/cache_suites.py) con el hash de servicio y dependencias, intérprete, ruta real de los módulos importados y huella por metadatos de las entradas no versionadas; módulo importado desde fuera del repositorio en curso = [AVISO] visible y sin caché; fecha del verde reutilizado; ARNES_SIN_CACHE=1. Un servicios.json sin los campos nuevos funciona igual. Genérico: se porta a arnes-base como 1.7.16 en el mismo trabajo (cubre F-028 del taller y el encargo 1.7.12). Spec: specs/F-072-cache-con-dependencias/.
 
