@@ -12,6 +12,7 @@ Git de verdad sobre un repositorio en `tmp_path`; la sonda se inyecta en
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
 import re
@@ -228,6 +229,25 @@ def test_f072_r21_sin_cache_nunca_sirve_pero_devuelve_la_clave(repo: Path) -> No
 
 
 # --- R22: protocolo de líneas y CLI -----------------------------------------------
+
+
+def test_f072_r22_sin_servicio_es_un_error_de_uso(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`--servicio` es obligatorio: sin él, argparse corta con su código de uso (2)."""
+    with pytest.raises(SystemExit) as salida:
+        main(["--raiz", str(repo)])
+
+    assert salida.value.code == 2
+    assert "--servicio" in capsys.readouterr().err
+
+
+def test_f072_r22_la_decision_es_inmutable() -> None:
+    """Lo que se imprime es lo que se decidió: nadie lo retoca por el camino."""
+    decision = Decision(False, None, None, ())
+
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        decision.servir = True  # type: ignore[misc]
 
 
 def test_f072_r22_lineas_de_salida() -> None:

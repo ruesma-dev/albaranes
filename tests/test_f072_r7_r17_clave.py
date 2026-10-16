@@ -14,6 +14,7 @@ sobre el repositorio real). La sonda es falsa: aquí se inyecta el `Sondeo`.
 from __future__ import annotations
 
 import builtins
+import dataclasses
 import hashlib
 import io
 import os
@@ -493,6 +494,50 @@ def test_f072_r16_sonda_con_el_interprete_y_la_carpeta_del_servicio(
     assert Path(vistos["cwd"]) == tmp_path
     assert vistos["stdin"] is subprocess.DEVNULL
     assert vistos["timeout"] == cache_suites.LIMITE_SONDA_S
+    # Un código de salida distinto de 0 lo traduce `sondear` (ErrorDeSonda);
+    # con check=True escaparía un CalledProcessError que nadie captura.
+    assert vistos["check"] is False
+
+
+def test_f072_r15_sonda_real_que_sale_con_error_da_error_de_sonda(tmp_path: Path) -> None:
+    """Un padre que sale del intérprete al importarse (SystemExit no es Exception)
+    hace que la sonda real termine con código 3: ErrorDeSonda, no otra excepción."""
+    (tmp_path / "sale").mkdir()
+    (tmp_path / "sale" / "__init__.py").write_text("raise SystemExit(3)\n", encoding="utf-8")
+
+    with pytest.raises(ErrorDeSonda, match="código 3"):
+        sondear(PY, ("sale.hijo",), tmp_path)
+
+
+def test_f072_r12_git_que_falla_aunque_imprima_algo_no_da_hash(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Un `git rev-parse` que sale con error no da hash, imprima lo que imprima."""
+    def _git_falso(args: list[str], raiz: str) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(args, 128, stdout="a" * 40 + "\n", stderr="")
+
+    monkeypatch.setattr(cache_suites, "_git", _git_falso)
+
+    assert hash_en_head("services/svc", str(tmp_path)) is None
+
+
+def test_f072_r12_git_que_sale_bien_sin_hash_no_da_hash(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    def _git_falso(args: list[str], raiz: str) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(args, 0, stdout="\n", stderr="")
+
+    monkeypatch.setattr(cache_suites, "_git", _git_falso)
+
+    assert hash_en_head("services/svc", str(tmp_path)) is None
+
+
+def test_f072_r7_el_sondeo_es_inmutable() -> None:
+    """La clave se deriva del sondeo: nadie puede retocarlo a medio cálculo."""
+    sondeo = Sondeo(origenes={}, tiene_coverage=False)
+
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        sondeo.tiene_coverage = True  # type: ignore[misc]
 
 
 # --- R17: comparación de rutas ---------------------------------------------------
