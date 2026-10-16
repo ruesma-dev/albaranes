@@ -5,6 +5,19 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-053 · Alta en Sigrid de los albaranes aprobados (cerrada 2026-10-16)
+
+Rama `feature/F-053-alta-sigrid`, rigor `critico`, servicio nuevo **sv9** (`ca-sv9-alta-sigrid`, consume `q-feedback`)
+más sv4 (panel «Alta en Sigrid», bloqueo de lo registrado), sv6, sv3 y comun. Al aprobar, sv9 da de alta el albarán
+en Sigrid vía sigrid-api (previa y commit, idempotente por `referencia_externa`), cuelga el PDF y guarda el
+resultado en `albaran_altas_sigrid`; lo registrado queda bloqueado en la app. v8: `usu` = login de quien aprueba o
+respaldo `pgris`. Fases 1, 2 y v8 APROBADAS. Pruebas: T26–T27c en local (agente, por delegación); T51 y T29 en Azure
+por el humano: primera grabación real `AC26/29714` correcta e idempotencia en verde (2026-10-16). T0 y T28
+descartadas por el humano. Hallazgos que abren features: partida con cero a la izquierda (F-076), líneas cuya
+descripción no estaba guardada (F-078), ficha desfasada tras aprobar y motivos invisibles (F-077), aviso de
+descripción en líneas vinculadas (F-079). **Escritura apagada** (`COMMIT=false`) hasta desplegar F-078, F-076 y F-077.
+
+
 ## F-070 · La obra siempre con el 0 inicial, salvo VAR y POSTV2 (cerrada 2026-10-15)
 
 Rama `feature/F-070-obra-con-cero-inicial`, rigor `critico`, comun + sv3 + sv4 + sv9. **Problema**: HERMANOS SAN JUAN con

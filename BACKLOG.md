@@ -3,15 +3,12 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **70 features**, 48 abiertas, 22 terminadas.
-
-Bloqueadas: **F-053**.
+Resumen: **70 features**, 47 abiertas, 23 terminadas.
 
 ## Trabajo abierto
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-053 | Alta en Sigrid de los albaranes aprobados | 1 | bloqueada | critico | `feature/F-053-alta-sigrid` |
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
 | F-058 | Revalorar no pierde las partidas ni el almacén asignados a mano | 1 | pendiente | critico |  |
 | F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 1 | pendiente | estandar |  |
@@ -70,6 +67,7 @@ Bloqueadas: **F-053**.
 | F-043 | IA1 clasifica el albaran: la tipologia la decide la IA, siempre y con definiciones claras, nunca una regla determinista | 1 | critico |
 | F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel | 1 | critico |
 | F-052 | sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF) | 1 | critico |
+| F-053 | Alta en Sigrid de los albaranes aprobados | 1 | critico |
 | F-054 | sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822) | 1 | estandar |
 | F-062 | sv3 aplica el proveedor propuesto antes de buscar contratos: CIF mal leído + candidato claro con contrato en la obra ⇒ se corrige y se busca con el bueno | 1 | critico |
 | F-063 | El CIF de Construcciones Ruesma nunca es el proveedor: sv3 lo descarta y busca el proveedor por nombre | 1 | critico |
@@ -88,20 +86,6 @@ Bloqueadas: **F-053**.
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | critico |
 
 ## Detalle
-
-### F-053 · Alta en Sigrid de los albaranes aprobados
-
-estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-053-alta-sigrid`
-
-PETICION DEL HUMANO (2026-09-30): «Alta en Sigrid de los albaranes aprobados». Aprobar ES registrar: los dos botones de sv4 que aprueban («Guardar y aprobar» de la ficha y «Aprobar» del listado) disparan el alta del albaran en Sigrid.
-
-DECISIONES (todas cerradas el 2026-10-01, detalle en progress/spec_F-053.md): solo endpoints de dominio de sigrid-api, nunca sql/write; servicio nuevo sv9 en el monorepo que consume q-feedback; arranque en SIMULACION y grabacion real solo con ALTA_SIGRID_COMMIT=true (humano); solo lineas con importe; en un mismo albaran, vinculadas a linea de contrato (consumen medicion) y sin vincular, cada una con partida o en almacen; producto del contrato o, sin vincular, generico por familia de la linea (QA9999 alquiler de maquinaria, XA9999 medios auxiliares, MA9999 el resto; decision del humano 2026-10-05), cambiable por el administrativo en sv4 antes de aprobar (columna producto_sigrid de albaran_line_valuations, DDL en sv6); linea sin partida = almacen (F-051 v4); negativas si; sin valorar (ok de sv6 o valoracion manual completa en sv4) no se aprueba ni se registra; tabla albaran_altas_sigrid con DDL en sv3; registrado = bloqueado en sv4; empleado fijo; clave de siempre.
-
-V7 (2026-10-06): SPEC_READY. El humano respondio «si» a todas las recomendaciones (P1-P7 de progress/spec_F-053.md): P1 familia medios_auxiliares en ficha propia F-061 (mientras, el administrativo elige XA9999 a mano en sv4); P2 signos opuestos (descuento: cantidad > 0 e importe < 0, o cantidad < 0 e importe > 0) => revisar con signo_incoherente sin llamar a sigrid-api, el descuento se mete a mano en Sigrid; P3 anular en Sigrid borra el albaran (M17b de F-009): se repite con la misma referencia; P4 sin paride mientras F-049 no conserve el ide de la partida (partida_ambigua => no_admitido); P5 vinculadas con cantidad y sin importe no se mandan; P6 ALM impreso sin vincular (vincularlo es de F-060/F-007); P7 XA9999 medido en F-009. Alineada con F-009 v8 de sigrid-api (8a6ecab): sin campo naturaleza (la pone sigrid-api por mapeo), cod2 y planificacion de compras de las vinculadas los copia sigrid-api del ctrpro.
-
-PRECONDICIONES: medicion de solo lectura (services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py, la ejecuta el humano) y PRE-1 = F-009 de sigrid-api (partida por linea, lineas sin contrato con producto por codigo, negativas, idempotencia) desplegada.
-
-SUSTITUYE A F-013. ORDEN: F-052 (done) -> F-051 en dev -> implementacion de F-053 (T0d fusiona dev en la rama); la previa contra sigrid-api y el modo real esperan a F-009 desplegada; F-049 (paride) y F-061 son evolucion, no bloqueo. Escribe en el ERP de produccion => rigor critico y verificaciones MANUAL del humano.
 
 ### F-055 · IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2)
 
@@ -703,6 +687,20 @@ PROPUESTA DEL DIAGNOSTICO: (1) consulta propia de proveedores de la obra (DISTIN
 RELACIONADAS: F-002 (red de proveedor por CIF), F-043, F-047 (RES-007 no cerraba ciclo por esto).
 
 DECISIONES DEL HUMANO (2026-09-30): aceptadas las recomendaciones D1-D7 de la spec v2 (consulta agregada sin paginar; no compartir con sv4; paginar solo header_and_lines y search_proveedores; D4 = B + A, es decir el bloque veraz Y «Guardar» relanza la busqueda si cambian CIF u obra; sin backfill; clientes colindantes a ficha aparte; efecto D7 aceptado).
+
+### F-053 · Alta en Sigrid de los albaranes aprobados
+
+estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-053-alta-sigrid`
+
+PETICION DEL HUMANO (2026-09-30): «Alta en Sigrid de los albaranes aprobados». Aprobar ES registrar: los dos botones de sv4 que aprueban («Guardar y aprobar» de la ficha y «Aprobar» del listado) disparan el alta del albaran en Sigrid.
+
+DECISIONES (todas cerradas el 2026-10-01, detalle en progress/spec_F-053.md): solo endpoints de dominio de sigrid-api, nunca sql/write; servicio nuevo sv9 en el monorepo que consume q-feedback; arranque en SIMULACION y grabacion real solo con ALTA_SIGRID_COMMIT=true (humano); solo lineas con importe; en un mismo albaran, vinculadas a linea de contrato (consumen medicion) y sin vincular, cada una con partida o en almacen; producto del contrato o, sin vincular, generico por familia de la linea (QA9999 alquiler de maquinaria, XA9999 medios auxiliares, MA9999 el resto; decision del humano 2026-10-05), cambiable por el administrativo en sv4 antes de aprobar (columna producto_sigrid de albaran_line_valuations, DDL en sv6); linea sin partida = almacen (F-051 v4); negativas si; sin valorar (ok de sv6 o valoracion manual completa en sv4) no se aprueba ni se registra; tabla albaran_altas_sigrid con DDL en sv3; registrado = bloqueado en sv4; empleado fijo; clave de siempre.
+
+V7 (2026-10-06): SPEC_READY. El humano respondio «si» a todas las recomendaciones (P1-P7 de progress/spec_F-053.md): P1 familia medios_auxiliares en ficha propia F-061 (mientras, el administrativo elige XA9999 a mano en sv4); P2 signos opuestos (descuento: cantidad > 0 e importe < 0, o cantidad < 0 e importe > 0) => revisar con signo_incoherente sin llamar a sigrid-api, el descuento se mete a mano en Sigrid; P3 anular en Sigrid borra el albaran (M17b de F-009): se repite con la misma referencia; P4 sin paride mientras F-049 no conserve el ide de la partida (partida_ambigua => no_admitido); P5 vinculadas con cantidad y sin importe no se mandan; P6 ALM impreso sin vincular (vincularlo es de F-060/F-007); P7 XA9999 medido en F-009. Alineada con F-009 v8 de sigrid-api (8a6ecab): sin campo naturaleza (la pone sigrid-api por mapeo), cod2 y planificacion de compras de las vinculadas los copia sigrid-api del ctrpro.
+
+PRECONDICIONES: medicion de solo lectura (services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py, la ejecuta el humano) y PRE-1 = F-009 de sigrid-api (partida por linea, lineas sin contrato con producto por codigo, negativas, idempotencia) desplegada.
+
+SUSTITUYE A F-013. ORDEN: F-052 (done) -> F-051 en dev -> implementacion de F-053 (T0d fusiona dev en la rama); la previa contra sigrid-api y el modo real esperan a F-009 desplegada; F-049 (paride) y F-061 son evolucion, no bloqueo. Escribe en el ERP de produccion => rigor critico y verificaciones MANUAL del humano.
 
 ### F-054 · sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822)
 
