@@ -132,3 +132,7 @@ migración por script.
 - **F-067**: sin rama ni código; sin solape. F-071–F-074: ninguna toca sv6, comun `sigrid` ni el cliente de sv4.
 - Hallazgo aparte: la 0720 tiene una línea con final `03.02`, que existe pero es capítulo (no imputable): F-076 la
   manda a revisión; sigrid-api la rechazaría con `partida_no_imputable`.
+
+## 6. PARADA 1: APROBADA (2026-10-16)
+
+El humano aprueba la propuesta con las opciones por defecto de P1 a P11 («si. apruebo»). La implementación espera turno: máximo una feature `in_progress` (ahora F-072).
