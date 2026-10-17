@@ -1,10 +1,9 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-078 · `in_progress` (implementer, 2026-10-16)** en `feature/F-078-linea-guarda-lo-que-se-ve` (worktree
-`../albaranes-F-078`). Tarea en curso y decisiones en `progress/impl_F-078.md`. Entorno: suites de la rama con
-`PYTHONPATH` a la comun del worktree; *junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de
-`git worktree remove`).
+**F-078 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`.** Espera las MANUAL T12–T14 del
+humano (abajo); con su verde, `done`. Informes: `progress/impl_F-078.md`, `progress/review_F-078.md`. *Junction* `.venv`
+de sv4 en el worktree `../albaranes-F-078` (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
 
 #### F-078 · MANUAL del humano (T12–T14), comandos para PowerShell
 
