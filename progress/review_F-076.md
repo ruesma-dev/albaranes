@@ -124,9 +124,7 @@ Rigor **`critico` declarado**: RED, cobertura ≥ 80 %, mutación completa con 0
 - **C5**: [x] T1–T17 y T5b `[x]` con commit (T18–T20 del humano). [x] Sin artefactos sueltos. [x] `features.json`
   con la spec APROBADA (pasada 2, P2.4).
 
-### 4.1 Requisito ⇒ test
-
-R1–R25 cubiertos (R19–R21 por lectura); la tabla, en `febcaf0` §4.1.
+**4.1 Requisito ⇒ test**: R1–R25 cubiertos (R19–R21 por lectura); la tabla, en `febcaf0` §4.1.
 
 ## 5. Cambios requeridos
 
