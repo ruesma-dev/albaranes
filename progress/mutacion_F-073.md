@@ -78,6 +78,9 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 > con la misma similitud, el mismo CIF recortado y el mismo nombre. Como la similitud depende solo del nombre leído
 > y del nombre del candidato, ese candidato es un `CandidatoNombre` igual campo a campo al que ya estaba (dataclass
 > congelada con igualdad por valor). Sustituirlo por un igual no cambia `por_clave` ni el resultado.
+> **Precisión de la review (H1, 2026-10-17):** `_orden` compara `nombre or ""`, así que también coinciden `None` y
+> `""`: objetos distintos, los dos con similitud 0 y pintados `'?'` en la nota. CIF, decisión, nota y log no cambian
+> (100.000 casos aleatorios del reviewer, 0 diferencias).
 > Decisión: equivalente. Con el nombre distinto ya lo mata
 > `test_f073_t11_mismo_cif_misma_similitud_gana_el_nombre_menor_sin_mirar_el_orden`.
 

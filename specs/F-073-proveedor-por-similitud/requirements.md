@@ -124,6 +124,8 @@ rutas (nuevo, duplicado y `reenrich_by_merge_id`), el merge debe acabar con A287
 R19. Con las 18 razones sociales reales de `evals/fixtures/final/` más HIERROS RODRIGO como
 candidatos (19) y las 31 lecturas de design §5, elegir por nombre debe dar 31 aciertos y 0 errores (hoy:
 23 aciertos y 7 errores, entre ellos los dos de la incidencia).
+*Nota de implementación (2026-10-17, aceptada en review):* el corpus se reconstruyó (el prototipo se perdió); el
+control medido con el criterio de antes da 24/6/1 (H0RPRESOL acierta solo por orden de llegada).
 
 R20. El margen debe ser un parámetro del constructor de `HeaderResolverService` (`margen_nombre`)
 con el valor por defecto de R9, sin variable de entorno ni interruptor de vuelta atrás (P2 y P3 de

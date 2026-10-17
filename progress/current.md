@@ -31,7 +31,7 @@ Set-DeployTag
 ```
 
 VERDE: `check_deploy.ps1` con sv3 en el tag nuevo y las réplicas arriba. sv3 se construye desde `dev`, que ya trae la
-comun de F-076 y F-078. sv3 no usa esos módulos y no cambia nada más.
+comun de F-076 y F-078. sv3 importa `ruesma_comun.sigrid`, que ya carga `sigrid.partidas` (solo stdlib; la suite de sv3 pasa con esa comun); nada más cambia.
 
 **Paso 2 · solo lectura: el log.**
 
@@ -215,7 +215,7 @@ az containerapp logs show -n ca-sv6-valorador -g $RG --tail 300 | Select-String 
 Debe salir `[partidas-obra] obra=… hojas=… segundos=…` y ninguna línea con `partidas_obra_no_disponibles`. Vuelta
 atrás sin redesplegar: `az containerapp update -n ca-sv6-valorador -g $RG --set-env-vars PARTIDAS_OBRA_NORMALIZAR_ENABLED=false`.
 
-**T19 · revalorar los pendientes y medir (solo lectura).** En la ficha de sv4 de cada uno, «Valorar ahora»:
+**T19 · revalorar los pendientes y medir (solo lectura).** *Antes, el paso 0 de F-073 (`54b82479` y los otros dos merges con «Elegir proveedor» → FEYMACO).* En la ficha de sv4 de cada uno, «Valorar ahora»:
 `2792cf3b`, `53337da7`, `54b82479`, `dedf011a` (0694); `41ab0dc1` (0711); `09643c2b`, `89e463a7`, `bef66bce`,
 `f96c6dbe` (0720); `ca609aee` (0723); `25c5d647` (0724). **`355449d9` NO se revalora** (6 filas guardadas: se
 perderían, F-058): su partida se corrige a mano en la ficha (`CI.04.18` ⇒ `CI.4.18`, `CI.03A.02` ⇒ `CI.03A.2`).
