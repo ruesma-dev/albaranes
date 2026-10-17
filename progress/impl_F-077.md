@@ -157,4 +157,4 @@ y se añade el bloque de F-077). Cambio 1: bloque T14 rehecho (a–e: la ficha s
 acciones que escriben marcadas con su sí expreso, datos reales elegidos por el humano, encaje en los pasos 4 y 6,
 verde ligado a `86c13097`) y dos notas en la secuencia combinada (paso 4 y paso 6). Cambio 2: notas «(implementación,
 aceptado en review)» del 2026-10-17 en R22, `spec_F-077.md` §5, design §3 («Dividir»), §5 y §9. Cambio 3: la cita de
-F-077 de `sv4.md` §11, fuera del bloque de código. Sin cambios de código. `init.sh`: INIT_PASADA1.
+F-077 de `sv4.md` §11, fuera del bloque de código. Sin cambios de código. `bash harness/init.sh` sobre `861aa70`: **VERDE**, «ENTORNO LISTO» (raíz 1237, sv4 1715 passed, el resto igual; COBERTURA 100,0 % de 92 líneas; TAMAÑO dentro, impl 160/220).
