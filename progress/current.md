@@ -1,7 +1,54 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-073 · `in_progress` (2026-10-17, implementer; PARADA 1 APROBADA el 2026-10-15; bloqueo de T3 resuelto por el humano el 2026-10-17 con la opción (a): el script de verificación de F-052 usa `similitud_razon_social` y su assert pasa a B10055433), prioridad 1, rigor `critico`** — proveedor por nombre en sv3 con un criterio único (similitud: TEYMACO casa con FEYMACO) y sin elegir en empates (incidencia 0694). Spec en `specs/F-073-proveedor-por-similitud/`, informe en `progress/impl_F-073.md`; rama `feature/F-073-proveedor-por-similitud`, worktree `../albaranes-F-073`, `dev` (`e09916f`) fusionado. *Junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
+**F-073 · `in_progress` (2026-10-17): implementación terminada (T1–T11, T13), a la espera de la review; T12 es MANUAL del humano (abajo)** — proveedor por nombre en sv3 con un criterio único (similitud: TEYMACO casa con FEYMACO) y sin elegir en empates (incidencia 0694). El bloqueo de T3 lo resolvió el humano el 2026-10-17 con la opción (a): el script de verificación de F-052 usa `similitud_razon_social` y su assert pasa a B10055433. Spec en `specs/F-073-proveedor-por-similitud/`, informe en `progress/impl_F-073.md`, mutación en `progress/mutacion_F-073.md` (2 equivalentes pendientes de tu aceptación escrita). Rama `feature/F-073-proveedor-por-similitud`, worktree `../albaranes-F-073`, `dev` (`e09916f`) fusionado. *Junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
+
+#### F-073 · MANUAL T12 (humano), comandos para PowerShell
+
+**Acciones marcadas [ESCRIBE EN PRODUCCIÓN]: cada una la ejecuta el humano y necesita su sí expreso para esa acción.**
+Ningún agente las lanza. El resto solo lee. No hace falta `Usar-PgAzure`: no hay scripts contra la BBDD.
+
+**Paso 0 · ya, sin esperar al despliegue (P7)** — [ESCRIBE EN PRODUCCIÓN · el revisor humano, en sv4]. Corrige los
+3 merges de la incidencia: correo «0694», obra 0694, hoy con HIERROS RODRIGO (A19004589) y el contrato CTSU26/0001.
+Uno es `54b82479-…`; los otros dos son los del mismo correo con ese proveedor. En la ficha de cada uno, «Elegir
+proveedor» → **A28733558 · FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)** y después «Guardar y volver a
+buscar». VERDE: proveedor FEYMACO (origen `manual`) y un contrato de FEYMACO en la obra. Re-buscar sin elegir no
+sirve: con el CIF ya puesto, la red canoniza a HIERROS. `54b82479` está también en la lista de «Valorar ahora» de
+F-076 T19: haz antes este paso 0.
+
+**Paso 1 · despliegue de sv3** (tras el APPROVED, la fusión en `dev` e `init.sh` en verde en el árbol principal).
+Primero, solo lectura: apunta la imagen actual, por si hay que volver atrás. Después, el despliegue, que es
+[ESCRIBE EN PRODUCCIÓN · humano].
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+. .\00_vars.ps1
+. .\00_capps_vars.ps1
+az containerapp show -n ca-sv3-persistencia -g $RG --query "properties.template.containers[0].image" -o tsv
+Set-DeployTag
+.\deploy.ps1 -Only sv3
+.\check_deploy.ps1
+```
+
+VERDE: `check_deploy.ps1` con sv3 en el tag nuevo y las réplicas arriba. sv3 se construye desde `dev`, que ya trae la
+comun de F-076 y F-078. sv3 no usa esos módulos y no cambia nada más.
+
+**Paso 2 · solo lectura: el log.**
+
+```powershell
+az containerapp logs show -n ca-sv3-persistencia -g $RG --tail 300 | Select-String "INSTANCIADO|por NOMBRE"
+```
+
+VERDE: `INSTANCIADO (…margen_nombre=0.25)`. En el siguiente albarán sin CIF resuelto por nombre debe salir una de
+estas líneas:
+- `proveedor resuelto por NOMBRE dentro de la obra … elegido cif=… similitud=… segunda=… margen=0.25`;
+- `… EMPATE, no se elige: … empatados=N`, con el documento a revisión y el motivo `proveedor_nombre_ambiguo`.
+
+Con esto, T12 en verde.
+
+**Vuelta atrás** (no hay interruptor, P3) — [ESCRIBE EN PRODUCCIÓN · humano, solo si hace falta]:
+`az containerapp update -n ca-sv3-persistencia -g $RG --image <la imagen apuntada en el paso 1>`.
+
 
 **F-077 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`; espera la MANUAL T14, que hace el
 líder en el navegador tras desplegar sv4 (abajo)** — rama

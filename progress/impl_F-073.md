@@ -1,158 +1,196 @@
 <!-- progress/impl_F-073.md -->
-# F-073 · Informe del implementer · BLOQUEADA en T3 (2026-10-17)
+# F-073 · Informe del implementer (2026-10-17)
 
-Rama `feature/F-073-proveedor-por-similitud` (worktree `../albaranes-F-073`). Rigor `critico`, solo sv3.
+Rama `feature/F-073-proveedor-por-similitud` (worktree `../albaranes-F-073`). Rigor `critico`, solo sv3, sin comun
+ni DDL. Spec aprobada el 2026-10-15 (PARADA 1). Bloqueo de T3 resuelto por el humano el 2026-10-17 (opción a, §2).
 
-## 0. Estado
+## 0. Estado y commits
 
-| Paso | Estado | Commit |
-|---|---|---|
-| Fusión de `dev` (`e09916f`) | hecha. `features.json` = todo `dev` + F-073; `current.md` = el de `dev` intacto + la línea de F-073; `BACKLOG.md` regenerado | `f497e45` |
-| F-073 a `in_progress` | hecho | `52da16c` |
-| T1 · `similitud_proveedor.py`: palabras, similitud, distancia (R2–R8) | **hecha**, 676 tests en verde | `4c9d8d8` |
-| T2 · `elegir_por_nombre` (R9, R12) | **hecha**, 39 tests en verde | `7c4bfc4` |
-| T3 … T13 | **sin empezar**: T3 está bloqueada (§1) | — |
+| Paso | Commit |
+|---|---|
+| Fusión de `dev` (`e09916f`): `features.json` = todo `dev` + F-073; `current.md` = el de `dev` intacto (bloques MANUAL de F-078, F-076 y F-077 incluidos) + la línea de F-073; `BACKLOG.md` regenerado | `f497e45` |
+| `in_progress` · bloqueo de T3 (§2) · decisión del humano en la spec (R1, R17, design §3 y §6) | `52da16c` · `60253fd` · `35866d6` |
+| T1 `similitud_proveedor.py`: palabras, similitud, distancia (R2–R8) | `4c9d8d8` |
+| T2 `elegir_por_nombre` (R9, R12) | `7c4bfc4` |
+| T3 la red por CIF y el script de F-052 usan el criterio único; P0 (R1, R8, R15, R17) | `7881097` |
+| T4 paso 1: no se elige en empate; revisión con `proveedor_nombre_ambiguo`; log (R9–R13) | `0be732d` |
+| T5 paso 2 con `elegir_por_nombre`; en empate, sin nota ni motivo (R10, R14) | `79b7e03` |
+| T6 `margen_nombre` en el constructor (R20) | `11da68d` |
+| T7 `fixture_f073` y la incidencia por las tres rutas (R18) | `3834814` |
+| T8 corpus real (R19) | `39c2574` |
+| T9 la obra no cambia (R16); suite de sv3 con solo los 3 cambios de R17 | `b229787` |
+| T10 `docs/ARCHITECTURE.md`: regla 24 y la línea de la 17 | `9f7f489` |
+| T11 mutación (3 pasadas, 2 commits de tests) y cobertura | `0a5d6d3` · `0c169a1` · `cd67656` |
+| T12 MANUAL del humano: bloque «F-073 · MANUAL T12» en `current.md` (§5) | — |
+| T13 `bash harness/init.sh` en verde (§7) | commit de cierre |
 
-`dev` no trae cambios en sv3 desde `d79b3d9`: las líneas que cita el design (`header_resolver_service.py`) siguen
-donde estaban. Entorno: *junction* `services/albaranes-front/.venv` → venv de sv4 del árbol principal, como en los
-worktrees de F-077 y F-078: sin ella, `init.sh` daba KO (`servicios.json`: el venv de sv4 no contiene intérprete).
-Hay que quitarla con `cmd /c rmdir services\albaranes-front\.venv` antes de `git worktree remove`.
+Entorno: *junction* `services/albaranes-front/.venv` → venv de sv4 del árbol principal, como en F-077 y F-078.
+Sin ella, `init.sh` daba KO. Quitarla con `cmd /c rmdir services\albaranes-front\.venv` antes de `git worktree remove`.
+`dev` no traía cambios en sv3 desde `d79b3d9`: las líneas que cita el design seguían donde estaban.
 
-## 1. Motivo del bloqueo: un tercer cambio de expectativa que la spec no prevé
+## 1. Qué cambió
 
-**Lo que dice la spec.** En design §3, T3 elimina `_score_razon_social` del resolver. R1 pide que ningún otro sitio de
-sv3 puntúe nombres de proveedor. R17 admite **dos** cambios de expectativa. En design §6, si cambia otro test, el
-implementer PARA: ese cambio solo se acepta si el test fijaba un empate resuelto por orden de llegada, y lo decide el
-humano. En design §5, «23 pares […] dan la misma similitud que `_score_razon_social` hoy; la única excepción es
-«S.L.»».
+- **Nuevo** `services/albaranes-persistencia/application/services/similitud_proveedor.py`: `FORMAS_JURIDICAS`,
+  `PALABRAS_VACIAS`, `palabras_razon_social`, `similitud_razon_social`, `distancia_edicion` (la de F-062 tal cual),
+  `CandidatoNombre`, `EleccionPorNombre`, `MARGEN_NOMBRE_POR_DEFECTO = 0.25`, `elegir_por_nombre` y `_decidir`.
+- `application/services/header_resolver_service.py`:
+  - Salen `_PUNTUACION_RAZON`, `_score_razon_social` y `_distancia_edicion`. `_norm` y `_match_score` se quedan
+    solo para la obra (R16), y sus docstrings lo dicen.
+  - Red por CIF: `similitud_razon_social` y `distancia_edicion`.
+  - Paso 1: `score_nombre` usa la similitud; el atajo pasa a `elegir_por_nombre`. En un empate, el paso por puntos
+    sigue intacto y, si no decide, `_marcar_revision_safely(proveedor_nombre_ambiguo, nota de R11)`.
+  - Paso 2: `elegir_por_nombre`; en un empate, solo log.
+  - `_log_eleccion` (R13), `_nota_empate_nombre` (R11), `_clave_cif` y `margen_nombre` en el constructor y en
+    «INSTANCIADO» (R20).
+- `domain/models/header_resolution_models.py`: `MOTIVO_PROVEEDOR_NOMBRE_AMBIGUO = "proveedor_nombre_ambiguo"`.
+- `scripts/verificar_f052_proveedores_obra.py`: `similitud_razon_social` (R1, decisión del humano).
+- Tests nuevos: `test_f073_similitud.py`, `test_f073_eleccion.py`, `test_f073_incidencia_0694.py` y
+  `test_f073_corpus.py`. Se modifican:
+  - `doble_sigrid_api.py`: `fixture_f073`; los fixtures de F-052, F-062 y F-063 no se tocan.
+  - `test_f062_r3_candidato_claro.py` y `test_f062_r10_…`: import con alias; `solo-forma-juridica` sale de
+    `CASOS_OPCION_B`, con un comentario.
+  - `test_f052_resumen_obra.py`: `marcar_revision_cabecera` en el `_RepoFake` y el caso de R17.
+  - `test_f052_script_verificacion.py`: el assert de R17.
+- `docs/ARCHITECTURE.md`: **regla 24** (la 22 y la 23 ya eran de F-078 y F-076) y la línea de la 17.
+- Spec: R1, R17, design §3 y §6 con la decisión del 2026-10-17, y `tasks.md` T1–T11 `[x]`.
+- Sin cambios: las composiciones (`composition.py` y `api/app.py`), `config/settings.py`, comun, DDL, sv4 y
+  `azure-apps/` (sv3 no cambia lo que expone ni lo que consume).
 
-**Lo que hay en el código.** Un cuarto consumidor que la spec no lista:
-`services/albaranes-persistencia/scripts/verificar_f052_proveedores_obra.py` (l. 51–53 y 351) importa
-`_score_razon_social`. Es el script de verificación de F-052, que repite en local la propuesta de
-`_mejor_candidato_por_nombre`. Si T3 quita la función tal como pide el design, el script deja de importar.
+## 2. Desviaciones respecto a la spec
 
-**Lo que mide.** El par «PROVEEDOR OBRA 07» ~ «PROVEEDOR OBRA 00, S.L.» vale **1,0 hoy** y **2/3 con F-073**. Es el
-mismo par que la spec fija en R6, así que la afirmación de design §5 no es cierta. La traza RED de §3 lo
-confirma: con el criterio de hoy, el caso `obra-00` de R6 falla. Sobre el doble 0691, el script con cada
-criterio:
+1. **El script de verificación de F-052** (`scripts/verificar_f052_proveedores_obra.py`) importaba
+   `_score_razon_social`, y la spec no lo listaba. Al pasarlo al criterio único cambiaba un tercer assert:
+   `test_f052_r29_el_mejor_no_es_el_cif_esperado_falla`, que fijaba un empate a 1,00 resuelto a favor del primero
+   (B10000000). Con F-073, «PROVEEDOR OBRA 07» casa exacto con B10055433. Se paró la tarea (commit `60253fd`) y el
+   humano eligió la opción (a): el script es sitio de R1 y ese cambio es el tercer caso de R17. Quedó anotado en la
+   spec (`35866d6`). También falla una afirmación de design §5: el par «PROVEEDOR OBRA 07» ~ «PROVEEDOR OBRA 00,
+   S.L.» no da lo mismo que con `_score_razon_social` (1 frente a 2/3).
+2. **`EleccionPorNombre.mejor`**: campo añadido a la firma de design §6. Es el primero en orden (−similitud, cif),
+   elegido o no, y lo necesitan el log de R13 y el log del paso 2 cuando nadie llega al umbral.
+3. **`CandidatoNombre.cif`** es el CIF recortado de la fila, no el normalizado, porque es el que se escribe en el
+   merge, como hasta ahora. La agrupación sí va por el normalizado.
+4. **Tolerancia `1e-9` en el margen**: 2/3 − 5/12 da 0,2499… en coma flotante, y sin ella un margen exacto (R9,
+   inclusivo) contaría como empate. Hay tests que la fijan.
+5. **El corpus de R19 está reconstruido**: el prototipo del spec-author vivía en su scratchpad y se perdió.
+   - Candidatos: las 18 razones de `evals/fixtures/final/` (con su CIF) y HIERROS RODRIGO.
+   - Lecturas: 31, con las categorías de design §5.
+   - Con F-073: **31/0/0**, como pide R19.
+   - Control con el criterio de antes, medido: **24/6/1**, no 23/7/1 como decía la spec, porque cambian el orden y
+     las lecturas. FEYMACO y TEYMACO eligen HIERROS RODRIGO, igual que en producción.
+6. **Observación, sin cambio**: `proveedor_nombre_ambiguo` no lo retira nadie, ni sv3 ni sv4, igual que
+   `proveedor_cif_propio:` (lo dice la spec). Si el revisor elige el proveedor, el motivo se queda en
+   `review_reasons_json`, porque la retirada de sv4 (`review_repository.py:4056`) solo cubre
+   `proveedor_cif_no_casa:`.
 
-```
-hoy    'PROVEEDOR OBRA 07'    mejor=B10000000 score=1.00 salmedina=0.00
-F-073  'PROVEEDOR OBRA 07'    mejor=B10055433 score=1.00 salmedina=0.00
-hoy    'PROVEEDOR XXXXX'      mejor=B10000000 score=0.50 salmedina=0.00   (igual)
-F-073  'SALMEDINA'            mejor=B82899550 score=1.00 salmedina=1.00   (igual)
-```
+## 3. Fase RED (trazas reales, comando desde `services/albaranes-persistencia`)
 
-Un solo assert cambia: `tests/test_f052_script_verificacion.py:183`,
-`test_f052_r29_el_mejor_no_es_el_cif_esperado_falla`, que espera
-`"Mejor candidato: B10000000 (score 1,00) -> propuesta"`. Su propio comentario dice que fija un empate: «Empate a
-1,00 entre los «PROVEEDOR OBRA xx»: gana el primero en el orden de la agregada». Con F-073 deja de haber empate:
-«PROVEEDOR OBRA 07» casa exacto con B10055433 (`PROVEEDOR OBRA 07, S.L.`). El test sigue probando lo que debe
-probar: el mejor no es SALMEDINA, así que la verificación falla (código 1).
-
-**Propuesta para el humano** (al responder, la feature vuelve a `in_progress` y sigo desde T3):
-
-- **(a) Recomendada.** El script usa `similitud_razon_social` (R1: una sola función) y el assert pasa a
-  `B10055433 (score 1,00)`. El comentario del test cita F-073 y la fecha. El script se añade a design §3. Es justo
-  el caso que design §6 admite (un empate resuelto por orden de llegada), pero necesita tu decisión.
-- (b) El script conserva una copia privada del criterio viejo. Así no cambia ninguna expectativa, pero vuelve a
-  haber dos criterios de nombre, lo que contradice R1. No la recomiendo.
-
-**Comprobado y sin sorpresas**:
-- El caso `nombre-debil-y-familia` de R17: «PROVEEDOR» empata con 80 candidatos y los puntos no deciden, porque
-  cuatro proveedores con hormigón sacan 7 puntos. Con F-073 sale `(None, "deterministic")` con la nota de R11,
-  como prevé la spec.
-- No hay más usos de `_score_razon_social`, `_distancia_edicion` ni `_PUNTUACION_RAZON` en el repositorio. Solo
-  están en el resolver, en los dos tests de F-062 que lista el design y en el script de §1.
-
-**Desviación menor que aplicaré sin preguntar** (no bloquea): en `docs/ARCHITECTURE.md` las reglas 22 y 23 ya
-existen (F-078 y F-076, entraron con `dev`). La de F-073 será la **regla 24**, no la 22.
-
-## 2. Decisiones de diseño (T1 y T2)
-
-- `palabras_razon_social` aplica R2 tal cual: minúsculas, la tabla de separadores, sin acentos (NFD) y fuera las
-  palabras de 1 carácter, las formas jurídicas y las palabras vacías.
-- `_casa` (R5): subcadena con ≥ 3 caracteres; con ≥ 5, `distancia_edicion ≤ 1` contra palabras de ≥ 5. Antes se
-  filtra por `|Δlongitud| ≤ 1`, que es condición necesaria y solo ahorra cálculo. Ese filtro importa en el
-  paso 2, que compara contra 3.543 proveedores. Con 2 caracteres, igualdad.
-- `distancia_edicion` es la de F-062 copiada tal cual (R8). En T3 el resolver la importará de aquí.
-- **Añadido a la firma de design §6**: `EleccionPorNombre.mejor`, el primero en orden (−similitud, cif), elegido o
-  no. Hace falta para el log de R13 y para conservar el log de hoy, «mejor score global=… < umbral», del paso 2.
-  Es un campo más y no cambia ninguna regla.
-- `CandidatoNombre.cif` es el CIF **recortado de la fila**, no el normalizado, porque es el que se escribirá en el
-  merge, como hoy (un `ESB…` de 11 caracteres sigue siendo `ESB…`). La agrupación sí va por el normalizado.
-  Dentro de un grupo manda el orden (−similitud, cif, nombre), así que no depende de la llegada (R12).
-- `_decidir` compara el margen con una tolerancia `1e-9`. Las similitudes son fracciones de palabras, y
-  2/3 − 5/12 da 0,2499… en coma flotante. Sin tolerancia, un margen exacto de 0,25 (inclusivo, R9) se tomaría
-  por empate. Hay un test que lo fija.
-- El umbral se aplica literal (`≥ min_score`). Con `min_score = 0` y todo a 0, el resultado es empate, no
-  elección. En producción el umbral es 0,5.
-
-## 3. Fase RED (trazas reales)
-
-**T1.** Desde `services/albaranes-persistencia`, antes de crear el módulo:
-`python -m pytest tests/test_f073_similitud.py -q`
-```
-E   ModuleNotFoundError: No module named 'application.services.similitud_proveedor'
-ERROR tests/test_f073_similitud.py
-!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
-1 error in 0.35s
-```
-RED de comportamiento: los 13 casos de R6, copiados tal cual del test, contra el `_score_razon_social` de hoy.
-Se lanzó con `python -m pytest <scratchpad>/red/test_red_r6_criterio_viejo.py -q -p no:cacheprovider --rootdir .`:
+**T1.** `python -m pytest tests/test_f073_similitud.py -q`, sin el módulo:
+`ModuleNotFoundError: No module named 'application.services.similitud_proveedor'`. RED de comportamiento: los 13
+casos de R6 contra el `_score_razon_social` de hoy (copia del test en el scratchpad,
+`python -m pytest <scratchpad>/red/test_red_r6_criterio_viejo.py -q -p no:cacheprovider --rootdir .`):
 ```
 FAILED ::test_f073_r6_casos_de_referencia[teymaco]
 FAILED ::test_f073_r6_casos_de_referencia[solo-sa]
 FAILED ::test_f073_r6_casos_de_referencia[obra-00]
 3 failed, 10 passed in 9.26s
 ```
-El `_match_score` de hoy, que usan el atajo y el paso 2, sobre la incidencia (script de lectura):
+El `_match_score` de hoy (atajo y paso 2) sobre la incidencia da `0.50` frente a FEYMACO y `0.50` frente a HIERROS
+RODRIGO, con FEYMACO y con TEYMACO.
+
+**T2.** `python -m pytest tests/test_f073_eleccion.py -q -k "r9 or r12"` →
+`ImportError: cannot import name 'MARGEN_NOMBRE_POR_DEFECTO'`.
+
+**T3.** `python -m pytest tests/test_f073_eleccion.py -q -k "r1 or r15"`:
 ```
-hoy _match_score('FEYMACO, S.A.', 'FERRETERIA Y MAQUINARI') = 0.50  _score_razon_social = 1.00
-hoy _match_score('FEYMACO, S.A.', 'HIERROS RODRIGO, S.A.') = 0.50  _score_razon_social = 0.00
-hoy _match_score('TEYMACO, S.A.', 'FERRETERIA Y MAQUINARI') = 0.50  _score_razon_social = 0.00
-hoy _match_score('TEYMACO, S.A.', 'HIERROS RODRIGO, S.A.') = 0.50  _score_razon_social = 0.00
-hoy _score_razon_social('S.L.', 'ARIDOS ANFERSA, S.L.') = 1.0
+E           AssertionError: _PUNTUACION_RAZON
+E       AttributeError: module 'scripts.verificar_f052_proveedores_obra' has no attribute 'similitud_razon_social'
+E       AssertionError: assert [('A19004589'...733558', 0.0)] == [('A19004589'...733558', 1.0)]
+4 failed, 21 passed, 19 deselected in 2.54s
 ```
-GREEN: `python -m pytest tests/test_f073_similitud.py -q` → `676 passed in 1.37s`.
+(El cuarto es P0: «S.L.» se aplicaba como corrección).
 
-**T2.** Con los tests escritos y el módulo todavía sin `elegir_por_nombre`:
-`python -m pytest tests/test_f073_eleccion.py -q -k "r9 or r12"`
+**T4** (central: el paso 1 de la incidencia).
+`python -m pytest tests/test_f073_eleccion.py tests/test_f052_resumen_obra.py -q` → `14 failed, 57 passed`:
 ```
-E   ImportError: cannot import name 'MARGEN_NOMBRE_POR_DEFECTO' from 'application.services.similitud_proveedor'
-ERROR tests/test_f073_eleccion.py
-1 error in 0.33s
+E           AssertionError: assert ('A19004589', 'deterministic') == ('A28733558', 'deterministic')
+E           AssertionError: assert ('B10000000', 'deterministic') == (None, 'deterministic')
 ```
-GREEN: `python -m pytest tests/test_f073_eleccion.py tests/test_f073_similitud.py -q` → `715 passed in 1.37s`.
 
-## 4. Ficheros tocados hasta ahora
+**T5.** `python -m pytest tests/test_f073_eleccion.py -q -k "paso2 or r14"` → `6 failed, 1 passed`:
+```
+E       AssertionError: assert [(None, 'A190...terministic')] == [(None, 'A287...terministic')]
+E       AssertionError: assert [(None, 'B2',...terministic')] == [(None, None,...terministic')]
+E           AssertionError: assert 'B10000000' == 'B82899550'   (3.543 globales, «SALMEDlNA S.L.»)
+```
 
-- Nuevo: `services/albaranes-persistencia/application/services/similitud_proveedor.py`.
-- Nuevos: `services/albaranes-persistencia/tests/test_f073_similitud.py` y `tests/test_f073_eleccion.py` (R9 y
-  R12; T4–T6 añadirán R10, R11, R13, R14 y R20).
-- `specs/F-073-proveedor-por-similitud/tasks.md`: T1 y T2 marcadas `[x]`.
-- `harness/features.json`, `BACKLOG.md` y `progress/current.md`: la fusión, `in_progress` y ahora `blocked`.
-- El resolver **no se ha tocado**: producción no cambia de comportamiento hasta T3–T5.
+**T6.** `python -m pytest tests/test_f073_eleccion.py -q -k r20` →
+`TypeError: HeaderResolverService.__init__() got an unexpected keyword argument 'margen_nombre'` (2 failed).
 
-## 5. MANUAL pendientes
+**T7** (central: R18). El test se ejecutó con el resolver de antes de F-073, restaurado temporalmente desde
+`7c4bfc4`. Comando: `python -m pytest tests/test_f073_incidencia_0694.py -q` → `6 failed, 1 passed`, las 6 por las
+tres rutas × FEYMACO/TEYMACO:
+```
+E       AssertionError: assert ('A19004589', 'deterministic') == ('A28733558', 'deterministic')
+```
+Con el resolver nuevo: `7 passed`.
 
-T12 (desplegar sv3 y corregir los 3 merges con «Elegir proveedor») se redactará en el bloque «F-073 · MANUAL» de
-`current.md` al terminar T11. Lo único urgente es P7, que no depende de esta rama: el revisor puede corregir ya en
-sv4 los 3 merges de la incidencia.
+**T8.** Es el control del propio test: con el criterio de antes, 24/6/1. Con F-073, 31/0/0.
+**T9 (R16)** fija el comportamiento de antes y no tiene RED posible: la obra no cambia.
 
-## Evidencias (parciales, a la fecha del bloqueo)
+GREEN de cada tarea: `pytest` en `services/albaranes-persistencia` completo tras T3 (1422), T4 (1437), T5 (1444),
+T6 (1448) y T9 (1490 passed).
 
-| Evidencia | Valor |
+## 4. Mutación y cobertura
+
+Campaña completa (`python -m harness.mutacion --feature F-073`, crítico, sin muestreo), detalle en
+`progress/mutacion_F-073.md`:
+- pasada 1: 71 mutantes, 60 muertos, 11 supervivientes;
+- 7 eran huecos reales y los cubren tests nuevos (`0a5d6d3`): `_clave_cif` (`or`→`and`), «≥ 5» en las dos palabras,
+  la contención (`or`→`and`), el desempate por nombre y `frozen=True` ×2. La frontera margen − tolerancia, en
+  `0c169a1`;
+- **pasada final: 71, 69 muertos, 2 supervivientes, los dos EQUIVALENTES** y analizados en el informe:
+  - el filtro `|Δlongitud| ≤ 1`: la distancia ≤ 1 ya lo implica. Solo ahorra tiempo: 0,22 s frente a 0,37 s por
+    búsqueda global;
+  - `<`→`<=` en la agrupación: solo cambia con candidatos idénticos campo a campo.
+- **Pendiente: la aceptación escrita del humano** de esos dos equivalentes (rigor crítico).
+
+Cobertura de las líneas cambiadas: `python -m harness.cobertura --base dev --config harness/rigor.json` →
+`PUERTA COBERTURA: 93.4% de 122 líneas cambiadas cubiertas (114/122, umbral 80%, nivel critico)`.
+
+## 5. MANUAL pendiente (T12, del humano)
+
+Está entero en `progress/current.md`, bloque «F-073 · MANUAL T12». Cada acción que escribe en producción va
+marcada con quién la ejecuta y con su autorización:
+- **Paso 0, ya** [ESCRIBE EN PRODUCCIÓN · revisor humano en sv4]: los 3 merges de la incidencia (uno es
+  `54b82479`), «Elegir proveedor» → A28733558 (FEYMACO) y «Guardar y volver a buscar». Va antes del «Valorar
+  ahora» de F-076 T19 sobre `54b82479`.
+- **Paso 1** [ESCRIBE EN PRODUCCIÓN · humano, tras el APPROVED y la fusión]: desde `infra\`, `. .\00_vars.ps1`,
+  `. .\00_capps_vars.ps1`, apuntar la imagen actual (lectura), `Set-DeployTag`, `.\deploy.ps1 -Only sv3` y
+  `.\check_deploy.ps1`.
+- **Paso 2** (lectura): `az containerapp logs show -n ca-sv3-persistencia …`. Debe salir `margen_nombre=0.25` y la
+  línea `elegido`/`EMPATE` de R13.
+- **Vuelta atrás**: la imagen anterior, con `az containerapp update` [ESCRIBE EN PRODUCCIÓN · humano].
+
+No hay scripts contra la BBDD (no hace falta `Usar-PgAzure`). Nada de lo anterior lo ha lanzado un agente.
+
+## 6. Fuera de alcance (según la spec)
+
+- La propuesta automática de sv4 (`_proposeBest`): X4 de F-067 (P4).
+- Que la propuesta de F-052 deje de proponer en empate (P5): sigue proponiendo el primero, y hay un test que lo fija.
+- Mover el criterio a comun (P1).
+- Corregir los 3 merges: lo hace el revisor (paso 0).
+
+## 7. `bash harness/init.sh` al cierre
+
+(se completa abajo)
+
+## Evidencias
+
+| Evidencia | Valor real |
 |---|---|
-| Tests de F-073 ejecutados | 715 passed (T1 + T2), 1,37 s |
-| `bash harness/init.sh` (línea base, antes de T1, sin la *junction*) | 1237 passed en 318,71 s; **KO** por el venv de sv4 del worktree (resuelto con la *junction*, §0) |
-| `bash harness/init.sh` (tras el bloqueo) | **verde**, EXIT=0 (§6) |
-| Cobertura de líneas cambiadas | PENDIENTE: el resolver aún no cambia (T11) |
-| Mutantes | PENDIENTE: la campaña es la T11 |
-
-## 6. Resultado de `bash harness/init.sh` tras el bloqueo (2026-10-17, con la *junction*)
-
-Verde, `EXIT=0`. Raíz: 1237 passed (252,74 s). sv1 205, sv2 397, **sv3 1418** (25,59 s), sv4 1715 (248,45 s), sv5 43,
-sv6 444 (+1 skipped), sv9 670 y comun 818 (+3 skipped): todo en verde. `PUERTA COBERTURA`: 100,0 % de 79 líneas
-cambiadas (umbral 80 %, crítico). `PUERTA TAMAÑO`: impl 155/220. Aviso esperado en un worktree: los servicios
-importan `ruesma_comun` del árbol principal (F-072). F-073 no toca comun, así que no afecta.
+| Tests de F-073 | `test_f073_similitud.py` 676, `test_f073_eleccion.py` 77, `test_f073_incidencia_0694.py` 7 y `test_f073_corpus.py` 34 |
+| Suite de sv3 | 1490 passed en 14,22 s (T9); al cierre, ver §7 |
+| Cobertura de las líneas cambiadas | 93,4 % (114/122) |
+| Mutantes | 71 generados, 69 muertos, 2 supervivientes (equivalentes, pendientes de aceptación); 293,2 s, 4 workers |
+| Tiempo de la suite | sv3 14–25 s; `init.sh` completo, ver §7 |
+| Corpus R19 | F-073 31/0/0; antes de F-073, 24/6/1 |
