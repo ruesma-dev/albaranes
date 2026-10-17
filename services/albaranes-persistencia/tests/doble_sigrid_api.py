@@ -40,6 +40,9 @@ hormigonera que empata por nombre).
 
 Fixture «F-063» (``fixture_f063``, aparte): obra 0694 de la incidencia de
 FEYMACO del 2026-10-08, con Construcciones Ruesma (el cliente) en ``prv``.
+
+Fixture «F-073» (``fixture_f073``, aparte): obra 0694 de la incidencia del
+2026-10-15, con HIERROS RODRIGO y FEYMACO con su razón social real.
 """
 from __future__ import annotations
 
@@ -316,6 +319,51 @@ def fixture_f063() -> Fixture:
         contrato(CIF_FEYMACO, RAZ_FEYMACO, 2600694, CONTRATO_FEYMACO,
                  "SUMINISTRO FERRETERIA OBRA 0694", ("DISCO CORTE 230 MM", "GUANTES NITRILO"))
         + contrato(CIF_OTRO_0694, RAZ_OTRO_0694, 2600695, "CTSU26/0695", "PORTES", ("PORTES",))
+    )
+    globales = tuple(sorted({(ln.cif, ln.raz) for ln in lineas} | {
+        (CIF_RUESMA, RAZ_RUESMA),
+        ("A30000001", "PROVEEDOR GLOBAL 0001"),
+    }))
+    return Fixture(lineas=lineas, proveedores_global=globales)
+
+
+# ------------------------------------------------------------------ #
+# Fixture de F-073 (design §4): la incidencia 0694 del 2026-10-15, con las
+# razones sociales REALES del log de sv3. Aparte de los de F-052, F-062 y
+# F-063, que no se tocan.
+# ------------------------------------------------------------------ #
+#: FEYMACO con su razón social real (la de F-063 no lleva «(FEYMACO)»).
+RAZ_FEYMACO_REAL = "FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)"
+#: Código de contrato FICTICIO: el real no se conoce (el log no lo trae).
+CONTRATO_FEYMACO_F073 = "CTSU26/7694"
+#: El proveedor al que sv3 asignó los 3 albaranes (primero en el empate a 0,50).
+CIF_HIERROS_RODRIGO = "A19004589"
+RAZ_HIERROS_RODRIGO = "HIERROS RODRIGO, S.A."
+CONTRATO_HIERROS_RODRIGO = "CTSU26/0001"  # el del log
+#: Lo que leyó la IA en los 3 albaranes (con el CIF del cliente).
+NOMBRES_LEIDOS_F073 = ("FEYMACO, S.A.", "TEYMACO, S.A.")
+
+
+@lru_cache(maxsize=1)
+def fixture_f073() -> Fixture:
+    contador = {"linea": 730000}
+
+    def contrato(cif, raz, ide, cod, res, descripciones) -> list[Linea]:
+        out = []
+        for pos, desc in enumerate(descripciones, start=1):
+            contador["linea"] += 1
+            out.append(Linea("0694", cif, raz, ide, cod, res, contador["linea"], pos, desc, None))
+        return out
+
+    # Familias del log: FEYMACO ['acero','hormigon','maquinaria','mortero'],
+    # HIERROS RODRIGO ['acero'].
+    lineas = tuple(
+        contrato(CIF_HIERROS_RODRIGO, RAZ_HIERROS_RODRIGO, 2600001, CONTRATO_HIERROS_RODRIGO,
+                 "SUMINISTRO ACERO OBRA 0694", ("ACERO CORRUGADO B500S",))
+        + contrato(CIF_FEYMACO, RAZ_FEYMACO_REAL, 2607694, CONTRATO_FEYMACO_F073,
+                   "SUMINISTRO FERRETERIA OBRA 0694",
+                   ("HORMIGON HM-20/P/20/I", "MORTERO M-5", "ALQUILER MAQUINARIA",
+                    "ACERO CORRUGADO B500S"))
     )
     globales = tuple(sorted({(ln.cif, ln.raz) for ln in lineas} | {
         (CIF_RUESMA, RAZ_RUESMA),
