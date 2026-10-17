@@ -7,8 +7,8 @@
 - R12: el importe que se repinta al teclear es ``Q × precio × (1 − dto)``.
 - R13, R18: «Guardar» de la fila y «Guardar todas» bloquean (``?bloquear=1``);
   «Guardar todas» solo manda las filas con cambios.
-- R19: aviso de filas con cambios sin guardar antes de «Guardar» y «Guardar y
-  aprobar».
+- R19: (sustituido por F-077 R1–R10: «Guardar» y «Guardar y aprobar» guardan
+  antes las filas; sus tests viven en ``test_f077_guardar_y_aprobar_js.py``).
 - R21: confirmación con las dos sumas antes de aprobar.
 - R22: confirmación antes de revalorar si hay filas tocadas a mano.
 - R23: «Traer líneas contrato» exige la cantidad de cada línea elegida.
@@ -165,28 +165,8 @@ def test_f065_r18_guardar_todas_salta_las_filas_sin_cambios_y_avisa_si_no_hay():
     assert "filasConCambios(" in todas  # F-077 R12: el filtro vive en la función compartida
 
 
-# =================================================================== #
-# R19 · aviso de filas sin guardar antes de guardar la cabecera
-# =================================================================== #
-@con_node
-def test_f065_r19_js_aviso_de_filas_sin_guardar(tmp_path):
-    casos = _ejecutar(tmp_path, ["avisoFilasSinGuardar"], """
-        console.log(JSON.stringify([avisoFilasSinGuardar(0), avisoFilasSinGuardar(1),
-                                    avisoFilasSinGuardar(3)]));
-    """)
-
-    assert casos == [None, "Hay 1 línea con cambios sin guardar",
-                     "Hay 3 líneas con cambios sin guardar"]
-
-
-def test_f065_r19_guardar_y_aprobar_miran_las_filas_sucias_antes_del_put():
-    js = _app_js()
-    guardar = _bloque(js, "function guardarCabecera(", "if (saveBtn)")
-
-    assert "avisoFilasSinGuardar(" in guardar and "contarFilasConCambios(" in guardar
-    assert guardar.index("avisoFilasSinGuardar(") < guardar.index("sendSave(")
-    assert 'saveBtn.addEventListener("click", function () { guardarCabecera(false); })' in js
-    assert 'approveBtn.addEventListener("click", function () { guardarCabecera(true); })' in js
+# R19 (F-065) sustituido por F-077 R1–R10: sus tests (orden «filas ⇒ PUT»,
+# sin el aviso «Hay N líneas…») están en test_f077_guardar_y_aprobar_js.py.
 
 
 # =================================================================== #

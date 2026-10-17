@@ -85,7 +85,7 @@ _FICHA = """
     function attachPartidaCombo() {}
     function cargarPartidasObra() { return Promise.resolve({items: [], error: false}); }
     function contarFilasConCambios() { return 0; }
-    function avisoFilasSinGuardar() { return ""; }
+    function avisoFilasSinGuardar() { return ""; }  // F-065 R29: la confirmación de «Dividir»
     let enviado = null;
     let envios = 0;
     function fetch(url, init) {
@@ -739,7 +739,7 @@ def test_f065_r27v4_en_la_ventana_dividir_lo_mismo(tmp_path):
 # cambiada que no es de la lista no se guarda por ningún camino.
 # =================================================================== #
 _GUARDAR = ["parseNumEs", "numerosIguales", "partidaParaEnviar", "_camposCambiados", "importeDeFila",
-            "marcarPartida", "partidasMalas", "partidasInvalidas", "filasConCambios", "motivoDeRespuesta",
+            "marcarPartida", "partidasMalas", "filasConCambios", "motivoDeRespuesta",
             "enviarFila", "consolidarFila", "wireConciliaEdit"]
 
 # Una fila editable de verdad: combo de partida + wireConciliaEdit (Enter =
@@ -989,9 +989,13 @@ def test_f065_r27v5_guardar_todas_con_una_partida_mala_no_envia_nada(tmp_path):
 
 @con_node
 def test_f065_r27v5_guardar_y_aprobar_marca_la_partida_mala(tmp_path):
-    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR + ["contarFilasConCambios", "avisoFilasSinGuardar",
-                                                            "guardarCabecera"], _fila_guardar() + """
+    # F-077 R3: ya no avisa «Hay 1 línea…» (F-065 R19 sustituido): guarda antes
+    # las filas, y con una partida mala no envía nada (ni PATCH ni PUT).
+    casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR + [
+        "marcarFilaNoGuardada", "limpiarFilasNoGuardadas", "guardarFilasPendientes", "avisoSumaVigente",
+        "guardarCabecera"], _fila_guardar() + """
         var approveBtn = null;
+        var saveBtn = null;
         let guardados = 0;
         function sendSave() { guardados += 1; }
     """, """
@@ -1001,8 +1005,8 @@ def test_f065_r27v5_guardar_y_aprobar_marca_la_partida_mala(tmp_path):
         console.log(JSON.stringify({guardados, roja: marca().roja, alertas, peticiones: peticiones.length}));
     """)
 
-    assert casos == {"guardados": 0, "roja": True, "alertas": ["Hay 1 línea con cambios sin guardar"],
-                     "peticiones": 0}
+    assert casos == {"guardados": 0, "roja": True, "peticiones": 0, "alertas": [
+        "Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén)."]}
 
 
 @con_node

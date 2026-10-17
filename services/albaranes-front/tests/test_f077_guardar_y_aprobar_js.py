@@ -423,6 +423,19 @@ def test_f077_r12_una_sola_peticion_patch_de_fila():
 
 
 def test_f077_r13_ya_no_avisa_de_filas_con_cambios_sin_guardar():
+    """Ni «Guardar» ni «Guardar y aprobar» avisan ya «Hay N líneas con cambios sin
+    guardar» (F-065 R19). El único uso que queda de ese aviso es la confirmación
+    de «Dividir» (F-065 R29: dividir recarga la ficha), fuera del alcance de
+    F-077 (design §8: wireDividir no se toca)."""
+    from test_f051_almacen_front import _funcion_js
+
     js = _app_js()
-    assert "con cambios sin guardar" not in js
-    assert "avisoFilasSinGuardar" not in js and "contarFilasConCambios" not in js
+    guardar = _funcion_js(js, "guardarCabecera") + _funcion_js(js, "guardarFilasPendientes")
+    assert "avisoFilasSinGuardar" not in guardar and "contarFilasConCambios" not in guardar
+    assert "con cambios sin guardar" not in guardar
+    fuera_de_dividir = js
+    for nombre in ("wireDividir", "avisoFilasSinGuardar", "contarFilasConCambios"):
+        fuera_de_dividir = fuera_de_dividir.replace(_funcion_js(js, nombre), "")
+    assert fuera_de_dividir.count("avisoFilasSinGuardar(") == 0
+    assert fuera_de_dividir.count("contarFilasConCambios(") == 0
+    assert "partidasInvalidas" not in js  # solo la usaba el aviso de F-065 R19
