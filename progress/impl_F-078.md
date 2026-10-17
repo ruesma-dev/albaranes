@@ -59,84 +59,68 @@ Rama `feature/F-078-linea-guarda-lo-que-se-ve` (worktree `../albaranes-F-078`), 
    Caso sin ocurrencias en producción (§3 de la spec: 0 unidades distintas). Test actualizado con la cita.
 4. **`app.py` sin cambios**: sus manejadores ya devuelven `exc.aviso`; el texto vive en `LineasIncompletasError`
    (tests del portal: 303 del listado y 409 del PUT con «Líneas sin descripción: 3, 5»).
-5. **Fixture `f065_bbdd`**: la fila 13 nace con `descripcion_linea='PORTES'` (como la deja F-078); con R17 la
-   METALFIRE de la fixture ya no se aprobaría (15 tests de aprobar de F-065 caían). Los tests de F-078 que necesitan
-   la 13 vacía la vacían explícitamente. `f053_sv4_bbdd` añade `albaran_lines_merge.unidad_medida` (columna de sv3,
-   como `contexto_linea_json`).
+5. **Fixtures**: en `f065_bbdd` la fila 13 nace con `descripcion_linea='PORTES'` (como la deja F-078; con R17 caían
+   15 tests de aprobar de F-065); `f053_sv4_bbdd` añade `albaran_lines_merge.unidad_medida` (columna de sv3).
 6. **La derivada en el PATCH in situ** recibe lo de la fila (como dice el design); antes del relleno podría vaciar
    un campo de la derivada que la fila no tenía: por eso el orden de despliegue sv6 → relleno → sv4.
-7. **Script**: errores de conexión se imprimen solo con el tipo (`ERROR: OperationalError. Detalle omitido…`): el
-   mensaje de SQLAlchemy puede llevar host y usuario. `SET TRANSACTION READ ONLY` solo en PostgreSQL.
-8. **Orden TDD del script (T9)**: el script se redactó antes que su test; la fase RED se tomó retirando el script
-   (traza abajo). El resto de tareas, test primero.
+7. **Script**: un error de conexión se imprime solo con su tipo (el mensaje puede llevar host y usuario).
+8. **T9**: el script se redactó antes que su test; la RED se tomó con el script retirado. El resto, test primero.
 
 ## 3. Fase RED (comandos desde la carpeta del servicio, `PYTHONPATH` = comun del worktree)
 
-**T1** `python -m pytest -q tests/test_f078_linea_valorada.py` (comun):
+**T1** `python -m pytest -q tests/test_f078_linea_valorada.py` (comun) — GREEN: `103 passed in 0.51s`.
 ```
 E   ModuleNotFoundError: No module named 'ruesma_comun.linea_valorada'
-ERROR tests/test_f078_linea_valorada.py
 1 error in 1.02s
 ```
-GREEN: `103 passed in 0.51s`.
 
-**T2** `python -m pytest -q tests/test_f078_fila_completa.py -k "r4 or r5 or r19"` (sv6):
+**T2** `python -m pytest -q tests/test_f078_fila_completa.py -k "r4 or r5 or r19"` (sv6) — GREEN: `16 passed, 2 deselected in 2.70s`.
 ```
 E       ModuleNotFoundError: No module named 'application.services.fila_completa'
 16 failed, 2 deselected in 3.89s
 ```
-GREEN: `16 passed, 2 deselected in 2.70s`.
 
-**T3** `... -k pipeline` (sv6), con `fila_completa` ya hecho y el pipeline sin llamarlo:
+**T3** `... -k pipeline` (sv6), con `fila_completa` ya hecho y el pipeline sin llamarlo — GREEN: `18 passed`; suite sv6 `313 passed in 11.68s`.
 ```
 E       AssertionError: assert None == 'MORTERO M-5'
 E           AssertionError: lines = self._builder.build(
 E           assert 'completar_registros(' in 'self._builder.build('
 2 failed, 16 deselected in 3.13s
 ```
-GREEN: `18 passed`; suite sv6 `313 passed in 11.68s`.
 
-**T4** `.venv/Scripts/python.exe -m pytest -q tests/test_f078_ficha_pinta_fila.py` (sv4):
+**T4** `.venv/Scripts/python.exe -m pytest -q tests/test_f078_ficha_pinta_fila.py` (sv4) — GREEN: `13 passed in 5.68s`.
 ```
 E       AssertionError: assert 'PUERTA CORTAFUEGOS EI2-60' is None
 E       AssertionError: assert ('UD', 99.5) == ('M2', 99.5)
-E       AssertionError: assert ('UD', 115.0) == (None, None)
 E       AssertionError: assert ('PORTES', 'UD', 50.0) == ('Portes a obra', 'VIAJE', 55)
-E       AssertionError: assert ('PORTES', 'UD') == (None, None)
 E       AssertionError: assert 60.0 == 50.0
 E       assert 'value=""' in '\n   ...'          (importe: la plantilla pintaba 720.00)
 8 failed, 5 passed in 5.68s
 ```
-GREEN: `13 passed in 5.68s`.
 
-**T5** `... tests/test_f078_escrituras.py -k "r9 or r10 or r11"` (sv4):
+**T5** `... tests/test_f078_escrituras.py -k "r9 or r10 or r11"` (sv4) — GREEN: `15 passed in 5.01s`.
 ```
 E       AssertionError: assert 'UD' is None
 E       assert 115.0 is None
-E       AssertionError: assert None == 'PUERTA CORTAFUEGOS EI2-60'
 E       AssertionError: assert None == 'PUERTA CORTAFUEGOS EI2-60'
 E       AssertionError: assert ('VIAJE', None) == ('VIAJE', 'VIAJE')
 E       AssertionError: assert ('PAR', None) == ('PAR', 'PAR')
 6 failed, 9 passed in 6.14s
 ```
-GREEN: `15 passed in 5.01s`.
 
-**T6** `... tests/test_f078_escrituras.py -k "r12 or r13 or r14 or r15 or r16"` (sv4):
+**T6** `... tests/test_f078_escrituras.py -k "r12 or r13 or r14 or r15 or r16"` (sv4) — GREEN: `28 passed in 5.37s`.
 ```
 E       AssertionError: assert (503, None, 'UD', None) == (503, 'PUERTA...', 'UD', 'UD')
 E       AssertionError: assert None == 'PUERTA EI2-90 HOJA'
 E       AssertionError: assert None == 'PUERTA CORTAFUEGOS EI2-60'
 E       AssertionError: assert (' TORNILLOS ...one, 2.0, 2.0) == ('TORNILLOS M...UD', 2.0, 2.0)
 E       AssertionError: assert ('PUERTA CORT...D', None, 5.0) == ('PUERTA CORT...D', 'UD', 5.0)
-E           assert (None, 'UD', None) == ('PUERTA CORT...', 'UD', 'UD')
 E       AssertionError: assert None == 'PUERTA CORTAFUEGOS EI2-90'
-E       AssertionError: assert None == 'PORTES'
 E         {13: {'descripcion_linea': 'PORTES', 'unidad_albaran': 'UD', 'cantidad_convertida': 1.0}} != {13: {}}
 10 failed, 3 passed, 15 deselected in 5.74s
 ```
-GREEN: `28 passed in 5.37s`.
 
-**T7** `... tests/test_f078_aprobar.py` (sv4):
+**T7** `... tests/test_f078_aprobar.py` (sv4) — GREEN: `15 passed`. (R20 pasa desde el principio: F-053 se mantiene, es un test de caracterización.)
 ```
 E       Failed: DID NOT RAISE LineasIncompletasError          (×6)
 E         - Líneas sin cantidad o importe: 2. Líneas sin descripción: 3, 4
@@ -144,17 +128,15 @@ E         + Líneas sin cantidad o importe: 2
 E       TypeError: LineasIncompletasError.__init__() got an unexpected keyword argument 'sin_descripcion'   (×2)
 9 failed, 5 passed, 1 warning in 13.65s
 ```
-GREEN: `15 passed`. (R20 pasa desde el principio: F-053 se mantiene, es un test de caracterización.)
 
 **T8** (sv9, sin código nuevo): los tests de las filas «de antes» fijan el hueco que cierra F-078
 (`[Motivo('falta_descripcion', '', '386')]`, la 385 sin unidad, la 401 `cantidad_sin_convertir`); `6 passed`.
 
-**T9** `python -m pytest -q tests/test_f078_relleno.py` (sv6) con el script retirado:
+**T9** `python -m pytest -q tests/test_f078_relleno.py` (sv6) con el script retirado — GREEN: `24 passed in 3.77s` (27 tras T10).
 ```
      24 E       ModuleNotFoundError: No module named 'scripts.rellenar_filas_f078'
 24 failed in 4.54s
 ```
-GREEN: `24 passed in 3.77s` (27 tras T10).
 
 ## 4. Mutación (T10) · detalle en `progress/mutacion_F-078.md`
 
@@ -164,9 +146,17 @@ borde `<=` de `sin_conversion`, la ayuda del script y tres ramas de `_linea_de_l
 porque escriben la descripción antes de materializar): 7 tests nuevos (`2a6c462`). Re-juicio de los 8 con la suite
 entera de su servicio sin `-x`: **8 de 8 muertos**. Total: **0 supervivientes, 0 equivalentes que aceptar**.
 
-## 5. Verificación final (T15)
+## 5. Verificación final (T15) · `bash harness/init.sh`
 
-PENDIENTE_INIT
+1. **Tal cual** (sobre `a99bb69`): KO por el entorno del worktree, no por el código. sv4, sv6 y sv9
+   importan la comun editable del árbol principal (`dev`), que no tiene `ruesma_comun.linea_valorada`
+   (`ModuleNotFoundError` en la recolección); de ahí la cobertura 24,4 % (sus suites no corrieron). Además: raíz
+   `test_f039_r2` (faltaban los dos informes de F-078 en `inventario_mutacion_F-039.md`: añadidos, `ef70d17`) y
+   tamaño del informe (223 > 220: recortado). Sin más KO.
+2. **Con `PYTHONPATH` a la comun del worktree** (lo que verá el árbol principal tras fusionar): PENDIENTE_INIT2
+3. **AVISO rutas sensibles [evals]**: `fila_completa.py` cae en «redes deterministas de sv6» y pide
+   `progress/evals_F-078.md` (`python -m evals.runner --con-llm --feature F-078`). Llama a LLM: no lo lancé (sin red
+   en esta tarea). Decide el líder/humano; es aviso, no bloquea.
 
 ## 6. Fuera del alcance y lo que falta
 
@@ -220,4 +210,10 @@ Deja de terminar en `no_admitido` con `falta_descripcion` (con `ALTA_SIGRID_COMM
 
 ## 8. Evidencias
 
-PENDIENTE_EVIDENCIAS
+| Evidencia | Valor |
+|---|---|
+| Tests (suites enteras, `PYTHONPATH` comun del worktree) | PENDIENTE_TESTS |
+| Tests nuevos de F-078 | comun 106, sv6 18 + 27, sv4 13 + 32 + 15, sv9 6 |
+| Cobertura de las líneas cambiadas | PENDIENTE_COB |
+| Mutantes generados / supervivientes | 81 / 8 en la herramienta → **0** tras los tests de T10 (8 de 8 muertos) |
+| Tiempo de la suite | PENDIENTE_TIEMPO |
