@@ -31,6 +31,8 @@ expansión de abreviaturas). Si no casa, lo dice y la lectura se queda.
   canoniza con ``canonizar_codigo_obra`` (F-070); vacía ⇒ no consulta.
 - :func:`normalizar_partida`, :func:`partes_de_partida`,
   :func:`casar_partida` y sus motivos.
+- (F-076) :func:`resolver_partida_obra`: qué partida debe usar quien valora
+  (el código de la lista o la lectura intacta) con la guarda de no hoja.
 """
 from __future__ import annotations
 
@@ -38,7 +40,7 @@ import re
 import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from ruesma_comun.obras import canonizar_codigo_obra
 from ruesma_comun.sigrid.lectura import MAX_FILAS_POR_PETICION, PoliticaTruncado
@@ -418,3 +420,69 @@ def casar_partida(lista: ListaPartidasObra, lectura: Any, alm: str | None) -> Ca
     if MOTIVO_AMBIGUA in motivos:
         return CasePartida(MOTIVO_AMBIGUA)
     return CasePartida(MOTIVO_COMPUESTA, tuple(c for _, c in resultados if c is not None))
+
+
+# ------------------------------------------------------------------ #
+# F-076 · resolver la partida de una línea contra su obra
+# ------------------------------------------------------------------ #
+#: Motivos de :class:`ResolucionPartida` (F-076 R5).
+RESOLUCION_EXACTA = "exacta"
+RESOLUCION_NORMALIZADA = "normalizada"
+RESOLUCION_FUERA_DE_LISTA = "fuera_de_lista"
+RESOLUCION_AMBIGUA = "ambigua"
+RESOLUCION_NO_APLICA = "no_aplica"
+
+MotivoResolucion = Literal["exacta", "normalizada", "fuera_de_lista", "ambigua", "no_aplica"]
+
+
+@dataclass(frozen=True)
+class ResolucionPartida:
+    """Qué partida usar para una lectura (F-076 R5).
+
+    ``codigo`` es el código TAL COMO FIGURA EN LA LISTA con ``exacta`` y
+    ``normalizada``; en cualquier otro motivo, la lectura sin cambios.
+    ``leida`` es la lectura tal cual llegó.
+    """
+
+    codigo: str | None
+    motivo: MotivoResolucion
+    leida: str | None
+
+    @property
+    def cambia(self) -> bool:
+        """``True`` si quien valora debe usar otro texto que el leído."""
+        return self.codigo != self.leida
+
+
+def _choca_con_no_hoja(lista: ListaPartidasObra, lectura: Any) -> bool:
+    """La clave de la lectura es la de algún código NO hoja de la obra."""
+    clave = normalizar_partida(lectura)
+    return clave is not None and any(normalizar_partida(c) == clave for c in lista.no_hojas)
+
+
+def resolver_partida_obra(lista: ListaPartidasObra, lectura: Any, alm: str | None) -> ResolucionPartida:
+    """La partida que debe usar quien valora una línea (F-076 R5).
+
+    :func:`casar_partida` y, encima:
+
+    - ``alm`` / ``sin_partida`` ⇒ ``no_aplica`` (almacén o nada que verificar).
+    - Lectura no exacta cuya clave es la de un código NO hoja de la obra ⇒
+      ``fuera_de_lista``: nunca se normaliza hacia otra fila del árbol
+      (``03.02`` capítulo ≠ ``3.02`` hoja).
+    - ``compuesta`` ⇒ ``fuera_de_lista``: Sigrid admite una partida por línea
+      y el reparto es de F-049.
+    - ``fuera_de_lista`` / ``ambigua`` ⇒ la lectura sin cambios.
+    """
+    leida = None if lectura is None else str(lectura)
+    caso = casar_partida(lista, lectura, alm)
+    if caso.motivo in (MOTIVO_ALM, MOTIVO_SIN_PARTIDA):
+        return ResolucionPartida(leida, RESOLUCION_NO_APLICA, leida)
+    if caso.motivo == MOTIVO_EXACTA:
+        return ResolucionPartida(caso.codigos_lista[0], RESOLUCION_EXACTA, leida)
+    if _choca_con_no_hoja(lista, lectura):
+        return ResolucionPartida(leida, RESOLUCION_FUERA_DE_LISTA, leida)
+    if caso.motivo == MOTIVO_NORMALIZADA:
+        return ResolucionPartida(caso.codigos_lista[0], RESOLUCION_NORMALIZADA, leida)
+    if caso.motivo == MOTIVO_AMBIGUA:
+        return ResolucionPartida(leida, RESOLUCION_AMBIGUA, leida)
+    return ResolucionPartida(leida, RESOLUCION_FUERA_DE_LISTA, leida)

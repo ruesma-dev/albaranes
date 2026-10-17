@@ -38,11 +38,13 @@ from ruesma_comun.sigrid.partidas import (
     CasePartida,
     ListaPartidasObra,
     PartidaObra,
+    ResolucionPartida,
     casar_partida,
     hojas_de_filas,
     leer_partidas_obra,
     normalizar_partida,
     partes_de_partida,
+    resolver_partida_obra,
 )
 
 _LOG = logging.getLogger("test_f076_partidas")
@@ -431,3 +433,99 @@ def test_f076_r3_sin_filas_da_lista_vacia_no_none():
     """Quien decide qué es «sin lista» con 0 hojas es la caché (R6), no la lectura."""
     lista = leer_partidas_obra(_lector_http(_cuerpo([]), []), "0691")
     assert lista == ListaPartidasObra(obra="0691", hojas=(), no_hojas=())
+
+
+# ------------------------------------------------------------------ #
+# R5 · resolver_partida_obra: el código de la lista o la lectura intacta
+# ------------------------------------------------------------------ #
+# La 0720 de la medición: hoja CI.03A.2 y el capítulo 03.02 (no imputable)
+# junto a una hoja 3.02 que comparte su clave.
+_LISTA_0720 = _lista("CI.4.18", "CI.03A.2", "3.02", "P5.01.09", no_hojas=("03.02", "CI", "CI.03A"))
+
+
+@pytest.mark.parametrize(
+    ("lectura", "codigo", "motivo"),
+    [
+        ("CI.04.18", "CI.4.18", "normalizada"),
+        ("CI.03A.02", "CI.03A.2", "normalizada"),
+        ("ci.4.18", "CI.4.18", "normalizada"),
+        ("ci 04 18", "CI.4.18", "normalizada"),
+        ("CI.4.18", "CI.4.18", "exacta"),
+        (" CI.4.18 ", "CI.4.18", "exacta"),
+        ("P5.1.9", "P5.01.09", "normalizada"),
+    ],
+)
+def test_f076_r5_casa_da_el_codigo_tal_como_figura_en_la_lista(lectura, codigo, motivo):
+    res = resolver_partida_obra(_LISTA_0720, lectura, "ALM")
+    assert res == ResolucionPartida(codigo=codigo, motivo=motivo, leida=lectura)
+    assert res.cambia is (codigo != lectura)
+
+
+def test_f076_r5_exacta_sin_cambio():
+    res = resolver_partida_obra(_LISTA_0720, "CI.4.18", "ALM")
+    assert res.cambia is False
+
+
+@pytest.mark.parametrize("lectura", ["3.2", "03.02", "3.002", "03-02"])
+def test_f076_r5_clave_de_un_codigo_no_hoja_no_se_normaliza(lectura):
+    """``03.02`` capítulo ≠ ``3.02`` hoja: nunca se normaliza hacia otra fila
+    del árbol. Fuera de lista y la lectura sin cambios."""
+    res = resolver_partida_obra(_LISTA_0720, lectura, "ALM")
+    assert res == ResolucionPartida(codigo=lectura, motivo="fuera_de_lista", leida=lectura)
+    assert res.cambia is False
+
+
+def test_f076_r5_la_hoja_exacta_gana_aunque_su_clave_sea_la_de_un_no_hoja():
+    res = resolver_partida_obra(_LISTA_0720, "3.02", "ALM")
+    assert res == ResolucionPartida(codigo="3.02", motivo="exacta", leida="3.02")
+
+
+def test_f076_r5_ambigua_con_clave_de_no_hoja_es_fuera_de_lista():
+    lista = _lista("A.01", "A.1", no_hojas=("A.001",))
+    assert resolver_partida_obra(lista, "A.0001", "ALM").motivo == "fuera_de_lista"
+
+
+def test_f076_r5_dos_hojas_con_la_misma_clave_es_ambigua():
+    lista = _lista("CI.04.18", "CI.4.18")
+    res = resolver_partida_obra(lista, "ci-04-18", "ALM")
+    assert res == ResolucionPartida(codigo="ci-04-18", motivo="ambigua", leida="ci-04-18")
+    assert res.cambia is False
+
+
+@pytest.mark.parametrize("lectura", ["CI.14.18", "01.03A.02", "CI.04.01.08", "CI.03.A", "03.09"])
+def test_f076_r5_sin_candidata_fuera_de_lista_sin_cambios(lectura):
+    """Las 6 sin candidata de la medición (spec §2.2) y un sufijo: no se tocan."""
+    res = resolver_partida_obra(_LISTA_0720, lectura, "ALM")
+    assert res == ResolucionPartida(codigo=lectura, motivo="fuera_de_lista", leida=lectura)
+
+
+def test_f076_r5_compuesta_es_fuera_de_lista():
+    """Sigrid admite una partida por línea; el reparto es de F-049."""
+    lista = _lista("P4.01.09", "P5.01.09")
+    assert casar_partida(lista, "P4.1.9/P5.01.09", "ALM").motivo == MOTIVO_COMPUESTA
+    res = resolver_partida_obra(lista, "P4.1.9/P5.01.09", "ALM")
+    assert res == ResolucionPartida(codigo="P4.1.9/P5.01.09", motivo="fuera_de_lista", leida="P4.1.9/P5.01.09")
+
+
+@pytest.mark.parametrize("lectura", ["ALM", " alm "])
+def test_f076_r5_alm_no_aplica(lectura):
+    res = resolver_partida_obra(_LISTA_0720, lectura, "ALM")
+    assert res == ResolucionPartida(codigo=lectura, motivo="no_aplica", leida=lectura)
+    assert res.cambia is False
+
+
+@pytest.mark.parametrize("lectura", [None, "", "   ", "./-"])
+def test_f076_r5_vacia_no_aplica(lectura):
+    res = resolver_partida_obra(_LISTA_0720, lectura, "ALM")
+    assert res == ResolucionPartida(codigo=lectura, motivo="no_aplica", leida=lectura)
+    assert res.cambia is False
+
+
+def test_f076_r5_lista_sin_hojas_todo_fuera_de_lista():
+    assert resolver_partida_obra(_lista(), "CI.04.18", "ALM").motivo == "fuera_de_lista"
+
+
+def test_f076_r5_resolucion_es_inmutable():
+    res = resolver_partida_obra(_LISTA_0720, "CI.04.18", "ALM")
+    with pytest.raises(AttributeError):
+        res.codigo = "X"  # type: ignore[misc]
