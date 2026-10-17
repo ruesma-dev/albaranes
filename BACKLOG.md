@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **76 features**, 52 abiertas, 24 terminadas.
+Resumen: **77 features**, 53 abiertas, 24 terminadas.
 
 Bloqueadas: **F-078, F-076, F-077, F-073**.
 
@@ -30,6 +30,7 @@ Bloqueadas: **F-078, F-076, F-077, F-073**.
 | F-068 | F7 en la ficha: divide la última fila pulsada y Edge no pregunta por la exploración con el símbolo de intercalación (sv4) | 2 | pendiente | estandar |  |
 | F-069 | Lista de equivalencias usuario de la app ↔ usuario de Sigrid para el alta (sv9) | 2 | pendiente | critico |  |
 | F-079 | Avisar en la ficha cuando se edita la descripción de una línea vinculada a contrato (Sigrid usa la del contrato) | 2 | pendiente | estandar |  |
+| F-081 | sv3: decodificar el nombre del PDF de Sigrid (X-Document-Filename llega con codificación porcentual UTF-8) | 2 | pendiente | estandar |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -302,6 +303,18 @@ PETICIÓN DEL HUMANO (2026-10-14, PARADA 1 de F-053 v8): «en el futuro habrá u
 estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí
 
 PETICIÓN DEL HUMANO (2026-10-16, P8 de la PARADA 1 de F-078): en una línea Contrato vinculada, la descripción editada en la ficha no llega a Sigrid: sigrid-api usa la de su línea de contrato (hoy 2 filas en producción). Esta feature hace que la ficha lo avise (o lo impida) al editar esa descripción. Alcance exacto a decidir en su PARADA 1. Depende de F-078.
+
+### F-081 · sv3: decodificar el nombre del PDF de Sigrid (X-Document-Filename llega con codificación porcentual UTF-8)
+
+estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí
+
+ORIGEN: aviso de la sesión sigrid-api (2026-10-17), feature F-010 de sigrid-api, fusionada y pendiente de despliegue: POST /api/documents/read enviará la cabecera X-Document-Filename con codificación porcentual UTF-8 en los caracteres no ASCII, los de control y el propio «%». Un nombre ASCII sin «%» sale igual que hoy; uno con tildes, que hoy da 500, llegará como «Factura%20...%C3%B1...»; uno ASCII con «%» llegará con «%25».
+
+PROBLEMA: sv3 usa la cabecera tal cual como nombre del PDF de contrato (sigrid_api_contrato_client.py, download_contrato_document, ~l. 709): tras el despliegue de sigrid-api, los PDF con tildes se descargarán (hoy fallan) pero con el nombre codificado.
+
+PROPUESTA: decodificar con urllib.parse.unquote (retrocompatible: sobre un nombre sin «%» no cambia nada) en el cliente de sv3 y en los scripts de diagnóstico que leen la misma cabecera (trace_sigrid_rcg_dual.py, diagnose_sigrid_contrato_gra.py, diagnose_sigrid_contrato_gra_modificado.py, diagnose_sigrid_contrato_docs.py, diagnose_sigrid_contrato_docs_v2.py), o leer filename* de Content-Disposition. Tests: ASCII igual, «%C3%B1» ⇒ «ñ», «%25» ⇒ «%».
+
+NO ENTRA: el campo nuevo «key» ni el 409 DocumentoAmbiguoError (pedimos por id_column «ide», la PK). Despliegue: solo sv3 (puede ir con el de F-073). Actualizar azure-apps/albaranes.md si describe la cabecera.
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 
