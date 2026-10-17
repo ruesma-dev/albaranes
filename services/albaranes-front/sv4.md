@@ -160,6 +160,7 @@ albaranes-review-web/
 | `GET`  | `/api/documents/{id}?view=...`                         | —                                 | `DocumentDetailPayload` completo (campos + líneas + display_lines + contratos + valuation).    |
 | `PUT`  | `/api/documents/{id}`                                  | `MergeDocumentUpdatePayload`      | Guardar cambios. Update in-place de líneas + edición de sintéticas + recálculo de importes.    |
 | `POST` | `/api/documents/{id}/re-fetch-contratos`               | `{}`                              | Re-buscar contratos en el ERP y actualizar BBDD. 503 si SIGRID no está configurado.            |
+| `GET`  | `/api/documents/{id}/alta-sigrid/fase`                 | —                                 | (F-077 R18) `{"fase": "en_curso" \| "sin_respuesta" \| "resultado"}` del panel «Alta en Sigrid»; la ficha la sondea cada 3 s mientras está «en curso». Solo lectura (ni escribe el alta ni publica); 404 sin documento; con `ALTA_SIGRID_DESDE_UTC` vacía, `resultado`. Uso interno del JS de sv4 (fuera del esquema OpenAPI). |
 
 ### 4.3 Detalle del payload `MergeDocumentUpdatePayload`
 
@@ -547,6 +548,10 @@ DEFAULT_REVIEWER="Equipo Ruesma"
 ## 11. Flujo del guardado (PUT /api/documents/{id})
 
 ```
+> F-077: desde la ficha, «Guardar» y «Guardar y aprobar» mandan ANTES el PATCH
+> de cada fila con cambios (`.../lines/{vid}/conciliacion/campos?bloquear=1`);
+> si alguno falla no se envía este PUT (regla 20 de `docs/ARCHITECTURE.md`).
+
 1. PUT /api/documents/{id} { campos + lines + valuation_line_updates + approved? }
 
 2. ReviewService.save_document(...) → AlbaranReviewRepository.update_document(...)

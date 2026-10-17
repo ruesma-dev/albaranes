@@ -397,6 +397,23 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
     - **Las reglas compartidas viven en comun** (`ruesma_comun.alta_sigrid`):
       DESDE, Espera, «vinculada», «línea a registrar», producto efectivo y
       estados; sv4 y sv9 deciden con las mismas funciones.
+    - **El panel de la ficha** (F-077, spec `specs/F-077-guardar-y-aprobar/`)
+      tiene tres fases (`domain/services/alta_sigrid.fase_alta`): «Alta en
+      curso…» solo mientras sv9 procesa la aprobación vigente (sin fila, fila de
+      una aprobación anterior en estado repetible, o `en_curso` del mismo
+      `approved_at_utc`, comparado como instante) y como mucho **5 minutos**
+      desde la aprobación, sin nada del resultado anterior ni botones; pasados,
+      error de tiempo («Sigrid no ha respondido en 5 minutos…», con «Solicitar
+      alta» solo si `puede_solicitar_alta`); en otro caso, el resultado, con
+      `no_admitido`, `revisar` y `error` pintados como error. Una fila anterior
+      `ya_en_sigrid`, `registrado` o `incierto` es la respuesta (sv9 ignora la
+      aprobación nueva). En «en curso» la ficha consulta cada 3 s `GET
+      /api/documents/{id}/alta-sigrid/fase` (solo lectura: ni escribe el alta ni
+      publica) y recarga una vez al cambiar. Todo motivo del alta se ve con su
+      texto legible (`TEXTOS_MOTIVO_ALTA`, que un test contrasta con las fuentes
+      de sv9) y el código en el `title`; los de una línea sin fila en la tabla
+      del panel (p. ej. un rechazo local sin petición), como «Línea N: …» con N
+      la posición de la fila en la ficha.
 20. **Lo editado en las líneas manda** (F-065 fase 1, oct 2026). Spec:
     `specs/F-065-lineas-editadas-y-reparto/`; decisiones en
     `progress/spec_F-065.md` §v2. Lo aprobado es lo que sv9 da de alta, así
@@ -434,6 +451,20 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       desbloquéala para editarla») y los masivos se la saltan. «Desbloquear»
       la libera; las dos acciones tienen «Deshacer». Aprobar no exige filas
       bloqueadas. Revalorar las deja desbloqueadas (F-058).
+    - **«Guardar» y «Guardar y aprobar» guardan antes las filas** (F-077,
+      sustituye al aviso «Hay N líneas con cambios sin guardar» de F-065 R19):
+      el PATCH de cada fila con cambios, en orden y con la misma validación de
+      partida, y solo si todos van bien el PUT de cabecera. Al primer fallo se
+      para (la fila en rojo con su motivo, sin PUT); las guardadas quedan
+      guardadas y bloqueadas (no es atómico). Con filas guardadas, el aviso de
+      la suma se relee del servidor antes de confirmar. Las tres vías de
+      guardar filas usan la misma función de `app.js` (`enviarFila`).
+    - **El ⚠ de la partida** (F-077) sale solo en filas Contrato con línea del
+      albarán cuya partida leída no coincide con la de su línea de contrato, con
+      el `title` «descripción · [Normalizada: X → Y, F-076] · No coincide con la
+      partida leída en el albarán (X)» (la nota y el ⚠ se excluyen); nunca en
+      Nueva, sintéticas, `manual` ni `reparto`, que no tienen lectura que
+      comparar.
     - **Aprobar valida**: no se aprueba (ficha ni listado) con filas sin
       cantidad o importe («Líneas sin cantidad o importe: 3, 5», posiciones de
       la tabla de la ficha); si la suma de las filas no cuadra con la de lo
