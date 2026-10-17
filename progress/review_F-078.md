@@ -22,7 +22,7 @@ Revisión incremental desde 16e048b (pasada 2): `16e048b..a201c6d`. La pasada 1 
   AVISO [evals], ya justificado como falso positivo (C4 ter).
 - **Checkpoints:** el `[ ]` de C4 (MANUAL en `current.md`) pasa a `[x]`; el resto, como en la pasada 1. C4 ter queda
   en `aviso` con su motivo escrito. Cierre: falta solo lo MANUAL del humano (T12–T14), que no bloquea el veredicto.
-- **Observación:** el tercer bloque de T13 (relectura tras sv4) no repite el `cd` a `serviceslbaran-valoracion-persist`; si
+- **Observación:** el tercer bloque de T13 (relectura tras sv4) no repite el `cd` a la carpeta de sv6 (`albaran-valoracion-persist`); si
   el humano despliega sv4 desde `infra\`, que vuelva antes a esa carpeta. Que el líder lo diga al pasarle los comandos.
 
 ## Pasada 1 · veredicto: CHANGES_REQUESTED (resuelto en la pasada 2)
