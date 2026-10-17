@@ -32,6 +32,7 @@ from ruesma_comun.contratos.origen_datos import (
     normalizar_codigo,
 )
 from ruesma_comun.importes import importe_de_linea
+from ruesma_comun.sigrid import normalizar_partida
 from ruesma_comun.valoracion import esta_valorado
 
 from domain.models.alta_sigrid_models import (
@@ -1115,6 +1116,36 @@ class ValuationPayload(BaseModel):
 
 
 # ====================================================================== #
+def coincide_partida(declarada: Any, esperada: Any) -> tuple[bool | None, str | None]:
+    """Aviso ✓/⚠ de la partida de una fila (F-076 R23, R24).
+
+    Compara con la clave de comun (``ruesma_comun.sigrid.normalizar_partida``,
+    la misma con la que sv6 normaliza la partida al valorar), sin copia:
+
+    - una de las dos vacía (``None`` o solo espacios) ⇒ ``(None, None)``: sin
+      icono, como siempre;
+    - misma clave ⇒ ``True`` (✓) y, si difieren literalmente (sin espacios
+      exteriores), la declarada recortada como segundo valor: la ficha añade
+      «Normalizada: {declarada} → {final}» al ``title``; iguales ⇒ ``None``;
+    - clave distinta ⇒ ``(False, None)`` (⚠).
+
+    Un texto no vacío sin nada alfanumérico no tiene clave: cuenta él mismo
+    como clave (comparación literal, como antes de F-076; nunca un ✓ por dos
+    claves ``None``). No choca con ninguna clave real: esas siempre llevan
+    alguna letra o cifra.
+    """
+    if declarada is None or esperada is None:
+        return None, None
+    d, e = str(declarada).strip(), str(esperada).strip()
+    if not d or not e:
+        return None, None
+    clave_d, clave_e = normalizar_partida(d) or d, normalizar_partida(e) or e
+    if clave_d != clave_e:
+        return False, None
+    return True, (d if d != e else None)
+
+
+# ====================================================================== #
 class ConciliacionDisplay(BaseModel):
     """Datos de la conciliación que se muestran inline bajo cada línea
     del albarán en sv4. NO contiene lógica — solo lo que el revisor
@@ -1192,6 +1223,13 @@ class ConciliacionDisplay(BaseModel):
     # la usan los avisos ✓/⚠ contra el contrato y el aviso «pasará a
     # NUEVA» del navegador (R20: la de la casada no cambia la identidad).
     codigo_partida_casada: str | None = None
+
+    # (F-076 R24) La partida con la que se compara (leída del albarán o, sin
+    # línea del albarán, la final) cuando coincide con la casada por la clave
+    # de comun pero no literalmente (``CI.04.18`` frente a ``CI.4.18``): la
+    # ficha la enseña en el ``title`` («Normalizada: X → Y»). ``None`` si son
+    # iguales, si no coinciden (⚠) o si no hay nada que comparar.
+    partida_normalizada_desde: str | None = None
 
     # Senales para el calculo determinista de CONFIANZA (no se pintan):
     #   match_method / match_confidence_pct -> distinguir match fuerte

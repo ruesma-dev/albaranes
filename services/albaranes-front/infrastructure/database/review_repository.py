@@ -48,6 +48,7 @@ from domain.models.review_models import (
     cambia_origen,
     cantidades_tras_editar,
     cantidades_tras_reapuntar,
+    coincide_partida,
     MOTIVO_UNIDAD_CAMBIADA,
     motivos_con,
     ConciliacionDisplay,
@@ -4742,8 +4743,13 @@ class AlbaranReviewRepository:
                     and _conc.unitario_contrato is not None
                     else None
                 )
-                # partida: lo imputado en la blanca vs la partida del contrato
-                _conc.agree_partida = _agree_txt(
+                # partida: lo imputado en la blanca vs la partida del contrato,
+                # por la clave de comun (F-076 R23, R24): ``CI.04.18`` leída
+                # frente a ``CI.4.18`` casada es ✓ con nota «Normalizada».
+                (
+                    _conc.agree_partida,
+                    _conc.partida_normalizada_desde,
+                ) = coincide_partida(
                     line.codigo_imputacion, _partida_del_contrato(_conc)
                 )
                 # cantidad: la salmon copia la de la blanca (coincide si hay)
@@ -4889,7 +4895,12 @@ class AlbaranReviewRepository:
                     return None
                 return str(d).strip() == str(e).strip()
 
-            conc.agree_partida = _txt(
+            # (F-076 R23, R24) Sin línea del albarán: la final frente a la
+            # casada, por la clave de comun.
+            (
+                conc.agree_partida,
+                conc.partida_normalizada_desde,
+            ) = coincide_partida(
                 syn.codigo_partida_final, _partida_del_contrato(conc)
             )
             conc.agree_cantidad = _num(_cant, _cant)

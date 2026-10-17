@@ -9,6 +9,10 @@ from application.services.conciliacion_orchestrator import (
     aplicar_conciliacion_ia4,
 )
 from application.services.fila_completa import completar_registros
+from application.services.normalizador_partidas import (
+    NormalizacionSobre,
+    NormalizadorPartidas,
+)
 from dataclasses import dataclass
 
 from application.services.valuation_builder import ValuationBuilder
@@ -51,9 +55,13 @@ class RunValuationPipeline:
     Pasos:
       1. Si existe valoración y no se fuerza: devolver la existente.
       2. Llamar al servicio 5 via HTTP.
+      2 bis. (F-076) Normalizar la partida leída de cada línea contra las
+         de la obra (``NormalizadorPartidas``); desde aquí se valora con
+         ese sobre. Nunca falla: sin lista, se valora como siempre.
       3. Si status == no_contract: persistir cabecera vacía con
          status='no_contract' y terminar.
       4. Pasarle el envelope al ValuationBuilder.
+      4 bis. (F-076) Anotar la normalización en los registros.
       5. Persistir en las 3 tablas (replace atómico).
     """
 
@@ -64,11 +72,41 @@ class RunValuationPipeline:
         repository: ValuationRepository,
         builder: ValuationBuilder,
         conciliacion_client: Any = None,
+        normalizador: NormalizadorPartidas | None = None,
     ) -> None:
         self._ia_client = ia_client
         self._repository = repository
         self._builder = builder
         self._conciliacion_client = conciliacion_client
+        # (F-076) None = sin normalizar (como antes de F-076).
+        self._normalizador = normalizador
+
+    def _normalizar_partidas(
+        self, document_id: str, envelope: Any,
+    ) -> NormalizacionSobre:
+        """(F-076 R7, R11) El sobre con el que se valora; nunca lanza.
+
+        La obra se lee del merge solo si el normalizador la necesita
+        (encendido y con alguna lectura). Cualquier excepción (BBDD,
+        caché) ⇒ WARNING y el sobre original con
+        ``partidas_obra_no_disponibles``.
+        """
+        if self._normalizador is None:
+            return NormalizacionSobre(envelope=envelope)
+        try:
+            obra = (
+                self._repository.obra_del_documento(document_id=document_id)
+                if self._normalizador.necesita_obra(envelope)
+                else None
+            )
+            return self._normalizador.normalizar(envelope=envelope, obra=obra)
+        except Exception as exc:  # noqa: BLE001 - R11: nunca falla por la lista
+            logger.warning(
+                "[run-valuation] document_id=%s no se pudo normalizar la "
+                "partida (%r); se valora con el sobre de sv5.",
+                document_id, exc,
+            )
+            return NormalizadorPartidas.degradada(envelope)
 
     def run(self, request: RunValuationRequest) -> RunValuationResult:
         existing: ExistingValuationSummary | None = (
@@ -148,6 +186,12 @@ class RunValuationPipeline:
                 duplicate=False,
             )
 
+        # (F-076 R7, R14) Normalizar la partida ANTES de la rama
+        # no_contract, de IA4 y de las reglas; desde aquí se valora (y se
+        # persiste) el sobre normalizado.
+        normalizacion = self._normalizar_partidas(request.document_id, envelope)
+        envelope = normalizacion.envelope
+
         # Caso "no contrato seleccionado".
         if envelope.status == "no_contract":
             logger.info(
@@ -207,6 +251,10 @@ class RunValuationPipeline:
         # (concepto, unidad, precio, unidad del albarán y Q sin conversión).
         # Toda rama que persista líneas pasa por aquí (lo exige un test).
         lines = completar_registros(lines, envelope)
+        # (F-076 R9, R10, R11) Rastro de la normalización: motivos, revisión
+        # y la partida leída de vuelta en ``codigo_partida_albaran``. Modifica
+        # los registros en su sitio (no reasigna ``lines``).
+        NormalizadorPartidas.anotar(header, lines, normalizacion)
 
         # Adjuntamos el envelope bruto al header para trazabilidad.
         header_with_envelope = ValuationHeaderRecord(

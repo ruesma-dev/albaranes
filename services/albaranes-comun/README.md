@@ -22,6 +22,7 @@ Resuelve la duplicación con deriva detectada en el análisis de código
 | `ruesma_comun.markdown` *(entrega 4)* | Conversión de contratos (PDF/Word) a **Markdown** con markitdown: `a_markdown`, `combinar_a_markdown` (conserva tablas de tarifas; degrada al texto de fallback) | — (capacidad nueva) |
 | `ruesma_comun.sigrid` *(0.7.0, F-052)* | Lectura de sigrid-api sin truncados silenciosos: `PoliticaTruncado`, `SigridRespuestaTruncada`, `comprobar_truncado`, `con_paginacion`, `leer_paginado`, `MAX_FILAS_POR_PETICION` (500.000) y `PAGINA_MAXIMA` (499.999). Sin HTTP ni SQL: la SQL de cada servicio es suya | el `truncated` que nadie miraba en sv3 y sv4 |
 | `ruesma_comun.obras` *(0.7.0, F-052)* | `normalizar_codigo_obra`: el código de obra canónico que se envía a Sigrid y se sella (semántica de sv3) | las 2 copias divergentes de sv3 y sv4 |
+| `ruesma_comun.sigrid.partidas` *(0.8.0, F-076)* | Partidas HOJA de una obra (SQL de sv4 + `emp = 1`), `normalizar_partida` (`CI.04.18` ≡ `CI.4.18`), `casar_partida`, `resolver_partida_obra` (guarda de no hoja) y `CachePartidasObra` (TTL, LRU, fallo recordado). Subconjunto aprobado de F-049; excepción consciente a D2 de F-052 | la copia de la SQL y del cálculo de hojas de sv4 |
 
 Hecho en la **entrega 2**: capa LLM y `contexto_linea` migradas como
 *reexports* de 3 líneas en los servicios. Hecho en la **entrega 3**: el
@@ -37,6 +38,10 @@ adaptadores de ENTRADA por cola de cada worker.
 **0.7.0** (F-052, 2026-10-01): subpaquetes nuevos `sigrid` y `obras`, sin
 cambios de API en el resto. Solo los importan sv3 y sv4: se reconstruyen
 juntos, en orden sv3 → sv4.
+
+**0.8.0** (F-076, 2026-10-17): `ruesma_comun.sigrid.partidas` (lista de partidas
+de la obra y normalización de la partida). La importan sv4 y sv6; como siempre,
+el paquete va en cada imagen.
 
 ## Instalación en local (PyCharm)
 
