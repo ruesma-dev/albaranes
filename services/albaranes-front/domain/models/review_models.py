@@ -714,6 +714,22 @@ def aviso_suma_importes(
     )
 
 
+def posiciones_filas_ficha(display_lines: list[Any]) -> dict[int, int]:
+    """(F-077 R25) ``valuation_line_id`` => posición (desde 1) de la fila en la
+    tabla de líneas de la ficha: las ``display_lines`` con conciliación, en su
+    orden (las que pinta la plantilla, ``{% if dline.concilia %}``), la misma
+    numeración que dan los avisos de aprobar (F-065 R20)."""
+    posiciones: dict[int, int] = {}
+    numero = 0
+    for linea in display_lines:
+        if linea.concilia is None:
+            continue
+        numero += 1
+        if linea.valuation_line_id is not None:
+            posiciones[linea.valuation_line_id] = numero
+    return posiciones
+
+
 def aviso_partida_texto(
     agree: bool | None, *, kind: str | None, leida: str | None,
 ) -> str | None:
@@ -1514,6 +1530,10 @@ class DocumentDetailPayload(BaseModel):
     #: F-077 R14: fase del panel del alta (``en_curso`` / ``sin_respuesta`` /
     #: ``resultado``). Con DESDE vacía, el defecto: el panel ni se pinta (R3).
     alta_fase: str = "resultado"
+    #: F-077 R24, R25: motivos de línea del alta sin fila en la tabla del panel,
+    #: con «Línea N» (posición en la ficha) o «Línea (ref. X)»; los pone el
+    #: servicio con DESDE puesta.
+    alta_motivos_linea: list[dict[str, Any]] = Field(default_factory=list)
     productos_sigrid: dict[int, ProductoLinea] = Field(default_factory=dict)
     productos_admitidos: list[ProductoOpcion] = Field(default_factory=list)
 

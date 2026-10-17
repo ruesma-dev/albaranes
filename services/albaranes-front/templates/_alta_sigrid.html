@@ -62,10 +62,15 @@
                 Mientras tanto no se puede editar, desaprobar, borrar, revalorar ni volver a buscar contratos.</div>
         {% endif %}
 
-        {% if alta.motivos_documento %}
+        {# F-077 R24-R26: todos los motivos visibles, con su texto legible y el código en el title;
+           los de una línea sin fila en la tabla de abajo, después de los del documento, como «Línea N: …». #}
+        {% if alta.motivos_documento or document.alta_motivos_linea %}
             <ul class="alta-sigrid-motivos">
                 {% for m in alta.motivos_documento %}
-                    <li><code>{{ m.codigo }}</code>{% if m.detalle %} · {{ m.detalle }}{% endif %}</li>
+                    <li title="{{ m.codigo }}">{{ m.texto }}{% if m.detalle %}{{ ' · ' if m.texto else '' }}{{ m.detalle }}{% endif %}</li>
+                {% endfor %}
+                {% for m in document.alta_motivos_linea %}
+                    <li title="{{ m.codigo }}">{{ m.linea }}: {{ m.texto }}{% if m.detalle %}{{ ' · ' if m.texto else '' }}{{ m.detalle }}{% endif %}</li>
                 {% endfor %}
             </ul>
         {% endif %}
@@ -90,7 +95,7 @@
                         <td>{{ l.total | importe_eur }}</td>
                         <td>
                             {% for m in l.motivos %}
-                                <div><code>{{ m.codigo }}</code>{% if m.detalle %} · {{ m.detalle }}{% endif %}</div>
+                                <div title="{{ m.codigo }}">{{ m.texto }}{% if m.detalle %}{{ ' · ' if m.texto else '' }}{{ m.detalle }}{% endif %}</div>
                             {% endfor %}
                         </td>
                     </tr>

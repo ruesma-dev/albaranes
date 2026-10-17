@@ -29,6 +29,7 @@ from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
     VIEW_MODE_MERGE,
     AlbaranAprobadoError,
+    posiciones_filas_ficha,
     DivisionHecha,
     DocumentDetailPayload,
     DocumentListFilters,
@@ -43,6 +44,7 @@ from domain.ports.orchestrator_port import OrchestratorClient
 from domain.services.alta_sigrid import (
     FASE_RESULTADO,
     fase_alta,
+    motivos_linea_vista,
     puede_reintentar_adjunto,
     puede_solicitar_alta,
 )
@@ -160,12 +162,16 @@ class ReviewService:
             or detalle.view_mode != VIEW_MODE_MERGE
         ):
             return detalle
+        alta = self._repository.leer_alta_sigrid(document_id)
         return detalle.model_copy(update={
             "alta_sigrid_activa": True,
-            "alta_sigrid": self._repository.leer_alta_sigrid(document_id),
+            "alta_sigrid": alta,
             "alta_puede_solicitar": self.puede_solicitar_alta(document_id),
             "alta_puede_reintentar_adjunto": self.puede_reintentar_adjunto(document_id),
             "alta_fase": self.fase_alta(document_id) or FASE_RESULTADO,
+            "alta_motivos_linea": motivos_linea_vista(
+                alta, posiciones_filas_ficha(detalle.display_lines),
+            ),
             "productos_sigrid": self.productos_sigrid(
                 document_id,
                 clasificacion_documento(detalle.tipologia, detalle.tipologia_mixta),

@@ -17,6 +17,7 @@ apagada: sv4 se comporta como antes de F-053 (R3), salvo R37, que vale siempre.
 """
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -57,6 +58,103 @@ ETIQUETAS_ESTADO_ALTA: dict[str, str] = {
 #: o de Sigrid). ``incierto`` no lo es: es una grabación sin confirmar que sv9
 #: retoma tras la Espera (aviso de bloqueo, como antes).
 ESTADOS_ALTA_ERROR: frozenset[str] = frozenset({"no_admitido", "revisar", "error"})
+
+
+#: F-077 R26, R27: texto legible de cada código de motivo que sv9 escribe en
+#: ``motivos_json`` (Anexo A de ``progress/spec_F-077.md``). El panel enseña el
+#: texto y deja el código en el ``title``. Un test lee las fuentes de sv9 como
+#: texto y falla si aparece un código sin entrada aquí.
+TEXTOS_MOTIVO_ALTA: dict[str, str] = {
+    # Validación local de sv9 (validador_alta.py).
+    "falta_obra": "Falta la obra",
+    "falta_cif": "Falta el CIF del proveedor",
+    "cif_no_valido": "El CIF del proveedor no es válido",
+    "falta_numero_albaran": "Falta el número de albarán",
+    "fecha_ilegible": "La fecha del albarán no se entiende",
+    "fecha_no_plausible": "La fecha del albarán no es plausible (futura o demasiado antigua)",
+    "no_valorado": "El albarán no está valorado",
+    "sin_lineas": "No hay líneas que dar de alta",
+    "campo_demasiado_largo": "Un campo es demasiado largo para Sigrid",
+    "falta_descripcion": "La línea no tiene descripción",
+    "cantidad_no_valida": "La línea no tiene cantidad (o es 0)",
+    "cantidad_sin_convertir": "La línea no tiene la cantidad en la unidad del contrato",
+    "producto_no_admitido": "Producto de Sigrid no admitido",
+    "signo_incoherente": "La cantidad y el importe tienen signos distintos",
+    "linea_de_otro_contrato": "La línea es de otro contrato",
+    # Comparación con la previa (comparador_previa.py).
+    "lineas_distintas": "Las líneas no coinciden con lo que devolvió Sigrid",
+    "importe_distinto": "El importe no coincide con el que calcula Sigrid",
+    "registrado_distinto": "Lo registrado en Sigrid no coincide con lo aprobado",
+    "partida_distinta": "Sigrid devolvió otra partida",
+    "aviso_bloqueante": "Sigrid dio un aviso que impide el alta",
+    # Servicio de sv9 (alta_sigrid_service.py).
+    "alta_a_mano": "Ya hay un alta a mano en Sigrid para este albarán",
+    "respuesta_inesperada": "Sigrid devolvió una respuesta inesperada",
+    "excepcion": "Fallo interno al dar de alta (sv9)",
+    "adjunto_no_colgado": "No se pudo colgar el PDF del albarán en Sigrid",
+    "usuario_no_resuelto": "No se pudo saber con qué usuario de Sigrid colgar el PDF",
+    "verificacion_fallida": "No se pudo comprobar en Sigrid si el albarán está anulado",
+    "sigue_en_sigrid": "El albarán sigue en Sigrid: anúlalo allí antes de pulsar «Ya lo he anulado»",
+    # Códigos de cabecera de sigrid-api (clasificador.py).
+    "obra_no_encontrada": "La obra no existe en Sigrid",
+    "obra_ambigua": "La obra es ambigua en Sigrid",
+    "contrato_no_encontrado": "El contrato no existe en Sigrid",
+    "contrato_ambiguo": "El contrato es ambiguo en Sigrid",
+    "proveedor_sin_albaran_previo": "El proveedor no tiene ningún albarán previo en Sigrid",
+    "almacen_de_obra_no_resuelto": "Sigrid no encuentra el almacén de la obra",
+    "demasiadas_lineas": "El albarán tiene más líneas de las que admite Sigrid",
+    "referencia_en_conflicto": "Otro albarán de Sigrid ya lleva este número",
+    "escritura_albaranes_deshabilitada": "La escritura de albaranes está deshabilitada en sigrid-api",
+    "base_de_datos_no_permitida": "sigrid-api no permite escribir en esa base de datos",
+    "referencia_no_permitida": "sigrid-api no admite el prefijo de la referencia del albarán",
+    "obra_de_empresa_no_permitida": "La obra es de una empresa en la que no se puede dar de alta",
+    "usuario_no_valido": "El usuario de Sigrid no es válido",
+    "estado_inicial_no_encontrado": "Sigrid no encuentra el estado inicial del albarán",
+    "peticion_mixta": "Petición no válida: mezcla los dos modos de alta de sigrid-api",
+    "colision_de_clave": "Colisión de clave en Sigrid: vuelve a solicitar el alta",
+    "filas_afectadas_inesperadas": "Sigrid escribió un número de filas inesperado",
+    "lineas_no_validas": "Sigrid rechazó alguna línea",
+    # Códigos de línea de sigrid-api (clasificador.py).
+    "linea_no_es_del_contrato": "La línea no es del contrato",
+    "partida_no_encontrada": "La partida no existe en la obra en Sigrid",
+    "partida_ambigua": "La partida es ambigua en la obra",
+    "partida_no_imputable": "La partida no admite imputaciones",
+    "paride_no_valido": "Identificador de partida no válido",
+    "analitica_no_resuelta": "Sigrid no encuentra la analítica de la obra",
+    "producto_no_permitido": "Producto no permitido en Sigrid",
+    "producto_no_encontrado": "El producto no existe en Sigrid",
+    "naturaleza_no_valida": "Naturaleza no válida (configuración de sigrid-api)",
+    "precio_negativo": "Precio negativo",
+    # Tipo de fallo sin código ni HTTP (TipoFallo, alta_models.py).
+    "rechazo": "Sigrid rechazó el alta",
+    "autorizacion": "sigrid-api no autorizó la petición",
+    "cliente": "Petición no válida para sigrid-api",
+    "servidor": "Error del servidor de sigrid-api",
+    "tiempo_agotado": "sigrid-api no respondió a tiempo",
+    "conexion": "No se pudo conectar con sigrid-api",
+    "respuesta_invalida": "Respuesta no válida de sigrid-api",
+}
+
+_HTTP = re.compile(r"http_(\d{3})")
+
+
+def texto_motivo_alta(codigo: str | None) -> str:
+    """F-077 R26: el texto legible de un código de motivo del alta.
+
+    ``http_<NNN>`` => «sigrid-api respondió con HTTP <NNN>»; un código que no
+    está en la tabla se enseña tal cual (nunca se pierde el motivo)."""
+    texto = "" if codigo is None else str(codigo)
+    if texto in TEXTOS_MOTIVO_ALTA:
+        return TEXTOS_MOTIVO_ALTA[texto]
+    http = _HTTP.fullmatch(texto)
+    if http:
+        return f"sigrid-api respondió con HTTP {http.group(1)}"
+    return texto
+
+
+def _con_texto(motivo: dict[str, Any]) -> dict[str, Any]:
+    """El motivo tal cual, con su ``texto`` legible (R26)."""
+    return {**motivo, "texto": texto_motivo_alta(motivo.get("codigo"))}
 
 
 def etiqueta_estado_alta(estado: str | None) -> str | None:
@@ -268,7 +366,7 @@ class AltaSigridVista(BaseModel):
                 "precio": pedida.get("precio"),
                 "total": devuelta.get("total"),
                 "motivos": [
-                    m for m in self.motivos
+                    _con_texto(m) for m in self.motivos
                     if str(m.get("referencia_linea")) == referencia
                 ],
             })
@@ -294,5 +392,17 @@ class AltaSigridVista(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def motivos_documento(self) -> list[dict[str, Any]]:
-        """Motivos que no son de una línea concreta."""
-        return [m for m in self.motivos if not m.get("referencia_linea")]
+        """Motivos que no son de una línea concreta, con su texto (F-077 R26)."""
+        return [_con_texto(m) for m in self.motivos if not m.get("referencia_linea")]
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def motivos_linea_sueltos(self) -> list[dict[str, Any]]:
+        """F-077 R24: motivos de línea cuya ``referencia_linea`` no está en la
+        tabla de líneas del panel (``lineas``, que sale de la petición): p. ej.
+        un rechazo local de sv9 sin petición. Con su texto (R26)."""
+        en_tabla = {fila["referencia_linea"] for fila in self.lineas}
+        return [
+            _con_texto(m) for m in self.motivos
+            if m.get("referencia_linea") and str(m.get("referencia_linea")) not in en_tabla
+        ]

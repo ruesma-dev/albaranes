@@ -132,3 +132,28 @@ def fase_alta(
     if ahora - aprobado_en < TOPE_RESPUESTA_ALTA:
         return FASE_EN_CURSO
     return FASE_SIN_RESPUESTA
+
+
+def motivos_linea_vista(
+    alta: AltaSigridVista | None, posiciones: dict[int, int],
+) -> list[dict[str, str]]:
+    """F-077 R24, R25: los motivos de línea del alta que no tienen fila en la
+    tabla del panel, listos para pintar: ``linea`` («Línea N» con la posición de
+    esa línea valorada en la ficha, o «Línea (ref. X)» si no está), ``texto``,
+    ``detalle`` y ``codigo``. ``referencia_linea`` es el id de la línea valorada."""
+    if alta is None:
+        return []
+    vista: list[dict[str, str]] = []
+    for motivo in alta.motivos_linea_sueltos:
+        referencia = str(motivo.get("referencia_linea"))
+        try:
+            posicion = posiciones.get(int(referencia))
+        except ValueError:
+            posicion = None
+        vista.append({
+            "linea": f"Línea {posicion}" if posicion is not None else f"Línea (ref. {referencia})",
+            "texto": motivo["texto"],
+            "detalle": str(motivo.get("detalle") or ""),
+            "codigo": str(motivo.get("codigo") or ""),
+        })
+    return vista
