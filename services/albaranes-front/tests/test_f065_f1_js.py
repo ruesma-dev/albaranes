@@ -126,9 +126,14 @@ def test_f065_r8_los_dos_guardados_usan_campos_cambiados():
                            'getElementById("save-all-lines-btn")')
     todas = _bloque(js, 'saveAllLinesBtn.addEventListener("click"', "if (addLineBtn)")
 
-    assert "_camposCambiados(tr)" in fila_guardar and "_camposCambiados(tr)" in todas
+    assert "_camposCambiados(tr)" in fila_guardar
+    # F-077 R12: «Guardar todas» elige las filas con filasConCambios (que usa
+    # _camposCambiados) y las dos envían con enviarFila, el único PATCH con
+    # ?bloquear=1 del fichero.
+    assert "filasConCambios(" in todas and "_camposCambiados(tr)" in todas
     assert "_conciliaBody" not in js
-    assert "?bloquear=1" in fila_guardar and "?bloquear=1" in todas
+    assert "enviarFila(" in fila_guardar and "enviarFila(" in todas
+    assert "?bloquear=1" in _funcion_js(js, "enviarFila")
 
 
 # =================================================================== #
@@ -136,23 +141,28 @@ def test_f065_r8_los_dos_guardados_usan_campos_cambiados():
 # =================================================================== #
 @con_node
 def test_f065_r18_js_cuenta_las_filas_con_cambios(tmp_path):
-    casos = _ejecutar(tmp_path, _CAMBIADOS + ["contarFilasConCambios"], """
-        const limpia = fila([entrada("cantidad", "8", "8", {numeric: "1"})]);
-        const sucia = fila([entrada("cantidad", "8", "6", {numeric: "1"})]);
+    """F-077 R12: ``filasConCambios`` sustituye a ``contarFilasConCambios``
+    (devuelve las filas, y deja fuera las que no tienen id de valoración)."""
+    casos = _ejecutar(tmp_path, _CAMBIADOS + ["filasConCambios"], """
+        function con_vid(f, vid) { f.dataset = {forValuationLineId: vid}; return f; }
+        const limpia = con_vid(fila([entrada("cantidad", "8", "8", {numeric: "1"})]), "1");
+        const sucia = con_vid(fila([entrada("cantidad", "8", "6", {numeric: "1"})]), "2");
+        const sucia2 = con_vid(fila([entrada("cantidad", "8", "6", {numeric: "1"})]), " 3 ");
+        const sin_vid = con_vid(fila([entrada("cantidad", "8", "6", {numeric: "1"})]), "  ");
         console.log(JSON.stringify([
-            contarFilasConCambios([]), contarFilasConCambios([limpia, limpia]),
-            contarFilasConCambios([limpia, sucia, sucia]),
+            filasConCambios([]).length, filasConCambios([limpia, limpia]).length,
+            filasConCambios([limpia, sucia, sin_vid, sucia2]).map(function (f) { return f.dataset.forValuationLineId; }),
         ]));
     """)
 
-    assert casos == [0, 0, 2]
+    assert casos == [0, 0, ["2", " 3 "]]
 
 
 def test_f065_r18_guardar_todas_salta_las_filas_sin_cambios_y_avisa_si_no_hay():
     todas = _bloque(_app_js(), 'saveAllLinesBtn.addEventListener("click"', "if (addLineBtn)")
 
     assert "No hay cambios en las líneas" in todas
-    assert re.search(r"Object\.keys\(cuerpo\)\.length", todas)
+    assert "filasConCambios(" in todas  # F-077 R12: el filtro vive en la función compartida
 
 
 # =================================================================== #

@@ -1097,11 +1097,70 @@
         return body;
     }
 
+    // F-065 R18, F-077 R12: las filas (``tr``) de ``filas`` que tienen id de
+    // valoración y algo cambiado (cuerpo de PATCH no vacío), en su orden.
+    function filasConCambios(filas) {
+        return filas.filter(function (tr) {
+            const vid = (tr.dataset.forValuationLineId || "").trim();
+            return vid && Object.keys(_camposCambiados(tr)).length > 0;
+        });
+    }
+
     // F-065 R18, R19: cuántas filas tienen cambios sin guardar.
     function contarFilasConCambios(filas) {
-        return filas.filter(function (tr) {
-            return Object.keys(_camposCambiados(tr)).length > 0;
-        }).length;
+        return filasConCambios(filas).length;
+    }
+
+    // F-077 R12: el motivo de una respuesta no ok: el ``detail`` del servidor
+    // (la lista de un 422 unida con « | ») o, si no, el ``statusText``.
+    async function motivoDeRespuesta(resp) {
+        let motivo = resp.statusText;
+        try {
+            const b = await resp.json();
+            if (Array.isArray(b.detail)) {
+                motivo = b.detail.map(function (e) {
+                    const loc = e.loc ? e.loc.join(".") : "";
+                    return (loc ? loc + ": " : "") + (e.msg || "");
+                }).join(" | ");
+            } else if (b.detail) {
+                motivo = b.detail;
+            }
+        } catch (_) {}
+        return motivo;
+    }
+
+    // F-077 R12: el PATCH de fila (F-065 R8, R13: solo lo cambiado, y guardar
+    // = bloquear). Única petición de este tipo en el fichero: la usan el
+    // «Guardar» de cada fila, «Guardar todas» y el guardado previo de
+    // «Guardar» / «Guardar y aprobar». ``null`` si fue bien; si no, el motivo.
+    async function enviarFila(vid, cuerpo) {
+        let resp;
+        try {
+            resp = await fetch(
+                `/api/documents/${documentId}/lines/${vid}/conciliacion/campos?bloquear=1`,
+                {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(cuerpo),
+                }
+            );
+        } catch (_) {
+            return "error de red";
+        }
+        return resp.ok ? null : await motivoDeRespuesta(resp);
+    }
+
+    // F-077 R5: una fila recién guardada (y bloqueada en el servidor): lo
+    // enviado pasa a ser su valor inicial, sin marca de cambio y en solo
+    // lectura, así un reintento no la reenvía (el servidor daría 409).
+    function consolidarFila(tr) {
+        tr.querySelectorAll(".js-cedit").forEach(function (inp) {
+            inp.defaultValue = inp.value;
+            inp.classList.remove("cedit-dirty");
+            inp.disabled = true;
+        });
+        const boton = tr.querySelector(".js-cedit-save");
+        if (boton) { boton.disabled = true; }
     }
 
     // F-065 R19: aviso antes de «Guardar» / «Guardar y aprobar».
@@ -1212,36 +1271,14 @@
                 const body = _camposCambiados(tr);
                 const original = saveBtn.textContent;
                 saveBtn.textContent = "Guardando…";
-                try {
-                    const resp = await fetch(
-                        `/api/documents/${documentId}/lines/${vid}/conciliacion/campos?bloquear=1`,
-                        {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(body),
-                        }
-                    );
-                    if (!resp.ok) {
-                        let detail = resp.statusText;
-                        try {
-                            const b = await resp.json();
-                            if (Array.isArray(b.detail)) {
-                                detail = b.detail.map(function (e) {
-                                    const loc = e.loc ? e.loc.join(".") : "";
-                                    return (loc ? loc + ": " : "") + (e.msg || "");
-                                }).join(" | ");
-                            } else if (b.detail) {
-                                detail = b.detail;
-                            }
-                        } catch (_) {}
-                        throw new Error(detail);
-                    }
+                const motivo = await enviarFila(vid, body);
+                if (motivo === null) {
                     window.location.reload();
-                } catch (exc) {
-                    window.alert("Error al guardar la línea: " + (exc && exc.message || exc));
-                    saveBtn.disabled = false;
-                    saveBtn.textContent = original;
+                    return;
                 }
+                window.alert("Error al guardar la línea: " + motivo);
+                saveBtn.disabled = false;
+                saveBtn.textContent = original;
             });
         });
     }
@@ -1505,11 +1542,7 @@
     if (saveAllLinesBtn) {
         saveAllLinesBtn.addEventListener("click", async function () {
             function conCambios() {
-                return [].filter.call(linesBody.querySelectorAll("tr.concilia-editable"), function (tr) {
-                    const vid = (tr.dataset.forValuationLineId || "").trim();
-                    const cuerpo = _camposCambiados(tr);
-                    return vid && Object.keys(cuerpo).length;
-                });
+                return filasConCambios([].slice.call(linesBody.querySelectorAll("tr.concilia-editable")));
             }
             if (!conCambios().length) {
                 window.alert("No hay cambios en las líneas.");
@@ -1534,30 +1567,9 @@
             const errores = [];
             for (let i = 0; i < envios.length; i++) {
                 const vid = envios[i].vid;
-                try {
-                    const resp = await fetch(
-                        `/api/documents/${documentId}/lines/${vid}/conciliacion/campos?bloquear=1`,
-                        {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(envios[i].cuerpo),
-                        }
-                    );
-                    if (!resp.ok) {
-                        let d = resp.statusText;
-                        try {
-                            const b = await resp.json();
-                            if (Array.isArray(b.detail)) {
-                                d = b.detail.map(function (e) {
-                                    const loc = e.loc ? e.loc.join(".") : "";
-                                    return (loc ? loc + ": " : "") + (e.msg || "");
-                                }).join(" | ");
-                            } else if (b.detail) { d = b.detail; }
-                        } catch (_) {}
-                        errores.push("Línea " + vid + ": " + d);
-                    }
-                } catch (_) {
-                    errores.push("Línea " + vid + ": error de red");
+                const motivo = await enviarFila(vid, envios[i].cuerpo);
+                if (motivo !== null) {
+                    errores.push("Línea " + vid + ": " + motivo);
                 }
             }
             if (errores.length) {

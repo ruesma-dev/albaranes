@@ -739,7 +739,8 @@ def test_f065_r27v4_en_la_ventana_dividir_lo_mismo(tmp_path):
 # cambiada que no es de la lista no se guarda por ningún camino.
 # =================================================================== #
 _GUARDAR = ["parseNumEs", "numerosIguales", "partidaParaEnviar", "_camposCambiados", "importeDeFila",
-            "marcarPartida", "partidasMalas", "partidasInvalidas", "wireConciliaEdit"]
+            "marcarPartida", "partidasMalas", "partidasInvalidas", "filasConCambios", "motivoDeRespuesta",
+            "enviarFila", "consolidarFila", "wireConciliaEdit"]
 
 # Una fila editable de verdad: combo de partida + wireConciliaEdit (Enter =
 # «Guardar», botón «Guardar» con su PATCH). Las partidas llegan cuando el test
