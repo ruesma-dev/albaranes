@@ -657,3 +657,41 @@ def test_f073_r20_las_dos_composiciones_usan_el_defecto(modulo):
     assert "HeaderResolverService(" in fuente
     assert "margen_nombre" not in fuente
     assert "margen_nombre" not in (raiz / "config" / "settings.py").read_text(encoding="utf-8")
+
+
+# ------------------------------------------------------------------ #
+# R16 · la obra por texto sigue con ``_match_score`` tal cual
+# ------------------------------------------------------------------ #
+def test_f073_r16_la_obra_con_s_a_puntua_como_hoy():
+    """En la obra no se quitan formas jurídicas ni puntuación: «S.A.» sola
+    casa con un nombre de obra que la lleve (1,0, contenido) y «s.a.» cuenta
+    como palabra (0,5), como antes de F-073. Con el criterio de proveedor
+    serían 0."""
+    from application.services.header_resolver_service import _match_score, _norm
+    from domain.models.obra_models import ObraEnrichmentResult
+
+    assert _match_score(_norm("S.A."), _norm("NAVE PARA HIERROS RODRIGO, S.A.")) == 1.0
+    assert _match_score(_norm("ZZZZ S.A."), _norm("NAVE PARA HIERROS RODRIGO, S.A.")) == 0.5
+    assert similitud_obra_si_fuera_proveedor("S.A.", "NAVE PARA HIERROS RODRIGO, S.A.") == 0.0
+
+    class _Obras:
+        def search_obras(self):
+            return [ObraEnrichmentResult(
+                codigo_obra="694", nombre_obra="NAVE PARA HIERROS RODRIGO, S.A.",
+                direccion_linea1=None, direccion_linea2=None, codigo_postal=None,
+                municipio=None, provincia=None,
+            )]
+
+    from application.services.header_resolver_service import HeaderResolverService
+
+    servicio = HeaderResolverService(
+        obra_client=_Obras(), proveedor_client=_ClienteRed([]), repository=_RepoConLineas(),
+    )
+    assert servicio._resolve_obra(None, "ZZZZ S.A.", None) == "0694"
+    assert servicio._resolve_obra(None, "ZZZZ YYYY", None) is None
+
+
+def similitud_obra_si_fuera_proveedor(a, b):
+    from application.services.similitud_proveedor import similitud_razon_social
+
+    return similitud_razon_social(a, b)
