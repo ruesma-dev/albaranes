@@ -35,7 +35,7 @@ import sys
 from collections import Counter
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from ruesma_comun.obras import canonizar_codigo_obra
@@ -71,10 +71,10 @@ class SesionNoSoloLectura(RuntimeError):
 
 @dataclass
 class Medicion:
-    clases: Counter = field(default_factory=Counter)  # (clase, estado) -> líneas
-    motivos: Counter = field(default_factory=Counter)  # (motivo, estado) -> líneas
-    obras_sin_lista: int = 0
-    lineas: int = 0
+    clases: Counter  # (clase, estado) -> líneas
+    motivos: Counter  # (motivo, estado) -> líneas
+    obras_sin_lista: int
+    lineas: int
 
 
 def comprobar_solo_lectura(conexion: Any) -> None:
@@ -101,7 +101,8 @@ def medir(conexion: Any, lector: LectorSql, *, alm: str) -> Medicion:
     comprobar_solo_lectura(conexion)
     filas = [dict(f) for f in conexion.execute(text(SQL_LINEAS)).mappings().all()]
     listas: dict[str | None, Any] = {}
-    resultado = Medicion(lineas=len(filas))
+    clases: Counter = Counter()
+    motivos: Counter = Counter()
     for fila in filas:
         estado = "aprobado" if fila.get("approved") else "pendiente"
         obra = canonizar_codigo_obra(fila.get("obra_codigo"))
@@ -116,11 +117,11 @@ def medir(conexion: Any, lector: LectorSql, *, alm: str) -> Medicion:
             clase = "sin_lista"
         else:
             clase = resolver_partida_obra(lista, fila.get("codigo_partida_final"), alm).motivo
-        resultado.clases[(clase, estado)] += 1
+        clases[(clase, estado)] += 1
         for motivo in _motivos_de(fila):
-            resultado.motivos[(motivo, estado)] += 1
-    resultado.obras_sin_lista = sum(1 for lista in listas.values() if lista is None)
-    return resultado
+            motivos[(motivo, estado)] += 1
+    sin_lista = sum(1 for lista in listas.values() if lista is None)
+    return Medicion(clases=clases, motivos=motivos, obras_sin_lista=sin_lista, lineas=len(filas))
 
 
 def formatear(medicion: Medicion) -> str:

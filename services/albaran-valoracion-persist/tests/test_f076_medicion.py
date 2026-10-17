@@ -177,3 +177,50 @@ class _Contexto:
 
     def __exit__(self, *exc):
         return False
+
+
+def test_f076_t16_informe_exacto_con_ceros():
+    filas = [_fila("CI.4.18"), _fila("CI.14.18", aprobado=True, motivos=["partida_fuera_de_lista"])]
+    informe = medir.formatear(medir.medir(_Conexion(filas=filas), _Lector(), alm="ALM"))
+    lineas = [ln.split() for ln in informe.splitlines()]
+    assert ["Líneas", "valoradas", "from_albaran", "de", "documentos", "activos:", "2"] in lineas
+    assert ["Obras", "sin", "lista:", "0"] in lineas
+    assert ["existe", "tal", "cual", "1", "/", "0"] in lineas
+    assert ["normalizable", "sin", "normalizar", "0", "/", "0"] in lineas
+    assert ["fuera", "de", "lista", "(sin", "candidata", "segura)", "0", "/", "1"] in lineas
+    assert ["partida_fuera_de_lista", "0", "/", "1"] in lineas
+    assert ["partida_normalizada", "0", "/", "0"] in lineas
+
+
+def test_f076_t16_medicion_vacia():
+    resultado = medir.medir(_Conexion(filas=[]), _Lector(), alm="ALM")
+    assert (resultado.lineas, resultado.obras_sin_lista, dict(resultado.clases), dict(resultado.motivos)) == (
+        0, 0, {}, {})
+
+
+def test_f076_t16_el_lector_toma_la_configuracion_de_sv6():
+    from config.settings import Settings
+
+    ajustes = Settings(_env_file=None, PG_USER="u", PG_PASSWORD="p", SIGRID_API_BASE_URL="https://sigrid.invalid",
+                       SIGRID_API_FUNCTION_KEY="clave-de-test", SIGRID_API_DATABASE="db", SIGRID_API_TIMEOUT_S="12")
+    lector = medir._lector(ajustes)
+    assert (lector._base_url, lector._clave, lector._database, lector._timeout_s) == (
+        "https://sigrid.invalid", "clave-de-test", "db", 12.0)
+
+
+def test_f076_t16_sesion_no_de_solo_lectura_sale_con_2(monkeypatch, capsys):
+    from config.settings import Settings
+
+    ajustes = Settings(_env_file=None, PG_USER="u", PG_PASSWORD="p", SIGRID_API_BASE_URL="https://sigrid.invalid",
+                       SIGRID_API_FUNCTION_KEY="k", SIGRID_API_DATABASE="db")
+    monkeypatch.setattr(medir, "_ajustes", lambda: ajustes)
+    monkeypatch.setattr(medir, "_conectar", lambda a: _Contexto(_Conexion(solo_lectura="off")))
+    monkeypatch.setattr(medir, "_lector", lambda a: _Lector())
+    assert medir.main([]) == 2
+    assert "transaction_read_only" in capsys.readouterr().err
+
+
+def test_f076_t16_ayuda_con_la_primera_linea_del_docstring(capsys):
+    with pytest.raises(SystemExit):
+        medir.main(["--help"])
+    assert "Medición de F-076" in capsys.readouterr().out

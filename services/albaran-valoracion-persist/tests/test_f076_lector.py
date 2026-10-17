@@ -229,3 +229,11 @@ def test_f076_r17_sin_url_clave_o_base_no_esta_configurada(monkeypatch, faltante
                "SIGRID_API_DATABASE": "db"}
     entorno[faltante] = "   "
     assert _ajustes(monkeypatch, **entorno).sigrid_api_configurada is False
+
+
+@pytest.mark.parametrize("intentos", [1, 0, -3])
+def test_f076_t16_con_un_intento_no_reintenta(intentos):
+    api = _Api(httpx.Response(503), _ok())
+    with pytest.raises(SigridLecturaError):
+        _leer(_lector(api, intentos=intentos))
+    assert len(api.peticiones) == 1

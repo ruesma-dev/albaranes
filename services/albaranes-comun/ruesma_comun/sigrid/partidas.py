@@ -563,9 +563,9 @@ class CachePartidasObra:
                 en_fallo = entrada.fallo_hasta is not None and ahora < entrada.fallo_hasta
                 if vigente or en_fallo:
                     return _con_hojas(entrada.lista)
-        inicio = time.perf_counter()
         try:
-            lista = leer_partidas_obra(self._lector, clave)
+            # ``clave`` ya es canónica y no vacía: la lectura nunca da ``None``.
+            lista = leer_partidas_obra(self._lector, clave) or ListaPartidasObra(clave, (), ())
         except Exception as exc:  # noqa: BLE001 - fallo o truncado: se degrada
             with self._candado:
                 previa = self._entradas.get(clave)
@@ -585,8 +585,8 @@ class CachePartidasObra:
         logger.info(
             "[partidas-obra] obra=%s hojas=%s segundos=%.2f",
             clave,
-            len(lista.hojas) if lista is not None else 0,
-            time.perf_counter() - inicio,
+            len(lista.hojas),
+            self._reloj() - ahora,
         )
         return _con_hojas(lista)
 

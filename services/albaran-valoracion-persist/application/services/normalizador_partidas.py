@@ -126,7 +126,7 @@ class NormalizadorPartidas:
         for posicion, linea in enumerate(envelope.context.lineas_albaran):
             if not self._es_lectura(linea.codigo_partida_albaran):
                 continue
-            resolucion = resolver_partida_obra(lista, linea.codigo_partida_albaran, self._alm or None)
+            resolucion = resolver_partida_obra(lista, linea.codigo_partida_albaran, self._alm)
             por_linea[linea.merge_line_id] = resolucion
             if resolucion.cambia:
                 nuevas[posicion] = resolucion.codigo
@@ -184,7 +184,7 @@ class NormalizadorPartidas:
             if record.line_kind != "from_albaran" or record.merge_line_id not in n.por_linea:
                 continue
             resolucion = n.por_linea[record.merge_line_id]
-            if resolucion.motivo in ("exacta", "normalizada") and resolucion.cambia:
+            if resolucion.cambia:  # solo exacta/normalizada cambian el texto
                 record.codigo_partida_albaran = resolucion.leida
             if resolucion.motivo == "normalizada":
                 leida = (resolucion.leida or "").strip()

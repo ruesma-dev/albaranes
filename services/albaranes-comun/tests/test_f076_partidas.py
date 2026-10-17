@@ -723,3 +723,45 @@ def test_f076_t4_version_080():
     import ruesma_comun
 
     assert ruesma_comun.__version__ == "0.8.0"
+
+
+# ------------------------------------------------------------------ #
+# T16 · huecos que dejó la primera campaña de mutación
+# ------------------------------------------------------------------ #
+def test_f076_t16_los_modelos_son_inmutables():
+    hoja = PartidaObra(codigo="CI.4.18", descripcion=None, descripcion_agregada=None)
+    lista = _lista("CI.4.18")
+    caso = CasePartida(MOTIVO_EXACTA, ("CI.4.18",))
+    for objeto, campo in ((hoja, "codigo"), (lista, "hojas"), (caso, "motivo")):
+        with pytest.raises(AttributeError):
+            setattr(objeto, campo, None)
+
+
+def test_f076_t16_ttl_cero_es_valido():
+    cache = CachePartidasObra(_Lector(), ttl_s=0, max_obras=1, ttl_fallo_s=0, reloj=_Reloj())
+    assert cache.lista("0691") is not None
+
+
+def test_f076_t16_log_de_lectura_con_hojas_y_segundos_del_reloj(caplog):
+    lector, reloj = _Lector(), _Reloj()
+    with caplog.at_level(logging.INFO, logger="ruesma_comun.sigrid.partidas"):
+        _cache(lector, reloj).lista("0691")
+    (mensaje,) = [r.getMessage() for r in caplog.records if r.levelno == logging.INFO]
+    assert mensaje == "[partidas-obra] obra=0691 hojas=5 segundos=0.00"
+
+
+def test_f076_t16_warning_dice_si_usa_la_caducada(caplog):
+    lector, reloj = _Lector(), _Reloj()
+    cache = _cache(lector, reloj, ttl_s=10)
+    lector.fallo = RuntimeError("caido")
+    with caplog.at_level(logging.WARNING, logger="ruesma_comun.sigrid.partidas"):
+        cache.lista("0691")
+        lector.fallo = None
+        cache2 = _cache(lector, reloj, ttl_s=10)
+        cache2.lista("0692")
+        reloj.ahora += 10
+        lector.fallo = RuntimeError("caido")
+        cache2.lista("0692")
+    avisos = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    assert "se usa ninguna" in avisos[0] and "obra=0691" in avisos[0]
+    assert "se usa la lista caducada" in avisos[1] and "obra=0692" in avisos[1]

@@ -254,3 +254,9 @@ def test_f076_r24_la_nota_va_escapada(render_detalle, documento_detalle, fila_de
     casilla = _render(render_detalle, documento_detalle, fila_detalle, linea_valorada, conciliacion,
                       editable=True)
     assert "<b>" not in casilla and "&#34;&gt;&lt;b&gt;x" in casilla
+
+
+@pytest.mark.parametrize(("declarada", "esperada"), [("-", "CI.4.18"), ("CI.4.18", "-"), ("./", "./ ")])
+def test_f076_t16_una_sin_clave_frente_a_otra(declarada, esperada):
+    esperado = (True, None) if declarada.strip() == esperada.strip() else (False, None)
+    assert coincide_partida(declarada, esperada) == esperado

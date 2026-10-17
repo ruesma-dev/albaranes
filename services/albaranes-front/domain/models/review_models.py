@@ -1129,17 +1129,17 @@ def coincide_partida(declarada: Any, esperada: Any) -> tuple[bool | None, str | 
       «Normalizada: {declarada} → {final}» al ``title``; iguales ⇒ ``None``;
     - clave distinta ⇒ ``(False, None)`` (⚠).
 
-    Un texto no vacío sin nada alfanumérico no tiene clave: se compara
-    literalmente, como antes de F-076 (nunca un ✓ por dos claves ``None``).
+    Un texto no vacío sin nada alfanumérico no tiene clave: cuenta él mismo
+    como clave (comparación literal, como antes de F-076; nunca un ✓ por dos
+    claves ``None``). No choca con ninguna clave real: esas siempre llevan
+    alguna letra o cifra.
     """
     if declarada is None or esperada is None:
         return None, None
     d, e = str(declarada).strip(), str(esperada).strip()
     if not d or not e:
         return None, None
-    clave_d, clave_e = normalizar_partida(d), normalizar_partida(e)
-    if clave_d is None or clave_e is None:
-        return d == e, None
+    clave_d, clave_e = normalizar_partida(d) or d, normalizar_partida(e) or e
     if clave_d != clave_e:
         return False, None
     return True, (d if d != e else None)

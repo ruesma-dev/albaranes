@@ -294,3 +294,9 @@ def test_f076_r9_anotar_dos_veces_no_duplica():
     assert por[1].review_reasons.count("partida_normalizada:CI.04.18>CI.4.18") == 1
     assert por[2].review_reasons.count("partida_fuera_de_lista") == 1
     assert cabecera.review_reasons.count("partida_fuera_de_lista") == 1
+
+
+def test_f076_t16_normalizacion_es_inmutable():
+    n = NormalizadorPartidas.degradada(sobre([(1, "CI.04.18")]))
+    with pytest.raises(AttributeError):
+        n.motivos_cabecera = ()  # type: ignore[misc]
