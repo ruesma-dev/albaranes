@@ -308,3 +308,211 @@ def test_f073_r15_p0_una_forma_juridica_sola_no_corrige_y_es_nadie_casa():
     [nota] = [n for n in repo.lineas_notas() if n.startswith("[AVISO] Proveedor")]
     assert "ninguno de los 1 proveedores con contrato en la obra 0720 casa" in nota
     assert "PROPUESTA" not in nota
+
+
+# ------------------------------------------------------------------ #
+# R10, R11, R13 · paso 1: el atajo por nombre dentro de la obra
+# ------------------------------------------------------------------ #
+import logging  # noqa: E402
+
+from application.services import header_resolver_service as modulo_resolver  # noqa: E402
+
+_DOC = "doc-f062"  # el de f062_dobles
+_PREFIJO = "[AVISO] Proveedor"
+_MOTIVO = "proveedor_nombre_ambiguo"
+
+
+class _RepoConLineas(RepoRed):
+    """El merge en memoria de F-062 con líneas para la familia."""
+
+    def __init__(self, conceptos=(), **kwargs):
+        kwargs.setdefault("cif", None)
+        kwargs.setdefault("nombre", None)
+        kwargs.setdefault("obra", "0694")
+        super().__init__(**kwargs)
+        self._conceptos = list(conceptos)
+
+    def get_merge_lines_for_scoring(self, *, document_id):
+        return [{"codigo": "", "concepto": c, "contexto_linea_json": None} for c in self._conceptos]
+
+
+def _paso1(obra_resumenes, nombre, *, conceptos=(), repo=None, **kwargs):
+    repo = repo or _RepoConLineas(conceptos)
+    servicio = resolver(_ClienteRed(obra_resumenes), repo, **kwargs)
+    decision = servicio._resolver_por_obra_y_familia(
+        proveedor_nombre=nombre, obra_codigo="0694", merge_document_id=_DOC,
+    )
+    return decision, repo
+
+
+def _nota_r11(leido, n, listado, obra="0694"):
+    return (
+        f"{_PREFIJO} sin CIF: el nombre leído '{leido}' casa por igual con {n} proveedores "
+        f"con contrato en la obra {obra}: {listado}. Elige el proveedor arriba y pulsa "
+        "\"Guardar y volver a buscar\"."
+    )
+
+
+def test_f073_r9_paso1_la_incidencia_elige_feymaco_por_nombre():
+    for leido in ("FEYMACO, S.A.", "TEYMACO, S.A."):
+        decision, repo = _paso1(
+            [_resumen(_CIF_HIERROS, _RAZ_HIERROS, "ACERO CORRUGADO B500S"),
+             _resumen(_CIF_FEYMACO, _RAZ_FEYMACO, "HORMIGON HM-20 MORTERO M-5")],
+            leido, conceptos=["DISCO CORTE 230 MM"],
+        )
+        assert decision == (_CIF_FEYMACO, "deterministic")
+        assert repo.marcas == []
+        assert repo.review_required is False
+
+
+def test_f073_r9_paso1_control_con_el_criterio_de_hoy_empataban():
+    """Control de la incidencia: con ``_match_score`` (el atajo de antes de
+    F-073) las dos razones empatan a 0,50, y el primero era HIERROS."""
+    from application.services.header_resolver_service import _match_score, _norm
+
+    for leido in ("FEYMACO, S.A.", "TEYMACO, S.A."):
+        assert _match_score(_norm(leido), _norm(_RAZ_HIERROS)) == 0.5
+        assert _match_score(_norm(leido), _norm(_RAZ_FEYMACO)) == 0.5
+
+
+def test_f073_r10_p6_empate_por_nombre_que_separa_la_familia_se_deduce_con_aviso():
+    """P6 (humano, 2026-10-15): empate a 1 por nombre; la familia lo separa
+    (7 puntos frente a 2) y el paso por puntos de hoy lo deduce."""
+    decision, repo = _paso1(
+        [_resumen("B2", "HORMIGONES DEL NORTE, S.L.", "HORMIGON HA-25"),
+         _resumen("B1", "HORMIGONES DEL SUR, S.L.", "CONTENEDOR RCD")],
+        "HORMIGONES", conceptos=["CONTENEDOR 6 M3 RCD"],
+    )
+    assert decision == ("B1", "det_familia_obra")
+    assert repo.marcas == []
+    [nota] = repo.lineas_notas()
+    assert nota.startswith(f"{_PREFIJO} B1 — HORMIGONES DEL SUR, S.L. deducido AUTOMATICAMENTE")
+
+
+def test_f073_r10_r11_empate_que_los_puntos_no_deciden_va_a_revision_con_la_nota():
+    decision, repo = _paso1(
+        [_resumen("B2", "HORMIGONES DEL NORTE, S.L.", "HORMIGON HA-25"),
+         _resumen("B1", "HORMIGONES DEL SUR, S.L.", "HORMIGON HM-20"),
+         _resumen("B9", "TRANSPORTES PEREZ, S.L.", "PORTES")],
+        "HORMIGONES", conceptos=["HORMIGON HA-25/B/20/IIa"],
+    )
+    assert decision == (None, "deterministic")
+    nota = _nota_r11("HORMIGONES", 2, "B1 — HORMIGONES DEL SUR, S.L.; B2 — HORMIGONES DEL NORTE, S.L.")
+    assert repo.marcas == [(_MOTIVO, nota, _PREFIJO)]
+    assert repo.review_required is True
+    assert repo.lista_motivos() == [_MOTIVO]
+    assert repo.lineas_notas() == [nota]
+
+
+def test_f073_r11_nota_ordenada_por_puntos_y_cif_y_con_el_tope_de_candidatos():
+    """Empatan los cuatro a 1 por nombre; la familia suma a B4 y B3 (7
+    puntos) frente a B1 y B2 (2): no decide (B4 y B3 empatan a puntos). La
+    nota lleva 3 (``nota_max_candidatos``) en orden (-puntos, cif) y dice 4."""
+    decision, repo = _paso1(
+        [_resumen("B1", "HORMIGONES UNO, S.L.", "GASOLEO A"),
+         _resumen("B4", "HORMIGONES CUATRO, S.L.", "CONTENEDOR RCD"),
+         _resumen("B2", "HORMIGONES DOS, S.L.", "GASOLEO A"),
+         _resumen("B3", "HORMIGONES TRES, S.L.", "CONTENEDOR RCD")],
+        "HORMIGONES", conceptos=["CONTENEDOR 6 M3 RCD"], nota_max_candidatos=3,
+    )
+    assert decision == (None, "deterministic")
+    [(_, nota, _)] = repo.marcas
+    assert nota == _nota_r11(
+        "HORMIGONES", 4,
+        "B3 — HORMIGONES TRES, S.L.; B4 — HORMIGONES CUATRO, S.L.; B1 — HORMIGONES UNO, S.L.",
+    )
+
+
+def test_f073_r11_dos_pasadas_no_duplican_motivo_ni_nota():
+    repo = _RepoConLineas(["HORMIGON HA-25"])
+    obra = [_resumen("B2", "HORMIGONES DEL NORTE, S.L.", "HORMIGON HA-25"),
+            _resumen("B1", "HORMIGONES DEL SUR, S.L.", "HORMIGON HM-20")]
+    _paso1(obra, "HORMIGONES", repo=repo)
+    _paso1(obra, "HORMIGONES", repo=repo)
+    assert repo.lista_motivos() == [_MOTIVO]
+    assert len(repo.lineas_notas()) == 1
+
+
+def test_f073_r11_la_nota_sustituye_a_la_de_otra_pasada_de_proveedor():
+    repo = _RepoConLineas(["HORMIGON HA-25"])
+    repo.notas = (
+        f"{_PREFIJO} sin CIF: no deducible con seguridad. Candidatos con contrato en la obra 0694: X\n"
+        "otra nota"
+    )
+    _paso1([_resumen("B2", "HORMIGONES DEL NORTE, S.L.", "HORMIGON HA-25"),
+            _resumen("B1", "HORMIGONES DEL SUR, S.L.", "HORMIGON HM-20")], "HORMIGONES", repo=repo)
+    assert repo.lineas_notas()[0] == "otra nota"
+    assert repo.lineas_notas()[1].startswith(
+        f"{_PREFIJO} sin CIF: el nombre leído 'HORMIGONES' casa por igual",
+    )
+
+
+def test_f073_r11_si_la_marca_falla_no_rompe_y_no_hay_cif():
+    class _Falla(_RepoConLineas):
+        def marcar_revision_cabecera(self, **kwargs):
+            raise RuntimeError("BBDD caida")
+
+    decision, repo = _paso1(
+        [_resumen("B2", "HORMIGONES DEL NORTE, S.L.", "HORMIGON HA-25"),
+         _resumen("B1", "HORMIGONES DEL SUR, S.L.", "HORMIGON HM-20")],
+        "HORMIGONES", repo=_Falla(["HORMIGON HA-25"]),
+    )
+    assert decision == (None, "deterministic")
+    assert repo.notas is None
+
+
+def test_f073_r11_sin_empate_y_sin_decision_la_nota_de_hoy_sin_motivo():
+    """Nadie llega al umbral por nombre y los puntos no deciden: como hoy."""
+    decision, repo = _paso1(
+        [_resumen("B2", "ALFA, S.L.", "HORMIGON HA-25"), _resumen("B1", "BETA, S.L.", "HORMIGON HM-20")],
+        "ZZZZ", conceptos=["HORMIGON HA-25"],
+    )
+    assert decision == (None, "deterministic")
+    assert repo.marcas == []
+    [nota] = repo.lineas_notas()
+    assert nota.startswith(f"{_PREFIJO} sin CIF: no deducible con seguridad.")
+
+
+@pytest.mark.parametrize("semilla", [1, 2, 3])
+def test_f073_r12_paso1_misma_decision_y_nota_con_cualquier_orden(semilla):
+    obra = [_resumen(f"B{i}", f"HORMIGONES {i:02d}, S.L.", "HORMIGON HA-25" if i % 2 else "GASOLEO")
+            for i in range(1, 9)]
+    referencia = _paso1(obra, "HORMIGONES", conceptos=["HORMIGON HA-25"])
+    barajada = list(obra)
+    random.Random(semilla).shuffle(barajada)
+    otra = _paso1(barajada, "HORMIGONES", conceptos=["HORMIGON HA-25"])
+    assert otra[0] == referencia[0] == (None, "deterministic")
+    assert otra[1].marcas == referencia[1].marcas
+    assert "B1 — HORMIGONES 01, S.L.; B3 — HORMIGONES 03, S.L." in referencia[1].marcas[0][1]
+
+
+def _mensajes(caplog):
+    return [r.getMessage() for r in caplog.records]
+
+
+def test_f073_r13_log_al_elegir(caplog):
+    with caplog.at_level(logging.INFO, logger=modulo_resolver.logger.name):
+        _paso1([_resumen(_CIF_HIERROS, _RAZ_HIERROS), _resumen(_CIF_FEYMACO, _RAZ_FEYMACO)], "TEYMACO, S.A.")
+    assert any(
+        f"elegido cif={_CIF_FEYMACO} similitud=1.00 segunda=0.00 margen=0.25" in m and "obra 0694" in m
+        for m in _mensajes(caplog)
+    )
+
+
+def test_f073_r13_log_en_empate_dice_cuantos(caplog):
+    with caplog.at_level(logging.INFO, logger=modulo_resolver.logger.name):
+        _paso1([_resumen("B2", "HORMIGONES DEL NORTE, S.L."), _resumen("B1", "HORMIGONES DEL SUR, S.L."),
+                _resumen("B3", "HORMIGONES DEL ESTE, S.L.")], "HORMIGONES")
+    assert any(
+        "EMPATE" in m and "mejor cif=B1 similitud=1.00 segunda=1.00 margen=0.25 empatados=3" in m
+        for m in _mensajes(caplog)
+    )
+
+
+def test_f073_r13_log_sin_nadie_que_llegue(caplog):
+    with caplog.at_level(logging.INFO, logger=modulo_resolver.logger.name):
+        _paso1([_resumen("B2", "ALFA, S.L."), _resumen("B1", "BETA, S.L.")], "ZZZZ")
+    assert any(
+        "nadie llega al umbral" in m and "mejor cif=B1 similitud=0.00 segunda=0.00 umbral=0.50" in m
+        for m in _mensajes(caplog)
+    )

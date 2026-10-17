@@ -26,6 +26,10 @@ MOTIVO_PROVEEDOR_CIF_PROPIO = "proveedor_cif_propio:"
 #: Prefijo PROPIO de su nota (F-063 · D1, R10): con ``[AVISO] Proveedor``
 #: la borraria la propia pasada en cuanto se resuelve por nombre.
 NOTA_CIF_PROPIO_PREFIJO = "[AVISO] CIF del cliente"
+#: Motivo de revision: sin CIF, el nombre leido casa por igual con varios
+#: proveedores con contrato en la obra y la familia no los separa (F-073 ·
+#: R11). Sin sufijo (no lleva CIF); ``depurar_motivos_proveedor`` no lo toca.
+MOTIVO_PROVEEDOR_NOMBRE_AMBIGUO = "proveedor_nombre_ambiguo"
 
 
 @dataclass(frozen=True)

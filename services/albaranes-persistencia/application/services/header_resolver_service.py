@@ -9,6 +9,8 @@ from application.services.familia_detector import (
     familias_de_texto,
 )
 from application.services.similitud_proveedor import (
+    MARGEN_NOMBRE_POR_DEFECTO,
+    EleccionPorNombre,
     distancia_edicion,
     elegir_por_nombre,
     similitud_razon_social,
@@ -17,6 +19,7 @@ from domain.models.header_resolution_models import (
     MOTIVO_PROVEEDOR_CIF_PROPIO,
     MOTIVO_PROVEEDOR_CORREGIDO,
     MOTIVO_PROVEEDOR_NO_CASA,
+    MOTIVO_PROVEEDOR_NOMBRE_AMBIGUO,
     NOTA_CIF_PROPIO_PREFIJO,
     NOTA_PROVEEDOR_CORREGIDO_PREFIJO,
     ProveedorObraResumen,
@@ -144,6 +147,12 @@ def _motivo_sin_propuesta(
     )
 
 
+def _clave_cif(cif: str | None) -> str:
+    """Clave de agrupacion por CIF, la de ``elegir_por_nombre`` (F-073)."""
+    recortado = (cif or "").strip()
+    return normalizar_cif(recortado) or recortado
+
+
 class _CandidatoObra:
     """Candidato puntuado (proveedor con contrato en la obra)."""
 
@@ -229,6 +238,8 @@ class HeaderResolverService:
         self._correccion_enabled = bool(correccion_enabled)
         self._correccion_score_min = float(correccion_score_min)
         self._correccion_margen = int(correccion_margen_distancia)
+        # F-073 · R9: margen de la eleccion por nombre sobre el segundo CIF.
+        self._margen_nombre = MARGEN_NOMBRE_POR_DEFECTO
         # F-063: CIF propios (el del cliente, Ruesma): nunca son proveedor.
         self._cifs_propios = (
             _cifs_propios_de_serie() if cifs_propios is None else cifs_propios
@@ -964,11 +975,11 @@ class HeaderResolverService:
                 "solo con nombre.", _LOG_PREFIX,
             )
 
-        q = _norm(proveedor_nombre)
         candidatos: list[_CandidatoObra] = []
         for r in resumenes:
             fams_prov = familias_de_texto((r.texto or "").lower())
-            score_nombre = _match_score(q, _norm(r.nombre)) if q else 0.0
+            # F-073 · R1: el criterio unico de nombre de proveedor.
+            score_nombre = similitud_razon_social(proveedor_nombre, r.nombre)
             comunes = familias_alb & fams_prov
             puntos = (
                 round(_PUNTOS_NOMBRE_MAX * score_nombre)
@@ -991,18 +1002,19 @@ class HeaderResolverService:
                 sorted(comunes) or "-",
             )
 
-        # Atajo por NOMBRE dentro de la obra: si algun candidato supera el
-        # umbral clasico, el nombre manda (origen 'deterministic').
-        por_nombre = max(candidatos, key=lambda c: c.score_nombre)
-        if por_nombre.score_nombre >= self._min_score:
-            logger.info(
-                "%s proveedor resuelto por NOMBRE dentro de la obra %s: "
-                "cif=%s score=%.2f",
-                _LOG_PREFIX, obra_codigo, por_nombre.cif,
-                por_nombre.score_nombre,
-            )
+        # Atajo por NOMBRE dentro de la obra (F-073 · R9): el nombre manda
+        # (origen 'deterministic') si el mejor CIF llega al umbral Y saca el
+        # margen al segundo. En empate no se elige (R10): siguen los puntos.
+        eleccion = elegir_por_nombre(
+            proveedor_nombre,
+            ((c.cif, c.nombre) for c in candidatos),
+            umbral=self._min_score,
+            margen=self._margen_nombre,
+        )
+        self._log_eleccion(eleccion, donde=f"dentro de la obra {obra_codigo}")
+        if eleccion.elegido is not None:
             self._remove_nota_proveedor_safely(merge_document_id)
-            return por_nombre.cif, "deterministic"
+            return eleccion.elegido.cif, "deterministic"
 
         # Decision por PUNTOS (nombre debil + familia).
         candidatos.sort(key=lambda c: c.puntos, reverse=True)
@@ -1043,6 +1055,18 @@ class HeaderResolverService:
             _LOG_PREFIX, mejor.puntos, segundo_puntos,
             _PUNTOS_MINIMOS, _MARGEN_MINIMO,
         )
+        if eleccion.empatados:
+            # F-073 · R11: empate por nombre que la familia no separa ⇒ a
+            # revision con motivo propio y la lista de los empatados.
+            self._marcar_revision_safely(
+                merge_document_id=merge_document_id,
+                motivo=MOTIVO_PROVEEDOR_NOMBRE_AMBIGUO,
+                nota=self._nota_empate_nombre(
+                    eleccion, candidatos,
+                    proveedor_nombre=proveedor_nombre, obra_codigo=obra_codigo,
+                ),
+            )
+            return None, "deterministic"
         top = candidatos[: self._nota_max_candidatos]
         listado = "; ".join(c.etiqueta() for c in top)
         self._nota_proveedor_safely(
@@ -1055,6 +1079,62 @@ class HeaderResolverService:
             ),
         )
         return None, "deterministic"
+
+    def _nota_empate_nombre(
+        self,
+        eleccion: EleccionPorNombre,
+        candidatos: list[_CandidatoObra],
+        *,
+        proveedor_nombre: str | None,
+        obra_codigo: str,
+    ) -> str:
+        """Nota de R11: hasta ``nota_max_candidatos`` empatados, en orden
+        de puntos descendente y CIF ascendente (R12: no depende de la
+        llegada)."""
+        puntos: dict[str, int] = {}
+        for c in candidatos:
+            clave = _clave_cif(c.cif)
+            puntos[clave] = max(puntos.get(clave, c.puntos), c.puntos)
+        ordenados = sorted(
+            eleccion.empatados,
+            key=lambda e: (-puntos[_clave_cif(e.cif)], e.cif),
+        )[: self._nota_max_candidatos]
+        listado = "; ".join(f"{e.cif} — {e.nombre or '?'}" for e in ordenados)
+        return (
+            f"{_NOTA_PROVEEDOR_PREFIX} sin CIF: el nombre leído "
+            f"'{proveedor_nombre or '—'}' casa por igual con "
+            f"{len(eleccion.empatados)} proveedores con contrato en la obra "
+            f"{obra_codigo}: {listado}. Elige el proveedor arriba y pulsa "
+            '"Guardar y volver a buscar".'
+        )
+
+    def _log_eleccion(self, eleccion: EleccionPorNombre, *, donde: str) -> None:
+        """F-073 · R13: CIF y similitud del mejor, la del segundo y el
+        margen; en empate, cuantos empatan."""
+        mejor = eleccion.mejor
+        cif = mejor.cif if mejor else "-"
+        similitud = mejor.similitud if mejor else 0.0
+        if eleccion.elegido is not None:
+            logger.info(
+                "%s proveedor resuelto por NOMBRE %s: elegido cif=%s "
+                "similitud=%.2f segunda=%.2f margen=%.2f",
+                _LOG_PREFIX, donde, cif, similitud, eleccion.segunda,
+                self._margen_nombre,
+            )
+        elif eleccion.empatados:
+            logger.info(
+                "%s proveedor por NOMBRE %s: EMPATE, no se elige: mejor "
+                "cif=%s similitud=%.2f segunda=%.2f margen=%.2f empatados=%d",
+                _LOG_PREFIX, donde, cif, similitud, eleccion.segunda,
+                self._margen_nombre, len(eleccion.empatados),
+            )
+        else:
+            logger.info(
+                "%s proveedor por NOMBRE %s: nadie llega al umbral: mejor "
+                "cif=%s similitud=%.2f segunda=%.2f umbral=%.2f",
+                _LOG_PREFIX, donde, cif, similitud, eleccion.segunda,
+                self._min_score,
+            )
 
     # ----------------------------------------------------------------- #
     # Notas de revision (best-effort, con dedupe por prefijo)
