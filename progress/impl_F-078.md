@@ -153,7 +153,7 @@ entera de su servicio sin `-x`: **8 de 8 muertos**. Total: **0 supervivientes, 0
    (`ModuleNotFoundError` en la recolección); de ahí la cobertura 24,4 % (sus suites no corrieron). Además: raíz
    `test_f039_r2` (faltaban los dos informes de F-078 en `inventario_mutacion_F-039.md`: añadidos, `ef70d17`) y
    tamaño del informe (223 > 220: recortado). Sin más KO.
-2. **Con `PYTHONPATH` a la comun del worktree** (lo que verá el árbol principal tras fusionar): PENDIENTE_INIT2
+2. **Con `PYTHONPATH` a la comun del worktree** (lo que verá el árbol principal tras fusionar): **`ENTORNO LISTO. Puedes trabajar.`** Raíz 1237, sv1 205, sv2 397, sv3 703, sv4 1487, sv5 43, sv6 340, sv9 660 passed; comun de caché (684 + 3 skipped, verde de la pasada 1); `PUERTA COBERTURA: 98.0% de 246 líneas cambiadas (241/246)`; tamaño impl 219/220.
 3. **AVISO rutas sensibles [evals]**: `fila_completa.py` cae en «redes deterministas de sv6» y pide
    `progress/evals_F-078.md` (`python -m evals.runner --con-llm --feature F-078`). Llama a LLM: no lo lancé (sin red
    en esta tarea). Decide el líder/humano; es aviso, no bloquea.
@@ -212,8 +212,8 @@ Deja de terminar en `no_admitido` con `falta_descripcion` (con `ALTA_SIGRID_COMM
 
 | Evidencia | Valor |
 |---|---|
-| Tests (suites enteras, `PYTHONPATH` comun del worktree) | PENDIENTE_TESTS |
+| Tests (suites enteras, `PYTHONPATH` comun del worktree) | raíz 1237, sv4 1487, sv6 340, sv9 660, comun 684 (+3 skipped), sv1–sv3 y sv5 sin cambios; 0 fallos |
 | Tests nuevos de F-078 | comun 106, sv6 18 + 27, sv4 13 + 32 + 15, sv9 6 |
-| Cobertura de las líneas cambiadas | PENDIENTE_COB |
+| Cobertura de las líneas cambiadas | **98,0 %** (241/246, umbral 80 %, `PUERTA COBERTURA` de la pasada 2) |
 | Mutantes generados / supervivientes | 81 / 8 en la herramienta → **0** tras los tests de T10 (8 de 8 muertos) |
-| Tiempo de la suite | PENDIENTE_TIEMPO |
+| Tiempo de la suite | sv4 288 s, sv9 75 s, sv6 23 s, comun 177 s, raíz 423 s (pasada 2; init.sh ≈ 20 min) |
