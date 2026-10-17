@@ -57,13 +57,34 @@ verde en el árbol principal.
 de sv6 y sv4 de F-076 lleva también F-078 (está en `dev`), así que va todo en este orden, en UNA consola de
 PowerShell 5.1 (cada paso con su `cd`; sin `&&`). Si un paso no da su VERDE, para ahí.
 
+> **Conexión a producción (corregido el 2026-10-17).** El `.env` de sv6 apunta a `localhost` (la BBDD local): los
+> scripts `rellenar_filas_f078` y `medir_f076_partidas` leen la de Azure solo si la consola lleva las `PG_*` de Azure,
+> que mandan sobre el `.env` (pydantic-settings). La contraseña sale de Key Vault a la variable, nunca a un fichero, y
+> se borra al terminar. Pega estas dos funciones al abrir la consola y llama a `Usar-PgAzure` antes de cada script
+> (los pasos ya lo hacen) y a `Quitar-PgAzure` al acabar. Sin ellas, el script lee (y con `--aplicar`, escribiría) la
+> BBDD local: así salió la primera T12 del 17-10 (46 filas, ids 973–1052).
+
 ```powershell
-# 1. sv6 local: tenacity (F-076) y lectura de F-078 T12 (solo lectura, .env de sv6)
+function Usar-PgAzure {
+  $env:PG_HOST = "psql-albaranes-rs9k2.postgres.database.azure.com"
+  $env:PG_USER = "ruesmaadmin"
+  $env:PGSSLMODE = "require"
+  $env:PG_PASSWORD = az keyvault secret show --vault-name kv-albaranes-rs9k2 --name PG-PASSWORD --query value -o tsv
+}
+function Quitar-PgAzure { Remove-Item env:PG_HOST, env:PG_USER, env:PG_PASSWORD, env:PGSSLMODE -ErrorAction SilentlyContinue }
+```
+
+```powershell
+# 1. sv6 local: tenacity (F-076) y lectura de F-078 T12 (solo lectura, BBDD de Azure)
 cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
 .\.venv\Scripts\python.exe -m pip install "tenacity>=8.2"
+Usar-PgAzure
 .\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
-#    VERDE: cuadra con progress/spec_F-078.md §3 (≈93 descripcion_linea, 7 unidad_albaran, 6 cantidad_convertida
-#    con los ids 385 y 386, 0 unidad_contrato, 0 precio_unitario_final, salvo lo cambiado desde el 16-10).
+Quitar-PgAzure
+#    VERDE: ids entre 362 y 545 (Azure) y cuadra con la medición del líder del 17-10 (102 filas revisadas, 94 que
+#    cambiarían: 91 descripcion_linea, 27 unidad_albaran, 21 cantidad_convertida, 385 y 386 dentro; 0
+#    unidad_contrato, 0 precio). Frente a spec §3 (93/7/6), lo de más son vinculadas a las que se pone la unidad del
+#    contrato y sin vincular con la convertida = cantidad (factor 1): no cambia lo que manda sv9. Ids ≥ 900 ⇒ local.
 
 # 2. variables de F-076 en sv6 y despliegue de sv6
 cd C:\Users\pgris\PycharmProjects\albaranes\infra
@@ -76,8 +97,10 @@ cd C:\Users\pgris\PycharmProjects\albaranes\infra
 
 # 3. relleno de F-078 con --aplicar (autorización expresa del humano) y su relectura
 cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
+Usar-PgAzure
 .\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078 --aplicar
 .\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
+Quitar-PgAzure
 #    VERDE: la primera acaba en «Escritas N filas. Releído: 0 pendientes.» (si no, ROLLBACK y código 2);
 #    la segunda, en «Filas que cambiarían: 0».
 
@@ -89,7 +112,9 @@ cd C:\Users\pgris\PycharmProjects\albaranes\infra
 
 # 5. relectura de F-078 tras sv4 (cierra la ventana entre el relleno y sv4)
 cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
+Usar-PgAzure
 .\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
+Quitar-PgAzure
 #    VERDE: «Filas que cambiarían: 0». Si da más: repite el paso 3 (misma autorización) y este.
 ```
 
@@ -131,14 +156,16 @@ atrás sin redesplegar: `az containerapp update -n ca-sv6-valorador -g $RG --set
 `2792cf3b`, `53337da7`, `54b82479`, `dedf011a` (0694); `41ab0dc1` (0711); `09643c2b`, `89e463a7`, `bef66bce`,
 `f96c6dbe` (0720); `ca609aee` (0723); `25c5d647` (0724). **`355449d9` NO se revalora** (6 filas guardadas: se
 perderían, F-058): su partida se corrige a mano en la ficha (`CI.04.18` ⇒ `CI.4.18`, `CI.03A.02` ⇒ `CI.03A.2`).
-Después, la medición (sv6 del árbol principal; PostgreSQL con el `.env` de sv6, en solo lectura; las tres
-`SIGRID_API_*` se toman del `.env` de sv3 SOLO para esta consola, sin imprimirlas):
+Después, la medición (sv6 del árbol principal; PostgreSQL de **Azure** con `Usar-PgAzure` —el `.env` de sv6 apunta a
+local—, en solo lectura; las tres `SIGRID_API_*` se toman del `.env` de sv3 SOLO para esta consola, sin imprimirlas):
 
 ```powershell
 cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
 .\.venv\Scripts\python.exe -m pip install "tenacity>=8.2"
 Get-Content ..\albaranes-persistencia\.env | Where-Object { $_ -match '^(SIGRID_API_(BASE_URL|FUNCTION_KEY|DATABASE))=(.*)$' } | ForEach-Object { Set-Item -Path "env:$($Matches[1])" -Value $Matches[3].Trim('"') }
+Usar-PgAzure
 .\.venv\Scripts\python.exe -m scripts.medir_f076_partidas
+Quitar-PgAzure
 Remove-Item env:SIGRID_API_BASE_URL, env:SIGRID_API_FUNCTION_KEY, env:SIGRID_API_DATABASE
 ```
 
@@ -177,8 +204,10 @@ de sv4 en el worktree `../albaranes-F-078` (quitarla con `cmd /c rmdir` antes de
 Antes de nada: **fusionar la rama en `dev`** (el script y `ruesma_comun.linea_valorada` viven en el árbol principal a
 partir de ahí). Orden obligatorio: **sv6 → relleno con `--aplicar` → sv4**; **sv9 no se redespliega**.
 
-**T12 · relleno en SOLO LECTURA contra producción** (`.env` de sv6 del árbol principal; transacción `READ ONLY`, sin
-conexión ni textos de proveedor en la salida, solo ids y columnas):
+**T12 · relleno en SOLO LECTURA contra producción** (**ojo: el `.env` de sv6 apunta a local**; antes de cada
+`rellenar_filas_f078` de este bloque, `Usar-PgAzure`, y después `Quitar-PgAzure`, funciones del bloque «F-076 ·
+MANUAL»; transacción `READ ONLY`, sin conexión ni textos de proveedor en la salida, solo ids y columnas). Hecha por el
+líder el 17-10 contra Azure: 102 revisadas, 94 que cambiarían (91/27/21, 385 y 386 dentro; ver el paso 1 de arriba):
 
 ```powershell
 cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
