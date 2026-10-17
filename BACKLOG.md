@@ -5,6 +5,8 @@
 
 Resumen: **74 features**, 50 abiertas, 24 terminadas.
 
+En curso: **F-077**.
+
 Bloqueadas: **F-078, F-076**.
 
 ## Trabajo abierto
@@ -17,7 +19,7 @@ Bloqueadas: **F-078, F-076**.
 | F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 1 | pendiente | critico |  |
 | F-067 | Limpieza de la ficha de detalle (sv4) | 1 | pendiente | estandar |  |
 | F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | 1 | bloqueada | critico | `feature/F-076-normalizar-partidas` |
-| F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 1 | spec lista | estandar | `feature/F-077-guardar-y-aprobar` |
+| F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 1 | en curso | estandar | `feature/F-077-guardar-y-aprobar` |
 | F-078 | La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia | 1 | bloqueada | critico | `feature/F-078-linea-guarda-lo-que-se-ve` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
@@ -159,7 +161,7 @@ ORIGEN (T51 de F-053, 2026-10-16, producción en simulación): sv9 dejó no_admi
 
 ### F-077 · Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4)
 
-estado **spec lista** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-077-guardar-y-aprobar`
+estado **en curso** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-077-guardar-y-aprobar`
 
 ORIGEN (humano, 2026-10-16, en producción tras la T51 de F-053): (1) «Guardar y aprobar» con filas sin guardar solo avisaba «Hay N líneas con cambios sin guardar» (F-065 R19) y no hacía nada; (2) tras reaprobar, la ficha pintó durante 3-13 s el no_admitido viejo con la partida vieja, o «Sin alta en Sigrid todavía» con «Solicitar alta», porque sv9 aún no había respondido; (3) el ⚠ de partida no decía contra qué no coincide; (4) un no_admitido con un motivo de línea (falta_descripcion, línea manual sin descripción, documento 86c13097) no enseñaba ninguna razón porque la petición venía vacía. ALCANCE (PARADA 1 aprobada 2026-10-16; spec en specs/F-077-guardar-y-aprobar/, resumen en progress/spec_F-077.md): «Guardar y aprobar» y «Guardar» de la cabecera guardan primero, con el mismo PATCH por fila y las mismas validaciones (R27 v5), las filas con cambios y después aprueban/guardan; si una fila falla se para, no se aprueba y la fila queda en rojo (no atómico: las guardadas quedan); se mantiene la confirmación de la suma (releída tras guardar). El panel del alta pinta «Alta en curso…» sin resultado viejo ni botones solo mientras sv9 procesa la aprobación vigente, sondeando cada 3 s una ruta de solo lectura nueva; a los 5 min sin respuesta, error de tiempo; un resultado malo (no_admitido/revisar/error) se pinta como error. El ⚠ de partida solo en filas Contrato con lectura del albarán distinta, con tooltip «No coincide con la partida leída en el albarán (X)». Todos los motivos del alta visibles y con texto legible (los de línea sin fila, como «Línea N»), código en el title. PARADA 1 aprobada con P1–P4 resueltas (spec v2). Solo sv4; sv4 no escribe albaran_altas_sigrid. Fuera: equivalencia de partidas (F-076), F7 (F-068).
 
