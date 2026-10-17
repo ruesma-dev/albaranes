@@ -15,8 +15,16 @@ más parecida» (ni sufijo, ni prefijo, ni distancia).
 """
 from __future__ import annotations
 
-import pytest
+import logging
 
+import httpx
+import pytest
+from ruesma_comun.sigrid import (
+    MAX_FILAS_POR_PETICION,
+    PoliticaTruncado,
+    SigridRespuestaTruncada,
+    comprobar_truncado,
+)
 from ruesma_comun.sigrid.partidas import (
     MOTIVO_ALM,
     MOTIVO_AMBIGUA,
@@ -32,9 +40,12 @@ from ruesma_comun.sigrid.partidas import (
     PartidaObra,
     casar_partida,
     hojas_de_filas,
+    leer_partidas_obra,
     normalizar_partida,
     partes_de_partida,
 )
+
+_LOG = logging.getLogger("test_f076_partidas")
 
 _COLUMNAS = ["ide", "padide", "cod", "res"]
 
@@ -332,3 +343,91 @@ def test_f076_r4_lista_vacia():
 def test_f076_r4_codigos_duplicados_en_la_lista_no_son_ambiguos():
     caso = casar_partida(_lista("P5.01.09", "P5.01.09"), "P5.1.9", "ALM")
     assert caso == CasePartida(motivo=MOTIVO_NORMALIZADA, codigos_lista=("P5.01.09",))
+
+
+# ------------------------------------------------------------------ #
+# R3 · leer_partidas_obra: obra de F-070, UNA consulta, NO_TOLERA
+# ------------------------------------------------------------------ #
+def _lector_http(cuerpo: dict, llamadas: list[dict]):
+    """Lector como el de sv4 y sv6: POST a sigrid-api (simulado) + política."""
+
+    def leer(sql, parametros, etiqueta, politica, max_rows):
+        llamadas.append(
+            {"sql": sql, "parametros": parametros, "etiqueta": etiqueta, "politica": politica, "max_rows": max_rows}
+        )
+        transporte = httpx.MockTransport(lambda peticion: httpx.Response(200, json=cuerpo))
+        with httpx.Client(transport=transporte) as cliente:
+            respuesta = cliente.post(
+                "http://sigrid-api.test/api/sql/read",
+                json={"sql": sql, "parameters": parametros, "max_rows": max_rows},
+            )
+        body = respuesta.json()
+        comprobar_truncado(body, politica=politica, etiqueta=etiqueta, logger=_LOG)
+        return list(body["columns"]), list(body["rows"])
+
+    return leer
+
+
+def _cuerpo(filas=None, truncated=False) -> dict:
+    return {"ok": True, "columns": _COLUMNAS, "rows": _filas_arbol() if filas is None else filas,
+            "truncated": truncated}
+
+
+def test_f076_r3_una_consulta_no_tolera_y_tope_maximo():
+    llamadas: list[dict] = []
+    lista = leer_partidas_obra(_lector_http(_cuerpo(), llamadas), " 0691 ")
+    assert len(llamadas) == 1
+    (llamada,) = llamadas
+    assert llamada["sql"] == SQL_PARTIDAS_POR_OBRA
+    assert llamada["parametros"] == ["0691"]
+    assert llamada["etiqueta"] == "partidas_obra_0691"
+    assert llamada["politica"] is PoliticaTruncado.NO_TOLERA
+    assert llamada["max_rows"] == MAX_FILAS_POR_PETICION == 500_000
+    assert isinstance(lista, ListaPartidasObra)
+    assert lista.obra == "0691"
+    assert lista.codigos == ("123", "ALM.1", "P4.01.09", "P5.01.02", "P5.01.09")
+    assert lista.no_hojas == ("P4", "P5", "P5.01")
+
+
+@pytest.mark.parametrize(
+    ("obra", "consultada"),
+    [("686", "0686"), (" 686 ", "0686"), ("0686", "0686"), ("var", "VAR"), ("postv2", "POSTV2"),
+     (" GG ", "GG"), ("0578-B", "0578-B")],
+)
+def test_f076_r3_obra_canonizada_con_f070(obra, consultada):
+    """``canonizar_codigo_obra`` (F-070): canónica si la hay; si no, recortada."""
+    llamadas: list[dict] = []
+    lista = leer_partidas_obra(_lector_http(_cuerpo(), llamadas), obra)
+    assert [ll["parametros"] for ll in llamadas] == [[consultada]]
+    assert llamadas[0]["etiqueta"] == f"partidas_obra_{consultada}"
+    assert lista is not None and lista.obra == consultada
+
+
+@pytest.mark.parametrize("obra", [None, "", "   ", "	"])
+def test_f076_r3_obra_vacia_no_consulta(obra):
+    def leer(*args, **kwargs):  # pragma: no cover - no debe llamarse
+        raise AssertionError("no debe consultarse sigrid-api sin obra")
+
+    assert leer_partidas_obra(leer, obra) is None
+
+
+def test_f076_r3_truncado_lanza_nunca_lista_parcial():
+    llamadas: list[dict] = []
+    with pytest.raises(SigridRespuestaTruncada) as info:
+        leer_partidas_obra(_lector_http(_cuerpo(_filas_arbol()[:3], truncated=True), llamadas), "0691")
+    assert info.value.etiqueta == "partidas_obra_0691"
+    assert len(llamadas) == 1
+
+
+def test_f076_r3_error_del_lector_se_propaga():
+    def leer(*args, **kwargs):
+        raise RuntimeError("sigrid-api respondio 500")
+
+    with pytest.raises(RuntimeError, match="500"):
+        leer_partidas_obra(leer, "0691")
+
+
+def test_f076_r3_sin_filas_da_lista_vacia_no_none():
+    """Quien decide qué es «sin lista» con 0 hojas es la caché (R6), no la lectura."""
+    lista = leer_partidas_obra(_lector_http(_cuerpo([]), []), "0691")
+    assert lista == ListaPartidasObra(obra="0691", hojas=(), no_hojas=())

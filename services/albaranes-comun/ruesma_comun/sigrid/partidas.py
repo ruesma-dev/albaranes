@@ -26,6 +26,9 @@ expansión de abreviaturas). Si no casa, lo dice y la lectura se queda.
 - :func:`hojas_de_filas` y :meth:`ListaPartidasObra.desde_filas`: hojas con
   la semántica de sv4 (padre 0/nulo = sin padre; sin ``cod`` fuera; ruta de
   capítulos; orden por código) y, aparte, los códigos no hoja.
+- :func:`leer_partidas_obra`: UNA consulta, ``NO_TOLERA`` y
+  :data:`~ruesma_comun.sigrid.lectura.MAX_FILAS_POR_PETICION`; la obra se
+  canoniza con ``canonizar_codigo_obra`` (F-070); vacía ⇒ no consulta.
 - :func:`normalizar_partida`, :func:`partes_de_partida`,
   :func:`casar_partida` y sus motivos.
 """
@@ -37,7 +40,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from ruesma_comun.sigrid.lectura import PoliticaTruncado
+from ruesma_comun.obras import canonizar_codigo_obra
+from ruesma_comun.sigrid.lectura import MAX_FILAS_POR_PETICION, PoliticaTruncado
 
 # Partidas del presupuesto de una obra (obrparpar). Es la
 # ``_SQL_PARTIDAS_POR_OBRA`` de sv4 (``sigrid_lookup_client.py``) del
@@ -309,6 +313,35 @@ def hojas_de_filas(columnas: Sequence[str], filas: Sequence[Sequence[Any]]) -> l
     """
     by_ide, parent_ides = _indexar(columnas, filas)
     return _hojas(by_ide, parent_ides)
+
+
+def leer_partidas_obra(leer: LectorSql, obra: Any) -> ListaPartidasObra | None:
+    """Lista de partidas de ``obra``: UNA consulta a sigrid-api (F-076 R3).
+
+    La obra se lleva al código de la consulta con ``canonizar_codigo_obra``
+    (F-070: ``686`` ⇒ ``0686``, ``var`` ⇒ ``VAR``; lo que no encaja, recortado
+    tal cual, como las demás consultas por obra de sv4). Si queda vacía, NO se
+    consulta y se devuelve ``None`` (no hay lista). La lectura va con
+    ``NO_TOLERA`` y ``max_rows`` = :data:`MAX_FILAS_POR_PETICION`: una lista
+    truncada calcularía mal las hojas sin error, así que ``truncated=true``
+    acaba en :class:`~ruesma_comun.sigrid.lectura.SigridRespuestaTruncada` (la
+    lanza el lector) y nunca en una lista parcial. Cualquier error del lector
+    se propaga: degradar es cosa de quien llama.
+
+    (F-049 canonizaba con su ``obra_a_consultar`` y un índice de obras, que no
+    están en ``dev``; al retomarla, se queda su versión.)
+    """
+    canonica = canonizar_codigo_obra(None if obra is None else str(obra))
+    if canonica is None:
+        return None
+    columnas, filas = leer(
+        SQL_PARTIDAS_POR_OBRA,
+        [canonica],
+        f"partidas_obra_{canonica}",
+        PoliticaTruncado.NO_TOLERA,
+        MAX_FILAS_POR_PETICION,
+    )
+    return ListaPartidasObra.desde_filas(canonica, columnas, filas)
 
 
 # ------------------------------------------------------------------ #
