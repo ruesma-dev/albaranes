@@ -1,11 +1,40 @@
 <!-- progress/review_F-076.md -->
-Revisión completa (pasada 1) · `git diff dev...HEAD` (base `a8b9f7d`, HEAD `bceff77`)
+Revisión incremental desde bceff77 (pasada 2) · delta `bceff77..4471d72`; pasada 1 completa en `febcaf0`
 
 # F-076 · Normalizar partidas contra las de la obra · Review (2026-10-17)
 
-**Veredicto: CHANGES_REQUESTED.** Código, tests y mutación correctos. Falla la documentación operativa: las MANUAL de
-F-076 no dan la secuencia exacta combinada con las de F-078, aún pendientes. Más dos retoques menores. Son tres cambios
-de texto, sin código (§5).
+**Veredicto: APPROVED.** Los tres cambios de la pasada 1 están aplicados y el delta no toca código.
+
+## Pasada 2 (incremental)
+
+El delta `4471d72` solo toca `progress/current.md`, `progress/impl_F-076.md`, `harness/features.json` y `BACKLOG.md`
+(más esta review): **cero código**. No invalida nada de lo aprobado en la pasada 1, que no se relee.
+
+- **P2.1 · Orden (cambio 1).** La «Secuencia combinada F-078 + F-076» de `current.md` va así: 1 tenacity y lectura de
+  F-078 T12; 2 `set_partidas_sv6.ps1` y `deploy -Only sv6`; 3 relleno `--aplicar` y relectura; 4 `deploy -Only sv4` y
+  `check_deploy`; 5 relectura tras sv4; 6 F-078 T14; 7 F-076 T19 y el log de T18. Respeta **sv6 ⇒ relleno ⇒ sv4**, y
+  los comandos y VERDE de F-078 coinciden literalmente con su bloque.
+- **P2.2 · Pegable en PowerShell 5.1.** Cada paso lleva su `cd` absoluto, sin `&&`, ternarios ni here-strings. Hay
+  dot-source de `00_vars`/`00_capps_vars` en la misma consola, con lo que `$RG` sirve después para el log, y los
+  comentarios `#` son inertes. Cada paso trae su `VERDE:`, y el texto dice «si un paso no da su VERDE, para ahí».
+  Observación, no bloquea: está todo en un único bloque de código, y pegarlo entero de una vez ejecutaría el `--aplicar`
+  aunque el paso 2 hubiera fallado; el humano debe pegarlo paso a paso, como dice el texto.
+- **P2.3 · Nota simétrica en F-078.** «Con F-076 fusionada en `dev` … usa la secuencia combinada»; el bloque suelto vale
+  solo si F-078 se despliega antes. Es coherente con la secuencia y no la contradice. `impl` §6 queda como puntero a
+  `current.md`, única copia.
+- **P2.4 · `features.json` (cambio 2).** La `description` dice «spec APROBADA el 2026-10-16: P1–P11 por defecto y
+  ampliación R23–R25». Se conserva la etiqueta «PROPUESTA:» delante del resumen técnico, que se lee como el contenido de
+  la propuesta aprobada: aceptable. `BACKLOG.md` regenerado («al día»).
+- **P2.5 · `Remove-Item` (cambio 3).** Está justo después de `-m scripts.medir_f076_partidas` en T19, que la secuencia
+  ejecuta en el paso 7.
+- **P2.6 · `init.sh`.** Git Bash, mismo `PYTHONPATH` (comun del worktree) ⇒ **exit 0, «ENTORNO LISTO»**. Raíz 1237
+  passed. Los 8 servicios salen verdes por la caché de suite: el verde es el de la pasada 1, sin caché y en serie, y
+  desde entonces no ha cambiado ningún fichero de servicio. `COBERTURA` [OK] 97,3 %; `TAMAÑO` [OK].
+
+Checkpoints que estaban en `[ ]` y ahora pasan a `[x]`: C4 (MANUAL) y C5 (`features.json`). El resto, como en la
+pasada 1.
+
+# Pasada 1 (completa, `bceff77`), resumida
 
 ## 1. Verificación ejecutada (resultados reales)
 
@@ -18,20 +47,11 @@ de texto, sin código (§5).
 - **Evals deterministas** (`python -m evals.runner --feature F-076`, sin LLM ni red, salida al scratchpad): ROJO, pero
   **idéntico línea a línea** al mismo comando sobre `dev` (`a8b9f7d`): sin regresión. `git status` limpio después.
 
-## 2. Las 10 desviaciones de `impl_F-076.md` §2: todas caben; ninguna exige volver al humano
+## 2. Las 10 desviaciones de `impl_F-076.md` §2
 
-| # | Juicio |
-|---|---|
-| 1 R11 frente a design §5.2 | Manda el requisito, y R11 enumera «sin configuración». Si sv6 se despliega sin T18: motivo de cabecera sin revisión, inocuo y además avisa. |
-| 2 Guarda de no hoja en `ambigua` | Es R5 literal («no exacta ⇒ `fuera_de_lista`»). Las dos ramas van a revisión; solo cambia el motivo. Conservador (H1). |
-| 3 «Lectura» | Sin nada alfanumérico ya era `sin_partida` ⇒ `no_aplica`. Equivale a R13. |
-| 4 `exacta` con espacios y motivo de cabecera | Regla 6; `at_least_one_line_requires_review` es el invariante del builder (`valuation_builder.py:1848`). |
-| 5 Copia profunda | Necesaria: IA4 muta el sobre en su sitio. El mutante `deep=False` muere. |
-| 6 Alias `_SQL_PARTIDAS_POR_OBRA` | Referencia, no copia: el test de R15 comprueba la identidad y que no quede `obrparpar`. |
-| 7 Tests de F-052 tocados | Consecuencia directa de P7 (aprobado). Solo cambian las aserciones de `TOLERA`/5000 de partidas y la versión 0.7.0. Que dos nombres digan aún «partidas toleran» es cosmético. |
-| 8 `tenacity` | La exige R18; el Dockerfile instala `requirements.txt`. |
-| 9 `app.py` saltado | Sin hueco real: el test AST corre siempre y el de comportamiento lo ejecuté yo (§1). Sin ciclo de imports. Limitación previa (§6). |
-| 10 Separador « · » | El de design §5.4. |
+Todas caben en la spec aprobada; ninguna exige volver al humano. La tabla con el juicio de cada una está en la pasada 1
+(`git show febcaf0:progress/review_F-076.md`, §2): #1 manda R11, #2 es R5 literal, #7 es consecuencia de P7 y #9 no deja
+hueco (el test saltado lo ejecuté con FastAPI: 8 passed).
 
 ## 3. Puntos expresos del líder
 
@@ -81,7 +101,7 @@ Rigor **`critico` declarado**: RED, cobertura ≥ 80 %, mutación completa con 0
     la partida y no se anotan.
 - **C3 bis**: N/A, no entra ningún documento externo.
 - **C4**: [x] Trazabilidad (§4.1). [x] Unit tests sin red ni BBDD (`MockTransport`, SQLite en memoria, puertos
-  falsos). [ ] **Las MANUAL no traen la secuencia exacta combinada** (cambio 1).
+  falsos). [x] MANUAL con la secuencia combinada exacta (pasada 2, P2.1).
 - **C4 bis**:
   - [x] `rigor` declarado. [x] RED real de los centrales (R5, R15, R23/24, R9/10, R7/8/14); T12 y T15 justificados
     (R16 «sin cambio», R22 no central). [x] Cobertura 97,3 %.
@@ -101,40 +121,21 @@ Rigor **`critico` declarado**: RED, cobertura ≥ 80 %, mutación completa con 0
     clave es canónica y no vacía en origen (`canonizar_codigo_obra`) y queda `or ListaPartidasObra(...)`.
   - [x] RM5: sin equivalentes declarados. [x] «Evidencias» con los cuatro números y los workers. [x] Sin N/A mudos.
 - **C4 ter**: [x] Ruta tocada `normalizador_partidas.py`; `aviso` sin `progress/evals_F-076.md`; motivo en §3.
-- **C5**: [x] T1–T17 y T5b `[x]` con commit (T18–T20 del humano). [x] Sin artefactos sueltos. [ ] **La `description`
-  de F-076 en `features.json` dice «PROPUESTA (spec v1, PARADA 1 pendiente …)»** y la spec está APROBADA (cambio 2).
+- **C5**: [x] T1–T17 y T5b `[x]` con commit (T18–T20 del humano). [x] Sin artefactos sueltos. [x] `features.json`
+  con la spec APROBADA (pasada 2, P2.4).
 
 ### 4.1 Requisito ⇒ test
 
-| Requisitos | Tests |
-|---|---|
-| R1–R6 | comun `test_f076_partidas.py` (`r1_*`…`r6_*`; R5 con `03.02` no hoja; R6 con reloj falso) |
-| R7, R11–R13 / R8, R14 | sv6 `test_f076_normalizador.py` y `test_f076_pipeline.py` / `test_f076_pipeline.py` |
-| R9–R10 / R17–R18 / R22 | `test_f076_normalizador.py` (+ `r10` del pipeline) / `test_f076_lector.py` / `test_f076_medicion.py` |
-| R15 / R23–R25 / R16 | sv4 `test_f076_partidas_sv4.py` / sv4 `test_f076_aviso_partida.py` / sv9 `test_f076_partida_final.py` |
-| R19, R20, R21 | Por lectura: R19 + grep; R20 = ARCHITECTURE regla 23 (la 22 es de F-078), `sv6.md`, `azure-apps` `8a6f63c` con árbol limpio; R21 por nomenclatura y sin red |
+R1–R25 cubiertos (R19–R21 por lectura); la tabla, en `febcaf0` §4.1.
 
 ## 5. Cambios requeridos
 
-1. **`progress/current.md` (bloque «F-076 · MANUAL») y `progress/impl_F-076.md` §6.** Sustituir la remisión «sigue
-   entonces el orden de F-078» por **un único bloque PowerShell con la secuencia combinada exacta**, válido mientras
-   F-078 siga pendiente:
-   1. En `services\albaran-valoracion-persist` del árbol principal: `pip install "tenacity>=8.2"` y la lectura de
-      F-078 T12 (`-m scripts.rellenar_filas_f078`).
-   2. En `infra`: `. .\00_vars.ps1`, `. .\00_capps_vars.ps1`, `.\set_partidas_sv6.ps1`, `.\deploy.ps1 -Only sv6`.
-   3. En sv6: `rellenar_filas_f078 --aplicar` y la lectura (debe dar 0).
-   4. En `infra`: `.\deploy.ps1 -Only sv4` y `.\check_deploy.ps1`.
-   5. En sv6: la lectura de F-078 (debe dar 0). 6. F-078 T14. 7. F-076 T19 y la comprobación del log de T18.
-   El bloque actual de T18 queda para «F-078 ya cerrada»; nota simétrica en el de F-078 para que no se contradigan.
-2. **`harness/features.json`, F-076, `description`**: «PROPUESTA (spec v1, PARADA 1 pendiente, preguntas P1-P11)» ⇒
-   «spec APROBADA el 2026-10-16: P1–P11 por defecto y ampliación R23–R25». `init.sh` regenera `BACKLOG.md`.
-3. **T19, mismo bloque**: tras `-m scripts.medir_f076_partidas`, añadir
-   `Remove-Item env:SIGRID_API_BASE_URL, env:SIGRID_API_FUNCTION_KEY, env:SIGRID_API_DATABASE`, para que la clave no
-   quede viva en la consola.
+Ninguno. Los tres de la pasada 1 están aplicados en `4471d72`.
 
 ## 6. Automejora (propuesta al humano, no aplicada)
 
-- C4 ter de `CHECKPOINTS.md` y `rutas_sensibles.json` dicen que los `_indice.json` están vacíos, pero `evals/fixtures/`
-  ya tiene casos: o D5 (`aviso` ⇒ `bloqueo`) ya se cumple o el texto está desfasado. Además, las evals deterministas no
-  pasan por `RunValuationPipeline` (F-076 y F-078 quedan fuera) y el intérprete del arnés, sin FastAPI, nunca ejecuta
-  `app.py` de sv6: un intérprete por servicio en `harness/servicios.json` lo cerraría.
+- Los `_indice.json` de `evals/fixtures/` ya tienen casos: o D5 (`aviso` ⇒ `bloqueo`) ya se cumple o el texto de C4 ter
+  y de `rutas_sensibles.json` está desfasado.
+- Las evals deterministas no pasan por `RunValuationPipeline`.
+- El intérprete del arnés no trae FastAPI, así que `app.py` de sv6 nunca se ejecuta. Lo resolvería un intérprete por
+  servicio en `servicios.json`.
