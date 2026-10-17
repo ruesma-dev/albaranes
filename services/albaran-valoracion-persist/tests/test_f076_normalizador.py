@@ -173,3 +173,124 @@ def test_f076_r13_alm_configurable():
     assert set(n.por_linea) == {2}
     assert n.por_linea[2].motivo == "fuera_de_lista"
     assert LISTA_0678.obra == "0678"
+
+
+# ------------------------------------------------------------------ #
+# T9 · anotar tras el build (R9, R10)
+# ------------------------------------------------------------------ #
+def _valorar(lineas, *, contrato=(), puerto=None, sinteticas=()):
+    """Normaliza, construye con el builder real y anota: (n, cabecera, registros)."""
+    from tests.f027_escenarios import construir_builder
+
+    n = _normalizador(puerto or PuertoFalso()).normalizar(
+        envelope=sobre(lineas, contrato=contrato, sinteticas=sinteticas), obra="0678")
+    cabecera, registros = construir_builder().build(envelope=n.envelope, existing_document_already_valued=False)
+    antes = [(r.review_required, list(r.review_reasons), r.importe_calculado, r.codigo_partida_final,
+              r.matched_contrato_line_id, r.partida_action) for r in registros]
+    cabecera_antes = (cabecera.review_required, list(cabecera.review_reasons))
+    NormalizadorPartidas.anotar(cabecera, registros, n)
+    return n, cabecera, registros, antes, cabecera_antes
+
+
+def _por_merge(registros):
+    return {r.merge_line_id: r for r in registros if r.line_kind == "from_albaran"}
+
+
+def test_f076_r9_normalizada_motivo_y_leida_conservada_sin_revision():
+    from tests.f076_sobres import linea_contrato
+
+    _n, cabecera, registros, antes, cabecera_antes = _valorar(
+        [(1, "CI.04.18", 501)], contrato=[linea_contrato(501, "CI.4.18")])
+    (fila,) = registros
+    assert fila.codigo_partida_albaran == "CI.04.18"  # regla 6: lo leído
+    assert fila.codigo_partida_final == "CI.4.18"  # la decisión, de la lista
+    assert "partida_normalizada:CI.04.18>CI.4.18" in fila.review_reasons
+    assert fila.review_required == antes[0][0]
+    assert (cabecera.review_required, cabecera.review_reasons) == cabecera_antes
+
+
+def test_f076_r9_exacta_con_espacios_devuelve_la_leida_sin_motivo():
+    _n, _c, registros, antes, _ca = _valorar([(1, " CI.4.18 ")])
+    (fila,) = registros
+    assert fila.codigo_partida_albaran == " CI.4.18 "
+    assert fila.codigo_partida_final == "CI.4.18"
+    assert fila.review_reasons == antes[0][1]
+
+
+def test_f076_r9_exacta_sin_cambios_no_anota():
+    _n, cabecera, registros, antes, cabecera_antes = _valorar([(1, "CI.4.18")])
+    (fila,) = registros
+    assert (fila.codigo_partida_albaran, fila.review_reasons) == ("CI.4.18", antes[0][1])
+    assert (cabecera.review_required, cabecera.review_reasons) == cabecera_antes
+
+
+@pytest.mark.parametrize(
+    ("lectura", "puerto", "motivo"),
+    [
+        ("CI.14.18", None, "partida_fuera_de_lista"),
+        ("3.2", None, "partida_fuera_de_lista"),
+        ("ci-04-18", PuertoFalso(lista_obra("CI.04.18", "CI.4.18")), "partida_ambigua_en_obra"),
+    ],
+    ids=["sin_candidata", "no_hoja", "ambigua"],
+)
+def test_f076_r10_fuera_de_lista_o_ambigua_a_revision(lectura, puerto, motivo):
+    _n, cabecera, registros, _antes, _ca = _valorar([(1, lectura), (2, lectura)], puerto=puerto)
+    for fila in registros:
+        assert fila.codigo_partida_albaran == lectura
+        assert motivo in fila.review_reasons
+        assert fila.review_required is True
+    assert cabecera.review_required is True
+    assert cabecera.review_reasons.count(motivo) == 1
+    assert "at_least_one_line_requires_review" in cabecera.review_reasons
+
+
+def test_f076_r10_la_partida_no_cambia():
+    _n, _c, registros, antes, _ca = _valorar([(1, "CI.14.18")])
+    assert registros[0].codigo_partida_final == antes[0][3]
+
+
+def test_f076_r9_r10_no_toca_importes_casado_ni_accion():
+    from tests.f076_sobres import linea_contrato
+
+    _n, _c, registros, antes, _ca = _valorar(
+        [(1, "CI.04.18", 501), (2, "CI.14.18"), (3, None), (4, "ALM")],
+        contrato=[linea_contrato(501, "CI.4.18")])
+    despues = [(r.importe_calculado, r.codigo_partida_final, r.matched_contrato_line_id, r.partida_action)
+               for r in registros]
+    assert despues == [a[2:] for a in antes]
+
+
+def test_f076_r9_lineas_sin_lectura_y_sinteticas_no_se_anotan():
+    _n, _c, registros, antes, _ca = _valorar(
+        [(1, None), (2, "ALM"), (3, "CI.04.18")], sinteticas=[(3, "recargo")])
+    for fila, previo in zip(registros, antes):
+        if fila.line_kind != "from_albaran" or fila.merge_line_id in (1, 2):
+            assert fila.review_reasons == previo[1]
+            assert not any(m.startswith("partida_") for m in fila.review_reasons)
+
+
+def test_f076_r11_anotar_motivo_de_cabecera_sin_revision_y_sin_duplicar():
+    from tests.f027_escenarios import construir_builder
+
+    original = sobre([(1, "CI.04.18")])
+    n = NormalizadorPartidas.degradada(original)
+    cabecera, registros = construir_builder().build(envelope=n.envelope, existing_document_already_valued=False)
+    revision = cabecera.review_required
+    NormalizadorPartidas.anotar(cabecera, registros, n)
+    NormalizadorPartidas.anotar(cabecera, registros, n)
+    assert cabecera.review_reasons.count(MOTIVO_PARTIDAS_NO_DISPONIBLES) == 1
+    assert cabecera.review_required is revision
+    assert registros[0].codigo_partida_albaran == "CI.04.18"
+
+
+def test_f076_r9_anotar_dos_veces_no_duplica():
+    from tests.f027_escenarios import construir_builder
+
+    n = _normalizador(PuertoFalso()).normalizar(envelope=sobre([(1, "CI.04.18"), (2, "CI.14.18")]), obra="0678")
+    cabecera, registros = construir_builder().build(envelope=n.envelope, existing_document_already_valued=False)
+    NormalizadorPartidas.anotar(cabecera, registros, n)
+    NormalizadorPartidas.anotar(cabecera, registros, n)
+    por = _por_merge(registros)
+    assert por[1].review_reasons.count("partida_normalizada:CI.04.18>CI.4.18") == 1
+    assert por[2].review_reasons.count("partida_fuera_de_lista") == 1
+    assert cabecera.review_reasons.count("partida_fuera_de_lista") == 1

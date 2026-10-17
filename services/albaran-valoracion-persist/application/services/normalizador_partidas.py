@@ -28,6 +28,7 @@ import logging
 from dataclasses import dataclass, field
 
 from domain.models.valuation_envelope import ValuationEnvelope
+from domain.models.valuation_records import LineValuationRecord, ValuationHeaderRecord
 from domain.ports.partidas_obra_port import PartidasObraPort
 from ruesma_comun.sigrid import (
     ResolucionPartida,
@@ -39,6 +40,19 @@ logger = logging.getLogger(__name__)
 
 #: (R11) Motivo de cabecera cuando no hay lista de la obra (sin revisión).
 MOTIVO_PARTIDAS_NO_DISPONIBLES = "partidas_obra_no_disponibles"
+#: (R9) Prefijo del rastro de una partida normalizada (sin revisión):
+#: ``partida_normalizada:<leída>><lista>``.
+PREFIJO_PARTIDA_NORMALIZADA = "partida_normalizada:"
+#: (R10) Motivos de línea y de cabecera que mandan la línea a revisión.
+MOTIVO_PARTIDA_FUERA_DE_LISTA = "partida_fuera_de_lista"
+MOTIVO_PARTIDA_AMBIGUA = "partida_ambigua_en_obra"
+#: El motivo de cabecera que el builder pone cuando alguna línea va a revisión.
+_MOTIVO_CABECERA_REVISION = "at_least_one_line_requires_review"
+
+_MOTIVO_A_REVISION = {
+    "fuera_de_lista": MOTIVO_PARTIDA_FUERA_DE_LISTA,
+    "ambigua": MOTIVO_PARTIDA_AMBIGUA,
+}
 
 
 @dataclass(frozen=True)
@@ -140,3 +154,54 @@ class NormalizadorPartidas:
             documento, obra, causa, MOTIVO_PARTIDAS_NO_DISPONIBLES,
         )
         return NormalizadorPartidas.degradada(envelope)
+
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def anotar(
+        header: ValuationHeaderRecord,
+        lines: list[LineValuationRecord],
+        n: NormalizacionSobre,
+    ) -> None:
+        """(R9, R10, R11) Rastro de la normalización en los registros ya construidos.
+
+        Solo las líneas ``from_albaran`` cuyo ``merge_line_id`` está en
+        ``n.por_linea``; los registros se modifican en su sitio (los motivos,
+        en una lista nueva). Sin duplicar motivos si se anota dos veces. No
+        toca importes, casado, partida final ni almacén.
+
+        - ``normalizada`` ⇒ motivo ``partida_normalizada:<leída>><lista>``, sin
+          revisión, y ``codigo_partida_albaran`` vuelve a la leída (regla 6).
+          Una ``exacta`` que solo difería en espacios exteriores también
+          recupera la leída, sin motivo.
+        - ``fuera_de_lista`` / ``ambigua`` ⇒ ``partida_fuera_de_lista`` /
+          ``partida_ambigua_en_obra`` y ``review_required`` en la línea y en la
+          cabecera, que lleva el mismo motivo (y, como el builder, el de «alguna
+          línea a revisión»).
+        - Los motivos de cabecera de ``n`` (``partidas_obra_no_disponibles``) se
+          añaden sin revisión.
+        """
+        for record in lines:
+            if record.line_kind != "from_albaran" or record.merge_line_id not in n.por_linea:
+                continue
+            resolucion = n.por_linea[record.merge_line_id]
+            if resolucion.motivo in ("exacta", "normalizada") and resolucion.cambia:
+                record.codigo_partida_albaran = resolucion.leida
+            if resolucion.motivo == "normalizada":
+                leida = (resolucion.leida or "").strip()
+                _anadir(record, f"{PREFIJO_PARTIDA_NORMALIZADA}{leida}>{resolucion.codigo}")
+            motivo = _MOTIVO_A_REVISION.get(resolucion.motivo)
+            if motivo is not None:
+                _anadir(record, motivo)
+                record.review_required = True
+                _anadir(header, motivo)
+                _anadir(header, _MOTIVO_CABECERA_REVISION)
+                header.review_required = True
+        for motivo in n.motivos_cabecera:
+            _anadir(header, motivo)
+
+
+def _anadir(destino: LineValuationRecord | ValuationHeaderRecord, motivo: str) -> None:
+    """Añade ``motivo`` sin duplicar, en una lista NUEVA (la de entrada puede
+    estar compartida con otro registro)."""
+    if motivo not in destino.review_reasons:
+        destino.review_reasons = [*destino.review_reasons, motivo]
