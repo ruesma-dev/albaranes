@@ -33,6 +33,12 @@ from infrastructure.database.session_factory import SessionFactory
 
 logger = logging.getLogger(__name__)
 
+#: (F-076, design §4) Única lectura de sv6 sobre una columna de sv3: la obra
+#: del merge, para pedir la lista de partidas de la obra. Solo lectura.
+SQL_OBRA_DEL_DOCUMENTO = (
+    "SELECT obra_codigo FROM albaran_documents_merge WHERE id = :document_id"
+)
+
 
 class SqlAlchemyValuationRepository(ValuationRepository):
     """Repositorio con inicialización PEREZOSA y DDL por sentencia.
@@ -168,6 +174,22 @@ class SqlAlchemyValuationRepository(ValuationRepository):
                 created_at_utc=row.created_at_utc,
                 updated_at_utc=row.updated_at_utc,
             )
+
+    def obra_del_documento(self, *, document_id: str) -> str | None:
+        """(F-076 R7) Obra del merge, en solo lectura (design §4).
+
+        Lector acoplado a una columna de sv3 (``albaran_documents_merge``,
+        regla 3 de ARCHITECTURE). No inicializa el schema de sv6: es una
+        lectura de una tabla ajena. La obra sale tal cual; la canoniza la
+        caché de comun. Sin fila o sin obra ⇒ ``None``.
+        """
+        with self._session_factory.create_session() as session:
+            valor = session.execute(
+                text(SQL_OBRA_DEL_DOCUMENTO), {"document_id": document_id},
+            ).scalar()
+        if valor is None:
+            return None
+        return str(valor)
 
     def read_full_valuation_json(
         self,
