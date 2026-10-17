@@ -751,3 +751,25 @@ def test_f073_t11_la_nota_suma_los_puntos_del_cif_normalizado():
     [(_, nota, _)] = repo.marcas
     assert "casa por igual con 2 proveedores" in nota
     assert "B1 — HORMIGONES UNO, S.L.; B2 — HORMIGONES DOS, S.L." in nota
+
+
+def test_f073_t11_la_frontera_del_margen_es_inclusiva_tambien_tras_la_tolerancia():
+    """2.ª campaña, #2 y #3: con ``margen = 0,25 + tolerancia`` el límite
+    efectivo es 0,25 exacto en coma flotante. Una diferencia de 0,25 elige
+    (``>=``) y, en un empate, el que queda a 0,25 del mejor no empata (``<``)."""
+    from application.services import similitud_proveedor as modulo
+
+    margen = 0.25 + modulo._TOLERANCIA
+    assert margen - modulo._TOLERANCIA == 0.25
+    eleccion = modulo._decidir(
+        [CandidatoNombre("B1", "UNO", 1.0), CandidatoNombre("B2", "DOS", 0.75)],
+        umbral=0.5, margen=margen,
+    )
+    assert eleccion.elegido.cif == "B1"
+    eleccion = modulo._decidir(
+        [CandidatoNombre("B1", "UNO", 1.0), CandidatoNombre("B2", "DOS", 0.875),
+         CandidatoNombre("B3", "TRES", 0.75)],
+        umbral=0.5, margen=margen,
+    )
+    assert eleccion.elegido is None
+    assert [c.cif for c in eleccion.empatados] == ["B1", "B2"]
