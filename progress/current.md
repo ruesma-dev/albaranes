@@ -1,9 +1,47 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-077 · `in_progress` (2026-10-17): implementación en curso** — rama `feature/F-077-guardar-y-aprobar` (worktree
-`../albaranes-F-077`), `dev` fusionado (F-078 y F-076 incluidas). Spec v2 aprobada en `specs/F-077-guardar-y-aprobar/`;
-resumen en `progress/spec_F-077.md`; informe del implementer en `progress/impl_F-077.md`. Solo sv4, rigor `estandar`.
+**F-077 · `in_progress` (2026-10-17): T1–T13 y T15 hechas, pendiente de review; T14 es MANUAL del humano (abajo)** —
+rama `feature/F-077-guardar-y-aprobar` (worktree `../albaranes-F-077`), `dev` fusionado (F-078 y F-076 incluidas). Spec
+v2 en `specs/F-077-guardar-y-aprobar/`; informe: `progress/impl_F-077.md`; mutación: `progress/mutacion_F-077.md`.
+Solo sv4, rigor `estandar`. *Junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de
+`git worktree remove`). Desviaciones a revisar (informe §3): `title` de la partida con « · » (no en línea aparte),
+4 textos de motivo fuera del Anexo A, y el aviso «Hay N líneas…» que sigue en la confirmación de «Dividir».
+
+#### F-077 · MANUAL del humano (T14)
+
+Cuándo: tras el APPROVED del reviewer, la fusión en `dev`, `init.sh` en verde en el árbol principal y el despliegue de
+**sv4** (lo pide el humano). sv4 desde `dev` lleva también F-078 y F-076: mientras su secuencia combinada (bloque
+«F-076 · MANUAL») siga pendiente, F-077 va en su paso 4 (`deploy.ps1 -Only sv4`); **no despliegues sv4 suelto antes
+del paso 3** (relleno de F-078). Si ya está hecha, en PowerShell 5.1:
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+. .\00_vars.ps1
+. .\00_capps_vars.ps1
+.\deploy.ps1 -Only sv4
+.\check_deploy.ps1
+#    VERDE: check_deploy con sv4 en el tag nuevo.
+```
+
+Comprobación en pantalla (sv4 con `ALTA_SIGRID_DESDE_UTC` puesta y `ALTA_SIGRID_COMMIT=false`). VERDE si todo sale así:
+
+1. Ficha **sin aprobar** con 2 filas editables: cambia la cantidad de las dos **sin** pulsar su «Guardar» y pulsa
+   «Guardar y aprobar» (acepta la confirmación de la suma si sale) ⇒ vuelve al listado; al reabrir, las dos filas
+   salen guardadas (bloqueadas) con la cantidad nueva y el albarán aprobado.
+2. Otra ficha sin aprobar: escribe `zzzz` en la partida de una fila y pulsa «Guardar y aprobar» ⇒ aviso «Hay partidas
+   no válidas (en rojo)…», casilla en rojo y nada guardado (recarga: fila sin bloquear, albarán pendiente).
+3. Nada más aprobar: el panel «Alta en Sigrid» dice «Alta en curso…» sin estado viejo ni botones; en F12 → Red, una
+   petición a `/alta-sigrid/fase` cada 3 s; cuando sv9 responde, la ficha se recarga sola con el resultado. Un
+   `no_admitido` sale en rojo como «Error en el alta en Sigrid: No admitido» con sus motivos en texto (código al pasar
+   el ratón).
+4. ⚠ de partida: solo en filas «Contrato» cuya partida leída no coincide; tooltip «… · No coincide con la partida
+   leída en el albarán (X)». En filas «Nueva», manuales o partes de un reparto, ningún ⚠.
+5. Documento `86c13097-98f8-4e4b-91af-6a378c28d9cf` (solo abrirlo): si su alta sigue en `no_admitido` con
+   `falta_descripcion`, el panel enseña «Línea N: La línea no tiene descripción» (N = posición de la fila 386). Si
+   F-078 T14 ya lo dejó en `simulado`, ese punto no aplica: vale cualquier `no_admitido` con motivo de línea.
+
+Con el verde de los cinco puntos, anótalo en `progress/impl_F-077.md` (§MANUAL) y F-077 pasa a `done`.
 
 **F-076 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`; espera las MANUAL T18–T20 (secuencia combinada con F-078, abajo)** — rama `feature/F-076-normalizar-partidas`
 (worktree `../albaranes-F-076`), `dev` fusionado (F-078 incluida). T1–T17 y T5b hechas; T18–T20 son MANUAL del humano
