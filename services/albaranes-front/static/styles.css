@@ -1821,6 +1821,14 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
 .alta-sigrid .alta-sigrid-bloqueo { margin-top: 6px; }
 .alta-sigrid .alta-sigrid-acciones { margin-top: 8px; display: flex; gap: 8px; }
 .alta-sigrid .inline-form { display: inline; }
+/* F-077 R15-R17: «Alta en curso…» y los errores del alta (rechazo o sin respuesta). */
+.alert.error, .alta-sigrid.error {
+    background: var(--danger-soft);
+    color: var(--danger-strong);
+    border-color: var(--danger-border);
+    box-shadow: inset 3px 0 0 var(--danger);
+}
+.alta-sigrid-en-curso { font-style: italic; }
 .alta-sigrid-pill { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 10px;
     font-size: 0.8em; background: #e5e7eb; color: #1f2937; }
 .alta-sigrid-pill.estado-registrado, .alta-sigrid-pill.estado-ya_en_sigrid { background: #d1fae5; color: #065f46; }

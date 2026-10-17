@@ -3500,3 +3500,39 @@
         });
     });
 })();
+// ------------------------------------------------------------------- //
+// F-077 R19: con el panel del alta en «Alta en curso…» (data-fase), la
+// ficha pregunta la fase cada 3 s fijos a una ruta de solo lectura (R18) y
+// recarga UNA vez cuando deja de estar en curso. setTimeout encadenado
+// (nunca setInterval: una respuesta lenta no apila peticiones). Un error de
+// red, una respuesta no ok o un JSON ilegible no paran; un 404 sí. El tope de
+// 5 min lo decide el servidor. Bloque autónomo: la ficha aprobada no monta el
+// bloque de edición.
+// ------------------------------------------------------------------- //
+(function () {
+    const SONDEO_ALTA_MS = 3000;
+
+    function sondearAltaEnCurso(panel) {
+        if (!panel || panel.dataset.fase !== "en_curso") { return; }
+        const url = `/api/documents/${encodeURIComponent(panel.dataset.documentId || "")}/alta-sigrid/fase`;
+        function programar() { setTimeout(consultar, SONDEO_ALTA_MS); }
+        async function consultar() {
+            let datos = null;
+            try {
+                const resp = await fetch(url, { headers: { "Accept": "application/json" } });
+                if (resp.status === 404) { return; }
+                if (resp.ok) { datos = await resp.json(); }
+            } catch (e) {
+                datos = null;
+            }
+            if (!datos || typeof datos.fase !== "string" || datos.fase === "en_curso") {
+                programar();
+                return;
+            }
+            window.location.reload();
+        }
+        programar();
+    }
+
+    sondearAltaEnCurso(document.getElementById("alta-sigrid"));
+})();

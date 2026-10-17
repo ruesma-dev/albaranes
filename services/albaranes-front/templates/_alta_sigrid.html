@@ -3,13 +3,45 @@
    «Reintentar adjunto»).
    Solo se incluye con ALTA_SIGRID_DESDE_UTC puesta y el documento aprobado
    (R3). sv4 PINTA lo que sv9 dejó en albaran_altas_sigrid: no lo escribe
-   (R34). Los botones publican en q-feedback y sv9 decide. #}
+   (R34). Los botones publican en q-feedback y sv9 decide.
+   F-077 (R14-R17): tres fases. «en_curso» = sv9 procesa la aprobación vigente:
+   nada del resultado anterior ni botones, y la ficha sondea cada 3 s (app.js,
+   R19). «sin_respuesta» = 5 min sin respuesta: error de tiempo, sin sondear.
+   «resultado» = la fila es la respuesta: no_admitido / revisar / error, como
+   error. #}
 {% set alta = document.alta_sigrid %}
-<section class="alert alta-sigrid {{ 'warning' if alta and (alta.bloqueante or alta.estado in ('revisar', 'error', 'no_admitido')) else 'info' }}"
-         id="alta-sigrid" data-estado="{{ alta.estado if alta else 'sin_alta' }}">
+{% set fase = document.alta_fase or 'resultado' %}
+{% if fase == 'en_curso' %}
+    {% set clase_alta = 'info alta-sigrid-en-curso' %}
+{% elif fase == 'sin_respuesta' or (alta and alta.es_error) %}
+    {% set clase_alta = 'error' %}
+{% elif alta and alta.bloqueante %}
+    {% set clase_alta = 'warning' %}
+{% else %}
+    {% set clase_alta = 'info' %}
+{% endif %}
+<section class="alert alta-sigrid {{ clase_alta }}"
+         id="alta-sigrid" data-fase="{{ fase }}" data-document-id="{{ document.id }}"{% if fase == 'resultado' %} data-estado="{{ alta.estado if alta else 'sin_alta' }}"{% endif %}>
     <strong>Alta en Sigrid</strong>
+    {% if fase == 'en_curso' %}
+        · <strong>Alta en curso…</strong>
+        <span class="muted small">La ficha se actualizará sola cuando Sigrid responda.</span>
+    {% elif fase == 'sin_respuesta' %}
+        · <span class="alta-sigrid-sin-respuesta">Sigrid no ha respondido en 5 minutos. El alta aún puede completarse: recarga la página más tarde para ver el resultado.</span>
+        {% if document.alta_puede_solicitar %}
+            <div class="alta-sigrid-acciones">
+                <form method="post" action="/documents/{{ document.id }}/alta-sigrid/solicitar" class="inline-form">
+                    <button type="submit" class="btn small success">Solicitar alta en Sigrid</button>
+                </form>
+            </div>
+        {% endif %}
+    {% else %}
     {% if alta %}
+        {% if alta.es_error %}
+        · <strong class="alta-sigrid-estado estado-{{ alta.estado }}">Error en el alta en Sigrid: {{ alta.estado_texto }}</strong>
+        {% else %}
         · Estado: <strong class="alta-sigrid-estado estado-{{ alta.estado }}">{{ alta.estado_texto }}</strong>
+        {% endif %}
         · Modo: <strong>{{ 'Simulación' if alta.simulacion else ('Real' if alta.modo == 'real' else (alta.modo or '—')) }}</strong>
         {% if alta.sigrid_cod %}
             {% if alta.simulacion %}
@@ -101,4 +133,5 @@
             </form>
         {% endif %}
     </div>
+    {% endif %}
 </section>
