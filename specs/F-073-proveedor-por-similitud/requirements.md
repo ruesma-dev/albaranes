@@ -26,9 +26,11 @@ el **máximo sin mirar empates** (gana el primero en llegar). Petición del huma
 ## Criterio único de nombre de proveedor
 
 R1. El sistema debe tener UNA sola función de similitud de nombre de proveedor
-(`similitud_razon_social`), usada por los cuatro sitios que comparan el nombre leído con una razón
+(`similitud_razon_social`), usada por los sitios que comparan el nombre leído con una razón
 social: el atajo por nombre del paso 1, el fallback global del paso 2, la propuesta de la red por
-CIF (F-052) y el candidato claro (F-062). Ningún otro sitio de sv3 puntúa nombres de proveedor.
+CIF (F-052), el candidato claro (F-062) y el script de verificación de F-052
+(`scripts/verificar_f052_proveedores_obra.py`, añadido por el humano el 2026-10-17). Ningún otro
+sitio de sv3 puntúa nombres de proveedor.
 
 R2. Las palabras de un nombre deben salir de: minúsculas y sin acentos; la puntuación
 `, . ; : ( ) [ ] { } - / \ " ' & + * _` como separador; y fuera las palabras de un carácter, las **formas
@@ -100,13 +102,16 @@ R15. La red por CIF (F-002, F-052, F-062, F-063) debe conservar sus reglas: umbr
 R16. La deducción de la obra por texto (`_resolve_obra`) debe seguir con `_match_score` tal cual.
 
 R17. Los tests existentes de F-002, F-052, F-062, F-063 y F-070 deben seguir en verde sin cambiar
-sus expectativas, salvo dos, que fijaban el error de esta feature:
+sus expectativas, salvo tres, que fijaban el error de esta feature:
 - caso `nombre-debil-y-familia` de `test_f052_r5_mismo_ganador_y_misma_nota_con_tres_barajados`
   («PROVEEDOR» empata a 1 con 80 candidatos y ganaba el primero, B10000000): pasa a `(None,
   "deterministic")` con la nota de R11;
 - caso `solo-forma-juridica` de `test_f062_r3_opcion_b_…` («S.L.» ~ «ARIDOS ANFERSA, S.L.» = 1 y
   se aplicaba): pasa a similitud 0, sin corrección y con `proveedor_cif_no_casa` como cualquier
-  «nadie casa». Ese test pide expresamente volver al humano: **requiere su visto bueno (P0)**.
+  «nadie casa». Ese test pide expresamente volver al humano: **requiere su visto bueno (P0)**;
+- `test_f052_r29_el_mejor_no_es_el_cif_esperado_falla` (script de F-052, «PROVEEDOR OBRA 07»
+  empataba a 1 con los 80 y ganaba el primero, B10000000): el mejor pasa a `B10055433 (score 1,00)`,
+  el que casa exacto. Encontrado al implementar T3; **aceptado por el humano el 2026-10-17** (opción a).
 Cualquier otro cambio de expectativa obliga a parar (design §6).
 
 ## La incidencia y el corpus real

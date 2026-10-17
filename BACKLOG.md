@@ -5,7 +5,9 @@
 
 Resumen: **75 features**, 51 abiertas, 24 terminadas.
 
-Bloqueadas: **F-078, F-076, F-077, F-073**.
+En curso: **F-073**.
+
+Bloqueadas: **F-078, F-076, F-077**.
 
 ## Trabajo abierto
 
@@ -16,7 +18,7 @@ Bloqueadas: **F-078, F-076, F-077, F-073**.
 | F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 1 | pendiente | estandar |  |
 | F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 1 | pendiente | critico |  |
 | F-067 | Limpieza de la ficha de detalle (sv4) | 1 | pendiente | estandar |  |
-| F-073 | Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate | 1 | bloqueada | critico | `feature/F-073-proveedor-por-similitud` |
+| F-073 | Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate | 1 | en curso | critico | `feature/F-073-proveedor-por-similitud` |
 | F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | 1 | bloqueada | critico | `feature/F-076-normalizar-partidas` |
 | F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 1 | bloqueada | estandar | `feature/F-077-guardar-y-aprobar` |
 | F-078 | La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia | 1 | bloqueada | critico | `feature/F-078-linea-guarda-lo-que-se-ve` |
@@ -154,7 +156,7 @@ NOTAS QUE QUEDAN AQUÍ: X4 (al abrir la ficha se guardan solas una obra o un pro
 
 ### F-073 · Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate
 
-estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-073-proveedor-por-similitud`
+estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-073-proveedor-por-similitud`
 
 INCIDENCIA DE PRODUCCIÓN (2026-10-15, correo «0694» de administración de obra, obra 0694, 5 albaranes de FEYMACO): en 3 la IA leyó el CIF de Ruesma (A81873903), sv3 lo descartó (F-063) y buscó por nombre «FEYMACO, S.A.» / «TEYMACO, S.A.». Log de sv3 (merge 54b82479-…): A19004589 (HIERROS RODRIGO, S.A.) y A28733558 (FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)) empatan a nombre=0.50 y el atajo «por NOMBRE dentro de la obra» elige el primero ⇒ 3 albaranes con HIERROS RODRIGO y CTSU26/0001.
 

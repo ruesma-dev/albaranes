@@ -65,7 +65,10 @@ expone o consume (no hay que tocar `azure-apps/albaranes.md`). Despliegue: solo 
 - `tests/test_f052_resumen_obra.py`: el caso `nombre-debil-y-familia` (R17) y
   `marcar_revision_cabecera` en su `_RepoFake` (hoy no lo tiene; sin él el best-effort se tragaría
   el error y no habría nota).
-- `docs/ARCHITECTURE.md`: regla 22 nueva (criterio único, sin elegir en empate, motivo nuevo) y
+- `scripts/verificar_f052_proveedores_obra.py`: `similitud_razon_social` en vez de
+  `_score_razon_social` (R1); y en `tests/test_f052_script_verificacion.py`, el assert del mejor de
+  «PROVEEDOR OBRA 07» (R17, tercer caso, humano 2026-10-17).
+- `docs/ARCHITECTURE.md`: regla 24 nueva (la 22 y la 23 ya son de F-078 y F-076) (criterio único, sin elegir en empate, motivo nuevo) y
   una línea en la 17 («score de F-052» ⇒ «similitud de F-073»).
 
 ## 4. Fixture `fixture_f073` (obra 0694, razones sociales reales)
@@ -142,7 +145,8 @@ def elegir_por_nombre(
 
 **Tests existentes y R17.** Si al implementar otro test cambia de resultado, el implementer PARA y
 lo anota: solo es aceptable si el test fijaba un empate resuelto por orden de llegada, y lo decide
-el humano.
+el humano. Pasó una vez (T3, 2026-10-17): el script de F-052 y su test, aceptado como tercer caso de
+R17 (opción a de `progress/impl_F-073.md` §1).
 
 ## 7. Riesgos y decisiones
 
