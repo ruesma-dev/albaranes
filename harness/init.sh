@@ -41,6 +41,10 @@ COMPROBACIONES_EXTRA=0   # 1 para activar la sección 9 (personalizada)
 # (`bash harness/init.sh` a secas).
 SALTAR_SUITES="${ARNES_SALTAR_SUITES:-0}"
 
+# Sin caché: con ARNES_SIN_CACHE=1 las suites de los servicios (sección 7 bis)
+# se ejecutan aunque haya un verde reutilizable, y lo refrescan si salen en verde.
+SIN_CACHE="${ARNES_SIN_CACHE:-0}"
+
 set -u
 cd "$(dirname "$0")/.." || exit 1
 
@@ -357,7 +361,16 @@ fi
 # La declaración rota NO degrada a mono-proyecto: sería dejar servicios enteros
 # sin comprobar mientras el portero imprime que todo va bien. El esquema y un
 # ejemplo comentado están en harness/servicios.ejemplo.json.
+#
+# Caché de suites: la decide `python -m harness.cache_suites`, no este bash. Su
+# clave reúne el árbol del servicio en HEAD, el de cada ruta de `depende_de`, el
+# intérprete, dónde resuelve ese intérprete cada módulo de `importa` y la huella
+# (metadatos, nunca el contenido) de los .env y las `entradas_no_versionadas`.
+# Con cambios sin commitear no hay clave; con un módulo importado desde fuera
+# del repositorio, tampoco, y lo dice con un [AVISO]. Si el módulo falla, la
+# suite se ejecuta y no se guarda nada: el error va al lado seguro.
 if [ -f "harness/servicios.json" ]; then
+    [ "$SIN_CACHE" = "1" ] && warn "ARNES_SIN_CACHE=1: las suites de los servicios se ejecutan sin caché (y la refrescan si salen en verde)"
     if [ -z "$PY" ]; then
         warn "Sin Python: no se puede leer harness/servicios.json y NADIE está comprobando los servicios"
     elif ! $PY -m harness.servicios --validar; then
@@ -382,23 +395,28 @@ if [ -f "harness/servicios.json" ]; then
                     warn "servicio $NOMBRE ($RUTA): suite saltada (portero ligero)"
                     continue
                 fi
-                # Caché de suite: si el árbol del servicio no ha cambiado desde
-                # su último verde (mismo árbol commiteado y sin ficheros sucios
-                # en su ruta), la suite se salta. Cualquier edición, commit o
-                # fichero nuevo bajo la ruta del servicio invalida la caché.
-                HASH_SRV=$(git rev-parse "HEAD:$RUTA" 2>/dev/null)
-                SUCIO_SRV=$(git status --porcelain -- "$RUTA" 2>/dev/null | head -n 1)
-                CACHE_SRV=".arnes_cache/suite_${NOMBRE}.ok"
-                if [ -n "$HASH_SRV" ] && [ -z "$SUCIO_SRV" ] && [ -f "$CACHE_SRV" ] \
-                   && [ "$(cat "$CACHE_SRV" 2>/dev/null)" = "$HASH_SRV" ]; then
-                    # Con coverage disponible, solo vale la caché si el
-                    # coverage.json de ese mismo árbol sigue ahí (la puerta
-                    # de la sección 7b puede necesitarlo).
-                    if ! "$INTERPRETE" -c "import coverage" >/dev/null 2>&1 \
-                       || [ -f "$RUTA/coverage.json" ]; then
-                        ok "servicio $NOMBRE ($RUTA): pytest en verde (caché: árbol sin cambios desde el último verde)"
-                        continue
-                    fi
+                # Caché de suite (ver el comentario de la sección). `</dev/null`:
+                # ni el módulo ni su sonda pueden comerse la entrada del bucle.
+                OPCION_CACHE=""
+                [ "$SIN_CACHE" = "1" ] && OPCION_CACHE="--sin-cache"
+                CLAVE_SRV=""
+                FECHA_VERDE=""
+                if DECISION=$($PY -m harness.cache_suites --servicio "$NOMBRE" $OPCION_CACHE </dev/null); then
+                    while IFS='|' read -r TIPO VALOR; do
+                        case "$TIPO" in
+                            AVISO)    warn "servicio $NOMBRE ($RUTA): $VALOR" ;;
+                            SERVIR)   FECHA_VERDE="$VALOR" ;;
+                            EJECUTAR) CLAVE_SRV="$VALOR" ;;
+                        esac
+                    done <<EOF_CACHE
+$DECISION
+EOF_CACHE
+                else
+                    warn "servicio $NOMBRE ($RUTA): no se pudo decidir la caché (python -m harness.cache_suites --servicio $NOMBRE); se ejecuta la suite y no se guarda"
+                fi
+                if [ -n "$FECHA_VERDE" ]; then
+                    ok "servicio $NOMBRE ($RUTA): pytest en verde (caché: ni el servicio ni sus dependencias han cambiado desde el verde del $FECHA_VERDE)"
+                    continue
                 fi
                 if "$INTERPRETE" -c "import coverage" >/dev/null 2>&1; then
                     ( cd "$RUTA" && rm -f coverage.json \
@@ -413,11 +431,9 @@ if [ -f "harness/servicios.json" ]; then
                 fi
                 if [ "$RESULTADO" -eq 0 ]; then
                     ok "servicio $NOMBRE ($RUTA): pytest en verde"
-                    # Solo se cachea un verde de árbol limpio: el hash describe
-                    # el árbol commiteado, no el estado sucio.
-                    if [ -n "$HASH_SRV" ] && [ -z "$SUCIO_SRV" ]; then
-                        mkdir -p .arnes_cache && printf '%s' "$HASH_SRV" > "$CACHE_SRV"
-                    fi
+                    # Solo se cachea con clave: sin ella (árbol sucio, módulo
+                    # de fuera, sonda rota) el verde no describe nada fijo.
+                    [ -n "$CLAVE_SRV" ] && mkdir -p .arnes_cache && printf '%s' "$CLAVE_SRV" > ".arnes_cache/suite_${NOMBRE}.ok"
                 else
                     ko "servicio $NOMBRE ($RUTA): pytest en rojo"
                 fi

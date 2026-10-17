@@ -81,6 +81,30 @@ class Settings(BaseSettings):
     )
 
     # ----------------------------------------------------------------- #
+    # F-076 · la partida se normaliza contra las de la obra.
+    #
+    # sv6 LEE de sigrid-api (solo ``POST /api/sql/read``) las partidas hoja
+    # de la obra del albarán y, antes de sus reglas, cambia la partida leída
+    # por el código exacto de la lista cuando la equivalencia es segura
+    # (``CI.04.18`` => ``CI.4.18``). Sin URL, clave o base de datos, o con
+    # sigrid-api caído, se valora como siempre (R11): nunca falla.
+    # PARTIDAS_OBRA_NORMALIZAR_ENABLED=false es el interruptor de vuelta
+    # atrás sin desplegar. Caché por réplica: TTL, obras en memoria y cuánto
+    # se recuerda un fallo antes de reconsultar.
+    # ----------------------------------------------------------------- #
+    sigrid_api_base_url: str | None = Field(None, alias="SIGRID_API_BASE_URL")
+    sigrid_api_function_key: str | None = Field(None, alias="SIGRID_API_FUNCTION_KEY")
+    sigrid_api_database: str | None = Field(None, alias="SIGRID_API_DATABASE")
+    sigrid_api_timeout_s: float = Field(30.0, alias="SIGRID_API_TIMEOUT_S")
+    partidas_obra_normalizar_enabled: bool = Field(
+        True,
+        alias="PARTIDAS_OBRA_NORMALIZAR_ENABLED",
+    )
+    partidas_obra_ttl_s: float = Field(21600.0, alias="PARTIDAS_OBRA_TTL_S")
+    partidas_obra_max_obras: int = Field(64, alias="PARTIDAS_OBRA_MAX_OBRAS")
+    partidas_obra_fallo_ttl_s: float = Field(300.0, alias="PARTIDAS_OBRA_FALLO_TTL_S")
+
+    # ----------------------------------------------------------------- #
     # Bloque 1 (may 2026): CONCILIACIÓN de modificadores (líneas
     # sintéticas) contra la tabla de líneas de contrato de Sigrid.
     #
@@ -126,6 +150,18 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @property
+    def sigrid_api_configurada(self) -> bool:
+        """(F-076 R17) URL, clave y base de datos de sigrid-api presentes."""
+        return all(
+            (valor or "").strip()
+            for valor in (
+                self.sigrid_api_base_url,
+                self.sigrid_api_function_key,
+                self.sigrid_api_database,
+            )
+        )
 
     @property
     def database_url(self) -> str:

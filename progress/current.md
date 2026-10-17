@@ -1,67 +1,209 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-077 · `spec_ready` (2026-10-16).** Spec en `specs/F-077-guardar-y-aprobar/` (rama `feature/F-077-guardar-y-aprobar`,
-worktree `albaranes-F-077`); resumen, decisiones y preguntas P1–P4 con su opción por defecto en `progress/spec_F-077.md`.
-Solo sv4, rigor `estandar`. PARADA 1 APROBADA (2026-10-16) con P1–P4 resueltas (spec v2); lista para el implementer.
+**F-077 · `in_progress` (2026-10-17): implementación en curso** — rama `feature/F-077-guardar-y-aprobar` (worktree
+`../albaranes-F-077`), `dev` fusionado (F-078 y F-076 incluidas). Spec v2 aprobada en `specs/F-077-guardar-y-aprobar/`;
+resumen en `progress/spec_F-077.md`; informe del implementer en `progress/impl_F-077.md`. Solo sv4, rigor `estandar`.
 
-**F-070 · CERRADA (`done`, 2026-10-15).** Desplegada en sv3, sv4 y sv9 (r20261015-0947) y verificada en pantalla por el
-humano (T13). Los merges antiguos con obra de 3 cifras los corrigió el humano a mano en la BBDD. Resumen en `history.md`.
+**F-076 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`; espera las MANUAL T18–T20 (secuencia combinada con F-078, abajo)** — rama `feature/F-076-normalizar-partidas`
+(worktree `../albaranes-F-076`), `dev` fusionado (F-078 incluida). T1–T17 y T5b hechas; T18–T20 son MANUAL del humano
+(abajo). Informe: `progress/impl_F-076.md`; mutación: `progress/mutacion_F-076.md`. `azure-apps` `8a6f63c` (sin
+push). *Junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
 
-**F-053 · `blocked` (2026-10-14) — v8 APROBADA (review pasada 2) y fusionada en `dev` (`4f1e802`); espera la MANUAL
-T51 del humano** (despliegue sv6, sv3 → sv9 con `ALTA_SIGRID_COMMIT=false` → sv4, y aprobaciones de prueba; comandos
-abajo). Pasada a `blocked` para dejar paso a F-070 (máximo una `in_progress`); el párrafo siguiente es el estado de la
-v8 antes de la review.
+#### F-076 · MANUAL del humano (T18–T20), comandos para PowerShell
 
-**F-053 · `in_progress` · v8 (Bloque H) IMPLEMENTADA (2026-10-14), pendiente de review.** T41–T50 y T52 hechas en
-`feature/F-053-alta-sigrid` (`usu` del alta = login de quien aprobó o respaldo `pgris`; R49 la cabecera de Easy Auth
-manda; «Reintentar adjunto»; R14 normalizado). Informe: `progress/impl_F-053_v8.md`; mutación:
-`progress/mutacion_F-053_v8.md` (64 mutantes, 62 muertos, 2 equivalentes). `azure-apps` `77c6bf6` (sin push).
-Para el líder: review; propuesta de filas de consumo del contrato para la sesión de sigrid-api en
-`progress/propuestas_a_sigrid_api_F-053.md` §C (en sigrid-api no se ha tocado nada). Falta la MANUAL **T51** (abajo),
-tras APPROVED y fusión. El bloque «F-053 · `blocked`» de más abajo es anterior a la v8.
+Cuándo: tras el APPROVED del reviewer, la fusión de `feature/F-076-normalizar-partidas` en `dev` y `init.sh` en
+verde en el árbol principal.
 
-### F-053 v8 · MANUAL T51 del humano (comandos exactos, PowerShell)
+**Secuencia combinada F-078 + F-076 (úsala mientras las MANUAL T12–T14 de F-078 sigan pendientes).** El despliegue
+de sv6 y sv4 de F-076 lleva también F-078 (está en `dev`), así que va todo en este orden, en UNA consola de
+PowerShell 5.1 (cada paso con su `cd`; sin `&&`). Si un paso no da su VERDE, para ahí.
 
-Cuándo: tras el APPROVED del reviewer, la fusión de `feature/F-053-alta-sigrid` en `dev` y `init.sh` en verde en el
-árbol principal. Orden de design §8: sv6 y sv3 → sv9 → sv4, **con DESDE vacía**; DESDE solo después (R6 ignora lo
-aprobado antes de DESDE, U3). Nadie toca `ALTA_SIGRID_COMMIT` (sigue `false`: simulación).
+```powershell
+# 1. sv6 local: tenacity (F-076) y lectura de F-078 T12 (solo lectura, .env de sv6)
+cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
+.\.venv\Scripts\python.exe -m pip install "tenacity>=8.2"
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
+#    VERDE: cuadra con progress/spec_F-078.md §3 (≈93 descripcion_linea, 7 unidad_albaran, 6 cantidad_convertida
+#    con los ids 385 y 386, 0 unidad_contrato, 0 precio_unitario_final, salvo lo cambiado desde el 16-10).
 
-1. Desplegar (misma consola; `Set-DeployTag` fija el tag por fecha):
+# 2. variables de F-076 en sv6 y despliegue de sv6
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+. .\00_vars.ps1
+. .\00_capps_vars.ps1
+.\set_partidas_sv6.ps1
+.\deploy.ps1 -Only sv6
+#    VERDE: set_partidas_sv6.ps1 dice OK en las 8 variables y en «secreto sigrid-key» y termina en «Ajustes de
+#    F-076 aplicados a ca-sv6-valorador»; deploy.ps1 termina sin error.
+
+# 3. relleno de F-078 con --aplicar (autorización expresa del humano) y su relectura
+cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078 --aplicar
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
+#    VERDE: la primera acaba en «Escritas N filas. Releído: 0 pendientes.» (si no, ROLLBACK y código 2);
+#    la segunda, en «Filas que cambiarían: 0».
+
+# 4. despliegue de sv4 y comprobación
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+.\deploy.ps1 -Only sv4
+.\check_deploy.ps1
+#    VERDE: check_deploy con sv6 y sv4 en el tag nuevo.
+
+# 5. relectura de F-078 tras sv4 (cierra la ventana entre el relleno y sv4)
+cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
+#    VERDE: «Filas que cambiarían: 0». Si da más: repite el paso 3 (misma autorización) y este.
+```
+
+6. **F-078 T14**: «Solicitar alta en Sigrid» en `86c13097-98f8-4e4b-91af-6a378c28d9cf` desde la ficha y, en solo
+   lectura, `SET default_transaction_read_only = on; SELECT estado, historial_json FROM albaran_altas_sigrid WHERE
+   document_id = '86c13097-98f8-4e4b-91af-6a378c28d9cf';`. VERDE: ya no termina en `no_admitido` con
+   `falta_descripcion` (con `ALTA_SIGRID_COMMIT=false`, `simulado`). Comprobación en la ficha, la del bloque de F-078.
+7. **F-076 T19** (abajo, tal cual) y, tras la primera revaloración, la comprobación del log de T18 (abajo). VERDE: los
+   de cada uno.
+
+Con eso cierran F-078 (T12–T14) y F-076 (T18–T19); queda T20.
+
+**T18 · si F-078 ya está cerrada: variables de sv6 → sv6 → sv4** (misma consola; con F-078 pendiente, usa la
+secuencia combinada de arriba en su lugar):
+
 ```powershell
 cd C:\Users\pgris\PycharmProjects\albaranes\infra
 . .\00_vars.ps1
 . .\00_capps_vars.ps1
-Set-DeployTag
-.\deploy.ps1 -Only sv6,sv3
-.\deploy.ps1 -Only sv9
+.\set_partidas_sv6.ps1
+.\deploy.ps1 -Only sv6
 .\deploy.ps1 -Only sv4
 .\check_deploy.ps1
 ```
-   `ca-sv9-alta-sigrid` ya existe (T0c); si no existiera, en vez de `.\deploy.ps1 -Only sv9`:
-   `.\build_images.ps1 -Only sv9` y `.\create_capps_sv9.ps1`. `deploy.ps1` enseña `ALTA_SIGRID_COMMIT` de sv9: debe
-   decir `simulacion`.
-2. Encender en simulación: en `infra\00_capps_vars.ps1` pon `$Global:ALTA_SIGRID_DESDE_UTC` a la hora UTC de ahora
-   (p. ej. `"2026-10-20T08:00:00Z"`; `$Global:ALTA_SIGRID_USUARIO_RESPALDO` ya es `"pgris"`) y, en la misma consola:
+
+VERDE si `set_partidas_sv6.ps1` dice `OK` en las 8 variables (7 valores + `SIGRID_API_FUNCTION_KEY` con
+`secretref:'sigrid-key'`) y en `secreto sigrid-key`, y termina en «Ajustes de F-076 aplicados a ca-sv6-valorador»;
+`check_deploy.ps1` con sv6 y sv4 en el tag nuevo. Tras la primera valoración (T19), el log de sv6 no debe decir
+`partidas_obra_no_disponibles`:
+
 ```powershell
-. .\00_capps_vars.ps1
-.\set_alta_sigrid.ps1
+az containerapp logs show -n ca-sv6-valorador -g $RG --tail 300 | Select-String "partidas-obra|partidas_obra_no_disponibles"
 ```
-   VERDE si la comprobación final dice `OK` en las tres variables comunes, `ALTA_SIGRID_USUARIO_RESPALDO (sv9):
-   'pgris'`, `ALTA_SIGRID_COMMIT (sv9, no se toca): 'false'` y termina en «Ajustes del alta aplicados a sv9 y sv4.».
-3. En `https://<sv4>` con tu usuario: aprueba UN albarán valorado desde la ficha («Guardar y aprobar») y OTRO desde
-   el listado («Aprobar»). Espera unos segundos y refresca las dos fichas.
-4. Lectura (solo lectura, BBDD `albaranes` de Azure, con la URL que uses para `psql`):
+
+Debe salir `[partidas-obra] obra=… hojas=… segundos=…` y ninguna línea con `partidas_obra_no_disponibles`. Vuelta
+atrás sin redesplegar: `az containerapp update -n ca-sv6-valorador -g $RG --set-env-vars PARTIDAS_OBRA_NORMALIZAR_ENABLED=false`.
+
+**T19 · revalorar los pendientes y medir (solo lectura).** En la ficha de sv4 de cada uno, «Valorar ahora»:
+`2792cf3b`, `53337da7`, `54b82479`, `dedf011a` (0694); `41ab0dc1` (0711); `09643c2b`, `89e463a7`, `bef66bce`,
+`f96c6dbe` (0720); `ca609aee` (0723); `25c5d647` (0724). **`355449d9` NO se revalora** (6 filas guardadas: se
+perderían, F-058): su partida se corrige a mano en la ficha (`CI.04.18` ⇒ `CI.4.18`, `CI.03A.02` ⇒ `CI.03A.2`).
+Después, la medición (sv6 del árbol principal; PostgreSQL con el `.env` de sv6, en solo lectura; las tres
+`SIGRID_API_*` se toman del `.env` de sv3 SOLO para esta consola, sin imprimirlas):
+
 ```powershell
-psql "$env:ALBARANES_DB_URL" -c "SET default_transaction_read_only = on; SELECT document_id, estado, modo, approved_by, peticion_json::json->>'usu' AS usu FROM albaran_altas_sigrid ORDER BY creado_at_utc DESC LIMIT 5;"
+cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
+.\.venv\Scripts\python.exe -m pip install "tenacity>=8.2"
+Get-Content ..\albaranes-persistencia\.env | Where-Object { $_ -match '^(SIGRID_API_(BASE_URL|FUNCTION_KEY|DATABASE))=(.*)$' } | ForEach-Object { Set-Item -Path "env:$($Matches[1])" -Value $Matches[3].Trim('"') }
+.\.venv\Scripts\python.exe -m scripts.medir_f076_partidas
+Remove-Item env:SIGRID_API_BASE_URL, env:SIGRID_API_FUNCTION_KEY, env:SIGRID_API_DATABASE
 ```
-   VERDE si en las dos filas `approved_by` = tu correo (`pgris@ruesma.es`), `usu` = `pgris`, `modo` = `simulacion`,
-   y el panel «Alta en Sigrid» de las dos fichas dice «Usuario de Sigrid: pgris» **sin** «(respaldo)». ROJO si
-   `approved_by` sale vacío o con `DEFAULT_REVIEWER` (la ficha no leyó la cabecera, R49), si `usu` no es `pgris`, o
-   si el estado es `error` con `usuario_no_resuelto` (lectura de `dbo.usu` caída o respaldo sin poner).
-5. Opcional (riesgo 1 de la v8): `SELECT approved_by, COUNT(*) FROM albaran_documents_merge WHERE approved GROUP BY 1;`
-   (misma forma, solo lectura) y mirar si la parte antes de la @ de cada uno es un login de Sigrid; los que no, caen al
-   respaldo hasta F-069.
+
+VERDE si «normalizable sin normalizar» da **0** en pendientes y las 6 sin candidata de `progress/spec_F-076.md`
+§2.2 cuentan en «fuera de lista» con el motivo `partida_fuera_de_lista` (pendientes). Los aprobados antes de DESDE
+(12 líneas `CI.4.18`) pueden seguir en «normalizable sin normalizar / aprobado»: sv9 los ignora (R6 de F-053).
+
+**T20**: `bash harness/init.sh` en verde en el árbol principal tras T18–T19; con eso, F-076 `done`.
+
+> **Notas para quien fusione después de F-076:**
+> - **F-077** (mismas líneas de `review_repository.py`, `review_models.py` y `document_detail.html`): el
+>   `agree_partida` de F-077 ya no es literal: lo da `coincide_partida` (clave de comun) en los dos sitios. El `title`
+>   de la casilla de partida debe quedar «descripción ⏎ [nota F-076] ⏎ [aviso F-077]»: la descripción de la partida;
+>   si ✓ normalizada, «Normalizada: X → Y» (F-076, `_nota_normalizada`); si ⚠, el aviso de F-077 («No coincide con
+>   la partida leída en el albarán (X)»). Las dos notas no coinciden nunca (✓ y ⚠ se excluyen). Hoy F-076 une
+>   descripción y nota con « · » (design §5.4); quien fusione F-077 compone el `_title_partida` de la plantilla con
+>   el separador que elija para los tres y ajusta R22 de F-077 («el cálculo de `agree_partida` no cambia» ya no es
+>   cierto).
+> - **F-075**: su `ValoracionDirectaBuilder` recibe ya el sobre normalizado (el pipeline rebinda `envelope` antes de
+>   la rama `no_contract`); debe llamar a `NormalizadorPartidas.anotar(header, lines, normalizacion)` tras
+>   `completar_registros` (F-078) en su rama.
+> - **F-049**: `ruesma_comun/sigrid/partidas.py` (add/add): se queda el suyo conservando `resolver_partida_obra`,
+>   `CachePartidasObra`, la guarda de no hoja y `leer_partidas_obra` con F-070; comun pasa a 0.9.0; sv4 ya hace su R11.
+
+**F-078 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`.** Espera las MANUAL T12–T14 del
+humano (abajo); con su verde, `done`. Informes: `progress/impl_F-078.md`, `progress/review_F-078.md`. *Junction* `.venv`
+de sv4 en el worktree `../albaranes-F-078` (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
+
+#### F-078 · MANUAL del humano (T12–T14), comandos para PowerShell
+
+> **Con F-076 fusionada en `dev`**, sus despliegues de sv6 y sv4 llevan también F-078: no sigas este bloque suelto,
+> usa la **secuencia combinada F-078 + F-076** del bloque «F-076 · MANUAL» de arriba (mismos comandos de T12–T14, en
+> el orden en que se intercalan con los de F-076). Este bloque vale tal cual solo si F-078 se despliega antes de
+> fusionar F-076.
+
+Antes de nada: **fusionar la rama en `dev`** (el script y `ruesma_comun.linea_valorada` viven en el árbol principal a
+partir de ahí). Orden obligatorio: **sv6 → relleno con `--aplicar` → sv4**; **sv9 no se redespliega**.
+
+**T12 · relleno en SOLO LECTURA contra producción** (`.env` de sv6 del árbol principal; transacción `READ ONLY`, sin
+conexión ni textos de proveedor en la salida, solo ids y columnas):
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
+```
+
+Debe cuadrar con `progress/spec_F-078.md` §3: ≈93 `descripcion_linea`, 7 `unidad_albaran`, 6 `cantidad_convertida`
+(ids 385 y 386 dentro), 0 `unidad_contrato`, 0 `precio_unitario_final`, salvo lo cambiado desde el 16-10.
+
+**T13 · despliegue de sv6 → relleno con `--aplicar` (autorización expresa) → despliegue de sv4.** Los despliegues, con
+los scripts de `infra/` (los lanza el humano). El relleno, en la misma consola:
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078 --aplicar
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
+```
+
+La primera termina con «Escritas N filas. Releído: 0 pendientes.» (si no, ROLLBACK y código 2); la segunda, de solo
+lectura, con «Filas que cambiarían: 0». Después se despliega sv4 y, **tras desplegar sv4, otra vez el relleno en solo
+lectura** (cierra la ventana entre el relleno y sv4: lo que el sv4 viejo haya dejado con huecos en ese rato):
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
+```
+
+Debe dar «Filas que cambiarían: 0». Si da más, se lanza otra vez con `--aplicar` (misma autorización) y se repite la
+lectura. Comprobación en la ficha de `86c13097-98f8-4e4b-91af-6a378c28d9cf`: «Mortero M-5» 01.05.07 m3 y «CARGA
+INCOMPLETA» M3 Almacén; la fila 379 pinta «DISCO C/ACERO 230 BOSCH».
+
+**T14 · «Solicitar alta en Sigrid»** en `86c13097…` desde la ficha, y comprobación (solo lectura):
+
+```sql
+SET default_transaction_read_only = on;
+SELECT estado, historial_json FROM albaran_altas_sigrid
+WHERE document_id = '86c13097-98f8-4e4b-91af-6a378c28d9cf';
+```
+
+Deja de terminar en `no_admitido` con `falta_descripcion` (con `ALTA_SIGRID_COMMIT=false` queda en `simulado`).
+
+**F-072 · CERRADA (`done`, 2026-10-16).** MANUAL T16 en verde. Resumen en `history.md`.
+
+**Siguiente (orden del humano, 2026-10-16):** F-078 → F-076 → F-077 → F-073 → F-064 (evals del humano) → F-074; F-071 y
+F-075 tras F-064. Specs de F-076, F-077 y F-078 APROBADAS en sus ramas. Escritura en Sigrid apagada (`COMMIT=false`)
+hasta desplegar F-078, F-076 y F-077.
+
+> **Nota para quien fusione después de F-078:**
+> - **F-075**: su `ValoracionDirectaBuilder` persiste por otra rama del pipeline de sv6; debe llamar a
+>   `completar_registros` antes de cada `replace_valuation` con líneas (lo exige
+>   `test_f078_pipeline_todo_replace_valuation_con_lineas_va_tras_completar_registros`).
+> - **F-077**: su R11 (validación del PUT de «Guardar y aprobar») incluye ahora la R17 de F-078 («Líneas sin
+>   descripción: …»), y la fila 13 de `tests/f065_bbdd.py` lleva `descripcion_linea = 'PORTES'`.
+> - **Conflictos de texto**: F-076 en `run_valuation_pipeline.py` (sv6); F-075 y F-077 en `review_repository.py`, y
+>   F-077 también en `document_detail.html` (sv4). Sin interacción de reglas (`progress/spec_F-078.md` §5).
+
+**F-070 · CERRADA (`done`, 2026-10-15).** Desplegada en sv3, sv4 y sv9 (r20261015-0947) y verificada en pantalla por el
+humano (T13). Los merges antiguos con obra de 3 cifras los corrigió el humano a mano en la BBDD. Resumen en `history.md`.
+
+**F-053 · CERRADA (`done`, 2026-10-16).** Alta en Sigrid de lo aprobado (sv9). Código APROBADO (v8, pasada 2) y en
+`dev` con `init.sh` en verde; T51 y T29 hechas por el humano en Azure: primera grabación real `AC26/29714` (A27239,
+obra 0678) correcta en Sigrid e idempotencia en verde. **sv9 vuelve a SIMULACIÓN** (`ALTA_SIGRID_COMMIT=false`,
+revisión `--0000003`) por orden del humano hasta que estén desplegadas F-078, F-076 y F-077; reabrir solo con su
+autorización. Resumen en `history.md`.
 
 **F-065 · CERRADA (`done`, 2026-10-13)**: fases 1, 2, 3 y 3 bis (pasadas 1–5) APROBADAS, en `dev` (`53515de`) con
 `init.sh` en verde (raíz 1083, sv4 1287) y sv4 desplegado (`r20261013-1836`). MANUAL T19, T27 y T35 hechas por el
@@ -107,25 +249,6 @@ comando que T0b: su bloque `==== A.3 correcciones F-062` lista cada merge activo
 Revisar en sv4 cada documento listado: CIF aplicado = proveedor real y `contratos_busqueda_resultado` =
 `encontrados`. Un caso mal aplicado ⇒ `RED_PROVEEDOR_CORRECCION_ENABLED=false` en la Container App de sv3 (la
 decide y la aplica el humano) y volver a la spec. No bloquea el `done`.
-
-**F-053 · `blocked` (2026-10-09) — esperando al humano, código terminado y en `dev`.** Fases 1 y 2 APROBADAS
-(`progress/review_F-053_fase2.md`), fusionada en `dev` (`039a118`, `cb125af`) con `init.sh` en verde (T0d, T30).
-O1, los equivalentes, T0b y T0c quedaron resueltos el 2026-10-13 (abajo, v8). Falta: aprobar la v8 e implementarla
-(Bloque H), despliegue en simulación (sv6, sv3 → sv9 con `ALTA_SIGRID_COMMIT=false` → sv4 → DESDE), T26–T28, T51 y,
-con autorización, T29. F-065 fase 1 ya está desplegada (2026-10-11). Se bloqueó para dejar paso a F-065 (máximo una
-`in_progress`).
-- **2026-10-13 · spec v8 escrita (spec-author), PARADA 1 pendiente** (`progress/spec_F-053.md` §«v8»; rama
-  `feature/F-053-alta-sigrid` con `dev` fusionado, `53515de`). El humano resolvió: `usu` = usuario del correo de
-  Ruesma de quien usa la app (respaldo, el suyo), O1 = a (botón «Reintentar adjunto»), 10 equivalentes aceptados,
-  permiso para T0b/T0c. **Hechas T0b y T0c** (solo lectura): `pgris` existe en `dbo.usu` y `pgros` no; App Settings
-  de sigrid-api conformes; `entref` sí es el número del proveedor pero con formato libre (U6: normalizar en R14).
-  Hallazgo: la ficha de sv4 nunca guarda quién aprueba (el PUT no lee la cabecera de Easy Auth); el listado sí.
-  Propuesta: cambian R12, R14, R22, R23, R29, R30; nuevas R47–R49; Bloque H (T41–T50), MANUAL T51, T52.
-  **Decisiones del humano U1–U7** en esa sección. Sin código tocado; F-053 sigue `blocked` en `features.json`.
-- MANUAL pendientes y comandos: `specs/F-053-alta-sigrid/tasks.md` (T0, T22, T26, T27, T27b, T27c, T28, T29, T51).
-- Para el líder: Parte B de `progress/propuestas_a_sigrid_api_F-053.md` con sigrid-api; propuesta de `CLAUDE.md` de
-  design §9 sin aplicar; el hallazgo R23/R30 (adjunto en error sin botón) lo cierra la v8 (O1 = a, T47).
-  (Podado el 2026-10-11 el bloque viejo «`in_progress`» de F-053, O7 de `progress/review_F-065_fase1.md`.)
 
 **F-051 · CERRADA (`done`, 2026-10-09): T22–T24 hechas por el humano (`progress/impl_F-051.md` §6 bis).** Antes: `blocked` (2026-10-06) y FUSIONADA en `dev`. Implementación APROBADA por el reviewer (pasada 2) e `init.sh`
 en verde. **T21 hecha** (evals con LLM, 2026-10-06 11:07 UTC, informe local `progress/evals_F-051.md`): frente a F-048,

@@ -53,6 +53,7 @@
   "permissions": {
     "allow": [
       "Bash(bash harness/init.sh)",
+      "Bash(ARNES_SIN_CACHE=1 bash harness/init.sh)",
       "Bash(python -m pytest*)",
       "Bash(python -m compileall*)",
       "Bash(git status)",

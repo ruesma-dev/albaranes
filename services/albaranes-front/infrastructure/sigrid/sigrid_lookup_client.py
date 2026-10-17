@@ -7,7 +7,12 @@ from typing import Any
 
 import httpx
 from ruesma_comun.obras import canonizar_codigo_obra
-from ruesma_comun.sigrid import PoliticaTruncado, comprobar_truncado
+from ruesma_comun.sigrid import (
+    SQL_PARTIDAS_POR_OBRA,
+    PoliticaTruncado,
+    comprobar_truncado,
+    leer_partidas_obra,
+)
 
 from domain.models.review_models import (
     ContratoOption,
@@ -79,22 +84,11 @@ WHERE con_obr.cod = ?
 ORDER BY con_ctr.cod
 """
 
-# Partidas del presupuesto de una obra (obrparpar). Traemos TODAS las filas
-# de la obra (ide, padide, cod, res) y en Python identificamos las HOJA (las
-# que no son ``padide`` de ninguna otra) y construimos la ruta de capítulos.
-# El nombre legible (cod/res) está en la propia obrparpar. ``obride`` apunta
-# a ``obr.ide`` = ``con.ide``; filtramos por código de obra vía con.
-_SQL_PARTIDAS_POR_OBRA = """\
-SELECT
-    p.ide    AS ide,
-    p.padide AS padide,
-    p.cod    AS cod,
-    p.res    AS res
-FROM obrparpar AS p
-JOIN con AS con_obr ON p.obride = con_obr.ide
-WHERE con_obr.cod = ?
-ORDER BY p.cod
-"""
+# (F-076 R15) La consulta de partidas y el cálculo de hojas viven en
+# ``ruesma_comun.sigrid.partidas`` (la misma lista que normaliza sv6). Este
+# nombre se conserva SOLO como referencia a la de comun (no es una copia):
+# los tests de F-052 y F-070 reconocen la consulta por él.
+_SQL_PARTIDAS_POR_OBRA = SQL_PARTIDAS_POR_OBRA
 
 
 class SigridLookupClient:
@@ -203,86 +197,57 @@ class SigridLookupClient:
         *,
         codigo_obra: str,
     ) -> list[PartidaOption]:
-        """Partidas HOJA del presupuesto de la obra en Sigrid.
+        """Partidas HOJA del presupuesto de la obra en Sigrid (F-076 R15).
 
-        Devuelve solo las partidas sin descomposición (las que no son
-        ``padide`` de ninguna otra fila): nunca capítulos ni subcapítulos.
-        ``descripcion_agregada`` es la ruta de capítulos hasta la partida
-        (capítulo › subcapítulo › … › partida), construida en Python a
-        partir de la cadena ``padide``.
+        Delega en ``ruesma_comun.sigrid.leer_partidas_obra``: la misma SQL
+        (con ``con_obr.emp = 1``) y la misma definición de hoja que usa sv6 al
+        normalizar (nunca capítulos ni subcapítulos; ``descripcion_agregada`` =
+        ruta de capítulos). La obra se canoniza con ``canonizar_codigo_obra``
+        (F-070); vacía ⇒ ``[]`` sin consultar. Lista truncada ⇒
+        ``SigridRespuestaTruncada`` (``NO_TOLERA``, 500.000 filas), que el
+        endpoint convierte en ``ok=false`` (P7).
         """
-        # F-070 · R10/R11: obra canónica (``686`` ⇒ ``0686``, ``var`` ⇒
-        # ``VAR``); lo que no encaja, recortado como hoy.
-        codigo = canonizar_codigo_obra(codigo_obra)
-        if not codigo:
+        lista = leer_partidas_obra(self._lector_partidas, codigo_obra)
+        if lista is None:
             return []
-        columns, rows = self._post_sql_read(
-            sql=_SQL_PARTIDAS_POR_OBRA,
-            parameters=[codigo],
-            label=f"partidas_obra_{codigo}",
-            politica=PoliticaTruncado.TOLERA,
-        )
-
-        # Indexamos todas las filas por ide y registramos qué ides son
-        # padre (tienen hijos) para detectar las HOJA.
-        by_ide: dict[Any, dict[str, Any]] = {}
-        parent_ides: set[Any] = set()
-        for row in rows:
-            rm = dict(zip(columns, row))
-            ide = rm.get("ide")
-            if ide is None:
-                continue
-            padide = rm.get("padide")
-            # En Sigrid el 0 en un índice equivale a "sin padre".
-            if padide in (0, "0"):
-                padide = None
-            by_ide[ide] = {
-                "ide": ide,
-                "padide": padide,
-                "cod": _opt_str(rm.get("cod")),
-                "res": _opt_str(rm.get("res")),
-            }
-            if padide is not None:
-                parent_ides.add(padide)
-
-        def _ruta(node: dict[str, Any]) -> str:
-            # Camino raíz→hoja de descripciones (res), evitando ciclos.
-            partes: list[str] = []
-            visto: set[Any] = set()
-            cur: dict[str, Any] | None = node
-            while cur is not None and cur["ide"] not in visto:
-                visto.add(cur["ide"])
-                if cur.get("res"):
-                    partes.append(cur["res"])
-                pad = cur.get("padide")
-                cur = by_ide.get(pad) if pad is not None else None
-            partes.reverse()
-            return " › ".join(partes)
-
-        out: list[PartidaOption] = []
-        for ide, node in by_ide.items():
-            # HOJA = no es padre de ninguna otra fila.
-            if ide in parent_ides:
-                continue
-            cod = node.get("cod")
-            if not cod:
-                continue
-            out.append(
-                PartidaOption(
-                    codigo=cod,
-                    descripcion=node.get("res"),
-                    descripcion_agregada=_ruta(node) or node.get("res"),
-                )
+        out = [
+            PartidaOption(
+                codigo=hoja.codigo,
+                descripcion=hoja.descripcion,
+                descripcion_agregada=hoja.descripcion_agregada,
             )
-        out.sort(key=lambda p: p.codigo)
+            for hoja in lista.hojas
+        ]
         logger.info(
-            "%s partidas_por_obra obra=%s -> %s partidas hoja (de %s filas)",
+            "%s partidas_por_obra obra=%s -> %s partidas hoja (%s no hoja)",
             _LOG_PREFIX,
-            codigo,
+            lista.obra,
             len(out),
-            len(by_ide),
+            len(lista.no_hojas),
         )
         return out
+
+    def _lector_partidas(
+        self,
+        sql: str,
+        parametros: list[Any],
+        etiqueta: str,
+        politica: PoliticaTruncado,
+        max_rows: int,
+    ) -> tuple[list[str], list[list[Any]]]:
+        """``LectorSql`` de comun sobre el HTTP de este cliente.
+
+        Aplica la política y el ``max_rows`` que pide comun (``NO_TOLERA`` y
+        500.000 filas): una lista de partidas truncada calcularía mal las
+        hojas sin error.
+        """
+        return self._post_sql_read(
+            sql=sql,
+            parameters=parametros,
+            label=etiqueta,
+            politica=politica,
+            max_rows=max_rows,
+        )
 
     def fetch_contratos(
         self,
@@ -347,12 +312,15 @@ class SigridLookupClient:
         parameters: list[Any],
         label: str,
         politica: PoliticaTruncado,
+        max_rows: int | None = None,
     ) -> tuple[list[str], list[list[Any]]]:
         """POST a ``/api/sql/read``.
 
         ``politica`` es obligatoria (F-052 R28): ``truncated=true`` nunca
         pasa en silencio. ``NO_TOLERA`` lanza ``SigridRespuestaTruncada``;
         ``TOLERA`` devuelve las filas y deja un WARNING con la etiqueta.
+        ``max_rows``: ``None`` = el del cliente (F-076: las partidas piden el
+        suyo).
         """
         url = f"{self._base_url}/api/sql/read"
         payload = {
@@ -360,7 +328,7 @@ class SigridLookupClient:
             "sql": sql,
             "parameters": parameters,
             "timeout_seconds": int(self._timeout_s),
-            "max_rows": self._max_rows,
+            "max_rows": self._max_rows if max_rows is None else int(max_rows),
         }
         headers = {
             "x-functions-key": self._function_key,

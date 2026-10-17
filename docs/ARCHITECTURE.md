@@ -81,7 +81,9 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
    (CASCADE) + INSERT completo. Nunca update incremental de una valoración.
 3. **sv5 lee con SQL crudo, sin ORM**: su contrato con el schema es implícito
    por nombre de columna. Renombrar una columna del merge compila en sv3 y
-   revienta sv5 en runtime. Todo cambio de schema lista sus lectores.
+   revienta sv5 en runtime. Todo cambio de schema lista sus lectores. (F-076)
+   sv6 también lee con SQL crudo `albaran_documents_merge.obra_codigo` por `id`
+   (`SQL_OBRA_DEL_DOCUMENTO`, solo lectura).
 4. **`albaran_contrato_lines_merge` la crean sv3 Y sv4** (`IF NOT EXISTS`
    ambos; gana el que arranca primero). Acoplamiento conocido y documentado:
    si se toca ese DDL, se toca en los dos sitios.
@@ -459,7 +461,9 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       ningún guardado: queda en rojo; el servidor no la valida contra la
       obra). «Origen ✎» es la única vía de reapuntar:
       una línea de contrato deja la fila Contrato con su partida, unidad y
-      precio; «Nueva», Nueva con los valores actuales.
+      precio (y, desde F-078, su descripción en la fila); «Nueva», Nueva con
+      los valores actuales. La descripción de la fila ya no va «solo si se
+      editó» (F-065 CR1/H1): la sustituye la regla 22.
     - **Dividir** (fase 3; absorbe F-016): «Dividir» (o F7; F6 es del
       navegador) reparte una fila en 2–20 partes, cada una con su cantidad y
       su partida (combo de la obra; vacía = almacén); la última se rellena
@@ -477,7 +481,8 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       `line_kind = 'reparto'` con `merge_line_id` nulo y `parent_merge_line_id`
       de la blanca de la original, sus campos copiados y en la valoración la
       descripción que enseña la original (la fijada, la de su línea o el concepto
-      de su blanca: sv9 no tiene blanca que leer); `cantidad_convertida
+      de su blanca: sv9 no tiene blanca que leer; desde F-078, la de
+      `fila_a_guardar`, regla 22); `cantidad_convertida
       = qk`, `cantidad_albaran = ca0 × qk / Q` e importe `round(importe0 × qk /
       Q, 2)` (la última absorbe el redondeo: la familia suma lo de antes). El
       origen sigue la regla de editar: con la partida de la original, la de su
@@ -516,17 +521,90 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       esquemas. Los merges ya guardados con 3 cifras **no se migran** (P3):
       los cubren sv4 al consultar y guardar y sv9 al dar de alta.
 
+22. **La fila valorada es la fuente de verdad de la línea** (F-078, oct 2026).
+    Spec: `specs/F-078-linea-guarda-lo-que-se-ve/`; medición y decisiones en
+    `progress/spec_F-078.md`. Principio del humano: «Lo que está en la tabla es lo
+    que debería estar guardado en BBDD, ya que lo ha puesto el humano. No es que
+    sv9 tenga que buscar en muchos sitios, sino que esté bien guardado todo.»
+    - **Cada campo de «Líneas a Sigrid», en su columna de la fila**: concepto →
+      `descripcion_linea`; unidad → `unidad_contrato` (la de Q y del precio); Q →
+      `cantidad_convertida ?? cantidad_albaran`; precio → `precio_unitario_final`;
+      importe → `importe_calculado`; dto → `descuento_albaran_aplicado`; código
+      externo → `codigo_externo`; partida → `codigo_partida_final` (vacía =
+      almacén, regla 16). sv4 pinta cada campo de su columna, sin completarlo con
+      la línea de contrato, la derivada ni la blanca: vacío = vacío (el importe nulo
+      ya no lo calcula la plantilla). Su línea solo da el precio del contrato del
+      `title`, la medición, la descripción de la partida, los avisos ✓/⚠ y la
+      partida casada.
+    - **Una regla, en comun**: `ruesma_comun.linea_valorada.fila_a_guardar`.
+      Concepto: Contrato, el de la fila o el de su línea; Nueva con blanca, el de
+      la fila o el del papel (P1 = (b): no el de su derivada); Nueva sin blanca
+      (manual, reparto, sintética), el de su derivada o el de la fila; si no hay,
+      el de la blanca. Unidad: la de su línea o la de la fila. Precio: el de la
+      fila o el de su línea. Sin conversión (factor = 1): `unidad_albaran` vacía ⇒
+      la unidad y `cantidad_convertida` nula ⇒ Q; con conversión (o factor nulo)
+      no se tocan. La aplican **sv6** a cada registro antes del replace
+      (`completar_registros`: toda rama del pipeline que persista líneas pasa por
+      ahí, lo exige un test), **sv4** en toda vía que crea o reapunta una fila
+      (`_materializar_fila_in_session`: «Origen ✎», «+ a Sigrid», «Traer líneas
+      contrato», «Dividir»; una vía nueva solo tiene que llamarlo; «Añadir línea»
+      nace vacía y así se ve) y el **relleno** de lo anterior
+      (`scripts/rellenar_filas_f078.py` de sv6: solo lectura por defecto;
+      `--aplicar` lo lanza el humano).
+    - **El PATCH de fila** toma el estado actual solo de la fila, guarda la
+      descripción cambiada en `descripcion_linea` en toda fila y la unidad
+      cambiada también en `unidad_albaran` sin conversión. No aplica la regla: lo
+      vaciado se ve vacío.
+    - **Aprobar** (ficha o listado) no deja con filas a registrar sin vincular
+      (`es_linea_vinculada`) sin descripción: «Líneas sin descripción: 3, 5».
+    - **sv9 no cambia** ni busca en otras tablas. El producto por defecto sigue
+      sin guardarse (regla 19: sv4 y sv9 lo calculan igual). Fuera de F-078: la
+      descripción editada de una Contrato vinculada no llega a Sigrid (F-079).
+
+23. **La partida final es un código de la obra** (F-076, oct 2026). Spec:
+    `specs/F-076-normalizar-partidas/`; medición y decisiones en
+    `progress/spec_F-076.md`. Origen: sigrid-api rechazó con
+    `partida_no_encontrada` los albaranes de T51 (leída `CI.04.18`, la obra tiene
+    `CI.4.18`); sigrid-api compara sin mayúsculas ni espacios, pero no quita ceros.
+    - **Dónde**: en **sv6, al valorar**, antes de IA4, de la rama `no_contract` y
+      de las reglas (también al revalorar con `force`): lo que enseña la ficha es
+      lo que manda sv9. `NormalizadorPartidas` resuelve la partida leída de cada
+      línea contra las partidas HOJA de la obra con
+      `ruesma_comun.sigrid.resolver_partida_obra`: exacta o normalizada con la
+      clave `normalizar_partida` (NFKC, mayúsculas, separadores, sin ceros a la
+      izquierda en segmentos numéricos) ⇒ el código TAL COMO FIGURA EN LA LISTA;
+      si la clave es la de un código NO hoja (`03.02` capítulo), compuesta, sin
+      candidata o con más de una ⇒ no se toca y la línea va a revisión
+      (`partida_fuera_de_lista` / `partida_ambigua_en_obra`, no bloquea aprobar).
+      Nunca por parecido, sufijo ni distancia (H1 de F-049).
+    - **Rastro** (regla 6): `codigo_partida_albaran` de la valoración conserva la
+      leída; `codigo_partida_final` es la de la lista; motivo
+      `partida_normalizada:<leída>><lista>` sin revisión.
+    - **Una lista, en comun**: `ruesma_comun.sigrid.partidas` (subconjunto
+      aprobado de F-049: SQL de sv4 + `con_obr.emp = 1`, hojas, clave, casado) y
+      `CachePartidasObra` (por réplica: 6 h, 64 obras, fallo recordado 300 s).
+      sv4 lee el combo de partidas de ahí (sin copia; truncada ⇒ `ok=false`) y su
+      aviso ✓/⚠ de partida compara por la misma clave (`coincide_partida`: ✓ con
+      nota «Normalizada: X → Y» si solo difieren en la forma).
+    - **Sin lista** (sin `SIGRID_API_*`, obra vacía, sigrid-api caído, truncado, 0
+      hojas): se valora como antes, WARNING y `partidas_obra_no_disponibles` en la
+      cabecera sin revisión. `PARTIDAS_OBRA_NORMALIZAR_ENABLED=false` lo apaga sin
+      redesplegar. sv9 no cambia: manda `codigo_partida_final`. Lo existente se
+      corrige revalorando desde sv4 (lo manual se pierde, F-058).
+
 ## Acceso a datos y sistemas externos
 
 - **PostgreSQL `albaranes`** (Azure Flexible Server compartido
   `psql-albaranes-rs9k2`): sv3 dueño del schema (también del DDL de
   `albaran_altas_sigrid`, F-053); sv4 lectura+escritura de revisión (lee el
   alta, nunca la escribe); sv5 SOLO lectura; sv6 dueño de las 3 tablas de
-  valoración (columna `producto_sigrid`, que escribe sv4); sv9 lee merge y
+  valoración (columna `producto_sigrid`, que escribe sv4) y lee `obra_codigo`
+  del merge (F-076, regla 23); sv9 lee merge y
   valoración y escribe SOLO `albaran_altas_sigrid`; sv1 solo `workflow_runs`. Cambios a nivel de servidor afectan a otros
   proyectos: prohibidos desde aquí.
 - **Sigrid (ERP)**: SOLO vía `sigrid-api` (function key), nunca SQL directo.
-  Leer: cualquier servicio. **Escribir: SOLO sv9** (F-053), con el alta de
+  Leer: cualquier servicio (sv3, sv4, sv9 y, desde F-076, sv6: solo `sql/read`
+  de las partidas de la obra, con caché). **Escribir: SOLO sv9** (F-053), con el alta de
   albarán (`sigrid/albaran`, modo extendido) y `concepto-grafico`, nunca
   `sql/write`, y solo con `ALTA_SIGRID_COMMIT=true`, que activa el humano;
   desde local, nunca (en local `ALTA_SIGRID_COMMIT` no se pone).
@@ -568,7 +646,9 @@ rollback: `docs/referencia/dominio_negocio_albaranes.md` §6–§7.
   imagen**: tocar `ruesma_comun` obliga a reconstruir sv2, sv3, sv5 y sv6
   — un fix en comun sin rebuild no existe en Azure. Excepción conocida:
   `ruesma_comun.sigrid` y `ruesma_comun.obras` (F-052, F-070) solo los
-  importan sv3, sv4 y sv9. En F-052 se reconstruyeron en orden **sv3 → sv4**
+  importan sv3, sv4, sv9 y, desde F-076 (comun 0.8.0, `sigrid.partidas`), sv6.
+  F-076 despliega en orden `set_partidas_sv6.ps1` → sv6 → sv4 (sin DDL ni
+  cambio de mensajes). En F-052 se reconstruyeron en orden **sv3 → sv4**
   (sv3 aplica el DDL de `contratos_busqueda_*` que el ORM de sv4 lee); el
   cambio de `obras` de F-070 no lleva DDL ni contrato de mensajes y vale en
   cualquier orden: recomendado **sv4 → sv3**, y sv9 sale con F-053 desde un
