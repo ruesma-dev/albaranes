@@ -77,10 +77,11 @@ servicio: esos números no están tocados por este defecto.
 | `progress/mutacion_F-072_arnes.md` | **Sí** (`harness/cache_suites.py`, `harness/servicios.py`) | `VÁLIDA` | Campaña **completa** de la herramienta (sin muestreo, nivel `critico`) de F-072 sobre `576f464`, **4 workers**, juzgada con la suite de la raíz con ruta `tests` (invocación arreglada en F-038): 2 ficheros y 488 líneas, **72 mutantes, 65 muertos, 7 supervivientes**, 0 timeouts, 0 sin veredicto, 3674,5 s. De los 7, 5 matados después con 6 tests nuevos (comprobado aplicando cada mutante a mano) y 2 equivalentes RM5 (`text=False` junto a `encoding=`), pendientes de la aceptación del humano. |
 | `progress/mutacion_F-078.md` | No | `VÁLIDA` | Análisis de los 8 supervivientes de la campaña de la herramienta de F-078 (`mutacion_F-078_arnes.md`) y su **re-juicio** con los 7 tests nuevos (`2a6c462`): cada mutante aplicado a mano sobre su texto exacto, suite **entera** de su servicio **sin `-x`**, en serie, sin bytecode, `PYTHONPATH` a la comun de la rama: **8 de 8 muertos**. Total de F-078: 81 mutantes, 81 muertos, 0 supervivientes, 0 equivalentes. |
 | `progress/mutacion_F-078_arnes.md` | No | `VÁLIDA` | Campaña **completa** de la herramienta (sin muestreo, nivel `critico`) de F-078 sobre `f3094c9`, **4 workers**, con `PYTHONPATH` a la comun de la rama: 6 ficheros y 734 líneas de comun, sv6 y sv4, **81 mutantes, 73 muertos, 8 supervivientes**, 0 timeouts, 0 sin veredicto, 2980,1 s. Los 8, matados después (`mutacion_F-078.md`). |
+| `progress/mutacion_F-076.md` | No | `VÁLIDA` | Campaña **completa** de la herramienta (sin muestreo, nivel `critico`) de F-076, **4 workers**, con `PYTHONPATH` a la comun de la rama: 17 ficheros y 1499 líneas de comun, sv6 y sv4. Pasada 1 sobre `121524c`: 180 mutantes, 154 muertos, 26 supervivientes (huecos de test y ramas equivalentes, resueltos en `fdb9c58`, tabla en el propio informe). Final sobre `fdb9c58a1e569edf22a27fc99208e827cd63521e`: **173 mutantes, 173 muertos, 0 supervivientes**, 0 timeouts, 0 sin veredicto, 1242,2 s. |
 
 ## Recuento
 
-- Informes inventariados: **39** (recontado el 2026-10-17 al añadir las dos de F-078).
+- Informes inventariados: **40** (recontado el 2026-10-17 al añadir la de F-076).
 - Con alcance fuera de `services/`: **8** (F-011, F-012, F-034, F-038,
   maquinaria-paralela-F-039, F-039, F-040, F-072).
 - Medidos con la invocación rota y **no repuestos**: **2** (F-011 y F-012).
