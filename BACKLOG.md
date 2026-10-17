@@ -5,9 +5,7 @@
 
 Resumen: **73 features**, 49 abiertas, 24 terminadas.
 
-En curso: **F-076**.
-
-Bloqueadas: **F-078**.
+Bloqueadas: **F-078, F-076**.
 
 ## Trabajo abierto
 
@@ -18,7 +16,7 @@ Bloqueadas: **F-078**.
 | F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 1 | pendiente | estandar |  |
 | F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 1 | pendiente | critico |  |
 | F-067 | Limpieza de la ficha de detalle (sv4) | 1 | pendiente | estandar |  |
-| F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | 1 | en curso | critico | `feature/F-076-normalizar-partidas` |
+| F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | 1 | bloqueada | critico | `feature/F-076-normalizar-partidas` |
 | F-078 | La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia | 1 | bloqueada | critico | `feature/F-078-linea-guarda-lo-que-se-ve` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
@@ -154,7 +152,7 @@ NOTAS QUE QUEDAN AQUÍ: X4 (al abrir la ficha se guardan solas una obra o un pro
 
 ### F-076 · La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura
 
-estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-076-normalizar-partidas`
+estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-076-normalizar-partidas`
 
 ORIGEN (T51 de F-053, 2026-10-16, producción en simulación): sv9 dejó no_admitido dos albaranes de la obra 0678 (A27244 y A27239, contrato CTSU26/0313) porque sigrid-api rechazó todas sus líneas con partida_no_encontrada: la IA leyó CI.04.18 y la obra tiene CI.4.18 (confirmado con la lista de la obra y con la previa: el humano la cambió a mano y pasaron a simulado). PETICIÓN DEL HUMANO: «eso hay que arreglarlo, debe normalizar partidas». MEDICIÓN (solo lectura, progress/spec_F-076.md §2): 35 de 74 líneas valoradas con partida final no existen en su obra; 29 se arreglan quitando ceros a la izquierda en segmentos numéricos; mayúsculas, espacios y separadores, 0 (sigrid-api ya compara sin mayúsculas ni espacios de cola); 0 ambiguas; 6 sin candidata. spec APROBADA el 2026-10-16: P1–P11 por defecto y ampliación R23–R25. PROPUESTA: sv6 normaliza la lectura de cada línea contra las partidas hoja de la obra antes de sus reglas (exacta o normalizada => el código de la lista; 0 o >1 candidatas o choque con un código no hoja => no se toca y a revisión con motivo; sin lista => como hoy), con la obra leída del merge, una caché por obra y un cliente de solo lectura de sigrid-api nuevo en sv6; comun recibe el subconjunto ya aprobado de F-049 (ruesma_comun.sigrid.partidas) y sv4 lo importa en vez de su copia. sv9 sin código: lo que enseña la ficha es lo que se manda. Lo existente se corrige revalorando desde sv4 (sin escrituras de agentes en producción). RELACIONADAS: F-049 (rebasa sobre esto: su partidas.py es superconjunto), F-053, F-065, F-075 (su valoración directa recibe el sobre normalizado y debe anotar), F-058.
 

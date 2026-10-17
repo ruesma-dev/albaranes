@@ -1,7 +1,7 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-076 · `in_progress` (2026-10-17): IMPLEMENTADA, pendiente de review** — rama `feature/F-076-normalizar-partidas`
+**F-076 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`; espera las MANUAL T18–T20 (secuencia combinada con F-078, abajo)** — rama `feature/F-076-normalizar-partidas`
 (worktree `../albaranes-F-076`), `dev` fusionado (F-078 incluida). T1–T17 y T5b hechas; T18–T20 son MANUAL del humano
 (abajo). Informe: `progress/impl_F-076.md`; mutación: `progress/mutacion_F-076.md`. `azure-apps` `8a6f63c` (sin
 push). *Junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
