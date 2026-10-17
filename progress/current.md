@@ -1,9 +1,76 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-076 · `in_progress` (2026-10-17, implementer)** — rama `feature/F-076-normalizar-partidas` (worktree
-`../albaranes-F-076`), `dev` fusionado (F-078 incluida). Spec APROBADA (P1–P11 por defecto + ampliación R23–R25/T5b)
-en `specs/F-076-normalizar-partidas/`. Avance e informe: `progress/impl_F-076.md`.
+**F-076 · `in_progress` (2026-10-17): IMPLEMENTADA, pendiente de review** — rama `feature/F-076-normalizar-partidas`
+(worktree `../albaranes-F-076`), `dev` fusionado (F-078 incluida). T1–T17 y T5b hechas; T18–T20 son MANUAL del humano
+(abajo). Informe: `progress/impl_F-076.md`; mutación: `progress/mutacion_F-076.md`. `azure-apps` `8a6f63c` (sin
+push). *Junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
+
+#### F-076 · MANUAL del humano (T18–T20), comandos para PowerShell
+
+Cuándo: tras el APPROVED del reviewer, la fusión de `feature/F-076-normalizar-partidas` en `dev` y `init.sh` en
+verde en el árbol principal. **Si las MANUAL T12–T14 de F-078 siguen pendientes**, el despliegue de sv6 y sv4 de
+F-076 lleva también F-078 (está en `dev`): sigue entonces el orden de F-078 (sv6 → relleno → sv4) con estos mismos
+despliegues.
+
+**T18 · variables de sv6 → sv6 → sv4** (misma consola):
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+. .\00_vars.ps1
+. .\00_capps_vars.ps1
+.\set_partidas_sv6.ps1
+.\deploy.ps1 -Only sv6
+.\deploy.ps1 -Only sv4
+.\check_deploy.ps1
+```
+
+VERDE si `set_partidas_sv6.ps1` dice `OK` en las 8 variables (7 valores + `SIGRID_API_FUNCTION_KEY` con
+`secretref:'sigrid-key'`) y en `secreto sigrid-key`, y termina en «Ajustes de F-076 aplicados a ca-sv6-valorador»;
+`check_deploy.ps1` con sv6 y sv4 en el tag nuevo. Tras la primera valoración (T19), el log de sv6 no debe decir
+`partidas_obra_no_disponibles`:
+
+```powershell
+az containerapp logs show -n ca-sv6-valorador -g $RG --tail 300 | Select-String "partidas-obra|partidas_obra_no_disponibles"
+```
+
+Debe salir `[partidas-obra] obra=… hojas=… segundos=…` y ninguna línea con `partidas_obra_no_disponibles`. Vuelta
+atrás sin redesplegar: `az containerapp update -n ca-sv6-valorador -g $RG --set-env-vars PARTIDAS_OBRA_NORMALIZAR_ENABLED=false`.
+
+**T19 · revalorar los pendientes y medir (solo lectura).** En la ficha de sv4 de cada uno, «Valorar ahora»:
+`2792cf3b`, `53337da7`, `54b82479`, `dedf011a` (0694); `41ab0dc1` (0711); `09643c2b`, `89e463a7`, `bef66bce`,
+`f96c6dbe` (0720); `ca609aee` (0723); `25c5d647` (0724). **`355449d9` NO se revalora** (6 filas guardadas: se
+perderían, F-058): su partida se corrige a mano en la ficha (`CI.04.18` ⇒ `CI.4.18`, `CI.03A.02` ⇒ `CI.03A.2`).
+Después, la medición (sv6 del árbol principal; PostgreSQL con el `.env` de sv6, en solo lectura; las tres
+`SIGRID_API_*` se toman del `.env` de sv3 SOLO para esta consola, sin imprimirlas):
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
+.\.venv\Scripts\python.exe -m pip install "tenacity>=8.2"
+Get-Content ..\albaranes-persistencia\.env | Where-Object { $_ -match '^(SIGRID_API_(BASE_URL|FUNCTION_KEY|DATABASE))=(.*)$' } | ForEach-Object { Set-Item -Path "env:$($Matches[1])" -Value $Matches[3].Trim('"') }
+.\.venv\Scripts\python.exe -m scripts.medir_f076_partidas
+```
+
+VERDE si «normalizable sin normalizar» da **0** en pendientes y las 6 sin candidata de `progress/spec_F-076.md`
+§2.2 cuentan en «fuera de lista» con el motivo `partida_fuera_de_lista` (pendientes). Los aprobados antes de DESDE
+(12 líneas `CI.4.18`) pueden seguir en «normalizable sin normalizar / aprobado»: sv9 los ignora (R6 de F-053).
+
+**T20**: `bash harness/init.sh` en verde en el árbol principal tras T18–T19; con eso, F-076 `done`.
+
+> **Notas para quien fusione después de F-076:**
+> - **F-077** (mismas líneas de `review_repository.py`, `review_models.py` y `document_detail.html`): el
+>   `agree_partida` de F-077 ya no es literal: lo da `coincide_partida` (clave de comun) en los dos sitios. El `title`
+>   de la casilla de partida debe quedar «descripción ⏎ [nota F-076] ⏎ [aviso F-077]»: la descripción de la partida;
+>   si ✓ normalizada, «Normalizada: X → Y» (F-076, `_nota_normalizada`); si ⚠, el aviso de F-077 («No coincide con
+>   la partida leída en el albarán (X)»). Las dos notas no coinciden nunca (✓ y ⚠ se excluyen). Hoy F-076 une
+>   descripción y nota con « · » (design §5.4); quien fusione F-077 compone el `_title_partida` de la plantilla con
+>   el separador que elija para los tres y ajusta R22 de F-077 («el cálculo de `agree_partida` no cambia» ya no es
+>   cierto).
+> - **F-075**: su `ValoracionDirectaBuilder` recibe ya el sobre normalizado (el pipeline rebinda `envelope` antes de
+>   la rama `no_contract`); debe llamar a `NormalizadorPartidas.anotar(header, lines, normalizacion)` tras
+>   `completar_registros` (F-078) en su rama.
+> - **F-049**: `ruesma_comun/sigrid/partidas.py` (add/add): se queda el suyo conservando `resolver_partida_obra`,
+>   `CachePartidasObra`, la guarda de no hoja y `leer_partidas_obra` con F-070; comun pasa a 0.9.0; sv4 ya hace su R11.
 
 **F-078 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`.** Espera las MANUAL T12–T14 del
 humano (abajo); con su verde, `done`. Informes: `progress/impl_F-078.md`, `progress/review_F-078.md`. *Junction* `.venv`
