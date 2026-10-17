@@ -464,10 +464,12 @@ def test_f036_r8_una_conversion_reproducible_tambien_ensena_lo_guardado(
     assert "20.00" not in celda
 
 
-def test_f036_r8_sin_importe_persistido_se_calcula_como_siempre(
+def test_f036_r8_sin_importe_persistido_se_pinta_vacio(
     render_detalle, documento_detalle, linea_valorada, fila_detalle,
 ):
-    """Sin importe guardado: mejor el producto que un hueco."""
+    """Sin importe guardado, la casilla vacía (F-078 R7, que sustituye al «mejor
+    el producto que un hueco» de F-036 R8): la ficha pinta la fila, y lo que no
+    está guardado no se inventa en la plantilla."""
     html = render_detalle(
         documento_detalle(
             lineas_valoracion=[linea_valorada(importe_calculado=None)],
@@ -475,7 +477,9 @@ def test_f036_r8_sin_importe_persistido_se_calcula_como_siempre(
         )
     )
 
-    assert 'value="720.00"' in _celda_importe(html)
+    celda = _celda_importe(html)
+    assert 'value=""' in celda
+    assert "720" not in celda
 
 
 def test_f036_r8_el_descuento_no_se_aplica_dos_veces(

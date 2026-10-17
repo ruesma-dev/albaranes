@@ -8,6 +8,7 @@ from typing import Any
 from application.services.conciliacion_orchestrator import (
     aplicar_conciliacion_ia4,
 )
+from application.services.fila_completa import completar_registros
 from dataclasses import dataclass
 
 from application.services.valuation_builder import ValuationBuilder
@@ -202,6 +203,10 @@ class RunValuationPipeline:
             envelope=envelope,
             existing_document_already_valued=request.line_already_valued,
         )
+        # (F-078 R4) Cada fila se guarda con lo que la ficha va a enseñar
+        # (concepto, unidad, precio, unidad del albarán y Q sin conversión).
+        # Toda rama que persista líneas pasa por aquí (lo exige un test).
+        lines = completar_registros(lines, envelope)
 
         # Adjuntamos el envelope bruto al header para trazabilidad.
         header_with_envelope = ValuationHeaderRecord(

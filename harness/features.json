@@ -834,6 +834,21 @@
       "branch": "feature/F-070-obra-con-cero-inicial"
     },
     {
+      "id": "F-078",
+      "title": "La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia",
+      "description": "ORIGEN (producción, 2026-10-16, solo lectura): sv9 dejó no_admitido con falta_descripcion el albarán 86c13097-98f8-4e4b-91af-6a378c28d9cf (modo real): la fila manual 386 tiene descripcion_linea vacía, pero la ficha pinta «CARGA INCOMPLETA» porque la saca de contrato_lines_derived (review_repository.py, _load_conciliation_map_in_session); la 385 también va vacía y sv9 la cubre con el concepto del merge. El producto «MA9999 · Suministro de materiales» no se guarda: es el por defecto que sv4 y sv9 calculan igual con ruesma_comun.alta_sigrid.producto_efectivo. PRINCIPIO DEL HUMANO (literal): «Lo que está en la tabla es lo que debería estar guardado en BBDD, ya que lo ha puesto el humano. No es que sv9 tenga que buscar en muchos sitios, sino que esté bien guardado todo.» MEDICIÓN (105 filas de 42 documentos activos, progress/spec_F-078.md §3): 93 sin descripción en la fila que la ficha rellena (6 que sv9 rechazaría y 16 en que sv9 mandaría otro texto que el que se ve), 7 sin vincular con unidad_albaran vacía (sv9 mandaría sin unidad) y 6 vinculadas con cantidad_convertida nula y factor 1 (sv9: cantidad_sin_convertir); precio, importe, partida y unidad de Q, 0. SPEC v1 (specs/F-078-linea-guarda-lo-que-se-ve/, PARADA 1 APROBADA 2026-10-16: P1 = (b), en las Nueva con blanca se guarda y se ve el concepto del papel; P8 fuera, es F-079; P2-P7, P9, P10 por defecto): regla única «lo que se veía» en comun (ruesma_comun.linea_valorada.fila_a_guardar); sv6 la aplica a cada registro antes del replace; sv4 pinta solo la fila (vacío = vacío), el PATCH guarda la descripción en toda fila y la unidad también en unidad_albaran sin conversión, y las vías que crean o reapuntan filas la materializan; no se aprueba con filas sin vincular sin descripción; relleno de lo existente con un script de sv6 (lectura por defecto, --aplicar con autorización expresa del humano), sin DDL; sv9 sin código. Despliegue: sv6 -> relleno -> sv4. RELACIONADAS: F-053 (reintentar el alta tras el relleno), F-065 (sustituye CR1/H1), F-058, F-075 (su builder directo pasa por el mismo paso), F-076, F-077 (conflictos de texto).",
+      "status": "blocked",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "servicios": [
+        "comun",
+        "sv6-valoracion-persist",
+        "sv4-front"
+      ],
+      "branch": "feature/F-078-linea-guarda-lo-que-se-ve"
+    },
+    {
       "id": "F-072",
       "title": "Arnés: la caché de suites de init.sh tiene en cuenta las dependencias de cada servicio",
       "description": "ORIGEN: review de F-070, observación O1 (progress/review_F-070.md de su rama, §Automejora). La clave de la caché de suites de init.sh §7 bis (.arnes_cache/suite_<svc>.ok) es solo `git rev-parse HEAD:<ruta del servicio>`. Fallos reales: (a) un cambio en services/albaranes-comun no invalida la caché de sv1-sv9, que la importan, y un verde viejo tapa una rotura; (b) en un worktree los intérpretes importan la comun editable del árbol principal, e init.sh dio verde por caché con sv3/sv4/sv9 rotos (ImportError: canonizar_codigo_obra). PETICIÓN DEL HUMANO: «arregla la caché». ARREGLO: dependencias declaradas por servicio en servicios.json (depende_de, importa, entradas_no_versionadas), clave calculada en Python (harness/cache_suites.py) con el hash de servicio y dependencias, intérprete, ruta real de los módulos importados y huella por metadatos de las entradas no versionadas; módulo importado desde fuera del repositorio en curso = [AVISO] visible y sin caché; fecha del verde reutilizado; ARNES_SIN_CACHE=1. Un servicios.json sin los campos nuevos funciona igual. Genérico: se porta a arnes-base como 1.7.16 en el mismo trabajo (cubre F-028 del taller y el encargo 1.7.12). Spec: specs/F-072-cache-con-dependencias/.",

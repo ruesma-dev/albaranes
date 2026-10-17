@@ -127,12 +127,14 @@ def test_f065_h1_la_descripcion_editada_de_una_contrato_viaja_al_pasar_a_nueva()
     assert f["descripcion_linea"] == "PUERTA EI2-60 IZQUIERDA"
 
 
-def test_f065_h1_origen_nueva_con_blanca_sin_editar_no_fija_descripcion():
+def test_f065_h1_origen_nueva_con_blanca_sin_editar_fija_la_descripcion_que_se_veia():
+    """(F-078 R12, que sustituye a H1) Con blanca y sin teclear, la fila guarda la
+    descripción que tenía (la de su línea de contrato): la fila es la fuente."""
     motor = construir()
 
     repositorio(motor).set_line_conciliacion(document_id=DOC, valuation_line_id=11, mode="nueva")
 
-    assert fila(motor, 11)["descripcion_linea"] is None
+    assert fila(motor, 11)["descripcion_linea"] == "PUERTA CORTAFUEGOS EI2-60"
 
 
 def test_f065_h1_origen_nueva_con_descripcion_dada_la_fija():

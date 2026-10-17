@@ -453,14 +453,17 @@ def test_f065_r8_mismo_numero(a, b, igual):
 
 
 def test_f065_r8_la_misma_descripcion_no_es_un_cambio():
-    """La de la línea de contrato que pinta la ficha, reenviada tal cual."""
+    """La que pinta la ficha, reenviada tal cual. (F-078 R6, R9) La ficha pinta la
+    de la FILA y el estado actual sale solo de ella (antes: la de su línea)."""
     motor = construir()
+    ejecutar(motor, "UPDATE albaran_line_valuations SET descripcion_linea = "
+             "'PUERTA CORTAFUEGOS EI2-60' WHERE id = 11")
 
     _editar(motor, 11, descripcion=" PUERTA CORTAFUEGOS EI2-60 ")
 
     f = fila(motor, 11)
     assert f["review_required"] in (1, True)
-    assert f["descripcion_linea"] is None
+    assert f["descripcion_linea"] == "PUERTA CORTAFUEGOS EI2-60"
 
 
 def test_f065_r8_el_mismo_codigo_externo_no_es_un_cambio():
@@ -499,7 +502,9 @@ def test_f065_r8_cambiar_el_precio_o_la_unidad_de_una_fila_contrato_la_hace_nuev
 
 
 def test_f065_r8_la_descripcion_de_una_fila_contrato_se_guarda_aparte():
-    """Distinta de la de su línea de contrato: override; igual: sin override."""
+    """(F-078 R10, que sustituye al «override solo si difiere») La descripción de
+    una fila Contrato se guarda en la fila, sea o no la de su línea de contrato,
+    y no cambia el origen."""
     motor = construir()
 
     _editar(motor, 11, descripcion="PUERTA EI2-60 IZQUIERDA")
@@ -507,7 +512,7 @@ def test_f065_r8_la_descripcion_de_una_fila_contrato_se_guarda_aparte():
 
     _editar(motor, 11, descripcion="PUERTA CORTAFUEGOS EI2-60")
     f = fila(motor, 11)
-    assert f["descripcion_linea"] is None
+    assert f["descripcion_linea"] == "PUERTA CORTAFUEGOS EI2-60"
     assert f["matched_contrato_line_id"] == 501
 
 

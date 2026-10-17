@@ -1,11 +1,71 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-078 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`.** Espera las MANUAL T12–T14 del
+humano (abajo); con su verde, `done`. Informes: `progress/impl_F-078.md`, `progress/review_F-078.md`. *Junction* `.venv`
+de sv4 en el worktree `../albaranes-F-078` (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
+
+#### F-078 · MANUAL del humano (T12–T14), comandos para PowerShell
+
+Antes de nada: **fusionar la rama en `dev`** (el script y `ruesma_comun.linea_valorada` viven en el árbol principal a
+partir de ahí). Orden obligatorio: **sv6 → relleno con `--aplicar` → sv4**; **sv9 no se redespliega**.
+
+**T12 · relleno en SOLO LECTURA contra producción** (`.env` de sv6 del árbol principal; transacción `READ ONLY`, sin
+conexión ni textos de proveedor en la salida, solo ids y columnas):
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
+```
+
+Debe cuadrar con `progress/spec_F-078.md` §3: ≈93 `descripcion_linea`, 7 `unidad_albaran`, 6 `cantidad_convertida`
+(ids 385 y 386 dentro), 0 `unidad_contrato`, 0 `precio_unitario_final`, salvo lo cambiado desde el 16-10.
+
+**T13 · despliegue de sv6 → relleno con `--aplicar` (autorización expresa) → despliegue de sv4.** Los despliegues, con
+los scripts de `infra/` (los lanza el humano). El relleno, en la misma consola:
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078 --aplicar
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
+```
+
+La primera termina con «Escritas N filas. Releído: 0 pendientes.» (si no, ROLLBACK y código 2); la segunda, de solo
+lectura, con «Filas que cambiarían: 0». Después se despliega sv4 y, **tras desplegar sv4, otra vez el relleno en solo
+lectura** (cierra la ventana entre el relleno y sv4: lo que el sv4 viejo haya dejado con huecos en ese rato):
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
+```
+
+Debe dar «Filas que cambiarían: 0». Si da más, se lanza otra vez con `--aplicar` (misma autorización) y se repite la
+lectura. Comprobación en la ficha de `86c13097-98f8-4e4b-91af-6a378c28d9cf`: «Mortero M-5» 01.05.07 m3 y «CARGA
+INCOMPLETA» M3 Almacén; la fila 379 pinta «DISCO C/ACERO 230 BOSCH».
+
+**T14 · «Solicitar alta en Sigrid»** en `86c13097…` desde la ficha, y comprobación (solo lectura):
+
+```sql
+SET default_transaction_read_only = on;
+SELECT estado, historial_json FROM albaran_altas_sigrid
+WHERE document_id = '86c13097-98f8-4e4b-91af-6a378c28d9cf';
+```
+
+Deja de terminar en `no_admitido` con `falta_descripcion` (con `ALTA_SIGRID_COMMIT=false` queda en `simulado`).
+
 **F-072 · CERRADA (`done`, 2026-10-16).** MANUAL T16 en verde. Resumen en `history.md`.
 
 **Siguiente (orden del humano, 2026-10-16):** F-078 → F-076 → F-077 → F-073 → F-064 (evals del humano) → F-074; F-071 y
 F-075 tras F-064. Specs de F-076, F-077 y F-078 APROBADAS en sus ramas. Escritura en Sigrid apagada (`COMMIT=false`)
 hasta desplegar F-078, F-076 y F-077.
+
+> **Nota para quien fusione después de F-078:**
+> - **F-075**: su `ValoracionDirectaBuilder` persiste por otra rama del pipeline de sv6; debe llamar a
+>   `completar_registros` antes de cada `replace_valuation` con líneas (lo exige
+>   `test_f078_pipeline_todo_replace_valuation_con_lineas_va_tras_completar_registros`).
+> - **F-077**: su R11 (validación del PUT de «Guardar y aprobar») incluye ahora la R17 de F-078 («Líneas sin
+>   descripción: …»), y la fila 13 de `tests/f065_bbdd.py` lleva `descripcion_linea = 'PORTES'`.
+> - **Conflictos de texto**: F-076 en `run_valuation_pipeline.py` (sv6); F-075 y F-077 en `review_repository.py`, y
+>   F-077 también en `document_detail.html` (sv4). Sin interacción de reglas (`progress/spec_F-078.md` §5).
 
 **F-070 · CERRADA (`done`, 2026-10-15).** Desplegada en sv3, sv4 y sv9 (r20261015-0947) y verificada en pantalla por el
 humano (T13). Los merges antiguos con obra de 3 cifras los corrigió el humano a mano en la BBDD. Resumen en `history.md`.
