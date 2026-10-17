@@ -3,9 +3,9 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **74 features**, 50 abiertas, 24 terminadas.
+Resumen: **76 features**, 52 abiertas, 24 terminadas.
 
-Bloqueadas: **F-078, F-076, F-077**.
+Bloqueadas: **F-078, F-076, F-077, F-073**.
 
 ## Trabajo abierto
 
@@ -16,9 +16,11 @@ Bloqueadas: **F-078, F-076, F-077**.
 | F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 1 | pendiente | estandar |  |
 | F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 1 | pendiente | critico |  |
 | F-067 | Limpieza de la ficha de detalle (sv4) | 1 | pendiente | estandar |  |
+| F-073 | Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate | 1 | bloqueada | critico | `feature/F-073-proveedor-por-similitud` |
 | F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | 1 | bloqueada | critico | `feature/F-076-normalizar-partidas` |
 | F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 1 | bloqueada | estandar | `feature/F-077-guardar-y-aprobar` |
 | F-078 | La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia | 1 | bloqueada | critico | `feature/F-078-linea-guarda-lo-que-se-ve` |
+| F-080 | Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados | 1 | pendiente | critico |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
@@ -137,6 +139,8 @@ ALCANCE: services/albaranes-front (plantilla y catálogo). NO ENTRA: cambiar los
 
 X24 (2026-10-09, progress/propuestas_ficha_detalle.md): motivos de revisión en código interno y bandera en casi todas las filas; textos en castellano y bandera solo en avisos reales (los informativos no cuentan en el ⚑).
 
+AMPLIACIÓN (humano, 2026-10-17, H3 de progress/review_F-073.md): cuando el revisor fija el proveedor a mano (origen manual, «Elegir proveedor»), sv4 retira también proveedor_nombre_ambiguo (F-073) y proveedor_cif_propio: (F-063), como ya hace con proveedor_cif_no_casa: (review_repository.py, retirada de F-062). Hoy se quedan visibles aunque el proveedor ya esté elegido.
+
 ### F-066 · Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4)
 
 estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
@@ -150,6 +154,16 @@ estado **pendiente** · prioridad 1 · rigor `estandar` · SDD sí
 PETICIÓN DEL HUMANO (2026-10-09, PARADA 1 de F-065): ficha para revisar después, sin spec. Filas X25, X26, R1–R3, R5 y R7–R12 de progress/propuestas_ficha_detalle.md (detalle en progress/explore_front_detalle.md §3–§4): el ✓ de la cantidad compara con lo leído (X25); ordenación por albarán y no persistente (X26); proveedor en un solo desplegable «Nombre — CIF» (R1); obra en un desplegable con la dirección debajo (R2); contrato en una línea: desplegable + PDF + importe (R3); crear líneas solo con traer, añadir y F6 (quitar duplicar y «Copiar sin casar», R5); lo leído como referencia plegada o tooltip (R7); franja única de estado y avisos (R8); un solo «Deshacer» y una navegación (R9); bloques técnicos a «Detalles técnicos» (R10); ficha más ligera: una lista compartida, sin JSON incrustado, caché del PDF (R11); ocultar «Abrir contrato» sin PDF y corregir textos de «Borrar» (R12).
 
 NOTAS QUE QUEDAN AQUÍ: X4 (al abrir la ficha se guardan solas una obra o un proveedor «sugeridos» por parecido de texto; propuesta: proponer sin guardar) quedó FUERA de F-065 por decisión del humano y está pendiente de decidir dónde va. O2 (operativo): posibles líneas ya dañadas en producción por X1 y X2 (cantidad convertida nula; filas pasadas a Nueva con el precio del contrato): consulta de solo lectura en producción y decisión del humano.
+
+### F-073 · Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate
+
+estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-073-proveedor-por-similitud`
+
+INCIDENCIA DE PRODUCCIÓN (2026-10-15, correo «0694» de administración de obra, obra 0694, 5 albaranes de FEYMACO): en 3 la IA leyó el CIF de Ruesma (A81873903), sv3 lo descartó (F-063) y buscó por nombre «FEYMACO, S.A.» / «TEYMACO, S.A.». Log de sv3 (merge 54b82479-…): A19004589 (HIERROS RODRIGO, S.A.) y A28733558 (FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)) empatan a nombre=0.50 y el atajo «por NOMBRE dentro de la obra» elige el primero ⇒ 3 albaranes con HIERROS RODRIGO y CTSU26/0001.
+
+CAUSA (verificada en header_resolver_service.py): _match_score no separa la puntuación («feymaco,» no está en «(feymaco)»), no admite una letra mal leída y cuenta «s.a.» como palabra (0,50 = min_score para cualquier S.A.); el atajo del paso 1 y el fallback global del paso 2 eligen el máximo sin mirar empates. Hay dos criterios de nombre (_match_score y _score_razon_social de F-052/F-062).
+
+SPEC (specs/F-073-proveedor-por-similitud/, informe progress/spec_F-073.md): criterio ÚNICO en sv3 (application/services/similitud_proveedor.py) para los cuatro sitios (atajo, global, propuesta F-052, candidato claro F-062): puntuación como separador, fuera formas jurídicas y palabras vacías, subcadena de hoy más distancia de edición ≤ 1 en palabras de ≥ 5 caracteres; elegir por nombre solo con ≥ min_score y margen 0,25 sobre el segundo CIF; empate ⇒ paso por puntos sin cambios y, si no decide, revisión con motivo proveedor_nombre_ambiguo y nota con los empatados; paso 2 en empate no elige. Medición: corpus de 19 razones sociales reales y 31 lecturas, hoy 23 aciertos y 7 errores, con F-073 31 y 0. La obra (_resolve_obra) no cambia. Sin comun, sin DDL; despliegue solo sv3. FUERA: corregir los 3 merges (revisor en sv4), la propuesta de sv4 (X4 de F-067), que la propuesta de F-052 deje de proponer en empate. PREGUNTAS P0–P6 para la PARADA 1; P0 bloquea: el caso «S.L.» de la opción B de F-062 pasa de 1 a 0. RELACIONADAS: F-063, F-062, F-052, F-055, F-067 (X4).
 
 ### F-076 · La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura
 
@@ -168,6 +182,18 @@ ORIGEN (humano, 2026-10-16, en producción tras la T51 de F-053): (1) «Guardar 
 estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-078-linea-guarda-lo-que-se-ve`
 
 ORIGEN (producción, 2026-10-16, solo lectura): sv9 dejó no_admitido con falta_descripcion el albarán 86c13097-98f8-4e4b-91af-6a378c28d9cf (modo real): la fila manual 386 tiene descripcion_linea vacía, pero la ficha pinta «CARGA INCOMPLETA» porque la saca de contrato_lines_derived (review_repository.py, _load_conciliation_map_in_session); la 385 también va vacía y sv9 la cubre con el concepto del merge. El producto «MA9999 · Suministro de materiales» no se guarda: es el por defecto que sv4 y sv9 calculan igual con ruesma_comun.alta_sigrid.producto_efectivo. PRINCIPIO DEL HUMANO (literal): «Lo que está en la tabla es lo que debería estar guardado en BBDD, ya que lo ha puesto el humano. No es que sv9 tenga que buscar en muchos sitios, sino que esté bien guardado todo.» MEDICIÓN (105 filas de 42 documentos activos, progress/spec_F-078.md §3): 93 sin descripción en la fila que la ficha rellena (6 que sv9 rechazaría y 16 en que sv9 mandaría otro texto que el que se ve), 7 sin vincular con unidad_albaran vacía (sv9 mandaría sin unidad) y 6 vinculadas con cantidad_convertida nula y factor 1 (sv9: cantidad_sin_convertir); precio, importe, partida y unidad de Q, 0. SPEC v1 (specs/F-078-linea-guarda-lo-que-se-ve/, PARADA 1 APROBADA 2026-10-16: P1 = (b), en las Nueva con blanca se guarda y se ve el concepto del papel; P8 fuera, es F-079; P2-P7, P9, P10 por defecto): regla única «lo que se veía» en comun (ruesma_comun.linea_valorada.fila_a_guardar); sv6 la aplica a cada registro antes del replace; sv4 pinta solo la fila (vacío = vacío), el PATCH guarda la descripción en toda fila y la unidad también en unidad_albaran sin conversión, y las vías que crean o reapuntan filas la materializan; no se aprueba con filas sin vincular sin descripción; relleno de lo existente con un script de sv6 (lectura por defecto, --aplicar con autorización expresa del humano), sin DDL; sv9 sin código. Despliegue: sv6 -> relleno -> sv4. RELACIONADAS: F-053 (reintentar el alta tras el relleno), F-065 (sustituye CR1/H1), F-058, F-075 (su builder directo pasa por el mismo paso), F-076, F-077 (conflictos de texto).
+
+### F-080 · Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados
+
+estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
+
+ORIGEN: H4 de progress/review_F-073.md, decisión del humano del 2026-10-17 («solo entre empatados»).
+
+PROBLEMA: con F-073 (P6), tras un empate por nombre los puntos por familia (R10, sin cambios) pueden elegir a un proveedor AJENO al empate, con similitud 0, si su familia le da margen (reproducido: empatan «HORMIGONES DEL SUR/NORTE» con 2 puntos de gasóleo y se elige «ARIDOS PEPE», 6 puntos de hormigón, det_familia_obra con aviso).
+
+PROPUESTA: tras un empate por nombre, la deducción por familia solo puede elegir entre los empatados; si no separa a ninguno de ellos, la cabecera va a revisión con proveedor_nombre_ambiguo y la nota de los empatados (R11 de F-073).
+
+ALCANCE: services/albaranes-persistencia (header_resolver_service). RELACIONADAS: F-073 (P6, R10, R11), F-062.
 
 ### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
 

@@ -26,10 +26,14 @@ from doble_sigrid_api import (
 )
 from f062_dobles import RepoRed, pasada
 
-from application.services.header_resolver_service import (
-    HeaderResolverService,
-    _distancia_edicion,
-    _score_razon_social,
+from application.services.header_resolver_service import HeaderResolverService
+# F-073: el criterio único de nombre y la distancia viven en su módulo; alias
+# para no tocar los cuerpos de los tests.
+from application.services.similitud_proveedor import (
+    distancia_edicion as _distancia_edicion,
+)
+from application.services.similitud_proveedor import (
+    similitud_razon_social as _score_razon_social,
 )
 from domain.models.header_resolution_models import ProveedorObraResumen
 
@@ -263,11 +267,14 @@ def test_f062_r4_leido_sin_caracteres_utiles_no_rompe():
 #: pasaremos los proveedores filtrados» (F-055). Este test FIJA esa decisión:
 #: si alguien endurece el score o la elegibilidad, tiene que romper aquí y
 #: volver al humano.
+#: F-073 (P0, humano, 2026-10-15): el caso «solo-forma-juridica» («S.L.» ~
+#: «ARIDOS ANFERSA, S.L.» = 1) sale de esta lista: una forma jurídica sola no
+#: casa con nadie. Lo contrario lo fija
+#: ``test_f073_r15_p0_una_forma_juridica_sola_no_corrige_y_es_nadie_casa``.
 CASOS_OPCION_B = [
     pytest.param("Hormigones Mat SL", "HORMIGONES MATERIALES, S.A.", id="subcadena-mat"),
     pytest.param("Transportes", "TRANSPORTES PEREZ GARCIA, S.L.", id="una-palabra"),
     pytest.param("Grupo Hormigones Mat", "HORMIGONES, S.A.", id="contiene-al-otro"),
-    pytest.param("S.L.", "ARIDOS ANFERSA, S.L.", id="solo-forma-juridica"),
 ]
 
 

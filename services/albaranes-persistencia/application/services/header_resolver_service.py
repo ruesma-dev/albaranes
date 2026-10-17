@@ -8,10 +8,18 @@ from application.services.familia_detector import (
     familias_de_filas_merge,
     familias_de_texto,
 )
+from application.services.similitud_proveedor import (
+    MARGEN_NOMBRE_POR_DEFECTO,
+    EleccionPorNombre,
+    distancia_edicion,
+    elegir_por_nombre,
+    similitud_razon_social,
+)
 from domain.models.header_resolution_models import (
     MOTIVO_PROVEEDOR_CIF_PROPIO,
     MOTIVO_PROVEEDOR_CORREGIDO,
     MOTIVO_PROVEEDOR_NO_CASA,
+    MOTIVO_PROVEEDOR_NOMBRE_AMBIGUO,
     NOTA_CIF_PROPIO_PREFIJO,
     NOTA_PROVEEDOR_CORREGIDO_PREFIJO,
     ProveedorObraResumen,
@@ -67,7 +75,11 @@ def _cifs_propios_de_serie() -> frozenset[str]:
 
 
 def _norm(value: str | None) -> str:
-    """minusculas, sin acentos, espacios colapsados."""
+    """minusculas, sin acentos, espacios colapsados.
+
+    F-073 · R16: solo para la OBRA (``_resolve_obra``). El nombre de
+    proveedor se compara con ``similitud_razon_social``.
+    """
     s = (value or "").lower()
     nfkd = unicodedata.normalize("NFD", s)
     ascii_ = "".join(c for c in nfkd if not unicodedata.combining(c))
@@ -78,6 +90,9 @@ def _match_score(q_norm: str, cand_norm: str) -> float:
     """Mismo criterio que el desplegable de sv4:
     1.0 si uno contiene al otro; si no, fraccion de tokens (>=3 letras)
     de la consulta presentes en el candidato.
+
+    F-073 · R16: solo para la OBRA. El proveedor tiene su criterio unico en
+    ``application/services/similitud_proveedor.py``.
     """
     if not q_norm or not cand_norm:
         return 0.0
@@ -88,59 +103,6 @@ def _match_score(q_norm: str, cand_norm: str) -> float:
         return 0.0
     hits = sum(1 for t in toks if t in cand_norm)
     return hits / len(toks)
-
-
-# ------------------------------------------------------------------ #
-# Red de PROVEEDOR por CIF (ago 2026, F-002).
-# ------------------------------------------------------------------ #
-#: Signos que separan palabras en una razon social pero que _norm no
-#: toca ("HORPRESOL, S.L." -> tokens "horpresol," y "s.l."). Sin esto,
-#: comparar razones sociales con puntuacion da 0 por un detalle
-#: tipografico.
-_PUNTUACION_RAZON = str.maketrans({c: " " for c in ",.;:()[]-/\\\"'"})
-
-
-def _score_razon_social(leido: str | None, candidato: str | None) -> float:
-    """Parecido entre el nombre LEIDO y una razon social candidata.
-
-    Dos diferencias con ``_match_score`` a secas, ambas necesarias para
-    el caso de referencia de R9 ("GRUPO OTTO HORPRESOL" en el logotipo
-    frente a "HORPRESOL, S.L." en el maestro):
-
-      1. Es SIMETRICO. Lo que describe la feature es que el nombre leido
-         CONTENGA a un proveedor con contrato, y ese sentido (tokens del
-         candidato presentes en lo leido) es el que puntua alto cuando el
-         albaran trae la marca comercial del grupo por delante.
-      2. Trata la puntuacion como separador, para que "S.L." no arrastre
-         el score a cero.
-
-    Se usa SOLO en esta red: los caminos previos del resolver siguen con
-    ``_match_score`` tal cual, sin cambio de comportamiento.
-    """
-    a = _norm((leido or "").translate(_PUNTUACION_RAZON))
-    b = _norm((candidato or "").translate(_PUNTUACION_RAZON))
-    if not a or not b:
-        return 0.0
-    return max(_match_score(a, b), _match_score(b, a))
-
-
-def _distancia_edicion(a: str, b: str) -> int:
-    """Distancia de Levenshtein (inserciones, borrados y sustituciones).
-
-    F-062 · R4: desempata entre candidatos claros por cercania al CIF
-    leido. Pura y sin dependencias: los CIF tienen 9 caracteres.
-    """
-    anterior = list(range(len(b) + 1))
-    for i, ca in enumerate(a, start=1):
-        actual = [i]
-        for j, cb in enumerate(b, start=1):
-            actual.append(min(
-                anterior[j] + 1,
-                actual[j - 1] + 1,
-                anterior[j - 1] + (ca != cb),
-            ))
-        anterior = actual
-    return anterior[-1]
 
 
 # ------------------------------------------------------------------ #
@@ -183,6 +145,12 @@ def _motivo_sin_propuesta(
         f"y ninguno de los {n_candidatos} proveedores con contrato en la "
         f"obra {obra} casa con el nombre leído ('{nombre_leido}')"
     )
+
+
+def _clave_cif(cif: str | None) -> str:
+    """Clave de agrupacion por CIF, la de ``elegir_por_nombre`` (F-073)."""
+    recortado = (cif or "").strip()
+    return normalizar_cif(recortado) or recortado
 
 
 class _CandidatoObra:
@@ -256,6 +224,7 @@ class HeaderResolverService:
         correccion_score_min: float = 1.0,
         correccion_margen_distancia: int = 2,
         cifs_propios: frozenset[str] | None = None,
+        margen_nombre: float = MARGEN_NOMBRE_POR_DEFECTO,
     ) -> None:
         self._obra_client = obra_client
         self._proveedor_client = proveedor_client
@@ -270,17 +239,21 @@ class HeaderResolverService:
         self._correccion_enabled = bool(correccion_enabled)
         self._correccion_score_min = float(correccion_score_min)
         self._correccion_margen = int(correccion_margen_distancia)
+        # F-073 · R9, R20: margen de la eleccion por nombre sobre el segundo
+        # CIF. Sin variable de entorno: las composiciones usan el defecto.
+        self._margen_nombre = float(margen_nombre)
         # F-063: CIF propios (el del cliente, Ruesma): nunca son proveedor.
         self._cifs_propios = (
             _cifs_propios_de_serie() if cifs_propios is None else cifs_propios
         )
         logger.info(
             "%s INSTANCIADO (enabled=%s min_score=%s familia=%s cif=%s "
-            "correccion=%s score_min=%s margen=%s cifs_propios=%s)",
+            "correccion=%s score_min=%s margen=%s cifs_propios=%s "
+            "margen_nombre=%s)",
             _LOG_PREFIX, enabled, self._min_score, self._familia_enabled,
             self._cif_enabled, self._correccion_enabled,
             self._correccion_score_min, self._correccion_margen,
-            sorted(self._cifs_propios),
+            sorted(self._cifs_propios), self._margen_nombre,
         )
 
     def resolve_merge_document(self, *, merge_document_id: str) -> None:
@@ -461,25 +434,17 @@ class HeaderResolverService:
         if not proveedores:
             return None, "deterministic"
 
-        q = _norm(proveedor_nombre)
-        best_cif: str | None = None
-        best_score = 0.0
-        for cif, nombre in proveedores:
-            score = _match_score(q, _norm(nombre))
-            if score > best_score:
-                best_score = score
-                best_cif = cif
-        if best_cif and best_score >= self._min_score:
-            logger.info(
-                "%s proveedor resuelto por texto (global): cif=%s score=%.2f",
-                _LOG_PREFIX, best_cif, best_score,
-            )
-            self._remove_nota_proveedor_safely(merge_document_id)
-            return (best_cif.strip() or None), "deterministic"
-        logger.info(
-            "%s proveedor NO resuelto (mejor score global=%.2f < %.2f).",
-            _LOG_PREFIX, best_score, self._min_score,
+        # F-073 · R9, R10, R14: misma regla que el atajo del paso 1. En
+        # empate no se fija CIF y no se deja nota ni motivo (la del paso 1,
+        # con los candidatos de la obra, es la util): solo el log.
+        eleccion = elegir_por_nombre(
+            proveedor_nombre, proveedores,
+            umbral=self._min_score, margen=self._margen_nombre,
         )
+        self._log_eleccion(eleccion, donde="global")
+        if eleccion.elegido is not None:
+            self._remove_nota_proveedor_safely(merge_document_id)
+            return eleccion.elegido.cif, "deterministic"
         return None, "deterministic"
 
     # ----------------------------------------------------------------- #
@@ -817,7 +782,7 @@ class HeaderResolverService:
             )
             return [], MOTIVO_CONSULTA_FALLIDA
         puntuados = [
-            (resumen, _score_razon_social(proveedor_nombre, resumen.nombre))
+            (resumen, similitud_razon_social(proveedor_nombre, resumen.nombre))
             for resumen in resumenes
         ]
         mejor_score = max((score for _, score in puntuados), default=0.0)
@@ -889,7 +854,7 @@ class HeaderResolverService:
             return unico, VIA_UNICO
         leido = normalizar_cif(cif_leido) or ""
         por_distancia = sorted(
-            (_distancia_edicion(leido, cif), cif) for cif in elegibles
+            (distancia_edicion(leido, cif), cif) for cif in elegibles
         )
         (primera, cif_primero), (segunda, _) = por_distancia[0], por_distancia[1]
         if segunda - primera >= self._correccion_margen:
@@ -1005,11 +970,11 @@ class HeaderResolverService:
                 "solo con nombre.", _LOG_PREFIX,
             )
 
-        q = _norm(proveedor_nombre)
         candidatos: list[_CandidatoObra] = []
         for r in resumenes:
             fams_prov = familias_de_texto((r.texto or "").lower())
-            score_nombre = _match_score(q, _norm(r.nombre)) if q else 0.0
+            # F-073 · R1: el criterio unico de nombre de proveedor.
+            score_nombre = similitud_razon_social(proveedor_nombre, r.nombre)
             comunes = familias_alb & fams_prov
             puntos = (
                 round(_PUNTOS_NOMBRE_MAX * score_nombre)
@@ -1032,18 +997,19 @@ class HeaderResolverService:
                 sorted(comunes) or "-",
             )
 
-        # Atajo por NOMBRE dentro de la obra: si algun candidato supera el
-        # umbral clasico, el nombre manda (origen 'deterministic').
-        por_nombre = max(candidatos, key=lambda c: c.score_nombre)
-        if por_nombre.score_nombre >= self._min_score:
-            logger.info(
-                "%s proveedor resuelto por NOMBRE dentro de la obra %s: "
-                "cif=%s score=%.2f",
-                _LOG_PREFIX, obra_codigo, por_nombre.cif,
-                por_nombre.score_nombre,
-            )
+        # Atajo por NOMBRE dentro de la obra (F-073 · R9): el nombre manda
+        # (origen 'deterministic') si el mejor CIF llega al umbral Y saca el
+        # margen al segundo. En empate no se elige (R10): siguen los puntos.
+        eleccion = elegir_por_nombre(
+            proveedor_nombre,
+            ((c.cif, c.nombre) for c in candidatos),
+            umbral=self._min_score,
+            margen=self._margen_nombre,
+        )
+        self._log_eleccion(eleccion, donde=f"dentro de la obra {obra_codigo}")
+        if eleccion.elegido is not None:
             self._remove_nota_proveedor_safely(merge_document_id)
-            return por_nombre.cif, "deterministic"
+            return eleccion.elegido.cif, "deterministic"
 
         # Decision por PUNTOS (nombre debil + familia).
         candidatos.sort(key=lambda c: c.puntos, reverse=True)
@@ -1084,6 +1050,18 @@ class HeaderResolverService:
             _LOG_PREFIX, mejor.puntos, segundo_puntos,
             _PUNTOS_MINIMOS, _MARGEN_MINIMO,
         )
+        if eleccion.empatados:
+            # F-073 · R11: empate por nombre que la familia no separa ⇒ a
+            # revision con motivo propio y la lista de los empatados.
+            self._marcar_revision_safely(
+                merge_document_id=merge_document_id,
+                motivo=MOTIVO_PROVEEDOR_NOMBRE_AMBIGUO,
+                nota=self._nota_empate_nombre(
+                    eleccion, candidatos,
+                    proveedor_nombre=proveedor_nombre, obra_codigo=obra_codigo,
+                ),
+            )
+            return None, "deterministic"
         top = candidatos[: self._nota_max_candidatos]
         listado = "; ".join(c.etiqueta() for c in top)
         self._nota_proveedor_safely(
@@ -1096,6 +1074,62 @@ class HeaderResolverService:
             ),
         )
         return None, "deterministic"
+
+    def _nota_empate_nombre(
+        self,
+        eleccion: EleccionPorNombre,
+        candidatos: list[_CandidatoObra],
+        *,
+        proveedor_nombre: str | None,
+        obra_codigo: str,
+    ) -> str:
+        """Nota de R11: hasta ``nota_max_candidatos`` empatados, en orden
+        de puntos descendente y CIF ascendente (R12: no depende de la
+        llegada)."""
+        puntos: dict[str, int] = {}
+        for c in candidatos:
+            clave = _clave_cif(c.cif)
+            puntos[clave] = max(puntos.get(clave, c.puntos), c.puntos)
+        ordenados = sorted(
+            eleccion.empatados,
+            key=lambda e: (-puntos[_clave_cif(e.cif)], e.cif),
+        )[: self._nota_max_candidatos]
+        listado = "; ".join(f"{e.cif} — {e.nombre or '?'}" for e in ordenados)
+        return (
+            f"{_NOTA_PROVEEDOR_PREFIX} sin CIF: el nombre leído "
+            f"'{proveedor_nombre or '—'}' casa por igual con "
+            f"{len(eleccion.empatados)} proveedores con contrato en la obra "
+            f"{obra_codigo}: {listado}. Elige el proveedor arriba y pulsa "
+            '"Guardar y volver a buscar".'
+        )
+
+    def _log_eleccion(self, eleccion: EleccionPorNombre, *, donde: str) -> None:
+        """F-073 · R13: CIF y similitud del mejor, la del segundo y el
+        margen; en empate, cuantos empatan."""
+        mejor = eleccion.mejor
+        cif = mejor.cif if mejor else "-"
+        similitud = mejor.similitud if mejor else 0.0
+        if eleccion.elegido is not None:
+            logger.info(
+                "%s proveedor resuelto por NOMBRE %s: elegido cif=%s "
+                "similitud=%.2f segunda=%.2f margen=%.2f",
+                _LOG_PREFIX, donde, cif, similitud, eleccion.segunda,
+                self._margen_nombre,
+            )
+        elif eleccion.empatados:
+            logger.info(
+                "%s proveedor por NOMBRE %s: EMPATE, no se elige: mejor "
+                "cif=%s similitud=%.2f segunda=%.2f margen=%.2f empatados=%d",
+                _LOG_PREFIX, donde, cif, similitud, eleccion.segunda,
+                self._margen_nombre, len(eleccion.empatados),
+            )
+        else:
+            logger.info(
+                "%s proveedor por NOMBRE %s: nadie llega al umbral: mejor "
+                "cif=%s similitud=%.2f segunda=%.2f umbral=%.2f",
+                _LOG_PREFIX, donde, cif, similitud, eleccion.segunda,
+                self._min_score,
+            )
 
     # ----------------------------------------------------------------- #
     # Notas de revision (best-effort, con dedupe por prefijo)

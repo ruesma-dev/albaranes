@@ -315,10 +315,11 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       obra (la misma consulta agregada de F-052, una vez por pasada):
       **elegible** = identificador fiscal válido (`ruesma_comun.proveedores`:
       CIF/NIF/NIE con su carácter de control) y nombre que casa con el leído
-      (score de F-052 ≥ `RED_PROVEEDOR_CORRECCION_SCORE_MIN`, 1,0: un nombre
-      contiene al otro o todas las palabras de 3+ letras de uno aparecen
-      como subcadena en el otro; **no** exige el nombre completo:
-      «Transportes» casa con «TRANSPORTES PEREZ GARCIA, S.L.»). Aceptado por
+      (similitud de F-073, regla 24, ≥ `RED_PROVEEDOR_CORRECCION_SCORE_MIN`,
+      1,0: el texto de palabras de uno contiene al del otro o todas las
+      palabras de uno casan en el otro; **no** exige el nombre completo:
+      «Transportes» casa con «TRANSPORTES PEREZ GARCIA, S.L.»; una forma
+      jurídica sola, «S.L.», no casa con nadie). Aceptado por
       el humano (2026-10-08): es la red de seguridad; la defensa de fondo es
       F-055 (IA2 elige de los proveedores con contrato en la obra). Uno
       solo ⇒ claro; varios ⇒
@@ -622,6 +623,39 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       cabecera sin revisión. `PARTIDAS_OBRA_NORMALIZAR_ENABLED=false` lo apaga sin
       redesplegar. sv9 no cambia: manda `codigo_partida_final`. Lo existente se
       corrige revalorando desde sv4 (lo manual se pierde, F-058).
+
+24. **Proveedor por nombre: un solo criterio y nunca se elige en un empate**
+    (F-073, oct 2026; incidencia 0694 del 2026-10-15: «FEYMACO, S.A.» y
+    «TEYMACO, S.A.» empataban a 0,50 con HIERROS RODRIGO, S.A. y ganaba el
+    primero). Spec: `specs/F-073-proveedor-por-similitud/`; decisiones P0–P7 en
+    `progress/spec_F-073.md`.
+    - **Criterio único** de sv3, `application/services/similitud_proveedor.py`
+      (`similitud_razon_social`): lo usan el atajo por nombre del paso 1, el
+      fallback global del paso 2, la propuesta de F-052, el candidato claro de
+      F-062 (regla 17) y el script de verificación de F-052. Palabras sin
+      acentos, con la puntuación como separador y sin palabras de una letra,
+      formas jurídicas (lista cerrada) ni palabras vacías. Sin palabras, 0
+      («S.A.» sola no casa). Contención del texto de palabras, 1. Si no, el
+      máximo de las dos direcciones (fracción de palabras que casan): por
+      subcadena con 3+ letras, a una edición (Levenshtein, la misma de F-062)
+      con 5+ letras en las dos palabras, o por igualdad con 2. Es simétrico.
+      La obra (`_resolve_obra`) sigue con `_match_score`.
+    - **Elegir por nombre** (`elegir_por_nombre`, atajo del paso 1 y paso 2):
+      agrupa por CIF normalizado y elige solo si el mejor llega a
+      `HEADER_RESOLVER_MIN_SCORE` (0,5) Y saca al segundo CIF el margen
+      (`margen_nombre` del constructor, 0,25, sin variable de entorno; los dos
+      inclusivos). No depende del orden de llegada.
+    - **Empate** en el paso 1: siguen los puntos de nombre y familia sin
+      cambios (si la familia separa, `det_familia_obra` con aviso). Si tampoco
+      deciden, va a revisión con el motivo `proveedor_nombre_ambiguo` (sin
+      sufijo; la red no lo retira) y la nota `[AVISO] Proveedor sin CIF: el
+      nombre leído '…' casa por igual con N proveedores…`, con hasta
+      `HEADER_RESOLVER_NOTA_MAX_CANDIDATOS` en orden de puntos y CIF. En el
+      paso 2 un empate no fija CIF ni deja nota (no pisa la del paso 1): solo
+      se registra en el log, como la similitud del mejor y del segundo.
+    - La red por CIF conserva sus reglas (la propuesta de F-052 sigue siendo
+      el primero en empate). La propuesta de sv4 (`_proposeBest`) no está
+      aquí: X4 de F-067.
 
 ## Acceso a datos y sistemas externos
 
