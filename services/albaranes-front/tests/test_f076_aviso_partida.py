@@ -243,7 +243,9 @@ def test_f076_r24_literal_o_aviso_sin_nota(render_detalle, documento_detalle, fi
     casilla = _render(render_detalle, documento_detalle, fila_detalle, linea_valorada, conciliacion,
                       editable=editable)
     assert "Normalizada" not in casilla
-    assert re.findall(r'title="([^"]*)"', casilla) == ["Costes indirectos de obra"]
+    # F-077 R22 (al fusionar): con ⚠, el aviso de F-077 detrás de la descripción.
+    aviso = " · No coincide con la partida leída en el albarán (CI.14.18)" if leida == "CI.14.18" else ""
+    assert re.findall(r'title="([^"]*)"', casilla) == ["Costes indirectos de obra" + aviso]
     if leida == "CI.14.18":
         assert ("cedit-warn" if editable else "concilia-price-warn") in casilla
 

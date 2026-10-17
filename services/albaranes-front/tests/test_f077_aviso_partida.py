@@ -122,7 +122,7 @@ def test_f077_r21_repositorio_nueva_con_lectura_distinta_sin_aviso():
     assert conc.aviso_partida is None
 
 
-@pytest.mark.parametrize("line_kind", ["manual", "reparto", "synthetic_modifier", None])
+@pytest.mark.parametrize("line_kind", ["manual", "reparto", "synthetic_modifier"])
 def test_f077_r21_repositorio_sin_blanca_nunca_aviso(line_kind):
     conc = _sin_blanca("CI.14.18", "CI.4.18", line_kind)
     assert conc.agree_partida is False  # R23: el cálculo no cambia

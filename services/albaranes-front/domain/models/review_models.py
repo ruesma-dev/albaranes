@@ -714,6 +714,26 @@ def aviso_suma_importes(
     )
 
 
+def aviso_partida_texto(
+    agree: bool | None, *, kind: str | None, leida: str | None,
+) -> str | None:
+    """(F-077 R21, R22) El aviso del ⚠ de la partida de una fila, o ``None``.
+
+    Solo en filas de origen Contrato (``kind == "assigned"``) cuya partida
+    leída en el albarán (``leida``, recortada y no vacía) no coincide con la
+    de su línea de contrato (``agree is False``, el cálculo de siempre: F-076
+    lo hace por la clave de comun). Las Nueva ya dicen con la insignia que no
+    coinciden con el contrato; las filas sin línea del albarán no tienen
+    lectura que comparar (el repositorio ni siquiera llama aquí).
+    """
+    if agree is not False or kind != "assigned":
+        return None
+    texto = (leida or "").strip()
+    if not texto:
+        return None
+    return f"No coincide con la partida leída en el albarán ({texto})"
+
+
 def _numero_es(valor: object) -> object:
     """Número tecleado en la ficha: admite coma decimal (``1.234,5``); vacío
     o «—» es ``None``; uno ilegible o no finito es un error de validación
@@ -1230,6 +1250,13 @@ class ConciliacionDisplay(BaseModel):
     # ficha la enseña en el ``title`` («Normalizada: X → Y»). ``None`` si son
     # iguales, si no coinciden (⚠) o si no hay nada que comparar.
     partida_normalizada_desde: str | None = None
+
+    # (F-077 R21, R22) Texto del ⚠ de la partida («No coincide con la partida
+    # leída en el albarán (X)»): solo en filas con línea del albarán de origen
+    # Contrato cuya lectura no coincide (``aviso_partida_texto``). ``None`` en
+    # el resto (sintéticas, ``manual``, ``reparto``, Nueva): sin ⚠ aunque
+    # ``agree_partida`` sea false. Excluyente con ``partida_normalizada_desde``.
+    aviso_partida: str | None = None
 
     # Senales para el calculo determinista de CONFIANZA (no se pintan):
     #   match_method / match_confidence_pct -> distinguir match fuerte
