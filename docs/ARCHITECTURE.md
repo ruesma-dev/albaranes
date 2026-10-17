@@ -459,7 +459,9 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       ningún guardado: queda en rojo; el servidor no la valida contra la
       obra). «Origen ✎» es la única vía de reapuntar:
       una línea de contrato deja la fila Contrato con su partida, unidad y
-      precio; «Nueva», Nueva con los valores actuales.
+      precio (y, desde F-078, su descripción en la fila); «Nueva», Nueva con
+      los valores actuales. La descripción de la fila ya no va «solo si se
+      editó» (F-065 CR1/H1): la sustituye la regla 22.
     - **Dividir** (fase 3; absorbe F-016): «Dividir» (o F7; F6 es del
       navegador) reparte una fila en 2–20 partes, cada una con su cantidad y
       su partida (combo de la obra; vacía = almacén); la última se rellena
@@ -477,7 +479,8 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       `line_kind = 'reparto'` con `merge_line_id` nulo y `parent_merge_line_id`
       de la blanca de la original, sus campos copiados y en la valoración la
       descripción que enseña la original (la fijada, la de su línea o el concepto
-      de su blanca: sv9 no tiene blanca que leer); `cantidad_convertida
+      de su blanca: sv9 no tiene blanca que leer; desde F-078, la de
+      `fila_a_guardar`, regla 22); `cantidad_convertida
       = qk`, `cantidad_albaran = ca0 × qk / Q` e importe `round(importe0 × qk /
       Q, 2)` (la última absorbe el redondeo: la familia suma lo de antes). El
       origen sigue la regla de editar: con la partida de la original, la de su
@@ -515,6 +518,46 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       (forma de COMPARACIÓN de F-048, sin ceros), las SQL de Sigrid y los
       esquemas. Los merges ya guardados con 3 cifras **no se migran** (P3):
       los cubren sv4 al consultar y guardar y sv9 al dar de alta.
+
+22. **La fila valorada es la fuente de verdad de la línea** (F-078, oct 2026).
+    Spec: `specs/F-078-linea-guarda-lo-que-se-ve/`; medición y decisiones en
+    `progress/spec_F-078.md`. Principio del humano: «Lo que está en la tabla es lo
+    que debería estar guardado en BBDD, ya que lo ha puesto el humano. No es que
+    sv9 tenga que buscar en muchos sitios, sino que esté bien guardado todo.»
+    - **Cada campo de «Líneas a Sigrid», en su columna de la fila**: concepto →
+      `descripcion_linea`; unidad → `unidad_contrato` (la de Q y del precio); Q →
+      `cantidad_convertida ?? cantidad_albaran`; precio → `precio_unitario_final`;
+      importe → `importe_calculado`; dto → `descuento_albaran_aplicado`; código
+      externo → `codigo_externo`; partida → `codigo_partida_final` (vacía =
+      almacén, regla 16). sv4 pinta cada campo de su columna, sin completarlo con
+      la línea de contrato, la derivada ni la blanca: vacío = vacío (el importe nulo
+      ya no lo calcula la plantilla). Su línea solo da el precio del contrato del
+      `title`, la medición, la descripción de la partida, los avisos ✓/⚠ y la
+      partida casada.
+    - **Una regla, en comun**: `ruesma_comun.linea_valorada.fila_a_guardar`.
+      Concepto: Contrato, el de la fila o el de su línea; Nueva con blanca, el de
+      la fila o el del papel (P1 = (b): no el de su derivada); Nueva sin blanca
+      (manual, reparto, sintética), el de su derivada o el de la fila; si no hay,
+      el de la blanca. Unidad: la de su línea o la de la fila. Precio: el de la
+      fila o el de su línea. Sin conversión (factor = 1): `unidad_albaran` vacía ⇒
+      la unidad y `cantidad_convertida` nula ⇒ Q; con conversión (o factor nulo)
+      no se tocan. La aplican **sv6** a cada registro antes del replace
+      (`completar_registros`: toda rama del pipeline que persista líneas pasa por
+      ahí, lo exige un test), **sv4** en toda vía que crea o reapunta una fila
+      (`_materializar_fila_in_session`: «Origen ✎», «+ a Sigrid», «Traer líneas
+      contrato», «Dividir»; una vía nueva solo tiene que llamarlo; «Añadir línea»
+      nace vacía y así se ve) y el **relleno** de lo anterior
+      (`scripts/rellenar_filas_f078.py` de sv6: solo lectura por defecto;
+      `--aplicar` lo lanza el humano).
+    - **El PATCH de fila** toma el estado actual solo de la fila, guarda la
+      descripción cambiada en `descripcion_linea` en toda fila y la unidad
+      cambiada también en `unidad_albaran` sin conversión. No aplica la regla: lo
+      vaciado se ve vacío.
+    - **Aprobar** (ficha o listado) no deja con filas a registrar sin vincular
+      (`es_linea_vinculada`) sin descripción: «Líneas sin descripción: 3, 5».
+    - **sv9 no cambia** ni busca en otras tablas. El producto por defecto sigue
+      sin guardarse (regla 19: sv4 y sv9 lo calculan igual). Fuera de F-078: la
+      descripción editada de una Contrato vinculada no llega a Sigrid (F-079).
 
 ## Acceso a datos y sistemas externos
 
