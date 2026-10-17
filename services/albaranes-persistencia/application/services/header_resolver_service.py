@@ -8,6 +8,11 @@ from application.services.familia_detector import (
     familias_de_filas_merge,
     familias_de_texto,
 )
+from application.services.similitud_proveedor import (
+    distancia_edicion,
+    elegir_por_nombre,
+    similitud_razon_social,
+)
 from domain.models.header_resolution_models import (
     MOTIVO_PROVEEDOR_CIF_PROPIO,
     MOTIVO_PROVEEDOR_CORREGIDO,
@@ -67,7 +72,11 @@ def _cifs_propios_de_serie() -> frozenset[str]:
 
 
 def _norm(value: str | None) -> str:
-    """minusculas, sin acentos, espacios colapsados."""
+    """minusculas, sin acentos, espacios colapsados.
+
+    F-073 · R16: solo para la OBRA (``_resolve_obra``). El nombre de
+    proveedor se compara con ``similitud_razon_social``.
+    """
     s = (value or "").lower()
     nfkd = unicodedata.normalize("NFD", s)
     ascii_ = "".join(c for c in nfkd if not unicodedata.combining(c))
@@ -78,6 +87,9 @@ def _match_score(q_norm: str, cand_norm: str) -> float:
     """Mismo criterio que el desplegable de sv4:
     1.0 si uno contiene al otro; si no, fraccion de tokens (>=3 letras)
     de la consulta presentes en el candidato.
+
+    F-073 · R16: solo para la OBRA. El proveedor tiene su criterio unico en
+    ``application/services/similitud_proveedor.py``.
     """
     if not q_norm or not cand_norm:
         return 0.0
@@ -88,59 +100,6 @@ def _match_score(q_norm: str, cand_norm: str) -> float:
         return 0.0
     hits = sum(1 for t in toks if t in cand_norm)
     return hits / len(toks)
-
-
-# ------------------------------------------------------------------ #
-# Red de PROVEEDOR por CIF (ago 2026, F-002).
-# ------------------------------------------------------------------ #
-#: Signos que separan palabras en una razon social pero que _norm no
-#: toca ("HORPRESOL, S.L." -> tokens "horpresol," y "s.l."). Sin esto,
-#: comparar razones sociales con puntuacion da 0 por un detalle
-#: tipografico.
-_PUNTUACION_RAZON = str.maketrans({c: " " for c in ",.;:()[]-/\\\"'"})
-
-
-def _score_razon_social(leido: str | None, candidato: str | None) -> float:
-    """Parecido entre el nombre LEIDO y una razon social candidata.
-
-    Dos diferencias con ``_match_score`` a secas, ambas necesarias para
-    el caso de referencia de R9 ("GRUPO OTTO HORPRESOL" en el logotipo
-    frente a "HORPRESOL, S.L." en el maestro):
-
-      1. Es SIMETRICO. Lo que describe la feature es que el nombre leido
-         CONTENGA a un proveedor con contrato, y ese sentido (tokens del
-         candidato presentes en lo leido) es el que puntua alto cuando el
-         albaran trae la marca comercial del grupo por delante.
-      2. Trata la puntuacion como separador, para que "S.L." no arrastre
-         el score a cero.
-
-    Se usa SOLO en esta red: los caminos previos del resolver siguen con
-    ``_match_score`` tal cual, sin cambio de comportamiento.
-    """
-    a = _norm((leido or "").translate(_PUNTUACION_RAZON))
-    b = _norm((candidato or "").translate(_PUNTUACION_RAZON))
-    if not a or not b:
-        return 0.0
-    return max(_match_score(a, b), _match_score(b, a))
-
-
-def _distancia_edicion(a: str, b: str) -> int:
-    """Distancia de Levenshtein (inserciones, borrados y sustituciones).
-
-    F-062 · R4: desempata entre candidatos claros por cercania al CIF
-    leido. Pura y sin dependencias: los CIF tienen 9 caracteres.
-    """
-    anterior = list(range(len(b) + 1))
-    for i, ca in enumerate(a, start=1):
-        actual = [i]
-        for j, cb in enumerate(b, start=1):
-            actual.append(min(
-                anterior[j] + 1,
-                actual[j - 1] + 1,
-                anterior[j - 1] + (ca != cb),
-            ))
-        anterior = actual
-    return anterior[-1]
 
 
 # ------------------------------------------------------------------ #
@@ -817,7 +776,7 @@ class HeaderResolverService:
             )
             return [], MOTIVO_CONSULTA_FALLIDA
         puntuados = [
-            (resumen, _score_razon_social(proveedor_nombre, resumen.nombre))
+            (resumen, similitud_razon_social(proveedor_nombre, resumen.nombre))
             for resumen in resumenes
         ]
         mejor_score = max((score for _, score in puntuados), default=0.0)
@@ -889,7 +848,7 @@ class HeaderResolverService:
             return unico, VIA_UNICO
         leido = normalizar_cif(cif_leido) or ""
         por_distancia = sorted(
-            (_distancia_edicion(leido, cif), cif) for cif in elegibles
+            (distancia_edicion(leido, cif), cif) for cif in elegibles
         )
         (primera, cif_primero), (segunda, _) = por_distancia[0], por_distancia[1]
         if segunda - primera >= self._correccion_margen:

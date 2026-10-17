@@ -208,3 +208,103 @@ def test_f073_r12_misma_decision_con_cualquier_orden(leido, semilla):
     assert barajada != _LISTA_R12
     assert _elegir(leido, barajada) == referencia
     assert _elegir(leido, reversed(_LISTA_R12)) == referencia
+
+
+# ------------------------------------------------------------------ #
+# R1, R8 · un solo criterio en sv3
+# ------------------------------------------------------------------ #
+def test_f073_r1_r8_el_resolver_no_tiene_criterio_propio():
+    """Fuera del resolver los dos criterios viejos de proveedor; la obra
+    conserva ``_match_score`` (R16)."""
+    from application.services import header_resolver_service as modulo
+    from application.services import similitud_proveedor as criterio
+
+    for viejo in ("_PUNTUACION_RAZON", "_score_razon_social", "_distancia_edicion"):
+        assert not hasattr(modulo, viejo), viejo
+    assert modulo.similitud_razon_social is criterio.similitud_razon_social
+    assert modulo.distancia_edicion is criterio.distancia_edicion
+    assert modulo.elegir_por_nombre is criterio.elegir_por_nombre
+    assert hasattr(modulo, "_match_score")
+
+
+def test_f073_r1_el_script_de_verificacion_de_f052_usa_el_criterio_unico():
+    """Decisión del humano (2026-10-17, opción a): el script cuenta como
+    sitio de R1."""
+    import importlib
+
+    from application.services import similitud_proveedor as criterio
+
+    script = importlib.import_module("scripts.verificar_f052_proveedores_obra")
+    assert script.similitud_razon_social is criterio.similitud_razon_social
+    assert not hasattr(script, "_score_razon_social")
+
+
+# ------------------------------------------------------------------ #
+# R15 · la red por CIF conserva sus reglas; solo cambia la similitud
+# ------------------------------------------------------------------ #
+from domain.models.header_resolution_models import ProveedorObraResumen  # noqa: E402
+from f062_dobles import RepoRed, pasada, resolver  # noqa: E402
+
+_RAZ_FEYMACO = "FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)"
+_RAZ_HIERROS = "HIERROS RODRIGO, S.A."
+_CIF_FEYMACO = "A28733558"
+_CIF_HIERROS = "A19004589"
+_CIF_LEIDO_INEXISTENTE = "B86056201"  # control inválido, no está en prv
+
+
+def _resumen(cif, nombre, texto="SUMINISTRO VARIOS"):
+    return ProveedorObraResumen(cif=cif, nombre=nombre, codigos_contratos=("CT1",), texto=texto)
+
+
+class _ClienteRed:
+    def __init__(self, obra):
+        self.obra = list(obra)
+
+    def fetch_proveedor_by_cif(self, *, cif):
+        return None
+
+    def fetch_contratos_resumen_por_obra(self, *, codigo_obra):
+        return list(self.obra)
+
+    def search_proveedores(self):
+        return []
+
+
+def test_f073_r15_la_propuesta_y_el_candidato_claro_usan_la_similitud_unica():
+    """«TEYMACO, S.A.» con un CIF que no existe: hoy no casaba con nadie
+    (``_score_razon_social`` = 0); con F-073 casa a 1 con FEYMACO y es el
+    candidato claro."""
+    cliente = _ClienteRed([_resumen(_CIF_HIERROS, _RAZ_HIERROS), _resumen(_CIF_FEYMACO, _RAZ_FEYMACO)])
+    servicio = resolver(cliente, RepoRed(cif=None, nombre=None, obra="0694"))
+    puntuados, motivo = servicio._candidatos_puntuados(proveedor_nombre="TEYMACO, S.A.", obra="0694")
+    assert [(r.cif, s) for r, s in puntuados] == [(_CIF_HIERROS, 0.0), (_CIF_FEYMACO, 1.0)]
+    assert motivo == "propuesta"
+    assert servicio._candidato_claro(cif_leido=_CIF_LEIDO_INEXISTENTE, puntuados=puntuados) == (
+        puntuados[1][0], "unico",
+    )
+
+
+def test_f073_r15_la_propuesta_sigue_siendo_el_primero_en_empate():
+    """P5: la propuesta de F-052 no cambia de regla (el primero en empate)."""
+    cliente = _ClienteRed([_resumen("B2", "PROVEEDOR OBRA 02, S.L."), _resumen("B1", "PROVEEDOR OBRA 01, S.L.")])
+    servicio = resolver(cliente, RepoRed(cif=None, nombre=None, obra="0691"))
+    candidato, motivo, n = servicio._mejor_candidato_por_nombre(
+        proveedor_nombre="PROVEEDOR OBRA", obra_codigo_efectiva="0691",
+    )
+    assert (candidato.cif, motivo, n) == ("B2", "propuesta", 2)
+
+
+def test_f073_r15_p0_una_forma_juridica_sola_no_corrige_y_es_nadie_casa():
+    """P0 (humano, 2026-10-15): sustituye al caso «solo-forma-juridica» de la
+    opción B de F-062 (decisión del 2026-10-08). «S.L.» leído como nombre ya
+    no casa con «ARIDOS ANFERSA, S.L.»: sin corrección y con el motivo de
+    cualquier «nadie casa»."""
+    cliente = _ClienteRed([_resumen("B18487421", "ARIDOS ANFERSA, S.L.")])
+    repo = RepoRed(cif=_CIF_LEIDO_INEXISTENTE, nombre="S.L.", obra="0720")
+    pasada(cliente, repo)
+    assert repo.aplicadas == []
+    assert repo.cif == _CIF_LEIDO_INEXISTENTE
+    assert repo.lista_motivos() == [f"proveedor_cif_no_casa:{_CIF_LEIDO_INEXISTENTE}"]
+    [nota] = [n for n in repo.lineas_notas() if n.startswith("[AVISO] Proveedor")]
+    assert "ninguno de los 1 proveedores con contrato en la obra 0720 casa" in nota
+    assert "PROPUESTA" not in nota
