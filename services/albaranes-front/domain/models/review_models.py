@@ -714,6 +714,42 @@ def aviso_suma_importes(
     )
 
 
+def posiciones_filas_ficha(display_lines: list[Any]) -> dict[int, int]:
+    """(F-077 R25) ``valuation_line_id`` => posición (desde 1) de la fila en la
+    tabla de líneas de la ficha: las ``display_lines`` con conciliación, en su
+    orden (las que pinta la plantilla, ``{% if dline.concilia %}``), la misma
+    numeración que dan los avisos de aprobar (F-065 R20)."""
+    posiciones: dict[int, int] = {}
+    numero = 0
+    for linea in display_lines:
+        if linea.concilia is None:
+            continue
+        numero += 1
+        if linea.valuation_line_id is not None:
+            posiciones[linea.valuation_line_id] = numero
+    return posiciones
+
+
+def aviso_partida_texto(
+    agree: bool | None, *, kind: str | None, leida: str | None,
+) -> str | None:
+    """(F-077 R21, R22) El aviso del ⚠ de la partida de una fila, o ``None``.
+
+    Solo en filas de origen Contrato (``kind == "assigned"``) cuya partida
+    leída en el albarán (``leida``, recortada y no vacía) no coincide con la
+    de su línea de contrato (``agree is False``, el cálculo de siempre: F-076
+    lo hace por la clave de comun). Las Nueva ya dicen con la insignia que no
+    coinciden con el contrato; las filas sin línea del albarán no tienen
+    lectura que comparar (el repositorio ni siquiera llama aquí).
+    """
+    if agree is not False or kind != "assigned":
+        return None
+    texto = (leida or "").strip()
+    if not texto:
+        return None
+    return f"No coincide con la partida leída en el albarán ({texto})"
+
+
 def _numero_es(valor: object) -> object:
     """Número tecleado en la ficha: admite coma decimal (``1.234,5``); vacío
     o «—» es ``None``; uno ilegible o no finito es un error de validación
@@ -1231,6 +1267,13 @@ class ConciliacionDisplay(BaseModel):
     # iguales, si no coinciden (⚠) o si no hay nada que comparar.
     partida_normalizada_desde: str | None = None
 
+    # (F-077 R21, R22) Texto del ⚠ de la partida («No coincide con la partida
+    # leída en el albarán (X)»): solo en filas con línea del albarán de origen
+    # Contrato cuya lectura no coincide (``aviso_partida_texto``). ``None`` en
+    # el resto (sintéticas, ``manual``, ``reparto``, Nueva): sin ⚠ aunque
+    # ``agree_partida`` sea false. Excluyente con ``partida_normalizada_desde``.
+    aviso_partida: str | None = None
+
     # Senales para el calculo determinista de CONFIANZA (no se pintan):
     #   match_method / match_confidence_pct -> distinguir match fuerte
     #     (codigo/exacto) de semantico-familia (conf <= 50) y de manual.
@@ -1484,6 +1527,13 @@ class DocumentDetailPayload(BaseModel):
     alta_puede_solicitar: bool = False
     #: F-053 v8 (R30, O1 = a): «Reintentar adjunto».
     alta_puede_reintentar_adjunto: bool = False
+    #: F-077 R14: fase del panel del alta (``en_curso`` / ``sin_respuesta`` /
+    #: ``resultado``). Con DESDE vacía, el defecto: el panel ni se pinta (R3).
+    alta_fase: str = "resultado"
+    #: F-077 R24, R25: motivos de línea del alta sin fila en la tabla del panel,
+    #: con «Línea N» (posición en la ficha) o «Línea (ref. X)»; los pone el
+    #: servicio con DESDE puesta.
+    alta_motivos_linea: list[dict[str, Any]] = Field(default_factory=list)
     productos_sigrid: dict[int, ProductoLinea] = Field(default_factory=dict)
     productos_admitidos: list[ProductoOpcion] = Field(default_factory=list)
 

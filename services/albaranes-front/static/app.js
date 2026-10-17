@@ -1053,12 +1053,6 @@
         return malas;
     }
 
-    // Lo mismo esperando la lista (solo para marcar: el aviso de «Guardar» de
-    // la cabecera no envía filas).
-    async function partidasInvalidas(filas) {
-        return partidasMalas(filas, (await cargarPartidasObra()).items);
-    }
-
     // F-065 R8: ¿el mismo número? Tolerancia de coma flotante, no de dinero
     // (un precio de 4 decimales o una cantidad de 3 cuentan).
     function numerosIguales(a, b) {
@@ -1097,14 +1091,77 @@
         return body;
     }
 
-    // F-065 R18, R19: cuántas filas tienen cambios sin guardar.
-    function contarFilasConCambios(filas) {
+    // F-065 R18, F-077 R12: las filas (``tr``) de ``filas`` que tienen id de
+    // valoración y algo cambiado (cuerpo de PATCH no vacío), en su orden.
+    function filasConCambios(filas) {
         return filas.filter(function (tr) {
-            return Object.keys(_camposCambiados(tr)).length > 0;
-        }).length;
+            const vid = (tr.dataset.forValuationLineId || "").trim();
+            return vid && Object.keys(_camposCambiados(tr)).length > 0;
+        });
     }
 
-    // F-065 R19: aviso antes de «Guardar» / «Guardar y aprobar».
+    // F-065 R29: cuántas filas tienen cambios sin guardar (lo usa la
+    // confirmación de «Dividir», que recarga la ficha; F-077 ya no lo usa al
+    // guardar la cabecera).
+    function contarFilasConCambios(filas) {
+        return filasConCambios(filas).length;
+    }
+
+    // F-077 R12: el motivo de una respuesta no ok: el ``detail`` del servidor
+    // (la lista de un 422 unida con « | ») o, si no, el ``statusText``.
+    async function motivoDeRespuesta(resp) {
+        let motivo = resp.statusText;
+        try {
+            const b = await resp.json();
+            if (Array.isArray(b.detail)) {
+                motivo = b.detail.map(function (e) {
+                    const loc = e.loc ? e.loc.join(".") : "";
+                    return (loc ? loc + ": " : "") + (e.msg || "");
+                }).join(" | ");
+            } else if (b.detail) {
+                motivo = b.detail;
+            }
+        } catch (_) {}
+        return motivo;
+    }
+
+    // F-077 R12: el PATCH de fila (F-065 R8, R13: solo lo cambiado, y guardar
+    // = bloquear). Única petición de este tipo en el fichero: la usan el
+    // «Guardar» de cada fila, «Guardar todas» y el guardado previo de
+    // «Guardar» / «Guardar y aprobar». ``null`` si fue bien; si no, el motivo.
+    async function enviarFila(vid, cuerpo) {
+        let resp;
+        try {
+            resp = await fetch(
+                `/api/documents/${documentId}/lines/${vid}/conciliacion/campos?bloquear=1`,
+                {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(cuerpo),
+                }
+            );
+        } catch (_) {
+            return "error de red";
+        }
+        return resp.ok ? null : await motivoDeRespuesta(resp);
+    }
+
+    // F-077 R5: una fila recién guardada (y bloqueada en el servidor): lo
+    // enviado pasa a ser su valor inicial, sin marca de cambio y en solo
+    // lectura, así un reintento no la reenvía (el servidor daría 409).
+    function consolidarFila(tr) {
+        tr.querySelectorAll(".js-cedit").forEach(function (inp) {
+            inp.defaultValue = inp.value;
+            inp.classList.remove("cedit-dirty");
+            inp.disabled = true;
+        });
+        const boton = tr.querySelector(".js-cedit-save");
+        if (boton) { boton.disabled = true; }
+    }
+
+    // F-065 R29: aviso de la confirmación de «Dividir» (recarga la ficha y se
+    // perderían). Desde F-077 ya no se da al guardar la cabecera (R13): esos
+    // botones guardan antes las filas.
     function avisoFilasSinGuardar(n) {
         if (!n) { return null; }
         return n === 1
@@ -1212,36 +1269,14 @@
                 const body = _camposCambiados(tr);
                 const original = saveBtn.textContent;
                 saveBtn.textContent = "Guardando…";
-                try {
-                    const resp = await fetch(
-                        `/api/documents/${documentId}/lines/${vid}/conciliacion/campos?bloquear=1`,
-                        {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(body),
-                        }
-                    );
-                    if (!resp.ok) {
-                        let detail = resp.statusText;
-                        try {
-                            const b = await resp.json();
-                            if (Array.isArray(b.detail)) {
-                                detail = b.detail.map(function (e) {
-                                    const loc = e.loc ? e.loc.join(".") : "";
-                                    return (loc ? loc + ": " : "") + (e.msg || "");
-                                }).join(" | ");
-                            } else if (b.detail) {
-                                detail = b.detail;
-                            }
-                        } catch (_) {}
-                        throw new Error(detail);
-                    }
+                const motivo = await enviarFila(vid, body);
+                if (motivo === null) {
                     window.location.reload();
-                } catch (exc) {
-                    window.alert("Error al guardar la línea: " + (exc && exc.message || exc));
-                    saveBtn.disabled = false;
-                    saveBtn.textContent = original;
+                    return;
                 }
+                window.alert("Error al guardar la línea: " + motivo);
+                saveBtn.disabled = false;
+                saveBtn.textContent = original;
             });
         });
     }
@@ -1505,11 +1540,7 @@
     if (saveAllLinesBtn) {
         saveAllLinesBtn.addEventListener("click", async function () {
             function conCambios() {
-                return [].filter.call(linesBody.querySelectorAll("tr.concilia-editable"), function (tr) {
-                    const vid = (tr.dataset.forValuationLineId || "").trim();
-                    const cuerpo = _camposCambiados(tr);
-                    return vid && Object.keys(cuerpo).length;
-                });
+                return filasConCambios([].slice.call(linesBody.querySelectorAll("tr.concilia-editable")));
             }
             if (!conCambios().length) {
                 window.alert("No hay cambios en las líneas.");
@@ -1534,30 +1565,9 @@
             const errores = [];
             for (let i = 0; i < envios.length; i++) {
                 const vid = envios[i].vid;
-                try {
-                    const resp = await fetch(
-                        `/api/documents/${documentId}/lines/${vid}/conciliacion/campos?bloquear=1`,
-                        {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(envios[i].cuerpo),
-                        }
-                    );
-                    if (!resp.ok) {
-                        let d = resp.statusText;
-                        try {
-                            const b = await resp.json();
-                            if (Array.isArray(b.detail)) {
-                                d = b.detail.map(function (e) {
-                                    const loc = e.loc ? e.loc.join(".") : "";
-                                    return (loc ? loc + ": " : "") + (e.msg || "");
-                                }).join(" | ");
-                            } else if (b.detail) { d = b.detail; }
-                        } catch (_) {}
-                        errores.push("Línea " + vid + ": " + d);
-                    }
-                } catch (_) {
-                    errores.push("Línea " + vid + ": error de red");
+                const motivo = await enviarFila(vid, envios[i].cuerpo);
+                if (motivo !== null) {
+                    errores.push("Línea " + vid + ": " + motivo);
                 }
             }
             if (errores.length) {
@@ -2181,20 +2191,119 @@
         return true;
     }
 
-    // F-065 R19, R21: antes del PUT, nada de filas con cambios sin guardar
-    // y, al aprobar, confirmación si la suma de las filas no cuadra con lo
-    // leído en el albarán.
+    // F-077 R4: la fila cuyo PATCH falló, en rojo con su motivo en el title.
+    function marcarFilaNoGuardada(tr, motivo) {
+        tr.classList.add("fila-no-guardada");
+        tr.title = motivo;
+    }
+
+    function limpiarFilasNoGuardadas() {
+        linesBody.querySelectorAll("tr.fila-no-guardada").forEach(function (tr) {
+            tr.classList.remove("fila-no-guardada");
+            tr.title = "";
+        });
+    }
+
+    // F-077 R1, R3–R5: guarda, una a una y en el orden de la tabla, las filas
+    // con cambios (el mismo PATCH que el «Guardar» de cada fila). Primero espera
+    // la lista de partidas y, en el mismo tick, elige las filas, las valida
+    // (F-065 R27 v5) y arma los cuerpos: lo validado es lo enviado (CR4). Al
+    // primer fallo para; cada fila guardada se consolida. Devuelve
+    // ``{malas, guardadas, motivo}``.
+    async function guardarFilasPendientes() {
+        const lista = await cargarPartidasObra();
+        const filas = filasConCambios([].slice.call(linesBody.querySelectorAll("tr.concilia-editable")));
+        if (partidasMalas(filas, lista.items).length) {
+            return { malas: true, guardadas: 0, motivo: null };
+        }
+        const envios = filas.map(function (tr) {
+            return { tr: tr, vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };
+        });
+        let guardadas = 0;
+        for (let i = 0; i < envios.length; i++) {
+            const motivo = await enviarFila(envios[i].vid, envios[i].cuerpo);
+            if (motivo !== null) {
+                marcarFilaNoGuardada(envios[i].tr, motivo);
+                return { malas: false, guardadas: guardadas, motivo: motivo };
+            }
+            consolidarFila(envios[i].tr);
+            guardadas += 1;
+        }
+        return { malas: false, guardadas: guardadas, motivo: null };
+    }
+
+    // F-077 R6, R8: el aviso de la suma tras guardar filas (el pintado al
+    // cargar ya no vale): ``aviso_suma`` del documento, "" si cuadra, o null
+    // si la lectura falla.
+    async function avisoSumaVigente() {
+        try {
+            const resp = await fetch(`/api/documents/${documentId}`, {
+                headers: { "Accept": "application/json" },
+            });
+            if (!resp.ok) { return null; }
+            const doc = await resp.json();
+            return (doc && doc.aviso_suma) || "";
+        } catch (_) {
+            return null;
+        }
+    }
+
+    // F-077 R1–R10 (sustituye a F-065 R19; R21 se mantiene): «Guardar» y
+    // «Guardar y aprobar» guardan antes las filas con cambios y solo si todas
+    // van bien guardan (o aprueban) la cabecera. No es atómico: si algo falla
+    // después, las filas guardadas quedan guardadas. Mientras dura, los dos
+    // botones desactivados y un segundo clic no hace nada (R10); al parar sin
+    // navegar vuelven a como estaban (el de aprobar puede venir desactivado de
+    // la plantilla si no está valorado).
     async function guardarCabecera(markApproved) {
-        const filas = [].slice.call(linesBody.querySelectorAll("tr.concilia-editable"));
-        let aviso = avisoFilasSinGuardar(contarFilasConCambios(filas));
-        if (aviso) {
-            await partidasInvalidas(filas);  // R27 v5: las que no valen, en rojo
-            window.alert(aviso);
+        if (guardarCabecera.enMarcha) { return; }
+        guardarCabecera.enMarcha = true;
+        const botones = [saveBtn, approveBtn].filter(Boolean);
+        const antes = botones.map(function (b) { return b.disabled; });
+        botones.forEach(function (b) { b.disabled = true; });
+        function reactivar() {
+            botones.forEach(function (b, i) { b.disabled = antes[i]; });
+            guardarCabecera.enMarcha = false;
+        }
+
+        limpiarFilasNoGuardadas();
+        const r = await guardarFilasPendientes();
+        if (r.malas) {
+            window.alert("Hay partidas no válidas (en rojo): elige una de la lista o déjala vacía (almacén).");
+            reactivar();
             return;
         }
-        aviso = markApproved && approveBtn ? approveBtn.dataset.avisoSuma : "";
-        if (aviso && !window.confirm(aviso)) { return; }
-        sendSave(markApproved);
+        if (r.motivo !== null) {
+            window.alert("No se pudo guardar una línea (en rojo): " + r.motivo + ". "
+                + (markApproved ? "No se ha aprobado el albarán." : "No se ha guardado la cabecera."));
+            reactivar();
+            return;
+        }
+        if (markApproved) {
+            // R6 (F-065 R21): confirmar con el aviso de la suma, el vigente si
+            // se acaba de guardar alguna fila.
+            const aviso = r.guardadas
+                ? await avisoSumaVigente()
+                : (approveBtn ? approveBtn.dataset.avisoSuma || "" : "");
+            if (aviso === null) {
+                window.alert("No se pudo comprobar la suma de las líneas: recarga y vuelve a aprobar.");
+                window.location.reload();
+                return;
+            }
+            if (aviso && !window.confirm(aviso)) {
+                if (r.guardadas) { window.location.reload(); } else { reactivar(); }
+                return;
+            }
+        }
+        let ok = false;
+        try {
+            ok = await sendSave(markApproved);
+        } catch (_) {
+            alert("Error al guardar: error de red");
+        }
+        if (!ok) {
+            if (r.guardadas) { window.location.reload(); } else { reactivar(); }
+        }
     }
 
     if (saveBtn) saveBtn.addEventListener("click", function () { guardarCabecera(false); });
@@ -3499,4 +3608,40 @@
             }
         });
     });
+})();
+// ------------------------------------------------------------------- //
+// F-077 R19: con el panel del alta en «Alta en curso…» (data-fase), la
+// ficha pregunta la fase cada 3 s fijos a una ruta de solo lectura (R18) y
+// recarga UNA vez cuando deja de estar en curso. setTimeout encadenado
+// (nunca setInterval: una respuesta lenta no apila peticiones). Un error de
+// red, una respuesta no ok o un JSON ilegible no paran; un 404 sí. El tope de
+// 5 min lo decide el servidor. Bloque autónomo: la ficha aprobada no monta el
+// bloque de edición.
+// ------------------------------------------------------------------- //
+(function () {
+    const SONDEO_ALTA_MS = 3000;
+
+    function sondearAltaEnCurso(panel) {
+        if (!panel || panel.dataset.fase !== "en_curso") { return; }
+        const url = `/api/documents/${encodeURIComponent(panel.dataset.documentId || "")}/alta-sigrid/fase`;
+        function programar() { setTimeout(consultar, SONDEO_ALTA_MS); }
+        async function consultar() {
+            let datos = null;
+            try {
+                const resp = await fetch(url, { headers: { "Accept": "application/json" } });
+                if (resp.status === 404) { return; }
+                if (resp.ok) { datos = await resp.json(); }
+            } catch (e) {
+                datos = null;
+            }
+            if (!datos || typeof datos.fase !== "string" || datos.fase === "en_curso") {
+                programar();
+                return;
+            }
+            window.location.reload();
+        }
+        programar();
+    }
+
+    sondearAltaEnCurso(document.getElementById("alta-sigrid"));
 })();

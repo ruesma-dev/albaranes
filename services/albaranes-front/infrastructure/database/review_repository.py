@@ -48,6 +48,7 @@ from domain.models.review_models import (
     cambia_origen,
     cantidades_tras_editar,
     cantidades_tras_reapuntar,
+    aviso_partida_texto,
     coincide_partida,
     MOTIVO_UNIDAD_CAMBIADA,
     motivos_con,
@@ -4751,6 +4752,12 @@ class AlbaranReviewRepository:
                     _conc.partida_normalizada_desde,
                 ) = coincide_partida(
                     line.codigo_imputacion, _partida_del_contrato(_conc)
+                )
+                # (F-077 R21, R22) el ⚠ solo aquí, con lectura del albarán y
+                # en filas Contrato; las sin blanca (abajo) nunca lo llevan.
+                _conc.aviso_partida = aviso_partida_texto(
+                    _conc.agree_partida, kind=_conc.kind,
+                    leida=line.codigo_imputacion,
                 )
                 # cantidad: la salmon copia la de la blanca (coincide si hay)
                 _conc.agree_cantidad = _agree_num(line.cantidad, line.cantidad)

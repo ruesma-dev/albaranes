@@ -1,6 +1,60 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-077 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`; espera la MANUAL T14, que hace el
+líder en el navegador tras desplegar sv4 (abajo)** — rama
+`feature/F-077-guardar-y-aprobar` (worktree `../albaranes-F-077`), `dev` fusionado. Spec v2 en
+`specs/F-077-guardar-y-aprobar/` (con las notas de implementación aceptadas en review); informe:
+`progress/impl_F-077.md`; review: `progress/review_F-077.md`; mutación: `progress/mutacion_F-077.md`. Solo sv4, rigor
+`estandar`. *Junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
+
+#### F-077 · MANUAL T14 (la hace el LÍDER en el navegador, con el humano)
+
+**Cuándo y dónde encaja.** Tras el APPROVED, la fusión en `dev` y `init.sh` en verde en el árbol principal. sv4 desde
+`dev` lleva F-078 y F-076: mientras su **secuencia combinada** (bloque «F-076 · MANUAL») siga pendiente, F-077 se
+despliega en su **paso 4** (`deploy.ps1 -Only sv4`, lo lanza el humano) y esta T14 va **justo después**; el punto 1
+va siempre **antes del paso 6** (F-078 T14), que deja `86c13097` en `simulado`. Nunca sv4 suelto antes del paso 3. Si
+la secuencia ya está hecha, el humano despliega sv4 con `. .\00_vars.ps1`, `. .\00_capps_vars.ps1`,
+`.\deploy.ps1 -Only sv4` y `.\check_deploy.ps1` (en `infra\`; VERDE: sv4 en el tag nuevo).
+
+Precondición: sv4 con `ALTA_SIGRID_DESDE_UTC` puesta y `ALTA_SIGRID_COMMIT=false`. **Acciones marcadas
+[ESCRIBE EN PRODUCCIÓN]: cada una necesita el sí expreso del humano en el chat, para esa acción, antes de pulsar.**
+El resto solo abre fichas y mira (sin escribir nada).
+
+1. **Solo lectura, ANTES del paso 6.** Abrir la ficha de `86c13097-98f8-4e4b-91af-6a378c28d9cf`. VERDE: el panel
+   «Alta en Sigrid» sale **en rojo** con «Error en el alta en Sigrid: No admitido» y, en su lista de motivos,
+   **«Línea N: La línea no tiene descripción»**, con N la posición de la fila 386 en la tabla de líneas de la ficha
+   (al pasar el ratón, `falta_descripcion`); las filas 385 y 386 (manuales) sin ⚠ de partida. Si el panel dice en su
+   lugar «Sigrid no ha respondido en 5 minutos…», se comprueba en solo lectura `SET default_transaction_read_only =
+   on; SELECT m.approved_at_utc, a.approved_at_utc, a.estado FROM albaran_documents_merge m JOIN albaran_altas_sigrid
+   a ON a.document_id = m.id WHERE m.id = '86c13097-98f8-4e4b-91af-6a378c28d9cf';`: si los dos instantes difieren, se
+   reaprobó sin respuesta de sv9 (el panel es correcto, pero el punto no se puede verificar: se avisa al humano).
+2. **Solo lectura, tras el paso 6** (F-078 T14, autorizado en su bloque). Reabrir `86c13097`. VERDE: panel sin
+   rojo (no `error`) con «Estado: Simulado (no grabado)» y sin el motivo «La línea no tiene descripción».
+3. **⚠ de partida (solo lectura).** En fichas que el humano indique (o las ya abiertas): ⚠ solo en filas «Contrato»
+   cuya partida leída no coincide, con tooltip «… · No coincide con la partida leída en el albarán (X)»; en «Nueva»,
+   manuales o partes de un reparto, ningún ⚠. VERDE: así en todas las vistas.
+4. **Partida no válida (no escribe nada si sale verde).** En una ficha pendiente que elija el humano: escribir `zzzz`
+   en la partida de una fila y pulsar «Guardar y aprobar». VERDE: aviso «Hay partidas no válidas (en rojo)…», casilla
+   en rojo y, en F12 → Red, **ninguna** petición PATCH ni PUT. Después, recargar sin guardar (la fila vuelve como
+   estaba y el albarán sigue pendiente). Si saliera alguna petición, es el defecto: parar y avisar.
+5. **[ESCRIBE EN PRODUCCIÓN] «Guardar y aprobar» con filas cambiadas.** Solo si el humano tiene un albarán pendiente
+   que **necesite de verdad** corregir una o más filas: la ficha y los valores los elige él (nada inventado: con
+   `COMMIT=false` sale `simulado`, pero un «Solicitar alta» posterior con `COMMIT=true` mandaría esos valores a
+   Sigrid). Escribe en producción: (a) el **PATCH de cada fila** cambiada (`…/conciliacion/campos?bloquear=1`: la
+   guarda y la bloquea), (b) el **PUT de aprobación** de la cabecera y (c) la **publicación en `q-feedback`** del alta
+   para sv9. Con el sí expreso del humano para esas tres, cambiar las filas **sin** pulsar su «Guardar» y pulsar
+   «Guardar y aprobar» (aceptar la confirmación de la suma si sale). VERDE: la **misma ficha se recarga aprobada**
+   (solo lectura, con el mensaje de guardado) con las filas guardadas con los valores nuevos; el panel dice «Alta en
+   curso…» sin estado viejo ni botones, F12 → Red enseña `/alta-sigrid/fase` cada 3 s, y en segundos la ficha se
+   recarga sola con el resultado de sv9 (lo esperable con `COMMIT=false`: «Estado: Simulado (no grabado)»; si sale
+   `no_admitido`/`revisar`/`error`, en rojo y con sus motivos en texto). **Si no hay ninguna corrección real
+   pendiente, este punto no se hace:** «guardar las filas antes de aprobar» queda cubierto por
+   `tests/test_f077_guardar_y_aprobar_js.py` (23 tests con node) y se anota así.
+
+Con el verde de 1–4 (y el de 5 o su «no aplica» anotado), el líder lo anota en `progress/impl_F-077.md` (§6) y
+F-077 pasa a `done`.
+
 **F-076 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`; espera las MANUAL T18–T20 (secuencia combinada con F-078, abajo)** — rama `feature/F-076-normalizar-partidas`
 (worktree `../albaranes-F-076`), `dev` fusionado (F-078 incluida). T1–T17 y T5b hechas; T18–T20 son MANUAL del humano
 (abajo). Informe: `progress/impl_F-076.md`; mutación: `progress/mutacion_F-076.md`. `azure-apps` `8a6f63c` (sin
@@ -67,6 +121,8 @@ cd C:\Users\pgris\PycharmProjects\albaranes\infra
 .\deploy.ps1 -Only sv4
 .\check_deploy.ps1
 #    VERDE: check_deploy con sv6 y sv4 en el tag nuevo.
+#    Si F-077 ya está en dev, este sv4 la lleva: su T14 (bloque «F-077 · MANUAL T14») va justo después, y su
+#    punto 1 (86c13097 en no_admitido, solo lectura) siempre antes del paso 6.
 
 # 5. relectura de F-078 tras sv4 (cierra la ventana entre el relleno y sv4)
 cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
@@ -76,7 +132,7 @@ Quitar-PgAzure
 #    VERDE: «Filas que cambiarían: 0». Si da más: repite el paso 3 (misma autorización) y este.
 ```
 
-6. **F-078 T14**: «Solicitar alta en Sigrid» en `86c13097-98f8-4e4b-91af-6a378c28d9cf` desde la ficha y, en solo
+6. **F-078 T14** (con F-077 desplegada, después de su punto 1 de T14): «Solicitar alta en Sigrid» en `86c13097-98f8-4e4b-91af-6a378c28d9cf` desde la ficha y, en solo
    lectura, `SET default_transaction_read_only = on; SELECT estado, historial_json FROM albaran_altas_sigrid WHERE
    document_id = '86c13097-98f8-4e4b-91af-6a378c28d9cf';`. VERDE: ya no termina en `no_admitido` con
    `falta_descripcion` (con `ALTA_SIGRID_COMMIT=false`, `simulado`). Comprobación en la ficha, la del bloque de F-078.

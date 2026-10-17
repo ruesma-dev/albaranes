@@ -739,17 +739,19 @@
                                     {% set _almacen = c.estado_partida == 'almacen' %}
                                     {# F-076 R24: leída y casada iguales por la clave de comun pero no literalmente ⇒ nota en el title. #}
                                     {% set _nota_normalizada = ('Normalizada: ' ~ c.partida_normalizada_desde ~ ' → ' ~ (c.codigo_partida or '')) if c.partida_normalizada_desde else '' %}
-                                    {% set _title_partida = (c.descripcion_partida or '') ~ (' · ' if c.descripcion_partida and _nota_normalizada else '') ~ _nota_normalizada %}
+                                    {# F-077 R22 (al fusionar F-076): «descripción · [nota F-076] · [aviso F-077]»; la nota y el aviso se excluyen (✓ frente a ⚠). #}
+                                    {% set _title_partida = [c.descripcion_partida, _nota_normalizada, c.aviso_partida] | select | join(' · ') %}
                                     <td class="concilia-td" data-col="partida" data-sort-value="{{ 'Almacén' if _almacen else (c.codigo_partida or '') }}">
                                         {% if cedit %}
-                                            <input type="text" class="cell-input js-cedit js-partida-combo{% if _almacen %} partida-almacen{% elif c.agree_partida == true %} cedit-ok{% elif c.agree_partida == false %} cedit-warn{% endif %}"
+                                            <input type="text" class="cell-input js-cedit js-partida-combo{% if _almacen %} partida-almacen{% elif c.agree_partida == true %} cedit-ok{% elif c.aviso_partida %} cedit-warn{% endif %}"
                                                    data-field="codigo_partida" data-identity="1"
                                                    data-valuation-line-id="{{ dline.valuation_line_id }}"
                                                    value="{{ c.codigo_partida or '' }}" placeholder="{{ 'Almacén' if _almacen else '—' }}" autocomplete="off"
                                                    title="{{ 'Va a almacén: no se imputa a ninguna partida' if _almacen else _title_partida }}">
                                         {% elif _almacen %}
                                             <span class="concilia-val partida-almacen" title="Va a almacén: no se imputa a ninguna partida">Almacén</span>
-                                        {% elif c.agree_partida == false %}
+                                        {% elif c.aviso_partida %}
+                                            {# F-077 R21: el ⚠ solo en filas Contrato con lectura del albarán distinta. #}
                                             <span class="concilia-price-warn" title="{{ _title_partida }}"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ c.codigo_partida or '—' }}</span>
                                         {% else %}
                                             <span class="concilia-val" title="{{ _title_partida }}">{{ c.codigo_partida or '—' }}</span>
