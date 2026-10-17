@@ -33,17 +33,25 @@ expansión de abreviaturas). Si no casa, lo dice y la lectura se queda.
   :func:`casar_partida` y sus motivos.
 - (F-076) :func:`resolver_partida_obra`: qué partida debe usar quien valora
   (el código de la lista o la lectura intacta) con la guarda de no hoja.
+- (F-076) :class:`CachePartidasObra`: la lista por obra en memoria del
+  proceso (TTL, LRU, fallo recordado); nunca lanza.
 """
 from __future__ import annotations
 
+import logging
 import re
+import threading
+import time
 import unicodedata
-from collections.abc import Sequence
+from collections import OrderedDict
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol
 
 from ruesma_comun.obras import canonizar_codigo_obra
 from ruesma_comun.sigrid.lectura import MAX_FILAS_POR_PETICION, PoliticaTruncado
+
+logger = logging.getLogger(__name__)
 
 # Partidas del presupuesto de una obra (obrparpar). Es la
 # ``_SQL_PARTIDAS_POR_OBRA`` de sv4 (``sigrid_lookup_client.py``) del
@@ -486,3 +494,111 @@ def resolver_partida_obra(lista: ListaPartidasObra, lectura: Any, alm: str | Non
     if caso.motivo == MOTIVO_AMBIGUA:
         return ResolucionPartida(leida, RESOLUCION_AMBIGUA, leida)
     return ResolucionPartida(leida, RESOLUCION_FUERA_DE_LISTA, leida)
+
+
+@dataclass
+class _Entrada:
+    lista: ListaPartidasObra | None  # la última buena (puede estar caducada)
+    leida_en: float | None  # cuándo se leyó la buena
+    fallo_hasta: float | None  # hasta cuándo no se reconsulta tras un fallo
+
+
+class CachePartidasObra:
+    """Lista de partidas por obra en memoria del proceso (F-076 R6).
+
+    - Clave: la obra canonizada (``canonizar_codigo_obra``); vacía ⇒ ``None``
+      sin consultar.
+    - N peticiones de la misma obra dentro de ``ttl_s`` ⇒ UNA consulta.
+    - Más de ``max_obras`` ⇒ sale la menos usada (LRU).
+    - Si la consulta falla o trunca: la lista caducada si la hay o, si no,
+      ``None``; el fallo se recuerda ``ttl_fallo_s`` sin reconsultar (para no
+      martillear sigrid-api) y se registra un WARNING con la obra y la causa.
+    - Una lista con 0 hojas cuenta como «sin lista» (``None``), pero se
+      cachea como cualquier otra.
+    - Nunca lanza: degradar es la norma (quien llama valora como siempre).
+
+    Implementa ``PartidasObraPort`` de sv6. Segura entre hilos: el estado va
+    bajo un candado; la consulta, fuera de él.
+    """
+
+    def __init__(
+        self,
+        lector: LectorSql,
+        *,
+        ttl_s: float,
+        max_obras: int,
+        ttl_fallo_s: float,
+        reloj: Callable[[], float] = time.monotonic,
+    ) -> None:
+        if ttl_s < 0 or ttl_fallo_s < 0:
+            raise ValueError("CachePartidasObra: ttl_s y ttl_fallo_s no pueden ser negativos")
+        if max_obras < 1:
+            raise ValueError("CachePartidasObra: max_obras debe ser >= 1")
+        self._lector = lector
+        self._ttl_s = ttl_s
+        self._max_obras = max_obras
+        self._ttl_fallo_s = ttl_fallo_s
+        self._reloj = reloj
+        self._entradas: OrderedDict[str, _Entrada] = OrderedDict()
+        self._candado = threading.Lock()
+
+    def lista(self, obra: str | None) -> ListaPartidasObra | None:
+        """Lista de ``obra`` (hojas > 0) o ``None`` si no hay; nunca lanza."""
+        try:
+            return self._lista(obra)
+        except Exception as exc:  # noqa: BLE001 - R6: nunca lanza
+            logger.warning("[partidas-obra] obra=%s fallo inesperado: %r", obra, exc)
+            return None
+
+    def _lista(self, obra: str | None) -> ListaPartidasObra | None:
+        clave = canonizar_codigo_obra(obra)
+        if clave is None:
+            return None
+        ahora = self._reloj()
+        with self._candado:
+            entrada = self._entradas.get(clave)
+            if entrada is not None:
+                self._entradas.move_to_end(clave)
+                vigente = entrada.leida_en is not None and ahora - entrada.leida_en < self._ttl_s
+                en_fallo = entrada.fallo_hasta is not None and ahora < entrada.fallo_hasta
+                if vigente or en_fallo:
+                    return _con_hojas(entrada.lista)
+        inicio = time.perf_counter()
+        try:
+            lista = leer_partidas_obra(self._lector, clave)
+        except Exception as exc:  # noqa: BLE001 - fallo o truncado: se degrada
+            with self._candado:
+                previa = self._entradas.get(clave)
+                vieja = previa.lista if previa is not None else None
+                leida_en = previa.leida_en if previa is not None else None
+                self._guardar(clave, _Entrada(vieja, leida_en, ahora + self._ttl_fallo_s))
+            logger.warning(
+                "[partidas-obra] obra=%s sin lista de sigrid-api (%s); se usa %s y no se reconsulta en %ss",
+                clave,
+                exc,
+                "la lista caducada" if vieja is not None else "ninguna",
+                self._ttl_fallo_s,
+            )
+            return _con_hojas(vieja)
+        with self._candado:
+            self._guardar(clave, _Entrada(lista, ahora, None))
+        logger.info(
+            "[partidas-obra] obra=%s hojas=%s segundos=%.2f",
+            clave,
+            len(lista.hojas) if lista is not None else 0,
+            time.perf_counter() - inicio,
+        )
+        return _con_hojas(lista)
+
+    def _guardar(self, clave: str, entrada: _Entrada) -> None:
+        self._entradas[clave] = entrada
+        self._entradas.move_to_end(clave)
+        while len(self._entradas) > self._max_obras:
+            self._entradas.popitem(last=False)
+
+
+def _con_hojas(lista: ListaPartidasObra | None) -> ListaPartidasObra | None:
+    """0 hojas cuenta como «sin lista» (F-076 R6, como el remate de F-049)."""
+    if lista is None or not lista.hojas:
+        return None
+    return lista

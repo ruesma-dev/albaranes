@@ -35,6 +35,7 @@ from ruesma_comun.sigrid.partidas import (
     MOTIVO_SIN_PARTIDA,
     MOTIVOS_PARTIDA,
     SQL_PARTIDAS_POR_OBRA,
+    CachePartidasObra,
     CasePartida,
     ListaPartidasObra,
     PartidaObra,
@@ -529,3 +530,196 @@ def test_f076_r5_resolucion_es_inmutable():
     res = resolver_partida_obra(_LISTA_0720, "CI.04.18", "ALM")
     with pytest.raises(AttributeError):
         res.codigo = "X"  # type: ignore[misc]
+
+
+# ------------------------------------------------------------------ #
+# R6 · CachePartidasObra: TTL, LRU, lista caducada ante fallo, fallo
+# recordado, 0 hojas ⇒ None, nunca lanza
+# ------------------------------------------------------------------ #
+class _Reloj:
+    def __init__(self) -> None:
+        self.ahora = 1000.0
+
+    def __call__(self) -> float:
+        return self.ahora
+
+
+class _Lector:
+    """Lector falso: cuenta las consultas por obra; puede fallar o truncar."""
+
+    def __init__(self, filas=None) -> None:
+        self.filas = _filas_arbol() if filas is None else filas
+        self.consultas: list[str] = []
+        self.fallo: Exception | None = None
+
+    def __call__(self, sql, parametros, etiqueta, politica, max_rows):
+        self.consultas.append(parametros[0])
+        if self.fallo is not None:
+            raise self.fallo
+        return list(_COLUMNAS), [list(f) for f in self.filas]
+
+
+def _cache(lector, reloj, *, ttl_s=21600, max_obras=64, ttl_fallo_s=300) -> CachePartidasObra:
+    return CachePartidasObra(lector, ttl_s=ttl_s, max_obras=max_obras, ttl_fallo_s=ttl_fallo_s, reloj=reloj)
+
+
+def test_f076_r6_n_peticiones_dentro_del_ttl_una_consulta():
+    lector, reloj = _Lector(), _Reloj()
+    cache = _cache(lector, reloj, ttl_s=100)
+    primera = cache.lista("0691")
+    for _ in range(5):
+        reloj.ahora += 19.9
+        assert cache.lista("691") is primera  # misma obra canonizada
+    assert lector.consultas == ["0691"]
+    assert primera is not None and primera.codigos == ("123", "ALM.1", "P4.01.09", "P5.01.02", "P5.01.09")
+
+
+def test_f076_r6_caducada_se_reconsulta():
+    lector, reloj = _Lector(), _Reloj()
+    cache = _cache(lector, reloj, ttl_s=100)
+    cache.lista("0691")
+    reloj.ahora += 99.9
+    cache.lista("0691")
+    assert lector.consultas == ["0691"]
+    reloj.ahora += 0.1
+    cache.lista("0691")
+    assert lector.consultas == ["0691", "0691"]
+
+
+def test_f076_r6_mas_de_max_obras_fuera_la_menos_usada():
+    lector, reloj = _Lector(), _Reloj()
+    cache = _cache(lector, reloj, max_obras=2)
+    cache.lista("0001")
+    cache.lista("0002")
+    cache.lista("0001")  # la 0002 pasa a ser la menos usada
+    cache.lista("0003")  # entra la 0003 y sale la 0002
+    assert lector.consultas == ["0001", "0002", "0003"]
+    cache.lista("0001")
+    cache.lista("0003")
+    assert lector.consultas == ["0001", "0002", "0003"]
+    cache.lista("0002")
+    assert lector.consultas == ["0001", "0002", "0003", "0002"]
+
+
+def test_f076_r6_fallo_sin_lista_previa_da_none_y_se_recuerda():
+    lector, reloj = _Lector(), _Reloj()
+    lector.fallo = RuntimeError("sigrid-api respondio 503")
+    cache = _cache(lector, reloj, ttl_fallo_s=300)
+    assert cache.lista("0691") is None
+    reloj.ahora += 299.9
+    assert cache.lista("0691") is None
+    assert lector.consultas == ["0691"]  # el fallo se recuerda: no se martillea
+    reloj.ahora += 0.1
+    lector.fallo = None
+    lista = cache.lista("0691")
+    assert lista is not None and lector.consultas == ["0691", "0691"]
+
+
+def test_f076_r6_fallo_con_lista_caducada_da_la_caducada():
+    lector, reloj = _Lector(), _Reloj()
+    cache = _cache(lector, reloj, ttl_s=100, ttl_fallo_s=300)
+    vieja = cache.lista("0691")
+    reloj.ahora += 100
+    lector.fallo = SigridRespuestaTruncada("partidas_obra_0691", 3)
+    assert cache.lista("0691") is vieja
+    reloj.ahora += 299
+    assert cache.lista("0691") is vieja
+    assert lector.consultas == ["0691", "0691"]
+    reloj.ahora += 1
+    lector.fallo = None
+    nueva = cache.lista("0691")
+    assert nueva is not None and nueva is not vieja
+    assert lector.consultas == ["0691", "0691", "0691"]
+
+
+def test_f076_r6_fallo_registra_warning_con_obra_y_causa(caplog):
+    lector, reloj = _Lector(), _Reloj()
+    lector.fallo = RuntimeError("sigrid-api respondio 503")
+    with caplog.at_level(logging.WARNING, logger="ruesma_comun.sigrid.partidas"):
+        _cache(lector, reloj).lista("0691")
+    (registro,) = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert "0691" in registro.getMessage()
+    assert "503" in registro.getMessage()
+
+
+def test_f076_r6_cero_hojas_es_sin_lista():
+    lector, reloj = _Lector(filas=[[1, None, "P5", "Capítulo"], [2, 1, None, "hoja sin cod"]]), _Reloj()
+    cache = _cache(lector, reloj)
+    assert cache.lista("0691") is None
+    assert cache.lista("0691") is None
+    assert lector.consultas == ["0691"]  # se cachea igual: no se reconsulta
+
+
+@pytest.mark.parametrize("obra", [None, "", "   "])
+def test_f076_r6_sin_obra_no_consulta(obra):
+    lector = _Lector()
+    assert _cache(lector, _Reloj()).lista(obra) is None
+    assert lector.consultas == []
+
+
+def test_f076_r6_nunca_lanza():
+    class _Roto:
+        def __call__(self, *args, **kwargs):
+            raise ValueError("cualquier cosa")
+
+    assert _cache(_Roto(), _Reloj()).lista("0691") is None
+
+
+def test_f076_r6_obras_distintas_no_se_mezclan():
+    lector, reloj = _Lector(), _Reloj()
+    cache = _cache(lector, reloj)
+    a, b = cache.lista("0691"), cache.lista("0692")
+    assert a is not None and b is not None
+    assert (a.obra, b.obra) == ("0691", "0692")
+    assert lector.consultas == ["0691", "0692"]
+
+
+def test_f076_r6_reloj_por_defecto_monotonic():
+    import time
+
+    cache = CachePartidasObra(_Lector(), ttl_s=1, max_obras=1, ttl_fallo_s=1)
+    assert cache._reloj is time.monotonic
+
+
+@pytest.mark.parametrize(
+    "kwargs", [{"ttl_s": -1}, {"max_obras": 0}, {"ttl_fallo_s": -1}],
+)
+def test_f076_r6_parametros_invalidos(kwargs):
+    base = {"ttl_s": 1, "max_obras": 1, "ttl_fallo_s": 1}
+    base.update(kwargs)
+    with pytest.raises(ValueError):
+        CachePartidasObra(_Lector(), **base)
+
+
+# ------------------------------------------------------------------ #
+# Exportes en ``ruesma_comun.sigrid`` (excepción consciente a D2)
+# ------------------------------------------------------------------ #
+def test_f076_t4_exportes_en_sigrid():
+    from ruesma_comun import sigrid
+    from ruesma_comun.sigrid import partidas
+
+    for nombre in (
+        "SQL_PARTIDAS_POR_OBRA",
+        "PartidaObra",
+        "ListaPartidasObra",
+        "CasePartida",
+        "LectorSql",
+        "normalizar_partida",
+        "partes_de_partida",
+        "hojas_de_filas",
+        "leer_partidas_obra",
+        "casar_partida",
+        "MOTIVOS_PARTIDA",
+        "ResolucionPartida",
+        "resolver_partida_obra",
+        "CachePartidasObra",
+    ):
+        assert nombre in sigrid.__all__
+        assert getattr(sigrid, nombre) is getattr(partidas, nombre)
+    assert "F-076" in (sigrid.__doc__ or "")
+
+
+def test_f076_t4_version_080():
+    import ruesma_comun
+
+    assert ruesma_comun.__version__ == "0.8.0"
