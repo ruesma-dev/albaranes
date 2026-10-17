@@ -1,7 +1,7 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-073 · `spec_ready` (2026-10-15), PARADA 1 APROBADA, prioridad 1, rigor `critico`** — proveedor por nombre en sv3 con un criterio único (similitud: TEYMACO casa con FEYMACO) y sin elegir en empates (incidencia 0694: 3 albaranes de FEYMACO asignados a HIERROS RODRIGO). Spec en `specs/F-073-proveedor-por-similitud/`, informe y decisiones P0–P7 en `progress/spec_F-073.md`; rama `feature/F-073-proveedor-por-similitud`, worktree `../albaranes-F-073`, `dev` (`e09916f`) fusionado.
+**F-073 · `in_progress` (2026-10-17, implementer; PARADA 1 APROBADA el 2026-10-15), prioridad 1, rigor `critico`** — proveedor por nombre en sv3 con un criterio único (similitud: TEYMACO casa con FEYMACO) y sin elegir en empates (incidencia 0694: 3 albaranes de FEYMACO asignados a HIERROS RODRIGO). Spec en `specs/F-073-proveedor-por-similitud/`, informe y decisiones P0–P7 en `progress/spec_F-073.md`; rama `feature/F-073-proveedor-por-similitud`, worktree `../albaranes-F-073`, `dev` (`e09916f`) fusionado.
 
 **F-077 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`; espera la MANUAL T14, que hace el
 líder en el navegador tras desplegar sv4 (abajo)** — rama
