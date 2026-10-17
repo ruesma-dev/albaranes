@@ -613,3 +613,47 @@ def test_f073_r14_paso2_con_los_3543_proveedores_del_doble():
     for leido, esperado in (("SALMEDINA", CIF_SALMEDINA), ("SALMEDlNA S.L.", CIF_SALMEDINA), ("PROVEEDOR", None)):
         assert _resolver_completo([], globales, leido).cif == esperado
     assert time.perf_counter() - inicio < 10
+
+
+# ------------------------------------------------------------------ #
+# R20 · el margen es un parámetro del constructor, con su defecto
+# ------------------------------------------------------------------ #
+def test_f073_r20_margen_por_defecto_y_en_el_log_de_instanciado(caplog):
+    import inspect
+
+    from application.services.header_resolver_service import HeaderResolverService
+
+    parametro = inspect.signature(HeaderResolverService.__init__).parameters["margen_nombre"]
+    assert parametro.kind is inspect.Parameter.KEYWORD_ONLY
+    assert parametro.default == MARGEN_NOMBRE_POR_DEFECTO == 0.25
+    with caplog.at_level(logging.INFO, logger=modulo_resolver.logger.name):
+        resolver(_ClienteRed([]), _RepoConLineas(), margen_nombre=0.4)
+    [instanciado] = [m for m in _mensajes(caplog) if "INSTANCIADO" in m]
+    assert "margen_nombre=0.4" in instanciado
+
+
+def test_f073_r20_el_margen_del_constructor_es_el_que_se_aplica():
+    """1,0 frente a 0,75: elige con 0,25 (inclusivo) y empata con 0,3."""
+    obra = [_resumen("B1", "ALFA BETA GAMMA DELTA"), _resumen("B2", "ALFA BETA GAMMA OMEGA")]
+    assert _paso1(obra, "ALFA BETA GAMMA DELTA")[0] == ("B1", "deterministic")
+    decision, repo = _paso1(obra, "ALFA BETA GAMMA DELTA", margen_nombre=0.3)
+    assert decision == (None, "deterministic")
+    assert repo.lista_motivos() == [_MOTIVO]
+    globales = [("B1", "ALFA BETA GAMMA DELTA"), ("B2", "ALFA BETA GAMMA OMEGA")]
+    assert _resolver_completo([], globales, "ALFA BETA GAMMA DELTA").cif == "B1"
+    repo = _RepoConLineas((), nombre="ALFA BETA GAMMA DELTA")
+    pasada(_ClienteGlobal([], globales), repo, margen_nombre=0.3)
+    assert repo.cif is None
+
+
+@pytest.mark.parametrize("modulo", ["interface_adapters/composition.py", "interface_adapters/api/app.py"])
+def test_f073_r20_las_dos_composiciones_usan_el_defecto(modulo):
+    """Sin variable de entorno ni interruptor (P2, P3): las composiciones no
+    pasan ``margen_nombre`` y ``config/settings.py`` no tiene un campo."""
+    from pathlib import Path
+
+    raiz = Path(__file__).resolve().parents[1]
+    fuente = (raiz / modulo).read_text(encoding="utf-8")
+    assert "HeaderResolverService(" in fuente
+    assert "margen_nombre" not in fuente
+    assert "margen_nombre" not in (raiz / "config" / "settings.py").read_text(encoding="utf-8")

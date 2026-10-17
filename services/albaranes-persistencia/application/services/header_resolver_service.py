@@ -224,6 +224,7 @@ class HeaderResolverService:
         correccion_score_min: float = 1.0,
         correccion_margen_distancia: int = 2,
         cifs_propios: frozenset[str] | None = None,
+        margen_nombre: float = MARGEN_NOMBRE_POR_DEFECTO,
     ) -> None:
         self._obra_client = obra_client
         self._proveedor_client = proveedor_client
@@ -238,19 +239,21 @@ class HeaderResolverService:
         self._correccion_enabled = bool(correccion_enabled)
         self._correccion_score_min = float(correccion_score_min)
         self._correccion_margen = int(correccion_margen_distancia)
-        # F-073 · R9: margen de la eleccion por nombre sobre el segundo CIF.
-        self._margen_nombre = MARGEN_NOMBRE_POR_DEFECTO
+        # F-073 · R9, R20: margen de la eleccion por nombre sobre el segundo
+        # CIF. Sin variable de entorno: las composiciones usan el defecto.
+        self._margen_nombre = float(margen_nombre)
         # F-063: CIF propios (el del cliente, Ruesma): nunca son proveedor.
         self._cifs_propios = (
             _cifs_propios_de_serie() if cifs_propios is None else cifs_propios
         )
         logger.info(
             "%s INSTANCIADO (enabled=%s min_score=%s familia=%s cif=%s "
-            "correccion=%s score_min=%s margen=%s cifs_propios=%s)",
+            "correccion=%s score_min=%s margen=%s cifs_propios=%s "
+            "margen_nombre=%s)",
             _LOG_PREFIX, enabled, self._min_score, self._familia_enabled,
             self._cif_enabled, self._correccion_enabled,
             self._correccion_score_min, self._correccion_margen,
-            sorted(self._cifs_propios),
+            sorted(self._cifs_propios), self._margen_nombre,
         )
 
     def resolve_merge_document(self, *, merge_document_id: str) -> None:
