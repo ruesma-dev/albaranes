@@ -19,6 +19,10 @@ Puro: sin E/S ni dependencias nuevas.
 from __future__ import annotations
 
 import unicodedata
+from collections.abc import Iterable
+from dataclasses import dataclass
+
+from ruesma_comun.proveedores import normalizar_cif
 
 #: R2 · formas jurídicas (lista cerrada): no identifican a nadie.
 FORMAS_JURIDICAS: frozenset[str] = frozenset(
@@ -29,12 +33,18 @@ FORMAS_JURIDICAS: frozenset[str] = frozenset(
 PALABRAS_VACIAS: frozenset[str] = frozenset(
     "de del la las el los y e en para por con a al".split()
 )
+#: R9 · margen por defecto sobre el segundo CIF (inclusivo).
+MARGEN_NOMBRE_POR_DEFECTO: float = 0.25
+
 #: R2 · signos que separan palabras.
 _SEPARADORES = str.maketrans({c: " " for c in ",.;:()[]{}-/\\\"'&+*_"})
 #: R5 · longitudes de palabra.
 _MINIMO_SUBCADENA = 3
 _MINIMO_APROXIMADA = 5
 _LONGITUD_EXACTA = 2
+#: R9 · tolerancia de coma flotante en el margen: las similitudes son
+#: fracciones de palabras y 2/3 - 5/12 da 0,2499… en vez de 0,25.
+_TOLERANCIA = 1e-9
 
 
 def palabras_razon_social(texto: str | None) -> tuple[str, ...]:
@@ -107,3 +117,88 @@ def similitud_razon_social(leido: str | None, candidato: str | None) -> float:
     if texto_a in texto_b or texto_b in texto_a:
         return 1.0
     return max(_direccion(a, b, texto_b), _direccion(b, a, texto_a))
+
+
+# ------------------------------------------------------------------ #
+# Elegir por nombre (R9–R12)
+# ------------------------------------------------------------------ #
+@dataclass(frozen=True)
+class CandidatoNombre:
+    """Un CIF con su mejor similitud frente al nombre leído."""
+
+    cif: str
+    nombre: str | None
+    similitud: float
+
+
+@dataclass(frozen=True)
+class EleccionPorNombre:
+    """Decisión de ``elegir_por_nombre``.
+
+    ``elegido``: el CIF elegido (R9) o ``None``. ``empatados``: solo cuando
+    el mejor llega al umbral y no saca el margen, los que quedan a MENOS del
+    margen del mejor, en orden (-similitud, cif) (R11). ``segunda``: la
+    similitud del segundo CIF, 0 sin segundo (R13). ``mejor``: el primero en
+    ese orden, elegido o no, para el log (R13).
+    """
+
+    elegido: CandidatoNombre | None
+    empatados: tuple[CandidatoNombre, ...]
+    segunda: float
+    mejor: CandidatoNombre | None
+
+
+def _orden(candidato: CandidatoNombre) -> tuple[float, str, str]:
+    return (-candidato.similitud, candidato.cif, candidato.nombre or "")
+
+
+def _decidir(
+    por_cif: Iterable[CandidatoNombre], *, umbral: float, margen: float,
+) -> EleccionPorNombre:
+    """R9 y R10 sobre candidatos ya agrupados (un CIF, una entrada)."""
+    ordenados = sorted(por_cif, key=_orden)
+    if not ordenados:
+        return EleccionPorNombre(elegido=None, empatados=(), segunda=0.0, mejor=None)
+    mejor = ordenados[0]
+    segunda = ordenados[1].similitud if len(ordenados) > 1 else 0.0
+    if mejor.similitud < umbral:
+        return EleccionPorNombre(elegido=None, empatados=(), segunda=segunda, mejor=mejor)
+    if mejor.similitud - segunda >= margen - _TOLERANCIA:
+        return EleccionPorNombre(elegido=mejor, empatados=(), segunda=segunda, mejor=mejor)
+    empatados = tuple(
+        c for c in ordenados if mejor.similitud - c.similitud < margen - _TOLERANCIA
+    )
+    return EleccionPorNombre(elegido=None, empatados=empatados, segunda=segunda, mejor=mejor)
+
+
+def elegir_por_nombre(
+    leido: str | None,
+    candidatos: Iterable[tuple[str | None, str | None]],
+    *,
+    umbral: float,
+    margen: float,
+) -> EleccionPorNombre:
+    """Elige un CIF solo por la similitud del nombre, nunca en un empate.
+
+    ``candidatos``: pares ``(cif, razón social)``. Se agrupan por
+    ``normalizar_cif(cif)`` o, si no normaliza, por el CIF recortado; un CIF
+    vacío se ignora. Cada CIF cuenta con su mejor similitud, y el CIF que se
+    devuelve es el de esa fila, recortado (el que se escribe en el merge).
+    Elige el mejor si llega a ``umbral`` y supera al segundo CIF en
+    ``margen`` o más (los dos inclusivos; sin segundo, cuenta 0). La
+    decisión no depende del orden de llegada (R12).
+    """
+    por_clave: dict[str, CandidatoNombre] = {}
+    for cif, nombre in candidatos:
+        recortado = (cif or "").strip()
+        clave = normalizar_cif(recortado) or recortado
+        if not clave:
+            continue
+        candidato = CandidatoNombre(
+            cif=recortado, nombre=nombre,
+            similitud=similitud_razon_social(leido, nombre),
+        )
+        actual = por_clave.get(clave)
+        if actual is None or _orden(candidato) < _orden(actual):
+            por_clave[clave] = candidato
+    return _decidir(por_clave.values(), umbral=umbral, margen=margen)
