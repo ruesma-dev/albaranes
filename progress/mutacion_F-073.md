@@ -58,7 +58,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 - Original: `and abs(len(otra) - len(palabra)) <= 1  # condición necesaria`
 - Mutado:   `and abs(len(otra) - len(palabra)) <= 2  # condición necesaria`
 
-#### Análisis (implementer, 2026-10-17): EQUIVALENTE · pendiente de la aceptación escrita del humano
+#### Análisis (implementer, 2026-10-17): EQUIVALENTE · **ACEPTADO por el humano (2026-10-17, por el chat al líder: «Acepto los dos»)**; confirmado por el reviewer (RM5)
 
 > Por qué ningún test lo caza: es un filtro previo que solo ahorra cálculo. Una distancia de Levenshtein ≤ 1
 > implica |Δlongitud| ≤ 1, así que `distancia_edicion(palabra, otra) <= 1`, en la condición siguiente, rechaza
@@ -72,7 +72,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 - Original: `if actual is None or _orden(candidato) < _orden(actual):`
 - Mutado:   `if actual is None or _orden(candidato) <= _orden(actual):`
 
-#### Análisis (implementer, 2026-10-17): EQUIVALENTE · pendiente de la aceptación escrita del humano
+#### Análisis (implementer, 2026-10-17): EQUIVALENTE · **ACEPTADO por el humano (2026-10-17, por el chat al líder: «Acepto los dos»)**; confirmado por el reviewer (RM5)
 
 > Por qué ningún test lo caza: `<` y `<=` solo difieren cuando `_orden(candidato) == _orden(actual)`, es decir,
 > con la misma similitud, el mismo CIF recortado y el mismo nombre. Como la similitud depende solo del nombre leído
