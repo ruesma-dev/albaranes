@@ -22,7 +22,7 @@ ni DDL. Spec aprobada el 2026-10-15 (PARADA 1). Bloqueo de T3 resuelto por el hu
 | T10 `docs/ARCHITECTURE.md`: regla 24 y la línea de la 17 | `9f7f489` |
 | T11 mutación (3 pasadas, 2 commits de tests) y cobertura | `0a5d6d3` · `0c169a1` · `cd67656` |
 | T12 MANUAL del humano: bloque «F-073 · MANUAL T12» en `current.md` (§5) | — |
-| T13 `bash harness/init.sh` en verde (§7) | commit de cierre |
+| T13 `bash harness/init.sh` en verde (§7) · fila en el inventario de mutación | `a5727fb` y el de cierre |
 
 Entorno: *junction* `services/albaranes-front/.venv` → venv de sv4 del árbol principal, como en F-077 y F-078.
 Sin ella, `init.sh` daba KO. Quitarla con `cmd /c rmdir services\albaranes-front\.venv` antes de `git worktree remove`.
@@ -180,17 +180,29 @@ No hay scripts contra la BBDD (no hace falta `Usar-PgAzure`). Nada de lo anterio
 - Mover el criterio a comun (P1).
 - Corregir los 3 merges: lo hace el revisor (paso 0).
 
-## 7. `bash harness/init.sh` al cierre
+## 7. `bash harness/init.sh` al cierre (2026-10-17, HEAD `a5727fb`)
 
-(se completa abajo)
+**Verde, `EXIT=0`.** Raíz: 1237 passed en 174,01 s. Servicios: sv1 205, sv2 397, **sv3 1496** (26,61 s), sv4 1715
+(187,66 s), sv5 43, sv6 444 (+1 skipped), sv9 670; comun en verde por caché (no cambia).
+
+Puertas:
+- `PUERTA COBERTURA`: 100,0 % de 117 líneas (umbral 80 %, crítico).
+- `PUERTA RUTAS SENSIBLES`: N/A.
+- `PUERTA TAMAÑO`: requirements 138/150, design 194/250, impl 196/220.
+
+El intento anterior dio KO por un solo test, `test_f039_r2_todo_informe_de_mutacion_figura_en_el_inventario`: le
+faltaba la fila de `mutacion_F-073.md` en `progress/inventario_mutacion_F-039.md`. Se añadió en `a5727fb`.
+
+Avisos esperados en un worktree: los servicios importan `ruesma_comun` del árbol principal (F-072). F-073 no toca
+comun.
 
 ## Evidencias
 
 | Evidencia | Valor real |
 |---|---|
 | Tests de F-073 | `test_f073_similitud.py` 676, `test_f073_eleccion.py` 77, `test_f073_incidencia_0694.py` 7 y `test_f073_corpus.py` 34 |
-| Suite de sv3 | 1490 passed en 14,22 s (T9); al cierre, ver §7 |
-| Cobertura de las líneas cambiadas | 93,4 % (114/122) |
+| Suite de sv3 | 1496 passed en 26,61 s (`init.sh` al cierre) |
+| Cobertura de las líneas cambiadas | `init.sh`: 100,0 % (117/117); `harness.cobertura` suelto antes del cierre: 93,4 % (114/122) |
 | Mutantes | 71 generados, 69 muertos, 2 supervivientes (equivalentes, pendientes de aceptación); 293,2 s, 4 workers |
-| Tiempo de la suite | sv3 14–25 s; `init.sh` completo, ver §7 |
+| Tiempo de la suite | sv3 26,61 s; raíz 174,01 s; sv4 187,66 s |
 | Corpus R19 | F-073 31/0/0; antes de F-073, 24/6/1 |
