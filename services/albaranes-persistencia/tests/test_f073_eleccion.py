@@ -516,3 +516,100 @@ def test_f073_r13_log_sin_nadie_que_llegue(caplog):
         "nadie llega al umbral" in m and "mejor cif=B1 similitud=0.00 segunda=0.00 umbral=0.50" in m
         for m in _mensajes(caplog)
     )
+
+
+# ------------------------------------------------------------------ #
+# R10, R14 · paso 2: el fallback global por nombre
+# ------------------------------------------------------------------ #
+class _ClienteGlobal(_ClienteRed):
+    def __init__(self, obra, globales):
+        super().__init__(obra)
+        self.globales = list(globales)
+
+    def search_proveedores(self):
+        return list(self.globales)
+
+
+def _resolver_completo(obra, globales, nombre, *, repo=None, conceptos=()):
+    repo = repo or _RepoConLineas(conceptos, nombre=nombre)
+    pasada(_ClienteGlobal(obra, globales), repo)
+    return repo
+
+
+def test_f073_r9_paso2_elige_con_margen():
+    """Sin candidatos en la obra, el global elige FEYMACO; con el criterio de
+    antes (0,50 y 0,50) ganaba el primero de la lista, HIERROS RODRIGO."""
+    repo = _resolver_completo(
+        [], [(_CIF_HIERROS, _RAZ_HIERROS), (_CIF_FEYMACO, _RAZ_FEYMACO)], "TEYMACO, S.A.",
+    )
+    assert repo.resoluciones == [(None, _CIF_FEYMACO, "deterministic")]
+    assert (repo.cif, repo.origen) == (_CIF_FEYMACO, "deterministic")
+
+
+def test_f073_r14_paso2_en_empate_no_elige_ni_deja_nota_ni_motivo(caplog):
+    with caplog.at_level(logging.INFO, logger=modulo_resolver.logger.name):
+        repo = _resolver_completo(
+            [], [("B2", "HORMIGONES DEL NORTE, S.L."), ("B1", "HORMIGONES DEL SUR, S.L."),
+                 ("B9", "TRANSPORTES PEREZ, S.L.")], "HORMIGONES",
+        )
+    assert repo.resoluciones == [(None, None, "deterministic")]
+    assert repo.cif is None
+    assert repo.marcas == []
+    assert repo.motivos is None
+    assert repo.notas is None
+    assert any(
+        "global" in m and "EMPATE" in m and "mejor cif=B1 similitud=1.00 segunda=1.00 margen=0.25 empatados=2" in m
+        for m in _mensajes(caplog)
+    )
+
+
+def test_f073_r14_la_nota_del_paso1_sobrevive_al_empate_global():
+    obra = [_resumen("B2", "HORMIGONES DEL NORTE, S.L.", "HORMIGON HA-25"),
+            _resumen("B1", "HORMIGONES DEL SUR, S.L.", "HORMIGON HM-20")]
+    globales = [("B1", "HORMIGONES DEL SUR, S.L."), ("B2", "HORMIGONES DEL NORTE, S.L."),
+                ("B7", "HORMIGONES DEL OESTE, S.L.")]
+    repo = _resolver_completo(obra, globales, "HORMIGONES", conceptos=["HORMIGON HA-25"])
+    assert repo.cif is None
+    assert repo.lista_motivos() == [_MOTIVO]
+    [nota] = repo.lineas_notas()
+    assert nota == _nota_r11("HORMIGONES", 2, "B1 — HORMIGONES DEL SUR, S.L.; B2 — HORMIGONES DEL NORTE, S.L.")
+
+
+def test_f073_r14_paso2_por_debajo_del_umbral_no_elige(caplog):
+    with caplog.at_level(logging.INFO, logger=modulo_resolver.logger.name):
+        repo = _resolver_completo([], [("B1", "ALFA, S.L."), ("B2", "BETA, S.L.")], "ZZZZ")
+    assert repo.cif is None
+    assert any("global" in m and "nadie llega al umbral" in m for m in _mensajes(caplog))
+
+
+def test_f073_r14_paso2_al_elegir_retira_el_aviso_de_proveedor():
+    repo = _RepoConLineas((), nombre="TEYMACO, S.A.")
+    repo.notas = f"{_PREFIJO} sin CIF: algo viejo"
+    _resolver_completo([], [(_CIF_FEYMACO, _RAZ_FEYMACO)], "TEYMACO, S.A.", repo=repo)
+    assert repo.cif == _CIF_FEYMACO
+    assert repo.notas in (None, "")
+
+
+def test_f073_r12_paso2_misma_decision_con_cualquier_orden():
+    globales = [(f"B{i}", f"HORMIGONES {i:02d}, S.L.") for i in range(1, 30)] + [(_CIF_FEYMACO, _RAZ_FEYMACO)]
+    for leido, esperado in (("FEYMACO", _CIF_FEYMACO), ("HORMIGONES", None), ("HORMIGONES 07", "B7")):
+        for semilla in (1, 2, 3):
+            barajada = list(globales)
+            random.Random(semilla).shuffle(barajada)
+            assert _resolver_completo([], barajada, leido).cif == esperado
+
+
+def test_f073_r14_paso2_con_los_3543_proveedores_del_doble():
+    """El global de verdad (3.543 del doble de sigrid-api): «SALMEDINA»
+    elige, «PROVEEDOR» empata y no elige, y no tarda."""
+    import time
+
+    from doble_sigrid_api import CIF_SALMEDINA, DobleSigridApi
+
+    cliente = DobleSigridApi().cliente()
+    globales = cliente.search_proveedores()
+    assert len(globales) == 3543
+    inicio = time.perf_counter()
+    for leido, esperado in (("SALMEDINA", CIF_SALMEDINA), ("SALMEDlNA S.L.", CIF_SALMEDINA), ("PROVEEDOR", None)):
+        assert _resolver_completo([], globales, leido).cif == esperado
+    assert time.perf_counter() - inicio < 10

@@ -431,25 +431,17 @@ class HeaderResolverService:
         if not proveedores:
             return None, "deterministic"
 
-        q = _norm(proveedor_nombre)
-        best_cif: str | None = None
-        best_score = 0.0
-        for cif, nombre in proveedores:
-            score = _match_score(q, _norm(nombre))
-            if score > best_score:
-                best_score = score
-                best_cif = cif
-        if best_cif and best_score >= self._min_score:
-            logger.info(
-                "%s proveedor resuelto por texto (global): cif=%s score=%.2f",
-                _LOG_PREFIX, best_cif, best_score,
-            )
-            self._remove_nota_proveedor_safely(merge_document_id)
-            return (best_cif.strip() or None), "deterministic"
-        logger.info(
-            "%s proveedor NO resuelto (mejor score global=%.2f < %.2f).",
-            _LOG_PREFIX, best_score, self._min_score,
+        # F-073 · R9, R10, R14: misma regla que el atajo del paso 1. En
+        # empate no se fija CIF y no se deja nota ni motivo (la del paso 1,
+        # con los candidatos de la obra, es la util): solo el log.
+        eleccion = elegir_por_nombre(
+            proveedor_nombre, proveedores,
+            umbral=self._min_score, margen=self._margen_nombre,
         )
+        self._log_eleccion(eleccion, donde="global")
+        if eleccion.elegido is not None:
+            self._remove_nota_proveedor_safely(merge_document_id)
+            return eleccion.elegido.cif, "deterministic"
         return None, "deterministic"
 
     # ----------------------------------------------------------------- #
