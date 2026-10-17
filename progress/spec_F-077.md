@@ -50,7 +50,8 @@ prioridad 1, rigor **estandar**, servicio **sv4** únicamente.
   por clave normalizada) y **R24** (nota «Normalizada: X → Y» en el mismo `title`) tocan las mismas líneas de
   `review_repository.py` (~L4641, ~L4787) y `document_detail.html` (~L742, ~L750). Semántica compatible (el ⚠ de F-077
   se deriva de `agree_partida`; la nota y el ⚠ son excluyentes); conflicto de texto: quien fusione segundo deja el
-  `title` como «descripción ⏎ [nota F-076] ⏎ [aviso F-077]». F-077 no toca nada de F-076.
+  `title` como «descripción ⏎ [nota F-076] ⏎ [aviso F-077]». F-077 no toca nada de F-076. Nota 2026-10-17
+  (implementación, aceptado en review): fusionó F-077 y quedó «descripción · [nota F-076] · [aviso F-077]» (« · », el separador de F-076).
 - **F-068**: `wireDividir`/F7, otra zona de `app.js`. `azure-apps/albaranes.md` no cambia (la ruta nueva es interna).
 
 ## Anexo A · Textos legibles de los motivos del alta (R26, R27)

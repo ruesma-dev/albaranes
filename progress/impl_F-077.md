@@ -127,9 +127,12 @@ de 92 líneas cambiadas (92/92)**; PUERTA TAMAÑO dentro. Pasada final: §7.
 
 ## 6. MANUAL pendiente
 
-**T14** (humano, tras APPROVED, fusión y despliegue de sv4 que pide el humano; con F-078/F-076 aún sin desplegar, va
-en el paso 4 de su secuencia combinada): los cinco puntos de `progress/current.md` («F-077 · MANUAL del humano
-(T14)»). Resultado: **PENDIENTE** (se anota aquí al hacerla).
+**T14** la hace **el líder en el navegador**, con el humano: bloque «F-077 · MANUAL T14» de `progress/current.md`
+(rehecho en la pasada 1 de la review). Encaje: tras el paso 4 de la secuencia combinada F-078 + F-076 (su `deploy
+sv4` lleva F-077 si ya está en `dev`); el punto 1 (`86c13097` en `no_admitido`, «Línea N: La línea no tiene
+descripción», solo lectura) antes del paso 6. Solo el punto 5 escribe en producción (PATCH de fila, PUT de
+aprobación, `q-feedback`), con el sí expreso del humano y con correcciones reales que elija él; si no hay ninguna,
+queda cubierto por los tests y se anota. Resultado: **PENDIENTE**.
 
 ## 7. Evidencias
 
@@ -146,3 +149,12 @@ en el paso 4 de su secuencia combinada): los cinco puntos de `progress/current.m
 `bash harness/init.sh` final (sobre `1fd1cb4`): **VERDE**, «ENTORNO LISTO». Raíz 1237 passed (161,14 s); sv1 205, sv2 397, sv3 703, **sv4 1715 passed
 (173,38 s)**, sv5 43, sv6 444 (+1 skip), sv9 670, comun (caché); PUERTA COBERTURA 100,0 % (92/92); PUERTA TAMAÑO
 dentro (impl 146/220).
+
+## 8. Review pasada 1 (CHANGES_REQUESTED, solo documentación)
+
+`git merge dev` (`current.md` de `24c8bd9`: `.env` de sv6 a localhost, `Usar-PgAzure`/`Quitar-PgAzure`; se conservan
+y se añade el bloque de F-077). Cambio 1: bloque T14 rehecho (a–e: la ficha se recarga aprobada, la hace el líder,
+acciones que escriben marcadas con su sí expreso, datos reales elegidos por el humano, encaje en los pasos 4 y 6,
+verde ligado a `86c13097`) y dos notas en la secuencia combinada (paso 4 y paso 6). Cambio 2: notas «(implementación,
+aceptado en review)» del 2026-10-17 en R22, `spec_F-077.md` §5, design §3 («Dividir»), §5 y §9. Cambio 3: la cita de
+F-077 de `sv4.md` §11, fuera del bloque de código. Sin cambios de código. `init.sh`: INIT_PASADA1.

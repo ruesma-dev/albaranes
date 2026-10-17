@@ -547,11 +547,11 @@ DEFAULT_REVIEWER="Equipo Ruesma"
 
 ## 11. Flujo del guardado (PUT /api/documents/{id})
 
-```
 > F-077: desde la ficha, «Guardar» y «Guardar y aprobar» mandan ANTES el PATCH
 > de cada fila con cambios (`.../lines/{vid}/conciliacion/campos?bloquear=1`);
 > si alguno falla no se envía este PUT (regla 20 de `docs/ARCHITECTURE.md`).
 
+```
 1. PUT /api/documents/{id} { campos + lines + valuation_line_updates + approved? }
 
 2. ReviewService.save_document(...) → AlbaranReviewRepository.update_document(...)

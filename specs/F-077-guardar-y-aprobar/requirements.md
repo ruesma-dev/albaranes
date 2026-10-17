@@ -87,6 +87,8 @@ vacío (`_camposCambiados`, F-065 R8); **PATCH de fila** = `PATCH /api/documents
 - R22. Donde haya ⚠ (R21), el `title` debe llevar, después de la descripción de la partida (si la hay) y en línea
   aparte, «No coincide con la partida leída en el albarán (<código leído>)», con el `codigo_imputacion` de su línea
   del albarán, recortado.
+  > Nota 2026-10-17 (implementación, aceptado en review): separador « · », no línea aparte (el de la nota de F-076): `title` =
+  > «descripción · [Normalizada: X → Y, F-076] · No coincide con…»; la nota y el aviso se excluyen.
 - R23. El cálculo de `agree_partida` y el ✓ (`cedit-ok`) no cambian. Sin ⚠, el `title` es el de hoy. El aviso
   «Partida no válida…» de F-065 R27 v5 sigue sustituyendo el `title` mientras la casilla esté en rojo y, al
   corregirla, debe volver el de R22.

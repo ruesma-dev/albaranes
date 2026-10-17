@@ -73,6 +73,8 @@ de «intento en marcha» es una variable del bloque (no el `disabled` del botón
 la plantilla cuando no está valorado y eso no se toca).
 
 Se borran `avisoFilasSinGuardar` y `contarFilasConCambios` (sin otros usos: `grep` en `app.js`).
+> Nota 2026-10-17 (implementación, aceptado en review): sí tenían otro uso, la confirmación de «Dividir» (`wireDividir`, F-065 R29), que §8 deja
+> fuera: se quedan para ella; `guardarCabecera` ya no las usa (R13). Se borra `partidasInvalidas`, que solo usaba R19.
 
 ## 4. B · Fases del panel del alta
 
@@ -143,7 +145,8 @@ las dos (R23; lo usan el ✓ y F-076).
 Plantilla: la clase `cedit-warn` de la casilla (~L742) pasa de `c.agree_partida == false` a `c.aviso_partida`
 (`cedit-ok` sigue con `agree_partida == true`); la rama `{% elif c.agree_partida == false %}` del ⚠ de solo lectura
 (~L749) pasa a `{% elif c.aviso_partida %}`. El `title` de las dos: `{{ c.descripcion_partida or '' }}` y, con
-`c.aviso_partida`, un salto de línea y el aviso. `marcarPartida` (F-065 R27 v5) guarda el `title` en
+`c.aviso_partida`, un salto de línea y el aviso (nota 2026-10-17 (implementación, aceptado en review): « · » en vez del salto,
+`[descripción, nota F-076, aviso] | select | join(' · ')`). `marcarPartida` (F-065 R27 v5) guarda el `title` en
 `data-titulo-antes` y lo devuelve: R23 sale gratis; un test con node lo fija.
 
 ## 6. D · Motivos del alta visibles y legibles
@@ -206,7 +209,8 @@ dicts de `motivos_documento` o `lineas` por igualdad, se adapta a la clave `text
   `title` de la casilla y del span «Normalizada: X → Y». Semántica compatible: `aviso_partida` se deriva de
   `agree_partida` sea cual sea la comparación, y la nota de F-076 y el ⚠ de F-077 son excluyentes. Conflicto de
   **texto** en `review_repository.py` y `document_detail.html`: quien fusione segundo deja el `title` como
-  «descripción ⏎ [nota F-076] ⏎ [aviso F-077]». F-077 no toca nada de F-076.
+  «descripción ⏎ [nota F-076] ⏎ [aviso F-077]». F-077 no toca nada de F-076. Nota 2026-10-17 (implementación, aceptado en review):
+  fusionó F-077 y el separador quedó « · » (el de F-076), no «⏎».
 - **F-068** (pendiente): `wireDividir`/F7 en `app.js`, otra zona. **F-058**: sin relación directa.
 
 ## 10. Riesgos y decisiones
