@@ -77,9 +77,21 @@ Write-Host "  sv5 interno: https://$SV5_FQDN" -ForegroundColor Cyan
 
 # =========================================================== sv6 (worker) ===
 Write-Host "`n=== sv6 (valorador, worker q-valoracion) ===" -ForegroundColor Green
-$sv6Secrets = @("pg-password=$(KvRef 'PG-PASSWORD')")
+# F-076: sv6 lee de sigrid-api (solo sql/read) la lista de partidas de la obra
+# para normalizar la partida al valorar. Mismo secreto que sv3/sv4/sv9; sin el,
+# sv6 valora como siempre. En una app ya creada: set_partidas_sv6.ps1.
+$sv6Secrets = @("pg-password=$(KvRef 'PG-PASSWORD')",
+                "sigrid-key=$(KvRef 'SIGRID-API-FUNCTION-KEY')")
 $sv6Env = @("AZURE_CLIENT_ID=$MI_CLIENTID", "COLAS_ACCOUNT_URL=$QUEUE_URL",
-            "VALUATION_API_BASE_URL=https://$SV5_FQDN", "LOG_DIR=/tmp/logs") + $pgEnv
+            "VALUATION_API_BASE_URL=https://$SV5_FQDN", "LOG_DIR=/tmp/logs",
+            "SIGRID_API_BASE_URL=$SIGRID_BASE_URL",
+            "SIGRID_API_FUNCTION_KEY=secretref:sigrid-key",
+            "SIGRID_API_DATABASE=$SIGRID_DB",
+            "SIGRID_API_TIMEOUT_S=30",
+            "PARTIDAS_OBRA_NORMALIZAR_ENABLED=true",
+            "PARTIDAS_OBRA_TTL_S=21600",
+            "PARTIDAS_OBRA_MAX_OBRAS=64",
+            "PARTIDAS_OBRA_FALLO_TTL_S=300") + $pgEnv
 $a = @("containerapp","create","-n","ca-sv6-valorador","-g",$RG,"--environment",$CAE,
        "--image","$ACR_LOGIN/$($IMG['sv6'])",
        "--registry-server",$ACR_LOGIN,"--registry-identity",$MI_ID,
