@@ -61,6 +61,12 @@ class ValuationRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def obra_del_documento(self, *, document_id: str) -> str | None:
+        """(F-076) ``obra_codigo`` del merge del documento, tal cual; sin
+        fila o sin obra ⇒ ``None``. Solo lectura de una tabla de sv3."""
+        raise NotImplementedError
+
+    @abstractmethod
     def read_full_valuation_json(
         self,
         *,

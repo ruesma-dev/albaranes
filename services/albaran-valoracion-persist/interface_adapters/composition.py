@@ -3,8 +3,9 @@
 
 Replica el wiring de ``build_app`` (interface_adapters/api/app.py) pero SOLO
 en lo que necesita el pipeline de valoración, omitiendo los endpoints FastAPI.
-No se toca ``app.py``: el modo HTTP sigue intacto; este módulo es la entrada
-para el modo worker (consumidor de q-valoracion).
+Este módulo es la entrada para el modo worker (consumidor de q-valoracion).
+(F-076) ``construir_normalizador_partidas`` lo usan los DOS puntos de entrada:
+el worker y ``build_app``.
 
 Igual que en HTTP, ``RunValuationPipeline`` llama al servicio 5 por HTTP
 (``HttpValuationIaClient`` → ``VALUATION_API_BASE_URL``). En el piloto local,
@@ -18,6 +19,10 @@ import logging
 from application.pipelines.run_valuation_pipeline import RunValuationPipeline
 from application.services.almacen_politica import familias_destinadas_de_csv
 from application.services.importe_calculator import ImporteCalculator
+from application.services.normalizador_partidas import (
+    MOTIVO_PARTIDAS_NO_DISPONIBLES,
+    NormalizadorPartidas,
+)
 from application.services.partida_matcher import PartidaMatcher
 from application.services.price_reconciler import PriceReconciler
 from application.services.unit_category_guard import UnitCategoryGuard
@@ -38,9 +43,59 @@ from infrastructure.database.session_factory import SessionFactory
 from infrastructure.database.sqlalchemy_valuation_repository import (
     SqlAlchemyValuationRepository,
 )
+from infrastructure.sigrid.sigrid_api_lector import SigridApiLector
 from infrastructure.units.yaml_unit_registry import YamlUnitRegistry
+from ruesma_comun.sigrid import CachePartidasObra
 
 logger = logging.getLogger(__name__)
+
+
+def construir_normalizador_partidas(settings: Settings) -> NormalizadorPartidas:
+    """(F-076 R11, R12, R17) El normalizador de partidas de la obra.
+
+    Lector de sigrid-api y caché por proceso SOLO si el interruptor está
+    encendido y hay URL, clave y base de datos. Sin ellas, puerto ``None`` y
+    WARNING al arrancar: se valora como siempre, con el motivo de cabecera
+    ``partidas_obra_no_disponibles``. Apagado: ni lector ni caché.
+    """
+    puerto = None
+    if not settings.partidas_obra_normalizar_enabled:
+        logger.info(
+            "[svc6][wiring] F-076 normalizar partidas APAGADO "
+            "(PARTIDAS_OBRA_NORMALIZAR_ENABLED=false)."
+        )
+    elif not settings.sigrid_api_configurada:
+        logger.warning(
+            "[svc6][wiring] F-076: faltan SIGRID_API_BASE_URL, "
+            "SIGRID_API_FUNCTION_KEY o SIGRID_API_DATABASE; se valora sin "
+            "normalizar la partida (%s).",
+            MOTIVO_PARTIDAS_NO_DISPONIBLES,
+        )
+    else:
+        lector = SigridApiLector(
+            base_url=settings.sigrid_api_base_url or "",
+            function_key=settings.sigrid_api_function_key or "",
+            database=settings.sigrid_api_database or "",
+            timeout_s=settings.sigrid_api_timeout_s,
+        )
+        puerto = CachePartidasObra(
+            lector,
+            ttl_s=settings.partidas_obra_ttl_s,
+            max_obras=settings.partidas_obra_max_obras,
+            ttl_fallo_s=settings.partidas_obra_fallo_ttl_s,
+        )
+        logger.info(
+            "[svc6][wiring] F-076 normalizar partidas ENCENDIDO: ttl=%ss "
+            "max_obras=%s fallo=%ss",
+            settings.partidas_obra_ttl_s,
+            settings.partidas_obra_max_obras,
+            settings.partidas_obra_fallo_ttl_s,
+        )
+    return NormalizadorPartidas(
+        partidas=puerto,
+        alm_codigo_partida=settings.alm_codigo_partida,
+        activo=settings.partidas_obra_normalizar_enabled,
+    )
 
 
 def build_run_valuation_pipeline(settings: Settings) -> RunValuationPipeline:
@@ -114,6 +169,8 @@ def build_run_valuation_pipeline(settings: Settings) -> RunValuationPipeline:
         repository=repository,
         builder=builder,
         conciliacion_client=conciliacion_client,
+        # F-076: normalizar la partida contra las de la obra.
+        normalizador=construir_normalizador_partidas(settings),
     )
     logger.info(
         "[ca-valorador][worker-wiring] pipeline construido; "

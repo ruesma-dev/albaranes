@@ -690,6 +690,14 @@ Esto se ve en `/health` con el flag `schema_ready`:
 | `ALM_CODIGO_PARTIDA`             | `ALM`                  | Código literal del albarán para "almacén/acopio".                            |
 | `ALMACEN_SIN_PARTIDA_ENABLED`    | `true`                 | F-051: línea base sin partida ⇒ almacén (`almacen_sin_partida`); `false` = como antes. |
 | `FAMILIAS_DESTINADAS`            | `hormigon,mortero,combustible,alquiler_maquinaria,residuos` | F-051: CSV; su línea en almacén va a revisión no bloqueante. Vacío = ninguna. |
+| `SIGRID_API_BASE_URL`            | —                      | F-076: sigrid-api (solo `POST /api/sql/read`). Sin URL, clave o base ⇒ se valora sin normalizar. |
+| `SIGRID_API_FUNCTION_KEY`        | —                      | F-076: secreto `sigrid-key` (Key Vault `SIGRID-API-FUNCTION-KEY`). Nunca en el log. |
+| `SIGRID_API_DATABASE`            | —                      | F-076: base de Sigrid (la misma que sv3, sv4 y sv9).                          |
+| `SIGRID_API_TIMEOUT_S`           | `30.0`                 | F-076: timeout de cada lectura (3 intentos con tenacity ante 5xx/timeout/conexión). |
+| `PARTIDAS_OBRA_NORMALIZAR_ENABLED` | `true`               | F-076: `false` = interruptor de vuelta atrás sin redesplegar (ni consulta ni cambia). |
+| `PARTIDAS_OBRA_TTL_S`            | `21600`                | F-076: vida de la lista de una obra en la caché de la réplica.               |
+| `PARTIDAS_OBRA_MAX_OBRAS`        | `64`                   | F-076: obras en memoria (sale la menos usada).                               |
+| `PARTIDAS_OBRA_FALLO_TTL_S`      | `300`                  | F-076: cuánto se recuerda un fallo de sigrid-api antes de reconsultar.        |
 | `API_HOST`                       | `127.0.0.1`            |                                                                              |
 | `API_PORT`                       | `8003`                 | (sv2: 8000, sv3: 8001, sv5: 8002, sv6: 8003)                                 |
 | `LOG_LEVEL`                      | `INFO`                 |                                                                              |
@@ -767,6 +775,24 @@ SERVICE_VERSION=1.0.0
    g) return RunValuationResult(valuation_id, total_valorado, ..., duplicate=False)
 ```
 
+### 9 bis. F-076 · la partida se normaliza contra las de la obra
+
+Spec: `specs/F-076-normalizar-partidas/` (regla 23 de `docs/ARCHITECTURE.md`).
+Entre (b) y (c): si `PARTIDAS_OBRA_NORMALIZAR_ENABLED` y alguna línea trae
+partida leída (ni vacía ni `ALM`), `NormalizadorPartidas` lee `obra_codigo` del
+merge (`obra_del_documento`, solo lectura), pide la lista de partidas HOJA de la
+obra a `CachePartidasObra` (comun, sobre `SigridApiLector`) y resuelve cada
+lectura con `resolver_partida_obra`. Con `exacta`/`normalizada` IA4 y las reglas
+trabajan con el código de la lista (`CI.04.18` ⇒ `CI.4.18`: casa con su línea de
+contrato, la derivada y las sintéticas lo heredan); el sobre normalizado es una
+copia y es el que se persiste en `raw_ia_envelope_json`. Tras `completar_registros`,
+`anotar` deja `partida_normalizada:<leída>><lista>` (sin revisión) y devuelve la
+leída a `codigo_partida_albaran`; `partida_fuera_de_lista` /
+`partida_ambigua_en_obra` mandan la línea y la cabecera a revisión (no bloquea
+aprobar). Sin lista (sin configuración, obra vacía, fallo, truncado, 0 hojas) o
+con cualquier excepción: WARNING y `partidas_obra_no_disponibles` en la cabecera,
+sin revisión; se valora como siempre. Infra: `infra/set_partidas_sv6.ps1`.
+
 ---
 
 ## 10. Cómo se invoca este servicio
@@ -837,6 +863,8 @@ Igual que sv3 — **Azure Container App** con:
 | HTTP                  | `GET /valuation/{id}`                    | Lectura simple                                                            |
 | `.env`                | Configuración estática                   | BBDD + URL sv5 + tolerancias + ALM literal                                |
 | sv5 (HTTP)            | `ValuationEnvelope`                      | Envelope IA con `data.lineas` + `context.lineas_albaran/contrato`         |
+| sigrid-api (HTTP)     | `POST /api/sql/read` (F-076)             | Partidas de la obra (`obrparpar`, empresa 1); solo lectura, con caché     |
+| PostgreSQL (sv3)      | `SELECT obra_codigo` del merge (F-076)    | Obra del documento para pedir su lista de partidas                       |
 | `unit_registry.yaml`  | Configuración estática                   | Categorías + factores cargados al arrancar                                |
 
 ### Outputs
@@ -910,7 +938,8 @@ Igual que sv3 — **Azure Container App** con:
 A diferencia del sv3 (donde sí veía sobrecarga de responsabilidades), **sv6 está
 muy bien delimitado** dentro de su rol. Su responsabilidad es muy clara:
 "dado un envelope IA, aplica las reglas del cliente y persiste". No hace OCR, no
-llama a Sigrid, no toca SharePoint, no descarga PDFs. Cinco servicios pequeños y
+escribe en Sigrid (desde F-076 solo LEE de sigrid-api las partidas de la obra),
+no toca SharePoint, no descarga PDFs. Cinco servicios pequeños y
 desacoplados (`UnitCategoryGuard`, `PriceReconciler`, `PartidaMatcher`,
 `UnitConverter`, `ImporteCalculator`) compuestos por el `ValuationBuilder`.
 
@@ -940,7 +969,7 @@ separación es ejemplar.
 | Punto de entrada       | `python main.py`                                                                     |
 | Dependencias clave     | `fastapi`, `uvicorn`, `sqlalchemy`, `psycopg`, `httpx`, `pydantic-settings`, `PyYAML`|
 | Servicios upstream     | sv3 (run-async) · sv4 (re-run, GET) · operadores (run con force=true)               |
-| Servicios downstream   | sv5 (IA) · PostgreSQL                                                                |
+| Servicios downstream   | sv5 (IA) · PostgreSQL · sigrid-api (solo `sql/read`, F-076)                          |
 | Cierra el ciclo del ecosistema | **Sí** — la fila ganadora en `albaran_valuations` es el output final de los 6 servicios |
 
 ---

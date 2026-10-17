@@ -1758,6 +1758,15 @@ def build_app(settings: Settings) -> FastAPI:
     # ------------------------------------------------------------------ #
     # F-053 · Alta en Sigrid desde la ficha y producto de las líneas.
     # ------------------------------------------------------------------ #
+    @app.get("/api/documents/{document_id}/alta-sigrid/fase", include_in_schema=False)
+    def fase_alta_sigrid_api(document_id: str) -> dict:
+        """F-077 R18: fase del panel del alta, para el sondeo de la ficha
+        (R19). Solo lectura: ni escribe el alta ni publica (R20)."""
+        fase = review_service.fase_alta(document_id)
+        if fase is None:
+            raise HTTPException(status_code=404, detail="Documento no encontrado")
+        return {"fase": fase}
+
     @app.post("/documents/{document_id}/alta-sigrid/solicitar", include_in_schema=False)
     def solicitar_alta_sigrid(document_id: str, request: Request) -> RedirectResponse:
         """R30: «Solicitar alta en Sigrid» (``accion="alta"``)."""
