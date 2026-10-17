@@ -9,11 +9,59 @@ push). *Junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` ant
 #### F-076 · MANUAL del humano (T18–T20), comandos para PowerShell
 
 Cuándo: tras el APPROVED del reviewer, la fusión de `feature/F-076-normalizar-partidas` en `dev` y `init.sh` en
-verde en el árbol principal. **Si las MANUAL T12–T14 de F-078 siguen pendientes**, el despliegue de sv6 y sv4 de
-F-076 lleva también F-078 (está en `dev`): sigue entonces el orden de F-078 (sv6 → relleno → sv4) con estos mismos
-despliegues.
+verde en el árbol principal.
 
-**T18 · variables de sv6 → sv6 → sv4** (misma consola):
+**Secuencia combinada F-078 + F-076 (úsala mientras las MANUAL T12–T14 de F-078 sigan pendientes).** El despliegue
+de sv6 y sv4 de F-076 lleva también F-078 (está en `dev`), así que va todo en este orden, en UNA consola de
+PowerShell 5.1 (cada paso con su `cd`; sin `&&`). Si un paso no da su VERDE, para ahí.
+
+```powershell
+# 1. sv6 local: tenacity (F-076) y lectura de F-078 T12 (solo lectura, .env de sv6)
+cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
+.\.venv\Scripts\python.exe -m pip install "tenacity>=8.2"
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
+#    VERDE: cuadra con progress/spec_F-078.md §3 (≈93 descripcion_linea, 7 unidad_albaran, 6 cantidad_convertida
+#    con los ids 385 y 386, 0 unidad_contrato, 0 precio_unitario_final, salvo lo cambiado desde el 16-10).
+
+# 2. variables de F-076 en sv6 y despliegue de sv6
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+. .\00_vars.ps1
+. .\00_capps_vars.ps1
+.\set_partidas_sv6.ps1
+.\deploy.ps1 -Only sv6
+#    VERDE: set_partidas_sv6.ps1 dice OK en las 8 variables y en «secreto sigrid-key» y termina en «Ajustes de
+#    F-076 aplicados a ca-sv6-valorador»; deploy.ps1 termina sin error.
+
+# 3. relleno de F-078 con --aplicar (autorización expresa del humano) y su relectura
+cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078 --aplicar
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
+#    VERDE: la primera acaba en «Escritas N filas. Releído: 0 pendientes.» (si no, ROLLBACK y código 2);
+#    la segunda, en «Filas que cambiarían: 0».
+
+# 4. despliegue de sv4 y comprobación
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+.\deploy.ps1 -Only sv4
+.\check_deploy.ps1
+#    VERDE: check_deploy con sv6 y sv4 en el tag nuevo.
+
+# 5. relectura de F-078 tras sv4 (cierra la ventana entre el relleno y sv4)
+cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
+.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
+#    VERDE: «Filas que cambiarían: 0». Si da más: repite el paso 3 (misma autorización) y este.
+```
+
+6. **F-078 T14**: «Solicitar alta en Sigrid» en `86c13097-98f8-4e4b-91af-6a378c28d9cf` desde la ficha y, en solo
+   lectura, `SET default_transaction_read_only = on; SELECT estado, historial_json FROM albaran_altas_sigrid WHERE
+   document_id = '86c13097-98f8-4e4b-91af-6a378c28d9cf';`. VERDE: ya no termina en `no_admitido` con
+   `falta_descripcion` (con `ALTA_SIGRID_COMMIT=false`, `simulado`). Comprobación en la ficha, la del bloque de F-078.
+7. **F-076 T19** (abajo, tal cual) y, tras la primera revaloración, la comprobación del log de T18 (abajo). VERDE: los
+   de cada uno.
+
+Con eso cierran F-078 (T12–T14) y F-076 (T18–T19); queda T20.
+
+**T18 · si F-078 ya está cerrada: variables de sv6 → sv6 → sv4** (misma consola; con F-078 pendiente, usa la
+secuencia combinada de arriba en su lugar):
 
 ```powershell
 cd C:\Users\pgris\PycharmProjects\albaranes\infra
@@ -49,6 +97,7 @@ cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
 .\.venv\Scripts\python.exe -m pip install "tenacity>=8.2"
 Get-Content ..\albaranes-persistencia\.env | Where-Object { $_ -match '^(SIGRID_API_(BASE_URL|FUNCTION_KEY|DATABASE))=(.*)$' } | ForEach-Object { Set-Item -Path "env:$($Matches[1])" -Value $Matches[3].Trim('"') }
 .\.venv\Scripts\python.exe -m scripts.medir_f076_partidas
+Remove-Item env:SIGRID_API_BASE_URL, env:SIGRID_API_FUNCTION_KEY, env:SIGRID_API_DATABASE
 ```
 
 VERDE si «normalizable sin normalizar» da **0** en pendientes y las 6 sin candidata de `progress/spec_F-076.md`
@@ -77,6 +126,11 @@ humano (abajo); con su verde, `done`. Informes: `progress/impl_F-078.md`, `progr
 de sv4 en el worktree `../albaranes-F-078` (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
 
 #### F-078 · MANUAL del humano (T12–T14), comandos para PowerShell
+
+> **Con F-076 fusionada en `dev`**, sus despliegues de sv6 y sv4 llevan también F-078: no sigas este bloque suelto,
+> usa la **secuencia combinada F-078 + F-076** del bloque «F-076 · MANUAL» de arriba (mismos comandos de T12–T14, en
+> el orden en que se intercalan con los de F-076). Este bloque vale tal cual solo si F-078 se despliega antes de
+> fusionar F-076.
 
 Antes de nada: **fusionar la rama en `dev`** (el script y `ruesma_comun.linea_valorada` viven en el árbol principal a
 partir de ahí). Orden obligatorio: **sv6 → relleno con `--aplicar` → sv4**; **sv9 no se redespliega**.

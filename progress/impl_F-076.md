@@ -146,56 +146,11 @@ Nuevos de F-076: comun `test_f076_partidas.py` (134), sv4 `test_f076_partidas_sv
 
 ## 6. MANUAL del humano (no las ejecuta ningún agente)
 
-Están también, con el mismo texto, en `progress/current.md` («F-076 · MANUAL del humano»).
-
-Cuándo: tras el APPROVED del reviewer, la fusión de `feature/F-076-normalizar-partidas` en `dev` y `init.sh` en
-verde en el árbol principal. **Si las MANUAL T12–T14 de F-078 siguen pendientes**, el despliegue de sv6 y sv4 de
-F-076 lleva también F-078 (está en `dev`): sigue entonces el orden de F-078 (sv6 → relleno → sv4) con estos mismos
-despliegues.
-
-**T18 · variables de sv6 → sv6 → sv4** (misma consola):
-
-```powershell
-cd C:\Users\pgris\PycharmProjects\albaranes\infra
-. .\00_vars.ps1
-. .\00_capps_vars.ps1
-.\set_partidas_sv6.ps1
-.\deploy.ps1 -Only sv6
-.\deploy.ps1 -Only sv4
-.\check_deploy.ps1
-```
-
-VERDE si `set_partidas_sv6.ps1` dice `OK` en las 8 variables (7 valores + `SIGRID_API_FUNCTION_KEY` con
-`secretref:'sigrid-key'`) y en `secreto sigrid-key`, y termina en «Ajustes de F-076 aplicados a ca-sv6-valorador»;
-`check_deploy.ps1` con sv6 y sv4 en el tag nuevo. Tras la primera valoración (T19), el log de sv6 no debe decir
-`partidas_obra_no_disponibles`:
-
-```powershell
-az containerapp logs show -n ca-sv6-valorador -g $RG --tail 300 | Select-String "partidas-obra|partidas_obra_no_disponibles"
-```
-
-Debe salir `[partidas-obra] obra=… hojas=… segundos=…` y ninguna línea con `partidas_obra_no_disponibles`. Vuelta
-atrás sin redesplegar: `az containerapp update -n ca-sv6-valorador -g $RG --set-env-vars PARTIDAS_OBRA_NORMALIZAR_ENABLED=false`.
-
-**T19 · revalorar los pendientes y medir (solo lectura).** En la ficha de sv4 de cada uno, «Valorar ahora»:
-`2792cf3b`, `53337da7`, `54b82479`, `dedf011a` (0694); `41ab0dc1` (0711); `09643c2b`, `89e463a7`, `bef66bce`,
-`f96c6dbe` (0720); `ca609aee` (0723); `25c5d647` (0724). **`355449d9` NO se revalora** (6 filas guardadas: se
-perderían, F-058): su partida se corrige a mano en la ficha (`CI.04.18` ⇒ `CI.4.18`, `CI.03A.02` ⇒ `CI.03A.2`).
-Después, la medición (sv6 del árbol principal; PostgreSQL con el `.env` de sv6, en solo lectura; las tres
-`SIGRID_API_*` se toman del `.env` de sv3 SOLO para esta consola, sin imprimirlas):
-
-```powershell
-cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
-.\.venv\Scripts\python.exe -m pip install "tenacity>=8.2"
-Get-Content ..\albaranes-persistencia\.env | Where-Object { $_ -match '^(SIGRID_API_(BASE_URL|FUNCTION_KEY|DATABASE))=(.*)$' } | ForEach-Object { Set-Item -Path "env:$($Matches[1])" -Value $Matches[3].Trim('"') }
-.\.venv\Scripts\python.exe -m scripts.medir_f076_partidas
-```
-
-VERDE si «normalizable sin normalizar» da **0** en pendientes y las 6 sin candidata de `progress/spec_F-076.md`
-§2.2 cuentan en «fuera de lista» con el motivo `partida_fuera_de_lista` (pendientes). Los aprobados antes de DESDE
-(12 líneas `CI.4.18`) pueden seguir en «normalizable sin normalizar / aprobado»: sv9 los ignora (R6 de F-053).
-
-**T20**: `bash harness/init.sh` en verde en el árbol principal tras T18–T19; con eso, F-076 `done`.
+Los comandos exactos para PowerShell están en `progress/current.md`, bloque «F-076 · MANUAL del humano (T18–T20)»
+(única copia, para que no diverjan): la **secuencia combinada F-078 + F-076** (pasos 1–7, cada uno con su VERDE)
+mientras F-078 siga pendiente; T18 suelto si F-078 ya está cerrada; T19 (revalorar los 11 pendientes desde sv4 con
+«Valorar ahora», `355449d9` a mano, medición con `-m scripts.medir_f076_partidas` y `Remove-Item` de las
+`SIGRID_API_*` de la consola); T20 (`init.sh` en el árbol principal).
 
 ## 7. Fuera de alcance y pendiente
 
