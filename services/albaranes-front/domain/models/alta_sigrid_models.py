@@ -53,6 +53,12 @@ ETIQUETAS_ESTADO_ALTA: dict[str, str] = {
 }
 
 
+#: F-077 R17: estados del alta que la ficha pinta como error (un rechazo de sv9
+#: o de Sigrid). ``incierto`` no lo es: es una grabación sin confirmar que sv9
+#: retoma tras la Espera (aviso de bloqueo, como antes).
+ESTADOS_ALTA_ERROR: frozenset[str] = frozenset({"no_admitido", "revisar", "error"})
+
+
 def etiqueta_estado_alta(estado: str | None) -> str | None:
     """Texto del estado; uno desconocido se enseña tal cual."""
     if estado is None:
@@ -212,6 +218,12 @@ class AltaSigridVista(BaseModel):
     @property
     def bloqueante(self) -> bool:
         return self.estado in ESTADOS_ALTA_BLOQUEANTES
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def es_error(self) -> bool:
+        """F-077 R17: el panel lo pinta como error (``ESTADOS_ALTA_ERROR``)."""
+        return self.estado in ESTADOS_ALTA_ERROR
 
     @computed_field  # type: ignore[prop-decorator]
     @property

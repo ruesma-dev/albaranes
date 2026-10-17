@@ -1511,6 +1511,9 @@ class DocumentDetailPayload(BaseModel):
     alta_puede_solicitar: bool = False
     #: F-053 v8 (R30, O1 = a): «Reintentar adjunto».
     alta_puede_reintentar_adjunto: bool = False
+    #: F-077 R14: fase del panel del alta (``en_curso`` / ``sin_respuesta`` /
+    #: ``resultado``). Con DESDE vacía, el defecto: el panel ni se pinta (R3).
+    alta_fase: str = "resultado"
     productos_sigrid: dict[int, ProductoLinea] = Field(default_factory=dict)
     productos_admitidos: list[ProductoOpcion] = Field(default_factory=list)
 
