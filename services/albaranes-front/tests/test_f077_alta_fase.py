@@ -21,11 +21,10 @@ import shutil
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from fastapi.testclient import TestClient
-
 from config.settings import Settings
 from domain.models.alta_sigrid_models import AltaSigridVista, ConfigAltaSigrid
 from domain.services import alta_sigrid as dominio
+from fastapi.testclient import TestClient
 from interface_adapters.web import app as modulo_app
 
 DESDE = datetime(2026, 10, 1, tzinfo=UTC)
@@ -496,3 +495,12 @@ def test_f077_r19_arranca_solo_con_el_panel_y_sin_set_interval():
     assert "const SONDEO_ALTA_MS = 3000;" in js
     assert 'sondearAltaEnCurso(document.getElementById("alta-sigrid"));' in js
     assert "setInterval" not in _funcion_js(js, "sondearAltaEnCurso")
+
+
+def test_f077_r18_la_ruta_queda_fuera_del_esquema_openapi(monkeypatch):
+    """Superviviente de la campaña (app.py, ``include_in_schema``): la ruta es
+    interna del JS de sv4 (design §1) y no se publica en ``/openapi.json``."""
+    cliente, _ = _cliente(monkeypatch, _ServicioFase("resultado"))
+    rutas = cliente.app.openapi()["paths"]
+    assert "/api/documents/{document_id}/alta-sigrid/fase" not in rutas
+    assert "/api/documents/{document_id}" in rutas  # el esquema sí lleva las demás

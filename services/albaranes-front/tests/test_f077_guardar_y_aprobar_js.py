@@ -227,8 +227,8 @@ def test_f077_r4_falla_la_segunda_fila(tmp_path, aprobar, cola):
         await guardarCabecera({json.dumps(aprobar)});
     """, preparacion=_FOTO_FILA)
     assert casos["peticiones"] == [_patch(12, {"cantidad": 6}), _patch(13, {"cantidad": 4})]
-    assert casos["alertas"] == ["No se pudo guardar una línea (en rojo): Línea guardada: desbloquéala para "
-                                "editarla. " + cola]
+    assert casos["alertas"] == [("No se pudo guardar una línea (en rojo): Línea guardada: desbloquéala para "
+                                 "editarla. ") + cola]
     assert casos["f2"] == {"rojo": True, "title": "Línea guardada: desbloquéala para editarla",
                            "defecto": "5", "bloqueada": False}
     assert casos["recargas"] == 0 and casos["href"] is None
@@ -244,8 +244,8 @@ def test_f077_r4_error_de_red_en_la_primera(tmp_path):
         await guardarCabecera(true);
     """, preparacion=_FOTO_FILA)
     assert casos["peticiones"] == [_patch(12, {"cantidad": 6})]
-    assert casos["alertas"] == ["No se pudo guardar una línea (en rojo): error de red. No se ha aprobado el "
-                                "albarán."]
+    assert casos["alertas"] == [("No se pudo guardar una línea (en rojo): error de red. No se ha aprobado el "
+                                 "albarán.")]
     assert casos["f1"]["rojo"] is True and casos["f2"]["rojo"] is False
 
 
@@ -257,8 +257,8 @@ def test_f077_r4_el_motivo_de_un_422_es_la_lista_de_detail(tmp_path):
         f1.cant.value = "6";
         await guardarCabecera(false);
     """)
-    assert casos["alertas"] == ["No se pudo guardar una línea (en rojo): body.cantidad: no es un número | otro. "
-                                "No se ha guardado la cabecera."]
+    assert casos["alertas"] == [("No se pudo guardar una línea (en rojo): body.cantidad: no es un número | otro. "
+                                 "No se ha guardado la cabecera.")]
 
 
 # =================================================================== #
@@ -402,9 +402,8 @@ def test_f077_r10_los_botones_llaman_a_guardar_cabecera():
 # R11 · el servidor sigue validando el PUT de aprobar
 # =================================================================== #
 def test_f077_r11_el_servidor_sigue_rechazando_aprobar_con_filas_incompletas():
-    from f065_bbdd import DOC, construir, ejecutar, repositorio
-
     from domain.models.review_models import LineasIncompletasError
+    from f065_bbdd import DOC, construir, ejecutar, repositorio
 
     motor = construir()
     ejecutar(motor, "UPDATE albaran_line_valuations SET descripcion_linea = NULL WHERE id = 13")

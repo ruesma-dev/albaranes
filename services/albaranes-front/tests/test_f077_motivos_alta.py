@@ -22,7 +22,6 @@ import re
 from pathlib import Path
 
 import pytest
-
 from domain.models import alta_sigrid_models as modelos
 from domain.models.alta_sigrid_models import AltaSigridVista, ConfigAltaSigrid
 from domain.models.review_models import ConciliacionDisplay, DisplayLine
