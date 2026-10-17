@@ -142,7 +142,7 @@ Nuevos de F-076: comun `test_f076_partidas.py` (134), sv4 `test_f076_partidas_sv
 | Mutación | **173 generados, 173 muertos, 0 supervivientes**, 0 timeouts, 0 sin veredicto, 1242,2 s, 4 workers, campaña completa sobre `fdb9c58` (`progress/mutacion_F-076.md`). Pasada 1 (`121524c`): 180/154/26; los 26 resueltos con tests o quitando la rama equivalente (tabla en el informe) |
 | Tiempo de las suites | raíz 136,8 s · sv4 129,9 s · comun 125,8 s · sv9 31,8 s · sv6 11,1 s |
 | Rutas sensibles | `normalizador_partidas.py` (redes deterministas de sv6): AVISO sin `progress/evals_F-076.md`. Sin evals de pago por P8 (aprobado); exigencia «aviso», no bloquea |
-| `init.sh` final | __INIT__ |
+| `init.sh` final | **VERDE** («ENTORNO LISTO», exit 0) sobre `b506507`: raíz 1237 passed (190,9 s); los 8 servicios en verde por caché de suite (verdes de 07:44–07:50 del mismo día, sin cambios desde entonces); avisos: `blocked` (F-078), ruff (deuda previa), infra sin tests, rutas sensibles (P8) y [ADAPTAR] ajenos |
 
 ## 6. MANUAL del humano (no las ejecuta ningún agente)
 
