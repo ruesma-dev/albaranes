@@ -121,7 +121,7 @@ suite entera de sv4 `1714 passed`.
 
 Primera pasada (tras T13): **rojo** solo por la suite de la raíz,
 `test_f039_r2_todo_informe_de_mutacion_figura_en_el_inventario` (`progress/mutacion_F-077.md` sin fila en
-`progress/inventario_mutacion_F-039.md`). Añadida la fila (41 informes). El resto, en verde: sv1 205, sv2 397, sv3
+`progress/inventario_mutacion_F-039.md`). Añadida la fila (41 informes). El resto, ya en verde entonces: sv1 205, sv2 397, sv3
 703, **sv4 1715 passed** (149,55 s), sv5 43, sv6 444 (+1 skip), sv9 670, comun (caché); **PUERTA COBERTURA: 100.0 %
 de 92 líneas cambiadas (92/92)**; PUERTA TAMAÑO dentro. Pasada final: §7.
 
@@ -143,4 +143,6 @@ en el paso 4 de su secuencia combinada): los cinco puntos de `progress/current.m
 | JS | No lo mide la herramienta (solo Python): lo cubren los 23 tests con node de A y los de sondeo/marcado de B y C (node v24.14.1) |
 | `bash harness/init.sh` final | ver la línea siguiente |
 
-`bash harness/init.sh` final (tras la fila del inventario y este informe): RESULTADO_INIT_FINAL
+`bash harness/init.sh` final (sobre `1fd1cb4`): **VERDE**, «ENTORNO LISTO». Raíz 1237 passed (161,14 s); sv1 205, sv2 397, sv3 703, **sv4 1715 passed
+(173,38 s)**, sv5 43, sv6 444 (+1 skip), sv9 670, comun (caché); PUERTA COBERTURA 100,0 % (92/92); PUERTA TAMAÑO
+dentro (impl 146/220).
