@@ -6,12 +6,18 @@
 - R17: ``no_admitido``, ``revisar`` y ``error`` son un error (``es_error``).
 - R18: ``GET /api/documents/{id}/alta-sigrid/fase`` (200 con la fase, 404 sin
   documento; con la feature apagada, ``resultado`` sin leer el alta).
+- R15, R16, R17: la plantilla del panel por fase (en curso, error de tiempo,
+  resultado malo como error).
+- R19: el sondeo cada 3 s de la ficha (node, con reloj y fetch falsos).
 - R20: ni pintar ni sondear escriben el alta ni publican.
 
 Sin red ni BBDD: dobles del repositorio y ``TestClient`` sobre ``build_app``.
 """
 from __future__ import annotations
 
+import json
+import re
+import shutil
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -279,3 +285,214 @@ def test_f077_r20_la_ruta_es_get_y_solo_lectura():
     assert "review_service.fase_alta(" in bloque
     for prohibido in ("publicar", "solicitar", "_publicar_feedback", "guardar", "save"):
         assert prohibido not in bloque
+
+
+# =================================================================== #
+# R15, R16, R17 · la plantilla del panel por fase
+# =================================================================== #
+_ALTA_COMPLETA = {
+    "estado": "registrado", "modo": "real", "sigrid_cod": "AC26/0042", "sigrid_con_ide": 42,
+    "adjunto_estado": "error", "intentos": 3, "ultimo_intento_at_utc": "2026-10-16T09:00:00+00:00",
+    "approved_by": "pgris@ruesma.es", "approved_at_utc": ANTERIOR,
+    "peticion": {"usu": "pgris", "lineas": [{"referencia_linea": "900", "producto": "QA9999",
+                                              "descripcion": "GRUA 30T", "partida": "03.02",
+                                              "cantidad": 2.0, "precio": 60.0}]},
+    "respuesta": {"totales": {"totbas": 120.0, "totdoc": 145.2}, "lineas": []},
+    "motivos": [{"codigo": "fecha_no_plausible", "detalle": "2025-01-01"},
+                {"codigo": "importe_distinto", "detalle": "120 frente a 118", "referencia_linea": "900"}],
+    "avisos": [{"codigo": "stock_negativo", "mensaje": "Stock por debajo de cero"}],
+}
+
+#: Nada del resultado anterior puede verse con la fase en_curso / sin_respuesta.
+_DEL_RESULTADO = ["Estado:", "Registrado en Sigrid", "AC26/0042", "Modo:", "Intentos", "Último intento",
+                  "Adjunto", "Usuario de Sigrid", "corrígelo", "fecha_no_plausible", "importe_distinto",
+                  "GRUA 30T", "Total de la previa", "Avisos de Sigrid", "stock_negativo",
+                  "Sin alta en Sigrid todavía", "alta-sigrid-motivos", "alta-sigrid-lineas"]
+
+_SIN_RESPUESTA = ("Sigrid no ha respondido en 5 minutos. El alta aún puede completarse: recarga la página "
+                  "más tarde para ver el resultado.")
+
+
+def _ficha_alta(documento, fase, alta=None, *, puede=True, adjunto=True):
+    documento.approved = True
+    documento.alta_sigrid_activa = True
+    documento.alta_sigrid = alta
+    documento.alta_fase = fase
+    documento.alta_puede_solicitar = puede
+    documento.alta_puede_reintentar_adjunto = adjunto
+    return documento
+
+
+def _panel(html):
+    encontrado = re.search(r'<section[^>]*id="alta-sigrid".*?</section>', html, re.DOTALL)
+    return encontrado.group(0) if encontrado else None
+
+
+def _clases(panel):
+    return re.search(r'<section class="([^"]*)"', panel).group(1).split()
+
+
+@pytest.mark.parametrize("alta", [None, AltaSigridVista(**_ALTA_COMPLETA)])
+def test_f077_r15_en_curso_sin_nada_del_resultado_ni_botones(render_detalle, documento_detalle, alta):
+    documento = _ficha_alta(documento_detalle(), "en_curso", alta)
+    panel = _panel(render_detalle(documento))
+    assert "Alta en curso…" in panel
+    assert "La ficha se actualizará sola cuando Sigrid responda." in panel
+    assert 'data-fase="en_curso"' in panel
+    assert f'data-document-id="{documento.id}"' in panel
+    for texto in _DEL_RESULTADO:
+        assert texto not in panel, texto
+    assert "<button" not in panel and "<form" not in panel
+    assert "error" not in _clases(panel)
+
+
+@pytest.mark.parametrize("alta", [None, AltaSigridVista(**_ALTA_COMPLETA)])
+@pytest.mark.parametrize("puede", [True, False])
+def test_f077_r16_sin_respuesta_error_de_tiempo(render_detalle, documento_detalle, alta, puede):
+    panel = _panel(render_detalle(_ficha_alta(documento_detalle(), "sin_respuesta", alta, puede=puede)))
+    assert "error" in _clases(panel)
+    assert 'data-fase="sin_respuesta"' in panel
+    assert _SIN_RESPUESTA in panel
+    for texto in _DEL_RESULTADO:
+        assert texto not in panel, texto
+    assert ("alta-sigrid/solicitar" in panel) is puede
+    assert "reintentar-adjunto" not in panel and "verificar-anulacion" not in panel
+    assert "Alta en curso" not in panel
+
+
+@pytest.mark.parametrize("estado", ["no_admitido", "revisar", "error"])
+def test_f077_r17_resultado_malo_es_error(render_detalle, documento_detalle, estado):
+    alta = AltaSigridVista(**{**_ALTA_COMPLETA, "estado": estado, "approved_at_utc": APROBADO})
+    panel = _panel(render_detalle(_ficha_alta(documento_detalle(), "resultado", alta)))
+    assert "error" in _clases(panel)
+    assert f"Error en el alta en Sigrid: {alta.estado_texto}" in panel
+    assert "Estado:" not in panel
+    assert 'data-fase="resultado"' in panel
+    assert "fecha_no_plausible" in panel  # con sus motivos (D)
+
+
+@pytest.mark.parametrize("estado", ["simulado", "ya_en_sigrid", "registrado", "incierto", "anulado", "en_curso"])
+def test_f077_r17_resto_de_estados_como_hoy(render_detalle, documento_detalle, estado):
+    alta = AltaSigridVista(**{**_ALTA_COMPLETA, "estado": estado, "approved_at_utc": APROBADO})
+    panel = _panel(render_detalle(_ficha_alta(documento_detalle(), "resultado", alta)))
+    assert "error" not in _clases(panel)
+    assert "Error en el alta" not in panel
+    assert f'Estado: <strong class="alta-sigrid-estado estado-{estado}">{alta.estado_texto}</strong>' in panel
+    assert ("warning" in _clases(panel)) is alta.bloqueante
+
+
+def test_f077_r17_resultado_sin_alta_como_hoy(render_detalle, documento_detalle):
+    panel = _panel(render_detalle(_ficha_alta(documento_detalle(), "resultado", None)))
+    assert "Sin alta en Sigrid todavía." in panel and "alta-sigrid/solicitar" in panel
+    assert "info" in _clases(panel)
+
+
+# =================================================================== #
+# R19 · el sondeo de la ficha, ejecutado con node
+# =================================================================== #
+_SONDEO = """
+    const relojes = [];
+    globalThis.setTimeout = function (f, ms) { relojes.push({f: f, ms: ms}); return relojes.length; };
+    globalThis.setInterval = function () { throw new Error("nada de setInterval"); };
+    const peticiones = [];
+    let respuestas = [];
+    globalThis.fetch = function (url, init) {
+        peticiones.push({url: url, accept: init && init.headers && init.headers.Accept});
+        const r = respuestas.shift();
+        if (r === "red") { return Promise.reject(new Error("red caída")); }
+        return Promise.resolve({
+            ok: r.status >= 200 && r.status < 300, status: r.status,
+            json: function () {
+                return r.json === "ilegible" ? Promise.reject(new Error("x")) : Promise.resolve(r.json);
+            },
+        });
+    };
+    function vaciar() { return new Promise(function (r) { setImmediate(r); }); }
+    async function disparar() {
+        const reloj = relojes.shift();
+        reloj.f();
+        for (let i = 0; i < 5; i++) { await vaciar(); }
+        return reloj.ms;
+    }
+    function panelCon(fase) {
+        const p = el("section", "alert alta-sigrid info", document.body);
+        p.id = "alta-sigrid";
+        p.dataset.fase = fase;
+        p.dataset.documentId = "DOC-1";
+        return p;
+    }
+"""
+
+_con_node = pytest.mark.skipif(shutil.which("node") is None, reason="node no está instalado")
+
+
+def _sondeo(tmp_path, programa):
+    from test_f051_almacen_front import _app_js
+    from test_f065_f3bis_front import _ejecutar_dom
+
+    constante = re.search(r"const SONDEO_ALTA_MS = (\d+);", _app_js()).group(0)
+    return _ejecutar_dom(tmp_path, ["sondearAltaEnCurso"], constante + "\n" + _SONDEO, programa)
+
+
+@_con_node
+def test_f077_r19_sondea_cada_3_s_y_recarga_una_vez_al_cambiar(tmp_path):
+    casos = _sondeo(tmp_path, """
+        respuestas = ["red", {status: 500, json: {}}, {status: 200, json: "ilegible"},
+                      {status: 200, json: {}}, {status: 200, json: {fase: "en_curso"}},
+                      {status: 200, json: {fase: "resultado"}}];
+        sondearAltaEnCurso(panelCon("en_curso"));
+        const antes = {peticiones: peticiones.length, relojes: relojes.length};
+        const esperas = [];
+        while (relojes.length) { esperas.push(await disparar()); }
+        console.log(JSON.stringify({antes, esperas, peticiones, recargas: window._recargas}));
+    """)
+    assert casos["antes"] == {"peticiones": 0, "relojes": 1}
+    assert casos["esperas"] == [3000] * 6
+    assert casos["peticiones"] == [{"url": "/api/documents/DOC-1/alta-sigrid/fase",
+                                    "accept": "application/json"}] * 6
+    assert casos["recargas"] == 1
+
+
+@_con_node
+@pytest.mark.parametrize("fase", ["sin_respuesta", "resultado"])
+def test_f077_r19_cualquier_otra_fase_recarga(tmp_path, fase):
+    casos = _sondeo(tmp_path, """
+        respuestas = [{status: 200, json: {fase: FASE}}];
+        sondearAltaEnCurso(panelCon("en_curso"));
+        await disparar();
+        console.log(JSON.stringify({recargas: window._recargas, relojes: relojes.length}));
+    """.replace("FASE", json.dumps(fase)))
+    assert casos == {"recargas": 1, "relojes": 0}
+
+
+@_con_node
+def test_f077_r19_un_404_para_el_sondeo(tmp_path):
+    casos = _sondeo(tmp_path, """
+        respuestas = [{status: 503, json: {}}, {status: 404, json: {detail: "no"}}];
+        sondearAltaEnCurso(panelCon("en_curso"));
+        await disparar();
+        await disparar();
+        console.log(JSON.stringify({recargas: window._recargas, relojes: relojes.length,
+                                    peticiones: peticiones.length}));
+    """)
+    assert casos == {"recargas": 0, "relojes": 0, "peticiones": 2}
+
+
+@_con_node
+@pytest.mark.parametrize("fase", ["sin_respuesta", "resultado", ""])
+def test_f077_r19_sin_en_curso_ninguna_consulta(tmp_path, fase):
+    casos = _sondeo(tmp_path, """
+        sondearAltaEnCurso(panelCon(FASE));
+        sondearAltaEnCurso(null);
+        console.log(JSON.stringify({relojes: relojes.length, peticiones: peticiones.length}));
+    """.replace("FASE", json.dumps(fase)))
+    assert casos == {"relojes": 0, "peticiones": 0}
+
+
+def test_f077_r19_arranca_solo_con_el_panel_y_sin_set_interval():
+    from test_f051_almacen_front import _app_js, _funcion_js
+
+    js = _app_js()
+    assert "const SONDEO_ALTA_MS = 3000;" in js
+    assert 'sondearAltaEnCurso(document.getElementById("alta-sigrid"));' in js
+    assert "setInterval" not in _funcion_js(js, "sondearAltaEnCurso")
