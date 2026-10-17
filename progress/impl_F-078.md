@@ -153,7 +153,8 @@ entera de su servicio sin `-x`: **8 de 8 muertos**. Total: **0 supervivientes, 0
    (`ModuleNotFoundError` en la recolección); de ahí la cobertura 24,4 % (sus suites no corrieron). Además: raíz
    `test_f039_r2` (faltaban los dos informes de F-078 en `inventario_mutacion_F-039.md`: añadidos, `ef70d17`) y
    tamaño del informe (223 > 220: recortado). Sin más KO.
-2. **Con `PYTHONPATH` a la comun del worktree** (lo que verá el árbol principal tras fusionar): **`ENTORNO LISTO. Puedes trabajar.`** Raíz 1237, sv1 205, sv2 397, sv3 703, sv4 1487, sv5 43, sv6 340, sv9 660 passed; comun de caché (684 + 3 skipped, verde de la pasada 1); `PUERTA COBERTURA: 98.0% de 246 líneas cambiadas (241/246)`; tamaño impl 219/220.
+2. **Con `PYTHONPATH` a la comun del worktree** (Git Bash: `export PYTHONPATH=<worktree>/services/albaranes-comun`;
+   el `bash` de PowerShell es el de WSL y no arranca), lo que verá el árbol principal tras fusionar: **`ENTORNO LISTO. Puedes trabajar.`** Raíz 1237, sv1 205, sv2 397, sv3 703, sv4 1487, sv5 43, sv6 340, sv9 660 passed; comun de caché (684 + 3 skipped, verde de la pasada 1); `PUERTA COBERTURA: 98.0% de 246 líneas cambiadas (241/246)`; tamaño impl 219/220.
 3. **AVISO rutas sensibles [evals]**: `fila_completa.py` cae en «redes deterministas de sv6» y pide
    `progress/evals_F-078.md` (`python -m evals.runner --con-llm --feature F-078`). Llama a LLM: no lo lancé (sin red
    en esta tarea). Decide el líder/humano; es aviso, no bloquea.
