@@ -1,8 +1,31 @@
-Revisión completa (pasada 1): `dev...16e048b` (rama `feature/F-078-linea-guarda-lo-que-se-ve`, `dev` fusionado en `ac4d24a`)
+Revisión incremental desde 16e048b (pasada 2): `16e048b..a201c6d`. La pasada 1 (completa, `dev...16e048b`) va debajo
 <!-- progress/review_F-078.md -->
 # F-078 · La línea valorada guarda lo que se ve · review
 
-## Veredicto: CHANGES_REQUESTED
+## Pasada 2 · veredicto: APPROVED
+
+- **Delta:** `a201c6d` toca solo `progress/current.md` (+56), `harness/features.json` y `BACKLOG.md` (una palabra cada
+  uno). `git diff 16e048b..a201c6d -- services harness/*.py` está **vacío**: no cambia código ni tests, así que lo
+  aprobado en la pasada 1 sigue en pie (campaña sobre `f3094c9`, RM1 intacto; sin campaña nueva).
+- **CR1** [x] `current.md` trae «F-078 · MANUAL del humano (T12–T14)» con fusión previa en `dev`, orden sv6 → relleno
+  `--aplicar` → sv4 y «sv9 no se redespliega». Extraje los bloques de código PowerShell y SQL de `current.md` y de
+  `impl_F-078.md` §7 y los comparé con `diff`: **idénticos**, salvo la línea añadida de la relectura (CR2).
+- **CR2** [x] T13 termina con el relleno en solo lectura **tras desplegar sv4**, «Filas que cambiarían: 0» y, si da
+  más, `--aplicar` otra vez con la misma autorización y nueva lectura.
+- **CR3** [x] La nota para quien fusione después es correcta: F-075 debe pasar por `completar_registros` (cita el
+  nombre exacto del test, que existe); F-077 R11 incluye R17 y la fila 13 de `f065_bbdd` lleva «PORTES»; conflictos de
+  texto de F-076 (pipeline de sv6) y de F-075/F-077 (`review_repository.py`, plantilla), como en `spec_F-078.md` §5.
+- **CR4** [x] `features.json` dice `fila_a_guardar`; `init.sh` da «BACKLOG.md al día».
+- **`bash harness/init.sh`** desde Git Bash con `export PYTHONPATH=<worktree>/services/albaranes-comun`: `ENTORNO
+  LISTO`, exit 0. Raíz `1237 passed` (205 s); servicios de caché (válida: el delta no toca `services/`, y en la pasada 1
+  ejecuté sin caché sv4, sv6, sv9 y comun); `COBERTURA [OK] 98.0%`; tamaño impl 220/220. Sigue el
+  AVISO [evals], ya justificado como falso positivo (C4 ter).
+- **Checkpoints:** el `[ ]` de C4 (MANUAL en `current.md`) pasa a `[x]`; el resto, como en la pasada 1. C4 ter queda
+  en `aviso` con su motivo escrito. Cierre: falta solo lo MANUAL del humano (T12–T14), que no bloquea el veredicto.
+- **Observación:** el tercer bloque de T13 (relectura tras sv4) no repite el `cd` a `serviceslbaran-valoracion-persist`; si
+  el humano despliega sv4 desde `infra\`, que vuelva antes a esa carpeta. Que el líder lo diga al pasarle los comandos.
+
+## Pasada 1 · veredicto: CHANGES_REQUESTED (resuelto en la pasada 2)
 
 No pido ningún cambio de código: el código, los tests y la campaña están bien. Rechazo por un checkpoint vacío de C4,
 porque las MANUAL T12–T14 no están en `progress/current.md`. Van tres arreglos de documentación más en el mismo commit
@@ -22,42 +45,14 @@ supervivientes salvo equivalentes que acepte el humano, RM5 con una muestra y MA
 | RM4 en una copia `git archive`, en mi scratchpad y sin bytecode | Script L92 `frozen=False`: 1 fallo (`r21_un_cambio_es_inmutable`). sv4 L297 `es_contrato=True`: 1 fallo (`r16_materializar_una_nueva_con_blanca_…`). Las dos filas del re-juicio coinciden. Un muerto de la herramienta (`fila_completa.py` L36 `es_contrato=False`): 5 fallos. El worktree quedó limpio |
 | Ramas F-075, F-076 y F-077 | Aún sin código (`git diff --name-only dev...` vacío en `services/`). El choque está en sus specs y en quien implemente después |
 
-## Puntos que pidió juzgar el líder
+## Puntos que pidió juzgar el líder (pasada 1, resumen; texto íntegro en `git show 0a3851f:progress/review_F-078.md`)
 
-1. **Desviaciones del §2: todas caben en la spec aprobada. No hace falta volver al humano.**
-   - **#2.** «Su línea» es primero la de contrato porque así lo dice el glosario de requirements, que es lo vinculante.
-     La ficha decide en ese orden (`matched` primero; si no, `elif derived`, ~L1516); la incoherencia está en design
-     §4. Los builders de sv6 nunca ponen las dos (`partida_matcher`: derivada ⇒ `matched=None`).
-   - **#3.** R2 acepta expresamente la unidad de su línea y R16 obliga a materializar la original, así que «las
-     unidades de la original» de R15 son las ya materializadas. La ficha de antes también pintaba la de su línea, y
-     en producción hay 0 casos. El líder debe citarlo en la PARADA 2 como cambio de F-065 R31, sin parar.
-   - **#1.** Una blanca sin concepto pasa a la derivada. Se aparta de la letra de la spec, pero evita guardar vacía
-     una Nueva de sv6 cuyo papel no trae concepto. Es lo que pintaba la ficha y cabe por R2.
-   - **#4–#8.** También caben: el aviso de R17 vive en `LineasIncompletasError` (tests del 303 y del 409),
-     `unidad_medida` es columna real del merge de sv3, la conexión no se imprime y la RED de T9 retiró el script.
-2. **AVISO [evals]: es un falso positivo y no hacen falta evals con LLM.**
-   - `completar_registros` solo toca cinco columnas de presentación y alta, y lo hace después del builder.
-   - Importes, partida, `partida_action`, motivos y `review_required` no cambian (lo fija `r5_solo_cambian_los_cinco_…`).
-   - `evals/procesos/sv6_build.py` compone `ValuationBuilder`, no `RunValuationPipeline`. Las evals no ejecutan este
-     paso y darían lo mismo que en `dev`.
-   - Un precio vacío se llena con el de su línea, pero el importe sigue nulo y la fila sigue en revisión. En
-     producción, 0 casos.
-3. **Orden sv6 → relleno → sv4.** El riesgo está acotado y documentado en design §7, impl §2.6 y T13. Queda una
-   ventana:
-   - Entre el relleno y el despliegue de sv4, el sv4 viejo sigue escribiendo huecos: `descripcion_linea = NULL` en
-     «Origen ✎» → contrato y en `descripcion_para_valoracion`.
-   - El sv4 nuevo los pinta vacíos y R17 bloquea la aprobación, así que a Sigrid no sale nada mal.
-   - Un PATCH in situ sí copia el vacío a la derivada (L2195).
-   - Repetir el relleno lo recupera desde el papel (cambio 2).
-4. **Script de relleno: correcto.**
-   - Por defecto, `SET TRANSACTION READ ONLY` antes de leer (tests del orden y del dialecto). `--aplicar`: un único
-     `conexion.begin()`; si falla, `RellenoIncompleto` deshace y sale con código 2.
-   - Idempotente (`fila_a_guardar` es un punto fijo; `r22_segunda_pasada_cero_cambios`). Salta `is_active` falso y
-     `ESTADOS_ALTA_BLOQUEANTES`. Solo imprime ids, columnas y el tipo del error. No toca derivadas, importes ni partidas.
-5. **sv9:** confirmado, solo cambian sus tests.
-6. **Choques:** están anotados solo en `spec_F-078.md` §5 y en `impl_F-078.md` §6, no en `current.md`, así que quien
-   implemente F-076 o F-077 no los verá. F-077 R11 da por fijas las validaciones del PUT, y R17 añade una. F-075 trae
-   3 `replace_valuation`; el test por grep lo cazaría. Es el cambio 3.
+1. Las desviaciones #1–#8 del §2 caben en la spec. #2: el glosario de requirements manda y la ficha decide igual. #3:
+   R2 + R16 lo cubren; citarlo en la PARADA 2 como cambio de F-065 R31. 2. El AVISO [evals] es un falso positivo: el
+   paso va tras el builder, no cambia ninguna decisión (R5) y `evals/procesos/sv6_build.py` no ejecuta el pipeline.
+3. Orden sv6 → relleno → sv4: acotado; la ventana del sv4 viejo la cierra la relectura tras sv4. 4. Script correcto
+   (READ ONLY, una transacción, idempotente, salta papelera y alta bloqueante, sin credenciales). 5. sv9: solo tests.
+6. Choques: ahora anotados en `current.md` (pasada 2).
 
 ## Checkpoints
 
