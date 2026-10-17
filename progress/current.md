@@ -1,8 +1,8 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-077 · `in_progress` (2026-10-17): review pasada 1 CHANGES_REQUESTED (solo documentación, código aprobado);
-cambios 1–3 aplicados, pendiente de la pasada 2; T14 la hace el líder en el navegador (abajo)** — rama
+**F-077 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`; espera la MANUAL T14, que hace el
+líder en el navegador tras desplegar sv4 (abajo)** — rama
 `feature/F-077-guardar-y-aprobar` (worktree `../albaranes-F-077`), `dev` fusionado. Spec v2 en
 `specs/F-077-guardar-y-aprobar/` (con las notas de implementación aceptadas en review); informe:
 `progress/impl_F-077.md`; review: `progress/review_F-077.md`; mutación: `progress/mutacion_F-077.md`. Solo sv4, rigor
