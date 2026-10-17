@@ -234,3 +234,28 @@ def test_f078_r1_cambios_a_guardar_recorta_textos():
     assert cambios_a_guardar(fila, None, None) == {
         "descripcion_linea": "X", "unidad_contrato": "UD",
     }
+
+
+# ------------------------------------------------------------------ #
+# T10 · lo que la campaña de mutación pidió fijar
+# ------------------------------------------------------------------ #
+@pytest.mark.parametrize("valor", [
+    CamposFila(), LineaDeLaFila(es_contrato=True),
+])
+def test_f078_r1_los_valores_de_la_regla_son_inmutables(valor):
+    """Se comparten entre sv4, sv6 y el relleno: nadie puede tocarlos por el camino."""
+    import dataclasses
+
+    campo = dataclasses.fields(valor)[0].name
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        setattr(valor, campo, None)
+
+
+def test_f078_r1_sin_conversion_incluye_el_borde_de_la_tolerancia(monkeypatch):
+    """La tolerancia cuenta como «1»: ``|factor − 1| ≤ TOLERANCIA_FACTOR``."""
+    import ruesma_comun.linea_valorada as modulo
+
+    monkeypatch.setattr(modulo, "TOLERANCIA_FACTOR", 0.5)
+    assert modulo.sin_conversion(1.5) is True
+    assert modulo.sin_conversion(0.5) is True
+    assert modulo.sin_conversion(1.5000001) is False

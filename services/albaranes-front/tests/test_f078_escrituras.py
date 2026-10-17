@@ -16,7 +16,7 @@ Repositorio real sobre SQLite (``f065_bbdd``: METALFIRE). Sin red.
 from __future__ import annotations
 
 import pytest
-from f065_bbdd import DOC, construir, ejecutar, fila, repositorio
+from f065_bbdd import DOC, construir, ejecutar, fila, filas, linea, repositorio
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -434,3 +434,60 @@ def test_f078_r16_el_patch_no_materializa_lo_vaciado():
     _editar(motor, 11, descripcion=None)
 
     assert fila(motor, 11)["descripcion_linea"] is None
+
+
+# =================================================================== #
+# T10 · el helper decide Contrato / Nueva como la ficha
+# =================================================================== #
+def _materializar(motor, vid):
+    repo = repositorio(motor)
+    with Session(motor) as s:
+        repo._materializar_fila_in_session(s, vid)
+        s.commit()
+
+
+def test_f078_r16_materializar_una_contrato_sin_descripcion_toma_la_de_su_linea():
+    """Fila 11 (Contrato, blanca «PUERTA EI2-60»): la de su línea, no el papel."""
+    motor = construir()
+
+    _materializar(motor, 11)
+
+    assert fila(motor, 11)["descripcion_linea"] == "PUERTA CORTAFUEGOS EI2-60"
+
+
+def test_f078_r16_materializar_una_nueva_con_blanca_sin_descripcion_toma_el_papel():
+    """Fila 13 (Nueva, blanca «PORTES»), derivada «TRANSPORTE»: el papel (P1 = (b))."""
+    motor = construir()
+    ejecutar(motor, "UPDATE contrato_lines_derived SET descripcion_linea = 'TRANSPORTE' "
+             "WHERE id = 601")
+    ejecutar(motor, "UPDATE albaran_line_valuations SET descripcion_linea = NULL "
+             "WHERE id = 13")
+
+    _materializar(motor, 13)
+
+    assert fila(motor, 13)["descripcion_linea"] == "PORTES"
+
+
+def test_f078_r16_materializar_una_fila_que_no_existe_no_hace_nada():
+    motor = construir()
+
+    _materializar(motor, 999)
+
+    assert [f["id"] for f in filas(motor)] == [11, 12, 13]
+
+
+def test_f078_r16_materializar_una_manual_sin_blanca_toma_su_derivada():
+    """La 386 del caso: manual, sin blanca, derivada «CARGA INCOMPLETA» en M3."""
+    motor = construir()
+    ejecutar(motor, "INSERT INTO contrato_lines_derived (id, created_by_valuation_id, "
+             "descripcion_linea, unidad_medida, precio_unitario, origen) VALUES "
+             "(639, 'f065-val-1', 'CARGA INCOMPLETA', 'M3', 12.5, 'manual_override')")
+    with Session(motor) as s:
+        linea(s, id=386, line_kind="manual", derived_contrato_line_id=639,
+              unidad_contrato=None, precio_unitario_final=None, importe_calculado=12.5)
+        s.commit()
+
+    _materializar(motor, 386)
+
+    assert _columnas(motor, 386, "descripcion_linea", "unidad_contrato", "unidad_albaran",
+                     "precio_unitario_final") == ("CARGA INCOMPLETA", "M3", "M3", 12.5)

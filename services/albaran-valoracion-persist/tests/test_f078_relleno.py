@@ -473,3 +473,51 @@ def test_f078_r25_tras_el_relleno_la_ficha_pinta_lo_mismo_salvo_el_concepto_del_
     for vid in (385, 379):
         antes[vid]["concepto"] = ahora[vid]["concepto"]
     assert ahora == antes
+
+
+# =================================================================== #
+# T10 · lo que la campaña de mutación pidió fijar
+# =================================================================== #
+def test_f078_r21_un_cambio_es_inmutable():
+    import dataclasses
+
+    from scripts.rellenar_filas_f078 import Cambio
+
+    cambio = Cambio(id=1, line_kind="manual", aprobado=False, columnas={})
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        cambio.id = 2  # type: ignore[misc]
+
+
+def test_f078_r21_la_ayuda_dice_que_es_y_como_se_escribe(capsys):
+    import scripts.rellenar_filas_f078 as script
+
+    with pytest.raises(SystemExit) as salida:
+        script.main(["--help"])
+
+    assert salida.value.code == 0
+    ayuda = capsys.readouterr().out
+    assert "Relleno de F-078: cada fila valorada guarda lo que la ficha enseña." in ayuda
+    assert "--aplicar" in ayuda and "--env" in ayuda
+
+
+def test_f078_r24_lanzado_como_script_sin_configuracion_sale_con_1_y_sin_datos(tmp_path):
+    """``python -m scripts.rellenar_filas_f078`` llega a ``main``: sin ``PG_USER`` ni
+    ``PG_PASSWORD`` (un ``.env`` vacío) no conecta, sale con 1 y solo dice el tipo
+    de error."""
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    vacio = tmp_path / "vacio.env"
+    vacio.write_text("", encoding="utf-8")
+    entorno = {k: v for k, v in os.environ.items() if not k.startswith("PG_")}
+    hecho = subprocess.run(
+        [sys.executable, "-m", "scripts.rellenar_filas_f078", "--env", str(vacio)],
+        cwd=Path(__file__).resolve().parents[1], env=entorno, capture_output=True,
+        text=True, timeout=120,
+    )
+
+    assert hecho.returncode == 1, hecho.stderr
+    assert hecho.stdout == ""
+    assert hecho.stderr.startswith("ERROR: ValidationError.")
