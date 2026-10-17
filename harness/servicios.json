@@ -1,12 +1,12 @@
 {
   "servicios": [
-    { "nombre": "sv1-email",              "ruta": "services/albaranes-email",            "lenguaje": "python" },
-    { "nombre": "sv2-api",                "ruta": "services/albaranes-api",              "lenguaje": "python" },
-    { "nombre": "sv3-persistencia",       "ruta": "services/albaranes-persistencia",     "lenguaje": "python" },
-    { "nombre": "sv4-front",              "ruta": "services/albaranes-front",            "lenguaje": "python", "venv": "services/albaranes-front/.venv" },
-    { "nombre": "sv5-valoracion-api",     "ruta": "services/albaran-valoracion-api",     "lenguaje": "python" },
-    { "nombre": "sv6-valoracion-persist", "ruta": "services/albaran-valoracion-persist", "lenguaje": "python" },
-    { "nombre": "sv9-alta-sigrid",        "ruta": "services/albaranes-alta-sigrid",      "lenguaje": "python" },
+    { "nombre": "sv1-email",              "ruta": "services/albaranes-email",            "lenguaje": "python", "depende_de": ["services/albaranes-comun"], "importa": ["ruesma_comun"] },
+    { "nombre": "sv2-api",                "ruta": "services/albaranes-api",              "lenguaje": "python", "depende_de": ["services/albaranes-comun"], "importa": ["ruesma_comun"] },
+    { "nombre": "sv3-persistencia",       "ruta": "services/albaranes-persistencia",     "lenguaje": "python", "depende_de": ["services/albaranes-comun"], "importa": ["ruesma_comun"] },
+    { "nombre": "sv4-front",              "ruta": "services/albaranes-front",            "lenguaje": "python", "venv": "services/albaranes-front/.venv", "depende_de": ["services/albaranes-comun"], "importa": ["ruesma_comun"] },
+    { "nombre": "sv5-valoracion-api",     "ruta": "services/albaran-valoracion-api",     "lenguaje": "python", "depende_de": ["services/albaranes-comun"], "importa": ["ruesma_comun"] },
+    { "nombre": "sv6-valoracion-persist", "ruta": "services/albaran-valoracion-persist", "lenguaje": "python", "depende_de": ["services/albaranes-comun"], "importa": ["ruesma_comun"] },
+    { "nombre": "sv9-alta-sigrid",        "ruta": "services/albaranes-alta-sigrid",      "lenguaje": "python", "depende_de": ["services/albaranes-comun"], "importa": ["ruesma_comun"] },
     { "nombre": "comun",                  "ruta": "services/albaranes-comun",            "lenguaje": "python" },
     { "nombre": "infra",                  "ruta": "infra",                               "lenguaje": "otro" }
   ]

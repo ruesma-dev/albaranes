@@ -80,6 +80,8 @@ _VALORACION = (
     """,
     "ALTER TABLE albaran_contrato_lines_merge ADD COLUMN sigrid_ide INTEGER",
     "ALTER TABLE albaran_lines_merge ADD COLUMN contexto_linea_json TEXT",
+    # (F-078 R13) La unidad leída de la blanca (columna de sv3, como la de arriba).
+    "ALTER TABLE albaran_lines_merge ADD COLUMN unidad_medida VARCHAR(32)",
 )
 
 #: El DDL de sv3 (``phase2_ddl``), con tipos de SQLite.
