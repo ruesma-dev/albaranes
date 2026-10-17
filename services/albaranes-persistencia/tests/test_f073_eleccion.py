@@ -695,3 +695,59 @@ def similitud_obra_si_fuera_proveedor(a, b):
     from application.services.similitud_proveedor import similitud_razon_social
 
     return similitud_razon_social(a, b)
+
+
+# ------------------------------------------------------------------ #
+# T11 · supervivientes de la 1.ª campaña de mutación
+# ------------------------------------------------------------------ #
+def test_f073_t11_cinco_caracteres_en_las_dos_palabras_se_aproximan():
+    """#34 y #37: «≥ 5» es inclusivo en la palabra leída y en la del otro."""
+    from application.services.similitud_proveedor import similitud_razon_social
+
+    assert similitud_razon_social("PALXS ZZZZ", "PALOS PEREZ") == 0.5
+    assert similitud_razon_social("PALOS PEREZ", "PALXS ZZZZ") == 0.5
+
+
+def test_f073_t11_la_contencion_es_del_texto_aunque_una_palabra_de_dos_no_case():
+    """#55: «xx yyy» está dentro de «axx yyyb» (R4 ⇒ 1), aunque palabra a
+    palabra «xx» no casa (2 caracteres: solo igualdad) y daría 0,5."""
+    from application.services.similitud_proveedor import similitud_razon_social
+
+    assert similitud_razon_social("XX YYY", "AXX YYYB") == 1.0
+    assert similitud_razon_social("AXX YYYB", "XX YYY") == 1.0
+
+
+def test_f073_t11_mismo_cif_misma_similitud_gana_el_nombre_menor_sin_mirar_el_orden():
+    """#45: el desempate dentro de un CIF llega hasta el nombre."""
+    filas = [("B1", "PROVEEDOR OBRA ZETA"), ("B1", "PROVEEDOR OBRA ALFA"), ("B2", "OTRA, S.L.")]
+    for orden in (filas, list(reversed(filas))):
+        eleccion = _elegir("PROVEEDOR OBRA", orden)
+        assert eleccion.elegido == CandidatoNombre("B1", "PROVEEDOR OBRA ALFA", 1.0)
+
+
+def test_f073_t11_candidato_y_eleccion_son_inmutables():
+    """#52 y #56: ``frozen=True`` (design §6)."""
+    import dataclasses
+
+    candidato = CandidatoNombre("B1", "X", 1.0)
+    eleccion = EleccionPorNombre(elegido=candidato, empatados=(), segunda=0.0, mejor=candidato)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        candidato.similitud = 0.0
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        eleccion.elegido = None
+
+
+def test_f073_t11_la_nota_suma_los_puntos_del_cif_normalizado():
+    """#4: dos filas del mismo CIF con distinta grafía («B1» y « b1 ») son un
+    candidato y cuentan con sus mejores puntos (7, no los 2 de la fila
+    «B1»): en la nota, B1 empata a puntos con B2 y va delante por CIF."""
+    decision, repo = _paso1(
+        [_resumen("B1", "HORMIGONES UNO, S.L.", "GASOLEO A"),
+         _resumen(" b1 ", "HORMIGONES UNO BIS, S.L.", "HORMIGON HA-25"),
+         _resumen("B2", "HORMIGONES DOS, S.L.", "HORMIGON HM-20")],
+        "HORMIGONES", conceptos=["HORMIGON HA-25"],
+    )
+    assert decision == (None, "deterministic")
+    [(_, nota, _)] = repo.marcas
+    assert "casa por igual con 2 proveedores" in nota
+    assert "B1 — HORMIGONES UNO, S.L.; B2 — HORMIGONES DOS, S.L." in nota
