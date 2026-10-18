@@ -1,7 +1,7 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-075 · `blocked` (2026-10-18): review APPROVED (pasada 2, `progress/review_F-075.md`); espera la T17 del humano (evals con LLM, en el worktree y antes de fusionar) y su sí al orden de T18 (sv5 → sv6 → sv3 → sv4 → sv2); O3 a decidir por el humano.** Antes: — el importe del albarán manda (rigor `critico`; opción A y M1 del humano del 18-10, spec ajustada en `cb54d23`). T1–T16 y T19 hechas (un commit por tarea, hasta `575cef5`; `dev` `bee817d` fusionado); `init.sh` en verde en el worktree (cobertura 98,1 %; mutación 175 mutantes, 0 supervivientes tras el re-juicio). Informe: `progress/impl_F-075.md` (RED en `impl_F-075_red.md`, mutación en `mutacion_F-075.md`); `azure-apps` `c5fd3b0` sin push. Pendientes del humano: T0 (opcional), **T17** (evals con LLM, cierra el aviso de rutas sensibles) y **T18** (despliegue sv5 → sv6 → sv3 → sv4 → sv2, propuesto por el líder), comandos en el bloque de abajo. Rama `feature/F-075-importe-leido`, worktree `../albaranes-F-075`, *junction* `.venv` de sv4 (quitarla con `cmd /c rmdir` antes de `git worktree remove`). Suites de la rama con `PYTHONPATH=<worktree>/services/albaranes-comun`.
+**F-075 · `blocked` (2026-10-18): review APPROVED (pasada 2, `progress/review_F-075.md`); espera la T17 del humano (evals con LLM, en el worktree y antes de fusionar; lanzada el 2026-10-18); orden de T18 (sv5 → sv6 → sv3 → sv4 → sv2) **aceptado por el humano el 2026-10-18**; O3 a decidir por el humano.** Antes: — el importe del albarán manda (rigor `critico`; opción A y M1 del humano del 18-10, spec ajustada en `cb54d23`). T1–T16 y T19 hechas (un commit por tarea, hasta `575cef5`; `dev` `bee817d` fusionado); `init.sh` en verde en el worktree (cobertura 98,1 %; mutación 175 mutantes, 0 supervivientes tras el re-juicio). Informe: `progress/impl_F-075.md` (RED en `impl_F-075_red.md`, mutación en `mutacion_F-075.md`); `azure-apps` `c5fd3b0` sin push. Pendientes del humano: T0 (opcional), **T17** (evals con LLM, cierra el aviso de rutas sensibles) y **T18** (despliegue sv5 → sv6 → sv3 → sv4 → sv2, propuesto por el líder), comandos en el bloque de abajo. Rama `feature/F-075-importe-leido`, worktree `../albaranes-F-075`, *junction* `.venv` de sv4 (quitarla con `cmd /c rmdir` antes de `git worktree remove`). Suites de la rama con `PYTHONPATH=<worktree>/services/albaranes-comun`.
 
 #### F-075 · MANUAL del humano (T0, T17, T18), comandos para PowerShell
 
@@ -47,8 +47,8 @@ Ese informe cierra también el aviso de la puerta de rutas sensibles (`prompts.y
 **T18 · despliegue**, tras el APPROVED, la fusión en `dev` e `init.sh` en verde en el árbol principal. Cada
 `deploy.ps1` es **[ESCRIBE EN PRODUCCIÓN · humano]**.
 
-El orden es **sv5 → sv6 → sv3 → sv4 → sv2**. Lo propone el líder al humano, a partir de la O1 de
-`progress/review_F-075.md`; la spec decía sv3 → sv5 → sv6.
+El orden es **sv5 → sv6 → sv3 → sv4 → sv2**. Lo propuso el líder a partir de la O1 de
+`progress/review_F-075.md` (la spec decía sv3 → sv5 → sv6) y **lo aceptó el humano el 2026-10-18**.
 - **Por qué sv5 y sv6 van primero**: no dependen de la DDL, y así, cuando sv3 empiece a publicar sin contrato, cada
   albarán nuevo ya se valora directo. Con sv3 primero quedarían cabeceras `no_contract` **vacías**, que sv6 no rehace
   sin `force`.
