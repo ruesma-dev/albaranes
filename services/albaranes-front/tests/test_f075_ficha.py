@@ -459,7 +459,7 @@ def test_f075_r10_js_estado_inicial_y_sin_contrato_usan_la_regla():
     inicial = inicial[:inicial.index("async function persistSelection()")]
     assert 'valuateBtn.disabled = !puedeValorar(current, valuateBtn.dataset.traeImportes === "1")' in inicial
     assert "valuateBtn.disabled = !current" not in js
-    sin = js[js.index("if (sinContrato) {\n                if (valuateBtn)"):]
+    sin = js[js.index("if (sinContrato) {\n                const traeImportes"):]
     sin = sin[:sin.index("return;")]
     assert 'valuateBtn.disabled = !puedeValorar("", traeImportes)' in sin
     assert "avisoSinContrato(traeImportes)" in sin
