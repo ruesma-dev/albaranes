@@ -4,9 +4,8 @@
 Rama `feature/F-064-proveedor-en-prompts` (worktree `../albaranes-F-064`, spec `4b71baa`). Rigor `critico`, RUTA
 SENSIBLE (prompts de sv2). PARADA 1 aprobada (Q1–Q6 según el encargo; Q4: sin albarán nuevo en el banco).
 
-**ESTADO (2026-10-15): T1–T8 y T11 hechas; review pasada 1 APPROVED; `dev` fusionado y O1 aplicada (§8),
-pendiente de review.** #28 aceptado por el humano. Pendiente del humano: T9 y T10 (sobre `bea97f4` o posterior,
-tras la review de O1) y T12 (§6). `init.sh` no se ha reejecutado tras O1 (restricción del líder).
+**ESTADO (2026-10-18): `blocked`, solo falta la MANUAL T12 (§6).** T1–T11 hechas; review de O1 APPROVED
+(`81f386b`); T9 y T10 del humano en VERDE sobre `e0ee65c` (§9); `dev` fusionado de nuevo (§9). #28 aceptado.
 
 Entorno: venv raíz del árbol principal (`albaranes/.venv`: sv2 no declara venv en `harness/servicios.json`, así que
 init.sh usa el del arnés) con `PYTHONPATH=…\albaranes-F-064\services\albaranes-comun` (verificado:
@@ -126,27 +125,7 @@ E   ImportError: cannot import name 'comparar_proveedor' from 'evals' (...\albar
 
 ## 6. MANUAL del humano (PowerShell; claves por `Read-Host`, nunca del `.env`)
 
-Las claves se piden ocultas y se borran al final. Proveedores por defecto: IA1 `gemini` (`GEMINI_API_KEY`), IA2 `openai` (`OPENAI_API_KEY`); si cambias `IA_PRIMERA_FASE`/`IA_SEGUNDA_FASE`, pide también la de ese proveedor.
-```powershell
-cd C:\Users\pgris\PycharmProjects\albaranes-F-064
-$env:PYTHONPATH = 'C:\Users\pgris\PycharmProjects\albaranes-F-064\services\albaranes-comun'
-$s = Read-Host -AsSecureString 'GEMINI_API_KEY'; $env:GEMINI_API_KEY = [System.Net.NetworkCredential]::new('', $s).Password
-$s = Read-Host -AsSecureString 'OPENAI_API_KEY'; $env:OPENAI_API_KEY = [System.Net.NetworkCredential]::new('', $s).Password
-```
-**T9 · comparador base/rama** (≈ **228 llamadas**: 114 a gemini en IA1 y 114 a openai en IA2; 19 casos × 2 variantes × 3 repeticiones; el importe en euros lo da la consola de cada proveedor). `--base 544113b` = `dev` de antes de F-064
-(inmutable; con `dev` vale igual mientras F-064 no esté fusionada):
-```powershell
-& C:\Users\pgris\PycharmProjects\albaranes\.venv\Scripts\python.exe -m evals.comparar_proveedor --variante ambas --repeticiones 3 --base 544113b --albaranes C:\Users\pgris\PycharmProjects\albaranes\evals\inputs\albaranes
-```
-Criterio: `progress/comparar_proveedor_F-064.md` con `C1 · OK`, `C2 · OK`, `C3 · OK` y `VEREDICTO: VERDE`. Si sale el AVISO «la base no dio ningún CIF cliente», el banco no reproduce el incidente (design §7: añadir el albarán real).
-
-**T10 · pasada completa de la puerta** (≈ **190 llamadas**: ≈ 59 × 2 de sv2 + 59 de IA3 + ~13 de IA4):
-```powershell
-Copy-Item -Recurse C:\Users\pgris\PycharmProjects\albaranes\evals\inputs C:\Users\pgris\PycharmProjects\albaranes-F-064\evals\inputs
-& C:\Users\pgris\PycharmProjects\albaranes\.venv\Scripts\python.exe -m evals.runner --con-llm --feature F-064
-Remove-Item Env:GEMINI_API_KEY, Env:OPENAI_API_KEY
-```
-Criterio: `progress/evals_F-064.md` con IA1 ≤ 154 e IA2 ≤ 4 fallos críticos (base 147 y 2 de `evals_F-051.md`).
+T9 y T10 ya ejecutadas por el humano (comandos en `progress/spec_F-064.md` §5; resultado en §9). Queda T12:
 
 **T12 · tras fusionar en `dev` e `init.sh` en verde: desplegar SOLO sv2** (sin orden: ni schema ni comun cambian):
 ```powershell
@@ -166,9 +145,10 @@ ORDER BY m.created_at_utc DESC;
 
 ## 7. Qué falta (orden)
 
-1. Review de la pasada O1 (§8) y `bash harness/init.sh` cuando el líder lo permita.
-2. Humano: T9 y T10 sobre `bea97f4` o posterior (antes de fusionar); T12 (tras fusionar). #28 ya aceptado.
-3. Tras fusionar: `bash harness/init.sh` en el árbol principal y quitar la *junction* de sv4 antes de borrar el worktree.
+1. Fusionar la rama en `dev` (líder/humano) y `bash harness/init.sh` en el árbol principal.
+2. Humano: T12 (desplegar solo sv2 y vigilar `proveedor_cif_propio:` una semana, §6).
+3. Quitar la *junction* de sv4 antes de borrar el worktree (§5 bis).
+4. Decisión del humano pendiente: el albarán real de F-063 en el banco del comparador (§9).
 Fuera de alcance (spec): lista de proveedores de la obra para IA2 (F-055), `header-grounding`, comun, sv3, backfill.
 
 ## 8. Pasada O1 (2026-10-15, tras la review pasada 1 APPROVED)
@@ -203,6 +183,21 @@ FAILED tests/test_f064_prompt_ia2_proveedor.py::test_f064_o1_la_clausula_llega_a
 
 **Mutación**: `alcance_de_feature("F-064", base="bea97f4~1", rama="bea97f4")` ⇒ `0 fichero(s), 0 línea(s) de producción` (solo YAML, tests y docs; el YAML no es mutable, lo cubren las evals). Sin campaña nueva, sin equivalentes nuevos (RM5
 no aplica). **Efecto en T9/T10**: O1 toca `revision_rules.yaml`, ruta sensible ⇒ T9 y T10 se miden sobre `bea97f4` o posterior y `progress/evals_F-064.md` debe ser posterior a `bea97f4` (ya no a `8814e4f`).
+
+## 9. Fusión de dev y T9/T10, 2026-10-18
+
+**T9** (humano, HEAD `e0ee65c`, `progress/comparar_proveedor_F-064.md`, sin valores; revisado: solo recuentos y
+caso_id): **VERDE**, C1/C2/C3 OK. Mayoría emisor base 8 → rama 9 (IA1 e IA2); CIF cliente 0/0. **AVISO**: la base
+no dio ningún CIF cliente, así que el banco no reproduce el incidente y C1 no prueba la corrección. Movimientos:
+GEN-002 mejora (nulo → emisor), HOR-005 mejora (CIF ajeno → nulo), MOR-003 empeora (nulo → CIF ajeno; C3 no lo
+marca porque la base tampoco daba el emisor).
+**T10** (humano, `progress/evals_F-064.md`, fuera de git): criterio cumplido, IA1 **152** críticos (≤ 154; 57
+casos, RES-020/RES-021 omitidos sin fichero; gemini), IA2 **2** (≤ 4; openai); F-051: 147 y 2. Veredicto global ROJO
+esperado (IA3 408, IA4 27, E2E 537: fuera de F-064, que solo toca sv2).
+
+**Propuesta (decisión del humano, sin crear feature)**: meter el albarán real de la incidencia F-063 en el banco
+de `evals.comparar_proveedor` (design §7), para que C1 pruebe la corrección. Es un PDF con datos reales: entra
+solo si el humano lo autoriza y por la vía de `evals/inputs` (no versionada), con su CIF esperado.
 
 ## Evidencias
 

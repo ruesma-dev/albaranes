@@ -1,18 +1,14 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-064 · `blocked` (2026-10-15): review pasada O1 APPROVED; espera las evals T9 y T10 del humano** (el runner exige las claves en la sesión: comandos en `progress/spec_F-064.md` §5 con `Read-Host`; `evals/inputs` ya copiado). Con T9 y T10 en verde: fusionar en `dev` y desplegar solo sv2 (T12).
-
-**F-064 · `in_progress` (2026-10-15): review pasada 1 APPROVED (`progress/review_F-064.md`), cierre condicionado a
-T9 y T10 (el equivalente #28 ya está aceptado).** Rama `feature/F-064-proveedor-en-prompts`, worktree `../albaranes-F-064`
-(*junction* `services\albaranes-front\.venv`: quitarla con `cmd /c rmdir` ANTES de `git worktree remove`). Decisiones
-del humano (2026-10-15): **#28 aceptado por escrito** («Acepto los dos») y **O1 aprobada** (cláusula «emisor
-ilegible» en la regla `proveedor_emisor` de IA2). **`dev` (`d79b3d9`) fusionado en la rama** (conflictos en
-`features.json`, `BACKLOG.md`, `current.md`, `ARCHITECTURE.md` e inventario de mutación: se conserva todo lo de `dev`
-y F-064 queda como única `in_progress`). **Pasada O1 hecha, pendiente de review** (`progress/impl_F-064.md`
-§8 «Pasada O1»). Humano: T9 y T10 (evals con LLM real, tras la review de O1 y sobre `bea97f4` o posterior: O1 toca
-`revision_rules.yaml`, ruta sensible) y T12 (desplegar solo sv2 tras fusionar);
-comandos en `progress/impl_F-064.md` §6. Historia de la spec (PARADA 1, Q1–Q6) en `progress/spec_F-064.md`.
+**F-064 · `blocked` (2026-10-18): review O1 APPROVED, T9 y T10 del humano en VERDE; solo queda la MANUAL T12.**
+Rama `feature/F-064-proveedor-en-prompts`, worktree `../albaranes-F-064` (*junction* `services\albaranes-front\.venv`:
+quitarla con `cmd /c rmdir` ANTES de `git worktree remove`). T9 (comparador, `progress/comparar_proveedor_F-064.md`):
+C1/C2/C3 OK, emisor base 8 → rama 9, CIF cliente 0/0; AVISO: el banco no reproduce el incidente (propuesta al humano:
+añadir el albarán real de F-063, `progress/impl_F-064.md` §9). T10 (`progress/evals_F-064.md`, fuera de git): IA1 152
+(≤ 154), IA2 2 (≤ 4). Siguiente: fusionar en `dev`, `init.sh` en el árbol principal y **T12: desplegar SOLO sv2 y
+vigilar `proveedor_cif_propio:` en merges nuevos una semana** (comandos en `progress/impl_F-064.md` §6). Con T12 en
+verde, pasa a `done`.
 
 **F-070 · `blocked` (2026-10-15): review APPROVED (pasada 2), equivalente #17 aceptado por el humano, fusionada en `dev`.** Espera la MANUAL T13 del humano (desplegar sv4 y luego sv3; comando en el bloque «F-070 · MANUAL T13»). Al verificarla en pantalla, pasa a `done`.
 
