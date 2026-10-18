@@ -273,7 +273,7 @@ def test_f064_r14_proveedor_de_lee_solo_la_cabecera():
 
 def test_f064_r14_montar_servicio_rechaza_ficheros_incompletos():
     with pytest.raises(ValueError, match="prompts y reglas"):
-        sv2_proveedor.montar_servicio({"prompts": Path("p.yaml")}, [])
+        sv2_proveedor.montar_servicio({"prompts": Path("p.yaml")}, [], sin_pie=False)
 
 
 # --- R16 · mayoría y veredicto --------------------------------------------------

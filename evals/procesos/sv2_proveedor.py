@@ -97,7 +97,7 @@ def ficheros_de_rama() -> dict[str, Path]:
 # --- Montaje del servicio y las dos fases ----------------------------------------
 
 
-def montar_servicio(ficheros: dict[str, Path], especificaciones: list, *, sin_pie: bool = False):
+def montar_servicio(ficheros: dict[str, Path], especificaciones: list, *, sin_pie: bool):
     """El `AlbaranExtractionService` con los YAML de `ficheros`, sin obras ni correo.
 
     ``sin_pie`` (F-075): el schema de respuesta sin el pie de la cabecera, que
@@ -107,7 +107,7 @@ def montar_servicio(ficheros: dict[str, Path], especificaciones: list, *, sin_pi
     return _servicio(ficheros, especificaciones, sin_pie=sin_pie)
 
 
-def _servicio(ficheros: dict[str, Path], especificaciones: list, *, sin_pie: bool = False):  # pragma: no cover - subproceso del test de la base
+def _servicio(ficheros: dict[str, Path], especificaciones: list, *, sin_pie: bool):  # pragma: no cover - subproceso del test de la base
     """Importa sv2 y monta el servicio como el runner (sin `obras_activas_provider`)."""
     _con_sv2_en_path()
     from application.services.albaran_extraction_service import AlbaranExtractionService

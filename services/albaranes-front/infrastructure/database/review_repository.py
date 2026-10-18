@@ -784,6 +784,7 @@ class AlbaranReviewRepository:
         importes_doc = {
             doc_id: importe_albaran(leidos) for doc_id, leidos in leidos_by_doc.items()
         }
+        sin_lineas = importe_albaran([])
         items = [
             self._to_list_item(
                 row,
@@ -801,16 +802,9 @@ class AlbaranReviewRepository:
                     status_by_doc.get(row.id), importes_by_doc.get(row.id, []),
                 ),
                 "alta_estado": alta_by_doc.get(row.id),
-                "importe_albaran": (
-                    importes_doc[row.id].total if row.id in importes_doc else None
-                ),
-                "lineas_albaran": (
-                    importes_doc[row.id].lineas if row.id in importes_doc else 0
-                ),
-                "lineas_con_importe": (
-                    importes_doc[row.id].lineas_con_importe
-                    if row.id in importes_doc else 0
-                ),
+                "importe_albaran": importes_doc.get(row.id, sin_lineas).total,
+                "lineas_albaran": importes_doc.get(row.id, sin_lineas).lineas,
+                "lineas_con_importe": importes_doc.get(row.id, sin_lineas).lineas_con_importe,
                 "importe_error": importe_error,
             })
             for row in rows

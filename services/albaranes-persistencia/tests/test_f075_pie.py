@@ -337,3 +337,63 @@ def test_f075_r17_repo_retira_motivo_y_nota_sin_bajar_la_revision(repo_sqlite):
     assert json.loads(motivos) == ["fecha_albaran_fuera_de_rango:2023-01-01"]
     assert "La suma de las líneas" not in notas and "[AVISO] Fecha" in notas
     repo.retirar_revision_cabecera(document_id="no-existe", motivo_prefijo="x", nota_prefijo="y")
+
+
+# ------------------------------------------------------------------ #
+# T16 · supervivientes de la campaña (progress/mutacion_F-075.md)
+# ------------------------------------------------------------------ #
+def test_f075_t16_el_pipeline_llama_al_guard_del_pie():
+    from application.pipelines.persist_albaran_pipeline import PersistAlbaranPipeline
+
+    llamadas = []
+
+    class _Espia:
+        def check_merge_document(self, *, merge_document_id):
+            llamadas.append(merge_document_id)
+
+    PersistAlbaranPipeline(repository=None, document_storage=None, normalizer=None,
+                           pie_guard_service=_Espia())._check_pie_guard_safely(merge_document_id="m1")
+    assert llamadas == ["m1"]
+
+
+def test_f075_t16_sin_servicio_solo_lo_dice_el_log(caplog):
+    import logging
+
+    from application.pipelines.persist_albaran_pipeline import PersistAlbaranPipeline
+
+    with caplog.at_level(logging.INFO):
+        PersistAlbaranPipeline(repository=None, document_storage=None, normalizer=None)._check_pie_guard_safely(
+            merge_document_id="m1")
+    assert any("SKIP" in r.getMessage() for r in caplog.records)
+    assert not any(r.levelno >= logging.ERROR for r in caplog.records)
+
+
+def test_f075_t16_el_pie_que_no_coincide_entre_ias_no_cambia_la_confianza():
+    """Peso 0 y no crítico: ni un conflicto entre proveedores mueve la confianza ni
+    manda a revisión (con peso o crítico, sí)."""
+    from application.services.albaran_confidence_service import AlbaranConfidenceService
+    from domain.models.extraction_models import ProviderExtractionEnvelope
+
+    def _gemini(cabecera):
+        return ProviderExtractionEnvelope.model_validate({
+            "meta": dict(_META),
+            "data": {"cabecera": {"proveedor_nombre": "DISCOIN", "numero_albaran": "A-1", **cabecera},
+                     "lineas": [{"concepto": "TUBO", "cantidad": 2, "precio_neto": 100.0}]},
+        })
+
+    servicio = AlbaranConfidenceService()
+    pie_openai = {"base_imponible": 100.0, "tipo_iva_pct": 21.0, "cuota_iva": 21.0, "total_albaran": 121.0}
+    pie_gemini = {"base_imponible": 50.0, "tipo_iva_pct": 10.0, "cuota_iva": 5.0, "total_albaran": 55.0}
+    sin = servicio.build_merge_analysis(openai=_envelope({}), gemini=_gemini({}))
+    con = servicio.build_merge_analysis(openai=_envelope(pie_openai), gemini=_gemini(pie_gemini))
+    assert con.document_confidence_pct == sin.document_confidence_pct
+    assert con.comparison_summary["header"]["score"] == sin.comparison_summary["header"]["score"]
+    assert con.review_reasons == sin.review_reasons
+    assert con.review_required == sin.review_required
+
+
+def test_f075_t16_el_guard_del_pie_viene_encendido():
+    from config.settings import Settings
+
+    assert Settings.model_fields["pie_guard_enabled"].default is True
+    assert Settings.model_fields["pie_guard_enabled"].alias == "PIE_GUARD_ENABLED"

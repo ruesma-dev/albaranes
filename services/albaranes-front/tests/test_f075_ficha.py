@@ -411,3 +411,8 @@ def test_f075_pie_r23_select_lee_las_columnas_de_sv3():
     assert (detalle.pie_base, detalle.pie_tipo_iva, detalle.pie_cuota, detalle.pie_total) == (
         2120.0, 21.0, 445.2, 2565.2)
     assert detalle.pie_comparacion == "cuadra"
+
+
+def test_f075_t16_la_diferencia_va_en_centimos():
+    assert _doc([100.0], valorado=130.004).importe_diferencia == 30.0
+    assert _doc([100.0], valorado=99.986).importe_diferencia == -0.01

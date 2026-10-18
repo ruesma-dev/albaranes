@@ -230,3 +230,26 @@ def test_f075_pie_r20_la_bandeja_lee_el_motivo_del_merge():
     items = _items(repositorio(motor))
     assert items[ALB].importe_distinto is True
     assert items[ALB].importe_distinto_texto == "Albarán 150,00 € · Pie 160,00 €"
+
+
+# ------------------------------------------------------------------ #
+# T16 · supervivientes de la campaña (progress/mutacion_F-075.md)
+# ------------------------------------------------------------------ #
+def test_f075_t16_sin_lineas_leidas_cero_lineas():
+    assert _item("d").lineas_albaran == 0 and _item("d").lineas_con_importe == 0
+    motor = construir({"f075-vacio": ("0686", "B4", [], None, False, True)})
+    (item,) = repositorio(motor).list_documents(DocumentListFilters(approved="all")).items
+    assert (item.lineas_albaran, item.lineas_con_importe, item.importe_albaran) == (0, 0, None)
+
+
+def test_f075_t16_los_fallos_del_importe_dejan_la_traza_del_error(repo, monkeypatch, caplog):
+    import infrastructure.database.review_repository as modulo
+
+    monkeypatch.setattr(modulo, "_SQL_IMPORTES_LEIDOS_DOCS", "SELECT nada FROM no_existe WHERE x IN :ids")
+    monkeypatch.setattr(modulo, "sql_importe_mostrado", lambda alias: "columna_que_no_existe")
+    with caplog.at_level(logging.WARNING):
+        resultado = repo.list_documents(DocumentListFilters(approved="all"))
+    assert resultado.importe_pendiente_aprobar == 0.0
+    avisos = [r for r in caplog.records if r.levelno == logging.WARNING and "[bandeja]" in r.getMessage()]
+    assert len(avisos) == 2
+    assert all(r.exc_info for r in avisos)  # con exc_info=False, el registro guarda False

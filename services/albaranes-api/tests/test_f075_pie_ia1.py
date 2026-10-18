@@ -155,3 +155,12 @@ def test_f075_r14_no_muta_el_envelope_persistido_de_fase_2():
     env2 = _env({"proveedor_nombre": "Y"}, fase=2)
     construir_envelope_final(env_fase1=_env({"base_imponible": 1.0}), env_fase2=env2)
     assert "base_imponible" not in env2["data"]["documento_revisado"]["cabecera"]
+
+
+@pytest.mark.parametrize(("cabecera1", "cabecera2"), [
+    ("no-es-un-dict", {"proveedor_nombre": "Y"}),
+    ({"base_imponible": 1.0}, "no-es-un-dict"),
+])
+def test_f075_r14_cabeceras_que_no_son_dict_no_se_tocan(cabecera1, cabecera2):
+    final = construir_envelope_final(env_fase1=_env(cabecera1), env_fase2=_env(cabecera2, fase=2))
+    assert final["data"]["cabecera"] == cabecera2

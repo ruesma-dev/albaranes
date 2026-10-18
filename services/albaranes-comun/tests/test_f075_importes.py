@@ -187,3 +187,9 @@ def test_f075_r6_unitario_despejado_no_derivable(importe, cantidad, dto):
 
 def test_f075_r6_unitario_despejado_descuento_invalido_no_descuenta():
     assert unitario_despejado(importe=20.0, cantidad=2.0, descuento_pct=150) == 10.0
+
+
+def test_f075_r2_la_diferencia_se_mide_en_centimos():
+    # 0,024 € son 2 céntimos: con 0,02 de tolerancia, cuadra.
+    assert pie_cuadra(100.0, base=100.024, cuota=None, total=None, tolerancia=0.02)[0] is ComparacionPie.CUADRA
+    assert pie_cuadra(100.0, base=100.026, cuota=None, total=None, tolerancia=0.02)[0] is ComparacionPie.NO_CUADRA

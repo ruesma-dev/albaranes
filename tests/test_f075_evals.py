@@ -141,3 +141,35 @@ def test_f075_r27_la_variante_dev_del_comparador_de_obra_no_pide_el_pie():
     assert recortado.model_fields["cabecera"].is_required()
     assert recortado.model_json_schema()["description"] == "El documento."  # sin perder la docstring
     assert sv2_obra.modelo_sin_campo(LineaAlbaran) is LineaAlbaran  # sin nada que quitar, el mismo
+
+
+# ------------------------------------------------------------------ #
+# T16 · supervivientes de la campaña (progress/mutacion_F-075.md)
+# ------------------------------------------------------------------ #
+def test_f075_t16_el_extractor_del_comparador_recorta_el_pie_solo_en_la_base(monkeypatch):
+    from evals.procesos import sv2_extraccion, sv2_proveedor
+
+    pedidos = {}
+    monkeypatch.setattr(sv2_proveedor, "_con_sv2_en_path", lambda: None)
+    monkeypatch.setattr(sv2_extraccion, "_especificacion", lambda proveedor: proveedor)
+    monkeypatch.setattr(sv2_proveedor, "montar_servicio",
+                        lambda rutas, especificaciones, *, sin_pie: pedidos.setdefault(rutas["prompts"], sin_pie))
+    sv2_proveedor.montar_extractor(
+        {"base": {"prompts": "b", "reglas": "r"}, "rama": {"prompts": "a", "reglas": "r"}},
+        {"IA1": "gemini", "IA2": "gemini"}, {},
+    )
+    assert pedidos == {"b": True, "a": False}
+
+
+def test_f075_t16_sin_llm_no_se_declara_no_medido_aunque_se_pida_ia1(tmp_path, monkeypatch):
+    import argparse
+
+    from evals import runner
+
+    monkeypatch.setattr(runner, "corrida_determinista", lambda *a, **k: ([ResultadoFase(nombre="IA1")], []))
+    monkeypatch.setattr(runner, "comprobar_peticion", lambda *a: None)
+    monkeypatch.setattr(runner, "cargar_fixtures", lambda d, fase: {})
+    opciones = argparse.Namespace(fases="IA1", con_llm=False, fixtures=str(tmp_path), casos="",
+                                  proveedores="", feature="")
+    pasada, _ = runner.ejecutar(opciones)
+    assert pasada.no_medidos == []
