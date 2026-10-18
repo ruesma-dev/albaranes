@@ -102,3 +102,39 @@ def test_f075_r27_el_pie_esta_clasificado_en_criticidad():
     criticidad = cargar_criticidad()
     for campo in PIE:
         assert criticidad.clasificar(f"IA1.cabeceras[].{campo}").clasificado, campo
+
+
+def test_f075_r27_la_variante_dev_del_comparador_de_obra_no_pide_el_pie():
+    """F-048 compara el prompt de la base con el de la rama: la base no conoce el pie.
+
+    Con modelos sintéticos de la misma forma (importar el `domain` de sv2 aquí
+    chocaría con el de otros servicios en el mismo proceso)."""
+    from typing import Optional
+
+    from pydantic import BaseModel
+
+    from evals.procesos import sv2_obra
+
+    class CabeceraAlbaran(BaseModel):
+        proveedor_nombre: Optional[str] = None
+        base_imponible: Optional[float] = None
+        tipo_iva_pct: Optional[float] = None
+        cuota_iva: Optional[float] = None
+        total_albaran: Optional[float] = None
+        id: Optional[str] = None
+
+    class LineaAlbaran(BaseModel):
+        concepto: Optional[str] = None
+
+    class DocumentoAlbaran(BaseModel):
+        cabecera: CabeceraAlbaran
+        lineas: list[LineaAlbaran]
+        lectura_correo: Optional[dict] = None
+
+    recortado = sv2_obra.modelo_sin_campo(DocumentoAlbaran)
+    cabecera = recortado.model_fields["cabecera"].annotation
+    assert list(recortado.model_fields) == ["cabecera", "lineas"]
+    assert cabecera.__name__ == "CabeceraAlbaran" and cabecera is not CabeceraAlbaran
+    assert list(cabecera.model_fields) == ["proveedor_nombre", "id"]
+    assert recortado.model_fields["cabecera"].is_required()
+    assert sv2_obra.modelo_sin_campo(LineaAlbaran) is LineaAlbaran  # sin nada que quitar, el mismo

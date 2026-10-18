@@ -159,23 +159,47 @@ def consultar_obras(entorno: dict) -> list | None:  # pragma: no cover - red rea
 # --- Montaje del servicio ----------------------------------------------------
 
 
-def modelo_sin_campo(modelo, campo: str = CAMPO_SOLO_RAMA):
-    """El mismo modelo pydantic sin `campo`: mismo nombre, base, orden y campos."""
-    from pydantic import create_model
+#: (F-075) Campos que la rama añade a la CABECERA y que la base no conoce: el
+#: pie del albarán. La variante `dev` tampoco los pide.
+CAMPOS_SOLO_RAMA_CABECERA: tuple[str, ...] = (
+    "base_imponible", "tipo_iva_pct", "cuota_iva", "total_albaran",
+)
 
-    if campo not in modelo.model_fields:
+
+def _sin_campos(modelo, quitar: frozenset[str]):
+    """El modelo sin los campos de `quitar`, también en los submodelos directos
+    (como `cabecera`). Si nada cambia, el MISMO modelo: el JSON Schema sale
+    byte a byte igual."""
+    from pydantic import BaseModel, create_model
+
+    campos = {}
+    cambia = False
+    for nombre, info in modelo.model_fields.items():
+        if nombre in quitar:
+            cambia = True
+            continue
+        anotacion = info.annotation
+        if isinstance(anotacion, type) and issubclass(anotacion, BaseModel):
+            recortado = _sin_campos(anotacion, quitar)
+            if recortado is not anotacion:
+                cambia = True
+                info = info.__class__.merge_field_infos(info, annotation=recortado)
+                anotacion = recortado
+        campos[nombre] = (anotacion, info)
+    if not cambia:
         return modelo
-    campos = {
-        nombre: (info.annotation, info)
-        for nombre, info in modelo.model_fields.items()
-        if nombre != campo
-    }
     return create_model(
         modelo.__name__,
         __base__=modelo.__base__,
         __module__=modelo.__module__,
         **campos,
     )
+
+
+def modelo_sin_campo(modelo, campo: str = CAMPO_SOLO_RAMA):
+    """El mismo modelo pydantic sin `campo` (ni el pie de la cabecera, F-075):
+    mismo nombre, base, orden y campos."""
+    return _sin_campos(modelo, frozenset({campo, *CAMPOS_SOLO_RAMA_CABECERA}))
 
 
 class RegistroSinCampo:
