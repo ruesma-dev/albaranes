@@ -361,6 +361,27 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
     - Un CIF propio nunca es candidato: se excluye de la lista de la obra,
       de la búsqueda global y de la propuesta/candidato claro de la regla 17.
     - Si el revisor elige a mano un CIF propio (origen `manual`), se respeta.
+    - **Prompts (F-064)**: la IA ya no lo lee como proveedor. sv2 pinta la
+      MISMA lista (`CIFS_PROPIOS_POR_DEFECTO`, con su razón social, ampliada
+      con la `CIFS_PROPIOS` de sv2: mismo nombre, formato y regla que en sv3;
+      si se usa, igual en las dos Container Apps) en el marcador
+      `{empresas_cliente}` del task de IA1 (`application/services/
+      empresas_cliente.py`, sustituido en `_render_task_fase_1` antes del
+      correo). IA1 lee que el proveedor es el EMISOR (membrete, bloque
+      fiscal, pie del Registro Mercantil), devuelve su CIF normalizado y
+      deja `proveedor_cif` null si el único CIF es del cliente. IA2 recibe la
+      lista dentro de `{prompt_fase_1}` y la regla `proveedor_emisor` de
+      `revision_rules.yaml` (los cuatro prompts de fase 2, sin editarlos):
+      confirma SIEMPRE nombre y CIF, los corrige en `documento_revisado.
+      cabecera` (razonamiento `patron_aplicado=proveedor_emisor`, sin campos
+      nuevos; si no lee con seguridad al emisor, conserva lo de fase 1 salvo
+      que sea una empresa del cliente, y entonces CIF null) y prevalece sobre
+      el contexto de Sigrid. sv2 **no filtra** el
+      CIF propio: si la IA falla, llega a sv3 y el descarte de arriba deja
+      su motivo `proveedor_cif_propio:`, que es la métrica de producción.
+      Ningún YAML escribe a mano el nombre ni el CIF del cliente. Para
+      añadir una empresa del grupo: entrada en `CIFS_PROPIOS_POR_DEFECTO`
+      (reconstruir sv2 y sv3). Medición: `python -m evals.comparar_proveedor`.
 19. **Aprobar es registrar en Sigrid** (F-053, oct 2026). Spec:
     `specs/F-053-alta-sigrid/`; decisiones P1–P7 y D1–D4 en
     `progress/spec_F-053.md`.

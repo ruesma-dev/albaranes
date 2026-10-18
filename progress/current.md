@@ -311,6 +311,15 @@ WHERE document_id = '86c13097-98f8-4e4b-91af-6a378c28d9cf';
 
 Deja de terminar en `no_admitido` con `falta_descripcion` (con `ALTA_SIGRID_COMMIT=false` queda en `simulado`).
 
+**F-064 · `blocked` (2026-10-18): review O1 APPROVED, T9 y T10 del humano en VERDE; solo queda la MANUAL T12.**
+Rama `feature/F-064-proveedor-en-prompts`, worktree `../albaranes-F-064` (*junction* `services\albaranes-front\.venv`:
+quitarla con `cmd /c rmdir` ANTES de `git worktree remove`). T9 (comparador, `progress/comparar_proveedor_F-064.md`):
+C1/C2/C3 OK, emisor base 8 → rama 9, CIF cliente 0/0; AVISO: el banco no reproduce el incidente (propuesta al humano:
+añadir el albarán real de F-063, `progress/impl_F-064.md` §9). T10 (`progress/evals_F-064.md`, fuera de git): IA1 152
+(≤ 154), IA2 2 (≤ 4). Siguiente: fusionar en `dev` (ya lleva `dev` fusionado, 2026-10-18), `init.sh` en el árbol principal y **T12: desplegar SOLO sv2 y
+vigilar `proveedor_cif_propio:` en merges nuevos una semana** (comandos en `progress/impl_F-064.md` §6). Con T12 en
+verde, pasa a `done`.
+
 **F-072 · CERRADA (`done`, 2026-10-16).** MANUAL T16 en verde. Resumen en `history.md`.
 
 **Siguiente (orden del humano, 2026-10-16):** F-078 → F-076 → F-077 → F-073 → F-064 (evals del humano) → F-074; F-071 y

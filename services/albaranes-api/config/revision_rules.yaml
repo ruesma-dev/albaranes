@@ -106,6 +106,40 @@ reglas:
                       con cantidad=3.1 lo lógico son toneladas."
         patron_aplicado: "unidad_medida_camion"
 
+  # -----------------------------------------------------------------
+  # (F-064 · R9) Las empresas del cliente NO se escriben aquí: las lista
+  # el prompt de fase 1 (marcador {empresas_cliente}), que IA2 recibe
+  # entero dentro de {prompt_fase_1}.
+  - id: proveedor_emisor
+    titulo: El proveedor es el EMISOR del albarán, nunca una empresa del cliente
+    descripcion: |
+      Confirma SIEMPRE el proveedor de la fase 1, sea cual sea la familia del
+      albarán: compara cabecera.proveedor_nombre y cabecera.proveedor_cif con
+      el documento.
+      - El proveedor es la empresa que EMITE el albarán: su membrete, su
+        bloque fiscal o el pie con la inscripción en el Registro Mercantil.
+      - Las EMPRESAS DEL CLIENTE que listan las reglas de la fase 1 somos
+        nosotros y nunca son el proveedor. Esta regla prevalece sobre
+        cualquier otra de la cabecera, también sobre el contexto del ERP
+        Sigrid aunque dé ese CIF por validado.
+      Acción:
+        - Si el nombre o el CIF de fase 1 son de una empresa del cliente, o no
+          son los del emisor, corrígelos con los del emisor leídos en el
+          documento. Si el CIF del emisor no aparece, deja proveedor_cif en
+          null: el sistema buscará el proveedor por su nombre.
+        - Si no puedes leer con seguridad al emisor, conserva lo de fase 1,
+          salvo que sea una empresa del cliente: entonces deja proveedor_cif
+          en null.
+        - Si son correctos, cópialos tal cual y no añadas razonamiento.
+        - Cada cambio lleva su razonamiento con campo "cabecera.proveedor_cif"
+          o "cabecera.proveedor_nombre" y patron_aplicado "proveedor_emisor".
+    ejemplo: |
+      Fase 1 trae como proveedor_cif el CIF de la casilla C.I.F./D.N.I. del
+      bloque del cliente (una empresa del cliente). El pie dice «Inscrita en el
+      Registro Mercantil … C.I.F. A-28/733558» ⇒ proveedor_cif "A28733558" y
+      razonamiento «el CIF de fase 1 es del cliente; el del emisor está en el
+      pie».
+
 # =====================================================================
 # PLANTILLA PARA NUEVAS REGLAS (copia, descomenta y rellena)
 # =====================================================================
@@ -140,7 +174,7 @@ reglas:
 #  - id: obra_codigo_4_digitos
 #    titulo: El código de obra siempre tiene 4 dígitos empezando por 0
 #    descripcion: |
-#      En Construcciones Ruesma el obra_codigo es 4 dígitos con cero
+#      En la constructora el obra_codigo es 4 dígitos con cero
 #      a la izquierda (ej. "0695", "0721"). Si fase 1 extrajo:
 #        - "695" (3 dígitos) → normaliza a "0695".
 #        - "06952" (5+ dígitos) → probablemente cogió un dígito de

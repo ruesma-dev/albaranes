@@ -38,17 +38,30 @@ albaran_factura_es:
 
     ## Reglas para la cabecera
 
-    - proveedor_nombre: RAZÓN SOCIAL del emisor tal y como aparece en su
-      BLOQUE FISCAL, es decir, el nombre que acompaña al CIF/NIF (suele
-      llevar la forma jurídica: S.L., S.A., S.L.U., S. Coop., etc.).
-      La marca comercial o el nombre del grupo que aparece en el
-      LOGOTIPO NO es el proveedor: si el logotipo y el bloque fiscal
-      dicen cosas distintas, manda SIEMPRE el bloque fiscal.
-      Construcciones Ruesma, cuyo CIF es A81873903, somos nosotros la
-      constructora: ignóralo como posible proveedor.
-    - proveedor_cif: CIF/NIF/NIE del proveedor según formato español.
-      Busca el código por un campo que ponga CIF o NIF o NIE; si no,
-      puede ser un código cerca de la razón social en cabecera.
+    - proveedor_nombre: RAZÓN SOCIAL del EMISOR del albarán (la empresa que
+      lo emite y suministra), tal y como aparece en su BLOQUE FISCAL, es
+      decir, el nombre que acompaña a su CIF/NIF (suele llevar la forma
+      jurídica: S.L., S.A., S.L.U., S. Coop., etc.). La marca comercial o el
+      nombre del grupo que aparece en el LOGOTIPO NO es el proveedor: si el
+      logotipo y el bloque fiscal dicen cosas distintas, manda SIEMPRE el
+      bloque fiscal. Si no identificas al emisor, null.
+    - proveedor_cif: CIF/NIF/NIE del EMISOR según formato español. Está en
+      su membrete, junto a su razón social o en el pie del documento (la
+      inscripción en el Registro Mercantil suele acabar con su C.I.F.).
+      Devuélvelo sin espacios, guiones, puntos ni barras (A-28/733558 ⇒
+      A28733558). Si el documento no trae el CIF del emisor, null.
+    - El CLIENTE no es el proveedor. Estas son las empresas del cliente
+      (nosotros, la constructora que recibe el albarán):
+
+      {empresas_cliente}
+
+      Aparecen en las casillas del cliente ("Cliente", "Nº cliente",
+      "Empresa", "Destinatario", "Facturar a" y su "C.I.F./D.N.I."), con la
+      razón social completa o abreviada y con o sin forma jurídica. NUNCA
+      devuelvas su nombre en proveedor_nombre ni su CIF en proveedor_cif,
+      aunque sea el único CIF que veas o esté en una casilla rotulada CIF:
+      ignóralos y busca los del emisor. Si el único CIF del documento es de
+      una empresa del cliente, proveedor_cif es null.
     - fecha: la del albarán.
     - numero_albaran: identificador del documento (no pedido/cliente).
     - forma_pago: 'contado', 'transferencia', '30 días', etc.

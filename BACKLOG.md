@@ -3,9 +3,9 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **77 features**, 53 abiertas, 24 terminadas.
+Resumen: **78 features**, 54 abiertas, 24 terminadas.
 
-Bloqueadas: **F-078, F-076, F-077, F-073**.
+Bloqueadas: **F-064, F-078, F-076, F-077, F-073**.
 
 ## Trabajo abierto
 
@@ -14,6 +14,7 @@ Bloqueadas: **F-078, F-076, F-077, F-073**.
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
 | F-058 | Revalorar no pierde las partidas ni el almacén asignados a mano | 1 | pendiente | critico |  |
 | F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 1 | pendiente | estandar |  |
+| F-064 | IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor | 1 | bloqueada | critico | `feature/F-064-proveedor-en-prompts` |
 | F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 1 | pendiente | critico |  |
 | F-067 | Limpieza de la ficha de detalle (sv4) | 1 | pendiente | estandar |  |
 | F-073 | Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate | 1 | bloqueada | critico | `feature/F-073-proveedor-por-similitud` |
@@ -141,6 +142,20 @@ ALCANCE: services/albaranes-front (plantilla y catálogo). NO ENTRA: cambiar los
 X24 (2026-10-09, progress/propuestas_ficha_detalle.md): motivos de revisión en código interno y bandera en casi todas las filas; textos en castellano y bandera solo en avisos reales (los informativos no cuentan en el ⚑).
 
 AMPLIACIÓN (humano, 2026-10-17, H3 de progress/review_F-073.md): cuando el revisor fija el proveedor a mano (origen manual, «Elegir proveedor»), sv4 retira también proveedor_nombre_ambiguo (F-073) y proveedor_cif_propio: (F-063), como ya hace con proveedor_cif_no_casa: (review_repository.py, retirada de F-062). Hoy se quedan visibles aunque el proveedor ya esté elegido.
+
+### F-064 · IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor
+
+estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-064-proveedor-en-prompts`
+
+PETICIÓN DEL HUMANO (2026-10-08), tras la incidencia de FEYMACO (obra 0694) que arregló F-063 en sv3: «añade en el prompt de sv2 que estos CIF y empresas son los del cliente, y debe ignorarlos y buscar otros» y «F-064 será para IA 1 y 2. Ambas deben confirmar proveedor». Empresas del cliente: «de momento esa» (Construcciones Ruesma, A81873903).
+
+CAUSA EN EL PROMPT: en albaran_factura_es la frase sobre Ruesma está escrita a mano y solo en la viñeta del nombre, y la del CIF manda buscar «un campo que ponga CIF o NIF o NIE»: en FEYMACO la única casilla rotulada así es la del cliente (el CIF del emisor solo está en el pie, junto a la inscripción en el Registro Mercantil).
+
+ALCANCE (sv2 + evals): (1) IA1: las viñetas proveedor_nombre/proveedor_cif dicen que el proveedor es el EMISOR y que las empresas del cliente se ignoran (CIF null si el único CIF es del cliente); la lista se inyecta con el marcador {empresas_cliente} desde ruesma_comun.proveedores (CIFS_PROPIOS_POR_DEFECTO + CIFS_PROPIOS, la misma fuente que el descarte de F-063). (2) IA2: regla proveedor_emisor en revision_rules.yaml (llega a los cuatro prompts de fase 2 sin editarlos): confirma nombre y CIF de fase 1 contra el documento; si son del cliente o no del emisor, los corrige o deja el CIF null; prevalece sobre el contexto de Sigrid. Sin campos nuevos: IA2 devuelve el proveedor en documento_revisado.cabecera; sv2 no filtra (la red de F-063 en sv3 sigue siendo la verificación y su motivo, la métrica). sv3 y comun no cambian. (3) evals/comparar_proveedor.py: el banco no mide hoy el CIF (NO_COMPARAR en IA1, no observable en E2E); compara base/rama en 11 casos con el cliente impreso (FER-001…003, HOR-005…011, MOR-003) y 8 controles.
+
+FUERA: la lista de proveedores con contrato en la obra para IA2 (F-055, sobre ContextoSigridFase2 de F-049); el endpoint header-grounding de sv3 que valida el CIF propio. RUTA SENSIBLE: exige evals con LLM real del humano. Spec: specs/F-064-proveedor-en-prompts/; informe y preguntas: progress/spec_F-064.md.
+
+ESTADO (2026-10-18): review APPROVED (también la pasada O1). T9 y T10 del humano en VERDE: comparador C1/C2/C3 OK (emisor base 8 → rama 9 en IA1 e IA2, CIF cliente 0/0; AVISO: el banco no reproduce el incidente, se propone añadir el albarán real de F-063) y puerta IA1 152 (≤ 154) e IA2 2 (≤ 4). blocked solo por la MANUAL T12: tras fusionar en dev, desplegar SOLO sv2 y vigilar el motivo proveedor_cif_propio: en merges nuevos una semana.
 
 ### F-066 · Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4)
 
