@@ -89,7 +89,7 @@ class PieGuardService:
             (base, _tipo, cuota, total), importes = (
                 self._repository.get_merge_pie_para_guard(document_id=merge_document_id)
             )
-        except Exception:
+        except Exception:  # best-effort (R18)
             logger.exception(
                 "%s no se pudo leer el pie del merge. document_id=%s",
                 _LOG_PREFIX, merge_document_id,
@@ -136,7 +136,7 @@ class PieGuardService:
                 "%s document_id=%s %s (suma=%s pie=%s)",
                 _LOG_PREFIX, merge_document_id, comparacion.value, suma, referencia,
             )
-        except Exception:
+        except Exception:  # best-effort (R18)
             logger.exception(
                 "%s no se pudo marcar o retirar la revisión del pie. document_id=%s",
                 _LOG_PREFIX, merge_document_id,
