@@ -15,7 +15,10 @@ from application.services.normalizador_partidas import (
 )
 from dataclasses import dataclass
 
-from application.services.valoracion_directa import ValoracionDirectaBuilder
+from application.services.valoracion_directa import (
+    ValoracionDirectaBuilder,
+    anotar_valorado_distinto,
+)
 from application.services.valuation_builder import ValuationBuilder
 from domain.models.valuation_records import ValuationHeaderRecord
 from domain.ports.valuation_ia_client import ValuationIaClient
@@ -265,6 +268,9 @@ class RunValuationPipeline:
         # y la partida leída de vuelta en ``codigo_partida_albaran``. Modifica
         # los registros en su sitio (no reasigna ``lines``).
         NormalizadorPartidas.anotar(header, lines, normalizacion)
+        # (F-075 R12) El valorado se aparta del importe leído del albarán:
+        # a revisión, sin tocar importes ni sintéticas.
+        anotar_valorado_distinto(header, envelope)
 
         # Adjuntamos el envelope bruto al header para trazabilidad.
         header_with_envelope = ValuationHeaderRecord(

@@ -344,3 +344,84 @@ def test_f075_pipeline_anota_la_partida_normalizada_de_f076():
     assert cabecera.review_required is True
     assert "partida_fuera_de_lista" in cabecera.review_reasons
     assert cabecera.review_reasons[0] == "valoracion_directa_albaran"
+
+
+# ------------------------------------------------------------------ #
+# T4 · R12: con contrato, aviso si el valorado se aparta del albarán
+# ------------------------------------------------------------------ #
+def _sobre_con_contrato(netos, *, sinteticas=()):
+    from tests.f076_sobres import linea_contrato, sobre
+
+    envelope = sobre(
+        [(i + 1, "CI.4.18", 501) for i in range(len(netos))],
+        contrato=[linea_contrato(501, "CI.4.18")], sinteticas=sinteticas,
+    )
+    lineas = [
+        l.model_copy(update={"precio_neto_albaran": neto})
+        for l, neto in zip(envelope.context.lineas_albaran, netos)
+    ]
+    return envelope.model_copy(update={"context": envelope.context.model_copy(update={"lineas_albaran": lineas})})
+
+
+def _valorar_con_contrato(envelope):
+    from tests.f027_escenarios import construir_builder
+
+    repo = _Repositorio()
+    RunValuationPipeline(ia_client=_Sv5(envelope), repository=repo, builder=construir_builder()).run(
+        RunValuationRequest(document_id=DOC, codigo_contrato="CTSU26/0313"),
+    )
+    ((cabecera, lineas),) = repo.guardados
+    return cabecera, lineas
+
+
+def test_f075_r12_con_sintetica_el_valorado_se_aparta_y_va_a_revision():
+    envelope = _sobre_con_contrato([20.0], sinteticas=[(1, "otro")])
+    cabecera, lineas = _valorar_con_contrato(envelope)
+    from tests.f027_escenarios import construir_builder
+
+    esperado, _ = construir_builder().build(envelope=envelope, existing_document_already_valued=False)
+    assert cabecera.total_valorado == esperado.total_valorado != 20.0  # R12 no toca importes
+    motivo = f"valorado_distinto_de_albaran:{cabecera.total_valorado:.2f}!=20.00"
+    assert motivo in cabecera.review_reasons
+    assert cabecera.review_required is True
+    assert cabecera.status == "ok"
+
+
+def test_f075_r12_si_cuadra_no_hay_motivo():
+    cabecera, _ = _valorar_con_contrato(_sobre_con_contrato([20.0, 20.0]))
+    assert cabecera.total_valorado == 40.0
+    assert not any(m.startswith("valorado_distinto_de_albaran") for m in cabecera.review_reasons)
+
+
+def test_f075_r12_sin_importes_leidos_no_hay_motivo():
+    cabecera, _ = _valorar_con_contrato(_sobre_con_contrato([None], sinteticas=[(1, "otro")]))
+    assert not any(m.startswith("valorado_distinto_de_albaran") for m in cabecera.review_reasons)
+
+
+def test_f075_r12_parcial_compara_con_lo_leido():
+    # Una línea con importe leído y otra sin él: el valorado (con el contrato
+    # en la segunda) se aparta del importe del albarán (solo la primera).
+    cabecera, _ = _valorar_con_contrato(_sobre_con_contrato([20.0, None]))
+    assert cabecera.total_valorado == 40.0
+    assert "valorado_distinto_de_albaran:40.00!=20.00" in cabecera.review_reasons
+    assert cabecera.review_required is True
+
+
+def test_f075_r12_funcion_pura_no_cambia_nada_mas():
+    from application.services.valoracion_directa import anotar_valorado_distinto
+    from domain.models.valuation_records import ValuationHeaderRecord
+
+    cab = ValuationHeaderRecord(
+        document_id=DOC, contrato_codigo="C", status="ok", provider_ia=None, model_name=None, prompt_key=None,
+        total_valorado=10.0, total_lines=1, lines_matched_exact=1, lines_matched_semantic=0,
+        lines_matched_price_only=0, lines_unmatched=0, review_required=False, review_reasons=["x"],
+    )
+    reasons_antes = cab.review_reasons
+    anotar_valorado_distinto(cab, _sobre(_linea(1, neto=10.004), status="ok"))
+    assert cab.review_reasons == ["x"] and cab.review_required is False
+    anotar_valorado_distinto(cab, _sobre(_linea(1, neto=10.01), status="ok"))
+    assert cab.review_reasons == ["x", "valorado_distinto_de_albaran:10.00!=10.01"]
+    assert reasons_antes == ["x"]  # lista nueva
+    assert cab.review_required is True and cab.total_valorado == 10.0
+    anotar_valorado_distinto(cab, _sobre(_linea(1, neto=10.01), status="ok"))
+    assert cab.review_reasons.count("valorado_distinto_de_albaran:10.00!=10.01") == 1

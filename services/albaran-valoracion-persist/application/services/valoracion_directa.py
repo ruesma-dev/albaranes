@@ -26,7 +26,7 @@ Puro: sin BBDD ni red. El pipeline aplica después ``completar_registros``
 """
 from __future__ import annotations
 
-from ruesma_comun.importes import importe_albaran, unitario_despejado
+from ruesma_comun.importes import difieren, importe_albaran, unitario_despejado
 
 from domain.models.valuation_envelope import AlbaranLineContextDto, ValuationEnvelope
 from domain.models.valuation_records import (
@@ -43,6 +43,8 @@ MOTIVO_DIRECTA = "valoracion_directa_albaran"
 MOTIVO_SIN_IMPORTE = "sin_importe_en_albaran"
 #: El motivo de cabecera que pone el builder cuando alguna línea va a revisión.
 MOTIVO_CABECERA_REVISION = "at_least_one_line_requires_review"
+#: (R12) Prefijo del motivo «el valorado se aparta del importe del albarán».
+PREFIJO_VALORADO_DISTINTO = "valorado_distinto_de_albaran:"
 
 
 def _texto(valor: str | None) -> str | None:
@@ -158,3 +160,22 @@ class ValoracionDirectaBuilder:
             rol_linea=rol,
             descuento_albaran_aplicado=linea.descuento_albaran,
         )
+
+
+def anotar_valorado_distinto(header: ValuationHeaderRecord, envelope: ValuationEnvelope) -> None:
+    """(F-075 R12) Con contrato: si el albarán trae importes leídos y el
+    ``total_valorado`` se aparta de su suma en 0,01 € o más (sintéticas, o
+    líneas sin importe valoradas con el contrato), la cabecera va a revisión
+    con ``valorado_distinto_de_albaran:<valorado>!=<albarán>``.
+
+    No toca importes ni sintéticas: solo añade el motivo (sin duplicarlo, en
+    una lista nueva) y ``review_required``."""
+    albaran = importe_albaran(
+        linea.precio_neto_albaran for linea in envelope.context.lineas_albaran
+    )
+    if not albaran.trae_importes or not difieren(header.total_valorado, albaran.total):
+        return
+    motivo = f"{PREFIJO_VALORADO_DISTINTO}{header.total_valorado:.2f}!={albaran.total:.2f}"
+    if motivo not in header.review_reasons:
+        header.review_reasons = [*header.review_reasons, motivo]
+    header.review_required = True
