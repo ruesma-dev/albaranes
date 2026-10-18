@@ -117,11 +117,8 @@ E   ImportError: cannot import name 'comparar_proveedor' from 'evals' (...\albar
 - **`bash harness/init.sh` final** (tras `910b59b` + inventario): `ENTORNO LISTO. Puedes trabajar.` Raíz `1162 passed in 109.69s`; servicios en verde (última medición sin caché: sv1 205, sv2 462, sv3 584, sv4 458, sv5 43, sv6 283, comun 433
   + 3 skipped); `PUERTA COBERTURA: 98.9% de 354 líneas cambiadas cubiertas (350/354, umbral 80%, nivel critico)`; AVISO (no bloquea) de `PUERTA RUTAS SENSIBLES [evals]`: falta `progress/evals_F-064.md` (T10, humano). Las 4 líneas sin
   cubrir: `montar_servicio → _servicio` (solo en el subproceso del test de la base) y su import.
-- **Mutación** (`python -m harness.mutacion --feature F-064`, 4 workers, sobre `0ffa0d4`): **145 mutantes, 115 muertos, 30 supervivientes**, 0 timeouts, 5711,7 s. **Ningún superviviente en el código de sv2** (todos en `evals/`). Análisis
-  completo en `progress/mutacion_F-064.md` (0 `PENDIENTE`): 29 eran huecos de los informes del comparador (aviso, cabecera con commits, celdas del detalle, directorios anidados, recuento de llamadas, modelos, `git show` vacío, posición de
-  sv2 en `sys.path`) y se cierran con tests nuevos en `tests/test_f064_comparar_proveedor.py`; **verificado reinyectando cada uno a mano** y corriendo ese fichero (bytes restaurados, `git diff` vacío): 29 MUERTO. El **#28 es equivalente**
-  (`"error" not in (x or {"error": True})` frente a `{"error": False}`: se comprueba la clave, no el valor; demostración ejecutable RM5 en `test_f064_demostracion_el_mutante_28_es_equivalente`) — **aceptado por escrito por el humano el 2026-10-15** (§8). Una primera
-  campaña en serie se paró a mano (≈ 2 h estimadas) tras 2 supervivientes (`_categoria`, cerrados con `test_f064_r14_clasificar_…`); `--restaurar` y `git diff` vacío antes de relanzar.
+- **Mutación** (`--feature F-064`, 4 workers, sobre `0ffa0d4`): **145 mutantes, 115 muertos, 30 supervivientes**, 5711,7 s, ninguno en sv2 (todos en `evals/`): 29 huecos
+  cerrados con tests nuevos y verificados reinyectándolos a mano (29 MUERTO); el #28, equivalente, **aceptado por el humano el 2026-10-15**. Detalle en `progress/mutacion_F-064.md` (0 `PENDIENTE`).
 
 ## 6. MANUAL del humano (PowerShell; claves por `Read-Host`, nunca del `.env`)
 
@@ -186,26 +183,37 @@ no aplica). **Efecto en T9/T10**: O1 toca `revision_rules.yaml`, ruta sensible �
 
 ## 9. Fusión de dev y T9/T10, 2026-10-18
 
-**T9** (humano, HEAD `e0ee65c`, `progress/comparar_proveedor_F-064.md`, sin valores; revisado: solo recuentos y
-caso_id): **VERDE**, C1/C2/C3 OK. Mayoría emisor base 8 → rama 9 (IA1 e IA2); CIF cliente 0/0. **AVISO**: la base
-no dio ningún CIF cliente, así que el banco no reproduce el incidente y C1 no prueba la corrección. Movimientos:
-GEN-002 mejora (nulo → emisor), HOR-005 mejora (CIF ajeno → nulo), MOR-003 empeora (nulo → CIF ajeno; C3 no lo
-marca porque la base tampoco daba el emisor).
-**T10** (humano, `progress/evals_F-064.md`, fuera de git): criterio cumplido, IA1 **152** críticos (≤ 154; 57
-casos, RES-020/RES-021 omitidos sin fichero; gemini), IA2 **2** (≤ 4; openai); F-051: 147 y 2. Veredicto global ROJO
-esperado (IA3 408, IA4 27, E2E 537: fuera de F-064, que solo toca sv2).
+**T9** (humano, HEAD `e0ee65c`; `progress/comparar_proveedor_F-064.md` revisado: solo recuentos y caso_id, sin CIF,
+nombres ni importes): **VERDE**, C1/C2/C3 OK; mayoría emisor base 8 → rama 9 (IA1 e IA2), CIF cliente 0/0. **AVISO**:
+la base no dio ningún CIF cliente: el banco no reproduce el incidente y C1 no prueba la corrección. GEN-002 mejora
+(nulo → emisor), HOR-005 mejora (CIF ajeno → nulo), MOR-003 empeora (nulo → CIF ajeno; C3 no lo marca: la base
+tampoco daba el emisor). **T10** (`progress/evals_F-064.md`, fuera de git): IA1 **152** críticos (≤ 154; 57 casos,
+RES-020/021 omitidos sin fichero; gemini), IA2 **2** (≤ 4; openai); F-051: 147 y 2. Veredicto global ROJO esperado
+(IA3 408, IA4 27, E2E 537: fuera de F-064, que solo toca sv2).
+**Propuesta (decisión del humano, sin crear feature)**: meter el albarán real de la incidencia F-063 en el banco de
+`evals.comparar_proveedor` (design §7) para que C1 pruebe la corrección. PDF con datos reales: solo si el humano lo
+autoriza, por `evals/inputs` (ignorado por git) y con su CIF esperado.
 
-**Propuesta (decisión del humano, sin crear feature)**: meter el albarán real de la incidencia F-063 en el banco
-de `evals.comparar_proveedor` (design §7), para que C1 pruebe la corrección. Es un PDF con datos reales: entra
-solo si el humano lo autoriza y por la vía de `evals/inputs` (no versionada), con su CIF esperado.
+**Commits**: `47e48b6` (T9/T10 `[x]`, comparador al repo, este informe y `current.md`) · `261f82d` (fusión de `dev`
+`64a4f6d`, 165 commits, `--no-ff`). **Conflictos**: `BACKLOG.md` (regenerado con `harness/backlog.py`, `--comprobar`
+rc 0), `progress/current.md` (el de `dev` + el bloque F-064 tras los `blocked` de dev, antes de «F-072 · CERRADA»),
+`progress/inventario_mutacion_F-039.md` (recuento 43 = 42 de dev + F-064; fuera de `services/` se queda en 8 como en
+dev). Auto-fusionados: `features.json` (dev + F-064, sin perder ninguna: F-072/073/076–081 solo en dev; ninguna
+`in_progress`; descripción de F-064 al día) y `ARCHITECTURE.md` (viñeta F-064 intacta + lo de dev). `dev` no toca
+sv2 ni `evals/`: sin conflicto de código. `history.md`: el de dev.
+**`bash harness/init.sh`** (sobre `261f82d`; salida volcada a un fichero del scratchpad para leerla): rc 0, `ENTORNO
+LISTO. Puedes trabajar.` Raíz `1317 passed in 210.06s`; sv1 205, sv2 468, sv3 1496, sv4 1715, sv5 43, sv6 444
+(+1 skipped), sv9 670, comun 818 (+3 skipped), todo passed. `PUERTA COBERTURA 98.9%` (350/354), `PUERTA TAMAÑO` en
+verde, rutas sensibles N/A. AVISO de entorno (no bloquea): los servicios importan la comun del árbol principal, igual
+a la de `dev` (`64a4f6d`), y F-064 no toca comun.
 
 ## Evidencias
 
 | Evidencia | Valor |
 |---|---|
 | Tests nuevos de F-064 | 150 (sv2 71 + raíz 79; 6 de ellos de O1), en verde fichero a fichero |
-| Suite raíz / servicios | `1162 passed in 109.69s`; sv2 `462 passed in 12.22s`, sv3 `584 passed in 14.82s` y resto en verde |
-| `bash harness/init.sh` | `ENTORNO LISTO. Puedes trabajar.` (0 KO) tras T11; **no reejecutado tras la fusión y O1** (restricción del líder) |
+| Suite raíz / servicios | 2026-10-18: raíz `1317 passed in 210.06s`; sv2 `468 passed in 25.51s`, sv3 `1496 passed in 15.50s` y resto en verde (§9) |
+| `bash harness/init.sh` | `ENTORNO LISTO. Puedes trabajar.` (rc 0) el 2026-10-18 sobre `261f82d` (tras O1 y la fusión de `dev`); raíz `1317 passed in 210.06s` |
 | Cobertura de líneas cambiadas | **98,9 %** (350/354; umbral 80 %, `critico`) |
 | Mutantes generados / supervivientes | **145 / 30** en la campaña; tras los tests nuevos, 29 cazados (verificado uno a uno) y 1 equivalente |
 | Tiempo de la campaña de mutación | 5711,7 s con 4 workers |
