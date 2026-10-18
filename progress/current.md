@@ -312,6 +312,8 @@ WHERE document_id = '86c13097-98f8-4e4b-91af-6a378c28d9cf';
 Deja de terminar en `no_admitido` con `falta_descripcion` (con `ALTA_SIGRID_COMMIT=false` queda en `simulado`).
 
 **F-064 · `blocked` (2026-10-18): review O1 APPROVED, T9 y T10 del humano en VERDE; solo queda la MANUAL T12.**
+**T12 en marcha:** sv2 desplegado por el humano el 2026-10-18 (`r20261018-1420`, revisión única tras `fix_revisiones`); la
+vigilancia de `proveedor_cif_propio:` cuenta desde `2026-10-18T12:22:00Z` hasta el 2026-10-25 (la consulta la hace el líder, solo lectura).
 Rama `feature/F-064-proveedor-en-prompts`, worktree `../albaranes-F-064` (*junction* `services\albaranes-front\.venv`:
 quitarla con `cmd /c rmdir` ANTES de `git worktree remove`). T9 (comparador, `progress/comparar_proveedor_F-064.md`):
 C1/C2/C3 OK, emisor base 8 → rama 9, CIF cliente 0/0; AVISO: el banco no reproduce el incidente (propuesta al humano:
@@ -322,8 +324,8 @@ verde, pasa a `done`.
 
 **F-072 · CERRADA (`done`, 2026-10-16).** MANUAL T16 en verde. Resumen en `history.md`.
 
-**Siguiente (orden del humano, 2026-10-16):** F-078 → F-076 → F-077 → F-073 → F-064 (evals del humano) → F-074; F-071 y
-F-075 tras F-064. Specs de F-076, F-077 y F-078 APROBADAS en sus ramas. Escritura en Sigrid apagada (`COMMIT=false`)
+**Siguiente (orden del humano, 2026-10-18):** F-075 → F-071 → F-074 (la última, decisión del humano). Mientras, los
+despliegues pendientes de F-078, F-076, F-077 y F-073. Después: F-080, F-079, F-081, F-058, F-059, F-049. Specs de F-076, F-077 y F-078 APROBADAS en sus ramas. Escritura en Sigrid apagada (`COMMIT=false`)
 hasta desplegar F-078, F-076 y F-077.
 
 > **Nota para quien fusione después de F-078:**
