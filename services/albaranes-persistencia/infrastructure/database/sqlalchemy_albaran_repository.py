@@ -2248,6 +2248,67 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
             )
             session.commit()
 
+    def get_merge_pie_para_guard(
+        self, *, document_id: str,
+    ) -> tuple[
+        tuple[float | None, float | None, float | None, float | None],
+        list[float | None],
+    ]:
+        """(F-075 R16) ``((base, tipo, cuota, total), importes_leidos)`` del
+        merge. Sin documento, el pie vacío y ninguna línea. Solo lectura."""
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            fila = session.execute(
+                text(
+                    "SELECT base_imponible, tipo_iva_pct, cuota_iva, total_albaran "
+                    "FROM albaran_documents_merge WHERE id = :document_id"
+                ),
+                {"document_id": document_id},
+            ).first()
+        if fila is None:
+            return (None, None, None, None), []
+        pie = tuple(None if v is None else float(v) for v in fila)
+        return pie, self.importes_leidos(document_id=document_id)  # type: ignore[return-value]
+
+    def retirar_revision_cabecera(
+        self,
+        *,
+        document_id: str,
+        motivo_prefijo: str,
+        nota_prefijo: str,
+    ) -> None:
+        """(F-075 R17) Retira los motivos que empiezan por ``motivo_prefijo``
+        y la nota de ``nota_prefijo``, en una transacción. Como
+        ``retirar_motivos_proveedor``, ``review_required`` NO baja: puede
+        haber otros motivos vivos y cerrarlos es del revisor."""
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            fila = session.execute(
+                text(
+                    "SELECT review_reasons_json FROM albaran_documents_merge "
+                    "WHERE id = :document_id"
+                ),
+                {"document_id": document_id},
+            ).first()
+            if fila is None:
+                return
+            nuevos = quitar_motivos_con_prefijo(fila[0], motivo_prefijo)
+            if _motivos_de_json(nuevos) != _motivos_de_json(fila[0]):
+                session.execute(
+                    text(
+                        "UPDATE albaran_documents_merge SET review_reasons_json = :r "
+                        "WHERE id = :document_id"
+                    ),
+                    {"r": nuevos, "document_id": document_id},
+                )
+            self._sustituir_nota(
+                session=session,
+                document_id=document_id,
+                prefijo=nota_prefijo,
+                nota=None,
+            )
+            session.commit()
+
     def get_merge_fechas_para_guard(
         self, *, document_id: str,
     ) -> tuple[str | None, str | None]:

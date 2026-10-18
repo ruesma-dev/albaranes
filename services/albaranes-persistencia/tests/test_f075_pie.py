@@ -133,3 +133,207 @@ def test_f075_r15_se_persiste_en_las_dos_tablas(merge):
     )
     assert (documento.base_imponible, documento.tipo_iva_pct, documento.cuota_iva,
             documento.total_albaran) == (100.0, 21.0, 21.0, 121.0)
+
+
+# ------------------------------------------------------------------ #
+# R16–R18 · PieGuardService
+# ------------------------------------------------------------------ #
+class _RepoPie:
+    def __init__(self, *, pie=(None, None, None, None), importes=(), rompe_lectura=False,
+                 rompe_marca=False):
+        self.pie = pie
+        self.importes = list(importes)
+        self.rompe_lectura = rompe_lectura
+        self.rompe_marca = rompe_marca
+        self.marcas = []
+        self.retiradas = []
+
+    def get_merge_pie_para_guard(self, *, document_id):
+        if self.rompe_lectura:
+            raise RuntimeError("BBDD caída")
+        return self.pie, self.importes
+
+    def marcar_revision_cabecera(self, *, document_id, motivo, nota, nota_prefijo):
+        if self.rompe_marca:
+            raise RuntimeError("BBDD caída")
+        self.marcas.append((document_id, motivo, nota, nota_prefijo))
+
+    def retirar_revision_cabecera(self, *, document_id, motivo_prefijo, nota_prefijo):
+        self.retiradas.append((document_id, motivo_prefijo, nota_prefijo))
+
+
+def _guard(repo, **kw):
+    from application.services.pie_guard_service import PieGuardService
+
+    return PieGuardService(repository=repo, **kw)
+
+
+def test_f075_r16_no_cuadra_marca_revision_con_motivo_y_nota():
+    from application.services.pie_guard_service import NOTA_PIE_PREFIJO
+
+    repo = _RepoPie(pie=(110.0, 21.0, 23.1, 133.1), importes=[60.0, 40.0, None])
+    _guard(repo).check_merge_document(merge_document_id="m1")
+    ((doc, motivo, nota, prefijo),) = repo.marcas
+    assert doc == "m1"
+    assert motivo == "pie_no_cuadra:100.00!=110.00"
+    assert prefijo == NOTA_PIE_PREFIJO == "[AVISO] La suma de las líneas no cuadra con el pie del albarán"
+    assert nota.startswith(NOTA_PIE_PREFIJO)
+    assert "100,00 €" in nota and "110,00 €" in nota and "varias páginas" in nota
+    assert repo.retiradas == []
+
+
+def test_f075_r16_sin_base_compara_con_total_menos_cuota():
+    repo = _RepoPie(pie=(None, None, 21.0, 131.0), importes=[100.0])
+    _guard(repo).check_merge_document(merge_document_id="m1")
+    assert repo.marcas[0][1] == "pie_no_cuadra:100.00!=110.00"
+
+
+def test_f075_r16_tolerancia_configurable():
+    repo = _RepoPie(pie=(100.05, None, None, None), importes=[100.0])
+    _guard(repo, tolerancia_eur=0.02).check_merge_document(merge_document_id="m1")
+    assert len(repo.marcas) == 1
+    repo = _RepoPie(pie=(100.05, None, None, None), importes=[100.0])
+    _guard(repo, tolerancia_eur=0.10).check_merge_document(merge_document_id="m1")
+    assert repo.marcas == [] and len(repo.retiradas) == 1
+
+
+@pytest.mark.parametrize(("pie", "importes"), [
+    ((100.01, 21.0, 21.0, 121.01), [100.0]),        # cuadra
+    ((None, None, None, 121.0), [100.0]),           # solo el total: no comparable
+    ((None, None, None, None), [100.0]),            # sin pie
+    ((110.0, None, None, None), [None, None]),      # el albarán no trae importes
+])
+def test_f075_r17_cuadra_o_no_comparable_retira_motivo_y_nota(pie, importes):
+    from application.services.pie_guard_service import MOTIVO_PIE, NOTA_PIE_PREFIJO
+
+    repo = _RepoPie(pie=pie, importes=importes)
+    _guard(repo).check_merge_document(merge_document_id="m1")
+    assert repo.marcas == []
+    assert repo.retiradas == [("m1", f"{MOTIVO_PIE}:", NOTA_PIE_PREFIJO)]
+
+
+def test_f075_r18_best_effort_lectura_rota(caplog):
+    import logging
+
+    repo = _RepoPie(rompe_lectura=True)
+    with caplog.at_level(logging.ERROR):
+        _guard(repo).check_merge_document(merge_document_id="m1")
+    assert repo.marcas == [] and repo.retiradas == []
+    assert any("m1" in r.getMessage() for r in caplog.records)
+
+
+def test_f075_r18_best_effort_marca_rota():
+    repo = _RepoPie(pie=(110.0, None, None, None), importes=[100.0], rompe_marca=True)
+    _guard(repo).check_merge_document(merge_document_id="m1")  # no lanza
+
+
+def test_f075_r18_deshabilitado_no_hace_nada():
+    repo = _RepoPie(pie=(110.0, None, None, None), importes=[100.0])
+    _guard(repo, enabled=False).check_merge_document(merge_document_id="m1")
+    assert repo.marcas == [] and repo.retiradas == []
+
+
+def test_f075_r18_el_pipeline_lo_llama_junto_al_guard_de_fecha():
+    """En los tres puntos (nuevo, duplicado, reenrich), tras el de fecha."""
+    import re
+    from pathlib import Path
+
+    fuente = (Path(__file__).resolve().parents[1] / "application" / "pipelines"
+              / "persist_albaran_pipeline.py").read_text(encoding="utf-8")
+    fecha = [m.start() for m in re.finditer(r"self\._check_fecha_guard_safely\(", fuente)]
+    pie = [m.start() for m in re.finditer(r"self\._check_pie_guard_safely\(", fuente)]
+    assert len(fecha) == len(pie) == 3
+    for f, siguiente_f in zip(fecha, fecha[1:] + [len(fuente)]):
+        assert any(f < p < siguiente_f for p in pie)
+
+
+def test_f075_r18_pipeline_sin_servicio_o_con_fallo_no_rompe():
+    from application.pipelines.persist_albaran_pipeline import PersistAlbaranPipeline
+
+    PersistAlbaranPipeline(repository=None, document_storage=None, normalizer=None)._check_pie_guard_safely(
+        merge_document_id="m1")
+
+    class _Roto:
+        def check_merge_document(self, **_):
+            raise RuntimeError("x")
+
+    PersistAlbaranPipeline(repository=None, document_storage=None, normalizer=None,
+                           pie_guard_service=_Roto())._check_pie_guard_safely(merge_document_id="m1")
+
+
+def test_f075_r16_ajuste_por_defecto_de_la_tolerancia():
+    from config.settings import Settings
+
+    assert Settings.model_fields["pie_tolerancia_eur"].default == 0.02
+    assert Settings.model_fields["pie_tolerancia_eur"].alias == "PIE_TOLERANCIA_EUR"
+
+
+# ------------------------------------------------------------------ #
+# R16, R17 · el repositorio real (SQLite)
+# ------------------------------------------------------------------ #
+_MOTIVOS_SEMBRADOS = '["fecha_albaran_fuera_de_rango:2023-01-01", "pie_no_cuadra:100.00!=110.00"]'
+_NOTAS_SEMBRADAS = "[AVISO] Fecha x\n[AVISO] La suma de las líneas no cuadra con el pie del albarán: y"
+
+
+@pytest.fixture()
+def repo_sqlite(tmp_path):
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import Session
+
+    from infrastructure.database.sqlalchemy_albaran_repository import SqlAlchemyAlbaranRepository
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'pie.db'}")
+    with engine.begin() as con:
+        con.execute(text(
+            "CREATE TABLE albaran_documents_merge (id TEXT PRIMARY KEY, base_imponible REAL, "
+            "tipo_iva_pct REAL, cuota_iva REAL, total_albaran REAL, review_required BOOLEAN, "
+            "review_reasons_json TEXT, review_notes TEXT)"))
+        con.execute(text(
+            "CREATE TABLE albaran_lines_merge (id INTEGER PRIMARY KEY, document_id TEXT, "
+            "line_index INTEGER, precio_neto REAL)"))
+        con.execute(text(
+            "INSERT INTO albaran_documents_merge VALUES ('m1', 110.0, 21.0, 23.1, 133.1, 1, :m, :n)"),
+            {"m": _MOTIVOS_SEMBRADOS, "n": _NOTAS_SEMBRADAS})
+        con.execute(text(
+            "INSERT INTO albaran_lines_merge (document_id, line_index, precio_neto) VALUES "
+            "('m1', 1, 40.0), ('m1', 0, 60.0), ('m1', 2, NULL)"))
+
+    class _Fabrica:
+        generation = 1
+
+        def ensure_database_and_engine(self):
+            return None
+
+        def create_session(self):
+            return Session(engine)
+
+    repo = SqlAlchemyAlbaranRepository(_Fabrica())
+    repo._initialized_generation = 1
+    return repo, engine
+
+
+def test_f075_r16_repo_lee_el_pie_y_los_importes(repo_sqlite):
+    repo, _ = repo_sqlite
+    pie, importes = repo.get_merge_pie_para_guard(document_id="m1")
+    assert pie == (110.0, 21.0, 23.1, 133.1)
+    assert importes == [60.0, 40.0, None]
+    assert repo.get_merge_pie_para_guard(document_id="no") == ((None, None, None, None), [])
+
+
+def test_f075_r17_repo_retira_motivo_y_nota_sin_bajar_la_revision(repo_sqlite):
+    import json
+
+    from sqlalchemy import text
+
+    from application.services.pie_guard_service import MOTIVO_PIE, NOTA_PIE_PREFIJO
+
+    repo, engine = repo_sqlite
+    repo.retirar_revision_cabecera(document_id="m1", motivo_prefijo=f"{MOTIVO_PIE}:",
+                                   nota_prefijo=NOTA_PIE_PREFIJO)
+    with engine.connect() as con:
+        revision, motivos, notas = con.execute(text(
+            "SELECT review_required, review_reasons_json, review_notes FROM albaran_documents_merge")).one()
+    assert revision in (1, True)
+    assert json.loads(motivos) == ["fecha_albaran_fuera_de_rango:2023-01-01"]
+    assert "La suma de las líneas" not in notas and "[AVISO] Fecha" in notas
+    repo.retirar_revision_cabecera(document_id="no-existe", motivo_prefijo="x", nota_prefijo="y")

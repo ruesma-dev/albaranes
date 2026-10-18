@@ -217,6 +217,10 @@ class Settings(BaseSettings):
     cifs_propios: str = Field("", alias="CIFS_PROPIOS")
     fecha_guard_enabled: bool = Field(True, alias="FECHA_GUARD_ENABLED")
     fecha_guard_max_dias: int = Field(365, alias="FECHA_GUARD_MAX_DIAS")
+    # (F-075 R16) Control del pie: diferencia máxima, en euros, entre la suma
+    # de las líneas y la base del pie (o total − cuota) para que «cuadre».
+    pie_guard_enabled: bool = Field(True, alias="PIE_GUARD_ENABLED")
+    pie_tolerancia_eur: float = Field(0.02, alias="PIE_TOLERANCIA_EUR")
 
     # ------------------------------------------------------------ #
     # Grounding de cabecera para la fase 2 (jun 2026).
