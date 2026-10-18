@@ -588,6 +588,12 @@ def ejecutar(opciones: argparse.Namespace) -> tuple[ResultadoPasada, list[str]]:
         feature=opciones.feature or "",
         commit=_commit_actual(Path(opciones.fixtures).resolve().parent.parent),
         fecha=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        # (F-075 R27) El pie que IA1 devuelve y el libro aún no mide.
+        no_medidos=(
+            sv2_extraccion.campos_no_medidos(cargar_fixtures(fixtures, "IA1"))
+            if opciones.con_llm and "IA1" in fases
+            else []
+        ),
     )
     return pasada, no_observables
 

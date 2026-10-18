@@ -78,6 +78,9 @@ CAMPOS_NUMERICOS: tuple[str, ...] = (
     "*m3*",
     "*contenedor*",
     "*confianza*",
+    # (F-075 R27) El pie del albarán.
+    "*base_imponible*",
+    "*iva*",
 )
 
 #: Campos que el contrato de datos declara como lista separada por `;`.
@@ -97,6 +100,10 @@ ALIAS_ENCABEZADOS: dict[str, str] = {
     "modifier_source_concepto_vetado": "concepto_vetado",
     "motivo_del_veto": "motivo_veto",
     "regla_motivo": "motivo",
+    # (F-075 R27) El tipo de IVA del pie, con sus rótulos para personas.
+    "tipo_iva": "tipo_iva_pct",
+    "tipo_de_iva": "tipo_iva_pct",
+    "iva_pct": "tipo_iva_pct",
 }
 
 _PARENTESIS = re.compile(r"\([^)]*\)")
