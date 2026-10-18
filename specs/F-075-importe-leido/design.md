@@ -14,12 +14,15 @@ Cada pieza va al servicio dueño (ARCHITECTURE, tabla de servicios):
 | Leer el pie | sv2 (prompt IA1, `CabeceraAlbaran`, `phase_merge`) | Solo sv2 lee el papel |
 | Guardar el pie y el control | sv3 (DDL, normalizador, fusión, guard) | Dueño del esquema del merge y de los motivos de revisión |
 | Disparar la valoración sin contrato | sv3 (`persist_albaran_pipeline`) | Hoy decide él no publicar |
+| Llevar el importe leído en el sobre `no_contract` | sv5 (`_raw_albaran_line_to_dict`) | Arma el sobre; solo se añaden dos claves (R5 bis) |
 | Valoración directa | sv6 (rama `no_contract`) | Valorador y dueño del esquema de valoración. Ya recibe las líneas del albarán en el sobre de sv5 |
 | Qué se enseña | sv4 | Front |
 | Alta en Sigrid | sv9 **sin código** | Ya admite `no_contract` completa (F-053 R10, R12) |
 
-No hace falta ningún servicio nuevo. No cambia `MensajeValoracion`, que ya admite `codigo_contrato` nulo. sv5 no
-cambia: con `no_contract` ya devuelve `context.lineas_albaran`.
+No hace falta ningún servicio nuevo. No cambia `MensajeValoracion`, que ya admite `codigo_contrato` nulo. sv5 con
+`no_contract` ya devuelve `context.lineas_albaran`, pero **sin `precio_neto_albaran` ni `descuento_albaran`**
+(`_raw_albaran_line_to_dict`): sv5 añade esas dos claves, que ya lee en `RawAlbaranLine` (R5 bis; opción A, decisión
+del humano 2026-10-18). Es un añadido compatible: el DTO de sv6 ya tiene los dos campos.
 
 **Corte propuesto (v2-P8).** La feature se puede partir en dos, y cada mitad se puede desplegar sola:
 - **F-075 · Paso directo e importe que manda**: bloques 1 (sin `pie_cuadra`), 2, 3, 5 (sin pie) y 6 (sv9).
@@ -43,7 +46,8 @@ No se parte por sv9: el alta sin contrato no necesita código nuevo, solo tests 
 
 | Ruta | Cambio |
 |---|---|
-| sv3 `application/pipelines/persist_albaran_pipeline.py` | En el paso de disparo: sin contrato con líneas **y** `trae_importes` ⇒ `trigger_async(codigo_contrato=None)` (R3, R4). Añade `_check_pie_guard_safely` junto a la fecha (R16) |
+| sv5 `application/pipelines/value_albaran_pipeline.py` | `_raw_albaran_line_to_dict` añade `descuento_albaran` y `precio_neto_albaran` (R5 bis). Test `tests/test_f075_no_contract.py` |
+| sv3 `application/pipelines/persist_albaran_pipeline.py` | En el paso de disparo: sin contrato seleccionado (código nulo, M1) **y** `trae_importes` ⇒ `trigger_async(codigo_contrato=None)`; con contrato seleccionado sin líneas, SKIP (R3, R4). Añade `_check_pie_guard_safely` junto a la fecha (R16) |
 | sv3 `domain/ports/…`, `infrastructure/database/sqlalchemy_albaran_repository.py` | `importes_leidos(document_id) -> list[float \| None]`. Se guardan los cuatro campos del pie |
 | sv3 `infrastructure/database/orm_models.py`, `phase2_ddl.py` | Cuatro columnas `Float` en `_DocumentColumnsMixin` y sus `ADD COLUMN IF NOT EXISTS` en las dos tablas (§7) |
 | sv3 `domain/models/extraction_models.py`, `application/services/albaran_normalizer.py`, `albaran_confidence_service.py` | Campos del pie en la cabecera, normalizados como número, y `_HEADER_CONFIGS` `kind: number` con peso bajo y no críticos (no cambian la confianza de hoy) |
@@ -97,7 +101,8 @@ def pie_cuadra(suma: float | None, *, base: float | None, cuota: float | None,
 
 ## 6. sv3 · disparo y `PieGuardService`
 
-- Disparo: `has_selected_contrato_with_lines` ⇒ igual que hoy. Si no, se pregunta
+- Disparo: `has_selected_contrato_with_lines` ⇒ igual que hoy. Si no hay líneas y el código seleccionado **no es
+  nulo** ⇒ SKIP, como hoy (M1, humano 2026-10-18). Si el código es nulo, se pregunta
   `importe_albaran(repo.importes_leidos(id)).trae_importes`: si es verdad ⇒ `trigger_async(document_id,
   codigo_contrato=None, force)`, y si no ⇒ SKIP, como hoy. Cualquier excepción se registra en el log y no se publica
   (best-effort, como hoy).
@@ -150,15 +155,16 @@ todavía, la ficha pinta «no leído». Orden de despliegue: **sv3 antes que sv4
 
 ## 10. Despliegue
 
-Orden: **comun** (con cada imagen), **sv3** (DDL y disparo), **sv6** (valoración directa), **sv4**. sv9 no se
-redespliega: `esta_valorado` no cambia. Si sv3 sale antes que sv6, los `no_contract` con importes quedan con la
-cabecera vacía de hoy, que es inocuo; un «Revalorar» después lo rehace. sv2 sale con el bloque 4, después de F-064.
+Orden: **comun** (con cada imagen), **sv3** (DDL y disparo), **sv5** (sobre `no_contract` con el importe leído, R5
+bis), **sv6** (valoración directa), **sv4**. sv9 no se
+redespliega: `esta_valorado` no cambia. Si sv3 sale antes que sv6, o sv6 antes que sv5, los `no_contract` con importes
+quedan con la cabecera vacía de hoy, que es inocuo; un «Revalorar» después lo rehace. sv2 sale con el bloque 4, después de F-064.
 `ALTA_SIGRID_COMMIT` sigue `false` (T51 de F-053). Antes de pasar a real, el humano revisa en simulación 3 altas
 directas (MANUAL).
 
 ## 11. Ficheros que NO se tocan
 
-- sv5 entero.
+- sv5, salvo las dos claves del sobre `no_contract` (R5 bis): ni el cálculo, ni el SELECT, ni la IA.
 - sv9 (`validador_alta.py`, `construir_peticion`), `ruesma_comun.valoracion.esta_valorado` y
   `ruesma_comun.alta_sigrid`.
 - `ValuationBuilder`, `PriceReconciler` e `ImporteCalculator` en el cálculo: R12 solo añade un motivo detrás.

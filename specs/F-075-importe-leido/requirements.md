@@ -1,8 +1,12 @@
 # F-075 · El importe del albarán manda: pie leído como control y paso directo sin contrato — requisitos (v2)
 
 Rigor **critico** (lo aprobado lo da de alta sv9 en el ERP; cambia lo que lee IA1 en producción y lo que va a
-revisión). Servicios: **comun**, **sv2-api**, **sv3-persistencia**, **sv6-valoracion-persist**, **sv4-front**; sv9
-sin código (tests de contrato). Prioridad 1. Informe, respuestas de la PARADA 1 y preguntas v2:
+revisión). Servicios: **comun**, **sv2-api**, **sv3-persistencia**, **sv5-valoracion-api** (solo el sobre
+`no_contract`, R5 bis), **sv6-valoracion-persist**, **sv4-front**; sv9 sin código (tests de contrato).
+
+> **Ajuste por decisión del humano (2026-10-18)**, a raíz del bloqueo del implementer (`progress/impl_F-075.md` §2):
+> opción **A** (sv5 añade `precio_neto_albaran` y `descuento_albaran` al sobre `no_contract`, R5 bis) y matiz **M1**
+> (R3: solo sin contrato seleccionado; con contrato seleccionado y 0 líneas, SKIP como hoy). Prioridad 1. Informe, respuestas de la PARADA 1 y preguntas v2:
 `progress/spec_F-075.md` §v2. Corte propuesto en dos features: design §1. La v1 (solo sv4, importe junto al
 valorado) queda **sustituida**.
 
@@ -49,9 +53,13 @@ base, con `total − cuota`; devuelve `cuadra`, `no_cuadra` o `no_comparable` (s
 
 ## 2 · Paso directo sin contrato (sv3 + sv6)
 
-R3. CUANDO sv3 termina de persistir un merge sin contrato seleccionado con líneas y el albarán trae importes, sv3
-debe publicar `q-valoracion` con `codigo_contrato` nulo (hoy lo omite).
-R4. SI el albarán no trae importes y no tiene contrato, ENTONCES sv3 no publica, como hoy.
+R3. CUANDO sv3 termina de persistir un merge **sin contrato seleccionado** (código nulo) y el albarán trae importes,
+sv3 debe publicar `q-valoracion` con `codigo_contrato` nulo (hoy lo omite). (M1, humano 2026-10-18.)
+R4. SI el albarán no trae importes y no tiene contrato, ENTONCES sv3 no publica, como hoy. SI tiene contrato
+seleccionado sin líneas, ENTONCES sv3 no publica, como hoy (M1: sv5 tomaría ese contrato del merge y no daría
+`no_contract`).
+R5 bis. El sobre `no_contract` de sv5 debe llevar, por línea, `precio_neto_albaran` (el `precio_neto` del merge, sin
+derivar) y `descuento_albaran`, como ya los lleva el sobre con contrato. (Opción A, humano 2026-10-18.)
 R5. CUANDO sv6 recibe un sobre `no_contract` y alguna línea de `context.lineas_albaran` trae importe leído, sv6 debe
 persistir una valoración directa: cabecera `no_contract`, `contrato_codigo` nulo, `total_valorado` = suma de los
 importes no nulos, y una línea `from_albaran` por cada línea del albarán.
@@ -116,7 +124,8 @@ exigible por tocar prompts y esquemas (rutas sensibles).
 ## Fuera de alcance
 
 - Valorar sin contrato los albaranes **sin** importes (siguen como hoy).
-- Quitar o recalcular sintéticas con contrato (R12 solo las marca); cambiar sv5.
+- Quitar o recalcular sintéticas con contrato (R12 solo las marca); cambiar el cálculo o la IA de sv5 (solo se
+  añaden dos claves al sobre `no_contract`, R5 bis).
 - Aprobación automática.
 - Backfill de merges ya guardados (decide el humano, v2-P6).
 - F-064, F-071, F-073, F-066 X12.
