@@ -589,6 +589,13 @@ con peticiones que pueden tardar minutos, el destino natural es:
 | Punto de entrada       | `python main.py` (o `uvicorn interface_adapters.api.app:build_app --factory`)    |
 | Dependencias clave     | `fastapi`, `uvicorn`, `pydantic-settings`, `openai`, `anthropic`, `google-genai`, `google-cloud-documentai`, `httpx`, `PyYAML` |
 
+> **F-075 (oct 2026)** · IA1 lee el **pie** del albarán en la cabecera
+> (`base_imponible`, `tipo_iva_pct`, `cuota_iva`, `total_albaran`; sección «Pie del
+> albarán» del prompt, que IA2 recibe por `{prompt_fase_1}`) y `phase_merge`
+> conserva el de la fase 1 si la fase 2 lo devuelve nulo. Regla 25 de
+> `docs/ARCHITECTURE.md`. Se despliega después de sv3 (sv3 rechaza campos que no
+> conoce).
+
 ---
 
 *Documento generado a partir del análisis del código del paquete `sv2.zip` aportado.*

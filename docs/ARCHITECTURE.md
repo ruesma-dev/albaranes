@@ -166,6 +166,9 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
     ha tocado la línea, y eso se decide mirando lo que el revisor **cambió**
     (cantidad, descuento), nunca comparando el importe guardado con el
     recalculado: hay filas en que discrepan a propósito.
+    Desde F-075 (regla 25) `ruesma_comun.importes` también suma el **importe
+    del albarán** (`importe_albaran`), compara dos importes (`difieren`) y
+    controla el pie (`pie_cuadra`).
 14. **La familia del albarán la decide IA1; NUNCA una regla determinista**
     (F-043, ago 2026). La clasificación es del **documento** y la devuelve
     IA1 al leerlo, en el bloque `data.clasificacion` —`familia`,
@@ -677,6 +680,50 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
     - La red por CIF conserva sus reglas (la propuesta de F-052 sigue siendo
       el primero en empate). La propuesta de sv4 (`_proposeBest`) no está
       aquí: X4 de F-067.
+25. **El importe del albarán manda; el pie es un control** (F-075, oct 2026;
+    DISCOIN, obra 0686: un albarán con precios y sin contrato salía «Importe
+    valorado —» y no se podía aprobar). Spec: `specs/F-075-importe-leido/`;
+    decisiones del humano en `progress/spec_F-075.md` (PARADA 1 v2) y en
+    `progress/impl_F-075.md` (opción A y M1, 2026-10-18).
+    - **Importe del albarán** = suma con signo de los `precio_neto` leídos
+      (sin IVA, regla 13); nulo si ninguna línea lo trae; **parcial** si
+      faltan algunos (esas líneas no suman y nada las completa: ni el
+      contrato ni `cantidad × precio`). Una sola definición:
+      `ruesma_comun.importes.importe_albaran`, que usan sv3, sv4 y sv6.
+    - **Sin contrato y con importes ⇒ valoración directa.** sv3 publica
+      `q-valoracion` con `codigo_contrato` nulo solo si **no hay contrato
+      seleccionado** (con contrato seleccionado sin líneas, nada, como antes);
+      el sobre `no_contract` de sv5 lleva `precio_neto_albaran` y
+      `descuento_albaran`; sv6 (`ValoracionDirectaBuilder`) guarda una cabecera
+      `no_contract` con `prompt_key` y motivo `valoracion_directa_albaran` y una
+      línea por línea del albarán: sin IA, sin contrato, sin sintéticas,
+      importe = el leído, factor 1, partida impresa o almacén y una derivada
+      `nueva_no_match` con `codigo_contrato=""`; pasa por `completar_registros`
+      (regla 22) y por la normalización de partidas (regla 23). Completa, es
+      «valorada» (`esta_valorado` no cambia) y la aprueba una persona; sv9 la
+      da de alta sin vincular sin código nuevo. Con alguna línea sin importe
+      (`sin_importe_en_albaran`), no se aprueba hasta completarla. sv4 deja
+      «Valorar ahora» sin contrato si el albarán trae importes.
+    - **Con contrato, como siempre** (lo leído ya manda línea a línea): la
+      valoración vincula la línea a su `ctrpro`. Si el `total_valorado` se
+      aparta del importe del albarán (≥ 0,01 €: sintéticas o líneas sin
+      importe), la cabecera va a revisión con
+      `valorado_distinto_de_albaran:<valorado>!=<albarán>`; no se toca ningún
+      importe.
+    - **El pie** (`base_imponible`, `tipo_iva_pct`, `cuota_iva`,
+      `total_albaran`) lo lee IA1 tal como está impreso, sv2 conserva el de la
+      fase 1 si la fase 2 lo devuelve nulo y sv3 lo guarda en
+      `albaran_documents` y en el merge. **Es un control, nunca una fuente de
+      importes**: `PieGuardService` compara la suma de las líneas con la base o
+      `total − cuota` (`PIE_TOLERANCIA_EUR`, 0,02) y, si no cuadra, motivo
+      `pie_no_cuadra:<suma>!=<pie>` y nota; con solo el total no se compara
+      (nunca se supone el tipo de IVA). No bloquea la aprobación.
+    - **sv4 enseña una sola cifra**, «Importe»: la del albarán si trae importes
+      (rótulo «albarán · sin IVA») y, si no, el valorado (rótulo «contrato»),
+      con la marca ≠ si el valorado se aparta o el pie no cuadra. La misma
+      expresión SQL portable ordena, filtra y suma en la tarjeta «Importe
+      pendiente» y en las vistas Obras y Proveedores; una valoración sin
+      filas no es un valorado.
 
 ## Acceso a datos y sistemas externos
 
