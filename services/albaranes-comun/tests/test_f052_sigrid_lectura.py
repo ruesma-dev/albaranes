@@ -324,5 +324,6 @@ def test_f052_version_0_7_0_en_paquete_y_pyproject():
 
     pyproject = (Path(ruesma_comun.__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
     [declarada] = re.findall(r'^version = "([^"]+)"', pyproject, flags=re.MULTILINE)
-    assert ruesma_comun.__version__ == "0.7.0"
+    # F-076 sube a 0.8.0 (subpaquete nuevo sin romper API): desde 0.7.0, nunca menos.
+    assert tuple(int(x) for x in ruesma_comun.__version__.split(".")) >= (0, 7, 0)
     assert declarada == ruesma_comun.__version__

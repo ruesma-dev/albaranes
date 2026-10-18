@@ -178,9 +178,11 @@ def test_f052_r29_el_mejor_no_es_el_cif_esperado_falla():
     )
     assert codigo == 1
     assert f"  - el mejor candidato por nombre no es {CIF_SALMEDINA}" in texto
-    # Empate a 1,00 entre los «PROVEEDOR OBRA xx»: gana el primero en el
-    # orden de la agregada, como en el resolver (``>`` estricto).
-    assert "Mejor candidato: B10000000 (score 1,00) -> propuesta" in texto
+    # F-073 (decisión del humano, 2026-10-17, opción a): con el criterio
+    # único de similitud ya no hay empate a 1,00 entre los «PROVEEDOR OBRA
+    # xx» que ganaba el primero (B10000000): «07» casa exacto con «PROVEEDOR
+    # OBRA 07, S.L.» y los demás quedan a 2/3.
+    assert "Mejor candidato: B10055433 (score 1,00) -> propuesta" in texto
     assert f"Score del CIF {CIF_SALMEDINA}: 0," in texto
 
 

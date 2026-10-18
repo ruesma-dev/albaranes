@@ -22,9 +22,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 #: Ruta (relativa a la raíz del repositorio) de la declaración de servicios.
 RUTA_SERVICIOS = Path("harness/servicios.json")
@@ -39,6 +40,9 @@ SEPARADOR = "|"
 #: Rutas relativas donde vive el intérprete dentro de un entorno virtual.
 INTERPRETES_DEL_VENV: tuple[str, ...] = ("Scripts/python.exe", "bin/python")
 
+#: Forma de un nombre de módulo de Python, con o sin puntos (`pkg.sub`).
+NOMBRE_DE_MODULO = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*")
+
 
 @dataclass(frozen=True)
 class Servicio:
@@ -49,6 +53,14 @@ class Servicio:
     lenguaje: str
     venv: str | None = None
     comando_tests: str | None = None
+    #: Rutas del repositorio de las que depende su suite (1.7.16): un commit en
+    #: cualquiera de ellas invalida la caché del servicio.
+    depende_de: tuple[str, ...] = ()
+    #: Módulos cuya ruta real se comprueba antes de servir la caché (1.7.16).
+    importa: tuple[str, ...] = ()
+    #: Ficheros no versionados cuya huella (metadatos, nunca contenido) entra
+    #: en la clave de la caché (1.7.16).
+    entradas_no_versionadas: tuple[str, ...] = ()
 
 
 # --- Carga y validación -----------------------------------------------------
@@ -77,6 +89,76 @@ def _texto(entrada: dict, clave: str, nombre: str, obligatorio: bool) -> str | N
     return valor
 
 
+def _es_absoluta(ruta: str) -> bool:
+    """¿Ruta absoluta en cualquiera de los dos sistemas (`/x`, contrabarra, `C:`)?"""
+    return (
+        PurePosixPath(ruta.replace("\\", "/")).is_absolute()
+        or PureWindowsPath(ruta).drive != ""
+    )
+
+
+def _lista(entrada: dict, clave: str, nombre: str) -> list:
+    """Lee un campo de lista; ausente es lista vacía, cualquier otra cosa falla."""
+    if clave not in entrada:
+        return []
+    valor = entrada[clave]
+    if not isinstance(valor, list):
+        raise ValueError(
+            f"servicio '{nombre}': el campo '{clave}' debe ser una lista, y es "
+            f"{valor!r}"
+        )
+    return valor
+
+
+def _rutas(entrada: dict, clave: str, nombre: str) -> tuple[str, ...]:
+    """Lista de rutas relativas a la raíz, normalizadas y sin repetir (R3, R5).
+
+    La existencia NO se mira aquí: solo `depende_de` la exige, y se comprueba
+    con la raíz en `_comprobar_conjunto`.
+    """
+    rutas: list[str] = []
+    for valor in _lista(entrada, clave, nombre):
+        if not isinstance(valor, str) or not valor.strip():
+            motivo = "debe contener textos no vacíos"
+        elif SEPARADOR in valor:
+            motivo = f"no puede contener '{SEPARADOR}'"
+        elif _es_absoluta(valor):
+            motivo = "debe contener rutas relativas a la raíz del repositorio"
+        elif ".." in _normalizar(valor).split("/"):
+            motivo = "no puede salir de la raíz con '..'"
+        elif _normalizar(valor) in rutas:
+            motivo = f"tiene la ruta '{_normalizar(valor)}' repetida"
+        else:
+            rutas.append(_normalizar(valor))
+            continue
+        raise ValueError(
+            f"servicio '{nombre}': el campo '{clave}' {motivo}, y tiene {valor!r}"
+        )
+    return tuple(rutas)
+
+
+def _modulos(entrada: dict, nombre: str, lenguaje: str) -> tuple[str, ...]:
+    """Nombres de módulo vigilados (R4): con forma de módulo y sin repetir."""
+    if "importa" in entrada and lenguaje != "python":
+        raise ValueError(
+            f"servicio '{nombre}': el campo 'importa' solo vale en un servicio "
+            f"de lenguaje 'python', y este es {lenguaje!r}"
+        )
+    modulos: list[str] = []
+    for valor in _lista(entrada, "importa", nombre):
+        if not isinstance(valor, str) or not NOMBRE_DE_MODULO.fullmatch(valor):
+            motivo = "debe contener nombres de módulo de Python (p. ej. 'pkg.sub')"
+        elif valor in modulos:
+            motivo = "tiene un módulo repetido"
+        else:
+            modulos.append(valor)
+            continue
+        raise ValueError(
+            f"servicio '{nombre}': el campo 'importa' {motivo}, y tiene {valor!r}"
+        )
+    return tuple(modulos)
+
+
 def _servicio_de_entrada(entrada: object) -> Servicio:
     """Convierte una entrada de la declaración en un `Servicio` validado."""
     if not isinstance(entrada, dict):
@@ -102,6 +184,9 @@ def _servicio_de_entrada(entrada: object) -> Servicio:
         lenguaje=lenguaje,
         venv=_texto(entrada, "venv", nombre, obligatorio=False),
         comando_tests=_texto(entrada, "comando_tests", nombre, obligatorio=False),
+        depende_de=_rutas(entrada, "depende_de", nombre),
+        importa=_modulos(entrada, nombre, lenguaje),
+        entradas_no_versionadas=_rutas(entrada, "entradas_no_versionadas", nombre),
     )
 
 
@@ -134,6 +219,14 @@ def _comprobar_conjunto(servicios: list[Servicio], raiz: str) -> None:
                 f"servicio '{servicio.nombre}': la ruta '{servicio.ruta}' no existe "
                 f"en el repositorio"
             )
+
+        for dependencia in servicio.depende_de:
+            if not (Path(raiz) / dependencia).exists():
+                raise ValueError(
+                    f"servicio '{servicio.nombre}': el campo 'depende_de' tiene "
+                    f"'{dependencia}', que no existe en el repositorio (ni como "
+                    f"fichero ni como carpeta)"
+                )
 
 
 def cargar_servicios(

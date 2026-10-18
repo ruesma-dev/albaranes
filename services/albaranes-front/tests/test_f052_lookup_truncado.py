@@ -9,7 +9,11 @@ F-052 nadie lo miraba. Ahora cada consulta declara su política
 - proveedores de la obra: ``NO_TOLERA`` ⇒ ``SigridRespuestaTruncada``
   (el endpoint la convierte en ``ok=false`` y el front mantiene la entrada
   manual: mejor eso que una lista a la que le falta el proveedor bueno);
-- obras, contratos y partidas: ``TOLERA`` ⇒ filas tal cual + WARNING.
+- obras y contratos: ``TOLERA`` ⇒ filas tal cual + WARNING;
+- partidas (ajuste de F-076, P7 aprobado, con motivo): ``NO_TOLERA`` y
+  500.000 filas ⇒ ``SigridRespuestaTruncada``: una lista de partidas truncada
+  calcula mal las hojas (deja capítulos como hojas) sin error. La SQL de
+  partidas es la de ``ruesma_comun.sigrid`` (R15).
 
 La SQL no cambia ni se comparte con sv3 (D2).
 
@@ -78,12 +82,21 @@ def _cliente() -> SigridLookupClient:
     )
 
 
-def test_f052_r28_proveedores_truncados_lanzan(sigrid_api):
+@pytest.mark.parametrize(
+    ("llamada", "etiqueta", "filas"),
+    [
+        (lambda c: c.fetch_proveedores_por_obra(codigo_obra="0691"), "proveedores_obra_0691", 1),
+        # F-076 (P7): las partidas pasan de «tolera» a «lanza».
+        (lambda c: c.fetch_partidas_por_obra(codigo_obra="0691"), "partidas_obra_0691", 2),
+    ],
+    ids=["proveedores", "partidas"],
+)
+def test_f052_r28_proveedores_truncados_lanzan(sigrid_api, llamada, etiqueta, filas):
     sigrid_api(truncated=True)
     with pytest.raises(SigridRespuestaTruncada) as exc:
-        _cliente().fetch_proveedores_por_obra(codigo_obra="0691")
-    assert exc.value.etiqueta == "proveedores_obra_0691"
-    assert exc.value.filas == 1
+        llamada(_cliente())
+    assert exc.value.etiqueta == etiqueta
+    assert exc.value.filas == filas
 
 
 @pytest.mark.parametrize(
@@ -91,10 +104,8 @@ def test_f052_r28_proveedores_truncados_lanzan(sigrid_api):
     [
         (lambda c: c.fetch_obras(), "obras", 1),
         (lambda c: c.fetch_contratos(codigo_obra="0691"), "contratos_obra_0691", 1),
-        (lambda c: c.fetch_partidas_por_obra(codigo_obra="0691"),
-         "partidas_obra_0691", 1),
     ],
-    ids=["obras", "contratos", "partidas"],
+    ids=["obras", "contratos"],
 )
 def test_f052_r28_obras_contratos_y_partidas_toleran_con_warning(
     sigrid_api, caplog, llamada, etiqueta, n,
@@ -139,7 +150,8 @@ def test_f052_r28_la_sql_y_el_max_rows_no_cambian(sigrid_api):
         modulo._SQL_CONTRATOS_POR_OBRA,
         modulo._SQL_PARTIDAS_POR_OBRA,
     ]
-    assert {p["max_rows"] for p in falsa.peticiones} == {5000}
+    # F-076 (R3, P7): las partidas piden 500.000 filas (el resto, las de siempre).
+    assert [p["max_rows"] for p in falsa.peticiones] == [5000, 5000, 5000, 500_000]
     assert "ORDER BY prv.raz" in modulo._SQL_PROVEEDORES_POR_OBRA
 
 

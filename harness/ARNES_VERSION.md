@@ -25,6 +25,14 @@ el caso que documenta la nota de abajo.
 > trazabilidad al requisito.
 > Lo aplicado consta en `progress/history.md`.
 
+> **Cache de suites con dependencias: la de la 1.7.16, sobre esta 1.7.2 (2026-10-15).**
+> Se desarrollo **aqui** (F-072) y se porto a `arnes-base` como 1.7.16:
+> `harness/cache_suites.py`, los campos `depende_de`, `importa` y
+> `entradas_no_versionadas` de `harness/servicios.py` y la seccion 7 bis de
+> `harness/init.sh` (con `ARNES_SIN_CACHE=1`) son los de la 1.7.16. El resto
+> del arnes sigue en la 1.7.2: faltan la 1.7.3 a la 1.7.15, y por eso
+> `harness/VERSION` no cambia.
+
 > **AVISO de la 1.6.3: hay informes de mutacion que pueden no valer.**
 > Hasta este parche la campania lanzaba la suite dejando escribir `__pycache__`,
 > asi que un `.pyc` compilado desde el codigo MUTADO sobrevivia a la

@@ -29,6 +29,7 @@ from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
     VIEW_MODE_MERGE,
     AlbaranAprobadoError,
+    posiciones_filas_ficha,
     DivisionHecha,
     DocumentDetailPayload,
     DocumentListFilters,
@@ -40,7 +41,13 @@ from domain.models.review_models import (
 )
 from domain.ports.contrato_refetch_port import ContratoRefetchClient
 from domain.ports.orchestrator_port import OrchestratorClient
-from domain.services.alta_sigrid import puede_reintentar_adjunto, puede_solicitar_alta
+from domain.services.alta_sigrid import (
+    FASE_RESULTADO,
+    fase_alta,
+    motivos_linea_vista,
+    puede_reintentar_adjunto,
+    puede_solicitar_alta,
+)
 from infrastructure.database.review_repository import AlbaranReviewRepository
 
 logger = logging.getLogger(__name__)
@@ -155,11 +162,16 @@ class ReviewService:
             or detalle.view_mode != VIEW_MODE_MERGE
         ):
             return detalle
+        alta = self._repository.leer_alta_sigrid(document_id)
         return detalle.model_copy(update={
             "alta_sigrid_activa": True,
-            "alta_sigrid": self._repository.leer_alta_sigrid(document_id),
+            "alta_sigrid": alta,
             "alta_puede_solicitar": self.puede_solicitar_alta(document_id),
             "alta_puede_reintentar_adjunto": self.puede_reintentar_adjunto(document_id),
+            "alta_fase": self.fase_alta(document_id) or FASE_RESULTADO,
+            "alta_motivos_linea": motivos_linea_vista(
+                alta, posiciones_filas_ficha(detalle.display_lines),
+            ),
             "productos_sigrid": self.productos_sigrid(
                 document_id,
                 clasificacion_documento(detalle.tipologia, detalle.tipologia_mixta),
@@ -913,6 +925,26 @@ class ReviewService:
         if estado is None:
             return False
         return puede_solicitar_alta(
+            aprobado=estado["approved"],
+            activo=estado["is_active"],
+            approved_at_utc=estado["approved_at_utc"],
+            alta=self._repository.leer_alta_sigrid(document_id),
+            config=self._config_alta,
+            ahora=ahora or datetime.now(UTC),
+        )
+
+    def fase_alta(
+        self, document_id: str, *, ahora: datetime | None = None,
+    ) -> str | None:
+        """F-077 R14, R18: fase del panel del alta. Solo lectura (estado de
+        aprobación del merge y alta, sin cerrojo; R20). Feature apagada =>
+        ``resultado`` sin leer nada; documento inexistente => ``None``."""
+        if not self._config_alta.activa:
+            return FASE_RESULTADO
+        estado = self._repository.estado_aprobacion(document_id)
+        if estado is None:
+            return None
+        return fase_alta(
             aprobado=estado["approved"],
             activo=estado["is_active"],
             approved_at_utc=estado["approved_at_utc"],

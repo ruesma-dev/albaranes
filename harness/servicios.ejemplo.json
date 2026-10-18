@@ -1,11 +1,26 @@
 {
-  "$doc": "EJEMPLO, no activo. Copialo a harness/servicios.json SOLO si este repositorio es un monorepo con varios servicios. Sin harness/servicios.json el arnes es mono-proyecto: no hay nada que configurar y todo funciona como siempre. Campos: 'nombre' (unico), 'ruta' (relativa a la raiz, sin solaparse con la de otro servicio), 'lenguaje' ('python' u 'otro'), 'venv' (opcional: ruta del entorno virtual del servicio; si se declara y no existe, el arnes falla en vez de probar con el interprete equivocado) y 'comando_tests' (opcional: suite de un servicio que no es Python). Ningun campo puede contener el caracter '|'.",
+  "$doc": "EJEMPLO, no activo. Copialo a harness/servicios.json SOLO si este repositorio es un monorepo con varios servicios. Sin harness/servicios.json el arnes es mono-proyecto: no hay nada que configurar y todo funciona como siempre. Campos: 'nombre' (unico), 'ruta' (relativa a la raiz, sin solaparse con la de otro servicio), 'lenguaje' ('python' u 'otro'), 'venv' (opcional: ruta del entorno virtual del servicio; si se declara y no existe, el arnes falla en vez de probar con el interprete equivocado) y 'comando_tests' (opcional: suite de un servicio que no es Python). Ningun campo puede contener el caracter '|'. Campos de la cache de suites (opcionales; sin ellos, la clave es solo el arbol del servicio en HEAD mas el interprete y los .env): 'depende_de' (lista de rutas del repositorio, fichero o carpeta, que la suite usa fuera de su ruta, p. ej. una libreria comun: un commit en cualquiera invalida la cache; tienen que existir y estar versionadas), 'importa' (solo en servicios python: lista de modulos cuya ruta real se comprueba con el interprete del servicio, sin importarlos; si resuelven fuera de este repositorio -un worktree que importa la libreria del arbol principal- o fuera de la ruta y de depende_de, el portero lo avisa y no cachea) y 'entradas_no_versionadas' (lista de ficheros locales sin versionar cuya huella -nombre, tamano y fecha, nunca el contenido- entra en la clave; .env de la raiz y el del servicio entran siempre). Limitacion: la sonda usa importlib.util.find_spec desde la carpeta del servicio y NO ve un conftest.py que toque sys.path para llegar a otro paquete; declara esa ruta en depende_de. ARNES_SIN_CACHE=1 bash harness/init.sh ejecuta todas las suites aunque haya cache (y la refresca).",
   "servicios": [
+    {
+      "nombre": "comun",
+      "ruta": "services/comun",
+      "lenguaje": "python",
+      "venv": "services/comun/.venv"
+    },
     {
       "nombre": "email",
       "ruta": "services/email",
       "lenguaje": "python",
-      "venv": "services/email/.venv"
+      "venv": "services/email/.venv",
+      "depende_de": [
+        "services/comun"
+      ],
+      "importa": [
+        "comun"
+      ],
+      "entradas_no_versionadas": [
+        "services/email/config.local.ini"
+      ]
     },
     {
       "nombre": "api",

@@ -20,9 +20,10 @@ from doble_sigrid_api import (
 from f062_dobles import RepoRed, pasada
 from ruesma_comun.sigrid import SigridRespuestaTruncada
 
-from application.services.header_resolver_service import (
-    _NOTA_PROVEEDOR_PREFIX,
-    _distancia_edicion,
+from application.services.header_resolver_service import _NOTA_PROVEEDOR_PREFIX
+# F-073: la distancia de edición vive en el módulo del criterio único.
+from application.services.similitud_proveedor import (
+    distancia_edicion as _distancia_edicion,
 )
 from domain.models.header_resolution_models import ProveedorObraResumen
 

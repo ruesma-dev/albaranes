@@ -11,7 +11,8 @@ El documento ``DOC`` (contrato ``CTSU25/0359``):
   (1150 €) y 703 portes ×1 (50 €);
 - filas (lo que se aprueba): 11 Contrato (casa con la 501) 8 ud a 115 €,
   12 Contrato (502) 10 ud a 115 €, 13 Nueva (derivada 601) 1 portes a 50 €
-  sin ``cantidad_convertida``; total 2120 €;
+  sin ``cantidad_convertida`` y con su descripción «PORTES» (F-078 R17: una
+  sin vincular sin descripción no se aprueba); total 2120 €;
 - líneas de contrato 501, 502 y 503 (puerta EI2-120, la que se «trae»).
 """
 from __future__ import annotations
@@ -123,7 +124,7 @@ def construir(*, aprobado: bool = False, con_altas: bool = False, status: str = 
         linea(s, id=13, merge_line_id=703, derived_contrato_line_id=601,
               precio_unitario_final=50.0, factor_conversion=None, cantidad_albaran=1.0,
               cantidad_convertida=None, importe_calculado=50.0, codigo_partida_final="03.01",
-              partida_action="new_line_created")
+              partida_action="new_line_created", descripcion_linea="PORTES")
         linea(s, id=21, valuation_id=VAL_AJENO, merge_line_id=801,
               matched_contrato_line_id=501, cantidad_albaran=3.0, cantidad_convertida=3.0,
               importe_calculado=30.0, precio_unitario_final=10.0)

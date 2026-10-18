@@ -20,6 +20,7 @@ from application.services.unit_category_guard import UnitCategoryGuard
 from application.services.unit_converter import UnitConverter
 from application.services.valuation_builder import ValuationBuilder
 from config.settings import Settings
+from interface_adapters.composition import construir_normalizador_partidas
 from infrastructure.clients.http_conciliacion_client import (
     HttpConciliacionClient,
 )
@@ -146,6 +147,8 @@ def build_app(settings: Settings) -> FastAPI:
         repository=repository,
         builder=builder,
         conciliacion_client=conciliacion_client,
+        # F-076: el mismo normalizador que el worker (composition).
+        normalizador=construir_normalizador_partidas(settings),
     )
 
     app = FastAPI(

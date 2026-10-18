@@ -33,6 +33,7 @@ class _RepoFake:
     def __init__(self, conceptos: list[str] | None = None) -> None:
         self._conceptos = conceptos or []
         self.notas: list[str] = []
+        self.motivos: list[str] = []
 
     def get_merge_lines_for_scoring(self, *, document_id: str) -> list[dict]:
         return [{"codigo": "", "concepto": c, "contexto_linea_json": None} for c in self._conceptos]
@@ -42,6 +43,13 @@ class _RepoFake:
 
     def remove_review_note_prefix(self, *, document_id: str, prefijo: str) -> None:
         self.notas = [n for n in self.notas if not n.startswith(prefijo)]
+
+    def marcar_revision_cabecera(self, *, document_id: str, motivo: str, nota: str, nota_prefijo: str) -> None:
+        """F-073 · R11: motivo sin duplicar y la nota sustituye a la del prefijo."""
+        if motivo not in self.motivos:
+            self.motivos.append(motivo)
+        self.remove_review_note_prefix(document_id=document_id, prefijo=nota_prefijo)
+        self.notas.append(nota)
 
 
 class _ObraFake:
@@ -158,7 +166,11 @@ def test_f052_r5_barajado_mismo_resumen_y_mismo_orden(semilla):
                      id="red-por-nombre"),
         pytest.param(None, ["CONTENEDOR 6 M3 RCD"], (None, "deterministic"),
                      "Candidatos con contrato en la obra 0691", id="familia-sin-nombre"),
-        pytest.param("PROVEEDOR", ["HORMIGON HA-25"], ("B10000000", "deterministic"), None,
+        # F-073 (R17): «PROVEEDOR» empata a 1 con los 80 «PROVEEDOR OBRA xx»
+        # y antes ganaba el primero (B10000000); ahora no se elige en empate,
+        # los puntos tampoco deciden y va a revisión con la nota de R11.
+        pytest.param("PROVEEDOR", ["HORMIGON HA-25"], (None, "deterministic"),
+                     "casa por igual con 80 proveedores con contrato en la obra 0691",
                      id="nombre-debil-y-familia"),
     ],
 )
