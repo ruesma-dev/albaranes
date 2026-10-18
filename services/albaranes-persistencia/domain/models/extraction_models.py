@@ -31,6 +31,12 @@ class CabeceraAlbaran(StrictSchemaModel):
     obra_codigo: Optional[str] = None
     obra_nombre: Optional[str] = None
     obra_direccion: Optional[str] = None
+    # (F-075 R13, R15) Pie del albarán tal como está impreso; ``None`` si no
+    # figura. Es un control, no una fuente de importes.
+    base_imponible: Optional[float] = None
+    tipo_iva_pct: Optional[float] = None
+    cuota_iva: Optional[float] = None
+    total_albaran: Optional[float] = None
     id: Optional[str] = None
 
 

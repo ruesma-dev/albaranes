@@ -64,6 +64,13 @@ _HEADER_CONFIGS: dict[str, dict[str, Any]] = {
     "obra_codigo": {"weight": 6, "required": False, "critical": False, "kind": "identifier"},
     "obra_nombre": {"weight": 14, "required": False, "critical": False, "kind": "text"},
     "obra_direccion": {"weight": 4, "required": False, "critical": False, "kind": "text"},
+    # (F-075 R15) El pie: se fusiona por proveedor como el resto de la
+    # cabecera, pero con peso 0 y no crítico, así que no cambia la confianza
+    # (``_weighted_average`` ignora los pesos 0) ni manda nada a revisión.
+    "base_imponible": {"weight": 0, "required": False, "critical": False, "kind": "number", "tolerance": 0.01},
+    "tipo_iva_pct": {"weight": 0, "required": False, "critical": False, "kind": "number", "tolerance": 0.01},
+    "cuota_iva": {"weight": 0, "required": False, "critical": False, "kind": "number", "tolerance": 0.01},
+    "total_albaran": {"weight": 0, "required": False, "critical": False, "kind": "number", "tolerance": 0.01},
 }
 
 _LINE_CONFIGS: dict[str, dict[str, Any]] = {

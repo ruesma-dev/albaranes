@@ -2446,6 +2446,11 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
             obra_codigo=cabecera.obra_codigo,
             obra_nombre=cabecera.obra_nombre,
             obra_direccion=cabecera.obra_direccion,
+            # (F-075 R15) El pie, en las dos tablas.
+            base_imponible=cabecera.base_imponible,
+            tipo_iva_pct=cabecera.tipo_iva_pct,
+            cuota_iva=cabecera.cuota_iva,
+            total_albaran=cabecera.total_albaran,
             sharepoint_drive_id=stored_file.drive_id,
             sharepoint_item_id=stored_file.item_id,
             sharepoint_relative_path=stored_file.relative_path,
