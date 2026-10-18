@@ -182,7 +182,8 @@ def test_f075_r16_no_cuadra_marca_revision_con_motivo_y_nota():
     assert prefijo == NOTA_PIE_PREFIJO == "[AVISO] La suma de las líneas no cuadra con el pie del albarán"
     assert nota.startswith(NOTA_PIE_PREFIJO)
     assert "100,00 €" in nota and "110,00 €" in nota and "varias páginas" in nota
-    assert repo.retiradas == []
+    # (O2) Antes de marcar, se retira el `pie_no_cuadra:*` que hubiera.
+    assert repo.retiradas == [("m1", "pie_no_cuadra:", NOTA_PIE_PREFIJO)]
 
 
 def test_f075_r16_sin_base_compara_con_total_menos_cuota():
@@ -400,3 +401,32 @@ def test_f075_t16_el_guard_del_pie_viene_encendido():
 
     assert Settings.model_fields["pie_guard_enabled"].default is True
     assert Settings.model_fields["pie_guard_enabled"].alias == "PIE_GUARD_ENABLED"
+
+
+# ------------------------------------------------------------------ #
+# Pasada 2 · O2 de la review: un pie que sigue sin cuadrar con otra suma deja UN motivo
+# ------------------------------------------------------------------ #
+class _RepoConMotivos(_RepoPie):
+    """Aplica de verdad las dos operaciones sobre una lista de motivos."""
+
+    def __init__(self, motivos, **kw):
+        super().__init__(**kw)
+        self.motivos = list(motivos)
+        self.orden = []
+
+    def marcar_revision_cabecera(self, *, document_id, motivo, nota, nota_prefijo):
+        self.orden.append("marcar")
+        if motivo not in self.motivos:
+            self.motivos.append(motivo)
+
+    def retirar_revision_cabecera(self, *, document_id, motivo_prefijo, nota_prefijo):
+        self.orden.append("retirar")
+        self.motivos = [m for m in self.motivos if not m.startswith(motivo_prefijo)]
+
+
+def test_f075_r16_o2_al_cambiar_la_suma_queda_solo_el_motivo_nuevo():
+    repo = _RepoConMotivos(["fecha_albaran_fuera_de_rango:2023-01-01", "pie_no_cuadra:90.00!=110.00"],
+                           pie=(110.0, None, None, None), importes=[100.0])
+    _guard(repo).check_merge_document(merge_document_id="m1")
+    assert repo.motivos == ["fecha_albaran_fuera_de_rango:2023-01-01", "pie_no_cuadra:100.00!=110.00"]
+    assert repo.orden == ["retirar", "marcar"]

@@ -104,6 +104,14 @@ class PieGuardService:
             if comparacion is ComparacionPie.NO_CUADRA:
                 # NO_CUADRA solo sale con suma y referencia (pie_cuadra).
                 suma, referencia = float(suma or 0.0), float(referencia or 0.0)
+                # Un solo `pie_no_cuadra:*` vivo: si la suma o el pie cambian al
+                # reprocesar, se retira el anterior antes de marcar el nuevo
+                # (sv4 lee el primero que encuentra).
+                self._repository.retirar_revision_cabecera(
+                    document_id=merge_document_id,
+                    motivo_prefijo=f"{MOTIVO_PIE}:",
+                    nota_prefijo=NOTA_PIE_PREFIJO,
+                )
                 self._repository.marcar_revision_cabecera(
                     document_id=merge_document_id,
                     motivo=f"{MOTIVO_PIE}:{suma:.2f}!={referencia:.2f}",
