@@ -1,6 +1,17 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-080 · `spec_ready` (2026-10-18): spec escrita, espera la PARADA 1 del humano (P1–P3)** — tras un empate por nombre (F-073), la familia solo elige entre los empatados (H4 de `progress/review_F-073.md`). Spec en `specs/F-080-empate-solo-entre-empatados/`. Rama `feature/F-080-empate-solo-entre-empatados`, worktree `../albaranes-F-080`, desde `dev` `bee817d`. Rigor `critico`, solo sv3 (`header_resolver_service.py`), sin DDL ni comun. Propuesta: el paso por puntos de hoy no cambia, pero su ganador solo se acepta si es uno de los empatados (clave de CIF normalizada); si gana un ajeno, revisión con `proveedor_nombre_ambiguo` y la nota de R11 de F-073. Prototipo (scratchpad, sin tocar el repo): H4 pasa a revisión y la suite de sv3 sigue en 1496 passed con las dos variantes de P1.
+
+Decisiones abiertas para el humano (design §2):
+- **P1** · ¿Contra quién compite el empatado? (a) carrera solo entre empatados, o (b) la carrera de hoy, con el ganador obligado a ser empatado. Recomendada **(b)**: solo convierte deducciones de hoy en revisión, nunca crea una nueva. Se separan en el caso P1 de design §1 (con (a), SUR; con (b), revisión).
+- **P2** · ¿Quiénes son «los empatados»? Recomendado: los de `EleccionPorNombre.empatados` (a menos de 0,25 del mejor), los mismos que lista la nota de R11.
+- **P3** · ¿Y si la familia deja dos o más empatados igualados arriba? Recomendado: R11 de F-073 sin cambios, con la nota de todos los empatados por nombre en orden de puntos y CIF.
+
+Coordinación: F-075 comparte `docs/ARCHITECTURE.md` (su regla 25 va justo tras la 24 que edita F-080), `features.json`, `BACKLOG.md` y este fichero; no toca `header_resolver_service.py`. F-049 toca el constructor y `_resolve_obra` del mismo fichero, sin solape de líneas. El despliegue de sv3 va después de la T12 de F-073.
+
+Entorno: en este worktree `bash harness/init.sh` da un único KO, porque falta la *junction* `.venv` de sv4 (`services/albaranes-front/.venv`, como la de `../albaranes-F-073`). Los tests van en verde y la puerta de tamaño también (requirements 109/150, design 169/250). La *junction* la crea el líder antes de lanzar al implementer; el spec-author no la ha creado.
+
 **F-073 · `blocked` (2026-10-17): review APPROVED (pasada 1), fusionada en `dev`; espera la MANUAL T12 del humano (abajo)** — proveedor por nombre en sv3 con un criterio único (similitud: TEYMACO casa con FEYMACO) y sin elegir en empates (incidencia 0694). El bloqueo de T3 lo resolvió el humano el 2026-10-17 con la opción (a): el script de verificación de F-052 usa `similitud_razon_social` y su assert pasa a B10055433. Spec en `specs/F-073-proveedor-por-similitud/`, informe en `progress/impl_F-073.md`, mutación en `progress/mutacion_F-073.md` (2 equivalentes ACEPTADOS por el humano el 2026-10-17). Decisiones de la review: H3 → ampliación de F-059 (sv4 retira `proveedor_nombre_ambiguo` y `proveedor_cif_propio:` al fijar el proveedor a mano); H4 → F-080 (tras un empate por nombre, la familia solo elige entre los empatados). Rama `feature/F-073-proveedor-por-similitud`, worktree `../albaranes-F-073`, `dev` (`e09916f`) fusionado. *Junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
 
 #### F-073 · MANUAL T12 (humano), comandos para PowerShell
