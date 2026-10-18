@@ -9,7 +9,6 @@ importes. Sin red ni BBDD (salvo SQLite en memoria donde se dice).
 from __future__ import annotations
 
 import pytest
-
 from domain.models.extraction_models import CabeceraAlbaran, ExtractionEnvelope
 
 PIE = ("base_imponible", "tipo_iva_pct", "cuota_iva", "total_albaran")
@@ -34,9 +33,11 @@ def _envelope(cabecera: dict, lineas=None) -> ExtractionEnvelope:
 # ------------------------------------------------------------------ #
 @pytest.mark.parametrize("columna", PIE)
 def test_f075_r15_el_orm_tiene_las_cuatro_columnas_en_las_dos_tablas(columna):
+    from infrastructure.database.orm_models import (
+        AlbaranDocumentMergeOrm,
+        AlbaranDocumentOrm,
+    )
     from sqlalchemy import Float
-
-    from infrastructure.database.orm_models import AlbaranDocumentMergeOrm, AlbaranDocumentOrm
 
     for orm in (AlbaranDocumentOrm, AlbaranDocumentMergeOrm):
         col = orm.__table__.columns[columna]
@@ -116,7 +117,9 @@ def test_f075_r15_se_persiste_en_las_dos_tablas(merge):
         AlbaranLineMergeOrm,
         AlbaranLineOrm,
     )
-    from infrastructure.database.sqlalchemy_albaran_repository import SqlAlchemyAlbaranRepository
+    from infrastructure.database.sqlalchemy_albaran_repository import (
+        SqlAlchemyAlbaranRepository,
+    )
 
     envelope = _envelope({"base_imponible": 100.0, "tipo_iva_pct": 21.0, "cuota_iva": 21.0,
                           "total_albaran": 121.0})
@@ -277,10 +280,11 @@ _NOTAS_SEMBRADAS = "[AVISO] Fecha x\n[AVISO] La suma de las líneas no cuadra co
 
 @pytest.fixture()
 def repo_sqlite(tmp_path):
+    from infrastructure.database.sqlalchemy_albaran_repository import (
+        SqlAlchemyAlbaranRepository,
+    )
     from sqlalchemy import create_engine, text
     from sqlalchemy.orm import Session
-
-    from infrastructure.database.sqlalchemy_albaran_repository import SqlAlchemyAlbaranRepository
 
     engine = create_engine(f"sqlite:///{tmp_path / 'pie.db'}")
     with engine.begin() as con:
@@ -323,9 +327,8 @@ def test_f075_r16_repo_lee_el_pie_y_los_importes(repo_sqlite):
 def test_f075_r17_repo_retira_motivo_y_nota_sin_bajar_la_revision(repo_sqlite):
     import json
 
-    from sqlalchemy import text
-
     from application.services.pie_guard_service import MOTIVO_PIE, NOTA_PIE_PREFIJO
+    from sqlalchemy import text
 
     repo, engine = repo_sqlite
     repo.retirar_revision_cabecera(document_id="m1", motivo_prefijo=f"{MOTIVO_PIE}:",

@@ -5,7 +5,6 @@ from __future__ import annotations
 import math
 
 import pytest
-
 from ruesma_comun.importes import (
     ComparacionPie,
     ImporteAlbaran,

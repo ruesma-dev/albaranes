@@ -18,7 +18,6 @@ from pathlib import Path
 
 import pytest
 import yaml
-
 from application.services.phase_merge import construir_envelope_final
 from domain.models.albaran_models import CabeceraAlbaran, DocumentoAlbaran
 
@@ -63,7 +62,7 @@ def test_f075_r13_el_esquema_de_la_fase_2_tambien():
 # R13 · prompt
 # ------------------------------------------------------------------ #
 def _seccion_pie(task: str) -> str:
-    m = re.search(r"## Pie del albarán\n(.*?)(?=\n    ## |\n## |\Z)", task, re.S)
+    m = re.search(r"## Pie del albarán\n(.*?)(?=\n    ## |\n## |\Z)", task, re.DOTALL)
     assert m, "no está la sección «## Pie del albarán»"
     return _plano(m.group(1))
 

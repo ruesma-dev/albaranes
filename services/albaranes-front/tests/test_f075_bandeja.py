@@ -13,9 +13,19 @@ from __future__ import annotations
 import logging
 
 import pytest
-
 from domain.models.review_models import DocumentListFilters, DocumentListItem
-from tests.f075_bbdd import ALB, APR, BORR, CON, DIS, NADA, PAR, VACIA, construir, repositorio
+from tests.f075_bbdd import (
+    ALB,
+    APR,
+    BORR,
+    CON,
+    DIS,
+    NADA,
+    PAR,
+    VACIA,
+    construir,
+    repositorio,
+)
 
 
 @pytest.fixture()
@@ -138,10 +148,9 @@ def test_f075_r25_fallo_en_la_consulta_del_importe(repo, monkeypatch, caplog):
 # R19–R21 · lo que pinta la plantilla
 # ------------------------------------------------------------------ #
 def _listado_html(monkeypatch, items, *, query="approved=all"):
-    from fastapi.testclient import TestClient
-
     from config.settings import Settings
     from domain.models.review_models import PaginatedDocuments
+    from fastapi.testclient import TestClient
     from interface_adapters.web import app as modulo_app
 
     class _Servicio:
@@ -170,7 +179,7 @@ def _celda(html, doc):
     import re
 
     fila = html[html.index(f'data-id="{doc}"') if f'data-id="{doc}"' in html else html.index(doc):]
-    return re.search(r'<td class="num-cell" data-col="importe">(.*?)</td>', fila, re.S).group(1)
+    return re.search(r'<td class="num-cell" data-col="importe">(.*?)</td>', fila, re.DOTALL).group(1)
 
 
 def test_f075_r19_r20_plantilla_pinta_cifra_rotulo_parcial_y_marca(monkeypatch):

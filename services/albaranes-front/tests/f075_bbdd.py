@@ -21,8 +21,7 @@ from __future__ import annotations
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
-
-from tests.f053_sv4_bbdd import _VALORACION, _merge, repositorio  # noqa: F401
+from tests.f053_sv4_bbdd import _VALORACION, _merge, repositorio
 
 ALB, CON, DIS, PAR, NADA, VACIA, APR, BORR = (
     "f075-alb", "f075-con", "f075-dis", "f075-par", "f075-nada", "f075-vacia", "f075-apr", "f075-borr",
@@ -53,7 +52,7 @@ def construir(siembra: dict | None = None):
         for doc, (obra, cif, netos, valoracion, aprobado, activo) in (siembra or SIEMBRA).items():
             _merge(s, doc, obra_codigo=obra, proveedor_cif=cif, proveedor_nombre=f"PROV {cif}",
                    approved=aprobado, is_active=activo, source_sha256=f"sha-{doc}",
-                   confidence_pct_calc=50.0, created_at_utc=f"2026-10-15T08:00:00+00:00")
+                   confidence_pct_calc=50.0, created_at_utc="2026-10-15T08:00:00+00:00")
             for i, neto in enumerate(netos):
                 linea_id += 1
                 s.execute(text(

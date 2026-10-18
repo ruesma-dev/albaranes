@@ -15,10 +15,9 @@ from __future__ import annotations
 import logging
 
 import pytest
+from application.pipelines.persist_albaran_pipeline import PersistAlbaranPipeline
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
-
-from application.pipelines.persist_albaran_pipeline import PersistAlbaranPipeline
 
 DOC = "dfdc8aab-08e1-49f0-978d-bb906515e748"
 
@@ -126,7 +125,9 @@ class _Fabrica:
 
 @pytest.fixture()
 def repo_sqlite(tmp_path):
-    from infrastructure.database.sqlalchemy_albaran_repository import SqlAlchemyAlbaranRepository
+    from infrastructure.database.sqlalchemy_albaran_repository import (
+        SqlAlchemyAlbaranRepository,
+    )
 
     engine = create_engine(f"sqlite:///{tmp_path / 'f075.db'}")
     with engine.begin() as con:

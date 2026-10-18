@@ -12,14 +12,13 @@ from __future__ import annotations
 import re
 
 import pytest
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session
-
 from domain.models.review_models import (
     DocumentDetailPayload,
     MergeLinePayload,
     ValuationPayload,
 )
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session
 
 
 def _doc(netos, *, valorado=None, con_filas=True, **campos):
@@ -41,7 +40,7 @@ def _doc(netos, *, valorado=None, con_filas=True, **campos):
 
 
 def _bloque(html):
-    m = re.search(r'<div class="alert importe-albaran"[^>]*>(.*?)</div>', html, re.S)
+    m = re.search(r'<div class="alert importe-albaran"[^>]*>(.*?)</div>', html, re.DOTALL)
     assert m, "no se pinta el bloque del importe"
     return " ".join(m.group(1).split())
 
@@ -104,7 +103,7 @@ def test_f075_r23_pie_de_la_tabla_de_lineas_leidas(render_detalle):
     html = render_detalle(_doc([100.0, 20.5]))
     tabla = html[html.index('id="albaran-lines-table"'):]
     tabla = tabla[:tabla.index("</table>")]
-    pie = re.search(r"<tfoot>(.*?)</tfoot>", tabla, re.S).group(1)
+    pie = re.search(r"<tfoot>(.*?)</tfoot>", tabla, re.DOTALL).group(1)
     assert "Total leído (sin IVA)" in pie and "120,50" in pie
 
 
@@ -154,8 +153,7 @@ DIRECTA = "f075-directa-0000-0000-000000000001"
 def _motor_directa(netos):
     """Un merge sin contrato con su valoración directa como la deja sv6."""
     from infrastructure.database.orm_models import Base
-
-    from tests.f053_sv4_bbdd import DDL_ALTAS, _VALORACION, _merge
+    from tests.f053_sv4_bbdd import _VALORACION, DDL_ALTAS, _merge
 
     motor = create_engine("sqlite://")
     Base.metadata.create_all(motor)
@@ -199,7 +197,6 @@ def test_f075_r9_valoracion_directa_completa_se_aprueba():
 
 def test_f075_r9_valoracion_directa_parcial_no_se_aprueba():
     from domain.models.alta_sigrid_models import AlbaranSinValorarError
-
     from tests.f053_sv4_bbdd import repositorio
 
     motor = _motor_directa([10.0, None])
@@ -251,9 +248,8 @@ class _Servicio:
 
 
 def _post_valuate(monkeypatch, documento):
-    from fastapi.testclient import TestClient
-
     from config.settings import Settings
+    from fastapi.testclient import TestClient
     from interface_adapters.web import app as modulo_app
 
     publicador = _Publicador()

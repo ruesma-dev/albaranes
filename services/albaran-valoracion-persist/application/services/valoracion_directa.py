@@ -26,8 +26,6 @@ Puro: sin BBDD ni red. El pipeline aplica después ``completar_registros``
 """
 from __future__ import annotations
 
-from ruesma_comun.importes import difieren, importe_albaran, unitario_despejado
-
 from domain.models.valuation_envelope import AlbaranLineContextDto, ValuationEnvelope
 from domain.models.valuation_records import (
     DerivedContratoLineRecord,
@@ -35,6 +33,7 @@ from domain.models.valuation_records import (
     PrecioUnitarioSource,
     ValuationHeaderRecord,
 )
+from ruesma_comun.importes import difieren, importe_albaran, unitario_despejado
 
 #: ``prompt_key`` y motivo de cabecera de una valoración directa.
 PROMPT_KEY_DIRECTA = "valoracion_directa_albaran"

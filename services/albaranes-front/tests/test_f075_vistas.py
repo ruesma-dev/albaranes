@@ -11,7 +11,6 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-
 from tests.f075_bbdd import ALB, CON, DIS, NADA, PAR, VACIA, construir, repositorio
 
 

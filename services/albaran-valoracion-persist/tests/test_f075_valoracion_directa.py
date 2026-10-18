@@ -32,7 +32,6 @@ from domain.models.valuation_envelope import (
 )
 from domain.ports.valuation_repository import PersistedValuation
 from ruesma_comun.valoracion import esta_valorado
-
 from tests.f076_sobres import PuertoFalso
 
 DOC = "dfdc8aab-08e1-49f0-978d-bb906515e748"

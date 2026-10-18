@@ -11,7 +11,6 @@ directo, falla aquí. Puro: sin red ni BBDD.
 from __future__ import annotations
 
 import pytest
-
 from domain.models.alta_models import EstadoAlta, PeticionAlbaran
 from domain.services.validador_alta import estado_de_motivos, validar_y_construir
 from tests.f053_datos import CONFIG, HOY, USU, datos, sin_vincular
