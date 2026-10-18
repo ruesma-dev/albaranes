@@ -1,7 +1,90 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-075 · `in_progress` (2026-10-18): implementación TERMINADA, pendiente de review** — el importe del albarán manda (rigor `critico`; opción A y M1 del humano del 18-10, spec ajustada en `cb54d23`). T1–T16 y T19 hechas (un commit por tarea, hasta `575cef5`; `dev` `bee817d` fusionado); `init.sh` en verde en el worktree (cobertura 98,1 %; mutación 175 mutantes, 0 supervivientes tras el re-juicio). Informe: `progress/impl_F-075.md` (RED en `impl_F-075_red.md`, mutación en `mutacion_F-075.md`); `azure-apps` `c5fd3b0` sin push. Pendientes del humano: T0 (opcional), **T17** (evals con LLM, cierra el aviso de rutas sensibles) y **T18** (despliegue sv3 → sv5 → sv6 → sv4 → sv2), comandos en el informe §8. Rama `feature/F-075-importe-leido`, worktree `../albaranes-F-075`, *junction* `.venv` de sv4 (quitarla con `cmd /c rmdir` antes de `git worktree remove`). Suites de la rama con `PYTHONPATH=<worktree>/services/albaranes-comun`.
+**F-075 · `in_progress` (2026-10-18): implementación TERMINADA, pendiente de review** — el importe del albarán manda (rigor `critico`; opción A y M1 del humano del 18-10, spec ajustada en `cb54d23`). T1–T16 y T19 hechas (un commit por tarea, hasta `575cef5`; `dev` `bee817d` fusionado); `init.sh` en verde en el worktree (cobertura 98,1 %; mutación 175 mutantes, 0 supervivientes tras el re-juicio). Informe: `progress/impl_F-075.md` (RED en `impl_F-075_red.md`, mutación en `mutacion_F-075.md`); `azure-apps` `c5fd3b0` sin push. Pendientes del humano: T0 (opcional), **T17** (evals con LLM, cierra el aviso de rutas sensibles) y **T18** (despliegue sv5 → sv6 → sv3 → sv4 → sv2, propuesto por el líder), comandos en el bloque de abajo. Rama `feature/F-075-importe-leido`, worktree `../albaranes-F-075`, *junction* `.venv` de sv4 (quitarla con `cmd /c rmdir` antes de `git worktree remove`). Suites de la rama con `PYTHONPATH=<worktree>/services/albaranes-comun`.
+
+#### F-075 · MANUAL del humano (T0, T17, T18), comandos para PowerShell
+
+Todo va en **PowerShell 5.1**, con un comando por línea y sin `&&`. Si un paso no da su VERDE, para ahí.
+
+- Las acciones marcadas **[ESCRIBE EN PRODUCCIÓN · humano]** las ejecuta el humano y necesitan su sí expreso para
+  esa acción. Ningún agente las lanza.
+- El resto solo lee.
+- No hay scripts contra la BBDD de Azure: no hace falta `Usar-PgAzure`.
+
+**T0 · opcional, SOLO LECTURA.** Son las consultas de los Anexos A y B de `progress/spec_F-075.md`, contra la BBDD
+`albaranes` y en una sesión con `SET default_transaction_read_only = on`:
+- el Anexo A da los dos merges de DISCOIN y cuántos merges no traen importe, lo traen parcial o completo;
+- el Anexo B da los candidatos a «Revalorar» uno a uno: activos, no aprobados, sin valoración y con algún importe.
+
+VERDE: las cifras quedan anotadas en `progress/spec_F-075.md` §v2.2.
+
+**T17 · evals con LLM.** Se facturan unas 190 llamadas, como en F-064 T10. Se lanza en el worktree, antes de fusionar
+en `dev`, porque la rama trae su comun.
+
+```powershell
+Copy-Item -Recurse C:\Users\pgris\PycharmProjects\albaranes\evals\inputs C:\Users\pgris\PycharmProjects\albaranes-F-075\evals\inputs
+cd C:\Users\pgris\PycharmProjects\albaranes-F-075
+$env:PYTHONPATH = "C:\Users\pgris\PycharmProjects\albaranes-F-075\services\albaranes-comun"
+$s = Read-Host "GEMINI_API_KEY" -AsSecureString
+$env:GEMINI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+$s = Read-Host "OPENAI_API_KEY" -AsSecureString
+$env:OPENAI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+& C:\Users\pgris\PycharmProjects\albaranes\.venv\Scripts\python.exe -m evals.runner --con-llm --feature F-075
+Remove-Item env:GEMINI_API_KEY, env:OPENAI_API_KEY, env:PYTHONPATH
+```
+
+VERDE en `progress/evals_F-075.md`. El banco ya está en ROJO de base, así que el `VERDE` literal no se puede alcanzar;
+la condición es esta:
+- `MODO: completa` y `FASES: IA1,IA2,IA3,IA4,E2E`;
+- **IA1 ≤ 154 e IA2 ≤ 4 fallos críticos** (F-064 T10 dio 152 y 2);
+- la sección «Campos no medidos» con los cuatro campos del pie;
+- IA3, IA4 y E2E sin cambios respecto a la pasada determinista, que es idéntica a `dev`.
+
+Ese informe cierra también el aviso de la puerta de rutas sensibles (`prompts.yaml`, `albaran_models.py`,
+`valoracion_directa.py`).
+
+**T18 · despliegue**, tras el APPROVED, la fusión en `dev` e `init.sh` en verde en el árbol principal. Cada
+`deploy.ps1` es **[ESCRIBE EN PRODUCCIÓN · humano]**.
+
+El orden es **sv5 → sv6 → sv3 → sv4 → sv2**. Lo propone el líder al humano, a partir de la O1 de
+`progress/review_F-075.md`; la spec decía sv3 → sv5 → sv6.
+- **Por qué sv5 y sv6 van primero**: no dependen de la DDL, y así, cuando sv3 empiece a publicar sin contrato, cada
+  albarán nuevo ya se valora directo. Con sv3 primero quedarían cabeceras `no_contract` **vacías**, que sv6 no rehace
+  sin `force`.
+- **Por qué sv2 va detrás de sv3**: sv3 valida la cabecera con `StrictSchemaModel` y rechazaría el pie si llegara
+  antes.
+
+sv9 no se redespliega y `ALTA_SIGRID_COMMIT` sigue `false`.
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+. .\00_vars.ps1
+. .\00_capps_vars.ps1
+foreach ($a in "ca-sv5-valuation","ca-sv6-valorador","ca-sv3-persistencia","ca-sv4-front","ca-sv2-extraccion") { az containerapp show -n $a -g $RG --query "properties.template.containers[0].image" -o tsv }
+.\deploy.ps1 -Only sv5
+.\check_deploy.ps1
+.\deploy.ps1 -Only sv6
+.\check_deploy.ps1
+.\deploy.ps1 -Only sv3
+.\check_deploy.ps1
+.\deploy.ps1 -Only sv4
+.\check_deploy.ps1
+.\deploy.ps1 -Only sv2
+.\check_deploy.ps1
+```
+
+VERDE de cada paso: `check_deploy.ps1` con el servicio en el tag nuevo y sus réplicas arriba. El `foreach` del
+principio, que solo lee, deja apuntadas las imágenes actuales por si hay que volver atrás.
+
+Comprobación en pantalla, en la ficha de sv4 del merge de DISCOIN `dfdc8aab-08e1-49f0-978d-bb906515e748`:
+1. Pulsar «Valorar ahora» **[ESCRIBE EN PRODUCCIÓN · humano: reemplaza su valoración]**.
+2. VERDE si sale la valoración directa, la bandeja enseña «Importe» con el rótulo «albarán · sin IVA» y «Aprobar» está
+   habilitado (si todas las líneas traen importe).
+3. Aprobar **[ESCRIBE EN PRODUCCIÓN · humano]**. VERDE si el panel de F-053 enseña el alta `simulado`.
+
+Antes de poner `ALTA_SIGRID_COMMIT=true`, revisar en simulación tres altas directas (D6: la analítica
+`<obra>.<sufijo>`).
 
 **F-073 · `blocked` (2026-10-17): review APPROVED (pasada 1), fusionada en `dev`; espera la MANUAL T12 del humano (abajo)** — proveedor por nombre en sv3 con un criterio único (similitud: TEYMACO casa con FEYMACO) y sin elegir en empates (incidencia 0694). El bloqueo de T3 lo resolvió el humano el 2026-10-17 con la opción (a): el script de verificación de F-052 usa `similitud_razon_social` y su assert pasa a B10055433. Spec en `specs/F-073-proveedor-por-similitud/`, informe en `progress/impl_F-073.md`, mutación en `progress/mutacion_F-073.md` (2 equivalentes ACEPTADOS por el humano el 2026-10-17). Decisiones de la review: H3 → ampliación de F-059 (sv4 retira `proveedor_nombre_ambiguo` y `proveedor_cif_propio:` al fijar el proveedor a mano); H4 → F-080 (tras un empate por nombre, la familia solo elige entre los empatados). Rama `feature/F-073-proveedor-por-similitud`, worktree `../albaranes-F-073`, `dev` (`e09916f`) fusionado. *Junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
 
