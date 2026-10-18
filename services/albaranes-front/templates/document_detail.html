@@ -90,6 +90,28 @@
 {% endif %}
 
 {# =========================================================== #}
+{#  (F-075 R23) Importe del albarán: manda el albarán            #}
+{# =========================================================== #}
+{% if document.view_mode == 'merge' %}
+    {% set leido = document.importe_leido %}
+    <div class="alert importe-albaran" id="importe-albaran">
+        <strong>Importe del albarán (sin IVA):</strong>
+        {% if leido.trae_importes %}
+            <strong>{{ leido.total | importe_eur }}</strong>
+            {% if document.importe_parcial_texto %}<span class="importe-parcial">({{ document.importe_parcial_texto }})</span>{% endif %}
+        {% else %}
+            — <span class="muted">(el albarán no trae importes)</span>
+        {% endif %}
+        {% if document.importe_valorado is not none %}
+            · Valorado: <strong>{{ document.importe_valorado | importe_eur }}</strong>
+            {% if document.importe_diferencia is not none %}
+                · <span class="importe-distinto" title="El valorado se aparta del importe del albarán">≠</span> Diferencia: <strong>{{ document.importe_diferencia | importe_eur }}</strong>
+            {% endif %}
+        {% endif %}
+    </div>
+{% endif %}
+
+{# =========================================================== #}
 {#  Banner de VALORACIÓN                                        #}
 {# =========================================================== #}
 {% if valuation %}
@@ -657,6 +679,15 @@
                                 <tr><td colspan="9" class="empty-cell">Sin líneas leídas.</td></tr>
                             {% endfor %}
                             </tbody>
+                            {% if document.lines %}
+                            <tfoot>
+                            <tr class="al-total">
+                                <td colspan="5"><strong>Total leído (sin IVA)</strong>{% if document.importe_parcial_texto %} <span class="muted small">· {{ document.importe_parcial_texto }}</span>{% endif %}</td>
+                                <td><strong>{% if document.importe_leido.trae_importes %}{{ document.importe_leido.total | importe_eur }}{% else %}—{% endif %}</strong></td>
+                                <td colspan="3"></td>
+                            </tr>
+                            </tfoot>
+                            {% endif %}
                         </table>
                     </div>
                 </details>

@@ -31,7 +31,7 @@ from ruesma_comun.contratos.origen_datos import (
     MOTIVO_CORREO_FUERA_DE_LISTA,
     normalizar_codigo,
 )
-from ruesma_comun.importes import difieren, importe_de_linea
+from ruesma_comun.importes import ImporteAlbaran, difieren, importe_albaran, importe_de_linea
 from ruesma_comun.sigrid import normalizar_partida
 from ruesma_comun.valoracion import esta_valorado
 
@@ -772,9 +772,8 @@ def aviso_suma_importes(
     """(R21) Confirmación antes de aprobar si la suma de las filas difiere en
     0,01 € o más de la de lo leído en el albarán; ``None`` si cuadra o falta
     alguna de las dos. No bloquea: una recepción parcial es legítima."""
-    if suma_filas is None or suma_leida is None:
-        return None
-    if round(abs(suma_filas - suma_leida), 2) < 0.01:
+    # (F-075 R24) La regla «difieren» es la de ``ruesma_comun.importes``.
+    if not difieren(suma_filas, suma_leida):
         return None
     return (
         f"La suma de las líneas ({_euros(suma_filas)}) no cuadra con la del "
@@ -1610,6 +1609,44 @@ class DocumentDetailPayload(BaseModel):
     def aviso_suma(self) -> str | None:
         """(F-065 R21) Confirmación antes de aprobar si las sumas no cuadran."""
         return aviso_suma_importes(self.suma_filas, self.suma_leida)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_leido(self) -> ImporteAlbaran:
+        """(F-075 R23) El importe del albarán: la suma de los ``precio_neto``
+        leídos de sus líneas (sin IVA), con ``ruesma_comun.importes``."""
+        return importe_albaran(linea.precio_neto for linea in self.lines)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_parcial_texto(self) -> str | None:
+        """(F-075 R23, P3) «N de M sin importe» si faltan importes en algunas."""
+        leido = self.importe_leido
+        if not leido.parcial:
+            return None
+        return f"{leido.sin_importe} de {leido.lineas} sin importe"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_valorado(self) -> float | None:
+        """(F-075 R23) El total valorado; una valoración sin filas (la
+        cabecera ``no_contract`` vacía) no es un valorado."""
+        valoracion = self.valuation
+        if valoracion is None or not (
+            valoracion.lines_by_merge_line_id or valoracion.synthetic_lines
+        ):
+            return None
+        return valoracion.total_valorado
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_diferencia(self) -> float | None:
+        """(F-075 R23) Valorado − albarán, si se apartan en 0,01 € o más."""
+        albaran = self.importe_leido.total
+        valorado = self.importe_valorado
+        if not difieren(valorado, albaran):
+            return None
+        return round(float(valorado) - float(albaran), 2)  # type: ignore[arg-type]
 
     @computed_field  # type: ignore[prop-decorator]
     @property

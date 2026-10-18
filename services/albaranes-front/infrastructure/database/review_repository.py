@@ -3672,7 +3672,8 @@ class AlbaranReviewRepository:
         )
         conc_map = conciliation_by_valuation_line_id or {}
         importes_filas = [f.importe_calculado for f in filas if f.importe_calculado is not None]
-        importes_leidos = [m.precio_neto for m in merge_lines_payload if m.precio_neto is not None]
+        # (F-075 R24) La suma leída es ``importe_albaran`` de comun.
+        importe_leido = importe_albaran(m.precio_neto for m in merge_lines_payload)
         n_filas_manuales = sum(
             1 for f in filas
             if es_fila_manual(
@@ -3730,7 +3731,7 @@ class AlbaranReviewRepository:
             # (F-065 R21, R22)
             # (sin redondear: el aviso redondea la diferencia y pinta 2 decimales)
             suma_filas=sum(importes_filas) if importes_filas else None,
-            suma_leida=sum(importes_leidos) if importes_leidos else None,
+            suma_leida=importe_leido.total,
             n_filas_manuales=n_filas_manuales,
             provider_snapshots=provider_snapshots,
             contratos=contratos,
