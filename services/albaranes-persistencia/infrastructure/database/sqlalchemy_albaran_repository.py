@@ -1133,6 +1133,22 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
                 result[codigo] = (ide, rel_path, web_url)
         return result
 
+    def importes_leidos(self, *, document_id: str) -> list[float | None]:
+        """(F-075 R3) El importe leído (``precio_neto``: importe de la línea
+        tras descuento, sin IVA) de cada línea del merge, en su orden. Solo
+        lectura; la regla «trae importes» es ``ruesma_comun.importes``."""
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            filas = session.execute(
+                text(
+                    "SELECT precio_neto FROM albaran_lines_merge "
+                    "WHERE document_id = :document_id "
+                    "ORDER BY line_index, id"
+                ),
+                {"document_id": document_id},
+            ).all()
+        return [None if fila[0] is None else float(fila[0]) for fila in filas]
+
     def has_selected_contrato_with_lines(
         self,
         *,

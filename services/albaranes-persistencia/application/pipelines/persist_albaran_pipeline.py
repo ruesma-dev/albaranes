@@ -20,6 +20,7 @@ from domain.models.extraction_models import (
 from domain.ports.albaran_repository import AlbaranRepository
 from domain.ports.document_storage import DocumentStorage
 from domain.ports.valuation_trigger_port import ValuationTrigger
+from ruesma_comun.importes import importe_albaran
 
 logger = logging.getLogger(__name__)
 
@@ -578,7 +579,10 @@ class PersistAlbaranPipeline:
         merge_document_id: str,
         force: bool = False,
     ) -> None:
-        """Dispara el servicio 6 SOLO si hay contrato seleccionado con líneas.
+        """Dispara el servicio 6 si hay contrato seleccionado con líneas o
+        (F-075 R3) si NO hay contrato seleccionado y el albarán trae importes
+        leídos: entonces publica con ``codigo_contrato=None`` y sv6 hace la
+        valoración directa. Con contrato seleccionado sin líneas, SKIP (M1).
 
         ``force`` (jul 2026) — FIX re-valorado: se propaga tal cual a
         ``trigger_async`` → ``MensajeValoracion.force`` → sv6. Antes
@@ -618,12 +622,16 @@ class PersistAlbaranPipeline:
             return
 
         if not has_lines:
-            logger.info(
-                "[valuation-trigger][pipeline] SKIP: no hay contrato "
-                "seleccionado con líneas. document_id=%s codigo=%s",
-                merge_document_id, codigo,
-            )
-            return
+            if codigo or not self._trae_importes_safely(merge_document_id):
+                logger.info(
+                    "[valuation-trigger][pipeline] SKIP: no hay contrato "
+                    "seleccionado con líneas ni (sin contrato) importes "
+                    "leídos. document_id=%s codigo=%s",
+                    merge_document_id, codigo,
+                )
+                return
+            # (F-075 R3) Sin contrato y con importes: valoración directa.
+            codigo = None
 
         try:
             accepted = self._valuation_trigger.trigger_async(
@@ -643,6 +651,22 @@ class PersistAlbaranPipeline:
                 "disparar trigger. document_id=%s",
                 merge_document_id,
             )
+
+    def _trae_importes_safely(self, merge_document_id: str) -> bool:
+        """(F-075 R3, R4) ¿Alguna línea del merge trae importe leído
+        (``precio_neto``)? Ante cualquier error, ``False``: no se publica."""
+        try:
+            importes = self._repository.importes_leidos(
+                document_id=merge_document_id,
+            )
+            return importe_albaran(importes).trae_importes
+        except Exception:
+            logger.exception(
+                "[valuation-trigger][pipeline] Error leyendo los importes "
+                "del albarán; se omite trigger. document_id=%s",
+                merge_document_id,
+            )
+            return False
 
     def _validate_sha256(
         self,
