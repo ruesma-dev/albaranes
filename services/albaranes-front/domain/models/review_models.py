@@ -31,7 +31,13 @@ from ruesma_comun.contratos.origen_datos import (
     MOTIVO_CORREO_FUERA_DE_LISTA,
     normalizar_codigo,
 )
-from ruesma_comun.importes import ImporteAlbaran, difieren, importe_albaran, importe_de_linea
+from ruesma_comun.importes import (
+    ImporteAlbaran,
+    difieren,
+    importe_albaran,
+    importe_de_linea,
+    referencia_pie,
+)
 from ruesma_comun.sigrid import normalizar_partida
 from ruesma_comun.valoracion import esta_valorado
 
@@ -268,6 +274,8 @@ class DocumentListItem(BaseModel):
     lineas_con_importe: int = 0
     # (F-075 R25) La consulta del importe falló: la columna pinta «—».
     importe_error: bool = False
+    # (F-075 R20) Los motivos del merge, para leer ``pie_no_cuadra`` de sv3.
+    review_reasons_json: str | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -316,21 +324,34 @@ class DocumentListItem(BaseModel):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
+    def pie_no_cuadra(self) -> float | None:
+        """(F-075 R20) La cifra del pie si sv3 marcó ``pie_no_cuadra``."""
+        return pie_de_motivos(motivos_de_json(self.review_reasons_json))
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
     def importe_distinto(self) -> bool:
-        """(F-075 R20) El valorado se aparta del importe del albarán (≥ 0,01 €)."""
+        """(F-075 R20) El valorado se aparta del importe del albarán (≥ 0,01 €)
+        o el pie no cuadra (motivo de sv3)."""
         if self.importe_origen != "albaran":
             return False
-        return difieren(self.total_valorado, self.importe_albaran)
+        return (
+            difieren(self.total_valorado, self.importe_albaran)
+            or self.pie_no_cuadra is not None
+        )
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def importe_distinto_texto(self) -> str | None:
+        """(F-075 R20) «Albarán X · Valorado Y · Pie Z» (lo que haya)."""
         if not self.importe_distinto:
             return None
-        return (
-            f"Albarán {_euros(self.importe_albaran or 0.0)} · "
-            f"Valorado {_euros(self.total_valorado or 0.0)}"
-        )
+        partes = [f"Albarán {_euros(self.importe_albaran or 0.0)}"]
+        if self.total_valorado is not None:
+            partes.append(f"Valorado {_euros(self.total_valorado)}")
+        if self.pie_no_cuadra is not None:
+            partes.append(f"Pie {_euros(self.pie_no_cuadra)}")
+        return " · ".join(partes)
 
 
 class ProviderSnapshot(BaseModel):
@@ -759,6 +780,28 @@ def orden_filas_ficha(
     for huerfanas in por_padre.values():
         salida.extend(huerfanas)
     return salida
+
+
+#: (F-075 R16, R20) Prefijo del motivo con el que sv3 marca un pie que no cuadra.
+PREFIJO_PIE_NO_CUADRA = "pie_no_cuadra:"
+
+
+def pie_de_motivos(motivos: list[str]) -> float | None:
+    """(F-075 R20) La cifra del pie del motivo ``pie_no_cuadra:<suma>!=<pie>``
+    que deja sv3, o ``None`` si no lo hay o no se lee. sv4 no recalcula."""
+    for motivo in motivos:
+        if not motivo.startswith(PREFIJO_PIE_NO_CUADRA):
+            continue
+        _, separador, pie = motivo[len(PREFIJO_PIE_NO_CUADRA):].partition("!=")
+        if not separador:
+            continue
+        try:
+            valor = float(pie)
+        except ValueError:
+            continue
+        if math.isfinite(valor):
+            return valor
+    return None
 
 
 def _euros(valor: float) -> str:
@@ -1589,6 +1632,12 @@ class DocumentDetailPayload(BaseModel):
     suma_filas: float | None = None
     suma_leida: float | None = None
     n_filas_manuales: int = 0
+    # (F-075 R23) El pie impreso (columnas de sv3; nulas si no se leyó o si
+    # sv3 aún no las tiene: el repositorio las lee con SELECT defensivo).
+    pie_base: float | None = None
+    pie_tipo_iva: float | None = None
+    pie_cuota: float | None = None
+    pie_total: float | None = None
     alta_sigrid_activa: bool = False
     alta_sigrid: AltaSigridVista | None = None
     alta_puede_solicitar: bool = False
@@ -1625,6 +1674,22 @@ class DocumentDetailPayload(BaseModel):
         if not leido.parcial:
             return None
         return f"{leido.sin_importe} de {leido.lineas} sin importe"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def pie_comparacion(self) -> Literal["no_leido", "cuadra", "no_cuadra", "no_comparable"]:
+        """(F-075 R23) Sin recalcular la tolerancia: ``no_cuadra`` es el motivo
+        que deja sv3; sin él, ``no_comparable`` si no hay suma o el pie no da
+        referencia (solo el total; v2-P4) y ``cuadra`` en otro caso."""
+        pie = (self.pie_base, self.pie_tipo_iva, self.pie_cuota, self.pie_total)
+        if all(valor is None for valor in pie):
+            return "no_leido"
+        if pie_de_motivos(self.review_reasons) is not None:
+            return "no_cuadra"
+        referencia = referencia_pie(base=self.pie_base, cuota=self.pie_cuota, total=self.pie_total)
+        if referencia is None or self.importe_leido.total is None:
+            return "no_comparable"
+        return "cuadra"
 
     @computed_field  # type: ignore[prop-decorator]
     @property

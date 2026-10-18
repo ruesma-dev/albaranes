@@ -192,3 +192,41 @@ def test_f075_r21_cabecera_importe_ordenable(monkeypatch):
     assert "sort_by=importe" in html
     assert ">Importe</a><span class=\"sort-arrow\">▲</span>" in html
     assert "Importe valorado" not in html
+
+
+# ------------------------------------------------------------------ #
+# T13 · R20 la marca ≠ también cuando el pie no cuadra (motivo de sv3)
+# ------------------------------------------------------------------ #
+def test_f075_pie_r20_marca_con_el_motivo_de_sv3_sin_recalcular():
+    item = _item("d", importe_albaran=100.0, lineas_albaran=1, lineas_con_importe=1,
+                 review_reasons_json='["pie_no_cuadra:100.00!=110.00"]')
+    assert item.pie_no_cuadra == 110.0
+    assert item.importe_distinto is True
+    assert item.importe_distinto_texto == "Albarán 100,00 € · Pie 110,00 €"
+
+
+def test_f075_pie_r20_texto_completo_con_valorado_y_pie():
+    item = _item("d", importe_albaran=100.0, lineas_albaran=1, lineas_con_importe=1, total_valorado=70.0,
+                 review_reasons_json='["otro", "pie_no_cuadra:100.00!=110.00"]')
+    assert item.importe_distinto_texto == "Albarán 100,00 € · Valorado 70,00 € · Pie 110,00 €"
+
+
+def test_f075_pie_r20_motivo_ilegible_o_ausente_no_marca():
+    for motivos in (None, "[]", '["pie_no_cuadra:basura"]', "no-json"):
+        item = _item("d", importe_albaran=100.0, lineas_albaran=1, lineas_con_importe=1,
+                     review_reasons_json=motivos)
+        assert item.pie_no_cuadra is None and item.importe_distinto is False
+
+
+def test_f075_pie_r20_la_bandeja_lee_el_motivo_del_merge():
+    from sqlalchemy import text
+    from sqlalchemy.orm import Session
+
+    motor = construir()
+    with Session(motor) as s:
+        s.execute(text("UPDATE albaran_documents_merge SET review_reasons_json = "
+                       "'[\"pie_no_cuadra:150.00!=160.00\"]' WHERE id = :d"), {"d": ALB})
+        s.commit()
+    items = _items(repositorio(motor))
+    assert items[ALB].importe_distinto is True
+    assert items[ALB].importe_distinto_texto == "Albarán 150,00 € · Pie 160,00 €"

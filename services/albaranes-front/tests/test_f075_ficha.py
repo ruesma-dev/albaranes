@@ -338,3 +338,76 @@ def test_f075_r10_js_revalorar_pide_confirmacion_con_filas_manuales():
     disparo = js[js.index("async function triggerValuate()"):]
     disparo = disparo[:disparo.index("valuateBtn.disabled = true")]
     assert "motivoNoValorar(codigo, valuateBtn.dataset.traeImportes === \"1\")" in disparo
+
+
+# ------------------------------------------------------------------ #
+# T13 · R23 el pie en la ficha (base, tipo, cuota, total o «no leído»)
+# ------------------------------------------------------------------ #
+import json as _json
+
+
+def _con_pie(netos, *, base=None, tipo=None, cuota=None, total=None, no_cuadra=False, **campos):
+    motivos = ["pie_no_cuadra:100.00!=110.00"] if no_cuadra else []
+    return _doc(netos, pie_base=base, pie_tipo_iva=tipo, pie_cuota=cuota, pie_total=total,
+                review_reasons_json=_json.dumps(motivos) if motivos else None, **campos)
+
+
+@pytest.mark.parametrize(("kw", "estado"), [
+    ({}, "no_leido"),
+    ({"base": 100.0, "tipo": 21.0, "cuota": 21.0, "total": 121.0}, "cuadra"),
+    ({"base": 110.0, "no_cuadra": True}, "no_cuadra"),
+    ({"total": 121.0}, "no_comparable"),                  # solo el total
+    ({"cuota": 21.0, "total": 121.0}, "cuadra"),          # total − cuota
+])
+def test_f075_pie_r23_comparacion_sin_recalcular(kw, estado):
+    assert _con_pie([100.0], **kw).pie_comparacion == estado
+
+
+def test_f075_pie_r23_sin_importes_no_es_comparable():
+    assert _con_pie([None], base=100.0).pie_comparacion == "no_comparable"
+
+
+def test_f075_pie_r23_la_ficha_pinta_el_pie(render_detalle):
+    bloque = _bloque(render_detalle(_con_pie([100.0], base=110.0, tipo=21.0, cuota=23.1, total=133.1,
+                                             no_cuadra=True)))
+    assert "Pie" in bloque
+    assert "Base 110,00" in bloque and "IVA 21 %" in bloque and "Cuota 23,10" in bloque
+    assert "Total 133,10" in bloque
+    assert "no cuadra" in bloque
+
+
+def test_f075_pie_r23_la_ficha_dice_no_leido_y_cuadra(render_detalle):
+    assert "Pie: no leído" in _bloque(render_detalle(_con_pie([100.0])))
+    bloque = _bloque(render_detalle(_con_pie([100.0], base=100.0)))
+    assert "cuadra" in bloque and "no cuadra" not in bloque
+    bloque = _bloque(render_detalle(_con_pie([100.0], total=121.0)))
+    assert "no comparable" in bloque and "Base —" in bloque
+
+
+def _detalle_sqlite(motor):
+    from tests.test_f065_f1_aprobar import _detalle
+
+    return _detalle(motor)
+
+
+def test_f075_pie_r23_select_defensivo_sin_columnas():
+    """Sin las columnas de sv3 todavía (sv4 antes que sv3): «no leído»."""
+    from tests.f065_bbdd import construir
+
+    detalle = _detalle_sqlite(construir())
+    assert detalle.pie_base is None and detalle.pie_total is None
+    assert detalle.pie_comparacion == "no_leido"
+
+
+def test_f075_pie_r23_select_lee_las_columnas_de_sv3():
+    from tests.f065_bbdd import DOC, construir, ejecutar
+
+    motor = construir()
+    for columna in ("base_imponible", "tipo_iva_pct", "cuota_iva", "total_albaran"):
+        ejecutar(motor, f"ALTER TABLE albaran_documents_merge ADD COLUMN {columna} DOUBLE PRECISION")
+    ejecutar(motor, "UPDATE albaran_documents_merge SET base_imponible = 2120, tipo_iva_pct = 21, "
+             "cuota_iva = 445.2, total_albaran = 2565.2 WHERE id = :d", d=DOC)
+    detalle = _detalle_sqlite(motor)
+    assert (detalle.pie_base, detalle.pie_tipo_iva, detalle.pie_cuota, detalle.pie_total) == (
+        2120.0, 21.0, 445.2, 2565.2)
+    assert detalle.pie_comparacion == "cuadra"

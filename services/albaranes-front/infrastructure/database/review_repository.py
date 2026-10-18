@@ -22,6 +22,7 @@ from sqlalchemy import (
     select,
     text,
 )
+from sqlalchemy.orm import object_session
 
 from ruesma_comun.alta_sigrid import (
     ESTADOS_ALTA_BLOQUEANTES,
@@ -232,6 +233,13 @@ def sql_importe_mostrado(alias: str) -> str:
         f"COALESCE({sql_importe_albaran_documento(alias)}, "
         f"{sql_valorado_documento(alias)})"
     )
+
+
+#: (F-075 R23) El pie del merge (columnas de sv3), leído a la defensiva.
+_SQL_PIE_MERGE = text(
+    "SELECT base_imponible, tipo_iva_pct, cuota_iva, total_albaran "
+    "FROM albaran_documents_merge WHERE id = :id"
+)
 
 
 #: (F-075 R19) Los importes leídos de los documentos de una página.
@@ -3645,6 +3653,34 @@ class AlbaranReviewRepository:
             return None
 
 
+    @staticmethod
+    def _pie_del_merge(merge_doc: AlbaranDocumentMergeOrm) -> dict[str, float | None]:
+        """(F-075 R23) El pie del merge con un SELECT defensivo: las columnas
+        son de sv3 y sv4 puede salir antes (design §7). Si no existen o la
+        consulta falla, todo nulo («no leído»); dentro de un SAVEPOINT para no
+        dejar abortada la transacción de la ficha."""
+        vacio: dict[str, float | None] = {
+            "pie_base": None, "pie_tipo_iva": None, "pie_cuota": None, "pie_total": None,
+        }
+        sesion = object_session(merge_doc)
+        if sesion is None:
+            return vacio
+        try:
+            with sesion.begin_nested():
+                fila = sesion.execute(_SQL_PIE_MERGE, {"id": merge_doc.id}).first()
+        except Exception:
+            logger.info(
+                "[ficha] sin columnas del pie todavía (sv3); se pinta «no leído». doc=%s",
+                merge_doc.id,
+            )
+            return vacio
+        if fila is None:
+            return vacio
+        return {
+            clave: (None if valor is None else float(valor))
+            for clave, valor in zip(vacio, fila)
+        }
+
     def _build_merge_detail(
         self,
         *,
@@ -3733,6 +3769,7 @@ class AlbaranReviewRepository:
             suma_filas=sum(importes_filas) if importes_filas else None,
             suma_leida=importe_leido.total,
             n_filas_manuales=n_filas_manuales,
+            **self._pie_del_merge(merge_doc),
             provider_snapshots=provider_snapshots,
             contratos=contratos,
             contrato_lines=contrato_lines or [],
@@ -5171,6 +5208,7 @@ class AlbaranReviewRepository:
             created_at_utc=row.created_at_utc,
             document_url=AlbaranReviewRepository._document_url(row),
             lines=lines or [],
+            review_reasons_json=row.review_reasons_json,
         )
 
     # ------------------------------------------------------------------ #

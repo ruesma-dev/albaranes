@@ -102,6 +102,17 @@
         {% else %}
             — <span class="muted">(el albarán no trae importes)</span>
         {% endif %}
+        {# F-075 R23: el pie impreso y su comparación (la decide sv3). #}
+        {% set pie_txt = {'cuadra': 'cuadra', 'no_cuadra': 'no cuadra', 'no_comparable': 'no comparable'} %}
+        {% if document.pie_comparacion == 'no_leido' %}
+            · <span class="muted">Pie: no leído</span>
+        {% else %}
+            · Pie: Base {{ document.pie_base | importe_eur if document.pie_base is not none else '—' }}
+            · IVA {{ ('%g' | format(document.pie_tipo_iva)) ~ ' %' if document.pie_tipo_iva is not none else '—' }}
+            · Cuota {{ document.pie_cuota | importe_eur if document.pie_cuota is not none else '—' }}
+            · Total {{ document.pie_total | importe_eur if document.pie_total is not none else '—' }}
+            (<span class="pie-{{ document.pie_comparacion }}">{{ pie_txt[document.pie_comparacion] }}</span>)
+        {% endif %}
         {% if document.importe_valorado is not none %}
             · Valorado: <strong>{{ document.importe_valorado | importe_eur }}</strong>
             {% if document.importe_diferencia is not none %}
