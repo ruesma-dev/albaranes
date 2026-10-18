@@ -56,6 +56,11 @@ líder en el navegador tras desplegar sv4 (abajo)** — rama
 `specs/F-077-guardar-y-aprobar/` (con las notas de implementación aceptadas en review); informe:
 `progress/impl_F-077.md`; review: `progress/review_F-077.md`; mutación: `progress/mutacion_F-077.md`. Solo sv4, rigor
 `estandar`. *Junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
+**T14 (líder, 2026-10-18, sv4 `r20261018-1741`):** punto 1 VERDE (panel rojo «No admitido», «Línea 2: La línea no
+tiene descripción», title `falta_descripcion`, fila 386; 385/386 sin ⚠). Punto 2 VERDE tras F-078 T14 («Simulado (no
+grabado)», sin el motivo). Punto 3 VERDE en lo negativo: 12 de 12 albaranes con filas Contrato (son todos los de la BBDD),
+ningún ⚠ en Nueva ni en Contrato coincidentes; no hay hoy ningún caso positivo (Contrato con lectura distinta) que mirar.
+Pendientes: punto 4 (`zzzz`, ficha que elija el humano) y punto 5 (solo si hay una corrección real).
 
 #### F-077 · MANUAL T14 (la hace el LÍDER en el navegador, con el humano)
 
@@ -254,7 +259,10 @@ VERDE si «normalizable sin normalizar» da **0** en pendientes y las 6 sin cand
 >   `CachePartidasObra`, la guarda de no hoja y `leer_partidas_obra` con F-070; comun pasa a 0.9.0; sv4 ya hace su R11.
 
 **F-078 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`.** Espera las MANUAL T12–T14 del
-humano (abajo); con su verde, `done`. Informes: `progress/impl_F-078.md`, `progress/review_F-078.md`. *Junction* `.venv`
+humano (abajo); con su verde, `done`. **T12–T14 VERDES (2026-10-18):** relleno `--aplicar` 94 filas y relectura 0;
+T14 «Solicitar alta» en `86c13097` (sí del humano en el chat) → `simulado`, cod provisional `AC26/29750`, sin motivos
+(`COMMIT=false` comprobado en sv9); en la ficha «Mortero M-5» 01.05.07 m3, «CARGA INCOMPLETA» M3 Almacén y la fila 379
+(`41ab0dc1`) «DISCO C/ACERO 230 BOSCH». Falta cerrar: `init.sh` y pasar a `done`. Informes: `progress/impl_F-078.md`, `progress/review_F-078.md`. *Junction* `.venv`
 de sv4 en el worktree `../albaranes-F-078` (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
 
 #### F-078 · MANUAL del humano (T12–T14), comandos para PowerShell
