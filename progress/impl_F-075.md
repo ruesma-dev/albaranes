@@ -217,4 +217,4 @@ Antes de `ALTA_SIGRID_COMMIT=true`, revisar en simulación 3 altas directas (D6:
 | Mutantes | **175 generados, 171 muertos, 4 desaparecidos, 0 supervivientes** (tras el re-juicio; herramienta: 153 / 22) |
 | Tiempo de la suite | raíz 193,6 s; sv4 165,0 s; comun 121,4 s; sv1 41,4 s; sv9 35,5 s; sv2 24,5 s; sv3 20,1 s; sv6 13,4 s; sv5 2,6 s |
 | Fase RED | 15 trazas (T1–T14 ter) en §5 y `progress/impl_F-075_red.md` |
-| `init.sh` final | ULTIMO_INIT |
+| `init.sh` final | sobre `575cef5`: **ENTORNO LISTO**, mismos recuentos (0 fallos), cobertura 98,1 %, tamaño impl 220/220 |
