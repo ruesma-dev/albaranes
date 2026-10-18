@@ -43,7 +43,7 @@
                 <th class="num-cell">Pendientes</th>
                 <th class="num-cell">Aprobados</th>
                 <th class="num-cell">Revisión</th>
-                <th class="num-cell">Importe valorado</th>
+                <th class="num-cell" title="Suma del importe de cada albarán: el del albarán (sin IVA) si trae importes; si no, el valorado">Importe</th>
                 <th>Última fecha</th>
                 <th></th>
             </tr>
@@ -64,7 +64,7 @@
                     <td class="num-cell">{% if item.pendientes %}<strong>{{ item.pendientes }}</strong>{% else %}0{% endif %}</td>
                     <td class="num-cell">{{ item.aprobados }}</td>
                     <td class="num-cell">{{ item.revision_requerida }}</td>
-                    <td class="num-cell">{{ item.importe_valorado | importe_eur }}</td>
+                    <td class="num-cell">{{ item.importe | importe_eur }}</td>
                     <td>{{ item.ultima_fecha | fecha_int_iso }}</td>
                     <td>
                         {% if bandeja_url %}

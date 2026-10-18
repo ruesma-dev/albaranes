@@ -100,7 +100,7 @@
                 <th data-col="recepcion" draggable="true"><a draggable="false" href="/documents?{{ build_sort_query('created_at_utc') }}">Fecha recepción</a>{% if filters.sort_by == 'created_at_utc' %}<span class="sort-arrow">{{ '▲' if filters.sort_dir == 'asc' else '▼' }}</span>{% endif %}</th>
                 <th data-col="obra" draggable="true"><a draggable="false" href="/documents?{{ build_sort_query('obra_codigo') }}">Obra</a>{% if filters.sort_by == 'obra_codigo' %}<span class="sort-arrow">{{ '▲' if filters.sort_dir == 'asc' else '▼' }}</span>{% endif %}</th>
                 <th data-col="albaran" draggable="true"><a draggable="false" href="/documents?{{ build_sort_query('numero_albaran') }}">Albarán</a>{% if filters.sort_by == 'numero_albaran' %}<span class="sort-arrow">{{ '▲' if filters.sort_dir == 'asc' else '▼' }}</span>{% endif %}</th>
-                <th class="num-cell" data-col="importe" draggable="true">Importe valorado</th>
+                <th class="num-cell" data-col="importe" draggable="true" title="El importe del albarán (sin IVA) si trae importes; si no, el valorado"><a draggable="false" href="/documents?{{ build_sort_query('importe') }}">Importe</a>{% if filters.sort_by == 'importe' %}<span class="sort-arrow">{{ '▲' if filters.sort_dir == 'asc' else '▼' }}</span>{% endif %}</th>
                 <th data-col="contrato" draggable="true">Contrato</th>
                 <th data-col="confianza" draggable="true"><a draggable="false" href="/documents?{{ build_sort_query('confidence_pct_calc') }}">Confianza</a>{% if filters.sort_by == 'confidence_pct_calc' %}<span class="sort-arrow">{{ '▲' if filters.sort_dir == 'asc' else '▼' }}</span>{% endif %}</th>
                 <th data-col="aprobado" draggable="true"><a draggable="false" href="/documents?{{ build_sort_query('approved') }}">Aprobado</a>{% if filters.sort_by == 'approved' %}<span class="sort-arrow">{{ '▲' if filters.sort_dir == 'asc' else '▼' }}</span>{% endif %}</th>
@@ -227,8 +227,12 @@
                     </td>
                     <td data-col="albaran">{{ item.numero_albaran or '—' }}</td>
                     <td class="num-cell" data-col="importe">
-                        {% if item.total_valorado is not none %}
-                            {{ item.total_valorado | importe_eur }}
+                        {# F-075 R19, R20: una sola cifra; manda el albarán. #}
+                        {% if item.importe_mostrado is not none %}
+                            <span class="importe-cifra">{{ item.importe_mostrado | importe_eur }}</span>
+                            {% if item.importe_distinto %}<span class="importe-distinto" title="{{ item.importe_distinto_texto }}">≠</span>{% endif %}
+                            <div class="muted small importe-origen">{{ item.importe_rotulo }}</div>
+                            {% if item.importe_parcial_texto %}<div class="small importe-parcial">{{ item.importe_parcial_texto }}</div>{% endif %}
                         {% else %}
                             —
                         {% endif %}

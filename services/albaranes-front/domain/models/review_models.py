@@ -31,7 +31,7 @@ from ruesma_comun.contratos.origen_datos import (
     MOTIVO_CORREO_FUERA_DE_LISTA,
     normalizar_codigo,
 )
-from ruesma_comun.importes import importe_de_linea
+from ruesma_comun.importes import difieren, importe_de_linea
 from ruesma_comun.sigrid import normalizar_partida
 from ruesma_comun.valoracion import esta_valorado
 
@@ -210,6 +210,8 @@ class DocumentListFilters(BaseModel):
             "numero_albaran",
             "confidence_pct_calc",
             "approved",
+            # (F-075 R21) La columna «Importe» (albarán o, si no, valorado).
+            "importe",
         }
         value = (value or "confidence_pct_calc").strip()
         return value if value in allowed else "confidence_pct_calc"
@@ -258,11 +260,77 @@ class DocumentListItem(BaseModel):
     valorado: bool = False
     # F-053 R31: estado del alta en Sigrid (None = sin alta o DESDE vacía).
     alta_estado: str | None = None
+    # (F-075 R19) El importe del albarán: suma de los ``precio_neto`` leídos
+    # (sin IVA), cuántas líneas tiene y cuántas traen importe. ``total_valorado``
+    # es el de la valoración con filas (sin filas no hay valorado).
+    importe_albaran: float | None = None
+    lineas_albaran: int = 0
+    lineas_con_importe: int = 0
+    # (F-075 R25) La consulta del importe falló: la columna pinta «—».
+    importe_error: bool = False
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def alta_estado_texto(self) -> str | None:
         return etiqueta_estado_alta(self.alta_estado)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_origen(self) -> Literal["albaran", "contrato"] | None:
+        """(F-075 R19) «Manda el albarán»: si trae importes, el suyo; si no,
+        el valorado; ``None`` si ninguno (o si la consulta falló, R25)."""
+        if self.importe_error:
+            return None
+        if self.lineas_con_importe > 0:
+            return "albaran"
+        if self.total_valorado is not None:
+            return "contrato"
+        return None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_mostrado(self) -> float | None:
+        """(F-075 R19) La cifra de la columna «Importe»."""
+        origen = self.importe_origen
+        if origen == "albaran":
+            return self.importe_albaran
+        if origen == "contrato":
+            return self.total_valorado
+        return None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_rotulo(self) -> str | None:
+        return {"albaran": "albarán · sin IVA", "contrato": "contrato"}.get(
+            self.importe_origen or "",
+        )
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_parcial_texto(self) -> str | None:
+        """(F-075 R19, P3) «N de M sin importe» si faltan importes en algunas."""
+        if self.importe_origen != "albaran" or self.lineas_con_importe >= self.lineas_albaran:
+            return None
+        faltan = self.lineas_albaran - self.lineas_con_importe
+        return f"{faltan} de {self.lineas_albaran} sin importe"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_distinto(self) -> bool:
+        """(F-075 R20) El valorado se aparta del importe del albarán (≥ 0,01 €)."""
+        if self.importe_origen != "albaran":
+            return False
+        return difieren(self.total_valorado, self.importe_albaran)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_distinto_texto(self) -> str | None:
+        if not self.importe_distinto:
+            return None
+        return (
+            f"Albarán {_euros(self.importe_albaran or 0.0)} · "
+            f"Valorado {_euros(self.total_valorado or 0.0)}"
+        )
 
 
 class ProviderSnapshot(BaseModel):
@@ -1826,7 +1894,8 @@ class ObraResumenItem(BaseModel):
     pendientes: int = 0
     aprobados: int = 0
     revision_requerida: int = 0
-    importe_valorado: float = 0.0
+    # (F-075 R22) Suma del importe de la bandeja (albarán o, si no, valorado).
+    importe: float = 0.0
     ultima_fecha: str | None = None
 
 
@@ -1840,7 +1909,8 @@ class ProveedorResumenItem(BaseModel):
     pendientes: int = 0
     aprobados: int = 0
     revision_requerida: int = 0
-    importe_valorado: float = 0.0
+    # (F-075 R22) Suma del importe de la bandeja (albarán o, si no, valorado).
+    importe: float = 0.0
     ultima_fecha: str | None = None
 
 

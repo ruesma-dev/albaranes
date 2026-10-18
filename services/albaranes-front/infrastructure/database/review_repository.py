@@ -16,6 +16,7 @@ from sqlalchemy import (
     delete,
     func,
     inspect,
+    literal_column,
     nullslast,
     or_,
     select,
@@ -27,7 +28,7 @@ from ruesma_comun.alta_sigrid import (
     es_linea_a_registrar,
     es_linea_vinculada,
 )
-from ruesma_comun.importes import clasificar_descuento, importe_de_linea
+from ruesma_comun.importes import clasificar_descuento, importe_albaran, importe_de_linea
 from ruesma_comun.linea_valorada import (
     CamposFila,
     LineaDeLaFila,
@@ -193,6 +194,52 @@ TABLA_ALTAS_SIGRID = "albaran_altas_sigrid"
 _SQL_ALTA_DEL_DOCUMENTO = text(
     "SELECT estado, sigrid_cod FROM albaran_altas_sigrid WHERE document_id = :id"
 )
+
+# ---------------------------------------------------------------------- #
+# (F-075 R19–R22) El importe de la bandeja: «manda el albarán».
+#
+# Una sola expresión SQL, portable (PostgreSQL y SQLite), para el orden, el
+# filtro mín/máx, la tarjeta «Importe pendiente» y las vistas Obras y
+# Proveedores: la suma de los ``precio_neto`` leídos del documento (sin IVA)
+# si alguno trae importe; si no, el valorado de su última valoración CON
+# filas (una cabecera sin filas, como la ``no_contract`` vacía, no es un
+# valorado). Sustituye a ``LATERAL`` y ``DISTINCT ON`` (solo PostgreSQL);
+# ``document_id`` es único en ``albaran_valuations``, así que «la última» es
+# la única, y el ``ORDER BY id DESC`` lo deja dicho por si dejara de serlo.
+# La misma regla, en Python, es ``ruesma_comun.importes.importe_albaran``.
+# ---------------------------------------------------------------------- #
+def sql_importe_albaran_documento(alias: str) -> str:
+    """(F-075) Suma de los importes leídos del documento ``alias`` (o NULL)."""
+    return (
+        "(SELECT SUM(lm.precio_neto) FROM albaran_lines_merge lm "
+        f"WHERE lm.document_id = {alias}.id)"
+    )
+
+
+def sql_valorado_documento(alias: str) -> str:
+    """(F-075) ``total_valorado`` de la última valoración con filas (o NULL)."""
+    return (
+        "(SELECT av.total_valorado FROM albaran_valuations av "
+        f"WHERE av.document_id = {alias}.id AND EXISTS ("
+        "SELECT 1 FROM albaran_line_valuations alv WHERE alv.valuation_id = av.id) "
+        "ORDER BY av.id DESC LIMIT 1)"
+    )
+
+
+def sql_importe_mostrado(alias: str) -> str:
+    """(F-075 R19) La cifra de la columna «Importe» del documento ``alias``."""
+    return (
+        f"COALESCE({sql_importe_albaran_documento(alias)}, "
+        f"{sql_valorado_documento(alias)})"
+    )
+
+
+#: (F-075 R19) Los importes leídos de los documentos de una página.
+_SQL_IMPORTES_LEIDOS_DOCS = (
+    "SELECT document_id, precio_neto FROM albaran_lines_merge "
+    "WHERE document_id IN :ids"
+)
+
 
 #: (F-053 R29) El alta entera, para pintarla (sin cerrojo: solo lectura).
 _SQL_ALTA_COMPLETA = text(
@@ -563,25 +610,23 @@ class AlbaranReviewRepository:
                     AlbaranDocumentMergeOrm.is_active.is_(False)
                 )
             ) or 0
-            # Importe total pendiente de aprobar: suma del total valorado de
-            # los albaranes activos NO aprobados. DISTINCT ON por documento
-            # para no duplicar si hubiera varias valoraciones por documento.
+            # Importe total pendiente de aprobar (F-075 R22): suma del
+            # importe de la bandeja (albarán o, si no, valorado) de los
+            # albaranes activos NO aprobados.
             try:
                 importe_pendiente_aprobar = session.scalar(
                     text(
-                        "SELECT COALESCE(SUM(t.total_valorado), 0) FROM ("
-                        "  SELECT DISTINCT ON (av.document_id) "
-                        "         av.document_id, av.total_valorado "
-                        "  FROM albaran_valuations av "
-                        "  JOIN albaran_documents_merge d "
-                        "    ON d.id = av.document_id "
-                        "  WHERE d.is_active = TRUE AND d.approved = FALSE "
-                        "  ORDER BY av.document_id, av.id DESC"
-                        ") t"
+                        f"SELECT COALESCE(SUM({sql_importe_mostrado('d')}), 0) "
+                        "FROM albaran_documents_merge d "
+                        "WHERE d.is_active = TRUE AND d.approved = FALSE"
                     )
                 ) or 0.0
             except Exception:
                 session.rollback()
+                logger.warning(
+                    "[bandeja] no se pudo sumar el importe pendiente; se pinta 0.",
+                    exc_info=True,
+                )
                 importe_pendiente_aprobar = 0.0
 
             # Columnas nuevas de la lista: importe total valorado (de la
@@ -596,7 +641,29 @@ class AlbaranReviewRepository:
             alta_by_doc: dict[str, str] = {}
             names_by_code: dict[str, str | None] = {}
             lines_by_doc: dict[str, list[DocumentLineSummary]] = {}
+            # (F-075 R19) Importes leídos por documento (``precio_neto``).
+            leidos_by_doc: dict[str, list[float | None]] = {}
+            importe_error = False
             if doc_ids:
+                try:
+                    for ir in session.execute(
+                        text(_SQL_IMPORTES_LEIDOS_DOCS).bindparams(
+                            bindparam("ids", expanding=True)
+                        ),
+                        {"ids": doc_ids},
+                    ).mappings():
+                        leidos_by_doc.setdefault(ir["document_id"], []).append(
+                            ir["precio_neto"]
+                        )
+                except Exception:
+                    # (F-075 R25) La bandeja se pinta igual, con «—».
+                    session.rollback()
+                    importe_error = True
+                    logger.warning(
+                        "[bandeja] no se pudo leer el importe del albarán; "
+                        "la columna Importe se pinta con «—».",
+                        exc_info=True,
+                    )
                 try:
                     for vr in session.execute(
                         text(
@@ -706,10 +773,16 @@ class AlbaranReviewRepository:
                     ).mappings():
                         alta_by_doc[ar["document_id"]] = str(ar["estado"])
 
+        importes_doc = {
+            doc_id: importe_albaran(leidos) for doc_id, leidos in leidos_by_doc.items()
+        }
         items = [
             self._to_list_item(
                 row,
-                total_valorado=totals_by_doc.get(row.id),
+                # (F-075) Sin filas no hay valorado (cabecera no_contract vacía).
+                total_valorado=(
+                    totals_by_doc.get(row.id) if row.id in importes_by_doc else None
+                ),
                 contrato_codigo=getattr(row, "selected_contrato_codigo", None),
                 contrato_nombre=names_by_code.get(
                     getattr(row, "selected_contrato_codigo", None)
@@ -720,6 +793,17 @@ class AlbaranReviewRepository:
                     status_by_doc.get(row.id), importes_by_doc.get(row.id, []),
                 ),
                 "alta_estado": alta_by_doc.get(row.id),
+                "importe_albaran": (
+                    importes_doc[row.id].total if row.id in importes_doc else None
+                ),
+                "lineas_albaran": (
+                    importes_doc[row.id].lineas if row.id in importes_doc else 0
+                ),
+                "lineas_con_importe": (
+                    importes_doc[row.id].lineas_con_importe
+                    if row.id in importes_doc else 0
+                ),
+                "importe_error": importe_error,
             })
             for row in rows
         ]
@@ -764,16 +848,10 @@ class AlbaranReviewRepository:
             "           AS aprobados, "
             "       COUNT(*) FILTER (WHERE d.review_required = TRUE) "
             "           AS revision_requerida, "
-            "       COALESCE(SUM(v.total_valorado), 0) AS importe_valorado, "
+            # (F-075 R22) El importe de la bandeja, sumado por documento.
+            f"       COALESCE(SUM({sql_importe_mostrado('d')}), 0) AS importe, "
             "       MAX(d.fecha) AS ultima_fecha "
             "FROM albaran_documents_merge d "
-            "LEFT JOIN LATERAL ("
-            "    SELECT av.total_valorado "
-            "    FROM albaran_valuations av "
-            "    WHERE av.document_id = d.id "
-            "    ORDER BY av.id DESC "
-            "    LIMIT 1"
-            ") v ON TRUE "
             "WHERE d.is_active = TRUE "
         )
         params: dict[str, Any] = {}
@@ -802,7 +880,7 @@ class AlbaranReviewRepository:
                 pendientes=int(r["pendientes"] or 0),
                 aprobados=int(r["aprobados"] or 0),
                 revision_requerida=int(r["revision_requerida"] or 0),
-                importe_valorado=float(r["importe_valorado"] or 0.0),
+                importe=float(r["importe"] or 0.0),
                 ultima_fecha=(
                     str(r["ultima_fecha"]) if r["ultima_fecha"] else None
                 ),
@@ -835,16 +913,10 @@ class AlbaranReviewRepository:
             "           AS aprobados, "
             "       COUNT(*) FILTER (WHERE d.review_required = TRUE) "
             "           AS revision_requerida, "
-            "       COALESCE(SUM(v.total_valorado), 0) AS importe_valorado, "
+            # (F-075 R22) El importe de la bandeja, sumado por documento.
+            f"       COALESCE(SUM({sql_importe_mostrado('d')}), 0) AS importe, "
             "       MAX(d.fecha) AS ultima_fecha "
             "FROM albaran_documents_merge d "
-            "LEFT JOIN LATERAL ("
-            "    SELECT av.total_valorado "
-            "    FROM albaran_valuations av "
-            "    WHERE av.document_id = d.id "
-            "    ORDER BY av.id DESC "
-            "    LIMIT 1"
-            ") v ON TRUE "
             "WHERE d.is_active = TRUE "
         )
         params: dict[str, Any] = {}
@@ -879,7 +951,7 @@ class AlbaranReviewRepository:
                 pendientes=int(r["pendientes"] or 0),
                 aprobados=int(r["aprobados"] or 0),
                 revision_requerida=int(r["revision_requerida"] or 0),
-                importe_valorado=float(r["importe_valorado"] or 0.0),
+                importe=float(r["importe"] or 0.0),
                 ultima_fecha=(
                     str(r["ultima_fecha"]) if r["ultima_fecha"] else None
                 ),
@@ -5240,23 +5312,20 @@ class AlbaranReviewRepository:
                 ).bindparams(lineas_term=f"%{filters.lineas.strip()}%")
             )
         if filters.min_importe is not None or filters.max_importe is not None:
-            # Importe valorado vive en albaran_valuations.total_valorado;
-            # filtramos por EXISTS correlacionado. Los documentos sin
-            # valoración quedan fuera cuando se aplica este filtro.
-            _conds = ["av.document_id = albaran_documents_merge.id"]
+            # (F-075 R21) Sobre la cifra de la columna «Importe»: el importe
+            # del albarán o, si no trae, el valorado. Los documentos sin
+            # ninguno de los dos quedan fuera cuando se aplica este filtro.
+            _importe = sql_importe_mostrado("albaran_documents_merge")
+            _conds: list[str] = []
             _params: dict[str, Any] = {}
             if filters.min_importe is not None:
-                _conds.append("av.total_valorado >= :min_imp")
+                _conds.append(f"{_importe} >= :min_imp")
                 _params["min_imp"] = filters.min_importe
             if filters.max_importe is not None:
-                _conds.append("av.total_valorado <= :max_imp")
+                _conds.append(f"{_importe} <= :max_imp")
                 _params["max_imp"] = filters.max_importe
             stmt = stmt.where(
-                text(
-                    "EXISTS (SELECT 1 FROM albaran_valuations av WHERE "
-                    + " AND ".join(_conds)
-                    + ")"
-                ).bindparams(**_params)
+                text("(" + " AND ".join(_conds) + ")").bindparams(**_params)
             )
         if filters.review_required == "yes":
             stmt = stmt.where(AlbaranDocumentMergeOrm.review_required.is_(True))
@@ -5284,6 +5353,9 @@ class AlbaranReviewRepository:
             "approved": AlbaranDocumentMergeOrm.approved,
         }
         column = sort_map.get(filters.sort_by, AlbaranDocumentMergeOrm.confidence_pct_calc)
+        if filters.sort_by == "importe":
+            # (F-075 R21) La misma cifra de la columna; sin importe, al final.
+            column = literal_column(sql_importe_mostrado("albaran_documents_merge"))
         if filters.sort_dir == "desc":
             stmt = stmt.order_by(nullslast(column.desc()))
         else:
