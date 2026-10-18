@@ -2,7 +2,7 @@
 
 Rama `feature/F-075-importe-leido`, worktree `C:\Users\pgris\PycharmProjects\albaranes-F-075`. Spec v2 (PARADA 1 v2
 aprobada el 2026-10-15) **más el ajuste del humano del 2026-10-18** (opción A y M1, §1). Rigor `critico`.
-**Estado: T1–T16 y T19 hechas; pendientes del humano T0 (opcional), T17 (evals con LLM) y T18 (despliegue).**
+**Estado: T1–T16 y T19 hechas, más la pasada 2 de la review (§8 bis); pendientes del humano T0 (opcional), T17 (evals con LLM) y T18 (despliegue).**
 Detalle de la fase RED: `progress/impl_F-075_red.md`. Mutación: `progress/mutacion_F-075.md`.
 
 ## 1. Bloqueo previo y decisión del humano
@@ -149,56 +149,39 @@ nuevos y este informe): ver la última línea de §Evidencias.
 - La valoración directa, la bandeja y la ficha están probadas con el repositorio real sobre SQLite y con la plantilla
   renderizada; **no** se ha probado en pantalla ni contra Azure (no se toca producción): es la comprobación de T18.
 
-## 8. MANUAL del humano (PowerShell; lo que escribe va marcado)
+## 8. MANUAL del humano
 
-Todo desde **PowerShell 5.1**, tras el APPROVED del reviewer, salvo T0 (solo lectura).
+Los comandos exactos de T0, T17 y T18 están en `progress/current.md`, bloque «F-075 · MANUAL del humano». Llevan las
+marcas [ESCRIBE EN PRODUCCIÓN · humano] y el criterio de VERDE de cada paso.
 
-**T0 (opcional, SOLO LECTURA)**: consultas de los Anexos A y B de `progress/spec_F-075.md` contra la BBDD
-`albaranes` (sesión con `default_transaction_read_only=on`). Anotar en `progress/spec_F-075.md` §v2.2.
+- **T17**: las evals con LLM se lanzan en el worktree, con `PYTHONPATH` y las claves pedidas con
+  `Read-Host -AsSecureString`. VERDE: IA1 ≤ 154 e IA2 ≤ 4 fallos críticos, más la sección «no medido».
+- **T18**: el orden es **sv5 → sv6 → sv3 → sv4 → sv2**, según la O1 de la review; el líder se lo propone al humano.
+  Así no queda ninguna ventana con cabeceras `no_contract` vacías, y sv2 sigue detrás de sv3 por `StrictSchemaModel`.
 
-**T17 · evals con LLM** (se facturan ≈ 190 llamadas, como en F-064 T10). En el worktree, antes de fusionar:
-```powershell
-Copy-Item -Recurse C:\Users\pgris\PycharmProjects\albaranes\evals\inputs C:\Users\pgris\PycharmProjects\albaranes-F-075\evals\inputs
-cd C:\Users\pgris\PycharmProjects\albaranes-F-075
-$env:PYTHONPATH = "C:\Users\pgris\PycharmProjects\albaranes-F-075\services\albaranes-comun"
-$s = Read-Host "GEMINI_API_KEY" -AsSecureString
-$env:GEMINI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-$s = Read-Host "OPENAI_API_KEY" -AsSecureString
-$env:OPENAI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-& C:\Users\pgris\PycharmProjects\albaranes\.venv\Scripts\python.exe -m evals.runner --con-llm --feature F-075
-Remove-Item env:GEMINI_API_KEY, env:OPENAI_API_KEY, env:PYTHONPATH
-```
-Criterio de verde (el banco está en ROJO de base, `VERDE` literal no es alcanzable): en `progress/evals_F-075.md`,
-`MODO: completa` y `FASES: IA1,IA2,IA3,IA4,E2E`; **IA1 ≤ 154 e IA2 ≤ 4 fallos críticos** (F-064 T10: 152 y 2), la
-sección «Campos no medidos» con los cuatro del pie, e IA3/IA4/E2E iguales a la pasada determinista (que es idéntica
-a `dev`, §7). El aviso de la puerta de rutas sensibles (`prompts.yaml`, `albaran_models.py`, `valoracion_directa.py`)
-se cierra con ese informe.
+## 8 bis. Pasada 2 (review CHANGES_REQUESTED, `progress/review_F-075.md` §4)
 
-**T18 · despliegue** (tras fusionar en `dev` e `init.sh` en verde en el árbol principal). Cada `deploy.ps1` es
-**[ESCRIBE EN PRODUCCIÓN · humano]**; lo demás solo lee. Orden: sv3 (DDL y disparo) → sv5 → sv6 → sv4 → sv2 (sv3
-rechazaría la cabecera con el pie si sv2 saliera antes). sv9 no se redespliega; `ALTA_SIGRID_COMMIT` sigue `false`.
-```powershell
-cd C:\Users\pgris\PycharmProjects\albaranes\infra
-. .\00_vars.ps1
-. .\00_capps_vars.ps1
-foreach ($a in "ca-sv3-persistencia","ca-sv5-valuation","ca-sv6-valorador","ca-sv4-front","ca-sv2-extraccion") { az containerapp show -n $a -g $RG --query "properties.template.containers[0].image" -o tsv }
-.\deploy.ps1 -Only sv3
-.\check_deploy.ps1
-.\deploy.ps1 -Only sv5
-.\check_deploy.ps1
-.\deploy.ps1 -Only sv6
-.\check_deploy.ps1
-.\deploy.ps1 -Only sv4
-.\check_deploy.ps1
-.\deploy.ps1 -Only sv2
-.\check_deploy.ps1
-```
-VERDE de cada paso: `check_deploy.ps1` con el servicio en el tag nuevo y réplicas arriba (la primera línea apunta
-las imágenes actuales por si hay que volver atrás). Comprobación en pantalla: en sv4, ficha de uno de los merges de
-DISCOIN (`dfdc8aab-08e1-49f0-978d-bb906515e748`) → «Valorar ahora» **[ESCRIBE EN PRODUCCIÓN · humano: reemplaza su
-valoración]** → valoración directa, bandeja con «Importe» y rótulo «albarán · sin IVA», «Aprobar» habilitado si todas
-las líneas traen importe; aprobar **[ESCRIBE EN PRODUCCIÓN · humano]** y ver el alta `simulado` en el panel de F-053.
-Antes de `ALTA_SIGRID_COMMIT=true`, revisar en simulación 3 altas directas (D6: analítica `<obra>.<sufijo>`).
+Un commit por punto, sobre `8eed0c7`.
+
+| Punto | Commit | Qué |
+|---|---|---|
+| §4.1 R10 | `bb7fea3`, `8d81c47` | `app.js`. **Antes**, el combo de contrato apagaba «Valorar ahora» al cargar la ficha sin contrato y al elegir «Sin contrato», y entonces `motivoNoValorar` no llegaba a ejecutarse. **Ahora**, `puedeValorar(codigo, traeImportes)` activa el botón con contrato o con `data-trae-importes="1"` en los dos sitios, y `avisoSinContrato` dice «se valora con los importes del albarán: pulsa «Valorar ahora»». Tests `test_f075_r10_js_*`: los dos primeros ejecutan las funciones con `node` y el tercero fija el estado inicial y el de «Sin contrato» con el texto del bloque, como `test_f051_almacen_front` |
+| §4.2 R11 | `f617037` | `test_f075_r11_con_contrato_mismas_lineas_y_total_que_el_valuation_builder` y `test_f075_r11_r12_con_sinteticas_solo_se_anade_el_motivo` en sv6 (líneas, total y motivos iguales a los del `ValuationBuilder` con `completar_registros`), y `test_f075_r11_con_contrato_y_lineas_publica_su_codigo_como_hoy` en sv3. Son tests de caracterización, así que no tienen fase RED: lo que fijan es justamente que nada cambia |
+| §4.3 C4 | `5b3024f` | T0, T17 y T18 en `current.md`. T18 va en el orden de la O1 y explica por qué en una línea |
+| O2 | `04c52fc` | `PieGuardService` retira el `pie_no_cuadra:*` anterior antes de marcar el nuevo. Test `test_f075_r16_o2_al_cambiar_la_suma_queda_solo_el_motivo_nuevo` |
+| O4 | `6376564` | Vuelve el comentario «best-effort (R18)» en los dos `except` |
+
+La O3 (línea directa con importe y sin cantidad) no se toca: está fuera de la spec y la decide el humano.
+
+**RED** (trazas íntegras en `progress/impl_F-075_red.md`, al final):
+- R10: `.venv/Scripts/python -m pytest tests/test_f075_ficha.py -q -k "r10_js"` dio `ValueError: substring not
+  found` (las funciones aún no existían) y `assert 'valuateBtn.disabled = !puedeValorar(current, …)' in '// ----
+  Estado inicial ----…'`; resultado `3 failed, 2 passed`.
+- O2: `python -m pytest tests/test_f075_pie.py -q -k o2` dio `At index 1 diff: 'pie_no_cuadra:90.00!=110.00' !=
+  'pie_no_cuadra:100.00!=110.00'` y `Left contains one more item`; resultado `1 failed`.
+
+**Mutación**: la O2 solo añade una llamada, y en ella no hay operadores ni constantes que la herramienta mute. `app.js`
+no es Python, así que no tiene mutación (review §4.4). El total de §6 no cambia.
 
 ## 9. Qué falta y qué queda fuera
 
@@ -218,3 +201,4 @@ Antes de `ALTA_SIGRID_COMMIT=true`, revisar en simulación 3 altas directas (D6:
 | Tiempo de la suite | raíz 193,6 s; sv4 165,0 s; comun 121,4 s; sv1 41,4 s; sv9 35,5 s; sv2 24,5 s; sv3 20,1 s; sv6 13,4 s; sv5 2,6 s |
 | Fase RED | 15 trazas (T1–T14 ter) en §5 y `progress/impl_F-075_red.md` |
 | `init.sh` final | sobre `575cef5`: **ENTORNO LISTO**, mismos recuentos (0 fallos), cobertura 98,1 %, tamaño impl 220/220 |
+| Pasada 2 (`init.sh` con `ARNES_SIN_CACHE=1`, sobre `5b3024f`) | **ENTORNO LISTO**; raíz 1328, sv1 205, sv2 485, sv3 1540, sv4 1774, sv5 46, sv6 473 (+1 skipped), sv9 673, comun 859 (+3 skipped), 0 fallos; cobertura **98,1 %** (464/473); impl 203/220 |

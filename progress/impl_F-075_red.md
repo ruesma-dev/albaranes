@@ -152,3 +152,17 @@ E   AssertionError: R11: sin campos nuevos
 6 failed, 1320 passed in 128.11s
 ```
 (y, ya con el recorte, `falta /description`: `create_model` perdía la docstring de `RevisionAlbaranFase2`.)
+### Pasada 2 · §4.1 R10 (sv4) — `.venv/Scripts/python -m pytest tests/test_f075_ficha.py -q -k "r10_js"`
+```
+E       ValueError: substring not found          (puedeValorar / avisoSinContrato no existen en app.js)
+E       ValueError: substring not found
+E       assert 'valuateBtn.disabled = !puedeValorar(current, valuateBtn.dataset.traeImportes === "1")' in '// ---- Estado inicial ----\n        const current = …'
+3 failed, 2 passed, 32 deselected in 1.01s
+```
+### Pasada 2 · O2 (sv3) — `python -m pytest tests/test_f075_pie.py -q -k o2` (desde services/albaranes-persistencia)
+```
+E       AssertionError: assert ['fecha_albar...0.00!=110.00'] == ['fecha_albar...0.00!=110.00']
+E         At index 1 diff: 'pie_no_cuadra:90.00!=110.00' != 'pie_no_cuadra:100.00!=110.00'
+E         Left contains one more item: 'pie_no_cuadra:100.00!=110.00'
+1 failed
+```
