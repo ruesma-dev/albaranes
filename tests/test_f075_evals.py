@@ -127,6 +127,8 @@ def test_f075_r27_la_variante_dev_del_comparador_de_obra_no_pide_el_pie():
         concepto: Optional[str] = None
 
     class DocumentoAlbaran(BaseModel):
+        """El documento."""
+
         cabecera: CabeceraAlbaran
         lineas: list[LineaAlbaran]
         lectura_correo: Optional[dict] = None
@@ -137,4 +139,5 @@ def test_f075_r27_la_variante_dev_del_comparador_de_obra_no_pide_el_pie():
     assert cabecera.__name__ == "CabeceraAlbaran" and cabecera is not CabeceraAlbaran
     assert list(cabecera.model_fields) == ["proveedor_nombre", "id"]
     assert recortado.model_fields["cabecera"].is_required()
+    assert recortado.model_json_schema()["description"] == "El documento."  # sin perder la docstring
     assert sv2_obra.modelo_sin_campo(LineaAlbaran) is LineaAlbaran  # sin nada que quitar, el mismo
