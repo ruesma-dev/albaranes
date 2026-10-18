@@ -424,3 +424,34 @@ def test_f075_r12_funcion_pura_no_cambia_nada_mas():
     assert cab.review_required is True and cab.total_valorado == 10.0
     anotar_valorado_distinto(cab, _sobre(_linea(1, neto=10.01), status="ok"))
     assert cab.review_reasons.count("valorado_distinto_de_albaran:10.00!=10.01") == 1
+
+
+# ------------------------------------------------------------------ #
+# R11 · con contrato y líneas se valora como siempre (R12 solo añade el motivo)
+# ------------------------------------------------------------------ #
+def _esperado_del_builder(envelope):
+    from application.services.fila_completa import completar_registros
+    from tests.f027_escenarios import construir_builder
+
+    cabecera, lineas = construir_builder().build(envelope=envelope, existing_document_already_valued=False)
+    return cabecera, completar_registros(lineas, envelope)
+
+
+def test_f075_r11_con_contrato_mismas_lineas_y_total_que_el_valuation_builder():
+    envelope = _sobre_con_contrato([20.0, 20.0])
+    cabecera, lineas = _valorar_con_contrato(envelope)
+    esperada, esperadas = _esperado_del_builder(envelope)
+    assert [vars(l) for l in lineas] == [vars(l) for l in esperadas]
+    assert cabecera.total_valorado == esperada.total_valorado
+    assert cabecera.review_reasons == esperada.review_reasons
+    assert cabecera.status == "ok" and cabecera.prompt_key != "valoracion_directa_albaran"
+
+
+def test_f075_r11_r12_con_sinteticas_solo_se_anade_el_motivo():
+    envelope = _sobre_con_contrato([20.0], sinteticas=[(1, "otro")])
+    cabecera, lineas = _valorar_con_contrato(envelope)
+    esperada, esperadas = _esperado_del_builder(envelope)
+    assert [vars(l) for l in lineas] == [vars(l) for l in esperadas]
+    assert cabecera.total_valorado == esperada.total_valorado
+    motivo = f"valorado_distinto_de_albaran:{esperada.total_valorado:.2f}!=20.00"
+    assert cabecera.review_reasons == [*esperada.review_reasons, motivo]

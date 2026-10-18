@@ -147,3 +147,12 @@ def repo_sqlite(tmp_path):
 def test_f075_r3_importes_leidos_en_orden_y_solo_del_documento(repo_sqlite):
     assert repo_sqlite.importes_leidos(document_id=DOC) == [10.5, -3.0, None]
     assert repo_sqlite.importes_leidos(document_id="no-existe") == []
+
+
+def test_f075_r11_con_contrato_y_lineas_publica_su_codigo_como_hoy():
+    """R11: con contrato seleccionado con líneas, el disparo no cambia (ni lee los importes)."""
+    for importes in ([10.0], [None], []):
+        repo, trigger = _Repo(con_lineas=True, codigo="CTSU26/0313", importes=importes), _Trigger()
+        _pipeline(repo, trigger)._trigger_valuation_safely(merge_document_id=DOC, force=True)
+        assert trigger.llamadas == [(DOC, "CTSU26/0313", True)]
+        assert repo.pedidos == []
