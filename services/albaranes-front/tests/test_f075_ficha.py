@@ -221,3 +221,120 @@ def test_f075_r9_ficha_boton_aprobar_habilitado_o_no(render_detalle):
 
     assert "disabled" not in _ficha([10.0, 5.0])
     assert "disabled" in _ficha([10.0, None])
+
+
+# ------------------------------------------------------------------ #
+# R10 · revalorar sin contrato si el albarán trae importes
+# ------------------------------------------------------------------ #
+class _Publicador:
+    def __init__(self):
+        self.publicados = []
+
+    def publicar(self, nombre_cola, mensaje):
+        self.publicados.append((nombre_cola, mensaje))
+        return True
+
+
+class _Servicio:
+    def __init__(self, documento):
+        self.documento = documento
+        self.llamadas = []
+
+    def initialize(self):
+        return True
+
+    def get_document(self, document_id, view_mode=None):
+        return self.documento
+
+    def comprobar_editable(self, document_id):
+        self.llamadas.append("comprobar_editable")
+
+
+def _post_valuate(monkeypatch, documento):
+    from fastapi.testclient import TestClient
+
+    from config.settings import Settings
+    from interface_adapters.web import app as modulo_app
+
+    publicador = _Publicador()
+    monkeypatch.setattr(modulo_app, "SessionFactory", lambda **_: object())
+    monkeypatch.setattr(modulo_app, "AlbaranReviewRepository", lambda *_: object())
+    monkeypatch.setattr(modulo_app, "WorkflowRunsPurger", lambda *_: object())
+    monkeypatch.setattr(modulo_app, "ReviewService", lambda *_: _Servicio(documento))
+    monkeypatch.setattr(modulo_app, "construir_publicador", lambda **_: publicador)
+    ajustes = Settings.model_construct(pg_password="x", pg_admin_password="x")
+    cliente = TestClient(modulo_app.build_app(ajustes), follow_redirects=False)
+    return cliente.post(f"/api/documents/{documento.id}/valuate"), publicador
+
+
+def test_f075_r10_sin_contrato_con_importes_publica_la_revaloracion(monkeypatch):
+    from ruesma_comun.colas import COLA_PERSISTENCIA
+
+    respuesta, publicador = _post_valuate(monkeypatch, _doc([10.0, None]))
+    assert respuesta.status_code == 200, respuesta.text
+    cuerpo = respuesta.json()
+    assert cuerpo["accepted"] is True and cuerpo["codigo_contrato"] is None
+    assert "importes del albarán" in cuerpo["message"]
+    ((cola, mensaje),) = publicador.publicados
+    assert cola == COLA_PERSISTENCIA
+    assert mensaje.document_id == "f075-doc" and mensaje.force is True
+
+
+def test_f075_r10_sin_contrato_sin_importes_sigue_el_409(monkeypatch):
+    respuesta, publicador = _post_valuate(monkeypatch, _doc([None]))
+    assert respuesta.status_code == 409
+    assert "Elige un contrato antes de valorar" in respuesta.json()["detail"]
+    assert publicador.publicados == []
+
+
+def test_f075_r10_con_contrato_como_hoy(monkeypatch):
+    respuesta, publicador = _post_valuate(monkeypatch, _doc([None], selected_contrato_codigo="CT/1"))
+    assert respuesta.status_code == 200
+    assert respuesta.json()["codigo_contrato"] == "CT/1"
+    assert len(publicador.publicados) == 1
+
+
+def test_f075_r10_boton_dice_si_trae_importes(render_detalle):
+    boton = re.search(r'<button[^>]*id="valuate-btn"[^>]*>', render_detalle(_doc([10.0]))).group(0)
+    assert 'data-trae-importes="1"' in boton
+    boton = re.search(r'<button[^>]*id="valuate-btn"[^>]*>', render_detalle(_doc([None]))).group(0)
+    assert 'data-trae-importes="0"' in boton
+
+
+def _js(tmp_path, programa):
+    import json
+    import shutil
+    import subprocess
+
+    from test_f051_almacen_front import _app_js, _funcion_js
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node no está instalado")
+    guion = tmp_path / "f075.js"
+    guion.write_text(_funcion_js(_app_js(), "motivoNoValorar") + "\n" + programa, encoding="utf-8")
+    salida = subprocess.run([node, str(guion)], capture_output=True, text=True, encoding="utf-8", check=False)
+    assert salida.returncode == 0, salida.stderr
+    return json.loads(salida.stdout)
+
+
+def test_f075_r10_js_sin_contrato_solo_si_trae_importes(tmp_path):
+    casos = _js(tmp_path, """
+        console.log(JSON.stringify([
+            motivoNoValorar("CT/1", false), motivoNoValorar("", true),
+            motivoNoValorar("", false), motivoNoValorar(null, false)]));
+    """)
+    assert casos[0] is None and casos[1] is None
+    assert casos[2] == casos[3] == "Selecciona un contrato antes de valorar."
+
+
+def test_f075_r10_js_revalorar_pide_confirmacion_con_filas_manuales():
+    from test_f051_almacen_front import _app_js
+
+    js = _app_js()
+    manejador = js[js.index('valuateBtn.addEventListener("click"'):]
+    manejador = manejador[:manejador.index("});")]
+    assert manejador.index("confirmarRevalorar()") < manejador.index("triggerValuate()")
+    disparo = js[js.index("async function triggerValuate()"):]
+    disparo = disparo[:disparo.index("valuateBtn.disabled = true")]
+    assert "motivoNoValorar(codigo, valuateBtn.dataset.traeImportes === \"1\")" in disparo

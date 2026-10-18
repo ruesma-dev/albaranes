@@ -1177,6 +1177,13 @@
             : "Revalorar descarta " + n + " líneas tocadas a mano. ¿Continuar?";
     }
 
+    // F-075 R10: sin contrato solo se valora si el albarán trae importes
+    // (valoración directa). Devuelve el aviso, o null si se puede valorar.
+    function motivoNoValorar(codigo, traeImportes) {
+        if (codigo || traeImportes) { return null; }
+        return "Selecciona un contrato antes de valorar.";
+    }
+
     function confirmarRevalorar() {
         const aviso = avisoRevalorar(DOC_DATA.n_filas_manuales);
         return !aviso || window.confirm(aviso);
@@ -2381,11 +2388,9 @@
         //   1) Guarda la selección actual (PUT, SIN redirigir).
         //   2) Dispara la valoración (POST /valuate → sv7 → sv6 → sv5).
         const codigo = collectSelectedContratoCodigo();
-        if (!codigo) {
-            paintValuateStatus(
-                "error",
-                "Selecciona un contrato antes de valorar."
-            );
+        const motivo = motivoNoValorar(codigo, valuateBtn.dataset.traeImportes === "1");
+        if (motivo) {
+            paintValuateStatus("error", motivo);
             return;
         }
 

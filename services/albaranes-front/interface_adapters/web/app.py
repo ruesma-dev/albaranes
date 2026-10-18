@@ -1337,7 +1337,14 @@ def build_app(settings: Settings) -> FastAPI:
         codigo_contrato: str | None = getattr(
             preview, "selected_contrato_codigo", None,
         )
-        if not codigo_contrato:
+        # (F-075 R10) Sin contrato, si el albarán trae importes se revalora
+        # igual: sv3 reenriquece y, sin contrato, publica q-valoracion con
+        # contrato nulo (valoración directa en sv6).
+        sin_contrato_con_importes = not codigo_contrato and bool(
+            getattr(preview, "importe_leido", None)
+            and preview.importe_leido.trae_importes
+        )
+        if not codigo_contrato and not sin_contrato_con_importes:
             raise HTTPException(
                 status_code=409,
                 detail=(
@@ -1414,6 +1421,11 @@ def build_app(settings: Settings) -> FastAPI:
             message = (
                 "No se encontró nada que valorar: "
                 f"{detail or 'sin detalle'}."
+            )
+        elif sin_contrato_con_importes:
+            message = (
+                "Valoración encolada sin contrato: se valora con los importes "
+                "del albarán. Refresca la página en unos segundos."
             )
         else:
             message = (

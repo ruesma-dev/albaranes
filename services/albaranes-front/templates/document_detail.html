@@ -559,11 +559,12 @@
                                     id="valuate-btn"
                                     data-current-val-id="{{ valuation.valuation_id if valuation else '' }}"
                                     data-current-val-ts="{{ valuation.created_at_utc if valuation else '' }}"
+                                    data-trae-importes="{{ '1' if document.importe_leido.trae_importes else '0' }}"
                                     title="Guarda el contrato seleccionado y lanza la valoración (líneas sintéticas, conciliación…)">
                                 Valorar ahora
                             </button>
                             <span class="valuate-hint muted small">
-                                Genera la valoración contra el contrato seleccionado arriba.
+                                Genera la valoración contra el contrato seleccionado arriba{% if document.importe_leido.trae_importes %}; sin contrato, con los importes del albarán{% endif %}.
                             </span>
                             <span id="valuate-status" class="valuate-status" hidden></span>
                         </div>
