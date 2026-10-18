@@ -627,7 +627,7 @@
       "id": "F-053",
       "title": "Alta en Sigrid de los albaranes aprobados",
       "description": "PETICION DEL HUMANO (2026-09-30): «Alta en Sigrid de los albaranes aprobados». Aprobar ES registrar: los dos botones de sv4 que aprueban («Guardar y aprobar» de la ficha y «Aprobar» del listado) disparan el alta del albaran en Sigrid.\n\nDECISIONES (todas cerradas el 2026-10-01, detalle en progress/spec_F-053.md): solo endpoints de dominio de sigrid-api, nunca sql/write; servicio nuevo sv9 en el monorepo que consume q-feedback; arranque en SIMULACION y grabacion real solo con ALTA_SIGRID_COMMIT=true (humano); solo lineas con importe; en un mismo albaran, vinculadas a linea de contrato (consumen medicion) y sin vincular, cada una con partida o en almacen; producto del contrato o, sin vincular, generico por familia de la linea (QA9999 alquiler de maquinaria, XA9999 medios auxiliares, MA9999 el resto; decision del humano 2026-10-05), cambiable por el administrativo en sv4 antes de aprobar (columna producto_sigrid de albaran_line_valuations, DDL en sv6); linea sin partida = almacen (F-051 v4); negativas si; sin valorar (ok de sv6 o valoracion manual completa en sv4) no se aprueba ni se registra; tabla albaran_altas_sigrid con DDL en sv3; registrado = bloqueado en sv4; empleado fijo; clave de siempre.\n\nV7 (2026-10-06): SPEC_READY. El humano respondio «si» a todas las recomendaciones (P1-P7 de progress/spec_F-053.md): P1 familia medios_auxiliares en ficha propia F-061 (mientras, el administrativo elige XA9999 a mano en sv4); P2 signos opuestos (descuento: cantidad > 0 e importe < 0, o cantidad < 0 e importe > 0) => revisar con signo_incoherente sin llamar a sigrid-api, el descuento se mete a mano en Sigrid; P3 anular en Sigrid borra el albaran (M17b de F-009): se repite con la misma referencia; P4 sin paride mientras F-049 no conserve el ide de la partida (partida_ambigua => no_admitido); P5 vinculadas con cantidad y sin importe no se mandan; P6 ALM impreso sin vincular (vincularlo es de F-060/F-007); P7 XA9999 medido en F-009. Alineada con F-009 v8 de sigrid-api (8a6ecab): sin campo naturaleza (la pone sigrid-api por mapeo), cod2 y planificacion de compras de las vinculadas los copia sigrid-api del ctrpro.\n\nPRECONDICIONES: medicion de solo lectura (services/albaranes-persistencia/scripts/medir_admisibilidad_f053.py, la ejecuta el humano) y PRE-1 = F-009 de sigrid-api (partida por linea, lineas sin contrato con producto por codigo, negativas, idempotencia) desplegada.\n\nSUSTITUYE A F-013. ORDEN: F-052 (done) -> F-051 en dev -> implementacion de F-053 (T0d fusiona dev en la rama); la previa contra sigrid-api y el modo real esperan a F-009 desplegada; F-049 (paride) y F-061 son evolucion, no bloqueo. Escribe en el ERP de produccion => rigor critico y verificaciones MANUAL del humano.",
-      "status": "blocked",
+      "status": "done",
       "sdd": true,
       "rigor": "critico",
       "priority": 1,
@@ -703,7 +703,7 @@
     {
       "id": "F-059",
       "title": "Etiquetas legibles para los motivos de revisión en sv4",
-      "description": "ORIGEN: review del bloque B de F-049 (progress/review_F-049_bloqueB.md en la rama feature/F-049-partida-de-la-lista, decisión 2 para el humano): la etiqueta legible de partida_fuera_de_lista no es defecto de F-049, porque sv4 pinta TODOS los motivos como código crudo; propone una ficha aparte que etiquete todos.\n\nPROBLEMA DE HOY: desde F-036 R23 sv4 muestra las razones de cada línea de valoración (albaran_line_valuations.review_reasons_json) y los motivos del documento (albaran_documents_merge.review_reasons_json) como <code> crudo (p. ej. partida_ausente_familia_destinada, almacen_sin_partida_en_albaran, partida_fuera_de_lista, residuos_*, obra_*): el revisor ve identificadores internos, no frases.\n\nPROPUESTA: un catálogo código -> etiqueta en español (con el código en el title para soporte) usado por la plantilla de sv4; un código sin etiqueta se sigue pintando crudo (nunca se oculta) y un test avisa de los motivos que emiten sv3/sv6 sin etiqueta. A decidir en la spec: si el catálogo vive en sv4 o en ruesma_comun (lo emiten sv2, sv3 y sv6).\n\nALCANCE: services/albaranes-front (plantilla y catálogo). NO ENTRA: cambiar los códigos que emiten los servicios. RELACIONADAS: F-036 (R23), F-049, F-051.\n\nX24 (2026-10-09, progress/propuestas_ficha_detalle.md): motivos de revisión en código interno y bandera en casi todas las filas; textos en castellano y bandera solo en avisos reales (los informativos no cuentan en el ⚑).",
+      "description": "ORIGEN: review del bloque B de F-049 (progress/review_F-049_bloqueB.md en la rama feature/F-049-partida-de-la-lista, decisión 2 para el humano): la etiqueta legible de partida_fuera_de_lista no es defecto de F-049, porque sv4 pinta TODOS los motivos como código crudo; propone una ficha aparte que etiquete todos.\n\nPROBLEMA DE HOY: desde F-036 R23 sv4 muestra las razones de cada línea de valoración (albaran_line_valuations.review_reasons_json) y los motivos del documento (albaran_documents_merge.review_reasons_json) como <code> crudo (p. ej. partida_ausente_familia_destinada, almacen_sin_partida_en_albaran, partida_fuera_de_lista, residuos_*, obra_*): el revisor ve identificadores internos, no frases.\n\nPROPUESTA: un catálogo código -> etiqueta en español (con el código en el title para soporte) usado por la plantilla de sv4; un código sin etiqueta se sigue pintando crudo (nunca se oculta) y un test avisa de los motivos que emiten sv3/sv6 sin etiqueta. A decidir en la spec: si el catálogo vive en sv4 o en ruesma_comun (lo emiten sv2, sv3 y sv6).\n\nALCANCE: services/albaranes-front (plantilla y catálogo). NO ENTRA: cambiar los códigos que emiten los servicios. RELACIONADAS: F-036 (R23), F-049, F-051.\n\nX24 (2026-10-09, progress/propuestas_ficha_detalle.md): motivos de revisión en código interno y bandera en casi todas las filas; textos en castellano y bandera solo en avisos reales (los informativos no cuentan en el ⚑).\n\nAMPLIACIÓN (humano, 2026-10-17, H3 de progress/review_F-073.md): cuando el revisor fija el proveedor a mano (origen manual, «Elegir proveedor»), sv4 retira también proveedor_nombre_ambiguo (F-073) y proveedor_cif_propio: (F-063), como ya hace con proveedor_cif_no_casa: (review_repository.py, retirada de F-062). Hoy se quedan visibles aunque el proveedor ya esté elegido.",
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
@@ -754,6 +754,19 @@
         "comun"
       ],
       "branch": "feature/F-063-cif-propio-no-es-proveedor"
+    },
+    {
+      "id": "F-064",
+      "title": "IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor",
+      "description": "PETICIÓN DEL HUMANO (2026-10-08), tras la incidencia de FEYMACO (obra 0694) que arregló F-063 en sv3: «añade en el prompt de sv2 que estos CIF y empresas son los del cliente, y debe ignorarlos y buscar otros» y «F-064 será para IA 1 y 2. Ambas deben confirmar proveedor». Empresas del cliente: «de momento esa» (Construcciones Ruesma, A81873903).\n\nCAUSA EN EL PROMPT: en albaran_factura_es la frase sobre Ruesma está escrita a mano y solo en la viñeta del nombre, y la del CIF manda buscar «un campo que ponga CIF o NIF o NIE»: en FEYMACO la única casilla rotulada así es la del cliente (el CIF del emisor solo está en el pie, junto a la inscripción en el Registro Mercantil).\n\nALCANCE (sv2 + evals): (1) IA1: las viñetas proveedor_nombre/proveedor_cif dicen que el proveedor es el EMISOR y que las empresas del cliente se ignoran (CIF null si el único CIF es del cliente); la lista se inyecta con el marcador {empresas_cliente} desde ruesma_comun.proveedores (CIFS_PROPIOS_POR_DEFECTO + CIFS_PROPIOS, la misma fuente que el descarte de F-063). (2) IA2: regla proveedor_emisor en revision_rules.yaml (llega a los cuatro prompts de fase 2 sin editarlos): confirma nombre y CIF de fase 1 contra el documento; si son del cliente o no del emisor, los corrige o deja el CIF null; prevalece sobre el contexto de Sigrid. Sin campos nuevos: IA2 devuelve el proveedor en documento_revisado.cabecera; sv2 no filtra (la red de F-063 en sv3 sigue siendo la verificación y su motivo, la métrica). sv3 y comun no cambian. (3) evals/comparar_proveedor.py: el banco no mide hoy el CIF (NO_COMPARAR en IA1, no observable en E2E); compara base/rama en 11 casos con el cliente impreso (FER-001…003, HOR-005…011, MOR-003) y 8 controles.\n\nFUERA: la lista de proveedores con contrato en la obra para IA2 (F-055, sobre ContextoSigridFase2 de F-049); el endpoint header-grounding de sv3 que valida el CIF propio. RUTA SENSIBLE: exige evals con LLM real del humano. Spec: specs/F-064-proveedor-en-prompts/; informe y preguntas: progress/spec_F-064.md.\n\nESTADO (2026-10-18): review APPROVED (también la pasada O1). T9 y T10 del humano en VERDE: comparador C1/C2/C3 OK (emisor base 8 → rama 9 en IA1 e IA2, CIF cliente 0/0; AVISO: el banco no reproduce el incidente, se propone añadir el albarán real de F-063) y puerta IA1 152 (≤ 154) e IA2 2 (≤ 4). blocked solo por la MANUAL T12: tras fusionar en dev, desplegar SOLO sv2 y vigilar el motivo proveedor_cif_propio: en merges nuevos una semana.",
+      "status": "blocked",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "servicios": [
+        "sv2-api"
+      ],
+      "branch": "feature/F-064-proveedor-en-prompts"
     },
     {
       "id": "F-065",
@@ -821,7 +834,7 @@
       "id": "F-070",
       "title": "La obra siempre con el 0 inicial (salvo VAR y POSTV2): sv3 la sella canónica, sv4 consulta y guarda canónica, sv9 da de alta canónica",
       "description": "ORIGEN (diagnóstico del líder, 2026-10-14, en producción y solo lectura): en los albaranes de HERMANOS SAN JUAN (obra 0686, contrato CTSU24/0524) el combo de partida de sv4 solo ofrece «Almacén». El merge tiene obra_codigo = \"686\" y sv4 llama a sigrid-api con \"686\": /api/sigrid/partidas?obra=686 devuelve ok y 0 partidas (con 0686, 2412); contratos 0 frente a 117; proveedores 0 frente a 115. En la bandeja hay 5 pendientes con obra de 3 cifras (686, 711, 723). sv9 (F-053, validador_alta.py) mandaría cod_obra = \"686\" sin completar y el alta fallaría. CAUSA SEGÚN EL HUMANO (literal): «el error es que al leer la obra del correo ha leído 686 y no ha normalizado. Es crucial que añada el 0 inicial si no es VAR ni POSTV2». REGLA: todo código de obra lleva el 0 inicial, salvo VAR y POSTV2, códigos válidos que se dejan tal cual (comprobado en Sigrid: existen como con.cod de obra). ALCANCE (spec 2026-10-14, progress/spec_F-070.md): normalización en un único punto de comun (ruesma_comun.obras: CODIGOS_OBRA_SIN_CERO, normalizar_codigo_obra con VAR/POSTV2 y canonizar_codigo_obra); sv3 canoniza la obra al sellar el merge (correo y papel) y al deducirla por texto, y deja de descartar VAR/POSTV2; sv4 canoniza en las tres consultas a Sigrid por obra (si no encaja, tal cual) y al guardar la cabecera; sv9 canoniza cod_obra antes del alta. Sin migración ni escrituras en producción: los merges ya guardados con 3 cifras los cubren sv4 y sv9. sv2 no cambia. Orden de despliegue: sv4 -> sv3; sv9 con F-053 desde un dev que ya tenga F-070. Coordinación con la rama de F-053 (v8) en design §7.",
-      "status": "blocked",
+      "status": "done",
       "sdd": true,
       "rigor": "critico",
       "priority": 1,
@@ -849,6 +862,108 @@
         "sv4-front"
       ],
       "branch": "feature/F-075-importe-leido"
+    },
+    {
+      "id": "F-078",
+      "title": "La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia",
+      "description": "ORIGEN (producción, 2026-10-16, solo lectura): sv9 dejó no_admitido con falta_descripcion el albarán 86c13097-98f8-4e4b-91af-6a378c28d9cf (modo real): la fila manual 386 tiene descripcion_linea vacía, pero la ficha pinta «CARGA INCOMPLETA» porque la saca de contrato_lines_derived (review_repository.py, _load_conciliation_map_in_session); la 385 también va vacía y sv9 la cubre con el concepto del merge. El producto «MA9999 · Suministro de materiales» no se guarda: es el por defecto que sv4 y sv9 calculan igual con ruesma_comun.alta_sigrid.producto_efectivo. PRINCIPIO DEL HUMANO (literal): «Lo que está en la tabla es lo que debería estar guardado en BBDD, ya que lo ha puesto el humano. No es que sv9 tenga que buscar en muchos sitios, sino que esté bien guardado todo.» MEDICIÓN (105 filas de 42 documentos activos, progress/spec_F-078.md §3): 93 sin descripción en la fila que la ficha rellena (6 que sv9 rechazaría y 16 en que sv9 mandaría otro texto que el que se ve), 7 sin vincular con unidad_albaran vacía (sv9 mandaría sin unidad) y 6 vinculadas con cantidad_convertida nula y factor 1 (sv9: cantidad_sin_convertir); precio, importe, partida y unidad de Q, 0. SPEC v1 (specs/F-078-linea-guarda-lo-que-se-ve/, PARADA 1 APROBADA 2026-10-16: P1 = (b), en las Nueva con blanca se guarda y se ve el concepto del papel; P8 fuera, es F-079; P2-P7, P9, P10 por defecto): regla única «lo que se veía» en comun (ruesma_comun.linea_valorada.fila_a_guardar); sv6 la aplica a cada registro antes del replace; sv4 pinta solo la fila (vacío = vacío), el PATCH guarda la descripción en toda fila y la unidad también en unidad_albaran sin conversión, y las vías que crean o reapuntan filas la materializan; no se aprueba con filas sin vincular sin descripción; relleno de lo existente con un script de sv6 (lectura por defecto, --aplicar con autorización expresa del humano), sin DDL; sv9 sin código. Despliegue: sv6 -> relleno -> sv4. RELACIONADAS: F-053 (reintentar el alta tras el relleno), F-065 (sustituye CR1/H1), F-058, F-075 (su builder directo pasa por el mismo paso), F-076, F-077 (conflictos de texto).",
+      "status": "blocked",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "servicios": [
+        "comun",
+        "sv6-valoracion-persist",
+        "sv4-front"
+      ],
+      "branch": "feature/F-078-linea-guarda-lo-que-se-ve"
+    },
+    {
+      "id": "F-076",
+      "title": "La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura",
+      "description": "ORIGEN (T51 de F-053, 2026-10-16, producción en simulación): sv9 dejó no_admitido dos albaranes de la obra 0678 (A27244 y A27239, contrato CTSU26/0313) porque sigrid-api rechazó todas sus líneas con partida_no_encontrada: la IA leyó CI.04.18 y la obra tiene CI.4.18 (confirmado con la lista de la obra y con la previa: el humano la cambió a mano y pasaron a simulado). PETICIÓN DEL HUMANO: «eso hay que arreglarlo, debe normalizar partidas». MEDICIÓN (solo lectura, progress/spec_F-076.md §2): 35 de 74 líneas valoradas con partida final no existen en su obra; 29 se arreglan quitando ceros a la izquierda en segmentos numéricos; mayúsculas, espacios y separadores, 0 (sigrid-api ya compara sin mayúsculas ni espacios de cola); 0 ambiguas; 6 sin candidata. spec APROBADA el 2026-10-16: P1–P11 por defecto y ampliación R23–R25. PROPUESTA: sv6 normaliza la lectura de cada línea contra las partidas hoja de la obra antes de sus reglas (exacta o normalizada => el código de la lista; 0 o >1 candidatas o choque con un código no hoja => no se toca y a revisión con motivo; sin lista => como hoy), con la obra leída del merge, una caché por obra y un cliente de solo lectura de sigrid-api nuevo en sv6; comun recibe el subconjunto ya aprobado de F-049 (ruesma_comun.sigrid.partidas) y sv4 lo importa en vez de su copia. sv9 sin código: lo que enseña la ficha es lo que se manda. Lo existente se corrige revalorando desde sv4 (sin escrituras de agentes en producción). RELACIONADAS: F-049 (rebasa sobre esto: su partidas.py es superconjunto), F-053, F-065, F-075 (su valoración directa recibe el sobre normalizado y debe anotar), F-058.",
+      "status": "blocked",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "servicios": [
+        "comun",
+        "sv6-valoracion-persist",
+        "sv4-front"
+      ],
+      "branch": "feature/F-076-normalizar-partidas"
+    },
+    {
+      "id": "F-072",
+      "title": "Arnés: la caché de suites de init.sh tiene en cuenta las dependencias de cada servicio",
+      "description": "ORIGEN: review de F-070, observación O1 (progress/review_F-070.md de su rama, §Automejora). La clave de la caché de suites de init.sh §7 bis (.arnes_cache/suite_<svc>.ok) es solo `git rev-parse HEAD:<ruta del servicio>`. Fallos reales: (a) un cambio en services/albaranes-comun no invalida la caché de sv1-sv9, que la importan, y un verde viejo tapa una rotura; (b) en un worktree los intérpretes importan la comun editable del árbol principal, e init.sh dio verde por caché con sv3/sv4/sv9 rotos (ImportError: canonizar_codigo_obra). PETICIÓN DEL HUMANO: «arregla la caché». ARREGLO: dependencias declaradas por servicio en servicios.json (depende_de, importa, entradas_no_versionadas), clave calculada en Python (harness/cache_suites.py) con el hash de servicio y dependencias, intérprete, ruta real de los módulos importados y huella por metadatos de las entradas no versionadas; módulo importado desde fuera del repositorio en curso = [AVISO] visible y sin caché; fecha del verde reutilizado; ARNES_SIN_CACHE=1. Un servicios.json sin los campos nuevos funciona igual. Genérico: se porta a arnes-base como 1.7.16 en el mismo trabajo (cubre F-028 del taller y el encargo 1.7.12). Spec: specs/F-072-cache-con-dependencias/.",
+      "status": "done",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "branch": "feature/F-072-cache-con-dependencias"
+    },
+    {
+      "id": "F-079",
+      "title": "Avisar en la ficha cuando se edita la descripción de una línea vinculada a contrato (Sigrid usa la del contrato)",
+      "description": "PETICIÓN DEL HUMANO (2026-10-16, P8 de la PARADA 1 de F-078): en una línea Contrato vinculada, la descripción editada en la ficha no llega a Sigrid: sigrid-api usa la de su línea de contrato (hoy 2 filas en producción). Esta feature hace que la ficha lo avise (o lo impida) al editar esa descripción. Alcance exacto a decidir en su PARADA 1. Depende de F-078.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 2,
+      "servicios": [
+        "sv4-front"
+      ]
+    },
+    {
+      "id": "F-080",
+      "title": "Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados",
+      "description": "ORIGEN: H4 de progress/review_F-073.md, decisión del humano del 2026-10-17 («solo entre empatados»).\n\nPROBLEMA: con F-073 (P6), tras un empate por nombre los puntos por familia (R10, sin cambios) pueden elegir a un proveedor AJENO al empate, con similitud 0, si su familia le da margen (reproducido: empatan «HORMIGONES DEL SUR/NORTE» con 2 puntos de gasóleo y se elige «ARIDOS PEPE», 6 puntos de hormigón, det_familia_obra con aviso).\n\nPROPUESTA: tras un empate por nombre, la deducción por familia solo puede elegir entre los empatados; si no separa a ninguno de ellos, la cabecera va a revisión con proveedor_nombre_ambiguo y la nota de los empatados (R11 de F-073).\n\nALCANCE: services/albaranes-persistencia (header_resolver_service). RELACIONADAS: F-073 (P6, R10, R11), F-062.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "servicios": [
+        "sv3-persistencia"
+      ]
+    },
+    {
+      "id": "F-081",
+      "title": "sv3: decodificar el nombre del PDF de Sigrid (X-Document-Filename llega con codificación porcentual UTF-8)",
+      "description": "ORIGEN: aviso de la sesión sigrid-api (2026-10-17), feature F-010 de sigrid-api, fusionada y pendiente de despliegue: POST /api/documents/read enviará la cabecera X-Document-Filename con codificación porcentual UTF-8 en los caracteres no ASCII, los de control y el propio «%». Un nombre ASCII sin «%» sale igual que hoy; uno con tildes, que hoy da 500, llegará como «Factura%20...%C3%B1...»; uno ASCII con «%» llegará con «%25».\n\nPROBLEMA: sv3 usa la cabecera tal cual como nombre del PDF de contrato (sigrid_api_contrato_client.py, download_contrato_document, ~l. 709): tras el despliegue de sigrid-api, los PDF con tildes se descargarán (hoy fallan) pero con el nombre codificado.\n\nPROPUESTA: decodificar con urllib.parse.unquote (retrocompatible: sobre un nombre sin «%» no cambia nada) en el cliente de sv3 y en los scripts de diagnóstico que leen la misma cabecera (trace_sigrid_rcg_dual.py, diagnose_sigrid_contrato_gra.py, diagnose_sigrid_contrato_gra_modificado.py, diagnose_sigrid_contrato_docs.py, diagnose_sigrid_contrato_docs_v2.py), o leer filename* de Content-Disposition. Tests: ASCII igual, «%C3%B1» ⇒ «ñ», «%25» ⇒ «%».\n\nNO ENTRA: el campo nuevo «key» ni el 409 DocumentoAmbiguoError (pedimos por id_column «ide», la PK). Despliegue: solo sv3 (puede ir con el de F-073). Actualizar azure-apps/albaranes.md si describe la cabecera.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 2,
+      "servicios": [
+        "sv3-persistencia"
+      ]
+    },
+    {
+      "id": "F-077",
+      "title": "Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4)",
+      "description": "ORIGEN (humano, 2026-10-16, en producción tras la T51 de F-053): (1) «Guardar y aprobar» con filas sin guardar solo avisaba «Hay N líneas con cambios sin guardar» (F-065 R19) y no hacía nada; (2) tras reaprobar, la ficha pintó durante 3-13 s el no_admitido viejo con la partida vieja, o «Sin alta en Sigrid todavía» con «Solicitar alta», porque sv9 aún no había respondido; (3) el ⚠ de partida no decía contra qué no coincide; (4) un no_admitido con un motivo de línea (falta_descripcion, línea manual sin descripción, documento 86c13097) no enseñaba ninguna razón porque la petición venía vacía. ALCANCE (PARADA 1 aprobada 2026-10-16; spec en specs/F-077-guardar-y-aprobar/, resumen en progress/spec_F-077.md): «Guardar y aprobar» y «Guardar» de la cabecera guardan primero, con el mismo PATCH por fila y las mismas validaciones (R27 v5), las filas con cambios y después aprueban/guardan; si una fila falla se para, no se aprueba y la fila queda en rojo (no atómico: las guardadas quedan); se mantiene la confirmación de la suma (releída tras guardar). El panel del alta pinta «Alta en curso…» sin resultado viejo ni botones solo mientras sv9 procesa la aprobación vigente, sondeando cada 3 s una ruta de solo lectura nueva; a los 5 min sin respuesta, error de tiempo; un resultado malo (no_admitido/revisar/error) se pinta como error. El ⚠ de partida solo en filas Contrato con lectura del albarán distinta, con tooltip «No coincide con la partida leída en el albarán (X)». Todos los motivos del alta visibles y con texto legible (los de línea sin fila, como «Línea N»), código en el title. PARADA 1 aprobada con P1–P4 resueltas (spec v2). Solo sv4; sv4 no escribe albaran_altas_sigrid. Fuera: equivalencia de partidas (F-076), F7 (F-068).",
+      "status": "blocked",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 1,
+      "servicios": [
+        "sv4-front"
+      ],
+      "branch": "feature/F-077-guardar-y-aprobar"
+    },
+    {
+      "id": "F-073",
+      "title": "Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate",
+      "description": "INCIDENCIA DE PRODUCCIÓN (2026-10-15, correo «0694» de administración de obra, obra 0694, 5 albaranes de FEYMACO): en 3 la IA leyó el CIF de Ruesma (A81873903), sv3 lo descartó (F-063) y buscó por nombre «FEYMACO, S.A.» / «TEYMACO, S.A.». Log de sv3 (merge 54b82479-…): A19004589 (HIERROS RODRIGO, S.A.) y A28733558 (FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)) empatan a nombre=0.50 y el atajo «por NOMBRE dentro de la obra» elige el primero ⇒ 3 albaranes con HIERROS RODRIGO y CTSU26/0001.\n\nCAUSA (verificada en header_resolver_service.py): _match_score no separa la puntuación («feymaco,» no está en «(feymaco)»), no admite una letra mal leída y cuenta «s.a.» como palabra (0,50 = min_score para cualquier S.A.); el atajo del paso 1 y el fallback global del paso 2 eligen el máximo sin mirar empates. Hay dos criterios de nombre (_match_score y _score_razon_social de F-052/F-062).\n\nSPEC (specs/F-073-proveedor-por-similitud/, informe progress/spec_F-073.md): criterio ÚNICO en sv3 (application/services/similitud_proveedor.py) para los cuatro sitios (atajo, global, propuesta F-052, candidato claro F-062): puntuación como separador, fuera formas jurídicas y palabras vacías, subcadena de hoy más distancia de edición ≤ 1 en palabras de ≥ 5 caracteres; elegir por nombre solo con ≥ min_score y margen 0,25 sobre el segundo CIF; empate ⇒ paso por puntos sin cambios y, si no decide, revisión con motivo proveedor_nombre_ambiguo y nota con los empatados; paso 2 en empate no elige. Medición: corpus de 19 razones sociales reales y 31 lecturas, hoy 23 aciertos y 7 errores, con F-073 31 y 0. La obra (_resolve_obra) no cambia. Sin comun, sin DDL; despliegue solo sv3. FUERA: corregir los 3 merges (revisor en sv4), la propuesta de sv4 (X4 de F-067), que la propuesta de F-052 deje de proponer en empate. PREGUNTAS P0–P6 para la PARADA 1; P0 bloquea: el caso «S.L.» de la opción B de F-062 pasa de 1 a 0. RELACIONADAS: F-063, F-062, F-052, F-055, F-067 (X4).",
+      "status": "blocked",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "servicios": [
+        "sv3-persistencia"
+      ],
+      "branch": "feature/F-073-proveedor-por-similitud"
     }
   ]
 }

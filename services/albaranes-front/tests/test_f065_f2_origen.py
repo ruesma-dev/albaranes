@@ -150,7 +150,8 @@ def test_f065_r28_elegir_otra_linea_de_contrato_copia_su_partida_y_su_precio():
     assert f["codigo_partida_final"] == "01.03"
     assert f["precio_unitario_final"] == pytest.approx(130.0)
     assert f["unidad_contrato"] == "U"
-    assert f["descripcion_linea"] is None
+    # (F-078 R12, antes NULL a propósito) La descripción de la línea elegida.
+    assert f["descripcion_linea"] == "PUERTA CORTAFUEGOS EI2-120"
     assert f["importe_calculado"] == pytest.approx(8 * 130.0)
     assert total(motor) == pytest.approx(1040 + 1150 + 50)
 

@@ -737,19 +737,24 @@
                                        F-051 (R11, R13): partida final vacía = ALMACÉN; se pinta «Almacén», nunca la
                                        partida de la línea casada. El combo ofrece «Almacén (sin partida)» primero. #}
                                     {% set _almacen = c.estado_partida == 'almacen' %}
+                                    {# F-076 R24: leída y casada iguales por la clave de comun pero no literalmente ⇒ nota en el title. #}
+                                    {% set _nota_normalizada = ('Normalizada: ' ~ c.partida_normalizada_desde ~ ' → ' ~ (c.codigo_partida or '')) if c.partida_normalizada_desde else '' %}
+                                    {# F-077 R22 (al fusionar F-076): «descripción · [nota F-076] · [aviso F-077]»; la nota y el aviso se excluyen (✓ frente a ⚠). #}
+                                    {% set _title_partida = [c.descripcion_partida, _nota_normalizada, c.aviso_partida] | select | join(' · ') %}
                                     <td class="concilia-td" data-col="partida" data-sort-value="{{ 'Almacén' if _almacen else (c.codigo_partida or '') }}">
                                         {% if cedit %}
-                                            <input type="text" class="cell-input js-cedit js-partida-combo{% if _almacen %} partida-almacen{% elif c.agree_partida == true %} cedit-ok{% elif c.agree_partida == false %} cedit-warn{% endif %}"
+                                            <input type="text" class="cell-input js-cedit js-partida-combo{% if _almacen %} partida-almacen{% elif c.agree_partida == true %} cedit-ok{% elif c.aviso_partida %} cedit-warn{% endif %}"
                                                    data-field="codigo_partida" data-identity="1"
                                                    data-valuation-line-id="{{ dline.valuation_line_id }}"
                                                    value="{{ c.codigo_partida or '' }}" placeholder="{{ 'Almacén' if _almacen else '—' }}" autocomplete="off"
-                                                   title="{{ 'Va a almacén: no se imputa a ninguna partida' if _almacen else (c.descripcion_partida or '') }}">
+                                                   title="{{ 'Va a almacén: no se imputa a ninguna partida' if _almacen else _title_partida }}">
                                         {% elif _almacen %}
                                             <span class="concilia-val partida-almacen" title="Va a almacén: no se imputa a ninguna partida">Almacén</span>
-                                        {% elif c.agree_partida == false %}
-                                            <span class="concilia-price-warn" title="{{ c.descripcion_partida or '' }}"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ c.codigo_partida or '—' }}</span>
+                                        {% elif c.aviso_partida %}
+                                            {# F-077 R21: el ⚠ solo en filas Contrato con lectura del albarán distinta. #}
+                                            <span class="concilia-price-warn" title="{{ _title_partida }}"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ c.codigo_partida or '—' }}</span>
                                         {% else %}
-                                            <span class="concilia-val" title="{{ c.descripcion_partida or '' }}">{{ c.codigo_partida or '—' }}</span>
+                                            <span class="concilia-val" title="{{ _title_partida }}">{{ c.codigo_partida or '—' }}</span>
                                         {% endif %}
                                     </td>
                                     {# Concepto — UNA sola línea: el input de descripción. Medición → tooltip. Selector de línea de contrato oculto (lo abre el ✎). #}
@@ -826,15 +831,13 @@
                                        producto de aquí pintaba 6 × 120 = 720 €, un número que no
                                        está en la BBDD y que no cuadra con el total del documento.
                                        En ese caso se muestra el `importe_calculado` persistido,
-                                       que ya lleva su descuento aplicado. Si no lo hubiera, se
-                                       cae al producto: mejor eso que un hueco. #}
+                                       que ya lleva su descuento aplicado (sin él, vacío: F-078 R7). #}
                                     {# F-065 R12: SIEMPRE el importe guardado (también si la conversión es
-                                       reproducible); al teclear lo repinta el JS con la fórmula del backend. #}
-                                    {% set _imp_persistido = v.importe_calculado if (v and v.importe_calculado is not none) else none %}
-                                    {% set _imp_jinja = (dline.cantidad * c.unitario * (1 - (c.descuento or 0) / 100)) if (dline.cantidad is not none and c.unitario is not none) else none %}
-                                    <td class="concilia-td td-num" data-col="importe" data-sort-value="{{ (_imp_persistido if _imp_persistido is not none else _imp_jinja) if (_imp_persistido is not none or _imp_jinja is not none) else '' }}">
-                                        {% if _imp_persistido is not none or _imp_jinja is not none %}
-                                            {% set _imp = _imp_persistido if _imp_persistido is not none else _imp_jinja %}
+                                       reproducible); al teclear lo repinta el JS con la fórmula del backend.
+                                       F-078 R7: importe nulo = vacío; la plantilla ya no lo calcula. #}
+                                    {% set _imp = v.importe_calculado if (v and v.importe_calculado is not none) else none %}
+                                    <td class="concilia-td td-num" data-col="importe" data-sort-value="{{ _imp if _imp is not none else '' }}">
+                                        {% if _imp is not none %}
                                             {% if cedit %}
                                                 <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit" data-field="importe" data-numeric="1" value="{{ '%.2f'|format(_imp) }}" placeholder="—">
                                             {% elif c.agree_importe == false %}

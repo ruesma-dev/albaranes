@@ -221,6 +221,18 @@ class Settings(BaseSettings):
     obras_activas_max: int = Field(300, alias="OBRAS_ACTIVAS_MAX")
     obras_activas_cod_min: int = Field(450, alias="OBRAS_ACTIVAS_COD_MIN")
 
+    # --------------------------------------------------------------
+    # (F-064 · R2) Empresas del CLIENTE que IA1 e IA2 ignoran como
+    # proveedor. Igual que en sv3 (F-063): mismo nombre, mismo formato
+    # (CIF separados por comas, punto y coma o espacios) y misma regla:
+    # solo AMPLÍA las de serie de `ruesma_comun.proveedores`, nunca las
+    # quita. Opcional; vacía = solo las de serie. Si se usa, hay que
+    # ponerla IGUAL en sv2 y en sv3. La vía recomendada para añadir una
+    # empresa del grupo es una entrada en `CIFS_PROPIOS_POR_DEFECTO`
+    # (con su razón social), no esta variable.
+    # --------------------------------------------------------------
+    cifs_propios: str = Field("", alias="CIFS_PROPIOS")
+
     @property
     def sigrid_credentials_present(self) -> bool:
         """True si las 3 credenciales necesarias estan presentes."""

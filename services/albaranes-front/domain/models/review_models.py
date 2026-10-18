@@ -32,6 +32,7 @@ from ruesma_comun.contratos.origen_datos import (
     normalizar_codigo,
 )
 from ruesma_comun.importes import importe_de_linea
+from ruesma_comun.sigrid import normalizar_partida
 from ruesma_comun.valoracion import esta_valorado
 
 from domain.models.alta_sigrid_models import (
@@ -482,7 +483,11 @@ class LineasIncompletasError(Exception):
     ``unidad_cambiada`` (CR3, pasada 3 de la review de la fase 2): posiciones
     de las filas con la marca ``MOTIVO_UNIDAD_CAMBIADA`` («Origen ✎» a otra
     unidad sin poder convertir la cantidad). sv9 la mandaría tal cual (8 ud
-    como 8 t): no se aprueba hasta revisar la cantidad."""
+    como 8 t): no se aprueba hasta revisar la cantidad.
+
+    ``sin_descripcion`` (F-078 R17): posiciones de las filas a registrar SIN
+    vincular sin descripción. sv9 no tendría concepto que mandar
+    (``falta_descripcion``): no se aprueba hasta escribirla."""
 
     def __init__(
         self,
@@ -490,11 +495,14 @@ class LineasIncompletasError(Exception):
         posiciones: list[int],
         huerfanas: int = 0,
         unidad_cambiada: list[int] | None = None,
+        *,
+        sin_descripcion: list[int] | None = None,
     ) -> None:
         self.document_id = document_id
         self.posiciones = list(posiciones)
         self.huerfanas = huerfanas
         self.unidad_cambiada = list(unidad_cambiada or [])
+        self.sin_descripcion = list(sin_descripcion or [])
         super().__init__(self.aviso)
 
     @property
@@ -503,6 +511,10 @@ class LineasIncompletasError(Exception):
         if self.posiciones:
             partes.append("Líneas sin cantidad o importe: " + ", ".join(
                 str(posicion) for posicion in self.posiciones
+            ))
+        if self.sin_descripcion:
+            partes.append("Líneas sin descripción: " + ", ".join(
+                str(posicion) for posicion in self.sin_descripcion
             ))
         if self.unidad_cambiada:
             partes.append("Líneas con la unidad cambiada: revisa la cantidad: " + ", ".join(
@@ -623,25 +635,6 @@ def motivos_con(valor: Any, motivo: str, presente: bool) -> str:
     return json.dumps(motivos, ensure_ascii=False)
 
 
-def descripcion_para_valoracion(
-    *,
-    descripcion: str | None,
-    sin_blanca: bool,
-    editada: bool,
-    ya_fijada: bool,
-) -> str | None:
-    """(F-065 CR1, H1) Descripción que guarda la VALORACIÓN de una fila Nueva
-    (``albaran_line_valuations.descripcion_linea``), que es la que sv9 manda a
-    Sigrid antes que el concepto leído de la blanca.
-
-    - Sin blanca (traída del contrato, «Añadir línea»): siempre la de la fila;
-      si no, sv9 no tendría ninguna y el albarán saldría ``no_admitido``.
-    - Con blanca: solo si el administrativo la editó (ahora o antes); sin
-      editar, ``None`` y sv9 manda lo leído del albarán (diseño de F-053).
-    """
-    return descripcion if (sin_blanca or editada or ya_fijada) else None
-
-
 def es_fila_manual(
     *,
     line_kind: str | None,
@@ -719,6 +712,42 @@ def aviso_suma_importes(
         f"La suma de las líneas ({_euros(suma_filas)}) no cuadra con la del "
         f"albarán ({_euros(suma_leida)}). ¿Aprobar igualmente?"
     )
+
+
+def posiciones_filas_ficha(display_lines: list[Any]) -> dict[int, int]:
+    """(F-077 R25) ``valuation_line_id`` => posición (desde 1) de la fila en la
+    tabla de líneas de la ficha: las ``display_lines`` con conciliación, en su
+    orden (las que pinta la plantilla, ``{% if dline.concilia %}``), la misma
+    numeración que dan los avisos de aprobar (F-065 R20)."""
+    posiciones: dict[int, int] = {}
+    numero = 0
+    for linea in display_lines:
+        if linea.concilia is None:
+            continue
+        numero += 1
+        if linea.valuation_line_id is not None:
+            posiciones[linea.valuation_line_id] = numero
+    return posiciones
+
+
+def aviso_partida_texto(
+    agree: bool | None, *, kind: str | None, leida: str | None,
+) -> str | None:
+    """(F-077 R21, R22) El aviso del ⚠ de la partida de una fila, o ``None``.
+
+    Solo en filas de origen Contrato (``kind == "assigned"``) cuya partida
+    leída en el albarán (``leida``, recortada y no vacía) no coincide con la
+    de su línea de contrato (``agree is False``, el cálculo de siempre: F-076
+    lo hace por la clave de comun). Las Nueva ya dicen con la insignia que no
+    coinciden con el contrato; las filas sin línea del albarán no tienen
+    lectura que comparar (el repositorio ni siquiera llama aquí).
+    """
+    if agree is not False or kind != "assigned":
+        return None
+    texto = (leida or "").strip()
+    if not texto:
+        return None
+    return f"No coincide con la partida leída en el albarán ({texto})"
 
 
 def _numero_es(valor: object) -> object:
@@ -1123,6 +1152,36 @@ class ValuationPayload(BaseModel):
 
 
 # ====================================================================== #
+def coincide_partida(declarada: Any, esperada: Any) -> tuple[bool | None, str | None]:
+    """Aviso ✓/⚠ de la partida de una fila (F-076 R23, R24).
+
+    Compara con la clave de comun (``ruesma_comun.sigrid.normalizar_partida``,
+    la misma con la que sv6 normaliza la partida al valorar), sin copia:
+
+    - una de las dos vacía (``None`` o solo espacios) ⇒ ``(None, None)``: sin
+      icono, como siempre;
+    - misma clave ⇒ ``True`` (✓) y, si difieren literalmente (sin espacios
+      exteriores), la declarada recortada como segundo valor: la ficha añade
+      «Normalizada: {declarada} → {final}» al ``title``; iguales ⇒ ``None``;
+    - clave distinta ⇒ ``(False, None)`` (⚠).
+
+    Un texto no vacío sin nada alfanumérico no tiene clave: cuenta él mismo
+    como clave (comparación literal, como antes de F-076; nunca un ✓ por dos
+    claves ``None``). No choca con ninguna clave real: esas siempre llevan
+    alguna letra o cifra.
+    """
+    if declarada is None or esperada is None:
+        return None, None
+    d, e = str(declarada).strip(), str(esperada).strip()
+    if not d or not e:
+        return None, None
+    clave_d, clave_e = normalizar_partida(d) or d, normalizar_partida(e) or e
+    if clave_d != clave_e:
+        return False, None
+    return True, (d if d != e else None)
+
+
+# ====================================================================== #
 class ConciliacionDisplay(BaseModel):
     """Datos de la conciliación que se muestran inline bajo cada línea
     del albarán en sv4. NO contiene lógica — solo lo que el revisor
@@ -1200,6 +1259,20 @@ class ConciliacionDisplay(BaseModel):
     # la usan los avisos ✓/⚠ contra el contrato y el aviso «pasará a
     # NUEVA» del navegador (R20: la de la casada no cambia la identidad).
     codigo_partida_casada: str | None = None
+
+    # (F-076 R24) La partida con la que se compara (leída del albarán o, sin
+    # línea del albarán, la final) cuando coincide con la casada por la clave
+    # de comun pero no literalmente (``CI.04.18`` frente a ``CI.4.18``): la
+    # ficha la enseña en el ``title`` («Normalizada: X → Y»). ``None`` si son
+    # iguales, si no coinciden (⚠) o si no hay nada que comparar.
+    partida_normalizada_desde: str | None = None
+
+    # (F-077 R21, R22) Texto del ⚠ de la partida («No coincide con la partida
+    # leída en el albarán (X)»): solo en filas con línea del albarán de origen
+    # Contrato cuya lectura no coincide (``aviso_partida_texto``). ``None`` en
+    # el resto (sintéticas, ``manual``, ``reparto``, Nueva): sin ⚠ aunque
+    # ``agree_partida`` sea false. Excluyente con ``partida_normalizada_desde``.
+    aviso_partida: str | None = None
 
     # Senales para el calculo determinista de CONFIANZA (no se pintan):
     #   match_method / match_confidence_pct -> distinguir match fuerte
@@ -1454,6 +1527,13 @@ class DocumentDetailPayload(BaseModel):
     alta_puede_solicitar: bool = False
     #: F-053 v8 (R30, O1 = a): «Reintentar adjunto».
     alta_puede_reintentar_adjunto: bool = False
+    #: F-077 R14: fase del panel del alta (``en_curso`` / ``sin_respuesta`` /
+    #: ``resultado``). Con DESDE vacía, el defecto: el panel ni se pinta (R3).
+    alta_fase: str = "resultado"
+    #: F-077 R24, R25: motivos de línea del alta sin fila en la tabla del panel,
+    #: con «Línea N» (posición en la ficha) o «Línea (ref. X)»; los pone el
+    #: servicio con DESDE puesta.
+    alta_motivos_linea: list[dict[str, Any]] = Field(default_factory=list)
     productos_sigrid: dict[int, ProductoLinea] = Field(default_factory=dict)
     productos_admitidos: list[ProductoOpcion] = Field(default_factory=list)
 

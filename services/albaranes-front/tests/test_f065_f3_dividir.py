@@ -379,8 +379,8 @@ def test_f065_r32_repositorio_la_parte_1_con_otra_partida_pasa_a_nueva():
 
     original, parte = fila(motor, 12), fila(motor, hecha.partes[0])
     assert original["matched_contrato_line_id"] is None
-    # Con blanca y sin descripción fijada: sv9 manda el concepto leído (CR1/H1).
-    assert original["descripcion_linea"] is None
+    # (F-078 R15, que sustituye a CR1/H1) La que se veía: la de su línea.
+    assert original["descripcion_linea"] == "PUERTA CORTAFUEGOS EI2-90"
     assert hecha.derivadas == [original["derived_contrato_line_id"]]
     assert _derivada(motor, original["derived_contrato_line_id"])["codigo_partida"] == "01.03"
     assert (original["codigo_partida_final"], original["precio_unitario_agreement"]) == (
@@ -486,12 +486,14 @@ def test_f065_r31_repositorio_sin_descripcion_ninguna_queda_nula():
 
 
 @pytest.mark.parametrize(("precio", "unidad", "esperado"), [
-    (120.0, "M2", (120.0, "M2", [480.0, 720.0])),
+    (120.0, "M2", (120.0, "UD", [480.0, 720.0])),
     (None, None, (115.0, "UD", [460.0, 690.0])),
 ], ids=["los_de_la_fila", "los_de_su_linea"])
 def test_f065_r31_repositorio_precio_y_unidad_de_la_fila_o_de_su_linea(precio, unidad, esperado):
     """La derivada de la parte que pasa a Nueva y el importe sin ``importe0``
-    salen del precio y la unidad de la fila; si no los tiene, de su línea."""
+    salen del precio de la fila (si no lo tiene, de su línea) y de la unidad que
+    se guarda: (F-078 R15, R16) la de su línea de contrato y, si no tiene, la de
+    la fila (``fila_a_guardar``; la original, que sigue Contrato, queda con ella)."""
     motor = construir()
     ejecutar(motor, "UPDATE albaran_line_valuations SET precio_unitario_final = :p, "
              "unidad_contrato = :u, importe_calculado = NULL WHERE id = 12",

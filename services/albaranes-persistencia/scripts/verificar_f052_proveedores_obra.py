@@ -48,8 +48,8 @@ if str(_RAIZ_SV3) not in sys.path:
     sys.path.insert(0, str(_RAIZ_SV3))
 
 from application.services.familia_detector import familias_de_texto
-from application.services.header_resolver_service import (
-    _score_razon_social,
+from application.services.similitud_proveedor import (
+    similitud_razon_social,
 )
 from infrastructure.sigrid import (
     sigrid_api_contrato_client as modulo_cliente,
@@ -348,7 +348,7 @@ def _verificar_nombre(
         return []
     salida(f"Nombre {nombre!r} frente a los {len(resumenes)} proveedores de la obra {obra} "
            f"(red por nombre; umbral {decimal(entorno.umbral)}):")
-    puntuados = [(_score_razon_social(nombre, r.nombre), r) for r in resumenes]
+    puntuados = [(similitud_razon_social(nombre, r.nombre), r) for r in resumenes]
     for score, r in sorted(puntuados, key=lambda p: -p[0])[:5]:
         salida(f"  {decimal(score)}  {r.cif}  {r.nombre}")
     # Mismo criterio que HeaderResolverService._mejor_candidato_por_nombre.
