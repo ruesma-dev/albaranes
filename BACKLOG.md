@@ -5,7 +5,7 @@
 
 Resumen: **79 features**, 55 abiertas, 24 terminadas.
 
-Bloqueadas: **F-064, F-078, F-076, F-077, F-073**.
+Bloqueadas: **F-064, F-075, F-078, F-076, F-077, F-073**.
 
 ## Trabajo abierto
 
@@ -18,7 +18,7 @@ Bloqueadas: **F-064, F-078, F-076, F-077, F-073**.
 | F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 1 | pendiente | critico |  |
 | F-067 | Limpieza de la ficha de detalle (sv4) | 1 | pendiente | estandar |  |
 | F-073 | Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate | 1 | bloqueada | critico | `feature/F-073-proveedor-por-similitud` |
-| F-075 | El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán | 1 | spec lista | critico | `feature/F-075-importe-leido` |
+| F-075 | El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán | 1 | bloqueada | critico | `feature/F-075-importe-leido` |
 | F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | 1 | bloqueada | critico | `feature/F-076-normalizar-partidas` |
 | F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 1 | bloqueada | estandar | `feature/F-077-guardar-y-aprobar` |
 | F-078 | La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia | 1 | bloqueada | critico | `feature/F-078-linea-guarda-lo-que-se-ve` |
@@ -184,7 +184,7 @@ SPEC (specs/F-073-proveedor-por-similitud/, informe progress/spec_F-073.md): cri
 
 ### F-075 · El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán
 
-estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-075-importe-leido`
+estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-075-importe-leido`
 
 ORIGEN (correo de administración de obra, obra 0686, 2026-10-15): un albarán de DISCOIN con precios sale con «Importe valorado —» y «Sin valoración» y no se puede aprobar: no hay contrato (sv3 no dispara q-valoracion) y sv6 no valora. Merges: dfdc8aab-08e1-49f0-978d-bb906515e748 y 5dea6509-4a81-4192-b8b0-3a21041931ca.
 
