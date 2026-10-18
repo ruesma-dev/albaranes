@@ -15,6 +15,7 @@ from application.services.normalizador_partidas import (
 )
 from dataclasses import dataclass
 
+from application.services.valoracion_directa import ValoracionDirectaBuilder
 from application.services.valuation_builder import ValuationBuilder
 from domain.models.valuation_records import ValuationHeaderRecord
 from domain.ports.valuation_ia_client import ValuationIaClient
@@ -58,8 +59,10 @@ class RunValuationPipeline:
       2 bis. (F-076) Normalizar la partida leída de cada línea contra las
          de la obra (``NormalizadorPartidas``); desde aquí se valora con
          ese sobre. Nunca falla: sin lista, se valora como siempre.
-      3. Si status == no_contract: persistir cabecera vacía con
-         status='no_contract' y terminar.
+      3. Si status == no_contract: (F-075) si alguna línea trae importe
+         leído, persistir la valoración directa (``ValoracionDirectaBuilder``,
+         sin IA ni contrato); si no, cabecera vacía con
+         status='no_contract'. Y terminar.
       4. Pasarle el envelope al ValuationBuilder.
       4 bis. (F-076) Anotar la normalización en los registros.
       5. Persistir en las 3 tablas (replace atómico).
@@ -73,6 +76,7 @@ class RunValuationPipeline:
         builder: ValuationBuilder,
         conciliacion_client: Any = None,
         normalizador: NormalizadorPartidas | None = None,
+        valoracion_directa: ValoracionDirectaBuilder | None = None,
     ) -> None:
         self._ia_client = ia_client
         self._repository = repository
@@ -80,6 +84,8 @@ class RunValuationPipeline:
         self._conciliacion_client = conciliacion_client
         # (F-076) None = sin normalizar (como antes de F-076).
         self._normalizador = normalizador
+        # (F-075) Sin contrato y con importes leídos: manda el albarán.
+        self._valoracion_directa = valoracion_directa or ValoracionDirectaBuilder()
 
     def _normalizar_partidas(
         self, document_id: str, envelope: Any,
@@ -192,6 +198,10 @@ class RunValuationPipeline:
         normalizacion = self._normalizar_partidas(request.document_id, envelope)
         envelope = normalizacion.envelope
 
+        # (F-075 R5) Sin contrato y con importes leídos: valoración directa.
+        if self._valoracion_directa.aplica(envelope):
+            return self._persistir_directa(request.document_id, envelope, normalizacion)
+
         # Caso "no contrato seleccionado".
         if envelope.status == "no_contract":
             logger.info(
@@ -295,5 +305,35 @@ class RunValuationPipeline:
             total_lines=persisted.total_lines,
             review_required=persisted.review_required,
             review_reasons=header_with_envelope.review_reasons,
+            duplicate=False,
+        )
+
+    def _persistir_directa(
+        self,
+        document_id: str,
+        envelope: Any,
+        normalizacion: NormalizacionSobre,
+    ) -> RunValuationResult:
+        """(F-075 R5–R7) Persiste la valoración directa: sin IA, sin contrato y
+        sin sintéticas. Pasa por ``completar_registros`` (F-078) y por
+        ``NormalizadorPartidas.anotar`` (F-076) como la rama normal."""
+        cabecera, directas = self._valoracion_directa.construir(envelope, document_id)
+        directas = completar_registros(directas, envelope)
+        NormalizadorPartidas.anotar(cabecera, directas, normalizacion)
+        cabecera.raw_ia_envelope_json = envelope.model_dump_json()
+        logger.info(
+            "[run-valuation] document_id=%s sin contrato y con importes "
+            "leídos; valoración directa con %s líneas, total=%.2f.",
+            document_id, len(directas), cabecera.total_valorado,
+        )
+        persisted = self._repository.replace_valuation(header=cabecera, lines=directas)
+        return RunValuationResult(
+            valuation_id=persisted.valuation_id,
+            document_id=persisted.document_id,
+            status=persisted.status,
+            total_valorado=persisted.total_valorado,
+            total_lines=persisted.total_lines,
+            review_required=persisted.review_required,
+            review_reasons=list(cabecera.review_reasons),
             duplicate=False,
         )

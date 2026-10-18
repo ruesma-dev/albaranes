@@ -218,3 +218,129 @@ def test_f075_r9_completa_esta_valorada_y_parcial_no():
     assert esta_valorado(cab.status, [l.importe_calculado for l in lineas]) is True
     cab, lineas = _construir(_linea(1, neto=10.0), _linea(2))
     assert esta_valorado(cab.status, [l.importe_calculado for l in lineas]) is False
+
+
+# ------------------------------------------------------------------ #
+# T3 · pipeline: la rama no_contract usa el builder (R5, R8, R9, R10)
+# ------------------------------------------------------------------ #
+class _Repositorio:
+    def __init__(self, *, obra="0686", existente=False):
+        self.obra = obra
+        self.existente = existente
+        self.guardados = []
+
+    def get_by_document_id(self, *, document_id):
+        if not self.existente:
+            return None
+        from domain.ports.valuation_repository import ExistingValuationSummary
+
+        return ExistingValuationSummary(
+            valuation_id="val-viejo", document_id=document_id, contrato_codigo=None, status="no_contract",
+            total_valorado=0.0, total_lines=0, review_required=True, created_at_utc="x", updated_at_utc=None,
+        )
+
+    def obra_del_documento(self, *, document_id):
+        return self.obra
+
+    def replace_valuation(self, *, header, lines):
+        self.guardados.append((header, list(lines)))
+        return PersistedValuation(
+            valuation_id="val-1", document_id=header.document_id, status=header.status,
+            total_valorado=header.total_valorado, total_lines=header.total_lines,
+            review_required=header.review_required,
+        )
+
+
+class _Sv5:
+    def __init__(self, envelope):
+        self.envelope = envelope
+        self.llamadas = 0
+
+    def value(self, *, document_id, codigo_contrato):
+        self.llamadas += 1
+        return self.envelope
+
+
+class _BuilderQueNoSeUsa:
+    def build(self, **_):
+        raise AssertionError("la valoración directa no pasa por el ValuationBuilder")
+
+
+class _Ia4QueNoSeUsa:
+    def conciliar(self, **_):
+        raise AssertionError("la valoración directa no llama a IA4")
+
+
+def _pipeline(envelope, repo, *, normalizador=None):
+    return RunValuationPipeline(
+        ia_client=_Sv5(envelope), repository=repo, builder=_BuilderQueNoSeUsa(),
+        conciliacion_client=_Ia4QueNoSeUsa(), normalizador=normalizador,
+    )
+
+
+def test_f075_pipeline_no_contract_con_importes_persiste_la_valoracion_directa():
+    envelope = _sobre(_linea(1, neto=100.0, precio=50.0, partida="CI.4.18"), _linea(2, neto=20.0, descripcion="PORTES"))
+    repo = _Repositorio()
+    resultado = _pipeline(envelope, repo).run(RunValuationRequest(document_id=DOC, codigo_contrato=None))
+    ((cabecera, lineas),) = repo.guardados
+    assert cabecera.status == "no_contract" and cabecera.prompt_key == "valoracion_directa_albaran"
+    assert cabecera.total_valorado == 120.0 and cabecera.total_lines == 2
+    assert json.loads(cabecera.raw_ia_envelope_json)["status"] == "no_contract"
+    assert [l.derived_contrato_line_record.origen for l in lineas] == ["nueva_no_match"] * 2
+    assert [l.derived_contrato_line_record.codigo_contrato for l in lineas] == ["", ""]
+    # F-078: la fila guarda lo que se ve (el concepto del papel).
+    assert [l.descripcion_linea for l in lineas] == ["TUBO PVC 110", "PORTES"]
+    assert resultado.status == "no_contract" and resultado.duplicate is False
+    assert resultado.total_valorado == 120.0 and resultado.total_lines == 2
+    assert resultado.review_required is False
+    assert resultado.review_reasons == ["valoracion_directa_albaran"]
+    assert esta_valorado(cabecera.status, [l.importe_calculado for l in lineas]) is True
+
+
+def test_f075_pipeline_no_contract_parcial_no_queda_valorada():
+    envelope = _sobre(_linea(1, neto=100.0), _linea(2, precio=3.0, importe=6.0))
+    repo = _Repositorio()
+    resultado = _pipeline(envelope, repo).run(RunValuationRequest(document_id=DOC))
+    ((cabecera, lineas),) = repo.guardados
+    assert len(lineas) == 2 and lineas[1].review_reasons == ["sin_importe_en_albaran"]
+    assert resultado.review_required is True
+    assert esta_valorado(cabecera.status, [l.importe_calculado for l in lineas]) is False
+
+
+def test_f075_pipeline_r8_no_contract_sin_importes_persiste_la_cabecera_vacia():
+    envelope = _sobre(_linea(1, precio=3.0, importe=6.0))
+    repo = _Repositorio()
+    _pipeline(envelope, repo).run(RunValuationRequest(document_id=DOC))
+    ((cabecera, lineas),) = repo.guardados
+    assert lineas == []
+    assert cabecera.prompt_key is None
+    assert cabecera.total_valorado == 0.0
+    assert cabecera.review_reasons == ["no_contract_selected"]
+
+
+def test_f075_pipeline_r10_force_rehace_la_valoracion_directa():
+    envelope = _sobre(_linea(1, neto=10.0))
+    repo = _Repositorio(existente=True)
+    sv5 = _Sv5(envelope)
+    pipeline = RunValuationPipeline(ia_client=sv5, repository=repo, builder=_BuilderQueNoSeUsa())
+    pipeline.run(RunValuationRequest(document_id=DOC, force=True))
+    assert sv5.llamadas == 1
+    ((cabecera, lineas),) = repo.guardados
+    assert cabecera.prompt_key == "valoracion_directa_albaran" and len(lineas) == 1
+
+
+def test_f075_pipeline_anota_la_partida_normalizada_de_f076():
+    envelope = _sobre(_linea(1, neto=10.0, partida="CI.04.18"), _linea(2, neto=1.0, partida="ZZ.99"))
+    repo = _Repositorio()
+    normalizador = NormalizadorPartidas(partidas=PuertoFalso(), alm_codigo_partida="ALM", activo=True)
+    _pipeline(envelope, repo, normalizador=normalizador).run(RunValuationRequest(document_id=DOC))
+    ((cabecera, (normalizada, fuera)),) = repo.guardados
+    assert normalizada.codigo_partida_final == "CI.4.18"
+    assert normalizada.derived_contrato_line_record.codigo_partida == "CI.4.18"
+    assert normalizada.codigo_partida_albaran == "CI.04.18"  # la leída vuelve (regla 6)
+    assert "partida_normalizada:CI.04.18>CI.4.18" in normalizada.review_reasons
+    assert normalizada.review_required is False
+    assert fuera.review_required is True and "partida_fuera_de_lista" in fuera.review_reasons
+    assert cabecera.review_required is True
+    assert "partida_fuera_de_lista" in cabecera.review_reasons
+    assert cabecera.review_reasons[0] == "valoracion_directa_albaran"
