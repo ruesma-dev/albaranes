@@ -412,3 +412,55 @@ def test_f075_pie_r23_select_lee_las_columnas_de_sv3():
 def test_f075_t16_la_diferencia_va_en_centimos():
     assert _doc([100.0], valorado=130.004).importe_diferencia == 30.0
     assert _doc([100.0], valorado=99.986).importe_diferencia == -0.01
+
+
+# ------------------------------------------------------------------ #
+# Pasada 2 · §4.1 de la review: el botón no se apaga sin contrato si trae importes
+# ------------------------------------------------------------------ #
+def _js_funciones(tmp_path, funciones, programa):
+    import json
+    import shutil
+    import subprocess
+
+    from test_f051_almacen_front import _app_js, _funcion_js
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node no está instalado")
+    fuente = "\n".join(_funcion_js(_app_js(), f) for f in funciones)
+    guion = tmp_path / "f075_r10.js"
+    guion.write_text(fuente + "\n" + programa, encoding="utf-8")
+    salida = subprocess.run([node, str(guion)], capture_output=True, text=True, encoding="utf-8", check=False)
+    assert salida.returncode == 0, salida.stderr
+    return json.loads(salida.stdout)
+
+
+def test_f075_r10_js_valorar_activo_con_contrato_o_con_importes(tmp_path):
+    casos = _js_funciones(tmp_path, ["puedeValorar"], """
+        console.log(JSON.stringify([puedeValorar("CT/1", false), puedeValorar("", true),
+                                    puedeValorar("", false), puedeValorar(null, false)]));
+    """)
+    assert casos == [True, True, False, False]
+
+
+def test_f075_r10_js_mensaje_de_sin_contrato(tmp_path):
+    con, sin = _js_funciones(tmp_path, ["avisoSinContrato"], """
+        console.log(JSON.stringify([avisoSinContrato(true), avisoSinContrato(false)]));
+    """)
+    assert "importes del albarán" in con and "Valorar ahora" in con and "no se valora" not in con
+    assert sin == "Contrato eliminado. Este albarán queda sin contrato (no se valora)."
+
+
+def test_f075_r10_js_estado_inicial_y_sin_contrato_usan_la_regla():
+    from test_f051_almacen_front import _app_js
+
+    js = _app_js()
+    inicial = js[js.index("// ---- Estado inicial ----"):]
+    inicial = inicial[:inicial.index("async function persistSelection()")]
+    assert 'valuateBtn.disabled = !puedeValorar(current, valuateBtn.dataset.traeImportes === "1")' in inicial
+    assert "valuateBtn.disabled = !current" not in js
+    sin = js[js.index("if (sinContrato) {\n                if (valuateBtn)"):]
+    sin = sin[:sin.index("return;")]
+    assert 'valuateBtn.disabled = !puedeValorar("", traeImportes)' in sin
+    assert "avisoSinContrato(traeImportes)" in sin
+    assert "valuateBtn.disabled = true" not in sin

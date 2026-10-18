@@ -1184,6 +1184,19 @@
         return "Selecciona un contrato antes de valorar.";
     }
 
+    // F-075 R10: «Valorar ahora» se activa con contrato o, sin él, si el
+    // albarán trae importes (valoración directa).
+    function puedeValorar(codigo, traeImportes) {
+        return Boolean(codigo) || Boolean(traeImportes);
+    }
+
+    // F-075 R10: qué se dice al quitar el contrato.
+    function avisoSinContrato(traeImportes) {
+        return traeImportes
+            ? "Contrato eliminado. Sin contrato se valora con los importes del albar\u00e1n: pulsa \u00abValorar ahora\u00bb."
+            : "Contrato eliminado. Este albar\u00e1n queda sin contrato (no se valora).";
+    }
+
     function confirmarRevalorar() {
         const aviso = avisoRevalorar(DOC_DATA.n_filas_manuales);
         return !aviso || window.confirm(aviso);
@@ -2699,7 +2712,7 @@
         const current = (hidden.value || "").trim();
         showCard(current);
         syncHeaderBtn(current || null);
-        if (valuateBtn) valuateBtn.disabled = !current;
+        if (valuateBtn) valuateBtn.disabled = !puedeValorar(current, valuateBtn.dataset.traeImportes === "1");
         input.value = current ? (labelByCodigo[current] || current) : "";
         if (!current) input.placeholder = "Sin contrato \u2014 escribe para buscar en Sigrid\u2026";
 
@@ -2745,11 +2758,12 @@
             if (sinContrato) input.placeholder = "Sin contrato \u2014 escribe para buscar en Sigrid\u2026";
 
             if (sinContrato) {
-                if (valuateBtn) valuateBtn.disabled = true;
+                const traeImportes = Boolean(valuateBtn && valuateBtn.dataset.traeImportes === "1");
+                if (valuateBtn) valuateBtn.disabled = !puedeValorar("", traeImportes);
                 status("loading", "Guardando \u00abSin contrato\u00bb\u2026");
                 try {
                     await persistSelection();
-                    status("ok", "Contrato eliminado. Este albar\u00e1n queda sin contrato (no se valora).");
+                    status("ok", avisoSinContrato(traeImportes));
                 } catch (exc) {
                     status("error", "Error al guardar: " + (exc && exc.message || exc));
                 }
