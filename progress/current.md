@@ -3,7 +3,7 @@
 
 **F-080 · `in_progress` (2026-10-19): implementer en marcha** — tras un empate por nombre (F-073), la familia solo elige entre los empatados (H4 de `progress/review_F-073.md`). Spec en `specs/F-080-empate-solo-entre-empatados/`. Rama `feature/F-080-empate-solo-entre-empatados`, worktree `../albaranes-F-080`. Rigor `critico`, solo sv3 (`header_resolver_service.py`), sin DDL ni comun. PARADA 1 resuelta el 2026-10-19: **P1 = (b)** (la carrera por puntos de hoy, y el ganador tiene que ser uno de los empatados), P2 y P3 según la recomendación (design §2). Informe en curso: `progress/impl_F-080.md`.
 
-Estado del implementer: T1 (tests, fase RED), T2 (código, 36 passed) y T3 (sv3 1532 passed, sin cambiar expectativas) hechas. Tarea en curso: fusión de `dev` y T4. Desviaciones: ninguna respecto a la spec (un caso de mi propio test corregido en T2: «es-b1» no normaliza a B1, se usa «b-1»).
+Estado del implementer: T1 (tests, fase RED), T2 (código, 36 passed) y T3 (sv3 1532 passed, sin cambiar expectativas) hechas. `dev` (`f49f1b2`, F-075) fusionado en la rama (conflictos en `BACKLOG.md`, generado, y en este fichero, conservando los dos bloques). T4 (ARCHITECTURE regla 24) hecha. Tarea en curso: T5. Desviaciones: ninguna respecto a la spec (un caso de mi propio test corregido en T2: «es-b1» no normaliza a B1, se usa «b-1»).
 
 Coordinación: F-075 comparte `docs/ARCHITECTURE.md` (su regla 25 va justo tras la 24 que edita F-080), `features.json`, `BACKLOG.md` y este fichero; no toca `header_resolver_service.py`. F-049 toca el constructor y `_resolve_obra` del mismo fichero, sin solape de líneas. El despliegue de sv3 va después de la T12 de F-073.
 
