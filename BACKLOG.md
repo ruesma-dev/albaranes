@@ -5,6 +5,8 @@
 
 Resumen: **80 features**, 56 abiertas, 24 terminadas.
 
+En curso: **F-080**.
+
 Bloqueadas: **F-064, F-075, F-078, F-076, F-077, F-073**.
 
 ## Trabajo abierto
@@ -22,7 +24,7 @@ Bloqueadas: **F-064, F-075, F-078, F-076, F-077, F-073**.
 | F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | 1 | bloqueada | critico | `feature/F-076-normalizar-partidas` |
 | F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 1 | bloqueada | estandar | `feature/F-077-guardar-y-aprobar` |
 | F-078 | La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia | 1 | bloqueada | critico | `feature/F-078-linea-guarda-lo-que-se-ve` |
-| F-080 | Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados | 1 | pendiente | critico |  |
+| F-080 | Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados | 1 | en curso | critico | `feature/F-080-empate-solo-entre-empatados` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
@@ -213,7 +215,7 @@ ORIGEN (producción, 2026-10-16, solo lectura): sv9 dejó no_admitido con falta_
 
 ### F-080 · Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados
 
-estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
+estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-080-empate-solo-entre-empatados`
 
 ORIGEN: H4 de progress/review_F-073.md, decisión del humano del 2026-10-17 («solo entre empatados»).
 
@@ -222,6 +224,8 @@ PROBLEMA: con F-073 (P6), tras un empate por nombre los puntos por familia (R10,
 PROPUESTA: tras un empate por nombre, la deducción por familia solo puede elegir entre los empatados; si no separa a ninguno de ellos, la cabecera va a revisión con proveedor_nombre_ambiguo y la nota de los empatados (R11 de F-073).
 
 ALCANCE: services/albaranes-persistencia (header_resolver_service). RELACIONADAS: F-073 (P6, R10, R11), F-062.
+
+SPEC (specs/F-080-empate-solo-entre-empatados/, 2026-10-18): tras un empate por nombre, el ganador del paso por puntos de hoy (sobre toda la obra, mínimo 3 y margen 2, sin cambios) solo se acepta si es uno de los empatados (clave de CIF normalizada); si gana un ajeno, revisión con proveedor_nombre_ambiguo y la nota de R11 de F-073, y una línea de log. Prototipo: H4 pasa a revisión y la suite de sv3 sigue en 1496 passed sin cambiar expectativas. Sin DDL, sin comun, sin tocar similitud_proveedor.py. PREGUNTAS P1–P3 para la PARADA 1 (design §2): P1 contra quién compite el empatado (recomendada (b), la carrera de hoy con el ganador empatado, frente a (a) carrera solo entre empatados); P2 quiénes son los empatados (los de EleccionPorNombre.empatados); P3 si la familia deja empatados igualados arriba (R11 sin cambios).
 
 ### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
 

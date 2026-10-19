@@ -670,8 +670,11 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       (`margen_nombre` del constructor, 0,25, sin variable de entorno; los dos
       inclusivos). No depende del orden de llegada.
     - **Empate** en el paso 1: siguen los puntos de nombre y familia sin
-      cambios (si la familia separa, `det_familia_obra` con aviso). Si tampoco
-      deciden, va a revisión con el motivo `proveedor_nombre_ambiguo` (sin
+      cambios, sobre todos los de la obra, pero el ganador solo se acepta si
+      es uno de los empatados, por CIF normalizado (F-080, H4 de F-073): si la
+      familia lo separa, `det_familia_obra` con aviso. Si gana un ajeno al
+      empate o los puntos no deciden, va a revisión con el motivo
+      `proveedor_nombre_ambiguo` (sin
       sufijo; la red no lo retira) y la nota `[AVISO] Proveedor sin CIF: el
       nombre leído '…' casa por igual con N proveedores…`, con hasta
       `HEADER_RESOLVER_NOTA_MAX_CANDIDATOS` en orden de puntos y CIF. En el

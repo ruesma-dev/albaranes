@@ -919,14 +919,15 @@
     {
       "id": "F-080",
       "title": "Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados",
-      "description": "ORIGEN: H4 de progress/review_F-073.md, decisión del humano del 2026-10-17 («solo entre empatados»).\n\nPROBLEMA: con F-073 (P6), tras un empate por nombre los puntos por familia (R10, sin cambios) pueden elegir a un proveedor AJENO al empate, con similitud 0, si su familia le da margen (reproducido: empatan «HORMIGONES DEL SUR/NORTE» con 2 puntos de gasóleo y se elige «ARIDOS PEPE», 6 puntos de hormigón, det_familia_obra con aviso).\n\nPROPUESTA: tras un empate por nombre, la deducción por familia solo puede elegir entre los empatados; si no separa a ninguno de ellos, la cabecera va a revisión con proveedor_nombre_ambiguo y la nota de los empatados (R11 de F-073).\n\nALCANCE: services/albaranes-persistencia (header_resolver_service). RELACIONADAS: F-073 (P6, R10, R11), F-062.",
-      "status": "pending",
+      "description": "ORIGEN: H4 de progress/review_F-073.md, decisión del humano del 2026-10-17 («solo entre empatados»).\n\nPROBLEMA: con F-073 (P6), tras un empate por nombre los puntos por familia (R10, sin cambios) pueden elegir a un proveedor AJENO al empate, con similitud 0, si su familia le da margen (reproducido: empatan «HORMIGONES DEL SUR/NORTE» con 2 puntos de gasóleo y se elige «ARIDOS PEPE», 6 puntos de hormigón, det_familia_obra con aviso).\n\nPROPUESTA: tras un empate por nombre, la deducción por familia solo puede elegir entre los empatados; si no separa a ninguno de ellos, la cabecera va a revisión con proveedor_nombre_ambiguo y la nota de los empatados (R11 de F-073).\n\nALCANCE: services/albaranes-persistencia (header_resolver_service). RELACIONADAS: F-073 (P6, R10, R11), F-062.\n\nSPEC (specs/F-080-empate-solo-entre-empatados/, 2026-10-18): tras un empate por nombre, el ganador del paso por puntos de hoy (sobre toda la obra, mínimo 3 y margen 2, sin cambios) solo se acepta si es uno de los empatados (clave de CIF normalizada); si gana un ajeno, revisión con proveedor_nombre_ambiguo y la nota de R11 de F-073, y una línea de log. Prototipo: H4 pasa a revisión y la suite de sv3 sigue en 1496 passed sin cambiar expectativas. Sin DDL, sin comun, sin tocar similitud_proveedor.py. PREGUNTAS P1–P3 para la PARADA 1 (design §2): P1 contra quién compite el empatado (recomendada (b), la carrera de hoy con el ganador empatado, frente a (a) carrera solo entre empatados); P2 quiénes son los empatados (los de EleccionPorNombre.empatados); P3 si la familia deja empatados igualados arriba (R11 sin cambios).",
+      "status": "blocked",
       "sdd": true,
       "rigor": "critico",
       "priority": 1,
       "servicios": [
         "sv3-persistencia"
-      ]
+      ],
+      "branch": "feature/F-080-empate-solo-entre-empatados"
     },
     {
       "id": "F-081",

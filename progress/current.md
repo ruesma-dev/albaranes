@@ -1,6 +1,33 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-080 · `blocked` (2026-10-19): review APPROVED (pasada 1, `progress/review_F-080.md`), fusionada en `dev`; espera la MANUAL T6 del humano (desplegar solo sv3)** — tras un empate por nombre (F-073), la familia solo elige entre los empatados (H4 de `progress/review_F-073.md`). Spec en `specs/F-080-empate-solo-entre-empatados/`. Rama `feature/F-080-empate-solo-entre-empatados`, worktree `../albaranes-F-080`. Rigor `critico`, solo sv3 (`header_resolver_service.py`), sin DDL ni comun. PARADA 1 resuelta el 2026-10-19: **P1 = (b)** (la carrera por puntos de hoy, y el ganador tiene que ser uno de los empatados), P2 y P3 según la recomendación (design §2). Informe en curso: `progress/impl_F-080.md`.
+
+Estado del implementer (2026-10-19): **T1–T5 y T7 hechas, informe en `progress/impl_F-080.md`; espera la review**. Tests de F-080: 36 passed (fase RED registrada). sv3: 1576 passed después de fusionar `dev` (`f49f1b2`, F-075) en la rama, sin cambiar ninguna expectativa existente (R13). Cobertura de lo cambiado: 100 % (8/8). Mutación: 5 generados, 5 muertos, 0 supervivientes (`progress/mutacion_F-080.md`). `bash harness/init.sh` en verde en el worktree (último verde: el del reviewer sobre `f4ad6e0`). Desviaciones respecto a la spec: ninguna.
+
+#### F-080 · MANUAL T6 (humano), comandos para PowerShell
+
+**Cuándo:** ya se puede (APPROVED, fusionada en `dev` con `init.sh` en verde en el árbol principal). sv3 corre desde el 2026-10-19 con F-073 y F-075 (`r20261019-0952`, la imagen de vuelta atrás); la de F-080 las lleva dentro. Antes, comprobar que `dev` no traiga otro cambio de sv3 sin aprobar para producción. Solo sv3. **`deploy.ps1` es [ESCRIBE EN PRODUCCIÓN · humano]**; el resto solo lee. Ningún agente lo lanza.
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+. .\00_vars.ps1
+. .\00_capps_vars.ps1
+az containerapp show -n ca-sv3-persistencia -g $RG --query "properties.template.containers[0].image" -o tsv
+Set-DeployTag
+.\deploy.ps1 -Only sv3
+.\check_deploy.ps1
+az containerapp logs show -n ca-sv3-persistencia -g $RG --tail 300 | Select-String "AJENO al empate"
+```
+
+VERDE: `check_deploy.ps1` con sv3 en el tag nuevo y las réplicas arriba. Si en el log sale «es AJENO al empate por nombre», ese documento está en revisión con `proveedor_nombre_ambiguo` y la nota «casa por igual con N proveedores». La imagen que imprime el `az containerapp show` del principio es la de la vuelta atrás.
+
+**Vuelta atrás** (sin interruptor, D4) — [ESCRIBE EN PRODUCCIÓN · humano, solo si hace falta]: `az containerapp update -n ca-sv3-persistencia -g $RG --image <la imagen apuntada>`.
+
+Coordinación: F-075 comparte `docs/ARCHITECTURE.md` (su regla 25 va justo tras la 24 que edita F-080), `features.json`, `BACKLOG.md` y este fichero; no toca `header_resolver_service.py`. F-049 toca el constructor y `_resolve_obra` del mismo fichero, sin solape de líneas. El despliegue de sv3 va después de la T12 de F-073.
+
+Entorno: la *junction* `.venv` de sv4 ya está en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`); `bash harness/init.sh` en verde en el worktree el 2026-10-19 (HEAD `0eaec26`).
+
 **F-075 · `blocked` (2026-10-18): review APPROVED (pasada 2, `progress/review_F-075.md`); **T17 VERDE** (evals con LLM del humano, `progress/evals_F-075.md` 2026-10-18T23:09Z sobre `f202922`, modo completa, IA1–IA4 y E2E: IA1 141 ≤ 154, IA2 2 ≤ 4, el pie en «Campos no medidos»; IA3/IA4/E2E 408/27/537, idénticos caso a caso a los de F-064 con LLM); orden de T18 (sv5 → sv6 → sv3 → sv4 → sv2) **aceptado por el humano el 2026-10-18**; O3 a decidir por el humano.** Antes: — el importe del albarán manda (rigor `critico`; opción A y M1 del humano del 18-10, spec ajustada en `cb54d23`). T1–T16 y T19 hechas (un commit por tarea, hasta `575cef5`; `dev` `bee817d` fusionado); `init.sh` en verde en el worktree (cobertura 98,1 %; mutación 175 mutantes, 0 supervivientes tras el re-juicio). Informe: `progress/impl_F-075.md` (RED en `impl_F-075_red.md`, mutación en `mutacion_F-075.md`); `azure-apps` `c5fd3b0` sin push. Pendientes del humano: T0 (opcional), **T17** (evals con LLM, cierra el aviso de rutas sensibles) y **T18** (despliegue sv5 → sv6 → sv3 → sv4 → sv2, propuesto por el líder), comandos en el bloque de abajo. Rama `feature/F-075-importe-leido`, worktree `../albaranes-F-075`, *junction* `.venv` de sv4 (quitarla con `cmd /c rmdir` antes de `git worktree remove`). Suites de la rama con `PYTHONPATH=<worktree>/services/albaranes-comun`.
 
 #### F-075 · MANUAL del humano (T0, T17, T18), comandos para PowerShell
