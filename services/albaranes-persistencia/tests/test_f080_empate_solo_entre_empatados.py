@@ -258,7 +258,7 @@ def test_f080_r8_una_grafia_distinta_del_empatado_cuenta_como_empatado():
 
 @pytest.mark.parametrize(
     ("cif", "esperado"),
-    [("B1", True), (" b1 ", True), ("es-b1", True), ("B2", True), ("B9", False), (None, False), ("", False)],
+    [("B1", True), (" b1 ", True), ("b-1", True), ("B2", True), ("B9", False), (None, False), ("", False)],
 )
 def test_f080_r8_es_empatado_por_clave(cif, esperado):
     from application.services.similitud_proveedor import CandidatoNombre, EleccionPorNombre

@@ -153,6 +153,13 @@ def _clave_cif(cif: str | None) -> str:
     return normalizar_cif(recortado) or recortado
 
 
+def _es_empatado(cif: str | None, eleccion: EleccionPorNombre) -> bool:
+    """F-080 · R1, R8: ``cif`` es uno de los empatados por nombre (clave
+    de CIF normalizada, la de ``elegir_por_nombre``)."""
+    clave = _clave_cif(cif)
+    return any(_clave_cif(e.cif) == clave for e in eleccion.empatados)
+
+
 class _CandidatoObra:
     """Candidato puntuado (proveedor con contrato en la obra)."""
 
@@ -195,7 +202,8 @@ class HeaderResolverService:
                  (comportamiento clasico, factor 0.6 en confianza sv4);
                * si gana por familia (nombre debil) -> origen
                  'det_familia_obra' + AVISO en review_notes (sv4 lo
-                 penaliza con factor 0.5).
+                 penaliza con factor 0.5); tras un empate por nombre,
+                 solo si el ganador es uno de los empatados (F-080).
              Si hay ambiguedad: NO se fija y se deja un AVISO con los
              candidatos de la obra para que el revisor elija rapido.
           2) Fallback global por nombre contra todos los proveedores con
@@ -1016,10 +1024,23 @@ class HeaderResolverService:
         mejor = candidatos[0]
         segundo_puntos = candidatos[1].puntos if len(candidatos) > 1 else -999
 
-        if (
+        decide = (
             mejor.puntos >= _PUNTOS_MINIMOS
             and (mejor.puntos - segundo_puntos) >= _MARGEN_MINIMO
-        ):
+        )
+        if decide and eleccion.empatados and not _es_empatado(mejor.cif, eleccion):
+            # F-080 · R2, R6: tras un empate por nombre, la familia solo
+            # elige entre los empatados. Un ajeno que gana por puntos no se
+            # acepta: el documento va a revision con la nota de R11.
+            logger.info(
+                "%s proveedor NO deducido por familia+obra: el ganador por "
+                "puntos %s (%s puntos) es AJENO al empate por nombre "
+                "(%d empatados) obra=%s",
+                _LOG_PREFIX, mejor.cif, mejor.puntos,
+                len(eleccion.empatados), obra_codigo,
+            )
+            decide = False
+        if decide:
             logger.warning(
                 "%s proveedor %s DEDUCIDO por familia+obra (%s puntos, "
                 "segundo=%s, nombre=%.2f) obra=%s -> origen=%s",
