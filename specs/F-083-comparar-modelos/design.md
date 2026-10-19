@@ -177,7 +177,18 @@ Remove-Variable s, py, m
 - VERDE: `progress/comparar_modelos_F-083.md` con una sección por invocación, sus líneas `GASTO:` y
   una recomendación por fase; el gasto total, dentro de P3.
 
-## 9. Preguntas abiertas para la PARADA 1 (con recomendación)
+## 9. Preguntas para la PARADA 1 — RESUELTAS por el humano el 2026-10-19
+
+**Decisiones del humano:**
+- **P2 · Tanda 1 = 8 modelos**: `gemini-3.7-flash`, `gemini-4-argon`, `claude-opus-5-5`, `gpt-5.4`, `gpt-5.5`,
+  `gpt-6.1-sol`, `gpt-6-luna`, `gpt-5.6-luna`. **Fuera**: `claude-sonnet-5`, `claude-haiku-5-5`, `claude-opus-5`,
+  `claude-opus-4-8`, Fable (5 y 5.1) y, como recomendaba la spec, `gpt-6-astra` y los «pro».
+- **P5 = (a)**: comun admite Claude 5.5 (parámetro para no forzar la herramienta, con el defecto de hoy).
+- P1, P3, P4 y P6: según la recomendación de abajo (el líder las propuso así y el humano no las cambió).
+- **Nota del líder**: `claude-opus-4-8` sale como **candidato**, pero R12 añade sola la referencia de cada fase.
+  En IA3 e IA4 la referencia es el modelo de producción (`claude-opus-4-8`), así que se sigue midiendo, **solo como
+  referencia**, para comparar en la misma invocación (R30). Igual en IA1 (`gemini-3.7-flash`) e IA2 (`gpt-5.4`).
+
 
 - **P1 · «Luna».** Es la gama Luna de OpenAI. Hay `gpt-6-luna` y `gpt-5.6-luna`; **no existe
   `gpt-6.1-luna`** (la 6.1 solo tiene `gpt-6.1-sol`). Si «6 y 6.1 luna» quería decir `gpt-6-luna`,
