@@ -5,9 +5,7 @@
 
 Resumen: **80 features**, 56 abiertas, 24 terminadas.
 
-En curso: **F-080**.
-
-Bloqueadas: **F-064, F-075, F-078, F-076, F-077, F-073**.
+Bloqueadas: **F-064, F-075, F-078, F-076, F-080, F-077, F-073**.
 
 ## Trabajo abierto
 
@@ -24,7 +22,7 @@ Bloqueadas: **F-064, F-075, F-078, F-076, F-077, F-073**.
 | F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | 1 | bloqueada | critico | `feature/F-076-normalizar-partidas` |
 | F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 1 | bloqueada | estandar | `feature/F-077-guardar-y-aprobar` |
 | F-078 | La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia | 1 | bloqueada | critico | `feature/F-078-linea-guarda-lo-que-se-ve` |
-| F-080 | Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados | 1 | en curso | critico | `feature/F-080-empate-solo-entre-empatados` |
+| F-080 | Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados | 1 | bloqueada | critico | `feature/F-080-empate-solo-entre-empatados` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
@@ -215,7 +213,7 @@ ORIGEN (producción, 2026-10-16, solo lectura): sv9 dejó no_admitido con falta_
 
 ### F-080 · Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados
 
-estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-080-empate-solo-entre-empatados`
+estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-080-empate-solo-entre-empatados`
 
 ORIGEN: H4 de progress/review_F-073.md, decisión del humano del 2026-10-17 («solo entre empatados»).
 
