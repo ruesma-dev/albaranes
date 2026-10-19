@@ -83,3 +83,15 @@ ERROR tests/test_f083_fases.py
 1 error in 0.74s
 ```
 Verde tras T6: `41 passed` (todo `test_f083_fases.py`), con el subproceso real de sv5 sin casos.
+
+### T7 · `python -m pytest tests/test_f083_comparar_modelos.py -q --tb=line -k "parada or estimar or plan"`
+
+```
+    from evals import comparar_modelos as cm
+E   ImportError: cannot import name 'comparar_modelos' from 'evals' (...\evals\__init__.py)
+=========================== short test summary info ===========================
+ERROR tests/test_f083_comparar_modelos.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.48s
+```
+Verde tras T7: `31 passed` (el fichero entero).
