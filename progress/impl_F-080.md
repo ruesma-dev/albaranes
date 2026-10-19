@@ -49,3 +49,21 @@ E   AssertionError: assert 'B9' is None
 
 Los 10 casos de R7 (H4 y P1, semillas 1–5) y los 3 de R2 (tope, idempotencia, sustitución) fallan con el
 mismo `('B9', 'det_familia_obra') == (None, 'deterministic')`.
+
+## T2 · verde
+
+Mismo comando tras el cambio: **36 passed in 2.17s**. Un caso de mi propio test estaba mal planteado:
+`normalizar_cif("es-b1")` da `ESB1` (el prefijo `ES` solo se quita en un CIF de longitud completa), así
+que «es-b1» no es la grafía de «B1». Se cambió por «b-1» (`normalizar_cif("b-1")` = `B1`, el mismo que
+usa F-073). No toca la spec ni ningún test existente.
+
+## T3 · la suite de sv3 y R13/R14
+
+- `python -m pytest -q -p no:cacheprovider` en `services/albaranes-persistencia` (antes de fusionar
+  `dev`): **1532 passed in 13.46s** = 1496 de antes + 36 nuevos. Ningún test existente tocado (R13).
+- `git diff bee817d -- …/similitud_proveedor.py`: vacío (0 líneas). El diff de
+  `header_resolver_service.py` frente a la base tiene 3 *hunks*: `_es_empatado` (nueva, tras
+  `_clave_cif`), una línea del docstring de la clase y el bloque de decisión por puntos de
+  `_resolver_por_obra_y_familia`. Sin diff en `_resolve_proveedor`, `_red_proveedor_por_cif`,
+  `_candidato_claro`, `_descartar_cif_propio`, `_resolve_obra`, `_nota_empate_nombre`, `_log_eleccion`,
+  constructor ni constantes (R12, R14).
