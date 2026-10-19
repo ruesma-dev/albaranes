@@ -997,15 +997,16 @@
     {
       "id": "F-084",
       "title": "El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None»)",
-      "description": "ORIGEN: pruebas rápidas de modelos del 2026-10-19 (progress/evals_prueba-{luna,sol,argon}.md, fuera de git) y pasada de F-075: IA3, IA4 y E2E salen idénticos caso a caso con cualquier modelo; en IA3, 126 de 136 fallos (15 casos) y 388 de 408 (59 casos, F-075) son «obtenido None»: la valoración del banco no produce líneas valoradas salvo FER-001/FER-002. Así el banco no mide el modelo de valoración.\n\nOBJETIVO: diagnosticar por qué (fixtures de inputs/contrato, adaptador evals/procesos/sv5_valoracion.py, servicios de sv5 sin contrato, R26 de campos no observables...) y arreglarlo para que IA3/IA4/E2E midan el modelo; nueva línea base con el modelo de producción.\n\nNECESARIO PARA: elegir el modelo de IA3/IA4 (F-083, F-085: Opus 5.5 en IA3, GPT-6.1 Sol en IA4). RELACIONADAS: F-047 (ciclo completo), F-083.",
-      "status": "pending",
+      "description": "ORIGEN: pruebas rápidas de modelos del 2026-10-19 (progress/evals_prueba-{luna,sol,argon}.md, fuera de git) y pasada de F-075: IA3, IA4 y E2E salen idénticos caso a caso con cualquier modelo; en IA3, 126 de 136 fallos (15 casos) y 388 de 408 (59 casos, F-075) son «obtenido None»: la valoración del banco no produce líneas valoradas salvo FER-001/FER-002. Así el banco no mide el modelo de valoración.\n\nOBJETIVO: diagnosticar por qué (fixtures de inputs/contrato, adaptador evals/procesos/sv5_valoracion.py, servicios de sv5 sin contrato, R26 de campos no observables...) y arreglarlo para que IA3/IA4/E2E midan el modelo; nueva línea base con el modelo de producción.\n\nNECESARIO PARA: elegir el modelo de IA3/IA4 (F-083, F-085: Opus 5.5 en IA3, GPT-6.1 Sol en IA4). RELACIONADAS: F-047 (ciclo completo), F-083.\n\nSPEC (2026-10-20, specs/F-084-banco-valoracion/): DIAGNÓSTICO sin llamadas de pago: 52 de los 59 fixtures de INPUTS no tienen líneas de contrato (F-045 las dejó fuera a propósito y midió el agujero el 2026-09-16, progress/impl_F-045_contrato_lineas.md, sin ficha); el determinista, sin LLM, da 390 «obtenido None» de 401 fallos de IA3, y 14 de los 15 casos de la prueba rápida tienen el mismo número de fallos que con gpt-6-luna; el LLM se llama pero recibe lineas_contrato vacías y la nota de solo fase 1a. Además el adaptador de sv5 no pasa descuento ni precio neto (FER-001 32,35 en vez de 19,41), ni clasificación (los 21 RES se miden con valuation_es en vez de valuation_residuos), ni categoría de unidad ni fecha. sv5 y sv6 NO tienen el fallo y no se tocan. ARREGLO: importador evals/contratos_sigrid.py (sigrid-api solo lectura, una consulta por contrato, al libro INPUTS con copia y fusión conservadora, sin tocar los 7 RES, informe de cobertura sin valores) lanzado por el humano; contexto de valoración fiel (descuento, importe derivado, clasificación desde la tipología, UnitCategoryPrefilter, fecha); runner: OMITIDO sin contrato, sin sv2 si no se piden IA1/IA2, proveedor por defecto de producción y modelo en el informe; estímulo determinista por precio único. LÍNEA BASE: MANUAL con claude-opus-4-8 en IA3/IA4/E2E (design §9), válida con 0 ERROR y «obtenido None» ≤ 20 % de los fallos de IA3. COORDINACIÓN: F-083 fusiona primero su código; sus pagos de IA3/IA4 esperan a F-084. PREGUNTAS P1–P7 (design §11). servicios: no se toca ninguno (la ficha dice sv5/sv6).",
+      "status": "spec_ready",
       "sdd": true,
       "rigor": "critico",
       "priority": 1,
       "servicios": [
         "sv5-valoracion-api",
         "sv6-valoracion-persist"
-      ]
+      ],
+      "branch": "feature/F-084-banco-valoracion"
     },
     {
       "id": "F-085",

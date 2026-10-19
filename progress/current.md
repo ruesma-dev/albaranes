@@ -1,6 +1,26 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-084 · `spec_ready` (2026-10-20): spec escrita, espera la PARADA 1** — el banco de evals valora de verdad (IA3/IA4/E2E salen iguales con cualquier modelo). Spec en `specs/F-084-banco-valoracion/`. Rama `feature/F-084-banco-valoracion`, worktree `../albaranes-F-084` (desde `dev` `efd73b7`; *junction* `.venv` de sv4 puesta: quitarla con `cmd /c rmdir` antes de `git worktree remove`). Rigor `critico`. Solo `evals/` (más sus tests, el README y `azure-apps/albaranes.md`): **no se toca ningún servicio**, aunque la ficha liste sv5 y sv6.
+
+Diagnóstico (design §1, sin gastar: determinista, doble de LLM y código):
+- **52 de los 59 casos no tienen líneas de contrato en INPUTS.** F-045 las dejó fuera a propósito y midió el agujero el 2026-09-16 (`progress/impl_F-045_contrato_lineas.md`, vía B), pero nunca tuvo ficha.
+- **El determinista, sin LLM, falla igual**: 390 de 401 fallos de IA3 son «obtenido None», y 14 de los 15 casos de la prueba rápida tienen el mismo número de fallos que con `gpt-6-luna`. El LLM sí se llama, pero recibe `lineas_contrato: []` y la nota de «solo fase 1a».
+- **El adaptador de sv5 tampoco reproduce producción**: no pasa descuento (FER-001 sale 32,35 en vez de 19,41), ni clasificación (los 21 RES se miden con `valuation_es` y producción usa `valuation_residuos`), ni categoría de unidad ni fecha.
+
+Qué propone: un importador `python -m evals.contratos_sigrid`, solo lectura por sigrid-api y lanzado por el humano, que escribe en el libro INPUTS; un contexto de valoración fiel a producción; y en el runner: OMITIDO para los casos sin contrato, no llamar a sv2 si no se piden IA1/IA2, proveedor de producción por defecto y el modelo en el informe. Las MANUAL son T11 (importar) y T13 (línea base con `claude-opus-4-8`, de pago), con sus comandos en design §9.
+
+Coordinación con F-083 (design §8): las dos tocan `sv5_valoracion.py` y `runner.py`, y F-084 añade una línea a `sv5_modelos.py`. **F-083 fusiona primero su código. Sus pagos de IA3/IA4 (la parte IA3 de su T13, y T14–T15) tienen que esperar a F-084**: hoy medirían la tabla vacía.
+
+Decisiones abiertas de la PARADA 1 (design §11, cada una con recomendación):
+- **P1**: fuente de las líneas de contrato. Recomendada, sigrid-api.
+- **P2**: estímulo determinista por precio único.
+- **P3**: OMITIDO para los casos sin contrato.
+- **P4**: clasificación tomada de la tipología.
+- **P5**: el documento del contrato (fase 1b) queda fuera, a otra ficha.
+- **P6**: proveedor de producción por defecto.
+- **P7**: orden con F-083.
+
 **F-080 · `blocked` (2026-10-19): review APPROVED (pasada 1, `progress/review_F-080.md`), fusionada en `dev`; espera la MANUAL T6 del humano (desplegar solo sv3)** — tras un empate por nombre (F-073), la familia solo elige entre los empatados (H4 de `progress/review_F-073.md`). Spec en `specs/F-080-empate-solo-entre-empatados/`. Rama `feature/F-080-empate-solo-entre-empatados`, worktree `../albaranes-F-080`. Rigor `critico`, solo sv3 (`header_resolver_service.py`), sin DDL ni comun. PARADA 1 resuelta el 2026-10-19: **P1 = (b)** (la carrera por puntos de hoy, y el ganador tiene que ser uno de los empatados), P2 y P3 según la recomendación (design §2). Informe en curso: `progress/impl_F-080.md`.
 
 Estado del implementer (2026-10-19): **T1–T5 y T7 hechas, informe en `progress/impl_F-080.md`; espera la review**. Tests de F-080: 36 passed (fase RED registrada). sv3: 1576 passed después de fusionar `dev` (`f49f1b2`, F-075) en la rama, sin cambiar ninguna expectativa existente (R13). Cobertura de lo cambiado: 100 % (8/8). Mutación: 5 generados, 5 muertos, 0 supervivientes (`progress/mutacion_F-080.md`). `bash harness/init.sh` en verde en el worktree (último verde: el del reviewer sobre `f4ad6e0`). Desviaciones respecto a la spec: ninguna.
