@@ -96,6 +96,21 @@ albaran_factura_es:
       ahora. NO copies en cabecera.obra_codigo el código del correo: las
       dos lecturas las cruza el sistema después.
 
+    ## Pie del albarán
+
+    - En la cabecera, lee del PIE del albarán las cuatro cifras tal y como
+      están impresas: base_imponible (la base imponible, el total sin
+      IVA), tipo_iva_pct (el tipo de IVA en %, p. ej. 21), cuota_iva (el
+      importe del IVA) y total_albaran (el total con IVA).
+    - Léelas también en los albaranes que el proveedor ya trae valorados.
+    - Si hay varios tipos de IVA, suma las bases y las cuotas y deja
+      tipo_iva_pct a null.
+    - No los calcules ni los deduzcas unos de otros: si una cifra no está
+      impresa, null. Un albarán sin precios no tiene pie: los cuatro, null.
+    - Un "suma y sigue", un subtotal de página o el importe de una línea no
+      es el pie.
+    - El pie va a la cabecera, nunca como línea.
+
     ## Reglas generales para las líneas
 
     - Identifica cada línea de concepto.

@@ -25,6 +25,7 @@ from application.services.contrato_enrichment_service import (
     ContratoEnrichmentService,
 )
 from application.services.fecha_guard_service import FechaGuardService
+from application.services.pie_guard_service import PieGuardService
 from application.services.header_resolver_service import HeaderResolverService
 from application.services.obra_enrichment_service import ObraEnrichmentService
 from config.settings import Settings
@@ -145,6 +146,12 @@ def build_persist_pipeline(
         enabled=settings.fecha_guard_enabled,
         max_dias=settings.fecha_guard_max_dias,
     )
+    # Control del pie (F-075 · R16): tampoco depende de Sigrid.
+    pie_guard_service = PieGuardService(
+        repository=repository,
+        enabled=settings.pie_guard_enabled,
+        tolerancia_eur=settings.pie_tolerancia_eur,
+    )
 
     return PersistAlbaranPipeline(
         repository=repository,
@@ -155,4 +162,5 @@ def build_persist_pipeline(
         contrato_enrichment_service=contrato_enrichment_service,
         valuation_trigger=valuation_trigger,
         fecha_guard_service=fecha_guard_service,
+        pie_guard_service=pie_guard_service,
     )

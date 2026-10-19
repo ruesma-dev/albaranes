@@ -14,7 +14,8 @@ Qué se monta, variante a variante:
   defecto `dev`), sacados con `git show`. Un YAML anterior a F-064 no lleva
   `{empresas_cliente}` y sin marcador el render no añade nada (R7), así que lo
   que recibe el LLM es lo de la base. El schema de respuesta no cambia con
-  F-064 (R11): no hace falta recortarlo como en `sv2_obra`. Lo fija
+  F-064 (R11), pero F-075 añade el pie a la cabecera: la variante `base` lo
+  recorta (`sin_pie`, con el `RegistroSinCampo` de `sv2_obra`). Lo fija
   `tests/test_f064_comparar_proveedor_base.py` contra el código de la base.
 
 Las dos fases, sin correo ni lista de obras ni contexto de Sigrid (como el
@@ -30,6 +31,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from evals.procesos.errores import describir_error
+from evals.procesos.sv2_obra import CAMPOS_SOLO_RAMA_CABECERA, RegistroSinCampo
 from evals.procesos.sv2_extraccion import (
     PROMPT_FASE_1,
     RAIZ_REPO,
@@ -95,14 +97,17 @@ def ficheros_de_rama() -> dict[str, Path]:
 # --- Montaje del servicio y las dos fases ----------------------------------------
 
 
-def montar_servicio(ficheros: dict[str, Path], especificaciones: list):
-    """El `AlbaranExtractionService` con los YAML de `ficheros`, sin obras ni correo."""
+def montar_servicio(ficheros: dict[str, Path], especificaciones: list, *, sin_pie: bool):
+    """El `AlbaranExtractionService` con los YAML de `ficheros`, sin obras ni correo.
+
+    ``sin_pie`` (F-075): el schema de respuesta sin el pie de la cabecera, que
+    la base de antes de F-075 no conoce (lo usa la variante `base`)."""
     if not {"prompts", "reglas"} <= set(ficheros):
         raise ValueError("faltan ficheros: hacen falta prompts y reglas")
-    return _servicio(ficheros, especificaciones)
+    return _servicio(ficheros, especificaciones, sin_pie=sin_pie)
 
 
-def _servicio(ficheros: dict[str, Path], especificaciones: list):  # pragma: no cover - subproceso del test de la base
+def _servicio(ficheros: dict[str, Path], especificaciones: list, *, sin_pie: bool):  # pragma: no cover - subproceso del test de la base
     """Importa sv2 y monta el servicio como el runner (sin `obras_activas_provider`)."""
     _con_sv2_en_path()
     from application.services.albaran_extraction_service import AlbaranExtractionService
@@ -113,7 +118,11 @@ def _servicio(ficheros: dict[str, Path], especificaciones: list):  # pragma: no 
     return AlbaranExtractionService(
         providers=list(especificaciones),
         prompt_repo=YamlPromptRepository(ficheros["prompts"]),
-        schema_registry=SchemaRegistry(),
+        schema_registry=(
+            RegistroSinCampo(SchemaRegistry(), campos=frozenset(CAMPOS_SOLO_RAMA_CABECERA))
+            if sin_pie
+            else SchemaRegistry()
+        ),
         revision_rules_repo=RevisionRulesRepository(yaml_path=ficheros["reglas"]),
         prompt_key_phase_1=PROMPT_FASE_1,
     )
@@ -172,7 +181,8 @@ def montar_extractor(
 
     especificaciones = [_especificacion(p) for p in dict.fromkeys(proveedores.values())]
     servicios = {
-        variante: montar_servicio(rutas, especificaciones) for variante, rutas in ficheros.items()
+        variante: montar_servicio(rutas, especificaciones, sin_pie=variante == "base")
+        for variante, rutas in ficheros.items()
     }
     material_por_ruta: dict[str, list] = {}
 

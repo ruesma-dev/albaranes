@@ -22,6 +22,15 @@ en tres puntos observables: qué hacían con un descuento ilegible (una
 devolvía `None`, la otra reventaba con `ValueError`), qué dejaban escrito
 y dónde estaba el borde del cero.
 
+(F-075) EL IMPORTE DEL ALBARÁN Y EL PIE
+---------------------------------------
+También vive aquí la suma de los importes leídos de un albarán
+(``importe_albaran``), la regla «dos importes difieren» (``difieren``) y el
+control del pie impreso (``pie_cuadra``): las usan sv3 (disparo y control
+del pie), sv4 (bandeja, ficha y aviso al aprobar) y sv6 (valoración directa
+y aviso con contrato). El pie es un **control**, nunca una fuente de
+importes.
+
 QUÉ **NO** VIVE AQUÍ
 --------------------
 La **política** de cada servicio. Este módulo decide aritmética y
@@ -32,7 +41,12 @@ base.
 """
 from __future__ import annotations
 
+import math
+from collections.abc import Iterable
+from enum import StrEnum
 from typing import Literal, Tuple
+
+from pydantic import BaseModel, ConfigDict, computed_field
 
 #: Estados en que puede quedar un descuento leído de un albarán.
 #:
@@ -105,3 +119,157 @@ def importe_de_linea(
     except (TypeError, ValueError):
         return None
     return round(base * factor_descuento(descuento_pct), 2)
+
+
+# --------------------------------------------------------------------------- #
+# F-075 · El importe del albarán manda
+# --------------------------------------------------------------------------- #
+
+#: (F-075) Diferencia mínima, en euros, para que dos importes «difieran».
+UMBRAL_DIFERENCIA_EUR = 0.01
+
+
+def _numero_finito(valor: object) -> float | None:
+    """``float`` finito o ``None`` (nulo, texto no numérico, NaN o infinito)."""
+    if valor is None:
+        return None
+    try:
+        numero = float(valor)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(numero):
+        return None
+    return numero
+
+
+class ImporteAlbaran(BaseModel):
+    """(F-075 R1) El importe de un albarán: la suma de sus importes leídos.
+
+    ``total`` es ``None`` si ninguna línea trae importe. Sin IVA: el importe
+    leído de una línea es su ``precio_neto`` (importe tras descuento).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    total: float | None
+    lineas: int
+    lineas_con_importe: int
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def sin_importe(self) -> int:
+        """Líneas que no traen importe."""
+        return self.lineas - self.lineas_con_importe
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def trae_importes(self) -> bool:
+        """Al menos una línea trae importe leído."""
+        return self.lineas_con_importe > 0
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def parcial(self) -> bool:
+        """Trae importes, pero no en todas las líneas (P3)."""
+        return 0 < self.lineas_con_importe < self.lineas
+
+
+def importe_albaran(importes: Iterable[object]) -> ImporteAlbaran:
+    """(F-075 R1) Suma con signo de los importes leídos, sin redondear.
+
+    Un ``None`` o un valor no finito o no numérico cuenta como «línea sin
+    importe»: no suma y deja el total parcial (P3). No se completa con nada:
+    ni con el contrato ni con ``cantidad × precio``.
+    """
+    lineas = 0
+    con_importe = 0
+    total = 0.0
+    for valor in importes:
+        lineas += 1
+        numero = _numero_finito(valor)
+        if numero is None:
+            continue
+        con_importe += 1
+        total += numero
+    return ImporteAlbaran(
+        total=total if con_importe else None,
+        lineas=lineas,
+        lineas_con_importe=con_importe,
+    )
+
+
+def difieren(
+    a: float | None, b: float | None, umbral: float = UMBRAL_DIFERENCIA_EUR,
+) -> bool:
+    """(F-075) ``True`` si los dos importes se apartan en ``umbral`` o más
+    (redondeada la diferencia a céntimos). Con alguno nulo, ``False``: no hay
+    nada que comparar. Es la regla del aviso de F-065 R21."""
+    if a is None or b is None:
+        return False
+    return round(abs(float(a) - float(b)), 2) >= umbral
+
+
+class ComparacionPie(StrEnum):
+    """(F-075 R2) Resultado de comparar la suma de las líneas con el pie."""
+
+    CUADRA = "cuadra"
+    NO_CUADRA = "no_cuadra"
+    NO_COMPARABLE = "no_comparable"
+
+
+def referencia_pie(
+    *, base: object, cuota: object, total: object,
+) -> float | None:
+    """(F-075 R2) La cifra del pie con la que se compara la suma de las líneas:
+    la base imponible o, si falta, ``total − cuota``. Nunca supone un tipo de
+    IVA (v2-P4): con solo el total, ``None``."""
+    base_num = _numero_finito(base)
+    if base_num is not None:
+        return base_num
+    total_num = _numero_finito(total)
+    cuota_num = _numero_finito(cuota)
+    if total_num is None or cuota_num is None:
+        return None
+    return total_num - cuota_num
+
+
+def pie_cuadra(
+    suma: float | None,
+    *,
+    base: float | None,
+    cuota: float | None,
+    total: float | None,
+    tolerancia: float,
+) -> tuple[ComparacionPie, float | None]:
+    """(F-075 R2) Compara la suma de las líneas con el pie impreso.
+
+    Devuelve el resultado y la referencia usada (base, o ``total − cuota``).
+    ``NO_COMPARABLE`` si la suma es nula o el pie no da referencia. Cuadra si
+    la diferencia, redondeada a céntimos, no pasa de ``tolerancia``.
+    """
+    referencia = referencia_pie(base=base, cuota=cuota, total=total)
+    suma_num = _numero_finito(suma)
+    if suma_num is None or referencia is None:
+        return ComparacionPie.NO_COMPARABLE, referencia
+    if round(abs(suma_num - referencia), 2) <= tolerancia:
+        return ComparacionPie.CUADRA, referencia
+    return ComparacionPie.NO_CUADRA, referencia
+
+
+def unitario_despejado(
+    *, importe: object, cantidad: object, descuento_pct: object = None,
+) -> float | None:
+    """(F-075 R6) Unitario BRUTO despejado de la fórmula canónica:
+    ``importe / (cantidad × (1 − dto/100))``, redondeado a 6 decimales.
+
+    ``None`` si falta el importe o la cantidad, si la cantidad es 0 o si el
+    descuento es del 100 % (divisor nulo). Un descuento inválido no
+    descuenta (``factor_descuento``)."""
+    importe_num = _numero_finito(importe)
+    cantidad_num = _numero_finito(cantidad)
+    if importe_num is None or cantidad_num is None:
+        return None
+    divisor = cantidad_num * factor_descuento(descuento_pct)
+    if divisor == 0.0:
+        return None
+    return round(importe_num / divisor, 6)

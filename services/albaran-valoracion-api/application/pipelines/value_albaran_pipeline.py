@@ -71,6 +71,11 @@ def _raw_albaran_line_to_dict(line: RawAlbaranLine) -> Dict[str, Any]:
         "importe_albaran": line.importe_albaran,
         "codigo_partida_albaran": line.codigo_partida_albaran,
         "contexto_linea_json": line.contexto_linea_json,
+        # (F-075 R5 bis) El importe LEÍDO, sin derivar, y el descuento: sv6
+        # hace con ellos la valoración directa sin contrato (P3: una línea
+        # sin ``precio_neto`` no suma, aunque ``importe_albaran`` se derive).
+        "descuento_albaran": line.descuento,
+        "precio_neto_albaran": line.precio_neto,
     }
 
 

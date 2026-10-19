@@ -783,6 +783,15 @@ demasiado para un único microservicio bien delimitado. Concretamente:
 | Servicios upstream    | sv1 (persist) + frontend humano (PATCH)                                                 |
 | Servicios downstream  | sigrid-api · SharePoint/Graph · sv6 (valuation)                                         |
 
+> **F-075 (oct 2026)** · Sin contrato seleccionado y con algún `precio_neto` leído,
+> publica `q-valoracion` con `codigo_contrato` nulo (valoración directa en sv6); con
+> contrato seleccionado sin líneas, nada. Guarda el pie (cuatro columnas `DOUBLE
+> PRECISION` en `albaran_documents` y `albaran_documents_merge`, `phase2_ddl`) y
+> `PieGuardService` lo compara con la suma de las líneas en los tres puntos del
+> pipeline (`PIE_GUARD_ENABLED`, `PIE_TOLERANCIA_EUR` = 0,02): motivo
+> `pie_no_cuadra:<suma>!=<pie>` y nota «[AVISO] La suma de las líneas no cuadra con el
+> pie del albarán…». Regla 25 de `docs/ARCHITECTURE.md`.
+
 ---
 
 *Documento generado a partir del análisis del código del paquete `sv3.zip` aportado.*

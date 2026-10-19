@@ -35,3 +35,9 @@ class AlbaranRepository(ABC):
         stored_file: StoredFile,
     ) -> ExistingDocument:
         raise NotImplementedError
+
+    def importes_leidos(self, *, document_id: str) -> list[float | None]:
+        """(F-075 R3) El ``precio_neto`` de cada línea del merge, en orden.
+        No abstracto: un repositorio que no lo implemente hace que el disparo
+        sin contrato no publique (best-effort)."""
+        raise NotImplementedError

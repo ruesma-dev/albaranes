@@ -90,6 +90,39 @@
 {% endif %}
 
 {# =========================================================== #}
+{#  (F-075 R23) Importe del albarán: manda el albarán            #}
+{# =========================================================== #}
+{% if document.view_mode == 'merge' %}
+    {% set leido = document.importe_leido %}
+    <div class="alert importe-albaran" id="importe-albaran">
+        <strong>Importe del albarán (sin IVA):</strong>
+        {% if leido.trae_importes %}
+            <strong>{{ leido.total | importe_eur }}</strong>
+            {% if document.importe_parcial_texto %}<span class="importe-parcial">({{ document.importe_parcial_texto }})</span>{% endif %}
+        {% else %}
+            — <span class="muted">(el albarán no trae importes)</span>
+        {% endif %}
+        {# F-075 R23: el pie impreso y su comparación (la decide sv3). #}
+        {% set pie_txt = {'cuadra': 'cuadra', 'no_cuadra': 'no cuadra', 'no_comparable': 'no comparable'} %}
+        {% if document.pie_comparacion == 'no_leido' %}
+            · <span class="muted">Pie: no leído</span>
+        {% else %}
+            · Pie: Base {{ document.pie_base | importe_eur if document.pie_base is not none else '—' }}
+            · IVA {{ ('%g' | format(document.pie_tipo_iva)) ~ ' %' if document.pie_tipo_iva is not none else '—' }}
+            · Cuota {{ document.pie_cuota | importe_eur if document.pie_cuota is not none else '—' }}
+            · Total {{ document.pie_total | importe_eur if document.pie_total is not none else '—' }}
+            (<span class="pie-{{ document.pie_comparacion }}">{{ pie_txt[document.pie_comparacion] }}</span>)
+        {% endif %}
+        {% if document.importe_valorado is not none %}
+            · Valorado: <strong>{{ document.importe_valorado | importe_eur }}</strong>
+            {% if document.importe_diferencia is not none %}
+                · <span class="importe-distinto" title="El valorado se aparta del importe del albarán">≠</span> Diferencia: <strong>{{ document.importe_diferencia | importe_eur }}</strong>
+            {% endif %}
+        {% endif %}
+    </div>
+{% endif %}
+
+{# =========================================================== #}
 {#  Banner de VALORACIÓN                                        #}
 {# =========================================================== #}
 {% if valuation %}
@@ -537,11 +570,12 @@
                                     id="valuate-btn"
                                     data-current-val-id="{{ valuation.valuation_id if valuation else '' }}"
                                     data-current-val-ts="{{ valuation.created_at_utc if valuation else '' }}"
+                                    data-trae-importes="{{ '1' if document.importe_leido.trae_importes else '0' }}"
                                     title="Guarda el contrato seleccionado y lanza la valoración (líneas sintéticas, conciliación…)">
                                 Valorar ahora
                             </button>
                             <span class="valuate-hint muted small">
-                                Genera la valoración contra el contrato seleccionado arriba.
+                                Genera la valoración contra el contrato seleccionado arriba{% if document.importe_leido.trae_importes %}; sin contrato, con los importes del albarán{% endif %}.
                             </span>
                             <span id="valuate-status" class="valuate-status" hidden></span>
                         </div>
@@ -657,6 +691,15 @@
                                 <tr><td colspan="9" class="empty-cell">Sin líneas leídas.</td></tr>
                             {% endfor %}
                             </tbody>
+                            {% if document.lines %}
+                            <tfoot>
+                            <tr class="al-total">
+                                <td colspan="5"><strong>Total leído (sin IVA)</strong>{% if document.importe_parcial_texto %} <span class="muted small">· {{ document.importe_parcial_texto }}</span>{% endif %}</td>
+                                <td><strong>{% if document.importe_leido.trae_importes %}{{ document.importe_leido.total | importe_eur }}{% else %}—{% endif %}</strong></td>
+                                <td colspan="3"></td>
+                            </tr>
+                            </tfoot>
+                            {% endif %}
                         </table>
                     </div>
                 </details>

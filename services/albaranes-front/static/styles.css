@@ -301,6 +301,10 @@ h1 {
    que quepa sin desbordar. */
 .stat-importe strong { font-size: 1.3rem; white-space: nowrap; }
 .stat-importe::before { background: var(--brand); }
+/* F-075 R19, R20: columna «Importe» de la bandeja. */
+.importe-distinto { margin-left: .25rem; color: var(--danger, #b42318); font-weight: 700; cursor: help; }
+.importe-origen { white-space: nowrap; }
+.importe-parcial { color: var(--warning, #b54708); white-space: nowrap; }
 
 /* ---------- Formularios ----------------------------------------------------- */
 .filters-grid { display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)); gap: 16px; align-items: end; }

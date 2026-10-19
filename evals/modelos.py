@@ -202,6 +202,8 @@ class ResultadoPasada:
     feature: str = ""
     commit: str = ""
     fecha: str = ""
+    #: (F-075 R27) Campos que el proceso sí devuelve pero el libro aún no mide.
+    no_medidos: list[str] = field(default_factory=list)
 
     def veredicto(self) -> str:
         """ROJO manda sobre NO_EVALUABLE: un fallo detectado no se disfraza.

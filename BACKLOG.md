@@ -3,9 +3,9 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **78 features**, 54 abiertas, 24 terminadas.
+Resumen: **79 features**, 55 abiertas, 24 terminadas.
 
-Bloqueadas: **F-064, F-078, F-076, F-077, F-073**.
+Bloqueadas: **F-064, F-075, F-078, F-076, F-077, F-073**.
 
 ## Trabajo abierto
 
@@ -18,6 +18,7 @@ Bloqueadas: **F-064, F-078, F-076, F-077, F-073**.
 | F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 1 | pendiente | critico |  |
 | F-067 | Limpieza de la ficha de detalle (sv4) | 1 | pendiente | estandar |  |
 | F-073 | Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate | 1 | bloqueada | critico | `feature/F-073-proveedor-por-similitud` |
+| F-075 | El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán | 1 | bloqueada | critico | `feature/F-075-importe-leido` |
 | F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | 1 | bloqueada | critico | `feature/F-076-normalizar-partidas` |
 | F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 1 | bloqueada | estandar | `feature/F-077-guardar-y-aprobar` |
 | F-078 | La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia | 1 | bloqueada | critico | `feature/F-078-linea-guarda-lo-que-se-ve` |
@@ -180,6 +181,16 @@ INCIDENCIA DE PRODUCCIÓN (2026-10-15, correo «0694» de administración de obr
 CAUSA (verificada en header_resolver_service.py): _match_score no separa la puntuación («feymaco,» no está en «(feymaco)»), no admite una letra mal leída y cuenta «s.a.» como palabra (0,50 = min_score para cualquier S.A.); el atajo del paso 1 y el fallback global del paso 2 eligen el máximo sin mirar empates. Hay dos criterios de nombre (_match_score y _score_razon_social de F-052/F-062).
 
 SPEC (specs/F-073-proveedor-por-similitud/, informe progress/spec_F-073.md): criterio ÚNICO en sv3 (application/services/similitud_proveedor.py) para los cuatro sitios (atajo, global, propuesta F-052, candidato claro F-062): puntuación como separador, fuera formas jurídicas y palabras vacías, subcadena de hoy más distancia de edición ≤ 1 en palabras de ≥ 5 caracteres; elegir por nombre solo con ≥ min_score y margen 0,25 sobre el segundo CIF; empate ⇒ paso por puntos sin cambios y, si no decide, revisión con motivo proveedor_nombre_ambiguo y nota con los empatados; paso 2 en empate no elige. Medición: corpus de 19 razones sociales reales y 31 lecturas, hoy 23 aciertos y 7 errores, con F-073 31 y 0. La obra (_resolve_obra) no cambia. Sin comun, sin DDL; despliegue solo sv3. FUERA: corregir los 3 merges (revisor en sv4), la propuesta de sv4 (X4 de F-067), que la propuesta de F-052 deje de proponer en empate. PREGUNTAS P0–P6 para la PARADA 1; P0 bloquea: el caso «S.L.» de la opción B de F-062 pasa de 1 a 0. RELACIONADAS: F-063, F-062, F-052, F-055, F-067 (X4).
+
+### F-075 · El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán
+
+estado **bloqueada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-075-importe-leido`
+
+ORIGEN (correo de administración de obra, obra 0686, 2026-10-15): un albarán de DISCOIN con precios sale con «Importe valorado —» y «Sin valoración» y no se puede aprobar: no hay contrato (sv3 no dispara q-valoracion) y sv6 no valora. Merges: dfdc8aab-08e1-49f0-978d-bb906515e748 y 5dea6509-4a81-4192-b8b0-3a21041931ca.
+
+SPEC v1 (2026-10-15, solo sv4: importe leído junto al valorado) RECHAZADA en la PARADA 1. Respuestas literales del humano: P1 «como ya hay importe, no hay que valorar con contrato, manda el albarán y pisa»; P2 «que lea el pie y sirva para revisar»; P3 aceptada (líneas sin importe no suman, total parcial); sin contrato «si trae importes no hace valorar ni contrato, pasa directo».
+
+SPEC v2 (2026-10-15, specs/F-075-importe-leido/, informe progress/spec_F-075.md §v2): hallazgo clave, con contrato lo leído YA manda línea a línea en sv6 (F-019, jul 2026); el contrato aporta vínculo, partida y conversión, y añade sintéticas. Propuesta: (1) comun: importe_albaran (suma de precio_neto, parcial) y pie_cuadra; (2) sin contrato y con importes: sv3 publica q-valoracion con contrato nulo y sv6 construye una valoración directa no_contract desde las líneas (sin IA, sin sintéticas, derivada nueva_no_match), «valorada» si todas traen importe, así que se aprueba y sv9 la da de alta sin vincular SIN código nuevo (tests de contrato); sv4 deja revalorar sin contrato si trae importes; (3) con contrato, como hoy más motivo valorado_distinto_de_albaran; (4) pie: IA1 lee base, tipo, cuota y total, sv2 conserva el pie de fase 1, sv3 DDL de 4 columnas y PieGuardService (pie_no_cuadra a revisión, no bloquea); (5) sv4: una columna «Importe» (albarán si trae, si no valorado) con origen y marca ≠, tarjetas, Obras, Proveedores y ficha con pie; (6) evals observan el pie («no medido» sin ground truth). PREGUNTAS v2-P1 a v2-P8 (P1 seguir valorando con contrato o saltarlo, P2 aprobación humana, P3 sintéticas, P4 pie sin base, P5 varias páginas y tolerancia, P6 backfill, P7 una columna, P8 partir en dos: F-075 paso directo sin prompts, ya; F-0XX pie detrás de F-064). FUERA: albaranes sin importes y sin contrato, quitar sintéticas, sv5, aprobación automática, backfill por script, F-064, F-071, F-073 y F-066 X12. AJUSTE (humano, 2026-10-18, tras el bloqueo del implementer): opción A, sv5 añade precio_neto_albaran y descuento_albaran al sobre no_contract (R5 bis), despliegue comun → sv3 → sv5 → sv6 → sv4; M1, solo se publica sin contrato si el seleccionado es nulo.
 
 ### F-076 · La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura
 

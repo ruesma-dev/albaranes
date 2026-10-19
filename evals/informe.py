@@ -125,6 +125,14 @@ _AVISO_NO_OBSERVABLES = (
 )
 
 
+_AVISO_NO_MEDIDOS = (
+    "El proceso los devuelve, pero el libro de ground truth (IA1_extraccion) "
+    "todavía no trae sus columnas rellenas: «no medido». NO se comparan y NO "
+    "cuentan como fallo; se miden solos el día que el humano rellene las "
+    "columnas en el libro (F-075 R27)."
+)
+
+
 def render(
     pasada: ResultadoPasada,
     sin_clasificar: list[str] | None = None,
@@ -152,6 +160,16 @@ def render(
             _AVISO_NO_OBSERVABLES,
             "",
             *[f"- `{campo}`" for campo in no_observables],
+            "",
+        ]
+
+    if pasada.no_medidos:
+        lineas += [
+            "## Campos no medidos (sin ground truth)",
+            "",
+            _AVISO_NO_MEDIDOS,
+            "",
+            *[f"- `{campo}`" for campo in pasada.no_medidos],
             "",
         ]
 

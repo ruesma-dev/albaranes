@@ -972,6 +972,15 @@ separación es ejemplar.
 | Servicios downstream   | sv5 (IA) · PostgreSQL · sigrid-api (solo `sql/read`, F-076)                          |
 | Cierra el ciclo del ecosistema | **Sí** — la fila ganadora en `albaran_valuations` es el output final de los 6 servicios |
 
+> **F-075 (oct 2026)** · Rama `no_contract` con importes leídos ⇒ **valoración
+> directa** (`application/services/valoracion_directa.py`): cabecera `no_contract`,
+> `prompt_key`/motivo `valoracion_directa_albaran`, una línea por línea del albarán
+> con el importe leído, factor 1, partida impresa o almacén y derivada
+> `nueva_no_match` (`codigo_contrato=""`), sin IA ni sintéticas; pasa por
+> `completar_registros` y `NormalizadorPartidas.anotar`. Con contrato, motivo
+> `valorado_distinto_de_albaran:<valorado>!=<albarán>` si el total se aparta del
+> importe leído. Regla 25 de `docs/ARCHITECTURE.md`.
+
 ---
 
 *Documento generado a partir del análisis del código del paquete `sv6.zip` aportado.*

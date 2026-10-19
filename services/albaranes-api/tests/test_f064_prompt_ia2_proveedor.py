@@ -269,7 +269,10 @@ def test_f064_r10_con_contexto_de_sigrid_la_regla_sigue(clave) -> None:
     [
         (CabeceraAlbaran, [
             "proveedor_nombre", "proveedor_cif", "fecha", "numero_albaran",
-            "forma_pago", "obra_codigo", "obra_nombre", "obra_direccion", "id",
+            "forma_pago", "obra_codigo", "obra_nombre", "obra_direccion",
+            # (F-075 R13) El pie: lo añade F-075 a propósito; F-064 no
+            # añadía campos (R11) y este test sigue fijando el resto.
+            "base_imponible", "tipo_iva_pct", "cuota_iva", "total_albaran", "id",
         ]),
         (DocumentoAlbaran, ["cabecera", "lineas", "clasificacion", "lectura_correo"]),
         (LineaAlbaran, [
