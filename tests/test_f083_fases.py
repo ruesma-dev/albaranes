@@ -517,3 +517,109 @@ def test_f083_sv2_subproceso_sin_clave_muere_con_codigo():
     trabajo = {**_trabajo_sv2(), "casos": []}
     with pytest.raises(RuntimeError, match="código 1"):
         medidor_mod.lanzar("evals.procesos.sv2_modelos", trabajo, "sv2", entorno=entorno)
+
+
+# --- T6 · sv5_modelos: IA3, IA4 y la preparación de IA3 --------------------------
+
+from evals.procesos import sv5_modelos  # noqa: E402
+
+_LINEA_VALORADA = {
+    "merge_line_id": 1,
+    "line_kind": "from_albaran",
+    "matched_contrato_line_id": 7,
+    "precio_unitario_contrato_db": 5.0,
+}
+
+
+def _contexto():
+    return {"document_id": "RES-001", "codigo_contrato": "C-1", "lineas_albaran": [
+        {"merge_line_id": 1, "descripcion": "x"}], "lineas_contrato": [
+        {"contrato_line_id": 7, "codigo_producto": "P1"}]}
+
+
+@pytest.mark.parametrize("fase", ["IA3", "prep_IA3"])
+def test_f083_sv5_r22_ia3_monta_el_envelope_con_las_lineas_valoradas(fase):
+    """Aviso del líder (2026-10-19): el envelope SÍ lleva las líneas que valora el modelo."""
+    vistos = []
+
+    def valorar(contexto):
+        vistos.append(contexto["document_id"])
+        return [dict(_LINEA_VALORADA)]
+
+    llamar = sv5_modelos.llamador(fase, valorar, None, "openai", "gpt-6-luna")
+    salida = llamar({"caso_id": "RES-001", "contexto": _contexto()})
+    envelope = salida["envelope"]
+    assert vistos == ["RES-001"]
+    assert envelope["data"]["lineas"] == [_LINEA_VALORADA]
+    assert envelope["meta"]["primary_provider"] == "openai"
+    assert envelope["meta"]["model"] == "gpt-6-luna"
+    assert envelope["context"]["lineas_contrato"] == _contexto()["lineas_contrato"]
+
+
+def test_f083_sv5_r23_ia4_concilia_sobre_el_envelope_de_preparacion():
+    vistos = []
+
+    def conciliar(envelope, contexto):
+        vistos.append((envelope["meta"]["model"], contexto["document_id"]))
+        return [{"line_ref": 1, "matched_contrato_line_id": 7}]
+
+    llamar = sv5_modelos.llamador("IA4", None, conciliar, "claude", "claude-opus-5-5")
+    envelope = {"meta": {"model": "claude-opus-4-8"}, "data": {"lineas": []}}
+    salida = llamar({"caso_id": "RES-001", "contexto": _contexto(), "envelope": envelope})
+    assert salida == {"conciliaciones": [{"line_ref": 1, "matched_contrato_line_id": 7}]}
+    assert vistos == [("claude-opus-4-8", "RES-001")]
+
+
+def test_f083_sv5_fase_desconocida():
+    with pytest.raises(ValueError, match="IA1"):
+        sv5_modelos.llamador("IA1", None, None, "claude", "x")
+
+
+def _trabajo_sv5(fase="IA3", herramienta=True, proveedor="claude", modelo="claude-opus-4-8"):
+    return {
+        "fase": fase,
+        "modelo": {"id": modelo, "proveedor": proveedor, "herramienta_forzada": herramienta},
+        "casos": [{"caso_id": "RES-001", "contexto": _contexto()}],
+        "presupuesto_usd": "5",
+        "fecha": "2026-10-19",
+    }
+
+
+@pytest.mark.parametrize(
+    ("fase", "etiqueta", "herramienta", "forzar"),
+    [
+        ("IA3", "candidato", True, True),
+        ("prep_IA3", "preparación", True, True),
+        ("IA3", "candidato", False, False),
+    ],
+)
+def test_f083_sv5_ejecutar_trabajo(fase, etiqueta, herramienta, forzar):
+    montados = []
+
+    def montar(modelo_id, proveedor, forzar_herramienta, medidor):
+        montados.append((modelo_id, proveedor, forzar_herramienta, medidor.etiqueta))
+        return (lambda contexto: [dict(_LINEA_VALORADA)]), None
+
+    salida = sv5_modelos.ejecutar_trabajo(
+        _trabajo_sv5(fase=fase, herramienta=herramienta), montar=montar
+    )
+    assert montados == [("claude-opus-4-8", "claude", forzar, etiqueta)]
+    assert salida["resultados"][0]["envelope"]["data"]["lineas"] == [_LINEA_VALORADA]
+    assert salida["registros"] == []
+
+
+def test_f083_sv5_r24_el_error_de_ia4_se_atribuye_a_ia4():
+    def conciliar(envelope, contexto):
+        raise RuntimeError("roto")
+
+    trabajo = _trabajo_sv5(fase="IA4")
+    trabajo["casos"][0]["envelope"] = {"meta": {}}
+    salida = sv5_modelos.ejecutar_trabajo(trabajo, montar=lambda *a: (None, conciliar))
+    assert salida["resultados"][0]["error"]["fase"] == "IA4"
+
+
+def test_f083_sv5_subproceso_real_sin_casos():
+    trabajo = {**_trabajo_sv5(), "casos": []}
+    entorno = {**os.environ, "ANTHROPIC_API_KEY": "clave-de-prueba"}
+    salida = medidor_mod.lanzar("evals.procesos.sv5_modelos", trabajo, "sv5", entorno=entorno)
+    assert salida == {"resultados": [], "registros": []}

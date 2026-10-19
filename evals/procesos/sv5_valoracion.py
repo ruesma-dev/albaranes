@@ -340,8 +340,16 @@ def _contexto_de_dict(datos: dict):  # pragma: no cover - subproceso
     )
 
 
-def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:  # pragma: no cover - subproceso
-    """IA3 + IA4 reales caso a caso, EN SECUENCIA. Requiere sv5 en path."""
+def servicios(
+    especificacion, proveedor: str, prompt_key: str = "valuation_es",
+    prompt_key_ia4: str = "conciliacion_es",
+):  # pragma: no cover - subproceso
+    """(valorar, conciliar) de sv5 con UNA especificación. Requiere sv5 en path.
+
+    `valorar(contexto)` devuelve las líneas valoradas por IA3 y
+    `conciliar(envelope, contexto)`, las conciliaciones de IA4. Los usan el
+    runner y el comparador de modelos (F-083).
+    """
     from application.services.conciliacion_service import ConciliacionService
     from application.services.schema_registry import SchemaRegistry
     from application.services.valuation_extraction_service import (
@@ -349,32 +357,25 @@ def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:  # pragma: no cover -
     )
     from infrastructure.prompts.yaml_prompt_repository import YamlPromptRepository
 
-    proveedor = trabajo.get("proveedor", "gemini")
-    fabrica = fabrica or _clientes_reales
-    especificacion = fabrica(proveedor)
-
     prompts = YamlPromptRepository(RAIZ_SV5 / "config" / "prompts.yaml")
     esquemas = SchemaRegistry()
     valoracion = ValuationExtractionService(
         providers=[especificacion],
         prompt_repo=prompts,
         schema_registry=esquemas,
-        prompt_key=trabajo.get("prompt_key", "valuation_es"),
+        prompt_key=prompt_key,
         ia3_provider=proveedor,
     )
     conciliacion = ConciliacionService(
         providers=[especificacion],
         prompt_repo=prompts,
         schema_registry=esquemas,
-        prompt_key=trabajo.get("prompt_key_ia4", "conciliacion_es"),
+        prompt_key=prompt_key_ia4,
     )
 
     def valorar(contexto: dict) -> list:
         salida = valoracion.extract(context=_contexto_de_dict(contexto), pdf_attachment=None)
         return salida[proveedor].parsed.model_dump().get("lineas", [])
-
-    def construir_envelope(contexto: dict, lineas: list) -> dict:
-        return envelope_desde(contexto, lineas, proveedor, especificacion.model_name)
 
     def conciliar(envelope: dict, contexto: dict) -> list[dict]:
         documento = conciliacion.conciliar(
@@ -382,6 +383,24 @@ def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:  # pragma: no cover -
             lineas_contrato=contexto.get("lineas_contrato", []),
         )
         return documento.model_dump().get("conciliaciones", [])
+
+    return valorar, conciliar
+
+
+def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:  # pragma: no cover - subproceso
+    """IA3 + IA4 reales caso a caso, EN SECUENCIA. Requiere sv5 en path."""
+    proveedor = trabajo.get("proveedor", "gemini")
+    fabrica = fabrica or _clientes_reales
+    especificacion = fabrica(proveedor)
+    valorar, conciliar = servicios(
+        especificacion,
+        proveedor,
+        trabajo.get("prompt_key", "valuation_es"),
+        trabajo.get("prompt_key_ia4", "conciliacion_es"),
+    )
+
+    def construir_envelope(contexto: dict, lineas: list) -> dict:
+        return envelope_desde(contexto, lineas, proveedor, especificacion.model_name)
 
     resultados = procesar_casos(
         trabajo.get("casos", []),

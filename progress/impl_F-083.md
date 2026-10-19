@@ -71,3 +71,15 @@ ERROR tests/test_f083_fases.py
 1 error in 0.88s
 ```
 Verde tras T5: `21 passed` (`-k sv2`), incluido el subproceso real de sv2 sin casos (arranca sv2 y sus clientes sin red).
+
+### T6 · `python -m pytest tests/test_f083_fases.py -q --tb=line -k sv5`
+
+```
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   ImportError: cannot import name 'sv5_modelos' from 'evals.procesos' (...\evals\procesos\__init__.py)
+=========================== short test summary info ===========================
+ERROR tests/test_f083_fases.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.74s
+```
+Verde tras T6: `41 passed` (todo `test_f083_fases.py`), con el subproceso real de sv5 sin casos.
