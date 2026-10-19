@@ -75,8 +75,8 @@ RUTA_RESUMEN = RAIZ_REPO / "progress" / "comparar_modelos_F-083.md"
 RUTA_SALIDAS = RAIZ_REPO / "evals" / "salidas" / "comparar_modelos"
 
 #: Topes por defecto (P3 de la PARADA 1).
-TOPE_USD = Decimal("25")
-TOPE_TOTAL_USD = Decimal("200")
+TOPE_USD = Decimal(25)
+TOPE_TOTAL_USD = Decimal(200)
 
 #: Qué fase prepara la entrada de la fase medida, y con qué etiqueta de trabajo.
 PREPARACION = {"IA2": ("IA1", "prep_IA1"), "IA4": ("IA3", "prep_IA3")}

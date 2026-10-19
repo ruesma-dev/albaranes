@@ -166,12 +166,12 @@ def test_f083_r8_el_motivo_se_recorta():
 
 def test_f083_r4_hasta_vigente_hasta_inclusive_rige_el_actual(tabla):
     argon = tabla.modelo("gemini-4-argon")
-    assert precio_vigente(argon, dt.date(2026, 11, 30)).entrada == Decimal("2")
+    assert precio_vigente(argon, dt.date(2026, 11, 30)).entrada == Decimal(2)
 
 
 def test_f083_r4_despues_rige_el_siguiente(tabla):
     argon = tabla.modelo("gemini-4-argon")
-    assert precio_vigente(argon, dt.date(2026, 12, 1)).entrada == Decimal("4")
+    assert precio_vigente(argon, dt.date(2026, 12, 1)).entrada == Decimal(4)
 
 
 def test_f083_r4_sin_siguiente_la_tabla_esta_caducada(tabla):
@@ -222,9 +222,9 @@ def test_f083_r7_tramo_largo_por_encima_del_umbral(tabla):
     justo = Uso(entrada=272_000, lectura_cache=0, escritura_cache=0, salida=1_000_000)
     encima = Uso(entrada=271_000, lectura_cache=1_001, escritura_cache=0, salida=1_000_000)
     # En el umbral: tarifa normal (5 / 30).
-    assert coste_usd(gpt, justo, HOY) == Decimal("1.36") + Decimal("30")
+    assert coste_usd(gpt, justo, HOY) == Decimal("1.36") + Decimal(30)
     # Por encima (la caché cuenta como entrada): tramo largo (10 / 1 / 45).
-    assert coste_usd(gpt, encima, HOY) == Decimal("2.71") + Decimal("0.001001") + Decimal("45")
+    assert coste_usd(gpt, encima, HOY) == Decimal("2.71") + Decimal("0.001001") + Decimal(45)
 
 
 def test_f083_r7_tramo_largo_cuenta_la_escritura_de_cache(tabla):
@@ -235,7 +235,7 @@ def test_f083_r7_tramo_largo_cuenta_la_escritura_de_cache(tabla):
 
 def test_f083_r7_coste_con_el_precio_siguiente(tabla):
     uso = Uso(entrada=1_000_000, lectura_cache=0, escritura_cache=0, salida=0)
-    assert coste_usd(tabla.modelo("gemini-4-argon"), uso, dt.date(2026, 12, 1)) == Decimal("4")
+    assert coste_usd(tabla.modelo("gemini-4-argon"), uso, dt.date(2026, 12, 1)) == Decimal(4)
 
 
 def test_f083_r10_uso_vacio_cuesta_cero(tabla):

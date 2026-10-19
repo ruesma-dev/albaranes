@@ -24,13 +24,13 @@ NOMBRE = "HORMIGONES CENTINELA SL"
 
 
 def _metricas(modelo, fase="IA1", **cambios):
-    datos = dict(
-        modelo=modelo, fase=fase, casos=2, verdes=1, fallos=Decimal(3), fallos_min=3,
-        fallos_max=3, avisos=1, tiempo_medio_s=Decimal("2.5"), tiempo_max_s=Decimal("4"),
-        llamadas=2, tokens_entrada_medios=Decimal("1000.4"), tokens_salida_medios=Decimal("300"),
-        coste_total=Decimal("0.02"), coste_por_albaran=Decimal("0.01"),
-        modelos_servidos=[modelo], motivos_parada={"STOP": 2},
-    )
+    datos = {
+        "modelo": modelo, "fase": fase, "casos": 2, "verdes": 1, "fallos": Decimal(3), "fallos_min": 3,
+        "fallos_max": 3, "avisos": 1, "tiempo_medio_s": Decimal("2.5"), "tiempo_max_s": Decimal(4),
+        "llamadas": 2, "tokens_entrada_medios": Decimal("1000.4"), "tokens_salida_medios": Decimal(300),
+        "coste_total": Decimal("0.02"), "coste_por_albaran": Decimal("0.01"),
+        "modelos_servidos": [modelo], "motivos_parada": {"STOP": 2},
+    }
     datos.update(cambios)
     return Metricas(**datos)
 
@@ -42,32 +42,32 @@ def _caso_rojo():
 
 
 def _seccion(**cambios):
-    datos = dict(
-        fecha="2026-10-20T10:00:00Z",
-        fase="IA1",
-        commit="abc1234",
-        casos=["GEN-001", "HOR-001"],
-        omitidos={"GEN-002": "no existe el fichero del albarán"},
-        repeticiones=1,
-        referencia="gemini-3.7-flash",
-        referencia_anadida=True,
-        preparacion=None,
-        metricas={
+    datos = {
+        "fecha": "2026-10-20T10:00:00Z",
+        "fase": "IA1",
+        "commit": "abc1234",
+        "casos": ["GEN-001", "HOR-001"],
+        "omitidos": {"GEN-002": "no existe el fichero del albarán"},
+        "repeticiones": 1,
+        "referencia": "gemini-3.7-flash",
+        "referencia_anadida": True,
+        "preparacion": None,
+        "metricas": {
             "gemini-3.7-flash": _metricas("gemini-3.7-flash", modelos_servidos=["gemini-3.8-flash"]),
             "gpt-6-luna": _metricas("gpt-6-luna", errores=1, uso_incompleto=1,
                                     modelos_servidos=["gpt-6-luna-2026-09-01"]),
         },
-        metricas_e2e={},
-        metricas_preparacion=None,
-        recomendacion=Recomendacion(
+        "metricas_e2e": {},
+        "metricas_preparacion": None,
+        "recomendacion": Recomendacion(
             ["gemini-3.7-flash"], ["gemini-3.7-flash"], "gemini-3.7-flash", "mantener", [],
             True, "provisional (1 repetición)",
         ),
-        errores=[("gpt-6-luna", 1, "HOR-001", "ERROR en IA1 · ValidationError: json_invalid")],
-        gasto_real=Decimal("0.0412345"),
-        cortado=False,
-        salida="evals/salidas/comparar_modelos/2026-10-20-100000",
-    )
+        "errores": [("gpt-6-luna", 1, "HOR-001", "ERROR en IA1 · ValidationError: json_invalid")],
+        "gasto_real": Decimal("0.0412345"),
+        "cortado": False,
+        "salida": "evals/salidas/comparar_modelos/2026-10-20-100000",
+    }
     datos.update(cambios)
     return Seccion(**datos)
 

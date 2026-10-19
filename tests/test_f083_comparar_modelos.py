@@ -356,8 +356,8 @@ def test_f083_r11_parada_uso_incorrecto_del_cli(banco, argv):
 def test_f083_r11_plan_valores_por_defecto():
     opciones = cm.analizar(["--fase", "IA1", "--modelos", "gpt-5.5"])
     assert opciones.repeticiones == 1
-    assert opciones.tope_usd == Decimal("25")
-    assert opciones.tope_total_usd == Decimal("200")
+    assert opciones.tope_usd == Decimal(25)
+    assert opciones.tope_total_usd == Decimal(200)
     assert opciones.estimar is False
     assert Path(opciones.resumen) == cm.RUTA_RESUMEN
     assert opciones.salida == ""
@@ -365,11 +365,11 @@ def test_f083_r11_plan_valores_por_defecto():
 
 # --- T8 · ejecución por bloques (R19, R24–R26) -----------------------------------------
 
-import copy  # noqa: E402
+import copy
 
-from evals.conversor import RUTA_FIXTURES  # noqa: E402
-from evals.procesos import sv5_valoracion, sv6_build  # noqa: E402
-from evals.runner import cargar_fixtures  # noqa: E402
+from evals.conversor import RUTA_FIXTURES
+from evals.procesos import sv5_valoracion, sv6_build
+from evals.runner import cargar_fixtures
 
 _IA1 = {"cabeceras": [{"numero_albaran": "A-1"}], "lineas": [{"num_linea": 1, "cantidad": 2}]}
 
@@ -551,7 +551,7 @@ def test_f083_tope_alcanzado_no_lanza_mas_bloques(banco_ia1, capsys):
     texto = _resumen(banco_ia1)
     assert "**CORTADO**" in texto
     assert "| `gpt-6-luna` | 0 | 0 | 2 | 0 | 0 |" in texto
-    assert gasto_acumulado(texto) == Decimal("2")
+    assert gasto_acumulado(texto) == Decimal(2)
 
 
 def test_f083_tope_alcanzado_dentro_de_un_bloque(banco_ia1):
@@ -626,7 +626,7 @@ def test_f083_bloque_ia3_con_la_ia4_del_libro(banco):
         RUTA_FIXTURES, _CASOS_SV5)
     fallos = {f.nombre: sum(len(c.fallos) for c in f.casos) for f in deterministas}
     texto = _resumen(banco)
-    assert f"| `claude-opus-5-5` | 3 | 0 | 0 |" in texto
+    assert "| `claude-opus-5-5` | 3 | 0 | 0 |" in texto
     fila = _fila(texto, "claude-opus-5-5")
     assert fila.split("|")[6].strip() == str(fallos["IA3"])
     e2e = texto.split("### E2E")[1]

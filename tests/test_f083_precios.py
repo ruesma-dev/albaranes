@@ -98,7 +98,7 @@ def test_f083_r1_precios_de_ejemplo_del_inventario():
     tabla = cargar_tabla()
     opus = tabla.modelo("claude-opus-5-5").precio
     assert (opus.entrada, opus.lectura_cache, opus.escritura_cache, opus.salida) == (
-        Decimal("4"), Decimal("0.20"), Decimal("5"), Decimal("20"),
+        Decimal(4), Decimal("0.20"), Decimal(5), Decimal(20),
     )
     luna = tabla.modelo("gpt-6-luna").precio
     assert (luna.entrada, luna.lectura_cache, luna.escritura_cache, luna.salida) == (
@@ -106,7 +106,7 @@ def test_f083_r1_precios_de_ejemplo_del_inventario():
     )
     argon = tabla.modelo("gemini-4-argon").precio
     assert argon.vigente_hasta.isoformat() == "2026-11-30"
-    assert argon.siguiente.entrada == Decimal("4")
+    assert argon.siguiente.entrada == Decimal(4)
     assert tabla.modelo("gpt-5.5").tramo_largo.umbral == 272000
     assert tabla.modelo("claude-haiku-5-5").tramo_largo.umbral == 100000
     assert tabla.modelo("gpt-5.4").tramo_largo is None

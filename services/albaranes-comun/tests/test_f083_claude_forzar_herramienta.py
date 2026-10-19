@@ -13,7 +13,6 @@ from types import SimpleNamespace as NS
 
 import pytest
 from pydantic import BaseModel
-
 from ruesma_comun.llm.claude_messages_client import ClaudeMessagesVisionClient
 
 

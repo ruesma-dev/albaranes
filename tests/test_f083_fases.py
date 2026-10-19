@@ -293,11 +293,11 @@ def test_f083_runner_fabrica_toma_el_modelo_del_entorno_si_no_se_pide(clientes_f
 
 # --- T5 · bucle medido de un bloque (medidor.procesar) ------------------------------
 
-import os  # noqa: E402
-from decimal import Decimal  # noqa: E402
+import os
+from decimal import Decimal
 
-from evals.procesos import medidor as medidor_mod  # noqa: E402
-from evals.procesos import sv2_modelos  # noqa: E402
+from evals.procesos import medidor as medidor_mod
+from evals.procesos import sv2_modelos
 
 
 class _MedidorDoble:
@@ -521,7 +521,7 @@ def test_f083_sv2_subproceso_sin_clave_muere_con_codigo():
 
 # --- T6 · sv5_modelos: IA3, IA4 y la preparación de IA3 --------------------------
 
-from evals.procesos import sv5_modelos  # noqa: E402
+from evals.procesos import sv5_modelos
 
 _LINEA_VALORADA = {
     "merge_line_id": 1,

@@ -112,9 +112,9 @@ def _paradas(metricas: Metricas) -> str:
 
 def _tabla(metricas: dict[str, Metricas]) -> list[str]:
     lineas = [
-        "| Modelo | Casos | ERROR | NO_EJECUTADO | Verdes | Fallos críticos | Avisos | "
+        ("| Modelo | Casos | ERROR | NO_EJECUTADO | Verdes | Fallos críticos | Avisos | "
         "t medio s | t máx s | Tokens entrada | Tokens salida | USD/albarán | USD total | "
-        "Uso incompleto | Modelo servido | Parada |",
+        "Uso incompleto | Modelo servido | Parada |"),
         "|---|" + "---|" * 15,
     ]
     for m in metricas.values():
@@ -193,8 +193,8 @@ def render_versionable(seccion: Seccion) -> str:
     lineas += ["", *_tabla(seccion.metricas)]
     prep = seccion.metricas_preparacion
     if prep is not None:
-        lineas += ["", f"- Preparación ({prep.fase}, una vez): `{prep.modelo}` · "
-                       f"{prep.llamadas} llamadas · {prep.coste_total:.4f} USD"]
+        lineas += ["", (f"- Preparación ({prep.fase}, una vez): `{prep.modelo}` · "
+                       f"{prep.llamadas} llamadas · {prep.coste_total:.4f} USD")]
     if seccion.metricas_e2e:
         lineas += ["", "### E2E", "", *_tabla_e2e(seccion.metricas_e2e)]
     lineas += ["", *_recomendacion(seccion), "", "### Casos con ERROR (sin valores)", ""]

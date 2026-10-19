@@ -219,7 +219,7 @@ def test_f083_r27_metricas_de_una_repeticion():
     assert (m.casos, m.errores, m.no_ejecutados, m.verdes) == (2, 1, 1, 1)
     assert (m.fallos, m.fallos_min, m.fallos_max, m.avisos) == (2, 2, 2, 1)
     # A: 1 + 3 = 4 s; B: 2 s; C: 0,5 s (sin respuesta). Medio 6,5 / 3, máximo 4.
-    assert m.tiempo_max_s == Decimal("4")
+    assert m.tiempo_max_s == Decimal(4)
     assert m.tiempo_medio_s == Decimal("6.5") / 3
     assert m.llamadas == 4
     # Solo las llamadas con respuesta, con la caché: (300 + 200 + 100) / 3. Una
@@ -248,8 +248,8 @@ def test_f083_r27_el_mismo_caso_en_dos_repeticiones_son_dos_albaranes():
     casos = [[_caso("A")], [_caso("A")]]
     registros = [_registro("A", 1, "1", 1000), _registro("A", 2, "3", 3000)]
     m = medir("x", "IA1", casos, registros)
-    assert m.coste_por_albaran == Decimal("2")
-    assert m.tiempo_medio_s == Decimal("2") and m.tiempo_max_s == Decimal("3")
+    assert m.coste_por_albaran == Decimal(2)
+    assert m.tiempo_medio_s == Decimal(2) and m.tiempo_max_s == Decimal(3)
 
 
 def test_f083_r27_fallo_del_medidor_cuenta_aparte():
