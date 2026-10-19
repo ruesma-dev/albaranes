@@ -115,6 +115,9 @@ con R1–R5.
   están entre los muertos: `==`→`!=` en la clave (l. 160), `not _es_empatado`→`_es_empatado` y
   `and`→`or` en los dos sitios de la condición (l. 1031); también `decide = False`→`True` (l. 1042).
   Sin supervivientes, no hay nada que justificar.
+- Fila de `progress/mutacion_F-080.md` en `progress/inventario_mutacion_F-039.md` (la exige
+  `test_f039_r2_…`: la primera pasada final de `init.sh` dio KO por eso). Se rehízo el recuento: 46
+  informes (faltaban las dos de F-075, que trae `dev`) y 10 con alcance fuera de `services/`.
 
 ## T7 · `bash harness/init.sh`
 
