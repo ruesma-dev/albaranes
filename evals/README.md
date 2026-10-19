@@ -119,3 +119,57 @@ escribes un adaptador nuevo en `evals/procesos/`, usa `canal.emitir` y
 Si un hijo muere, su stderr completo sale por la consola de la pasada y **no se
 redirige a `progress/`** (puede llevar valores del albarán): guárdalo tú si lo
 necesitas, porque el informe solo trae el motivo corto.
+
+## Comparar modelos (F-083)
+
+`python -m evals.comparar_modelos` mide varios modelos en **una** fase (IA1, IA2,
+IA3 o IA4) con el acierto del banco y el **coste por albarán**, para decidir si
+merece la pena cambiar el modelo de producción. **Cuesta dinero y solo lo lanza
+el humano**; `harness/init.sh` no lo invoca nunca.
+
+```bash
+# Siempre primero: estimación sin claves ni llamadas (sale con 0)
+python -m evals.comparar_modelos --fase IA1 --modelos gpt-6-luna,gemini-4-argon --estimar
+
+# La corrida de verdad (pide las claves de los proveedores que use)
+python -m evals.comparar_modelos --fase IA1 --modelos gpt-6-luna,gemini-4-argon \
+    [--casos GEN-001,HOR-001] [--repeticiones 3] [--tope-usd 25] [--tope-total-usd 200]
+```
+
+- **Modelos y precios**: `evals/precios_modelos.json`, versionado, con fuente
+  oficial y fecha de consulta por modelo. Los `excluido` no se pueden pedir.
+- **Referencia**: el modelo de producción de la fase (`infra/create_capps.ps1`)
+  se añade siempre y va primero en cada repetición; la recomendación se decide
+  contra ella, medida en la misma invocación.
+- **Cómo se aísla la fase**: IA2 parte de una IA1 de la referencia hecha una
+  sola vez; IA4 concilia sobre una IA3 de la referencia hecha una sola vez; en
+  IA3 la conciliación sale del libro IA4 (sin LLM). Cada bloque (modelo,
+  repetición) corre en su propio subproceso.
+- **Coste**: tokens reales leídos por `evals/procesos/medidor.py`, que entra
+  como `call_logger` de los clientes de comun sin tocarlos, por la tabla.
+
+Paradas **antes de gastar** (código 2), por este orden: modelo que no está en
+la tabla o está excluido, tabla de precios caducada, falta la clave de algún
+proveedor (también el de la preparación), la estimación supera `--tope-usd`,
+o el gasto acumulado de la feature más la estimación supera `--tope-total-usd`.
+
+Códigos de salida: `0` hecho, `1` ningún candidato dio resultado, `2` parada
+antes de gastar, `3` cortado por `--tope-usd` a mitad (lo pendiente queda
+`NO_EJECUTADO` y el informe se escribe con lo hecho).
+
+Dónde queda cada cosa:
+
+- `progress/comparar_modelos_F-083.md` — resumen **sin valores**, acumulativo:
+  una sección por invocación con la tabla por modelo (casos, `ERROR`,
+  `NO_EJECUTADO`, fallos críticos, tiempos, tokens, USD por albarán, modelo
+  servido y motivo de parada), la recomendación y dos líneas que se leen de
+  vuelta: `GASTO:` (el gasto real, que suma el tope de la feature) y `TOKENS:`
+  (que usa la estimación siguiente).
+- `evals/salidas/comparar_modelos/<fecha-hora>/` — el detalle **con valores**
+  (`detalle.md`, `resultados.json` y un `registros_*.jsonl` por bloque). Git lo
+  ignora.
+
+Si el modelo que dice la respuesta no es el pedido (Google sirve
+`gemini-3.8-flash` a quien pide `gemini-3.7-flash`), el informe lo avisa junto
+al modelo. Las cifras de IA3 y E2E no son comparables con las del runner: aquí
+IA4 sale del libro.
