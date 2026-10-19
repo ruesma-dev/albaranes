@@ -5,6 +5,38 @@ Rama `feature/F-080-empate-solo-entre-empatados`, worktree `../albaranes-F-080`.
 Variante **(b)** de P1 (decisión del humano, 2026-10-19): el paso por puntos de hoy no cambia; tras un
 empate por nombre su ganador solo se acepta si es uno de los empatados (clave de CIF normalizada).
 
+## Qué cambió
+
+- `services/albaranes-persistencia/application/services/header_resolver_service.py` (+24 líneas):
+  - `_es_empatado(cif, eleccion)`, función pura junto a `_clave_cif`: ¿la clave de CIF de `cif` es la de
+    algún `eleccion.empatados`? (R1, R8; D2).
+  - `_resolver_por_obra_y_familia`: la condición de hoy (≥ 3 puntos y margen ≥ 2) pasa a `decide`; si
+    `decide and eleccion.empatados and not _es_empatado(mejor.cif, eleccion)` ⇒ log de R6 (`logger.info`)
+    y `decide = False`. Con `decide`, la rama «DEDUCIDO» de hoy intacta; sin él, el código de hoy tal cual
+    (log «NO deducido», y R11 de F-073 con `eleccion.empatados`, que en el caso del ajeno siempre existe).
+  - Docstring de la clase: «tras un empate por nombre, solo si el ganador es uno de los empatados (F-080)».
+- `services/albaranes-persistencia/tests/test_f080_empate_solo_entre_empatados.py` (nuevo, 36 casos,
+  `test_f080_rN_…`): los cinco casos de design §1 (H4, P1, ajeno cerca, ajeno lejos, penalización) y R1–R12.
+  Reutiliza `_paso1`, `_resumen`, `_RepoConLineas` y `_ClienteRed` de `test_f073_eleccion` y `pasada` de
+  `f062_dobles`, sin tocarlos.
+- `docs/ARCHITECTURE.md`, regla 24, viñeta «Empate» (R15): el ganador por puntos solo se acepta si es uno
+  de los empatados (F-080); si gana un ajeno o los puntos no deciden, revisión con `proveedor_nombre_ambiguo`.
+- Fusión de `dev` (`f49f1b2`, F-075) en la rama antes de T4/T5 (commit `98b2cee`). Conflictos solo en
+  `BACKLOG.md` (generado: se tomó el de `dev` y lo regenera `init.sh`) y `progress/current.md` (se conservan
+  los dos bloques, F-080 y F-075). `docs/ARCHITECTURE.md` fusionó solo: la regla 25 de F-075 sigue tras la 24.
+- No se tocan: `similitud_proveedor.py`, el paso 2, la red por CIF, el CIF propio, `_resolve_obra`,
+  `_nota_empate_nombre`, el constructor, las constantes, comun, DDL, mensajes, `sv3.md` ni `azure-apps/`.
+
+## Decisiones de diseño
+
+- Variante (b) de P1, como en design §2/§4 (D1). P2: «los empatados» = `EleccionPorNombre.empatados`.
+  P3: sin cambios en R11 (la nota lista todos los empatados en orden (−puntos, CIF), con el tope).
+- El log de R6 va antes del log «NO deducido» de hoy, que sigue saliendo (design §4: «el código de hoy tal
+  cual»). Texto exacto: `[header-resolver] proveedor NO deducido por familia+obra: el ganador por puntos B9
+  (6 puntos) es AJENO al empate por nombre (2 empatados) obra=0694`.
+- R12 en el test: se comprueban las constantes, el defecto de `margen_nombre` y que no hay parámetro nuevo
+  en el constructor, sin fijar la lista entera de parámetros (F-049 toca el constructor en otra rama).
+
 ## Fase RED (T1)
 
 Test escrito antes del código: `services/albaranes-persistencia/tests/test_f080_empate_solo_entre_empatados.py`
@@ -67,3 +99,44 @@ usa F-073). No toca la spec ni ningún test existente.
   `_resolver_por_obra_y_familia`. Sin diff en `_resolve_proveedor`, `_red_proveedor_por_cif`,
   `_candidato_claro`, `_descartar_cif_propio`, `_resolve_obra`, `_nota_empate_nombre`, `_log_eleccion`,
   constructor ni constantes (R12, R14).
+
+## T4 · docs
+
+`docs/ARCHITECTURE.md`, regla 24, viñeta «Empate», con el texto de design §4 (R15). Lo contrasta el reviewer
+con R1–R5.
+
+## T5 · cobertura y mutación
+
+- `PUERTA COBERTURA` de `bash harness/init.sh` (tras fusionar `dev`): **100.0 % de 8 líneas cambiadas
+  cubiertas (8/8, umbral 80 %, nivel critico)**.
+- `python -m harness.mutacion --feature F-080 --workers 1` (en serie, para no correr dos suites a la vez):
+  **5 mutantes generados, 5 evaluados, 5 muertos, 0 supervivientes, 0 timeouts, 66.8 s**. Informe:
+  `progress/mutacion_F-080.md` (HEAD medido `00c52db`). Los tres mutantes de pertenencia de design §6
+  están entre los muertos: `==`→`!=` en la clave (l. 160), `not _es_empatado`→`_es_empatado` y
+  `and`→`or` en los dos sitios de la condición (l. 1031); también `decide = False`→`True` (l. 1042).
+  Sin supervivientes, no hay nada que justificar.
+
+## T7 · `bash harness/init.sh`
+
+En verde en el worktree tras la fusión de `dev` y T4 (todas las líneas `[OK]`; un `[AVISO]` heredado: sv3
+importa `ruesma_comun` del árbol principal, fuera del worktree, y no se cachea; comun no cambia en F-080).
+Suites: sv3 **1576 passed** (1532 + los 44 de F-075 que trae `dev`), raíz 1328, sv1 205, sv2 485,
+sv4 1774, sv5 46, sv6 473 (+1 skipped), sv9 673, comun 859 (+3 skipped). Puerta de tamaño: impl en tope.
+
+## Pendiente
+
+- **T6 · MANUAL del humano** (tras APPROVED, fusión en `dev` y la T12 de F-073): desplegar sv3 y mirar el
+  log. Comando en `progress/current.md`, sin ejecutar.
+- Fuera de alcance (requirements): revisar albaranes ya deducidos con un ajeno, O1 del paso 2 global,
+  retirar `proveedor_nombre_ambiguo` al fijar a mano (F-059), `_proposeBest` y la propuesta de F-052.
+
+## Evidencias
+
+| Evidencia | Valor medido |
+|---|---|
+| Tests de F-080 | 36 passed in 2.17 s (RED: 26 failed, 10 passed) |
+| Suite de sv3 | 1576 passed in 27.26 s (tras fusionar `dev`); 1532 passed in 13.46 s antes de fusionar |
+| Tests existentes con expectativa cambiada | 0 (R13) |
+| Cobertura de las líneas cambiadas | 100.0 % (8/8) — `PUERTA COBERTURA` |
+| Mutantes generados / supervivientes | 5 / 0 (5 muertos, 66.8 s) — `progress/mutacion_F-080.md` |
+| `bash harness/init.sh` | verde (sin `[KO]`) |
