@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **80 features**, 56 abiertas, 24 terminadas.
+Resumen: **81 features**, 57 abiertas, 24 terminadas.
 
 Bloqueadas: **F-064, F-075, F-078, F-076, F-080, F-077, F-073**.
 
@@ -23,6 +23,7 @@ Bloqueadas: **F-064, F-075, F-078, F-076, F-080, F-077, F-073**.
 | F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 1 | bloqueada | estandar | `feature/F-077-guardar-y-aprobar` |
 | F-078 | La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia | 1 | bloqueada | critico | `feature/F-078-linea-guarda-lo-que-se-ve` |
 | F-080 | Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados | 1 | bloqueada | critico | `feature/F-080-empate-solo-entre-empatados` |
+| F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 1 | pendiente | critico |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
@@ -224,6 +225,20 @@ PROPUESTA: tras un empate por nombre, la deducción por familia solo puede elegi
 ALCANCE: services/albaranes-persistencia (header_resolver_service). RELACIONADAS: F-073 (P6, R10, R11), F-062.
 
 SPEC (specs/F-080-empate-solo-entre-empatados/, 2026-10-18): tras un empate por nombre, el ganador del paso por puntos de hoy (sobre toda la obra, mínimo 3 y margen 2, sin cambios) solo se acepta si es uno de los empatados (clave de CIF normalizada); si gana un ajeno, revisión con proveedor_nombre_ambiguo y la nota de R11 de F-073, y una línea de log. Prototipo: H4 pasa a revisión y la suite de sv3 sigue en 1496 passed sin cambiar expectativas. Sin DDL, sin comun, sin tocar similitud_proveedor.py. PREGUNTAS P1–P3 para la PARADA 1 (design §2): P1 contra quién compite el empatado (recomendada (b), la carrera de hoy con el ganador empatado, frente a (a) carrera solo entre empatados); P2 quiénes son los empatados (los de EleccionPorNombre.empatados); P3 si la familia deja empatados igualados arriba (R11 sin cambios).
+
+### F-083 · Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán
+
+estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
+
+ORIGEN: petición del humano, 2026-10-19: «una feature para mejorar los modelos»; probar las llamadas con modelos de Claude (mínimo 4.8), Gemini (mínimo Flash 3.7) y OpenAI (mínimo 5.5), ver el coste de cada modelo, y probar también con «Luna» (un modelo de IA, nombre exacto por confirmar).
+
+HOY (infra/create_capps.ps1): ANTHROPIC_MODEL claude-opus-4-8, OPENAI_MODEL gpt-5.4, GEMINI_MODEL gemini-3.7-flash (IA1).
+
+ALCANCE (decisión del humano): todas las fases, IA1 e IA2 (extracción, sv2) e IA3 e IA4 (valoración, sv5), con el banco de evals (59 casos). Por modelo y fase: fallos críticos, avisos, tiempo y coste por albarán (tokens de entrada y salida por precio vigente), y recomendación de qué modelo usar en cada fase.
+
+PRIMERO: inventario de modelos disponibles por proveedor que cumplan el mínimo, con su identificador de API y su precio vigente (fuente y fecha), e identificar «Luna». Las llamadas de pago las lanza el humano con sus claves (Read-Host -AsSecureString); ningún agente gasta.
+
+RELACIONADAS: F-047 (ciclo completo), F-064 y F-075 (líneas base de evals con LLM: IA1 141, IA2 2), comparar_proveedor (patrón de comparador).
 
 ### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
 
