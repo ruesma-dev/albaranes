@@ -107,3 +107,21 @@ ERROR tests/test_f083_decision.py
 1 error in 0.49s
 ```
 Verde tras T9: `32 passed`. Tres tests de R32/R33 estaban mal planteados (la mejora clara exige que la referencia quede fuera de la banda: si no, el más barato de la banda es ella); se corrigió el test, no el código.
+
+### T10 · `python -m pytest tests/test_f083_informe.py tests/test_f083_decision.py -q --tb=line` (antes que T8)
+
+```
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_f083_informe.py:9: in <module>
+    from evals.informe_modelos import (
+E   ImportError: cannot import name 'CABECERA' from 'evals.informe_modelos' (...\evals\informe_modelos.py)
+=========================== short test summary info ===========================
+ERROR tests/test_f083_informe.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 1.31s
+...\tests\test_f083_decision.py:227: AssertionError: assert Decimal('175') == (Decimal('600') / 3)
+=========================== short test summary info ===========================
+FAILED tests/test_f083_decision.py::test_f083_r27_metricas_de_una_repeticion
+1 failed, 31 passed in 0.18s
+```
+El segundo fallo es el cambio de criterio de `decision.medir` que pide T10: los tokens medios salen solo de las llamadas **con respuesta** (si no, una llamada sin respuesta abarataría la estimación siguiente, R15). Verde tras T10: `20 passed` (informe) y `32 passed` (decisión).

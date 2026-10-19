@@ -222,9 +222,10 @@ def test_f083_r27_metricas_de_una_repeticion():
     assert m.tiempo_max_s == Decimal("4")
     assert m.tiempo_medio_s == Decimal("6.5") / 3
     assert m.llamadas == 4
-    # Entrada con la caché: (300 + 200 + 100 + 100) / 4.
-    assert m.tokens_entrada_medios == Decimal(700) / 4
-    assert m.tokens_salida_medios == Decimal(60) / 4
+    # Solo las llamadas con respuesta, con la caché: (300 + 200 + 100) / 3. Una
+    # llamada sin respuesta no mide tokens: bajaría la estimación siguiente (R15).
+    assert m.tokens_entrada_medios == Decimal(600) / 3
+    assert m.tokens_salida_medios == Decimal(50) / 3
     assert m.coste_total == Decimal("0.60")
     # Casos con respuesta: A y B.
     assert m.coste_por_albaran == Decimal("0.30")

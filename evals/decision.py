@@ -100,29 +100,30 @@ def medir(
     duraciones: dict[tuple, int] = {}
     con_respuesta = set()
     servidos, motivos = set(), Counter()
-    entrada = salida = 0
+    entrada = salida = respondidas = 0
     for registro in propios:
         albaran = (registro.get("repeticion"), registro.get("caso_id"))
         metricas.coste_total += Decimal(registro["coste_usd"])
         metricas.fallos_medidor += bool(registro.get("fallo_medidor"))
         metricas.uso_incompleto += bool(registro.get("uso_incompleto"))
-        entrada += (
-            registro.get("entrada", 0)
-            + registro.get("lectura_cache", 0)
-            + registro.get("escritura_cache", 0)
-        )
-        salida += registro.get("salida", 0)
         if isinstance(registro.get("duracion_ms"), int):
             duraciones[albaran] = duraciones.get(albaran, 0) + registro["duracion_ms"]
         if registro.get("con_respuesta"):
+            # Los tokens medios, solo de las llamadas con respuesta: una sin
+            # respuesta no mide nada y bajaría la estimación siguiente (R15).
+            respondidas += 1
+            entrada += (
+                registro["entrada"] + registro["lectura_cache"] + registro["escritura_cache"]
+            )
+            salida += registro["salida"]
             con_respuesta.add(albaran)
             if registro.get("modelo_servido"):
                 servidos.add(registro["modelo_servido"])
             if registro.get("motivo_parada"):
                 motivos[registro["motivo_parada"]] += 1
     metricas.llamadas = len(propios)
-    metricas.tokens_entrada_medios = _media(entrada, len(propios))
-    metricas.tokens_salida_medios = _media(salida, len(propios))
+    metricas.tokens_entrada_medios = _media(entrada, respondidas)
+    metricas.tokens_salida_medios = _media(salida, respondidas)
     metricas.tiempo_medio_s = _media(sum(duraciones.values()), len(duraciones)) / 1000
     metricas.tiempo_max_s = Decimal(max(duraciones.values(), default=0)) / 1000
     metricas.coste_por_albaran = _media(metricas.coste_total, len(con_respuesta))
