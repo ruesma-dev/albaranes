@@ -965,6 +965,19 @@
         "sv3-persistencia"
       ],
       "branch": "feature/F-073-proveedor-por-similitud"
+    },
+    {
+      "id": "F-082",
+      "title": "Valoración directa (F-075): una línea con importe y sin cantidad no puede quedar valorada sin revisión, porque sv9 la rechaza en el alta",
+      "description": "ORIGEN: observación O3 de progress/review_F-075.md (pasada 1), decisión del humano del 2026-10-19: abrir feature.\n\nPROBLEMA: con F-075, la valoración directa sin contrato da por valorada una línea que trae importe del albarán pero no cantidad. Esa línea se aprueba con normalidad y después sv9 deja el alta en no_admitido (visible en el panel del alta de F-053), en vez de avisar antes de aprobar.\n\nPROPUESTA (a concretar en la spec): que esa línea vaya a revisión antes de la aprobación (motivo de línea en sv6, visible en la ficha de sv4), para que el revisor ponga la cantidad o la corrija; sin cambiar la valoración de las líneas que sí traen cantidad.\n\nALCANCE probable: sv6 (valoración directa de F-075) y, si hace falta, el aviso en la ficha de sv4. RELACIONADAS: F-075 (O3), F-053 (alta), F-077 (motivos de línea).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 2,
+      "servicios": [
+        "sv6-valoracion-persist",
+        "sv4-front"
+      ]
     }
   ]
 }
