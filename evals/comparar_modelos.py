@@ -25,14 +25,18 @@ Códigos: 0 hecho, 1 ningún candidato dio resultado, 2 parada antes de gastar,
 from __future__ import annotations
 
 import argparse
+import copy
 import datetime as dt
+import json
 import os
+import subprocess
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from decimal import ROUND_CEILING, Decimal, InvalidOperation
 from pathlib import Path
 
+from evals import runner
 from evals.conversor import RUTA_FIXTURES
 from evals.costes import (
     FASES,
@@ -45,9 +49,19 @@ from evals.costes import (
     estimar,
     precio_vigente,
 )
-from evals.informe_modelos import gasto_acumulado, tokens_medidos
-from evals.procesos import sv6_build
-from evals.procesos.medidor import lanzar
+from evals.criticidad import cargar_criticidad
+from evals.decision import NO_EJECUTADO, medir, recomendar
+from evals.informe_modelos import (
+    Seccion,
+    anadir_seccion,
+    gasto_acumulado,
+    render_detalle,
+    render_versionable,
+    tokens_medidos,
+)
+from evals.modelos import ERROR, ROJO, VERDE, ResultadoCaso
+from evals.procesos import sv5_valoracion, sv6_build
+from evals.procesos.medidor import lanzar, registros_de_fichero
 from evals.procesos.sv2_extraccion import RUTA_ALBARANES, ruta_de_albaran
 from evals.procesos.sv5_valoracion import ClavesAusentes, comprobar_claves
 from evals.runner import cargar_fixtures
@@ -271,9 +285,311 @@ def ejecutar(opciones, entorno: dict, dependencias: Dependencias) -> int:
     return ejecutar_plan(plan, opciones, tabla, dependencias, ahora)
 
 
-def ejecutar_plan(plan, opciones, tabla, dependencias, ahora) -> int:
-    """La corrida por bloques: llega en T8."""
-    raise NotImplementedError("la ejecución por bloques llega en T8")
+# --- Ejecución por bloques (R19, R21, R23–R26) -------------------------------------
+
+#: Por qué un caso no tiene resultado del bloque.
+MOTIVO_NO_DEVUELTO = "el bloque no devolvió el caso"
+MOTIVO_NO_EJECUTADO = "no ejecutado: se alcanzó --tope-usd"
+
+
+@dataclass
+class Bloque:
+    """Lo que devolvió un bloque: resultado por caso y los registros del medidor."""
+
+    resultados: dict[str, dict]
+    registros: list[dict]
+
+
+def _trabajos_de_casos(plan: Plan, fixtures: Path, albaranes: Path) -> dict[str, dict]:
+    """La entrada de cada caso para el subproceso, sin los valores del candidato."""
+    if plan.fase in ("IA1", "IA2"):
+        libro = cargar_fixtures(fixtures, plan.fase)
+        return {
+            caso: {
+                "caso_id": caso,
+                "fichero": str(ruta_de_albaran(caso, albaranes)),
+                "tipologia": libro[caso].get("tipologia", ""),
+            }
+            for caso in plan.casos
+        }
+    inputs = cargar_fixtures(fixtures, "inputs")
+    return {
+        caso: {"caso_id": caso, "contexto": sv5_valoracion.construir_contexto(inputs[caso])}
+        for caso in plan.casos
+    }
+
+
+def _ejecutar_bloque(
+    trabajo_fase: str,
+    modelo_id: str,
+    casos: list[dict],
+    presupuesto: Decimal,
+    registros: Path,
+    tabla: Tabla,
+    dependencias: Dependencias,
+    fecha: dt.date,
+) -> Bloque:
+    """Un bloque en su subproceso; si muere, sus casos quedan con error y lo
+    ya pagado se recupera del fichero de registros del medidor (R26)."""
+    modelo = tabla.modelo(modelo_id)
+    trabajo = {
+        "fase": trabajo_fase,
+        "modelo": {
+            "id": modelo.id,
+            "proveedor": modelo.proveedor,
+            "herramienta_forzada": modelo.herramienta_forzada,
+        },
+        "casos": casos,
+        "presupuesto_usd": str(presupuesto),
+        "fecha": fecha.isoformat(),
+        "registros": str(registros),
+    }
+    ejecutar = dependencias.ejecutar_sv2 if "IA1" in trabajo_fase or trabajo_fase == "IA2" else (
+        dependencias.ejecutar_sv5
+    )
+    try:
+        salida = ejecutar(trabajo)
+    except (RuntimeError, OSError, subprocess.SubprocessError) as error:
+        print(f"comparar_modelos: el bloque {trabajo_fase} de {modelo_id} murió: {error}",
+              file=sys.stderr)
+        motivo = {"fase": trabajo_fase, "tipo": type(error).__name__,
+                  "motivo": "el subproceso del bloque murió (detalle en la consola)"}
+        return Bloque(
+            {caso["caso_id"]: {"caso_id": caso["caso_id"], "error": motivo} for caso in casos},
+            registros_de_fichero(registros),
+        )
+    return Bloque({r.get("caso_id"): r for r in salida.get("resultados", [])},
+                  list(salida.get("registros", [])))
+
+
+def _gasto(registros: list[dict]) -> Decimal:
+    return sum((Decimal(r.get("coste_usd", "0")) for r in registros), Decimal(0))
+
+
+def _motivo_error(resultado: dict) -> str:
+    error = resultado.get("error") or {}
+    return f"ERROR en {error.get('fase') or '?'} · {error.get('motivo', '')}"
+
+
+def _caso_sin_evaluar(
+    caso: str, fase: str, resultado: dict | None, preparacion: dict | None, hay_preparacion: bool
+) -> ResultadoCaso | None:
+    """El caso como ERROR o NO_EJECUTADO, o `None` si hay con qué evaluarlo.
+
+    Con preparación, manda la del caso: si falló, el candidato ni lo recibió.
+    """
+    if hay_preparacion:
+        if preparacion is None:
+            return ResultadoCaso.con_error(caso, fase, f"falló la preparación · {MOTIVO_NO_DEVUELTO}")
+        if preparacion.get("error"):
+            return ResultadoCaso.con_error(
+                caso, fase, f"falló la preparación · {_motivo_error(preparacion)}"
+            )
+        if preparacion.get("no_ejecutado"):
+            return ResultadoCaso(caso_id=caso, fase=fase, estado=NO_EJECUTADO,
+                                 motivo=f"preparación {MOTIVO_NO_EJECUTADO}")
+    if resultado is None:
+        return ResultadoCaso.con_error(caso, fase, MOTIVO_NO_DEVUELTO)
+    if resultado.get("no_ejecutado"):
+        return ResultadoCaso(caso_id=caso, fase=fase, estado=NO_EJECUTADO, motivo=MOTIVO_NO_EJECUTADO)
+    if resultado.get("error"):
+        return ResultadoCaso.con_error(caso, fase, _motivo_error(resultado))
+    return None
+
+
+def _evaluar_bloque(
+    plan: Plan,
+    bloque: Bloque,
+    prep: dict[str, dict],
+    libros: dict[str, dict],
+    criticidad,
+    dependencias: Dependencias,
+) -> dict[str, list[ResultadoCaso]]:
+    """Los casos del bloque evaluados en la fase (y en E2E si es IA3 o IA4)."""
+    fases = [plan.fase] if plan.fase in ("IA1", "IA2") else [plan.fase, "E2E"]
+    por_fase: dict[str, dict[str, ResultadoCaso]] = {fase: {} for fase in fases}
+    evaluables: dict[str, dict] = {}
+    for caso in plan.casos:
+        resultado = bloque.resultados.get(caso)
+        for fase in fases:
+            sin_evaluar = _caso_sin_evaluar(
+                caso, fase, resultado, prep.get(caso), plan.preparacion is not None
+            )
+            if sin_evaluar is not None:
+                por_fase[fase][caso] = sin_evaluar
+        if all(caso not in por_fase[fase] for fase in fases):
+            evaluables[caso] = resultado
+
+    if plan.fase in ("IA1", "IA2"):
+        for caso, resultado in evaluables.items():
+            por_fase[plan.fase][caso] = ResultadoCaso.desde_discrepancias(
+                caso, plan.fase,
+                runner.comparar_sv2(plan.fase, libros[plan.fase][caso], resultado["documento"],
+                                    caso, criticidad),
+            )
+    else:
+        envelopes, conciliaciones = {}, {}
+        for caso, resultado in evaluables.items():
+            if plan.fase == "IA3":
+                envelope = copy.deepcopy(resultado["envelope"])
+                if caso in libros["IA4"]:  # D3: la IA4 del libro, sin LLM
+                    sv5_valoracion.aplicar_conciliacion(
+                        envelope,
+                        sv5_valoracion.conciliaciones_desde_ground_truth(libros["IA4"][caso], envelope),
+                    )
+            else:
+                envelope = copy.deepcopy(prep[caso]["envelope"])
+                conciliaciones[caso] = resultado.get("conciliaciones", [])
+                sv5_valoracion.aplicar_conciliacion(envelope, conciliaciones[caso])
+            envelopes[caso] = envelope
+        if envelopes:
+            evaluadas, _ = runner.evaluar_valoracion(
+                envelopes,
+                conciliaciones,
+                libros["IA3"] if plan.fase == "IA3" else {},
+                libros["IA4"] if plan.fase == "IA4" else {},
+                libros["final"],
+                criticidad,
+                build=dependencias.build_sv6,
+            )
+            for fase_evaluada in evaluadas:
+                if fase_evaluada.nombre in por_fase:
+                    for resultado_caso in fase_evaluada.casos:
+                        por_fase[fase_evaluada.nombre][resultado_caso.caso_id] = resultado_caso
+    return {
+        fase: [casos[c] for c in plan.casos if c in casos] for fase, casos in por_fase.items()
+    }
+
+
+def _directorio_salida(opciones, ahora: dt.datetime) -> Path:
+    if opciones.salida:
+        return Path(opciones.salida)
+    return RUTA_SALIDAS / ahora.astimezone().strftime("%Y-%m-%d-%H%M%S")
+
+
+def _relativa(ruta: Path) -> str:
+    try:
+        return Path(ruta).resolve().relative_to(RAIZ_REPO).as_posix()
+    except ValueError:
+        return Path(ruta).as_posix()
+
+
+def ejecutar_plan(plan: Plan, opciones, tabla: Tabla, dependencias: Dependencias, ahora) -> int:
+    """Preparación, bloques intercalados, evaluación, métricas e informes."""
+    fecha = ahora.date()
+    salida = _directorio_salida(opciones, ahora)
+    salida.mkdir(parents=True, exist_ok=True)
+    fixtures = Path(dependencias.fixtures)
+    trabajos = _trabajos_de_casos(plan, fixtures, Path(dependencias.albaranes))
+    libros = {nombre: cargar_fixtures(fixtures, nombre) for nombre in ("IA1", "IA2", "IA3", "IA4", "final")}
+    tope = opciones.tope_usd
+    gastado = Decimal(0)
+
+    prep: dict[str, dict] = {}
+    registros_prep: list[dict] = []
+    if plan.preparacion is not None:
+        bloque = _ejecutar_bloque(
+            PREPARACION[plan.fase][1], plan.preparacion, list(trabajos.values()), tope,
+            salida / "registros_preparacion.jsonl", tabla, dependencias, fecha,
+        )
+        prep = bloque.resultados
+        registros_prep = [{**r, "repeticion": 0} for r in bloque.registros]
+        gastado += _gasto(bloque.registros)
+
+    # Lo que la preparación devuelve y el campo con que entra en cada caso del candidato.
+    salida_prep, campo_prep = ("documento", "ia1") if plan.fase == "IA2" else ("envelope", "envelope")
+    casos_por_modelo: dict[str, dict[str, list[list[ResultadoCaso]]]] = {}
+    registros: dict[str, list[dict]] = {modelo: [] for modelo in plan.modelos}
+    brutos = []
+    for repeticion, modelo in plan.bloques():
+        casos = []
+        for caso, trabajo in trabajos.items():
+            if plan.preparacion is None:
+                casos.append(trabajo)
+            elif salida_prep in prep.get(caso, {}):
+                casos.append({**trabajo, campo_prep: prep[caso][salida_prep]})
+        restante = tope - gastado
+        if restante <= 0:
+            bloque = Bloque({c["caso_id"]: {"caso_id": c["caso_id"], "no_ejecutado": True}
+                             for c in casos}, [])
+        else:
+            bloque = _ejecutar_bloque(
+                plan.fase, modelo, casos, restante,
+                salida / f"registros_{modelo}_r{repeticion}.jsonl", tabla, dependencias, fecha,
+            )
+        gastado += _gasto(bloque.registros)
+        registros[modelo] += [{**r, "repeticion": repeticion} for r in bloque.registros]
+        brutos.append({"modelo": modelo, "repeticion": repeticion, "resultados": bloque.resultados})
+        evaluado = _evaluar_bloque(plan, bloque, prep, libros, cargar_criticidad(), dependencias)
+        for fase, lista in evaluado.items():
+            casos_por_modelo.setdefault(fase, {}).setdefault(modelo, []).append(lista)
+
+    return _cerrar(plan, opciones, ahora, salida, casos_por_modelo, registros, registros_prep,
+                   prep, brutos, gastado)
+
+
+def _cerrar(plan, opciones, ahora, salida, casos_por_modelo, registros, registros_prep, prep,
+            brutos, gastado) -> int:
+    """Métricas, recomendación, los dos informes y el código de salida."""
+    principal = casos_por_modelo[plan.fase]
+    metricas = {m: medir(m, plan.fase, principal[m], registros[m]) for m in plan.modelos}
+    e2e = {
+        m: medir(m, "E2E", casos_por_modelo["E2E"][m], registros[m])
+        for m in plan.modelos
+    } if "E2E" in casos_por_modelo else {}
+    metricas_prep = None
+    if plan.preparacion is not None:
+        metricas_prep = medir(plan.preparacion, PREPARACION[plan.fase][0], [],
+                              registros_prep, etiqueta="preparación")
+    errores = [
+        (modelo, repeticion, caso.caso_id, caso.motivo)
+        for modelo in plan.modelos
+        for repeticion, lista in enumerate(principal[modelo], start=1)
+        for caso in lista
+        if caso.estado == ERROR
+    ]
+    cortado = any(
+        caso.estado == NO_EJECUTADO for listas in principal.values() for lista in listas for caso in lista
+    )
+    seccion = Seccion(
+        fecha=ahora.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        fase=plan.fase,
+        commit=runner._commit_actual(RAIZ_REPO),
+        casos=plan.casos,
+        omitidos=plan.omitidos,
+        repeticiones=plan.repeticiones,
+        referencia=plan.referencia,
+        referencia_anadida=plan.referencia_anadida,
+        preparacion=plan.preparacion,
+        metricas=metricas,
+        recomendacion=recomendar(metricas, plan.referencia, plan.repeticiones),
+        gasto_real=gastado,
+        salida=_relativa(salida),
+        metricas_e2e=e2e,
+        metricas_preparacion=metricas_prep,
+        errores=errores,
+        cortado=cortado,
+    )
+    resumen = Path(opciones.resumen)
+    resumen.parent.mkdir(parents=True, exist_ok=True)
+    resumen.write_text(anadir_seccion(_leer(resumen), render_versionable(seccion)), encoding="utf-8")
+    (salida / "detalle.md").write_text(render_detalle(seccion, principal), encoding="utf-8")
+    (salida / "resultados.json").write_text(
+        json.dumps(
+            {"fase": plan.fase, "preparacion": prep, "bloques": brutos,
+             "registros": {**registros, "preparación": registros_prep}},
+            ensure_ascii=False, indent=2, default=str,
+        ),
+        encoding="utf-8",
+    )
+    print(f"comparar_modelos: gasto real {gastado} USD · detalle con valores en {salida}")
+    print(f"comparar_modelos: resumen sin valores en {resumen} · "
+          f"{seccion.recomendacion.veredicto}")
+    if cortado:
+        return 3
+    alguno = any(caso.estado in (VERDE, ROJO) for listas in principal.values()
+                 for lista in listas for caso in lista)
+    return 0 if alguno else 1
 
 
 # --- CLI --------------------------------------------------------------------------

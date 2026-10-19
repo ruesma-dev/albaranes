@@ -125,3 +125,26 @@ FAILED tests/test_f083_decision.py::test_f083_r27_metricas_de_una_repeticion
 1 failed, 31 passed in 0.18s
 ```
 El segundo fallo es el cambio de criterio de `decision.medir` que pide T10: los tokens medios salen solo de las llamadas **con respuesta** (si no, una llamada sin respuesta abarataría la estimación siguiente, R15). Verde tras T10: `20 passed` (informe) y `32 passed` (decisión).
+
+### T8 · `python -m pytest tests/test_f083_comparar_modelos.py -q --tb=no -k "bloque or tope or repeticion"` (con `ejecutar_plan` aún en `NotImplementedError`)
+
+```
+.....FFFFFFFFFFFFFF                                                      [100%]
+=========================== short test summary info ===========================
+FAILED test_f083_bloque_ia1_completo - N...
+FAILED test_f083_bloque_el_presupuesto_restante_pasa_al_siguiente
+FAILED test_f083_repeticion_bloques_intercalados_y_registros_por_bloque
+FAILED test_f083_repeticion_la_preparacion_se_ejecuta_una_vez
+FAILED test_f083_bloque_preparacion_que_falla_en_un_caso
+FAILED test_f083_bloque_muerto_pierde_solo_ese_bloque
+FAILED test_f083_bloque_que_no_devuelve_un_caso
+FAILED test_f083_tope_alcanzado_no_lanza_mas_bloques
+FAILED test_f083_tope_alcanzado_dentro_de_un_bloque
+FAILED test_f083_bloque_ningun_candidato_dio_resultado
+FAILED test_f083_bloque_el_resumen_se_acumula
+FAILED test_f083_bloque_salida_por_defecto_con_fecha
+FAILED test_f083_bloque_ia3_con_la_ia4_del_libro
+FAILED test_f083_bloque_ia4_concilia_sobre_la_preparacion
+14 failed, 5 passed, 26 deselected in 3.30s
+```
+Verde tras T8: `45 passed` (el fichero entero; IA3 e IA4 con el build real de sv6). Suite de la raíz: `1556 passed`.

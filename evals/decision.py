@@ -76,11 +76,12 @@ def medir(
     fase: str,
     casos_por_repeticion: list[list[ResultadoCaso]],
     registros: list[dict],
+    etiqueta: str = "candidato",
 ) -> Metricas:
     """Agrega los casos de cada repetición y los registros del medidor del modelo.
 
-    `registros` son los del modelo en esta fase con su `repeticion`; los de
-    preparación se descartan aquí (su coste va aparte en el informe).
+    `registros` son los del modelo en esta fase con su `repeticion`; solo
+    cuentan los de `etiqueta`: los de preparación se miden aparte (R27).
     """
     fallos_por_rep = []
     metricas = Metricas(modelo=modelo, fase=fase, repeticiones=len(casos_por_repeticion))
@@ -96,7 +97,7 @@ def medir(
     metricas.fallos_min = min(fallos_por_rep, default=0)
     metricas.fallos_max = max(fallos_por_rep, default=0)
 
-    propios = [r for r in registros if r.get("etiqueta") == "candidato"]
+    propios = [r for r in registros if r.get("etiqueta") == etiqueta]
     duraciones: dict[tuple, int] = {}
     con_respuesta = set()
     servidos, motivos = set(), Counter()

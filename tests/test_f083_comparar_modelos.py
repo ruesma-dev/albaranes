@@ -361,3 +361,310 @@ def test_f083_r11_plan_valores_por_defecto():
     assert opciones.estimar is False
     assert Path(opciones.resumen) == cm.RUTA_RESUMEN
     assert opciones.salida == ""
+
+
+# --- T8 · ejecución por bloques (R19, R24–R26) -----------------------------------------
+
+import copy  # noqa: E402
+
+from evals.conversor import RUTA_FIXTURES  # noqa: E402
+from evals.procesos import sv5_valoracion, sv6_build  # noqa: E402
+from evals.runner import cargar_fixtures  # noqa: E402
+
+_IA1 = {"cabeceras": [{"numero_albaran": "A-1"}], "lineas": [{"num_linea": 1, "cantidad": 2}]}
+
+
+@pytest.fixture
+def banco_ia1(banco):
+    """El banco con tablas IA1 comparables: GEN-001 y HOR-001 esperan cantidad 2."""
+    fixtures = banco[0]
+    for caso in ("GEN-001", "GEN-002", "HOR-001"):
+        (fixtures / "IA1" / f"{caso}.json").write_text(
+            json.dumps(_fixture("IA1", caso, tablas=_IA1)), encoding="utf-8"
+        )
+    return banco
+
+
+def _documento(cantidad=2):
+    return {"cabecera": {"numero_albaran": "A-1"},
+            "lineas": [{"concepto": "x", "cantidad": cantidad}]}
+
+
+def _registro(trabajo, caso, coste, ms=1000):
+    return {
+        "caso_id": caso, "etiqueta": "preparación" if trabajo["fase"].startswith("prep")
+        else "candidato", "proveedor": trabajo["modelo"]["proveedor"],
+        "modelo_pedido": trabajo["modelo"]["id"], "modelo_servido": trabajo["modelo"]["id"],
+        "duracion_ms": ms, "entrada": 1000, "lectura_cache": 0, "escritura_cache": 0,
+        "salida": 100, "uso_incompleto": False, "coste_usd": str(coste),
+        "motivo_parada": "STOP", "fallo": False, "con_respuesta": True,
+    }
+
+
+class _Sv2Doble:
+    """Contesta cada caso; `cantidades[modelo]` decide si acierta (2) o falla."""
+
+    def __init__(self, coste="0.01", cantidades=None, muere=(), casos_rotos=(), no_ejecuta=()):
+        self.coste = Decimal(coste)
+        self.cantidades = cantidades or {}
+        self.muere = set(muere)
+        self.casos_rotos = set(casos_rotos)
+        self.no_ejecuta = set(no_ejecuta)
+        self.trabajos: list[dict] = []
+
+    def __call__(self, trabajo):
+        self.trabajos.append(copy.deepcopy(trabajo))
+        modelo = trabajo["modelo"]["id"]
+        registros, resultados = [], []
+        for caso in trabajo["casos"]:
+            caso_id = caso["caso_id"]
+            if (modelo, caso_id) in self.no_ejecuta:
+                resultados.append({"caso_id": caso_id, "no_ejecutado": True})
+                continue
+            registros.append(_registro(trabajo, caso_id, self.coste))
+            if (modelo, caso_id) in self.casos_rotos:
+                resultados.append({"caso_id": caso_id, "error": {
+                    "fase": "IA1", "tipo": "ValidationError", "motivo": "ValidationError: json"}})
+            else:
+                resultados.append({"caso_id": caso_id,
+                                   "documento": _documento(self.cantidades.get(modelo, 2))})
+        if modelo in self.muere:
+            Path(trabajo["registros"]).write_text(
+                "".join(json.dumps(r) + "\n" for r in registros), encoding="utf-8"
+            )
+            raise RuntimeError("el subproceso de sv2 falló con código 1")
+        return {"resultados": resultados, "registros": registros}
+
+
+def _resumen(banco):
+    return (banco[2] / "resumen.md").read_text(encoding="utf-8")
+
+
+def _fila(texto, modelo):
+    return next(linea for linea in texto.splitlines() if linea.startswith(f"| `{modelo}`"))
+
+
+def test_f083_bloque_ia1_completo(banco_ia1, capsys):
+    sv2 = _Sv2Doble(cantidades={"gpt-6-luna": 3})
+    codigo = cm.main(_argv(banco_ia1, "--fase", "IA1", "--modelos", "gpt-6-luna"),
+                     entorno=CLAVES, dependencias=_deps(banco_ia1, ejecutar_sv2=sv2))
+    assert codigo == 0
+    assert [t["modelo"]["id"] for t in sv2.trabajos] == ["gemini-3.7-flash", "gpt-6-luna"]
+    primero = sv2.trabajos[0]
+    assert primero["fase"] == "IA1" and primero["fecha"] == "2026-10-19"
+    assert primero["modelo"] == {"id": "gemini-3.7-flash", "proveedor": "gemini",
+                                 "herramienta_forzada": None}
+    assert [c["caso_id"] for c in primero["casos"]] == ["GEN-001", "HOR-001"]
+    assert primero["casos"][0]["fichero"].endswith("GEN-001.pdf")
+    assert primero["presupuesto_usd"] == "25"
+    texto = _resumen(banco_ia1)
+    # 4 llamadas de 0,01 USD.
+    assert gasto_acumulado(texto) == Decimal("0.04")
+    assert "| `gemini-3.7-flash` | 2 | 0 | 0 | 2 | 0 |" in texto
+    assert "| `gpt-6-luna` | 2 | 0 | 0 | 0 | 2 |" in texto
+    assert "**mantener** `gemini-3.7-flash`" in texto
+    assert "provisional (1 repetición)" in texto
+    salida = banco_ia1[2] / "salida"
+    assert "detalle CON valores" in (salida / "detalle.md").read_text(encoding="utf-8")
+    assert json.loads((salida / "resultados.json").read_text(encoding="utf-8"))["fase"] == "IA1"
+    assert "resumen sin valores" in capsys.readouterr().out
+
+
+def test_f083_bloque_el_presupuesto_restante_pasa_al_siguiente(banco_ia1):
+    sv2 = _Sv2Doble(coste="1.5")
+    cm.main(_argv(banco_ia1, "--fase", "IA1", "--modelos", "gpt-6-luna", "--tope-usd", "5"),
+            entorno=CLAVES, dependencias=_deps(banco_ia1, ejecutar_sv2=sv2))
+    assert [t["presupuesto_usd"] for t in sv2.trabajos] == ["5", "2.0"]
+
+
+def test_f083_repeticion_bloques_intercalados_y_registros_por_bloque(banco_ia1):
+    sv2 = _Sv2Doble()
+    cm.main(_argv(banco_ia1, "--fase", "IA1", "--modelos", "gpt-6-luna", "--repeticiones", "2"),
+            entorno=CLAVES, dependencias=_deps(banco_ia1, ejecutar_sv2=sv2))
+    assert [t["modelo"]["id"] for t in sv2.trabajos] == [
+        "gemini-3.7-flash", "gpt-6-luna", "gemini-3.7-flash", "gpt-6-luna"]
+    ficheros = [Path(t["registros"]).name for t in sv2.trabajos]
+    assert len(set(ficheros)) == 4
+    texto = _resumen(banco_ia1)
+    assert "× 2 repeticiones" in texto
+    assert "| `gpt-6-luna` | 4 | 0 | 0 | 4 | 0.00 (0–0) |" in texto
+
+
+def test_f083_repeticion_la_preparacion_se_ejecuta_una_vez(banco):
+    sv2 = _Sv2Doble()
+    cm.main(_argv(banco, "--fase", "IA2", "--modelos", "gpt-5.5", "--repeticiones", "2"),
+            entorno=CLAVES, dependencias=_deps(banco, ejecutar_sv2=sv2))
+    fases = [(t["fase"], t["modelo"]["id"]) for t in sv2.trabajos]
+    assert fases == [("prep_IA1", "gemini-3.7-flash"), ("IA2", "gpt-5.4"), ("IA2", "gpt-5.5"),
+                     ("IA2", "gpt-5.4"), ("IA2", "gpt-5.5")]
+    # Cada candidato recibe la IA1 de la preparación.
+    assert sv2.trabajos[1]["casos"][0]["ia1"] == _documento()
+    texto = _resumen(banco)
+    assert "- Preparación (IA1, una vez): `gemini-3.7-flash` · 2 llamadas · 0.0200 USD" in texto
+    # 2 de preparación + 8 de candidatos.
+    assert gasto_acumulado(texto) == Decimal("0.10")
+
+
+def test_f083_bloque_preparacion_que_falla_en_un_caso(banco):
+    sv2 = _Sv2Doble(casos_rotos={("gemini-3.7-flash", "HOR-001")})
+    cm.main(_argv(banco, "--fase", "IA2", "--modelos", "gpt-5.5"),
+            entorno=CLAVES, dependencias=_deps(banco, ejecutar_sv2=sv2))
+    assert [c["caso_id"] for c in sv2.trabajos[1]["casos"]] == ["RES-001"]
+    texto = _resumen(banco)
+    assert "- `gpt-5.4` r1 · HOR-001 · falló la preparación · ERROR en IA1 · " in texto
+    assert "- `gpt-5.5` r1 · HOR-001 · falló la preparación" in texto
+    assert "**sin datos**" in texto
+
+
+def test_f083_bloque_muerto_pierde_solo_ese_bloque(banco_ia1, capsys):
+    sv2 = _Sv2Doble(muere={"gpt-6-luna"})
+    codigo = cm.main(_argv(banco_ia1, "--fase", "IA1", "--modelos", "gpt-6-luna,gpt-5.5"),
+                     entorno=CLAVES, dependencias=_deps(banco_ia1, ejecutar_sv2=sv2))
+    assert codigo == 0
+    assert [t["modelo"]["id"] for t in sv2.trabajos] == [
+        "gemini-3.7-flash", "gpt-6-luna", "gpt-5.5"]
+    texto = _resumen(banco_ia1)
+    assert "| `gpt-6-luna` | 0 | 2 | 0 | 0 | 0 |" in texto
+    assert "- `gpt-6-luna` r1 · GEN-001 · ERROR en IA1 · el subproceso del bloque murió" in texto
+    # Lo pagado por el bloque muerto se recupera de su fichero de registros (R26).
+    assert gasto_acumulado(texto) == Decimal("0.06")
+    assert "gpt-6-luna" in capsys.readouterr().err
+
+
+def test_f083_bloque_que_no_devuelve_un_caso(banco_ia1):
+    def sv2(trabajo):
+        return {"resultados": [], "registros": []}
+
+    cm.main(_argv(banco_ia1, "--fase", "IA1", "--modelos", "gpt-6-luna"),
+            entorno=CLAVES, dependencias=_deps(banco_ia1, ejecutar_sv2=sv2))
+    assert "- `gpt-6-luna` r1 · GEN-001 · el bloque no devolvió el caso" in _resumen(banco_ia1)
+
+
+def test_f083_tope_alcanzado_no_lanza_mas_bloques(banco_ia1, capsys):
+    sv2 = _Sv2Doble(coste="1")
+    codigo = cm.main(
+        _argv(banco_ia1, "--fase", "IA1", "--modelos", "gpt-6-luna", "--tope-usd", "2"),
+        entorno=CLAVES, dependencias=_deps(banco_ia1, ejecutar_sv2=sv2),
+    )
+    assert codigo == 3
+    assert [t["modelo"]["id"] for t in sv2.trabajos] == ["gemini-3.7-flash"]
+    texto = _resumen(banco_ia1)
+    assert "**CORTADO**" in texto
+    assert "| `gpt-6-luna` | 0 | 0 | 2 | 0 | 0 |" in texto
+    assert gasto_acumulado(texto) == Decimal("2")
+
+
+def test_f083_tope_alcanzado_dentro_de_un_bloque(banco_ia1):
+    sv2 = _Sv2Doble(no_ejecuta={("gpt-6-luna", "HOR-001")})
+    codigo = cm.main(_argv(banco_ia1, "--fase", "IA1", "--modelos", "gpt-6-luna"),
+                     entorno=CLAVES, dependencias=_deps(banco_ia1, ejecutar_sv2=sv2))
+    assert codigo == 3
+    assert "| `gpt-6-luna` | 1 | 0 | 1 | 1 | 0 |" in _resumen(banco_ia1)
+
+
+def test_f083_bloque_ningun_candidato_dio_resultado(banco_ia1):
+    sv2 = _Sv2Doble(casos_rotos={(m, c) for m in ("gemini-3.7-flash", "gpt-6-luna")
+                                 for c in ("GEN-001", "HOR-001")})
+    codigo = cm.main(_argv(banco_ia1, "--fase", "IA1", "--modelos", "gpt-6-luna"),
+                     entorno=CLAVES, dependencias=_deps(banco_ia1, ejecutar_sv2=sv2))
+    assert codigo == 1
+    assert "ERROR en IA1 · ValidationError: json" in _resumen(banco_ia1)
+
+
+def test_f083_bloque_el_resumen_se_acumula(banco_ia1):
+    for _ in range(2):
+        cm.main(_argv(banco_ia1, "--fase", "IA1", "--modelos", "gpt-6-luna"),
+                entorno=CLAVES, dependencias=_deps(banco_ia1, ejecutar_sv2=_Sv2Doble()))
+    texto = _resumen(banco_ia1)
+    assert gasto_acumulado(texto) == Decimal("0.08")
+    assert texto.startswith("<!-- progress/comparar_modelos_F-083.md -->")
+
+
+def test_f083_bloque_salida_por_defecto_con_fecha(banco_ia1, monkeypatch, tmp_path):
+    monkeypatch.setattr(cm, "RUTA_SALIDAS", tmp_path / "salidas")
+    argv = ["--resumen", str(tmp_path / "r.md"), "--fase", "IA1", "--modelos", "gpt-6-luna"]
+    cm.main(argv, entorno=CLAVES, dependencias=_deps(banco_ia1, ejecutar_sv2=_Sv2Doble()))
+    (carpeta,) = (tmp_path / "salidas").iterdir()
+    assert (carpeta / "detalle.md").is_file()
+
+
+# --- T8 · IA3 e IA4 con el build real de sv6 (sin LLM) ------------------------------------
+
+_CASOS_SV5 = ["FER-001", "GEN-001", "RES-001"]
+
+
+def _deps_reales(banco, sv5):
+    return _deps(banco, ejecutar_sv5=sv5, fixtures=RUTA_FIXTURES,
+                 build_sv6=sv6_build.ejecutar_en_subproceso)
+
+
+def test_f083_bloque_ia3_con_la_ia4_del_libro(banco):
+    """El candidato devuelve los envelopes del libro IA3: IA3 y E2E, como el modo determinista."""
+    inputs = cargar_fixtures(RUTA_FIXTURES, "inputs")
+    ia3 = cargar_fixtures(RUTA_FIXTURES, "IA3")
+    trabajos = []
+
+    def sv5(trabajo):
+        trabajos.append(trabajo)
+        resultados = []
+        for caso in trabajo["casos"]:
+            envelope = sv6_build.construir_envelope_estimulado(
+                inputs[caso["caso_id"]], ia3.get(caso["caso_id"], {"tablas": {}}))
+            assert caso["contexto"] == sv5_valoracion.construir_contexto(inputs[caso["caso_id"]])
+            resultados.append({"caso_id": caso["caso_id"], "envelope": envelope})
+        return {"resultados": resultados, "registros": [
+            _registro(trabajo, c["caso_id"], "0.01") for c in trabajo["casos"]]}
+
+    codigo = cm.main(
+        _argv(banco, "--fase", "IA3", "--modelos", "claude-opus-5-5",
+              "--casos", ",".join(_CASOS_SV5)),
+        entorno=CLAVES, dependencias=_deps_reales(banco, sv5),
+    )
+    assert codigo == 0
+    assert trabajos[1]["modelo"]["herramienta_forzada"] is False
+    deterministas, _ = __import__("evals.runner", fromlist=["x"]).corrida_determinista(
+        RUTA_FIXTURES, _CASOS_SV5)
+    fallos = {f.nombre: sum(len(c.fallos) for c in f.casos) for f in deterministas}
+    texto = _resumen(banco)
+    assert f"| `claude-opus-5-5` | 3 | 0 | 0 |" in texto
+    fila = _fila(texto, "claude-opus-5-5")
+    assert fila.split("|")[6].strip() == str(fallos["IA3"])
+    e2e = texto.split("### E2E")[1]
+    assert _fila(e2e, "claude-opus-5-5").split("|")[6].strip() == str(fallos["E2E"])
+
+
+def test_f083_bloque_ia4_concilia_sobre_la_preparacion(banco):
+    inputs = cargar_fixtures(RUTA_FIXTURES, "inputs")
+    ia4 = cargar_fixtures(RUTA_FIXTURES, "IA4")
+    trabajos = []
+
+    def sv5(trabajo):
+        trabajos.append(copy.deepcopy(trabajo))
+        resultados = []
+        for caso in trabajo["casos"]:
+            caso_id = caso["caso_id"]
+            if trabajo["fase"] == "prep_IA3":
+                envelope = sv6_build.construir_envelope_estimulado(inputs[caso_id], {"tablas": {}})
+                resultados.append({"caso_id": caso_id, "envelope": envelope})
+            else:
+                conciliaciones = sv5_valoracion.conciliaciones_desde_ground_truth(
+                    ia4[caso_id], caso["envelope"])
+                if trabajo["modelo"]["id"] == "gpt-6-luna":
+                    conciliaciones = []
+                resultados.append({"caso_id": caso_id, "conciliaciones": conciliaciones})
+        return {"resultados": resultados, "registros": [
+            _registro(trabajo, c["caso_id"], "0.01") for c in trabajo["casos"]]}
+
+    codigo = cm.main(
+        _argv(banco, "--fase", "IA4", "--modelos", "gpt-6-luna", "--casos", "FER-001,RES-008"),
+        entorno=CLAVES, dependencias=_deps_reales(banco, sv5),
+    )
+    assert codigo == 0
+    assert [(t["fase"], t["modelo"]["id"]) for t in trabajos] == [
+        ("prep_IA3", "claude-opus-4-8"), ("IA4", "claude-opus-4-8"), ("IA4", "gpt-6-luna")]
+    assert trabajos[1]["casos"][0]["envelope"]["meta"] is not None
+    texto = _resumen(banco)
+    referencia, luna = _fila(texto, "claude-opus-4-8"), _fila(texto, "gpt-6-luna")
+    assert referencia.split("|")[6].strip() == "0"
+    assert int(luna.split("|")[6].strip()) > 0
+    assert "### E2E" in texto
