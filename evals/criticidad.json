@@ -28,7 +28,10 @@
     "unidad",
     "unidad_final",
     "valor",
-    "valor_esperado"
+    "valor_esperado",
+    "base_imponible",
+    "cuota_iva",
+    "tipo_iva_pct"
   ],
   "laxos": [
     "descripcion",

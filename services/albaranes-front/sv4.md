@@ -817,6 +817,15 @@ servicios escriben las mismas tablas, las fronteras se difuminan.
 | Servicios downstream   | PostgreSQL · SharePoint/Graph · sigrid-api                                           |
 | Cierra el ciclo        | **No**, pero es la cara visible donde el ciclo del ecosistema desemboca               |
 
+> **F-075 (oct 2026)** · Una sola columna **«Importe»** en la bandeja (el del
+> albarán, sin IVA, si trae importes; si no, el valorado), con rótulo de origen, «N de
+> M sin importe» y marca ≠; ordenable y con filtro mín/máx sobre esa cifra, que
+> también suman la tarjeta «Importe pendiente» y las vistas Obras y Proveedores (SQL
+> portable, sin `LATERAL` ni `DISTINCT ON`). La ficha enseña el importe del albarán,
+> el pie (SELECT defensivo: sin las columnas de sv3, «no leído»), el valorado y la
+> diferencia. «Valorar ahora» funciona sin contrato si el albarán trae importes.
+> Regla 25 de `docs/ARCHITECTURE.md`.
+
 ---
 
 *Documento generado a partir del análisis del código del paquete `sv4.zip` aportado.*

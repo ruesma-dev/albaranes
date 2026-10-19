@@ -40,6 +40,13 @@ class _DocumentColumnsMixin:
     obra_codigo: Mapped[str | None] = mapped_column(String(128))
     obra_nombre: Mapped[str | None] = mapped_column(String(255))
     obra_direccion: Mapped[str | None] = mapped_column(String(255))
+    # (F-075 R15) El pie del albarán tal como está impreso (euros, salvo el
+    # tipo en %). Es un control (PieGuardService), nunca una fuente de
+    # importes. Nulos si no figuran. DDL idempotente en ``phase2_ddl``.
+    base_imponible: Mapped[float | None] = mapped_column(Float)
+    tipo_iva_pct: Mapped[float | None] = mapped_column(Float)
+    cuota_iva: Mapped[float | None] = mapped_column(Float)
+    total_albaran: Mapped[float | None] = mapped_column(Float)
     sharepoint_drive_id: Mapped[str | None] = mapped_column(String(255))
     sharepoint_item_id: Mapped[str | None] = mapped_column(String(255))
     sharepoint_relative_path: Mapped[str | None] = mapped_column(String(1024))

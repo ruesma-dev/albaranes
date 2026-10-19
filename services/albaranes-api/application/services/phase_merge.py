@@ -37,6 +37,29 @@ from typing import Any, Mapping
 from ruesma_comun.contratos import ClasificacionAlbaran
 
 
+#: (F-075 R13) Los cuatro campos del pie en la cabecera.
+CAMPOS_PIE = ("base_imponible", "tipo_iva_pct", "cuota_iva", "total_albaran")
+
+
+def _conservar_pie(documento: dict, env_fase1: Mapping[str, Any]) -> dict:
+    """(F-075 R14) Si la fase 2 devuelve el pie nulo (los cuatro campos) y la
+    fase 1 lo traía, la cabecera final lleva el de la fase 1. Con algún campo
+    del pie en la fase 2, manda la fase 2, como en el resto de la cabecera.
+    Devuelve un documento nuevo (no toca el de la fase 2, que está persistido)."""
+    cabecera2 = documento.get("cabecera")
+    cabecera1 = ((env_fase1.get("data") or {}).get("cabecera")) or {}
+    if not isinstance(cabecera2, dict) or not isinstance(cabecera1, dict):
+        return documento
+    if any(cabecera2.get(c) is not None for c in CAMPOS_PIE):
+        return documento
+    if all(cabecera1.get(c) is None for c in CAMPOS_PIE):
+        return documento
+    cabecera = dict(cabecera2)
+    for campo in CAMPOS_PIE:
+        cabecera[campo] = cabecera1.get(campo)
+    return {**documento, "cabecera": cabecera}
+
+
 def _doc_final(
     env_fase1: Mapping[str, Any],
     env_fase2: Mapping[str, Any] | None,
@@ -50,7 +73,7 @@ def _doc_final(
             # Copia: el envelope de fase 2 ya está PERSISTIDO cuando se
             # llama a esto, y escribirle dentro la clasificación
             # reescribiría la auditoría forense de lo que dijo cada IA.
-            return dict(documento), list(razonamientos), "phase_2"
+            return _conservar_pie(dict(documento), env_fase1), list(razonamientos), "phase_2"
         # Salvaguarda: si la fase 2 no trajo documento_revisado utilizable,
         # NO perdemos la extracción: caemos a fase 1.
     data1 = env_fase1.get("data") or {}

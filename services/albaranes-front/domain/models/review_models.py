@@ -31,7 +31,13 @@ from ruesma_comun.contratos.origen_datos import (
     MOTIVO_CORREO_FUERA_DE_LISTA,
     normalizar_codigo,
 )
-from ruesma_comun.importes import importe_de_linea
+from ruesma_comun.importes import (
+    ImporteAlbaran,
+    difieren,
+    importe_albaran,
+    importe_de_linea,
+    referencia_pie,
+)
 from ruesma_comun.sigrid import normalizar_partida
 from ruesma_comun.valoracion import esta_valorado
 
@@ -210,6 +216,8 @@ class DocumentListFilters(BaseModel):
             "numero_albaran",
             "confidence_pct_calc",
             "approved",
+            # (F-075 R21) La columna «Importe» (albarán o, si no, valorado).
+            "importe",
         }
         value = (value or "confidence_pct_calc").strip()
         return value if value in allowed else "confidence_pct_calc"
@@ -258,11 +266,92 @@ class DocumentListItem(BaseModel):
     valorado: bool = False
     # F-053 R31: estado del alta en Sigrid (None = sin alta o DESDE vacía).
     alta_estado: str | None = None
+    # (F-075 R19) El importe del albarán: suma de los ``precio_neto`` leídos
+    # (sin IVA), cuántas líneas tiene y cuántas traen importe. ``total_valorado``
+    # es el de la valoración con filas (sin filas no hay valorado).
+    importe_albaran: float | None = None
+    lineas_albaran: int = 0
+    lineas_con_importe: int = 0
+    # (F-075 R25) La consulta del importe falló: la columna pinta «—».
+    importe_error: bool = False
+    # (F-075 R20) Los motivos del merge, para leer ``pie_no_cuadra`` de sv3.
+    review_reasons_json: str | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def alta_estado_texto(self) -> str | None:
         return etiqueta_estado_alta(self.alta_estado)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_origen(self) -> Literal["albaran", "contrato"] | None:
+        """(F-075 R19) «Manda el albarán»: si trae importes, el suyo; si no,
+        el valorado; ``None`` si ninguno (o si la consulta falló, R25)."""
+        if self.importe_error:
+            return None
+        if self.lineas_con_importe > 0:
+            return "albaran"
+        if self.total_valorado is not None:
+            return "contrato"
+        return None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_mostrado(self) -> float | None:
+        """(F-075 R19) La cifra de la columna «Importe»."""
+        origen = self.importe_origen
+        if origen == "albaran":
+            return self.importe_albaran
+        if origen == "contrato":
+            return self.total_valorado
+        return None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_rotulo(self) -> str | None:
+        return {"albaran": "albarán · sin IVA", "contrato": "contrato"}.get(
+            self.importe_origen or "",
+        )
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_parcial_texto(self) -> str | None:
+        """(F-075 R19, P3) «N de M sin importe» si faltan importes en algunas."""
+        if self.importe_origen != "albaran" or self.lineas_con_importe >= self.lineas_albaran:
+            return None
+        faltan = self.lineas_albaran - self.lineas_con_importe
+        return f"{faltan} de {self.lineas_albaran} sin importe"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def pie_no_cuadra(self) -> float | None:
+        """(F-075 R20) La cifra del pie si sv3 marcó ``pie_no_cuadra``."""
+        return pie_de_motivos(motivos_de_json(self.review_reasons_json))
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_distinto(self) -> bool:
+        """(F-075 R20) El valorado se aparta del importe del albarán (≥ 0,01 €)
+        o el pie no cuadra (motivo de sv3)."""
+        if self.importe_origen != "albaran":
+            return False
+        return (
+            difieren(self.total_valorado, self.importe_albaran)
+            or self.pie_no_cuadra is not None
+        )
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_distinto_texto(self) -> str | None:
+        """(F-075 R20) «Albarán X · Valorado Y · Pie Z» (lo que haya)."""
+        if not self.importe_distinto:
+            return None
+        partes = [f"Albarán {_euros(self.importe_albaran or 0.0)}"]
+        if self.total_valorado is not None:
+            partes.append(f"Valorado {_euros(self.total_valorado)}")
+        if self.pie_no_cuadra is not None:
+            partes.append(f"Pie {_euros(self.pie_no_cuadra)}")
+        return " · ".join(partes)
 
 
 class ProviderSnapshot(BaseModel):
@@ -693,6 +782,28 @@ def orden_filas_ficha(
     return salida
 
 
+#: (F-075 R16, R20) Prefijo del motivo con el que sv3 marca un pie que no cuadra.
+PREFIJO_PIE_NO_CUADRA = "pie_no_cuadra:"
+
+
+def pie_de_motivos(motivos: list[str]) -> float | None:
+    """(F-075 R20) La cifra del pie del motivo ``pie_no_cuadra:<suma>!=<pie>``
+    que deja sv3, o ``None`` si no lo hay o no se lee. sv4 no recalcula."""
+    for motivo in motivos:
+        if not motivo.startswith(PREFIJO_PIE_NO_CUADRA):
+            continue
+        _, separador, pie = motivo[len(PREFIJO_PIE_NO_CUADRA):].partition("!=")
+        if not separador:
+            continue
+        try:
+            valor = float(pie)
+        except ValueError:
+            continue
+        if math.isfinite(valor):
+            return valor
+    return None
+
+
 def _euros(valor: float) -> str:
     entero, _, decimales = f"{valor:,.2f}".partition(".")
     return f"{entero.replace(',', '.')},{decimales} €"
@@ -704,9 +815,8 @@ def aviso_suma_importes(
     """(R21) Confirmación antes de aprobar si la suma de las filas difiere en
     0,01 € o más de la de lo leído en el albarán; ``None`` si cuadra o falta
     alguna de las dos. No bloquea: una recepción parcial es legítima."""
-    if suma_filas is None or suma_leida is None:
-        return None
-    if round(abs(suma_filas - suma_leida), 2) < 0.01:
+    # (F-075 R24) La regla «difieren» es la de ``ruesma_comun.importes``.
+    if not difieren(suma_filas, suma_leida):
         return None
     return (
         f"La suma de las líneas ({_euros(suma_filas)}) no cuadra con la del "
@@ -1522,6 +1632,12 @@ class DocumentDetailPayload(BaseModel):
     suma_filas: float | None = None
     suma_leida: float | None = None
     n_filas_manuales: int = 0
+    # (F-075 R23) El pie impreso (columnas de sv3; nulas si no se leyó o si
+    # sv3 aún no las tiene: el repositorio las lee con SELECT defensivo).
+    pie_base: float | None = None
+    pie_tipo_iva: float | None = None
+    pie_cuota: float | None = None
+    pie_total: float | None = None
     alta_sigrid_activa: bool = False
     alta_sigrid: AltaSigridVista | None = None
     alta_puede_solicitar: bool = False
@@ -1542,6 +1658,60 @@ class DocumentDetailPayload(BaseModel):
     def aviso_suma(self) -> str | None:
         """(F-065 R21) Confirmación antes de aprobar si las sumas no cuadran."""
         return aviso_suma_importes(self.suma_filas, self.suma_leida)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_leido(self) -> ImporteAlbaran:
+        """(F-075 R23) El importe del albarán: la suma de los ``precio_neto``
+        leídos de sus líneas (sin IVA), con ``ruesma_comun.importes``."""
+        return importe_albaran(linea.precio_neto for linea in self.lines)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_parcial_texto(self) -> str | None:
+        """(F-075 R23, P3) «N de M sin importe» si faltan importes en algunas."""
+        leido = self.importe_leido
+        if not leido.parcial:
+            return None
+        return f"{leido.sin_importe} de {leido.lineas} sin importe"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def pie_comparacion(self) -> Literal["no_leido", "cuadra", "no_cuadra", "no_comparable"]:
+        """(F-075 R23) Sin recalcular la tolerancia: ``no_cuadra`` es el motivo
+        que deja sv3; sin él, ``no_comparable`` si no hay suma o el pie no da
+        referencia (solo el total; v2-P4) y ``cuadra`` en otro caso."""
+        pie = (self.pie_base, self.pie_tipo_iva, self.pie_cuota, self.pie_total)
+        if all(valor is None for valor in pie):
+            return "no_leido"
+        if pie_de_motivos(self.review_reasons) is not None:
+            return "no_cuadra"
+        referencia = referencia_pie(base=self.pie_base, cuota=self.pie_cuota, total=self.pie_total)
+        if referencia is None or self.importe_leido.total is None:
+            return "no_comparable"
+        return "cuadra"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_valorado(self) -> float | None:
+        """(F-075 R23) El total valorado; una valoración sin filas (la
+        cabecera ``no_contract`` vacía) no es un valorado."""
+        valoracion = self.valuation
+        if valoracion is None or not (
+            valoracion.lines_by_merge_line_id or valoracion.synthetic_lines
+        ):
+            return None
+        return valoracion.total_valorado
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def importe_diferencia(self) -> float | None:
+        """(F-075 R23) Valorado − albarán, si se apartan en 0,01 € o más."""
+        albaran = self.importe_leido.total
+        valorado = self.importe_valorado
+        if not difieren(valorado, albaran):
+            return None
+        return round(float(valorado) - float(albaran), 2)  # type: ignore[arg-type]
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -1826,7 +1996,8 @@ class ObraResumenItem(BaseModel):
     pendientes: int = 0
     aprobados: int = 0
     revision_requerida: int = 0
-    importe_valorado: float = 0.0
+    # (F-075 R22) Suma del importe de la bandeja (albarán o, si no, valorado).
+    importe: float = 0.0
     ultima_fecha: str | None = None
 
 
@@ -1840,7 +2011,8 @@ class ProveedorResumenItem(BaseModel):
     pendientes: int = 0
     aprobados: int = 0
     revision_requerida: int = 0
-    importe_valorado: float = 0.0
+    # (F-075 R22) Suma del importe de la bandeja (albarán o, si no, valorado).
+    importe: float = 0.0
     ultima_fecha: str | None = None
 
 

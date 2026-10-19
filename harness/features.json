@@ -847,6 +847,24 @@
       "branch": "feature/F-070-obra-con-cero-inicial"
     },
     {
+      "id": "F-075",
+      "title": "El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán",
+      "description": "ORIGEN (correo de administración de obra, obra 0686, 2026-10-15): un albarán de DISCOIN con precios sale con «Importe valorado —» y «Sin valoración» y no se puede aprobar: no hay contrato (sv3 no dispara q-valoracion) y sv6 no valora. Merges: dfdc8aab-08e1-49f0-978d-bb906515e748 y 5dea6509-4a81-4192-b8b0-3a21041931ca.\n\nSPEC v1 (2026-10-15, solo sv4: importe leído junto al valorado) RECHAZADA en la PARADA 1. Respuestas literales del humano: P1 «como ya hay importe, no hay que valorar con contrato, manda el albarán y pisa»; P2 «que lea el pie y sirva para revisar»; P3 aceptada (líneas sin importe no suman, total parcial); sin contrato «si trae importes no hace valorar ni contrato, pasa directo».\n\nSPEC v2 (2026-10-15, specs/F-075-importe-leido/, informe progress/spec_F-075.md §v2): hallazgo clave, con contrato lo leído YA manda línea a línea en sv6 (F-019, jul 2026); el contrato aporta vínculo, partida y conversión, y añade sintéticas. Propuesta: (1) comun: importe_albaran (suma de precio_neto, parcial) y pie_cuadra; (2) sin contrato y con importes: sv3 publica q-valoracion con contrato nulo y sv6 construye una valoración directa no_contract desde las líneas (sin IA, sin sintéticas, derivada nueva_no_match), «valorada» si todas traen importe, así que se aprueba y sv9 la da de alta sin vincular SIN código nuevo (tests de contrato); sv4 deja revalorar sin contrato si trae importes; (3) con contrato, como hoy más motivo valorado_distinto_de_albaran; (4) pie: IA1 lee base, tipo, cuota y total, sv2 conserva el pie de fase 1, sv3 DDL de 4 columnas y PieGuardService (pie_no_cuadra a revisión, no bloquea); (5) sv4: una columna «Importe» (albarán si trae, si no valorado) con origen y marca ≠, tarjetas, Obras, Proveedores y ficha con pie; (6) evals observan el pie («no medido» sin ground truth). PREGUNTAS v2-P1 a v2-P8 (P1 seguir valorando con contrato o saltarlo, P2 aprobación humana, P3 sintéticas, P4 pie sin base, P5 varias páginas y tolerancia, P6 backfill, P7 una columna, P8 partir en dos: F-075 paso directo sin prompts, ya; F-0XX pie detrás de F-064). FUERA: albaranes sin importes y sin contrato, quitar sintéticas, sv5, aprobación automática, backfill por script, F-064, F-071, F-073 y F-066 X12. AJUSTE (humano, 2026-10-18, tras el bloqueo del implementer): opción A, sv5 añade precio_neto_albaran y descuento_albaran al sobre no_contract (R5 bis), despliegue comun → sv3 → sv5 → sv6 → sv4; M1, solo se publica sin contrato si el seleccionado es nulo.",
+      "status": "blocked",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "servicios": [
+        "comun",
+        "sv2-api",
+        "sv3-persistencia",
+        "sv5-valoracion-api",
+        "sv6-valoracion-persist",
+        "sv4-front"
+      ],
+      "branch": "feature/F-075-importe-leido"
+    },
+    {
       "id": "F-078",
       "title": "La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia",
       "description": "ORIGEN (producción, 2026-10-16, solo lectura): sv9 dejó no_admitido con falta_descripcion el albarán 86c13097-98f8-4e4b-91af-6a378c28d9cf (modo real): la fila manual 386 tiene descripcion_linea vacía, pero la ficha pinta «CARGA INCOMPLETA» porque la saca de contrato_lines_derived (review_repository.py, _load_conciliation_map_in_session); la 385 también va vacía y sv9 la cubre con el concepto del merge. El producto «MA9999 · Suministro de materiales» no se guarda: es el por defecto que sv4 y sv9 calculan igual con ruesma_comun.alta_sigrid.producto_efectivo. PRINCIPIO DEL HUMANO (literal): «Lo que está en la tabla es lo que debería estar guardado en BBDD, ya que lo ha puesto el humano. No es que sv9 tenga que buscar en muchos sitios, sino que esté bien guardado todo.» MEDICIÓN (105 filas de 42 documentos activos, progress/spec_F-078.md §3): 93 sin descripción en la fila que la ficha rellena (6 que sv9 rechazaría y 16 en que sv9 mandaría otro texto que el que se ve), 7 sin vincular con unidad_albaran vacía (sv9 mandaría sin unidad) y 6 vinculadas con cantidad_convertida nula y factor 1 (sv9: cantidad_sin_convertir); precio, importe, partida y unidad de Q, 0. SPEC v1 (specs/F-078-linea-guarda-lo-que-se-ve/, PARADA 1 APROBADA 2026-10-16: P1 = (b), en las Nueva con blanca se guarda y se ve el concepto del papel; P8 fuera, es F-079; P2-P7, P9, P10 por defecto): regla única «lo que se veía» en comun (ruesma_comun.linea_valorada.fila_a_guardar); sv6 la aplica a cada registro antes del replace; sv4 pinta solo la fila (vacío = vacío), el PATCH guarda la descripción en toda fila y la unidad también en unidad_albaran sin conversión, y las vías que crean o reapuntan filas la materializan; no se aprueba con filas sin vincular sin descripción; relleno de lo existente con un script de sv6 (lectura por defecto, --aplicar con autorización expresa del humano), sin DDL; sv9 sin código. Despliegue: sv6 -> relleno -> sv4. RELACIONADAS: F-053 (reintentar el alta tras el relleno), F-065 (sustituye CR1/H1), F-058, F-075 (su builder directo pasa por el mismo paso), F-076, F-077 (conflictos de texto).",
@@ -948,6 +966,19 @@
         "sv3-persistencia"
       ],
       "branch": "feature/F-073-proveedor-por-similitud"
+    },
+    {
+      "id": "F-082",
+      "title": "Valoración directa (F-075): una línea con importe y sin cantidad no puede quedar valorada sin revisión, porque sv9 la rechaza en el alta",
+      "description": "ORIGEN: observación O3 de progress/review_F-075.md (pasada 1), decisión del humano del 2026-10-19: abrir feature.\n\nPROBLEMA: con F-075, la valoración directa sin contrato da por valorada una línea que trae importe del albarán pero no cantidad. Esa línea se aprueba con normalidad y después sv9 deja el alta en no_admitido (visible en el panel del alta de F-053), en vez de avisar antes de aprobar.\n\nPROPUESTA (a concretar en la spec): que esa línea vaya a revisión antes de la aprobación (motivo de línea en sv6, visible en la ficha de sv4), para que el revisor ponga la cantidad o la corrija; sin cambiar la valoración de las líneas que sí traen cantidad.\n\nALCANCE probable: sv6 (valoración directa de F-075) y, si hace falta, el aviso en la ficha de sv4. RELACIONADAS: F-075 (O3), F-053 (alta), F-077 (motivos de línea).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 2,
+      "servicios": [
+        "sv6-valoracion-persist",
+        "sv4-front"
+      ]
     }
   ]
 }

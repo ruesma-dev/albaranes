@@ -779,6 +779,11 @@ microservicios. La mejora #1 (VIEWs gestionadas) es la solución limpia.
 | Servicios upstream     | sv6 (orquestador valoración) — y sv4 (frontend) si llama directo                     |
 | Servicios downstream   | PostgreSQL · SharePoint/Graph · Anthropic / Google / OpenAI                          |
 
+> **F-075 (oct 2026)** · El sobre `no_contract` lleva también, por línea,
+> `precio_neto_albaran` (el leído, sin derivar) y `descuento_albaran`, como el sobre
+> con contrato: sv6 hace con ellos la valoración directa. Nada más cambia (ni el
+> SELECT ni la IA). Regla 25 de `docs/ARCHITECTURE.md`.
+
 ---
 
 *Documento generado a partir del análisis del código del paquete `sv5.zip` aportado.*

@@ -23,6 +23,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from evals.modelos import NO_COMPARAR
 from evals.procesos import canal
 from evals.procesos.errores import avisar, describir_error
 from evals.procesos.sv5_valoracion import (
@@ -101,6 +102,12 @@ def prompt_de_fase_2(tipologia: str) -> str:
 #: - `unidad` y `descuentos`: sv2 no los extrae hoy (F-024). Se declaran en el
 #:   informe en vez de darlos por malos (R26); el día que sv2 los devuelva,
 #:   entran aquí y el banco los vigila solo.
+#:
+#: (F-075 R27) El pie del albarán (`CAMPOS_PIE`) sí lo devuelve IA1 y entra
+#: aquí; mientras el libro `IA1_extraccion` no traiga sus columnas rellenas,
+#: el informe lo declara «no medido» (`campos_no_medidos`).
+CAMPOS_PIE: tuple[str, ...] = ("base_imponible", "tipo_iva_pct", "cuota_iva", "total_albaran")
+
 OBSERVABLES: dict[str, tuple[str, ...]] = {
     "cabeceras": (
         "proveedor_nombre",
@@ -110,6 +117,7 @@ OBSERVABLES: dict[str, tuple[str, ...]] = {
         "obra_codigo",
         "obra_nombre",
         "forma_pago",
+        *CAMPOS_PIE,
     ),
     "lineas": (
         "num_linea",
@@ -139,6 +147,8 @@ def proyectar_ia1(documento: dict, caso_id: str) -> dict[str, list[dict]]:
                 "obra_codigo": cabecera.get("obra_codigo"),
                 "obra_nombre": cabecera.get("obra_nombre"),
                 "forma_pago": cabecera.get("forma_pago"),
+                # (F-075 R27) El pie, tal como lo devuelve IA1.
+                **{campo: cabecera.get(campo) for campo in CAMPOS_PIE},
             }
         ],
         "lineas": [
@@ -153,6 +163,22 @@ def proyectar_ia1(documento: dict, caso_id: str) -> dict[str, list[dict]]:
             for indice, linea in enumerate(documento.get("lineas") or [], start=1)
         ],
     }
+
+
+def campos_no_medidos(fixtures_ia1: dict[str, dict]) -> list[str]:
+    """(F-075 R27) Los campos del pie que ningún caso del libro IA1 rellena.
+
+    Sin columna, o con «no comparar» en todas las filas, nadie los está
+    midiendo: el informe lo dice en vez de callarlo. Un ``null`` explícito sí
+    es una expectativa («no figura en el papel») y cuenta como medido."""
+    medidos = {
+        campo
+        for fixture in fixtures_ia1.values()
+        for fila in (fixture.get("tablas") or {}).get("cabeceras", [])
+        for campo in CAMPOS_PIE
+        if campo in fila and fila[campo] != NO_COMPARAR
+    }
+    return [campo for campo in CAMPOS_PIE if campo not in medidos]
 
 
 def proyectar_ia2(documento: dict, caso_id: str) -> dict[str, list[dict]]:

@@ -123,6 +123,28 @@ _PHASE2_DDL: tuple[str, ...] = (
     "ALTER TABLE albaran_documents_merge "
     "ADD COLUMN IF NOT EXISTS contratos_busqueda_at_utc VARCHAR(64)",
 
+    # Pie del albarán (F-075 · R15): base, tipo de IVA, cuota y total tal como
+    # están impresos. En las DOS tablas de documento (por proveedor y merge),
+    # como el resto de la cabecera. Todas nullable: un documento anterior no
+    # lo trae. Lectores acoplados: sv5 lee el merge por nombre de columna (no
+    # le afecta); sv4 las lee con SELECT defensivo.
+    "ALTER TABLE albaran_documents "
+    "ADD COLUMN IF NOT EXISTS base_imponible DOUBLE PRECISION",
+    "ALTER TABLE albaran_documents "
+    "ADD COLUMN IF NOT EXISTS tipo_iva_pct DOUBLE PRECISION",
+    "ALTER TABLE albaran_documents "
+    "ADD COLUMN IF NOT EXISTS cuota_iva DOUBLE PRECISION",
+    "ALTER TABLE albaran_documents "
+    "ADD COLUMN IF NOT EXISTS total_albaran DOUBLE PRECISION",
+    "ALTER TABLE albaran_documents_merge "
+    "ADD COLUMN IF NOT EXISTS base_imponible DOUBLE PRECISION",
+    "ALTER TABLE albaran_documents_merge "
+    "ADD COLUMN IF NOT EXISTS tipo_iva_pct DOUBLE PRECISION",
+    "ALTER TABLE albaran_documents_merge "
+    "ADD COLUMN IF NOT EXISTS cuota_iva DOUBLE PRECISION",
+    "ALTER TABLE albaran_documents_merge "
+    "ADD COLUMN IF NOT EXISTS total_albaran DOUBLE PRECISION",
+
     # albaran_lines_merge
     "ALTER TABLE albaran_lines_merge "
     "ADD COLUMN IF NOT EXISTS source_phase VARCHAR(16) "

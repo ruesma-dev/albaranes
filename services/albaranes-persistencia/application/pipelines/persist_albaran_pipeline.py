@@ -13,6 +13,7 @@ from application.services.contrato_enrichment_service import (
 from application.services.fecha_guard_service import FechaGuardService
 from application.services.header_resolver_service import HeaderResolverService
 from application.services.obra_enrichment_service import ObraEnrichmentService
+from application.services.pie_guard_service import PieGuardService
 from domain.models.extraction_models import (
     ExtractionEnvelope,
     ProviderExtractionEnvelope,
@@ -20,6 +21,7 @@ from domain.models.extraction_models import (
 from domain.ports.albaran_repository import AlbaranRepository
 from domain.ports.document_storage import DocumentStorage
 from domain.ports.valuation_trigger_port import ValuationTrigger
+from ruesma_comun.importes import importe_albaran
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +74,7 @@ class PersistAlbaranPipeline:
         contrato_enrichment_service: ContratoEnrichmentService | None = None,
         valuation_trigger: ValuationTrigger | None = None,
         fecha_guard_service: FechaGuardService | None = None,
+        pie_guard_service: PieGuardService | None = None,
     ) -> None:
         self._repository = repository
         self._document_storage = document_storage
@@ -81,6 +84,8 @@ class PersistAlbaranPipeline:
         self._contrato_enrichment_service = contrato_enrichment_service
         self._valuation_trigger = valuation_trigger
         self._fecha_guard_service = fecha_guard_service
+        # (F-075 R16) Control del pie, junto al guard de fecha.
+        self._pie_guard_service = pie_guard_service
         logger.info(
             "[pipeline] PersistAlbaranPipeline construido; "
             "obra_enrichment=%s contrato_enrichment=%s "
@@ -142,6 +147,9 @@ class PersistAlbaranPipeline:
             )
             self._enrich_obra_safely(merge_document_id=existing.document_id)
             self._check_fecha_guard_safely(
+                merge_document_id=existing.document_id,
+            )
+            self._check_pie_guard_safely(
                 merge_document_id=existing.document_id,
             )
             contratos_count = self._enrich_contratos_safely(
@@ -233,6 +241,7 @@ class PersistAlbaranPipeline:
         )
         self._enrich_obra_safely(merge_document_id=saved.document_id)
         self._check_fecha_guard_safely(merge_document_id=saved.document_id)
+        self._check_pie_guard_safely(merge_document_id=saved.document_id)
         contratos_count = self._enrich_contratos_safely(
             merge_document_id=saved.document_id,
             force_refetch=request.force_refetch,
@@ -458,6 +467,7 @@ class PersistAlbaranPipeline:
         )
         self._enrich_obra_safely(merge_document_id=merge_document_id)
         self._check_fecha_guard_safely(merge_document_id=merge_document_id)
+        self._check_pie_guard_safely(merge_document_id=merge_document_id)
         self._enrich_contratos_safely(
             merge_document_id=merge_document_id,
             force_refetch=force_refetch,
@@ -507,6 +517,24 @@ class PersistAlbaranPipeline:
         except Exception:
             logger.exception(
                 "[fecha-guard][pipeline] step falló; se continúa. "
+                "document_id=%s",
+                merge_document_id,
+            )
+
+    def _check_pie_guard_safely(self, *, merge_document_id: str) -> None:
+        """(F-075 R16–R18) Control del pie: la suma de las líneas frente al
+        pie impreso -> revisión si no cuadra. Best-effort: nunca rompe la
+        persistencia."""
+        if self._pie_guard_service is None:
+            logger.info("[pie-guard][pipeline] SKIP: servicio no cableado.")
+            return
+        try:
+            self._pie_guard_service.check_merge_document(
+                merge_document_id=merge_document_id,
+            )
+        except Exception:
+            logger.exception(
+                "[pie-guard][pipeline] step falló; se continúa. "
                 "document_id=%s",
                 merge_document_id,
             )
@@ -578,7 +606,10 @@ class PersistAlbaranPipeline:
         merge_document_id: str,
         force: bool = False,
     ) -> None:
-        """Dispara el servicio 6 SOLO si hay contrato seleccionado con líneas.
+        """Dispara el servicio 6 si hay contrato seleccionado con líneas o
+        (F-075 R3) si NO hay contrato seleccionado y el albarán trae importes
+        leídos: entonces publica con ``codigo_contrato=None`` y sv6 hace la
+        valoración directa. Con contrato seleccionado sin líneas, SKIP (M1).
 
         ``force`` (jul 2026) — FIX re-valorado: se propaga tal cual a
         ``trigger_async`` → ``MensajeValoracion.force`` → sv6. Antes
@@ -618,12 +649,16 @@ class PersistAlbaranPipeline:
             return
 
         if not has_lines:
-            logger.info(
-                "[valuation-trigger][pipeline] SKIP: no hay contrato "
-                "seleccionado con líneas. document_id=%s codigo=%s",
-                merge_document_id, codigo,
-            )
-            return
+            if codigo or not self._trae_importes_safely(merge_document_id):
+                logger.info(
+                    "[valuation-trigger][pipeline] SKIP: no hay contrato "
+                    "seleccionado con líneas ni (sin contrato) importes "
+                    "leídos. document_id=%s codigo=%s",
+                    merge_document_id, codigo,
+                )
+                return
+            # (F-075 R3) Sin contrato y con importes: valoración directa.
+            codigo = None
 
         try:
             accepted = self._valuation_trigger.trigger_async(
@@ -643,6 +678,22 @@ class PersistAlbaranPipeline:
                 "disparar trigger. document_id=%s",
                 merge_document_id,
             )
+
+    def _trae_importes_safely(self, merge_document_id: str) -> bool:
+        """(F-075 R3, R4) ¿Alguna línea del merge trae importe leído
+        (``precio_neto``)? Ante cualquier error, ``False``: no se publica."""
+        try:
+            importes = self._repository.importes_leidos(
+                document_id=merge_document_id,
+            )
+            return importe_albaran(importes).trae_importes
+        except Exception:
+            logger.exception(
+                "[valuation-trigger][pipeline] Error leyendo los importes "
+                "del albarán; se omite trigger. document_id=%s",
+                merge_document_id,
+            )
+            return False
 
     def _validate_sha256(
         self,

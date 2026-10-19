@@ -58,6 +58,11 @@ class AlbaranNormalizer:
                 "obra_codigo": self.normalize_obra_codigo(header.obra_codigo),
                 "obra_nombre": self.normalize_text(header.obra_nombre),
                 "obra_direccion": self.normalize_text(header.obra_direccion),
+                # (F-075 R15) El pie, como número.
+                "base_imponible": self.normalize_number(header.base_imponible),
+                "tipo_iva_pct": self.normalize_number(header.tipo_iva_pct),
+                "cuota_iva": self.normalize_number(header.cuota_iva),
+                "total_albaran": self.normalize_number(header.total_albaran),
                 "id": self.normalize_identifier(header.id),
             }
         )

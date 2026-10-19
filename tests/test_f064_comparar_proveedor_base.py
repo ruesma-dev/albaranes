@@ -104,7 +104,7 @@ from application.services.albaran_extraction_service import ProviderClientSpec
 
 spec = ProviderClientSpec(provider="gemini", model_name="m", client=ClienteQueCaptura())
 ficheros = {"base": sv2_proveedor.ficheros_de_base(temporal, base=base), "rama": sv2_proveedor.ficheros_de_rama()}
-salida = {v: capturar(sv2_proveedor.montar_servicio(f, [spec])) for v, f in ficheros.items()}
+salida = {v: capturar(sv2_proveedor.montar_servicio(f, [spec], sin_pie=v == "base")) for v, f in ficheros.items()}
 print("__MARCA__" + json.dumps(salida, ensure_ascii=False))
 """.replace("__MARCA__", MARCA)
 
@@ -163,12 +163,22 @@ def test_f064_r15_variante_base_identica_a_la_base(capturas, fase):
     assert "EMPRESAS DEL CLIENTE" not in obtenido["instructions"]
 
 
+def _sin_pie(schema: dict) -> dict:
+    """El JSON Schema sin los cuatro campos del pie (F-075 R13), en el mismo orden."""
+    copia = json.loads(json.dumps(schema))
+    propiedades = copia.get("$defs", {}).get("CabeceraAlbaran", {}).get("properties", {})
+    for campo in ("base_imponible", "tipo_iva_pct", "cuota_iva", "total_albaran"):
+        propiedades.pop(campo, None)
+    return copia
+
+
 @pytest.mark.parametrize("fase", ("IA1", *CLAVES_FASE_2))
 def test_f064_r15_variante_rama_lleva_la_lista_y_el_mismo_schema(capturas, fase):
     rama = capturas["rama"]["rama"][fase]
     base = capturas["codigo_base"]["base"][fase]
     assert rama["instructions"] != base["instructions"]
     assert rama["instructions"].count("EMPRESAS DEL CLIENTE (CIF — razón social):") == 1
-    assert json.dumps(rama["schema"]) == json.dumps(base["schema"]), "R11: sin campos nuevos"
+    # R11 de F-064: sin campos nuevos... salvo el pie de la cabecera, que añade F-075.
+    assert json.dumps(_sin_pie(rama["schema"])) == json.dumps(base["schema"]), "R11: sin campos nuevos"
     if fase != "IA1":
         assert "proveedor_emisor" in rama["instructions"]
