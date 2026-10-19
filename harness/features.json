@@ -979,6 +979,20 @@
         "sv6-valoracion-persist",
         "sv4-front"
       ]
+    },
+    {
+      "id": "F-083",
+      "title": "Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán",
+      "description": "ORIGEN: petición del humano, 2026-10-19: «una feature para mejorar los modelos»; probar las llamadas con modelos de Claude (mínimo 4.8), Gemini (mínimo Flash 3.7) y OpenAI (mínimo 5.5), ver el coste de cada modelo, y probar también con «Luna» (un modelo de IA, nombre exacto por confirmar).\n\nHOY (infra/create_capps.ps1): ANTHROPIC_MODEL claude-opus-4-8, OPENAI_MODEL gpt-5.4, GEMINI_MODEL gemini-3.7-flash (IA1).\n\nALCANCE (decisión del humano): todas las fases, IA1 e IA2 (extracción, sv2) e IA3 e IA4 (valoración, sv5), con el banco de evals (59 casos). Por modelo y fase: fallos críticos, avisos, tiempo y coste por albarán (tokens de entrada y salida por precio vigente), y recomendación de qué modelo usar en cada fase.\n\nPRIMERO: inventario de modelos disponibles por proveedor que cumplan el mínimo, con su identificador de API y su precio vigente (fuente y fecha), e identificar «Luna». Las llamadas de pago las lanza el humano con sus claves (Read-Host -AsSecureString); ningún agente gasta.\n\nRELACIONADAS: F-047 (ciclo completo), F-064 y F-075 (líneas base de evals con LLM: IA1 141, IA2 2), comparar_proveedor (patrón de comparador).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "servicios": [
+        "sv2-api",
+        "sv5-valoracion-api",
+        "comun"
+      ]
     }
   ]
 }
