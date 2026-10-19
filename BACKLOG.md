@@ -5,6 +5,8 @@
 
 Resumen: **81 features**, 57 abiertas, 24 terminadas.
 
+En curso: **F-083**.
+
 Bloqueadas: **F-064, F-075, F-078, F-076, F-080, F-077, F-073**.
 
 ## Trabajo abierto
@@ -23,7 +25,7 @@ Bloqueadas: **F-064, F-075, F-078, F-076, F-080, F-077, F-073**.
 | F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 1 | bloqueada | estandar | `feature/F-077-guardar-y-aprobar` |
 | F-078 | La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia | 1 | bloqueada | critico | `feature/F-078-linea-guarda-lo-que-se-ve` |
 | F-080 | Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados | 1 | bloqueada | critico | `feature/F-080-empate-solo-entre-empatados` |
-| F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 1 | spec lista | critico | `feature/F-083-comparar-modelos` |
+| F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 1 | en curso | critico | `feature/F-083-comparar-modelos` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
@@ -228,7 +230,7 @@ SPEC (specs/F-080-empate-solo-entre-empatados/, 2026-10-18): tras un empate por 
 
 ### F-083 · Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán
 
-estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-083-comparar-modelos`
+estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-083-comparar-modelos`
 
 ORIGEN: petición del humano, 2026-10-19: «una feature para mejorar los modelos»; probar las llamadas con modelos de Claude (mínimo 4.8), Gemini (mínimo Flash 3.7) y OpenAI (mínimo 5.5), ver el coste de cada modelo, y probar también con «Luna» (un modelo de IA, nombre exacto por confirmar).
 
