@@ -121,10 +121,11 @@ con R1–R5.
 
 ## T7 · `bash harness/init.sh`
 
-En verde en el worktree tras la fusión de `dev` y T4 (todas las líneas `[OK]`; un `[AVISO]` heredado: sv3
+Pasada final sobre `868dcb0`: **verde, 0 `[KO]`** (la anterior, sobre `8ca8cbe`, dio un KO por la fila del
+inventario de mutación, arreglado en `868dcb0`). Todas las puertas en `[OK]`; un `[AVISO]` heredado: sv3
 importa `ruesma_comun` del árbol principal, fuera del worktree, y no se cachea; comun no cambia en F-080).
 Suites: sv3 **1576 passed** (1532 + los 44 de F-075 que trae `dev`), raíz 1328, sv1 205, sv2 485,
-sv4 1774, sv5 46, sv6 473 (+1 skipped), sv9 673, comun 859 (+3 skipped). Puerta de tamaño: impl en tope.
+sv4 1774, sv5 46, sv6 473 (+1 skipped), sv9 673, comun 859 (+3 skipped). Puerta de tamaño: impl 145/220.
 
 ## Pendiente
 
@@ -138,7 +139,7 @@ sv4 1774, sv5 46, sv6 473 (+1 skipped), sv9 673, comun 859 (+3 skipped). Puerta 
 | Evidencia | Valor medido |
 |---|---|
 | Tests de F-080 | 36 passed in 2.17 s (RED: 26 failed, 10 passed) |
-| Suite de sv3 | 1576 passed in 27.26 s (tras fusionar `dev`); 1532 passed in 13.46 s antes de fusionar |
+| Suite de sv3 | 1576 passed in 20.28 s (tras fusionar `dev`); 1532 passed in 13.46 s antes de fusionar |
 | Tests existentes con expectativa cambiada | 0 (R13) |
 | Cobertura de las líneas cambiadas | 100.0 % (8/8) — `PUERTA COBERTURA` |
 | Mutantes generados / supervivientes | 5 / 0 (5 muertos, 66.8 s) — `progress/mutacion_F-080.md` |
