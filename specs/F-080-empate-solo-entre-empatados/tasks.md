@@ -1,6 +1,6 @@
 # F-080 · tareas
 
-Rama `feature/F-080-empate-solo-entre-empatados` (worktree `C:\Users\pgris\PycharmProjects\albaranes-F-080`, desde `dev` `bee817d`). Una tarea = un commit `F-080 Tn: …`. Rigor `critico`: fase RED de cada tarea con código registrada en `progress/impl_F-080.md`. Tests de sv3 con `services/albaranes-persistencia` como raíz. **No empezar sin la PARADA 1 resuelta (P1–P3 de design §2).** Si el humano elige (a) en P1, R2 y R4 cambian como dice design §2 antes de T1.
+Rama `feature/F-080-empate-solo-entre-empatados` (worktree `C:\Users\pgris\PycharmProjects\albaranes-F-080`, desde `dev` `bee817d`). Una tarea = un commit `F-080 Tn: …`. Rigor `critico`: fase RED de cada tarea con código registrada en `progress/impl_F-080.md`. Tests de sv3 con `services/albaranes-persistencia` como raíz. PARADA 1 resuelta el 2026-10-19: P1 = (b), P2 y P3 según la recomendación (design §2).
 
 - [ ] T1: sv3 — `tests/test_f080_empate_solo_entre_empatados.py` con los casos de design §1 (H4, P1, ajeno cerca, ajeno lejos, penalización) y los tests de R1–R12; fase RED contra `dev`: deben fallar R2, R3, R4, R6, R7 y R9, y pasar R1, R5, R8 y R10–R12 (registrar la traza)  |  Verificación: `pytest tests/test_f080_empate_solo_entre_empatados.py` (RED con los fallos esperados)
 - [ ] T2: sv3 — `_es_empatado` junto a `_clave_cif` y la comprobación de pertenencia en la decisión por puntos de `_resolver_por_obra_y_familia`, con el log de R6 y la línea del docstring de la clase (design §4) (R1–R9)  |  Verificación: `pytest tests/test_f080_empate_solo_entre_empatados.py`

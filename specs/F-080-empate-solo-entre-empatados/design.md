@@ -44,7 +44,12 @@ B2 «HORMIGONES DEL NORTE, S.L.» (contrato «GASOLEO A» en todos), B9 «ARIDOS
 `round(4·s)` no puede abrir 2 puntos con esa diferencia (con 0,875 frente a 0,625 ya no es empate:
 el margen es inclusivo). Solo la familia o la penalización separan.
 
-## 2. Preguntas abiertas para el humano (PARADA 1)
+## 2. Preguntas para el humano (PARADA 1) — RESUELTAS el 2026-10-19
+
+**Decisión del humano:** P1 = **(b)** (la carrera de hoy, y el ganador tiene que ser empatado); P2 y P3 según la
+recomendación de abajo (el líder las anunció como opción por defecto y el humano no las cambió). R2 y R4 quedan como
+están; D1 confirmada.
+
 
 **P1 · ¿Contra quién compite el empatado?** (R2, R4.) La decisión dice «la familia solo puede
 elegir entre los empatados», y admite dos lecturas que se separan en los casos P1 y «ajeno cerca»
