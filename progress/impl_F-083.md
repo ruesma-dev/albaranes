@@ -148,3 +148,17 @@ FAILED test_f083_bloque_ia4_concilia_sobre_la_preparacion
 14 failed, 5 passed, 26 deselected in 3.30s
 ```
 Verde tras T8: `45 passed` (el fichero entero; IA3 e IA4 con el build real de sv6). Suite de la raíz: `1556 passed`.
+
+### T11 · `cd services/albaranes-comun && python -m pytest tests/test_f083_claude_forzar_herramienta.py -q --tb=line`
+
+```
+...\tests\test_f083_claude_forzar_herramienta.py:43: TypeError: ClaudeMessagesVisionClient.__init__() got an unexpected keyword argument 'forzar_herramienta'
+E   TypeError: ClaudeMessagesVisionClient.__init__() got an unexpected keyword argument 'forzar_herramienta'
+...\tests\test_f083_claude_forzar_herramienta.py:98: TypeError: ClaudeMessagesVisionClient.__init__() got an unexpected keyword argument 'forzar_herramienta'
+=========================== short test summary info ===========================
+FAILED tests/test_f083_claude_forzar_herramienta.py::test_f083_r38_true_explicito_es_identico_al_defecto
+FAILED tests/test_f083_claude_forzar_herramienta.py::test_f083_r38_false_pide_auto_y_nada_mas_cambia
+FAILED tests/test_f083_claude_forzar_herramienta.py::test_f083_r38_sin_tool_use_falla_como_hoy
+3 failed, 1 passed in 4.46s
+```
+El que pasaba en RED es el de «por defecto, la petición de hoy» (es la red de R38, tiene que pasar antes y después). Verde tras T11: `4 passed`; suite de comun `863 passed, 3 skipped`.
