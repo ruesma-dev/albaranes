@@ -993,6 +993,33 @@
         "sv5-valoracion-api",
         "comun"
       ]
+    },
+    {
+      "id": "F-084",
+      "title": "El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None»)",
+      "description": "ORIGEN: pruebas rápidas de modelos del 2026-10-19 (progress/evals_prueba-{luna,sol,argon}.md, fuera de git) y pasada de F-075: IA3, IA4 y E2E salen idénticos caso a caso con cualquier modelo; en IA3, 126 de 136 fallos (15 casos) y 388 de 408 (59 casos, F-075) son «obtenido None»: la valoración del banco no produce líneas valoradas salvo FER-001/FER-002. Así el banco no mide el modelo de valoración.\n\nOBJETIVO: diagnosticar por qué (fixtures de inputs/contrato, adaptador evals/procesos/sv5_valoracion.py, servicios de sv5 sin contrato, R26 de campos no observables...) y arreglarlo para que IA3/IA4/E2E midan el modelo; nueva línea base con el modelo de producción.\n\nNECESARIO PARA: elegir el modelo de IA3/IA4 (F-083, F-085: Opus 5.5 en IA3, GPT-6.1 Sol en IA4). RELACIONADAS: F-047 (ciclo completo), F-083.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "servicios": [
+        "sv5-valoracion-api",
+        "sv6-valoracion-persist"
+      ]
+    },
+    {
+      "id": "F-085",
+      "title": "Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 claude-opus-5-5, IA4 gpt-6.1-sol",
+      "description": "ORIGEN: decisión del humano, 2026-10-20, tras la prueba rápida de modelos (IA1: Argon 52 fallos frente a 56 del Gemini actual en 15 casos).\n\nCAMBIO: sv2 IA1 = gemini-4-argon (hoy gemini-3.7-flash, que Google sirve como 3.8); IA2 ENCENDIDA (hoy WORKER_CON_FASE2=false) con openai gpt-6.1-sol (hoy gpt-5.4); sv5 IA3 = claude-opus-5-5 (hoy claude-opus-4-8; necesita no forzar la herramienta, T11 de F-083, y que sv5 lo pida en producción), IA4 = openai gpt-6.1-sol (hoy Claude; sv5 hoy solo tiene Claude habilitado: ENABLE_OPENAI, clave de OpenAI como secreto, IA3_PROVIDER/IA4_PROVIDER). infra/create_capps.ps1 al día; azure-apps/albaranes.md si cambia lo que se consume.\n\nCONDICIÓN: medir antes coste y precisión con el comparador de F-083 (cada fase contra el modelo actual) y, para IA3/IA4, con el banco arreglado por F-084. El despliegue y los cambios de configuración en Azure los lanza el humano. Precio: Argon dobla el 2026-12-01 (2/10 → 4/20).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "servicios": [
+        "sv2-api",
+        "sv5-valoracion-api",
+        "comun"
+      ]
     }
   ]
 }
