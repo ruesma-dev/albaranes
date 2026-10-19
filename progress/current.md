@@ -1,13 +1,13 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-080 · `in_progress` (2026-10-19): implementación terminada, espera la review** — tras un empate por nombre (F-073), la familia solo elige entre los empatados (H4 de `progress/review_F-073.md`). Spec en `specs/F-080-empate-solo-entre-empatados/`. Rama `feature/F-080-empate-solo-entre-empatados`, worktree `../albaranes-F-080`. Rigor `critico`, solo sv3 (`header_resolver_service.py`), sin DDL ni comun. PARADA 1 resuelta el 2026-10-19: **P1 = (b)** (la carrera por puntos de hoy, y el ganador tiene que ser uno de los empatados), P2 y P3 según la recomendación (design §2). Informe en curso: `progress/impl_F-080.md`.
+**F-080 · `blocked` (2026-10-19): review APPROVED (pasada 1, `progress/review_F-080.md`), fusionada en `dev`; espera la MANUAL T6 del humano (desplegar solo sv3)** — tras un empate por nombre (F-073), la familia solo elige entre los empatados (H4 de `progress/review_F-073.md`). Spec en `specs/F-080-empate-solo-entre-empatados/`. Rama `feature/F-080-empate-solo-entre-empatados`, worktree `../albaranes-F-080`. Rigor `critico`, solo sv3 (`header_resolver_service.py`), sin DDL ni comun. PARADA 1 resuelta el 2026-10-19: **P1 = (b)** (la carrera por puntos de hoy, y el ganador tiene que ser uno de los empatados), P2 y P3 según la recomendación (design §2). Informe en curso: `progress/impl_F-080.md`.
 
-Estado del implementer (2026-10-19): **T1–T5 y T7 hechas, informe en `progress/impl_F-080.md`; espera la review**. Tests de F-080: 36 passed (fase RED registrada). sv3: 1576 passed después de fusionar `dev` (`f49f1b2`, F-075) en la rama, sin cambiar ninguna expectativa existente (R13). Cobertura de lo cambiado: 100 % (8/8). Mutación: 5 generados, 5 muertos, 0 supervivientes (`progress/mutacion_F-080.md`). `bash harness/init.sh` en verde en el worktree. Desviaciones respecto a la spec: ninguna.
+Estado del implementer (2026-10-19): **T1–T5 y T7 hechas, informe en `progress/impl_F-080.md`; espera la review**. Tests de F-080: 36 passed (fase RED registrada). sv3: 1576 passed después de fusionar `dev` (`f49f1b2`, F-075) en la rama, sin cambiar ninguna expectativa existente (R13). Cobertura de lo cambiado: 100 % (8/8). Mutación: 5 generados, 5 muertos, 0 supervivientes (`progress/mutacion_F-080.md`). `bash harness/init.sh` en verde en el worktree (último verde: el del reviewer sobre `f4ad6e0`). Desviaciones respecto a la spec: ninguna.
 
 #### F-080 · MANUAL T6 (humano), comandos para PowerShell
 
-**Cuándo:** después del APPROVED, la fusión en `dev`, `init.sh` en verde en el árbol principal y la T12 de F-073 (la imagen de sv3 de F-080 lleva F-073 dentro). Solo sv3. **`deploy.ps1` es [ESCRIBE EN PRODUCCIÓN · humano]**; el resto solo lee. Ningún agente lo lanza.
+**Cuándo:** ya se puede (APPROVED, fusionada en `dev` con `init.sh` en verde en el árbol principal). sv3 corre desde el 2026-10-19 con F-073 y F-075 (`r20261019-0952`, la imagen de vuelta atrás); la de F-080 las lleva dentro. Antes, comprobar que `dev` no traiga otro cambio de sv3 sin aprobar para producción. Solo sv3. **`deploy.ps1` es [ESCRIBE EN PRODUCCIÓN · humano]**; el resto solo lee. Ningún agente lo lanza.
 
 ```powershell
 cd C:\Users\pgris\PycharmProjects\albaranes\infra
