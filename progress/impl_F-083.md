@@ -26,3 +26,13 @@ ERROR tests/test_f083_costes.py
 1 error in 0.28s
 ```
 Verde tras T2: `77 passed` (T1 + T2).
+
+### T3 · `python -m pytest tests/test_f083_medidor.py -q --tb=line`
+
+```
+    from evals.procesos.medidor import MedidorDeUso, registros_de_fichero
+E   ModuleNotFoundError: No module named 'evals.procesos.medidor'
+ERROR tests/test_f083_medidor.py
+1 error in 0.25s
+```
+Verde tras T3: `13 passed`.
