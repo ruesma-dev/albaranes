@@ -23,7 +23,7 @@ Bloqueadas: **F-064, F-075, F-078, F-076, F-080, F-077, F-073**.
 | F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 1 | bloqueada | estandar | `feature/F-077-guardar-y-aprobar` |
 | F-078 | La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia | 1 | bloqueada | critico | `feature/F-078-linea-guarda-lo-que-se-ve` |
 | F-080 | Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados | 1 | bloqueada | critico | `feature/F-080-empate-solo-entre-empatados` |
-| F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 1 | pendiente | critico |  |
+| F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 1 | spec lista | critico | `feature/F-083-comparar-modelos` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
@@ -228,7 +228,7 @@ SPEC (specs/F-080-empate-solo-entre-empatados/, 2026-10-18): tras un empate por 
 
 ### F-083 · Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán
 
-estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
+estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-083-comparar-modelos`
 
 ORIGEN: petición del humano, 2026-10-19: «una feature para mejorar los modelos»; probar las llamadas con modelos de Claude (mínimo 4.8), Gemini (mínimo Flash 3.7) y OpenAI (mínimo 5.5), ver el coste de cada modelo, y probar también con «Luna» (un modelo de IA, nombre exacto por confirmar).
 
@@ -239,6 +239,8 @@ ALCANCE (decisión del humano): todas las fases, IA1 e IA2 (extracción, sv2) e 
 PRIMERO: inventario de modelos disponibles por proveedor que cumplan el mínimo, con su identificador de API y su precio vigente (fuente y fecha), e identificar «Luna». Las llamadas de pago las lanza el humano con sus claves (Read-Host -AsSecureString); ningún agente gasta.
 
 RELACIONADAS: F-047 (ciclo completo), F-064 y F-075 (líneas base de evals con LLM: IA1 141, IA2 2), comparar_proveedor (patrón de comparador).
+
+SPEC (2026-10-19, specs/F-083-comparar-modelos/, anexo de inventario y precios con fuente progress/spec_F-083.md): comparador nuevo evals/comparar_modelos.py, una fase por invocación y varios modelos, con la referencia de producción medida en la misma corrida (IA1 gemini-3.7-flash, IA2 gpt-5.4, IA3/IA4 claude-opus-4-8); IA2 e IA4 con preparación única por la referencia, IA3 con la IA4 del libro; coste por albarán con los tokens reales leídos por un call_logger medidor (sin tocar los clientes) y la tabla versionada evals/precios_modelos.json; estimación previa, --estimar sin claves, paradas sin gastar (modelo, tabla caducada, claves, tope por invocación y de la feature) y corte en caliente por tope; criterio: elegible (0 ERROR y fallos ≤ referencia), banda máx(2, 5 %), el más barato de la banda, «cambiar» solo con mejora o ahorro claros, provisional con 1 repetición. HALLAZGOS: gemini-3.7-flash está descontinuado y Google lo redirige a gemini-3.8-flash; la línea base de F-075 probablemente no midió los modelos de producción (defaults del runner, IA3/IA4 con gemini); el cliente de Claude fuerza la herramienta y claude-opus-5-5, claude-sonnet-5-5 y claude-fable-5-1 lo rechazan con 400. «Luna» = gama Luna de OpenAI (gpt-6-luna, gpt-5.6-luna; no existe gpt-6.1-luna). PREGUNTAS P1–P6 (design §9): P1 qué Luna y si entra gpt-6.1-sol, P2 primera tanda (11 modelos), P3 tope (25 por invocación, 200 la feature; tanda 1 ≈ 150 USD), P4 repeticiones (1 y 3 en finalistas), P5 parámetro forzar_herramienta en comun (recomendado) o dejar fuera los Claude 5.5, P6 umbrales del criterio. FUERA: cambiar el modelo de producción (feature siguiente), barrer esfuerzo/pensamiento, infra/.
 
 ### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
 

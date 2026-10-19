@@ -1,6 +1,26 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-083 · `spec_ready` (2026-10-19): spec escrita, espera la PARADA 1** — comparar modelos de IA por fase (IA1–IA4) con acierto y coste por albarán. Spec en `specs/F-083-comparar-modelos/`; inventario de modelos con precio, fuente y fecha en `progress/spec_F-083.md`. Rama `feature/F-083-comparar-modelos`, worktree `../albaranes-F-083` (creado desde `dev` `7facc86`; *junction* `.venv` de sv4 puesta: quitarla con `cmd /c rmdir` antes de `git worktree remove`). Rigor `critico`. Toca `evals/` y, solo con P5 = (a), un parámetro opcional del cliente de Claude en comun; ningún servicio cambia en producción.
+
+Qué propone: `python -m evals.comparar_modelos --fase F --modelos a,b`, una fase por invocación, con la referencia de producción medida en la misma corrida (IA1 `gemini-3.7-flash`, IA2 `gpt-5.4`, IA3/IA4 `claude-opus-4-8`). El coste sale de los tokens reales, leídos por un `call_logger` medidor sin tocar los clientes, y de la tabla versionada `evals/precios_modelos.json`. Hay `--estimar` (sin claves ni gasto), paradas antes de gastar (modelo, tabla caducada, claves, tope por invocación y de la feature) y corte en caliente por tope. Criterio de decisión en design §6.
+
+Hallazgos que el humano debe conocer:
+- `gemini-3.7-flash` (IA1 en producción) está descontinuado y Google lo redirige a `gemini-3.8-flash` (página oficial del modelo, 2026-10-12). Renombrarlo en `infra/` queda fuera.
+- La línea base de F-075 (IA1 141, IA2 2, IA3/IA4/E2E 408/27/537) probablemente se midió con los defectos del runner (`gemini-2.5-flash`, `gpt-5`, e IA3/IA4 con gemini), no con los modelos de producción: el informe no registra el modelo.
+- El cliente de Claude fuerza la herramienta, y `claude-opus-5-5`, `claude-sonnet-5-5` y `claude-fable-5-1` lo rechazan con 400.
+- «Luna» es la gama Luna de OpenAI: existen `gpt-6-luna` y `gpt-5.6-luna`. No existe `gpt-6.1-luna`.
+
+Decisiones abiertas de la PARADA 1 (design §9, cada una con recomendación):
+- **P1**: qué Luna, y si entra `gpt-6.1-sol`.
+- **P2**: la primera tanda (11 modelos).
+- **P3**: el tope de gasto (25 USD por invocación y 200 USD la feature; la tanda 1 se estima en ≈ 150 USD).
+- **P4**: repeticiones (1, y 3 para los finalistas).
+- **P5**: `forzar_herramienta` en comun (recomendado) o dejar fuera los Claude 5.5.
+- **P6**: los umbrales del criterio.
+
+Las llamadas de pago son T13–T15, MANUAL del humano, con los comandos de design §8. Ningún agente gasta.
+
 **F-080 · `blocked` (2026-10-19): review APPROVED (pasada 1, `progress/review_F-080.md`), fusionada en `dev`; espera la MANUAL T6 del humano (desplegar solo sv3)** — tras un empate por nombre (F-073), la familia solo elige entre los empatados (H4 de `progress/review_F-073.md`). Spec en `specs/F-080-empate-solo-entre-empatados/`. Rama `feature/F-080-empate-solo-entre-empatados`, worktree `../albaranes-F-080`. Rigor `critico`, solo sv3 (`header_resolver_service.py`), sin DDL ni comun. PARADA 1 resuelta el 2026-10-19: **P1 = (b)** (la carrera por puntos de hoy, y el ganador tiene que ser uno de los empatados), P2 y P3 según la recomendación (design §2). Informe en curso: `progress/impl_F-080.md`.
 
 Estado del implementer (2026-10-19): **T1–T5 y T7 hechas, informe en `progress/impl_F-080.md`; espera la review**. Tests de F-080: 36 passed (fase RED registrada). sv3: 1576 passed después de fusionar `dev` (`f49f1b2`, F-075) en la rama, sin cambiar ninguna expectativa existente (R13). Cobertura de lo cambiado: 100 % (8/8). Mutación: 5 generados, 5 muertos, 0 supervivientes (`progress/mutacion_F-080.md`). `bash harness/init.sh` en verde en el worktree (último verde: el del reviewer sobre `f4ad6e0`). Desviaciones respecto a la spec: ninguna.
