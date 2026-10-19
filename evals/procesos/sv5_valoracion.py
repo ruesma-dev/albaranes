@@ -234,25 +234,50 @@ def proyectar_ia4(conciliaciones: list[dict], envelope: dict) -> list[dict]:
 # --- Subproceso: aquí y solo aquí se importa sv5 ----------------------------
 
 
-def _clientes_reales(proveedor: str):  # pragma: no cover - subproceso
-    """Un `ProviderClientSpec` de sv5 con el cliente real del proveedor."""
-    from application.services.valuation_extraction_service import ProviderClientSpec
+def cliente_llm(
+    proveedor: str,
+    tool_name: str,
+    modelo: str | None = None,
+    call_logger=None,
+    forzar_herramienta: bool = True,
+):
+    """(modelo, cliente real de comun) de un proveedor, para sv2 y para sv5.
+
+    Sin argumentos opcionales, exactamente lo de siempre: el modelo del entorno
+    (o el de `MODELOS_POR_PROVEEDOR`) y el cliente sin logger. El comparador de
+    modelos (F-083) pide un modelo concreto, mete su medidor como `call_logger`
+    y, solo para los Claude que rechazan la herramienta forzada,
+    `forzar_herramienta=False`: el argumento solo llega al cliente entonces.
+    """
     from ruesma_comun.llm.claude_messages_client import ClaudeMessagesVisionClient
     from ruesma_comun.llm.gemini_genai_client import GeminiGenAiVisionClient
     from ruesma_comun.llm.openai_responses_client import OpenAIResponsesVisionClient
 
     clave = os.environ.get(CLAVES_POR_PROVEEDOR[proveedor], "")
     variable, por_defecto = MODELOS_POR_PROVEEDOR[proveedor]
-    modelo = os.environ.get(variable, por_defecto)
+    modelo = modelo or os.environ.get(variable, por_defecto)
+    extra = {} if call_logger is None else {"call_logger": call_logger}
 
     if proveedor == "claude":
-        cliente = ClaudeMessagesVisionClient(
-            api_key=clave, tool_name="emit_valuation_result"
-        )
+        if not forzar_herramienta:
+            extra["forzar_herramienta"] = False
+        cliente = ClaudeMessagesVisionClient(api_key=clave, tool_name=tool_name, **extra)
     elif proveedor == "gemini":
-        cliente = GeminiGenAiVisionClient(clave)
+        cliente = GeminiGenAiVisionClient(clave, **extra)
     else:
-        cliente = OpenAIResponsesVisionClient(clave)
+        cliente = OpenAIResponsesVisionClient(clave, **extra)
+    return modelo, cliente
+
+
+def _clientes_reales(
+    proveedor: str, modelo: str | None = None, call_logger=None, forzar_herramienta: bool = True
+):
+    """Un `ProviderClientSpec` de sv5 con el cliente real del proveedor."""
+    from application.services.valuation_extraction_service import ProviderClientSpec
+
+    modelo, cliente = cliente_llm(
+        proveedor, "emit_valuation_result", modelo, call_logger, forzar_herramienta
+    )
     return ProviderClientSpec(provider=proveedor, model_name=modelo, client=cliente)
 
 
