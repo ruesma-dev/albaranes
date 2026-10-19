@@ -59,3 +59,15 @@ FAILED test_f083_runner_fabrica_toma_el_modelo_del_entorno_si_no_se_pide
 ```
 Con `--tb=line`: `AttributeError: module 'evals.runner' has no attribute 'evaluar_valoracion'` (y `comparar_sv2`) y `TypeError: _especificacion() got an unexpected keyword argument 'modelo'` (y `_clientes_reales`). Los 2 que pasaban son los de «sin argumentos nuevos, como hoy».
 Verde tras T4: `15 passed` (`-k runner`). **R36**: suite de la raíz entera, `1433 passed` (1328 de antes + los nuevos), sin tocar ni un test existente (`git diff dev -- tests/` solo añade `test_f083_*`).
+
+### T5 · `python -m pytest tests/test_f083_fases.py -q --tb=line -k sv2`
+
+```
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   ImportError: cannot import name 'sv2_modelos' from 'evals.procesos' (...\evals\procesos\__init__.py)
+=========================== short test summary info ===========================
+ERROR tests/test_f083_fases.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.88s
+```
+Verde tras T5: `21 passed` (`-k sv2`), incluido el subproceso real de sv2 sin casos (arranca sv2 y sus clientes sin red).

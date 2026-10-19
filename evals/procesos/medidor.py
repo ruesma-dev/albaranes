@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import subprocess
+import sys
 from decimal import Decimal
 from pathlib import Path
 
@@ -32,6 +34,10 @@ from evals.costes import (
     motivo_parada,
     uso_de_respuesta,
 )
+from evals.procesos import canal
+from evals.procesos.errores import avisar, describir_error
+
+RAIZ_REPO = Path(__file__).resolve().parent.parent.parent
 
 
 class MedidorDeUso:
@@ -127,6 +133,66 @@ class MedidorDeUso:
                 salida.write(json.dumps(registro, ensure_ascii=False) + "\n")
         except OSError:
             return
+
+
+def procesar(casos: list[dict], llamar, medidor, presupuesto, fase: str) -> list[dict]:
+    """Los casos de un bloque (un modelo, una repetición), uno a uno y AISLADOS.
+
+    - Antes de cada caso mira lo gastado: si ya alcanza `presupuesto`, el caso
+      queda `no_ejecutado` sin llamar a nada (R19). Se puede pasar como mucho en
+      un caso: cortar a mitad tiraría lo ya pagado de ese caso (D4).
+    - Un caso que revienta queda con su `error` (fase, tipo y motivo, sin
+      valores del albarán) y el bucle sigue (R24).
+
+    `llamar(caso)` devuelve lo que el caso produjo (`documento`, `envelope`,
+    `conciliaciones`); el medidor es el `call_logger` de los clientes del bloque.
+    """
+    presupuesto = Decimal(str(presupuesto))
+    resultados = []
+    for caso in casos:
+        caso_id = caso.get("caso_id")
+        if medidor.gasto_usd() >= presupuesto:
+            resultados.append({"caso_id": caso_id, "no_ejecutado": True})
+            continue
+        medidor.caso(caso_id)
+        try:
+            salida = llamar(caso)
+        except Exception as error:  # noqa: BLE001 - se aísla el caso, no se oculta
+            fallo = describir_error(error, fase)
+            avisar("comparar_modelos", f"caso {caso_id}: error en {fase} · {fallo['motivo']}")
+            resultados.append({"caso_id": caso_id, "error": fallo})
+            continue
+        avisar("comparar_modelos", f"caso {caso_id}: ok")
+        resultados.append({"caso_id": caso_id, **salida})
+    medidor.caso(None)
+    return resultados
+
+
+def lanzar(
+    modulo: str, trabajo: dict, servicio: str, interprete: str | None = None, entorno=None
+) -> dict:
+    """Ejecuta un bloque en su propio intérprete (R26): sv2 y sv5 no caben juntos.
+
+    El stderr del hijo NO se captura: sus líneas de avance salen en la consola
+    al momento, y si muere, su motivo ya está ahí (puede llevar valores del
+    albarán, por eso no viaja en la excepción ni al informe).
+    """
+    proceso = subprocess.run(
+        [interprete or sys.executable, "-m", modulo],
+        input=json.dumps(trabajo, ensure_ascii=False),
+        stdout=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        cwd=str(RAIZ_REPO),
+        env=entorno,
+        check=False,
+    )
+    if proceso.returncode != 0:
+        raise RuntimeError(
+            f"el subproceso de {servicio} falló con código {proceso.returncode} "
+            f"(el detalle está en la salida de error de la consola)"
+        )
+    return canal.leer(proceso.stdout, servicio)
 
 
 def registros_de_fichero(ruta: Path | str) -> list[dict]:

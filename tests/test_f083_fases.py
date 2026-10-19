@@ -289,3 +289,231 @@ def test_f083_runner_fabrica_toma_el_modelo_del_entorno_si_no_se_pide(clientes_f
     monkeypatch.setenv("OPENAI_MODEL", "gpt-5.4")
     assert sv2_extraccion._especificacion("openai").model_name == "gpt-5.4"
     assert sv2_extraccion._especificacion("openai", modelo="gpt-5.5").model_name == "gpt-5.5"
+
+
+# --- T5 · bucle medido de un bloque (medidor.procesar) ------------------------------
+
+import os  # noqa: E402
+from decimal import Decimal  # noqa: E402
+
+from evals.procesos import medidor as medidor_mod  # noqa: E402
+from evals.procesos import sv2_modelos  # noqa: E402
+
+
+class _MedidorDoble:
+    """Gasta `por_caso` USD en cada caso que se llama."""
+
+    def __init__(self, por_caso="1"):
+        self.por_caso = Decimal(por_caso)
+        self.gastado = Decimal(0)
+        self.casos: list = []
+        self.registros: list = []
+
+    def caso(self, caso_id):
+        self.casos.append(caso_id)
+
+    def gasto_usd(self):
+        return self.gastado
+
+
+def _llamar_que_gasta(medidor, rompe=()):
+    def llamar(caso):
+        medidor.gastado += medidor.por_caso
+        if caso["caso_id"] in rompe:
+            raise ValueError(f"respuesta con el CIF B12345678 de {caso['caso_id']}")
+        return {"documento": {"caso": caso["caso_id"]}}
+
+    return llamar
+
+
+def test_f083_sv2_r24_un_caso_que_falla_no_para_a_los_demas():
+    medidor = _MedidorDoble("0")
+    casos = [{"caso_id": c} for c in ("A", "B", "C")]
+    resultados = medidor_mod.procesar(
+        casos, _llamar_que_gasta(medidor, rompe={"B"}), medidor, Decimal(10), "IA1"
+    )
+    assert resultados[0] == {"caso_id": "A", "documento": {"caso": "A"}}
+    assert resultados[1]["caso_id"] == "B"
+    assert resultados[1]["error"]["fase"] == "IA1"
+    assert resultados[1]["error"]["tipo"] == "ValueError"
+    assert "B12345678" not in str(resultados[1])
+    assert resultados[2] == {"caso_id": "C", "documento": {"caso": "C"}}
+    assert medidor.casos == ["A", "B", "C", None]
+
+
+def test_f083_sv2_r19_mira_el_presupuesto_antes_de_cada_caso():
+    medidor = _MedidorDoble("1")
+    casos = [{"caso_id": c} for c in ("A", "B", "C", "D")]
+    resultados = medidor_mod.procesar(casos, _llamar_que_gasta(medidor), medidor, "2", "IA1")
+    assert [("no_ejecutado" in r) for r in resultados] == [False, False, True, True]
+    assert resultados[2] == {"caso_id": "C", "no_ejecutado": True}
+    assert medidor.gastado == 2
+
+
+def test_f083_sv2_r19_se_puede_pasar_como_mucho_en_un_caso():
+    medidor = _MedidorDoble("1.5")
+    casos = [{"caso_id": c} for c in ("A", "B", "C")]
+    resultados = medidor_mod.procesar(casos, _llamar_que_gasta(medidor), medidor, Decimal(2), "IA3")
+    assert [("no_ejecutado" in r) for r in resultados] == [False, False, True]
+    assert medidor.gastado == 3
+
+
+def test_f083_sv2_r19_presupuesto_agotado_no_llama_a_nada():
+    medidor = _MedidorDoble("1")
+    resultados = medidor_mod.procesar(
+        [{"caso_id": "A"}], _llamar_que_gasta(medidor), medidor, Decimal(0), "IA1"
+    )
+    assert resultados == [{"caso_id": "A", "no_ejecutado": True}]
+    assert medidor.gastado == 0 and medidor.casos == [None]
+
+
+# --- T5 · sv2_modelos: la llamada de cada fase -------------------------------------
+
+
+class _ServicioSv2:
+    def __init__(self):
+        self.llamadas = []
+
+    def extract_phase_1(self, *, attachments, provider, prompt_key):
+        self.llamadas.append(("IA1", attachments, provider, prompt_key))
+        return NS(parsed=NS(model_dump=lambda: {"cabecera": {"numero_albaran": "A-1"}}))
+
+    def review_phase_2(self, *, attachments, provider, prompt_key, phase_1_json):
+        self.llamadas.append(("IA2", attachments, provider, prompt_key, phase_1_json))
+        revisado = {"documento_revisado": {"lineas": [{"contexto_linea": {"bombeo": True}}]}}
+        if phase_1_json.get("sin_revisado"):
+            revisado = {"documento_revisado": None}
+        return NS(parsed=NS(model_dump=lambda: revisado))
+
+
+def _adjuntos(ruta):
+    return [f"adjunto:{ruta.name}"]
+
+
+@pytest.mark.parametrize("fase", ["IA1", "prep_IA1"])
+def test_f083_sv2_r20_ia1_con_el_prompt_y_el_preprocesado_de_produccion(fase):
+    servicio = _ServicioSv2()
+    llamar = sv2_modelos.llamador(fase, servicio, _adjuntos, "gemini")
+    salida = llamar({"caso_id": "GEN-001", "fichero": "x/GEN-001.pdf", "tipologia": "Generico"})
+    assert salida == {"documento": {"cabecera": {"numero_albaran": "A-1"}}}
+    assert servicio.llamadas == [("IA1", ["adjunto:GEN-001.pdf"], "gemini", "albaran_factura_es")]
+
+
+def test_f083_sv2_r21_ia2_parte_de_la_ia1_de_preparacion():
+    servicio = _ServicioSv2()
+    llamar = sv2_modelos.llamador("IA2", servicio, _adjuntos, "openai")
+    ia1 = {"cabecera": {}}
+    salida = llamar({"caso_id": "HOR-001", "fichero": "x/HOR-001.pdf", "tipologia": "Hormigon",
+                     "ia1": ia1})
+    assert salida == {"documento": {"lineas": [{"contexto_linea": {"bombeo": True}}]}}
+    (llamada,) = servicio.llamadas
+    assert llamada == ("IA2", ["adjunto:HOR-001.pdf"], "openai",
+                       "albaran_revision_fase2_hormigon", ia1)
+
+
+def test_f083_sv2_r21_sin_documento_revisado_vale_el_de_ia1():
+    servicio = _ServicioSv2()
+    llamar = sv2_modelos.llamador("IA2", servicio, _adjuntos, "openai")
+    ia1 = {"sin_revisado": True}
+    salida = llamar({"caso_id": "RES-001", "fichero": "RES-001.pdf", "tipologia": "Residuos",
+                     "ia1": ia1})
+    assert salida == {"documento": ia1}
+
+
+def test_f083_sv2_fase_desconocida():
+    with pytest.raises(ValueError, match="IA9"):
+        sv2_modelos.llamador("IA9", _ServicioSv2(), _adjuntos, "openai")
+
+
+def _trabajo_sv2(fase="IA1", herramienta=None, proveedor="openai", modelo="gpt-6-luna"):
+    return {
+        "fase": fase,
+        "modelo": {"id": modelo, "proveedor": proveedor, "herramienta_forzada": herramienta},
+        "casos": [{"caso_id": "GEN-001", "fichero": "GEN-001.pdf", "tipologia": ""}],
+        "presupuesto_usd": "5",
+        "fecha": "2026-10-19",
+    }
+
+
+def test_f083_sv2_ejecutar_trabajo_mide_con_el_modelo_del_bloque(tmp_path):
+    montados = []
+
+    def montar(modelo_id, proveedor, forzar, medidor):
+        montados.append((modelo_id, proveedor, forzar, medidor.etiqueta))
+        servicio = _ServicioSv2()
+        original = servicio.extract_phase_1
+
+        def extract_phase_1(**kwargs):
+            medidor.log_call(
+                provider=proveedor, model=modelo_id, request_summary={"duration_ms": 10},
+                response_payload={"raw_sdk_response": NS(model=modelo_id, usage=NS(
+                    input_tokens=1000, output_tokens=100))},
+            )
+            return original(**kwargs)
+
+        servicio.extract_phase_1 = extract_phase_1
+        return servicio
+
+    trabajo = {**_trabajo_sv2(), "registros": str(tmp_path / "r.jsonl")}
+    salida = sv2_modelos.ejecutar_trabajo(trabajo, montar=montar, adjuntos=_adjuntos)
+    assert montados == [("gpt-6-luna", "openai", True, "candidato")]
+    assert salida["resultados"] == [
+        {"caso_id": "GEN-001", "documento": {"cabecera": {"numero_albaran": "A-1"}}}
+    ]
+    (registro,) = salida["registros"]
+    assert registro["caso_id"] == "GEN-001" and registro["modelo_servido"] == "gpt-6-luna"
+    assert medidor_mod.registros_de_fichero(tmp_path / "r.jsonl") == salida["registros"]
+
+
+@pytest.mark.parametrize(
+    ("herramienta", "forzar"), [(None, True), (True, True), (False, False)]
+)
+def test_f083_sv2_forzar_herramienta_sale_de_la_tabla(herramienta, forzar):
+    montados = []
+
+    def montar(modelo_id, proveedor, forzar_herramienta, medidor):
+        montados.append(forzar_herramienta)
+        return _ServicioSv2()
+
+    sv2_modelos.ejecutar_trabajo(
+        _trabajo_sv2(herramienta=herramienta, proveedor="claude", modelo="claude-opus-5-5"),
+        montar=montar, adjuntos=_adjuntos,
+    )
+    assert montados == [forzar]
+
+
+def test_f083_sv2_la_preparacion_se_etiqueta_como_tal():
+    etiquetas = []
+
+    def montar(modelo_id, proveedor, forzar, medidor):
+        etiquetas.append(medidor.etiqueta)
+        return _ServicioSv2()
+
+    sv2_modelos.ejecutar_trabajo(_trabajo_sv2(fase="prep_IA1"), montar=montar, adjuntos=_adjuntos)
+    assert etiquetas == ["preparación"]
+
+
+def test_f083_sv2_el_error_de_ia2_se_atribuye_a_ia2():
+    class Roto(_ServicioSv2):
+        def review_phase_2(self, **kwargs):
+            raise RuntimeError("roto")
+
+    trabajo = _trabajo_sv2(fase="IA2")
+    trabajo["casos"][0]["ia1"] = {}
+    salida = sv2_modelos.ejecutar_trabajo(trabajo, montar=lambda *a: Roto(), adjuntos=_adjuntos)
+    assert salida["resultados"][0]["error"]["fase"] == "IA2"
+
+
+def test_f083_sv2_subproceso_real_sin_casos():
+    """El subproceso arranca sv2 de verdad (sin red: no hay casos que llamar)."""
+    trabajo = {**_trabajo_sv2(), "casos": []}
+    entorno = {**os.environ, "OPENAI_API_KEY": "clave-de-prueba"}
+    salida = medidor_mod.lanzar("evals.procesos.sv2_modelos", trabajo, "sv2", entorno=entorno)
+    assert salida == {"resultados": [], "registros": []}
+
+
+def test_f083_sv2_subproceso_sin_clave_muere_con_codigo():
+    entorno = {k: v for k, v in os.environ.items() if k != "OPENAI_API_KEY"}
+    trabajo = {**_trabajo_sv2(), "casos": []}
+    with pytest.raises(RuntimeError, match="código 1"):
+        medidor_mod.lanzar("evals.procesos.sv2_modelos", trabajo, "sv2", entorno=entorno)
