@@ -25,7 +25,7 @@ Bloqueadas: **F-064, F-075, F-078, F-076, F-080, F-077, F-073**.
 | F-080 | Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados | 1 | bloqueada | critico | `feature/F-080-empate-solo-entre-empatados` |
 | F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 1 | pendiente | critico |  |
 | F-084 | El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None») | 1 | pendiente | critico |  |
-| F-085 | Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 claude-opus-5-5, IA4 gpt-6.1-sol | 1 | pendiente | critico |  |
+| F-085 | Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 claude-opus-5-5, IA4 gpt-6.1-sol | 1 | spec lista | critico |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
@@ -254,7 +254,7 @@ NECESARIO PARA: elegir el modelo de IA3/IA4 (F-083, F-085: Opus 5.5 en IA3, GPT-
 
 ### F-085 · Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 claude-opus-5-5, IA4 gpt-6.1-sol
 
-estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
+estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí
 
 ORIGEN: decisión del humano, 2026-10-20, tras la prueba rápida de modelos (IA1: Argon 52 fallos frente a 56 del Gemini actual en 15 casos).
 
