@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **79 features**, 55 abiertas, 24 terminadas.
+Resumen: **80 features**, 56 abiertas, 24 terminadas.
 
 Bloqueadas: **F-064, F-075, F-078, F-076, F-077, F-073**.
 
@@ -33,6 +33,7 @@ Bloqueadas: **F-064, F-075, F-078, F-076, F-077, F-073**.
 | F-069 | Lista de equivalencias usuario de la app ↔ usuario de Sigrid para el alta (sv9) | 2 | pendiente | critico |  |
 | F-079 | Avisar en la ficha cuando se edita la descripción de una línea vinculada a contrato (Sigrid usa la del contrato) | 2 | pendiente | estandar |  |
 | F-081 | sv3: decodificar el nombre del PDF de Sigrid (X-Document-Filename llega con codificación porcentual UTF-8) | 2 | pendiente | estandar |  |
+| F-082 | Valoración directa (F-075): una línea con importe y sin cantidad no puede quedar valorada sin revisión, porque sv9 la rechaza en el alta | 2 | pendiente | critico |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -341,6 +342,18 @@ PROBLEMA: sv3 usa la cabecera tal cual como nombre del PDF de contrato (sigrid_a
 PROPUESTA: decodificar con urllib.parse.unquote (retrocompatible: sobre un nombre sin «%» no cambia nada) en el cliente de sv3 y en los scripts de diagnóstico que leen la misma cabecera (trace_sigrid_rcg_dual.py, diagnose_sigrid_contrato_gra.py, diagnose_sigrid_contrato_gra_modificado.py, diagnose_sigrid_contrato_docs.py, diagnose_sigrid_contrato_docs_v2.py), o leer filename* de Content-Disposition. Tests: ASCII igual, «%C3%B1» ⇒ «ñ», «%25» ⇒ «%».
 
 NO ENTRA: el campo nuevo «key» ni el 409 DocumentoAmbiguoError (pedimos por id_column «ide», la PK). Despliegue: solo sv3 (puede ir con el de F-073). Actualizar azure-apps/albaranes.md si describe la cabecera.
+
+### F-082 · Valoración directa (F-075): una línea con importe y sin cantidad no puede quedar valorada sin revisión, porque sv9 la rechaza en el alta
+
+estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
+
+ORIGEN: observación O3 de progress/review_F-075.md (pasada 1), decisión del humano del 2026-10-19: abrir feature.
+
+PROBLEMA: con F-075, la valoración directa sin contrato da por valorada una línea que trae importe del albarán pero no cantidad. Esa línea se aprueba con normalidad y después sv9 deja el alta en no_admitido (visible en el panel del alta de F-053), en vez de avisar antes de aprobar.
+
+PROPUESTA (a concretar en la spec): que esa línea vaya a revisión antes de la aprobación (motivo de línea en sv6, visible en la ficha de sv4), para que el revisor ponga la cantidad o la corrija; sin cambiar la valoración de las líneas que sí traen cantidad.
+
+ALCANCE probable: sv6 (valoración directa de F-075) y, si hace falta, el aviso en la ficha de sv4. RELACIONADAS: F-075 (O3), F-053 (alta), F-077 (motivos de línea).
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 
