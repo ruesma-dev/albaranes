@@ -16,3 +16,13 @@ ERROR tests/test_f083_precios.py
 1 error in 0.25s
 ```
 Verde tras T1: `38 passed`.
+
+### T2 · `python -m pytest tests/test_f083_costes.py -q --tb=line`
+
+```
+    from evals.costes import (
+E   ImportError: cannot import name 'Partida' from 'evals.costes' (...\albaranes-F-083\evals\costes.py)
+ERROR tests/test_f083_costes.py
+1 error in 0.28s
+```
+Verde tras T2: `77 passed` (T1 + T2).

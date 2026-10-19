@@ -28,8 +28,20 @@ FASES = ("IA1", "IA2", "IA3", "IA4")
 CLASES_DE_PRECIO = ("entrada", "lectura_cache", "escritura_cache", "salida")
 
 
+#: Tope de los textos cortos que se guardan de una respuesta (modelo servido,
+#: motivo de parada): nunca cabe ahí un trozo del albarán.
+TOPE_TEXTO = 60
+
+#: Tokens por unidad de precio: los precios van en USD por millón.
+MILLON = Decimal(1_000_000)
+
+
 class TablaInvalida(ValueError):
     """La tabla de precios no se puede usar tal como está (R2)."""
+
+
+class TablaCaducada(RuntimeError):
+    """Un precio pasó su `vigente_hasta` y no hay precio siguiente (R4)."""
 
 
 @dataclass(frozen=True)
@@ -197,3 +209,229 @@ def _fecha(texto: object, donde: str) -> dt.date:
         return dt.date.fromisoformat(str(texto))
     except ValueError as error:
         raise TablaInvalida(f"{donde}: {texto!r} no es una fecha AAAA-MM-DD") from error
+
+
+# --- Uso de una respuesta (R5, R6) ------------------------------------------
+
+
+@dataclass(frozen=True)
+class Uso:
+    """Tokens de una llamada en las cuatro clases que se facturan."""
+
+    entrada: int
+    lectura_cache: int
+    escritura_cache: int
+    salida: int
+    incompleto: bool = False
+
+    @property
+    def entrada_total(self) -> int:
+        """La entrada con la caché: lo que decide el tramo largo (R7)."""
+        return self.entrada + self.lectura_cache + self.escritura_cache
+
+
+def _campo(objeto: object, nombre: str) -> object:
+    """Lee por atributo o por clave: los tests pasan `SimpleNamespace` o dict."""
+    if isinstance(objeto, dict):
+        return objeto.get(nombre)
+    return getattr(objeto, nombre, None)
+
+
+def _recuento(objeto: object, nombre: str, obligatorio: bool) -> tuple[int, bool]:
+    """(tokens, falta). Un campo opcional ausente es 0 y no falta: la API lo
+    omite cuando vale 0. Uno obligatorio ausente, o cualquiera que no sea un
+    entero, es 0 y falta (R6)."""
+    valor = _campo(objeto, nombre)
+    if valor is None:
+        return 0, obligatorio
+    if isinstance(valor, bool) or not isinstance(valor, int):
+        return 0, True
+    return valor, False
+
+
+#: Campos de uso de cada SDK: (entrada, lectura de caché, escritura de caché,
+#: salida, pensamiento). `None` = el SDK no informa esa clase. El booleano dice
+#: si el campo es obligatorio (ver `_recuento`).
+_CAMPOS_DE_USO = {
+    "claude": (
+        "usage",
+        ("input_tokens", True),
+        ("cache_read_input_tokens", False),
+        ("cache_creation_input_tokens", False),
+        ("output_tokens", True),
+        None,
+    ),
+    "openai": (
+        "usage",
+        ("input_tokens", True),
+        ("input_tokens_details.cached_tokens", False),
+        None,
+        ("output_tokens", True),
+        None,
+    ),
+    "gemini": (
+        "usage_metadata",
+        ("prompt_token_count", True),
+        ("cached_content_token_count", False),
+        None,
+        ("candidates_token_count", True),
+        ("thoughts_token_count", False),
+    ),
+}
+
+#: Proveedores cuya entrada informada YA incluye la caché (hay que restarla).
+_ENTRADA_INCLUYE_CACHE = frozenset({"openai", "gemini"})
+
+
+def uso_de_respuesta(proveedor: str, respuesta: object) -> Uso:
+    """Normaliza el uso del SDK de cada proveedor (R5); si falta algo, R6."""
+    if proveedor not in _CAMPOS_DE_USO:
+        return Uso(0, 0, 0, 0, True)
+    raiz, *campos = _CAMPOS_DE_USO[proveedor]
+    uso = _campo(respuesta, raiz)
+    valores = []
+    falta = False
+    for campo in campos:
+        if campo is None:
+            valores.append(0)
+            continue
+        nombre, obligatorio = campo
+        objeto = uso
+        *ruta, hoja = nombre.split(".")
+        for paso in ruta:
+            objeto = _campo(objeto, paso)
+        valor, ausente = _recuento(objeto, hoja, obligatorio)
+        valores.append(valor)
+        falta = falta or ausente
+    entrada, lectura, escritura, salida, pensamiento = valores
+    if proveedor in _ENTRADA_INCLUYE_CACHE:
+        falta = falta or lectura > entrada
+        entrada = max(entrada - lectura, 0)
+    return Uso(entrada, lectura, escritura, salida + pensamiento, falta)
+
+
+def _texto_corto(valor: object) -> str | None:
+    if valor is None:
+        return None
+    return str(valor)[:TOPE_TEXTO]
+
+
+def modelo_servido(proveedor: str, respuesta: object) -> str | None:
+    """El modelo que dice la respuesta que la sirvió (R9)."""
+    if proveedor in ("claude", "openai"):
+        return _texto_corto(_campo(respuesta, "model"))
+    if proveedor == "gemini":
+        return _texto_corto(_campo(respuesta, "model_version"))
+    return None
+
+
+def motivo_parada(proveedor: str, respuesta: object) -> str | None:
+    """Por qué dejó de generar: un `max_tokens` es un resultado, no un ruido."""
+    if proveedor == "claude":
+        return _texto_corto(_campo(respuesta, "stop_reason"))
+    if proveedor == "openai":
+        estado = _campo(respuesta, "status")
+        razon = _campo(_campo(respuesta, "incomplete_details"), "reason")
+        return _texto_corto(estado if razon is None else f"{estado}:{razon}")
+    if proveedor == "gemini":
+        candidatos = _campo(respuesta, "candidates") or []
+        if not candidatos:
+            return None
+        motivo = _campo(candidatos[0], "finish_reason")
+        return _texto_corto(getattr(motivo, "name", motivo))
+    return None
+
+
+# --- Precio vigente y coste (R4, R7) -----------------------------------------
+
+
+def precio_vigente(modelo: Modelo, fecha: dt.date) -> Precio:
+    """El precio que rige en `fecha`; `TablaCaducada` si ya no rige ninguno."""
+    precio = modelo.precio
+    while precio.vigente_hasta is not None and fecha > precio.vigente_hasta:
+        if precio.siguiente is None:
+            raise TablaCaducada(
+                f"la tabla de precios está caducada: el precio de {modelo.id} rige "
+                f"hasta {precio.vigente_hasta.isoformat()} y no hay precio siguiente. "
+                f"Actualiza evals/precios_modelos.json. No se ha llamado a ningún LLM."
+            )
+        precio = precio.siguiente
+    return precio
+
+
+def coste_usd(modelo: Modelo, uso: Uso, fecha: dt.date) -> Decimal:
+    """Cada clase de tokens por su precio; el del tramo largo si toca (R7)."""
+    precio = precio_vigente(modelo, fecha)
+    tramo = modelo.tramo_largo
+    if tramo is not None and uso.entrada_total > tramo.umbral:
+        precio = tramo.precio
+    return (
+        uso.entrada * precio.entrada
+        + uso.lectura_cache * precio.lectura_cache
+        + uso.escritura_cache * precio.escritura_cache
+        + uso.salida * precio.salida
+    ) / MILLON
+
+
+# --- Estimación antes de gastar (R15) ----------------------------------------
+
+
+@dataclass(frozen=True)
+class Partida:
+    """Llamadas previstas de un modelo, con la fase de la que salen sus tokens."""
+
+    modelo: str
+    etiqueta: str
+    fase: str
+    llamadas: int
+
+
+@dataclass(frozen=True)
+class LineaEstimada:
+    modelo: str
+    etiqueta: str
+    fase: str
+    llamadas: int
+    entrada: int
+    salida: int
+    origen: str
+    usd: Decimal
+
+
+@dataclass(frozen=True)
+class Estimacion:
+    lineas: list[LineaEstimada]
+    total: Decimal
+
+
+def estimar(
+    partidas: list[Partida],
+    tabla: Tabla,
+    medidos: dict[tuple[str, str], tuple[int, int]],
+    fecha: dt.date,
+) -> Estimacion:
+    """Coste previsto: tokens medidos en una corrida anterior o, si no los hay,
+    los de `estimacion_por_defecto` por su margen; todo como entrada sin caché."""
+    lineas = []
+    for partida in partidas:
+        if (partida.fase, partida.modelo) in medidos:
+            entrada, salida = medidos[(partida.fase, partida.modelo)]
+            origen = "medido"
+        else:
+            entrada, salida, margen = tabla.por_defecto(partida.fase)
+            entrada, salida = int(entrada * margen), int(salida * margen)
+            origen = f"por defecto ×{margen}"
+        por_llamada = coste_usd(tabla.modelo(partida.modelo), Uso(entrada, 0, 0, salida), fecha)
+        lineas.append(
+            LineaEstimada(
+                modelo=partida.modelo,
+                etiqueta=partida.etiqueta,
+                fase=partida.fase,
+                llamadas=partida.llamadas,
+                entrada=entrada,
+                salida=salida,
+                origen=origen,
+                usd=por_llamada * partida.llamadas,
+            )
+        )
+    return Estimacion(lineas=lineas, total=sum((linea.usd for linea in lineas), Decimal(0)))
