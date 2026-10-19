@@ -95,3 +95,15 @@ ERROR tests/test_f083_comparar_modelos.py
 1 error in 0.48s
 ```
 Verde tras T7: `31 passed` (el fichero entero).
+
+### T9 · `python -m pytest tests/test_f083_decision.py -q --tb=line` (hecha antes que T8, ver `progress/current.md`)
+
+```
+    from evals import decision
+E   ImportError: cannot import name 'decision' from 'evals' (...\evals\__init__.py)
+=========================== short test summary info ===========================
+ERROR tests/test_f083_decision.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.49s
+```
+Verde tras T9: `32 passed`. Tres tests de R32/R33 estaban mal planteados (la mejora clara exige que la referencia quede fuera de la banda: si no, el más barato de la banda es ella); se corrigió el test, no el código.
