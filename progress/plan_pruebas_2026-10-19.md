@@ -22,6 +22,10 @@ comprueba antes de cualquier paso que acabe en un alta.
 | F-076 en 2792cf3b: «Valorar ahora» (humano, 20-10) con IA3/IA4 en gpt-6.1-sol | VERDE: valorada 91,73 €, 0/3 casadas (el contrato no trae esas piezas), `partida_fuera_de_lista` por CI.14.18 |
 | Bloque A · F-073 paso 0 (líder, 20-10, sí del humano) en `54b82479`, `dedf011a`, `53337da7` | VERDE: FEYMACO A28733558 y contrato CTSU24/0466 en los tres (BBDD). Observación: `proveedor_cif_origen` queda `deterministic`, no `manual`: la re-búsqueda de sv3 lo resuelve por CIF |
 | Bloque B1–B2 · F-075 (líder, 20-10, solo lectura) | VERDE: bandeja con «Importe» y rótulo «albarán · sin IVA»; `dfdc8aab` con columna Importe en 13 líneas, «Importe del albarán (sin IVA): 183,74 €» y «Valorar ahora» habilitado sin contrato |
+| `ALTA_SIGRID_COMMIT` (20-10) | `true` 12:46 (sv9 `0000004`, orden del humano) y vuelta a `false` 14:06 (`0000005`) para probar en simulación |
+| Previa local sin contrato de `dfdc8aab` (líder, `commit=false`, BBDD en solo lectura) | VERDE: `previsto`, 13 líneas sin vincular MA9999, sin partida (= almacén de la obra, almide/cenide de 0686), base 183,74 + IVA 38,57 = 222,31, comparación sin motivos |
+| B3–B4 · F-075 (sí del humano, simulación) | VERDE: «Valorar ahora» → valoración directa 183,74 €, 13 líneas, sin revisión; «Guardar y aprobar» → alta `simulado`, sin motivos, cod provisional AC26/30066 |
+| C · F-076 T19 (sí del humano, 20-10) | Los 3 del 0694 se revaloraron solos al re-buscar (10:29–10:31); 41ab0dc1, 09643c2b, 89e463a7, bef66bce, f96c6dbe, ca609aee y 25c5d647 a mano (12:15–12:28), todos con gpt-6.1-sol. Totales idénticos a antes. Casadas: Opus 4.8 9/17 líneas, Sol 2/17: Opus casaba con las bolsas «MATERIAL DE FERRETERIA» (CI.4.18) y «SUMINISTROS PROPIOS SEG SALUD» (28.01), Sol no. 25c5d647 añade `partida_fuera_de_lista`. Pendiente: 355449d9 a mano y `medir_f076_partidas` (humano) |
 
 ## Bloque A · F-073: corregir el 0694 (paso 0) — [ESCRIBE · sí dado el 2026-10-19]
 
