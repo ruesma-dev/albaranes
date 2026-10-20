@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **83 features**, 57 abiertas, 26 terminadas.
+Resumen: **84 features**, 58 abiertas, 26 terminadas.
 
 Bloqueadas: **F-064, F-075, F-076, F-077, F-073**.
 
@@ -11,6 +11,7 @@ Bloqueadas: **F-064, F-075, F-076, F-077, F-073**.
 
 | # | Feature | Prioridad | Estado | Rigor | Rama |
 |---|---|---|---|---|---|
+| F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 1 | pendiente | critico |  |
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 1 | pendiente | critico |  |
 | F-058 | Revalorar no pierde las partidas ni el almacén asignados a mano | 1 | pendiente | critico |  |
 | F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 1 | pendiente | estandar |  |
@@ -24,7 +25,6 @@ Bloqueadas: **F-064, F-075, F-076, F-077, F-073**.
 | F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 1 | pendiente | critico |  |
 | F-084 | El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None») | 1 | pendiente | critico |  |
 | F-085 | Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 claude-opus-5-5, IA4 gpt-6.1-sol | 1 | pendiente | critico |  |
-| F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 2 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 2 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 2 | pendiente | estandar |  |
 | F-057 | Truncado sin comprobar en los clientes de Sigrid colindantes: header_and_lines de sv4 (max_rows=1000) y SigridApiObraClient de sv3 | 2 | pendiente | critico |  |
@@ -35,6 +35,7 @@ Bloqueadas: **F-064, F-075, F-076, F-077, F-073**.
 | F-079 | Avisar en la ficha cuando se edita la descripción de una línea vinculada a contrato (Sigrid usa la del contrato) | 2 | pendiente | estandar |  |
 | F-081 | sv3: decodificar el nombre del PDF de Sigrid (X-Document-Filename llega con codificación porcentual UTF-8) | 2 | pendiente | estandar |  |
 | F-082 | Valoración directa (F-075): una línea con importe y sin cantidad no puede quedar valorada sin revisión, porque sv9 la rechaza en el alta | 2 | pendiente | critico |  |
+| F-086 | Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol | 2 | pendiente | critico |  |
 | F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 3 | pendiente | critico |  |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 3 | spec lista | critico |  |
 | F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 5 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
@@ -101,6 +102,20 @@ Bloqueadas: **F-064, F-075, F-076, F-077, F-073**.
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | critico |
 
 ## Detalle
+
+### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
+
+estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
+
+ORIGEN MEDIDO: la pasada del ciclo completo de F-047 (analisis por caso del 2026-09-18, §1.3 y §1.6, fuera de git porque lleva precios) mide que LA PARTIDA SALE MAL EN 33 DE 41 albaranes evaluados y coloca este arreglo el PRIMERO por relacion coste/beneficio: «validar la partida leida contra la lista de partidas de la obra y, si no casa, quedarse con la mas parecida». Cada partida mal arrastra de media 3 campos aguas abajo (partida_final, partida de lineas anadidas, casa_con_contrato). Es tambien lo que el humano lleva anotado CINCO veces revisando a mano los 59 albaranes: «no leer la partida a ciegas, sino buscarla en la lista de partidas de la obra».
+
+EL SUBPATRON QUE ATACA: 7 albaranes pierden o deforman el prefijo de capitulo (03.09 por P5.03.09, PJ.0304 por P5.03.04, 04.03.05 por P4.03.05, RJ.14.01.02.02 por P5.14.01.02.02...), y otros 23 dan una partida «que no sale de ningun sitio identificable». Estrechar el espacio de busqueda, no anadir reglas.
+
+DONDE, verificado al escribir la spec de F-048: la lista de partidas HOJA de una obra SOLO existe hoy en sv4 (sigrid_lookup_client.fetch_partidas_por_obra, con _SQL_PARTIDAS_POR_OBRA sobre obrparpar y el calculo de hojas en Python); sv3 solo ve las partidas de las lineas de contrato y sv2 no la tiene. Validar en sv3 NO sirve: corre despues de IA1 e IA2 y no puede devolverles nada. El sitio es SV2, que ya habla con sigrid-api (como con las obras activas de F-002) y conoce la obra en cuanto termina la fase 1 —y con F-048, mejor y antes, porque la trae el correo—. ALCANCE: mover la consulta y el calculo de hojas a ruesma_comun.sigrid.partidas (sv4 pasa a importarlo, nunca una copia), cache por obra, inyectar la lista en el prompt de fase 2 para que IA2 ELIJA en vez de leer a ciegas, y rellenar origen_datos.partida.validada, que F-048 deja siempre a null.
+
+CUIDADOS: toca los cuatro prompts de fase 2 (RUTA SENSIBLE: exige pasada de evals con LLM real, que se factura), anade una llamada a sigrid-api por documento (solo lectura, maximo 10.000 filas por peticion, el balanceador corta a 230 s) y toca sv4 al mover la consulta, asi que su suite tiene que seguir verde sin cambios de comportamiento. Ojo tambien con el formato: hay 3 albaranes cuyo unico fallo son los ceros a la izquierda (CI.04.18 vs CI.4.18), que se arreglan normalizando antes de comparar, no cambiando la lectura.
+
+RELACIONADAS: F-048 (de donde sale, con el hueco validada=null ya preparado), F-021 (eleccion de partida), F-047 (el ciclo que lo mide), F-007 (partida ALM/acopio).
 
 ### F-055 · IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2)
 
@@ -242,20 +257,6 @@ CAMBIO: sv2 IA1 = gemini-4-argon (hoy gemini-3.7-flash, que Google sirve como 3.
 
 CONDICIÓN: medir antes coste y precisión con el comparador de F-083 (cada fase contra el modelo actual) y, para IA3/IA4, con el banco arreglado por F-084. El despliegue y los cambios de configuración en Azure los lanza el humano. Precio: Argon dobla el 2026-12-01 (2/10 → 4/20).
 
-### F-049 · La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun)
-
-estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
-
-ORIGEN MEDIDO: la pasada del ciclo completo de F-047 (analisis por caso del 2026-09-18, §1.3 y §1.6, fuera de git porque lleva precios) mide que LA PARTIDA SALE MAL EN 33 DE 41 albaranes evaluados y coloca este arreglo el PRIMERO por relacion coste/beneficio: «validar la partida leida contra la lista de partidas de la obra y, si no casa, quedarse con la mas parecida». Cada partida mal arrastra de media 3 campos aguas abajo (partida_final, partida de lineas anadidas, casa_con_contrato). Es tambien lo que el humano lleva anotado CINCO veces revisando a mano los 59 albaranes: «no leer la partida a ciegas, sino buscarla en la lista de partidas de la obra».
-
-EL SUBPATRON QUE ATACA: 7 albaranes pierden o deforman el prefijo de capitulo (03.09 por P5.03.09, PJ.0304 por P5.03.04, 04.03.05 por P4.03.05, RJ.14.01.02.02 por P5.14.01.02.02...), y otros 23 dan una partida «que no sale de ningun sitio identificable». Estrechar el espacio de busqueda, no anadir reglas.
-
-DONDE, verificado al escribir la spec de F-048: la lista de partidas HOJA de una obra SOLO existe hoy en sv4 (sigrid_lookup_client.fetch_partidas_por_obra, con _SQL_PARTIDAS_POR_OBRA sobre obrparpar y el calculo de hojas en Python); sv3 solo ve las partidas de las lineas de contrato y sv2 no la tiene. Validar en sv3 NO sirve: corre despues de IA1 e IA2 y no puede devolverles nada. El sitio es SV2, que ya habla con sigrid-api (como con las obras activas de F-002) y conoce la obra en cuanto termina la fase 1 —y con F-048, mejor y antes, porque la trae el correo—. ALCANCE: mover la consulta y el calculo de hojas a ruesma_comun.sigrid.partidas (sv4 pasa a importarlo, nunca una copia), cache por obra, inyectar la lista en el prompt de fase 2 para que IA2 ELIJA en vez de leer a ciegas, y rellenar origen_datos.partida.validada, que F-048 deja siempre a null.
-
-CUIDADOS: toca los cuatro prompts de fase 2 (RUTA SENSIBLE: exige pasada de evals con LLM real, que se factura), anade una llamada a sigrid-api por documento (solo lectura, maximo 10.000 filas por peticion, el balanceador corta a 230 s) y toca sv4 al mover la consulta, asi que su suite tiene que seguir verde sin cambios de comportamiento. Ojo tambien con el formato: hay 3 albaranes cuyo unico fallo son los ceros a la izquierda (CI.04.18 vs CI.4.18), que se arreglan normalizando antes de comparar, no cambiando la lectura.
-
-RELACIONADAS: F-048 (de donde sale, con el hueco validada=null ya preparado), F-021 (eleccion de partida), F-047 (el ciclo que lo mide), F-007 (partida ALM/acopio).
-
 ### F-050 · Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes
 
 estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí
@@ -373,6 +374,12 @@ PROBLEMA: con F-075, la valoración directa sin contrato da por valorada una lí
 PROPUESTA (a concretar en la spec): que esa línea vaya a revisión antes de la aprobación (motivo de línea en sv6, visible en la ficha de sv4), para que el revisor ponga la cantidad o la corrija; sin cambiar la valoración de las líneas que sí traen cantidad.
 
 ALCANCE probable: sv6 (valoración directa de F-075) y, si hace falta, el aviso en la ficha de sv4. RELACIONADAS: F-075 (O3), F-053 (alta), F-077 (motivos de línea).
+
+### F-086 · Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol
+
+estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
+
+ORIGEN: P3 de F-085, decidida por el humano el 2026-10-20 (aceptada la recomendación): el paso 2 de F-085 (R15–R19, T6, M5) sale a una feature propia porque depende de F-083 y F-084 y puede tardar semanas. El humano pidió IA3 = Opus 5.5 y, «de momento», dejó gpt-6.1-sol en su lugar: la API de claude-opus-5-5 rechaza con 400 el tool_choice forzado que usa el cliente de Claude de comun. ALCANCE: sv5 lee ANTHROPIC_FORZAR_HERRAMIENTA (booleana, defecto true) y la pasa como forzar_herramienta al cliente de comun (parámetro de F-083 T11); con true los argumentos a messages.create son idénticos a los de hoy; sv2 no cambia su cliente. El cliente arregla el camino de respuesta sin tool_use: si el texto es JSON válido contra el modelo, lo devuelve tras sanear_para_modelo (hoy _parse_response usa `cls`, que no existe, y siempre acaba en ValueError); si no, ValueError con el stop_reason y sv5 responde 400 como hoy. CONDICIONES DE ENTRADA (§7 del design de F-085): F-083 T11 en dev; sv5 reconstruido con esa comun; F-084 done y, en el comparador (IA3, 3 repeticiones, referencia gpt-6.1-sol), Opus 5.5 cumple el §6.1 de F-085 y la regla «cambiar» de F-083, con 0 casos sin tool_use y 0 paradas por max_tokens (si las hay, subir ANTHROPIC_MAX_TOKENS y volver a medir). Se mide con el mismo cliente que irá a producción (tool_choice auto, sin thinking ni esfuerzo explícitos); salidas estructuradas y strict fuera. CAMBIO EN PRODUCCIÓN (lo hace el humano): sv5 IA3_PROVIDER=claude, ANTHROPIC_MODEL=claude-opus-5-5, ANTHROPIC_FORZAR_HERRAMIENTA=false; IA4 sigue en gpt-6.1-sol; vuelta atrás por variable. RELACIONADAS: F-083 (T11), F-084 (banco que valora), F-085 (paso 1).
 
 ### F-046 · El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla
 
