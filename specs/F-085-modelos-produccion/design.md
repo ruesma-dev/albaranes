@@ -229,22 +229,22 @@ en la prueba rápida, ≈ 0,93×; ≈ 2,5–5× coste con los tokens estimados) 
   test; F-085 avisa en `progress/current.md` (T1). Es justo lo que R3 quiere detectar.
 - **D5 · Vuelta atrás por variable y por fase** (M3), sin interruptor nuevo.
 
-## 9. Preguntas abiertas (con recomendación)
+## 9. Decisiones de la PARADA 1 (el humano, 2026-10-20: P1–P5 según la recomendación)
 
 - **P1 · ¿Quién arregla el parseo de respaldo de Claude** (R18–R19)? (a) F-083 T11, que toca la misma
-  función por el mismo motivo; (b) F-085. **Recomendación: (a)**, para que lo que mide F-083 con Opus
+  función por el mismo motivo; (b) F-085. **Decidido: (a)**, para que lo que mide F-083 con Opus
   5.5 sea lo que irá a producción; con (b), T7 se hace aquí y sv5 pide pasada de evals.
 - **P2 · ¿Se quita `WORKER_CON_FASE2`?** (a) Quitarla de `create_capps.ps1` y de sv2
   (`az containerapp update -n ca-sv2-extraccion -g $RG --remove-env-vars WORKER_CON_FASE2`,
   [ESCRIBE EN PRODUCCIÓN · humano], sin efecto en el comportamiento) y corregir los `INSTRUCCIONES`;
-  (b) dejarla con un comentario de que no se lee. **Recomendación: (a)**: una variable que dice
+  (b) dejarla con un comentario de que no se lee. **Decidido: (a)**: una variable que dice
   `false` sobre algo que está encendido ya engañó a la decisión de esta feature.
 - **P3 · ¿El paso 2 (R15–R19, T6, M5) se queda en F-085 o va a una feature nueva?** Depende de F-083 y
-  F-084 y puede tardar semanas, y solo puede haber una feature `in_progress`. **Recomendación: feature
+  F-084 y puede tardar semanas, y solo puede haber una feature `in_progress`. **Decidido: feature
   nueva** («Opus 5.5 en IA3»), con §7 como criterio de entrada; F-085 se cierra con el paso 1
   consolidado o provisional.
 - **P4 · Criterio de IA1:** ¿vale el de §6 (no empeorar + coste aceptado) o se exige la regla «cambiar»
-  de F-083? **Recomendación: §6**, con el coste mensual de Argon a 4/20 escrito antes del 2026-12-01.
+  de F-083? **Decidido: §6**, con el coste mensual de Argon a 4/20 escrito antes del 2026-12-01.
 - **P5 · ¿`IA_SEGUNDA_FASE=openai` explícita** en sv2 (en `create_capps.ps1` y con un `update` del
-  humano)? **Recomendación: sí en `create_capps.ps1`**; en Azure es opcional (el defecto ya es `openai`)
+  humano)? **Decidido: sí en `create_capps.ps1`**; en Azure es opcional (el defecto ya es `openai`)
   y puede ir en el mismo `update` de P2.

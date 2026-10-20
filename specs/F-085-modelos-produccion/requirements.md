@@ -63,6 +63,9 @@ sv2 cambia solo el modelo de IA2: **no hay llamadas nuevas**. Ver design §1.
 
 ## 3. Paso 2 · Claude Opus 5.5 en IA3 (código listo ahora, activación posterior)
 
+> **Decidido en la PARADA 1 (P3, 2026-10-20): R15–R19 y R27 salen de F-085** a una feature nueva
+> («Opus 5.5 en IA3»), con design §7 como criterio de entrada. Aquí quedan solo como referencia.
+
 - **R15.** sv5 debe leer `ANTHROPIC_FORZAR_HERRAMIENTA` (booleana, por defecto `true`) y pasarla como
   `forzar_herramienta` al cliente de Claude de comun (parámetro de F-083 T11).
 - **R16.** MIENTRAS `ANTHROPIC_FORZAR_HERRAMIENTA` valga `true` (o no exista), los argumentos que sv5
