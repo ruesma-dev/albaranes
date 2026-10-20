@@ -19,6 +19,9 @@ comprueba antes de cualquier paso que acabe en un alta.
 | F-077 T14 puntos 1–2 (panel rojo con «Línea 2…», luego «Simulado») | VERDE |
 | F-077 T14 punto 3, mitad negativa (12/12 albaranes con filas Contrato) | VERDE; no hay caso positivo hoy |
 | Arranque de los servicios (logs) y DDL del pie (4 columnas × 2 tablas) | VERDE |
+| F-076 en 2792cf3b: «Valorar ahora» (humano, 20-10) con IA3/IA4 en gpt-6.1-sol | VERDE: valorada 91,73 €, 0/3 casadas (el contrato no trae esas piezas), `partida_fuera_de_lista` por CI.14.18 |
+| Bloque A · F-073 paso 0 (líder, 20-10, sí del humano) en `54b82479`, `dedf011a`, `53337da7` | VERDE: FEYMACO A28733558 y contrato CTSU24/0466 en los tres (BBDD). Observación: `proveedor_cif_origen` queda `deterministic`, no `manual`: la re-búsqueda de sv3 lo resuelve por CIF |
+| Bloque B1–B2 · F-075 (líder, 20-10, solo lectura) | VERDE: bandeja con «Importe» y rótulo «albarán · sin IVA»; `dfdc8aab` con columna Importe en 13 líneas, «Importe del albarán (sin IVA): 183,74 €» y «Valorar ahora» habilitado sin contrato |
 
 ## Bloque A · F-073: corregir el 0694 (paso 0) — [ESCRIBE · sí dado el 2026-10-19]
 
