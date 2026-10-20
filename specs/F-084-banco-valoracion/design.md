@@ -3,146 +3,154 @@
 
 ## 1. Diagnóstico, con evidencia (sin una sola llamada de pago)
 
-Medido sobre `efd73b7` con la corrida determinista, un doble de cliente LLM
-metido por la costura `fabrica` de `sv5_valoracion.ejecutar_trabajo`, y el código.
+Medido sobre `efd73b7`: corrida determinista, doble de LLM por la costura `fabrica`, código.
 
 1. **INPUTS no tiene contrato.** 52 de los 59 fixtures de
    `evals/fixtures/inputs/` traen `contrato_lineas: []` y `condiciones: []`.
-   Solo RES-001…RES-007 los tienen (6 o 1 líneas, escritas a mano en F-011).
-   `ALQ-001` espera precio 170 «de contrato» y su contrato llega vacío.
+   Solo RES-001…RES-007 los tienen (escritos a mano en F-011). `ALQ-001`
+   espera precio 170 «de contrato» y su contrato llega vacío.
 2. **El determinista falla igual que el LLM.** Sin llamar a ningún modelo, IA3
    da 401 fallos y 390 son «obtenido None»; en los 15 casos de la prueba
    rápida, 14 tienen el mismo número de fallos que con `gpt-6-luna`, y el
    único distinto, RES-001, es uno de los que sí tienen contrato.
 3. **El LLM sí se llama, pero no tiene nada que decidir.** Con el doble: 2
    llamadas por caso (IA3 `DocumentoValoracion`, IA4 `DocumentoConciliacion`);
-   el texto lleva `"lineas_contrato": []` y la nota `_NOTA_SIN_PDF` («solo fase
-   1a, no emitas sintéticas»). Todo sale `no_match`; sv6 deja
-   `precio_unitario_source = none` con `no_price_available`, `ia_no_match`,
-   `contract_unit_unknown`… (traza de ALQ-001). IA4 concilia contra una lista
-   vacía. Por eso IA3, IA4 y E2E salen idénticos con cualquier modelo.
-4. **Ya se sabía y no tuvo ficha.** F-045 dejó fuera `CONTRATO_LINEAS` a
-   propósito (su design §3; `evals/revision/reparto.py`, `TABLAS["INPUTS"]`) y
-   el 2026-09-16 midió ~865 fallos sin información y recomendó leer los
-   contratos por sigrid-api (`progress/impl_F-045_contrato_lineas.md`, vía B).
-5. **El adaptador de sv5 tampoco reproduce producción** (tapado por lo
-   anterior):
-   - **Descuento.** `construir_contexto` no pasa `descuento_albaran` ni
-     `precio_neto_albaran` (el doble los ve `null`). FER-001 espera
-     19,41 = 50 × 0,647 × 0,60 y obtiene 32,35 = 50 × 0,647: son los 9 fallos
-     «con valor» de FER-001/FER-002. Y `importe_albaran` va crudo; sv5 lo
-     deriva en su `SELECT` si el albarán no lo trae.
+   el texto lleva `"lineas_contrato": []` y la nota `_NOTA_SIN_PDF`. Todo sale
+   `no_match`; sv6 deja `precio_unitario_source = none` (`no_price_available`,
+   `ia_no_match`…). IA4 concilia contra una lista vacía. Por eso IA3, IA4 y
+   E2E salen idénticos con cualquier modelo.
+4. **Ya se sabía**: F-045 dejó fuera `CONTRATO_LINEAS` y midió el agujero
+   (`progress/impl_F-045_contrato_lineas.md`); nunca tuvo ficha.
+5. **El adaptador de sv5 tampoco reproduce producción** (tapado por lo anterior):
+   - **Descuento.** No pasa `descuento_albaran` ni `precio_neto_albaran`.
+     FER-001 espera 19,41 = 50 × 0,647 × 0,60 y obtiene 32,35 = 50 × 0,647
+     (los 9 fallos «con valor» de FER-001/FER-002). `importe_albaran` va crudo;
+     sv5 lo deriva en su `SELECT`.
    - **Clasificación.** Sin `clasificacion`, sv5 usa siempre `valuation_es`; en
-     producción los 21 RES van con `valuation_residuos`
-     (`familias.prompt_valoracion_de`): se mide un prompt que no corre.
-   - **Unidad y fecha.** Todo llega `unidad_categoria = unknown` (producción
-     pasa por `UnitCategoryPrefilter`) y `fecha_albaran = None` (M1 por año).
-   - **Documento del contrato.** Producción pasa a IA3 el MD (o el PDF) del
-     contrato; el banco ninguno: fase 1b y sus sintéticas fuera (P5).
-6. **La línea base de F-075 no usó el modelo de producción**: sin
-   `--proveedores`, `_corrida_valoracion_real` usa `gemini`
-   (`gemini-2.5-flash`) y el informe no registra el modelo (también en F-083).
+     producción los 21 RES van con `valuation_residuos`.
+   - **Unidad, fecha y cabecera.** `unidad_categoria = unknown` (producción pasa
+     por `UnitCategoryPrefilter`), `fecha_albaran = None` y la cabecera del
+     contrato (nombre, proveedor, obra) a `None`.
+   - **Documento del contrato.** Producción pasa a IA3 el MD (o el PDF) que sv3
+     dejó en SharePoint; el banco, nada, y le dice «solo fase 1a».
+6. **F-075 midió con `gemini-2.5-flash`**, el defecto del runner, sin registrarlo.
 
 **Conclusión:** el fallo está en el banco (fixtures y adaptador), no en sv5 ni sv6.
 
 ## 2. Encaje y límite
 
-- Todo vive en `evals/` (herramienta de desarrollo, no servicio). La ficha
-  lista sv5 y sv6 en `servicios`; no se toca ninguno (el líder puede corregirlo).
-- **Consumo nuevo de sigrid-api**: una lectura por código de contrato, desde
-  local, lanzada por el humano, como ya hace `evals.comparar_obra` con las
-  obras. Se anota en `azure-apps/albaranes.md` §8 en el mismo trabajo.
-- SQL propia del importador (D2 de F-052: la SQL no se comparte); se reutiliza
-  `ruesma_comun.sigrid.lectura` (`comprobar_truncado`, `PoliticaTruncado`,
-  `MAX_FILAS_POR_PETICION`).
-- Las líneas entran por el **libro** `INPUTS.xlsx`, no por los fixtures: el
-  conversor regenera los fixtures desde los libros y pisaría el JSON.
+- Todo vive en `evals/` (herramienta de desarrollo). Ficha: `servicios =
+  ["evals"]`. sv5 se reutiliza **dentro de su subproceso**, como ya hace el
+  banco, sin tocar su código.
+- **Lo que lee el importador, siempre en solo lectura y lanzado por el humano**:
+  sigrid-api (líneas, como ya hace `evals.comparar_obra`), la BBDD `albaranes`
+  (`albaran_contratos_merge`, la misma fila que lee sv5) y SharePoint (el
+  documento que sv3 ya subió y sv4 sirve en `/documents/{id}/contrato-pdf`).
+  No hay integración nueva con documentos de Sigrid ni llamada aparte de fase
+  1b: el documento entra en la misma llamada de IA3, como en el pipeline. P1 y
+  el límite de servicio no cambian. Se anota en `azure-apps/albaranes.md` §8.
+- La SQL de Sigrid es propia (D2 de F-052); se reutiliza
+  `ruesma_comun.sigrid.lectura`. La de la BBDD es la de sv5
+  (`_SQL_CONTRATO_HEADER`), importada en el subproceso; un test la fija.
+- Las líneas entran por el **libro** `INPUTS.xlsx`: el conversor regenera los
+  fixtures desde los libros y pisaría el JSON. Los documentos se cachean en
+  local (§6) para que la corrida no dependa de la red.
+- **El banco no empareja** (P2 = (b), «la IA4 es la que debe encargarse de
+  emparejar»): las líneas de contrato llegan a IA3/IA4 como en producción y el
+  emparejamiento solo lo mide la corrida con LLM (R36).
 
 ## 3. Ficheros a crear
 
-- `evals/contratos_sigrid.py` — escribe `progress/import_F-084.md`; CLI `python -m evals.contratos_sigrid
-  [--dry-run] [--casos A,B] [--ground-truth DIR] [--informe RUTA]` (R1–R11).
-- `tests/test_f084_contratos_sigrid.py` — R1–R11, R25 (sigrid-api con
-  `httpx.MockTransport`, libro de prueba en `tmp_path` con openpyxl).
-- `tests/test_f084_contexto_valoracion.py` (R12–R17, R22, R24) y
-  `tests/test_f084_runner.py` (R18–R21).
+- `evals/contratos.py` — CLI `python -m evals.contratos {lineas,documentos}
+  [--dry-run] [--casos A,B]`; escribe `progress/import_F-084.md` (R1–R11, R29–R31, R34).
+- `evals/procesos/sv5_documentos.py` — subproceso con sv5 en `sys.path`: lee la
+  fila del contrato y descarga el documento (R29, R31, R34).
+- `evals/fixtures/contratos/_indice.json` — lo genera `documentos` (R30).
+- `tests/test_f084_{contratos,contexto_valoracion,runner}.py` (R1–R36, R25).
 
 ## 4. Ficheros a modificar
 
 - `evals/procesos/sv6_build.py` — `lineas_albaran_de(inputs)` y
-  `clasificacion_de(inputs)` (puras); `construir_envelope_estimulado` las usa,
-  mete `clasificacion` en `context` y aplica el estímulo por precio (R22).
+  `clasificacion_de(inputs)` (puras); `construir_envelope_estimulado` las usa y
+  mete `clasificacion` en `context`. Su estímulo de matches NO cambia.
 - `evals/procesos/sv5_valoracion.py` — `construir_contexto` usa las dos de
-  arriba; `_contexto_de_dict` construye `RawAlbaranLine` / `RawContratoLine`,
-  los pasa por `UnitCategoryPrefilter` y valida la `ClasificacionAlbaran`;
-  `preparar_contexto(dict) -> dict` (subproceso) deja la `unidad_categoria` de
-  producción también para el envelope; `ejecutar_trabajo` la aplica a cada
-  caso y devuelve además `modelo`.
-- `evals/procesos/sv5_modelos.py` (**de F-083**, solo tras fusionarla): su
-  `ejecutar_trabajo` aplica `preparar_contexto` igual. Una línea.
-- `evals/runner.py` — R18 en `corrida_determinista` y en
-  `_corrida_valoracion_real` (antes de montar el trabajo de sv5), R19 en
-  `corrida_completa`, R20 (proveedor por defecto) y R21 (modelo a la fase).
-- `evals/modelos.py` (`ResultadoFase.modelos`) y `evals/informe.py`
-  (`- Modelo: …` y «Entradas no reproducidas», R17, R21; parseables iguales).
+  arriba, la cabecera del índice y `documento_contrato` (§6); `_contexto_de_dict`
+  pasa por `RawAlbaranLine` / `RawContratoLine` + `UnitCategoryPrefilter` +
+  `ClasificacionAlbaran`; `preparar_contexto(dict) -> dict` (subproceso) deja la
+  `unidad_categoria` de producción para el envelope; `valorar` lee el documento
+  local y lo pasa a `extract` como `contrato_markdown` o `pdf_attachment`;
+  `ejecutar_trabajo` aplica `preparar_contexto` y devuelve además `modelo`.
+- `evals/procesos/sv5_modelos.py` (**de F-083**, tras fusionarla): aplica
+  `preparar_contexto` igual. Una línea.
+- `evals/runner.py` — R18 y R33 (determinista y real, antes de montar el
+  trabajo de sv5), R19, R20, R21 y R36.
+- `evals/modelos.py` (`ResultadoFase.modelos`, `documentos`) y
+  `evals/informe.py` (`- Modelo: …`, recuento md/pdf/ninguno y la advertencia
+  de R36; las líneas parseables no cambian).
 - `evals/revision/escritura.py` — `CLAVES_DE_TABLA["contrato_lineas"]` =
   (`caso_id`, `codigo_producto`, `linea_sigrid`) (R11).
-- `evals/README.md` — sección «Líneas de contrato desde Sigrid» (R26).
-- `C:\Users\pgris\PycharmProjects\azure-apps\albaranes.md` §8 (otro
-  repositorio, commit local allí): la lectura por código desde `evals`.
-- `evals/fixtures/inputs/*.json` — los regenera el conversor tras la MANUAL
-  T11; se versionan en T12.
+- `evals/README.md` (R26) y `azure-apps/albaranes.md` §8 (commit allí).
+- `evals/fixtures/inputs/*.json` — los regenera el conversor tras T12.
 
 ## 5. Ficheros que NO se tocan
 
-- `services/**` entero: sv5 y sv6 hacen lo correcto con lo que reciben (§1).
-  Ni prompts, ni schemas, ni clientes LLM, ni redes (R23).
-- `evals/revision/reparto.py`: la revisión manual sigue sin alimentar
-  `CONTRATO_LINEAS` (decisión de F-045); el importador nuevo es otro módulo.
-- `evals/conversor.py`: lee columnas por encabezado y acepta `linea_sigrid`
-  sin cambios (se comprueba en T3).
-- Los libros IA1–IA4 y `RESULTADO_FINAL` (solo se escribe INPUTS),
-  `evals/criticidad.json`, `harness/rutas_sensibles.json` y
-  `MODELOS_POR_PROVEEDOR` (el modelo va por entorno; el defecto es de F-085).
+- `services/**` entero (R23), incluido el descargador y la SQL de sv5, que se
+  reutilizan tal cual.
+- `evals/revision/reparto.py` (la revisión manual sigue sin alimentar
+  `CONTRATO_LINEAS`, decisión de F-045) y `evals/conversor.py` (lee columnas por
+  encabezado: acepta `linea_sigrid` sin cambios, se comprueba en T3).
+- Los libros IA1–IA4 y `RESULTADO_FINAL`, `evals/criticidad.json`,
+  `harness/rutas_sensibles.json`, `MODELOS_POR_PROVEEDOR` (es de F-085) y `.gitignore`
+  (`evals/inputs/` ya cubre la caché).
 
-## 6. Funciones (en `evals/`, fuera de la hexagonal de los servicios)
+## 6. Funciones y datos (en `evals/`, fuera de la hexagonal de los servicios)
 
 ```python
-# evals/contratos_sigrid.py
+# evals/contratos.py
 SQL_LINEAS_CONTRATO: str                                        # §7
 def contratos_de_casos(inputs) -> dict[str, list[str]]          # código -> casos SIN líneas (R6)
-def filas_de_respuesta(columnas, filas, codigo) -> list[dict]   # >1 ctr.ide -> ErrorContrato (R5)
+def filas_de_respuesta(columnas, filas, codigo) -> list[dict]   # 0 o >1 ctr.ide -> ErrorContrato (R5)
 def filas_por_caso(lineas, caso_ids, fecha_import) -> list[dict]  # R1, R11
 def condiciones_fecha(inputs, ia1) -> list[dict]                # R9
-def cobertura(ia3, lineas) -> dict[int, str]                    # num_linea -> unica|varias|ninguna (R10)
+def precios_presentes(ia3, lineas) -> tuple[int, int]           # R10: control, no empareja
 class LectorSigrid:                                             # httpx, transport inyectable (R2–R4)
     def lineas(self, codigo: str) -> tuple[list, list]
-def ejecutar(opciones, entorno, lector=None) -> InformeImport   # con escritura.* (R6–R8)
-def main(argv=None) -> int                                      # 0 ok, 1 contrato fallido, 2 uso
+def entrada_de_indice(codigo, fila, documento) -> dict          # R30, R31 (pura)
+def main(argv=None) -> int                                      # 0 ok, 1 algún contrato falló, 2 uso
+
+# evals/procesos/sv5_documentos.py (subproceso: sv5 en sys.path)
+def ejecutar_trabajo(trabajo, sesion=None, descargador=None) -> dict  # costuras de test (R25)
 
 # evals/procesos/sv6_build.py
 MAPA_FAMILIA_DOCUMENTO = {"Residuos": "residuos", "Hormigon": "hormigon", "Mortero": "mortero",
                           "Combustible": "combustible", "Alquiler": "alquiler_maquinaria"}  # resto: generico
 def lineas_albaran_de(inputs) -> list[dict]                     # R12; DescuentoCompuesto (R13)
 def clasificacion_de(inputs) -> dict                            # R14; confianza 100, origen "banco_evals"
-def estimulo_por_precio(fila_ia3, lineas_contrato) -> tuple[int | None, str]  # R22
 
-# evals/procesos/sv5_valoracion.py (subproceso)
-def preparar_contexto(contexto: dict) -> dict                   # R15
+# evals/procesos/sv5_valoracion.py
+def documento_de(codigo, indice, raiz) -> dict | None           # R32/R33 (pura): {tipo, ruta} o falta
+def preparar_contexto(contexto: dict) -> dict                   # R15 (subproceso)
 ```
 
-`DescuentoCompuesto` sube por `valorar` y `procesar_casos` lo aísla como ERROR
-de IA3; en el determinista el runner lo da como ERROR de IA3 y E2E del caso.
+**Caché del documento (R30).** `evals/inputs/contratos/<código saneado>.md` o
+`.pdf`, no versionado: un contrato trae precios de proveedor y datos personales
+de firmantes, y los PDF no se versionan nunca. Lo versionado es el índice, sin
+contenido: `{codigo: {tipo, sha256, bytes, motivo, nombre_contrato,
+cif_proveedor, nombre_proveedor, codigo_obra, nombre_obra, leido_utc}}`. Con el
+índice y sin fichero local (clon limpio), el caso sale OMITIDO (R33): mejor no
+medir que medir otra cosa. Preferencia MD > PDF y tope `MAX_PDF_MB` = las de
+`ValueAlbaranPipeline`. La sesión de BBDD se abre con
+`default_transaction_read_only=on`.
 
-La `clasificacion` con `origen = "banco_evals"` es el ground truth de IA1 (la
-tipología la puso el humano), no una regla: aísla IA3 de IA1 y no contradice
-que en producción la clasificación la decida la IA.
+`DescuentoCompuesto`: ERROR de IA3 (y de E2E en el determinista) solo de ese caso.
+La `clasificacion` con `origen = "banco_evals"` es el ground truth de IA1: aísla
+IA3 de IA1 y no contradice que en producción la decida la IA.
 
-## 7. SQL (sigrid-api, base de negocio, solo lectura)
+## 7. SQL (solo lectura)
 
-Sin DDL. Una sentencia en `evals/contratos_sigrid.py`, con las mismas uniones
-que `_SQL_HEADER_AND_LINES` de sv3, para que cada columna signifique lo mismo
-que lo que acaba en `albaran_contrato_lines_merge` y lee sv5:
+**Sigrid** (sigrid-api, base de negocio): mismas uniones que
+`_SQL_HEADER_AND_LINES` de sv3, para que cada columna signifique lo que acaba en
+`albaran_contrato_lines_merge`.
 
 ```sql
 SELECT ctr.ide AS contrato_ide, ctrpro.ide AS linea_sigrid,
@@ -159,50 +167,53 @@ WHERE con_ctr.cod = ? AND con_ctr.emp = 1
 ORDER BY ctr.ide, ctrpro.pos, ctrpro.ide
 ```
 
-`max_rows = MAX_FILAS_POR_PETICION`, `timeout_seconds` de
-`SIGRID_API_TIMEOUT_S` (30 por defecto); ~20 contratos, una petición cada uno.
+`max_rows = MAX_FILAS_POR_PETICION`, `timeout_seconds` de `SIGRID_API_TIMEOUT_S`.
+
+**BBDD `albaranes`**: `_SQL_CONTRATO_HEADER` de sv5 (la fila más reciente del código). Sin DDL.
 
 ## 8. Coordinación con F-083 (rama `feature/F-083-comparar-modelos`)
 
 | Fichero | F-083 | F-084 |
 |---|---|---|
-| `evals/procesos/sv5_valoracion.py` | `cliente_llm`, `_clientes_reales(modelo…)`, `servicios()` | `construir_contexto`, `_contexto_de_dict`, `preparar_contexto`, `ejecutar_trabajo` (+`modelo`) |
-| `evals/runner.py` | `comparar_sv2`, `evaluar_valoracion` pública, `_build_sv6(build=)` | R18–R21 |
+| `evals/procesos/sv5_valoracion.py` | `cliente_llm`, `_clientes_reales(modelo…)`, `servicios()` | contexto, `preparar_contexto`, documento en `valorar`, `modelo` |
+| `evals/runner.py` | `comparar_sv2`, `evaluar_valoracion` pública, `_build_sv6(build=)` | R18–R21, R33, R36 |
 | `evals/procesos/sv5_modelos.py` | nuevo | una línea: `preparar_contexto` |
-| `sv6_build.py`, `contratos_sigrid.py`, `escritura.py`, `informe.py`, `modelos.py` | no | sí |
 
-**Orden recomendado (P7):** F-083 fusiona primero su código en `dev`; F-084
-hace T1–T5 (no se pisan), fusiona `dev` en su rama y sigue con T6–T9. **Los
-pagos de IA3/IA4 de F-083 (la parte IA3 de su T13, y T14–T15 en IA3/IA4)
-esperan a F-084 en `dev` con los fixtures importados**: hoy medirían la tabla
-vacía y todos los modelos saldrían iguales. IA1/IA2 de F-083 no dependen de
-F-084. El comparador usa `construir_contexto` y `servicios()`, así que hereda
-los arreglos con solo la línea de `sv5_modelos.py`. F-085 va después de las dos.
+**Orden (P7, decidido):** F-083 fusiona primero su código en `dev`; F-084 hace
+T1–T6 (no se pisan), fusiona `dev` en su rama y sigue con T7–T10. **Los pagos
+de IA3/IA4 de F-083 (la parte IA3 de su T13, y T14–T15) esperan a F-084 en
+`dev` con los contratos importados.** El comparador hereda contexto y
+documento. F-085 va después de las dos.
 
 ## 9. MANUAL del humano (PowerShell, desde el worktree)
 
-**T11 · Importar** (solo lee Sigrid; escribe el libro local, que no se versiona):
+**T12 · Importar** (solo lee; escribe el libro y la caché locales). Las `PG_*`
+tienen que ser las de Azure en la consola: el `.env` de los servicios apunta a
+local.
 
 ```powershell
 cd C:\Users\pgris\PycharmProjects\albaranes-F-084
-$env:SIGRID_API_BASE_URL = "<url de sigrid-api>"
-$env:SIGRID_API_DATABASE = "ruesma"
+$env:SIGRID_API_BASE_URL = "<url de sigrid-api>"; $env:SIGRID_API_DATABASE = "ruesma"
 $s = Read-Host -AsSecureString "SIGRID_API_FUNCTION_KEY"
 $env:SIGRID_API_FUNCTION_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-python -m evals.contratos_sigrid --dry-run
-python -m evals.contratos_sigrid
+python -m evals.contratos lineas --dry-run
+python -m evals.contratos lineas
+$env:PG_HOST = "<servidor PostgreSQL de Azure>"; $env:PG_DB = "albaranes"; $env:PG_USER = "<usuario de lectura>"
+$s = Read-Host -AsSecureString "PG_PASSWORD"
+$env:PG_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+$s = Read-Host -AsSecureString "GRAPH_KEY"
+$env:GRAPH_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+python -m evals.contratos documentos
 python -m evals.conversor
 python -m evals.runner --feature F-084
-Remove-Item Env:SIGRID_API_FUNCTION_KEY
+Remove-Item Env:SIGRID_API_FUNCTION_KEY, Env:PG_PASSWORD, Env:GRAPH_KEY
 ```
 
-Criterio: `progress/import_F-084.md` sin contratos fallidos (o con motivo
-aceptado) y R27. Las coberturas «ninguna» se miran a mano: precio cambiado
-desde el albarán o ground truth a corregir.
+`SHAREPOINT_*`, las del contenedor de sv5. Criterio: informe sin contratos
+fallidos (o con motivo aceptado), `tipo` por contrato en el índice y R27.
 
-**T13 · Línea base con LLM** (cuesta dinero; si F-083 ya está en `dev`, antes
-`python -m evals.comparar_modelos --fase IA3 --modelos claude-opus-4-8
---estimar`). Humo con 3 casos y luego los 59:
+**T14 · Línea base con LLM** (cuesta dinero; si F-083 ya está en `dev`, antes
+`python -m evals.comparar_modelos --fase IA3 --modelos claude-opus-4-8 --estimar`):
 
 ```powershell
 $s = Read-Host -AsSecureString "ANTHROPIC_API_KEY"
@@ -213,38 +224,27 @@ python -m evals.runner --con-llm --fases IA3,IA4,E2E --proveedores claude --feat
 Remove-Item Env:ANTHROPIC_API_KEY
 ```
 
-Criterio: R28. El veredicto puede ser ROJO: se exige que mida, no que acierte.
+Criterio: R28 (puede salir ROJO). Con el documento el prompt crece: el humo da el coste.
 
 ## 10. Riesgos y alternativas descartadas
 
-- **Contrato de hoy, albarán de ayer.** Sigrid da el precio vigente y hay casos
-  de 2023 a 2026. La cobertura de R10 lo enseña caso a caso en vez de
-  esconderlo en un rojo; si pesa, se replantea P1.
-- **Contratos grandes** (`CTSB23/0964`, 10 casos): las líneas se repiten por
-  caso y el prompt crece, como en producción. **Barrido de sensibles** del
-  conversor: si salta, se redacta en el libro, nunca se desactiva.
-- **Descartado**: escribir los fixtures JSON directamente (el conversor los
-  pisa); sintetizar el contrato desde el ground truth (vía A de F-045: da la
-  respuesta como entrada y mata los señuelos); leer
-  `albaran_contrato_lines_merge` de producción (vía C: circular); tocar sv5 o
-  sv6 (no es donde está el fallo).
+- **Contrato de hoy, albarán de ayer**: Sigrid da el precio vigente; R10 lo
+  enseña caso a caso. **Contratos grandes** (`CTSB23/0964`, 10 casos): prompt
+  mayor, como en producción. **Barrido de sensibles**: se redacta, no se apaga.
+- **Descartado**: escribir los fixtures JSON a mano (el conversor los pisa);
+  sintetizar el contrato desde el ground truth (vía A de F-045); leer las
+  líneas de `albaran_contrato_lines_merge` (vía C, circular); versionar los
+  documentos (datos personales y PDF); emparejar en el determinista (P2);
+  tocar sv5 o sv6 (no es donde está el fallo).
 
-## 11. Preguntas abiertas (PARADA 1), con recomendación
+## 11. Decisiones de la PARADA 1 (el humano, 2026-10-20)
 
-- **P1 · Fuente de las líneas de contrato.** (a) sigrid-api por código;
-  (b) sintetizarlas del ground truth; (c) lo persistido en producción.
-  **(a)**, con la cobertura de R10 como control de la fecha.
-- **P2 · Estímulo por precio en el determinista (R22).** (a) sí, solo si la
-  línea es única; (b) no. **(a)**: mide gratis partida, descuento e importe de
-  sv6 en los 52 casos, y lo ambiguo se declara.
-- **P3 · Casos sin contrato tras importar (R18).** (a) OMITIDO con motivo;
-  (b) ROJO, como hoy. **(a)**: un rojo que no dice nada del sistema tapa los
-  que sí, y no se paga por él.
-- **P4 · Clasificación desde la tipología (R14).** (a) sí; (b) sin ella, como
-  hoy. **(a)**: sin ella, los 21 RES se miden con un prompt que no corre.
-- **P5 · Documento del contrato (fase 1b).** (a) fuera, declarado (R17), con
-  ficha nueva para traer el MD; (b) dentro. **(a)**: es otra integración
-  (documentos de Sigrid, conversión Word/PDF) y dobla la feature.
-- **P6 · Proveedor por defecto de IA3/IA4 (R20).** (a) el de producción; (b) `gemini`.
-  **(a)**: el defecto tiene que medir lo que corre.
-- **P7 · Orden con F-083 (§8).** F-083 primero en código; sus pagos de IA3/IA4, después.
+- **P1 = (a)**: las líneas, de sigrid-api por código, con el control de R10.
+- **P2 = (b)**: sin estímulo por precio ni emparejamiento en el banco; empareja
+  IA3/IA4 y lo mide la corrida con LLM; el determinista lo declara (R36).
+- **P3 = (a)**: sin contrato tras importar ⇒ OMITIDO (R18).
+- **P4 = (a)**: clasificación desde la tipología (R14).
+- **P5 = dentro**: IA3 recibe el documento que sv3 ya guardó, en la misma
+  llamada (R29–R33); sin integración nueva ni llamada de fase 1b aparte.
+- **P6 = (a)**: proveedor de producción por defecto (R20).
+- **P7**: F-083 primero en código; sus pagos de IA3/IA4, después de F-084 (§8).

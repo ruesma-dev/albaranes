@@ -1,25 +1,29 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-084 · `spec_ready` (2026-10-20): spec escrita, espera la PARADA 1** — el banco de evals valora de verdad (IA3/IA4/E2E salen iguales con cualquier modelo). Spec en `specs/F-084-banco-valoracion/`. Rama `feature/F-084-banco-valoracion`, worktree `../albaranes-F-084` (desde `dev` `efd73b7`; *junction* `.venv` de sv4 puesta: quitarla con `cmd /c rmdir` antes de `git worktree remove`). Rigor `critico`. Solo `evals/` (más sus tests, el README y `azure-apps/albaranes.md`): **no se toca ningún servicio**, aunque la ficha liste sv5 y sv6.
+**F-084 · `spec_ready` (2026-10-20): PARADA 1 resuelta por el humano; spec ajustada, lista para el implementer** — el banco de evals valora de verdad (IA3/IA4/E2E salen iguales con cualquier modelo). Spec en `specs/F-084-banco-valoracion/`. Rama `feature/F-084-banco-valoracion`, worktree `../albaranes-F-084` (desde `dev` `efd73b7`; *junction* `.venv` de sv4 puesta: quitarla con `cmd /c rmdir` antes de `git worktree remove`). Rigor `critico`. Ficha con `servicios = evals`: **no se toca ningún servicio**.
 
-Diagnóstico (design §1, sin gastar: determinista, doble de LLM y código):
-- **52 de los 59 casos no tienen líneas de contrato en INPUTS.** F-045 las dejó fuera a propósito y midió el agujero el 2026-09-16 (`progress/impl_F-045_contrato_lineas.md`, vía B), pero nunca tuvo ficha.
-- **El determinista, sin LLM, falla igual**: 390 de 401 fallos de IA3 son «obtenido None», y 14 de los 15 casos de la prueba rápida tienen el mismo número de fallos que con `gpt-6-luna`. El LLM sí se llama, pero recibe `lineas_contrato: []` y la nota de «solo fase 1a».
-- **El adaptador de sv5 tampoco reproduce producción**: no pasa descuento (FER-001 sale 32,35 en vez de 19,41), ni clasificación (los 21 RES se miden con `valuation_es` y producción usa `valuation_residuos`), ni categoría de unidad ni fecha.
+Diagnóstico (design §1, sin gastar):
+- **52 de los 59 casos no tienen líneas de contrato en INPUTS**, un hueco de F-045 que nunca tuvo ficha.
+- **El determinista, sin LLM, falla igual**: 390 de 401 fallos de IA3 son «obtenido None».
+- **El adaptador de sv5 no da a la IA lo que le da producción**: descuento (FER-001 sale 32,35 en vez de 19,41), clasificación (los 21 RES con `valuation_es`), categoría de unidad, fecha, cabecera y documento del contrato.
 
-Qué propone: un importador `python -m evals.contratos_sigrid`, solo lectura por sigrid-api y lanzado por el humano, que escribe en el libro INPUTS; un contexto de valoración fiel a producción; y en el runner: OMITIDO para los casos sin contrato, no llamar a sv2 si no se piden IA1/IA2, proveedor de producción por defecto y el modelo en el informe. Las MANUAL son T11 (importar) y T13 (línea base con `claude-opus-4-8`, de pago), con sus comandos en design §9.
+Decisiones del humano (2026-10-20, design §11):
+- **P1, P3, P4, P6 y P7**: (a).
+- **P2 = (b)**: el banco no empareja («la ia4 es la que debe encargarse de emparejar»); el determinista lo declara en su informe (R36).
+- **P5 dentro**: IA3 recibe el documento del contrato que sv3 ya guardó. Se lee en solo lectura de `albaran_contratos_merge` y SharePoint, con la SQL y el descargador de sv5, y se cachea en `evals/inputs/contratos/` (no versionado). El índice `evals/fixtures/contratos/_indice.json` sí se versiona, sin contenido.
 
-Coordinación con F-083 (design §8): las dos tocan `sv5_valoracion.py` y `runner.py`, y F-084 añade una línea a `sv5_modelos.py`. **F-083 fusiona primero su código. Sus pagos de IA3/IA4 (la parte IA3 de su T13, y T14–T15) tienen que esperar a F-084**: hoy medirían la tabla vacía.
+Qué hará:
+- `python -m evals.contratos lineas`: lee sigrid-api y escribe el libro INPUTS.
+- `python -m evals.contratos documentos`: lee BBDD y SharePoint.
+- Contexto de valoración fiel a producción.
+- Ajustes del runner.
 
-Decisiones abiertas de la PARADA 1 (design §11, cada una con recomendación):
-- **P1**: fuente de las líneas de contrato. Recomendada, sigrid-api.
-- **P2**: estímulo determinista por precio único.
-- **P3**: OMITIDO para los casos sin contrato.
-- **P4**: clasificación tomada de la tipología.
-- **P5**: el documento del contrato (fase 1b) queda fuera, a otra ficha.
-- **P6**: proveedor de producción por defecto.
-- **P7**: orden con F-083.
+MANUAL del humano (comandos en design §9):
+- **T12 · importar**: necesita las `PG_*` de Azure en la consola y `GRAPH_KEY`.
+- **T14 · línea base**: `claude-opus-4-8`, de pago.
+
+Coordinación con F-083 (design §8): **F-083 fusiona primero su código; sus pagos de IA3/IA4 esperan a F-084.**
 
 **F-080 · `blocked` (2026-10-19): review APPROVED (pasada 1, `progress/review_F-080.md`), fusionada en `dev`; espera la MANUAL T6 del humano (desplegar solo sv3)** — tras un empate por nombre (F-073), la familia solo elige entre los empatados (H4 de `progress/review_F-073.md`). Spec en `specs/F-080-empate-solo-entre-empatados/`. Rama `feature/F-080-empate-solo-entre-empatados`, worktree `../albaranes-F-080`. Rigor `critico`, solo sv3 (`header_resolver_service.py`), sin DDL ni comun. PARADA 1 resuelta el 2026-10-19: **P1 = (b)** (la carrera por puntos de hoy, y el ganador tiene que ser uno de los empatados), P2 y P3 según la recomendación (design §2). Informe en curso: `progress/impl_F-080.md`.
 
