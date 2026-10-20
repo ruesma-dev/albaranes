@@ -668,3 +668,47 @@ def test_f083_bloque_ia4_concilia_sobre_la_preparacion(banco):
     assert referencia.split("|")[6].strip() == "0"
     assert int(luna.split("|")[6].strip()) > 0
     assert "### E2E" in texto
+
+
+# --- T16 · supervivientes de la mutación ------------------------------------------------
+
+
+def test_f083_t16_tope_igual_a_la_estimacion_exacta_no_para(banco, monkeypatch):
+    from evals.costes import estimar
+
+    llamado = []
+    monkeypatch.setattr(cm, "ejecutar_plan", lambda *a, **k: llamado.append(1) or 0)
+    argv = _argv(banco, "--fase", "IA1", "--modelos", "gpt-6-luna")
+    plan = cm.planificar(cm.analizar(argv), cargar_tabla(), *banco[:2])
+    total = str(estimar(plan.partidas(), cargar_tabla(), {}, AHORA.date()).total)
+    codigo = cm.main([*argv, "--tope-usd", total, "--tope-total-usd", total],
+                     entorno=CLAVES, dependencias=_deps(banco))
+    assert codigo == 0 and llamado == [1]
+
+
+def test_f083_t16_tope_con_menos_de_un_dolar_restante_sigue(banco_ia1):
+    sv2 = _Sv2Doble(coste="0.1")
+    codigo = cm.main(
+        _argv(banco_ia1, "--fase", "IA1", "--modelos", "gpt-6-luna", "--tope-usd", "0.5"),
+        entorno=CLAVES, dependencias=_deps(banco_ia1, ejecutar_sv2=sv2),
+    )
+    assert codigo == 0
+    assert [t["presupuesto_usd"] for t in sv2.trabajos] == ["0.5", "0.3"]
+
+
+def test_f083_t16_el_resumen_crea_su_carpeta_y_el_json_es_legible(banco_ia1):
+    _, _, raiz = banco_ia1
+    resumen = raiz / "nueva" / "honda" / "resumen.md"
+    argv = ["--resumen", str(resumen), "--salida", str(raiz / "salida"),
+            "--fase", "IA2", "--modelos", "gpt-5.5"]
+    cm.main(argv, entorno=CLAVES, dependencias=_deps(banco_ia1, ejecutar_sv2=_Sv2Doble()))
+    assert resumen.is_file()
+    texto = (raiz / "salida" / "resultados.json").read_text(encoding="utf-8")
+    assert texto.startswith('{\n  "fase": "IA2"')
+    assert '"preparación"' in texto
+
+
+def test_f083_t16_la_fase_es_obligatoria(banco):
+    with pytest.raises(SystemExit) as salida:
+        cm.analizar(["--modelos", "gpt-5.5"])
+    assert salida.value.code == 2

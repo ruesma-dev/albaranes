@@ -229,3 +229,44 @@ def test_f083_r29_detalle_de_casos_sin_discrepancias_y_con_motivo():
     detalle = render_detalle(_seccion(), casos)
     assert "- `a` r1 · A · VERDE" in detalle
     assert "- `a` r1 · B · ERROR · falló" in detalle
+
+
+# --- T16 · supervivientes de la mutación ------------------------------------------------
+
+
+def test_f083_t16_seccion_sin_cortar_por_defecto():
+    datos = {k: v for k, v in _seccion().__dict__.items() if k != "cortado"}
+    assert Seccion(**datos).cortado is False
+
+
+def test_f083_t16_las_tablas_tienen_tantas_columnas_como_su_cabecera():
+    e2e = {"a": _metricas("a", fase="E2E")}
+    texto = render_versionable(_seccion(fase="IA3", metricas_e2e=e2e))
+    for cabecera in ("| Modelo | Casos | ERROR | NO_EJECUTADO | Verdes | Fallos críticos | Avisos | t",
+                     "| Modelo | Casos | ERROR | NO_EJECUTADO | Verdes | Fallos críticos | Avisos |\n"):
+        inicio = texto.index(cabecera)
+        encabezado, separador = texto[inicio:].splitlines()[:2]
+        assert separador.startswith("|---|")
+        assert encabezado.count("|") == separador.count("|")
+
+
+def test_f083_t16_mantener_con_otro_mejor_de_la_banda_lo_dice():
+    recomendacion = Recomendacion(["gemini-3.7-flash", "b"], ["gemini-3.7-flash", "b"], "b",
+                                  "mantener", [], True, "provisional (1 repetición)")
+    texto = render_versionable(_seccion(recomendacion=recomendacion))
+    assert ("- **mantener** `gemini-3.7-flash` (el más barato de la banda es `b`, "
+            "sin mejora ni ahorro claros)") in texto
+    assert "el más barato de la banda" not in render_versionable(_seccion())
+
+
+def test_f083_t16_tokens_con_salida_cero_tambien_se_anotan():
+    metricas = {"a": _metricas("a", tokens_entrada_medios=Decimal(500),
+                               tokens_salida_medios=Decimal(0))}
+    assert "TOKENS: IA1 · a · 500 · 0" in render_versionable(_seccion(metricas=metricas))
+
+
+def test_f083_t16_commit_desconocido():
+    assert "- Commit `?` ·" in render_versionable(_seccion(commit=""))
+    assert "- Commit `abc1234` ·" in render_versionable(_seccion())
+    assert "commit `?`" in render_detalle(_seccion(commit=""), {})
+    assert "commit `abc1234`" in render_detalle(_seccion(), {})

@@ -80,7 +80,7 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - subproceso
     """Punto de entrada del subproceso: stdin → un bloque de sv5 → stdout."""
     del argv
     canal.blindar_stdout()
-    sys.path.insert(0, str(sv5_valoracion.RAIZ_SV5))
+    sys.path = [str(sv5_valoracion.RAIZ_SV5), *sys.path]
     try:
         trabajo = json.loads(sys.stdin.read() or "{}")
         sv5_valoracion.comprobar_claves([trabajo["modelo"]["proveedor"]])

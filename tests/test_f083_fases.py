@@ -259,10 +259,13 @@ def test_f083_runner_fabricas_sin_argumentos_nuevos_como_hoy(clientes_falsos, fa
     claude = fabrica("claude")
     assert claude.model_name == "claude-sonnet-4-5"
     assert claude.client.kwargs == {"api_key": "clave-ANTHROPIC_API_KEY", "tool_name": herramienta}
+    assert type(claude.client).__name__ == "ClaudeMessagesVisionClient"
     gemini = fabrica("gemini")
+    assert type(gemini.client).__name__ == "GeminiGenAiVisionClient"
     assert gemini.client.args == ("clave-GEMINI_API_KEY",) and gemini.client.kwargs == {}
     assert gemini.model_name == "gemini-2.5-flash"
     openai = fabrica("openai")
+    assert type(openai.client).__name__ == "OpenAIResponsesVisionClient"
     assert openai.client.args == ("clave-OPENAI_API_KEY",) and openai.client.kwargs == {}
     assert openai.provider == "openai" and openai.model_name == "gpt-5"
 
@@ -623,3 +626,32 @@ def test_f083_sv5_subproceso_real_sin_casos():
     entorno = {**os.environ, "ANTHROPIC_API_KEY": "clave-de-prueba"}
     salida = medidor_mod.lanzar("evals.procesos.sv5_modelos", trabajo, "sv5", entorno=entorno)
     assert salida == {"resultados": [], "registros": []}
+
+
+# --- T16 · supervivientes de la mutación ------------------------------------------------
+
+
+def test_f083_t16_sv5_subproceso_sin_clave_muere_con_codigo():
+    entorno = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
+    with pytest.raises(RuntimeError, match="código 1"):
+        medidor_mod.lanzar("evals.procesos.sv5_modelos", {**_trabajo_sv5(), "casos": []}, "sv5",
+                           entorno=entorno)
+
+
+def test_f083_t16_sv5_valoracion_ejecutar_trabajo_usa_la_fabrica_y_los_servicios(monkeypatch):
+    """El camino del runner con la fábrica inyectada, sin sv5 ni LLM."""
+    pedidos = []
+
+    def servicios(especificacion, proveedor, prompt_key, prompt_key_ia4):
+        pedidos.append((especificacion.model_name, proveedor, prompt_key, prompt_key_ia4))
+        return (lambda contexto: [dict(_LINEA_VALORADA)]), (lambda envelope, contexto: [])
+
+    monkeypatch.setattr(sv5_valoracion, "servicios", servicios)
+    salida = sv5_valoracion.ejecutar_trabajo(
+        {"proveedor": "openai", "casos": [{"caso_id": "RES-001", "contexto": _contexto()}]},
+        fabrica=lambda proveedor: NS(model_name=f"modelo-de-{proveedor}"),
+    )
+    assert pedidos == [("modelo-de-openai", "openai", "valuation_es", "conciliacion_es")]
+    (resultado,) = salida["resultados"]
+    assert resultado["envelope"]["meta"]["model"] == "modelo-de-openai"
+    assert salida["proveedor"] == "openai"

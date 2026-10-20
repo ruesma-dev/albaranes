@@ -1,9 +1,75 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-083 · `in_progress` (2026-10-20): PARADA 1 resuelta el 2026-10-19 (tanda 1 de 8 modelos, P5 = (a)); el implementer va por T8** — comparar modelos de IA por fase (IA1–IA4) con acierto y coste por albarán. Spec en `specs/F-083-comparar-modelos/`; inventario de modelos con precio, fuente y fecha en `progress/spec_F-083.md`. Rama `feature/F-083-comparar-modelos`, worktree `../albaranes-F-083` (creado desde `dev` `7facc86`; *junction* `.venv` de sv4 puesta: quitarla con `cmd /c rmdir` antes de `git worktree remove`). Rigor `critico`. Toca `evals/` y, solo con P5 = (a), un parámetro opcional del cliente de Claude en comun; ningún servicio cambia en producción.
+**F-083 · `in_progress` (2026-10-20): PARADA 1 resuelta el 2026-10-19 (tanda 1 de 8 modelos, P5 = (a)); implementación hecha (T1–T12 y T16), pendientes T13–T15 del humano** — comparar modelos de IA por fase (IA1–IA4) con acierto y coste por albarán. Spec en `specs/F-083-comparar-modelos/`; inventario de modelos con precio, fuente y fecha en `progress/spec_F-083.md`. Rama `feature/F-083-comparar-modelos`, worktree `../albaranes-F-083` (creado desde `dev` `7facc86`; *junction* `.venv` de sv4 puesta: quitarla con `cmd /c rmdir` antes de `git worktree remove`). Rigor `critico`. Toca `evals/` y, solo con P5 = (a), un parámetro opcional del cliente de Claude en comun; ningún servicio cambia en producción.
 
-Estado del implementer (2026-10-20): T1–T7 hechas, un commit por tarea (hasta `cc9a971`), fase RED en `progress/impl_F-083.md`. Desviación de orden: **T9 y T10 antes que T8**, porque el final de la corrida (T8) calcula métricas y recomendación (T9) y escribe los informes (T10); cada una sigue con su commit.
+Estado del implementer (2026-10-20): **T1–T12 hechas** (un commit por tarea), fase RED y evidencias en `progress/impl_F-083.md`; T16 (campaña de mutación completa e `init.sh`) en curso. Desviaciones (justificadas en el informe): T9 y T10 antes que T8; `procesar` y `lanzar` viven en `medidor.py`, compartidos por los dos subprocesos. **Riesgo para el humano antes de pagar IA3/IA4**: 52 de los 59 casos de INPUTS no traen líneas de contrato, así que esas fases apenas miden el modelo (R-1 del informe). T13–T15 son MANUAL del humano, comandos abajo.
+
+#### F-083 · MANUAL T13–T15 (humano), comandos para PowerShell
+
+**Cuesta dinero: solo el humano.** Todo en el worktree, sobre la rama (trae la comun con `forzar_herramienta`). `--estimar` no pide claves ni llama a nada: hacerlo siempre antes. Las claves se piden con `Read-Host -AsSecureString` y se borran al final. Nada escribe en producción: solo llamadas a las API de los tres proveedores.
+
+Preparación de la consola (una vez):
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes-F-083
+if (-not (Test-Path .\evals\inputs)) { Copy-Item -Recurse C:\Users\pgris\PycharmProjects\albaranes\evals\inputs .\evals\inputs }
+$env:PYTHONPATH = "C:\Users\pgris\PycharmProjects\albaranes-F-083\services\albaranes-comun"
+$py = "C:\Users\pgris\PycharmProjects\albaranes\.venv\Scripts\python.exe"
+$m = "gemini-3.7-flash,gemini-4-argon,claude-opus-5-5,gpt-5.4,gpt-5.5,gpt-6.1-sol,gpt-6-luna,gpt-5.6-luna"
+$s = Read-Host "ANTHROPIC_API_KEY" -AsSecureString
+$env:ANTHROPIC_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+$s = Read-Host "GEMINI_API_KEY" -AsSecureString
+$env:GEMINI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+$s = Read-Host "OPENAI_API_KEY" -AsSecureString
+$env:OPENAI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+```
+
+**T13 · humo** (≈ 2–4 USD). Dice qué modelos fallan por formato (PDF en las Luna, `max_tokens` con pensamiento, Opus 5.5 con `tool_choice` auto), qué modelo sirve Google a `gemini-3.7-flash` y deja tokens medidos para la estimación siguiente.
+
+```powershell
+& $py -m evals.comparar_modelos --fase IA1 --modelos $m --casos GEN-001,HOR-001 --estimar
+& $py -m evals.comparar_modelos --fase IA1 --modelos $m --casos GEN-001,HOR-001
+& $py -m evals.comparar_modelos --fase IA3 --modelos $m --casos GEN-001 --estimar
+& $py -m evals.comparar_modelos --fase IA3 --modelos $m --casos GEN-001
+```
+
+VERDE: dos secciones nuevas en `progress/comparar_modelos_F-083.md`, con la columna «Modelo servido» y «Parada» rellenas, y sus líneas `GASTO:`. Si un modelo sale con todo `ERROR`, el líder lo revisa y decide si pasa a `excluido` en la tabla.
+
+**T14 · tanda 1**: las cuatro fases, una invocación por fase, siempre `--estimar` antes. Estimación sin medir (×1,5, 2026-10-20): IA1 ≈ 37 USD, IA2 ≈ 8, IA3 ≈ 64, IA4 ≈ 9 (≈ 118 en total). Tras el humo bajan: usan los tokens medidos. **IA3 necesita `--tope-usd 70`** (con 60 para antes de gastar, código 2).
+
+```powershell
+& $py -m evals.comparar_modelos --fase IA1 --modelos $m --estimar
+& $py -m evals.comparar_modelos --fase IA1 --modelos $m --tope-usd 60
+& $py -m evals.comparar_modelos --fase IA2 --modelos $m --estimar
+& $py -m evals.comparar_modelos --fase IA2 --modelos $m
+& $py -m evals.comparar_modelos --fase IA3 --modelos $m --estimar
+& $py -m evals.comparar_modelos --fase IA3 --modelos $m --tope-usd 70
+& $py -m evals.comparar_modelos --fase IA4 --modelos $m --estimar
+& $py -m evals.comparar_modelos --fase IA4 --modelos $m
+```
+
+**Antes de pagar IA3 e IA4, leer el riesgo R-1 de `progress/impl_F-083.md`**: 52 de los 59 casos de INPUTS no traen líneas de contrato, así que hoy esas dos fases apenas miden el modelo. Puede compensar dejarlas para cuando el banco tenga contratos.
+
+VERDE: una sección por fase con su recomendación (marcada «provisional (1 repetición)») y la suma de `GASTO:` dentro de los 200 USD de P3.
+
+**T15 · finalistas**: por fase, la referencia y los dos primeros de la banda de T14, con 3 repeticiones. Ejemplo para IA1 (cambiar `<a>,<b>` por los de la banda):
+
+```powershell
+& $py -m evals.comparar_modelos --fase IA1 --modelos <a>,<b> --repeticiones 3 --estimar
+& $py -m evals.comparar_modelos --fase IA1 --modelos <a>,<b> --repeticiones 3 --tope-usd 60
+```
+
+VERDE: recomendación sin marca de provisional por fase; es la base de la feature que cambie el modelo de producción.
+
+Al terminar, siempre:
+
+```powershell
+Remove-Item env:ANTHROPIC_API_KEY, env:GEMINI_API_KEY, env:OPENAI_API_KEY, env:PYTHONPATH
+Remove-Variable s, py, m
+```
+
+Códigos de salida: 0 hecho, 1 ningún candidato dio resultado, 2 parada antes de gastar, 3 cortado por `--tope-usd` (el informe se escribe con lo hecho). Tras cada corrida, versionar `progress/comparar_modelos_F-083.md` (no lleva valores); `evals/salidas/` no se versiona.
 
 Qué propone: `python -m evals.comparar_modelos --fase F --modelos a,b`, una fase por invocación, con la referencia de producción medida en la misma corrida (IA1 `gemini-3.7-flash`, IA2 `gpt-5.4`, IA3/IA4 `claude-opus-4-8`). El coste sale de los tokens reales, leídos por un `call_logger` medidor sin tocar los clientes, y de la tabla versionada `evals/precios_modelos.json`. Hay `--estimar` (sin claves ni gasto), paradas antes de gastar (modelo, tabla caducada, claves, tope por invocación y de la feature) y corte en caliente por tope. Criterio de decisión en design §6.
 

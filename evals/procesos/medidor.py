@@ -179,9 +179,8 @@ def lanzar(
     """
     proceso = subprocess.run(
         [interprete or sys.executable, "-m", modulo],
-        input=json.dumps(trabajo, ensure_ascii=False),
+        input=json.dumps(trabajo),
         stdout=subprocess.PIPE,
-        text=True,
         encoding="utf-8",
         cwd=str(RAIZ_REPO),
         env=entorno,

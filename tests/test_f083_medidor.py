@@ -198,3 +198,22 @@ def test_f083_r26_registros_de_fichero_tolera_lineas_rotas_y_ausencia(tmp_path):
     ruta = tmp_path / "r.jsonl"
     ruta.write_text('{"caso_id": "A"}\n{roto\n\n{"caso_id": "B"}\n[1]\n', encoding="utf-8")
     assert registros_de_fichero(ruta) == [{"caso_id": "A"}, {"caso_id": "B"}]
+
+
+# --- T16 · supervivientes de la mutación ------------------------------------------------
+
+
+def test_f083_t16_sin_respuesta_no_cuenta_tokens(medidor):
+    medidor.log_call(provider="openai", model="gpt-5.4", request_summary={},
+                     response_payload=None, error="APIError")
+    registro = medidor.registros[0]
+    assert [registro[c] for c in ("entrada", "lectura_cache", "escritura_cache", "salida")] == [
+        0, 0, 0, 0]
+
+
+def test_f083_t16_el_fichero_de_registros_crea_su_carpeta_y_guarda_utf8(tmp_path):
+    ruta = tmp_path / "a" / "b" / "r.jsonl"
+    medidor = MedidorDeUso("preparación", cargar_tabla(), HOY, fichero=ruta)
+    medidor.log_call(provider="openai", model="gpt-5.4", request_summary=_resumen(),
+                     response_payload={"raw_sdk_response": _respuesta_openai()})
+    assert '"etiqueta": "preparación"' in ruta.read_text(encoding="utf-8")

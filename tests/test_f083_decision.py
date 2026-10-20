@@ -268,3 +268,28 @@ def test_f083_umbrales_declarados():
     assert decision.AHORRO_COSTE == Decimal("0.7")
     assert decision.LATENCIA == 2
     assert decision.REPETICIONES_FIRMES == 3
+
+
+# --- T16 · supervivientes de la mutación ------------------------------------------------
+
+
+def test_f083_t16_metricas_vacias_valen_cero():
+    assert Metricas("x", "IA1") == Metricas(
+        modelo="x", fase="IA1", repeticiones=1, casos=0, errores=0, no_ejecutados=0, verdes=0,
+        fallos=Decimal(0), fallos_min=0, fallos_max=0, avisos=0, tiempo_medio_s=Decimal(0),
+        tiempo_max_s=Decimal(0), llamadas=0, tokens_entrada_medios=Decimal(0),
+        tokens_salida_medios=Decimal(0), coste_total=Decimal(0), coste_por_albaran=Decimal(0),
+        uso_incompleto=0, fallos_medidor=0, modelos_servidos=[], motivos_parada={},
+    )
+
+
+def test_f083_t16_medir_sin_repeticiones_es_la_preparacion():
+    registros = [{**_registro("A", 0, "0.5", 100), "etiqueta": "preparación"}]
+    m = medir("x", "IA1", [], registros, etiqueta="preparación")
+    assert (m.repeticiones, m.fallos, m.fallos_min, m.fallos_max) == (0, 0, 0, 0)
+    assert m.llamadas == 1 and m.coste_total == Decimal("0.5")
+
+
+def test_f083_t16_la_escritura_de_cache_cuenta_como_entrada():
+    registros = [_registro("A", 1, "0", 100, entrada=10, lectura_cache=20, escritura_cache=30)]
+    assert medir("x", "IA1", [[_caso("A")]], registros).tokens_entrada_medios == 60

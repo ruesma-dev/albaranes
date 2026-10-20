@@ -235,16 +235,13 @@ def proyectar_ia4(conciliaciones: list[dict], envelope: dict) -> list[dict]:
 
 
 def cliente_llm(
-    proveedor: str,
-    tool_name: str,
-    modelo: str | None = None,
-    call_logger=None,
-    forzar_herramienta: bool = True,
+    proveedor: str, tool_name: str, modelo: str | None, call_logger, forzar_herramienta: bool
 ):
     """(modelo, cliente real de comun) de un proveedor, para sv2 y para sv5.
 
-    Sin argumentos opcionales, exactamente lo de siempre: el modelo del entorno
-    (o el de `MODELOS_POR_PROVEEDOR`) y el cliente sin logger. El comparador de
+    Con `modelo=None`, `call_logger=None` y `forzar_herramienta=True`, lo de
+    siempre: el modelo del entorno (o el de `MODELOS_POR_PROVEEDOR`) y el
+    cliente sin logger. El comparador de
     modelos (F-083) pide un modelo concreto, mete su medidor como `call_logger`
     y, solo para los Claude que rechazan la herramienta forzada,
     `forzar_herramienta=False`: el argumento solo llega al cliente entonces.

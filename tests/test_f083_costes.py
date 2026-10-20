@@ -288,3 +288,27 @@ def test_f083_r15_estimar_con_tabla_caducada_para(tabla):
     with pytest.raises(TablaCaducada, match="gemini-4-argon"):
         estimar([Partida("gemini-4-argon", "candidato", "IA1", 1)], caducada, {},
                 dt.date(2026, 12, 1))
+
+
+# --- T16 · supervivientes de la mutación ------------------------------------------------
+
+import dataclasses
+
+
+def test_f083_t16_tope_de_los_textos_cortos():
+    assert costes.TOPE_TEXTO == 60
+
+
+def test_f083_t16_toda_la_entrada_en_cache_no_es_incompleto():
+    respuesta = NS(usage=NS(input_tokens=5, input_tokens_details=NS(cached_tokens=5),
+                            output_tokens=1))
+    assert uso_de_respuesta("openai", respuesta) == Uso(0, 5, 0, 1, False)
+
+
+def test_f083_t16_los_valores_de_la_tabla_son_inmutables(tabla):
+    modelo = tabla.modelo("gpt-5.5")
+    linea = estimar([Partida("gpt-5.5", "candidato", "IA1", 1)], tabla, {}, HOY)
+    for objeto in (modelo, modelo.precio, modelo.tramo_largo, tabla, Uso(1, 0, 0, 1),
+                   Partida("x", "candidato", "IA1", 1), linea, linea.lineas[0]):
+        with pytest.raises(dataclasses.FrozenInstanceError):
+            objeto.__setattr__("id", "otro")

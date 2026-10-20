@@ -128,8 +128,8 @@ class Plan:
     referencia_anadida: bool
     preparacion: str | None
     casos: list[str]
+    repeticiones: int
     omitidos: dict[str, str] = field(default_factory=dict)
-    repeticiones: int = 1
     proveedores: list[str] = field(default_factory=list)
 
     def bloques(self) -> list[tuple[int, str]]:
@@ -493,7 +493,7 @@ def ejecutar_plan(plan: Plan, opciones, tabla: Tabla, dependencias: Dependencias
             salida / "registros_preparacion.jsonl", tabla, dependencias, fecha,
         )
         prep = bloque.resultados
-        registros_prep = [{**r, "repeticion": 0} for r in bloque.registros]
+        registros_prep = list(bloque.registros)
         gastado += _gasto(bloque.registros)
 
     # Lo que la preparación devuelve y el campo con que entra en cada caso del candidato.
