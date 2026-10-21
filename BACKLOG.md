@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **87 features**, 59 abiertas, 28 terminadas.
+Resumen: **88 features**, 60 abiertas, 28 terminadas.
 
 Bloqueadas: **F-064, F-076, F-077, F-083, F-085**.
 
@@ -30,6 +30,7 @@ Bloqueadas: **F-064, F-076, F-077, F-083, F-085**.
 | F-087 | Aprobar y Registrar: el «aprobar» de hoy pasa a llamarse Registrar (guarda, bloquea y da de alta en Sigrid) y nace un estado Aprobar (guarda todo el albarán y lo bloquea dándolo por bueno, sin Sigrid) | 13 | pendiente | critico |  |
 | F-088 | Bandeja: filtro de varias obras a la vez y TODOS los filtros se recuerdan al navegar, volver atrás o recargar | 13 | pendiente | estandar |  |
 | F-089 | Vista Obra con el formato Ruesma (como en partes): entrar en una obra muestra la bandeja general filtrada por esa obra | 13 | pendiente | estandar |  |
+| F-090 | Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692) | 13 | pendiente | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 14 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 14 | pendiente | estandar |  |
 | F-057 | Truncado sin comprobar en los clientes de Sigrid colindantes: header_and_lines de sv4 (max_rows=1000) y SigridApiObraClient de sv3 | 14 | pendiente | critico |  |
@@ -297,6 +298,12 @@ ORIGEN: petición del humano, 2026-10-21. CAMBIO: (1) en los filtros de la venta
 estado **pendiente** · prioridad 13 · rigor `estandar` · SDD sí
 
 ORIGEN: petición del humano, 2026-10-21. CAMBIO: la vista «Obras» de sv4 adopta el formato visual de Ruesma, como el front de partes (monorepo `partes`, carpeta `services/partes-front`; documento `azure-apps/partes.md`): tomar de ahí estilos y patrones, sin duplicar documentos de otro proyecto. Al entrar en una obra se ve la vista general (la bandeja) ya filtrada por esa obra, con los mismos filtros, columnas y acciones; el filtro se mantiene al entrar en un albarán y volver, al ir adelante/atrás y al recargar (persistencia de F-088). A DECIDIR EN LA SPEC: qué elementos del formato de partes se adoptan (cabecera, colores, tipografía, tarjetas), si la vista obra añade algo propio (resumen de importes o contratos de la obra) y si el estilo se extiende al resto de sv4 o solo a Obras. RELACIONADAS: F-088 (filtros multiobra y persistentes), F-067.
+
+### F-090 · Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692)
+
+estado **pendiente** · prioridad 13 · rigor `critico` · SDD sí
+
+ORIGEN: petición del humano, 2026-10-21: «oscurecer y aumentar contraste va a mejorar la lectura; ha pasado con los albaranes de la 0692 de hormigón, al oscurecer el escaneado ha mejorado». Caso de referencia: correo de odomingo@ruesma.es del 2026-10-21 (asunto 0692, PDF de 2 páginas de ARIDOS ANFERSA): la página 2 (merge ea395a26, albarán 1766248632), impresa en amarillo claro sobre papel amarillo, salió sin proveedor ni fecha (confianza 44,8 %), y el humano comprobó que oscureciendo el escaneado se lee. HOY: ruesma_comun/imaging/preprocess.py ya realza (canal -> deskew -> iluminación -> estirado por percentiles -> nitidez; CLAHE retirado en jul 2026), y aun así esa página no se leyó. A DECIDIR EN LA SPEC: por qué la cadena actual no basta con impresión clara sobre papel de color (elección de canal, percentiles del estirado), qué se añade (oscurecido tipo gamma, estirado más agresivo, umbral adaptativo...) y cuándo (siempre o solo si el trazo es tenue, medido en la imagen), sin empeorar los casos con los que se calibró (carbonicas azul/rosa, calco, matricial). Calibrar con muestras reales de la 0692 y las de julio; interruptor por variable para volver atrás; medir con evals de IA1 antes de desplegar. RELACIONADAS: F-071 (toca preprocess.py: arregla el deskew, que hoy falla en todas las imágenes con OpenCV 5; esta va DETRÁS de F-071), F-083 (medición de IA1).
 
 ### F-050 · Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes
 

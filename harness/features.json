@@ -1072,6 +1072,19 @@
       "servicios": [
         "sv4-front"
       ]
+    },
+    {
+      "id": "F-090",
+      "title": "Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692)",
+      "description": "ORIGEN: petición del humano, 2026-10-21: «oscurecer y aumentar contraste va a mejorar la lectura; ha pasado con los albaranes de la 0692 de hormigón, al oscurecer el escaneado ha mejorado». Caso de referencia: correo de odomingo@ruesma.es del 2026-10-21 (asunto 0692, PDF de 2 páginas de ARIDOS ANFERSA): la página 2 (merge ea395a26, albarán 1766248632), impresa en amarillo claro sobre papel amarillo, salió sin proveedor ni fecha (confianza 44,8 %), y el humano comprobó que oscureciendo el escaneado se lee. HOY: ruesma_comun/imaging/preprocess.py ya realza (canal -> deskew -> iluminación -> estirado por percentiles -> nitidez; CLAHE retirado en jul 2026), y aun así esa página no se leyó. A DECIDIR EN LA SPEC: por qué la cadena actual no basta con impresión clara sobre papel de color (elección de canal, percentiles del estirado), qué se añade (oscurecido tipo gamma, estirado más agresivo, umbral adaptativo...) y cuándo (siempre o solo si el trazo es tenue, medido en la imagen), sin empeorar los casos con los que se calibró (carbonicas azul/rosa, calco, matricial). Calibrar con muestras reales de la 0692 y las de julio; interruptor por variable para volver atrás; medir con evals de IA1 antes de desplegar. RELACIONADAS: F-071 (toca preprocess.py: arregla el deskew, que hoy falla en todas las imágenes con OpenCV 5; esta va DETRÁS de F-071), F-083 (medición de IA1).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 13,
+      "servicios": [
+        "comun",
+        "sv2-api"
+      ]
     }
   ]
 }
