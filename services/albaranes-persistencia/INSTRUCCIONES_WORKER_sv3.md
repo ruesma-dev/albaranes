@@ -64,9 +64,10 @@ Flujo esperado:
 - `q-valoracion` con 1 mensaje si hubo contrato unico (Azure Storage Explorer).
 
 ## Nota sobre el envelope
-El piloto encadena con el envelope de **fase 1** de sv2 (`WORKER_CON_FASE2=false`).
-El pipeline de sv3 valida y persiste igual; cuando actives fase 2 en sv2, sv3
-recibira el envelope completo sin cambios.
+sv2 ejecuta SIEMPRE fase 1 + fase 2 (IA1 e IA2) y sv3 recibe el envelope final
+(`envelopes/{id}_phase_1.json`, con `meta.model` de la fase 2). Nota F-085
+(2026-10-21): la variable de fase 2 del piloto, `WORKER_CON_FASE2`, no existe
+para el código (no la lee nadie) y ya no se declara; sv3 no cambia por ello.
 
 ## Siguiente paso
 Adaptadores de produccion: `FuenteEnvelope` -> tabla donde sv2 persiste el

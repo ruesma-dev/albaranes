@@ -1,10 +1,10 @@
 {
   "$doc": "Precios de los modelos que mide F-083, en USD por millon de tokens, nivel estandar y API directa del proveedor. Fuente y fecha por modelo; inventario completo en progress/spec_F-083.md. Un precio con vigente_hasta pasa a su 'siguiente' despues de esa fecha; sin siguiente, la tabla esta caducada y el comparador para (R4). tramo_largo: precios cuando la entrada total supera umbral_entrada. imagen/pdf: true, false o null (la documentacion no lo confirma por modelo). herramienta_forzada: solo Claude. papel: referencia | candidato | excluido (con motivo).",
   "referencias": {
-    "IA1": "gemini-3.7-flash",
-    "IA2": "gpt-5.4",
-    "IA3": "claude-opus-4-8",
-    "IA4": "claude-opus-4-8"
+    "IA1": "gemini-4-argon",
+    "IA2": "gpt-6.1-sol",
+    "IA3": "gpt-6.1-sol",
+    "IA4": "gpt-6.1-sol"
   },
   "estimacion_por_defecto": {
     "IA1": {
@@ -43,8 +43,8 @@
       "imagen": true,
       "pdf": true,
       "herramienta_forzada": true,
-      "papel": "referencia",
-      "motivo": "referencia de IA3 e IA4 (infra/create_capps.ps1); fuera como candidato por decision del humano",
+      "papel": "candidato",
+      "motivo": "IA3 e IA4 antes de F-085 (vuelta atras, IA3_PROVIDER/IA4_PROVIDER=claude); solo como candidato de esas fases (F-085 design, M2), fuera de la tanda 1 por decision del humano",
       "notas": "legacy"
     },
     {
@@ -201,8 +201,8 @@
       "imagen": true,
       "pdf": true,
       "herramienta_forzada": null,
-      "papel": "referencia",
-      "motivo": "referencia de IA1 (infra/create_capps.ps1)",
+      "papel": "candidato",
+      "motivo": "IA1 antes de F-085 (vuelta atras); referencia hasta el paso 1 del 2026-10-20",
       "notas": "Descontinuado: Google lo redirige a gemini-3.8-flash. Sin precio propio: se factura como 3.8 (supuesto). Google no cobra escritura de cache implicita: se usa el precio de entrada (el SDK no informa escritura)."
     },
     {
@@ -227,7 +227,7 @@
       "pdf": true,
       "herramienta_forzada": null,
       "papel": "excluido",
-      "motivo": "hoy es lo mismo que la referencia de IA1 (Google redirige gemini-3.7-flash a gemini-3.8-flash); entra si el humo lo desmiente",
+      "motivo": "hoy es lo mismo que gemini-3.7-flash, la vuelta atras de IA1 (Google redirige gemini-3.7-flash a gemini-3.8-flash); entra si el humo lo desmiente",
       "notas": "Google no cobra escritura de cache implicita: se usa el precio de entrada (el SDK no informa escritura)."
     },
     {
@@ -251,8 +251,8 @@
       "imagen": true,
       "pdf": true,
       "herramienta_forzada": null,
-      "papel": "candidato",
-      "motivo": "",
+      "papel": "referencia",
+      "motivo": "referencia de IA1 (infra/create_capps.ps1, GEMINI_MODEL; F-085)",
       "notas": "cache de lectura implicita. Google no cobra escritura de cache implicita: se usa el precio de entrada (el SDK no informa escritura)."
     },
     {
@@ -269,8 +269,8 @@
       "imagen": true,
       "pdf": null,
       "herramienta_forzada": null,
-      "papel": "referencia",
-      "motivo": "referencia de IA2 (infra/create_capps.ps1)",
+      "papel": "candidato",
+      "motivo": "IA2 antes de F-085 (vuelta atras); referencia hasta el paso 1 del 2026-10-20",
       "notas": "La ficha no publica escritura de cache: se usa el precio de entrada (el SDK no la informa). PDF: ninguna ficha por modelo lo confirma (null)."
     },
     {
@@ -395,8 +395,8 @@
       "imagen": true,
       "pdf": null,
       "herramienta_forzada": null,
-      "papel": "candidato",
-      "motivo": "",
+      "papel": "referencia",
+      "motivo": "referencia de IA2, IA3 e IA4 (infra/create_capps.ps1: OPENAI_MODEL en sv2 y, con IA3_PROVIDER/IA4_PROVIDER=openai, en sv5; F-085)",
       "tramo_largo": {
         "umbral_entrada": 272000,
         "precio": {

@@ -1,6 +1,65 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-085 · `blocked` (2026-10-21): review APPROVED (pasada 2), fusionada en `dev`; implementación hecha (T1–T5, T2b, T8, T9); T0, T10 y T11 son MANUAL del humano; T6, T7 y T12 FUERA → F-086** — modelos de producción por fase. Spec en `specs/F-085-modelos-produccion/` (corregida por O3 de la review de F-083). Rama `feature/F-085-modelos-produccion`, worktree `../albaranes-F-085` (*junction* `.venv` de sv4: quitarla con `cmd /c rmdir` antes de `git worktree remove`), `dev` (`17ccef7`) fusionado. Rigor `critico`. Informe: `progress/impl_F-085.md`; mutación: `progress/mutacion_F-085.md`; `azure-apps` `0416ce3` sin push.
+
+- **Punto de partida:** el paso 1 que el humano aplicó a mano el 2026-10-20 (sv2 `ca-sv2-extraccion--0000004`: `GEMINI_MODEL=gemini-4-argon`, `OPENAI_MODEL=gpt-6.1-sol`; sv5 `ca-sv5-valuation--0000005`: secreto `openai-key` → KV `OPENAI-API-KEY`, `ENABLE_OPENAI=true`, `IA3_PROVIDER=openai`, `IA4_PROVIDER=openai`, `OPENAI_MODEL=gpt-6.1-sol`). `infra/create_capps.ps1` lo deja igual. IA3/IA4 **provisionales** hasta medir con el banco de F-084 (R24).
+- **Ampliación del líder (2026-10-21, T2b):** sv2 con las credenciales de sigrid-api en `create_capps.ps1` (secreto `sigrid-key` → KV `SIGRID-API-FUNCTION-KEY`, `SIGRID_API_BASE_URL`, `SIGRID_API_FUNCTION_KEY`, `SIGRID_API_DATABASE`): sv2 arrancaba sin ellas e IA1 recibía `obras_activas=NO DISPONIBLE`. **M-S HECHA**: aplicado por el humano el 2026-10-21 (`ca-sv2-extraccion--0000006`), verificado en el log («Obras activas CABLEADAS», 277 obras); `azure-apps` `81164ab`.
+- **D4 (O1 de `progress/review_F-083.md`), hecho aquí:** `evals/precios_modelos.json` con referencias IA1 `gemini-4-argon` e IA2–IA4 `gpt-6.1-sol` (los de antes, candidatos de vuelta atrás); el test R3 de F-083 lee `IA3_PROVIDER`/`IA4_PROVIDER` de sv5; los tests del comparador fijan sus propias referencias. Consecuencia para las MANUAL T13–T15 de F-083: la referencia que añade el comparador ya es la de producción (O1 resuelto).
+- **Desviaciones (justificadas en el informe):** los tests de `build_app` importan `app.py` con un sustituto de `fastapi` (el `.venv` de la raíz no lo trae); `forzar_herramienta` de la línea de wiring es la constante `FORZAR_HERRAMIENTA_CLAUDE = True` hasta F-086.
+
+#### F-085 · MANUAL del humano, comandos para PowerShell
+
+Todo desde `C:\Users\pgris\PycharmProjects\albaranes\infra`. Lo marcado **[ESCRIBE EN PRODUCCIÓN · humano]** necesita el sí expreso del humano; ningún agente lo lanza. Si un paso no da su VERDE, para ahí.
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes\infra
+. .\00_vars.ps1
+. .\00_capps_vars.ps1
+```
+
+**T0 · M0, solo lectura** (el paso 1 coincide con `create_capps.ps1`, R7):
+
+```powershell
+az containerapp show -n ca-sv2-extraccion -g $RG --query "properties.template.containers[0].env[?ends_with(name,'_MODEL') || starts_with(name,'IA_') || starts_with(name,'SIGRID_') || name=='WORKER_CON_FASE2'].{n:name,v:value,s:secretRef}" -o table
+az containerapp show -n ca-sv5-valuation -g $RG --query "properties.template.containers[0].env[?ends_with(name,'_MODEL') || starts_with(name,'IA') || starts_with(name,'ENABLE_') || name=='OPENAI_API_KEY'].{n:name,v:value,s:secretRef}" -o table
+az containerapp show -n ca-sv5-valuation -g $RG --query "properties.configuration.secrets[].name" -o tsv
+az containerapp revision list -n ca-sv5-valuation -g $RG --query "[?properties.active].name" -o tsv
+```
+
+VERDE: sv2 `GEMINI_MODEL=gemini-4-argon`, `OPENAI_MODEL=gpt-6.1-sol`; sv5 `ENABLE_OPENAI=true`, `IA3_PROVIDER=openai`, `IA4_PROVIDER=openai`, `OPENAI_MODEL=gpt-6.1-sol`, `OPENAI_API_KEY` con `s=openai-key`, y `openai-key` en los secretos. Pegar la salida y la revisión activa en `progress/impl_F-085.md` (T0).
+
+**M-S · sigrid-api en sv2 (ampliación) — HECHA el 2026-10-21** (rev. `--0000006`, «Obras activas CABLEADAS», 277 obras). Comandos que se usaron, como referencia:
+
+```powershell
+az containerapp secret set -n ca-sv2-extraccion -g $RG --secrets "sigrid-key=keyvaultref:$KV_URI/secrets/SIGRID-API-FUNCTION-KEY,identityref:$MI_ID"
+az containerapp update -n ca-sv2-extraccion -g $RG --set-env-vars "SIGRID_API_BASE_URL=$SIGRID_BASE_URL" SIGRID_API_FUNCTION_KEY=secretref:sigrid-key "SIGRID_API_DATABASE=$SIGRID_DB"
+az containerapp logs show -n ca-sv2-extraccion -g $RG --tail 300 | Select-String "Obras activas|faltan credenciales"
+```
+
+VERDE: «Obras activas CABLEADAS» y ningún «faltan credenciales SIGRID_API_*» en la revisión nueva (sv2 escala a cero: puede hacer falta un albarán para ver el log). Vuelta atrás: `--remove-env-vars SIGRID_API_BASE_URL SIGRID_API_FUNCTION_KEY SIGRID_API_DATABASE`.
+
+**P2/P5 en sv2 (opcional, sin efecto en el comportamiento) — [ESCRIBE EN PRODUCCIÓN · humano]:**
+
+```powershell
+az containerapp update -n ca-sv2-extraccion -g $RG --remove-env-vars WORKER_CON_FASE2
+az containerapp update -n ca-sv2-extraccion -g $RG --set-env-vars IA_SEGUNDA_FASE=openai
+```
+
+**T10 · M4, desplegar solo sv5 — [ESCRIBE EN PRODUCCIÓN · humano].** Tras APPROVED, fusión en `dev` e `init.sh` en verde en el árbol principal; **antes, T0 en verde** (con R8/R9, sv5 no arranca con una combinación incoherente).
+
+```powershell
+az containerapp show -n ca-sv5-valuation -g $RG --query "properties.template.containers[0].image" -o tsv
+Set-DeployTag
+.\deploy.ps1 -Only sv5
+.\check_deploy.ps1 -ConModelos
+az containerapp logs show -n ca-sv5-valuation -g $RG --tail 300 | Select-String "wiring|proveedor=|IA4 proveedor|HTTPException|Traceback"
+```
+
+VERDE: sv5 en el tag nuevo y `[svc5][wiring] IA3=openai/gpt-6.1-sol IA4=openai/gpt-6.1-sol forzar_herramienta=True`, sin WARNING de «IA3 llamará a TODOS», sin `Traceback`. Vuelta atrás: `az containerapp update -n ca-sv5-valuation -g $RG --image <la imagen apuntada>`. Después, M1 de design §5 (Log Analytics: modelos servidos y volumen de 30 días).
+
+**T11 · M2, medición (cuesta dinero; humano):** con F-083 T13–T15, comandos en design §5 M2 y en el bloque de F-083 de abajo. IA1 e IA2 ya; IA3 e IA4 solo con F-084 `done`. Veredicto de design §6 por fase (consolidar o M3) y coste mensual con Argon a 4/20, anotados aquí.
+
 **F-083 · `blocked` (2026-10-21): review APPROVED (pasada 2), fusionada en `dev`; espera las MANUAL T13–T15 del humano (pago). O6 de la review (campo de uso opcional ausente = 0 sin `uso_incompleto`) ACEPTADO por el humano el 2026-10-21. Antes: PARADA 1 resuelta el 2026-10-19 (tanda 1 de 8 modelos, P5 = (a)); T1–T12 y T16 hechas, review pasada 1 CHANGES_REQUESTED solo documental (aplicada); pendientes T13–T15 del humano, que antes debe decidir O1 y O2** — comparar modelos de IA por fase (IA1–IA4) con acierto y coste por albarán. Spec en `specs/F-083-comparar-modelos/`; inventario de modelos con precio, fuente y fecha en `progress/spec_F-083.md`. Rama `feature/F-083-comparar-modelos`, worktree `../albaranes-F-083` (creado desde `dev` `7facc86`; *junction* `.venv` de sv4 puesta: quitarla con `cmd /c rmdir` antes de `git worktree remove`). Rigor `critico`. Toca `evals/` y, solo con P5 = (a), un parámetro opcional del cliente de Claude en comun; ningún servicio cambia en producción.
 
 Estado del implementer (2026-10-21): **T1–T12 y T16 hechas** (un commit por tarea); fase RED, decisiones, riesgos y evidencias en `progress/impl_F-083.md`. `bash harness/init.sh` en verde en el worktree (cobertura de lo cambiado 99,4 %). **T16, mutación VÁLIDA**: la campaña completa del reviewer sobre `96a59a3`, 3 workers, **366 mutantes, 366 muertos, 0 supervivientes**, 0 timeouts, 21.907 s (`progress/mutacion_F-083.md`, con su fila en el inventario de F-039). Las dos campañas anteriores del implementer quedaron «NO VÁLIDA» por la base de cierre con la máquina cargada (`progress/impl_F-083_mutacion.md`). Desviaciones (justificadas en el informe): T9 y T10 antes que T8; `procesar` y `lanzar` viven en `medidor.py`, compartidos por los dos subprocesos. T13–T15 son MANUAL del humano, comandos abajo.

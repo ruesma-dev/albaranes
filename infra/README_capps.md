@@ -65,11 +65,31 @@ que solo exista en el código nuevo.
 ### Cambiar modelo LLM sin reconstruir
 
 ```powershell
-.\set_models.ps1 -Anthropic claude-opus-4-7
+.\set_models.ps1 -Openai gpt-6.1-sol             # IA2 (sv2) e IA3/IA4 (sv5)
+.\set_models.ps1 -Openai gpt-5.4 -Solo sv2       # solo IA2
+.\set_models.ps1 -Gemini gemini-4-argon          # IA1 (sv2)
+.\check_deploy.ps1 -ConModelos                   # modelos y proveedor por fase
 ```
 
-Toca sv2 (los tres proveedores) y sv5 (solo Claude). Persiste solo hasta la
-próxima recreación: fija también `$ANTHROPIC_MODEL` en `create_capps.ps1`.
+Qué variable gobierna cada fase (F-085; tabla completa, cuota y vuelta atrás en
+`azure-apps/albaranes.md`, «Modelos de IA por fase»):
+
+| Fase | App | Proveedor | Modelo (desde el 2026-10-20) |
+|---|---|---|---|
+| IA1 | sv2 | `IA_PRIMERA_FASE=gemini` | `GEMINI_MODEL=gemini-4-argon` |
+| IA2 | sv2 | `IA_SEGUNDA_FASE=openai` | `OPENAI_MODEL=gpt-6.1-sol` |
+| IA3 | sv5 | `IA3_PROVIDER=openai` | `OPENAI_MODEL=gpt-6.1-sol` |
+| IA4 | sv5 | `IA4_PROVIDER=openai` | `OPENAI_MODEL=gpt-6.1-sol` |
+
+IA2 corre siempre: el worker de sv2 hace fase 1 + fase 2 sin condición. La
+antigua `WORKER_CON_FASE2` no existe para el código (no la lee nadie) y ya no se
+declara. sv5 habilita OpenAI (`ENABLE_OPENAI=true`, secreto `openai-key`) además
+de Claude, que queda ocioso con `ANTHROPIC_MODEL` como vuelta atrás de IA3/IA4;
+sv5 no arranca si `IA3_PROVIDER`/`IA4_PROVIDER` nombran un proveedor apagado.
+`-Openai` toca sv2 **y** sv5; `-Gemini`, solo sv2; `-Anthropic`, los dos. Un
+Claude 5.5 en sv5 necesita `ANTHROPIC_FORZAR_HERRAMIENTA=false`, que sv5 aún no
+lee (F-086). Persiste solo hasta la próxima recreación: fija también
+`$GEMINI_MODEL` / `$OPENAI_MODEL` / `$ANTHROPIC_MODEL` en `create_capps.ps1`.
 
 **Modelos probados** (24-jul-2026): `claude-sonnet-4-6` estable;
 `claude-opus-4-7` devolvía el JSON doblemente anidado y tumbaba sv5 con un

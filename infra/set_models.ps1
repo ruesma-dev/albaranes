@@ -1,10 +1,23 @@
 ﻿# set_models.ps1
-# Cambia EN CALIENTE los modelos LLM de las apps que los usan (sv2 los tres
-# proveedores, sv5 solo Claude) sin reconstruir imagenes. Uso:
+# Cambia EN CALIENTE los modelos LLM de las apps que los usan sin reconstruir
+# imagenes. Que variable vive en que app (F-085):
+#   -Gemini    -> GEMINI_MODEL     en sv2           (IA1)
+#   -Openai    -> OPENAI_MODEL     en sv2 Y en sv5  (IA2 en sv2; IA3 e IA4 en sv5)
+#   -Anthropic -> ANTHROPIC_MODEL  en sv2 y en sv5  (hoy ocioso en los dos)
+# -Solo sv2 / -Solo sv5 limita el cambio a esa app (p.e. cambiar IA2 sin
+# tocar IA3/IA4). Uso:
 #
 #   . .\00_vars.ps1
-#   .\set_models.ps1 -Anthropic claude-sonnet-5
-#   .\set_models.ps1 -Anthropic claude-opus-4-7 -Openai gpt-5.4
+#   .\set_models.ps1 -Openai gpt-6.1-sol
+#   .\set_models.ps1 -Openai gpt-5.4 -Solo sv2
+#   .\set_models.ps1 -Gemini gemini-4-argon
+#
+# OJO Claude 5.5 (claude-opus-5-5, claude-sonnet-5-5) y Fable 5.1 en sv5: su
+# API rechaza con 400 la herramienta forzada que pide el cliente de comun.
+# Necesitan ANTHROPIC_FORZAR_HERRAMIENTA=false, que sv5 aun NO lee (F-086):
+# hasta entonces, no los pongas en sv5 con IA3_PROVIDER/IA4_PROVIDER=claude.
+# Que proveedor usa cada fase de sv5 lo deciden IA3_PROVIDER/IA4_PROVIDER, no
+# este script.
 #
 # --set-env-vars solo toca las variables nombradas: el resto del entorno y
 # los secretref (API keys via Key Vault) quedan intactos. Cada cambio crea
@@ -23,7 +36,9 @@
 param(
     [string] $Anthropic = "",
     [string] $Openai    = "",
-    [string] $Gemini    = ""
+    [string] $Gemini    = "",
+    [ValidateSet("", "sv2", "sv5")]
+    [string] $Solo      = ""
 )
 
 $ErrorActionPreference = "Continue"
@@ -56,10 +71,11 @@ if (-not ($Anthropic -or $Openai -or $Gemini)) {
     throw "Indica al menos un modelo: -Anthropic / -Openai / -Gemini"
 }
 
-# Que variable vive en que app (sv2: los tres; sv5: solo Anthropic).
+# Que variable vive en que app (sv2: los tres; sv5: Anthropic y, desde F-085,
+# OpenAI, que es el modelo de IA3 e IA4).
 $destino = [ordered]@{
     "sv2" = @("ANTHROPIC_MODEL", "OPENAI_MODEL", "GEMINI_MODEL")
-    "sv5" = @("ANTHROPIC_MODEL")
+    "sv5" = @("ANTHROPIC_MODEL", "OPENAI_MODEL")
 }
 $valor = @{
     "ANTHROPIC_MODEL" = $Anthropic
@@ -70,6 +86,7 @@ $valor = @{
 $sfx = "m" + (Get-Date -Format "MMddHHmm")
 $i = 0
 foreach ($s in @($destino.Keys)) {
+    if ($Solo -and $s -ne $Solo) { continue }
     $app = $AppMap[[string]$s]
     if (-not $app) { Write-Host "  (sin app para '$s')" -ForegroundColor DarkGray; continue }
     $sets = @()

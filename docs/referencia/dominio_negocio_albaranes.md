@@ -447,11 +447,13 @@ sv2/sv3/sv6 escalan **0→N** con el scaler de cola (ej. `q-valoracion-scaler`:
   configuración de producción va como env vars de la Container App
   (`create_capps.ps1` al crear; `az containerapp update --set-env-vars` en
   caliente). Un `.env` local con `ANTHROPIC_MODEL=x` NO afecta a Azure.
-- **Cambio de modelos en caliente**: `.\set_models.ps1 -Anthropic <m>`
-  (sv2: los tres proveedores; sv5: solo Claude). `--set-env-vars` solo toca
-  las variables nombradas (secretrefs intactos), crea revisión nueva y fuerza
-  modo single. **No persiste** ante una recreación: fijar también
-  `$ANTHROPIC_MODEL` en `create_capps.ps1`.
+- **Cambio de modelos en caliente**: `.\set_models.ps1 -Openai <m>` (sv2 y sv5),
+  `-Gemini <m>` (sv2) o `-Anthropic <m>` (sv2 y sv5), con `-Solo sv2|sv5` para
+  limitarlo a una app. Desde F-085 sv5 ya no es «solo Claude»: IA3 e IA4 van con
+  OpenAI (`IA3_PROVIDER`/`IA4_PROVIDER`); tabla por fase en `docs/ARCHITECTURE.md`.
+  `--set-env-vars` solo toca las variables nombradas (secretrefs intactos), crea
+  revisión nueva y fuerza modo single. **No persiste** ante una recreación: fijar
+  también `$GEMINI_MODEL` / `$OPENAI_MODEL` / `$ANTHROPIC_MODEL` en `create_capps.ps1`.
 - **Recreación completa**: `create_capps.ps1` (apps + env + scale rules +
   identity + secrets). Tras recrear, redeploy normal.
 
