@@ -1,17 +1,37 @@
 <!-- progress/review_F-085.md -->
-Revisión completa (pasada 1) · `dev...HEAD` con HEAD `969063c` (merge-base `17ccef7`)
+Revisión incremental desde 82f72a6 (pasada 2) · HEAD `28711ac`; la pasada 1 fue completa sobre `969063c`
 
 # F-085 · Review del reviewer: modelos de producción por fase
 
-**Veredicto: CHANGES_REQUESTED.** Los dos cambios pedidos son solo documentales. Código, tests,
-infra y mutación están bien. El O3 de F-083 se corrigió en la spec, pero sigue igual en la ficha
-de la feature (`features.json` y `BACKLOG.md`). `azure-apps` §14 da por pendiente algo que ya
-está en producción.
+**Veredicto: APPROVED.** La pasada 2 aplica los cambios 1 y 2 y las observaciones O1 y O5. El
+delta (`28711ac`) solo toca documentación, `harness/` y `progress/`: no hay código, no hay tests
+y la infra no cambia. Por eso no se repite la mutación. Lo aprobado en la pasada 1 vale tal cual.
 
-**Rigor:** `critico`, declarado en `features.json`. Exige fase RED, cobertura ≥ 80 % de lo
-cambiado, mutación completa con 0 supervivientes y las MANUAL con su comando exacto.
+**Rigor:** `critico`, declarado en `features.json`. Exige fase RED, cobertura ≥ 80 %, mutación
+completa con 0 supervivientes y las MANUAL con su comando exacto.
 
-## Verificación ejecutada por el reviewer
+## Pasada 2 (delta `82f72a6..28711ac`)
+
+- **Ficheros:** `BACKLOG.md`, `harness/features.json`, `docs/ARCHITECTURE.md`,
+  `docs/referencia/dominio_negocio_albaranes.md`, `services/albaran-valoracion-api/sv5.md`,
+  `progress/current.md` y `progress/impl_F-085.md`. Mi `review_F-085.md` sigue sin tocar desde `14f6e9e`.
+- **`init.sh`** completo: ENTORNO LISTO. Mismas suites en verde (sv5 96) y COBERTURA `[OK]`
+  44/44. TAMAÑO `[OK]` (impl 212/220, review 139/140). El árbol quedó limpio.
+- **Cambio 1 [x].** La `description` de F-085 dice ahora «P1 = (a): fuera de F-085; F-083 T11 solo
+  añadió `forzar_herramienta`; el arreglo de `_parse_response` va a F-086». El `title` dice «IA3
+  e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086)». `BACKLOG.md` está regenerado y es coherente.
+- **Cambio 2 [x].** `azure-apps` `81164ab` (sin push): §14 da sv2 `--0000006` y «aplicado el
+  2026-10-21, verificado en el log». M-S consta como HECHA en `current.md`.
+- **O1 [x].** ARCHITECTURE: `WORKER_CON_FASE2` se quitó de `create_capps.ps1` y sigue en Azure
+  hasta P2.
+- **O5 [x].** `sv5.md` documenta `IA3_PROVIDER`/`IA4_PROVIDER`, R8/R9, la línea de wiring y la
+  decisión 8. Su `/health` `["openai","claude"]` cuadra con `enabled_llm_providers` (test R9). La
+  ficha de referencia está al día.
+- **Barrido de secretos** del delta y de `81164ab`: GUID, IPv4, `sk-`, `AIza`, `azurewebsites`,
+  `vault.azure`, `/subscriptions/`, `password=`, `AccountKey`, `tenant` y correos. Sin
+  resultados: solo hay nombres de revisión, `ruesma` y nombres de secreto.
+
+## Verificación de la pasada 1 (sobre `969063c`, vigente)
 
 - **`bash harness/init.sh`** en el worktree: ENTORNO LISTO (exit 0).
   - Suites: raíz 1638, sv1 205, sv2 485, sv3 1576, sv4 1774, **sv5 96**, sv6 473 (+1 skip) y
@@ -69,7 +89,7 @@ cambiado, mutación completa con 0 supervivientes y las MANUAL con su comando ex
 - **C3** [x] hexagonal (wiring en `interface_adapters`, validación en `config`, dominio intacto)
   · [x] primera línea con la ruta · [x] sin print, secretos ni dependencias nuevas · [x] trampas
   de dominio N/A: ni SQL, ni merge, ni importes.
-- **C3 bis** N/A: no toca `docs/referencia/`.
+- **C3 bis** (la pasada 2 edita `dominio_negocio_albaranes.md`, un documento existente, no nuevo) [x] cabecera intacta · [x] sin originales · [x] barrido hecho, sin resultados · N/A: no hubo nada que redactar.
 - **C4** [x] trazabilidad (tabla de abajo) · [x] sin red ni BBDD (dobles de los SDK, `az` falso
   con `az.cmd` trampa, `AZURE_CONFIG_DIR` vacío) · [x] MANUAL T0, M-S, P2/P5, T10 y T11 en
   `current.md` con su comando exacto.
@@ -85,7 +105,7 @@ cambiado, mutación completa con 0 supervivientes y las MANUAL con su comando ex
     T0, T10 y T11 son MANUAL del humano, pendientes como en F-083. T6, T7 y T12, FUERA → F-086
     (P3).
   - [x] no hay ficheros temporales.
-  - **[ ] `features.json` no refleja el estado real** (cambio 1).
+  - [x] `features.json` refleja el estado real (cambio 1, aplicado en la pasada 2).
 
 ## Cobertura: requisito → test
 
@@ -99,41 +119,20 @@ cambiado, mutación completa con 0 supervivientes y las MANUAL con su comando ex
 | R11, R12 | `test_f085_wiring.py::test_f085_r11_*` y `r12_*`: función pura y `build_app` con caplog |
 | R13, R14 | `test_f085_r13_*` (IA4 solo openai, IA3 primario openai, `build_app`) y `test_f085_r14_*` |
 | R15–R19, R27 | FUERA → F-086 (PARADA 1, P1/P3) |
-| R20, R21 | Revisión: `docs/ARCHITECTURE.md` «APIs LLM» y `azure-apps/albaranes.md` §14 (ver el cambio 2) |
+| R20, R21 | Revisión: `docs/ARCHITECTURE.md` «APIs LLM» y `azure-apps/albaranes.md` §14 (§14 al día en `81164ab`) |
 | R22 | `test_f085_r22_*` (×6) |
 | R23–R26 | MANUAL T11 del humano. R24 provisional en `current.md` y en `azure-apps` [x] |
 
 ## Cambios requeridos
 
-1. **O3 sigue sin corregir en la ficha de la feature.**
-   - `harness/features.json:1012`, `description` de F-085, dice «P1 = (a) el parseo de respaldo
-     de Claude lo arregla F-083 T11». Se replica en `BACKLOG.md:144`.
-   - Hay que reescribirlo como en design §9: «P1 = (a): fuera de F-085; F-083 T11 solo añadió
-     `forzar_herramienta`; el arreglo de `_parse_response` va a F-086». Después se regenera
-     `BACKLOG.md` con `init.sh`.
-   - Recomendado en el mismo commit: el `title` aún dice «IA3 claude-opus-5-5». Ponerlo al día,
-     p. ej. «… IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086)».
-2. **`azure-apps/albaranes.md` §14 se quedó atrás** (regla de `azure-apps`).
-   - La viñeta «sv2 consume sigrid-api» dice «Lo aplica el humano a mano».
-   - Ya está aplicado: el reviewer lo leyó en `ca-sv2-extraccion--0000006` y el líder vio en el
-     log «Obras activas CABLEADAS», 277 obras. El recuadro inicial aún cita sv2 `--0000004`.
-   - Hay que anotar «aplicado el 2026-10-21 (rev. `--0000006`), verificado en el log», en un
-     commit nuevo en `azure-apps`, sin push.
-   - En el mismo trabajo, marcar M-S como hecha en el bloque de F-085 de `progress/current.md`.
+Ninguno. Los de la pasada 1 están aplicados en `28711ac` y en `azure-apps` `81164ab`.
 
-## Observaciones (no bloquean)
+## Observaciones que siguen abiertas (no bloquean)
 
-- **O1.** `docs/ARCHITECTURE.md:779` dice que `WORKER_CON_FASE2` «se quitó». Se quitó de
-  `create_capps.ps1`, pero en Azure sigue (`false`) hasta P2. Conviene precisarlo.
-- **O2.** sv5 desplegado lleva `GEMINI_MODEL=gemini-3.7-flash`, que `create_capps.ps1` no
-  declara. Es inocuo (Gemini está apagado), pero saldrá en `-ConModelos`; puede retirarse en el
-  `update` de P2.
-- **O3.** Ruff, dos avisos nuevos y menores: `settings.py:326` UP037 y `test_f085_settings.py:7` I001.
-- **O4.** `test_f085_wiring.py` mete un `fastapi` sustituto en `sys.modules`: un test futuro con
-  `importorskip("fastapi")` no se saltaría.
-- **O5.** Textos viejos fuera de R22: `docs/referencia/dominio_negocio_albaranes.md:451` («sv5:
-  solo Claude») y `sv5.md`, que no cuenta R8/R9 ni la línea de wiring.
-
-**Pasada 2:** incremental desde `82f72a6`, solo documental: basta con `init.sh` en verde.
-**Automejora (propuesta)** para `CHECKPOINTS.md` C5: «`features.json` refleja el estado real,
-**incluida la `description`** cuando una review posterior corrige una decisión de la PARADA 1».
+- **O2.** sv5 desplegado lleva un `GEMINI_MODEL=gemini-3.7-flash` sobrante (Gemini apagado); puede
+  retirarse en el `update` de P2.
+- **O3.** Ruff: `settings.py:326` UP037 y `test_f085_settings.py:7` I001, dentro de la deuda.
+- **O4.** El `fastapi` sustituto de `test_f085_wiring.py` en `sys.modules`.
+- **Pendiente del humano:** T0 (M0), P2/P5, T10 (despliegue de sv5) y T11.
+- **Automejora (propuesta)** para `CHECKPOINTS.md` C5: «`features.json` refleja el estado real,
+  **incluida la `description`** cuando una review posterior corrige una decisión de la PARADA 1».
