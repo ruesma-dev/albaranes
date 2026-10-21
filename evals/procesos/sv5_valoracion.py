@@ -234,25 +234,47 @@ def proyectar_ia4(conciliaciones: list[dict], envelope: dict) -> list[dict]:
 # --- Subproceso: aquí y solo aquí se importa sv5 ----------------------------
 
 
-def _clientes_reales(proveedor: str):  # pragma: no cover - subproceso
-    """Un `ProviderClientSpec` de sv5 con el cliente real del proveedor."""
-    from application.services.valuation_extraction_service import ProviderClientSpec
+def cliente_llm(
+    proveedor: str, tool_name: str, modelo: str | None, call_logger, forzar_herramienta: bool
+):
+    """(modelo, cliente real de comun) de un proveedor, para sv2 y para sv5.
+
+    Con `modelo=None`, `call_logger=None` y `forzar_herramienta=True`, lo de
+    siempre: el modelo del entorno (o el de `MODELOS_POR_PROVEEDOR`) y el
+    cliente sin logger. El comparador de
+    modelos (F-083) pide un modelo concreto, mete su medidor como `call_logger`
+    y, solo para los Claude que rechazan la herramienta forzada,
+    `forzar_herramienta=False`: el argumento solo llega al cliente entonces.
+    """
     from ruesma_comun.llm.claude_messages_client import ClaudeMessagesVisionClient
     from ruesma_comun.llm.gemini_genai_client import GeminiGenAiVisionClient
     from ruesma_comun.llm.openai_responses_client import OpenAIResponsesVisionClient
 
     clave = os.environ.get(CLAVES_POR_PROVEEDOR[proveedor], "")
     variable, por_defecto = MODELOS_POR_PROVEEDOR[proveedor]
-    modelo = os.environ.get(variable, por_defecto)
+    modelo = modelo or os.environ.get(variable, por_defecto)
+    extra = {} if call_logger is None else {"call_logger": call_logger}
 
     if proveedor == "claude":
-        cliente = ClaudeMessagesVisionClient(
-            api_key=clave, tool_name="emit_valuation_result"
-        )
+        if not forzar_herramienta:
+            extra["forzar_herramienta"] = False
+        cliente = ClaudeMessagesVisionClient(api_key=clave, tool_name=tool_name, **extra)
     elif proveedor == "gemini":
-        cliente = GeminiGenAiVisionClient(clave)
+        cliente = GeminiGenAiVisionClient(clave, **extra)
     else:
-        cliente = OpenAIResponsesVisionClient(clave)
+        cliente = OpenAIResponsesVisionClient(clave, **extra)
+    return modelo, cliente
+
+
+def _clientes_reales(
+    proveedor: str, modelo: str | None = None, call_logger=None, forzar_herramienta: bool = True
+):
+    """Un `ProviderClientSpec` de sv5 con el cliente real del proveedor."""
+    from application.services.valuation_extraction_service import ProviderClientSpec
+
+    modelo, cliente = cliente_llm(
+        proveedor, "emit_valuation_result", modelo, call_logger, forzar_herramienta
+    )
     return ProviderClientSpec(provider=proveedor, model_name=modelo, client=cliente)
 
 
@@ -315,8 +337,16 @@ def _contexto_de_dict(datos: dict):  # pragma: no cover - subproceso
     )
 
 
-def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:  # pragma: no cover - subproceso
-    """IA3 + IA4 reales caso a caso, EN SECUENCIA. Requiere sv5 en path."""
+def servicios(
+    especificacion, proveedor: str, prompt_key: str = "valuation_es",
+    prompt_key_ia4: str = "conciliacion_es",
+):  # pragma: no cover - subproceso
+    """(valorar, conciliar) de sv5 con UNA especificación. Requiere sv5 en path.
+
+    `valorar(contexto)` devuelve las líneas valoradas por IA3 y
+    `conciliar(envelope, contexto)`, las conciliaciones de IA4. Los usan el
+    runner y el comparador de modelos (F-083).
+    """
     from application.services.conciliacion_service import ConciliacionService
     from application.services.schema_registry import SchemaRegistry
     from application.services.valuation_extraction_service import (
@@ -324,32 +354,25 @@ def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:  # pragma: no cover -
     )
     from infrastructure.prompts.yaml_prompt_repository import YamlPromptRepository
 
-    proveedor = trabajo.get("proveedor", "gemini")
-    fabrica = fabrica or _clientes_reales
-    especificacion = fabrica(proveedor)
-
     prompts = YamlPromptRepository(RAIZ_SV5 / "config" / "prompts.yaml")
     esquemas = SchemaRegistry()
     valoracion = ValuationExtractionService(
         providers=[especificacion],
         prompt_repo=prompts,
         schema_registry=esquemas,
-        prompt_key=trabajo.get("prompt_key", "valuation_es"),
+        prompt_key=prompt_key,
         ia3_provider=proveedor,
     )
     conciliacion = ConciliacionService(
         providers=[especificacion],
         prompt_repo=prompts,
         schema_registry=esquemas,
-        prompt_key=trabajo.get("prompt_key_ia4", "conciliacion_es"),
+        prompt_key=prompt_key_ia4,
     )
 
     def valorar(contexto: dict) -> list:
         salida = valoracion.extract(context=_contexto_de_dict(contexto), pdf_attachment=None)
         return salida[proveedor].parsed.model_dump().get("lineas", [])
-
-    def construir_envelope(contexto: dict, lineas: list) -> dict:
-        return envelope_desde(contexto, lineas, proveedor, especificacion.model_name)
 
     def conciliar(envelope: dict, contexto: dict) -> list[dict]:
         documento = conciliacion.conciliar(
@@ -357,6 +380,24 @@ def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:  # pragma: no cover -
             lineas_contrato=contexto.get("lineas_contrato", []),
         )
         return documento.model_dump().get("conciliaciones", [])
+
+    return valorar, conciliar
+
+
+def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:  # pragma: no cover - subproceso
+    """IA3 + IA4 reales caso a caso, EN SECUENCIA. Requiere sv5 en path."""
+    proveedor = trabajo.get("proveedor", "gemini")
+    fabrica = fabrica or _clientes_reales
+    especificacion = fabrica(proveedor)
+    valorar, conciliar = servicios(
+        especificacion,
+        proveedor,
+        trabajo.get("prompt_key", "valuation_es"),
+        trabajo.get("prompt_key_ia4", "conciliacion_es"),
+    )
+
+    def construir_envelope(contexto: dict, lineas: list) -> dict:
+        return envelope_desde(contexto, lineas, proveedor, especificacion.model_name)
 
     resultados = procesar_casos(
         trabajo.get("casos", []),
