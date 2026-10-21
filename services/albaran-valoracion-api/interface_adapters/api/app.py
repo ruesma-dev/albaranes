@@ -109,52 +109,9 @@ def build_app(settings: Settings) -> FastAPI:
         settings.ia_logging_dir if call_logger.enabled else "n/a",
     )
 
-    providers: list[ProviderClientSpec] = []
-    if settings.claude_enabled:
-        providers.append(
-            ProviderClientSpec(
-                provider="claude",
-                model_name=settings.anthropic_model,
-                client=ClaudeMessagesVisionClient(
-                    api_key=settings.anthropic_api_key or "",
-                    max_tokens=settings.anthropic_max_tokens,
-                    timeout_s=settings.anthropic_timeout_s,
-                    retry_policy=retry_policy,
-                    call_logger=call_logger,
-                    # El cliente canónico (ruesma-albaranes-comun) es
-                    # compartido con sv2: cada servicio fija su tool.
-                    tool_name="emit_valuation_result",
-                    tool_description=(
-                        "Devuelve la valoración estructurada de las líneas del albarán "
-                        "conforme al esquema exigido. Llama SIEMPRE y SOLO a esta herramienta."
-                    ),
-                ),
-            )
-        )
-    if settings.gemini_enabled:
-        providers.append(
-            ProviderClientSpec(
-                provider="gemini",
-                model_name=settings.gemini_model,
-                client=GeminiGenAiVisionClient(
-                    api_key=settings.gemini_api_key or "",
-                    retry_policy=retry_policy,
-                    call_logger=call_logger,
-                ),
-            )
-        )
-    if settings.openai_enabled:
-        providers.append(
-            ProviderClientSpec(
-                provider="openai",
-                model_name=settings.openai_model,
-                client=OpenAIResponsesVisionClient(
-                    settings.openai_api_key or "",
-                    retry_policy=retry_policy,
-                    call_logger=call_logger,
-                ),
-            )
-        )
+    providers = construir_proveedores(
+        settings, retry_policy=retry_policy, call_logger=call_logger
+    )
 
     extraction_service = ValuationExtractionService(
         providers=providers,
@@ -164,14 +121,10 @@ def build_app(settings: Settings) -> FastAPI:
         ia3_provider=settings.ia3_provider,
     )
     # IA4: proveedor dedicado si se configura (IA4_PROVIDER); si no, el
-    # primero habilitado. ConciliacionService usa providers[0] del que
-    # le pasemos, asi que filtramos la lista al elegido.
-    _ia4_sel = (settings.ia4_provider or "").strip().lower()
-    _ia4_providers = (
-        [p for p in providers if p.provider == _ia4_sel] or providers
-    )
+    # primero habilitado (ConciliacionService usa providers[0]).
+    ia4_providers = seleccionar_ia4(providers, settings.ia4_provider)
     conciliacion_service = ConciliacionService(
-        providers=_ia4_providers,
+        providers=ia4_providers,
         prompt_repo=prompt_repo,
         schema_registry=schema_registry,
         prompt_key=settings.ia4_prompt_key,
@@ -341,3 +294,83 @@ def build_app(settings: Settings) -> FastAPI:
             ) from exc
 
     return app
+
+
+# ------------------------------------------------------------------ #
+# (F-085) Wiring de proveedores: funciones puras que usa build_app.
+# ------------------------------------------------------------------ #
+
+
+def construir_proveedores(
+    settings: Settings,
+    *,
+    retry_policy: RetryPolicy,
+    call_logger: LlmCallLogger,
+) -> list[ProviderClientSpec]:
+    """(F-085 R14) Los proveedores LLM habilitados, en el orden de siempre.
+
+    Orden claude, gemini, openai (el del primario de IA3 cuando
+    ``IA3_PROVIDER`` está vacía). Construir los clientes de los SDK no abre
+    conexión: se puede probar sin red, sin BBDD y sin ``build_app``.
+    """
+    providers: list[ProviderClientSpec] = []
+    if settings.claude_enabled:
+        providers.append(
+            ProviderClientSpec(
+                provider="claude",
+                model_name=settings.anthropic_model,
+                client=ClaudeMessagesVisionClient(
+                    api_key=settings.anthropic_api_key or "",
+                    max_tokens=settings.anthropic_max_tokens,
+                    timeout_s=settings.anthropic_timeout_s,
+                    retry_policy=retry_policy,
+                    call_logger=call_logger,
+                    # El cliente canónico (ruesma-albaranes-comun) es
+                    # compartido con sv2: cada servicio fija su tool.
+                    tool_name="emit_valuation_result",
+                    tool_description=(
+                        "Devuelve la valoración estructurada de las líneas del albarán "
+                        "conforme al esquema exigido. Llama SIEMPRE y SOLO a esta herramienta."
+                    ),
+                ),
+            )
+        )
+    if settings.gemini_enabled:
+        providers.append(
+            ProviderClientSpec(
+                provider="gemini",
+                model_name=settings.gemini_model,
+                client=GeminiGenAiVisionClient(
+                    api_key=settings.gemini_api_key or "",
+                    retry_policy=retry_policy,
+                    call_logger=call_logger,
+                ),
+            )
+        )
+    if settings.openai_enabled:
+        providers.append(
+            ProviderClientSpec(
+                provider="openai",
+                model_name=settings.openai_model,
+                client=OpenAIResponsesVisionClient(
+                    settings.openai_api_key or "",
+                    retry_policy=retry_policy,
+                    call_logger=call_logger,
+                ),
+            )
+        )
+    return providers
+
+
+def seleccionar_ia4(
+    providers: list[ProviderClientSpec],
+    ia4_provider: str | None,
+) -> list[ProviderClientSpec]:
+    """(F-085 R13, R10) Los proveedores que recibe ``ConciliacionService``.
+
+    Con ``IA4_PROVIDER`` fijada, solo ese; vacía (o, como hasta F-085, un
+    proveedor que no está), todos, y la conciliación usa el primero.
+    ``Settings`` ya impide arrancar con uno desconocido o apagado (R9).
+    """
+    seleccion = (ia4_provider or "").strip().lower()
+    return [p for p in providers if p.provider == seleccion] or providers
