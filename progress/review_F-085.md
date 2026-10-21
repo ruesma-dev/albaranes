@@ -128,18 +128,12 @@ cambiado, mutación completa con 0 supervivientes y las MANUAL con su comando ex
 - **O2.** sv5 desplegado lleva `GEMINI_MODEL=gemini-3.7-flash`, que `create_capps.ps1` no
   declara. Es inocuo (Gemini está apagado), pero saldrá en `-ConModelos`; puede retirarse en el
   `update` de P2.
-- **O3.** Dos avisos nuevos de ruff, menores y dentro de la deuda de 1360:
-  `settings.py:326` UP037 (mismo estilo que los validadores de al lado) y
-  `test_f085_settings.py:7` I001.
-- **O4.** `test_f085_wiring.py` mete un `fastapi` sustituto en `sys.modules` al importarse. Un
-  test futuro de sv5 con `importorskip("fastapi")` vería el sustituto y no se saltaría.
-- **O5.** Textos viejos fuera de R22, candidatos para F-086 o para una ficha documental:
-  - `docs/referencia/dominio_negocio_albaranes.md:451` dice «sv5: solo Claude».
-  - `services/albaran-valoracion-api/sv5.md` no cuenta R8/R9 ni la línea de wiring.
+- **O3.** Ruff, dos avisos nuevos y menores: `settings.py:326` UP037 y `test_f085_settings.py:7` I001.
+- **O4.** `test_f085_wiring.py` mete un `fastapi` sustituto en `sys.modules`: un test futuro con
+  `importorskip("fastapi")` no se saltaría.
+- **O5.** Textos viejos fuera de R22: `docs/referencia/dominio_negocio_albaranes.md:451` («sv5:
+  solo Claude») y `sv5.md`, que no cuenta R8/R9 ni la línea de wiring.
 
-**Pasada 2:** incremental desde `969063c` y solo documental. Basta con `init.sh` en verde; si el
-delta no toca `settings.py` ni `app.py`, no hace falta campaña nueva.
-
-**Automejora (propuesta, no aplicada)** para `CHECKPOINTS.md` C5: «`features.json` refleja el
-estado real, **incluida la `description`** cuando una review posterior corrige una decisión de
-la PARADA 1».
+**Pasada 2:** incremental desde `82f72a6`, solo documental: basta con `init.sh` en verde.
+**Automejora (propuesta)** para `CHECKPOINTS.md` C5: «`features.json` refleja el estado real,
+**incluida la `description`** cuando una review posterior corrige una decisión de la PARADA 1».
