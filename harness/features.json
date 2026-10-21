@@ -1033,6 +1033,45 @@
         "comun",
         "sv5-valoracion-api"
       ]
+    },
+    {
+      "id": "F-087",
+      "title": "Aprobar y Registrar: el «aprobar» de hoy pasa a llamarse Registrar (guarda, bloquea y da de alta en Sigrid) y nace un estado Aprobar (guarda todo el albarán y lo bloquea dándolo por bueno, sin Sigrid)",
+      "description": "ORIGEN: petición del humano, 2026-10-21. CAMBIO: (1) todo lo que hoy es «aprobar» (botón «Guardar y aprobar», «Aprobar» de la bandeja, columna «APROBADO», filtro «Aprobados», textos y motivos) pasa a llamarse REGISTRAR y hace lo de hoy: guarda todo, bloquea y publica q-feedback para que sv9 dé el alta en Sigrid. (2) Estado NUEVO «Aprobar»: guarda todo el albarán (cabecera y filas) y lo BLOQUEA dándolo por bueno, pero NO registra en Sigrid (no publica a sv9). (3) En la ficha, arriba, tres botones: «Guardar» (como hoy, guarda la cabecera), «Aprobar» (guarda todo y bloquea) y «Registrar» (hace todo, muy similar al «Guardar y aprobar» actual). A DECIDIR EN LA SPEC: cómo se guarda el estado (hoy `approved` booleano en albaran_documents_merge; probable estado con tres valores pendiente/aprobado/registrado, DDL en sv3, dueño del esquema), qué pasa con los ya aprobados (hoy aprobado = registrado o en alta), si un aprobado se puede desbloquear, si «Registrar» desde un aprobado reutiliza lo guardado, filtros y columnas de la bandeja, y qué ve sv9 (solo registrar). RIGOR critico: toca lo que llega a Sigrid (ALTA_SIGRID_COMMIT=true desde el 2026-10-20). RELACIONADAS: F-053 (alta en Sigrid), F-077 («Guardar y aprobar» guarda antes las filas), F-078, F-059 (etiquetas de motivos).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 13,
+      "servicios": [
+        "sv4-front",
+        "sv3-persistencia",
+        "sv9-alta-sigrid",
+        "comun"
+      ]
+    },
+    {
+      "id": "F-088",
+      "title": "Bandeja: filtro de varias obras a la vez y TODOS los filtros se recuerdan al navegar, volver atrás o recargar",
+      "description": "ORIGEN: petición del humano, 2026-10-21. CAMBIO: (1) en los filtros de la ventana principal (bandeja de sv4) se pueden elegir VARIAS obras a la vez (multiobra). (2) Los filtros persisten: si el usuario entra en un albarán y vuelve, va adelante/atrás en el navegador o recarga la página, la bandeja conserva TODOS los filtros activos (obra/s, estado, revisión, paginación, búsqueda...). Palabras del humano: «no puede ser que entre en mi obra vea la página filtrada y si recargo o entro en un albarán y vuelvo a la página general me desaparezca el filtro (vale para todos los filtros)». A DECIDIR EN LA SPEC: filtros en la URL (query string, que sobrevive a recargar y al historial) y/o en almacenamiento local del navegador; qué pasa con «Anterior/Siguiente» de la ficha (deben respetar el filtro). RELACIONADAS: F-089 (vista obra = bandeja filtrada), F-067 (limpieza de la ficha).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 13,
+      "servicios": [
+        "sv4-front"
+      ]
+    },
+    {
+      "id": "F-089",
+      "title": "Vista Obra con el formato Ruesma (como en partes): entrar en una obra muestra la bandeja general filtrada por esa obra",
+      "description": "ORIGEN: petición del humano, 2026-10-21. CAMBIO: la vista «Obras» de sv4 adopta el formato visual de Ruesma, como el front de partes (monorepo `partes`, carpeta `services/partes-front`; documento `azure-apps/partes.md`): tomar de ahí estilos y patrones, sin duplicar documentos de otro proyecto. Al entrar en una obra se ve la vista general (la bandeja) ya filtrada por esa obra, con los mismos filtros, columnas y acciones; el filtro se mantiene al entrar en un albarán y volver, al ir adelante/atrás y al recargar (persistencia de F-088). A DECIDIR EN LA SPEC: qué elementos del formato de partes se adoptan (cabecera, colores, tipografía, tarjetas), si la vista obra añade algo propio (resumen de importes o contratos de la obra) y si el estilo se extiende al resto de sv4 o solo a Obras. RELACIONADAS: F-088 (filtros multiobra y persistentes), F-067.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 13,
+      "servicios": [
+        "sv4-front"
+      ]
     }
   ]
 }

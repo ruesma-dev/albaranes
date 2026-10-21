@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **84 features**, 56 abiertas, 28 terminadas.
+Resumen: **87 features**, 59 abiertas, 28 terminadas.
 
 Bloqueadas: **F-064, F-076, F-077, F-083, F-085**.
 
@@ -27,6 +27,9 @@ Bloqueadas: **F-064, F-076, F-077, F-083, F-085**.
 | F-067 | Limpieza de la ficha de detalle (sv4) | 13 | pendiente | estandar |  |
 | F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | 13 | bloqueada | critico | `feature/F-076-normalizar-partidas` |
 | F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 13 | bloqueada | estandar | `feature/F-077-guardar-y-aprobar` |
+| F-087 | Aprobar y Registrar: el «aprobar» de hoy pasa a llamarse Registrar (guarda, bloquea y da de alta en Sigrid) y nace un estado Aprobar (guarda todo el albarán y lo bloquea dándolo por bueno, sin Sigrid) | 13 | pendiente | critico |  |
+| F-088 | Bandeja: filtro de varias obras a la vez y TODOS los filtros se recuerdan al navegar, volver atrás o recargar | 13 | pendiente | estandar |  |
+| F-089 | Vista Obra con el formato Ruesma (como en partes): entrar en una obra muestra la bandeja general filtrada por esa obra | 13 | pendiente | estandar |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 14 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 14 | pendiente | estandar |  |
 | F-057 | Truncado sin comprobar en los clientes de Sigrid colindantes: header_and_lines de sv4 (max_rows=1000) y SigridApiObraClient de sv3 | 14 | pendiente | critico |  |
@@ -276,6 +279,24 @@ ORIGEN (T51 de F-053, 2026-10-16, producción en simulación): sv9 dejó no_admi
 estado **bloqueada** · prioridad 13 · rigor `estandar` · SDD sí · rama `feature/F-077-guardar-y-aprobar`
 
 ORIGEN (humano, 2026-10-16, en producción tras la T51 de F-053): (1) «Guardar y aprobar» con filas sin guardar solo avisaba «Hay N líneas con cambios sin guardar» (F-065 R19) y no hacía nada; (2) tras reaprobar, la ficha pintó durante 3-13 s el no_admitido viejo con la partida vieja, o «Sin alta en Sigrid todavía» con «Solicitar alta», porque sv9 aún no había respondido; (3) el ⚠ de partida no decía contra qué no coincide; (4) un no_admitido con un motivo de línea (falta_descripcion, línea manual sin descripción, documento 86c13097) no enseñaba ninguna razón porque la petición venía vacía. ALCANCE (PARADA 1 aprobada 2026-10-16; spec en specs/F-077-guardar-y-aprobar/, resumen en progress/spec_F-077.md): «Guardar y aprobar» y «Guardar» de la cabecera guardan primero, con el mismo PATCH por fila y las mismas validaciones (R27 v5), las filas con cambios y después aprueban/guardan; si una fila falla se para, no se aprueba y la fila queda en rojo (no atómico: las guardadas quedan); se mantiene la confirmación de la suma (releída tras guardar). El panel del alta pinta «Alta en curso…» sin resultado viejo ni botones solo mientras sv9 procesa la aprobación vigente, sondeando cada 3 s una ruta de solo lectura nueva; a los 5 min sin respuesta, error de tiempo; un resultado malo (no_admitido/revisar/error) se pinta como error. El ⚠ de partida solo en filas Contrato con lectura del albarán distinta, con tooltip «No coincide con la partida leída en el albarán (X)». Todos los motivos del alta visibles y con texto legible (los de línea sin fila, como «Línea N»), código en el title. PARADA 1 aprobada con P1–P4 resueltas (spec v2). Solo sv4; sv4 no escribe albaran_altas_sigrid. Fuera: equivalencia de partidas (F-076), F7 (F-068).
+
+### F-087 · Aprobar y Registrar: el «aprobar» de hoy pasa a llamarse Registrar (guarda, bloquea y da de alta en Sigrid) y nace un estado Aprobar (guarda todo el albarán y lo bloquea dándolo por bueno, sin Sigrid)
+
+estado **pendiente** · prioridad 13 · rigor `critico` · SDD sí
+
+ORIGEN: petición del humano, 2026-10-21. CAMBIO: (1) todo lo que hoy es «aprobar» (botón «Guardar y aprobar», «Aprobar» de la bandeja, columna «APROBADO», filtro «Aprobados», textos y motivos) pasa a llamarse REGISTRAR y hace lo de hoy: guarda todo, bloquea y publica q-feedback para que sv9 dé el alta en Sigrid. (2) Estado NUEVO «Aprobar»: guarda todo el albarán (cabecera y filas) y lo BLOQUEA dándolo por bueno, pero NO registra en Sigrid (no publica a sv9). (3) En la ficha, arriba, tres botones: «Guardar» (como hoy, guarda la cabecera), «Aprobar» (guarda todo y bloquea) y «Registrar» (hace todo, muy similar al «Guardar y aprobar» actual). A DECIDIR EN LA SPEC: cómo se guarda el estado (hoy `approved` booleano en albaran_documents_merge; probable estado con tres valores pendiente/aprobado/registrado, DDL en sv3, dueño del esquema), qué pasa con los ya aprobados (hoy aprobado = registrado o en alta), si un aprobado se puede desbloquear, si «Registrar» desde un aprobado reutiliza lo guardado, filtros y columnas de la bandeja, y qué ve sv9 (solo registrar). RIGOR critico: toca lo que llega a Sigrid (ALTA_SIGRID_COMMIT=true desde el 2026-10-20). RELACIONADAS: F-053 (alta en Sigrid), F-077 («Guardar y aprobar» guarda antes las filas), F-078, F-059 (etiquetas de motivos).
+
+### F-088 · Bandeja: filtro de varias obras a la vez y TODOS los filtros se recuerdan al navegar, volver atrás o recargar
+
+estado **pendiente** · prioridad 13 · rigor `estandar` · SDD sí
+
+ORIGEN: petición del humano, 2026-10-21. CAMBIO: (1) en los filtros de la ventana principal (bandeja de sv4) se pueden elegir VARIAS obras a la vez (multiobra). (2) Los filtros persisten: si el usuario entra en un albarán y vuelve, va adelante/atrás en el navegador o recarga la página, la bandeja conserva TODOS los filtros activos (obra/s, estado, revisión, paginación, búsqueda...). Palabras del humano: «no puede ser que entre en mi obra vea la página filtrada y si recargo o entro en un albarán y vuelvo a la página general me desaparezca el filtro (vale para todos los filtros)». A DECIDIR EN LA SPEC: filtros en la URL (query string, que sobrevive a recargar y al historial) y/o en almacenamiento local del navegador; qué pasa con «Anterior/Siguiente» de la ficha (deben respetar el filtro). RELACIONADAS: F-089 (vista obra = bandeja filtrada), F-067 (limpieza de la ficha).
+
+### F-089 · Vista Obra con el formato Ruesma (como en partes): entrar en una obra muestra la bandeja general filtrada por esa obra
+
+estado **pendiente** · prioridad 13 · rigor `estandar` · SDD sí
+
+ORIGEN: petición del humano, 2026-10-21. CAMBIO: la vista «Obras» de sv4 adopta el formato visual de Ruesma, como el front de partes (monorepo `partes`, carpeta `services/partes-front`; documento `azure-apps/partes.md`): tomar de ahí estilos y patrones, sin duplicar documentos de otro proyecto. Al entrar en una obra se ve la vista general (la bandeja) ya filtrada por esa obra, con los mismos filtros, columnas y acciones; el filtro se mantiene al entrar en un albarán y volver, al ir adelante/atrás y al recargar (persistencia de F-088). A DECIDIR EN LA SPEC: qué elementos del formato de partes se adoptan (cabecera, colores, tipografía, tarjetas), si la vista obra añade algo propio (resumen de importes o contratos de la obra) y si el estilo se extiende al resto de sv4 o solo a Obras. RELACIONADAS: F-088 (filtros multiobra y persistentes), F-067.
 
 ### F-050 · Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes
 
