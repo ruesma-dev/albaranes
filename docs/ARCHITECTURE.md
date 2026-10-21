@@ -739,8 +739,9 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
   valoración y escribe SOLO `albaran_altas_sigrid`; sv1 solo `workflow_runs`. Cambios a nivel de servidor afectan a otros
   proyectos: prohibidos desde aquí.
 - **Sigrid (ERP)**: SOLO vía `sigrid-api` (function key), nunca SQL directo.
-  Leer: cualquier servicio (sv3, sv4, sv9 y, desde F-076, sv6: solo `sql/read`
-  de las partidas de la obra, con caché). **Escribir: SOLO sv9** (F-053), con el alta de
+  Leer: cualquier servicio (sv3, sv4, sv9; desde F-076, sv6: solo `sql/read`
+  de las partidas de la obra, con caché; y sv2, la lista de obras activas del
+  prompt de IA1 por `sql/read`, con credenciales en Azure desde F-085). **Escribir: SOLO sv9** (F-053), con el alta de
   albarán (`sigrid/albaran`, modo extendido) y `concepto-grafico`, nunca
   `sql/write`, y solo con `ALTA_SIGRID_COMMIT=true`, que activa el humano;
   desde local, nunca (en local `ALTA_SIGRID_COMMIT` no se pone).
@@ -764,6 +765,22 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
   `GRAPH_KEY`. SharePoint es el almacén durable de documentos.
 - **APIs LLM**: Anthropic/OpenAI/Gemini (sv2 y sv5, flags `ENABLE_*`).
   Las claves llegan por entorno/Key Vault, jamás en código ni en specs.
+  Qué gobierna cada fase (F-085; valores vigentes, cuota y vuelta atrás en
+  `azure-apps/albaranes.md`, «Modelos de IA por fase»):
+
+  | Fase | Servicio | Proveedor | Modelo |
+  |---|---|---|---|
+  | IA1 | sv2 | `IA_PRIMERA_FASE` | el `*_MODEL` de ese proveedor (hoy `GEMINI_MODEL`) |
+  | IA2 | sv2 | `IA_SEGUNDA_FASE` (defecto `openai`) | ídem (hoy `OPENAI_MODEL`) |
+  | IA3 | sv5 | `IA3_PROVIDER` (vacía: TODOS los habilitados, primario claude > gemini > openai) | ídem (hoy `OPENAI_MODEL`) |
+  | IA4 | sv5 | `IA4_PROVIDER` (vacía: el primero habilitado) | ídem (hoy `OPENAI_MODEL`) |
+
+  IA2 corre **siempre**: el worker de sv2 hace fase 1 + fase 2 sin condición
+  (`WORKER_CON_FASE2` no la leía nadie y se quitó). sv5 habilita OpenAI desde
+  F-085 (`ENABLE_OPENAI=true`, misma clave de Key Vault que sv2: la cuota de
+  OpenAI es compartida) y no arranca si `IA3_PROVIDER`/`IA4_PROVIDER` nombran un
+  proveedor desconocido o apagado; al arrancar escribe
+  `[svc5][wiring] IA3=<proveedor>/<modelo> IA4=<proveedor>/<modelo> ...`.
 - **Colas y blobs**: Azure Storage en la nube; **Azurite en local**
   (`COLAS_CONNECTION_STRING`) — desde local nunca contra las colas reales.
 - Los unit tests no tocan NINGUNO de estos sistemas: mocks y fixtures.

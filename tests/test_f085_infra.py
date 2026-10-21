@@ -364,3 +364,25 @@ def test_f085_amp_sin_url_ni_base_en_claro():
     texto = _texto(CREATE_CAPPS)
     assert "azurewebsites.net" not in texto
     assert not re.search(r'"SIGRID_API_(BASE_URL|DATABASE)=[^$]', texto)
+
+
+# --- R22 ------------------------------------------------------------------------
+
+DOCUMENTOS_R22 = (
+    "infra/README_capps.md",
+    "services/albaranes-api/INSTRUCCIONES_WORKER_sv2.md",
+    "services/albaranes-persistencia/INSTRUCCIONES_WORKER_sv3.md",
+)
+
+
+@pytest.mark.parametrize("relativa", DOCUMENTOS_R22)
+def test_f085_r22_nadie_dice_que_worker_con_fase2_apaga_la_fase_2(relativa):
+    for linea in _texto(RAIZ / relativa).splitlines():
+        if "WORKER_CON_FASE2" in linea:
+            assert "no existe" in linea or "no la lee" in linea, f"{relativa}: {linea.strip()}"
+
+
+@pytest.mark.parametrize("relativa", DOCUMENTOS_R22)
+def test_f085_r22_nadie_dice_que_sv5_solo_usa_claude(relativa):
+    texto = _texto(RAIZ / relativa)
+    assert not re.search(r"sv5[^.\n]{0,40}\(?solo (usa )?claude", texto, re.IGNORECASE), relativa
