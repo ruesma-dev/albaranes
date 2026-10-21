@@ -4,7 +4,7 @@
 **F-085 · `in_progress` (2026-10-21): implementación hecha (T1–T5, T2b, T8, T9), espera la review; T0, T10 y T11 son MANUAL del humano; T6, T7 y T12 FUERA → F-086** — modelos de producción por fase. Spec en `specs/F-085-modelos-produccion/` (corregida por O3 de la review de F-083). Rama `feature/F-085-modelos-produccion`, worktree `../albaranes-F-085` (*junction* `.venv` de sv4: quitarla con `cmd /c rmdir` antes de `git worktree remove`), `dev` (`17ccef7`) fusionado. Rigor `critico`. Informe: `progress/impl_F-085.md`; mutación: `progress/mutacion_F-085.md`; `azure-apps` `0416ce3` sin push.
 
 - **Punto de partida:** el paso 1 que el humano aplicó a mano el 2026-10-20 (sv2 `ca-sv2-extraccion--0000004`: `GEMINI_MODEL=gemini-4-argon`, `OPENAI_MODEL=gpt-6.1-sol`; sv5 `ca-sv5-valuation--0000005`: secreto `openai-key` → KV `OPENAI-API-KEY`, `ENABLE_OPENAI=true`, `IA3_PROVIDER=openai`, `IA4_PROVIDER=openai`, `OPENAI_MODEL=gpt-6.1-sol`). `infra/create_capps.ps1` lo deja igual. IA3/IA4 **provisionales** hasta medir con el banco de F-084 (R24).
-- **Ampliación del líder (2026-10-21, T2b):** sv2 con las credenciales de sigrid-api en `create_capps.ps1` (secreto `sigrid-key` → KV `SIGRID-API-FUNCTION-KEY`, `SIGRID_API_BASE_URL`, `SIGRID_API_FUNCTION_KEY`, `SIGRID_API_DATABASE`): sv2 arrancaba sin ellas e IA1 recibía `obras_activas=NO DISPONIBLE`. El humano lo aplica a mano (M-S abajo).
+- **Ampliación del líder (2026-10-21, T2b):** sv2 con las credenciales de sigrid-api en `create_capps.ps1` (secreto `sigrid-key` → KV `SIGRID-API-FUNCTION-KEY`, `SIGRID_API_BASE_URL`, `SIGRID_API_FUNCTION_KEY`, `SIGRID_API_DATABASE`): sv2 arrancaba sin ellas e IA1 recibía `obras_activas=NO DISPONIBLE`. **M-S HECHA**: aplicado por el humano el 2026-10-21 (`ca-sv2-extraccion--0000006`), verificado en el log («Obras activas CABLEADAS», 277 obras); `azure-apps` `81164ab`.
 - **D4 (O1 de `progress/review_F-083.md`), hecho aquí:** `evals/precios_modelos.json` con referencias IA1 `gemini-4-argon` e IA2–IA4 `gpt-6.1-sol` (los de antes, candidatos de vuelta atrás); el test R3 de F-083 lee `IA3_PROVIDER`/`IA4_PROVIDER` de sv5; los tests del comparador fijan sus propias referencias. Consecuencia para las MANUAL T13–T15 de F-083: la referencia que añade el comparador ya es la de producción (O1 resuelto).
 - **Desviaciones (justificadas en el informe):** los tests de `build_app` importan `app.py` con un sustituto de `fastapi` (el `.venv` de la raíz no lo trae); `forzar_herramienta` de la línea de wiring es la constante `FORZAR_HERRAMIENTA_CLAUDE = True` hasta F-086.
 
@@ -29,7 +29,7 @@ az containerapp revision list -n ca-sv5-valuation -g $RG --query "[?properties.a
 
 VERDE: sv2 `GEMINI_MODEL=gemini-4-argon`, `OPENAI_MODEL=gpt-6.1-sol`; sv5 `ENABLE_OPENAI=true`, `IA3_PROVIDER=openai`, `IA4_PROVIDER=openai`, `OPENAI_MODEL=gpt-6.1-sol`, `OPENAI_API_KEY` con `s=openai-key`, y `openai-key` en los secretos. Pegar la salida y la revisión activa en `progress/impl_F-085.md` (T0).
 
-**M-S · sigrid-api en sv2 (ampliación) — [ESCRIBE EN PRODUCCIÓN · humano].** Si ya se aplicó, basta la comprobación final:
+**M-S · sigrid-api en sv2 (ampliación) — HECHA el 2026-10-21** (rev. `--0000006`, «Obras activas CABLEADAS», 277 obras). Comandos que se usaron, como referencia:
 
 ```powershell
 az containerapp secret set -n ca-sv2-extraccion -g $RG --secrets "sigrid-key=keyvaultref:$KV_URI/secrets/SIGRID-API-FUNCTION-KEY,identityref:$MI_ID"

@@ -776,7 +776,8 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
   | IA4 | sv5 | `IA4_PROVIDER` (vacía: el primero habilitado) | ídem (hoy `OPENAI_MODEL`) |
 
   IA2 corre **siempre**: el worker de sv2 hace fase 1 + fase 2 sin condición
-  (`WORKER_CON_FASE2` no la leía nadie y se quitó). sv5 habilita OpenAI desde
+  (`WORKER_CON_FASE2` no la lee nadie: se quitó de `create_capps.ps1`, pero en
+  Azure sigue declarada con `false`, sin efecto, hasta P2). sv5 habilita OpenAI desde
   F-085 (`ENABLE_OPENAI=true`, misma clave de Key Vault que sv2: la cuota de
   OpenAI es compartida) y no arranca si `IA3_PROVIDER`/`IA4_PROVIDER` nombran un
   proveedor desconocido o apagado; al arrancar escribe

@@ -176,8 +176,11 @@ albaranes-valuation-api/
 }
 ```
 
-> Por defecto **solo Claude está habilitado** (decisión del cliente). Las flags
-> de OpenAI/Gemini existen para activarlos sin tocar el código.
+> Por defecto (sin variables) **solo Claude está habilitado**. Las flags de
+> OpenAI/Gemini existen para activarlos sin tocar el código. **En producción, desde
+> F-085 (2026-10-20), sv5 tiene Claude y OpenAI habilitados e IA3 e IA4 van con
+> OpenAI** (`IA3_PROVIDER=openai`, `IA4_PROVIDER=openai`, `OPENAI_MODEL=gpt-6.1-sol`):
+> `/health` da `"enabled_providers": ["openai", "claude"]`. Ver §8.2.
 
 ### 5.2 `POST /v1/albaranes/value`
 
@@ -426,6 +429,15 @@ corrupto, no es objeto, o no casa con el modelo, devuelve `None` con un
 | `ANTHROPIC_MODEL`       | `claude-sonnet-4-5`  |                                                             |
 | `ANTHROPIC_MAX_TOKENS`  | `8192`               |                                                             |
 | `ANTHROPIC_TIMEOUT_S`   | `180`                | **Más alto que sv2 (120 s)** porque la valoración es más larga. |
+| `IA3_PROVIDER`          | *(vacía)*            | Quién valora (IA3). Vacía: TODOS los habilitados y primario claude > gemini > openai. |
+| `IA4_PROVIDER`          | *(vacía)*            | Quién concilia (IA4). Vacía: el primero habilitado.          |
+
+(F-085) `Settings()` **no arranca** si `IA3_PROVIDER` o `IA4_PROVIDER` no están vacías y
+no son `openai`, `gemini` ni `claude`, o si nombran un proveedor con su `ENABLE_*` apagado.
+Al arrancar, el wiring escribe `[svc5][wiring] IA3=<proveedor>/<modelo> IA4=<proveedor>/<modelo>
+forzar_herramienta=<bool>` y, si `IA3_PROVIDER` está vacía con varios proveedores, un WARNING
+(IA3 llamará a todos: coste × N). Valores de producción por fase: `docs/ARCHITECTURE.md`
+(«APIs LLM») y `azure-apps/albaranes.md` §14.
 
 ### 8.3 Política de reintentos
 
@@ -719,10 +731,11 @@ Mismo perfil que sv2/sv3 — recomendación: **Azure Container App** en el spoke
 7. **Override de `codigo_contrato` en el request.** El revisor humano puede pedir
    re-valorar contra OTRO contrato sin tener que llamar antes al PATCH del sv3.
    Es solo para preview: la selección persistente sigue siendo la del sv3.
-8. **El proveedor primario es hardcoded en orden `claude > gemini > openai`.** Si
-   solo está Claude (default), Claude manda. Si activas los otros, el primary se
-   queda en Claude y los demás se anexan como secundarios. Cambiar este orden
-   requiere editar código (no hay flag).
+8. **El proveedor primario sale de `IA3_PROVIDER`; vacía, del orden fijo
+   `claude > gemini > openai`.** Con `IA3_PROVIDER` fijada solo valora ese
+   proveedor (una llamada) y es el primario; en producción, `openai` desde F-085.
+   Vacía y con varios habilitados, se llama a todos, manda Claude y los demás se
+   anexan como secundarios (el arranque lo avisa con un WARNING).
 9. **`ANTHROPIC_TIMEOUT_S=180`** es alto deliberadamente: la inferencia con PDF
    adjunto + ~30 líneas de contrato puede tardar 60-120 s con Claude Sonnet 4.5.
 10. **`MAX_PDF_MB=40`** es generoso: los PDFs de contratos firmados con anexos

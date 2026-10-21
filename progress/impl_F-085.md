@@ -189,6 +189,15 @@ el árbol principal, `[ADAPTAR]` de F-034/F-035, infra sin `comando_tests`. Los 
 - **D4 en F-083**: los tests del comparador ya no dependen de producción; si alguien cambia las
   referencias de la tabla, solo R3 y los papeles de `test_f083_precios.py` lo notan, que es lo pretendido.
 
+## 8 bis. Pasada 2 de la review (solo documental, `progress/review_F-085.md`)
+
+Cambio 1: `description` de F-085 en `features.json` con P1 corregido (O3) y `title` al día; `BACKLOG.md`
+regenerado. Cambio 2: `azure-apps` §14 con sigrid-api en sv2 aplicado (rev. `--0000006`, 277 obras), commit
+**`81164ab`** sin push; M-S marcada hecha en `current.md`. O1: ARCHITECTURE.md precisa que `WORKER_CON_FASE2`
+sigue en Azure (`false`) hasta P2. O5: `dominio_negocio_albaranes.md` (§ cambio de modelos) y `sv5.md` (§5.1,
+§8.2 con `IA3_PROVIDER`/`IA4_PROVIDER`, R8/R9 y la línea de wiring; decisión 8). Sin tocar código (O3 de
+ruff y O4 quedan como están).
+
 ## 9. Evidencias
 
 | Evidencia | Valor medido |
