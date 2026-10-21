@@ -328,3 +328,39 @@ def test_f085_r6_con_modelos_pide_y_pinta_las_variables_de_fase(tmp_path):
         for variable in VARIABLES_DE_FASE:
             assert f"name=='{variable}'" in consulta, variable
     assert re.search(r"ca-sv5-valuation\s+IA3_PROVIDER=openai\s+OPENAI_MODEL=gpt-6.1-sol", salida)
+
+
+# --- Ampliación del líder (2026-10-21): sv2 con credenciales de sigrid-api ------
+# sv2 arrancaba sin SIGRID_API_* («OBRAS_ACTIVAS_ENABLED=true pero faltan
+# credenciales SIGRID_API_*», Log Analytics desde el 07-10) e IA1 recibía
+# `obras_activas=NO DISPONIBLE`. Mismo patrón que sv3 y sv9: secreto por Key
+# Vault y la URL y la base de 00_vars.ps1 / 00_capps_vars.ps1.
+
+SIGRID_ENTORNO = (
+    "SIGRID_API_BASE_URL=$SIGRID_BASE_URL",
+    "SIGRID_API_FUNCTION_KEY=secretref:sigrid-key",
+    "SIGRID_API_DATABASE=$SIGRID_DB",
+)
+
+
+def test_f085_amp_sv2_declara_el_secreto_de_sigrid_api():
+    assert "sigrid-key=$(KvRef 'SIGRID-API-FUNCTION-KEY')" in _secretos("sv2")
+
+
+@pytest.mark.parametrize("entrada", SIGRID_ENTORNO)
+def test_f085_amp_sv2_lleva_las_credenciales_de_sigrid_api(entrada):
+    assert entrada in _entorno("sv2")
+
+
+def test_f085_amp_sv2_copia_el_patron_de_sv3():
+    sv3 = [e for e in _entorno("sv3") if e.startswith("SIGRID_API_")]
+    sv2 = [e for e in _entorno("sv2") if e.startswith("SIGRID_API_")]
+    assert sv2 == sv3 == list(SIGRID_ENTORNO)
+    secreto = [s for s in _secretos("sv3") if s.startswith("sigrid-key=")]
+    assert [s for s in _secretos("sv2") if s.startswith("sigrid-key=")] == secreto
+
+
+def test_f085_amp_sin_url_ni_base_en_claro():
+    texto = _texto(CREATE_CAPPS)
+    assert "azurewebsites.net" not in texto
+    assert not re.search(r'"SIGRID_API_(BASE_URL|DATABASE)=[^$]', texto)

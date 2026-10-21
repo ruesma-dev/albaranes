@@ -129,7 +129,12 @@ Run-Az $a
 Write-Host "`n=== sv2 (extracción, worker q-extraccion) ===" -ForegroundColor Green
 $sv2Secrets = @("anthropic-key=$(KvRef 'ANTHROPIC-API-KEY')",
                 "openai-key=$(KvRef 'OPENAI-API-KEY')",
-                "gemini-key=$(KvRef 'GEMINI-API-KEY')")
+                "gemini-key=$(KvRef 'GEMINI-API-KEY')",
+                "sigrid-key=$(KvRef 'SIGRID-API-FUNCTION-KEY')")
+# F-085 (ampliación del líder, 2026-10-21): sv2 lee de sigrid-api (solo
+# lectura) la lista de obras activas para el prompt de IA1. Sin SIGRID_API_*
+# arrancaba con «OBRAS_ACTIVAS_ENABLED=true pero faltan credenciales» e IA1
+# recibía obras_activas=NO DISPONIBLE. Mismo patrón que sv3 y sv9.
 $sv2Env = @("AZURE_CLIENT_ID=$MI_CLIENTID", "COLAS_ACCOUNT_URL=$QUEUE_URL",
             "BLOBS_ACCOUNT_URL=$BLOB_URL", "LOG_DIR=/tmp/logs",
             "IA_PRIMERA_FASE=gemini", "IA_SEGUNDA_FASE=openai",
@@ -138,7 +143,10 @@ $sv2Env = @("AZURE_CLIENT_ID=$MI_CLIENTID", "COLAS_ACCOUNT_URL=$QUEUE_URL",
             "GEMINI_API_KEY=secretref:gemini-key",
             "ANTHROPIC_MODEL=$ANTHROPIC_MODEL",
             "OPENAI_MODEL=$OPENAI_MODEL",
-            "GEMINI_MODEL=$GEMINI_MODEL")
+            "GEMINI_MODEL=$GEMINI_MODEL",
+            "SIGRID_API_BASE_URL=$SIGRID_BASE_URL",
+            "SIGRID_API_FUNCTION_KEY=secretref:sigrid-key",
+            "SIGRID_API_DATABASE=$SIGRID_DB")
 $a = @("containerapp","create","-n","ca-sv2-extraccion","-g",$RG,"--environment",$CAE,
        "--image","$ACR_LOGIN/$($IMG['sv2'])",
        "--registry-server",$ACR_LOGIN,"--registry-identity",$MI_ID,
