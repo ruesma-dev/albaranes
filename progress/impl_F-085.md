@@ -157,7 +157,7 @@ Root: `C:\Users\pgris\PycharmProjects\albaranes\.venv\Scripts\python.exe -m pyte
   3 failed, 3 passed, 56 deselected in 0.13s
   ```
 
-## 6. Resultado real de `bash harness/init.sh` (worktree, HEAD `6f82a46`, 2026-10-21)
+## 6. Resultado real de `bash harness/init.sh` (worktree, HEAD `6f82a46`; repetido sobre `039f58f`, mismo verde)
 
 `ENTORNO LISTO. Puedes trabajar.` (exit 0). Raíz `1638 passed in 308.37s`; sv1 205, sv2 485, sv3 1576, sv4
 1774, **sv5 `96 passed in 34.29s`**, sv6 473 (+1 skipped), sv9 673, comun en verde (caché). `[OK] PUERTA
