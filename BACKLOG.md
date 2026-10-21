@@ -3,11 +3,9 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **84 features**, 58 abiertas, 26 terminadas.
+Resumen: **84 features**, 56 abiertas, 28 terminadas.
 
-En curso: **F-085**.
-
-Bloqueadas: **F-064, F-075, F-076, F-077, F-073, F-083**.
+Bloqueadas: **F-064, F-076, F-077, F-083, F-085**.
 
 ## Trabajo abierto
 
@@ -15,7 +13,7 @@ Bloqueadas: **F-064, F-075, F-076, F-077, F-073, F-083**.
 |---|---|---|---|---|---|
 | F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 1 | bloqueada | critico | `feature/F-083-comparar-modelos` |
 | F-084 | El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None») | 2 | pendiente | critico |  |
-| F-085 | Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086) | 3 | en curso | critico | `feature/F-085-modelos-produccion` |
+| F-085 | Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086) | 3 | bloqueada | critico | `feature/F-085-modelos-produccion` |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 4 | pendiente | critico |  |
 | F-079 | Avisar en la ficha cuando se edita la descripción de una línea vinculada a contrato (Sigrid usa la del contrato) | 6 | pendiente | estandar |  |
 | F-081 | sv3: decodificar el nombre del PDF de Sigrid (X-Document-Filename llega con codificación porcentual UTF-8) | 7 | pendiente | estandar |  |
@@ -27,8 +25,6 @@ Bloqueadas: **F-064, F-075, F-076, F-077, F-073, F-083**.
 | F-064 | IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor | 13 | bloqueada | critico | `feature/F-064-proveedor-en-prompts` |
 | F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 13 | pendiente | critico |  |
 | F-067 | Limpieza de la ficha de detalle (sv4) | 13 | pendiente | estandar |  |
-| F-073 | Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate | 13 | bloqueada | critico | `feature/F-073-proveedor-por-similitud` |
-| F-075 | El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán | 13 | bloqueada | critico | `feature/F-075-importe-leido` |
 | F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | 13 | bloqueada | critico | `feature/F-076-normalizar-partidas` |
 | F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 13 | bloqueada | estandar | `feature/F-077-guardar-y-aprobar` |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 14 | pendiente | estandar |  |
@@ -102,6 +98,8 @@ Bloqueadas: **F-064, F-075, F-076, F-077, F-073, F-083**.
 | F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | estandar |
 | F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | critico |
+| F-073 | Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate | 13 | critico |
+| F-075 | El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán | 13 | critico |
 
 ## Detalle
 
@@ -133,7 +131,7 @@ NECESARIO PARA: elegir el modelo de IA3/IA4 (F-083, F-085: Opus 5.5 en IA3, GPT-
 
 ### F-085 · Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086)
 
-estado **en curso** · prioridad 3 · rigor `critico` · SDD sí · rama `feature/F-085-modelos-produccion`
+estado **bloqueada** · prioridad 3 · rigor `critico` · SDD sí · rama `feature/F-085-modelos-produccion`
 
 ORIGEN: decisión del humano, 2026-10-20, tras la prueba rápida de modelos (IA1: Argon 52 fallos frente a 56 del Gemini actual en 15 casos).
 
@@ -266,26 +264,6 @@ estado **pendiente** · prioridad 13 · rigor `estandar` · SDD sí
 PETICIÓN DEL HUMANO (2026-10-09, PARADA 1 de F-065): ficha para revisar después, sin spec. Filas X25, X26, R1–R3, R5 y R7–R12 de progress/propuestas_ficha_detalle.md (detalle en progress/explore_front_detalle.md §3–§4): el ✓ de la cantidad compara con lo leído (X25); ordenación por albarán y no persistente (X26); proveedor en un solo desplegable «Nombre — CIF» (R1); obra en un desplegable con la dirección debajo (R2); contrato en una línea: desplegable + PDF + importe (R3); crear líneas solo con traer, añadir y F6 (quitar duplicar y «Copiar sin casar», R5); lo leído como referencia plegada o tooltip (R7); franja única de estado y avisos (R8); un solo «Deshacer» y una navegación (R9); bloques técnicos a «Detalles técnicos» (R10); ficha más ligera: una lista compartida, sin JSON incrustado, caché del PDF (R11); ocultar «Abrir contrato» sin PDF y corregir textos de «Borrar» (R12).
 
 NOTAS QUE QUEDAN AQUÍ: X4 (al abrir la ficha se guardan solas una obra o un proveedor «sugeridos» por parecido de texto; propuesta: proponer sin guardar) quedó FUERA de F-065 por decisión del humano y está pendiente de decidir dónde va. O2 (operativo): posibles líneas ya dañadas en producción por X1 y X2 (cantidad convertida nula; filas pasadas a Nueva con el precio del contrato): consulta de solo lectura en producción y decisión del humano.
-
-### F-073 · Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate
-
-estado **bloqueada** · prioridad 13 · rigor `critico` · SDD sí · rama `feature/F-073-proveedor-por-similitud`
-
-INCIDENCIA DE PRODUCCIÓN (2026-10-15, correo «0694» de administración de obra, obra 0694, 5 albaranes de FEYMACO): en 3 la IA leyó el CIF de Ruesma (A81873903), sv3 lo descartó (F-063) y buscó por nombre «FEYMACO, S.A.» / «TEYMACO, S.A.». Log de sv3 (merge 54b82479-…): A19004589 (HIERROS RODRIGO, S.A.) y A28733558 (FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)) empatan a nombre=0.50 y el atajo «por NOMBRE dentro de la obra» elige el primero ⇒ 3 albaranes con HIERROS RODRIGO y CTSU26/0001.
-
-CAUSA (verificada en header_resolver_service.py): _match_score no separa la puntuación («feymaco,» no está en «(feymaco)»), no admite una letra mal leída y cuenta «s.a.» como palabra (0,50 = min_score para cualquier S.A.); el atajo del paso 1 y el fallback global del paso 2 eligen el máximo sin mirar empates. Hay dos criterios de nombre (_match_score y _score_razon_social de F-052/F-062).
-
-SPEC (specs/F-073-proveedor-por-similitud/, informe progress/spec_F-073.md): criterio ÚNICO en sv3 (application/services/similitud_proveedor.py) para los cuatro sitios (atajo, global, propuesta F-052, candidato claro F-062): puntuación como separador, fuera formas jurídicas y palabras vacías, subcadena de hoy más distancia de edición ≤ 1 en palabras de ≥ 5 caracteres; elegir por nombre solo con ≥ min_score y margen 0,25 sobre el segundo CIF; empate ⇒ paso por puntos sin cambios y, si no decide, revisión con motivo proveedor_nombre_ambiguo y nota con los empatados; paso 2 en empate no elige. Medición: corpus de 19 razones sociales reales y 31 lecturas, hoy 23 aciertos y 7 errores, con F-073 31 y 0. La obra (_resolve_obra) no cambia. Sin comun, sin DDL; despliegue solo sv3. FUERA: corregir los 3 merges (revisor en sv4), la propuesta de sv4 (X4 de F-067), que la propuesta de F-052 deje de proponer en empate. PREGUNTAS P0–P6 para la PARADA 1; P0 bloquea: el caso «S.L.» de la opción B de F-062 pasa de 1 a 0. RELACIONADAS: F-063, F-062, F-052, F-055, F-067 (X4).
-
-### F-075 · El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán
-
-estado **bloqueada** · prioridad 13 · rigor `critico` · SDD sí · rama `feature/F-075-importe-leido`
-
-ORIGEN (correo de administración de obra, obra 0686, 2026-10-15): un albarán de DISCOIN con precios sale con «Importe valorado —» y «Sin valoración» y no se puede aprobar: no hay contrato (sv3 no dispara q-valoracion) y sv6 no valora. Merges: dfdc8aab-08e1-49f0-978d-bb906515e748 y 5dea6509-4a81-4192-b8b0-3a21041931ca.
-
-SPEC v1 (2026-10-15, solo sv4: importe leído junto al valorado) RECHAZADA en la PARADA 1. Respuestas literales del humano: P1 «como ya hay importe, no hay que valorar con contrato, manda el albarán y pisa»; P2 «que lea el pie y sirva para revisar»; P3 aceptada (líneas sin importe no suman, total parcial); sin contrato «si trae importes no hace valorar ni contrato, pasa directo».
-
-SPEC v2 (2026-10-15, specs/F-075-importe-leido/, informe progress/spec_F-075.md §v2): hallazgo clave, con contrato lo leído YA manda línea a línea en sv6 (F-019, jul 2026); el contrato aporta vínculo, partida y conversión, y añade sintéticas. Propuesta: (1) comun: importe_albaran (suma de precio_neto, parcial) y pie_cuadra; (2) sin contrato y con importes: sv3 publica q-valoracion con contrato nulo y sv6 construye una valoración directa no_contract desde las líneas (sin IA, sin sintéticas, derivada nueva_no_match), «valorada» si todas traen importe, así que se aprueba y sv9 la da de alta sin vincular SIN código nuevo (tests de contrato); sv4 deja revalorar sin contrato si trae importes; (3) con contrato, como hoy más motivo valorado_distinto_de_albaran; (4) pie: IA1 lee base, tipo, cuota y total, sv2 conserva el pie de fase 1, sv3 DDL de 4 columnas y PieGuardService (pie_no_cuadra a revisión, no bloquea); (5) sv4: una columna «Importe» (albarán si trae, si no valorado) con origen y marca ≠, tarjetas, Obras, Proveedores y ficha con pie; (6) evals observan el pie («no medido» sin ground truth). PREGUNTAS v2-P1 a v2-P8 (P1 seguir valorando con contrato o saltarlo, P2 aprobación humana, P3 sintéticas, P4 pie sin base, P5 varias páginas y tolerancia, P6 backfill, P7 una columna, P8 partir en dos: F-075 paso directo sin prompts, ya; F-0XX pie detrás de F-064). FUERA: albaranes sin importes y sin contrato, quitar sintéticas, sv5, aprobación automática, backfill por script, F-064, F-071, F-073 y F-066 X12. AJUSTE (humano, 2026-10-18, tras el bloqueo del implementer): opción A, sv5 añade precio_neto_albaran y descuento_albaran al sobre no_contract (R5 bis), despliegue comun → sv3 → sv5 → sv6 → sv4; M1, solo se publica sin contrato si el seleccionado es nulo.
 
 ### F-076 · La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura
 
@@ -1106,3 +1084,23 @@ ALCANCE POR SERVICIO: sv4 albaranes-front (D1: el recalculo y el guardian; y la 
 TESTS: hoy NO HAY NI UNO de la regla de contenedores, ni del contexto_linea_merger, ni del tipologia_resolver; del ModifierContractMatcher y del exact_concept en residuos, nada especifico. Con rigor critico, fase RED obligatoria y hay que crear esa base desde cero.
 
 RIESGO A VIGILAR: F-024 (unidad_medida no se extrae, NULL en las lineas base). Los 4 albaranes de este lote tienen unidad_medida NULL y unidad_categoria unknown; al arreglar F-024 los casos que hoy aciertan por la regla de contenedores pueden pasar a valorar x6. Cualquier diseno aqui debe seguir siendo correcto cuando la unidad SI se lea.
+
+### F-073 · Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate
+
+estado **terminada** · prioridad 13 · rigor `critico` · SDD sí · rama `feature/F-073-proveedor-por-similitud`
+
+INCIDENCIA DE PRODUCCIÓN (2026-10-15, correo «0694» de administración de obra, obra 0694, 5 albaranes de FEYMACO): en 3 la IA leyó el CIF de Ruesma (A81873903), sv3 lo descartó (F-063) y buscó por nombre «FEYMACO, S.A.» / «TEYMACO, S.A.». Log de sv3 (merge 54b82479-…): A19004589 (HIERROS RODRIGO, S.A.) y A28733558 (FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)) empatan a nombre=0.50 y el atajo «por NOMBRE dentro de la obra» elige el primero ⇒ 3 albaranes con HIERROS RODRIGO y CTSU26/0001.
+
+CAUSA (verificada en header_resolver_service.py): _match_score no separa la puntuación («feymaco,» no está en «(feymaco)»), no admite una letra mal leída y cuenta «s.a.» como palabra (0,50 = min_score para cualquier S.A.); el atajo del paso 1 y el fallback global del paso 2 eligen el máximo sin mirar empates. Hay dos criterios de nombre (_match_score y _score_razon_social de F-052/F-062).
+
+SPEC (specs/F-073-proveedor-por-similitud/, informe progress/spec_F-073.md): criterio ÚNICO en sv3 (application/services/similitud_proveedor.py) para los cuatro sitios (atajo, global, propuesta F-052, candidato claro F-062): puntuación como separador, fuera formas jurídicas y palabras vacías, subcadena de hoy más distancia de edición ≤ 1 en palabras de ≥ 5 caracteres; elegir por nombre solo con ≥ min_score y margen 0,25 sobre el segundo CIF; empate ⇒ paso por puntos sin cambios y, si no decide, revisión con motivo proveedor_nombre_ambiguo y nota con los empatados; paso 2 en empate no elige. Medición: corpus de 19 razones sociales reales y 31 lecturas, hoy 23 aciertos y 7 errores, con F-073 31 y 0. La obra (_resolve_obra) no cambia. Sin comun, sin DDL; despliegue solo sv3. FUERA: corregir los 3 merges (revisor en sv4), la propuesta de sv4 (X4 de F-067), que la propuesta de F-052 deje de proponer en empate. PREGUNTAS P0–P6 para la PARADA 1; P0 bloquea: el caso «S.L.» de la opción B de F-062 pasa de 1 a 0. RELACIONADAS: F-063, F-062, F-052, F-055, F-067 (X4).
+
+### F-075 · El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán
+
+estado **terminada** · prioridad 13 · rigor `critico` · SDD sí · rama `feature/F-075-importe-leido`
+
+ORIGEN (correo de administración de obra, obra 0686, 2026-10-15): un albarán de DISCOIN con precios sale con «Importe valorado —» y «Sin valoración» y no se puede aprobar: no hay contrato (sv3 no dispara q-valoracion) y sv6 no valora. Merges: dfdc8aab-08e1-49f0-978d-bb906515e748 y 5dea6509-4a81-4192-b8b0-3a21041931ca.
+
+SPEC v1 (2026-10-15, solo sv4: importe leído junto al valorado) RECHAZADA en la PARADA 1. Respuestas literales del humano: P1 «como ya hay importe, no hay que valorar con contrato, manda el albarán y pisa»; P2 «que lea el pie y sirva para revisar»; P3 aceptada (líneas sin importe no suman, total parcial); sin contrato «si trae importes no hace valorar ni contrato, pasa directo».
+
+SPEC v2 (2026-10-15, specs/F-075-importe-leido/, informe progress/spec_F-075.md §v2): hallazgo clave, con contrato lo leído YA manda línea a línea en sv6 (F-019, jul 2026); el contrato aporta vínculo, partida y conversión, y añade sintéticas. Propuesta: (1) comun: importe_albaran (suma de precio_neto, parcial) y pie_cuadra; (2) sin contrato y con importes: sv3 publica q-valoracion con contrato nulo y sv6 construye una valoración directa no_contract desde las líneas (sin IA, sin sintéticas, derivada nueva_no_match), «valorada» si todas traen importe, así que se aprueba y sv9 la da de alta sin vincular SIN código nuevo (tests de contrato); sv4 deja revalorar sin contrato si trae importes; (3) con contrato, como hoy más motivo valorado_distinto_de_albaran; (4) pie: IA1 lee base, tipo, cuota y total, sv2 conserva el pie de fase 1, sv3 DDL de 4 columnas y PieGuardService (pie_no_cuadra a revisión, no bloquea); (5) sv4: una columna «Importe» (albarán si trae, si no valorado) con origen y marca ≠, tarjetas, Obras, Proveedores y ficha con pie; (6) evals observan el pie («no medido» sin ground truth). PREGUNTAS v2-P1 a v2-P8 (P1 seguir valorando con contrato o saltarlo, P2 aprobación humana, P3 sintéticas, P4 pie sin base, P5 varias páginas y tolerancia, P6 backfill, P7 una columna, P8 partir en dos: F-075 paso directo sin prompts, ya; F-0XX pie detrás de F-064). FUERA: albaranes sin importes y sin contrato, quitar sintéticas, sv5, aprobación automática, backfill por script, F-064, F-071, F-073 y F-066 X12. AJUSTE (humano, 2026-10-18, tras el bloqueo del implementer): opción A, sv5 añade precio_neto_albaran y descuento_albaran al sobre no_contract (R5 bis), despliegue comun → sv3 → sv5 → sv6 → sv4; M1, solo se publica sin contrato si el seleccionado es nulo.
