@@ -1,9 +1,9 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-083 · `in_progress` (2026-10-20): PARADA 1 resuelta el 2026-10-19 (tanda 1 de 8 modelos, P5 = (a)); implementación hecha (T1–T12); T16 con `init.sh` en verde pero **sin campaña de mutación VÁLIDA** (dos completas, 0 supervivientes, las dos «NO VÁLIDA» por la base de cierre con la máquina cargada: repetirla con la máquina libre); pendientes T13–T15 del humano** — comparar modelos de IA por fase (IA1–IA4) con acierto y coste por albarán. Spec en `specs/F-083-comparar-modelos/`; inventario de modelos con precio, fuente y fecha en `progress/spec_F-083.md`. Rama `feature/F-083-comparar-modelos`, worktree `../albaranes-F-083` (creado desde `dev` `7facc86`; *junction* `.venv` de sv4 puesta: quitarla con `cmd /c rmdir` antes de `git worktree remove`). Rigor `critico`. Toca `evals/` y, solo con P5 = (a), un parámetro opcional del cliente de Claude en comun; ningún servicio cambia en producción.
+**F-083 · `in_progress` (2026-10-21): PARADA 1 resuelta el 2026-10-19 (tanda 1 de 8 modelos, P5 = (a)); T1–T12 y T16 hechas, review pasada 1 CHANGES_REQUESTED solo documental (aplicada); pendientes T13–T15 del humano, que antes debe decidir O1 y O2** — comparar modelos de IA por fase (IA1–IA4) con acierto y coste por albarán. Spec en `specs/F-083-comparar-modelos/`; inventario de modelos con precio, fuente y fecha en `progress/spec_F-083.md`. Rama `feature/F-083-comparar-modelos`, worktree `../albaranes-F-083` (creado desde `dev` `7facc86`; *junction* `.venv` de sv4 puesta: quitarla con `cmd /c rmdir` antes de `git worktree remove`). Rigor `critico`. Toca `evals/` y, solo con P5 = (a), un parámetro opcional del cliente de Claude en comun; ningún servicio cambia en producción.
 
-Estado del implementer (2026-10-21): **T1–T12 hechas** (un commit por tarea); fase RED, decisiones, riesgos y evidencias en `progress/impl_F-083.md`. `bash harness/init.sh` en verde en el worktree (cobertura de lo cambiado 99,4 %). **T16, mutación**: dos campañas completas de la herramienta (366 mutantes, 0 supervivientes, cada mutante `muerto` en al menos una), pero las dos «NO VÁLIDA»: la línea base de cierre pasó de su tope fijo de 600 s con la máquina cargada por campañas de `partes`, `mcp-bbdd`, `porcentajes`… Falta repetirla con la máquina libre: `python -m harness.mutacion --feature F-083 --workers 3` desde el worktree, y añadir la fila de `progress/mutacion_F-083.md` al inventario de F-039 (detalle en `progress/impl_F-083_mutacion.md`). Desviaciones (justificadas en el informe): T9 y T10 antes que T8; `procesar` y `lanzar` viven en `medidor.py`, compartidos por los dos subprocesos. **Riesgo para el humano antes de pagar IA3/IA4**: 52 de los 59 casos de INPUTS no traen líneas de contrato, así que esas fases apenas miden el modelo (R-1 del informe). T13–T15 son MANUAL del humano, comandos abajo.
+Estado del implementer (2026-10-21): **T1–T12 y T16 hechas** (un commit por tarea); fase RED, decisiones, riesgos y evidencias en `progress/impl_F-083.md`. `bash harness/init.sh` en verde en el worktree (cobertura de lo cambiado 99,4 %). **T16, mutación VÁLIDA**: la campaña completa del reviewer sobre `96a59a3`, 3 workers, **366 mutantes, 366 muertos, 0 supervivientes**, 0 timeouts, 21.907 s (`progress/mutacion_F-083.md`, con su fila en el inventario de F-039). Las dos campañas anteriores del implementer quedaron «NO VÁLIDA» por la base de cierre con la máquina cargada (`progress/impl_F-083_mutacion.md`). Desviaciones (justificadas en el informe): T9 y T10 antes que T8; `procesar` y `lanzar` viven en `medidor.py`, compartidos por los dos subprocesos. T13–T15 son MANUAL del humano, comandos abajo.
 
 #### F-083 · MANUAL T13–T15 (humano), comandos para PowerShell
 
@@ -24,6 +24,11 @@ $env:GEMINI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtim
 $s = Read-Host "OPENAI_API_KEY" -AsSecureString
 $env:OPENAI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
 ```
+
+**Antes de T13, lo decide el humano (review de F-083, `progress/review_F-083.md`):**
+
+- **O1 · Producción ya no usa las referencias de la tabla.** Según el líder, desde el 20-10 producción usa `gemini-4-argon` en IA1 y `gpt-6.1-sol` en IA2–IA4. La tabla sigue a `infra/create_capps.ps1` (IA1 `gemini-3.7-flash`, IA2 `gpt-5.4`, IA3/IA4 `claude-opus-4-8`), así que R3 pasa hoy, pero T13–T15 compararían contra modelos retirados y prepararían IA2 con 3.7-flash e IA4 con Opus 4.8. **Recomendación: F-085 antes de pagar T13**; después, quien se fusione segunda ajusta `referencias` y `papel` de la tabla y hace que R3 lea el proveedor de sv5 (`IA3_PROVIDER`/`IA4_PROVIDER`).
+- **O2 · No pagar IA3 ni IA4 hasta F-084.** El banco de IA3/IA4 no discrimina (52 de los 59 casos de INPUTS sin líneas de contrato, R-1 del informe): con los mismos fallos en todos los modelos, R33 podría decir «cambiar» al más barato sin que el banco lo sostenga.
 
 **T13 · humo** (≈ 2–4 USD). Dice qué modelos fallan por formato (PDF en las Luna, `max_tokens` con pensamiento, Opus 5.5 con `tool_choice` auto), qué modelo sirve Google a `gemini-3.7-flash` y deja tokens medidos para la estimación siguiente.
 
@@ -49,7 +54,7 @@ VERDE: dos secciones nuevas en `progress/comparar_modelos_F-083.md`, con la colu
 & $py -m evals.comparar_modelos --fase IA4 --modelos $m
 ```
 
-**Antes de pagar IA3 e IA4, leer el riesgo R-1 de `progress/impl_F-083.md`**: 52 de los 59 casos de INPUTS no traen líneas de contrato, así que hoy esas dos fases apenas miden el modelo. Puede compensar dejarlas para cuando el banco tenga contratos.
+**IA3 e IA4, no hasta F-084 (O2)**: 52 de los 59 casos de INPUTS no traen líneas de contrato y hoy esas dos fases apenas miden el modelo (R-1 de `progress/impl_F-083.md`). Lo mismo vale para el humo de IA3 de T13.
 
 VERDE: una sección por fase con su recomendación (marcada «provisional (1 repetición)») y la suma de `GASTO:` dentro de los 200 USD de P3.
 
@@ -71,21 +76,11 @@ Remove-Variable s, py, m
 
 Códigos de salida: 0 hecho, 1 ningún candidato dio resultado, 2 parada antes de gastar, 3 cortado por `--tope-usd` (el informe se escribe con lo hecho). Tras cada corrida, versionar `progress/comparar_modelos_F-083.md` (no lleva valores); `evals/salidas/` no se versiona.
 
-Qué propone: `python -m evals.comparar_modelos --fase F --modelos a,b`, una fase por invocación, con la referencia de producción medida en la misma corrida (IA1 `gemini-3.7-flash`, IA2 `gpt-5.4`, IA3/IA4 `claude-opus-4-8`). El coste sale de los tokens reales, leídos por un `call_logger` medidor sin tocar los clientes, y de la tabla versionada `evals/precios_modelos.json`. Hay `--estimar` (sin claves ni gasto), paradas antes de gastar (modelo, tabla caducada, claves, tope por invocación y de la feature) y corte en caliente por tope. Criterio de decisión en design §6.
-
 Hallazgos que el humano debe conocer:
-- `gemini-3.7-flash` (IA1 en producción) está descontinuado y Google lo redirige a `gemini-3.8-flash` (página oficial del modelo, 2026-10-12). Renombrarlo en `infra/` queda fuera.
+- `gemini-3.7-flash` (IA1 en producción según `infra/create_capps.ps1`; ver O1) está descontinuado y Google lo redirige a `gemini-3.8-flash` (página oficial del modelo, 2026-10-12). Renombrarlo en `infra/` queda fuera.
 - La línea base de F-075 (IA1 141, IA2 2, IA3/IA4/E2E 408/27/537) probablemente se midió con los defectos del runner (`gemini-2.5-flash`, `gpt-5`, e IA3/IA4 con gemini), no con los modelos de producción: el informe no registra el modelo.
 - El cliente de Claude fuerza la herramienta, y `claude-opus-5-5`, `claude-sonnet-5-5` y `claude-fable-5-1` lo rechazan con 400.
 - «Luna» es la gama Luna de OpenAI: existen `gpt-6-luna` y `gpt-5.6-luna`. No existe `gpt-6.1-luna`.
-
-Decisiones abiertas de la PARADA 1 (design §9, cada una con recomendación):
-- **P1**: qué Luna, y si entra `gpt-6.1-sol`.
-- **P2**: la primera tanda (11 modelos).
-- **P3**: el tope de gasto (25 USD por invocación y 200 USD la feature; la tanda 1 se estima en ≈ 150 USD).
-- **P4**: repeticiones (1, y 3 para los finalistas).
-- **P5**: `forzar_herramienta` en comun (recomendado) o dejar fuera los Claude 5.5.
-- **P6**: los umbrales del criterio.
 
 Las llamadas de pago son T13–T15, MANUAL del humano, con los comandos de design §8. Ningún agente gasta.
 

@@ -1,13 +1,18 @@
 <!-- progress/impl_F-083_mutacion.md -->
 # F-083 · Campaña de mutación (T16, rigor `critico`)
 
+> **Actualización 2026-10-21 · ya hay campaña VÁLIDA:** `progress/mutacion_F-083.md`, del reviewer, sobre
+> `96a59a3`, con 3 workers: **366 mutantes, 366 muertos, 0 supervivientes**, 0 timeouts, 21.907 s. Está
+> en el inventario de F-039. Lo que sigue es la historia de las dos campañas anteriores, que no valen
+> como evidencia.
+
 ## Resultado
 
 **366 mutantes; 0 supervivientes en las dos campañas completas. Cada mutante sale `muerto` en al menos
 una de ellas.** Pero la herramienta marca las dos como **«CAMPAÑA NO VÁLIDA»**: en las dos se agotó la
 línea base de cierre. Ese tiempo es fijo, 600 s (suelo 120 × 5), y la suite no falló: se quedó sin tiempo.
-Por eso estos números **no bastan para cerrar la feature**: hace falta una tercera campaña en una
-máquina libre (ver «Qué falta»).
+Por eso estos números no bastaban para cerrar la feature: hacía falta una tercera campaña, que es la
+válida del reviewer.
 
 | Campaña | Comando | Commit | Muertos | Supervivientes | Timeouts | Duración | Veredicto de la herramienta |
 |---|---|---|---|---|---|---|---|
@@ -91,7 +96,7 @@ Los únicos que la pre-pasada dejó sin veredicto son los tres `if __name__ == "
 puntos de entrada. Al importarse, lanzan `main()` y rompen la recolección; la herramienta lo resuelve
 como `muerto` (base verde), y así salen en c1 y c2.
 
-## Qué falta para que la evidencia valga
+## Lo que faltaba (hecho por el reviewer el 2026-10-21)
 
 Repetir la campaña con la máquina libre (sin campañas ni suites de otros proyectos), desde el worktree:
 

@@ -84,11 +84,12 @@ servicio: esos números no están tocados por este defecto.
 | `progress/mutacion_F-077.md` | No | `VÁLIDA` | Campaña **muestreada** de la herramienta (nivel `estandar`: 20 de 39, semilla `20260820`) de F-077 sobre `e1d99376e6f90d702d863cee1739a543fddcd422`, **4 workers**: 6 ficheros y 301 líneas de sv4, **20 mutantes, 19 muertos, 1 superviviente** (`include_in_schema` de la ruta de la fase), 0 timeouts, 0 sin veredicto, 980,8 s. El superviviente, hueco real cerrado con `test_f077_r18_la_ruta_queda_fuera_del_esquema_openapi` (falla con el mutante aplicado a mano). El JS no lo mide la herramienta: lo cubren los tests con node. |
 | `progress/mutacion_F-073.md` | No | `VÁLIDA` | Campaña **completa** de la herramienta (sin muestreo, nivel `critico`) de F-073, **4 workers**: 4 ficheros y 334 líneas de sv3. Pasada 1 sobre `9f7f489`: 71 mutantes, 60 muertos, 11 supervivientes (7 huecos de test cerrados en `0a5d6d3`, 2 de la frontera margen − tolerancia en `0c169a1`). Final sobre `0c169a14fd8bbe851dda20b5e0bdc618262e4046`: **71 mutantes, 69 muertos, 2 supervivientes equivalentes** (filtro `|Δlongitud| ≤ 1` previo a la distancia; `<=` en la agrupación con candidatos idénticos), 0 timeouts, 0 sin veredicto, 293,2 s; **pendientes de la aceptación escrita del humano**. |
 | `progress/mutacion_F-080.md` | No | `VÁLIDA` | Campaña **completa** de la herramienta (sin muestreo, nivel `critico`) de F-080 sobre `00c52db9c8555ddd7eecd439a1d55a10d1106ef2`, **1 worker** (en serie), desde el worktree `albaranes-F-080` y con `dev` (`f49f1b2`) ya fusionado: 1 fichero y 24 líneas de sv3, **5 mutantes, 5 muertos, 0 supervivientes**, 0 timeouts, 0 sin veredicto, 66,8 s. Detalle en `progress/impl_F-080.md` §«T5». |
+| `progress/mutacion_F-083.md` | Sí | `VÁLIDA` | Campaña **completa** de la herramienta (sin muestreo, nivel `critico`) de F-083, repetida por el reviewer sobre `96a59a3043db3da53877f18e9353dcd61caab3a2`, **3 workers**: 11 ficheros y 2105 líneas de `evals/` (con la suite de la raíz) y de comun (`claude_messages_client.py`, con la suya): **366 mutantes, 366 muertos, 0 supervivientes**, 0 timeouts, 0 sin veredicto, 21.907,1 s. Las dos campañas anteriores del implementer (mismo código, 0 supervivientes) quedaron «NO VÁLIDA» por la base de cierre con la máquina cargada; no cuentan como campaña y viven fuera de este inventario, en `progress/impl_F-083_mutacion.md`. |
 
 ## Recuento
 
-- Informes inventariados: **46** (recontado el 2026-10-19 en F-080: las 43 del recuento anterior, las dos de F-075 y la de F-080).
-- Con alcance fuera de `services/`: **10** (F-011, F-012, F-034, F-038,
-  maquinaria-paralela-F-039, F-039, F-040, F-072, y las dos de F-075).
+- Informes inventariados: **47** (recontado el 2026-10-21 en F-083: los 46 del recuento anterior y la de F-083).
+- Con alcance fuera de `services/`: **11** (F-011, F-012, F-034, F-038,
+  maquinaria-paralela-F-039, F-039, F-040, F-072, las dos de F-075 y la de F-083).
 - Medidos con la invocación rota y **no repuestos**: **2** (F-011 y F-012).
   Ninguno de los dos se va a rehacer, y las dos cabeceras lo dicen.

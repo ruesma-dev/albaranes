@@ -5,15 +5,6 @@ Rama `feature/F-083-comparar-modelos` (worktree `../albaranes-F-083`), rigor `cr
 `specs/F-083-comparar-modelos/`. T1–T12 y T16 hechas, con un commit por tarea. T13–T15 son MANUAL del
 humano y sus comandos están en `progress/current.md`. **No se ha hecho ninguna llamada de pago.**
 
-> **Pendiente para cerrar (T16): la mutación no tiene campaña VÁLIDA.** Hubo dos campañas completas, con
-> 366 mutantes cada una:
->
-> - **0 supervivientes** en las dos, y cada mutante sale `muerto` en al menos una;
-> - las dos acaban «NO VÁLIDA» porque la línea base de cierre pasó de su tope fijo de 600 s, con la
->   máquina cargada por campañas de otros proyectos.
->
-> Hay que repetirla con la máquina libre. Detalle en `progress/impl_F-083_mutacion.md`.
-
 ## Qué cambió
 
 - **Nuevo** `evals/precios_modelos.json`: 19 modelos con fuente, fecha (2026-10-19), papel y motivo,
@@ -135,7 +126,7 @@ humano y sus comandos están en `progress/current.md`. **No se ha hecho ninguna 
 | Tests ejecutados | Raíz `1575 passed`; sv1 205, sv2 485, sv3 1576, sv4 1774 (1 warning), sv5 46, sv6 473 (1 skipped), sv9 673; comun `863 passed, 3 skipped` (caché de `init.sh` del verde del 2026-10-21 00:36). Todo en verde | `bash harness/init.sh` del 2026-10-21: `ENTORNO LISTO` |
 | Tests de F-083 | 207 funciones `test_` (+ parametrizaciones): `247 passed` en raíz y `4 passed` en comun | `pytest tests/test_f083_*.py` y comun |
 | Cobertura de las líneas cambiadas | **99,4 %** (957/963; umbral 80 %, nivel `critico`) | `PUERTA COBERTURA` de `init.sh` |
-| Mutantes | **366** generados (11 ficheros), **0 supervivientes** en las dos campañas completas. c1: 363 muertos y 3 timeouts. c2: 357 muertos y 9 timeouts. Ningún mutante sin un `muerto`. Las dos campañas, **NO VÁLIDAS** (base de cierre > 600 s por carga ajena) | `progress/impl_F-083_mutacion.md` (+ `_c1`, `_c2`, `impl_F-083_mutantes.md`) |
+| Mutantes | **Campaña VÁLIDA** (la del reviewer, sobre `96a59a3`, **3 workers**): **366 generados, 366 muertos, 0 supervivientes**, 0 timeouts, 0 sin veredicto, 21.907 s. Antes, dos campañas del implementer con el mismo código: c1 (4 workers) 363 muertos y 3 timeouts; c2 (3 workers) 357 muertos y 9 timeouts; 0 supervivientes. Las dos quedaron NO VÁLIDAS (base de cierre > 600 s por carga ajena) | `progress/mutacion_F-083.md` (válida, en el inventario de F-039); las anteriores en `progress/impl_F-083_mutacion.md` |
 | Tiempo de la suite de la raíz | 585,9 s en el último `init.sh`, con la máquina cargada; 146,6 s el 2026-10-19 en reposo | la propia suite |
 | ruff | 1358 avisos, los mismos que antes de F-083: 0 nuevos | `init.sh` |
 | Puerta rutas sensibles | Aviso (no bloqueo): T11 toca `ruesma_comun/llm/**`; falta la pasada de evals con LLM (R-4) | `init.sh` |
