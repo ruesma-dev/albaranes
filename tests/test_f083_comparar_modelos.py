@@ -8,6 +8,7 @@ llamarían a un LLM revientan si se tocan.
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 import json
 from decimal import Decimal
@@ -16,8 +17,29 @@ from pathlib import Path
 import pytest
 
 from evals import comparar_modelos as cm
-from evals.costes import cargar_tabla
+from evals.costes import Tabla
+from evals.costes import cargar_tabla as _cargar_tabla_versionada
 from evals.informe_modelos import gasto_acumulado, tokens_medidos
+
+#: (F-085, D4) Las referencias de la tabla siguen a producción
+#: (`infra/create_capps.ps1`; lo vigila R3 en `test_f083_precios.py`) y cambian
+#: con cada cambio de modelo. Estos tests prueban el comparador, no qué modelo
+#: está hoy en producción: fijan las referencias con las que se escribieron,
+#: las de antes del paso 1 de F-085. Precios y papeles son los versionados.
+REFERENCIAS_DE_ESTOS_TESTS = {
+    "IA1": "gemini-3.7-flash",
+    "IA2": "gpt-5.4",
+    "IA3": "claude-opus-4-8",
+    "IA4": "claude-opus-4-8",
+}
+
+
+def cargar_tabla() -> Tabla:
+    """La tabla versionada con las referencias de estos tests."""
+    return dataclasses.replace(
+        _cargar_tabla_versionada(), referencias=dict(REFERENCIAS_DE_ESTOS_TESTS)
+    )
+
 
 AHORA = dt.datetime(2026, 10, 19, 12, 0, tzinfo=dt.timezone.utc)
 CLAVES = {"ANTHROPIC_API_KEY": "a", "GEMINI_API_KEY": "g", "OPENAI_API_KEY": "o"}

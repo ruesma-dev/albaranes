@@ -32,9 +32,24 @@ $pgEnv = @(
 
 # --- Modelos LLM por defecto -----------------------------------------------
 # El .env local NO viaja a Azure (se excluye del build), así que el modelo se
-# fija aquí. sv2 usa los tres proveedores; sv5 solo Claude. Cambia el modelo en
-# ESTE sitio y vuelve a crear, o en caliente con .\set_models.ps1 (que hace
-# el --set-env-vars sobre las apps ya desplegadas).
+# fija aquí. Cambia el modelo en ESTE sitio y vuelve a crear, o en caliente con
+# .\set_models.ps1 (que hace el --set-env-vars sobre las apps ya desplegadas).
+#
+# Quién usa qué (F-085, paso 1 aplicado a mano por el humano el 2026-10-20;
+# tabla completa en azure-apps/albaranes.md, «Modelos de IA por fase»):
+#   IA1  sv2  IA_PRIMERA_FASE=gemini  -> $GEMINI_MODEL
+#   IA2  sv2  IA_SEGUNDA_FASE=openai  -> $OPENAI_MODEL  (corre SIEMPRE: el
+#             worker hace fase 1 + fase 2 sin condición; la antigua
+#             WORKER_CON_FASE2 no la lee ningún código y ya no se declara)
+#   IA3  sv5  IA3_PROVIDER=openai     -> $OPENAI_MODEL
+#   IA4  sv5  IA4_PROVIDER=openai     -> $OPENAI_MODEL
+# sv5 ya NO es «solo Claude»: habilita OpenAI con la misma clave de Key Vault
+# que sv2 (OPENAI-API-KEY), así que la cuota de OpenAI es compartida. Claude
+# sigue instanciado y ocioso en sv2 y sv5 ($ANTHROPIC_MODEL): es la vuelta
+# atrás de IA3/IA4 (IA3_PROVIDER=claude / IA4_PROVIDER=claude). sv5 no arranca
+# si IA3_PROVIDER o IA4_PROVIDER nombran un proveedor apagado (F-085 R9).
+# Un Claude 5.5 en sv5 (Opus 5.5 en IA3) no se pone aquí hasta F-086: su API
+# rechaza la herramienta forzada que pide el cliente de comun.
 # OJO 1: el adaptador de Claude (comun/llm/claude_messages_client.py) NO
 # envia temperature/top_p/top_k, imprescindible desde Opus 4.7 (esos
 # parametros devuelven 400). Si algun dia se anaden, fallaria.
@@ -43,9 +58,9 @@ $pgEnv = @(
 # sonnet-5). Lo absorbe comun/llm/json_coercion.py -> si cambias de modelo
 # y sv5 empieza a devolver 400 "Input should be a valid list", el fix va
 # ahi, no en el prompt.
-$ANTHROPIC_MODEL = "claude-opus-4-8"   # 16-ago-2026 (decision del humano)
-$OPENAI_MODEL    = "gpt-5.4"
-$GEMINI_MODEL    = "gemini-3.7-flash"  # 16-ago-2026 (IA1; antes gemini-3.1-pro-preview)
+$ANTHROPIC_MODEL = "claude-opus-4-8"   # 16-ago-2026; ocioso desde F-085 (vuelta atrás de IA3/IA4)
+$OPENAI_MODEL    = "gpt-6.1-sol"       # 20-oct-2026, F-085: IA2 (sv2), IA3 e IA4 (sv5); antes gpt-5.4
+$GEMINI_MODEL    = "gemini-4-argon"    # 20-oct-2026, F-085: IA1; antes gemini-3.7-flash
 
 function Run-Az($argList) {
     az @argList | Out-Null
@@ -56,11 +71,18 @@ function Run-Az($argList) {
 Write-Host "`n=== sv5 (valuation, interno HTTP :8002) ===" -ForegroundColor Green
 $sv5Secrets = @("pg-password=$(KvRef 'PG-PASSWORD')",
                 "graph-key=$(KvRef 'GRAPH-KEY')",
-                "anthropic-key=$(KvRef 'ANTHROPIC-API-KEY')")
+                "anthropic-key=$(KvRef 'ANTHROPIC-API-KEY')",
+                "openai-key=$(KvRef 'OPENAI-API-KEY')")
+# F-085: IA3 e IA4 con OpenAI. IA3_PROVIDER va con ENABLE_OPENAI en la misma
+# creación: con IA3_PROVIDER vacía y dos proveedores, IA3 llamaría a los dos.
 $sv5Env = @() + $pgEnv + @(
     "GRAPH_KEY=secretref:graph-key",
     "ANTHROPIC_API_KEY=secretref:anthropic-key",
     "ANTHROPIC_MODEL=$ANTHROPIC_MODEL",
+    "ENABLE_OPENAI=true",
+    "OPENAI_API_KEY=secretref:openai-key",
+    "OPENAI_MODEL=$OPENAI_MODEL",
+    "IA3_PROVIDER=openai", "IA4_PROVIDER=openai",
     "API_HOST=0.0.0.0", "API_PORT=8002", "LOG_DIR=/tmp/logs"
 ) + (SpEnv)
 $a = @("containerapp","create","-n","ca-sv5-valuation","-g",$RG,"--environment",$CAE,
@@ -110,7 +132,7 @@ $sv2Secrets = @("anthropic-key=$(KvRef 'ANTHROPIC-API-KEY')",
                 "gemini-key=$(KvRef 'GEMINI-API-KEY')")
 $sv2Env = @("AZURE_CLIENT_ID=$MI_CLIENTID", "COLAS_ACCOUNT_URL=$QUEUE_URL",
             "BLOBS_ACCOUNT_URL=$BLOB_URL", "LOG_DIR=/tmp/logs",
-            "WORKER_CON_FASE2=false", "IA_PRIMERA_FASE=gemini",
+            "IA_PRIMERA_FASE=gemini", "IA_SEGUNDA_FASE=openai",
             "ANTHROPIC_API_KEY=secretref:anthropic-key",
             "OPENAI_API_KEY=secretref:openai-key",
             "GEMINI_API_KEY=secretref:gemini-key",

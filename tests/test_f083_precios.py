@@ -81,8 +81,14 @@ def test_f083_r1_papeles_de_la_parada_1():
         modelo = tabla.modelo(modelo_id)
         assert modelo.papel == "excluido", modelo_id
         assert modelo.motivo.strip(), modelo_id
-    # Opus 4.8 solo como referencia de IA3/IA4 (lo añade R12).
-    assert tabla.modelo("claude-opus-4-8").papel == "referencia"
+    # F-085 (D4): las referencias pasan a gemini-4-argon (IA1) y gpt-6.1-sol
+    # (IA2–IA4); los modelos de antes quedan como candidatos (vuelta atrás) y
+    # Opus 4.8 sigue fuera de la tanda 1, pero se puede pedir en IA3/IA4.
+    assert tabla.modelo("gemini-4-argon").papel == "referencia"
+    assert tabla.modelo("gpt-6.1-sol").papel == "referencia"
+    for anterior in ("gemini-3.7-flash", "gpt-5.4", "claude-opus-4-8"):
+        assert tabla.modelo(anterior).papel == "candidato", anterior
+        assert "antes de F-085" in tabla.modelo(anterior).motivo, anterior
     assert set(tabla.validos()) == {*TANDA_1, "claude-opus-4-8"}
 
 
@@ -234,23 +240,47 @@ def test_f083_r2_json_ilegible(tmp_path):
 # --- R3 -----------------------------------------------------------------------
 
 
+def _texto_de_infra() -> str:
+    return (RAIZ / "infra" / "create_capps.ps1").read_text(encoding="utf-8-sig")
+
+
 def _modelo_de_infra(variable: str) -> str:
-    texto = (RAIZ / "infra" / "create_capps.ps1").read_text(encoding="utf-8-sig")
-    encontrado = re.search(rf'^\${variable}\s*=\s*"([^"]+)"', texto, re.MULTILINE)
+    encontrado = re.search(rf'^\${variable}\s*=\s*"([^"]+)"', _texto_de_infra(), re.MULTILINE)
     assert encontrado, f"{variable} no está en infra/create_capps.ps1"
     return encontrado.group(1)
 
 
-@pytest.mark.parametrize(
-    ("fase", "variable"),
-    [
-        ("IA1", "GEMINI_MODEL"),
-        ("IA2", "OPENAI_MODEL"),
-        ("IA3", "ANTHROPIC_MODEL"),
-        ("IA4", "ANTHROPIC_MODEL"),
-    ],
-)
-def test_f083_r3_la_referencia_es_la_de_produccion(fase, variable):
+#: Variable de modelo de cada proveedor en `create_capps.ps1`.
+VARIABLE_DEL_PROVEEDOR = {
+    "claude": "ANTHROPIC_MODEL",
+    "gemini": "GEMINI_MODEL",
+    "openai": "OPENAI_MODEL",
+}
+
+
+def _proveedor_de_sv5(variable: str) -> str:
+    """(F-085, D4) El proveedor de IA3/IA4 que fija el bloque de sv5.
+
+    Sin `IA3_PROVIDER`/`IA4_PROVIDER` en el bloque, sv5 usa el primero
+    habilitado, y con sus defectos ese es Claude.
+    """
+    texto = _texto_de_infra()
+    bloque = texto[texto.index("sv5 (interno)"):texto.index("sv6 (worker)")]
+    encontrado = re.search(rf'"{variable}=([a-z]+)"', bloque)
+    return encontrado.group(1) if encontrado else "claude"
+
+
+def _variable_de_fase(fase: str) -> str:
+    if fase == "IA1":
+        return "GEMINI_MODEL"
+    if fase == "IA2":
+        return "OPENAI_MODEL"
+    return VARIABLE_DEL_PROVEEDOR[_proveedor_de_sv5(f"{fase}_PROVIDER")]
+
+
+@pytest.mark.parametrize("fase", ["IA1", "IA2", "IA3", "IA4"])
+def test_f083_r3_la_referencia_es_la_de_produccion(fase):
+    variable = _variable_de_fase(fase)
     produccion = _modelo_de_infra(variable)
     tabla = cargar_tabla()
     assert tabla.referencia(fase) == produccion, (
@@ -258,6 +288,14 @@ def test_f083_r3_la_referencia_es_la_de_produccion(fase, variable):
         f"({variable}) dice {produccion}"
     )
     assert tabla.modelo(produccion).papel == "referencia"
+
+
+def test_f083_r3_ia3_e_ia4_siguen_al_proveedor_de_sv5():
+    # F-085 (D4): con IA3_PROVIDER/IA4_PROVIDER=openai la referencia de IA3 e
+    # IA4 es OPENAI_MODEL, no ANTHROPIC_MODEL (Claude queda ocioso en sv5).
+    assert _proveedor_de_sv5("IA3_PROVIDER") == "openai"
+    assert _proveedor_de_sv5("IA4_PROVIDER") == "openai"
+    assert _variable_de_fase("IA3") == _variable_de_fase("IA4") == "OPENAI_MODEL"
 
 
 def test_f083_r3_fase_desconocida():
