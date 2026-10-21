@@ -64,7 +64,7 @@ sv2 cambia solo el modelo de IA2: **no hay llamadas nuevas**. Ver design §1.
 ## 3. Paso 2 · Claude Opus 5.5 en IA3 (código listo ahora, activación posterior)
 
 > **Decidido en la PARADA 1 (P3, 2026-10-20): R15–R19 y R27 salen de F-085** a una feature nueva
-> («Opus 5.5 en IA3»), con design §7 como criterio de entrada. Aquí quedan solo como referencia.
+> (**F-086**, «Opus 5.5 en IA3»), con design §7 como criterio de entrada. Aquí, solo referencia.
 
 - **R15.** sv5 debe leer `ANTHROPIC_FORZAR_HERRAMIENTA` (booleana, por defecto `true`) y pasarla como
   `forzar_herramienta` al cliente de Claude de comun (parámetro de F-083 T11).
@@ -101,5 +101,5 @@ sv2 cambia solo el modelo de IA2: **no hay llamadas nuevas**. Ver design §1.
 - **R26.** SI una fase incumple el umbral de acierto, ENTONCES el humano debe aplicar su vuelta atrás
   de la MANUAL M3 y anotarlo en `progress/current.md`.
 - **R27.** El paso 2 (Opus 5.5 en IA3) solo se activa CUANDO se cumplan las condiciones de design §7
-  (F-083 T11 y el arreglo de R18 en `dev`, sv5 reconstruido, y Opus 5.5 recomendado frente a
+  (F-083 T11 y el arreglo de R18 de F-086 en `dev`, sv5 reconstruido, y Opus 5.5 mejor que
   `gpt-6.1-sol` en IA3 con el banco de F-084).

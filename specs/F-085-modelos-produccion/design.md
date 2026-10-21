@@ -193,7 +193,7 @@ en la prueba rápida, ≈ 0,93×; ≈ 2,5–5× coste con los tokens estimados) 
 
 ## 7. Paso 2 · Opus 5.5 en IA3: condiciones de entrada
 
-1. F-083 T11 (`forzar_herramienta`) y el arreglo de R18–R19 (P1) fusionados en `dev`; F-085 T6 hecha.
+1. F-083 T11 (`forzar_herramienta`, ya en `dev`) y el arreglo de R18–R19 (F-086, O3) en `dev`; T6 hecha.
 2. sv5 reconstruido con esa comun (M4 o un despliegue posterior). Las demás imágenes no lo necesitan:
    el defecto del parámetro es el comportamiento de hoy.
 3. F-084 `done`, y en el comparador (IA3, 3 repeticiones, referencia `gpt-6.1-sol`) Opus 5.5 cumple §6.1
@@ -231,9 +231,9 @@ en la prueba rápida, ≈ 0,93×; ≈ 2,5–5× coste con los tokens estimados) 
 
 ## 9. Decisiones de la PARADA 1 (el humano, 2026-10-20: P1–P5 según la recomendación)
 
-- **P1 · ¿Quién arregla el parseo de respaldo de Claude** (R18–R19)? (a) F-083 T11, que toca la misma
-  función por el mismo motivo; (b) F-085. **Decidido: (a)**, para que lo que mide F-083 con Opus
-  5.5 sea lo que irá a producción; con (b), T7 se hace aquí y sv5 pide pasada de evals.
+- **P1 · ¿Quién arregla el parseo de respaldo de Claude** (R18–R19)? (a) fuera de F-085; (b) F-085.
+  **Decidido: (a)**. Corregido por O3 de `progress/review_F-083.md` (2026-10-21): F-083 T11 solo añadió
+  `forzar_herramienta`; el arreglo de `_parse_response` va a **F-086**, con T6, T7 y T12.
 - **P2 · ¿Se quita `WORKER_CON_FASE2`?** (a) Quitarla de `create_capps.ps1` y de sv2
   (`az containerapp update -n ca-sv2-extraccion -g $RG --remove-env-vars WORKER_CON_FASE2`,
   [ESCRIBE EN PRODUCCIÓN · humano], sin efecto en el comportamiento) y corregir los `INSTRUCCIONES`;
