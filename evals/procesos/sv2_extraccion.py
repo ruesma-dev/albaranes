@@ -26,11 +26,7 @@ from pathlib import Path
 from evals.modelos import NO_COMPARAR
 from evals.procesos import canal
 from evals.procesos.errores import avisar, describir_error
-from evals.procesos.sv5_valoracion import (
-    CLAVES_POR_PROVEEDOR,
-    MODELOS_POR_PROVEEDOR,
-    comprobar_claves,
-)
+from evals.procesos.sv5_valoracion import cliente_llm, comprobar_claves
 
 RAIZ_REPO = Path(__file__).resolve().parent.parent.parent
 RAIZ_SV2 = RAIZ_REPO / "services" / "albaranes-api"
@@ -202,25 +198,15 @@ def proyectar_ia2(documento: dict, caso_id: str) -> dict[str, list[dict]]:
 # --- Subproceso: aquí y solo aquí se importa sv2 ----------------------------
 
 
-def _especificacion(proveedor: str):  # pragma: no cover - subproceso
+def _especificacion(
+    proveedor: str, modelo: str | None = None, call_logger=None, forzar_herramienta: bool = True
+):
     """`ProviderClientSpec` de sv2 con el cliente real del proveedor."""
     from application.services.albaran_extraction_service import ProviderClientSpec
-    from ruesma_comun.llm.claude_messages_client import ClaudeMessagesVisionClient
-    from ruesma_comun.llm.gemini_genai_client import GeminiGenAiVisionClient
-    from ruesma_comun.llm.openai_responses_client import OpenAIResponsesVisionClient
 
-    clave = os.environ.get(CLAVES_POR_PROVEEDOR[proveedor], "")
-    variable, por_defecto = MODELOS_POR_PROVEEDOR[proveedor]
-    modelo = os.environ.get(variable, por_defecto)
-
-    if proveedor == "claude":
-        cliente = ClaudeMessagesVisionClient(
-            api_key=clave, tool_name="emit_albaran_extraction"
-        )
-    elif proveedor == "gemini":
-        cliente = GeminiGenAiVisionClient(clave)
-    else:
-        cliente = OpenAIResponsesVisionClient(clave)
+    modelo, cliente = cliente_llm(
+        proveedor, "emit_albaran_extraction", modelo, call_logger, forzar_herramienta
+    )
     return ProviderClientSpec(provider=proveedor, model_name=modelo, client=cliente)
 
 
