@@ -264,7 +264,64 @@ def test_f085_r10_ia3_vacia_llama_a_todos_y_manda_claude():
     assert sobre["meta"]["providers_used"] == ["claude", "openai"]
 
 
-# --- build_app usa las funciones de wiring ---------------------------------------------------
+# --- R12: la línea de wiring -----------------------------------------------------
+
+
+def test_f085_r12_linea_de_wiring_del_paso_1():
+    proveedores = [_spec("claude", "claude-opus-4-8"), _spec("openai", "gpt-6.1-sol")]
+    ia4 = modulo.seleccionar_ia4(proveedores, "openai")
+    assert modulo.describir_wiring(proveedores, "openai", ia4, True) == (
+        "[svc5][wiring] IA3=openai/gpt-6.1-sol IA4=openai/gpt-6.1-sol forzar_herramienta=True"
+    )
+
+
+def test_f085_r12_ia3_vacia_nombra_a_todos_los_que_llama():
+    proveedores = [_spec("claude", "claude-opus-4-8"), _spec("openai", "gpt-6.1-sol")]
+    ia4 = modulo.seleccionar_ia4(proveedores, None)
+    assert modulo.describir_wiring(proveedores, " ", ia4, False) == (
+        "[svc5][wiring] IA3=claude/claude-opus-4-8,openai/gpt-6.1-sol "
+        "IA4=claude/claude-opus-4-8 forzar_herramienta=False"
+    )
+
+
+def test_f085_r12_ia3_normalizada():
+    proveedores = [_spec("claude", "claude-opus-4-8"), _spec("openai", "gpt-6.1-sol")]
+    texto = modulo.describir_wiring(proveedores, " OpenAI ", proveedores[:1], True)
+    assert texto.startswith("[svc5][wiring] IA3=openai/gpt-6.1-sol IA4=claude/claude-opus-4-8 ")
+
+
+def test_f085_r12_sin_proveedores_no_revienta():
+    assert modulo.describir_wiring([], None, [], True) == (
+        "[svc5][wiring] IA3=ninguno IA4=ninguno forzar_herramienta=True"
+    )
+
+
+# --- R11: el aviso de IA3 con todos ------------------------------------------------
+
+
+@pytest.mark.parametrize("valor", [None, "", "  "])
+def test_f085_r11_ia3_vacia_con_dos_avisa(valor):
+    proveedores = [_spec("claude", "claude-opus-4-8"), _spec("openai", "gpt-6.1-sol")]
+    aviso = modulo.aviso_ia3_todos(proveedores, valor)
+    assert aviso == (
+        "[svc5][wiring] IA3_PROVIDER vacía con 2 proveedores habilitados (claude, openai): "
+        "IA3 llamará a TODOS en cada valoración (coste x2). Fija IA3_PROVIDER."
+    )
+
+
+def test_f085_r11_tres_proveedores_coste_x3():
+    proveedores = [_spec("claude", "a"), _spec("gemini", "b"), _spec("openai", "c")]
+    assert "(coste x3)" in modulo.aviso_ia3_todos(proveedores, None)
+
+
+def test_f085_r11_sin_aviso_con_uno_o_con_ia3_fijada():
+    uno = [_spec("claude", "claude-opus-4-8")]
+    dos = [*uno, _spec("openai", "gpt-6.1-sol")]
+    assert modulo.aviso_ia3_todos(uno, None) is None
+    assert modulo.aviso_ia3_todos(dos, "openai") is None
+
+
+# --- R11, R12 dentro de build_app ---------------------------------------------------
 
 
 class _Nada:
@@ -282,6 +339,27 @@ def _sin_infra(monkeypatch):
 def _mensajes(caplog, nivel):
     return [r.getMessage() for r in caplog.records
             if r.name == modulo.logger.name and r.levelno == nivel]
+
+
+def test_f085_r12_build_app_escribe_la_linea_de_wiring(_sin_infra, caplog):
+    caplog.set_level(logging.INFO, logger=modulo.logger.name)
+    modulo.build_app(_settings(**PASO_1))
+    assert (
+        "[svc5][wiring] IA3=openai/gpt-6.1-sol IA4=openai/gpt-6.1-sol forzar_herramienta=True"
+        in _mensajes(caplog, logging.INFO)
+    )
+    assert _mensajes(caplog, logging.WARNING) == []
+
+
+def test_f085_r11_build_app_avisa_si_ia3_llamara_a_todos(_sin_infra, caplog):
+    caplog.set_level(logging.INFO, logger=modulo.logger.name)
+    modulo.build_app(_settings(**{**PASO_1, "IA3_PROVIDER": "", "IA4_PROVIDER": ""}))
+    avisos = _mensajes(caplog, logging.WARNING)
+    assert len(avisos) == 1 and "(coste x2)" in avisos[0]
+    assert (
+        "[svc5][wiring] IA3=claude/claude-opus-4-8,openai/gpt-6.1-sol "
+        "IA4=claude/claude-opus-4-8 forzar_herramienta=True"
+    ) in _mensajes(caplog, logging.INFO)
 
 
 def test_f085_r13_build_app_da_a_ia4_solo_openai(_sin_infra, monkeypatch):

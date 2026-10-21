@@ -123,6 +123,18 @@ def build_app(settings: Settings) -> FastAPI:
     # IA4: proveedor dedicado si se configura (IA4_PROVIDER); si no, el
     # primero habilitado (ConciliacionService usa providers[0]).
     ia4_providers = seleccionar_ia4(providers, settings.ia4_provider)
+    # (F-085 R11, R12) Qué proveedor y qué modelo hacen de verdad cada fase.
+    aviso = aviso_ia3_todos(providers, settings.ia3_provider)
+    if aviso:
+        logger.warning(aviso)
+    logger.info(
+        describir_wiring(
+            providers,
+            settings.ia3_provider,
+            ia4_providers,
+            FORZAR_HERRAMIENTA_CLAUDE,
+        )
+    )
     conciliacion_service = ConciliacionService(
         providers=ia4_providers,
         prompt_repo=prompt_repo,
@@ -300,6 +312,12 @@ def build_app(settings: Settings) -> FastAPI:
 # (F-085) Wiring de proveedores: funciones puras que usa build_app.
 # ------------------------------------------------------------------ #
 
+#: Lo que pide hoy el cliente de Claude a ``messages.create``: sv5 no le pasa
+#: ``forzar_herramienta`` y el defecto de comun (F-083 T11) es forzarla. Lo
+#: cambiará F-086 con ``ANTHROPIC_FORZAR_HERRAMIENTA``; hasta entonces solo
+#: sale en la línea de wiring.
+FORZAR_HERRAMIENTA_CLAUDE = True
+
 
 def construir_proveedores(
     settings: Settings,
@@ -374,3 +392,57 @@ def seleccionar_ia4(
     """
     seleccion = (ia4_provider or "").strip().lower()
     return [p for p in providers if p.provider == seleccion] or providers
+
+
+def proveedores_ia3(
+    providers: list[ProviderClientSpec],
+    ia3_provider: str | None,
+) -> list[ProviderClientSpec]:
+    """(F-085 R12) A quién llama IA3: el de ``IA3_PROVIDER`` o, vacía, a todos.
+
+    Mismo criterio que ``ValuationExtractionService.extract``.
+    """
+    seleccion = (ia3_provider or "").strip().lower()
+    return [p for p in providers if p.provider == seleccion] or providers
+
+
+def describir_wiring(
+    providers: list[ProviderClientSpec],
+    ia3_provider: str | None,
+    ia4_seleccionados: list[ProviderClientSpec],
+    forzar: bool,
+) -> str:
+    """(F-085 R12) La línea INFO de arranque con el proveedor/modelo por fase.
+
+    IA3 nombra a todos los que llamará (más de uno solo si ``IA3_PROVIDER``
+    está vacía); IA4, el primero de su lista, que es el que usa
+    ``ConciliacionService``.
+    """
+    ia3 = ",".join(
+        f"{p.provider}/{p.model_name}"
+        for p in proveedores_ia3(providers, ia3_provider)
+    ) or "ninguno"
+    ia4 = (
+        f"{ia4_seleccionados[0].provider}/{ia4_seleccionados[0].model_name}"
+        if ia4_seleccionados else "ninguno"
+    )
+    return f"[svc5][wiring] IA3={ia3} IA4={ia4} forzar_herramienta={forzar}"
+
+
+def aviso_ia3_todos(
+    providers: list[ProviderClientSpec],
+    ia3_provider: str | None,
+) -> str | None:
+    """(F-085 R11) El WARNING de IA3 con ``IA3_PROVIDER`` vacía y varios proveedores.
+
+    En ese caso IA3 llama a todos los habilitados en cada valoración: el coste
+    se multiplica por su número. ``None`` si no hay nada que avisar.
+    """
+    if (ia3_provider or "").strip() or len(providers) <= 1:
+        return None
+    nombres = ", ".join(p.provider for p in providers)
+    return (
+        f"[svc5][wiring] IA3_PROVIDER vacía con {len(providers)} proveedores "
+        f"habilitados ({nombres}): IA3 llamará a TODOS en cada valoración "
+        f"(coste x{len(providers)}). Fija IA3_PROVIDER."
+    )
