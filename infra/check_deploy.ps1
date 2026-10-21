@@ -88,11 +88,19 @@ if ($malos.Count) {
 Write-Host "Nota: replicas=0 es NORMAL en workers (sv3/sv6 escalan a cero y despiertan con la cola)." -ForegroundColor DarkGray
 
 if ($ConModelos) {
-    Write-Host "`nModelos LLM por app:" -ForegroundColor Cyan
+    # F-085: ademas de los modelos, quien hace cada fase (IA1/IA2 en sv2,
+    # IA3/IA4 en sv5) y si sv5 tiene OpenAI encendido. Solo salen las que
+    # existan en la app.
+    $variablesDeFase = @("ANTHROPIC_MODEL", "OPENAI_MODEL", "GEMINI_MODEL",
+                         "IA_PRIMERA_FASE", "IA_SEGUNDA_FASE",
+                         "IA3_PROVIDER", "IA4_PROVIDER",
+                         "ENABLE_OPENAI", "ANTHROPIC_FORZAR_HERRAMIENTA")
+    $filtro = ($variablesDeFase | ForEach-Object { "name=='$_'" }) -join " || "
+    Write-Host "`nModelos LLM y fases por app:" -ForegroundColor Cyan
     foreach ($s in $Orden) {
         $app = $AppMap[$s]
         $envs = az containerapp show -n $app -g $RG `
-            --query "properties.template.containers[0].env[?name=='ANTHROPIC_MODEL' || name=='OPENAI_MODEL' || name=='GEMINI_MODEL'].{n:name,v:value}" `
+            --query "properties.template.containers[0].env[?$filtro].{n:name,v:value}" `
             -o json 2>$null | ConvertFrom-Json
         if ($envs) {
             $txt = (@($envs) | ForEach-Object { "$($_.n)=$($_.v)" }) -join "  "

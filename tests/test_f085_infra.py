@@ -203,3 +203,128 @@ def test_f085_r4_reconoce_cada_forma_de_clave(texto, forma):
 @pytest.mark.parametrize("texto", ["la tarea task-1234567890123456789012", "prefijo sk- citado", "AIza"])
 def test_f085_r4_no_confunde_texto_normal_con_una_clave(texto):
     assert claves_en(texto) == []
+
+
+# --- R5, R6: los scripts, ejecutados con un `az` falso ----------------------------
+
+POWERSHELL = shutil.which("powershell.exe") or shutil.which("pwsh")
+con_powershell = pytest.mark.skipif(POWERSHELL is None, reason="sin PowerShell")
+
+#: Entorno de prueba: mapas de 00_vars.ps1 mínimos y un `az` que solo apunta.
+#: `show` devuelve las variables de fase para que -ConModelos tenga qué pintar.
+_PRELUDIO = r"""
+$ErrorActionPreference = "Stop"
+$Global:APPS = [ordered]@{ "sv2" = "ca-sv2-extraccion"; "sv5" = "ca-sv5-valuation" }
+$Global:REPO = @{ "sv2" = "r2"; "sv5" = "r5" }
+$Global:IMG  = @{ "sv2" = "i2"; "sv5" = "i5" }
+$Global:RG   = "rg-prueba"
+$Global:LLAMADAS = New-Object System.Collections.ArrayList
+function global:az {
+    [void]$Global:LLAMADAS.Add(($args -join " "))
+    $global:LASTEXITCODE = 0
+    if ($args -contains "show") { '[{"n":"IA3_PROVIDER","v":"openai"},{"n":"OPENAI_MODEL","v":"gpt-6.1-sol"}]' }
+}
+"""
+
+
+def _ejecutar(tmp_path: Path, guion: str, *argumentos: str) -> tuple[list[str], str]:
+    """Ejecuta un script de infra con el `az` falso; devuelve las llamadas a az y la salida."""
+    falso = tmp_path / "bin"
+    falso.mkdir(exist_ok=True)
+    (falso / "az.cmd").write_text("@echo AZ-CMD-REAL-NO %*\r\n@exit /b 0\r\n", encoding="ascii")
+    (tmp_path / "azcfg").mkdir(exist_ok=True)
+    envoltorio = tmp_path / "envoltorio.ps1"
+    envoltorio.write_text(
+        "﻿"
+        + _PRELUDIO
+        + f"& '{INFRA / guion}' {' '.join(argumentos)}\n"
+        + '$Global:LLAMADAS | ForEach-Object { "LLAMADA-AZ: $_" }\n',
+        encoding="utf-8",
+    )
+    entorno = dict(os.environ)
+    entorno["PATH"] = f"{falso}{os.pathsep}{entorno.get('PATH', '')}"
+    entorno["AZURE_CONFIG_DIR"] = str(tmp_path / "azcfg")
+    resultado = subprocess.run(
+        [POWERSHELL, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+         "-File", str(envoltorio)],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        env=entorno, timeout=120, check=False,
+    )
+    salida = resultado.stdout + resultado.stderr
+    assert "AZ-CMD-REAL-NO" not in salida, "se llamó a az.exe y no a la función falsa"
+    assert resultado.returncode == 0, salida
+    llamadas = [l.split("LLAMADA-AZ: ", 1)[1] for l in salida.splitlines() if "LLAMADA-AZ: " in l]
+    return llamadas, salida
+
+
+def _updates(llamadas: list[str]) -> dict[str, str]:
+    """`containerapp update` por app: {app: '--set-env-vars ...'}."""
+    out = {}
+    for llamada in llamadas:
+        if llamada.startswith("containerapp update"):
+            app = re.search(r"-n (\S+)", llamada).group(1)
+            out[app] = llamada
+    return out
+
+
+@con_powershell
+def test_f085_r5_openai_cambia_sv2_y_sv5(tmp_path):
+    llamadas, _ = _ejecutar(tmp_path, "set_models.ps1", "-Openai", "gpt-prueba")
+    updates = _updates(llamadas)
+    assert set(updates) == {"ca-sv2-extraccion", "ca-sv5-valuation"}
+    for llamada in updates.values():
+        assert "--set-env-vars OPENAI_MODEL=gpt-prueba" in llamada
+        assert "ANTHROPIC_MODEL" not in llamada and "GEMINI_MODEL" not in llamada
+
+
+@con_powershell
+@pytest.mark.parametrize(
+    ("solo", "app"), [("sv2", "ca-sv2-extraccion"), ("sv5", "ca-sv5-valuation")]
+)
+def test_f085_r5_solo_un_servicio(tmp_path, solo, app):
+    llamadas, _ = _ejecutar(tmp_path, "set_models.ps1", "-Openai", "gpt-prueba", "-Solo", solo)
+    assert list(_updates(llamadas)) == [app]
+
+
+@con_powershell
+def test_f085_r5_gemini_sigue_siendo_solo_de_sv2(tmp_path):
+    llamadas, _ = _ejecutar(tmp_path, "set_models.ps1", "-Gemini", "gemini-prueba")
+    updates = _updates(llamadas)
+    assert list(updates) == ["ca-sv2-extraccion"]
+    assert "GEMINI_MODEL=gemini-prueba" in updates["ca-sv2-extraccion"]
+
+
+@con_powershell
+def test_f085_r5_anthropic_sigue_en_los_dos(tmp_path):
+    llamadas, _ = _ejecutar(tmp_path, "set_models.ps1", "-Anthropic", "claude-prueba")
+    assert set(_updates(llamadas)) == {"ca-sv2-extraccion", "ca-sv5-valuation"}
+
+
+@con_powershell
+def test_f085_r5_solo_rechaza_un_servicio_que_no_existe(tmp_path):
+    with pytest.raises(AssertionError):
+        _ejecutar(tmp_path, "set_models.ps1", "-Openai", "gpt-prueba", "-Solo", "sv9")
+
+
+def test_f085_r5_la_ayuda_avisa_de_claude_5_5_en_sv5():
+    ayuda = _texto(INFRA / "set_models.ps1").split("param(")[0]
+    assert "ANTHROPIC_FORZAR_HERRAMIENTA" in ayuda
+    assert "-Solo" in ayuda
+
+
+VARIABLES_DE_FASE = (
+    "ANTHROPIC_MODEL", "OPENAI_MODEL", "GEMINI_MODEL",
+    "IA_PRIMERA_FASE", "IA_SEGUNDA_FASE", "IA3_PROVIDER", "IA4_PROVIDER",
+    "ENABLE_OPENAI", "ANTHROPIC_FORZAR_HERRAMIENTA",
+)
+
+
+@con_powershell
+def test_f085_r6_con_modelos_pide_y_pinta_las_variables_de_fase(tmp_path):
+    llamadas, salida = _ejecutar(tmp_path, "check_deploy.ps1", "-ConModelos")
+    consultas = [l for l in llamadas if l.startswith("containerapp show")]
+    assert len(consultas) == 2
+    for consulta in consultas:
+        for variable in VARIABLES_DE_FASE:
+            assert f"name=='{variable}'" in consulta, variable
+    assert re.search(r"ca-sv5-valuation\s+IA3_PROVIDER=openai\s+OPENAI_MODEL=gpt-6.1-sol", salida)
