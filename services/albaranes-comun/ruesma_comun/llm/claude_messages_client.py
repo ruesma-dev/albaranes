@@ -42,9 +42,18 @@ class ClaudeMessagesVisionClient(LlmVisionClient):
         call_logger: LlmCallLogger | None = None,
         tool_name: str = _TOOL_NAME_POR_DEFECTO,
         tool_description: str = _TOOL_DESCRIPTION_POR_DEFECTO,
+        forzar_herramienta: bool = True,
     ) -> None:
         self._tool_name = tool_name
         self._tool_description = tool_description
+        # (F-083) Los Claude 5.5 y Fable 5.1 rechazan con 400 `tool_choice` de
+        # tipo `tool`/`any`. Con False se pide `auto`: la descripción de la
+        # herramienta ya exige llamarla siempre, y si no llega `tool_use`
+        # decide el parseo de siempre. El defecto deja la petición como hoy.
+        self._tool_choice = (
+            {"type": "tool", "name": tool_name} if forzar_herramienta else {"type": "auto"}
+        )
+        self._response_format = "tool_use forced" if forzar_herramienta else "tool_use auto"
         self._client = anthropic.Anthropic(
             api_key=api_key,
             timeout=float(timeout_s),
@@ -183,7 +192,7 @@ class ClaudeMessagesVisionClient(LlmVisionClient):
             "schema_name": response_model.__name__,
             "tool_name": self._tool_name,
             "max_tokens": self._max_tokens,
-            "response_format": "tool_use forced",
+            "response_format": self._response_format,
         }
 
         response = None
@@ -197,7 +206,7 @@ class ClaudeMessagesVisionClient(LlmVisionClient):
                     max_tokens=self._max_tokens,
                     system=instructions,
                     tools=[tool_spec],
-                    tool_choice={"type": "tool", "name": self._tool_name},
+                    tool_choice=self._tool_choice,
                     messages=[{"role": "user", "content": content}],
                 ),
                 policy=self._retry_policy,

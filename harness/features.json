@@ -68,7 +68,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 20,
+      "priority": 32,
       "branch": "feature/F-003-valorados-match-estricto"
     },
     {
@@ -78,7 +78,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 23,
+      "priority": 35,
       "branch": "feature/F-004-hormigon-fino"
     },
     {
@@ -88,7 +88,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 24,
+      "priority": 36,
       "branch": "feature/F-005-bombeo"
     },
     {
@@ -98,7 +98,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 25,
+      "priority": 37,
       "branch": "feature/F-006-residuos-pago"
     },
     {
@@ -108,7 +108,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 26,
+      "priority": 38,
       "branch": "feature/F-007-partida-alm-selector"
     },
     {
@@ -123,7 +123,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 29,
+      "priority": 41,
       "branch": "feature/F-008-blob-lifecycle"
     },
     {
@@ -139,7 +139,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 30,
+      "priority": 42,
       "branch": "feature/F-009-limpieza-q-emails"
     },
     {
@@ -149,7 +149,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 31,
+      "priority": 43,
       "branch": "feature/F-010-easy-auth-sv4"
     },
     {
@@ -159,7 +159,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 28,
+      "priority": 40,
       "branch": "feature/F-013-registro-sigrid"
     },
     {
@@ -169,7 +169,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 21,
+      "priority": 33,
       "branch": "feature/F-014-conversor-administrativo"
     },
     {
@@ -179,7 +179,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 14,
+      "priority": 26,
       "branch": "feature/F-015-lineas-tachadas"
     },
     {
@@ -189,7 +189,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 16,
+      "priority": 28,
       "branch": "feature/F-016-linea-multipartida"
     },
     {
@@ -199,7 +199,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 27,
+      "priority": 39,
       "branch": "feature/F-017-comparativo-precio"
     },
     {
@@ -209,7 +209,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 22,
+      "priority": 34,
       "branch": "feature/F-018-carga-incompleta"
     },
     {
@@ -230,7 +230,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 19,
+      "priority": 31,
       "branch": "feature/F-020-proveedor-agnostico"
     },
     {
@@ -240,7 +240,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 15,
+      "priority": 27,
       "branch": "feature/F-021-partida-catalogo-candidatas"
     },
     {
@@ -250,7 +250,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 32,
+      "priority": 44,
       "branch": "feature/F-022-concepto-lineas-bandeja"
     },
     {
@@ -260,7 +260,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 13,
+      "priority": 25,
       "branch": "feature/F-023-mortero-incrementos"
     },
     {
@@ -270,7 +270,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 6,
+      "priority": 18,
       "branch": "feature/F-024-unidad-medida"
     },
     {
@@ -280,7 +280,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 18,
+      "priority": 30,
       "branch": "feature/F-025-motivo-conversion-omitida"
     },
     {
@@ -290,7 +290,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 17,
+      "priority": 29,
       "branch": "feature/F-026-guard-partida-base"
     },
     {
@@ -310,7 +310,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 7,
+      "priority": 19,
       "branch": "feature/F-028-selector-contrato-por-partidas"
     },
     {
@@ -320,7 +320,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 8,
+      "priority": 20,
       "branch": "feature/F-029-obra-empates-y-sin-cif"
     },
     {
@@ -330,7 +330,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 9,
+      "priority": 21,
       "branch": "feature/F-030-proveedor-cif-aproximado"
     },
     {
@@ -340,7 +340,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 10,
+      "priority": 22,
       "branch": "feature/F-031-partida-elige-linea-contrato"
     },
     {
@@ -350,7 +350,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 11,
+      "priority": 23,
       "branch": "feature/F-032-semantica-precio-neto"
     },
     {
@@ -360,7 +360,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 12,
+      "priority": 24,
       "branch": "feature/F-033-contrato-md-o-pdf-determinista"
     },
     {
@@ -408,7 +408,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 5,
+      "priority": 17,
       "branch": "feature/F-037-guardado-inmediato-contrato"
     },
     {
@@ -457,7 +457,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 99,
+      "priority": 111,
       "branch": "feature/F-041-veredicto-honesto-del-mutante"
     },
     {
@@ -467,7 +467,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 99,
+      "priority": 111,
       "branch": "feature/F-042-segunda-opinion-otro-modelo"
     },
     {
@@ -493,7 +493,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 33,
+      "priority": 45,
       "servicios": [
         "comun",
         "sv2-api",
@@ -517,7 +517,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 3
+      "priority": 15
     },
     {
       "id": "F-047",
@@ -526,7 +526,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "critico",
-      "priority": 3
+      "priority": 15
     },
     {
       "id": "F-048",
@@ -552,7 +552,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 2,
+      "priority": 4,
       "servicios": [
         "sv2-api",
         "sv4-front",
@@ -566,7 +566,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 2,
+      "priority": 14,
       "servicios": [
         "sv2-api"
       ]
@@ -592,7 +592,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 1,
+      "priority": 13,
       "servicios": [
         "sv2-api",
         "sv3-persistencia"
@@ -605,7 +605,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 2,
+      "priority": 14,
       "servicios": [
         "sv4-front"
       ]
@@ -617,7 +617,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 2,
+      "priority": 14,
       "servicios": [
         "sv4-front",
         "sv3-persistencia"
@@ -648,7 +648,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 2,
+      "priority": 14,
       "servicios": [
         "comun",
         "sv2-api",
@@ -692,7 +692,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 1,
+      "priority": 9,
       "servicios": [
         "sv3-persistencia",
         "sv5-valoracion-api",
@@ -707,7 +707,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 1,
+      "priority": 10,
       "servicios": [
         "sv4-front"
       ]
@@ -719,7 +719,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 2,
+      "priority": 14,
       "servicios": [
         "sv2-api",
         "sv6-valoracion-persist",
@@ -762,7 +762,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 1,
+      "priority": 13,
       "servicios": [
         "sv2-api"
       ],
@@ -789,7 +789,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 1,
+      "priority": 13,
       "servicios": [
         "sv4-front"
       ]
@@ -801,7 +801,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 1,
+      "priority": 13,
       "servicios": [
         "sv4-front"
       ]
@@ -813,7 +813,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 2,
+      "priority": 14,
       "servicios": [
         "sv4-front"
       ]
@@ -825,7 +825,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 2,
+      "priority": 14,
       "servicios": [
         "sv9-alta-sigrid"
       ]
@@ -850,10 +850,10 @@
       "id": "F-075",
       "title": "El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán",
       "description": "ORIGEN (correo de administración de obra, obra 0686, 2026-10-15): un albarán de DISCOIN con precios sale con «Importe valorado —» y «Sin valoración» y no se puede aprobar: no hay contrato (sv3 no dispara q-valoracion) y sv6 no valora. Merges: dfdc8aab-08e1-49f0-978d-bb906515e748 y 5dea6509-4a81-4192-b8b0-3a21041931ca.\n\nSPEC v1 (2026-10-15, solo sv4: importe leído junto al valorado) RECHAZADA en la PARADA 1. Respuestas literales del humano: P1 «como ya hay importe, no hay que valorar con contrato, manda el albarán y pisa»; P2 «que lea el pie y sirva para revisar»; P3 aceptada (líneas sin importe no suman, total parcial); sin contrato «si trae importes no hace valorar ni contrato, pasa directo».\n\nSPEC v2 (2026-10-15, specs/F-075-importe-leido/, informe progress/spec_F-075.md §v2): hallazgo clave, con contrato lo leído YA manda línea a línea en sv6 (F-019, jul 2026); el contrato aporta vínculo, partida y conversión, y añade sintéticas. Propuesta: (1) comun: importe_albaran (suma de precio_neto, parcial) y pie_cuadra; (2) sin contrato y con importes: sv3 publica q-valoracion con contrato nulo y sv6 construye una valoración directa no_contract desde las líneas (sin IA, sin sintéticas, derivada nueva_no_match), «valorada» si todas traen importe, así que se aprueba y sv9 la da de alta sin vincular SIN código nuevo (tests de contrato); sv4 deja revalorar sin contrato si trae importes; (3) con contrato, como hoy más motivo valorado_distinto_de_albaran; (4) pie: IA1 lee base, tipo, cuota y total, sv2 conserva el pie de fase 1, sv3 DDL de 4 columnas y PieGuardService (pie_no_cuadra a revisión, no bloquea); (5) sv4: una columna «Importe» (albarán si trae, si no valorado) con origen y marca ≠, tarjetas, Obras, Proveedores y ficha con pie; (6) evals observan el pie («no medido» sin ground truth). PREGUNTAS v2-P1 a v2-P8 (P1 seguir valorando con contrato o saltarlo, P2 aprobación humana, P3 sintéticas, P4 pie sin base, P5 varias páginas y tolerancia, P6 backfill, P7 una columna, P8 partir en dos: F-075 paso directo sin prompts, ya; F-0XX pie detrás de F-064). FUERA: albaranes sin importes y sin contrato, quitar sintéticas, sv5, aprobación automática, backfill por script, F-064, F-071, F-073 y F-066 X12. AJUSTE (humano, 2026-10-18, tras el bloqueo del implementer): opción A, sv5 añade precio_neto_albaran y descuento_albaran al sobre no_contract (R5 bis), despliegue comun → sv3 → sv5 → sv6 → sv4; M1, solo se publica sin contrato si el seleccionado es nulo.",
-      "status": "blocked",
+      "status": "done",
       "sdd": true,
       "rigor": "critico",
-      "priority": 1,
+      "priority": 13,
       "servicios": [
         "comun",
         "sv2-api",
@@ -868,7 +868,7 @@
       "id": "F-078",
       "title": "La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia",
       "description": "ORIGEN (producción, 2026-10-16, solo lectura): sv9 dejó no_admitido con falta_descripcion el albarán 86c13097-98f8-4e4b-91af-6a378c28d9cf (modo real): la fila manual 386 tiene descripcion_linea vacía, pero la ficha pinta «CARGA INCOMPLETA» porque la saca de contrato_lines_derived (review_repository.py, _load_conciliation_map_in_session); la 385 también va vacía y sv9 la cubre con el concepto del merge. El producto «MA9999 · Suministro de materiales» no se guarda: es el por defecto que sv4 y sv9 calculan igual con ruesma_comun.alta_sigrid.producto_efectivo. PRINCIPIO DEL HUMANO (literal): «Lo que está en la tabla es lo que debería estar guardado en BBDD, ya que lo ha puesto el humano. No es que sv9 tenga que buscar en muchos sitios, sino que esté bien guardado todo.» MEDICIÓN (105 filas de 42 documentos activos, progress/spec_F-078.md §3): 93 sin descripción en la fila que la ficha rellena (6 que sv9 rechazaría y 16 en que sv9 mandaría otro texto que el que se ve), 7 sin vincular con unidad_albaran vacía (sv9 mandaría sin unidad) y 6 vinculadas con cantidad_convertida nula y factor 1 (sv9: cantidad_sin_convertir); precio, importe, partida y unidad de Q, 0. SPEC v1 (specs/F-078-linea-guarda-lo-que-se-ve/, PARADA 1 APROBADA 2026-10-16: P1 = (b), en las Nueva con blanca se guarda y se ve el concepto del papel; P8 fuera, es F-079; P2-P7, P9, P10 por defecto): regla única «lo que se veía» en comun (ruesma_comun.linea_valorada.fila_a_guardar); sv6 la aplica a cada registro antes del replace; sv4 pinta solo la fila (vacío = vacío), el PATCH guarda la descripción en toda fila y la unidad también en unidad_albaran sin conversión, y las vías que crean o reapuntan filas la materializan; no se aprueba con filas sin vincular sin descripción; relleno de lo existente con un script de sv6 (lectura por defecto, --aplicar con autorización expresa del humano), sin DDL; sv9 sin código. Despliegue: sv6 -> relleno -> sv4. RELACIONADAS: F-053 (reintentar el alta tras el relleno), F-065 (sustituye CR1/H1), F-058, F-075 (su builder directo pasa por el mismo paso), F-076, F-077 (conflictos de texto).",
-      "status": "blocked",
+      "status": "done",
       "sdd": true,
       "rigor": "critico",
       "priority": 1,
@@ -886,7 +886,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 1,
+      "priority": 13,
       "servicios": [
         "comun",
         "sv6-valoracion-persist",
@@ -911,7 +911,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 2,
+      "priority": 6,
       "servicios": [
         "sv4-front"
       ]
@@ -920,7 +920,7 @@
       "id": "F-080",
       "title": "Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados",
       "description": "ORIGEN: H4 de progress/review_F-073.md, decisión del humano del 2026-10-17 («solo entre empatados»).\n\nPROBLEMA: con F-073 (P6), tras un empate por nombre los puntos por familia (R10, sin cambios) pueden elegir a un proveedor AJENO al empate, con similitud 0, si su familia le da margen (reproducido: empatan «HORMIGONES DEL SUR/NORTE» con 2 puntos de gasóleo y se elige «ARIDOS PEPE», 6 puntos de hormigón, det_familia_obra con aviso).\n\nPROPUESTA: tras un empate por nombre, la deducción por familia solo puede elegir entre los empatados; si no separa a ninguno de ellos, la cabecera va a revisión con proveedor_nombre_ambiguo y la nota de los empatados (R11 de F-073).\n\nALCANCE: services/albaranes-persistencia (header_resolver_service). RELACIONADAS: F-073 (P6, R10, R11), F-062.\n\nSPEC (specs/F-080-empate-solo-entre-empatados/, 2026-10-18): tras un empate por nombre, el ganador del paso por puntos de hoy (sobre toda la obra, mínimo 3 y margen 2, sin cambios) solo se acepta si es uno de los empatados (clave de CIF normalizada); si gana un ajeno, revisión con proveedor_nombre_ambiguo y la nota de R11 de F-073, y una línea de log. Prototipo: H4 pasa a revisión y la suite de sv3 sigue en 1496 passed sin cambiar expectativas. Sin DDL, sin comun, sin tocar similitud_proveedor.py. PREGUNTAS P1–P3 para la PARADA 1 (design §2): P1 contra quién compite el empatado (recomendada (b), la carrera de hoy con el ganador empatado, frente a (a) carrera solo entre empatados); P2 quiénes son los empatados (los de EleccionPorNombre.empatados); P3 si la familia deja empatados igualados arriba (R11 sin cambios).",
-      "status": "blocked",
+      "status": "done",
       "sdd": true,
       "rigor": "critico",
       "priority": 1,
@@ -936,7 +936,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 2,
+      "priority": 7,
       "servicios": [
         "sv3-persistencia"
       ]
@@ -948,7 +948,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 1,
+      "priority": 13,
       "servicios": [
         "sv4-front"
       ],
@@ -958,10 +958,10 @@
       "id": "F-073",
       "title": "Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate",
       "description": "INCIDENCIA DE PRODUCCIÓN (2026-10-15, correo «0694» de administración de obra, obra 0694, 5 albaranes de FEYMACO): en 3 la IA leyó el CIF de Ruesma (A81873903), sv3 lo descartó (F-063) y buscó por nombre «FEYMACO, S.A.» / «TEYMACO, S.A.». Log de sv3 (merge 54b82479-…): A19004589 (HIERROS RODRIGO, S.A.) y A28733558 (FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)) empatan a nombre=0.50 y el atajo «por NOMBRE dentro de la obra» elige el primero ⇒ 3 albaranes con HIERROS RODRIGO y CTSU26/0001.\n\nCAUSA (verificada en header_resolver_service.py): _match_score no separa la puntuación («feymaco,» no está en «(feymaco)»), no admite una letra mal leída y cuenta «s.a.» como palabra (0,50 = min_score para cualquier S.A.); el atajo del paso 1 y el fallback global del paso 2 eligen el máximo sin mirar empates. Hay dos criterios de nombre (_match_score y _score_razon_social de F-052/F-062).\n\nSPEC (specs/F-073-proveedor-por-similitud/, informe progress/spec_F-073.md): criterio ÚNICO en sv3 (application/services/similitud_proveedor.py) para los cuatro sitios (atajo, global, propuesta F-052, candidato claro F-062): puntuación como separador, fuera formas jurídicas y palabras vacías, subcadena de hoy más distancia de edición ≤ 1 en palabras de ≥ 5 caracteres; elegir por nombre solo con ≥ min_score y margen 0,25 sobre el segundo CIF; empate ⇒ paso por puntos sin cambios y, si no decide, revisión con motivo proveedor_nombre_ambiguo y nota con los empatados; paso 2 en empate no elige. Medición: corpus de 19 razones sociales reales y 31 lecturas, hoy 23 aciertos y 7 errores, con F-073 31 y 0. La obra (_resolve_obra) no cambia. Sin comun, sin DDL; despliegue solo sv3. FUERA: corregir los 3 merges (revisor en sv4), la propuesta de sv4 (X4 de F-067), que la propuesta de F-052 deje de proponer en empate. PREGUNTAS P0–P6 para la PARADA 1; P0 bloquea: el caso «S.L.» de la opción B de F-062 pasa de 1 a 0. RELACIONADAS: F-063, F-062, F-052, F-055, F-067 (X4).",
-      "status": "blocked",
+      "status": "done",
       "sdd": true,
       "rigor": "critico",
-      "priority": 1,
+      "priority": 13,
       "servicios": [
         "sv3-persistencia"
       ],
@@ -974,7 +974,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 2,
+      "priority": 8,
       "servicios": [
         "sv6-valoracion-persist",
         "sv4-front"
@@ -983,25 +983,24 @@
     {
       "id": "F-083",
       "title": "Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán",
-      "description": "ORIGEN: petición del humano, 2026-10-19: «una feature para mejorar los modelos»; probar las llamadas con modelos de Claude (mínimo 4.8), Gemini (mínimo Flash 3.7) y OpenAI (mínimo 5.5), ver el coste de cada modelo, y probar también con «Luna» (un modelo de IA, nombre exacto por confirmar).\n\nHOY (infra/create_capps.ps1): ANTHROPIC_MODEL claude-opus-4-8, OPENAI_MODEL gpt-5.4, GEMINI_MODEL gemini-3.7-flash (IA1).\n\nALCANCE (decisión del humano): todas las fases, IA1 e IA2 (extracción, sv2) e IA3 e IA4 (valoración, sv5), con el banco de evals (59 casos). Por modelo y fase: fallos críticos, avisos, tiempo y coste por albarán (tokens de entrada y salida por precio vigente), y recomendación de qué modelo usar en cada fase.\n\nPRIMERO: inventario de modelos disponibles por proveedor que cumplan el mínimo, con su identificador de API y su precio vigente (fuente y fecha), e identificar «Luna». Las llamadas de pago las lanza el humano con sus claves (Read-Host -AsSecureString); ningún agente gasta.\n\nRELACIONADAS: F-047 (ciclo completo), F-064 y F-075 (líneas base de evals con LLM: IA1 141, IA2 2), comparar_proveedor (patrón de comparador).",
-      "status": "pending",
+      "description": "ORIGEN: petición del humano, 2026-10-19: «una feature para mejorar los modelos»; probar las llamadas con modelos de Claude (mínimo 4.8), Gemini (mínimo Flash 3.7) y OpenAI (mínimo 5.5), ver el coste de cada modelo, y probar también con «Luna» (un modelo de IA, nombre exacto por confirmar).\n\nHOY (infra/create_capps.ps1): ANTHROPIC_MODEL claude-opus-4-8, OPENAI_MODEL gpt-5.4, GEMINI_MODEL gemini-3.7-flash (IA1).\n\nALCANCE (decisión del humano): todas las fases, IA1 e IA2 (extracción, sv2) e IA3 e IA4 (valoración, sv5), con el banco de evals (59 casos). Por modelo y fase: fallos críticos, avisos, tiempo y coste por albarán (tokens de entrada y salida por precio vigente), y recomendación de qué modelo usar en cada fase.\n\nPRIMERO: inventario de modelos disponibles por proveedor que cumplan el mínimo, con su identificador de API y su precio vigente (fuente y fecha), e identificar «Luna». Las llamadas de pago las lanza el humano con sus claves (Read-Host -AsSecureString); ningún agente gasta.\n\nRELACIONADAS: F-047 (ciclo completo), F-064 y F-075 (líneas base de evals con LLM: IA1 141, IA2 2), comparar_proveedor (patrón de comparador).\n\nSPEC (2026-10-19, specs/F-083-comparar-modelos/, anexo de inventario y precios con fuente progress/spec_F-083.md): comparador nuevo evals/comparar_modelos.py, una fase por invocación y varios modelos, con la referencia de producción medida en la misma corrida (IA1 gemini-3.7-flash, IA2 gpt-5.4, IA3/IA4 claude-opus-4-8); IA2 e IA4 con preparación única por la referencia, IA3 con la IA4 del libro; coste por albarán con los tokens reales leídos por un call_logger medidor (sin tocar los clientes) y la tabla versionada evals/precios_modelos.json; estimación previa, --estimar sin claves, paradas sin gastar (modelo, tabla caducada, claves, tope por invocación y de la feature) y corte en caliente por tope; criterio: elegible (0 ERROR y fallos ≤ referencia), banda máx(2, 5 %), el más barato de la banda, «cambiar» solo con mejora o ahorro claros, provisional con 1 repetición. HALLAZGOS: gemini-3.7-flash está descontinuado y Google lo redirige a gemini-3.8-flash; la línea base de F-075 probablemente no midió los modelos de producción (defaults del runner, IA3/IA4 con gemini); el cliente de Claude fuerza la herramienta y claude-opus-5-5, claude-sonnet-5-5 y claude-fable-5-1 lo rechazan con 400. «Luna» = gama Luna de OpenAI (gpt-6-luna, gpt-5.6-luna; no existe gpt-6.1-luna). PREGUNTAS P1–P6 (design §9): P1 qué Luna y si entra gpt-6.1-sol, P2 primera tanda (11 modelos), P3 tope (25 por invocación, 200 la feature; tanda 1 ≈ 150 USD), P4 repeticiones (1 y 3 en finalistas), P5 parámetro forzar_herramienta en comun (recomendado) o dejar fuera los Claude 5.5, P6 umbrales del criterio. FUERA: cambiar el modelo de producción (feature siguiente), barrer esfuerzo/pensamiento, infra/.",
+      "status": "blocked",
       "sdd": true,
       "rigor": "critico",
       "priority": 1,
       "servicios": [
-        "sv2-api",
-        "sv5-valoracion-api",
         "comun"
-      ]
+      ],
+      "branch": "feature/F-083-comparar-modelos"
     },
     {
       "id": "F-084",
       "title": "El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None»)",
       "description": "ORIGEN: pruebas rápidas de modelos del 2026-10-19 (progress/evals_prueba-{luna,sol,argon}.md, fuera de git) y pasada de F-075: IA3, IA4 y E2E salen idénticos caso a caso con cualquier modelo; en IA3, 126 de 136 fallos (15 casos) y 388 de 408 (59 casos, F-075) son «obtenido None»: la valoración del banco no produce líneas valoradas salvo FER-001/FER-002. Así el banco no mide el modelo de valoración.\n\nOBJETIVO: diagnosticar por qué (fixtures de inputs/contrato, adaptador evals/procesos/sv5_valoracion.py, servicios de sv5 sin contrato, R26 de campos no observables...) y arreglarlo para que IA3/IA4/E2E midan el modelo; nueva línea base con el modelo de producción.\n\nNECESARIO PARA: elegir el modelo de IA3/IA4 (F-083, F-085: Opus 5.5 en IA3, GPT-6.1 Sol en IA4). RELACIONADAS: F-047 (ciclo completo), F-083.\n\nSPEC (2026-10-20, specs/F-084-banco-valoracion/): DIAGNÓSTICO sin llamadas de pago: 52 de los 59 fixtures de INPUTS no tienen líneas de contrato (F-045 las dejó fuera a propósito y midió el agujero el 2026-09-16, progress/impl_F-045_contrato_lineas.md, sin ficha); el determinista, sin LLM, da 390 «obtenido None» de 401 fallos de IA3, y 14 de los 15 casos de la prueba rápida tienen el mismo número de fallos que con gpt-6-luna; el LLM se llama pero recibe lineas_contrato vacías y la nota de solo fase 1a. Además el adaptador de sv5 no pasa descuento ni precio neto (FER-001 32,35 en vez de 19,41), ni clasificación (los 21 RES se miden con valuation_es en vez de valuation_residuos), ni categoría de unidad ni fecha. sv5 y sv6 NO tienen el fallo y no se tocan. ARREGLO: importador evals/contratos_sigrid.py (sigrid-api solo lectura, una consulta por contrato, al libro INPUTS con copia y fusión conservadora, sin tocar los 7 RES, informe de cobertura sin valores) lanzado por el humano; contexto de valoración fiel (descuento, importe derivado, clasificación desde la tipología, UnitCategoryPrefilter, fecha); runner: OMITIDO sin contrato, sin sv2 si no se piden IA1/IA2, proveedor por defecto de producción y modelo en el informe; estímulo determinista por precio único. LÍNEA BASE: MANUAL con claude-opus-4-8 en IA3/IA4/E2E (design §9), válida con 0 ERROR y «obtenido None» ≤ 20 % de los fallos de IA3. COORDINACIÓN: F-083 fusiona primero su código; sus pagos de IA3/IA4 esperan a F-084. PREGUNTAS P1–P7 (design §11). servicios: no se toca ninguno (la ficha dice sv5/sv6).\n\nPARADA 1 resuelta por el humano (2026-10-20, design §11): P1 (a) líneas de sigrid-api; P2 (b) SIN estímulo por precio ni emparejamiento en el banco («la ia4 es la que debe encargarse de emparejar»): el determinista lo declara y el emparejamiento solo lo mide la corrida con LLM; P3 (a) OMITIDO sin contrato; P4 (a) clasificación desde la tipología; P5 DENTRO: IA3 recibe el documento del contrato que sv3 ya guardó (MD si hay, si no PDF), leído en solo lectura de albaran_contratos_merge y SharePoint con la SQL y el descargador de sv5, cacheado en evals/inputs/contratos/ (no versionado) con índice versionado sin contenido; P6 (a) proveedor de producción; P7 F-083 primero en código, sus pagos de IA3/IA4 después de F-084. servicios = evals.",
-      "status": "spec_ready",
+      "status": "in_progress",
       "sdd": true,
       "rigor": "critico",
-      "priority": 1,
+      "priority": 2,
       "servicios": [
         "evals"
       ],
@@ -1009,16 +1008,82 @@
     },
     {
       "id": "F-085",
-      "title": "Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 claude-opus-5-5, IA4 gpt-6.1-sol",
-      "description": "ORIGEN: decisión del humano, 2026-10-20, tras la prueba rápida de modelos (IA1: Argon 52 fallos frente a 56 del Gemini actual en 15 casos).\n\nCAMBIO: sv2 IA1 = gemini-4-argon (hoy gemini-3.7-flash, que Google sirve como 3.8); IA2 ENCENDIDA (hoy WORKER_CON_FASE2=false) con openai gpt-6.1-sol (hoy gpt-5.4); sv5 IA3 = claude-opus-5-5 (hoy claude-opus-4-8; necesita no forzar la herramienta, T11 de F-083, y que sv5 lo pida en producción), IA4 = openai gpt-6.1-sol (hoy Claude; sv5 hoy solo tiene Claude habilitado: ENABLE_OPENAI, clave de OpenAI como secreto, IA3_PROVIDER/IA4_PROVIDER). infra/create_capps.ps1 al día; azure-apps/albaranes.md si cambia lo que se consume.\n\nCONDICIÓN: medir antes coste y precisión con el comparador de F-083 (cada fase contra el modelo actual) y, para IA3/IA4, con el banco arreglado por F-084. El despliegue y los cambios de configuración en Azure los lanza el humano. Precio: Argon dobla el 2026-12-01 (2/10 → 4/20).",
-      "status": "pending",
+      "title": "Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086)",
+      "description": "ORIGEN: decisión del humano, 2026-10-20, tras la prueba rápida de modelos (IA1: Argon 52 fallos frente a 56 del Gemini actual en 15 casos).\n\nCAMBIO: sv2 IA1 = gemini-4-argon (hoy gemini-3.7-flash, que Google sirve como 3.8); IA2 ENCENDIDA (hoy WORKER_CON_FASE2=false) con openai gpt-6.1-sol (hoy gpt-5.4); sv5 IA3 = claude-opus-5-5 (hoy claude-opus-4-8; necesita no forzar la herramienta, T11 de F-083, y que sv5 lo pida en producción), IA4 = openai gpt-6.1-sol (hoy Claude; sv5 hoy solo tiene Claude habilitado: ENABLE_OPENAI, clave de OpenAI como secreto, IA3_PROVIDER/IA4_PROVIDER). infra/create_capps.ps1 al día; azure-apps/albaranes.md si cambia lo que se consume.\n\nCONDICIÓN: medir antes coste y precisión con el comparador de F-083 (cada fase contra el modelo actual) y, para IA3/IA4, con el banco arreglado por F-084. El despliegue y los cambios de configuración en Azure los lanza el humano. Precio: Argon dobla el 2026-12-01 (2/10 → 4/20).\n\nPARADA 1 resuelta por el humano (2026-10-20): P1–P5 según la recomendación de design §9: P1 = (a): fuera de F-085; F-083 T11 solo añadió `forzar_herramienta`; el arreglo de `_parse_response` va a F-086 (corregido por O3 de progress/review_F-083.md, 2026-10-21); P2 = (a) se quita WORKER_CON_FASE2; P3 = el paso 2 (Opus 5.5 en IA3: R15–R19, R27, T6, T7, T12) va a F-086 (dada de alta por el líder); P4 = criterio de IA1 de design §6; P5 = IA_SEGUNDA_FASE=openai explícita en create_capps.ps1.",
+      "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 1,
+      "priority": 3,
       "servicios": [
         "sv2-api",
         "sv5-valoracion-api",
         "comun"
+      ],
+      "branch": "feature/F-085-modelos-produccion"
+    },
+    {
+      "id": "F-086",
+      "title": "Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol",
+      "description": "ORIGEN: P3 de F-085, decidida por el humano el 2026-10-20 (aceptada la recomendación): el paso 2 de F-085 (R15–R19, T6, M5) sale a una feature propia porque depende de F-083 y F-084 y puede tardar semanas. El humano pidió IA3 = Opus 5.5 y, «de momento», dejó gpt-6.1-sol en su lugar: la API de claude-opus-5-5 rechaza con 400 el tool_choice forzado que usa el cliente de Claude de comun. ALCANCE: sv5 lee ANTHROPIC_FORZAR_HERRAMIENTA (booleana, defecto true) y la pasa como forzar_herramienta al cliente de comun (parámetro de F-083 T11); con true los argumentos a messages.create son idénticos a los de hoy; sv2 no cambia su cliente. El cliente arregla el camino de respuesta sin tool_use: si el texto es JSON válido contra el modelo, lo devuelve tras sanear_para_modelo (hoy _parse_response usa `cls`, que no existe, y siempre acaba en ValueError); si no, ValueError con el stop_reason y sv5 responde 400 como hoy. CONDICIONES DE ENTRADA (§7 del design de F-085): F-083 T11 en dev; sv5 reconstruido con esa comun; F-084 done y, en el comparador (IA3, 3 repeticiones, referencia gpt-6.1-sol), Opus 5.5 cumple el §6.1 de F-085 y la regla «cambiar» de F-083, con 0 casos sin tool_use y 0 paradas por max_tokens (si las hay, subir ANTHROPIC_MAX_TOKENS y volver a medir). Se mide con el mismo cliente que irá a producción (tool_choice auto, sin thinking ni esfuerzo explícitos); salidas estructuradas y strict fuera. CAMBIO EN PRODUCCIÓN (lo hace el humano): sv5 IA3_PROVIDER=claude, ANTHROPIC_MODEL=claude-opus-5-5, ANTHROPIC_FORZAR_HERRAMIENTA=false; IA4 sigue en gpt-6.1-sol; vuelta atrás por variable. RELACIONADAS: F-083 (T11), F-084 (banco que valora), F-085 (paso 1).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 11,
+      "servicios": [
+        "comun",
+        "sv5-valoracion-api"
+      ]
+    },
+    {
+      "id": "F-087",
+      "title": "Aprobar y Registrar: el «aprobar» de hoy pasa a llamarse Registrar (guarda, bloquea y da de alta en Sigrid) y nace un estado Aprobar (guarda todo el albarán y lo bloquea dándolo por bueno, sin Sigrid)",
+      "description": "ORIGEN: petición del humano, 2026-10-21. CAMBIO: (1) todo lo que hoy es «aprobar» (botón «Guardar y aprobar», «Aprobar» de la bandeja, columna «APROBADO», filtro «Aprobados», textos y motivos) pasa a llamarse REGISTRAR y hace lo de hoy: guarda todo, bloquea y publica q-feedback para que sv9 dé el alta en Sigrid. (2) Estado NUEVO «Aprobar»: guarda todo el albarán (cabecera y filas) y lo BLOQUEA dándolo por bueno, pero NO registra en Sigrid (no publica a sv9). (3) En la ficha, arriba, tres botones: «Guardar» (como hoy, guarda la cabecera), «Aprobar» (guarda todo y bloquea) y «Registrar» (hace todo, muy similar al «Guardar y aprobar» actual). A DECIDIR EN LA SPEC: cómo se guarda el estado (hoy `approved` booleano en albaran_documents_merge; probable estado con tres valores pendiente/aprobado/registrado, DDL en sv3, dueño del esquema), qué pasa con los ya aprobados (hoy aprobado = registrado o en alta), si un aprobado se puede desbloquear, si «Registrar» desde un aprobado reutiliza lo guardado, filtros y columnas de la bandeja, y qué ve sv9 (solo registrar). RIGOR critico: toca lo que llega a Sigrid (ALTA_SIGRID_COMMIT=true desde el 2026-10-20). RELACIONADAS: F-053 (alta en Sigrid), F-077 («Guardar y aprobar» guarda antes las filas), F-078, F-059 (etiquetas de motivos).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 13,
+      "servicios": [
+        "sv4-front",
+        "sv3-persistencia",
+        "sv9-alta-sigrid",
+        "comun"
+      ]
+    },
+    {
+      "id": "F-088",
+      "title": "Bandeja: filtro de varias obras a la vez y TODOS los filtros se recuerdan al navegar, volver atrás o recargar",
+      "description": "ORIGEN: petición del humano, 2026-10-21. CAMBIO: (1) en los filtros de la ventana principal (bandeja de sv4) se pueden elegir VARIAS obras a la vez (multiobra). (2) Los filtros persisten: si el usuario entra en un albarán y vuelve, va adelante/atrás en el navegador o recarga la página, la bandeja conserva TODOS los filtros activos (obra/s, estado, revisión, paginación, búsqueda...). Palabras del humano: «no puede ser que entre en mi obra vea la página filtrada y si recargo o entro en un albarán y vuelvo a la página general me desaparezca el filtro (vale para todos los filtros)». A DECIDIR EN LA SPEC: filtros en la URL (query string, que sobrevive a recargar y al historial) y/o en almacenamiento local del navegador; qué pasa con «Anterior/Siguiente» de la ficha (deben respetar el filtro). RELACIONADAS: F-089 (vista obra = bandeja filtrada), F-067 (limpieza de la ficha).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 13,
+      "servicios": [
+        "sv4-front"
+      ]
+    },
+    {
+      "id": "F-089",
+      "title": "Vista Obra con el formato Ruesma (como en partes): entrar en una obra muestra la bandeja general filtrada por esa obra",
+      "description": "ORIGEN: petición del humano, 2026-10-21. CAMBIO: la vista «Obras» de sv4 adopta el formato visual de Ruesma, como el front de partes (monorepo `partes`, carpeta `services/partes-front`; documento `azure-apps/partes.md`): tomar de ahí estilos y patrones, sin duplicar documentos de otro proyecto. Al entrar en una obra se ve la vista general (la bandeja) ya filtrada por esa obra, con los mismos filtros, columnas y acciones; el filtro se mantiene al entrar en un albarán y volver, al ir adelante/atrás y al recargar (persistencia de F-088). A DECIDIR EN LA SPEC: qué elementos del formato de partes se adoptan (cabecera, colores, tipografía, tarjetas), si la vista obra añade algo propio (resumen de importes o contratos de la obra) y si el estilo se extiende al resto de sv4 o solo a Obras. RELACIONADAS: F-088 (filtros multiobra y persistentes), F-067.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 13,
+      "servicios": [
+        "sv4-front"
+      ]
+    },
+    {
+      "id": "F-090",
+      "title": "Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692)",
+      "description": "ORIGEN: petición del humano, 2026-10-21: «oscurecer y aumentar contraste va a mejorar la lectura; ha pasado con los albaranes de la 0692 de hormigón, al oscurecer el escaneado ha mejorado». Caso de referencia: correo de odomingo@ruesma.es del 2026-10-21 (asunto 0692, PDF de 2 páginas de ARIDOS ANFERSA): la página 2 (merge ea395a26, albarán 1766248632), impresa en amarillo claro sobre papel amarillo, salió sin proveedor ni fecha (confianza 44,8 %), y el humano comprobó que oscureciendo el escaneado se lee. HOY: ruesma_comun/imaging/preprocess.py ya realza (canal -> deskew -> iluminación -> estirado por percentiles -> nitidez; CLAHE retirado en jul 2026), y aun así esa página no se leyó. A DECIDIR EN LA SPEC: por qué la cadena actual no basta con impresión clara sobre papel de color (elección de canal, percentiles del estirado), qué se añade (oscurecido tipo gamma, estirado más agresivo, umbral adaptativo...) y cuándo (siempre o solo si el trazo es tenue, medido en la imagen), sin empeorar los casos con los que se calibró (carbonicas azul/rosa, calco, matricial). Calibrar con muestras reales de la 0692 y las de julio; interruptor por variable para volver atrás; medir con evals de IA1 antes de desplegar. RELACIONADAS: F-071 (toca preprocess.py: arregla el deskew, que hoy falla en todas las imágenes con OpenCV 5; esta va DETRÁS de F-071), F-083 (medición de IA1).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 13,
+      "servicios": [
+        "comun",
+        "sv2-api"
       ]
     }
   ]

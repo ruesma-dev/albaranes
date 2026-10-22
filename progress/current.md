@@ -1,190 +1,158 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-084 · `spec_ready` (2026-10-20): PARADA 1 resuelta por el humano; spec ajustada, lista para el implementer** — el banco de evals valora de verdad (IA3/IA4/E2E salen iguales con cualquier modelo). Spec en `specs/F-084-banco-valoracion/`. Rama `feature/F-084-banco-valoracion`, worktree `../albaranes-F-084` (desde `dev` `efd73b7`; *junction* `.venv` de sv4 puesta: quitarla con `cmd /c rmdir` antes de `git worktree remove`). Rigor `critico`. Ficha con `servicios = evals`: **no se toca ningún servicio**.
+**F-084 · `in_progress` (2026-10-22): implementer en curso** — el banco de evals valora de verdad. Spec en `specs/F-084-banco-valoracion/` (PARADA 1 resuelta el 2026-10-20, commit `4c69746`). Rama `feature/F-084-banco-valoracion`, worktree `../albaranes-F-084`, `dev` (`ac34ad8`, con F-083 y F-085) fusionado. Rigor `critico`, `servicios = evals`: no se toca ningún servicio. Informe en curso: `progress/impl_F-084.md`.
 
-Diagnóstico (design §1, sin gastar):
-- **52 de los 59 casos no tienen líneas de contrato en INPUTS**, un hueco de F-045 que nunca tuvo ficha.
-- **El determinista, sin LLM, falla igual**: 390 de 401 fallos de IA3 son «obtenido None».
-- **El adaptador de sv5 no da a la IA lo que le da producción**: descuento (FER-001 sale 32,35 en vez de 19,41), clasificación (los 21 RES con `valuation_es`), categoría de unidad, fecha, cabecera y documento del contrato.
+- Tarea en curso: T1.
+- Decisiones y desviaciones: se anotan aquí y en el informe.
 
-Decisiones del humano (2026-10-20, design §11):
-- **P1, P3, P4, P6 y P7**: (a).
-- **P2 = (b)**: el banco no empareja («la ia4 es la que debe encargarse de emparejar»); el determinista lo declara en su informe (R36).
-- **P5 dentro**: IA3 recibe el documento del contrato que sv3 ya guardó. Se lee en solo lectura de `albaran_contratos_merge` y SharePoint, con la SQL y el descargador de sv5, y se cachea en `evals/inputs/contratos/` (no versionado). El índice `evals/fixtures/contratos/_indice.json` sí se versiona, sin contenido.
+**F-085 · `blocked` (2026-10-21): review APPROVED (pasada 2), fusionada en `dev`; implementación hecha (T1–T5, T2b, T8, T9); T0, T10 y T11 son MANUAL del humano; T6, T7 y T12 FUERA → F-086** — modelos de producción por fase. Spec en `specs/F-085-modelos-produccion/` (corregida por O3 de la review de F-083). Rama `feature/F-085-modelos-produccion`, worktree `../albaranes-F-085` (*junction* `.venv` de sv4: quitarla con `cmd /c rmdir` antes de `git worktree remove`), `dev` (`17ccef7`) fusionado. Rigor `critico`. Informe: `progress/impl_F-085.md`; mutación: `progress/mutacion_F-085.md`; `azure-apps` `0416ce3` sin push.
 
-Qué hará:
-- `python -m evals.contratos lineas`: lee sigrid-api y escribe el libro INPUTS.
-- `python -m evals.contratos documentos`: lee BBDD y SharePoint.
-- Contexto de valoración fiel a producción.
-- Ajustes del runner.
+- **Punto de partida:** el paso 1 que el humano aplicó a mano el 2026-10-20 (sv2 `ca-sv2-extraccion--0000004`: `GEMINI_MODEL=gemini-4-argon`, `OPENAI_MODEL=gpt-6.1-sol`; sv5 `ca-sv5-valuation--0000005`: secreto `openai-key` → KV `OPENAI-API-KEY`, `ENABLE_OPENAI=true`, `IA3_PROVIDER=openai`, `IA4_PROVIDER=openai`, `OPENAI_MODEL=gpt-6.1-sol`). `infra/create_capps.ps1` lo deja igual. IA3/IA4 **provisionales** hasta medir con el banco de F-084 (R24).
+- **Ampliación del líder (2026-10-21, T2b):** sv2 con las credenciales de sigrid-api en `create_capps.ps1` (secreto `sigrid-key` → KV `SIGRID-API-FUNCTION-KEY`, `SIGRID_API_BASE_URL`, `SIGRID_API_FUNCTION_KEY`, `SIGRID_API_DATABASE`): sv2 arrancaba sin ellas e IA1 recibía `obras_activas=NO DISPONIBLE`. **M-S HECHA**: aplicado por el humano el 2026-10-21 (`ca-sv2-extraccion--0000006`), verificado en el log («Obras activas CABLEADAS», 277 obras); `azure-apps` `81164ab`.
+- **D4 (O1 de `progress/review_F-083.md`), hecho aquí:** `evals/precios_modelos.json` con referencias IA1 `gemini-4-argon` e IA2–IA4 `gpt-6.1-sol` (los de antes, candidatos de vuelta atrás); el test R3 de F-083 lee `IA3_PROVIDER`/`IA4_PROVIDER` de sv5; los tests del comparador fijan sus propias referencias. Consecuencia para las MANUAL T13–T15 de F-083: la referencia que añade el comparador ya es la de producción (O1 resuelto).
+- **Desviaciones (justificadas en el informe):** los tests de `build_app` importan `app.py` con un sustituto de `fastapi` (el `.venv` de la raíz no lo trae); `forzar_herramienta` de la línea de wiring es la constante `FORZAR_HERRAMIENTA_CLAUDE = True` hasta F-086.
 
-MANUAL del humano (comandos en design §9):
-- **T12 · importar**: necesita las `PG_*` de Azure en la consola y `GRAPH_KEY`.
-- **T14 · línea base**: `claude-opus-4-8`, de pago.
+#### F-085 · MANUAL del humano, comandos para PowerShell
 
-Coordinación con F-083 (design §8): **F-083 fusiona primero su código; sus pagos de IA3/IA4 esperan a F-084.**
-
-**F-080 · `blocked` (2026-10-19): review APPROVED (pasada 1, `progress/review_F-080.md`), fusionada en `dev`; espera la MANUAL T6 del humano (desplegar solo sv3)** — tras un empate por nombre (F-073), la familia solo elige entre los empatados (H4 de `progress/review_F-073.md`). Spec en `specs/F-080-empate-solo-entre-empatados/`. Rama `feature/F-080-empate-solo-entre-empatados`, worktree `../albaranes-F-080`. Rigor `critico`, solo sv3 (`header_resolver_service.py`), sin DDL ni comun. PARADA 1 resuelta el 2026-10-19: **P1 = (b)** (la carrera por puntos de hoy, y el ganador tiene que ser uno de los empatados), P2 y P3 según la recomendación (design §2). Informe en curso: `progress/impl_F-080.md`.
-
-Estado del implementer (2026-10-19): **T1–T5 y T7 hechas, informe en `progress/impl_F-080.md`; espera la review**. Tests de F-080: 36 passed (fase RED registrada). sv3: 1576 passed después de fusionar `dev` (`f49f1b2`, F-075) en la rama, sin cambiar ninguna expectativa existente (R13). Cobertura de lo cambiado: 100 % (8/8). Mutación: 5 generados, 5 muertos, 0 supervivientes (`progress/mutacion_F-080.md`). `bash harness/init.sh` en verde en el worktree (último verde: el del reviewer sobre `f4ad6e0`). Desviaciones respecto a la spec: ninguna.
-
-#### F-080 · MANUAL T6 (humano), comandos para PowerShell
-
-**Cuándo:** ya se puede (APPROVED, fusionada en `dev` con `init.sh` en verde en el árbol principal). sv3 corre desde el 2026-10-19 con F-073 y F-075 (`r20261019-0952`, la imagen de vuelta atrás); la de F-080 las lleva dentro. Antes, comprobar que `dev` no traiga otro cambio de sv3 sin aprobar para producción. Solo sv3. **`deploy.ps1` es [ESCRIBE EN PRODUCCIÓN · humano]**; el resto solo lee. Ningún agente lo lanza.
+Todo desde `C:\Users\pgris\PycharmProjects\albaranes\infra`. Lo marcado **[ESCRIBE EN PRODUCCIÓN · humano]** necesita el sí expreso del humano; ningún agente lo lanza. Si un paso no da su VERDE, para ahí.
 
 ```powershell
 cd C:\Users\pgris\PycharmProjects\albaranes\infra
 . .\00_vars.ps1
 . .\00_capps_vars.ps1
-az containerapp show -n ca-sv3-persistencia -g $RG --query "properties.template.containers[0].image" -o tsv
-Set-DeployTag
-.\deploy.ps1 -Only sv3
-.\check_deploy.ps1
-az containerapp logs show -n ca-sv3-persistencia -g $RG --tail 300 | Select-String "AJENO al empate"
 ```
 
-VERDE: `check_deploy.ps1` con sv3 en el tag nuevo y las réplicas arriba. Si en el log sale «es AJENO al empate por nombre», ese documento está en revisión con `proveedor_nombre_ambiguo` y la nota «casa por igual con N proveedores». La imagen que imprime el `az containerapp show` del principio es la de la vuelta atrás.
-
-**Vuelta atrás** (sin interruptor, D4) — [ESCRIBE EN PRODUCCIÓN · humano, solo si hace falta]: `az containerapp update -n ca-sv3-persistencia -g $RG --image <la imagen apuntada>`.
-
-Coordinación: F-075 comparte `docs/ARCHITECTURE.md` (su regla 25 va justo tras la 24 que edita F-080), `features.json`, `BACKLOG.md` y este fichero; no toca `header_resolver_service.py`. F-049 toca el constructor y `_resolve_obra` del mismo fichero, sin solape de líneas. El despliegue de sv3 va después de la T12 de F-073.
-
-Entorno: la *junction* `.venv` de sv4 ya está en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`); `bash harness/init.sh` en verde en el worktree el 2026-10-19 (HEAD `0eaec26`).
-
-**F-075 · `blocked` (2026-10-18): review APPROVED (pasada 2, `progress/review_F-075.md`); **T17 VERDE** (evals con LLM del humano, `progress/evals_F-075.md` 2026-10-18T23:09Z sobre `f202922`, modo completa, IA1–IA4 y E2E: IA1 141 ≤ 154, IA2 2 ≤ 4, el pie en «Campos no medidos»; IA3/IA4/E2E 408/27/537, idénticos caso a caso a los de F-064 con LLM); orden de T18 (sv5 → sv6 → sv3 → sv4 → sv2) **aceptado por el humano el 2026-10-18**; O3 a decidir por el humano.** Antes: — el importe del albarán manda (rigor `critico`; opción A y M1 del humano del 18-10, spec ajustada en `cb54d23`). T1–T16 y T19 hechas (un commit por tarea, hasta `575cef5`; `dev` `bee817d` fusionado); `init.sh` en verde en el worktree (cobertura 98,1 %; mutación 175 mutantes, 0 supervivientes tras el re-juicio). Informe: `progress/impl_F-075.md` (RED en `impl_F-075_red.md`, mutación en `mutacion_F-075.md`); `azure-apps` `c5fd3b0` sin push. Pendientes del humano: T0 (opcional), **T17** (evals con LLM, cierra el aviso de rutas sensibles) y **T18** (despliegue sv5 → sv6 → sv3 → sv4 → sv2, propuesto por el líder), comandos en el bloque de abajo. Rama `feature/F-075-importe-leido`, worktree `../albaranes-F-075`, *junction* `.venv` de sv4 (quitarla con `cmd /c rmdir` antes de `git worktree remove`). Suites de la rama con `PYTHONPATH=<worktree>/services/albaranes-comun`.
-
-#### F-075 · MANUAL del humano (T0, T17, T18), comandos para PowerShell
-
-Todo va en **PowerShell 5.1**, con un comando por línea y sin `&&`. Si un paso no da su VERDE, para ahí.
-
-- Las acciones marcadas **[ESCRIBE EN PRODUCCIÓN · humano]** las ejecuta el humano y necesitan su sí expreso para
-  esa acción. Ningún agente las lanza.
-- El resto solo lee.
-- No hay scripts contra la BBDD de Azure: no hace falta `Usar-PgAzure`.
-
-**T0 · opcional, SOLO LECTURA.** Son las consultas de los Anexos A y B de `progress/spec_F-075.md`, contra la BBDD
-`albaranes` y en una sesión con `SET default_transaction_read_only = on`:
-- el Anexo A da los dos merges de DISCOIN y cuántos merges no traen importe, lo traen parcial o completo;
-- el Anexo B da los candidatos a «Revalorar» uno a uno: activos, no aprobados, sin valoración y con algún importe.
-
-VERDE: las cifras quedan anotadas en `progress/spec_F-075.md` §v2.2.
-
-**T17 · evals con LLM.** Se facturan unas 190 llamadas, como en F-064 T10. Se lanza en el worktree, antes de fusionar
-en `dev`, porque la rama trae su comun.
+**T0 · M0, solo lectura** (el paso 1 coincide con `create_capps.ps1`, R7):
 
 ```powershell
-Copy-Item -Recurse C:\Users\pgris\PycharmProjects\albaranes\evals\inputs C:\Users\pgris\PycharmProjects\albaranes-F-075\evals\inputs
-cd C:\Users\pgris\PycharmProjects\albaranes-F-075
-$env:PYTHONPATH = "C:\Users\pgris\PycharmProjects\albaranes-F-075\services\albaranes-comun"
+az containerapp show -n ca-sv2-extraccion -g $RG --query "properties.template.containers[0].env[?ends_with(name,'_MODEL') || starts_with(name,'IA_') || starts_with(name,'SIGRID_') || name=='WORKER_CON_FASE2'].{n:name,v:value,s:secretRef}" -o table
+az containerapp show -n ca-sv5-valuation -g $RG --query "properties.template.containers[0].env[?ends_with(name,'_MODEL') || starts_with(name,'IA') || starts_with(name,'ENABLE_') || name=='OPENAI_API_KEY'].{n:name,v:value,s:secretRef}" -o table
+az containerapp show -n ca-sv5-valuation -g $RG --query "properties.configuration.secrets[].name" -o tsv
+az containerapp revision list -n ca-sv5-valuation -g $RG --query "[?properties.active].name" -o tsv
+```
+
+VERDE: sv2 `GEMINI_MODEL=gemini-4-argon`, `OPENAI_MODEL=gpt-6.1-sol`; sv5 `ENABLE_OPENAI=true`, `IA3_PROVIDER=openai`, `IA4_PROVIDER=openai`, `OPENAI_MODEL=gpt-6.1-sol`, `OPENAI_API_KEY` con `s=openai-key`, y `openai-key` en los secretos. Pegar la salida y la revisión activa en `progress/impl_F-085.md` (T0).
+
+**M-S · sigrid-api en sv2 (ampliación) — HECHA el 2026-10-21** (rev. `--0000006`, «Obras activas CABLEADAS», 277 obras). Comandos que se usaron, como referencia:
+
+```powershell
+az containerapp secret set -n ca-sv2-extraccion -g $RG --secrets "sigrid-key=keyvaultref:$KV_URI/secrets/SIGRID-API-FUNCTION-KEY,identityref:$MI_ID"
+az containerapp update -n ca-sv2-extraccion -g $RG --set-env-vars "SIGRID_API_BASE_URL=$SIGRID_BASE_URL" SIGRID_API_FUNCTION_KEY=secretref:sigrid-key "SIGRID_API_DATABASE=$SIGRID_DB"
+az containerapp logs show -n ca-sv2-extraccion -g $RG --tail 300 | Select-String "Obras activas|faltan credenciales"
+```
+
+VERDE: «Obras activas CABLEADAS» y ningún «faltan credenciales SIGRID_API_*» en la revisión nueva (sv2 escala a cero: puede hacer falta un albarán para ver el log). Vuelta atrás: `--remove-env-vars SIGRID_API_BASE_URL SIGRID_API_FUNCTION_KEY SIGRID_API_DATABASE`.
+
+**P2/P5 en sv2 (opcional, sin efecto en el comportamiento) — [ESCRIBE EN PRODUCCIÓN · humano]:**
+
+```powershell
+az containerapp update -n ca-sv2-extraccion -g $RG --remove-env-vars WORKER_CON_FASE2
+az containerapp update -n ca-sv2-extraccion -g $RG --set-env-vars IA_SEGUNDA_FASE=openai
+```
+
+**T10 · M4, desplegar solo sv5 — [ESCRIBE EN PRODUCCIÓN · humano].** Tras APPROVED, fusión en `dev` e `init.sh` en verde en el árbol principal; **antes, T0 en verde** (con R8/R9, sv5 no arranca con una combinación incoherente).
+
+```powershell
+az containerapp show -n ca-sv5-valuation -g $RG --query "properties.template.containers[0].image" -o tsv
+Set-DeployTag
+.\deploy.ps1 -Only sv5
+.\check_deploy.ps1 -ConModelos
+az containerapp logs show -n ca-sv5-valuation -g $RG --tail 300 | Select-String "wiring|proveedor=|IA4 proveedor|HTTPException|Traceback"
+```
+
+VERDE: sv5 en el tag nuevo y `[svc5][wiring] IA3=openai/gpt-6.1-sol IA4=openai/gpt-6.1-sol forzar_herramienta=True`, sin WARNING de «IA3 llamará a TODOS», sin `Traceback`. Vuelta atrás: `az containerapp update -n ca-sv5-valuation -g $RG --image <la imagen apuntada>`. Después, M1 de design §5 (Log Analytics: modelos servidos y volumen de 30 días).
+
+**T11 · M2, medición (cuesta dinero; humano):** con F-083 T13–T15, comandos en design §5 M2 y en el bloque de F-083 de abajo. IA1 e IA2 ya; IA3 e IA4 solo con F-084 `done`. Veredicto de design §6 por fase (consolidar o M3) y coste mensual con Argon a 4/20, anotados aquí.
+
+**F-083 · `blocked` (2026-10-21): review APPROVED (pasada 2), fusionada en `dev`; espera las MANUAL T13–T15 del humano (pago). O6 de la review (campo de uso opcional ausente = 0 sin `uso_incompleto`) ACEPTADO por el humano el 2026-10-21. Antes: PARADA 1 resuelta el 2026-10-19 (tanda 1 de 8 modelos, P5 = (a)); T1–T12 y T16 hechas, review pasada 1 CHANGES_REQUESTED solo documental (aplicada); pendientes T13–T15 del humano, que antes debe decidir O1 y O2** — comparar modelos de IA por fase (IA1–IA4) con acierto y coste por albarán. Spec en `specs/F-083-comparar-modelos/`; inventario de modelos con precio, fuente y fecha en `progress/spec_F-083.md`. Rama `feature/F-083-comparar-modelos`, worktree `../albaranes-F-083` (creado desde `dev` `7facc86`; *junction* `.venv` de sv4 puesta: quitarla con `cmd /c rmdir` antes de `git worktree remove`). Rigor `critico`. Toca `evals/` y, solo con P5 = (a), un parámetro opcional del cliente de Claude en comun; ningún servicio cambia en producción.
+
+Estado del implementer (2026-10-21): **T1–T12 y T16 hechas** (un commit por tarea); fase RED, decisiones, riesgos y evidencias en `progress/impl_F-083.md`. `bash harness/init.sh` en verde en el worktree (cobertura de lo cambiado 99,4 %). **T16, mutación VÁLIDA**: la campaña completa del reviewer sobre `96a59a3`, 3 workers, **366 mutantes, 366 muertos, 0 supervivientes**, 0 timeouts, 21.907 s (`progress/mutacion_F-083.md`, con su fila en el inventario de F-039). Las dos campañas anteriores del implementer quedaron «NO VÁLIDA» por la base de cierre con la máquina cargada (`progress/impl_F-083_mutacion.md`). Desviaciones (justificadas en el informe): T9 y T10 antes que T8; `procesar` y `lanzar` viven en `medidor.py`, compartidos por los dos subprocesos. T13–T15 son MANUAL del humano, comandos abajo.
+
+#### F-083 · MANUAL T13–T15 (humano), comandos para PowerShell
+
+**Cuesta dinero: solo el humano.** Todo en el worktree, sobre la rama (trae la comun con `forzar_herramienta`). `--estimar` no pide claves ni llama a nada: hacerlo siempre antes. Las claves se piden con `Read-Host -AsSecureString` y se borran al final. Nada escribe en producción: solo llamadas a las API de los tres proveedores.
+
+Preparación de la consola (una vez):
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes-F-083
+if (-not (Test-Path .\evals\inputs)) { Copy-Item -Recurse C:\Users\pgris\PycharmProjects\albaranes\evals\inputs .\evals\inputs }
+$env:PYTHONPATH = "C:\Users\pgris\PycharmProjects\albaranes-F-083\services\albaranes-comun"
+$py = "C:\Users\pgris\PycharmProjects\albaranes\.venv\Scripts\python.exe"
+$m = "gemini-3.7-flash,gemini-4-argon,claude-opus-5-5,gpt-5.4,gpt-5.5,gpt-6.1-sol,gpt-6-luna,gpt-5.6-luna"
+$s = Read-Host "ANTHROPIC_API_KEY" -AsSecureString
+$env:ANTHROPIC_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
 $s = Read-Host "GEMINI_API_KEY" -AsSecureString
 $env:GEMINI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
 $s = Read-Host "OPENAI_API_KEY" -AsSecureString
 $env:OPENAI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-& C:\Users\pgris\PycharmProjects\albaranes\.venv\Scripts\python.exe -m evals.runner --con-llm --feature F-075
-Remove-Item env:GEMINI_API_KEY, env:OPENAI_API_KEY, env:PYTHONPATH
 ```
 
-VERDE en `progress/evals_F-075.md`. El banco ya está en ROJO de base, así que el `VERDE` literal no se puede alcanzar;
-la condición es esta:
-- `MODO: completa` y `FASES: IA1,IA2,IA3,IA4,E2E`;
-- **IA1 ≤ 154 e IA2 ≤ 4 fallos críticos** (F-064 T10 dio 152 y 2);
-- la sección «Campos no medidos» con los cuatro campos del pie;
-- IA3, IA4 y E2E sin cambios respecto a la pasada determinista, que es idéntica a `dev`.
+**Antes de T13, lo decide el humano (review de F-083, `progress/review_F-083.md`):**
 
-Ese informe cierra también el aviso de la puerta de rutas sensibles (`prompts.yaml`, `albaran_models.py`,
-`valoracion_directa.py`).
+- **O1 · Producción ya no usa las referencias de la tabla.** Según el líder, desde el 20-10 producción usa `gemini-4-argon` en IA1 y `gpt-6.1-sol` en IA2–IA4. La tabla sigue a `infra/create_capps.ps1` (IA1 `gemini-3.7-flash`, IA2 `gpt-5.4`, IA3/IA4 `claude-opus-4-8`), así que R3 pasa hoy, pero T13–T15 compararían contra modelos retirados y prepararían IA2 con 3.7-flash e IA4 con Opus 4.8. **Recomendación: F-085 antes de pagar T13**; después, quien se fusione segunda ajusta `referencias` y `papel` de la tabla y hace que R3 lea el proveedor de sv5 (`IA3_PROVIDER`/`IA4_PROVIDER`).
+- **O2 · No pagar IA3 ni IA4 hasta F-084.** El banco de IA3/IA4 no discrimina (52 de los 59 casos de INPUTS sin líneas de contrato, R-1 del informe): con los mismos fallos en todos los modelos, R33 podría decir «cambiar» al más barato sin que el banco lo sostenga.
 
-**T18 · despliegue**, tras el APPROVED, la fusión en `dev` e `init.sh` en verde en el árbol principal. Cada
-`deploy.ps1` es **[ESCRIBE EN PRODUCCIÓN · humano]**.
-
-El orden es **sv5 → sv6 → sv3 → sv4 → sv2**. Lo propuso el líder a partir de la O1 de
-`progress/review_F-075.md` (la spec decía sv3 → sv5 → sv6) y **lo aceptó el humano el 2026-10-18**.
-- **Por qué sv5 y sv6 van primero**: no dependen de la DDL, y así, cuando sv3 empiece a publicar sin contrato, cada
-  albarán nuevo ya se valora directo. Con sv3 primero quedarían cabeceras `no_contract` **vacías**, que sv6 no rehace
-  sin `force`.
-- **Por qué sv2 va detrás de sv3**: sv3 valida la cabecera con `StrictSchemaModel` y rechazaría el pie si llegara
-  antes.
-
-sv9 no se redespliega y `ALTA_SIGRID_COMMIT` sigue `false`.
+**T13 · humo** (≈ 2–4 USD). Dice qué modelos fallan por formato (PDF en las Luna, `max_tokens` con pensamiento, Opus 5.5 con `tool_choice` auto), qué modelo sirve Google a `gemini-3.7-flash` y deja tokens medidos para la estimación siguiente.
 
 ```powershell
-cd C:\Users\pgris\PycharmProjects\albaranes\infra
-. .\00_vars.ps1
-. .\00_capps_vars.ps1
-foreach ($a in "ca-sv5-valuation","ca-sv6-valorador","ca-sv3-persistencia","ca-sv4-front","ca-sv2-extraccion") { az containerapp show -n $a -g $RG --query "properties.template.containers[0].image" -o tsv }
-.\deploy.ps1 -Only sv5
-.\check_deploy.ps1
-.\deploy.ps1 -Only sv6
-.\check_deploy.ps1
-.\deploy.ps1 -Only sv3
-.\check_deploy.ps1
-.\deploy.ps1 -Only sv4
-.\check_deploy.ps1
-.\deploy.ps1 -Only sv2
-.\check_deploy.ps1
+& $py -m evals.comparar_modelos --fase IA1 --modelos $m --casos GEN-001,HOR-001 --estimar
+& $py -m evals.comparar_modelos --fase IA1 --modelos $m --casos GEN-001,HOR-001
+& $py -m evals.comparar_modelos --fase IA3 --modelos $m --casos GEN-001 --estimar
+& $py -m evals.comparar_modelos --fase IA3 --modelos $m --casos GEN-001
 ```
 
-VERDE de cada paso: `check_deploy.ps1` con el servicio en el tag nuevo y sus réplicas arriba. El `foreach` del
-principio, que solo lee, deja apuntadas las imágenes actuales por si hay que volver atrás.
+VERDE: dos secciones nuevas en `progress/comparar_modelos_F-083.md`, con la columna «Modelo servido» y «Parada» rellenas, y sus líneas `GASTO:`. Si un modelo sale con todo `ERROR`, el líder lo revisa y decide si pasa a `excluido` en la tabla.
 
-Comprobación en pantalla, en la ficha de sv4 del merge de DISCOIN `dfdc8aab-08e1-49f0-978d-bb906515e748`:
-1. Pulsar «Valorar ahora» **[ESCRIBE EN PRODUCCIÓN · humano: reemplaza su valoración]**.
-2. VERDE si sale la valoración directa, la bandeja enseña «Importe» con el rótulo «albarán · sin IVA» y «Aprobar» está
-   habilitado (si todas las líneas traen importe).
-3. Aprobar **[ESCRIBE EN PRODUCCIÓN · humano]**. VERDE si el panel de F-053 enseña el alta `simulado`.
-
-Antes de poner `ALTA_SIGRID_COMMIT=true`, revisar en simulación tres altas directas (D6: la analítica
-`<obra>.<sufijo>`).
-
-**F-073 · `blocked` (2026-10-17): review APPROVED (pasada 1), fusionada en `dev`; espera la MANUAL T12 del humano (abajo)** — proveedor por nombre en sv3 con un criterio único (similitud: TEYMACO casa con FEYMACO) y sin elegir en empates (incidencia 0694). El bloqueo de T3 lo resolvió el humano el 2026-10-17 con la opción (a): el script de verificación de F-052 usa `similitud_razon_social` y su assert pasa a B10055433. Spec en `specs/F-073-proveedor-por-similitud/`, informe en `progress/impl_F-073.md`, mutación en `progress/mutacion_F-073.md` (2 equivalentes ACEPTADOS por el humano el 2026-10-17). Decisiones de la review: H3 → ampliación de F-059 (sv4 retira `proveedor_nombre_ambiguo` y `proveedor_cif_propio:` al fijar el proveedor a mano); H4 → F-080 (tras un empate por nombre, la familia solo elige entre los empatados). Rama `feature/F-073-proveedor-por-similitud`, worktree `../albaranes-F-073`, `dev` (`e09916f`) fusionado. *Junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
-
-#### F-073 · MANUAL T12 (humano), comandos para PowerShell
-
-**Acciones marcadas [ESCRIBE EN PRODUCCIÓN]: cada una la ejecuta el humano y necesita su sí expreso para esa acción.**
-Ningún agente las lanza. El resto solo lee. No hace falta `Usar-PgAzure`: no hay scripts contra la BBDD.
-
-**Paso 0 · ya, sin esperar al despliegue (P7)** — [ESCRIBE EN PRODUCCIÓN · el revisor humano, en sv4]. Corrige los
-3 merges de la incidencia: correo «0694», obra 0694, hoy con HIERROS RODRIGO (A19004589) y el contrato CTSU26/0001.
-Uno es `54b82479-…`; los otros dos son los del mismo correo con ese proveedor. En la ficha de cada uno, «Elegir
-proveedor» → **A28733558 · FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)** y después «Guardar y volver a
-buscar». VERDE: proveedor FEYMACO (origen `manual`) y un contrato de FEYMACO en la obra. Re-buscar sin elegir no
-sirve: con el CIF ya puesto, la red canoniza a HIERROS. `54b82479` está también en la lista de «Valorar ahora» de
-F-076 T19: haz antes este paso 0.
-
-**Paso 1 · despliegue de sv3** (tras el APPROVED, la fusión en `dev` e `init.sh` en verde en el árbol principal).
-Primero, solo lectura: apunta la imagen actual, por si hay que volver atrás. Después, el despliegue, que es
-[ESCRIBE EN PRODUCCIÓN · humano].
+**T14 · tanda 1**: las cuatro fases, una invocación por fase, siempre `--estimar` antes. Estimación sin medir (×1,5, 2026-10-20): IA1 ≈ 37 USD, IA2 ≈ 8, IA3 ≈ 64, IA4 ≈ 9 (≈ 118 en total). Tras el humo bajan: usan los tokens medidos. **IA3 necesita `--tope-usd 70`** (con 60 para antes de gastar, código 2).
 
 ```powershell
-cd C:\Users\pgris\PycharmProjects\albaranes\infra
-. .\00_vars.ps1
-. .\00_capps_vars.ps1
-az containerapp show -n ca-sv3-persistencia -g $RG --query "properties.template.containers[0].image" -o tsv
-Set-DeployTag
-.\deploy.ps1 -Only sv3
-.\check_deploy.ps1
+& $py -m evals.comparar_modelos --fase IA1 --modelos $m --estimar
+& $py -m evals.comparar_modelos --fase IA1 --modelos $m --tope-usd 60
+& $py -m evals.comparar_modelos --fase IA2 --modelos $m --estimar
+& $py -m evals.comparar_modelos --fase IA2 --modelos $m
+& $py -m evals.comparar_modelos --fase IA3 --modelos $m --estimar
+& $py -m evals.comparar_modelos --fase IA3 --modelos $m --tope-usd 70
+& $py -m evals.comparar_modelos --fase IA4 --modelos $m --estimar
+& $py -m evals.comparar_modelos --fase IA4 --modelos $m
 ```
 
-VERDE: `check_deploy.ps1` con sv3 en el tag nuevo y las réplicas arriba. sv3 se construye desde `dev`, que ya trae la
-comun de F-076 y F-078. sv3 importa `ruesma_comun.sigrid`, que ya carga `sigrid.partidas` (solo stdlib; la suite de sv3 pasa con esa comun); nada más cambia.
+**IA3 e IA4, no hasta F-084 (O2)**: 52 de los 59 casos de INPUTS no traen líneas de contrato y hoy esas dos fases apenas miden el modelo (R-1 de `progress/impl_F-083.md`). Lo mismo vale para el humo de IA3 de T13.
 
-**Paso 2 · solo lectura: el log.**
+VERDE: una sección por fase con su recomendación (marcada «provisional (1 repetición)») y la suma de `GASTO:` dentro de los 200 USD de P3.
+
+**T15 · finalistas**: por fase, la referencia y los dos primeros de la banda de T14, con 3 repeticiones. Ejemplo para IA1 (cambiar `<a>,<b>` por los de la banda):
 
 ```powershell
-az containerapp logs show -n ca-sv3-persistencia -g $RG --tail 300 | Select-String "INSTANCIADO|por NOMBRE"
+& $py -m evals.comparar_modelos --fase IA1 --modelos <a>,<b> --repeticiones 3 --estimar
+& $py -m evals.comparar_modelos --fase IA1 --modelos <a>,<b> --repeticiones 3 --tope-usd 60
 ```
 
-VERDE: `INSTANCIADO (…margen_nombre=0.25)`. En el siguiente albarán sin CIF resuelto por nombre debe salir una de
-estas líneas:
-- `proveedor resuelto por NOMBRE dentro de la obra … elegido cif=… similitud=… segunda=… margen=0.25`;
-- `… EMPATE, no se elige: … empatados=N`, con el documento a revisión y el motivo `proveedor_nombre_ambiguo`.
+VERDE: recomendación sin marca de provisional por fase; es la base de la feature que cambie el modelo de producción.
 
-Con esto, T12 en verde.
+Al terminar, siempre:
 
-**Vuelta atrás** (no hay interruptor, P3) — [ESCRIBE EN PRODUCCIÓN · humano, solo si hace falta]:
-`az containerapp update -n ca-sv3-persistencia -g $RG --image <la imagen apuntada en el paso 1>`.
+```powershell
+Remove-Item env:ANTHROPIC_API_KEY, env:GEMINI_API_KEY, env:OPENAI_API_KEY, env:PYTHONPATH
+Remove-Variable s, py, m
+```
 
+Códigos de salida: 0 hecho, 1 ningún candidato dio resultado, 2 parada antes de gastar, 3 cortado por `--tope-usd` (el informe se escribe con lo hecho). Tras cada corrida, versionar `progress/comparar_modelos_F-083.md` (no lleva valores); `evals/salidas/` no se versiona.
+
+Hallazgos que el humano debe conocer:
+- `gemini-3.7-flash` (IA1 en producción según `infra/create_capps.ps1`; ver O1) está descontinuado y Google lo redirige a `gemini-3.8-flash` (página oficial del modelo, 2026-10-12). Renombrarlo en `infra/` queda fuera.
+- La línea base de F-075 (IA1 141, IA2 2, IA3/IA4/E2E 408/27/537) probablemente se midió con los defectos del runner (`gemini-2.5-flash`, `gpt-5`, e IA3/IA4 con gemini), no con los modelos de producción: el informe no registra el modelo.
+- El cliente de Claude fuerza la herramienta, y `claude-opus-5-5`, `claude-sonnet-5-5` y `claude-fable-5-1` lo rechazan con 400.
+- «Luna» es la gama Luna de OpenAI: existen `gpt-6-luna` y `gpt-5.6-luna`. No existe `gpt-6.1-luna`.
+
+Las llamadas de pago son T13–T15, MANUAL del humano, con los comandos de design §8. Ningún agente gasta.
+
+**F-080 · CERRADA (`done`, 2026-10-20).** Desplegada en sv3 (`r20261019-1114`); validación: su suite (36 tests) y el log de sv3 del Bloque E del plan de pruebas. Resumen en `history.md`.
+
+**F-075 · CERRADA (`done`, 2026-10-21).** Desplegada (sv5 → sv6 → sv3 → sv4 → sv2, r20261019); B1–B4 en verde el 2026-10-20 (dfdc8aab: valoración directa y alta `simulado`). El pie (B5) se observará en el próximo albarán que lo traiga. Resumen en `history.md`.
+
+**F-073 · CERRADA (`done`, 2026-10-21).** Desplegada en sv3 (r20261019-0952, y con F-080 en r20261019-1114); paso 0 en verde el 2026-10-20 (54b82479, dedf011a, 53337da7 → FEYMACO, CTSU24/0466). El log del próximo albarán sin CIF se observa sin bloquear. Resumen en `history.md`.
 
 **F-077 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`; espera la MANUAL T14, que hace el
 líder en el navegador tras desplegar sv4 (abajo)** — rama
@@ -394,66 +362,7 @@ VERDE si «normalizable sin normalizar» da **0** en pendientes y las 6 sin cand
 > - **F-049**: `ruesma_comun/sigrid/partidas.py` (add/add): se queda el suyo conservando `resolver_partida_obra`,
 >   `CachePartidasObra`, la guarda de no hoja y `leer_partidas_obra` con F-070; comun pasa a 0.9.0; sv4 ya hace su R11.
 
-**F-078 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`.** Espera las MANUAL T12–T14 del
-humano (abajo); con su verde, `done`. **T12–T14 VERDES (2026-10-18):** relleno `--aplicar` 94 filas y relectura 0;
-T14 «Solicitar alta» en `86c13097` (sí del humano en el chat) → `simulado`, cod provisional `AC26/29750`, sin motivos
-(`COMMIT=false` comprobado en sv9); en la ficha «Mortero M-5» 01.05.07 m3, «CARGA INCOMPLETA» M3 Almacén y la fila 379
-(`41ab0dc1`) «DISCO C/ACERO 230 BOSCH». Falta cerrar: `init.sh` y pasar a `done`. Informes: `progress/impl_F-078.md`, `progress/review_F-078.md`. *Junction* `.venv`
-de sv4 en el worktree `../albaranes-F-078` (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
-
-#### F-078 · MANUAL del humano (T12–T14), comandos para PowerShell
-
-> **Con F-076 fusionada en `dev`**, sus despliegues de sv6 y sv4 llevan también F-078: no sigas este bloque suelto,
-> usa la **secuencia combinada F-078 + F-076** del bloque «F-076 · MANUAL» de arriba (mismos comandos de T12–T14, en
-> el orden en que se intercalan con los de F-076). Este bloque vale tal cual solo si F-078 se despliega antes de
-> fusionar F-076.
-
-Antes de nada: **fusionar la rama en `dev`** (el script y `ruesma_comun.linea_valorada` viven en el árbol principal a
-partir de ahí). Orden obligatorio: **sv6 → relleno con `--aplicar` → sv4**; **sv9 no se redespliega**.
-
-**T12 · relleno en SOLO LECTURA contra producción** (**ojo: el `.env` de sv6 apunta a local**; antes de cada
-`rellenar_filas_f078` de este bloque, `Usar-PgAzure`, y después `Quitar-PgAzure`, funciones del bloque «F-076 ·
-MANUAL»; transacción `READ ONLY`, sin conexión ni textos de proveedor en la salida, solo ids y columnas). Hecha por el
-líder el 17-10 contra Azure: 102 revisadas, 94 que cambiarían (91/27/21, 385 y 386 dentro; ver el paso 1 de arriba):
-
-```powershell
-cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
-.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
-```
-
-Debe cuadrar con `progress/spec_F-078.md` §3: ≈93 `descripcion_linea`, 7 `unidad_albaran`, 6 `cantidad_convertida`
-(ids 385 y 386 dentro), 0 `unidad_contrato`, 0 `precio_unitario_final`, salvo lo cambiado desde el 16-10.
-
-**T13 · despliegue de sv6 → relleno con `--aplicar` (autorización expresa) → despliegue de sv4.** Los despliegues, con
-los scripts de `infra/` (los lanza el humano). El relleno, en la misma consola:
-
-```powershell
-cd C:\Users\pgris\PycharmProjects\albaranes\services\albaran-valoracion-persist
-.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078 --aplicar
-.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
-```
-
-La primera termina con «Escritas N filas. Releído: 0 pendientes.» (si no, ROLLBACK y código 2); la segunda, de solo
-lectura, con «Filas que cambiarían: 0». Después se despliega sv4 y, **tras desplegar sv4, otra vez el relleno en solo
-lectura** (cierra la ventana entre el relleno y sv4: lo que el sv4 viejo haya dejado con huecos en ese rato):
-
-```powershell
-.\.venv\Scripts\python.exe -m scripts.rellenar_filas_f078
-```
-
-Debe dar «Filas que cambiarían: 0». Si da más, se lanza otra vez con `--aplicar` (misma autorización) y se repite la
-lectura. Comprobación en la ficha de `86c13097-98f8-4e4b-91af-6a378c28d9cf`: «Mortero M-5» 01.05.07 m3 y «CARGA
-INCOMPLETA» M3 Almacén; la fila 379 pinta «DISCO C/ACERO 230 BOSCH».
-
-**T14 · «Solicitar alta en Sigrid»** en `86c13097…` desde la ficha, y comprobación (solo lectura):
-
-```sql
-SET default_transaction_read_only = on;
-SELECT estado, historial_json FROM albaran_altas_sigrid
-WHERE document_id = '86c13097-98f8-4e4b-91af-6a378c28d9cf';
-```
-
-Deja de terminar en `no_admitido` con `falta_descripcion` (con `ALTA_SIGRID_COMMIT=false` queda en `simulado`).
+**F-078 · CERRADA (`done`, 2026-10-20).** Desplegada en sv6 (`r20261019-0949`) y sv4 (`r20261019-0955`); MANUAL T12–T14 en verde el 2026-10-18. Resumen en `history.md`.
 
 **F-064 · `blocked` (2026-10-18): review O1 APPROVED, T9 y T10 del humano en VERDE; solo queda la MANUAL T12.**
 **T12 en marcha:** sv2 desplegado por el humano el 2026-10-18 (`r20261018-1420`, revisión única tras `fix_revisiones`); la

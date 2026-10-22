@@ -1,0 +1,430 @@
+{
+  "$doc": "Precios de los modelos que mide F-083, en USD por millon de tokens, nivel estandar y API directa del proveedor. Fuente y fecha por modelo; inventario completo en progress/spec_F-083.md. Un precio con vigente_hasta pasa a su 'siguiente' despues de esa fecha; sin siguiente, la tabla esta caducada y el comparador para (R4). tramo_largo: precios cuando la entrada total supera umbral_entrada. imagen/pdf: true, false o null (la documentacion no lo confirma por modelo). herramienta_forzada: solo Claude. papel: referencia | candidato | excluido (con motivo).",
+  "referencias": {
+    "IA1": "gemini-4-argon",
+    "IA2": "gpt-6.1-sol",
+    "IA3": "gpt-6.1-sol",
+    "IA4": "gpt-6.1-sol"
+  },
+  "estimacion_por_defecto": {
+    "IA1": {
+      "entrada": 10000,
+      "salida": 3000,
+      "margen": 1.5
+    },
+    "IA2": {
+      "entrada": 14000,
+      "salida": 4000,
+      "margen": 1.5
+    },
+    "IA3": {
+      "entrada": 12000,
+      "salida": 4000,
+      "margen": 1.5
+    },
+    "IA4": {
+      "entrada": 5000,
+      "salida": 1500,
+      "margen": 1.5
+    }
+  },
+  "modelos": [
+    {
+      "id": "claude-opus-4-8",
+      "proveedor": "claude",
+      "precio": {
+        "entrada": 5,
+        "lectura_cache": 0.5,
+        "escritura_cache": 6.25,
+        "salida": 25
+      },
+      "fuente": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": true,
+      "herramienta_forzada": true,
+      "papel": "candidato",
+      "motivo": "IA3 e IA4 antes de F-085 (vuelta atras, IA3_PROVIDER/IA4_PROVIDER=claude); solo como candidato de esas fases (F-085 design, M2), fuera de la tanda 1 por decision del humano",
+      "notas": "legacy"
+    },
+    {
+      "id": "claude-opus-5",
+      "proveedor": "claude",
+      "precio": {
+        "entrada": 5,
+        "lectura_cache": 0.5,
+        "escritura_cache": 6.25,
+        "salida": 25
+      },
+      "fuente": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": true,
+      "herramienta_forzada": true,
+      "papel": "excluido",
+      "motivo": "fuera de la tanda 1 por decision del humano (PARADA 1, 2026-10-19)",
+      "notas": "legacy"
+    },
+    {
+      "id": "claude-sonnet-5",
+      "proveedor": "claude",
+      "precio": {
+        "entrada": 2,
+        "lectura_cache": 0.2,
+        "escritura_cache": 2.5,
+        "salida": 10
+      },
+      "fuente": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": true,
+      "herramienta_forzada": true,
+      "papel": "excluido",
+      "motivo": "fuera de la tanda 1 por decision del humano (PARADA 1, 2026-10-19)",
+      "notas": "legacy"
+    },
+    {
+      "id": "claude-haiku-5-5",
+      "proveedor": "claude",
+      "precio": {
+        "entrada": 0.1,
+        "lectura_cache": 0.01,
+        "escritura_cache": 0.125,
+        "salida": 0.5
+      },
+      "fuente": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": true,
+      "herramienta_forzada": true,
+      "papel": "excluido",
+      "motivo": "fuera de la tanda 1 por decision del humano (PARADA 1, 2026-10-19)",
+      "tramo_largo": {
+        "umbral_entrada": 100000,
+        "precio": {
+          "entrada": 0.5,
+          "lectura_cache": 0.05,
+          "escritura_cache": 0.625,
+          "salida": 2.5
+        }
+      },
+      "notas": "admite la herramienta forzada sin pensamiento"
+    },
+    {
+      "id": "claude-opus-5-5",
+      "proveedor": "claude",
+      "precio": {
+        "entrada": 4,
+        "lectura_cache": 0.2,
+        "escritura_cache": 5,
+        "salida": 20
+      },
+      "fuente": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": true,
+      "herramienta_forzada": false,
+      "papel": "candidato",
+      "motivo": "",
+      "notas": "rechaza tool_choice tool/any con 400: se mide con forzar_herramienta=False (P5 = a)"
+    },
+    {
+      "id": "claude-sonnet-5-5",
+      "proveedor": "claude",
+      "precio": {
+        "entrada": 2,
+        "lectura_cache": 0.1,
+        "escritura_cache": 2.5,
+        "salida": 10
+      },
+      "fuente": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": true,
+      "herramienta_forzada": false,
+      "papel": "excluido",
+      "motivo": "fuera de la tanda 1 por decision del humano (PARADA 1, 2026-10-19)"
+    },
+    {
+      "id": "claude-fable-5",
+      "proveedor": "claude",
+      "precio": {
+        "entrada": 10,
+        "lectura_cache": 1,
+        "escritura_cache": 12.5,
+        "salida": 50
+      },
+      "fuente": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": true,
+      "herramienta_forzada": true,
+      "papel": "excluido",
+      "motivo": "precio (10 / 50); fuera de la tanda 1 por decision del humano (PARADA 1, 2026-10-19)",
+      "notas": "legacy"
+    },
+    {
+      "id": "claude-fable-5-1",
+      "proveedor": "claude",
+      "precio": {
+        "entrada": 10,
+        "lectura_cache": 0.25,
+        "escritura_cache": 12.5,
+        "salida": 50
+      },
+      "fuente": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": true,
+      "herramienta_forzada": false,
+      "papel": "excluido",
+      "motivo": "precio (10 / 50); fuera de la tanda 1 por decision del humano (PARADA 1, 2026-10-19)"
+    },
+    {
+      "id": "gemini-3.7-flash",
+      "proveedor": "gemini",
+      "precio": {
+        "entrada": 0.75,
+        "lectura_cache": 0.075,
+        "escritura_cache": 0.75,
+        "salida": 3.75,
+        "vigente_hasta": "2026-12-31",
+        "siguiente": {
+          "entrada": 1.5,
+          "lectura_cache": 0.15,
+          "escritura_cache": 1.5,
+          "salida": 7.5
+        }
+      },
+      "fuente": "https://ai.google.dev/gemini-api/docs/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": true,
+      "herramienta_forzada": null,
+      "papel": "candidato",
+      "motivo": "IA1 antes de F-085 (vuelta atras); referencia hasta el paso 1 del 2026-10-20",
+      "notas": "Descontinuado: Google lo redirige a gemini-3.8-flash. Sin precio propio: se factura como 3.8 (supuesto). Google no cobra escritura de cache implicita: se usa el precio de entrada (el SDK no informa escritura)."
+    },
+    {
+      "id": "gemini-3.8-flash",
+      "proveedor": "gemini",
+      "precio": {
+        "entrada": 0.75,
+        "lectura_cache": 0.075,
+        "escritura_cache": 0.75,
+        "salida": 3.75,
+        "vigente_hasta": "2026-12-31",
+        "siguiente": {
+          "entrada": 1.5,
+          "lectura_cache": 0.15,
+          "escritura_cache": 1.5,
+          "salida": 7.5
+        }
+      },
+      "fuente": "https://ai.google.dev/gemini-api/docs/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": true,
+      "herramienta_forzada": null,
+      "papel": "excluido",
+      "motivo": "hoy es lo mismo que gemini-3.7-flash, la vuelta atras de IA1 (Google redirige gemini-3.7-flash a gemini-3.8-flash); entra si el humo lo desmiente",
+      "notas": "Google no cobra escritura de cache implicita: se usa el precio de entrada (el SDK no informa escritura)."
+    },
+    {
+      "id": "gemini-4-argon",
+      "proveedor": "gemini",
+      "precio": {
+        "entrada": 2,
+        "lectura_cache": 0.1,
+        "escritura_cache": 2,
+        "salida": 10,
+        "vigente_hasta": "2026-11-30",
+        "siguiente": {
+          "entrada": 4,
+          "lectura_cache": 0.2,
+          "escritura_cache": 4,
+          "salida": 20
+        }
+      },
+      "fuente": "https://ai.google.dev/gemini-api/docs/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": true,
+      "herramienta_forzada": null,
+      "papel": "referencia",
+      "motivo": "referencia de IA1 (infra/create_capps.ps1, GEMINI_MODEL; F-085)",
+      "notas": "cache de lectura implicita. Google no cobra escritura de cache implicita: se usa el precio de entrada (el SDK no informa escritura)."
+    },
+    {
+      "id": "gpt-5.4",
+      "proveedor": "openai",
+      "precio": {
+        "entrada": 2.5,
+        "lectura_cache": 0.25,
+        "escritura_cache": 2.5,
+        "salida": 15
+      },
+      "fuente": "https://developers.openai.com/api/docs/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": null,
+      "herramienta_forzada": null,
+      "papel": "candidato",
+      "motivo": "IA2 antes de F-085 (vuelta atras); referencia hasta el paso 1 del 2026-10-20",
+      "notas": "La ficha no publica escritura de cache: se usa el precio de entrada (el SDK no la informa). PDF: ninguna ficha por modelo lo confirma (null)."
+    },
+    {
+      "id": "gpt-5.5",
+      "proveedor": "openai",
+      "precio": {
+        "entrada": 5,
+        "lectura_cache": 0.5,
+        "escritura_cache": 5,
+        "salida": 30
+      },
+      "fuente": "https://developers.openai.com/api/docs/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": null,
+      "herramienta_forzada": null,
+      "papel": "candidato",
+      "motivo": "",
+      "tramo_largo": {
+        "umbral_entrada": 272000,
+        "precio": {
+          "entrada": 10,
+          "lectura_cache": 1,
+          "escritura_cache": 10,
+          "salida": 45
+        }
+      },
+      "notas": "La ficha no publica escritura de cache: se usa el precio de entrada (el SDK no la informa). PDF: ninguna ficha por modelo lo confirma (null)."
+    },
+    {
+      "id": "gpt-5.6-luna",
+      "proveedor": "openai",
+      "precio": {
+        "entrada": 0.2,
+        "lectura_cache": 0.02,
+        "escritura_cache": 0.2,
+        "salida": 1.2
+      },
+      "fuente": "https://developers.openai.com/api/docs/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": null,
+      "herramienta_forzada": null,
+      "papel": "candidato",
+      "motivo": "",
+      "tramo_largo": {
+        "umbral_entrada": 272000,
+        "precio": {
+          "entrada": 0.4,
+          "lectura_cache": 0.04,
+          "escritura_cache": 0.4,
+          "salida": 1.8
+        }
+      },
+      "notas": "La ficha no publica escritura de cache: se usa el precio de entrada (el SDK no la informa). PDF: ninguna ficha por modelo lo confirma (null). La ficha de las Luna no menciona PDF: lo dice el humo (T13)."
+    },
+    {
+      "id": "gpt-5.6-terra",
+      "proveedor": "openai",
+      "precio": {
+        "entrada": 2,
+        "lectura_cache": 0.2,
+        "escritura_cache": 2,
+        "salida": 12
+      },
+      "fuente": "https://developers.openai.com/api/docs/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": null,
+      "herramienta_forzada": null,
+      "papel": "excluido",
+      "motivo": "gpt-6.1-sol es mas nuevo y no mas caro",
+      "notas": "La ficha no publica escritura de cache: se usa el precio de entrada (el SDK no la informa). PDF: ninguna ficha por modelo lo confirma (null)."
+    },
+    {
+      "id": "gpt-5.6-sol",
+      "proveedor": "openai",
+      "precio": {
+        "entrada": 4,
+        "lectura_cache": 0.4,
+        "escritura_cache": 4,
+        "salida": 20
+      },
+      "fuente": "https://developers.openai.com/api/docs/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": null,
+      "herramienta_forzada": null,
+      "papel": "excluido",
+      "motivo": "precio",
+      "notas": "La ficha no publica escritura de cache: se usa el precio de entrada (el SDK no la informa). PDF: ninguna ficha por modelo lo confirma (null)."
+    },
+    {
+      "id": "gpt-6-luna",
+      "proveedor": "openai",
+      "precio": {
+        "entrada": 0.1,
+        "lectura_cache": 0.01,
+        "escritura_cache": 0.125,
+        "salida": 0.5
+      },
+      "fuente": "https://developers.openai.com/api/docs/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": null,
+      "herramienta_forzada": null,
+      "papel": "candidato",
+      "motivo": "",
+      "notas": "Escritura de cache 0,125 segun su ficha. PDF sin confirmar: la ficha de las Luna no lo menciona; lo dice el humo (T13)."
+    },
+    {
+      "id": "gpt-6.1-sol",
+      "proveedor": "openai",
+      "precio": {
+        "entrada": 2,
+        "lectura_cache": 0.1,
+        "escritura_cache": 2,
+        "salida": 10
+      },
+      "fuente": "https://developers.openai.com/api/docs/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": null,
+      "herramienta_forzada": null,
+      "papel": "referencia",
+      "motivo": "referencia de IA2, IA3 e IA4 (infra/create_capps.ps1: OPENAI_MODEL en sv2 y, con IA3_PROVIDER/IA4_PROVIDER=openai, en sv5; F-085)",
+      "tramo_largo": {
+        "umbral_entrada": 272000,
+        "precio": {
+          "entrada": 4,
+          "lectura_cache": 0.2,
+          "escritura_cache": 4,
+          "salida": 15
+        }
+      },
+      "notas": "La ficha no publica escritura de cache: se usa el precio de entrada (el SDK no la informa). PDF: ninguna ficha por modelo lo confirma (null)."
+    },
+    {
+      "id": "gpt-6-astra",
+      "proveedor": "openai",
+      "precio": {
+        "entrada": 10,
+        "lectura_cache": 1,
+        "escritura_cache": 10,
+        "salida": 50
+      },
+      "fuente": "https://developers.openai.com/api/docs/pricing",
+      "fecha_consulta": "2026-10-19",
+      "imagen": true,
+      "pdf": null,
+      "herramienta_forzada": null,
+      "papel": "excluido",
+      "motivo": "precio (10 / 50)",
+      "notas": "La ficha no publica escritura de cache: se usa el precio de entrada (el SDK no la informa). PDF: ninguna ficha por modelo lo confirma (null)."
+    }
+  ]
+}

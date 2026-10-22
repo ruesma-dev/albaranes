@@ -5,6 +5,42 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-075 · El importe del albarán manda (cerrada 2026-10-21)
+
+Rama `feature/F-075-importe-leido`, rigor `critico`, comun, sv2, sv3, sv5, sv6 y sv4. Sin contrato y con importes
+leídos, sv6 valora directo con los importes del albarán (`valoracion_directa_albaran`), se aprueba y sv9 da el alta
+sin vincular; con contrato, lo leído ya mandaba (F-019) y se añade `valorado_distinto_de_albaran`; IA1 lee el pie
+(base, tipo, cuota, total) y `pie_no_cuadra` va a revisión; sv4 enseña una columna «Importe» (albarán · sin IVA o
+valorado). Review APROBADA en la pasada 2; T17 (evals con LLM) en verde; T18 desplegado por el humano el 2026-10-19.
+Pruebas en la app (2026-10-20): bandeja e importes en la ficha, y en `dfdc8aab` (DISCOIN, sin contrato) valoración
+directa 183,74 € y alta `simulado` sin motivos, con previa local aceptada por Sigrid. O3 pasó a F-082.
+
+## F-073 · Proveedor por nombre con similitud y sin elegir en empates (cerrada 2026-10-21)
+
+Rama `feature/F-073-proveedor-por-similitud`, rigor `critico`, solo sv3. Un único criterio de proveedor por nombre
+(similitud de razón social: TEYMACO casa con FEYMACO); en un empate no se elige y la cabecera va a revisión con
+`proveedor_nombre_ambiguo` (incidencia del 0694). Review APROBADA (pasada 1); H3 → ampliación de F-059, H4 → F-080.
+Desplegada en sv3; paso 0 en verde el 2026-10-20 (los tres merges del 0694 con FEYMACO y CTSU24/0466; observación: el
+origen del proveedor queda `deterministic` tras re-buscar, no `manual`).
+
+## F-080 · Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados (cerrada 2026-10-20)
+
+Rama `feature/F-080-empate-solo-entre-empatados`, rigor `critico`, solo sv3 (`header_resolver_service.py`), sin DDL
+ni comun. Nace del H4 de la review de F-073: tras un empate por nombre, los puntos por familia podían elegir a un
+proveedor ajeno al empate con similitud 0. **Arreglo** (P1 = (b) del humano): la carrera por puntos de hoy, pero el
+ganador tiene que ser uno de los empatados; si la familia no separa a ninguno, la cabecera va a revisión con
+`proveedor_nombre_ambiguo`. 36 tests, cobertura de lo cambiado 100 %, mutación 5/5 muertos. Review APROBADA en la
+pasada 1. Desplegada por el humano en sv3 (`r20261019-1114`, 2026-10-19).
+
+## F-078 · La línea valorada guarda lo que se ve (cerrada 2026-10-20)
+
+Rama `feature/F-078-linea-guarda-lo-que-se-ve`, rigor `critico`, comun, sv6 y sv4. Nace del `no_admitido` con
+`falta_descripcion` de `86c13097` (16-10): la ficha pintaba descripciones sacadas de `contrato_lines_derived` que no
+estaban guardadas. **Arreglo**: cada fila de `albaran_line_valuations` guarda descripción, unidad y cantidad de la
+ficha; la ficha pinta solo la fila; sv9 no cambia. Review APROBADA en la pasada 2. MANUAL T12–T14 en verde
+(2026-10-18): relleno `--aplicar` de 94 filas con relectura a 0 y «Solicitar alta» en `86c13097` → `simulado`
+(`COMMIT=false`). Desplegada con F-076/F-077 en sv6 (`r20261019-0949`) y sv4 (`r20261019-0955`).
+
 ## F-072 · Arnés: la caché de suites de init.sh tiene en cuenta las dependencias (cerrada 2026-10-16)
 
 Rama `feature/F-072-cache-con-dependencias`, rigor `critico`, arnés (`harness/cache_suites.py`, `init.sh` §7 bis,

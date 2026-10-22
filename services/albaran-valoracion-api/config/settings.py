@@ -277,6 +277,10 @@ class Settings(BaseSettings):
     #
     # 1) Al menos un proveedor LLM debe estar habilitado.
     # 2) Si un proveedor está habilitado, su API key debe existir.
+    # 3) (F-085) IA3_PROVIDER / IA4_PROVIDER, si se fijan, nombran un
+    #    proveedor conocido y habilitado. Son variables del sv5 (no del
+    #    sv2): con un valor mal escrito o apagado, IA4 caía en silencio
+    #    al primero habilitado e IA3 llamaba a todos. Mejor no arrancar.
     #
     # Se ELIMINARON intencionalmente:
     #   - ``_ensure_phase_providers_enabled`` (era el causante del
@@ -316,6 +320,40 @@ class Settings(BaseSettings):
                 "usar un proveedor, pon su flag a false (p.e. "
                 "ENABLE_OPENAI=false) en lugar de dejar la clave vacía."
             )
+        return self
+
+    @model_validator(mode="after")
+    def _ensure_phase_providers_valid(self) -> "Settings":
+        """(F-085 R8, R9) ``IA3_PROVIDER`` / ``IA4_PROVIDER`` coherentes.
+
+        Vacías: nada (comportamiento de siempre, R10). Con valor, se
+        normaliza (``strip`` + minúsculas) y tiene que ser un proveedor
+        conocido y habilitado; si no, el sv5 no arranca y el error dice
+        qué variable y qué ``ENABLE_*`` mirar.
+        """
+        habilitados = {
+            "openai": ("ENABLE_OPENAI", self.openai_enabled),
+            "gemini": ("ENABLE_GEMINI", self.gemini_enabled),
+            "claude": ("ENABLE_CLAUDE", self.claude_enabled),
+        }
+        for variable, valor in (
+            ("IA3_PROVIDER", self.ia3_provider),
+            ("IA4_PROVIDER", self.ia4_provider),
+        ):
+            proveedor = (valor or "").strip().lower()
+            if not proveedor:
+                continue
+            if proveedor not in habilitados:
+                raise ValueError(
+                    f"{variable}={valor!r} no es un proveedor del sv5: "
+                    "tiene que ser openai, gemini o claude (o vacía)."
+                )
+            flag, habilitado = habilitados[proveedor]
+            if not habilitado:
+                raise ValueError(
+                    f"{variable}={valor!r} pero {flag} no está a true: "
+                    f"habilita {flag} (con su API key) o cambia {variable}."
+                )
         return self
 
     # Helpers de conveniencia para el wiring.

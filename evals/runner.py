@@ -174,12 +174,12 @@ def corrida_determinista(
     return [fase_ia3, fase_ia4, fase_e2e], sorted(set(no_observables))
 
 
-def _build_sv6(envelopes: dict[str, dict], fases) -> tuple[dict[str, dict], str]:
+def _build_sv6(envelopes: dict[str, dict], fases, build=None) -> tuple[dict[str, dict], str]:
     """El build de sv6 de todos los envelopes; si el subproceso muere, las fases
     que dependen de él (`fases`) se quedan con el motivo y sin resultados."""
     salida, motivo_muerte = _ejecutar_aislado(
         "sv6",
-        sv6_build.ejecutar_en_subproceso,
+        build or sv6_build.ejecutar_en_subproceso,
         {
             "casos": [
                 {"caso_id": caso_id, "envelope": envelope}
@@ -358,21 +358,35 @@ def _evaluar_sv2(trabajo, proveedores, fases, criticidad, no_observables) -> Non
                 if motivos.get(nombre):
                     fase.casos.append(ResultadoCaso.con_error(etiqueta, nombre, motivos[nombre]))
                     continue
-                proyectar, tablas = _COMPARACION_SV2[nombre]
                 fase.casos.append(
                     ResultadoCaso.desde_discrepancias(
                         etiqueta,
                         nombre,
-                        _comparar_tablas_de(
-                            fixtures[caso_id],
-                            proyectar(documentos[nombre.lower()], caso_id),
-                            criticidad,
-                            tablas,
+                        comparar_sv2(
                             nombre,
+                            fixtures[caso_id],
+                            documentos[nombre.lower()],
+                            caso_id,
+                            criticidad,
                             no_observables,
                         ),
                     )
                 )
+
+
+def comparar_sv2(
+    fase: str, fixture: dict, documento: dict, caso_id: str, criticidad, no_observables=None
+) -> list:
+    """Las discrepancias de UN documento de sv2 contra su caso del libro IA1 o IA2.
+
+    Pública desde F-083: el comparador de modelos evalúa cada modelo igual que
+    el runner, con la misma proyección, los mismos observables y la misma
+    criticidad.
+    """
+    proyectar, tablas = _COMPARACION_SV2[fase]
+    return _comparar_tablas_de(
+        fixture, proyectar(documento, caso_id), criticidad, tablas, fase, no_observables
+    )
 
 
 def _motivos_de_error(error: dict | None) -> dict[str, str]:
@@ -476,8 +490,37 @@ def _corrida_valoracion_real(
         envelopes[caso_id] = resultado_sv5["envelope"]
         conciliaciones[caso_id] = resultado_sv5.get("conciliaciones", [])
 
+    return evaluar_valoracion(
+        envelopes, conciliaciones, ia3, ia4, final, criticidad, fases=fases
+    )
+
+
+def evaluar_valoracion(
+    envelopes: dict[str, dict],
+    conciliaciones: dict[str, list],
+    ia3: dict,
+    ia4: dict,
+    final: dict,
+    criticidad,
+    *,
+    fases: tuple[ResultadoFase, ResultadoFase, ResultadoFase] | None = None,
+    build=None,
+) -> tuple[list[ResultadoFase], list[str]]:
+    """IA3, IA4 y E2E de unos envelopes ya valorados (y conciliados): el build
+    de sv6 y la comparación con los libros.
+
+    Pública desde F-083: el comparador de modelos evalúa con ella los envelopes
+    de cada modelo. `fases` son las (IA3, IA4, E2E) a las que se añaden los
+    casos —el runner pasa las suyas, que ya traen los errores de sv5—, y
+    `build`, quien ejecuta el build de sv6 (por defecto, su subproceso).
+    """
+    if fases is None:
+        fases = (ResultadoFase(nombre="IA3"), ResultadoFase(nombre="IA4"), ResultadoFase(nombre="E2E"))
+    fase_ia3, fase_ia4, fase_e2e = fases
+    no_observables: list[str] = []
+
     resultados, motivo_muerte = (
-        _build_sv6(envelopes, (fase_ia3, fase_e2e)) if envelopes else ({}, "")
+        _build_sv6(envelopes, (fase_ia3, fase_e2e), build) if envelopes else ({}, "")
     )
 
     for caso_id, envelope in envelopes.items():

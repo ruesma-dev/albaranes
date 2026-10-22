@@ -35,8 +35,9 @@ intacto; esto es una entrada alternativa (`main_worker.py`).
    # En el .env usa comillas SIMPLES y barras / (evita escapes de \\):
    #   WORKER_PDF_PATH='worker_input/mi albaran.pdf'
    #   WORKER_OUT_DIR='worker_out'
-   #   WORKER_CON_FASE2=false
    # (main_worker.py carga el .env en os.environ al arrancar)
+   # Nota F-085: la fase 2 (IA2) corre SIEMPRE tras la fase 1. La antigua
+   # WORKER_CON_FASE2 no existe para el código (no la lee nadie): no la pongas.
    ```
    (Necesitas `comun` instalado en el venv: `pip install -e ..\comun`.)
 
@@ -74,5 +75,10 @@ intacto; esto es una entrada alternativa (`main_worker.py`).
 ## Siguiente paso
 Adaptadores de produccion: `FuenteDocumento` -> descarga SharePoint por la ruta
 en BBDD; `SumideroEnvelope` -> tabla en PostgreSQL; `GroundingCabecera` ->
-mover el grounding determinista de sv3 a sv2 y poner `WORKER_CON_FASE2=true`.
-Luego, el worker de sv3 consumiendo `q-persistencia`.
+mover el grounding determinista de sv3 a sv2. Luego, el worker de sv3
+consumiendo `q-persistencia`.
+
+> Nota F-085 (2026-10-21): este documento es del piloto. Hoy el worker ejecuta
+> fase 1 + fase 2 sin condición (IA1 con `IA_PRIMERA_FASE`, IA2 con
+> `IA_SEGUNDA_FASE`); la variable de fase 2 que aparecía aquí no existe para el
+> código (no la lee nadie, `WORKER_CON_FASE2` se quitó de `infra/create_capps.ps1`).
