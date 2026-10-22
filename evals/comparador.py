@@ -12,14 +12,25 @@ Los dos sentinelas del contrato de datos se resuelven aquí:
   inventó** el valor: lo dejó sin resolver o marcado para revisión humana. Si
   el sistema puso un precio o una partida concreta donde el ground truth
   esperaba revisión, eso es un fallo, y de los importantes.
+
+Dos campos se comparan NORMALIZADOS (banco de IA1, 2026-10-22), porque lo
+escrito por el humano y lo impreso dicen lo mismo con otra grafía:
+
+- `numero_albaran`: solo dígitos y sin ceros a la izquierda. «SS-0000168» ≡
+  «0000168» ≡ «168»; un dígito cambiado sigue siendo un fallo.
+- `codigo_imputacion` (la partida que LEE IA1): mayúsculas, sin espacios y sin
+  ceros a la izquierda en cada segmento. «CI.04.18» ≡ «CI.4.18». La partida
+  valorada (`codigo_partida_final`, `partida_final`) NO se normaliza: ahí se
+  exige el código exacto de Sigrid.
 """
 
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping, Sequence
+import re
+from collections.abc import Callable, Mapping, Sequence
 
-from evals.criticidad import Criticidad
+from evals.criticidad import Criticidad, nombre_de_campo
 from evals.modelos import ESPERA_REVISION, NO_COMPARAR, Discrepancia
 
 #: Tolerancia al comparar dos números. Los importes se calculan con float en
@@ -106,6 +117,61 @@ def equivalentes(esperado: object, obtenido: object) -> bool:
     return _texto(esperado) == _texto(obtenido)
 
 
+def _como_texto(valor: object) -> str:
+    """El valor como lo escribiría una persona: 168.0 es «168», no «168.0»."""
+    if isinstance(valor, float) and valor.is_integer():
+        return str(int(valor))
+    return str(valor)
+
+
+def normalizar_numero_albaran(valor: object) -> str | None:
+    """Solo los dígitos, sin ceros a la izquierda; `None` si no hay ninguno.
+
+    El humano escribe el código sin el prefijo de serie y el papel lo trae con
+    él: «0000168» en la tabla, «SS-0000168» impreso. Sin dígitos no hay nada
+    que normalizar y se compara el texto tal cual.
+    """
+    if valor is None or isinstance(valor, bool):
+        return None
+    digitos = re.sub(r"\D", "", _como_texto(valor))
+    if not digitos:
+        return None
+    return digitos.lstrip("0") or "0"
+
+
+def normalizar_partida(valor: object) -> str | None:
+    """Mayúsculas, sin espacios y sin ceros a la izquierda en cada segmento.
+
+    «CI.04.18» ≡ «CI.4.18» y «CI.03A.7» ≡ «CI.3A.7». Un segmento que no empieza
+    por dígito («CI», «P5») se deja como está.
+    """
+    if valor is None or isinstance(valor, bool):
+        return None
+    texto = re.sub(r"\s+", "", _como_texto(valor)).upper()
+    segmentos = [
+        (segmento.lstrip("0") or "0") if segmento[:1].isdigit() else segmento
+        for segmento in texto.split(".")
+    ]
+    return ".".join(segmentos)
+
+
+#: Campos que se comparan normalizados (ver la cabecera del módulo).
+NORMALIZADORES: dict[str, Callable[[object], str | None]] = {
+    "numero_albaran": normalizar_numero_albaran,
+    "codigo_imputacion": normalizar_partida,
+}
+
+
+def equivalentes_en(campo: str, esperado: object, obtenido: object) -> bool:
+    """`equivalentes`, pero con la normalización propia del campo si la tiene."""
+    normalizar = NORMALIZADORES.get(nombre_de_campo(campo))
+    if normalizar is not None:
+        normal_esperado, normal_obtenido = normalizar(esperado), normalizar(obtenido)
+        if normal_esperado is not None and normal_obtenido is not None:
+            return normal_esperado == normal_obtenido
+    return equivalentes(esperado, obtenido)
+
+
 def _discrepancia(
     campo: str,
     esperado: object,
@@ -183,7 +249,7 @@ def comparar(
             )
         ]
 
-    if equivalentes(esperado, obtenido):
+    if equivalentes_en(prefijo, esperado, obtenido):
         return []
     return [_discrepancia(prefijo, esperado, obtenido, criticidad)]
 
