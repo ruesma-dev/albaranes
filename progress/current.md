@@ -1,6 +1,8 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-092 · `blocked` (2026-10-22, al darla de alta): gestión de almacén.** Bloqueada por la regla LÍMITE DE SERVICIO antes de la spec: el humano decide qué es (vista de lo que entró a almacén desde albaranes o gestión de existencias con salidas a partida/obra), si va en este monorepo como servicio nuevo o en un proyecto aparte, y si escribe en Sigrid. Ficha en `harness/features.json`.
+
 **F-085 · `blocked` (2026-10-21): review APPROVED (pasada 2), fusionada en `dev`; implementación hecha (T1–T5, T2b, T8, T9); T0, T10 y T11 son MANUAL del humano; T6, T7 y T12 FUERA → F-086** — modelos de producción por fase. Spec en `specs/F-085-modelos-produccion/` (corregida por O3 de la review de F-083). Rama `feature/F-085-modelos-produccion`, worktree `../albaranes-F-085` (*junction* `.venv` de sv4: quitarla con `cmd /c rmdir` antes de `git worktree remove`), `dev` (`17ccef7`) fusionado. Rigor `critico`. Informe: `progress/impl_F-085.md`; mutación: `progress/mutacion_F-085.md`; `azure-apps` `0416ce3` sin push.
 
 - **Punto de partida:** el paso 1 que el humano aplicó a mano el 2026-10-20 (sv2 `ca-sv2-extraccion--0000004`: `GEMINI_MODEL=gemini-4-argon`, `OPENAI_MODEL=gpt-6.1-sol`; sv5 `ca-sv5-valuation--0000005`: secreto `openai-key` → KV `OPENAI-API-KEY`, `ENABLE_OPENAI=true`, `IA3_PROVIDER=openai`, `IA4_PROVIDER=openai`, `OPENAI_MODEL=gpt-6.1-sol`). `infra/create_capps.ps1` lo deja igual. IA3/IA4 **provisionales** hasta medir con el banco de F-084 (R24).

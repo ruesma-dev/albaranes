@@ -3,9 +3,9 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **88 features**, 60 abiertas, 28 terminadas.
+Resumen: **90 features**, 62 abiertas, 28 terminadas.
 
-Bloqueadas: **F-064, F-076, F-077, F-083, F-085**.
+Bloqueadas: **F-064, F-076, F-077, F-083, F-085, F-092**.
 
 ## Trabajo abierto
 
@@ -31,6 +31,8 @@ Bloqueadas: **F-064, F-076, F-077, F-083, F-085**.
 | F-088 | Bandeja: filtro de varias obras a la vez y TODOS los filtros se recuerdan al navegar, volver atrás o recargar | 13 | pendiente | estandar |  |
 | F-089 | Vista Obra con el formato Ruesma (como en partes): entrar en una obra muestra la bandeja general filtrada por esa obra | 13 | pendiente | estandar |  |
 | F-090 | Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692) | 13 | pendiente | critico |  |
+| F-091 | Forma de pago desde el contrato: si el albarán tiene contrato, la forma de pago se toma del contrato y no de lo leído | 13 | pendiente | critico |  |
+| F-092 | Gestión de almacén: crear la gestión del almacén (acopios) de las obras | 13 | bloqueada | critico |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 14 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 14 | pendiente | estandar |  |
 | F-057 | Truncado sin comprobar en los clientes de Sigrid colindantes: header_and_lines de sv4 (max_rows=1000) y SigridApiObraClient de sv3 | 14 | pendiente | critico |  |
@@ -304,6 +306,18 @@ ORIGEN: petición del humano, 2026-10-21. CAMBIO: la vista «Obras» de sv4 adop
 estado **pendiente** · prioridad 13 · rigor `critico` · SDD sí
 
 ORIGEN: petición del humano, 2026-10-21: «oscurecer y aumentar contraste va a mejorar la lectura; ha pasado con los albaranes de la 0692 de hormigón, al oscurecer el escaneado ha mejorado». Caso de referencia: correo de odomingo@ruesma.es del 2026-10-21 (asunto 0692, PDF de 2 páginas de ARIDOS ANFERSA): la página 2 (merge ea395a26, albarán 1766248632), impresa en amarillo claro sobre papel amarillo, salió sin proveedor ni fecha (confianza 44,8 %), y el humano comprobó que oscureciendo el escaneado se lee. HOY: ruesma_comun/imaging/preprocess.py ya realza (canal -> deskew -> iluminación -> estirado por percentiles -> nitidez; CLAHE retirado en jul 2026), y aun así esa página no se leyó. A DECIDIR EN LA SPEC: por qué la cadena actual no basta con impresión clara sobre papel de color (elección de canal, percentiles del estirado), qué se añade (oscurecido tipo gamma, estirado más agresivo, umbral adaptativo...) y cuándo (siempre o solo si el trazo es tenue, medido en la imagen), sin empeorar los casos con los que se calibró (carbonicas azul/rosa, calco, matricial). Calibrar con muestras reales de la 0692 y las de julio; interruptor por variable para volver atrás; medir con evals de IA1 antes de desplegar. RELACIONADAS: F-071 (toca preprocess.py: arregla el deskew, que hoy falla en todas las imágenes con OpenCV 5; esta va DETRÁS de F-071), F-083 (medición de IA1).
+
+### F-091 · Forma de pago desde el contrato: si el albarán tiene contrato, la forma de pago se toma del contrato y no de lo leído
+
+estado **pendiente** · prioridad 13 · rigor `critico` · SDD sí
+
+ORIGEN: petición del humano, 2026-10-22: «apunta feature para que forma de pago salga de contrato». HOY: forma_pago es un campo de cabecera que extrae IA1/IA2 del papel (casi nunca viene: en el ground truth de IA1 está a NO_COMPARAR en los 59 casos), sv3 lo persiste en el merge, el front lo enseña como texto libre editable con «Guardar» y sv9 NO lo manda a Sigrid en el alta. A DECIDIR EN LA SPEC: (1) de dónde sale la forma de pago del contrato en Sigrid (en sigrid_tablas.md no aparece un campo forpag en ctr; puede estar en el proveedor, en otra tabla del contrato o solo en el documento del contrato, MD/PDF), consultado SOLO vía sigrid-api y en lectura; (2) precedencia: contrato > leído, o contrato solo si no se leyó nada, y qué pasa si discrepan (aviso de revisión o no); (3) sin contrato, qué queda (lo leído, o la del proveedor); (4) si el alta de sv9 debe enviarla a Sigrid y en qué campo (coordinar con la sesión sigrid-api si el endpoint no la admite: contrato-sigrid-api-consumos); (5) cómo se ve en la ficha (origen del dato). RELACIONADAS: enriquecimiento de contrato de sv3, F-087 (Aprobar/Registrar).
+
+### F-092 · Gestión de almacén: crear la gestión del almacén (acopios) de las obras
+
+estado **bloqueada** · prioridad 13 · rigor `critico` · SDD sí
+
+ORIGEN: petición del humano, 2026-10-22: «crear gestión de almacén». HOY: una línea sin partida va a almacén de la obra (paride 0, almide/cenide de la obra en el alta de sv9; F-051 almacén por línea con botón «almacén a todas las líneas»); no hay ninguna vista ni lógica que gestione lo que hay en almacén después del alta. BLOQUEADA POR ALCANCE (regla LÍMITE DE SERVICIO): «gestión de almacén» puede ser una responsabilidad nueva (otro dominio: existencias, entradas y salidas de almacén a partida, traspasos entre obras) que no es el pipeline de albaranes. Antes de la spec el humano decide: (a) qué es exactamente (solo una vista de lo que entró a almacén desde albaranes, o gestión de existencias con salidas a partida/obra), (b) si se hace en este monorepo como servicio nuevo o como proyecto aparte, y (c) si escribe en Sigrid (y con qué endpoint de sigrid-api) o solo lee. RELACIONADAS: F-051, la ficha de tipología de líneas acopiables, F-089 (vista Obra).
 
 ### F-050 · Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes
 
