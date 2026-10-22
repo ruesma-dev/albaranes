@@ -2,7 +2,7 @@
   "caso_id": "MOR-001",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "8415ac68cd9086104f4bb1033b8bb99fc467943b806dcd9d645b6f9e890beddc",
+  "sha256_libro": "4ff11165e3d27b5d83f61048097a5798ebad37053b320230915e2303bf92aabe",
   "tablas": {
     "cabeceras": [
       {
@@ -11,10 +11,10 @@
         "fecha": "2026-05-28",
         "fichero_albaran": "MOR-001.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "225225",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
-        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_cif": "B86738812",
         "proveedor_nombre": "HORMIGON SIERRA MADRID, S.L."
       }
     ],
@@ -22,7 +22,7 @@
       {
         "cantidad": 7,
         "caso_id": "MOR-001",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "P5.14.01.02.02",
         "comentario": "la partida ha puesto RJ.14.01.02.02 en lugar de P5.14.01.02.02",
         "descripcion_esperada": "MORTERO PREP. M-7,5",
         "descuentos": null,

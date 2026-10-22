@@ -2,19 +2,19 @@
   "caso_id": "HOR-005",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "8415ac68cd9086104f4bb1033b8bb99fc467943b806dcd9d645b6f9e890beddc",
+  "sha256_libro": "4ff11165e3d27b5d83f61048097a5798ebad37053b320230915e2303bf92aabe",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "HOR-005",
-        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen",
+        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 4 fila(s): ADICIÓN FIBRAS POLIPROPILENO (600 GR/M3); INCREMENTO ARIDO 15; INCREMENTO FRATASADO; HA-25/B/20/XC2. CARGA INCOMPLETA",
         "fecha": "2025-07-15",
         "fichero_albaran": "HOR-005.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "H132525",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
-        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_cif": "B04685541",
         "proveedor_nombre": "HORPRESOL, S.L."
       }
     ],
@@ -23,59 +23,11 @@
         "cantidad": 4,
         "caso_id": "HOR-005",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen",
+        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 4 fila(s): ADICIÓN FIBRAS POLIPROPILENO (600 GR/M3); INCREMENTO ARIDO 15; INCREMENTO FRATASADO; HA-25/B/20/XC2. CARGA INCOMPLETA",
         "descripcion_esperada": "HA-25/B/12/XC2/F/P",
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 4,
-        "caso_id": "HOR-005",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen",
-        "descripcion_esperada": "ADICIÓN FIBRAS POLIPROPILENO (600 GR/M3)",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 2,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 4,
-        "caso_id": "HOR-005",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen",
-        "descripcion_esperada": "INCREMENTO ARIDO 15",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 3,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 4,
-        "caso_id": "HOR-005",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen",
-        "descripcion_esperada": "INCREMENTO FRATASADO",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 4,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 2,
-        "caso_id": "HOR-005",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado. Si no hay partida es almacen",
-        "descripcion_esperada": "HA-25/B/20/XC2. CARGA INCOMPLETA",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 5,
         "precio_unitario": null,
         "unidad": "M3"
       }

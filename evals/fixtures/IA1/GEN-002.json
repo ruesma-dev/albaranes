@@ -2,7 +2,7 @@
   "caso_id": "GEN-002",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "8415ac68cd9086104f4bb1033b8bb99fc467943b806dcd9d645b6f9e890beddc",
+  "sha256_libro": "4ff11165e3d27b5d83f61048097a5798ebad37053b320230915e2303bf92aabe",
   "tablas": {
     "cabeceras": [
       {
@@ -11,10 +11,10 @@
         "fecha": "2026-06-11",
         "fichero_albaran": "GEN-002.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "2026/01/007378",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
-        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_cif": "A28800597",
         "proveedor_nombre": "PAVIMARSA, S.A."
       }
     ],
@@ -22,7 +22,7 @@
       {
         "cantidad": 43.2,
         "caso_id": "GEN-002",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "P5.09.03",
         "comentario": "habia 2 contratos, y no ha sabido elegir uno. Podriamos hacer uqe si no sabe elegir que coja los 2, lo smerge (distinguiendo que es un mergeo) y que siga con eso. No ha coigo el capitulo inicial P5. el codigo era P5.09.03",
         "descripcion_esperada": "SOLADO BOREAL WHITE 60X60 cm - COCINA (OP1)",
         "descuentos": null,
@@ -34,7 +34,7 @@
       {
         "cantidad": 388.8,
         "caso_id": "GEN-002",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "P5.09.03",
         "comentario": null,
         "descripcion_esperada": "SOLADO SAN FRANCISCO SAND 60X60 cm - COCINA (OP2)",
         "descuentos": null,
@@ -46,7 +46,7 @@
       {
         "cantidad": 43.2,
         "caso_id": "GEN-002",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "P5.09.03",
         "comentario": null,
         "descripcion_esperada": "SOLADO SAN FRANCISCO GREY 60X60 cm - COCINA (OP3)",
         "descuentos": null,
@@ -58,7 +58,7 @@
       {
         "cantidad": 43.2,
         "caso_id": "GEN-002",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "P5.09.04",
         "comentario": null,
         "descripcion_esperada": "SOLADO BOREAL GREY 60X60 cm - BAÑOS PRINCIPALES (OP2)",
         "descuentos": null,
@@ -70,7 +70,7 @@
       {
         "cantidad": 43.2,
         "caso_id": "GEN-002",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "P5.09.05",
         "comentario": null,
         "descripcion_esperada": "SOLADO NATURE BONE RECTIFICADO 60x60 cm - BAÑOS SECUNDARIOS (OP2)",
         "descuentos": null,
@@ -82,7 +82,7 @@
       {
         "cantidad": 43.2,
         "caso_id": "GEN-002",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "P5.09.06",
         "comentario": null,
         "descripcion_esperada": "SOLADO RC ESSEN GREY 60x60",
         "descuentos": null,
@@ -94,7 +94,7 @@
       {
         "cantidad": 500.64,
         "caso_id": "GEN-002",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "P5.38.07.02",
         "comentario": null,
         "descripcion_esperada": "ROMANCE ROBLE 24,8x150",
         "descuentos": null,
@@ -107,10 +107,10 @@
         "cantidad": 22,
         "caso_id": "GEN-002",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": null,
+        "comentario": "Banco 2026-10-22 (chore banco-correcciones): importe a ? (no comparar): 180 no cuadra con 22 x 9 y los modelos leen cosas distintas",
         "descripcion_esperada": "EUROPALET",
         "descuentos": null,
-        "importe": 180,
+        "importe": "@@NO_COMPARAR@@",
         "num_linea": 8,
         "precio_unitario": 9,
         "unidad": "UD"

@@ -2,19 +2,19 @@
   "caso_id": "MOR-003",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "8415ac68cd9086104f4bb1033b8bb99fc467943b806dcd9d645b6f9e890beddc",
+  "sha256_libro": "4ff11165e3d27b5d83f61048097a5798ebad37053b320230915e2303bf92aabe",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "MOR-003",
-        "comentario": "partida en blanco es almacen | partida en blanco es almacen. En mortero tambien hay carga incompleta.en hormigon lo pilla bien , aquí en mortero lo mismo (copiar regla desde hormigon sin inventar)",
+        "comentario": "partida en blanco es almacen | partida en blanco es almacen. En mortero tambien hay carga incompleta.en hormigon lo pilla bien , aquí en mortero lo mismo (copiar regla desde hormigon sin inventar) | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 1 fila(s): MD-200 (M-5) / 48 H. CARGA INCOMPLETA",
         "fecha": "2025-06-23",
         "fichero_albaran": "MOR-003.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "H132193",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
-        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_cif": "B04685541",
         "proveedor_nombre": "HORPRESOL, S.L."
       }
     ],
@@ -23,23 +23,11 @@
         "cantidad": 3,
         "caso_id": "MOR-003",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "partida en blanco es almacen",
+        "comentario": "partida en blanco es almacen | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 1 fila(s): MD-200 (M-5) / 48 H. CARGA INCOMPLETA",
         "descripcion_esperada": "MD-200 (M-5) / 48 H.",
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 2,
-        "caso_id": "MOR-003",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "partida en blanco es almacen. En mortero tambien hay carga incompleta.en hormigon lo pilla bien , aquí en mortero lo mismo (copiar regla desde hormigon sin inventar)",
-        "descripcion_esperada": "MD-200 (M-5) / 48 H. CARGA INCOMPLETA",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 2,
         "precio_unitario": null,
         "unidad": "M3"
       }

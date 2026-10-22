@@ -2,19 +2,19 @@
   "caso_id": "HOR-017",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "8415ac68cd9086104f4bb1033b8bb99fc467943b806dcd9d645b6f9e890beddc",
+  "sha256_libro": "4ff11165e3d27b5d83f61048097a5798ebad37053b320230915e2303bf92aabe",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "HOR-017",
-        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 3 fila(s): INCREM. ARIDO 12; INCREM. CONSISTENCIA FLUIDA; CARGA INCOMPLETA",
         "fecha": "2025-09-12",
         "fichero_albaran": "HOR-017.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "250012",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
-        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_cif": "B29679628",
         "proveedor_nombre": "HORMIGONES Y CEMENTOS ANDALUCES, S.L."
       }
     ],
@@ -22,48 +22,12 @@
       {
         "cantidad": 3,
         "caso_id": "HOR-017",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "codigo_imputacion": "42.01",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 3 fila(s): INCREM. ARIDO 12; INCREM. CONSISTENCIA FLUIDA; CARGA INCOMPLETA",
         "descripcion_esperada": "HA-25/F/12/XC2",
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 3,
-        "caso_id": "HOR-017",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
-        "descripcion_esperada": "INCREM. ARIDO 12",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 2,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 3,
-        "caso_id": "HOR-017",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
-        "descripcion_esperada": "INCREM. CONSISTENCIA FLUIDA",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 3,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 3,
-        "caso_id": "HOR-017",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
-        "descripcion_esperada": "CARGA INCOMPLETA",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 4,
         "precio_unitario": null,
         "unidad": "M3"
       }

@@ -2,14 +2,14 @@
   "caso_id": "HOR-015",
   "fase": "IA3",
   "libro": "IA3_valoracion.xlsx",
-  "sha256_libro": "5370ea490c6e6d5c0345ca6f706294d672b7804097efffe67ebcdfd6628c1b60",
+  "sha256_libro": "46f317c274944b85c77cd0d09d95d3803d98668538e79b4cd078871299a64042",
   "tablas": {
     "lineas_valoradas": [
       {
         "caso_id": "HOR-015",
-        "codigo_partida_final": 42.01,
+        "codigo_partida_final": null,
         "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": "no habia elegido contrato. Cuando sean 2 vamos a unirlos. Y que no elija. El incremento de precio se calcula contra año contrato antiguo",
+        "comentario": "no habia elegido contrato. Cuando sean 2 vamos a unirlos. Y que no elija. El incremento de precio se calcula contra año contrato antiguo | F-051 (decision del humano 2026-10-22): linea sin partida impresa => almacen, partida final vacia; antes esperaba 42.01, la del contrato",
         "importe_calculado": 625.1,
         "match_method": "@@NO_COMPARAR@@",
         "num_linea": 1,
@@ -19,9 +19,9 @@
       },
       {
         "caso_id": "HOR-015",
-        "codigo_partida_final": 42.01,
+        "codigo_partida_final": null,
         "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02",
+        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02 | F-051 (decision del humano 2026-10-22): linea sin partida impresa => almacen, partida final vacia; antes esperaba 42.01, la del contrato",
         "importe_calculado": 21,
         "match_method": "@@NO_COMPARAR@@",
         "num_linea": 2,
@@ -31,9 +31,9 @@
       },
       {
         "caso_id": "HOR-015",
-        "codigo_partida_final": 42.01,
+        "codigo_partida_final": null,
         "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02",
+        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02 | F-051 (decision del humano 2026-10-22): linea sin partida impresa => almacen, partida final vacia; antes esperaba 42.01, la del contrato",
         "importe_calculado": 21,
         "match_method": "@@NO_COMPARAR@@",
         "num_linea": 3,
@@ -46,8 +46,8 @@
       {
         "cantidad": 7,
         "caso_id": "HOR-015",
-        "codigo_partida": 42.01,
-        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02. importe de oferta, ahora no sale",
+        "codigo_partida": null,
+        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02. importe de oferta, ahora no sale | F-051 (decision del humano 2026-10-22): linea sin partida impresa => almacen, partida final vacia; antes esperaba 42.01, la del contrato",
         "descripcion_esperada": "HA-25/F/12/XC2/1. INCREM. 2025",
         "modifier_source": "@@NO_COMPARAR@@",
         "num_linea_base": 3,

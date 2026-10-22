@@ -68,7 +68,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 32,
+      "priority": 38,
       "branch": "feature/F-003-valorados-match-estricto"
     },
     {
@@ -78,17 +78,17 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 35,
+      "priority": 41,
       "branch": "feature/F-004-hormigon-fino"
     },
     {
       "id": "F-005",
       "title": "Tanda 4a — Tipología bombeo",
-      "description": "Valoración por rendimiento mínimo contractual (caso PUMPING TEAM): m³ a facturar = horas de bombeo × rendimiento mínimo del contrato (caso real: 10,5 h × 20 m³/h = 210 m³ aunque se bombeara menos). La línea de horas NO se factura aparte (embebida en el mínimo); el desplazamiento sí. Requiere prompt de familia nuevo y leer el rendimiento del contrato. Toca sv2 (contexto_linea), sv5 (prompt) y sv6 (reglas).",
+      "description": "PETICIÓN DEL HUMANO (2026-10-22): «hay que crear bombeo de hormigón (Pumping es el proveedor típico)». La spec ya existe (spec_ready): revisarla contra los albaranes actuales de PUMPING TEAM antes de implementar; hoy el banco no tiene ningún caso BOM-.\n\nValoración por rendimiento mínimo contractual (caso PUMPING TEAM): m³ a facturar = horas de bombeo × rendimiento mínimo del contrato (caso real: 10,5 h × 20 m³/h = 210 m³ aunque se bombeara menos). La línea de horas NO se factura aparte (embebida en el mínimo); el desplazamiento sí. Requiere prompt de familia nuevo y leer el rendimiento del contrato. Toca sv2 (contexto_linea), sv5 (prompt) y sv6 (reglas).",
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 36,
+      "priority": 42,
       "branch": "feature/F-005-bombeo"
     },
     {
@@ -98,7 +98,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 37,
+      "priority": 43,
       "branch": "feature/F-006-residuos-pago"
     },
     {
@@ -108,7 +108,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 38,
+      "priority": 44,
       "branch": "feature/F-007-partida-alm-selector"
     },
     {
@@ -123,7 +123,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 41,
+      "priority": 47,
       "branch": "feature/F-008-blob-lifecycle"
     },
     {
@@ -139,7 +139,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 42,
+      "priority": 48,
       "branch": "feature/F-009-limpieza-q-emails"
     },
     {
@@ -149,7 +149,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 43,
+      "priority": 49,
       "branch": "feature/F-010-easy-auth-sv4"
     },
     {
@@ -159,7 +159,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 40,
+      "priority": 46,
       "branch": "feature/F-013-registro-sigrid"
     },
     {
@@ -169,7 +169,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 33,
+      "priority": 39,
       "branch": "feature/F-014-conversor-administrativo"
     },
     {
@@ -179,7 +179,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 26,
+      "priority": 32,
       "branch": "feature/F-015-lineas-tachadas"
     },
     {
@@ -189,7 +189,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 28,
+      "priority": 34,
       "branch": "feature/F-016-linea-multipartida"
     },
     {
@@ -199,7 +199,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 39,
+      "priority": 45,
       "branch": "feature/F-017-comparativo-precio"
     },
     {
@@ -209,7 +209,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 34,
+      "priority": 40,
       "branch": "feature/F-018-carga-incompleta"
     },
     {
@@ -230,7 +230,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 31,
+      "priority": 37,
       "branch": "feature/F-020-proveedor-agnostico"
     },
     {
@@ -240,7 +240,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 27,
+      "priority": 33,
       "branch": "feature/F-021-partida-catalogo-candidatas"
     },
     {
@@ -250,7 +250,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 44,
+      "priority": 50,
       "branch": "feature/F-022-concepto-lineas-bandeja"
     },
     {
@@ -260,7 +260,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 25,
+      "priority": 31,
       "branch": "feature/F-023-mortero-incrementos"
     },
     {
@@ -270,7 +270,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 18,
+      "priority": 24,
       "branch": "feature/F-024-unidad-medida"
     },
     {
@@ -280,7 +280,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 30,
+      "priority": 36,
       "branch": "feature/F-025-motivo-conversion-omitida"
     },
     {
@@ -290,7 +290,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 29,
+      "priority": 35,
       "branch": "feature/F-026-guard-partida-base"
     },
     {
@@ -306,11 +306,11 @@
     {
       "id": "F-028",
       "title": "Con dos contratos candidatos no se elige ninguno y el albarán no llega a valorarse",
-      "description": "HALLAZGO H-3 (ALTA) + INSTRUCCIÓN LITERAL DEL HUMANO (2026-08-18): «Pavimarsa tiene 2 contratos: debe elegir uno si puede». QUÉ PASA: los dos albaranes de PAVIMARSA (2026/01/007181 y 2026/01/007378, 521,07 € y 20.111,40 € esperados) **no se valoraron en absoluto**. No falló sv5 ni sv6: nunca se publicó mensaje en `q-valoracion`, porque sv3 solo dispara la valoración si hay contrato seleccionado y no lo había. Log: «[valuation-trigger][pipeline] SKIP: no hay contrato seleccionado» y «[contrato-selector] sin familia detectable en el albaran; no se auto-selecciona». Sigrid devolvió 2 contratos para el par (CIF A28800597, obra 0696): CTSU25/0317 (PED1 Parcela 4, 168 líneas, 40 partidas) y CTSU26/0187 (PED2, 48 líneas, 10 partidas). CAUSA RAÍZ: `elegir_contrato_probable` (contrato_selector.py:79-160) puntúa SOLO por familia de producto y tokens técnicos del texto; si no detecta familia devuelve None. Además `contrato_enrichment_service` NO le pasa el parámetro `tipologia` (la llamada de la línea ~466 solo envía `contratos` y `lineas_albaran`) pese a que el propio docstring del selector la llama «la señal más fuerte». LA SEÑAL DECISIVA ESTÁ EN EL ALBARÁN Y NO SE MIRA: las 7 partidas manuscritas del 007378 y las 2 del 007181 existen TODAS en CTSU25/0317 con la descripción y el precio del ground truth (comprobado en `albaran_contrato_lines_merge`, contrato_id=254), y CTSU26/0187 solo tiene 10 partidas. Un criterio de cobertura de partidas habría acertado sin ambigüedad. PROPUESTA: añadir al selector una señal de PARTIDAS (fracción de las partidas del albarán presentes en el catálogo de cada contrato) con más peso que las familias, y pasarle `tipologia` desde sv2. Si aun así hay empate, mantener el comportamiento actual de no elegir. POR QUÉ ES CRÍTICA: un documento que no se valora es peor que uno que se valora mal, porque no aparece en ninguna pantalla y nadie se entera. Son 20.632,47 € en dos documentos, y los albaranes de acabados (azulejos, carpintería, sanitarios) no tienen familia detectable por palabras, así que esto se repetirá en todo ese bloque de la obra. RELACIÓN: depende de que la partida se lea bien (F-021) pero no la bloquea: aun con lecturas parciales, la cobertura de partidas discrimina. Toca sv3. Fuente: progress/revision_resto_lote_20260818.md (revision de los 7 albaranes restantes del lote alvaro_17082026, 2026-08-18).",
+      "description": "DECISIÓN DEL HUMANO (2026-10-22, sustituye a la de 2026-08-18 «debe elegir uno si puede»): «en esta situación debe leerse los 2 contratos, seleccionar el bueno o que valore con la suma de ambos documentos». Es decir, con dos (o más) contratos candidatos para el mismo CIF y obra, la valoración lee las líneas y los documentos de TODOS: o elige con criterio el que corresponde, o valora con la unión de ambos (líneas + documentos MD/PDF). Nunca quedarse sin valorar. CASO REAL (prueba en producción 2026-10-22, caso HOR-015 del banco, HORMICEM albarán 37515, obra 0693): sv3 encontró CTSU24/0452 y CTSU25/0259 y no eligió ⇒ sin valoración. El humano eligió a mano CTSU24/0452 y sv5 valoró 667,10 € frente a 714,00 € esperados: base 7 × 89,30 = 625,10, árido 12 21, consistencia 21, bien; falta el «INCREM. 2025» 7 × 6,70 = 46,90 («el contrato no tarifa el año 2025»), que según el comentario del Excel sale de la oferta/contrato nuevo: justo lo que daría leer los dos. Hallazgo colateral: tras elegir a mano, albaran_contratos_merge quedó con las dos filas duplicadas (4 filas para 2 contratos).\n\nTEXTO ANTERIOR: HALLAZGO H-3 (ALTA) + INSTRUCCIÓN LITERAL DEL HUMANO (2026-08-18): «Pavimarsa tiene 2 contratos: debe elegir uno si puede». QUÉ PASA: los dos albaranes de PAVIMARSA (2026/01/007181 y 2026/01/007378, 521,07 € y 20.111,40 € esperados) **no se valoraron en absoluto**. No falló sv5 ni sv6: nunca se publicó mensaje en `q-valoracion`, porque sv3 solo dispara la valoración si hay contrato seleccionado y no lo había. Log: «[valuation-trigger][pipeline] SKIP: no hay contrato seleccionado» y «[contrato-selector] sin familia detectable en el albaran; no se auto-selecciona». Sigrid devolvió 2 contratos para el par (CIF A28800597, obra 0696): CTSU25/0317 (PED1 Parcela 4, 168 líneas, 40 partidas) y CTSU26/0187 (PED2, 48 líneas, 10 partidas). CAUSA RAÍZ: `elegir_contrato_probable` (contrato_selector.py:79-160) puntúa SOLO por familia de producto y tokens técnicos del texto; si no detecta familia devuelve None. Además `contrato_enrichment_service` NO le pasa el parámetro `tipologia` (la llamada de la línea ~466 solo envía `contratos` y `lineas_albaran`) pese a que el propio docstring del selector la llama «la señal más fuerte». LA SEÑAL DECISIVA ESTÁ EN EL ALBARÁN Y NO SE MIRA: las 7 partidas manuscritas del 007378 y las 2 del 007181 existen TODAS en CTSU25/0317 con la descripción y el precio del ground truth (comprobado en `albaran_contrato_lines_merge`, contrato_id=254), y CTSU26/0187 solo tiene 10 partidas. Un criterio de cobertura de partidas habría acertado sin ambigüedad. PROPUESTA: añadir al selector una señal de PARTIDAS (fracción de las partidas del albarán presentes en el catálogo de cada contrato) con más peso que las familias, y pasarle `tipologia` desde sv2. Si aun así hay empate, mantener el comportamiento actual de no elegir. POR QUÉ ES CRÍTICA: un documento que no se valora es peor que uno que se valora mal, porque no aparece en ninguna pantalla y nadie se entera. Son 20.632,47 € en dos documentos, y los albaranes de acabados (azulejos, carpintería, sanitarios) no tienen familia detectable por palabras, así que esto se repetirá en todo ese bloque de la obra. RELACIÓN: depende de que la partida se lea bien (F-021) pero no la bloquea: aun con lecturas parciales, la cobertura de partidas discrimina. Toca sv3. Fuente: progress/revision_resto_lote_20260818.md (revision de los 7 albaranes restantes del lote alvaro_17082026, 2026-08-18).",
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 19,
+      "priority": 25,
       "branch": "feature/F-028-selector-contrato-por-partidas"
     },
     {
@@ -320,7 +320,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 20,
+      "priority": 26,
       "branch": "feature/F-029-obra-empates-y-sin-cif"
     },
     {
@@ -330,7 +330,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 21,
+      "priority": 27,
       "branch": "feature/F-030-proveedor-cif-aproximado"
     },
     {
@@ -340,7 +340,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 22,
+      "priority": 28,
       "branch": "feature/F-031-partida-elige-linea-contrato"
     },
     {
@@ -350,7 +350,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 23,
+      "priority": 29,
       "branch": "feature/F-032-semantica-precio-neto"
     },
     {
@@ -360,7 +360,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 24,
+      "priority": 30,
       "branch": "feature/F-033-contrato-md-o-pdf-determinista"
     },
     {
@@ -408,7 +408,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 17,
+      "priority": 23,
       "branch": "feature/F-037-guardado-inmediato-contrato"
     },
     {
@@ -457,7 +457,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 111,
+      "priority": 117,
       "branch": "feature/F-041-veredicto-honesto-del-mutante"
     },
     {
@@ -467,7 +467,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 111,
+      "priority": 117,
       "branch": "feature/F-042-segunda-opinion-otro-modelo"
     },
     {
@@ -493,7 +493,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 45,
+      "priority": 51,
       "servicios": [
         "comun",
         "sv2-api",
@@ -517,7 +517,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 15
+      "priority": 21
     },
     {
       "id": "F-047",
@@ -526,7 +526,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "critico",
-      "priority": 15
+      "priority": 21
     },
     {
       "id": "F-048",
@@ -552,7 +552,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 4,
+      "priority": 5,
       "servicios": [
         "sv2-api",
         "sv4-front",
@@ -566,7 +566,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 14,
+      "priority": 20,
       "servicios": [
         "sv2-api"
       ]
@@ -592,7 +592,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 13,
+      "priority": 4,
       "servicios": [
         "sv2-api",
         "sv3-persistencia"
@@ -605,7 +605,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 14,
+      "priority": 20,
       "servicios": [
         "sv4-front"
       ]
@@ -617,7 +617,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 14,
+      "priority": 20,
       "servicios": [
         "sv4-front",
         "sv3-persistencia"
@@ -648,7 +648,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 14,
+      "priority": 20,
       "servicios": [
         "comun",
         "sv2-api",
@@ -692,7 +692,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 9,
+      "priority": 15,
       "servicios": [
         "sv3-persistencia",
         "sv5-valoracion-api",
@@ -707,7 +707,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 10,
+      "priority": 16,
       "servicios": [
         "sv4-front"
       ]
@@ -719,7 +719,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 14,
+      "priority": 20,
       "servicios": [
         "sv2-api",
         "sv6-valoracion-persist",
@@ -762,7 +762,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 13,
+      "priority": 19,
       "servicios": [
         "sv2-api"
       ],
@@ -789,7 +789,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 13,
+      "priority": 19,
       "servicios": [
         "sv4-front"
       ]
@@ -801,7 +801,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 13,
+      "priority": 19,
       "servicios": [
         "sv4-front"
       ]
@@ -813,7 +813,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 14,
+      "priority": 20,
       "servicios": [
         "sv4-front"
       ]
@@ -825,7 +825,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 14,
+      "priority": 20,
       "servicios": [
         "sv9-alta-sigrid"
       ]
@@ -886,7 +886,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 13,
+      "priority": 19,
       "servicios": [
         "comun",
         "sv6-valoracion-persist",
@@ -911,7 +911,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 6,
+      "priority": 12,
       "servicios": [
         "sv4-front"
       ]
@@ -936,7 +936,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 7,
+      "priority": 13,
       "servicios": [
         "sv3-persistencia"
       ]
@@ -948,7 +948,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 13,
+      "priority": 19,
       "servicios": [
         "sv4-front"
       ],
@@ -974,7 +974,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 8,
+      "priority": 14,
       "servicios": [
         "sv6-valoracion-persist",
         "sv4-front"
@@ -1028,7 +1028,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 11,
+      "priority": 17,
       "servicios": [
         "comun",
         "sv5-valoracion-api"
@@ -1041,7 +1041,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 13,
+      "priority": 6,
       "servicios": [
         "sv4-front",
         "sv3-persistencia",
@@ -1052,11 +1052,11 @@
     {
       "id": "F-088",
       "title": "Bandeja: filtro de varias obras a la vez y TODOS los filtros se recuerdan al navegar, volver atrás o recargar",
-      "description": "ORIGEN: petición del humano, 2026-10-21. CAMBIO: (1) en los filtros de la ventana principal (bandeja de sv4) se pueden elegir VARIAS obras a la vez (multiobra). (2) Los filtros persisten: si el usuario entra en un albarán y vuelve, va adelante/atrás en el navegador o recarga la página, la bandeja conserva TODOS los filtros activos (obra/s, estado, revisión, paginación, búsqueda...). Palabras del humano: «no puede ser que entre en mi obra vea la página filtrada y si recargo o entro en un albarán y vuelvo a la página general me desaparezca el filtro (vale para todos los filtros)». A DECIDIR EN LA SPEC: filtros en la URL (query string, que sobrevive a recargar y al historial) y/o en almacenamiento local del navegador; qué pasa con «Anterior/Siguiente» de la ficha (deben respetar el filtro). RELACIONADAS: F-089 (vista obra = bandeja filtrada), F-067 (limpieza de la ficha).",
+      "description": "EVIDENCIA DE USUARIO (Óscar Domingo, obra 0692, 2026-10-22): «En el momento que apruebas un albarán y dices volver a la bandeja (conservando los filtros) te quita los filtros de la obra en la que estás y es un coñazo estar todo el rato filtrando por obra, luego proveedor o volver a ordenarlos». Incluye la ORDENACIÓN entre lo que se conserva y el camino aprobar → «volver a la bandeja».\n\nORIGEN: petición del humano, 2026-10-21. CAMBIO: (1) en los filtros de la ventana principal (bandeja de sv4) se pueden elegir VARIAS obras a la vez (multiobra). (2) Los filtros persisten: si el usuario entra en un albarán y vuelve, va adelante/atrás en el navegador o recarga la página, la bandeja conserva TODOS los filtros activos (obra/s, estado, revisión, paginación, búsqueda...). Palabras del humano: «no puede ser que entre en mi obra vea la página filtrada y si recargo o entro en un albarán y vuelvo a la página general me desaparezca el filtro (vale para todos los filtros)». A DECIDIR EN LA SPEC: filtros en la URL (query string, que sobrevive a recargar y al historial) y/o en almacenamiento local del navegador; qué pasa con «Anterior/Siguiente» de la ficha (deben respetar el filtro). RELACIONADAS: F-089 (vista obra = bandeja filtrada), F-067 (limpieza de la ficha).",
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 13,
+      "priority": 19,
       "servicios": [
         "sv4-front"
       ]
@@ -1068,7 +1068,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 13,
+      "priority": 19,
       "servicios": [
         "sv4-front"
       ]
@@ -1080,10 +1080,98 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 13,
+      "priority": 7,
       "servicios": [
         "comun",
         "sv2-api"
+      ]
+    },
+    {
+      "id": "F-091",
+      "title": "Forma de pago desde el contrato: si el albarán tiene contrato, la forma de pago se toma del contrato y no de lo leído",
+      "description": "DECISIÓN DEL HUMANO (2026-10-22): «forma de pago, hay que leerla del contrato». Con contrato, la forma de pago SALE DEL CONTRATO (Sigrid o su documento) y no de lo leído en el papel; lo que quede por decidir en la spec es de dónde exactamente en Sigrid y qué hacer sin contrato.\n\nEVIDENCIA DE USUARIO (Óscar Domingo, obra 0692, 2026-10-22): en los albaranes de CECOIS «no me pone la forma de pago, solo me deja elegir pagaré 120 y no coge la del contrato o contrato Sigrid» (en BBDD forma_pago = «Reposicion pagare 120 dias», leída del papel).\n\nORIGEN: petición del humano, 2026-10-22: «apunta feature para que forma de pago salga de contrato». HOY: forma_pago es un campo de cabecera que extrae IA1/IA2 del papel (casi nunca viene: en el ground truth de IA1 está a NO_COMPARAR en los 59 casos), sv3 lo persiste en el merge, el front lo enseña como texto libre editable con «Guardar» y sv9 NO lo manda a Sigrid en el alta. A DECIDIR EN LA SPEC: (1) de dónde sale la forma de pago del contrato en Sigrid (en sigrid_tablas.md no aparece un campo forpag en ctr; puede estar en el proveedor, en otra tabla del contrato o solo en el documento del contrato, MD/PDF), consultado SOLO vía sigrid-api y en lectura; (2) precedencia: contrato > leído, o contrato solo si no se leyó nada, y qué pasa si discrepan (aviso de revisión o no); (3) sin contrato, qué queda (lo leído, o la del proveedor); (4) si el alta de sv9 debe enviarla a Sigrid y en qué campo (coordinar con la sesión sigrid-api si el endpoint no la admite: contrato-sigrid-api-consumos); (5) cómo se ve en la ficha (origen del dato). RELACIONADAS: enriquecimiento de contrato de sv3, F-087 (Aprobar/Registrar).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 19,
+      "servicios": [
+        "sv3-persistencia",
+        "sv4-front",
+        "sv9-alta-sigrid"
+      ]
+    },
+    {
+      "id": "F-092",
+      "title": "Gestión de almacén: crear la gestión del almacén (acopios) de las obras",
+      "description": "ORIGEN: petición del humano, 2026-10-22: «crear gestión de almacén». HOY: una línea sin partida va a almacén de la obra (paride 0, almide/cenide de la obra en el alta de sv9; F-051 almacén por línea con botón «almacén a todas las líneas»); no hay ninguna vista ni lógica que gestione lo que hay en almacén después del alta. BLOQUEADA POR ALCANCE (regla LÍMITE DE SERVICIO): «gestión de almacén» puede ser una responsabilidad nueva (otro dominio: existencias, entradas y salidas de almacén a partida, traspasos entre obras) que no es el pipeline de albaranes. Antes de la spec el humano decide: (a) qué es exactamente (solo una vista de lo que entró a almacén desde albaranes, o gestión de existencias con salidas a partida/obra), (b) si se hace en este monorepo como servicio nuevo o como proyecto aparte, y (c) si escribe en Sigrid (y con qué endpoint de sigrid-api) o solo lee. RELACIONADAS: F-051, la ficha de tipología de líneas acopiables, F-089 (vista Obra).",
+      "status": "blocked",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 19,
+      "servicios": [
+        "por-decidir"
+      ]
+    },
+    {
+      "id": "F-093",
+      "title": "La fecha del albarán se lee mal: 18 de 57 casos fallan en algún modelo y 3 en los 8; validarla y no inventarla",
+      "description": "MÁS CASOS (2026-10-22): ARIDOS ANFERSA obra 0692 (merge d550baa3, papel amarillo desvaído): IA1 e IA2 leen 2025-10-02 por 2026-10-02; sv9 lo frenó con fecha_no_plausible (la guarda funciona). Óscar Domingo: «este albarán no me lee bien la fecha – obra 0692». El formato español dd/mm/aa del papel es el de referencia.\n\nORIGEN: petición del humano, 2026-10-22 («añade el de fecha, que falla mucho»), tras las pruebas en real de F-083. MEDIDO: T14 de IA1 de F-083 (8 modelos × 57 casos): la fecha falla en 18 casos en al menos un modelo; en FER-001, FER-002 y RES-019 fallan los 8 y cada modelo da una fecha distinta. En producción (2026-10-22): FER-002 (FEYMACO 2137569) 04-02-2026 frente a 01-06-2026; FER-001 (FEYMACO 2139643) sin fecha (IA1 e IA2 null; el humano la puso a mano); RES-019 (Cubas 030366) 07-08-2025 frente a 28-07-2025. PATRONES: (1) año con el dígito final mal leído (2020/2006/2018 por 2026); (2) mes cambiado en fechas manuscritas de las fotos de Cubas (07 por 01/02, 08 por 07): RES-010..RES-019; (3) en FEYMACO (impresión matricial) la fecha no se encuentra o se toma otra del papel. A DECIDIR EN LA SPEC: qué dice el prompt de IA1/IA2 sobre qué fecha es la del albarán y el formato español dd/mm/aa; comprobaciones de verosimilitud deterministas (no posterior a la recepción del correo, no anterior a un límite razonable ni al inicio de la obra, dentro de la vigencia del contrato: ya existe el aviso fecha_albaran_fuera_de_rango) y qué hacer si falla (aviso de revisión, nunca inventar); si una fecha inverosímil se deja vacía a revisión. Medir con el banco (IA1, fecha) antes y después; F-090 (contraste) puede ayudar en FEYMACO. RELACIONADAS: F-094 (fecha en la ficha), F-090, F-083.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 8,
+      "servicios": [
+        "sv2-api",
+        "sv3-persistencia"
+      ]
+    },
+    {
+      "id": "F-094",
+      "title": "Formato español en la ficha: fecha dd/mm/aaaa con selector y teclado (guardada canónica) y números con punto de miles",
+      "description": "AMPLIADA (2026-10-22, Óscar Domingo): «Formato fecha ponerlo en español y no americano» y «No pone el punto de los miles en la cantidad». Aplica a TODAS las fechas y cantidades/importes que enseña el front (ficha y bandeja), con coma decimal; la entrada sigue aceptando teclado.\n\nORIGEN: petición del humano, 2026-10-22: «para la fecha hay que poner el formato español (dd/mm/aaaa) y que se pueda seleccionar en la cabecera con un pequeño selector de fecha o con teclado». HOY: la fecha de la cabecera de la ficha (sv4, document_detail.html) es texto libre y se guarda tal cual se teclea: en FER-001 (merge ae044452, 2026-10-22) quedó «05/06/2026» mientras el resto se guarda 2026-06-05. A DECIDIR EN LA SPEC: mostrar dd/mm/aaaa; un selector de calendario pequeño y la entrada por teclado (dd/mm/aaaa, aceptando también d/m/aa y separadores habituales) en el mismo campo; validar antes de guardar (fecha inexistente, fuera de rango) con mensaje claro; guardar SIEMPRE en el formato canónico que leen sv3/sv6/sv9 (ISO); qué hacer con las fechas ya guardadas en otro formato (migración o lectura tolerante) y comprobar que sv9 las da de alta bien; si aplica a otras fechas del front (filtros de la bandeja, F-088). RELACIONADAS: F-093 (lectura de la fecha), F-088 (filtros), F-087 (Aprobar/Registrar).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 9,
+      "servicios": [
+        "sv4-front"
+      ]
+    },
+    {
+      "id": "F-095",
+      "title": "Alta en Sigrid con el precio BRUTO y el % de descuento en su columna, no con el precio neto",
+      "description": "ORIGEN: Óscar Domingo, obra 0692, 2026-10-22: «Albarán con descuento vuelca el precio con el descuento incluido en Sigrid, no vuelca el precio verdadero y la columna del porcentaje descuento vuelca en blanco. Cecois y un albarán de Rondón de palets devueltos». VERIFICADO en albaran_altas_sigrid.peticion_json (modo real): CECOIS A 26018267 (AC26/30447) línea 151,20 −7 % enviada como precio 140,62 sin descuento; CECOIS A 26017765 (AC26/30434) 26,796 −7 % → 24,92; RONDÓN MAC977620 (AC26/30472) devolución de palets 18,00 −10 % → 16,20. El importe total en Sigrid es correcto (neto), pero precio y % no. ALCANCE a 2026-10-22: 8 de las 18 altas reales registradas llevan alguna línea con descuento (22 líneas). CAUSA: el payload de sv9 a sigrid/albaran(-directo) lleva solo `precio` (neto) y ningún campo de descuento. A DECIDIR EN LA SPEC: si el endpoint de sigrid-api admite el % de descuento por línea (campo dto de las líneas del albarán en Sigrid); si no, se propone y coordina con la sesión sigrid-api (albaranes solo edita lo que consume); enviar precio bruto + dto y comprobar que Sigrid recalcula el mismo neto (redondeo); vinculadas a contrato (¿el dto es el del contrato o el del albarán?); qué hacer con las altas ya grabadas con precio neto (listarlas; corregirlas a mano o no). RELACIONADAS: F-053 (alta), F-087 (Registrar), F-019 (precio del albarán manda).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 19,
+      "servicios": [
+        "sv9-alta-sigrid"
+      ]
+    },
+    {
+      "id": "F-096",
+      "title": "Ficha: guardar una línea no debe deshacer las partidas cambiadas y aún sin guardar en las demás (vuelven a almacén)",
+      "description": "ORIGEN: Óscar Domingo, obra 0692, 2026-10-22: «Cuando cambias las partidas en el albarán, si las cambias en todas y luego le das a guardar una a una te guarda la primera que des y el resto vuelve a almacén la partida. Tienes que darle a guardar todas para que no se cambien». Es decir: el guardado de UNA línea refresca la tabla y pierde las ediciones pendientes del resto. A DECIDIR EN LA SPEC (reproducir primero en local con Chrome): guardar una línea solo envía y refresca esa línea, conservando lo editado en las demás; o avisar de cambios sin guardar antes de refrescar; tests del flujo «editar N, guardar 1». RELACIONADAS: F-065 (guardados separados, guardar = bloquear la línea), F-058 (revalorar no pierde partidas), F-087.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 19,
+      "servicios": [
+        "sv4-front"
+      ]
+    },
+    {
+      "id": "F-097",
+      "title": "Proveedor no identificado cuando el papel trae el CIF del transportista o solo el nombre comercial (Anfersa)",
+      "description": "ORIGEN: Óscar Domingo, obra 0692, 2026-10-22: «Albarán sin encontrar proveedor: es un transportista externo y por eso no reconoce el CIF. No reconoce el nombre de Anfersa en el albarán». VERIFICADO: merge 2d21322b (correo del escáner 2026-10-21, página 1 de 14, nº 1790930508): IA1 e IA2 devuelven proveedor y CIF vacíos ⇒ contratos sin_datos y sin valorar. El mismo albarán reenviado el 22-10 (474d045d): la IA leyó «Anfersa» sin CIF y sv3 casó por nombre con ARIDOS ANFERSA, S.L (F-073) y su contrato CTSU26/0161: cuando el nombre comercial se lee, la cadena funciona. A DECIDIR EN LA SPEC: el prompt de IA1/IA2 distingue emisor/proveedor de transportista y del cliente (Ruesma, F-063/F-064) y lee el nombre comercial o el logotipo aunque no haya razón social; si el CIF leído no es de un proveedor con contrato en la obra (o es de un transportista), sv3 busca por nombre como hace F-063 con el CIF de Ruesma; medir con el banco. RELACIONADAS: F-062, F-063, F-064 (blocked), F-073, F-090 (el papel de Anfersa es amarillo desvaído).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 19,
+      "servicios": [
+        "sv2-api",
+        "sv3-persistencia"
       ]
     }
   ]

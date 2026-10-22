@@ -2,14 +2,14 @@
   "caso_id": "GRA-001",
   "fase": "IA3",
   "libro": "IA3_valoracion.xlsx",
-  "sha256_libro": "5370ea490c6e6d5c0345ca6f706294d672b7804097efffe67ebcdfd6628c1b60",
+  "sha256_libro": "46f317c274944b85c77cd0d09d95d3803d98668538e79b4cd078871299a64042",
   "tablas": {
     "lineas_valoradas": [
       {
         "caso_id": "GRA-001",
-        "codigo_partida_final": "P5.22.01.03.07",
+        "codigo_partida_final": "P4.22.01.03.07",
         "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": "La unidad esta bien, pero ha cogio un unitario que no es. Es grava 20/40 (se deduce del texto, esta en el contrato), el unitario es 12,86",
+        "comentario": "La unidad esta bien, pero ha cogio un unitario que no es. Es grava 20/40 (se deduce del texto, esta en el contrato), el unitario es 12,86 | Banco 2026-10-22 (decision del humano): la partida es P4.22.01.03.07, no P5.22.01.03.07",
         "importe_calculado": 390.99,
         "match_method": "@@NO_COMPARAR@@",
         "num_linea": 1,

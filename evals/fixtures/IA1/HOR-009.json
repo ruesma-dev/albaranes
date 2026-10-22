@@ -2,19 +2,19 @@
   "caso_id": "HOR-009",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "8415ac68cd9086104f4bb1033b8bb99fc467943b806dcd9d645b6f9e890beddc",
+  "sha256_libro": "4ff11165e3d27b5d83f61048097a5798ebad37053b320230915e2303bf92aabe",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "HOR-009",
-        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio. El codigo de hormigon leido es correcto, pero luego lo ha cambiado en la descripcion de la linea de sigrid para casarlo. El codigo de hormigon no se puede cambiar | partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio | partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio- esta linea no la ha generado, pero pon B en el codigo asi que parece error de negocio",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio. El codigo de hormigon leido es correcto, pero luego lo ha cambiado en la descripcion de la linea de sigrid para casarlo. El codigo de hormigon no se puede cambiar | partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio | partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio- esta linea no la ha generado, pero pon B en el codigo asi que parece error de negocio | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 2 fila(s): ADICIÓN FIBRAS POLIPROPILENO (600 GR/M3); INCREM. CONSISTENCIA FLUIDA",
         "fecha": "2024-08-06",
         "fichero_albaran": "HOR-009.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "W26580",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
-        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_cif": "B04685541",
         "proveedor_nombre": "HORPRESOL, S.L."
       }
     ],
@@ -22,36 +22,12 @@
       {
         "cantidad": 8,
         "caso_id": "HOR-009",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio. El codigo de hormigon leido es correcto, pero luego lo ha cambiado en la descripcion de la linea de sigrid para casarlo. El codigo de hormigon no se puede cambiar",
+        "codigo_imputacion": "32.03.02",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio. El codigo de hormigon leido es correcto, pero luego lo ha cambiado en la descripcion de la linea de sigrid para casarlo. El codigo de hormigon no se puede cambiar | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 2 fila(s): ADICIÓN FIBRAS POLIPROPILENO (600 GR/M3); INCREM. CONSISTENCIA FLUIDA",
         "descripcion_esperada": "HMF-20/P-CR/B/20-12/X0/P",
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 8,
-        "caso_id": "HOR-009",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio",
-        "descripcion_esperada": "ADICIÓN FIBRAS POLIPROPILENO (600 GR/M3)",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 2,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 8,
-        "caso_id": "HOR-009",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio- esta linea no la ha generado, pero pon B en el codigo asi que parece error de negocio",
-        "descripcion_esperada": "INCREM. CONSISTENCIA FLUIDA",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 3,
         "precio_unitario": null,
         "unidad": "M3"
       }
