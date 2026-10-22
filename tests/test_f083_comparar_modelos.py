@@ -612,7 +612,9 @@ def test_f083_bloque_salida_por_defecto_con_fecha(banco_ia1, monkeypatch, tmp_pa
 
 # --- T8 · IA3 e IA4 con el build real de sv6 (sin LLM) ------------------------------------
 
-_CASOS_SV5 = ["FER-001", "GEN-001", "RES-001"]
+# F-084 (R18): el modo determinista omite los casos sin líneas de contrato en
+# INPUTS; la equivalencia con el comparador se mide en casos que las tienen.
+_CASOS_SV5 = ["RES-001", "RES-004", "RES-006"]
 
 
 def _deps_reales(banco, sv5):

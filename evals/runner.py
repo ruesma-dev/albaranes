@@ -19,12 +19,14 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 from evals.comparador import campos_no_observables, comparar_tablas
 from evals.conversor import RUTA_FIXTURES
+from evals.costes import cargar_tabla
 from evals.criticidad import cargar_criticidad
 from evals.informe import MODO_COMPLETA, MODO_DETERMINISTA, render
 from evals.modelos import (
@@ -33,6 +35,8 @@ from evals.modelos import (
     ResultadoPasada,
 )
 from evals.procesos import sv2_extraccion, sv5_valoracion, sv6_build
+from evals.procesos.sv5_documentos import RUTA_CACHE, leer_indice
+from evals.procesos.sv6_build import DescuentoCompuesto
 
 #: Directorio de informes del arnés.
 RUTA_PROGRESS = Path(__file__).resolve().parent.parent / "progress"
@@ -46,8 +50,85 @@ FASES_DETERMINISTA: tuple[str, ...] = ("IA3", "IA4", "E2E")
 FASES_SOLO_CON_LLM: frozenset[str] = frozenset({"IA1", "IA2"})
 
 
+#: Fases de la valoración: las que dependen del contrato del caso.
+FASES_VALORACION: tuple[str, ...] = ("IA3", "IA4", "E2E")
+
+#: (F-084 R18) Un caso con contrato y sin sus líneas no mide el modelo: sin
+#: nada con qué casar, todo sale `no_match` con cualquier modelo.
+MOTIVO_SIN_LINEAS = "sin líneas de contrato en INPUTS"
+
+
 class UsoIncorrecto(RuntimeError):
     """Lo que se ha pedido no se puede ejecutar tal como se ha pedido."""
+
+
+# --- Qué casos se valoran (F-084 R13, R18, R33) -------------------------------
+
+
+def ruta_indice(fixtures: Path | str) -> Path:
+    """El índice de documentos del contrato que va con estos fixtures."""
+    return Path(fixtures) / "contratos" / "_indice.json"
+
+
+def motivo_para_omitir(inputs: dict, indice: dict, raiz: Path | str) -> str:
+    """Por qué un caso no se valora (OMITIDO en IA3, IA4 y E2E); vacío si se valora.
+
+    - R18: tiene contrato y ninguna línea de contrato en INPUTS.
+    - R33: el índice declara un documento del contrato que no está en local
+      (o no casa con su sha256). Mejor no medir que medir otra cosa.
+    """
+    caso = (inputs.get("tablas", {}).get("caso") or [{}])[0]
+    codigo = str(sv6_build.valor(caso, "contrato_codigo") or "").strip()
+    if not codigo:
+        return ""
+    if not inputs.get("tablas", {}).get("contrato_lineas"):
+        return MOTIVO_SIN_LINEAS
+    documento = sv5_valoracion.documento_de(codigo, indice, raiz)
+    return (documento or {}).get("falta", "")
+
+
+def _omitir_en(fases, caso_id: str, motivo: str) -> None:
+    for fase in fases:
+        fase.casos.append(ResultadoCaso.omitido(caso_id, fase.nombre, motivo))
+
+
+def _motivo_descuento(error: DescuentoCompuesto) -> str:
+    return f"ERROR al montar el caso · {error}"
+
+
+# --- Proveedor y modelo de la valoración (F-084 R20) ---------------------------
+
+
+def valoracion_por_defecto(
+    proveedores: list[str] | None, entorno: dict | None = None, tabla=None
+) -> tuple[str, str]:
+    """(R20) Proveedor y modelo de IA3/IA4: los de producción si no se piden.
+
+    - Proveedor: el primero de `--proveedores`; si no, `IA3_PROVIDER` del
+      entorno, como sv5; si no, el de la referencia de IA3 de
+      `evals/precios_modelos.json`, que es la configuración de producción
+      (`infra/create_capps.ps1`; lo vigila R3 de F-083).
+    - Modelo: la variable del proveedor (`OPENAI_MODEL`…) si está, como lee
+      sv5; si no y el proveedor es el de producción, el modelo de producción;
+      si no, el defecto de `MODELOS_POR_PROVEEDOR`.
+    """
+    entorno = dict(os.environ) if entorno is None else entorno
+    tabla = tabla or cargar_tabla()
+    referencia = tabla.modelo(tabla.referencia("IA3"))
+    if proveedores:
+        proveedor = proveedores[0].strip().lower()
+    else:
+        proveedor = (entorno.get("IA3_PROVIDER") or "").strip().lower() or referencia.proveedor
+    if proveedor not in sv5_valoracion.MODELOS_POR_PROVEEDOR:
+        raise UsoIncorrecto(
+            f"proveedor de valoración desconocido: {proveedor!r} (IA3_PROVIDER o "
+            f"--proveedores); tiene que ser {', '.join(sv5_valoracion.MODELOS_POR_PROVEEDOR)}."
+        )
+    variable, por_defecto = sv5_valoracion.MODELOS_POR_PROVEEDOR[proveedor]
+    explicito = (entorno.get(variable) or "").strip()
+    if explicito:
+        return proveedor, explicito
+    return proveedor, referencia.id if proveedor == referencia.proveedor else por_defecto
 
 
 # --- Carga de fixtures ------------------------------------------------------
@@ -80,6 +161,7 @@ def corrida_determinista(
 ) -> tuple[list[ResultadoFase], list[str]]:
     """IA3, IA4 y extremo-a-extremo contra las redes de sv6, sin ninguna red."""
     criticidad = cargar_criticidad()
+    indice = leer_indice(ruta_indice(fixtures))
     inputs = _filtrar(cargar_fixtures(fixtures, "inputs"), casos_pedidos)
     ia3 = cargar_fixtures(fixtures, "IA3")
     ia4 = cargar_fixtures(fixtures, "IA4")
@@ -97,10 +179,23 @@ def corrida_determinista(
         return [fase_ia3, fase_ia4, fase_e2e], no_observables
 
     envelopes: dict[str, dict] = {}
+    fases = (fase_ia3, fase_ia4, fase_e2e)
     for caso_id, datos in inputs.items():
-        envelope = sv6_build.construir_envelope_estimulado(
-            datos, ia3.get(caso_id, {"tablas": {}})
-        )
+        motivo = motivo_para_omitir(datos, indice, RUTA_CACHE)
+        if motivo:
+            _omitir_en(fases, caso_id, motivo)
+            continue
+        try:
+            envelope = sv6_build.construir_envelope_estimulado(
+                datos, ia3.get(caso_id, {"tablas": {}})
+            )
+        except DescuentoCompuesto as error:
+            # (R13) Sin envelope no hay build: IA3 y E2E en ERROR; IA4 no se evalúa.
+            motivo = _motivo_descuento(error)
+            fase_ia3.casos.append(ResultadoCaso.con_error(caso_id, "IA3", motivo))
+            fase_ia4.casos.append(ResultadoCaso.omitido(caso_id, "IA4", motivo))
+            fase_e2e.casos.append(ResultadoCaso.con_error(caso_id, "E2E", motivo))
+            continue
         if caso_id in ia4:
             sv5_valoracion.aplicar_conciliacion(
                 envelope,
@@ -110,7 +205,9 @@ def corrida_determinista(
             )
         envelopes[caso_id] = envelope
 
-    resultados, motivo_muerte = _build_sv6(envelopes, (fase_ia3, fase_e2e))
+    resultados, motivo_muerte = (
+        _build_sv6(envelopes, (fase_ia3, fase_e2e)) if envelopes else ({}, "")
+    )
 
     for caso_id, envelope in envelopes.items():
         resultado = resultados.get(caso_id)
@@ -243,9 +340,16 @@ def corrida_completa(
     casos_pedidos: list[str] | None = None,
     proveedores: list[str] | None = None,
     directorio_albaranes: Path | None = None,
+    fases: list[str] | None = None,
 ) -> tuple[list[ResultadoFase], list[str]]:
-    """Las cuatro fases con LLM reales más el extremo-a-extremo (R9, R14)."""
+    """Las cuatro fases con LLM reales más el extremo-a-extremo (R9, R14).
+
+    (F-084 R19) Si `fases` no pide IA1 ni IA2, sv2 no se invoca ni se exigen
+    sus claves. Las de sv5 se comprueban siempre ANTES de nada.
+    """
     criticidad = cargar_criticidad()
+    con_sv2 = fases is None or bool(FASES_SOLO_CON_LLM & set(fases))
+    proveedor, modelo = valoracion_por_defecto(proveedores)
     inputs = _filtrar(cargar_fixtures(fixtures, "inputs"), casos_pedidos)
     ia1 = _filtrar(cargar_fixtures(fixtures, "IA1"), casos_pedidos)
     ia2 = _filtrar(cargar_fixtures(fixtures, "IA2"), casos_pedidos)
@@ -253,16 +357,16 @@ def corrida_completa(
     ia4 = cargar_fixtures(fixtures, "IA4")
     final = cargar_fixtures(fixtures, "final")
 
-    invocados_ia1 = sv2_extraccion.proveedores_a_invocar("IA1", proveedores)
-    invocados_ia2 = sv2_extraccion.proveedores_a_invocar("IA2", proveedores)
-    sv5_valoracion.comprobar_claves(sorted(set(invocados_ia1 + invocados_ia2)))
+    invocados_ia1 = sv2_extraccion.proveedores_a_invocar("IA1", proveedores) if con_sv2 else []
+    invocados_ia2 = sv2_extraccion.proveedores_a_invocar("IA2", proveedores) if con_sv2 else []
+    sv5_valoracion.comprobar_claves(sorted({*invocados_ia1, *invocados_ia2, proveedor}))
 
     fase_ia1 = ResultadoFase(nombre="IA1", proveedores=invocados_ia1)
     fase_ia2 = ResultadoFase(nombre="IA2", proveedores=invocados_ia2)
     no_observables: list[str] = []
 
     trabajo_sv2 = []
-    for caso_id, datos in sorted({**ia1, **ia2}.items()):
+    for caso_id, datos in sorted({**ia1, **ia2}.items()) if con_sv2 else ():
         ruta = sv2_extraccion.ruta_de_albaran(
             caso_id, directorio_albaranes or sv2_extraccion.RUTA_ALBARANES
         )
@@ -289,7 +393,9 @@ def corrida_completa(
         )
 
     fases_valoracion, no_observables_valoracion = _corrida_valoracion_real(
-        inputs, ia3, ia4, final, criticidad, proveedores
+        inputs, ia3, ia4, final, criticidad, proveedores,
+        indice=leer_indice(ruta_indice(fixtures)),
+        valoracion=(proveedor, modelo),
     )
     no_observables.extend(no_observables_valoracion)
     return [fase_ia1, fase_ia2, *fases_valoracion], sorted(set(no_observables))
@@ -437,10 +543,17 @@ def _comparar_tablas_de(
 
 
 def _corrida_valoracion_real(
-    inputs, ia3, ia4, final, criticidad, proveedores
+    inputs, ia3, ia4, final, criticidad, proveedores, *, indice=None, valoracion=None
 ) -> tuple[list[ResultadoFase], list[str]]:
-    """IA3 e IA4 reales de sv5 y el build de sv6 con el envelope resultante."""
-    proveedor = (proveedores or ["gemini"])[0]
+    """IA3 e IA4 reales de sv5 y el build de sv6 con el envelope resultante.
+
+    `valoracion` es (proveedor, modelo) de R20; sin ella, se resuelve desde
+    `proveedores`. Los casos omitidos por R18 o R33, o con un descuento
+    compuesto (R13), no se mandan a sv5. `indice` es el de documentos del
+    contrato (sin él, ninguno).
+    """
+    proveedor, modelo = valoracion or valoracion_por_defecto(proveedores)
+    indice = {} if indice is None else indice
     fase_ia3 = ResultadoFase(nombre="IA3", proveedores=[proveedor])
     fase_ia4 = ResultadoFase(nombre="IA4", proveedores=[proveedor])
     fase_e2e = ResultadoFase(nombre="E2E", proveedores=[proveedor])
@@ -453,33 +566,42 @@ def _corrida_valoracion_real(
         return [fase_ia3, fase_ia4, fase_e2e], no_observables
 
     fases = (fase_ia3, fase_ia4, fase_e2e)
+    casos_sv5 = []
+    for caso_id, datos in sorted(inputs.items()):
+        motivo = motivo_para_omitir(datos, indice, RUTA_CACHE)
+        if motivo:
+            _omitir_en(fases, caso_id, motivo)
+            continue
+        try:
+            contexto = sv5_valoracion.construir_contexto(datos, indice=indice, raiz=RUTA_CACHE)
+        except DescuentoCompuesto as error:
+            motivo = _motivo_descuento(error)
+            fase_ia3.casos.append(ResultadoCaso.con_error(caso_id, "IA3", motivo))
+            _omitir_en((fase_ia4, fase_e2e), caso_id, f"no se valoró · {motivo}")
+            continue
+        casos_sv5.append({"caso_id": caso_id, "contexto": contexto})
+    if not casos_sv5:
+        return list(fases), no_observables
+
     salida_sv5, motivo_muerte_sv5 = _ejecutar_aislado(
         "sv5",
         sv5_valoracion.ejecutar_en_subproceso,
-        {
-            "proveedor": proveedor,
-            "casos": [
-                {
-                    "caso_id": caso_id,
-                    "contexto": sv5_valoracion.construir_contexto(datos),
-                }
-                for caso_id, datos in sorted(inputs.items())
-            ],
-        },
+        {"proveedor": proveedor, "modelo": modelo, "casos": casos_sv5},
     )
+    enviados = [caso["caso_id"] for caso in casos_sv5]
     if salida_sv5 is None:
         for fase in fases:
             fase.motivo = motivo_muerte_sv5
             fase.casos.extend(
                 ResultadoCaso.con_error(caso_id, fase.nombre, motivo_muerte_sv5)
-                for caso_id in sorted(inputs)
+                for caso_id in enviados
             )
         return list(fases), no_observables
 
     por_caso = {r.get("caso_id"): r for r in salida_sv5.get("resultados", [])}
     envelopes: dict[str, dict] = {}
     conciliaciones: dict[str, list] = {}
-    for caso_id in sorted(inputs):
+    for caso_id in enviados:
         resultado_sv5 = por_caso.get(caso_id)
         motivo = _motivo_sv5(resultado_sv5)
         if motivo:
@@ -621,7 +743,9 @@ def ejecutar(opciones: argparse.Namespace) -> tuple[ResultadoPasada, list[str]]:
     proveedores = opciones.proveedores.split(",") if opciones.proveedores else None
 
     if opciones.con_llm:
-        resultados, no_observables = corrida_completa(fixtures, casos, proveedores)
+        resultados, no_observables = corrida_completa(
+            fixtures, casos, proveedores, fases=fases
+        )
     else:
         resultados, no_observables = corrida_determinista(fixtures, casos)
 
