@@ -2,7 +2,7 @@
   "caso_id": "RES-011",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "372578227f547f69b420f2d0f392c8885da3995575e99f7cf590ae81f914ccf3",
+  "sha256_libro": "402f87af54e3ce3701365e34104c8c7da1f468004586710b119fd3dbb84df7ef",
   "tablas": {
     "datos_generales": [
       {
@@ -25,13 +25,13 @@
         "cantidad_final": 1,
         "casa_con_contrato": "SI",
         "caso_id": "RES-011",
-        "comentario": null,
+        "comentario": "F-051 (decision del humano 2026-10-22): linea sin partida impresa => almacen, partida final vacia; antes esperaba CI.03A.7, la del contrato",
         "descripcion": "CONTENEDOR DE 8M3",
         "importe_final": 90,
         "linea_a_revision": "@@NO_COMPARAR@@",
         "linea_contrato": "@@NO_COMPARAR@@",
         "num_linea": 1,
-        "partida_final": "CI.03A.7",
+        "partida_final": null,
         "precio_source": "contrato_db",
         "precio_unitario_final": 90,
         "unidad_final": "UD"
@@ -40,13 +40,13 @@
         "cantidad_final": 3.28,
         "casa_con_contrato": "SI",
         "caso_id": "RES-011",
-        "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año",
+        "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año | F-051 (decision del humano 2026-10-22): linea sin partida impresa => almacen, partida final vacia; antes esperaba CI.03A.7, la del contrato",
         "descripcion": "RCDS. SUCIOS",
         "importe_final": 85.28,
         "linea_a_revision": "@@NO_COMPARAR@@",
         "linea_contrato": "@@NO_COMPARAR@@",
         "num_linea": 2,
-        "partida_final": "CI.03A.7",
+        "partida_final": null,
         "precio_source": "contrato_db",
         "precio_unitario_final": 26,
         "unidad_final": "M3"
@@ -56,11 +56,11 @@
       {
         "cantidad": 3.28,
         "caso_id": "RES-011",
-        "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año",
+        "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año | F-051 (decision del humano 2026-10-22): linea sin partida impresa => almacen, partida final vacia; antes esperaba CI.03A.7, la del contrato",
         "concepto": "RCDS. SUCIOS. INCREM. 2025",
         "importe": 13.12,
         "num_linea_base": 2,
-        "partida": "CI.03A.7",
+        "partida": null,
         "precio_unitario": 4
       }
     ]

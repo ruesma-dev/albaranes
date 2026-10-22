@@ -2,12 +2,12 @@
   "caso_id": "FER-002",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "8415ac68cd9086104f4bb1033b8bb99fc467943b806dcd9d645b6f9e890beddc",
+  "sha256_libro": "655d6ddd6719388b9d752b6e4fec51bb14f3670fe1bacfb8f2a39d931ff388f6",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "FER-002",
-        "comentario": null,
+        "comentario": "Banco 2026-10-22 (decision del humano): en el papel hay 5 lineas, no 8; las 8 de antes eran el reparto P4/P5 de la valoracion (F-049 R23), que sigue en RESULTADO_FINAL e INPUTS",
         "fecha": "2026-06-01",
         "fichero_albaran": "FER-002.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
@@ -20,10 +20,10 @@
     ],
     "lineas": [
       {
-        "cantidad": 54,
+        "cantidad": 108,
         "caso_id": "FER-002",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": null,
+        "comentario": "Banco 2026-10-22 (decision del humano): en el papel hay 5 lineas, no 8; las 8 de antes eran el reparto P4/P5 de la valoracion (F-049 R23), que sigue en RESULTADO_FINAL e INPUTS",
         "descripcion_esperada": "papel higienico",
         "descuentos": 40,
         "importe": null,
@@ -32,7 +32,7 @@
         "unidad": "UD"
       },
       {
-        "cantidad": 5,
+        "cantidad": 10,
         "caso_id": "FER-002",
         "codigo_imputacion": "@@NO_COMPARAR@@",
         "comentario": null,
@@ -44,7 +44,7 @@
         "unidad": "UD"
       },
       {
-        "cantidad": 6,
+        "cantidad": 12,
         "caso_id": "FER-002",
         "codigo_imputacion": "@@NO_COMPARAR@@",
         "comentario": null,
@@ -56,42 +56,6 @@
         "unidad": "UD"
       },
       {
-        "cantidad": 54,
-        "caso_id": "FER-002",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": null,
-        "descripcion_esperada": "papel higienico",
-        "descuentos": 40,
-        "importe": null,
-        "num_linea": 4,
-        "precio_unitario": 0.543,
-        "unidad": "UD"
-      },
-      {
-        "cantidad": 5,
-        "caso_id": "FER-002",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": null,
-        "descripcion_esperada": "jabon liquido ph neutro",
-        "descuentos": 40,
-        "importe": null,
-        "num_linea": 5,
-        "precio_unitario": 3.422,
-        "unidad": "UD"
-      },
-      {
-        "cantidad": 6,
-        "caso_id": "FER-002",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": null,
-        "descripcion_esperada": "rollo papel ind.",
-        "descuentos": 40,
-        "importe": null,
-        "num_linea": 6,
-        "precio_unitario": 7.726,
-        "unidad": "UD"
-      },
-      {
         "cantidad": 4,
         "caso_id": "FER-002",
         "codigo_imputacion": "@@NO_COMPARAR@@",
@@ -99,7 +63,7 @@
         "descripcion_esperada": "AÑIL ESPECIAL FEYMACO",
         "descuentos": 40,
         "importe": null,
-        "num_linea": 7,
+        "num_linea": 4,
         "precio_unitario": 5.497,
         "unidad": "UD"
       },
@@ -111,7 +75,7 @@
         "descripcion_esperada": "BOLSA BASURA 52x58",
         "descuentos": 40,
         "importe": null,
-        "num_linea": 8,
+        "num_linea": 5,
         "precio_unitario": 0.252,
         "unidad": "UD"
       }
