@@ -84,6 +84,8 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - subproceso
     try:
         trabajo = json.loads(sys.stdin.read() or "{}")
         sv5_valoracion.comprobar_claves([trabajo["modelo"]["proveedor"]])
+        # (F-084 R15) El contexto de producción: las categorías de unidad de sv5.
+        trabajo["casos"] = [{**c, "contexto": sv5_valoracion.preparar_contexto(c["contexto"])} for c in trabajo.get("casos", [])]
         salida = ejecutar_trabajo(trabajo)
     except Exception as error:  # noqa: BLE001 - la frontera devuelve el motivo
         avisar("sv5_modelos", f"el bloque entero falló · {describir_error(error, '')['motivo']}")

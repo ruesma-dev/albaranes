@@ -40,19 +40,24 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import httpx
-from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
-
-from evals.conversor import LIBROS, RUTA_FIXTURES, RUTA_GROUND_TRUTH
-from evals.modelos import NO_COMPARAR
-from evals.procesos import sv5_documentos
-from evals.procesos.sv2_obra import TIMEOUT_SIGRID, faltan_variables_sigrid
-from evals.revision import escritura
 from ruesma_comun.sigrid import (
     MAX_FILAS_POR_PETICION,
     PoliticaTruncado,
     SigridRespuestaTruncada,
     comprobar_truncado,
 )
+from tenacity import (
+    Retrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
+from evals.conversor import LIBROS, RUTA_FIXTURES, RUTA_GROUND_TRUTH
+from evals.modelos import NO_COMPARAR
+from evals.procesos import sv5_documentos
+from evals.procesos.sv2_obra import TIMEOUT_SIGRID, faltan_variables_sigrid
+from evals.revision import escritura
 
 logger = logging.getLogger(__name__)
 

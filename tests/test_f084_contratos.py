@@ -87,7 +87,7 @@ def test_f084_r11_el_conversor_lleva_linea_sigrid_al_fixture(tmp_path, construct
 
 # --- T3 · parte pura del subcomando `lineas` ---------------------------------
 
-from evals import contratos  # noqa: E402  (el módulo nace en T3)
+from evals import contratos
 
 _COLUMNAS = [
     "contrato_ide",
@@ -236,11 +236,10 @@ def test_f084_r10_sin_lineas_contrato_db_no_hay_nada_que_controlar():
 
 # --- T4 · LectorSigrid y subcomando `lineas` (R2–R4, R7, R8, R10) ------------
 
-import hashlib  # noqa: E402
+import hashlib
 
-import httpx  # noqa: E402
-
-from ruesma_comun.sigrid import MAX_FILAS_POR_PETICION  # noqa: E402
+import httpx
+from ruesma_comun.sigrid import MAX_FILAS_POR_PETICION
 
 _ENTORNO = {
     "SIGRID_API_BASE_URL": "https://sigrid.ejemplo.invalid",
@@ -521,13 +520,13 @@ def test_f084_r1_sin_libro_es_un_error_de_uso(tmp_path, constructor_gt, capsys):
 
 # --- T5 · documento y cabecera del contrato (R29–R31, R34) -------------------
 
-import ast  # noqa: E402
-import base64  # noqa: E402
-import os  # noqa: E402
-import subprocess  # noqa: E402
-import sys  # noqa: E402
+import ast
+import base64
+import os
+import subprocess
+import sys
 
-from evals.procesos import sv5_documentos  # noqa: E402
+from evals.procesos import sv5_documentos
 
 _REPO_SV5 = (
     RAIZ / "services" / "albaran-valoracion-api" / "infrastructure" / "database"
@@ -646,7 +645,7 @@ def test_f084_r29_con_md_se_prefiere_el_md():
                            pdf={_FILA["pdf_sharepoint_relative_path"]: b"%PDF"})
 
     assert documento["tipo"] == "md"
-    assert base64.b64decode(documento["contenido_b64"]) == "# Contrato".encode("utf-8")
+    assert base64.b64decode(documento["contenido_b64"]) == b"# Contrato"
     assert documento["cabecera"] == {
         "nombre_contrato": "SUMINISTRO FERRETERIA", "cif_proveedor": "A00000000",
         "nombre_proveedor": "FERRETERIA DE PRUEBA SA", "codigo_obra": "696",
@@ -720,7 +719,7 @@ def test_f084_r31_un_contrato_que_revienta_no_para_a_los_demas():
 
 
 def test_f084_r30_la_entrada_del_indice_no_lleva_el_contenido():
-    contenido = "# Contrato con precios".encode("utf-8")
+    contenido = b"# Contrato con precios"
     documento = {"tipo": "md", "motivo": "", "cabecera": dict(_documento(
         md={_FILA["md_sharepoint_relative_path"]: "# C"})["cabecera"]),
         "contenido_b64": base64.b64encode(contenido).decode()}

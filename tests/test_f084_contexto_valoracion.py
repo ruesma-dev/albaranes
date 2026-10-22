@@ -238,10 +238,10 @@ def test_f084_r14_el_estimulo_de_matches_no_cambia():
 
 # --- T6 · documento local y cabecera del índice (R17, R32, R33) ---------------
 
-import hashlib  # noqa: E402
+import hashlib
 
-from evals.procesos import sv5_valoracion  # noqa: E402
-from evals.procesos.sv5_documentos import nombre_en_cache  # noqa: E402
+from evals.procesos import sv5_valoracion
+from evals.procesos.sv5_documentos import nombre_en_cache
 
 _CABECERA = {
     "nombre_contrato": "SUMINISTRO FERRETERIA",
@@ -264,7 +264,7 @@ def _indice(tipo: str, contenido: bytes = b"", codigo: str = "CTSU26/0001") -> d
 
 
 def test_f084_r32_con_el_fichero_local_y_su_sha256_hay_documento(tmp_path):
-    contenido = "# Contrato".encode("utf-8")
+    contenido = b"# Contrato"
     (tmp_path / nombre_en_cache("CTSU26/0001", "md")).write_bytes(contenido)
 
     documento = sv5_valoracion.documento_de("CTSU26/0001", _indice("md", contenido), tmp_path)
@@ -338,3 +338,164 @@ def test_f084_r17_la_cabecera_llega_tambien_con_lineas_de_contrato(tmp_path):
 
     assert contexto["nombre_proveedor"] == "FERRETERIA DE PRUEBA SA"
     assert contexto["lineas_contrato"][0]["contrato_line_id"] == 1
+
+
+# --- T7 · el subproceso de sv5 da a la IA lo que le da producción -------------
+#
+# sv5 solo se importa en un subproceso (comparte nombres de paquete con sv2 y
+# sv6). Este guion lo monta con un DOBLE de LLM —ni red ni claves— por la misma
+# puerta que usa `main`, `valorar_casos`, y devuelve lo que vio el «modelo».
+
+import subprocess
+import sys
+
+_GUION_SV5 = r"""
+import json, sys
+sys.path.insert(0, sys.argv[1])
+from application.services.valuation_extraction_service import ProviderClientSpec
+from infrastructure.prompts.yaml_prompt_repository import YamlPromptRepository
+from evals.procesos import sv5_valoracion
+
+llamadas = []
+
+class Doble:
+    def extract_document(self, *, model, instructions, user_text, attachment, response_model):
+        llamadas.append({
+            "model": model,
+            "schema": response_model.__name__,
+            "user_text": user_text,
+            "instructions": instructions,
+            "adjunto": None if attachment is None else [attachment.kind, len(attachment.data)],
+        })
+        if response_model.__name__ == "DocumentoValoracion":
+            return response_model.model_validate({"lineas": []})
+        return response_model.model_validate({"conciliaciones": []})
+
+def fabrica(proveedor, modelo=None):
+    return ProviderClientSpec(provider=proveedor, model_name=modelo or "sin-modelo", client=Doble())
+
+trabajo = json.loads(sys.stdin.read())
+salida = sv5_valoracion.valorar_casos(trabajo, fabrica=fabrica)
+prompts = YamlPromptRepository(sv5_valoracion.RAIZ_SV5 / "config" / "prompts.yaml")
+sistemas = {clave: prompts.get(clave).system for clave in ("valuation_es", "valuation_residuos")}
+for llamada in llamadas:
+    sistema = llamada.pop("instructions")
+    llamada["prompt"] = next((k for k, v in sistemas.items() if v == sistema), None)
+sys.stdout.write("\n@@SALIDA@@" + json.dumps({"salida": salida, "llamadas": llamadas}, ensure_ascii=False))
+"""
+
+
+def _valorar_con_doble(casos: list[dict], modelo: str | None = "modelo-doble") -> dict:
+    trabajo = {"proveedor": "openai", "casos": casos}
+    if modelo:
+        trabajo["modelo"] = modelo
+    proceso = subprocess.run(
+        [sys.executable, "-c", _GUION_SV5, str(sv5_valoracion.RAIZ_SV5)],
+        input=json.dumps(trabajo, ensure_ascii=False), capture_output=True, text=True,
+        encoding="utf-8", cwd=str(RAIZ), check=False,
+    )
+    assert proceso.returncode == 0, proceso.stderr[-3000:]
+    return json.loads(proceso.stdout.rsplit("@@SALIDA@@", 1)[1])
+
+
+def _contexto_res(tmp_path, documento: bytes | None, tipo: str = "md") -> dict:
+    inputs = _fixture("inputs", "RES-001")
+    codigo = inputs["tablas"]["caso"][0]["contrato_codigo"]
+    indice = {}
+    if documento is not None:
+        (tmp_path / nombre_en_cache(codigo, tipo)).write_bytes(documento)
+        indice = _indice(tipo, documento, codigo)
+    return sv5_valoracion.construir_contexto(inputs, indice=indice, raiz=tmp_path)
+
+
+def test_f084_r12_r14_construir_contexto_usa_las_funciones_de_sv6_build():
+    inputs = _inputs([_linea()], tipologia="Residuos")
+
+    contexto = sv5_valoracion.construir_contexto(inputs, indice={})
+
+    assert contexto["lineas_albaran"] == lineas_albaran_de(inputs)
+    assert contexto["clasificacion"] == clasificacion_de(inputs)
+
+
+def test_f084_r16_fecha_y_numero_salen_de_condiciones():
+    condiciones = [
+        {"caso_id": "FER-900", "campo": "fecha_albaran", "valor": "2026-06-05"},
+        {"caso_id": "FER-900", "campo": "numero_albaran", "valor": "2139643"},
+    ]
+
+    contexto = sv5_valoracion.construir_contexto(_inputs([_linea()], condiciones=condiciones), indice={})
+
+    assert (contexto["fecha_albaran"], contexto["numero_albaran"]) == ("2026-06-05", "2139643")
+
+
+def test_f084_r14_el_envelope_de_sv5_lleva_la_clasificacion():
+    contexto = sv5_valoracion.construir_contexto(_inputs([_linea()], tipologia="Hormigon"), indice={})
+
+    envelope = sv5_valoracion.envelope_desde(contexto, [], "openai", "m")
+
+    assert envelope["context"]["clasificacion"]["familia"] == "hormigon"
+
+
+def test_f084_r12_r14_r15_r16_r32_el_texto_de_ia3_es_el_de_produccion(tmp_path):
+    contexto = _contexto_res(tmp_path, b"# CONTRATO RES-001\nTarifa de contenedores")
+
+    vista = _valorar_con_doble([{"caso_id": "RES-001", "contexto": contexto}])
+
+    (ia3,) = [l for l in vista["llamadas"] if l["schema"] == "DocumentoValoracion"]
+    texto = ia3["user_text"]
+    assert ia3["prompt"] == "valuation_residuos"
+    assert ia3["model"] == "modelo-doble" and ia3["adjunto"] is None
+    assert '"descuento_albaran"' in texto and '"precio_neto_albaran"' in texto
+    assert '"unidad_categoria": "count"' in texto
+    assert '"fecha_albaran": "2024-07-03"' in texto
+    assert '"nombre_proveedor": "FERRETERIA DE PRUEBA SA"' in texto
+    assert "## CONTRATO (markdown)" in texto and "Tarifa de contenedores" in texto
+    assert "NO HAY PDF DE CONTRATO" not in texto
+
+
+def test_f084_r15_el_envelope_devuelto_lleva_las_categorias_y_el_modelo(tmp_path):
+    contexto = _contexto_res(tmp_path, None)
+
+    vista = _valorar_con_doble([{"caso_id": "RES-001", "contexto": contexto}])
+
+    (resultado,) = vista["salida"]["resultados"]
+    assert vista["salida"]["modelo"] == "modelo-doble"
+    assert resultado["envelope"]["meta"]["model"] == "modelo-doble"
+    assert {l["unidad_categoria"] for l in resultado["envelope"]["context"]["lineas_albaran"]} == {"count"}
+    assert {l["unidad_categoria"] for l in resultado["envelope"]["context"]["lineas_contrato"]} == {"count"}
+    assert resultado["envelope"]["context"]["clasificacion"]["familia"] == "residuos"
+
+
+def test_f084_r32_sin_documento_ia3_recibe_la_nota_de_solo_fase_1a(tmp_path):
+    vista = _valorar_con_doble([{"caso_id": "RES-001", "contexto": _contexto_res(tmp_path, None)}])
+
+    (ia3,) = [l for l in vista["llamadas"] if l["schema"] == "DocumentoValoracion"]
+    assert "NO HAY PDF DE CONTRATO" in ia3["user_text"] and ia3["adjunto"] is None
+
+
+def test_f084_r32_un_pdf_va_como_adjunto_en_la_misma_llamada(tmp_path):
+    contexto = _contexto_res(tmp_path, b"%PDF-1.7 contrato", tipo="pdf")
+
+    vista = _valorar_con_doble([{"caso_id": "RES-001", "contexto": contexto}])
+
+    (ia3,) = [l for l in vista["llamadas"] if l["schema"] == "DocumentoValoracion"]
+    assert ia3["adjunto"] == ["pdf", len(b"%PDF-1.7 contrato")]
+    assert "NO HAY PDF DE CONTRATO" not in ia3["user_text"]
+
+
+def test_f084_r33_un_documento_que_falta_no_llega_al_llm(tmp_path):
+    contexto = _contexto_res(tmp_path, None)
+    contexto["documento"] = {"falta": sv5_valoracion.MOTIVO_SIN_DOCUMENTO}
+
+    vista = _valorar_con_doble([{"caso_id": "RES-001", "contexto": contexto}])
+
+    assert vista["llamadas"] == []
+    assert vista["salida"]["resultados"][0]["error"]["fase"] == "IA3"
+
+
+def test_f084_r20_sin_modelo_en_el_trabajo_se_usa_el_de_la_fabrica(tmp_path):
+    vista = _valorar_con_doble(
+        [{"caso_id": "RES-001", "contexto": _contexto_res(tmp_path, None)}], modelo=None
+    )
+
+    assert vista["salida"]["modelo"] == "sin-modelo"
