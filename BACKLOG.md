@@ -3,78 +3,94 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **92 features**, 64 abiertas, 28 terminadas.
+Resumen: **95 features**, 67 abiertas (1 en curso, 5 con la spec lista, 6 bloqueadas y 55 en backlog) y 28 terminadas.
 
-Bloqueadas: **F-064, F-076, F-077, F-083, F-085, F-092**.
+## En curso
 
-## Trabajo abierto
+| # | Feature | Prioridad | Rigor | Rama |
+|---|---|---|---|---|
+| F-084 | El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None») | 2 | critico |  |
 
-| # | Feature | Prioridad | Estado | Rigor | Rama |
-|---|---|---|---|---|---|
-| F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 1 | bloqueada | critico | `feature/F-083-comparar-modelos` |
-| F-084 | El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None») | 2 | pendiente | critico |  |
-| F-085 | Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086) | 3 | bloqueada | critico | `feature/F-085-modelos-produccion` |
-| F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 4 | pendiente | critico |  |
-| F-079 | Avisar en la ficha cuando se edita la descripción de una línea vinculada a contrato (Sigrid usa la del contrato) | 6 | pendiente | estandar |  |
-| F-081 | sv3: decodificar el nombre del PDF de Sigrid (X-Document-Filename llega con codificación porcentual UTF-8) | 7 | pendiente | estandar |  |
-| F-082 | Valoración directa (F-075): una línea con importe y sin cantidad no puede quedar valorada sin revisión, porque sv9 la rechaza en el alta | 8 | pendiente | critico |  |
-| F-058 | Revalorar no pierde las partidas ni el almacén asignados a mano | 9 | pendiente | critico |  |
-| F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 10 | pendiente | estandar |  |
-| F-086 | Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol | 11 | pendiente | critico |  |
-| F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 13 | pendiente | critico |  |
-| F-064 | IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor | 13 | bloqueada | critico | `feature/F-064-proveedor-en-prompts` |
-| F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 13 | pendiente | critico |  |
-| F-067 | Limpieza de la ficha de detalle (sv4) | 13 | pendiente | estandar |  |
-| F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | 13 | bloqueada | critico | `feature/F-076-normalizar-partidas` |
-| F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 13 | bloqueada | estandar | `feature/F-077-guardar-y-aprobar` |
-| F-087 | Aprobar y Registrar: el «aprobar» de hoy pasa a llamarse Registrar (guarda, bloquea y da de alta en Sigrid) y nace un estado Aprobar (guarda todo el albarán y lo bloquea dándolo por bueno, sin Sigrid) | 13 | pendiente | critico |  |
-| F-088 | Bandeja: filtro de varias obras a la vez y TODOS los filtros se recuerdan al navegar, volver atrás o recargar | 13 | pendiente | estandar |  |
-| F-089 | Vista Obra con el formato Ruesma (como en partes): entrar en una obra muestra la bandeja general filtrada por esa obra | 13 | pendiente | estandar |  |
-| F-090 | Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692) | 13 | pendiente | critico |  |
-| F-091 | Forma de pago desde el contrato: si el albarán tiene contrato, la forma de pago se toma del contrato y no de lo leído | 13 | pendiente | critico |  |
-| F-092 | Gestión de almacén: crear la gestión del almacén (acopios) de las obras | 13 | bloqueada | critico |  |
-| F-093 | La fecha del albarán se lee mal: 18 de 57 casos fallan en algún modelo y 3 en los 8; validarla y no inventarla | 13 | pendiente | critico |  |
-| F-094 | Fecha de la cabecera en formato español (dd/mm/aaaa) con selector de fecha y entrada por teclado, guardada siempre canónica | 13 | pendiente | estandar |  |
-| F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 14 | pendiente | estandar |  |
-| F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 14 | pendiente | estandar |  |
-| F-057 | Truncado sin comprobar en los clientes de Sigrid colindantes: header_and_lines de sv4 (max_rows=1000) y SigridApiObraClient de sv3 | 14 | pendiente | critico |  |
-| F-060 | Tipología de líneas acopiables: qué familias o tipos de línea pueden ir a almacén/acopio y cuáles se imputan siempre a partida | 14 | pendiente | critico |  |
-| F-061 | Familia medios_auxiliares (andamios, puntales, plataformas...) en el catalogo de familias de IA1 | 14 | pendiente | critico |  |
-| F-068 | F7 en la ficha: divide la última fila pulsada y Edge no pregunta por la exploración con el símbolo de intercalación (sv4) | 14 | pendiente | estandar |  |
-| F-069 | Lista de equivalencias usuario de la app ↔ usuario de Sigrid para el alta (sv9) | 14 | pendiente | critico |  |
-| F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 15 | pendiente | critico |  |
-| F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 15 | spec lista | critico |  |
-| F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 17 | pendiente | estandar | `feature/F-037-guardado-inmediato-contrato` |
-| F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 18 | pendiente | estandar | `feature/F-024-unidad-medida` |
-| F-028 | Con dos contratos candidatos no se elige ninguno y el albarán no llega a valorarse | 19 | pendiente | critico | `feature/F-028-selector-contrato-por-partidas` |
-| F-029 | Obra resuelta por texto sin detectar empates: score 1,00 a la obra equivocada | 20 | pendiente | critico | `feature/F-029-obra-empates-y-sin-cif` |
-| F-030 | IA2 busca el proveedor parecido cuando el CIF leído no casa con ninguno de Sigrid | 21 | pendiente | estandar | `feature/F-030-proveedor-cif-aproximado` |
-| F-031 | La partida del albarán no se usa para elegir la línea de contrato cuando la descripción no coincide | 22 | pendiente | estandar | `feature/F-031-partida-elige-linea-contrato` |
-| F-032 | precio_neto no tiene semántica única y genera line_net_mismatch masivo | 23 | pendiente | estandar | `feature/F-032-semantica-precio-neto` |
-| F-033 | El contrato llega a sv5 en Markdown o en PDF según el documento, sin criterio determinista | 24 | pendiente | estandar | `feature/F-033-contrato-md-o-pdf-determinista` |
-| F-023 | Mortero: las sintéticas de contrato no se emiten porque IA3 y sv6 las vetan por tipo_familia | 25 | pendiente | critico | `feature/F-023-mortero-incrementos` |
-| F-015 | Líneas tachadas del albarán: no se registran | 26 | pendiente | estandar | `feature/F-015-lineas-tachadas` |
-| F-021 | Partida: validación contra el catálogo del contrato y elección asistida entre candidatas | 27 | pendiente | estandar | `feature/F-021-partida-catalogo-candidatas` |
-| F-016 | [ABSORBIDA POR F-065] Reparto de una línea del albarán entre varias partidas | 28 | pendiente | estandar | `feature/F-016-linea-multipartida` |
-| F-026 | Guard de partida de la línea BASE antes de escribir en contrato_lines_derived | 29 | pendiente | estandar | `feature/F-026-guard-partida-base` |
-| F-025 | El motivo no_quantity_in_albaran es una falsa alarma sistemática cuando se omite la conversión de unidad | 30 | pendiente | estandar | `feature/F-025-motivo-conversion-omitida` |
-| F-020 | El pipeline es agnóstico al proveedor de IA: ninguna fase privilegia a OpenAI | 31 | pendiente | estandar | `feature/F-020-proveedor-agnostico` |
-| F-003 | Tanda 2 — Albaranes valorados, match estricto y coherencia (G3+G4+G5) | 32 | spec lista | estandar | `feature/F-003-valorados-match-estricto` |
-| F-014 | Conversor del formato plano del administrativo a fixtures de evals | 33 | pendiente | estandar | `feature/F-014-conversor-administrativo` |
-| F-018 | Carga incompleta: línea siempre generada por IA2 y cantidad fijada por IA3 con mínimo por defecto 6 m³ | 34 | pendiente | estandar | `feature/F-018-carga-incompleta` |
-| F-004 | Tanda 3 — Hormigón fino y veto de mortero | 35 | spec lista | estandar | `feature/F-004-hormigon-fino` |
-| F-005 | Tanda 4a — Tipología bombeo | 36 | spec lista | estandar | `feature/F-005-bombeo` |
-| F-006 | Tanda 4b — Residuos: lógica de pago LLEVAR/RETIRAR y canon | 37 | spec lista | estandar | `feature/F-006-residuos-pago` |
-| F-007 | Tanda 5 — Partida ALM por defecto y selector de candidatas en sv4 | 38 | pendiente | estandar | `feature/F-007-partida-alm-selector` |
-| F-017 | El comparativo como fuente de precio (1c) en la valoración | 39 | pendiente | estandar | `feature/F-017-comparativo-precio` |
-| F-013 | [SUSTITUIDA POR F-053] Registro del albarán aprobado en Sigrid (consumidor de q-feedback) | 40 | pendiente | critico | `feature/F-013-registro-sigrid` |
-| F-008 | Lifecycle de blobs de hand-off | 41 | pendiente | estandar | `feature/F-008-blob-lifecycle` |
-| F-009 | Limpieza de la cola huérfana q-emails | 42 | pendiente | estandar | `feature/F-009-limpieza-q-emails` |
-| F-010 | Easy Auth en el portal sv4 | 43 | pendiente | critico | `feature/F-010-easy-auth-sv4` |
-| F-022 | Bandeja de portada: el concepto de las líneas del albarán sale vacío porque el JOIN de la línea derivada apunta a la tabla equivocada | 44 | pendiente | estandar | `feature/F-022-concepto-lineas-bandeja` |
-| F-044 | Cache de prompts en las llamadas a Claude: hoy el prompt de sistema entero se reenvia y se paga completo en cada albaran | 45 | pendiente | estandar |  |
-| F-041 | Arnes: el veredicto de un mutante no puede depender de que la suite recogiera tests | 111 | pendiente | critico | `feature/F-041-veredicto-honesto-del-mutante` |
-| F-042 | Arnes: segunda opinion de review con un modelo de otra familia (Codex/OpenAI) | 111 | pendiente | estandar | `feature/F-042-segunda-opinion-otro-modelo` |
+## Spec lista
+
+| # | Feature | Prioridad | Rigor | Rama |
+|---|---|---|---|---|
+| F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 15 | critico |  |
+| F-003 | Tanda 2 — Albaranes valorados, match estricto y coherencia (G3+G4+G5) | 32 | estandar | `feature/F-003-valorados-match-estricto` |
+| F-004 | Tanda 3 — Hormigón fino y veto de mortero | 35 | estandar | `feature/F-004-hormigon-fino` |
+| F-005 | Tanda 4a — Tipología bombeo | 36 | estandar | `feature/F-005-bombeo` |
+| F-006 | Tanda 4b — Residuos: lógica de pago LLEVAR/RETIRAR y canon | 37 | estandar | `feature/F-006-residuos-pago` |
+
+## Bloqueadas
+
+| # | Feature | Prioridad | Rigor | Rama |
+|---|---|---|---|---|
+| F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 1 | critico | `feature/F-083-comparar-modelos` |
+| F-085 | Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086) | 3 | critico | `feature/F-085-modelos-produccion` |
+| F-064 | IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor | 13 | critico | `feature/F-064-proveedor-en-prompts` |
+| F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | 13 | critico | `feature/F-076-normalizar-partidas` |
+| F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 13 | estandar | `feature/F-077-guardar-y-aprobar` |
+| F-092 | Gestión de almacén: crear la gestión del almacén (acopios) de las obras | 13 | critico |  |
+
+## Backlog
+
+| # | Feature | Prioridad | Rigor | Rama |
+|---|---|---|---|---|
+| F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 4 | critico |  |
+| F-079 | Avisar en la ficha cuando se edita la descripción de una línea vinculada a contrato (Sigrid usa la del contrato) | 6 | estandar |  |
+| F-081 | sv3: decodificar el nombre del PDF de Sigrid (X-Document-Filename llega con codificación porcentual UTF-8) | 7 | estandar |  |
+| F-082 | Valoración directa (F-075): una línea con importe y sin cantidad no puede quedar valorada sin revisión, porque sv9 la rechaza en el alta | 8 | critico |  |
+| F-058 | Revalorar no pierde las partidas ni el almacén asignados a mano | 9 | critico |  |
+| F-059 | Etiquetas legibles para los motivos de revisión en sv4 | 10 | estandar |  |
+| F-086 | Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol | 11 | critico |  |
+| F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 13 | critico |  |
+| F-066 | Edición de líneas tipo hoja de cálculo en la ficha de detalle (sv4) | 13 | critico |  |
+| F-067 | Limpieza de la ficha de detalle (sv4) | 13 | estandar |  |
+| F-087 | Aprobar y Registrar: el «aprobar» de hoy pasa a llamarse Registrar (guarda, bloquea y da de alta en Sigrid) y nace un estado Aprobar (guarda todo el albarán y lo bloquea dándolo por bueno, sin Sigrid) | 13 | critico |  |
+| F-088 | Bandeja: filtro de varias obras a la vez y TODOS los filtros se recuerdan al navegar, volver atrás o recargar | 13 | estandar |  |
+| F-089 | Vista Obra con el formato Ruesma (como en partes): entrar en una obra muestra la bandeja general filtrada por esa obra | 13 | estandar |  |
+| F-090 | Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692) | 13 | critico |  |
+| F-091 | Forma de pago desde el contrato: si el albarán tiene contrato, la forma de pago se toma del contrato y no de lo leído | 13 | critico |  |
+| F-093 | La fecha del albarán se lee mal: 18 de 57 casos fallan en algún modelo y 3 en los 8; validarla y no inventarla | 13 | critico |  |
+| F-094 | Formato español en la ficha: fecha dd/mm/aaaa con selector y teclado (guardada canónica) y números con punto de miles | 13 | estandar |  |
+| F-095 | Alta en Sigrid con el precio BRUTO y el % de descuento en su columna, no con el precio neto | 13 | critico |  |
+| F-096 | Ficha: guardar una línea no debe deshacer las partidas cambiadas y aún sin guardar en las demás (vuelven a almacén) | 13 | estandar |  |
+| F-097 | Proveedor no identificado cuando el papel trae el CIF del transportista o solo el nombre comercial (Anfersa) | 13 | critico |  |
+| F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 14 | estandar |  |
+| F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 14 | estandar |  |
+| F-057 | Truncado sin comprobar en los clientes de Sigrid colindantes: header_and_lines de sv4 (max_rows=1000) y SigridApiObraClient de sv3 | 14 | critico |  |
+| F-060 | Tipología de líneas acopiables: qué familias o tipos de línea pueden ir a almacén/acopio y cuáles se imputan siempre a partida | 14 | critico |  |
+| F-061 | Familia medios_auxiliares (andamios, puntales, plataformas...) en el catalogo de familias de IA1 | 14 | critico |  |
+| F-068 | F7 en la ficha: divide la última fila pulsada y Edge no pregunta por la exploración con el símbolo de intercalación (sv4) | 14 | estandar |  |
+| F-069 | Lista de equivalencias usuario de la app ↔ usuario de Sigrid para el alta (sv9) | 14 | critico |  |
+| F-046 | El catalogo de familias crece: combustible sube a documento, y entran grava, ferreteria y ferralla | 15 | critico |  |
+| F-037 | sv4: al seleccionar un contrato, guardar directamente sin pulsar Guardar | 17 | estandar | `feature/F-037-guardado-inmediato-contrato` |
+| F-024 | La unidad de medida no se extrae: unidad_medida NULL en las líneas base de hormigón y mortero | 18 | estandar | `feature/F-024-unidad-medida` |
+| F-028 | Con dos contratos candidatos no se elige ninguno y el albarán no llega a valorarse | 19 | critico | `feature/F-028-selector-contrato-por-partidas` |
+| F-029 | Obra resuelta por texto sin detectar empates: score 1,00 a la obra equivocada | 20 | critico | `feature/F-029-obra-empates-y-sin-cif` |
+| F-030 | IA2 busca el proveedor parecido cuando el CIF leído no casa con ninguno de Sigrid | 21 | estandar | `feature/F-030-proveedor-cif-aproximado` |
+| F-031 | La partida del albarán no se usa para elegir la línea de contrato cuando la descripción no coincide | 22 | estandar | `feature/F-031-partida-elige-linea-contrato` |
+| F-032 | precio_neto no tiene semántica única y genera line_net_mismatch masivo | 23 | estandar | `feature/F-032-semantica-precio-neto` |
+| F-033 | El contrato llega a sv5 en Markdown o en PDF según el documento, sin criterio determinista | 24 | estandar | `feature/F-033-contrato-md-o-pdf-determinista` |
+| F-023 | Mortero: las sintéticas de contrato no se emiten porque IA3 y sv6 las vetan por tipo_familia | 25 | critico | `feature/F-023-mortero-incrementos` |
+| F-015 | Líneas tachadas del albarán: no se registran | 26 | estandar | `feature/F-015-lineas-tachadas` |
+| F-021 | Partida: validación contra el catálogo del contrato y elección asistida entre candidatas | 27 | estandar | `feature/F-021-partida-catalogo-candidatas` |
+| F-016 | [ABSORBIDA POR F-065] Reparto de una línea del albarán entre varias partidas | 28 | estandar | `feature/F-016-linea-multipartida` |
+| F-026 | Guard de partida de la línea BASE antes de escribir en contrato_lines_derived | 29 | estandar | `feature/F-026-guard-partida-base` |
+| F-025 | El motivo no_quantity_in_albaran es una falsa alarma sistemática cuando se omite la conversión de unidad | 30 | estandar | `feature/F-025-motivo-conversion-omitida` |
+| F-020 | El pipeline es agnóstico al proveedor de IA: ninguna fase privilegia a OpenAI | 31 | estandar | `feature/F-020-proveedor-agnostico` |
+| F-014 | Conversor del formato plano del administrativo a fixtures de evals | 33 | estandar | `feature/F-014-conversor-administrativo` |
+| F-018 | Carga incompleta: línea siempre generada por IA2 y cantidad fijada por IA3 con mínimo por defecto 6 m³ | 34 | estandar | `feature/F-018-carga-incompleta` |
+| F-007 | Tanda 5 — Partida ALM por defecto y selector de candidatas en sv4 | 38 | estandar | `feature/F-007-partida-alm-selector` |
+| F-017 | El comparativo como fuente de precio (1c) en la valoración | 39 | estandar | `feature/F-017-comparativo-precio` |
+| F-013 | [SUSTITUIDA POR F-053] Registro del albarán aprobado en Sigrid (consumidor de q-feedback) | 40 | critico | `feature/F-013-registro-sigrid` |
+| F-008 | Lifecycle de blobs de hand-off | 41 | estandar | `feature/F-008-blob-lifecycle` |
+| F-009 | Limpieza de la cola huérfana q-emails | 42 | estandar | `feature/F-009-limpieza-q-emails` |
+| F-010 | Easy Auth en el portal sv4 | 43 | critico | `feature/F-010-easy-auth-sv4` |
+| F-022 | Bandeja de portada: el concepto de las líneas del albarán sale vacío porque el JOIN de la línea derivada apunta a la tabla equivocada | 44 | estandar | `feature/F-022-concepto-lineas-bandeja` |
+| F-044 | Cache de prompts en las llamadas a Claude: hoy el prompt de sistema entero se reenvia y se paga completo en cada albaran | 45 | estandar |  |
+| F-041 | Arnes: el veredicto de un mutante no puede depender de que la suite recogiera tests | 111 | critico | `feature/F-041-veredicto-honesto-del-mutante` |
+| F-042 | Arnes: segunda opinion de review con un modelo de otra familia (Codex/OpenAI) | 111 | estandar | `feature/F-042-segunda-opinion-otro-modelo` |
 
 ## Terminadas
 
@@ -129,7 +145,7 @@ SPEC (2026-10-19, specs/F-083-comparar-modelos/, anexo de inventario y precios c
 
 ### F-084 · El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None»)
 
-estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
+estado **en curso** · prioridad 2 · rigor `critico` · SDD sí
 
 ORIGEN: pruebas rápidas de modelos del 2026-10-19 (progress/evals_prueba-{luna,sol,argon}.md, fuera de git) y pasada de F-075: IA3, IA4 y E2E salen idénticos caso a caso con cualquier modelo; en IA3, 126 de 136 fallos (15 casos) y 388 de 408 (59 casos, F-075) son «obtenido None»: la valoración del banco no produce líneas valoradas salvo FER-001/FER-002. Así el banco no mide el modelo de valoración.
 
@@ -295,6 +311,8 @@ ORIGEN: petición del humano, 2026-10-21. CAMBIO: (1) todo lo que hoy es «aprob
 
 estado **pendiente** · prioridad 13 · rigor `estandar` · SDD sí
 
+EVIDENCIA DE USUARIO (Óscar Domingo, obra 0692, 2026-10-22): «En el momento que apruebas un albarán y dices volver a la bandeja (conservando los filtros) te quita los filtros de la obra en la que estás y es un coñazo estar todo el rato filtrando por obra, luego proveedor o volver a ordenarlos». Incluye la ORDENACIÓN entre lo que se conserva y el camino aprobar → «volver a la bandeja».
+
 ORIGEN: petición del humano, 2026-10-21. CAMBIO: (1) en los filtros de la ventana principal (bandeja de sv4) se pueden elegir VARIAS obras a la vez (multiobra). (2) Los filtros persisten: si el usuario entra en un albarán y vuelve, va adelante/atrás en el navegador o recarga la página, la bandeja conserva TODOS los filtros activos (obra/s, estado, revisión, paginación, búsqueda...). Palabras del humano: «no puede ser que entre en mi obra vea la página filtrada y si recargo o entro en un albarán y vuelvo a la página general me desaparezca el filtro (vale para todos los filtros)». A DECIDIR EN LA SPEC: filtros en la URL (query string, que sobrevive a recargar y al historial) y/o en almacenamiento local del navegador; qué pasa con «Anterior/Siguiente» de la ficha (deben respetar el filtro). RELACIONADAS: F-089 (vista obra = bandeja filtrada), F-067 (limpieza de la ficha).
 
 ### F-089 · Vista Obra con el formato Ruesma (como en partes): entrar en una obra muestra la bandeja general filtrada por esa obra
@@ -313,6 +331,8 @@ ORIGEN: petición del humano, 2026-10-21: «oscurecer y aumentar contraste va a 
 
 estado **pendiente** · prioridad 13 · rigor `critico` · SDD sí
 
+EVIDENCIA DE USUARIO (Óscar Domingo, obra 0692, 2026-10-22): en los albaranes de CECOIS «no me pone la forma de pago, solo me deja elegir pagaré 120 y no coge la del contrato o contrato Sigrid» (en BBDD forma_pago = «Reposicion pagare 120 dias», leída del papel).
+
 ORIGEN: petición del humano, 2026-10-22: «apunta feature para que forma de pago salga de contrato». HOY: forma_pago es un campo de cabecera que extrae IA1/IA2 del papel (casi nunca viene: en el ground truth de IA1 está a NO_COMPARAR en los 59 casos), sv3 lo persiste en el merge, el front lo enseña como texto libre editable con «Guardar» y sv9 NO lo manda a Sigrid en el alta. A DECIDIR EN LA SPEC: (1) de dónde sale la forma de pago del contrato en Sigrid (en sigrid_tablas.md no aparece un campo forpag en ctr; puede estar en el proveedor, en otra tabla del contrato o solo en el documento del contrato, MD/PDF), consultado SOLO vía sigrid-api y en lectura; (2) precedencia: contrato > leído, o contrato solo si no se leyó nada, y qué pasa si discrepan (aviso de revisión o no); (3) sin contrato, qué queda (lo leído, o la del proveedor); (4) si el alta de sv9 debe enviarla a Sigrid y en qué campo (coordinar con la sesión sigrid-api si el endpoint no la admite: contrato-sigrid-api-consumos); (5) cómo se ve en la ficha (origen del dato). RELACIONADAS: enriquecimiento de contrato de sv3, F-087 (Aprobar/Registrar).
 
 ### F-092 · Gestión de almacén: crear la gestión del almacén (acopios) de las obras
@@ -325,13 +345,35 @@ ORIGEN: petición del humano, 2026-10-22: «crear gestión de almacén». HOY: u
 
 estado **pendiente** · prioridad 13 · rigor `critico` · SDD sí
 
+MÁS CASOS (2026-10-22): ARIDOS ANFERSA obra 0692 (merge d550baa3, papel amarillo desvaído): IA1 e IA2 leen 2025-10-02 por 2026-10-02; sv9 lo frenó con fecha_no_plausible (la guarda funciona). Óscar Domingo: «este albarán no me lee bien la fecha – obra 0692». El formato español dd/mm/aa del papel es el de referencia.
+
 ORIGEN: petición del humano, 2026-10-22 («añade el de fecha, que falla mucho»), tras las pruebas en real de F-083. MEDIDO: T14 de IA1 de F-083 (8 modelos × 57 casos): la fecha falla en 18 casos en al menos un modelo; en FER-001, FER-002 y RES-019 fallan los 8 y cada modelo da una fecha distinta. En producción (2026-10-22): FER-002 (FEYMACO 2137569) 04-02-2026 frente a 01-06-2026; FER-001 (FEYMACO 2139643) sin fecha (IA1 e IA2 null; el humano la puso a mano); RES-019 (Cubas 030366) 07-08-2025 frente a 28-07-2025. PATRONES: (1) año con el dígito final mal leído (2020/2006/2018 por 2026); (2) mes cambiado en fechas manuscritas de las fotos de Cubas (07 por 01/02, 08 por 07): RES-010..RES-019; (3) en FEYMACO (impresión matricial) la fecha no se encuentra o se toma otra del papel. A DECIDIR EN LA SPEC: qué dice el prompt de IA1/IA2 sobre qué fecha es la del albarán y el formato español dd/mm/aa; comprobaciones de verosimilitud deterministas (no posterior a la recepción del correo, no anterior a un límite razonable ni al inicio de la obra, dentro de la vigencia del contrato: ya existe el aviso fecha_albaran_fuera_de_rango) y qué hacer si falla (aviso de revisión, nunca inventar); si una fecha inverosímil se deja vacía a revisión. Medir con el banco (IA1, fecha) antes y después; F-090 (contraste) puede ayudar en FEYMACO. RELACIONADAS: F-094 (fecha en la ficha), F-090, F-083.
 
-### F-094 · Fecha de la cabecera en formato español (dd/mm/aaaa) con selector de fecha y entrada por teclado, guardada siempre canónica
+### F-094 · Formato español en la ficha: fecha dd/mm/aaaa con selector y teclado (guardada canónica) y números con punto de miles
 
 estado **pendiente** · prioridad 13 · rigor `estandar` · SDD sí
 
+AMPLIADA (2026-10-22, Óscar Domingo): «Formato fecha ponerlo en español y no americano» y «No pone el punto de los miles en la cantidad». Aplica a TODAS las fechas y cantidades/importes que enseña el front (ficha y bandeja), con coma decimal; la entrada sigue aceptando teclado.
+
 ORIGEN: petición del humano, 2026-10-22: «para la fecha hay que poner el formato español (dd/mm/aaaa) y que se pueda seleccionar en la cabecera con un pequeño selector de fecha o con teclado». HOY: la fecha de la cabecera de la ficha (sv4, document_detail.html) es texto libre y se guarda tal cual se teclea: en FER-001 (merge ae044452, 2026-10-22) quedó «05/06/2026» mientras el resto se guarda 2026-06-05. A DECIDIR EN LA SPEC: mostrar dd/mm/aaaa; un selector de calendario pequeño y la entrada por teclado (dd/mm/aaaa, aceptando también d/m/aa y separadores habituales) en el mismo campo; validar antes de guardar (fecha inexistente, fuera de rango) con mensaje claro; guardar SIEMPRE en el formato canónico que leen sv3/sv6/sv9 (ISO); qué hacer con las fechas ya guardadas en otro formato (migración o lectura tolerante) y comprobar que sv9 las da de alta bien; si aplica a otras fechas del front (filtros de la bandeja, F-088). RELACIONADAS: F-093 (lectura de la fecha), F-088 (filtros), F-087 (Aprobar/Registrar).
+
+### F-095 · Alta en Sigrid con el precio BRUTO y el % de descuento en su columna, no con el precio neto
+
+estado **pendiente** · prioridad 13 · rigor `critico` · SDD sí
+
+ORIGEN: Óscar Domingo, obra 0692, 2026-10-22: «Albarán con descuento vuelca el precio con el descuento incluido en Sigrid, no vuelca el precio verdadero y la columna del porcentaje descuento vuelca en blanco. Cecois y un albarán de Rondón de palets devueltos». VERIFICADO en albaran_altas_sigrid.peticion_json (modo real): CECOIS A 26018267 (AC26/30447) línea 151,20 −7 % enviada como precio 140,62 sin descuento; CECOIS A 26017765 (AC26/30434) 26,796 −7 % → 24,92; RONDÓN MAC977620 (AC26/30472) devolución de palets 18,00 −10 % → 16,20. El importe total en Sigrid es correcto (neto), pero precio y % no. CAUSA: el payload de sv9 a sigrid/albaran(-directo) lleva solo `precio` (neto) y ningún campo de descuento. A DECIDIR EN LA SPEC: si el endpoint de sigrid-api admite el % de descuento por línea (campo dto de las líneas del albarán en Sigrid); si no, se propone y coordina con la sesión sigrid-api (albaranes solo edita lo que consume); enviar precio bruto + dto y comprobar que Sigrid recalcula el mismo neto (redondeo); vinculadas a contrato (¿el dto es el del contrato o el del albarán?); qué hacer con las altas ya grabadas con precio neto (listarlas; corregirlas a mano o no). RELACIONADAS: F-053 (alta), F-087 (Registrar), F-019 (precio del albarán manda).
+
+### F-096 · Ficha: guardar una línea no debe deshacer las partidas cambiadas y aún sin guardar en las demás (vuelven a almacén)
+
+estado **pendiente** · prioridad 13 · rigor `estandar` · SDD sí
+
+ORIGEN: Óscar Domingo, obra 0692, 2026-10-22: «Cuando cambias las partidas en el albarán, si las cambias en todas y luego le das a guardar una a una te guarda la primera que des y el resto vuelve a almacén la partida. Tienes que darle a guardar todas para que no se cambien». Es decir: el guardado de UNA línea refresca la tabla y pierde las ediciones pendientes del resto. A DECIDIR EN LA SPEC (reproducir primero en local con Chrome): guardar una línea solo envía y refresca esa línea, conservando lo editado en las demás; o avisar de cambios sin guardar antes de refrescar; tests del flujo «editar N, guardar 1». RELACIONADAS: F-065 (guardados separados, guardar = bloquear la línea), F-058 (revalorar no pierde partidas), F-087.
+
+### F-097 · Proveedor no identificado cuando el papel trae el CIF del transportista o solo el nombre comercial (Anfersa)
+
+estado **pendiente** · prioridad 13 · rigor `critico` · SDD sí
+
+ORIGEN: Óscar Domingo, obra 0692, 2026-10-22: «Albarán sin encontrar proveedor: es un transportista externo y por eso no reconoce el CIF. No reconoce el nombre de Anfersa en el albarán». VERIFICADO: merge 2d21322b (correo del escáner 2026-10-21, página 1 de 14, nº 1790930508): IA1 e IA2 devuelven proveedor y CIF vacíos ⇒ contratos sin_datos y sin valorar. El mismo albarán reenviado el 22-10 (474d045d): la IA leyó «Anfersa» sin CIF y sv3 casó por nombre con ARIDOS ANFERSA, S.L (F-073) y su contrato CTSU26/0161: cuando el nombre comercial se lee, la cadena funciona. A DECIDIR EN LA SPEC: el prompt de IA1/IA2 distingue emisor/proveedor de transportista y del cliente (Ruesma, F-063/F-064) y lee el nombre comercial o el logotipo aunque no haya razón social; si el CIF leído no es de un proveedor con contrato en la obra (o es de un transportista), sv3 busca por nombre como hace F-063 con el CIF de Ruesma; medir con el banco. RELACIONADAS: F-062, F-063, F-064 (blocked), F-073, F-090 (el papel de Anfersa es amarillo desvaído).
 
 ### F-050 · Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes
 
@@ -635,6 +677,8 @@ Re-apuntado determinista de incrementos al recurso del contrato en la partida de
 ### F-005 · Tanda 4a — Tipología bombeo
 
 estado **spec lista** · prioridad 36 · rigor `estandar` · SDD sí · rama `feature/F-005-bombeo`
+
+PETICIÓN DEL HUMANO (2026-10-22): «hay que crear bombeo de hormigón (Pumping es el proveedor típico)». La spec ya existe (spec_ready): revisarla contra los albaranes actuales de PUMPING TEAM antes de implementar; hoy el banco no tiene ningún caso BOM-.
 
 Valoración por rendimiento mínimo contractual (caso PUMPING TEAM): m³ a facturar = horas de bombeo × rendimiento mínimo del contrato (caso real: 10,5 h × 20 m³/h = 210 m³ aunque se bombeara menos). La línea de horas NO se factura aparte (embebida en el mínimo); el desplazamiento sí. Requiere prompt de familia nuevo y leer el rendimiento del contrato. Toca sv2 (contexto_linea), sv5 (prompt) y sv6 (reglas).
 
