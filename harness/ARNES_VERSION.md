@@ -33,6 +33,12 @@ el caso que documenta la nota de abajo.
 > del arnes sigue en la 1.7.2: faltan la 1.7.3 a la 1.7.15, y por eso
 > `harness/VERSION` no cambia.
 
+> **BACKLOG.md con una tabla por estado: el `backlog.py` de la 1.7.16 (2026-10-22).**
+> Por petición del humano («pon las que tienen spec hecha, en curso, bloqueadas en
+> diferentes tablas») se copiaron tal cual de `arnes-base` `harness/backlog.py` y
+> `tests/test_backlog_md.py`. Mejora ya genérica: no hay nada que portar. El resto
+> del arnés sigue como dice la nota anterior.
+
 > **AVISO de la 1.6.3: hay informes de mutacion que pueden no valer.**
 > Hasta este parche la campania lanzaba la suite dejando escribir `__pycache__`,
 > asi que un `.pyc` compilado desde el codigo MUTADO sobrevivia a la
