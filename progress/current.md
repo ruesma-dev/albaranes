@@ -3,8 +3,9 @@
 
 **F-084 · `in_progress` (2026-10-22): implementer en curso** — el banco de evals valora de verdad. Spec en `specs/F-084-banco-valoracion/` (PARADA 1 resuelta el 2026-10-20, commit `4c69746`). Rama `feature/F-084-banco-valoracion`, worktree `../albaranes-F-084`, `dev` (`ac34ad8`, con F-083 y F-085) fusionado. Rigor `critico`, `servicios = evals`: no se toca ningún servicio. Informe en curso: `progress/impl_F-084.md`.
 
-- Hechas T1–T5 (commits locales). Tarea en curso: T6.
-- Decisiones y desviaciones: se anotan aquí y en el informe.
+- Hechas T1–T10 (commits locales; T10 también en `azure-apps` `a6bc26a`, sin push). En curso: T11 y T15. T12 y T14 son MANUAL del humano (comandos en `progress/impl_F-084.md`); T13 espera a T12.
+- **Desviación D1 (R20, R28, T14; instrucción del líder):** el proveedor y el modelo por defecto de IA3/IA4 no son `claude` ni `claude-opus-4-8` sino los de producción tras F-085, leídos de la referencia de IA3 de `evals/precios_modelos.json` (la que R3 de F-083 ata a `infra/create_capps.ps1`): hoy `openai` / `gpt-6.1-sol`. `IA3_PROVIDER` y la variable de modelo del proveedor siguen mandando. La línea base de T14 se lanza con `gpt-6.1-sol`. Cumple P6 = (a) («proveedor de producción por defecto»); solo cambia el literal que la spec copió de antes de F-085.
+- **Desviación D2 (R18 frente a tests de otras features):** dos tests de F-083 comparaban el determinista con el comparador en FER-001/GEN-001/HOR-005, que hoy no tienen líneas de contrato y R18 deja OMITIDO; ahora usan RES-001/RES-004/RES-006, que sí las tienen (misma intención). El doble de `construir_contexto` de un test de F-048 acepta los argumentos nuevos (`**_`). Ninguna expectativa cambia.
 
 **F-085 · `blocked` (2026-10-21): review APPROVED (pasada 2), fusionada en `dev`; implementación hecha (T1–T5, T2b, T8, T9); T0, T10 y T11 son MANUAL del humano; T6, T7 y T12 FUERA → F-086** — modelos de producción por fase. Spec en `specs/F-085-modelos-produccion/` (corregida por O3 de la review de F-083). Rama `feature/F-085-modelos-produccion`, worktree `../albaranes-F-085` (*junction* `.venv` de sv4: quitarla con `cmd /c rmdir` antes de `git worktree remove`), `dev` (`17ccef7`) fusionado. Rigor `critico`. Informe: `progress/impl_F-085.md`; mutación: `progress/mutacion_F-085.md`; `azure-apps` `0416ce3` sin push.
 
