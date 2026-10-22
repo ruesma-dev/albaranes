@@ -499,3 +499,12 @@ def test_f084_r20_sin_modelo_en_el_trabajo_se_usa_el_de_la_fabrica(tmp_path):
     )
 
     assert vista["salida"]["modelo"] == "sin-modelo"
+
+
+# --- T15 · supervivientes de la mutación ---------------------------------------
+
+
+def test_f084_t15_un_hueco_en_la_lista_de_descuentos_no_cuenta_como_otro():
+    linea = lineas_albaran_de(_inputs([_linea(descuentos=[None, "40"])]))[0]
+
+    assert linea["descuento_albaran"] == 40.0

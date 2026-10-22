@@ -328,7 +328,7 @@ def _lineas_de_produccion(datos: dict):  # pragma: no cover - subproceso
             codigo_partida_albaran=linea.get("codigo_partida_albaran"),
             # En producción es el JSON que sv3 guardó en el merge.
             contexto_linea_json=(
-                json.dumps(linea["contexto_linea"], ensure_ascii=False)
+                json.dumps(linea["contexto_linea"])
                 if linea.get("contexto_linea")
                 else None
             ),

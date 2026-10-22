@@ -213,21 +213,29 @@ def _sql_de_sv5():
     return _SQL_CONTRATO_HEADER
 
 
-def _sesion_real(entorno: dict):  # pragma: no cover - BBDD real, solo en el subproceso
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import Session
+def _sesion_real(entorno: dict, crear=None, abrir=None):
+    """La sesión de solo lectura de BBDD. No conecta hasta la primera consulta.
 
+    `crear` y `abrir` son costuras de test (por defecto, `create_engine` y
+    `Session` de SQLAlchemy).
+    """
+    if crear is None or abrir is None:  # pragma: no cover - las reales
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import Session
+
+        crear, abrir = crear or create_engine, abrir or Session
     url, argumentos = conexion_de_solo_lectura(entorno)
-    motor = create_engine(url, future=True, pool_pre_ping=True, connect_args=argumentos)
-    return Session(motor)
+    return abrir(crear(url, connect_args=argumentos))
 
 
-def _descargador_real(entorno: dict):  # pragma: no cover - SharePoint real
-    from infrastructure.storage.sharepoint_contrato_pdf_downloader import (
-        SharePointContratoPdfDownloader,
-    )
+def _descargador_real(entorno: dict, clase=None):
+    """El descargador de sv5 con las `SHAREPOINT_*` del entorno; `clase`, costura de test."""
+    if clase is None:  # pragma: no cover - el real, solo con sv5 en sys.path
+        from infrastructure.storage.sharepoint_contrato_pdf_downloader import (
+            SharePointContratoPdfDownloader as clase,
+        )
 
-    return SharePointContratoPdfDownloader(
+    return clase(
         graph_key=entorno["GRAPH_KEY"],
         timeout_s=int(entorno.get("HTTP_TIMEOUT_S") or 60),
         mode=(entorno.get("SHAREPOINT_MODE") or MODO_POR_DEFECTO).strip(),

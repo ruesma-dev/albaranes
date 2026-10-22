@@ -9,6 +9,7 @@ cabecera del contrato). Sin red ni BBDD (R25): sigrid-api con
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 from pathlib import Path
 
@@ -876,3 +877,306 @@ def test_f084_r34_el_subproceso_recibe_el_entorno_por_env_y_no_por_stdin(monkeyp
     assert vistos["env"]["PG_PASSWORD"] == "secreto-de-prueba"
     assert "secreto" not in vistos["input"]
     assert os.environ.get("PG_PASSWORD") != "secreto-de-prueba"
+
+
+# --- T15 · supervivientes de la mutación (LectorSigrid y control de R10) -------
+
+
+class _Respuestas:
+    """sigrid-api que responde siempre lo mismo, y cuenta las peticiones."""
+
+    def __init__(self, estado: int, cuerpo=None):
+        self.estado, self.cuerpo, self.peticiones = estado, cuerpo, 0
+        self.transporte = httpx.MockTransport(self._responder)
+
+    def _responder(self, peticion):
+        self.peticiones += 1
+        return httpx.Response(self.estado, json=self.cuerpo if self.cuerpo is not None else {"ok": False})
+
+
+def _lector(respuestas: _Respuestas, **opciones) -> contratos.LectorSigrid:
+    return contratos.LectorSigrid(
+        base_url="https://sigrid.ejemplo.invalid", clave="k", database="d",
+        espera_base_s=0, transport=respuestas.transporte, **opciones,
+    )
+
+
+def test_f084_t15_un_5xx_se_reintenta_tres_veces_por_defecto():
+    respuestas = _Respuestas(500)
+
+    with pytest.raises(contratos.ErrorContrato, match=r"tras 3 intentos \(HTTP 500\)"):
+        _lector(respuestas).lineas("C/1")
+    assert respuestas.peticiones == contratos.INTENTOS_POR_DEFECTO == 3
+
+
+def test_f084_t15_un_4xx_no_se_reintenta():
+    respuestas = _Respuestas(404)
+
+    with pytest.raises(contratos.ErrorContrato, match="HTTP 404"):
+        _lector(respuestas).lineas("C/1")
+    assert respuestas.peticiones == 1
+
+
+def test_f084_t15_con_cero_intentos_se_pide_una_vez():
+    respuestas = _Respuestas(503)
+
+    with pytest.raises(contratos.ErrorContrato, match="tras 1 intentos"):
+        _lector(respuestas, intentos=0).lineas("C/1")
+    assert respuestas.peticiones == 1
+
+
+def test_f084_t15_la_espera_entre_reintentos_tiene_techo_de_10_s():
+    esperas = []
+    respuestas = _Respuestas(502)
+    lector = contratos.LectorSigrid(
+        base_url="https://x.invalid", clave="k", database="d", espera_base_s=100,
+        transport=respuestas.transporte, dormir=esperas.append,
+    )
+
+    with pytest.raises(contratos.ErrorContrato):
+        lector.lineas("C/1")
+    assert esperas == [10, 10]
+
+
+@pytest.mark.parametrize("cuerpo", [{"ok": False, "rows": []}, {"rows": []}, ["no", "es", "objeto"]])
+def test_f084_t15_una_respuesta_sin_ok_true_no_se_usa(cuerpo):
+    with pytest.raises(contratos.ErrorContrato, match="ok=true"):
+        _lector(_Respuestas(200, cuerpo)).lineas("C/1")
+
+
+def test_f084_t15_el_control_de_precios_compara_a_cuatro_decimales():
+    ia3 = _ia3((1, "contrato_db", 0.647))
+
+    assert contratos.precios_presentes(ia3, [{"precio_unitario": 0.64704}]) == (1, 1)
+    assert contratos.precios_presentes(ia3, [{"precio_unitario": 0.6475}]) == (0, 1)
+
+
+def test_f084_t15_una_importacion_recien_preparada_no_ha_cambiado_nada():
+    importacion = contratos.preparar_lineas({}, {}, {}, None, dt.date(2026, 10, 22))
+
+    assert contratos.informe_lineas(importacion, "t")[3] == (
+        "- Resultado: sin cambios: el libro no se ha guardado"
+    )
+
+
+def test_f084_t15_sin_cambios_no_hay_copia_ni_escritura(tmp_path, constructor_gt, monkeypatch):
+    ground_truth, fixtures = _escenario(tmp_path, constructor_gt)
+    _lanzar(ground_truth, fixtures, tmp_path / "i.md", _Sigrid())
+    copias = []
+    monkeypatch.setattr(escritura, "copia_de_seguridad", lambda ruta: copias.append(ruta))
+
+    _lanzar(ground_truth, fixtures, tmp_path / "i.md", _Sigrid())
+
+    assert copias == []
+    assert "sin cambios" in (tmp_path / "i.md").read_text(encoding="utf-8")
+
+
+def test_f084_t15_la_columna_linea_sigrid_se_anade_una_sola_vez(tmp_path, constructor_gt):
+    libro = constructor_gt(tmp_path / "gt") / _INPUTS
+
+    assert contratos.asegurar_columna(libro, "CONTRATO_LINEAS", "linea_sigrid") is True
+    assert contratos.asegurar_columna(libro, "CONTRATO_LINEAS", "linea_sigrid") is False
+    libro_abierto = openpyxl.load_workbook(libro)
+    fila = [celda.value for celda in libro_abierto["CONTRATO_LINEAS"][2]]
+    libro_abierto.close()
+    assert fila == [
+        "caso_id", "codigo_producto", "descripcion_recurso", "unidad",
+        "precio_unitario", "codigo_partida", "comentario", "linea_sigrid",
+    ]
+
+
+
+
+def test_f084_t15_una_seccion_repetida_a_mano_no_rompe_el_informe(tmp_path):
+    informe = tmp_path / "informe.md"
+    seccion = "<!-- seccion:lineas -->\nvieja\n<!-- /seccion:lineas -->"
+    informe.write_text(f"# t\n\n{seccion}\n\n{seccion}\n", encoding="utf-8")
+
+    contratos.escribir_seccion(informe, "lineas", ["nueva"])
+
+    texto = informe.read_text(encoding="utf-8")
+    assert texto.startswith("# t\n\n<!-- seccion:lineas -->\nnueva\n<!-- /seccion:lineas -->")
+
+
+def test_f084_t15_una_seccion_sin_cierre_no_se_toca_y_se_anade_otra(tmp_path):
+    informe = tmp_path / "informe.md"
+    informe.write_text("# t\n\n<!-- seccion:lineas -->\nrota\n", encoding="utf-8")
+
+    contratos.escribir_seccion(informe, "lineas", ["nueva"])
+
+    texto = informe.read_text(encoding="utf-8")
+    assert "rota" in texto and texto.rstrip().endswith("nueva\n<!-- /seccion:lineas -->")
+
+
+def test_f084_t15_el_informe_crea_sus_carpetas(tmp_path):
+    informe = tmp_path / "no" / "existe" / "informe.md"
+
+    contratos.escribir_seccion(informe, "lineas", ["x"])
+
+    assert informe.read_text(encoding="utf-8").startswith("# Importación de contratos")
+
+
+def test_f084_t15_la_cache_y_el_indice_crean_sus_carpetas(tmp_path):
+    cache, indice = tmp_path / "a" / "cache", tmp_path / "b" / "c" / "_indice.json"
+
+    contratos.guardar_documentos([_resultado("X/1", "md", b"# x")], cache, indice, "t")
+
+    assert (cache / "X_1.md").read_bytes() == b"# x"
+    assert json.loads(indice.read_text(encoding="utf-8"))["X/1"]["tipo"] == "md"
+
+
+def test_f084_t15_el_indice_se_escribe_legible_en_utf8(tmp_path):
+    resultado = {**_resultado("X/1", "md", b"# x"), "cabecera": {"nombre_obra": "ACCESO A PEÑÍSCOLA"}}
+    indice = tmp_path / "_indice.json"
+
+    contratos.guardar_documentos([resultado], tmp_path / "cache", indice, "t")
+
+    assert '"nombre_obra": "ACCESO A PEÑÍSCOLA"' in indice.read_text(encoding="utf-8")
+
+
+def test_f084_t15_el_indice_tiene_forma_canonica_y_estable(tmp_path):
+    """Claves ordenadas e indentación 2, como los fixtures: un diff limpio en git."""
+    indice = tmp_path / "_indice.json"
+    contratos.guardar_documentos(
+        [_resultado("B/2", "md", b"# b"), _resultado("A/1", "ninguno", None, "sin ruta")],
+        tmp_path / "cache", indice, "t",
+    )
+
+    texto = indice.read_text(encoding="utf-8")
+    canonico = json.dumps(json.loads(texto), ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    assert texto == canonico
+    assert texto.index('"A/1"') < texto.index('"B/2"')
+
+
+def test_f084_t15_sin_subcomando_es_un_error_de_uso():
+    with pytest.raises(SystemExit) as salida:
+        contratos.main([], entorno={})
+
+    assert salida.value.code == 2
+
+
+_SIN_PDF = {**_FILA, "pdf_sharepoint_relative_path": None}
+
+
+def test_f084_t15_md_vacio_y_sin_pdf_dice_por_que():
+    documento = _documento(fila=_SIN_PDF, md={_FILA["md_sharepoint_relative_path"]: " "})
+
+    assert (documento["tipo"], documento["motivo"]) == ("ninguno", "el MD llegó vacío")
+
+
+def test_f084_t15_md_que_falla_y_sin_pdf_dice_por_que():
+    documento = _documento(fila=_SIN_PDF, md={_FILA["md_sharepoint_relative_path"]: OSError("x")})
+
+    assert documento["motivo"] == "falló la descarga del MD (OSError)"
+
+
+def test_f084_t15_el_tope_del_pdf_es_en_megas():
+    pdf = b"%" * 2048
+    documento = _documento(fila={**_FILA, "md_sharepoint_relative_path": None},
+                           pdf={_FILA["pdf_sharepoint_relative_path"]: pdf}, max_pdf_mb=1)
+
+    assert documento["tipo"] == "pdf"
+
+
+@pytest.mark.parametrize(("trabajo", "tipo"), [({}, "pdf"), ({"max_pdf_mb": 1}, "ninguno")])
+def test_f084_t15_sin_tope_en_el_trabajo_vale_el_de_sv5(trabajo, tipo):
+    fila = {**_FILA, "md_sharepoint_relative_path": None}
+    descargador = _Descargador(pdf={_FILA["pdf_sharepoint_relative_path"]: b"x" * (2 * 1024 * 1024)})
+
+    salida = sv5_documentos.ejecutar_trabajo(
+        {"contratos": ["CTSU24/0454"], **trabajo}, sesion=_Sesion({"CTSU24/0454": fila}),
+        descargador=descargador, sql=_SQL_SV5,
+    )
+
+    assert salida["resultados"][0]["tipo"] == tipo
+
+
+def test_f084_t15_un_pdf_de_justo_max_pdf_mb_entra_como_en_sv5():
+    documento = _documento(fila={**_FILA, "md_sharepoint_relative_path": None},
+                           pdf={_FILA["pdf_sharepoint_relative_path"]: b"x" * (1024 * 1024)},
+                           max_pdf_mb=1)
+
+    assert documento["tipo"] == "pdf"
+
+
+def test_f084_t15_la_sesion_real_es_de_solo_lectura_sin_conectar():
+    pedidos = []
+
+    def crear(url, **opciones):
+        pedidos.append((url, opciones))
+        return "motor"
+
+    sesion = sv5_documentos._sesion_real(_ENTORNO_DOCS, crear=crear, abrir=lambda motor: ("sesión", motor))
+
+    assert sesion == ("sesión", "motor")
+    assert pedidos == [(
+        "postgresql+psycopg://lector:secreto-de-prueba@pg.ejemplo.invalid:5432/albaranes",
+        {"connect_args": {"options": "-c default_transaction_read_only=on"}},
+    )]
+
+
+@pytest.mark.parametrize(
+    ("extra", "esperado"),
+    [
+        ({}, {"timeout_s": 60, "mode": "drive_id", "drive_name": "Documentos compartidos"}),
+        ({"HTTP_TIMEOUT_S": "15", "SHAREPOINT_MODE": " site_path ", "SHAREPOINT_DRIVE_NAME": "Docs",
+          "SHAREPOINT_HOSTNAME": "h", "SHAREPOINT_SITE_PATH": "/s"},
+         {"timeout_s": 15, "mode": "site_path", "drive_name": "Docs", "hostname": "h", "site_path": "/s"}),
+    ],
+)
+def test_f084_t15_el_descargador_real_se_monta_como_en_sv5(extra, esperado):
+    entorno = {k: v for k, v in _ENTORNO_DOCS.items() if k != "SHAREPOINT_MODE"} | extra
+    vistos = {}
+
+    sv5_documentos._descargador_real(entorno, clase=lambda **opciones: vistos.update(opciones))
+
+    assert vistos["graph_key"] == "{}" and vistos["drive_id"] == "drive-de-prueba"
+    assert {clave: vistos[clave] for clave in esperado} == esperado
+
+
+@pytest.mark.parametrize("interprete", [None, "otro-python"])
+def test_f084_t15_el_subproceso_se_lanza_como_los_demas_adaptadores(interprete, monkeypatch):
+    llamadas = []
+
+    def falso_run(argumentos, **opciones):
+        llamadas.append((argumentos, opciones))
+        salida = "<<<EVALS-JSON-INICIO>>>\n{\"resultados\": []}\n<<<EVALS-JSON-FIN>>>\n"
+        return subprocess.CompletedProcess(argumentos, 0, stdout=salida, stderr="")
+
+    monkeypatch.setattr(sv5_documentos.subprocess, "run", falso_run)
+    sv5_documentos.ejecutar_en_subproceso({"contratos": ["CTÑ/1"]}, {}, interprete=interprete)
+
+    ((argumentos, opciones),) = llamadas
+    assert argumentos == [interprete or sys.executable, "-m", "evals.procesos.sv5_documentos"]
+    assert opciones["capture_output"] is True and opciones["text"] is True
+    assert opciones["encoding"] == "utf-8" and opciones["check"] is False
+    assert opciones["cwd"] == str(sv5_documentos.RAIZ_REPO)
+    assert opciones["input"] == '{"contratos": ["CTÑ/1"]}'
+
+
+def test_f084_t15_si_el_subproceso_falla_se_dice_con_su_codigo(monkeypatch):
+    monkeypatch.setattr(
+        sv5_documentos.subprocess, "run",
+        lambda a, **o: subprocess.CompletedProcess(a, 3, stdout="", stderr="  detalle  "),
+    )
+
+    with pytest.raises(RuntimeError, match="falló con código 3:\ndetalle$"):
+        sv5_documentos.ejecutar_en_subproceso({}, {})
+
+
+def _entorno_subproceso() -> dict:
+    """El entorno del test más credenciales falsas: monta sesión y descargador sin conectar."""
+    return {**os.environ, **_ENTORNO_DOCS}
+
+
+def test_f084_t15_el_subproceso_real_sin_contratos_sale_bien_y_sin_conectar():
+    assert sv5_documentos.ejecutar_en_subproceso({"contratos": []}, _entorno_subproceso()) == {
+        "resultados": []
+    }
+
+
+def test_f084_t15_el_subproceso_real_con_un_trabajo_roto_sale_con_codigo_1():
+    with pytest.raises(RuntimeError, match="código 1"):
+        sv5_documentos.ejecutar_en_subproceso(
+            {"contratos": [], "max_pdf_mb": "no-es-un-numero"}, _entorno_subproceso()
+        )

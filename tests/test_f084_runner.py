@@ -313,8 +313,8 @@ def test_f084_r20_el_trabajo_de_sv5_lleva_proveedor_y_modelo(tmp_path, subproces
 
 # --- T9 · modelo, documento y emparejamiento en el informe (R17, R21, R36) -----
 
-from evals import informe  # noqa: E402
-from evals.modelos import ResultadoCaso, ResultadoFase, ResultadoPasada  # noqa: E402
+from evals import informe
+from evals.modelos import ResultadoCaso, ResultadoFase, ResultadoPasada
 
 
 def _bloques(texto: str) -> dict[str, str]:

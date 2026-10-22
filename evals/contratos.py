@@ -36,6 +36,7 @@ import logging
 import os
 import subprocess
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -271,6 +272,7 @@ class LectorSigrid:
         intentos: int = INTENTOS_POR_DEFECTO,
         espera_base_s: float = 1.0,
         transport: httpx.BaseTransport | None = None,
+        dormir=time.sleep,
     ) -> None:
         self._url = base_url.strip().rstrip("/") + RUTA_SQL_READ
         self._clave = clave.strip()
@@ -279,6 +281,7 @@ class LectorSigrid:
         self._intentos = max(1, int(intentos))
         self._espera_base_s = float(espera_base_s)
         self._transport = transport
+        self._dormir = dormir
 
     def __repr__(self) -> str:  # sin la clave
         return f"LectorSigrid(url={self._url!r}, database={self._database!r})"
@@ -356,6 +359,7 @@ class LectorSigrid:
             stop=stop_after_attempt(self._intentos),
             wait=wait_exponential(multiplier=self._espera_base_s, max=10),
             retry=retry_if_exception_type(_TRANSITORIOS),
+            sleep=self._dormir,
             reraise=True,
         )
         try:
