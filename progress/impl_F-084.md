@@ -212,9 +212,9 @@ línea base.
 
 | Evidencia | Valor |
 |---|---|
-| Tests ejecutados (`bash harness/init.sh`) | raíz 1775 passed (326,8 s); sv1 205; sv2 485; sv3 1576; sv4 1774; sv5 96; sv6 473 (+1 skipped); sv9 673; comun 863 (+3 skipped): todo en verde |
+| Tests ejecutados (`bash harness/init.sh` final, `06b55e8`) | raíz 1808 passed (354,4 s); sv1 205; sv2 485; sv3 1576; sv4 1774; sv5 96; sv6 473 (+1 skipped); sv9 673; comun en verde |
 | Tests de F-084 | 170 (contratos 93 · contexto 49 · runner 28) |
-| Cobertura de las líneas cambiadas | `PUERTA COBERTURA: 97.8% de 591 líneas cambiadas cubiertas (578/591, umbral 80%, nivel critico)` |
+| Cobertura de las líneas cambiadas | `PUERTA COBERTURA: 98.5% de 598 líneas cambiadas cubiertas (589/598, umbral 80%, nivel critico)` |
 | Mutación | 2.ª campaña completa (`progress/mutacion_F-084.md`, `d4dbe97`): **198 generados, 194 muertos, 4 supervivientes** (equivalentes, analizados) · remedida del fichero afectado (`progress/mutacion_F-084_sv5_documentos.md`, `3ce021f`): **39 generados, 39 muertos, 0 supervivientes**. 1.ª campaña (195, 45 supervivientes) sustituida: ver «Mutación» |
-| Tiempo de la suite raíz | 326,8 s (dentro de init.sh) |
-| `bash harness/init.sh` | INIT_FINAL |
+| Tiempo de la suite raíz | 354,4 s (dentro de init.sh) |
+| `bash harness/init.sh` | `ENTORNO LISTO. Puedes trabajar.` (exit 0; PUERTA TAMAÑO impl 220/220) |
