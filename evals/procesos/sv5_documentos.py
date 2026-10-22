@@ -219,11 +219,10 @@ def _sesion_real(entorno: dict, crear=None, abrir=None):
     `crear` y `abrir` son costuras de test (por defecto, `create_engine` y
     `Session` de SQLAlchemy).
     """
-    if crear is None or abrir is None:  # pragma: no cover - las reales
-        from sqlalchemy import create_engine
-        from sqlalchemy.orm import Session
-
-        crear, abrir = crear or create_engine, abrir or Session
+    if crear is None:  # pragma: no cover - la real
+        from sqlalchemy import create_engine as crear
+    if abrir is None:  # pragma: no cover - la real
+        from sqlalchemy.orm import Session as abrir
     url, argumentos = conexion_de_solo_lectura(entorno)
     return abrir(crear(url, connect_args=argumentos))
 
@@ -271,7 +270,8 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - subproceso
     """Punto de entrada del subproceso: stdin → fila y documento → stdout."""
     del argv
     canal.blindar_stdout()
-    sys.path.insert(0, str(RAIZ_SV5))
+    # sv5 delante de todo, como en `sv5_modelos`.
+    sys.path = [str(RAIZ_SV5), *sys.path]
     try:
         trabajo = json.loads(sys.stdin.read() or "{}")
         salida = ejecutar_trabajo(trabajo)
