@@ -232,3 +232,288 @@ def test_f084_r10_cuenta_las_lineas_contrato_db_con_su_precio_importado():
 def test_f084_r10_sin_lineas_contrato_db_no_hay_nada_que_controlar():
     assert contratos.precios_presentes(_ia3((1, "albaran", 1)), []) == (0, 0)
     assert contratos.precios_presentes({}, [{"precio_unitario": 1}]) == (0, 0)
+
+
+# --- T4 · LectorSigrid y subcomando `lineas` (R2–R4, R7, R8, R10) ------------
+
+import hashlib  # noqa: E402
+
+import httpx  # noqa: E402
+
+from ruesma_comun.sigrid import MAX_FILAS_POR_PETICION  # noqa: E402
+
+_ENTORNO = {
+    "SIGRID_API_BASE_URL": "https://sigrid.ejemplo.invalid",
+    "SIGRID_API_FUNCTION_KEY": "clave-de-prueba",
+    "SIGRID_API_DATABASE": "ruesma-pruebas",
+}
+
+#: Lo que «devuelve Sigrid» por código: filas, o `"truncada"` / `"500"`.
+_SIGRID = {
+    "CTSU24/0228": [[7, 701, "C9", "CAMBIO CONTENEDOR 9M3", "UD", 150, "CI.03A.7"]],
+    "CTSU25/0317": "truncada",
+    "CTSU24/0518": [
+        [9, 901, "H25", "TORNILLO HORMIGON", "M3", 72.5, "01.02"],
+        [9, 902, "H25", "TORNILLO HORMIGON", "M3", 80, "01.03"],
+    ],
+}
+
+
+class _Sigrid:
+    """sigrid-api de mentira: `httpx.MockTransport` y registro de peticiones."""
+
+    def __init__(self, respuestas=None):
+        self.respuestas = _SIGRID if respuestas is None else respuestas
+        self.peticiones: list[httpx.Request] = []
+        self.transporte = httpx.MockTransport(self._responder)
+
+    def _responder(self, peticion: httpx.Request) -> httpx.Response:
+        self.peticiones.append(peticion)
+        codigo = json.loads(peticion.content)["parameters"][0]
+        filas = self.respuestas.get(codigo, [])
+        if filas == "truncada":
+            return httpx.Response(
+                200, json={"ok": True, "columns": _COLUMNAS, "rows": [], "truncated": True}
+            )
+        if filas == "500":
+            return httpx.Response(500, json={"ok": False})
+        return httpx.Response(
+            200, json={"ok": True, "columns": _COLUMNAS, "rows": filas, "truncated": False}
+        )
+
+
+def _sha(ruta: Path) -> str:
+    return hashlib.sha256(ruta.read_bytes()).hexdigest()
+
+
+def _escenario(tmp_path: Path, constructor_gt) -> tuple[Path, Path]:
+    """Libro INPUTS con un RES escrito a mano y tres casos sin contrato, y sus fixtures."""
+    ground_truth = constructor_gt(
+        tmp_path / "gt",
+        filas={
+            _CASOS: [
+                ["RES-001", "Residuos", "IA3", "manual", "CTSU24/0228", "a mano"],
+                ["RES-008", "Residuos", "IA3", "manual", "CTSU24/0228", "sin contrato"],
+                ["GEN-002", "Generico-Suministros", "IA3", "manual", "CTSU25/0317", "x"],
+                ["HOR-001", "Hormigon", "IA3", "manual", "CTSU24/0518", "x"],
+            ],
+            _LINEAS: [
+                [caso, 1, "LINEA", 1, "UD", None, None, None, None, None]
+                for caso in ("RES-001", "RES-008", "GEN-002", "HOR-001")
+            ],
+            _CONTRATO: [
+                ["RES-001", "C1", "CAMBIO CONTENEDOR 6M3", "UD", 120, "CI.03A.7", "a mano"],
+                ["RES-001", "C2", "LLEVADA CONTENEDOR 6M3", "UD", 120, "CI.03A.7", "SEÑUELO"],
+            ],
+            _CONDICIONES: [["RES-001", "fecha_albaran", "2024-07-03", "a mano"]],
+        },
+    )
+    fixtures = tmp_path / "fixtures"
+    assert conversor.main(["--ground-truth", str(ground_truth), "--fixtures", str(fixtures)]) == 0
+    for fase, caso, tablas in (
+        ("IA1", "HOR-001", {"cabeceras": [{"caso_id": "HOR-001", "fecha": "2025-03-04"}]}),
+        ("IA3", "HOR-001", {"lineas_valoradas": [
+            {"num_linea": 1, "precio_source": "contrato_db", "precio_unitario_final": 72.5},
+            {"num_linea": 2, "precio_source": "contrato_db", "precio_unitario_final": 99},
+        ]}),
+    ):
+        (fixtures / fase).mkdir(parents=True, exist_ok=True)
+        (fixtures / fase / f"{caso}.json").write_text(
+            json.dumps({"caso_id": caso, "tablas": tablas}), encoding="utf-8"
+        )
+    return ground_truth, fixtures
+
+
+def _lanzar(ground_truth, fixtures, informe, sigrid, *extra, entorno=None):
+    return contratos.main(
+        ["lineas", "--ground-truth", str(ground_truth), "--fixtures", str(fixtures),
+         "--informe", str(informe), *extra],
+        entorno=_ENTORNO if entorno is None else entorno,
+        transport=sigrid.transporte,
+    )
+
+
+def _filas(ruta: Path, pestana: str) -> list[list]:
+    libro = openpyxl.load_workbook(ruta)
+    try:
+        return [
+            [c.value for c in fila]
+            for fila in libro[pestana].iter_rows(min_row=3)
+            if any(c.value is not None for c in fila)
+        ]
+    finally:
+        libro.close()
+
+
+def test_f084_r2_una_lectura_por_contrato_solo_de_lectura_y_parametrizada(tmp_path, constructor_gt):
+    ground_truth, fixtures = _escenario(tmp_path, constructor_gt)
+    sigrid = _Sigrid()
+
+    _lanzar(ground_truth, fixtures, tmp_path / "informe.md", sigrid)
+
+    assert len(sigrid.peticiones) == 3
+    for peticion in sigrid.peticiones:
+        cuerpo = json.loads(peticion.content)
+        assert peticion.method == "POST"
+        assert str(peticion.url) == "https://sigrid.ejemplo.invalid/api/sql/read"
+        assert peticion.headers["x-functions-key"] == "clave-de-prueba"
+        assert cuerpo["sql"] == contratos.SQL_LINEAS_CONTRATO
+        assert cuerpo["database"] == "ruesma-pruebas"
+        assert cuerpo["max_rows"] == MAX_FILAS_POR_PETICION
+        assert cuerpo["timeout_seconds"] == 30
+    assert sorted(json.loads(p.content)["parameters"][0] for p in sigrid.peticiones) == [
+        "CTSU24/0228", "CTSU24/0518", "CTSU25/0317",
+    ]
+
+
+def test_f084_r2_la_sql_es_un_select_con_emp_1_y_orden_estable():
+    sql = contratos.SQL_LINEAS_CONTRATO
+    primera = sql.lstrip().split()[0].upper()
+
+    assert primera == "SELECT"
+    assert "con_ctr.cod = ?" in sql and "con_ctr.emp = 1" in sql
+    assert sql.rstrip().endswith("ORDER BY ctr.ide, ctrpro.pos, ctrpro.ide")
+    for prohibida in ("INSERT", "UPDATE", "DELETE", "MERGE", "EXEC", "DROP"):
+        assert prohibida not in sql.upper()
+
+
+def test_f084_r2_el_timeout_sale_de_sigrid_api_timeout_s(tmp_path, constructor_gt):
+    ground_truth, fixtures = _escenario(tmp_path, constructor_gt)
+    sigrid = _Sigrid()
+
+    _lanzar(ground_truth, fixtures, tmp_path / "i.md", sigrid,
+            entorno={**_ENTORNO, "SIGRID_API_TIMEOUT_S": "90"})
+
+    assert {json.loads(p.content)["timeout_seconds"] for p in sigrid.peticiones} == {90}
+
+
+@pytest.mark.parametrize("falta", sorted(_ENTORNO))
+def test_f084_r3_sin_variables_de_sigrid_para_sin_pedir_nada(falta, tmp_path, constructor_gt, capsys):
+    ground_truth, fixtures = _escenario(tmp_path, constructor_gt)
+    antes = _sha(ground_truth / _INPUTS)
+    sigrid = _Sigrid()
+
+    codigo = _lanzar(ground_truth, fixtures, tmp_path / "i.md", sigrid,
+                     entorno={**_ENTORNO, falta: "  "})
+
+    assert codigo == 2
+    assert falta in capsys.readouterr().err
+    assert sigrid.peticiones == []
+    assert _sha(ground_truth / _INPUTS) == antes
+
+
+def test_f084_r4_un_contrato_truncado_falla_solo_y_el_resto_sigue(tmp_path, constructor_gt):
+    ground_truth, fixtures = _escenario(tmp_path, constructor_gt)
+    informe = tmp_path / "informe.md"
+
+    codigo = _lanzar(ground_truth, fixtures, informe, _Sigrid())
+
+    casos = {fila[0] for fila in _filas(ground_truth / _INPUTS, "CONTRATO_LINEAS")}
+    assert codigo == 1
+    assert "GEN-002" not in casos
+    assert {"RES-001", "RES-008", "HOR-001"} <= casos
+    texto = informe.read_text(encoding="utf-8")
+    assert "CTSU25/0317" in texto and "truncada" in texto
+
+
+def test_f084_r4_un_error_http_falla_solo_ese_contrato(tmp_path, constructor_gt):
+    ground_truth, fixtures = _escenario(tmp_path, constructor_gt)
+    informe = tmp_path / "informe.md"
+    sigrid = _Sigrid({**_SIGRID, "CTSU25/0317": "500"})
+
+    assert _lanzar(ground_truth, fixtures, informe, sigrid, "--reintentos", "1") == 1
+    assert "HTTP 500" in informe.read_text(encoding="utf-8")
+
+
+def test_f084_r1_r11_las_lineas_se_escriben_con_linea_sigrid(tmp_path, constructor_gt):
+    ground_truth, fixtures = _escenario(tmp_path, constructor_gt)
+
+    _lanzar(ground_truth, fixtures, tmp_path / "i.md", _Sigrid())
+
+    libro = ground_truth / _INPUTS
+    assert _encabezados(libro, "CONTRATO_LINEAS")[-1] == "linea_sigrid"
+    hor = [fila for fila in _filas(libro, "CONTRATO_LINEAS") if fila[0] == "HOR-001"]
+    assert [(f[1], f[4], f[5], f[7]) for f in hor] == [
+        ("H25", 72.5, "01.02", 901), ("H25", 80, "01.03", 902),
+    ]
+
+
+def test_f084_r6_las_filas_de_los_casos_con_lineas_quedan_identicas(tmp_path, constructor_gt):
+    ground_truth, fixtures = _escenario(tmp_path, constructor_gt)
+    libro = ground_truth / _INPUTS
+    antes_contrato = [f[:7] for f in _filas(libro, "CONTRATO_LINEAS") if f[0] == "RES-001"]
+    antes_condiciones = [f for f in _filas(libro, "CONDICIONES") if f[0] == "RES-001"]
+
+    _lanzar(ground_truth, fixtures, tmp_path / "i.md", _Sigrid())
+
+    despues = [f for f in _filas(libro, "CONTRATO_LINEAS") if f[0] == "RES-001"]
+    assert [f[:7] for f in despues] == antes_contrato
+    assert all(f[7] is None for f in despues)
+    assert [f for f in _filas(libro, "CONDICIONES") if f[0] == "RES-001"] == antes_condiciones
+
+
+def test_f084_r9_la_fecha_de_ia1_entra_en_condiciones(tmp_path, constructor_gt):
+    ground_truth, fixtures = _escenario(tmp_path, constructor_gt)
+
+    _lanzar(ground_truth, fixtures, tmp_path / "i.md", _Sigrid())
+
+    filas = [f[:3] for f in _filas(ground_truth / _INPUTS, "CONDICIONES") if f[0] == "HOR-001"]
+    assert filas == [["HOR-001", "fecha_albaran", "2025-03-04"]]
+
+
+def test_f084_r7_copia_antes_de_escribir_y_sin_cambios_no_se_guarda(tmp_path, constructor_gt):
+    ground_truth, fixtures = _escenario(tmp_path, constructor_gt)
+    libro = ground_truth / _INPUTS
+    copias = ground_truth / escritura.NOMBRE_COPIAS
+
+    _lanzar(ground_truth, fixtures, tmp_path / "i.md", _Sigrid())
+    assert len(list(copias.glob("INPUTS.xlsx.*.xlsx"))) == 1
+    tras_la_primera = _sha(libro)
+
+    _lanzar(ground_truth, fixtures, tmp_path / "i.md", _Sigrid())
+
+    assert _sha(libro) == tras_la_primera
+    assert len(list(copias.glob("INPUTS.xlsx.*.xlsx"))) == 1
+
+
+def test_f084_r8_dry_run_no_toca_el_libro_y_deja_el_informe(tmp_path, constructor_gt):
+    ground_truth, fixtures = _escenario(tmp_path, constructor_gt)
+    libro = ground_truth / _INPUTS
+    antes = _sha(libro)
+    informe = tmp_path / "informe.md"
+
+    _lanzar(ground_truth, fixtures, informe, _Sigrid(), "--dry-run")
+
+    assert _sha(libro) == antes
+    assert not (ground_truth / escritura.NOMBRE_COPIAS).exists()
+    assert "dry-run" in informe.read_text(encoding="utf-8")
+
+
+def test_f084_r10_el_informe_solo_lleva_recuentos_casos_y_num_linea(tmp_path, constructor_gt):
+    ground_truth, fixtures = _escenario(tmp_path, constructor_gt)
+    informe = tmp_path / "informe.md"
+
+    _lanzar(ground_truth, fixtures, informe, _Sigrid())
+
+    texto = informe.read_text(encoding="utf-8")
+    assert "| CTSU24/0518 | 2 | HOR-001 | — |" in texto
+    assert "| HOR-001 | 1 de 2 | 2 |" in texto
+    for dato in ("TORNILLO", "72.5", "72,5", "CONTENEDOR", "01.02"):
+        assert dato not in texto
+
+
+def test_f084_r1_casos_filtra_lo_que_se_importa(tmp_path, constructor_gt):
+    ground_truth, fixtures = _escenario(tmp_path, constructor_gt)
+    sigrid = _Sigrid()
+
+    assert _lanzar(ground_truth, fixtures, tmp_path / "i.md", sigrid, "--casos", "HOR-001") == 0
+    assert [json.loads(p.content)["parameters"][0] for p in sigrid.peticiones] == ["CTSU24/0518"]
+
+
+def test_f084_r1_sin_libro_es_un_error_de_uso(tmp_path, constructor_gt, capsys):
+    _, fixtures = _escenario(tmp_path, constructor_gt)
+
+    codigo = _lanzar(tmp_path / "no-existe", fixtures, tmp_path / "i.md", _Sigrid())
+
+    assert codigo == 2
+    assert "INPUTS.xlsx" in capsys.readouterr().err

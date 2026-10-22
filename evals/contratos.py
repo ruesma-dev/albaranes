@@ -27,7 +27,43 @@ El informe (`progress/import_F-084.md`) lleva recuentos, `caso_id` y
 
 from __future__ import annotations
 
+import argparse
+import datetime as dt
+import json
+import logging
+import os
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+
+import httpx
+from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
+
+from evals.conversor import LIBROS, RUTA_FIXTURES, RUTA_GROUND_TRUTH
 from evals.modelos import NO_COMPARAR
+from evals.revision import escritura
+from evals.procesos.sv2_obra import TIMEOUT_SIGRID, faltan_variables_sigrid
+from ruesma_comun.sigrid import (
+    MAX_FILAS_POR_PETICION,
+    PoliticaTruncado,
+    SigridRespuestaTruncada,
+    comprobar_truncado,
+)
+
+logger = logging.getLogger(__name__)
+
+#: Raíz del repositorio y destino del informe del importador (R10).
+RAIZ_REPO = Path(__file__).resolve().parent.parent
+RUTA_INFORME = RAIZ_REPO / "progress" / "import_F-084.md"
+
+#: El libro y las dos pestañas que toca `lineas`.
+LIBRO_INPUTS = "INPUTS.xlsx"
+PESTANA_CONTRATO = "CONTRATO_LINEAS"
+PESTANA_CONDICIONES = "CONDICIONES"
+COLUMNA_LINEA_SIGRID = "linea_sigrid"
+
+RUTA_SQL_READ = "/api/sql/read"
+INTENTOS_POR_DEFECTO = 3
 
 #: (R2) La consulta de Sigrid, solo lectura y parametrizada por código. Mismas
 #: uniones que `_SQL_HEADER_AND_LINES` de sv3, para que cada columna signifique
@@ -192,3 +228,407 @@ def precios_ausentes(ia3: dict, lineas: list[dict]) -> list:
     """(R10) Los `num_linea` de IA3 `contrato_db` cuyo precio no está en el contrato."""
     importados = {_precio(linea.get("precio_unitario")) for linea in lineas}
     return [numero for numero, precio in _esperadas_de_contrato(ia3) if precio not in importados]
+
+
+# --- Lectura de sigrid-api (R2–R4) --------------------------------------------
+
+
+class ErrorUso(RuntimeError):
+    """Lo pedido no se puede lanzar tal cual: se para antes de leer nada (código 2)."""
+
+
+class _Transitorio(Exception):
+    """5xx de sigrid-api: se reintenta con espera exponencial."""
+
+
+_TRANSITORIOS = (_Transitorio, httpx.TimeoutException, httpx.TransportError)
+
+
+class LectorSigrid:
+    """`POST /api/sql/read` de sigrid-api, solo lectura, un contrato por llamada.
+
+    Sin secretos en el log ni en los errores: ni la clave (cabecera
+    `x-functions-key`) ni el cuerpo de la respuesta. `transport` es la costura
+    de los tests (`httpx.MockTransport`, R25).
+    """
+
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        clave: str,
+        database: str,
+        timeout_s: float = TIMEOUT_SIGRID[1],
+        intentos: int = INTENTOS_POR_DEFECTO,
+        espera_base_s: float = 1.0,
+        transport: httpx.BaseTransport | None = None,
+    ) -> None:
+        self._url = base_url.strip().rstrip("/") + RUTA_SQL_READ
+        self._clave = clave.strip()
+        self._database = database.strip()
+        self._timeout_s = float(timeout_s)
+        self._intentos = max(1, int(intentos))
+        self._espera_base_s = float(espera_base_s)
+        self._transport = transport
+
+    def __repr__(self) -> str:  # sin la clave
+        return f"LectorSigrid(url={self._url!r}, database={self._database!r})"
+
+    @classmethod
+    def desde_entorno(
+        cls,
+        entorno: dict,
+        *,
+        intentos: int = INTENTOS_POR_DEFECTO,
+        transport: httpx.BaseTransport | None = None,
+    ) -> LectorSigrid:
+        """(R3) Con las tres variables de sigrid-api o `ErrorUso` que las nombra."""
+        faltan = faltan_variables_sigrid(entorno)
+        if faltan:
+            raise ErrorUso(
+                "sigrid-api no está configurado: faltan en el entorno "
+                + ", ".join(faltan)
+                + ". No se ha pedido nada ni se ha tocado el libro."
+            )
+        variable, por_defecto = TIMEOUT_SIGRID
+        return cls(
+            base_url=entorno["SIGRID_API_BASE_URL"],
+            clave=entorno["SIGRID_API_FUNCTION_KEY"],
+            database=entorno["SIGRID_API_DATABASE"],
+            timeout_s=float(entorno.get(variable) or por_defecto),
+            intentos=intentos,
+            transport=transport,
+        )
+
+    def lineas(self, codigo: str) -> tuple[list, list]:
+        """(columnas, filas) del contrato; `ErrorContrato` si la lectura falla.
+
+        Una respuesta truncada no se usa nunca (`NO_TOLERA`, R4): un contrato a
+        medias valoraría contra la mitad de sus líneas sin decirlo.
+        """
+        cuerpo = {
+            "database": self._database,
+            "sql": SQL_LINEAS_CONTRATO,
+            "parameters": [codigo],
+            "timeout_seconds": int(self._timeout_s),
+            "max_rows": MAX_FILAS_POR_PETICION,
+        }
+        respuesta = self._post(cuerpo, codigo)
+        if respuesta.status_code != 200:
+            raise ErrorContrato(f"{codigo}: sigrid-api respondió HTTP {respuesta.status_code}")
+        try:
+            datos = respuesta.json()
+        except ValueError as error:
+            raise ErrorContrato(f"{codigo}: la respuesta de sigrid-api no es JSON") from error
+        if not isinstance(datos, dict) or datos.get("ok") is not True:
+            raise ErrorContrato(f"{codigo}: la respuesta de sigrid-api no trae ok=true")
+        try:
+            comprobar_truncado(
+                datos, politica=PoliticaTruncado.NO_TOLERA, etiqueta=codigo, logger=logger
+            )
+        except SigridRespuestaTruncada as error:
+            raise ErrorContrato(
+                f"{codigo}: respuesta truncada de sigrid-api (NO_TOLERA)"
+            ) from error
+        return list(datos.get("columns") or []), list(datos.get("rows") or [])
+
+    def _post(self, cuerpo: dict, codigo: str) -> httpx.Response:
+        """Un POST con reintentos ante 5xx, tiempo agotado o fallo de conexión."""
+        cabeceras = {"x-functions-key": self._clave, "Content-Type": "application/json"}
+
+        def intento() -> httpx.Response:
+            with httpx.Client(timeout=self._timeout_s, transport=self._transport) as cliente:
+                respuesta = cliente.post(self._url, json=cuerpo, headers=cabeceras)
+            if respuesta.status_code >= 500:
+                raise _Transitorio(f"HTTP {respuesta.status_code}")
+            return respuesta
+
+        reintentos = Retrying(
+            stop=stop_after_attempt(self._intentos),
+            wait=wait_exponential(multiplier=self._espera_base_s, max=10),
+            retry=retry_if_exception_type(_TRANSITORIOS),
+            reraise=True,
+        )
+        try:
+            return reintentos(intento)
+        except _TRANSITORIOS as error:
+            detalle = str(error) if isinstance(error, _Transitorio) else type(error).__name__
+            raise ErrorContrato(
+                f"{codigo}: sigrid-api falló tras {self._intentos} intentos ({detalle})"
+            ) from error
+
+
+# --- Subcomando `lineas` -------------------------------------------------------
+
+
+@dataclass
+class ResultadoContrato:
+    """Lo que pasó con UN contrato: sus líneas leídas o el motivo del fallo."""
+
+    codigo: str
+    casos: list[str]
+    lineas: list[dict] = field(default_factory=list)
+    motivo: str = ""
+
+
+@dataclass
+class ImportacionLineas:
+    """Todo lo que `lineas` decidió, antes de escribir nada."""
+
+    contratos: list[ResultadoContrato]
+    filas_contrato: list[dict]
+    filas_condiciones: list[dict]
+    control: dict[str, tuple[int, int, list]]
+    cambia: bool = False
+    copia: Path | None = None
+    dry_run: bool = False
+
+    @property
+    def fallidos(self) -> list[ResultadoContrato]:
+        return [contrato for contrato in self.contratos if contrato.motivo]
+
+
+def _definiciones(pestana: str) -> tuple[escritura.DefTabla, ...]:
+    """Las tablas de una pestaña de INPUTS, tal como las declara el conversor.
+
+    Se derivan de `conversor.LIBROS` en vez de copiarse: si las dos
+    declaraciones divergieran, el importador escribiría donde el conversor no
+    mira (la misma regla que `evals/revision/escritura.py`).
+    """
+    (libro,) = [definicion for definicion in LIBROS if definicion.fichero == LIBRO_INPUTS]
+    return tuple(
+        escritura.DefTabla(tabla.titulo, tabla.clave)
+        for tabla in libro.tablas_por_pestana[pestana]
+    )
+
+
+def cargar_fase(fixtures: Path, fase: str) -> dict[str, dict]:
+    """Los fixtures de una fase, por `caso_id` (los `_*.json` son índices)."""
+    carpeta = Path(fixtures) / fase
+    if not carpeta.is_dir():
+        return {}
+    return {
+        ruta.stem: json.loads(ruta.read_text(encoding="utf-8"))
+        for ruta in sorted(carpeta.glob("*.json"))
+        if not ruta.name.startswith("_")
+    }
+
+
+def filtrar(casos: dict[str, dict], pedidos: list[str] | None) -> dict[str, dict]:
+    """Los casos pedidos con `--casos`; sin lista, todos."""
+    return {caso: datos for caso, datos in casos.items() if not pedidos or caso in pedidos}
+
+
+def preparar_lineas(
+    inputs: dict[str, dict], ia1: dict[str, dict], ia3: dict[str, dict], lector, hoy: dt.date
+) -> ImportacionLineas:
+    """Lee cada contrato y monta las filas; un contrato que falla, aislado (R4, R5)."""
+    resultados = []
+    for codigo, caso_ids in contratos_de_casos(inputs).items():
+        resultado = ResultadoContrato(codigo=codigo, casos=caso_ids)
+        try:
+            columnas, filas = lector.lineas(codigo)
+            resultado.lineas = filas_de_respuesta(columnas, filas, codigo)
+        except ErrorContrato as error:
+            resultado.motivo = str(error)
+        resultados.append(resultado)
+
+    filas_contrato: list[dict] = []
+    control: dict[str, tuple[int, int, list]] = {}
+    for resultado in resultados:
+        if resultado.motivo:
+            continue
+        filas_contrato += filas_por_caso(resultado.lineas, resultado.casos, hoy.isoformat())
+        for caso_id in resultado.casos:
+            esperado = ia3.get(caso_id, {})
+            presentes, total = precios_presentes(esperado, resultado.lineas)
+            control[caso_id] = (presentes, total, precios_ausentes(esperado, resultado.lineas))
+    return ImportacionLineas(
+        contratos=resultados,
+        filas_contrato=filas_contrato,
+        filas_condiciones=condiciones_fecha(inputs, ia1),
+        control=control,
+    )
+
+
+def asegurar_columna(ruta: Path, pestana: str, columna: str) -> bool:
+    """(R11) Añade `columna` al final de los encabezados si la tabla no la tiene."""
+    import openpyxl
+
+    libro = openpyxl.load_workbook(ruta)
+    try:
+        hoja = libro[pestana]
+        (bloque,) = escritura.localizar_bloques(hoja, _definiciones(pestana))
+        if columna in (bloque.encabezados or []):
+            return False
+        ultima = max(
+            celda.column for celda in hoja[bloque.fila_encabezados] if celda.value is not None
+        )
+        hoja.cell(row=bloque.fila_encabezados, column=ultima + 1, value=columna)
+        libro.save(ruta)
+        return True
+    finally:
+        libro.close()
+
+
+def _escribir(ruta: Path, importacion: ImportacionLineas, ejecutar: bool) -> bool:
+    """Las dos pestañas, solo las filas de sus casos; si alguna cambia (o cambiaría)."""
+    cambia = False
+    for pestana, clave, filas in (
+        (PESTANA_CONTRATO, "contrato_lineas", importacion.filas_contrato),
+        (PESTANA_CONDICIONES, "condiciones", importacion.filas_condiciones),
+    ):
+        if not filas:
+            continue
+        cambia = (
+            escritura.escribir_pestana(
+                ruta,
+                pestana,
+                _definiciones(pestana),
+                {clave: filas},
+                {fila["caso_id"] for fila in filas},
+                ejecutar=ejecutar,
+            )
+            or cambia
+        )
+    return cambia
+
+
+def aplicar_lineas(ruta: Path, importacion: ImportacionLineas, dry_run: bool) -> ImportacionLineas:
+    """(R7, R8) Copia y escribe solo si algo cambia; con `--dry-run`, nada."""
+    importacion.dry_run = dry_run
+    importacion.cambia = _escribir(ruta, importacion, ejecutar=False)
+    if dry_run or not importacion.cambia:
+        return importacion
+    importacion.copia = escritura.copia_de_seguridad(ruta)
+    if importacion.filas_contrato:
+        asegurar_columna(ruta, PESTANA_CONTRATO, COLUMNA_LINEA_SIGRID)
+    _escribir(ruta, importacion, ejecutar=True)
+    return importacion
+
+
+# --- Informe (R10) ---------------------------------------------------------------
+
+_TITULO_INFORME = "# Importación de contratos del banco de evals — F-084"
+
+
+def escribir_seccion(ruta: Path, clave: str, lineas: list[str]) -> None:
+    """Sustituye (o añade) la sección `clave` del informe sin tocar las demás."""
+    inicio, fin = f"<!-- seccion:{clave} -->", f"<!-- /seccion:{clave} -->"
+    bloque = "\n".join([inicio, *lineas, fin])
+    texto = ruta.read_text(encoding="utf-8") if ruta.is_file() else f"{_TITULO_INFORME}\n"
+    if inicio in texto and fin in texto:
+        antes, resto = texto.split(inicio, 1)
+        _, despues = resto.split(fin, 1)
+        texto = f"{antes}{bloque}{despues}"
+    else:
+        texto = f"{texto.rstrip()}\n\n{bloque}\n"
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    ruta.write_text(texto, encoding="utf-8")
+
+
+def informe_lineas(importacion: ImportacionLineas, momento: str) -> list[str]:
+    """Recuentos, `caso_id` y `num_linea`: ni precios ni descripciones (R10)."""
+    if importacion.dry_run:
+        estado = "dry-run: el libro no se ha tocado"
+    elif not importacion.cambia:
+        estado = "sin cambios: el libro no se ha guardado"
+    else:
+        estado = f"libro escrito; copia previa en `{importacion.copia.name}`"
+    lineas = [
+        "## Líneas de contrato (`python -m evals.contratos lineas`)",
+        "",
+        f"- Fecha: {momento}",
+        f"- Resultado: {estado}",
+        f"- Contratos leídos: {len(importacion.contratos)} · "
+        f"fallidos: {len(importacion.fallidos)}",
+        f"- Filas de CONTRATO_LINEAS: {len(importacion.filas_contrato)} · "
+        f"fechas añadidas a CONDICIONES: {len(importacion.filas_condiciones)}",
+        "",
+        "| Contrato | Líneas leídas | Casos | Motivo del fallo |",
+        "|---|---|---|---|",
+    ]
+    for contrato in importacion.contratos:
+        leidas = "—" if contrato.motivo else str(len(contrato.lineas))
+        lineas.append(
+            f"| {contrato.codigo} | {leidas} | {', '.join(contrato.casos)} | "
+            f"{contrato.motivo or '—'} |"
+        )
+    lineas += [
+        "",
+        "Control del contrato vigente (R10): de las líneas IA3 con precio `contrato_db`,",
+        "cuántas tienen su precio esperado entre los de las líneas importadas. No",
+        "empareja: Sigrid da el precio de hoy y el albarán puede ser de ayer.",
+        "",
+        "| Caso | Precios de contrato presentes | num_linea sin su precio |",
+        "|---|---|---|",
+    ]
+    for caso_id, (presentes, total, ausentes) in sorted(importacion.control.items()):
+        sin_precio = ", ".join(str(numero) for numero in ausentes) or "—"
+        lineas.append(f"| {caso_id} | {presentes} de {total} | {sin_precio} |")
+    return [*lineas, ""]
+
+
+# --- CLI ---------------------------------------------------------------------------
+
+
+def _analizador() -> argparse.ArgumentParser:
+    analizador = argparse.ArgumentParser(
+        prog="python -m evals.contratos",
+        description="Importa las líneas y el documento del contrato de los casos del banco.",
+    )
+    ordenes = analizador.add_subparsers(dest="orden", required=True)
+    lineas = ordenes.add_parser("lineas", help="líneas de contrato de sigrid-api al libro INPUTS")
+    lineas.add_argument("--dry-run", action="store_true", help="no toca el libro: solo el informe")
+    lineas.add_argument("--reintentos", type=int, default=INTENTOS_POR_DEFECTO)
+    lineas.add_argument("--ground-truth", default=str(RUTA_GROUND_TRUTH))
+    for orden in (lineas,):
+        orden.add_argument("--casos", default="", help="lista de caso_id separados por coma")
+        orden.add_argument("--fixtures", default=str(RUTA_FIXTURES))
+        orden.add_argument("--informe", default=str(RUTA_INFORME))
+    return analizador
+
+
+def _pedidos(opciones) -> list[str] | None:
+    return [caso.strip() for caso in opciones.casos.split(",") if caso.strip()] or None
+
+
+def ejecutar_lineas(opciones, entorno: dict, transport=None) -> int:
+    """El subcomando `lineas`: 0 todo bien, 1 algún contrato falló."""
+    libro = Path(opciones.ground_truth) / LIBRO_INPUTS
+    if not libro.is_file():
+        raise ErrorUso(
+            f"no existe el libro {libro}: los libros no se versionan, cópialos a esa carpeta."
+        )
+    lector = LectorSigrid.desde_entorno(entorno, intentos=opciones.reintentos, transport=transport)
+    fixtures = Path(opciones.fixtures)
+    importacion = preparar_lineas(
+        filtrar(cargar_fase(fixtures, "inputs"), _pedidos(opciones)),
+        cargar_fase(fixtures, "IA1"),
+        cargar_fase(fixtures, "IA3"),
+        lector,
+        dt.date.today(),
+    )
+    aplicar_lineas(libro, importacion, opciones.dry_run)
+    momento = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    escribir_seccion(Path(opciones.informe), "lineas", informe_lineas(importacion, momento))
+    print(
+        f"contratos: {len(importacion.contratos)} · fallidos: {len(importacion.fallidos)} · "
+        f"informe en {opciones.informe}"
+    )
+    return 1 if importacion.fallidos else 0
+
+
+def main(argv: list[str] | None = None, entorno: dict | None = None, transport=None) -> int:
+    """CLI. Códigos: 0 bien, 1 algún contrato falló, 2 uso (falta algo)."""
+    opciones = _analizador().parse_args(argv)
+    entorno = dict(os.environ) if entorno is None else entorno
+    try:
+        return ejecutar_lineas(opciones, entorno, transport=transport)
+    except ErrorUso as error:
+        print(str(error), file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":  # pragma: no cover
+    raise SystemExit(main())
