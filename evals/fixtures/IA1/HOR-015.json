@@ -2,12 +2,12 @@
   "caso_id": "HOR-015",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "655d6ddd6719388b9d752b6e4fec51bb14f3670fe1bacfb8f2a39d931ff388f6",
+  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "HOR-015",
-        "comentario": "no habia elegido contrato. Cuando sean 2 vamos a unirlos. Y que no elija. El incremento de precio se calcula contra año contrato antiguo | no se de donde saca la partida. Ha puesto 02.01.02 | no se de donde saca la partida. Ha puesto 02.01.02. importe de oferta, ahora no sale",
+        "comentario": "no habia elegido contrato. Cuando sean 2 vamos a unirlos. Y que no elija. El incremento de precio se calcula contra año contrato antiguo | no se de donde saca la partida. Ha puesto 02.01.02 | no se de donde saca la partida. Ha puesto 02.01.02. importe de oferta, ahora no sale | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 2 fila(s): INCREM. ARIDO 12; INCREM. CONSISTENCIA FLUIDA",
         "fecha": "2025-09-11",
         "fichero_albaran": "HOR-015.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
@@ -23,35 +23,11 @@
         "cantidad": 7,
         "caso_id": "HOR-015",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "no habia elegido contrato. Cuando sean 2 vamos a unirlos. Y que no elija. El incremento de precio se calcula contra año contrato antiguo",
+        "comentario": "no habia elegido contrato. Cuando sean 2 vamos a unirlos. Y que no elija. El incremento de precio se calcula contra año contrato antiguo | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 2 fila(s): INCREM. ARIDO 12; INCREM. CONSISTENCIA FLUIDA",
         "descripcion_esperada": "HA-25/F/12/XC2/1",
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 7,
-        "caso_id": "HOR-015",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02",
-        "descripcion_esperada": "INCREM. ARIDO 12",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 2,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 7,
-        "caso_id": "HOR-015",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02",
-        "descripcion_esperada": "INCREM. CONSISTENCIA FLUIDA",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 3,
         "precio_unitario": null,
         "unidad": "M3"
       }

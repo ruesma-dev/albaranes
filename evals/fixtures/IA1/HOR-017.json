@@ -2,12 +2,12 @@
   "caso_id": "HOR-017",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "655d6ddd6719388b9d752b6e4fec51bb14f3670fe1bacfb8f2a39d931ff388f6",
+  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "HOR-017",
-        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 3 fila(s): INCREM. ARIDO 12; INCREM. CONSISTENCIA FLUIDA; CARGA INCOMPLETA",
         "fecha": "2025-09-12",
         "fichero_albaran": "HOR-017.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
@@ -23,47 +23,11 @@
         "cantidad": 3,
         "caso_id": "HOR-017",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
+        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 3 fila(s): INCREM. ARIDO 12; INCREM. CONSISTENCIA FLUIDA; CARGA INCOMPLETA",
         "descripcion_esperada": "HA-25/F/12/XC2",
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 3,
-        "caso_id": "HOR-017",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
-        "descripcion_esperada": "INCREM. ARIDO 12",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 2,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 3,
-        "caso_id": "HOR-017",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
-        "descripcion_esperada": "INCREM. CONSISTENCIA FLUIDA",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 3,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 3,
-        "caso_id": "HOR-017",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "cantida mal. En m3 sale 3 en el albaran. Ha puesto 8. de ahi se deduce carga incompleta. no se de donde saca la partida. Ha puesto 02.01.02. no habia elegido contrato",
-        "descripcion_esperada": "CARGA INCOMPLETA",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 4,
         "precio_unitario": null,
         "unidad": "M3"
       }

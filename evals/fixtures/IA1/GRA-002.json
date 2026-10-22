@@ -2,7 +2,7 @@
   "caso_id": "GRA-002",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "655d6ddd6719388b9d752b6e4fec51bb14f3670fe1bacfb8f2a39d931ff388f6",
+  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
   "tablas": {
     "cabeceras": [
       {
@@ -20,10 +20,10 @@
     ],
     "lineas": [
       {
-        "cantidad": 29.96,
+        "cantidad": 29960,
         "caso_id": "GRA-002",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "La partida ha cogido PT.03.04 en lugar de P5.03.04La unidad esta bien, pero ha cogio un unitario que no es. Es grava 20/40 (se deduce del texto, esta en el contrato), el unitario es 12,87",
+        "comentario": "La partida ha cogido PT.03.04 en lugar de P5.03.04La unidad esta bien, pero ha cogio un unitario que no es. Es grava 20/40 (se deduce del texto, esta en el contrato), el unitario es 12,87 | Banco 2026-10-22 (chore banco-correcciones): IA1 espera lo impreso, 29960 (kg); las 29.96 t son la conversion de la valoracion",
         "descripcion_esperada": "GRAVA 20/40",
         "descuentos": null,
         "importe": null,

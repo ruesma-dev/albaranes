@@ -2,12 +2,12 @@
   "caso_id": "HOR-009",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "655d6ddd6719388b9d752b6e4fec51bb14f3670fe1bacfb8f2a39d931ff388f6",
+  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "HOR-009",
-        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio. El codigo de hormigon leido es correcto, pero luego lo ha cambiado en la descripcion de la linea de sigrid para casarlo. El codigo de hormigon no se puede cambiar | partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio | partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio- esta linea no la ha generado, pero pon B en el codigo asi que parece error de negocio",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio. El codigo de hormigon leido es correcto, pero luego lo ha cambiado en la descripcion de la linea de sigrid para casarlo. El codigo de hormigon no se puede cambiar | partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio | partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio- esta linea no la ha generado, pero pon B en el codigo asi que parece error de negocio | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 2 fila(s): ADICIÓN FIBRAS POLIPROPILENO (600 GR/M3); INCREM. CONSISTENCIA FLUIDA",
         "fecha": "2024-08-06",
         "fichero_albaran": "HOR-009.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
@@ -23,35 +23,11 @@
         "cantidad": 8,
         "caso_id": "HOR-009",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio. El codigo de hormigon leido es correcto, pero luego lo ha cambiado en la descripcion de la linea de sigrid para casarlo. El codigo de hormigon no se puede cambiar",
+        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio. El codigo de hormigon leido es correcto, pero luego lo ha cambiado en la descripcion de la linea de sigrid para casarlo. El codigo de hormigon no se puede cambiar | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 2 fila(s): ADICIÓN FIBRAS POLIPROPILENO (600 GR/M3); INCREM. CONSISTENCIA FLUIDA",
         "descripcion_esperada": "HMF-20/P-CR/B/20-12/X0/P",
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 8,
-        "caso_id": "HOR-009",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio",
-        "descripcion_esperada": "ADICIÓN FIBRAS POLIPROPILENO (600 GR/M3)",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 2,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 8,
-        "caso_id": "HOR-009",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "partida ha cogido 10.04.01, pero no se de donde sale ni de donde la coge neogcio- esta linea no la ha generado, pero pon B en el codigo asi que parece error de negocio",
-        "descripcion_esperada": "INCREM. CONSISTENCIA FLUIDA",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 3,
         "precio_unitario": null,
         "unidad": "M3"
       }

@@ -2,12 +2,12 @@
   "caso_id": "RES-014",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "655d6ddd6719388b9d752b6e4fec51bb14f3670fe1bacfb8f2a39d931ff388f6",
+  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "RES-014",
-        "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año",
+        "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año | Banco 2026-10-22 (chore banco-correcciones): la fila del canon con las toneladas la construye la valoracion (canon, F-006), no esta impresa (sigue en RESULTADO_FINAL); se quitan de IA1 1 fila(s): RCDS. SUCIOS",
         "fecha": "2025-02-13",
         "fichero_albaran": "RES-014.png",
         "forma_pago": "@@NO_COMPARAR@@",
@@ -20,28 +20,16 @@
     ],
     "lineas": [
       {
-        "cantidad": 1,
+        "cantidad": "@@NO_COMPARAR@@",
         "caso_id": "RES-014",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": null,
+        "comentario": "Banco 2026-10-22 (chore banco-correcciones): la fila del canon con las toneladas la construye la valoracion (canon, F-006), no esta impresa (sigue en RESULTADO_FINAL); se quitan de IA1 1 fila(s): RCDS. SUCIOS | Banco 2026-10-22 (chore banco-correcciones): cantidad a ? (no comparar): el 1 era el contenedor ya convertido por la regla de contenedores de sv6; el papel trae m3 y kg y que debe devolver IA1 en cantidad no esta decidido",
         "descripcion_esperada": "CONTENEDOR DE 8M3",
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
         "precio_unitario": null,
         "unidad": "UD"
-      },
-      {
-        "cantidad": 6.1,
-        "caso_id": "RES-014",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año",
-        "descripcion_esperada": "RCDS. SUCIOS",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 2,
-        "precio_unitario": null,
-        "unidad": "M3"
       }
     ]
   },

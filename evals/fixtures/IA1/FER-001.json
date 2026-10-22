@@ -2,7 +2,7 @@
   "caso_id": "FER-001",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "655d6ddd6719388b9d752b6e4fec51bb14f3670fe1bacfb8f2a39d931ff388f6",
+  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
   "tablas": {
     "cabeceras": [
       {
@@ -23,10 +23,10 @@
         "cantidad": 50,
         "caso_id": "FER-001",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": null,
+        "comentario": "Banco 2026-10-22 (chore banco-correcciones): importe impreso, cuadra con cantidad x precio x (1 - dto)",
         "descripcion_esperada": "DISCO ESPECIAL ACERO INOX 115x1x22",
         "descuentos": 40,
-        "importe": null,
+        "importe": 19.41,
         "num_linea": 1,
         "precio_unitario": 0.647,
         "unidad": "UD"

@@ -2,12 +2,12 @@
   "caso_id": "MOR-002",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "655d6ddd6719388b9d752b6e4fec51bb14f3670fe1bacfb8f2a39d931ff388f6",
+  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "MOR-002",
-        "comentario": "La partida ha puesto 14.01.02.02, cuando es P4.01.02.02. partida debe buscar en lista de partidas de la obra | La partida ha puesto 14.01.02.02, cuando es P4.01.02.02. partida debe buscar en lista de partidas de la obra. No ha creado esta linea. Sin embargo hay una casilla claramente donde dice carga incompleta 3. los morteross tambien tienen carga incompleta como los hormigones, añadir a la tipologia",
+        "comentario": "La partida ha puesto 14.01.02.02, cuando es P4.01.02.02. partida debe buscar en lista de partidas de la obra | La partida ha puesto 14.01.02.02, cuando es P4.01.02.02. partida debe buscar en lista de partidas de la obra. No ha creado esta linea. Sin embargo hay una casilla claramente donde dice carga incompleta 3. los morteross tambien tienen carga incompleta como los hormigones, añadir a la tipologia | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 1 fila(s): CARGAS INCOMPLETAS",
         "fecha": "2026-06-09",
         "fichero_albaran": "MOR-002.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
@@ -23,23 +23,11 @@
         "cantidad": 3,
         "caso_id": "MOR-002",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "La partida ha puesto 14.01.02.02, cuando es P4.01.02.02. partida debe buscar en lista de partidas de la obra",
+        "comentario": "La partida ha puesto 14.01.02.02, cuando es P4.01.02.02. partida debe buscar en lista de partidas de la obra | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 1 fila(s): CARGAS INCOMPLETAS",
         "descripcion_esperada": "MORTERO 7,5 - 48H",
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 3,
-        "caso_id": "MOR-002",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "La partida ha puesto 14.01.02.02, cuando es P4.01.02.02. partida debe buscar en lista de partidas de la obra. No ha creado esta linea. Sin embargo hay una casilla claramente donde dice carga incompleta 3. los morteross tambien tienen carga incompleta como los hormigones, añadir a la tipologia",
-        "descripcion_esperada": "CARGAS INCOMPLETAS",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 2,
         "precio_unitario": null,
         "unidad": "M3"
       }

@@ -2,7 +2,7 @@
   "caso_id": "FER-002",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "655d6ddd6719388b9d752b6e4fec51bb14f3670fe1bacfb8f2a39d931ff388f6",
+  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
   "tablas": {
     "cabeceras": [
       {
@@ -23,10 +23,10 @@
         "cantidad": 108,
         "caso_id": "FER-002",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "Banco 2026-10-22 (decision del humano): en el papel hay 5 lineas, no 8; las 8 de antes eran el reparto P4/P5 de la valoracion (F-049 R23), que sigue en RESULTADO_FINAL e INPUTS",
+        "comentario": "Banco 2026-10-22 (decision del humano): en el papel hay 5 lineas, no 8; las 8 de antes eran el reparto P4/P5 de la valoracion (F-049 R23), que sigue en RESULTADO_FINAL e INPUTS | Banco 2026-10-22 (chore banco-correcciones): importe impreso, cuadra con cantidad x precio x (1 - dto)",
         "descripcion_esperada": "papel higienico",
         "descuentos": 40,
-        "importe": null,
+        "importe": 35.19,
         "num_linea": 1,
         "precio_unitario": 0.543,
         "unidad": "UD"
@@ -38,7 +38,7 @@
         "comentario": null,
         "descripcion_esperada": "jabon liquido ph neutro",
         "descuentos": 40,
-        "importe": null,
+        "importe": 20.53,
         "num_linea": 2,
         "precio_unitario": 3.422,
         "unidad": "UD"
@@ -50,7 +50,7 @@
         "comentario": null,
         "descripcion_esperada": "rollo papel ind.",
         "descuentos": 40,
-        "importe": null,
+        "importe": 55.63,
         "num_linea": 3,
         "precio_unitario": 7.726,
         "unidad": "UD"
@@ -62,7 +62,7 @@
         "comentario": null,
         "descripcion_esperada": "AÑIL ESPECIAL FEYMACO",
         "descuentos": 40,
-        "importe": null,
+        "importe": 13.19,
         "num_linea": 4,
         "precio_unitario": 5.497,
         "unidad": "UD"
@@ -74,7 +74,7 @@
         "comentario": null,
         "descripcion_esperada": "BOLSA BASURA 52x58",
         "descuentos": 40,
-        "importe": null,
+        "importe": 15.12,
         "num_linea": 5,
         "precio_unitario": 0.252,
         "unidad": "UD"

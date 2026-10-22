@@ -2,12 +2,12 @@
   "caso_id": "RES-018",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "655d6ddd6719388b9d752b6e4fec51bb14f3670fe1bacfb8f2a39d931ff388f6",
+  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "RES-018",
-        "comentario": "La cantidad es el peso en toneladas, solo ocurre en este proveedor?  Como se como se mide eso? Viene en contrato? | porque solo este tiene el incremento por año? Y los demas?",
+        "comentario": "La cantidad es el peso en toneladas, solo ocurre en este proveedor?  Como se como se mide eso? Viene en contrato? | porque solo este tiene el incremento por año? Y los demas? | Banco 2026-10-22 (chore banco-correcciones): la fila del canon con las toneladas la construye la valoracion (canon, F-006), no esta impresa (sigue en RESULTADO_FINAL); se quitan de IA1 1 fila(s): RCDS. SUCIOS",
         "fecha": "2025-07-28",
         "fichero_albaran": "RES-018.png",
         "forma_pago": "@@NO_COMPARAR@@",
@@ -20,28 +20,16 @@
     ],
     "lineas": [
       {
-        "cantidad": 1,
+        "cantidad": "@@NO_COMPARAR@@",
         "caso_id": "RES-018",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": null,
+        "comentario": "Banco 2026-10-22 (chore banco-correcciones): la fila del canon con las toneladas la construye la valoracion (canon, F-006), no esta impresa (sigue en RESULTADO_FINAL); se quitan de IA1 1 fila(s): RCDS. SUCIOS | Banco 2026-10-22 (chore banco-correcciones): cantidad a ? (no comparar): el 1 era el contenedor ya convertido por la regla de contenedores de sv6; el papel trae m3 y kg y que debe devolver IA1 en cantidad no esta decidido",
         "descripcion_esperada": "CONTENEDOR DE 8M3",
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
         "precio_unitario": null,
         "unidad": "UD"
-      },
-      {
-        "cantidad": 5.4,
-        "caso_id": "RES-018",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "La cantidad es el peso en toneladas, solo ocurre en este proveedor?  Como se como se mide eso? Viene en contrato?",
-        "descripcion_esperada": "RCDS. SUCIOS",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 2,
-        "precio_unitario": null,
-        "unidad": "M3"
       }
     ]
   },

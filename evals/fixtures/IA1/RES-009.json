@@ -2,7 +2,7 @@
   "caso_id": "RES-009",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "655d6ddd6719388b9d752b6e4fec51bb14f3670fe1bacfb8f2a39d931ff388f6",
+  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
   "tablas": {
     "cabeceras": [
       {
@@ -20,10 +20,10 @@
     ],
     "lineas": [
       {
-        "cantidad": 1,
+        "cantidad": "@@NO_COMPARAR@@",
         "caso_id": "RES-009",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "numero de albraran incorrecto. Ha cogido 09478. la obra no venaia y ha deducido una incorrecta. Si tiene match de proveedor solo deberia intentar deducir entre las que tienen dicho porveedor en la obra",
+        "comentario": "numero de albraran incorrecto. Ha cogido 09478. la obra no venaia y ha deducido una incorrecta. Si tiene match de proveedor solo deberia intentar deducir entre las que tienen dicho porveedor en la obra | Banco 2026-10-22 (chore banco-correcciones): cantidad a ? (no comparar): el 1 era el contenedor ya convertido por la regla de contenedores de sv6; el papel trae m3 y kg y que debe devolver IA1 en cantidad no esta decidido",
         "descripcion_esperada": "MOVIMIENTO DE CONTENEDOR DE 6 M CÚBICOS MEZCLA OTROS RESIDUOS",
         "descuentos": null,
         "importe": null,

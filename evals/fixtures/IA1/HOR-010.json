@@ -2,12 +2,12 @@
   "caso_id": "HOR-010",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "655d6ddd6719388b9d752b6e4fec51bb14f3670fe1bacfb8f2a39d931ff388f6",
+  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "HOR-010",
-        "comentario": "ha cambiado codigo de linea de hormigon en descripcion para casar con sigrid. El codigo del hormigon no se cambia | no la ha generado. Y hay cambio de año entre contrato (ver codigo) y año de albaran. Deberia haberlo hecho",
+        "comentario": "ha cambiado codigo de linea de hormigon en descripcion para casar con sigrid. El codigo del hormigon no se cambia | no la ha generado. Y hay cambio de año entre contrato (ver codigo) y año de albaran. Deberia haberlo hecho | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 1 fila(s): INCREM. CONSISTENCIA FLUIDA",
         "fecha": "2024-03-21",
         "fichero_albaran": "HOR-010.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
@@ -23,23 +23,11 @@
         "cantidad": 8,
         "caso_id": "HOR-010",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": null,
+        "comentario": "Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 1 fila(s): INCREM. CONSISTENCIA FLUIDA",
         "descripcion_esperada": "HA-25/F/20/XC2",
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 8,
-        "caso_id": "HOR-010",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "ha cambiado codigo de linea de hormigon en descripcion para casar con sigrid. El codigo del hormigon no se cambia",
-        "descripcion_esperada": "INCREM. CONSISTENCIA FLUIDA",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 2,
         "precio_unitario": null,
         "unidad": "M3"
       }

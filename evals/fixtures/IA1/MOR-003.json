@@ -2,12 +2,12 @@
   "caso_id": "MOR-003",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "655d6ddd6719388b9d752b6e4fec51bb14f3670fe1bacfb8f2a39d931ff388f6",
+  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
   "tablas": {
     "cabeceras": [
       {
         "caso_id": "MOR-003",
-        "comentario": "partida en blanco es almacen | partida en blanco es almacen. En mortero tambien hay carga incompleta.en hormigon lo pilla bien , aquí en mortero lo mismo (copiar regla desde hormigon sin inventar)",
+        "comentario": "partida en blanco es almacen | partida en blanco es almacen. En mortero tambien hay carga incompleta.en hormigon lo pilla bien , aquí en mortero lo mismo (copiar regla desde hormigon sin inventar) | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 1 fila(s): MD-200 (M-5) / 48 H. CARGA INCOMPLETA",
         "fecha": "2025-06-23",
         "fichero_albaran": "MOR-003.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
@@ -23,23 +23,11 @@
         "cantidad": 3,
         "caso_id": "MOR-003",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "partida en blanco es almacen",
+        "comentario": "partida en blanco es almacen | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 1 fila(s): MD-200 (M-5) / 48 H. CARGA INCOMPLETA",
         "descripcion_esperada": "MD-200 (M-5) / 48 H.",
         "descuentos": null,
         "importe": null,
         "num_linea": 1,
-        "precio_unitario": null,
-        "unidad": "M3"
-      },
-      {
-        "cantidad": 2,
-        "caso_id": "MOR-003",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "partida en blanco es almacen. En mortero tambien hay carga incompleta.en hormigon lo pilla bien , aquí en mortero lo mismo (copiar regla desde hormigon sin inventar)",
-        "descripcion_esperada": "MD-200 (M-5) / 48 H. CARGA INCOMPLETA",
-        "descuentos": null,
-        "importe": null,
-        "num_linea": 2,
         "precio_unitario": null,
         "unidad": "M3"
       }

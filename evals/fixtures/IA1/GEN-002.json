@@ -2,7 +2,7 @@
   "caso_id": "GEN-002",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "655d6ddd6719388b9d752b6e4fec51bb14f3670fe1bacfb8f2a39d931ff388f6",
+  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
   "tablas": {
     "cabeceras": [
       {
@@ -107,10 +107,10 @@
         "cantidad": 22,
         "caso_id": "GEN-002",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": null,
+        "comentario": "Banco 2026-10-22 (chore banco-correcciones): importe a ? (no comparar): 180 no cuadra con 22 x 9 y los modelos leen cosas distintas",
         "descripcion_esperada": "EUROPALET",
         "descuentos": null,
-        "importe": 180,
+        "importe": "@@NO_COMPARAR@@",
         "num_linea": 8,
         "precio_unitario": 9,
         "unidad": "UD"

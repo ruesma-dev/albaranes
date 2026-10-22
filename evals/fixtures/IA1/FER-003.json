@@ -2,7 +2,7 @@
   "caso_id": "FER-003",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "655d6ddd6719388b9d752b6e4fec51bb14f3670fe1bacfb8f2a39d931ff388f6",
+  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
   "tablas": {
     "cabeceras": [
       {
@@ -23,12 +23,12 @@
         "cantidad": 4,
         "caso_id": "FER-003",
         "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": "ha cogido 01.04.18 en lugar de CI.04.18",
+        "comentario": "ha cogido 01.04.18 en lugar de CI.04.18 | Banco 2026-10-22 (chore banco-correcciones): precio impreso 95,481; cuadra con el importe 229,15 (4 x 95,481 x 0,6)",
         "descripcion_esperada": "DISCO DIAMANTE 180 MM. PULIDORA (DEBASTAR)",
         "descuentos": 40,
         "importe": 229.15,
         "num_linea": 1,
-        "precio_unitario": null,
+        "precio_unitario": 95.481,
         "unidad": "UD"
       },
       {
