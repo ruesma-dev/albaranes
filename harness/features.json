@@ -1111,6 +1111,31 @@
       "servicios": [
         "por-decidir"
       ]
+    },
+    {
+      "id": "F-093",
+      "title": "La fecha del albarán se lee mal: 18 de 57 casos fallan en algún modelo y 3 en los 8; validarla y no inventarla",
+      "description": "ORIGEN: petición del humano, 2026-10-22 («añade el de fecha, que falla mucho»), tras las pruebas en real de F-083. MEDIDO: T14 de IA1 de F-083 (8 modelos × 57 casos): la fecha falla en 18 casos en al menos un modelo; en FER-001, FER-002 y RES-019 fallan los 8 y cada modelo da una fecha distinta. En producción (2026-10-22): FER-002 (FEYMACO 2137569) 04-02-2026 frente a 01-06-2026; FER-001 (FEYMACO 2139643) sin fecha (IA1 e IA2 null; el humano la puso a mano); RES-019 (Cubas 030366) 07-08-2025 frente a 28-07-2025. PATRONES: (1) año con el dígito final mal leído (2020/2006/2018 por 2026); (2) mes cambiado en fechas manuscritas de las fotos de Cubas (07 por 01/02, 08 por 07): RES-010..RES-019; (3) en FEYMACO (impresión matricial) la fecha no se encuentra o se toma otra del papel. A DECIDIR EN LA SPEC: qué dice el prompt de IA1/IA2 sobre qué fecha es la del albarán y el formato español dd/mm/aa; comprobaciones de verosimilitud deterministas (no posterior a la recepción del correo, no anterior a un límite razonable ni al inicio de la obra, dentro de la vigencia del contrato: ya existe el aviso fecha_albaran_fuera_de_rango) y qué hacer si falla (aviso de revisión, nunca inventar); si una fecha inverosímil se deja vacía a revisión. Medir con el banco (IA1, fecha) antes y después; F-090 (contraste) puede ayudar en FEYMACO. RELACIONADAS: F-094 (fecha en la ficha), F-090, F-083.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 13,
+      "servicios": [
+        "sv2-api",
+        "sv3-persistencia"
+      ]
+    },
+    {
+      "id": "F-094",
+      "title": "Fecha de la cabecera en formato español (dd/mm/aaaa) con selector de fecha y entrada por teclado, guardada siempre canónica",
+      "description": "ORIGEN: petición del humano, 2026-10-22: «para la fecha hay que poner el formato español (dd/mm/aaaa) y que se pueda seleccionar en la cabecera con un pequeño selector de fecha o con teclado». HOY: la fecha de la cabecera de la ficha (sv4, document_detail.html) es texto libre y se guarda tal cual se teclea: en FER-001 (merge ae044452, 2026-10-22) quedó «05/06/2026» mientras el resto se guarda 2026-06-05. A DECIDIR EN LA SPEC: mostrar dd/mm/aaaa; un selector de calendario pequeño y la entrada por teclado (dd/mm/aaaa, aceptando también d/m/aa y separadores habituales) en el mismo campo; validar antes de guardar (fecha inexistente, fuera de rango) con mensaje claro; guardar SIEMPRE en el formato canónico que leen sv3/sv6/sv9 (ISO); qué hacer con las fechas ya guardadas en otro formato (migración o lectura tolerante) y comprobar que sv9 las da de alta bien; si aplica a otras fechas del front (filtros de la bandeja, F-088). RELACIONADAS: F-093 (lectura de la fecha), F-088 (filtros), F-087 (Aprobar/Registrar).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 13,
+      "servicios": [
+        "sv4-front"
+      ]
     }
   ]
 }

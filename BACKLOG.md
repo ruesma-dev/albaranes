@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **90 features**, 62 abiertas, 28 terminadas.
+Resumen: **92 features**, 64 abiertas, 28 terminadas.
 
 Bloqueadas: **F-064, F-076, F-077, F-083, F-085, F-092**.
 
@@ -33,6 +33,8 @@ Bloqueadas: **F-064, F-076, F-077, F-083, F-085, F-092**.
 | F-090 | Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692) | 13 | pendiente | critico |  |
 | F-091 | Forma de pago desde el contrato: si el albarán tiene contrato, la forma de pago se toma del contrato y no de lo leído | 13 | pendiente | critico |  |
 | F-092 | Gestión de almacén: crear la gestión del almacén (acopios) de las obras | 13 | bloqueada | critico |  |
+| F-093 | La fecha del albarán se lee mal: 18 de 57 casos fallan en algún modelo y 3 en los 8; validarla y no inventarla | 13 | pendiente | critico |  |
+| F-094 | Fecha de la cabecera en formato español (dd/mm/aaaa) con selector de fecha y entrada por teclado, guardada siempre canónica | 13 | pendiente | estandar |  |
 | F-050 | Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes | 14 | pendiente | estandar |  |
 | F-056 | sv4: la re-búsqueda de contrato se lanza dos veces (combo, «Guardar» durante «Buscando…») y «Solo volver a buscar» vacío publica sin sello | 14 | pendiente | estandar |  |
 | F-057 | Truncado sin comprobar en los clientes de Sigrid colindantes: header_and_lines de sv4 (max_rows=1000) y SigridApiObraClient de sv3 | 14 | pendiente | critico |  |
@@ -318,6 +320,18 @@ ORIGEN: petición del humano, 2026-10-22: «apunta feature para que forma de pag
 estado **bloqueada** · prioridad 13 · rigor `critico` · SDD sí
 
 ORIGEN: petición del humano, 2026-10-22: «crear gestión de almacén». HOY: una línea sin partida va a almacén de la obra (paride 0, almide/cenide de la obra en el alta de sv9; F-051 almacén por línea con botón «almacén a todas las líneas»); no hay ninguna vista ni lógica que gestione lo que hay en almacén después del alta. BLOQUEADA POR ALCANCE (regla LÍMITE DE SERVICIO): «gestión de almacén» puede ser una responsabilidad nueva (otro dominio: existencias, entradas y salidas de almacén a partida, traspasos entre obras) que no es el pipeline de albaranes. Antes de la spec el humano decide: (a) qué es exactamente (solo una vista de lo que entró a almacén desde albaranes, o gestión de existencias con salidas a partida/obra), (b) si se hace en este monorepo como servicio nuevo o como proyecto aparte, y (c) si escribe en Sigrid (y con qué endpoint de sigrid-api) o solo lee. RELACIONADAS: F-051, la ficha de tipología de líneas acopiables, F-089 (vista Obra).
+
+### F-093 · La fecha del albarán se lee mal: 18 de 57 casos fallan en algún modelo y 3 en los 8; validarla y no inventarla
+
+estado **pendiente** · prioridad 13 · rigor `critico` · SDD sí
+
+ORIGEN: petición del humano, 2026-10-22 («añade el de fecha, que falla mucho»), tras las pruebas en real de F-083. MEDIDO: T14 de IA1 de F-083 (8 modelos × 57 casos): la fecha falla en 18 casos en al menos un modelo; en FER-001, FER-002 y RES-019 fallan los 8 y cada modelo da una fecha distinta. En producción (2026-10-22): FER-002 (FEYMACO 2137569) 04-02-2026 frente a 01-06-2026; FER-001 (FEYMACO 2139643) sin fecha (IA1 e IA2 null; el humano la puso a mano); RES-019 (Cubas 030366) 07-08-2025 frente a 28-07-2025. PATRONES: (1) año con el dígito final mal leído (2020/2006/2018 por 2026); (2) mes cambiado en fechas manuscritas de las fotos de Cubas (07 por 01/02, 08 por 07): RES-010..RES-019; (3) en FEYMACO (impresión matricial) la fecha no se encuentra o se toma otra del papel. A DECIDIR EN LA SPEC: qué dice el prompt de IA1/IA2 sobre qué fecha es la del albarán y el formato español dd/mm/aa; comprobaciones de verosimilitud deterministas (no posterior a la recepción del correo, no anterior a un límite razonable ni al inicio de la obra, dentro de la vigencia del contrato: ya existe el aviso fecha_albaran_fuera_de_rango) y qué hacer si falla (aviso de revisión, nunca inventar); si una fecha inverosímil se deja vacía a revisión. Medir con el banco (IA1, fecha) antes y después; F-090 (contraste) puede ayudar en FEYMACO. RELACIONADAS: F-094 (fecha en la ficha), F-090, F-083.
+
+### F-094 · Fecha de la cabecera en formato español (dd/mm/aaaa) con selector de fecha y entrada por teclado, guardada siempre canónica
+
+estado **pendiente** · prioridad 13 · rigor `estandar` · SDD sí
+
+ORIGEN: petición del humano, 2026-10-22: «para la fecha hay que poner el formato español (dd/mm/aaaa) y que se pueda seleccionar en la cabecera con un pequeño selector de fecha o con teclado». HOY: la fecha de la cabecera de la ficha (sv4, document_detail.html) es texto libre y se guarda tal cual se teclea: en FER-001 (merge ae044452, 2026-10-22) quedó «05/06/2026» mientras el resto se guarda 2026-06-05. A DECIDIR EN LA SPEC: mostrar dd/mm/aaaa; un selector de calendario pequeño y la entrada por teclado (dd/mm/aaaa, aceptando también d/m/aa y separadores habituales) en el mismo campo; validar antes de guardar (fecha inexistente, fuera de rango) con mensaje claro; guardar SIEMPRE en el formato canónico que leen sv3/sv6/sv9 (ISO); qué hacer con las fechas ya guardadas en otro formato (migración o lectura tolerante) y comprobar que sv9 las da de alta bien; si aplica a otras fechas del front (filtros de la bandeja, F-088). RELACIONADAS: F-093 (lectura de la fecha), F-088 (filtros), F-087 (Aprobar/Registrar).
 
 ### F-050 · Estudiar Jev (TypeSafe AI) para mejorar la clasificacion de albaranes
 
