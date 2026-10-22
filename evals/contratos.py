@@ -28,10 +28,13 @@ El informe (`progress/import_F-084.md`) lleva recuentos, `caso_id` y
 from __future__ import annotations
 
 import argparse
+import base64
 import datetime as dt
+import hashlib
 import json
 import logging
 import os
+import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -41,8 +44,9 @@ from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait
 
 from evals.conversor import LIBROS, RUTA_FIXTURES, RUTA_GROUND_TRUTH
 from evals.modelos import NO_COMPARAR
-from evals.revision import escritura
+from evals.procesos import sv5_documentos
 from evals.procesos.sv2_obra import TIMEOUT_SIGRID, faltan_variables_sigrid
+from evals.revision import escritura
 from ruesma_comun.sigrid import (
     MAX_FILAS_POR_PETICION,
     PoliticaTruncado,
@@ -569,6 +573,115 @@ def informe_lineas(importacion: ImportacionLineas, momento: str) -> list[str]:
     return [*lineas, ""]
 
 
+# --- Subcomando `documentos` (R29–R31, R34) -------------------------------------
+
+
+def entrada_de_indice(codigo: str, documento: dict, leido_utc: str) -> dict:
+    """(R30) La huella del documento de un contrato, SIN su contenido.
+
+    Tipo, sha256 y tamaño del fichero que queda en la caché local, el motivo si
+    no hay documento y la cabecera que sv5 pasa a IA3. Con esto, un clon limpio
+    sabe qué documento se usó y puede comprobar que el suyo es el mismo (R33).
+    """
+    contenido = (
+        base64.b64decode(documento["contenido_b64"]) if documento.get("contenido_b64") else b""
+    )
+    cabecera = documento.get("cabecera") or {}
+    return {
+        codigo: {
+            "tipo": documento.get("tipo") or "ninguno",
+            "sha256": hashlib.sha256(contenido).hexdigest() if contenido else None,
+            "bytes": len(contenido),
+            "motivo": documento.get("motivo") or "",
+            **{campo: cabecera.get(campo) for campo in sv5_documentos.CAMPOS_CABECERA},
+            "leido_utc": leido_utc,
+        }
+    }
+
+
+def contratos_del_banco(inputs: dict[str, dict]) -> list[str]:
+    """Los códigos de contrato distintos de los casos, con o sin líneas."""
+    codigos = {
+        _texto((_tablas(fixture, "caso") or [{}])[0].get("contrato_codigo"))
+        for fixture in inputs.values()
+    }
+    return sorted(codigo for codigo in codigos if codigo)
+
+
+def cargar_indice(ruta: Path) -> dict:
+    """El índice de documentos; vacío si todavía no existe."""
+    return json.loads(ruta.read_text(encoding="utf-8")) if ruta.is_file() else {}
+
+
+def guardar_documentos(resultados: list[dict], cache: Path, indice: Path, momento: str) -> dict:
+    """Deja cada documento en la caché y actualiza SU entrada del índice."""
+    entradas = cargar_indice(indice)
+    for resultado in resultados:
+        if resultado.get("contenido_b64"):
+            cache.mkdir(parents=True, exist_ok=True)
+            destino = cache / sv5_documentos.nombre_en_cache(resultado["codigo"], resultado["tipo"])
+            destino.write_bytes(base64.b64decode(resultado["contenido_b64"]))
+        entradas.update(entrada_de_indice(resultado["codigo"], resultado, momento))
+    indice.parent.mkdir(parents=True, exist_ok=True)
+    indice.write_text(
+        json.dumps(dict(sorted(entradas.items())), ensure_ascii=False, indent=2, sort_keys=True)
+        + "\n",
+        encoding="utf-8",
+    )
+    return entradas
+
+
+def informe_documentos(entradas: dict, codigos: list[str], momento: str) -> list[str]:
+    """Por contrato: tipo, tamaño y motivo. Ni rutas ni contenido."""
+    tipos = [entradas[codigo]["tipo"] for codigo in codigos]
+    lineas = [
+        "## Documento del contrato (`python -m evals.contratos documentos`)",
+        "",
+        f"- Fecha: {momento}",
+        "- Recuento: "
+        + " · ".join(f"{tipo} {tipos.count(tipo)}" for tipo in sv5_documentos.TIPOS),
+        "",
+        "| Contrato | Tipo | Bytes | Motivo |",
+        "|---|---|---|---|",
+    ]
+    for codigo in codigos:
+        entrada = entradas[codigo]
+        lineas.append(
+            f"| {codigo} | {entrada['tipo']} | {entrada['bytes']} | {entrada['motivo'] or '—'} |"
+        )
+    return [*lineas, ""]
+
+
+def ejecutar_documentos(opciones, entorno: dict, lanzar=None) -> int:
+    """El subcomando `documentos`: 0 leído, 1 si el subproceso de sv5 murió."""
+    faltan = sv5_documentos.faltan_variables(entorno)
+    if faltan:
+        raise ErrorUso(
+            "no se puede leer el documento del contrato: faltan en el entorno "
+            + ", ".join(faltan)
+            + ". No se ha conectado a nada."
+        )
+    codigos = contratos_del_banco(
+        filtrar(cargar_fase(Path(opciones.fixtures), "inputs"), _pedidos(opciones))
+    )
+    trabajo = {"contratos": codigos, "max_pdf_mb": sv5_documentos.MAX_PDF_MB}
+    try:
+        salida = (lanzar or sv5_documentos.ejecutar_en_subproceso)(trabajo, entorno)
+    except (RuntimeError, OSError, subprocess.SubprocessError) as error:
+        print(f"contratos: no se ha leído ningún documento:\n{error}", file=sys.stderr)
+        return 1
+    momento = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    entradas = guardar_documentos(
+        salida.get("resultados", []), Path(opciones.cache), Path(opciones.indice), momento
+    )
+    leidos = [codigo for codigo in codigos if codigo in entradas]
+    escribir_seccion(
+        Path(opciones.informe), "documentos", informe_documentos(entradas, leidos, momento)
+    )
+    print(f"documentos: {len(leidos)} contratos · índice en {opciones.indice}")
+    return 0
+
+
 # --- CLI ---------------------------------------------------------------------------
 
 
@@ -582,7 +695,12 @@ def _analizador() -> argparse.ArgumentParser:
     lineas.add_argument("--dry-run", action="store_true", help="no toca el libro: solo el informe")
     lineas.add_argument("--reintentos", type=int, default=INTENTOS_POR_DEFECTO)
     lineas.add_argument("--ground-truth", default=str(RUTA_GROUND_TRUTH))
-    for orden in (lineas,):
+    documentos = ordenes.add_parser(
+        "documentos", help="cabecera y documento del contrato (BBDD albaranes y SharePoint)"
+    )
+    documentos.add_argument("--cache", default=str(sv5_documentos.RUTA_CACHE))
+    documentos.add_argument("--indice", default=str(sv5_documentos.RUTA_INDICE))
+    for orden in (lineas, documentos):
         orden.add_argument("--casos", default="", help="lista de caso_id separados por coma")
         orden.add_argument("--fixtures", default=str(RUTA_FIXTURES))
         orden.add_argument("--informe", default=str(RUTA_INFORME))
@@ -619,11 +737,19 @@ def ejecutar_lineas(opciones, entorno: dict, transport=None) -> int:
     return 1 if importacion.fallidos else 0
 
 
-def main(argv: list[str] | None = None, entorno: dict | None = None, transport=None) -> int:
-    """CLI. Códigos: 0 bien, 1 algún contrato falló, 2 uso (falta algo)."""
+def main(
+    argv: list[str] | None = None, entorno: dict | None = None, transport=None, lanzar=None
+) -> int:
+    """CLI. Códigos: 0 bien, 1 algún contrato (o el subproceso) falló, 2 uso.
+
+    `transport` (sigrid-api) y `lanzar` (subproceso de sv5) son las costuras de
+    los tests: sin red ni BBDD (R25).
+    """
     opciones = _analizador().parse_args(argv)
     entorno = dict(os.environ) if entorno is None else entorno
     try:
+        if opciones.orden == "documentos":
+            return ejecutar_documentos(opciones, entorno, lanzar=lanzar)
         return ejecutar_lineas(opciones, entorno, transport=transport)
     except ErrorUso as error:
         print(str(error), file=sys.stderr)

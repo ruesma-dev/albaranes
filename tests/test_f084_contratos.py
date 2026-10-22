@@ -517,3 +517,363 @@ def test_f084_r1_sin_libro_es_un_error_de_uso(tmp_path, constructor_gt, capsys):
 
     assert codigo == 2
     assert "INPUTS.xlsx" in capsys.readouterr().err
+
+
+# --- T5 · documento y cabecera del contrato (R29–R31, R34) -------------------
+
+import ast  # noqa: E402
+import base64  # noqa: E402
+import os  # noqa: E402
+import subprocess  # noqa: E402
+import sys  # noqa: E402
+
+from evals.procesos import sv5_documentos  # noqa: E402
+
+_REPO_SV5 = (
+    RAIZ / "services" / "albaran-valoracion-api" / "infrastructure" / "database"
+    / "sqlalchemy_valuation_context_repository.py"
+)
+
+
+def _sql_de_sv5_en_el_fuente() -> str:
+    """El texto de `_SQL_CONTRATO_HEADER` leído del fuente de sv5, sin importarlo."""
+    arbol = ast.parse(_REPO_SV5.read_text(encoding="utf-8"))
+    for nodo in arbol.body:
+        if isinstance(nodo, ast.Assign) and getattr(nodo.targets[0], "id", "") == "_SQL_CONTRATO_HEADER":
+            return nodo.value.args[0].value
+    raise AssertionError("sv5 ya no declara _SQL_CONTRATO_HEADER")
+
+
+_SQL_SV5 = _sql_de_sv5_en_el_fuente()
+
+_FILA = {
+    "id": 31,
+    "codigo_contrato": "CTSU24/0454",
+    "nombre_contrato": "SUMINISTRO FERRETERIA",
+    "cif_proveedor": "A00000000",
+    "nombre_proveedor": "FERRETERIA DE PRUEBA SA",
+    "codigo_obra": "696",
+    "nombre_obra": "OBRA DE PRUEBA",
+    "pdf_sharepoint_relative_path": "contratos/CTSU24-0454.pdf",
+    "pdf_sharepoint_web_url": "https://ejemplo.invalid/x",
+    "md_sharepoint_relative_path": "contratos/CTSU24-0454.md",
+}
+
+
+class _Resultado:
+    def __init__(self, fila):
+        self._fila = fila
+
+    def mappings(self):
+        return self
+
+    def first(self):
+        return self._fila
+
+
+class _Sesion:
+    """Doble de la sesión de BBDD: una fila por código, y lo que se le pidió."""
+
+    def __init__(self, filas: dict, rota: set | None = None):
+        self.filas = filas
+        self.rota = rota or set()
+        self.consultas: list[tuple[str, dict]] = []
+
+    def execute(self, sql, parametros):
+        self.consultas.append((str(sql), parametros))
+        if parametros["codigo_contrato"] in self.rota:
+            raise RuntimeError("la BBDD se cayó")
+        return _Resultado(self.filas.get(parametros["codigo_contrato"]))
+
+
+class _Descargador:
+    """Doble del descargador de sv5: MD y PDF por ruta, o una excepción."""
+
+    def __init__(self, md=None, pdf=None):
+        self.md = md or {}
+        self.pdf = pdf or {}
+        self.pedidos: list[tuple[str, str]] = []
+
+    def download_markdown_by_relative_path(self, *, relative_path):
+        self.pedidos.append(("md", relative_path))
+        valor = self.md[relative_path]
+        if isinstance(valor, Exception):
+            raise valor
+        return valor
+
+    def download_by_relative_path(self, *, relative_path):
+        self.pedidos.append(("pdf", relative_path))
+        valor = self.pdf[relative_path]
+        if isinstance(valor, Exception):
+            raise valor
+        return type("Descargado", (), {"filename": "c.pdf", "mime_type": "application/pdf", "data": valor})()
+
+
+def _documento(fila=_FILA, md=None, pdf=None, max_pdf_mb=40):
+    return sv5_documentos.documento_de_contrato(
+        "CTSU24/0454", _Sesion({"CTSU24/0454": fila}), _Descargador(md, pdf), _SQL_SV5, max_pdf_mb
+    )
+
+
+def test_f084_r29_la_sql_del_subproceso_es_la_de_sv5():
+    """Se importa en un subproceso con sv5 en `sys.path`, como en la corrida."""
+    codigo = (
+        "import sys; sys.path.insert(0, sys.argv[1]);"
+        "from evals.procesos import sv5_documentos as m; sys.stdout.write(m.sql_contrato())"
+    )
+    proceso = subprocess.run(
+        [sys.executable, "-c", codigo, str(RAIZ / "services" / "albaran-valoracion-api")],
+        capture_output=True, text=True, encoding="utf-8", cwd=str(RAIZ), check=True,
+    )
+
+    assert proceso.stdout == _SQL_SV5
+    assert "FROM albaran_contratos_merge" in _SQL_SV5 and "LIMIT 1" in _SQL_SV5
+
+
+def test_f084_r29_lee_la_fila_del_codigo_con_la_sql_que_recibe():
+    sesion = _Sesion({"CTSU24/0454": _FILA})
+
+    sv5_documentos.documento_de_contrato(
+        "CTSU24/0454", sesion, _Descargador(md={_FILA["md_sharepoint_relative_path"]: "# C"}),
+        _SQL_SV5, 40,
+    )
+
+    assert sesion.consultas == [(_SQL_SV5, {"codigo_contrato": "CTSU24/0454"})]
+
+
+def test_f084_r29_con_md_se_prefiere_el_md():
+    documento = _documento(md={_FILA["md_sharepoint_relative_path"]: "  # Contrato\n"},
+                           pdf={_FILA["pdf_sharepoint_relative_path"]: b"%PDF"})
+
+    assert documento["tipo"] == "md"
+    assert base64.b64decode(documento["contenido_b64"]) == "# Contrato".encode("utf-8")
+    assert documento["cabecera"] == {
+        "nombre_contrato": "SUMINISTRO FERRETERIA", "cif_proveedor": "A00000000",
+        "nombre_proveedor": "FERRETERIA DE PRUEBA SA", "codigo_obra": "696",
+        "nombre_obra": "OBRA DE PRUEBA",
+    }
+
+
+@pytest.mark.parametrize("md", ["   ", RuntimeError("graph caído")])
+def test_f084_r29_md_vacio_o_que_falla_cae_al_pdf(md):
+    documento = _documento(md={_FILA["md_sharepoint_relative_path"]: md},
+                           pdf={_FILA["pdf_sharepoint_relative_path"]: b"%PDF-1.7"})
+
+    assert documento["tipo"] == "pdf"
+    assert base64.b64decode(documento["contenido_b64"]) == b"%PDF-1.7"
+
+
+def test_f084_r29_sin_ruta_de_md_va_al_pdf():
+    documento = _documento(fila={**_FILA, "md_sharepoint_relative_path": None},
+                           pdf={_FILA["pdf_sharepoint_relative_path"]: b"%PDF"})
+
+    assert documento["tipo"] == "pdf"
+
+
+def test_f084_r31_contrato_que_no_esta_en_la_tabla():
+    documento = _documento(fila=None)
+
+    assert documento["tipo"] == "ninguno"
+    assert "no está en albaran_contratos_merge" in documento["motivo"]
+    assert documento["contenido_b64"] is None and documento["cabecera"] == {}
+
+
+def test_f084_r31_contrato_sin_ruta_de_documento():
+    documento = _documento(fila={**_FILA, "md_sharepoint_relative_path": None,
+                                 "pdf_sharepoint_relative_path": "  "})
+
+    assert documento["tipo"] == "ninguno"
+    assert "sin ruta" in documento["motivo"]
+    assert documento["cabecera"]["codigo_obra"] == "696"
+
+
+def test_f084_r31_la_descarga_del_pdf_falla():
+    documento = _documento(fila={**_FILA, "md_sharepoint_relative_path": None},
+                           pdf={_FILA["pdf_sharepoint_relative_path"]: TimeoutError("lento")})
+
+    assert documento["tipo"] == "ninguno"
+    assert "TimeoutError" in documento["motivo"]
+
+
+def test_f084_r31_un_pdf_que_pasa_de_max_pdf_mb_no_entra():
+    grande = b"x" * (1024 * 1024 + 1)
+    documento = _documento(fila={**_FILA, "md_sharepoint_relative_path": None},
+                           pdf={_FILA["pdf_sharepoint_relative_path"]: grande}, max_pdf_mb=1)
+
+    assert documento["tipo"] == "ninguno"
+    assert "MAX_PDF_MB" in documento["motivo"]
+    assert sv5_documentos.MAX_PDF_MB == 40
+
+
+def test_f084_r31_un_contrato_que_revienta_no_para_a_los_demas():
+    sesion = _Sesion({"A": {**_FILA, "md_sharepoint_relative_path": None,
+                            "pdf_sharepoint_relative_path": None}}, rota={"B"})
+
+    salida = sv5_documentos.ejecutar_trabajo(
+        {"contratos": ["B", "A"], "max_pdf_mb": 40}, sesion=sesion, descargador=_Descargador(),
+        sql=_SQL_SV5,
+    )
+
+    assert [(r["codigo"], r["tipo"]) for r in salida["resultados"]] == [("B", "ninguno"), ("A", "ninguno")]
+    assert "RuntimeError" in salida["resultados"][0]["motivo"]
+    assert "la BBDD se cayó" not in salida["resultados"][0]["motivo"]
+
+
+def test_f084_r30_la_entrada_del_indice_no_lleva_el_contenido():
+    contenido = "# Contrato con precios".encode("utf-8")
+    documento = {"tipo": "md", "motivo": "", "cabecera": dict(_documento(
+        md={_FILA["md_sharepoint_relative_path"]: "# C"})["cabecera"]),
+        "contenido_b64": base64.b64encode(contenido).decode()}
+
+    entrada = contratos.entrada_de_indice("CTSU24/0454", documento, "2026-10-22T10:00:00Z")
+
+    assert entrada == {"CTSU24/0454": {
+        "tipo": "md", "sha256": hashlib.sha256(contenido).hexdigest(), "bytes": len(contenido),
+        "motivo": "", "nombre_contrato": "SUMINISTRO FERRETERIA", "cif_proveedor": "A00000000",
+        "nombre_proveedor": "FERRETERIA DE PRUEBA SA", "codigo_obra": "696",
+        "nombre_obra": "OBRA DE PRUEBA", "leido_utc": "2026-10-22T10:00:00Z",
+    }}
+    assert "precios" not in json.dumps(entrada)
+
+
+def test_f084_r30_sin_documento_la_entrada_dice_ninguno_y_su_motivo():
+    entrada = contratos.entrada_de_indice(
+        "X", {"tipo": "ninguno", "motivo": "sin ruta", "cabecera": {}, "contenido_b64": None}, "t"
+    )["X"]
+
+    assert entrada["tipo"] == "ninguno" and entrada["sha256"] is None and entrada["bytes"] == 0
+    assert entrada["motivo"] == "sin ruta" and entrada["nombre_obra"] is None
+
+
+_ENTORNO_DOCS = {
+    "PG_HOST": "pg.ejemplo.invalid", "PG_DB": "albaranes", "PG_USER": "lector",
+    "PG_PASSWORD": "secreto-de-prueba", "GRAPH_KEY": "{}", "SHAREPOINT_MODE": "drive_id",
+    "SHAREPOINT_DRIVE_ID": "drive-de-prueba",
+}
+
+
+def _lanzar_documentos(tmp_path, fixtures, lanzar, entorno=None, *extra):
+    return contratos.main(
+        ["documentos", "--fixtures", str(fixtures), "--informe", str(tmp_path / "informe.md"),
+         "--cache", str(tmp_path / "cache"), "--indice", str(tmp_path / "indice" / "_indice.json"),
+         *extra],
+        entorno=_ENTORNO_DOCS if entorno is None else entorno,
+        lanzar=lanzar,
+    )
+
+
+def _resultado(codigo, tipo, contenido: bytes | None, motivo=""):
+    return {"codigo": codigo, "tipo": tipo, "motivo": motivo,
+            "cabecera": {"nombre_obra": "OBRA"} if contenido else {},
+            "contenido_b64": base64.b64encode(contenido).decode() if contenido else None}
+
+
+def test_f084_r30_documentos_deja_la_cache_y_el_indice(tmp_path, constructor_gt):
+    _, fixtures = _escenario(tmp_path, constructor_gt)
+    pedidos = []
+
+    def lanzar(trabajo, entorno):
+        pedidos.append((trabajo, entorno))
+        return {"resultados": [
+            _resultado("CTSU24/0228", "md", b"# Contrato 0228"),
+            _resultado("CTSU24/0518", "pdf", b"%PDF-1.7 hormigon"),
+            _resultado("CTSU25/0317", "ninguno", None, "sin ruta de documento (md ni pdf)"),
+        ]}
+
+    assert _lanzar_documentos(tmp_path, fixtures, lanzar) == 0
+
+    (trabajo, entorno), = pedidos
+    assert trabajo == {"contratos": ["CTSU24/0228", "CTSU24/0518", "CTSU25/0317"], "max_pdf_mb": 40}
+    assert entorno["PG_PASSWORD"] == "secreto-de-prueba"
+    assert (tmp_path / "cache" / "CTSU24_0228.md").read_bytes() == b"# Contrato 0228"
+    assert (tmp_path / "cache" / "CTSU24_0518.pdf").read_bytes() == b"%PDF-1.7 hormigon"
+    texto = (tmp_path / "indice" / "_indice.json").read_text(encoding="utf-8")
+    indice = json.loads(texto)
+    assert list(indice) == ["CTSU24/0228", "CTSU24/0518", "CTSU25/0317"]
+    assert indice["CTSU24/0518"]["sha256"] == hashlib.sha256(b"%PDF-1.7 hormigon").hexdigest()
+    assert indice["CTSU25/0317"]["tipo"] == "ninguno"
+    assert "Contrato 0228" not in texto and "hormigon" not in texto
+    informe = (tmp_path / "informe.md").read_text(encoding="utf-8")
+    assert "| CTSU25/0317 | ninguno | 0 | sin ruta de documento (md ni pdf) |" in informe
+
+
+def test_f084_r30_documentos_conserva_las_demas_entradas_del_indice(tmp_path, constructor_gt):
+    _, fixtures = _escenario(tmp_path, constructor_gt)
+    indice = tmp_path / "indice" / "_indice.json"
+    indice.parent.mkdir()
+    indice.write_text(json.dumps({"OTRO/1": {"tipo": "ninguno"}}), encoding="utf-8")
+
+    _lanzar_documentos(tmp_path, fixtures, lambda t, e: {"resultados": [
+        _resultado("CTSU24/0518", "md", b"# x")]}, None, "--casos", "HOR-001")
+
+    assert set(json.loads(indice.read_text(encoding="utf-8"))) == {"OTRO/1", "CTSU24/0518"}
+
+
+def test_f084_r30_si_el_subproceso_muere_no_se_toca_nada(tmp_path, constructor_gt, capsys):
+    _, fixtures = _escenario(tmp_path, constructor_gt)
+
+    def lanzar(trabajo, entorno):
+        raise RuntimeError("el subproceso de sv5 falló con código 1")
+
+    assert _lanzar_documentos(tmp_path, fixtures, lanzar) == 1
+    assert not (tmp_path / "indice" / "_indice.json").exists()
+    assert "código 1" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("cambio", "falta"),
+    [
+        ({"PG_HOST": ""}, "PG_HOST"),
+        ({"PG_PASSWORD": " "}, "PG_PASSWORD"),
+        ({"PG_USER": ""}, "PG_USER"),
+        ({"PG_DB": ""}, "PG_DB"),
+        ({"GRAPH_KEY": ""}, "GRAPH_KEY"),
+        ({"SHAREPOINT_DRIVE_ID": ""}, "SHAREPOINT_DRIVE_ID"),
+        ({"SHAREPOINT_MODE": "folder_url"}, "SHAREPOINT_FOLDER_URL"),
+        ({"SHAREPOINT_MODE": "site_path"}, "SHAREPOINT_HOSTNAME"),
+        ({"SHAREPOINT_MODE": "otro"}, "SHAREPOINT_MODE"),
+    ],
+)
+def test_f084_r34_sin_variables_para_antes_de_conectar(cambio, falta, tmp_path, constructor_gt, capsys):
+    _, fixtures = _escenario(tmp_path, constructor_gt)
+    lanzados = []
+
+    codigo = _lanzar_documentos(
+        tmp_path, fixtures, lambda t, e: lanzados.append(t), {**_ENTORNO_DOCS, **cambio}
+    )
+
+    assert codigo == 2
+    assert falta in capsys.readouterr().err
+    assert lanzados == []
+
+
+def test_f084_r34_sin_sharepoint_mode_vale_el_de_sv5_drive_id():
+    entorno = {k: v for k, v in _ENTORNO_DOCS.items() if k != "SHAREPOINT_MODE"}
+
+    assert sv5_documentos.faltan_variables(entorno) == []
+
+
+def test_f084_r34_la_sesion_se_abre_en_solo_lectura():
+    url, argumentos = sv5_documentos.conexion_de_solo_lectura(
+        {**_ENTORNO_DOCS, "PG_PASSWORD": "p@ss:word", "PG_PORT": "6432"}
+    )
+
+    assert argumentos == {"options": "-c default_transaction_read_only=on"}
+    assert url == "postgresql+psycopg://lector:p%40ss%3Aword@pg.ejemplo.invalid:6432/albaranes"
+
+
+def test_f084_r34_el_subproceso_recibe_el_entorno_por_env_y_no_por_stdin(monkeypatch):
+    vistos = {}
+
+    def falso_run(argumentos, **opciones):
+        vistos.update(opciones)
+        salida = "<<<EVALS-JSON-INICIO>>>\n{\"resultados\": []}\n<<<EVALS-JSON-FIN>>>\n"
+        return subprocess.CompletedProcess(argumentos, 0, stdout=salida, stderr="")
+
+    monkeypatch.setattr(sv5_documentos.subprocess, "run", falso_run)
+    salida = sv5_documentos.ejecutar_en_subproceso({"contratos": ["A"]}, dict(_ENTORNO_DOCS))
+
+    assert salida == {"resultados": []}
+    assert vistos["env"]["PG_PASSWORD"] == "secreto-de-prueba"
+    assert "secreto" not in vistos["input"]
+    assert os.environ.get("PG_PASSWORD") != "secreto-de-prueba"
