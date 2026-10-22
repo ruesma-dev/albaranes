@@ -2,7 +2,7 @@
   "caso_id": "HOR-006",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
+  "sha256_libro": "4ff11165e3d27b5d83f61048097a5798ebad37053b320230915e2303bf92aabe",
   "tablas": {
     "cabeceras": [
       {
@@ -11,10 +11,10 @@
         "fecha": "2023-12-19",
         "fichero_albaran": "HOR-006.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "H98634",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
-        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_cif": "B04685541",
         "proveedor_nombre": "HORPRESOL, S.L."
       }
     ],
@@ -22,7 +22,7 @@
       {
         "cantidad": 7,
         "caso_id": "HOR-006",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "5.01",
         "comentario": "ha codigo partida 02.05 pero no se de donde lo ha sacado, ni de donde lo ha sacado negocio",
         "descripcion_esperada": "HA-25/B/20/XC2",
         "descuentos": null,

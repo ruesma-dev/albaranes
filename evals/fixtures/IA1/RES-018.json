@@ -2,7 +2,7 @@
   "caso_id": "RES-018",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
+  "sha256_libro": "4ff11165e3d27b5d83f61048097a5798ebad37053b320230915e2303bf92aabe",
   "tablas": {
     "cabeceras": [
       {
@@ -11,10 +11,10 @@
         "fecha": "2025-07-28",
         "fichero_albaran": "RES-018.png",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "29990",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
-        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_cif": "B93649002",
         "proveedor_nombre": "CARGA Y TRANSPORTE DE CUBAS, S.L."
       }
     ],
@@ -22,7 +22,7 @@
       {
         "cantidad": "@@NO_COMPARAR@@",
         "caso_id": "RES-018",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "CI.03A.7",
         "comentario": "Banco 2026-10-22 (chore banco-correcciones): la fila del canon con las toneladas la construye la valoracion (canon, F-006), no esta impresa (sigue en RESULTADO_FINAL); se quitan de IA1 1 fila(s): RCDS. SUCIOS | Banco 2026-10-22 (chore banco-correcciones): cantidad a ? (no comparar): el 1 era el contenedor ya convertido por la regla de contenedores de sv6; el papel trae m3 y kg y que debe devolver IA1 en cantidad no esta decidido",
         "descripcion_esperada": "CONTENEDOR DE 8M3",
         "descuentos": null,

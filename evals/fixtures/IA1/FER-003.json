@@ -2,7 +2,7 @@
   "caso_id": "FER-003",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
+  "sha256_libro": "4ff11165e3d27b5d83f61048097a5798ebad37053b320230915e2303bf92aabe",
   "tablas": {
     "cabeceras": [
       {
@@ -11,10 +11,10 @@
         "fecha": "2026-03-10",
         "fichero_albaran": "FER-003.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "2.115.714",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
-        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_cif": "A28733558",
         "proveedor_nombre": "FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)"
       }
     ],
@@ -22,7 +22,7 @@
       {
         "cantidad": 4,
         "caso_id": "FER-003",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "CI.4.18",
         "comentario": "ha cogido 01.04.18 en lugar de CI.04.18 | Banco 2026-10-22 (chore banco-correcciones): precio impreso 95,481; cuadra con el importe 229,15 (4 x 95,481 x 0,6)",
         "descripcion_esperada": "DISCO DIAMANTE 180 MM. PULIDORA (DEBASTAR)",
         "descuentos": 40,
@@ -34,7 +34,7 @@
       {
         "cantidad": -4,
         "caso_id": "FER-003",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "CI.4.18",
         "comentario": "la deduccion no la ha cogido (no estaba planteado hasta ahora). En el albaran poner RTIRAR 4 disco diamante. Y una referencia a un albaran anterior (su numero de alabaran, no nuestro codigo interno)",
         "descripcion_esperada": "DISCO DIAMANTE 100 MM. PULIDORA (11-380)",
         "descuentos": 40,

@@ -2,7 +2,7 @@
   "caso_id": "GRA-002",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
+  "sha256_libro": "4ff11165e3d27b5d83f61048097a5798ebad37053b320230915e2303bf92aabe",
   "tablas": {
     "cabeceras": [
       {
@@ -11,10 +11,10 @@
         "fecha": "2026-05-26",
         "fichero_albaran": "GRA-002.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "58878",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
-        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_cif": "B86615549",
         "proveedor_nombre": "MATERIALES Y HORMIGONES, S.L. (MAHORSA)"
       }
     ],
@@ -22,7 +22,7 @@
       {
         "cantidad": 29960,
         "caso_id": "GRA-002",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "P5.03.04",
         "comentario": "La partida ha cogido PT.03.04 en lugar de P5.03.04La unidad esta bien, pero ha cogio un unitario que no es. Es grava 20/40 (se deduce del texto, esta en el contrato), el unitario es 12,87 | Banco 2026-10-22 (chore banco-correcciones): IA1 espera lo impreso, 29960 (kg); las 29.96 t son la conversion de la valoracion",
         "descripcion_esperada": "GRAVA 20/40",
         "descuentos": null,

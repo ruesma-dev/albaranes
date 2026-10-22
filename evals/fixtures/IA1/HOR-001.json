@@ -2,7 +2,7 @@
   "caso_id": "HOR-001",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
+  "sha256_libro": "4ff11165e3d27b5d83f61048097a5798ebad37053b320230915e2303bf92aabe",
   "tablas": {
     "cabeceras": [
       {
@@ -11,10 +11,10 @@
         "fecha": "2026-05-25",
         "fichero_albaran": "HOR-001.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "225137",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
-        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_cif": "B86738812",
         "proveedor_nombre": "HORMIGON SIERRA MADRID, S.L."
       }
     ],
@@ -22,7 +22,7 @@
       {
         "cantidad": 9,
         "caso_id": "HOR-001",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "P5.03.09",
         "comentario": "falta P5 al inicio de la partida.",
         "descripcion_esperada": "HORMIGÓN HA-25/B/20/XC2",
         "descuentos": null,

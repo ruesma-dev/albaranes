@@ -2,7 +2,7 @@
   "caso_id": "MOR-004",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "52a435d7ff08bd9519b74926454caa1fe4526becb38d89f2f5cd4ce988d730a4",
+  "sha256_libro": "4ff11165e3d27b5d83f61048097a5798ebad37053b320230915e2303bf92aabe",
   "tablas": {
     "cabeceras": [
       {
@@ -11,10 +11,10 @@
         "fecha": "2025-09-29",
         "fichero_albaran": "MOR-004.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "37816",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
-        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_cif": "B29679628",
         "proveedor_nombre": "HORMIGONES Y CEMENTOS ANDALUCES, S.L."
       }
     ],
@@ -22,7 +22,7 @@
       {
         "cantidad": 9,
         "caso_id": "MOR-004",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "10.03.04",
         "comentario": "partida mal, ha cogido 00.03.01. importe viene de oferta. Añadir | Banco 2026-10-22 (chore banco-correcciones): no son lineas impresas, las crea la valoracion como sinteticas (siguen en RESULTADO_FINAL); se quitan de IA1 1 fila(s): INCREM. FIBRAS POLIPROPILENO",
         "descripcion_esperada": "D-300/B/5/I",
         "descuentos": null,
