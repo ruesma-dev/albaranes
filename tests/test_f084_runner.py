@@ -309,3 +309,114 @@ def test_f084_r20_el_trabajo_de_sv5_lleva_proveedor_y_modelo(tmp_path, subproces
 
     assert (sv5.trabajos[0]["proveedor"], sv5.trabajos[0]["modelo"]) == ("openai", "gpt-6.1-sol")
     assert _fase(fases, "IA3").proveedores == ["openai"]
+
+
+# --- T9 · modelo, documento y emparejamiento en el informe (R17, R21, R36) -----
+
+from evals import informe  # noqa: E402
+from evals.modelos import ResultadoCaso, ResultadoFase, ResultadoPasada  # noqa: E402
+
+
+def _bloques(texto: str) -> dict[str, str]:
+    """El texto de cada bloque de fase del informe, por su nombre corto."""
+    bloques = {}
+    for trozo in texto.split("\n## ")[1:]:
+        nombre = "E2E" if trozo.startswith("Extremo a extremo") else trozo.split(" ", 1)[0]
+        bloques[nombre] = trozo
+    return bloques
+
+
+def _pasada(modo: str, **por_fase) -> ResultadoPasada:
+    fases = []
+    for nombre in ("IA1", "IA3", "IA4", "E2E"):
+        fase = ResultadoFase(nombre=nombre, proveedores=["openai"], **por_fase.get(nombre, {}))
+        fase.casos.append(ResultadoCaso(caso_id="HOR-001", fase=nombre))
+        fases.append(fase)
+    return ResultadoPasada(modo=modo, fases=fases, feature="F-084", commit="abc", fecha="hoy")
+
+
+def test_f084_r21_el_informe_registra_el_modelo_de_cada_fase_de_valoracion():
+    pasada = _pasada(
+        informe.MODO_COMPLETA,
+        IA3={"modelos": ["gpt-6.1-sol"]}, IA4={"modelos": ["gpt-6.1-sol"]},
+        E2E={"modelos": ["gpt-6.1-sol"]},
+    )
+
+    bloques = _bloques(informe.render(pasada))
+
+    for nombre in ("IA3", "IA4", "E2E"):
+        assert "- Proveedores invocados: openai" in bloques[nombre]
+        assert "- Modelo: gpt-6.1-sol" in bloques[nombre]
+    assert "- Modelo:" not in bloques["IA1"]
+
+
+def test_f084_r21_sin_modelo_lo_dice():
+    bloques = _bloques(informe.render(_pasada(informe.MODO_DETERMINISTA)))
+
+    assert "- Modelo: (ninguno: sin llamadas LLM)" in bloques["IA3"]
+
+
+def test_f084_r21_las_lineas_parseables_no_cambian():
+    texto = informe.render(_pasada(informe.MODO_COMPLETA, IA3={"modelos": ["m"]}))
+    parseable = texto.split("```")[1].strip().splitlines()
+
+    assert parseable == ["MODO: completa", "FASES: IA1,IA3,IA4,E2E", "PROVEEDORES: openai"]
+    assert informe.parsear_veredicto(texto) == "VERDE"
+    assert texto.rstrip().splitlines()[-1] == "VEREDICTO: VERDE"
+
+
+def test_f084_r17_el_informe_declara_con_que_documento_se_valoro():
+    pasada = _pasada(informe.MODO_COMPLETA, IA3={"documentos": {"md": 2, "ninguno": 1}})
+
+    bloques = _bloques(informe.render(pasada))
+
+    assert "- Documento del contrato: md 2 · pdf 0 · ninguno 1" in bloques["IA3"]
+
+
+def test_f084_r36_el_determinista_declara_que_no_mide_el_emparejamiento():
+    bloques = _bloques(informe.render(_pasada(informe.MODO_DETERMINISTA)))
+
+    for nombre in ("IA3", "IA4", "E2E"):
+        assert "NO mide el emparejamiento" in bloques[nombre]
+        assert "`?`" in bloques[nombre] and "--con-llm" in bloques[nombre]
+    assert "emparejamiento" not in bloques["IA1"]
+
+
+def test_f084_r36_la_corrida_con_llm_no_lleva_la_advertencia():
+    texto = informe.render(_pasada(informe.MODO_COMPLETA))
+
+    assert "NO mide el emparejamiento" not in texto
+
+
+def test_f084_r21_r17_la_corrida_con_llm_rellena_modelo_y_documentos(tmp_path, subprocesos, monkeypatch):
+    cache = tmp_path / "cache"
+    cache.mkdir()
+    (cache / "CT_HOR-002.md").write_bytes(b"# C")
+    monkeypatch.setattr(runner, "RUTA_CACHE", cache)
+    fixtures = _banco(tmp_path, _inputs("HOR-001"), _inputs("HOR-002"), _inputs("HOR-003", lineas_contrato=False),
+                      indice=_indice_md("HOR-002"))
+
+    fases, _ = runner.corrida_completa(fixtures, fases=["IA3", "IA4", "E2E"])
+
+    for nombre in ("IA3", "IA4", "E2E"):
+        assert _fase(fases, nombre).modelos == ["modelo-servido"]
+        assert _fase(fases, nombre).documentos == {"md": 1, "pdf": 0, "ninguno": 1}
+
+
+def test_f084_r21_si_sv5_no_dice_el_modelo_vale_el_pedido(tmp_path, subprocesos):
+    _, sv5 = subprocesos
+    sv5.modelo = None
+    fixtures = _banco(tmp_path, _inputs("HOR-001"))
+
+    fases, _ = runner.corrida_completa(fixtures, fases=["IA3"])
+
+    assert _fase(fases, "IA3").modelos == ["gpt-6.1-sol"]
+
+
+def test_f084_r36_el_informe_determinista_del_runner_lleva_la_advertencia(tmp_path, subprocesos):
+    fixtures = _banco(tmp_path, _inputs("HOR-001"))
+
+    runner.main(["--fixtures", str(fixtures), "--informes", str(tmp_path), "--feature", "F-084-t"])
+
+    texto = (tmp_path / "evals_F-084-t.md").read_text(encoding="utf-8")
+    assert texto.count("NO mide el emparejamiento") == 3

@@ -41,6 +41,21 @@ _AVISO_SIN_CLASIFICAR = (
     "para que el informe deje de avisar:"
 )
 
+#: Fases de la valoración: llevan el modelo (R21) y, en el determinista, la
+#: advertencia de que no se mide el emparejamiento (R36). F-084.
+_FASES_VALORACION = ("IA3", "IA4", "E2E")
+
+_SIN_MODELO = "(ninguno: sin llamadas LLM)"
+
+_TIPOS_DOCUMENTO = ("md", "pdf", "ninguno")
+
+_AVISO_EMPAREJAMIENTO = (
+    "- Emparejamiento: esta corrida determinista NO mide el emparejamiento. "
+    "Una línea sin emparejar en el ground truth (`?`) sigue sin emparejar: "
+    "emparejar es trabajo de IA3/IA4 y solo lo mide la corrida con LLM "
+    "(`--con-llm`). El banco no empareja por partida, precio ni texto (F-084 R36)."
+)
+
 _NOMBRE_LARGO = {
     "IA1": "IA1 · extracción genérica (sv2)",
     "IA2": "IA2 · contexto por tipología (sv2)",
@@ -79,7 +94,7 @@ def _cabecera(pasada: ResultadoPasada) -> list[str]:
     ]
 
 
-def _bloque_fase(fase: ResultadoFase) -> list[str]:
+def _bloque_fase(fase: ResultadoFase, modo: str = MODO_COMPLETA) -> list[str]:
     lineas = [
         f"## {_NOMBRE_LARGO.get(fase.nombre, fase.nombre)} — {fase.veredicto()}",
         "",
@@ -89,6 +104,15 @@ def _bloque_fase(fase: ResultadoFase) -> list[str]:
         ),
         f"- Proveedores invocados: {', '.join(fase.proveedores) or '(ninguno)'}",
     ]
+    if fase.nombre in _FASES_VALORACION or fase.modelos:
+        lineas.append(f"- Modelo: {', '.join(fase.modelos) or _SIN_MODELO}")
+    if fase.documentos:
+        recuento = " · ".join(
+            f"{tipo} {fase.documentos.get(tipo, 0)}" for tipo in _TIPOS_DOCUMENTO
+        )
+        lineas.append(f"- Documento del contrato: {recuento}")
+    if modo == MODO_DETERMINISTA and fase.nombre in _FASES_VALORACION:
+        lineas.append(_AVISO_EMPAREJAMIENTO)
     if fase.motivo:
         lineas.append(f"- Motivo: {fase.motivo}")
     lineas += ["", "| Caso | Estado | Fallos críticos | Avisos laxos | Motivo |", "|---|---|---|---|---|"]
@@ -151,7 +175,7 @@ def render(
     lineas += _cabecera(pasada)
 
     for fase in pasada.fases:
-        lineas += _bloque_fase(fase)
+        lineas += _bloque_fase(fase, pasada.modo)
 
     if no_observables:
         lineas += [

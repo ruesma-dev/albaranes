@@ -87,6 +87,14 @@ def motivo_para_omitir(inputs: dict, indice: dict, raiz: Path | str) -> str:
     return (documento or {}).get("falta", "")
 
 
+def recuento_documentos(casos: list[dict]) -> dict[str, int]:
+    """(R17) Cuántos casos van a IA3 con el documento en MD, en PDF o sin él."""
+    tipos = [
+        (caso["contexto"].get("documento") or {}).get("tipo") or "ninguno" for caso in casos
+    ]
+    return {tipo: tipos.count(tipo) for tipo in ("md", "pdf", "ninguno")}
+
+
 def _omitir_en(fases, caso_id: str, motivo: str) -> None:
     for fase in fases:
         fase.casos.append(ResultadoCaso.omitido(caso_id, fase.nombre, motivo))
@@ -554,9 +562,9 @@ def _corrida_valoracion_real(
     """
     proveedor, modelo = valoracion or valoracion_por_defecto(proveedores)
     indice = {} if indice is None else indice
-    fase_ia3 = ResultadoFase(nombre="IA3", proveedores=[proveedor])
-    fase_ia4 = ResultadoFase(nombre="IA4", proveedores=[proveedor])
-    fase_e2e = ResultadoFase(nombre="E2E", proveedores=[proveedor])
+    fase_ia3 = ResultadoFase(nombre="IA3", proveedores=[proveedor], modelos=[modelo])
+    fase_ia4 = ResultadoFase(nombre="IA4", proveedores=[proveedor], modelos=[modelo])
+    fase_e2e = ResultadoFase(nombre="E2E", proveedores=[proveedor], modelos=[modelo])
     no_observables: list[str] = []
 
     if not inputs:
@@ -583,11 +591,16 @@ def _corrida_valoracion_real(
     if not casos_sv5:
         return list(fases), no_observables
 
+    documentos = recuento_documentos(casos_sv5)
+    for fase in fases:
+        fase.documentos = dict(documentos)
     salida_sv5, motivo_muerte_sv5 = _ejecutar_aislado(
         "sv5",
         sv5_valoracion.ejecutar_en_subproceso,
         {"proveedor": proveedor, "modelo": modelo, "casos": casos_sv5},
     )
+    for fase in fases:
+        fase.modelos = [(salida_sv5 or {}).get("modelo") or modelo]
     enviados = [caso["caso_id"] for caso in casos_sv5]
     if salida_sv5 is None:
         for fase in fases:
