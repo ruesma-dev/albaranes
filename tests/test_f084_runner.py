@@ -420,3 +420,40 @@ def test_f084_r36_el_informe_determinista_del_runner_lleva_la_advertencia(tmp_pa
 
     texto = (tmp_path / "evals_F-084-t.md").read_text(encoding="utf-8")
     assert texto.count("NO mide el emparejamiento") == 3
+
+
+# --- T11 · R24: los 7 RES siguen igual ------------------------------------------
+
+#: sha256 de `tests/datos/afirmado_por_el_humano_RES.json` en `efd73b7` (la
+#: base de la spec), con finales de línea LF como lo guarda git.
+_SHA_AFIRMADO_RES = "d5d37b7a6bd6e46e56723862c14b75fe3dd40dcdcf730cd6c0372e63ec43fd51"
+
+#: Fallos críticos del determinista en `efd73b7`, por caso y fase: el techo.
+_FALLOS_BASE_RES = {
+    **{(f"RES-00{n}", fase): 0 for n in range(1, 7) for fase in ("IA3", "E2E")},
+    ("RES-007", "IA3"): 4,
+    ("RES-007", "E2E"): 6,
+}
+
+
+def test_f084_r24_lo_afirmado_por_el_humano_no_cambia():
+    contenido = (RAIZ / "tests" / "datos" / "afirmado_por_el_humano_RES.json").read_bytes()
+
+    assert hashlib.sha256(contenido.replace(b"\r\n", b"\n")).hexdigest() == _SHA_AFIRMADO_RES
+
+
+def test_f084_r24_el_determinista_de_los_7_res_no_empeora():
+    from evals.conversor import RUTA_FIXTURES
+
+    casos = [f"RES-00{n}" for n in range(1, 8)]
+    fases, _ = runner.corrida_determinista(RUTA_FIXTURES, casos)
+
+    obtenidos = {
+        (caso.caso_id, fase.nombre): len(caso.fallos)
+        for fase in fases if fase.nombre in ("IA3", "E2E")
+        for caso in fase.casos
+    }
+    assert set(obtenidos) == set(_FALLOS_BASE_RES)
+    for clave, techo in _FALLOS_BASE_RES.items():
+        assert obtenidos[clave] <= techo, clave
+    assert all(c.estado != OMITIDO for f in fases if f.nombre != "IA4" for c in f.casos)
