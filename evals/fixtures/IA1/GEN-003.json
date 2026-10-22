@@ -2,7 +2,7 @@
   "caso_id": "GEN-003",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "8415ac68cd9086104f4bb1033b8bb99fc467943b806dcd9d645b6f9e890beddc",
+  "sha256_libro": "4ff11165e3d27b5d83f61048097a5798ebad37053b320230915e2303bf92aabe",
   "tablas": {
     "cabeceras": [
       {
@@ -11,10 +11,10 @@
         "fecha": "2026-06-09",
         "fichero_albaran": "GEN-003.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "2026/01/007181",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
-        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_cif": "A28800597",
         "proveedor_nombre": "PAVIMARSA, S.A."
       }
     ],
@@ -22,7 +22,7 @@
       {
         "cantidad": 23.76,
         "caso_id": "GEN-003",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "P4.09.04",
         "comentario": null,
         "descripcion_esperada": "SOLADO BOREAL GREY 60X60 cm - BAÑOS PRINCIPALES (OP2)",
         "descuentos": null,
@@ -34,7 +34,7 @@
       {
         "cantidad": 65,
         "caso_id": "GEN-003",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "P4.08.21",
         "comentario": null,
         "descripcion_esperada": "RODAPIÉ BOREAL GREY C/BISELADO 14,8x60 cm - BAÑOS PRINCIPALES (OP2)",
         "descuentos": null,

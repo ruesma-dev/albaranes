@@ -2,7 +2,7 @@
   "caso_id": "RES-018",
   "fase": "IA3",
   "libro": "IA3_valoracion.xlsx",
-  "sha256_libro": "5370ea490c6e6d5c0345ca6f706294d672b7804097efffe67ebcdfd6628c1b60",
+  "sha256_libro": "46f317c274944b85c77cd0d09d95d3803d98668538e79b4cd078871299a64042",
   "tablas": {
     "lineas_valoradas": [
       {

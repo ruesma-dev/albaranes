@@ -2,7 +2,7 @@
   "caso_id": "GRA-001",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "372578227f547f69b420f2d0f392c8885da3995575e99f7cf590ae81f914ccf3",
+  "sha256_libro": "402f87af54e3ce3701365e34104c8c7da1f468004586710b119fd3dbb84df7ef",
   "tablas": {
     "datos_generales": [
       {
@@ -25,13 +25,13 @@
         "cantidad_final": 30.38,
         "casa_con_contrato": "SI",
         "caso_id": "GRA-001",
-        "comentario": "La unidad esta bien, pero ha cogio un unitario que no es. Es grava 20/40 (se deduce del texto, esta en el contrato), el unitario es 12,86",
+        "comentario": "La unidad esta bien, pero ha cogio un unitario que no es. Es grava 20/40 (se deduce del texto, esta en el contrato), el unitario es 12,86 | Banco 2026-10-22 (decision del humano): la partida es P4.22.01.03.07, no P5.22.01.03.07",
         "descripcion": "GRAVA 20/40",
         "importe_final": 390.99,
         "linea_a_revision": "@@NO_COMPARAR@@",
         "linea_contrato": "@@NO_COMPARAR@@",
         "num_linea": 1,
-        "partida_final": "P5.22.01.03.07",
+        "partida_final": "P4.22.01.03.07",
         "precio_source": "contrato_db",
         "precio_unitario_final": 12.87,
         "unidad_final": "TN"

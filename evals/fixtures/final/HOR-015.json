@@ -2,7 +2,7 @@
   "caso_id": "HOR-015",
   "fase": "FINAL",
   "libro": "RESULTADO_FINAL.xlsx",
-  "sha256_libro": "372578227f547f69b420f2d0f392c8885da3995575e99f7cf590ae81f914ccf3",
+  "sha256_libro": "402f87af54e3ce3701365e34104c8c7da1f468004586710b119fd3dbb84df7ef",
   "tablas": {
     "datos_generales": [
       {
@@ -25,13 +25,13 @@
         "cantidad_final": 7,
         "casa_con_contrato": "SI",
         "caso_id": "HOR-015",
-        "comentario": "no habia elegido contrato. Cuando sean 2 vamos a unirlos. Y que no elija. El incremento de precio se calcula contra año contrato antiguo",
+        "comentario": "no habia elegido contrato. Cuando sean 2 vamos a unirlos. Y que no elija. El incremento de precio se calcula contra año contrato antiguo | F-051 (decision del humano 2026-10-22): linea sin partida impresa => almacen, partida final vacia; antes esperaba 42.01, la del contrato",
         "descripcion": "HA-25/F/12/XC2/1",
         "importe_final": 625.1,
         "linea_a_revision": "@@NO_COMPARAR@@",
         "linea_contrato": "@@NO_COMPARAR@@",
         "num_linea": 1,
-        "partida_final": 42.01,
+        "partida_final": null,
         "precio_source": "contrato_db",
         "precio_unitario_final": 89.3,
         "unidad_final": "M3"
@@ -40,13 +40,13 @@
         "cantidad_final": 7,
         "casa_con_contrato": "SI",
         "caso_id": "HOR-015",
-        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02",
+        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02 | F-051 (decision del humano 2026-10-22): linea sin partida impresa => almacen, partida final vacia; antes esperaba 42.01, la del contrato",
         "descripcion": "INCREM. ARIDO 12",
         "importe_final": 21,
         "linea_a_revision": "@@NO_COMPARAR@@",
         "linea_contrato": "@@NO_COMPARAR@@",
         "num_linea": 2,
-        "partida_final": 42.01,
+        "partida_final": null,
         "precio_source": "contrato_db",
         "precio_unitario_final": 3,
         "unidad_final": "M3"
@@ -55,13 +55,13 @@
         "cantidad_final": 7,
         "casa_con_contrato": "SI",
         "caso_id": "HOR-015",
-        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02",
+        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02 | F-051 (decision del humano 2026-10-22): linea sin partida impresa => almacen, partida final vacia; antes esperaba 42.01, la del contrato",
         "descripcion": "INCREM. CONSISTENCIA FLUIDA",
         "importe_final": 21,
         "linea_a_revision": "@@NO_COMPARAR@@",
         "linea_contrato": "@@NO_COMPARAR@@",
         "num_linea": 3,
-        "partida_final": 42.01,
+        "partida_final": null,
         "precio_source": "contrato_db",
         "precio_unitario_final": 3,
         "unidad_final": "M3"
@@ -71,11 +71,11 @@
       {
         "cantidad": 7,
         "caso_id": "HOR-015",
-        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02. importe de oferta, ahora no sale",
+        "comentario": "no se de donde saca la partida. Ha puesto 02.01.02. importe de oferta, ahora no sale | F-051 (decision del humano 2026-10-22): linea sin partida impresa => almacen, partida final vacia; antes esperaba 42.01, la del contrato",
         "concepto": "HA-25/F/12/XC2/1. INCREM. 2025",
         "importe": 46.9,
         "num_linea_base": 3,
-        "partida": 42.01,
+        "partida": null,
         "precio_unitario": 6.7
       }
     ]

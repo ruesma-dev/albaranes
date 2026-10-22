@@ -2,7 +2,7 @@
   "caso_id": "FER-001",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "8415ac68cd9086104f4bb1033b8bb99fc467943b806dcd9d645b6f9e890beddc",
+  "sha256_libro": "4ff11165e3d27b5d83f61048097a5798ebad37053b320230915e2303bf92aabe",
   "tablas": {
     "cabeceras": [
       {
@@ -11,10 +11,10 @@
         "fecha": "2026-06-05",
         "fichero_albaran": "FER-001.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "2139643",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
-        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_cif": "A28733558",
         "proveedor_nombre": "FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)"
       }
     ],
@@ -22,11 +22,11 @@
       {
         "cantidad": 50,
         "caso_id": "FER-001",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
-        "comentario": null,
+        "codigo_imputacion": "CI.4.18",
+        "comentario": "Banco 2026-10-22 (chore banco-correcciones): importe impreso, cuadra con cantidad x precio x (1 - dto)",
         "descripcion_esperada": "DISCO ESPECIAL ACERO INOX 115x1x22",
         "descuentos": 40,
-        "importe": null,
+        "importe": 19.41,
         "num_linea": 1,
         "precio_unitario": 0.647,
         "unidad": "UD"

@@ -2,14 +2,14 @@
   "caso_id": "RES-011",
   "fase": "IA3",
   "libro": "IA3_valoracion.xlsx",
-  "sha256_libro": "5370ea490c6e6d5c0345ca6f706294d672b7804097efffe67ebcdfd6628c1b60",
+  "sha256_libro": "46f317c274944b85c77cd0d09d95d3803d98668538e79b4cd078871299a64042",
   "tablas": {
     "lineas_valoradas": [
       {
         "caso_id": "RES-011",
-        "codigo_partida_final": "CI.03A.7",
+        "codigo_partida_final": null,
         "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": null,
+        "comentario": "F-051 (decision del humano 2026-10-22): linea sin partida impresa => almacen, partida final vacia; antes esperaba CI.03A.7, la del contrato",
         "importe_calculado": 90,
         "match_method": "@@NO_COMPARAR@@",
         "num_linea": 1,
@@ -19,9 +19,9 @@
       },
       {
         "caso_id": "RES-011",
-        "codigo_partida_final": "CI.03A.7",
+        "codigo_partida_final": null,
         "codigo_producto_contrato": "@@NO_COMPARAR@@",
-        "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año",
+        "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año | F-051 (decision del humano 2026-10-22): linea sin partida impresa => almacen, partida final vacia; antes esperaba CI.03A.7, la del contrato",
         "importe_calculado": 85.28,
         "match_method": "@@NO_COMPARAR@@",
         "num_linea": 2,
@@ -34,8 +34,8 @@
       {
         "cantidad": 3.28,
         "caso_id": "RES-011",
-        "codigo_partida": "CI.03A.7",
-        "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año",
+        "codigo_partida": null,
+        "comentario": "en general, el incremento por leer si no viene leer en el contrato se deduce de canon qe es lo mismo usando el ler. La cantidad es peso en tn, si es menor que 1, pones 1.  hay que añadir incremento por año | F-051 (decision del humano 2026-10-22): linea sin partida impresa => almacen, partida final vacia; antes esperaba CI.03A.7, la del contrato",
         "descripcion_esperada": "RCDS. SUCIOS. INCREM. 2025",
         "modifier_source": "@@NO_COMPARAR@@",
         "num_linea_base": 2,

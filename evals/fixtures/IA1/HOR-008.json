@@ -2,7 +2,7 @@
   "caso_id": "HOR-008",
   "fase": "IA1",
   "libro": "IA1_extraccion.xlsx",
-  "sha256_libro": "8415ac68cd9086104f4bb1033b8bb99fc467943b806dcd9d645b6f9e890beddc",
+  "sha256_libro": "4ff11165e3d27b5d83f61048097a5798ebad37053b320230915e2303bf92aabe",
   "tablas": {
     "cabeceras": [
       {
@@ -11,10 +11,10 @@
         "fecha": "2024-06-05",
         "fichero_albaran": "HOR-008.pdf",
         "forma_pago": "@@NO_COMPARAR@@",
-        "numero_albaran": "@@NO_COMPARAR@@",
+        "numero_albaran": "W25963",
         "obra_codigo": "@@NO_COMPARAR@@",
         "obra_nombre": "@@NO_COMPARAR@@",
-        "proveedor_cif": "@@NO_COMPARAR@@",
+        "proveedor_cif": "B04685541",
         "proveedor_nombre": "HORPRESOL, S.L."
       }
     ],
@@ -22,7 +22,7 @@
       {
         "cantidad": 8,
         "caso_id": "HOR-008",
-        "codigo_imputacion": "@@NO_COMPARAR@@",
+        "codigo_imputacion": "32.02.01.01",
         "comentario": "partida ha cogido 02.01, pero no se de donde sale ni de donde la coge neogcio",
         "descripcion_esperada": "HNE-15/B/20",
         "descuentos": null,

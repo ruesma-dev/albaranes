@@ -1,6 +1,10 @@
 {
   "_descripcion": "Criticidad de los campos comparados por los evals (decisión D4 de specs/F-011-evals-ia). Un campo CRÍTICO que discrepa hace FALLAR el caso; uno LAXO solo deja un AVISO en el informe. Subir un campo de laxo a crítico es una línea de 'criticos'.",
   "_orden_de_resolucion": "1) 'criticos' (exacto) · 2) 'laxos' (exacto) · 3) 'patrones_criticos' · 4) 'patrones_laxos' · 5) 'por_defecto' más un aviso de campo sin clasificar (R8). Los dos primeros son el ajuste campo a campo y mandan sobre los patrones.",
+  "_notas_laxos": {
+    "proveedor_nombre": "Laxo desde el 2026-10-22 (banco de IA1): en produccion la razon social la pone sv3 desde Sigrid (F-062/F-063/F-073), no la lectura de IA1. El que identifica al proveedor es proveedor_cif, que sigue CRITICO por el patron '*_cif'.",
+    "codigo_imputacion": "Laxo desde el 2026-10-22 (banco de IA1): la partida que lee IA1 se compara como AVISO contra la partida_final de RESULTADO_FINAL, normalizada (CI.04.18 = CI.4.18, ver evals/comparador.py), para ver cuantas salen mal sin tumbar el caso. La partida valorada (codigo_partida_final, partida_final) sigue CRITICA."
+  },
   "por_defecto": "critico",
   "criticos": [
     "caso_id",
@@ -41,7 +45,9 @@
     "descripcion_recurso",
     "motivo_veto",
     "observaciones_albaran",
-    "razon_corta"
+    "razon_corta",
+    "codigo_imputacion",
+    "proveedor_nombre"
   ],
   "patrones_criticos": [
     "*cantidad*",
