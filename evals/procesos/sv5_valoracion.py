@@ -17,6 +17,7 @@ test. Lo que necesita sv5 vive detrás del subproceso.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -25,6 +26,13 @@ from pathlib import Path
 
 from evals.procesos import canal
 from evals.procesos.errores import avisar, describir_error
+from evals.procesos.sv5_documentos import (
+    CAMPOS_CABECERA,
+    RUTA_CACHE,
+    RUTA_INDICE,
+    leer_indice,
+    nombre_en_cache,
+)
 from evals.procesos.sv6_build import (
     MAPA_TIPO_FAMILIA,
     _decimal,
@@ -76,10 +84,45 @@ def comprobar_claves(proveedores: list[str], entorno: dict | None = None) -> Non
 
 # --- Parte pura: contexto, envelope y conciliación --------------------------
 
+#: (R33) Por qué un caso no se manda a sv5 si su documento no está en local.
+MOTIVO_SIN_DOCUMENTO = "documento del contrato no disponible en local"
 
-def construir_contexto(inputs: dict) -> dict:
-    """Contexto de valoración de un caso, con la forma que espera sv5."""
+
+def documento_de(codigo: str, indice: dict, raiz: Path | str) -> dict | None:
+    """(R32, R33) El documento del contrato en la caché local, comprobado.
+
+    - Sin entrada en el índice, o con `tipo = ninguno`: `None`. IA3 valora
+      sin documento, que es lo que hace producción con ese contrato.
+    - Con documento en el índice y el fichero local con su `sha256`:
+      `{tipo, ruta}`, que el subproceso de sv5 lee sin red.
+    - Con documento en el índice y el fichero ausente o distinto (un clon
+      limpio, otra importación): `{falta: motivo}`. Mejor no medir que medir
+      otra cosa: el caso sale OMITIDO y no se manda a sv5.
+    """
+    entrada = indice.get(codigo) or {}
+    tipo = entrada.get("tipo")
+    if tipo not in ("md", "pdf"):
+        return None
+    ruta = Path(raiz) / nombre_en_cache(codigo, tipo)
+    if not ruta.is_file() or hashlib.sha256(ruta.read_bytes()).hexdigest() != entrada.get("sha256"):
+        return {"falta": MOTIVO_SIN_DOCUMENTO}
+    return {"tipo": tipo, "ruta": str(ruta)}
+
+
+def construir_contexto(
+    inputs: dict, indice: dict | None = None, raiz: Path | str | None = None
+) -> dict:
+    """Contexto de valoración de un caso, con la forma que espera sv5.
+
+    `indice` y `raiz` son el índice de documentos y la caché local; sin ellos,
+    los versionados (`evals/fixtures/contratos/_indice.json`) y
+    `evals/inputs/contratos/`.
+    """
+    documentos = leer_indice(RUTA_INDICE) if indice is None else indice
+    raiz = RUTA_CACHE if raiz is None else raiz
     caso = (_tablas(inputs, "caso") or [{}])[0]
+    codigo = str(valor(caso, "contrato_codigo") or "")
+    entrada = documentos.get(codigo) or {}
     tipo_familia = MAPA_TIPO_FAMILIA.get(str(inputs.get("tipologia", "")), "otro")
     condiciones = condiciones_de(inputs)
 
@@ -123,11 +166,14 @@ def construir_contexto(inputs: dict) -> dict:
 
     return {
         "document_id": str(inputs.get("caso_id", "")),
-        "codigo_contrato": str(valor(caso, "contrato_codigo") or ""),
+        "codigo_contrato": codigo,
+        # (R17) La cabecera del contrato que sv5 lee de albaran_contratos_merge.
+        **{campo: entrada.get(campo) for campo in CAMPOS_CABECERA},
         "fecha_albaran": condiciones.get("fecha_albaran"),
         "numero_albaran": condiciones.get("numero_albaran"),
         "lineas_albaran": lineas_albaran,
         "lineas_contrato": lineas_contrato,
+        "documento": documento_de(codigo, documentos, raiz),
     }
 
 

@@ -80,6 +80,12 @@ def nombre_en_cache(codigo: str, tipo: str) -> str:
     return f"{re.sub(r'[^A-Za-z0-9_-]+', '_', codigo)}.{tipo}"
 
 
+def leer_indice(ruta: Path | str = RUTA_INDICE) -> dict:
+    """El índice de documentos; vacío si todavía no existe (antes de T12)."""
+    ruta = Path(ruta)
+    return json.loads(ruta.read_text(encoding="utf-8")) if ruta.is_file() else {}
+
+
 def faltan_variables(entorno: dict) -> list[str]:
     """(R34) Las variables de BBDD y de Graph/SharePoint que no están."""
 

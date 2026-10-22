@@ -608,14 +608,9 @@ def contratos_del_banco(inputs: dict[str, dict]) -> list[str]:
     return sorted(codigo for codigo in codigos if codigo)
 
 
-def cargar_indice(ruta: Path) -> dict:
-    """El índice de documentos; vacío si todavía no existe."""
-    return json.loads(ruta.read_text(encoding="utf-8")) if ruta.is_file() else {}
-
-
 def guardar_documentos(resultados: list[dict], cache: Path, indice: Path, momento: str) -> dict:
     """Deja cada documento en la caché y actualiza SU entrada del índice."""
-    entradas = cargar_indice(indice)
+    entradas = sv5_documentos.leer_indice(indice)
     for resultado in resultados:
         if resultado.get("contenido_b64"):
             cache.mkdir(parents=True, exist_ok=True)

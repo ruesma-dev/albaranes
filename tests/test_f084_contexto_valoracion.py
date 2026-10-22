@@ -234,3 +234,107 @@ def test_f084_r14_el_estimulo_de_matches_no_cambia():
         linea = por_linea[int(fila["num_linea"])]
         assert linea["match_method"] == (fila["match_method"] or "no_match")
         assert linea["razon_corta"] == "estímulo del eval desde el ground truth de IA3"
+
+
+# --- T6 · documento local y cabecera del índice (R17, R32, R33) ---------------
+
+import hashlib  # noqa: E402
+
+from evals.procesos import sv5_valoracion  # noqa: E402
+from evals.procesos.sv5_documentos import nombre_en_cache  # noqa: E402
+
+_CABECERA = {
+    "nombre_contrato": "SUMINISTRO FERRETERIA",
+    "cif_proveedor": "A00000000",
+    "nombre_proveedor": "FERRETERIA DE PRUEBA SA",
+    "codigo_obra": "696",
+    "nombre_obra": "OBRA DE PRUEBA",
+}
+
+
+def _indice(tipo: str, contenido: bytes = b"", codigo: str = "CTSU26/0001") -> dict:
+    return {codigo: {
+        "tipo": tipo,
+        "sha256": hashlib.sha256(contenido).hexdigest() if contenido else None,
+        "bytes": len(contenido),
+        "motivo": "" if contenido else "sin ruta de documento (md ni pdf)",
+        **_CABECERA,
+        "leido_utc": "2026-10-22T10:00:00Z",
+    }}
+
+
+def test_f084_r32_con_el_fichero_local_y_su_sha256_hay_documento(tmp_path):
+    contenido = "# Contrato".encode("utf-8")
+    (tmp_path / nombre_en_cache("CTSU26/0001", "md")).write_bytes(contenido)
+
+    documento = sv5_valoracion.documento_de("CTSU26/0001", _indice("md", contenido), tmp_path)
+
+    assert documento == {"tipo": "md", "ruta": str(tmp_path / "CTSU26_0001.md")}
+
+
+def test_f084_r32_un_pdf_local_tambien_vale(tmp_path):
+    (tmp_path / "CTSU26_0001.pdf").write_bytes(b"%PDF-1.7")
+
+    documento = sv5_valoracion.documento_de("CTSU26/0001", _indice("pdf", b"%PDF-1.7"), tmp_path)
+
+    assert documento["tipo"] == "pdf"
+
+
+@pytest.mark.parametrize("indice", [{}, _indice("ninguno")])
+def test_f084_r32_sin_documento_en_el_indice_se_valora_sin_el(indice, tmp_path):
+    """Como en producción con un contrato sin MD ni PDF: la nota de solo fase 1a."""
+    assert sv5_valoracion.documento_de("CTSU26/0001", indice, tmp_path) is None
+
+
+def test_f084_r33_el_indice_lo_declara_y_el_fichero_no_esta(tmp_path):
+    documento = sv5_valoracion.documento_de("CTSU26/0001", _indice("md", b"# C"), tmp_path)
+
+    assert documento == {"falta": "documento del contrato no disponible en local"}
+
+
+def test_f084_r33_el_fichero_local_no_casa_con_su_sha256(tmp_path):
+    (tmp_path / "CTSU26_0001.md").write_bytes(b"# Otro contrato")
+
+    documento = sv5_valoracion.documento_de("CTSU26/0001", _indice("md", b"# C"), tmp_path)
+
+    assert documento == {"falta": "documento del contrato no disponible en local"}
+
+
+def test_f084_r17_el_contexto_lleva_la_cabecera_y_el_documento_del_indice(tmp_path):
+    (tmp_path / "CTSU26_0001.md").write_bytes(b"# C")
+    inputs = _inputs([_linea()])
+
+    contexto = sv5_valoracion.construir_contexto(inputs, indice=_indice("md", b"# C"), raiz=tmp_path)
+
+    assert {campo: contexto[campo] for campo in _CABECERA} == _CABECERA
+    assert contexto["documento"] == {"tipo": "md", "ruta": str(tmp_path / "CTSU26_0001.md")}
+
+
+def test_f084_r17_sin_entrada_en_el_indice_la_cabecera_va_vacia(tmp_path):
+    contexto = sv5_valoracion.construir_contexto(_inputs([_linea()]), indice={}, raiz=tmp_path)
+
+    assert all(contexto[campo] is None for campo in _CABECERA)
+    assert contexto["documento"] is None
+
+
+def test_f084_r17_sin_indice_explicito_se_lee_el_versionado(tmp_path, monkeypatch):
+    ruta = tmp_path / "_indice.json"
+    ruta.write_text(json.dumps(_indice("ninguno")), encoding="utf-8")
+    monkeypatch.setattr(sv5_valoracion, "RUTA_INDICE", ruta)
+
+    contexto = sv5_valoracion.construir_contexto(_inputs([_linea()]))
+
+    assert contexto["nombre_obra"] == "OBRA DE PRUEBA"
+
+
+def test_f084_r17_la_cabecera_llega_tambien_con_lineas_de_contrato(tmp_path):
+    inputs = _inputs([_linea()])
+    inputs["tablas"]["contrato_lineas"] = [
+        {"caso_id": "FER-900", "codigo_producto": "P1", "descripcion_recurso": "DISCO",
+         "unidad": "UD", "precio_unitario": 0.647, "codigo_partida": None},
+    ]
+
+    contexto = sv5_valoracion.construir_contexto(inputs, indice=_indice("ninguno"), raiz=tmp_path)
+
+    assert contexto["nombre_proveedor"] == "FERRETERIA DE PRUEBA SA"
+    assert contexto["lineas_contrato"][0]["contrato_line_id"] == 1
