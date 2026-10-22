@@ -424,9 +424,12 @@ def test_f084_r36_el_informe_determinista_del_runner_lleva_la_advertencia(tmp_pa
 
 # --- T11 · R24: los 7 RES siguen igual ------------------------------------------
 
-#: sha256 de `tests/datos/afirmado_por_el_humano_RES.json` en `efd73b7` (la
-#: base de la spec), con finales de línea LF como lo guarda git.
-_SHA_AFIRMADO_RES = "d5d37b7a6bd6e46e56723862c14b75fe3dd40dcdcf730cd6c0372e63ec43fd51"
+#: sha256 de lo afirmado por el humano en `tests/datos/afirmado_por_el_humano_RES.json`
+#: FUERA de IA1 (INPUTS, IA2, IA3, RESULTADO_FINAL): idéntico en `efd73b7` (la base
+#: de la spec) y en `dev` `2721e06`. La corrección del banco IA1 de `dev`
+#: (chore/banco-correcciones: CIF añadido y cantidades a «?») solo toca claves
+#: `IA1.*`, que F-084 no evalúa; se excluyen para que el guardián mire lo suyo.
+_SHA_AFIRMADO_RES_SIN_IA1 = "b7cdb1a899a077eab11bf44a086d27866cfa3fcaa963ee4754c5f1a75bb56d50"
 
 #: Fallos críticos del determinista en `efd73b7`, por caso y fase: el techo.
 _FALLOS_BASE_RES = {
@@ -437,9 +440,14 @@ _FALLOS_BASE_RES = {
 
 
 def test_f084_r24_lo_afirmado_por_el_humano_no_cambia():
-    contenido = (RAIZ / "tests" / "datos" / "afirmado_por_el_humano_RES.json").read_bytes()
+    datos = json.loads(
+        (RAIZ / "tests" / "datos" / "afirmado_por_el_humano_RES.json").read_text(encoding="utf-8")
+    )
+    fuera_de_ia1 = {k: v for k, v in datos["valores"].items() if not k.startswith("IA1.")}
+    huella = json.dumps(fuera_de_ia1, sort_keys=True, ensure_ascii=False).encode("utf-8")
 
-    assert hashlib.sha256(contenido.replace(b"\r\n", b"\n")).hexdigest() == _SHA_AFIRMADO_RES
+    assert len(fuera_de_ia1) == 419
+    assert hashlib.sha256(huella).hexdigest() == _SHA_AFIRMADO_RES_SIN_IA1
 
 
 def test_f084_r24_el_determinista_de_los_7_res_no_empeora():
