@@ -57,7 +57,7 @@ Servicios tocados: **ninguno** (solo `evals/` y tests). T1–T11 y T15 hechas;
   comparaban en FER-001/GEN-001/HOR-005 (sin líneas: ahora OMITIDO); pasan a
   RES-001/004/006, misma intención. El doble de `construir_contexto` de
   `test_f048_evals_fallos_aislados.py` acepta `**_`. Ninguna expectativa cambia.
-- **Hasta T12 el determinista omite 52 casos** (R18, lo pedido); tras importar se evalúan.
+- **Hasta T12 el determinista omite 52 casos** (R18, lo pedido). **D3 · `dev` `2721e06` fusionado** (banco IA1 corregido): solo cambian claves `IA1.*` de `afirmado_por_el_humano_RES.json`; el guardián de R24 pasa a fijar lo afirmado fuera de IA1 (idéntico a `efd73b7`) y RES-001..007 dan los mismos fallos (RES-007 IA3 4, E2E 6); los ajustes D2 siguen valiendo.
 
 ## Fase RED (comando y salida real, antes del código)
 
@@ -212,9 +212,9 @@ línea base.
 
 | Evidencia | Valor |
 |---|---|
-| Tests ejecutados (`bash harness/init.sh` final, `06b55e8`) | raíz 1808 passed (354,4 s); sv1 205; sv2 485; sv3 1576; sv4 1774; sv5 96; sv6 473 (+1 skipped); sv9 673; comun en verde |
+| Tests ejecutados (`bash harness/init.sh` final, `9248c63`, tras fusionar `dev`) | raíz 1839 passed (330,7 s); sv1 205; sv2 485; sv3 1576; sv4 1774; sv5 96; sv6 473 (+1 skipped); sv9 673; comun en verde |
 | Tests de F-084 | 170 (contratos 93 · contexto 49 · runner 28) |
 | Cobertura de las líneas cambiadas | `PUERTA COBERTURA: 98.5% de 598 líneas cambiadas cubiertas (589/598, umbral 80%, nivel critico)` |
 | Mutación | 2.ª campaña completa (`progress/mutacion_F-084.md`, `d4dbe97`): **198 generados, 194 muertos, 4 supervivientes** (equivalentes, analizados) · remedida del fichero afectado (`progress/mutacion_F-084_sv5_documentos.md`, `3ce021f`): **39 generados, 39 muertos, 0 supervivientes**. 1.ª campaña (195, 45 supervivientes) sustituida: ver «Mutación» |
-| Tiempo de la suite raíz | 354,4 s (dentro de init.sh) |
+| Tiempo de la suite raíz | 330,7 s (dentro de init.sh) |
 | `bash harness/init.sh` | `ENTORNO LISTO. Puedes trabajar.` (exit 0; PUERTA TAMAÑO impl 220/220) |
