@@ -207,4 +207,25 @@ avisan ahora en lugar de fallar o de no compararse.
 
 ## Evidencias
 
-PENDIENTE_TESTS
+- **Tests afectados**: 876 pasan y 791 quedan deseleccionados, en 202,35 s.
+  - Comando: `pytest tests/ -q -k "f011 or f045 or f047 or f083 or evals or
+    conversor or criticidad"`.
+  - Se lanzó con el venv del repo principal y después de comprobar que ya no
+    corría ningún pytest ni ningún `init.sh` de albaranes: la campaña de
+    F-084 había terminado.
+- **Test nuevo**: `tests/test_evals_normalizacion_numero_partida.py`, con
+  30 tests. Pasan en 0,16 s.
+- **Cobertura de las líneas nuevas** de `evals/comparador.py`: 100 %.
+  - Medida con `coverage run --include=evals/comparador.py` sobre el test
+    nuevo, `test_f011_r2_comparador.py` y `test_f045_r17_no_degradar.py`.
+  - El módulo entero queda al 77 %; las líneas sin cubrir son anteriores al
+    cambio.
+  - No se pasó por la `PUERTA COBERTURA` de `init.sh`: el encargo pedía no
+    lanzarlo.
+- **Mutación**: no se lanzó. Es un chore sin nivel de rigor y la máquina
+  estaba saturada de campañas.
+- **`bash harness/init.sh`**: NO se ejecutó, por indicación del líder (F-084
+  usaba la suite). Hay que lanzarlo antes de mergear.
+- **Re-evaluación**: hecha sin coste, y la cifra de «antes» reproduce los
+  97 comunes. Los ficheros con valores (no versionados) están en
+  `<scratchpad>\banco\antes.json` y `despues.json`.
