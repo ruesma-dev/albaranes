@@ -109,6 +109,14 @@ def test_evals_partida_se_normaliza_por_segmento(valor, normalizado):
     assert normalizar_partida(valor) == normalizado
 
 
+def test_evals_partida_no_leida_no_se_normaliza_y_avisa(criticidad):
+    assert normalizar_partida(None) is None
+    assert normalizar_partida(True) is None
+    discrepancias = comparar({"codigo_imputacion": "CI.4.18"}, {"codigo_imputacion": None}, criticidad)
+
+    assert [d.severidad for d in discrepancias] == ["aviso"]
+
+
 def test_evals_partida_con_ceros_o_minusculas_es_la_misma(criticidad):
     esperado = {"codigo_imputacion": "CI.4.18"}
 
