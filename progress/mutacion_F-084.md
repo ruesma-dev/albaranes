@@ -51,38 +51,38 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 - Original: `if crear is None or abrir is None:  # pragma: no cover - las reales`
 - Mutado:   `if crear is not None or abrir is None:  # pragma: no cover - las reales`
 
-#### Análisis (PENDIENTE del implementer)
+#### Análisis
 
-> Por qué ningún test lo caza: PENDIENTE.
-> Decisión: ¿test nuevo o mutante equivalente justificado?
+> Por qué ningún test lo caza: el bloque resolvía las dos costuras a la vez con `crear or create_engine` y `abrir or Session`; entrar en él con una costura ya inyectada no cambia nada (el `or` conserva la inyectada), así que las tres variantes de la condición se comportan igual. Equivalente en el código de `d4dbe97`.
+> Decisión: código reescrito en `d0f91b1` (una condición por costura, `if crear is None: from sqlalchemy import create_engine as crear`): ahí la mutación ya no es equivalente y `test_f084_t15_la_sesion_real_es_de_solo_lectura_sin_conectar` la caza. Remedido en `progress/mutacion_F-084_sv5_documentos.md`.
 
 ### 2. `evals/procesos/sv5_documentos.py:222` [logico]
 
 - Original: `if crear is None or abrir is None:  # pragma: no cover - las reales`
 - Mutado:   `if crear is None and abrir is None:  # pragma: no cover - las reales`
 
-#### Análisis (PENDIENTE del implementer)
+#### Análisis
 
-> Por qué ningún test lo caza: PENDIENTE.
-> Decisión: ¿test nuevo o mutante equivalente justificado?
+> Por qué ningún test lo caza: el bloque resolvía las dos costuras a la vez con `crear or create_engine` y `abrir or Session`; entrar en él con una costura ya inyectada no cambia nada (el `or` conserva la inyectada), así que las tres variantes de la condición se comportan igual. Equivalente en el código de `d4dbe97`.
+> Decisión: código reescrito en `d0f91b1` (una condición por costura, `if crear is None: from sqlalchemy import create_engine as crear`): ahí la mutación ya no es equivalente y `test_f084_t15_la_sesion_real_es_de_solo_lectura_sin_conectar` la caza. Remedido en `progress/mutacion_F-084_sv5_documentos.md`.
 
 ### 3. `evals/procesos/sv5_documentos.py:222` [comparacion]
 
 - Original: `if crear is None or abrir is None:  # pragma: no cover - las reales`
 - Mutado:   `if crear is None or abrir is not None:  # pragma: no cover - las reales`
 
-#### Análisis (PENDIENTE del implementer)
+#### Análisis
 
-> Por qué ningún test lo caza: PENDIENTE.
-> Decisión: ¿test nuevo o mutante equivalente justificado?
+> Por qué ningún test lo caza: el bloque resolvía las dos costuras a la vez con `crear or create_engine` y `abrir or Session`; entrar en él con una costura ya inyectada no cambia nada (el `or` conserva la inyectada), así que las tres variantes de la condición se comportan igual. Equivalente en el código de `d4dbe97`.
+> Decisión: código reescrito en `d0f91b1` (una condición por costura, `if crear is None: from sqlalchemy import create_engine as crear`): ahí la mutación ya no es equivalente y `test_f084_t15_la_sesion_real_es_de_solo_lectura_sin_conectar` la caza. Remedido en `progress/mutacion_F-084_sv5_documentos.md`.
 
 ### 4. `evals/procesos/sv5_documentos.py:274` [entero]
 
 - Original: `sys.path.insert(0, str(RAIZ_SV5))`
 - Mutado:   `sys.path.insert(1, str(RAIZ_SV5))`
 
-#### Análisis (PENDIENTE del implementer)
+#### Análisis
 
-> Por qué ningún test lo caza: PENDIENTE.
-> Decisión: ¿test nuevo o mutante equivalente justificado?
+> Por qué ningún test lo caza: en el subproceso `python -m`, `sys.path[0]` es la raíz del repositorio, que no tiene paquetes `domain`, `application` ni `infrastructure`; poner sv5 en la posición 1 resuelve los mismos imports. Equivalente.
+> Decisión: en `d0f91b1` el subproceso pone sv5 delante con `sys.path = [str(RAIZ_SV5), *sys.path]`, como `sv5_modelos`; sin literal entero que mutar. Remedido en `progress/mutacion_F-084_sv5_documentos.md`.
 

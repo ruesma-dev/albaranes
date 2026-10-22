@@ -86,11 +86,12 @@ servicio: esos números no están tocados por este defecto.
 | `progress/mutacion_F-080.md` | No | `VÁLIDA` | Campaña **completa** de la herramienta (sin muestreo, nivel `critico`) de F-080 sobre `00c52db9c8555ddd7eecd439a1d55a10d1106ef2`, **1 worker** (en serie), desde el worktree `albaranes-F-080` y con `dev` (`f49f1b2`) ya fusionado: 1 fichero y 24 líneas de sv3, **5 mutantes, 5 muertos, 0 supervivientes**, 0 timeouts, 0 sin veredicto, 66,8 s. Detalle en `progress/impl_F-080.md` §«T5». |
 | `progress/mutacion_F-083.md` | Sí | `VÁLIDA` | Campaña **completa** de la herramienta (sin muestreo, nivel `critico`) de F-083, repetida por el reviewer sobre `96a59a3043db3da53877f18e9353dcd61caab3a2`, **3 workers**: 11 ficheros y 2105 líneas de `evals/` (con la suite de la raíz) y de comun (`claude_messages_client.py`, con la suya): **366 mutantes, 366 muertos, 0 supervivientes**, 0 timeouts, 0 sin veredicto, 21.907,1 s. Las dos campañas anteriores del implementer (mismo código, 0 supervivientes) quedaron «NO VÁLIDA» por la base de cierre con la máquina cargada; no cuentan como campaña y viven fuera de este inventario, en `progress/impl_F-083_mutacion.md`. |
 | `progress/mutacion_F-085.md` | No | `VÁLIDA` | Campaña **completa** de la herramienta (sin muestreo, nivel `critico`) de F-085 sobre `a737e7b8b7197b6ce63d66db6d50e4b694512313`, **4 workers**, desde el worktree `albaranes-F-085` con `dev` (`17ccef7`) fusionado: 2 ficheros y 195 líneas de sv5 (`config/settings.py`, `interface_adapters/api/app.py`), **20 mutantes, 20 muertos, 0 supervivientes**, 0 timeouts, 0 sin veredicto, 170,0 s. Los `.ps1` de `infra/` y los tests no los muta la herramienta. Detalle en `progress/impl_F-085.md`. |
+| `progress/mutacion_F-084.md` | Sí | `VÁLIDA` | Segunda campaña **completa** de la herramienta (sin muestreo, nivel `critico`) de F-084 sobre `d4dbe97`, **4 workers**, desde el worktree `albaranes-F-084` con `dev` (`ac34ad8`) fusionado: 9 ficheros y 1540 líneas de `evals/` (con la suite de la raíz): **198 mutantes, 194 muertos, 4 supervivientes**, 0 timeouts, 0 sin veredicto, 19.300,7 s. Los 4 (dos líneas de `evals/procesos/sv5_documentos.py`) se quitan en `d0f91b1` y se remiden con la campaña de ese fichero, `progress/mutacion_F-084_sv5_documentos.md`. La primera campaña (195 mutantes, 45 supervivientes) se sustituyó por esta tras añadir sus tests; detalle en `progress/impl_F-084.md`. |
 
 ## Recuento
 
-- Informes inventariados: **48** (recontado el 2026-10-21 en F-085: los 47 del recuento anterior y la de F-085).
-- Con alcance fuera de `services/`: **11** (F-011, F-012, F-034, F-038,
-  maquinaria-paralela-F-039, F-039, F-040, F-072, las dos de F-075 y la de F-083).
+- Informes inventariados: **49** (recontado el 2026-10-22 en F-084: los 48 del recuento anterior y la de F-084).
+- Con alcance fuera de `services/`: **12** (F-011, F-012, F-034, F-038,
+  maquinaria-paralela-F-039, F-039, F-040, F-072, las dos de F-075, la de F-083 y la de F-084).
 - Medidos con la invocación rota y **no repuestos**: **2** (F-011 y F-012).
   Ninguno de los dos se va a rehacer, y las dos cabeceras lo dicen.
