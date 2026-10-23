@@ -192,50 +192,23 @@ documento. F-085 va después de las dos.
 ## 9. MANUAL del humano (PowerShell, desde el worktree)
 
 Los comandos exactos y vigentes de T12 y T14 están en `progress/current.md`
-(y en `progress/impl_F-084.md`); aquí, su forma.
+(bloque «F-084 · MANUAL del humano»): claves y contraseña con
+`Read-Host -AsSecureString`, nunca en fichero; nada escribe en Sigrid, la BBDD
+ni SharePoint.
 
-**T12 · Importar** (solo lee; escribe el libro y la caché locales). Las `PG_*`
-tienen que ser las de Azure en la consola: el `.env` de los servicios apunta a
-local. Requiere `az login` (las variables de `infra/` leen la identidad con
-`az identity show`).
-
-```powershell
-cd C:\Users\pgris\PycharmProjects\albaranes-F-084
-$env:SIGRID_API_BASE_URL = "<url de sigrid-api>"; $env:SIGRID_API_DATABASE = "ruesma"
-$s = Read-Host -AsSecureString "SIGRID_API_FUNCTION_KEY"
-$env:SIGRID_API_FUNCTION_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-python -m evals.contratos lineas --dry-run
-python -m evals.contratos lineas
-$env:PG_HOST = "<servidor PostgreSQL de Azure>"; $env:PG_DB = "albaranes"; $env:PG_USER = "<usuario de lectura>"
-$s = Read-Host -AsSecureString "PG_PASSWORD"
-$env:PG_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-$s = Read-Host -AsSecureString "GRAPH_KEY"
-$env:GRAPH_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-python -m evals.contratos documentos
-python -m evals.conversor
-python -m evals.runner --feature F-084
-Remove-Item Env:SIGRID_API_FUNCTION_KEY, Env:PG_PASSWORD, Env:GRAPH_KEY
-```
-
-`SHAREPOINT_*`, las del contenedor de sv5. Criterio: informe sin contratos
-fallidos (o con motivo aceptado), `tipo` por contrato en el índice y R27.
+**T12 · Importar** (gratis, solo lee; escribe el libro, la caché y el índice
+locales): `evals.contratos lineas --dry-run` y `lineas` (sigrid-api),
+`documentos` (`PG_*` de Azure en la consola: el `.env` apunta a local;
+`SHAREPOINT_*` las del contenedor de sv5; requiere `az login`), conversor y
+determinista. Criterio: informe sin contratos fallidos (o con motivo
+aceptado), `tipo` por contrato en el índice y R27.
 
 **T14 · Línea base con LLM** (cuesta dinero), con el modelo de producción tras
 F-085: `openai` `gpt-6.1-sol` (D1, R20; **pendiente de confirmación del
-humano**). Antes, la estimación sin claves
-`python -m evals.comparar_modelos --fase IA3 --modelos gpt-6.1-sol --estimar`:
-
-```powershell
-Remove-Item Env:IA3_PROVIDER -ErrorAction SilentlyContinue
-$env:OPENAI_MODEL = "gpt-6.1-sol"
-$s = Read-Host -AsSecureString "OPENAI_API_KEY"
-$env:OPENAI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-python -m evals.runner --con-llm --fases IA3,IA4,E2E --casos ALQ-001,GEN-002,RES-010 --feature F-084-humo
-python -m evals.runner --con-llm --fases IA3,IA4,E2E --feature F-084
-Remove-Item Env:OPENAI_API_KEY
-```
-
-Criterio: R28 (puede salir ROJO). Con el documento el prompt crece: el humo da el coste.
+humano**): estimación sin claves (`evals.comparar_modelos --fase IA3 --modelos
+gpt-6.1-sol --estimar`), humo de 3 casos (ALQ-001, GEN-002, RES-010) y los 59,
+sin `--proveedores`. Criterio: R28 (puede salir ROJO). Con el documento el
+prompt crece: el humo da el coste.
 
 ## 10. Riesgos y alternativas descartadas
 
