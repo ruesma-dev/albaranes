@@ -240,10 +240,7 @@ class SigridApiAltaClient(SigridAltaPort):
             SQL_EMPLEADOS_POR_CORREO, [(correo or "").strip().lower()],
             "f069-empleado-correo", MAX_FILAS_EMPLEADOS_CORREO,
         )
-        return [
-            EmpleadoSigrid(ide=int(f["ide"]), de_alta=int(f.get("fecbaj") or 0) == 0)
-            for f in filas
-        ]
+        return empleados_de_filas(filas)
 
     def empleado_de_alta(self, ide: int) -> bool:
         return bool(self._leer(
@@ -353,6 +350,16 @@ def _respuesta_alta(respuesta: httpx.Response) -> RespuestaAlta | ErrorAlta:
         )
     tipo = TipoFallo.AUTORIZACION if status in (401, 403) else TipoFallo.CLIENTE
     return ErrorAlta(tipo=tipo, status=status, mensaje=f"HTTP {status}")
+
+
+def empleados_de_filas(filas: list[dict]) -> list[EmpleadoSigrid]:
+    """Filas de :data:`SQL_EMPLEADOS_POR_CORREO` (columnas en minúsculas) a
+    empleados: de alta si ``fecbaj`` es 0 o nulo. La usa también el script de
+    medición de F-069 (R25), para medir lo mismo que hará sv9."""
+    return [
+        EmpleadoSigrid(ide=int(f["ide"]), de_alta=int(f.get("fecbaj") or 0) == 0)
+        for f in filas
+    ]
 
 
 def construir_desde_settings(settings: Any, *, transport: httpx.BaseTransport | None = None,
