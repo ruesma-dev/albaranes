@@ -68,7 +68,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 39,
+      "priority": 56,
       "branch": "feature/F-003-valorados-match-estricto"
     },
     {
@@ -78,7 +78,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 42,
+      "priority": 59,
       "branch": "feature/F-004-hormigon-fino"
     },
     {
@@ -88,7 +88,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 43,
+      "priority": 60,
       "branch": "feature/F-005-bombeo"
     },
     {
@@ -98,7 +98,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 44,
+      "priority": 61,
       "branch": "feature/F-006-residuos-pago"
     },
     {
@@ -108,7 +108,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 45,
+      "priority": 62,
       "branch": "feature/F-007-partida-alm-selector"
     },
     {
@@ -123,7 +123,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 48,
+      "priority": 65,
       "branch": "feature/F-008-blob-lifecycle"
     },
     {
@@ -139,7 +139,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 49,
+      "priority": 66,
       "branch": "feature/F-009-limpieza-q-emails"
     },
     {
@@ -149,7 +149,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 50,
+      "priority": 67,
       "branch": "feature/F-010-easy-auth-sv4"
     },
     {
@@ -159,7 +159,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 47,
+      "priority": 64,
       "branch": "feature/F-013-registro-sigrid"
     },
     {
@@ -169,7 +169,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 40,
+      "priority": 57,
       "branch": "feature/F-014-conversor-administrativo"
     },
     {
@@ -179,7 +179,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 33,
+      "priority": 50,
       "branch": "feature/F-015-lineas-tachadas"
     },
     {
@@ -189,7 +189,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 35,
+      "priority": 52,
       "branch": "feature/F-016-linea-multipartida"
     },
     {
@@ -199,7 +199,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 46,
+      "priority": 63,
       "branch": "feature/F-017-comparativo-precio"
     },
     {
@@ -209,7 +209,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 41,
+      "priority": 58,
       "branch": "feature/F-018-carga-incompleta"
     },
     {
@@ -230,7 +230,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 38,
+      "priority": 55,
       "branch": "feature/F-020-proveedor-agnostico"
     },
     {
@@ -240,7 +240,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 34,
+      "priority": 51,
       "branch": "feature/F-021-partida-catalogo-candidatas"
     },
     {
@@ -250,7 +250,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 51,
+      "priority": 68,
       "branch": "feature/F-022-concepto-lineas-bandeja"
     },
     {
@@ -260,7 +260,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 32,
+      "priority": 49,
       "branch": "feature/F-023-mortero-incrementos"
     },
     {
@@ -270,7 +270,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 25,
+      "priority": 42,
       "branch": "feature/F-024-unidad-medida"
     },
     {
@@ -280,7 +280,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 37,
+      "priority": 54,
       "branch": "feature/F-025-motivo-conversion-omitida"
     },
     {
@@ -290,7 +290,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 36,
+      "priority": 53,
       "branch": "feature/F-026-guard-partida-base"
     },
     {
@@ -310,7 +310,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 26,
+      "priority": 43,
       "branch": "feature/F-028-selector-contrato-por-partidas"
     },
     {
@@ -320,7 +320,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 27,
+      "priority": 44,
       "branch": "feature/F-029-obra-empates-y-sin-cif"
     },
     {
@@ -330,7 +330,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 28,
+      "priority": 45,
       "branch": "feature/F-030-proveedor-cif-aproximado"
     },
     {
@@ -340,7 +340,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 29,
+      "priority": 46,
       "branch": "feature/F-031-partida-elige-linea-contrato"
     },
     {
@@ -350,7 +350,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 30,
+      "priority": 47,
       "branch": "feature/F-032-semantica-precio-neto"
     },
     {
@@ -360,7 +360,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 31,
+      "priority": 48,
       "branch": "feature/F-033-contrato-md-o-pdf-determinista"
     },
     {
@@ -408,7 +408,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 24,
+      "priority": 41,
       "branch": "feature/F-037-guardado-inmediato-contrato"
     },
     {
@@ -457,7 +457,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 118,
+      "priority": 70,
       "branch": "feature/F-041-veredicto-honesto-del-mutante"
     },
     {
@@ -467,7 +467,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 118,
+      "priority": 71,
       "branch": "feature/F-042-segunda-opinion-otro-modelo"
     },
     {
@@ -493,7 +493,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 52,
+      "priority": 69,
       "servicios": [
         "comun",
         "sv2-api",
@@ -517,7 +517,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 22
+      "priority": 39
     },
     {
       "id": "F-047",
@@ -526,7 +526,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "critico",
-      "priority": 22
+      "priority": 40
     },
     {
       "id": "F-048",
@@ -552,7 +552,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 6,
+      "priority": 13,
       "servicios": [
         "sv2-api",
         "sv4-front",
@@ -566,7 +566,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 21,
+      "priority": 33,
       "servicios": [
         "sv2-api"
       ]
@@ -592,7 +592,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 5,
+      "priority": 12,
       "servicios": [
         "sv2-api",
         "sv3-persistencia"
@@ -605,7 +605,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 21,
+      "priority": 34,
       "servicios": [
         "sv4-front"
       ]
@@ -617,7 +617,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 21,
+      "priority": 35,
       "servicios": [
         "sv4-front",
         "sv3-persistencia"
@@ -648,7 +648,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 21,
+      "priority": 37,
       "servicios": [
         "comun",
         "sv2-api",
@@ -692,7 +692,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 16,
+      "priority": 26,
       "servicios": [
         "sv3-persistencia",
         "sv5-valoracion-api",
@@ -707,7 +707,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 17,
+      "priority": 27,
       "servicios": [
         "sv4-front"
       ]
@@ -719,7 +719,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 21,
+      "priority": 36,
       "servicios": [
         "sv2-api",
         "sv6-valoracion-persist",
@@ -762,7 +762,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 20,
+      "priority": 28,
       "servicios": [
         "sv2-api"
       ],
@@ -789,7 +789,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 20,
+      "priority": 29,
       "servicios": [
         "sv4-front"
       ]
@@ -801,7 +801,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 20,
+      "priority": 30,
       "servicios": [
         "sv4-front"
       ]
@@ -813,7 +813,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 21,
+      "priority": 38,
       "servicios": [
         "sv4-front"
       ]
@@ -825,7 +825,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 21,
+      "priority": 1,
       "servicios": [
         "sv9-alta-sigrid"
       ]
@@ -886,7 +886,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 20,
+      "priority": 31,
       "servicios": [
         "comun",
         "sv6-valoracion-persist",
@@ -911,7 +911,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 13,
+      "priority": 23,
       "servicios": [
         "sv4-front"
       ]
@@ -936,7 +936,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 14,
+      "priority": 24,
       "servicios": [
         "sv3-persistencia"
       ]
@@ -948,7 +948,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 20,
+      "priority": 32,
       "servicios": [
         "sv4-front"
       ],
@@ -974,7 +974,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 15,
+      "priority": 25,
       "servicios": [
         "sv6-valoracion-persist",
         "sv4-front"
@@ -987,7 +987,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 1,
+      "priority": 10,
       "servicios": [
         "comun"
       ],
@@ -1013,7 +1013,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 3,
+      "priority": 11,
       "servicios": [
         "sv2-api",
         "sv5-valoracion-api",
@@ -1028,7 +1028,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 18,
+      "priority": 4,
       "servicios": [
         "comun",
         "sv5-valoracion-api"
@@ -1041,7 +1041,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 7,
+      "priority": 14,
       "servicios": [
         "sv4-front",
         "sv3-persistencia",
@@ -1056,7 +1056,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 20,
+      "priority": 15,
       "servicios": [
         "sv4-front"
       ]
@@ -1068,7 +1068,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 20,
+      "priority": 16,
       "servicios": [
         "sv4-front"
       ]
@@ -1080,7 +1080,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 8,
+      "priority": 7,
       "servicios": [
         "comun",
         "sv2-api"
@@ -1093,7 +1093,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 20,
+      "priority": 17,
       "servicios": [
         "sv3-persistencia",
         "sv4-front",
@@ -1107,7 +1107,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 20,
+      "priority": 18,
       "servicios": [
         "por-decidir"
       ]
@@ -1119,7 +1119,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 9,
+      "priority": 8,
       "servicios": [
         "sv2-api",
         "sv3-persistencia"
@@ -1132,7 +1132,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 10,
+      "priority": 9,
       "servicios": [
         "sv4-front"
       ]
@@ -1144,7 +1144,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 20,
+      "priority": 5,
       "servicios": [
         "sv9-alta-sigrid"
       ]
@@ -1156,7 +1156,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 20,
+      "priority": 19,
       "servicios": [
         "sv4-front"
       ]
@@ -1181,7 +1181,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 4,
+      "priority": 3,
       "servicios": [
         "albaranes-comun",
         "sv4-front",
@@ -1196,7 +1196,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 119,
+      "priority": 6,
       "servicios": [
         "sv5-valoracion-api",
         "sv6-valoracion-persist"
@@ -1209,7 +1209,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 120,
+      "priority": 21,
       "servicios": [
         "sv5-valoracion-api",
         "sv6-valoracion-persist"
@@ -1222,12 +1222,24 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 121,
+      "priority": 22,
       "servicios": [
         "albaranes-comun",
         "sv2-api",
         "sv5-valoracion-api",
         "evals"
+      ]
+    },
+    {
+      "id": "F-103",
+      "title": "Alta en Sigrid sin heredar la facturación del albarán plantilla: el AC nuevo no queda vinculado a una factura ajena ni con fechas de facturación, entrega o límite copiadas",
+      "description": "ORIGEN: el humano, 2026-10-23: «escribir bien los albaranes sin coger facturas de albaranes anteriores, gran parte es en Sigrid». MEDIDO (solo lectura, sql/read, 2026-10-23, 46 altas del pipeline): sigrid-api clona la cabecera del último albarán del proveedor y arrastra idefac, fecfac, horfac y antestfac (= 3), además de fecent, feclim y cocide. 12 altas quedan vinculadas a una factura ajena (11 de HORMIGONES DEL JARAMA a FR26/10960: AC26/30573, 30576, 30578, 30580, 30582, 30596, 30598, 30599, 30629, 30633, 30634; AC26/30543 a FR26/11027) y otras 5 llevan fecfac o antestfac copiados (AC26/29714, 30594, 30595, 30617, 30631); estfac sí queda a 0. sigrid-api lo confirmó: lo cubre su F-015 R3 y ninguna factura ha absorbido aún esas líneas; proponen arreglo urgente aparte y limpieza en dry-run, y que el humano decida sobre pausar. El humano decidió mantener el alta real (ALTA_SIGRID_COMMIT=true). EL ARREGLO DE FONDO ES DE SIGRID-API (otro proyecto): albaranes no edita sigrid-api, coordina con su sesión. ALCANCE DE ALBARANES: (1) coordinar con sigrid-api el arreglo y la limpieza de las 12 + 5 altas ya escritas (decisión del humano; albaranes no escribe en Sigrid salvo por el alta); (2) tras su despliegue, verificar en solo lectura que el alta de un proveedor cuyo último AC está facturado sale con idefac vacío, fecfac/horfac/antestfac a 0 y fecent/feclim/cocide como acuerden; (3) script de solo lectura que revise las altas recientes del pipeline y avise si reaparece; (4) si el contrato de sigrid-api admite fijar esos campos en la petición, valorar que sv9 los mande explícitos. RELACIONADAS: F-053 (alta Sigrid), F-069 (usu y empide de quien aprueba), F-095 (descuentos en el alta).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 2,
+      "servicios": [
+        "sv9-alta-sigrid"
       ]
     }
   ]
