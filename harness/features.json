@@ -820,8 +820,8 @@
     },
     {
       "id": "F-069",
-      "title": "Lista de equivalencias usuario de la app ↔ usuario de Sigrid para el alta (sv9)",
-      "description": "PETICIÓN DEL HUMANO (2026-10-14, PARADA 1 de F-053 v8): «en el futuro habrá una lista de mapeo usuario vs usuario sigrid para los casos raros». F-053 v8 (R47) resuelve el `usu` del alta con la parte local del correo @ruesma.es de quien aprueba contra `dbo.usu.cod` y, si no casa, usa `ALTA_SIGRID_USUARIO_RESPALDO` (pgris). Esta feature añade una lista de equivalencias (correo → login de Sigrid) que se consulta ANTES de la parte local, para los usuarios cuyo login no coincide con su correo. Dónde vive (variable, tabla propia o fichero) y quién la mantiene, a decidir en su PARADA 1. Depende de F-053.",
+      "title": "Lista de equivalencias usuario de la app ↔ usuario Y EMPLEADO de Sigrid para el alta (sv9): usu y empide de quien aprueba",
+      "description": "PETICIÓN DEL HUMANO (2026-10-14, PARADA 1 de F-053 v8): «en el futuro habrá una lista de mapeo usuario vs usuario sigrid para los casos raros». F-053 v8 (R47) resuelve el `usu` del alta con la parte local del correo @ruesma.es de quien aprueba contra `dbo.usu.cod` y, si no casa, usa `ALTA_SIGRID_USUARIO_RESPALDO` (pgris). Esta feature añade una lista de equivalencias (correo → login de Sigrid) que se consulta ANTES de la parte local, para los usuarios cuyo login no coincide con su correo. Dónde vive (variable, tabla propia o fichero) y quién la mantiene, a decidir en su PARADA 1. Depende de F-053. AMPLIADA 2026-10-23 (absorbe la F-099 dada de alta ese día, por decisión del humano: «crea la feature o usa F-069»): la equivalencia también debe dar el EMPLEADO. ORIGEN: el humano, 2026-10-23: «el usuario que está registrando en Sigrid siempre es pgris, cuando debe depender del que está en el portal». VERIFICADO (solo lectura, 2026-10-23): el `usu` del alta SÍ es el del que aprueba (peticion_json.usu = odomingo/tortiz/lgarcia; dbo.log.usu y dbo.gra.usu del adjunto también). Lo que sale siempre es el EMPLEADO de la cabecera: dca.empide = 2425207 («PABLO GRIS MARTINEZ») en las 46 altas del pipeline, porque sv9 manda `empide` = null y sigrid-api pone `request.empide or settings.sigrid_albaran_empide` (create_albaran_compra_use_case.py:844). En las altas manuales cada usuario lleva su empleado (cperez 537256, vnueda 1129947, dgarcia 2157467…). dbo.usu y dbo.emp no comparten clave fiable: usu.dni vacío; usu.codemp ≈ emp.tarseg casa en algunos (tortiz, lgarcia, cperez) y no en otros (pgris, odomingo, vnueda). A DECIDIR EN LA SPEC: de dónde sale el empleado del usuario que aprueba (tabla de equivalencias usu→empide configurable, el empide de sus últimos albaranes manuales, la clave codemp/tarseg medida en todos los usuarios del portal) y qué se hace si no se encuentra (no mandar empide ⇒ el defecto de sigrid-api, o bloquear el alta); sv9 manda `empide` (ya admitido por el contrato de sigrid-api, campo opcional ≥1). RELACIONADAS: F-053 (alta Sigrid), F-095 (descuentos en el alta). Fallo aparte, de sigrid-api (otro proyecto): la cabecera clonada copia idefac/fecfac/horfac/antestfac/fecent/feclim del último albarán del proveedor: 12 altas vinculadas a facturas ajenas (11 de Jarama a FR26/10960, AC26/30543 a FR26/11027).",
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
@@ -1187,6 +1187,47 @@
         "sv4-front",
         "sv6-valoracion-persist",
         "sv9-alta-sigrid"
+      ]
+    },
+    {
+      "id": "F-100",
+      "title": "IA3 solo valora e IA4 casa TODAS las líneas valoradas: candidatas del contrato con el mismo precio unitario (±0,02 €) y la misma partida, y entre ellas por significado de la descripción",
+      "description": "ORIGEN: el humano, 2026-10-23, tras la T14 de F-084: «la que casa líneas es solo la IA4. IA3 valora. Con las líneas valoradas, se casa con el siguiente criterio: de las líneas que hay en Sigrid de ese contrato, se filtra que tengan igual unitario (2 céntimos de margen) y código de partida; de esas se casa por significado de la línea en la descripción». ESTADO HOY (verificado en código, 2026-10-23): IA3 (sv5 `valuation_es`, config/prompts.yaml) valora Y empareja (emite codigo_producto_contrato y match_method); IA4 (`conciliacion_es`, prompts.yaml:1135-1237) solo concilia en lote las líneas que quedaron sin match, por concepto, sin prefiltro de precio ni de partida. Síntomas en la T14 de F-084 (gpt-6.1-sol, 59 casos): ALQ-001 toma 115 (contrato) donde el libro espera 157 (oferta); GEN-002 casa con MA1512 líneas que el libro deja sin pareja; COM-001 casa con SM370001 una línea `no_match`. A DECIDIR EN LA SPEC: el prefiltro determinista (precio unitario ±0,02 € y partida; qué partida —la final de sv6/F-076/F-098— y qué hacer sin partida, almacén); qué hace IA4 con 0 o con varias candidatas; quién fija el precio cuando IA3 lo lee del papel y no hay candidata; IA3 deja de emitir el emparejamiento; impacto en sv6 (casa_con_contrato, modificadores, sintéticas) y en F-047/F-055. MEDIR: el banco solo tiene IA4 en 13 de 59 casos (46 OMITIDO): completar el libro IA4 antes o como parte de la feature. RELACIONADAS: F-084 (banco que valora), F-083 (comparador), F-049/F-098 (partida antes de IA4), F-076, F-102 (esfuerzo de los modelos).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 119,
+      "servicios": [
+        "sv5-valoracion-api",
+        "sv6-valoracion-persist"
+      ]
+    },
+    {
+      "id": "F-101",
+      "title": "Hormigón: no crear incrementos que el contrato no tarifa o que salen a 0 € (cemento SR sin precio, exceso de tiempo de descarga), caso Hormigones del Jarama",
+      "description": "ORIGEN: el humano, 2026-10-23: «en hormigones Jarama no está cogiendo el canon y hay que meterlo a mano». VERIFICADO (solo lectura, 2026-10-23, obra 0719, contrato CTSU26/0260, 37 albaranes): el canon SÍ entra solo (sintética `incremento_residuos` «GESTIÓN MEDIOAMBIENTAL HORMIGÓN» 1 €/m³, la única línea de ese tipo del contrato; vinculada a ctrpro 262972 en las 11 altas registradas). Lo que el revisor hace a mano en CADA albarán (undo_log de tortiz, 23-10): borrar «INCREMENTO POR CEMENTO SULFORRESISTENTE (SR)» (sale sin precio: el contrato no lo tarifa; red determinista de código de sv6, valuation_builder.py:736-873) y «INCREMENTO POR EXCESO DE TIEMPO DE DESCARGA» (sale a 0 €), y poner a mano el precio de la base (100 €) porque el papel dice HM-30 y el contrato solo tiene HA-30/B/20 a 90 € ⇒ entra en Sigrid sin vincular (MA9999). Los 5 de mortero («M 7.5 48 H») no tienen producto en el contrato: sin precio ni canon. El humano no ha confirmado aún si «el canon» se refiere a otro concepto: CONFIRMAR EN LA SPEC. A DECIDIR: una sintética que el contrato no tarifa ¿no se crea, se crea en revisión o se crea a 0?; el exceso de tiempo a 0 € (tiempo dentro del máximo) no se crea; HM frente a HA (¿es el mismo producto a efectos del contrato o falta línea en el contrato?); canon para mortero. RELACIONADAS: F-006 (canon de vertedero en residuos), F-036, F-100 (IA4 casa), F-047.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 120,
+      "servicios": [
+        "sv5-valoracion-api",
+        "sv6-valoracion-persist"
+      ]
+    },
+    {
+      "id": "F-102",
+      "title": "Nivel de esfuerzo de razonamiento configurable por fase (IA1, IA2, IA3, IA4) y medido con el banco en TODAS las IAs antes de cambiar producción",
+      "description": "ORIGEN: el humano, 2026-10-23: «¿qué nivel de esfuerzo tenemos en los modelos ahora mismo? quizás subirlo nos ayude» y «la prueba la haremos en todas las IAs». ESTADO HOY (verificado en código): no se fija ningún esfuerzo/razonamiento en ninguna llamada; vale el defecto de cada proveedor. ruesma_comun/llm/openai_responses_client.py manda model, instructions, input y text_format (responses.parse); gemini_genai_client.py, system_instruction + response_mime_type/response_json_schema; claude_messages_client.py, max_tokens. Producción: IA1 gemini-4-argon, IA2/IA3/IA4 gpt-6.1-sol (F-085). A DECIDIR EN LA SPEC: (1) un parámetro de esfuerzo por fase en comun y en los servicios (variables por fase; por defecto, no mandar nada = comportamiento actual), traducido al parámetro de cada proveedor (OpenAI reasoning effort, Gemini thinking, Claude thinking) y validado contra lo que acepta cada modelo; (2) el comparador del banco (F-083) admite el esfuerzo como variante del modelo (p. ej. gpt-6.1-sol@alto) en coste, informe y precios_modelos.json; (3) prueba de pago en IA1, IA2, IA3 e IA4 (59 casos; IA4 con F-084/F-100) con el esfuerzo por defecto (T14 de F-083/F-084 como base) frente a subido, midiendo aciertos, coste y latencia (gpt-6.1-sol ya tuvo llamadas de 443 y 628 s); la decide y la lanza el humano; (4) solo después, el valor de producción por fase. RELACIONADAS: F-083, F-084, F-085, F-086, F-100.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 121,
+      "servicios": [
+        "albaranes-comun",
+        "sv2-api",
+        "sv5-valoracion-api",
+        "evals"
       ]
     }
   ]
