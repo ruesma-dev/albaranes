@@ -4,8 +4,8 @@
 Rama `feature/F-084-banco-valoracion` (worktree `../albaranes-F-084`), `dev`
 `416b55c` fusionado (F-083, F-085, altas hasta F-098). Rigor `critico`.
 Servicios tocados: **ninguno** (solo `evals/` y tests). T1–T11, T13, T15 y T16
-hechas, y los 3 cambios de la review pasada 1; T12 la lanzó el humano el
-2026-10-23; **T14 es MANUAL del humano** (comandos en `progress/current.md`).
+hechas, y los 3 cambios de la review pasada 1; T12 y T14 las lanzó el humano el
+2026-10-23 (comandos en `progress/current.md`).
 
 ## Qué cambió
 
@@ -104,16 +104,16 @@ Comando base: `PYTHONPATH=<worktree>/services/albaranes-comun python -m pytest <
 - T7 (doble de LLM en subproceso): RES-001 usa `valuation_residuos` y el texto lleva
   descuento, `"unidad_categoria": "count"`, fecha, cabecera y el MD; un PDF va adjunto.
 - T11: determinista en `efd73b7` y HEAD, RES-001..007 idénticos (001–006 VERDE; RES-007
-  IA3 4 y E2E 6 fallos en los dos, detalle igual). Totales: base ROJO 106 · OMITIDO 46 ·
-  VERDE 25; HEAD ROJO 2 · OMITIDO 163 · VERDE 12 (los OMITIDO nuevos son R18 hasta T12).
+  IA3 4 y E2E 6 fallos en los dos, detalle igual).
 - Humo del subproceso real de documentos sin red (`contratos: []`, entorno
   falso) → `{'resultados': []}`; `python -m evals.contratos --help` correcto.
 
 ## Fuera del alcance / pendiente
 
-- **T14** (de pago, MANUAL del humano; comandos en `progress/current.md`):
-  `openai` `gpt-6.1-sol` (D1, **pendiente de confirmación del humano**). R28
-  sin verificar hasta entonces. IA4 usa el proveedor de IA3, como antes.
+- **D5 (propuesta, sin código):** cómo contar R28; ver «T14». IA4 usa el
+  proveedor de IA3, como antes.
+- **Emparejamiento como lo describe el humano** (solo IA4, prefiltro de precio
+  ±0,02 € y partida, y luego significado): feature aparte que propone el líder.
 - R18 no se aplica en el comparador de F-083 (la spec no lo pide); R33 sí.
 
 ## T12 (humano) y T13: línea base determinista (`b39cb0e`)
@@ -134,39 +134,45 @@ CIF son de sociedades (O3). La caché sigue ignorada.
   0 ERROR. RES-001..007 igual que antes (RES-007 IA3 4 y E2E 6).
 - **Línea base con R37** (`daa6293`): IA3 **386 fallos** (−8), E2E **563** (−9);
   mismos estados por caso (FER-002 IA3 15 → 8, FER-003 6 → 5); 0 de redondeo.
-- **«obtenido None»: R36, no el estímulo.** 385 de los 394 fallos de IA3, en
-  103 líneas: 77 con `codigo_producto_contrato` = `?` en el libro (74 esperan
-  `contrato_db`, 3 `oferta`) y 26 `no_match` (12 `oferta`, 2 `deducido`, el
-  resto partida o sintéticas). **Ninguna** línea con un código presente en las
-  líneas importadas sale en None. El estímulo solo empareja lo que el libro
-  afirma (P2 = b); el resto lo mide T14. Contados en IA3 y E2E, los
-  `precio_source` dan 148 / 30 / 4, las cifras del líder. 29 filas de
-  sintéticas esperadas sin rol en el libro no tienen pareja.
+- **«obtenido None»: R36, no el estímulo.** 385 de 394 en IA3 (103 líneas): 77
+  con el código de contrato en `?` en el libro y 26 `no_match`; **ninguna** con
+  un código presente en las líneas importadas. El estímulo solo empareja lo que
+  el libro afirma (P2 = b); el resto lo mide T14.
 - **Redondeo → R37 (T16; decisión del humano, opción a):** IA3 7 en FER-002
   (17,59 frente a 17,5932 = 54 × 0,543 × 0,60) y 1 en FER-003 (95,481 frente a
   95,479167); E2E, lo mismo y el total de FER-002 (139,65 frente a 139,66). El
   libro anota el papel en céntimos y sv6 no redondea sin importe declarado: el
   libro no está mal. Ahora el banco tolera 0,05 € ahí; producción no cambia.
 
+## T14 (humano): línea base con LLM, `gpt-6.1-sol` (detalle: `progress/impl_F-084_T14.md`)
+
+Informes del runner fuera de git (precios de proveedor); aquí, solo recuentos.
+IA3 59 evaluados, 0 ERROR, ROJO 58 · VERDE 1, **212 fallos**, 137 «obtenido None»;
+IA4 13 evaluados (46 OMITIDO), ROJO 13, 27 fallos; E2E ROJO 52 · VERDE 7, **312**.
+Modelo en las tres fases; documento md 5 · pdf 24 · ninguno 30. Coste real: no
+consta (el runner no mide tokens). Humo: IA3 19, IA4 3, E2E 23. Frente al
+determinista: IA3 386 → 212 y líneas sin precio 91 → 8.
+
+- **R28 en ROJO: 137 de 212 = 64,6 %.** 86 son `codigo_partida_final`, que IA3 no
+  produce: la pone sv6 desde la partida del albarán, y INPUTS la trae vacía en
+  las 110 líneas (E2E tampoco la observa). Sin ellas: 40,5 %. 28 son filas de
+  sintéticas con `rol_linea` en `?` en el libro, que no pueden casar. Sin ambas:
+  23 de 98 = 23,5 %. **D5** (decide el humano o el reviewer): partida no
+  observable en IA3 y la de IA1 a INPUTS para E2E. Criterio sin cambiar.
+- **Valoración frente a emparejamiento** (según el código de hoy): IA3 76 de
+  valoración y 20 de emparejamiento, IA4 27 de emparejamiento. El banco apenas
+  mide el emparejamiento: IA4 solo tiene 13 casos con libro.
+
 ## Review pasada 1 (`progress/review_F-084.md`): cambios aplicados
 
 - **1 · R33 (opción a, del líder):** `runner.motivo_sin_lineas` (R18) y
-  `sv5_valoracion.falta_documento` (R33, mismos defectos que
-  `construir_contexto`); el determinista aplica solo R18 y ya no lee el
-  índice; la corrida con LLM, R18 + R33; el comparador de F-083, R33 en IA3 e
-  IA4. Spec: R33 y design §4/§6/§11. `92b5e42`.
-  Tests nuevos: `test_f084_r33_el_determinista_no_lee_el_documento_y_no_omite`,
-  `test_f084_r33_el_comparador_omite_el_caso_sin_documento_local` y
-  `test_f084_r33_el_determinista_de_los_7_res_no_depende_de_la_cache` (copia de
-  los fixtures reales + índice con documento para CTSU24/0228 y CTSU24/0402, sin
-  caché: los 7 RES sin OMITIDO y sin empeorar). Los dos tests de F-083 sobre el
-  build real llevan `sin_documentos` (índice aislado): miden la equivalencia con
-  el determinista, que no lee el documento (D4).
+  `sv5_valoracion.falta_documento` (R33); el determinista aplica solo R18; con
+  LLM, R18 + R33; el comparador de F-083, R33 en IA3 e IA4 (`92b5e42`). Tres
+  tests `test_f084_r33_*` nuevos (uno con los fixtures reales, índice con
+  documento y sin caché); los dos de F-083 sobre el build real aíslan el índice (D4).
 - **2 · C4:** T12 y T14 con su texto exacto en `progress/current.md` (+ O2, O3).
-- **3 · D1 en la spec:** R20, R28, design §9 y T14 a `openai` `gpt-6.1-sol`,
-  coherentes con `test_f084_r20_*`; el modelo de la línea base, pendiente de
-  confirmación del humano. **O5:** descripción de F-084 sin el texto anterior a
-  la PARADA 1. `57c3c0c`.
+- **3 · D1 en la spec:** R20, R28, design §9 y T14 a `gpt-6.1-sol`, coherentes con
+  `test_f084_r20_*`. **O5:** descripción de F-084 sin el texto anterior a la PARADA 1.
 
 RED (código de `57c3c0c` con `runner.py`, `comparar_modelos.py` y
 `sv5_valoracion.py` de antes; `python -m pytest tests/test_f084_runner.py
@@ -188,20 +194,12 @@ Con el código nuevo: los 4 de R33 y los 2 de F-083, en verde.
 
 ## Mutación (T15)
 
-- **1.ª campaña** (`d4b948a`, 195): 150 muertos, **45 supervivientes**, todos
-  con test nuevo `test_f084_t15_*` en `d4dbe97` (reintentos y techo de espera de
-  `LectorSigrid`, `ok=true`, R10 a 4 decimales, sin cambios = sin copia,
-  `asegurar_columna`, secciones e índice del informe, MD vacío, tope del PDF,
-  sesión/descargador/subproceso reales, hueco en `descuentos`); el `ensure_ascii`
-  del `contexto_linea_json` era equivalente y se quitó. Su informe se sustituyó.
-- **2.ª campaña** (`d4dbe97`, 198): 4 supervivientes en dos líneas de
-  `sv5_documentos.py`, equivalentes (análisis escrito en el informe); el código
-  se reescribe en `d0f91b1` para que dejen de serlo.
+- **1.ª campaña** (`d4b948a`, 195): 45 supervivientes, todos muertos por los
+  `test_f084_t15_*` de `d4dbe97` (informe sustituido). **2.ª** (`d4dbe97`, 198):
+  4 equivalentes en `sv5_documentos.py`, reescrito en `d0f91b1`.
 - **Remedida** de `sv5_documentos.py` entero (`3ce021f`, 39): 0 supervivientes.
-- **Remedida de la review 1** (`progress/mutacion_F-084_review1.md`, `57c3c0c`,
-  diff desde `1839b8c`: 41 líneas, 3 ficheros): **10 mutantes, 10 muertos**,
-  2.065,1 s, 1 worker (con 4 y con 2 la línea base agotó los 600 s por suites
-  de otros proyectos en la máquina: dos intentos NO VÁLIDA, no versionados).
+- **Remedida de la review 1** (`progress/mutacion_F-084_review1.md`, `57c3c0c`, 41
+  líneas): **10 de 10 muertos**, 1 worker (dos intentos con 4 y 2, NO VÁLIDA por carga).
 - **Remedida de T16** (`progress/mutacion_F-084_r37.md`, `daa6293`, diff desde
   `5f70189`, `comparador.py`): **8 mutantes, 8 muertos**, 1.828,9 s, 2 workers. Un
   intento anterior dejó 1 superviviente (`round(…, 6)` → `7`): se quitó el redondeo.
