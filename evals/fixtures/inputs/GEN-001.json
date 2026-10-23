@@ -2,7 +2,7 @@
   "caso_id": "GEN-001",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
+  "sha256_libro": "0e7be5c97d30301b8fe5c5fc0facf4435100da51d113d1c70472424c3c1e01a4",
   "tablas": {
     "caso": [
       {
@@ -14,8 +14,76 @@
         "tipologia": "Generico-Suministros"
       }
     ],
-    "condiciones": [],
-    "contrato_lineas": [],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "GEN-001",
+        "comentario": "fecha de IA1.cabeceras (F-084)",
+        "valor": "2026-04-16"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "GEN-001",
+        "codigo_partida": "P4.22.02.03.01.07",
+        "codigo_producto": "MA4320",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO CANAL DE PLÁSTICO BASE DN100 H60",
+        "linea_sigrid": 252386,
+        "precio_unitario": 9,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-001",
+        "codigo_partida": "P4.22.02.03.01.07",
+        "codigo_producto": "MA4320",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO REJILLA RANURADA T DE ACERO GALVA H15",
+        "linea_sigrid": 252387,
+        "precio_unitario": 13.8,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-001",
+        "codigo_partida": "P4.22.02.03.01.07",
+        "codigo_producto": "MA4320",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO REGISTRO T OCULTO ACERO GALVA H15 L250",
+        "linea_sigrid": 252388,
+        "precio_unitario": 3.9,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-001",
+        "codigo_partida": "P5.22.02.03.01.07",
+        "codigo_producto": "MA4320",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO CANAL DE PLÁSTICO BASE DN100 H60",
+        "linea_sigrid": 252389,
+        "precio_unitario": 9,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-001",
+        "codigo_partida": "P5.22.02.03.01.07",
+        "codigo_producto": "MA4320",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO REJILLA RANURADA T DE ACERO GALVA H15",
+        "linea_sigrid": 252390,
+        "precio_unitario": 13.8,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-001",
+        "codigo_partida": "P5.22.02.03.01.07",
+        "codigo_producto": "MA4320",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO REGISTRO T OCULTO ACERO GALVA H15 L250",
+        "linea_sigrid": 252391,
+        "precio_unitario": 3.9,
+        "unidad": "UD"
+      }
+    ],
     "lineas_albaran": [
       {
         "cantidad": 377,

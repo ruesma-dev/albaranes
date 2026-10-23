@@ -2,7 +2,7 @@
   "caso_id": "GRA-001",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
+  "sha256_libro": "0e7be5c97d30301b8fe5c5fc0facf4435100da51d113d1c70472424c3c1e01a4",
   "tablas": {
     "caso": [
       {
@@ -14,8 +14,446 @@
         "tipologia": "Grava"
       }
     ],
-    "condiciones": [],
-    "contrato_lineas": [],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "GRA-001",
+        "comentario": "fecha de IA1.cabeceras (F-084)",
+        "valor": "2026-05-25"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.03.02",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE GRAVA 20/40",
+        "linea_sigrid": 226113,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.03.03",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE GRAVA 20/40",
+        "linea_sigrid": 226114,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.03.04",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE GRAVA 20/40",
+        "linea_sigrid": 226115,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.03.18",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE GRAVA 20/40",
+        "linea_sigrid": 226116,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.22.01.03.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "GRAVA 20/40",
+        "linea_sigrid": 226117,
+        "precio_unitario": 12.87,
+        "unidad": "Tn"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.22.01.03.10",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "GRAVA 20/40",
+        "linea_sigrid": 226118,
+        "precio_unitario": 12.87,
+        "unidad": "Tn"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.22.01.03.01",
+        "codigo_producto": "MA0807",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ARENA DE RIO",
+        "linea_sigrid": 226119,
+        "precio_unitario": 16.17,
+        "unidad": "Tn"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.22.01.03.02",
+        "codigo_producto": "MA0807",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ARENA DE RIO",
+        "linea_sigrid": 226120,
+        "precio_unitario": 16.17,
+        "unidad": "Tn"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.22.01.03.03",
+        "codigo_producto": "MA0807",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ARENA DE RIO",
+        "linea_sigrid": 226121,
+        "precio_unitario": 16.17,
+        "unidad": "Tn"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.22.01.03.04",
+        "codigo_producto": "MA0807",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ARENA DE RIO",
+        "linea_sigrid": 226122,
+        "precio_unitario": 16.17,
+        "unidad": "Tn"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.22.01.03.05",
+        "codigo_producto": "MA0807",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ARENA DE RIO",
+        "linea_sigrid": 226123,
+        "precio_unitario": 16.17,
+        "unidad": "Tn"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.22.01.03.06",
+        "codigo_producto": "MA0807",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ARENA DE RIO",
+        "linea_sigrid": 226124,
+        "precio_unitario": 16.17,
+        "unidad": "Tn"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.22.01.03.07",
+        "codigo_producto": "MA0807",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ARENA DE RIO",
+        "linea_sigrid": 226125,
+        "precio_unitario": 16.17,
+        "unidad": "Tn"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.22.01.03.10",
+        "codigo_producto": "MA0807",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ARENA DE RIO",
+        "linea_sigrid": 226126,
+        "precio_unitario": 16.17,
+        "unidad": "Tn"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.98.02",
+        "codigo_producto": "MA0816",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE ZAHORRA EN BAÑERA",
+        "linea_sigrid": 226127,
+        "precio_unitario": 12.93,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.98.02",
+        "codigo_producto": "MA0816",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE ZAHORRA EN BAÑERA",
+        "linea_sigrid": 226128,
+        "precio_unitario": 12.93,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.03.02",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE GRAVA 20/40",
+        "linea_sigrid": 236321,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.03.03",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE GRAVA 20/40",
+        "linea_sigrid": 236322,
+        "precio_unitario": 12.85,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.03.08",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE GRAVA 20/40",
+        "linea_sigrid": 236323,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.03.10",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE GRAVA 20/40",
+        "linea_sigrid": 236324,
+        "precio_unitario": 12.85,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.22.01.03.01",
+        "codigo_producto": "MA0807",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ARENA DE RIO",
+        "linea_sigrid": 236325,
+        "precio_unitario": 16.17,
+        "unidad": "Tn"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.22.01.02.02",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE GRAVA 20/40",
+        "linea_sigrid": 236326,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.22.01.02.03",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE GRAVA 20/40",
+        "linea_sigrid": 236327,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.22.01.03.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "GRAVA 20/40",
+        "linea_sigrid": 236328,
+        "precio_unitario": 12.87,
+        "unidad": "Tn"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.22.01.03.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "GRAVA 20/40",
+        "linea_sigrid": 236329,
+        "precio_unitario": 12.87,
+        "unidad": "Tn"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.98.02",
+        "codigo_producto": "MA0816",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE ZAHORRA EN BAÑERA",
+        "linea_sigrid": 236330,
+        "precio_unitario": 12.93,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.98.02",
+        "codigo_producto": "MA0816",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE ZAHORRA CALIZA EN BAÑERA",
+        "linea_sigrid": 236331,
+        "precio_unitario": 8.93,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.03.12",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE GRAVA 20/40",
+        "linea_sigrid": 236332,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.22.01.02.03",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE GRAVA 20/40",
+        "linea_sigrid": 236333,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.22.01.02.02",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE GRAVA 20/40",
+        "linea_sigrid": 236334,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.98.02",
+        "codigo_producto": "MA0816",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE ZAHORRA CALIZA EN BAÑERA",
+        "linea_sigrid": 236335,
+        "precio_unitario": 12.93,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.98.02",
+        "codigo_producto": "MA0816",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE ZAHORRA EN BAÑERA",
+        "linea_sigrid": 236336,
+        "precio_unitario": 8.93,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.14.01.02.01",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ARIDO CALIZA MACHAQUEO T-20/40-C EN 12620:2002H",
+        "linea_sigrid": 263753,
+        "precio_unitario": 15.43,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.14.01.02.01",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ARIDO CALIZA MACHAQUEO T-4/12-C EN 12620:2002H",
+        "linea_sigrid": 263754,
+        "precio_unitario": 17.23,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.14.01.02.01",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ARIDO CALIZA MACHAQUEO T-20/40-C EN 12620:2002H",
+        "linea_sigrid": 263755,
+        "precio_unitario": 15.43,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.14.01.02.01",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ARIDO CALIZA MACHAQUEO T-4/12-C EN 12620:2002H",
+        "linea_sigrid": 263756,
+        "precio_unitario": 17.23,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.06.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "GRAVA 20-40MM EN CUBIERTA",
+        "linea_sigrid": 263757,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.06.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "GRAVA 20-40MM EN CUBIERTA",
+        "linea_sigrid": 263758,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.06.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "GRAVA 20-40MM EN CUBIERTA",
+        "linea_sigrid": 263759,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.06.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "GRAVA 20-40MM EN CUBIERTA",
+        "linea_sigrid": 263760,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.06.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "GRAVA 20-40MM EN CUBIERTA",
+        "linea_sigrid": 263761,
+        "precio_unitario": 12.87,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P4.99.03.01",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE GRAVA 20/40",
+        "linea_sigrid": 263762,
+        "precio_unitario": 15.44,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "GRA-001",
+        "codigo_partida": "P5.99.04.01",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE GRAVA 20/40",
+        "linea_sigrid": 263763,
+        "precio_unitario": 15.44,
+        "unidad": "TN"
+      }
+    ],
     "lineas_albaran": [
       {
         "cantidad": 30.38,

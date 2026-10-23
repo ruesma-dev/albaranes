@@ -2,7 +2,7 @@
   "caso_id": "GEN-008",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
+  "sha256_libro": "0e7be5c97d30301b8fe5c5fc0facf4435100da51d113d1c70472424c3c1e01a4",
   "tablas": {
     "caso": [
       {
@@ -14,8 +14,1076 @@
         "tipologia": "Generico-Suministros"
       }
     ],
-    "condiciones": [],
-    "contrato_lineas": [],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "GEN-008",
+        "comentario": "fecha de IA1.cabeceras (F-084)",
+        "valor": "2026-03-09"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.10",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Barra de ducha",
+        "linea_sigrid": 248590,
+        "precio_unitario": 39.2,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.09",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Barra de ducha",
+        "linea_sigrid": 248591,
+        "precio_unitario": 39.2,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Desagüe urinario",
+        "linea_sigrid": 248592,
+        "precio_unitario": 44.34,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "15.02.13",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Espejo retroiluminado Ø70 cm",
+        "linea_sigrid": 248593,
+        "precio_unitario": 91.8,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Fluxor urinario",
+        "linea_sigrid": 248594,
+        "precio_unitario": 67.13,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC118.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Grifo fregadero Stillo Zeus",
+        "linea_sigrid": 248595,
+        "precio_unitario": 44.055,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.09",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Grifo monomando ducha Stillo Zeus",
+        "linea_sigrid": 248596,
+        "precio_unitario": 50.985,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.10",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Grifo monomando ducha Stillo Zeus",
+        "linea_sigrid": 248597,
+        "precio_unitario": 50.985,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.08",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Grifo monomando lavabo Stillo Zeus",
+        "linea_sigrid": 248598,
+        "precio_unitario": 37.62,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Inodoro Roca Gap Square Compact asiento",
+        "linea_sigrid": 248599,
+        "precio_unitario": 41.73,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Inodoro Roca Gap Square Compact asiento",
+        "linea_sigrid": 248600,
+        "precio_unitario": 41.73,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Inodoro Roca Gap Square Compact cisterna",
+        "linea_sigrid": 248601,
+        "precio_unitario": 101.06,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Inodoro Roca Gap Square Compact cisterna",
+        "linea_sigrid": 248602,
+        "precio_unitario": 101.06,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Inodoro Roca Gap Square Compact taza",
+        "linea_sigrid": 248603,
+        "precio_unitario": 109.74,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Inodoro Roca Gap Square Compact taza",
+        "linea_sigrid": 248604,
+        "precio_unitario": 109.74,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.11",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Kit fijación a suelo vertedero Roca Garda",
+        "linea_sigrid": 248605,
+        "precio_unitario": 0,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Latiguillo 30 cm",
+        "linea_sigrid": 248606,
+        "precio_unitario": 1.39,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Latiguillo 30 cm",
+        "linea_sigrid": 248607,
+        "precio_unitario": 1.39,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Latiguillo 50 cm",
+        "linea_sigrid": 248608,
+        "precio_unitario": 1.84,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Latiguillo 50 cm",
+        "linea_sigrid": 248609,
+        "precio_unitario": 1.84,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Lavabo adaptado Roca Access",
+        "linea_sigrid": 248610,
+        "precio_unitario": 59.33,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Lavabo adaptado Roca Access",
+        "linea_sigrid": 248611,
+        "precio_unitario": 59.33,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC118.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra",
+        "linea_sigrid": 248612,
+        "precio_unitario": 2.83,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "15.02.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra",
+        "linea_sigrid": 248613,
+        "precio_unitario": 2.83,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "15.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra",
+        "linea_sigrid": 248614,
+        "precio_unitario": 2.83,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.08",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra",
+        "linea_sigrid": 248615,
+        "precio_unitario": 2.83,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra",
+        "linea_sigrid": 248616,
+        "precio_unitario": 2.83,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra",
+        "linea_sigrid": 248617,
+        "precio_unitario": 2.83,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.11",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra",
+        "linea_sigrid": 248618,
+        "precio_unitario": 2.83,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra",
+        "linea_sigrid": 248619,
+        "precio_unitario": 2.83,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra",
+        "linea_sigrid": 248620,
+        "precio_unitario": 2.83,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.11",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Reja vertedero",
+        "linea_sigrid": 248621,
+        "precio_unitario": 71.44,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Separador urinarios",
+        "linea_sigrid": 248622,
+        "precio_unitario": 132,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Urinario Grohe Bau",
+        "linea_sigrid": 248623,
+        "precio_unitario": 177.51,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.11",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Vertedero Roca Garda",
+        "linea_sigrid": 248624,
+        "precio_unitario": 120.28,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.24",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALLEGRO DOSIFICADOR JABON PARED NEGRO MATE",
+        "linea_sigrid": 266108,
+        "precio_unitario": 46.61,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC57.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Armario acometida A2",
+        "linea_sigrid": 266109,
+        "precio_unitario": 137.47,
+        "unidad": "Ud"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "BARRA DESLIZANTE DUCHA C/SOPORTE NEGRO STILLO",
+        "linea_sigrid": 266110,
+        "precio_unitario": 39,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.09",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Barra de ducha",
+        "linea_sigrid": 266111,
+        "precio_unitario": 39.2,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Barra de ducha",
+        "linea_sigrid": 266112,
+        "precio_unitario": 39.2,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.09",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Barra de ducha PMR Grohe 90 cm",
+        "linea_sigrid": 266113,
+        "precio_unitario": 86.75,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "DESAGUE LAVABO 11/4 CLICK-CLACK PLANO NEGRO MATE STILLO",
+        "linea_sigrid": 266114,
+        "precio_unitario": 17.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.24",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "DISPENSADOR PAPEL HIGIENICO 400M NEGRO",
+        "linea_sigrid": 266115,
+        "precio_unitario": 43.46,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.24",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "DISPENSADOR TOALLAS NEGRO",
+        "linea_sigrid": 266116,
+        "precio_unitario": 44.18,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.24",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "DOSIFICADOR JABON LIQUIDO SUPERFICIE 1,5L NEGRO",
+        "linea_sigrid": 266117,
+        "precio_unitario": 87.64,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "15.02.13",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Espejo retroiluminado Ø70 cm",
+        "linea_sigrid": 266118,
+        "precio_unitario": 91.8,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.24",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Espejo retroiluminado Ø70 cm",
+        "linea_sigrid": 266119,
+        "precio_unitario": 91.8,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "15.02.13",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Espejo retroiluminado Ø70 cm hab. piloto",
+        "linea_sigrid": 266120,
+        "precio_unitario": 122.4,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC118.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Grifo fregadero Stillo Zeus",
+        "linea_sigrid": 266121,
+        "precio_unitario": 44.055,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC118.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Grifo fregadero Stillo Zeus",
+        "linea_sigrid": 266122,
+        "precio_unitario": 44.055,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC118.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Grifo fregadero Stillo Zeus",
+        "linea_sigrid": 266123,
+        "precio_unitario": 44.055,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.09",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Grifo monomando ducha Stillo Zeus",
+        "linea_sigrid": 266124,
+        "precio_unitario": 50.985,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Grifo monomando ducha Stillo Zeus",
+        "linea_sigrid": 266125,
+        "precio_unitario": 50.985,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.08",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Grifo monomando lavabo Stillo Zeus",
+        "linea_sigrid": 266126,
+        "precio_unitario": 37.62,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.24",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HOTELS PAPELERA 4-5L NEGRO MATE",
+        "linea_sigrid": 266127,
+        "precio_unitario": 54.6,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Inodoro Roca Gap Square Compact asiento",
+        "linea_sigrid": 266128,
+        "precio_unitario": 41.73,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Inodoro Roca Gap Square Compact cisterna",
+        "linea_sigrid": 266129,
+        "precio_unitario": 101.06,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Inodoro Roca Gap Square Compact taza",
+        "linea_sigrid": 266130,
+        "precio_unitario": 109.74,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Kit impermeabilización platos ducha water stop",
+        "linea_sigrid": 266131,
+        "precio_unitario": 36.12,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "LAVABO NUN PORCELANA Ø43 CM BLANCO BRILLO",
+        "linea_sigrid": 266132,
+        "precio_unitario": 42.35,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "LAVABO VESTA SOBRE ENCIMERA/MURAL 41X42 BLANCO BRILLO",
+        "linea_sigrid": 266133,
+        "precio_unitario": 72,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "LAVABO VESTA SOBRE ENCIMERA/MURAL 41X42 BLANCO BRILLO",
+        "linea_sigrid": 266134,
+        "precio_unitario": 79.02,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Latiguillo 30 cm",
+        "linea_sigrid": 266135,
+        "precio_unitario": 1.39,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Latiguillo 50 cm",
+        "linea_sigrid": 266136,
+        "precio_unitario": 1.84,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Lavabo adaptado Roca Access",
+        "linea_sigrid": 266137,
+        "precio_unitario": 59.33,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra",
+        "linea_sigrid": 266138,
+        "precio_unitario": 2.83,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra",
+        "linea_sigrid": 266139,
+        "precio_unitario": 2.83,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.08",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra",
+        "linea_sigrid": 266140,
+        "precio_unitario": 2.83,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC118.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra",
+        "linea_sigrid": 266141,
+        "precio_unitario": 2.83,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "15.02.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra (contratadas en partida grifos)",
+        "linea_sigrid": 266142,
+        "precio_unitario": 2.83,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "24.05.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra 1/2\"-1/2\"",
+        "linea_sigrid": 266143,
+        "precio_unitario": 3.26,
+        "unidad": "Ud"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "24.05.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Llave escuadra 1/2\"-3/4\"",
+        "linea_sigrid": 266144,
+        "precio_unitario": 4.75,
+        "unidad": "Ud"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MONOMANDO HADES LAVABO ALTO NEGRO MATE STILLO",
+        "linea_sigrid": 266145,
+        "precio_unitario": 135.3,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MONOMANDO HERA LAVABO NEGRO STILLO",
+        "linea_sigrid": 266146,
+        "precio_unitario": 41.25,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MONOMANDO ZEUS DUCHA NEGRO STILLO",
+        "linea_sigrid": 266147,
+        "precio_unitario": 70.95,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Monomando lavabo PMR Capri-N",
+        "linea_sigrid": 266148,
+        "precio_unitario": 41.8,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Pieza conexión urinario",
+        "linea_sigrid": 266149,
+        "precio_unitario": 24.73,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC153.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Porte sumidero acero inox cocina",
+        "linea_sigrid": 266150,
+        "precio_unitario": 67.2,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Portes",
+        "linea_sigrid": 266151,
+        "precio_unitario": 49,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PRESTO XT 2000 L ECO GRIFO LAVABO UN AGUA NEGRO",
+        "linea_sigrid": 266152,
+        "precio_unitario": 39,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PRESTO XT 2000 L ECO GRIFO LAVABO UN AGUA NEGRO",
+        "linea_sigrid": 266153,
+        "precio_unitario": 79.02,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PRESTO XT 2000 L ECO GRIFO LAVABO UN AGUA NEGRO",
+        "linea_sigrid": 266154,
+        "precio_unitario": 95.4,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PRESTOEQUIP GRIFO INGO+ GERONTOLOGICO NEGRO LAVABO",
+        "linea_sigrid": 266155,
+        "precio_unitario": 77.16,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC153.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Reja para sumidero acero inoxidable 20x20 cocina",
+        "linea_sigrid": 266156,
+        "precio_unitario": 43.52,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.11",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Reja vertedero",
+        "linea_sigrid": 266157,
+        "precio_unitario": 71.44,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SIFON BOTELLA LAVABO 11/4 CILINDRICO TUBO 300MM NEGRO STILLO",
+        "linea_sigrid": 266158,
+        "precio_unitario": 42.35,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SIFON BOTELLA LAVABO 11/4 CILINDRICO TUBO 300MM NEGRO STILLO",
+        "linea_sigrid": 266159,
+        "precio_unitario": 42.35,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.23",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SIFON BOTELLA LAVABO 11/4 CILINDRICO TUBO 30MM NEGRO STILLO",
+        "linea_sigrid": 266160,
+        "precio_unitario": 79.02,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Sifón flexible",
+        "linea_sigrid": 266161,
+        "precio_unitario": 5.02,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Sifón flexible",
+        "linea_sigrid": 266162,
+        "precio_unitario": 5.02,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Sifón flexible",
+        "linea_sigrid": 266163,
+        "precio_unitario": 5.8,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC153.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Sumidero acero inoxidable 20x20 para cocina",
+        "linea_sigrid": 266164,
+        "precio_unitario": 253.66,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "20.01.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Suministro arqueta ICT",
+        "linea_sigrid": 266165,
+        "precio_unitario": 275.76,
+        "unidad": "Ud"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Suministro rollo lámina water stop 1x30 m2",
+        "linea_sigrid": 266166,
+        "precio_unitario": 227.87,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Válvula tapón lavabo",
+        "linea_sigrid": 266167,
+        "precio_unitario": 4.84,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Válvula tapón lavabo",
+        "linea_sigrid": 266168,
+        "precio_unitario": 4.84,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.02.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Válvula tapón lavabo",
+        "linea_sigrid": 266169,
+        "precio_unitario": 5.77,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.11",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Vertedero Roca Garda",
+        "linea_sigrid": 266170,
+        "precio_unitario": 120.28,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "PC169.24",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "VICTORIA ESCOBILLERO SUELO/PARED NEGRO MATE",
+        "linea_sigrid": 266171,
+        "precio_unitario": 44.72,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "05.04.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Hönnun Mystone 25x75 White ajuste precio",
+        "linea_sigrid": 266172,
+        "precio_unitario": -0.75,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "05.04.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Hönnun Mystone 60x60 White C2 ajuste precio",
+        "linea_sigrid": 266173,
+        "precio_unitario": -0.82,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "11.01.12",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Grifo Monomando Vertedero",
+        "linea_sigrid": 266174,
+        "precio_unitario": 59.26,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "15.02.10",
+        "codigo_producto": "SM9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Mampara corredera ducha Stillo Core Max 100 cm",
+        "linea_sigrid": 266175,
+        "precio_unitario": 274.95,
+        "unidad": "Ud"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "15.02.11",
+        "codigo_producto": "SM9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Mampara corredera ducha Stillo Core Max 110 cm",
+        "linea_sigrid": 266176,
+        "precio_unitario": 288.6,
+        "unidad": "Ud"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "15.02.10",
+        "codigo_producto": "SM9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Mampara corredera ducha Stillo Tempo 100 cm",
+        "linea_sigrid": 266177,
+        "precio_unitario": 170,
+        "unidad": "Ud"
+      },
+      {
+        "caso_id": "GEN-008",
+        "codigo_partida": "15.02.11",
+        "codigo_producto": "SM9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Mampara corredera ducha Stillo Tempo 110 cm",
+        "linea_sigrid": 266178,
+        "precio_unitario": 182.5,
+        "unidad": "Ud"
+      }
+    ],
     "lineas_albaran": [
       {
         "cantidad": 2,

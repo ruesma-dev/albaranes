@@ -2,7 +2,7 @@
   "caso_id": "ALQ-001",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
+  "sha256_libro": "0e7be5c97d30301b8fe5c5fc0facf4435100da51d113d1c70472424c3c1e01a4",
   "tablas": {
     "caso": [
       {
@@ -14,8 +14,36 @@
         "tipologia": "Alquiler"
       }
     ],
-    "condiciones": [],
-    "contrato_lineas": [],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "ALQ-001",
+        "comentario": "fecha de IA1.cabeceras (F-084)",
+        "valor": "2025-08-11"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "ALQ-001",
+        "codigo_partida": "02.11",
+        "codigo_producto": "QA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SALIDA",
+        "linea_sigrid": 240680,
+        "precio_unitario": 170,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "ALQ-001",
+        "codigo_partida": "02.11",
+        "codigo_producto": "QA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORA CAMIÓN GRÚA",
+        "linea_sigrid": 240681,
+        "precio_unitario": 115,
+        "unidad": "ud"
+      }
+    ],
     "lineas_albaran": [
       {
         "cantidad": 1,

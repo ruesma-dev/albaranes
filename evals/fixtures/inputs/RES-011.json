@@ -2,7 +2,7 @@
   "caso_id": "RES-011",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
+  "sha256_libro": "0e7be5c97d30301b8fe5c5fc0facf4435100da51d113d1c70472424c3c1e01a4",
   "tablas": {
     "caso": [
       {
@@ -14,8 +14,216 @@
         "tipologia": "Residuos"
       }
     ],
-    "condiciones": [],
-    "contrato_lineas": [],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "RES-011",
+        "comentario": "fecha de IA1.cabeceras (F-084)",
+        "valor": "2025-01-27"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "31.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CONTENEDOR DE 5M3",
+        "linea_sigrid": 192900,
+        "precio_unitario": 85,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "31.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CONTENEDOR DE 8M3",
+        "linea_sigrid": 192901,
+        "precio_unitario": 90,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "31.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RCDS. HORMIGON",
+        "linea_sigrid": 192902,
+        "precio_unitario": 2.5,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "31.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RDCS. MIXTO",
+        "linea_sigrid": 192903,
+        "precio_unitario": 6,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "31.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RCDS. LIMPIOS",
+        "linea_sigrid": 192904,
+        "precio_unitario": 20,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "31.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RCDS. SUCIOS",
+        "linea_sigrid": 192905,
+        "precio_unitario": 26,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "31.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PODA VEGETAL",
+        "linea_sigrid": 192906,
+        "precio_unitario": 35,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "31.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MADERA",
+        "linea_sigrid": 192907,
+        "precio_unitario": 8,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "31.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MADERA CON PINTURA Y CHAPAO",
+        "linea_sigrid": 192908,
+        "precio_unitario": 15,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "31.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "VOLUMINOSOS",
+        "linea_sigrid": 192909,
+        "precio_unitario": 70,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "CI.03A.7",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CONTENEDOR DE 8M3",
+        "linea_sigrid": 214948,
+        "precio_unitario": 90,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "CI.03A.7",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RCDS. SUCIOS",
+        "linea_sigrid": 214949,
+        "precio_unitario": 26,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "31.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CONTENEDOR DE 8M3",
+        "linea_sigrid": 225665,
+        "precio_unitario": 90,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "CI.03A.7",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CONTENEDOR DE 8M3",
+        "linea_sigrid": 225666,
+        "precio_unitario": 90,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "31.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RCDS. SUCIOS",
+        "linea_sigrid": 237311,
+        "precio_unitario": 24.82,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "102.08.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "GESTION DE RESIDUOS",
+        "linea_sigrid": 237312,
+        "precio_unitario": 718.75,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "CI.03A.7",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CONTENEDOR DE 8M3",
+        "linea_sigrid": 237313,
+        "precio_unitario": 90,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "CI.03A.7",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RCDS. SUCIOS",
+        "linea_sigrid": 237314,
+        "precio_unitario": 26,
+        "unidad": "TN"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "CI.03A.7",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CONTENEDOR DE 8M3",
+        "linea_sigrid": 237315,
+        "precio_unitario": 90,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "RES-011",
+        "codigo_partida": "31.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RCDS. SUCIOS",
+        "linea_sigrid": 237316,
+        "precio_unitario": 24.82,
+        "unidad": "TN"
+      }
+    ],
     "lineas_albaran": [
       {
         "cantidad": 1,
