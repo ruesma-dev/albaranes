@@ -12,6 +12,9 @@ F-069 añade aquí lo puro de la resolución:
   ``None``; :func:`candidato_usuario` se apoya en él sin cambiar su resultado.
 - La **Lista** de excepciones (``ALTA_SIGRID_EQUIVALENCIAS_USUARIO``):
   :func:`leer_equivalencias` (R1, R2) y :func:`entrada_de` (por Login).
+- Los códigos ``AVISO_*`` de los Avisos de resolución y
+  :func:`clasificar_empleados_correo` (R10, R11), que importa también el
+  script de medición (R25).
 """
 from __future__ import annotations
 
@@ -19,6 +22,8 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
+
+from domain.models.alta_models import AvisoResolucion, EmpleadoSigrid
 
 #: Longitud máxima de ``dbo.usu.cod`` que admite el contrato (``usu``, H6).
 MAX_LOGIN = 24
@@ -173,3 +178,63 @@ def entrada_de(
     if correo is None:
         return None
     return equivalencias.get(correo.split("@")[0].casefold())
+
+
+# ---------------------------------------------------------------------- #
+# Avisos de resolución y Empleados del correo (F-069 R6, R9–R13)
+# ---------------------------------------------------------------------- #
+#: La Entrada con ``usu`` no casa con ``dbo.usu`` (R6).
+AVISO_USUARIO_LISTA_NO_EXISTE = "usuario_lista_no_existe"
+#: La Entrada con ``empide`` no es un Empleado de alta (R9).
+AVISO_EMPLEADO_LISTA_NO_VALIDO = "empleado_lista_no_valido"
+#: Dos o más Empleados del correo de alta (R11).
+AVISO_EMPLEADO_CORREO_AMBIGUO = "empleado_correo_ambiguo"
+#: Todos los Empleados del correo están de baja (R11).
+AVISO_EMPLEADO_CORREO_DE_BAJA = "empleado_correo_de_baja"
+#: Ningún empleado con ese correo (R11).
+AVISO_EMPLEADO_CORREO_SIN_EMPLEADO = "empleado_correo_sin_empleado"
+#: Quien aprobó no tiene Correo de Ruesma: ``dbo.emp`` ni se lee (R11).
+AVISO_EMPLEADO_SIN_CORREO = "empleado_sin_correo"
+#: Último escalón: ``empide`` nulo y sigrid-api pone el suyo (R12).
+AVISO_DEFECTO_SIGRID_API = "defecto_sigrid_api"
+#: Una lectura de ``dbo.emp`` falló tras los reintentos (R13).
+AVISO_EMPLEADO_LECTURA_FALLIDA = "empleado_lectura_fallida"
+
+#: Todos los códigos de Aviso de resolución (sv4 los contrasta, R24).
+AVISOS_RESOLUCION = frozenset({
+    AVISO_USUARIO_LISTA_NO_EXISTE, AVISO_EMPLEADO_LISTA_NO_VALIDO,
+    AVISO_EMPLEADO_CORREO_AMBIGUO, AVISO_EMPLEADO_CORREO_DE_BAJA,
+    AVISO_EMPLEADO_CORREO_SIN_EMPLEADO, AVISO_EMPLEADO_SIN_CORREO,
+    AVISO_DEFECTO_SIGRID_API, AVISO_EMPLEADO_LECTURA_FALLIDA,
+})
+
+#: Desde cuántos empleados de alta el detalle dice «N o más»: la consulta del
+#: correo trae como mucho tres filas (``TOP (3)``, design §7).
+TOPE_EMPLEADOS_CORREO = 3
+
+
+def clasificar_empleados_correo(
+    empleados: list[EmpleadoSigrid],
+) -> tuple[int | None, AvisoResolucion | None]:
+    """Los Empleados del correo ⇒ ``(ide, None)`` si hay exactamente uno de
+    alta (R10); si no, ``(None, aviso)`` (R11): ambiguo con cuántos (sin sus
+    ``ide``), solo de baja o ninguno. Los de baja no cuentan (E7)."""
+    de_alta = [e for e in empleados if e.de_alta]
+    if len(de_alta) == 1:
+        return de_alta[0].ide, None
+    if len(de_alta) >= 2:
+        cuantos = (f"{TOPE_EMPLEADOS_CORREO} o más" if len(de_alta) >= TOPE_EMPLEADOS_CORREO
+                   else str(len(de_alta)))
+        return None, AvisoResolucion(
+            AVISO_EMPLEADO_CORREO_AMBIGUO,
+            f"{cuantos} empleados de alta con el correo de quien aprobó",
+        )
+    if empleados:
+        return None, AvisoResolucion(
+            AVISO_EMPLEADO_CORREO_DE_BAJA,
+            "los empleados con el correo de quien aprobó están de baja",
+        )
+    return None, AvisoResolucion(
+        AVISO_EMPLEADO_CORREO_SIN_EMPLEADO,
+        "ningún empleado de Sigrid tiene el correo de quien aprobó",
+    )

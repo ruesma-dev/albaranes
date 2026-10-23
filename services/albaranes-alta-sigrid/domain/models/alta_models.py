@@ -395,3 +395,27 @@ class Reclamacion:
     motivo: str = ""
     #: ``approved_by`` del merge, leído bajo el cerrojo (R5): fuente del ``usu`` (R47).
     approved_by: str | None = None
+
+
+# ---------------------------------------------------------------------- #
+# F-069 · usuario y empleado de Sigrid de quien aprueba
+# ---------------------------------------------------------------------- #
+@dataclass(frozen=True)
+class EmpleadoSigrid:
+    """Una fila de ``dbo.emp`` leída por ``sql/read``: su ``ide`` y si está de
+    alta (``fecbaj`` 0 o nulo). Nunca su nombre ni su correo."""
+
+    ide: int
+    de_alta: bool
+
+
+@dataclass(frozen=True)
+class AvisoResolucion:
+    """Constancia de un escalón de la resolución que no sirvió (F-069). Nunca
+    bloquea el alta ni cambia su estado: no es un :class:`Motivo`."""
+
+    codigo: str
+    detalle: str = ""
+
+    def a_dict(self) -> dict[str, str]:
+        return {"codigo": self.codigo, "detalle": self.detalle}
