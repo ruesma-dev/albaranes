@@ -88,11 +88,12 @@ servicio: esos números no están tocados por este defecto.
 | `progress/mutacion_F-085.md` | No | `VÁLIDA` | Campaña **completa** de la herramienta (sin muestreo, nivel `critico`) de F-085 sobre `a737e7b8b7197b6ce63d66db6d50e4b694512313`, **4 workers**, desde el worktree `albaranes-F-085` con `dev` (`17ccef7`) fusionado: 2 ficheros y 195 líneas de sv5 (`config/settings.py`, `interface_adapters/api/app.py`), **20 mutantes, 20 muertos, 0 supervivientes**, 0 timeouts, 0 sin veredicto, 170,0 s. Los `.ps1` de `infra/` y los tests no los muta la herramienta. Detalle en `progress/impl_F-085.md`. |
 | `progress/mutacion_F-084.md` | Sí | `VÁLIDA` | Segunda campaña **completa** de la herramienta (sin muestreo, nivel `critico`) de F-084 sobre `d4dbe97`, **4 workers**, desde el worktree `albaranes-F-084` con `dev` (`ac34ad8`) fusionado: 9 ficheros y 1540 líneas de `evals/` (con la suite de la raíz): **198 mutantes, 194 muertos, 4 supervivientes**, 0 timeouts, 0 sin veredicto, 19.300,7 s. Los 4 (dos líneas de `evals/procesos/sv5_documentos.py`) se quitan en `d0f91b1` y se remiden con la campaña de ese fichero, `progress/mutacion_F-084_sv5_documentos.md`. La primera campaña (195 mutantes, 45 supervivientes) se sustituyó por esta tras añadir sus tests; detalle en `progress/impl_F-084.md`. |
 | `progress/mutacion_F-084_sv5_documentos.md` | Sí | `VÁLIDA` | Remedida de F-084 para el único fichero que cambió tras la segunda campaña: `evals/procesos/sv5_documentos.py` **entero** (`--ficheros`, sin muestreo, nivel `critico`) sobre `3ce021f`, **4 workers**, con la suite de la raíz: 286 líneas, **39 mutantes, 39 muertos, 0 supervivientes**, 0 timeouts, 0 sin veredicto, 4.533,4 s. Cierra los 4 supervivientes de `progress/mutacion_F-084.md`. |
+| `progress/mutacion_F-084_review1.md` | Sí | `VÁLIDA` | Remedida de F-084 tras la review pasada 1 (cambio 1: R33 solo con LLM y en el comparador): las líneas cambiadas desde `1839b8c` en `evals/runner.py`, `evals/procesos/sv5_valoracion.py` y `evals/comparar_modelos.py` (origen rama, sin muestreo, nivel `critico`) sobre `57c3c0c`, **1 worker** (con 4 y con 2 la línea base agotó los 600 s: la máquina la compartían suites de otros proyectos; esos dos intentos, NO VÁLIDA, no se versionan), con la suite de la raíz: 41 líneas, **10 mutantes, 10 muertos, 0 supervivientes**, 0 timeouts, 0 sin veredicto, 2.065,1 s. |
 
 ## Recuento
 
-- Informes inventariados: **50** (recontado el 2026-10-23 en F-084: los 48 del recuento anterior y las dos de F-084).
-- Con alcance fuera de `services/`: **13** (F-011, F-012, F-034, F-038,
-  maquinaria-paralela-F-039, F-039, F-040, F-072, las dos de F-075, la de F-083 y las dos de F-084).
+- Informes inventariados: **51** (recontado el 2026-10-23 en F-084: los 48 del recuento anterior y las tres de F-084).
+- Con alcance fuera de `services/`: **14** (F-011, F-012, F-034, F-038,
+  maquinaria-paralela-F-039, F-039, F-040, F-072, las dos de F-075, la de F-083 y las tres de F-084).
 - Medidos con la invocación rota y **no repuestos**: **2** (F-011 y F-012).
   Ninguno de los dos se va a rehacer, y las dos cabeceras lo dicen.

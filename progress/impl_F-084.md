@@ -2,9 +2,10 @@
 # F-084 · Informe del implementer — el banco de evals valora de verdad
 
 Rama `feature/F-084-banco-valoracion` (worktree `../albaranes-F-084`), `dev`
-`ac34ad8` fusionado (F-083, F-085, altas F-086..F-090). Rigor `critico`.
-Servicios tocados: **ninguno** (solo `evals/` y tests). T1–T11 y T15 hechas;
-**T12 y T14 son MANUAL del humano** (comandos al final); T13 espera a T12.
+`416b55c` fusionado (F-083, F-085, altas hasta F-098). Rigor `critico`.
+Servicios tocados: **ninguno** (solo `evals/` y tests). T1–T11 y T15 hechas, y
+los 3 cambios de la review pasada 1; **T12 y T14 son MANUAL del humano**
+(comandos en `progress/current.md`); T13 espera a T12.
 
 ## Qué cambió
 
@@ -16,10 +17,11 @@ Servicios tocados: **ninguno** (solo `evals/` y tests). T1–T11 y T15 hechas;
 | `evals/procesos/sv5_documentos.py` (nuevo) | Subproceso con sv5 en `sys.path`: `_SQL_CONTRATO_HEADER` de sv5 en sesión `default_transaction_read_only=on`, descargador de sv5, MD > PDF, `MAX_PDF_MB` = 40; credenciales por entorno, no por stdin. |
 | `evals/procesos/sv5_valoracion.py` | `documento_de` (sha256 contra el índice, R32/R33); `construir_contexto` con cabecera del índice, `lineas_albaran_de`, `clasificacion_de` y documento; subproceso: `Raw*` + `UnitCategoryPrefilter` + `ClasificacionAlbaran`, `preparar_contexto`, MD como `contrato_markdown` / PDF como adjunto, `modelo` en el trabajo y en la salida, `valorar_casos` como puerta del subproceso. |
 | `evals/procesos/sv5_modelos.py` | La línea de `preparar_contexto` en su `main` (design §8). |
-| `evals/runner.py` | R18, R33 y R13 en las dos corridas antes de montar sv5/sv6; R19 (`fases` sin IA1/IA2 ⇒ sin sv2 ni sus claves; las de sv5 se exigen antes de nada); R20 `valoracion_por_defecto`; R17/R21 en las fases. |
+| `evals/runner.py` | R18 y R13 en las dos corridas y R33 solo en la de LLM (review 1), antes de montar sv5/sv6; R19 (`fases` sin IA1/IA2 ⇒ sin sv2 ni sus claves; las de sv5 se exigen antes de nada); R20 `valoracion_por_defecto`; R17/R21 en las fases. |
+| `evals/comparar_modelos.py` (de F-083) | R33 en `casos_de_fase` de IA3 e IA4 vía `sv5_valoracion.falta_documento` (review 1). |
 | `evals/modelos.py`, `evals/informe.py` | `ResultadoFase.modelos` y `.documentos`; `- Modelo: …`, `- Documento del contrato: md N · pdf N · ninguno N` y la advertencia de emparejamiento del determinista (R36). Líneas parseables idénticas. |
 | `evals/README.md` | Sección de F-084 (R26). `azure-apps/albaranes.md` §8: commit local `a6bc26a`, **sin push**. |
-| Tests | `tests/test_f084_{contratos,contexto_valoracion,runner}.py` (170 tests). Ajuste en 2 tests de F-083 y 1 doble de F-048 (D2). |
+| Tests | `tests/test_f084_{contratos,contexto_valoracion,runner}.py` (173 tests). Ajuste en 2 tests de F-083 y 1 doble de F-048 (D2); los 2 de F-083 sobre el build real aíslan el índice (D4). |
 
 ## Decisiones de diseño
 
@@ -36,8 +38,9 @@ Servicios tocados: **ninguno** (solo `evals/` y tests). T1–T11 y T15 hechas;
   el subproceso entra por `valorar_casos`, que pasa `preparar_contexto`. Los
   tests de T7 entran por esa misma puerta en un subproceso con doble de LLM.
 - **El índice va con los fixtures** (`<fixtures>/contratos/_indice.json`) y el
-  runner lo lee de ahí; `construir_contexto` sin índice explícito lee el
-  versionado (el comparador de F-083 hereda contexto y documento).
+  runner lo lee de ahí; `construir_contexto` y `falta_documento` sin índice
+  explícito leen el versionado (el comparador de F-083 hereda contexto,
+  documento y R33).
 - **Informe compartido** `progress/import_F-084.md`, una sección por subcomando.
   Sin escritura en sistemas: sigrid-api solo `sql/read`, BBDD de solo lectura.
 - **Costuras por T15**: `LectorSigrid(dormir=…)`, `_sesion_real(crear, abrir)` y
@@ -57,6 +60,7 @@ Servicios tocados: **ninguno** (solo `evals/` y tests). T1–T11 y T15 hechas;
   comparaban en FER-001/GEN-001/HOR-005 (sin líneas: ahora OMITIDO); pasan a
   RES-001/004/006, misma intención. El doble de `construir_contexto` de
   `test_f048_evals_fallos_aislados.py` acepta `**_`. Ninguna expectativa cambia.
+- **D4 · R33, opción (a)** (cambio 1 de la review): ver «Review pasada 1».
 - **Hasta T12 el determinista omite 52 casos** (R18, lo pedido). **D3 · `dev` `2721e06` fusionado** (banco IA1 corregido): solo cambian claves `IA1.*` de `afirmado_por_el_humano_RES.json`; el guardián de R24 pasa a fijar lo afirmado fuera de IA1 (idéntico a `efd73b7`) y RES-001..007 dan los mismos fallos (RES-007 IA3 4, E2E 6); los ajustes D2 siguen valiendo.
 
 ## Fase RED (comando y salida real, antes del código)
@@ -110,88 +114,61 @@ Comando base: `PYTHONPATH=<worktree>/services/albaranes-comun python -m pytest <
   fixtures regenerados y el índice, y comprobar R27) la hace el implementer
   después de T12. R27 y R28 quedan sin verificar hasta entonces.
 - IA4 usa el mismo proveedor que IA3 (`IA4_PROVIDER` aparte: fuera, como antes).
-- R18 no se aplica en el comparador de F-083 (la spec no lo pide).
+- R18 no se aplica en el comparador de F-083 (la spec no lo pide); R33 sí.
 
-## MANUAL del humano: T12 y T14 (PowerShell)
+## MANUAL del humano: T12 y T14
 
-Claves y contraseña solo con `Read-Host -AsSecureString`, nunca en fichero.
-Ningún paso escribe en Sigrid, la BBDD ni SharePoint: solo libro, caché e índice locales.
+Comandos exactos de PowerShell en `progress/current.md` (bloque «F-084 · MANUAL
+del humano»), con `az login` como requisito (O2), el script del líder fuera del
+repo como forma cómoda de T12 y el repaso de `cif_proveedor`/`nombre_proveedor`
+del índice antes de T13 (O3). Claves y contraseña solo con
+`Read-Host -AsSecureString`; nada escribe en Sigrid, la BBDD ni SharePoint.
 
-### T12 · Importar contratos, convertir y determinista (solo lee)
+- **T12** (gratis, solo lee): `evals.contratos lineas --dry-run` → `lineas` →
+  `documentos` → conversor → determinista. Criterio: informe sin contratos
+  fallidos (o motivo aceptado), `tipo` por contrato en el índice y R27.
+- **T14** (de pago, tras T13): `openai` `gpt-6.1-sol` (D1, **pendiente de
+  confirmación del humano**); estimación, humo de 3 casos y los 59. Criterio
+  R28: 0 ERROR, `- Modelo: gpt-6.1-sol` en IA3/IA4/E2E y «obtenido None»
+  ≤ 20 % de los fallos críticos de IA3. La cifra vuelve aquí como línea base.
 
-Los libros viven en el árbol principal (no versionados): se leen con `--ground-truth`.
+## Review pasada 1 (`progress/review_F-084.md`): cambios aplicados
 
-```powershell
-cd C:\Users\pgris\PycharmProjects\albaranes-F-084
-$gt = "C:\Users\pgris\PycharmProjects\albaranes\evals\ground_truth"
-$env:PYTHONPATH = "$PWD\services\albaranes-comun"
+- **1 · R33 (opción a, del líder):** `runner.motivo_sin_lineas` (R18) y
+  `sv5_valoracion.falta_documento` (R33, mismos defectos que
+  `construir_contexto`); el determinista aplica solo R18 y ya no lee el
+  índice; la corrida con LLM, R18 + R33; el comparador de F-083, R33 en IA3 e
+  IA4. Spec: R33 y design §4/§6/§11. `92b5e42`.
+  Tests nuevos: `test_f084_r33_el_determinista_no_lee_el_documento_y_no_omite`,
+  `test_f084_r33_el_comparador_omite_el_caso_sin_documento_local` y
+  `test_f084_r33_el_determinista_de_los_7_res_no_depende_de_la_cache` (copia de
+  los fixtures reales + índice con documento para CTSU24/0228 y CTSU24/0402, sin
+  caché: los 7 RES sin OMITIDO y sin empeorar). Los dos tests de F-083 sobre el
+  build real llevan `sin_documentos` (índice aislado): miden la equivalencia con
+  el determinista, que no lee el documento (D4).
+- **2 · C4:** T12 y T14 con su texto exacto en `progress/current.md` (+ O2, O3).
+- **3 · D1 en la spec:** R20, R28, design §9 y T14 a `openai` `gpt-6.1-sol`,
+  coherentes con `test_f084_r20_*`; el modelo de la línea base, pendiente de
+  confirmación del humano. **O5:** descripción de F-084 sin el texto anterior a
+  la PARADA 1. `57c3c0c`.
 
-# 1. Líneas de contrato desde sigrid-api (solo lectura)
-$env:SIGRID_API_BASE_URL = "<url de sigrid-api>"
-$env:SIGRID_API_DATABASE = "ruesma"
-$s = Read-Host -AsSecureString "SIGRID_API_FUNCTION_KEY"
-$env:SIGRID_API_FUNCTION_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-python -m evals.contratos lineas --ground-truth $gt --dry-run
-#    VERDE: progress\import_F-084.md sin contratos fallidos (o con motivo aceptado)
-python -m evals.contratos lineas --ground-truth $gt
+RED (código de `57c3c0c` con `runner.py`, `comparar_modelos.py` y
+`sv5_valoracion.py` de antes; `python -m pytest tests/test_f084_runner.py
+tests/test_f083_comparar_modelos.py -q -k "r33 or bloque_ia3_con or bloque_ia4_concilia"`):
 
-# 2. Cabecera y documento: BBDD albaranes de AZURE (el .env apunta a local) y SharePoint
-Push-Location C:\Users\pgris\PycharmProjects\albaranes\infra
-. .\00_vars.ps1; . .\00_capps_vars.ps1
-Pop-Location
-$env:PG_HOST = $PG_HOST; $env:PG_PORT = "5432"; $env:PG_DB = $PG_DB; $env:PG_USER = $PG_ADMIN
-foreach ($k in $SP.Keys) { Set-Item "Env:$k" $SP[$k] }
-$s = Read-Host -AsSecureString "PG_PASSWORD"
-$env:PG_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-$s = Read-Host -AsSecureString "GRAPH_KEY"
-$env:GRAPH_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-python -m evals.contratos documentos
-#    VERDE: evals\fixtures\contratos\_indice.json con un tipo por contrato
-
-# 3. Libros -> fixtures y corrida determinista (sin red)
-python -m evals.conversor --ground-truth $gt
-python -m evals.runner --feature F-084
-
-Remove-Item Env:SIGRID_API_FUNCTION_KEY, Env:PG_PASSWORD, Env:GRAPH_KEY
+```
+E       assert False
+E        +  where False = all(<generator object test_f084_r33_el_determinista_no_lee_el_documento_y_no_omite.<locals>.<genexpr> ...>)
+E           AssertionError: IA3
+E           assert (['HOR-001', 'HOR-002'], {}) == (['HOR-001'],...le en local'})
+E        +  where False = all(<generator object test_f084_r33_el_determinista_de_los_7_res_no_depende_de_la_cache.<locals>.<genexpr> ...>)
+FAILED tests/test_f084_runner.py::test_f084_r33_el_determinista_no_lee_el_documento_y_no_omite
+FAILED tests/test_f084_runner.py::test_f084_r33_el_comparador_omite_el_caso_sin_documento_local
+FAILED tests/test_f084_runner.py::test_f084_r33_el_determinista_de_los_7_res_no_depende_de_la_cache
+3 failed, 3 passed, 74 deselected in 7.34s
 ```
 
-La sesión de BBDD es de solo lectura aunque el usuario sea el de la app. Si el
-barrido del conversor salta con un texto de contrato, se redacta en el libro.
-Criterio T12: informe sin contratos fallidos (o motivo aceptado), `tipo` por
-contrato en el índice y R27 en `progress\evals_F-084.md`. T13 la hace el
-implementer. Tras fusionar en `dev`, copiar la caché (sin ella, R33 omite):
-
-```powershell
-Copy-Item -Recurse -Force C:\Users\pgris\PycharmProjects\albaranes-F-084\evals\inputs\contratos C:\Users\pgris\PycharmProjects\albaranes\evals\inputs\
-```
-
-### T14 · Línea base con LLM (CUESTA DINERO), después de T13
-
-Con el modelo de producción vigente tras F-085: IA3 e IA4 = `openai`
-`gpt-6.1-sol` (desviación D1). Sin `--proveedores`, el runner usa justo eso.
-
-```powershell
-cd C:\Users\pgris\PycharmProjects\albaranes-F-084
-$env:PYTHONPATH = "$PWD\services\albaranes-comun"
-Remove-Item Env:IA3_PROVIDER -ErrorAction SilentlyContinue
-$env:OPENAI_MODEL = "gpt-6.1-sol"
-
-# Estimación sin claves ni llamadas (sale con 0)
-python -m evals.comparar_modelos --fase IA3 --modelos gpt-6.1-sol --estimar
-
-$s = Read-Host -AsSecureString "OPENAI_API_KEY"
-$env:OPENAI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-# Humo: 3 casos (el informe dice el coste real; con el documento el prompt crece)
-python -m evals.runner --con-llm --fases IA3,IA4,E2E --casos ALQ-001,GEN-002,RES-010 --feature F-084-humo
-# Los 59
-python -m evals.runner --con-llm --fases IA3,IA4,E2E --feature F-084
-Remove-Item Env:OPENAI_API_KEY
-```
-
-Criterio (R28; puede salir ROJO): 0 casos ERROR, `- Modelo: gpt-6.1-sol` en
-IA3, IA4 y E2E de `progress\evals_F-084.md`, y «obtenido None» ≤ 20 % de los
-fallos críticos de IA3 de los casos evaluados. La cifra va a este informe como
-línea base.
+Con el código nuevo: los 4 de R33 y los 2 de F-083, en verde.
 
 ## Mutación (T15)
 
@@ -205,16 +182,20 @@ línea base.
   `sv5_documentos.py`, equivalentes (análisis escrito en el informe); el código
   se reescribe en `d0f91b1` para que dejen de serlo.
 - **Remedida** de `sv5_documentos.py` entero (`3ce021f`, 39): 0 supervivientes.
+- **Remedida de la review 1** (`progress/mutacion_F-084_review1.md`, `57c3c0c`,
+  diff desde `1839b8c`: 41 líneas, 3 ficheros): **10 mutantes, 10 muertos**,
+  2.065,1 s, 1 worker (con 4 y con 2 la línea base agotó los 600 s por suites
+  de otros proyectos en la máquina: dos intentos NO VÁLIDA, no versionados).
   Supervivientes pendientes de aceptar por el humano: **ninguno**.
-- Las dos campañas de F-084 constan en `progress/inventario_mutacion_F-039.md`.
+- Las tres campañas de F-084 constan en `progress/inventario_mutacion_F-039.md`.
 
 ## Evidencias
 
 | Evidencia | Valor |
 |---|---|
 | Tests ejecutados (`bash harness/init.sh` final, `9248c63`, tras fusionar `dev`) | raíz 1839 passed (330,7 s); sv1 205; sv2 485; sv3 1576; sv4 1774; sv5 96; sv6 473 (+1 skipped); sv9 673; comun en verde |
-| Tests de F-084 | 170 (contratos 93 · contexto 49 · runner 28) |
+| Tests de F-084 | 173 (contratos 93 · contexto 49 · runner 31) |
 | Cobertura de las líneas cambiadas | `PUERTA COBERTURA: 98.5% de 598 líneas cambiadas cubiertas (589/598, umbral 80%, nivel critico)` |
-| Mutación | 2.ª campaña completa (`progress/mutacion_F-084.md`, `d4dbe97`): **198 generados, 194 muertos, 4 supervivientes** (equivalentes, analizados) · remedida del fichero afectado (`progress/mutacion_F-084_sv5_documentos.md`, `3ce021f`): **39 generados, 39 muertos, 0 supervivientes**. 1.ª campaña (195, 45 supervivientes) sustituida: ver «Mutación» |
+| Mutación | Remedida de la review 1 (`progress/mutacion_F-084_review1.md`, `57c3c0c`): **10 generados, 10 muertos, 0 supervivientes** · 2.ª campaña completa (`progress/mutacion_F-084.md`, `d4dbe97`): **198 generados, 194 muertos, 4 supervivientes** (equivalentes, analizados) · remedida del fichero afectado (`progress/mutacion_F-084_sv5_documentos.md`, `3ce021f`): **39 generados, 39 muertos, 0 supervivientes**. 1.ª campaña (195, 45 supervivientes) sustituida: ver «Mutación» |
 | Tiempo de la suite raíz | 330,7 s (dentro de init.sh) |
 | `bash harness/init.sh` | `ENTORNO LISTO. Puedes trabajar.` (exit 0; PUERTA TAMAÑO impl 220/220) |
