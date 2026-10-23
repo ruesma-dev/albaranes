@@ -1,5 +1,5 @@
 <!-- progress/impl_F-084_T14.md -->
-# F-084 · T14, línea base con LLM: cifras y análisis de R28
+# F-084 · T12–T14, líneas base: cifras y análisis de R28
 
 Detalle enlazado desde `progress/impl_F-084.md`. Solo recuentos: los informes del
 runner (`progress/evals_F-084.md` y `progress/evals_F-084-humo.md`) imprimen
@@ -101,13 +101,16 @@ informe, sí). Desglose de los 137: `codigo_partida_final` 86, filas de
   `partida_final` en E2E. **E2E tampoco la observa** con estos INPUTS: no es un
   fallo de sv6, que hace lo que debe con un albarán sin partida.
 
-**Propuesta (D5, no aplicada; decide el humano o el reviewer).**
+**D5, aprobada por el humano el 2026-10-23 («sí me vale») → T17.**
 
-1. Contar `IA3.lineas_valoradas.codigo_partida_final` como **no observable en
-   IA3** (como los de R26), porque esa fase no la produce. Se queda en E2E.
-2. Para que E2E la mida de verdad, llevar a `INPUTS.lineas_albaran.codigo_imputacion`
-   la partida que afirma el libro IA1 (58 de las 86 líneas), por el conversor o
-   en el libro. Es un cambio de datos del banco, fuera de esta feature.
+1. R38: `IA3.lineas_valoradas.codigo_partida_final` es **no observable en IA3**
+   (consta en «Campos no observables» y no cuenta en R28); E2E la sigue midiendo.
+2. R39: el banco lleva a `INPUTS.lineas_albaran.codigo_imputacion`, al cargar
+   (no en el conversor ni en el libro), la partida de la línea del libro IA1 con
+   su mismo número **y su misma descripción**: 56 líneas. De las 58 que se
+   esperaban, 2 (FER-002 L4 y L5) no son la misma línea: IA1 numera 4 y 5 las que
+   INPUTS numera 7 y 8; por número solo habrían recibido `CI.4.18` donde el final
+   espera `P5.36.01`.
 
 Sin esas 86: **51 de 126 = 40,5 %**.
 
@@ -128,6 +131,42 @@ Sin las 86 partidas ni las 28 filas sin pareja: **23 de 98 = 23,5 %**, aún por
 encima del 20 %. Los 23 son 8 líneas sin precio (con su importe y su precio
 final) y una sintética emparejada sin precio: lo que mide el modelo.
 
-**Criterio sin cambiar.** Contar distinto cambia el veredicto y lo que mide el
-banco, no solo la contabilidad del informe: queda como desviación D5 para que
-lo decida el humano o el reviewer, sin código.
+**R28 con el criterio aprobado (R38): 51 de 126 = 40,5 %**, recontado del
+texto del informe de T14 (`b4cde93`), sin volver a pagar. El 23,5 % exige además
+quitar las 28 sintéticas sin pareja, que siguen contando: su arreglo es una
+**tarea de datos del banco** (afirmar `rol_linea` en el libro IA3), anotada y no
+hecha en F-084. El líder propone al humano el 23,5 % como línea base documentada
+en lugar del 20 %; el umbral de R28 no cambia hasta que el humano lo decida.
+
+**T14 no se puede recomparar sin pagar:** el runner no guarda las respuestas de
+sv5 ni los envelopes, solo el informe. Además, con R39 el contexto de IA3 lleva
+ya la partida del albarán (como en producción) y T14 se tomó sin ella: una
+pasada nueva mediría también ese efecto.
+
+## Anexo · T12 (humano) y T13: línea base determinista (`b39cb0e`)
+
+T12, 2026-10-23: `lineas` 18 contratos y 0 fallidos (3159 filas, 52 fechas);
+`documentos` 20: md 1, pdf 6 y ninguno 13 (los 13, «no está en
+albaran_contratos_merge»: **30 de los 59 casos van a T14 sin documento**); 6
+libros y 264 ficheros. T13 versiona `evals/fixtures/inputs/` (60 ficheros), el
+índice y `progress/import_F-084.md`. Barrido de lo añadido: sin URL, correo,
+GUID, clave, IBAN, NIF de persona ni teléfono; los «IPv4» son partidas; los 7
+CIF son de sociedades (O3). La caché sigue ignorada.
+
+- **R27, verde:** 0 OMITIDO por R18; FER-001 `importe_calculado` 19,41 sin
+  fallo (le queda `codigo_partida_final`); advertencia de R36 en las tres fases.
+- **Determinista** (`python -m evals.runner --feature F-084`, ROJO): IA3 59
+  evaluados, VERDE 6, ROJO 53, **394 fallos**; IA4 13 evaluados, VERDE 13, 46
+  OMITIDO («sin caso en el libro IA4»); E2E VERDE 6, ROJO 53, **572 fallos**;
+  0 ERROR. RES-001..007 igual que antes (RES-007 IA3 4 y E2E 6).
+- **Línea base con R37** (`daa6293`): IA3 **386 fallos** (−8), E2E **563** (−9);
+  mismos estados por caso (FER-002 IA3 15 → 8, FER-003 6 → 5); 0 de redondeo.
+- **«obtenido None»: R36, no el estímulo.** 385 de 394 en IA3 (103 líneas): 77
+  con el código de contrato en `?` en el libro y 26 `no_match`; **ninguna** con
+  un código presente en las líneas importadas. El estímulo solo empareja lo que
+  el libro afirma (P2 = b); el resto lo mide T14.
+- **Redondeo → R37 (T16; decisión del humano, opción a):** IA3 7 en FER-002
+  (17,59 frente a 17,5932 = 54 × 0,543 × 0,60) y 1 en FER-003 (95,481 frente a
+  95,479167); E2E, lo mismo y el total de FER-002 (139,65 frente a 139,66). El
+  libro anota el papel en céntimos y sv6 no redondea sin importe declarado: el
+  libro no está mal. Ahora el banco tolera 0,05 € ahí; producción no cambia.

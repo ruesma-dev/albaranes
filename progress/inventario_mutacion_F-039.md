@@ -90,11 +90,12 @@ servicio: esos números no están tocados por este defecto.
 | `progress/mutacion_F-084_sv5_documentos.md` | Sí | `VÁLIDA` | Remedida de F-084 para el único fichero que cambió tras la segunda campaña: `evals/procesos/sv5_documentos.py` **entero** (`--ficheros`, sin muestreo, nivel `critico`) sobre `3ce021f`, **4 workers**, con la suite de la raíz: 286 líneas, **39 mutantes, 39 muertos, 0 supervivientes**, 0 timeouts, 0 sin veredicto, 4.533,4 s. Cierra los 4 supervivientes de `progress/mutacion_F-084.md`. |
 | `progress/mutacion_F-084_review1.md` | Sí | `VÁLIDA` | Remedida de F-084 tras la review pasada 1 (cambio 1: R33 solo con LLM y en el comparador): las líneas cambiadas desde `1839b8c` en `evals/runner.py`, `evals/procesos/sv5_valoracion.py` y `evals/comparar_modelos.py` (origen rama, sin muestreo, nivel `critico`) sobre `57c3c0c`, **1 worker** (con 4 y con 2 la línea base agotó los 600 s: la máquina la compartían suites de otros proyectos; esos dos intentos, NO VÁLIDA, no se versionan), con la suite de la raíz: 41 líneas, **10 mutantes, 10 muertos, 0 supervivientes**, 0 timeouts, 0 sin veredicto, 2.065,1 s. |
 | `progress/mutacion_F-084_r37.md` | Sí | `VÁLIDA` | Remedida de F-084 tras T16 (R37, tolerancia de 0,05 € en importes y precios valorados, decisión del humano del 2026-10-23): las líneas cambiadas desde `5f70189` en `evals/comparador.py` (origen rama, sin muestreo, nivel `critico`) sobre `daa6293`, **2 workers**, con la suite de la raíz: **8 mutantes, 8 muertos, 0 supervivientes**, 0 timeouts, 0 sin veredicto, 1.828,9 s. Un intento anterior sobre `46b60ac` (7 mutantes, 1 superviviente: `round(…, 6)` → `round(…, 7)`) se sustituyó tras quitar ese redondeo (`daa6293`); no se versiona. |
+| `progress/mutacion_F-084_r39.md` | Sí | `VÁLIDA` | Remedida de F-084 tras T17 (D5 del humano: R38, partida no observable en IA3, y R39, la partida del libro IA1 en INPUTS): las líneas cambiadas desde `83680ea` en `evals/procesos/sv6_build.py`, `evals/runner.py` y `evals/comparar_modelos.py` (origen rama, sin muestreo, nivel `critico`) sobre `a4d7653`, **2 workers**, con la suite de la raíz: 45 líneas, **5 mutantes, 5 muertos, 0 supervivientes**, 0 timeouts, 0 sin veredicto, 1.201,3 s. |
 
 ## Recuento
 
-- Informes inventariados: **52** (recontado el 2026-10-23 en F-084: los 48 del recuento anterior y las cuatro de F-084).
-- Con alcance fuera de `services/`: **15** (F-011, F-012, F-034, F-038,
-  maquinaria-paralela-F-039, F-039, F-040, F-072, las dos de F-075, la de F-083 y las cuatro de F-084).
+- Informes inventariados: **53** (recontado el 2026-10-23 en F-084: los 48 del recuento anterior y las cinco de F-084).
+- Con alcance fuera de `services/`: **16** (F-011, F-012, F-034, F-038,
+  maquinaria-paralela-F-039, F-039, F-040, F-072, las dos de F-075, la de F-083 y las cinco de F-084).
 - Medidos con la invocación rota y **no repuestos**: **2** (F-011 y F-012).
   Ninguno de los dos se va a rehacer, y las dos cabeceras lo dicen.

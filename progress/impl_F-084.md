@@ -3,9 +3,9 @@
 
 Rama `feature/F-084-banco-valoracion` (worktree `../albaranes-F-084`), `dev`
 `416b55c` fusionado (F-083, F-085, altas hasta F-098). Rigor `critico`.
-Servicios tocados: **ninguno** (solo `evals/` y tests). T1–T11, T13, T15 y T16
+Servicios tocados: **ninguno** (solo `evals/` y tests). T1–T11, T13, T15–T17
 hechas, y los 3 cambios de la review pasada 1; T12 y T14 las lanzó el humano el
-2026-10-23 (comandos en `progress/current.md`).
+2026-10-23 (comandos en `progress/current.md`). D5 aprobada por el humano → T17.
 
 ## Qué cambió
 
@@ -19,6 +19,7 @@ hechas, y los 3 cambios de la review pasada 1; T12 y T14 las lanzó el humano el
 | `evals/procesos/sv5_modelos.py` | La línea de `preparar_contexto` en su `main` (design §8). |
 | `evals/runner.py` | R18 y R13 en las dos corridas y R33 solo en la de LLM (review 1), antes de montar sv5/sv6; R19 (`fases` sin IA1/IA2 ⇒ sin sv2 ni sus claves; las de sv5 se exigen antes de nada); R20 `valoracion_por_defecto`; R17/R21 en las fases. |
 | `evals/comparar_modelos.py` (de F-083) | R33 en `casos_de_fase` de IA3 e IA4 vía `sv5_valoracion.falta_documento` (review 1). |
+| `evals/procesos/sv6_build.py`, `evals/runner.py`, `evals/comparar_modelos.py` (T17) | R38: `codigo_partida_final` fuera de `OBSERVABLES` de IA3. R39: `con_partidas_de_ia1` y `runner.cargar_inputs`, la única carga de INPUTS del runner y del comparador. |
 | `evals/comparador.py`, `evals/criticidad.json` | R37 (T16): 0,05 € de tolerancia, en `Decimal`, en los importes y precios valorados (`CAMPOS_CON_TOLERANCIA_EUR`); IA1 exacta; en `criticidad.json`, solo una nota. |
 | `evals/modelos.py`, `evals/informe.py` | `ResultadoFase.modelos` y `.documentos`; `- Modelo: …`, `- Documento del contrato: md N · pdf N · ninguno N` y la advertencia de emparejamiento del determinista (R36). Líneas parseables idénticas. |
 | `evals/README.md` | Sección de F-084 (R26). `azure-apps/albaranes.md` §8: commit local `a6bc26a`, **sin push**. |
@@ -26,27 +27,17 @@ hechas, y los 3 cambios de la review pasada 1; T12 y T14 las lanzó el humano el
 
 ## Decisiones de diseño
 
-- **Descuento en `Decimal`**: el `COALESCE` de sv5 calcula en `numeric`; en
-  float 50 × 0,647 × 0,60 da 19,409999…, en `Decimal` 19,41 exacto.
-- **`descuentos` del conversor** llega como número, lista (`a;b`) o texto: los
-  tres caminos; `?`/vacío = sin descuento; más de un valor = R13.
-- **R13 en el runner**: con LLM, IA3 `ERROR` e IA4/E2E `OMITIDO` («no se
-  valoró · …»); en el determinista, IA3 y E2E `ERROR` e IA4 `OMITIDO`.
-- **R9**: la fecha que falta se escribe para cualquier caso pedido sin
-  `fecha_albaran`, no solo los importados (nunca pisa una existente).
-- **`preparar_contexto` por costura**: `ejecutar_trabajo(trabajo, fabrica,
-  preparar)` sigue sirviendo al test in-process de F-083 (sin sv5 importable);
-  el subproceso entra por `valorar_casos`, que pasa `preparar_contexto`. Los
-  tests de T7 entran por esa misma puerta en un subproceso con doble de LLM.
-- **El índice va con los fixtures** (`<fixtures>/contratos/_indice.json`) y el
-  runner lo lee de ahí; `construir_contexto` y `falta_documento` sin índice
-  explícito leen el versionado (el comparador de F-083 hereda contexto,
-  documento y R33).
-- **Informe compartido** `progress/import_F-084.md`, una sección por subcomando.
-  Sin escritura en sistemas: sigrid-api solo `sql/read`, BBDD de solo lectura.
+- **Descuento en `Decimal`**, como el `COALESCE` de sv5 en `numeric` (float: 19,409999…).
+- **`descuentos`** llega como número, lista (`a;b`) o texto; `?`/vacío = sin descuento; >1 = R13.
+- **R13**: con LLM, IA3 `ERROR` e IA4/E2E `OMITIDO`; en el determinista, IA3/E2E `ERROR`.
+- **R9**: la fecha que falta se escribe en cualquier caso pedido; nunca pisa una existente.
+- **`preparar_contexto` por costura**: `ejecutar_trabajo(trabajo, fabrica, preparar)` sirve
+  al test in-process de F-083; el subproceso entra por `valorar_casos` (también los de T7).
+- **El índice va con los fixtures** (`<fixtures>/contratos/_indice.json`); sin índice
+  explícito se lee el versionado (el comparador de F-083 hereda contexto y R33).
+- **Informe compartido** `progress/import_F-084.md`; sigrid-api solo `sql/read`, BBDD solo lectura.
 - **Costuras por T15**: `LectorSigrid(dormir=…)`, `_sesion_real(crear, abrir)` y
-  `_descargador_real(clase)` dejan probar reintentos, techo de espera y el
-  montaje real sin conectar; se quitan `future`/`pool_pre_ping` (sesión de un uso).
+  `_descargador_real(clase)` prueban reintentos y montaje real sin conectar.
 
 ## Desviaciones (justificadas también en `progress/current.md`)
 
@@ -110,39 +101,18 @@ Comando base: `PYTHONPATH=<worktree>/services/albaranes-comun python -m pytest <
 
 ## Fuera del alcance / pendiente
 
-- **D5 (propuesta, sin código):** cómo contar R28; ver «T14». IA4 usa el
-  proveedor de IA3, como antes.
+- **Tarea de datos del banco (anotada, no hecha):** las 28 filas de sintéticas con
+  `rol_linea` en `?` (25 casos) no casan nunca. IA4 usa el proveedor de IA3, como antes.
 - **Emparejamiento como lo describe el humano** (solo IA4, prefiltro de precio
   ±0,02 € y partida, y luego significado): feature aparte que propone el líder.
 - R18 no se aplica en el comparador de F-083 (la spec no lo pide); R33 sí.
 
-## T12 (humano) y T13: línea base determinista (`b39cb0e`)
+## T12 (humano) y T13: línea base determinista (`b39cb0e`; detalle en `progress/impl_F-084_T14.md`, anexo)
 
-T12, 2026-10-23: `lineas` 18 contratos y 0 fallidos (3159 filas, 52 fechas);
-`documentos` 20: md 1, pdf 6 y ninguno 13 (los 13, «no está en
-albaran_contratos_merge»: **30 de los 59 casos van a T14 sin documento**); 6
-libros y 264 ficheros. T13 versiona `evals/fixtures/inputs/` (60 ficheros), el
-índice y `progress/import_F-084.md`. Barrido de lo añadido: sin URL, correo,
-GUID, clave, IBAN, NIF de persona ni teléfono; los «IPv4» son partidas; los 7
-CIF son de sociedades (O3). La caché sigue ignorada.
-
-- **R27, verde:** 0 OMITIDO por R18; FER-001 `importe_calculado` 19,41 sin
-  fallo (le queda `codigo_partida_final`); advertencia de R36 en las tres fases.
-- **Determinista** (`python -m evals.runner --feature F-084`, ROJO): IA3 59
-  evaluados, VERDE 6, ROJO 53, **394 fallos**; IA4 13 evaluados, VERDE 13, 46
-  OMITIDO («sin caso en el libro IA4»); E2E VERDE 6, ROJO 53, **572 fallos**;
-  0 ERROR. RES-001..007 igual que antes (RES-007 IA3 4 y E2E 6).
-- **Línea base con R37** (`daa6293`): IA3 **386 fallos** (−8), E2E **563** (−9);
-  mismos estados por caso (FER-002 IA3 15 → 8, FER-003 6 → 5); 0 de redondeo.
-- **«obtenido None»: R36, no el estímulo.** 385 de 394 en IA3 (103 líneas): 77
-  con el código de contrato en `?` en el libro y 26 `no_match`; **ninguna** con
-  un código presente en las líneas importadas. El estímulo solo empareja lo que
-  el libro afirma (P2 = b); el resto lo mide T14.
-- **Redondeo → R37 (T16; decisión del humano, opción a):** IA3 7 en FER-002
-  (17,59 frente a 17,5932 = 54 × 0,543 × 0,60) y 1 en FER-003 (95,481 frente a
-  95,479167); E2E, lo mismo y el total de FER-002 (139,65 frente a 139,66). El
-  libro anota el papel en céntimos y sv6 no redondea sin importe declarado: el
-  libro no está mal. Ahora el banco tolera 0,05 € ahí; producción no cambia.
+T12 (2026-10-23): `lineas` 18 contratos, 0 fallidos (3159 filas, 52 fechas); `documentos` 20
+(md 1, pdf 6, ninguno 13: 30 casos sin documento). T13 versiona fixtures, índice e informe de
+importación, con barrido de sensibles. **R27 en verde.** Determinista: IA3 394 fallos, E2E 572;
+con R37 (`daa6293`) 386 y 563; los «obtenido None» son el emparejamiento que no mide (R36).
 
 ## T14 (humano): línea base con LLM, `gpt-6.1-sol` (detalle: `progress/impl_F-084_T14.md`)
 
@@ -153,15 +123,42 @@ Modelo en las tres fases; documento md 5 · pdf 24 · ninguno 30. Coste real: no
 consta (el runner no mide tokens). Humo: IA3 19, IA4 3, E2E 23. Frente al
 determinista: IA3 386 → 212 y líneas sin precio 91 → 8.
 
-- **R28 en ROJO: 137 de 212 = 64,6 %.** 86 son `codigo_partida_final`, que IA3 no
-  produce: la pone sv6 desde la partida del albarán, y INPUTS la trae vacía en
-  las 110 líneas (E2E tampoco la observa). Sin ellas: 40,5 %. 28 son filas de
-  sintéticas con `rol_linea` en `?` en el libro, que no pueden casar. Sin ambas:
-  23 de 98 = 23,5 %. **D5** (decide el humano o el reviewer): partida no
-  observable en IA3 y la de IA1 a INPUTS para E2E. Criterio sin cambiar.
+- **R28, tal cual: 137 de 212 = 64,6 %.** 86 son `codigo_partida_final`, que IA3 no
+  produce; 28, sintéticas con `rol_linea` en `?` que no pueden casar. D5 aprobada →
+  T17; la cifra con el criterio nuevo, en «T17».
 - **Valoración frente a emparejamiento** (según el código de hoy): IA3 76 de
   valoración y 20 de emparejamiento, IA4 27 de emparejamiento. El banco apenas
   mide el emparejamiento: IA4 solo tiene 13 casos con libro.
+
+## T17 · D5 del humano: R38 y R39 (`a4d7653`)
+
+- **R39 casa por `num_linea` y descripción.** Solo por número, FER-002 L4 y L5 recibían
+  `CI.4.18` donde el final espera `P5.36.01` (en 21 casos IA1 e INPUTS no numeran igual).
+  Quedan 56 de 110 líneas con partida; 33 sin línea IA1 de ese número y 19 con `?` en IA1
+  siguen sin ella: no se inventa. El contexto de IA3 con LLM lleva ya la partida, como en
+  producción; T14 se tomó sin ella.
+- **Tests ajenos:** F-011 r13 (la partida torcida sale roja en E2E y no en IA3) y r16 (lo
+  crítico torcido pasa a ser el precio); nota en `criticidad.json`; I001 de ruff, previo, corregido.
+- **RED** (`python -m pytest tests/test_f084_partida.py -q`, antes del código):
+
+```
+E  AssertionError: assert 'codigo_partida_final' not in ('num_linea', 'match_method', 'codigo_producto_contrato', 'codigo_partida_final', ...)
+E  AttributeError: module 'evals.procesos.sv6_build' has no attribute 'con_partidas_de_ia1'
+E  AttributeError: module 'evals.runner' has no attribute 'cargar_inputs'
+E  AssertionError: assert not [Discrepancia(campo='FINAL.lineas[1].partida_final', esperado='CI.4.18', obtenido=None ...)]
+E  AssertionError: assert None == 'CI.4.18'
+10 failed in 11.80s
+```
+  La guarda de descripción (`-k "misma_linea or fer_002"`, código sin ella):
+  `E  AssertionError: assert ['CI.4.18', 'CI.4.18'] == [None, None]` → `2 failed, 10 deselected in 0.76s`.
+  Con el código: `12 passed`; tests de la raíz que tocan `evals`: `1392 passed in 121.37s`.
+- **Determinista recontado** (`a4d7653`): IA3 VERDE 8 · ROJO 51, **300 fallos** (386 − 86
+  partidas); IA4 13 VERDE; E2E VERDE 7 · ROJO 52, **491** (563), 30 `partida_final`, todas
+  «obtenido None» y 0 con partida distinta. FER-001 VERDE; RES-001..006 VERDE, RES-007 igual.
+- **R28 con R38, recontado del texto de T14 sin pagar: 51 de 126 = 40,5 %** (ROJO). Sin
+  además las 28 sintéticas `?`, que siguen contando: **23 de 98 = 23,5 %**, la cifra que el
+  líder propone al humano como línea base en lugar del 20 %; R28 no cambia hasta que decida.
+- **T14 no se recompara sin pagar:** el runner no guarda respuestas de sv5 ni envelopes.
 
 ## Review pasada 1 (`progress/review_F-084.md`): cambios aplicados
 
@@ -203,8 +200,9 @@ Con el código nuevo: los 4 de R33 y los 2 de F-083, en verde.
 - **Remedida de T16** (`progress/mutacion_F-084_r37.md`, `daa6293`, diff desde
   `5f70189`, `comparador.py`): **8 mutantes, 8 muertos**, 1.828,9 s, 2 workers. Un
   intento anterior dejó 1 superviviente (`round(…, 6)` → `7`): se quitó el redondeo.
-  Supervivientes pendientes de aceptar por el humano: **ninguno**.
-- Las cuatro campañas de F-084 constan en `progress/inventario_mutacion_F-039.md`.
+- **Remedida de T17** (`progress/mutacion_F-084_r39.md`, `a4d7653`, diff desde `83680ea`, 45
+  líneas): **5 mutantes, 5 muertos**, 1.201,3 s, 2 workers. Supervivientes por aceptar: **ninguno**.
+- Las cinco campañas de F-084 constan en `progress/inventario_mutacion_F-039.md`.
 
 ## Evidencias
 
@@ -213,6 +211,6 @@ Con el código nuevo: los 4 de R33 y los 2 de F-083, en verde.
 | Tests ejecutados (`bash harness/init.sh` final, `6dd6c88`, tras T14, T16, T13, la review 1 y `dev` `416b55c`) | raíz 1871 passed (327,9 s); sv1 205; sv2 485; sv3 1576; sv4 1774; sv5 96; sv6 473 (+1 skipped); sv9 673; comun en verde |
 | Tests de F-084 | 202 (contratos 93 · contexto 49 · runner 31 · tolerancia 29) |
 | Cobertura de las líneas cambiadas | `PUERTA COBERTURA: 98.5% de 618 líneas cambiadas cubiertas (609/618, umbral 80%, nivel critico)` |
-| Mutación | Remedida de T16 (`progress/mutacion_F-084_r37.md`, `daa6293`): **8 generados, 8 muertos, 0 supervivientes** · remedida de la review 1 (`progress/mutacion_F-084_review1.md`, `57c3c0c`): **10 generados, 10 muertos, 0 supervivientes** · 2.ª campaña completa (`progress/mutacion_F-084.md`, `d4dbe97`): **198 generados, 194 muertos, 4 supervivientes** (equivalentes, analizados) · remedida del fichero afectado (`progress/mutacion_F-084_sv5_documentos.md`, `3ce021f`): **39 generados, 39 muertos, 0 supervivientes**. 1.ª campaña (195, 45 supervivientes) sustituida: ver «Mutación» |
+| Mutación | Remedida de T17 (`progress/mutacion_F-084_r39.md`, `a4d7653`): **5 generados, 5 muertos, 0 supervivientes** · remedida de T16 (`progress/mutacion_F-084_r37.md`, `daa6293`): **8 generados, 8 muertos, 0 supervivientes** · remedida de la review 1 (`progress/mutacion_F-084_review1.md`, `57c3c0c`): **10 generados, 10 muertos, 0 supervivientes** · 2.ª campaña completa (`progress/mutacion_F-084.md`, `d4dbe97`): **198 generados, 194 muertos, 4 supervivientes** (equivalentes, analizados) · remedida del fichero afectado (`progress/mutacion_F-084_sv5_documentos.md`, `3ce021f`): **39 generados, 39 muertos, 0 supervivientes**. 1.ª campaña (195, 45 supervivientes) sustituida: ver «Mutación» |
 | Tiempo de la suite raíz | 327,9 s (dentro de init.sh, con los 59 casos ya con contrato) |
 | `bash harness/init.sh` | `ENTORNO LISTO. Puedes trabajar.` (exit 0; PUERTA TAMAÑO requirements 150/150, design 245/250, impl 218/220) |
