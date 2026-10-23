@@ -1,6 +1,8 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-084 · CERRADA (`done`, 2026-10-23).** El banco de evals valora de verdad. Review APROBADA en la pasada 3; línea base de R28 del 23,5 % aceptada por el humano (D5). Resumen en `history.md`; detalle en `progress/impl_F-084.md`, `progress/impl_F-084_T14.md` y `progress/review_F-084.md`. Pendiente anotado: afirmar `rol_linea` en las 28 líneas sintéticas `?` del libro IA3 (tarea de datos del banco).
+
 **F-092 · `blocked` (2026-10-22, al darla de alta): gestión de almacén.** Bloqueada por la regla LÍMITE DE SERVICIO antes de la spec: el humano decide qué es (vista de lo que entró a almacén desde albaranes o gestión de existencias con salidas a partida/obra), si va en este monorepo como servicio nuevo o en un proyecto aparte, y si escribe en Sigrid. Ficha en `harness/features.json`.
 
 **F-085 · `blocked` (2026-10-21): review APPROVED (pasada 2), fusionada en `dev`; implementación hecha (T1–T5, T2b, T8, T9); T0, T10 y T11 son MANUAL del humano; T6, T7 y T12 FUERA → F-086** — modelos de producción por fase. Spec en `specs/F-085-modelos-produccion/` (corregida por O3 de la review de F-083). Rama `feature/F-085-modelos-produccion`, worktree `../albaranes-F-085` (*junction* `.venv` de sv4: quitarla con `cmd /c rmdir` antes de `git worktree remove`), `dev` (`17ccef7`) fusionado. Rigor `critico`. Informe: `progress/impl_F-085.md`; mutación: `progress/mutacion_F-085.md`; `azure-apps` `0416ce3` sin push.

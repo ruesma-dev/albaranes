@@ -2,7 +2,7 @@
   "caso_id": "COM-001",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
+  "sha256_libro": "0e7be5c97d30301b8fe5c5fc0facf4435100da51d113d1c70472424c3c1e01a4",
   "tablas": {
     "caso": [
       {
@@ -14,8 +14,96 @@
         "tipologia": "Combustible"
       }
     ],
-    "condiciones": [],
-    "contrato_lineas": [],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "COM-001",
+        "comentario": "fecha de IA1.cabeceras (F-084)",
+        "valor": "2026-03-09"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "COM-001",
+        "codigo_partida": "CI.4.1",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "COMBUSTIBLES-GASOIL",
+        "linea_sigrid": 215948,
+        "precio_unitario": 0,
+        "unidad": "mes"
+      },
+      {
+        "caso_id": "COM-001",
+        "codigo_partida": "CI.4.1",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO GASOIL A",
+        "linea_sigrid": 215949,
+        "precio_unitario": 1.23,
+        "unidad": "L"
+      },
+      {
+        "caso_id": "COM-001",
+        "codigo_partida": "CI.4.1",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO GASOIL A",
+        "linea_sigrid": 221970,
+        "precio_unitario": 1.23,
+        "unidad": "L"
+      },
+      {
+        "caso_id": "COM-001",
+        "codigo_partida": "CI.4.1",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO GASOIL A",
+        "linea_sigrid": 225312,
+        "precio_unitario": 1.23,
+        "unidad": "L"
+      },
+      {
+        "caso_id": "COM-001",
+        "codigo_partida": "CI.4.1",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "COMBUSTIBLES-GASOIL",
+        "linea_sigrid": 226453,
+        "precio_unitario": 3000,
+        "unidad": "mes"
+      },
+      {
+        "caso_id": "COM-001",
+        "codigo_partida": "CI.4.1",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO GASOIL A",
+        "linea_sigrid": 241378,
+        "precio_unitario": 5000,
+        "unidad": "mes"
+      },
+      {
+        "caso_id": "COM-001",
+        "codigo_partida": "CI.4.1",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO GASOIL A",
+        "linea_sigrid": 247956,
+        "precio_unitario": 8700,
+        "unidad": "mes"
+      },
+      {
+        "caso_id": "COM-001",
+        "codigo_partida": "CI.4.1",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO GASOIL A",
+        "linea_sigrid": 254041,
+        "precio_unitario": 7000,
+        "unidad": "mes"
+      }
+    ],
     "lineas_albaran": [
       {
         "cantidad": 800,

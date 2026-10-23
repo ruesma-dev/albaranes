@@ -114,7 +114,9 @@ def _resumen(fase):
 
 def test_f083_runner_evaluar_valoracion_coincide_con_el_modo_determinista():
     """Con los envelopes del modo determinista, IA3 y E2E salen igual (sv6 real)."""
-    casos = ["FER-001", "GEN-001", "HOR-005"]
+    # F-084 (R18): el determinista omite los casos sin líneas de contrato en
+    # INPUTS; la equivalencia se mide en casos que las tienen.
+    casos = ["RES-001", "RES-004", "RES-006"]
     deterministas, _ = runner.corrida_determinista(RUTA_FIXTURES, casos)
     fases, no_observables = runner.evaluar_valoracion(
         _envelopes_estimulados(casos),

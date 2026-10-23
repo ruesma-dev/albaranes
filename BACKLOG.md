@@ -9,7 +9,7 @@ Resumen: **99 features**, 71 abiertas (1 en curso, 5 con la spec lista, 6 bloque
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
-| F-084 | El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None») | 2 | critico |  |
+| F-084 | El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None») | 2 | critico | `feature/F-084-banco-valoracion` |
 
 ## Spec lista
 
@@ -149,13 +149,15 @@ SPEC (2026-10-19, specs/F-083-comparar-modelos/, anexo de inventario y precios c
 
 ### F-084 · El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None»)
 
-estado **en curso** · prioridad 2 · rigor `critico` · SDD sí
+estado **en curso** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-084-banco-valoracion`
 
 ORIGEN: pruebas rápidas de modelos del 2026-10-19 (progress/evals_prueba-{luna,sol,argon}.md, fuera de git) y pasada de F-075: IA3, IA4 y E2E salen idénticos caso a caso con cualquier modelo; en IA3, 126 de 136 fallos (15 casos) y 388 de 408 (59 casos, F-075) son «obtenido None»: la valoración del banco no produce líneas valoradas salvo FER-001/FER-002. Así el banco no mide el modelo de valoración.
 
 OBJETIVO: diagnosticar por qué (fixtures de inputs/contrato, adaptador evals/procesos/sv5_valoracion.py, servicios de sv5 sin contrato, R26 de campos no observables...) y arreglarlo para que IA3/IA4/E2E midan el modelo; nueva línea base con el modelo de producción.
 
 NECESARIO PARA: elegir el modelo de IA3/IA4 (F-083, F-085: Opus 5.5 en IA3, GPT-6.1 Sol en IA4). RELACIONADAS: F-047 (ciclo completo), F-083.
+
+SPEC (2026-10-20, specs/F-084-banco-valoracion/, PARADA 1 resuelta, design §11): DIAGNÓSTICO sin llamadas de pago: 52 de los 59 fixtures de INPUTS no tienen líneas de contrato (F-045 las dejó fuera a propósito); el determinista da 390 «obtenido None» de 401 fallos de IA3; el LLM recibe lineas_contrato vacías. El adaptador de sv5 no pasaba descuento ni precio neto (FER-001 32,35 en vez de 19,41), ni clasificación (los RES con valuation_es), ni categoría de unidad ni fecha. sv5 y sv6 NO tienen el fallo y no se tocan. ARREGLO: evals/contratos.py con dos subcomandos lanzados por el humano, solo lectura: `lineas` (sigrid-api → libro INPUTS, copia de seguridad, sin tocar los 7 RES) y `documentos` (cabecera y documento del contrato que sv3 ya guardó, con la SQL y el descargador de sv5: MD si hay, si no PDF, cacheado en evals/inputs/contratos/ sin versionar, índice versionado sin contenido); contexto de valoración fiel (descuento, importe derivado, clasificación desde la tipología, UnitCategoryPrefilter, fecha, documento en la misma llamada de IA3); runner: OMITIDO sin líneas de contrato (R18), OMITIDO sin el documento local solo con LLM y en el comparador (R33), sin sv2 si no se piden IA1/IA2, proveedor y modelo por defecto de producción (referencia IA3 de evals/precios_modelos.json, hoy openai gpt-6.1-sol) y modelo en el informe; SIN estímulo por precio ni emparejamiento en el banco: el determinista declara que no mide el emparejamiento. LÍNEA BASE: MANUAL (T14) con el modelo de producción, gpt-6.1-sol (pendiente de confirmación del humano), válida con 0 ERROR y «obtenido None» ≤ 20 % de los fallos de IA3. servicios = evals.
 
 ### F-085 · Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086)
 

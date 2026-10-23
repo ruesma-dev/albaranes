@@ -1,0 +1,150 @@
+<!-- specs/F-084-banco-valoracion/requirements.md -->
+# F-084 · El banco de evals valora de verdad — requisitos (EARS)
+
+Diagnóstico en `design.md` §1: 52 de los 59 casos sin líneas de contrato en INPUTS y
+un adaptador de sv5 que no da a la IA lo de producción. Servicios: **ninguno** (solo
+`evals/`). PARADA 1 resuelta el 2026-10-20 (design §11).
+
+## A · Líneas de contrato desde Sigrid (`python -m evals.contratos lineas`)
+
+**R1.** CUANDO el humano ejecuta `python -m evals.contratos lineas`, el sistema
+debe leer de sigrid-api, una consulta por `contrato_codigo` distinto de los
+casos de `evals/fixtures/inputs/`, las líneas del contrato y escribirlas en
+`ground_truth/INPUTS.xlsx` › `CONTRATO_LINEAS`, una fila por línea y caso:
+`caso_id`, `codigo_producto`, `descripcion_recurso`, `unidad`,
+`precio_unitario`, `codigo_partida`, `linea_sigrid`, `comentario`.
+
+**R2.** Solo lectura: `POST /api/sql/read`, un `SELECT` parametrizado por código, `emp = 1`,
+`ORDER BY` estable y las columnas de Sigrid que persiste sv3 (`design.md` §7).
+
+**R3.** SI falta `SIGRID_API_BASE_URL`, `SIGRID_API_FUNCTION_KEY` o `SIGRID_API_DATABASE`,
+ENTONCES debe parar antes de pedir nada, código 2, nombrando las variables y sin tocar el libro.
+
+**R4.** SI la respuesta viene `truncated`, ENTONCES ese contrato falla
+(`NO_TOLERA`), sus casos no se escriben, consta el motivo y el resto sigue.
+
+**R5.** SI el código casa con ningún contrato o con más de un `ctr.ide`,
+ENTONCES no se escribe ese contrato y el informe lo dice.
+
+**R6.** El importador no debe tocar los casos que ya tienen líneas de contrato (los 7
+RES, con sus señuelos): sus `CONTRATO_LINEAS` y `CONDICIONES` quedan idénticas.
+
+**R7.** Antes de escribir debe dejar la copia del libro (`escritura.copia_de_seguridad`); si nada cambia, no lo guarda.
+
+**R8.** CUANDO se pasa `--dry-run`, no debe tocar el libro: solo el informe.
+
+**R9.** CUANDO un caso no declara `fecha_albaran` en `CONDICIONES`, debe
+escribirla desde `IA1.cabeceras.fecha` de su fixture; nunca pisa una existente.
+
+**R10.** Debe dejar `progress/import_F-084.md`: por contrato, líneas leídas y casos o motivo del
+fallo; por caso, cuántas líneas IA3 `contrato_db` tienen su precio esperado entre los importados
+(control del contrato vigente, no emparejamiento). Solo recuentos, `caso_id` y `num_linea`.
+
+**R11.** Una fila de `CONTRATO_LINEAS` es (`caso_id`, `codigo_producto`, `linea_sigrid`); SI el
+libro no tiene la columna `linea_sigrid`, ENTONCES el importador la añade al final.
+
+## B · Documento y cabecera del contrato (`python -m evals.contratos documentos`)
+
+**R29.** CUANDO el humano ejecuta `python -m evals.contratos documentos`, el
+sistema debe, por contrato, leer en solo lectura de la BBDD `albaranes` la fila
+de `albaran_contratos_merge` que lee sv5 (la más reciente del código) y
+descargar de SharePoint, con el descargador de sv5, el MD si hay
+`md_sharepoint_relative_path` y si no el PDF, igual que `ValueAlbaranPipeline`.
+
+**R30.** El documento debe quedar en `evals/inputs/contratos/` (no versionado)
+y en `evals/fixtures/contratos/_indice.json` (versionado) el código, `tipo`
+(`md`, `pdf` o `ninguno`), `sha256`, motivo y la cabecera (nombre, CIF y nombre
+del proveedor, código y nombre de obra); nunca el contenido del documento.
+
+**R31.** SI el contrato no está en la tabla, no tiene ruta, la descarga falla o el PDF pasa de
+`MAX_PDF_MB` (40, el de sv5), ENTONCES `tipo = ninguno` con su motivo y los demás siguen.
+
+**R34.** SI falta una variable de BBDD (`PG_*`) o de Graph (`GRAPH_KEY`, `SHAREPOINT_*`), ENTONCES
+para antes de conectar, código 2; la BBDD se abre en solo lectura y no se escribe nada.
+
+## C · El contexto de valoración es el de producción
+
+**R12.** Las líneas de albarán del contexto de IA3 y del envelope estimulado
+deben salir de UNA función: `descuento_albaran` = `descuentos`,
+`precio_neto_albaran` = `importe` e `importe_albaran` = `importe` o, si falta,
+`cantidad × precio_unitario × (1 − descuento/100)`, como el `SELECT` de sv5.
+
+**R13.** SI `descuentos` trae más de un valor, ENTONCES el caso sale ERROR en
+IA3 con motivo «descuento compuesto no representable».
+
+**R14.** El contexto y el envelope llevan la `clasificacion` con la familia de la tipología del
+caso (`design.md` §6): sv5 elige el prompt de producción y sv6 la familia efectiva.
+
+**R15.** En el subproceso de sv5, las líneas pasan por `UnitCategoryPrefilter`
+antes de llegar al LLM y al envelope.
+
+**R16.** `fecha_albaran` y `numero_albaran` del contexto salen de `CONDICIONES`.
+
+**R17.** El contexto lleva la cabecera del contrato del índice (R30) y el informe declara en
+IA3, IA4 y E2E cuántos casos se valoraron con `md`, `pdf` o `ninguno`.
+
+**R32.** CUANDO el contrato de un caso tiene documento en el índice y el fichero
+local casa con su `sha256`, IA3 debe recibirlo como en el pipeline (MD como
+`contrato_markdown`, PDF como adjunto), sin red y en la misma llamada.
+
+**R33.** SI el índice declara documento pero el fichero local falta o no casa,
+ENTONCES, con LLM, IA3, IA4 y E2E salen OMITIDO con «documento del contrato no
+disponible en local» sin mandarlo a sv5, y el comparador de F-083 lo deja fuera
+de IA3 e IA4; el determinista no lee el documento ni aplica R33 (review 1, a).
+
+## D · Runner y veredicto
+
+**R18.** SI un caso tiene `contrato_codigo` y ninguna línea de contrato en
+INPUTS, ENTONCES IA3, IA4 y E2E salen OMITIDO con «sin líneas de contrato en
+INPUTS», en las dos corridas, sin mandarlo a sv5.
+
+**R19.** CUANDO `--fases` no incluye IA1 ni IA2, la pasada con LLM no invoca sv2 ni exige sus claves.
+
+**R20.** Sin `--proveedores`, IA3/IA4 usan `IA3_PROVIDER` o la referencia IA3 de
+`evals/precios_modelos.json` (producción tras F-085, hoy `openai` `gpt-6.1-sol`, D1); manda la
+variable de modelo.
+
+**R21.** El informe registra en IA3, IA4 y E2E proveedor y **modelo** (`- Modelo: …`), con
+las líneas parseables intactas.
+
+**R36.** El informe determinista debe decir, en IA3, IA4 y E2E, que **no mide el
+emparejamiento**: una línea sin emparejar en el ground truth (`?`) sigue así; emparejar
+es de IA3/IA4 y lo mide la corrida con LLM. El banco no empareja por partida, precio ni texto.
+
+**R37.** Los importes y precios VALORADOS (IA3 `importe_calculado` y `precio_unitario_final`;
+RESULTADO_FINAL `importe_final`, `precio_unitario_final`, `lineas_anadidas.importe` y
+`total_valorado_esperado`) se comparan con 0,05 € de tolerancia absoluta; la lectura de
+IA1 y el resto, como antes (decisión del humano, 2026-10-23, opción a; design §4).
+
+**R38.** `codigo_partida_final` no es observable en IA3: la pone sv6 desde la partida del albarán,
+no sv5. Consta en «Campos no observables», no cuenta en R28 y E2E sigue comparando `partida_final`
+(D5, decisión del humano del 2026-10-23; design §4).
+
+**R39.** CUANDO una línea de INPUTS no trae `codigo_imputacion`, el banco le da, en las dos corridas
+y en el comparador de F-083, la de la línea del libro IA1 con su mismo `num_linea` y su misma
+descripción (en producción la lee IA1); INPUTS manda, y `?` o `REVISIÓN` no son partida.
+
+## E · Lo que no cambia
+
+**R23.** No se modifica sv5, sv6 ni ningún servicio, ni ninguna ruta de
+`harness/rutas_sensibles.json`.
+
+**R24.** Los 7 RES siguen igual: `tests/datos/afirmado_por_el_humano_RES.json` pasa sin
+cambios y su determinista no empeora en ningún caso.
+
+**R25.** Los tests no tocan red ni BBDD: sigrid-api con `httpx.MockTransport`,
+BBDD y SharePoint con dobles, LLM con doble, libros en `tmp_path`.
+
+**R26.** `evals/README.md` explica los dos subcomandos (de dónde leen, solo lectura, los
+lanza el humano) y el orden importar → convertir → determinista.
+
+## F · Verificación y nueva línea base
+
+**R27.** Tras importar y regenerar los fixtures, ningún caso con líneas importadas sale OMITIDO
+por R18, FER-001 da `importe_calculado` 19,41 en el determinista y su informe lleva la de R36.
+
+**R28.** Línea base del humano (`design.md` §9): IA3, IA4 y E2E con LLM en los 59 casos con
+`gpt-6.1-sol` (D1, confirmado). Vale con 0 ERROR, el modelo en el informe y la línea base de IA3
+que aceptó el humano (D5, 2026-10-23): «obtenido None» **23 de 98 = 23,5 %** de los fallos críticos,
+sin la partida (R38) ni las 28 sintéticas con `rol_linea` en `?` (tarea de datos del banco); con
+ellas, 51 de 126 = 40,5 %. T14 se tomó antes de R39, sin la partida en el prompt de IA3.

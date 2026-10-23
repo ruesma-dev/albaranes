@@ -5,6 +5,16 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-084 · El banco de evals valora de verdad (cerrada 2026-10-23)
+
+Rama `feature/F-084-banco-valoracion`, rigor `critico`, solo `evals` (ningún servicio cambia). IA3/IA4 del banco
+producen líneas valoradas con las líneas de contrato reales de Sigrid (T12/T13: 18 contratos, 3159 líneas, versionadas
+en `evals/fixtures/inputs/` por decisión del humano del 2026-10-23) y el documento del contrato cuando existe (R33).
+Tolerancia de 0,05 € en importes y precios (R37). D5: la partida no se mide en IA3 (R38) y E2E recibe la de IA1 (R39).
+Línea base con LLM (T14, `gpt-6.1-sol`): IA3 212 fallos, IA4 27, E2E 312; R28 = 23,5 % sin las 28 sintéticas `?`,
+aceptado por el humano como línea base en lugar del 20 %. Review APROBADA en la pasada 3. Siguientes: F-100 (IA4 casa
+todas las líneas) y la tarea de datos de `rol_linea` en las 28 sintéticas.
+
 ## F-075 · El importe del albarán manda (cerrada 2026-10-21)
 
 Rama `feature/F-075-importe-leido`, rigor `critico`, comun, sv2, sv3, sv5, sv6 y sv4. Sin contrato y con importes

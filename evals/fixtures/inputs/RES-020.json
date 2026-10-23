@@ -2,7 +2,7 @@
   "caso_id": "RES-020",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
+  "sha256_libro": "0e7be5c97d30301b8fe5c5fc0facf4435100da51d113d1c70472424c3c1e01a4",
   "tablas": {
     "caso": [
       {
@@ -14,8 +14,66 @@
         "tipologia": "Residuos"
       }
     ],
-    "condiciones": [],
-    "contrato_lineas": [],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "RES-020",
+        "comentario": "fecha de IA1.cabeceras (F-084)",
+        "valor": "2026-06-22"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "RES-020",
+        "codigo_partida": "15.01.",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CONTENDOR 6M3 CARTON-PAPEL",
+        "linea_sigrid": 260380,
+        "precio_unitario": 146,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-020",
+        "codigo_partida": "15.01.",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CONTENDOR 6M3 MADERA",
+        "linea_sigrid": 260381,
+        "precio_unitario": 146,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-020",
+        "codigo_partida": "15.01.",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CONTENDOR 6M3 PLASTICO",
+        "linea_sigrid": 260382,
+        "precio_unitario": 146,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-020",
+        "codigo_partida": "15.01.",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CONTENEDOR 6 M/3. (RCD´S)",
+        "linea_sigrid": 260383,
+        "precio_unitario": 184,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-020",
+        "codigo_partida": "15.01.",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CONTENEDOR 6 M/3. (RCD´S)",
+        "linea_sigrid": 268718,
+        "precio_unitario": 184,
+        "unidad": "UD"
+      }
+    ],
     "lineas_albaran": [
       {
         "cantidad": 1,

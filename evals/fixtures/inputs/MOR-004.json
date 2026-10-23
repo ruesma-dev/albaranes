@@ -2,7 +2,7 @@
   "caso_id": "MOR-004",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
+  "sha256_libro": "0e7be5c97d30301b8fe5c5fc0facf4435100da51d113d1c70472424c3c1e01a4",
   "tablas": {
     "caso": [
       {
@@ -14,8 +14,706 @@
         "tipologia": "Mortero"
       }
     ],
-    "condiciones": [],
-    "contrato_lineas": [],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "MOR-004",
+        "comentario": "fecha de IA1.cabeceras (F-084)",
+        "valor": "2025-09-29"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "02.02.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN H100",
+        "linea_sigrid": 214779,
+        "precio_unitario": 78.58,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "02.01.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214780,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "02.02.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214781,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "05.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214782,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "CI_F1.02.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214783,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "05.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214784,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "02.02.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214785,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "03.01.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214786,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "33.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214787,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "02.01.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214788,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "03.01.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214789,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "02.02.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214790,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "05.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214791,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "05.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214792,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "05.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214793,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "05.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214794,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214795,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214796,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214797,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214798,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.08",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214799,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.09",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214800,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.10",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214801,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.11",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214802,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.12",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214803,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.13",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214804,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 214805,
+        "precio_unitario": 89.3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "02.01.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HM-15",
+        "linea_sigrid": 214806,
+        "precio_unitario": 82.16,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "02.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HM-15",
+        "linea_sigrid": 214807,
+        "precio_unitario": 82.16,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HM-15",
+        "linea_sigrid": 214808,
+        "precio_unitario": 82.16,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "02.01.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN ÁRIDO 12/15mm",
+        "linea_sigrid": 214809,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "03.01.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN ÁRIDO 12/15mm",
+        "linea_sigrid": 214810,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "03.01.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN ÁRIDO 12/15mm",
+        "linea_sigrid": 214811,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "05.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN ÁRIDO 12/15mm",
+        "linea_sigrid": 214812,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "05.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN ÁRIDO 12/15mm",
+        "linea_sigrid": 214813,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN ÁRIDO 12/15mm",
+        "linea_sigrid": 214814,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN ÁRIDO 12/15mm",
+        "linea_sigrid": 214815,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.08",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN ÁRIDO 12/15mm",
+        "linea_sigrid": 214816,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.09",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN ÁRIDO 12/15mm",
+        "linea_sigrid": 214817,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.10",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN ÁRIDO 12/15mm",
+        "linea_sigrid": 214818,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "02.01.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FIBRAS POLIPROPILENO",
+        "linea_sigrid": 214819,
+        "precio_unitario": 4,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "02.01.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FIBRAS POLIPROPILENO",
+        "linea_sigrid": 214820,
+        "precio_unitario": 4,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FIBRAS POLIPROPILENO",
+        "linea_sigrid": 214821,
+        "precio_unitario": 4,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FIBRAS POLIPROPILENO",
+        "linea_sigrid": 214822,
+        "precio_unitario": 4,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.08",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FIBRAS POLIPROPILENO",
+        "linea_sigrid": 214823,
+        "precio_unitario": 4,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.09",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FIBRAS POLIPROPILENO",
+        "linea_sigrid": 214824,
+        "precio_unitario": 4,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "05.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FLUIDO",
+        "linea_sigrid": 214825,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "05.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FLUIDO",
+        "linea_sigrid": 214826,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "05.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FLUIDO",
+        "linea_sigrid": 214827,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "05.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FLUIDO",
+        "linea_sigrid": 214828,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "05.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FLUIDO",
+        "linea_sigrid": 214829,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.11",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FLUIDO",
+        "linea_sigrid": 214830,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.12",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FLUIDO",
+        "linea_sigrid": 214831,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "05.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FLUIDO",
+        "linea_sigrid": 214832,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "02.01.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN HIDRÓFUGO",
+        "linea_sigrid": 214833,
+        "precio_unitario": 5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "02.01.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN HIDRÓFUGO",
+        "linea_sigrid": 214834,
+        "precio_unitario": 5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "03.01.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN HIDRÓFUGO",
+        "linea_sigrid": 214835,
+        "precio_unitario": 5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "03.01.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN HIDRÓFUGO",
+        "linea_sigrid": 214836,
+        "precio_unitario": 5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN HIDRÓFUGO",
+        "linea_sigrid": 214837,
+        "precio_unitario": 5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.10",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN HIDRÓFUGO",
+        "linea_sigrid": 214838,
+        "precio_unitario": 5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN HIDRÓFUGO",
+        "linea_sigrid": 214839,
+        "precio_unitario": 5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.09",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN HIDRÓFUGO",
+        "linea_sigrid": 214840,
+        "precio_unitario": 5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.08",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN HIDRÓFUGO",
+        "linea_sigrid": 214841,
+        "precio_unitario": 5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "02.01.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN PLASTIFICANTE PULIDO",
+        "linea_sigrid": 214842,
+        "precio_unitario": 2.5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN PLASTIFICANTE PULIDO",
+        "linea_sigrid": 214843,
+        "precio_unitario": 2.5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN PLASTIFICANTE PULIDO",
+        "linea_sigrid": 214844,
+        "precio_unitario": 2.5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.08",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN PLASTIFICANTE PULIDO",
+        "linea_sigrid": 214845,
+        "precio_unitario": 2.5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "30.03.09",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN PLASTIFICANTE PULIDO",
+        "linea_sigrid": 214846,
+        "precio_unitario": 2.5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "MOR-004",
+        "codigo_partida": "02.01.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN ÁRIDO 12/15mm",
+        "linea_sigrid": 214847,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      }
+    ],
     "lineas_albaran": [
       {
         "cantidad": 9,

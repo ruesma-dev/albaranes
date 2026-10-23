@@ -2,7 +2,7 @@
   "caso_id": "FER-001",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
+  "sha256_libro": "0e7be5c97d30301b8fe5c5fc0facf4435100da51d113d1c70472424c3c1e01a4",
   "tablas": {
     "caso": [
       {
@@ -14,8 +14,666 @@
         "tipologia": "Ferreteria"
       }
     ],
-    "condiciones": [],
-    "contrato_lineas": [],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "FER-001",
+        "comentario": "fecha de IA1.cabeceras (F-084)",
+        "valor": "2026-06-05"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "CI.4.18",
+        "codigo_producto": "CICO18",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MATERIAL DE FERRETERIA",
+        "linea_sigrid": 214910,
+        "precio_unitario": 4000,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "CI.4.18",
+        "codigo_producto": "CICO18",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MATERIAL DE FERRETERIA - AMPLIACION 1",
+        "linea_sigrid": 225144,
+        "precio_unitario": 15000,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.03.10",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 20 MM. C/A",
+        "linea_sigrid": 231501,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.03.05",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 50 MM. C/A",
+        "linea_sigrid": 231502,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.03.08",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 20 MM. C/A",
+        "linea_sigrid": 231503,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.03.08",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO JUNTA GUM I-3 DE 230 MM.",
+        "linea_sigrid": 231504,
+        "precio_unitario": 10.82,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.03.02",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES SERPIENTE-50 (2M)",
+        "linea_sigrid": 231505,
+        "precio_unitario": 1.0716,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.03.06",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 20 MM. C/A",
+        "linea_sigrid": 231506,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.03.07",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 50 MM. C/A",
+        "linea_sigrid": 231507,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.03.06",
+        "codigo_producto": "MA0101",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO JUNTA BENTONITA SODIO 23MM",
+        "linea_sigrid": 231508,
+        "precio_unitario": 7.135333,
+        "unidad": "KG"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.03.11",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO JUNTA GUM I-3 DE 230 MM.",
+        "linea_sigrid": 231509,
+        "precio_unitario": 10.82,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.03.06",
+        "codigo_producto": "MA0208",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PLANCHA DE NERVOMETAL",
+        "linea_sigrid": 231510,
+        "precio_unitario": 7.74,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.03.08",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 50 MM. C/A",
+        "linea_sigrid": 231511,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.04.01.08",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 20 MM. C/A",
+        "linea_sigrid": 231512,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.03.05",
+        "codigo_producto": "MA0208",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PLANCHA DE NERVOMETAL",
+        "linea_sigrid": 231513,
+        "precio_unitario": 7.74,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.03.09",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 50 MM. C/A",
+        "linea_sigrid": 231514,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.03.12",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 20 MM. C/A",
+        "linea_sigrid": 231515,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.03.10",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO JUNTA GUM I-3 DE 230 MM.",
+        "linea_sigrid": 231516,
+        "precio_unitario": 10.82,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.04.01.03",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 50 MM. C/A",
+        "linea_sigrid": 231517,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.03.12",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO JUNTA GUM I-3 DE 230 MM.",
+        "linea_sigrid": 231518,
+        "precio_unitario": 10.82,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.03.09",
+        "codigo_producto": "MA0208",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PLANCHA DE NERVOMETAL",
+        "linea_sigrid": 231519,
+        "precio_unitario": 7.74,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.03.11",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 20 MM. C/A",
+        "linea_sigrid": 231520,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.04.01.07",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 20 MM. C/A",
+        "linea_sigrid": 231521,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.04.01.02",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 50 MM. C/A",
+        "linea_sigrid": 231522,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.04.01.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 50 MM. C/A",
+        "linea_sigrid": 231523,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.03.09",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 50 MM. C/A",
+        "linea_sigrid": 231524,
+        "precio_unitario": 0.06,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.04.01.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 50 MM. C/A",
+        "linea_sigrid": 231525,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.03.05",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 50 MM. C/A",
+        "linea_sigrid": 231526,
+        "precio_unitario": 0.06,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.03.07",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO JUNTA GUM I-3 DE 230 MM.",
+        "linea_sigrid": 231527,
+        "precio_unitario": 10.82,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.03.07",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 20 MM. C/A",
+        "linea_sigrid": 231528,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.04.01.02",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 50 MM. C/A",
+        "linea_sigrid": 231529,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.04.01.03",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 50 MM. C/A",
+        "linea_sigrid": 231530,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.03.06",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 50 MM. C/A",
+        "linea_sigrid": 231531,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.03.04",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES HORMIGON 50 MM. C/A",
+        "linea_sigrid": 231532,
+        "precio_unitario": 0.05,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.03.10",
+        "codigo_producto": "MA0101",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO JUNTA BENTONITA SODIO 23MM",
+        "linea_sigrid": 231533,
+        "precio_unitario": 7.135333,
+        "unidad": "KG"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "CI.03A.10",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MARTILLO BOSH",
+        "linea_sigrid": 245216,
+        "precio_unitario": 1250,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "CI.2.4",
+        "codigo_producto": "CIIN04",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ROLLOS MALLA CORPORATIVA",
+        "linea_sigrid": 245217,
+        "precio_unitario": 117.6,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "CI.03A.10",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RADIAL DE BATERIA MAKITA",
+        "linea_sigrid": 245218,
+        "precio_unitario": 285,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "CI.4.18",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RADIAL DE BATERIA BOSH",
+        "linea_sigrid": 245219,
+        "precio_unitario": 369,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.05.03",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO POLIETILENO G-400 PLASTICO",
+        "linea_sigrid": 245220,
+        "precio_unitario": 0.65,
+        "unidad": "m2"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.05.19",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO POLIETILENO G-400 PLASTICO",
+        "linea_sigrid": 245221,
+        "precio_unitario": 0.65,
+        "unidad": "m2"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "CI.2.2",
+        "codigo_producto": "MA2650",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO MATERIAL PARA CASETAS",
+        "linea_sigrid": 245222,
+        "precio_unitario": 200,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.36.01",
+        "codigo_producto": "MA010304",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTROS FEYMACO PARA SYS",
+        "linea_sigrid": 245223,
+        "precio_unitario": 3000,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "CI.4.18",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MARTILLO BOSH GSH 16-28",
+        "linea_sigrid": 245224,
+        "precio_unitario": 1250,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.03.07",
+        "codigo_producto": "MA0208",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PLANCHA DE NERVOMETAL",
+        "linea_sigrid": 245225,
+        "precio_unitario": 7.74,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.05.28",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO POLIETILENO G-400 PLASTICO",
+        "linea_sigrid": 245226,
+        "precio_unitario": 0.65,
+        "unidad": "m2"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.03.13",
+        "codigo_producto": "MA2649",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO SEPARADORES TIMON 70 (BOLSA DE 150 UD)",
+        "linea_sigrid": 245227,
+        "precio_unitario": 84.65,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "CI.4.18",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MARTILLO BOSH GSH 8-45",
+        "linea_sigrid": 245228,
+        "precio_unitario": 867.39,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.04.01.08",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO POLIETILENO G-400 PLASTICO",
+        "linea_sigrid": 245229,
+        "precio_unitario": 0.65,
+        "unidad": "m2"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.05.21",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO POLIETILENO G-400 PLASTICO",
+        "linea_sigrid": 245230,
+        "precio_unitario": 0.65,
+        "unidad": "m2"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.04.01.09",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO POLIETILENO G-400 PLASTICO",
+        "linea_sigrid": 245231,
+        "precio_unitario": 0.65,
+        "unidad": "m2"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "CI.03A.10",
+        "codigo_producto": "MA1202",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "BOMBAS DE IMPULSION / ASPIRACION PARA ABASTECIMI",
+        "linea_sigrid": 245232,
+        "precio_unitario": 318.35,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.05.29",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO POLIETILENO G-400 PLASTICO",
+        "linea_sigrid": 245233,
+        "precio_unitario": 0.65,
+        "unidad": "m2"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.05.20",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO POLIETILENO G-400 PLASTICO",
+        "linea_sigrid": 245234,
+        "precio_unitario": 0.65,
+        "unidad": "m2"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.98.02",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO ARMARIO DE AGUA TIPO A3",
+        "linea_sigrid": 245235,
+        "precio_unitario": 387.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.98.02",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "FERRETERÍA",
+        "linea_sigrid": 245236,
+        "precio_unitario": 426.35,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.05.03",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO POLIETILENO G-400 PLASTICO",
+        "linea_sigrid": 245237,
+        "precio_unitario": 0.65,
+        "unidad": "m2"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.36.01",
+        "codigo_producto": "CICO18",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MATERIAL DE FERRETERIA PARA SYS",
+        "linea_sigrid": 245238,
+        "precio_unitario": 3000,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "CI.4.18",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RADIAL DE BATERIA MAKITA",
+        "linea_sigrid": 245239,
+        "precio_unitario": 285,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "CI.2.5",
+        "codigo_producto": "CICO18",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO DE MATERIAL PARA GRIFOS DE OBRA",
+        "linea_sigrid": 245240,
+        "precio_unitario": 750,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P4.21.01.01.02",
+        "codigo_producto": "MA2112",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ARMARIO DE ACOMETIDA TIPO A3",
+        "linea_sigrid": 245241,
+        "precio_unitario": 387.759,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "P5.21.01.01.02",
+        "codigo_producto": "MA2112",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ARMARIO DE ACOMETIDA TIPO A3",
+        "linea_sigrid": 245242,
+        "precio_unitario": 465,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "CI.2.10",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTRO MATERIAL DE FONTANERIA",
+        "linea_sigrid": 245243,
+        "precio_unitario": 186,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "CI.4.18",
+        "codigo_producto": "CICO18",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MATERIAL DE FERRETERIA (ampl)",
+        "linea_sigrid": 253527,
+        "precio_unitario": 35000,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-001",
+        "codigo_partida": "CI.4.18",
+        "codigo_producto": "MA2119",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUMINISTROS FERRETERIA FEYMACO",
+        "linea_sigrid": 267666,
+        "precio_unitario": 13077,
+        "unidad": "UD"
+      }
+    ],
     "lineas_albaran": [
       {
         "cantidad": 50,

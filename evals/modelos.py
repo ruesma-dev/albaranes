@@ -167,6 +167,12 @@ class ResultadoFase:
     casos: list[ResultadoCaso] = field(default_factory=list)
     proveedores: list[str] = field(default_factory=list)
     motivo: str = ""
+    #: (F-084 R21) Los modelos que respondieron en esta fase. Sin ellos, una
+    #: línea base no dice qué midió (F-075 midió con un defecto sin saberlo).
+    modelos: list[str] = field(default_factory=list)
+    #: (F-084 R17) Casos valorados con el documento del contrato en MD, en PDF
+    #: o sin ninguno: lo que la IA tuvo delante.
+    documentos: dict[str, int] = field(default_factory=dict)
 
     @property
     def evaluados(self) -> list[ResultadoCaso]:

@@ -612,7 +612,9 @@ def test_f083_bloque_salida_por_defecto_con_fecha(banco_ia1, monkeypatch, tmp_pa
 
 # --- T8 · IA3 e IA4 con el build real de sv6 (sin LLM) ------------------------------------
 
-_CASOS_SV5 = ["FER-001", "GEN-001", "RES-001"]
+# F-084 (R18): el modo determinista omite los casos sin líneas de contrato en
+# INPUTS; la equivalencia con el comparador se mide en casos que las tienen.
+_CASOS_SV5 = ["RES-001", "RES-004", "RES-006"]
 
 
 def _deps_reales(banco, sv5):
@@ -620,7 +622,15 @@ def _deps_reales(banco, sv5):
                  build_sv6=sv6_build.ejecutar_en_subproceso)
 
 
-def test_f083_bloque_ia3_con_la_ia4_del_libro(banco):
+@pytest.fixture
+def sin_documentos(banco, monkeypatch):
+    """F-084 (R33): estos tests miden la equivalencia con el determinista, que no
+    lee el documento del contrato. Sin índice, el comparador no omite ningún caso
+    aunque el índice versionado declare documentos y la caché local no exista."""
+    monkeypatch.setattr(sv5_valoracion, "RUTA_INDICE", banco[2] / "sin-indice" / "_indice.json")
+
+
+def test_f083_bloque_ia3_con_la_ia4_del_libro(banco, sin_documentos):
     """El candidato devuelve los envelopes del libro IA3: IA3 y E2E, como el modo determinista."""
     inputs = cargar_fixtures(RUTA_FIXTURES, "inputs")
     ia3 = cargar_fixtures(RUTA_FIXTURES, "IA3")
@@ -655,7 +665,7 @@ def test_f083_bloque_ia3_con_la_ia4_del_libro(banco):
     assert _fila(e2e, "claude-opus-5-5").split("|")[6].strip() == str(fallos["E2E"])
 
 
-def test_f083_bloque_ia4_concilia_sobre_la_preparacion(banco):
+def test_f083_bloque_ia4_concilia_sobre_la_preparacion(banco, sin_documentos):
     inputs = cargar_fixtures(RUTA_FIXTURES, "inputs")
     ia4 = cargar_fixtures(RUTA_FIXTURES, "IA4")
     trabajos = []

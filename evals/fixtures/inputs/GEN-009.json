@@ -2,7 +2,7 @@
   "caso_id": "GEN-009",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
+  "sha256_libro": "0e7be5c97d30301b8fe5c5fc0facf4435100da51d113d1c70472424c3c1e01a4",
   "tablas": {
     "caso": [
       {
@@ -14,8 +14,506 @@
         "tipologia": "Generico-Suministros"
       }
     ],
-    "condiciones": [],
-    "contrato_lineas": [],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "GEN-009",
+        "comentario": "fecha de IA1.cabeceras (F-084)",
+        "valor": "2026-03-10"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.04.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Hönnun Mystone 25x75 White",
+        "linea_sigrid": 232870,
+        "precio_unitario": 9.32,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.04.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Hönnun Mystone 60x60 White C2",
+        "linea_sigrid": 232871,
+        "precio_unitario": 10.22,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.04.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Hönnun Mystone 60x60 White C2",
+        "linea_sigrid": 232872,
+        "precio_unitario": 10.22,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "PC165.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Escocia alumino empotrar 12 mm",
+        "linea_sigrid": 251522,
+        "precio_unitario": 21.56439256086523,
+        "unidad": "M"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Huella peldaño canto romo Solna Perla 30x120",
+        "linea_sigrid": 251523,
+        "precio_unitario": 19.45800795258287,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.08",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Huella peldaño canto romo Solna Perla 30x120",
+        "linea_sigrid": 251524,
+        "precio_unitario": 19.45799619228939,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.11",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado S-Tone Grey 60x60",
+        "linea_sigrid": 251525,
+        "precio_unitario": 11.07680953204165,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.16",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado S-Tone Grey 60x60",
+        "linea_sigrid": 251526,
+        "precio_unitario": 11.07680604246268,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.14",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado S-Tone Grey 60x60",
+        "linea_sigrid": 251527,
+        "precio_unitario": 11.07677490695932,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.20",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado S-Tone Grey 60x60",
+        "linea_sigrid": 251528,
+        "precio_unitario": 11.07685570396321,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.22",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado S-Tone Grey 60x60",
+        "linea_sigrid": 251529,
+        "precio_unitario": 11.07674489900194,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "PC121.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Solna Perla 60x120",
+        "linea_sigrid": 251530,
+        "precio_unitario": 13.55156800535689,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "PC121.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Solna Perla 60x120",
+        "linea_sigrid": 251531,
+        "precio_unitario": 13.55146670190275,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Solna Perla 60x60",
+        "linea_sigrid": 251532,
+        "precio_unitario": 11.59197828280675,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Solna Perla 60x60",
+        "linea_sigrid": 251533,
+        "precio_unitario": 11.59200473403905,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.09",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Solna Perla 60x60",
+        "linea_sigrid": 251534,
+        "precio_unitario": 11.59192382156545,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.22",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Somport Light 60x120",
+        "linea_sigrid": 251535,
+        "precio_unitario": 16.79000244520341,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.04.08",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Somport Light C3 60x60",
+        "linea_sigrid": 251536,
+        "precio_unitario": 14.90411316932928,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.11",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Somport Light C3 60x60",
+        "linea_sigrid": 251537,
+        "precio_unitario": 14.90403215406439,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.04.08",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Somport Light C3 60x60",
+        "linea_sigrid": 251538,
+        "precio_unitario": 14.90399948381864,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "04.10.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Somport Light C3 60x60",
+        "linea_sigrid": 251539,
+        "precio_unitario": 14.90393090075798,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.04.08",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Somport Light C3 60x60",
+        "linea_sigrid": 251540,
+        "precio_unitario": 14.90399228972829,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.13",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Cala Blanco mate 30x60",
+        "linea_sigrid": 251541,
+        "precio_unitario": 9.926660192223972,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.13",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Cala Blanco mate 30x60",
+        "linea_sigrid": 251542,
+        "precio_unitario": 9.926802572171296,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.17",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Cala Blanco mate 30x60",
+        "linea_sigrid": 251543,
+        "precio_unitario": 9.926801138181267,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.15",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Blanco Salou 8x31,5",
+        "linea_sigrid": 256055,
+        "precio_unitario": 29.04,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.22",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Massia Rosso 7,5x30",
+        "linea_sigrid": 256056,
+        "precio_unitario": 30.58,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.21",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Siracusa-R 45x120",
+        "linea_sigrid": 256057,
+        "precio_unitario": 34.12,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.15",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Terrades Grafito 20x20",
+        "linea_sigrid": 256058,
+        "precio_unitario": 21.07,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.14",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Terrades Grafito 20x20",
+        "linea_sigrid": 256059,
+        "precio_unitario": 21.07,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.08",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Huella peldaño canto romo Solna Perla 30x120",
+        "linea_sigrid": 256060,
+        "precio_unitario": 19.46,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.15",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Moldura italiana Verde 5x20",
+        "linea_sigrid": 256061,
+        "precio_unitario": 1.01,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.14",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Nakhon White 60x120",
+        "linea_sigrid": 256062,
+        "precio_unitario": 13.55,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.22",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Okinawa-R Carbon 19,4x120",
+        "linea_sigrid": 256063,
+        "precio_unitario": 50.03,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.22",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Projectos Verde Seco 20x20",
+        "linea_sigrid": 256064,
+        "precio_unitario": 16.11,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.14",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Rivoli Copenhagen 20x20",
+        "linea_sigrid": 256065,
+        "precio_unitario": 30.58,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.16",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado S-Tone Grey 60x60",
+        "linea_sigrid": 256066,
+        "precio_unitario": 11.08,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "PC121.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Solna Perla 60x120 (tabicas)",
+        "linea_sigrid": 256067,
+        "precio_unitario": 13.55,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.11",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Somport Light C3 60x60",
+        "linea_sigrid": 256068,
+        "precio_unitario": 14.9,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.15",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Blanco Mate 20x20",
+        "linea_sigrid": 256069,
+        "precio_unitario": 7.25,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.13",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Cala Blanco mate 30x60",
+        "linea_sigrid": 256070,
+        "precio_unitario": 9.93,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.04.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Hönnun Mystone 25x75 White",
+        "linea_sigrid": 256071,
+        "precio_unitario": 8.57,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.13",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Kalon Green 5x25",
+        "linea_sigrid": 256072,
+        "precio_unitario": 24.02,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.13",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Kalon Grey 5x25",
+        "linea_sigrid": 256073,
+        "precio_unitario": 24.02,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.22",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Kalon Grey 5x25",
+        "linea_sigrid": 256074,
+        "precio_unitario": 24.02,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.21",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Kalon Grey 5x25",
+        "linea_sigrid": 256075,
+        "precio_unitario": 24.02,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.15",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Metro Black 7,5x30",
+        "linea_sigrid": 256076,
+        "precio_unitario": 22.46,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.01.15",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Alicatado Metro White 7,5x30",
+        "linea_sigrid": 256077,
+        "precio_unitario": 20.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-009",
+        "codigo_partida": "05.04.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Solado Hönnun Mystone 60x60 White C2",
+        "linea_sigrid": 256078,
+        "precio_unitario": 9.4,
+        "unidad": "M2"
+      }
+    ],
     "lineas_albaran": [
       {
         "cantidad": 1013.76,

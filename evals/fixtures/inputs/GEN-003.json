@@ -2,7 +2,7 @@
   "caso_id": "GEN-003",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
+  "sha256_libro": "0e7be5c97d30301b8fe5c5fc0facf4435100da51d113d1c70472424c3c1e01a4",
   "tablas": {
     "caso": [
       {
@@ -14,8 +14,976 @@
         "tipologia": "Generico-Suministros"
       }
     ],
-    "condiciones": [],
-    "contrato_lineas": [],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "GEN-003",
+        "comentario": "fecha de IA1.cabeceras (F-084)",
+        "valor": "2026-06-09"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.05",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO BAYONA SILVER NATURAL RECT. 60x120 cm - BAÑO 1 (OP1)",
+        "linea_sigrid": 241693,
+        "precio_unitario": 13.68,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.05",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO MARBLEOUS MATT WHITE 40x120 cm - BAÑO 1 (OP2)",
+        "linea_sigrid": 241694,
+        "precio_unitario": 16.43,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.05",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO BAYONA IVORY NATURAL RECTIFICADO 60x120 cm - BAÑO 1 (OP3)",
+        "linea_sigrid": 241695,
+        "precio_unitario": 13.68,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.05",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO BP INARI GRIS MATT 30x90 cm - BAÑO 2 (OP1)",
+        "linea_sigrid": 241696,
+        "precio_unitario": 13.28,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.05",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO NATURE BONE 30x90 cm - BAÑO 2 (OP2)",
+        "linea_sigrid": 241697,
+        "precio_unitario": 13.28,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.05",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO VERSE CREAM 30x90 cm - BAÑO 2 (OP3)",
+        "linea_sigrid": 241698,
+        "precio_unitario": 13.28,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.06",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO RC ESSSEN WHITE 30x90 cm - ASEO",
+        "linea_sigrid": 241699,
+        "precio_unitario": 10.98,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.07",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO PASTA BLANCA KERABEN 30x90 cm - GASTROTECA",
+        "linea_sigrid": 241700,
+        "precio_unitario": 13.28,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.08",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO PASTA BLANCA DECORADO KERABEN 30x90 cm - GASTROTECA",
+        "linea_sigrid": 241701,
+        "precio_unitario": 15.58,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.09",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO BIANCHI MATE BRINDISI 30x90 cm - BASURAS/DEPURADORA",
+        "linea_sigrid": 241702,
+        "precio_unitario": 11.6,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.21",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ BAYONA SILVER C/BISELADO 14,8x60 cm - BAÑOS PRINCIPALES (OP1)",
+        "linea_sigrid": 241703,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.21",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ BOREAL GREY C/BISELADO 14,8x60 cm - BAÑOS PRINCIPALES (OP2)",
+        "linea_sigrid": 241704,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.21",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ BAYONA IVORY C/BISELADO 14,8x60 cm - BAÑOS PRINCIPALES (OP3)",
+        "linea_sigrid": 241705,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.22",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ INARI GRIS SOFT C/BISELADO 14,8x75 cm - BAÑOS SECUNDARIOS (OP1)",
+        "linea_sigrid": 241706,
+        "precio_unitario": 3.89,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.22",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ BAYONA SILVER C/BISELADO 14,8x60 cm - BAÑOS SECUNDARIOS (OP2)",
+        "linea_sigrid": 241707,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.22",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ VERSE CREAM SOFT C/BISELADO 14,8x60 cm - BAÑOS SECUNDARIOS (OP3)",
+        "linea_sigrid": 241708,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.23",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ ESENCE GREY 14,8x60 cm - ASEO",
+        "linea_sigrid": 241709,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.03",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO BOREAL WHITE 60X60 cm - COCINA (OP1)",
+        "linea_sigrid": 241710,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.03",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO SAN FRANCISCO SAND 60X60 cm - COCINA (OP2)",
+        "linea_sigrid": 241711,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.03",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO SAN FRANCISCO GREY 60X60 cm - COCINA (OP3)",
+        "linea_sigrid": 241712,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.03",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ BOREAL WHITE C/BISELADO 14,8x60 cm - COCINA (OP1)",
+        "linea_sigrid": 241713,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.03",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ SAN FRANCISCO SAND C/BISELADO 14,8x60 cm - COCINA (OP2)",
+        "linea_sigrid": 241714,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.03",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ SAN FRANCISCO GREY C/BISELADO 14,8x60 cm - COCINA (OP3)",
+        "linea_sigrid": 241715,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.04",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO BAYONA SILVER NAT. RECT. 60X120 cm - BAÑOS PRINCIPALES (OP1)",
+        "linea_sigrid": 241716,
+        "precio_unitario": 13.68,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.04",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO BOREAL GREY 60X60 cm - BAÑOS PRINCIPALES (OP2)",
+        "linea_sigrid": 241717,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.04",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO BAYONA IVORY NATURAL RECT. 60X120 cm - BAÑOS PRINCIPALES (OP3)",
+        "linea_sigrid": 241718,
+        "precio_unitario": 13.68,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.05",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO INARI GRIS SOFT 75x75 cm - BAÑOS SECUNDARIOS (OP1)",
+        "linea_sigrid": 241719,
+        "precio_unitario": 15.9,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.05",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO NATURE BONE RECTIFICADO 60x60 cm - BAÑOS SECUNDARIOS (OP2)",
+        "linea_sigrid": 241720,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.05",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO VERSE CREAM SOFT 75x75 cm - BAÑOS SECUNDARIOS (OP3)",
+        "linea_sigrid": 241721,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.06",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO INARI GRIS SOFT 75x75 cm - ASEOS",
+        "linea_sigrid": 241722,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.07",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO BRANCATO BEIGE SHOELESS 60x60 cm - TERRAZAS",
+        "linea_sigrid": 241723,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.07",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ INARI GRIS SOFT C/BISELADO 14,8x75 cm - TERRAZAS",
+        "linea_sigrid": 241724,
+        "precio_unitario": 3.89,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.08",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO MIXIT GRIS 75x75 cm - ALMACENES",
+        "linea_sigrid": 241725,
+        "precio_unitario": 16.68,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.09",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO MIXIT GRIS 60x120cm - SALAS USOS COMUNES",
+        "linea_sigrid": 241726,
+        "precio_unitario": 17.25,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.16",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO INARI CREMA SOFT 37X75 cm - VESTÍBULOS",
+        "linea_sigrid": 241727,
+        "precio_unitario": 17.88,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.19",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO MIJARES MATE SOFT 40X40 cm - TRASTEROS",
+        "linea_sigrid": 241728,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.19",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ MIJARES MATE 7,8X40 cm - TRASTEROS",
+        "linea_sigrid": 241729,
+        "precio_unitario": 1.16,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.20",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO BOREAL GREY ANTISLIP SHOELESS 60X60 cm - ASEOS PISCINA",
+        "linea_sigrid": 241730,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.21",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO INARI CREMA SOFT 37X75 cm - VESTÍBULOS SÓTANOS",
+        "linea_sigrid": 241731,
+        "precio_unitario": 17.88,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.14.01.01.07",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO ALMA HONEY ANTI-SLIP 19,4X97,8 cm - PLAYA PISCINA",
+        "linea_sigrid": 241732,
+        "precio_unitario": 24.96,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.20.01.01.10",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO PIETRO WHITE ANTI-SLIP 31X62,6 cm - PAREDES PISCINA AD.",
+        "linea_sigrid": 241733,
+        "precio_unitario": 18.12,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.20.01.01.11",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO PIETRO WHITE ANTI-SLIP 31X62,6 cm - SUELO PISCINA AD.",
+        "linea_sigrid": 241734,
+        "precio_unitario": 18.12,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.20.02.01.10",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO PIETRO WHITE ANTI-SLIP 31X62,6 cm - PAREDES PISCINA INF.",
+        "linea_sigrid": 241735,
+        "precio_unitario": 18.12,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.20.02.01.11",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO PIETRO WHITE ANTI-SLIP 31X62,6 cm - SUELO PISCINA INF.",
+        "linea_sigrid": 241736,
+        "precio_unitario": 18.12,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.06",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO BAYONA SILVER NATURAL RECT. 60x120 cm - BAÑO 1 (OP1)",
+        "linea_sigrid": 241737,
+        "precio_unitario": 13.68,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.06",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO MARBLEOUS MATT WHITE 40x120 cm - BAÑO 1 (OP2)",
+        "linea_sigrid": 241738,
+        "precio_unitario": 16.43,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.06",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO BAYONA IVORY NATURAL RECTIFICADO 60x120 cm - BAÑO 1 (OP3)",
+        "linea_sigrid": 241739,
+        "precio_unitario": 13.68,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.07",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO BP INARI GRIS MATT 30x90 cm - BAÑO 2 (OP1)",
+        "linea_sigrid": 241740,
+        "precio_unitario": 13.28,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.07",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO NATURE BONE 30x90 cm - BAÑO 2 (OP2)",
+        "linea_sigrid": 241741,
+        "precio_unitario": 13.28,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.07",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO VERSE CREAM 30x90 cm - BAÑO 2 (OP3)",
+        "linea_sigrid": 241742,
+        "precio_unitario": 13.28,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.08",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO RC ESSSEN WHITE 30x90 cm - ASEO",
+        "linea_sigrid": 241743,
+        "precio_unitario": 10.98,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.09",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO BIANCHI MATE BRINDISI 30x90 cm - BASURAS",
+        "linea_sigrid": 241744,
+        "precio_unitario": 11.6,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.19",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ BAYONA SILVER C/BISELADO 14,8x60 cm - BAÑOS PRINCIPALES (OP1)",
+        "linea_sigrid": 241745,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.19",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ BOREAL GREY C/BISELADO 14,8x60 cm - BAÑOS PRINCIPALES (OP2)",
+        "linea_sigrid": 241746,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.19",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ BAYONA IVORY C/BISELADO 14,8x60 cm - BAÑOS PRINCIPALES (OP3)",
+        "linea_sigrid": 241747,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.20",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ INARI GRIS SOFT C/BISELADO 14,8x75 cm - BAÑOS SECUNDARIOS (OP1)",
+        "linea_sigrid": 241748,
+        "precio_unitario": 3.89,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.20",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ BAYONA SILVER C/BISELADO 14,8x60 cm - BAÑOS SECUNDARIOS (OP2)",
+        "linea_sigrid": 241749,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.20",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ VERSE CREAM SOFT C/BISELADO 14,8x60 cm - BAÑOS SECUNDARIOS (OP3)",
+        "linea_sigrid": 241750,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.21",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ ESENCE GREY 14,8x60 cm - ASEO",
+        "linea_sigrid": 241751,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.03",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO BOREAL WHITE 60X60 cm - COCINA (OP1)",
+        "linea_sigrid": 241752,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.03",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO SAN FRANCISCO SAND 60X60 cm - COCINA (OP2)",
+        "linea_sigrid": 241753,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.03",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO SAN FRANCISCO GREY 60X60 cm - COCINA (OP3)",
+        "linea_sigrid": 241754,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.03",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ BOREAL WHITE C/BISELADO 14,8x60 cm - COCINA (OP1)",
+        "linea_sigrid": 241755,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.03",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ SAN FRANCISCO SAND C/BISELADO 14,8x60 cm - COCINA (OP2)",
+        "linea_sigrid": 241756,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.03",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ SAN FRANCISCO GREY C/BISELADO 14,8x60 cm - COCINA (OP3)",
+        "linea_sigrid": 241757,
+        "precio_unitario": 2.76,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.04",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO BAYONA SILVER NAT. RECT. 60X120 cm - BAÑOS PRINCIPALES (OP1)",
+        "linea_sigrid": 241758,
+        "precio_unitario": 13.68,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.04",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO BOREAL GREY 60X60 cm - BAÑOS PRINCIPALES (OP2)",
+        "linea_sigrid": 241759,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.04",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO BAYONA IVORY NATURAL RECT. 60X120 cm - BAÑOS PRINCIPALES (OP3)",
+        "linea_sigrid": 241760,
+        "precio_unitario": 13.68,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.05",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO INARI GRIS SOFT 75x75 cm - BAÑOS SECUNDARIOS (OP1)",
+        "linea_sigrid": 241761,
+        "precio_unitario": 15.9,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.05",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO NATURE BONE RECTIFICADO 60x60 cm - BAÑOS SECUNDARIOS (OP2)",
+        "linea_sigrid": 241762,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.05",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO VERSE CREAM SOFT 75x75 cm - BAÑOS SECUNDARIOS (OP3)",
+        "linea_sigrid": 241763,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.06",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO INARI GRIS SOFT 75x75 cm - ASEOS",
+        "linea_sigrid": 241764,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.07",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO BRANCATO BEIGE SHOELESS 60x60 cm - TERRAZAS",
+        "linea_sigrid": 241765,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.07",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ INARI GRIS SOFT C/BISELADO 14,8x75 cm - TERRAZAS",
+        "linea_sigrid": 241766,
+        "precio_unitario": 3.89,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.14",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO INARI CREMA SOFT 37X75 cm - VESTÍBULOS",
+        "linea_sigrid": 241767,
+        "precio_unitario": 17.88,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.17",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO MIJARES MATE SOFT 40X40 cm - TRASTEROS",
+        "linea_sigrid": 241768,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.17",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ MIJARES MATE 7,8X40 cm - TRASTEROS",
+        "linea_sigrid": 241769,
+        "precio_unitario": 1.16,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.09.18",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO BOREAL GREY ANTISLIP SHOELESS 60X60 cm - ASEOS ZZCC",
+        "linea_sigrid": 241770,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.09",
+        "codigo_producto": "MA0303",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ESCOCIA GRES BLANCO MATE",
+        "linea_sigrid": 257028,
+        "precio_unitario": 0.74,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.09",
+        "codigo_producto": "MA0303",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ANGULO ESCOCIA BLANCO MATE",
+        "linea_sigrid": 257029,
+        "precio_unitario": 2.04,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.08.09",
+        "codigo_producto": "MA0303",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PATA ELEFANTE BLANCO MATE",
+        "linea_sigrid": 257030,
+        "precio_unitario": 2.04,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.09",
+        "codigo_producto": "MA0303",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ESCOCIA GRES BLANCO MATE",
+        "linea_sigrid": 257031,
+        "precio_unitario": 0.74,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.09",
+        "codigo_producto": "MA0303",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ANGULO ESCOCIA BLANCO MATE",
+        "linea_sigrid": 257032,
+        "precio_unitario": 2.04,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.08.09",
+        "codigo_producto": "MA0303",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PATA ELEFANTE BLANCO MATE",
+        "linea_sigrid": 257033,
+        "precio_unitario": 2.04,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.38.07.01",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO IDENTIA BRANCATO BEIGE NATURAL 75x75 - IDENTIA",
+        "linea_sigrid": 268819,
+        "precio_unitario": 22.44,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.38.07.02",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO IDENTIA ROMANCE ROBLE 24,8x150 - IDENTIA",
+        "linea_sigrid": 268820,
+        "precio_unitario": 22.54,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.38.07.01",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO IDENTIA BRANCATO BEIGE NATURAL 75x75 - IDENTIA",
+        "linea_sigrid": 268821,
+        "precio_unitario": 22.44,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.38.07.02",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO IDENTIA ROMANCE ROBLE 24,8x150 - IDENTIA",
+        "linea_sigrid": 268822,
+        "precio_unitario": 22.54,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P5.38.07.01",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO BOREAL WHITE 60X60 cm - COCINA (OP1)",
+        "linea_sigrid": 268823,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.38.07.01",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO BOREAL WHITE 60X60 cm - COCINA (OP1)",
+        "linea_sigrid": 268824,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.20.02.01.10",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO PIETRO WHITE ANTI-SLIP 31X62,6 cm - PAREDES PISCINA INF.",
+        "linea_sigrid": 268825,
+        "precio_unitario": 18.12,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.19",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RODAPIÉ MIJARES MATE 7,8X40 cm - TRASTEROS",
+        "linea_sigrid": 268826,
+        "precio_unitario": 1.16,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.20.02.01.11",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO PIETRO WHITE ANTI-SLIP 31X62,6 cm - SUELO PISCINA INF.",
+        "linea_sigrid": 268827,
+        "precio_unitario": 18.12,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.20.01.01.11",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO PIETRO WHITE ANTI-SLIP 31X62,6 cm - SUELO PISCINA AD.",
+        "linea_sigrid": 268828,
+        "precio_unitario": 18.12,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.20.01.01.10",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ALICATADO PIETRO WHITE ANTI-SLIP 31X62,6 cm - PAREDES PISCINA AD.",
+        "linea_sigrid": 268829,
+        "precio_unitario": 18.12,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "GEN-003",
+        "codigo_partida": "P4.09.19",
+        "codigo_producto": "MA1512",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SOLADO MIJARES MATE SOFT 40X40 cm - TRASTEROS (cambio de material)",
+        "linea_sigrid": 268830,
+        "precio_unitario": 14.38,
+        "unidad": "M2"
+      }
+    ],
     "lineas_albaran": [
       {
         "cantidad": 23.76,

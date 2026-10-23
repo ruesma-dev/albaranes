@@ -2,7 +2,7 @@
   "caso_id": "HOR-001",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
+  "sha256_libro": "0e7be5c97d30301b8fe5c5fc0facf4435100da51d113d1c70472424c3c1e01a4",
   "tablas": {
     "caso": [
       {
@@ -14,8 +14,1016 @@
         "tipologia": "Hormigon"
       }
     ],
-    "condiciones": [],
-    "contrato_lineas": [],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "HOR-001",
+        "comentario": "fecha de IA1.cabeceras (F-084)",
+        "valor": "2026-05-25"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.09.20",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR HORMIGÓN SIN ADITIVO",
+        "linea_sigrid": 219030,
+        "precio_unitario": 4,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.04",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219031,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.05",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR CONSISTENCIA FLUIDA",
+        "linea_sigrid": 219032,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.04.01.06",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR CARGA INCOMPLETA",
+        "linea_sigrid": 219033,
+        "precio_unitario": 20,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.06",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219034,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.07",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219035,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.18",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219036,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.08",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219037,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.09",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219038,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.10",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219039,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.10",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR CONSISTENCIA FLUIDA",
+        "linea_sigrid": 219040,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.11",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219041,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.11",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR CONSISTENCIA FLUIDA",
+        "linea_sigrid": 219042,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.12",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219043,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.12",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR CONSISTENCIA FLUIDA",
+        "linea_sigrid": 219044,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.01",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HM-15",
+        "linea_sigrid": 219045,
+        "precio_unitario": 87.54,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.02",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219046,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.09.20",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219047,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.09.19",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR HORMIGÓN SIN ADITIVO",
+        "linea_sigrid": 219048,
+        "precio_unitario": 4,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.13",
+        "codigo_producto": "MA290204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219049,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.13",
+        "codigo_producto": "MA290204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN LÍQUIDO",
+        "linea_sigrid": 219050,
+        "precio_unitario": 6,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.14",
+        "codigo_producto": "MA290204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219051,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.04.01.01",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219052,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.04.01.01",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR CONSISTENCIA FLUIDA",
+        "linea_sigrid": 219053,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.04.01.02",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219054,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.04.01.02",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR CONSISTENCIA FLUIDA",
+        "linea_sigrid": 219055,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.04.01.03",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219056,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.03",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219057,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.09.19",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219058,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.05",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219059,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.14",
+        "codigo_producto": "MA290204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN LÍQUIDO",
+        "linea_sigrid": 219060,
+        "precio_unitario": 6,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.15",
+        "codigo_producto": "MA290204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219061,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.15",
+        "codigo_producto": "MA290204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN LÍQUIDO",
+        "linea_sigrid": 219062,
+        "precio_unitario": 6,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.04.01.07",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR CONSISTENCIA FLUIDA",
+        "linea_sigrid": 219063,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.04.01.07",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219064,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.04.01.06",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR CONSISTENCIA FLUIDA",
+        "linea_sigrid": 219065,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.04.01.06",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-35/B/20/XC2",
+        "linea_sigrid": 219066,
+        "precio_unitario": 108.76,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.17",
+        "codigo_producto": "MA290204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219067,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.17",
+        "codigo_producto": "MA290204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN LÍQUIDO",
+        "linea_sigrid": 219068,
+        "precio_unitario": 6,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.04.01.03",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR CONSISTENCIA FLUIDA",
+        "linea_sigrid": 219069,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.04.01.04",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219070,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.04.01.04",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR CONSISTENCIA FLUIDA",
+        "linea_sigrid": 219071,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.04.01.05",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219072,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.04.01.05",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR CONSISTENCIA FLUIDA",
+        "linea_sigrid": 219073,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.98.01",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HL-150",
+        "linea_sigrid": 219074,
+        "precio_unitario": 87.54,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "CI.2.8",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 219075,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "CI.2.8",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HL-150",
+        "linea_sigrid": 219076,
+        "precio_unitario": 87.54,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.07",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREM. POR EMPLEO DE ANTICONGELANTE",
+        "linea_sigrid": 219077,
+        "precio_unitario": 5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.06",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREM. POR EMPLEO DE ANTICONGELANTE",
+        "linea_sigrid": 219078,
+        "precio_unitario": 5,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P4.05.29",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-5",
+        "linea_sigrid": 219079,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P4.14.01.02.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-5",
+        "linea_sigrid": 219080,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P4.20.01.01.12",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-5",
+        "linea_sigrid": 219081,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.05.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-5",
+        "linea_sigrid": 219082,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P4.05.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-5",
+        "linea_sigrid": 219083,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P4.20.02.01.12",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-5",
+        "linea_sigrid": 219084,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.05.20",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-5",
+        "linea_sigrid": 219085,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.14.01.02.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-5",
+        "linea_sigrid": 219086,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.06.08",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-7 EN ESCOCIAS",
+        "linea_sigrid": 219087,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P4.06.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-7 EN ESCOCIAS",
+        "linea_sigrid": 219088,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.06.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-7 EN ESCOCIAS",
+        "linea_sigrid": 219089,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.06.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-7 EN ESCOCIAS",
+        "linea_sigrid": 219090,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P4.06.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-7 EN ESCOCIAS",
+        "linea_sigrid": 219091,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.06.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-7 EN ESCOCIAS",
+        "linea_sigrid": 219092,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P4.06.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-7 EN ESCOCIAS",
+        "linea_sigrid": 219093,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P4.06.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-7 EN ESCOCIAS",
+        "linea_sigrid": 219094,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P4.06.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-7 EN ESCOCIAS",
+        "linea_sigrid": 219095,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.06.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-7 EN ESCOCIAS",
+        "linea_sigrid": 219096,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.06.07",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-7 EN ESCOCIAS",
+        "linea_sigrid": 219097,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.06.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-7 EN ESCOCIAS",
+        "linea_sigrid": 219098,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P4.06.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-7 EN ESCOCIAS",
+        "linea_sigrid": 219099,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P4.06.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-7 EN ESCOCIAS",
+        "linea_sigrid": 219100,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.06.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-7 EN ESCOCIAS",
+        "linea_sigrid": 219101,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P4.05.30",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO PREP. M-5",
+        "linea_sigrid": 219102,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.05.19",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO PREP. M-5",
+        "linea_sigrid": 219103,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P4.05.28",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO PREP. M-5",
+        "linea_sigrid": 219104,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.05.21",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO PREP. M-5",
+        "linea_sigrid": 219105,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P4.14.01.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-5",
+        "linea_sigrid": 219106,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.14.01.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MORTERO M-5",
+        "linea_sigrid": 219107,
+        "precio_unitario": 70,
+        "unidad": "M3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.99.04.01",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 258383,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.15",
+        "codigo_producto": "MA290204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FLUIDO",
+        "linea_sigrid": 258384,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.39.03",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO PRECIO MORTERO 2026",
+        "linea_sigrid": 258385,
+        "precio_unitario": 9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.15",
+        "codigo_producto": "MA290204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 258386,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.99.03",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CARGAS INCOMPLETAS",
+        "linea_sigrid": 258387,
+        "precio_unitario": 20,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.13",
+        "codigo_producto": "MA290204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FLUIDO",
+        "linea_sigrid": 258388,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.98.06",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HM-15",
+        "linea_sigrid": 258389,
+        "precio_unitario": 87.54,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.99.03",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR CONSISTENCIA FLUIDA",
+        "linea_sigrid": 258390,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.99.03",
+        "codigo_producto": "MA290204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 258391,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.14",
+        "codigo_producto": "MA290204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FLUIDO",
+        "linea_sigrid": 258392,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.99.04.01",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2 EN SOLERA CAVITI",
+        "linea_sigrid": 258393,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.03.15",
+        "codigo_producto": "MA290204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO HORMIGÓN FLUIDO",
+        "linea_sigrid": 258394,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.98.01",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CARGAS INCOMPLETAS",
+        "linea_sigrid": 258395,
+        "precio_unitario": 20,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.98.01",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HA-25/B/20/XC2",
+        "linea_sigrid": 258396,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.98.01",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HM/20/B/20/IIa",
+        "linea_sigrid": 258397,
+        "precio_unitario": 96.58,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.99.04.01",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO POR CONSISTENCIA FLUIDA",
+        "linea_sigrid": 258398,
+        "precio_unitario": 3,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.39.03",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "INCREMENTO PRECIO HORMIGÓN 2026",
+        "linea_sigrid": 258399,
+        "precio_unitario": 9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.99.15",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 267661,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.99.16",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 267662,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.14.01.02.01",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 267663,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.99.07",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2",
+        "linea_sigrid": 267664,
+        "precio_unitario": 99.9,
+        "unidad": "m3"
+      },
+      {
+        "caso_id": "HOR-001",
+        "codigo_partida": "P5.24.07",
+        "codigo_producto": "MA2902",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGÓN HA-25/B/20/XC2 precio actualizado",
+        "linea_sigrid": 267665,
+        "precio_unitario": 108.9,
+        "unidad": "m3"
+      }
+    ],
     "lineas_albaran": [
       {
         "cantidad": 9,
