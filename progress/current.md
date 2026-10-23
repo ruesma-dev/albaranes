@@ -1,11 +1,11 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-069 · spec v2 escrita (2026-10-23) tras la PARADA 1; falta confirmar E8.** Usuario y empleado de Sigrid de quien aprueba: sv9 manda `empide` (hoy siempre nulo ⇒ 2425207 en las 46 altas). Spec en `specs/F-069-usuario-empleado-sigrid/` (rama `feature/F-069-usuario-empleado-sigrid`, worktree `../albaranes-F-069`). Toca sv9, sv4 (solo el panel), `infra` y docs: **actualizar `servicios` de la ficha en `features.json`** (hoy solo sv9). Decidido por el humano (design §9):
-- **E1** `usu`: login del correo del portal en `dbo.usu` → Lista → Respaldo `pgris`. `empide`: correo del portal contra `emp.traele` (empleados de alta, un único resultado) → Lista → defecto. **E3** nunca se bloquea por el empleado: se cae al defecto con un aviso en `peticion_json.resolucion`, visible en el panel como aviso. **E7** los de baja no cuentan.
-- **E2** se mantiene la variable JSON de sv9 (`ALTA_SIGRID_EQUIVALENCIAS_USUARIO`, vacía de inicio, solo excepciones), ahora **con el login como clave** para no versionar correos de terceros. E4 sin caché, E5 y E6 como en v1.
-- **Abierta, E8**: el defecto explícito (`ALTA_SIGRID_EMPIDE=2425207` versionado) o nulo (gana el de sigrid-api). Recomendado: explícito.
-- Script de T4/T5 simplificado: cobertura de `traele` por login de quien aprueba y las altas ya escritas con el empleado que les correspondería (E5). Coordinación con sigrid-api: T14.
+**F-069 · spec v3 (2026-10-23): PARADA 1 cerrada, todas las decisiones E1–E8 DECIDIDAS; lista para `spec_ready`.** Usuario y empleado de Sigrid de quien aprueba: sv9 manda `empide` (hoy siempre nulo ⇒ 2425207 en las 46 altas). Spec en `specs/F-069-usuario-empleado-sigrid/` (rama `feature/F-069-usuario-empleado-sigrid`, worktree `../albaranes-F-069`). Toca sv9, sv4 (solo el panel), `infra` y docs: **actualizar `servicios` de la ficha en `features.json`** (hoy solo sv9). Decidido por el humano (design §9):
+- **E1** la Lista primero en los dos campos. `usu`: Entrada de la Lista en `dbo.usu` → login del correo del portal → Respaldo `pgris`. `empide`: Entrada (empleado de alta) → correo contra `emp.traele` (de alta, un único resultado) → nulo. Una Entrada que no valida deja aviso y sigue.
+- **E3** nunca se bloquea por el empleado: avisos en `peticion_json.resolucion`, visibles en el panel como aviso. **E7** los de baja no cuentan. **E8** último escalón `empide` nulo (aviso `defecto_sigrid_api`); se retira `ALTA_SIGRID_EMPIDE`.
+- **E2** variable JSON de sv9 `ALTA_SIGRID_EQUIVALENCIAS_USUARIO`, vacía de inicio, con el login como clave. E4 sin caché, E5 (las 46 altas: decide el humano, junto con F-103) y E6 (panel) como en v1.
+- Script de T4/T5: cobertura de `traele` por login de quien aprueba y las altas ya escritas con el empleado que les correspondería. Coordinación con sigrid-api: T14.
 
 **F-084 · CERRADA (`done`, 2026-10-23).** El banco de evals valora de verdad. Review APROBADA en la pasada 3; línea base de R28 del 23,5 % aceptada por el humano (D5). Resumen en `history.md`; detalle en `progress/impl_F-084.md`, `progress/impl_F-084_T14.md` y `progress/review_F-084.md`. Pendiente anotado: afirmar `rol_linea` en las 28 líneas sintéticas `?` del libro IA3 (tarea de datos del banco).
 
