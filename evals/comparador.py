@@ -34,6 +34,7 @@ from __future__ import annotations
 import math
 import re
 from collections.abc import Callable, Mapping, Sequence
+from decimal import Decimal
 
 from evals.criticidad import Criticidad, nombre_de_campo
 from evals.modelos import ESPERA_REVISION, NO_COMPARAR, Discrepancia
@@ -45,7 +46,7 @@ TOLERANCIA_ABSOLUTA = 1e-6
 
 #: (F-084 R37) Euros de diferencia que se toleran en los importes y precios
 #: valorados: varios céntimos no cambian la valoración.
-TOLERANCIA_IMPORTE_EUR = 0.05
+TOLERANCIA_IMPORTE_EUR = Decimal("0.05")
 
 #: (F-084 R37) Los campos con esa tolerancia, como (tabla, campo): IA3,
 #: RESULTADO_FINAL, sus líneas añadidas y el total del documento. La lectura
@@ -196,9 +197,14 @@ def equivalentes_en(campo: str, esperado: object, obtenido: object) -> bool:
     """`equivalentes`, pero con la normalización o la tolerancia del campo."""
     if tolera_centimos(campo):
         numero_esperado, numero_obtenido = _a_numero(esperado), _a_numero(obtenido)
-        if numero_esperado is not None and numero_obtenido is not None:
-            # Redondeado a 6 decimales: 17,64 − 17,59 no es 0,05 en binario.
-            return round(abs(numero_esperado - numero_obtenido), 6) <= TOLERANCIA_IMPORTE_EUR
+        if (
+            numero_esperado is not None and numero_obtenido is not None
+            and math.isfinite(numero_esperado) and math.isfinite(numero_obtenido)
+        ):
+            # En Decimal desde la escritura corta del número: en binario,
+            # 17,64 − 17,59 no es 0,05.
+            diferencia = Decimal(repr(numero_esperado)) - Decimal(repr(numero_obtenido))
+            return abs(diferencia) <= TOLERANCIA_IMPORTE_EUR
     normalizar = NORMALIZADORES.get(nombre_de_campo(campo))
     if normalizar is not None:
         normal_esperado, normal_obtenido = normalizar(esperado), normalizar(obtenido)

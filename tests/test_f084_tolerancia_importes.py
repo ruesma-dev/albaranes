@@ -12,6 +12,8 @@ subproceso de sv6 sin llamadas.
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 
 from evals import comparador, runner
@@ -29,7 +31,7 @@ _TOLERADOS = [
 
 
 def test_f084_r37_la_tolerancia_es_de_cinco_centimos():
-    assert comparador.TOLERANCIA_IMPORTE_EUR == 0.05
+    assert comparador.TOLERANCIA_IMPORTE_EUR == Decimal("0.05")
 
 
 @pytest.mark.parametrize("campo", _TOLERADOS)
@@ -55,6 +57,8 @@ def test_f084_r37_el_limite_entra_y_un_centimo_mas_no(campo):
     assert comparador.equivalentes_en(campo, "17,59", "17,64")
     assert not comparador.equivalentes_en(campo, 17.59, 17.65)
     assert not comparador.equivalentes_en(campo, 17.59, 17.53)
+    assert not comparador.equivalentes_en(campo, 17.59, 17.6400004)
+    assert comparador.equivalentes_en(campo, 17.59, 17.5400001)
 
 
 @pytest.mark.parametrize("campo", [
@@ -73,6 +77,9 @@ def test_f084_r37_un_valor_ausente_sigue_siendo_un_fallo():
     campo = "IA3.lineas_valoradas[1].importe_calculado"
     assert not comparador.equivalentes_en(campo, 17.59, None)
     assert not comparador.equivalentes_en(campo, 17.59, "no es un número")
+    assert not comparador.equivalentes_en(campo, 17.59, "nan")
+    assert not comparador.equivalentes_en(campo, "inf", 17.59)
+    assert comparador.equivalentes_en(campo, "inf", "inf")
 
 
 def test_f084_r37_comparar_aplica_la_tolerancia_campo_a_campo():
