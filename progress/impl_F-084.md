@@ -210,9 +210,9 @@ Con el código nuevo: los 4 de R33 y los 2 de F-083, en verde.
 
 | Evidencia | Valor |
 |---|---|
-| Tests ejecutados (`bash harness/init.sh` final, `6cbc716`, tras T16, T13, la review 1 y `dev` `416b55c`) | raíz 1871 passed (331,9 s); sv1 205; sv2 485; sv3 1576; sv4 1774; sv5 96; sv6 473 (+1 skipped); sv9 673; comun en verde |
+| Tests ejecutados (`bash harness/init.sh` final, `6dd6c88`, tras T14, T16, T13, la review 1 y `dev` `416b55c`) | raíz 1871 passed (327,9 s); sv1 205; sv2 485; sv3 1576; sv4 1774; sv5 96; sv6 473 (+1 skipped); sv9 673; comun en verde |
 | Tests de F-084 | 202 (contratos 93 · contexto 49 · runner 31 · tolerancia 29) |
 | Cobertura de las líneas cambiadas | `PUERTA COBERTURA: 98.5% de 618 líneas cambiadas cubiertas (609/618, umbral 80%, nivel critico)` |
 | Mutación | Remedida de T16 (`progress/mutacion_F-084_r37.md`, `daa6293`): **8 generados, 8 muertos, 0 supervivientes** · remedida de la review 1 (`progress/mutacion_F-084_review1.md`, `57c3c0c`): **10 generados, 10 muertos, 0 supervivientes** · 2.ª campaña completa (`progress/mutacion_F-084.md`, `d4dbe97`): **198 generados, 194 muertos, 4 supervivientes** (equivalentes, analizados) · remedida del fichero afectado (`progress/mutacion_F-084_sv5_documentos.md`, `3ce021f`): **39 generados, 39 muertos, 0 supervivientes**. 1.ª campaña (195, 45 supervivientes) sustituida: ver «Mutación» |
-| Tiempo de la suite raíz | 331,9 s (dentro de init.sh, con los 59 casos ya con contrato) |
-| `bash harness/init.sh` | `ENTORNO LISTO. Puedes trabajar.` (exit 0; PUERTA TAMAÑO requirements 150/150, design 245/250, impl 220/220) |
+| Tiempo de la suite raíz | 327,9 s (dentro de init.sh, con los 59 casos ya con contrato) |
+| `bash harness/init.sh` | `ENTORNO LISTO. Puedes trabajar.` (exit 0; PUERTA TAMAÑO requirements 150/150, design 245/250, impl 218/220) |
