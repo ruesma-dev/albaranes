@@ -34,6 +34,7 @@ VARIABLES_ALTA = (
     "ALTA_SIGRID_TOLERANCIA_EUR", "ALTA_SIGRID_AVISOS_BLOQUEANTES", "ALTA_SIGRID_USUARIO",
     "ALTA_SIGRID_USUARIO_RESPALDO",
     "ALTA_SIGRID_EMPIDE", "ALTA_SIGRID_PRODUCTO_POR_DEFECTO", "SIGRID_API_DATABASE",
+    "ALTA_SIGRID_EQUIVALENCIAS_USUARIO",
 )
 
 
@@ -79,7 +80,7 @@ def test_f053_t3_defectos_del_diseno(monkeypatch):
     assert ajustes.tolerancia_eur == pytest.approx(0.05)
     assert ajustes.avisos_bloqueantes == frozenset({"producto_sin_historico"})
     assert ajustes.usuario_respaldo == ""
-    assert ajustes.empide is None
+    assert ajustes.equivalencias == {}  # F-069 R1 (ALTA_SIGRID_EMPIDE ya no existe, R4)
     assert ajustes.sigrid_api_database == "ruesma"
     assert ajustes.mapeo_producto == {
         "alquiler_maquinaria": "QA9999", "medios_auxiliares": "XA9999", "*": "MA9999",
@@ -125,22 +126,20 @@ def test_f053_t3_desde_ilegible_no_arranca(monkeypatch):
         _settings(monkeypatch, ALTA_SIGRID_DESDE_UTC="mañana")
 
 
-def test_f053_t3_avisos_bloqueantes_y_empide(monkeypatch):
+def test_f053_t3_avisos_bloqueantes_y_respaldo(monkeypatch):
+    """F-069 R4: ``ALTA_SIGRID_EMPIDE`` ya no se lee (lo prueba test_f069_config)."""
     ajustes = _settings(
         monkeypatch,
         ALTA_SIGRID_AVISOS_BLOQUEANTES=" producto_sin_historico , stock_negativo ,",
-        ALTA_SIGRID_EMPIDE="2425207",
         ALTA_SIGRID_USUARIO_RESPALDO="USU_ALTA",
     )
     assert ajustes.avisos_bloqueantes == frozenset(
         {"producto_sin_historico", "stock_negativo"},
     )
-    assert ajustes.empide == 2425207
     assert ajustes.usuario_respaldo == "USU_ALTA"
     # Vacías valen su defecto (env_ignore_empty), como en .env.example.
-    vacio = _settings(monkeypatch, ALTA_SIGRID_AVISOS_BLOQUEANTES="", ALTA_SIGRID_EMPIDE="")
+    vacio = _settings(monkeypatch, ALTA_SIGRID_AVISOS_BLOQUEANTES="")
     assert vacio.avisos_bloqueantes == frozenset({"producto_sin_historico"})
-    assert vacio.empide is None
     ninguno = _settings(monkeypatch, ALTA_SIGRID_AVISOS_BLOQUEANTES=" , ")
     assert ninguno.avisos_bloqueantes == frozenset()
 

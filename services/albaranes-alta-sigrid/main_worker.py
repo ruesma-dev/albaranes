@@ -30,6 +30,7 @@ from ruesma_comun.configuracion import motivos_configuracion
 
 from config.logging_config import configure_logging
 from config.settings import Settings
+from domain.services.usuario_sigrid import VARIABLE_LISTA
 from infrastructure.sigrid.sigrid_api_alta_client import (
     ESPERA_BASE_S,
     ESPERA_MAX_S,
@@ -106,6 +107,9 @@ def main() -> int:
         NOMBRE_WORKER, settings.modo, settings.desde, settings.espera_incierto_min,
         settings.tolerancia_eur, sorted(settings.avisos_bloqueantes), visibilidad_s,
     )
+    # F-069 R3: solo el número (las Entradas son excepciones; vacía es lo normal).
+    logger.info("[%s] Lista de equivalencias (%s): %s Entradas", NOMBRE_WORKER,
+                VARIABLE_LISTA, len(settings.equivalencias))
     if settings.desde is None:
         logger.warning("[%s] ALTA_SIGRID_DESDE_UTC vacía: confirmo los mensajes sin hacer nada",
                        NOMBRE_WORKER)

@@ -13,10 +13,14 @@ Llaves propias del alta (con sus defectos):
   (0,05), ``ALTA_SIGRID_AVISOS_BLOQUEANTES`` (CSV; ``producto_sin_historico``),
   ``ALTA_SIGRID_USUARIO_RESPALDO`` (v8, R47: login de ``dbo.usu`` que va en
   ``usu`` cuando quien aprobó no casa con uno; SIN defecto en código: vacía,
-  esas altas van a ``error``, R48), ``ALTA_SIGRID_EMPIDE`` (vacía = defecto de sigrid-api) y
+  esas altas van a ``error``, R48), ``ALTA_SIGRID_EQUIVALENCIAS_USUARIO``
+  (F-069: la Lista de excepciones, JSON Login → ``{"usu"?, "empide"?}``; vacía
+  es lo normal; mal escrita = no arranca, R2) y
   ``ALTA_SIGRID_PRODUCTO_POR_DEFECTO`` (JSON familia → producto, con ``*``;
   mal formado = no arranca, R44). DESDE, Espera y mapeo llevan el MISMO valor
-  en sv4.
+  en sv4. La variable del empleado fijo de F-053 ya no se lee (F-069 R4): el
+  ``empide`` sale de la resolución por documento; si queda en el entorno, se
+  ignora (``extra="ignore"``).
 
 El resto, con los nombres de sv3/sv6: sigrid-api, PostgreSQL, Graph/SharePoint
 y log. Las colas se leen del entorno en ``ruesma_comun.colas.arranque``.
@@ -36,6 +40,8 @@ from ruesma_comun.alta_sigrid import (
     leer_instante_utc,
     leer_mapeo,
 )
+
+from domain.services.usuario_sigrid import Equivalencia, leer_equivalencias
 
 _ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 
@@ -59,7 +65,7 @@ class Settings(BaseSettings):
         "producto_sin_historico", alias="ALTA_SIGRID_AVISOS_BLOQUEANTES",
     )
     usuario_respaldo: str = Field("", alias="ALTA_SIGRID_USUARIO_RESPALDO")
-    alta_sigrid_empide: str = Field("", alias="ALTA_SIGRID_EMPIDE")
+    alta_sigrid_equivalencias_usuario: str = Field("", alias="ALTA_SIGRID_EQUIVALENCIAS_USUARIO")
     alta_sigrid_producto_por_defecto: str = Field(
         MAPEO_PRODUCTO_POR_DEFECTO_TEXTO, alias="ALTA_SIGRID_PRODUCTO_POR_DEFECTO",
     )
@@ -132,13 +138,13 @@ class Settings(BaseSettings):
         leer_mapeo(valor)
         return valor
 
-    @field_validator("alta_sigrid_empide")
+    @field_validator("alta_sigrid_equivalencias_usuario")
     @classmethod
-    def _empide_entero(cls, valor: str) -> str:
-        limpio = (valor or "").strip()
-        if limpio and not limpio.isdigit():
-            raise ValueError(f"ALTA_SIGRID_EMPIDE debe ser un entero: {valor!r}")
-        return limpio
+    def _lista_valida(cls, valor: str) -> str:
+        # F-069 R2: el motivo y la clave viajan en el ValueError (y de ahí al
+        # log de arranque, como R44).
+        leer_equivalencias(valor)
+        return valor
 
     # ----------------------------------------------------------------- #
     # Valores ya interpretados.
@@ -163,8 +169,9 @@ class Settings(BaseSettings):
         )
 
     @property
-    def empide(self) -> int | None:
-        return int(self.alta_sigrid_empide) if self.alta_sigrid_empide else None
+    def equivalencias(self) -> dict[str, Equivalencia]:
+        """La Lista de excepciones por Login (F-069 R1); vacía es lo normal."""
+        return leer_equivalencias(self.alta_sigrid_equivalencias_usuario)
 
     @property
     def mapeo_producto(self) -> dict[str, str]:
