@@ -140,11 +140,11 @@ lanza el humano) y el orden importar → convertir → determinista.
 
 ## F · Verificación y nueva línea base
 
-**R27.** Tras importar y regenerar los fixtures, ningún caso con líneas importadas
-debe salir OMITIDO por R18, FER-001 debe dar `importe_calculado` 19,41 en el
-determinista y su informe debe llevar la advertencia de R36.
+**R27.** Tras importar y regenerar los fixtures, ningún caso con líneas importadas sale OMITIDO
+por R18, FER-001 da `importe_calculado` 19,41 en el determinista y su informe lleva la de R36.
 
-**R28.** Línea base del humano (`design.md` §9): IA3, IA4 y E2E con LLM en los 59 casos con el
-modelo de producción (hoy `gpt-6.1-sol`, D1; **pendiente de confirmación del humano**). Vale con
-0 ERROR, el modelo en el informe y «obtenido None» ≤ 20 % de los fallos críticos de IA3
-evaluados sin la partida (R38); el umbral lo revisa el humano con la cifra de T14 (§9).
+**R28.** Línea base del humano (`design.md` §9): IA3, IA4 y E2E con LLM en los 59 casos con
+`gpt-6.1-sol` (D1, confirmado). Vale con 0 ERROR, el modelo en el informe y la línea base de IA3
+que aceptó el humano (D5, 2026-10-23): «obtenido None» **23 de 98 = 23,5 %** de los fallos críticos,
+sin la partida (R38) ni las 28 sintéticas con `rol_linea` en `?` (tarea de datos del banco); con
+ellas, 51 de 126 = 40,5 %. T14 se tomó antes de R39, sin la partida en el prompt de IA3.

@@ -155,10 +155,12 @@ E  AssertionError: assert None == 'CI.4.18'
 - **Determinista recontado** (`a4d7653`): IA3 VERDE 8 · ROJO 51, **300 fallos** (386 − 86
   partidas); IA4 13 VERDE; E2E VERDE 7 · ROJO 52, **491** (563), 30 `partida_final`, todas
   «obtenido None» y 0 con partida distinta. FER-001 VERDE; RES-001..006 VERDE, RES-007 igual.
-- **R28 con R38, recontado del texto de T14 sin pagar: 51 de 126 = 40,5 %** (ROJO). Sin
-  además las 28 sintéticas `?`, que siguen contando: **23 de 98 = 23,5 %**, la cifra que el
-  líder propone al humano como línea base en lugar del 20 %; R28 no cambia hasta que decida.
+- **R28, línea base aceptada por el humano (D5, 2026-10-23): 23 de 98 = 23,5 %**, sin la
+  partida (R38) ni las 28 sintéticas `?` (tarea de datos); con ellas, 51 de 126 = 40,5 %.
+  Recontado del texto de T14, sin pagar; T14 se tomó antes de R39. D1 confirmado: `gpt-6.1-sol`.
 - **T14 no se recompara sin pagar:** el runner no guarda respuestas de sv5 ni envelopes.
+- **Review pasada 2** (`progress/review_F-084.md`): condiciones 1–4 aplicadas, solo texto (D1 y la
+  línea base del 23,5 % en R28, design §9 y §11, T14, informes y `current.md`); sin remedir mutación.
 
 ## Review pasada 1 (`progress/review_F-084.md`): cambios aplicados
 

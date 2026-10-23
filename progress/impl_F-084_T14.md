@@ -79,7 +79,7 @@ prefiltro de precio ni de partida. Atribución según el código de hoy:
   partida. Medido así, los fallos de emparejamiento de IA3 cuentan como de IA3.
   **No se resuelve en F-084**: el líder propone al humano una feature aparte.
 
-## R28: «obtenido None» ≤ 20 % de los fallos críticos de IA3
+## R28: «obtenido None» en los fallos críticos de IA3 (línea base aceptada: 23,5 %)
 
 **Tal cual: 137 de 212 = 64,6 % → R28 en ROJO** (0 ERROR y modelo en el
 informe, sí). Desglose de los 137: `codigo_partida_final` 86, filas de
@@ -127,16 +127,16 @@ humano afirma `rol_linea` en esas 28 filas, o el comparador las empareja sin
 esa clave. Las 2 filas `1/GESTION_RESIDUOS` sí casan y fallan de verdad
 (cantidad y precio).
 
-Sin las 86 partidas ni las 28 filas sin pareja: **23 de 98 = 23,5 %**, aún por
-encima del 20 %. Los 23 son 8 líneas sin precio (con su importe y su precio
+Sin las 86 partidas ni las 28 filas sin pareja: **23 de 98 = 23,5 %**, por
+encima del 20 % original (ahora la línea base). Los 23 son 8 líneas sin precio (con su importe y su precio
 final) y una sintética emparejada sin precio: lo que mide el modelo.
 
-**R28 con el criterio aprobado (R38): 51 de 126 = 40,5 %**, recontado del
-texto del informe de T14 (`b4cde93`), sin volver a pagar. El 23,5 % exige además
-quitar las 28 sintéticas sin pareja, que siguen contando: su arreglo es una
-**tarea de datos del banco** (afirmar `rol_linea` en el libro IA3), anotada y no
-hecha en F-084. El líder propone al humano el 23,5 % como línea base documentada
-en lugar del 20 %; el umbral de R28 no cambia hasta que el humano lo decida.
+**Línea base de R28 aceptada por el humano (D5, 2026-10-23): 23 de 98 = 23,5 %**,
+en lugar del 20 %: sin la partida (R38) ni las 28 sintéticas sin pareja, cuyo
+arreglo es una **tarea de datos del banco** (afirmar `rol_linea` en el libro IA3),
+anotada y no hecha en F-084. Con ellas dentro, lo que el banco mide hoy: **51 de
+126 = 40,5 %**. Recontado del texto del informe de T14 (`b4cde93`), sin volver a
+pagar. El modelo, `gpt-6.1-sol`, lo confirmó el humano (D1).
 
 **T14 no se puede recomparar sin pagar:** el runner no guarda las respuestas de
 sv5 ni los envelopes, solo el informe. Además, con R39 el contexto de IA3 lleva

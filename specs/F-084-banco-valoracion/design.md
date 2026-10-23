@@ -212,8 +212,8 @@ determinista. Criterio: informe sin contratos fallidos (o con motivo
 aceptado), `tipo` por contrato en el índice y R27.
 
 **T14 · Línea base con LLM** (cuesta dinero), con el modelo de producción tras
-F-085: `openai` `gpt-6.1-sol` (D1, R20; **pendiente de confirmación del
-humano**): estimación sin claves (`evals.comparar_modelos --fase IA3 --modelos
+F-085: `openai` `gpt-6.1-sol` (D1, R20; confirmado por el humano el
+2026-10-23): estimación sin claves (`evals.comparar_modelos --fase IA3 --modelos
 gpt-6.1-sol --estimar`), humo de 3 casos (ALQ-001, GEN-002, RES-010) y los 59,
 sin `--proveedores`. Criterio: R28 (puede salir ROJO). Con el documento el
 prompt crece: el humo da el coste.
@@ -239,12 +239,12 @@ prompt crece: el humo da el coste.
 - **P5 = dentro**: IA3 recibe el documento que sv3 ya guardó, en la misma
   llamada (R29–R33); sin integración nueva ni llamada de fase 1b aparte.
 - **P6 = (a)**: proveedor de producción por defecto (R20). Tras F-085 es
-  `openai` `gpt-6.1-sol` (D1, review 1); el modelo de la línea base de pago
-  queda pendiente de confirmación del humano.
+  `openai` `gpt-6.1-sol` (D1, review 1), y es el de la línea base de pago:
+  confirmado por el humano el 2026-10-23.
 - **Review 1 (2026-10-23), opción (a)** del líder: R33 solo con LLM y en el comparador.
 - **Redondeo (2026-10-23), opción (a) del humano**: «varios céntimos» → R37 (0,05 €).
 - **P7**: F-083 primero en código; sus pagos de IA3/IA4, después de F-084 (§8).
-- **D5 (2026-10-23), del humano**: la partida no se mide en IA3 (R38) e INPUTS
-  recibe la del libro IA1 (R39), por número y descripción: 21 casos numeran
-  distinto (FER-002). Las 28 sintéticas con `rol_linea` en `?` no casan nunca:
-  tarea de datos del banco, fuera de F-084.
+- **D5 (2026-10-23), del humano**: partida fuera de IA3 (R38); INPUTS con la de IA1
+  (R39), por número y descripción (21 casos numeran distinto). Las 28 sintéticas con
+  `rol_linea` en `?` no casan nunca: tarea de datos del banco, fuera de F-084. Línea
+  base de R28 aceptada: 23,5 % (23 de 98, sin ellas ni la partida), no el 20 %.
