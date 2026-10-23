@@ -5,6 +5,7 @@
     "proveedor_nombre": "Laxo desde el 2026-10-22 (banco de IA1): en produccion la razon social la pone sv3 desde Sigrid (F-062/F-063/F-073), no la lectura de IA1. El que identifica al proveedor es proveedor_cif, que sigue CRITICO por el patron '*_cif'.",
     "codigo_imputacion": "Laxo desde el 2026-10-22 (banco de IA1): la partida que lee IA1 se compara como AVISO contra la partida_final de RESULTADO_FINAL, normalizada (CI.04.18 = CI.4.18, ver evals/comparador.py), para ver cuantas salen mal sin tumbar el caso. La partida valorada (codigo_partida_final, partida_final) sigue CRITICA."
   },
+  "_nota_tolerancia_importes": "F-084 R37 (decision del humano del 2026-10-23): la criticidad no cambia, pero los importes y precios VALORADOS (IA3 importe_calculado y precio_unitario_final; RESULTADO_FINAL importe_final, precio_unitario_final, lineas_anadidas.importe y total_valorado_esperado) se comparan con 0,05 EUR de tolerancia. Vive en evals/comparador.py (TOLERANCIA_IMPORTE_EUR, CAMPOS_CON_TOLERANCIA_EUR). La lectura de IA1 sigue exacta.",
   "por_defecto": "critico",
   "criticos": [
     "caso_id",

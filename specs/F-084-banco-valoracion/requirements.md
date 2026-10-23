@@ -1,9 +1,9 @@
 <!-- specs/F-084-banco-valoracion/requirements.md -->
 # F-084 · El banco de evals valora de verdad — requisitos (EARS)
 
-Diagnóstico en `design.md` §1: 52 de los 59 casos no tienen líneas de contrato en
-INPUTS y el adaptador de sv5 no da a la IA lo que le da producción. Servicios
-tocados: **ninguno** (solo `evals/`). PARADA 1 resuelta el 2026-10-20 (design §11).
+Diagnóstico en `design.md` §1: 52 de los 59 casos sin líneas de contrato en INPUTS y
+un adaptador de sv5 que no da a la IA lo de producción. Servicios: **ninguno** (solo
+`evals/`). PARADA 1 resuelta el 2026-10-20 (design §11).
 
 ## A · Líneas de contrato desde Sigrid (`python -m evals.contratos lineas`)
 
@@ -18,9 +18,8 @@ casos de `evals/fixtures/inputs/`, las líneas del contrato y escribirlas en
 parametrizado por código, `emp = 1`, `ORDER BY` estable y las columnas de Sigrid
 que persiste sv3 (`design.md` §7).
 
-**R3.** SI falta `SIGRID_API_BASE_URL`, `SIGRID_API_FUNCTION_KEY` o
-`SIGRID_API_DATABASE`, ENTONCES debe parar antes de pedir nada, código 2,
-nombrando las variables y sin tocar el libro.
+**R3.** SI falta `SIGRID_API_BASE_URL`, `SIGRID_API_FUNCTION_KEY` o `SIGRID_API_DATABASE`,
+ENTONCES debe parar antes de pedir nada, código 2, nombrando las variables y sin tocar el libro.
 
 **R4.** SI la respuesta viene `truncated`, ENTONCES ese contrato falla
 (`NO_TOLERA`), sus casos no se escriben, consta el motivo y el resto sigue.
@@ -28,12 +27,10 @@ nombrando las variables y sin tocar el libro.
 **R5.** SI el código casa con ningún contrato o con más de un `ctr.ide`,
 ENTONCES no se escribe ese contrato y el informe lo dice.
 
-**R6.** El importador no debe tocar los casos que ya tienen líneas de contrato
-(los 7 RES, con sus señuelos): sus filas de `CONTRATO_LINEAS` y `CONDICIONES`
-quedan idénticas.
+**R6.** El importador no debe tocar los casos que ya tienen líneas de contrato (los 7
+RES, con sus señuelos): sus `CONTRATO_LINEAS` y `CONDICIONES` quedan idénticas.
 
-**R7.** Antes de escribir debe dejar la copia de seguridad del libro
-(`escritura.copia_de_seguridad`); si nada cambia, no lo guarda.
+**R7.** Antes de escribir debe dejar la copia del libro (`escritura.copia_de_seguridad`); si nada cambia, no lo guarda.
 
 **R8.** CUANDO se pasa `--dry-run`, no debe tocar el libro: solo el informe.
 
@@ -108,35 +105,38 @@ de IA3 e IA4; el determinista no lee el documento ni aplica R33 (review 1, a).
 INPUTS, ENTONCES IA3, IA4 y E2E salen OMITIDO con «sin líneas de contrato en
 INPUTS», en las dos corridas, sin mandarlo a sv5.
 
-**R19.** CUANDO `--fases` no incluye IA1 ni IA2, la pasada con LLM no invoca
-sv2 ni exige sus claves.
+**R19.** CUANDO `--fases` no incluye IA1 ni IA2, la pasada con LLM no invoca sv2 ni exige
+sus claves.
 
 **R20.** Sin `--proveedores`, IA3/IA4 usan `IA3_PROVIDER` del entorno o la
 referencia IA3 de `evals/precios_modelos.json`, la de producción tras F-085 (hoy
 `openai` `gpt-6.1-sol`, D1); la variable de modelo del proveedor manda.
 
-**R21.** El informe registra en IA3, IA4 y E2E proveedor y **modelo**
-(`- Modelo: …`), con las líneas parseables intactas.
+**R21.** El informe registra en IA3, IA4 y E2E proveedor y **modelo** (`- Modelo: …`), con
+las líneas parseables intactas.
 
-**R36.** El informe de la corrida determinista debe decir, en IA3, IA4 y E2E,
-que **no mide el emparejamiento**: una línea sin emparejar en el ground truth
-(`?`) sigue sin emparejar, porque emparejar es trabajo de IA3/IA4 y solo lo
-mide la corrida con LLM. El banco no empareja por partida, precio ni texto.
+**R36.** El informe determinista debe decir, en IA3, IA4 y E2E, que **no mide el
+emparejamiento**: una línea sin emparejar en el ground truth (`?`) sigue así; emparejar
+es de IA3/IA4 y lo mide la corrida con LLM. El banco no empareja por partida, precio ni texto.
+
+**R37.** Los importes y precios VALORADOS (IA3 `importe_calculado` y `precio_unitario_final`;
+RESULTADO_FINAL `importe_final`, `precio_unitario_final`, `lineas_anadidas.importe` y
+`total_valorado_esperado`) se comparan con 0,05 € de tolerancia absoluta; la lectura de
+IA1 y el resto, como antes (decisión del humano, 2026-10-23, opción a; design §4).
 
 ## E · Lo que no cambia
 
 **R23.** No se modifica sv5, sv6 ni ningún servicio, ni ninguna ruta de
 `harness/rutas_sensibles.json`.
 
-**R24.** Los 7 RES siguen igual: `tests/datos/afirmado_por_el_humano_RES.json`
-pasa sin cambios y su determinista no empeora en ningún caso.
+**R24.** Los 7 RES siguen igual: `tests/datos/afirmado_por_el_humano_RES.json` pasa sin
+cambios y su determinista no empeora en ningún caso.
 
 **R25.** Los tests no tocan red ni BBDD: sigrid-api con `httpx.MockTransport`,
 BBDD y SharePoint con dobles, LLM con doble, libros en `tmp_path`.
 
-**R26.** `evals/README.md` explica los dos subcomandos, de dónde leen, que son
-solo lectura y los lanza el humano, y el orden importar → convertir →
-determinista.
+**R26.** `evals/README.md` explica los dos subcomandos (de dónde leen, solo lectura, los
+lanza el humano) y el orden importar → convertir → determinista.
 
 ## F · Verificación y nueva línea base
 

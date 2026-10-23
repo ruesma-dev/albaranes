@@ -87,6 +87,11 @@ Medido sobre `efd73b7`: corrida determinista, doble de LLM por la costura `fabri
   R21 y R36.
 - `evals/comparar_modelos.py` (**de F-083**) — R33 en `casos_de_fase` de IA3 e
   IA4: el caso con el documento ausente queda fuera, con su motivo.
+- `evals/comparador.py` — R37: `TOLERANCIA_IMPORTE_EUR` = 0,05 y
+  `CAMPOS_CON_TOLERANCIA_EUR` (tabla, campo) en `equivalentes_en`. El libro anota
+  el importe del papel en céntimos y sv6 no redondea si INPUTS no trae el de la
+  línea (FER-002 17,59 frente a 17,5932; total 139,65 frente a 139,66). Sin tocar
+  producción ni `criticidad.json` (solo una nota): la criticidad no cambia.
 - `evals/modelos.py` (`ResultadoFase.modelos`, `documentos`) y
   `evals/informe.py` (`- Modelo: …`, recuento md/pdf/ninguno y la advertencia
   de R36; las líneas parseables no cambian).
@@ -235,4 +240,6 @@ prompt crece: el humo da el coste.
   queda pendiente de confirmación del humano.
 - **Review 1 (2026-10-23), opción (a)** propuesta por el líder: R33 solo en la
   corrida con LLM y en el comparador; el determinista no lee el documento.
+- **Redondeo (2026-10-23), opción (a) del humano**: «se puede tolerar varios
+  céntimos sin problema» → R37, 0,05 € en importes y precios valorados.
 - **P7**: F-083 primero en código; sus pagos de IA3/IA4, después de F-084 (§8).
