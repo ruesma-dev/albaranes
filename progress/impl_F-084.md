@@ -3,9 +3,9 @@
 
 Rama `feature/F-084-banco-valoracion` (worktree `../albaranes-F-084`), `dev`
 `416b55c` fusionado (F-083, F-085, altas hasta F-098). Rigor `critico`.
-Servicios tocados: **ninguno** (solo `evals/` y tests). T1–T11 y T15 hechas, y
-los 3 cambios de la review pasada 1; **T12 y T14 son MANUAL del humano**
-(comandos en `progress/current.md`); T13 espera a T12.
+Servicios tocados: **ninguno** (solo `evals/` y tests). T1–T11, T13 y T15
+hechas, y los 3 cambios de la review pasada 1; T12 la lanzó el humano el
+2026-10-23; **T14 es MANUAL del humano** (comandos en `progress/current.md`).
 
 ## Qué cambió
 
@@ -110,27 +110,46 @@ Comando base: `PYTHONPATH=<worktree>/services/albaranes-comun python -m pytest <
 
 ## Fuera del alcance / pendiente
 
-- **T12 y T14**: MANUAL del humano (comandos abajo). **T13** (versionar los
-  fixtures regenerados y el índice, y comprobar R27) la hace el implementer
-  después de T12. R27 y R28 quedan sin verificar hasta entonces.
-- IA4 usa el mismo proveedor que IA3 (`IA4_PROVIDER` aparte: fuera, como antes).
+- **T14** (de pago, MANUAL del humano; comandos en `progress/current.md`):
+  `openai` `gpt-6.1-sol` (D1, **pendiente de confirmación del humano**). R28
+  sin verificar hasta entonces. IA4 usa el proveedor de IA3, como antes.
 - R18 no se aplica en el comparador de F-083 (la spec no lo pide); R33 sí.
 
-## MANUAL del humano: T12 y T14
+## T12 (humano) y T13: línea base determinista (`b39cb0e`)
 
-Comandos exactos de PowerShell en `progress/current.md` (bloque «F-084 · MANUAL
-del humano»), con `az login` como requisito (O2), el script del líder fuera del
-repo como forma cómoda de T12 y el repaso de `cif_proveedor`/`nombre_proveedor`
-del índice antes de T13 (O3). Claves y contraseña solo con
-`Read-Host -AsSecureString`; nada escribe en Sigrid, la BBDD ni SharePoint.
+T12, 2026-10-23: `lineas` 18 contratos y 0 fallidos (3159 filas, 52 fechas);
+`documentos` 20: md 1, pdf 6 y ninguno 13 (los 13, «no está en
+albaran_contratos_merge»: **30 de los 59 casos van a T14 sin documento**); 6
+libros y 264 ficheros. T13 versiona `evals/fixtures/inputs/` (60 ficheros), el
+índice y `progress/import_F-084.md`. Barrido de lo añadido: sin URL, correo,
+GUID, clave, IBAN, NIF de persona ni teléfono; los «IPv4» son partidas; los 7
+CIF son de sociedades (O3). La caché sigue ignorada.
 
-- **T12** (gratis, solo lee): `evals.contratos lineas --dry-run` → `lineas` →
-  `documentos` → conversor → determinista. Criterio: informe sin contratos
-  fallidos (o motivo aceptado), `tipo` por contrato en el índice y R27.
-- **T14** (de pago, tras T13): `openai` `gpt-6.1-sol` (D1, **pendiente de
-  confirmación del humano**); estimación, humo de 3 casos y los 59. Criterio
-  R28: 0 ERROR, `- Modelo: gpt-6.1-sol` en IA3/IA4/E2E y «obtenido None»
-  ≤ 20 % de los fallos críticos de IA3. La cifra vuelve aquí como línea base.
+- **R27, verde:** 0 OMITIDO por R18; FER-001 `importe_calculado` 19,41 sin
+  fallo (le queda `codigo_partida_final`); advertencia de R36 en las tres fases.
+- **Determinista** (`python -m evals.runner --feature F-084`, ROJO): IA3 59
+  evaluados, VERDE 6, ROJO 53, **394 fallos**; IA4 13 evaluados, VERDE 13, 46
+  OMITIDO («sin caso en el libro IA4»); E2E VERDE 6, ROJO 53, **572 fallos**;
+  0 ERROR. RES-001..007 igual que antes (RES-007 IA3 4 y E2E 6).
+- **«obtenido None»: R36, no el estímulo.** 385 de los 394 fallos de IA3, en
+  103 líneas: 77 con `codigo_producto_contrato` = `?` en el libro (74 esperan
+  `contrato_db`, 3 `oferta`) y 26 `no_match` (12 `oferta`, 2 `deducido`, el
+  resto partida o sintéticas). **Ninguna** línea con un código presente en las
+  líneas importadas sale en None. El estímulo solo empareja lo que el libro
+  afirma (P2 = b); el resto lo mide T14. Contados en IA3 y E2E, los
+  `precio_source` dan 148 / 30 / 4, las cifras del líder. 29 filas de
+  sintéticas esperadas sin rol en el libro no tienen pareja.
+- **Redondeo: el libro no está mal; criterio sin cambiar.** IA3 7 en FER-002
+  (17,59 frente a 17,5932 = 54 × 0,543 × 0,60) y 1 en FER-003
+  (`precio_unitario_final` 95,481 frente a 95,479167 = 229,15 / 4 / 0,60). E2E,
+  lo mismo, más el total de FER-002: 139,65 frente a 139,66. El libro anota el
+  importe del papel, en céntimos. sv6 (`importe_de_linea`) no redondea cuando
+  INPUTS no trae el importe de la línea; si lo trae, manda el declarado. El
+  comparador tolera 1e-6. Tolerar ±0,005 en importes quitaría las 7 líneas,
+  pero no el total, que es una señal real (redondear por línea o al final).
+  Decide el humano: (a) tolerancia de medio céntimo en los campos de importe
+  del comparador; (b) el importe de línea en INPUTS de FER-002; o (c) redondear
+  en `ruesma_comun.importes` (cambio de producción, otra feature).
 
 ## Review pasada 1 (`progress/review_F-084.md`): cambios aplicados
 
