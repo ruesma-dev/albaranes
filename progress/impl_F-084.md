@@ -3,7 +3,7 @@
 
 Rama `feature/F-084-banco-valoracion` (worktree `../albaranes-F-084`), `dev`
 `416b55c` fusionado (F-083, F-085, altas hasta F-098). Rigor `critico`.
-Servicios tocados: **ninguno** (solo `evals/` y tests). T1–T11, T13 y T15
+Servicios tocados: **ninguno** (solo `evals/` y tests). T1–T11, T13, T15 y T16
 hechas, y los 3 cambios de la review pasada 1; T12 la lanzó el humano el
 2026-10-23; **T14 es MANUAL del humano** (comandos en `progress/current.md`).
 
@@ -19,9 +19,10 @@ hechas, y los 3 cambios de la review pasada 1; T12 la lanzó el humano el
 | `evals/procesos/sv5_modelos.py` | La línea de `preparar_contexto` en su `main` (design §8). |
 | `evals/runner.py` | R18 y R13 en las dos corridas y R33 solo en la de LLM (review 1), antes de montar sv5/sv6; R19 (`fases` sin IA1/IA2 ⇒ sin sv2 ni sus claves; las de sv5 se exigen antes de nada); R20 `valoracion_por_defecto`; R17/R21 en las fases. |
 | `evals/comparar_modelos.py` (de F-083) | R33 en `casos_de_fase` de IA3 e IA4 vía `sv5_valoracion.falta_documento` (review 1). |
+| `evals/comparador.py`, `evals/criticidad.json` | R37 (T16): 0,05 € de tolerancia, en `Decimal`, en los importes y precios valorados (`CAMPOS_CON_TOLERANCIA_EUR`); IA1 exacta; en `criticidad.json`, solo una nota. |
 | `evals/modelos.py`, `evals/informe.py` | `ResultadoFase.modelos` y `.documentos`; `- Modelo: …`, `- Documento del contrato: md N · pdf N · ninguno N` y la advertencia de emparejamiento del determinista (R36). Líneas parseables idénticas. |
 | `evals/README.md` | Sección de F-084 (R26). `azure-apps/albaranes.md` §8: commit local `a6bc26a`, **sin push**. |
-| Tests | `tests/test_f084_{contratos,contexto_valoracion,runner}.py` (173 tests). Ajuste en 2 tests de F-083 y 1 doble de F-048 (D2); los 2 de F-083 sobre el build real aíslan el índice (D4). |
+| Tests | `tests/test_f084_{contratos,contexto_valoracion,runner,tolerancia_importes}.py` (202 tests). Ajuste en 2 tests de F-083 y 1 doble de F-048 (D2); los 2 de F-083 sobre el build real aíslan el índice (D4). |
 
 ## Decisiones de diseño
 
@@ -49,19 +50,16 @@ hechas, y los 3 cambios de la review pasada 1; T12 la lanzó el humano el
 
 ## Desviaciones (justificadas también en `progress/current.md`)
 
-- **D1 · R20/R28/T14 (instrucción del líder):** el defecto no es `claude` ni
-  `claude-opus-4-8` sino la referencia de IA3 de `evals/precios_modelos.json`
-  (`openai` / `gpt-6.1-sol`, la que R3 de F-083 ata a `infra/create_capps.ps1`
-  tras F-085). `IA3_PROVIDER` y la variable de modelo del proveedor mandan si
-  están. Cumple P6 = (a); solo cambia el literal anterior a F-085. T14 se lanza
-  con `gpt-6.1-sol`. No es contradicción no trivial: no se ha bloqueado.
+- **D1 · R20/R28/T14 (líder):** el defecto es la referencia IA3 de
+  `evals/precios_modelos.json` (`openai`/`gpt-6.1-sol`, atada a `infra/` por R3
+  de F-083), no `claude-opus-4-8`. Cumple P6 = (a); ya en la spec (review 1).
 - **D2 · R18 frente a tests ajenos:** `test_f083_runner_evaluar_valoracion_
   coincide_con_el_modo_determinista` y `test_f083_bloque_ia3_con_la_ia4_del_libro`
   comparaban en FER-001/GEN-001/HOR-005 (sin líneas: ahora OMITIDO); pasan a
   RES-001/004/006, misma intención. El doble de `construir_contexto` de
   `test_f048_evals_fallos_aislados.py` acepta `**_`. Ninguna expectativa cambia.
 - **D4 · R33, opción (a)** (cambio 1 de la review): ver «Review pasada 1».
-- **Hasta T12 el determinista omite 52 casos** (R18, lo pedido). **D3 · `dev` `2721e06` fusionado** (banco IA1 corregido): solo cambian claves `IA1.*` de `afirmado_por_el_humano_RES.json`; el guardián de R24 pasa a fijar lo afirmado fuera de IA1 (idéntico a `efd73b7`) y RES-001..007 dan los mismos fallos (RES-007 IA3 4, E2E 6); los ajustes D2 siguen valiendo.
+- **D3 · `dev` `2721e06` fusionado** (banco IA1 corregido): solo cambian claves `IA1.*` de `afirmado_por_el_humano_RES.json`; el guardián de R24 pasa a fijar lo afirmado fuera de IA1 (idéntico a `efd73b7`) y RES-001..007 dan los mismos fallos (RES-007 IA3 4, E2E 6); los ajustes D2 siguen valiendo.
 
 ## Fase RED (comando y salida real, antes del código)
 
@@ -95,6 +93,9 @@ Comando base: `PYTHONPATH=<worktree>/services/albaranes-comun python -m pytest <
   `E       AssertionError: assert 'NO mide el emparejamiento' in 'IA3 · valoración contra contrato (sv5) — VERDE ...'` → `8 failed, 1 passed`.
 - **T11** es un guardián de no regresión (R24): pasa en `efd73b7` y en HEAD por
   construcción; no hay fase RED que mostrar.
+- **T16** (`test_f084_tolerancia_importes.py`, antes del código): `E  AttributeError:
+  module 'evals.comparador' has no attribute 'TOLERANCIA_IMPORTE_EUR'` · `E  AssertionError:
+  assert False` (17,59 frente a 17,5932, ×13) → `16 failed, 13 passed in 2.73s`.
 
 ## Verificación (resultado real)
 
@@ -131,6 +132,8 @@ CIF son de sociedades (O3). La caché sigue ignorada.
   evaluados, VERDE 6, ROJO 53, **394 fallos**; IA4 13 evaluados, VERDE 13, 46
   OMITIDO («sin caso en el libro IA4»); E2E VERDE 6, ROJO 53, **572 fallos**;
   0 ERROR. RES-001..007 igual que antes (RES-007 IA3 4 y E2E 6).
+- **Línea base con R37** (`daa6293`): IA3 **386 fallos** (−8), E2E **563** (−9);
+  mismos estados por caso (FER-002 IA3 15 → 8, FER-003 6 → 5); 0 de redondeo.
 - **«obtenido None»: R36, no el estímulo.** 385 de los 394 fallos de IA3, en
   103 líneas: 77 con `codigo_producto_contrato` = `?` en el libro (74 esperan
   `contrato_db`, 3 `oferta`) y 26 `no_match` (12 `oferta`, 2 `deducido`, el
@@ -139,17 +142,11 @@ CIF son de sociedades (O3). La caché sigue ignorada.
   afirma (P2 = b); el resto lo mide T14. Contados en IA3 y E2E, los
   `precio_source` dan 148 / 30 / 4, las cifras del líder. 29 filas de
   sintéticas esperadas sin rol en el libro no tienen pareja.
-- **Redondeo: el libro no está mal; criterio sin cambiar.** IA3 7 en FER-002
-  (17,59 frente a 17,5932 = 54 × 0,543 × 0,60) y 1 en FER-003
-  (`precio_unitario_final` 95,481 frente a 95,479167 = 229,15 / 4 / 0,60). E2E,
-  lo mismo, más el total de FER-002: 139,65 frente a 139,66. El libro anota el
-  importe del papel, en céntimos. sv6 (`importe_de_linea`) no redondea cuando
-  INPUTS no trae el importe de la línea; si lo trae, manda el declarado. El
-  comparador tolera 1e-6. Tolerar ±0,005 en importes quitaría las 7 líneas,
-  pero no el total, que es una señal real (redondear por línea o al final).
-  Decide el humano: (a) tolerancia de medio céntimo en los campos de importe
-  del comparador; (b) el importe de línea en INPUTS de FER-002; o (c) redondear
-  en `ruesma_comun.importes` (cambio de producción, otra feature).
+- **Redondeo → R37 (T16; decisión del humano, opción a):** IA3 7 en FER-002
+  (17,59 frente a 17,5932 = 54 × 0,543 × 0,60) y 1 en FER-003 (95,481 frente a
+  95,479167); E2E, lo mismo y el total de FER-002 (139,65 frente a 139,66). El
+  libro anota el papel en céntimos y sv6 no redondea sin importe declarado: el
+  libro no está mal. Ahora el banco tolera 0,05 € ahí; producción no cambia.
 
 ## Review pasada 1 (`progress/review_F-084.md`): cambios aplicados
 
@@ -205,16 +202,19 @@ Con el código nuevo: los 4 de R33 y los 2 de F-083, en verde.
   diff desde `1839b8c`: 41 líneas, 3 ficheros): **10 mutantes, 10 muertos**,
   2.065,1 s, 1 worker (con 4 y con 2 la línea base agotó los 600 s por suites
   de otros proyectos en la máquina: dos intentos NO VÁLIDA, no versionados).
+- **Remedida de T16** (`progress/mutacion_F-084_r37.md`, `daa6293`, diff desde
+  `5f70189`, `comparador.py`): **8 mutantes, 8 muertos**, 1.828,9 s, 2 workers. Un
+  intento anterior dejó 1 superviviente (`round(…, 6)` → `7`): se quitó el redondeo.
   Supervivientes pendientes de aceptar por el humano: **ninguno**.
-- Las tres campañas de F-084 constan en `progress/inventario_mutacion_F-039.md`.
+- Las cuatro campañas de F-084 constan en `progress/inventario_mutacion_F-039.md`.
 
 ## Evidencias
 
 | Evidencia | Valor |
 |---|---|
 | Tests ejecutados (`bash harness/init.sh` final, `6cd693e`, tras T13, la review 1 y `dev` `416b55c`) | raíz 1842 passed (452,7 s); sv1 205; sv2 485; sv3 1576; sv4 1774; sv5 96; sv6 473 (+1 skipped); sv9 673; comun en verde |
-| Tests de F-084 | 173 (contratos 93 · contexto 49 · runner 31) |
+| Tests de F-084 | 202 (contratos 93 · contexto 49 · runner 31 · tolerancia 29) |
 | Cobertura de las líneas cambiadas | `PUERTA COBERTURA: 98.5% de 606 líneas cambiadas cubiertas (597/606, umbral 80%, nivel critico)` |
-| Mutación | Remedida de la review 1 (`progress/mutacion_F-084_review1.md`, `57c3c0c`): **10 generados, 10 muertos, 0 supervivientes** · 2.ª campaña completa (`progress/mutacion_F-084.md`, `d4dbe97`): **198 generados, 194 muertos, 4 supervivientes** (equivalentes, analizados) · remedida del fichero afectado (`progress/mutacion_F-084_sv5_documentos.md`, `3ce021f`): **39 generados, 39 muertos, 0 supervivientes**. 1.ª campaña (195, 45 supervivientes) sustituida: ver «Mutación» |
+| Mutación | Remedida de T16 (`progress/mutacion_F-084_r37.md`, `daa6293`): **8 generados, 8 muertos, 0 supervivientes** · remedida de la review 1 (`progress/mutacion_F-084_review1.md`, `57c3c0c`): **10 generados, 10 muertos, 0 supervivientes** · 2.ª campaña completa (`progress/mutacion_F-084.md`, `d4dbe97`): **198 generados, 194 muertos, 4 supervivientes** (equivalentes, analizados) · remedida del fichero afectado (`progress/mutacion_F-084_sv5_documentos.md`, `3ce021f`): **39 generados, 39 muertos, 0 supervivientes**. 1.ª campaña (195, 45 supervivientes) sustituida: ver «Mutación» |
 | Tiempo de la suite raíz | 452,7 s (dentro de init.sh, con los 59 casos ya con contrato y suites de otros proyectos en la máquina) |
 | `bash harness/init.sh` | `ENTORNO LISTO. Puedes trabajar.` (exit 0; PUERTA TAMAÑO requirements 150/150, design 238/250, impl 220/220) |
