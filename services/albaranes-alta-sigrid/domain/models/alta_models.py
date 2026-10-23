@@ -419,3 +419,11 @@ class AvisoResolucion:
 
     def a_dict(self) -> dict[str, str]:
         return {"codigo": self.codigo, "detalle": self.detalle}
+
+
+class OrigenUsuario(StrEnum):
+    """De qué escalón salió el ``usu`` de una petición nueva (F-069 R5–R7)."""
+
+    LISTA = "lista"
+    CORREO = "correo"
+    RESPALDO = "respaldo"

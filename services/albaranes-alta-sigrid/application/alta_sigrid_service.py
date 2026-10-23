@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta
 
@@ -25,12 +25,14 @@ from domain.models.alta_models import (
     AccionAlta,
     AdjuntoEstado,
     AltaActual,
+    AvisoResolucion,
     DatosAlta,
     Decision,
     ErrorAlta,
     EstadoAlta,
     ModoAlta,
     Motivo,
+    OrigenUsuario,
     PeticionAlbaran,
     RespuestaAlta,
     ResultadoAdjunto,
@@ -41,7 +43,12 @@ from domain.ports.pdf_port import PdfAlbaranPort
 from domain.ports.sigrid_alta_port import SigridAltaPort
 from domain.services.clasificador import clasificar, motivos_de_error
 from domain.services.comparador_previa import comparar
-from domain.services.usuario_sigrid import candidato_usuario
+from domain.services.usuario_sigrid import (
+    AVISO_USUARIO_LISTA_NO_EXISTE,
+    Equivalencia,
+    candidato_usuario,
+    entrada_de,
+)
 from domain.services.validador_alta import (
     PREFIJO_REFERENCIA,
     ConfigAlta,
@@ -130,6 +137,7 @@ class AltaSigridService:
         tolerancia_eur: float,
         avisos_bloqueantes: frozenset[str],
         reloj: Callable[[], datetime] = _ahora_utc,
+        equivalencias: Mapping[str, Equivalencia] | None = None,
     ) -> None:
         self._repo = repo
         self._sigrid = sigrid
@@ -142,6 +150,8 @@ class AltaSigridService:
         self._tolerancia = tolerancia_eur
         self._bloqueantes = frozenset(avisos_bloqueantes)
         self._reloj = reloj
+        #: F-069: la Lista de excepciones por Login (vacía es lo normal).
+        self._equivalencias: Mapping[str, Equivalencia] = dict(equivalencias or {})
 
     @property
     def modo(self) -> ModoAlta:
@@ -228,33 +238,47 @@ class AltaSigridService:
     def _resultado(self, estado: EstadoAlta, paso: _Paso, **campos) -> ResultadoAlta:
         return ResultadoAlta(estado=estado, modo=self._modo.value, peticion=paso.peticion, **campos)
 
-    def _resolver_usuario(self, document_id: str, approved_by: str | None) -> str:
-        """R47–R48: el ``usu`` de una petición nueva. ÚNICO punto que lo decide.
+    def _buscar_usuario(self, cod: str) -> str | None:
+        """``dbo.usu`` (R47); si la lectura cae tras sus reintentos, R48."""
+        try:
+            return self._sigrid.buscar_usuario(cod)
+        except Exception as exc:  # noqa: BLE001 — R48: sin comprobar, no se atribuye
+            raise UsuarioNoResuelto(f"no se pudo leer dbo.usu: {type(exc).__name__}") from exc
 
-        El ``cod`` de ``dbo.usu`` para la parte local del correo ``@ruesma.es``
-        de quien aprobó; si no es correo de Ruesma o no casa, el Respaldo
-        (``ALTA_SIGRID_USUARIO_RESPALDO``). Lanza :class:`UsuarioNoResuelto` si
-        la lectura cae tras sus reintentos o hace falta el Respaldo y está
-        vacío. (F-069, la lista de equivalencias correo → login, entrará aquí,
-        antes de la parte local.)"""
+    def _resolver_usuario(
+        self, document_id: str, approved_by: str | None,
+    ) -> tuple[str, OrigenUsuario, list[AvisoResolucion]]:
+        """F-053 R47–R48 y F-069 R5–R8: el ``usu`` de una petición nueva, su
+        Origen y los Avisos de resolución. ÚNICO punto que lo decide.
+
+        Escalones (el primero que da valor gana): (1) la Entrada de la Lista
+        con ``usu``, si casa con ``dbo.usu`` (si no, Aviso
+        ``usuario_lista_no_existe`` y sigue); (2) la parte local del Correo de
+        Ruesma de quien aprobó, si casa; (3) el Respaldo
+        (``ALTA_SIGRID_USUARIO_RESPALDO``). Siempre se manda el ``cod`` que
+        devuelve Sigrid. Lanza :class:`UsuarioNoResuelto` si una lectura cae
+        tras sus reintentos o hace falta el Respaldo y está vacío."""
+        avisos: list[AvisoResolucion] = []
+        entrada = entrada_de(approved_by, self._equivalencias)
+        if entrada is not None and entrada.usu is not None:
+            cod = self._buscar_usuario(entrada.usu)
+            if cod:
+                return cod, OrigenUsuario.LISTA, avisos
+            avisos.append(AvisoResolucion(
+                AVISO_USUARIO_LISTA_NO_EXISTE,
+                f"el usu {entrada.usu} de la Lista no existe en dbo.usu",
+            ))
         candidato = candidato_usuario(approved_by)
         if candidato is not None:
-            try:
-                cod = self._sigrid.buscar_usuario(candidato)
-            except Exception as exc:  # noqa: BLE001 — R48: sin comprobar, no se atribuye
-                raise UsuarioNoResuelto(
-                    f"no se pudo leer dbo.usu: {type(exc).__name__}",
-                ) from exc
+            cod = self._buscar_usuario(candidato)
             if cod:
-                logger.info("%s document_id=%s usu=%s (quien aprobó)", _LOG, document_id, cod)
-                return cod
+                return cod, OrigenUsuario.CORREO, avisos
         if not self._respaldo:
             raise UsuarioNoResuelto(
                 "quien aprobó no casa con un login de Sigrid y "
                 "ALTA_SIGRID_USUARIO_RESPALDO está vacío",
             )
-        logger.info("%s document_id=%s usu=%s (respaldo)", _LOG, document_id, self._respaldo)
-        return self._respaldo
+        return self._respaldo, OrigenUsuario.RESPALDO, avisos
 
     def _flujo(
         self, document_id: str, previa: AltaActual | None, approved_by: str | None,
@@ -268,12 +292,14 @@ class AltaSigridService:
         peticion = _peticion_retomada(previa)
         if peticion is None:
             try:
-                usu = self._resolver_usuario(document_id, approved_by)
+                usu, origen_usu, avisos = self._resolver_usuario(document_id, approved_by)
             except UsuarioNoResuelto as exc:
                 self._guardar(document_id, paso, self._resultado(
                     EstadoAlta.ERROR, paso, motivos=(Motivo(MOTIVO_USUARIO, str(exc)),),
                 ))
                 return
+            logger.info("%s document_id=%s usu=%s origen_usu=%s avisos=%s", _LOG, document_id,
+                        usu, origen_usu.value, [a.codigo for a in avisos])
             _avisar_lineas_de_otro_contrato(document_id, datos)
             validada = validar_y_construir(
                 datos, self._config, hoy_en_madrid(self._reloj()), usu,
