@@ -166,7 +166,7 @@ def casos_de_fase(
     (F-084 R33): se mediría otra cosa.
     """
     libro = cargar_fixtures(fixtures, LIBRO_DE_FASE[fase])
-    inputs = cargar_fixtures(fixtures, "inputs") if fase in ("IA3", "IA4") else {}
+    inputs = runner.cargar_inputs(fixtures) if fase in ("IA3", "IA4") else {}
     omitidos: dict[str, str] = {}
     candidatos = sorted(libro)
     if pedidos:
@@ -316,7 +316,7 @@ def _trabajos_de_casos(plan: Plan, fixtures: Path, albaranes: Path) -> dict[str,
             }
             for caso in plan.casos
         }
-    inputs = cargar_fixtures(fixtures, "inputs")
+    inputs = runner.cargar_inputs(fixtures)
     return {
         caso: {"caso_id": caso, "contexto": sv5_valoracion.construir_contexto(inputs[caso])}
         for caso in plan.casos

@@ -72,7 +72,10 @@ Medido sobre `efd73b7`: corrida determinista, doble de LLM por la costura `fabri
 
 - `evals/procesos/sv6_build.py` — `lineas_albaran_de(inputs)` y
   `clasificacion_de(inputs)` (puras); `construir_envelope_estimulado` las usa y
-  mete `clasificacion` en `context`. Su estímulo de matches NO cambia.
+  mete `clasificacion` en `context`. Su estímulo de matches NO cambia. R38: fuera
+  `codigo_partida_final` de `OBSERVABLES["lineas_valoradas"]`. R39:
+  `con_partidas_de_ia1(inputs, ia1)` (pura, copia) y `runner.cargar_inputs`, la
+  única carga de INPUTS del runner y del comparador de F-083.
 - `evals/procesos/sv5_valoracion.py` — `construir_contexto` usa las dos de
   arriba, la cabecera del índice y `documento_contrato` (§6); `_contexto_de_dict`
   pasa por `RawAlbaranLine` / `RawContratoLine` + `UnitCategoryPrefilter` +
@@ -217,9 +220,9 @@ prompt crece: el humo da el coste.
 
 ## 10. Riesgos y alternativas descartadas
 
-- **Contrato de hoy, albarán de ayer**: Sigrid da el precio vigente; R10 lo
-  enseña caso a caso. **Contratos grandes** (`CTSB23/0964`, 10 casos): prompt
-  mayor, como en producción. **Barrido de sensibles**: se redacta, no se apaga.
+- **Contrato de hoy, albarán de ayer**: Sigrid da el precio vigente; R10 lo enseña caso a
+  caso. **Contratos grandes** (`CTSB23/0964`, 10 casos): prompt mayor, como en producción.
+  **Barrido de sensibles**: se redacta, no se apaga.
 - **Descartado**: escribir los fixtures JSON a mano (el conversor los pisa);
   sintetizar el contrato desde el ground truth (vía A de F-045); leer las
   líneas de `albaran_contrato_lines_merge` (vía C, circular); versionar los
@@ -238,8 +241,10 @@ prompt crece: el humo da el coste.
 - **P6 = (a)**: proveedor de producción por defecto (R20). Tras F-085 es
   `openai` `gpt-6.1-sol` (D1, review 1); el modelo de la línea base de pago
   queda pendiente de confirmación del humano.
-- **Review 1 (2026-10-23), opción (a)** propuesta por el líder: R33 solo en la
-  corrida con LLM y en el comparador; el determinista no lee el documento.
-- **Redondeo (2026-10-23), opción (a) del humano**: «se puede tolerar varios
-  céntimos sin problema» → R37, 0,05 € en importes y precios valorados.
+- **Review 1 (2026-10-23), opción (a)** del líder: R33 solo con LLM y en el comparador.
+- **Redondeo (2026-10-23), opción (a) del humano**: «varios céntimos» → R37 (0,05 €).
 - **P7**: F-083 primero en código; sus pagos de IA3/IA4, después de F-084 (§8).
+- **D5 (2026-10-23), del humano**: la partida no se mide en IA3 (R38) e INPUTS
+  recibe la del libro IA1 (R39), por número y descripción: 21 casos numeran
+  distinto (FER-002). Las 28 sintéticas con `rol_linea` en `?` no casan nunca:
+  tarea de datos del banco, fuera de F-084.

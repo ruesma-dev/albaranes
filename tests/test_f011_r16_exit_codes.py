@@ -56,8 +56,10 @@ _CASO_IA3 = {
                 "num_linea": 1,
                 "match_method": "exact_concept",
                 "codigo_producto_contrato": "T-1",
-                "codigo_partida_final": "99.99",
-                "precio_unitario_final": 2.0,
+                # F-084 R38: la partida ya no se compara en IA3; lo crítico
+                # que se tuerce aquí es el precio.
+                "codigo_partida_final": "07.01",
+                "precio_unitario_final": 99.99,
                 "importe_calculado": 20.0,
             }
         ],

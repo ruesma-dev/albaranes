@@ -283,20 +283,25 @@ def test_f011_r13_los_campos_no_observables_se_declaran(build_limpio):
 
 
 def test_f011_r13_una_partida_distinta_en_el_ground_truth_sale_roja(build_de_hor_900):
+    """F-084 R38: la partida la pone sv6, así que sale roja en el extremo-a-
+    extremo (`partida_final`) y ya no en IA3 (`codigo_partida_final`)."""
     envelope, resultado = build_de_hor_900
     ia3_torcido = json.loads(json.dumps(_IA3))
     ia3_torcido["tablas"]["lineas_valoradas"][0]["codigo_partida_final"] = "99.99.99"
+    final_torcido = json.loads(json.dumps(_FINAL))
+    final_torcido["tablas"]["lineas"][0]["partida_final"] = "99.99.99"
 
     evaluacion = evaluar_caso_determinista(
         caso_id="HOR-900",
         envelope=envelope,
         resultado=resultado,
         ia3=ia3_torcido,
-        final=_FINAL,
+        final=final_torcido,
     )
 
     campos = {d.campo for d in evaluacion.discrepancias if d.severidad == "fallo"}
-    assert any("codigo_partida_final" in campo for campo in campos)
+    assert any("partida_final" in campo and "codigo_" not in campo for campo in campos)
+    assert not any("codigo_partida_final" in campo for campo in campos)
 
 
 def test_f011_r13_el_extremo_a_extremo_compara_contra_resultado_final(

@@ -167,6 +167,15 @@ def _filtrar(casos: dict[str, dict], pedidos: list[str] | None) -> dict[str, dic
     return {caso: datos for caso, datos in casos.items() if caso in set(pedidos)}
 
 
+def cargar_inputs(fixtures: Path, casos_pedidos: list[str] | None = None) -> dict[str, dict]:
+    """(F-084 R39) Los INPUTS pedidos, con la partida que lee IA1 en cada línea."""
+    ia1 = cargar_fixtures(fixtures, "IA1")
+    return {
+        caso: sv6_build.con_partidas_de_ia1(datos, ia1.get(caso))
+        for caso, datos in _filtrar(cargar_fixtures(fixtures, "inputs"), casos_pedidos).items()
+    }
+
+
 # --- Modo determinista ------------------------------------------------------
 
 
@@ -175,7 +184,7 @@ def corrida_determinista(
 ) -> tuple[list[ResultadoFase], list[str]]:
     """IA3, IA4 y extremo-a-extremo contra las redes de sv6, sin ninguna red."""
     criticidad = cargar_criticidad()
-    inputs = _filtrar(cargar_fixtures(fixtures, "inputs"), casos_pedidos)
+    inputs = cargar_inputs(fixtures, casos_pedidos)
     ia3 = cargar_fixtures(fixtures, "IA3")
     ia4 = cargar_fixtures(fixtures, "IA4")
     final = cargar_fixtures(fixtures, "final")
@@ -364,7 +373,7 @@ def corrida_completa(
     criticidad = cargar_criticidad()
     con_sv2 = fases is None or bool(FASES_SOLO_CON_LLM & set(fases))
     proveedor, modelo = valoracion_por_defecto(proveedores)
-    inputs = _filtrar(cargar_fixtures(fixtures, "inputs"), casos_pedidos)
+    inputs = cargar_inputs(fixtures, casos_pedidos)
     ia1 = _filtrar(cargar_fixtures(fixtures, "IA1"), casos_pedidos)
     ia2 = _filtrar(cargar_fixtures(fixtures, "IA2"), casos_pedidos)
     ia3 = cargar_fixtures(fixtures, "IA3")

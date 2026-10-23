@@ -24,15 +24,17 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
 
+from ruesma_comun.contratos.contexto_linea import ContextoLinea
+
 from evals.comparador import (
     campos_no_observables,
     comparar_tablas,
+    equivalentes,
 )
 from evals.criticidad import Criticidad, cargar_criticidad
+from evals.modelos import ESPERA_REVISION, NO_COMPARAR, Discrepancia
 from evals.procesos import canal
 from evals.procesos.errores import avisar, describir_error
-from evals.modelos import NO_COMPARAR, Discrepancia
-from ruesma_comun.contratos.contexto_linea import ContextoLinea
 
 #: Campos del contrato compartido `ContextoLinea` — exactamente lo que el
 #: pipeline real le entrega a sv6 en el bloque `contexto_linea` de cada línea
@@ -117,7 +119,6 @@ OBSERVABLES: dict[str, tuple[str, ...]] = {
         "num_linea",
         "match_method",
         "codigo_producto_contrato",
-        "codigo_partida_final",
         "precio_unitario_final",
         "precio_source",
         "importe_calculado",
@@ -259,6 +260,34 @@ def _importe_derivado(
         return None
     factor = 1 - Decimal(str(descuento or 0)) / 100
     return float(Decimal(str(cantidad)) * Decimal(str(precio)) * factor)
+
+
+def con_partidas_de_ia1(inputs: dict, ia1: dict | None) -> dict:
+    """(F-084 R39) INPUTS con la partida que el libro IA1 espera de cada línea.
+
+    En producción la partida del albarán la lee IA1 y llega a sv5 y a sv6 por
+    el merge; INPUTS no la trae. Una línea sin `codigo_imputacion` recibe la
+    de la línea del libro IA1 con su mismo `num_linea` y su misma descripción:
+    en 21 casos los dos libros no numeran igual (FER-002: la 4 de IA1 es la 7
+    de INPUTS) y el número solo no basta. INPUTS manda si la trae, y `?` o
+    `REVISIÓN` del libro no son una partida. Devuelve una copia.
+    """
+    resultado = json.loads(json.dumps(inputs))
+    del_libro = {_entero(valor(fila, "num_linea")): fila for fila in _tablas(ia1 or {}, "lineas")}
+    for fila in _tablas(resultado, "lineas_albaran"):
+        if fila.get("codigo_imputacion"):
+            continue
+        leida = del_libro.get(_entero(valor(fila, "num_linea")), {})
+        partida = leida.get("codigo_imputacion")
+        descripcion = valor(leida, "descripcion_esperada")
+        if (
+            partida
+            and partida not in (NO_COMPARAR, ESPERA_REVISION)
+            and descripcion is not None
+            and equivalentes(descripcion, valor(fila, "descripcion"))
+        ):
+            fila["codigo_imputacion"] = partida
+    return resultado
 
 
 def lineas_albaran_de(inputs: dict) -> list[dict]:
