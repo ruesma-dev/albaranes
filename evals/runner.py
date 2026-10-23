@@ -70,21 +70,27 @@ def ruta_indice(fixtures: Path | str) -> Path:
     return Path(fixtures) / "contratos" / "_indice.json"
 
 
-def motivo_para_omitir(inputs: dict, indice: dict, raiz: Path | str) -> str:
-    """Por qué un caso no se valora (OMITIDO en IA3, IA4 y E2E); vacío si se valora.
+def motivo_sin_lineas(inputs: dict) -> str:
+    """(R18) El caso tiene contrato y ninguna línea de contrato en INPUTS.
 
-    - R18: tiene contrato y ninguna línea de contrato en INPUTS.
-    - R33: el índice declara un documento del contrato que no está en local
-      (o no casa con su sha256). Mejor no medir que medir otra cosa.
+    Vale en las dos corridas: sin líneas, sv5 no tiene contra qué valorar.
     """
     caso = (inputs.get("tablas", {}).get("caso") or [{}])[0]
     codigo = str(sv6_build.valor(caso, "contrato_codigo") or "").strip()
-    if not codigo:
-        return ""
-    if not inputs.get("tablas", {}).get("contrato_lineas"):
+    if codigo and not inputs.get("tablas", {}).get("contrato_lineas"):
         return MOTIVO_SIN_LINEAS
-    documento = sv5_valoracion.documento_de(codigo, indice, raiz)
-    return (documento or {}).get("falta", "")
+    return ""
+
+
+def motivo_para_omitir(inputs: dict, indice: dict, raiz: Path | str) -> str:
+    """Por qué un caso no se manda a sv5 en la corrida con LLM; vacío si se manda.
+
+    - R18: tiene contrato y ninguna línea de contrato en INPUTS.
+    - R33: el índice declara un documento del contrato que no está en local
+      (o no casa con su sha256). Mejor no medir que medir otra cosa. Solo
+      aquí: el determinista no lee el documento y aplica solo R18.
+    """
+    return motivo_sin_lineas(inputs) or sv5_valoracion.falta_documento(inputs, indice, raiz)
 
 
 def recuento_documentos(casos: list[dict]) -> dict[str, int]:
@@ -169,7 +175,6 @@ def corrida_determinista(
 ) -> tuple[list[ResultadoFase], list[str]]:
     """IA3, IA4 y extremo-a-extremo contra las redes de sv6, sin ninguna red."""
     criticidad = cargar_criticidad()
-    indice = leer_indice(ruta_indice(fixtures))
     inputs = _filtrar(cargar_fixtures(fixtures, "inputs"), casos_pedidos)
     ia3 = cargar_fixtures(fixtures, "IA3")
     ia4 = cargar_fixtures(fixtures, "IA4")
@@ -189,7 +194,8 @@ def corrida_determinista(
     envelopes: dict[str, dict] = {}
     fases = (fase_ia3, fase_ia4, fase_e2e)
     for caso_id, datos in inputs.items():
-        motivo = motivo_para_omitir(datos, indice, RUTA_CACHE)
+        # (R18) Solo la falta de líneas: este modo no lee el documento (R33).
+        motivo = motivo_sin_lineas(datos)
         if motivo:
             _omitir_en(fases, caso_id, motivo)
             continue

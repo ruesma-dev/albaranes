@@ -109,6 +109,23 @@ def documento_de(codigo: str, indice: dict, raiz: Path | str) -> dict | None:
     return {"tipo": tipo, "ruta": str(ruta)}
 
 
+def falta_documento(
+    inputs: dict, indice: dict | None = None, raiz: Path | str | None = None
+) -> str:
+    """(R33) Por qué el caso no se manda a sv5: su documento no está en local.
+
+    Vacío si el contrato no tiene documento en el índice o si el fichero
+    local casa. `indice` y `raiz`, con los mismos defectos que
+    `construir_contexto`. Solo lo aplican la corrida con LLM y el comparador
+    de F-083: el determinista no lee el documento.
+    """
+    documentos = leer_indice(RUTA_INDICE) if indice is None else indice
+    raiz = RUTA_CACHE if raiz is None else raiz
+    caso = (_tablas(inputs, "caso") or [{}])[0]
+    codigo = str(valor(caso, "contrato_codigo") or "")
+    return (documento_de(codigo, documentos, raiz) or {}).get("falta", "")
+
+
 def construir_contexto(
     inputs: dict, indice: dict | None = None, raiz: Path | str | None = None
 ) -> dict:

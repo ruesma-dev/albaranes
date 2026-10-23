@@ -177,21 +177,55 @@ def _indice_md(caso_id: str) -> dict:
                               "bytes": 3, "motivo": ""}}
 
 
-def test_f084_r33_sin_el_documento_local_el_caso_sale_omitido(tmp_path, subprocesos, monkeypatch):
+def test_f084_r33_sin_el_documento_local_la_corrida_con_llm_lo_omite(tmp_path, subprocesos, monkeypatch):
     _, sv5 = subprocesos
     monkeypatch.setattr(runner, "RUTA_CACHE", tmp_path / "cache-vacia")
     fixtures = _banco(tmp_path, _inputs("HOR-001"), _inputs("HOR-002"), indice=_indice_md("HOR-002"))
 
     completa, _ = runner.corrida_completa(fixtures, fases=["IA3", "IA4", "E2E"])
-    determinista, _ = runner.corrida_determinista(fixtures)
 
     assert [c["caso_id"] for c in sv5.trabajos[0]["casos"]] == ["HOR-001"]
-    for fases in (completa, determinista):
-        for nombre in ("IA3", "IA4", "E2E"):
-            (caso,) = [c for c in _fase(fases, nombre).casos if c.caso_id == "HOR-002"]
-            assert (caso.estado, caso.motivo) == (
-                OMITIDO, "documento del contrato no disponible en local"
-            )
+    for nombre in ("IA3", "IA4", "E2E"):
+        (caso,) = [c for c in _fase(completa, nombre).casos if c.caso_id == "HOR-002"]
+        assert (caso.estado, caso.motivo) == (
+            OMITIDO, "documento del contrato no disponible en local"
+        )
+
+
+def test_f084_r33_el_determinista_no_lee_el_documento_y_no_omite(tmp_path, subprocesos, monkeypatch):
+    """(R33, opción a) El determinista no usa el documento: un índice sin caché no le afecta."""
+    monkeypatch.setattr(runner, "RUTA_CACHE", tmp_path / "cache-vacia")
+    con_indice = _banco(tmp_path / "con", _inputs("HOR-001"), _inputs("HOR-002"),
+                        indice=_indice_md("HOR-002"))
+    sin_indice = _banco(tmp_path / "sin", _inputs("HOR-001"), _inputs("HOR-002"))
+
+    obtenido, _ = runner.corrida_determinista(con_indice)
+    esperado, _ = runner.corrida_determinista(sin_indice)
+
+    assert all(c.motivo != sv5_valoracion.MOTIVO_SIN_DOCUMENTO for f in obtenido for c in f.casos)
+    assert [(f.nombre, [(c.caso_id, c.estado, c.motivo, c.fallos) for c in f.casos])
+            for f in obtenido] == [
+        (f.nombre, [(c.caso_id, c.estado, c.motivo, c.fallos) for c in f.casos]) for f in esperado
+    ]
+
+
+def test_f084_r33_el_comparador_omite_el_caso_sin_documento_local(tmp_path, monkeypatch):
+    """(R33) El comparador de F-083 tampoco manda a sv5 un caso con el documento ausente."""
+    from evals import comparar_modelos as cm
+
+    fixtures = _banco(tmp_path, _inputs("HOR-001"), _inputs("HOR-002"), indice=_indice_md("HOR-002"))
+    (fixtures / "IA4").mkdir()
+    for caso_id in ("HOR-001", "HOR-002"):
+        (fixtures / "IA4" / f"{caso_id}.json").write_text(
+            json.dumps({"caso_id": caso_id, "tablas": {}}), encoding="utf-8")
+    monkeypatch.setattr(sv5_valoracion, "RUTA_INDICE", runner.ruta_indice(fixtures))
+    monkeypatch.setattr(sv5_valoracion, "RUTA_CACHE", tmp_path / "cache-vacia")
+
+    for fase in ("IA3", "IA4"):
+        casos, omitidos = cm.casos_de_fase(fase, fixtures, tmp_path / "albaranes", None)
+        assert (casos, omitidos) == (
+            ["HOR-001"], {"HOR-002": "documento del contrato no disponible en local"}
+        ), fase
 
 
 def test_f084_r32_con_el_documento_local_el_caso_viaja_con_el(tmp_path, subprocesos, monkeypatch):
@@ -465,3 +499,39 @@ def test_f084_r24_el_determinista_de_los_7_res_no_empeora():
     for clave, techo in _FALLOS_BASE_RES.items():
         assert obtenidos[clave] <= techo, clave
     assert all(c.estado != OMITIDO for f in fases if f.nombre != "IA4" for c in f.casos)
+
+
+def test_f084_r33_el_determinista_de_los_7_res_no_depende_de_la_cache(tmp_path, monkeypatch):
+    """Un clon limpio tras T13: el índice versionado declara documentos y no hay caché.
+
+    El guardián de R24 y los tests de F-083 sobre RES deben seguir en verde.
+    """
+    import shutil
+
+    from evals.conversor import RUTA_FIXTURES
+
+    fixtures = tmp_path / "fixtures"
+    shutil.copytree(RUTA_FIXTURES, fixtures)
+    casos = [f"RES-00{n}" for n in range(1, 8)]
+    codigos = {
+        json.loads((fixtures / "inputs" / f"{caso}.json").read_text(encoding="utf-8"))
+        ["tablas"]["caso"][0]["contrato_codigo"]
+        for caso in casos
+    }
+    runner.ruta_indice(fixtures).parent.mkdir(exist_ok=True)
+    runner.ruta_indice(fixtures).write_text(json.dumps(
+        {codigo: {"tipo": "md", "sha256": "0" * 64, "bytes": 1, "motivo": ""} for codigo in codigos}
+    ), encoding="utf-8")
+    monkeypatch.setattr(runner, "RUTA_CACHE", tmp_path / "sin-cache")
+
+    fases, _ = runner.corrida_determinista(fixtures, casos)
+
+    assert all(c.estado != OMITIDO for f in fases if f.nombre != "IA4" for c in f.casos)
+    obtenidos = {
+        (caso.caso_id, fase.nombre): len(caso.fallos)
+        for fase in fases if fase.nombre in ("IA3", "E2E")
+        for caso in fase.casos
+    }
+    assert set(obtenidos) == set(_FALLOS_BASE_RES)
+    for clave, techo in _FALLOS_BASE_RES.items():
+        assert obtenidos[clave] <= techo, clave
