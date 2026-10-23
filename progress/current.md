@@ -1,11 +1,81 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-084 · `in_progress` (2026-10-23): implementación hecha salvo las MANUAL; espera review y T12** — el banco de evals valora de verdad. Spec en `specs/F-084-banco-valoracion/` (PARADA 1 resuelta el 2026-10-20, commit `4c69746`). Rama `feature/F-084-banco-valoracion`, worktree `../albaranes-F-084`, `dev` (`ac34ad8`, con F-083 y F-085) fusionado. Rigor `critico`, `servicios = evals`: no se toca ningún servicio. Informe en curso: `progress/impl_F-084.md`.
+**F-084 · `in_progress` (2026-10-23): review pasada 1 APPROVED para lanzar T12; sus 3 cambios aplicados; espera T12 (humano), luego T13 (implementer) y T14 (humano)** — el banco de evals valora de verdad. Spec en `specs/F-084-banco-valoracion/` (PARADA 1 resuelta el 2026-10-20, commit `4c69746`). Rama `feature/F-084-banco-valoracion`, worktree `../albaranes-F-084`, `dev` (`416b55c`, con F-083, F-085 y el alta de F-098) fusionado. Rigor `critico`, `servicios = evals`: no se toca ningún servicio. Informe: `progress/impl_F-084.md`; review: `progress/review_F-084.md`.
 
-- **Implementer: T1–T11 y T15 hechas** (commits locales; T10 también en `azure-apps` `a6bc26a`, sin push). Informe `progress/impl_F-084.md`; mutación `progress/mutacion_F-084.md` (198, 4 supervivientes equivalentes) + `progress/mutacion_F-084_sv5_documentos.md` (39, 0). **Pendiente: T12 y T14 MANUAL del humano** (comandos PowerShell en el informe) y **T13** (implementer, tras T12). Siguiente paso del líder: review.
-- **Desviación D1 (R20, R28, T14; instrucción del líder):** el proveedor y el modelo por defecto de IA3/IA4 no son `claude` ni `claude-opus-4-8` sino los de producción tras F-085, leídos de la referencia de IA3 de `evals/precios_modelos.json` (la que R3 de F-083 ata a `infra/create_capps.ps1`): hoy `openai` / `gpt-6.1-sol`. `IA3_PROVIDER` y la variable de modelo del proveedor siguen mandando. La línea base de T14 se lanza con `gpt-6.1-sol`. Cumple P6 = (a) («proveedor de producción por defecto»); solo cambia el literal que la spec copió de antes de F-085.
-- **Desviación D2 (R18 frente a tests de otras features):** dos tests de F-083 comparaban el determinista con el comparador en FER-001/GEN-001/HOR-005, que hoy no tienen líneas de contrato y R18 deja OMITIDO; ahora usan RES-001/RES-004/RES-006, que sí las tienen (misma intención). El doble de `construir_contexto` de un test de F-048 acepta los argumentos nuevos (`**_`). Ninguna expectativa cambia.
+- **Implementer: T1–T11 y T15 hechas** (commits locales; T10 también en `azure-apps` `a6bc26a`, sin push). Mutación `progress/mutacion_F-084.md` (198, 4 supervivientes equivalentes, quitados) + `progress/mutacion_F-084_sv5_documentos.md` (39, 0) + la remedida de los cambios de la review (ver el informe). **Pendiente: T12 y T14 MANUAL del humano** (comandos abajo) y **T13** (implementer, tras T12).
+- **Desviación D1 (R20, R28, T14; instrucción del líder), ya en la spec (cambio 3 de la review):** el proveedor y el modelo por defecto de IA3/IA4 son los de producción tras F-085, leídos de la referencia de IA3 de `evals/precios_modelos.json` (la que R3 de F-083 ata a `infra/create_capps.ps1`): hoy `openai` / `gpt-6.1-sol`. `IA3_PROVIDER` y la variable de modelo del proveedor siguen mandando. **El modelo de la línea base de pago (T14) queda pendiente de confirmación del humano.**
+- **Desviación D2 (R18 frente a tests de otras features):** dos tests de F-083 comparan el determinista con el comparador en RES-001/RES-004/RES-006 (antes FER-001/GEN-001/HOR-005, sin líneas de contrato). El doble de `construir_contexto` de un test de F-048 acepta `**_`. Ninguna expectativa cambia.
+- **D3:** `dev` `2721e06` cambió solo claves `IA1.*` de `afirmado_por_el_humano_RES.json`; el guardián de R24 fija las 419 de fuera de IA1.
+- **D4 · R33, opción (a) (cambio 1 de la review, propuesta del líder; el humano puede corregirla):** R33 se aplica solo en la corrida con LLM y en el comparador de F-083 (IA3 e IA4), no en el determinista, que no lee el documento. Un clon sin `evals/inputs/contratos/` y con el índice versionado da el mismo determinista. Los dos tests de F-083 sobre el build real (`test_f083_bloque_ia3_con_la_ia4_del_libro`, `..._ia4_concilia_...`) aíslan el índice: miden la equivalencia con el determinista.
+
+#### F-084 · MANUAL del humano, comandos para PowerShell
+
+Claves y contraseña solo con `Read-Host -AsSecureString`, nunca en fichero. Ningún paso escribe en Sigrid, en la BBDD ni en SharePoint: solo el libro, la caché y el índice locales. **Requisito: `az login` hecho antes** (O2: `infra/00_capps_vars.ps1` llama a `az identity show`, que es lectura).
+
+**T12 · Importar contratos, convertir y determinista (gratis, solo lee).** Forma cómoda: el script que ha preparado el líder **fuera del repo**, `C:\Users\pgris\AppData\Local\Temp\claude\C--Users-pgris-PycharmProjects-albaranes\f36c80f5-0cba-463e-95e9-161d51e3f583\scratchpad\T12_F-084.ps1` (`powershell -ExecutionPolicy Bypass -File "<esa ruta>"`: hace los mismos pasos, saca la URL de sigrid-api del `.local.ps1` de sv4 y pide confirmación tras el ensayo). A mano, los mismos pasos:
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes-F-084
+$gt = "C:\Users\pgris\PycharmProjects\albaranes\evals\ground_truth"
+$env:PYTHONPATH = "$PWD\services\albaranes-comun"
+
+# 1. Líneas de contrato desde sigrid-api (solo lectura)
+$env:SIGRID_API_BASE_URL = "<url de sigrid-api>"
+$env:SIGRID_API_DATABASE = "ruesma"
+$s = Read-Host -AsSecureString "SIGRID_API_FUNCTION_KEY"
+$env:SIGRID_API_FUNCTION_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+python -m evals.contratos lineas --ground-truth $gt --dry-run
+#    VERDE: progress\import_F-084.md sin contratos fallidos (o con motivo aceptado)
+python -m evals.contratos lineas --ground-truth $gt
+
+# 2. Cabecera y documento: BBDD albaranes de AZURE (el .env apunta a local) y SharePoint
+Push-Location C:\Users\pgris\PycharmProjects\albaranes\infra
+. .\00_vars.ps1; . .\00_capps_vars.ps1
+Pop-Location
+$env:PG_HOST = $PG_HOST; $env:PG_PORT = "5432"; $env:PG_DB = $PG_DB; $env:PG_USER = $PG_ADMIN
+foreach ($k in $SP.Keys) { Set-Item "Env:$k" $SP[$k] }
+$s = Read-Host -AsSecureString "PG_PASSWORD"
+$env:PG_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+$s = Read-Host -AsSecureString "GRAPH_KEY"
+$env:GRAPH_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+python -m evals.contratos documentos
+#    VERDE: evals\fixtures\contratos\_indice.json con un tipo por contrato
+
+# 3. Libros -> fixtures y corrida determinista (sin red)
+python -m evals.conversor --ground-truth $gt
+python -m evals.runner --feature F-084
+
+Remove-Item Env:SIGRID_API_FUNCTION_KEY, Env:PG_PASSWORD, Env:GRAPH_KEY
+```
+
+La sesión de BBDD es de solo lectura aunque el usuario sea el de la app (O1: si hay usuario de lectura, mejor ese). Criterio T12: informe sin contratos fallidos (o motivo aceptado), `tipo` por contrato en el índice y R27 en `progress\evals_F-084.md`. **Antes de T13, el humano repasa `cif_proveedor` y `nombre_proveedor` de `evals\fixtures\contratos\_indice.json`** (O3): si algún proveedor es persona física, son datos personales y no se versionan así. T13 la hace el implementer. Tras fusionar en `dev`, para la corrida con LLM o el comparador desde el árbol principal, copiar la caché (sin ella, R33 omite esos casos; el determinista no la necesita):
+
+```powershell
+Copy-Item -Recurse -Force C:\Users\pgris\PycharmProjects\albaranes-F-084\evals\inputs\contratos C:\Users\pgris\PycharmProjects\albaranes\evals\inputs\
+```
+
+**T14 · Línea base con LLM (CUESTA DINERO), después de T13.** Modelo de producción tras F-085: IA3 e IA4 = `openai` `gpt-6.1-sol` (D1, **pendiente de confirmación del humano**). Sin `--proveedores`, el runner usa justo eso.
+
+```powershell
+cd C:\Users\pgris\PycharmProjects\albaranes-F-084
+$env:PYTHONPATH = "$PWD\services\albaranes-comun"
+Remove-Item Env:IA3_PROVIDER -ErrorAction SilentlyContinue
+$env:OPENAI_MODEL = "gpt-6.1-sol"
+
+# Estimación sin claves ni llamadas (sale con 0)
+python -m evals.comparar_modelos --fase IA3 --modelos gpt-6.1-sol --estimar
+
+$s = Read-Host -AsSecureString "OPENAI_API_KEY"
+$env:OPENAI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+# Humo: 3 casos (el informe dice el coste real; con el documento el prompt crece)
+python -m evals.runner --con-llm --fases IA3,IA4,E2E --casos ALQ-001,GEN-002,RES-010 --feature F-084-humo
+# Los 59
+python -m evals.runner --con-llm --fases IA3,IA4,E2E --feature F-084
+Remove-Item Env:OPENAI_API_KEY
+```
+
+Criterio (R28; puede salir ROJO): 0 casos ERROR, `- Modelo: gpt-6.1-sol` en IA3, IA4 y E2E de `progress\evals_F-084.md`, y «obtenido None» ≤ 20 % de los fallos críticos de IA3 de los casos evaluados. La cifra va a `progress/impl_F-084.md` como línea base.
 
 **F-092 · `blocked` (2026-10-22, al darla de alta): gestión de almacén.** Bloqueada por la regla LÍMITE DE SERVICIO antes de la spec: el humano decide qué es (vista de lo que entró a almacén desde albaranes o gestión de existencias con salidas a partida/obra), si va en este monorepo como servicio nuevo o en un proyecto aparte, y si escribe en Sigrid. Ficha en `harness/features.json`.
 

@@ -98,8 +98,11 @@ local casa con su `sha256`, IA3 debe recibirlo como en el pipeline (MD como
 `contrato_markdown`, PDF como adjunto), sin red y en la misma llamada.
 
 **R33.** SI el índice declara documento pero el fichero local falta o no casa,
-ENTONCES IA3, IA4 y E2E del caso salen OMITIDO con «documento del contrato no
-disponible en local», y no se manda a sv5.
+ENTONCES, en la corrida con LLM, IA3, IA4 y E2E del caso salen OMITIDO con
+«documento del contrato no disponible en local», y no se manda a sv5; el
+comparador de F-083 lo deja fuera de IA3 e IA4 con el mismo motivo. La corrida
+determinista no lee el documento y no aplica R33: un clon sin la caché local
+da el mismo determinista (review 1, opción a).
 
 ## D · Runner y veredicto
 
@@ -110,8 +113,12 @@ INPUTS», en las dos corridas, sin mandarlo a sv5.
 **R19.** CUANDO `--fases` no incluye IA1 ni IA2, la pasada con LLM no invoca
 sv2 ni exige sus claves.
 
-**R20.** Sin `--proveedores`, IA3/IA4 usan `IA3_PROVIDER` del entorno o
-`claude` (hoy `gemini`).
+**R20.** Sin `--proveedores`, IA3/IA4 usan `IA3_PROVIDER` del entorno (con el
+modelo de su variable o su defecto) o, si no está, el proveedor y el modelo de
+la referencia de IA3 de
+`evals/precios_modelos.json`, la que producción usa tras F-085 (hoy `openai`
+`gpt-6.1-sol`; antes, el defecto era `gemini`). La variable de modelo del
+proveedor (`OPENAI_MODEL`, …) manda sobre la referencia (D1).
 
 **R21.** El informe registra en IA3, IA4 y E2E proveedor y **modelo**
 (`- Modelo: …`), con las líneas parseables intactas.
@@ -143,6 +150,7 @@ debe salir OMITIDO por R18, FER-001 debe dar `importe_calculado` 19,41 en el
 determinista y su informe debe llevar la advertencia de R36.
 
 **R28.** Línea base: pasada con LLM de IA3, IA4 y E2E sobre los 59 casos con
-`claude-opus-4-8`, lanzada por el humano (`design.md` §9). Vale con 0 casos
+el modelo de producción (hoy `openai` `gpt-6.1-sol`, D1; **pendiente de
+confirmación del humano**), lanzada por el humano (`design.md` §9). Vale con 0 casos
 ERROR, el modelo en el informe y «obtenido None» ≤ 20 % de los fallos críticos
 de IA3 de los casos evaluados (hoy 93 % y 95 %).

@@ -82,8 +82,11 @@ Medido sobre `efd73b7`: corrida determinista, doble de LLM por la costura `fabri
   `ejecutar_trabajo` aplica `preparar_contexto` y devuelve además `modelo`.
 - `evals/procesos/sv5_modelos.py` (**de F-083**, tras fusionarla): aplica
   `preparar_contexto` igual. Una línea.
-- `evals/runner.py` — R18 y R33 (determinista y real, antes de montar el
-  trabajo de sv5), R19, R20, R21 y R36.
+- `evals/runner.py` — R18 (determinista y real) y R33 (solo la real, antes de
+  montar el trabajo de sv5: el determinista no lee el documento), R19, R20,
+  R21 y R36.
+- `evals/comparar_modelos.py` (**de F-083**) — R33 en `casos_de_fase` de IA3 e
+  IA4: el caso con el documento ausente queda fuera, con su motivo.
 - `evals/modelos.py` (`ResultadoFase.modelos`, `documentos`) y
   `evals/informe.py` (`- Modelo: …`, recuento md/pdf/ninguno y la advertencia
   de R36; las líneas parseables no cambian).
@@ -137,8 +140,9 @@ def preparar_contexto(contexto: dict) -> dict                   # R15 (subproces
 de firmantes, y los PDF no se versionan nunca. Lo versionado es el índice, sin
 contenido: `{codigo: {tipo, sha256, bytes, motivo, nombre_contrato,
 cif_proveedor, nombre_proveedor, codigo_obra, nombre_obra, leido_utc}}`. Con el
-índice y sin fichero local (clon limpio), el caso sale OMITIDO (R33): mejor no
-medir que medir otra cosa. Preferencia MD > PDF y tope `MAX_PDF_MB` = las de
+índice y sin fichero local (clon limpio), el caso sale OMITIDO en la corrida
+con LLM y en el comparador (R33): mejor no medir que medir otra cosa. El
+determinista no lo lee y no cambia. Preferencia MD > PDF y tope `MAX_PDF_MB` = las de
 `ValueAlbaranPipeline`. La sesión de BBDD se abre con
 `default_transaction_read_only=on`.
 
@@ -187,9 +191,13 @@ documento. F-085 va después de las dos.
 
 ## 9. MANUAL del humano (PowerShell, desde el worktree)
 
+Los comandos exactos y vigentes de T12 y T14 están en `progress/current.md`
+(y en `progress/impl_F-084.md`); aquí, su forma.
+
 **T12 · Importar** (solo lee; escribe el libro y la caché locales). Las `PG_*`
 tienen que ser las de Azure en la consola: el `.env` de los servicios apunta a
-local.
+local. Requiere `az login` (las variables de `infra/` leen la identidad con
+`az identity show`).
 
 ```powershell
 cd C:\Users\pgris\PycharmProjects\albaranes-F-084
@@ -212,16 +220,19 @@ Remove-Item Env:SIGRID_API_FUNCTION_KEY, Env:PG_PASSWORD, Env:GRAPH_KEY
 `SHAREPOINT_*`, las del contenedor de sv5. Criterio: informe sin contratos
 fallidos (o con motivo aceptado), `tipo` por contrato en el índice y R27.
 
-**T14 · Línea base con LLM** (cuesta dinero; si F-083 ya está en `dev`, antes
-`python -m evals.comparar_modelos --fase IA3 --modelos claude-opus-4-8 --estimar`):
+**T14 · Línea base con LLM** (cuesta dinero), con el modelo de producción tras
+F-085: `openai` `gpt-6.1-sol` (D1, R20; **pendiente de confirmación del
+humano**). Antes, la estimación sin claves
+`python -m evals.comparar_modelos --fase IA3 --modelos gpt-6.1-sol --estimar`:
 
 ```powershell
-$s = Read-Host -AsSecureString "ANTHROPIC_API_KEY"
-$env:ANTHROPIC_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-$env:ANTHROPIC_MODEL = "claude-opus-4-8"
-python -m evals.runner --con-llm --fases IA3,IA4,E2E --proveedores claude --casos ALQ-001,GEN-002,RES-010 --feature F-084-humo
-python -m evals.runner --con-llm --fases IA3,IA4,E2E --proveedores claude --feature F-084
-Remove-Item Env:ANTHROPIC_API_KEY
+Remove-Item Env:IA3_PROVIDER -ErrorAction SilentlyContinue
+$env:OPENAI_MODEL = "gpt-6.1-sol"
+$s = Read-Host -AsSecureString "OPENAI_API_KEY"
+$env:OPENAI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+python -m evals.runner --con-llm --fases IA3,IA4,E2E --casos ALQ-001,GEN-002,RES-010 --feature F-084-humo
+python -m evals.runner --con-llm --fases IA3,IA4,E2E --feature F-084
+Remove-Item Env:OPENAI_API_KEY
 ```
 
 Criterio: R28 (puede salir ROJO). Con el documento el prompt crece: el humo da el coste.
@@ -246,5 +257,9 @@ Criterio: R28 (puede salir ROJO). Con el documento el prompt crece: el humo da e
 - **P4 = (a)**: clasificación desde la tipología (R14).
 - **P5 = dentro**: IA3 recibe el documento que sv3 ya guardó, en la misma
   llamada (R29–R33); sin integración nueva ni llamada de fase 1b aparte.
-- **P6 = (a)**: proveedor de producción por defecto (R20).
+- **P6 = (a)**: proveedor de producción por defecto (R20). Tras F-085 es
+  `openai` `gpt-6.1-sol` (D1, review 1); el modelo de la línea base de pago
+  queda pendiente de confirmación del humano.
+- **Review 1 (2026-10-23), opción (a)** propuesta por el líder: R33 solo en la
+  corrida con LLM y en el comparador; el determinista no lee el documento.
 - **P7**: F-083 primero en código; sus pagos de IA3/IA4, después de F-084 (§8).
