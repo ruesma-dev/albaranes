@@ -1188,6 +1188,18 @@
         "sv6-valoracion-persist",
         "sv9-alta-sigrid"
       ]
+    },
+    {
+      "id": "F-099",
+      "title": "El empleado del alta en Sigrid es el del usuario que aprueba, no el fijo de sigrid-api (hoy «PABLO GRIS MARTINEZ» en todas)",
+      "description": "ORIGEN: el humano, 2026-10-23: «el usuario que está registrando en Sigrid siempre es pgris, cuando debe depender del que está en el portal». VERIFICADO (solo lectura, 2026-10-23): el `usu` del alta SÍ es el del que aprueba (peticion_json.usu = odomingo/tortiz/lgarcia; dbo.log.usu y dbo.gra.usu del adjunto también). Lo que sale siempre es el EMPLEADO de la cabecera: dca.empide = 2425207 («PABLO GRIS MARTINEZ») en las 46 altas del pipeline, porque sv9 manda `empide` = null y sigrid-api pone `request.empide or settings.sigrid_albaran_empide` (create_albaran_compra_use_case.py:844). En las altas manuales cada usuario lleva su empleado (cperez 537256, vnueda 1129947, dgarcia 2157467…). dbo.usu y dbo.emp no comparten clave fiable: usu.dni vacío; usu.codemp ≈ emp.tarseg casa en algunos (tortiz, lgarcia, cperez) y no en otros (pgris, odomingo, vnueda). A DECIDIR EN LA SPEC: de dónde sale el empleado del usuario que aprueba (tabla de equivalencias usu→empide configurable, el empide de sus últimos albaranes manuales, la clave codemp/tarseg medida en todos los usuarios del portal) y qué se hace si no se encuentra (no mandar empide ⇒ el defecto de sigrid-api, o bloquear el alta); sv9 manda `empide` (ya admitido por el contrato de sigrid-api, campo opcional ≥1). RELACIONADAS: F-069 (equivalencias correo→login), F-053 (alta Sigrid), F-095 (descuentos en el alta). Fallo aparte, de sigrid-api (otro proyecto): la cabecera clonada copia idefac/fecfac/horfac/antestfac/fecent/feclim del último albarán del proveedor: 12 altas vinculadas a facturas ajenas (11 de Jarama a FR26/10960, AC26/30543 a FR26/11027).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 119,
+      "servicios": [
+        "sv9-alta-sigrid"
+      ]
     }
   ]
 }

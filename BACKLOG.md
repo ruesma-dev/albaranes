@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **96 features**, 68 abiertas (1 en curso, 5 con la spec lista, 6 bloqueadas y 56 en backlog) y 28 terminadas.
+Resumen: **97 features**, 69 abiertas (1 en curso, 5 con la spec lista, 6 bloqueadas y 57 en backlog) y 28 terminadas.
 
 ## En curso
 
@@ -92,6 +92,7 @@ Resumen: **96 features**, 68 abiertas (1 en curso, 5 con la spec lista, 6 bloque
 | F-044 | Cache de prompts en las llamadas a Claude: hoy el prompt de sistema entero se reenvia y se paga completo en cada albaran | 52 | estandar |  |
 | F-041 | Arnes: el veredicto de un mutante no puede depender de que la suite recogiera tests | 118 | critico | `feature/F-041-veredicto-honesto-del-mutante` |
 | F-042 | Arnes: segunda opinion de review con un modelo de otra familia (Codex/OpenAI) | 118 | estandar | `feature/F-042-segunda-opinion-otro-modelo` |
+| F-099 | El empleado del alta en Sigrid es el del usuario que aprueba, no el fijo de sigrid-api (hoy «PABLO GRIS MARTINEZ» en todas) | 119 | critico |  |
 
 ## Terminadas
 
@@ -814,6 +815,12 @@ DONDE SI APORTA: una SEGUNDA OPINION de revision, independiente. Hoy implementer
 DISENO PROPUESTO: no sustituye al reviewer. Rol opcional que escribe progress/segunda_opinion_F-XXX.md con la regla anti-telefono-descompuesto (una linea por chat, el detalle en fichero). Se invoca desde Bash con `codex exec`, como proceso externo y NO como subagente. Se lanza solo donde compensa: rigor `critico`, o cuando el reviewer aprueba A LA PRIMERA, que es cuando mas riesgo hay de complacencia. Mejora del arnes -> porte a arnes-base y a los cinco proyectos.
 
 AVISOS: se factura en la cuenta de OpenAI del humano, aparte. El 2026-08-21 NO habia `codex` ni `openai` en PATH ni variables OPENAI: hay que instalarlo y autenticarlo primero, y comprobar los flags reales del CLI, que cambian entre versiones. La clave NO entra en el repositorio ni en progress/: variable de entorno o el login del propio CLI.
+
+### F-099 · El empleado del alta en Sigrid es el del usuario que aprueba, no el fijo de sigrid-api (hoy «PABLO GRIS MARTINEZ» en todas)
+
+estado **pendiente** · prioridad 119 · rigor `critico` · SDD sí
+
+ORIGEN: el humano, 2026-10-23: «el usuario que está registrando en Sigrid siempre es pgris, cuando debe depender del que está en el portal». VERIFICADO (solo lectura, 2026-10-23): el `usu` del alta SÍ es el del que aprueba (peticion_json.usu = odomingo/tortiz/lgarcia; dbo.log.usu y dbo.gra.usu del adjunto también). Lo que sale siempre es el EMPLEADO de la cabecera: dca.empide = 2425207 («PABLO GRIS MARTINEZ») en las 46 altas del pipeline, porque sv9 manda `empide` = null y sigrid-api pone `request.empide or settings.sigrid_albaran_empide` (create_albaran_compra_use_case.py:844). En las altas manuales cada usuario lleva su empleado (cperez 537256, vnueda 1129947, dgarcia 2157467…). dbo.usu y dbo.emp no comparten clave fiable: usu.dni vacío; usu.codemp ≈ emp.tarseg casa en algunos (tortiz, lgarcia, cperez) y no en otros (pgris, odomingo, vnueda). A DECIDIR EN LA SPEC: de dónde sale el empleado del usuario que aprueba (tabla de equivalencias usu→empide configurable, el empide de sus últimos albaranes manuales, la clave codemp/tarseg medida en todos los usuarios del portal) y qué se hace si no se encuentra (no mandar empide ⇒ el defecto de sigrid-api, o bloquear el alta); sv9 manda `empide` (ya admitido por el contrato de sigrid-api, campo opcional ≥1). RELACIONADAS: F-069 (equivalencias correo→login), F-053 (alta Sigrid), F-095 (descuentos en el alta). Fallo aparte, de sigrid-api (otro proyecto): la cabecera clonada copia idefac/fecfac/horfac/antestfac/fecent/feclim del último albarán del proveedor: 12 altas vinculadas a facturas ajenas (11 de Jarama a FR26/10960, AC26/30543 a FR26/11027).
 
 ### F-001 · Test de estructura del monorepo
 
