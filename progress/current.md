@@ -1,6 +1,8 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-069 · `in_progress` (implementer, 2026-10-24): T1–T4 y T6 hechas (un commit por tarea); en curso T7. T5 (medición, solo lectura), T16 y T17 son MANUAL (comandos en `progress/impl_F-069.md` al cerrar).** Desviación anotada: en T6 `composition.py` pasa `ConfigAlta(empide=None)` hasta que T9 quite el campo.
+
 **F-069 · spec v3 (2026-10-23): PARADA 1 cerrada, todas las decisiones E1–E8 DECIDIDAS; lista para `spec_ready`.** Usuario y empleado de Sigrid de quien aprueba: sv9 manda `empide` (hoy siempre nulo ⇒ 2425207 en las 46 altas). Spec en `specs/F-069-usuario-empleado-sigrid/` (rama `feature/F-069-usuario-empleado-sigrid`, worktree `../albaranes-F-069`). Toca sv9, sv4 (solo el panel), `infra` y docs: **actualizar `servicios` de la ficha en `features.json`** (hoy solo sv9). Decidido por el humano (design §9):
 - **E1** la Lista primero en los dos campos. `usu`: Entrada de la Lista en `dbo.usu` → login del correo del portal → Respaldo `pgris`. `empide`: Entrada (empleado de alta) → correo contra `emp.traele` (de alta, un único resultado) → nulo. Una Entrada que no valida deja aviso y sigue.
 - **E3** nunca se bloquea por el empleado: avisos en `peticion_json.resolucion`, visibles en el panel como aviso. **E7** los de baja no cuentan. **E8** último escalón `empide` nulo (aviso `defecto_sigrid_api`); se retira `ALTA_SIGRID_EMPIDE`.
