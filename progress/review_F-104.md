@@ -1,29 +1,38 @@
 <!-- progress/review_F-104.md -->
-Revisión completa (pasada 1), `dev...afe5b6d`, alcance T1–T7 (M1, M-D, M2, T8 y T9 fuera a propósito, D1).
+Revisión incremental desde afe5b6d (pasada 2). La pasada 1 (completa, `dev...afe5b6d`) queda resumida abajo.
 
-# F-104 · Review (pasada 1)
+# F-104 · Review (pasadas 1 y 2) · alcance T1–T7 (M1, M-D, M2, T8 y T9 fuera a propósito, D1)
 
-**Veredicto: CHANGES_REQUESTED (REJECTED).** El código, los tests y la documentación están bien y los
-reproduje. Lo que falla es la evidencia: la campaña manual (17 de los 18 mutantes) no se puede reproducir con
-lo que dice el informe (C4 bis, último punto de mutación). Se arregla en el papel, sin tocar código.
+**Veredicto: APPROVED.** La pasada 1 rechazó solo por la evidencia: la campaña manual no se podía reproducir
+desde el informe. El delta `afe5b6d..1a66c6b` lo corrige y no toca código: solo `progress/mutacion_F-104.md`
+y `progress/current.md`. Como no hay cambio de código, nada de lo aprobado queda invalidado.
 
 **Nivel de rigor:** `critico`, declarado en `features.json`. Exige fase RED, cobertura, mutación con 0
 supervivientes y las MANUAL listadas con su comando exacto.
 
-## Verificación ejecutada por el reviewer
-- `bash harness/init.sh` en el worktree: **exit 0**. Raíz 1883 passed; sv9 1017; sv4 1833; sv1 205, sv2 485,
-  sv3 1576, sv5 96, sv6 473 (+1 skipped); comun en verde por caché. `PUERTA COBERTURA: 100.0% de 4 líneas
-  cambiadas (4/4)`, tamaño `[OK]`, rutas sensibles N/A (no toca ninguna).
-- Recálculo puro (`alcance_de_feature` + `generar_mutantes`): **2 ficheros y 31 líneas** (clasificador 7,
-  alta_sigrid_models 24), **1 mutante**: `alta_sigrid_models.py:373`, operador `logico`,
-  `a.get("codigo") or ""` → `a.get("codigo") and ""`. Coincide con el informe. Prueba de control sobre los
-  ficheros enteros: 13 y 47 mutantes, así que el generador funciona y el 1 es legítimo (30 líneas son datos).
-- **La campaña no se reejecutó**: 566,1 s según el informe (> 60 s). Me quedo en el recálculo más RM1–RM6.
-- Tres filas de la campaña manual reproducidas al pie de la letra, sobre una **copia** en mi scratchpad (RM4),
-  sin `-x`, con la base en verde antes de cada una: M02 `clasificador.py:48` `_NO_ADMITIDO`→`_REVISAR`:
-  **10 failed**/135. M09 `alta_sigrid_models.py:374` `a.get("mensaje")`→`a.get("detalle")`: **4 failed**/50.
-  M14 `_alta_sigrid.html:128` sin `{% if a.mensaje %} · …{% endif %}`: **2 failed**/50. Las tres muertas.
-  El texto exacto lo saqué de `mutantes_manuales.py` del scratchpad de la sesión, **no del informe**.
+## Pasada 2 (delta)
+- `bash harness/init.sh`: **exit 0**. Raíz 1883; sv1 205, sv2 485, sv3 1576, sv4 1833, sv5 96, sv6 473
+  (+1 skipped), sv9 1017; comun en verde por caché. Cobertura 100 % (4/4); tamaño `[OK]` (review 100/140).
+- **Cambio 1: hecho.** La tabla manual trae una fila por mutante (M01…M17) con fichero:línea, texto exacto
+  original → mutado, fallos sin `-x` y los comandos de test. Comparé con el fuente las líneas de M01–M05,
+  M07, M09–M12 y M17, y coinciden.
+- **Muestra nueva**, sobre una copia limpia en mi scratchpad (`rev104b`, idéntica al worktree según `cmp`),
+  sin `-x`, con la base en verde antes de cada una:
+  - M05 `clasificador.py:45` `_NO_ADMITIDO`→`_ERROR`: **6/135**;
+  - M07 `alta_sigrid_models.py:138` texto = código: **5/50**;
+  - M17 `_alta_sigrid.html:127` `{% if a.texto %}`→`{% if a.codigo %}`: **2/50**.
+
+  Las tres cuadran con el informe. Con M02, M09 y M14 de la pasada 1, van **6 de 17 reproducidas**.
+- **Cambio 2: hecho.** `current.md` trae `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4`, desde `infra/`.
+- El árbol de trabajo queda limpio y en `progress/` no escribí nada salvo este informe.
+
+## Pasada 1 (resumen)
+- init.sh exit 0, con los mismos números.
+- Recálculo puro (`alcance_de_feature` + `generar_mutantes`): **2 ficheros, 31 líneas, 1 mutante**
+  (`alta_sigrid_models.py:373`, `logico`, `or ""` → `and ""`). Coincide con el informe.
+- Control sobre los ficheros enteros: 13 y 47 mutantes. El 1 es legítimo: 30 de las líneas son datos.
+- **La campaña no se reejecutó**: 566,1 s según el informe (> 60 s). Me quedé en el recálculo más RM1–RM6.
+- Reproducidas M02 (10/135), M09 (4/50) y M14 (2/50), sobre copia.
 
 ## Checkpoints
 - C1 [x] init.sh exit 0 · [x] ficheros del arnés. C2 [x] solo F-104 `in_progress` · [x] rama
@@ -40,21 +49,19 @@ supervivientes y las MANUAL listadas con su comando exacto.
   [x] RM1: medido en `d3c20f1`, y desde entonces solo cambian `progress/` y `tasks.md` ·
   [x] RM2: media 566,1 = total, base sv4 282,4; cuadra con base + una pasada casi entera de sv4 (`test_f104_*`
   va al final por orden alfabético) · [x] RM3: ninguno de los 17 manuales es equivalente · RM5 N/A (no hay
-  equivalentes) · RM6 N/A (no se quitó ninguna guarda; M12 protege `isinstance`) · **[ ] campaña MANUAL
-  reproducible: cambio 1** · [x] 0 supervivientes · [x] «Evidencias» con los workers (1).
+  equivalentes) · RM6 N/A (no se quitó ninguna guarda; M12 protege `isinstance`) · [x] campaña MANUAL
+  reproducible (pasada 2; 6 de 17 filas reproducidas) · [x] 0 supervivientes · [x] «Evidencias» con los workers (1).
 - C5 [x] T1–T7 `[x]` con 7 commits `F-104 Tn:`; T8/T9 y las MANUAL abiertas por D1 · [x] árbol limpio ·
   [x] `features.json` coherente.
 
 ## Puntos que pidió el líder
 1. **Mutación.** 1 mutante automático sobre 31 líneas es correcto: el mutador no toca literales de diccionario
    ni plantillas, y la prueba de control lo confirma. Para `critico` no basta solo, así que la campaña manual
-   es la evidencia que sostiene la feature. Lo que contiene es bueno: 17 mutantes que cubren cada código, cada
-   texto, cada campo de `avisos_sigrid`, el filtro y las ramas de la plantilla. Pero tiene que poder repetirse
-   desde el informe (cambio 1).
+   es la evidencia: 17 mutantes que cubren cada código, texto, campo de `avisos_sigrid`, filtro y rama de la
+   plantilla. Desde la pasada 2 se puede reproducir desde el informe.
 2. **Panel (D2).** `<li title="codigo">texto · mensaje (línea N)</li>`. El `mensaje` de sigrid-api (porcentaje,
    base y cuota) va entero y escapado (`test_f104_r8_el_mensaje_se_escapa`). Sin texto, igual que antes.
-   Ninguno de los otros 9 avisos de §3.2 de `871cc0c` tiene texto en `TEXTOS_MOTIVO_ALTA`, así que su
-   pintado no cambia.
+   Los otros 9 avisos de §3.2 (`871cc0c`) no tienen texto en `TEXTOS_MOTIVO_ALTA`: se pintan igual que antes.
 3. **Avisos y H25.** El defecto sigue en `producto_sin_historico` (`settings.py:65`); ningún `.ps1` ni
    `.env.example` los nombra (test de R4 y diff). `clasificar` mantiene `CODIGOS_CABECERA.get(…, _ERROR)`
    (`clasificador.py:108`); R3 lo prueba con un código desconocido, con uno a un carácter de distancia y con
@@ -70,8 +77,7 @@ supervivientes y las MANUAL listadas con su comando exacto.
 | R | Tests |
 |---|---|
 | R1 | `test_f104_r1_*` (tabla, `clasificar` en previa y grabación, motivo y detalle, servicio en simulación y real) |
-| R2 | `test_f104_r2_*` |
-| R3 | `test_f104_r3_*` (tabla v8.2 + 3, desconocido a `error`, no son de línea); `test_f053_r18_*` |
+| R2, R3 | `test_f104_r2_*`; `test_f104_r3_*` (tabla v8.2 + 3, desconocido a `error`, no son de línea); `test_f053_r18_*` |
 | R4 | `test_f104_r4_defecto_*`, `test_f104_r4_ni_infra_ni_env_example_*` |
 | R5 | `test_f104_r5_avisos_v83_se_guardan_sin_motivo[simulado/revisar/registrado]` + contraste |
 | R6 | `test_f104_r6_*` (por `desde_cuerpo`; `filas` no se guarda; `tot` sí, R16) |
@@ -83,18 +89,12 @@ supervivientes y las MANUAL listadas con su comando exacto.
 | R12 / R13–R14 | revisado `sv9.md` y `azure-apps` `8f6f243` / MANUAL tras el despliegue, fuera de esta pasada |
 
 ## Cambios requeridos
-1. **`progress/mutacion_F-104.md`**: **una fila por mutante (M01…M17)**, sin agrupar (hoy van juntas M01–M03,
-   M06–M07, M09–M11 y M14–M16), con fichero y **línea**, **texto exacto original → mutado** (el par
-   `viejo`/`nuevo` del script) y **número de fallos** sin `-x` sobre los mismos tests (mis tres: M02 10, M09 4,
-   M14 2). Motivo: hoy solo lo permite `mutantes_manuales.py`, en un scratchpad efímero fuera del repositorio;
-   cuando se borre, la campaña ya no se puede repetir (C4 bis). El script no hace falta versionarlo.
-2. Recomendado, no bloquea: en la línea de despliegue de `progress/current.md`, poner el comando completo,
-   `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4`, como en tasks.md M-D.
+Ninguno. Los dos de la pasada 1 están resueltos: la tabla manual reproducible (`1a66c6b`) y el comando completo
+en `current.md`. Siguiente paso, según D1: F-104 pasa a `blocked` hasta el despliegue de la F-015 de
+sigrid-api; después vienen M1, M-D, M2/M3 y T8–T9.
 
-Con el cambio 1 hecho, la pasada 2 es incremental desde `afe5b6d` y solo mira el informe de mutación.
 ## Automejora (propuesta, no aplicada)
 El último punto de mutación de C4 bis dice «si la campaña automática dio **0** mutantes y se sustituyó por una
 MANUAL». Propongo que diga «o si la manual **complementa** a una automática que no cubre el alcance». Aquí
-salió 1 mutante sobre 31 líneas: la regla no se activaba al pie de la letra, aunque la manual era el 94 % de
-la evidencia. El sitio del cambio es `CHECKPOINTS.md` y `.claude/agents/reviewer.md`, y es genérico: va
-también a `arnes-base`.
+salió 1 mutante sobre 31 líneas y la regla no se activaba al pie de la letra, aunque la manual era el 94 % de
+la evidencia. Va en `CHECKPOINTS.md` y `reviewer.md`, y es genérico: también en `arnes-base`.
