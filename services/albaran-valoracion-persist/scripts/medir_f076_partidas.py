@@ -9,6 +9,9 @@ misma regla con la que sv6 normaliza (``ruesma_comun.sigrid.resolver_partida_obr
 - ``exacta``: existe tal cual;
 - ``normalizada``: **normalizable sin normalizar** (difiere solo en ceros,
   mayúsculas o separadores; con F-076 desplegado y revalorado, 0 en pendientes);
+- ``completa`` (F-098 R31): casa SOLO por el código completo de la hoja
+  (``CD.99.01.64`` frente al cod ``99.01.64``); de esas, y solo de esas, se
+  listan el ``document_id`` y el par final → cod, para corregirlas a mano;
 - ``fuera_de_lista`` / ``ambigua``: sin candidata segura (deben llevar
   ``partida_fuera_de_lista`` / ``partida_ambigua_en_obra``);
 - ``no_aplica``: vacía (almacén) o ``ALM``; ``sin_lista``: no se pudo leer la obra.
@@ -20,7 +23,8 @@ documento (aprobado / pendiente).
   ``SHOW transaction_read_only`` no da ``on``, aborta sin leer nada.
 - sigrid-api con el lector de sv6 (solo ``sql/read``) y ``NO_TOLERA``.
 - Credenciales SOLO de la configuración de sv6 (entorno / su ``.env``); no se
-  imprimen nunca, ni precios, ni textos, ni códigos: solo recuentos.
+  imprimen nunca, ni precios, ni textos, ni códigos: solo recuentos (salvo el
+  documento y el par final → cod de las ``completa``, F-098 R31).
 
 Uso (lo ejecuta el humano)::
 
@@ -35,19 +39,25 @@ import sys
 from collections import Counter
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from ruesma_comun.obras import canonizar_codigo_obra
-from ruesma_comun.sigrid import LectorSql, leer_partidas_obra, resolver_partida_obra
+from ruesma_comun.sigrid import (
+    MOTIVO_COMPLETA,
+    LectorSql,
+    casar_partida,
+    leer_partidas_obra,
+    resolver_partida_obra,
+)
 from sqlalchemy import text
 
 #: Opciones de conexión de psycopg: la SESIÓN entera en solo lectura.
 OPCIONES_SOLO_LECTURA = {"options": "-c default_transaction_read_only=on"}
 
 SQL_LINEAS = """
-SELECT lv.codigo_partida_albaran, lv.codigo_partida_final, lv.review_reasons_json,
-       d.obra_codigo, d.approved
+SELECT d.id AS document_id, lv.codigo_partida_albaran, lv.codigo_partida_final,
+       lv.review_reasons_json, d.obra_codigo, d.approved
 FROM albaran_line_valuations lv
 JOIN albaran_valuations v ON v.id = lv.valuation_id
 JOIN albaran_documents_merge d ON d.id = v.document_id
@@ -57,6 +67,7 @@ WHERE d.is_active AND lv.line_kind = 'from_albaran'
 ETIQUETAS = {
     "exacta": "existe tal cual",
     "normalizada": "normalizable sin normalizar",
+    "completa": "casa solo por el código completo",
     "fuera_de_lista": "fuera de lista (sin candidata segura)",
     "ambigua": "ambigua en la obra",
     "no_aplica": "vacía (almacén) o ALM",
@@ -75,6 +86,8 @@ class Medicion:
     motivos: Counter  # (motivo, estado) -> líneas
     obras_sin_lista: int
     lineas: int
+    #: (F-098 R31) (document_id, estado, final, cod) de las de clase ``completa``.
+    completas: list[tuple[str, str, str, str]] = field(default_factory=list)
 
 
 def comprobar_solo_lectura(conexion: Any) -> None:
@@ -103,6 +116,7 @@ def medir(conexion: Any, lector: LectorSql, *, alm: str) -> Medicion:
     listas: dict[str | None, Any] = {}
     clases: Counter = Counter()
     motivos: Counter = Counter()
+    completas: list[tuple[str, str, str, str]] = []
     for fila in filas:
         estado = "aprobado" if fila.get("approved") else "pendiente"
         obra = canonizar_codigo_obra(fila.get("obra_codigo"))
@@ -116,12 +130,19 @@ def medir(conexion: Any, lector: LectorSql, *, alm: str) -> Medicion:
         if lista is None:
             clase = "sin_lista"
         else:
-            clase = resolver_partida_obra(lista, fila.get("codigo_partida_final"), alm).motivo
+            final = fila.get("codigo_partida_final")
+            resolucion = resolver_partida_obra(lista, final, alm)
+            clase = resolucion.motivo
+            # F-098 R31: sv6 la normaliza igual, pero casa SOLO por el completo.
+            if clase == "normalizada" and casar_partida(lista, final, alm).motivo == MOTIVO_COMPLETA:
+                clase = "completa"
+                completas.append((str(fila.get("document_id")), estado, str(final), str(resolucion.codigo)))
         clases[(clase, estado)] += 1
         for motivo in _motivos_de(fila):
             motivos[(motivo, estado)] += 1
     sin_lista = sum(1 for lista in listas.values() if lista is None)
-    return Medicion(clases=clases, motivos=motivos, obras_sin_lista=sin_lista, lineas=len(filas))
+    return Medicion(clases=clases, motivos=motivos, obras_sin_lista=sin_lista, lineas=len(filas),
+                    completas=completas)
 
 
 def formatear(medicion: Medicion) -> str:
@@ -140,6 +161,10 @@ def formatear(medicion: Medicion) -> str:
         pend = medicion.motivos.get((motivo, "pendiente"), 0)
         apro = medicion.motivos.get((motivo, "aprobado"), 0)
         lineas.append(f"  {motivo:<42} {pend:>6} / {apro:>6}")
+    if medicion.completas:
+        lineas += ["", "Líneas que casan solo por el código completo (documento: final → cod):"]
+        for documento, estado, final, cod in medicion.completas:
+            lineas.append(f"  {documento} ({estado})  {final} → {cod}")
     return "\n".join(lineas)
 
 

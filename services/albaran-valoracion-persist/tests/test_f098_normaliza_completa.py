@@ -81,3 +81,85 @@ def test_f098_r29_subcapitulo_en_completo_no_se_normaliza():
     assert fila.codigo_partida_final == "CD.99.01"
     assert "partida_fuera_de_lista" in fila.review_reasons
     assert cabecera.review_required is True
+
+
+# ------------------------------------------------------------------ #
+# R31 · la medición cuenta aparte la clase «completa»
+# ------------------------------------------------------------------ #
+class _LectorR31:
+    """Lector falso de sigrid-api: la 0686 de T0 (``FILAS_0686``) para cualquier obra."""
+
+    def __init__(self) -> None:
+        self.obras: list[str] = []
+
+    def __call__(self, sql, parametros, etiqueta, politica, max_rows):
+        self.obras.append(parametros[0])
+        return list(_COLUMNAS), [list(f) for f in FILAS_0686]
+
+
+def _fila_r31(final, *, doc="doc-1", aprobado=False, leida=None):
+    return {"document_id": doc, "codigo_partida_albaran": leida, "codigo_partida_final": final,
+            "obra_codigo": "0686", "approved": aprobado, "review_reasons_json": None}
+
+
+def _medir_r31(filas):
+    from scripts import medir_f076_partidas as medir
+    from tests.test_f076_medicion import _Conexion
+
+    return medir, medir.medir(_Conexion(filas=filas), _LectorR31(), alm="ALM")
+
+
+def test_f098_r31_completa_cuenta_aparte_por_estado():
+    medir, resultado = _medir_r31([
+        _fila_r31("CD.99.01.64", doc="8c4e026a"),
+        _fila_r31("cd.99.01.64", doc="8c4e026a", aprobado=True),
+        _fila_r31("99.01.64"),              # exacta
+        _fila_r31("99.1.64"),               # normalizada por el cod, no por el completo
+        _fila_r31("ANT.98.01", doc="d-2"),  # completa en otro capítulo
+        _fila_r31("CD.99.01"),              # completo de un NO hoja: fuera de lista
+    ])
+    assert resultado.clases == {
+        ("completa", "pendiente"): 2,
+        ("completa", "aprobado"): 1,
+        ("exacta", "pendiente"): 1,
+        ("normalizada", "pendiente"): 1,
+        ("fuera_de_lista", "pendiente"): 1,
+    }
+    assert resultado.completas == [
+        ("8c4e026a", "pendiente", "CD.99.01.64", "99.01.64"),
+        ("8c4e026a", "aprobado", "cd.99.01.64", "99.01.64"),
+        ("d-2", "pendiente", "ANT.98.01", "98.01"),
+    ]
+    assert "completa" in medir.ETIQUETAS
+
+
+def test_f098_r31_informe_solo_el_documento_y_el_par_de_las_completas():
+    medir, resultado = _medir_r31([
+        _fila_r31("CD.99.01.64", doc="8c4e026a"),
+        _fila_r31("99.1.64", doc="otro-doc"),
+        _fila_r31("CI.04.18", doc="tercero"),
+    ])
+    informe = medir.formatear(resultado)
+    lineas = [ln.split() for ln in informe.splitlines()]
+    assert ["casa", "solo", "por", "el", "código", "completo", "1", "/", "0"] in lineas
+    assert ["8c4e026a", "(pendiente)", "CD.99.01.64", "→", "99.01.64"] in lineas
+    # Las demás clases, solo recuentos: ni su documento ni sus códigos.
+    for prohibido in ("otro-doc", "tercero", "99.1.64", "CI.04.18", "CI.4.18", "Material", "0686"):
+        assert prohibido not in informe
+
+
+def test_f098_r31_sin_completas_no_hay_listado():
+    medir, resultado = _medir_r31([_fila_r31("99.01.64", doc="d-9")])
+    informe = medir.formatear(resultado)
+    assert resultado.completas == []
+    assert "d-9" not in informe and "99.01.64" not in informe
+    assert ["casa", "solo", "por", "el", "código", "completo", "0", "/", "0"] in [
+        ln.split() for ln in informe.splitlines()]
+
+
+def test_f098_r31_la_consulta_lee_el_documento_y_sigue_solo_leyendo():
+    from scripts import medir_f076_partidas as medir
+
+    sql = " ".join(medir.SQL_LINEAS.split()).upper()
+    assert "D.ID AS DOCUMENT_ID" in sql
+    assert sql.startswith("SELECT ") and "PRECIO" not in sql and "IMPORTE" not in sql
