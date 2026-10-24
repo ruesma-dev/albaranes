@@ -91,7 +91,7 @@ def test_f069_r16_avisos_de_usu_y_de_empide_en_orden():
 
 def test_f069_r16_la_resolucion_se_guarda_ya_en_en_curso():
     sigrid = f.sigrid(usuarios={"login1": "login1"})
-    repo, doc, _ = f.procesar(sigrid)
+    repo, _doc, _ = f.procesar(sigrid)
     en_curso = [r for d, r in repo.guardados if r.estado is EstadoAlta.EN_CURSO]
     assert en_curso and CLAVE_RESOLUCION in en_curso[0].peticion
 
@@ -245,7 +245,7 @@ def test_f069_r20_el_adjunto_va_con_el_usu_de_la_peticion_con_resolucion():
     creado = replace(previa_ok(f.peticion()), estado="creado")
     sigrid = SigridFalso(previa=previa_ok(f.peticion()), grabacion=creado,
                          usuarios={"login1b": "LOGIN1B"})
-    repo, doc, resultado = f.procesar(sigrid, lista='{"login1": {"usu": "login1b"}}',
+    _repo, _doc, resultado = f.procesar(sigrid, lista='{"login1": {"usu": "login1b"}}',
                                       modo=ModoAlta.REAL)
     assert resultado.estado is EstadoAlta.REGISTRADO
     (adjunto,) = [c for c in sigrid.llamadas if c[0] == "adjuntar_pdf"]

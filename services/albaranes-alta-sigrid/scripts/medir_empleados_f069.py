@@ -225,8 +225,8 @@ def resumen(medidas: list[Medida], altas: list[AltaEscrita], *, entradas_lista: 
         "",
         "## Altas ya escritas por el pipeline (`registrado` con `sigrid_con_ide`)",
         "",
-        f"Altas: {len(altas)}; difieren del empleado que les correspondería: {len(difieren)} "
-        "(con nulo, sigrid-api pone su defecto y no se cuenta como diferencia).",
+        (f"Altas: {len(altas)}; difieren del empleado que les correspondería: {len(difieren)} "
+         "(con nulo, sigrid-api pone su defecto y no se cuenta como diferencia)."),
         "",
         "| con.ide | cod | Login | usu | dca.empide actual | le correspondería | difiere |",
         "|---|---|---|---|---|---|---|",

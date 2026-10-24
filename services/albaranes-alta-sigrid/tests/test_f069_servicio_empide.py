@@ -177,7 +177,7 @@ def test_f069_r13_nada_del_empleado_impide_la_previa_ni_la_grabacion(fallar_en, 
 @pytest.mark.parametrize("filas", [[], [BAJA], [ALTA, OTRO_ALTA]])
 def test_f069_r13_sin_empleado_el_alta_sigue_en_simulado(filas):
     sigrid = f.sigrid(usuarios={"login1": "login1"}, empleados_por_correo={CORREO: filas})
-    repo, doc, resultado = f.procesar(sigrid)
+    repo, _doc, resultado = f.procesar(sigrid)
     assert resultado.estado is EstadoAlta.SIMULADO
     assert not [e for _, e in [(d, r.estado) for d, r in repo.guardados]
                 if e in (EstadoAlta.ERROR, EstadoAlta.REVISAR, EstadoAlta.NO_ADMITIDO)]
