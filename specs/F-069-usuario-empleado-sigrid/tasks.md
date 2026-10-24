@@ -22,7 +22,7 @@ Rama `feature/F-069-usuario-empleado-sigrid`. Rigor `critico`: **fase RED obliga
 
 ## Bloque C · panel de sv4
 
-- [ ] T12: `alta_sigrid_models.py`: `empide`, `avisos_resolucion` con `TEXTOS_AVISO_RESOLUCION`, `usu_respaldo` por `resolucion` con la regla de hoy como respaldo, texto nuevo de `usuario_no_resuelto`; constantes contrastadas con la fuente de sv9; `_alta_sigrid.html` con «Empleado de Sigrid» y los avisos con estilo de aviso, no de error ni de bloqueo (R21–R24)  |  Verificación: `pytest services/albaranes-front -k "f069 or f077_motivos"`
+- [x] T12: `alta_sigrid_models.py`: `empide`, `avisos_resolucion` con `TEXTOS_AVISO_RESOLUCION`, `usu_respaldo` por `resolucion` con la regla de hoy como respaldo, texto nuevo de `usuario_no_resuelto`; constantes contrastadas con la fuente de sv9; `_alta_sigrid.html` con «Empleado de Sigrid» y los avisos con estilo de aviso, no de error ni de bloqueo (R21–R24)  |  Verificación: `pytest services/albaranes-front -k "f069 or f077_motivos"`
 
 ## Bloque D · infra, documentación y coordinación
 
