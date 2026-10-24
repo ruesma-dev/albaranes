@@ -635,3 +635,101 @@ def test_f098_r9_cd2_01_de_la_0692_nunca_2_01():
     lista = lista_de("0692", FILAS_0692)
     assert P.resolver_partida_obra(lista, "CD2.01", None).codigo == "CD2.01"
     assert P.casar_partida(lista, "2.01", None).motivo == "fuera_de_lista"
+
+
+# ------------------------------------------------------------------ #
+# R10 · misma_partida
+# ------------------------------------------------------------------ #
+@pytest.mark.parametrize(
+    ("a", "b"),
+    [
+        ("CD.99.01.64", "99.01.64"),  # completa frente a exacta
+        ("99.01.64", "CD.99.01.64"),
+        ("cd 99.1.64", "99.1.64"),  # completa frente a normalizada
+        ("99.01.64", "99.01.64"),
+        ("ANT.98.01", "98.1"),
+        ("CI.04.18", "CI.4.18"),
+    ],
+)
+def test_f098_r10_misma_partida(a, b):
+    assert P.misma_partida(lista_de("0686", FILAS_0686), a, b) is True
+
+
+@pytest.mark.parametrize(
+    ("a", "b"),
+    [
+        ("CD.99.01.64", "21.02.21"),  # dos hojas distintas
+        ("CD.99.01.64", "CD.99.01"),  # una no casa (no hoja)
+        ("CD.99.01", "CD.99.01"),  # ninguna casa, aunque sean iguales
+        ("X.1", "X.1"),
+        ("", "99.01.64"),
+        (None, "99.01.64"),
+        ("99.01.64", None),
+        ("   ", "   "),
+        ("ALM", "ALM"),
+        ("CD.99.01.64/CI.4.18", "99.01.64"),  # compuesta no es «la misma partida»
+        ("CD.99.01.64/CI.4.18", "CD.99.01.64/CI.4.18"),
+    ],
+)
+def test_f098_r10_no_es_la_misma_partida(a, b):
+    assert P.misma_partida(lista_de("0686", FILAS_0686), a, b, "ALM") is False
+
+
+def test_f098_r10_alm_por_defecto_none_no_es_literal_especial():
+    """Sin ``alm``, «ALM» es una lectura más: no casa con nada de la 0686."""
+    assert P.misma_partida(lista_de("0686", FILAS_0686), "ALM", "ALM") is False
+    lista = lista_de("0000", [[1, 0, "ALM", "Almacén"]])
+    assert P.misma_partida(lista, "alm", "ALM") is True
+    assert P.misma_partida(lista, "alm", "ALM", "ALM") is False
+
+
+def test_f098_r10_sin_lista_es_false():
+    assert P.misma_partida(None, "99.01.64", "99.01.64") is False
+
+
+def test_f098_r10_ambigua_no_es_la_misma():
+    lista = lista_de("0692", FILAS_0692)
+    assert P.misma_partida(lista, "CI.1.01", "CI.1.01") is False
+    assert P.misma_partida(lista, "CI.1.1", "CI.01.01") is False
+
+
+# ------------------------------------------------------------------ #
+# R11 · mostrar_partida
+# ------------------------------------------------------------------ #
+@pytest.mark.parametrize(
+    ("filas", "cod", "mostrado"),
+    [
+        (FILAS_0686, "99.01.64", "CD.99.01.64"),
+        (FILAS_0686, "98.01", "ANT.98.01"),
+        (FILAS_0686, "CI.4.18", "CI.4.18"),
+        (FILAS_0692, "CI.6.1", "CI.6.1"),  # repetido con el mismo completo
+        (FILAS_0692, "CD2.01", "CD2.01"),
+        (FILAS_0696, "P4.08.05", "CD.P4.08.05"),  # repetido, mismo completo
+        (FILAS_0686, "CD.99.01.64", "CD.99.01.64"),  # no es un cod: tal cual
+        (FILAS_0686, "99.1.64", "99.1.64"),  # ni se normaliza
+        (FILAS_0686, "", ""),
+        (FILAS_0686, None, None),
+    ],
+)
+def test_f098_r11_mostrar_partida(filas, cod, mostrado):
+    assert P.mostrar_partida(lista_de("0000", filas), cod) == mostrado
+
+
+def test_f098_r11_repetido_con_completos_distintos_da_el_cod():
+    filas = [[1, 0, "CD", "C"], [2, 1, "X.1", "a"], [3, 0, "CI", "I"], [4, 3, "X.1", "b"]]
+    lista = lista_de("0000", filas)
+    assert sorted(h.codigo_completo for h in lista.hojas) == ["CD.X.1", "CI.X.1"]
+    assert P.mostrar_partida(lista, "X.1") == "X.1"
+
+
+def test_f098_r11_sin_lista_el_cod():
+    assert P.mostrar_partida(None, "99.01.64") == "99.01.64"
+    assert P.mostrar_partida(None, None) is None
+
+
+def test_f098_r11_cod_con_espacios_exteriores():
+    """Las partidas guardadas pueden llevar espacios: se busca el cod recortado
+    y, si no está, se devuelve tal cual."""
+    lista = lista_de("0686", FILAS_0686)
+    assert P.mostrar_partida(lista, " 99.01.64 ") == "CD.99.01.64"
+    assert P.mostrar_partida(lista, " X ") == " X "

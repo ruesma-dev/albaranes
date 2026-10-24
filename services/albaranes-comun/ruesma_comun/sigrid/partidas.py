@@ -677,6 +677,46 @@ def resolver_partida_obra(lista: ListaPartidasObra, lectura: Any, alm: str | Non
     return ResolucionPartida(leida, RESOLUCION_FUERA_DE_LISTA, leida)
 
 
+# ------------------------------------------------------------------ #
+# F-098 · comparar y enseñar partidas con la lista de la obra
+# ------------------------------------------------------------------ #
+#: Motivos con los que una lectura es UNA hoja de la lista (sin compuestas).
+_MOTIVOS_UNA_HOJA = frozenset({MOTIVO_EXACTA, MOTIVO_NORMALIZADA, MOTIVO_COMPLETA})
+
+
+def misma_partida(lista: ListaPartidasObra | None, a: Any, b: Any, alm: str | None = None) -> bool:
+    """(F-098 R10) ¿Son ``a`` y ``b`` la misma hoja de la obra?
+
+    ``True`` solo si las dos casan (``exacta``, ``normalizada`` o ``completa``)
+    con el MISMO cod: ``CD.99.01.64`` y ``99.01.64`` de CD. Vacías, ``alm``,
+    compuestas, ambiguas, fuera de la lista o sin lista ⇒ ``False``.
+    """
+    if lista is None:
+        return False
+    caso_a, caso_b = casar_partida(lista, a, alm), casar_partida(lista, b, alm)
+    return (
+        caso_a.motivo in _MOTIVOS_UNA_HOJA
+        and caso_b.motivo in _MOTIVOS_UNA_HOJA
+        and caso_a.codigos_lista == caso_b.codigos_lista
+    )
+
+
+def mostrar_partida(lista: ListaPartidasObra | None, cod: str | None) -> str | None:
+    """(F-098 R11) Lo que se pinta para el cod guardado: su código completo.
+
+    El código completo de la hoja con ese cod (recortado); si varias hojas lo
+    tienen con códigos completos distintos, si no es un cod de la lista o si no
+    hay lista, el cod tal cual (nunca se normaliza ni se inventa un prefijo).
+    """
+    if lista is None or cod is None:
+        return cod
+    clave = str(cod).strip()
+    completos = {h.codigo_completo for h in lista.hojas if h.codigo == clave}
+    if len(completos) == 1:
+        return completos.pop()
+    return cod
+
+
 @dataclass
 class _Entrada:
     lista: ListaPartidasObra | None  # la última buena (puede estar caducada)
