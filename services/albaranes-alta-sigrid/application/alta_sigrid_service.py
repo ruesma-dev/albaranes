@@ -32,6 +32,7 @@ from domain.models.alta_models import (
     EstadoAlta,
     ModoAlta,
     Motivo,
+    OrigenEmpleado,
     OrigenUsuario,
     PeticionAlbaran,
     RespuestaAlta,
@@ -44,9 +45,15 @@ from domain.ports.sigrid_alta_port import SigridAltaPort
 from domain.services.clasificador import clasificar, motivos_de_error
 from domain.services.comparador_previa import comparar
 from domain.services.usuario_sigrid import (
+    AVISO_DEFECTO_SIGRID_API,
+    AVISO_EMPLEADO_LECTURA_FALLIDA,
+    AVISO_EMPLEADO_LISTA_NO_VALIDO,
+    AVISO_EMPLEADO_SIN_CORREO,
     AVISO_USUARIO_LISTA_NO_EXISTE,
     Equivalencia,
     candidato_usuario,
+    clasificar_empleados_correo,
+    correo_ruesma,
     entrada_de,
 )
 from domain.services.validador_alta import (
@@ -280,6 +287,59 @@ class AltaSigridService:
             )
         return self._respaldo, OrigenUsuario.RESPALDO, avisos
 
+    def _resolver_empleado(
+        self, approved_by: str | None,
+    ) -> tuple[int | None, OrigenEmpleado, list[AvisoResolucion]]:
+        """F-069 R9–R13: el ``empide`` de una petición nueva, su Origen y los
+        Avisos de resolución. ÚNICO punto que lo decide. NUNCA lanza ni bloquea:
+        una lectura caída de ``dbo.emp`` es un Aviso y el escalón siguiente.
+
+        Escalones: (1) la Entrada de la Lista con ``empide``, si es un empleado
+        de alta (si no, ``empleado_lista_no_valido``); (2) el único Empleado del
+        correo de alta (``clasificar_empleados_correo``); (3) nulo, y sigrid-api
+        pone su defecto (``defecto_sigrid_api``). No depende del Origen del
+        usuario (E1)."""
+        avisos: list[AvisoResolucion] = []
+        entrada = entrada_de(approved_by, self._equivalencias)
+        if entrada is not None and entrada.empide is not None:
+            try:
+                de_alta = self._sigrid.empleado_de_alta(entrada.empide)
+            except Exception as exc:  # noqa: BLE001 — R13: el empleado nunca tumba el alta
+                avisos.append(AvisoResolucion(
+                    AVISO_EMPLEADO_LECTURA_FALLIDA,
+                    f"dbo.emp (empleado de la Lista): {type(exc).__name__}",
+                ))
+            else:
+                if de_alta:
+                    return entrada.empide, OrigenEmpleado.LISTA, avisos
+                avisos.append(AvisoResolucion(
+                    AVISO_EMPLEADO_LISTA_NO_VALIDO,
+                    f"el empide {entrada.empide} de la Lista no es un empleado de alta",
+                ))
+        correo = correo_ruesma(approved_by)
+        if correo is None:
+            avisos.append(AvisoResolucion(
+                AVISO_EMPLEADO_SIN_CORREO, "quien aprobó no tiene correo de Ruesma",
+            ))
+        else:
+            try:
+                empleados = self._sigrid.buscar_empleados_por_correo(correo)
+            except Exception as exc:  # noqa: BLE001 — R13
+                avisos.append(AvisoResolucion(
+                    AVISO_EMPLEADO_LECTURA_FALLIDA,
+                    f"dbo.emp (empleados del correo): {type(exc).__name__}",
+                ))
+            else:
+                ide, aviso = clasificar_empleados_correo(empleados)
+                if ide is not None:
+                    return ide, OrigenEmpleado.CORREO, avisos
+                avisos.append(aviso)
+        avisos.append(AvisoResolucion(
+            AVISO_DEFECTO_SIGRID_API,
+            "se manda empide nulo: sigrid-api pone su empleado por defecto",
+        ))
+        return None, OrigenEmpleado.DEFECTO_SIGRID_API, avisos
+
     def _flujo(
         self, document_id: str, previa: AltaActual | None, approved_by: str | None,
         paso: _Paso,
@@ -298,8 +358,11 @@ class AltaSigridService:
                     EstadoAlta.ERROR, paso, motivos=(Motivo(MOTIVO_USUARIO, str(exc)),),
                 ))
                 return
-            logger.info("%s document_id=%s usu=%s origen_usu=%s avisos=%s", _LOG, document_id,
-                        usu, origen_usu.value, [a.codigo for a in avisos])
+            empide, origen_empide, avisos_empide = self._resolver_empleado(approved_by)
+            avisos = [*avisos, *avisos_empide]
+            logger.info("%s document_id=%s usu=%s origen_usu=%s empide=%s origen_empide=%s "
+                        "avisos=%s", _LOG, document_id, usu, origen_usu.value, empide,
+                        origen_empide.value, [a.codigo for a in avisos])
             _avisar_lineas_de_otro_contrato(document_id, datos)
             validada = validar_y_construir(
                 datos, self._config, hoy_en_madrid(self._reloj()), usu,

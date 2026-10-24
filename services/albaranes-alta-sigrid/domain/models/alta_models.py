@@ -427,3 +427,12 @@ class OrigenUsuario(StrEnum):
     LISTA = "lista"
     CORREO = "correo"
     RESPALDO = "respaldo"
+
+
+class OrigenEmpleado(StrEnum):
+    """De qué escalón salió el ``empide`` (F-069 R9–R12). Con
+    ``defecto_sigrid_api`` se manda nulo y sigrid-api pone el suyo."""
+
+    LISTA = "lista"
+    CORREO = "correo"
+    DEFECTO_SIGRID_API = "defecto_sigrid_api"

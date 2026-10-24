@@ -85,7 +85,9 @@ def test_f053_r47_casa_con_dbo_usu_y_manda_el_cod_de_sigrid():
     repo, doc, resultado = _procesar(sigrid, approved_by="  Ana@Ruesma.ES ")
     assert resultado.estado is EstadoAlta.SIMULADO
     assert sigrid.llamadas[0] == ("buscar_usuario", "Ana")
-    assert sigrid.operaciones() == ["buscar_usuario", "buscar_albaranes", "alta_albaran"]
+    # F-069 R14: tras el usu, el empleado (dbo.emp), antes de las altas a mano.
+    assert sigrid.operaciones() == ["buscar_usuario", "buscar_empleados_por_correo",
+                                    "buscar_albaranes", "alta_albaran"]
     assert _usu_pedido(sigrid) == ["ANA"]
     assert repo.ultimo(doc).peticion["usu"] == "ANA"
 
