@@ -1181,7 +1181,7 @@
       "id": "F-098",
       "title": "Selector de partidas como el de partes (preselección por capítulo de primer nivel CD/CI/CP/…) y partida con su código completo (CD.99.01.64) aunque en Sigrid la hoja sea «99.01.64»",
       "description": "ORIGEN: el humano, 2026-10-23, prioridad alta: «que el filtro de partidas funcione igual que el de partes, tenga cd, ci, cp o cualquier otro sufijo en primer nivel como preselección, y luego las partidas» y «la partida completa (0686, Porcelanosa 96306082) debe incluir todo el código de la partida y aquí no incluye cd, he tenido que poner 99.01.64 y no cd.99.01.64». VERIFICADO (solo lectura, 2026-10-23): en Sigrid la obra 0686 tiene 4 capítulos raíz (98 AJUSTES ALMACÉN, CD COSTES DIRECTOS, CI COSTES INDIRECTOS, CP COSTES PROPORCIONALES); las hojas de CI/CP/98 llevan el prefijo en su `cod` (CI.4.18, 95 hojas) pero las 2313 hojas de CD NO (`cod` = '99.01.64', ruta CD › 99 › 99.01 › 99.01.64; '07.17' igual). El albarán 8c4e026a (Porcelanosa 96306082, línea 903) llevaba partida leída y final 'CD.99.01.64'; aprobado por lgarcia el 23-10 06:48, sv9 lo envió así y sigrid-api lo rechazó: «La obra no tiene ninguna partida 'CD.99.01.64'» (no_admitido); a las 07:02 se guardó la línea con '99.01.64' y hoy el albarán está sin aprobar. CÓMO LO HACE PARTES (services/partes-front): GET /api/sigrid/partidas devuelve solo hojas con {ide, cod, res, capitulo}; el capítulo se calcula subiendo el árbol (partida_catalog.py: prefijo del cod y, si no, palabra clave en res); el buscador (static/app.js _partidaCombo/buildPartidaPicker) tiene chips Todas/CD/CI encima de la lista, filtra por capítulo y luego por texto; guarda partida_ide y escribe paride = ide en Sigrid. CÓMO ESTÁ ALBARANES: ruesma_comun.sigrid.partidas (_hojas) devuelve el `cod` en bruto sin capítulo ni ide; sv4 attachPartidaCombo (app.js 805-977) filtra por texto y guarda el texto; F-076 normalizar_partida no casa 'CD.99.01.64' con '99.01.64'; sv9 (validador_alta.py) envía codigo_partida_final como texto. A DECIDIR EN LA SPEC: (1) la lista de partidas de comun devuelve también ide y capítulo raíz (todos los de la obra, no solo CD/CI/CP) y el código completo mostrado = capítulo + cod cuando el cod no lo lleva; (2) en sv4, preselección por capítulo de primer nivel (chips o combo previo con los capítulos que tenga la obra) y después la partida, como en partes; (3) qué se guarda (código completo para el humano, cod de Sigrid y/o ide) y qué envía sv9 a sigrid-api para que no vuelva a fallar; (4) casar en sv6/F-076 y en la lectura de IA (F-049) 'CD.99.01.64' con la hoja '99.01.64' de CD; (5) los albaranes ya guardados con el prefijo. RELACIONADAS: F-049 (partida de la lista), F-076 (blocked, normalización), F-077 (partida inválida no frena Guardar y aprobar), F-096 (ediciones de partida perdidas al guardar), F-053 (alta Sigrid).",
-      "status": "spec_ready",
+      "status": "in_progress",
       "sdd": true,
       "rigor": "critico",
       "priority": 4,
@@ -1250,14 +1250,15 @@
       "id": "F-104",
       "title": "sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos",
       "description": "ORIGEN: el humano, 2026-10-24 («sí a todo»), al recibir de la sesión de sigrid-api la petición de acuse del contrato v8.3 (rama feature/F-015-albaran-plantilla-y-retencion, commit 871cc0c; resumen en sigrid-api/progress/t0_F-015_albaranes.md). Sale de la D6 de F-103 (parada hasta que sigrid-api termine) para tenerlo listo ANTES de que sigrid-api despliegue su F-015: sin estos mapeos, un código de cabecera desconocido va a `error` (F-053 H25). ACUSE ENVIADO el 2026-10-24 con estos mapeos, decididos por el humano: (1) errores de cabecera `proveedor_no_encontrado`, `proveedor_ambiguo` y `retencion_no_soportada` ⇒ `no_admitido` (alta a mano) en `domain/services/clasificador.py` (CODIGOS_CABECERA) de sv9; (2) avisos `retencion_del_contrato` y `cabecera_sin_dato` informativos: NO entran en `ALTA_SIGRID_AVISOS_BLOQUEANTES` (defecto en config/settings.py ni en infra/), pero se ven en el panel; (3) textos legibles de los cinco en `TEXTOS_MOTIVO_ALTA` de sv4 (`domain/models/alta_sigrid_models.py`; el test de F-077 R27 lo exige); (4) `proveedor_sin_albaran_previo` (retirado en la v8.3) se mantiene hasta verificar el despliegue de sigrid-api y se quita después (tarea final o nota). FUERA: enseñar `totales.tot` (neto con retención) en el panel; la comparación de la previa sigue por línea (totales.tot, retenciones y filas.dcarec no se comparan). El usu del adjunto ya es el de la petición (F-069; confirmado a sigrid-api). DESPLIEGUE: sv9 y sv4 antes o a la vez que la F-015 de sigrid-api, que avisará antes de desplegar. Actualizar sv9.md y §10 de azure-apps/albaranes.md. RELACIONADAS: F-103 (D6), F-053 (H25), F-077 (R27), F-069.",
-      "status": "pending",
+      "status": "blocked",
       "sdd": true,
       "rigor": "critico",
       "priority": 2,
       "servicios": [
         "sv9-alta-sigrid",
         "sv4-front"
-      ]
+      ],
+      "branch": "feature/F-104-codigos-contrato-v83"
     }
   ]
 }

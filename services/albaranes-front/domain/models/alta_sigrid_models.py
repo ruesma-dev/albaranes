@@ -101,7 +101,13 @@ TEXTOS_MOTIVO_ALTA: dict[str, str] = {
     "obra_ambigua": "La obra es ambigua en Sigrid",
     "contrato_no_encontrado": "El contrato no existe en Sigrid",
     "contrato_ambiguo": "El contrato es ambiguo en Sigrid",
+    # Retirado en la v8.3; el texto se queda siempre: las altas antiguas lo
+    # llevan en motivos_json (F-104 R10).
     "proveedor_sin_albaran_previo": "El proveedor no tiene ningún albarán previo en Sigrid",
+    # Contrato v8.3 (F-015 de sigrid-api; F-104).
+    "proveedor_no_encontrado": "El proveedor no existe en Sigrid en la empresa de la obra",
+    "proveedor_ambiguo": "Hay varios proveedores en Sigrid con ese CIF",
+    "retencion_no_soportada": "La retención del contrato no la admite el alta automática: alta a mano",
     "almacen_de_obra_no_resuelto": "Sigrid no encuentra el almacén de la obra",
     "demasiadas_lineas": "El albarán tiene más líneas de las que admite Sigrid",
     "referencia_en_conflicto": "Otro albarán de Sigrid ya lleva este número",
@@ -126,6 +132,10 @@ TEXTOS_MOTIVO_ALTA: dict[str, str] = {
     "producto_no_encontrado": "El producto no existe en Sigrid",
     "naturaleza_no_valida": "Naturaleza no válida (configuración de sigrid-api)",
     "precio_negativo": "Precio negativo",
+    # Avisos de cabecera de sigrid-api (v8.3): no son motivos ni bloquean;
+    # el panel los pinta en «Avisos de Sigrid» con su mensaje (F-104 R8).
+    "retencion_del_contrato": "Sigrid aplicó la retención del contrato",
+    "cabecera_sin_dato": "Sigrid dejó vacío algún dato de pago de la cabecera",
     # Tipo de fallo sin código ni HTTP (TipoFallo, alta_models.py).
     "rechazo": "Sigrid rechazó el alta",
     "autorizacion": "sigrid-api no autorizó la petición",
@@ -350,6 +360,20 @@ class AltaSigridVista(BaseModel):
                                                   str(a.get("codigo") or "")),
              "detalle": str(a.get("detalle") or "")}
             for a in avisos if isinstance(a, dict)
+        ]
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def avisos_sigrid(self) -> list[dict[str, Any]]:
+        """F-104 R8 (D2): los avisos de Sigrid con su ``texto`` de
+        :data:`TEXTOS_MOTIVO_ALTA` (``None`` si no lo tiene: se pintan como
+        antes), su ``mensaje`` y su línea. Son avisos: no cambian nada (R9)."""
+        return [
+            {"codigo": a.get("codigo"),
+             "texto": TEXTOS_MOTIVO_ALTA.get(str(a.get("codigo") or "")),
+             "mensaje": a.get("mensaje"),
+             "referencia_linea": a.get("referencia_linea")}
+            for a in self.avisos if isinstance(a, dict)
         ]
 
     @computed_field  # type: ignore[prop-decorator]
