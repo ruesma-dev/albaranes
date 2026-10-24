@@ -193,7 +193,9 @@ veredicto sería «mantener» con cualquier acierto, y F-086 no podría pasar nu
   sv5; el humano revisa sus límites antes de M4.
 - **Medición caducada por F-100** (§2): mitigada por D1.
 
-## 9. Decisiones abiertas para la PARADA 1 (opción recomendada primero)
+## 9. Decisiones de la PARADA 1 (opción recomendada primero)
+
+**DECIDIDAS por el humano el 2026-10-24 («ok a f86»): D1–D6 = (a), la recomendada.** A se implementa ya; B y C esperan a F-100 en `dev`, y F-086 queda `blocked` tras A.
 
 1. **D1 · Orden con F-100.** (a) A ahora; B y C después de F-100 en `dev` (con su prompt de IA3 y el
    libro IA4 completado), y F-086 queda `blocked` tras A; (b) A, B y C ahora, y F-100 vuelve a medir
