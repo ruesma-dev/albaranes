@@ -9,7 +9,7 @@ Resumen: **101 features**, 72 abiertas (1 en curso, 5 con la spec lista, 8 bloqu
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
-| F-104 | sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos | 2 | critico |  |
+| F-104 | sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos | 2 | critico | `feature/F-104-codigos-contrato-v83` |
 
 ## Spec lista
 
@@ -141,7 +141,7 @@ PETICIÓN DEL HUMANO (2026-10-14, PARADA 1 de F-053 v8): «en el futuro habrá u
 
 ### F-104 · sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos
 
-estado **en curso** · prioridad 2 · rigor `critico` · SDD sí
+estado **en curso** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-104-codigos-contrato-v83`
 
 ORIGEN: el humano, 2026-10-24 («sí a todo»), al recibir de la sesión de sigrid-api la petición de acuse del contrato v8.3 (rama feature/F-015-albaran-plantilla-y-retencion, commit 871cc0c; resumen en sigrid-api/progress/t0_F-015_albaranes.md). Sale de la D6 de F-103 (parada hasta que sigrid-api termine) para tenerlo listo ANTES de que sigrid-api despliegue su F-015: sin estos mapeos, un código de cabecera desconocido va a `error` (F-053 H25). ACUSE ENVIADO el 2026-10-24 con estos mapeos, decididos por el humano: (1) errores de cabecera `proveedor_no_encontrado`, `proveedor_ambiguo` y `retencion_no_soportada` ⇒ `no_admitido` (alta a mano) en `domain/services/clasificador.py` (CODIGOS_CABECERA) de sv9; (2) avisos `retencion_del_contrato` y `cabecera_sin_dato` informativos: NO entran en `ALTA_SIGRID_AVISOS_BLOQUEANTES` (defecto en config/settings.py ni en infra/), pero se ven en el panel; (3) textos legibles de los cinco en `TEXTOS_MOTIVO_ALTA` de sv4 (`domain/models/alta_sigrid_models.py`; el test de F-077 R27 lo exige); (4) `proveedor_sin_albaran_previo` (retirado en la v8.3) se mantiene hasta verificar el despliegue de sigrid-api y se quita después (tarea final o nota). FUERA: enseñar `totales.tot` (neto con retención) en el panel; la comparación de la previa sigue por línea (totales.tot, retenciones y filas.dcarec no se comparan). El usu del adjunto ya es el de la petición (F-069; confirmado a sigrid-api). DESPLIEGUE: sv9 y sv4 antes o a la vez que la F-015 de sigrid-api, que avisará antes de desplegar. Actualizar sv9.md y §10 de azure-apps/albaranes.md. RELACIONADAS: F-103 (D6), F-053 (H25), F-077 (R27), F-069.
 
