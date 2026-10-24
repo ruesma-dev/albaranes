@@ -1661,6 +1661,11 @@ class DocumentDetailPayload(BaseModel):
     alta_motivos_linea: list[dict[str, Any]] = Field(default_factory=list)
     productos_sigrid: dict[int, ProductoLinea] = Field(default_factory=dict)
     productos_admitidos: list[ProductoOpcion] = Field(default_factory=list)
+    #: (F-098 R23) cod de Sigrid → código completo que se pinta
+    #: (``99.01.64`` → ``CD.99.01.64``), solo para los cod de la ficha cuyo
+    #: completo es otro; lo rellena ``presentar_partidas`` con la lista de la
+    #: obra. Vacío (sin lista) ⇒ la ficha pinta el cod, como antes.
+    partidas_mostradas: dict[str, str] = Field(default_factory=dict)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
