@@ -737,8 +737,10 @@ class CachePartidasObra:
     - Una lista con 0 hojas cuenta como «sin lista» (``None``), pero se
       cachea como cualquier otra.
     - Nunca lanza: degradar es la norma (quien llama valora como siempre).
+    - (F-098 R13) :meth:`consultar` da además si la lectura fue buena: ``(lista,
+      ok)``, con la lista también cuando tiene 0 hojas.
 
-    Implementa ``PartidasObraPort`` de sv6. Segura entre hilos: el estado va
+    Implementa ``PartidasObraPort`` de sv6 (y el de sv4, F-098). Segura entre hilos: el estado va
     bajo un candado; la consulta, fuera de él.
     """
 
@@ -765,25 +767,37 @@ class CachePartidasObra:
 
     def lista(self, obra: str | None) -> ListaPartidasObra | None:
         """Lista de ``obra`` (hojas > 0) o ``None`` si no hay; nunca lanza."""
+        return _con_hojas(self.consultar(obra)[0])
+
+    def consultar(self, obra: str | None) -> tuple[ListaPartidasObra | None, bool]:
+        """(F-098 R13) ``(lista, ok)`` de ``obra``; nunca lanza.
+
+        ``ok=True`` con la lista vigente o recién leída, también con 0 hojas (el
+        selector de sv4 distingue «sin partidas» de «no se pudo leer»). Tras un
+        fallo o truncado (y mientras se recuerda), la caducada si la hay o
+        ``None``, con ``ok=False``. Sin obra, ``(None, False)`` sin consultar.
+        Comparte entradas con :meth:`lista`: una sola consulta para las dos.
+        """
         try:
-            return self._lista(obra)
+            return self._consultar(obra)
         except Exception as exc:  # noqa: BLE001 - R6: nunca lanza
             logger.warning("[partidas-obra] obra=%s fallo inesperado: %r", obra, exc)
-            return None
+            return None, False
 
-    def _lista(self, obra: str | None) -> ListaPartidasObra | None:
+    def _consultar(self, obra: str | None) -> tuple[ListaPartidasObra | None, bool]:
         clave = canonizar_codigo_obra(obra)
         if clave is None:
-            return None
+            return None, False
         ahora = self._reloj()
         with self._candado:
             entrada = self._entradas.get(clave)
             if entrada is not None:
                 self._entradas.move_to_end(clave)
                 vigente = entrada.leida_en is not None and ahora - entrada.leida_en < self._ttl_s
-                en_fallo = entrada.fallo_hasta is not None and ahora < entrada.fallo_hasta
-                if vigente or en_fallo:
-                    return _con_hojas(entrada.lista)
+                if vigente:
+                    return entrada.lista, True
+                if entrada.fallo_hasta is not None and ahora < entrada.fallo_hasta:
+                    return entrada.lista, False
         try:
             # ``clave`` ya es canónica y no vacía: la lectura nunca da ``None``.
             lista = leer_partidas_obra(self._lector, clave) or ListaPartidasObra(clave, (), ())
@@ -800,7 +814,7 @@ class CachePartidasObra:
                 "la lista caducada" if vieja is not None else "ninguna",
                 self._ttl_fallo_s,
             )
-            return _con_hojas(vieja)
+            return vieja, False
         with self._candado:
             self._guardar(clave, _Entrada(lista, ahora, None))
         logger.info(
@@ -809,7 +823,7 @@ class CachePartidasObra:
             len(lista.hojas),
             self._reloj() - ahora,
         )
-        return _con_hojas(lista)
+        return lista, True
 
     def _guardar(self, clave: str, entrada: _Entrada) -> None:
         self._entradas[clave] = entrada

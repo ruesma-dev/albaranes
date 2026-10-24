@@ -724,7 +724,9 @@ def test_f076_t4_exportes_en_sigrid():
 def test_f076_t4_version_080():
     import ruesma_comun
 
-    assert ruesma_comun.__version__ == "0.8.0"
+    # F-098 sube a 0.9.0 (R33; su test exige la exacta): desde 0.8.0, nunca
+    # menos, como hizo F-076 con el de F-052.
+    assert tuple(int(x) for x in ruesma_comun.__version__.split(".")) >= (0, 8, 0)
 
 
 # ------------------------------------------------------------------ #

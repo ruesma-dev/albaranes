@@ -733,3 +733,145 @@ def test_f098_r11_cod_con_espacios_exteriores():
     lista = lista_de("0686", FILAS_0686)
     assert P.mostrar_partida(lista, " 99.01.64 ") == "CD.99.01.64"
     assert P.mostrar_partida(lista, " X ") == " X "
+
+
+# ------------------------------------------------------------------ #
+# R13 · CachePartidasObra.consultar: (lista, ok), nunca lanza
+# ------------------------------------------------------------------ #
+class _Reloj:
+    def __init__(self) -> None:
+        self.ahora = 1000.0
+
+    def __call__(self) -> float:
+        return self.ahora
+
+
+class _Lector:
+    def __init__(self, filas=None) -> None:
+        self.filas = FILAS_0686 if filas is None else filas
+        self.consultas: list[str] = []
+        self.fallo: Exception | None = None
+
+    def __call__(self, sql, parametros, etiqueta, politica, max_rows):
+        self.consultas.append(parametros[0])
+        if self.fallo is not None:
+            raise self.fallo
+        return list(_COLUMNAS), [list(f) for f in self.filas]
+
+
+def _cache(lector, reloj, *, ttl_s=600, ttl_fallo_s=60) -> P.CachePartidasObra:
+    return P.CachePartidasObra(lector, ttl_s=ttl_s, max_obras=64, ttl_fallo_s=ttl_fallo_s, reloj=reloj)
+
+
+def test_f098_r13_consultar_lista_recien_leida_y_vigente():
+    lector, reloj = _Lector(), _Reloj()
+    cache = _cache(lector, reloj)
+    lista, ok = cache.consultar("686")
+    assert ok is True and lista is not None
+    assert lista.obra == "0686" and hoja(lista, "99.01.64").codigo_completo == "CD.99.01.64"
+    reloj.ahora += 599
+    assert cache.consultar("0686") == (lista, True)
+    assert cache.lista("0686") is lista
+    assert lector.consultas == ["0686"]
+
+
+def test_f098_r13_cero_hojas_es_lista_y_ok():
+    lector, reloj = _Lector(filas=[]), _Reloj()
+    cache = _cache(lector, reloj)
+    lista, ok = cache.consultar("0686")
+    assert ok is True
+    assert lista is not None and lista.hojas == () and lista.capitulos == ()
+    # ``lista()`` sigue diciendo «sin lista» con 0 hojas (R5, F-076).
+    assert cache.lista("0686") is None
+    assert lector.consultas == ["0686"]
+
+
+def test_f098_r13_fallo_sin_previa_none_y_no_ok():
+    lector, reloj = _Lector(), _Reloj()
+    lector.fallo = RuntimeError("caído")
+    cache = _cache(lector, reloj)
+    assert cache.consultar("0686") == (None, False)
+    # Fallo recordado: no se reconsulta dentro de ttl_fallo_s, y sigue no ok.
+    reloj.ahora += 59
+    assert cache.consultar("0686") == (None, False)
+    assert lector.consultas == ["0686"]
+
+
+def test_f098_r13_fallo_con_caducada_da_la_caducada_y_no_ok():
+    lector, reloj = _Lector(), _Reloj()
+    cache = _cache(lector, reloj, ttl_s=10)
+    buena, ok = cache.consultar("0686")
+    assert ok is True
+    reloj.ahora += 10
+    lector.fallo = RuntimeError("caído")
+    assert cache.consultar("0686") == (buena, False)
+    reloj.ahora += 30
+    assert cache.consultar("0686") == (buena, False)  # dentro del fallo recordado
+    assert len(lector.consultas) == 2
+    reloj.ahora += 31  # pasado el fallo: se reconsulta y vuelve a ir bien
+    lector.fallo = None
+    nueva, ok = cache.consultar("0686")
+    assert ok is True and nueva is not buena and len(lector.consultas) == 3
+
+
+def test_f098_r13_truncado_es_no_ok():
+    from ruesma_comun.sigrid import SigridRespuestaTruncada
+
+    lector, reloj = _Lector(), _Reloj()
+    lector.fallo = SigridRespuestaTruncada("partidas_obra_0686", 500_000)
+    assert _cache(lector, reloj).consultar("0686") == (None, False)
+
+
+@pytest.mark.parametrize("obra", [None, "", "   "])
+def test_f098_r13_sin_obra_no_consulta(obra):
+    lector, reloj = _Lector(), _Reloj()
+    assert _cache(lector, reloj).consultar(obra) == (None, False)
+    assert lector.consultas == []
+
+
+def test_f098_r13_nunca_lanza(monkeypatch):
+    cache = _cache(_Lector(), _Reloj())
+
+    def _revienta(obra):
+        raise ValueError("inesperado")
+
+    monkeypatch.setattr(cache, "_consultar", _revienta)
+    assert cache.consultar("0686") == (None, False)
+    assert cache.lista("0686") is None
+
+
+def test_f098_r13_lista_y_consultar_comparten_entrada():
+    lector, reloj = _Lector(), _Reloj()
+    cache = _cache(lector, reloj)
+    primera = cache.lista("0686")
+    assert cache.consultar("0686") == (primera, True)
+    assert lector.consultas == ["0686"]
+
+
+# ------------------------------------------------------------------ #
+# T5 · exportes y versión
+# ------------------------------------------------------------------ #
+def test_f098_t5_exportes_en_sigrid():
+    from ruesma_comun import sigrid
+
+    for nombre in (
+        "CapituloObra",
+        "MOTIVO_COMPLETA",
+        "codigo_completo",
+        "misma_partida",
+        "mostrar_partida",
+    ):
+        assert nombre in sigrid.__all__
+        assert getattr(sigrid, nombre) is getattr(P, nombre)
+    assert "F-098" in (sigrid.__doc__ or "")
+    assert "F-098" in (P.__doc__ or "")
+
+
+def test_f098_t5_version_090():
+    from pathlib import Path
+
+    import ruesma_comun
+
+    assert ruesma_comun.__version__ == "0.9.0"
+    pyproject = (Path(ruesma_comun.__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'version = "0.9.0"' in pyproject
