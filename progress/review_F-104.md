@@ -26,36 +26,24 @@ supervivientes y las MANUAL listadas con su comando exacto.
   El texto exacto lo saqué de `mutantes_manuales.py` del scratchpad de la sesión, **no del informe**.
 
 ## Checkpoints
-- C1 [x] init.sh exit 0 · [x] ficheros del arnés.
-- C2 [x] solo F-104 `in_progress` · [x] rama `feature/F-104-codigos-contrato-v83` · [x] current.md describe la
-  sesión activa (F-104 arriba, F-069 `blocked` vigente) · [x] sin `done` nuevas.
-- C3 [x] hexagonal: los datos en *domain* (sv9 y sv4); `avisos_sigrid` es puro; la plantilla en *interface* ·
-  [x] primera línea con la ruta en los 2 tests nuevos · [x] sin prints, TODOs, secretos ni dependencias nuevas
-  (el test de R4 lee `infra/*.ps1` y solo imprime el nombre del fichero) · [x] trampas: no toca merge/raw,
-  schema ni importes.
-- C3 bis N/A: no toca `docs/referencia/`.
-- C4 [x] trazabilidad completa (tabla abajo), todo verde · [x] sin red ni BBDD (fakes de F-053, `Settings`
-  con monkeypatch) · [x] MANUAL: M1/M2/M3 en design §6 con su comando; M-D en current.md y tasks.md.
-- C4 bis
-  - [x] rigor declarado.
-  - [x] fase RED con trazas reales de T1–T4; las guardas (R2, R3, R4–R6, R10) con mutación inversa anotada.
-  - [x] cobertura `[OK]` al 100 %.
-  - [x] informe de la herramienta con totales verificados.
-  - [x] más de 60 s: recálculo puro, dicho arriba.
-  - [x] coste por mutante = 566,1 × 1 ÷ 1 = 566 s (> 1 s).
-  - [x] sin «CAMPAÑA NO VÁLIDA»; sin veredicto = 0.
-  - [x] RM1: medido sobre `d3c20f1`, y desde entonces solo cambian `progress/` y `tasks.md`; el alcance es el
-    mismo.
-  - [x] RM2: media 566,1 = total; base sv4 282,4. Cuadra con base + una pasada casi entera de sv4 (el test que
-    caza el mutante, `test_f104_*`, va al final por orden alfabético). No hay salto de orden de magnitud.
-  - [x] RM3: ningún muerto es equivalente (revisados los 17 del script uno a uno).
-  - RM5 N/A: no hay equivalentes declarados.
-  - RM6 N/A: no se quitó ninguna guarda; el filtro `isinstance` se queda y M12 lo protege.
-  - **[ ] campaña MANUAL reproducible**: ver el cambio 1.
-  - [x] 0 supervivientes · [x] «Evidencias» con los números y los workers (1).
-- C4 ter N/A: init.sh dice que no toca ninguna ruta sensible declarada.
-- C5 [x] T1–T7 `[x]` con commit `F-104 Tn:` (7); T8/T9 y las MANUAL abiertas, como corresponde a D1 ·
-  [x] árbol limpio · [x] `features.json` coherente (`in_progress`; pasará a `blocked` tras la aprobación).
+- C1 [x] init.sh exit 0 · [x] ficheros del arnés. C2 [x] solo F-104 `in_progress` · [x] rama
+  `feature/F-104-codigos-contrato-v83` · [x] current.md describe la sesión activa · [x] sin `done` nuevas.
+- C3 [x] hexagonal (datos y `avisos_sigrid` puros en *domain*, la plantilla en *interface*) · [x] primera
+  línea con la ruta · [x] sin prints, TODOs, secretos ni dependencias nuevas (el test de R4 lee `infra/*.ps1`
+  y solo imprime el nombre del fichero) · [x] trampas: no toca merge/raw, schema ni importes.
+- C3 bis N/A (no toca `docs/referencia/`). C4 ter N/A (init.sh: ninguna ruta sensible declarada).
+- C4 [x] trazabilidad completa y en verde · [x] sin red ni BBDD · [x] MANUAL: M1/M2/M3 con su comando en
+  design §6; M-D en current.md y tasks.md.
+- C4 bis [x] rigor declarado · [x] RED con trazas reales de T1–T4 y mutación inversa en las guardas ·
+  [x] cobertura `[OK]` al 100 % · [x] totales verificados · [x] más de 60 s: recálculo puro, dicho arriba ·
+  [x] coste por mutante 566,1 × 1 ÷ 1 = 566 s · [x] sin «CAMPAÑA NO VÁLIDA», sin veredicto = 0 ·
+  [x] RM1: medido en `d3c20f1`, y desde entonces solo cambian `progress/` y `tasks.md` ·
+  [x] RM2: media 566,1 = total, base sv4 282,4; cuadra con base + una pasada casi entera de sv4 (`test_f104_*`
+  va al final por orden alfabético) · [x] RM3: ninguno de los 17 manuales es equivalente · RM5 N/A (no hay
+  equivalentes) · RM6 N/A (no se quitó ninguna guarda; M12 protege `isinstance`) · **[ ] campaña MANUAL
+  reproducible: cambio 1** · [x] 0 supervivientes · [x] «Evidencias» con los workers (1).
+- C5 [x] T1–T7 `[x]` con 7 commits `F-104 Tn:`; T8/T9 y las MANUAL abiertas por D1 · [x] árbol limpio ·
+  [x] `features.json` coherente.
 
 ## Puntos que pidió el líder
 1. **Mutación.** 1 mutante automático sobre 31 líneas es correcto: el mutador no toca literales de diccionario
@@ -82,7 +70,7 @@ supervivientes y las MANUAL listadas con su comando exacto.
 | R | Tests |
 |---|---|
 | R1 | `test_f104_r1_*` (tabla, `clasificar` en previa y grabación, motivo y detalle, servicio en simulación y real) |
-| R2 | `test_f104_r2_el_retirado_sigue_en_no_admitido` |
+| R2 | `test_f104_r2_*` |
 | R3 | `test_f104_r3_*` (tabla v8.2 + 3, desconocido a `error`, no son de línea); `test_f053_r18_*` |
 | R4 | `test_f104_r4_defecto_*`, `test_f104_r4_ni_infra_ni_env_example_*` |
 | R5 | `test_f104_r5_avisos_v83_se_guardan_sin_motivo[simulado/revisar/registrado]` + contraste |
@@ -92,27 +80,18 @@ supervivientes y las MANUAL listadas con su comando exacto.
 | R9 | `test_f104_r9_*` (derivados de la vista; panel solo bajo «Avisos de Sigrid») |
 | R10 | sv4: `test_f104_r10_*`. sv9: T8, fuera de esta pasada (D1) |
 | R11 | revisado en el diff: no toca comparador, cliente, `ruesma_comun`, DDL, `infra` ni `.env.example` |
-| R12 | revisado: `sv9.md` y `azure-apps` `8f6f243` |
-| R13, R14 | MANUAL (M1, M2/M3), después del despliegue: fuera de esta pasada |
+| R12 / R13–R14 | revisado `sv9.md` y `azure-apps` `8f6f243` / MANUAL tras el despliegue, fuera de esta pasada |
 
 ## Cambios requeridos
-1. **`progress/mutacion_F-104.md`, tabla de la campaña manual**: **una fila por mutante (M01…M17)**, sin
-   agrupar (hoy van juntas M01–M03, M06–M07, M09–M11 y M14–M16). En cada fila:
-   - el fichero y la **línea**;
-   - el **texto exacto original → mutado** (el par `viejo`/`nuevo` del script; si es multilínea, la primera
-     línea y «…»);
-   - el **número de fallos**, medido **sin `-x`**, sobre los mismos ficheros de test que el script.
-     Referencia de mis tres: M02 10, M09 4, M14 2.
-
-   Motivo: la única fuente que hoy lo permite es `mutantes_manuales.py`, que vive en un scratchpad efímero,
-   fuera del repositorio. Cuando se borre, la campaña deja de poder repetirse y se queda en «un párrafo»
-   (C4 bis). Puedes añadir la lista de pares del script como bloque de código; el script no hace falta
-   versionarlo.
+1. **`progress/mutacion_F-104.md`**: **una fila por mutante (M01…M17)**, sin agrupar (hoy van juntas M01–M03,
+   M06–M07, M09–M11 y M14–M16), con fichero y **línea**, **texto exacto original → mutado** (el par
+   `viejo`/`nuevo` del script) y **número de fallos** sin `-x` sobre los mismos tests (mis tres: M02 10, M09 4,
+   M14 2). Motivo: hoy solo lo permite `mutantes_manuales.py`, en un scratchpad efímero fuera del repositorio;
+   cuando se borre, la campaña ya no se puede repetir (C4 bis). El script no hace falta versionarlo.
 2. Recomendado, no bloquea: en la línea de despliegue de `progress/current.md`, poner el comando completo,
    `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4`, como en tasks.md M-D.
 
 Con el cambio 1 hecho, la pasada 2 es incremental desde `afe5b6d` y solo mira el informe de mutación.
-
 ## Automejora (propuesta, no aplicada)
 El último punto de mutación de C4 bis dice «si la campaña automática dio **0** mutantes y se sustituyó por una
 MANUAL». Propongo que diga «o si la manual **complementa** a una automática que no cubre el alcance». Aquí
