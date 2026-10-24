@@ -364,6 +364,20 @@ class AltaSigridVista(BaseModel):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
+    def avisos_sigrid(self) -> list[dict[str, Any]]:
+        """F-104 R8 (D2): los avisos de Sigrid con su ``texto`` de
+        :data:`TEXTOS_MOTIVO_ALTA` (``None`` si no lo tiene: se pintan como
+        antes), su ``mensaje`` y su línea. Son avisos: no cambian nada (R9)."""
+        return [
+            {"codigo": a.get("codigo"),
+             "texto": TEXTOS_MOTIVO_ALTA.get(str(a.get("codigo") or "")),
+             "mensaje": a.get("mensaje"),
+             "referencia_linea": a.get("referencia_linea")}
+            for a in self.avisos if isinstance(a, dict)
+        ]
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
     def usu_respaldo(self) -> bool:
         """F-069 R23: el ``usu`` salió del Respaldo de sv9 según la
         ``resolucion`` guardada. Sin ella (altas anteriores a F-069), la regla
