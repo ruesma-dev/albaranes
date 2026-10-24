@@ -3,7 +3,8 @@
 > Implementer, 2026-10-24. Rama `feature/F-069-usuario-empleado-sigrid` (worktree
 > `../albaranes-F-069`), spec v3 (PARADA 1 cerrada el 2026-10-23), rigor `critico`.
 > Un commit por tarea (`git log --oneline dev..HEAD`; T15 en dos: `8d21097` y `254ea38`).
-> En `azure-apps`: `3119ae3` (local, sin push). Hechas T1–T4 y T6–T15; MANUAL: T5, T16, T17.
+> En `azure-apps`: `3119ae3` (local, sin push). Hechas T1–T15 y T18 (T5 por el líder);
+> MANUAL pendientes: T16, T17. Review 1 (CHANGES_REQUESTED, 3 condiciones) aplicada en `33c6d6c`.
 
 ## Qué cambió
 
@@ -64,9 +65,11 @@ F-069 en `progress/inventario_mutacion_F-039.md` (la exige `test_f039_r2`).
   credenciales salen solo del entorno de la consola, nunca de un `.env`.
 - `ALTA_SIGRID_EMPIDE` se queda en la Container App y sv9 la ignora:
   `--remove-env-vars` no está en la spec (opcional, lo decide el humano).
-- `harness/features.json` declara `servicios: ["sv9-alta-sigrid"]`, pero la feature
-  toca también sv4 (panel) e infra. La nota del spec-author en `progress/current.md`
-  pide actualizarlo; es del líder, no lo he tocado.
+- **Review 1** (`progress/review_F-069.md`): (1) el script ya no usa `zip(strict=False)`:
+  una fila desparejada con `columns` es `RuntimeError` («fila desparejada»), como
+  `truncated`, porque sin `fecbaj` el empleado contaba «de alta» en silencio; (2) campaña
+  repetida y demostración ejecutable (RM5) del equivalente que queda; (3) `servicios` de
+  F-069 en `features.json`: `sv9-alta-sigrid`, `sv4-front` e `infra` (encargo del líder).
 
 ## Fuera del alcance
 
@@ -75,20 +78,12 @@ F-069 en `progress/inventario_mutacion_F-039.md` (la exige `test_f039_r2`).
 - Corregir las altas ya escritas con el empleado por defecto (E5): lo decide el
   humano con el resultado de T5, junto con F-103.
 
-## Tareas MANUAL pendientes (no las he hecho)
+## Tareas MANUAL
 
-**T5 · medición, SOLO LECTURA (líder).** Con las variables de Azure en la consola (no
-el `.env`, que apunta a local), desde la raíz del worktree `albaranes-F-069` (no
-tiene `.venv` propio: se usa el de `albaranes`):
-```powershell
-$env:SIGRID_API_BASE_URL = "<url de sigrid-api>"; $env:SIGRID_API_FUNCTION_KEY = "<clave>"
-$env:SIGRID_API_DATABASE = "ruesma"
-$env:PG_HOST = "<host Azure>"; $env:PG_PORT = "5432"; $env:PG_DB = "albaranes"
-$env:PG_USER = "<usuario>"; $env:PG_PASSWORD = "<contraseña>"; $env:PG_SSLMODE = "require"
-& C:\Users\pgris\PycharmProjects\albaranes\.venv\Scripts\python.exe services\albaranes-alta-sigrid\scripts\medir_empleados_f069.py --salida progress\
-```
-Deja `progress/medicion_F-069.md` y `progress/medicion_F-069.csv` (Logins e `ide`, sin
-correos completos). Opcional: `$env:ALTA_SIGRID_EQUIVALENCIAS_USUARIO` con la Lista.
+**T5 · HECHA por el líder** (solo lectura, 2026-10-24): `progress/medicion_F-069.md`
+(comprobado: sin correos completos, ni una «@»). 7 aprobadores: 5 con empleado único, 1 sin
+empleado, 1 sin correo de Ruesma; 68 altas escritas, 65 con un empleado distinto del que les
+correspondería (E5: lo decide el humano, junto con F-103).
 
 **T16 · despliegue (humano, ESCRIBE EN PRODUCCIÓN, tras APPROVED y fusión en `dev`).**
 Desde `infra\`:
@@ -199,16 +194,25 @@ T15 · cada test nuevo, contra su mutante aplicado a mano (y el fichero restaura
 primeros mutantes `1 failed, 5 passed`; con el de la espera (test añadido después),
 `1 failed, 6 passed`.
 
+Review 1 · `python -m pytest tests -q -k "f069_script_fila_desparejada" --tb=line`
+```
+...	ests	est_f069_script.py:285: Failed: DID NOT RAISE RuntimeError
+FAILED tests/test_f069_script.py::test_f069_script_fila_desparejada_es_fallo[fila0]
+FAILED tests/test_f069_script.py::test_f069_script_fila_desparejada_es_fallo[fila1]
+2 failed, 959 deselected in 2.29s
+```
+Con el código: `2 passed`; con `strict=False` restaurado a mano, otra vez `2 failed`.
+
 ## Evidencias
 
 | Evidencia | Valor real |
 |---|---|
-| Tests sv9 | 959 passed en 38,25 s (`python -m pytest tests -q`) |
-| Tests sv4 | 1808 passed en 143,39 s (tras T12; T13–T15 no tocan sv4) |
-| `bash harness/init.sh` | **verde** («ENTORNO LISTO», exit 0): raíz 1883 passed (401,75 s), sv1 205, sv2 485, sv3 1576, sv4 1808 (267,87 s), sv5 96, sv6 473 + 1 skipped, sv9 959 (57,59 s), comun en caché verde |
-| Cobertura de las líneas cambiadas | **99,5 %** de 442 (440/442, umbral 80 %, nivel `critico`): `PUERTA COBERTURA` de `init.sh` |
-| Mutación | 1.ª campaña (`8ede6ca`): 148 generados, 137 muertos, 11 supervivientes. 2.ª (`8d21097`): **148, 146 muertos, 2 supervivientes**, 0 timeouts, 2510 s. Detalle: `progress/mutacion_F-069.md` |
-| Supervivientes | 2 **equivalentes justificados** (`sys.path.insert(1, …)` y `zip(strict=True)` del script de medición), **pendientes de que el humano acepte la justificación** (rigor `critico`, máximo 0) |
+| Tests sv9 | 961 passed en 28,55 s (`python -m pytest tests -q`, tras la review 1) |
+| Tests sv4 | 1808 passed (sin cambios en sv4 desde T12) |
+| `bash harness/init.sh` | **verde** («ENTORNO LISTO», exit 0, tras la review 1): raíz 1883 passed (363,52 s), sv1 205, sv2 485, sv3 1576, sv4 1808 (174,63 s), sv5 96, sv6 473 + 1 skipped, sv9 961 (37,98 s), comun verde |
+| Cobertura de las líneas cambiadas | **99,6 %** de 445 (443/445, umbral 80 %, nivel `critico`): `PUERTA COBERTURA` de `init.sh` |
+| Mutación | 1.ª (`8ede6ca`): 148, 137 muertos, 11 supervivientes. 2.ª (`8d21097`): 148, 146, 2. **3.ª (`33c6d6c`): 148 generados, 147 muertos, 1 superviviente**, 0 timeouts, 2047,7 s, 4 workers. Detalle: `progress/mutacion_F-069.md` |
+| Supervivientes | 1 **equivalente** (`sys.path.insert(1, …)` del script), con demostración ejecutable (RM5) en el informe; **pendiente de que el humano acepte la justificación** (rigor `critico`, máximo 0) |
 
-Pendiente para cerrar: APPROVED del reviewer, aceptación humana de los 2 equivalentes,
-T5 antes de desplegar (design §8) y luego T16 y T17.
+Pendiente para cerrar: APPROVED del reviewer, aceptación humana del equivalente y, tras
+fusionar, T16 y T17.
