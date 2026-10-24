@@ -91,11 +91,15 @@ MOTIVO_ALM = "alm"
 MOTIVO_SIN_PARTIDA = "sin_partida"
 MOTIVO_FUERA_DE_LISTA = "fuera_de_lista"
 MOTIVO_AMBIGUA = "ambigua"
+#: (F-098 R6) La lectura casa con UNA hoja solo por su código completo
+#: (``CD.99.01.64`` ⇒ la hoja ``99.01.64`` de CD).
+MOTIVO_COMPLETA = "completa"
 
 MOTIVOS_PARTIDA = frozenset(
     {
         MOTIVO_EXACTA,
         MOTIVO_NORMALIZADA,
+        MOTIVO_COMPLETA,
         MOTIVO_COMPUESTA,
         MOTIVO_ALM,
         MOTIVO_SIN_PARTIDA,
@@ -104,7 +108,7 @@ MOTIVOS_PARTIDA = frozenset(
     }
 )
 #: Motivos en que la lectura casa con la lista (``validada = true``).
-MOTIVOS_CASADOS = frozenset({MOTIVO_EXACTA, MOTIVO_NORMALIZADA, MOTIVO_COMPUESTA})
+MOTIVOS_CASADOS = frozenset({MOTIVO_EXACTA, MOTIVO_NORMALIZADA, MOTIVO_COMPLETA, MOTIVO_COMPUESTA})
 #: Motivos en que la lectura NO casa (``validada = false``: a revisión).
 MOTIVOS_NO_CASADOS = frozenset({MOTIVO_FUERA_DE_LISTA, MOTIVO_AMBIGUA})
 
@@ -504,28 +508,51 @@ def leer_partidas_obra(leer: LectorSql, obra: Any) -> ListaPartidasObra | None:
 # ------------------------------------------------------------------ #
 # Casar una lectura con la lista (H1: verifica, nunca elige)
 # ------------------------------------------------------------------ #
-def _indice_normalizado(lista: ListaPartidasObra) -> dict[str, set[str]]:
-    """Forma normalizada → códigos DISTINTOS de la lista que la tienen."""
-    indice: dict[str, set[str]] = {}
-    for codigo in lista.codigos:
-        clave = normalizar_partida(codigo)
-        if clave is not None:
-            indice.setdefault(clave, set()).add(codigo)
+#: Por dónde casa una entrada del índice: el cod de la hoja o su código completo.
+_POR_COD = "cod"
+_POR_COMPLETO = "completo"
+
+
+def _indice_normalizado(lista: ListaPartidasObra) -> dict[str, set[tuple[str, str]]]:
+    """Forma normalizada → ``(cod, por)`` de las hojas que la tienen.
+
+    (F-098 R6) Cada hoja entra por la clave de su cod (``por = "cod"``) y, si su
+    código completo es otro, también por la clave del completo (``"completo"``),
+    en TODA la lista: sin restringir a ningún capítulo (P6).
+    """
+    indice: dict[str, set[tuple[str, str]]] = {}
+    for hoja in lista.hojas:
+        formas = [(hoja.codigo, _POR_COD)]
+        if hoja.codigo_completo != hoja.codigo:
+            formas.append((hoja.codigo_completo, _POR_COMPLETO))
+        for forma, por in formas:
+            clave = normalizar_partida(forma)
+            if clave is not None:
+                indice.setdefault(clave, set()).add((hoja.codigo, por))
     return indice
 
 
 def _casar_simple(
-    lectura: str, exactos: set[str], indice: dict[str, set[str]]
+    lectura: str, exactos: set[str], indice: dict[str, set[tuple[str, str]]]
 ) -> tuple[str, str | None]:
-    """Casa UNA partida (sin ``/``): (motivo, código de la lista o None)."""
+    """Casa UNA partida (sin ``/``): (motivo, código de la lista o None).
+
+    La exacta literal primero (R7). Luego las candidatas de su clave: con UN
+    cod distinto, ``normalizada`` si casa por su cod y ``completa`` si solo por
+    su código completo; con dos o más, ``ambigua`` (R6).
+    """
     if lectura in exactos:
         return MOTIVO_EXACTA, lectura
-    candidatos = indice.get(normalizar_partida(lectura) or "")
+    entradas = indice.get(normalizar_partida(lectura) or "", set())
+    candidatos = {cod for cod, _ in entradas}
     if not candidatos:
         return MOTIVO_FUERA_DE_LISTA, None
     if len(candidatos) > 1:
         return MOTIVO_AMBIGUA, None
-    return MOTIVO_NORMALIZADA, next(iter(candidatos))
+    (codigo,) = candidatos
+    if (codigo, _POR_COD) in entradas:
+        return MOTIVO_NORMALIZADA, codigo
+    return MOTIVO_COMPLETA, codigo
 
 
 def casar_partida(lista: ListaPartidasObra, lectura: Any, alm: str | None) -> CasePartida:
@@ -540,7 +567,9 @@ def casar_partida(lista: ListaPartidasObra, lectura: Any, alm: str | None) -> Ca
     3. La lectura entera (sin espacios exteriores) es un código de la lista
        ⇒ ``exacta``.
     4. La lectura entera, normalizada, coincide con UNA hoja ⇒
-       ``normalizada``; con dos o más hojas distintas ⇒ ``ambigua``.
+       ``normalizada`` (por su cod) o ``completa`` (F-098: solo por su código
+       completo, ``CD.99.01.64`` ⇒ ``99.01.64``); con dos o más hojas
+       distintas ⇒ ``ambigua``. Se busca en toda la lista.
     5. Con dos o más partes (``/``): cada parte se casa por separado (tal
        cual y, si no, normalizada). Si alguna no casa ⇒ ``fuera_de_lista``;
        si no, si alguna es ambigua ⇒ ``ambigua``; si todas casan ⇒
@@ -610,9 +639,12 @@ class ResolucionPartida:
 
 
 def _choca_con_no_hoja(lista: ListaPartidasObra, lectura: Any) -> bool:
-    """La clave de la lectura es la de algún código NO hoja de la obra."""
+    """La clave de la lectura es la de algún código NO hoja de la obra: su cod
+    o (F-098 R8) su código completo (``CD.99.01`` del subcapítulo ``99.01``)."""
     clave = normalizar_partida(lectura)
-    return clave is not None and any(normalizar_partida(c) == clave for c in lista.no_hojas)
+    return clave is not None and any(
+        normalizar_partida(c) == clave for c in (*lista.no_hojas, *lista.no_hojas_completos)
+    )
 
 
 def resolver_partida_obra(lista: ListaPartidasObra, lectura: Any, alm: str | None) -> ResolucionPartida:
@@ -621,9 +653,11 @@ def resolver_partida_obra(lista: ListaPartidasObra, lectura: Any, alm: str | Non
     :func:`casar_partida` y, encima:
 
     - ``alm`` / ``sin_partida`` ⇒ ``no_aplica`` (almacén o nada que verificar).
-    - Lectura no exacta cuya clave es la de un código NO hoja de la obra ⇒
-      ``fuera_de_lista``: nunca se normaliza hacia otra fila del árbol
-      (``03.02`` capítulo ≠ ``3.02`` hoja).
+    - Lectura no exacta cuya clave es la de un código NO hoja de la obra (su
+      cod o, F-098 R8, su código completo) ⇒ ``fuera_de_lista``: nunca se
+      normaliza hacia otra fila del árbol (``03.02`` capítulo ≠ ``3.02`` hoja).
+    - (F-098 R8) ``completa`` ⇒ ``normalizada`` con el cod de la lista: lo que
+      se guarda es el cod, nunca la lectura con un prefijo recortado.
     - ``compuesta`` ⇒ ``fuera_de_lista``: Sigrid admite una partida por línea
       y el reparto es de F-049.
     - ``fuera_de_lista`` / ``ambigua`` ⇒ la lectura sin cambios.
@@ -636,7 +670,7 @@ def resolver_partida_obra(lista: ListaPartidasObra, lectura: Any, alm: str | Non
         return ResolucionPartida(caso.codigos_lista[0], RESOLUCION_EXACTA, leida)
     if _choca_con_no_hoja(lista, lectura):
         return ResolucionPartida(leida, RESOLUCION_FUERA_DE_LISTA, leida)
-    if caso.motivo == MOTIVO_NORMALIZADA:
+    if caso.motivo in (MOTIVO_NORMALIZADA, MOTIVO_COMPLETA):
         return ResolucionPartida(caso.codigos_lista[0], RESOLUCION_NORMALIZADA, leida)
     if caso.motivo == MOTIVO_AMBIGUA:
         return ResolucionPartida(leida, RESOLUCION_AMBIGUA, leida)

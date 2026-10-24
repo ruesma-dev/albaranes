@@ -431,3 +431,207 @@ def test_f098_r12_cod_repetido():
 def test_f098_r12_cod_repetido_es_literal():
     """``ci.6.1`` no es el cod ``CI.6.1``: la marca es del cod tal cual."""
     assert lista_de("0692", FILAS_0692).cod_repetido("ci.6.1") is False
+
+
+# ------------------------------------------------------------------ #
+# R6 · casar por el cod y por el código completo, en toda la lista
+# ------------------------------------------------------------------ #
+@pytest.mark.parametrize(
+    ("filas", "lectura", "motivo", "cod"),
+    [
+        (FILAS_0686, "CD.99.01.64", "completa", "99.01.64"),
+        (FILAS_0686, "cd 99.1.64", "completa", "99.01.64"),
+        (FILAS_0686, "CD-99-01-64", "completa", "99.01.64"),
+        (FILAS_0686, " CD.21.02.21 ", "completa", "21.02.21"),
+        (FILAS_0686, "ANT.98.01", "completa", "98.01"),
+        (FILAS_0686, "ANT 98.1", "completa", "98.01"),
+        (FILAS_0686, "98.1", "normalizada", "98.01"),
+        (FILAS_0686, "ci.04.18", "normalizada", "CI.4.18"),
+        (FILAS_0696, "CD.P4.01.01", "completa", "P4.01.01"),
+        (FILAS_0696, "cd p4 1 1", "completa", "P4.01.01"),
+        (FILAS_0692, "CD.01.01", "completa", "01.01"),
+        (FILAS_0692, "cd2.1", "normalizada", "CD2.01"),
+    ],
+)
+def test_f098_r6_casa_por_el_completo(filas, lectura, motivo, cod):
+    caso = P.casar_partida(lista_de("0000", filas), lectura, "ALM")
+    assert (caso.motivo, caso.codigos_lista) == (motivo, (cod,))
+    assert caso.validada is True
+
+
+@pytest.mark.parametrize(
+    ("filas", "lectura"),
+    [
+        (FILAS_0692, "CI.1.01"),  # CI.1.1 de CI y CI.01.01 de CI.F2
+        (FILAS_0692, "ci 1 1"),
+        (FILAS_0693, "CD.37.01"),  # 37.01 y 37-.01 de CD
+        (FILAS_0693, "37.1"),  # ya era ambigua en F-076, por el cod
+    ],
+)
+def test_f098_r6_dos_candidatas_ambigua(filas, lectura):
+    caso = P.casar_partida(lista_de("0000", filas), lectura, "ALM")
+    assert (caso.motivo, caso.codigos_lista) == ("ambigua", ())
+
+
+def test_f098_r6_ci_f2_con_su_prefijo_no_tiene_completo():
+    """P9: el completo de ``CI.01.01`` de CI.F2 es ``CI.01.01``; una lectura
+    ``CI.F2.01.01`` no casa (R-3, aceptado)."""
+    caso = P.casar_partida(lista_de("0692", FILAS_0692), "CI.F2.01.01", "ALM")
+    assert caso.motivo == "fuera_de_lista"
+
+
+def test_f098_r6_normalizada_gana_a_completa_del_mismo_cod():
+    """Un cod que casa por su propio cod es ``normalizada``; uno que casa solo
+    por su completo, ``completa``."""
+    lista = lista_de("0000", [[1, 0, "CD", "TOTAL"], [2, 0, "X", "x"], [3, 2, "01", "h"]])
+    assert P.casar_partida(lista, "cd", None).motivo == "normalizada"
+    assert P.casar_partida(lista, "x.1", None).motivo == "completa"
+
+
+def test_f098_r6_por_cod_y_por_completo_a_la_vez_es_normalizada():
+    """Dos hojas con el MISMO cod: una casa por su cod y la otra por su
+    completo; es una sola candidata y casa por el cod (normalizada)."""
+    filas = [[1, 0, "CD", "COSTES"], [2, 1, "CD.1", "h1"], [3, 0, "Z", "Z"], [4, 3, "CD.1", "h2"]]
+    lista = lista_de("0000", filas)
+    # «CD.1» en CD: completo CD.1 (b). «CD.1» en Z: completo Z.CD.1.
+    caso = P.casar_partida(lista, "cd 1", None)
+    assert (caso.motivo, caso.codigos_lista) == ("normalizada", ("CD.1",))
+    caso = P.casar_partida(lista, "Z.CD.01", None)
+    assert (caso.motivo, caso.codigos_lista) == ("completa", ("CD.1",))
+
+
+def test_f098_r6_mismo_cod_por_cod_y_por_completo_de_otra_hoja_no_es_ambigua():
+    """Dos hojas con el MISMO cod no son dos candidatas (F-076)."""
+    lista = lista_de("0696", FILAS_0696)
+    caso = P.casar_partida(lista, "CD.P4.8.5", None)
+    assert (caso.motivo, caso.codigos_lista) == ("completa", ("P4.08.05",))
+
+
+def test_f098_r6_completa_esta_en_los_motivos():
+    assert P.MOTIVO_COMPLETA == "completa"
+    assert "completa" in P.MOTIVOS_PARTIDA
+    assert "completa" in P.MOTIVOS_CASADOS
+    assert "completa" not in P.MOTIVOS_NO_CASADOS
+
+
+def test_f098_r6_compuesta_con_partes_completas():
+    caso = P.casar_partida(lista_de("0686", FILAS_0686), "CD.99.01.64/CI.4.18", None)
+    assert (caso.motivo, caso.codigos_lista) == ("compuesta", ("99.01.64", "CI.4.18"))
+
+
+def test_f098_r6_compuesta_con_parte_ambigua_por_completo():
+    caso = P.casar_partida(lista_de("0693", FILAS_0693), "CD.37.01/CP.1.1", None)
+    assert caso.motivo == "ambigua"
+
+
+def test_f098_r6_hoja_sin_completo_distinto_no_duplica_candidatas():
+    """Una hoja cuyo completo es su cod (CI.4.18) entra una sola vez."""
+    caso = P.casar_partida(lista_de("0686", FILAS_0686), "CI.04.18", None)
+    assert (caso.motivo, caso.codigos_lista) == ("normalizada", ("CI.4.18",))
+
+
+def test_f098_r6_hoja_construida_a_mano_casa_por_su_cod():
+    """Sin capítulo (hojas de F-076 construidas a mano) el completo es el cod."""
+    lista = P.ListaPartidasObra("0678", (P.PartidaObra("CI.4.18", None, None),), ())
+    assert P.casar_partida(lista, "CI.04.18", None).motivo == "normalizada"
+
+
+# ------------------------------------------------------------------ #
+# R7 · la exacta gana aunque otra hoja tenga ese código completo
+# ------------------------------------------------------------------ #
+@pytest.mark.parametrize(
+    ("filas", "lectura"),
+    [(FILAS_0692, "CI.01.01"), (FILAS_0696, "P4.22.01.03.07"), (FILAS_0686, "99.01.64"), (FILAS_0692, "CD2.01")],
+)
+def test_f098_r7_exacta(filas, lectura):
+    caso = P.casar_partida(lista_de("0000", filas), lectura, None)
+    assert (caso.motivo, caso.codigos_lista) == ("exacta", (lectura,))
+
+
+def test_f098_r7_exacta_frente_al_completo_de_otra_hoja():
+    # La hoja «CD.01» (raíz) y la hoja «01» de CD, cuyo completo es «CD.01».
+    filas = [[1, 0, "CD.01", "raíz"], [2, 0, "CD", "COSTES"], [3, 2, "01", "h"]]
+    lista = lista_de("0000", filas)
+    caso = P.casar_partida(lista, "CD.01", None)
+    assert (caso.motivo, caso.codigos_lista) == ("exacta", ("CD.01",))
+    # Sin la exacta, las dos candidatas son ambiguas.
+    assert P.casar_partida(lista, "cd.1", None).motivo == "ambigua"
+
+
+# ------------------------------------------------------------------ #
+# R8 · resolver: completa ⇒ normalizada; guarda de no hoja con completos
+# ------------------------------------------------------------------ #
+def test_f098_r8_resolver_completa_es_normalizada():
+    r = P.resolver_partida_obra(lista_de("0686", FILAS_0686), "CD.99.01.64", "ALM")
+    assert (r.codigo, r.motivo, r.leida, r.cambia) == ("99.01.64", "normalizada", "CD.99.01.64", True)
+
+
+@pytest.mark.parametrize(
+    ("filas", "lectura"),
+    [(FILAS_0686, "CD.99.01"), (FILAS_0686, "CD.99"), (FILAS_0696, "CD.P4"), (FILAS_0696, "cd.p4.1")],
+)
+def test_f098_r8_no_hoja_por_su_completo_es_fuera_de_lista(filas, lectura):
+    r = P.resolver_partida_obra(lista_de("0000", filas), lectura, "ALM")
+    assert (r.codigo, r.motivo) == (lectura, "fuera_de_lista")
+
+
+def test_f098_r8_la_guarda_mira_los_completos_de_los_no_hoja():
+    """Una hoja cuya clave choca con el completo de un no hoja: sin la guarda
+    casaría (normalizada); con ella, ``fuera_de_lista``."""
+    filas = FILAS_0686 + [[40, 0, "CD.99.01", "Hoja raíz con forma de subcapítulo"]]
+    lista = lista_de("0686", filas)
+    assert P.casar_partida(lista, "cd 99 1", None).motivo == "normalizada"
+    r = P.resolver_partida_obra(lista, "cd 99 1", None)
+    assert (r.codigo, r.motivo) == ("cd 99 1", "fuera_de_lista")
+    # La exacta sigue ganando a la guarda (F-076).
+    assert P.resolver_partida_obra(lista, "CD.99.01", None).motivo == "exacta"
+
+
+def test_f098_r8_la_guarda_mira_tambien_ante_una_completa():
+    """Una lectura que casa como ``completa`` y choca con un no hoja."""
+    filas = [
+        [1, 0, "CD", "COSTES"], [2, 1, "99", "VARIOS"], [3, 2, "99.1", "hoja"],
+        [4, 0, "CI", "CI"], [5, 4, "CD.99", "no hoja de CI con forma"], [6, 5, "CD.99.9", "x"],
+    ]
+    lista = lista_de("0000", filas)
+    # «CD.99» es no hoja (cod, de CI) y también el completo del no hoja 99 de CD.
+    assert P.casar_partida(lista, "CD.99.1", None).motivo == "completa"
+    assert P.resolver_partida_obra(lista, "CD.99.1", None).motivo == "normalizada"
+    assert P.resolver_partida_obra(lista, "cd.99", None).motivo == "fuera_de_lista"
+
+
+def test_f098_r8_la_guarda_de_f076_por_el_cod_sigue():
+    filas = FILAS_0686 + [[41, 0, "99.1", "Hoja raíz con la clave del no hoja 99.01"]]
+    lista = lista_de("0686", filas)
+    assert P.casar_partida(lista, "99.001", None).motivo == "normalizada"
+    r = P.resolver_partida_obra(lista, "99.001", None)
+    assert r.motivo == "fuera_de_lista"
+
+
+# ------------------------------------------------------------------ #
+# R9 · nunca quitar ni añadir un prefijo por parecido
+# ------------------------------------------------------------------ #
+def test_f098_r9_leida_sin_prefijo_no_casa_con_hoja_que_lo_lleva():
+    lista = lista_de("0000", [[1, 0, "CD", "C"], [2, 1, "CD.99.01.64", "hoja con prefijo"]])
+    assert P.casar_partida(lista, "99.01.64", None).motivo == "fuera_de_lista"
+
+
+@pytest.mark.parametrize(
+    "lectura", ["01.64", "CI.99.01.64", "CD.99.01", "99.01", "CD.1.64", "D.99.01.64", "CD99.01.64"],
+)
+def test_f098_r9_sin_parecidos_0686(lectura):
+    assert P.casar_partida(lista_de("0686", FILAS_0686), lectura, None).motivo == "fuera_de_lista"
+
+
+def test_f098_r9_ci_1_01_en_0692_no_elige():
+    lista = lista_de("0692", FILAS_0692)
+    caso = P.casar_partida(lista, "CI.1.01", None)
+    assert caso.codigos_lista == ()
+    r = P.resolver_partida_obra(lista, "CI.1.01", None)
+    assert (r.codigo, r.motivo) == ("CI.1.01", "ambigua")
+
+
+def test_f098_r9_cd2_01_de_la_0692_nunca_2_01():
+    lista = lista_de("0692", FILAS_0692)
+    assert P.resolver_partida_obra(lista, "CD2.01", None).codigo == "CD2.01"
+    assert P.casar_partida(lista, "2.01", None).motivo == "fuera_de_lista"

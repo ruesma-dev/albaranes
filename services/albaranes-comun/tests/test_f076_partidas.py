@@ -230,8 +230,10 @@ def test_f076_r2_sql_es_la_de_sv4_con_empresa_1():
 # R4 · casar_partida: semántica de F-049 R5
 # ------------------------------------------------------------------ #
 def test_f076_r4_motivos_declarados():
+    # F-098 R6 añade «completa» (casa solo por el código completo): es la única
+    # diferencia con F-076 (design §5.1 de F-098).
     assert MOTIVOS_PARTIDA == frozenset(
-        {"exacta", "normalizada", "compuesta", "alm", "sin_partida", "fuera_de_lista", "ambigua"}
+        {"exacta", "normalizada", "compuesta", "alm", "sin_partida", "fuera_de_lista", "ambigua", "completa"}
     )
     assert (MOTIVO_EXACTA, MOTIVO_NORMALIZADA, MOTIVO_COMPUESTA) == ("exacta", "normalizada", "compuesta")
     assert (MOTIVO_ALM, MOTIVO_SIN_PARTIDA) == ("alm", "sin_partida")
