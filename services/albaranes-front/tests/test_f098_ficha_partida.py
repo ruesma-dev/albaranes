@@ -237,3 +237,189 @@ def test_f098_traducir_partida_ambigua_tal_cual():
 
 def test_f098_traducir_partida_alm_no_es_literal_especial():
     assert _ficha().traducir_partida(LISTA_0686, "ALM") == "ALM"
+
+
+# ------------------------------------------------------------------ #
+# ReviewService (servicio): pinta con la lista y traduce lo que guarda
+# ------------------------------------------------------------------ #
+#: La obra 0404 del albarán de METALFIRE (``tests/f065_bbdd.py``), con su CD:
+#: las partidas 01.01–01.03 y 03.01–03.02 son hojas de CD (completo CD.01.01…).
+FILAS_0404 = [
+    [1, 0, "CD", "COSTES DIRECTOS"],
+    [2, 1, "01", "CARPINTERÍA"],
+    [3, 2, "01.01", "Puerta EI2-60"],
+    [4, 2, "01.02", "Puerta EI2-90"],
+    [5, 2, "01.03", "Puerta EI2-120"],
+    [6, 1, "03", "VARIOS"],
+    [7, 6, "03.01", "Portes"],
+    [8, 6, "03.02", "Otros portes"],
+]
+LISTA_0404 = ListaPartidasObra.desde_filas("0404", _COLUMNAS, FILAS_0404)
+
+
+class _Partidas:
+    """``PartidasObraPort`` falso: una lista por obra y las obras pedidas."""
+
+    def __init__(self, listas=None) -> None:
+        self.listas = {"0404": LISTA_0404} if listas is None else listas
+        self.pedidas: list[str | None] = []
+
+    def lista(self, obra):
+        self.pedidas.append(obra)
+        return self.listas.get(obra)
+
+    def consultar(self, obra):
+        lista = self.lista(obra)
+        return lista, lista is not None
+
+
+def _servicio(motor, partidas):
+    from application.services.review_service import ReviewService
+    from f065_bbdd import repositorio
+
+    return ReviewService(repositorio(motor), "ana", None, None, partidas)
+
+
+def test_f098_servicio_port_es_el_de_comun():
+    from domain.ports.partidas_obra_port import PartidasObraPort
+    from ruesma_comun.sigrid import CachePartidasObra
+
+    cache = CachePartidasObra(lambda *a: ([], []), ttl_s=1, max_obras=1, ttl_fallo_s=1)
+    assert isinstance(cache, PartidasObraPort)
+    assert isinstance(_Partidas(), PartidasObraPort)
+
+
+def test_f098_servicio_guarda_el_cod_y_la_fila_contrato_sigue_contrato():
+    from f065_bbdd import DOC, construir, fila
+
+    motor = construir()
+    partidas = _Partidas()
+    assert _servicio(motor, partidas).update_line_conciliacion(
+        document_id=DOC, valuation_line_id=11, campos={"codigo_partida": "CD.01.01"})
+    f = fila(motor, 11)
+    assert f["codigo_partida_final"] == "01.01"
+    assert (f["matched_contrato_line_id"], f["derived_contrato_line_id"]) == (501, None)
+    assert partidas.pedidas == ["0404"]
+
+
+def test_f098_servicio_sin_f098_la_misma_edicion_pasaba_a_nueva():
+    """La regresión que arregla R26: sin traducir, ``CD.01.01`` ≠ ``01.01``."""
+    from f065_bbdd import DOC, construir, fila
+
+    motor = construir()
+    _servicio(motor, None).update_line_conciliacion(
+        document_id=DOC, valuation_line_id=11, campos={"codigo_partida": "CD.01.01"})
+    f = fila(motor, 11)
+    assert f["codigo_partida_final"] == "CD.01.01"
+    assert f["derived_contrato_line_id"] is not None
+
+
+def test_f098_servicio_obra_sin_lista_guarda_tal_cual():
+    from f065_bbdd import DOC, construir, fila
+
+    motor = construir()
+    partidas = _Partidas(listas={})
+    _servicio(motor, partidas).update_line_conciliacion(
+        document_id=DOC, valuation_line_id=13, campos={"codigo_partida": "CD.03.02"})
+    assert fila(motor, 13)["codigo_partida_final"] == "CD.03.02"
+    assert partidas.pedidas == ["0404"]
+
+
+@pytest.mark.parametrize("campos", [{"cantidad": 6.0}, {"codigo_partida": ""}, {"codigo_partida": None},
+                                     {"codigo_partida": "   "}, None])
+def test_f098_servicio_sin_partida_no_pide_la_lista(campos):
+    from f065_bbdd import DOC, construir
+
+    motor = construir()
+    partidas = _Partidas()
+    _servicio(motor, partidas).update_line_conciliacion(document_id=DOC, valuation_line_id=13, campos=campos)
+    assert partidas.pedidas == []
+
+
+def test_f098_servicio_traduce_sin_mutar_los_campos():
+    from f065_bbdd import DOC, construir
+
+    motor = construir()
+    campos = {"codigo_partida": "CD.01.01", "cantidad": 6.0}
+    _servicio(motor, _Partidas()).update_line_conciliacion(
+        document_id=DOC, valuation_line_id=11, campos=campos)
+    assert campos == {"codigo_partida": "CD.01.01", "cantidad": 6.0}
+
+
+def test_f098_servicio_dividir_manda_el_cod_de_cada_parte():
+    from domain.models.review_models import ParteDivision
+    from f065_bbdd import DOC, construir, fila
+
+    motor = construir()
+    partes = [ParteDivision(cantidad=4, codigo_partida="CD.01.02"),
+              ParteDivision(cantidad=3, codigo_partida="cd 01 03"),
+              ParteDivision(cantidad=3, codigo_partida=None)]
+    hecha = _servicio(motor, _Partidas()).dividir_linea(document_id=DOC, valuation_line_id=12, partes=partes)
+    assert hecha is not None
+    # La original (12) es la parte 1; ``hecha.partes`` son las 2..N.
+    finales = [fila(motor, vid)["codigo_partida_final"] for vid in [12, *hecha.partes]]
+    assert finales == ["01.02", "01.03", None]
+    assert [p.codigo_partida for p in partes] == ["CD.01.02", "cd 01 03", None]  # no muta
+
+
+def test_f098_servicio_dividir_sin_partidas_no_pide_la_lista():
+    from domain.models.review_models import ParteDivision
+    from f065_bbdd import DOC, construir
+
+    motor = construir()
+    partidas = _Partidas()
+    _servicio(motor, partidas).dividir_linea(
+        document_id=DOC, valuation_line_id=12,
+        partes=[ParteDivision(cantidad=4, codigo_partida=None), ParteDivision(cantidad=6, codigo_partida=None)])
+    assert partidas.pedidas == []
+
+
+def test_f098_servicio_dividir_sin_lista_tal_cual():
+    from domain.models.review_models import ParteDivision
+    from f065_bbdd import DOC, construir, fila
+
+    motor = construir()
+    hecha = _servicio(motor, _Partidas(listas={})).dividir_linea(
+        document_id=DOC, valuation_line_id=12,
+        partes=[ParteDivision(cantidad=4, codigo_partida="CD.01.02"), ParteDivision(cantidad=6, codigo_partida="01.02")])
+    assert [fila(motor, vid)["codigo_partida_final"] for vid in [12, *hecha.partes]] == ["CD.01.02", "01.02"]
+
+
+class _RepoFicha:
+    def __init__(self, detalle) -> None:
+        self.detalle = detalle
+
+    def get_document_detail(self, document_id, *, view_mode):
+        return self.detalle
+
+
+def test_f098_servicio_get_document_presenta_con_la_lista():
+    from application.services.review_service import ReviewService
+
+    detalle = _detalle(_blanca("CD.99.01.64", _conc("99.01.64", "99.01.64", agree=False, aviso="⚠")))
+    partidas = _Partidas(listas={"0686": LISTA_0686})
+    nuevo = ReviewService(_RepoFicha(detalle), "r", None, None, partidas).get_document("doc-f098")
+    assert nuevo.partidas_mostradas == {"99.01.64": "CD.99.01.64"}
+    assert nuevo.display_lines[0].concilia.agree_partida is True
+    assert partidas.pedidas == ["0686"]
+
+
+def test_f098_servicio_get_document_sin_puerto_o_sin_obra_igual():
+    from application.services.review_service import ReviewService
+
+    detalle = _detalle(_blanca("CD.99.01.64", _conc("99.01.64", "99.01.64", agree=False)))
+    assert ReviewService(_RepoFicha(detalle), "r").get_document("d") is detalle
+    sin_obra = _detalle(obra=None)
+    partidas = _Partidas(listas={"0686": LISTA_0686})
+    assert ReviewService(_RepoFicha(sin_obra), "r", None, None, partidas).get_document("d") is sin_obra
+    assert partidas.pedidas == []
+    assert ReviewService(_RepoFicha(None), "r", None, None, partidas).get_document("d") is None
+
+
+def test_f098_servicio_get_document_obra_sin_lista_igual():
+    from application.services.review_service import ReviewService
+
+    detalle = _detalle()
+    partidas = _Partidas(listas={})
+    assert ReviewService(_RepoFicha(detalle), "r", None, None, partidas).get_document("d") is detalle
+    assert partidas.pedidas == ["0686"]

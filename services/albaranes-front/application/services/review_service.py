@@ -13,6 +13,7 @@ from ruesma_comun.alta_sigrid import (
     nombre_producto,
     producto_efectivo,
 )
+from ruesma_comun.sigrid import ListaPartidasObra
 
 from application.services.busqueda_contratos import (
     debe_relanzar_busqueda,
@@ -42,6 +43,7 @@ from domain.models.review_models import (
 from domain.ports.contrato_refetch_port import ContratoRefetchClient
 from domain.ports.orchestrator_port import OrchestratorClient
 from domain.ports.partidas_obra_port import PartidasObraPort
+from domain.services.partidas_ficha import presentar_partidas, traducir_partida
 from domain.services.alta_sigrid import (
     FASE_RESULTADO,
     fase_alta,
@@ -158,6 +160,11 @@ class ReviewService:
             document_id,
             view_mode=view_mode,
         )
+        # F-098 R23, R24, R28: con la lista de la obra, la partida se pinta en
+        # código completo y el ✓/⚠ compara por la hoja (en todas las vistas:
+        # presentar no escribe). Sin lista, el mismo detalle de siempre.
+        if detalle is not None and self._partidas is not None and detalle.obra_codigo:
+            detalle = presentar_partidas(detalle, self._partidas.lista(detalle.obra_codigo))
         # F-053: con DESDE puesta, la ficha (vista merge) lleva el alta y el
         # producto de cada línea (R29, R30, R40). Con DESDE vacía, nada (R3).
         if (
@@ -444,7 +451,14 @@ class ReviewService:
     ) -> bool:
         """Edición de una fila con SOLO los campos cambiados (F-065 R8) y,
         con ``bloquear``, «Guardar» = aplicar y bloquear (R13). Una entrada
-        de deshacer que devuelve la fila (y el total) a como estaba."""
+        de deshacer que devuelve la fila (y el total) a como estaba.
+
+        (F-098 R25, R26) Una partida no vacía se guarda como el cod de la
+        lista de la obra si casa (``CD.99.01.64`` ⇒ ``99.01.64``); así el
+        repositorio decide Contrato/Nueva con el cod."""
+        partida = (campos or {}).get("codigo_partida")
+        if isinstance(partida, str) and partida.strip():
+            campos = {**campos, "codigo_partida": self._traducir(document_id, partida)}
         etiqueta = self._undo_line_desc(valuation_line_id)
         snap_line = self._undo_snap_line(valuation_line_id)
         snap_val = self._undo_snap_valuation(document_id)
@@ -789,7 +803,17 @@ class ReviewService:
         """(F-065 R29–R34) Divide una fila en ``partes`` con UNA entrada de
         deshacer: borra las partes y las derivadas creadas y devuelve la
         original (con su derivada, si era Nueva) y el total a como estaban.
-        ``None`` si la fila no es del documento."""
+        ``None`` si la fila no es del documento.
+
+        (F-098 R25) La partida de cada parte se guarda como el cod de la lista
+        de la obra si casa; la lista se pide solo si alguna parte trae una."""
+        if any(p.codigo_partida for p in partes):
+            lista = self._lista_del_documento(document_id)
+            partes = [
+                p.model_copy(update={"codigo_partida": traducir_partida(lista, p.codigo_partida)})
+                if p.codigo_partida else p
+                for p in partes
+            ]
         etiqueta = self._undo_line_desc(valuation_line_id)
         snap_line = self._undo_snap_line(valuation_line_id)
         derivada = (snap_line or {}).get("values", {}).get("derived_contrato_line_id")
@@ -1064,6 +1088,17 @@ class ReviewService:
         return self._repository.snapshot_row(
             table="albaran_valuations", row_id=vid,
         )
+
+    def _lista_del_documento(self, document_id: str) -> ListaPartidasObra | None:
+        """(F-098) La lista de partidas de la obra del merge, o ``None`` (sin
+        puerto, sin obra o sin lista)."""
+        if self._partidas is None:
+            return None
+        _cif, obra = self._repository.get_merge_cif_and_obra(document_id=document_id)
+        return self._partidas.lista(obra) if obra else None
+
+    def _traducir(self, document_id: str, partida: str) -> str | None:
+        return traducir_partida(self._lista_del_documento(document_id), partida)
 
     def _undo_line_desc(self, valuation_line_id: int) -> str:
         b = self._repository.line_brief(valuation_line_id=valuation_line_id)
