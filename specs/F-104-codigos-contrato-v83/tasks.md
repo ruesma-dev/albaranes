@@ -10,7 +10,7 @@ Rama `feature/F-104-codigos-contrato-v83`, worktree `../albaranes-F-104` (*junct
 
 ## Bloque B · sv4
 
-- [ ] T3: Los cinco textos de design §3.2 en `TEXTOS_MOTIVO_ALTA` (el del retirado se queda) y tests: texto exacto, no vacío, distinto del código; F-077 R27 en verde (R7, R10 en su parte de sv4)  |  Verificación: `pytest services/albaranes-front -k "f104_r7 or f104_r10 or f077_r27"`
+- [x] T3: Los cinco textos de design §3.2 en `TEXTOS_MOTIVO_ALTA` (el del retirado se queda) y tests: texto exacto, no vacío, distinto del código; F-077 R27 en verde (R7, R10 en su parte de sv4)  |  Verificación: `pytest services/albaranes-front -k "f104_r7 or f104_r10 or f077_r27"`
 - [ ] T4: `AltaSigridVista.avisos_sigrid` y la rama `texto` de «Avisos de Sigrid» en `_alta_sigrid.html` (D2): un aviso con texto sale «texto · mensaje (línea N)» con el código en `title`; uno sin texto, igual que hoy; los avisos no cambian estado ni bloqueo (R8, R9)  |  Verificación: `pytest services/albaranes-front -k "f104_r8 or f104_r9 or f077 or f053_t20"`
 
 ## Bloque C · documentación y calidad
