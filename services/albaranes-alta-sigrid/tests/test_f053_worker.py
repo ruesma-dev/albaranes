@@ -27,6 +27,7 @@ from ruesma_comun.colas import COLA_FEEDBACK, MensajeFeedback, MensajeValoracion
 from ruesma_comun.colas.consumidor import ConfiguracionConsumidor, ConsumidorCola
 
 import main_worker
+from domain.services.usuario_sigrid import Equivalencia
 from application.alta_sigrid_service import ResultadoProceso
 from domain.models.alta_models import AccionAlta, Decision, EstadoAlta, ModoAlta
 from interface_adapters import composition
@@ -151,8 +152,9 @@ def test_f053_worker_composicion_pasa_toda_la_configuracion(monkeypatch):
     assert servicio._espera == timedelta(minutes=20)
     assert servicio._tolerancia == pytest.approx(0.1)
     assert servicio._bloqueantes == frozenset({"producto_sin_historico", "stock_negativo"})
-    # F-069 R4: el ALTA_SIGRID_EMPIDE que quede en el entorno ya no llega.
-    assert servicio._respaldo == "USU_ALTA" and servicio._config.empide is None
+    # F-069 R4: el ALTA_SIGRID_EMPIDE que quede en el entorno ya no llega; la Lista, sí.
+    assert servicio._respaldo == "USU_ALTA" and not hasattr(servicio._config, "empide")
+    assert servicio._equivalencias == {"login1": Equivalencia(usu=None, empide=1234567)}
     assert dict(servicio._config.mapeo) == {"*": "MA9999", "alquiler_maquinaria": "QA9999"}
     assert type(servicio._repo).__name__ == "SqlAltaRepository"
     assert type(servicio._sigrid).__name__ == "SigridApiAltaClient"

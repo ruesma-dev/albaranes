@@ -137,7 +137,7 @@ def test_f053_r47_la_reclamacion_lleva_el_approved_by_del_merge():
 
 def test_f053_r12_validar_y_construir_recibe_usu_y_config_ya_no_lo_lleva():
     assert "usu" not in ConfigAlta.__dataclass_fields__
-    config = ConfigAlta(empide=None, mapeo=MAPEO)
+    config = ConfigAlta(mapeo=MAPEO)
     assert validar_y_construir(D, config, HOY, "luis").usu == "luis"
 
 

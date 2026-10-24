@@ -143,3 +143,20 @@ def test_f069_r4_env_example_sin_empide_y_con_la_lista():
     texto = (RAIZ_SV9 / ".env.example").read_text(encoding="utf-8")
     assert "ALTA_SIGRID_EMPIDE" not in texto
     assert re.search(rf"^{VARIABLE}=$", texto, re.MULTILINE)  # sin valor
+
+
+# ------------------------------------------------------------------ #
+# T9 · la Lista llega al servicio (un parámetro que no llega es un
+# interruptor silencioso: lección de F-051)
+# ------------------------------------------------------------------ #
+def test_f069_r1_config_la_lista_llega_al_servicio(monkeypatch):
+    from interface_adapters import composition
+
+    servicio = composition.construir_servicio(
+        _settings(monkeypatch, **{VARIABLE: LISTA}), sigrid=object(), pdf=object(),
+    )
+    assert servicio._equivalencias == {
+        "login1": Equivalencia(usu="login1b", empide=None),
+        "login2": Equivalencia(usu=None, empide=1234567),
+    }
+    assert not hasattr(servicio._config, "empide")

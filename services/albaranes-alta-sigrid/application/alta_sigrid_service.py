@@ -365,7 +365,7 @@ class AltaSigridService:
                         origen_empide.value, [a.codigo for a in avisos])
             _avisar_lineas_de_otro_contrato(document_id, datos)
             validada = validar_y_construir(
-                datos, self._config, hoy_en_madrid(self._reloj()), usu,
+                datos, self._config, hoy_en_madrid(self._reloj()), usu, empide=empide,
             )
             if isinstance(validada, list):
                 self._guardar(document_id, paso, self._resultado(

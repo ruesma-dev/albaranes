@@ -221,3 +221,31 @@ def test_f069_r14_orden_completo_en_una_previa():
     assert sigrid.operaciones() == [
         "buscar_usuario", "buscar_empleados_por_correo", "buscar_albaranes", "alta_albaran",
     ]
+
+
+# ------------------------------------------------------------------ #
+# T9 · el empide resuelto es el que se manda (R9, R10, R12)
+# ------------------------------------------------------------------ #
+@pytest.mark.parametrize("lista, sigrid_extra, esperado", [
+    (LISTA_EMP, {"empleados_de_alta": {1234567}}, 1234567),                  # R9
+    ("", {"empleados_por_correo": {CORREO: [ALTA]}}, ALTA.ide),               # R10
+    ("", {"empleados_por_correo": {CORREO: [ALTA, OTRO_ALTA]}}, None),        # R11-R12
+    ("", {}, None),                                                           # R12
+])
+def test_f069_r10_el_empide_resuelto_va_en_la_previa_y_la_grabacion(lista, sigrid_extra, esperado):
+    creado = replace(previa_ok(f.peticion()), estado="creado")
+    sigrid = SigridFalso(previa=previa_ok(f.peticion()), grabacion=creado,
+                         usuarios={"login1": "login1"}, **sigrid_extra)
+    repo, doc, resultado = f.procesar(sigrid, lista=lista, modo=ModoAlta.REAL)
+    assert resultado.estado is EstadoAlta.REGISTRADO
+    assert f.pedidos(sigrid, "empide") == [esperado, esperado]
+    assert repo.ultimo(doc).peticion["empide"] == esperado
+
+
+def test_f069_r9_validar_y_construir_recibe_el_empide():
+    from domain.services.validador_alta import ConfigAlta, validar_y_construir
+    from tests.f053_datos import CONFIG, HOY
+
+    assert "empide" not in ConfigAlta.__dataclass_fields__
+    assert validar_y_construir(f.D, CONFIG, HOY, "u", empide=7).empide == 7
+    assert validar_y_construir(f.D, CONFIG, HOY, "u").empide is None
