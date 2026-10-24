@@ -45,23 +45,43 @@ entradas `"código": "texto"` de `TEXTOS_MOTIVO_ALTA`, comentarios y el cuerpo d
 `avisos_sigrid`. Sobre ellas no hay operador que mutar, así que el número «1 mutante» es correcto pero no mide la
 parte que sostiene F-104. Tampoco cubre `templates/_alta_sigrid.html` (no es Python).
 
-Complemento: **17 mutantes a mano** sobre esas líneas y la plantilla, cada uno juzgado con los tests de F-104 y los
-vecinos (`test_f104_contrato_v83.py` + `test_f053_clasificador.py` en sv9; `test_f104_textos_avisos.py` +
-`test_f077_motivos_alta.py` en sv4), restaurando el fichero tras cada uno. Script (fuera del repositorio, en el
-scratchpad de la sesión): `mutantes_manuales.py`. Resultado real: **17 muertos, 0 supervivientes**.
+## Campaña MANUAL: 17 mutantes, 17 muertos, 0 supervivientes
 
-| # | Fichero | Mutación | Veredicto |
-|---|---|---|---|
-| M01–M03 | `clasificador.py` | cada Error v8.3 a `_ERROR` / `_REVISAR` | muerto |
-| M04 | `clasificador.py` | borrar `retencion_no_soportada` | muerto |
-| M05 | `clasificador.py` | `proveedor_sin_albaran_previo` a `_ERROR` (R2) | muerto |
-| M06–M07 | `alta_sigrid_models.py` | texto de `proveedor_ambiguo` recortado; texto de `cabecera_sin_dato` = código | muerto |
-| M08 | `alta_sigrid_models.py` | borrar el texto de `retencion_del_contrato` | muerto |
-| M09–M11 | `alta_sigrid_models.py` | `avisos_sigrid`: `mensaje` ← `detalle`; `referencia_linea` = `None`; `codigo` = `None` | muerto |
-| M12 | `alta_sigrid_models.py` | `avisos_sigrid` sin el filtro `isinstance(a, dict)` | muerto |
-| M13 | `_alta_sigrid.html` | iterar `alta.avisos` en vez de `alta.avisos_sigrid` | muerto |
-| M14–M16 | `_alta_sigrid.html` | rama con texto: sin `· mensaje`; sin `title`; sin «(línea N)» | muerto |
-| M17 | `_alta_sigrid.html` | `{% if a.texto %}` → `{% if a.codigo %}` | muerto |
+Medida el 2026-10-24 (review 1) sobre `5e2b4ff` (código idéntico a `d3c20f1`), en serie, una suite cada vez:
+
+- **Tests de cada mutante** (los mismos para todos los de su servicio), **sin `-x`**:
+  sv9, desde `services/albaranes-alta-sigrid`: `python -m pytest -q --tb=no -p no:cacheprovider
+  tests/test_f104_contrato_v83.py tests/test_f053_clasificador.py` (135 tests);
+  sv4, desde `services/albaranes-front`: `.venv/Scripts/python.exe -m pytest -q --tb=no -p no:cacheprovider
+  tests/test_f104_textos_avisos.py tests/test_f077_motivos_alta.py` (50 tests).
+- Antes de cada mutante, esos tests en verde sobre el original; el mutante sustituye **una sola aparición** del texto
+  original (si aparece 0 o 2+ veces, la campaña aborta); tras cada uno se restaura el fichero byte a byte y se
+  comprueba. `PYTHONDONTWRITEBYTECODE=1`.
+- **Línea**: la del primer carácter del texto original en el fichero sin mutar. **Texto exacto**: tal cual se
+  sustituyó; `\n` es un salto de línea y `\|` una barra (escapadas solo para la tabla).
+- **Fallos**: tests caídos / tests ejecutados, del resumen de pytest. Muerto = al menos un test caído.
+
+| # | Fichero:línea | Texto original | Texto mutado | Fallos | Veredicto |
+|---|---|---|---|---|---|
+| M01 | `albaranes-alta-sigrid/domain/services/clasificador.py:47` | `"proveedor_no_encontrado": _NO_ADMITIDO` | `"proveedor_no_encontrado": _ERROR` | 10/135 | muerto |
+| M02 | `albaranes-alta-sigrid/domain/services/clasificador.py:48` | `"proveedor_ambiguo": _NO_ADMITIDO` | `"proveedor_ambiguo": _REVISAR` | 10/135 | muerto |
+| M03 | `albaranes-alta-sigrid/domain/services/clasificador.py:49` | `"retencion_no_soportada": _NO_ADMITIDO` | `"retencion_no_soportada": _ERROR` | 10/135 | muerto |
+| M04 | `albaranes-alta-sigrid/domain/services/clasificador.py:49` | `    "retencion_no_soportada": _NO_ADMITIDO,\n` | (línea borrada) | 10/135 | muerto |
+| M05 | `albaranes-alta-sigrid/domain/services/clasificador.py:45` | `"proveedor_sin_albaran_previo": _NO_ADMITIDO` | `"proveedor_sin_albaran_previo": _ERROR` | 6/135 | muerto |
+| M06 | `albaranes-front/domain/models/alta_sigrid_models.py:109` | `"proveedor_ambiguo": "Hay varios proveedores en Sigrid con ese CIF"` | `"proveedor_ambiguo": "Hay varios proveedores en Sigrid"` | 1/50 | muerto |
+| M07 | `albaranes-front/domain/models/alta_sigrid_models.py:138` | `"cabecera_sin_dato": "Sigrid dejó vacío algún dato de pago de la cabecera"` | `"cabecera_sin_dato": "cabecera_sin_dato"` | 5/50 | muerto |
+| M08 | `albaranes-front/domain/models/alta_sigrid_models.py:137` | `    "retencion_del_contrato": "Sigrid aplicó la retención del contrato",\n` | (línea borrada) | 6/50 | muerto |
+| M09 | `albaranes-front/domain/models/alta_sigrid_models.py:374` | `"mensaje": a.get("mensaje"),` | `"mensaje": a.get("detalle"),` | 4/50 | muerto |
+| M10 | `albaranes-front/domain/models/alta_sigrid_models.py:375` | `"referencia_linea": a.get("referencia_linea")}` | `"referencia_linea": None}` | 3/50 | muerto |
+| M11 | `albaranes-front/domain/models/alta_sigrid_models.py:372` | `"codigo": a.get("codigo"),\n             "texto"` | `"codigo": None,\n             "texto"` | 4/50 | muerto |
+| M12 | `albaranes-front/domain/models/alta_sigrid_models.py:376` | `for a in self.avisos if isinstance(a, dict)\n        ]\n\n    @computed_field  # type: ignore[prop-decorator]\n    @property\n    def usu_respaldo` | `for a in self.avisos\n        ]\n\n    @computed_field  # type: ignore[prop-decorator]\n    @property\n    def usu_respaldo` | 1/50 | muerto |
+| M13 | `albaranes-front/templates/_alta_sigrid.html:126` | `{% for a in alta.avisos_sigrid %}` | `{% for a in alta.avisos %}` | 3/50 | muerto |
+| M14 | `albaranes-front/templates/_alta_sigrid.html:128` | `<li title="{{ a.codigo }}">{{ a.texto }}{% if a.mensaje %} · {{ a.mensaje }}{% endif %}` | `<li title="{{ a.codigo }}">{{ a.texto }}` | 2/50 | muerto |
+| M15 | `albaranes-front/templates/_alta_sigrid.html:128` | `<li title="{{ a.codigo }}">{{ a.texto }}{% if a.mensaje %}` | `<li>{{ a.texto }}{% if a.mensaje %}` | 1/50 | muerto |
+| M16 | `albaranes-front/templates/_alta_sigrid.html:128` | `{{ a.texto }}{% if a.mensaje %} · {{ a.mensaje }}{% endif %}{% if a.referencia_linea %} (línea {{ a.referencia_linea }}){% endif %}</li>\n                    {% else %}` | `{{ a.texto }}{% if a.mensaje %} · {{ a.mensaje }}{% endif %}</li>\n                    {% else %}` | 1/50 | muerto |
+| M17 | `albaranes-front/templates/_alta_sigrid.html:127` | `{% if a.texto %}` | `{% if a.codigo %}` | 2/50 | muerto |
+
+Cruce con la review 1: el reviewer reprodujo M02 (10 failed/135), M09 (4 failed/50) y M14 (2 failed/50); cuadran.
 
 Además, las mutaciones inversas de la fase RED (`progress/impl_F-104.md`) cubren lo que F-104 no cambia pero
 protege: el defecto de `ALTA_SIGRID_AVISOS_BLOQUEANTES`, `.env.example`, el comparador frente a `totales.tot`,
