@@ -149,7 +149,12 @@ estado) va a `progress/impl_F-104.md`.
 - T8 (retirada) no exige despliegue propio: sale con la siguiente imagen de sv9 (D1).
 - Vuelta atrás: la imagen anterior de sv9/sv4 (los tres códigos vuelven a `error`); sin datos que migrar.
 
-## 8. Decisiones abiertas (las valida el humano en la PARADA 1; recomendada primero)
+## 8. Decisiones (PARADA 1 cerrada por el humano el 2026-10-24: «sí, apruebo 104»)
+
+**DECIDIDO (2026-10-24): D1 = opción 1 y D2 = opción 1.** T8 (retirada de `proveedor_sin_albaran_previo`) va
+dentro de F-104, tras M2 en verde; tras APPROVED de T1–T7, F-104 queda `blocked` esperando el despliegue de F-015
+de sigrid-api. En el panel, texto de `TEXTOS_MOTIVO_ALTA` + `mensaje` de sigrid-api, código en el `title`. Las
+opciones de abajo se dejan como registro de lo que se valoró.
 
 **D1 · Cómo y cuándo retirar `proveedor_sin_albaran_previo`.**
 1. *Recomendada*: T8 dentro de F-104, tras M2 en verde: se quita de `CODIGOS_CABECERA` (y del test de la tabla), el

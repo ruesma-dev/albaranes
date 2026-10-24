@@ -1,10 +1,10 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-104 · `pending` → spec v1 escrita (2026-10-24), falta la PARADA 1** — sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (`871cc0c`). Spec en `specs/F-104-codigos-contrato-v83/` (rama `feature/F-104-codigos-contrato-v83`, worktree `../albaranes-F-104`, *junction* `.venv` de sv4: quitarla con `cmd /c rmdir` antes de `git worktree remove`). Los mapeos ya decididos por el humano no se reabren. **Decisiones abiertas para el humano** (`design.md` §8, recomendada primero):
+**F-104 · `in_progress` (2026-10-24, implementer)** — sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (`871cc0c`). Spec en `specs/F-104-codigos-contrato-v83/` (rama `feature/F-104-codigos-contrato-v83`, worktree `../albaranes-F-104`, *junction* `.venv` de sv4: quitarla con `cmd /c rmdir` antes de `git worktree remove`). **PARADA 1 cerrada por el humano el 2026-10-24 («sí, apruebo 104»): D1 = opción 1, D2 = opción 1** (anotado en `design.md` §8).
 
-- **D1 · retirada de `proveedor_sin_albaran_previo`**: (1) T8 dentro de F-104 tras la verificación M2, sin despliegue propio, F-104 `blocked` hasta entonces y `done` con T8; (2) nota en `current.md` para la próxima feature de sv9; (3) no retirarlo nunca. El texto de sv4 se conserva siempre (altas antiguas).
-- **D2 · cómo se ven `retencion_del_contrato` y `cabecera_sin_dato` en el panel**: (1) texto de `TEXTOS_MOTIVO_ALTA` + `mensaje` de sigrid-api, código en `title` (un `computed_field` y una rama en `_alta_sigrid.html`); (2) textos sin usar en el panel; (3) texto en lugar del mensaje (descartada).
+- **Alcance de esta pasada: T1–T7.** M1, M-D, M2 y T8–T9 dependen del despliegue de la F-015 de sigrid-api: M1/M2 las hace el líder, el despliegue el humano. Tras APPROVED de T1–T7, F-104 queda `blocked` («espera al despliegue de F-015 de sigrid-api») hasta M2 en verde y T8.
+- **Tarea en curso:** ver `tasks.md` (marcas `[x]`). Desviaciones y decisiones de implementación: `progress/impl_F-104.md`.
 - **Para F-103, al retomarla**: su D6 / R11–R14 / T7 (Bloque C) quedan absorbidos por F-104 y hay que quitarlos de su spec.
 - **Despliegue**: sv9 y sv4 (`deploy.ps1 -Only sv9,sv4`) antes o a la vez que la F-015 de sigrid-api; lo lanza el humano. M1 (antes) y M2/M3 (después de F-015) son de solo lectura, del líder.
 
