@@ -1,10 +1,10 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-104 · `in_progress` (2026-10-24, implementer)** — sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (`871cc0c`). Spec en `specs/F-104-codigos-contrato-v83/` (rama `feature/F-104-codigos-contrato-v83`, worktree `../albaranes-F-104`, *junction* `.venv` de sv4: quitarla con `cmd /c rmdir` antes de `git worktree remove`). **PARADA 1 cerrada por el humano el 2026-10-24 («sí, apruebo 104»): D1 = opción 1, D2 = opción 1** (anotado en `design.md` §8).
+**F-104 · `blocked` (2026-10-24): review APPROVED (pasada 2), fusionada en `dev`; espera el despliegue de sv9+sv4 (humano) y de la F-015 de sigrid-api (`60db955`, avisará), luego M2 (líder) y T8** — sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (`871cc0c`). Spec en `specs/F-104-codigos-contrato-v83/` (rama `feature/F-104-codigos-contrato-v83`, worktree `../albaranes-F-104`, *junction* `.venv` de sv4: quitarla con `cmd /c rmdir` antes de `git worktree remove`). **PARADA 1 cerrada por el humano el 2026-10-24 («sí, apruebo 104»): D1 = opción 1, D2 = opción 1** (anotado en `design.md` §8).
 
 - **Alcance de esta pasada: T1–T7.** M1, M-D, M2 y T8–T9 dependen del despliegue de la F-015 de sigrid-api: M1/M2 las hace el líder, el despliegue el humano. Tras APPROVED de T1–T7, F-104 queda `blocked` («espera al despliegue de F-015 de sigrid-api») hasta M2 en verde y T8.
-- **T1–T7 hechas (implementer, 2026-10-24)**, `init.sh` en verde; pendiente la review. Informe `progress/impl_F-104.md`, mutación `progress/mutacion_F-104.md`, `azure-apps` `8f6f243` local sin push.
+- **T1–T7 hechas (implementer, 2026-10-24)**, `init.sh` en verde; review APPROVED en la pasada 2 (`progress/review_F-104.md`). Informe `progress/impl_F-104.md`, mutación `progress/mutacion_F-104.md`, `azure-apps` `8f6f243` local sin push.
 - **Para F-103, al retomarla**: su D6 / R11–R14 / T7 (Bloque C) quedan absorbidos por F-104 y hay que quitarlos de su spec.
 - **Despliegue**: sv9 y sv4, desde `infra/`: `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4`, antes o a la vez que la F-015 de sigrid-api; lo lanza el humano. M1 (antes) y M2/M3 (después de F-015) son de solo lectura, del líder.
 
