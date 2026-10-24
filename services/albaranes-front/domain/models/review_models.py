@@ -1667,6 +1667,11 @@ class DocumentDetailPayload(BaseModel):
     #: obra. Vacío (sin lista) ⇒ la ficha pinta el cod, como antes.
     partidas_mostradas: dict[str, str] = Field(default_factory=dict)
 
+    def partida_mostrada(self, cod: str | None) -> str | None:
+        """(F-098 R23) Lo que la ficha pinta para el cod ``cod``: su código
+        completo si ``partidas_mostradas`` lo trae; si no, el cod tal cual."""
+        return self.partidas_mostradas.get((cod or "").strip(), cod)
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def aviso_suma(self) -> str | None:

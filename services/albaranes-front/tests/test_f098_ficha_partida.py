@@ -423,3 +423,96 @@ def test_f098_servicio_get_document_obra_sin_lista_igual():
     partidas = _Partidas(listas={})
     assert ReviewService(_RepoFicha(detalle), "r", None, None, partidas).get_document("d") is detalle
     assert partidas.pedidas == ["0686"]
+
+
+# ------------------------------------------------------------------ #
+# Plantilla (R23, R25): pinta el completo, guarda el cod
+# ------------------------------------------------------------------ #
+def _celda_partida(html):
+    import re
+
+    celda = re.search(r'<td[^>]*data-col="partida"[^>]*>.*?</td>', html, re.DOTALL)
+    assert celda is not None, "no se encontro la celda de partida"
+    return celda.group(0)
+
+
+def _render_partida(render_detalle, documento_detalle, linea_valorada, fila_detalle, mostradas, **conc):
+    doc = documento_detalle(lineas_valoracion=[linea_valorada(codigo_partida_final="99.01.64")],
+                            display=[fila_detalle({"codigo_partida": "99.01.64", **conc})])
+    return render_detalle(doc.model_copy(update={"partidas_mostradas": mostradas}))
+
+
+def test_f098_render_pinta_el_completo_y_guarda_el_cod(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
+    html = _render_partida(render_detalle, documento_detalle, linea_valorada, fila_detalle,
+                           {"99.01.64": "CD.99.01.64"})
+    celda = _celda_partida(html)
+    assert 'value="CD.99.01.64"' in celda
+    assert 'data-partida-cod="99.01.64"' in celda
+    assert 'data-sort-value="CD.99.01.64"' in celda
+
+
+def test_f098_render_sin_lista_pinta_el_cod(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
+    celda = _celda_partida(_render_partida(render_detalle, documento_detalle, linea_valorada, fila_detalle, {}))
+    assert 'value="99.01.64"' in celda
+    assert 'data-partida-cod="99.01.64"' in celda
+    assert "CD.99.01.64" not in celda
+
+
+def test_f098_render_nota_normalizada_con_el_completo(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
+    html = _render_partida(render_detalle, documento_detalle, linea_valorada, fila_detalle,
+                           {"99.01.64": "CD.99.01.64"}, partida_normalizada_desde="99-01-64")
+    assert "Normalizada: 99-01-64 → CD.99.01.64" in _celda_partida(html)
+
+
+def test_f098_render_dividir_lleva_el_completo(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
+    html = _render_partida(render_detalle, documento_detalle, linea_valorada, fila_detalle,
+                           {"99.01.64": "CD.99.01.64"})
+    assert "js-dividir" in html
+    assert 'data-partida="CD.99.01.64"' in html
+
+
+def test_f098_render_contrato_json_part_cod_y_mostrada(render_detalle, documento_detalle):
+    import json
+    import re
+
+    doc = documento_detalle().model_copy(update={
+        "partidas_mostradas": {"99.01.64": "CD.99.01.64"},
+        "contrato_lines": [ContratoLinePayload(id=7, codigo_contrato="C-001", codigo_partida="99.01.64", descripcion="Material",
+                                               precio_unitario=2.5)],
+    })
+    html = render_detalle(doc)
+    bloque = re.search(r'<script type="application/json" id="contrato-lines-json">(.*?)</script>', html, re.DOTALL)
+    assert bloque is not None
+    datos = json.loads(bloque.group(1))
+    assert datos[0]["part"] == "99.01.64"
+    assert datos[0]["partMostrada"] == "CD.99.01.64"
+    assert datos[0]["label"].startswith("CD.99.01.64 · Material")
+
+
+def test_f098_render_modelo_partida_mostrada():
+    doc = _detalle().model_copy(update={"partidas_mostradas": {"99.01.64": "CD.99.01.64"}})
+    assert doc.partida_mostrada("99.01.64") == "CD.99.01.64"
+    assert doc.partida_mostrada(" 99.01.64 ") == "CD.99.01.64"
+    assert doc.partida_mostrada("01.01") == "01.01"
+    assert doc.partida_mostrada(None) is None
+    assert doc.partida_mostrada("") == ""
+
+
+def test_f098_render_solo_lectura_pinta_el_completo(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
+    """Fila guardada (bloqueada): sale en solo lectura y pinta el completo."""
+    doc = documento_detalle(lineas_valoracion=[linea_valorada(codigo_partida_final="99.01.64", bloqueada=True)],
+                            display=[fila_detalle({"codigo_partida": "99.01.64"})])
+    html = render_detalle(doc.model_copy(update={"partidas_mostradas": {"99.01.64": "CD.99.01.64"}}))
+    celda = _celda_partida(html)
+    assert "<input" not in celda
+    assert "CD.99.01.64" in celda
