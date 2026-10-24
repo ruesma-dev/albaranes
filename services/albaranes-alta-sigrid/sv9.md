@@ -2,7 +2,8 @@
 
 > F-053 · alta en Sigrid de los albaranes aprobados. Spec: `specs/F-053-alta-sigrid/`.
 > Contrato con sigrid-api: `sigrid-api/specs/F-009-alta-albaran-compra/contrato_albaranes.md`
-> (v8.2, `13fd99d`, misma forma que la v8 `8a6ecab`; dueño sigrid-api, aquí se enlaza, no se copia).
+> (v8.3, `871cc0c` (rama F-015 de sigrid-api): la forma de la petición es la de la v8.2 `13fd99d` y la v8
+> `8a6ecab`; dueño sigrid-api, aquí se enlaza, no se copia).
 
 ## Qué hace
 
@@ -70,6 +71,20 @@ Estado de cada alta: tabla `albaran_altas_sigrid` (la crea sv3, la escribe solo
 sv9, la lee sv4). Producto de las líneas sin vincular: columna
 `albaran_line_valuations.producto_sigrid` (la crea sv6) o el del mapeo
 `ALTA_SIGRID_PRODUCTO_POR_DEFECTO` (`ruesma_comun.alta_sigrid`).
+
+## Códigos del contrato v8.3 (F-104)
+
+Spec: `specs/F-104-codigos-contrato-v83/`. Contrato v8.3 §3.2–§3.3 (`871cc0c`).
+
+- **Errores de cabecera** `proveedor_no_encontrado`, `proveedor_ambiguo` y `retencion_no_soportada` ⇒
+  `no_admitido` (alta a mano), con el código como motivo y el `error` de sigrid-api de detalle.
+- **Avisos de cabecera** `retencion_del_contrato` y `cabecera_sin_dato`: informativos. No están en
+  `ALTA_SIGRID_AVISOS_BLOQUEANTES` (ni en el defecto ni en `infra/`); se guardan en `avisos_json` y el panel
+  de sv4 los enseña con su texto y el `mensaje` de sigrid-api. `totales.tot`, `retenciones` y `filas.dcarec`
+  no se comparan (la previa sigue por línea) y `filas` no se guarda.
+- **`proveedor_sin_albaran_previo`** (retirado en la v8.3): **sigue** en `no_admitido` hasta verificar, tras el
+  despliegue de la F-015 de sigrid-api, que ya no llega (M2); entonces se quita (T8, D1) y, si llegase, iría a
+  `error` (H25). sv4 conserva su texto (altas antiguas).
 
 ## Llaves (design §7)
 

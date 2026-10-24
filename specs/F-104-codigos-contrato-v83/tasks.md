@@ -15,7 +15,7 @@ Rama `feature/F-104-codigos-contrato-v83`, worktree `../albaranes-F-104` (*junct
 
 ## Bloque C · documentación y calidad
 
-- [ ] T5: `sv9.md` (cabecera v8.3 y sección «Códigos del contrato v8.3 (F-104)») y viñeta en §10 de `azure-apps/albaranes.md` (commit local en `azure-apps`, sin push) (R12)  |  Verificación: revisión del reviewer contra R12
+- [x] T5: `sv9.md` (cabecera v8.3 y sección «Códigos del contrato v8.3 (F-104)») y viñeta en §10 de `azure-apps/albaranes.md` (commit local en `azure-apps`, sin push) (R12)  |  Verificación: revisión del reviewer contra R12
 - [ ] T6: Campaña de mutación sobre `clasificador.py` y `alta_sigrid_models.py` (sin tope); supervivientes con test nuevo o justificación en `progress/mutacion_F-104.md`  |  Verificación: `python -m harness.mutacion --feature F-104`
 - [ ] T7: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`
 
