@@ -2,7 +2,8 @@
 """Respuesta de sigrid-api → estado del alta (F-053, design §2; R15, R18, R20, R21).
 
 Puro. La tabla de códigos es un DATO (:data:`CODIGOS_CABECERA`,
-:data:`CODIGOS_LINEA`), con los códigos del contrato de F-009 v8 (§3.3):
+:data:`CODIGOS_LINEA`), con los códigos del contrato de F-009 v8.3 (§3.3;
+``sigrid-api`` ``871cc0c``, F-104):
 
 - Lo que se corrige en sv4 o se da de alta a mano ⇒ ``no_admitido``.
 - ``referencia_en_conflicto`` (otro albarán lleva nuestra referencia) ⇒ ``revisar``.
@@ -40,7 +41,12 @@ CODIGOS_CABECERA: Mapping[str, EstadoAlta] = MappingProxyType({
     "obra_ambigua": _NO_ADMITIDO,
     "contrato_no_encontrado": _NO_ADMITIDO,
     "contrato_ambiguo": _NO_ADMITIDO,
+    # retirado en la v8.3: se quita tras F-104 T7 (T8, tras la verificación M2).
     "proveedor_sin_albaran_previo": _NO_ADMITIDO,
+    # Contrato v8.3 (F-015 de sigrid-api).
+    "proveedor_no_encontrado": _NO_ADMITIDO,
+    "proveedor_ambiguo": _NO_ADMITIDO,
+    "retencion_no_soportada": _NO_ADMITIDO,
     "almacen_de_obra_no_resuelto": _NO_ADMITIDO,   # H13
     "demasiadas_lineas": _NO_ADMITIDO,             # H22
     # Otro albarán de Sigrid lleva nuestra referencia: mirarlo.

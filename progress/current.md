@@ -1,6 +1,13 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-104 · `blocked` (2026-10-24): review APPROVED (pasada 2), fusionada en `dev`; espera el despliegue de sv9+sv4 (humano) y de la F-015 de sigrid-api (`60db955`, avisará), luego M2 (líder) y T8** — sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (`871cc0c`). Spec en `specs/F-104-codigos-contrato-v83/` (rama `feature/F-104-codigos-contrato-v83`, worktree `../albaranes-F-104`, *junction* `.venv` de sv4: quitarla con `cmd /c rmdir` antes de `git worktree remove`). **PARADA 1 cerrada por el humano el 2026-10-24 («sí, apruebo 104»): D1 = opción 1, D2 = opción 1** (anotado en `design.md` §8).
+
+- **Alcance de esta pasada: T1–T7.** M1, M-D, M2 y T8–T9 dependen del despliegue de la F-015 de sigrid-api: M1/M2 las hace el líder, el despliegue el humano. Tras APPROVED de T1–T7, F-104 queda `blocked` («espera al despliegue de F-015 de sigrid-api») hasta M2 en verde y T8.
+- **T1–T7 hechas (implementer, 2026-10-24)**, `init.sh` en verde; review APPROVED en la pasada 2 (`progress/review_F-104.md`). Informe `progress/impl_F-104.md`, mutación `progress/mutacion_F-104.md`, `azure-apps` `8f6f243` local sin push.
+- **Para F-103, al retomarla**: su D6 / R11–R14 / T7 (Bloque C) quedan absorbidos por F-104 y hay que quitarlos de su spec.
+- **Despliegue**: sv9 y sv4, desde `infra/`: `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4`, antes o a la vez que la F-015 de sigrid-api; lo lanza el humano. M1 (antes) y M2/M3 (después de F-015) son de solo lectura, del líder.
+
 **F-069 · `blocked` (2026-10-24): review APPROVED (pasada 2), fusionada en `dev` (`904d790`, init.sh en verde) y DESPLEGADA por el líder a petición expresa del humano** — usuario y empleado de Sigrid de quien aprueba (Lista → correo/`emp.traele` → Respaldo / `empide` nulo). Despliegue 2026-10-24: `set_alta_sigrid.ps1` (Lista vacía en sv9; DESDE, ESPERA y RESPALDO sin cambios; `ALTA_SIGRID_COMMIT` = true, sin tocar) → sv9 `r20261024-0845` (una revisión activa; log: `modo=real`, «Lista de equivalencias: 0 Entradas», escuchando `q-feedback`) → sv4 `r20261024-0848` (una revisión activa, arranque limpio). Rama `feature/F-069-usuario-empleado-sigrid`, worktree `../albaranes-F-069`. Informe `progress/impl_F-069.md`, review `progress/review_F-069.md`, medición T5 `progress/medicion_F-069.md`. `azure-apps` `3119ae3` local, sin push.
 
 - **Espera 1 · T17 (líder, solo lectura):** tras la primera alta real de un aprobador, `dca.empide` del AC nuevo = el de su correo (odomingo 1363636, tortiz 677761, lgarcia 922352, privillas 1203626) y el panel enseña «Empleado de Sigrid» y los avisos.
