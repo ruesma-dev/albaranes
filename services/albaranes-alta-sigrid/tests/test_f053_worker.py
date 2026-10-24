@@ -226,7 +226,7 @@ def _peor_caso_s(t_sigrid: float, t_graph: float) -> float:
 
 def test_f053_o1_visibilidad_por_encima_del_peor_caso(monkeypatch, tmp_path):
     peor = _peor_caso_s(60, 60)
-    assert peor == 1409  # 23,5 min: la visibilidad común de 600 s no basta
+    assert peor == 1409  # 23,5 min (F-053; F-069 R19 suma la resolución): 600 s no basta
     visibilidad = _visibilidad_con(monkeypatch, tmp_path)
     assert visibilidad >= peor + 300  # con margen para la BBDD y el arranque
     assert visibilidad < 7 * 24 * 3600  # máximo de Azure Storage Queues

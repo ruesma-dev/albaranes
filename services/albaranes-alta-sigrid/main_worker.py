@@ -64,18 +64,25 @@ def _con_reintentos_s(timeout_s: float) -> float:
     return INTENTOS_POR_DEFECTO * timeout_s + esperas
 
 
+#: F-069 R19: lecturas de la resolución de una petición nueva, cada una con sus
+#: reintentos: ``dbo.usu`` (Entrada y Login) y ``dbo.emp`` (Entrada y correo).
+LECTURAS_RESOLUCION = 4
+
+
 def peor_caso_mensaje_s(settings: Settings) -> float:
-    """Peor caso de UN mensaje en modo real: lectura de R14, previa,
-    grabación (una vez), PDF desde SharePoint y adjunto."""
+    """Peor caso de UN mensaje en modo real: las lecturas de la resolución
+    (F-069 R19), lectura de R14, previa, grabación (una vez), PDF desde
+    SharePoint y adjunto."""
     sigrid = _con_reintentos_s(settings.sigrid_api_timeout_s)
     token = (GRAPH_TOKEN_INTENTOS * settings.graph_timeout_s
              + (GRAPH_TOKEN_INTENTOS - 1) * GRAPH_TOKEN_ESPERA_MAX_S)
     pdf = token + GRAPH_PETICIONES_DESCARGA * settings.graph_timeout_s
-    return sigrid + sigrid + TIMEOUT_GRABACION_S + pdf + sigrid
+    resolucion = LECTURAS_RESOLUCION * sigrid
+    return resolucion + sigrid + sigrid + TIMEOUT_GRABACION_S + pdf + sigrid
 
 
 def visibilidad_cola_s(settings: Settings) -> int:
-    """Peor caso más el margen, redondeado al minuto (1740 s con los defectos)."""
+    """Peor caso más el margen, redondeado al minuto (2460 s con los defectos)."""
     return int(math.ceil((peor_caso_mensaje_s(settings) + MARGEN_VISIBILIDAD_S) / 60) * 60)
 
 

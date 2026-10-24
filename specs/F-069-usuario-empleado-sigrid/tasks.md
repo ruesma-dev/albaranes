@@ -18,7 +18,7 @@ Rama `feature/F-069-usuario-empleado-sigrid`. Rigor `critico`: **fase RED obliga
 - [x] T8: `OrigenEmpleado` y `_resolver_empleado` con los escalones en orden: Entrada de alta (si no, `empleado_lista_no_valido` y sigue), correo (cada aviso de R11), nulo con `defecto_sigrid_api`; con `usu` del Respaldo también; lectura caída en cada escalón; ningún caso lleva a `error`/`revisar`/`no_admitido` ni impide la previa o la grabación (R9–R14)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f069_r9 or f069_r10 or f069_r11 or f069_r12 or f069_r13 or f069_r14"`
 - [x] T9: `ConfigAlta` sin `empide` y `validar_y_construir(..., *, empide=None)`; `composition.py` con `equivalencias`; los 4 sitios de `ConfigAlta(empide=...)` de design §4 ajustados (R9–R12)  |  Verificación: `pytest services/albaranes-alta-sigrid` (toda la suite de sv9 en verde)
 - [x] T10: `Resolucion` en `peticion_json.resolucion` con orígenes y avisos (R16), conservada al retomar un `incierto` sin resolver nada (R15), nunca en el cuerpo enviado por previa, grabación ni retoma (R17, con `httpx.MockTransport`), log sin correo completo (R18) y adjunto con el `usu` guardado (R20)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f069_r15 or f069_r16 or f069_r17 or f069_r18 or f069_r20"`
-- [ ] T11: `peor_caso_mensaje_s` con dos lecturas de `dbo.usu` y dos de `dbo.emp`; ajustar el test que fije la visibilidad de hoy (R19)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f069_r19 or worker"`
+- [x] T11: `peor_caso_mensaje_s` con dos lecturas de `dbo.usu` y dos de `dbo.emp`; ajustar el test que fije la visibilidad de hoy (R19)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f069_r19 or worker"`
 
 ## Bloque C · panel de sv4
 
