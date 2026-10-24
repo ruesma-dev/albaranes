@@ -827,7 +827,9 @@
       "rigor": "critico",
       "priority": 1,
       "servicios": [
-        "sv9-alta-sigrid"
+        "sv9-alta-sigrid",
+        "sv4-front",
+        "infra"
       ],
       "branch": "feature/F-069-usuario-empleado-sigrid"
     },

@@ -273,6 +273,19 @@ def test_f069_script_truncado_es_fallo():
         medir(_lector(_servidor(truncar=True)), ["login1@ruesma.es"], [], {})
 
 
+@pytest.mark.parametrize("fila", [[11], [11, 0, 5]])
+def test_f069_script_fila_desparejada_es_fallo(fila):
+    # Review F-069 (superviviente 2): una fila sin ``fecbaj`` no puede contar
+    # como empleado de alta en silencio; la medición falla alto, como con
+    # ``truncated``.
+    def responder(request):
+        return httpx.Response(200, json={"ok": True, "columns": ["ide", "fecbaj"],
+                                         "rows": [fila], "row_count": 1, "truncated": False})
+
+    with pytest.raises(RuntimeError, match="desparejada"):
+        _lector(responder).leer(cliente.SQL_EMPLEADOS_POR_CORREO, ["login1@ruesma.es"], 3)
+
+
 def test_f069_script_lectura_caida_reintenta_y_falla():
     servidor = _servidor(fallar=True)
     with pytest.raises(RuntimeError, match="HTTP 500"):

@@ -303,7 +303,12 @@ class LectorSigrid:
         if datos.get("truncated"):
             raise RuntimeError("sql/read: respuesta truncada (sube max_rows o trocea)")
         columnas = [str(c).lower() for c in datos.get("columns") or []]
-        return [dict(zip(columnas, fila, strict=False)) for fila in datos.get("rows") or []]
+        # Una fila desparejada no se rellena: sin ``fecbaj`` el empleado contaría
+        # de alta en silencio y la medición decide E5. Falla alto, como truncated.
+        try:
+            return [dict(zip(columnas, fila, strict=True)) for fila in datos.get("rows") or []]
+        except ValueError as exc:
+            raise RuntimeError("sql/read: fila desparejada con las columnas") from exc
 
 
 def leer_postgres(conexion: Any) -> tuple[list[str | None], list[tuple]]:

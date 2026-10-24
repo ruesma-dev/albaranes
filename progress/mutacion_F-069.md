@@ -61,7 +61,65 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 
 > **Mutante equivalente.** Insertar la raíz de sv9 en la posición 1 en vez de la 0 solo la deja detrás de `sys.path[0]`, que al lanzar el script es su propia carpeta `scripts/`, y ahí solo están `__init__.py` y el propio script: ningún módulo de esa carpeta tapa a `domain`, `infrastructure` ni `config`. Las importaciones resuelven igual en las dos posiciones. Justificación para que la acepte el humano (rigor `critico`).
 
-> _Análisis traído de la campaña anterior de esta feature: el mutante volvió a sobrevivir con el mismo operador y el mismo texto. Reléelo si el código de alrededor ha cambiado._
+> **Demostración ejecutable (RM5, 2026-10-24)**: dos copias de sv9 sin `tests/` en una carpeta temporal, original y con el mutante; cada una lanza el script con `--help` como `__main__` y `sys.path[0]` = su `scripts/`, e imprime de dónde salió cada módulo. Las dos resuelven `domain` e `infrastructure` a su propia copia de sv9 y `httpx`, `psycopg` y `tenacity` a site-packages, y salen con 0: mismo comportamiento.
+
+```python
+# Demostración RM5 del superviviente 1 de F-069 (sys.path.insert(0) -> insert(1)).
+import runpy, shutil, subprocess, sys, tempfile
+from pathlib import Path
+SV9 = Path(r"C:\Users\pgris\PycharmProjects\albaranes-F-069\services\albaranes-alta-sigrid")
+SONDA = r'''
+import runpy, sys
+script = sys.argv[1]
+sys.path[0] = str(__import__("pathlib").Path(script).parent)   # como al lanzar el script
+sys.argv = [script, "--help"]
+try:
+    runpy.run_path(script, run_name="__main__")
+except SystemExit as fin:
+    codigo = fin.code
+for m in ("domain", "domain.services.usuario_sigrid", "infrastructure.sigrid.sigrid_api_alta_client", "httpx", "psycopg", "tenacity"):
+    print("MOD", m, sys.modules[m].__file__)
+print("SALIDA", codigo)
+'''
+base = Path(tempfile.mkdtemp(prefix="rm5_f069_"))
+for nombre, mutar in (("original", False), ("mutante", True)):
+    copia = base / nombre / "albaranes-alta-sigrid"
+    shutil.copytree(SV9, copia, ignore=shutil.ignore_patterns("tests", "__pycache__", ".venv", "*.pyc"))
+    ruta = copia / "scripts" / "medir_empleados_f069.py"
+    texto = ruta.read_text(encoding="utf-8")
+    if mutar:
+        assert texto.count("sys.path.insert(0, str(RAIZ_SV9))") == 1
+        texto = texto.replace("sys.path.insert(0, str(RAIZ_SV9))", "sys.path.insert(1, str(RAIZ_SV9))")
+        ruta.write_text(texto, encoding="utf-8")
+    r = subprocess.run([sys.executable, "-c", SONDA, str(ruta)], capture_output=True, text=True, cwd=base)
+    print(f"== {nombre} (exit {r.returncode})")
+    for linea in r.stdout.splitlines():
+        if linea.startswith(("MOD", "SALIDA")):
+            print("  " + linea.replace(str(base), "<tmp>"))
+    if r.returncode: print(r.stderr[-800:])
+shutil.rmtree(base)
+```
+
+Salida real (`python -I rm5_sv9.py`):
+
+```
+== original (exit 0)
+  MOD domain <tmp>\original\albaranes-alta-sigrid\domain\__init__.py
+  MOD domain.services.usuario_sigrid <tmp>\original\albaranes-alta-sigrid\domain\services\usuario_sigrid.py
+  MOD infrastructure.sigrid.sigrid_api_alta_client <tmp>\original\albaranes-alta-sigrid\infrastructure\sigrid\sigrid_api_alta_client.py
+  MOD httpx C:\Users\pgris\PycharmProjects\albaranes\.venv\Lib\site-packages\httpx\__init__.py
+  MOD psycopg C:\Users\pgris\PycharmProjects\albaranes\.venv\Lib\site-packages\psycopg\__init__.py
+  MOD tenacity C:\Users\pgris\PycharmProjects\albaranes\.venv\Lib\site-packages\tenacity\__init__.py
+  SALIDA 0
+== mutante (exit 0)
+  MOD domain <tmp>\mutante\albaranes-alta-sigrid\domain\__init__.py
+  MOD domain.services.usuario_sigrid <tmp>\mutante\albaranes-alta-sigrid\domain\services\usuario_sigrid.py
+  MOD infrastructure.sigrid.sigrid_api_alta_client <tmp>\mutante\albaranes-alta-sigrid\infrastructure\sigrid\sigrid_api_alta_client.py
+  MOD httpx C:\Users\pgris\PycharmProjects\albaranes\.venv\Lib\site-packages\httpx\__init__.py
+  MOD psycopg C:\Users\pgris\PycharmProjects\albaranes\.venv\Lib\site-packages\psycopg\__init__.py
+  MOD tenacity C:\Users\pgris\PycharmProjects\albaranes\.venv\Lib\site-packages\tenacity\__init__.py
+  SALIDA 0
+```
 
 ### 2. `services/albaranes-alta-sigrid/scripts/medir_empleados_f069.py:306` [booleano]
 
@@ -71,8 +129,6 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis
 
 > **Mutante equivalente** para el contrato de `sql/read` de sigrid-api: cada fila de `rows` trae un valor por cada elemento de `columns` (es una tabla: columnas y filas de la misma consulta), así que `zip` estricto o no da el mismo dict. Es la misma decisión que el cliente de sv9 (`sigrid_api_alta_client.py:208`, F-053), del que el script copia la lectura. Si un día sigrid-api devolviera una fila desparejada, el script de solo lectura daría una medición incompleta, no una escritura. Justificación para que la acepte el humano (rigor `critico`).
-
-> _Análisis traído de la campaña anterior de esta feature: el mutante volvió a sobrevivir con el mismo operador y el mismo texto. Reléelo si el código de alrededor ha cambiado._
 
 
 ## Campaña anterior (nota del implementer)
