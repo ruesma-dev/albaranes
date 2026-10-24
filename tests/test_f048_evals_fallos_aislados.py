@@ -498,7 +498,8 @@ def _banco_valoracion(tmp_path, *ids):
 def valoracion_sin_servicios(monkeypatch):
     """Todo lo que la valoración necesita de sv5/sv6, sin subprocesos."""
     monkeypatch.setenv("GEMINI_API_KEY", "clave-de-prueba")
-    monkeypatch.setattr(sv5, "construir_contexto", lambda datos: {"caso": datos["caso_id"]})
+    # F-084: el runner pasa además el índice y la caché del documento del contrato.
+    monkeypatch.setattr(sv5, "construir_contexto", lambda datos, **_: {"caso": datos["caso_id"]})
     monkeypatch.setattr(sv5, "proyectar_ia4", lambda conciliaciones, envelope: [])
     monkeypatch.setattr(
         sv6,

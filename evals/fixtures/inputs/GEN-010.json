@@ -2,7 +2,7 @@
   "caso_id": "GEN-010",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
+  "sha256_libro": "0e7be5c97d30301b8fe5c5fc0facf4435100da51d113d1c70472424c3c1e01a4",
   "tablas": {
     "caso": [
       {
@@ -14,8 +14,166 @@
         "tipologia": "Generico-Suministros"
       }
     ],
-    "condiciones": [],
-    "contrato_lineas": [],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "GEN-010",
+        "comentario": "fecha de IA1.cabeceras (F-084)",
+        "valor": "2026-03-10"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "GEN-010",
+        "codigo_partida": "PC115.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CANALETA MINIKIT 12x5 cm",
+        "linea_sigrid": 248629,
+        "precio_unitario": 7.449,
+        "unidad": "M"
+      },
+      {
+        "caso_id": "GEN-010",
+        "codigo_partida": "PC115.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "REJILLA GALVANIZADA PARA CANALETA MINIKIT",
+        "linea_sigrid": 248630,
+        "precio_unitario": 5.039,
+        "unidad": "M"
+      },
+      {
+        "caso_id": "GEN-010",
+        "codigo_partida": "25.02.01.16",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "TAPA+MARCO DE ARQUETA PARA SOLAR 100x100",
+        "linea_sigrid": 248631,
+        "precio_unitario": 289.3,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-010",
+        "codigo_partida": "25.02.01.15",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "TAPA+MARCO DE ARQUETA PARA SOLAR 40x40",
+        "linea_sigrid": 248632,
+        "precio_unitario": 69.56,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-010",
+        "codigo_partida": "PC197.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CANALETA M100 13x6 cm",
+        "linea_sigrid": 257355,
+        "precio_unitario": 11.73,
+        "unidad": "M"
+      },
+      {
+        "caso_id": "GEN-010",
+        "codigo_partida": "PC197.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CANALETA MINIKIT 12x5 cm",
+        "linea_sigrid": 257356,
+        "precio_unitario": 7.449,
+        "unidad": "M"
+      },
+      {
+        "caso_id": "GEN-010",
+        "codigo_partida": "PC197.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CANALETA SELF 200 20,4x14 cm",
+        "linea_sigrid": 257357,
+        "precio_unitario": 19.8,
+        "unidad": "M"
+      },
+      {
+        "caso_id": "GEN-010",
+        "codigo_partida": "PC197.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CANALETA SELF 250 26x15,5 cm",
+        "linea_sigrid": 257358,
+        "precio_unitario": 30.19,
+        "unidad": "M"
+      },
+      {
+        "caso_id": "GEN-010",
+        "codigo_partida": "PC197.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CANCELA PARA CANALETA SELF 250 26x15,5 cm",
+        "linea_sigrid": 257359,
+        "precio_unitario": 1.15,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-010",
+        "codigo_partida": "PC197.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "REJILLA FUNDICIÓN PARA CANALETA SELF 250 26x15,5 cm",
+        "linea_sigrid": 257360,
+        "precio_unitario": 23.55,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-010",
+        "codigo_partida": "PC197.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "REJILLA GALVANIZADA PARA CANALETA M100",
+        "linea_sigrid": 257361,
+        "precio_unitario": 5.75,
+        "unidad": "M"
+      },
+      {
+        "caso_id": "GEN-010",
+        "codigo_partida": "PC197.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "REJILLA GALVANIZADA PARA CANALETA MINIKIT",
+        "linea_sigrid": 257362,
+        "precio_unitario": 5.039,
+        "unidad": "M"
+      },
+      {
+        "caso_id": "GEN-010",
+        "codigo_partida": "PC197.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "TORNILLO PARA CANALETA M100",
+        "linea_sigrid": 257363,
+        "precio_unitario": 0.23,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-010",
+        "codigo_partida": "PC197.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "TORNILLO PARA CANALETA SELF 250 26x15,5 cm",
+        "linea_sigrid": 257364,
+        "precio_unitario": 0.54,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "GEN-010",
+        "codigo_partida": "PC156.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "TUBO DRENAJE 240º Ø160",
+        "linea_sigrid": 257365,
+        "precio_unitario": 2.43,
+        "unidad": "M"
+      }
+    ],
     "lineas_albaran": [
       {
         "cantidad": 72,

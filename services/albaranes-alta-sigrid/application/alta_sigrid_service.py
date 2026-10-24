@@ -9,7 +9,8 @@
    ``verificar_anulacion`` (R28), ``solo_adjunto`` (R23) o ``procesar``.
 3. ``procesar``: todo dentro de ``try/finally`` (R9). Una petición nueva lleva
    el ``usu`` de quien aprobó o el Respaldo (v8, R47–R48:
-   ``_resolver_usuario``). Tras dejar el alta en
+   ``_resolver_usuario``) y su ``empide`` (F-069: ``_resolver_empleado``, que
+   nunca bloquea), con la ``resolucion`` guardada junto al cuerpo (R16). Tras dejar el alta en
    ``en_curso``, ninguna salida —tampoco una excepción— la deja ahí: queda
    ``incierto`` si la grabación estaba en vuelo y ``error`` si no. Las
    excepciones de esta fase NO se propagan (el mensaje se confirma).
@@ -17,21 +18,26 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta
 
 from domain.models.alta_models import (
     AccionAlta,
     AdjuntoEstado,
+    CLAVE_RESOLUCION,
     AltaActual,
+    AvisoResolucion,
     DatosAlta,
     Decision,
     ErrorAlta,
     EstadoAlta,
     ModoAlta,
     Motivo,
+    OrigenEmpleado,
+    OrigenUsuario,
     PeticionAlbaran,
+    Resolucion,
     RespuestaAlta,
     ResultadoAdjunto,
     ResultadoAlta,
@@ -41,7 +47,18 @@ from domain.ports.pdf_port import PdfAlbaranPort
 from domain.ports.sigrid_alta_port import SigridAltaPort
 from domain.services.clasificador import clasificar, motivos_de_error
 from domain.services.comparador_previa import comparar
-from domain.services.usuario_sigrid import candidato_usuario
+from domain.services.usuario_sigrid import (
+    AVISO_DEFECTO_SIGRID_API,
+    AVISO_EMPLEADO_LECTURA_FALLIDA,
+    AVISO_EMPLEADO_LISTA_NO_VALIDO,
+    AVISO_EMPLEADO_SIN_CORREO,
+    AVISO_USUARIO_LISTA_NO_EXISTE,
+    Equivalencia,
+    candidato_usuario,
+    clasificar_empleados_correo,
+    correo_ruesma,
+    entrada_de,
+)
 from domain.services.validador_alta import (
     PREFIJO_REFERENCIA,
     ConfigAlta,
@@ -130,6 +147,7 @@ class AltaSigridService:
         tolerancia_eur: float,
         avisos_bloqueantes: frozenset[str],
         reloj: Callable[[], datetime] = _ahora_utc,
+        equivalencias: Mapping[str, Equivalencia] | None = None,
     ) -> None:
         self._repo = repo
         self._sigrid = sigrid
@@ -142,6 +160,8 @@ class AltaSigridService:
         self._tolerancia = tolerancia_eur
         self._bloqueantes = frozenset(avisos_bloqueantes)
         self._reloj = reloj
+        #: F-069: la Lista de excepciones por Login (vacía es lo normal).
+        self._equivalencias: Mapping[str, Equivalencia] = dict(equivalencias or {})
 
     @property
     def modo(self) -> ModoAlta:
@@ -228,33 +248,100 @@ class AltaSigridService:
     def _resultado(self, estado: EstadoAlta, paso: _Paso, **campos) -> ResultadoAlta:
         return ResultadoAlta(estado=estado, modo=self._modo.value, peticion=paso.peticion, **campos)
 
-    def _resolver_usuario(self, document_id: str, approved_by: str | None) -> str:
-        """R47–R48: el ``usu`` de una petición nueva. ÚNICO punto que lo decide.
+    def _buscar_usuario(self, cod: str) -> str | None:
+        """``dbo.usu`` (R47); si la lectura cae tras sus reintentos, R48."""
+        try:
+            return self._sigrid.buscar_usuario(cod)
+        except Exception as exc:  # noqa: BLE001 — R48: sin comprobar, no se atribuye
+            raise UsuarioNoResuelto(f"no se pudo leer dbo.usu: {type(exc).__name__}") from exc
 
-        El ``cod`` de ``dbo.usu`` para la parte local del correo ``@ruesma.es``
-        de quien aprobó; si no es correo de Ruesma o no casa, el Respaldo
-        (``ALTA_SIGRID_USUARIO_RESPALDO``). Lanza :class:`UsuarioNoResuelto` si
-        la lectura cae tras sus reintentos o hace falta el Respaldo y está
-        vacío. (F-069, la lista de equivalencias correo → login, entrará aquí,
-        antes de la parte local.)"""
+    def _resolver_usuario(
+        self, document_id: str, approved_by: str | None,
+    ) -> tuple[str, OrigenUsuario, list[AvisoResolucion]]:
+        """F-053 R47–R48 y F-069 R5–R8: el ``usu`` de una petición nueva, su
+        Origen y los Avisos de resolución. ÚNICO punto que lo decide.
+
+        Escalones (el primero que da valor gana): (1) la Entrada de la Lista
+        con ``usu``, si casa con ``dbo.usu`` (si no, Aviso
+        ``usuario_lista_no_existe`` y sigue); (2) la parte local del Correo de
+        Ruesma de quien aprobó, si casa; (3) el Respaldo
+        (``ALTA_SIGRID_USUARIO_RESPALDO``). Siempre se manda el ``cod`` que
+        devuelve Sigrid. Lanza :class:`UsuarioNoResuelto` si una lectura cae
+        tras sus reintentos o hace falta el Respaldo y está vacío."""
+        avisos: list[AvisoResolucion] = []
+        entrada = entrada_de(approved_by, self._equivalencias)
+        if entrada is not None and entrada.usu is not None:
+            cod = self._buscar_usuario(entrada.usu)
+            if cod:
+                return cod, OrigenUsuario.LISTA, avisos
+            avisos.append(AvisoResolucion(
+                AVISO_USUARIO_LISTA_NO_EXISTE,
+                f"el usu {entrada.usu} de la Lista no existe en dbo.usu",
+            ))
         candidato = candidato_usuario(approved_by)
         if candidato is not None:
-            try:
-                cod = self._sigrid.buscar_usuario(candidato)
-            except Exception as exc:  # noqa: BLE001 — R48: sin comprobar, no se atribuye
-                raise UsuarioNoResuelto(
-                    f"no se pudo leer dbo.usu: {type(exc).__name__}",
-                ) from exc
+            cod = self._buscar_usuario(candidato)
             if cod:
-                logger.info("%s document_id=%s usu=%s (quien aprobó)", _LOG, document_id, cod)
-                return cod
+                return cod, OrigenUsuario.CORREO, avisos
         if not self._respaldo:
             raise UsuarioNoResuelto(
                 "quien aprobó no casa con un login de Sigrid y "
                 "ALTA_SIGRID_USUARIO_RESPALDO está vacío",
             )
-        logger.info("%s document_id=%s usu=%s (respaldo)", _LOG, document_id, self._respaldo)
-        return self._respaldo
+        return self._respaldo, OrigenUsuario.RESPALDO, avisos
+
+    def _resolver_empleado(
+        self, approved_by: str | None,
+    ) -> tuple[int | None, OrigenEmpleado, list[AvisoResolucion]]:
+        """F-069 R9–R13: el ``empide`` de una petición nueva, su Origen y los
+        Avisos de resolución. ÚNICO punto que lo decide. NUNCA lanza ni bloquea:
+        una lectura caída de ``dbo.emp`` es un Aviso y el escalón siguiente.
+
+        Escalones: (1) la Entrada de la Lista con ``empide``, si es un empleado
+        de alta (si no, ``empleado_lista_no_valido``); (2) el único Empleado del
+        correo de alta (``clasificar_empleados_correo``); (3) nulo, y sigrid-api
+        pone su defecto (``defecto_sigrid_api``). No depende del Origen del
+        usuario (E1)."""
+        avisos: list[AvisoResolucion] = []
+        entrada = entrada_de(approved_by, self._equivalencias)
+        if entrada is not None and entrada.empide is not None:
+            try:
+                de_alta = self._sigrid.empleado_de_alta(entrada.empide)
+            except Exception as exc:  # noqa: BLE001 — R13: el empleado nunca tumba el alta
+                avisos.append(AvisoResolucion(
+                    AVISO_EMPLEADO_LECTURA_FALLIDA,
+                    f"dbo.emp (empleado de la Lista): {type(exc).__name__}",
+                ))
+            else:
+                if de_alta:
+                    return entrada.empide, OrigenEmpleado.LISTA, avisos
+                avisos.append(AvisoResolucion(
+                    AVISO_EMPLEADO_LISTA_NO_VALIDO,
+                    f"el empide {entrada.empide} de la Lista no es un empleado de alta",
+                ))
+        correo = correo_ruesma(approved_by)
+        if correo is None:
+            avisos.append(AvisoResolucion(
+                AVISO_EMPLEADO_SIN_CORREO, "quien aprobó no tiene correo de Ruesma",
+            ))
+        else:
+            try:
+                empleados = self._sigrid.buscar_empleados_por_correo(correo)
+            except Exception as exc:  # noqa: BLE001 — R13
+                avisos.append(AvisoResolucion(
+                    AVISO_EMPLEADO_LECTURA_FALLIDA,
+                    f"dbo.emp (empleados del correo): {type(exc).__name__}",
+                ))
+            else:
+                ide, aviso = clasificar_empleados_correo(empleados)
+                if ide is not None:
+                    return ide, OrigenEmpleado.CORREO, avisos
+                avisos.append(aviso)
+        avisos.append(AvisoResolucion(
+            AVISO_DEFECTO_SIGRID_API,
+            "se manda empide nulo: sigrid-api pone su empleado por defecto",
+        ))
+        return None, OrigenEmpleado.DEFECTO_SIGRID_API, avisos
 
     def _flujo(
         self, document_id: str, previa: AltaActual | None, approved_by: str | None,
@@ -262,21 +349,32 @@ class AltaSigridService:
     ) -> None:
         datos = self._repo.leer_datos(document_id)
 
-        # 1. Petición: la guardada si se retoma un incierto (R15, con su usu), o
-        #    una nueva con el usu de quien aprobó (R47–R48; solo lee dbo.usu) y
+        # 1. Petición: la guardada si se retoma un incierto (R15, con su usu, su
+        #    empide y su resolucion), o una nueva con el usu y el empide de quien
+        #    aprobó (R47–R48, F-069 R5–R14; solo lee dbo.usu y dbo.emp) y
         #    validada en local (R10–R13, R39; sin llamar a nadie más).
         peticion = _peticion_retomada(previa)
+        resolucion: dict | None = _resolucion_guardada(previa) if peticion is not None else None
         if peticion is None:
             try:
-                usu = self._resolver_usuario(document_id, approved_by)
+                usu, origen_usu, avisos = self._resolver_usuario(document_id, approved_by)
             except UsuarioNoResuelto as exc:
                 self._guardar(document_id, paso, self._resultado(
                     EstadoAlta.ERROR, paso, motivos=(Motivo(MOTIVO_USUARIO, str(exc)),),
                 ))
                 return
+            empide, origen_empide, avisos_empide = self._resolver_empleado(approved_by)
+            resuelta = Resolucion(usu=usu, origen_usu=origen_usu, empide=empide,
+                                  origen_empide=origen_empide,
+                                  avisos=(*avisos, *avisos_empide))
+            # R18: usu, empide, orígenes y códigos; nunca el correo ni el cuerpo.
+            logger.info("%s document_id=%s usu=%s origen_usu=%s empide=%s origen_empide=%s "
+                        "avisos=%s", _LOG, document_id, usu, origen_usu.value, empide,
+                        origen_empide.value, [a.codigo for a in resuelta.avisos])
+            resolucion = resuelta.a_dict()
             _avisar_lineas_de_otro_contrato(document_id, datos)
             validada = validar_y_construir(
-                datos, self._config, hoy_en_madrid(self._reloj()), usu,
+                datos, self._config, hoy_en_madrid(self._reloj()), usu, empide=empide,
             )
             if isinstance(validada, list):
                 self._guardar(document_id, paso, self._resultado(
@@ -284,7 +382,11 @@ class AltaSigridService:
                 ))
                 return
             peticion = validada
+        # R16: la resolucion va JUNTO al cuerpo en peticion_json; lo que se manda
+        # a sigrid-api es siempre peticion.a_dict() (R17).
         paso.peticion = peticion.a_dict()
+        if resolucion is not None:
+            paso.peticion[CLAVE_RESOLUCION] = resolucion
         self._guardar(document_id, paso, self._resultado(EstadoAlta.EN_CURSO, paso))
 
         # 2. Alta a mano del mismo albarán en Sigrid (R14).
@@ -467,6 +569,13 @@ def _peticion_retomada(previa: AltaActual | None) -> PeticionAlbaran | None:
     if previa is None or previa.estado is not EstadoAlta.INCIERTO or not previa.peticion:
         return None
     return PeticionAlbaran.desde_dict(previa.peticion)
+
+
+def _resolucion_guardada(previa: AltaActual | None) -> dict | None:
+    """La ``resolucion`` de la petición de un ``incierto`` retomado (F-069 R15),
+    o ``None`` si no la tenía (altas anteriores a F-069): no se inventa."""
+    guardada = (previa.peticion or {}).get(CLAVE_RESOLUCION) if previa is not None else None
+    return guardada if isinstance(guardada, dict) else None
 
 
 def _importes(datos: DatosAlta, peticion: PeticionAlbaran) -> dict[str, float]:

@@ -51,7 +51,9 @@ CLAVES_DE_TABLA: dict[str, tuple[str, ...]] = {
     "conciliacion": ("caso_id", "num_linea"),
     "caso": ("caso_id",),
     "lineas_albaran": ("caso_id", "num_linea"),
-    "contrato_lineas": ("caso_id", "codigo_producto"),
+    # (F-084 R11) Un contrato de Sigrid puede repetir producto en dos
+    # posiciones: la línea de Sigrid (`ctrpro.ide`) las distingue.
+    "contrato_lineas": ("caso_id", "codigo_producto", "linea_sigrid"),
     "condiciones": ("caso_id", "campo"),
     "datos_generales": ("caso_id",),
     "lineas_anadidas": ("caso_id", "num_linea_base", "concepto"),

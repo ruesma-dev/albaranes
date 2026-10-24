@@ -161,10 +161,12 @@ def casos_de_fase(
     """Los casos que se miden en la fase y los que se quedan fuera, con su motivo.
 
     IA1 e IA2: los de su libro con albarán. IA3: todos los de INPUTS (R22).
-    IA4: los del libro IA4 que tienen INPUTS (R23).
+    IA4: los del libro IA4 que tienen INPUTS (R23). En IA3 e IA4 se quedan
+    fuera los que tienen el documento del contrato en el índice y no en local
+    (F-084 R33): se mediría otra cosa.
     """
     libro = cargar_fixtures(fixtures, LIBRO_DE_FASE[fase])
-    inputs = cargar_fixtures(fixtures, "inputs") if fase == "IA4" else {}
+    inputs = runner.cargar_inputs(fixtures) if fase in ("IA3", "IA4") else {}
     omitidos: dict[str, str] = {}
     candidatos = sorted(libro)
     if pedidos:
@@ -178,6 +180,8 @@ def casos_de_fase(
             omitidos[caso] = "no existe el fichero del albarán"
         elif fase == "IA4" and caso not in inputs:
             omitidos[caso] = "sin caso en INPUTS"
+        elif inputs and (motivo := sv5_valoracion.falta_documento(inputs[caso])):
+            omitidos[caso] = motivo
         else:
             casos.append(caso)
     return casos, omitidos
@@ -312,7 +316,7 @@ def _trabajos_de_casos(plan: Plan, fixtures: Path, albaranes: Path) -> dict[str,
             }
             for caso in plan.casos
         }
-    inputs = cargar_fixtures(fixtures, "inputs")
+    inputs = runner.cargar_inputs(fixtures)
     return {
         caso: {"caso_id": caso, "contexto": sv5_valoracion.construir_contexto(inputs[caso])}
         for caso in plan.casos

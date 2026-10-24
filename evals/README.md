@@ -61,9 +61,80 @@ python -m harness.rutas_sensibles --validar
 
 Opciones útiles: `--casos GEN-001,HOR-002` para acotar, `--proveedores` para
 ampliar IA1/IA2 más allá del proveedor primario (por defecto solo el primario,
-que es lo que corre en producción), `--fases` para acotar la corrida.
+que es lo que corre en producción) y fijar el de IA3/IA4 (el primero de la
+lista; sin ella, el de producción, F-084), `--fases` para acotar la corrida.
 
 Pedir IA1/IA2 sin `--con-llm` se rechaza: el gasto en LLM nunca es implícito.
+
+## El contrato de cada caso: líneas y documento (F-084)
+
+IA3, IA4 y el extremo a extremo solo miden el modelo si el caso trae su
+contrato: sin líneas, todo sale `no_match` con cualquier modelo. Dos
+subcomandos lo traen de producción. **Los dos son solo lectura, los lanza el
+humano con sus credenciales en la consola** y `harness/init.sh` no los invoca
+nunca.
+
+```bash
+# 1. Líneas del contrato: sigrid-api -> ground_truth/INPUTS.xlsx › CONTRATO_LINEAS
+python -m evals.contratos lineas --dry-run     # solo el informe, el libro no se toca
+python -m evals.contratos lineas [--casos A,B]
+
+# 2. Cabecera y documento del contrato: BBDD albaranes + SharePoint
+python -m evals.contratos documentos [--casos A,B]
+
+# 3. Libros -> fixtures, y la corrida determinista
+python -m evals.conversor
+python -m evals.runner --feature F-XXX
+```
+
+El orden importa: **importar → convertir → determinista**. Las líneas entran
+por el libro, no por los fixtures, porque el conversor regenera los JSON desde
+los libros y pisaría cualquier cosa escrita a mano.
+
+- **`lineas`** lee de sigrid-api (`POST /api/sql/read`, un `SELECT` por código
+  de contrato distinto, `emp = 1`, `NO_TOLERA` con `truncated`) con
+  `SIGRID_API_BASE_URL`, `SIGRID_API_FUNCTION_KEY` y `SIGRID_API_DATABASE`.
+  Escribe una fila por línea y caso en `CONTRATO_LINEAS` (con `linea_sigrid`,
+  la línea de Sigrid) y la `fecha_albaran` que falte en `CONDICIONES`, sacada
+  de IA1. Copia el libro a `ground_truth/copias/` antes de escribir y no lo
+  guarda si nada cambia. **No toca los casos que ya tienen líneas** (los RES
+  escritos a mano, con sus señuelos). Un contrato que falla (truncado, 0 o más
+  de un `ctr.ide`) no se escribe y el resto sigue.
+- **`documentos`** lee, con la SQL y el descargador de sv5, la fila de
+  `albaran_contratos_merge` (sesión de solo lectura) y el MD del contrato que
+  sv3 dejó en SharePoint, o el PDF si no hay MD (tope `MAX_PDF_MB` = 40, el de
+  sv5). Necesita las `PG_*` **de Azure** en la consola (el `.env` de los
+  servicios apunta a local), `GRAPH_KEY` y las `SHAREPOINT_*` de sv5. El
+  documento queda en `evals/inputs/contratos/` (no versionado: precios de
+  proveedor y firmantes) y su huella en `evals/fixtures/contratos/_indice.json`
+  (versionado, sin contenido: tipo, sha256, tamaño, motivo y la cabecera).
+- **El informe** de los dos es `progress/import_F-084.md`: recuentos,
+  `caso_id` y `num_linea`, nunca precios ni descripciones. Lleva el control del
+  contrato vigente: de las líneas IA3 con precio `contrato_db`, cuántas tienen
+  su precio entre los importados (Sigrid da el precio de hoy).
+
+Lo que hace el runner con eso:
+
+- El contexto de IA3 es el de producción: descuento, precio neto e importe
+  derivado como el `SELECT` de sv5, la clasificación del documento desde la
+  tipología del caso (sv5 elige `valuation_residuos` para los RES), las
+  categorías de unidad de `UnitCategoryPrefilter`, la fecha y el número de
+  `CONDICIONES`, la cabecera del índice y el documento local en la misma
+  llamada (MD en el texto, PDF como adjunto).
+- Un caso con contrato y **sin líneas de contrato** sale `OMITIDO` en IA3, IA4
+  y E2E, en las dos corridas, sin mandarlo a sv5. Igual si el índice declara un
+  documento que **no está en local** o no casa con su sha256 (un clon limpio):
+  mejor no medir que medir otra cosa. Un descuento compuesto (`a;b`) sale
+  `ERROR`.
+- Sin `--proveedores`, IA3/IA4 usan `IA3_PROVIDER` del entorno o, si no, el
+  proveedor de producción, y el modelo de la variable del proveedor
+  (`OPENAI_MODEL`…) o el de producción: la referencia de IA3 de
+  `evals/precios_modelos.json`, que vigila `infra/create_capps.ps1`. El informe
+  dice el modelo y el documento con que se valoró cada fase.
+- Con `--fases IA3,IA4,E2E`, sv2 no se invoca ni se le piden claves.
+- **El determinista no mide el emparejamiento** y lo dice en su informe: una
+  línea sin emparejar en el ground truth sigue sin emparejar, porque emparejar
+  es trabajo de IA3/IA4 y solo lo mide la corrida con LLM.
 
 ## Cómo se decide el veredicto
 

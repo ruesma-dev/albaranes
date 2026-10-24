@@ -1,6 +1,7 @@
 {# templates/_alta_sigrid.html
    F-053 · Alta en Sigrid de un documento aprobado (R25, R28-R30; v8: usu y
-   «Reintentar adjunto»).
+   «Reintentar adjunto»). F-069 (R21-R23): empleado de Sigrid junto al usuario y
+   los Avisos de resolución, como aviso (nunca como error ni bloqueo).
    Solo se incluye con ALTA_SIGRID_DESDE_UTC puesta y el documento aprobado
    (R3). sv4 PINTA lo que sv9 dejó en albaran_altas_sigrid: no lo escribe
    (R34). Los botones publican en q-feedback y sv9 decide.
@@ -56,6 +57,7 @@
         {% if alta.ultimo_intento_at_utc %}· Último intento: {{ alta.ultimo_intento_at_utc | fecha_hora_local }}{% endif %}
         {% if alta.adjunto_estado %}· Adjunto (PDF): <strong>{{ alta.adjunto_estado }}</strong>{% endif %}
         {% if alta.usu %}· <span class="alta-sigrid-usu">Usuario de Sigrid: <code>{{ alta.usu }}</code>{% if alta.usu_respaldo %} (respaldo){% endif %}</span>{% endif %}
+        {% if alta.peticion %}· <span class="alta-sigrid-empide">Empleado de Sigrid: {% if alta.empide is not none %}<code>{{ alta.empide }}</code>{% else %}el de defecto de sigrid-api{% endif %}</span>{% endif %}
 
         {% if alta.aviso %}
             <div class="alta-sigrid-bloqueo"><strong>{{ alta.aviso }}.</strong>
@@ -106,6 +108,15 @@
         {% if alta.total_previa is not none or alta.total_documento is not none %}
             <div>Total de la previa: <strong>{{ alta.total_previa | importe_eur }}</strong>
                 (con IVA: {{ alta.total_documento | importe_eur }})</div>
+        {% endif %}
+
+        {% if alta.avisos_resolucion %}
+            <div class="muted small">Avisos del usuario y el empleado de Sigrid (no impiden el alta):</div>
+            <ul class="alta-sigrid-avisos alta-sigrid-avisos-resolucion">
+                {% for a in alta.avisos_resolucion %}
+                    <li title="{{ a.codigo }}">{{ a.texto }}{% if a.detalle %} · {{ a.detalle }}{% endif %}</li>
+                {% endfor %}
+            </ul>
         {% endif %}
 
         {% if alta.avisos %}

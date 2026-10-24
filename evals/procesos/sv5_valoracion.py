@@ -17,6 +17,7 @@ test. Lo que necesita sv5 vive detrás del subproceso.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -25,13 +26,20 @@ from pathlib import Path
 
 from evals.procesos import canal
 from evals.procesos.errores import avisar, describir_error
+from evals.procesos.sv5_documentos import (
+    CAMPOS_CABECERA,
+    RUTA_CACHE,
+    RUTA_INDICE,
+    leer_indice,
+    nombre_en_cache,
+)
 from evals.procesos.sv6_build import (
-    MAPA_TIPO_FAMILIA,
     _decimal,
     _entero,
     _tablas,
+    clasificacion_de,
     condiciones_de,
-    contexto_linea_de,
+    lineas_albaran_de,
     valor,
 )
 
@@ -76,41 +84,73 @@ def comprobar_claves(proveedores: list[str], entorno: dict | None = None) -> Non
 
 # --- Parte pura: contexto, envelope y conciliación --------------------------
 
+#: (R33) Por qué un caso no se manda a sv5 si su documento no está en local.
+MOTIVO_SIN_DOCUMENTO = "documento del contrato no disponible en local"
 
-def construir_contexto(inputs: dict) -> dict:
-    """Contexto de valoración de un caso, con la forma que espera sv5."""
+
+def documento_de(codigo: str, indice: dict, raiz: Path | str) -> dict | None:
+    """(R32, R33) El documento del contrato en la caché local, comprobado.
+
+    - Sin entrada en el índice, o con `tipo = ninguno`: `None`. IA3 valora
+      sin documento, que es lo que hace producción con ese contrato.
+    - Con documento en el índice y el fichero local con su `sha256`:
+      `{tipo, ruta}`, que el subproceso de sv5 lee sin red.
+    - Con documento en el índice y el fichero ausente o distinto (un clon
+      limpio, otra importación): `{falta: motivo}`. Mejor no medir que medir
+      otra cosa: el caso sale OMITIDO y no se manda a sv5.
+    """
+    entrada = indice.get(codigo) or {}
+    tipo = entrada.get("tipo")
+    if tipo not in ("md", "pdf"):
+        return None
+    ruta = Path(raiz) / nombre_en_cache(codigo, tipo)
+    if not ruta.is_file() or hashlib.sha256(ruta.read_bytes()).hexdigest() != entrada.get("sha256"):
+        return {"falta": MOTIVO_SIN_DOCUMENTO}
+    return {"tipo": tipo, "ruta": str(ruta)}
+
+
+def falta_documento(
+    inputs: dict, indice: dict | None = None, raiz: Path | str | None = None
+) -> str:
+    """(R33) Por qué el caso no se manda a sv5: su documento no está en local.
+
+    Vacío si el contrato no tiene documento en el índice o si el fichero
+    local casa. `indice` y `raiz`, con los mismos defectos que
+    `construir_contexto`. Solo lo aplican la corrida con LLM y el comparador
+    de F-083: el determinista no lee el documento.
+    """
+    documentos = leer_indice(RUTA_INDICE) if indice is None else indice
+    raiz = RUTA_CACHE if raiz is None else raiz
     caso = (_tablas(inputs, "caso") or [{}])[0]
-    tipo_familia = MAPA_TIPO_FAMILIA.get(str(inputs.get("tipologia", "")), "otro")
-    condiciones = condiciones_de(inputs)
+    codigo = str(valor(caso, "contrato_codigo") or "")
+    return (documento_de(codigo, documentos, raiz) or {}).get("falta", "")
 
-    lineas_albaran = []
-    for fila in _tablas(inputs, "lineas_albaran"):
-        numero = _entero(valor(fila, "num_linea"))
-        if numero is None:
-            continue
-        lineas_albaran.append(
-            {
-                "merge_line_id": numero,
-                "line_index": numero,
-                "codigo": valor(fila, "codigo_producto"),
-                "descripcion": valor(fila, "descripcion"),
-                "unidad_medida": valor(fila, "unidad"),
-                "unidad_categoria": "unknown",
-                "cantidad": _decimal(valor(fila, "cantidad")),
-                "precio_unitario_albaran": _decimal(valor(fila, "precio_unitario")),
-                "importe_albaran": _decimal(valor(fila, "importe")),
-                "codigo_partida_albaran": valor(fila, "codigo_imputacion"),
-                "contexto_linea": contexto_linea_de(
-                    condiciones, tipo_familia, fila
-                ),
-            }
-        )
+
+def construir_contexto(
+    inputs: dict, indice: dict | None = None, raiz: Path | str | None = None
+) -> dict:
+    """Contexto de valoración de un caso, con la forma que espera sv5.
+
+    `indice` y `raiz` son el índice de documentos y la caché local; sin ellos,
+    los versionados (`evals/fixtures/contratos/_indice.json`) y
+    `evals/inputs/contratos/`.
+    """
+    documentos = leer_indice(RUTA_INDICE) if indice is None else indice
+    raiz = RUTA_CACHE if raiz is None else raiz
+    caso = (_tablas(inputs, "caso") or [{}])[0]
+    codigo = str(valor(caso, "contrato_codigo") or "")
+    entrada = documentos.get(codigo) or {}
+    condiciones = condiciones_de(inputs)
+    # (R12) Las mismas líneas que el envelope estimulado: descuento, precio
+    # neto e importe derivado como el SELECT de sv5. Puede lanzar
+    # `DescuentoCompuesto` (R13): el runner deja ese caso en ERROR.
+    lineas_albaran = lineas_albaran_de(inputs)
 
     lineas_contrato = []
-    for indice, fila in enumerate(_tablas(inputs, "contrato_lineas"), start=1):
+    for posicion, fila in enumerate(_tablas(inputs, "contrato_lineas"), start=1):
         lineas_contrato.append(
             {
-                "contrato_line_id": indice,
+                "contrato_line_id": posicion,
                 "codigo_contrato": str(valor(caso, "contrato_codigo") or ""),
                 "codigo_producto": valor(fila, "codigo_producto"),
                 "descripcion": valor(fila, "descripcion_recurso"),
@@ -123,11 +163,16 @@ def construir_contexto(inputs: dict) -> dict:
 
     return {
         "document_id": str(inputs.get("caso_id", "")),
-        "codigo_contrato": str(valor(caso, "contrato_codigo") or ""),
+        "codigo_contrato": codigo,
+        # (R17) La cabecera del contrato que sv5 lee de albaran_contratos_merge.
+        **{campo: entrada.get(campo) for campo in CAMPOS_CABECERA},
         "fecha_albaran": condiciones.get("fecha_albaran"),
         "numero_albaran": condiciones.get("numero_albaran"),
         "lineas_albaran": lineas_albaran,
         "lineas_contrato": lineas_contrato,
+        # (R14) La clasificación del DOCUMENTO: sv5 elige con ella el prompt.
+        "clasificacion": clasificacion_de(inputs),
+        "documento": documento_de(codigo, documentos, raiz),
     }
 
 
@@ -151,6 +196,9 @@ def envelope_desde(
         "context": {
             "lineas_albaran": contexto.get("lineas_albaran", []),
             "lineas_contrato": contexto.get("lineas_contrato", []),
+            # (R14) Como `_build_envelope` de sv5: sv6 resuelve con ella la
+            # familia efectiva de cada línea.
+            "clasificacion": contexto.get("clasificacion"),
         },
     }
 
@@ -278,62 +326,116 @@ def _clientes_reales(
     return ProviderClientSpec(provider=proveedor, model_name=modelo, client=cliente)
 
 
-def _contexto_de_dict(datos: dict):  # pragma: no cover - subproceso
-    """Reconstruye `ContextoValoracion` desde el diccionario del fixture."""
-    from domain.models.contexto_linea import ContextoLinea
-    from domain.models.valuation_context import (
-        AlbaranLineForValuation,
-        ContextoValoracion,
-        ContratoLineForValuation,
-    )
+def _lineas_de_produccion(datos: dict):  # pragma: no cover - subproceso
+    """(R15) Las líneas por `Raw*` + `UnitCategoryPrefilter`, como el pipeline de sv5."""
+    from application.services.unit_category_prefilter import UnitCategoryPrefilter
+    from domain.ports.valuation_context_repository import RawAlbaranLine, RawContratoLine
 
-    lineas_albaran = [
-        AlbaranLineForValuation(
+    prefiltro = UnitCategoryPrefilter()
+    lineas_albaran = prefiltro.build_albaran_lines(
+        RawAlbaranLine(
             merge_line_id=linea["merge_line_id"],
             line_index=linea["line_index"],
             codigo=linea.get("codigo"),
             descripcion=linea.get("descripcion"),
             unidad_medida=linea.get("unidad_medida"),
-            unidad_categoria=linea.get("unidad_categoria", "unknown"),
             cantidad=linea.get("cantidad"),
             precio_unitario_albaran=linea.get("precio_unitario_albaran"),
             importe_albaran=linea.get("importe_albaran"),
             codigo_partida_albaran=linea.get("codigo_partida_albaran"),
-            contexto_linea=(
-                ContextoLinea.model_validate(linea["contexto_linea"])
+            # En producción es el JSON que sv3 guardó en el merge.
+            contexto_linea_json=(
+                json.dumps(linea["contexto_linea"])
                 if linea.get("contexto_linea")
                 else None
             ),
+            descuento=linea.get("descuento_albaran"),
+            precio_neto=linea.get("precio_neto_albaran"),
         )
         for linea in datos.get("lineas_albaran", [])
-    ]
-    lineas_contrato = [
-        ContratoLineForValuation(
+    )
+    lineas_contrato = prefiltro.build_contrato_lines(
+        RawContratoLine(
             contrato_line_id=linea["contrato_line_id"],
             codigo_contrato=linea.get("codigo_contrato", ""),
             codigo_producto=linea.get("codigo_producto"),
             descripcion=linea.get("descripcion"),
             unidad_medida=linea.get("unidad_medida"),
-            unidad_categoria=linea.get("unidad_categoria", "unknown"),
             precio_unitario=linea.get("precio_unitario"),
             codigo_partida=linea.get("codigo_partida"),
         )
         for linea in datos.get("lineas_contrato", [])
-    ]
+    )
+    return lineas_albaran, lineas_contrato
+
+
+def _contexto_de_dict(datos: dict, pdf_filename: str | None = None):  # pragma: no cover - subproceso
+    """Reconstruye `ContextoValoracion` desde el diccionario del fixture."""
+    from domain.models.valuation_context import ContextoValoracion
+    from ruesma_comun.contratos import ClasificacionAlbaran
+
+    lineas_albaran, lineas_contrato = _lineas_de_produccion(datos)
+    clasificacion = datos.get("clasificacion")
     return ContextoValoracion(
         document_id=datos.get("document_id", ""),
         codigo_contrato=datos.get("codigo_contrato", ""),
-        nombre_contrato=None,
-        cif_proveedor=None,
-        nombre_proveedor=None,
-        codigo_obra=None,
-        nombre_obra=None,
+        nombre_contrato=datos.get("nombre_contrato"),
+        cif_proveedor=datos.get("cif_proveedor"),
+        nombre_proveedor=datos.get("nombre_proveedor"),
+        codigo_obra=datos.get("codigo_obra"),
+        nombre_obra=datos.get("nombre_obra"),
         pdf_relative_path=None,
-        pdf_filename=None,
+        pdf_filename=pdf_filename,
         lineas_albaran=lineas_albaran,
         lineas_contrato=lineas_contrato,
         fecha_albaran=datos.get("fecha_albaran"),
         numero_albaran=datos.get("numero_albaran"),
+        clasificacion=(
+            ClasificacionAlbaran.model_validate(clasificacion) if clasificacion else None
+        ),
+    )
+
+
+def preparar_contexto(contexto: dict) -> dict:  # pragma: no cover - subproceso
+    """(R15) El contexto con la `unidad_categoria` de producción en cada línea.
+
+    Requiere sv5 en `sys.path`. Lo aplican los subprocesos de sv5 antes de
+    valorar, para que el envelope que llega a sv6 lleve las mismas categorías
+    que vio el LLM.
+    """
+    from application.services.unit_category_prefilter import UnitCategoryPrefilter
+
+    clasificar = UnitCategoryPrefilter().classify
+    return {
+        **contexto,
+        **{
+            tabla: [
+                {**linea, "unidad_categoria": clasificar(linea.get("unidad_medida"))}
+                for linea in contexto.get(tabla, [])
+            ]
+            for tabla in ("lineas_albaran", "lineas_contrato")
+        },
+    }
+
+
+def documento_para_ia3(documento: dict | None):  # pragma: no cover - subproceso
+    """(R32) (contrato_markdown, adjunto PDF) como en `ValueAlbaranPipeline`.
+
+    El MD va al texto, sin adjunto; el PDF, como adjunto; sin documento, ni
+    uno ni otro (sv5 añade la nota de solo fase 1a). Un documento que falta no
+    llega nunca hasta aquí desde el runner (R33); si llega, el caso revienta.
+    """
+    from domain.models.llm_attachment import LlmAttachment
+
+    if not documento:
+        return None, None
+    if documento.get("falta"):
+        raise RuntimeError(MOTIVO_SIN_DOCUMENTO)
+    ruta = Path(documento["ruta"])
+    if documento["tipo"] == "md":
+        return (ruta.read_text(encoding="utf-8").strip() or None), None
+    return None, LlmAttachment(
+        kind="pdf", filename=ruta.name, mime_type="application/pdf", data=ruta.read_bytes()
     )
 
 
@@ -371,7 +473,12 @@ def servicios(
     )
 
     def valorar(contexto: dict) -> list:
-        salida = valoracion.extract(context=_contexto_de_dict(contexto), pdf_attachment=None)
+        contrato_markdown, adjunto = documento_para_ia3(contexto.get("documento"))
+        salida = valoracion.extract(
+            context=_contexto_de_dict(contexto, adjunto.filename if adjunto else None),
+            pdf_attachment=adjunto,
+            contrato_markdown=contrato_markdown,
+        )
         return salida[proveedor].parsed.model_dump().get("lineas", [])
 
     def conciliar(envelope: dict, contexto: dict) -> list[dict]:
@@ -384,11 +491,19 @@ def servicios(
     return valorar, conciliar
 
 
-def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:  # pragma: no cover - subproceso
-    """IA3 + IA4 reales caso a caso, EN SECUENCIA. Requiere sv5 en path."""
+def ejecutar_trabajo(trabajo: dict, fabrica=None, preparar=None) -> dict:  # pragma: no cover - subproceso
+    """IA3 + IA4 reales caso a caso, EN SECUENCIA. Requiere sv5 en path.
+
+    `fabrica` y `preparar` son costuras: el subproceso entra por
+    `valorar_casos`, que pasa `preparar_contexto` (R15). Con `modelo` en el
+    trabajo, la fábrica lo recibe (R20); la salida dice qué modelo valoró (R21).
+    """
     proveedor = trabajo.get("proveedor", "gemini")
     fabrica = fabrica or _clientes_reales
-    especificacion = fabrica(proveedor)
+    modelo = trabajo.get("modelo")
+    especificacion = fabrica(proveedor, modelo) if modelo else fabrica(proveedor)
+    preparar = preparar or (lambda contexto: contexto)
+    casos = [{**caso, "contexto": preparar(caso["contexto"])} for caso in trabajo.get("casos", [])]
     valorar, conciliar = servicios(
         especificacion,
         proveedor,
@@ -400,13 +515,18 @@ def ejecutar_trabajo(trabajo: dict, fabrica=None) -> dict:  # pragma: no cover -
         return envelope_desde(contexto, lineas, proveedor, especificacion.model_name)
 
     resultados = procesar_casos(
-        trabajo.get("casos", []),
+        casos,
         proveedor,
         valorar=valorar,
         construir_envelope=construir_envelope,
         conciliar=conciliar,
     )
-    return {"resultados": resultados, "proveedor": proveedor}
+    return {"resultados": resultados, "proveedor": proveedor, "modelo": especificacion.model_name}
+
+
+def valorar_casos(trabajo: dict, fabrica=None) -> dict:  # pragma: no cover - subproceso
+    """La puerta del subproceso: el trabajo con el contexto de producción (R15)."""
+    return ejecutar_trabajo(trabajo, fabrica=fabrica, preparar=preparar_contexto)
 
 
 def procesar_casos(
@@ -472,7 +592,7 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - subproceso
     try:
         trabajo = json.loads(sys.stdin.read() or "{}")
         comprobar_claves([trabajo.get("proveedor", "gemini")])
-        salida = ejecutar_trabajo(trabajo)
+        salida = valorar_casos(trabajo)
     except Exception as error:  # noqa: BLE001 - la frontera devuelve el motivo
         # Sin `str(error)`: el de pydantic arrastra la respuesta del LLM.
         avisar("sv5_valoracion", f"la corrida entera falló · {describir_error(error, '')['motivo']}")

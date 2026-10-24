@@ -170,7 +170,9 @@ def test_f053_r14_la_peticion_se_guarda_antes_de_llamar():
     repo, _doc, _ = _procesar(d, sigrid)
     primero = repo.guardados[0][1]
     assert primero.estado is EstadoAlta.EN_CURSO
-    assert primero.peticion == _peticion(d).a_dict()
+    # F-069 R16: junto al cuerpo va la resolucion (que nunca se manda, R17).
+    assert "resolucion" in primero.peticion
+    assert {k: v for k, v in primero.peticion.items() if k != "resolucion"} == _peticion(d).a_dict()
 
 
 # ------------------------------------------------------------------ #

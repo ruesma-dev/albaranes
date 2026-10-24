@@ -15,7 +15,8 @@ Sin motivos, devuelve la :class:`PeticionAlbaran` del modo extendido de
   valoración si lo tiene (también sin vinculadas, H31), ``referencia_externa``
   ``ALB-{document_id}``, ``su_referencia`` = número recortado, ``usu`` (H1; v8:
   el de quien aprobó o el Respaldo, R47, lo resuelve el servicio y llega aquí),
-  ``fecha_albaran`` ``AAAAMMDD`` y ``empide``. Nunca ``lineas_recibidas`` ni
+  ``fecha_albaran`` ``AAAAMMDD`` y ``empide`` (F-069: el del documento, lo
+  resuelve el servicio y llega aquí; nulo = defecto de sigrid-api). Nunca ``lineas_recibidas`` ni
   ``naturaleza`` (H34).
 - Una línea por cada línea con importe ≠ 0 (R13), por ``line_index`` y las que
   no lo tienen al final por ``id`` (H26). **Vinculada** (casa con una línea del
@@ -78,10 +79,10 @@ _EPSILON = 1e-9
 
 @dataclass(frozen=True)
 class ConfigAlta:
-    """Lo que el validador toma de la configuración (design §3). El ``usu``
-    ya no: es por documento (v8, R47) y llega como argumento."""
+    """Lo que el validador toma de la configuración (design §3). Ni el ``usu``
+    (v8, R47) ni el ``empide`` (F-069 R9–R12): son por documento y llegan como
+    argumento."""
 
-    empide: int | None
     mapeo: Mapping[str, str]
 
 
@@ -314,10 +315,11 @@ def _linea_peticion(linea: LineaAlta, datos: DatosAlta, config: ConfigAlta) -> L
 
 
 def validar_y_construir(
-    datos: DatosAlta, config: ConfigAlta, hoy: date, usu: str,
+    datos: DatosAlta, config: ConfigAlta, hoy: date, usu: str, *, empide: int | None = None,
 ) -> PeticionAlbaran | list[Motivo]:
     """Motivos de R10 (o, si no hay, de R39) o la petición de R12, con ``usu``
-    (el login ya resuelto, R47)."""
+    (el login ya resuelto, R47) y ``empide`` (el empleado ya resuelto, F-069;
+    nulo = el defecto de sigrid-api)."""
     motivos = _motivos_cabecera(datos) + _motivos_lineas(datos, config.mapeo)
     if motivos:
         return motivos
@@ -335,6 +337,6 @@ def validar_y_construir(
         su_referencia=_texto(cab.numero_albaran),
         usu=usu,
         fecha_albaran=int(fecha.strftime("%Y%m%d")),
-        empide=config.empide,
+        empide=empide,
         lineas=tuple(_linea_peticion(l, datos, config) for l in lineas_a_registrar(datos)),
     )

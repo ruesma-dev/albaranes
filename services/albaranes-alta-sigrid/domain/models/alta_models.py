@@ -395,3 +395,70 @@ class Reclamacion:
     motivo: str = ""
     #: ``approved_by`` del merge, leído bajo el cerrojo (R5): fuente del ``usu`` (R47).
     approved_by: str | None = None
+
+
+# ---------------------------------------------------------------------- #
+# F-069 · usuario y empleado de Sigrid de quien aprueba
+# ---------------------------------------------------------------------- #
+@dataclass(frozen=True)
+class EmpleadoSigrid:
+    """Una fila de ``dbo.emp`` leída por ``sql/read``: su ``ide`` y si está de
+    alta (``fecbaj`` 0 o nulo). Nunca su nombre ni su correo."""
+
+    ide: int
+    de_alta: bool
+
+
+@dataclass(frozen=True)
+class AvisoResolucion:
+    """Constancia de un escalón de la resolución que no sirvió (F-069). Nunca
+    bloquea el alta ni cambia su estado: no es un :class:`Motivo`."""
+
+    codigo: str
+    detalle: str = ""
+
+    def a_dict(self) -> dict[str, str]:
+        return {"codigo": self.codigo, "detalle": self.detalle}
+
+
+class OrigenUsuario(StrEnum):
+    """De qué escalón salió el ``usu`` de una petición nueva (F-069 R5–R7)."""
+
+    LISTA = "lista"
+    CORREO = "correo"
+    RESPALDO = "respaldo"
+
+
+class OrigenEmpleado(StrEnum):
+    """De qué escalón salió el ``empide`` (F-069 R9–R12). Con
+    ``defecto_sigrid_api`` se manda nulo y sigrid-api pone el suyo."""
+
+    LISTA = "lista"
+    CORREO = "correo"
+    DEFECTO_SIGRID_API = "defecto_sigrid_api"
+
+
+#: Clave de ``peticion_json`` con el rastro de la resolución (F-069 R16). Va
+#: JUNTO al cuerpo, nunca dentro de lo que se manda a sigrid-api (R17: el
+#: contrato es ``extra="forbid"``; se manda siempre ``PeticionAlbaran.a_dict()``).
+CLAVE_RESOLUCION = "resolucion"
+
+
+@dataclass(frozen=True)
+class Resolucion:
+    """De dónde salieron el ``usu`` y el ``empide`` de una petición nueva y qué
+    escalones no sirvieron (F-069 R16)."""
+
+    usu: str
+    origen_usu: OrigenUsuario
+    empide: int | None
+    origen_empide: OrigenEmpleado
+    avisos: tuple[AvisoResolucion, ...] = ()
+
+    def a_dict(self) -> dict[str, Any]:
+        """Para ``peticion_json``: sin el ``usu`` ni el ``empide``, que ya van en el cuerpo."""
+        return {
+            "usu": self.origen_usu.value,
+            "empide": self.origen_empide.value,
+            "avisos": [aviso.a_dict() for aviso in self.avisos],
+        }

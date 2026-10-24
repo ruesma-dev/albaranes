@@ -179,15 +179,17 @@ def test_f053_t25_composicion_crea_el_motor_con_pre_ping(monkeypatch):
 def test_f053_t25_o1_peor_caso_y_visibilidad_exactos(monkeypatch, tmp_path):
     # 3 × 60 + (1 + 2) = 183 por llamada con reintentos; token 5 × 60 + 4 × 20 = 380;
     # PDF 380 + 4 × 60 = 620; total 183 × 3 + 240 + 620 = 1409; (1409 + 300) → 1740.
-    assert main_worker.peor_caso_mensaje_s(_settings(monkeypatch)) == 1409
-    assert _visibilidad_con(monkeypatch, tmp_path) == 1740
+    # F-069 R19: + 4 lecturas de la resolución (4 × 183) = 2141; (2141 + 300) → 2460.
+    assert main_worker.peor_caso_mensaje_s(_settings(monkeypatch)) == 2141
+    assert _visibilidad_con(monkeypatch, tmp_path) == 2460
 
 
 def test_f053_t25_o1_redondeo_al_minuto(monkeypatch, tmp_path):
     # t_sigrid 71, t_graph 60: 9 × 131 + 329 = 1508; + 300 = 1808 → 31 min = 1860 s.
+    # F-069 R19: + 4 × 216 = 2372; + 300 = 2672 → 45 min = 2700 s.
     ajustes = _settings(monkeypatch, SIGRID_API_TIMEOUT_S="71")
-    assert main_worker.peor_caso_mensaje_s(ajustes) == 1508
-    assert _visibilidad_con(monkeypatch, tmp_path, SIGRID_API_TIMEOUT_S="71") == 1860
+    assert main_worker.peor_caso_mensaje_s(ajustes) == 2372
+    assert _visibilidad_con(monkeypatch, tmp_path, SIGRID_API_TIMEOUT_S="71") == 2700
 
 
 @pytest.mark.parametrize("desde, respaldo, aviso_desde, aviso_usuario", [

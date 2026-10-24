@@ -2,7 +2,7 @@
   "caso_id": "RES-009",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
+  "sha256_libro": "0e7be5c97d30301b8fe5c5fc0facf4435100da51d113d1c70472424c3c1e01a4",
   "tablas": {
     "caso": [
       {
@@ -14,8 +14,136 @@
         "tipologia": "Residuos"
       }
     ],
-    "condiciones": [],
-    "contrato_lineas": [],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "RES-009",
+        "comentario": "fecha de IA1.cabeceras (F-084)",
+        "valor": "2026-03-13"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "RES-009",
+        "codigo_partida": "32.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Gestión De Residuos-CONTENEDORES",
+        "linea_sigrid": 216264,
+        "precio_unitario": 0,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-009",
+        "codigo_partida": "32.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MOVIMIENTO DE CONTENEDOR DE 6 M CÚBICOS HORMIGON",
+        "linea_sigrid": 216265,
+        "precio_unitario": 138,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-009",
+        "codigo_partida": "32.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MOVIMIENTO DE CONTENEDOR DE 6 M CÚBICOS LADRILLO",
+        "linea_sigrid": 216266,
+        "precio_unitario": 148,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-009",
+        "codigo_partida": "32.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MOVIMIENTO DE CONTENEDOR DE 6 M CÚBICOS MADERA",
+        "linea_sigrid": 216267,
+        "precio_unitario": 148,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-009",
+        "codigo_partida": "32.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MOVIMIENTO DE CONTENEDOR DE 6 M CÚBICOS MEZCLA OTROS RESIDUOS",
+        "linea_sigrid": 216268,
+        "precio_unitario": 138,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-009",
+        "codigo_partida": "32.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MOVIMIENTO DE CONTENEDOR DE 6 M CÚBICOS PAPEL CARTON",
+        "linea_sigrid": 216269,
+        "precio_unitario": 148,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-009",
+        "codigo_partida": "32.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MOVIMIENTO DE CONTENEDOR DE 6 M CÚBICOS RCD,s",
+        "linea_sigrid": 216270,
+        "precio_unitario": 148,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "RES-009",
+        "codigo_partida": "32.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MOVIMIENTO DE CONTENEDORES DE RESIDUOS",
+        "linea_sigrid": 251520,
+        "precio_unitario": 19320,
+        "unidad": "PA"
+      },
+      {
+        "caso_id": "RES-009",
+        "codigo_partida": "CI.03A.7",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MOVIMIENTO DE CONTENEDORES DE RESIDUOS",
+        "linea_sigrid": 251521,
+        "precio_unitario": 30000,
+        "unidad": "PA"
+      },
+      {
+        "caso_id": "RES-009",
+        "codigo_partida": "CI.03A.7",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MOVIMIENTO DE CONTENEDORES DE RESIDUOS",
+        "linea_sigrid": 257371,
+        "precio_unitario": 17800,
+        "unidad": "PA"
+      },
+      {
+        "caso_id": "RES-009",
+        "codigo_partida": "32.01",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MOVIMIENTO DE CONTENEDORES DE RESIDUOS",
+        "linea_sigrid": 258274,
+        "precio_unitario": 11340,
+        "unidad": "PA"
+      },
+      {
+        "caso_id": "RES-009",
+        "codigo_partida": "CI.03A.7",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MOVIMIENTO DE CONTENEDORES DE RESIDUOS",
+        "linea_sigrid": 258275,
+        "precio_unitario": 12000,
+        "unidad": "PA"
+      }
+    ],
     "lineas_albaran": [
       {
         "cantidad": 1,

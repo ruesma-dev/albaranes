@@ -21,17 +21,20 @@ import json
 import subprocess
 import sys
 from dataclasses import dataclass, field
+from decimal import Decimal
 from pathlib import Path
+
+from ruesma_comun.contratos.contexto_linea import ContextoLinea
 
 from evals.comparador import (
     campos_no_observables,
     comparar_tablas,
+    equivalentes,
 )
 from evals.criticidad import Criticidad, cargar_criticidad
+from evals.modelos import ESPERA_REVISION, NO_COMPARAR, Discrepancia
 from evals.procesos import canal
 from evals.procesos.errores import avisar, describir_error
-from evals.modelos import NO_COMPARAR, Discrepancia
-from ruesma_comun.contratos.contexto_linea import ContextoLinea
 
 #: Campos del contrato compartido `ContextoLinea` — exactamente lo que el
 #: pipeline real le entrega a sv6 en el bloque `contexto_linea` de cada línea
@@ -83,6 +86,30 @@ MAPA_TIPO_FAMILIA = {
     "Generico-Suministros": "otro",
 }
 
+#: (F-084 R14) De la pestaña de tipología a la familia del DOCUMENTO del
+#: catálogo de `ruesma_comun` (`contratos/familias.py`). Con ella sv5 elige el
+#: prompt de producción (`valuation_residuos` para los RES) y sv6 resuelve la
+#: familia efectiva. Lo que no está aquí es `generico`, que es una respuesta
+#: legítima del catálogo y no un fallo.
+MAPA_FAMILIA_DOCUMENTO = {
+    "Residuos": "residuos",
+    "Hormigon": "hormigon",
+    "Mortero": "mortero",
+    "Combustible": "combustible",
+    "Alquiler": "alquiler_maquinaria",
+}
+FAMILIA_POR_DEFECTO = "generico"
+
+#: Quién sella la clasificación del banco. En producción la decide IA1
+#: (`origen = "ia1"`); aquí es el ground truth de la tipología, para aislar la
+#: valoración (IA3) de la extracción (IA1).
+ORIGEN_CLASIFICACION = "banco_evals"
+
+
+class DescuentoCompuesto(ValueError):
+    """(F-084 R13) La línea trae más de un descuento: sv5 solo admite uno."""
+
+
 #: Campos que ESTA corrida puede observar en cada tabla del ground truth. Lo
 #: que queda fuera no se compara y se declara en el informe: por ejemplo, obra,
 #: proveedor, CIF y fecha no salen del build de sv6 —salen de la extracción—, y
@@ -92,7 +119,6 @@ OBSERVABLES: dict[str, tuple[str, ...]] = {
         "num_linea",
         "match_method",
         "codigo_producto_contrato",
-        "codigo_partida_final",
         "precio_unitario_final",
         "precio_source",
         "importe_calculado",
@@ -197,6 +223,138 @@ def contexto_linea_de(condiciones: dict, tipo_familia: str, fila: dict) -> dict:
     return contexto
 
 
+# --- Líneas del albarán y clasificación: lo que sv5 lee del merge -----------
+
+
+def _descuento_de(dato: object | None) -> float | None:
+    """El descuento único de la línea (porcentaje), o `None` si no hay.
+
+    El conversor guarda `descuentos` como lista cuando el libro escribe `a;b`
+    y como número cuando la celda lo es. sv5 lee UNA columna `descuento` del
+    merge: dos descuentos encadenados no tienen representación (R13) y el
+    caso sale ERROR en vez de valorarse con uno de los dos.
+    """
+    if isinstance(dato, str):
+        dato = [trozo for trozo in dato.split(";")]
+    if isinstance(dato, (list, tuple)):
+        valores = [
+            trozo
+            for trozo in dato
+            if trozo is not None and str(trozo).strip() not in ("", "?", NO_COMPARAR)
+        ]
+        if len(valores) > 1:
+            raise DescuentoCompuesto("descuento compuesto no representable")
+        dato = valores[0] if valores else None
+    return _decimal(dato)
+
+
+def _importe_derivado(
+    cantidad: float | None, precio: float | None, descuento: float | None
+) -> float | None:
+    """`cantidad × precio × (1 − descuento/100)`, en decimal y sin ruido de float.
+
+    Es la rama 2 del `COALESCE` del `SELECT` de sv5: en PostgreSQL se calcula
+    con `numeric` y 50 × 0,647 × 0,60 da 19,41 exacto, no 19,409999….
+    """
+    if cantidad is None or precio is None:
+        return None
+    factor = 1 - Decimal(str(descuento or 0)) / 100
+    return float(Decimal(str(cantidad)) * Decimal(str(precio)) * factor)
+
+
+def con_partidas_de_ia1(inputs: dict, ia1: dict | None) -> dict:
+    """(F-084 R39) INPUTS con la partida que el libro IA1 espera de cada línea.
+
+    En producción la partida del albarán la lee IA1 y llega a sv5 y a sv6 por
+    el merge; INPUTS no la trae. Una línea sin `codigo_imputacion` recibe la
+    de la línea del libro IA1 con su mismo `num_linea` y su misma descripción:
+    en 21 casos los dos libros no numeran igual (FER-002: la 4 de IA1 es la 7
+    de INPUTS) y el número solo no basta. INPUTS manda si la trae, y `?` o
+    `REVISIÓN` del libro no son una partida. Devuelve una copia.
+    """
+    resultado = json.loads(json.dumps(inputs))
+    del_libro = {_entero(valor(fila, "num_linea")): fila for fila in _tablas(ia1 or {}, "lineas")}
+    for fila in _tablas(resultado, "lineas_albaran"):
+        if fila.get("codigo_imputacion"):
+            continue
+        leida = del_libro.get(_entero(valor(fila, "num_linea")), {})
+        partida = leida.get("codigo_imputacion")
+        descripcion = valor(leida, "descripcion_esperada")
+        if (
+            partida
+            and partida not in (NO_COMPARAR, ESPERA_REVISION)
+            and descripcion is not None
+            and equivalentes(descripcion, valor(fila, "descripcion"))
+        ):
+            fila["codigo_imputacion"] = partida
+    return resultado
+
+
+def lineas_albaran_de(inputs: dict) -> list[dict]:
+    """(F-084 R12) Las líneas del albarán como las lee sv5 del merge.
+
+    Una sola función para el contexto de IA3 y para el envelope estimulado, con
+    la misma cascada que el `SELECT` de sv5 (`_SQL_ALBARAN_LINES`):
+
+    - `descuento_albaran` = `descuentos` (R13: uno solo).
+    - `precio_neto_albaran` = `importe`: en el merge `precio_neto` es el
+      IMPORTE de la línea tras el descuento, nunca un unitario (F-019).
+    - `importe_albaran` = `importe` o, si falta, la fórmula canónica.
+    """
+    tipo_familia = MAPA_TIPO_FAMILIA.get(str(inputs.get("tipologia", "")), "otro")
+    condiciones = condiciones_de(inputs)
+
+    lineas = []
+    for fila in _tablas(inputs, "lineas_albaran"):
+        numero = _entero(valor(fila, "num_linea"))
+        if numero is None:
+            continue
+        cantidad = _decimal(valor(fila, "cantidad"))
+        precio = _decimal(valor(fila, "precio_unitario"))
+        importe = _decimal(valor(fila, "importe"))
+        descuento = _descuento_de(valor(fila, "descuentos"))
+        lineas.append(
+            {
+                "merge_line_id": numero,
+                "line_index": numero,
+                "codigo": valor(fila, "codigo_producto"),
+                "descripcion": valor(fila, "descripcion"),
+                "unidad_medida": valor(fila, "unidad"),
+                "unidad_categoria": "unknown",
+                "cantidad": cantidad,
+                "precio_unitario_albaran": precio,
+                "importe_albaran": (
+                    importe
+                    if importe is not None
+                    else _importe_derivado(cantidad, precio, descuento)
+                ),
+                "codigo_partida_albaran": valor(fila, "codigo_imputacion"),
+                "contexto_linea": contexto_linea_de(condiciones, tipo_familia, fila),
+                "descuento_albaran": descuento,
+                "precio_neto_albaran": importe,
+            }
+        )
+    return lineas
+
+
+def clasificacion_de(inputs: dict) -> dict:
+    """(F-084 R14) La clasificación del DOCUMENTO, desde la tipología del caso.
+
+    Con la forma de `ruesma_comun.contratos.ClasificacionAlbaran`, que es la
+    que sv5 lee del merge y vuelca en el `context` del envelope.
+    """
+    return {
+        "familia": MAPA_FAMILIA_DOCUMENTO.get(
+            str(inputs.get("tipologia", "")), FAMILIA_POR_DEFECTO
+        ),
+        "confianza_pct": 100.0,
+        "motivo": "tipología del caso en el banco de evals",
+        "mixto": False,
+        "familias_secundarias": [],
+        "origen": ORIGEN_CLASIFICACION,
+    }
+
+
 # --- Estímulo: el envelope que sv5 habría devuelto --------------------------
 
 
@@ -208,32 +366,8 @@ def construir_envelope_estimulado(inputs: dict, ia3: dict) -> dict:
     """
     caso_id = str(inputs.get("caso_id", ""))
     caso = (_tablas(inputs, "caso") or [{}])[0]
-    tipo_familia = MAPA_TIPO_FAMILIA.get(str(inputs.get("tipologia", "")), "otro")
-
     condiciones = condiciones_de(inputs)
-
-    lineas_albaran = []
-    for fila in _tablas(inputs, "lineas_albaran"):
-        numero = _entero(valor(fila, "num_linea"))
-        if numero is None:
-            continue
-        lineas_albaran.append(
-            {
-                "merge_line_id": numero,
-                "line_index": numero,
-                "codigo": valor(fila, "codigo_producto"),
-                "descripcion": valor(fila, "descripcion"),
-                "unidad_medida": valor(fila, "unidad"),
-                "unidad_categoria": "unknown",
-                "cantidad": _decimal(valor(fila, "cantidad")),
-                "precio_unitario_albaran": _decimal(valor(fila, "precio_unitario")),
-                "importe_albaran": _decimal(valor(fila, "importe")),
-                "codigo_partida_albaran": valor(fila, "codigo_imputacion"),
-                "contexto_linea": contexto_linea_de(
-                    condiciones, tipo_familia, fila
-                ),
-            }
-        )
+    lineas_albaran = lineas_albaran_de(inputs)
 
     lineas_contrato = []
     id_por_codigo: dict[str, int] = {}
@@ -344,6 +478,7 @@ def construir_envelope_estimulado(inputs: dict, ia3: dict) -> dict:
         "context": {
             "lineas_albaran": lineas_albaran,
             "lineas_contrato": lineas_contrato,
+            "clasificacion": clasificacion_de(inputs),
         },
     }
 

@@ -1,8 +1,8 @@
 # infrastructure/sigrid/sigrid_api_alta_client.py
 """Cliente HTTP de sigrid-api para sv9 (F-053; contrato F-009 v8.2, ``13fd99d``).
 
-Solo tres rutas (R33): ``POST /api/sql/read`` (altas a mano, anulación y, v8,
-el login de ``dbo.usu``),
+Solo tres rutas (R33): ``POST /api/sql/read`` (altas a mano, anulación, el
+login de ``dbo.usu`` (v8) y, F-069, el empleado de ``dbo.emp``),
 ``POST /api/sigrid/albaran`` en modo extendido (previa y grabación) y
 ``POST /api/sigrid/concepto-grafico`` (adjunto). Nunca la escritura genérica de
 SQL, ni el modo clásico, ni el alta directa.
@@ -35,6 +35,7 @@ from tenacity import (
 
 from domain.models.alta_models import (
     AlbaranSigrid,
+    EmpleadoSigrid,
     ErrorAlta,
     PeticionAlbaran,
     RespuestaAlta,
@@ -69,6 +70,16 @@ SQL_EXISTE_CONCEPTO = "SELECT ide FROM dbo.con WHERE ide = ? AND tip = 14"
 #: R47 (v8): el login de Sigrid; la MISMA consulta con la que valida sigrid-api
 #: (``usuario_no_valido``). Se manda el ``cod`` que devuelve, no el pedido.
 SQL_BUSCAR_USUARIO = "SELECT TOP (1) cod FROM dbo.usu WHERE cod = ?"
+#: F-069 R9: ¿es el ``empide`` de una Entrada de la Lista un empleado de alta?
+SQL_EMPLEADO_DE_ALTA = "SELECT TOP (1) ide FROM dbo.emp WHERE ide = ? AND ISNULL(fecbaj, 0) = 0"
+#: F-069 R10 (design §7): los Empleados del correo, los de alta primero. ``traele``
+#: es ``text``: sin ``CAST`` no se compara. Con ``TOP (3)`` basta para distinguir
+#: uno, varios («3 o más») o solo de baja. El parámetro va recortado y en minúsculas.
+SQL_EMPLEADOS_POR_CORREO = (
+    "SELECT TOP (3) ide, ISNULL(fecbaj, 0) AS fecbaj FROM dbo.emp WHERE "
+    "LOWER(LTRIM(RTRIM(CAST(traele AS varchar(512))))) = ? ORDER BY CASE WHEN "
+    "ISNULL(fecbaj, 0) = 0 THEN 0 ELSE 1 END, ide"
+)
 
 #: Timeout de la grabación: por encima del corte de 230 s del balanceador.
 TIMEOUT_GRABACION_S = 240.0
@@ -84,6 +95,10 @@ GRATIPIDE_SIN_CLASE = 0
 MAX_RES = 48
 MAX_NOM = 255
 MAX_FILAS_BUSQUEDA = 50
+#: ``max_rows`` de las lecturas de ``dbo.emp`` (F-069): sigrid-api solo marca
+#: ``truncated`` si hay MÁS filas que ``max_rows`` y los ``TOP`` ya las acotan.
+MAX_FILAS_EMPLEADOS_CORREO = 3
+MAX_FILAS_EMPLEADO_LISTA = 2
 
 
 class _Transitorio(Exception):
@@ -219,6 +234,19 @@ class SigridApiAltaClient(SigridAltaPort):
         encontrado = str(filas[0].get("cod") or "").strip() if filas else ""
         return encontrado or None
 
+    def buscar_empleados_por_correo(self, correo: str) -> list[EmpleadoSigrid]:
+        # El correo solo viaja como parámetro: nunca al log (F-069 R18).
+        filas = self._leer(
+            SQL_EMPLEADOS_POR_CORREO, [(correo or "").strip().lower()],
+            "f069-empleado-correo", MAX_FILAS_EMPLEADOS_CORREO,
+        )
+        return empleados_de_filas(filas)
+
+    def empleado_de_alta(self, ide: int) -> bool:
+        return bool(self._leer(
+            SQL_EMPLEADO_DE_ALTA, [int(ide)], "f069-empleado-lista", MAX_FILAS_EMPLEADO_LISTA,
+        ))
+
     # ------------------------------------------------------------------ #
     # sigrid/albaran
     # ------------------------------------------------------------------ #
@@ -322,6 +350,16 @@ def _respuesta_alta(respuesta: httpx.Response) -> RespuestaAlta | ErrorAlta:
         )
     tipo = TipoFallo.AUTORIZACION if status in (401, 403) else TipoFallo.CLIENTE
     return ErrorAlta(tipo=tipo, status=status, mensaje=f"HTTP {status}")
+
+
+def empleados_de_filas(filas: list[dict]) -> list[EmpleadoSigrid]:
+    """Filas de :data:`SQL_EMPLEADOS_POR_CORREO` (columnas en minúsculas) a
+    empleados: de alta si ``fecbaj`` es 0 o nulo. La usa también el script de
+    medición de F-069 (R25), para medir lo mismo que hará sv9."""
+    return [
+        EmpleadoSigrid(ide=int(f["ide"]), de_alta=int(f.get("fecbaj") or 0) == 0)
+        for f in filas
+    ]
 
 
 def construir_desde_settings(settings: Any, *, transport: httpx.BaseTransport | None = None,

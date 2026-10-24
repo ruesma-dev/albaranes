@@ -2,7 +2,7 @@
   "caso_id": "FER-003",
   "fase": "INPUTS",
   "libro": "INPUTS.xlsx",
-  "sha256_libro": "a25db421e46df90d2151c9a919b768227c5a15b27b63a6a185244aeda83f6c03",
+  "sha256_libro": "0e7be5c97d30301b8fe5c5fc0facf4435100da51d113d1c70472424c3c1e01a4",
   "tablas": {
     "caso": [
       {
@@ -14,8 +14,766 @@
         "tipologia": "Ferreteria"
       }
     ],
-    "condiciones": [],
-    "contrato_lineas": [],
+    "condiciones": [
+      {
+        "campo": "fecha_albaran",
+        "caso_id": "FER-003",
+        "comentario": "fecha de IA1.cabeceras (F-084)",
+        "valor": "2026-03-10"
+      }
+    ],
+    "contrato_lineas": [
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.03.07",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "LAMINA DE POLIETILENO CS-PE-500",
+        "linea_sigrid": 217226,
+        "precio_unitario": 0.12,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.03.11",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "LAMINA DE POLIETILENO CS-PE-500",
+        "linea_sigrid": 217227,
+        "precio_unitario": 0.12,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.03.12",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "LAMINA DE POLIETILENO CS-PE-500",
+        "linea_sigrid": 217228,
+        "precio_unitario": 0.12,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.05.04",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Separador de hormigón para recubrimiento 4cm",
+        "linea_sigrid": 217229,
+        "precio_unitario": 0.039,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.05.02",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Separador tipo roseta para recubrimiento 3,5cm",
+        "linea_sigrid": 217230,
+        "precio_unitario": 0.042,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.03.08",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Separador tipo roseta para recubrimiento 7cm",
+        "linea_sigrid": 217231,
+        "precio_unitario": 0.15,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.03.08",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Tapones para espadines de muros de hormigón",
+        "linea_sigrid": 217232,
+        "precio_unitario": 0.009,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.4.18",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MATERIAL DE FERRETERIA FEYMACO",
+        "linea_sigrid": 217740,
+        "precio_unitario": 3000,
+        "unidad": "mes"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.4.18",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MATERIAL DE FERRETERIA FEYMACO 2",
+        "linea_sigrid": 231611,
+        "precio_unitario": 3000,
+        "unidad": "mes"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA2204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PLATAFORMAS DESCARGA",
+        "linea_sigrid": 237317,
+        "precio_unitario": 594,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA2204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PUNTALES REFORZADOS PLATAFORMAS DESCARGA",
+        "linea_sigrid": 237318,
+        "precio_unitario": 30,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA2204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "TRASPALETA RUEDAS NEUMÁTICAS",
+        "linea_sigrid": 237319,
+        "precio_unitario": 780,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "34.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MATERIAL FERRETERÍA PARA SEGURIDAD Y SALUD",
+        "linea_sigrid": 237320,
+        "precio_unitario": 8000,
+        "unidad": "PA"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.2.3",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MESA OFICINA 140X80 SEMINUEVA",
+        "linea_sigrid": 237321,
+        "precio_unitario": 154.21,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.2.3",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MESA OFICINA 160X80 SEMINUEVA",
+        "linea_sigrid": 237322,
+        "precio_unitario": 163.73,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.04.04",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "BERENJENO 25 MM",
+        "linea_sigrid": 241384,
+        "precio_unitario": 0.68,
+        "unidad": "M"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.04.05",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "BERENJENO 25 MM",
+        "linea_sigrid": 241385,
+        "precio_unitario": 0.68,
+        "unidad": "M"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.05.05",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "BERENJENO 30 MM",
+        "linea_sigrid": 241386,
+        "precio_unitario": 0.89,
+        "unidad": "M"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.03.07",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "GEOTEXTIL 120 GR/M2",
+        "linea_sigrid": 241387,
+        "precio_unitario": 0.35,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.03.07",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ROLLO FOMPEX 1,50x100",
+        "linea_sigrid": 241388,
+        "precio_unitario": 107.25,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.05.04",
+        "codigo_producto": "MA0809",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SACO CEMENTO 25 KG",
+        "linea_sigrid": 241389,
+        "precio_unitario": 6.77,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA2204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PLATAFORMAS DESCARGA",
+        "linea_sigrid": 241390,
+        "precio_unitario": 594,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA2204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PUNTALES REFORZADOS PLATAFORMAS DESCARGA",
+        "linea_sigrid": 241391,
+        "precio_unitario": 30,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA2204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PUNTALES REFORZADOS PLATAFORMAS DESCARGA SEMINUEVOS",
+        "linea_sigrid": 241392,
+        "precio_unitario": 22.8,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.02.02",
+        "codigo_producto": "MA290205",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SEPARADORES TIMÓN",
+        "linea_sigrid": 241393,
+        "precio_unitario": 0.14,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.02.03",
+        "codigo_producto": "MA290205",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SEPARADORES TIMÓN",
+        "linea_sigrid": 241394,
+        "precio_unitario": 0.14,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.03.08",
+        "codigo_producto": "MA290205",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SEPARADORES TIMÓN",
+        "linea_sigrid": 241395,
+        "precio_unitario": 0.14,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.04.02",
+        "codigo_producto": "MA290205",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SEPARADORES TIMÓN",
+        "linea_sigrid": 241396,
+        "precio_unitario": 0.14,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.04.04",
+        "codigo_producto": "MA290205",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SEPARADORES TIMÓN",
+        "linea_sigrid": 241397,
+        "precio_unitario": 0.14,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "04.07.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "BRIDAS",
+        "linea_sigrid": 241398,
+        "precio_unitario": 0.34,
+        "unidad": "PA"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "25.02.01.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CODO TUBO Ø110",
+        "linea_sigrid": 241399,
+        "precio_unitario": 5.75,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "25.02.02.11",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "CODOS E INJERTOS",
+        "linea_sigrid": 241400,
+        "precio_unitario": 5.88,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "04.07.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ESPUMA IGNÍFUGA POLIURETANO",
+        "linea_sigrid": 241401,
+        "precio_unitario": 284.57,
+        "unidad": "PA"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "04.01.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "FLEJE + IMPULSORES",
+        "linea_sigrid": 241402,
+        "precio_unitario": 2,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "04.02.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "FLEJE + IMPULSORES",
+        "linea_sigrid": 241403,
+        "precio_unitario": 2,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "25.02.02.20",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "GEOTEXTIL 120 GR",
+        "linea_sigrid": 241404,
+        "precio_unitario": 0.35,
+        "unidad": "M"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "HORMIGONERA",
+        "linea_sigrid": 241405,
+        "precio_unitario": 611.63,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.2.10",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MATERIAL FERRETERÍA PARA GASTOS ESTABLECIMIENTO",
+        "linea_sigrid": 241406,
+        "precio_unitario": 660,
+        "unidad": "PA"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "04.01.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MIRA 40x40",
+        "linea_sigrid": 241407,
+        "precio_unitario": 14.4,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "04.02.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MIRA 40x40",
+        "linea_sigrid": 241408,
+        "precio_unitario": 14.4,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "04.02.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MIRA 40x40",
+        "linea_sigrid": 241409,
+        "precio_unitario": 14.4,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.04.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "NERVOMETAL",
+        "linea_sigrid": 241410,
+        "precio_unitario": 7.74,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.05.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "NERVOMETAL",
+        "linea_sigrid": 241411,
+        "precio_unitario": 7.74,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.03.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "NERVOMETAL",
+        "linea_sigrid": 241412,
+        "precio_unitario": 9.67,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.04.04",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "NERVOMETAL",
+        "linea_sigrid": 241413,
+        "precio_unitario": 9.67,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "04.07.13",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PLANCHA POREXPAN 2 CM",
+        "linea_sigrid": 241414,
+        "precio_unitario": 5,
+        "unidad": "M2"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RULO PROLONGADOR IP 55",
+        "linea_sigrid": 241415,
+        "precio_unitario": 148.8,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "32.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SACAS ESCOMBRO 1.000 KG",
+        "linea_sigrid": 241416,
+        "precio_unitario": 4.94,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "04.01.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SACO YESO",
+        "linea_sigrid": 241417,
+        "precio_unitario": 2.88,
+        "unidad": "ud"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.03.02",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SEPARADORES HORMIGÓN",
+        "linea_sigrid": 241418,
+        "precio_unitario": 0.04,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "03.04.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SEPARADORES HORMIGÓN",
+        "linea_sigrid": 241419,
+        "precio_unitario": 0.04,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "32.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SEPIOLITA",
+        "linea_sigrid": 241420,
+        "precio_unitario": 1.05,
+        "unidad": "KG"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "04.08.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Suministro Self Dan (muestra Feymaco)",
+        "linea_sigrid": 241421,
+        "precio_unitario": 4.54,
+        "unidad": "M"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "TRANSPALETA ELÉCTRICA",
+        "linea_sigrid": 241422,
+        "precio_unitario": 1243.77,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "25.02.02.20",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "TUBERÍA DRENAJE DIAM. 160",
+        "linea_sigrid": 241423,
+        "precio_unitario": 3.9,
+        "unidad": "M"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "25.02.01.11",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "TUBO Ø110",
+        "linea_sigrid": 241424,
+        "precio_unitario": 35.87,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "BAÑERAS MORTERO 300 L",
+        "linea_sigrid": 241425,
+        "precio_unitario": 58,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ESLINGAS Y PULPOS GRÚA",
+        "linea_sigrid": 241426,
+        "precio_unitario": 4000,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.4.18",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MATERIAL DE FERRETERIA FEYMACO 3",
+        "linea_sigrid": 241427,
+        "precio_unitario": 3000,
+        "unidad": "mes"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PASARELAS ANDAMIOS Y CABALLETES",
+        "linea_sigrid": 241428,
+        "precio_unitario": 2000,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "SM370001",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PISTOLA CLAVOS",
+        "linea_sigrid": 241429,
+        "precio_unitario": 375,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "ATORNILLADOR BOSCH GSR 18V-21",
+        "linea_sigrid": 258234,
+        "precio_unitario": 205,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "05.01.03",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "Bolsa fibra de vidrio",
+        "linea_sigrid": 258235,
+        "precio_unitario": 6.52,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.4.18",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MATERIAL DE FERRETERIA FEYMACO 4",
+        "linea_sigrid": 258236,
+        "precio_unitario": 14350,
+        "unidad": "PA"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA2204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MARTILLO BOSCH GBH 2-40",
+        "linea_sigrid": 258237,
+        "precio_unitario": 178.5,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA2204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "MARTILLO BOSCH GBH 5-40",
+        "linea_sigrid": 258238,
+        "precio_unitario": 625.01,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA2204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PLATAFORMAS DESCARGA",
+        "linea_sigrid": 258239,
+        "precio_unitario": 594,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA2204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PUNTALES 3M",
+        "linea_sigrid": 258240,
+        "precio_unitario": 19.86,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA2204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PUNTALES 4M",
+        "linea_sigrid": 258241,
+        "precio_unitario": 25,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA2204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "PUNTALES 4M SEMINUEVOS",
+        "linea_sigrid": 258242,
+        "precio_unitario": 18,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "CI.03A.2",
+        "codigo_producto": "MA2204",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "RADIAL BOSCH 115 MM",
+        "linea_sigrid": 258243,
+        "precio_unitario": 79.49,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "04.07.05",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "BRIDAS",
+        "linea_sigrid": 258244,
+        "precio_unitario": 0.34,
+        "unidad": "PA"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "32.01",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SACAS ESCOMBRO 1.000 KG",
+        "linea_sigrid": 258245,
+        "precio_unitario": 4.94,
+        "unidad": "UD"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "25.02.01.10",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUM. CODOS PVC ENTERRADO",
+        "linea_sigrid": 258246,
+        "precio_unitario": 11.85,
+        "unidad": "PA"
+      },
+      {
+        "caso_id": "FER-003",
+        "codigo_partida": "25.02.01.06",
+        "codigo_producto": "MA9999",
+        "comentario": "importada de sigrid-api el 2026-10-23 (F-084)",
+        "descripcion_recurso": "SUM. CODOS PVC ENTERRADO",
+        "linea_sigrid": 258247,
+        "precio_unitario": 55.49,
+        "unidad": "PA"
+      }
+    ],
     "lineas_albaran": [
       {
         "cantidad": 4,

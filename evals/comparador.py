@@ -22,6 +22,11 @@ escrito por el humano y lo impreso dicen lo mismo con otra grafía:
   ceros a la izquierda en cada segmento. «CI.04.18» ≡ «CI.4.18». La partida
   valorada (`codigo_partida_final`, `partida_final`) NO se normaliza: ahí se
   exige el código exacto de Sigrid.
+
+Los importes y precios VALORADOS se comparan con una tolerancia de
+`TOLERANCIA_IMPORTE_EUR` (F-084 R37, decisión del humano del 2026-10-23): el
+libro anota el importe del papel en céntimos y sv6 no redondea cuando INPUTS no
+trae el importe de la línea (17,59 ≡ 17,5932). La lectura de IA1 sigue exacta.
 """
 
 from __future__ import annotations
@@ -29,6 +34,7 @@ from __future__ import annotations
 import math
 import re
 from collections.abc import Callable, Mapping, Sequence
+from decimal import Decimal
 
 from evals.criticidad import Criticidad, nombre_de_campo
 from evals.modelos import ESPERA_REVISION, NO_COMPARAR, Discrepancia
@@ -37,6 +43,25 @@ from evals.modelos import ESPERA_REVISION, NO_COMPARAR, Discrepancia
 #: varios sitios del pipeline; exigir igualdad binaria daría rojos falsos.
 TOLERANCIA_RELATIVA = 1e-6
 TOLERANCIA_ABSOLUTA = 1e-6
+
+#: (F-084 R37) Euros de diferencia que se toleran en los importes y precios
+#: valorados: varios céntimos no cambian la valoración.
+TOLERANCIA_IMPORTE_EUR = Decimal("0.05")
+
+#: (F-084 R37) Los campos con esa tolerancia, como (tabla, campo): IA3,
+#: RESULTADO_FINAL, sus líneas añadidas y el total del documento. La lectura
+#: de IA1 (`lineas.importe`, `lineas.precio_unitario`) no está.
+CAMPOS_CON_TOLERANCIA_EUR = frozenset({
+    ("lineas_valoradas", "importe_calculado"),
+    ("lineas_valoradas", "precio_unitario_final"),
+    ("lineas", "importe_final"),
+    ("lineas", "precio_unitario_final"),
+    ("lineas_anadidas", "importe"),
+    ("datos_generales", "total_valorado_esperado"),
+})
+
+#: La tabla y el campo de un camino como `FINAL.lineas[1/P5.03.09].importe`.
+_TABLA_Y_CAMPO = re.compile(r"([A-Za-z_]+)\[[^\]]*\]\.([A-Za-z_]+)$")
 
 #: Textos que significan «sí» y «no» en los libros que rellena el humano.
 _AFIRMATIVOS = frozenset({"SI", "SÍ", "TRUE", "VERDADERO", "1", "X"})
@@ -162,8 +187,24 @@ NORMALIZADORES: dict[str, Callable[[object], str | None]] = {
 }
 
 
+def tolera_centimos(campo: str) -> bool:
+    """(R37) ¿Es un importe o precio valorado, con la tolerancia en euros?"""
+    encontrado = _TABLA_Y_CAMPO.search(campo)
+    return bool(encontrado) and encontrado.groups() in CAMPOS_CON_TOLERANCIA_EUR
+
+
 def equivalentes_en(campo: str, esperado: object, obtenido: object) -> bool:
-    """`equivalentes`, pero con la normalización propia del campo si la tiene."""
+    """`equivalentes`, pero con la normalización o la tolerancia del campo."""
+    if tolera_centimos(campo):
+        numero_esperado, numero_obtenido = _a_numero(esperado), _a_numero(obtenido)
+        if (
+            numero_esperado is not None and numero_obtenido is not None
+            and math.isfinite(numero_esperado) and math.isfinite(numero_obtenido)
+        ):
+            # En Decimal desde la escritura corta del número: en binario,
+            # 17,64 − 17,59 no es 0,05.
+            diferencia = Decimal(repr(numero_esperado)) - Decimal(repr(numero_obtenido))
+            return abs(diferencia) <= TOLERANCIA_IMPORTE_EUR
     normalizar = NORMALIZADORES.get(nombre_de_campo(campo))
     if normalizar is not None:
         normal_esperado, normal_obtenido = normalizar(esperado), normalizar(obtenido)
