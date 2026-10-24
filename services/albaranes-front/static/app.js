@@ -734,22 +734,40 @@
     // la línea de contrato (eso es solo «Origen ✎», R28). Teclado: flechas,
     // Enter elige, Esc cierra y deshace lo tecleado.
     // --------------------------------------------------------------- //
+    // F-098 R14, R18, R20: cada hoja trae su cod (``code``, lo que se guarda),
+    // su código completo (lo que se pinta, ``CD.99.01.64``) y su capítulo; la
+    // etiqueta es «completo · descripción agregada» y, si el cod se repite en
+    // la obra, lo dice. Una sv4 sin F-098 (sin esos campos): el cod como
+    // completo y sin capítulos. Capítulo nulo ⇒ «» (su chip, «Sin capítulo»).
     function partidasDeRespuesta(data) {
-        if (!data || data.ok === false) { return { items: [], error: true }; }
+        if (!data || data.ok === false) { return { items: [], capitulos: [], error: true }; }
         const items = (data.items || []).map(function (p) {
+            const completo = p.codigo_completo || p.codigo;
             const desc = p.descripcion_agregada || p.descripcion || "";
-            const label = desc ? (p.codigo + " · " + desc) : p.codigo;
-            return { code: p.codigo, label: label, norm: _normLine(label) };
+            const base = desc ? (completo + " · " + desc) : completo;
+            const label = p.cod_repetido ? base + " (código repetido en la obra)" : base;
+            // Se busca por la etiqueta y por el cod (no por el aviso de repetido).
+            return { code: p.codigo, completo: completo, capitulo: p.capitulo == null ? "" : p.capitulo,
+                     repetido: !!p.cod_repetido, label: label, norm: _normLine(base + " " + p.codigo) };
         });
-        return { items: items, error: false };
+        const capitulos = (data.capitulos || []).map(function (c) {
+            return { codigo: c.codigo == null ? "" : c.codigo, descripcion: c.descripcion, n: c.n };
+        });
+        return { items: items, capitulos: capitulos, error: false };
     }
 
-    function opcionesPartida(items, texto) {
+    // F-098 R16, R19: «Almacén» primero; con ``capitulo`` (``null`` = «Todas»)
+    // solo sus hojas, y lo tecleado filtra por palabras como antes. Como mucho
+    // 100 partidas: ``resto`` es cuántas casan y no caben.
+    function opcionesPartida(items, texto, capitulo) {
         const ALMACEN = { almacen: true, code: "", label: "Almacén (sin partida)" };
+        const TOPE = 100;
         const tokens = _normLine(texto).split(/\s+/).filter(Boolean);
-        return [ALMACEN].concat(items.filter(function (it) {
-            return tokens.every(function (t) { return it.norm.indexOf(t) !== -1; });
-        }));
+        const casan = items.filter(function (it) {
+            return (capitulo == null || it.capitulo === capitulo) &&
+                tokens.every(function (t) { return it.norm.indexOf(t) !== -1; });
+        });
+        return { shown: [ALMACEN].concat(casan.slice(0, TOPE)), resto: Math.max(casan.length - TOPE, 0) };
     }
 
     // «a», «al», «alm», «almacén»… (o «Almacén (sin partida)» entero): lo
@@ -767,9 +785,22 @@
         return String(texto || "").trim() !== "" && shown.length > 1 ? 1 : -1;
     }
 
+    // F-098 R22: vale vacía (almacén), un código completo o un cod de la lista.
     function partidaValida(valor, items) {
         const v = String(valor || "").trim();
-        return v === "" || items.some(function (it) { return it.code === v; });
+        return v === "" || items.some(function (it) { return it.code === v || it.completo === v; });
+    }
+
+    // F-098 R21: lo que se manda es el cod (``99.01.64``), nunca el completo.
+    // Vacía ⇒ ""; un cod de la lista, tal cual; el completo de UNA sola hoja,
+    // su cod; si no (no es de la lista o dos hojas comparten completo), el
+    // valor: lo frena ``partidasMalas`` o lo traduce sv4 al guardar (R25).
+    function codigoParaEnviar(valor, items) {
+        const v = String(valor || "").trim();
+        if (v === "") { return ""; }
+        if (items.some(function (it) { return it.code === v; })) { return v; }
+        const conEse = items.filter(function (it) { return it.completo === v; });
+        return conEse.length === 1 ? conEse[0].code : v;
     }
 
     function siguienteActivo(actual, tecla, total) {
@@ -800,8 +831,40 @@
         return _partidasObra;
     }
 
+    // F-098 R17: el capítulo elegido (``null`` = «Todas») vale para todos los
+    // combos de la ficha y de «Dividir» y se recuerda por obra en el navegador.
+    // Sin almacenamiento (o si lanza), «Todas» al abrir y compartido mientras
+    // dure la ficha. Uno que ya no es de la obra cuenta como «Todas».
+    let _capituloFicha = {};
+    function capituloElegido(capitulos) {
+        const obraEl = document.getElementById("obra_codigo");
+        const obra = obraEl ? (obraEl.value || "").trim() : "";
+        if (!Object.prototype.hasOwnProperty.call(_capituloFicha, obra)) {
+            let leido = null;
+            try { leido = window.localStorage.getItem("f098.capitulo." + obra); } catch (e) { leido = null; }
+            _capituloFicha[obra] = leido;
+        }
+        const cap = _capituloFicha[obra];
+        return capitulos.some(function (c) { return c.codigo === cap; }) ? cap : null;
+    }
+
+    function elegirCapitulo(capitulo) {
+        const obraEl = document.getElementById("obra_codigo");
+        const obra = obraEl ? (obraEl.value || "").trim() : "";
+        _capituloFicha[obra] = capitulo;
+        try {
+            if (capitulo === null) {
+                window.localStorage.removeItem("f098.capitulo." + obra);
+            } else {
+                window.localStorage.setItem("f098.capitulo." + obra, capitulo);
+            }
+        } catch (e) { /* sin almacenamiento: vale solo para esta ficha */ }
+    }
+
     // ``opciones.alElegirAlmacen`` (F-065 R29): en la ventana de «Dividir»,
     // «Almacén» solo deja la partida vacía; en la fila, la manda a almacén.
+    // F-098 R15–R17: encima de la lista, los chips «Todas» y uno por capítulo
+    // de la obra (sin capítulos, sin barra); el elegido filtra la lista.
     function attachPartidaCombo(input, opciones) {
         if (!input || input.dataset.comboAttached) { return; }
         input.dataset.comboAttached = "1";
@@ -817,6 +880,7 @@
 
         let partidas = { items: [], error: false };
         let shown = [];
+        let resto = 0;
         let activo = -1;
         let alAbrir = input.value;
         let repos = null;
@@ -857,15 +921,45 @@
                 }
                 return;
             }
-            input.value = it.code;
-            alAbrir = it.code;
+            // F-098 R21: se pinta el completo; el cod queda a mano en el dataset.
+            input.value = it.completo || it.code;
+            input.dataset.partidaCod = it.code;
+            alAbrir = input.value;
             // Notifica a wireConciliaEdit: la fila queda con cambios.
             eligiendo = true;
             input.dispatchEvent(new Event("input", { bubbles: true }));
             eligiendo = false;
         }
+        // F-098 R15: «Todas» + un chip por capítulo; ``mousedown`` +
+        // ``preventDefault`` para que el foco siga en la casilla (como partes).
+        function barraCapitulos(capitulos) {
+            const actual = capituloElegido(capitulos);
+            const barra = document.createElement("div");
+            barra.className = "combo-chips";
+            const todas = { codigo: null, texto: "Todas", title: "Todas las partidas de la obra" };
+            [todas].concat(capitulos.map(function (c) {
+                return { codigo: c.codigo, texto: c.codigo || "Sin capítulo",
+                         title: (c.descripcion || c.codigo || "Sin capítulo") + " · " + c.n +
+                             (c.n === 1 ? " partida" : " partidas") };
+            })).forEach(function (c) {
+                const b = document.createElement("button");
+                b.type = "button";
+                b.className = "chip" + (c.codigo === actual ? " on" : "");
+                b.textContent = c.texto;
+                b.title = c.title;
+                b.addEventListener("mousedown", function (e) {
+                    e.preventDefault();
+                    elegirCapitulo(c.codigo);
+                    filtrar(true);
+                });
+                barra.appendChild(b);
+            });
+            return barra;
+        }
         function render() {
             panel.innerHTML = "";
+            const capitulos = partidas.capitulos || [];
+            if (cargadas && capitulos.length) { panel.appendChild(barraCapitulos(capitulos)); }
             shown.forEach(function (it, idx) {
                 const d = document.createElement("div");
                 d.className = "combo-item" + (idx === activo ? " active" : "");
@@ -876,6 +970,12 @@
                 });
                 panel.appendChild(d);
             });
+            if (resto > 0) {
+                const d = document.createElement("div");
+                d.className = "combo-msg";
+                d.textContent = resto + " partidas más: escribe para afinar";
+                panel.appendChild(d);
+            }
             if (!cargadas || partidas.error) {
                 const d = document.createElement("div");
                 d.className = "combo-msg";
@@ -913,15 +1013,23 @@
                     volverSiNoVale();  // O6: se salió antes de que llegara
                     return;
                 }
-                shown = opcionesPartida(res.items, input.value);
-                if (textoNuevo) {
-                    activo = marcadaAlTeclear(shown, input.value);
-                } else {
-                    activo = Math.min(activo, shown.length - 1);
-                }
-                render();
-                if (textoNuevo) { panel.scrollTop = 0; }
+                filtrar(textoNuevo);
             });
+        }
+        // La lista con lo tecleado y el capítulo de la ficha (F-098 R16).
+        function filtrar(textoNuevo) {
+            const capitulos = partidas.capitulos || [];
+            const capitulo = capitulos.length ? capituloElegido(capitulos) : null;
+            const opciones = opcionesPartida(partidas.items, input.value, capitulo);
+            shown = opciones.shown;
+            resto = opciones.resto;
+            if (textoNuevo) {
+                activo = marcadaAlTeclear(shown, input.value);
+            } else {
+                activo = Math.min(activo, shown.length - 1);
+            }
+            render();
+            if (textoNuevo) { panel.scrollTop = 0; }
         }
 
         input.addEventListener("focus", function () { open(false); });
@@ -1017,10 +1125,11 @@
     // Vaciada a propósito => "" (almacén); sin tocar => null («el campo
     // no viene»): guardar una fila que nadie tocó no la manda a almacén
     // ni le reescribe la partida.
-    function partidaParaEnviar(inp) {
+    // F-098 R21: con la lista (``items``), la cambiada viaja como su cod.
+    function partidaParaEnviar(inp, items) {
         const v = inp.value.trim();
         if (v === String(inp.defaultValue || "").trim()) { return null; }
-        return v;
+        return items ? codigoParaEnviar(v, items) : v;
     }
 
     // F-065 R27 v5: la casilla de partida en rojo (o ya no) con su aviso; el
@@ -1066,7 +1175,7 @@
     // campo que no viene no cambia; uno vaciado viaja como null (la partida,
     // como "" = almacén). El importe no viaja: al teclearlo se ajusta el
     // precio (que sí viaja si cambió). Lo usan «Guardar» y «Guardar todas».
-    function _camposCambiados(tr) {
+    function _camposCambiados(tr, items) {
         const CAMPOS = ["codigo_partida", "descripcion", "cantidad", "unidad",
                         "precio_unitario", "descuento", "codigo_externo"];
         const body = {};
@@ -1079,7 +1188,7 @@
                     body[field] = valor;
                 }
             } else if (field === "codigo_partida") {
-                const valor = partidaParaEnviar(inp);
+                const valor = partidaParaEnviar(inp, items);
                 if (valor !== null) { body[field] = valor; }
             } else {
                 const valor = inp.value.trim();
@@ -1286,7 +1395,7 @@
                     saveBtn.disabled = false;
                     return;
                 }
-                const body = _camposCambiados(tr);
+                const body = _camposCambiados(tr, lista.items);
                 const original = saveBtn.textContent;
                 saveBtn.textContent = "Guardando…";
                 const motivo = await enviarFila(vid, body);
@@ -1502,7 +1611,10 @@
                     {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(cuerpoDivision(cantidades(), partidas())),
+                        // F-098 R21: cada parte manda el cod de su partida.
+                        body: JSON.stringify(cuerpoDivision(cantidades(), partidas().map(function (v) {
+                            return codigoParaEnviar(v, res.items);
+                        }))),
                     }
                 );
                 if (!resp.ok) {
@@ -1578,7 +1690,7 @@
                 return;
             }
             const envios = filas.map(function (tr) {
-                return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };
+                return { vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr, lista.items) };
             });
             const original = saveAllLinesBtn.textContent;
             saveAllLinesBtn.textContent = "Guardando…";
@@ -2237,7 +2349,7 @@
             return { malas: true, guardadas: 0, motivo: null };
         }
         const envios = filas.map(function (tr) {
-            return { tr: tr, vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr) };
+            return { tr: tr, vid: tr.dataset.forValuationLineId.trim(), cuerpo: _camposCambiados(tr, lista.items) };
         });
         let guardadas = 0;
         for (let i = 0; i < envios.length; i++) {
