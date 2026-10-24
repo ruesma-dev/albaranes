@@ -206,3 +206,110 @@ def test_f104_r3_los_errores_v83_no_son_codigos_de_linea(codigo):
                       lineas=({"indice": 0, "referencia_linea": "1", "codigo": codigo},))
     assert codigo not in CODIGOS_LINEA
     assert clasificar(error, grabacion=False) is ERROR
+
+
+# ------------------------------------------------------------------ #
+# R4 · los Avisos v8.3 no son bloqueantes por defecto
+# ------------------------------------------------------------------ #
+def test_f104_r4_defecto_de_avisos_bloqueantes(monkeypatch):
+    bloqueantes = _settings(monkeypatch).avisos_bloqueantes
+    assert bloqueantes == frozenset({"producto_sin_historico"})
+    assert bloqueantes.isdisjoint(AVISOS_V83)
+
+
+def test_f104_r4_ni_infra_ni_env_example_nombran_los_avisos_v83():
+    ficheros = sorted((RAIZ_REPO / "infra").glob("*.ps1")) + [RAIZ_SERVICIO / ".env.example"]
+    assert len(ficheros) > 1
+    for fichero in ficheros:
+        texto = fichero.read_text(encoding="utf-8-sig", errors="replace")
+        for aviso in AVISOS_V83:
+            assert aviso not in texto, f"{fichero.name} nombra {aviso}"
+
+
+# ------------------------------------------------------------------ #
+# R5 · con el defecto, los Avisos v8.3 se guardan y no bloquean
+# ------------------------------------------------------------------ #
+def _codigo_y_mensaje(avisos) -> list[tuple[str, str]]:
+    return [(a["codigo"], a["mensaje"]) for a in avisos]
+
+
+@pytest.mark.parametrize("caso", ["simulado", "revisar", "registrado"])
+def test_f104_r5_avisos_v83_se_guardan_sin_motivo(monkeypatch, caso):
+    bloqueantes = _settings(monkeypatch).avisos_bloqueantes
+    peticion = _peticion()
+    if caso == "revisar":
+        previa = previa_ok(peticion, totales={"1": 400.0}, avisos=AVISOS_CABECERA_V83)
+    else:
+        previa = previa_ok(peticion, avisos=AVISOS_CABECERA_V83)
+    creado = previa_ok(peticion, estado="creado", con_ide=9123461, cod="AC26/16004",
+                       avisos=AVISOS_CABECERA_V83)
+    modo = ModoAlta.REAL if caso == "registrado" else ModoAlta.SIMULACION
+    repo, doc, resultado = _procesar(SigridFalso(previa=previa, grabacion=creado), modo, bloqueantes)
+
+    assert resultado.estado is EstadoAlta(caso)
+    guardado = repo.ultimo(doc)
+    codigos = [m.codigo for m in guardado.motivos]
+    assert "aviso_bloqueante" not in codigos
+    assert codigos == (["importe_distinto"] if caso == "revisar" else [])
+    assert _codigo_y_mensaje(guardado.avisos) == _codigo_y_mensaje(AVISOS_CABECERA_V83)
+
+
+def test_f104_r5_si_alguien_los_configura_bloquean(monkeypatch):
+    """Contraste: el no bloquear sale de la configuración, no del código."""
+    bloqueantes = _settings(
+        monkeypatch, ALTA_SIGRID_AVISOS_BLOQUEANTES="retencion_del_contrato",
+    ).avisos_bloqueantes
+    previa = previa_ok(_peticion(), avisos=AVISOS_CABECERA_V83)
+    repo, doc, resultado = _procesar(SigridFalso(previa=previa), ModoAlta.SIMULACION, bloqueantes)
+    assert resultado.estado is REVISAR
+    assert [m.codigo for m in repo.ultimo(doc).motivos] == ["aviso_bloqueante"]
+
+
+# ------------------------------------------------------------------ #
+# R6 · los campos nuevos del 200 no cambian nada
+# ------------------------------------------------------------------ #
+def _con_campos_v83(respuesta: RespuestaAlta) -> RespuestaAlta:
+    """El mismo 200 con lo que añade la v8.3, pasado por ``desde_cuerpo``."""
+    cuerpo = respuesta.a_dict()
+    cuerpo["totales"] = {
+        **cuerpo["totales"], "tot": 114.0, "n_retenciones": 1,
+        "retenciones": [{"codigo": 3, "porcentaje": 5.0, "base": 120.0, "cuota": 6.0}],
+    }
+    cuerpo["filas"] = {"dcarec": [{"dcaide": 1, "reccod": 3, "recpor": 5.0, "recimp": 6.0}]}
+    return RespuestaAlta.desde_cuerpo(cuerpo)
+
+
+def _resumen(repo, doc, resultado):
+    guardado = repo.ultimo(doc)
+    return (resultado.estado, [(m.codigo, m.detalle, m.referencia_linea) for m in guardado.motivos],
+            guardado.sigrid_cod, guardado.sigrid_con_ide)
+
+
+@pytest.mark.parametrize("caso", ["simulado", "revisar", "registrado"])
+def test_f104_r6_un_200_con_los_campos_v83_se_trata_igual(caso):
+    peticion = _peticion()
+    totales = {"1": 400.0} if caso == "revisar" else None
+    previa = previa_ok(peticion, totales=totales)
+    creado = previa_ok(peticion, estado="creado", con_ide=9123461, cod="AC26/16004")
+    modo = ModoAlta.REAL if caso == "registrado" else ModoAlta.SIMULACION
+    bloqueantes = frozenset({"producto_sin_historico"})
+
+    sin = _procesar(SigridFalso(previa=previa, grabacion=creado), modo, bloqueantes)
+    con = _procesar(SigridFalso(previa=_con_campos_v83(previa), grabacion=_con_campos_v83(creado)),
+                    modo, bloqueantes)
+
+    assert con[2].estado is EstadoAlta(caso)
+    assert _resumen(*con) == _resumen(*sin)
+    guardado = con[0].ultimo(con[1])
+    assert "filas" not in guardado.respuesta
+    assert "dcarec" not in json.dumps(guardado.respuesta)
+    assert guardado.respuesta["totales"]["tot"] == 114.0  # totales se guarda entero (R16)
+
+
+@pytest.mark.parametrize("grabacion", [False, True])
+@pytest.mark.parametrize("estado", ["previsto", "creado", "idempotente"])
+def test_f104_r6_clasificar_ignora_los_campos_v83(estado, grabacion):
+    respuesta = previa_ok(_peticion(), estado=estado)
+    assert clasificar(_con_campos_v83(respuesta), grabacion=grabacion) == clasificar(
+        respuesta, grabacion=grabacion,
+    )
