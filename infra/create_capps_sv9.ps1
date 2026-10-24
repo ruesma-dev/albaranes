@@ -30,7 +30,7 @@
 #     sentencias (T24b) y sigrid-api es idempotente por referencia/synckey.
 #
 # Visibilidad de q-feedback: la calcula el propio worker (main_worker.py,
-# peor caso de un mensaje + 300 s, 1740 s con los defectos).
+# peor caso de un mensaje + 300 s, 2460 s con los defectos desde F-069).
 
 $ErrorActionPreference = "Stop"
 if (-not $MI_ID)  { throw "Falta `$MI_ID. Haz:  . .\00_capps_vars.ps1" }
@@ -67,7 +67,7 @@ $sv9Env = @("AZURE_CLIENT_ID=$MI_CLIENTID", "COLAS_ACCOUNT_URL=$QUEUE_URL",
             "SIGRID_API_DATABASE=$SIGRID_DB",
             "ALTA_SIGRID_COMMIT=false",
             "ALTA_SIGRID_USUARIO_RESPALDO=$($Global:ALTA_SIGRID_USUARIO_RESPALDO)",
-            "ALTA_SIGRID_EMPIDE=$($Global:ALTA_SIGRID_EMPIDE)") + (AltaSigridEnvComun) + (SpEnv)
+            "ALTA_SIGRID_EQUIVALENCIAS_USUARIO=$(EscaparJsonNativo $Global:ALTA_SIGRID_EQUIVALENCIAS_USUARIO)") + (AltaSigridEnvComun) + (SpEnv)
 if (($sv9Env -match "^ALTA_SIGRID_COMMIT=") -ne "ALTA_SIGRID_COMMIT=false") {
     throw "sv9 solo se crea en simulacion (ALTA_SIGRID_COMMIT=false)."
 }
@@ -82,6 +82,14 @@ $a = @("containerapp","create","-n",$APP_SV9,"-g",$RG,"--environment",$CAE,
        "--secrets") + $sv9Secrets + @("--env-vars") + $sv9Env + @("--tags") + $TAGS
 Run-Az $a
 az containerapp revision set-mode -n $APP_SV9 -g $RG --mode single | Out-Null
+
+# F-069 (R28): relee la Lista de equivalencias; si no es la de 00_capps_vars,
+# las comillas se perdieron por el camino y sv9 no arrancaria.
+$lista = az containerapp show -n $APP_SV9 -g $RG `
+    --query "properties.template.containers[0].env[?name=='ALTA_SIGRID_EQUIVALENCIAS_USUARIO'].value | [0]" -o tsv 2>$null
+if ([string]$lista -ne [string]$Global:ALTA_SIGRID_EQUIVALENCIAS_USUARIO) {
+    throw "ALTA_SIGRID_EQUIVALENCIAS_USUARIO en sv9 no es la de 00_capps_vars.ps1: '$lista'"
+}
 
 Write-Host "`nsv9 creado en SIMULACION (ALTA_SIGRID_COMMIT=false), max 1 replica." -ForegroundColor Yellow
 Write-Host "Comprobar:  az containerapp logs show -n $APP_SV9 -g $RG --tail 40" -ForegroundColor Yellow

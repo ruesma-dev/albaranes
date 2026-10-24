@@ -92,7 +92,8 @@ TEXTOS_MOTIVO_ALTA: dict[str, str] = {
     "respuesta_inesperada": "Sigrid devolvió una respuesta inesperada",
     "excepcion": "Fallo interno al dar de alta (sv9)",
     "adjunto_no_colgado": "No se pudo colgar el PDF del albarán en Sigrid",
-    "usuario_no_resuelto": "No se pudo saber con qué usuario de Sigrid colgar el PDF",
+    # F-069 R24: vale para el alta (sv9 lo pone sin petición, R8) y para el PDF.
+    "usuario_no_resuelto": "No se pudo saber con qué usuario de Sigrid dar de alta el albarán ni colgar su PDF",
     "verificacion_fallida": "No se pudo comprobar en Sigrid si el albarán está anulado",
     "sigue_en_sigrid": "El albarán sigue en Sigrid: anúlalo allí antes de pulsar «Ya lo he anulado»",
     # Códigos de cabecera de sigrid-api (clasificador.py).
@@ -136,6 +137,27 @@ TEXTOS_MOTIVO_ALTA: dict[str, str] = {
 }
 
 _HTTP = re.compile(r"http_(\d{3})")
+
+
+#: F-069 R16: clave de ``peticion_json`` con el rastro de la resolución de
+#: ``usu`` y ``empide`` (la escribe sv9; sv4 no importa sv9 y un test contrasta
+#: el valor con ``CLAVE_RESOLUCION`` de sv9, R24).
+CLAVE_RESOLUCION = "resolucion"
+#: F-069 R23: Origen del usuario que se marca «(respaldo)» (``OrigenUsuario`` de sv9).
+ORIGEN_RESPALDO = "respaldo"
+
+#: F-069 R22, R24: texto legible de cada Aviso de resolución de sv9
+#: (``AVISO_*`` de ``usuario_sigrid.py``). Son avisos: nunca bloquean el alta.
+TEXTOS_AVISO_RESOLUCION: dict[str, str] = {
+    "usuario_lista_no_existe": "El usuario de la lista de equivalencias no existe en Sigrid",
+    "empleado_lista_no_valido": "El empleado de la lista de equivalencias no existe o está de baja",
+    "empleado_correo_ambiguo": "Varios empleados de Sigrid tienen el correo de quien aprobó",
+    "empleado_correo_de_baja": "Los empleados de Sigrid con el correo de quien aprobó están de baja",
+    "empleado_correo_sin_empleado": "Ningún empleado de Sigrid tiene el correo de quien aprobó",
+    "empleado_sin_correo": "Quien aprobó no tiene correo de Ruesma: no se buscó su empleado",
+    "defecto_sigrid_api": "Se usó el empleado por defecto de sigrid-api",
+    "empleado_lectura_fallida": "No se pudo leer el empleado en Sigrid",
+}
 
 
 def texto_motivo_alta(codigo: str | None) -> str:
@@ -301,13 +323,47 @@ class AltaSigridVista(BaseModel):
         texto = "" if valor is None else str(valor).strip()
         return texto or None
 
+    def _resolucion(self) -> dict[str, Any] | None:
+        """``peticion.resolucion`` si es un objeto (F-069 R16); si no, ``None``."""
+        valor = (self.peticion or {}).get(CLAVE_RESOLUCION)
+        return valor if isinstance(valor, dict) else None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def empide(self) -> int | None:
+        """F-069 R21: el empleado de Sigrid de la petición guardada; ``None`` si
+        es nulo (sigrid-api puso el suyo) o no hay petición."""
+        valor = (self.peticion or {}).get("empide")
+        return valor if isinstance(valor, int) and not isinstance(valor, bool) else None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def avisos_resolucion(self) -> list[dict[str, Any]]:
+        """F-069 R22: los Avisos de resolución con su texto legible; un código
+        sin texto, tal cual. Son avisos, no motivos: no cambian nada."""
+        avisos = (self._resolucion() or {}).get("avisos")
+        if not isinstance(avisos, list):
+            return []
+        return [
+            {"codigo": str(a.get("codigo") or ""),
+             "texto": TEXTOS_AVISO_RESOLUCION.get(str(a.get("codigo") or ""),
+                                                  str(a.get("codigo") or "")),
+             "detalle": str(a.get("detalle") or "")}
+            for a in avisos if isinstance(a, dict)
+        ]
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def usu_respaldo(self) -> bool:
-        """R29 (v8): el ``usu`` no es la parte local del correo de quien aprobó
-        (sin distinguir mayúsculas): salió del Respaldo de sv9 (R47)."""
+        """F-069 R23: el ``usu`` salió del Respaldo de sv9 según la
+        ``resolucion`` guardada. Sin ella (altas anteriores a F-069), la regla
+        de R29 (v8): el ``usu`` no es la parte local del correo de quien aprobó
+        (sin distinguir mayúsculas)."""
         if self.usu is None:
             return False
+        origen = (self._resolucion() or {}).get("usu")
+        if isinstance(origen, str):
+            return origen == ORIGEN_RESPALDO
         texto = (self.approved_by or "").strip()
         parte_local = texto.split("@")[0] if "@" in texto else ""
         return self.usu.casefold() != parte_local.casefold()

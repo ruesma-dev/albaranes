@@ -85,7 +85,9 @@ def test_f053_r47_casa_con_dbo_usu_y_manda_el_cod_de_sigrid():
     repo, doc, resultado = _procesar(sigrid, approved_by="  Ana@Ruesma.ES ")
     assert resultado.estado is EstadoAlta.SIMULADO
     assert sigrid.llamadas[0] == ("buscar_usuario", "Ana")
-    assert sigrid.operaciones() == ["buscar_usuario", "buscar_albaranes", "alta_albaran"]
+    # F-069 R14: tras el usu, el empleado (dbo.emp), antes de las altas a mano.
+    assert sigrid.operaciones() == ["buscar_usuario", "buscar_empleados_por_correo",
+                                    "buscar_albaranes", "alta_albaran"]
     assert _usu_pedido(sigrid) == ["ANA"]
     assert repo.ultimo(doc).peticion["usu"] == "ANA"
 
@@ -135,7 +137,7 @@ def test_f053_r47_la_reclamacion_lleva_el_approved_by_del_merge():
 
 def test_f053_r12_validar_y_construir_recibe_usu_y_config_ya_no_lo_lleva():
     assert "usu" not in ConfigAlta.__dataclass_fields__
-    config = ConfigAlta(empide=None, mapeo=MAPEO)
+    config = ConfigAlta(mapeo=MAPEO)
     assert validar_y_construir(D, config, HOY, "luis").usu == "luis"
 
 

@@ -16,7 +16,7 @@ DOCUMENT_ID = "3f2b9c1e-0000-4000-8000-000000000002"
 CONTRATO = "CTSU16/0206"
 HOY = date(2026, 10, 6)
 MAPEO = {"alquiler_maquinaria": "QA9999", "medios_auxiliares": "XA9999", "*": "MA9999"}
-CONFIG = ConfigAlta(empide=None, mapeo=MAPEO)
+CONFIG = ConfigAlta(mapeo=MAPEO)
 #: `usu` de las peticiones de prueba (v8: por documento, R47; ya no en `ConfigAlta`).
 USU = "USU_ALTA"
 

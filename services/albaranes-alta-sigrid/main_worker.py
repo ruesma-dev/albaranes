@@ -30,6 +30,7 @@ from ruesma_comun.configuracion import motivos_configuracion
 
 from config.logging_config import configure_logging
 from config.settings import Settings
+from domain.services.usuario_sigrid import VARIABLE_LISTA
 from infrastructure.sigrid.sigrid_api_alta_client import (
     ESPERA_BASE_S,
     ESPERA_MAX_S,
@@ -63,18 +64,25 @@ def _con_reintentos_s(timeout_s: float) -> float:
     return INTENTOS_POR_DEFECTO * timeout_s + esperas
 
 
+#: F-069 R19: lecturas de la resolución de una petición nueva, cada una con sus
+#: reintentos: ``dbo.usu`` (Entrada y Login) y ``dbo.emp`` (Entrada y correo).
+LECTURAS_RESOLUCION = 4
+
+
 def peor_caso_mensaje_s(settings: Settings) -> float:
-    """Peor caso de UN mensaje en modo real: lectura de R14, previa,
-    grabación (una vez), PDF desde SharePoint y adjunto."""
+    """Peor caso de UN mensaje en modo real: las lecturas de la resolución
+    (F-069 R19), lectura de R14, previa, grabación (una vez), PDF desde
+    SharePoint y adjunto."""
     sigrid = _con_reintentos_s(settings.sigrid_api_timeout_s)
     token = (GRAPH_TOKEN_INTENTOS * settings.graph_timeout_s
              + (GRAPH_TOKEN_INTENTOS - 1) * GRAPH_TOKEN_ESPERA_MAX_S)
     pdf = token + GRAPH_PETICIONES_DESCARGA * settings.graph_timeout_s
-    return sigrid + sigrid + TIMEOUT_GRABACION_S + pdf + sigrid
+    resolucion = LECTURAS_RESOLUCION * sigrid
+    return resolucion + sigrid + sigrid + TIMEOUT_GRABACION_S + pdf + sigrid
 
 
 def visibilidad_cola_s(settings: Settings) -> int:
-    """Peor caso más el margen, redondeado al minuto (1740 s con los defectos)."""
+    """Peor caso más el margen, redondeado al minuto (2460 s con los defectos)."""
     return int(math.ceil((peor_caso_mensaje_s(settings) + MARGEN_VISIBILIDAD_S) / 60) * 60)
 
 
@@ -106,6 +114,9 @@ def main() -> int:
         NOMBRE_WORKER, settings.modo, settings.desde, settings.espera_incierto_min,
         settings.tolerancia_eur, sorted(settings.avisos_bloqueantes), visibilidad_s,
     )
+    # F-069 R3: solo el número (las Entradas son excepciones; vacía es lo normal).
+    logger.info("[%s] Lista de equivalencias (%s): %s Entradas", NOMBRE_WORKER,
+                VARIABLE_LISTA, len(settings.equivalencias))
     if settings.desde is None:
         logger.warning("[%s] ALTA_SIGRID_DESDE_UTC vacía: confirmo los mensajes sin hacer nada",
                        NOMBRE_WORKER)

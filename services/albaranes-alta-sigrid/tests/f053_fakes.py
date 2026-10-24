@@ -18,6 +18,7 @@ from domain.models.alta_models import (
     AltaActual,
     DatosAlta,
     Decision,
+    EmpleadoSigrid,
     ErrorAlta,
     EstadoAlta,
     EstadoDocumento,
@@ -122,6 +123,10 @@ class SigridFalso(SigridAltaPort):
     existe: bool = True
     #: R47: logins de ``dbo.usu`` (clave sin distinguir mayúsculas → ``cod``).
     usuarios: dict[str, str] = field(default_factory=dict)
+    #: F-069 R10: Empleados del correo (correo recortado y en minúsculas → filas).
+    empleados_por_correo: dict[str, list[EmpleadoSigrid]] = field(default_factory=dict)
+    #: F-069 R9: ``ide`` de los empleados de alta.
+    empleados_de_alta: set[int] = field(default_factory=set)
     adjunto: ResultadoAdjunto = field(default_factory=lambda: ResultadoAdjunto(True, gra_ide=555))
     llamadas: list[tuple] = field(default_factory=list)
     fallar_en: set[str] = field(default_factory=set)
@@ -143,6 +148,18 @@ class SigridFalso(SigridAltaPort):
         if "buscar_usuario" in self.fallar_en:
             raise Explota("sql/read caído")
         return self.usuarios.get(cod.lower())
+
+    def buscar_empleados_por_correo(self, correo):
+        self.llamadas.append(("buscar_empleados_por_correo", correo))
+        if "buscar_empleados_por_correo" in self.fallar_en:
+            raise Explota("sql/read caído")
+        return list(self.empleados_por_correo.get(correo.strip().lower(), []))
+
+    def empleado_de_alta(self, ide):
+        self.llamadas.append(("empleado_de_alta", ide))
+        if "empleado_de_alta" in self.fallar_en:
+            raise Explota("sql/read caído")
+        return ide in self.empleados_de_alta
 
     def alta_albaran(self, peticion: PeticionAlbaran, commit: bool):
         self.llamadas.append(("alta_albaran", peticion, commit))

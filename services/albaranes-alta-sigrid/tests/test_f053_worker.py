@@ -7,7 +7,8 @@
   para reintentarlo.
 - Un mensaje de otro ``tipo`` va a poison sin tocar el servicio.
 - La composición pasa al servicio TODO lo de ``Settings`` (modo, DESDE, Espera,
-  tolerancia, avisos, usuario, empide, mapeo) y ``main_worker`` arranca sobre
+  tolerancia, avisos, usuario, mapeo; F-069: la Lista, y ya no un empide fijo)
+  y ``main_worker`` arranca sobre
   ``COLA_FEEDBACK`` con ``tipo="feedback"``; con el mapeo roto no arranca (R44)
   y dice por qué en el log.
 
@@ -26,6 +27,7 @@ from ruesma_comun.colas import COLA_FEEDBACK, MensajeFeedback, MensajeValoracion
 from ruesma_comun.colas.consumidor import ConfiguracionConsumidor, ConsumidorCola
 
 import main_worker
+from domain.services.usuario_sigrid import Equivalencia
 from application.alta_sigrid_service import ResultadoProceso
 from domain.models.alta_models import AccionAlta, Decision, EstadoAlta, ModoAlta
 from interface_adapters import composition
@@ -128,6 +130,7 @@ ENTORNO = {
     "ALTA_SIGRID_ESPERA_INCIERTO_MIN": "20", "ALTA_SIGRID_TOLERANCIA_EUR": "0.1",
     "ALTA_SIGRID_AVISOS_BLOQUEANTES": "producto_sin_historico,stock_negativo",
     "ALTA_SIGRID_USUARIO_RESPALDO": "USU_ALTA", "ALTA_SIGRID_EMPIDE": "2425207",
+    "ALTA_SIGRID_EQUIVALENCIAS_USUARIO": '{"login1": {"empide": 1234567}}',
     "ALTA_SIGRID_PRODUCTO_POR_DEFECTO": '{"*": "MA9999", "alquiler_maquinaria": "QA9999"}',
 }
 
@@ -149,7 +152,9 @@ def test_f053_worker_composicion_pasa_toda_la_configuracion(monkeypatch):
     assert servicio._espera == timedelta(minutes=20)
     assert servicio._tolerancia == pytest.approx(0.1)
     assert servicio._bloqueantes == frozenset({"producto_sin_historico", "stock_negativo"})
-    assert servicio._respaldo == "USU_ALTA" and servicio._config.empide == 2425207
+    # F-069 R4: el ALTA_SIGRID_EMPIDE que quede en el entorno ya no llega; la Lista, sí.
+    assert servicio._respaldo == "USU_ALTA" and not hasattr(servicio._config, "empide")
+    assert servicio._equivalencias == {"login1": Equivalencia(usu=None, empide=1234567)}
     assert dict(servicio._config.mapeo) == {"*": "MA9999", "alquiler_maquinaria": "QA9999"}
     assert type(servicio._repo).__name__ == "SqlAltaRepository"
     assert type(servicio._sigrid).__name__ == "SigridApiAltaClient"
@@ -221,7 +226,7 @@ def _peor_caso_s(t_sigrid: float, t_graph: float) -> float:
 
 def test_f053_o1_visibilidad_por_encima_del_peor_caso(monkeypatch, tmp_path):
     peor = _peor_caso_s(60, 60)
-    assert peor == 1409  # 23,5 min: la visibilidad común de 600 s no basta
+    assert peor == 1409  # 23,5 min (F-053; F-069 R19 suma la resolución): 600 s no basta
     visibilidad = _visibilidad_con(monkeypatch, tmp_path)
     assert visibilidad >= peor + 300  # con margen para la BBDD y el arranque
     assert visibilidad < 7 * 24 * 3600  # máximo de Azure Storage Queues

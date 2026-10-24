@@ -248,8 +248,9 @@ def test_f053_r12_nunca_claves_prohibidas():
 def test_f053_r12_cabecera_recorta_y_usa_la_configuracion():
     d = datos(sin_vincular(1), obra_codigo=" 0404 ", numero_albaran="  N-1  ",
               contrato_codigo=f" {CONTRATO} ")
-    config = ConfigAlta(empide=2425207, mapeo=MAPEO)
-    peticion = _peticion(validar_y_construir(d, config, HOY, "OTRO"))
+    # F-069: el empide ya no es de la configuración; llega como argumento.
+    config = ConfigAlta(mapeo=MAPEO)
+    peticion = _peticion(validar_y_construir(d, config, HOY, "OTRO", empide=2425207))
     assert peticion.cod_obra == "0404" and peticion.su_referencia == "N-1"
     assert peticion.cod_contrato == CONTRATO
     assert peticion.usu == "OTRO" and peticion.empide == 2425207

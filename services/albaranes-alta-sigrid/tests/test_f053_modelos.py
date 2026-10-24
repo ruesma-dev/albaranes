@@ -179,14 +179,14 @@ def test_f053_modelos_puerto_del_repositorio():
     assert _abstractos(AltaRepository) == {"reclamar", "leer_datos", "guardar", "leer_alta"}
 
 
-def test_f053_modelos_puerto_de_sigrid_solo_cinco_operaciones():
+def test_f053_modelos_puerto_de_sigrid_solo_siete_operaciones():
     """R33: buscar albaranes, concepto y usuario (sql/read; el usuario, v8 R47),
-    alta y adjunto."""
+    los dos de empleado (sql/read, F-069 R9–R10), alta y adjunto."""
     from domain.ports.sigrid_alta_port import SigridAltaPort
 
     assert _abstractos(SigridAltaPort) == {
         "buscar_albaranes", "existe_concepto", "buscar_usuario", "alta_albaran",
-        "adjuntar_pdf",
+        "adjuntar_pdf", "buscar_empleados_por_correo", "empleado_de_alta",
     }
     publicos = {n for n, _ in inspect.getmembers(SigridAltaPort) if not n.startswith("_")}
     assert publicos == _abstractos(SigridAltaPort)

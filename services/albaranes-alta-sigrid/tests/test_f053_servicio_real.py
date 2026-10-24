@@ -146,7 +146,8 @@ def test_f053_r21_fallo_transitorio_en_grabacion_incierto_sin_reintento(tipo):
     repo, doc, resultado = _procesar(sigrid)
     assert resultado.estado is EstadoAlta.INCIERTO
     assert sigrid.commits() == [False, True]
-    assert repo.ultimo(doc).peticion == _peticion().a_dict()  # para retomarla igual
+    guardada = repo.ultimo(doc).peticion  # para retomarla igual (F-069 R16: + resolucion)
+    assert {k: v for k, v in guardada.items() if k != "resolucion"} == _peticion().a_dict()
 
 
 # ------------------------------------------------------------------ #

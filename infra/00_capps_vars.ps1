@@ -56,11 +56,28 @@ $Global:ALTA_SIGRID_ESPERA_INCIERTO_MIN  = "15"
 # comillas escapadas y lo RELEE de las dos apps: un JSON roto no arranca (R44).
 $Global:ALTA_SIGRID_PRODUCTO_POR_DEFECTO = ""
 $Global:ALTA_SIGRID_USUARIO_RESPALDO     = "pgris"   # U5: versionado, no es secreto
-$Global:ALTA_SIGRID_EMPIDE               = ""   # vacia = defecto de sigrid-api
+# F-069 · Lista de equivalencias (SOLO sv9). JSON objeto cuyas claves son el
+# Login de quien aprueba (parte local de su correo de Ruesma, en minusculas) y
+# cuyo valor es {"usu": "<login de dbo.usu>", "empide": <ide de dbo.emp>}, con
+# una de las dos claves o las dos. Solo Logins e ide: NUNCA correos completos,
+# nombres ni DNI (se versiona). VACIA = sin Entradas: usu sale del correo y
+# empide del empleado de alta con ese correo. Ponla en comillas simples de
+# PowerShell, por ejemplo: '{"login1": {"usu": "login1b", "empide": 1000001}}'.
+# La pasa escapada set_alta_sigrid.ps1 y la RELEE: una Lista rota no arranca.
+# Sustituye a la variable fija de empleado de F-053, que ya no existe: sv9 la
+# ignora si sigue puesta en la app.
+$Global:ALTA_SIGRID_EQUIVALENCIAS_USUARIO = ""
+
+# Windows PowerShell 5.1 (y 7.x en modo Legacy) se come las comillas dobles de
+# los argumentos a programas nativos: el JSON (mapeo y Lista) se escapa a mano.
+function Global:EscaparJsonNativo($texto) {
+    $texto = [string]$texto
+    $legacy = ($PSVersionTable.PSVersion.Major -lt 7) -or ($PSNativeCommandArgumentPassing -eq "Legacy")
+    if ($texto -and $legacy) { $texto = $texto -replace '"', '\"' }
+    $texto
+}
 
 # Pares CLAVE=valor comunes a sv4 y sv9 (los tres que deben coincidir).
-# Windows PowerShell 5.1 (y 7.x en modo Legacy) se come las comillas dobles de
-# los argumentos a programas nativos: el JSON del mapeo se escapa a mano.
 function Global:AltaSigridEnvComun() {
     $pares = @(
         "ALTA_SIGRID_DESDE_UTC=$($Global:ALTA_SIGRID_DESDE_UTC)",
@@ -68,9 +85,7 @@ function Global:AltaSigridEnvComun() {
     )
     $mapeo = [string]$Global:ALTA_SIGRID_PRODUCTO_POR_DEFECTO
     if ($mapeo) {
-        $legacy = ($PSVersionTable.PSVersion.Major -lt 7) -or ($PSNativeCommandArgumentPassing -eq "Legacy")
-        if ($legacy) { $mapeo = $mapeo -replace '"', '\"' }
-        $pares += "ALTA_SIGRID_PRODUCTO_POR_DEFECTO=$mapeo"
+        $pares += "ALTA_SIGRID_PRODUCTO_POR_DEFECTO=$(EscaparJsonNativo $mapeo)"
     }
     $pares
 }
