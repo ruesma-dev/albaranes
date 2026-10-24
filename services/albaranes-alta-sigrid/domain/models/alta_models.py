@@ -436,3 +436,29 @@ class OrigenEmpleado(StrEnum):
     LISTA = "lista"
     CORREO = "correo"
     DEFECTO_SIGRID_API = "defecto_sigrid_api"
+
+
+#: Clave de ``peticion_json`` con el rastro de la resolución (F-069 R16). Va
+#: JUNTO al cuerpo, nunca dentro de lo que se manda a sigrid-api (R17: el
+#: contrato es ``extra="forbid"``; se manda siempre ``PeticionAlbaran.a_dict()``).
+CLAVE_RESOLUCION = "resolucion"
+
+
+@dataclass(frozen=True)
+class Resolucion:
+    """De dónde salieron el ``usu`` y el ``empide`` de una petición nueva y qué
+    escalones no sirvieron (F-069 R16)."""
+
+    usu: str
+    origen_usu: OrigenUsuario
+    empide: int | None
+    origen_empide: OrigenEmpleado
+    avisos: tuple[AvisoResolucion, ...] = ()
+
+    def a_dict(self) -> dict[str, Any]:
+        """Para ``peticion_json``: sin el ``usu`` ni el ``empide``, que ya van en el cuerpo."""
+        return {
+            "usu": self.origen_usu.value,
+            "empide": self.origen_empide.value,
+            "avisos": [aviso.a_dict() for aviso in self.avisos],
+        }

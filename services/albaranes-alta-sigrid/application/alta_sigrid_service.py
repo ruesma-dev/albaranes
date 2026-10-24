@@ -9,7 +9,8 @@
    ``verificar_anulacion`` (R28), ``solo_adjunto`` (R23) o ``procesar``.
 3. ``procesar``: todo dentro de ``try/finally`` (R9). Una petición nueva lleva
    el ``usu`` de quien aprobó o el Respaldo (v8, R47–R48:
-   ``_resolver_usuario``). Tras dejar el alta en
+   ``_resolver_usuario``) y su ``empide`` (F-069: ``_resolver_empleado``, que
+   nunca bloquea), con la ``resolucion`` guardada junto al cuerpo (R16). Tras dejar el alta en
    ``en_curso``, ninguna salida —tampoco una excepción— la deja ahí: queda
    ``incierto`` si la grabación estaba en vuelo y ``error`` si no. Las
    excepciones de esta fase NO se propagan (el mensaje se confirma).
@@ -24,6 +25,7 @@ from datetime import UTC, date, datetime, timedelta
 from domain.models.alta_models import (
     AccionAlta,
     AdjuntoEstado,
+    CLAVE_RESOLUCION,
     AltaActual,
     AvisoResolucion,
     DatosAlta,
@@ -35,6 +37,7 @@ from domain.models.alta_models import (
     OrigenEmpleado,
     OrigenUsuario,
     PeticionAlbaran,
+    Resolucion,
     RespuestaAlta,
     ResultadoAdjunto,
     ResultadoAlta,
@@ -346,10 +349,12 @@ class AltaSigridService:
     ) -> None:
         datos = self._repo.leer_datos(document_id)
 
-        # 1. Petición: la guardada si se retoma un incierto (R15, con su usu), o
-        #    una nueva con el usu de quien aprobó (R47–R48; solo lee dbo.usu) y
+        # 1. Petición: la guardada si se retoma un incierto (R15, con su usu, su
+        #    empide y su resolucion), o una nueva con el usu y el empide de quien
+        #    aprobó (R47–R48, F-069 R5–R14; solo lee dbo.usu y dbo.emp) y
         #    validada en local (R10–R13, R39; sin llamar a nadie más).
         peticion = _peticion_retomada(previa)
+        resolucion: dict | None = _resolucion_guardada(previa) if peticion is not None else None
         if peticion is None:
             try:
                 usu, origen_usu, avisos = self._resolver_usuario(document_id, approved_by)
@@ -359,10 +364,14 @@ class AltaSigridService:
                 ))
                 return
             empide, origen_empide, avisos_empide = self._resolver_empleado(approved_by)
-            avisos = [*avisos, *avisos_empide]
+            resuelta = Resolucion(usu=usu, origen_usu=origen_usu, empide=empide,
+                                  origen_empide=origen_empide,
+                                  avisos=(*avisos, *avisos_empide))
+            # R18: usu, empide, orígenes y códigos; nunca el correo ni el cuerpo.
             logger.info("%s document_id=%s usu=%s origen_usu=%s empide=%s origen_empide=%s "
                         "avisos=%s", _LOG, document_id, usu, origen_usu.value, empide,
-                        origen_empide.value, [a.codigo for a in avisos])
+                        origen_empide.value, [a.codigo for a in resuelta.avisos])
+            resolucion = resuelta.a_dict()
             _avisar_lineas_de_otro_contrato(document_id, datos)
             validada = validar_y_construir(
                 datos, self._config, hoy_en_madrid(self._reloj()), usu, empide=empide,
@@ -373,7 +382,11 @@ class AltaSigridService:
                 ))
                 return
             peticion = validada
+        # R16: la resolucion va JUNTO al cuerpo en peticion_json; lo que se manda
+        # a sigrid-api es siempre peticion.a_dict() (R17).
         paso.peticion = peticion.a_dict()
+        if resolucion is not None:
+            paso.peticion[CLAVE_RESOLUCION] = resolucion
         self._guardar(document_id, paso, self._resultado(EstadoAlta.EN_CURSO, paso))
 
         # 2. Alta a mano del mismo albarán en Sigrid (R14).
@@ -556,6 +569,13 @@ def _peticion_retomada(previa: AltaActual | None) -> PeticionAlbaran | None:
     if previa is None or previa.estado is not EstadoAlta.INCIERTO or not previa.peticion:
         return None
     return PeticionAlbaran.desde_dict(previa.peticion)
+
+
+def _resolucion_guardada(previa: AltaActual | None) -> dict | None:
+    """La ``resolucion`` de la petición de un ``incierto`` retomado (F-069 R15),
+    o ``None`` si no la tenía (altas anteriores a F-069): no se inventa."""
+    guardada = (previa.peticion or {}).get(CLAVE_RESOLUCION) if previa is not None else None
+    return guardada if isinstance(guardada, dict) else None
 
 
 def _importes(datos: DatosAlta, peticion: PeticionAlbaran) -> dict[str, float]:

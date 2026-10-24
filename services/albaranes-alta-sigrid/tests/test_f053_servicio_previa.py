@@ -77,7 +77,9 @@ def test_f053_r16_se_guarda_la_peticion_y_solo_lo_de_r16():
     sigrid = SigridFalso(previa=RespuestaAlta.desde_cuerpo(_cuerpo_completo(peticion)))
     repo, doc, _ = _procesar(sigrid)
     guardado = repo.ultimo(doc)
-    assert guardado.peticion == peticion.a_dict()
+    # F-069 R16: junto al cuerpo va la resolucion (que nunca se manda, R17).
+    assert "resolucion" in guardado.peticion
+    assert {k: v for k, v in guardado.peticion.items() if k != "resolucion"} == peticion.a_dict()
     assert set(guardado.respuesta) == {"estado", "con_ide", "cod", "avisos", "lineas", "totales"}
     texto = json.dumps([guardado.peticion, guardado.respuesta, list(guardado.avisos)])
     for prohibido in ("IBAN", "banco", "cpacue", "cabecera", "filas", "movimientos"):
