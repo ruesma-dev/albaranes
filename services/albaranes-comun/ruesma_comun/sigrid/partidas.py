@@ -35,6 +35,13 @@ expansión de abreviaturas). Si no casa, lo dice y la lectura se queda.
   (el código de la lista o la lectura intacta) con la guarda de no hoja.
 - (F-076) :class:`CachePartidasObra`: la lista por obra en memoria del
   proceso (TTL, LRU, fallo recordado); nunca lanza.
+- (F-098) Cada hoja lleva su ``ide``, su **capítulo** (la raíz de su cadena)
+  y su **código completo** (:func:`codigo_completo`: ``CD.99.01.64`` para el
+  cod ``99.01.64`` de CD), y la lista sus capítulos
+  (:attr:`ListaPartidasObra.capitulos`). Lo que se guarda y se manda sigue
+  siendo el cod; el completo es lo que ve el humano y una forma más de casar
+  una lectura con su hoja (motivo ``completa``): :func:`misma_partida`,
+  :func:`mostrar_partida` y :meth:`CachePartidasObra.consultar`.
 """
 from __future__ import annotations
 
@@ -45,7 +52,7 @@ import time
 import unicodedata
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
 from ruesma_comun.obras import canonizar_codigo_obra
@@ -108,25 +115,73 @@ _RE_SEPARADOR = re.compile(r"[\W_]+")
 
 @dataclass(frozen=True)
 class PartidaObra:
-    """Partida HOJA de una obra. Mismos campos que ``PartidaOption`` de sv4."""
+    """Partida HOJA de una obra. Mismos campos que ``PartidaOption`` de sv4.
+
+    (F-098 R1) Además: ``ide`` (``obrparpar.ide``), ``capitulo`` (el cod de la
+    raíz de su cadena, o ``None``), ``capitulo_descripcion`` y
+    ``codigo_completo`` (:func:`codigo_completo`; si no se da, el cod). Van al
+    final y con defecto, así que quien la construye con los tres campos de
+    siempre no se rompe, y NO entran en la igualdad ni en el hash: dos hojas
+    siguen siendo iguales si lo son su cod y sus descripciones, como en F-076
+    (R5).
+    """
 
     codigo: str
     descripcion: str | None
     descripcion_agregada: str | None
+    ide: Any = field(default=None, compare=False)
+    capitulo: str | None = field(default=None, compare=False)
+    capitulo_descripcion: str | None = field(default=None, compare=False)
+    codigo_completo: str | None = field(default=None, compare=False)
+
+    def __post_init__(self) -> None:
+        if self.codigo_completo is None:
+            object.__setattr__(self, "codigo_completo", self.codigo)
+
+
+@dataclass(frozen=True)
+class CapituloObra:
+    """(F-098 R4) Un capítulo con hojas: su cod (``None`` = «Sin capítulo»), su
+    descripción y cuántas hojas cuelgan de él."""
+
+    codigo: str | None
+    descripcion: str | None
+    n_hojas: int
 
 
 @dataclass(frozen=True)
 class ListaPartidasObra:
-    """Partidas de una obra: las hojas y los códigos que NO son hoja."""
+    """Partidas de una obra: las hojas y los códigos que NO son hoja.
+
+    (F-098) ``no_hojas_completos``: el código completo de cada no hoja que lo
+    tiene distinto de su cod (``CD.99.01`` del subcapítulo ``99.01`` de CD),
+    para la guarda de no hoja de :func:`resolver_partida_obra` (R8).
+    """
 
     obra: str
     hojas: tuple[PartidaObra, ...]
     no_hojas: tuple[str, ...]
+    no_hojas_completos: tuple[str, ...] = ()
 
     @property
     def codigos(self) -> tuple[str, ...]:
         """Códigos de las hojas, en el orden de la lista."""
         return tuple(h.codigo for h in self.hojas)
+
+    @property
+    def capitulos(self) -> tuple[CapituloObra, ...]:
+        """(F-098 R4) Capítulos con al menos una hoja, por código; ``None`` al final."""
+        cuenta: dict[str | None, int] = {}
+        descripcion: dict[str | None, str | None] = {}
+        for h in self.hojas:
+            cuenta[h.capitulo] = cuenta.get(h.capitulo, 0) + 1
+            descripcion.setdefault(h.capitulo, h.capitulo_descripcion)
+        orden = sorted(cuenta, key=lambda c: (c is None, c or ""))
+        return tuple(CapituloObra(c, descripcion[c], cuenta[c]) for c in orden)
+
+    def cod_repetido(self, cod: str) -> bool:
+        """(F-098 R12) ``True`` si dos o más hojas tienen ese cod (tal cual)."""
+        return sum(1 for h in self.hojas if h.codigo == cod) >= 2
 
     @classmethod
     def desde_filas(
@@ -137,10 +192,17 @@ class ListaPartidasObra:
         no_hojas = sorted(
             {nodo["cod"] for ide, nodo in by_ide.items() if ide in parent_ides and nodo["cod"]}
         )
+        completos: set[str] = set()
+        for ide, nodo in by_ide.items():
+            if ide in parent_ides and nodo["cod"]:
+                completo = codigo_completo(by_ide[_capitulo_de(by_ide, ide)]["cod"], nodo["cod"])
+                if completo != nodo["cod"]:
+                    completos.add(completo)
         return cls(
             obra=obra,
             hojas=tuple(_hojas(by_ide, parent_ides)),
             no_hojas=tuple(no_hojas),
+            no_hojas_completos=tuple(sorted(completos)),
         )
 
 
@@ -278,6 +340,85 @@ def _indexar(
     return by_ide, parent_ides
 
 
+# ------------------------------------------------------------------ #
+# F-098 · capítulo y código completo
+# ------------------------------------------------------------------ #
+def _comparable(texto: str) -> str:
+    """Forma de COMPARAR de R3: NFKC, mayúsculas y sin espacios exteriores."""
+    return unicodedata.normalize("NFKC", texto).upper().strip()
+
+
+def _hay_limite(antes: str, despues: str | None) -> bool:
+    """(R3 b) ¿Hay límite entre el último carácter del capítulo (``antes``) y el
+    siguiente del cod (``despues``; ``None`` o vacío = fin del cod)?
+
+    Lo hay en el fin del cod, si uno de los dos no es alfanumérico o si uno es
+    letra y el otro dígito (``CD`` | ``2.01``).
+    """
+    if not despues:
+        return True
+    if not antes.isalnum() or not despues.isalnum():
+        return True
+    return antes.isalpha() != despues.isalpha()
+
+
+def _raiz_alfabetica(capitulo: str) -> str:
+    """(R3 c, P9) Las letras iniciales del capítulo, tras comparar: ``CI.F2`` ⇒
+    ``CI``, ``CD1`` ⇒ ``CD``, ``ANT.`` ⇒ ``ANT``, ``98`` ⇒ vacía."""
+    texto = _comparable(capitulo)
+    fin = 0
+    while fin < len(texto) and texto[fin].isalpha():
+        fin += 1
+    return texto[:fin]
+
+
+def codigo_completo(capitulo: str | None, cod: str) -> str:
+    """(F-098 R3) El código de una hoja tal como lo ve el humano.
+
+    Comparando con NFKC, mayúsculas y sin espacios exteriores, en este orden:
+
+    a. Sin capítulo (``None`` o vacío) ⇒ el cod.
+    b. El cod ya empieza por el capítulo seguido de límite (:func:`_hay_limite`)
+       ⇒ el cod tal cual (``CI.4.18`` en CI, ``CD2.01`` en CD).
+    c. (P9) El cod empieza por la raíz alfabética no vacía del capítulo seguida
+       de fin o de algo que no es letra ⇒ el cod tal cual (``CI.01.01`` en
+       ``CI.F2``, ``CD2`` en ``CD1``).
+    d. Si no, capítulo + cod, con un ``.`` en medio salvo que el capítulo ya
+       termine en un carácter no alfanumérico (``CD.99.01.64``, ``ANT.98.01``).
+
+    Se compone con el cod tal cual: lo que se enseña no se normaliza.
+    """
+    cap = "" if capitulo is None else _comparable(capitulo)
+    if not cap:
+        return cod
+    codigo = _comparable(cod)
+    if codigo.startswith(cap) and _hay_limite(cap[-1], codigo[len(cap):len(cap) + 1]):
+        return cod
+    raiz = _raiz_alfabetica(cap)
+    if raiz and codigo.startswith(raiz) and not codigo[len(raiz):len(raiz) + 1].isalpha():
+        return cod
+    separador = "." if cap[-1].isalnum() else ""
+    return f"{capitulo}{separador}{cod}"
+
+
+def _capitulo_de(by_ide: dict[Any, dict[str, Any]], ide: Any) -> Any:
+    """(F-098 R2) ``ide`` de la raíz de la cadena de ``ide``.
+
+    Sube por ``padide`` hasta un nodo sin padre (0 o nulo, ya ``None`` en
+    :func:`_indexar`) o cuyo padre no está entre las filas; una raíz es su
+    propio capítulo. Si la subida repite un nodo (ciclo), para en el último no
+    repetido. Sin bajar de nivel aunque la obra tenga una sola raíz (P6).
+    """
+    visto = {ide}
+    actual = ide
+    while True:
+        padre = by_ide[actual]["padide"]
+        if padre not in by_ide or padre in visto:
+            return actual
+        visto.add(padre)
+        actual = padre
+
+
 def _hojas(by_ide: dict[Any, dict[str, Any]], parent_ides: set[Any]) -> list[PartidaObra]:
     def _ruta(node: dict[str, Any]) -> str:
         # Camino raíz→hoja de descripciones (res), evitando ciclos.
@@ -301,11 +442,17 @@ def _hojas(by_ide: dict[Any, dict[str, Any]], parent_ides: set[Any]) -> list[Par
         cod = node.get("cod")
         if not cod:
             continue
+        raiz = by_ide[_capitulo_de(by_ide, ide)]
+        capitulo = raiz["cod"]
         out.append(
             PartidaObra(
                 codigo=cod,
                 descripcion=node.get("res"),
                 descripcion_agregada=_ruta(node) or node.get("res"),
+                ide=ide,
+                capitulo=capitulo,
+                capitulo_descripcion=raiz["res"] if capitulo else None,
+                codigo_completo=codigo_completo(capitulo, cod),
             )
         )
     out.sort(key=lambda p: p.codigo)
