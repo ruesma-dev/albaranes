@@ -27,7 +27,7 @@ Rama `feature/F-069-usuario-empleado-sigrid`. Rigor `critico`: **fase RED obliga
 ## Bloque D · infra, documentación y coordinación
 
 - [x] T13: `infra/00_capps_vars.ps1` (Lista vacía, fuera `ALTA_SIGRID_EMPIDE`, `EscaparJsonNativo` compartida con el mapeo), `create_capps_sv9.ps1` y `set_alta_sigrid.ps1` (Lista solo a sv9, escapada, releída; ya sin `ALTA_SIGRID_EMPIDE`; nunca `ALTA_SIGRID_COMMIT`) (R28)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f069_r28 or f053_r47_config"` (tests de texto sobre los `.ps1`, como los de F-053)
-- [ ] T14: `sv9.md`, regla 19 de `docs/ARCHITECTURE.md` y §10 de `azure-apps/albaranes.md` (commit local en `azure-apps`, sin push) (R29); `progress/propuestas_a_sigrid_api_F-069.md` con las dos peticiones de design §10  |  Verificación: revisión del reviewer contra R29; la propuesta la revisa el humano antes de pasarla a sigrid-api
+- [x] T14: `sv9.md`, regla 19 de `docs/ARCHITECTURE.md` y §10 de `azure-apps/albaranes.md` (commit local en `azure-apps`, sin push) (R29); `progress/propuestas_a_sigrid_api_F-069.md` con las dos peticiones de design §10  |  Verificación: revisión del reviewer contra R29; la propuesta la revisa el humano antes de pasarla a sigrid-api
 - [ ] T15: Campaña de mutación sobre los ficheros cambiados de sv9 y sv4 (sin tope, rigor `critico`), supervivientes con test nuevo o justificación en `progress/mutacion_F-069.md`  |  Verificación: `python -m harness.mutacion --feature F-069`
 
 ## Bloque E · despliegue y verificación real (humano, tras APPROVED y fusión en `dev`)
