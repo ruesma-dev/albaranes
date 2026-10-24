@@ -41,6 +41,7 @@ from domain.models.review_models import (
 )
 from domain.ports.contrato_refetch_port import ContratoRefetchClient
 from domain.ports.orchestrator_port import OrchestratorClient
+from domain.ports.partidas_obra_port import PartidasObraPort
 from domain.services.alta_sigrid import (
     FASE_RESULTADO,
     fase_alta,
@@ -100,14 +101,17 @@ class ReviewService:
         default_reviewer: str | None,
         orchestrator: OrchestratorClient | None = None,
         config_alta: ConfigAltaSigrid | None = None,
+        partidas: PartidasObraPort | None = None,
     ) -> None:
         """``orchestrator`` y ``config_alta`` (F-053) son posicionales y
         opcionales: sin ellos, la feature está apagada (R3) y el servicio
-        se comporta como antes."""
+        se comporta como antes. ``partidas`` (F-098) es la lista de partidas
+        por obra; sin ella, la ficha pinta y guarda la partida como antes."""
         self._repository = repository
         self._default_reviewer = (default_reviewer or "").strip() or None
         self._orchestrator = orchestrator
         self._config_alta = config_alta or ConfigAltaSigrid()
+        self._partidas = partidas
 
     @property
     def config_alta(self) -> ConfigAltaSigrid:

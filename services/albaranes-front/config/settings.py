@@ -129,6 +129,18 @@ class Settings(BaseSettings):
     sigrid_api_timeout_s: float = Field(30.0, alias="SIGRID_API_TIMEOUT_S")
 
     # ------------------------------------------------------------ #
+    # F-098 R27 · Caché de la lista de partidas por obra (la de comun,
+    # ``CachePartidasObra``): el selector y la ficha la leen de aquí. Solo
+    # existe con SIGRID_API_*; sin ellas, ni caché ni cambios.
+    #   - PARTIDAS_OBRA_TTL_S: segundos que vale una lista (P5 = a: 10 min).
+    #   - PARTIDAS_OBRA_MAX_OBRAS: obras en memoria por réplica (LRU).
+    #   - PARTIDAS_OBRA_FALLO_TTL_S: segundos sin reconsultar tras un fallo.
+    # ------------------------------------------------------------ #
+    partidas_obra_ttl_s: float = Field(600.0, alias="PARTIDAS_OBRA_TTL_S")
+    partidas_obra_max_obras: int = Field(64, alias="PARTIDAS_OBRA_MAX_OBRAS")
+    partidas_obra_fallo_ttl_s: float = Field(60.0, alias="PARTIDAS_OBRA_FALLO_TTL_S")
+
+    # ------------------------------------------------------------ #
     # F-053 · Alta en Sigrid (design §7). MISMO valor que en sv9 (el
     # script de despliegue las pone desde una sola variable):
     #   - ALTA_SIGRID_DESDE_UTC: vacía = feature apagada (R3): sv4 no

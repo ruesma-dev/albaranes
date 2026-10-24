@@ -417,11 +417,20 @@ class PartidaOption(BaseModel):
 
     Solo las partidas sin descomposición (sin hijos); nunca capítulos ni
     subcapítulos. ``descripcion_agregada`` es la ruta completa de capítulos
-    hasta la partida (capítulo › subcapítulo › … › partida)."""
+    hasta la partida (capítulo › subcapítulo › … › partida).
+
+    (F-098 R14) ``codigo`` es el cod de Sigrid (lo que se guarda y se manda);
+    ``codigo_completo`` lo que se enseña (``CD.99.01.64``), ``capitulo`` la
+    raíz de su cadena, ``ide`` el ``obrparpar.ide`` y ``cod_repetido`` si otra
+    hoja de la obra tiene el mismo cod."""
 
     codigo: str
     descripcion: str | None = None
     descripcion_agregada: str | None = None
+    ide: int | str | None = None
+    codigo_completo: str | None = None
+    capitulo: str | None = None
+    cod_repetido: bool = False
 
 
 class ContratoPayload(BaseModel):

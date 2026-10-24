@@ -211,7 +211,13 @@ def test_f076_r15_el_endpoint_sirve_los_items_de_hoy(sigrid, portal):
     sigrid()
     respuesta = portal.get("/api/sigrid/partidas", params={"obra": "0691"})
     assert respuesta.status_code == 200
-    assert respuesta.json() == {"ok": True, "items": _ITEMS_DE_HOY}
+    # F-098 R14 añade campos por hoja (ide, código completo, capítulo, cod
+    # repetido) y los capítulos de la obra; los tres de siempre no cambian.
+    cuerpo = respuesta.json()
+    assert cuerpo["ok"] is True
+    assert [
+        {k: it[k] for k in ("codigo", "descripcion", "descripcion_agregada")} for it in cuerpo["items"]
+    ] == _ITEMS_DE_HOY
 
 
 def test_f076_r15_el_endpoint_con_lista_truncada_responde_ok_false(sigrid, portal):

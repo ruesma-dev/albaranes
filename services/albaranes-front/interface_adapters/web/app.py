@@ -53,7 +53,10 @@ from infrastructure.database.workflow_runs_purger import WorkflowRunsPurger
 from infrastructure.graph.token_provider import GraphTokenProvider
 from infrastructure.colas.colas_orchestrator_client import ColasOrchestratorClient
 from infrastructure.colas.colas_refetch_client import ColasRefetchClient
-from infrastructure.sigrid.sigrid_lookup_client import SigridLookupClient
+from infrastructure.sigrid.sigrid_lookup_client import (
+    SigridLookupClient,
+    opciones_partida,
+)
 from infrastructure.sigrid.sigrid_api_contrato_client import (
     SigridApiContratoClient,
 )
@@ -63,6 +66,7 @@ from infrastructure.sigrid.local_refetch_client import (
 from ruesma_comun.colas import construir_publicador
 from ruesma_comun.colas.arranque import ConfiguracionColasAusenteError
 from ruesma_comun.colas.publicador import PublicadorBestEffort
+from ruesma_comun.sigrid import CachePartidasObra
 
 logger = logging.getLogger(__name__)
 
@@ -373,23 +377,6 @@ def build_app(settings: Settings) -> FastAPI:
         "CABLEADOS (emitido_por=ca-sv4-front)"
     )
 
-    # F-053: el servicio de revisión publica el alta en Sigrid al pasar a
-    # aprobado (R1-R4) con la configuración del alta (DESDE, Espera, mapeo;
-    # DESDE vacía = feature apagada, R3). Posicionales a propósito.
-    config_alta = settings.config_alta_sigrid
-    review_service = ReviewService(
-        repository, settings.default_reviewer, orchestrator_client, config_alta,
-    )
-    app.state.review_service = review_service
-    app.state.config_alta = config_alta
-    app.state.tables_ready = review_service.initialize()
-    logger.info(
-        "[alta-sigrid][wiring] %s (desde=%s espera_min=%s productos=%s)",
-        "ACTIVA" if config_alta.activa else "APAGADA (DESDE vacía)",
-        config_alta.desde, settings.alta_sigrid_espera_incierto_min,
-        sorted(config_alta.admitidos),
-    )
-
     # ------------------------------------------------------------------ #
     # Cliente de SOLO LECTURA a Sigrid para los desplegables de cabecera
     # (elegir proveedor con contrato en la obra / elegir obra). Se
@@ -420,6 +407,40 @@ def build_app(settings: Settings) -> FastAPI:
             "los desplegables de cabecera quedaran en entrada manual."
         )
     app.state.sigrid_lookup_client = sigrid_lookup_client
+
+    # F-098 R27: la lista de partidas por obra, en una caché por réplica (la
+    # de comun) sobre el lector del cliente. La leen el selector
+    # (``/api/sigrid/partidas``) y la ficha (código completo, ✓/⚠, traducir
+    # lo que se guarda). Sin cliente, sin caché: todo como antes de F-098.
+    partidas_obra: CachePartidasObra | None = None
+    if sigrid_lookup_client is not None:
+        partidas_obra = CachePartidasObra(
+            sigrid_lookup_client.lector_partidas,
+            ttl_s=settings.partidas_obra_ttl_s,
+            max_obras=settings.partidas_obra_max_obras,
+            ttl_fallo_s=settings.partidas_obra_fallo_ttl_s,
+        )
+    app.state.partidas_obra = partidas_obra
+
+    # F-053: el servicio de revisión publica el alta en Sigrid al pasar a
+    # aprobado (R1-R4) con la configuración del alta (DESDE, Espera, mapeo;
+    # DESDE vacía = feature apagada, R3). Posicionales a propósito; F-098
+    # añade la caché de partidas (``None`` sin Sigrid), por eso el cliente de
+    # Sigrid se construye antes.
+    config_alta = settings.config_alta_sigrid
+    review_service = ReviewService(
+        repository, settings.default_reviewer, orchestrator_client, config_alta,
+        partidas_obra,
+    )
+    app.state.review_service = review_service
+    app.state.config_alta = config_alta
+    app.state.tables_ready = review_service.initialize()
+    logger.info(
+        "[alta-sigrid][wiring] %s (desde=%s espera_min=%s productos=%s)",
+        "ACTIVA" if config_alta.activa else "APAGADA (DESDE vacía)",
+        config_alta.desde, settings.alta_sigrid_espera_incierto_min,
+        sorted(config_alta.admitidos),
+    )
 
     templates = Jinja2Templates(
         directory=str(Path(__file__).resolve().parents[2] / "templates")
@@ -547,33 +568,44 @@ def build_app(settings: Settings) -> FastAPI:
     def sigrid_partidas(obra: str = Query(default="")) -> JSONResponse:
         # Partidas HOJA del presupuesto de la obra en Sigrid (obrparpar),
         # para el desplegable de partida de la fila salmón. SOLO lectura.
-        client = app.state.sigrid_lookup_client
-        if client is None:
+        # (F-098 R14) Por la caché de sv4 (R27), con el código completo, el
+        # capítulo de cada hoja y los capítulos de la obra para los chips.
+        cache = app.state.partidas_obra
+        if app.state.sigrid_lookup_client is None or cache is None:
             return JSONResponse(
                 {"ok": False, "error": "Sigrid no configurado en el sv4 "
-                 "(faltan SIGRID_API_*).", "items": []}
+                 "(faltan SIGRID_API_*).", "items": [], "capitulos": []}
             )
         codigo = (obra or "").strip()
         if not codigo:
             return JSONResponse(
-                {"ok": False, "error": "Falta el codigo de obra.", "items": []}
+                {"ok": False, "error": "Falta el codigo de obra.", "items": [], "capitulos": []}
             )
-        try:
-            partidas = client.fetch_partidas_por_obra(codigo_obra=codigo)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("[sigrid-lookup] partidas obra=%s fallo: %r", codigo, exc)
+        lista, ok = cache.consultar(codigo)
+        if not ok or lista is None:
+            # La causa ya la registró la caché (WARNING con la obra): aquí no
+            # se repite ni se manda al navegador.
             return JSONResponse(
-                {"ok": False, "error": f"Error consultando Sigrid: {exc}", "items": []}
+                {"ok": False, "error": "No se pudo leer la lista de partidas de Sigrid.",
+                 "items": [], "capitulos": []}
             )
         items = [
             {
+                "ide": p.ide,
                 "codigo": p.codigo,
+                "codigo_completo": p.codigo_completo,
+                "capitulo": p.capitulo,
                 "descripcion": p.descripcion,
                 "descripcion_agregada": p.descripcion_agregada,
+                "cod_repetido": p.cod_repetido,
             }
-            for p in partidas
+            for p in opciones_partida(lista)
         ]
-        return JSONResponse({"ok": True, "items": items})
+        capitulos = [
+            {"codigo": c.codigo, "descripcion": c.descripcion, "n": c.n_hojas}
+            for c in lista.capitulos
+        ]
+        return JSONResponse({"ok": True, "items": items, "capitulos": capitulos})
 
     @app.get("/api/sigrid/contratos", include_in_schema=False)
     def sigrid_contratos(
