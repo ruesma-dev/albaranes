@@ -1,5 +1,5 @@
 <!-- progress/impl_F-098.md -->
-# F-098 · Informe del implementer (T1–T17, T19)
+# F-098 · Informe del implementer (T1–T17, T19; review pasada 1 en §6)
 
 Rama `feature/F-098-partidas-por-capitulo` (worktree `../albaranes-F-098`), `dev` `3ae37eb` fusionado (`7de22d8`).
 Spec v2 (`1cd3cfa`), PARADA 1 cerrada por el humano el 2026-10-24 («ok a f98»). Rigor `critico`.
@@ -61,7 +61,6 @@ sv9 `test_f098_partida_cod.py` (9).
 ## 3. Fase RED (trazas reales; desde la raíz de cada servicio, `PYTHONPATH` = comun del worktree)
 
 Copia completa de cada traza en el scratchpad de la sesión (`.../scratchpad/red/T*.txt`).
-
 - **T1** `python -m pytest tests/test_f098_partidas_capitulo.py -p no:cacheprovider -q` (comun, antes de T2):
   `E   AttributeError: 'PartidaObra' object has no attribute 'ide'` … `92 failed, 2 passed in 0.32s`
 - **T3** `... -k "r6 or r7 or r8 or r9"`: `AssertionError: assert ('fuera_de_lista', ()) == ('completa', ('99.01.64',))`
@@ -82,9 +81,8 @@ Copia completa de cada traza en el scratchpad de la sesión (`.../scratchpad/red
   nuevas no existían en `app.js`) … `18 failed in 2.00s`
 - **T15** sv6 `... tests/test_f098_normaliza_completa.py -k r31`: `AssertionError: assert Counter({('no...ndiente'): 1})
   == {('completa',...nte'): 1, ...}` … `4 failed, 3 deselected in 1.10s`
-- T2 (código de T1), T7 (no regresión de sv9: ya verde por diseño, R30), T14 (CSS) y T16 (docs) no tienen RED propia.
-
-Tras cada tarea, el mismo comando en verde (p. ej. T12–T13: `18 passed in 2.71s`; T11: `7 passed`).
+- Sin RED propia: T2 (código de T1), T7 (no regresión, R30), T14 (CSS), T16 (docs). Tras cada tarea, el mismo comando
+  en verde (p. ej. T12–T13: `18 passed in 2.71s`; T11: `7 passed`).
 
 ## 4. Verificación
 
@@ -114,14 +112,39 @@ Tras cada tarea, el mismo comando en verde (p. ej. T12–T13: `18 passed in 2.71
 - **T20 (humano)**: tras fusionar en `dev` y con F-076 T18 hecha: `.\deploy.ps1 -Only sv6` → `.\deploy.ps1 -Only sv4`
   → `.\check_deploy.ps1`; corregir a mano las 2 líneas de la 0686 con `CD.21.02.21` (reelegir la partida).
 - **T21**: `bash harness/init.sh` de cierre tras T20.
-- Antes de `git worktree remove`: quitar la *junction* `.venv` de sv4 con `cmd /c rmdir`.
-- `azure-apps` `ddbe825`: commit local, falta el push (lo decide el humano).
+- Antes de `git worktree remove`: quitar la *junction* `.venv` de sv4 (`cmd /c rmdir`). `azure-apps` `ddbe825`: sin push.
+
+## 6. Review pasada 1 (REJECTED, `progress/review_F-098.md`): cambios hechos
+
+Cambios 1–6 de su §7 y, por decisión del líder, (a) y (b) de su §8. Con los tests viejos los 5 mutantes de su §4
+sobrevivían (`57 passed` cada uno); con los nuevos, cada mutante a mano y `test_f098_ficha_partida.py` entero sin `-x`:
+
+| # | Original → mutado (texto exacto) | Fallos | Test que lo mata |
+|---|---|---|---|
+| 1 | `value="{{ _partida_pintada }}"` → `value="{{ c.codigo_partida or '' }}"` | 1 failed, 59 passed | `render_pinta_el_completo_y_guarda_el_cod` (lee el `value` del `<input>`) |
+| 2 | `⚠</span> {{ _partida_pintada or '—' }}` → `⚠</span> {{ c.codigo_partida or '—' }}` | 1 failed, 59 passed | `render_solo_lectura_con_aviso_pinta_el_completo` (nuevo) |
+| 3 | `<span class="concilia-val" title="{{ _title_partida }}">{{ _partida_pintada or '—' }}` → `…{{ c.codigo_partida or '—' }}` | 1 failed, 59 passed | `render_solo_lectura_pinta_el_completo` (lee el texto del `<span>`) |
+| 4 | `<option value="{{ cl.id }}">{{ document.partida_mostrada(cl.codigo_partida) or '—' }}` → `<option value="{{ cl.id }}">{{ cl.codigo_partida or '—' }}` | 1 failed, 59 passed | `render_origen_ofrece_la_linea_con_el_completo` (nuevo) |
+| 5 | `eff_codimp = (document.partida_mostrada((v.codigo_partida_final or '') \| trim) or '') or 'Almacén'` → `eff_codimp = ((v.codigo_partida_final or '') \| trim) or 'Almacén'` | 1 failed, 59 passed | `render_lineas_a_sigrid_con_el_completo_o_almacen` (nuevo; el panel sale solo con la ficha no editable) |
+
+- **(a)** `codigoParaEnviar` no repite cod: con `P4.08.05` ×2 (mismo cod y completo, 0696) manda `P4.08.05`; dos cods
+  distintos con el mismo completo siguen yendo tal cual. RED (`test_f098_combo_js.py -k mismo_cod_y_mismo_completo`):
+  `{'repetido': 'CD.P4.08.05'} != {'repetido': 'P4.08.05'}` … `1 failed`; verde tras el cambio (`7dfef1b`).
+- **(b)** «Traer líneas contrato» filtra también por `partMostrada`. RED (`-k traer_lineas`, node + `dom_falso.js` con
+  `wireTraerContrato` de verdad): `{'CD.99': []} != {'CD.99': ['CD.99.01.64']}`, `{'cd.99.01': []} != …` … `1 failed`;
+  verde tras el cambio (`a19b78c`).
+- Commits: `25a9891` (1–2), `e146e0f` (3), `f2a4ceb` (4), `6e31775` (5), `7dfef1b` (a), `a19b78c` (b).
+- `init.sh` sobre `a19b78c`: **tal cual, ROJO** solo por el entorno del worktree (sv4 y sv6: `ImportError: cannot import
+  name 'misma_partida'` / `'MOTIVO_COMPLETA'` de la comun 0.8.0 del árbol principal; cobertura 55,7 %). **Con
+  `PYTHONPATH` a la comun del worktree y `ARNES_SIN_CACHE=1`: VERDE**, `ENTORNO LISTO`, exit 0: raíz 1883, sv1 205,
+  sv2 485, sv3 1576, sv4 1933 (218,6 s), sv5 96, sv6 480 + 1 skip, sv9 1026, comun 1050 + 3 skip (140,7 s, sin caché);
+  `PUERTA COBERTURA: 100.0% de 243 líneas cambiadas cubiertas`; `PUERTA TAMAÑO` dentro de los topes.
 
 ## Evidencias
 
 | Evidencia | Valor |
 |---|---|
-| Tests ejecutados | init.sh (con `PYTHONPATH`): raíz 1883, sv1 205, sv2 485, sv3 1576, sv4 1928, sv5 96, sv6 480 (+1 skip), sv9 1026, comun 1050 (+3 skip); 0 fallos. Tests nuevos de F-098: 298 (187 comun, 95 sv4, 7 sv6, 9 sv9) |
+| Tests ejecutados | init.sh (con `PYTHONPATH`, `ARNES_SIN_CACHE=1`, sobre `a19b78c`): raíz 1883, sv1 205, sv2 485, sv3 1576, sv4 1933, sv5 96, sv6 480 (+1 skip), sv9 1026, comun 1050 (+3 skip); 0 fallos. Tests nuevos de F-098: 303 (187 comun, 100 sv4, 7 sv6, 9 sv9) |
 | Cobertura de líneas cambiadas | **100,0 %** (243/243, umbral 80 %, `critico`) — `PUERTA COBERTURA` |
-| Mutación | campaña completa (`--max-mutantes 0`, 4 workers, sobre `f63ec2e`): **118 generados, 117 muertos, 1 superviviente**, 0 timeouts, 0 sin veredicto, 4664,3 s. Superviviente `app.py:574` (`or` → `and`): hueco real, matado por `test_f098_r14_basta_que_falte_el_cliente_o_la_cache` (con el mutante a mano: **2 failed**, sin `-x`). **0 supervivientes sin justificar**. Detalle: `progress/mutacion_F-098.md`. No mutados por la herramienta: `app.js`, `styles.css`, plantilla (cubiertos por los tests de node y de render) |
-| Tiempo de la suite | sv4 181,5 s; raíz 322,7 s; comun 128,4 s (primera ejecución de init.sh); sv6 12,6 s; sv9 36,2 s |
+| Mutación | campaña completa (`--max-mutantes 0`, 4 workers, sobre `f63ec2e`): **118 generados, 117 muertos, 1 superviviente**, 0 timeouts, 0 sin veredicto, 4664,3 s. Superviviente `app.py:574` (`or` → `and`): hueco real, matado por `test_f098_r14_basta_que_falte_el_cliente_o_la_cache` (con el mutante a mano: **2 failed**, sin `-x`). **0 supervivientes sin justificar**. Detalle: `progress/mutacion_F-098.md`. No mutados por la herramienta: `app.js`, `styles.css`, plantilla; tras la review 1, los 5 mutantes de plantilla de su §4 mueren (tabla de §6) |
+| Tiempo de la suite | último init.sh: raíz 369,9 s; sv4 218,6 s; comun 140,7 s; sv9 48,2 s; sv6 15,8 s |
