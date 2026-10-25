@@ -77,6 +77,13 @@ class Settings(BaseSettings):
         120,
         alias="ANTHROPIC_TIMEOUT_S",
     )
+    # (F-086) Los Claude 5.5 y Fable 5.1 rechazan con 400 la herramienta
+    # forzada (`tool_choice` de tipo `tool`). Con false el cliente de comun
+    # pide `auto`. El defecto (true) deja la petición exactamente como hoy.
+    anthropic_forzar_herramienta: bool = Field(
+        True,
+        alias="ANTHROPIC_FORZAR_HERRAMIENTA",
+    )
 
     # ------------------------------------------------------------
     # OCR puros (off por defecto). Hoy no se usan en sv5; los dejo
