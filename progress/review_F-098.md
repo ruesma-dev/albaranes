@@ -13,7 +13,6 @@ MANUAL listadas. Alcance T1–T17 y T19. T18, T20 y T21 quedan fuera a propósit
 `ddbe825`, desviaciones y R3/P9. El delta toca solo `app.js` (dos funciones), dos ficheros de test, `impl_F-098.md` y
 `current.md`. Ninguna línea de Python de producción cambia, así que el alcance de la campaña sigue igual (626 líneas,
 118 mutantes, SHA `f63ec2e`) y no hay que repetirla (RM1). `app.js` queda fuera de la herramienta.
-
 ## 1. init.sh (C1), sobre HEAD `3c602aa`
 
 - **Tal cual**: **exit 1**, los mismos 3 KO de la pasada 1. sv4 `cannot import name 'misma_partida'` y sv6
@@ -24,7 +23,6 @@ MANUAL listadas. Alcance T1–T17 y T19. T18, T20 y T21 quedan fuera a propósit
   `PUERTA COBERTURA: 100.0% de 243 líneas`. TAMAÑO OK.
 - Juicio: vale para C1, como en la pasada 1 (precedentes F-076 y F-053). **El líder repite `bash harness/init.sh`
   tal cual en `dev` tras fusionar, y antes no marca `done`.**
-
 ## 2. Los 5 mutantes de plantilla (punto 1)
 
 Hice una copia nueva del sv4 en HEAD, en el scratchpad, y reproduje **los cinco** (no solo dos) con el mismo texto
@@ -43,7 +41,6 @@ Las aserciones ya no se pueden cumplir por una subcadena de otro atributo:
 - en solo lectura se compara el texto del `<span>`;
 - en «Origen ✎» se busca la `<option value="7">` dentro de su `<select>`;
 - en «Líneas a Sigrid» se comparan las filas (n.º, partida, concepto), incluido `Almacén` con la final en blanco.
-
 ## 3. (a) y (b) (punto 2)
 
 - **(a) R21.** `codigoParaEnviar` junta los cod sin repetirlos. Con `P4.08.05` ×2 (0696) manda el cod, no
@@ -57,14 +54,12 @@ Las aserciones ya no se pueden cumplir por una subcadena de otro atributo:
   de verdad `wireTraerContrato` (node + `dom_falso.js`): `CD.99` y `cd.99.01` encuentran la línea `99.01.64`, y `CP.`
   no encuentra ninguna. Mi mutante, quitar `partMostrada`: **1 failed**. La RED, en `impl` §6.
 - No rompe nada: sv4 entero da 1933 passed (+5, los tests nuevos), con las suites JS viejas (f051, f065, f077) en verde.
-
 ## 4. Tabla de `impl_F-098.md` (punto 3)
 
 `impl` §6 trae una fila por mutante, con el **texto exacto original → mutado**, los fallos (`1 failed, 59 passed`,
 `test_f098_ficha_partida.py` entero y sin `-x`) y el test que lo mata. Coincide con lo que reproduje, fila a fila y
 test a test. Mi cuenta da 79 passed porque suma `test_f098_combo_js.py`: 60 + 20 = 80 tests. Cumple el punto de C4 bis
 sobre campañas manuales. «Evidencias» está al día (sv4 1933, 303 tests nuevos).
-
 ## 5. Checkpoints (pasada 2)
 
 - C1 [x] (§1) · ficheros del arnés [x].
@@ -82,16 +77,13 @@ sobre campañas manuales. «Evidencias» está al día (sv4 1933, 303 tests nuev
   [x] «Evidencias» completa, con 4 workers.
 - C5 [x] T1–T17 y T19 `[x]`, cambios de la review en commits `F-098 review 1 · …`, uno por cambio · [x] árbol limpio
   · [x] `features.json` coherente.
-
 ## 6. Cobertura requisito → test
 
 Como en la pasada 1, salvo tres cosas:
 - **R23, completa**: `render_pinta_…`, `render_sin_lista_…`, `render_solo_lectura_…`,
   `render_solo_lectura_con_aviso_…`, `render_origen_…`, `render_lineas_a_sigrid_…`, `render_dividir_…` y
   `render_contrato_json_…`.
-- R21: más `r21_…_dos_hojas_mismo_cod_y_mismo_completo`.
-- R18 («Traer líneas contrato»): `traer_lineas_contrato_busca_por_el_completo`.
-
+- R21: más `r21_…_dos_hojas_mismo_cod_y_mismo_completo` · R18 («Traer»): `traer_lineas_contrato_busca_por_el_completo`.
 ## 7. Para el cierre (no bloquea)
 
 1. Tras fusionar en `dev`: `bash harness/init.sh` tal cual en el árbol principal, en verde.
