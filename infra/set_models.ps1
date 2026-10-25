@@ -14,8 +14,10 @@
 #
 # OJO Claude 5.5 (claude-opus-5-5, claude-sonnet-5-5) y Fable 5.1 en sv5: su
 # API rechaza con 400 la herramienta forzada que pide el cliente de comun.
-# Necesitan ANTHROPIC_FORZAR_HERRAMIENTA=false, que sv5 aun NO lee (F-086):
-# hasta entonces, no los pongas en sv5 con IA3_PROVIDER/IA4_PROVIDER=claude.
+# sv5 lee ANTHROPIC_FORZAR_HERRAMIENTA desde F-086 (defecto true = forzada):
+# un Claude 5.5 en sv5 necesita ANTHROPIC_FORZAR_HERRAMIENTA=false, y este
+# script no la toca: fijala en ca-sv5-valuation con --set-env-vars antes de
+# poner el modelo, y usa -Solo sv5 (sv2 no la lee y sigue forzando).
 # Que proveedor usa cada fase de sv5 lo deciden IA3_PROVIDER/IA4_PROVIDER, no
 # este script.
 #

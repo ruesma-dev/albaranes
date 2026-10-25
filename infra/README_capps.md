@@ -87,8 +87,8 @@ declara. sv5 habilita OpenAI (`ENABLE_OPENAI=true`, secreto `openai-key`) ademá
 de Claude, que queda ocioso con `ANTHROPIC_MODEL` como vuelta atrás de IA3/IA4;
 sv5 no arranca si `IA3_PROVIDER`/`IA4_PROVIDER` nombran un proveedor apagado.
 `-Openai` toca sv2 **y** sv5; `-Gemini`, solo sv2; `-Anthropic`, los dos. Un
-Claude 5.5 en sv5 necesita `ANTHROPIC_FORZAR_HERRAMIENTA=false`, que sv5 aún no
-lee (F-086). Persiste solo hasta la próxima recreación: fija también
+Claude 5.5 en sv5 necesita `ANTHROPIC_FORZAR_HERRAMIENTA=false`, que sv5 lee desde
+F-086 (defecto `true`) y `set_models.ps1` no toca. Persiste solo hasta la próxima recreación: fija también
 `$GEMINI_MODEL` / `$OPENAI_MODEL` / `$ANTHROPIC_MODEL` en `create_capps.ps1`.
 
 **Modelos probados** (24-jul-2026): `claude-sonnet-4-6` estable;

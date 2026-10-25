@@ -48,8 +48,10 @@ $pgEnv = @(
 # sigue instanciado y ocioso en sv2 y sv5 ($ANTHROPIC_MODEL): es la vuelta
 # atrás de IA3/IA4 (IA3_PROVIDER=claude / IA4_PROVIDER=claude). sv5 no arranca
 # si IA3_PROVIDER o IA4_PROVIDER nombran un proveedor apagado (F-085 R9).
-# Un Claude 5.5 en sv5 (Opus 5.5 en IA3) no se pone aquí hasta F-086: su API
-# rechaza la herramienta forzada que pide el cliente de comun.
+# Un Claude 5.5 en sv5 (Opus 5.5 en IA3) necesita ANTHROPIC_FORZAR_HERRAMIENTA=false:
+# su API rechaza la herramienta forzada que pide el cliente de comun. sv5 la lee
+# desde F-086 con defecto true (la forzada de siempre) y aquí no se fija: el
+# cambio de IA3 a Opus 5.5 es la parte C de F-086, solo si su medición pasa.
 # OJO 1: el adaptador de Claude (comun/llm/claude_messages_client.py) NO
 # envia temperature/top_p/top_k, imprescindible desde Opus 4.7 (esos
 # parametros devuelven 400). Si algun dia se anaden, fallaria.
