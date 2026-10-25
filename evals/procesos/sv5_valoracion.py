@@ -283,7 +283,15 @@ def proyectar_ia4(conciliaciones: list[dict], envelope: dict) -> list[dict]:
 
 
 def cliente_llm(
-    proveedor: str, tool_name: str, modelo: str | None, call_logger, forzar_herramienta: bool
+    proveedor: str,
+    tool_name: str,
+    modelo: str | None,
+    call_logger,
+    forzar_herramienta: bool,
+    *,
+    tool_description: str | None = None,
+    max_tokens: int | None = None,
+    timeout_s: int | None = None,
 ):
     """(modelo, cliente real de comun) de un proveedor, para sv2 y para sv5.
 
@@ -293,6 +301,10 @@ def cliente_llm(
     modelos (F-083) pide un modelo concreto, mete su medidor como `call_logger`
     y, solo para los Claude que rechazan la herramienta forzada,
     `forzar_herramienta=False`: el argumento solo llega al cliente entonces.
+
+    (F-086) `tool_description`, `max_tokens` y `timeout_s` son solo de Claude
+    y, como `forzar_herramienta`, llegan al cliente solo si se dan: con `None`
+    valen los defectos de comun, y sv2, que no los da, queda como estaba (R15).
     """
     from ruesma_comun.llm.claude_messages_client import ClaudeMessagesVisionClient
     from ruesma_comun.llm.gemini_genai_client import GeminiGenAiVisionClient
@@ -306,6 +318,12 @@ def cliente_llm(
     if proveedor == "claude":
         if not forzar_herramienta:
             extra["forzar_herramienta"] = False
+        opcionales = {
+            "tool_description": tool_description,
+            "max_tokens": max_tokens,
+            "timeout_s": timeout_s,
+        }
+        extra.update({nombre: valor for nombre, valor in opcionales.items() if valor is not None})
         cliente = ClaudeMessagesVisionClient(api_key=clave, tool_name=tool_name, **extra)
     elif proveedor == "gemini":
         cliente = GeminiGenAiVisionClient(clave, **extra)
@@ -314,14 +332,42 @@ def cliente_llm(
     return modelo, cliente
 
 
+def _entero_del_entorno(variable: str) -> int | None:
+    """(F-086 R14) El entero de una variable de sv5, o `None` si no está (o vacía)."""
+    valor = os.environ.get(variable, "").strip()
+    if not valor:
+        return None
+    try:
+        return int(valor)
+    except ValueError:
+        raise ValueError(f"{variable}={valor!r} no es un entero") from None
+
+
 def _clientes_reales(
     proveedor: str, modelo: str | None = None, call_logger=None, forzar_herramienta: bool = True
 ):
-    """Un `ProviderClientSpec` de sv5 con el cliente real del proveedor."""
+    """Un `ProviderClientSpec` de sv5 con el cliente real del proveedor.
+
+    (F-086 R13, R14) Para Claude, el cliente de producción: la herramienta de
+    sv5 (su única definición, la que usa su wiring) y `max_tokens` y timeout
+    de `ANTHROPIC_MAX_TOKENS` / `ANTHROPIC_TIMEOUT_S` si están en el entorno,
+    como los lee sv5; si no, los defectos de comun, que son los de sv5.
+    """
     from application.services.valuation_extraction_service import ProviderClientSpec
+    from infrastructure.llm.claude_messages_client import (
+        TOOL_DESCRIPTION_VALORACION,
+        TOOL_NAME_VALORACION,
+    )
 
     modelo, cliente = cliente_llm(
-        proveedor, "emit_valuation_result", modelo, call_logger, forzar_herramienta
+        proveedor,
+        TOOL_NAME_VALORACION,
+        modelo,
+        call_logger,
+        forzar_herramienta,
+        tool_description=TOOL_DESCRIPTION_VALORACION,
+        max_tokens=_entero_del_entorno("ANTHROPIC_MAX_TOKENS"),
+        timeout_s=_entero_del_entorno("ANTHROPIC_TIMEOUT_S"),
     )
     return ProviderClientSpec(provider=proveedor, model_name=modelo, client=cliente)
 

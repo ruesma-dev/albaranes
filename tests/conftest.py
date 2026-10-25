@@ -304,3 +304,27 @@ def constructor_gt():
 def ground_truth_vacio(tmp_path: Path) -> Path:
     """Los seis libros con estructura y sin ningún caso (el estado de hoy)."""
     return construir_ground_truth(tmp_path / "ground_truth")
+
+
+@pytest.fixture
+def herramienta_sv5(monkeypatch):
+    """(F-086) El módulo de sv5 con su herramienta de valoración, desde su fichero.
+
+    `evals/procesos/sv5_valoracion.py` la importa en el subproceso de sv5 como
+    `infrastructure.llm.claude_messages_client` (sv5 va primero en `sys.path`).
+    En el proceso de los tests no hay un `infrastructure` fiable —sv2 tiene otro
+    con el mismo nombre—, así que se carga el fichero de sv5 por su ruta y se
+    registra con ese nombre solo mientras dura el test.
+    """
+    import importlib.util
+    import sys
+
+    ruta = (
+        Path(__file__).resolve().parent.parent / "services" / "albaran-valoracion-api"
+        / "infrastructure" / "llm" / "claude_messages_client.py"
+    )
+    especificacion = importlib.util.spec_from_file_location("herramienta_sv5_f086", ruta)
+    modulo = importlib.util.module_from_spec(especificacion)
+    especificacion.loader.exec_module(modulo)
+    monkeypatch.setitem(sys.modules, "infrastructure.llm.claude_messages_client", modulo)
+    return modulo
