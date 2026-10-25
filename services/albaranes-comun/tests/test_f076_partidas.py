@@ -230,8 +230,10 @@ def test_f076_r2_sql_es_la_de_sv4_con_empresa_1():
 # R4 · casar_partida: semántica de F-049 R5
 # ------------------------------------------------------------------ #
 def test_f076_r4_motivos_declarados():
+    # F-098 R6 añade «completa» (casa solo por el código completo): es la única
+    # diferencia con F-076 (design §5.1 de F-098).
     assert MOTIVOS_PARTIDA == frozenset(
-        {"exacta", "normalizada", "compuesta", "alm", "sin_partida", "fuera_de_lista", "ambigua"}
+        {"exacta", "normalizada", "compuesta", "alm", "sin_partida", "fuera_de_lista", "ambigua", "completa"}
     )
     assert (MOTIVO_EXACTA, MOTIVO_NORMALIZADA, MOTIVO_COMPUESTA) == ("exacta", "normalizada", "compuesta")
     assert (MOTIVO_ALM, MOTIVO_SIN_PARTIDA) == ("alm", "sin_partida")
@@ -722,7 +724,9 @@ def test_f076_t4_exportes_en_sigrid():
 def test_f076_t4_version_080():
     import ruesma_comun
 
-    assert ruesma_comun.__version__ == "0.8.0"
+    # F-098 sube a 0.9.0 (R33; su test exige la exacta): desde 0.8.0, nunca
+    # menos, como hizo F-076 con el de F-052.
+    assert tuple(int(x) for x in ruesma_comun.__version__.split(".")) >= (0, 8, 0)
 
 
 # ------------------------------------------------------------------ #

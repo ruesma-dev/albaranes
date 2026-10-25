@@ -28,7 +28,7 @@ from test_f065_f3bis_front import _ejecutar_dom
 
 #: Lo que ``guardarCabecera`` necesita de ``app.js`` (sacado tal cual).
 _FUNCIONES = ["parseNumEs", "numerosIguales", "partidaParaEnviar", "_camposCambiados", "partidaValida",
-              "marcarPartida", "partidasMalas", "filasConCambios", "motivoDeRespuesta", "enviarFila",
+              "codigoParaEnviar", "marcarPartida", "partidasMalas", "filasConCambios", "motivoDeRespuesta", "enviarFila",
               "consolidarFila", "marcarFilaNoGuardada", "limpiarFilasNoGuardadas", "guardarFilasPendientes",
               "avisoSumaVigente", "collectSelectedContratoCodigo", "collectPayload", "sendSave",
               "guardarCabecera"]

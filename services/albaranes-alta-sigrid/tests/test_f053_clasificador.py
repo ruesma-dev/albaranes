@@ -2,8 +2,8 @@
 """F-053 · T7 · ``clasificador``: respuesta de sigrid-api → estado del alta.
 
 La tabla de códigos (design §2) es un DATO del módulo y se prueba código a
-código con el contrato tal como está en F-009 v8.2 (``13fd99d``; códigos sin cambios desde
-la v8 ``8a6ecab``), §3.3 y §3.4.
+código con el contrato tal como está en F-009 v8.3 (``871cc0c``, rama F-015 de sigrid-api;
+F-104 añade sus tres errores de cabecera a la v8.2 ``13fd99d``), §3.3 y §3.4.
 R15 (``idempotente``), R18 (400 por ``details.codigo``), R20 (``creado``) y
 R21 (5xx, tiempo agotado y conexión: ``incierto`` en la grabación, ``error`` en
 la previa). Puro: sin red.
@@ -30,12 +30,14 @@ NO_ADMITIDO = EstadoAlta.NO_ADMITIDO
 ERROR = EstadoAlta.ERROR
 REVISAR = EstadoAlta.REVISAR
 
-#: Contrato v8 §3.3 (cabecera) y design §2.
+#: Contrato v8.3 §3.3 (cabecera) y design §2 (F-104: los tres errores de la v8.3).
 TABLA_CABECERA = {
     "obra_no_encontrada": NO_ADMITIDO, "obra_ambigua": NO_ADMITIDO,
     "contrato_no_encontrado": NO_ADMITIDO, "contrato_ambiguo": NO_ADMITIDO,
     "proveedor_sin_albaran_previo": NO_ADMITIDO, "almacen_de_obra_no_resuelto": NO_ADMITIDO,
     "demasiadas_lineas": NO_ADMITIDO,
+    "proveedor_no_encontrado": NO_ADMITIDO, "proveedor_ambiguo": NO_ADMITIDO,
+    "retencion_no_soportada": NO_ADMITIDO,
     "referencia_en_conflicto": REVISAR,
     "escritura_albaranes_deshabilitada": ERROR, "base_de_datos_no_permitida": ERROR,
     "referencia_no_permitida": ERROR, "obra_de_empresa_no_permitida": ERROR,

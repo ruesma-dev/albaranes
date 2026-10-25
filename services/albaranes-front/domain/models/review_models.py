@@ -417,11 +417,20 @@ class PartidaOption(BaseModel):
 
     Solo las partidas sin descomposición (sin hijos); nunca capítulos ni
     subcapítulos. ``descripcion_agregada`` es la ruta completa de capítulos
-    hasta la partida (capítulo › subcapítulo › … › partida)."""
+    hasta la partida (capítulo › subcapítulo › … › partida).
+
+    (F-098 R14) ``codigo`` es el cod de Sigrid (lo que se guarda y se manda);
+    ``codigo_completo`` lo que se enseña (``CD.99.01.64``), ``capitulo`` la
+    raíz de su cadena, ``ide`` el ``obrparpar.ide`` y ``cod_repetido`` si otra
+    hoja de la obra tiene el mismo cod."""
 
     codigo: str
     descripcion: str | None = None
     descripcion_agregada: str | None = None
+    ide: int | str | None = None
+    codigo_completo: str | None = None
+    capitulo: str | None = None
+    cod_repetido: bool = False
 
 
 class ContratoPayload(BaseModel):
@@ -1652,6 +1661,16 @@ class DocumentDetailPayload(BaseModel):
     alta_motivos_linea: list[dict[str, Any]] = Field(default_factory=list)
     productos_sigrid: dict[int, ProductoLinea] = Field(default_factory=dict)
     productos_admitidos: list[ProductoOpcion] = Field(default_factory=list)
+    #: (F-098 R23) cod de Sigrid → código completo que se pinta
+    #: (``99.01.64`` → ``CD.99.01.64``), solo para los cod de la ficha cuyo
+    #: completo es otro; lo rellena ``presentar_partidas`` con la lista de la
+    #: obra. Vacío (sin lista) ⇒ la ficha pinta el cod, como antes.
+    partidas_mostradas: dict[str, str] = Field(default_factory=dict)
+
+    def partida_mostrada(self, cod: str | None) -> str | None:
+        """(F-098 R23) Lo que la ficha pinta para el cod ``cod``: su código
+        completo si ``partidas_mostradas`` lo trae; si no, el cod tal cual."""
+        return self.partidas_mostradas.get((cod or "").strip(), cod)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

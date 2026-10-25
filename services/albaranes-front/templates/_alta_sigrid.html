@@ -122,8 +122,13 @@
         {% if alta.avisos %}
             <div class="muted small">Avisos de Sigrid:</div>
             <ul class="alta-sigrid-avisos">
-                {% for a in alta.avisos %}
+                {# F-104 R8 (D2): con texto legible, texto · mensaje y el código en el title; sin él, como antes. #}
+                {% for a in alta.avisos_sigrid %}
+                    {% if a.texto %}
+                    <li title="{{ a.codigo }}">{{ a.texto }}{% if a.mensaje %} · {{ a.mensaje }}{% endif %}{% if a.referencia_linea %} (línea {{ a.referencia_linea }}){% endif %}</li>
+                    {% else %}
                     <li><code>{{ a.codigo }}</code>{% if a.mensaje %} · {{ a.mensaje }}{% endif %}{% if a.referencia_linea %} (línea {{ a.referencia_linea }}){% endif %}</li>
+                    {% endif %}
                 {% endfor %}
             </ul>
         {% endif %}

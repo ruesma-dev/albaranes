@@ -1054,7 +1054,7 @@ def test_f051_r13_el_combo_de_partida_ofrece_almacen_primero():
     # «Almacén» como primer ítem fijo, fuera del filtro por texto.
     opciones = _funcion_js(js, "opcionesPartida")
     assert "Almacén (sin partida)" in opciones
-    assert _re.search(r"return\s*\[ALMACEN\]\.concat\(", opciones)
+    assert _re.search(r"\[ALMACEN\]\.concat\(", opciones)  # F-098: dentro de {shown, resto}
 
 
 def test_f051_r13_elegir_almacen_llama_al_post_de_la_linea():
@@ -1357,8 +1357,8 @@ def test_f051_r12_los_dos_guardados_arman_el_cuerpo_con_la_misma_funcion():
                       js.index('getElementById("save-all-lines-btn")')]
     todas = js[js.index('saveAllLinesBtn.addEventListener("click"'):]
 
-    assert "_camposCambiados(tr)" in fila_guardar
-    assert "_camposCambiados(tr)" in todas
+    assert "_camposCambiados(tr" in fila_guardar  # F-098: (tr, lista.items)
+    assert "_camposCambiados(tr" in todas
     cuerpo = _funcion_js(js, "_camposCambiados")
     assert js.count("body[field] =") == cuerpo.count("body[field] =")
 

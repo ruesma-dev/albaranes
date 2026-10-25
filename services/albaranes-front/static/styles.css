@@ -816,6 +816,36 @@ input[readonly].readonly-cell {
     max-height: 340px;
 }
 .combo-lines .combo-item { white-space: normal; }
+/* F-098 R15: chips de capítulo encima de la lista de partidas («Todas»,
+   CD, CI…). Pegados arriba al hacer scroll en el panel; el elegido, «on». */
+.combo-chips {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 10px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+}
+.combo-chips .chip {
+    padding: 3px 10px;
+    font: inherit;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    color: var(--ink-soft);
+    background: var(--paper-soft);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    cursor: pointer;
+}
+.combo-chips .chip:hover { border-color: var(--brand); color: var(--brand-strong); }
+.combo-chips .chip.on {
+    color: var(--paper);
+    background: var(--brand);
+    border-color: var(--brand);
+}
 /* Sugerencia automatica por coincidencia de texto (la IA no fijo el
    codigo/CIF): realce ambar para que el revisor sepa que debe verificar. */
 .combo-suggested .combo-input {

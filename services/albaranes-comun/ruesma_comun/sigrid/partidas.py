@@ -35,6 +35,13 @@ expansión de abreviaturas). Si no casa, lo dice y la lectura se queda.
   (el código de la lista o la lectura intacta) con la guarda de no hoja.
 - (F-076) :class:`CachePartidasObra`: la lista por obra en memoria del
   proceso (TTL, LRU, fallo recordado); nunca lanza.
+- (F-098) Cada hoja lleva su ``ide``, su **capítulo** (la raíz de su cadena)
+  y su **código completo** (:func:`codigo_completo`: ``CD.99.01.64`` para el
+  cod ``99.01.64`` de CD), y la lista sus capítulos
+  (:attr:`ListaPartidasObra.capitulos`). Lo que se guarda y se manda sigue
+  siendo el cod; el completo es lo que ve el humano y una forma más de casar
+  una lectura con su hoja (motivo ``completa``): :func:`misma_partida`,
+  :func:`mostrar_partida` y :meth:`CachePartidasObra.consultar`.
 """
 from __future__ import annotations
 
@@ -45,7 +52,7 @@ import time
 import unicodedata
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
 from ruesma_comun.obras import canonizar_codigo_obra
@@ -84,11 +91,15 @@ MOTIVO_ALM = "alm"
 MOTIVO_SIN_PARTIDA = "sin_partida"
 MOTIVO_FUERA_DE_LISTA = "fuera_de_lista"
 MOTIVO_AMBIGUA = "ambigua"
+#: (F-098 R6) La lectura casa con UNA hoja solo por su código completo
+#: (``CD.99.01.64`` ⇒ la hoja ``99.01.64`` de CD).
+MOTIVO_COMPLETA = "completa"
 
 MOTIVOS_PARTIDA = frozenset(
     {
         MOTIVO_EXACTA,
         MOTIVO_NORMALIZADA,
+        MOTIVO_COMPLETA,
         MOTIVO_COMPUESTA,
         MOTIVO_ALM,
         MOTIVO_SIN_PARTIDA,
@@ -97,7 +108,7 @@ MOTIVOS_PARTIDA = frozenset(
     }
 )
 #: Motivos en que la lectura casa con la lista (``validada = true``).
-MOTIVOS_CASADOS = frozenset({MOTIVO_EXACTA, MOTIVO_NORMALIZADA, MOTIVO_COMPUESTA})
+MOTIVOS_CASADOS = frozenset({MOTIVO_EXACTA, MOTIVO_NORMALIZADA, MOTIVO_COMPLETA, MOTIVO_COMPUESTA})
 #: Motivos en que la lectura NO casa (``validada = false``: a revisión).
 MOTIVOS_NO_CASADOS = frozenset({MOTIVO_FUERA_DE_LISTA, MOTIVO_AMBIGUA})
 
@@ -108,25 +119,73 @@ _RE_SEPARADOR = re.compile(r"[\W_]+")
 
 @dataclass(frozen=True)
 class PartidaObra:
-    """Partida HOJA de una obra. Mismos campos que ``PartidaOption`` de sv4."""
+    """Partida HOJA de una obra. Mismos campos que ``PartidaOption`` de sv4.
+
+    (F-098 R1) Además: ``ide`` (``obrparpar.ide``), ``capitulo`` (el cod de la
+    raíz de su cadena, o ``None``), ``capitulo_descripcion`` y
+    ``codigo_completo`` (:func:`codigo_completo`; si no se da, el cod). Van al
+    final y con defecto, así que quien la construye con los tres campos de
+    siempre no se rompe, y NO entran en la igualdad ni en el hash: dos hojas
+    siguen siendo iguales si lo son su cod y sus descripciones, como en F-076
+    (R5).
+    """
 
     codigo: str
     descripcion: str | None
     descripcion_agregada: str | None
+    ide: Any = field(default=None, compare=False)
+    capitulo: str | None = field(default=None, compare=False)
+    capitulo_descripcion: str | None = field(default=None, compare=False)
+    codigo_completo: str | None = field(default=None, compare=False)
+
+    def __post_init__(self) -> None:
+        if self.codigo_completo is None:
+            object.__setattr__(self, "codigo_completo", self.codigo)
+
+
+@dataclass(frozen=True)
+class CapituloObra:
+    """(F-098 R4) Un capítulo con hojas: su cod (``None`` = «Sin capítulo»), su
+    descripción y cuántas hojas cuelgan de él."""
+
+    codigo: str | None
+    descripcion: str | None
+    n_hojas: int
 
 
 @dataclass(frozen=True)
 class ListaPartidasObra:
-    """Partidas de una obra: las hojas y los códigos que NO son hoja."""
+    """Partidas de una obra: las hojas y los códigos que NO son hoja.
+
+    (F-098) ``no_hojas_completos``: el código completo de cada no hoja que lo
+    tiene distinto de su cod (``CD.99.01`` del subcapítulo ``99.01`` de CD),
+    para la guarda de no hoja de :func:`resolver_partida_obra` (R8).
+    """
 
     obra: str
     hojas: tuple[PartidaObra, ...]
     no_hojas: tuple[str, ...]
+    no_hojas_completos: tuple[str, ...] = ()
 
     @property
     def codigos(self) -> tuple[str, ...]:
         """Códigos de las hojas, en el orden de la lista."""
         return tuple(h.codigo for h in self.hojas)
+
+    @property
+    def capitulos(self) -> tuple[CapituloObra, ...]:
+        """(F-098 R4) Capítulos con al menos una hoja, por código; ``None`` al final."""
+        cuenta: dict[str | None, int] = {}
+        descripcion: dict[str | None, str | None] = {}
+        for h in self.hojas:
+            cuenta[h.capitulo] = cuenta.get(h.capitulo, 0) + 1
+            descripcion.setdefault(h.capitulo, h.capitulo_descripcion)
+        orden = sorted(cuenta, key=lambda c: (c is None, c or ""))
+        return tuple(CapituloObra(c, descripcion[c], cuenta[c]) for c in orden)
+
+    def cod_repetido(self, cod: str) -> bool:
+        """(F-098 R12) ``True`` si dos o más hojas tienen ese cod (tal cual)."""
+        return sum(1 for h in self.hojas if h.codigo == cod) >= 2
 
     @classmethod
     def desde_filas(
@@ -137,10 +196,17 @@ class ListaPartidasObra:
         no_hojas = sorted(
             {nodo["cod"] for ide, nodo in by_ide.items() if ide in parent_ides and nodo["cod"]}
         )
+        completos: set[str] = set()
+        for ide, nodo in by_ide.items():
+            if ide in parent_ides and nodo["cod"]:
+                completo = codigo_completo(by_ide[_capitulo_de(by_ide, ide)]["cod"], nodo["cod"])
+                if completo != nodo["cod"]:
+                    completos.add(completo)
         return cls(
             obra=obra,
             hojas=tuple(_hojas(by_ide, parent_ides)),
             no_hojas=tuple(no_hojas),
+            no_hojas_completos=tuple(sorted(completos)),
         )
 
 
@@ -278,6 +344,85 @@ def _indexar(
     return by_ide, parent_ides
 
 
+# ------------------------------------------------------------------ #
+# F-098 · capítulo y código completo
+# ------------------------------------------------------------------ #
+def _comparable(texto: str) -> str:
+    """Forma de COMPARAR de R3: NFKC, mayúsculas y sin espacios exteriores."""
+    return unicodedata.normalize("NFKC", texto).upper().strip()
+
+
+def _hay_limite(antes: str, despues: str | None) -> bool:
+    """(R3 b) ¿Hay límite entre el último carácter del capítulo (``antes``) y el
+    siguiente del cod (``despues``; ``None`` o vacío = fin del cod)?
+
+    Lo hay en el fin del cod, si uno de los dos no es alfanumérico o si uno es
+    letra y el otro dígito (``CD`` | ``2.01``).
+    """
+    if not despues:
+        return True
+    if not antes.isalnum() or not despues.isalnum():
+        return True
+    return antes.isalpha() != despues.isalpha()
+
+
+def _raiz_alfabetica(capitulo: str) -> str:
+    """(R3 c, P9) Las letras iniciales del capítulo, tras comparar: ``CI.F2`` ⇒
+    ``CI``, ``CD1`` ⇒ ``CD``, ``ANT.`` ⇒ ``ANT``, ``98`` ⇒ vacía."""
+    texto = _comparable(capitulo)
+    fin = 0
+    while fin < len(texto) and texto[fin].isalpha():
+        fin += 1
+    return texto[:fin]
+
+
+def codigo_completo(capitulo: str | None, cod: str) -> str:
+    """(F-098 R3) El código de una hoja tal como lo ve el humano.
+
+    Comparando con NFKC, mayúsculas y sin espacios exteriores, en este orden:
+
+    a. Sin capítulo (``None`` o vacío) ⇒ el cod.
+    b. El cod ya empieza por el capítulo seguido de límite (:func:`_hay_limite`)
+       ⇒ el cod tal cual (``CI.4.18`` en CI, ``CD2.01`` en CD).
+    c. (P9) El cod empieza por la raíz alfabética no vacía del capítulo seguida
+       de fin o de algo que no es letra ⇒ el cod tal cual (``CI.01.01`` en
+       ``CI.F2``, ``CD2`` en ``CD1``).
+    d. Si no, capítulo + cod, con un ``.`` en medio salvo que el capítulo ya
+       termine en un carácter no alfanumérico (``CD.99.01.64``, ``ANT.98.01``).
+
+    Se compone con el cod tal cual: lo que se enseña no se normaliza.
+    """
+    cap = "" if capitulo is None else _comparable(capitulo)
+    if not cap:
+        return cod
+    codigo = _comparable(cod)
+    if codigo.startswith(cap) and _hay_limite(cap[-1], codigo[len(cap):len(cap) + 1]):
+        return cod
+    raiz = _raiz_alfabetica(cap)
+    if raiz and codigo.startswith(raiz) and not codigo[len(raiz):len(raiz) + 1].isalpha():
+        return cod
+    separador = "." if cap[-1].isalnum() else ""
+    return f"{capitulo}{separador}{cod}"
+
+
+def _capitulo_de(by_ide: dict[Any, dict[str, Any]], ide: Any) -> Any:
+    """(F-098 R2) ``ide`` de la raíz de la cadena de ``ide``.
+
+    Sube por ``padide`` hasta un nodo sin padre (0 o nulo, ya ``None`` en
+    :func:`_indexar`) o cuyo padre no está entre las filas; una raíz es su
+    propio capítulo. Si la subida repite un nodo (ciclo), para en el último no
+    repetido. Sin bajar de nivel aunque la obra tenga una sola raíz (P6).
+    """
+    visto = {ide}
+    actual = ide
+    while True:
+        padre = by_ide[actual]["padide"]
+        if padre not in by_ide or padre in visto:
+            return actual
+        visto.add(padre)
+        actual = padre
+
+
 def _hojas(by_ide: dict[Any, dict[str, Any]], parent_ides: set[Any]) -> list[PartidaObra]:
     def _ruta(node: dict[str, Any]) -> str:
         # Camino raíz→hoja de descripciones (res), evitando ciclos.
@@ -301,11 +446,17 @@ def _hojas(by_ide: dict[Any, dict[str, Any]], parent_ides: set[Any]) -> list[Par
         cod = node.get("cod")
         if not cod:
             continue
+        raiz = by_ide[_capitulo_de(by_ide, ide)]
+        capitulo = raiz["cod"]
         out.append(
             PartidaObra(
                 codigo=cod,
                 descripcion=node.get("res"),
                 descripcion_agregada=_ruta(node) or node.get("res"),
+                ide=ide,
+                capitulo=capitulo,
+                capitulo_descripcion=raiz["res"] if capitulo else None,
+                codigo_completo=codigo_completo(capitulo, cod),
             )
         )
     out.sort(key=lambda p: p.codigo)
@@ -357,28 +508,51 @@ def leer_partidas_obra(leer: LectorSql, obra: Any) -> ListaPartidasObra | None:
 # ------------------------------------------------------------------ #
 # Casar una lectura con la lista (H1: verifica, nunca elige)
 # ------------------------------------------------------------------ #
-def _indice_normalizado(lista: ListaPartidasObra) -> dict[str, set[str]]:
-    """Forma normalizada → códigos DISTINTOS de la lista que la tienen."""
-    indice: dict[str, set[str]] = {}
-    for codigo in lista.codigos:
-        clave = normalizar_partida(codigo)
-        if clave is not None:
-            indice.setdefault(clave, set()).add(codigo)
+#: Por dónde casa una entrada del índice: el cod de la hoja o su código completo.
+_POR_COD = "cod"
+_POR_COMPLETO = "completo"
+
+
+def _indice_normalizado(lista: ListaPartidasObra) -> dict[str, set[tuple[str, str]]]:
+    """Forma normalizada → ``(cod, por)`` de las hojas que la tienen.
+
+    (F-098 R6) Cada hoja entra por la clave de su cod (``por = "cod"``) y, si su
+    código completo es otro, también por la clave del completo (``"completo"``),
+    en TODA la lista: sin restringir a ningún capítulo (P6).
+    """
+    indice: dict[str, set[tuple[str, str]]] = {}
+    for hoja in lista.hojas:
+        formas = [(hoja.codigo, _POR_COD)]
+        if hoja.codigo_completo != hoja.codigo:
+            formas.append((hoja.codigo_completo, _POR_COMPLETO))
+        for forma, por in formas:
+            clave = normalizar_partida(forma)
+            if clave is not None:
+                indice.setdefault(clave, set()).add((hoja.codigo, por))
     return indice
 
 
 def _casar_simple(
-    lectura: str, exactos: set[str], indice: dict[str, set[str]]
+    lectura: str, exactos: set[str], indice: dict[str, set[tuple[str, str]]]
 ) -> tuple[str, str | None]:
-    """Casa UNA partida (sin ``/``): (motivo, código de la lista o None)."""
+    """Casa UNA partida (sin ``/``): (motivo, código de la lista o None).
+
+    La exacta literal primero (R7). Luego las candidatas de su clave: con UN
+    cod distinto, ``normalizada`` si casa por su cod y ``completa`` si solo por
+    su código completo; con dos o más, ``ambigua`` (R6).
+    """
     if lectura in exactos:
         return MOTIVO_EXACTA, lectura
-    candidatos = indice.get(normalizar_partida(lectura) or "")
+    entradas = indice.get(normalizar_partida(lectura) or "", set())
+    candidatos = {cod for cod, _ in entradas}
     if not candidatos:
         return MOTIVO_FUERA_DE_LISTA, None
     if len(candidatos) > 1:
         return MOTIVO_AMBIGUA, None
-    return MOTIVO_NORMALIZADA, next(iter(candidatos))
+    (codigo,) = candidatos
+    if (codigo, _POR_COD) in entradas:
+        return MOTIVO_NORMALIZADA, codigo
+    return MOTIVO_COMPLETA, codigo
 
 
 def casar_partida(lista: ListaPartidasObra, lectura: Any, alm: str | None) -> CasePartida:
@@ -393,7 +567,9 @@ def casar_partida(lista: ListaPartidasObra, lectura: Any, alm: str | None) -> Ca
     3. La lectura entera (sin espacios exteriores) es un código de la lista
        ⇒ ``exacta``.
     4. La lectura entera, normalizada, coincide con UNA hoja ⇒
-       ``normalizada``; con dos o más hojas distintas ⇒ ``ambigua``.
+       ``normalizada`` (por su cod) o ``completa`` (F-098: solo por su código
+       completo, ``CD.99.01.64`` ⇒ ``99.01.64``); con dos o más hojas
+       distintas ⇒ ``ambigua``. Se busca en toda la lista.
     5. Con dos o más partes (``/``): cada parte se casa por separado (tal
        cual y, si no, normalizada). Si alguna no casa ⇒ ``fuera_de_lista``;
        si no, si alguna es ambigua ⇒ ``ambigua``; si todas casan ⇒
@@ -463,9 +639,12 @@ class ResolucionPartida:
 
 
 def _choca_con_no_hoja(lista: ListaPartidasObra, lectura: Any) -> bool:
-    """La clave de la lectura es la de algún código NO hoja de la obra."""
+    """La clave de la lectura es la de algún código NO hoja de la obra: su cod
+    o (F-098 R8) su código completo (``CD.99.01`` del subcapítulo ``99.01``)."""
     clave = normalizar_partida(lectura)
-    return clave is not None and any(normalizar_partida(c) == clave for c in lista.no_hojas)
+    return clave is not None and any(
+        normalizar_partida(c) == clave for c in (*lista.no_hojas, *lista.no_hojas_completos)
+    )
 
 
 def resolver_partida_obra(lista: ListaPartidasObra, lectura: Any, alm: str | None) -> ResolucionPartida:
@@ -474,9 +653,11 @@ def resolver_partida_obra(lista: ListaPartidasObra, lectura: Any, alm: str | Non
     :func:`casar_partida` y, encima:
 
     - ``alm`` / ``sin_partida`` ⇒ ``no_aplica`` (almacén o nada que verificar).
-    - Lectura no exacta cuya clave es la de un código NO hoja de la obra ⇒
-      ``fuera_de_lista``: nunca se normaliza hacia otra fila del árbol
-      (``03.02`` capítulo ≠ ``3.02`` hoja).
+    - Lectura no exacta cuya clave es la de un código NO hoja de la obra (su
+      cod o, F-098 R8, su código completo) ⇒ ``fuera_de_lista``: nunca se
+      normaliza hacia otra fila del árbol (``03.02`` capítulo ≠ ``3.02`` hoja).
+    - (F-098 R8) ``completa`` ⇒ ``normalizada`` con el cod de la lista: lo que
+      se guarda es el cod, nunca la lectura con un prefijo recortado.
     - ``compuesta`` ⇒ ``fuera_de_lista``: Sigrid admite una partida por línea
       y el reparto es de F-049.
     - ``fuera_de_lista`` / ``ambigua`` ⇒ la lectura sin cambios.
@@ -489,11 +670,51 @@ def resolver_partida_obra(lista: ListaPartidasObra, lectura: Any, alm: str | Non
         return ResolucionPartida(caso.codigos_lista[0], RESOLUCION_EXACTA, leida)
     if _choca_con_no_hoja(lista, lectura):
         return ResolucionPartida(leida, RESOLUCION_FUERA_DE_LISTA, leida)
-    if caso.motivo == MOTIVO_NORMALIZADA:
+    if caso.motivo in (MOTIVO_NORMALIZADA, MOTIVO_COMPLETA):
         return ResolucionPartida(caso.codigos_lista[0], RESOLUCION_NORMALIZADA, leida)
     if caso.motivo == MOTIVO_AMBIGUA:
         return ResolucionPartida(leida, RESOLUCION_AMBIGUA, leida)
     return ResolucionPartida(leida, RESOLUCION_FUERA_DE_LISTA, leida)
+
+
+# ------------------------------------------------------------------ #
+# F-098 · comparar y enseñar partidas con la lista de la obra
+# ------------------------------------------------------------------ #
+#: Motivos con los que una lectura es UNA hoja de la lista (sin compuestas).
+_MOTIVOS_UNA_HOJA = frozenset({MOTIVO_EXACTA, MOTIVO_NORMALIZADA, MOTIVO_COMPLETA})
+
+
+def misma_partida(lista: ListaPartidasObra | None, a: Any, b: Any, alm: str | None = None) -> bool:
+    """(F-098 R10) ¿Son ``a`` y ``b`` la misma hoja de la obra?
+
+    ``True`` solo si las dos casan (``exacta``, ``normalizada`` o ``completa``)
+    con el MISMO cod: ``CD.99.01.64`` y ``99.01.64`` de CD. Vacías, ``alm``,
+    compuestas, ambiguas, fuera de la lista o sin lista ⇒ ``False``.
+    """
+    if lista is None:
+        return False
+    caso_a, caso_b = casar_partida(lista, a, alm), casar_partida(lista, b, alm)
+    return (
+        caso_a.motivo in _MOTIVOS_UNA_HOJA
+        and caso_b.motivo in _MOTIVOS_UNA_HOJA
+        and caso_a.codigos_lista == caso_b.codigos_lista
+    )
+
+
+def mostrar_partida(lista: ListaPartidasObra | None, cod: str | None) -> str | None:
+    """(F-098 R11) Lo que se pinta para el cod guardado: su código completo.
+
+    El código completo de la hoja con ese cod (recortado); si varias hojas lo
+    tienen con códigos completos distintos, si no es un cod de la lista o si no
+    hay lista, el cod tal cual (nunca se normaliza ni se inventa un prefijo).
+    """
+    if lista is None or cod is None:
+        return cod
+    clave = str(cod).strip()
+    completos = {h.codigo_completo for h in lista.hojas if h.codigo == clave}
+    if len(completos) == 1:
+        return completos.pop()
+    return cod
 
 
 @dataclass
@@ -516,8 +737,10 @@ class CachePartidasObra:
     - Una lista con 0 hojas cuenta como «sin lista» (``None``), pero se
       cachea como cualquier otra.
     - Nunca lanza: degradar es la norma (quien llama valora como siempre).
+    - (F-098 R13) :meth:`consultar` da además si la lectura fue buena: ``(lista,
+      ok)``, con la lista también cuando tiene 0 hojas.
 
-    Implementa ``PartidasObraPort`` de sv6. Segura entre hilos: el estado va
+    Implementa ``PartidasObraPort`` de sv6 (y el de sv4, F-098). Segura entre hilos: el estado va
     bajo un candado; la consulta, fuera de él.
     """
 
@@ -544,25 +767,37 @@ class CachePartidasObra:
 
     def lista(self, obra: str | None) -> ListaPartidasObra | None:
         """Lista de ``obra`` (hojas > 0) o ``None`` si no hay; nunca lanza."""
+        return _con_hojas(self.consultar(obra)[0])
+
+    def consultar(self, obra: str | None) -> tuple[ListaPartidasObra | None, bool]:
+        """(F-098 R13) ``(lista, ok)`` de ``obra``; nunca lanza.
+
+        ``ok=True`` con la lista vigente o recién leída, también con 0 hojas (el
+        selector de sv4 distingue «sin partidas» de «no se pudo leer»). Tras un
+        fallo o truncado (y mientras se recuerda), la caducada si la hay o
+        ``None``, con ``ok=False``. Sin obra, ``(None, False)`` sin consultar.
+        Comparte entradas con :meth:`lista`: una sola consulta para las dos.
+        """
         try:
-            return self._lista(obra)
+            return self._consultar(obra)
         except Exception as exc:  # noqa: BLE001 - R6: nunca lanza
             logger.warning("[partidas-obra] obra=%s fallo inesperado: %r", obra, exc)
-            return None
+            return None, False
 
-    def _lista(self, obra: str | None) -> ListaPartidasObra | None:
+    def _consultar(self, obra: str | None) -> tuple[ListaPartidasObra | None, bool]:
         clave = canonizar_codigo_obra(obra)
         if clave is None:
-            return None
+            return None, False
         ahora = self._reloj()
         with self._candado:
             entrada = self._entradas.get(clave)
             if entrada is not None:
                 self._entradas.move_to_end(clave)
                 vigente = entrada.leida_en is not None and ahora - entrada.leida_en < self._ttl_s
-                en_fallo = entrada.fallo_hasta is not None and ahora < entrada.fallo_hasta
-                if vigente or en_fallo:
-                    return _con_hojas(entrada.lista)
+                if vigente:
+                    return entrada.lista, True
+                if entrada.fallo_hasta is not None and ahora < entrada.fallo_hasta:
+                    return entrada.lista, False
         try:
             # ``clave`` ya es canónica y no vacía: la lectura nunca da ``None``.
             lista = leer_partidas_obra(self._lector, clave) or ListaPartidasObra(clave, (), ())
@@ -579,7 +814,7 @@ class CachePartidasObra:
                 "la lista caducada" if vieja is not None else "ninguna",
                 self._ttl_fallo_s,
             )
-            return _con_hojas(vieja)
+            return vieja, False
         with self._candado:
             self._guardar(clave, _Entrada(lista, ahora, None))
         logger.info(
@@ -588,7 +823,7 @@ class CachePartidasObra:
             len(lista.hojas),
             self._reloj() - ahora,
         )
-        return _con_hojas(lista)
+        return lista, True
 
     def _guardar(self, clave: str, entrada: _Entrada) -> None:
         self._entradas[clave] = entrada

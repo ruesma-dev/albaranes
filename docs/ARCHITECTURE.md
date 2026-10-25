@@ -656,6 +656,30 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       cabecera sin revisión. `PARTIDAS_OBRA_NORMALIZAR_ENABLED=false` lo apaga sin
       redesplegar. sv9 no cambia: manda `codigo_partida_final`. Lo existente se
       corrige revalorando desde sv4 (lo manual se pierde, F-058).
+    - **Capítulo y código completo** (F-098, oct 2026; spec
+      `specs/F-098-partidas-por-capitulo/`, T0 en `progress/explore_F-098_T0.md`).
+      Una partida tiene DOS códigos: el **cod** (`obrparpar.cod`, `99.01.64`), que
+      es lo que se guarda en `codigo_partida_final` y lo que sv9 manda a Sigrid, y
+      el **código completo** (`CD.99.01.64`), que es lo que se enseña. El
+      **capítulo** de una hoja es la raíz de su cadena (`CD`, `CI`, `CP`, `ANT.`,
+      `CI.F2`…); el completo es el cod si ya empieza por el capítulo con límite
+      (`CI.4.18`, `CD2.01`) o por la raíz alfabética del capítulo (`CI.01.01` en
+      `CI.F2`), y si no, capítulo + cod con un `.` en medio salvo que el capítulo ya
+      acabe en un signo (`CD.99.01.64`, `ANT.98.01`) (R3, P9). `casar_partida` casa
+      también por el completo (motivo `completa`, que `resolver_partida_obra`
+      trata como `normalizada` con el cod: `CD.99.01.64` ⇒ `99.01.64`); la guarda
+      de no hoja mira también los completos de los no hoja (`CD.99.01` ⇒ fuera de
+      lista). `misma_partida` (✓ de la ficha) y `mostrar_partida` (lo pintado)
+      viven en comun.
+    - **sv4 con F-098**: lee la lista por `CachePartidasObra` propia
+      (`PARTIDAS_OBRA_TTL_S` 600 s, `PARTIDAS_OBRA_MAX_OBRAS` 64,
+      `PARTIDAS_OBRA_FALLO_TTL_S` 60 s; con fallo, la caducada si la hay). La
+      ficha pinta el completo (`partida_mostrada`) y guarda el cod: el combo filtra
+      por chips de capítulo («Todas» por defecto, recordado por obra en el
+      navegador, tope 100), manda el cod al guardar y al dividir, y `ReviewService`
+      traduce a cod un completo tecleado antes de escribir (`traducir_partida`):
+      sin eso, `CD.01.01` ≠ `01.01` pasaba la fila Contrato a Nueva. Lo guardado
+      es siempre el cod.
 
 24. **Proveedor por nombre: un solo criterio y nunca se elige en un empate**
     (F-073, oct 2026; incidencia 0694 del 2026-10-15: «FEYMACO, S.A.» y
@@ -811,7 +835,11 @@ rollback: `docs/referencia/dominio_negocio_albaranes.md` §6–§7.
   `ruesma_comun.sigrid` y `ruesma_comun.obras` (F-052, F-070) solo los
   importan sv3, sv4, sv9 y, desde F-076 (comun 0.8.0, `sigrid.partidas`), sv6.
   F-076 despliega en orden `set_partidas_sv6.ps1` → sv6 → sv4 (sin DDL ni
-  cambio de mensajes). En F-052 se reconstruyeron en orden **sv3 → sv4**
+  cambio de mensajes). F-098 (comun 0.9.0: capítulo, código completo, motivo
+  `completa`) despliega **sv6 → sv4**, sin DDL, sin cambio de mensajes ni de
+  sigrid-api y sin script de configuración (las variables `PARTIDAS_OBRA_*` de
+  sv4 tienen defecto); sv9 no se redespliega (manda la final tal cual, R30).
+  En F-052 se reconstruyeron en orden **sv3 → sv4**
   (sv3 aplica el DDL de `contratos_busqueda_*` que el ORM de sv4 lee); el
   cambio de `obras` de F-070 no lleva DDL ni contrato de mensajes y vale en
   cualquier orden: recomendado **sv4 → sv3**, y sv9 sale con F-053 desde un

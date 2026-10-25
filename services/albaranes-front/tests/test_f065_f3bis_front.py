@@ -59,7 +59,7 @@ def _ejecutar_dom(tmp_path, funciones, preparacion, programa):
 # La ventana de «Dividir»: F7 y la última parte automática (R29 v3)
 # =================================================================== #
 _DIVIDIR = ["parseNumEs", "faltaPorRepartir", "repartoValido", "cuerpoDivision",
-            "estadoReparto", "partidaValida", "marcarPartida", "wireDividir"]
+            "estadoReparto", "partidaValida", "codigoParaEnviar", "marcarPartida", "wireDividir"]
 
 # Una fila con su «Dividir» (Q y partida en data-*) y la ventana de la
 # plantilla, vacía. Lo que wireDividir usa y no es suyo, con dobles.
@@ -739,7 +739,7 @@ def test_f065_r27v4_en_la_ventana_dividir_lo_mismo(tmp_path):
 # cambiada que no es de la lista no se guarda por ningún camino.
 # =================================================================== #
 _GUARDAR = ["parseNumEs", "numerosIguales", "partidaParaEnviar", "_camposCambiados", "importeDeFila",
-            "marcarPartida", "partidasMalas", "filasConCambios", "motivoDeRespuesta",
+            "codigoParaEnviar", "marcarPartida", "partidasMalas", "filasConCambios", "motivoDeRespuesta",
             "enviarFila", "consolidarFila", "wireConciliaEdit"]
 
 # Una fila editable de verdad: combo de partida + wireConciliaEdit (Enter =

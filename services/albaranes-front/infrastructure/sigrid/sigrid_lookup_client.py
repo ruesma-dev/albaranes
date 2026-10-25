@@ -9,6 +9,7 @@ import httpx
 from ruesma_comun.obras import canonizar_codigo_obra
 from ruesma_comun.sigrid import (
     SQL_PARTIDAS_POR_OBRA,
+    ListaPartidasObra,
     PoliticaTruncado,
     comprobar_truncado,
     leer_partidas_obra,
@@ -206,18 +207,14 @@ class SigridLookupClient:
         (F-070); vacía ⇒ ``[]`` sin consultar. Lista truncada ⇒
         ``SigridRespuestaTruncada`` (``NO_TOLERA``, 500.000 filas), que el
         endpoint convierte en ``ok=false`` (P7).
+
+        (F-098) El endpoint lee por la caché de sv4 (``lector_partidas``); esto
+        queda para quien quiera la lista sin caché, con los mismos campos.
         """
-        lista = leer_partidas_obra(self._lector_partidas, codigo_obra)
+        lista = leer_partidas_obra(self.lector_partidas, codigo_obra)
         if lista is None:
             return []
-        out = [
-            PartidaOption(
-                codigo=hoja.codigo,
-                descripcion=hoja.descripcion,
-                descripcion_agregada=hoja.descripcion_agregada,
-            )
-            for hoja in lista.hojas
-        ]
+        out = opciones_partida(lista)
         logger.info(
             "%s partidas_por_obra obra=%s -> %s partidas hoja (%s no hoja)",
             _LOG_PREFIX,
@@ -227,7 +224,7 @@ class SigridLookupClient:
         )
         return out
 
-    def _lector_partidas(
+    def lector_partidas(
         self,
         sql: str,
         parametros: list[Any],
@@ -239,7 +236,8 @@ class SigridLookupClient:
 
         Aplica la política y el ``max_rows`` que pide comun (``NO_TOLERA`` y
         500.000 filas): una lista de partidas truncada calcularía mal las
-        hojas sin error.
+        hojas sin error. (F-098 R27) Público: sobre él se monta la
+        ``CachePartidasObra`` de sv4 (``app.py``).
         """
         return self._post_sql_read(
             sql=sql,
@@ -381,6 +379,24 @@ class SigridLookupClient:
         columns: list[str] = list(body.get("columns") or [])
         rows: list[list[Any]] = list(body.get("rows") or [])
         return columns, rows
+
+
+def opciones_partida(lista: ListaPartidasObra) -> list[PartidaOption]:
+    """(F-098 R14) Las hojas de la lista de comun como opciones del selector:
+    el cod, lo que se enseña (``codigo_completo``), su capítulo, su ``ide`` y
+    si el cod se repite en la obra; en el orden de la lista."""
+    return [
+        PartidaOption(
+            codigo=hoja.codigo,
+            descripcion=hoja.descripcion,
+            descripcion_agregada=hoja.descripcion_agregada,
+            ide=hoja.ide,
+            codigo_completo=hoja.codigo_completo,
+            capitulo=hoja.capitulo,
+            cod_repetido=lista.cod_repetido(hoja.codigo),
+        )
+        for hoja in lista.hojas
+    ]
 
 
 def _opt_str(value: Any) -> str | None:
