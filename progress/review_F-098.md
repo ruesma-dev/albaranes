@@ -1,6 +1,5 @@
 <!-- progress/review_F-098.md -->
 Revisión completa (pasada 1) · `3ae37eb..816797c` (rama `feature/F-098-partidas-por-capitulo`)
-
 # F-098 · Review
 
 **Veredicto: CHANGES_REQUESTED.** El código está bien; lo que falla es la prueba de R23. Cinco de los sitios donde la
@@ -9,7 +8,6 @@ plantilla pinta el código completo **no los vigila ningún test**: casilla edit
 
 **Rigor:** `critico`, declarado. Exige RED, cobertura ≥ 80 %, mutación completa con 0 supervivientes sin justificar y
 MANUAL listadas. Alcance T1–T17 y T19. T18, T20 y T21 quedan fuera a propósito.
-
 ## 1. init.sh (C1)
 
 - **Tal cual**: **exit 1**, 3 KO. sv4 `cannot import name 'misma_partida'` y sv6 `'MOTIVO_COMPLETA'` desde
@@ -19,7 +17,6 @@ MANUAL listadas. Alcance T1–T17 y T19. T18, T20 y T21 quedan fuera a propósit
   comun 1050+3s. `PUERTA COBERTURA: 100.0% de 243 líneas`. TAMAÑO OK.
 - Juicio: vale para C1. El rojo es del entorno, porque el código de la rama ni se importa. Con caché, la puerta salía
   KO porque reutilizaba los `coverage.json` del intento rojo; hay que pasarla sin caché. El líder la repite tal cual en `dev`.
-
 ## 2. Checkpoints
 
 - C1 [x] (§1), ficheros del arnés [x]. C2 [x] una `in_progress`, rama correcta, `current.md` con las `blocked` vivas
@@ -37,7 +34,6 @@ MANUAL listadas. Alcance T1–T17 y T19. T18, T20 y T21 quedan fuera a propósit
   [x] superviviente analizado · [x] «Evidencias» completa, con 4 workers.
 - C5 [x] T1–T17 y T19 `[x]`, con un commit por tarea (T12+T13 juntas, justificado) · [x] sin artefactos
   · [x] `features.json` coherente.
-
 ## 3. Mutación: verificación independiente
 
 `alcance_de_feature("F-098", base="3ae37eb")` sobre HEAD: 11 ficheros y **626 líneas**, igual que el informe.
@@ -48,7 +44,6 @@ tal cual: `app.py:574` `logico`, `… is None or cache is None:` → `… is Non
 `it.code` (1) · filtro de capítulo `===` → `!==` (5) · `TOPE = 100` → `101` (2) · `partidaParaEnviar` (1) · envío de
 «Dividir» (2) · `partidaValida` sin el completo (1). Plantilla: mueren `data-partida`, `data-partida-cod`,
 `data-sort-value` y la nota «Normalizada». **Sobreviven 5** (§4).
-
 ## 4. Hueco de R23
 
 `test_f098_render_pinta_el_completo_y_guarda_el_cod` comprueba `'value="CD.99.01.64"' in celda`, y esa cadena ya está
@@ -64,7 +59,6 @@ renderizando con el mutante, que da `value="99.01.64"`. Pasa lo mismo en `…_si
    `{{ cl.codigo_partida or '—' }}` («Origen ✎»).
 5. `eff_codimp = (document.partida_mostrada((v.codigo_partida_final or '') | trim) or '') or 'Almacén'` →
    `((v.codigo_partida_final or '') | trim) or 'Almacén'` («Líneas a Sigrid»).
-
 ## 5. Puntos pedidos por el líder
 
 - **Desviaciones §2 (1–9):** ninguna relaja comportamiento. `test_f076_r4` sigue comparando el conjunto exacto, ahora
@@ -76,14 +70,12 @@ renderizando con el mutante, que da `value="99.01.64"`. Pasa lo mismo en `…_si
   `CI.1.01` da `ambigua`. Se guarda siempre el cod: `traducir_partida` devuelve `resolucion.codigo` solo con
   exacta/normalizada y, si no, el valor sin recortar. sv9 manda la final tal cual (`r30_*`: `CD2.01`, `CI.01.01`, `98.01`).
 - **azure-apps `ddbe825`** (local, sin push): §11.1 correcto (variables, endpoint, orden sv6 → sv4), sin secretos.
-
 ## 6. Cobertura requisito → test
 
 R1–R13: `test_f098_partidas_capitulo.py` (`r1_*`…`r13_*`) · R14, R27, R28: `test_f098_lista_sv4.py` · R15–R22:
 `test_f098_combo_js.py` · **R23 parcial (§4)** · R24: `presentar_aviso_*`, `render_nota_*` · R25, R26: `traducir_*`,
 `servicio_*` · R29, R31: `test_f098_normaliza_completa.py` · R30: `test_f098_partida_cod.py` · R33: `t5_version_090` ·
 R34: node + `dom_falso.js` · R35: lectura. Los nombres `presentar_`/`servicio_`/`render_` los fija `tasks.md`.
-
 ## 7. Cambios requeridos (solo tests en `services/albaranes-front/tests/test_f098_ficha_partida.py`)
 
 1. `:452` y `:461`: comprobar el **atributo `value` del `<input>`**, por ejemplo `re.search(r'\svalue="CD\.99\.01\.64"', celda)`,
@@ -95,7 +87,6 @@ R34: node + `dom_falso.js` · R35: lectura. Los nombres `presentar_`/`servicio_`
 5. Test nuevo: «Líneas a Sigrid» pinta `CD.99.01.64` con final `99.01.64`, y `Almacén` con final vacía (mutante 5).
 6. Añadir a `impl_F-098.md` una tabla con los 5 mutantes de §4, con su texto exacto y el número de fallos de cada uno
    con los tests nuevos.
-
 ## 8. Observaciones (no bloquean)
 
 - `codigoParaEnviar`: con dos hojas del mismo cod y el mismo completo (`P4.08.05` ×2, 0696), por la red viaja
