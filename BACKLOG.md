@@ -3,13 +3,11 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **101 features**, 72 abiertas (1 en curso, 5 con la spec lista, 9 bloqueadas y 57 en backlog) y 29 terminadas.
+Resumen: **101 features**, 72 abiertas (0 en curso, 5 con la spec lista, 10 bloqueadas y 57 en backlog) y 29 terminadas.
 
 ## En curso
 
-| # | Feature | Prioridad | Rigor | Rama |
-|---|---|---|---|---|
-| F-098 | Selector de partidas como el de partes (preselección por capítulo de primer nivel CD/CI/CP/…) y partida con su código completo (CD.99.01.64) aunque en Sigrid la hoja sea «99.01.64» | 4 | critico | `feature/F-098-partidas-por-capitulo` |
+_Ninguna feature en curso._
 
 ## Spec lista
 
@@ -28,6 +26,7 @@ Resumen: **101 features**, 72 abiertas (1 en curso, 5 con la spec lista, 9 bloqu
 | F-069 | Lista de equivalencias usuario de la app ↔ usuario Y EMPLEADO de Sigrid para el alta (sv9): usu y empide de quien aprueba | 1 | critico | `feature/F-069-usuario-empleado-sigrid` |
 | F-104 | sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos | 2 | critico | `feature/F-104-codigos-contrato-v83` |
 | F-103 | Alta en Sigrid sin heredar la facturación del albarán plantilla: el AC nuevo no queda vinculado a una factura ajena ni con fechas de facturación, entrega o límite copiadas | 3 | critico |  |
+| F-098 | Selector de partidas como el de partes (preselección por capítulo de primer nivel CD/CI/CP/…) y partida con su código completo (CD.99.01.64) aunque en Sigrid la hoja sea «99.01.64» | 4 | critico | `feature/F-098-partidas-por-capitulo` |
 | F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 11 | critico | `feature/F-083-comparar-modelos` |
 | F-085 | Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086) | 12 | critico | `feature/F-085-modelos-produccion` |
 | F-092 | Gestión de almacén: crear la gestión del almacén (acopios) de las obras | 19 | critico |  |
@@ -153,7 +152,7 @@ ORIGEN: el humano, 2026-10-23: «escribir bien los albaranes sin coger facturas 
 
 ### F-098 · Selector de partidas como el de partes (preselección por capítulo de primer nivel CD/CI/CP/…) y partida con su código completo (CD.99.01.64) aunque en Sigrid la hoja sea «99.01.64»
 
-estado **en curso** · prioridad 4 · rigor `critico` · SDD sí · rama `feature/F-098-partidas-por-capitulo`
+estado **bloqueada** · prioridad 4 · rigor `critico` · SDD sí · rama `feature/F-098-partidas-por-capitulo`
 
 ORIGEN: el humano, 2026-10-23, prioridad alta: «que el filtro de partidas funcione igual que el de partes, tenga cd, ci, cp o cualquier otro sufijo en primer nivel como preselección, y luego las partidas» y «la partida completa (0686, Porcelanosa 96306082) debe incluir todo el código de la partida y aquí no incluye cd, he tenido que poner 99.01.64 y no cd.99.01.64». VERIFICADO (solo lectura, 2026-10-23): en Sigrid la obra 0686 tiene 4 capítulos raíz (98 AJUSTES ALMACÉN, CD COSTES DIRECTOS, CI COSTES INDIRECTOS, CP COSTES PROPORCIONALES); las hojas de CI/CP/98 llevan el prefijo en su `cod` (CI.4.18, 95 hojas) pero las 2313 hojas de CD NO (`cod` = '99.01.64', ruta CD › 99 › 99.01 › 99.01.64; '07.17' igual). El albarán 8c4e026a (Porcelanosa 96306082, línea 903) llevaba partida leída y final 'CD.99.01.64'; aprobado por lgarcia el 23-10 06:48, sv9 lo envió así y sigrid-api lo rechazó: «La obra no tiene ninguna partida 'CD.99.01.64'» (no_admitido); a las 07:02 se guardó la línea con '99.01.64' y hoy el albarán está sin aprobar. CÓMO LO HACE PARTES (services/partes-front): GET /api/sigrid/partidas devuelve solo hojas con {ide, cod, res, capitulo}; el capítulo se calcula subiendo el árbol (partida_catalog.py: prefijo del cod y, si no, palabra clave en res); el buscador (static/app.js _partidaCombo/buildPartidaPicker) tiene chips Todas/CD/CI encima de la lista, filtra por capítulo y luego por texto; guarda partida_ide y escribe paride = ide en Sigrid. CÓMO ESTÁ ALBARANES: ruesma_comun.sigrid.partidas (_hojas) devuelve el `cod` en bruto sin capítulo ni ide; sv4 attachPartidaCombo (app.js 805-977) filtra por texto y guarda el texto; F-076 normalizar_partida no casa 'CD.99.01.64' con '99.01.64'; sv9 (validador_alta.py) envía codigo_partida_final como texto. A DECIDIR EN LA SPEC: (1) la lista de partidas de comun devuelve también ide y capítulo raíz (todos los de la obra, no solo CD/CI/CP) y el código completo mostrado = capítulo + cod cuando el cod no lo lleva; (2) en sv4, preselección por capítulo de primer nivel (chips o combo previo con los capítulos que tenga la obra) y después la partida, como en partes; (3) qué se guarda (código completo para el humano, cod de Sigrid y/o ide) y qué envía sv9 a sigrid-api para que no vuelva a fallar; (4) casar en sv6/F-076 y en la lectura de IA (F-049) 'CD.99.01.64' con la hoja '99.01.64' de CD; (5) los albaranes ya guardados con el prefijo. RELACIONADAS: F-049 (partida de la lista), F-076 (blocked, normalización), F-077 (partida inválida no frena Guardar y aprobar), F-096 (ediciones de partida perdidas al guardar), F-053 (alta Sigrid).
 
