@@ -126,11 +126,11 @@ def test_f065_r8_los_dos_guardados_usan_campos_cambiados():
                            'getElementById("save-all-lines-btn")')
     todas = _bloque(js, 'saveAllLinesBtn.addEventListener("click"', "if (addLineBtn)")
 
-    assert "_camposCambiados(tr)" in fila_guardar
+    assert "_camposCambiados(tr" in fila_guardar  # F-098: (tr, lista.items)
     # F-077 R12: «Guardar todas» elige las filas con filasConCambios (que usa
     # _camposCambiados) y las dos envían con enviarFila, el único PATCH con
     # ?bloquear=1 del fichero.
-    assert "filasConCambios(" in todas and "_camposCambiados(tr)" in todas
+    assert "filasConCambios(" in todas and "_camposCambiados(tr" in todas
     assert "_conciliaBody" not in js
     assert "enviarFila(" in fila_guardar and "enviarFila(" in todas
     assert "?bloquear=1" in _funcion_js(js, "enviarFila")

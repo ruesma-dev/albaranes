@@ -780,24 +780,27 @@
                                        F-051 (R11, R13): partida final vacía = ALMACÉN; se pinta «Almacén», nunca la
                                        partida de la línea casada. El combo ofrece «Almacén (sin partida)» primero. #}
                                     {% set _almacen = c.estado_partida == 'almacen' %}
+                                    {# F-098 R23: se pinta el código completo (CD.99.01.64) y se guarda el cod (data-partida-cod, 99.01.64). Sin lista, el cod. #}
+                                    {% set _partida_pintada = document.partida_mostrada(c.codigo_partida) or '' %}
                                     {# F-076 R24: leída y casada iguales por la clave de comun pero no literalmente ⇒ nota en el title. #}
-                                    {% set _nota_normalizada = ('Normalizada: ' ~ c.partida_normalizada_desde ~ ' → ' ~ (c.codigo_partida or '')) if c.partida_normalizada_desde else '' %}
+                                    {% set _nota_normalizada = ('Normalizada: ' ~ c.partida_normalizada_desde ~ ' → ' ~ _partida_pintada) if c.partida_normalizada_desde else '' %}
                                     {# F-077 R22 (al fusionar F-076): «descripción · [nota F-076] · [aviso F-077]»; la nota y el aviso se excluyen (✓ frente a ⚠). #}
                                     {% set _title_partida = [c.descripcion_partida, _nota_normalizada, c.aviso_partida] | select | join(' · ') %}
-                                    <td class="concilia-td" data-col="partida" data-sort-value="{{ 'Almacén' if _almacen else (c.codigo_partida or '') }}">
+                                    <td class="concilia-td" data-col="partida" data-sort-value="{{ 'Almacén' if _almacen else _partida_pintada }}">
                                         {% if cedit %}
                                             <input type="text" class="cell-input js-cedit js-partida-combo{% if _almacen %} partida-almacen{% elif c.agree_partida == true %} cedit-ok{% elif c.aviso_partida %} cedit-warn{% endif %}"
                                                    data-field="codigo_partida" data-identity="1"
                                                    data-valuation-line-id="{{ dline.valuation_line_id }}"
-                                                   value="{{ c.codigo_partida or '' }}" placeholder="{{ 'Almacén' if _almacen else '—' }}" autocomplete="off"
+                                                   data-partida-cod="{{ c.codigo_partida or '' }}"
+                                                   value="{{ _partida_pintada }}" placeholder="{{ 'Almacén' if _almacen else '—' }}" autocomplete="off"
                                                    title="{{ 'Va a almacén: no se imputa a ninguna partida' if _almacen else _title_partida }}">
                                         {% elif _almacen %}
                                             <span class="concilia-val partida-almacen" title="Va a almacén: no se imputa a ninguna partida">Almacén</span>
                                         {% elif c.aviso_partida %}
                                             {# F-077 R21: el ⚠ solo en filas Contrato con lectura del albarán distinta. #}
-                                            <span class="concilia-price-warn" title="{{ _title_partida }}"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ c.codigo_partida or '—' }}</span>
+                                            <span class="concilia-price-warn" title="{{ _title_partida }}"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ _partida_pintada or '—' }}</span>
                                         {% else %}
-                                            <span class="concilia-val" title="{{ _title_partida }}">{{ c.codigo_partida or '—' }}</span>
+                                            <span class="concilia-val" title="{{ _title_partida }}">{{ _partida_pintada or '—' }}</span>
                                         {% endif %}
                                     </td>
                                     {# Concepto — UNA sola línea: el input de descripción. Medición → tooltip. Selector de línea de contrato oculto (lo abre el ✎). #}
@@ -810,7 +813,7 @@
                                                 <option value="" disabled selected>— elegir línea de contrato —</option>
                                                 <option value="nueva">➕ Nueva — con los valores actuales de la fila</option>
                                                 {% for cl in document.contrato_lines %}
-                                                <option value="{{ cl.id }}">{{ cl.codigo_partida or '—' }} · {{ cl.descripcion or '' }} · {{ '%.2f'|format(cl.precio_unitario) if cl.precio_unitario is not none else '—' }} €</option>
+                                                <option value="{{ cl.id }}">{{ document.partida_mostrada(cl.codigo_partida) or '—' }} · {{ cl.descripcion or '' }} · {{ '%.2f'|format(cl.precio_unitario) if cl.precio_unitario is not none else '—' }} €</option>
                                                 {% endfor %}
                                             </select>
                                         {% else %}
@@ -930,7 +933,7 @@
                                             <button type="button" class="btn small success js-cedit-save" title="Guardar los cambios de esta línea y bloquearla. Si cambias la partida, la unidad o el precio, pasará de Contrato a Nueva conservando el resto.">Guardar</button>
                                             {# F-065 R29: dividir (F7). No en las sintéticas de sv6 ni con «revisa la cantidad» (antes, resolverla). #}
                                             {% if dline.line_kind != 'synthetic_modifier' and 'front_unidad_cambiada_revisa_cantidad' not in razones and dline.cantidad %}
-                                            <button type="button" class="btn small secondary js-dividir" data-valuation-line-id="{{ dline.valuation_line_id }}" data-q="{{ dline.cantidad }}" data-partida="{{ '' if _almacen else (c.codigo_partida or '') }}" title="Dividir esta línea en varias, cada una con su cantidad y su partida (F7)">Dividir</button>
+                                            <button type="button" class="btn small secondary js-dividir" data-valuation-line-id="{{ dline.valuation_line_id }}" data-q="{{ dline.cantidad }}" data-partida="{{ '' if _almacen else _partida_pintada }}" title="Dividir esta línea en varias, cada una con su cantidad y su partida (F7)">Dividir</button>
                                             {% endif %}
                                         {% elif editable and bloqueada %}
                                             <button type="button" class="btn small secondary js-desbloquear" data-valuation-line-id="{{ dline.valuation_line_id }}" title="Línea guardada: desbloquéala para editarla">Desbloquear</button>
@@ -966,7 +969,7 @@
                     </dialog>
                     {% endif %}
                     {# Líneas de contrato disponibles para el desplegable del «+». #}
-                    <script type="application/json" id="contrato-lines-json">[{% for cl in document.contrato_lines %}{"id": {{ cl.id }}, "label": {{ ((cl.codigo_partida or '—') ~ ' · ' ~ (cl.descripcion or '') ~ ' · ' ~ (('%.2f'|format(cl.precio_unitario) ~ ' €') if cl.precio_unitario is not none else '—')) | tojson }}, "desc": {{ (cl.descripcion or '') | tojson }}, "part": {{ (cl.codigo_partida or '') | tojson }}, "unidad": {{ (cl.unidad_medida or '') | tojson }}, "precio": {{ cl.precio_unitario if cl.precio_unitario is not none else 'null' }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
+                    <script type="application/json" id="contrato-lines-json">[{% for cl in document.contrato_lines %}{"id": {{ cl.id }}, "label": {{ ((document.partida_mostrada(cl.codigo_partida) or '—') ~ ' · ' ~ (cl.descripcion or '') ~ ' · ' ~ (('%.2f'|format(cl.precio_unitario) ~ ' €') if cl.precio_unitario is not none else '—')) | tojson }}, "desc": {{ (cl.descripcion or '') | tojson }}, "part": {{ (cl.codigo_partida or '') | tojson }}, "partMostrada": {{ (document.partida_mostrada(cl.codigo_partida) or '') | tojson }}, "unidad": {{ (cl.unidad_medida or '') | tojson }}, "precio": {{ cl.precio_unitario if cl.precio_unitario is not none else 'null' }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
                 </div>
             </form>
         {% else %}
@@ -1030,7 +1033,7 @@
                         {% set v = val_lines.get(line.id) if line.id is not none else none %}
                         {# F-051 (R11): con valoración, la partida es la FINAL; vacía = almacén (nunca la leída por IA1). #}
                         {% if v %}
-                            {% set eff_codimp = ((v.codigo_partida_final or '') | trim) or 'Almacén' %}
+                            {% set eff_codimp = (document.partida_mostrada((v.codigo_partida_final or '') | trim) or '') or 'Almacén' %}
                         {% else %}
                             {% set eff_codimp = line.codigo_imputacion %}
                         {% endif %}

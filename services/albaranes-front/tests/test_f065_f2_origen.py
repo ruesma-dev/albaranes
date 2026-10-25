@@ -239,9 +239,10 @@ def test_f065_r27_js_partidas_de_la_respuesta(tmp_path):
     assert casos["ok"]["error"] is False
     assert [i["code"] for i in casos["ok"]["items"]] == ["01.01", "02.03"]
     assert casos["ok"]["items"][1]["label"] == "02.03 · Carpintería › Puertas cortafuegos"
-    assert casos["sin_partidas"] == {"items": [], "error": False}
-    assert casos["caido"] == {"items": [], "error": True}
-    assert casos["nada"] == {"items": [], "error": True}
+    # F-098 R14: la respuesta trae también los capítulos.
+    assert casos["sin_partidas"] == {"items": [], "capitulos": [], "error": False}
+    assert casos["caido"] == {"items": [], "capitulos": [], "error": True}
+    assert casos["nada"] == {"items": [], "capitulos": [], "error": True}
 
 
 @con_node
@@ -249,7 +250,7 @@ def test_f065_r27_js_opciones_almacen_primero_y_filtro(tmp_path):
     casos = _ejecutar(tmp_path, ["_normLine", "partidasDeRespuesta", "opcionesPartida"],
                       _RESPUESTA + """
         const items = partidasDeRespuesta(RESP).items;
-        function codigos(lista) { return lista.map(function (o) { return o.almacen ? "ALM" : o.code; }); }
+        function codigos(op) { return op.shown.map(function (o) { return o.almacen ? "ALM" : o.code; }); }
         console.log(JSON.stringify({
             todas: codigos(opcionesPartida(items, "")),
             por_codigo: codigos(opcionesPartida(items, "02.0")),
