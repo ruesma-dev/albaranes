@@ -542,3 +542,23 @@ def test_f098_render_solo_lectura_con_aviso_pinta_el_completo(
     celda = _celda_partida(render_detalle(doc.model_copy(update={"partidas_mostradas": {"99.01.64": "CD.99.01.64"}})))
     assert "<input" not in celda
     assert "⚠</span> CD.99.01.64</span>" in celda
+
+
+def test_f098_render_origen_ofrece_la_linea_con_el_completo(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
+    """«Origen ✎»: cada línea de contrato sale con su código completo delante."""
+    import re
+
+    doc = documento_detalle(lineas_valoracion=[linea_valorada(codigo_partida_final="99.01.64")],
+                            display=[fila_detalle({"codigo_partida": "99.01.64"})])
+    html = render_detalle(doc.model_copy(update={
+        "partidas_mostradas": {"99.01.64": "CD.99.01.64"},
+        "contrato_lines": [ContratoLinePayload(id=7, codigo_contrato="C-001", codigo_partida="99.01.64",
+                                               descripcion="Material", precio_unitario=2.5)],
+    }))
+    selector = re.search(r'<select class="concilia-select js-concilia-select".*?</select>', html, re.DOTALL)
+    assert selector is not None
+    opcion = re.search(r'<option value="7">(.*?)</option>', selector.group(0), re.DOTALL)
+    assert opcion is not None
+    assert opcion.group(1).strip().startswith("CD.99.01.64 · Material")
