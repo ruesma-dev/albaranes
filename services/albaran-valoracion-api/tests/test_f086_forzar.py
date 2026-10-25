@@ -210,6 +210,8 @@ def _peticion(**entorno: str):
     assert resultado == _Salida(numero="A-1")
     (llamada,) = mensajes.llamadas
     (resumen,) = registro.resumenes
+    # La duración (ms) depende del reloj: fuera, para comparar dos peticiones.
+    resumen.pop("duration_ms")
     return llamada, resumen
 
 
