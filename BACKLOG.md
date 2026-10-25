@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **101 features**, 72 abiertas (0 en curso, 5 con la spec lista, 10 bloqueadas y 57 en backlog) y 29 terminadas.
+Resumen: **101 features**, 72 abiertas (0 en curso, 5 con la spec lista, 11 bloqueadas y 56 en backlog) y 29 terminadas.
 
 ## En curso
 
@@ -27,6 +27,7 @@ _Ninguna feature en curso._
 | F-104 | sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos | 2 | critico | `feature/F-104-codigos-contrato-v83` |
 | F-103 | Alta en Sigrid sin heredar la facturación del albarán plantilla: el AC nuevo no queda vinculado a una factura ajena ni con fechas de facturación, entrega o límite copiadas | 3 | critico |  |
 | F-098 | Selector de partidas como el de partes (preselección por capítulo de primer nivel CD/CI/CP/…) y partida con su código completo (CD.99.01.64) aunque en Sigrid la hoja sea «99.01.64» | 4 | critico | `feature/F-098-partidas-por-capitulo` |
+| F-086 | Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol | 5 | critico | `feature/F-086-opus-ia3` |
 | F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 11 | critico | `feature/F-083-comparar-modelos` |
 | F-085 | Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086) | 12 | critico | `feature/F-085-modelos-produccion` |
 | F-092 | Gestión de almacén: crear la gestión del almacén (acopios) de las obras | 19 | critico |  |
@@ -38,7 +39,6 @@ _Ninguna feature en curso._
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
-| F-086 | Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol | 5 | critico |  |
 | F-095 | Alta en Sigrid con el precio BRUTO y el % de descuento en su columna, no con el precio neto | 6 | critico |  |
 | F-100 | IA3 solo valora e IA4 casa TODAS las líneas valoradas: candidatas del contrato con el mismo precio unitario (±0,02 €) y la misma partida, y entre ellas por significado de la descripción | 7 | critico |  |
 | F-090 | Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692) | 8 | critico |  |
@@ -158,7 +158,7 @@ ORIGEN: el humano, 2026-10-23, prioridad alta: «que el filtro de partidas funci
 
 ### F-086 · Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol
 
-estado **pendiente** · prioridad 5 · rigor `critico` · SDD sí
+estado **bloqueada** · prioridad 5 · rigor `critico` · SDD sí · rama `feature/F-086-opus-ia3`
 
 ORIGEN: P3 de F-085, decidida por el humano el 2026-10-20 (aceptada la recomendación): el paso 2 de F-085 (R15–R19, T6, M5) sale a una feature propia porque depende de F-083 y F-084 y puede tardar semanas. El humano pidió IA3 = Opus 5.5 y, «de momento», dejó gpt-6.1-sol en su lugar: la API de claude-opus-5-5 rechaza con 400 el tool_choice forzado que usa el cliente de Claude de comun. ALCANCE: sv5 lee ANTHROPIC_FORZAR_HERRAMIENTA (booleana, defecto true) y la pasa como forzar_herramienta al cliente de comun (parámetro de F-083 T11); con true los argumentos a messages.create son idénticos a los de hoy; sv2 no cambia su cliente. El cliente arregla el camino de respuesta sin tool_use: si el texto es JSON válido contra el modelo, lo devuelve tras sanear_para_modelo (hoy _parse_response usa `cls`, que no existe, y siempre acaba en ValueError); si no, ValueError con el stop_reason y sv5 responde 400 como hoy. CONDICIONES DE ENTRADA (§7 del design de F-085): F-083 T11 en dev; sv5 reconstruido con esa comun; F-084 done y, en el comparador (IA3, 3 repeticiones, referencia gpt-6.1-sol), Opus 5.5 cumple el §6.1 de F-085 y la regla «cambiar» de F-083, con 0 casos sin tool_use y 0 paradas por max_tokens (si las hay, subir ANTHROPIC_MAX_TOKENS y volver a medir). Se mide con el mismo cliente que irá a producción (tool_choice auto, sin thinking ni esfuerzo explícitos); salidas estructuradas y strict fuera. CAMBIO EN PRODUCCIÓN (lo hace el humano): sv5 IA3_PROVIDER=claude, ANTHROPIC_MODEL=claude-opus-5-5, ANTHROPIC_FORZAR_HERRAMIENTA=false; IA4 sigue en gpt-6.1-sol; vuelta atrás por variable. RELACIONADAS: F-083 (T11), F-084 (banco que valora), F-085 (paso 1).
 

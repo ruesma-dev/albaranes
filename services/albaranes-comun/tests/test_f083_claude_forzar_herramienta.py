@@ -34,7 +34,11 @@ class _Logger:
         self.resumenes: list[dict] = []
 
     def log_call(self, **kwargs):
-        self.resumenes.append(kwargs["request_summary"])
+        # (F-086) Sin `duration_ms`: depende del reloj y hacía intermitente la
+        # comparación de dos peticiones (1 ms frente a 0 en una suite cargada).
+        resumen = dict(kwargs["request_summary"])
+        resumen.pop("duration_ms")
+        self.resumenes.append(resumen)
 
 
 def _cliente(**extra):

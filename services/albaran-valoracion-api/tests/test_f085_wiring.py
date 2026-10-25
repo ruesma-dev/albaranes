@@ -161,6 +161,8 @@ def test_f085_r14_cada_cliente_con_los_argumentos_de_hoy():
             "Devuelve la valoración estructurada de las líneas del albarán "
             "conforme al esquema exigido. Llama SIEMPRE y SOLO a esta herramienta."
         ),
+        # (F-086 R3) El wiring pasa ANTHROPIC_FORZAR_HERRAMIENTA (defecto true).
+        "forzar_herramienta": True,
     }
     assert gemini.client.args == ()
     assert gemini.client.kwargs == {"api_key": "g", "retry_policy": RETRY, "call_logger": LOGGER}

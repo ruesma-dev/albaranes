@@ -24,6 +24,8 @@ from infrastructure.database.sqlalchemy_valuation_context_repository import (
     SqlAlchemyValuationContextRepository,
 )
 from infrastructure.llm.claude_messages_client import (
+    TOOL_DESCRIPTION_VALORACION,
+    TOOL_NAME_VALORACION,
     ClaudeMessagesVisionClient,
 )
 from infrastructure.llm.gemini_genai_client import GeminiGenAiVisionClient
@@ -132,7 +134,7 @@ def build_app(settings: Settings) -> FastAPI:
             providers,
             settings.ia3_provider,
             ia4_providers,
-            FORZAR_HERRAMIENTA_CLAUDE,
+            settings.anthropic_forzar_herramienta,
         )
     )
     conciliacion_service = ConciliacionService(
@@ -312,13 +314,6 @@ def build_app(settings: Settings) -> FastAPI:
 # (F-085) Wiring de proveedores: funciones puras que usa build_app.
 # ------------------------------------------------------------------ #
 
-#: Lo que pide hoy el cliente de Claude a ``messages.create``: sv5 no le pasa
-#: ``forzar_herramienta`` y el defecto de comun (F-083 T11) es forzarla. Lo
-#: cambiará F-086 con ``ANTHROPIC_FORZAR_HERRAMIENTA``; hasta entonces solo
-#: sale en la línea de wiring.
-FORZAR_HERRAMIENTA_CLAUDE = True
-
-
 def construir_proveedores(
     settings: Settings,
     *,
@@ -344,12 +339,14 @@ def construir_proveedores(
                     retry_policy=retry_policy,
                     call_logger=call_logger,
                     # El cliente canónico (ruesma-albaranes-comun) es
-                    # compartido con sv2: cada servicio fija su tool.
-                    tool_name="emit_valuation_result",
-                    tool_description=(
-                        "Devuelve la valoración estructurada de las líneas del albarán "
-                        "conforme al esquema exigido. Llama SIEMPRE y SOLO a esta herramienta."
-                    ),
+                    # compartido con sv2: cada servicio fija su tool. La
+                    # definición es única (la mide también el banco, F-086).
+                    tool_name=TOOL_NAME_VALORACION,
+                    tool_description=TOOL_DESCRIPTION_VALORACION,
+                    # (F-086) ANTHROPIC_FORZAR_HERRAMIENTA: true (defecto)
+                    # pide la herramienta forzada, como siempre; false pide
+                    # `auto`, lo que exigen los Claude 5.5.
+                    forzar_herramienta=settings.anthropic_forzar_herramienta,
                 ),
             )
         )

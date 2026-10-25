@@ -428,7 +428,8 @@ corrupto, no es objeto, o no casa con el modelo, devuelve `None` con un
 | `ANTHROPIC_API_KEY`     | *obl. si Claude on*  |                                                             |
 | `ANTHROPIC_MODEL`       | `claude-sonnet-4-5`  |                                                             |
 | `ANTHROPIC_MAX_TOKENS`  | `8192`               |                                                             |
-| `ANTHROPIC_TIMEOUT_S`   | `180`                | **Más alto que sv2 (120 s)** porque la valoración es más larga. |
+| `ANTHROPIC_TIMEOUT_S`   | `120`                | El de `config/settings.py` y el del cliente de comun; en Azure no se fija. |
+| `ANTHROPIC_FORZAR_HERRAMIENTA` | `true`        | (F-086) `true`: Claude recibe la herramienta forzada (`tool_choice` `tool`), como siempre. Un Claude 5.5 en sv5 (Opus 5.5, Sonnet 5.5) o Fable 5.1 necesita `ANTHROPIC_FORZAR_HERRAMIENTA=false` (`tool_choice` `auto`): su API rechaza la forzada con 400. Vale para el Claude de IA3 y de IA4. Valor no booleano: sv5 no arranca. En Azure no se fija. |
 | `IA3_PROVIDER`          | *(vacía)*            | Quién valora (IA3). Vacía: TODOS los habilitados y primario claude > gemini > openai. |
 | `IA4_PROVIDER`          | *(vacía)*            | Quién concilia (IA4). Vacía: el primero habilitado.          |
 
@@ -438,6 +439,12 @@ Al arrancar, el wiring escribe `[svc5][wiring] IA3=<proveedor>/<modelo> IA4=<pro
 forzar_herramienta=<bool>` y, si `IA3_PROVIDER` está vacía con varios proveedores, un WARNING
 (IA3 llamará a todos: coste × N). Valores de producción por fase: `docs/ARCHITECTURE.md`
 («APIs LLM») y `azure-apps/albaranes.md` §14.
+
+(F-086) `forzar_herramienta` es el valor leído de `ANTHROPIC_FORZAR_HERRAMIENTA`. Con `false`,
+si Claude contesta en texto sin llamar a la herramienta y ese texto es un objeto JSON que valida,
+se acepta con el WARNING `[claude] sin tool_use: JSON de texto aceptado model=<m> stop_reason=<s>`;
+si no valida, la valoración responde 400 con el `stop_reason` en el mensaje. sv2 no lee la
+variable: sigue forzando la herramienta.
 
 ### 8.3 Política de reintentos
 
@@ -736,8 +743,10 @@ Mismo perfil que sv2/sv3 — recomendación: **Azure Container App** en el spoke
    proveedor (una llamada) y es el primario; en producción, `openai` desde F-085.
    Vacía y con varios habilitados, se llama a todos, manda Claude y los demás se
    anexan como secundarios (el arranque lo avisa con un WARNING).
-9. **`ANTHROPIC_TIMEOUT_S=180`** es alto deliberadamente: la inferencia con PDF
-   adjunto + ~30 líneas de contrato puede tardar 60-120 s con Claude Sonnet 4.5.
+9. **`ANTHROPIC_TIMEOUT_S`** vale 120 s por defecto (`config/settings.py`) y en
+   Azure no se fija; la inferencia con PDF adjunto + ~30 líneas de contrato puede
+   tardar 60-120 s con Claude Sonnet 4.5, así que si se queda corto se sube por
+   variable (el `.env` de ejemplo usa 180).
 10. **`MAX_PDF_MB=40`** es generoso: los PDFs de contratos firmados con anexos
     suelen estar en 1-10 MB. El tope evita degradar la inferencia con PDFs
     descomunales (escaneados a alta resolución) que satura el contexto.

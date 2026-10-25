@@ -227,7 +227,7 @@ class _Cliente:
 
 
 @pytest.fixture
-def clientes_falsos(monkeypatch):
+def clientes_falsos(monkeypatch, herramienta_sv5):
     from ruesma_comun.llm import (
         claude_messages_client,
         gemini_genai_client,
@@ -246,21 +246,36 @@ def clientes_falsos(monkeypatch):
     monkeypatch.setitem(sys.modules, "application.services.valuation_extraction_service", spec)
     for variable in ("ANTHROPIC_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY"):
         monkeypatch.setenv(variable, f"clave-{variable}")
-    for variable in ("ANTHROPIC_MODEL", "GEMINI_MODEL", "OPENAI_MODEL"):
+    # (F-086) sv5 lee estas dos para Claude si existen (R14): fuera del test.
+    for variable in ("ANTHROPIC_MODEL", "GEMINI_MODEL", "OPENAI_MODEL",
+                     "ANTHROPIC_MAX_TOKENS", "ANTHROPIC_TIMEOUT_S"):
         monkeypatch.delenv(variable, raising=False)
 
 
+#: (F-086 R13) sv5 da a Claude la descripción de su herramienta de producción.
+_DESCRIPCION_SV5 = {
+    "tool_description": (
+        "Devuelve la valoración estructurada de las líneas del albarán "
+        "conforme al esquema exigido. Llama SIEMPRE y SOLO a esta herramienta."
+    )
+}
+
+
 @pytest.mark.parametrize(
-    ("fabrica", "herramienta"),
+    ("fabrica", "herramienta", "extra_claude"),
     [
-        (sv2_extraccion._especificacion, "emit_albaran_extraction"),
-        (sv5_valoracion._clientes_reales, "emit_valuation_result"),
+        (sv2_extraccion._especificacion, "emit_albaran_extraction", {}),
+        (sv5_valoracion._clientes_reales, "emit_valuation_result", _DESCRIPCION_SV5),
     ],
 )
-def test_f083_runner_fabricas_sin_argumentos_nuevos_como_hoy(clientes_falsos, fabrica, herramienta):
+def test_f083_runner_fabricas_sin_argumentos_nuevos_como_hoy(
+    clientes_falsos, fabrica, herramienta, extra_claude
+):
     claude = fabrica("claude")
     assert claude.model_name == "claude-sonnet-4-5"
-    assert claude.client.kwargs == {"api_key": "clave-ANTHROPIC_API_KEY", "tool_name": herramienta}
+    assert claude.client.kwargs == {
+        "api_key": "clave-ANTHROPIC_API_KEY", "tool_name": herramienta, **extra_claude
+    }
     assert type(claude.client).__name__ == "ClaudeMessagesVisionClient"
     gemini = fabrica("gemini")
     assert type(gemini.client).__name__ == "GeminiGenAiVisionClient"

@@ -228,7 +228,7 @@ class ClaudeMessagesVisionClient(LlmVisionClient):
         duration_ms = int((time.time() - t0) * 1000)
 
         try:
-            parsed_obj = self._parse_response(response, response_model)
+            parsed_obj = self._parse_response(response, response_model, model)
         except Exception as exc:
             error_str = f"PARSE ERROR: {type(exc).__name__}: {exc}"
             self._safe_log_call(
@@ -290,6 +290,7 @@ class ClaudeMessagesVisionClient(LlmVisionClient):
         self,
         response: Any,
         response_model: Type[BaseModel],
+        model: str | None = None,
     ) -> BaseModel:
         for block in response.content or []:
             block_type = getattr(block, "type", None)
@@ -315,27 +316,37 @@ class ClaudeMessagesVisionClient(LlmVisionClient):
                 except (ValueError, TypeError):
                     return response_model.model_validate_json(tool_input)
 
-        # Fallback: por si el modelo devolvió texto JSON sin usar el tool.
+        # (F-086 R8–R10) Respaldo: con `tool_choice` `auto` el modelo puede
+        # contestar en texto sin llamar a la herramienta. Si ese texto (con o
+        # sin cerca ```json) es un objeto JSON que valida, se acepta y se
+        # avisa; si no, ValueError con el `stop_reason` (sv5 responde 400).
+        stop_reason = getattr(response, "stop_reason", None)
         text_parts: list[str] = []
         for block in response.content or []:
             if getattr(block, "type", None) == "text":
                 text_value = getattr(block, "text", None)
                 if isinstance(text_value, str) and text_value.strip():
                     text_parts.append(text_value)
-        if text_parts:
-            joined = "\n".join(text_parts).strip()
-            try:
-                payload = json.loads(cls._strip_code_fences(joined))
-                if isinstance(payload, dict):
-                    return response_model.model_validate(payload)
-            except Exception as exc:
-                logger.debug(
-                    "Claude devolvió texto no parseable como JSON: %s", exc
-                )
-
-        raise ValueError(
-            "Claude no devolvió tool_use ni JSON válido en la respuesta."
+        joined = "\n".join(text_parts).strip()
+        try:
+            payload = json.loads(self._strip_code_fences(joined))
+            if not isinstance(payload, dict):
+                raise TypeError(f"JSON de tipo {type(payload).__name__}, no objeto")
+            parsed = response_model.model_validate(
+                sanear_para_modelo(payload, response_model)
+            )
+        except Exception as exc:
+            raise ValueError(
+                "Claude no devolvió tool_use ni JSON válido en la respuesta "
+                f"(stop_reason={stop_reason})."
+            ) from exc
+        # Ni el texto ni valores del albarán: solo modelo y stop_reason (R9).
+        logger.warning(
+            "[claude] sin tool_use: JSON de texto aceptado model=%s stop_reason=%s",
+            model,
+            stop_reason,
         )
+        return parsed
 
     @staticmethod
     def _strip_code_fences(text: str) -> str:

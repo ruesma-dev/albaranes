@@ -814,7 +814,11 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
   F-085 (`ENABLE_OPENAI=true`, misma clave de Key Vault que sv2: la cuota de
   OpenAI es compartida) y no arranca si `IA3_PROVIDER`/`IA4_PROVIDER` nombran un
   proveedor desconocido o apagado; al arrancar escribe
-  `[svc5][wiring] IA3=<proveedor>/<modelo> IA4=<proveedor>/<modelo> ...`.
+  `[svc5][wiring] IA3=<proveedor>/<modelo> IA4=<proveedor>/<modelo> forzar_herramienta=<bool>`.
+  sv5 lee `ANTHROPIC_FORZAR_HERRAMIENTA` (F-086; defecto `true`, la herramienta
+  forzada de siempre): un Claude 5.5 en sv5 necesita `ANTHROPIC_FORZAR_HERRAMIENTA=false`,
+  porque su API rechaza con 400 el `tool_choice` forzado. sv2 no la lee y sigue
+  forzando la herramienta.
 - **Colas y blobs**: Azure Storage en la nube; **Azurite en local**
   (`COLAS_CONNECTION_STRING`) — desde local nunca contra las colas reales.
 - Los unit tests no tocan NINGUNO de estos sistemas: mocks y fixtures.
