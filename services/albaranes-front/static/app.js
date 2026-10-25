@@ -1805,7 +1805,9 @@
             }
             let visibles = 0;
             contratoLines.forEach(function (cl) {
-                const texto = ((cl.part || "") + " " + (cl.desc || ""))
+                // F-098 (review 1): también por el código completo, como el combo
+                // (R18): «CD.99» encuentra la línea de partida 99.01.64 de CD.
+                const texto = ((cl.part || "") + " " + (cl.partMostrada || "") + " " + (cl.desc || ""))
                     .toLowerCase();
                 if (filtro && texto.indexOf(filtro) === -1) return;
                 visibles += 1;

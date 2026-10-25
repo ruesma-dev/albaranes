@@ -570,3 +570,47 @@ def test_f098_r21_codigo_para_enviar_dos_hojas_mismo_cod_y_mismo_completo(tmp_pa
     """)
 
     assert casos == {"repetido": "P4.08.05", "otro": "P4.08.06", "ambiguo": "CD.P4.08.06", "valida": True}
+
+
+# =================================================================== #
+# Review 1 (§8, líder) · «Traer líneas contrato» busca también por el completo
+# =================================================================== #
+_TRAER = """
+    var documentId = "DOC";
+    function nodo(tag, id) { const e = el(tag, "", document.body); e.id = id; return e; }
+    const btn = nodo("button", "traer-contrato-btn");
+    const panel = nodo("div", "traer-contrato-panel");
+    panel.hidden = true;
+    const lista = nodo("div", "traer-contrato-lista");
+    const buscar = nodo("input", "traer-contrato-buscar");
+    nodo("button", "traer-contrato-aplicar");
+    nodo("span", "traer-contrato-contador");
+    nodo("script", "contrato-lines-json").textContent = JSON.stringify([
+        {id: 7, label: "CD.99.01.64 · Material · 2.50 €", desc: "Material", part: "99.01.64",
+         partMostrada: "CD.99.01.64"},
+        {id: 8, label: "CI.4.18 · Otra · 1.00 €", desc: "Otra", part: "CI.4.18", partMostrada: "CI.4.18"},
+        {id: 9, label: "21.02.21 · Sin lista · 3.00 €", desc: "Sin lista", part: "21.02.21"},
+    ]);
+    wireTraerContrato();
+    function visibles() {
+        return lista.querySelectorAll("span").map(function (s) { return s.textContent.split(" · ")[0]; });
+    }
+"""
+
+
+@con_node
+def test_f098_traer_lineas_contrato_busca_por_el_completo(tmp_path):
+    casos = _ejecutar_dom(tmp_path, ["parseNumEs", "lineasATraer", "wireTraerContrato"], _TRAER, """
+        btn.dispatchEvent(new Event("click"));
+        const todas = visibles();
+        const r = {};
+        ["CD.99", "cd.99.01", "99.01", "material", "CI.4", "21.02", "CP."].forEach(function (f) {
+            teclear(buscar, f);
+            r[f] = visibles();
+        });
+        console.log(JSON.stringify({todas, r}));
+    """)
+
+    assert casos["todas"] == ["CD.99.01.64", "CI.4.18", "21.02.21"]
+    assert casos["r"] == {"CD.99": ["CD.99.01.64"], "cd.99.01": ["CD.99.01.64"], "99.01": ["CD.99.01.64"],
+                          "material": ["CD.99.01.64"], "CI.4": ["CI.4.18"], "21.02": ["21.02.21"], "CP.": []}
