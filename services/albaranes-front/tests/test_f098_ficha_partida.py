@@ -562,3 +562,25 @@ def test_f098_render_origen_ofrece_la_linea_con_el_completo(
     opcion = re.search(r'<option value="7">(.*?)</option>', selector.group(0), re.DOTALL)
     assert opcion is not None
     assert opcion.group(1).strip().startswith("CD.99.01.64 · Material")
+
+
+def test_f098_render_lineas_a_sigrid_con_el_completo_o_almacen(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
+    """«Líneas a Sigrid» (ficha no editable): la final se pinta con su completo; vacía, «Almacén»."""
+    import re
+
+    from domain.models.review_models import MergeLinePayload
+
+    doc = documento_detalle(lineas_valoracion=[
+        linea_valorada(codigo_partida_final="99.01.64"),
+        linea_valorada(valuation_line_id=901, merge_line_id=501, codigo_partida_final="  "),
+    ], display=[fila_detalle({"codigo_partida": "99.01.64"})], is_editable=False)
+    html = render_detalle(doc.model_copy(update={
+        "partidas_mostradas": {"99.01.64": "CD.99.01.64"},
+        "lines": [MergeLinePayload(id=500, concepto="RETIRADA CONTENEDOR RCD"),
+                  MergeLinePayload(id=501, concepto="TRANSPORTE")],
+    }))
+    filas = re.findall(r"<tr>\s*<td>(\d+)</td>\s*<td>(.*?)</td>\s*<td>(.*?)</td>", html, re.DOTALL)
+    assert [(n, cod.strip(), concepto.strip()) for n, cod, concepto in filas] == [
+        ("1", "CD.99.01.64", "RETIRADA CONTENEDOR RCD"), ("2", "Almacén", "TRANSPORTE")]
