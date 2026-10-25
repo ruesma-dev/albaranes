@@ -530,3 +530,15 @@ def test_f098_render_solo_lectura_pinta_el_completo(
     assert "<input" not in celda
     texto = re.search(r'<span class="concilia-val"[^>]*>(.*?)</span>', celda, re.DOTALL)
     assert texto is not None and texto.group(1).strip() == "CD.99.01.64"
+
+
+def test_f098_render_solo_lectura_con_aviso_pinta_el_completo(
+    render_detalle, documento_detalle, linea_valorada, fila_detalle,
+):
+    """Fila guardada con aviso de partida (F-077 R21): el ⚠ va con el completo."""
+    doc = documento_detalle(lineas_valoracion=[linea_valorada(codigo_partida_final="99.01.64", bloqueada=True)],
+                            display=[fila_detalle({"codigo_partida": "99.01.64",
+                                                   "aviso_partida": "Leída 99.02.10 en el albarán"})])
+    celda = _celda_partida(render_detalle(doc.model_copy(update={"partidas_mostradas": {"99.01.64": "CD.99.01.64"}})))
+    assert "<input" not in celda
+    assert "⚠</span> CD.99.01.64</span>" in celda
