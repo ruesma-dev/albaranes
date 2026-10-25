@@ -548,3 +548,25 @@ def test_f098_r21_el_resto_de_la_ficha_sin_cambios():
     assert "codigoParaEnviar(" in _funcion_js(js, "wireDividir")
     assert "capituloElegido(" in _funcion_js(js, "attachPartidaCombo")
     assert '"f098.capitulo." + obra' in _funcion_js(js, "capituloElegido")
+
+
+@con_node
+def test_f098_r21_codigo_para_enviar_dos_hojas_mismo_cod_y_mismo_completo(tmp_path):
+    """Review 1 (§8, líder): ``P4.08.05`` ×2 en la 0696, mismo cod y mismo completo ⇒ se manda el cod."""
+    casos = _ejecutar(tmp_path, _PURAS, """
+        const items = [
+            {code: "P4.08.05", completo: "CD.P4.08.05", capitulo: "CD", label: "a", norm: "a"},
+            {code: "P4.08.05", completo: "CD.P4.08.05", capitulo: "CD", label: "b", norm: "b"},
+            {code: "P4.08.06", completo: "CD.P4.08.06", capitulo: "CD", label: "c", norm: "c"},
+        ];
+        // Dos cods distintos con el mismo completo: sigue sin adivinarse.
+        const distintos = items.concat([{code: "X.9", completo: "CD.P4.08.06"}]);
+        console.log(JSON.stringify({
+            repetido: codigoParaEnviar("CD.P4.08.05", items),
+            otro: codigoParaEnviar("CD.P4.08.06", items),
+            ambiguo: codigoParaEnviar("CD.P4.08.06", distintos),
+            valida: partidaValida("CD.P4.08.05", items),
+        }));
+    """)
+
+    assert casos == {"repetido": "P4.08.05", "otro": "P4.08.06", "ambiguo": "CD.P4.08.06", "valida": True}

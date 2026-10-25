@@ -792,15 +792,20 @@
     }
 
     // F-098 R21: lo que se manda es el cod (``99.01.64``), nunca el completo.
-    // Vacía ⇒ ""; un cod de la lista, tal cual; el completo de UNA sola hoja,
-    // su cod; si no (no es de la lista o dos hojas comparten completo), el
+    // Vacía ⇒ ""; un cod de la lista, tal cual; el completo de un solo cod,
+    // su cod; si no (no es de la lista o dos cods distintos comparten completo), el
     // valor: lo frena ``partidasMalas`` o lo traduce sv4 al guardar (R25).
     function codigoParaEnviar(valor, items) {
         const v = String(valor || "").trim();
         if (v === "") { return ""; }
         if (items.some(function (it) { return it.code === v; })) { return v; }
-        const conEse = items.filter(function (it) { return it.completo === v; });
-        return conEse.length === 1 ? conEse[0].code : v;
+        // Hojas con ese completo, sin repetir cod (review 1: ``P4.08.05`` ×2 en la
+        // 0696, mismo cod y mismo completo ⇒ el cod, nunca el completo).
+        const cods = [];
+        items.forEach(function (it) {
+            if (it.completo === v && cods.indexOf(it.code) === -1) { cods.push(it.code); }
+        });
+        return cods.length === 1 ? cods[0] : v;
     }
 
     function siguienteActivo(actual, tecla, total) {
