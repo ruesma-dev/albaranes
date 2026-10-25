@@ -46,7 +46,9 @@ try:
 except ModuleNotFoundError:
     sys.modules["fastapi"] = _fastapi_de_prueba()
 
+from application.services.valuation_extraction_service import ValuationExtractionService
 from config.settings import Settings
+from domain.models.valuation_context import ContextoValoracion
 from infrastructure.llm import claude_messages_client as reexport
 from infrastructure.llm.retry_policy import RetryPolicy
 from interface_adapters.api import app as modulo
@@ -255,7 +257,7 @@ class _Nada:
 
 
 @pytest.fixture
-def _sin_infra(monkeypatch, _dobles):
+def _sin_infra(monkeypatch):
     for nombre in ("SessionFactory", "SqlAlchemyValuationContextRepository",
                    "SharePointContratoPdfDownloader", "YamlPromptRepository"):
         monkeypatch.setattr(modulo, nombre, _Nada)
@@ -267,7 +269,7 @@ def _lineas_info(caplog) -> list[str]:
 
 
 @pytest.mark.parametrize(("valor", "texto"), [(None, "True"), ("true", "True"), ("false", "False")])
-def test_f086_r6_build_app_escribe_el_valor_leido(_sin_infra, caplog, valor, texto):
+def test_f086_r6_build_app_escribe_el_valor_leido(_dobles, _sin_infra, caplog, valor, texto):
     caplog.set_level(logging.INFO, logger=modulo.logger.name)
     entorno = {} if valor is None else {"ANTHROPIC_FORZAR_HERRAMIENTA": valor}
     modulo.build_app(_settings(**PASO_1, **entorno))
@@ -275,3 +277,110 @@ def test_f086_r6_build_app_escribe_el_valor_leido(_sin_infra, caplog, valor, tex
         "[svc5][wiring] IA3=openai/gpt-6.1-sol IA4=openai/gpt-6.1-sol "
         f"forzar_herramienta={texto}"
     ) in _lineas_info(caplog)
+
+
+# --- R12 · el ValueError del cliente llega sin envolver y la API responde 400 ---------
+
+
+class _Spec:
+    system = "s"
+    task = "t"
+    schema_hint = "h"
+    schema = "esquema"
+
+
+class _Prompts:
+    def get(self, clave):
+        return _Spec()
+
+    def has(self, clave):
+        return False
+
+
+class _Esquemas:
+    def get(self, nombre):
+        return _Salida
+
+
+def _contexto() -> ContextoValoracion:
+    return ContextoValoracion(
+        document_id="doc-f086", codigo_contrato="C-1", nombre_contrato=None,
+        cif_proveedor=None, nombre_proveedor=None, codigo_obra=None, nombre_obra=None,
+        pdf_relative_path=None, pdf_filename=None, lineas_albaran=[], lineas_contrato=[],
+    )
+
+
+MENSAJE_R10 = (
+    "Claude no devolvió tool_use ni JSON válido en la respuesta (stop_reason=refusal)."
+)
+
+
+def _error_del_servicio() -> ValueError:
+    respuesta = NS(content=[NS(type="text", text="no puedo")], stop_reason="refusal")
+    registro = _Registro()
+    claude = _claude_real(
+        _settings(**{**PASO_1, "IA3_PROVIDER": "claude", "ANTHROPIC_FORZAR_HERRAMIENTA": "false"}),
+        _Mensajes(respuesta), registro,
+    )
+    servicio = ValuationExtractionService(
+        providers=[claude], prompt_repo=_Prompts(), schema_registry=_Esquemas(),
+        prompt_key="valuation_es", ia3_provider="claude",
+    )
+    with pytest.raises(ValueError) as error:
+        servicio.extract(context=_contexto(), pdf_attachment=None)
+    assert registro.errores == [f"PARSE ERROR: ValueError: {MENSAJE_R10}"]
+    return error.value
+
+
+def test_f086_r12_el_servicio_no_transforma_el_valueerror():
+    error = _error_del_servicio()
+    assert type(error) is ValueError
+    assert str(error) == MENSAJE_R10
+
+
+class _HTTPException(Exception):
+    def __init__(self, status_code: int, detail: str = "") -> None:
+        super().__init__(detail)
+        self.status_code = status_code
+        self.detail = detail
+
+
+class _FastAPI:
+    """Apunta las rutas para poder llamar a sus funciones sin servidor."""
+
+    def __init__(self, **kwargs) -> None:
+        self.rutas: dict[tuple[str, str], object] = {}
+
+    def get(self, ruta):
+        return self._ruta("GET", ruta)
+
+    def post(self, ruta):
+        return self._ruta("POST", ruta)
+
+    def _ruta(self, metodo, ruta):
+        def registrar(funcion):
+            self.rutas[(metodo, ruta)] = funcion
+            return funcion
+        return registrar
+
+
+def test_f086_r12_la_api_responde_400_con_el_mensaje(_sin_infra, monkeypatch):
+    error = _error_del_servicio()
+
+    class _Pipeline:
+        def __init__(self, **kwargs) -> None:
+            pass
+
+        def run(self, peticion):
+            raise error
+
+    monkeypatch.setattr(modulo, "FastAPI", _FastAPI)
+    monkeypatch.setattr(modulo, "HTTPException", _HTTPException)
+    monkeypatch.setattr(modulo, "ValueAlbaranPipeline", _Pipeline)
+    app = modulo.build_app(_settings(**PASO_1))
+    valorar = app.rutas[("POST", "/v1/albaranes/value")]
+    with pytest.raises(_HTTPException) as respuesta:
+        valorar(modulo.ValueRequestBody(document_id="doc-f086"))
+    assert respuesta.value.status_code == 400
+    assert respuesta.value.detail == MENSAJE_R10
+    assert respuesta.value.__cause__ is error
