@@ -436,6 +436,17 @@ def _celda_partida(html):
     return celda.group(0)
 
 
+def _valor_del_input(celda):
+    """El atributo ``value`` del ``<input>`` de la celda (no el de ``data-sort-value``)."""
+    import re
+
+    entrada = re.search(r"<input\b[^>]*>", celda)
+    assert entrada is not None, "la celda no tiene <input>"
+    valor = re.search(r'\svalue="([^"]*)"', entrada.group(0))
+    assert valor is not None, "el <input> no tiene value"
+    return valor.group(1)
+
+
 def _render_partida(render_detalle, documento_detalle, linea_valorada, fila_detalle, mostradas, **conc):
     doc = documento_detalle(lineas_valoracion=[linea_valorada(codigo_partida_final="99.01.64")],
                             display=[fila_detalle({"codigo_partida": "99.01.64", **conc})])
@@ -448,7 +459,7 @@ def test_f098_render_pinta_el_completo_y_guarda_el_cod(
     html = _render_partida(render_detalle, documento_detalle, linea_valorada, fila_detalle,
                            {"99.01.64": "CD.99.01.64"})
     celda = _celda_partida(html)
-    assert 'value="CD.99.01.64"' in celda
+    assert _valor_del_input(celda) == "CD.99.01.64"
     assert 'data-partida-cod="99.01.64"' in celda
     assert 'data-sort-value="CD.99.01.64"' in celda
 
@@ -457,7 +468,7 @@ def test_f098_render_sin_lista_pinta_el_cod(
     render_detalle, documento_detalle, linea_valorada, fila_detalle,
 ):
     celda = _celda_partida(_render_partida(render_detalle, documento_detalle, linea_valorada, fila_detalle, {}))
-    assert 'value="99.01.64"' in celda
+    assert _valor_del_input(celda) == "99.01.64"
     assert 'data-partida-cod="99.01.64"' in celda
     assert "CD.99.01.64" not in celda
 
@@ -513,6 +524,9 @@ def test_f098_render_solo_lectura_pinta_el_completo(
     doc = documento_detalle(lineas_valoracion=[linea_valorada(codigo_partida_final="99.01.64", bloqueada=True)],
                             display=[fila_detalle({"codigo_partida": "99.01.64"})])
     html = render_detalle(doc.model_copy(update={"partidas_mostradas": {"99.01.64": "CD.99.01.64"}}))
+    import re
+
     celda = _celda_partida(html)
     assert "<input" not in celda
-    assert "CD.99.01.64" in celda
+    texto = re.search(r'<span class="concilia-val"[^>]*>(.*?)</span>', celda, re.DOTALL)
+    assert texto is not None and texto.group(1).strip() == "CD.99.01.64"
