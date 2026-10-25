@@ -291,3 +291,19 @@ def test_f098_r28_la_cache_se_pasa_a_review_service(sigrid, portal):
     from ruesma_comun.sigrid import CachePartidasObra
 
     assert isinstance(app.state.partidas_obra, CachePartidasObra)
+
+
+@pytest.mark.parametrize("falta", ["cliente", "cache"])
+def test_f098_r14_basta_que_falte_el_cliente_o_la_cache(sigrid, portal, falta):
+    """Mutación T17: «cliente is None or cache is None», no «and». Con una de
+    las dos piezas sin montar, el endpoint dice «no configurado» y no lee."""
+    api = sigrid()
+    cliente, app, _ = portal()
+    if falta == "cliente":
+        app.state.sigrid_lookup_client = None
+    else:
+        app.state.partidas_obra = None
+    cuerpo = cliente.get("/api/sigrid/partidas", params={"obra": "0686"}).json()
+    assert cuerpo == {"ok": False, "error": "Sigrid no configurado en el sv4 (faltan SIGRID_API_*).",
+                      "items": [], "capitulos": []}
+    assert api.peticiones == []
