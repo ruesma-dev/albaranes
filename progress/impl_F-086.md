@@ -22,21 +22,17 @@ defecto (`true`) la petición a Claude es idéntica a la de hoy (R4).
 | Tests previos tocados | ver desviaciones (a), (b) y (e) |
 
 Commits: `f04663e` T1, `f28d1fa` T2, `dbcf702` T3, `d454b72` T4, `8a23c4f` T5, `a8d004f` T6, `53baed8` T8 (tests
-deterministas), y T7 + informe + mutación en el commit de este informe. `harness/features.json`: F-086
-`in_progress`, `branch` declarada, servicios + `evals` e `infra`.
+deterministas), `c977acd` T7 + informe + mutación. `features.json`: F-086 `in_progress`, `branch`, + `evals`, `infra`.
 
 ## Decisiones de diseño
 
-- **El modelo del WARNING** llega como argumento nuevo de `_parse_response` (el pedido, siempre conocido), no de
-  `response.model` (design §4 deja elegir).
+- **El modelo del WARNING**: argumento nuevo de `_parse_response` (el pedido), no `response.model` (design §4).
 - **`except Exception`** en el respaldo: cualquier fallo (JSON, no objeto, `ValidationError`, `sanear`) acaba en
   `ValueError` con el `stop_reason`, y R12 se cumple siempre (400, nunca 500).
-- **R14**: variable vacía o en blanco = no existe; valor no entero ⇒ `ValueError("ANTHROPIC_MAX_TOKENS='x' no es un
-  entero")`, como sv5, que tampoco arrancaría.
+- **R14**: vacía o en blanco = no existe; no entero ⇒ `ValueError("ANTHROPIC_MAX_TOKENS='x' no es un entero")`.
 - **R12 en la API**: el test sustituye `FastAPI`/`HTTPException` en el módulo por dobles que apuntan las rutas, y llama
   a la función de `/v1/albaranes/value` con el `ValueError` real del cliente de comun (400, mismo `detail`, `__cause__`).
-- **R13 «una única definición»**: un test cambia el módulo de sv5 por uno con otra herramienta y comprueba que el banco
-  la sigue, así que no puede ser una copia.
+- **R13 «una única definición»**: un test cambia el módulo de sv5 por otro y el banco lo sigue: no es una copia.
 
 ## Desviaciones (justificadas)
 
@@ -46,23 +42,21 @@ deterministas), y T7 + informe + mutación en el commit de este informe. `harnes
 - **(b)** `tests/test_f083_fases.py`: la fixture `clientes_falsos` pide `herramienta_sv5` y borra
   `ANTHROPIC_MAX_TOKENS`/`ANTHROPIC_TIMEOUT_S`. En `test_f083_runner_fabricas_sin_argumentos_nuevos_como_hoy`, solo
   sv5 añade `tool_description` (R13, D3 = (a)); sv2 sigue con el dict exacto de siempre (R15).
-- **(c)** `infra/README_capps.md` no está en la lista de R16, pero también decía «sv5 aún no lee». Corregido y en el test.
+- **(c)** `infra/README_capps.md` (fuera de la lista de R16) también decía «aún no lee»: corregido y en el test.
 - **(d)** Junction `services/albaranes-front/.venv` → `.venv` de sv4 del árbol principal: sin ella `init.sh` daba
   KO en `servicios.json`. Quitarla con `cmd /c rmdir` antes de `git worktree remove`.
 - **(e)** Tests intermitentes por `duration_ms` del call logger (1 ms frente a 0): `_Logger.log_call` de
   `test_f083_claude_forzar_herramienta.py` y `_peticion` de `test_f086_forzar.py` lo quitan del resumen antes de
-  comparar (`pop` sin defecto: si falta, falla). Ninguna otra aserción cambia. Evidencia:
+  comparar (`pop` sin defecto: si falta, falla). Ninguna otra aserción cambia. Evidencia (plugin de un solo uso que repite items, fuera del repo):
 
   | Test | Antes | Después |
   |---|---|---|
   | `test_f083_r38_true_explicito_es_identico_al_defecto` | 20 rep.: **2 failed**; 100 rep.: **1 failed** (`duration_ms: 0 != 1`); falló en `init.sh` | 100 rep.: **100 passed** |
   | `test_f086_r4_true_es_identico_a_sin_variable` | rompió la línea base de la 1.ª campaña («LÍNEA BASE EN ROJO»); 100 rep.: 100 passed | r4 + r5, 100 rep. cada uno: **200 passed** |
-
-  Repeticiones con un plugin de un solo uso (`pytest_collection_modifyitems` repite los items, fuera del repo).
 - **Alcance del líder**: `$ANTHROPIC_MODEL_SV5` es de T12 (parte C, R23). No se crea: el comentario de
   `create_capps.ps1` solo dice que el cambio de IA3 es la parte C.
 
-## Fase RED (trazas reales; con `PYTHONPATH` a la comun del worktree salvo donde se dice)
+## Fase RED (trazas reales; T2–T4 con la comun del árbol principal: T2–T3 no dependen de T1)
 
 **T1 · R8–R10**, desde `services/albaranes-comun`, antes de tocar `_parse_response`
 (`pytest tests/test_f086_claude_parse.py -k "r8_texto_json_sin_cerca or r9_warning_con or r10_sin_stop"`):
@@ -78,8 +72,8 @@ El fichero entero: `20 failed, 7 passed` (los 7 son R11 y guardas que ya se cump
 ```
 E                   AttributeError: 'Settings' object has no attribute 'anthropic_forzar_herramienta'   (x12)
 E       Failed: DID NOT RAISE ValidationError                                                     (x4)
+16 failed  ·  después: 16 passed
 ```
-Después: `16 passed`.
 
 **T3 · R3–R6** (`-k "r3 or r4 or r5 or r6"`):
 ```
@@ -110,10 +104,8 @@ E       TypeError: cliente_llm() got an unexpected keyword argument 'tool_descri
 ```
 Los 7 que pasaban son R15 y los defectos (guardas). Después: `388 passed` en los 17 ficheros de evals de la raíz.
 
-**T6 · R16** (`pytest tests/test_f086_textos.py -k r16`): `12 failed, 4 passed`. Entre los fallos: falta la
-variable en sv5.md, ARCHITECTURE.md y create_capps.ps1; dicen «aún no lee» la ayuda de set_models.ps1,
-create_capps.ps1 y README_capps.md; falta la fila de sv5.md; `ANTHROPIC_TIMEOUT_S` = `180`. Después: `120 passed`
-con `test_f085_infra.py` y `test_f083_precios.py`.
+**T6 · R16** (`pytest tests/test_f086_textos.py -k r16`): `12 failed, 4 passed` (falta la variable, «aún no lee»,
+sin fila en sv5.md, timeout `180`). Después: `120 passed` con `test_f085_infra.py` y `test_f083_precios.py`.
 
 ## T7 · Puerta de evals (D4 = (a), aviso aceptado)
 
@@ -131,29 +123,28 @@ con `test_f085_infra.py` y `test_f083_precios.py`.
 - **A mano**: el mutador no muta argumentos, constantes ni textos, así que se añaden **24 mutantes**, uno por fila,
   con fichero, línea, original → mutado y fallidos sin `-x`: **24 muertos**. Total **28/28, 0 supervivientes**.
   Tabla en `progress/mutacion_F-086.md`; fila en `progress/inventario_mutacion_F-039.md` (57 informes).
-- Un primer intento abortó por base roja (desviación (e)) y no dejó informe.
 
-## `bash harness/init.sh` (T8)
+## `bash harness/init.sh` (T8), de cierre sobre `284fa18`
 
-- **Tal cual**: ROJO solo por el entorno del worktree. sv5 y comun importan `ruesma_comun` del árbol principal (sin
-  T1), así que cae el test de R12 de sv5; antes de `53baed8` también caía el F-083 intermitente de (e). La cobertura
-  medida contra esa comun sale 59,3 %. Mismo caso que aceptó el reviewer de F-098.
+- **Tal cual**: ROJO solo por el entorno del worktree: sv5 importa `ruesma_comun` del árbol principal (sin T1) y cae
+  `test_f086_r12_el_servicio_no_transforma_el_valueerror` (`1 failed, 123 passed`). El resto en verde: raíz 1919, sv1
+  205, sv2 485, sv3 1576, sv4 1933, sv6 480 (+1 skip), sv9 1026, comun 1077 (+3 skip); cobertura 100 % (27/27).
+  Es el mismo caso que aceptó el reviewer de F-098.
 - **Con `PYTHONPATH=C:\Users\pgris\PycharmProjects\albaranes-F-086\services\albaranes-comun` y `ARNES_SIN_CACHE=1`**:
-  VERDE. El `PYTHONPATH` tiene que ir en forma Windows: la forma `/c/...;.` desde Git Bash no surte efecto. Números
-  en «Evidencias».
+  **VERDE, exit 0, «ENTORNO LISTO»**, sv5 125 passed y las demás iguales. Rutas sensibles: aviso aceptado (T7).
+  El `PYTHONPATH` tiene que ir en forma Windows: la forma `/c/...` desde Git Bash no surte efecto.
 
 ## MANUAL pendientes (no son de esta pasada)
 
-- **T9 / M1** (humano, tras APPROVED y fusión): desplegar sv5 con A, sin cambiar variables. VERDE:
-  `[svc5][wiring] IA3=openai/gpt-6.1-sol IA4=openai/gpt-6.1-sol forzar_herramienta=True`.
-- **T10–T14** (B y C): tras F-100 en `dev` (D1). F-086 queda `blocked` con ese motivo tras el APPROVED de A.
+- **T9 / M1** (humano): desplegar sv5 con A sin tocar variables; VERDE `... forzar_herramienta=True`. **T10–T14**
+  (B y C): tras F-100 en `dev` (D1); F-086 queda `blocked` con ese motivo tras el APPROVED de A.
 
 ## Evidencias
 
 | Evidencia | Valor real |
 |---|---|
 | Tests nuevos de F-086 | 92: comun 27, sv5 29, raíz 36 (17 + 19) |
-| Suites (`init.sh` con `PYTHONPATH` + `ARNES_SIN_CACHE=1`) | ver «init.sh de cierre» abajo |
+| Suites (`init.sh` con `PYTHONPATH` + `ARNES_SIN_CACHE=1`, `284fa18`) | raíz 1919, sv1 205, sv2 485, sv3 1576, sv4 1933, sv5 125, sv6 480 (+1 skip), sv9 1026, comun 1077 (+3 skip): 0 fallos, exit 0 |
 | Cobertura de líneas cambiadas | `PUERTA COBERTURA: 100.0% de 27 líneas cambiadas cubiertas (27/27, umbral 80%, nivel critico)` |
 | Mutación | herramienta 4/4 muertos + a mano 24/24 muertos: **0 supervivientes** |
-| Tiempo de suites | raíz ≈ 257 s; comun ≈ 138 s; sv5 ≈ 19 s (pasada de `a8d004f`) |
+| Tiempo de suites (misma pasada, máquina compartida) | raíz 534 s, sv4 530 s, comun 203 s, sv9 100 s, sv5 53 s |
