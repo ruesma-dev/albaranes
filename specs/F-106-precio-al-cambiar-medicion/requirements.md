@@ -1,145 +1,149 @@
-# F-106 · Al editar una fila, se mueve lo que toca y lo que se ve es lo que va a Sigrid — requisitos (v2)
+# F-106 · Lo editado a mano en la ficha cuadra, va así a Sigrid y sobrevive a revalorar — requisitos (v3)
 
-Rigor **critico** (lo aprobado es lo que sv9 da de alta en Sigrid, F-053). Servicios: **comun**, **sv4-front** y
-**sv9-alta-sigrid**. **sv6 y sv3 no se tocan.** Sin DDL. PARADA 1 contestada por el humano el 2026-10-26: las
-decisiones cerradas y la nueva (D8) están en `design.md` §9.
+Rigor **critico**. Servicios: comun, sv4-front, sv9-alta-sigrid (fase A) y sv6 (fase B, DDL en sus tablas). sv3 y sv5
+no se tocan. D1–D7 cerradas; D8 = (c) del humano; D9–D13 nuevas, recomendada (a) (`design.md` §10).
 
-Origen: AC26/30435 (CECOIS A 26017815, obra 0692). El albarán dice 10 × 11,20 −7 % = 104,16. Óscar cambió la cantidad
-a 48 y «cambió el unitario y no el importe total»: Sigrid grabó 48 × 2,17 = 104,16 (sv9 despeja precio = importe /
-cantidad, `validador_alta.py:294`). Por qué pasó, en `design.md` §3.
+Origen: AC26/30435 (CECOIS). El papel dice 10 × 11,20 −7 % = 104,16; la fila acabó en Q 48, P 11,2, I 104,16
+`declared_albaran` y sv9 grabó 48 × 2,17 (`validador_alta.py:294`). Por qué, `design.md` §3.
 
 ## Definiciones
 
-- **Fila**: fila de `albaran_line_valuations` (regla 22). **Q** = `cantidad_convertida ?? cantidad_albaran` (la de la
-  ficha). **P** = `precio_unitario_final` (bruto, regla 13). **d** = `descuento_albaran_aplicado`. **I** =
-  `importe_calculado`.
-- **Originales (grises)**: lo leído del albarán, `albaran_lines_merge` (cantidad, precio, `precio_neto`, descuento) y
-  la cabecera `albaran_documents_merge`; la ficha los pinta en «Líneas leídas del albarán (IA) · solo lectura».
-  **Importe del albarán** de una fila = `precio_neto` de su blanca.
-- **Cuadra**: `|importe_de_linea(Q, P, d) − I| ≤ TOLERANCIA_CUADRE_EUR` (0,02 €). Con Q, P o I nulos o ilegibles,
-  **no comparable**.
-- **A Sigrid**: la cantidad (con signo) y el precio que sv9 pondrá en la petición de la línea.
-- **Fila tocada a mano**: `es_fila_manual` (F-065 R22, `review_models.py:736`).
+- **Fila**: fila de `albaran_line_valuations`. **Q** = `cantidad_convertida ?? cantidad_albaran`; **P** =
+  `precio_unitario_final` (bruto); **d** = `descuento_albaran_aplicado`; **I** = `importe_calculado`.
+- **Originales (grises)**: `albaran_lines_merge` (blancas) y `albaran_documents_merge`; la ficha los pinta en
+  «Líneas leídas del albarán (IA)». **Importe del albarán** de una fila = `precio_neto` de su blanca.
+- **Cuadra**: `|importe_de_linea(Q, P, d) − I| ≤ 0,02 €`; con Q, P o I nulos o ilegibles, **no comparable**.
+- **A Sigrid**: cantidad (con signo) y precio que sv9 pondrá en la petición de la línea.
+- **Edición**: `edicion_manual_json` de la fila: los campos que sv4 puso a mano con su valor, los valores de sv6
+  antes de la primera edición (`calculado`) y, en las filas que crea sv4, `fila_entera`.
+- **Pareja** de una fila editada en una valoración nueva: la fila nueva con su misma clave (R24).
 
-## Comun (`ruesma_comun`)
+# Fase A · editar, cuadrar y dar de alta lo que se ve
 
-R1. `importes.cuadra_linea(cantidad, precio, descuento, importe, tolerancia=TOLERANCIA_CUADRE_EUR)` debe devolver
-`True`/`False` según «cuadra» y `None` si no es comparable; nunca lanza.
+## Comun
 
-R2. `importes.TOLERANCIA_CUADRE_EUR` debe valer 0,02 y ser la única constante de cuadre de línea de sv4 y sv9.
+R1. `importes.cuadra_linea(cantidad, precio, descuento, importe, tolerancia=TOLERANCIA_CUADRE_EUR)` devuelve
+`True`/`False` según «cuadra» y `None` si no es comparable; nunca lanza. `TOLERANCIA_CUADRE_EUR = 0,02`, única
+constante de cuadre de línea de sv4, sv6 y sv9.
 
-R3. `alta_sigrid.linea_a_sigrid(*, vinculada, cantidad_albaran, cantidad_convertida, importe)` debe devolver la
-cantidad con el signo del importe y `round(|importe| / |cantidad|, 6)` (cantidad = la convertida si vinculada, si no
-la del albarán), o `None` sin cantidad no nula o sin importe. Es la ÚNICA definición de «a Sigrid» (sv9 y sv4).
+R2. `alta_sigrid.linea_a_sigrid(*, vinculada, cantidad_albaran, cantidad_convertida, importe)` devuelve la cantidad
+con el signo del importe y `round(|importe| / |cantidad|, 6)` (la convertida si vinculada, si no la del albarán), o
+`None`; es la ÚNICA definición de «a Sigrid» (sv9 y sv4).
 
-R4. Todo precio despejado (R7, R12) debe salir de `importes.unitario_despejado` (6 decimales), sin copia nueva.
+R3. `edicion_manual.recalcular_fila(*, cantidad, precio, descuento, importe, editados)` aplica la regla D1 (R5–R7)
+y la usan sv4 (PATCH) y sv6 (reaplicar); todo precio despejado sale de `importes.unitario_despejado` (6 decimales).
 
-## sv4 · editar una fila (PATCH `.../conciliacion/campos`)
+## sv4 · PATCH `.../conciliacion/campos`
 
-R5. El cuerpo debe admitir `importe` (número, coma decimal, `NaN`/`±Inf` ⇒ 422, como los demás) y `cuadrar` ∈
-{`importe`, `precio`}; otro valor de `cuadrar` ⇒ 422 sin escribir nada. `cuadrar` no es un campo de la fila.
+R4. El cuerpo admite `importe` (número, coma decimal, `NaN`/`±Inf` ⇒ 422) y `cuadrar` ∈ {`importe`, `precio`}; otro
+valor de `cuadrar` ⇒ 422 sin escribir. `cuadrar` no es un campo de la fila.
 
-R6. CUANDO cambian Q, P o d y no viene `importe`, sv4 debe guardar los Q, P y d resultantes e `I =
-importe_de_linea(Q, P, d)` con `importe_source = 'calculated'`, en toda fila sea cual sea su origen (lo de hoy:
-F-019 R23–R24, F-065 R11).
+R5. CUANDO cambian Q, P o d sin `importe`, sv4 guarda los resultantes e `I = importe_de_linea(Q, P, d)`,
+`importe_source = 'calculated'`, sea cual sea el origen de la fila (lo de hoy, F-019 R23–R24, F-065 R11).
 
-R7. CUANDO viene `importe` (solo o con Q o d), sv4 debe guardar `I` = el importe recibido redondeado a 2, `P =
-unitario_despejado(I, Q resultante, d resultante)`, d sin cambios (o el recibido) e `importe_source = 'calculated'`.
+R6. CUANDO viene `importe` (solo o con Q o d), sv4 guarda I = el recibido a 2 decimales, `P =
+unitario_despejado(I, Q, d)` con los Q y d resultantes, d sin cambios (o el recibido), `importe_source =
+'calculated'`.
 
-R8. SI vienen `importe` y `precio_unitario` a la vez, ENTONCES 422 «Cambia el precio o el importe, no los dos» sin
-escribir nada.
+R7. SI vienen `importe` y `precio_unitario` a la vez ⇒ 422 «Cambia el precio o el importe, no los dos». SI con `importe` no se puede despejar (Q nula o 0, o d del 100 %): importe 0 ⇒ I = 0 y P se conserva; importe ≠ 0
+⇒ 422 «No se puede calcular el precio con cantidad 0 o descuento del 100 %: cambia la cantidad, el descuento o el
+precio», sin escribir.
 
-R9. SI con `importe` el precio no se puede despejar (Q nula o 0, o d del 100 %), ENTONCES: con importe 0, sv4 debe
-guardar I = 0 y conservar P; con importe ≠ 0, 422 «No se puede calcular el precio con cantidad 0 o descuento del
-100 %: cambia la cantidad, el descuento o el precio» sin escribir nada.
+R8. Un P despejado (R6, R9) es un precio cambiado: una Contrato pasa a Nueva (F-065 R25) y en una Nueva su derivada
+recibe P. Cambiar solo Q o d no cambia el origen.
 
-R10. Un P despejado por R7 o R12 debe tratarse como un precio cambiado: una fila Contrato pasa a Nueva (F-065 R25,
-derivada `manual_override`) y en una Nueva su derivada recibe P, con las marcas manuales de hoy.
+R9. CUANDO el PATCH trae solo `cuadrar` sobre una fila que **no cuadra**: `importe` ⇒ como R5; `precio` ⇒ como R6
+con el I actual (R7, R8). Sobre una que cuadra o no comparable, no escribe lo valorado (F-065 R8).
 
-R11. Cambiar solo Q o d no debe cambiar el origen de la fila (F-065 R25, sin cambios).
-
-R12. CUANDO el PATCH trae solo `cuadrar` sobre una fila que **no cuadra**, sv4 debe cuadrarla con Q y d actuales:
-`importe` ⇒ como R6 (conserva P); `precio` ⇒ como R7 con el I actual (R9 y R10 incluidos). Sobre una fila que cuadra
-o no comparable no debe escribir lo valorado (F-065 R8).
-
-R13. Tras R6, R7 o R12 la fila editada debe cuadrar (con R7, para `Q × (1 − d) ≤ 40 000`, design §10 R-6), y
-`total_valorado` se recalcula como hoy.
-
-R14. El PATCH debe escribir solo en `albaran_line_valuations` y en la derivada de su fila; nunca en
-`albaran_lines_merge` ni en `albaran_documents_merge` (los originales quedan idénticos).
-
-R15. El PATCH no debe publicar en ninguna cola (`q-valoracion`, `q-persistencia`).
-
-## sv4 · que la edición no la pise una revaloración (D8)
-
-R16. CUANDO «Guardar» o el autoguardado de la cabecera haría relanzar la búsqueda de contratos (F-052 D4-A) y el
-documento tiene filas tocadas a mano, sv4 no debe relanzarla y el mensaje debe decir «Guardado. No se ha vuelto a
-buscar contratos porque hay N líneas tocadas a mano; «Volver a buscar» las descarta». Sin filas tocadas, como hoy.
-
-R17. «Valorar ahora», cambiar de contrato y «Volver a buscar» deben seguir pidiendo la confirmación de F-065 R22;
-conservar lo editado al revalorar es F-058, fuera de esta ficha.
+R10. Tras R5, R6 o R9 la fila cuadra (con R6, si `Q × (1 − d) ≤ 40 000`) y `total_valorado` se recalcula. El PATCH
+escribe solo en `albaran_line_valuations` y en la derivada de su fila, nunca en los originales, y no publica en colas.
 
 ## sv4 · la ficha
 
-R18. CUANDO el administrativo teclea Q, P o d, la ficha debe repintar el importe con `importeDeFila` (hoy); CUANDO
-teclea el importe, debe repintar P con 6 decimales (hoy 4) y conservar d. Con Q 0, d 100 % o Q vacía e importe ≠ 0,
-no repinta P y marca el importe en rojo con el texto de R9.
+R11. Al teclear Q, P o d, la ficha repinta el importe (`importeDeFila`, hoy); al teclear el importe, repinta P con 6
+decimales (hoy 4) y conserva d; con Q 0, d 100 % o Q vacía e importe ≠ 0, no repinta y marca el importe en rojo con
+el texto de R7.
 
-R19. El PATCH debe llevar `importe` (y no `precio_unitario`) si de precio, importe, cantidad y dto el último tecleado
-fue el importe; si no, P solo si cambió y nunca `importe`. Las tres vías de `enviarFila` (F-077) igual.
+R12. El PATCH lleva `importe` (y no `precio_unitario`) si, de precio, importe, cantidad y dto, el último tecleado fue
+el importe; si no, P solo si cambió y nunca `importe`. Igual por las tres vías de `enviarFila` (F-077).
 
-R20. Una fila con blanca (no sintética ni parte de reparto) cuyo I difiere de su importe del albarán
-(`importes.difieren`, 0,01 €) debe enseñar bajo el importe «≠ albarán: 104,16» con `title` «El importe ya no es el
-del albarán (104,16 €)», informativo, sin bloquear; al teclear se repinta. Las partes de un reparto conservan su
-aviso (F-065 R35).
+R13. Una fila con blanca (no sintética ni parte) cuyo I difiere de su importe del albarán (`importes.difieren`, 0,01 €)
+enseña bajo el importe «≠ albarán: 104,16» (`title` «El importe ya no es el del albarán (104,16 €)»), informativo y
+repintado al teclear. Las partes de un reparto conservan su aviso (F-065 R35).
 
-R21. Una fila que no cuadra debe pintarse en rojo con `title` «48 × 11,20 × (1 − 7 %) = 499,97 ≠ 104,16» y los
-botones «Recalcular importe» (`cuadrar = importe`) y «Recalcular precio» (`cuadrar = precio`); desactivados si la
-fila está bloqueada o el albarán aprobado.
+R14. Una fila que no cuadra se pinta en rojo con `title` «48 × 11,20 × (1 − 7 %) = 499,97 ≠ 104,16» y los botones
+«Recalcular importe» (`cuadrar = importe`) y «Recalcular precio» (`cuadrar = precio`), desactivados si la fila está
+bloqueada o el albarán aprobado.
 
-R22. Cada fila a registrar debe enseñar «A Sigrid: 48 × 2,17 €» con R3: en el `title` del precio siempre y visible
-bajo el precio cuando el precio a Sigrid difiere de P en más de 0,000001; al teclear se repinta (factor `cantidad a
-Sigrid / Q` que pinta el servidor).
+R15. Cada fila a registrar enseña «A Sigrid: 48 × 2,17 €» (R2) en el `title` del precio y, visible bajo él, cuando el
+precio a Sigrid difiere de P en más de 0,000001; al teclear se repinta (factor `cantidad a Sigrid / Q` del servidor).
+El precio se pinta con los decimales guardados, hasta 6, sin ceros finales y al menos 2.
 
-R23. El precio debe pintarse con los decimales guardados, hasta 6, sin ceros finales y al menos 2.
+## sv4 · aprobar · sv9 · altas grabadas
 
-## sv4 · aprobar
+R16. SI alguna fila a registrar (importe ≠ 0) no cuadra, sv4 no aprueba (ficha ni listado): `LineasIncompletasError`
+con posiciones y «Líneas que no cuadran (cantidad × precio × (1 − dto) ≠ importe): 3». Las no comparables no
+cuentan; R13 no bloquea.
 
-R24. SI alguna fila a registrar (importe ≠ 0) no cuadra, ENTONCES sv4 no debe aprobar, ni desde la ficha ni desde el
-listado: `LineasIncompletasError` con sus posiciones y «Líneas que no cuadran (cantidad × precio × (1 − dto) ≠
-importe): 3». Las no comparables no cuentan; el aviso de R20 no bloquea.
+R17. sv9 lee además P y d de la fila (`LineaAlta`, `SQL_LINEAS`). SI una línea a registrar no cuadra, sv9 deja el alta `no_admitido` con el motivo `linea_no_cuadra` (detalle «48 ×
+11,2 × (1 − 7 %) = 499,97 ≠ 104,16», referencia), sin llamar a sigrid-api; sin él, la petición es la de hoy
+(`_linea_peticion` con R2). `TEXTOS_MOTIVO_ALTA` (sv4) tiene su texto.
 
-## sv9 · alta
+R18. `scripts/listar_altas_descuadradas_f106.py` (sv9) lista sin escribir las altas reales `registrado` con una línea
+que no cuadra o con precio enviado ≠ `P × (1 − d)` (CSV UTF-8 BOM, `;`, coma decimal; `PG_*`; lo lanza el humano).
 
-R25. sv9 debe leer de la fila `precio_unitario_final` y `descuento_albaran_aplicado` (`LineaAlta`, SQL de
-`sql_alta_repository.py`).
+# Fase B · revalorar conserva lo editado a mano (D8 = c)
 
-R26. SI una línea a registrar no cuadra (R1 con su Q, P, d e I), ENTONCES sv9 debe dejar el alta `no_admitido` con
-el motivo `linea_no_cuadra` (detalle «48 × 11,2 × (1 − 7 %) = 499,97 ≠ 104,16», referencia de la línea), sin llamar
-a sigrid-api.
+R19. sv6 añade `albaran_line_valuations.edicion_manual_json TEXT NULL` (`ADD COLUMN IF NOT EXISTS` en su
+`schema_contribution.py`); al valorar solo la escribe al reaplicar (R23–R27).
 
-R27. Sin ese motivo, la petición debe ser idéntica a la de hoy: `_linea_peticion` toma cantidad y precio de R3.
+R20. Toda vía de sv4 que escribe una fila actualiza su edición en la misma transacción: PATCH (campos cambiados, con
+`importe` y el P despejado), «Origen ✎» (origen), almacén y «almacén a todas» (partida vacía), producto Sigrid,
+«Guardar»/bloquear y desbloquear (`bloqueada`). La primera vez guarda en `calculado` la fila tal como la dejó sv6.
 
-R28. `TEXTOS_MOTIVO_ALTA` (sv4) debe tener el texto de `linea_no_cuadra`; el test que lo contrasta con sv9 lo exige.
+R21. Las filas que crea sv4 (Añadir línea, Traer líneas del contrato, «+ a Sigrid», partes de Dividir) nacen con
+`fila_entera`; Dividir registra además la Q nueva de la original.
 
-## Altas ya grabadas (solo lectura)
+R22. `es_fila_manual` pasa a comun (`ruesma_comun.edicion_manual`); una fila con edición cuenta como tocada.
 
-R29. `services/albaranes-alta-sigrid/scripts/listar_altas_descuadradas_f106.py` debe listar, sin escribir nada, las
-altas `registrado` en modo real con alguna línea que no cuadra o cuyo precio enviado (`peticion_json`) difiere de `P
-× (1 − d)` más que la tolerancia: documento, `sigrid_cod`, referencia, Q, P, d, I y precio enviado, en CSV (UTF-8
-BOM, `;`, coma decimal). Conexión por variables `PG_*`; lo lanza el humano.
+R23. CUANDO sv6 reemplaza la valoración de un documento (`replace_valuation`, cualquier vía: «Valorar ahora», cambiar
+contrato, «Volver a buscar», «Guardar» que relanza la búsqueda, sv3 con `force`), debe leer en la misma transacción
+las filas con edición de la anterior (y las legadas de R27) y reaplicarlas antes de confirmar.
 
-## Regresión y documentación
+R24. La clave de pareja es `merge_line_id` en las filas con blanca, y (`parent_merge_line_id`, `modifier_source`) en
+las sintéticas cuando la valoración nueva tiene exactamente una; las `fila_entera` no tienen pareja.
 
-R30. Los tests de F-019 R23–R26, F-036 y F-065 deben seguir en verde sin relajar aserciones. Única excepción
-declarada: `test_f065_f1_js.py` («`importe_solo_ajusta_el_precio` = {}», F-065 R9) pasa a esperar `{"importe":
-1000}` por R19.
+R25. Con pareja, sv6 aplica a la fila nueva los campos de la edición con `recalcular_fila` (R3) y guarda en
+`calculado` los valores que acaba de calcular; la edición se conserva.
 
-R31. Caso CECOIS por fixture (sin red ni BBDD real): (a) fila 10 × 11,20 −7 % = 104,16 Contrato; PATCH `cantidad =
-48` ⇒ I 499,97, P 11,20, sigue Contrato, aviso «≠ albarán: 104,16», sv9 manda 48 × 10,416; luego PATCH `importe =
-104,16` ⇒ P 2,333333, Nueva, sin aviso, sv9 manda 48 × 2,17; la blanca, intacta. (b) fila ya incoherente (48, 11,20,
-7, 104,16, `declared_albaran`, la de producción, design §3) ⇒ rojo, aprobar rechazado, sv9 `no_admitido`
-`linea_no_cuadra`; un PATCH de partida o «Origen ✎ → Nueva» la deja sin cuadrar; «Recalcular precio» ⇒ P 2,333333.
+R26. Sin pareja, la fila editada se conserva entera si su blanca (`merge_line_id` o `parent_merge_line_id`) existe o
+si es una `fila_entera` sin blanca; si su blanca ya no existe, se pierde y la cabecera lleva el motivo
+`ediciones_perdidas:N`. Una valoración nueva sin filas (`failed`, `no_contract`) conserva igual las editadas.
 
-R32. `docs/ARCHITECTURE.md` reglas 13, 20 y 25 deben recoger R6–R16, R22, R24 y R26; `azure-apps/albaranes.md` se
-actualiza solo si describe el cuerpo del PATCH de fila o los motivos de sv9 (comprobarlo y anotarlo).
+R27. Una fila legada (sin edición y `es_fila_manual`) cuenta como `fila_entera` (sin relleno en producción). Una
+edición con origen Nueva recrea su derivada `manual_override` con su P; una editada vinculada a una línea que no es del
+contrato de la valoración nueva pasa a Nueva con su P y el motivo `front_contrato_cambiado`.
+
+R28. sv6 bloquea la cabecera (`SELECT … FOR UPDATE`) antes de leer las ediciones (un PATCH sobre una fila que ya no
+existe ⇒ 409 «La valoración ha cambiado: recarga la ficha»); total y contadores salen de las filas finales.
+
+R29. En la ficha, una fila con edición enseña «✋» con `title` campo a campo («Cantidad: 48 (calculado 10)»); una
+`fila_entera`, «✋ añadida a mano».
+
+R30. «Volver a lo calculado» (POST `.../lines/{vid}/volver-a-calculado`) restaura `calculado`, borra la edición y
+desbloquea, con deshacer; 409 en aprobado o con alta bloqueante; una `fila_entera` no lo tiene (✕). La confirmación
+de revalorar (F-065 R22) dice «Revalorar conserva N líneas puestas a mano. ¿Continuar?». Fuera de alcance: el «✕» de
+una fila con blanca vuelve al revalorar (como hoy).
+
+# Regresión y documentación
+
+R31. Los tests de F-019 R23–R26, F-036, F-065 y F-078 siguen en verde sin relajar aserciones, salvo los declarados:
+`test_f065_f1_js.py` (`importe_solo_ajusta_el_precio` ⇒ `{"importe": 1000}`, R12) y el texto de F-065 R22 (R30).
+
+R32. Casos por fixture, sin red ni BBDD real: (a) CECOIS por el PATCH: 10 × 11,20 −7 % = 104,16; `cantidad = 48` ⇒ I
+499,97 `calculated`, «≠ albarán»; `importe = 104,16` ⇒ P 2,333333, Nueva, sv9 48 × 2,17; blanca intacta. (b) la
+fila de producción (48, 11,20, 7, 104,16 `declared_albaran`) ⇒ rojo, no se aprueba, sv9 `linea_no_cuadra`. (c)
+revalorar (SQLite de sv6) con esa edición, con contrato cambiado, sin blanca y con valoración `failed` (R23–R28).
+
+R33. `docs/ARCHITECTURE.md` reglas 13, 20, 22 y 25 recogen R5–R10, R15, R16, R17 y R19–R30; `azure-apps/albaranes.md`
+se actualiza si describe el PATCH de fila, los motivos de sv9 o las columnas de valoración (comprobarlo y anotarlo).
