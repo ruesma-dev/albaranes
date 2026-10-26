@@ -1,182 +1,209 @@
-# F-106 · Diseño técnico (v1)
+# F-106 · Diseño técnico (v2)
 
-Servicios: **comun** (0.9.0 → 0.10.0), **sv4-front**, **sv9-alta-sigrid**. Sin DDL, sin endpoints nuevos (una clave
-nueva en un PATCH existente), sin cambios en sigrid-api. **sv6 no se toca** (F-100 `in_progress` lo modifica; F-100
-no toca sv4, sv9 ni comun, comprobado con `git diff dev...feature/F-100-ia3-valora-ia4-casa`).
+Servicios: **comun** (0.9.0 → 0.10.0), **sv4-front**, **sv9-alta-sigrid**. Sin DDL, sin endpoints nuevos (dos
+claves nuevas en un PATCH existente), sin cambios en sigrid-api. **sv6 y sv3 no se tocan** (F-100 `in_progress`
+modifica sv6; F-100 no toca sv4, sv9 ni comun). v2 = v1 corregida por la PARADA 1 del humano (2026-10-26, §9).
 
 ## 1. Límite de servicio
 
 Ninguna responsabilidad nueva: es la fórmula canónica (regla 13) aplicada al editar una fila (sv4) y al dar de alta
-(sv9), con la regla compartida en comun (como `importe_de_linea` y `es_linea_vinculada`). No hay que extraer nada.
+(sv9), con la regla compartida en comun (como `importe_de_linea` y `es_linea_vinculada`). La protección frente a
+revalorar (D8) es de sv4, que es quien dispara las revaloraciones (`review_service.py:929-937`). Conservar lo manual
+dentro de sv6 al revalorar es F-058 (sv3 + sv6), no esta ficha.
 
 ## 2. Cómo es hoy (lectura de código, `dev` 3163711)
 
-- **sv4 edita una fila** con `PATCH /api/documents/{id}/lines/{vid}/conciliacion/campos`
-  (`interface_adapters/web/app.py:1522`) → `ReviewService.update_line_conciliacion`
-  (`application/services/review_service.py:444`) → `SqlReviewRepository.update_line_conciliacion`
-  (`infrastructure/database/review_repository.py:2036`). Cuerpo `ConciliacionEditBody`
-  (`domain/models/review_models.py:1083`): solo los campos cambiados (R8 de F-065). Cantidades:
-  `cantidades_tras_editar` (`review_models.py:630`). **Si cambia Q, P o d, recalcula SIEMPRE el importe con P**
-  (`review_repository.py:2239`: `I = importe_de_linea(P, Q, d)`, `importe_source = 'calculated'`), es decir,
-  **conserva el precio**. Cambiar P o la unidad de una Contrato la hace Nueva (`cambia_origen`,
-  `review_models.py:663`; llamada en `review_repository.py:2259`). Escribe solo en `albaran_line_valuations` (y en la
-  derivada si es Nueva); **no revalora** ni publica en `q-valoracion`.
-- **La ficha** (`templates/document_detail.html:837-903`) pinta Q, P (`'%.4f'`), I (el guardado, F-065 R12) y d de
-  la fila (regla 22). Al teclear, `syncImporteUnitario` (`static/app.js:1349`) repinta I con `importeDeFila`
-  (`app.js:1320`) si cambia Q, P o d, y P si cambia I. El PATCH sale de `_camposCambiados` (`app.js:1183`) por
-  `enviarFila` (`app.js:1246`). Nada enseña lo que mandará sv9.
-- **sv9** (`services/albaranes-alta-sigrid/domain/services/validador_alta.py`): cantidad = la convertida si
-  vinculada, si no la del albarán (`_cantidad`, :142); `precio = round(|I| / |cantidad|, 6)` (`_linea_peticion`,
-  :294). **No lee P ni d** (`LineaAlta`, `domain/models/alta_models.py:141`): el precio que manda es siempre el neto
-  despejado del importe, cuadre o no la fila.
-- **F-019 / sv6**: el unitario leído manda (`price_reconciler.py`, «albaran_unitario_declarado_manda») y el importe
-  leído también (`importe_calculator.py:121-175`): si `Q × P × (1 − d)` discrepa, se guarda el declarado con el
-  motivo `declared_vs_calculated_mismatch`. Es decir, **sv6 deja a propósito filas que no cuadran** (F-019 R24).
+- **PATCH de fila**: `app.py:1522` → `ReviewService.update_line_conciliacion` → `SqlReviewRepository.
+  update_line_conciliacion` (`review_repository.py:2036`). Cuerpo `ConciliacionEditBody` (`review_models.py:1083`),
+  solo lo cambiado (F-065 R8). Si cambia Q, P o d recalcula **siempre** `I = importe_de_linea(Q, P, d)`,
+  `importe_source = 'calculated'` (`review_repository.py:2238-2251`): **conserva el precio**. Cambiar P o la unidad
+  de una Contrato la hace Nueva (`cambia_origen`, `review_models.py:663`, llamada en `review_repository.py:2259`).
+  Escribe solo `albaran_line_valuations` y la derivada; **no publica** (docstring `:2075`).
+- **La ficha**: `syncImporteUnitario` (`app.js:1349`) repinta I con `importeDeFila` si cambia Q, P o d
+  (`:1369-1374`) y, si cambia I, repinta P a **4 decimales** (`:1361-1368`); el importe **no viaja** en el PATCH
+  (`_camposCambiados`, `app.js:1183`), viaja el P repintado. P se pinta con `'%.4f'` (`document_detail.html:870`).
+  Las blancas son «solo lectura» (`document_detail.html:640-700`).
+- **sv9**: cantidad = la convertida si vinculada, si no la del albarán (`_cantidad`, `validador_alta.py:142`);
+  `precio = round(|I| / |cantidad|, 6)` (`:294`). No lee P ni d (`LineaAlta`, `alta_models.py:141`).
+- **sv6**: el importe leído manda y, con discrepancia, se guarda el declarado (`importe_calculator.py:121-175`): con
+  diferencia ≤ `IMPORTE_TOLERANCE_PCT` (5 % por defecto, `config/settings.py:51-56`) **sin motivo**; por encima, con
+  `declared_vs_calculated_mismatch`. Revalorar reemplaza todas las filas desde la blanca (`orm_valuation_models.py:
+  306-308`: conservar lo manual es F-058).
 
-## 3. Hallazgo: el estado del caso no lo escribe el PATCH (D0)
+## 3. Por qué en AC26/30435 cambió el precio y no el importe (punto 1 del humano)
 
-El PATCH, al cambiar Q a 48, habría escrito I = 48 × 11,20 × 0,93 = 499,97 `calculated` y sv9 habría mandado 10,416.
-Lo observado (Q 48, P 11,2, d 7, I 104,16 **`declared_albaran`**) es exactamente lo que escribe **sv6** al valorar
-una blanca con cantidad 48, precio 11,20, dto 7 y `precio_neto` 104,16: unitario declarado manda, importe declarado
-manda, motivo `declared_vs_calculated_mismatch`. Luego el 48 estaba en la blanca al valorar (lectura de la IA, u otra
-vía) o la fila no se editó por el PATCH actual. La spec cubre **las dos vías**: la de editar (R5–R20) y la de la
-fila que ya llega sin cuadrar (R18, R21, R23). La T0 (MANUAL, solo lectura) lo confirma; si apareciera una tercera
-vía que escribe Q sin pasar por el PATCH, se para y se repropone.
+**La hipótesis «sv4 revalora tras el PATCH» no se sostiene en el código**: (i) el PATCH no publica en ninguna cola
+(`app.py:1522-1549`, `review_repository.py:2036-2335`); (ii) aunque luego se revalorase, sv6 reconstruye la fila
+desde la blanca, así que Q volvería a la cantidad leída, no se quedaría en 48 (`orm_valuation_models.py:306-308`); y
+las valoraciones sin `force` son idempotentes (`valuation_worker.py:11-12`).
 
-## 4. Ficheros a modificar
+Sigrid grabó 48 × 2,17: en el alta la fila tenía Q 48 e I 104,16, y sv9 despejó el precio (`validador_alta.py:294`).
+Con el código de hoy solo dos caminos dejan esa fila:
+
+- **A (la ficha)**: Óscar teclea 48 (la ficha repinta I = 499,97) y después vuelve a teclear el importe 104,16
+  (el del papel); la ficha despeja P = 104,16 / (48 × 0,93) = 2,3333 (`app.js:1367`) y el PATCH manda Q y ese P
+  (`review_repository.py:2239`: I = 104,16; la fila pasa a Nueva por F-065 R25). Ese es el «cambió el unitario y no
+  el importe»: lo que la ficha hace hoy al teclear el importe.
+- **B (la blanca)**: sv6 valoró una blanca con cantidad 48: P 11,20 e I 104,16 `declared_albaran` con
+  `declared_vs_calculated_mismatch` (`importe_calculator.py:157-175`). sv4 no puede escribir la blanca (F-065 R1),
+  así que el 48 sería de la IA, no de Óscar.
+
+El diseño no depende de cuál fue: A queda cubierto por R7 y R18–R22 (P a 6 decimales, «≠ albarán», «A Sigrid»);
+B queda cubierto por R21, R24 y R26. Distinguirlos solo sirve para el registro: lo dice `precio_unitario_final` de
+la fila (≈ 2,3333 y `manual_derived` ⇒ A; 11,2 y `declared_albaran` ⇒ B). Pregunta para el humano en
+`progress/current.md`.
+
+## 4. La regla de recálculo (D1, sustituye a D1 y D4 de v1)
+
+Sin distinguir el origen de la fila. «Recalcular» se hace en el servidor; la ficha lo replica al teclear.
+
+| Lo que cambia el revisor | Se queda | Se mueve | Caso límite |
+|---|---|---|---|
+| Q, P o d (y combinaciones) | lo tecleado | `I = Q × P × (1 − d/100)`, 2 dec | Q 0 o d 100 % ⇒ I = 0 |
+| I (con o sin Q o d) | d e I tecleado | `P = I / (Q × (1 − d/100))`, 6 dec | divisor 0: I = 0 ⇒ P se queda; I ≠ 0 ⇒ 422 (R9) |
+| I y P a la vez | — | — | 422 (R8) |
+| solo `cuadrar` (fila que no cuadra) | Q, d | `importe` ⇒ I; `precio` ⇒ P | como las filas de arriba |
+
+Para Q, P y d es lo de hoy (§2): los tests de F-019 y F-065 siguen sin tocar. Lo nuevo es el importe: viaja, el
+servidor despeja P con `unitario_despejado` (6 decimales, igual que sv9) e I queda exactamente el tecleado. Un P
+despejado es un precio cambiado: una Contrato pasa a Nueva (F-065 R25), como hoy al teclear el importe.
+
+## 5. Ficheros a modificar
 
 | Fichero | Cambio |
 |---|---|
 | `services/albaranes-comun/ruesma_comun/importes.py` | `TOLERANCIA_CUADRE_EUR`, `cuadra_linea` (R1, R2). |
 | `services/albaranes-comun/ruesma_comun/alta_sigrid.py` | `linea_a_sigrid` (R3), movida desde sv9. |
 | `services/albaranes-comun/pyproject.toml`, `ruesma_comun/__init__.py` | 0.10.0. |
-| `services/albaranes-front/domain/models/review_models.py` | `ConciliacionEditBody.recalcular`; `decidir_recalculo` (§6); `LineasIncompletasError(no_cuadran=)` y su texto; campos de vista de `ConciliacionDisplay` (§6). |
-| `services/albaranes-front/infrastructure/database/review_repository.py` | `update_line_conciliacion` (R6–R14); construcción de `ConciliacionDisplay` (~1618, ~1655) con `cuadra` y «a Sigrid»; `_exigir_lineas_completas` (R21) y `_SQL_FILAS_PARA_APROBAR` (:306) con P y d. |
-| `services/albaranes-front/application/services/review_service.py` | pasa `recalcular` (y lo guarda en la entrada de deshacer, que ya restaura la fila entera). |
-| `services/albaranes-front/interface_adapters/web/app.py` | `update_line_conciliacion_api` pasa `payload.recalcular`; 422 de R5/R9/R13. |
-| `services/albaranes-front/templates/document_detail.html` | atributos `data-importe-manda`, `data-factor-alta`, `data-cuadra`; aviso R16; rojo y botones R18; «A Sigrid» R19; filtro de precio R20. |
-| `services/albaranes-front/static/app.js` | `precioDespejado`, `precioASigrid`; `syncImporteUnitario` (R15–R16); `_camposCambiados` sin el P repintado y con `recalcular` (R17); botones de R18. |
-| `services/albaranes-front/domain/models/alta_sigrid_models.py` | `TEXTOS_MOTIVO_ALTA["linea_no_cuadra"]` (R25). |
-| `services/albaranes-alta-sigrid/domain/models/alta_models.py` | `LineaAlta.precio_unitario_final`, `.descuento_albaran_aplicado` (R22). |
-| `services/albaranes-alta-sigrid/infrastructure/database/sql_alta_repository.py` | SELECT con `lv.precio_unitario_final, lv.descuento_albaran_aplicado` (:95) y mapeo (:244). |
-| `services/albaranes-alta-sigrid/domain/services/validador_alta.py` | motivo `linea_no_cuadra` en `_motivos_lineas` (R23); `_linea_peticion` usa `linea_a_sigrid` (R24); docstring. |
-| `docs/ARCHITECTURE.md` | reglas 13 y 20 (R29). |
+| `services/albaranes-front/domain/models/review_models.py` | `ConciliacionEditBody.importe`, `.cuadrar`; `recalculo_de_fila` (§7); `LineasIncompletasError(no_cuadran=)`; campos de vista de `ConciliacionDisplay`. |
+| `services/albaranes-front/infrastructure/database/review_repository.py` | `update_line_conciliacion` (R6–R14); construcción de `ConciliacionDisplay` (~1618, ~1655, ~4844) con `cuadra`, «a Sigrid» y aviso R20; `_exigir_lineas_completas` (:4301) y `_SQL_FILAS_PARA_APROBAR` (:306) con P y d (R24); `contar_filas_manuales` (R16). |
+| `services/albaranes-front/application/services/review_service.py` | `_relanzar_busqueda_si_cambia` (:296) no relanza con filas tocadas (R16); pasa `cuadrar`. |
+| `services/albaranes-front/application/services/busqueda_contratos.py` | texto del aviso de R16 (junto a `aviso_de_guardado`). |
+| `services/albaranes-front/interface_adapters/web/app.py` | `update_line_conciliacion_api` pasa `cuadrar`; 422 de R5, R8, R9; `busqueda_relanzada` falso con `no_relanzada` (:1271). |
+| `services/albaranes-front/templates/document_detail.html` | `data-importe-albaran`, `data-factor-alta`, `data-cuadra`; aviso R20; rojo y botones R21; «A Sigrid» R22; filtro de precio R23. |
+| `services/albaranes-front/static/app.js` | `precioDespejado` (6 dec), `precioASigrid`; `syncImporteUnitario` (R18, R20); `_camposCambiados` con `importe` según la última celda (R19); botones R21. |
+| `services/albaranes-front/domain/models/alta_sigrid_models.py` | `TEXTOS_MOTIVO_ALTA["linea_no_cuadra"]` (R28). |
+| `services/albaranes-alta-sigrid/domain/models/alta_models.py` | `LineaAlta.precio_unitario_final`, `.descuento_albaran_aplicado` (R25). |
+| `services/albaranes-alta-sigrid/infrastructure/database/sql_alta_repository.py` | `SQL_LINEAS` (:95) con `lv.precio_unitario_final, lv.descuento_albaran_aplicado`; mapeo (`_linea_de_fila`, :244). |
+| `services/albaranes-alta-sigrid/domain/services/validador_alta.py` | `linea_no_cuadra` en `_motivos_lineas` (:233, R26); `_linea_peticion` (:288) usa `linea_a_sigrid` (R27). |
+| `docs/ARCHITECTURE.md` | reglas 13, 20 y 25 (R32). |
 
-**Ficheros a crear**: `services/albaranes-alta-sigrid/scripts/listar_altas_descuadradas_f106.py` (R26) y los tests:
-`services/albaranes-comun/tests/test_f106_cuadre.py`, `services/albaranes-front/tests/test_f106_fila.py` (SQLite de
-`f065_bbdd.py`), `test_f106_ficha.py` (plantilla), `test_f106_js.py` (`dom_falso.js`), `test_f106_aprobar.py`,
-`services/albaranes-alta-sigrid/tests/test_f106_validador.py`, `test_f106_script.py`.
+**A crear**: `services/albaranes-alta-sigrid/scripts/listar_altas_descuadradas_f106.py` (R29) y los tests
+`services/albaranes-comun/tests/test_f106_cuadre.py`; en sv4 `tests/test_f106_fila.py` (SQLite de `f065_bbdd.py`),
+`test_f106_guardar.py`, `test_f106_ficha.py`, `test_f106_js.py` (`dom_falso.js`), `test_f106_aprobar.py`; en sv9
+`tests/test_f106_validador.py`, `test_f106_script.py`.
 
-## 5. Ficheros que NO se tocan
+## 6. Ficheros que NO se tocan
 
-- **sv6** entero (`importe_calculator.py`, `price_reconciler.py`, `valoracion_directa.py`, `linea_valorada`): sigue
-  dejando filas que no cuadran cuando el papel no cuadra; las caza R18/R21/R23. Hacer que sv6 escriba filas que
-  cuadran es otra ficha, después de F-100 (§9 R-4).
-- `set_line_conciliacion` («Origen ✎»), `dividir`, «Traer líneas contrato»: ya calculan I con P (cuadran por
-  construcción). `ruesma_comun.linea_valorada.fila_a_guardar` (regla 22): no cambia.
-- El PUT del documento (F-065 R1), sv5, sv3, sigrid-api, `albaran_altas_sigrid` (DDL de sv3), `cantidades_tras_editar`.
-- El comparador de la previa de sv9 (compara importes, que no cambian).
+- **sv6** entero (`importe_calculator.py`, `price_reconciler.py`, `valoracion_directa.py`): sigue dejando filas que
+  no cuadran (§2); las cazan R21, R24 y R26. Que sv6 escriba filas que cuadran es otra ficha, tras F-100 (§10 R-4).
+- **sv3** (búsqueda y disparo de la valoración, `persist_albaran_pipeline.py:425-478, 603`): D8 se resuelve en sv4.
+- Las blancas y la cabecera del merge (R14): ninguna vía de sv4 las escribe hoy (F-065 R1); se fija por test.
+- `set_line_conciliacion` («Origen ✎»), `dividir`, «Traer líneas contrato», `+ a Sigrid`: calculan I con P
+  (`review_repository.py:1938, 2018, 2737, 3205`), cuadran por construcción. `fila_a_guardar` (regla 22),
+  `cantidades_tras_editar`, el PUT del documento, sv5, sigrid-api, `albaran_altas_sigrid` y la previa de sv9.
 
-## 6. Clases y funciones
+## 7. Clases y funciones
 
-**comun · `importes`** (dominio puro):
-- `TOLERANCIA_CUADRE_EUR: float = 0.02`.
-- `cuadra_linea(cantidad: object, precio: object, descuento: object, importe: object, tolerancia: float =
-  TOLERANCIA_CUADRE_EUR) -> bool | None`: `None` si `importe_de_linea` da `None` o el importe no es finito; si no,
-  `round(abs(calc − I), 2) <= tolerancia`.
+**comun · `importes`** (dominio puro): `TOLERANCIA_CUADRE_EUR: float = 0.02`; `cuadra_linea(cantidad, precio,
+descuento, importe, tolerancia=TOLERANCIA_CUADRE_EUR) -> bool | None`: `None` si `importe_de_linea` da `None` o el
+importe no es finito; si no, `round(abs(calc − I), 2) <= tolerancia`.
 
-**comun · `alta_sigrid`**:
-- `linea_a_sigrid(*, vinculada: bool, cantidad_albaran: float | None, cantidad_convertida: float | None, importe:
-  float | None) -> tuple[float, float] | None`: el cuerpo actual de `_linea_peticion` (:290-294), sin cambiar nada.
-  **Punto de enganche de F-095** (§10).
+**comun · `alta_sigrid`**: `linea_a_sigrid(*, vinculada, cantidad_albaran, cantidad_convertida, importe) ->
+tuple[float, float] | None`: el cuerpo actual de `_linea_peticion` (`:290-294`), sin cambiar nada. Punto de enganche
+de F-095 (§11).
 
 **sv4 · `review_models`** (dominio):
-- `ConciliacionEditBody.recalcular: Literal["precio", "importe"] | None = None`; **no** entra en `campos()`.
-- `decidir_recalculo(*, cambios: set[str], importe_del_albaran: bool, recalcular: str | None) -> Literal["precio",
-  "importe"] | None`: `None` si no cambian Q ni d ni P (y no hay `recalcular`); `"importe"` si cambia P (y error si
-  además `recalcular == "precio"`, R9); si no, `recalcular` o, por defecto, `"precio"` con importe del albarán e
-  `"importe"` sin él (D1). Pura y probada con tabla (R6–R9).
-- `ConciliacionDisplay`: `importe_manda: bool`, `cuadra: bool | None`, `cuadre_texto: str | None` («48 × 11,20 × (1
-  − 7 %) = 499,97 ≠ 104,16»), `a_sigrid_cantidad`, `a_sigrid_precio: float | None`, `factor_alta: float | None`
-  (cantidad a Sigrid / Q). Los rellena el repositorio con comun (vinculada con `es_linea_vinculada`, mismas
-  columnas que `_SQL_FILAS_PARA_APROBAR`).
-- `LineasIncompletasError(..., no_cuadran: list[int] | None = None)` y su `aviso` (R21).
+- `ConciliacionEditBody.importe: float | None` (mismo validador numérico que `cantidad`) y `.cuadrar:
+  Literal["importe", "precio"] | None`; `importe` entra en `campos()`, `cuadrar` no.
+- `recalculo_de_fila(*, cambios: set[str], cuadrar: str | None, no_cuadra: bool) -> Literal["importe", "precio"] |
+  None`: `"precio"` si `importe` ∈ cambios (error si también `precio_unitario`, R8); `"importe"` si cambia Q, P o d;
+  sin cambios, `cuadrar` solo si `no_cuadra` (R12); si no, `None`. Pura, probada con tabla (§4).
+- `ConciliacionDisplay`: `cuadra: bool | None`, `cuadre_texto`, `importe_albaran: float | None`, `aviso_importe:
+  str | None` (R20), `a_sigrid_cantidad`, `a_sigrid_precio`, `factor_alta` (cantidad a Sigrid / Q). Los rellena el
+  repositorio con comun (vinculada con `es_linea_vinculada`, mismas columnas que `_SQL_FILAS_PARA_APROBAR`).
+- `LineasIncompletasError(..., no_cuadran: list[int] | None = None)` y su `aviso` (R24).
 
-**sv4 · `update_line_conciliacion`** (infraestructura), tras calcular `cambios` (:2150) y las cantidades:
-1. `modo = decidir_recalculo(...)` con `importe_del_albaran = row["importe_source"] == "declared_albaran"` (añadir
-   `importe_source` e `importe_calculado` al SELECT). Sin `cambios` y con `recalcular`: si `cuadra_linea` de la fila
-   es `False`, se aplica `modo = recalcular` (R12); si no, la rama `if not cambios` de siempre (:2176).
-2. `modo == "precio"`: `pu = unitario_despejado(I, cc, d)`; si es `None`, R13 (cae a `"importe"` o 422). Se escribe
-   `precio_unitario_final = pu`, d (si cambió), `precio_unitario_agreement = 'manual'`, `precio_unitario_source =
-   'manual_despejado'`; **no** se escriben `importe_calculado` ni `importe_source`. `pu` va a la derivada de una
-   Nueva (rama :2295) pero **no** a `cambia_origen` (se le pasan los `cambios` del revisor, R10).
-3. `modo == "importe"`: el bloque actual de :2239 (R8).
-4. `_recalcular_total_in_session` también en el modo `"precio"` (el total no cambia, pero se deja dicho).
+**sv4 · `update_line_conciliacion`**: el SELECT (`:2085`) añade `importe_calculado`; `actual["importe"] = I`
+(`importe` se compara con `_mismo_numero`, como Q y P). Con `modo = recalculo_de_fila(...)`:
+1. `"importe"`: el bloque de `:2238-2251` tal cual (R6).
+2. `"precio"`: `pu = unitario_despejado(I_nuevo, cc, d)`; `None` ⇒ R9 (I = 0 ⇒ se escribe I = 0 y P se conserva; si
+   no, `ValueError` → 422). Se escriben `precio_unitario_final = pu`, `importe_calculado = round(I_nuevo, 2)`,
+   `importe_source = 'calculated'`, d. A `cambia_origen` se le pasa `cambios ∪ {"precio_unitario"}` (R10).
+3. Sin cambios y `cuadrar` sobre fila que cuadra: la rama `if not cambios` de siempre (`:2176`).
+4. `_recalcular_total_in_session` en los modos `"importe"` y `"precio"`.
 
-**sv9 · `validador_alta`**: en `_motivos_lineas`, con Q = `cantidad_convertida ?? cantidad_albaran` (la de la fila,
-la de la ficha), `cuadra_linea(Q, P, d, I) is False` ⇒ `Motivo("linea_no_cuadra", texto, ref)` (R10 de F-053 ⇒
-`no_admitido`). `_linea_peticion` llama a `linea_a_sigrid`.
+**sv4 · `_relanzar_busqueda_si_cambia`** (`review_service.py:296`): nueva condición de salida
+`self._repository.contar_filas_manuales(document_id) > 0` (reusa `es_fila_manual`, como `review_repository.py:3707`),
+y en ese caso devuelve un `ContratoRefetchOutcome(status="no_relanzada", message=R16)` sin llamar al cliente;
+`aviso_de_guardado` lo enseña. El autoguardado al elegir obra o proveedor (`app.js:2137`) pasa por el mismo PUT.
 
-**Script R26** (sv9, `scripts/`): `main(argv)` con `--salida ruta.csv`; lee `albaran_altas_sigrid` (`estado =
+**sv9 · `validador_alta`**: en `_motivos_lineas`, con Q = `cantidad_convertida ?? cantidad_albaran`, `cuadra_linea(Q,
+P, d, I) is False` ⇒ `Motivo("linea_no_cuadra", texto, ref)` (F-053 R10 ⇒ `no_admitido`).
+
+**Script R29** (sv9, `scripts/`): `main(argv)` con `--salida ruta.csv`; lee `albaran_altas_sigrid` (`estado =
 'registrado'`, `modo = 'real'`, `peticion_json`) y las filas por `referencia_linea = str(lv.id)`; solo `SELECT`;
-conexión por `PG_*` (memoria del arnés: el `.env` de los servicios apunta a local). Lógica de comparación en una
-función pura probada sin BBDD.
+conexión por `PG_*` (el `.env` de los servicios apunta a local). Comparación en una función pura probada sin BBDD.
 
-## 7. SQL
+## 8. SQL
 
-Sin DDL. Solo lecturas nuevas: columnas añadidas a los SELECT de sv9 (`sql_alta_repository.py:95`), del PATCH de
-sv4 (`review_repository.py:2096`) y de `_SQL_FILAS_PARA_APROBAR`; el script de R26 (solo `SELECT`). Escrituras: las
-mismas columnas que hoy de `albaran_line_valuations` y `contrato_lines_derived`. `precio_unitario_source` es texto
-libre (sv4 ya escribe `manual_contract`/`manual_derived`; `confianza._es_manual` lee `startswith("manual")`).
+Sin DDL. Lecturas nuevas: columnas en `SQL_LINEAS` de sv9, en el SELECT del PATCH y en `_SQL_FILAS_PARA_APROBAR`;
+recuento de filas tocadas (R16); el script R29. Escrituras: las mismas columnas de hoy de `albaran_line_valuations`
+y `contrato_lines_derived`; ninguna en `albaran_lines_merge` ni `albaran_documents_merge` (R14).
 
-## 8. Decisiones para la PARADA 1 (recomendada primero)
+## 9. Decisiones (PARADA 1 del 2026-10-26)
 
-- **D0 · Origen del 48 (verificación, no opción).** T0 MANUAL lo confirma en solo lectura (tasks). Si el 48 vino
-  de la blanca (IA), el aviso de R18 es lo que habría avisado al revisor; si vino de otra vía, se repropone.
-- **D1 · Al cambiar Q, qué se conserva.** (a) **El importe del albarán si la fila lo tiene** (`declared_albaran`):
-  P se despeja y d se mantiene; si la fila no tiene importe del albarán (precio de contrato, `calculated`), se
-  conserva P y se recalcula I. Es la regla 25 («el importe del albarán manda»), lo que pide el título de la ficha y
-  lo que sv9 ya hacía (Sigrid no cambia de cifra; solo se ve antes). (b) Siempre P (hoy): el importe deja de ser el
-  del albarán y sv9 manda 499,97 por un albarán de 104,16. (c) Siempre I: una fila con precio de contrato cambiaría
-  de precio al corregir una cantidad mal leída.
-- **D2 · Preguntar o avisar.** (a) **Avisar en la fila, sin modal**: P repintado, el aviso con «Mantener el precio»
-  de un clic (R16) y, al aprobar, **bloqueo** de las filas que no cuadran con «Ajustar precio / Ajustar importe»
-  (R18, R21). (b) Modal en cada cambio de Q o d («¿mantener importe o precio?»): más seguro, más fricción. (c) Solo
-  confirmación al aprobar, sin bloqueo: deja pasar el caso CECOIS con un clic.
-- **D3 · Qué se persiste y dónde.** (a) **En la fila** (`albaran_line_valuations`, regla 22): P despejado, I y su
-  origen intactos, d, marca manual (R11); la derivada de una Nueva recibe P; **sin revalorar en sv6** y sin DDL.
-  (b) Revalorar con sv6: descarta lo manual (F-058 pendiente) y sv6 está bajo F-100. (c) Columna nueva con el precio
-  a Sigrid (DDL de sv6): duplica lo que R3 calcula.
-- **D4 · Al cambiar P o d.** (a) **P tecleado ⇒ recalcula I** (lo pone una persona; hoy, con F-065 R25) **y d ⇒
-  como Q** (conserva el importe del albarán y despeja P), con el mismo «Mantener el precio». (b) d ⇒ recalcula I
-  (como hoy). Editar I sigue reajustando P (hoy).
-- **D5 · Redondeo.** (a) **P despejado a 6 decimales** (`unitario_despejado`, igual que sv9), I a 2, **tolerancia
-  0,02 € por línea** (la del pie y la de F-100), P pintado hasta 6 decimales (R20). (b) 0,01 €
-  (`UMBRAL_DIFERENCIA_EUR`): bloquearía filas con el unitario impreso redondeado. (c) Relativa (p. ej. 0,1 %). T0
-  mide cuántas filas pendientes caen fuera con cada una antes de fijarla.
-- **D6 · Altas ya grabadas.** (a) **Solo listarlas** (R26, CSV, lo lanza el humano) y el humano decide si las
-  corrige a mano en Sigrid; las que solo llevan descuento bien cuadrado son de F-095, no de esta. (b) Además,
-  proponer la corrección línea a línea. (c) Nada.
-- **D7 · Red en sv9.** (a) **`linea_no_cuadra` ⇒ `no_admitido`** (R23): un aprobado anterior al despliegue o un
-  «Solicitar alta» no manda un precio que nadie vio. (b) ⇒ `revisar` (grupo R39). (c) No tocar sv9 salvo R24.
+- **D0 · Origen del 48**: cerrado por el humano («lo cambió Óscar»); el porqué del precio, §3.
+- **D1 · Regla de recálculo** (nueva, sustituye a D1 y D4): «si cambio % (dto), unitario o cantidad, lo que debe
+  moverse es el importe. Si cambio el importe, lo que debe moverse es el unitario». §4.
+- **D2 · Aviso** (rehecha): sin «Mantener el precio». Aviso informativo «≠ albarán» cuando I ya no es el importe de
+  la blanca (R20); bloqueo al aprobar solo para filas que no cuadran (R24), con «Recalcular importe / precio» (R21).
+- **D3 · Dónde se persiste** (corregida): «cambia en la BBDD de las tablas; las originales (grises) del albarán son
+  las que no pueden tocarse». Columnas editables de la fila y su derivada; blancas y cabecera intactas (R14).
+- **D5 · Redondeo** = (a): P despejado a 6 decimales, I a 2, **tolerancia 0,02 € por línea**. Motivo: el importe
+  impreso es `Q × P × (1 − d)` redondeado a céntimos (±0,005) y a menudo con el descuento redondeado aparte (otro
+  ±0,005); el precio impreso redondeado a k decimales añade ≤ `Q × (1 − d) × ½ × 10⁻ᵏ` (con 3–4 decimales, despreciable
+  para cantidades de obra). No es la de F-100 (0,01 €, casar un precio con el del contrato: otra magnitud). Las filas
+  cuyo precio impreso está más redondeado no cuadrarán: las cuenta T0 (§10 R-2).
+- **D6 · Altas ya grabadas** = (a): solo listarlas (R29, CSV, lo lanza el humano).
+- **D7 · Red en sv9** = (a): `linea_no_cuadra` ⇒ `no_admitido` (R26).
+- **D8 · Que una revaloración no pise lo editado (NUEVA, a validar).** Vías que reemplazan filas: las explícitas
+  («Valorar ahora» `app.js:2606`, cambiar contrato `:2870`, «Volver a buscar» `:3002, :3034`), todas con la
+  confirmación de F-065 R22; y **una automática sin confirmación**: «Guardar» y el autoguardado de cabecera relanzan
+  la búsqueda si CIF u obra cambiaron o no hay rastro (`app.js:2313`, `review_service.py:296-310`,
+  `busqueda_contratos.py:77-91`) y sv3 revalora con `force` (`persist_albaran_pipeline.py:425-478`), justo después
+  de que «Guardar» haya guardado las filas pendientes (`app.js:2405-2439`). (a) **Recomendada, solo sv4**: el PATCH
+  no publica (R15, test), «Guardar» no relanza con filas tocadas y lo dice (R16), las explícitas siguen con su
+  confirmación (R17). (b) Además, bloquear las revaloraciones explícitas mientras haya filas tocadas: nunca se pisa,
+  más fricción. (c) Que sv6 conserve las filas bloqueadas al reemplazar: adelanta F-058, toca sv6 (bajo F-100) y
+  sv3; después de F-100. **sv6 no se toca con (a) ni (b).**
 
-## 9. Riesgos
+## 10. Riesgos
 
-- **R-1 · METALFIRE (F-065).** Repartir unidades bajando Q en filas con importe del albarán subiría P con D1 (a):
-  el aviso R16 lo enseña y «Mantener el precio» lo deshace; la vía buena para repartir es «Dividir», que prorratea.
-- **R-2 · Bloqueo masivo.** Si muchas filas pendientes no cuadran (papel incoherente, ruido de redondeo), R21
-  frena aprobaciones. T0 lo mide; con muchas, se baja D2 a (c) para esas o se sube la tolerancia (D5).
-- **R-3 · Precisión de Sigrid.** sv9 manda 6 decimales; si Sigrid redondea el precio, `Q × precio` puede no dar I.
-  Es lo de hoy (la previa compara importes) y lo cierra F-095.
-- **R-4 · sv6 sigue escribiendo filas que no cuadran** al valorar. Se cazan en la ficha y en sv9; corregirlo en
-  sv6 (despejar P cuando unitario e importe leídos discrepan) es otra ficha, tras F-100.
-- **R-5 · Tests viejos** que fijan «cambiar Q recalcula el importe declarado» (F-019 R24, F-065 R11): se mantienen
-  con `recalcular = importe` (R27); es un cambio de comportamiento por defecto que el humano aprueba en D1.
-- **R-6 · comun 0.10.0** obliga a reconstruir sv4 y sv9 (despliegue: comun ⇒ sv9 → sv4, lo lanza el humano).
+- **R-1 · METALFIRE (F-065).** Con D1, bajar Q para repartir mueve el importe con el precio del contrato, que es lo
+  de hoy (`review_repository.py:2238-2251`) y lo que pedía METALFIRE; «Dividir» prorratea (`:3205`) y su aviso de
+  reparto (F-065 R35) sigue. El riesgo de v1 (subir P al bajar Q) desaparece.
+- **R-2 · Bloqueo masivo.** sv6 guarda el importe declarado sin motivo con hasta un 5 % de diferencia
+  (`config/settings.py:51-56`, `importe_calculator.py:148-155`): esas filas no cuadran a 0,02 € y R24 frenaría su
+  aprobación aunque nadie las edite. T0 lo mide; con muchas, se para y se repropone (tolerancia o alcance de R24).
+- **R-3 · Precisión de Sigrid.** sv9 manda 6 decimales; si Sigrid redondea, `Q × precio` puede no dar I. Lo de hoy;
+  lo cierra F-095.
+- **R-4 · sv6 sigue escribiendo filas que no cuadran** (§2). Se cazan en ficha, aprobar y sv9; corregirlo en sv6
+  es otra ficha, tras F-100.
+- **R-5 · F-019 R24 / F-065 R11.** Con D1 cambiar Q o d en una fila `declared_albaran` recalcula el importe, que es
+  lo que ya fijan sus tests (`review_repository.py:2238-2251`): no se tocan. Choca con la regla 25 («el importe del
+  albarán manda», `importe_calculator.py:157-175`) solo en lo editado a mano: es la decisión del humano y lo enseña
+  R20. Sí cambia F-065 R9 (el importe no viajaba, `app.js:1178-1183`): un test declarado (R30).
+- **R-6 · Despeje con cantidades grandes.** P a 6 decimales da un error ≤ `Q × (1 − d) × 5 × 10⁻⁷`: dentro de 0,02 €
+  hasta `Q × (1 − d) = 40 000`; por encima la fila editada puede salir «no cuadra» y bloquear. Se prueba el borde.
+- **R-7 · Contrato → Nueva al editar el importe** (R10, F-065 R25): la fila se da de alta sin vincular (producto
+  genérico). Es lo de hoy; el revisor lo ve en el badge.
+- **R-8 · Conversión no reproducible (F-036 R8, residuos).** `cuadra_linea` usa Q = la convertida; con contenedores
+  (`review_models.py:630-660`, caso c) Q × P debe dar I. Test con la fixture de F-036; si no cuadra, se para.
+- **R-9 · comun 0.10.0** obliga a reconstruir sv4 y sv9 (despliegue: comun ⇒ sv9 → sv4, lo lanza el humano).
 
-## 10. Encaje con F-095 (sin hacerla)
+## 11. Encaje con F-095 (sin hacerla)
 
-F-095 mandará P bruto y d en vez del neto. Con F-106 cada fila a registrar cuadra (R21, R23), así que Sigrid
-recalculará `Q × P × (1 − d) ≈ I` dentro de 0,02 €. F-095 solo tendrá que cambiar `linea_a_sigrid` (comun) para que
-devuelva P y d (con P pasado a la unidad de la cantidad enviada cuando la sin vincular lleva conversión, `factor_alta`)
-y el «A Sigrid» de la ficha (R19) lo enseñará sin tocar la plantilla. F-106 no añade campos a la petición.
+F-095 mandará P bruto y d en vez del neto. Con F-106 cada fila a registrar cuadra (R24, R26), así que Sigrid
+recalculará `Q × P × (1 − d) ≈ I` dentro de 0,02 €. F-095 solo cambiará `linea_a_sigrid` (comun) y el «A Sigrid» de
+la ficha (R22) lo enseñará sin tocar la plantilla. F-106 no añade campos a la petición.
