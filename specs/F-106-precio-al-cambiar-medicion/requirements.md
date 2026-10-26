@@ -138,7 +138,8 @@ declarada: `test_f065_f1_js.py` («`importe_solo_ajusta_el_precio` = {}», F-065
 R31. Caso CECOIS por fixture (sin red ni BBDD real): (a) fila 10 × 11,20 −7 % = 104,16 Contrato; PATCH `cantidad =
 48` ⇒ I 499,97, P 11,20, sigue Contrato, aviso «≠ albarán: 104,16», sv9 manda 48 × 10,416; luego PATCH `importe =
 104,16` ⇒ P 2,333333, Nueva, sin aviso, sv9 manda 48 × 2,17; la blanca, intacta. (b) fila ya incoherente (48, 11,20,
-7, 104,16) ⇒ rojo, aprobar rechazado, sv9 `no_admitido` `linea_no_cuadra`; «Recalcular precio» ⇒ P 2,333333.
+7, 104,16, `declared_albaran`, la de producción, design §3) ⇒ rojo, aprobar rechazado, sv9 `no_admitido`
+`linea_no_cuadra`; un PATCH de partida o «Origen ✎ → Nueva» la deja sin cuadrar; «Recalcular precio» ⇒ P 2,333333.
 
 R32. `docs/ARCHITECTURE.md` reglas 13, 20 y 25 deben recoger R6–R16, R22, R24 y R26; `azure-apps/albaranes.md` se
 actualiza solo si describe el cuerpo del PATCH de fila o los motivos de sv9 (comprobarlo y anotarlo).

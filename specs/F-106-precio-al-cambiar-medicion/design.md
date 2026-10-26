@@ -37,21 +37,28 @@ dentro de sv6 al revalorar es F-058 (sv3 + sv6), no esta ficha.
 desde la blanca, así que Q volvería a la cantidad leída, no se quedaría en 48 (`orm_valuation_models.py:306-308`); y
 las valoraciones sin `force` son idempotentes (`valuation_worker.py:11-12`).
 
-Sigrid grabó 48 × 2,17: en el alta la fila tenía Q 48 e I 104,16, y sv9 despejó el precio (`validador_alta.py:294`).
-Con el código de hoy solo dos caminos dejan esa fila:
+**Lectura de producción (líder, solo lectura, 2026-10-26)**: las filas de los dos documentos de AC26/30435 (5024111a
+y 6e9b8fc1) tienen `cantidad_albaran` 48, P 11,2 `manual_derived`, I 104,16 `declared_albaran` (= el importe leído).
+sv9 despejó 104,16 / 48 = 2,17 (`validador_alta.py:294`). Es un tercer camino, **C**: Q 48 con el precio y el importe
+del papel, una fila que no cuadra (48 × 11,20 × 0,93 = 499,97) que la ficha enseñó y sv9 dio de alta sin avisar.
 
-- **A (la ficha)**: Óscar teclea 48 (la ficha repinta I = 499,97) y después vuelve a teclear el importe 104,16
-  (el del papel); la ficha despeja P = 104,16 / (48 × 0,93) = 2,3333 (`app.js:1367`) y el PATCH manda Q y ese P
-  (`review_repository.py:2239`: I = 104,16; la fila pasa a Nueva por F-065 R25). Ese es el «cambió el unitario y no
-  el importe»: lo que la ficha hace hoy al teclear el importe.
-- **B (la blanca)**: sv6 valoró una blanca con cantidad 48: P 11,20 e I 104,16 `declared_albaran` con
-  `declared_vs_calculated_mismatch` (`importe_calculator.py:157-175`). sv4 no puede escribir la blanca (F-065 R1),
-  así que el 48 sería de la IA, no de Óscar.
+**Dónde se pierde el importe: no en el PATCH de cantidad con el código desplegado.** Al cambiar Q, el PATCH escribe
+`importe_calculado` y `importe_source = 'calculated'` siempre (`review_repository.py:2238-2251`; igual desde F-065,
+5c61741, y en sv4 `r20261019-0955`); `declared_albaran` solo lo escribe sv6 (`importe_calculator.py:121-175`,
+`valoracion_directa.py:150`). Una fila `manual_derived` + `declared_albaran` es lo que deja una edición de sv4 que
+**no** cambia Q, P ni d: «Origen ✎ → Nueva» con el mismo precio (`review_repository.py:2017-2023`) o un PATCH de
+partida, unidad o descripción (`:2289-2321`). Luego el 48 ya estaba en la fila al hacer esa edición, y la escribió
+sv6 (dos documentos con la misma fila apuntan a dos valoraciones de una blanca con 48). Se confirma en solo lectura
+con `albaran_lines_merge.cantidad` de la línea y el `undo_log` de los dos documentos (`payload` = la fila antes de
+cada edición, `review_repository.py:3341-3383`). **No cambia la spec**: venga de donde venga el 48, C es «fila que no
+cuadra», y la cubren:
 
-El diseño no depende de cuál fue: A queda cubierto por R7 y R18–R22 (P a 6 decimales, «≠ albarán», «A Sigrid»);
-B queda cubierto por R21, R24 y R26. Distinguirlos solo sirve para el registro: lo dice `precio_unitario_final` de
-la fila (≈ 2,3333 y `manual_derived` ⇒ A; 11,2 y `declared_albaran` ⇒ B). Pregunta para el humano en
-`progress/current.md`.
+- **R6 + T7 (C1)**: cambiar Q en una fila `declared_albaran` deja `I = Q × P × (1 − d)` y `importe_source =
+  'calculated'`; nunca el importe leído (test que reproduce C desde el PATCH).
+- **R12/R21 + T7 (C2)**: la fila C, tras «Origen ✎ → Nueva» o un PATCH de partida, sigue sin cuadrar: rojo y
+  «Recalcular importe / precio».
+- **R24 (aprobar)** y **R26 (sv9, D7)**: la fila C no se aprueba ni se da de alta; R22 enseña «A Sigrid: 48 × 2,17 €».
+- **R7, R19**: el importe viaja en el PATCH; lo que se ve al teclear es lo que se guarda.
 
 ## 4. La regla de recálculo (D1, sustituye a D1 y D4 de v1)
 
