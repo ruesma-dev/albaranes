@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **102 features**, 73 abiertas (0 en curso, 5 con la spec lista, 11 bloqueadas y 57 en backlog) y 29 terminadas.
+Resumen: **102 features**, 73 abiertas (0 en curso, 6 con la spec lista, 11 bloqueadas y 56 en backlog) y 29 terminadas.
 
 ## En curso
 
@@ -13,6 +13,7 @@ _Ninguna feature en curso._
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
+| F-106 | Al cambiar la medición de una línea en la ficha, el precio unitario se recalcula y se ve coherente con el importe (cantidad × precio × (1 − dto) = importe) antes de aprobar y de volcar a Sigrid | 1 | critico | `feature/F-106-precio-al-cambiar-medicion` |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 42 | critico |  |
 | F-003 | Tanda 2 — Albaranes valorados, match estricto y coherencia (G3+G4+G5) | 58 | estandar | `feature/F-003-valorados-match-estricto` |
 | F-004 | Tanda 3 — Hormigón fino y veto de mortero | 61 | estandar | `feature/F-004-hormigon-fino` |
@@ -39,7 +40,6 @@ _Ninguna feature en curso._
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
-| F-106 | Al cambiar la medición de una línea en la ficha, el precio unitario se recalcula y se ve coherente con el importe (cantidad × precio × (1 − dto) = importe) antes de aprobar y de volcar a Sigrid | 1 | critico |  |
 | F-095 | Alta en Sigrid con el precio BRUTO y el % de descuento en su columna, no con el precio neto | 7 | critico |  |
 | F-100 | IA3 solo valora e IA4 casa TODAS las líneas valoradas: candidatas del contrato con el mismo precio unitario (±0,02 €) y la misma partida, y entre ellas por significado de la descripción | 8 | critico |  |
 | F-090 | Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692) | 9 | critico |  |
@@ -135,7 +135,7 @@ _Ninguna feature en curso._
 
 ### F-106 · Al cambiar la medición de una línea en la ficha, el precio unitario se recalcula y se ve coherente con el importe (cantidad × precio × (1 − dto) = importe) antes de aprobar y de volcar a Sigrid
 
-estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
+estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-106-precio-al-cambiar-medicion`
 
 ORIGEN: correo de Óscar Domingo (obra 0692), reenviado por el humano el 2026-10-26: «Este albarán de Cecois ha volcado mal el precio, está ok en la IA y mal en el Sigrid; no, lo que ha hecho es que cuando he cambiado la medición al volcarlo lo ha cuadrado para que se cuadre con el importe del albarán». El humano: «esa ficha ponla con prioridad altísima». VERIFICADO (solo lectura, 2026-10-26) en AC26/30435 (CECOIS A 26017815, con_ide 2859417): la IA leyó 11,20 −7 % e importe 104,16 (≈ 10 unidades); el revisor cambió la cantidad a 48; la ficha siguió mostrando precio 11,20 y dto 7 % con 48 unidades e importe 104,16 (incoherente: 48 × 11,20 × 0,93 = 499,97); sv9 manda precio = |importe| / |cantidad| (`services/albaranes-alta-sigrid/domain/services/validador_alta.py:294`) = 2,17, y Sigrid grabó 48 × 2,17 = 104,16. El importe en Sigrid es correcto; el precio es el neto por la nueva unidad, pero el revisor no lo vio antes de aprobar y en la ficha queda otro. A DECIDIR EN LA SPEC: al cambiar la cantidad, qué se conserva (el importe del albarán, recalculando el precio y manteniendo el dto; o el precio, recalculando el importe), si se pregunta al revisor o se avisa; qué precio se muestra y cuál se persiste (sv4 escribe el merge; ¿revalorar con sv6?); el mismo caso al cambiar el precio o el dto; tolerancia de redondeo; que lo que ve el revisor sea exactamente lo que sv9 mandará (precio, y con F-095 bruto + dto). RELACIONADAS: F-095 (bruto + % de descuento a Sigrid), F-019 (el importe del albarán manda), F-065 (líneas editadas en la ficha), F-053 (alta).
 
