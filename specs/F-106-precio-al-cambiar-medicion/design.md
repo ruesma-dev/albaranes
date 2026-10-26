@@ -167,6 +167,7 @@ en `replace_valuation` (con `FOR UPDATE`; en SQLite se omite). Escrituras: las c
   línea: el importe impreso es `Q × P × (1 − d)` redondeado a céntimos (±0,005), a menudo con el descuento redondeado
   aparte (otro ±0,005), y el precio impreso a k decimales añade ≤ `Q × (1 − d) × ½ × 10⁻ᵏ`; no es la de F-100. D6 (a)
   solo listar. D7 (a) `linea_no_cuadra` ⇒ `no_admitido`.
+- **PARADA 1 cerrada por el humano el 2026-10-26 («todo a»): D9–D13 = (a).** F-058 queda absorbida (D11).
 - **D8 = (c) (humano)**: revalorar conserva lo editado a mano. Sustituye a la (a) de v2 («Guardar no relanza»), que
   se retira: con D9 cualquier revaloración conserva, también la de «Guardar».
 - **D9 · Mecanismo.** (a) **Recomendada**: edición por fila en `edicion_manual_json` (sv6 DDL), escrita por sv4 y
