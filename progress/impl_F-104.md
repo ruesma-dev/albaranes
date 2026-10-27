@@ -130,8 +130,52 @@ tenía fila en `progress/inventario_mutacion_F-039.md`); añadida la fila (55 in
 - **M1** (líder, solo lectura, antes de desplegar): `ALTA_SIGRID_AVISOS_BLOQUEANTES` de `ca-sv9-alta-sigrid` sin
   Avisos v8.3 (design §6). **M-D** (humano): `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4`, antes o a la vez que la
   F-015 de sigrid-api. **M2/M3** (líder, tras F-015): SQL de design §6 y panel de un alta con `retencion_del_contrato`.
-- **T8–T9** (tras M2 en verde): retirar `proveedor_sin_albaran_previo` de sv9 (el texto de sv4 se queda).
+- **T8**: hecha el 2026-10-27 (sección T8); su mutación y la **T9**, pendientes del líder.
 - Tras APPROVED de T1–T7, F-104 pasa a `blocked` («espera al despliegue de F-015 de sigrid-api»), D1.
+
+## T8 · retirada de `proveedor_sin_albaran_previo` (2026-10-27, R10, D1)
+
+Tras M2 en verde (líder) con la F-015 de sigrid-api desplegada (`60db955`). Antes, `git merge dev`: avance rápido
+(`dev` ya contenía la rama), sin conflictos.
+
+- `domain/services/clasificador.py`: fuera la línea del Código retirado y su comentario (−2 líneas). Si llegase, va
+  a `error` por H25. sv4 **sin cambios**: `TEXTOS_MOTIVO_ALTA` conserva su texto (altas antiguas).
+- `tests/test_f104_contrato_v83.py`: R2 pasa a R10 (`test_f104_r10_el_retirado_ya_no_esta_en_la_tabla`,
+  `…_se_clasifica_error[previa/grabación]`, `…_previa_rechazada_por_el_retirado_es_error[simulación/real]`);
+  `TABLA_CABECERA_V82` sin el retirado y el test de R3 renombrado a `…_v82_sin_el_retirado_mas_los_tres_errores`.
+- `tests/test_f053_clasificador.py`: `TABLA_CABECERA` sin el retirado (docstring y comentario).
+- `tests/test_f053_servicio_previa.py`: el caso parametrizado de R18 usa `proveedor_no_encontrado` → `no_admitido`.
+- `sv9.md` y §10 de `azure-apps/albaranes.md` dicen «retirado»; la viñeta de §10 ya no pone «sin desplegar»
+  (sv9 y sv4 desplegados el 2026-10-24). `azure-apps` `ac1f414`, local, sin push.
+
+**RED** (con la línea aún en `CODIGOS_CABECERA`), desde `services/albaranes-alta-sigrid`:
+`python -m pytest -q --tb=line -k "f104_r10 or f104_r3_la_tabla or f053_r18_la_tabla"` (PYTHONPATH = `ruesma_comun`)
+```
+tests	est_f053_clasificador.py:70: AssertionError: assert {'obra_no_enc...mitido'>, ...} == {'obra_no_enc...mitido'>, ...}
+tests	est_f104_contrato_v83.py:184: AssertionError: assert 'proveedor_sin_albaran_previo' not in mappingproxy({...})
+tests	est_f104_contrato_v83.py:190: AssertionError: assert <EstadoAlta.NO_ADMITIDO: 'no_admitido'> is <EstadoAlta.ERROR: 'error'>
+tests	est_f104_contrato_v83.py:198: AssertionError: assert <EstadoAlta.NO_ADMITIDO: 'no_admitido'> is <EstadoAlta.ERROR: 'error'>
+tests	est_f104_contrato_v83.py:206: AssertionError: assert {'obra_no_enc...mitido'>, ...} == {'obra_no_enc...mitido'>, ...}
+      Left contains 1 more item: {'proveedor_sin_albaran_previo': <EstadoAlta.NO_ADMITIDO: 'no_admitido'>}
+7 failed, 1020 deselected in 15.48s
+```
+La verificación de la T8 en RED: `-k "f104 or f053_clasificador or f053_r18"` → `7 failed, 145 passed`.
+
+**GREEN** (verificación de la T8, sin suite completa: F-100 tiene su campaña de mutación en marcha):
+
+- `pytest services/albaranes-alta-sigrid -k "f104 or f053_clasificador or f053_r18"` → **152 passed**, 875
+  deselected, 12,61 s.
+- `pytest services/albaranes-front -k "f104 or f077_r27"` → **28 passed**, 1905 deselected, 36,09 s (con el
+  `.venv` de sv4; R10 de sv4 y F-077 R27 en verde: un código de sv4 con texto y sin clasificador no rompe R27).
+
+El RED equivale al mutante «volver a poner la línea» (muerto por 7 tests). **Pendiente del líder** cuando la suite
+quede libre (no lanzados aquí, por orden expresa):
+
+- Mutación de `clasificador.py` (R10): `python -m harness.mutacion --feature F-104 --ficheros
+  services/albaranes-alta-sigrid/domain/services/clasificador.py --max-mutantes 0 --workers 1 --salida
+  progress/mutacion_F-104_T8.md` (con `--salida` para no pisar el informe de T6; el informe nuevo necesita su fila
+  en `progress/inventario_mutacion_F-039.md`, o `test_f039_r2_…` sale en rojo, como en T7).
+- **T9**: `bash harness/init.sh` en verde. `tasks.md` T8 queda `[ ]` hasta esa mutación.
 
 ## Fuera de alcance (R11, sin tocar)
 

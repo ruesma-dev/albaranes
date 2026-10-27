@@ -20,6 +20,7 @@
 
 - **Alcance de esta pasada: T1–T7.** M1, M-D, M2 y T8–T9 dependen del despliegue de la F-015 de sigrid-api: M1/M2 las hace el líder, el despliegue el humano. Tras APPROVED de T1–T7, F-104 queda `blocked` («espera al despliegue de F-015 de sigrid-api») hasta M2 en verde y T8.
 - **T1–T7 hechas (implementer, 2026-10-24)**, `init.sh` en verde; review APPROVED en la pasada 2 (`progress/review_F-104.md`). Informe `progress/impl_F-104.md`, mutación `progress/mutacion_F-104.md`, `azure-apps` `8f6f243` local sin push.
+- **T8 hecha (implementer, 2026-10-27)** en la rama, commit local: `proveedor_sin_albaran_previo` fuera de `CODIGOS_CABECERA` (va a `error`, H25), texto de sv4 intacto, `sv9.md` y `azure-apps` `ac1f414` (sin push). Verde con los pytest dirigidos de la T8 (sv9 152 passed, sv4 28 passed). **Pendientes del líder** con la suite libre: mutación de `clasificador.py` y T9 (`bash harness/init.sh`), comandos en `progress/impl_F-104.md` §T8.
 - **Para F-103, al retomarla**: su D6 / R11–R14 / T7 (Bloque C) quedan absorbidos por F-104 y hay que quitarlos de su spec.
 - **Despliegue**: sv9 y sv4, desde `infra/`: `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4`, antes o a la vez que la F-015 de sigrid-api; lo lanza el humano. M1 (antes) y M2/M3 (después de F-015) son de solo lectura, del líder.
 
