@@ -1289,6 +1289,19 @@
         "sv3-persistencia",
         "sv5-valoracion-api"
       ]
+    },
+    {
+      "id": "F-107",
+      "title": "sv1 lee el buzón cuando llega un correo (notificación de cambio de Graph) y no con una réplica siempre activa",
+      "description": "ORIGEN: el humano, 2026-10-26, vía la sesión de `facturas` (al aprobar el despliegue de su F-008 copiando nuestro sv1: «ya arreglaremos lo del hook»; pidió la misma feature en facturas —su F-077—, albaranes y partes); confirmado por el humano en esta sesión el 2026-10-26 («si»). HOY: sv1 es un daemon con una réplica siempre activa que sondea el buzón M365 por Graph cada 60 s. QUÉ SE PIDE: sustituir el sondeo por notificaciones de cambio de Microsoft Graph sobre el buzón: Graph avisa a un endpoint de sv1 al entrar un correo y el contenedor escala desde cero, en vez de pagar una réplica 24/7 (coste fijo estimado por facturas en 10-35 USD/mes por servicio, cifras de memoria sin confirmar: MEDIR en la spec). A RESOLVER EN LA SPEC: endpoint público nuevo (validationToken en el alta de la suscripción, clientState en cada aviso); renovación de la suscripción (la de correo caduca en ~3 días: quién y cómo renueva, p. ej. job programado); barrido de respaldo porque Graph no garantiza la entrega; arranque en frío frente al plazo de respuesta de Graph; idempotencia (no procesar dos veces el mismo correo); seguridad del endpoint; coste real antes y después. COORDINACIÓN: diseño común con facturas (F-077) y partes, documentado en azure-apps (no tres diseños distintos). Toca infra (ingress, escalado, permisos de Graph).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 75,
+      "servicios": [
+        "sv1-email",
+        "infra"
+      ]
     }
   ]
 }
