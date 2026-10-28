@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **107 features**, 77 abiertas (1 en curso, 5 con la spec lista, 10 bloqueadas y 61 en backlog) y 30 terminadas.
+Resumen: **107 features**, 76 abiertas (1 en curso, 5 con la spec lista, 9 bloqueadas y 61 en backlog) y 31 terminadas.
 
 ## En curso
 
@@ -26,7 +26,6 @@ Resumen: **107 features**, 77 abiertas (1 en curso, 5 con la spec lista, 10 bloq
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
 | F-104 | sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos | 3 | critico | `feature/F-104-codigos-contrato-v83` |
-| F-103 | Alta en Sigrid sin heredar la facturación del albarán plantilla: el AC nuevo no queda vinculado a una factura ajena ni con fechas de facturación, entrega o límite copiadas | 4 | critico |  |
 | F-098 | Selector de partidas como el de partes (preselección por capítulo de primer nivel CD/CI/CP/…) y partida con su código completo (CD.99.01.64) aunque en Sigrid la hoja sea «99.01.64» | 5 | critico | `feature/F-098-partidas-por-capitulo` |
 | F-086 | Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol | 6 | critico | `feature/F-086-opus-ia3` |
 | F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 13 | critico | `feature/F-083-comparar-modelos` |
@@ -134,6 +133,7 @@ Resumen: **107 features**, 77 abiertas (1 en curso, 5 con la spec lista, 10 bloq
 | F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | estandar |
 | F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
 | F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | critico |
+| F-103 | Alta en Sigrid sin heredar la facturación del albarán plantilla: el AC nuevo no queda vinculado a una factura ajena ni con fechas de facturación, entrega o límite copiadas | 4 | critico |
 | F-073 | Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate | 13 | critico |
 | F-075 | El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán | 13 | critico |
 
@@ -162,12 +162,6 @@ ORIGEN: el humano, 2026-10-28 («si a F-110»): en las líneas con descuento (al
 estado **bloqueada** · prioridad 3 · rigor `critico` · SDD sí · rama `feature/F-104-codigos-contrato-v83`
 
 ORIGEN: el humano, 2026-10-24 («sí a todo»), al recibir de la sesión de sigrid-api la petición de acuse del contrato v8.3 (rama feature/F-015-albaran-plantilla-y-retencion, commit 871cc0c; resumen en sigrid-api/progress/t0_F-015_albaranes.md). Sale de la D6 de F-103 (parada hasta que sigrid-api termine) para tenerlo listo ANTES de que sigrid-api despliegue su F-015: sin estos mapeos, un código de cabecera desconocido va a `error` (F-053 H25). ACUSE ENVIADO el 2026-10-24 con estos mapeos, decididos por el humano: (1) errores de cabecera `proveedor_no_encontrado`, `proveedor_ambiguo` y `retencion_no_soportada` ⇒ `no_admitido` (alta a mano) en `domain/services/clasificador.py` (CODIGOS_CABECERA) de sv9; (2) avisos `retencion_del_contrato` y `cabecera_sin_dato` informativos: NO entran en `ALTA_SIGRID_AVISOS_BLOQUEANTES` (defecto en config/settings.py ni en infra/), pero se ven en el panel; (3) textos legibles de los cinco en `TEXTOS_MOTIVO_ALTA` de sv4 (`domain/models/alta_sigrid_models.py`; el test de F-077 R27 lo exige); (4) `proveedor_sin_albaran_previo` (retirado en la v8.3) se mantiene hasta verificar el despliegue de sigrid-api y se quita después (tarea final o nota). FUERA: enseñar `totales.tot` (neto con retención) en el panel; la comparación de la previa sigue por línea (totales.tot, retenciones y filas.dcarec no se comparan). El usu del adjunto ya es el de la petición (F-069; confirmado a sigrid-api). DESPLIEGUE: sv9 y sv4 antes o a la vez que la F-015 de sigrid-api, que avisará antes de desplegar. Actualizar sv9.md y §10 de azure-apps/albaranes.md. RELACIONADAS: F-103 (D6), F-053 (H25), F-077 (R27), F-069.
-
-### F-103 · Alta en Sigrid sin heredar la facturación del albarán plantilla: el AC nuevo no queda vinculado a una factura ajena ni con fechas de facturación, entrega o límite copiadas
-
-estado **bloqueada** · prioridad 4 · rigor `critico` · SDD sí
-
-ORIGEN: el humano, 2026-10-23: «escribir bien los albaranes sin coger facturas de albaranes anteriores, gran parte es en Sigrid». MEDIDO (solo lectura, sql/read, 2026-10-23, 46 altas del pipeline): sigrid-api clona la cabecera del último albarán del proveedor y arrastra idefac, fecfac, horfac y antestfac (= 3), además de fecent, feclim y cocide. 12 altas quedan vinculadas a una factura ajena (11 de HORMIGONES DEL JARAMA a FR26/10960: AC26/30573, 30576, 30578, 30580, 30582, 30596, 30598, 30599, 30629, 30633, 30634; AC26/30543 a FR26/11027) y otras 5 llevan fecfac o antestfac copiados (AC26/29714, 30594, 30595, 30617, 30631); estfac sí queda a 0. sigrid-api lo confirmó: lo cubre su F-015 R3 y ninguna factura ha absorbido aún esas líneas; proponen arreglo urgente aparte y limpieza en dry-run, y que el humano decida sobre pausar. El humano decidió mantener el alta real (ALTA_SIGRID_COMMIT=true). EL ARREGLO DE FONDO ES DE SIGRID-API (otro proyecto): albaranes no edita sigrid-api, coordina con su sesión. ALCANCE DE ALBARANES: (1) coordinar con sigrid-api el arreglo y la limpieza de las 12 + 5 altas ya escritas (decisión del humano; albaranes no escribe en Sigrid salvo por el alta); (2) tras su despliegue, verificar en solo lectura que el alta de un proveedor cuyo último AC está facturado sale con idefac vacío, fecfac/horfac/antestfac a 0 y fecent/feclim/cocide como acuerden; (3) script de solo lectura que revise las altas recientes del pipeline y avise si reaparece; (4) si el contrato de sigrid-api admite fijar esos campos en la petición, valorar que sv9 los mande explícitos. RELACIONADAS: F-053 (alta Sigrid), F-069 (usu y empide de quien aprueba), F-095 (descuentos en el alta).
 
 ### F-098 · Selector de partidas como el de partes (preselección por capítulo de primer nivel CD/CI/CP/…) y partida con su código completo (CD.99.01.64) aunque en Sigrid la hoja sea «99.01.64»
 
@@ -1274,6 +1268,12 @@ ALCANCE POR SERVICIO: sv4 albaranes-front (D1: el recalculo y el guardian; y la 
 TESTS: hoy NO HAY NI UNO de la regla de contenedores, ni del contexto_linea_merger, ni del tipologia_resolver; del ModifierContractMatcher y del exact_concept en residuos, nada especifico. Con rigor critico, fase RED obligatoria y hay que crear esa base desde cero.
 
 RIESGO A VIGILAR: F-024 (unidad_medida no se extrae, NULL en las lineas base). Los 4 albaranes de este lote tienen unidad_medida NULL y unidad_categoria unknown; al arreglar F-024 los casos que hoy aciertan por la regla de contenedores pueden pasar a valorar x6. Cualquier diseno aqui debe seguir siendo correcto cuando la unidad SI se lea.
+
+### F-103 · Alta en Sigrid sin heredar la facturación del albarán plantilla: el AC nuevo no queda vinculado a una factura ajena ni con fechas de facturación, entrega o límite copiadas
+
+estado **terminada** · prioridad 4 · rigor `critico` · SDD sí
+
+ORIGEN: el humano, 2026-10-23: «escribir bien los albaranes sin coger facturas de albaranes anteriores, gran parte es en Sigrid». MEDIDO (solo lectura, sql/read, 2026-10-23, 46 altas del pipeline): sigrid-api clona la cabecera del último albarán del proveedor y arrastra idefac, fecfac, horfac y antestfac (= 3), además de fecent, feclim y cocide. 12 altas quedan vinculadas a una factura ajena (11 de HORMIGONES DEL JARAMA a FR26/10960: AC26/30573, 30576, 30578, 30580, 30582, 30596, 30598, 30599, 30629, 30633, 30634; AC26/30543 a FR26/11027) y otras 5 llevan fecfac o antestfac copiados (AC26/29714, 30594, 30595, 30617, 30631); estfac sí queda a 0. sigrid-api lo confirmó: lo cubre su F-015 R3 y ninguna factura ha absorbido aún esas líneas; proponen arreglo urgente aparte y limpieza en dry-run, y que el humano decida sobre pausar. El humano decidió mantener el alta real (ALTA_SIGRID_COMMIT=true). EL ARREGLO DE FONDO ES DE SIGRID-API (otro proyecto): albaranes no edita sigrid-api, coordina con su sesión. ALCANCE DE ALBARANES: (1) coordinar con sigrid-api el arreglo y la limpieza de las 12 + 5 altas ya escritas (decisión del humano; albaranes no escribe en Sigrid salvo por el alta); (2) tras su despliegue, verificar en solo lectura que el alta de un proveedor cuyo último AC está facturado sale con idefac vacío, fecfac/horfac/antestfac a 0 y fecent/feclim/cocide como acuerden; (3) script de solo lectura que revise las altas recientes del pipeline y avise si reaparece; (4) si el contrato de sigrid-api admite fijar esos campos en la petición, valorar que sv9 los mande explícitos. RELACIONADAS: F-053 (alta Sigrid), F-069 (usu y empide de quien aprueba), F-095 (descuentos en el alta).
 
 ### F-073 · Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate
 
