@@ -86,3 +86,31 @@ Cruce con la review 1: el reviewer reprodujo M02 (10 failed/135), M09 (4 failed/
 Además, las mutaciones inversas de la fase RED (`progress/impl_F-104.md`) cubren lo que F-104 no cambia pero
 protege: el defecto de `ALTA_SIGRID_AVISOS_BLOQUEANTES`, `.env.example`, el comparador frente a `totales.tot`,
 `desde_cuerpo` frente a `filas` y el `_ERROR` por defecto de H25. Todas muertas.
+
+## T8 · mutación repetida de `clasificador.py` (R10, 2026-10-28)
+
+Tras quitar `proveedor_sin_albaran_previo` de `CODIGOS_CABECERA` (`4a81091`). El diff de la T8 en ese fichero es
+**solo un borrado** (no deja líneas añadidas que mutar), así que la campaña muta el **fichero entero**, en serie:
+
+`python -m harness.mutacion --feature F-104 --ficheros services/albaranes-alta-sigrid/domain/services/clasificador.py
+--max-mutantes 0 --workers 1 --salida <scratchpad>/mutacion_F-104_T8.md` (PYTHONPATH = `ruesma_comun` del worktree;
+la salida fuera de `progress/` para no pisar este informe ni necesitar fila nueva en el inventario de F-039).
+
+| Métrica | Valor |
+|---|---|
+| Alcance | 141 líneas, 1 fichero (origen `ficheros`) |
+| SHA medido | `4a81091b737506710ca473919017c6e5514670e7` |
+| Línea base sv9 | 70,9 s, en verde; timeout por mutante 142 s |
+| Mutantes generados / evaluados | 13 / 13 |
+| Muertos / supervivientes / timeouts / sin veredicto | **13 / 0 / 0 / 0** |
+| Tiempo total | 218,7 s (media 16,8 s por mutante) |
+| Muestreo | no: campaña completa |
+
+Mutantes (todos muertos): `:92` `or`→`and`; `:93` `not` quitado; `:102` ×3 (`is not`→`is`, `or`→`and`, `not`
+quitado); `:104` `==`→`!=`; `:116` `==`→`!=`; `:129` ×3 (`is not None`→`is None`, `and`→`or`, `is not`→`is`);
+`:137` y `:138` `or`→`and`; `:139` `is None`→`is not None`.
+
+**Supervivientes: ninguno; nada que justificar.** Como en T6, el mutador no muta entradas de diccionario: el cambio
+de la T8 (una entrada menos) lo cubre el mutante a mano **M18** «volver a poner
+`"proveedor_sin_albaran_previo": _NO_ADMITIDO` en `CODIGOS_CABECERA`», que es exactamente la fase RED de la T8
+(`progress/impl_F-104.md`): `-k "f104 or f053_clasificador or f053_r18"` → **7 failed**, 145 passed ⇒ **muerto**.

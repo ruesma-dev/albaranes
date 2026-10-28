@@ -130,7 +130,7 @@ tenía fila en `progress/inventario_mutacion_F-039.md`); añadida la fila (55 in
 - **M1** (líder, solo lectura, antes de desplegar): `ALTA_SIGRID_AVISOS_BLOQUEANTES` de `ca-sv9-alta-sigrid` sin
   Avisos v8.3 (design §6). **M-D** (humano): `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4`, antes o a la vez que la
   F-015 de sigrid-api. **M2/M3** (líder, tras F-015): SQL de design §6 y panel de un alta con `retencion_del_contrato`.
-- **T8**: hecha el 2026-10-27 (sección T8); su mutación y la **T9**, pendientes del líder.
+- **T8** y **T9**: hechas (secciones T8 y T9).
 - Tras APPROVED de T1–T7, F-104 pasa a `blocked` («espera al despliegue de F-015 de sigrid-api»), D1.
 
 ## T8 · retirada de `proveedor_sin_albaran_previo` (2026-10-27, R10, D1)
@@ -168,14 +168,12 @@ La verificación de la T8 en RED: `-k "f104 or f053_clasificador or f053_r18"` �
 - `pytest services/albaranes-front -k "f104 or f077_r27"` → **28 passed**, 1905 deselected, 36,09 s (con el
   `.venv` de sv4; R10 de sv4 y F-077 R27 en verde: un código de sv4 con texto y sin clasificador no rompe R27).
 
-El RED equivale al mutante «volver a poner la línea» (muerto por 7 tests). **Pendiente del líder** cuando la suite
-quede libre (no lanzados aquí, por orden expresa):
+El RED equivale al mutante a mano M18 «volver a poner la línea» (muerto por 7 tests).
 
-- Mutación de `clasificador.py` (R10): `python -m harness.mutacion --feature F-104 --ficheros
-  services/albaranes-alta-sigrid/domain/services/clasificador.py --max-mutantes 0 --workers 1 --salida
-  progress/mutacion_F-104_T8.md` (con `--salida` para no pisar el informe de T6; el informe nuevo necesita su fila
-  en `progress/inventario_mutacion_F-039.md`, o `test_f039_r2_…` sale en rojo, como en T7).
-- **T9**: `bash harness/init.sh` en verde. `tasks.md` T8 queda `[ ]` hasta esa mutación.
+**Mutación de la T8** (2026-10-28, `clasificador.py` entero, en serie; el diff de la T8 ahí es solo un borrado):
+`python -m harness.mutacion --feature F-104 --ficheros services/albaranes-alta-sigrid/domain/services/clasificador.py
+--max-mutantes 0 --workers 1 --salida <scratchpad>` sobre `4a81091` → **13 generados, 13 muertos, 0 supervivientes**,
+218,7 s (base sv9 70,9 s). Detalle en `progress/mutacion_F-104.md` § T8. T8 `[x]`.
 
 ## Fuera de alcance (R11, sin tocar)
 
