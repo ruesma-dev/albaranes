@@ -11,7 +11,8 @@ no había nada que objetar.
 y las MANUAL con su comando y su resultado.
 
 ## Pasada 4 (delta `5ba0dc6..6dbb263`)
-- `bash harness/init.sh`, tal cual: INIT4.
+- `bash harness/init.sh`, tal cual, en el worktree: **exit 0, «ENTORNO LISTO»**, con los mismos recuentos que en la
+  pasada 3 (raíz 1919, sv4 1933, sv9 1027…). Tamaño `[OK]`: impl 204/220.
 - **Cambio 1: hecho.** En `impl_F-104.md` § «MANUAL (líder, solo lectura)» quedan registrados:
   - M1: verde el 24-10 y repetida el 28-10;
   - M-D: sv9 `r20261024-1838`, sv4 `r20261024-1841`;
