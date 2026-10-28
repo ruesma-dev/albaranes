@@ -68,7 +68,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 58,
+      "priority": 59,
       "branch": "feature/F-003-valorados-match-estricto"
     },
     {
@@ -78,7 +78,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 61,
+      "priority": 62,
       "branch": "feature/F-004-hormigon-fino"
     },
     {
@@ -88,7 +88,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 62,
+      "priority": 63,
       "branch": "feature/F-005-bombeo"
     },
     {
@@ -98,7 +98,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 63,
+      "priority": 64,
       "branch": "feature/F-006-residuos-pago"
     },
     {
@@ -108,7 +108,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 64,
+      "priority": 65,
       "branch": "feature/F-007-partida-alm-selector"
     },
     {
@@ -123,7 +123,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 67,
+      "priority": 68,
       "branch": "feature/F-008-blob-lifecycle"
     },
     {
@@ -139,7 +139,7 @@
       "status": "pending",
       "sdd": false,
       "rigor": "estandar",
-      "priority": 68,
+      "priority": 69,
       "branch": "feature/F-009-limpieza-q-emails"
     },
     {
@@ -149,7 +149,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 69,
+      "priority": 70,
       "branch": "feature/F-010-easy-auth-sv4"
     },
     {
@@ -159,7 +159,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 66,
+      "priority": 67,
       "branch": "feature/F-013-registro-sigrid"
     },
     {
@@ -169,7 +169,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 59,
+      "priority": 60,
       "branch": "feature/F-014-conversor-administrativo"
     },
     {
@@ -179,7 +179,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 52,
+      "priority": 53,
       "branch": "feature/F-015-lineas-tachadas"
     },
     {
@@ -189,7 +189,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 54,
+      "priority": 55,
       "branch": "feature/F-016-linea-multipartida"
     },
     {
@@ -199,7 +199,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 65,
+      "priority": 66,
       "branch": "feature/F-017-comparativo-precio"
     },
     {
@@ -209,7 +209,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 60,
+      "priority": 61,
       "branch": "feature/F-018-carga-incompleta"
     },
     {
@@ -230,7 +230,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 57,
+      "priority": 58,
       "branch": "feature/F-020-proveedor-agnostico"
     },
     {
@@ -240,7 +240,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 53,
+      "priority": 54,
       "branch": "feature/F-021-partida-catalogo-candidatas"
     },
     {
@@ -250,7 +250,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 70,
+      "priority": 71,
       "branch": "feature/F-022-concepto-lineas-bandeja"
     },
     {
@@ -260,7 +260,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 51,
+      "priority": 52,
       "branch": "feature/F-023-mortero-incrementos"
     },
     {
@@ -270,7 +270,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 44,
+      "priority": 45,
       "branch": "feature/F-024-unidad-medida"
     },
     {
@@ -280,7 +280,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 56,
+      "priority": 57,
       "branch": "feature/F-025-motivo-conversion-omitida"
     },
     {
@@ -290,7 +290,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 55,
+      "priority": 56,
       "branch": "feature/F-026-guard-partida-base"
     },
     {
@@ -310,7 +310,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 45,
+      "priority": 46,
       "branch": "feature/F-028-selector-contrato-por-partidas"
     },
     {
@@ -320,7 +320,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 46,
+      "priority": 47,
       "branch": "feature/F-029-obra-empates-y-sin-cif"
     },
     {
@@ -330,7 +330,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 47,
+      "priority": 48,
       "branch": "feature/F-030-proveedor-cif-aproximado"
     },
     {
@@ -340,7 +340,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 48,
+      "priority": 49,
       "branch": "feature/F-031-partida-elige-linea-contrato"
     },
     {
@@ -350,7 +350,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 49,
+      "priority": 50,
       "branch": "feature/F-032-semantica-precio-neto"
     },
     {
@@ -360,7 +360,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 50,
+      "priority": 51,
       "branch": "feature/F-033-contrato-md-o-pdf-determinista"
     },
     {
@@ -408,7 +408,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 43,
+      "priority": 44,
       "branch": "feature/F-037-guardado-inmediato-contrato"
     },
     {
@@ -457,7 +457,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 72,
+      "priority": 73,
       "branch": "feature/F-041-veredicto-honesto-del-mutante"
     },
     {
@@ -467,7 +467,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 73,
+      "priority": 74,
       "branch": "feature/F-042-segunda-opinion-otro-modelo"
     },
     {
@@ -493,7 +493,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 71,
+      "priority": 72,
       "servicios": [
         "comun",
         "sv2-api",
@@ -517,7 +517,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 41
+      "priority": 42
     },
     {
       "id": "F-047",
@@ -526,7 +526,7 @@
       "status": "spec_ready",
       "sdd": true,
       "rigor": "critico",
-      "priority": 42
+      "priority": 43
     },
     {
       "id": "F-048",
@@ -552,7 +552,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 15,
+      "priority": 16,
       "servicios": [
         "sv2-api",
         "sv4-front",
@@ -566,7 +566,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 35,
+      "priority": 36,
       "servicios": [
         "sv2-api"
       ]
@@ -592,7 +592,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 14,
+      "priority": 15,
       "servicios": [
         "sv2-api",
         "sv3-persistencia"
@@ -605,7 +605,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 36,
+      "priority": 37,
       "servicios": [
         "sv4-front"
       ]
@@ -617,7 +617,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 37,
+      "priority": 38,
       "servicios": [
         "sv4-front",
         "sv3-persistencia"
@@ -648,7 +648,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 39,
+      "priority": 40,
       "servicios": [
         "comun",
         "sv2-api",
@@ -692,7 +692,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 28,
+      "priority": 29,
       "servicios": [
         "sv3-persistencia",
         "sv5-valoracion-api",
@@ -707,7 +707,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 29,
+      "priority": 30,
       "servicios": [
         "sv4-front"
       ]
@@ -719,7 +719,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 38,
+      "priority": 39,
       "servicios": [
         "sv2-api",
         "sv6-valoracion-persist",
@@ -762,7 +762,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 30,
+      "priority": 31,
       "servicios": [
         "sv2-api"
       ],
@@ -789,7 +789,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 31,
+      "priority": 32,
       "servicios": [
         "sv4-front"
       ]
@@ -801,7 +801,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 32,
+      "priority": 33,
       "servicios": [
         "sv4-front"
       ]
@@ -813,7 +813,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 40,
+      "priority": 41,
       "servicios": [
         "sv4-front"
       ]
@@ -822,7 +822,7 @@
       "id": "F-069",
       "title": "Lista de equivalencias usuario de la app ↔ usuario Y EMPLEADO de Sigrid para el alta (sv9): usu y empide de quien aprueba",
       "description": "PETICIÓN DEL HUMANO (2026-10-14, PARADA 1 de F-053 v8): «en el futuro habrá una lista de mapeo usuario vs usuario sigrid para los casos raros». F-053 v8 (R47) resuelve el `usu` del alta con la parte local del correo @ruesma.es de quien aprueba contra `dbo.usu.cod` y, si no casa, usa `ALTA_SIGRID_USUARIO_RESPALDO` (pgris). Esta feature añade una lista de equivalencias (correo → login de Sigrid) que se consulta ANTES de la parte local, para los usuarios cuyo login no coincide con su correo. Dónde vive (variable, tabla propia o fichero) y quién la mantiene, a decidir en su PARADA 1. Depende de F-053. AMPLIADA 2026-10-23 (absorbe la F-099 dada de alta ese día, por decisión del humano: «crea la feature o usa F-069»): la equivalencia también debe dar el EMPLEADO. ORIGEN: el humano, 2026-10-23: «el usuario que está registrando en Sigrid siempre es pgris, cuando debe depender del que está en el portal». VERIFICADO (solo lectura, 2026-10-23): el `usu` del alta SÍ es el del que aprueba (peticion_json.usu = odomingo/tortiz/lgarcia; dbo.log.usu y dbo.gra.usu del adjunto también). Lo que sale siempre es el EMPLEADO de la cabecera: dca.empide = 2425207 («PABLO GRIS MARTINEZ») en las 46 altas del pipeline, porque sv9 manda `empide` = null y sigrid-api pone `request.empide or settings.sigrid_albaran_empide` (create_albaran_compra_use_case.py:844). En las altas manuales cada usuario lleva su empleado (cperez 537256, vnueda 1129947, dgarcia 2157467…). dbo.usu y dbo.emp no comparten clave fiable: usu.dni vacío; usu.codemp ≈ emp.tarseg casa en algunos (tortiz, lgarcia, cperez) y no en otros (pgris, odomingo, vnueda). A DECIDIR EN LA SPEC: de dónde sale el empleado del usuario que aprueba (tabla de equivalencias usu→empide configurable, el empide de sus últimos albaranes manuales, la clave codemp/tarseg medida en todos los usuarios del portal) y qué se hace si no se encuentra (no mandar empide ⇒ el defecto de sigrid-api, o bloquear el alta); sv9 manda `empide` (ya admitido por el contrato de sigrid-api, campo opcional ≥1). RELACIONADAS: F-053 (alta Sigrid), F-095 (descuentos en el alta). Fallo aparte, de sigrid-api (otro proyecto): la cabecera clonada copia idefac/fecfac/horfac/antestfac/fecent/feclim del último albarán del proveedor: 12 altas vinculadas a facturas ajenas (11 de Jarama a FR26/10960, AC26/30543 a FR26/11027).",
-      "status": "blocked",
+      "status": "done",
       "sdd": true,
       "rigor": "critico",
       "priority": 2,
@@ -889,7 +889,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 33,
+      "priority": 34,
       "servicios": [
         "comun",
         "sv6-valoracion-persist",
@@ -914,7 +914,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 25,
+      "priority": 26,
       "servicios": [
         "sv4-front"
       ]
@@ -939,7 +939,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 26,
+      "priority": 27,
       "servicios": [
         "sv3-persistencia"
       ]
@@ -951,7 +951,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 34,
+      "priority": 35,
       "servicios": [
         "sv4-front"
       ],
@@ -977,7 +977,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 27,
+      "priority": 28,
       "servicios": [
         "sv6-valoracion-persist",
         "sv4-front"
@@ -990,7 +990,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 12,
+      "priority": 13,
       "servicios": [
         "comun"
       ],
@@ -1016,7 +1016,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 13,
+      "priority": 14,
       "servicios": [
         "sv2-api",
         "sv5-valoracion-api",
@@ -1047,7 +1047,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 16,
+      "priority": 17,
       "servicios": [
         "sv4-front",
         "sv3-persistencia",
@@ -1062,7 +1062,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 17,
+      "priority": 18,
       "servicios": [
         "sv4-front"
       ]
@@ -1074,7 +1074,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 18,
+      "priority": 19,
       "servicios": [
         "sv4-front"
       ]
@@ -1086,7 +1086,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 9,
+      "priority": 10,
       "servicios": [
         "comun",
         "sv2-api"
@@ -1099,7 +1099,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 19,
+      "priority": 20,
       "servicios": [
         "sv3-persistencia",
         "sv4-front",
@@ -1113,7 +1113,7 @@
       "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 20,
+      "priority": 21,
       "servicios": [
         "por-decidir"
       ]
@@ -1125,7 +1125,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 10,
+      "priority": 11,
       "servicios": [
         "sv2-api",
         "sv3-persistencia"
@@ -1138,7 +1138,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 11,
+      "priority": 12,
       "servicios": [
         "sv4-front"
       ]
@@ -1146,11 +1146,11 @@
     {
       "id": "F-095",
       "title": "Alta en Sigrid con el precio BRUTO y el % de descuento en su columna, no con el precio neto",
-      "description": "ORIGEN: Óscar Domingo, obra 0692, 2026-10-22: «Albarán con descuento vuelca el precio con el descuento incluido en Sigrid, no vuelca el precio verdadero y la columna del porcentaje descuento vuelca en blanco. Cecois y un albarán de Rondón de palets devueltos». VERIFICADO en albaran_altas_sigrid.peticion_json (modo real): CECOIS A 26018267 (AC26/30447) línea 151,20 −7 % enviada como precio 140,62 sin descuento; CECOIS A 26017765 (AC26/30434) 26,796 −7 % → 24,92; RONDÓN MAC977620 (AC26/30472) devolución de palets 18,00 −10 % → 16,20. El importe total en Sigrid es correcto (neto), pero precio y % no. ALCANCE a 2026-10-22: 8 de las 18 altas reales registradas llevan alguna línea con descuento (22 líneas). CAUSA: el payload de sv9 a sigrid/albaran(-directo) lleva solo `precio` (neto) y ningún campo de descuento. A DECIDIR EN LA SPEC: si el endpoint de sigrid-api admite el % de descuento por línea (campo dto de las líneas del albarán en Sigrid); si no, se propone y coordina con la sesión sigrid-api (albaranes solo edita lo que consume); enviar precio bruto + dto y comprobar que Sigrid recalcula el mismo neto (redondeo); vinculadas a contrato (¿el dto es el del contrato o el del albarán?); qué hacer con las altas ya grabadas con precio neto (listarlas; corregirlas a mano o no). RELACIONADAS: F-053 (alta), F-087 (Registrar), F-019 (precio del albarán manda).",
+      "description": "ABSORBIDA POR F-110 (D0 de su PARADA 1, «Todo a» del humano el 2026-10-28). Se deja en pending porque el arnés no tiene estado de «absorbida», como F-016 y F-058.\n\nTEXTO ORIGINAL: ORIGEN: Óscar Domingo, obra 0692, 2026-10-22: «Albarán con descuento vuelca el precio con el descuento incluido en Sigrid, no vuelca el precio verdadero y la columna del porcentaje descuento vuelca en blanco. Cecois y un albarán de Rondón de palets devueltos». VERIFICADO en albaran_altas_sigrid.peticion_json (modo real): CECOIS A 26018267 (AC26/30447) línea 151,20 −7 % enviada como precio 140,62 sin descuento; CECOIS A 26017765 (AC26/30434) 26,796 −7 % → 24,92; RONDÓN MAC977620 (AC26/30472) devolución de palets 18,00 −10 % → 16,20. El importe total en Sigrid es correcto (neto), pero precio y % no. ALCANCE a 2026-10-22: 8 de las 18 altas reales registradas llevan alguna línea con descuento (22 líneas). CAUSA: el payload de sv9 a sigrid/albaran(-directo) lleva solo `precio` (neto) y ningún campo de descuento. A DECIDIR EN LA SPEC: si el endpoint de sigrid-api admite el % de descuento por línea (campo dto de las líneas del albarán en Sigrid); si no, se propone y coordina con la sesión sigrid-api (albaranes solo edita lo que consume); enviar precio bruto + dto y comprobar que Sigrid recalcula el mismo neto (redondeo); vinculadas a contrato (¿el dto es el del contrato o el del albarán?); qué hacer con las altas ya grabadas con precio neto (listarlas; corregirlas a mano o no). RELACIONADAS: F-053 (alta), F-087 (Registrar), F-019 (precio del albarán manda).",
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 7,
+      "priority": 8,
       "servicios": [
         "sv9-alta-sigrid"
       ]
@@ -1162,7 +1162,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "estandar",
-      "priority": 21,
+      "priority": 22,
       "servicios": [
         "sv4-front"
       ]
@@ -1174,7 +1174,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 22,
+      "priority": 23,
       "servicios": [
         "sv2-api",
         "sv3-persistencia"
@@ -1200,14 +1200,15 @@
       "id": "F-100",
       "title": "IA3 solo valora e IA4 casa TODAS las líneas valoradas: candidatas del contrato con el mismo precio unitario (±0,02 €) y la misma partida, y entre ellas por significado de la descripción",
       "description": "ORIGEN: el humano, 2026-10-23, tras la T14 de F-084: «la que casa líneas es solo la IA4. IA3 valora. Con las líneas valoradas, se casa con el siguiente criterio: de las líneas que hay en Sigrid de ese contrato, se filtra que tengan igual unitario (2 céntimos de margen) y código de partida; de esas se casa por significado de la línea en la descripción». ESTADO HOY (verificado en código, 2026-10-23): IA3 (sv5 `valuation_es`, config/prompts.yaml) valora Y empareja (emite codigo_producto_contrato y match_method); IA4 (`conciliacion_es`, prompts.yaml:1135-1237) solo concilia en lote las líneas que quedaron sin match, por concepto, sin prefiltro de precio ni de partida. Síntomas en la T14 de F-084 (gpt-6.1-sol, 59 casos): ALQ-001 toma 115 (contrato) donde el libro espera 157 (oferta); GEN-002 casa con MA1512 líneas que el libro deja sin pareja; COM-001 casa con SM370001 una línea `no_match`. A DECIDIR EN LA SPEC: el prefiltro determinista (precio unitario ±0,02 € y partida; qué partida —la final de sv6/F-076/F-098— y qué hacer sin partida, almacén); qué hace IA4 con 0 o con varias candidatas; quién fija el precio cuando IA3 lo lee del papel y no hay candidata; IA3 deja de emitir el emparejamiento; impacto en sv6 (casa_con_contrato, modificadores, sintéticas) y en F-047/F-055. MEDIR: el banco solo tiene IA4 en 13 de 59 casos (46 OMITIDO): completar el libro IA4 antes o como parte de la feature. RELACIONADAS: F-084 (banco que valora), F-083 (comparador), F-049/F-098 (partida antes de IA4), F-076, F-102 (esfuerzo de los modelos).",
-      "status": "pending",
+      "status": "blocked",
       "sdd": true,
       "rigor": "critico",
-      "priority": 8,
+      "priority": 7,
       "servicios": [
         "sv5-valoracion-api",
         "sv6-valoracion-persist"
-      ]
+      ],
+      "branch": "feature/F-100-ia3-valora-ia4-casa"
     },
     {
       "id": "F-101",
@@ -1216,7 +1217,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 23,
+      "priority": 24,
       "servicios": [
         "sv5-valoracion-api",
         "sv6-valoracion-persist"
@@ -1229,7 +1230,7 @@
       "status": "pending",
       "sdd": true,
       "rigor": "critico",
-      "priority": 24,
+      "priority": 25,
       "servicios": [
         "albaranes-comun",
         "sv2-api",
@@ -1241,7 +1242,7 @@
       "id": "F-103",
       "title": "Alta en Sigrid sin heredar la facturación del albarán plantilla: el AC nuevo no queda vinculado a una factura ajena ni con fechas de facturación, entrega o límite copiadas",
       "description": "ORIGEN: el humano, 2026-10-23: «escribir bien los albaranes sin coger facturas de albaranes anteriores, gran parte es en Sigrid». MEDIDO (solo lectura, sql/read, 2026-10-23, 46 altas del pipeline): sigrid-api clona la cabecera del último albarán del proveedor y arrastra idefac, fecfac, horfac y antestfac (= 3), además de fecent, feclim y cocide. 12 altas quedan vinculadas a una factura ajena (11 de HORMIGONES DEL JARAMA a FR26/10960: AC26/30573, 30576, 30578, 30580, 30582, 30596, 30598, 30599, 30629, 30633, 30634; AC26/30543 a FR26/11027) y otras 5 llevan fecfac o antestfac copiados (AC26/29714, 30594, 30595, 30617, 30631); estfac sí queda a 0. sigrid-api lo confirmó: lo cubre su F-015 R3 y ninguna factura ha absorbido aún esas líneas; proponen arreglo urgente aparte y limpieza en dry-run, y que el humano decida sobre pausar. El humano decidió mantener el alta real (ALTA_SIGRID_COMMIT=true). EL ARREGLO DE FONDO ES DE SIGRID-API (otro proyecto): albaranes no edita sigrid-api, coordina con su sesión. ALCANCE DE ALBARANES: (1) coordinar con sigrid-api el arreglo y la limpieza de las 12 + 5 altas ya escritas (decisión del humano; albaranes no escribe en Sigrid salvo por el alta); (2) tras su despliegue, verificar en solo lectura que el alta de un proveedor cuyo último AC está facturado sale con idefac vacío, fecfac/horfac/antestfac a 0 y fecent/feclim/cocide como acuerden; (3) script de solo lectura que revise las altas recientes del pipeline y avise si reaparece; (4) si el contrato de sigrid-api admite fijar esos campos en la petición, valorar que sv9 los mande explícitos. RELACIONADAS: F-053 (alta Sigrid), F-069 (usu y empide de quien aprueba), F-095 (descuentos en el alta).",
-      "status": "blocked",
+      "status": "done",
       "sdd": true,
       "rigor": "critico",
       "priority": 4,
@@ -1267,17 +1268,83 @@
       "id": "F-106",
       "title": "Al cambiar la medición de una línea en la ficha, el precio unitario se recalcula y se ve coherente con el importe (cantidad × precio × (1 − dto) = importe) antes de aprobar y de volcar a Sigrid",
       "description": "ORIGEN: correo de Óscar Domingo (obra 0692), reenviado por el humano el 2026-10-26: «Este albarán de Cecois ha volcado mal el precio, está ok en la IA y mal en el Sigrid; no, lo que ha hecho es que cuando he cambiado la medición al volcarlo lo ha cuadrado para que se cuadre con el importe del albarán». El humano: «esa ficha ponla con prioridad altísima». VERIFICADO (solo lectura, 2026-10-26) en AC26/30435 (CECOIS A 26017815, con_ide 2859417): la IA leyó 11,20 −7 % e importe 104,16 (≈ 10 unidades); el revisor cambió la cantidad a 48; la ficha siguió mostrando precio 11,20 y dto 7 % con 48 unidades e importe 104,16 (incoherente: 48 × 11,20 × 0,93 = 499,97); sv9 manda precio = |importe| / |cantidad| (`services/albaranes-alta-sigrid/domain/services/validador_alta.py:294`) = 2,17, y Sigrid grabó 48 × 2,17 = 104,16. El importe en Sigrid es correcto; el precio es el neto por la nueva unidad, pero el revisor no lo vio antes de aprobar y en la ficha queda otro. A DECIDIR EN LA SPEC: al cambiar la cantidad, qué se conserva (el importe del albarán, recalculando el precio y manteniendo el dto; o el precio, recalculando el importe), si se pregunta al revisor o se avisa; qué precio se muestra y cuál se persiste (sv4 escribe el merge; ¿revalorar con sv6?); el mismo caso al cambiar el precio o el dto; tolerancia de redondeo; que lo que ve el revisor sea exactamente lo que sv9 mandará (precio, y con F-095 bruto + dto). RELACIONADAS: F-095 (bruto + % de descuento a Sigrid), F-019 (el importe del albarán manda), F-065 (líneas editadas en la ficha), F-053 (alta).",
-      "status": "spec_ready",
+      "status": "in_progress",
       "sdd": true,
       "rigor": "critico",
       "priority": 1,
-      "branch": "feature/F-106-precio-al-cambiar-medicion",
       "servicios": [
         "comun",
         "sv4-front",
         "sv6-valoracion-persist",
         "sv9-alta-sigrid"
+      ],
+      "branch": "feature/F-106-precio-al-cambiar-medicion"
+    },
+    {
+      "id": "F-105",
+      "title": "Traer a IA3 todos los documentos de contrato (PDF y anexos) de cada contrato, no solo el de gra_rep_ide",
+      "description": "ORIGEN: el humano, 2026-10-26, en la PARADA 1 de F-100 (D24 = a: fuera de F-100), con la frase literal «cuando digo pdf me refiero a que primero manda el pdf o pdfs de los contratos, si ahí no lo encuentra entonces busca la valoración a partir de las líneas de contrato». ESTADO HOY (leído en la rama de F-100 sobre dev 27101e9): IA3 recibe UN documento de contrato por albarán. sv5 lee la fila más reciente de albaran_contratos_merge del código de contrato (services/albaran-valoracion-api/infrastructure/database/sqlalchemy_valuation_context_repository.py 186–204, ORDER BY id DESC LIMIT 1), con un solo pdf_sharepoint_relative_path y un solo md_sharepoint_relative_path; manda el MD si existe y, si no, ese PDF (application/pipelines/value_albaran_pipeline.py 184–227; application/services/valuation_extraction_service.py 256–266). sv3 baja un único PDF por contrato, el del documento gra_rep_ide (services/albaranes-persistencia/application/services/contrato_enrichment_service.py 845–872), y genera su MD. Si el contrato tiene anexos u otros PDF en el repositorio documental de Sigrid, IA3 no los ve. A DECIDIR: cuáles son «los documentos del contrato» (qué tipos del repositorio de Sigrid, vía sigrid-api, cuentan como contrato o anexo y cuáles no); el tope de páginas y de tokens por albarán y qué se hace si se pasa; el coste por albarán de IA3 con varios documentos (medirlo con evals/comparar_modelos.py antes y después, como F-100); el orden en que se presentan a IA3 y si cambia el schema (varias rutas por contrato: DDL en sv3, dueño del schema). RELACIONADAS: F-100 (orden de precio de las sintéticas: los PDF del contrato y, si no, la tabla; D18 y D24), F-086 (modelo de IA3: el coste por token cambia con el tamaño del contexto).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 9,
+      "servicios": [
+        "sv3-persistencia",
+        "sv5-valoracion-api"
       ]
+    },
+    {
+      "id": "F-107",
+      "title": "sv1 lee el buzón cuando llega un correo (notificación de cambio de Graph) y no con una réplica siempre activa",
+      "description": "ORIGEN: el humano, 2026-10-26, vía la sesión de `facturas` (al aprobar el despliegue de su F-008 copiando nuestro sv1: «ya arreglaremos lo del hook»; pidió la misma feature en facturas —su F-077—, albaranes y partes); confirmado por el humano en esta sesión el 2026-10-26 («si»). HOY: sv1 es un daemon con una réplica siempre activa que sondea el buzón M365 por Graph cada 60 s. QUÉ SE PIDE: sustituir el sondeo por notificaciones de cambio de Microsoft Graph sobre el buzón: Graph avisa a un endpoint de sv1 al entrar un correo y el contenedor escala desde cero, en vez de pagar una réplica 24/7 (coste fijo estimado por facturas en 10-35 USD/mes por servicio, cifras de memoria sin confirmar: MEDIR en la spec). A RESOLVER EN LA SPEC: endpoint público nuevo (validationToken en el alta de la suscripción, clientState en cada aviso); renovación de la suscripción (la de correo caduca en ~3 días: quién y cómo renueva, p. ej. job programado); barrido de respaldo porque Graph no garantiza la entrega; arranque en frío frente al plazo de respuesta de Graph; idempotencia (no procesar dos veces el mismo correo); seguridad del endpoint; coste real antes y después. COORDINACIÓN: diseño común con facturas (F-077) y partes, documentado en azure-apps (no tres diseños distintos). Toca infra (ingress, escalado, permisos de Graph).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 75,
+      "servicios": [
+        "sv1-email",
+        "infra"
+      ]
+    },
+    {
+      "id": "F-109",
+      "title": "sv2 lee ANTHROPIC_FORZAR_HERRAMIENTA, como sv5, para poder usar Claude 5.5 en la extracción",
+      "description": "ORIGEN: el humano, 2026-10-28, al revisar los modelos tras el despliegue (Opus 5.5, Gemini 4 y GPT-6.1 Sol en todas las apps) eligió «a»: poner ANTHROPIC_MODEL=claude-opus-5-5 también en sv2 y dar de alta esta feature. HOY: sv2 instancia Claude con la herramienta forzada siempre (F-086 R7, R15) y no lee ANTHROPIC_FORZAR_HERRAMIENTA; la API de Claude 5.5 rechaza con 400 la herramienta forzada (comentario de infra/set_models.ps1). Claude está ocioso en sv2 (IA_PRIMERA_FASE=gemini, IA2 OpenAI), así que hoy no rompe nada, pero el día que se active fallará cada llamada. QUÉ SE PIDE: que sv2 lea ANTHROPIC_FORZAR_HERRAMIENTA (defecto true, como sv5), con tool_choice auto cuando es false, igual que hizo F-086 en sv5; tests de wiring y del 400; actualizar set_models.ps1 (deja de decir que sv2 no la lee), sv2.md y el documento de albaranes en azure-apps. FUERA: cambiar qué IA extrae en cada fase.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 76,
+      "servicios": [
+        "sv2-api",
+        "infra"
+      ]
+    },
+    {
+      "id": "F-110",
+      "title": "El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS)",
+      "description": "ORIGEN: el humano, 2026-10-28 («si a F-110»): en las líneas con descuento (albaranes de CECOIS) Sigrid recibe el unitario con el descuento ya aplicado. DEBE recibir lo mismo que la línea de la plataforma: precio unitario SIN descuento, el % de descuento como campo de Sigrid (`dcapro.dto`), la cantidad y el importe con el descuento aplicado. CAUSA (leída por el líder): sv9 calcula `precio = round(abs(importe)/cantidad, 6)` (`validador_alta.py`, `_linea_peticion`) y el alta de sigrid-api (`sigrid/albaran` extendido) no admite descuento por línea (solo `cantidad` y `precio`). QUÉ SE PIDE: (1) sigrid-api acepta `dto?` por línea y lo escribe en `dcapro.dto` con `pre` bruto (cambio SUYO: albaranes no edita sigrid-api; petición enviada a su sesión el 2026-10-28 con el sí del humano); (2) sv9 manda `precio` = precio unitario final sin descuento, `dto` = % de la línea y comprueba cantidad × precio × (1 − dto/100) = importe (tolerancia como F-106 D5); (3) sv4 y el panel del alta muestran lo enviado. DEPENDE de F-106 (misma función de sv9 y misma regla de edición: cantidad/precio/dto mueven el importe) y del contrato nuevo de sigrid-api; azure-apps (albaranes y el consumo de sigrid-api) al día.",
+      "status": "spec_ready",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 2,
+      "servicios": [
+        "sv9-alta-sigrid",
+        "sv4-front"
+      ],
+      "branch": "feature/F-110-descuento-linea-sigrid"
+    },
+    {
+      "id": "F-108",
+      "title": "Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha",
+      "description": "ORIGEN: el humano, 2026-10-28: «los campos de fecha, numero de albaran tiene que poder editarse con normalidad (fecha con un desplegable de calendario como adicional)». HOY (leído por el líder): en `document_detail.html` los dos son `input type=text` editables salvo con el documento no editable (aprobado / dado de alta); no se ve en el código nada que bloquee el teclado. A RESOLVER EN LA SPEC: el síntoma exacto (preguntado al humano: no deja escribir / se pierde al guardar / formato de la fecha) reproduciéndolo en solo lectura; cómo se guardan y validan (`fecha` en el PUT de la ficha, formato ISO frente a dd/mm/aaaa) y su efecto en sv9 (`fecha_albaran` AAAAMMDD, `fecha_no_plausible`); calendario adicional sin perder la escritura a mano (botón junto al campo de texto que abre el selector de fecha del navegador).",
+      "status": "spec_ready",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 2,
+      "servicios": [
+        "sv4-front"
+      ],
+      "branch": "feature/F-108-fecha-numero-editables"
     }
   ]
 }

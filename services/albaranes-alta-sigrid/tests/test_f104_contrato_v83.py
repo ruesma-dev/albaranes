@@ -7,8 +7,9 @@ contrato_albaranes.md`` §3.2 (avisos) y §3.3 (errores). Se enlaza, no se copia
 - R1: ``proveedor_no_encontrado``, ``proveedor_ambiguo`` y
   ``retencion_no_soportada`` ⇒ ``no_admitido`` en la previa y en la grabación,
   con el código como motivo de cabecera y el ``error`` de sigrid-api de detalle.
-- R2: ``proveedor_sin_albaran_previo`` (retirado en la v8.3) sigue en
-  ``no_admitido`` hasta la verificación M2 y la retirada (T8, D1).
+- R10 (antes R2): ``proveedor_sin_albaran_previo`` (retirado en la v8.3)
+  sale de la tabla tras la verificación M2 (T8, D1): si llegase, va a
+  ``error`` como cualquier código desconocido (F-053 H25).
 - R3: el resto de la tabla no cambia y un código desconocido sigue en
   ``error`` (F-053 H25).
 - R4: los avisos ``retencion_del_contrato`` y ``cabecera_sin_dato`` no son
@@ -63,15 +64,15 @@ RAIZ_REPO = RAIZ_SERVICIO.parents[1]
 ERRORES_V83 = ("proveedor_no_encontrado", "proveedor_ambiguo", "retencion_no_soportada")
 #: Avisos de cabecera nuevos de la v8.3 (§3.2).
 AVISOS_V83 = ("retencion_del_contrato", "cabecera_sin_dato")
-#: Retirado en la v8.3; se mantiene hasta M2 (R2, D1).
+#: Retirado en la v8.3; fuera de la tabla desde T8 (R10, D1).
 RETIRADO = "proveedor_sin_albaran_previo"
 
-#: La tabla de cabecera tal como estaba en la v8.2 (``13fd99d``): R3 exige que
-#: lo que no es de F-104 siga exactamente así.
+#: La tabla de cabecera tal como estaba en la v8.2 (``13fd99d``) sin el Código
+#: retirado (R10): R3 exige que lo que no es de F-104 siga exactamente así.
 TABLA_CABECERA_V82 = {
     "obra_no_encontrada": NO_ADMITIDO, "obra_ambigua": NO_ADMITIDO,
     "contrato_no_encontrado": NO_ADMITIDO, "contrato_ambiguo": NO_ADMITIDO,
-    "proveedor_sin_albaran_previo": NO_ADMITIDO, "almacen_de_obra_no_resuelto": NO_ADMITIDO,
+    "almacen_de_obra_no_resuelto": NO_ADMITIDO,
     "demasiadas_lineas": NO_ADMITIDO,
     "referencia_en_conflicto": REVISAR,
     "escritura_albaranes_deshabilitada": ERROR, "base_de_datos_no_permitida": ERROR,
@@ -177,18 +178,31 @@ def test_f104_r1_grabacion_rechazada_por_un_error_v83_es_no_admitido(codigo):
 
 
 # ------------------------------------------------------------------ #
-# R2 · el Código retirado sigue mapeado hasta M2 (D1)
+# R10 · el Código retirado sale de la tabla tras M2 (D1): a error (H25)
 # ------------------------------------------------------------------ #
+def test_f104_r10_el_retirado_ya_no_esta_en_la_tabla():
+    assert RETIRADO not in CODIGOS_CABECERA
+    assert RETIRADO not in CODIGOS_LINEA
+
+
 @pytest.mark.parametrize("grabacion", [False, True])
-def test_f104_r2_el_retirado_sigue_en_no_admitido(grabacion):
-    assert CODIGOS_CABECERA[RETIRADO] is NO_ADMITIDO
-    assert clasificar(_rechazo(RETIRADO), grabacion=grabacion) is NO_ADMITIDO
+def test_f104_r10_el_retirado_se_clasifica_error(grabacion):
+    assert clasificar(_rechazo(RETIRADO), grabacion=grabacion) is ERROR
+
+
+@pytest.mark.parametrize("modo", [ModoAlta.SIMULACION, ModoAlta.REAL])
+def test_f104_r10_previa_rechazada_por_el_retirado_es_error(modo):
+    error = _rechazo(RETIRADO, "El proveedor no tiene albaranes previos.")
+    repo, doc, resultado = _procesar(SigridFalso(previa=error), modo,
+                                     frozenset({"producto_sin_historico"}))
+    assert resultado.estado is ERROR
+    assert repo.ultimo(doc).respuesta == error.a_dict()
 
 
 # ------------------------------------------------------------------ #
 # R3 · el resto de la tabla, intacto; lo desconocido, a error (H25)
 # ------------------------------------------------------------------ #
-def test_f104_r3_la_tabla_es_la_v82_mas_los_tres_errores():
+def test_f104_r3_la_tabla_es_la_v82_sin_el_retirado_mas_los_tres_errores():
     assert dict(CODIGOS_CABECERA) == {**TABLA_CABECERA_V82, **dict.fromkeys(ERRORES_V83, NO_ADMITIDO)}
     assert dict(CODIGOS_LINEA) == TABLA_LINEA_V82
 

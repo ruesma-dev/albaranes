@@ -5,6 +5,28 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-103 · El alta no hereda la facturación de la plantilla (cerrada 2026-10-28, sin código)
+
+Rigor `critico`, cerrada sin código. La causa (la cabecera del alta se clonaba del último albarán del proveedor y
+arrastraba facturación y fechas) la quitó sigrid-api en el origen con su F-015 (cabecera por lista blanca, desplegada
+el 2026-10-24 18:21:18 UTC, `60db955`). El humano decidió el 24-10 no limpiar las altas ya escritas y el 28-10 («todo
+a») dejar fuera el detector y que sv9 mande campos de cabecera explícitos. Verificación en solo lectura del líder
+(`progress/verif_F-103.md`): 17 altas escritas desde F-015 sin `idefac`, `fecent`, `feclim`, `cocide` ni `dcarec`;
+las cinco con `fecfac` las facturaron usuarios a mano después del alta (`dbo.log`, `ope` 5/30). Review APROBADA en la
+pasada 2 (`progress/review_F-103.md`). La spec v1 (rama `feature/F-103-alta-sin-facturacion-heredada`, `563d264`) no
+se fusiona; su Bloque C lo absorbió F-104.
+
+## F-069 · Usuario y empleado de Sigrid de quien aprueba (cerrada 2026-10-26)
+
+Rama `feature/F-069-usuario-empleado-sigrid`, rigor `critico`, sv9, sv4 e infra. El alta en Sigrid lleva el `usu` y el
+`empide` de quien aprueba: Lista de equivalencias → parte local del correo contra `dbo.usu.cod` / `dbo.emp.traele` →
+Respaldo, y `empide` nulo si no se encuentra. Review APROBADA en la pasada 2; superviviente equivalente y E5 (las 65
+altas antiguas con 2425207 se dejan así) aceptados por el humano el 2026-10-24. T16: desplegada el 2026-10-24 (sv9
+`r20261024-0845`, sv4 `r20261024-0848`, Lista vacía). T17 (líder, solo lectura, 2026-10-26): AC26/30675, 30676 y 30770,
+aprobadas por odomingo, llevan `dca.empide` 1363636, el de su correo; el panel de alta de 30675 enseña «Usuario de
+Sigrid: odomingo · Empleado de Sigrid: 1363636» y los avisos de Sigrid. Pendiente fuera de la feature: push de
+`azure-apps` `3119ae3` (lo decide el humano).
+
 ## F-084 · El banco de evals valora de verdad (cerrada 2026-10-23)
 
 Rama `feature/F-084-banco-valoracion`, rigor `critico`, solo `evals` (ningún servicio cambia). IA3/IA4 del banco

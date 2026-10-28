@@ -1,100 +1,97 @@
 <!-- progress/review_F-104.md -->
-Revisión incremental desde afe5b6d (pasada 2). La pasada 1 (completa, `dev...afe5b6d`) queda resumida abajo.
+Revisión incremental desde 5ba0dc6 (pasada 4). Lo de las pasadas 1–3 queda dado por bueno salvo lo que dice abajo.
 
-# F-104 · Review (pasadas 1 y 2) · alcance T1–T7 (M1, M-D, M2, T8 y T9 fuera a propósito, D1)
+# F-104 · Review (pasada 4) · alcance T8–T9
 
-**Veredicto: APPROVED.** La pasada 1 rechazó solo por la evidencia: la campaña manual no se podía reproducir
-desde el informe. El delta `afe5b6d..1a66c6b` lo corrige y no toca código: solo `progress/mutacion_F-104.md`
-y `progress/current.md`. Como no hay cambio de código, nada de lo aprobado queda invalidado.
+**Veredicto: APPROVED (T8–T9).** El delta es solo `6dbb263`, del líder, y solo documental: `tasks.md`,
+`impl_F-104.md` y `current.md`. Ahí se resuelven los dos cambios de la pasada 3, y en el código de la T8
+no había nada que objetar.
 
-**Nivel de rigor:** `critico`, declarado en `features.json`. Exige fase RED, cobertura, mutación con 0
-supervivientes y las MANUAL listadas con su comando exacto.
+**Nivel de rigor:** `critico`, declarado en `features.json`. Exige RED, cobertura, mutación con 0 supervivientes
+y las MANUAL con su comando y su resultado.
 
-## Pasada 2 (delta)
-- `bash harness/init.sh`: **exit 0**. Raíz 1883; sv1 205, sv2 485, sv3 1576, sv4 1833, sv5 96, sv6 473
-  (+1 skipped), sv9 1017; comun en verde por caché. Cobertura 100 % (4/4); tamaño `[OK]` (review 100/140).
-- **Cambio 1: hecho.** La tabla manual trae una fila por mutante (M01…M17) con fichero:línea, texto exacto
-  original → mutado, fallos sin `-x` y los comandos de test. Comparé con el fuente las líneas de M01–M05,
-  M07, M09–M12 y M17, y coinciden.
-- **Muestra nueva**, sobre una copia limpia en mi scratchpad (`rev104b`, idéntica al worktree según `cmp`),
-  sin `-x`, con la base en verde antes de cada una:
-  - M05 `clasificador.py:45` `_NO_ADMITIDO`→`_ERROR`: **6/135**;
-  - M07 `alta_sigrid_models.py:138` texto = código: **5/50**;
-  - M17 `_alta_sigrid.html:127` `{% if a.texto %}`→`{% if a.codigo %}`: **2/50**.
+## Pasada 4 (delta `5ba0dc6..6dbb263`)
+- `bash harness/init.sh`, tal cual, en el worktree: **exit 0, «ENTORNO LISTO»**, con los mismos recuentos que en la
+  pasada 3 (raíz 1919, sv4 1933, sv9 1027…). Tamaño `[OK]`: impl 204/220.
+- **Cambio 1: hecho.** En `impl_F-104.md` § «MANUAL (líder, solo lectura)» quedan registrados:
+  - M1: verde el 24-10 y repetida el 28-10;
+  - M-D: sv9 `r20261024-1838`, sv4 `r20261024-1841`;
+  - M2: SQL de design §6, `:desde` = `2026-10-24T18:21:18Z`, en solo lectura. Por estado, `registrado` 17 y
+    `ya_en_sigrid` 1, con `retirado`, `errores_v83`, `con_retencion`, `sin_dato` y `aviso_v83_bloqueo` a 0 en las dos.
 
-  Las tres cuadran con el informe. Con M02, M09 y M14 de la pasada 1, van **6 de 17 reproducidas**.
-- **Cambio 2: hecho.** `current.md` trae `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4`, desde `infra/`.
-- El árbol de trabajo queda limpio y en `progress/` no escribí nada salvo este informe.
+  Con el criterio de §6 es **verde**: `retirado` = 0 en todas las filas, ningún `errores_v83` fuera de
+  `no_admitido` (no hay ninguno) y `aviso_v83_bloqueo` = 0. En `tasks.md`, M1, M-D y M2 pasan a `[x]` y la nota
+  de M2 deja el panel M3 pendiente. El recuento no lo puedo reproducir yo: es una lectura del líder contra Azure,
+  fuera de mi rol y sin credenciales en el worktree. Lo tomo como registro de una MANUAL, que es lo que pide §6.
+- **El orden, declarado con honestidad.** El informe dice que «la T8 se escribió el 27-10, antes de anotar este
+  recuento», y D1 pedía «tras M2 en verde». No lo trato como defecto: la retirada no tiene efecto hasta que se
+  fusione y se despliegue la siguiente imagen de sv9 (D1, design §7), y eso pasa después de un M2 en verde ya
+  registrado. Lo que la puerta protege, que no se quite el mapeo mientras el código aún llegue, queda cubierto.
+  sv9 sigue en `r20261024-1838`, sin la T8.
+- **Cambio 2: hecho.** La cabecera de F-104 en `current.md` dice ahora: F-015 desplegada, M2 en verde el 28-10
+  con enlace a los recuentos, T8–T9 hechas, a la espera de review, fusión y despliegue de sv9, y M3 cuando pase
+  la primera alta con retención. La viñeta «Alcance de esta pasada: T1–T7» que va debajo es histórica, no
+  contradice nada y la dejo pasar.
 
-## Pasada 1 (resumen)
-- init.sh exit 0, con los mismos números.
-- Recálculo puro (`alcance_de_feature` + `generar_mutantes`): **2 ficheros, 31 líneas, 1 mutante**
-  (`alta_sigrid_models.py:373`, `logico`, `or ""` → `and ""`). Coincide con el informe.
-- Control sobre los ficheros enteros: 13 y 47 mutantes. El 1 es legítimo: 30 de las líneas son datos.
-- **La campaña no se reejecutó**: 566,1 s según el informe (> 60 s). Me quedé en el recálculo más RM1–RM6.
-- Reproducidas M02 (10/135), M09 (4/50) y M14 (2/50), sobre copia.
+## ¿Bloquea M3 el APPROVED de T8–T9? No.
+- R10 dice «CUANDO se haya cumplido R14», y R14, al pie de la letra, incluye el panel (M3). Pero la decisión del
+  humano D1 (design §8), el Bloque E de `tasks.md` («solo con M2 en verde») y design §6 concretan la condición en
+  el **SQL de M2**. §6 dice expresamente que `con_retencion` = 0 «no es rojo: se repite más tarde».
+- M3 verifica R8 y R9: el panel de los Avisos v8.3, que es código de T4, aprobado en la pasada 2. No tiene
+  relación causal con la retirada, cuya seguridad depende solo de `retirado` = 0.
+- **M3 sí bloquea el `done` de F-104**, porque R14 no está cumplido entero. F-104 debe seguir `blocked` tras la
+  fusión y el despliegue, hasta que el líder registre M3 en `impl_F-104.md`. La salida tiene que decirlo:
+  `current.md` ya lo dice.
 
-## Checkpoints
-- C1 [x] init.sh exit 0 · [x] ficheros del arnés. C2 [x] solo F-104 `in_progress` · [x] rama
-  `feature/F-104-codigos-contrato-v83` · [x] current.md describe la sesión activa · [x] sin `done` nuevas.
-- C3 [x] hexagonal (datos y `avisos_sigrid` puros en *domain*, la plantilla en *interface*) · [x] primera
-  línea con la ruta · [x] sin prints, TODOs, secretos ni dependencias nuevas (el test de R4 lee `infra/*.ps1`
-  y solo imprime el nombre del fichero) · [x] trampas: no toca merge/raw, schema ni importes.
-- C3 bis N/A (no toca `docs/referencia/`). C4 ter N/A (init.sh: ninguna ruta sensible declarada).
-- C4 [x] trazabilidad completa y en verde · [x] sin red ni BBDD · [x] MANUAL: M1/M2/M3 con su comando en
-  design §6; M-D en current.md y tasks.md.
-- C4 bis [x] rigor declarado · [x] RED con trazas reales de T1–T4 y mutación inversa en las guardas ·
-  [x] cobertura `[OK]` al 100 % · [x] totales verificados · [x] más de 60 s: recálculo puro, dicho arriba ·
-  [x] coste por mutante 566,1 × 1 ÷ 1 = 566 s · [x] sin «CAMPAÑA NO VÁLIDA», sin veredicto = 0 ·
-  [x] RM1: medido en `d3c20f1`, y desde entonces solo cambian `progress/` y `tasks.md` ·
-  [x] RM2: media 566,1 = total, base sv4 282,4; cuadra con base + una pasada casi entera de sv4 (`test_f104_*`
-  va al final por orden alfabético) · [x] RM3: ninguno de los 17 manuales es equivalente · RM5 N/A (no hay
-  equivalentes) · RM6 N/A (no se quitó ninguna guarda; M12 protege `isinstance`) · [x] campaña MANUAL
-  reproducible (pasada 2; 6 de 17 filas reproducidas) · [x] 0 supervivientes · [x] «Evidencias» con los workers (1).
-- C5 [x] T1–T7 `[x]` con 7 commits `F-104 Tn:`; T8/T9 y las MANUAL abiertas por D1 · [x] árbol limpio ·
-  [x] `features.json` coherente.
+## Checkpoints (pasada 4; los de la 3 que no cambian siguen en `[x]`)
+- C1 [x] init.sh exit 0. C2 [x] `current.md` coherente (resuelve el `[ ]` de la pasada 3) · [x] F-104 `blocked`.
+- C3 N/A en este delta: no hay código. C3 bis N/A (no entra ningún documento externo). C4 ter N/A (no declara
+  ninguna ruta sensible).
+- C4 [x] R10 trazado y en verde · [x] MANUAL: M1, M-D y M2 con comando y resultado. M3 sigue pendiente,
+  con su comando en design §6 y listado en `current.md` (resuelve el `[ ]` de la pasada 3).
+- C4 bis: sin cambios desde la pasada 3, todo `[x]` (RED reproducido; mutación T8 13/13, recalculada y muestreada).
+- C5 [x] `tasks.md` todo `[x]`, con M3 anotado como pendiente dentro de M2 · [x] árbol limpio · [x] `features.json`
+  sin tocar (`blocked`).
 
-## Puntos que pidió el líder
-1. **Mutación.** 1 mutante automático sobre 31 líneas es correcto: el mutador no toca literales de diccionario
-   ni plantillas, y la prueba de control lo confirma. Para `critico` no basta solo, así que la campaña manual
-   es la evidencia: 17 mutantes que cubren cada código, texto, campo de `avisos_sigrid`, filtro y rama de la
-   plantilla. Desde la pasada 2 se puede reproducir desde el informe.
-2. **Panel (D2).** `<li title="codigo">texto · mensaje (línea N)</li>`. El `mensaje` de sigrid-api (porcentaje,
-   base y cuota) va entero y escapado (`test_f104_r8_el_mensaje_se_escapa`). Sin texto, igual que antes.
-   Los otros 9 avisos de §3.2 (`871cc0c`) no tienen texto en `TEXTOS_MOTIVO_ALTA`: se pintan igual que antes.
-3. **Avisos y H25.** El defecto sigue en `producto_sin_historico` (`settings.py:65`); ningún `.ps1` ni
-   `.env.example` los nombra (test de R4 y diff). `clasificar` mantiene `CODIGOS_CABECERA.get(…, _ERROR)`
-   (`clasificador.py:108`); R3 lo prueba con un código desconocido, con uno a un carácter de distancia y con
-   los dos avisos llegados como error.
-4. **`d3c20f1`.** Correcto. Añade solo `"branch"` a la ficha de F-104, con el mismo formato que F-073/F-083/
-   F-085, y regenera `BACKLOG.md`. Lo usan `alcance.rama_de_feature`, `rigor`, `tamano` y `rutas_sensibles`.
-   Sin él, la mutación medía el merge de `chore/F-104-alta`.
-5. **`azure-apps` `8f6f243`.** La viñeta está al final de §10 (F-053; §11 empieza justo después). Trae los cinco
-   códigos, el retirado hasta la verificación, el orden de despliegue y el enlace a la spec. Sin secretos,
-   commit local y sin push. Cumple R12; `sv9.md` también (cabecera v8.3 `871cc0c` y sección nueva).
+## Pasada 3 (resumen; `5ba0dc6`, CHANGES_REQUESTED)
+- init.sh exit 0 (raíz 1919; sv1 205, sv2 485, sv3 1576, sv4 1933, sv5 125, sv6 480 +1 skipped, sv9 1027;
+  cobertura N/A con su motivo, porque la T8 solo borra).
+- Verificaciones de la T8: sv9 `-k "f104 or f053_clasificador or f053_r18"` **152 passed**; sv4 `-k "f104 or
+  f077_r27"` **28 passed**.
+- **RED reproducido (M18)** sobre una copia en mi scratchpad, volviendo a poner la línea: **7 failed / 145 passed**,
+  los mismos 7 del informe.
+- **Mutación T8.** El recálculo puro da 13 mutantes en `clasificador.py`, con las mismas líneas y operadores que
+  el informe. La campaña dura 218,7 s (> 60 s), así que no la reejecuté. RM4: `:138` `or ""`→`and ""` da
+  **2 failed / 1025** ⇒ muerto. RM1: medido en `4a81091`, y desde entonces no cambia nada de `services/`. RM2:
+  16,8 s por mutante con 1 worker frente a una base de 70,9 s, coherente con `-x` y 13/13 muertos. RM3, RM5 y RM6
+  no aplican: no hay equivalentes, y la T8 quita un dato, no una guarda; H25 `get(…, _ERROR)` sigue y R10 la prueba.
+- **Merge de `dev` (`9c5617d`).** No pisa F-104: solo cambia `BACKLOG.md`, `features.json` (F-069 `done` y F-107),
+  `current.md` (F-069), `history.md` y el `tasks.md` de F-069. `git diff 4a81091 HEAD -- services` sale vacío.
+- **sv4 no pinta nada roto.** `TEXTOS_MOTIVO_ALTA` conserva el texto del retirado (`alta_sigrid_models.py:106`),
+  así que las altas antiguas siguen con su texto. Si llegase uno nuevo, iría a `error` con ese texto (H25). R27 de
+  F-077 sigue en verde.
+- **azure-apps `ac1f414`.** Correcto, sin secretos, local y sin push. §10 dice «retirado también de sv9 … sale
+  con el siguiente despliegue». Con el registro de M2, su «tras verificar que ya no llega» queda respaldado.
 
-## Cobertura requisito → test
-| R | Tests |
+## Cobertura requisito → test (delta T8–T9)
+| R | Tests / evidencia |
 |---|---|
-| R1 | `test_f104_r1_*` (tabla, `clasificar` en previa y grabación, motivo y detalle, servicio en simulación y real) |
-| R2, R3 | `test_f104_r2_*`; `test_f104_r3_*` (tabla v8.2 + 3, desconocido a `error`, no son de línea); `test_f053_r18_*` |
-| R4 | `test_f104_r4_defecto_*`, `test_f104_r4_ni_infra_ni_env_example_*` |
-| R5 | `test_f104_r5_avisos_v83_se_guardan_sin_motivo[simulado/revisar/registrado]` + contraste |
-| R6 | `test_f104_r6_*` (por `desde_cuerpo`; `filas` no se guarda; `tot` sí, R16) |
-| R7 | `test_f104_r7_*`; `test_f077_r27_*` |
-| R8 | `test_f104_r8_*` (vista, ignora lo que no es dict, panel, sin texto, escape) |
-| R9 | `test_f104_r9_*` (derivados de la vista; panel solo bajo «Avisos de Sigrid») |
-| R10 | sv4: `test_f104_r10_*`. sv9: T8, fuera de esta pasada (D1) |
-| R11 | revisado en el diff: no toca comparador, cliente, `ruesma_comun`, DDL, `infra` ni `.env.example` |
-| R12 / R13–R14 | revisado `sv9.md` y `azure-apps` `8f6f243` / MANUAL tras el despliegue, fuera de esta pasada |
+| R10 (sv9) | `test_f104_r10_el_retirado_ya_no_esta_en_la_tabla`, `…_se_clasifica_error[False/True]`, `…_previa_rechazada_por_el_retirado_es_error[simulacion/real]` |
+| R10 (sv4) | `test_f104_r10_*` de `test_f104_textos_avisos.py` (texto conservado) |
+| R3 | `test_f104_r3_la_tabla_es_la_v82_sin_el_retirado_mas_los_tres_errores`; `test_f053_r18_la_tabla_es_la_del_contrato_v8` |
+| R12 | `sv9.md` l. 85–87 y `azure-apps` `ac1f414` §10 |
+| R13 / R14 | M1 y M2 registrados en `impl_F-104.md`; **M3 pendiente** (bloquea `done`, no esta review) |
 
 ## Cambios requeridos
-Ninguno. Los dos de la pasada 1 están resueltos: la tabla manual reproducible (`1a66c6b`) y el comando completo
-en `current.md`. Siguiente paso, según D1: F-104 pasa a `blocked` hasta el despliegue de la F-015 de
-sigrid-api; después vienen M1, M-D, M2/M3 y T8–T9.
+Ninguno para T8–T9. Pasos siguientes, que no son de esta review: fusionar en `dev` con `init.sh` en verde,
+desplegar sv9 (el humano) con la T8, y luego M3 en el navegador cuando `con_retencion` > 0. Solo después, `done`.
+
+## Pasadas 1 y 2 (resumen)
+T1–T7 APPROVED en la pasada 2 (`a8fa77b`). Detalle en `git show a8fa77b:progress/review_F-104.md`.
 
 ## Automejora (propuesta, no aplicada)
-El último punto de mutación de C4 bis dice «si la campaña automática dio **0** mutantes y se sustituyó por una
-MANUAL». Propongo que diga «o si la manual **complementa** a una automática que no cubre el alcance». Aquí
-salió 1 mutante sobre 31 líneas y la regla no se activaba al pie de la letra, aunque la manual era el 94 % de
-la evidencia. Va en `CHECKPOINTS.md` y `reviewer.md`, y es genérico: también en `arnes-base`.
+1. Una puerta en `init.sh` que avise cuando una tarea `[x]` cuelga de un bloque «solo con Mx en verde» y esa Mx
+   sigue en `[ ]`. Es genérica, iría también a `arnes-base`. Aquí habría ahorrado la pasada 3.
+2. En las specs, que la condición de una retirada nombre **la misma** verificación en requirements y en design.
+   Aquí R10 decía «R14» (que incluye M3) y D1 decía «M2», y hubo que decidir cuál mandaba. Va en `specs/SPECS.md`
+   y es genérico.

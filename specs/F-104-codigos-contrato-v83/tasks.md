@@ -21,11 +21,11 @@ Rama `feature/F-104-codigos-contrato-v83`, worktree `../albaranes-F-104` (*junct
 
 ## Bloque D · despliegue y verificación (MANUAL; tras APPROVED, fusión en `dev` e `init.sh` en verde)
 
-- [ ] M1: Antes de desplegar, `ALTA_SIGRID_AVISOS_BLOQUEANTES` de `ca-sv9-alta-sigrid` sin Avisos v8.3 (R13)  |  Verificación: MANUAL (líder, solo lectura) — comando de design §6 M1
-- [ ] M-D: Despliegue de sv9 y sv4, antes o a la vez que la F-015 de sigrid-api (design §7)  |  Verificación: MANUAL (humano) — `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4` y arranque limpio en los logs
-- [ ] M2: Tras el despliegue de F-015 de sigrid-api: SQL de design §6 M2 en verde y panel de un alta con `retencion_del_contrato` (M3); recuentos por estado en `progress/impl_F-104.md` (R14)  |  Verificación: MANUAL (líder, solo lectura) — SQL de design §6 M2 y navegador
+- [x] M1: Antes de desplegar, `ALTA_SIGRID_AVISOS_BLOQUEANTES` de `ca-sv9-alta-sigrid` sin Avisos v8.3 (R13)  |  Verificación: MANUAL (líder, solo lectura) — comando de design §6 M1
+- [x] M-D: Despliegue de sv9 y sv4, antes o a la vez que la F-015 de sigrid-api (design §7)  |  Verificación: MANUAL (humano) — `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4` y arranque limpio en los logs
+- [x] M2 (SQL en verde el 2026-10-28; el panel M3, pendiente hasta la primera alta con `retencion_del_contrato`): Tras el despliegue de F-015 de sigrid-api: SQL de design §6 M2 en verde y panel de un alta con `retencion_del_contrato` (M3); recuentos por estado en `progress/impl_F-104.md` (R14)  |  Verificación: MANUAL (líder, solo lectura) — SQL de design §6 M2 y navegador
 
 ## Bloque E · retirada (D1; solo con M2 en verde)
 
-- [ ] T8: Quitar `proveedor_sin_albaran_previo` de `CODIGOS_CABECERA` y de `TABLA_CABECERA`; el test de R2 pasa a R10 (el retirado va a `error` por H25) y el caso de `test_f053_servicio_previa.py` usa `proveedor_no_encontrado`; el texto de sv4 se queda; `sv9.md` y §10 de `azure-apps` dicen «retirado»; mutación de `clasificador.py` repetida (R10)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f104 or f053_clasificador or f053_r18"` y `pytest services/albaranes-front -k "f104 or f077_r27"`
-- [ ] T9: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`
+- [x] T8: Quitar `proveedor_sin_albaran_previo` de `CODIGOS_CABECERA` y de `TABLA_CABECERA`; el test de R2 pasa a R10 (el retirado va a `error` por H25) y el caso de `test_f053_servicio_previa.py` usa `proveedor_no_encontrado`; el texto de sv4 se queda; `sv9.md` y §10 de `azure-apps` dicen «retirado»; mutación de `clasificador.py` repetida (R10)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f104 or f053_clasificador or f053_r18"` y `pytest services/albaranes-front -k "f104 or f077_r27"`
+- [x] T9: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`

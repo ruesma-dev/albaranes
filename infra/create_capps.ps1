@@ -48,10 +48,12 @@ $pgEnv = @(
 # sigue instanciado y ocioso en sv2 y sv5 ($ANTHROPIC_MODEL): es la vuelta
 # atrás de IA3/IA4 (IA3_PROVIDER=claude / IA4_PROVIDER=claude). sv5 no arranca
 # si IA3_PROVIDER o IA4_PROVIDER nombran un proveedor apagado (F-085 R9).
-# Un Claude 5.5 en sv5 (Opus 5.5 en IA3) necesita ANTHROPIC_FORZAR_HERRAMIENTA=false:
-# su API rechaza la herramienta forzada que pide el cliente de comun. sv5 la lee
-# desde F-086 con defecto true (la forzada de siempre) y aquí no se fija: el
-# cambio de IA3 a Opus 5.5 es la parte C de F-086, solo si su medición pasa.
+# Un Claude 5.5 necesita ANTHROPIC_FORZAR_HERRAMIENTA=false: su API rechaza la
+# herramienta forzada que pide el cliente de comun. sv5 la lee desde F-086 y
+# aquí se fija a false (28-oct-2026, orden del humano: Opus 5.5 en todas las
+# apps). sv2 NO la lee todavía (F-109): su Claude está ocioso y, si se activa
+# antes de F-109, cada llamada daría 400. Que IA3 pase a Opus 5.5 sigue siendo
+# la parte C de F-086 (IA3_PROVIDER), no este fichero.
 # OJO 1: el adaptador de Claude (comun/llm/claude_messages_client.py) NO
 # envia temperature/top_p/top_k, imprescindible desde Opus 4.7 (esos
 # parametros devuelven 400). Si algun dia se anaden, fallaria.
@@ -60,7 +62,7 @@ $pgEnv = @(
 # sonnet-5). Lo absorbe comun/llm/json_coercion.py -> si cambias de modelo
 # y sv5 empieza a devolver 400 "Input should be a valid list", el fix va
 # ahi, no en el prompt.
-$ANTHROPIC_MODEL = "claude-opus-4-8"   # 16-ago-2026; ocioso desde F-085 (vuelta atrás de IA3/IA4)
+$ANTHROPIC_MODEL = "claude-opus-5-5"   # 28-oct-2026, orden del humano; antes claude-opus-4-8. Ocioso desde F-085 (vuelta atrás de IA3/IA4)
 $OPENAI_MODEL    = "gpt-6.1-sol"       # 20-oct-2026, F-085: IA2 (sv2), IA3 e IA4 (sv5); antes gpt-5.4
 $GEMINI_MODEL    = "gemini-4-argon"    # 20-oct-2026, F-085: IA1; antes gemini-3.7-flash
 
@@ -81,6 +83,7 @@ $sv5Env = @() + $pgEnv + @(
     "GRAPH_KEY=secretref:graph-key",
     "ANTHROPIC_API_KEY=secretref:anthropic-key",
     "ANTHROPIC_MODEL=$ANTHROPIC_MODEL",
+    "ANTHROPIC_FORZAR_HERRAMIENTA=false",
     "ENABLE_OPENAI=true",
     "OPENAI_API_KEY=secretref:openai-key",
     "OPENAI_MODEL=$OPENAI_MODEL",
