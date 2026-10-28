@@ -3,13 +3,13 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **107 features**, 76 abiertas (1 en curso, 7 con la spec lista, 9 bloqueadas y 59 en backlog) y 31 terminadas.
+Resumen: **107 features**, 76 abiertas (1 en curso, 7 con la spec lista, 10 bloqueadas y 58 en backlog) y 31 terminadas.
 
 ## En curso
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
-| F-100 | IA3 solo valora e IA4 casa TODAS las líneas valoradas: candidatas del contrato con el mismo precio unitario (±0,02 €) y la misma partida, y entre ellas por significado de la descripción | 7 | critico | `feature/F-100-ia3-valora-ia4-casa` |
+| F-106 | Al cambiar la medición de una línea en la ficha, el precio unitario se recalcula y se ve coherente con el importe (cantidad × precio × (1 − dto) = importe) antes de aprobar y de volcar a Sigrid | 1 | critico | `feature/F-106-precio-al-cambiar-medicion` |
 
 ## Spec lista
 
@@ -30,6 +30,7 @@ Resumen: **107 features**, 76 abiertas (1 en curso, 7 con la spec lista, 9 bloqu
 | F-104 | sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos | 3 | critico | `feature/F-104-codigos-contrato-v83` |
 | F-098 | Selector de partidas como el de partes (preselección por capítulo de primer nivel CD/CI/CP/…) y partida con su código completo (CD.99.01.64) aunque en Sigrid la hoja sea «99.01.64» | 5 | critico | `feature/F-098-partidas-por-capitulo` |
 | F-086 | Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol | 6 | critico | `feature/F-086-opus-ia3` |
+| F-100 | IA3 solo valora e IA4 casa TODAS las líneas valoradas: candidatas del contrato con el mismo precio unitario (±0,02 €) y la misma partida, y entre ellas por significado de la descripción | 7 | critico | `feature/F-100-ia3-valora-ia4-casa` |
 | F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 13 | critico | `feature/F-083-comparar-modelos` |
 | F-085 | Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086) | 14 | critico | `feature/F-085-modelos-produccion` |
 | F-092 | Gestión de almacén: crear la gestión del almacén (acopios) de las obras | 21 | critico |  |
@@ -41,7 +42,6 @@ Resumen: **107 features**, 76 abiertas (1 en curso, 7 con la spec lista, 9 bloqu
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
-| F-106 | Al cambiar la medición de una línea en la ficha, el precio unitario se recalcula y se ve coherente con el importe (cantidad × precio × (1 − dto) = importe) antes de aprobar y de volcar a Sigrid | 1 | critico |  |
 | F-095 | Alta en Sigrid con el precio BRUTO y el % de descuento en su columna, no con el precio neto | 8 | critico |  |
 | F-105 | Traer a IA3 todos los documentos de contrato (PDF y anexos) de cada contrato, no solo el de gra_rep_ide | 9 | critico |  |
 | F-090 | Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692) | 10 | critico |  |
@@ -141,7 +141,7 @@ Resumen: **107 features**, 76 abiertas (1 en curso, 7 con la spec lista, 9 bloqu
 
 ### F-106 · Al cambiar la medición de una línea en la ficha, el precio unitario se recalcula y se ve coherente con el importe (cantidad × precio × (1 − dto) = importe) antes de aprobar y de volcar a Sigrid
 
-estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
+estado **en curso** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-106-precio-al-cambiar-medicion`
 
 ORIGEN: correo de Óscar Domingo (obra 0692), reenviado por el humano el 2026-10-26: «Este albarán de Cecois ha volcado mal el precio, está ok en la IA y mal en el Sigrid; no, lo que ha hecho es que cuando he cambiado la medición al volcarlo lo ha cuadrado para que se cuadre con el importe del albarán». El humano: «esa ficha ponla con prioridad altísima». VERIFICADO (solo lectura, 2026-10-26) en AC26/30435 (CECOIS A 26017815, con_ide 2859417): la IA leyó 11,20 −7 % e importe 104,16 (≈ 10 unidades); el revisor cambió la cantidad a 48; la ficha siguió mostrando precio 11,20 y dto 7 % con 48 unidades e importe 104,16 (incoherente: 48 × 11,20 × 0,93 = 499,97); sv9 manda precio = |importe| / |cantidad| (`services/albaranes-alta-sigrid/domain/services/validador_alta.py:294`) = 2,17, y Sigrid grabó 48 × 2,17 = 104,16. El importe en Sigrid es correcto; el precio es el neto por la nueva unidad, pero el revisor no lo vio antes de aprobar y en la ficha queda otro. A DECIDIR EN LA SPEC: al cambiar la cantidad, qué se conserva (el importe del albarán, recalculando el precio y manteniendo el dto; o el precio, recalculando el importe), si se pregunta al revisor o se avisa; qué precio se muestra y cuál se persiste (sv4 escribe el merge; ¿revalorar con sv6?); el mismo caso al cambiar el precio o el dto; tolerancia de redondeo; que lo que ve el revisor sea exactamente lo que sv9 mandará (precio, y con F-095 bruto + dto). RELACIONADAS: F-095 (bruto + % de descuento a Sigrid), F-019 (el importe del albarán manda), F-065 (líneas editadas en la ficha), F-053 (alta).
 
@@ -177,7 +177,7 @@ ORIGEN: P3 de F-085, decidida por el humano el 2026-10-20 (aceptada la recomenda
 
 ### F-100 · IA3 solo valora e IA4 casa TODAS las líneas valoradas: candidatas del contrato con el mismo precio unitario (±0,02 €) y la misma partida, y entre ellas por significado de la descripción
 
-estado **en curso** · prioridad 7 · rigor `critico` · SDD sí · rama `feature/F-100-ia3-valora-ia4-casa`
+estado **bloqueada** · prioridad 7 · rigor `critico` · SDD sí · rama `feature/F-100-ia3-valora-ia4-casa`
 
 ORIGEN: el humano, 2026-10-23, tras la T14 de F-084: «la que casa líneas es solo la IA4. IA3 valora. Con las líneas valoradas, se casa con el siguiente criterio: de las líneas que hay en Sigrid de ese contrato, se filtra que tengan igual unitario (2 céntimos de margen) y código de partida; de esas se casa por significado de la línea en la descripción». ESTADO HOY (verificado en código, 2026-10-23): IA3 (sv5 `valuation_es`, config/prompts.yaml) valora Y empareja (emite codigo_producto_contrato y match_method); IA4 (`conciliacion_es`, prompts.yaml:1135-1237) solo concilia en lote las líneas que quedaron sin match, por concepto, sin prefiltro de precio ni de partida. Síntomas en la T14 de F-084 (gpt-6.1-sol, 59 casos): ALQ-001 toma 115 (contrato) donde el libro espera 157 (oferta); GEN-002 casa con MA1512 líneas que el libro deja sin pareja; COM-001 casa con SM370001 una línea `no_match`. A DECIDIR EN LA SPEC: el prefiltro determinista (precio unitario ±0,02 € y partida; qué partida —la final de sv6/F-076/F-098— y qué hacer sin partida, almacén); qué hace IA4 con 0 o con varias candidatas; quién fija el precio cuando IA3 lo lee del papel y no hay candidata; IA3 deja de emitir el emparejamiento; impacto en sv6 (casa_con_contrato, modificadores, sintéticas) y en F-047/F-055. MEDIR: el banco solo tiene IA4 en 13 de 59 casos (46 OMITIDO): completar el libro IA4 antes o como parte de la feature. RELACIONADAS: F-084 (banco que valora), F-083 (comparador), F-049/F-098 (partida antes de IA4), F-076, F-102 (esfuerzo de los modelos).
 
