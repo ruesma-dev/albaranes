@@ -125,17 +125,18 @@ El mutador no muta entradas de diccionario ni plantillas (30 de las 31 líneas s
 Primera pasada en rojo por **un** test de la raíz (`test_f039_r2_…`: el informe `progress/mutacion_F-104.md` no
 tenía fila en `progress/inventario_mutacion_F-039.md`); añadida la fila (55 informes). Pasada final: ver «Evidencias».
 
-## MANUAL pendientes (no son de esta pasada)
+## MANUAL (líder, solo lectura)
 
-- **M1** (líder, solo lectura, antes de desplegar): `ALTA_SIGRID_AVISOS_BLOQUEANTES` de `ca-sv9-alta-sigrid` sin
-  Avisos v8.3 (design §6). **M-D** (humano): `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4`, antes o a la vez que la
-  F-015 de sigrid-api. **M2/M3** (líder, tras F-015): SQL de design §6 y panel de un alta con `retencion_del_contrato`.
-- **T8** y **T9**: hechas (secciones T8 y T9).
-- Tras APPROVED de T1–T7, F-104 pasa a `blocked` («espera al despliegue de F-015 de sigrid-api»), D1.
+- **M1** (24-10, repetida el 28-10): `ca-sv9-alta-sigrid` sin `ALTA_SIGRID_AVISOS_BLOQUEANTES` (manda el defecto). Verde.
+- **M-D** (humano, 24-10): sv9 `r20261024-1838`, sv4 `r20261024-1841`; el 28-10 sv9 sigue en `r20261024-1838`.
+- **M2** (28-10, SQL de design §6 con `:desde` = `2026-10-24T18:21:18Z`, PostgreSQL de Azure en solo lectura):
+  `registrado` 17 altas y `ya_en_sigrid` 1; en ambas `retirado` 0, `errores_v83` 0, `con_retencion` 0, `sin_dato` 0,
+  `aviso_v83_bloqueo` 0. **Verde.** `con_retencion` = 0: aún no ha pasado un albarán con retención (no es rojo, §6);
+  el panel **M3** se repite cuando pase. La T8 se escribió el 27-10, antes de anotar este recuento.
 
 ## T8 · retirada de `proveedor_sin_albaran_previo` (2026-10-27, R10, D1)
 
-Tras M2 en verde (líder) con la F-015 de sigrid-api desplegada (`60db955`). Antes, `git merge dev`: avance rápido
+Con la F-015 de sigrid-api desplegada (`60db955`). Antes, `git merge dev`: avance rápido
 (`dev` ya contenía la rama), sin conflictos.
 
 - `domain/services/clasificador.py`: fuera la línea del Código retirado y su comentario (−2 líneas). Si llegase, va

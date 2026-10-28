@@ -21,9 +21,9 @@ Rama `feature/F-104-codigos-contrato-v83`, worktree `../albaranes-F-104` (*junct
 
 ## Bloque D · despliegue y verificación (MANUAL; tras APPROVED, fusión en `dev` e `init.sh` en verde)
 
-- [ ] M1: Antes de desplegar, `ALTA_SIGRID_AVISOS_BLOQUEANTES` de `ca-sv9-alta-sigrid` sin Avisos v8.3 (R13)  |  Verificación: MANUAL (líder, solo lectura) — comando de design §6 M1
-- [ ] M-D: Despliegue de sv9 y sv4, antes o a la vez que la F-015 de sigrid-api (design §7)  |  Verificación: MANUAL (humano) — `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4` y arranque limpio en los logs
-- [ ] M2: Tras el despliegue de F-015 de sigrid-api: SQL de design §6 M2 en verde y panel de un alta con `retencion_del_contrato` (M3); recuentos por estado en `progress/impl_F-104.md` (R14)  |  Verificación: MANUAL (líder, solo lectura) — SQL de design §6 M2 y navegador
+- [x] M1: Antes de desplegar, `ALTA_SIGRID_AVISOS_BLOQUEANTES` de `ca-sv9-alta-sigrid` sin Avisos v8.3 (R13)  |  Verificación: MANUAL (líder, solo lectura) — comando de design §6 M1
+- [x] M-D: Despliegue de sv9 y sv4, antes o a la vez que la F-015 de sigrid-api (design §7)  |  Verificación: MANUAL (humano) — `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4` y arranque limpio en los logs
+- [x] M2 (SQL en verde el 2026-10-28; el panel M3, pendiente hasta la primera alta con `retencion_del_contrato`): Tras el despliegue de F-015 de sigrid-api: SQL de design §6 M2 en verde y panel de un alta con `retencion_del_contrato` (M3); recuentos por estado en `progress/impl_F-104.md` (R14)  |  Verificación: MANUAL (líder, solo lectura) — SQL de design §6 M2 y navegador
 
 ## Bloque E · retirada (D1; solo con M2 en verde)
 
