@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **105 features**, 75 abiertas (1 en curso, 5 con la spec lista, 10 bloqueadas y 59 en backlog) y 30 terminadas.
+Resumen: **107 features**, 77 abiertas (1 en curso, 5 con la spec lista, 10 bloqueadas y 61 en backlog) y 30 terminadas.
 
 ## En curso
 
@@ -41,6 +41,8 @@ Resumen: **105 features**, 75 abiertas (1 en curso, 5 con la spec lista, 10 bloq
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
 | F-106 | Al cambiar la medición de una línea en la ficha, el precio unitario se recalcula y se ve coherente con el importe (cantidad × precio × (1 − dto) = importe) antes de aprobar y de volcar a Sigrid | 1 | critico |  |
+| F-108 | Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha | 2 | estandar |  |
+| F-110 | El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS) | 2 | critico |  |
 | F-095 | Alta en Sigrid con el precio BRUTO y el % de descuento en su columna, no con el precio neto | 8 | critico |  |
 | F-105 | Traer a IA3 todos los documentos de contrato (PDF y anexos) de cada contrato, no solo el de gra_rep_ide | 9 | critico |  |
 | F-090 | Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692) | 10 | critico |  |
@@ -142,6 +144,18 @@ Resumen: **105 features**, 75 abiertas (1 en curso, 5 con la spec lista, 10 bloq
 estado **pendiente** · prioridad 1 · rigor `critico` · SDD sí
 
 ORIGEN: correo de Óscar Domingo (obra 0692), reenviado por el humano el 2026-10-26: «Este albarán de Cecois ha volcado mal el precio, está ok en la IA y mal en el Sigrid; no, lo que ha hecho es que cuando he cambiado la medición al volcarlo lo ha cuadrado para que se cuadre con el importe del albarán». El humano: «esa ficha ponla con prioridad altísima». VERIFICADO (solo lectura, 2026-10-26) en AC26/30435 (CECOIS A 26017815, con_ide 2859417): la IA leyó 11,20 −7 % e importe 104,16 (≈ 10 unidades); el revisor cambió la cantidad a 48; la ficha siguió mostrando precio 11,20 y dto 7 % con 48 unidades e importe 104,16 (incoherente: 48 × 11,20 × 0,93 = 499,97); sv9 manda precio = |importe| / |cantidad| (`services/albaranes-alta-sigrid/domain/services/validador_alta.py:294`) = 2,17, y Sigrid grabó 48 × 2,17 = 104,16. El importe en Sigrid es correcto; el precio es el neto por la nueva unidad, pero el revisor no lo vio antes de aprobar y en la ficha queda otro. A DECIDIR EN LA SPEC: al cambiar la cantidad, qué se conserva (el importe del albarán, recalculando el precio y manteniendo el dto; o el precio, recalculando el importe), si se pregunta al revisor o se avisa; qué precio se muestra y cuál se persiste (sv4 escribe el merge; ¿revalorar con sv6?); el mismo caso al cambiar el precio o el dto; tolerancia de redondeo; que lo que ve el revisor sea exactamente lo que sv9 mandará (precio, y con F-095 bruto + dto). RELACIONADAS: F-095 (bruto + % de descuento a Sigrid), F-019 (el importe del albarán manda), F-065 (líneas editadas en la ficha), F-053 (alta).
+
+### F-108 · Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha
+
+estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí
+
+ORIGEN: el humano, 2026-10-28: «los campos de fecha, numero de albaran tiene que poder editarse con normalidad (fecha con un desplegable de calendario como adicional)». HOY (leído por el líder): en `document_detail.html` los dos son `input type=text` editables salvo con el documento no editable (aprobado / dado de alta); no se ve en el código nada que bloquee el teclado. A RESOLVER EN LA SPEC: el síntoma exacto (preguntado al humano: no deja escribir / se pierde al guardar / formato de la fecha) reproduciéndolo en solo lectura; cómo se guardan y validan (`fecha` en el PUT de la ficha, formato ISO frente a dd/mm/aaaa) y su efecto en sv9 (`fecha_albaran` AAAAMMDD, `fecha_no_plausible`); calendario adicional sin perder la escritura a mano (botón junto al campo de texto que abre el selector de fecha del navegador).
+
+### F-110 · El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS)
+
+estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
+
+ORIGEN: el humano, 2026-10-28 («si a F-110»): en las líneas con descuento (albaranes de CECOIS) Sigrid recibe el unitario con el descuento ya aplicado. DEBE recibir lo mismo que la línea de la plataforma: precio unitario SIN descuento, el % de descuento como campo de Sigrid (`dcapro.dto`), la cantidad y el importe con el descuento aplicado. CAUSA (leída por el líder): sv9 calcula `precio = round(abs(importe)/cantidad, 6)` (`validador_alta.py`, `_linea_peticion`) y el alta de sigrid-api (`sigrid/albaran` extendido) no admite descuento por línea (solo `cantidad` y `precio`). QUÉ SE PIDE: (1) sigrid-api acepta `dto?` por línea y lo escribe en `dcapro.dto` con `pre` bruto (cambio SUYO: albaranes no edita sigrid-api; petición enviada a su sesión el 2026-10-28 con el sí del humano); (2) sv9 manda `precio` = precio unitario final sin descuento, `dto` = % de la línea y comprueba cantidad × precio × (1 − dto/100) = importe (tolerancia como F-106 D5); (3) sv4 y el panel del alta muestran lo enviado. DEPENDE de F-106 (misma función de sv9 y misma regla de edición: cantidad/precio/dto mueven el importe) y del contrato nuevo de sigrid-api; azure-apps (albaranes y el consumo de sigrid-api) al día.
 
 ### F-104 · sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos
 
