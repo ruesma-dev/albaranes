@@ -275,3 +275,14 @@ def test_f106_r3_tras_recalcular_la_fila_cuadra():
 def test_f106_r3_errores_son_value_error():
     assert issubclass(NoDespejable, ValueError)
     assert issubclass(PrecioEImporte, ValueError)
+
+
+# ------------------------------------------------------------------ versión
+def test_f106_t2_version_0100():
+    from pathlib import Path
+
+    import ruesma_comun
+
+    assert ruesma_comun.__version__ == "0.10.0"
+    pyproject = (Path(ruesma_comun.__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'version = "0.10.0"' in pyproject
