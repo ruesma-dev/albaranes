@@ -161,6 +161,8 @@ GROUP BY 1, 2, 3, 4 ORDER BY 3;
 **Para que el líder lo traslade a sigrid-api** (no lo hace este agente): las 9 vinculadas de FEYMACO (D3), D1 (precio
 a 6 decimales: ¿con cuántos lo guarda Sigrid?), D4 (que la previa devuelva `dto`) y la duda `pre`/`tar` de §2.
 
+**PARADA 1 cerrada por el humano el 2026-10-28 («Todo a»): D0–D7 = (a).** D0: F-095 queda absorbida (la marca el líder en `features.json`).
+
 ## 11. Riesgos
 
 - **R-1 · Contrato distinto del supuesto.** Mitigación: guarda apagada, T18 antes de encenderla, R24 (parar).
