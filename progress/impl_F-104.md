@@ -1,5 +1,5 @@
 <!-- progress/impl_F-104.md -->
-# F-104 · Informe del implementer (pasada 1: T1–T7)
+# F-104 · Informe del implementer (T1–T7, 2026-10-24; T8–T9, 2026-10-27/28)
 
 Rama `feature/F-104-codigos-contrato-v83` (worktree `../albaranes-F-104`), `dev` (`ba516a7`) fusionado al empezar.
 Rigor `critico`. PARADA 1 cerrada por el humano el 2026-10-24: **D1 = 1, D2 = 1** (anotado en `design.md` §8).
@@ -175,6 +175,15 @@ El RED equivale al mutante a mano M18 «volver a poner la línea» (muerto por 7
 --max-mutantes 0 --workers 1 --salida <scratchpad>` sobre `4a81091` → **13 generados, 13 muertos, 0 supervivientes**,
 218,7 s (base sv9 70,9 s). Detalle en `progress/mutacion_F-104.md` § T8. T8 `[x]`.
 
+## T9 · `bash harness/init.sh` (2026-10-28)
+
+Antes, `git merge dev` (`7af0762`: F-069 `done`, F-107 en el backlog): merge sin conflictos; F-104 sigue `blocked`
+con su `branch`; `BACKLOG.md` sin cambios tras `init.sh`. `bash harness/init.sh` **tal cual** en el worktree, sin
+`PYTHONPATH` ni `ARNES_SIN_CACHE` (no hizo falta la variante de entorno): **verde, exit 0**, «ENTORNO LISTO».
+Raíz 1919 passed (625,9 s, con cobertura); sv1 205; sv2 485; sv3 1576; sv4 1933 (399,6 s); sv5 125; sv6 480 (+1
+skipped); sv9 **1027 passed** (83,0 s); comun 1077 (+3 skipped). `PUERTA COBERTURA: N/A (F-104 no cambia líneas
+Python de producción frente a dev)`: la T8 solo borra líneas. `PUERTA TAMAÑO`: impl 192/220. T9 `[x]`.
+
 ## Fuera de alcance (R11, sin tocar)
 
 Petición a sigrid-api, `comparador_previa.py`, `ruesma_comun`, DDL, `infra/*.ps1`, `.env.example`, `settings.py`,
@@ -189,4 +198,6 @@ Petición a sigrid-api, `comparador_previa.py`, `ruesma_comun`, DDL, `infra/*.ps
 | Cobertura de líneas cambiadas | `PUERTA COBERTURA: 100.0% de 4 líneas cambiadas cubiertas (4/4, umbral 80%, nivel critico)` |
 | Mutación (herramienta, sin tope) | 1 generado, 1 muerto, **0 supervivientes**, 566,1 s |
 | Mutación a mano (datos y plantilla) | 17 generados, 17 muertos, **0 supervivientes** |
-| `init.sh` final | **verde, exit 0** (raíz 1883 passed con cobertura; 0 comprobaciones fallidas; tamaño impl 150/220) |
+| `init.sh` final (T7) | **verde, exit 0** (raíz 1883 passed con cobertura; 0 comprobaciones fallidas; tamaño impl 150/220) |
+| Mutación T8 (`clasificador.py` entero) | 13 generados, 13 muertos, **0 supervivientes**, 218,7 s |
+| `init.sh` T9 (tal cual, tras merge de `dev`) | **verde, exit 0**; sv9 1027 passed (83,0 s), sv4 1933 passed (399,6 s), raíz 1919 passed (625,9 s); cobertura N/A (solo borrados) |

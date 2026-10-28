@@ -28,4 +28,4 @@ Rama `feature/F-104-codigos-contrato-v83`, worktree `../albaranes-F-104` (*junct
 ## Bloque E · retirada (D1; solo con M2 en verde)
 
 - [x] T8: Quitar `proveedor_sin_albaran_previo` de `CODIGOS_CABECERA` y de `TABLA_CABECERA`; el test de R2 pasa a R10 (el retirado va a `error` por H25) y el caso de `test_f053_servicio_previa.py` usa `proveedor_no_encontrado`; el texto de sv4 se queda; `sv9.md` y §10 de `azure-apps` dicen «retirado»; mutación de `clasificador.py` repetida (R10)  |  Verificación: `pytest services/albaranes-alta-sigrid -k "f104 or f053_clasificador or f053_r18"` y `pytest services/albaranes-front -k "f104 or f077_r27"`
-- [ ] T9: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`
+- [x] T9: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`
