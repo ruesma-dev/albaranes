@@ -72,3 +72,17 @@ Del humano es la T21: desplegar con la guarda apagada y, después de la T18, enc
 - No se ha tocado `features.json` ni `progress/current.md`, para no chocar con el árbol del líder. La entrada de F-110
   en `current.md` la pone el líder.
 - El script de la medición quedó en el scratchpad de la sesión y no se versiona.
+
+## Respuesta de sigrid-api a las 4 preguntas (2026-10-28, su F-018, sin aprobar todavía: NO es contrato)
+
+- **`tar` es el bruto** («P.Bruto») y `pre` el neto = `tot`/`can` (medido por ellos en 24.000 líneas con dto, 99,99 %).
+  Propuesta con `dto` > 0: `tar` = nuestro `precio`; `dto` = texto «40%» / «1,5%» (coma decimal); `tot` =
+  ROUND_HALF_UP(cantidad·precio·(1 − dto/100), 2); `pre` = `tot`/`cantidad`; `mov` y PMP con el neto. Es su P1.
+- **Vinculadas con dto**: nunca rechazan por diferencias con el contrato; avisos informativos de línea
+  `precio_distinto_del_contrato` (bruto frente a `ctrpro.tar`) y `dto_distinto_del_contrato` (frente a `ctrpro.dto`,
+  vacío = 0). Nuestra propuesta de comparar el dto solo si el bruto cuadra va a su humano (con su P3).
+- **Decimales**: no redondean el precio; `tot` sobre el producto exacto (Decimal), redondeado a 2 al final.
+- **Previa**: cada línea de `previsto` y `creado` trae `dto` (número) y `precio_bruto` (= `tar`); `precio` es el neto y
+  `total` el importe; en `idempotente`, `dto` y `precio_bruto` a `null`. Contrato **v8.4** antes de implementar.
+- Consecuencia para la spec: D4 (`dto_distinto`) puede leer `dto` de la previa; los dos avisos nuevos van a la tabla de
+  textos de sv4 en la T19. Se contrasta todo en la T18 cuando publiquen v8.4.
