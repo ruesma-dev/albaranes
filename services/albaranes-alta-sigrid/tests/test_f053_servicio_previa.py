@@ -166,7 +166,7 @@ def _lineas(*codigos: str) -> tuple[dict, ...]:
                lineas=_lineas("partida_no_encontrada", "naturaleza_no_valida")), EstadoAlta.ERROR),
     (ErrorAlta(tipo=TipoFallo.RECHAZO, status=400, codigo="referencia_en_conflicto"),
      EstadoAlta.REVISAR),
-    (ErrorAlta(tipo=TipoFallo.RECHAZO, status=400, codigo="proveedor_sin_albaran_previo"),
+    (ErrorAlta(tipo=TipoFallo.RECHAZO, status=400, codigo="proveedor_no_encontrado"),
      EstadoAlta.NO_ADMITIDO),
     (ErrorAlta(tipo=TipoFallo.RECHAZO, status=400, mensaje="Solicitud invalida."), EstadoAlta.ERROR),
     (ErrorAlta(tipo=TipoFallo.SERVIDOR, status=500), EstadoAlta.ERROR),

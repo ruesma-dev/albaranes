@@ -41,8 +41,6 @@ CODIGOS_CABECERA: Mapping[str, EstadoAlta] = MappingProxyType({
     "obra_ambigua": _NO_ADMITIDO,
     "contrato_no_encontrado": _NO_ADMITIDO,
     "contrato_ambiguo": _NO_ADMITIDO,
-    # retirado en la v8.3: se quita tras F-104 T7 (T8, tras la verificación M2).
-    "proveedor_sin_albaran_previo": _NO_ADMITIDO,
     # Contrato v8.3 (F-015 de sigrid-api).
     "proveedor_no_encontrado": _NO_ADMITIDO,
     "proveedor_ambiguo": _NO_ADMITIDO,

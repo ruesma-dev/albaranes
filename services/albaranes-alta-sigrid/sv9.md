@@ -82,9 +82,9 @@ Spec: `specs/F-104-codigos-contrato-v83/`. Contrato v8.3 §3.2–§3.3 (`871cc0c
   `ALTA_SIGRID_AVISOS_BLOQUEANTES` (ni en el defecto ni en `infra/`); se guardan en `avisos_json` y el panel
   de sv4 los enseña con su texto y el `mensaje` de sigrid-api. `totales.tot`, `retenciones` y `filas.dcarec`
   no se comparan (la previa sigue por línea) y `filas` no se guarda.
-- **`proveedor_sin_albaran_previo`** (retirado en la v8.3): **sigue** en `no_admitido` hasta verificar, tras el
-  despliegue de la F-015 de sigrid-api, que ya no llega (M2); entonces se quita (T8, D1) y, si llegase, iría a
-  `error` (H25). sv4 conserva su texto (altas antiguas).
+- **`proveedor_sin_albaran_previo`** (retirado en la v8.3): **retirado** también de `CODIGOS_CABECERA` (T8, D1,
+  2026-10-27), tras verificar con la F-015 de sigrid-api desplegada que ya no llega (M2). Si llegase, va a `error`
+  como cualquier código desconocido (H25). sv4 conserva su texto (altas antiguas).
 
 ## Llaves (design §7)
 

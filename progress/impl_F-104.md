@@ -1,5 +1,5 @@
 <!-- progress/impl_F-104.md -->
-# F-104 · Informe del implementer (pasada 1: T1–T7)
+# F-104 · Informe del implementer (T1–T7, 2026-10-24; T8–T9, 2026-10-27/28)
 
 Rama `feature/F-104-codigos-contrato-v83` (worktree `../albaranes-F-104`), `dev` (`ba516a7`) fusionado al empezar.
 Rigor `critico`. PARADA 1 cerrada por el humano el 2026-10-24: **D1 = 1, D2 = 1** (anotado en `design.md` §8).
@@ -125,13 +125,65 @@ El mutador no muta entradas de diccionario ni plantillas (30 de las 31 líneas s
 Primera pasada en rojo por **un** test de la raíz (`test_f039_r2_…`: el informe `progress/mutacion_F-104.md` no
 tenía fila en `progress/inventario_mutacion_F-039.md`); añadida la fila (55 informes). Pasada final: ver «Evidencias».
 
-## MANUAL pendientes (no son de esta pasada)
+## MANUAL (líder, solo lectura)
 
-- **M1** (líder, solo lectura, antes de desplegar): `ALTA_SIGRID_AVISOS_BLOQUEANTES` de `ca-sv9-alta-sigrid` sin
-  Avisos v8.3 (design §6). **M-D** (humano): `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4`, antes o a la vez que la
-  F-015 de sigrid-api. **M2/M3** (líder, tras F-015): SQL de design §6 y panel de un alta con `retencion_del_contrato`.
-- **T8–T9** (tras M2 en verde): retirar `proveedor_sin_albaran_previo` de sv9 (el texto de sv4 se queda).
-- Tras APPROVED de T1–T7, F-104 pasa a `blocked` («espera al despliegue de F-015 de sigrid-api»), D1.
+- **M1** (24-10, repetida el 28-10): `ca-sv9-alta-sigrid` sin `ALTA_SIGRID_AVISOS_BLOQUEANTES` (manda el defecto). Verde.
+- **M-D** (humano, 24-10): sv9 `r20261024-1838`, sv4 `r20261024-1841`; el 28-10 sv9 sigue en `r20261024-1838`.
+- **M2** (28-10, SQL de design §6 con `:desde` = `2026-10-24T18:21:18Z`, PostgreSQL de Azure en solo lectura):
+  `registrado` 17 altas y `ya_en_sigrid` 1; en ambas `retirado` 0, `errores_v83` 0, `con_retencion` 0, `sin_dato` 0,
+  `aviso_v83_bloqueo` 0. **Verde.** `con_retencion` = 0: aún no ha pasado un albarán con retención (no es rojo, §6);
+  el panel **M3** se repite cuando pase. La T8 se escribió el 27-10, antes de anotar este recuento.
+
+## T8 · retirada de `proveedor_sin_albaran_previo` (2026-10-27, R10, D1)
+
+Con la F-015 de sigrid-api desplegada (`60db955`). Antes, `git merge dev`: avance rápido
+(`dev` ya contenía la rama), sin conflictos.
+
+- `domain/services/clasificador.py`: fuera la línea del Código retirado y su comentario (−2 líneas). Si llegase, va
+  a `error` por H25. sv4 **sin cambios**: `TEXTOS_MOTIVO_ALTA` conserva su texto (altas antiguas).
+- `tests/test_f104_contrato_v83.py`: R2 pasa a R10 (`test_f104_r10_el_retirado_ya_no_esta_en_la_tabla`,
+  `…_se_clasifica_error[previa/grabación]`, `…_previa_rechazada_por_el_retirado_es_error[simulación/real]`);
+  `TABLA_CABECERA_V82` sin el retirado y el test de R3 renombrado a `…_v82_sin_el_retirado_mas_los_tres_errores`.
+- `tests/test_f053_clasificador.py`: `TABLA_CABECERA` sin el retirado (docstring y comentario).
+- `tests/test_f053_servicio_previa.py`: el caso parametrizado de R18 usa `proveedor_no_encontrado` → `no_admitido`.
+- `sv9.md` y §10 de `azure-apps/albaranes.md` dicen «retirado»; la viñeta de §10 ya no pone «sin desplegar»
+  (sv9 y sv4 desplegados el 2026-10-24). `azure-apps` `ac1f414`, local, sin push.
+
+**RED** (con la línea aún en `CODIGOS_CABECERA`), desde `services/albaranes-alta-sigrid`:
+`python -m pytest -q --tb=line -k "f104_r10 or f104_r3_la_tabla or f053_r18_la_tabla"` (PYTHONPATH = `ruesma_comun`)
+```
+tests	est_f053_clasificador.py:70: AssertionError: assert {'obra_no_enc...mitido'>, ...} == {'obra_no_enc...mitido'>, ...}
+tests	est_f104_contrato_v83.py:184: AssertionError: assert 'proveedor_sin_albaran_previo' not in mappingproxy({...})
+tests	est_f104_contrato_v83.py:190: AssertionError: assert <EstadoAlta.NO_ADMITIDO: 'no_admitido'> is <EstadoAlta.ERROR: 'error'>
+tests	est_f104_contrato_v83.py:198: AssertionError: assert <EstadoAlta.NO_ADMITIDO: 'no_admitido'> is <EstadoAlta.ERROR: 'error'>
+tests	est_f104_contrato_v83.py:206: AssertionError: assert {'obra_no_enc...mitido'>, ...} == {'obra_no_enc...mitido'>, ...}
+      Left contains 1 more item: {'proveedor_sin_albaran_previo': <EstadoAlta.NO_ADMITIDO: 'no_admitido'>}
+7 failed, 1020 deselected in 15.48s
+```
+La verificación de la T8 en RED: `-k "f104 or f053_clasificador or f053_r18"` → `7 failed, 145 passed`.
+
+**GREEN** (verificación de la T8, sin suite completa: F-100 tiene su campaña de mutación en marcha):
+
+- `pytest services/albaranes-alta-sigrid -k "f104 or f053_clasificador or f053_r18"` → **152 passed**, 875
+  deselected, 12,61 s.
+- `pytest services/albaranes-front -k "f104 or f077_r27"` → **28 passed**, 1905 deselected, 36,09 s (con el
+  `.venv` de sv4; R10 de sv4 y F-077 R27 en verde: un código de sv4 con texto y sin clasificador no rompe R27).
+
+El RED equivale al mutante a mano M18 «volver a poner la línea» (muerto por 7 tests).
+
+**Mutación de la T8** (2026-10-28, `clasificador.py` entero, en serie; el diff de la T8 ahí es solo un borrado):
+`python -m harness.mutacion --feature F-104 --ficheros services/albaranes-alta-sigrid/domain/services/clasificador.py
+--max-mutantes 0 --workers 1 --salida <scratchpad>` sobre `4a81091` → **13 generados, 13 muertos, 0 supervivientes**,
+218,7 s (base sv9 70,9 s). Detalle en `progress/mutacion_F-104.md` § T8. T8 `[x]`.
+
+## T9 · `bash harness/init.sh` (2026-10-28)
+
+Antes, `git merge dev` (`7af0762`: F-069 `done`, F-107 en el backlog): merge sin conflictos; F-104 sigue `blocked`
+con su `branch`; `BACKLOG.md` sin cambios tras `init.sh`. `bash harness/init.sh` **tal cual** en el worktree, sin
+`PYTHONPATH` ni `ARNES_SIN_CACHE` (no hizo falta la variante de entorno): **verde, exit 0**, «ENTORNO LISTO».
+Raíz 1919 passed (625,9 s, con cobertura); sv1 205; sv2 485; sv3 1576; sv4 1933 (399,6 s); sv5 125; sv6 480 (+1
+skipped); sv9 **1027 passed** (83,0 s); comun 1077 (+3 skipped). `PUERTA COBERTURA: N/A (F-104 no cambia líneas
+Python de producción frente a dev)`: la T8 solo borra líneas. `PUERTA TAMAÑO`: impl 192/220. T9 `[x]`.
 
 ## Fuera de alcance (R11, sin tocar)
 
@@ -147,4 +199,6 @@ Petición a sigrid-api, `comparador_previa.py`, `ruesma_comun`, DDL, `infra/*.ps
 | Cobertura de líneas cambiadas | `PUERTA COBERTURA: 100.0% de 4 líneas cambiadas cubiertas (4/4, umbral 80%, nivel critico)` |
 | Mutación (herramienta, sin tope) | 1 generado, 1 muerto, **0 supervivientes**, 566,1 s |
 | Mutación a mano (datos y plantilla) | 17 generados, 17 muertos, **0 supervivientes** |
-| `init.sh` final | **verde, exit 0** (raíz 1883 passed con cobertura; 0 comprobaciones fallidas; tamaño impl 150/220) |
+| `init.sh` final (T7) | **verde, exit 0** (raíz 1883 passed con cobertura; 0 comprobaciones fallidas; tamaño impl 150/220) |
+| Mutación T8 (`clasificador.py` entero) | 13 generados, 13 muertos, **0 supervivientes**, 218,7 s |
+| `init.sh` T9 (tal cual, tras merge de `dev`) | **verde, exit 0**; sv9 1027 passed (83,0 s), sv4 1933 passed (399,6 s), raíz 1919 passed (625,9 s); cobertura N/A (solo borrados) |
