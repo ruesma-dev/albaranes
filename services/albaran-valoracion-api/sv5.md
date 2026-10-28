@@ -429,7 +429,7 @@ corrupto, no es objeto, o no casa con el modelo, devuelve `None` con un
 | `ANTHROPIC_MODEL`       | `claude-sonnet-4-5`  |                                                             |
 | `ANTHROPIC_MAX_TOKENS`  | `8192`               |                                                             |
 | `ANTHROPIC_TIMEOUT_S`   | `120`                | El de `config/settings.py` y el del cliente de comun; en Azure no se fija. |
-| `ANTHROPIC_FORZAR_HERRAMIENTA` | `true`        | (F-086) `true`: Claude recibe la herramienta forzada (`tool_choice` `tool`), como siempre. Un Claude 5.5 en sv5 (Opus 5.5, Sonnet 5.5) o Fable 5.1 necesita `ANTHROPIC_FORZAR_HERRAMIENTA=false` (`tool_choice` `auto`): su API rechaza la forzada con 400. Vale para el Claude de IA3 y de IA4. Valor no booleano: sv5 no arranca. En Azure no se fija. |
+| `ANTHROPIC_FORZAR_HERRAMIENTA` | `true`        | (F-086) `true`: Claude recibe la herramienta forzada (`tool_choice` `tool`), como siempre. Un Claude 5.5 en sv5 (Opus 5.5, Sonnet 5.5) o Fable 5.1 necesita `ANTHROPIC_FORZAR_HERRAMIENTA=false` (`tool_choice` `auto`): su API rechaza la forzada con 400. Vale para el Claude de IA3 y de IA4. Valor no booleano: sv5 no arranca. En Azure, `false` desde el 2026-10-28 (con `ANTHROPIC_MODEL=claude-opus-5-5`, ocioso: IA3/IA4 en OpenAI). |
 | `IA3_PROVIDER`          | *(vacía)*            | Quién valora (IA3). Vacía: TODOS los habilitados y primario claude > gemini > openai. |
 | `IA4_PROVIDER`          | *(vacía)*            | Quién concilia (IA4). Vacía: el primero habilitado.          |
 
