@@ -180,6 +180,8 @@ No editable: solo el `input` con `readonly` y el filtro, sin botón ni selector 
   (rechaza); la de sv3 es tolerante (deja pasar lo que no entiende). Distinta responsabilidad, no copia.
   (b) `ruesma_comun.fechas` (comun 0.10.0) y sv3 la usa: toca comun y sv3, más despliegue.
 
+**PARADA 1 cerrada por el humano el 2026-10-28 («Todo a»): D1–D7 = (a).**
+
 ## 9. Riesgos
 - `showPicker` necesita gesto del usuario y el selector renderizado: por eso va oculto con opacidad y
   tamaño mínimo junto al botón (el calendario se ancla ahí), no con `display:none`; fallback de R14.
