@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **107 features**, 76 abiertas (1 en curso, 5 con la spec lista, 9 bloqueadas y 61 en backlog) y 31 terminadas.
+Resumen: **107 features**, 76 abiertas (1 en curso, 7 con la spec lista, 9 bloqueadas y 59 en backlog) y 31 terminadas.
 
 ## En curso
 
@@ -15,6 +15,8 @@ Resumen: **107 features**, 76 abiertas (1 en curso, 5 con la spec lista, 9 bloqu
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
+| F-108 | Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha | 2 | estandar | `feature/F-108-fecha-numero-editables` |
+| F-110 | El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS) | 2 | critico | `feature/F-110-descuento-linea-sigrid` |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 43 | critico |  |
 | F-003 | Tanda 2 — Albaranes valorados, match estricto y coherencia (G3+G4+G5) | 59 | estandar | `feature/F-003-valorados-match-estricto` |
 | F-004 | Tanda 3 — Hormigón fino y veto de mortero | 62 | estandar | `feature/F-004-hormigon-fino` |
@@ -40,8 +42,6 @@ Resumen: **107 features**, 76 abiertas (1 en curso, 5 con la spec lista, 9 bloqu
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
 | F-106 | Al cambiar la medición de una línea en la ficha, el precio unitario se recalcula y se ve coherente con el importe (cantidad × precio × (1 − dto) = importe) antes de aprobar y de volcar a Sigrid | 1 | critico |  |
-| F-108 | Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha | 2 | estandar |  |
-| F-110 | El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS) | 2 | critico |  |
 | F-095 | Alta en Sigrid con el precio BRUTO y el % de descuento en su columna, no con el precio neto | 8 | critico |  |
 | F-105 | Traer a IA3 todos los documentos de contrato (PDF y anexos) de cada contrato, no solo el de gra_rep_ide | 9 | critico |  |
 | F-090 | Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692) | 10 | critico |  |
@@ -147,13 +147,13 @@ ORIGEN: correo de Óscar Domingo (obra 0692), reenviado por el humano el 2026-10
 
 ### F-108 · Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha
 
-estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí
+estado **spec lista** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-108-fecha-numero-editables`
 
 ORIGEN: el humano, 2026-10-28: «los campos de fecha, numero de albaran tiene que poder editarse con normalidad (fecha con un desplegable de calendario como adicional)». HOY (leído por el líder): en `document_detail.html` los dos son `input type=text` editables salvo con el documento no editable (aprobado / dado de alta); no se ve en el código nada que bloquee el teclado. A RESOLVER EN LA SPEC: el síntoma exacto (preguntado al humano: no deja escribir / se pierde al guardar / formato de la fecha) reproduciéndolo en solo lectura; cómo se guardan y validan (`fecha` en el PUT de la ficha, formato ISO frente a dd/mm/aaaa) y su efecto en sv9 (`fecha_albaran` AAAAMMDD, `fecha_no_plausible`); calendario adicional sin perder la escritura a mano (botón junto al campo de texto que abre el selector de fecha del navegador).
 
 ### F-110 · El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS)
 
-estado **pendiente** · prioridad 2 · rigor `critico` · SDD sí
+estado **spec lista** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-110-descuento-linea-sigrid`
 
 ORIGEN: el humano, 2026-10-28 («si a F-110»): en las líneas con descuento (albaranes de CECOIS) Sigrid recibe el unitario con el descuento ya aplicado. DEBE recibir lo mismo que la línea de la plataforma: precio unitario SIN descuento, el % de descuento como campo de Sigrid (`dcapro.dto`), la cantidad y el importe con el descuento aplicado. CAUSA (leída por el líder): sv9 calcula `precio = round(abs(importe)/cantidad, 6)` (`validador_alta.py`, `_linea_peticion`) y el alta de sigrid-api (`sigrid/albaran` extendido) no admite descuento por línea (solo `cantidad` y `precio`). QUÉ SE PIDE: (1) sigrid-api acepta `dto?` por línea y lo escribe en `dcapro.dto` con `pre` bruto (cambio SUYO: albaranes no edita sigrid-api; petición enviada a su sesión el 2026-10-28 con el sí del humano); (2) sv9 manda `precio` = precio unitario final sin descuento, `dto` = % de la línea y comprueba cantidad × precio × (1 − dto/100) = importe (tolerancia como F-106 D5); (3) sv4 y el panel del alta muestran lo enviado. DEPENDE de F-106 (misma función de sv9 y misma regla de edición: cantidad/precio/dto mueven el importe) y del contrato nuevo de sigrid-api; azure-apps (albaranes y el consumo de sigrid-api) al día.
 
@@ -185,7 +185,9 @@ ORIGEN: el humano, 2026-10-23, tras la T14 de F-084: «la que casa líneas es so
 
 estado **pendiente** · prioridad 8 · rigor `critico` · SDD sí
 
-ORIGEN: Óscar Domingo, obra 0692, 2026-10-22: «Albarán con descuento vuelca el precio con el descuento incluido en Sigrid, no vuelca el precio verdadero y la columna del porcentaje descuento vuelca en blanco. Cecois y un albarán de Rondón de palets devueltos». VERIFICADO en albaran_altas_sigrid.peticion_json (modo real): CECOIS A 26018267 (AC26/30447) línea 151,20 −7 % enviada como precio 140,62 sin descuento; CECOIS A 26017765 (AC26/30434) 26,796 −7 % → 24,92; RONDÓN MAC977620 (AC26/30472) devolución de palets 18,00 −10 % → 16,20. El importe total en Sigrid es correcto (neto), pero precio y % no. ALCANCE a 2026-10-22: 8 de las 18 altas reales registradas llevan alguna línea con descuento (22 líneas). CAUSA: el payload de sv9 a sigrid/albaran(-directo) lleva solo `precio` (neto) y ningún campo de descuento. A DECIDIR EN LA SPEC: si el endpoint de sigrid-api admite el % de descuento por línea (campo dto de las líneas del albarán en Sigrid); si no, se propone y coordina con la sesión sigrid-api (albaranes solo edita lo que consume); enviar precio bruto + dto y comprobar que Sigrid recalcula el mismo neto (redondeo); vinculadas a contrato (¿el dto es el del contrato o el del albarán?); qué hacer con las altas ya grabadas con precio neto (listarlas; corregirlas a mano o no). RELACIONADAS: F-053 (alta), F-087 (Registrar), F-019 (precio del albarán manda).
+ABSORBIDA POR F-110 (D0 de su PARADA 1, «Todo a» del humano el 2026-10-28). Se deja en pending porque el arnés no tiene estado de «absorbida», como F-016 y F-058.
+
+TEXTO ORIGINAL: ORIGEN: Óscar Domingo, obra 0692, 2026-10-22: «Albarán con descuento vuelca el precio con el descuento incluido en Sigrid, no vuelca el precio verdadero y la columna del porcentaje descuento vuelca en blanco. Cecois y un albarán de Rondón de palets devueltos». VERIFICADO en albaran_altas_sigrid.peticion_json (modo real): CECOIS A 26018267 (AC26/30447) línea 151,20 −7 % enviada como precio 140,62 sin descuento; CECOIS A 26017765 (AC26/30434) 26,796 −7 % → 24,92; RONDÓN MAC977620 (AC26/30472) devolución de palets 18,00 −10 % → 16,20. El importe total en Sigrid es correcto (neto), pero precio y % no. ALCANCE a 2026-10-22: 8 de las 18 altas reales registradas llevan alguna línea con descuento (22 líneas). CAUSA: el payload de sv9 a sigrid/albaran(-directo) lleva solo `precio` (neto) y ningún campo de descuento. A DECIDIR EN LA SPEC: si el endpoint de sigrid-api admite el % de descuento por línea (campo dto de las líneas del albarán en Sigrid); si no, se propone y coordina con la sesión sigrid-api (albaranes solo edita lo que consume); enviar precio bruto + dto y comprobar que Sigrid recalcula el mismo neto (redondeo); vinculadas a contrato (¿el dto es el del contrato o el del albarán?); qué hacer con las altas ya grabadas con precio neto (listarlas; corregirlas a mano o no). RELACIONADAS: F-053 (alta), F-087 (Registrar), F-019 (precio del albarán manda).
 
 ### F-105 · Traer a IA3 todos los documentos de contrato (PDF y anexos) de cada contrato, no solo el de gra_rep_ide
 
