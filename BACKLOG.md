@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **104 features**, 74 abiertas (1 en curso, 5 con la spec lista, 10 bloqueadas y 58 en backlog) y 30 terminadas.
+Resumen: **105 features**, 75 abiertas (1 en curso, 5 con la spec lista, 10 bloqueadas y 59 en backlog) y 30 terminadas.
 
 ## En curso
 
@@ -98,6 +98,7 @@ Resumen: **104 features**, 74 abiertas (1 en curso, 5 con la spec lista, 10 bloq
 | F-041 | Arnes: el veredicto de un mutante no puede depender de que la suite recogiera tests | 73 | critico | `feature/F-041-veredicto-honesto-del-mutante` |
 | F-042 | Arnes: segunda opinion de review con un modelo de otra familia (Codex/OpenAI) | 74 | estandar | `feature/F-042-segunda-opinion-otro-modelo` |
 | F-107 | sv1 lee el buzón cuando llega un correo (notificación de cambio de Graph) y no con una réplica siempre activa | 75 | critico |  |
+| F-109 | sv2 lee ANTHROPIC_FORZAR_HERRAMIENTA, como sv5, para poder usar Claude 5.5 en la extracción | 76 | estandar |  |
 
 ## Terminadas
 
@@ -854,6 +855,12 @@ AVISOS: se factura en la cuenta de OpenAI del humano, aparte. El 2026-08-21 NO h
 estado **pendiente** · prioridad 75 · rigor `critico` · SDD sí
 
 ORIGEN: el humano, 2026-10-26, vía la sesión de `facturas` (al aprobar el despliegue de su F-008 copiando nuestro sv1: «ya arreglaremos lo del hook»; pidió la misma feature en facturas —su F-077—, albaranes y partes); confirmado por el humano en esta sesión el 2026-10-26 («si»). HOY: sv1 es un daemon con una réplica siempre activa que sondea el buzón M365 por Graph cada 60 s. QUÉ SE PIDE: sustituir el sondeo por notificaciones de cambio de Microsoft Graph sobre el buzón: Graph avisa a un endpoint de sv1 al entrar un correo y el contenedor escala desde cero, en vez de pagar una réplica 24/7 (coste fijo estimado por facturas en 10-35 USD/mes por servicio, cifras de memoria sin confirmar: MEDIR en la spec). A RESOLVER EN LA SPEC: endpoint público nuevo (validationToken en el alta de la suscripción, clientState en cada aviso); renovación de la suscripción (la de correo caduca en ~3 días: quién y cómo renueva, p. ej. job programado); barrido de respaldo porque Graph no garantiza la entrega; arranque en frío frente al plazo de respuesta de Graph; idempotencia (no procesar dos veces el mismo correo); seguridad del endpoint; coste real antes y después. COORDINACIÓN: diseño común con facturas (F-077) y partes, documentado en azure-apps (no tres diseños distintos). Toca infra (ingress, escalado, permisos de Graph).
+
+### F-109 · sv2 lee ANTHROPIC_FORZAR_HERRAMIENTA, como sv5, para poder usar Claude 5.5 en la extracción
+
+estado **pendiente** · prioridad 76 · rigor `estandar` · SDD sí
+
+ORIGEN: el humano, 2026-10-28, al revisar los modelos tras el despliegue (Opus 5.5, Gemini 4 y GPT-6.1 Sol en todas las apps) eligió «a»: poner ANTHROPIC_MODEL=claude-opus-5-5 también en sv2 y dar de alta esta feature. HOY: sv2 instancia Claude con la herramienta forzada siempre (F-086 R7, R15) y no lee ANTHROPIC_FORZAR_HERRAMIENTA; la API de Claude 5.5 rechaza con 400 la herramienta forzada (comentario de infra/set_models.ps1). Claude está ocioso en sv2 (IA_PRIMERA_FASE=gemini, IA2 OpenAI), así que hoy no rompe nada, pero el día que se active fallará cada llamada. QUÉ SE PIDE: que sv2 lea ANTHROPIC_FORZAR_HERRAMIENTA (defecto true, como sv5), con tool_choice auto cuando es false, igual que hizo F-086 en sv5; tests de wiring y del 400; actualizar set_models.ps1 (deja de decir que sv2 no la lee), sv2.md y el documento de albaranes en azure-apps. FUERA: cambiar qué IA extrae en cada fase.
 
 ### F-001 · Test de estructura del monorepo
 

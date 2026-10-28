@@ -1302,6 +1302,19 @@
         "sv1-email",
         "infra"
       ]
+    },
+    {
+      "id": "F-109",
+      "title": "sv2 lee ANTHROPIC_FORZAR_HERRAMIENTA, como sv5, para poder usar Claude 5.5 en la extracción",
+      "description": "ORIGEN: el humano, 2026-10-28, al revisar los modelos tras el despliegue (Opus 5.5, Gemini 4 y GPT-6.1 Sol en todas las apps) eligió «a»: poner ANTHROPIC_MODEL=claude-opus-5-5 también en sv2 y dar de alta esta feature. HOY: sv2 instancia Claude con la herramienta forzada siempre (F-086 R7, R15) y no lee ANTHROPIC_FORZAR_HERRAMIENTA; la API de Claude 5.5 rechaza con 400 la herramienta forzada (comentario de infra/set_models.ps1). Claude está ocioso en sv2 (IA_PRIMERA_FASE=gemini, IA2 OpenAI), así que hoy no rompe nada, pero el día que se active fallará cada llamada. QUÉ SE PIDE: que sv2 lea ANTHROPIC_FORZAR_HERRAMIENTA (defecto true, como sv5), con tool_choice auto cuando es false, igual que hizo F-086 en sv5; tests de wiring y del 400; actualizar set_models.ps1 (deja de decir que sv2 no la lee), sv2.md y el documento de albaranes en azure-apps. FUERA: cambiar qué IA extrae en cada fase.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 76,
+      "servicios": [
+        "sv2-api",
+        "infra"
+      ]
     }
   ]
 }
