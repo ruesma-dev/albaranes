@@ -1,6 +1,8 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-112 · `pending` (2026-10-29): spec v1 escrita, espera PARADA 1** — año del albarán con la fecha del correo como referencia (sv2). Spec en `specs/F-112-anio-fecha-albaran/`, informe y medición de producción en `progress/spec_F-112.md` (19 de 158 documentos con la fecha a más de un año del correo; residuos 10/15; el error nace en IA1 e IA2 lo confirma). Decisiones D1–D9 para el humano en design §9. Va después de F-106.
+
 **F-106 · `in_progress` (2026-10-28): recalcular el precio al cambiar la medición** — rama `feature/F-106-precio-al-cambiar-medicion`, worktree `../albaranes-F-106`. Spec v3 con PARADA 1 cerrada (D8 = c, D9–D13 = a; design §10). Empieza por la T0 (solo lectura en producción: cuántas líneas pendientes no cuadran; si más del 10 %, se para). Despliegue: sv6 → sv9 → sv4. F-110 (dto a Sigrid) va detrás y toca la misma función de sv9.
 
 **F-100 · `blocked` (2026-10-28): parte A (T1–T7, banco VAL) con review APPROVED** (`progress/review_F-100.md` en su rama, pasada 1). Espera a F-106 en `dev` para la medición ANTES (T8–T11; T10 y T11 de pago, las lanza el humano). Antes de T11: (O1) que el humano acepte los 6 mutantes equivalentes; (O2) corregir la fila «valoración» de `evals/README.md:257` (mide importe, precio y su fuente, no la cantidad); (O3) fusionar `dev` antes de T11, nunca entre T11 y T21; (O4) decidir si el banco normaliza las partidas como producción (F-076) antes de IA4.
