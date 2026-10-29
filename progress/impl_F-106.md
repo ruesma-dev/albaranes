@@ -1,167 +1,209 @@
 <!-- progress/impl_F-106.md -->
 # F-106 · informe del implementer
 
-Rama `feature/F-106-precio-al-cambiar-medicion` (worktree `../albaranes-F-106`). Rigor `critico`.
-
-## Estado: BLOQUEADA en la T11 (pasada 3, 2026-10-29)
-
-**Un test contradice R15.** `test_f065_f1_fila.py::test_f065_r9_plantilla_precio_aplicado_y_el_del_contrato_en_el_title`
-exige `value="120.0000"` en la celda del precio. R15 dice que el precio se pinta «con los decimales guardados, hasta 6,
-sin ceros finales y al menos 2», así que 120 queda `120.00`. R31 no declara ese test. El resto de la T11 está hecho y
-en verde (`287fe41`); T12–T21, sin empezar. Suite de sv4 con la T11:
-`2042 passed, 13 failed`. 11 de esos rojos (F-051) eran míos y ya están arreglados: la consulta del vínculo tolera BBDD
-sin `sigrid_ide`. Quedan dos rojos: este y `test_f077_r27`, que es la T12.
-
-**Propuesta:** declarar el test en R31 y cambiar su aserción a `value="120.00"`, que es R15 literal. La alternativa sería
-enmendar R15 a «al menos 4 decimales», es decir, `120.0000` y `2.333333`.
-
-Dos enmiendas del humano del 2026-10-29, las dos en R31 y en la spec:
-
-- **T9**: «Cambiar los 2 tests». `test_f065_r8_dominio_campos_presentes[cuerpo8-campos8]` y
-  `test_f065_r8_un_campo_desconocido_no_cuenta_como_cambio` usan `importe_calculado` como clave desconocida (`bef559b`).
-- **T10**: «cuando es almacen, no hay partida. lo que debe comprobar es que almacen = sin partida». Almacén es una fila
-  sin partida y cuadra como las demás: si no cuadra, bloquea el aprobar (R16) y sv9 la rechaza (R17). Ya estaba así
-  implementado en `4d80f3f`. Cambios:
-  - R16 lo aclara y la T10 pierde «y almacén no cuentan».
-  - Se corrigen dos fixtures, declarados en R31, sin tocar sus aserciones. En `test_f075_r9_valoracion_directa_completa_se_aprueba`
-    la fila 12 lleva P 2,5 (P = neto / 2). En `test_f078_r17_junto_a_las_de_f065_y_desde_guardar_y_aprobar` la 386 lleva
-    P 12,5, el de su derivada.
-  - «Almacén = sin partida» ya lo fijaba sv9 en `test_f076_partida_final.py::test_f076_r16_final_vacia_sin_clave_de_partida`.
-    Se le añade `test_f106_r16_r17_almacen_es_sin_partida_y_cuadra_como_las_demas`: sin partida y sin cuadrar da
-    `linea_no_cuadra`, y cuadrando va sin clave `partida`. Pasa a la primera porque el código ya existía.
+Rama `feature/F-106-precio-al-cambiar-medicion` (worktree `../albaranes-F-106`). Rigor `critico`. Hechas T0–T21; no
+se hacen aquí T22 (líder, Chrome), T23 y T24 (humano) ni la T25 final (líder con el reviewer).
 
 ## Lo hecho
 
 | Tarea | Commit | Resumen |
 |---|---|---|
-| fusión | `dc9e4c2` | `dev` 5dd1f45 en la rama (pasada 1) |
-| T0 | `0ca72d2` | medición en producción (abajo) |
-| T1 / T2 | `c93f1f4` / `546679f` | comun 0.10.0: `importes.TOLERANCIA_CUADRE_EUR` y `cuadra_linea`, `alta_sigrid.linea_a_sigrid` y `edicion_manual.recalcular_fila` (con `NoDespejable` y `PrecioEImporte`) |
-| T3 / T4 | `3939d3f` / `7d8ca8f` | sv9: P y d en `LineaAlta`, `SQL_LINEAS` y `_linea_de_fila`; motivo `linea_no_cuadra` (⇒ `no_admitido`); `_linea_peticion` con `linea_a_sigrid` |
-| T5 / T6 | `8bc8578` / `50dcffd` | sv4 dominio: `ConciliacionEditBody.importe` y `.cuadrar`, `recalculo_de_fila`, `LineasIncompletasError(no_cuadran=)` |
-| T7 / T8 | `dc15389` / `041edb9` | sv4 PATCH: `update_line_conciliacion(cuadrar=)`, servicio y ruta (422 de R4, R7) |
-| T9 | `f83c1f3`, `bef559b` | R-8 (residuos de F-036 cuadran con la convertida), `cuadrar` solo si vino y la enmienda de R31 |
-| T11 parcial | `287fe41` | vista: `cuadra`, `cuadre_texto`, `importe_albaran`, `aviso_importe`, `a_sigrid`, `factor_alta`; plantilla con rojo, botones, «≠ albarán», «A Sigrid» y precio a 6; `test_f106_ficha.py` (41) |
-| T10 | `a5322fa` | R16 en `_exigir_lineas_completas` (P y d en `_SQL_FILAS_PARA_APROBAR`); `test_f106_aprobar.py` (11); fixtures de F-075/F-078; test sv9 de almacén |
+| fusión / T0 | `dc9e4c2` / `0ca72d2` | `dev` 5dd1f45 en la rama; medición en producción (abajo) |
+| T1 / T2 | `c93f1f4` / `546679f` | comun 0.10.0: `cuadra_linea`, `TOLERANCIA_CUADRE_EUR`, `linea_a_sigrid`, `recalcular_fila` |
+| T3 / T4 | `3939d3f` / `7d8ca8f` | sv9: P y d en `LineaAlta`/`SQL_LINEAS`; `linea_no_cuadra` ⇒ `no_admitido`; petición con `linea_a_sigrid` |
+| T5 / T6 | `8bc8578` / `50dcffd` | sv4 dominio: `importe` y `cuadrar` en el cuerpo, `recalculo_de_fila`, `no_cuadran` |
+| T7 / T8 | `dc15389` / `041edb9` | sv4 PATCH con `importe` (despeja P) y `cuadrar`; 422 de R4 y R7 |
+| T9 | `f83c1f3`, `bef559b` | regresión del PATCH; dos tests de F-065 R8 declarados (enmienda del humano) |
+| T10 | `4d80f3f`, `a5322fa` | R16 al aprobar; almacén = fila sin partida (humano); fixtures de F-075/F-078 declarados |
+| T11 | `287fe41`, `11f8546` | ficha: rojo con la cuenta, botones, «≠ albarán», «A Sigrid», precio hasta 6 decimales (R15 literal) |
+| T12 | `b3f32c0` | JS: P a 6, rojo sin despejar, `importe` o P en el PATCH, repintado, botones; texto de `linea_no_cuadra` |
+| T13 / T14 | `e1c8dfc` / `418a1d3` | comun fase B: `EdicionManual`, `registrar_edicion`, `leer_edicion`, `aplicar_edicion`, `es_fila_manual` |
+| T15 / T16 | `08cee12` / `32578fc` | sv6: columna `edicion_manual_json`; `replace_valuation` con `FOR UPDATE` y reaplicación (R23–R28) |
+| T17 / T18 | `e988163` / `23490f7` | sv4 fase B: las nueve vías registran la edición, «✋», «Volver a lo calculado», 409 de R28 |
+| T19 | `86141a4` | `scripts/listar_altas_descuadradas_f106.py` de sv9 (solo `SELECT`) |
+| T20 | `dc725e8` + azure-apps `9a369c3` | ARCHITECTURE reglas 13, 20, 22, 25 y acceso a datos; sv4.md, sv6.md, sv9.md; `azure-apps/albaranes.md` |
+| T21 | MUT_COMMIT | campaña de mutación: `progress/mutacion_F-106.md` |
 
-Ficheros: comun `importes.py`, `alta_sigrid.py`, `edicion_manual.py` (nuevo), `__init__.py`, `pyproject.toml`; sv9
-`alta_models.py`, `sql_alta_repository.py`, `validador_alta.py`; sv4 `review_models.py`, `review_repository.py`,
-`review_service.py`, `app.py`. Tests nuevos: `comun/tests/test_f106_cuadre.py` (59), `sv9/tests/test_f106_validador.py`
-(15), `sv4/tests/test_f106_fila.py` (70) y `test_f106_aprobar.py` (11).
+Ficheros de producción: comun `importes.py`, `alta_sigrid.py`, `edicion_manual.py` (nuevo), `__init__.py`,
+`pyproject.toml`; sv9 `alta_models.py`, `sql_alta_repository.py`, `validador_alta.py`,
+`scripts/listar_altas_descuadradas_f106.py` (nuevo); sv6 `schema_contribution.py`, `orm_valuation_models.py`,
+`sqlalchemy_valuation_repository.py`; sv4 `review_models.py`, `alta_sigrid_models.py`, `review_repository.py`,
+`review_service.py`, `app.py`, `document_detail.html`, `app.js`, `styles.css`.
 
-### Decisiones de diseño (y desviaciones, justificadas)
+## Tests de features anteriores tocados (todos en R31 o sin tocar aserciones)
 
-1. **`importe` presente a `null` (o vacío) ⇒ 422** «El importe no puede quedar vacío». La spec no dice qué hacer con un
-   importe vaciado; vaciarlo no encaja en D1 (no hay precio que lo dé). Igual `cuadrar: null` ⇒ 422.
-2. **Importe + precio a la vez ⇒ 422 ya en el cuerpo** (`model_validator`), con el texto de R7, sin llegar al servicio.
-   `recalcular_fila` lo comprueba también (`PrecioEImporte`), para sv6.
-3. **Un importe igual al de hoy se descarta (F-065 R8) salvo que cambien Q o d en el mismo PATCH**: entonces manda (el
-   revisor lo volvió a teclear; si se descartara, se recalcularía y se perdería).
-4. **Un P despejado igual al actual no es un precio cambiado**: la fila Contrato sigue Contrato (evita pasar a Nueva
-   por redondeos). Distinto ⇒ R8 (Contrato → Nueva; en una Nueva, su derivada recibe P).
-5. **`NoDespejable` se calcula antes de escribir nada** (también con `cuadrar = precio`); la ruta lo traduce a 422.
-6. **sv9: `linea_no_cuadra` usa Q = convertida ?? albarán** (la definición de la spec, en la unidad de P), aunque la
-   petición mande la del albarán en una sin vincular. Detalle con coma decimal y P sin ceros finales («48 × 11,2 × (1 −
-   7 %) = 499,97 ≠ 104,16», el literal de R17); sin dto aplicable no se escribe el factor.
-7. **P y d de `LineaAlta` tienen defecto `None`** (no comparable): los datos de F-053 no cambian y la petición sale
-   idéntica (test `peticion_identica_a_la_de_hoy`).
-8. **«Campos de vista» de T6** (`cuadra`, `aviso_importe`, «a Sigrid»): los dejo para la T11, donde se rellenan y se
-   prueban; en T6 habrían sido campos sin uso.
-9. **F-053 T25, equivalente #6** (`con_signo = -cantidad if importe < 0`): la línea se movió a comun con
-   `linea_a_sigrid` (R2), así que el test de equivalencias pedía «rehacer la justificación». Allí ya no es equivalente
-   (con importe 0 la función se puede llamar) y lo mata `test_f106_r2_importe_cero_cantidad_en_positivo`. El test de
-   F-053 conserva los #4 y #5 y dice por qué el #6 ya no está.
-10. **`test_f098_t5_version_090`** pasa a «≥ 0.9.0 y pyproject igual al paquete», como hizo F-098 con el de F-076; el
-    exacto 0.10.0 lo exige `test_f106_t2_version_0100`.
-11. El test de deshacer emula `undo_last` con los métodos reales de restaurar (como `test_f065_f3_dividir`): su
-    `FOR UPDATE` no existe en SQLite.
+Declarados en R31:
+- `test_f065_f1_js.py`: `importe_solo_ajusta_el_precio` ⇒ `{"importe": 1000}` (R12), y en T18 los dos textos de
+  `avisoRevalorar` («Revalorar conserva N líneas puestas a mano», R30).
+- Los dos de F-065 R8 (clave `importe_calculado`).
+- Los fixtures de `test_f075_r9…` y `test_f078_r17…` (R16).
+- `test_f065_r9_plantilla…` (`value="120.00"`, R15).
+- `test_f065_bloqueada_ddl.py::test_f065_r17…` (R27).
+
+Sin tocar ninguna aserción, solo el esquema de los fixtures para que tengan las columnas de producción:
+- `tests/conftest.py` y `tests/f053_sv4_bbdd.py` de sv4 llevan `edicion_manual_json`.
+- `conftest.py` lleva `producto_sigrid`. La columna existe en producción desde F-053 y la lectura de la edición la nombra.
+
+`test_f051_r16_todas_en_un_unico_update` no cambia: almacén escribe la edición en el MISMO UPDATE (CASE por id), así
+que sigue siendo una sola sentencia.
+
+## Decisiones de diseño (y desviaciones, justificadas)
+
+Fase A (pasadas 1–3):
+1. `importe` o `cuadrar` a `null` ⇒ 422 (vaciar el importe no encaja en D1). Importe + precio ⇒ 422 ya en el cuerpo.
+2. Un importe igual al de hoy se descarta (F-065 R8) salvo que cambien Q o d en el mismo PATCH (entonces manda).
+3. Un P despejado igual al actual no es un precio cambiado (no pasa a Nueva por redondeos).
+4. `NoDespejable` se calcula antes de escribir. sv9 compara con Q = convertida ?? albarán. P y d de `LineaAlta`
+   llevan defecto `None`, así que la petición sale idéntica a la de hoy.
+5. Equivalente #6 de F-053 T25 rehecho: la línea se movió a comun y ya no es equivalente.
+   `test_f098_t5_version_090` pasa a «≥ 0.9.0 y pyproject igual»; la versión exacta la exige `test_f106_t2_version_0100`.
+6. Ficha y botones:
+   - Solo las filas a registrar se pintan en rojo.
+   - El `title` del precio junta «Precio del contrato» y «A Sigrid».
+   - Los botones mandan solo `{cuadrar}` por `enviarFila` (guardar = bloquear).
+   - Sin `ultimoCampo` y con el importe cambiado, viaja el importe.
+   - `TEXTOS_MOTIVO_ALTA["linea_no_cuadra"]` = «La línea no cuadra (cantidad × precio × (1 − dto) ≠ importe)». La spec
+     no da literal.
+7. `syncImporteUnitario` sigue anidada en `wireConciliaEdit`, su único llamador. Sacada fuera rompía los tests de
+   F-065 f3bis, que extraen `wireConciliaEdit` sin ella.
+
+Fase B (T13–T18):
+8. La edición guarda cada campo como `{columna: valor}` de sus columnas. La firma es `registrar_edicion(previa, *,
+   fila_antes, fila_despues, campos, fila_entera)`, por palabras clave, en vez del `(previa, fila_antes, cambios)` del
+   design.
+9. `calculado` lleva además `precio_unitario_source` y `_agreement` (el «origen» del design §5). Sin ellos, «Volver a
+   lo calculado» desde Nueva dejaría `agreement = manual` y la fila seguiría contando como tocada.
+10. `aplicar_edicion` conserva el I editado si no se puede despejar (Q 0): la fila no cuadrará y R16 la para.
+11. sv6:
+    - Solo se recalculan `total_valorado` y `total_lines`; los demás contadores quedan como salen de sv6.
+    - Una fila conservada con blanca sustituye a la nueva de esa blanca.
+    - `codigo_externo` (columna de sv4) se escribe con un UPDATE tolerante.
+    - La fila legada se reconoce también por `bloqueada`.
+12. Qué registra el PATCH:
+    - Los campos cambiados.
+    - Con el P despejado (importe tecleado o «Recalcular precio»), `importe` y no el precio.
+    - Si eso pasa la fila a Nueva (R8), también `origen`: sv6 tiene que recrear la derivada (R27).
+    - «Recalcular importe» registra `cantidad`: es «como cambiar Q» (R9) y sv6 rehará I.
+
+    Por eso cambié dos tests RED míos de T17, de `["importe"]` a `["importe", "origen"]`, y añadí
+    `test_f106_r20_recalcular_importe_guarda_la_cantidad`. Otro test RED usaba `mode="derived"`, que no existe; pasa a
+    `mode="nueva"`.
+13. «+ a Sigrid» sobre una blanca ya valorada reapunta la fila y registra `origen`; si la crea, `fila_entera`.
+    Dividir registra en la original `cantidad`, y también `codigo_partida` y `origen` si cambian.
+14. «Volver a lo calculado» no exige la fila desbloqueada: desbloquear es parte de volver. Da 404 sin edición o en una
+    `fila_entera`. Si la línea calculada ya no existe, no se restauran ni el origen ni la fuente del precio.
+15. Fila desaparecida en el PATCH ⇒ `ValoracionCambiadaError` (409). Una fila de otro documento sigue siendo 404.
+16. Script R18:
+    - «Precio difiere» si `|enviado − P(1 − d)| × |cantidad enviada| > 0,02 €`, la tolerancia del cuadre en euros. Así
+      el redondeo a céntimos del importe no lista media base.
+    - Solo altas `modo = 'real'`.
+    - Las líneas sin fila o ilegibles no se comparan.
+
+## Propuesta al líder (D11)
+
+F-058 («lo manual se pierde al revalorar») queda **absorbida** por la fase B de F-106 (R19–R30, D11; ya anotado en
+`de8e289`). Propongo marcarla así en `features.json` al cerrar F-106. Yo no he tocado `features.json`.
 
 ## Fase RED (trazas reales)
 
-Comando y salida resumida de cada RED, en el orden de `tasks.md` (PYTHONPATH a la comun del worktree):
+Comando y salida resumida de cada RED, en el orden de `tasks.md` (PYTHONPATH a la comun del worktree). sv4 usa
+`.venv/Scripts/python.exe`:
 
 ```
-### T1 RED: python -m pytest tests/test_f106_cuadre.py -q (services/albaranes-comun)
-E   ImportError: cannot import name 'linea_a_sigrid' from 'ruesma_comun.alta_sigrid'
-ERROR tests/test_f106_cuadre.py — 1 error during collection
-### T3 RED: python -m pytest tests/test_f106_validador.py -q (services/albaranes-alta-sigrid)
-     11 E       TypeError: LineaAlta.__init__() got an unexpected keyword argument 'precio_unitario_final'
-      1 E       AttributeError: 'LineaAlta' object has no attribute 'precio_unitario_final'
-      1 E       AssertionError: assert PeticionAlbaran(... cantidad=48.0, precio=2.17, ... partida='01.02'),)) ==
-                [Motivo(codigo='linea_no_cuadra', detalle='48 × 11,2 × (1 − 7 %) = 499,97 ≠ 104,16', referencia_linea='7')]
-      1 E       AssertionError: assert 'lv.precio_unitario_final' in '\nSELECT lv.id, lv.merge_line_id, ...'
+### T1 RED: python -m pytest tests/test_f106_cuadre.py -q (comun)
+E   ImportError: cannot import name 'linea_a_sigrid' from 'ruesma_comun.alta_sigrid'   — 1 error during collection
+### T3 RED: python -m pytest tests/test_f106_validador.py -q (sv9)
+     11 E   TypeError: LineaAlta.__init__() got an unexpected keyword argument 'precio_unitario_final'
+      1 E   AssertionError: assert PeticionAlbaran(... cantidad=48.0, precio=2.17, ...) ==
+            [Motivo(codigo='linea_no_cuadra', detalle='48 × 11,2 × (1 − 7 %) = 499,97 ≠ 104,16', referencia_linea='7')]
       14 failed, 1 passed
-### T5 RED: .venv/Scripts/python.exe -m pytest tests/test_f106_fila.py -k dominio -q (services/albaranes-front)
-     16 E       ImportError: cannot import name 'recalculo_de_fila' from 'domain.models.review_models'
-     15 E       Failed: DID NOT RAISE ValidationError
-      2 E       TypeError: LineasIncompletasError.__init__() got an unexpected keyword argument 'no_cuadran'
-      2 E       AttributeError: 'ConciliacionEditBody' object has no attribute 'importe'
-      2 E       AttributeError: 'ConciliacionEditBody' object has no attribute 'cuadrar'
+### T5 RED: pytest tests/test_f106_fila.py -k dominio -q (sv4)
+     16 E   ImportError: cannot import name 'recalculo_de_fila' ; 15 E Failed: DID NOT RAISE ValidationError
       38 failed
-### T7 RED: .venv/Scripts/python.exe -m pytest tests/test_f106_fila.py -q
-     22 E       TypeError: AlbaranReviewRepository.update_line_conciliacion() got an unexpected keyword argument 'cuadrar'
-      1 E       TypeError: ReviewService.update_line_conciliacion() got an unexpected keyword argument 'cuadrar'
-      1 E       KeyError: 'cuadrar'
-      1 E       ruesma_comun.edicion_manual.NoDespejable: No se puede calcular el precio con cantidad 0 ...
+### T7 RED: pytest tests/test_f106_fila.py -q (sv4)
+     22 E   TypeError: AlbaranReviewRepository.update_line_conciliacion() got an unexpected keyword argument 'cuadrar'
       25 failed, 43 passed  (los 43: dominio de T6 y los 422 del cuerpo)
-### T11 RED: .venv/Scripts/python.exe -m pytest tests/test_f106_ficha.py -q
-      E   ImportError: cannot import name 'a_sigrid_de_fila' from 'domain.models.review_models'
-      1 error during collection
-### T10 RED: .venv/Scripts/python.exe -m pytest tests/test_f106_aprobar.py -q
-      4 E       Failed: DID NOT RAISE LineasIncompletasError
-      1 E       assert [] == [2, 4]
-      6 failed, 5 passed  (los 5: lo que ya se aprobaba y debe seguir aprobándose)
+### T10 RED: pytest tests/test_f106_aprobar.py -q (sv4)
+      4 E   Failed: DID NOT RAISE LineasIncompletasError ; 1 E assert [] == [2, 4]
+      6 failed, 5 passed  (los 5: lo que ya se aprobaba)
+### T11 RED: pytest tests/test_f106_ficha.py -q (sv4)
+E   ImportError: cannot import name 'a_sigrid_de_fila' from 'domain.models.review_models'   — 1 error during collection
+### T12 RED: pytest tests/test_f106_js.py tests/test_f065_f1_js.py -q (sv4)
+     13 E   ValueError: substring not found   (precioDespejado, precioASigrid, avisoImporte… no existen en app.js)
+      1 E   KeyError: 'linea_no_cuadra'
+      1 E   AssertionError: assert {'precio_unitario': 125} == {'importe': 1000}
+### T13 RED: pytest tests/test_f106_edicion.py -q (comun)
+E   ImportError: cannot import name 'EdicionManual' from 'ruesma_comun.edicion_manual'   — 1 error during collection
+### T15 RED: pytest tests/test_f106_reaplicar.py -q (sv6)
+     12 E   sqlite3.OperationalError: no such column: edicion_manual_json
+      4 E   [SQL: UPDATE albaran_line_valuations SET cantidad_albaran = ?, cantidad_convertida = ?, edicion_manual_json = ? ...]
+### T17 RED: pytest tests/test_f106_edicion.py -q (sv4) — 37 de 38 en rojo
+     18 E   KeyError: 'edicion_manual_json'
+      5 E   AttributeError: 'AlbaranReviewRepository' object has no attribute 'volver_a_calculado'
+      3 E   ImportError: cannot import name 'texto_edicion' ; 2 E ImportError: cannot import name 'ValoracionCambiadaError'
+      1 E   assert (404 == 200) ; 1 E assert '>✋ añadida a mano<' in '<!-- templates/document_detail.html -->...'
+      1 E   AssertionError: assert [None, 'Reval... ¿Continuar?'] == [None, 'Reval... ¿Continuar?'] ; 1 E assert 0 >= 1
+### T19 RED: python -m pytest tests/test_f106_script.py -q (sv9)
+E   ImportError: cannot import name 'listar_altas_descuadradas_f106' from 'scripts'   — 1 error during collection
 ```
 
-La traza de T3 es la de AC26/30435: sin F-106, sv9 manda 48 × 2,17 en vez de rechazarla.
+La traza de T3 es el caso AC26/30435: sin F-106, sv9 manda 48 × 2,17 en vez de rechazarla.
 
-GREEN: T2 `test_f106_cuadre` + `test_f098` 244 passed; T4 `test_f106_validador` 15 passed; T6 `-k dominio` 38
-passed; T8 `test_f106_fila.py` 68 passed (70 con los dos de R-8 de la T9).
+GREEN:
 
-## Suites completas (una cada vez, en segundo plano, `ARNES_SIN_CACHE=1`, comun del worktree)
+| Tarea | Tests | Resultado |
+|---|---|---|
+| T2 | | 244 passed |
+| T4 | | 15 passed |
+| T6 | | 38 passed |
+| T8 | | 68 passed |
+| T14 | `test_f106_edicion` (comun) | 41 passed |
+| T16 | `test_f106_reaplicar` | 18 passed |
+| T18 | `test_f106_{edicion,fila,ficha,js}` + `test_f065_f1_js` | 184 passed |
+| T19 | `test_f106_script` | 19 passed |
+
+## Suites completas (una cada vez, `ARNES_SIN_CACHE=1`, comun del worktree)
 
 | Suite | Resultado | Tiempo |
 |---|---|---|
-| comun (tras T2) | 1134 passed, 3 skipped | 243 s |
-| sv9 (tras T4) | 1038 passed, 4 failed → 3 eran los equivalentes de F-053 (rehechos, decisión 9; en verde) y 1 es de entorno (abajo) | 93 s |
-| sv4 (tras T8) | 1996 passed, 5 failed: los 2 de F-065 R8 (enmienda, `bef559b`), el de kwargs (`f83c1f3`) y `test_f077_r27` (T12) | 211 s |
-| sv4 (tras T11 parcial) | 2042 passed, 13 failed: 11 de F-051 por `sigrid_ide` (arreglado), `test_f065_r9_plantilla_precio…` (el bloqueo) y `test_f077_r27` (T12) | 280 s |
-| sv4 (tras T10 parcial) | 2011 passed, 3 failed: los 2 fixtures de almacén (corregidos al cerrar la T10) y `test_f077_r27` (T12) | 237 s |
+| sv4 tras T18 | **2111 passed** (ver nota) | 410 s |
+| sv6 tras T18 | 498 passed, 1 skipped | 33 s |
+| comun `test_f106_edicion` tras T18 | 41 passed (la suite entera, en `init.sh`) | 5 s |
+| sv9 tras T19 | 1062 passed, 1 failed: el KO de entorno de abajo | 108 s |
 
-**KO de entorno del worktree (no del código)**: `sv9 test_f069_t15_script_arranca_fuera_de_sv9...` lanza un script en
-un subproceso con el entorno vacío, sin `PYTHONPATH`; el venv del árbol principal trae `ruesma_comun` editable desde
-`../albaranes` (0.9.0, sin `linea_a_sigrid`) ⇒ `ImportError`. Es el mismo caso que aceptaron F-053 y F-062: se verifica
-en el árbol principal tras fusionar en `dev`.
+Nota sobre sv4: la primera pasada dio 30 rojos y la segunda 2111 passed.
+- 19 de F-051 por la falta de `producto_sigrid` en el fixture.
+- 10 de f3bis y 1 de F-077 por `syncImporteUnitario`.
 
-## T0 · cuántas líneas pendientes no cuadran (pasada 1, 2026-10-28, solo lectura)
+Los 30 se arreglaron sin tocar aserciones, uno de ellos en el código (`test_f051_r16_todas_en_un_unico_update`).
 
-BBDD `albaranes` de Azure con `default_transaction_read_only=on` (comprobado `SHOW transaction_read_only` = `on`); la
-clave salió de Key Vault solo a `$env:PG_PASSWORD` y se borró en `finally`. Solo `SELECT`; script en el scratchpad, solo
-recuentos. 57 documentos pendientes (100 aprobados); 50 con valoración y 126 filas.
+**KO de entorno del worktree (no del código)**: `sv9 test_f069_t15_script_arranca_fuera_de_sv9…` lanza un script en un
+subproceso con el entorno vacío. Sin `PYTHONPATH`, coge la comun editable del árbol principal (`../albaranes`, 0.9.0,
+sin `linea_a_sigrid`) ⇒ `ImportError`. Es el caso que aceptaron F-053 y F-062: se verifica en el árbol principal tras
+fusionar en `dev`.
 
-| Universo | Filas (I ≠ 0, P no nulo) | > 0,02 € | > 0,1 € | > 1 % | Documentos afectados |
-|---|---|---|---|---|---|
-| U1 · literal de la T0 | 98 (48 `calculated`, 50 `declared_albaran`) | **5 (5,10 %)**, todas `declared_albaran` | 5 | 5 | 2 de 45 (4,44 %; 3,51 % de los 57) |
-| U3 · las que pinta la ficha, sin almacén | 78 | 4 (5,13 %) | 4 | 4 | 1 de 33 |
+INIT_PLACEHOLDER
 
-Bajo el umbral del 10 % (R-1): se siguió. Con `importe_de_linea` de comun sale lo mismo. Filas legadas (R27) en
-pendientes: 16 filas en 8 documentos (`bloqueada` 8, `precio_unitario_agreement = manual` 11, `manual/reparto` 1,
-`almacen_elegido` 1, derivada `manual_override` 2; una fila puede tener varias marcas). Las 5 filas que no cuadran
-quedarán bloqueadas por R16 y R17 al aprobar (lo que dice la spec).
+## T0 · cuántas líneas pendientes no cuadran (2026-10-28, solo lectura)
+
+Medido contra la BBDD `albaranes` de Azure en solo lectura (`SHOW transaction_read_only` = `on`). La clave solo vivió
+en `$env:PG_PASSWORD` y se borró en `finally`. Solo `SELECT` y recuentos.
+
+- 57 documentos pendientes, 50 con valoración.
+- U1: 5 de 98 filas no cuadran (5,10 %), todas `declared_albaran`, en 2 documentos. Bajo el umbral del 10 % (R-1).
+- U3 (las que pinta la ficha, sin almacén): 4 de 78.
+- Filas legadas (R27) en pendientes: 16 filas en 8 documentos.
+
+Las 5 que no cuadran quedan paradas por R16 y R17 al aprobar, como dice la spec («no les busques una salida»).
 
 ## Falta
 
-- **Desbloquear la T11** (formato del precio) y seguir T12–T21 en orden: JS y `TEXTOS_MOTIVO_ALTA` (T11–T12), fase B en comun, sv6 y sv4 (T13–T18), script R18 (T19), documentación (sv4.md,
-  sv6.md, sv9.md y `azure-apps/albaranes.md`, T20) y mutación (T21).
-- No se hacen aquí: T22 (líder, Chrome), T23 y T24 (humano), T25 (líder con el reviewer).
-- Antes de `git worktree remove`: quitar la *junction* `.venv` de sv4 con `cmd /c rmdir` (creada en esta pasada).
+- T22 (líder, Chrome con el pipeline local).
+- T23 (humano): el script R18 contra Azure, solo lectura.
+- T24 (despliegue, lo hace el humano): comun 0.10.0 ⇒ sv6 → sv9 → sv4.
+- T25 final: `init.sh` en verde con el reviewer.
+- Verificar en el árbol principal, tras fusionar, el test de entorno de sv9 (`test_f069_t15_script_arranca…`).
+- Antes de `git worktree remove`: quitar la *junction* `.venv` de sv4 con `cmd /c rmdir`.
+- Marcar F-058 como absorbida (propuesta de arriba).
 
-## Evidencias
-
-| Evidencia | Valor |
-|---|---|
-| Tests ejecutados | 199 nuevos de F-106 (comun 59, sv9 18, sv4 122), en verde; suites: comun 1134 + 3 skipped, sv9 1038 (+3 rehechos), sv4 2011 con 3 rojos tras la T10 parcial (2 fixtures ya corregidos, 1 de la T12) |
-| Cobertura de las líneas cambiadas | **sin medir**: la `PUERTA COBERTURA` sale de `bash harness/init.sh`, que se correrá al terminar la T21 |
-| Mutantes generados / supervivientes | **sin medir**: la campaña es la T21, después de T11–T20 |
-| Tiempo de las suites | comun 243 s, sv9 93 s, sv4 280 s |
-| `bash harness/init.sh` | no ejecutado: la feature está bloqueada en la T11 |
+EVID_PLACEHOLDER
