@@ -584,7 +584,7 @@ def test_f106_r4_app_pasa_importe_y_cuadrar_al_servicio(monkeypatch):
     r = cliente.patch(RUTA, json={"importe": "104,16"})
     assert r.status_code == 200, r.text
     assert servicio.llamadas[0]["campos"] == {"importe": 104.16}
-    assert servicio.llamadas[0]["cuadrar"] is None
+    assert "cuadrar" not in servicio.llamadas[0]
 
     r = cliente.patch(RUTA, json={"cuadrar": "precio"})
     assert r.status_code == 200, r.text
@@ -613,3 +613,44 @@ def test_f106_r7_app_no_despejable_es_422_con_el_texto(monkeypatch):
         "No se puede calcular el precio con cantidad 0 o descuento del 100 %: "
         "cambia la cantidad, el descuento o el precio"
     )
+
+
+# =================================================================== #
+# T9 · R-8: residuos (F-036) cuadran con la cantidad convertida
+# =================================================================== #
+def test_f106_r_8_residuos_de_f036_cuadran_con_la_convertida():
+    # SS-0000589: 6 m3 declarados, 1 contenedor a 120 = 120 (F-036 D1).
+    from ruesma_comun.importes import cuadra_linea
+    from test_f036_r1_r8_conversion_no_reproducible import LINEA_RESIDUOS as L
+
+    assert cuadra_linea(L["cantidad_convertida"], L["pu"], L["dto"], L["importe"]) is True
+    # Con la del albarán no cuadraría (6 × 120 = 720): por eso Q es la convertida.
+    assert cuadra_linea(L["cantidad_albaran"], L["pu"], L["dto"], L["importe"]) is False
+
+
+def test_f106_r_8_editar_un_residuo_lo_deja_cuadrando_y_conserva_la_del_albaran():
+    from f065_bbdd import fila, linea, motor_con_valoracion, repositorio
+    from sqlalchemy.orm import Session
+
+    motor = motor_con_valoracion(document_id="f106-doc-res", valuation_id="f106-val-res",
+                                 total=120.0)
+    with Session(motor) as s:
+        from sqlalchemy import text
+
+        s.execute(text(
+            "INSERT INTO contrato_lines_derived (id, created_by_valuation_id, "
+            "descripcion_linea, unidad_medida, precio_unitario, codigo_partida, origen) "
+            "VALUES (5900, 'f106-val-res', 'CONTENEDOR', 'UD', 120, '01.01', "
+            "'nueva_no_match')"))
+        linea(s, id=900, valuation_id="f106-val-res", derived_contrato_line_id=5900,
+              precio_unitario_final=120.0, factor_conversion=None, cantidad_albaran=6.0,
+              cantidad_convertida=1.0, importe_calculado=120.0)
+        s.commit()
+
+    repositorio(motor).update_line_conciliacion(
+        document_id="f106-doc-res", valuation_line_id=900, campos={"importe": 300.0})
+
+    f = fila(motor, 900)
+    assert (f["cantidad_albaran"], f["cantidad_convertida"]) == (6.0, 1.0)
+    assert (f["precio_unitario_final"], f["importe_calculado"]) == (300.0, 300.0)
+    assert _cuadra(f) is True

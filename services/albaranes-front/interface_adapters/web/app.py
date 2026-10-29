@@ -1531,15 +1531,17 @@ def build_app(settings: Settings) -> FastAPI:
     ) -> dict:
         # F-065 R8: solo los campos que vinieron (ausente = no cambia; null =
         # vaciar). R13: «Guardar» de la fila manda ``?bloquear=1``.
-        # F-106 R4, R7, R9: ``importe`` y ``cuadrar``; sin precio que dé el
-        # importe (Q 0 o dto 100 %), 422 con el texto para el revisor.
+        # F-106 R4, R7, R9: ``importe`` y ``cuadrar`` (solo si vino: sin él, la
+        # llamada es la de siempre); sin precio que dé el importe (Q 0 o dto
+        # 100 %), 422 con el texto para el revisor.
+        extra = {} if payload.cuadrar is None else {"cuadrar": payload.cuadrar}
         try:
             ok = review_service.update_line_conciliacion(
                 document_id=document_id,
                 valuation_line_id=valuation_line_id,
                 campos=payload.campos(),
                 bloquear=bloquear,
-                cuadrar=payload.cuadrar,
+                **extra,
             )
         except (NoDespejable, PrecioEImporte) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
