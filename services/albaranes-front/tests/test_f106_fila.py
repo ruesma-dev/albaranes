@@ -477,6 +477,32 @@ def test_f106_r10_no_publica_ni_escribe_los_originales():
 
 
 # ------------------------------------------------------------------ deshacer
+def _deshacer(motor):
+    """Lo que hace ``undo_last`` (que usa ``FOR UPDATE``, PostgreSQL), con los
+    métodos reales de restaurar (como ``test_f065_f3_dividir``)."""
+    import json
+
+    from f065_bbdd import DOC, repositorio
+    from sqlalchemy import text
+    from sqlalchemy.orm import Session
+
+    repo = repositorio(motor)
+    with Session(motor) as s:
+        (payload,) = s.execute(text(
+            "SELECT payload FROM undo_log WHERE document_id = :d AND undone = 0"),
+            {"d": DOC}).scalars().all()
+        entrada = json.loads(payload)
+        for item in entrada.get("delete_created", []):
+            s.execute(text(f"DELETE FROM {item['table']} WHERE id = :id"), {"id": item["id"]})
+        for snap in entrada.get("reinsert", []):
+            repo._undo_apply_reinsert(s, snap)
+        for snap in entrada["restore"]:
+            repo._undo_apply_restore(s, snap)
+        s.execute(text("DELETE FROM undo_log"))
+        s.commit()
+    return entrada
+
+
 def test_f106_deshacer_devuelve_precio_importe_y_origen():
     from application.services.review_service import ReviewService
     from f065_bbdd import DOC, fila, repositorio, total
@@ -489,7 +515,7 @@ def test_f106_deshacer_devuelve_precio_importe_y_origen():
         document_id=DOC, valuation_line_id=FILA, campos={}, cuadrar="precio") is True
     assert fila(motor, FILA)["precio_unitario_final"] == 2.333333
 
-    servicio.undo_last(document_id=DOC)
+    _deshacer(motor)
 
     assert fila(motor, FILA) == antes
     assert total(motor) == total_antes

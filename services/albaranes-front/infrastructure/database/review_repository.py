@@ -29,7 +29,13 @@ from ruesma_comun.alta_sigrid import (
     es_linea_a_registrar,
     es_linea_vinculada,
 )
-from ruesma_comun.importes import clasificar_descuento, importe_albaran, importe_de_linea
+from ruesma_comun.edicion_manual import CAMPO_IMPORTE, recalcular_fila
+from ruesma_comun.importes import (
+    clasificar_descuento,
+    cuadra_linea,
+    importe_albaran,
+    importe_de_linea,
+)
 from ruesma_comun.linea_valorada import (
     CamposFila,
     LineaDeLaFila,
@@ -48,6 +54,7 @@ from domain.models.review_models import (
     AlbaranAprobadoError,
     aviso_reparto,
     cambia_origen,
+    recalculo_de_fila,
     cantidades_tras_editar,
     cantidades_tras_reapuntar,
     aviso_partida_texto,
@@ -2040,6 +2047,7 @@ class AlbaranReviewRepository:
         valuation_line_id: int,
         campos: dict[str, Any] | None = None,
         bloquear: bool = False,
+        cuadrar: str | None = None,
     ) -> bool:
         """Edición de UNA fila (la línea que se dará de alta en Sigrid).
 
@@ -2071,6 +2079,16 @@ class AlbaranReviewRepository:
           fila y la unidad cambiada, sin conversión, también a
           ``unidad_albaran``. No aplica ``fila_a_guardar``: lo vaciado se ve
           vacío (R16).
+        - (F-106 R5–R10, D1) Cantidad, precio o descuento ⇒ se recalcula el
+          importe (``calculated``, sea cual sea su origen). ``importe`` ⇒ se
+          guarda a 2 decimales y se despeja el precio (6 decimales) con la Q y
+          el dto resultantes; el dto se queda. Un precio despejado distinto es
+          un precio cambiado (Contrato → Nueva; en una Nueva, su derivada). Un
+          importe igual al de hoy se descarta salvo que cambie Q o d (entonces
+          manda: el revisor lo volvió a teclear). ``cuadrar`` (botones de una
+          fila que NO cuadra): ``importe`` ⇒ como cambiar Q; ``precio`` ⇒ como
+          teclear el importe actual. Sobre una que cuadra no escribe nada.
+          ``NoDespejable`` (importe ≠ 0 con Q 0 o dto 100 %) antes de escribir.
 
         NO revalora. Devuelve True si la fila es del documento.
         """
@@ -2094,7 +2112,7 @@ class AlbaranReviewRepository:
                     "       lv.codigo_partida_final, lv.descripcion_linea, "
                     "       lv.precio_unitario_final, lv.unidad_contrato, "
                     "       lv.descuento_albaran_aplicado, lv.codigo_externo, "
-                    "       lv.review_reasons_json, "
+                    "       lv.review_reasons_json, lv.importe_calculado, "
                     "       v.document_id, v.contrato_codigo "
                     "FROM albaran_line_valuations lv "
                     "JOIN albaran_valuations v ON v.id = lv.valuation_id "
@@ -2144,6 +2162,7 @@ class AlbaranReviewRepository:
                 "precio_unitario": cur_precio,
                 "descuento": _sanear_descuento(row["descuento_albaran_aplicado"]),
                 "codigo_externo": _txt(row["codigo_externo"]) or None,
+                CAMPO_IMPORTE: row["importe_calculado"],
             }
 
             # ---- solo lo que de verdad cambia (R8) ----
@@ -2154,6 +2173,9 @@ class AlbaranReviewRepository:
                 if campo in ("cantidad", "precio_unitario"):
                     nuevo = valor
                     igual = _mismo_numero(nuevo, actual[campo])
+                elif campo == CAMPO_IMPORTE:
+                    nuevo = round(float(valor), 2)
+                    igual = _mismo_numero(nuevo, actual[campo])
                 elif campo == "descuento":
                     nuevo = _sanear_descuento(valor)
                     igual = _mismo_numero(nuevo, actual[campo])
@@ -2162,6 +2184,24 @@ class AlbaranReviewRepository:
                     igual = nuevo == actual[campo]
                 if not igual:
                     cambios[campo] = nuevo
+            # (F-106 R6) El importe tecleado manda aunque sea el de hoy si
+            # cambian Q o d: si no, se recalcularía y se perdería.
+            if (
+                CAMPO_IMPORTE in cambios_pedidos
+                and CAMPO_IMPORTE not in cambios
+                and {"cantidad", "descuento"} & set(cambios)
+            ):
+                cambios[CAMPO_IMPORTE] = round(float(cambios_pedidos[CAMPO_IMPORTE]), 2)
+
+            # (F-106 R9) Los botones solo actúan sobre una fila que no cuadra.
+            modo = recalculo_de_fila(
+                cambios=cambios,
+                cuadrar=cuadrar,  # type: ignore[arg-type]
+                no_cuadra=cuadra_linea(
+                    q_actual, cur_precio, row["descuento_albaran_aplicado"],
+                    row["importe_calculado"],
+                ) is False,
+            )
 
             # (F-065 H2) El aviso «revisa la cantidad» se va cuando la cantidad
             # se revisa: al cambiarla o al guardar la fila.
@@ -2173,7 +2213,7 @@ class AlbaranReviewRepository:
                 row["review_reasons_json"], MOTIVO_UNIDAD_CAMBIADA, False,
             )
 
-            if not cambios:
+            if not cambios and modo is None:
                 # (R10) Completar la convertida y (R13) bloquear: nada más.
                 session.execute(
                     text(
@@ -2205,6 +2245,29 @@ class AlbaranReviewRepository:
                 )
                 if cantidad_convertida is None:
                     cantidad_convertida = cantidad_albaran
+
+            # ---- importe y precio (F-106 D1) ----
+            # Antes de escribir nada: ``NoDespejable`` no deja la fila a medias.
+            importe_nuevo: float | None = None
+            if modo == "precio":
+                precio_despejado, importe_nuevo = recalcular_fila(
+                    cantidad=cantidad_convertida,
+                    precio=nuevo["precio_unitario"],
+                    descuento=nuevo["descuento"],
+                    importe=nuevo[CAMPO_IMPORTE],
+                    editados={CAMPO_IMPORTE},
+                )
+                if not _mismo_numero(precio_despejado, cur_precio):
+                    # (R8) Un precio despejado es un precio cambiado.
+                    cambios["precio_unitario"] = precio_despejado
+                    nuevo["precio_unitario"] = precio_despejado
+            elif modo == "importe":
+                importe_nuevo = _importe_de_linea(
+                    precio_unitario=nuevo["precio_unitario"],
+                    cantidad=cantidad_convertida,
+                    descuento_pct=nuevo["descuento"],
+                )
+
             params: dict[str, Any] = {
                 "vid": valuation_line_id,
                 "ca": cantidad_albaran,
@@ -2236,14 +2299,10 @@ class AlbaranReviewRepository:
                 sets.append("unidad_albaran = :uni")
 
             # ---- importe: solo si cambia lo que entra en él (R11) ----
-            cambia_importe = bool({"cantidad", "precio_unitario", "descuento"} & set(cambios))
+            cambia_importe = modo is not None
             if cambia_importe:
                 params["dto"] = nuevo["descuento"]
-                params["imp"] = _importe_de_linea(
-                    precio_unitario=nuevo["precio_unitario"],
-                    cantidad=cantidad_convertida,
-                    descuento_pct=nuevo["descuento"],
-                )
+                params["imp"] = importe_nuevo
                 sets += [
                     "descuento_albaran_aplicado = :dto",
                     "importe_calculado = :imp",
