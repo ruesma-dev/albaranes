@@ -93,6 +93,39 @@ def test_f106_r18_no_comparable_no_cuenta_como_descuadre():
     assert comparar_alta([_linea()], {"14": fila}) == []
 
 
+def test_f106_r18_linea_a_la_que_falta_cantidad_o_precio_no_se_compara():
+    fila = _fila(importe_calculado=120.0)  # no cuadra: saldría si se comparase
+    lineas = [{"referencia_linea": "14", "cantidad": 10.0},
+              {"referencia_linea": "14", "precio": 10.416}]
+    assert comparar_alta(lineas, {"14": fila}) == []
+
+
+def test_f106_r18_un_booleano_no_es_una_cantidad():
+    fila = _fila(importe_calculado=120.0)
+    assert comparar_alta([_linea(cantidad=True)], {"14": fila}) == []
+
+
+def test_f106_r18_sin_q_convertida_vale_la_cantidad_del_albaran():
+    # Q = convertida ?? albarán: 48 × 11,20 −7 % ≠ 104,16 ⇒ no cuadra.
+    fila = _fila(cantidad_albaran=48.0, cantidad_convertida=None)
+    (d,) = comparar_alta([_linea(cantidad=48.0)], {"14": fila})
+    assert (d.no_cuadra, d.precio_difiere, d.cantidad) == (True, False, 48.0)
+
+
+def test_f106_r18_justo_en_la_tolerancia_no_es_descuadre():
+    # Misma tolerancia que el cuadre (≤ 0,02 €): línea a 0 € enviada a 0,02 €.
+    fila = _fila(cantidad_albaran=1.0, cantidad_convertida=1.0, precio_unitario_final=0.0,
+                 descuento_albaran_aplicado=None, importe_calculado=0.0)
+    assert comparar_alta([_linea(cantidad=1.0, precio=0.02)], {"14": fila}) == []
+    (d,) = comparar_alta([_linea(cantidad=1.0, precio=0.03)], {"14": fila})
+    assert d.precio_difiere is True
+
+
+@pytest.mark.parametrize("descuento", [150.0, -5.0, "7 %"])
+def test_f106_r18_descuento_no_aplicable_el_neto_es_p(descuento):
+    assert script.precio_neto(11.2, descuento) == 11.2
+
+
 # =================================================================== #
 # Lectura (solo SELECT) y listado
 # =================================================================== #
@@ -157,6 +190,11 @@ def test_f106_r18_listar_por_documento():
         ("DOC1", 9100001, "AC26/1", "14")]
 
 
+def test_f106_r18_fila_con_columnas_de_menos_falla_en_vez_de_leer_mal():
+    with pytest.raises(ValueError):
+        listar(ALTAS, [("DOC1", 14, 48.0, 48.0, 11.2, 7.0)])
+
+
 def test_f106_r18_peticion_ilegible_no_tumba_el_listado():
     altas = [("DOC1", 9100001, "AC26/1", "{roto"), ("DOC3", 9100003, "AC26/3", None), *ALTAS]
     assert len(listar(altas, FILAS)) == 1
@@ -197,7 +235,23 @@ def test_f106_r18_main_de_punta_a_punta(monkeypatch, tmp_path, capsys):
     assert cabecera.split(";")[:4] == ["document_id", "con_ide", "cod", "referencia_linea"]
     assert linea.startswith("DOC1;9100001;AC26/1;14;")
     impreso = capsys.readouterr().out
-    assert "1 línea descuadrada" in impreso and "pg.invalid" not in impreso
+    assert impreso.splitlines()[0].endswith("1 línea descuadrada en 1 alta") and "pg.invalid" not in impreso
+
+
+def test_f106_r18_main_en_plural_y_en_una_carpeta_nueva(monkeypatch, tmp_path, capsys):
+    _entorno(monkeypatch)
+    filas = [FILAS[0], ("DOC2", 20, 10.0, 10.0, 11.2, 7.0, 120.0)]
+    salida = tmp_path / "nueva" / "dentro" / "altas_f106.csv"
+    assert script.main(["--salida", str(salida)],
+                       conectar=lambda **_k: ConexionDeMentira(ALTAS, filas)) == 0
+    assert salida.exists()
+    assert capsys.readouterr().out.splitlines()[0] == "Altas reales registradas: 2 · 2 líneas descuadradas en 2 altas"
+
+
+def test_f106_r18_ayuda_con_la_primera_linea_del_modulo(capsys):
+    with pytest.raises(SystemExit):
+        script.main(["--help"])
+    assert script.__doc__.splitlines()[0] in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("falta", ["PG_HOST", "PG_USER", "PG_PASSWORD"])

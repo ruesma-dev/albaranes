@@ -406,3 +406,135 @@ def test_f106_r28_si_falla_queda_la_valoracion_anterior(monkeypatch):
     with pytest.raises(RuntimeError):
         _base(motor)
     assert _filas(motor) == antes
+
+
+# =================================================================== #
+# T21 · casos que la campaña de mutación encontró sin cubrir
+# =================================================================== #
+def _insertar_fila_entera(motor, *, importe):
+    """Una fila añadida a mano (sin blanca, sin vínculo) en la valoración actual."""
+    with Session(motor) as s:
+        vid = s.execute(text("SELECT id FROM albaran_valuations")).scalar_one()
+        s.execute(text(
+            "INSERT INTO albaran_line_valuations (valuation_id, merge_line_id, precio_unitario_final, "
+            "precio_unitario_source, precio_unitario_agreement, unidad_categoria, unidad_category_match, "
+            "cantidad_albaran, cantidad_convertida, importe_calculado, importe_source, partida_action, "
+            "match_confidence_pct, match_method, review_required, created_at_utc, line_kind, "
+            "descripcion_linea, edicion_manual_json) VALUES (:v, NULL, 3.0, 'manual', 'manual', 'unidad', 1, "
+            "2.0, 2.0, :imp, 'calculated', 'existing_matched', 0, 'none', 0, 't', 'manual', 'PORTE', :e)"),
+            {"v": vid, "imp": importe,
+             "e": registrar_edicion(None, fila_antes=None, fila_despues={}, campos=set(), fila_entera=True)})
+        s.commit()
+
+
+def test_f106_r28_total_redondeado_a_centimos():
+    motor = _motor()
+    _base(motor)
+    _insertar_fila_entera(motor, importe=6.006)
+
+    _base(motor)
+
+    # 50 + 104,16 + 6,006 = 160,166 ⇒ 160,17 €, como el resto de totales.
+    assert _cab(motor)["total_valorado"] == pytest.approx(160.17, abs=1e-9)
+
+
+def test_f106_r26_fila_entera_sin_vinculo_no_se_vuelve_nueva():
+    motor = _motor()
+    _base(motor)
+    _insertar_fila_entera(motor, importe=6.0)
+
+    _base(motor)
+
+    (manual,) = [f for f in _filas(motor) if f["line_kind"] == "manual"]
+    assert (manual["matched_contrato_line_id"], manual["derived_contrato_line_id"]) == (None, None)
+    with motor.connect() as c:
+        assert c.execute(text("SELECT COUNT(*) FROM contrato_lines_derived")).scalar() == 0
+
+
+def test_f106_r26_fila_conservada_entera_conserva_su_codigo_externo():
+    motor = _motor()
+    _base(motor)
+    _editar(motor, 704, {"cantidad"}, cantidad_albaran=48.0, cantidad_convertida=48.0)
+    with motor.begin() as c:
+        c.execute(text("UPDATE albaran_line_valuations SET codigo_externo = 'X9' WHERE merge_line_id = 704"))
+
+    _valorar(motor, [_linea(701, matched=505, precio=5.0, dto=None)])
+
+    f = _fila(motor, 704)
+    assert (f["cantidad_convertida"], f["codigo_externo"]) == (48.0, "X9")
+
+
+def test_f106_r27_conservada_entera_de_otro_contrato_pasa_a_nueva():
+    motor = _motor()
+    _base(motor)
+    _editar(motor, 704, {"cantidad"}, cantidad_albaran=48.0, cantidad_convertida=48.0,
+            importe_calculado=499.97)
+
+    # 704 sin pareja (la valoración nueva no la trae) y su línea 504 es de C1.
+    _valorar(motor, [_linea(701, matched=600, precio=5.0, dto=None)], contrato="C2")
+
+    f = _fila(motor, 704)
+    assert f["matched_contrato_line_id"] is None
+    derivada = _derivada(motor, f["derived_contrato_line_id"])
+    assert (derivada["origen"], derivada["codigo_contrato"]) == ("manual_override", "C2")
+    assert derivada["precio_unitario"] == 11.2
+    assert "front_contrato_cambiado" in json.loads(f["review_reasons_json"])
+
+
+def test_f106_r27_conservada_entera_del_mismo_contrato_sigue_en_su_linea():
+    motor = _motor()
+    _base(motor)
+    _editar(motor, 704, {"cantidad"}, cantidad_albaran=48.0, cantidad_convertida=48.0)
+
+    _valorar(motor, [_linea(701, matched=505, precio=5.0, dto=None)])
+
+    f = _fila(motor, 704)
+    assert (f["matched_contrato_line_id"], f["derived_contrato_line_id"]) == (504, None)
+    assert "front_contrato_cambiado" not in json.loads(f["review_reasons_json"])
+
+
+def test_f106_r27_contrato_cambiado_conserva_los_motivos_que_ya_tenia():
+    motor = _motor()
+    _base(motor)
+    _editar(motor, 704, {"cantidad", "origen"}, cantidad_albaran=48.0, cantidad_convertida=48.0)
+
+    _valorar(motor, [_linea(704, matched=600, precio=13.0, review_reasons=["revisión de precio"])],
+             contrato="C2")
+
+    crudo = _fila(motor, 704)["review_reasons_json"]
+    assert json.loads(crudo) == ["revisión de precio", "front_contrato_cambiado"]
+    # Se escribe como el resto de motivos de sv6: sin escapar (ensure_ascii=False).
+    assert "revisión" in crudo
+
+
+def test_f106_r26_ediciones_perdidas_se_suma_a_los_motivos_de_la_cabecera():
+    from dataclasses import replace
+
+    motor = _motor()
+    _base(motor)
+    _editar(motor, 704, {"cantidad"}, cantidad_albaran=48.0, cantidad_convertida=48.0)
+    with motor.begin() as c:
+        c.execute(text("DELETE FROM albaran_lines_merge WHERE id = 704"))
+
+    lineas = [_linea(701, matched=505, precio=5.0, dto=None)]
+    cabecera = replace(_cabecera(lineas=lineas), review_reasons=["sin conversión"])
+    _repo(motor).replace_valuation(header=cabecera, lines=lineas)
+
+    crudo = _cab(motor)["review_reasons_json"]
+    assert json.loads(crudo) == ["sin conversión", "ediciones_perdidas:1"]
+    assert "conversión" in crudo
+
+
+def test_f106_r27_sintetica_legada_se_conserva_entera_sin_pareja():
+    motor = _motor()
+    sintetica = dict(line_kind="synthetic_modifier", parent_merge_line_id=704,
+                     modifier_source="ia3")
+    _valorar(motor, [_linea(704), _linea(None, precio=3.0, dto=None, **sintetica)])
+    with motor.begin() as c:
+        c.execute(text("UPDATE albaran_line_valuations SET bloqueada = 1, precio_unitario_final = 3.5 "
+                       "WHERE line_kind = 'synthetic_modifier'"))
+
+    _valorar(motor, [_linea(704), _linea(None, precio=4.0, dto=None, **sintetica)])
+
+    legadas = [f for f in _filas(motor) if f["line_kind"] == "synthetic_modifier" and f["bloqueada"]]
+    assert [(f["precio_unitario_final"], f["edicion_manual_json"]) for f in legadas] == [(3.5, None)]
