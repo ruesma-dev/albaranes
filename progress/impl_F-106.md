@@ -3,40 +3,22 @@
 
 Rama `feature/F-106-precio-al-cambiar-medicion` (worktree `../albaranes-F-106`). Rigor `critico`.
 
-## Estado: BLOQUEADA en la T10 (pasada 3, 2026-10-29)
+## Estado: en curso (pasada 3, 2026-10-29)
 
-La T9 quedó cerrada con la enmienda del humano del 2026-10-29 («Cambiar los 2 tests»): `test_f065_r8_dominio_campos_
-presentes[cuerpo8-campos8]` y `test_f065_r8_un_campo_desconocido_no_cuenta_como_cambio` usan ahora `importe_calculado`
-como clave desconocida y constan en R31 (`bef559b`). **La T10 no cierra por una ambigüedad de la spec**; T11–T21 sin
-empezar. `features.json` sin cambios.
+Dos enmiendas del humano del 2026-10-29, las dos en R31 y en la spec:
 
-### La ambigüedad: ¿una fila de almacén que no cuadra bloquea el aprobar?
-
-- **R16**: «SI alguna fila a registrar (importe ≠ 0) no cuadra, sv4 no aprueba». Las únicas excepciones son las no
-  comparables. **R17** (sv9) tampoco excluye el almacén: sv9 la rechazaría con `linea_no_cuadra`.
-- **T10**: «no comparables **y almacén no cuentan**».
-
-Las dos lecturas dan resultados distintos con dos tests que R31 no declara. Los dos tienen una fila de almacén cuyo
-precio de fixture no da su importe:
-
-| Test | Fila | Q × P × (1 − d) | I |
-|---|---|---|---|
-| `test_f075_ficha.py::test_f075_r9_valoracion_directa_completa_se_aprueba` | 12 (`almacen_sin_partida`, P 5,0 del fixture) | 2 × 5 = 10,00 | 5,00 |
-| `test_f078_aprobar.py::test_f078_r17_junto_a_las_de_f065_y_desde_guardar_y_aprobar` | 386 (manual, almacén, P 115 por defecto de `linea()`, su derivada dice 12,5) | 1 × 115 = 115,00 | 12,50 |
-
-Suite de sv4 con la T10 tal como está (lectura a): `3 failed, 2011 passed in 237 s`. Los 3 rojos son esos dos y
-`test_f077_r27_todo_codigo_de_sv9_tiene_texto`, que es la T12 (planificado).
-
-**Opciones para el líder o el humano:**
-
-- **(a) Recomendada: el almacén cuenta** (R16 y R17 tal como están; es lo implementado en `4d80f3f`). Lo que se
-  aprueba es lo que sv9 admite. Exige corregir los datos de los dos fixtures: P 2,5 en la fila 12 de F-075 (lo que
-  pondría sv6 en una directa, `unitario_despejado`) y P 12,5 en la 386 de F-078, la de su derivada. Las aserciones no
-  cambian. En la T0, U3 (filas que pinta la ficha, sin almacén) deja 4 de las 5: la quinta es de almacén o no se
-  pinta, y la T0 no separó esos dos casos.
-- **(b) El almacén no cuenta**, ni en sv4 ni en sv9. Si sv4 lo excluye y sv9 no, se aprueba y el alta acaba en
-  `no_admitido`. Los dos tests pasan sin tocarlos, pero una fila de almacén iría a Sigrid con Q × P ≠ I, que es el
-  fallo de AC26/30435.
+- **T9**: «Cambiar los 2 tests». `test_f065_r8_dominio_campos_presentes[cuerpo8-campos8]` y
+  `test_f065_r8_un_campo_desconocido_no_cuenta_como_cambio` usan `importe_calculado` como clave desconocida (`bef559b`).
+- **T10**: «cuando es almacen, no hay partida. lo que debe comprobar es que almacen = sin partida». Almacén es una fila
+  sin partida y cuadra como las demás: si no cuadra, bloquea el aprobar (R16) y sv9 la rechaza (R17). Ya estaba así
+  implementado en `4d80f3f`. Cambios:
+  - R16 lo aclara y la T10 pierde «y almacén no cuentan».
+  - Se corrigen dos fixtures, declarados en R31, sin tocar sus aserciones. En `test_f075_r9_valoracion_directa_completa_se_aprueba`
+    la fila 12 lleva P 2,5 (P = neto / 2). En `test_f078_r17_junto_a_las_de_f065_y_desde_guardar_y_aprobar` la 386 lleva
+    P 12,5, el de su derivada.
+  - «Almacén = sin partida» ya lo fijaba sv9 en `test_f076_partida_final.py::test_f076_r16_final_vacia_sin_clave_de_partida`.
+    Se le añade `test_f106_r16_r17_almacen_es_sin_partida_y_cuadra_como_las_demas`: sin partida y sin cuadrar da
+    `linea_no_cuadra`, y cuadrando va sin clave `partida`. Pasa a la primera porque el código ya existía.
 
 ## Lo hecho
 
@@ -49,7 +31,7 @@ Suite de sv4 con la T10 tal como está (lectura a): `3 failed, 2011 passed in 23
 | T5 / T6 | `8bc8578` / `50dcffd` | sv4 dominio: `ConciliacionEditBody.importe` y `.cuadrar`, `recalculo_de_fila`, `LineasIncompletasError(no_cuadran=)` |
 | T7 / T8 | `dc15389` / `041edb9` | sv4 PATCH: `update_line_conciliacion(cuadrar=)`, servicio y ruta (422 de R4, R7) |
 | T9 | `f83c1f3`, `bef559b` | R-8 (residuos de F-036 cuadran con la convertida), `cuadrar` solo si vino y la enmienda de R31 |
-| T10 parcial | `4d80f3f` | R16 en `_exigir_lineas_completas` (P y d en `_SQL_FILAS_PARA_APROBAR`); `test_f106_aprobar.py` (11) |
+| T10 | `4d80f3f` + cierre | R16 en `_exigir_lineas_completas` (P y d en `_SQL_FILAS_PARA_APROBAR`); `test_f106_aprobar.py` (11); fixtures de F-075/F-078; test sv9 de almacén |
 
 Ficheros: comun `importes.py`, `alta_sigrid.py`, `edicion_manual.py` (nuevo), `__init__.py`, `pyproject.toml`; sv9
 `alta_models.py`, `sql_alta_repository.py`, `validador_alta.py`; sv4 `review_models.py`, `review_repository.py`,
@@ -129,7 +111,7 @@ passed; T8 `test_f106_fila.py` 68 passed (70 con los dos de R-8 de la T9).
 | comun (tras T2) | 1134 passed, 3 skipped | 243 s |
 | sv9 (tras T4) | 1038 passed, 4 failed → 3 eran los equivalentes de F-053 (rehechos, decisión 9; en verde) y 1 es de entorno (abajo) | 93 s |
 | sv4 (tras T8) | 1996 passed, 5 failed: los 2 de F-065 R8 (enmienda, `bef559b`), el de kwargs (`f83c1f3`) y `test_f077_r27` (T12) | 211 s |
-| sv4 (tras T10 parcial) | 2011 passed, 3 failed: los 2 de la ambigüedad del almacén y `test_f077_r27` (T12) | 237 s |
+| sv4 (tras T10 parcial) | 2011 passed, 3 failed: los 2 fixtures de almacén (corregidos al cerrar la T10) y `test_f077_r27` (T12) | 237 s |
 
 **KO de entorno del worktree (no del código)**: `sv9 test_f069_t15_script_arranca_fuera_de_sv9...` lanza un script en
 un subproceso con el entorno vacío, sin `PYTHONPATH`; el venv del árbol principal trae `ruesma_comun` editable desde
@@ -154,8 +136,7 @@ quedarán bloqueadas por R16 y R17 al aprobar (lo que dice la spec).
 
 ## Falta
 
-- **Desbloquear la T10** (decisión sobre el almacén) y seguir T11–T21 en orden: ficha, JS y `TEXTOS_MOTIVO_ALTA`
-  (T11–T12), fase B en comun, sv6 y sv4 (T13–T18), script R18 (T19), documentación (sv4.md,
+- Seguir T11–T21 en orden: ficha, JS y `TEXTOS_MOTIVO_ALTA` (T11–T12), fase B en comun, sv6 y sv4 (T13–T18), script R18 (T19), documentación (sv4.md,
   sv6.md, sv9.md y `azure-apps/albaranes.md`, T20) y mutación (T21).
 - No se hacen aquí: T22 (líder, Chrome), T23 y T24 (humano), T25 (líder con el reviewer).
 - Antes de `git worktree remove`: quitar la *junction* `.venv` de sv4 con `cmd /c rmdir` (creada en esta pasada).
@@ -164,8 +145,8 @@ quedarán bloqueadas por R16 y R17 al aprobar (lo que dice la spec).
 
 | Evidencia | Valor |
 |---|---|
-| Tests ejecutados | 155 nuevos de F-106 (comun 59, sv9 15, sv4 81), en verde; suites: comun 1134 + 3 skipped, sv9 1038 (+3 rehechos), sv4 2011 con 3 rojos (2 de la ambigüedad, 1 de la T12) |
-| Cobertura de las líneas cambiadas | **sin medir**: la `PUERTA COBERTURA` sale de `bash harness/init.sh`, que no se ha corrido con la feature parada en la T10 |
+| Tests ejecutados | 158 nuevos de F-106 (comun 59, sv9 18, sv4 81), en verde; suites: comun 1134 + 3 skipped, sv9 1038 (+3 rehechos), sv4 2011 con 3 rojos tras la T10 parcial (2 fixtures ya corregidos, 1 de la T12) |
+| Cobertura de las líneas cambiadas | **sin medir**: la `PUERTA COBERTURA` sale de `bash harness/init.sh`, que se correrá al terminar la T21 |
 | Mutantes generados / supervivientes | **sin medir**: la campaña es la T21, después de T11–T20 |
 | Tiempo de las suites | comun 243 s, sv9 93 s, sv4 237 s |
-| `bash harness/init.sh` | no ejecutado: la feature está bloqueada y la suite de sv4 tiene 2 rojos por la ambigüedad (arriba) |
+| `bash harness/init.sh` | pendiente: al final de la T21 |

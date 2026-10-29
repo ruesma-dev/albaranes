@@ -40,9 +40,8 @@ valor de `cuadrar` ⇒ 422 sin escribir. `cuadrar` no es un campo de la fila.
 R5. CUANDO cambian Q, P o d sin `importe`, sv4 guarda los resultantes e `I = importe_de_linea(Q, P, d)`,
 `importe_source = 'calculated'`, sea cual sea el origen de la fila (lo de hoy, F-019 R23–R24, F-065 R11).
 
-R6. CUANDO viene `importe` (solo o con Q o d), sv4 guarda I = el recibido a 2 decimales, `P =
-unitario_despejado(I, Q, d)` con los Q y d resultantes, d sin cambios (o el recibido), `importe_source =
-'calculated'`.
+R6. CUANDO viene `importe` (solo o con Q o d), sv4 guarda I = el recibido a 2 decimales, `P = unitario_despejado(I, Q, d)`
+con los Q y d resultantes, d sin cambios (o el recibido), `importe_source = 'calculated'`.
 
 R7. SI vienen `importe` y `precio_unitario` a la vez ⇒ 422 «Cambia el precio o el importe, no los dos». SI con `importe` no se puede despejar (Q nula o 0, o d del 100 %): importe 0 ⇒ I = 0 y P se conserva; importe ≠ 0
 ⇒ 422 «No se puede calcular el precio con cantidad 0 o descuento del 100 %: cambia la cantidad, el descuento o el
@@ -82,7 +81,7 @@ El precio se pinta con los decimales guardados, hasta 6, sin ceros finales y al 
 
 R16. SI alguna fila a registrar (importe ≠ 0) no cuadra, sv4 no aprueba (ficha ni listado): `LineasIncompletasError`
 con posiciones y «Líneas que no cuadran (cantidad × precio × (1 − dto) ≠ importe): 3». Las no comparables no
-cuentan; R13 no bloquea.
+cuentan; R13 no bloquea. Almacén = fila sin partida, sin excepción: cuadra o bloquea (humano, 2026-10-29).
 
 R17. sv9 lee además P y d de la fila (`LineaAlta`, `SQL_LINEAS`). SI una línea a registrar no cuadra, sv9 deja el alta `no_admitido` con el motivo `linea_no_cuadra` (detalle «48 ×
 11,2 × (1 − 7 %) = 499,97 ≠ 104,16», referencia), sin llamar a sigrid-api; sin él, la petición es la de hoy
@@ -126,8 +125,7 @@ contrato de la valoración nueva pasa a Nueva con su P y el motivo `front_contra
 R28. sv6 bloquea la cabecera (`SELECT … FOR UPDATE`) antes de leer las ediciones (un PATCH sobre una fila que ya no
 existe ⇒ 409 «La valoración ha cambiado: recarga la ficha»); total y contadores salen de las filas finales.
 
-R29. En la ficha, una fila con edición enseña «✋» con `title` campo a campo («Cantidad: 48 (calculado 10)»); una
-`fila_entera`, «✋ añadida a mano».
+R29. En la ficha, una fila con edición enseña «✋» con `title` campo a campo («Cantidad: 48 (calculado 10)»); una `fila_entera`, «✋ añadida a mano».
 
 R30. «Volver a lo calculado» (POST `.../lines/{vid}/volver-a-calculado`) restaura `calculado`, borra la edición y
 desbloquea, con deshacer; 409 en aprobado o con alta bloqueante; una `fila_entera` no lo tiene (✕). La confirmación
@@ -137,9 +135,11 @@ una fila con blanca vuelve al revalorar (como hoy).
 # Regresión y documentación
 
 R31. Los tests de F-019 R23–R26, F-036, F-065 y F-078 siguen en verde sin relajar aserciones, salvo los declarados:
-`test_f065_f1_js.py` (`importe_solo_ajusta_el_precio` ⇒ `{"importe": 1000}`, R12), el texto de F-065 R22 (R30) y
-(enmienda del humano, 2026-10-29) en `test_f065_f1_fila.py` `test_f065_r8_dominio_campos_presentes[cuerpo8-campos8]` y
-`test_f065_r8_un_campo_desconocido_no_cuenta_como_cambio`: su clave desconocida de ejemplo pasa de `importe` a `importe_calculado`.
+`test_f065_f1_js.py` (`importe_solo_ajusta_el_precio` ⇒ `{"importe": 1000}`, R12), el texto de F-065 R22 (R30) y,
+por enmiendas del humano del 2026-10-29: en `test_f065_f1_fila.py` `test_f065_r8_dominio_campos_presentes[cuerpo8-campos8]` y
+`test_f065_r8_un_campo_desconocido_no_cuenta_como_cambio`, la clave desconocida pasa de `importe` a `importe_calculado`;
+y el fixture (no la aserción) de `test_f075_r9_valoracion_directa_completa_se_aprueba` (P 2,5 en la fila 12) y de
+`test_f078_r17_junto_a_las_de_f065_y_desde_guardar_y_aprobar` (P 12,5 en la 386), que no cuadraban (R16).
 
 R32. Casos por fixture, sin red ni BBDD real: (a) CECOIS por el PATCH: 10 × 11,20 −7 % = 104,16; `cantidad = 48` ⇒ I
 499,97 `calculated`, «≠ albarán»; `importe = 104,16` ⇒ P 2,333333, Nueva, sv9 48 × 2,17; blanca intacta. (b) la

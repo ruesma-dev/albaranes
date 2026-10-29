@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+import pytest
+
 from domain.models.alta_models import LineaAlta, Motivo, PeticionAlbaran
 from domain.services.validador_alta import validar_y_construir
 from infrastructure.database.sql_alta_repository import SQL_LINEAS, _linea_de_fila
@@ -51,6 +53,19 @@ def test_f106_r17_una_vinculada_que_no_cuadra_tampoco():
     assert validar_y_construir(datos(linea), CONFIG, HOY, USU) == [
         Motivo("linea_no_cuadra", "6 × 70 = 420,00 ≠ 410,40", "3"),
     ]
+
+
+@pytest.mark.parametrize("vacia", [None, "", "   "])
+def test_f106_r16_r17_almacen_es_sin_partida_y_cuadra_como_las_demas(vacia):
+    """Decisión del humano (2026-10-29): almacén = fila sin partida, sin excepción.
+
+    La que no cuadra se rechaza igual; la que cuadra va sin clave ``partida``
+    (eso lo fija ``test_f076_r16_final_vacia_sin_clave_de_partida``)."""
+    assert validar_y_construir(datos(_cecois(codigo_partida_final=vacia)), CONFIG, HOY, USU) == [
+        Motivo("linea_no_cuadra", DETALLE_CECOIS, "7"),
+    ]
+    (linea,) = _peticion(_cecois(codigo_partida_final=vacia, importe_calculado=499.97)).lineas
+    assert "partida" not in linea.a_dict()
 
 
 def test_f106_r17_cuadra_con_la_cantidad_convertida():
