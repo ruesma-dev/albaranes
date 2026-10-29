@@ -92,7 +92,9 @@ def test_f065_r22_dominio_es_fila_manual(campos, esperado):
         ({"descuento": ""}, {"descuento": None}),
         ({"codigo_partida": ""}, {"codigo_partida": None}),
         ({"codigo_partida": " 01.02 "}, {"codigo_partida": "01.02"}),
-        ({"descripcion": "X", "importe": 3}, {"descripcion": "X"}),
+        # (F-106 R4, enmienda del humano del 2026-10-29) ``importe`` ya es un campo
+        # del cuerpo: la clave desconocida de ejemplo pasa a ``importe_calculado``.
+        ({"descripcion": "X", "importe_calculado": 3}, {"descripcion": "X"}),
     ],
 )
 def test_f065_r8_dominio_campos_presentes(cuerpo, campos):
@@ -420,11 +422,13 @@ def test_f065_r8_dominio_un_texto_a_null_se_vacia():
 
 
 def test_f065_r8_un_campo_desconocido_no_cuenta_como_cambio():
-    """El ``importe`` (u otra clave) no es un campo de la fila: no hay cambio."""
+    """Una clave que no es campo de la fila no cuenta como cambio. (F-106 R4,
+    enmienda del humano del 2026-10-29: ``importe`` ya es un campo; el ejemplo
+    pasa a ``importe_calculado``.)"""
     motor = construir()
     antes = fila(motor, 11)
 
-    assert _editar(motor, 11, importe=1.0) is True
+    assert _editar(motor, 11, importe_calculado=1.0) is True
 
     assert fila(motor, 11) == antes
 

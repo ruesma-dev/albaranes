@@ -1,7 +1,6 @@
 # F-106 · Lo editado a mano en la ficha cuadra, va así a Sigrid y sobrevive a revalorar — requisitos (v3)
 
-Rigor **critico**. Servicios: comun, sv4-front, sv9-alta-sigrid (fase A) y sv6 (fase B, DDL en sus tablas). sv3 y sv5
-no se tocan. D1–D7 cerradas; D8 = (c) del humano; D9–D13 nuevas, recomendada (a) (`design.md` §10).
+Rigor **critico**. comun, sv4, sv9 (fase A) y sv6 (fase B, DDL); sv3 y sv5 no. D1–D13 cerradas (`design.md` §10).
 
 Origen: AC26/30435 (CECOIS). El papel dice 10 × 11,20 −7 % = 104,16; la fila acabó en Q 48, P 11,2, I 104,16
 `declared_albaran` y sv9 grabó 48 × 2,17 (`validador_alta.py:294`). Por qué, `design.md` §3.
@@ -138,7 +137,9 @@ una fila con blanca vuelve al revalorar (como hoy).
 # Regresión y documentación
 
 R31. Los tests de F-019 R23–R26, F-036, F-065 y F-078 siguen en verde sin relajar aserciones, salvo los declarados:
-`test_f065_f1_js.py` (`importe_solo_ajusta_el_precio` ⇒ `{"importe": 1000}`, R12) y el texto de F-065 R22 (R30).
+`test_f065_f1_js.py` (`importe_solo_ajusta_el_precio` ⇒ `{"importe": 1000}`, R12), el texto de F-065 R22 (R30) y
+(enmienda del humano, 2026-10-29) en `test_f065_f1_fila.py` `test_f065_r8_dominio_campos_presentes[cuerpo8-campos8]` y
+`test_f065_r8_un_campo_desconocido_no_cuenta_como_cambio`: su clave desconocida de ejemplo pasa de `importe` a `importe_calculado`.
 
 R32. Casos por fixture, sin red ni BBDD real: (a) CECOIS por el PATCH: 10 × 11,20 −7 % = 104,16; `cantidad = 48` ⇒ I
 499,97 `calculated`, «≠ albarán»; `importe = 104,16` ⇒ P 2,333333, Nueva, sv9 48 × 2,17; blanca intacta. (b) la
