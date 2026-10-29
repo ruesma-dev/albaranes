@@ -43,6 +43,8 @@ CUADRE_CECOIS = "48 × 11,20 × (1 − 7 %) = 499,97 ≠ 104,16"
     (2.3333333333, "2.333333", "2,333333"),
     (1234.5, "1234.50", "1.234,50"),
     (-9.0, "-9.00", "-9,00"),
+    (-0.5, "-0.50", "-0,50"),          # abono por debajo de 1 €: conserva el signo
+    (-0.0000001, "0.00", "0,00"),      # redondea a cero: sin «-0»
     (None, "", "—"),
 ])
 def test_f106_r15_precio_hasta_seis_decimales_sin_ceros_y_al_menos_dos(valor, entrada, es):
@@ -52,6 +54,11 @@ def test_f106_r15_precio_hasta_seis_decimales_sin_ceros_y_al_menos_dos(valor, en
 
 def test_f106_r14_texto_de_la_cuenta():
     assert texto_cuadre(cantidad=48.0, precio=11.2, descuento=7.0, importe=104.16) == CUADRE_CECOIS
+
+
+def test_f106_r14_el_importe_se_redondea_una_sola_vez_a_centimos():
+    # 0,3749999 ⇒ 0,37 (redondear antes a milésimas daría 0,375 ⇒ 0,38).
+    assert texto_cuadre(cantidad=1.0, precio=1.0, descuento=None, importe=0.3749999).endswith("≠ 0,37")
 
 
 def test_f106_r14_texto_sin_descuento_aplicable():

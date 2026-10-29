@@ -42,6 +42,8 @@ def test_f106_r1_no_cuadra_la_fila_de_produccion():
         (99.98, True),
         (100.03, False),  # tres: fuera
         (99.97, False),
+        (100.024, True),  # la diferencia se redondea a céntimos: 0,024 ⇒ 0,02
+        (100.026, False),  # 0,026 ⇒ 0,03
     ],
 )
 def test_f106_r1_borde_de_dos_centimos(importe, esperado):
@@ -77,6 +79,7 @@ def test_f106_r1_no_comparable_con_nulos(cantidad, precio, importe):
         (10, 10, math.nan),
         (10, 10, -math.inf),
         (object(), 10, 100),
+        (1e200, 1e200, 5),  # Q × P desborda a infinito: tampoco es comparable
     ],
 )
 def test_f106_r1_ilegible_es_no_comparable_y_nunca_lanza(cantidad, precio, importe):

@@ -154,10 +154,17 @@ def test_f106_r20_previa_rota_empieza_de_cero():
 # =================================================================== #
 # R21 · fila entera
 # =================================================================== #
-def test_f106_r21_fila_entera_sin_calculado():
-    datos = _json(registrar_edicion(None, fila_antes=None, fila_despues=_fila(), campos=set(),
+@pytest.mark.parametrize("antes", [None, _fila()], ids=["sin_fila_antes", "con_fila_antes"])
+def test_f106_r21_fila_entera_sin_calculado(antes):
+    # Una fila_entera no tiene calculado aunque se parta de otra fila (dividir).
+    datos = _json(registrar_edicion(None, fila_antes=antes, fila_despues=_fila(), campos=set(),
                                     fila_entera=True))
     assert datos == {"v": 1, "campos": {}, "calculado": {}, "fila_entera": True}
+
+
+def test_f106_r20_sin_fila_antes_el_calculado_queda_vacio():
+    datos = _json(registrar_edicion(None, fila_antes=None, fila_despues=_fila(), campos={"unidad"}))
+    assert datos["calculado"] == {} and datos["fila_entera"] is False
 
 
 def test_f106_r21_una_edicion_por_defecto_no_es_fila_entera():
@@ -262,6 +269,14 @@ def test_f106_r25_sin_convertida_recalcula_con_la_cantidad_del_albaran():
     edicion = _editada({"cantidad"}, {"cantidad_albaran": 48.0, "cantidad_convertida": None})
     fila = aplicar_edicion(_fila(precio_unitario_final=12.0, importe_calculado=111.6), edicion)
     assert fila["importe_calculado"] == pytest.approx(535.68)
+
+
+def test_f106_r25_campo_mal_formado_se_ignora_y_no_lanza():
+    # Un JSON tocado a mano: el campo sin sus columnas no tumba la valoración.
+    edicion = leer_edicion(json.dumps({"v": 1, "campos": {"unidad": None, "descripcion": "x"},
+                                       "calculado": {}}))
+    fila = aplicar_edicion(_fila(), edicion)
+    assert (fila["unidad_contrato"], fila["descripcion_linea"]) == ("UD", "TUBO PVC 110")
 
 
 def test_f106_r25_partida_vacia_es_almacen():
