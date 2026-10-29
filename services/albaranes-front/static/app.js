@@ -75,8 +75,8 @@
 
     // Datos completos del documento (JSON incrustado). F-065 R1: el PUT de la
     // cabecera ya NO reenvía las blancas (el backend ignora las líneas); de
-    // aquí se lee, p. ej., cuántas filas tocadas a mano descartaría
-    // revalorar (n_filas_manuales, R22).
+    // aquí se lee, p. ej., cuántas filas tocadas a mano conservará
+    // revalorar (n_filas_manuales, R22; F-106 R30).
     let DOC_DATA = {};
     try { DOC_DATA = JSON.parse(dataTag.textContent) || {}; } catch (_) { DOC_DATA = {}; }
     window.__documentData = DOC_DATA;
@@ -1296,9 +1296,10 @@
     // F-065 R22: revalorar (o cambiar de contrato) descarta lo hecho a mano.
     function avisoRevalorar(n) {
         if (!n) { return null; }
+        // F-106 R30: revalorar ya no descarta lo editado a mano, lo conserva.
         return n === 1
-            ? "Revalorar descarta 1 línea tocada a mano. ¿Continuar?"
-            : "Revalorar descarta " + n + " líneas tocadas a mano. ¿Continuar?";
+            ? "Revalorar conserva 1 línea puesta a mano. ¿Continuar?"
+            : "Revalorar conserva " + n + " líneas puestas a mano. ¿Continuar?";
     }
 
     // F-075 R10: sin contrato solo se valora si el albarán trae importes
@@ -1403,54 +1404,6 @@
         }
     }
 
-    // F-065 R12, F-106 R11, R13, R15: repinta la fila al teclear ``campo``.
-    // Cantidad, precio o dto ⇒ importe = Q × P × (1 − dto). Importe ⇒ P
-    // despejado a 6 decimales y el dto se queda; sin divisor e importe ≠ 0, no
-    // se repinta y el importe se marca en rojo. Después, «≠ albarán» y «A
-    // Sigrid» con lo que quede en la fila.
-    function syncImporteUnitario(tr, campo) {
-        const cantEl = tr.querySelector('[data-field="cantidad"]');
-        const puEl = tr.querySelector('[data-field="precio_unitario"]');
-        const dtoEl = tr.querySelector('[data-field="descuento"]');
-        const impEl = tr.querySelector('[data-field="importe"]');
-        const cant = cantEl ? parseNumEs(cantEl.value) : null;
-        const dto = dtoEl ? parseNumEs(dtoEl.value) : null;
-        if (campo === "importe") {
-            if (!puEl || !impEl) { return; }
-            const imp = parseNumEs(impEl.value);
-            const pu = precioDespejado(imp, cant, dto);
-            marcarNoDespejable(impEl, pu === null && imp !== null && imp !== 0);
-            if (pu !== null) { puEl.value = String(pu); }
-        } else if (campo === "cantidad" || campo === "precio_unitario" || campo === "descuento") {
-            if (!impEl) { return; }
-            const importe = importeDeFila(cant, puEl ? parseNumEs(puEl.value) : null, dto);
-            impEl.value = importe === null ? "" : String(importe);
-            marcarNoDespejable(impEl, false);
-        }
-        const imp = impEl ? parseNumEs(impEl.value) : null;
-        const aviso = tr.querySelector(".js-aviso-importe");
-        if (aviso && impEl && impEl.dataset.importeAlbaran !== undefined) {
-            const texto = avisoImporte(imp, parseFloat(impEl.dataset.importeAlbaran));
-            aviso.textContent = texto || "";
-            aviso.hidden = !texto;
-        }
-        const sigrid = tr.querySelector(".js-a-sigrid");
-        if (puEl && puEl.dataset.factorAlta !== undefined) {
-            const a = precioASigrid(cant, imp, parseFloat(puEl.dataset.factorAlta));
-            const texto = a ? textoASigrid(a) : null;
-            const lineas = String(puEl.title || "").split("\n").filter(function (l) {
-                return l && l.indexOf("A Sigrid:") !== 0;
-            });
-            if (texto) { lineas.push(texto); }
-            puEl.title = lineas.join("\n");
-            if (sigrid) {
-                const pu = parseNumEs(puEl.value);
-                if (texto) { sigrid.textContent = texto; }
-                sigrid.hidden = !a || (pu !== null && Math.abs(a.precio - pu) <= 1e-6);
-            }
-        }
-    }
-
     // F-106 R14: el cuerpo de «Recalcular importe» / «Recalcular precio».
     function cuerpoCuadrar(modo) {
         return { cuadrar: modo };
@@ -1478,6 +1431,37 @@
         });
     }
 
+    // F-106 R30: «Volver a lo calculado» de una fila editada a mano (con su
+    // «Deshacer»): la fila vuelve a lo que calculó la valoración.
+    function wireVolverACalculado() {
+        linesBody.querySelectorAll(".js-volver-calculado").forEach(function (btn) {
+            btn.addEventListener("click", async function () {
+                const vid = (btn.dataset.valuationLineId || "").trim();
+                if (!vid || btn.disabled) { return; }
+                btn.disabled = true;
+                try {
+                    const resp = await fetch(
+                        `/api/documents/${documentId}/lines/${vid}/volver-a-calculado`,
+                        { method: "POST" }
+                    );
+                    if (resp.ok) {
+                        window.location.reload();
+                        return;
+                    }
+                    let msg = "No se pudo volver a lo calculado.";
+                    try {
+                        const j = await resp.json();
+                        if (j && j.detail) msg = j.detail;
+                    } catch (e) { /* sin cuerpo JSON */ }
+                    window.alert(msg);
+                } catch (e) {
+                    window.alert("Error de red volviendo a lo calculado.");
+                }
+                btn.disabled = false;
+            });
+        });
+    }
+
     // F-065 R23: las líneas a traer con su cantidad (obligatoria, ≠ 0), o
     // null si falta alguna (entonces «Incorporar» no se habilita).
     function lineasATraer(seleccion) {
@@ -1492,6 +1476,55 @@
     }
 
     function wireConciliaEdit() {
+        // F-065 R12, F-106 R11, R13, R15: repinta la fila al teclear ``campo``
+        // (dentro de wireConciliaEdit, su único llamador).
+        // Cantidad, precio o dto ⇒ importe = Q × P × (1 − dto). Importe ⇒ P
+        // despejado a 6 decimales y el dto se queda; sin divisor e importe ≠ 0, no
+        // se repinta y el importe se marca en rojo. Después, «≠ albarán» y «A
+        // Sigrid» con lo que quede en la fila.
+        function syncImporteUnitario(tr, campo) {
+            const cantEl = tr.querySelector('[data-field="cantidad"]');
+            const puEl = tr.querySelector('[data-field="precio_unitario"]');
+            const dtoEl = tr.querySelector('[data-field="descuento"]');
+            const impEl = tr.querySelector('[data-field="importe"]');
+            const cant = cantEl ? parseNumEs(cantEl.value) : null;
+            const dto = dtoEl ? parseNumEs(dtoEl.value) : null;
+            if (campo === "importe") {
+                if (!puEl || !impEl) { return; }
+                const imp = parseNumEs(impEl.value);
+                const pu = precioDespejado(imp, cant, dto);
+                marcarNoDespejable(impEl, pu === null && imp !== null && imp !== 0);
+                if (pu !== null) { puEl.value = String(pu); }
+            } else if (campo === "cantidad" || campo === "precio_unitario" || campo === "descuento") {
+                if (!impEl) { return; }
+                const importe = importeDeFila(cant, puEl ? parseNumEs(puEl.value) : null, dto);
+                impEl.value = importe === null ? "" : String(importe);
+                marcarNoDespejable(impEl, false);
+            }
+            const imp = impEl ? parseNumEs(impEl.value) : null;
+            const aviso = tr.querySelector(".js-aviso-importe");
+            if (aviso && impEl && impEl.dataset.importeAlbaran !== undefined) {
+                const texto = avisoImporte(imp, parseFloat(impEl.dataset.importeAlbaran));
+                aviso.textContent = texto || "";
+                aviso.hidden = !texto;
+            }
+            const sigrid = tr.querySelector(".js-a-sigrid");
+            if (puEl && puEl.dataset.factorAlta !== undefined) {
+                const a = precioASigrid(cant, imp, parseFloat(puEl.dataset.factorAlta));
+                const texto = a ? textoASigrid(a) : null;
+                const lineas = String(puEl.title || "").split("\n").filter(function (l) {
+                    return l && l.indexOf("A Sigrid:") !== 0;
+                });
+                if (texto) { lineas.push(texto); }
+                puEl.title = lineas.join("\n");
+                if (sigrid) {
+                    const pu = parseNumEs(puEl.value);
+                    if (texto) { sigrid.textContent = texto; }
+                    sigrid.hidden = !a || (pu !== null && Math.abs(a.precio - pu) <= 1e-6);
+                }
+            }
+        }
+
         linesBody.querySelectorAll("tr.concilia-editable").forEach(function (tr) {
             const inputs = tr.querySelectorAll(".js-cedit");
             const saveBtn = tr.querySelector(".js-cedit-save");
@@ -1552,6 +1585,7 @@
     wirePartidaCombos();
     wireConciliaEdit();
     wireCuadrar();
+    wireVolverACalculado();
 
     // ------------------------------------------------------------------ //
     // «Dividir» (F-065 R29 v3): el botón de la fila o F7 abren una ventana con

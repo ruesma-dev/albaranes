@@ -204,7 +204,7 @@ def test_f065_r22_js_aviso_de_revalorar(tmp_path):
         console.log(JSON.stringify([avisoRevalorar(0), avisoRevalorar(2), avisoRevalorar(undefined)]));
     """)
 
-    assert casos == [None, "Revalorar descarta 2 líneas tocadas a mano. ¿Continuar?", None]
+    assert casos == [None, "Revalorar conserva 2 líneas puestas a mano. ¿Continuar?", None]
 
 
 @con_node
@@ -220,7 +220,7 @@ def test_f065_r22_js_confirmar_revalorar(tmp_path):
     """)
 
     assert casos == {"sin": True, "con": False,
-                     "preguntas": ["Revalorar descarta 3 líneas tocadas a mano. ¿Continuar?"]}
+                     "preguntas": ["Revalorar conserva 3 líneas puestas a mano. ¿Continuar?"]}
 
 
 def test_f065_r22_las_tres_vias_de_revalorar_confirman_antes():

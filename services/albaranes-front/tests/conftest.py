@@ -113,6 +113,7 @@ _DDL = (
         review_required               BOOLEAN NOT NULL DEFAULT 0,
         review_reasons_json           TEXT,
         bloqueada                     BOOLEAN NOT NULL DEFAULT 0,
+        producto_sigrid               VARCHAR(64),
         edicion_manual_json           TEXT
     )
     """,

@@ -55,14 +55,23 @@ def test_f106_r20_patch_importe_guarda_el_importe_y_no_el_precio_despejado():
     _patch(motor, {"importe": 104.16})
 
     e = _edicion(motor)
-    assert list(e.campos) == ["importe"]
+    # El P despejado (2,333333 ≠ 11,20) es un precio cambiado: Contrato → Nueva
+    # (R8), y sv6 tiene que recrear su derivada (R27).
+    assert list(e.campos) == ["importe", "origen"]
     assert e.campos["importe"] == {"importe_calculado": 104.16}
 
 
 def test_f106_r20_recalcular_precio_guarda_el_importe():
     motor = cecois(q=48.0)
     _patch(motor, cuadrar="precio")
-    assert list(_edicion(motor).campos) == ["importe"]
+    assert list(_edicion(motor).campos) == ["importe", "origen"]
+
+
+def test_f106_r20_recalcular_importe_guarda_la_cantidad():
+    """«Recalcular importe» es como cambiar Q (R9): queda la Q y sv6 rehace I."""
+    motor = cecois(q=48.0)
+    _patch(motor, cuadrar="importe")
+    assert list(_edicion(motor).campos) == ["cantidad"]
 
 
 def test_f106_r20_contrato_a_nueva_guarda_el_origen():
@@ -137,7 +146,7 @@ def test_f106_r20_producto_sigrid():
 def test_f106_r20_origen_a_nueva():
     motor = cecois()
     repositorio(motor).set_line_conciliacion(
-        document_id=DOC, valuation_line_id=FILA, mode="derived", descripcion="TUBO", precio_unitario=9.0)
+        document_id=DOC, valuation_line_id=FILA, mode="nueva", descripcion="TUBO", precio_unitario=9.0)
     assert _edicion(motor).campos["origen"] == {"tipo": "nueva"}
 
 

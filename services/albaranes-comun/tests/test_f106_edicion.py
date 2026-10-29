@@ -38,6 +38,7 @@ def _fila(**cambios):
         "unidad_contrato": "UD", "descripcion_linea": "TUBO PVC 110",
         "codigo_externo": None, "producto_sigrid": None, "bloqueada": False,
         "matched_contrato_line_id": 504, "derived_contrato_line_id": None,
+        "precio_unitario_source": "contract_db", "precio_unitario_agreement": "match",
     }
     base.update(cambios)
     return base
@@ -50,6 +51,7 @@ CALCULADO = {
     "partida_action": "existing_matched", "unidad_contrato": "UD",
     "descripcion_linea": "TUBO PVC 110", "matched_contrato_line_id": 504,
     "derived_contrato_line_id": None,
+    "precio_unitario_source": "contract_db", "precio_unitario_agreement": "match",
 }
 
 

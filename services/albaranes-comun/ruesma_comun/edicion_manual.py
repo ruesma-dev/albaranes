@@ -136,12 +136,15 @@ COLUMNAS_DE_CAMPO: dict[str, tuple[str, ...]] = {
 }
 
 #: (design §5) Lo que se guarda en ``calculado``: la fila tal como la dejó sv6
-#: (para «Volver a lo calculado» y para la marca «✋»).
+#: (para «Volver a lo calculado» y para la marca «✋»). El origen son la línea
+#: (de contrato o derivada) y de dónde salió su precio (``precio_unitario_source``
+#: y ``_agreement``): pasar a Nueva los cambia y volver a lo calculado los repone.
 COLUMNAS_CALCULADO: tuple[str, ...] = (
     "cantidad_albaran", "cantidad_convertida", "precio_unitario_final",
     "descuento_albaran_aplicado", "importe_calculado", "importe_source",
     "codigo_partida_final", "partida_action", "unidad_contrato", "descripcion_linea",
     "matched_contrato_line_id", "derived_contrato_line_id",
+    "precio_unitario_source", "precio_unitario_agreement",
 )
 
 #: Campos de la edición que entran en el importe (los de ``recalcular_fila``).

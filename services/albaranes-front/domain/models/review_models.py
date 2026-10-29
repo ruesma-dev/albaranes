@@ -47,6 +47,8 @@ from ruesma_comun.edicion_manual import (
     CAMPO_IMPORTE,
     CAMPOS_QUE_MUEVEN_EL_IMPORTE,
     MENSAJE_PRECIO_E_IMPORTE,
+    EdicionManual,
+    es_fila_manual,
 )
 from ruesma_comun.sigrid import normalizar_partida
 from ruesma_comun.valoracion import esta_valorado
@@ -57,7 +59,6 @@ from domain.models.alta_sigrid_models import (
     ProductoOpcion,
     etiqueta_estado_alta,
 )
-from domain.services.almacen import ACCION_ALMACEN_ELEGIDO
 
 VIEW_MODE_MERGE = "merge"
 KNOWN_PROVIDER_VIEWS = ("openai", "gemini", "claude")
@@ -565,6 +566,24 @@ class AlbaranAprobadoError(Exception):
         return AVISO_ALBARAN_APROBADO
 
 
+#: (F-106 R28) Aviso de un PATCH sobre una fila que una revaloración ya
+#: reemplazó.
+AVISO_VALORACION_CAMBIADA = "La valoración ha cambiado: recarga la ficha"
+
+
+class ValoracionCambiadaError(Exception):
+    """(F-106 R28) La fila ya no existe: la valoración se rehízo mientras la
+    ficha estaba abierta (409)."""
+
+    def __init__(self, document_id: str) -> None:
+        self.document_id = document_id
+        super().__init__(AVISO_VALORACION_CAMBIADA)
+
+    @property
+    def aviso(self) -> str:
+        return AVISO_VALORACION_CAMBIADA
+
+
 class LineaBloqueadaError(Exception):
     """(R14) La fila está guardada (bloqueada): no se toca hasta desbloquearla."""
 
@@ -808,6 +827,65 @@ def texto_cuadre(*, cantidad: float, precio: float, descuento: object, importe: 
     )
 
 
+#: (F-106 R29) Texto de la marca de una fila creada por sv4.
+TEXTO_FILA_ENTERA = "✋ añadida a mano"
+
+#: (F-106 R29) Etiqueta de cada campo de la edición, en su orden.
+_ETIQUETAS_EDICION = {
+    "cantidad": "Cantidad", "precio_unitario": "Precio", "importe": "Importe",
+    "descuento": "Descuento", "codigo_partida": "Partida", "unidad": "Unidad",
+    "descripcion": "Descripción", "codigo_externo": "Código externo",
+    "producto_sigrid": "Producto Sigrid",
+}
+
+
+def _valor_edicion(campo: str, valores: dict[str, Any]) -> str:
+    """El valor de ``campo`` en una edición (o en su ``calculado``)."""
+    def _num(v: object, formato) -> str:
+        numero = _finito(v)
+        return "—" if numero is None else formato(numero)
+
+    if campo == "cantidad":
+        q = valores.get("cantidad_convertida")
+        return _num(q if q is not None else valores.get("cantidad_albaran"), _numero_corto)
+    if campo == "precio_unitario":
+        return precio_es(valores.get("precio_unitario_final"))
+    if campo == "importe":
+        return _num(valores.get("importe_calculado"), _importe_es)
+    if campo == "descuento":
+        return _num(valores.get("descuento_albaran_aplicado"), _numero_corto)
+    if campo == "codigo_partida":
+        partida = (valores.get("codigo_partida_final") or "").strip()
+        return partida or "almacén"
+    columna = {"unidad": "unidad_contrato", "descripcion": "descripcion_linea"}.get(campo, campo)
+    return (str(valores.get(columna) or "")).strip() or "—"
+
+
+def texto_edicion(edicion: EdicionManual) -> str:
+    """(F-106 R29) El ``title`` de «✋»: lo editado campo a campo, con lo que
+    calculó sv6 («Cantidad: 48 (calculado 10)»), una línea por campo; «Guardada»
+    o «Desbloqueada» y el origen («Origen: Nueva», «Origen: línea 501»). Una
+    ``fila_entera``: «✋ añadida a mano»."""
+    if edicion.fila_entera:
+        return TEXTO_FILA_ENTERA
+    lineas: list[str] = []
+    for campo, valores in edicion.campos.items():
+        if campo == "bloqueada":
+            lineas.append("Guardada" if (valores or {}).get("bloqueada") else "Desbloqueada")
+        elif campo == "origen":
+            origen = valores or {}
+            lineas.append(
+                "Origen: Nueva" if origen.get("tipo") != "contrato"
+                else f"Origen: línea {origen.get('linea')}"
+            )
+        elif campo in _ETIQUETAS_EDICION and isinstance(valores, dict):
+            lineas.append(
+                f"{_ETIQUETAS_EDICION[campo]}: {_valor_edicion(campo, valores)} "
+                f"(calculado {_valor_edicion(campo, edicion.calculado)})"
+            )
+    return "\n".join(lineas)
+
+
 def aviso_importe_albaran(importe: float | None, importe_del_albaran: float | None) -> str | None:
     """(F-106 R13) «≠ albarán: 104,16» si el importe de la fila ya no es el del
     albarán (``importes.difieren``, 0,01 €); ``None`` si es el mismo o falta
@@ -927,24 +1005,8 @@ def motivos_con(valor: Any, motivo: str, presente: bool) -> str:
     return json.dumps(motivos, ensure_ascii=False)
 
 
-def es_fila_manual(
-    *,
-    line_kind: str | None,
-    bloqueada: bool,
-    derivada_origen: str | None,
-    precio_unitario_agreement: str | None,
-    partida_action: str | None,
-) -> bool:
-    """(R22) ¿La tocó el administrativo? (definición de requirements): línea
-    ``manual`` o ``reparto``, bloqueada, con derivada ``manual_override``,
-    con precio fijado a mano o con el almacén elegido. Revalorar la descarta."""
-    return (
-        line_kind in ("manual", "reparto")
-        or bool(bloqueada)
-        or derivada_origen == "manual_override"
-        or precio_unitario_agreement == "manual"
-        or partida_action == ACCION_ALMACEN_ELEGIDO
-    )
+# (F-106 R22) ``es_fila_manual`` vive en comun (``ruesma_comun.edicion_manual``,
+# importada arriba): la usan sv4 (aviso de revalorar) y sv6 (las legadas, R27).
 
 
 def orden_filas_ficha(
@@ -1402,6 +1464,8 @@ class LineValuationPayload(BaseModel):
     partida_action: str | None = None
     # ---- F-065 R13–R17: el administrativo la guardó (guardar = bloquear) ----
     bloqueada: bool = False
+    # ---- F-106 R19–R30: lo editado a mano (JSON de comun, o None) ----
+    edicion_manual_json: str | None = None
 
     match_confidence_pct: float | None = None
     match_method: str | None = None
@@ -1598,6 +1662,9 @@ class ConciliacionDisplay(BaseModel):
     a_sigrid: str | None = None
     a_sigrid_difiere: bool = False
     factor_alta: float | None = None
+    # ---- F-106 R29–R30: «✋» (``title`` campo a campo) y si la creó sv4 ----
+    edicion_texto: str | None = None
+    fila_entera: bool = False
 
     @property
     def unitario_input(self) -> str:
@@ -1881,8 +1948,8 @@ class DocumentDetailPayload(BaseModel):
     # F-053 — alta en Sigrid (R29-R30) y producto de cada línea (R40). Lo
     # rellena el servicio en la vista merge SOLO con DESDE puesta (R3).
     # F-065 R21: suma de importes de las filas y de lo leído en las blancas
-    # (None si no hay ninguno); R22: filas tocadas a mano (revalorar las
-    # descarta). Los rellena el repositorio en el detalle del merge.
+    # (None si no hay ninguno); R22: filas tocadas a mano (F-106 R30:
+    # revalorar las conserva). Los rellena el repositorio en el detalle del merge.
     suma_filas: float | None = None
     suma_leida: float | None = None
     n_filas_manuales: int = 0

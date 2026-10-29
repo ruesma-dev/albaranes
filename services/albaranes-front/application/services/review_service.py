@@ -485,6 +485,28 @@ class ReviewService:
             )
         return ok
 
+    def volver_a_calculado(self, *, document_id: str, valuation_line_id: int) -> bool:
+        """(F-106 R30) «Volver a lo calculado»: la fila vuelve a lo que calculó
+        sv6, sin edición y desbloqueada. Una entrada de deshacer que devuelve la
+        fila (con su edición) y el total a como estaban."""
+        etiqueta = self._undo_line_desc(valuation_line_id)
+        snap_line = self._undo_snap_line(valuation_line_id)
+        snap_val = self._undo_snap_valuation(document_id)
+        ok = self._repository.volver_a_calculado(
+            document_id=document_id, valuation_line_id=valuation_line_id,
+        )
+        if ok:
+            self._repository.record_undo(
+                document_id=document_id,
+                action="volver_a_calculado",
+                description=(
+                    f"Volver a lo calculado · {etiqueta} "
+                    f"({self._repository.doc_label(document_id=document_id)})"
+                ),
+                restore=[snap_line, snap_val],
+            )
+        return ok
+
     def bloquear_linea(self, *, document_id: str, valuation_line_id: int) -> bool:
         """(F-065 R13, R15) Bloquea la fila, con su entrada de deshacer."""
         return self._marcar_bloqueada(document_id, valuation_line_id, True)

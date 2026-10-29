@@ -955,6 +955,17 @@
                                         {% elif editable and bloqueada %}
                                             <button type="button" class="btn small secondary js-desbloquear" data-valuation-line-id="{{ dline.valuation_line_id }}" title="Línea guardada: desbloquéala para editarla">Desbloquear</button>
                                         {% endif %}
+                                        {# F-106 R29, R30: «✋» = editada a mano (revalorar la conserva); una creada por sv4 no tiene nada calculado a lo que volver (✕). #}
+                                        {% if c and c.edicion_texto %}
+                                            {% if c.fila_entera %}
+                                            <span class="edicion-manual js-edicion-manual" title="Línea añadida a mano: revalorar la conserva">{{ c.edicion_texto }}</span>
+                                            {% else %}
+                                            <span class="edicion-manual js-edicion-manual" title="{{ c.edicion_texto }}">✋</span>
+                                            {% if editable %}
+                                            <button type="button" class="btn small secondary js-volver-calculado" data-valuation-line-id="{{ dline.valuation_line_id }}" title="Deshacer lo editado a mano y volver a lo que calculó la valoración">Volver a lo calculado</button>
+                                            {% endif %}
+                                            {% endif %}
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endif %}

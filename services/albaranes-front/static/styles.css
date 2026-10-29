@@ -1344,6 +1344,8 @@ button.concilia-badge.js-concilia-edit:hover {
 .conciliacion-row .a-sigrid { display: block; font-size: 11px; color: #8a5a00; white-space: nowrap; }
 .conciliacion-row .aviso-importe[hidden],
 .conciliacion-row .a-sigrid[hidden] { display: none; }
+/* F-106 R29: «✋» de una fila editada a mano (revalorar la conserva). */
+.conciliacion-row .edicion-manual { cursor: help; margin-left: 4px; white-space: nowrap; }
 .conciliacion-row .cell-input.importe-no-despejable { border-color: #c0392b; }
 .conciliacion-row .cell-input.cedit-dirty {
     border-color: #9f2842;
