@@ -86,3 +86,10 @@ Del humano es la T21: desplegar con la guarda apagada y, después de la T18, enc
   `total` el importe; en `idempotente`, `dto` y `precio_bruto` a `null`. Contrato **v8.4** antes de implementar.
 - Consecuencia para la spec: D4 (`dto_distinto`) puede leer `dto` de la previa; los dos avisos nuevos van a la tabla de
   textos de sv4 en la T19. Se contrasta todo en la T18 cuando publiquen v8.4.
+
+## Contrato v8.4 de sigrid-api (F-018 v1.2, `02dc4ad`), acusado por albaranes el 2026-10-29
+
+Confirmado por el humano («Sí, y actualizo lo nuestro»). sv9 compara la previa por `total` (0,05 €) y no lee el `precio`
+de la respuesta, así que el neto y el céntimo del punto 4 no la rompen. Los avisos desconocidos se ven con su código en sv4
+hasta la T19. Falta nuestra parte del contrato (punto 6: «Origen en albaranes» de `precio` y `dto` en §2.2 y regla 4 de
+§2.4), coordinada con la sesión de sigrid-api porque el fichero está en su rama.
