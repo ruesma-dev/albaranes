@@ -32,7 +32,8 @@ Suite de sv4 con la T10 tal como está (lectura a): `3 failed, 2011 passed in 23
 - **(a) Recomendada: el almacén cuenta** (R16 y R17 tal como están; es lo implementado en `4d80f3f`). Lo que se
   aprueba es lo que sv9 admite. Exige corregir los datos de los dos fixtures: P 2,5 en la fila 12 de F-075 (lo que
   pondría sv6 en una directa, `unitario_despejado`) y P 12,5 en la 386 de F-078, la de su derivada. Las aserciones no
-  cambian. En la T0, 1 de las 5 filas pendientes que no cuadran era de almacén (U1 5 frente a U3 4).
+  cambian. En la T0, U3 (filas que pinta la ficha, sin almacén) deja 4 de las 5: la quinta es de almacén o no se
+  pinta, y la T0 no separó esos dos casos.
 - **(b) El almacén no cuenta**, ni en sv4 ni en sv9. Si sv4 lo excluye y sv9 no, se aprueba y el alta acaba en
   `no_admitido`. Los dos tests pasan sin tocarlos, pero una fila de almacén iría a Sigrid con Q × P ≠ I, que es el
   fallo de AC26/30435.
