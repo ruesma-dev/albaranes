@@ -317,7 +317,8 @@ def test_f065_r9_plantilla_precio_aplicado_y_el_del_contrato_en_el_title(
     ))
 
     entrada = re.search(r'<input[^>]*data-field="precio_unitario"[^>]*>', html).group(0)
-    assert 'value="120.0000"' in entrada
+    # F-106 R15 (declarado en R31): hasta 6 decimales, sin ceros finales y al menos 2.
+    assert 'value="120.00"' in entrada
     assert "115" in entrada and "title=" in entrada
 
 

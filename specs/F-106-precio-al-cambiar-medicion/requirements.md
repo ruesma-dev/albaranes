@@ -47,8 +47,7 @@ R7. SI vienen `importe` y `precio_unitario` a la vez ⇒ 422 «Cambia el precio 
 ⇒ 422 «No se puede calcular el precio con cantidad 0 o descuento del 100 %: cambia la cantidad, el descuento o el
 precio», sin escribir.
 
-R8. Un P despejado (R6, R9) es un precio cambiado: una Contrato pasa a Nueva (F-065 R25) y en una Nueva su derivada
-recibe P. Cambiar solo Q o d no cambia el origen.
+R8. Un P despejado (R6, R9) es un precio cambiado: una Contrato pasa a Nueva (F-065 R25) y en una Nueva su derivada recibe P. Cambiar solo Q o d no cambia el origen.
 
 R9. CUANDO el PATCH trae solo `cuadrar` sobre una fila que **no cuadra**: `importe` ⇒ como R5; `precio` ⇒ como R6
 con el I actual (R7, R8). Sobre una que cuadra o no comparable, no escribe lo valorado (F-065 R8).
@@ -139,7 +138,8 @@ R31. Los tests de F-019 R23–R26, F-036, F-065 y F-078 siguen en verde sin rela
 por enmiendas del humano del 2026-10-29: en `test_f065_f1_fila.py` `test_f065_r8_dominio_campos_presentes[cuerpo8-campos8]` y
 `test_f065_r8_un_campo_desconocido_no_cuenta_como_cambio`, la clave desconocida pasa de `importe` a `importe_calculado`;
 y el fixture (no la aserción) de `test_f075_r9_valoracion_directa_completa_se_aprueba` (P 2,5 en la fila 12) y de
-`test_f078_r17_junto_a_las_de_f065_y_desde_guardar_y_aprobar` (P 12,5 en la 386), que no cuadraban (R16).
+`test_f078_r17_junto_a_las_de_f065_y_desde_guardar_y_aprobar` (P 12,5 en la 386), que no cuadraban (R16); y por R15
+`test_f065_f1_fila.py::test_f065_r9_plantilla_precio_aplicado_y_el_del_contrato_en_el_title`: `value="120.0000"` ⇒ `"120.00"`.
 
 R32. Casos por fixture, sin red ni BBDD real: (a) CECOIS por el PATCH: 10 × 11,20 −7 % = 104,16; `cantidad = 48` ⇒ I
 499,97 `calculated`, «≠ albarán»; `importe = 104,16` ⇒ P 2,333333, Nueva, sv9 48 × 2,17; blanca intacta. (b) la
