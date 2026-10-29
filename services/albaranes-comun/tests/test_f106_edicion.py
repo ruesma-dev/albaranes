@@ -132,6 +132,8 @@ def test_f106_r20_desbloquear_registra_false_y_no_borra():
 @pytest.mark.parametrize(("despues", "origen"), [
     ({"matched_contrato_line_id": None, "derived_contrato_line_id": 640}, {"tipo": "nueva"}),
     ({"matched_contrato_line_id": 505, "derived_contrato_line_id": None}, {"tipo": "contrato", "linea": 505}),
+    # Sin línea ni derivada (sin vincular) también es Nueva, nunca «contrato» sin línea.
+    ({"matched_contrato_line_id": None, "derived_contrato_line_id": None}, {"tipo": "nueva"}),
 ])
 def test_f106_r20_origen(despues, origen):
     datos = _json(registrar_edicion(None, fila_antes=_fila(), fila_despues=_fila(**despues),
@@ -158,6 +160,32 @@ def test_f106_r21_fila_entera_sin_calculado():
     assert datos == {"v": 1, "campos": {}, "calculado": {}, "fila_entera": True}
 
 
+def test_f106_r21_una_edicion_por_defecto_no_es_fila_entera():
+    edicion = EdicionManual(campos={"unidad": {"unidad_contrato": "M"}}, calculado={"unidad_contrato": "UD"})
+    assert edicion.fila_entera is False
+    assert json.loads(edicion.a_json())["fila_entera"] is False
+
+
+def test_f106_r20_el_json_se_guarda_legible():
+    # Sin escapar, como el resto de JSON de las filas (ensure_ascii=False).
+    edicion = EdicionManual(campos={"descripcion": {"descripcion_linea": "CODO Ø110"}},
+                            calculado={"descripcion_linea": "CODO 110"})
+    assert "Ø110" in edicion.a_json()
+
+
+def test_f106_leer_sin_la_marca_no_es_fila_entera():
+    texto = json.dumps({"v": 1, "campos": {"unidad": {"unidad_contrato": "M"}},
+                        "calculado": {"unidad_contrato": "UD"}})
+    assert leer_edicion(texto).fila_entera is False
+
+
+def test_f106_r21_la_edicion_es_inmutable():
+    # La comparten sv4, sv6 y sv9: nadie la cambia por debajo de los demás.
+    edicion = EdicionManual(campos={}, calculado={}, fila_entera=True)
+    with pytest.raises(AttributeError):
+        edicion.fila_entera = False  # type: ignore[misc]
+
+
 def test_f106_r21_la_fila_entera_lo_sigue_siendo_al_editarla():
     primera = registrar_edicion(None, fila_antes=None, fila_despues=_fila(), campos=set(), fila_entera=True)
     datos = _json(registrar_edicion(primera, fila_antes=_fila(), fila_despues=_fila(unidad_contrato="M"),
@@ -169,8 +197,11 @@ def test_f106_r21_la_fila_entera_lo_sigue_siendo_al_editarla():
 # leer_edicion
 # =================================================================== #
 @pytest.mark.parametrize("texto", [None, "", "   "])
-def test_f106_leer_sin_edicion(texto):
-    assert leer_edicion(texto) is None
+def test_f106_leer_sin_edicion(texto, caplog):
+    # Vacío es «sin edición», no un JSON roto: no avisa.
+    with caplog.at_level(logging.WARNING):
+        assert leer_edicion(texto) is None
+    assert caplog.records == []
 
 
 @pytest.mark.parametrize("texto", ["{roto", "[]", '{"v": 2, "campos": {}, "calculado": {}}',
@@ -224,6 +255,13 @@ def test_f106_r25_importe_no_despejable_se_queda_como_se_edito():
     edicion = _editada({"importe"}, {"importe_calculado": 50.0})
     fila = aplicar_edicion(_fila(cantidad_albaran=0.0, cantidad_convertida=0.0), edicion)
     assert (fila["importe_calculado"], fila["precio_unitario_final"]) == (50.0, 11.2)
+
+
+def test_f106_r25_sin_convertida_recalcula_con_la_cantidad_del_albaran():
+    # Q = convertida ?? albarán: 48 × 12 −7 % = 535,68.
+    edicion = _editada({"cantidad"}, {"cantidad_albaran": 48.0, "cantidad_convertida": None})
+    fila = aplicar_edicion(_fila(precio_unitario_final=12.0, importe_calculado=111.6), edicion)
+    assert fila["importe_calculado"] == pytest.approx(535.68)
 
 
 def test_f106_r25_partida_vacia_es_almacen():

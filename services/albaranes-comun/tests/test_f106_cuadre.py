@@ -155,7 +155,7 @@ def test_f106_r2_seis_decimales():
     ) == (3.0, 3.333333)
 
 
-@pytest.mark.parametrize("cantidad", [None, 0, 0.0, 1e-12])
+@pytest.mark.parametrize("cantidad", [None, 0, 0.0, 1e-12, 1e-9, -1e-9])  # 1e-9: el borde
 def test_f106_r2_cantidad_nula_o_cero_no_da_linea(cantidad):
     assert linea_a_sigrid(
         vinculada=False, cantidad_albaran=cantidad, cantidad_convertida=5, importe=10,
