@@ -99,7 +99,8 @@ def test_f065_r8_js_solo_viajan_los_campos_cambiados(tmp_path):
     assert casos["mismo_numero_con_coma"] == {}
     assert casos["mismo_numero_sin_decimales"] == {}
     assert casos["precio"] == {"precio_unitario": 120}
-    assert casos["importe_solo_ajusta_el_precio"] == {}
+    # F-106 R12 (declarado en R31): sin rastro de la última celda, el importe cambiado viaja.
+    assert casos["importe_solo_ajusta_el_precio"] == {"importe": 1000}
     assert casos["descuento_vaciado"] == {}
     assert casos["descuento_puesto"] == {"descuento": 10}
     assert casos["partida_vaciada"] == {"codigo_partida": ""}

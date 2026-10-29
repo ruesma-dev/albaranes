@@ -1178,11 +1178,15 @@
     // SOLO los campos que el administrativo cambió respecto a lo que pintó la
     // ficha (números comparados como números: «115,0» = «115.0000»). Un
     // campo que no viene no cambia; uno vaciado viaja como null (la partida,
-    // como "" = almacén). El importe no viaja: al teclearlo se ajusta el
-    // precio (que sí viaja si cambió). Lo usan «Guardar» y «Guardar todas».
+    // como "" = almacén). F-106 R12: el importe viaja (y el precio no) si,
+    // de precio, importe, cantidad y dto, lo último tecleado fue el importe
+    // (``tr.dataset.ultimoCampo``; sin rastro, si el importe cambió); si no, el
+    // precio solo si cambió y nunca el importe. Lo usan las tres vías de
+    // ``enviarFila``: «Guardar», «Guardar todas» y el guardado previo de la
+    // cabecera.
     function _camposCambiados(tr, items) {
         const CAMPOS = ["codigo_partida", "descripcion", "cantidad", "unidad",
-                        "precio_unitario", "descuento", "codigo_externo"];
+                        "precio_unitario", "importe", "descuento", "codigo_externo"];
         const body = {};
         tr.querySelectorAll(".js-cedit").forEach(function (inp) {
             const field = inp.dataset.field;
@@ -1202,6 +1206,12 @@
                 }
             }
         });
+        const ultimo = (tr.dataset && tr.dataset.ultimoCampo) || null;
+        if ("importe" in body && (ultimo === "importe" || ultimo === null)) {
+            delete body.precio_unitario;
+        } else {
+            delete body.importe;
+        }
         return body;
     }
 
@@ -1322,6 +1332,152 @@
         return Math.round(cant * pu * (1 - (dto || 0) / 100) * 100) / 100;
     }
 
+    // F-106 R11: el precio que despeja el backend (``unitario_despejado`` de
+    // comun), importe / (Q × (1 − dto)) a 6 decimales; null sin divisor.
+    function precioDespejado(imp, cant, dto) {
+        if (imp === null || cant === null) { return null; }
+        const divisor = cant * (1 - (dto || 0) / 100);
+        if (divisor === 0) { return null; }
+        return Math.round((imp / divisor) * 1e6) / 1e6;
+    }
+
+    // F-106 R15: lo que mandará sv9 (``linea_a_sigrid`` de comun): la cantidad
+    // a Sigrid es Q × |factor| (el del servidor: cantidad a Sigrid / Q) con el
+    // signo del importe, y el precio |I| / |cantidad| a 6 decimales. null si la
+    // fila no es a registrar (importe vacío o 0) o no hay cantidad.
+    function precioASigrid(cant, imp, factor) {
+        if (cant === null || imp === null || imp === 0 || factor === null || isNaN(factor)) { return null; }
+        const q = Math.abs(cant * factor);
+        if (q <= 1e-9) { return null; }
+        return { cantidad: imp < 0 ? -q : q, precio: Math.round((Math.abs(imp) / q) * 1e6) / 1e6 };
+    }
+
+    // F-106 R15: el precio como lo pinta la plantilla (``precio_es``): hasta 6
+    // decimales, sin ceros finales y al menos 2, en formato español.
+    function precioEs(v) {
+        const partes = (Math.round(v * 1e6) / 1e6).toFixed(6).split(".");
+        let dec = partes[1].replace(/0+$/, "");
+        while (dec.length < 2) { dec += "0"; }
+        const signo = partes[0].charAt(0) === "-" ? "-" : "";
+        const entero = partes[0].replace("-", "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return signo + entero + "," + dec;
+    }
+
+    // F-106 R14, R15: una cantidad sin ceros de más («48», «2,5»).
+    function cantidadEs(v) {
+        return String(Math.round(v * 1e6) / 1e6).replace(".", ",");
+    }
+
+    // F-106 R13: un importe a 2 decimales en formato español («1.234,50»).
+    function importeEs(v) {
+        const partes = (Math.round(v * 100) / 100).toFixed(2).split(".");
+        const signo = partes[0].charAt(0) === "-" ? "-" : "";
+        const entero = partes[0].replace("-", "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return signo + entero + "," + partes[1];
+    }
+
+    // F-106 R15: «A Sigrid: 48 × 2,17 €».
+    function textoASigrid(a) {
+        return "A Sigrid: " + cantidadEs(a.cantidad) + " × " + precioEs(a.precio) + " €";
+    }
+
+    // F-106 R13: «≠ albarán: 104,16» si el importe ya no es el del albarán
+    // (``importes.difieren``: 0,01 € o más); null si es el mismo o falta alguno.
+    function avisoImporte(imp, albaran) {
+        if (imp === null || albaran === null || isNaN(albaran)) { return null; }
+        if (Math.round(Math.abs(imp - albaran) * 100) / 100 < 0.01) { return null; }
+        return "\u2260 albar\u00e1n: " + importeEs(albaran);
+    }
+
+    // F-106 R11: el importe que no deja despejar el precio, en rojo y con el
+    // texto del 422 de R7 (``MENSAJE_NO_DESPEJABLE`` de comun).
+    function marcarNoDespejable(inp, mal) {
+        if (!inp) { return; }
+        inp.classList.toggle("importe-no-despejable", mal);
+        if (mal) {
+            inp.title = "No se puede calcular el precio con cantidad 0 o descuento del 100 %: cambia la cantidad, el descuento o el precio";
+            inp.setAttribute("aria-invalid", "true");
+        } else {
+            inp.title = "";
+            inp.removeAttribute("aria-invalid");
+        }
+    }
+
+    // F-065 R12, F-106 R11, R13, R15: repinta la fila al teclear ``campo``.
+    // Cantidad, precio o dto ⇒ importe = Q × P × (1 − dto). Importe ⇒ P
+    // despejado a 6 decimales y el dto se queda; sin divisor e importe ≠ 0, no
+    // se repinta y el importe se marca en rojo. Después, «≠ albarán» y «A
+    // Sigrid» con lo que quede en la fila.
+    function syncImporteUnitario(tr, campo) {
+        const cantEl = tr.querySelector('[data-field="cantidad"]');
+        const puEl = tr.querySelector('[data-field="precio_unitario"]');
+        const dtoEl = tr.querySelector('[data-field="descuento"]');
+        const impEl = tr.querySelector('[data-field="importe"]');
+        const cant = cantEl ? parseNumEs(cantEl.value) : null;
+        const dto = dtoEl ? parseNumEs(dtoEl.value) : null;
+        if (campo === "importe") {
+            if (!puEl || !impEl) { return; }
+            const imp = parseNumEs(impEl.value);
+            const pu = precioDespejado(imp, cant, dto);
+            marcarNoDespejable(impEl, pu === null && imp !== null && imp !== 0);
+            if (pu !== null) { puEl.value = String(pu); }
+        } else if (campo === "cantidad" || campo === "precio_unitario" || campo === "descuento") {
+            if (!impEl) { return; }
+            const importe = importeDeFila(cant, puEl ? parseNumEs(puEl.value) : null, dto);
+            impEl.value = importe === null ? "" : String(importe);
+            marcarNoDespejable(impEl, false);
+        }
+        const imp = impEl ? parseNumEs(impEl.value) : null;
+        const aviso = tr.querySelector(".js-aviso-importe");
+        if (aviso && impEl && impEl.dataset.importeAlbaran !== undefined) {
+            const texto = avisoImporte(imp, parseFloat(impEl.dataset.importeAlbaran));
+            aviso.textContent = texto || "";
+            aviso.hidden = !texto;
+        }
+        const sigrid = tr.querySelector(".js-a-sigrid");
+        if (puEl && puEl.dataset.factorAlta !== undefined) {
+            const a = precioASigrid(cant, imp, parseFloat(puEl.dataset.factorAlta));
+            const texto = a ? textoASigrid(a) : null;
+            const lineas = String(puEl.title || "").split("\n").filter(function (l) {
+                return l && l.indexOf("A Sigrid:") !== 0;
+            });
+            if (texto) { lineas.push(texto); }
+            puEl.title = lineas.join("\n");
+            if (sigrid) {
+                const pu = parseNumEs(puEl.value);
+                if (texto) { sigrid.textContent = texto; }
+                sigrid.hidden = !a || (pu !== null && Math.abs(a.precio - pu) <= 1e-6);
+            }
+        }
+    }
+
+    // F-106 R14: el cuerpo de «Recalcular importe» / «Recalcular precio».
+    function cuerpoCuadrar(modo) {
+        return { cuadrar: modo };
+    }
+
+    // F-106 R14: los botones de una fila que no cuadra mandan ``cuadrar`` por
+    // la única petición de fila (``enviarFila``: guardar = bloquear) y recargan.
+    // Desactivados en la plantilla si la fila está bloqueada o el albarán
+    // aprobado.
+    function wireCuadrar() {
+        linesBody.querySelectorAll(".js-cuadrar").forEach(function (btn) {
+            btn.addEventListener("click", async function () {
+                const tr = btn.closest("tr");
+                const vid = tr ? (tr.dataset.forValuationLineId || "").trim() : "";
+                if (!vid || btn.disabled) { return; }
+                btn.disabled = true;
+                const motivo = await enviarFila(vid, cuerpoCuadrar(btn.dataset.cuadrar));
+                if (motivo === null) {
+                    window.location.reload();
+                    return;
+                }
+                window.alert("Error al recalcular la línea: " + motivo);
+                btn.disabled = false;
+            });
+        });
+    }
+
     // F-065 R23: las líneas a traer con su cantidad (obligatoria, ≠ 0), o
     // null si falta alguna (entonces «Incorporar» no se habilita).
     function lineasATraer(seleccion) {
@@ -1341,41 +1497,17 @@
             const saveBtn = tr.querySelector(".js-cedit-save");
             if (!inputs.length || !saveBtn) return;
 
-            // Sincroniza importe <-> precio unitario, igual que la fila
-            // blanca del PDF, pero metiendo el descuento (%) en la ecuación:
-            //   importe = cantidad × precio × (1 − dto/100)
-            //   precio  = importe / (cantidad × (1 − dto/100))
-            // 'campo' es el data-field que el usuario acaba de tocar.
-            function syncImporteUnitario(campo) {
-                const cantEl = tr.querySelector('[data-field="cantidad"]');
-                const puEl = tr.querySelector('[data-field="precio_unitario"]');
-                const dtoEl = tr.querySelector('[data-field="descuento"]');
-                const impEl = tr.querySelector('[data-field="importe"]');
-                const cant = cantEl ? parseNumEs(cantEl.value) : null;
-                const dto = dtoEl ? parseNumEs(dtoEl.value) : null;
-                const factor = 1 - (dto || 0) / 100;
-                if (campo === "importe") {
-                    // Cambió el importe -> ajustamos el precio unitario.
-                    if (!puEl || !impEl) return;
-                    const imp = parseNumEs(impEl.value);
-                    if (cant !== null && cant !== 0 && factor !== 0 && imp !== null) {
-                        puEl.value = String(Math.round((imp / (cant * factor)) * 10000) / 10000);
-                    }
-                } else {
-                    // Cambió cantidad / precio / descuento -> recomputamos importe.
-                    if (!impEl) return;
-                    const pu = puEl ? parseNumEs(puEl.value) : null;
-                    const importe = importeDeFila(cant, pu, dto);
-                    impEl.value = importe === null ? "" : String(importe);
-                }
-            }
-
             inputs.forEach(function (inp) {
                 inp.addEventListener("input", function () {
                     inp.classList.toggle("cedit-dirty", inp.value !== inp.defaultValue);
+                    // F-106 R12: la última de precio, importe, cantidad y dto
+                    // que se tecleó decide si viaja el importe o el precio.
+                    if (["precio_unitario", "importe", "cantidad", "descuento"].indexOf(inp.dataset.field) !== -1) {
+                        tr.dataset.ultimoCampo = inp.dataset.field;
+                    }
                     // El botón "Guardar" de la fila está SIEMPRE visible; aquí
-                    // sincronizamos importe<->unitario y el feedback visual.
-                    syncImporteUnitario(inp.dataset.field);
+                    // se repinta la fila (importe <-> precio, avisos).
+                    syncImporteUnitario(tr, inp.dataset.field);
                 });
                 // Enter guarda directamente.
                 inp.addEventListener("keydown", function (e) {
@@ -1419,6 +1551,7 @@
     // concepto es texto (reapuntar es solo «Origen ✎»).
     wirePartidaCombos();
     wireConciliaEdit();
+    wireCuadrar();
 
     // ------------------------------------------------------------------ //
     // «Dividir» (F-065 R29 v3): el botón de la fila o F7 abren una ventana con
