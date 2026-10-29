@@ -279,6 +279,28 @@ def test_f106_r29_texto_de_cada_campo():
         "Unidad: M (calculado UD)\nGuardada\nOrigen: Nueva")
 
 
+def test_f106_r29_texto_de_los_campos_del_importe_y_los_demas():
+    from domain.models.review_models import texto_edicion
+    from ruesma_comun.edicion_manual import EdicionManual
+
+    e = EdicionManual(
+        campos={"cantidad": {"cantidad_albaran": 48.0, "cantidad_convertida": None},
+                "importe": {"importe_calculado": 1234.5},
+                "descuento": {"descuento_albaran_aplicado": 12.5},
+                "descripcion": {"descripcion_linea": "  "},
+                "codigo_externo": {"codigo_externo": "X9"},
+                "bloqueada": {"bloqueada": False},
+                "origen": {"tipo": "contrato", "linea": 505}},
+        calculado={"cantidad_albaran": 5.0, "cantidad_convertida": 10.0, "importe_calculado": None,
+                   "descuento_albaran_aplicado": 7.0, "descripcion_linea": "TUBO PVC 110"},
+    )
+    # Cantidad: la convertida o, sin ella, la del albarán; sin valor, «—».
+    assert texto_edicion(e).splitlines() == [
+        "Cantidad: 48 (calculado 10)", "Importe: 1.234,50 (calculado —)",
+        "Descuento: 12,5 (calculado 7)", "Descripción: — (calculado TUBO PVC 110)",
+        "Código externo: X9 (calculado —)", "Desbloqueada", "Origen: línea 505"]
+
+
 def test_f106_r29_fila_entera_es_anadida_a_mano():
     from domain.models.review_models import texto_edicion
     from ruesma_comun.edicion_manual import EdicionManual
