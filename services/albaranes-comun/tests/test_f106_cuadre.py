@@ -128,6 +128,27 @@ def test_f106_r2_signo_del_importe_en_la_cantidad():
     ) == (2.0, 10.0)
 
 
+def test_f106_r2_importe_cero_cantidad_en_positivo():
+    assert linea_a_sigrid(
+        vinculada=False, cantidad_albaran=2, cantidad_convertida=None, importe=0,
+    ) == (2.0, 0.0)
+    assert linea_a_sigrid(
+        vinculada=False, cantidad_albaran=-2, cantidad_convertida=None, importe=-0.0,
+    ) == (2.0, 0.0)
+
+
+def test_f106_r2_texto_ilegible_no_da_linea():
+    assert linea_a_sigrid(
+        vinculada=False, cantidad_albaran="x", cantidad_convertida=None, importe=10,
+    ) is None
+    assert linea_a_sigrid(
+        vinculada=False, cantidad_albaran=2, cantidad_convertida=None, importe="x",
+    ) is None
+    assert linea_a_sigrid(
+        vinculada=False, cantidad_albaran=math.inf, cantidad_convertida=None, importe=10,
+    ) is None
+
+
 def test_f106_r2_seis_decimales():
     assert linea_a_sigrid(
         vinculada=False, cantidad_albaran=3, cantidad_convertida=None, importe=10,
