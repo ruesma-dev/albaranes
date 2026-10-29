@@ -760,8 +760,9 @@
                                 {% set bloqueada = v.bloqueada if v else false %}
                                 {% set cedit = editable and dline.valuation_line_id is not none and not bloqueada %}
                                 {% set razones = v.review_reasons if v else [] %}
-                                <tr class="conciliacion-row salmon-row concilia-{{ c.kind }}{% if cedit %} concilia-editable{% endif %}"
-                                    data-line-kind="{{ dline.line_kind }}"{% if bloqueada %} data-bloqueada="1"{% endif %}
+                                {# F-106 R14: la fila que no cuadra, en rojo (``cuadra`` None = no comparable). #}
+                                <tr class="conciliacion-row salmon-row concilia-{{ c.kind }}{% if cedit %} concilia-editable{% endif %}{% if c.cuadra == false %} fila-no-cuadra{% endif %}"
+                                    data-line-kind="{{ dline.line_kind }}"{% if bloqueada %} data-bloqueada="1"{% endif %}{% if c.cuadra is not none %} data-cuadra="{{ '1' if c.cuadra else '0' }}"{% endif %}
                                     data-for-line-id="{{ dline.merge_line_id if dline.merge_line_id is not none else '' }}"
                                     data-for-valuation-line-id="{{ dline.valuation_line_id if dline.valuation_line_id is not none else '' }}">
                                     {# Origen — SOLO badge Contrato/Nueva (F-065 R24; antes «Sigrid»). El ✎ abre/cierra el selector de línea de contrato (oculto por defecto). #}
@@ -860,14 +861,21 @@
                                         {% if cedit %}
                                             <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit{% if c.agree_unitario == true %} cedit-ok{% elif c.agree_unitario == false %} cedit-warn{% endif %}"
                                                    data-field="precio_unitario" data-identity="1" data-numeric="1"
-                                                   {#- F-065 R9: el precio APLICADO; el del contrato, en el title. #}
-                                                   {%- if c.kind == 'assigned' and c.unitario_contrato is not none %} title="Precio del contrato: {{ '%.4f'|format(c.unitario_contrato) }} €"{% endif %}
-                                                   value="{{ '%.4f'|format(c.unitario) if c.unitario is not none else '' }}" placeholder="—">
+                                                   {#- F-065 R9: el precio APLICADO; el del contrato, en el title.
+                                                       F-106 R15: hasta 6 decimales y «A Sigrid» también en el title. #}
+                                                   {%- set _titulo_precio = [] %}
+                                                   {%- if c.kind == 'assigned' and c.unitario_contrato is not none %}{% set _ = _titulo_precio.append('Precio del contrato: ' ~ ('%.4f'|format(c.unitario_contrato)) ~ ' €') %}{% endif %}
+                                                   {%- if c.a_sigrid %}{% set _ = _titulo_precio.append(c.a_sigrid) %}{% endif %}
+                                                   {%- if _titulo_precio %} title="{{ _titulo_precio | join('\n') }}"{% endif %}
+                                                   {%- if c.factor_alta is not none %} data-factor-alta="{{ c.factor_alta }}"{% endif %}
+                                                   value="{{ c.unitario_input }}" placeholder="—">
                                         {% elif c.agree_unitario == false %}
-                                            <span class="concilia-price-warn"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ c.unitario | importe_eur }}</span>
+                                            <span class="concilia-price-warn"{% if c.a_sigrid %} title="{{ c.a_sigrid }}"{% endif %}><span class="concilia-icon" aria-hidden="true">⚠</span> {{ c.unitario_es }}</span>
                                         {% else %}
-                                            <span class="concilia-val">{{ c.unitario | importe_eur if c.unitario is not none else '—' }}</span>
+                                            <span class="concilia-val"{% if c.a_sigrid %} title="{{ c.a_sigrid }}"{% endif %}>{{ c.unitario_es }}</span>
                                         {% endif %}
+                                        {# F-106 R15: visible solo si el precio a Sigrid no es P (el JS lo repinta). #}
+                                        {% if c.a_sigrid %}<span class="a-sigrid js-a-sigrid"{% if not c.a_sigrid_difiere %} hidden{% endif %}>{{ c.a_sigrid }}</span>{% endif %}
                                     </td>
                                     {# Importe — editable: importe = cantidad × precio × (1 − dto%).
 
@@ -885,15 +893,24 @@
                                     <td class="concilia-td td-num" data-col="importe" data-sort-value="{{ _imp if _imp is not none else '' }}">
                                         {% if _imp is not none %}
                                             {% if cedit %}
-                                                <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit" data-field="importe" data-numeric="1" value="{{ '%.2f'|format(_imp) }}" placeholder="—">
+                                                <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit" data-field="importe" data-numeric="1"{% if c.importe_albaran is not none %} data-importe-albaran="{{ c.importe_albaran }}"{% endif %} value="{{ '%.2f'|format(_imp) }}" placeholder="—">
                                             {% elif c.agree_importe == false %}
                                                 <span class="concilia-price-warn"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ _imp | importe_eur }}</span>
                                             {% else %}
                                                 <span class="concilia-val">{{ _imp | importe_eur }}</span>
                                             {% endif %}
                                         {% elif cedit %}
-                                            <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit" data-field="importe" data-numeric="1" value="" placeholder="—">
+                                            <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit" data-field="importe" data-numeric="1"{% if c.importe_albaran is not none %} data-importe-albaran="{{ c.importe_albaran }}"{% endif %} value="" placeholder="—">
                                         {% else %}<span class="concilia-val">—</span>{% endif %}
+                                        {# F-106 R13: «≠ albarán», informativo; el hueco oculto existe para que el JS lo repinte. #}
+                                        {% if c.importe_albaran is not none %}<span class="aviso-importe js-aviso-importe" title="El importe ya no es el del albarán ({{ '%.2f'|format(c.importe_albaran) | replace('.', ',') }} €)"{% if not c.aviso_importe %} hidden{% endif %}>{{ c.aviso_importe or '' }}</span>{% endif %}
+                                        {# F-106 R14: la cuenta en el title y los dos botones (desactivados si bloqueada o aprobado). #}
+                                        {% if c.cuadra == false %}
+                                        <div class="fila-cuadre" title="{{ c.cuadre_texto }}">
+                                            <button type="button" class="btn btn-xs js-cuadrar" data-cuadrar="importe"{% if not cedit %} disabled{% endif %}>Recalcular importe</button>
+                                            <button type="button" class="btn btn-xs js-cuadrar" data-cuadrar="precio"{% if not cedit %} disabled{% endif %}>Recalcular precio</button>
+                                        </div>
+                                        {% endif %}
                                     </td>
                                     {# Descuento — campo propio de sv4 (no existe en Sigrid). #}
                                     <td class="concilia-td td-num" data-col="descuento" data-sort-value="{{ c.descuento if c.descuento is not none else '' }}">

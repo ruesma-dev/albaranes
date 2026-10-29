@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import math
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from urllib.parse import quote
@@ -32,8 +33,11 @@ from ruesma_comun.contratos.origen_datos import (
     MOTIVO_CORREO_FUERA_DE_LISTA,
     normalizar_codigo,
 )
+from ruesma_comun.alta_sigrid import es_linea_a_registrar, linea_a_sigrid
 from ruesma_comun.importes import (
     ImporteAlbaran,
+    clasificar_descuento,
+    cuadra_linea,
     difieren,
     importe_albaran,
     importe_de_linea,
@@ -735,6 +739,146 @@ def recalculo_de_fila(
     if cuadrar is not None and no_cuadra is True:
         return cuadrar
     return None
+
+
+#: (F-106 R15) Decimales con los que se guarda y se pinta un precio.
+DECIMALES_PRECIO = 6
+
+#: (F-106 R15) Diferencia a partir de la cual el precio a Sigrid es otro.
+TOLERANCIA_PRECIO_SIGRID = 1e-6
+
+
+def _finito(valor: object) -> float | None:
+    try:
+        numero = float(valor)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return numero if math.isfinite(numero) else None
+
+
+def _con_miles(entero: str) -> str:
+    signo, cifras = ("-", entero[1:]) if entero.startswith("-") else ("", entero)
+    return signo + f"{int(cifras):,}".replace(",", ".")
+
+
+def precio_input(valor: object) -> str:
+    """(F-106 R15) El precio para el ``value`` de la celda: hasta 6 decimales,
+    sin ceros finales y al menos 2, con punto y sin miles («2.333333»,
+    «120.00»). Vacío si no hay precio."""
+    numero = _finito(valor)
+    if numero is None:
+        return ""
+    entero, _, decimales = f"{numero:.{DECIMALES_PRECIO}f}".partition(".")
+    if entero == "-0" and not decimales.strip("0"):
+        entero = "0"
+    return f"{entero}.{decimales.rstrip('0').ljust(2, '0')}"
+
+
+def precio_es(valor: object) -> str:
+    """(F-106 R15) El precio que se lee: como :func:`precio_input`, en formato
+    español («1.234,50», «2,333333»). «—» si no hay precio."""
+    texto = precio_input(valor)
+    if not texto:
+        return "—"
+    entero, _, decimales = texto.partition(".")
+    return f"{_con_miles(entero)},{decimales}"
+
+
+def _importe_es(valor: float) -> str:
+    entero, _, decimales = f"{round(valor, 2):.2f}".partition(".")
+    return f"{_con_miles(entero)},{decimales}"
+
+
+def _numero_corto(valor: float) -> str:
+    """Una cantidad o un % sin ceros de más: «48», «2,5», «12,5»."""
+    texto = f"{valor:.{DECIMALES_PRECIO}f}".rstrip("0").rstrip(".")
+    return "0" if texto == "-0" else texto.replace(".", ",")
+
+
+def texto_cuadre(*, cantidad: float, precio: float, descuento: object, importe: float) -> str:
+    """(F-106 R14) La cuenta de una fila que no cuadra, para su ``title``:
+    «48 × 11,20 × (1 − 7 %) = 499,97 ≠ 104,16». Sin descuento aplicable, sin el
+    factor. Solo para filas comparables (las de ``cuadra_linea`` no nulo)."""
+    estado, valor_dto = clasificar_descuento(descuento)
+    factor = f" × (1 − {_numero_corto(valor_dto)} %)" if estado == "aplicable" else ""
+    calculado = importe_de_linea(cantidad=cantidad, precio_unitario=precio, descuento_pct=descuento) or 0.0
+    return (
+        f"{_numero_corto(cantidad)} × {precio_es(precio)}{factor} = "
+        f"{_importe_es(calculado)} ≠ {_importe_es(importe)}"
+    )
+
+
+def aviso_importe_albaran(importe: float | None, importe_del_albaran: float | None) -> str | None:
+    """(F-106 R13) «≠ albarán: 104,16» si el importe de la fila ya no es el del
+    albarán (``importes.difieren``, 0,01 €); ``None`` si es el mismo o falta
+    alguno. Informativo: no bloquea."""
+    if not difieren(importe, importe_del_albaran):
+        return None
+    return f"≠ albarán: {_importe_es(float(importe_del_albaran))}"  # type: ignore[arg-type]
+
+
+@dataclass(frozen=True)
+class ASigrid:
+    """(F-106 R15) Lo que sv9 mandará de la fila: ``texto`` («A Sigrid: 48 ×
+    2,17 €»), si su precio ``difiere`` del P de la ficha y ``factor`` = cantidad a
+    Sigrid / Q de la ficha (para que el JS lo repinte al teclear)."""
+
+    texto: str
+    difiere: bool
+    factor: float | None
+
+
+def a_sigrid_de_fila(
+    *,
+    vinculada: bool,
+    cantidad_albaran: float | None,
+    cantidad_convertida: float | None,
+    precio: float | None,
+    importe: float | None,
+) -> ASigrid | None:
+    """(F-106 R15) La línea que mandará sv9 (``linea_a_sigrid`` de comun, la
+    misma función) de una fila a registrar; ``None`` si no lo es o no hay
+    línea (sin cantidad)."""
+    if not es_linea_a_registrar(importe):
+        return None
+    linea = linea_a_sigrid(
+        vinculada=vinculada, cantidad_albaran=cantidad_albaran,
+        cantidad_convertida=cantidad_convertida, importe=importe,
+    )
+    if linea is None:
+        return None
+    cantidad, precio_sigrid = linea
+    q_ficha = _finito(cantidad_convertida if cantidad_convertida is not None else cantidad_albaran)
+    p_ficha = _finito(precio)
+    return ASigrid(
+        texto=f"A Sigrid: {_numero_corto(cantidad)} × {precio_es(precio_sigrid)} €",
+        difiere=p_ficha is None or abs(precio_sigrid - p_ficha) > TOLERANCIA_PRECIO_SIGRID,
+        factor=cantidad / q_ficha if q_ficha else None,
+    )
+
+
+def cuadre_de_fila(
+    *,
+    cantidad_albaran: float | None,
+    cantidad_convertida: float | None,
+    precio: float | None,
+    descuento: object,
+    importe: float | None,
+) -> tuple[bool | None, str | None]:
+    """(F-106 R14) ``(cuadra, cuenta)`` de una fila de la ficha, con la Q de la
+    ficha (convertida o, sin ella, la del albarán). Solo las filas a registrar se
+    comparan (como al aprobar, R16): las demás, ``(None, None)``. La cuenta, solo
+    si no cuadra."""
+    if not es_linea_a_registrar(importe):
+        return None, None
+    cantidad = cantidad_convertida if cantidad_convertida is not None else cantidad_albaran
+    cuadra = cuadra_linea(cantidad, precio, descuento, importe)
+    if cuadra is not False:
+        return cuadra, None
+    return False, texto_cuadre(
+        cantidad=float(cantidad), precio=float(precio),  # type: ignore[arg-type]
+        descuento=descuento, importe=float(importe),  # type: ignore[arg-type]
+    )
 
 
 #: (F-065 H2) «Origen ✎» llevó la fila a una línea de contrato de OTRA unidad y
@@ -1441,6 +1585,30 @@ class ConciliacionDisplay(BaseModel):
     # propia de sv4) y el revisor puede editarlos en la fila salmon.
     descuento: float | None = None
     codigo_externo: str | None = None
+
+    # (F-106 R13–R15) Lo calcula el repositorio: si la fila cuadra (``None`` =
+    # no comparable o no es a registrar) y su cuenta si no; el importe de su
+    # blanca (solo filas con blanca que no son parte de un reparto) y el aviso
+    # «≠ albarán»; lo que mandará sv9 («A Sigrid: …»), si difiere de P y el
+    # factor cantidad a Sigrid / Q para el JS.
+    cuadra: bool | None = None
+    cuadre_texto: str | None = None
+    importe_albaran: float | None = None
+    aviso_importe: str | None = None
+    a_sigrid: str | None = None
+    a_sigrid_difiere: bool = False
+    factor_alta: float | None = None
+
+    @property
+    def unitario_input(self) -> str:
+        """(F-106 R15) El precio aplicado para el ``value`` de la celda."""
+        return precio_input(self.unitario)
+
+    @property
+    def unitario_es(self) -> str:
+        """(F-106 R15) El precio aplicado en solo lectura, con «€»."""
+        texto = precio_es(self.unitario)
+        return texto if self.unitario is None else f"{texto} €"
 
     # (F-051 R10, R11) 'partida' | 'almacen' segun la partida FINAL de la
     # valoracion (vacia = almacen, sin mirar partida_action). En almacen,

@@ -52,6 +52,9 @@ from ruesma_comun.valoracion import esta_valorado
 # la llama el resto de este módulo.
 from domain.models.review_models import (
     AlbaranAprobadoError,
+    a_sigrid_de_fila,
+    aviso_importe_albaran,
+    cuadre_de_fila,
     aviso_reparto,
     cambia_origen,
     recalculo_de_fila,
@@ -1607,6 +1610,12 @@ class AlbaranReviewRepository:
                 ).append(vid)
 
         out: dict[int, ConciliacionDisplay] = {}
+        # (F-106 R15) vid -> ¿vinculada? (la Q que mandará sv9).
+        vinculada_by_vid: dict[int, bool] = {}
+
+        vinculo = self._fetch_vinculo_contrato_in_session(
+            session, list(matched_to_vlines.keys())
+        )
 
         # Paso 2: líneas matched (de Sigrid cacheadas) en bloque.
         for row in self._fetch_contrato_lines_in_session(
@@ -1615,6 +1624,14 @@ class AlbaranReviewRepository:
             # Todas las líneas de valoración que casaron con ESTA línea de
             # contrato reciben su propio bloque de conciliación (uno-a-varios).
             for vid in matched_to_vlines.get(row["id"], []):
+                _sigrid_ide, _contrato_linea = vinculo.get(row["id"], (None, None))
+                vinculada_by_vid[vid] = es_linea_vinculada(
+                    matched_contrato_line_id=row["id"],
+                    derived_contrato_line_id=None,
+                    sigrid_ide=_sigrid_ide,
+                    contrato_linea=_contrato_linea,
+                    contrato_valoracion=valuation.contrato_codigo,
+                )
                 # (F-065 R9) La ficha pinta y edita el precio APLICADO (el de
                 # la valoración); el de la línea de contrato va aparte, para el
                 # title y los avisos.
@@ -1714,8 +1731,42 @@ class AlbaranReviewRepository:
             elif str(final).strip() != (conc.codigo_partida or "").strip():
                 conc.codigo_partida = str(final).strip()
                 conc.descripcion_partida = None
+            # (F-106 R14, R15) Si cuadra (y su cuenta) y lo que mandará sv9.
+            AlbaranReviewRepository._marcar_cuadre(
+                conc, _vl, vinculada=vinculada_by_vid.get(vid, False),
+            )
 
         return out
+
+    @staticmethod
+    def _marcar_cuadre(
+        conc: ConciliacionDisplay,
+        vl: LineValuationPayload | None,
+        *,
+        vinculada: bool,
+    ) -> None:
+        """(F-106 R14, R15) Rellena ``cuadra``, ``cuadre_texto`` y el «A Sigrid»
+        de la fila con sus columnas (las mismas que miran aprobar y sv9)."""
+        if vl is None:
+            return
+        conc.cuadra, conc.cuadre_texto = cuadre_de_fila(
+            cantidad_albaran=vl.cantidad_albaran,
+            cantidad_convertida=vl.cantidad_convertida,
+            precio=vl.precio_unitario_final,
+            descuento=vl.descuento_albaran_aplicado,
+            importe=vl.importe_calculado,
+        )
+        a_sigrid = a_sigrid_de_fila(
+            vinculada=vinculada,
+            cantidad_albaran=vl.cantidad_albaran,
+            cantidad_convertida=vl.cantidad_convertida,
+            precio=vl.precio_unitario_final,
+            importe=vl.importe_calculado,
+        )
+        if a_sigrid is not None:
+            conc.a_sigrid = a_sigrid.texto
+            conc.a_sigrid_difiere = a_sigrid.difiere
+            conc.factor_alta = a_sigrid.factor
 
     @staticmethod
     def _fetch_contrato_lines_in_session(session: Any, ids: list[int]):
@@ -1740,6 +1791,30 @@ class AlbaranReviewRepository:
             return session.execute(
                 text(base_sql + f"WHERE id IN ({placeholders})"), params
             ).mappings().all()
+
+    @staticmethod
+    def _fetch_vinculo_contrato_in_session(
+        session: Any, ids: list[int],
+    ) -> dict[int, tuple[Any, Any]]:
+        """(F-106 R15) ``id -> (sigrid_ide, codigo_contrato)`` de las líneas de
+        contrato casadas, para saber si la fila es vinculada (la Q que manda
+        sv9). Tolera una BBDD sin esas columnas (anterior a F-053): sin ellas,
+        ninguna es vinculada, como en sv9."""
+        if not ids:
+            return {}
+        marcas = ", ".join(f":id_{i}" for i in range(len(ids)))
+        try:
+            filas = session.execute(
+                text(
+                    "SELECT id, sigrid_ide, codigo_contrato "
+                    f"FROM albaran_contrato_lines_merge WHERE id IN ({marcas})"
+                ),
+                {f"id_{i}": v for i, v in enumerate(ids)},
+            ).mappings().all()
+        except Exception:
+            session.rollback()
+            return {}
+        return {int(f["id"]): (f["sigrid_ide"], f["codigo_contrato"]) for f in filas}
 
     @staticmethod
     def _fetch_derived_lines_in_session(session: Any, ids: list[int]):
@@ -4942,6 +5017,12 @@ class AlbaranReviewRepository:
                 )
                 # importe: importe declarado vs cantidad x unitario de contrato
                 _conc.agree_importe = _agree_num(line.precio_neto, _exp_imp)
+                # (F-106 R13) el importe del albarán de su blanca y el aviso
+                # «≠ albarán» (las partes de un reparto lo pierden abajo).
+                _conc.importe_albaran = line.precio_neto
+                _conc.aviso_importe = aviso_importe_albaran(
+                    v.importe_calculado if v is not None else None, line.precio_neto,
+                )
 
             base_dl = DisplayLine(
                 line_kind="from_albaran",
@@ -4988,6 +5069,11 @@ class AlbaranReviewRepository:
                     ]
                 ),
             )
+            # (F-106 R13) Las partes de un reparto conservan su aviso (F-065
+            # R35): ni «≠ albarán» ni importe del albarán en la original.
+            if base_dl.parte is not None and _conc is not None:
+                _conc.importe_albaran = None
+                _conc.aviso_importe = None
 
         # Sintéticas huérfanas (parent no encontrado). Raro, pero no
         # podemos silenciarlas sin avisar: las colocamos al final.
