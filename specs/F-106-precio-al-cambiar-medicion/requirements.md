@@ -69,8 +69,7 @@ enseña bajo el importe «≠ albarán: 104,16» (`title` «El importe ya no es 
 repintado al teclear. Las partes de un reparto conservan su aviso (F-065 R35).
 
 R14. Una fila que no cuadra se pinta en rojo con `title` «48 × 11,20 × (1 − 7 %) = 499,97 ≠ 104,16» y los botones
-«Recalcular importe» (`cuadrar = importe`) y «Recalcular precio» (`cuadrar = precio`), desactivados si la fila está
-bloqueada o el albarán aprobado.
+«Recalcular importe» (`cuadrar = importe`) y «Recalcular precio» (`cuadrar = precio`), desactivados si la fila está bloqueada o el albarán aprobado.
 
 R15. Cada fila a registrar enseña «A Sigrid: 48 × 2,17 €» (R2) en el `title` del precio y, visible bajo él, cuando el
 precio a Sigrid difiere de P en más de 0,000001; al teclear se repinta (factor `cantidad a Sigrid / Q` del servidor).
@@ -139,7 +138,8 @@ por enmiendas del humano del 2026-10-29: en `test_f065_f1_fila.py` `test_f065_r8
 `test_f065_r8_un_campo_desconocido_no_cuenta_como_cambio`, la clave desconocida pasa de `importe` a `importe_calculado`;
 y el fixture (no la aserción) de `test_f075_r9_valoracion_directa_completa_se_aprueba` (P 2,5 en la fila 12) y de
 `test_f078_r17_junto_a_las_de_f065_y_desde_guardar_y_aprobar` (P 12,5 en la 386), que no cuadraban (R16); y por R15
-`test_f065_f1_fila.py::test_f065_r9_plantilla_precio_aplicado_y_el_del_contrato_en_el_title`: `value="120.0000"` ⇒ `"120.00"`.
+`test_f065_f1_fila.py::test_f065_r9_plantilla_precio_aplicado_y_el_del_contrato_en_el_title`: `value="120.0000"` ⇒ `"120.00"`; por R27 (las legadas se leen con `bloqueada`)
+`test_f065_bloqueada_ddl.py::test_f065_r17_el_replace_no_escribe_bloqueada`: solo el constructor de filas nuevas no la nombra.
 
 R32. Casos por fixture, sin red ni BBDD real: (a) CECOIS por el PATCH: 10 × 11,20 −7 % = 104,16; `cantidad = 48` ⇒ I
 499,97 `calculated`, «≠ albarán»; `importe = 104,16` ⇒ P 2,333333, Nueva, sv9 48 × 2,17; blanca intacta. (b) la

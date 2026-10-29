@@ -56,7 +56,8 @@ def _motor():
     Table("albaran_contrato_lines_merge", md, Column("id", Integer, primary_key=True),
           Column("codigo_contrato", String(64)))
     for tabla in Base.metadata.sorted_tables:
-        tabla.to_metadata(md)
+        if tabla.name not in md.tables:
+            tabla.to_metadata(md)
     md.create_all(motor)
     with motor.begin() as c:
         # La columna propia de sv4 (la crea sv4 al arrancar).
@@ -226,7 +227,7 @@ def test_f106_r25_partida_y_codigo_externo_se_reaplican():
 def test_f106_r24_sintetica_por_padre_y_modificador_si_hay_una():
     motor = _motor()
     sintetica = dict(line_kind="synthetic_modifier", parent_merge_line_id=704,
-                     modifier_source="ia3", merge_line_id=None)
+                     modifier_source="ia3")
     _valorar(motor, [_linea(704), _linea(None, precio=3.0, dto=None, **sintetica)])
     sid = next(f for f in _filas(motor) if f["line_kind"] == "synthetic_modifier")["id"]
     antes = next(f for f in _filas(motor) if f["id"] == sid)
