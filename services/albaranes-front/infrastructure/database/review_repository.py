@@ -314,6 +314,7 @@ _SQL_FILAS_PARA_APROBAR = text(
     "SELECT lv.id, lv.merge_line_id, lv.parent_merge_line_id, lv.line_kind, "
     "       lv.matched_contrato_line_id, lv.derived_contrato_line_id, "
     "       lv.cantidad_albaran, lv.cantidad_convertida, lv.importe_calculado, "
+    "       lv.precio_unitario_final, lv.descuento_albaran_aplicado, "
     "       lv.review_reasons_json, lv.descripcion_linea, "
     "       cl.sigrid_ide, cl.codigo_contrato AS contrato_linea, "
     "       v.contrato_codigo AS contrato_valoracion "
@@ -4362,7 +4363,12 @@ class AlbaranReviewRepository:
         la tabla de la ficha no tiene cantidad (Q) o importe: sv9 no la daría
         de alta y se perdería en silencio. Las posiciones son las de la tabla
         (``orden_filas_ficha``), que solo pinta las filas con línea de
-        contrato o derivada."""
+        contrato o derivada.
+
+        (F-106 R16) Tampoco con filas a registrar que no cuadran
+        (``cuadra_linea`` is ``False``): sv9 las dejaría en ``no_admitido``
+        (``linea_no_cuadra``). Las no comparables no cuentan; estar en almacén
+        no es motivo (si no cuadra, sí: sv9 la rechazaría igual)."""
         merge_line_ids = [
             int(r[0]) for r in session.execute(
                 _SQL_BLANCAS_EN_ORDEN, {"doc": document_id},
@@ -4376,6 +4382,7 @@ class AlbaranReviewRepository:
         posiciones: list[int] = []
         unidad_cambiada: list[int] = []
         sin_descripcion: list[int] = []
+        no_cuadran: list[int] = []
         posicion = 0
         huerfanas = 0
         for fila in orden_filas_ficha(merge_line_ids, filas):
@@ -4394,6 +4401,11 @@ class AlbaranReviewRepository:
             )
             if q is None or fila["importe_calculado"] is None:
                 posiciones.append(posicion)
+            if es_linea_a_registrar(fila["importe_calculado"]) and cuadra_linea(
+                q, fila["precio_unitario_final"], fila["descuento_albaran_aplicado"],
+                fila["importe_calculado"],
+            ) is False:
+                no_cuadran.append(posicion)
             # (F-078 R17) Sin vincular, a registrar y sin descripción: sv9 no
             # tendría concepto que mandar (``falta_descripcion``).
             if (
@@ -4411,10 +4423,10 @@ class AlbaranReviewRepository:
             # (CR3) «Origen ✎» cambió la unidad y nadie ha revisado la cantidad.
             if MOTIVO_UNIDAD_CAMBIADA in motivos_de_json(fila["review_reasons_json"]):
                 unidad_cambiada.append(posicion)
-        if posiciones or huerfanas or unidad_cambiada or sin_descripcion:
+        if posiciones or huerfanas or unidad_cambiada or sin_descripcion or no_cuadran:
             raise LineasIncompletasError(
                 document_id, posiciones, huerfanas, unidad_cambiada,
-                sin_descripcion=sin_descripcion,
+                sin_descripcion=sin_descripcion, no_cuadran=no_cuadran,
             )
 
     @staticmethod

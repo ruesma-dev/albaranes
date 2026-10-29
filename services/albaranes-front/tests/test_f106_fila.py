@@ -169,7 +169,8 @@ def cecois(*, q: float = 10.0, importe: float = 104.16, source: str = "declared_
         linea(s, id=FILA, merge_line_id=704, matched_contrato_line_id=504,
               precio_unitario_final=11.2, descuento_albaran_aplicado=7.0,
               cantidad_albaran=q, cantidad_convertida=q, importe_calculado=importe,
-              importe_source=source, codigo_partida_final="01.04")
+              importe_source=source, codigo_partida_final="01.04",
+              descripcion_linea="TUBO PVC 110")
         s.commit()
     ejecutar(motor, "UPDATE albaran_valuations SET total_valorado = 2120 + :i "
              "WHERE id = 'f065-val-1'", i=importe)
