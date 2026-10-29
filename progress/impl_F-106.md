@@ -3,7 +3,17 @@
 
 Rama `feature/F-106-precio-al-cambiar-medicion` (worktree `../albaranes-F-106`). Rigor `critico`.
 
-## Estado: en curso (pasada 3, 2026-10-29)
+## Estado: BLOQUEADA en la T11 (pasada 3, 2026-10-29)
+
+**Un test contradice R15.** `test_f065_f1_fila.py::test_f065_r9_plantilla_precio_aplicado_y_el_del_contrato_en_el_title`
+exige `value="120.0000"` en la celda del precio. R15 dice que el precio se pinta «con los decimales guardados, hasta 6,
+sin ceros finales y al menos 2», así que 120 queda `120.00`. R31 no declara ese test. El resto de la T11 está hecho y
+en verde (`287fe41`); T12–T21, sin empezar. Suite de sv4 con la T11:
+`2042 passed, 13 failed`. 11 de esos rojos (F-051) eran míos y ya están arreglados: la consulta del vínculo tolera BBDD
+sin `sigrid_ide`. Quedan dos rojos: este y `test_f077_r27`, que es la T12.
+
+**Propuesta:** declarar el test en R31 y cambiar su aserción a `value="120.00"`, que es R15 literal. La alternativa sería
+enmendar R15 a «al menos 4 decimales», es decir, `120.0000` y `2.333333`.
 
 Dos enmiendas del humano del 2026-10-29, las dos en R31 y en la spec:
 
@@ -31,7 +41,8 @@ Dos enmiendas del humano del 2026-10-29, las dos en R31 y en la spec:
 | T5 / T6 | `8bc8578` / `50dcffd` | sv4 dominio: `ConciliacionEditBody.importe` y `.cuadrar`, `recalculo_de_fila`, `LineasIncompletasError(no_cuadran=)` |
 | T7 / T8 | `dc15389` / `041edb9` | sv4 PATCH: `update_line_conciliacion(cuadrar=)`, servicio y ruta (422 de R4, R7) |
 | T9 | `f83c1f3`, `bef559b` | R-8 (residuos de F-036 cuadran con la convertida), `cuadrar` solo si vino y la enmienda de R31 |
-| T10 | `4d80f3f` + cierre | R16 en `_exigir_lineas_completas` (P y d en `_SQL_FILAS_PARA_APROBAR`); `test_f106_aprobar.py` (11); fixtures de F-075/F-078; test sv9 de almacén |
+| T11 parcial | `287fe41` | vista: `cuadra`, `cuadre_texto`, `importe_albaran`, `aviso_importe`, `a_sigrid`, `factor_alta`; plantilla con rojo, botones, «≠ albarán», «A Sigrid» y precio a 6; `test_f106_ficha.py` (41) |
+| T10 | `a5322fa` | R16 en `_exigir_lineas_completas` (P y d en `_SQL_FILAS_PARA_APROBAR`); `test_f106_aprobar.py` (11); fixtures de F-075/F-078; test sv9 de almacén |
 
 Ficheros: comun `importes.py`, `alta_sigrid.py`, `edicion_manual.py` (nuevo), `__init__.py`, `pyproject.toml`; sv9
 `alta_models.py`, `sql_alta_repository.py`, `validador_alta.py`; sv4 `review_models.py`, `review_repository.py`,
@@ -93,6 +104,9 @@ ERROR tests/test_f106_cuadre.py — 1 error during collection
       1 E       KeyError: 'cuadrar'
       1 E       ruesma_comun.edicion_manual.NoDespejable: No se puede calcular el precio con cantidad 0 ...
       25 failed, 43 passed  (los 43: dominio de T6 y los 422 del cuerpo)
+### T11 RED: .venv/Scripts/python.exe -m pytest tests/test_f106_ficha.py -q
+      E   ImportError: cannot import name 'a_sigrid_de_fila' from 'domain.models.review_models'
+      1 error during collection
 ### T10 RED: .venv/Scripts/python.exe -m pytest tests/test_f106_aprobar.py -q
       4 E       Failed: DID NOT RAISE LineasIncompletasError
       1 E       assert [] == [2, 4]
@@ -111,6 +125,7 @@ passed; T8 `test_f106_fila.py` 68 passed (70 con los dos de R-8 de la T9).
 | comun (tras T2) | 1134 passed, 3 skipped | 243 s |
 | sv9 (tras T4) | 1038 passed, 4 failed → 3 eran los equivalentes de F-053 (rehechos, decisión 9; en verde) y 1 es de entorno (abajo) | 93 s |
 | sv4 (tras T8) | 1996 passed, 5 failed: los 2 de F-065 R8 (enmienda, `bef559b`), el de kwargs (`f83c1f3`) y `test_f077_r27` (T12) | 211 s |
+| sv4 (tras T11 parcial) | 2042 passed, 13 failed: 11 de F-051 por `sigrid_ide` (arreglado), `test_f065_r9_plantilla_precio…` (el bloqueo) y `test_f077_r27` (T12) | 280 s |
 | sv4 (tras T10 parcial) | 2011 passed, 3 failed: los 2 fixtures de almacén (corregidos al cerrar la T10) y `test_f077_r27` (T12) | 237 s |
 
 **KO de entorno del worktree (no del código)**: `sv9 test_f069_t15_script_arranca_fuera_de_sv9...` lanza un script en
@@ -136,7 +151,7 @@ quedarán bloqueadas por R16 y R17 al aprobar (lo que dice la spec).
 
 ## Falta
 
-- Seguir T11–T21 en orden: ficha, JS y `TEXTOS_MOTIVO_ALTA` (T11–T12), fase B en comun, sv6 y sv4 (T13–T18), script R18 (T19), documentación (sv4.md,
+- **Desbloquear la T11** (formato del precio) y seguir T12–T21 en orden: JS y `TEXTOS_MOTIVO_ALTA` (T11–T12), fase B en comun, sv6 y sv4 (T13–T18), script R18 (T19), documentación (sv4.md,
   sv6.md, sv9.md y `azure-apps/albaranes.md`, T20) y mutación (T21).
 - No se hacen aquí: T22 (líder, Chrome), T23 y T24 (humano), T25 (líder con el reviewer).
 - Antes de `git worktree remove`: quitar la *junction* `.venv` de sv4 con `cmd /c rmdir` (creada en esta pasada).
@@ -145,8 +160,8 @@ quedarán bloqueadas por R16 y R17 al aprobar (lo que dice la spec).
 
 | Evidencia | Valor |
 |---|---|
-| Tests ejecutados | 158 nuevos de F-106 (comun 59, sv9 18, sv4 81), en verde; suites: comun 1134 + 3 skipped, sv9 1038 (+3 rehechos), sv4 2011 con 3 rojos tras la T10 parcial (2 fixtures ya corregidos, 1 de la T12) |
+| Tests ejecutados | 199 nuevos de F-106 (comun 59, sv9 18, sv4 122), en verde; suites: comun 1134 + 3 skipped, sv9 1038 (+3 rehechos), sv4 2011 con 3 rojos tras la T10 parcial (2 fixtures ya corregidos, 1 de la T12) |
 | Cobertura de las líneas cambiadas | **sin medir**: la `PUERTA COBERTURA` sale de `bash harness/init.sh`, que se correrá al terminar la T21 |
 | Mutantes generados / supervivientes | **sin medir**: la campaña es la T21, después de T11–T20 |
-| Tiempo de las suites | comun 243 s, sv9 93 s, sv4 237 s |
-| `bash harness/init.sh` | pendiente: al final de la T21 |
+| Tiempo de las suites | comun 243 s, sv9 93 s, sv4 280 s |
+| `bash harness/init.sh` | no ejecutado: la feature está bloqueada en la T11 |
