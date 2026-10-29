@@ -14,6 +14,7 @@ from pydantic import (
     ValidationError,
     computed_field,
     field_validator,
+    model_validator,
 )
 
 from ruesma_comun.contratos import (
@@ -37,6 +38,11 @@ from ruesma_comun.importes import (
     importe_albaran,
     importe_de_linea,
     referencia_pie,
+)
+from ruesma_comun.edicion_manual import (
+    CAMPO_IMPORTE,
+    CAMPOS_QUE_MUEVEN_EL_IMPORTE,
+    MENSAJE_PRECIO_E_IMPORTE,
 )
 from ruesma_comun.sigrid import normalizar_partida
 from ruesma_comun.valoracion import esta_valorado
@@ -585,7 +591,12 @@ class LineasIncompletasError(Exception):
 
     ``sin_descripcion`` (F-078 R17): posiciones de las filas a registrar SIN
     vincular sin descripción. sv9 no tendría concepto que mandar
-    (``falta_descripcion``): no se aprueba hasta escribirla."""
+    (``falta_descripcion``): no se aprueba hasta escribirla.
+
+    ``no_cuadran`` (F-106 R16): posiciones de las filas a registrar que no
+    cuadran (``Q × P × (1 − d)`` ≠ importe en más de 0,02 €). sv9 las dejaría
+    en ``no_admitido`` (``linea_no_cuadra``): no se aprueba hasta cuadrarlas.
+    Las no comparables no cuentan."""
 
     def __init__(
         self,
@@ -595,12 +606,14 @@ class LineasIncompletasError(Exception):
         unidad_cambiada: list[int] | None = None,
         *,
         sin_descripcion: list[int] | None = None,
+        no_cuadran: list[int] | None = None,
     ) -> None:
         self.document_id = document_id
         self.posiciones = list(posiciones)
         self.huerfanas = huerfanas
         self.unidad_cambiada = list(unidad_cambiada or [])
         self.sin_descripcion = list(sin_descripcion or [])
+        self.no_cuadran = list(no_cuadran or [])
         super().__init__(self.aviso)
 
     @property
@@ -614,6 +627,11 @@ class LineasIncompletasError(Exception):
             partes.append("Líneas sin descripción: " + ", ".join(
                 str(posicion) for posicion in self.sin_descripcion
             ))
+        if self.no_cuadran:
+            partes.append(
+                "Líneas que no cuadran (cantidad × precio × (1 − dto) ≠ importe): "
+                + ", ".join(str(posicion) for posicion in self.no_cuadran)
+            )
         if self.unidad_cambiada:
             partes.append("Líneas con la unidad cambiada: revisa la cantidad: " + ", ".join(
                 str(posicion) for posicion in self.unidad_cambiada
@@ -685,6 +703,38 @@ def cambia_origen(
         or "precio_unitario" in cambios
         or "unidad" in cambios
     )
+
+
+#: (F-106 R4, R9) Botones de una fila que no cuadra: qué se recalcula.
+ModoCuadrar = Literal["importe", "precio"]
+
+
+def recalculo_de_fila(
+    *,
+    cambios: dict[str, Any],
+    cuadrar: ModoCuadrar | None,
+    no_cuadra: bool | None,
+) -> ModoCuadrar | None:
+    """(F-106 R5, R6, R9; tabla de design §4) Qué recalcula el PATCH.
+
+    ``cambios`` son SOLO los campos que de verdad cambian. Devuelve:
+
+    - ``"precio"`` si cambió el importe (se despeja P; el dto se queda);
+    - ``"importe"`` si cambió la cantidad, el precio o el descuento;
+    - sin nada de eso, el ``cuadrar`` pedido, pero solo sobre una fila que no
+      cuadra (``no_cuadra is True``): sobre una que cuadra o no comparable no se
+      escribe lo valorado (F-065 R8);
+    - ``None``: no se toca ni el importe ni el precio.
+
+    Lo tecleado manda sobre el botón.
+    """
+    if CAMPO_IMPORTE in cambios:
+        return "precio"
+    if CAMPOS_QUE_MUEVEN_EL_IMPORTE & set(cambios):
+        return "importe"
+    if cuadrar is not None and no_cuadra is True:
+        return cuadrar
+    return None
 
 
 #: (F-065 H2) «Origen ✎» llevó la fila a una línea de contrato de OTRA unidad y
@@ -1103,11 +1153,34 @@ class ConciliacionEditBody(BaseModel):
     precio_unitario: float | None = None
     descuento: float | None = None
     codigo_externo: str | None = None
+    #: (F-106 R4, R6) El importe tecleado: se guarda y se despeja el precio.
+    importe: float | None = None
+    #: (F-106 R4, R9) Botón de una fila que no cuadra. No es un campo de la fila.
+    cuadrar: ModoCuadrar | None = None
 
-    @field_validator("cantidad", "precio_unitario", "descuento", mode="before")
+    @field_validator("cantidad", "precio_unitario", "descuento", "importe", mode="before")
     @classmethod
     def _numero(cls, valor: object) -> object:
         return _numero_es(valor)
+
+    @field_validator("cuadrar", mode="before")
+    @classmethod
+    def _cuadrar(cls, valor: object) -> object:
+        # Presente a ``null`` (o vacío) no es «sin botón»: es un valor inválido.
+        if valor is None:
+            raise ValueError("cuadrar debe ser 'importe' o 'precio'")
+        return valor
+
+    @model_validator(mode="after")
+    def _importe(self) -> ConciliacionEditBody:
+        """(F-106 R4, R7) Un importe presente no puede quedar vacío; con el
+        precio a la vez, 422 (uno de los dos manda)."""
+        if "importe" in self.model_fields_set:
+            if self.importe is None:
+                raise ValueError("El importe no puede quedar vacío")
+            if "precio_unitario" in self.model_fields_set:
+                raise ValueError(MENSAJE_PRECIO_E_IMPORTE)
+        return self
 
     @field_validator(
         "codigo_partida", "descripcion", "unidad", "codigo_externo", mode="before",
@@ -1121,7 +1194,11 @@ class ConciliacionEditBody(BaseModel):
     def campos(self) -> dict[str, Any]:
         """Los campos que vinieron en el cuerpo, con su valor (``None`` =
         vaciar)."""
-        return {nombre: getattr(self, nombre) for nombre in sorted(self.model_fields_set)}
+        return {
+            nombre: getattr(self, nombre)
+            for nombre in sorted(self.model_fields_set)
+            if nombre != "cuadrar"
+        }
 
 
 # ====================================================================== #
