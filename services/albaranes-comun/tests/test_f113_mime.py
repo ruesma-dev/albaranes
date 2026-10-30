@@ -271,3 +271,13 @@ def test_f113_r6_exporta_la_api() -> None:
 
     for nombre in ("detectar_mime", "nombre_coherente", "es_mime_generico", "MIME_PDF"):
         assert nombre in mod.__all__
+
+
+def test_f113_r6_version_091() -> None:
+    from pathlib import Path
+
+    import ruesma_comun
+
+    assert ruesma_comun.__version__ == "0.9.1"
+    pyproject = (Path(ruesma_comun.__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'version = "0.9.1"' in pyproject
