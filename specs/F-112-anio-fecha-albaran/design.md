@@ -1,4 +1,4 @@
-# F-112 · El año del albarán se lee con la fecha del correo como referencia · Diseño (v1.1)
+# F-112 · El año del albarán se lee con la fecha del correo como referencia · Diseño (v1.2)
 
 Servicio: **sv2**. Sin DDL, sin cambios en `ruesma_comun`, sin cambios de contrato entre servicios. Medición de
 partida y detalle de la lectura en `progress/spec_F-112.md`. Decisiones abiertas (PARADA 1) en §9.
@@ -7,7 +7,8 @@ partida y detalle de la lectura en `progress/spec_F-112.md`. Decisiones abiertas
 estemos en un cambio de año (diciembre o enero)». Efecto: IA2 revisa la fecha en una sección propia de sus cuatro
 prompts (§4.2, sustituye a la regla de checklist de la v1); la Regla del año (requirements, glosario) entra en los dos
 bloques; el comparador mide aparte el efecto de IA2 y gana el juego D sintético (§7); riesgo nuevo en §9. D7 = 416
-llamadas (decidida); D8 la cierra el líder leyendo los 19 en Blob.
+llamadas (decidida). **v1.2 (2026-10-30)**: juego A leído en el papel (`progress/juego_a_F-112.md`), D8 cerrada,
+pista del R.D. en la Regla del año y D1–D6 y D9 = (a) por el humano («doy por bueno a»), con D2 señalada (§9).
 
 ## 1. Qué pasa hoy (leído en el código y en producción, solo lectura)
 
@@ -93,7 +94,8 @@ La fecha de un albarán es IGUAL o algo ANTERIOR a la de recepción (días o sem
 mes del papel caen DESPUÉS del día y el mes de la recepción, el año es el ANTERIOR al de la recepción
 (28-12 con correo del 03-01 ⇒ el año anterior; 02-01 con correo del 05-01 ⇒ el mismo año). Si el papel trae un
 año legible y plausible (la fecha queda entre un año antes de la recepción y pocos días después), ese año
-manda: no inventes otro. Si el año que lees no es plausible, vuelve a mirarlo: casi siempre es una cifra mal
+manda: no inventes otro. El año NUNCA sale de una referencia normativa impresa (R.D. 553/2020, Orden, Ley,
+norma): es el de la fecha del documento. Si el año que lees no es plausible, vuelve a mirarlo: casi siempre es una cifra mal
 leída (la última, sobre todo); si aun así el papel dice sin ninguna duda ese año, devuélvelo tal cual.
 ```
 
@@ -156,14 +158,15 @@ de 2024, 1 de 2023). Por eso tres juegos:
 
 | Juego | Casos | Referencia | Qué mide |
 |---|---|---|---|
-| A | los de producción con el año mal (§7.1) | la recepción real | que la referencia arregla el fallo (C1) |
+| A | los 19 de producción (§7.1): 14 `anio`, 1 `dudoso`, 4 `antigua` | la recepción real | que arregla el fallo (C1) y no mueve las antiguas de verdad (C7) |
 | B | los 59 del banco | esperada + 7 días (135 de 158 en producción llegan en ≤ 30 días) | que no rompe lo que funciona (C2) |
 | C | los 13 del banco anteriores a 2025 | esperada + 730 días | que un año antiguo impreso de verdad no se pisa (C3) |
 | D | 5 sintéticos de cambio de año (R27) | la de cada caso | diciembre con correo de enero, enero con enero, diciembre con diciembre, año legible y año de dos cifras (C6) |
 
 - **Variantes**: `base` = YAML de `--base` (sin marcador ni regla ⇒ el prompt de hoy byte a byte, R8) y `rama`.
-- **Umbral de C1** (D6): en A, casos con mayoría `exacta` tras IA2 en rama ≥ 80 % y ≥ base. C4 (ninguna ejecución
-  `referencia`) vigila que la IA no copie la recepción.
+- **Umbral de C1** (D6): de los 14 `anio`, mayoría `exacta` tras IA2 en rama ≥ 80 % (≥ 12) y ≥ base; `exacta` exige
+  también día y mes (en 3 fallan hoy). El `dudoso` entra en C1 solo si el humano confirma su fecha. **C7**: los 4
+  `antigua`, mayoría `exacta` tras IA2 en rama (el año impreso no se mueve). C4 vigila que no copie la recepción.
 - **Efecto de IA2, aparte** (R21, R29): por ejecución, fecha de IA1 frente a la final (`corrige`, `estropea`, `cambia`,
   `igual`). C5 exige 0 `estropea` en rama; la tabla dice cuánto aporta la revisión obligatoria frente a base.
 - **Juego D**: imágenes JPG de un albarán mínimo (emisor ficticio «PROVEEDOR SINTÉTICO, S.L.», una línea, la fecha
@@ -172,19 +175,15 @@ de 2024, 1 de 2023). Por eso tres juegos:
   repeticiones: **416**. D suma 5 × 2 × 2 × 2 = 40.
 - **Modelos**: los del entorno (`GEMINI_MODEL`, `OPENAI_MODEL`), que deben ser los de producción (F-085).
 
-### 7.1 Montaje del juego A (M1)
+### 7.1 Juego A (M1, hecho por el líder el 2026-10-30)
 
-1. Líder, solo lectura (sesión con `default_transaction_read_only=on`, clave de Key Vault en variable de proceso):
-   lista de los documentos activos de `albaran_documents_merge` con `|fecha − email_received_datetime| > 365` días, con
-   su `id`, tipología y recepción, en `evals/inputs/fecha/origen.json` (**ignorado por git**).
-2. Líder, solo lectura en Blob (permiso del humano, 2026-10-30): descarga cada PDF a
-   `evals/inputs/albaranes/FEC-NNN.pdf` y lee en el papel la fecha verdadera; con eso cierra D8.
-3. Humano o líder: `evals/casos_fecha.json` con `caso_id`, `tipologia`, `fecha_esperada`, `recibido` (solo fechas y
-   tipología; sin proveedor ni número de albarán). Se versiona.
-
-Los 3 de los 19 sin el patrón «día y mes bien, año mal» (dos de un transportista de residuos y uno de un gestor de
-residuos) pueden ser **otra fecha del papel** (autorización, contrato) y no un año mal leído: el humano lo dirá en el
-paso 2 (D8, la cierra el líder).
+Fecha del papel de los 19 en `progress/juego_a_F-112.md` (PDF por Graph, solo lectura, al scratchpad). Resultado:
+**14 `anio`** (13 seguros, FEYMACO 2168495 casi seguro; en 1350 B, 462044 y 170.675 fallan además día o mes), **1
+`dudoso`** (Anfersa 1788248802: lo confirma el humano) y **4 `antigua`** de verdad (ficheros de prueba del 22-10:
+RES-001, RES-011, RES-019, HOR-015; la IA acertó). En 5 de los 14 la IA puso 2020, el año del «R.D. 553/2020» impreso
+en la cabecera de los partes de residuos: de ahí la frase del R.D. en la Regla del año (§4.1). Queda para T9 pasar
+los PDF a `evals/inputs/albaranes/FEC-NNN.pdf` (ignorado) y escribir `evals/casos_fecha.json` con `caso_id`,
+`tipologia`, `clase` (`anio`, `dudoso`, `antigua`), `fecha_esperada` y `recibido` (sin proveedor ni número).
 
 ## 8. Después del despliegue (M4, solo lectura)
 
@@ -202,44 +201,35 @@ SELECT count(*) AS comparables,
 Línea base: 19 de 158 (12 %), 17 de 155 en octubre. Además, cuántos razonamientos de IA2 llevan
 `patron_aplicado = anio_fecha_recepcion` (en `raw_extraction_json`) y en cuántos documentos la fecha de IA1
 (`debug.phase_2.debug.phase_1_json`) difiere de la final (línea base: 21 de 158). En enero de 2027 se repite la
-medición solo sobre albaranes con fecha de diciembre y correo de enero (el riesgo de §9). Despliegue: solo sv2 (`.\deploy.ps1 -Only sv2`,
-lo lanza el humano); sin orden con otros servicios porque no cambia ningún contrato.
-
-**PARADA 1 (parcial) del humano, 2026-10-30:** D7 = 416 llamadas («mejor 416 lecturas»); para el juego A, permiso de lectura en Blob al líder, que leerá las fechas verdaderas de los 19 en el papel (D8 se cierra con esa lectura). D1–D6 y D9: propuestas las recomendadas, pendientes de su confirmación explícita.
+medición solo con fecha de diciembre y correo de enero (§9). Despliegue: solo sv2 (`.\deploy.ps1 -Only sv2`, lo
+lanza el humano); sin orden con otros servicios porque no cambia ningún contrato.
 
 ## 9. Riesgos y decisiones (PARADA 1)
 
-Estado a 2026-10-30: **D7 decidida (416)**; **D8 la cierra el líder** con la lectura en Blob; D1–D6 y D9 siguen como
-propuestas recomendadas, **pendientes de confirmar por el humano**.
+Estado a 2026-10-30: D7 = 416 («mejor 416 lecturas»); D8 cerrada con la lectura del juego A; **D1–D6 y D9 = (a)**,
+dadas por buenas por el humano («doy por bueno a»), con **D2 señalada al líder** por el cambio de año (abajo).
 
-- **Riesgo del cambio de año** (enmienda v1.1). Una referencia leída como «el año del correo» convierte un albarán del
-  28-12 que llega el 03-01 en uno de 11 meses después: justo el error que se quiere quitar, pero al revés y en
-  diciembre-enero. Mitigación: la Regla del año (igual o anterior; día y mes posteriores ⇒ año anterior), el mismo
-  texto en IA1 e IA2 y con cualquier fecha (R28), el juego D (C6) y la repetición de M4 en enero. Riesgo residual: un
-  albarán con fecha unos días POSTERIOR al correo (fechado por adelantado) con un año dudoso puede pasar al año
-  anterior; sv3 lo marca a revisión (> 365 días) y F-108 lo corrige a mano.
-- **D1 · Dónde entra la referencia.** (a) Marcador en el task de IA1 + sección propia de revisión obligatoria en los
-  prompts de IA2 (v1.1; IA2 recibe además el bloque de fase 1 dentro de `{prompt_fase_1}`). (b) Solo IA1. (c) Solo
-  IA2. **Recomendada (a)**: el error nace en IA1 y hoy IA2 no lo ve; en estos 19 IA2 no corrigió ninguno.
-- **D2 · Qué fecha.** (a) La parte de fecha de `recibido_utc` en UTC, como la red de sv3. (b) Hora de Madrid. **(a)**:
-  para leer un año, unas horas no importan, y las dos redes miran lo mismo.
-- **D3 · Sin correo.** (a) Sin referencia (Nota sin recepción). (b) Hoy como referencia, como hace sv3. **(a)**: una
-  reextracción manual de un documento viejo con «hoy» empujaría el año hacia el que no es.
-- **D4 · Albarán con una fecha antigua impresa de verdad.** La IA la devuelve tal cual («si el papel dice sin ninguna
-  duda otro año»); sv3 lo marca a revisión, sv9 no da de alta y la ficha (F-108) permite corregirla. No se añade
-  campo nuevo al schema. Alternativa descartada: un `fecha_dudosa` de la IA, que toca schemas de sv2, sv3 y sv4 para
-  lo que ya hace la red de sv3. El riesgo contrario —la IA pisa un año legible con el de la referencia— lo mide C3.
-- **D5 · Sin marcador no se añade nada** (como `{empresas_cliente}`, no como `{obras_activas}`): permite medir la
-  variante `base` con el código nuevo. Riesgo: un YAML desplegado sin marcador va sin referencia; lo vigila R15.
-- **D6 · Umbral de C1**: 80 % de A con mayoría `exacta` tras IA2. Alternativa: «mejor que base» sin umbral.
-- **D7 · Tamaño de la medición**: **decidida el 2026-10-30, 416** (B a 20 casos), «mejor 416 lecturas».
-- **D8 · Los 3 casos de residuos sin patrón de año** (la cierra el líder con la lectura en Blob): si el papel muestra que la IA tomó otra fecha (autorización del
-  gestor, contrato), (a) basta la aclaración «emisión o servicio, no pedido, contrato o autorización» de §4.1, que ya
-  va incluida; (b) se sacan del juego A y se abre ficha propia.
-- **D9 · Versionar `evals/casos_fecha.json`**: solo fechas y tipología, sin datos del proveedor. Alternativa: dejarlo en
-  `evals/inputs/` (ignorado), y entonces el reviewer no puede reproducir el juego A.
-- **Riesgo**: el bloque de recepción alarga el prompt de IA1 unas 120 palabras (coste despreciable frente a la lista
-  de obras). **Riesgo**: si sv1 no pudo leer el correo (fallo de Graph), no hay blob y ese documento va sin referencia,
-  como hoy.
-- **Alternativa descartada**: corregir el año en código (p. ej. con el de la recepción cuando día y mes encajan).
-  Contradice la decisión del humano: la fecha la lee la IA.
+- **Riesgo del cambio de año** (v1.1). Leer la referencia como «el año del correo» convierte un albarán del 28-12 que
+  llega el 03-01 en uno de 11 meses después. Mitigación: la Regla del año, el mismo texto en IA1 e IA2 y con cualquier
+  fecha (R28), el juego D (C6) y M4 repetida en enero. Residual: un albarán fechado unos días DESPUÉS del correo con
+  año dudoso puede ir al año anterior; sv3 lo marca (> 365 días) y F-108 lo corrige a mano.
+- **Riesgo del año normativo** (v1.2): el «R.D. 553/2020» de los partes de residuos dio 2020 en 5 de 14; la Regla del
+  año lo prohíbe expresamente y el juego A lo mide.
+- **D1 = (a)**: marcador en el task de IA1 + sección propia de revisión obligatoria en los prompts de IA2 (v1.1; IA2
+  recibe además el bloque de fase 1 en `{prompt_fase_1}`). Coherente con la enmienda: es la enmienda.
+- **D2 = (a)**, la parte de fecha de `recibido_utc` en UTC, como sv3. **Señalada, no decidida aquí**: con la Regla del
+  año, un correo recibido el 01-01 entre las 00:00 y la 01:00 o 02:00 de Madrid tiene fecha UTC 31-12; un albarán del
+  01-01 queda «después» de la referencia y la regla lo manda al año anterior (error de un año). La (b), fecha de
+  Madrid, lo evita. Lo decide el humano por medio del líder.
+- **D3 = (a)**: sin correo, sin referencia (Nota sin recepción); «hoy» empujaría el año de una reextracción vieja.
+- **D4 = (a)**: un año antiguo impreso de verdad se devuelve tal cual (sv3 lo marca, sv9 no da de alta, F-108
+  corrige); sin campo nuevo. Coherente con la enmienda («no puede inventar un año si el papel trae uno legible»); lo
+  miden C3 (banco) y C7 (los 4 `antigua` del juego A).
+- **D5 = (a)**: sin marcador no se añade nada (permite medir `base`); R15 vigila que el YAML lo lleve.
+- **D6 = (a)**: 80 % de los 14 `anio` (≥ 12) con mayoría `exacta` tras IA2 en rama, y ≥ base.
+- **D7 = 416** (B a 20 casos). **D8 cerrada**: los 3 de residuos «sin patrón» eran antiguos de verdad; la aclaración
+  «emisión o servicio, no pedido, contrato o autorización» de §4.1 se mantiene, sin ficha propia.
+- **D9 = (a)**: `evals/casos_fecha.json` versionado (fechas, tipología y clase, sin datos del proveedor).
+- **Riesgos menores**: el bloque alarga el prompt de IA1 unas 140 palabras; sin blob de correo (fallo de Graph en sv1)
+  el documento va sin referencia, como hoy. Fuera: el «2.» perdido del número 2.170.675 (números mal leídos, ficha).
+- **Descartada**: corregir el año en código. Contradice la decisión del humano: la fecha la lee la IA.

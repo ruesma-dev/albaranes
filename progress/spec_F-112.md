@@ -49,7 +49,18 @@ Cita literal: «añade que ia2 revisara tambien la fecha. el problema vendra cua
 - **D7 = 416** (decidida). **D8**: la cierra el líder leyendo los 19 en Blob (permiso de lectura del humano).
 - D1–D6 y D9 siguen como propuestas recomendadas, pendientes de que el humano las confirme.
 
-## 4. Decisiones abiertas para el humano (PARADA 1, design §9; estado de la v1)
+## 4. Enmienda v1.2 (2026-10-30): juego A y cierre de la PARADA 1
+
+- Juego A leído en el papel por el líder (`progress/juego_a_F-112.md`): 14 errores de año, 1 dudoso, 4 fechas
+  antiguas de verdad (controles de D4, criterio C7). D8 cerrada: los 3 «sin patrón» eran antiguos de verdad.
+- Pista nueva: 5 de los 14 dieron 2020 por el «R.D. 553/2020» impreso; la Regla del año dice que el año nunca sale
+  de una referencia normativa (R.D., Orden, Ley).
+- Decisiones: D1–D6 y D9 = (a), dadas por buenas por el humano («doy por bueno a»); D7 = 416.
+- **Señalada al líder, sin decidir**: D2 (a) (fecha UTC) choca con la regla del cambio de año en la primera hora
+  o dos del 1 de enero (fecha UTC 31-12 ⇒ un albarán del 01-01 iría al año anterior). La (b), fecha de Madrid, lo
+  evita. Detalle en design §9.
+
+## 5. Decisiones de la v1 (historial; estado actual en el §4)
 
 - **D1** dónde entra la referencia: IA1 + regla de IA2 (recomendada), solo IA1, o solo IA2.
 - **D2** fecha UTC (recomendada) u hora de Madrid. **D3** sin correo: sin referencia (recomendada) u «hoy».

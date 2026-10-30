@@ -1,4 +1,4 @@
-# F-112 · El año del albarán se lee con la fecha del correo como referencia · Requisitos (v1.1)
+# F-112 · El año del albarán se lee con la fecha del correo como referencia · Requisitos (v1.2)
 
 Servicio: **sv2** (`services/albaranes-api`). Banco de evals (`evals/`) para medir. Rigor `estandar`.
 Ficha en `harness/features.json` (F-112). Va **después de F-106**. Medición de partida en `progress/spec_F-112.md` §1.
@@ -9,7 +9,8 @@ determinista; la referencia solo se le da a la IA para que lea mejor el año. La
 
 **Enmienda v1.1 (2026-10-30, PARADA 1).** Palabras del humano: «añade que ia2 revisara tambien la fecha. el problema
 vendra cuando estemos en un cambio de año (diciembre o enero)». Cambian R3, R17, R18, R19, R21 y R22; nuevos R27–R29.
-D7 = 416 llamadas (decidida). D8 la cierra el líder leyendo los 19 en Blob (permiso de lectura del humano).
+D7 = 416 llamadas (decidida). **v1.2 (2026-10-30)**: juego A leído en el papel (`progress/juego_a_F-112.md`); cambian el
+glosario (Regla del año), R19 y R22 (C7). Decisiones D1–D6 y D9 = (a) por el humano; D2 señalada (design §9).
 
 ## Glosario
 - **Recepción**: `ContextoCorreo.recibido_utc` (el `receivedDateTime` de Graph que sv1 guarda en el blob lateral
@@ -21,7 +22,8 @@ D7 = 416 llamadas (decidida). D8 la cierra el líder leyendo los 19 en Blob (per
 - **Regla del año**: la fecha del albarán es IGUAL o algo ANTERIOR a la de recepción; el año es el que deja la fecha
   del papel (día y mes) en la recepción o poco antes: si día y mes caen DESPUÉS del día y mes de la recepción, el año
   es el ANTERIOR al de la recepción (28-12 con correo del 03-01 ⇒ año anterior). Un año legible y plausible del papel
-  manda: no se inventa otro. Plausible = la fecha queda entre un año antes de la recepción y pocos días después.
+  manda: no se inventa otro. El año nunca sale de una referencia normativa impresa (R.D., Orden, Ley). Plausible =
+  la fecha queda entre un año antes de la recepción y pocos días después.
 - **Juegos del comparador**: A (documentos de producción con el año mal), B (banco, referencia realista), C (banco con
   albarán de verdad antiguo), D (sintéticos de cambio de año). Definidos en R19 y R27.
 
@@ -75,8 +77,8 @@ legible y plausible. SIN Fecha de recepción, debe ser una nota fija («revisa l
 prompts deben seguir conteniendo `{prompt_fase_1}`; `revision_rules.yaml` no gana regla de fecha.
 
 ## E. Medición: `python -m evals.comparar_fecha`
-R19. El comparador debe construir los juegos así: **A**, de `evals/casos_fecha.json` (caso, tipología, fecha esperada
-y fecha de recepción reales); **B**, los casos de `evals/fixtures/IA1/` con fecha esperada, con referencia = esperada +
+R19. El comparador debe construir los juegos así: **A**, de `evals/casos_fecha.json` (caso, tipología, `clase` `anio`,
+`dudoso` o `antigua`, fecha esperada y fecha de recepción reales); **B**, los casos de `evals/fixtures/IA1/` con fecha esperada, con referencia = esperada +
 7 días; **C**, los casos del banco con fecha esperada anterior a 2025-01-01, con referencia = esperada + 730 días;
 **D**, los sintéticos de R27. B va muestreado a 20 casos con semilla fija (D7: 416 llamadas en total con A, B y C a
 2 repeticiones, más las de D).
@@ -92,7 +94,8 @@ R22. El veredicto debe ser VERDE solo si se cumplen todos: **C1** en A, casos co
 ≥ el umbral de design §7 y ≥ base; **C2** en B, ningún caso con mayoría `exacta` en base la pierde en rama; **C3** en C,
 ningún caso con mayoría `exacta` en base pasa a `solo_anio` o `referencia` en rama; **C4** 0 ejecuciones `referencia`
 en rama, en cualquier juego y fase; **C5** en rama, 0 ejecuciones `estropea` de IA2 en cualquier juego; **C6** en D,
-todos los casos con mayoría `exacta` tras IA2 en rama. Sin las dos variantes, el veredicto es NO APLICA.
+todos los casos con mayoría `exacta` tras IA2 en rama; **C7** en A, los casos `antigua`, todos con mayoría `exacta`
+tras IA2 en rama. C1 cuenta solo los `anio` (un `dudoso` entra si el humano lo pasa a `anio`). Sin las dos variantes, el veredicto es NO APLICA.
 R23. SI falta la clave de un proveedor, ningún caso tiene albarán, `casos_fecha.json` no valida (campos, formato de
 fecha, `caso_id` repetido) o el `git show` de la base falla, ENTONCES el comparador debe parar con código 2 antes de
 llamar a ninguna IA, con un mensaje que no cite el contenido de ningún fichero. Con `--solo-validar` hace esas

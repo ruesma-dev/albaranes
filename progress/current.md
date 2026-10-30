@@ -1,7 +1,7 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-112 · `pending` (2026-10-29): spec v1.1 (2026-10-30, enmienda del humano: IA2 revisa siempre la fecha y cambio de año; D7 = 416; D8 la cierra el líder leyendo los 19 en Blob), D1–D6 y D9 pendientes de confirmar** — año del albarán con la fecha del correo como referencia (sv2). Spec en `specs/F-112-anio-fecha-albaran/`, informe y medición de producción en `progress/spec_F-112.md` (19 de 158 documentos con la fecha a más de un año del correo; residuos 10/15; el error nace en IA1 e IA2 lo confirma). Decisiones D1–D9 para el humano en design §9. Va después de F-106.
+**F-112 · `pending` (2026-10-29): spec v1.1 (2026-10-30, enmienda del humano: IA2 revisa siempre la fecha y cambio de año; D7 = 416; D8 la cierra el líder leyendo los 19 en Blob), v1.2 del 30-10 con el juego A leído en el papel; D1–D6 y D9 = (a) por el humano, D2 señalada al líder por el cambio de año (design §9)** — año del albarán con la fecha del correo como referencia (sv2). Spec en `specs/F-112-anio-fecha-albaran/`, informe y medición de producción en `progress/spec_F-112.md` (19 de 158 documentos con la fecha a más de un año del correo; residuos 10/15; el error nace en IA1 e IA2 lo confirma). Decisiones D1–D9 para el humano en design §9. Va después de F-106.
 
 **F-106 · `in_progress` (2026-10-28): recalcular el precio al cambiar la medición** — rama `feature/F-106-precio-al-cambiar-medicion`, worktree `../albaranes-F-106`. Spec v3 con PARADA 1 cerrada (D8 = c, D9–D13 = a; design §10). Empieza por la T0 (solo lectura en producción: cuántas líneas pendientes no cuadran; si más del 10 %, se para). Despliegue: sv6 → sv9 → sv4. F-110 (dto a Sigrid) va detrás y toca la misma función de sv9.
 
