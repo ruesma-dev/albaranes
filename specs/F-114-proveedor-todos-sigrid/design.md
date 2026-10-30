@@ -163,6 +163,8 @@ En `initCombo`, solo si `kind === "proveedor"` y existe `data-solo-obra-check`:
 
 ## 8. Decisiones para la PARADA 1 (recomendación en negrita)
 
+**PARADA 1 cerrada por el humano el 2026-10-30**: D1 a D7 aprobadas según la recomendación («apruebo»). D6: el contrato del proveedor anterior va a una feature aparte, F-115, dada de alta el mismo día.
+
 - **D1 Lista completa o búsqueda al escribir.** (a) Lista completa de vivos, cargada al enfocar y
   filtrada en local como hoy: reutiliza todo, pero son N filas por apertura y `render` pinta un `div`
   por fila (con 3.543 proveedores con contrato el 29-09, `prv` entero será mayor). (b) **Búsqueda en

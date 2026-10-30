@@ -4,7 +4,7 @@
 Servicio: **sv4** (`services/albaranes-front`). Rigor `estandar`. Ficha en `harness/features.json`
 (rama `chore/alta-F-111-F-112`, commit `3684669`). Origen: el humano, 2026-10-30, por el documento
 `097191e9-857d-46f9-8357-1a61a9031d4c` (obra sin contratos: el desplegable sale vacío).
-Decisiones abiertas D1–D7 para la PARADA 1: `design.md` §8 y `progress/spec_F-114.md`.
+Decisiones D1–D7: `design.md` §8 y `progress/spec_F-114.md`. PARADA 1 cerrada el 2026-10-30, todas según la recomendación.
 
 ## Glosario
 - **Combo de proveedor**: el `.combo[data-kind="proveedor"]` de `templates/document_detail.html`
