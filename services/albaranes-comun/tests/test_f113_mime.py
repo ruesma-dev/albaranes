@@ -281,3 +281,13 @@ def test_f113_r6_version_091() -> None:
     assert ruesma_comun.__version__ == "0.9.1"
     pyproject = (Path(ruesma_comun.__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
     assert 'version = "0.9.1"' in pyproject
+
+
+@pytest.mark.parametrize(
+    ("mime", "esperado"),
+    [(None, ""), ("", ""), ("  Image/JPEG ; name=a.jpg", "image/jpeg"), ("application/pdf", MIME_PDF)],
+)
+def test_f113_normalizar_mime(mime: str | None, esperado: str) -> None:
+    from ruesma_comun.mime import normalizar_mime
+
+    assert normalizar_mime(mime) == esperado

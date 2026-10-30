@@ -27,6 +27,7 @@ __all__ = [
     "detectar_mime",
     "es_mime_generico",
     "nombre_coherente",
+    "normalizar_mime",
 ]
 
 MIME_PDF = "application/pdf"
@@ -86,9 +87,12 @@ _MARCAS_HEIF = frozenset({b"mif1", b"msf1"})
 _VENTANA_PDF = 1024
 
 
-def _normalizar(mime: str | None) -> str:
-    """Minúsculas y sin parámetros (``; name=...``)."""
+def normalizar_mime(mime: str | None) -> str:
+    """Minúsculas y sin parámetros (``; name=...``); ``""`` si no hay."""
     return (mime or "").split(";")[0].strip().lower()
+
+
+_normalizar = normalizar_mime
 
 
 def es_mime_generico(mime: str | None) -> bool:
