@@ -153,6 +153,8 @@ Ninguno nuevo. sv6 reutiliza `SQL_OBRA_DEL_DOCUMENTO` y la lista de `SQL_PARTIDA
 
 ## 10. Decisiones abiertas (PARADA 1)
 
+**PARADA 1 cerrada por el humano el 2026-10-30 («doy por bueno a»): D1–D10 = (a).**
+
 - **D1 · `svc5_prompt_valuation_es.yaml`.** No lo carga nadie (`settings.prompts_yaml_path = config/prompts.yaml`;
   `sv5.md:105` lo llama «versión histórica»). (a) **Recomendada**: corregir su regla 4 para que ningún fichero diga «6
   por defecto». (b) No tocarlo. (c) Borrarlo (otra feature).
