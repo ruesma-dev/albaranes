@@ -136,6 +136,8 @@ soporta); sv9 no lee la selección.
 
 ## 8. Riesgos y decisiones (PARADA 1)
 
+**PARADA 1 cerrada por el humano el 2026-10-30**: D1 y D3 a D7 = (a). D2 = (a) con una precisión: «al cambiar la obra se puede dejar el proveedor, pero hay que cambiar el contrato» (el proveedor se conserva; el contrato de la obra anterior se quita y se buscan los del mismo proveedor en la obra nueva; R15).
+
 - **D1 · Dónde se retira la selección.** (a) **Recomendada: en sv4 (PUT) y en sv3 (al enriquecer)**: el PUT deja la
   ficha coherente al instante y sobrevive a un fallo de la cola; sv3 cubre las vías sin PUT (F-062, HTTP, duplicado).
   (b) Solo sv3: entre el PUT y el worker la ficha enseña el contrato del anterior con el proveedor nuevo, y si la

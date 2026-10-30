@@ -89,6 +89,8 @@ y vuelve a buscar contratos y a valorar. Las líneas leídas se conservan[ y N p
 `n_filas_manuales`, solo si N > 0). Cancelar deja el combo con el proveedor anterior y no guarda (D3).
 
 R15. Lo mismo al elegir otra obra en su combo, con «Cambiar la obra…» (D2).
+     Al cambiar la obra **se conserva el proveedor**: solo se quita el contrato (que era de la obra anterior) y se
+     buscan los contratos de ese mismo proveedor en la obra nueva (D2, precisión del humano del 2026-10-30).
 
 ## E. lo que se conserva y casos límite
 
