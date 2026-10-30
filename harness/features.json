@@ -1363,7 +1363,7 @@
       "id": "F-112",
       "title": "Año del albarán mal leído: la IA lee la fecha con la del correo como referencia",
       "description": "ORIGEN: el humano, 2026-10-29, por los albaranes de HERMANOS SAN JUAN: 5176 B leído con fecha 17-10-2022 y 5629 B con 16-10-2024 (llegaron el 28-10-2026); los tres del 14-10 (1909 B, 1350 B, 2910 B) con 2020 y 2023. Día y mes parecen bien; el año sale imposible (marca `fecha_albaran_fuera_de_rango` en sv3; sv9 ya no da de alta con `fecha_no_plausible`). PROPUESTA del líder, aceptada por el humano para spec: dar a la IA de lectura (sv2, IA1/IA2) la fecha de recepción del correo como referencia para leer el año; la fecha la sigue leyendo la IA, sin corrección determinista. A RESOLVER EN LA SPEC: dónde entra la fecha del correo en el prompt (IA1 Gemini, IA2 OpenAI o ambas) y qué hacer si el albarán imprime de verdad otra fecha antigua; medir en producción (solo lectura) cuántos documentos tienen la fecha a más de 1 año de su correo y de qué proveedores; banco de evals si existe para la cabecera. FUERA: los números de albarán mal leídos (4889/4839, 5029/5629), que se corrigen a mano. Va DESPUÉS de F-106; F-108 (fecha editable con calendario) facilita la corrección a mano.",
-      "status": "pending",
+      "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
       "priority": 2,
