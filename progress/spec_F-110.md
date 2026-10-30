@@ -93,3 +93,13 @@ Confirmado por el humano («Sí, y actualizo lo nuestro»). sv9 compara la previ
 de la respuesta, así que el neto y el céntimo del punto 4 no la rompen. Los avisos desconocidos se ven con su código en sv4
 hasta la T19. Falta nuestra parte del contrato (punto 6: «Origen en albaranes» de `precio` y `dto` en §2.2 y regla 4 de
 §2.4), coordinada con la sesión de sigrid-api porque el fichero está en su rama.
+
+## 2026-10-30 · sigrid-api despliega F-018 (aviso de su sesión)
+
+- `sigrid/albaran` en modo extendido ya admite `lineas[].dto` (contrato v8.4, §2.2–§3.1). sigrid-api lo verificó con
+  previas y con una grabación real que después anuló: `tar` bruto, `dto` «7%», `tot` 499,97 y `pre` neto = `tot`/`can`.
+- Cuándo se enciende `ALTA_SIGRID_ENVIAR_DTO` lo decide el humano, después de implementar y desplegar F-110.
+- Aviso 1 para la implementación: el modo clásico y `albaran-directo` **ignoran `dto` sin dar 400**. El bruto con
+  `dto` solo puede ir al modo extendido; hace falta un test que lo garantice.
+- Aviso 2: una línea vinculada sin `dto` que casa por la opción C con un `ctrpro` que lleva dto copia ahora el `tar` y
+  el `dto` de ese `ctrpro`. Revisarlo en la T18.
