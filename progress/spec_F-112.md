@@ -35,7 +35,21 @@ scratchpad de la sesión, no en el repositorio. Base: `albaran_documents_merge` 
 - El banco cubre `fecha` (campo crítico, 59 casos de IA1) pero sin correo ni recepción y sin ningún caso del fallo:
   hace falta el comparador nuevo con tres juegos (design §7).
 
-## 3. Decisiones abiertas para el humano (PARADA 1, design §9)
+## 3. Enmienda v1.1 (2026-10-30, respuesta del humano a la PARADA 1)
+
+Cita literal: «añade que ia2 revisara tambien la fecha. el problema vendra cuando estemos en un cambio de año
+(diciembre o enero)». Y sobre D7: «mejor 416 lecturas».
+
+- **IA2 revisa SIEMPRE la fecha** en una sección propia de sus cuatro prompts (`{revision_fecha}`, R17–R18), en lugar de
+  la regla de checklist de la v1; su efecto (fecha de IA1 frente a la final) se mide aparte (R21, R29, C5).
+- **Cambio de año**: la referencia ya no es «el año del correo» sino la Regla del año (fecha igual o algo anterior a la
+  recepción; día y mes posteriores ⇒ año anterior; 28-12 con correo del 03-01 ⇒ año anterior; un año legible y
+  plausible manda). Va igual en IA1 e IA2 y con cualquier fecha (R28). Juego D con cinco sintéticos (R27, C6). Riesgo
+  en design §9 y repetición de la medición en enero de 2027.
+- **D7 = 416** (decidida). **D8**: la cierra el líder leyendo los 19 en Blob (permiso de lectura del humano).
+- D1–D6 y D9 siguen como propuestas recomendadas, pendientes de que el humano las confirme.
+
+## 4. Decisiones abiertas para el humano (PARADA 1, design §9; estado de la v1)
 
 - **D1** dónde entra la referencia: IA1 + regla de IA2 (recomendada), solo IA1, o solo IA2.
 - **D2** fecha UTC (recomendada) u hora de Madrid. **D3** sin correo: sin referencia (recomendada) u «hoy».
@@ -43,7 +57,7 @@ scratchpad de la sesión, no en el repositorio. Base: `albaran_documents_merge` 
   cubren el resto (recomendada).
 - **D5** sin marcador no se añade nada (permite medir `base`).
 - **D6** umbral de C1: 80 % del juego A con mayoría exacta tras IA2.
-- **D7** tamaño de la medición de pago: 728 llamadas (B completo) o 416 (B a 20 casos).
+- **D7** tamaño de la medición de pago: decidida en la v1.1, 416.
 - **D8** los 3 de residuos sin patrón de año: ¿otra fecha del papel? Lo dice el humano al montar el juego A.
 - **D9** versionar `evals/casos_fecha.json` (solo fechas y tipología).
 - Para montar el juego A el humano tiene que leer en el papel la fecha verdadera de los 19 (design §7.1).

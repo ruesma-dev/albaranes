@@ -1,7 +1,13 @@
-# F-112 · El año del albarán se lee con la fecha del correo como referencia · Diseño (v1)
+# F-112 · El año del albarán se lee con la fecha del correo como referencia · Diseño (v1.1)
 
 Servicio: **sv2**. Sin DDL, sin cambios en `ruesma_comun`, sin cambios de contrato entre servicios. Medición de
 partida y detalle de la lectura en `progress/spec_F-112.md`. Decisiones abiertas (PARADA 1) en §9.
+
+**Enmienda v1.1 (2026-10-30).** El humano: «añade que ia2 revisara tambien la fecha. el problema vendra cuando
+estemos en un cambio de año (diciembre o enero)». Efecto: IA2 revisa la fecha en una sección propia de sus cuatro
+prompts (§4.2, sustituye a la regla de checklist de la v1); la Regla del año (requirements, glosario) entra en los dos
+bloques; el comparador mide aparte el efecto de IA2 y gana el juego D sintético (§7); riesgo nuevo en §9. D7 = 416
+llamadas (decidida); D8 la cierra el líder leyendo los 19 en Blob.
 
 ## 1. Qué pasa hoy (leído en el código y en producción, solo lectura)
 
@@ -22,15 +28,17 @@ partida y detalle de la lectura en `progress/spec_F-112.md`. Decisiones abiertas
 
 | Ruta | Qué |
 |---|---|
-| `services/albaranes-api/application/services/fecha_recepcion.py` | Puro, sin I/O (mismo patrón que `empresas_cliente.py`): `MARCADOR_FECHA_RECEPCION`, `fecha_recepcion_de`, `render_fecha_recepcion`, `NOTA_SIN_RECEPCION` |
+| `services/albaranes-api/application/services/fecha_recepcion.py` | Puro, sin I/O (mismo patrón que `empresas_cliente.py`): `MARCADOR_FECHA_RECEPCION`, `MARCADOR_REVISION_FECHA`, `fecha_recepcion_de`, `render_fecha_recepcion`, `render_revision_fecha`, `NOTA_SIN_RECEPCION`, `NOTA_REVISION_SIN_RECEPCION`; la Regla del año vive en UNA constante que usan los dos render |
 | `services/albaranes-api/tests/test_f112_fecha_recepcion.py` | R1–R5 |
 | `services/albaranes-api/tests/test_f112_render_prompt.py` | R6–R11 (servicio con cliente LLM falso) |
 | `services/albaranes-api/tests/test_f112_worker.py` | R12–R14 (pipeline y worker con fakes) |
 | `services/albaranes-api/tests/test_f112_prompt_yaml.py` | R15–R18 (YAML reales) |
+| `evals/sinteticos_fecha.py` | Genera las imágenes JPG de SIN-001…005 con Pillow (texto fijo, sin aleatoriedad) y `evals/casos_fecha_sinteticos.json` (R27) |
+| `tests/test_f112_sinteticos_fecha.py` | R27 (determinismo: dos generaciones, mismos bytes; casos y fechas esperadas) |
 | `evals/procesos/sv2_fecha.py` | Las dos fases de un caso con `fecha_recepcion`, devolviendo solo `cabecera.fecha` (reutiliza `sv2_proveedor.montar_servicio`, `ficheros_de_base`, `ficheros_de_rama` y `sv2_extraccion._adjuntos`) |
 | `evals/comparar_fecha.py` | CLI del comparador (R19–R24), forma de `evals/comparar_proveedor.py` |
 | `evals/casos_fecha.json` | Juego A: `{"version": 1, "casos": []}` versionado; lo rellena M1 (§7.1) |
-| `tests/test_f112_comparar_fecha.py` | R19, R21–R24 sin red (extractor falso) |
+| `tests/test_f112_comparar_fecha.py` | R19, R21–R24, R29 sin red (extractor falso) |
 | `tests/test_f112_rutas_sensibles.py` | R25 |
 
 ## 3. Ficheros a modificar
@@ -41,12 +49,16 @@ partida y detalle de la lectura en `progress/spec_F-112.md`. Decisiones abiertas
     marcador está (R6, R8: sin marcador no se añade nada, como `{empresas_cliente}` en F-064).
   - `extract_phase_1(..., fecha_recepcion: date | None = None)` y `review_phase_2(..., fecha_recepcion=None)`: la pasan a
     `_render_task_fase_1` (R9). Las dos líneas de log ganan `fecha_recepcion=%s` (fecha ISO o `NO`, R10).
+  - `_MARCADORES_FASE_2` gana `revision_fecha`; en `review_phase_2`, `valores["{revision_fecha}"] =
+    render_revision_fecha(fecha_recepcion)` dentro de la pasada única (R17). Lo insertado no se recorre otra vez.
 - `services/albaranes-api/application/pipelines/extract_albaran_pipeline.py`: campo `fecha_recepcion: date | None =
   None` en las dos requests y paso tal cual (R12).
 - `services/albaranes-api/interface_adapters/worker/extraction_worker.py`: tras `_leer_correo`,
   `fecha = fecha_recepcion_de(correo)` una vez; la misma a las dos requests (R13, R14).
 - `services/albaranes-api/config/prompts.yaml`: regla de `fecha` y marcador en `albaran_factura_es` (§4.1).
-- `services/albaranes-api/config/revision_rules.yaml`: regla `anio_fecha_recepcion` (§4.2).
+- `services/albaranes-api/config/prompts.yaml`, los cuatro `albaran_revision_fase2_*`: sección «Fecha del albarán
+  (revisión obligatoria)» con `{revision_fecha}`, después de la checklist y antes del grounding (§4.2).
+- `revision_rules.yaml` **no** se toca (en la v1 llevaba la regla; la v1.1 la sustituye por la sección propia).
 - `harness/rutas_sensibles.json`: `fecha_recepcion.py` en la verificación `evals` (R25). Es declaración del proyecto,
   no del arnés genérico: no se porta a `arnes-base`.
 - `docs/ARCHITECTURE.md` (regla 26), `services/albaranes-api/sv2.md` (marcador), `evals/README.md` (comparador) (R26).
@@ -68,11 +80,21 @@ Sustituye a `- fecha: la del albarán.`:
 
 ```
 FECHA DE RECEPCIÓN DEL CORREO: 2026-10-28. Es el día en que este albarán llegó al buzón, NO la fecha del
-albarán. Úsala SOLO para leer el AÑO de cabecera.fecha: un albarán se emite normalmente días o semanas antes de
-llegar, nunca después. Si el año que lees está a más de un año de esta fecha, vuelve a mirarlo: casi siempre es
-una cifra mal leída (la última, sobre todo). Si tras mirarlo el papel dice sin ninguna duda otro año, devuélvelo
-tal cual. El día y el mes salen SIEMPRE del papel. Si el papel no trae fecha, cabecera.fecha es null: NUNCA
-copies esta fecha como fecha del albarán.
+albarán. Úsala SOLO para leer el AÑO de cabecera.fecha. {REGLA_DEL_ANIO}
+El día y el mes salen SIEMPRE del papel. Si el papel no trae fecha, cabecera.fecha es null: NUNCA copies esta
+fecha como fecha del albarán.
+```
+
+`REGLA_DEL_ANIO` (constante única, va en los dos bloques y con cualquier fecha, R28):
+
+```
+La fecha de un albarán es IGUAL o algo ANTERIOR a la de recepción (días o semanas), nunca muy posterior. NO es
+«el año del correo»: es el año que deja el día y el mes del papel en la recepción o poco antes. Si el día y el
+mes del papel caen DESPUÉS del día y el mes de la recepción, el año es el ANTERIOR al de la recepción
+(28-12 con correo del 03-01 ⇒ el año anterior; 02-01 con correo del 05-01 ⇒ el mismo año). Si el papel trae un
+año legible y plausible (la fecha queda entre un año antes de la recepción y pocos días después), ese año
+manda: no inventes otro. Si el año que lees no es plausible, vuelve a mirarlo: casi siempre es una cifra mal
+leída (la última, sobre todo); si aun así el papel dice sin ninguna duda ese año, devuélvelo tal cual.
 ```
 
 `NOTA_SIN_RECEPCION` (R4): `(Sin fecha de recepción del correo en esta ejecución: lee la fecha solo del papel, como
@@ -81,16 +103,22 @@ siempre.)`
 Seguridad (R5): el bloque solo lleva `date.isoformat()` de la fecha validada; ningún otro carácter de `recibido_utc`
 (que viene de Graph, no del texto del correo) llega al prompt.
 
-### 4.2 `revision_rules.yaml` · `anio_fecha_recepcion`
+### 4.2 Fase 2 · sección «Fecha del albarán (revisión obligatoria)» con `{revision_fecha}`
 
-- **titulo**: El año de cabecera.fecha, contrastado con la fecha de recepción del correo.
-- **descripcion**: Las reglas de la fase 1 traen la FECHA DE RECEPCIÓN DEL CORREO. Si `cabecera.fecha` de la fase 1
-  está a más de un año de ella (antes o después), relee el año en el documento. Si el papel admite el año que encaja
-  con la recepción, corrige SOLO el año (día y mes, los del papel) y añade un razonamiento con campo `cabecera.fecha` y
-  patron_aplicado `anio_fecha_recepcion`. Si el papel dice sin duda otro año, déjalo. Sin fecha de recepción, la regla
-  no aplica. Nunca pongas la fecha de recepción como fecha del albarán.
-- **ejemplo**: recepción 2026-10-28, fase 1 `2020-10-17`, en el papel «17/10/26» con el 6 mal cerrado ⇒ `2026-10-17`,
-  razonamiento «el año impreso es 26; 2020 era el 6 leído como 0».
+En los cuatro `albaran_revision_fase2_*`, tras «CHECKLIST DE REGLAS DE REVISIÓN». `render_revision_fecha(fecha)`:
+
+```
+FECHA DE RECEPCIÓN DEL CORREO: 2026-10-28. Revisa SIEMPRE cabecera.fecha de la fase 1 contra el documento y
+contra esta fecha, sea cual sea la familia y aunque nada más cambie. {REGLA_DEL_ANIO}
+Si la fecha de fase 1 no cumple esa regla y el papel admite el año correcto, corrige SOLO el año (día y mes, los
+del papel) y añade un razonamiento con campo "cabecera.fecha" y patron_aplicado "anio_fecha_recepcion". Si la
+fase 1 leyó mal el día o el mes, corrígelos con lo que diga el papel. Si el papel trae un año legible y
+plausible, no lo toques. Nunca pongas la fecha de recepción como fecha del albarán.
+```
+
+Ejemplo para el YAML (fijo, no lo pinta el código): recepción 2026-10-28, fase 1 `2020-10-17`, papel «17/10/26» con
+el 6 mal cerrado ⇒ `2026-10-17`. `NOTA_REVISION_SIN_RECEPCION`: `(Sin fecha de recepción del correo: revisa
+cabecera.fecha solo contra el papel, como siempre.)`
 
 ## 5. Clases y funciones (capa)
 
@@ -111,7 +139,7 @@ razonamiento de IA2 y, aguas abajo, la red de sv3).
 - `ruesma_comun` (`ContextoCorreo` ya trae `recibido_utc`; el bloque del correo y su advertencia de DATO no cambian).
 - sv1 (ya envía la recepción), sv3 (`fecha_guard_service.py` sigue marcando `fecha_albaran_fuera_de_rango`), sv9
   (`fecha_no_plausible`), sv4 (la corrección a mano es F-108).
-- Los cuatro prompts `albaran_revision_fase2_*` (heredan por `{prompt_fase_1}` y `{revision_rules}`), los schemas de
+- Del resto de los cuatro prompts de fase 2, todo salvo la sección nueva; `revision_rules.yaml`; los schemas de
   `domain/models/` y `config/prompts/svc2_prompt_albaran_factura_es.yaml` (no cargado).
 - La API HTTP de sv2 (`/v1/albaranes/extract`): no recibe correo, va sin referencia (Nota sin recepción).
 - `evals/runner.py` y `evals/procesos/sv2_extraccion.py`: la pasada completa sigue midiendo sin referencia; con
@@ -131,26 +159,32 @@ de 2024, 1 de 2023). Por eso tres juegos:
 | A | los de producción con el año mal (§7.1) | la recepción real | que la referencia arregla el fallo (C1) |
 | B | los 59 del banco | esperada + 7 días (135 de 158 en producción llegan en ≤ 30 días) | que no rompe lo que funciona (C2) |
 | C | los 13 del banco anteriores a 2025 | esperada + 730 días | que un año antiguo impreso de verdad no se pisa (C3) |
+| D | 5 sintéticos de cambio de año (R27) | la de cada caso | diciembre con correo de enero, enero con enero, diciembre con diciembre, año legible y año de dos cifras (C6) |
 
 - **Variantes**: `base` = YAML de `--base` (sin marcador ni regla ⇒ el prompt de hoy byte a byte, R8) y `rama`.
 - **Umbral de C1** (D6): en A, casos con mayoría `exacta` tras IA2 en rama ≥ 80 % y ≥ base. C4 (ninguna ejecución
   `referencia`) vigila que la IA no copie la recepción.
-- **Coste**: 2 llamadas por caso, variante y repetición. Con A = 19, B = 59, C = 13 y 2 repeticiones: 728 llamadas.
-  Con B muestreado a 20 casos (semilla fija): 416 (D7).
+- **Efecto de IA2, aparte** (R21, R29): por ejecución, fecha de IA1 frente a la final (`corrige`, `estropea`, `cambia`,
+  `igual`). C5 exige 0 `estropea` en rama; la tabla dice cuánto aporta la revisión obligatoria frente a base.
+- **Juego D**: imágenes JPG de un albarán mínimo (emisor ficticio «PROVEEDOR SINTÉTICO, S.L.», una línea, la fecha
+  como único dato variable), generadas con Pillow por `evals/sinteticos_fecha.py`; su tipología, `generico`.
+- **Coste** (D7 decidida): 2 llamadas por caso, variante y repetición; A = 19, B = 20 (semilla fija), C = 13, 2
+  repeticiones: **416**. D suma 5 × 2 × 2 × 2 = 40.
 - **Modelos**: los del entorno (`GEMINI_MODEL`, `OPENAI_MODEL`), que deben ser los de producción (F-085).
 
 ### 7.1 Montaje del juego A (M1)
 
 1. Líder, solo lectura (sesión con `default_transaction_read_only=on`, clave de Key Vault en variable de proceso):
    lista de los documentos activos de `albaran_documents_merge` con `|fecha − email_received_datetime| > 365` días, con
-   su `id`, ruta de SharePoint, tipología y recepción, en `evals/inputs/fecha/origen.json` (**ignorado por git**).
-2. Humano: deja cada PDF en `evals/inputs/albaranes/FEC-NNN.pdf` y lee en el papel la fecha verdadera.
+   su `id`, tipología y recepción, en `evals/inputs/fecha/origen.json` (**ignorado por git**).
+2. Líder, solo lectura en Blob (permiso del humano, 2026-10-30): descarga cada PDF a
+   `evals/inputs/albaranes/FEC-NNN.pdf` y lee en el papel la fecha verdadera; con eso cierra D8.
 3. Humano o líder: `evals/casos_fecha.json` con `caso_id`, `tipologia`, `fecha_esperada`, `recibido` (solo fechas y
    tipología; sin proveedor ni número de albarán). Se versiona.
 
 Los 3 de los 19 sin el patrón «día y mes bien, año mal» (dos de un transportista de residuos y uno de un gestor de
 residuos) pueden ser **otra fecha del papel** (autorización, contrato) y no un año mal leído: el humano lo dirá en el
-paso 2 (D8).
+paso 2 (D8, la cierra el líder).
 
 ## 8. Después del despliegue (M4, solo lectura)
 
@@ -166,16 +200,27 @@ SELECT count(*) AS comparables,
 ```
 
 Línea base: 19 de 158 (12 %), 17 de 155 en octubre. Además, cuántos razonamientos de IA2 llevan
-`patron_aplicado = anio_fecha_recepcion` (en `raw_extraction_json`). Despliegue: solo sv2 (`.\deploy.ps1 -Only sv2`,
+`patron_aplicado = anio_fecha_recepcion` (en `raw_extraction_json`) y en cuántos documentos la fecha de IA1
+(`debug.phase_2.debug.phase_1_json`) difiere de la final (línea base: 21 de 158). En enero de 2027 se repite la
+medición solo sobre albaranes con fecha de diciembre y correo de enero (el riesgo de §9). Despliegue: solo sv2 (`.\deploy.ps1 -Only sv2`,
 lo lanza el humano); sin orden con otros servicios porque no cambia ningún contrato.
 
 **PARADA 1 (parcial) del humano, 2026-10-30:** D7 = 416 llamadas («mejor 416 lecturas»); para el juego A, permiso de lectura en Blob al líder, que leerá las fechas verdaderas de los 19 en el papel (D8 se cierra con esa lectura). D1–D6 y D9: propuestas las recomendadas, pendientes de su confirmación explícita.
 
-## 9. Riesgos y decisiones (PARADA 1: las valida el humano)
+## 9. Riesgos y decisiones (PARADA 1)
 
-- **D1 · Dónde entra la referencia.** (a) Marcador en el task de IA1 + regla en la checklist de IA2 (IA2 recibe además
-  el bloque dentro de `{prompt_fase_1}`). (b) Solo IA1. (c) Solo IA2. **Recomendada (a)**: el error nace en IA1 y hoy
-  IA2 no lo ve; con (c) depende de que IA2 cambie lo que IA1 leyó, y en estos 19 no lo hizo nunca.
+Estado a 2026-10-30: **D7 decidida (416)**; **D8 la cierra el líder** con la lectura en Blob; D1–D6 y D9 siguen como
+propuestas recomendadas, **pendientes de confirmar por el humano**.
+
+- **Riesgo del cambio de año** (enmienda v1.1). Una referencia leída como «el año del correo» convierte un albarán del
+  28-12 que llega el 03-01 en uno de 11 meses después: justo el error que se quiere quitar, pero al revés y en
+  diciembre-enero. Mitigación: la Regla del año (igual o anterior; día y mes posteriores ⇒ año anterior), el mismo
+  texto en IA1 e IA2 y con cualquier fecha (R28), el juego D (C6) y la repetición de M4 en enero. Riesgo residual: un
+  albarán con fecha unos días POSTERIOR al correo (fechado por adelantado) con un año dudoso puede pasar al año
+  anterior; sv3 lo marca a revisión (> 365 días) y F-108 lo corrige a mano.
+- **D1 · Dónde entra la referencia.** (a) Marcador en el task de IA1 + sección propia de revisión obligatoria en los
+  prompts de IA2 (v1.1; IA2 recibe además el bloque de fase 1 dentro de `{prompt_fase_1}`). (b) Solo IA1. (c) Solo
+  IA2. **Recomendada (a)**: el error nace en IA1 y hoy IA2 no lo ve; en estos 19 IA2 no corrigió ninguno.
 - **D2 · Qué fecha.** (a) La parte de fecha de `recibido_utc` en UTC, como la red de sv3. (b) Hora de Madrid. **(a)**:
   para leer un año, unas horas no importan, y las dos redes miran lo mismo.
 - **D3 · Sin correo.** (a) Sin referencia (Nota sin recepción). (b) Hoy como referencia, como hace sv3. **(a)**: una
@@ -187,8 +232,8 @@ lo lanza el humano); sin orden con otros servicios porque no cambia ningún cont
 - **D5 · Sin marcador no se añade nada** (como `{empresas_cliente}`, no como `{obras_activas}`): permite medir la
   variante `base` con el código nuevo. Riesgo: un YAML desplegado sin marcador va sin referencia; lo vigila R15.
 - **D6 · Umbral de C1**: 80 % de A con mayoría `exacta` tras IA2. Alternativa: «mejor que base» sin umbral.
-- **D7 · Tamaño de la medición**: B completo (728 llamadas) o muestreado a 20 (416).
-- **D8 · Los 3 casos de residuos sin patrón de año**: si el papel muestra que la IA tomó otra fecha (autorización del
+- **D7 · Tamaño de la medición**: **decidida el 2026-10-30, 416** (B a 20 casos), «mejor 416 lecturas».
+- **D8 · Los 3 casos de residuos sin patrón de año** (la cierra el líder con la lectura en Blob): si el papel muestra que la IA tomó otra fecha (autorización del
   gestor, contrato), (a) basta la aclaración «emisión o servicio, no pedido, contrato o autorización» de §4.1, que ya
   va incluida; (b) se sacan del juego A y se abre ficha propia.
 - **D9 · Versionar `evals/casos_fecha.json`**: solo fechas y tipología, sin datos del proveedor. Alternativa: dejarlo en
