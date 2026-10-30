@@ -1,6 +1,8 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-111 · `pending` (2026-10-30): spec escrita, espera PARADA 1** — residuos: contenedores de 3, 6 o 9 m³ y partida del capítulo de gestión de residuos. Spec en `specs/F-111-residuos-contenedores-y-partida/`, informe `progress/spec_F-111.md` (medición en solo lectura: cambian 2 líneas de contenedores, una aprobada; 8 líneas de residuos sin partida; el capítulo existe en 17 de 17 obras, como subcapítulo de CD). Decisiones abiertas D1–D10 en `design.md` §10 (recomendada (a) en todas); D9 = orden frente a F-100, que comparte ficheros. Va después de F-106.
+
 **F-106 · `in_progress` (2026-10-28): recalcular el precio al cambiar la medición** — rama `feature/F-106-precio-al-cambiar-medicion`, worktree `../albaranes-F-106`. Spec v3 con PARADA 1 cerrada (D8 = c, D9–D13 = a; design §10). Empieza por la T0 (solo lectura en producción: cuántas líneas pendientes no cuadran; si más del 10 %, se para). Despliegue: sv6 → sv9 → sv4. F-110 (dto a Sigrid) va detrás y toca la misma función de sv9.
 
 **F-100 · `blocked` (2026-10-28): parte A (T1–T7, banco VAL) con review APPROVED** (`progress/review_F-100.md` en su rama, pasada 1). Espera a F-106 en `dev` para la medición ANTES (T8–T11; T10 y T11 de pago, las lanza el humano). Antes de T11: (O1) que el humano acepte los 6 mutantes equivalentes; (O2) corregir la fila «valoración» de `evals/README.md:257` (mide importe, precio y su fuente, no la cantidad); (O3) fusionar `dev` antes de T11, nunca entre T11 y T21; (O4) decidir si el banco normaliza las partidas como producción (F-076) antes de IA4.
