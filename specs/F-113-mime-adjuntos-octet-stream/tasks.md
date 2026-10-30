@@ -20,7 +20,7 @@ lectura, salvo el despliegue, que lo hace el humano. PARADA 1 cerrada el 2026-10
 - [x] T5: sv2 `_build_attachments` con `detectar_mime` y `nombre_coherente` al principio; JPEG `octet-stream` ⇒ imagen realzada; PDF genérico sin `.pdf` ⇒ PDF; caso coherente idéntico al de hoy (R17–R19)  |  Verificación: `pytest services/albaranes-api/tests/test_f113_build_attachments.py services/albaranes-api -k "build_attachments or preproceso"`
 - [x] T6: script `medir_f113_octet_stream.py` de solo lectura y su test sin BBDD (R20, R21)  |  Verificación: `pytest services/albaranes-email/tests/test_f113_medicion.py`
 - [x] T7: documentación: `docs/ARCHITECTURE.md` (regla de blobs de `input/`) y `azure-apps/albaranes.md`, este último con commit local en ese repo y sin push (R23)  |  Verificación: lectura del reviewer
-- [ ] T8: `bash harness/init.sh` en verde (cierre del código, antes de la review)  |  Verificación: `bash harness/init.sh`
+- [x] T8: `bash harness/init.sh` en verde (cierre del código, antes de la review)  |  Verificación: `bash harness/init.sh`
 - [ ] T9: MANUAL (líder o humano, solo lectura): el script de T6 contra Azure antes de desplegar, con las `PG_*` de Azure en la consola; anotar el recuento en `progress/impl_F-113.md` (D-6)  |  Verificación: MANUAL (humano) · recuento anotado
 - [ ] T10: MANUAL (humano): desplegar sv1 y después sv2 desde `infra/`: `Set-DeployTag; .\deploy.ps1 -Only sv1`, `.\deploy.ps1 -Only sv2` y `.\check_deploy.ps1` (D-8)  |  Verificación: MANUAL (humano) · los dos con la revisión nueva en `Running`
 - [ ] T11: MANUAL (líder, solo lectura): el script de T6 a las 24 h del despliegue; debe salir 0 casos nuevos (D-6)  |  Verificación: MANUAL (humano) · recuento anotado

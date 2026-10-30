@@ -53,8 +53,13 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 - Original: `parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])`
 - Mutado:   `parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[1])`
 
-#### Análisis (PENDIENTE del implementer)
+#### Análisis (implementer, 2026-10-30)
 
-> Por qué ningún test lo caza: PENDIENTE.
-> Decisión: ¿test nuevo o mutante equivalente justificado?
+> Por qué ningún test lo caza: solo cambia el texto de `--help` (la línea 1 del
+> docstring es la vacía) y ningún test pedía la ayuda. No es equivalente: la
+> ayuda dejaría de decir qué mide el script.
+> Decisión: **test nuevo** `test_f113_r20_la_ayuda_dice_que_mide`
+> (`services/albaranes-email/tests/test_f113_medicion.py`). Comprobado a mano:
+> con el mutante aplicado el test cae (`1 failed`); con el original, 17 passed.
+> Hueco real cerrado: **0 supervivientes** tras el test.
 
