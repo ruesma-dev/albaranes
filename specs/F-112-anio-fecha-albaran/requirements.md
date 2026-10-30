@@ -1,4 +1,4 @@
-# F-112 · El año del albarán se lee con la fecha del correo como referencia · Requisitos (v1.2)
+# F-112 · El año del albarán se lee con la fecha del correo como referencia · Requisitos (v1.3)
 
 Servicio: **sv2** (`services/albaranes-api`). Banco de evals (`evals/`) para medir. Rigor `estandar`.
 Ficha en `harness/features.json` (F-112). Va **después de F-106**. Medición de partida en `progress/spec_F-112.md` §1.
@@ -10,12 +10,14 @@ determinista; la referencia solo se le da a la IA para que lea mejor el año. La
 **Enmienda v1.1 (2026-10-30, PARADA 1).** Palabras del humano: «añade que ia2 revisara tambien la fecha. el problema
 vendra cuando estemos en un cambio de año (diciembre o enero)». Cambian R3, R17, R18, R19, R21 y R22; nuevos R27–R29.
 D7 = 416 llamadas (decidida). **v1.2 (2026-10-30)**: juego A leído en el papel (`progress/juego_a_F-112.md`); cambian el
-glosario (Regla del año), R19 y R22 (C7). Decisiones D1–D6 y D9 = (a) por el humano; D2 señalada (design §9).
+glosario (Regla del año), R19 y R22 (C7). **v1.3 (2026-10-30)**: el humano elige **D2 = (b)**, día de recepción en
+Europe/Madrid; cambian el glosario, R1, R2 y R27 (SIN-006, Nochevieja); nuevo R30. **PARADA 1 cerrada**.
 
 ## Glosario
 - **Recepción**: `ContextoCorreo.recibido_utc` (el `receivedDateTime` de Graph que sv1 guarda en el blob lateral
   `input/{document_id}.correo.json` desde F-048).
-- **Fecha de recepción**: la fecha (`date`) de los 10 primeros caracteres de la Recepción, en UTC.
+- **Fecha de recepción**: el día (`date`) de la Recepción pasada a la hora de Europe/Madrid (D2 = b), no la fecha
+  UTC: un correo de las 23:30 UTC del 31-12 es del 01-01 en Madrid.
 - **Bloque de recepción**: el texto que sustituye al marcador `{fecha_recepcion}` del task de fase 1.
 - **Nota sin recepción**: el texto fijo que lo sustituye cuando no hay Fecha de recepción.
 - **Bloque de revisión de fecha**: el texto que sustituye al marcador `{revision_fecha}` de los prompts de fase 2.
@@ -28,9 +30,11 @@ glosario (Regla del año), R19 y R22 (C7). Decisiones D1–D6 y D9 = (a) por el 
   albarán de verdad antiguo), D (sintéticos de cambio de año). Definidos en R19 y R27.
 
 ## A. La referencia en sv2
-R1. CUANDO `fecha_recepcion_de` reciba un `ContextoCorreo` cuyo `recibido_utc` empiece por una fecha ISO válida
-(`2026-10-28T07:12:00Z`, `2026-10-28`), sv2 debe devolver esa fecha como `date`.
-R2. SI el contexto es `None`, o `recibido_utc` es `None`, vacío o no empieza por una fecha ISO válida, ENTONCES
+R1. CUANDO `fecha_recepcion_de` reciba un `ContextoCorreo` cuyo `recibido_utc` sea una fecha-hora ISO válida (con `Z`,
+con desfase o sin zona, que se toma como UTC), sv2 debe devolver el día en Europe/Madrid: `2026-10-28T07:12:00Z` ⇒
+2026-10-28; `2026-12-31T23:30:00Z` ⇒ **2027-01-01** (Nochevieja, CET); `2026-07-15T22:30:00Z` ⇒ 2026-07-16 (CEST);
+`2026-12-31T22:59:59Z` ⇒ 2026-12-31. Una fecha sola (`2026-10-28`) se devuelve tal cual.
+R2. SI el contexto es `None`, o `recibido_utc` es `None`, vacío o no es una fecha ni fecha-hora ISO válida, ENTONCES
 `fecha_recepcion_de` debe devolver `None` sin lanzar excepción.
 R3. CUANDO `render_fecha_recepcion` reciba una fecha, sv2 debe devolver un texto fijo que contiene esa fecha en
 formato `AAAA-MM-DD` y que dice: que es la fecha de llegada y no la del albarán; que sirve solo para el AÑO; la Regla
@@ -109,11 +113,16 @@ R27. `python -m evals.sinteticos_fecha` debe generar, de forma determinista, las
 «28/12» sin año, correo 2027-01-03 ⇒ 2026-12-28; **SIN-002** papel «02/01» sin año, correo 2027-01-05 ⇒ 2027-01-02;
 **SIN-003** papel «15/12» sin año, correo 2026-12-18 ⇒ 2026-12-15; **SIN-004** papel «28/12/2026» legible, correo
 2027-01-03 ⇒ 2026-12-28 (no se pasa a 2027); **SIN-005** papel «30/12/25» con año de dos cifras, correo 2026-01-02 ⇒
-2025-12-30. Dos ejecuciones dan los mismos bytes.
+2025-12-30; **SIN-006** (Nochevieja) papel «01/01» sin año, correo `2026-12-31T23:30:00Z` ⇒ referencia 2027-01-01 ⇒
+2027-01-01. Los casos D guardan `recibido_utc` y el comparador saca su referencia con `fecha_recepcion_de` (R1). Dos
+ejecuciones dan los mismos bytes.
 R28. CUANDO `render_fecha_recepcion` y `render_revision_fecha` reciban una fecha de enero, el texto debe ser el mismo
 que con cualquier otra fecha salvo la propia fecha (la Regla del año va siempre, no solo en enero).
 R29. El resumen de R24 debe traer una tabla propia del efecto de IA2 (R21) por juego y variante, y la lista de
 `caso_id` con `estropea`.
+
+R30. La conversión a Europe/Madrid debe funcionar igual en Windows y en el contenedor: sv2 declara `tzdata` en
+`infra/manifests/sv2/requirements.txt`, y un test fija los cuatro ejemplos de R1 sin depender de la zona del sistema.
 
 ## F. Declaraciones y documentación
 R25. `harness/rutas_sensibles.json` debe declarar `services/albaranes-api/application/services/fecha_recepcion.py`

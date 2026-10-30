@@ -56,11 +56,19 @@ Cita literal: «añade que ia2 revisara tambien la fecha. el problema vendra cua
 - Pista nueva: 5 de los 14 dieron 2020 por el «R.D. 553/2020» impreso; la Regla del año dice que el año nunca sale
   de una referencia normativa (R.D., Orden, Ley).
 - Decisiones: D1–D6 y D9 = (a), dadas por buenas por el humano («doy por bueno a»); D7 = 416.
-- **Señalada al líder, sin decidir**: D2 (a) (fecha UTC) choca con la regla del cambio de año en la primera hora
+- **Señalada al líder (resuelta en la v1.3, D2 = b)**: D2 (a) (fecha UTC) choca con la regla del cambio de año en la primera hora
   o dos del 1 de enero (fecha UTC 31-12 ⇒ un albarán del 01-01 iría al año anterior). La (b), fecha de Madrid, lo
   evita. Detalle en design §9.
 
-## 5. Decisiones de la v1 (historial; estado actual en el §4)
+## 5. Enmienda v1.3 (2026-10-30): D2 = (b) y PARADA 1 cerrada
+
+- El humano elige **D2 = (b)**: la referencia es el día de recepción del correo pasado a Europe/Madrid, no la fecha
+  UTC. Cambian R1, R2 y R27; nuevo R30 (`tzdata` en sv2). Caso de Nochevieja SIN-006: correo a las 23:30 UTC del
+  31-12, que en Madrid ya es 01-01.
+- **PARADA 1 de F-112 cerrada**: D1 y D3–D9 en (a) (D8 cerrada con el juego A), D7 = 416, D2 = (b).
+- El estado de `features.json` no se ha tocado (lo pasa el líder).
+
+## 6. Decisiones de la v1 (historial; estado actual en el §5)
 
 - **D1** dónde entra la referencia: IA1 + regla de IA2 (recomendada), solo IA1, o solo IA2.
 - **D2** fecha UTC (recomendada) u hora de Madrid. **D3** sin correo: sin referencia (recomendada) u «hoy».

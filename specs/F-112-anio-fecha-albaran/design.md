@@ -1,4 +1,4 @@
-# F-112 · El año del albarán se lee con la fecha del correo como referencia · Diseño (v1.2)
+# F-112 · El año del albarán se lee con la fecha del correo como referencia · Diseño (v1.3)
 
 Servicio: **sv2**. Sin DDL, sin cambios en `ruesma_comun`, sin cambios de contrato entre servicios. Medición de
 partida y detalle de la lectura en `progress/spec_F-112.md`. Decisiones abiertas (PARADA 1) en §9.
@@ -8,7 +8,8 @@ estemos en un cambio de año (diciembre o enero)». Efecto: IA2 revisa la fecha 
 prompts (§4.2, sustituye a la regla de checklist de la v1); la Regla del año (requirements, glosario) entra en los dos
 bloques; el comparador mide aparte el efecto de IA2 y gana el juego D sintético (§7); riesgo nuevo en §9. D7 = 416
 llamadas (decidida). **v1.2 (2026-10-30)**: juego A leído en el papel (`progress/juego_a_F-112.md`), D8 cerrada,
-pista del R.D. en la Regla del año y D1–D6 y D9 = (a) por el humano («doy por bueno a»), con D2 señalada (§9).
+pista del R.D. en la Regla del año y D1, D3–D6 y D9 = (a) por el humano («doy por bueno a»). **v1.3**: **D2 = (b)**,
+día de recepción en Europe/Madrid; caso SIN-006 de Nochevieja. **PARADA 1 cerrada.**
 
 ## 1. Qué pasa hoy (leído en el código y en producción, solo lectura)
 
@@ -34,7 +35,7 @@ pista del R.D. en la Regla del año y D1–D6 y D9 = (a) por el humano («doy po
 | `services/albaranes-api/tests/test_f112_render_prompt.py` | R6–R11 (servicio con cliente LLM falso) |
 | `services/albaranes-api/tests/test_f112_worker.py` | R12–R14 (pipeline y worker con fakes) |
 | `services/albaranes-api/tests/test_f112_prompt_yaml.py` | R15–R18 (YAML reales) |
-| `evals/sinteticos_fecha.py` | Genera las imágenes JPG de SIN-001…005 con Pillow (texto fijo, sin aleatoriedad) y `evals/casos_fecha_sinteticos.json` (R27) |
+| `evals/sinteticos_fecha.py` | Genera las imágenes JPG de SIN-001…006 con Pillow (texto fijo, sin aleatoriedad) y `evals/casos_fecha_sinteticos.json` (R27) |
 | `tests/test_f112_sinteticos_fecha.py` | R27 (determinismo: dos generaciones, mismos bytes; casos y fechas esperadas) |
 | `evals/procesos/sv2_fecha.py` | Las dos fases de un caso con `fecha_recepcion`, devolviendo solo `cabecera.fecha` (reutiliza `sv2_proveedor.montar_servicio`, `ficheros_de_base`, `ficheros_de_rama` y `sv2_extraccion._adjuntos`) |
 | `evals/comparar_fecha.py` | CLI del comparador (R19–R24), forma de `evals/comparar_proveedor.py` |
@@ -60,6 +61,9 @@ pista del R.D. en la Regla del año y D1–D6 y D9 = (a) por el humano («doy po
 - `services/albaranes-api/config/prompts.yaml`, los cuatro `albaran_revision_fase2_*`: sección «Fecha del albarán
   (revisión obligatoria)» con `{revision_fecha}`, después de la checklist y antes del grounding (§4.2).
 - `revision_rules.yaml` **no** se toca (en la v1 llevaba la regla; la v1.1 la sustituye por la sección propia).
+- `infra/manifests/sv2/requirements.txt`: `tzdata` (R30). Windows no trae base de zonas y `python:3.12-slim` no la
+  garantiza; con el paquete, `ZoneInfo("Europe/Madrid")` funciona igual en los tests y en Azure. No se copia el
+  cálculo a mano de la DST de sv4 (`_madrid_local`): sería lógica duplicada entre servicios.
 - `harness/rutas_sensibles.json`: `fecha_recepcion.py` en la verificación `evals` (R25). Es declaración del proyecto,
   no del arnés genérico: no se porta a `arnes-base`.
 - `docs/ARCHITECTURE.md` (regla 26), `services/albaranes-api/sv2.md` (marcador), `evals/README.md` (comparador) (R26).
@@ -128,7 +132,9 @@ cabecera.fecha solo contra el papel, como siempre.)`
 # application/services/fecha_recepcion.py  (application, puro)
 MARCADOR_FECHA_RECEPCION = "{fecha_recepcion}"
 NOTA_SIN_RECEPCION: str
-def fecha_recepcion_de(correo: ContextoCorreo | None) -> date | None   # date.fromisoformat(recibido_utc[:10])
+def fecha_recepcion_de(correo: ContextoCorreo | None) -> date | None
+    # datetime.fromisoformat (Z ⇒ +00:00; sin zona ⇒ UTC) .astimezone(ZoneInfo("Europe/Madrid")).date();
+    # una fecha sola, tal cual; cualquier otra cosa, None (R1, R2, D2 = b)
 def render_fecha_recepcion(fecha: date | None) -> str
 ```
 
@@ -161,7 +167,7 @@ de 2024, 1 de 2023). Por eso tres juegos:
 | A | los 19 de producción (§7.1): 14 `anio`, 1 `dudoso`, 4 `antigua` | la recepción real | que arregla el fallo (C1) y no mueve las antiguas de verdad (C7) |
 | B | los 59 del banco | esperada + 7 días (135 de 158 en producción llegan en ≤ 30 días) | que no rompe lo que funciona (C2) |
 | C | los 13 del banco anteriores a 2025 | esperada + 730 días | que un año antiguo impreso de verdad no se pisa (C3) |
-| D | 5 sintéticos de cambio de año (R27) | la de cada caso | diciembre con correo de enero, enero con enero, diciembre con diciembre, año legible y año de dos cifras (C6) |
+| D | 6 sintéticos de cambio de año (R27) | la de cada caso, por `fecha_recepcion_de` | diciembre con correo de enero, enero con enero, diciembre con diciembre, año legible, año de dos cifras y Nochevieja (C6) |
 
 - **Variantes**: `base` = YAML de `--base` (sin marcador ni regla ⇒ el prompt de hoy byte a byte, R8) y `rama`.
 - **Umbral de C1** (D6): de los 14 `anio`, mayoría `exacta` tras IA2 en rama ≥ 80 % (≥ 12) y ≥ base; `exacta` exige
@@ -172,7 +178,7 @@ de 2024, 1 de 2023). Por eso tres juegos:
 - **Juego D**: imágenes JPG de un albarán mínimo (emisor ficticio «PROVEEDOR SINTÉTICO, S.L.», una línea, la fecha
   como único dato variable), generadas con Pillow por `evals/sinteticos_fecha.py`; su tipología, `generico`.
 - **Coste** (D7 decidida): 2 llamadas por caso, variante y repetición; A = 19, B = 20 (semilla fija), C = 13, 2
-  repeticiones: **416**. D suma 5 × 2 × 2 × 2 = 40.
+  repeticiones: **416**. D suma 6 × 2 × 2 × 2 = 48.
 - **Modelos**: los del entorno (`GEMINI_MODEL`, `OPENAI_MODEL`), que deben ser los de producción (F-085).
 
 ### 7.1 Juego A (M1, hecho por el líder el 2026-10-30)
@@ -206,8 +212,8 @@ lanza el humano); sin orden con otros servicios porque no cambia ningún contrat
 
 ## 9. Riesgos y decisiones (PARADA 1)
 
-Estado a 2026-10-30: D7 = 416 («mejor 416 lecturas»); D8 cerrada con la lectura del juego A; **D1–D6 y D9 = (a)**,
-dadas por buenas por el humano («doy por bueno a»), con **D2 señalada al líder** por el cambio de año (abajo).
+Estado a 2026-10-30: **PARADA 1 cerrada**. D1 y D3–D6 y D9 = (a) («doy por bueno a»), D7 = 416 («mejor 416
+lecturas»), D8 cerrada con la lectura del juego A y **D2 = (b)** (elección del humano tras el aviso del líder).
 
 - **Riesgo del cambio de año** (v1.1). Leer la referencia como «el año del correo» convierte un albarán del 28-12 que
   llega el 03-01 en uno de 11 meses después. Mitigación: la Regla del año, el mismo texto en IA1 e IA2 y con cualquier
@@ -217,10 +223,10 @@ dadas por buenas por el humano («doy por bueno a»), con **D2 señalada al líd
   año lo prohíbe expresamente y el juego A lo mide.
 - **D1 = (a)**: marcador en el task de IA1 + sección propia de revisión obligatoria en los prompts de IA2 (v1.1; IA2
   recibe además el bloque de fase 1 en `{prompt_fase_1}`). Coherente con la enmienda: es la enmienda.
-- **D2 = (a)**, la parte de fecha de `recibido_utc` en UTC, como sv3. **Señalada, no decidida aquí**: con la Regla del
-  año, un correo recibido el 01-01 entre las 00:00 y la 01:00 o 02:00 de Madrid tiene fecha UTC 31-12; un albarán del
-  01-01 queda «después» de la referencia y la regla lo manda al año anterior (error de un año). La (b), fecha de
-  Madrid, lo evita. Lo decide el humano por medio del líder.
+- **D2 = (b)**, decidida por el humano: el día de la Recepción en Europe/Madrid. Con la (a), fecha UTC, un correo
+  recibido el 01-01 entre las 00:00 y la 01:00 (CET) de Madrid tenía fecha 31-12 y la Regla del año mandaba un
+  albarán del 01-01 al año anterior. Lo fijan R1 (cuatro ejemplos) y SIN-006. La red de sv3 sigue en UTC: con su
+  margen de 365 días, la diferencia de un día no cambia nada.
 - **D3 = (a)**: sin correo, sin referencia (Nota sin recepción); «hoy» empujaría el año de una reextracción vieja.
 - **D4 = (a)**: un año antiguo impreso de verdad se devuelve tal cual (sv3 lo marca, sv9 no da de alta, F-108
   corrige); sin campo nuevo. Coherente con la enmienda («no puede inventar un año si el papel trae uno legible»); lo
