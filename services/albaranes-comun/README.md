@@ -23,6 +23,7 @@ Resuelve la duplicación con deriva detectada en el análisis de código
 | `ruesma_comun.sigrid` *(0.7.0, F-052)* | Lectura de sigrid-api sin truncados silenciosos: `PoliticaTruncado`, `SigridRespuestaTruncada`, `comprobar_truncado`, `con_paginacion`, `leer_paginado`, `MAX_FILAS_POR_PETICION` (500.000) y `PAGINA_MAXIMA` (499.999). Sin HTTP ni SQL: la SQL de cada servicio es suya | el `truncated` que nadie miraba en sv3 y sv4 |
 | `ruesma_comun.obras` *(0.7.0, F-052)* | `normalizar_codigo_obra`: el código de obra canónico que se envía a Sigrid y se sella (semántica de sv3) | las 2 copias divergentes de sv3 y sv4 |
 | `ruesma_comun.sigrid.partidas` *(0.8.0, F-076; 0.9.0, F-098)* | Partidas HOJA de una obra (SQL de sv4 + `emp = 1`), `normalizar_partida` (`CI.04.18` ≡ `CI.4.18`), `casar_partida`, `resolver_partida_obra` (guarda de no hoja) y `CachePartidasObra` (TTL, LRU, fallo recordado). F-098: cada hoja con `ide`, capítulo (raíz de su cadena) y `codigo_completo` (`CD.99.01.64` para el cod `99.01.64` de CD), `ListaPartidasObra.capitulos`, motivo `completa`, `misma_partida`, `mostrar_partida` y `CachePartidasObra.consultar`. Subconjunto aprobado de F-049; excepción consciente a D2 de F-052 | la copia de la SQL y del cálculo de hojas de sv4 |
+| `ruesma_comun.mime` *(0.9.1, F-113)* | MIME real por los bytes: `detectar_mime` (firma > declarado específico > extensión con tabla fija > `application/octet-stream`; JPEG, PNG, GIF, WebP, TIFF, HEIC/HEIF y PDF), `nombre_coherente` (extensión acorde al MIME real), `es_mime_generico`, `MIME_PDF`. Funciones puras, solo stdlib. `normalizar_adjuntos` de `ruesma_comun.llm` lo aplica a cada adjunto | el `contentType` de Graph tomado tal cual (`application/octet-stream` en fotos de WhatsApp) |
 
 Hecho en la **entrega 2**: capa LLM y `contexto_linea` migradas como
 *reexports* de 3 líneas en los servicios. Hecho en la **entrega 3**: el
@@ -48,6 +49,13 @@ el paquete va en cada imagen.
 `mostrar_partida` y `CachePartidasObra.consultar`, sin romper API (los campos
 nuevos de `PartidaObra` van al final, con defecto y fuera de la igualdad). Se
 reconstruyen sv6 y sv4, en ese orden; sv9 la importa pero no cambia.
+
+**0.9.1** (F-113, 2026-10-30): módulo nuevo `ruesma_comun.mime` y
+`normalizar_adjuntos` devuelve cada adjunto con su MIME real (copia con `kind`
+coherente y WARNING sin nombre; el mismo objeto si ya era el real). Compatible:
+sin cambios de firma. Se reconstruyen sv1 y sv2, en ese orden; sv5 importa
+`ruesma_comun.llm` y lo hereda en su próxima imagen sin obligar a desplegarlo.
+La 0.10.0 es de F-106, que entra en `dev` después.
 
 ## Instalación en local (PyCharm)
 
