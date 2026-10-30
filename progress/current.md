@@ -1,6 +1,8 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-115 · spec escrita (2026-10-30), pendiente de PARADA 1** — al cambiar el proveedor (o la obra, D2) se retira el contrato que no es del albarán, se rebusca y se revalora sin regenerar líneas. Spec en `specs/F-115-cambio-proveedor-reinicia-contrato/`, rama `feature/F-115-cambio-proveedor-reinicia-contrato`, worktree `../albaranes-F-115`. Servicios: comun, sv3, sv4 (sin DDL; sv5/sv6/sv9 sin cambios). Depende de F-106 fase B y va tras F-114 (D5). Decisiones D1–D7 con recomendación en `design.md` §8 y resumen en `progress/spec_F-115.md`.
+
 **F-106 · `in_progress` (2026-10-28): recalcular el precio al cambiar la medición** — rama `feature/F-106-precio-al-cambiar-medicion`, worktree `../albaranes-F-106`. Spec v3 con PARADA 1 cerrada (D8 = c, D9–D13 = a; design §10). Empieza por la T0 (solo lectura en producción: cuántas líneas pendientes no cuadran; si más del 10 %, se para). Despliegue: sv6 → sv9 → sv4. F-110 (dto a Sigrid) va detrás y toca la misma función de sv9.
 
 **F-100 · `blocked` (2026-10-28): parte A (T1–T7, banco VAL) con review APPROVED** (`progress/review_F-100.md` en su rama, pasada 1). Espera a F-106 en `dev` para la medición ANTES (T8–T11; T10 y T11 de pago, las lanza el humano). Antes de T11: (O1) que el humano acepte los 6 mutantes equivalentes; (O2) corregir la fila «valoración» de `evals/README.md:257` (mide importe, precio y su fuente, no la cantidad); (O3) fusionar `dev` antes de T11, nunca entre T11 y T21; (O4) decidir si el banco normaliza las partidas como producción (F-076) antes de IA4.
