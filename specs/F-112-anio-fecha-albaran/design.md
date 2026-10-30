@@ -169,6 +169,8 @@ Línea base: 19 de 158 (12 %), 17 de 155 en octubre. Además, cuántos razonamie
 `patron_aplicado = anio_fecha_recepcion` (en `raw_extraction_json`). Despliegue: solo sv2 (`.\deploy.ps1 -Only sv2`,
 lo lanza el humano); sin orden con otros servicios porque no cambia ningún contrato.
 
+**PARADA 1 (parcial) del humano, 2026-10-30:** D7 = 416 llamadas («mejor 416 lecturas»); para el juego A, permiso de lectura en Blob al líder, que leerá las fechas verdaderas de los 19 en el papel (D8 se cierra con esa lectura). D1–D6 y D9: propuestas las recomendadas, pendientes de su confirmación explícita.
+
 ## 9. Riesgos y decisiones (PARADA 1: las valida el humano)
 
 - **D1 · Dónde entra la referencia.** (a) Marcador en el task de IA1 + regla en la checklist de IA2 (IA2 recibe además
