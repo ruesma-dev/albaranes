@@ -22,7 +22,7 @@ se hacen aquí T22 (líder, Chrome), T23 y T24 (humano) ni la T25 final (líder 
 | T17 / T18 | `e988163` / `23490f7` | sv4 fase B: las nueve vías registran la edición, «✋», «Volver a lo calculado», 409 de R28 |
 | T19 | `86141a4` | `scripts/listar_altas_descuadradas_f106.py` de sv9 (solo `SELECT`) |
 | T20 | `dc725e8` + azure-apps `9a369c3` | ARCHITECTURE reglas 13, 20, 22, 25 y acceso a datos; sv4.md, sv6.md, sv9.md; `azure-apps/albaranes.md` |
-| T21 | MUT_COMMIT | campaña de mutación: `progress/mutacion_F-106.md` |
+| T21 | `eb579da`…`cc850d3`, `0babedb` | mutación (`progress/mutacion_F-106.md`) y 16 tests que matan supervivientes |
 
 Ficheros de producción: comun `importes.py`, `alta_sigrid.py`, `edicion_manual.py` (nuevo), `__init__.py`,
 `pyproject.toml`; sv9 `alta_models.py`, `sql_alta_repository.py`, `validador_alta.py`,
@@ -57,13 +57,9 @@ Fase A (pasadas 1–3):
    llevan defecto `None`, así que la petición sale idéntica a la de hoy.
 5. Equivalente #6 de F-053 T25 rehecho: la línea se movió a comun y ya no es equivalente.
    `test_f098_t5_version_090` pasa a «≥ 0.9.0 y pyproject igual»; la versión exacta la exige `test_f106_t2_version_0100`.
-6. Ficha y botones:
-   - Solo las filas a registrar se pintan en rojo.
-   - El `title` del precio junta «Precio del contrato» y «A Sigrid».
-   - Los botones mandan solo `{cuadrar}` por `enviarFila` (guardar = bloquear).
-   - Sin `ultimoCampo` y con el importe cambiado, viaja el importe.
-   - `TEXTOS_MOTIVO_ALTA["linea_no_cuadra"]` = «La línea no cuadra (cantidad × precio × (1 − dto) ≠ importe)». La spec
-     no da literal.
+6. Ficha y botones: solo las filas a registrar se pintan en rojo; el `title` del precio junta «Precio del contrato» y
+   «A Sigrid»; los botones mandan solo `{cuadrar}` por `enviarFila` (guardar = bloquear); sin `ultimoCampo` y con el
+   importe cambiado, viaja el importe; `linea_no_cuadra` = «La línea no cuadra (cantidad × precio × (1 − dto) ≠ importe)».
 7. `syncImporteUnitario` sigue anidada en `wireConciliaEdit`, su único llamador. Sacada fuera rompía los tests de
    F-065 f3bis, que extraen `wireConciliaEdit` sin ella.
 
@@ -93,11 +89,8 @@ Fase B (T13–T18):
 14. «Volver a lo calculado» no exige la fila desbloqueada: desbloquear es parte de volver. Da 404 sin edición o en una
     `fila_entera`. Si la línea calculada ya no existe, no se restauran ni el origen ni la fuente del precio.
 15. Fila desaparecida en el PATCH ⇒ `ValoracionCambiadaError` (409). Una fila de otro documento sigue siendo 404.
-16. Script R18:
-    - «Precio difiere» si `|enviado − P(1 − d)| × |cantidad enviada| > 0,02 €`, la tolerancia del cuadre en euros. Así
-      el redondeo a céntimos del importe no lista media base.
-    - Solo altas `modo = 'real'`.
-    - Las líneas sin fila o ilegibles no se comparan.
+16. Script R18: «precio difiere» si `|enviado − P(1 − d)| × |cantidad enviada| > 0,02 €` (la tolerancia del cuadre, para
+    que el redondeo a céntimos no liste media base); solo altas `modo = 'real'`; sin fila o ilegibles, no se comparan.
 
 ## Propuesta al líder (D11)
 
@@ -171,18 +164,22 @@ GREEN:
 | comun `test_f106_edicion` tras T18 | 41 passed (la suite entera, en `init.sh`) | 5 s |
 | sv9 tras T19 | 1062 passed, 1 failed: el KO de entorno de abajo | 108 s |
 
-Nota sobre sv4: la primera pasada dio 30 rojos y la segunda 2111 passed.
-- 19 de F-051 por la falta de `producto_sigrid` en el fixture.
-- 10 de f3bis y 1 de F-077 por `syncImporteUnitario`.
-
-Los 30 se arreglaron sin tocar aserciones, uno de ellos en el código (`test_f051_r16_todas_en_un_unico_update`).
+Nota sobre sv4: la primera pasada dio 30 rojos (19 de F-051 por `producto_sigrid` en el fixture; 10 de f3bis y 1 de
+F-077 por `syncImporteUnitario`), arreglados sin tocar aserciones; la segunda, 2111 passed.
 
 **KO de entorno del worktree (no del código)**: `sv9 test_f069_t15_script_arranca_fuera_de_sv9…` lanza un script en un
 subproceso con el entorno vacío. Sin `PYTHONPATH`, coge la comun editable del árbol principal (`../albaranes`, 0.9.0,
 sin `linea_a_sigrid`) ⇒ `ImportError`. Es el caso que aceptaron F-053 y F-062: se verifica en el árbol principal tras
 fusionar en `dev`.
 
-INIT_PLACEHOLDER
+## `bash harness/init.sh` (2026-10-30, sobre `0babedb`)
+
+- **Tal cual**: rojo, 4 KO, todos del entorno del worktree. sv4, sv6 y sv9 importan la comun editable del árbol
+  principal (0.9.0) y mueren en la recolección (`ImportError`); con eso la cobertura baja al 19,1 %.
+- **Con `PYTHONPATH` a la comun del worktree y `ARNES_SIN_CACHE=1`** (como F-086 y F-098): **1 KO, el ya aceptado**
+  (sv9 `test_f069_t15_script_arranca…`); el resto en verde. Raíz 1919, sv1 205, sv2 485, sv3 1576, sv4 2131, sv5 125,
+  sv6 506 (+1 skipped), comun 1191 (+3 skipped). `PUERTA COBERTURA` 85,5 % (657/768), `PUERTA TAMAÑO` en verde.
+  `init.sh` corre con `-x`, así que sv9 paró en ese test (903 passed); sv9 entera sin `-x`: **1 failed (ese), 1072 passed**.
 
 ## T0 · cuántas líneas pendientes no cuadran (2026-10-28, solo lectura)
 
@@ -198,6 +195,7 @@ Las 5 que no cuadran quedan paradas por R16 y R17 al aprobar, como dice la spec 
 
 ## Falta
 
+- Humano: aceptar (o no) los 5 mutantes equivalentes de `progress/mutacion_F-106.md` (nivel `critico`).
 - T22 (líder, Chrome con el pipeline local).
 - T23 (humano): el script R18 contra Azure, solo lectura.
 - T24 (despliegue, lo hace el humano): comun 0.10.0 ⇒ sv6 → sv9 → sv4.
@@ -206,4 +204,17 @@ Las 5 que no cuadran quedan paradas por R16 y R17 al aprobar, como dice la spec 
 - Antes de `git worktree remove`: quitar la *junction* `.venv` de sv4 con `cmd /c rmdir`.
 - Marcar F-058 como absorbida (propuesta de arriba).
 
-EVID_PLACEHOLDER
+## Evidencias
+
+| Evidencia | Valor (medido) |
+|---|---|
+| Tests ejecutados | 9041 passed (+4 skipped) en `init.sh` con `PYTHONPATH` + 169 de sv9 sin `-x`; 1 failed (el KO de entorno aceptado) |
+| Tests nuevos de T21 | `test_f106_t21_supervivientes.py` (sv4): 16 passed, 3,8 s |
+| Cobertura de las líneas cambiadas | **85,5 %** (657/768, umbral 80 %, nivel `critico`) |
+| Mutación (`progress/mutacion_F-106.md`) | **325** generados y evaluados: 302 muertos, **21 supervivientes**, 2 timeouts, 43 509 s en serie |
+| Supervivientes tras el análisis | 16 muertos por tests nuevos (repetidos a mano); **5 equivalentes** justificados, **pendientes del sí del humano** (nivel `critico`): sv6 `:537` y `:541`, `alta_sigrid.py:167`, `importes.py:306`, `review_repository.py:2307` |
+| Mutante 164 interferido (`edicion_manual.py:316`) | repetido a mano: MUERTO (2 failed en comun) |
+| Tiempo de las suites (con `PYTHONPATH`) | raíz 501 s, sv4 431 s, comun 179 s, sv9 64 s (40 s sin `-x`), sv6 37 s |
+
+Desviación de la campaña: `PYTEST_ADDOPTS` deselecciona solo el test de entorno de sv9 (si no, la base de sv9 sale en
+rojo y la herramienta aborta). Detalle en `progress/mutacion_F-106.md` § «Condiciones de la campaña».
