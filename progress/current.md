@@ -1,6 +1,8 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-114 · `pending`, spec v1 escrita (2026-10-30, spec-author): check «Solo de la obra» o todos los proveedores de Sigrid** — rama `feature/F-114-proveedor-todos-sigrid`, worktree `../albaranes-F-114`. Spec en `specs/F-114-proveedor-todos-sigrid/`; informe `progress/spec_F-114.md`. Solo sv4. **Para la PARADA 1, el humano valida D1–D7** (design §8): D1 búsqueda en servidor (mín. 3, 50) frente a lista completa; D2 una entrada por CIF con «N fichas»; D3 baja = `con.fecbaj`, `prvblo` sin tocar; D4 check no recordado; D5 sin cambios con F-062; D6 contrato del proveedor anterior ⇒ feature aparte propuesta; D7 `emp = 1`. Antes de implementar, T0 MANUAL de solo lectura (tamaño de `prv` y validar la SQL). sv9 no necesita cambios.
+
 **F-106 · `in_progress` (2026-10-28): recalcular el precio al cambiar la medición** — rama `feature/F-106-precio-al-cambiar-medicion`, worktree `../albaranes-F-106`. Spec v3 con PARADA 1 cerrada (D8 = c, D9–D13 = a; design §10). Empieza por la T0 (solo lectura en producción: cuántas líneas pendientes no cuadran; si más del 10 %, se para). Despliegue: sv6 → sv9 → sv4. F-110 (dto a Sigrid) va detrás y toca la misma función de sv9.
 
 **F-100 · `blocked` (2026-10-28): parte A (T1–T7, banco VAL) con review APPROVED** (`progress/review_F-100.md` en su rama, pasada 1). Espera a F-106 en `dev` para la medición ANTES (T8–T11; T10 y T11 de pago, las lanza el humano). Antes de T11: (O1) que el humano acepte los 6 mutantes equivalentes; (O2) corregir la fila «valoración» de `evals/README.md:257` (mide importe, precio y su fuente, no la cantidad); (O3) fusionar `dev` antes de T11, nunca entre T11 y T21; (O4) decidir si el banco normaliza las partidas como producción (F-076) antes de IA4.
