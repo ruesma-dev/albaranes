@@ -151,12 +151,17 @@ GREEN: `16 passed`; con el test de la mutación, `17 passed`.
 
 | Evidencia | Valor real |
 |---|---|
-| Tests ejecutados (`init.sh`, `PYTHONPATH` al worktree, HEAD `be9439c`) | raíz 1919 passed; sv1 235; sv2 496; sv3 1576; sv4 1933 (1 warning); sv5 125; sv6 480 (1 skipped); sv9 1027; comun 1202 (3 skipped, por caché de un verde previo del mismo día) — 0 fallos |
-| Cobertura de líneas cambiadas | `PUERTA COBERTURA: 99.4% de 168 líneas cambiadas cubiertas (167/168, umbral 80%)` |
+| Tests ejecutados (`init.sh` final, `PYTHONPATH` al worktree y `ARNES_SIN_CACHE=1`, HEAD `2019480`) | raíz 1919 passed; sv1 236; sv2 496; sv3 1576; sv4 1933 (1 warning); sv5 125; sv6 480 (1 skipped); sv9 1027; comun 1202 (3 skipped) — **0 fallos** |
+| Cobertura de líneas cambiadas | `PUERTA COBERTURA: 99.4% de 168 líneas cambiadas cubiertas (167/168, umbral 80%)` (la que falta es el cuerpo de `_conectar` del script, `pragma: no cover`: solo con BBDD real, MANUAL) |
 | Mutantes | 44 generados, **20 evaluados** (muestreo `estandar`, semilla 20260820): **19 muertos, 1 superviviente**, 0 timeouts, 0 sin veredicto, 650,2 s, 4 workers. El superviviente (`--help` del script, `splitlines()[1]`) lo mata el test nuevo `test_f113_r20_la_ayuda_dice_que_mide` (comprobado a mano: `1 failed` con el mutante). Análisis en `progress/mutacion_F-113.md`. |
-| Tiempo de la suite | raíz 504,17 s; sv1 66,63 s; sv2 45,26 s; sv4 312,80 s; sv9 76,38 s; el resto < 50 s |
-| `init.sh` final (HEAD con el test de la mutación) | ver §7 |
+| Tiempo de la suite (pasada final) | raíz 256,07 s; sv1 32,71 s; sv2 22,54 s; sv3 15,34 s; sv4 239,64 s; sv5 42,84 s; sv6 30,69 s; sv9 86,28 s; comun 165,38 s |
 
 ## 7. `init.sh` final
 
-Pendiente de anotar abajo con el resultado real de la última pasada.
+- `export PYTHONPATH='C:\…\albaranes-F-113\services\albaranes-comun' ARNES_SIN_CACHE=1; bash harness/init.sh` en
+  Git Bash sobre `2019480`: **exit 0, «ENTORNO LISTO»**. Avisos de siempre: ruff (1392, deuda previa), features
+  `blocked`, marcas `[ADAPTAR]` de F-034/F-035.
+- La pasada anterior (sobre `6a8c6e6`) salió roja por **un fallo real mío**: `test_f039_r2_…_inventario` exige una
+  fila por informe de mutación. Añadida la de `mutacion_F-113.md` a `progress/inventario_mutacion_F-039.md` (58
+  informes), commit `2019480`.
+- Tal cual (sin `PYTHONPATH`): rojo SOLO en sv1 y sv2 por el entorno del worktree (§4), como F-086/F-098.
