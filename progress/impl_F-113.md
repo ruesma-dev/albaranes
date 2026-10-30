@@ -138,6 +138,7 @@ GREEN: `16 passed`; con el test de la mutación, `17 passed`.
 
 ## 5. Verificaciones MANUAL pendientes (no hechas aquí)
 
+- **T9 HECHA (líder, 2026-10-31, solo lectura contra Azure, exit 0)**: 6 filas con MIME genérico, todas del 2026-10-30 y todas en `email_received`: las 5 conocidas de las 10:02 UTC y una sexta (`7ed9c9b5`, 11:01 UTC). Ninguna anterior: el fallo empezó ese día.
 - **T9** (líder o humano, solo lectura): `medir_f113_octet_stream.py` contra Azure ANTES de desplegar, con las
   `PG_*` de Azure en la consola (el `.env` de sv1 apunta a local), y anotar el recuento aquí. Comando:
   `cd services\albaranes-email; python -m scripts.medir_f113_octet_stream [--csv f113.csv]`.
