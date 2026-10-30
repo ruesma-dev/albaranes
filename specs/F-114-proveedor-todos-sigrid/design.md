@@ -46,8 +46,8 @@ FROM prv AS v
 JOIN con AS c ON c.ide = v.ide
 WHERE c.tip = ? AND c.emp = ? AND c.fecbaj = ?
   AND v.cif IS NOT NULL AND LTRIM(RTRIM(v.cif)) <> ''
-  AND (v.raz COLLATE Latin1_General_CI_AI LIKE ? ESCAPE '\'
-       OR REPLACE(REPLACE(UPPER(v.cif), ' ', ''), '-', '') LIKE ? ESCAPE '\')
+  AND (v.raz COLLATE Latin1_General_CI_AI LIKE ? ESCAPE '!'
+       OR REPLACE(REPLACE(UPPER(v.cif), ' ', ''), '-', '') LIKE ? ESCAPE '!')
 GROUP BY v.cif
 ORDER BY MIN(v.raz), v.cif
 ```
@@ -60,7 +60,7 @@ alta sin contrato reconoce. La sintaxis (`TOP (?)`, `COLLATE`, `ESCAPE`) se vali
 Constantes del módulo: `MINIMO_BUSQUEDA_PROVEEDOR = 3`, `LIMITE_BUSQUEDA_PROVEEDOR = 50`,
 `TIP_PROVEEDOR = 5`, `EMPRESA_RUESMA = 1`.
 
-- `_patron_like(texto: str) -> str` (función del módulo): escapa `\`, `%`, `_`, `[` con `\` y
+- `_patron_like(texto: str) -> str` (función del módulo): escapa `!`, `%`, `_`, `[` con `!` (T0: `ESCAPE '\'` da error 506 a través de sigrid-api) y
   envuelve en `%…%` (R16).
 - `SigridLookupClient.buscar_proveedores(self, *, texto: str) -> BusquedaProveedores`:
   1. `t = texto.strip()`; si `len(t) < MINIMO` ⇒ `BusquedaProveedores(items=[], mas=False)` sin

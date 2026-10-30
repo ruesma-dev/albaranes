@@ -68,7 +68,24 @@ Rama `feature/F-114-proveedor-todos-sigrid` (worktree `../albaranes-F-114`). Rig
 
 Las tres lecturas y su comando de PowerShell están en `tasks.md`, bloque 0. Sus resultados se anotan en esta sección.
 
-- **Pendiente.**
+Hecha por el líder el 2026-10-30, en solo lectura, con `sql/read` de sigrid-api sobre la base de negocio. La clave solo
+estuvo en una variable del proceso y se borró al terminar. No se anotan nombres ni CIF de proveedores, porque entre
+ellos hay personas físicas.
+
+- **A · Tamaño** (`con.tip = 5`, `emp = 1`).
+  - 7.367 fichas y 7.266 CIF distintos. Vivas (`fecbaj = 0`): 7.295 fichas, con 7.232 CIF.
+  - 5 CIF vivos están repetidos y 1 ficha viva tiene el CIF sin normalizar (R-1).
+  - La consulta tardó 2,2 s.
+  - Como hay más de 5.000 CIF vivos, **D1 = (b), búsqueda en el servidor**.
+- **B · Bloqueos**: ningún proveedor vivo tiene un `prvblo` activo en la empresa 1. Se confirma D3: no se filtran.
+- **C · SQL de la búsqueda**:
+  - Con `ESCAPE` y la barra invertida falla con HTTP 500 (SQL Server 506: «Carácter de escape "" no válido»): la barra
+    no llega intacta hasta SQL Server.
+  - **Con `ESCAPE '!'` funciona.** «cera» devuelve 35 CIF en 1,6 s, «ferr» llega al límite de 51 en 1,3 s y un trozo
+    de CIF devuelve 2 en 1,2 s.
+  - `TOP (?)` y `COLLATE` funcionan.
+  - El carácter de escape pasa a `!` en design §3 y en `tasks.md`.
+- **Riesgos**: R-3 resuelto con el cambio de escape. R-4: entre 1,2 y 1,6 s, por debajo de los 5 s.
 - Dato conocido: 3.543 proveedores con contrato en la empresa 1 el 29-09 (`search_proveedores` de sv3,
   `azure-apps/albaranes.md` §8). `prv` entero será mayor.
 

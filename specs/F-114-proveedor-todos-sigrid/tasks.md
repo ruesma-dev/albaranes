@@ -5,7 +5,7 @@ Rama `feature/F-114-proveedor-todos-sigrid`, worktree `../albaranes-F-114`. Rigo
 
 ## Bloque 0 · medición (MANUAL, solo lectura, antes de implementar)
 
-- [ ] T0: Medir `prv` y validar la SQL de la búsqueda con las tres lecturas de abajo por `sql/read` (sigrid-api, solo lectura); resultados en `progress/spec_F-114.md` §T0; si la C falla (R-3) o tarda > 5 s (R-4), PARAR y re-proponer  |  Verificación: MANUAL (humano o líder) — comando de abajo
+- [x] T0: Medir `prv` y validar la SQL de la búsqueda con las tres lecturas de abajo por `sql/read` (sigrid-api, solo lectura); resultados en `progress/spec_F-114.md` §T0; si la C falla (R-3) o tarda > 5 s (R-4), PARAR y re-proponer  |  Verificación: MANUAL (humano o líder) — comando de abajo
 
 Comando (PowerShell, desde una consola con `$env:SIGRID_API_BASE_URL`, `$env:SIGRID_API_FUNCTION_KEY` y `$env:SIGRID_API_DATABASE` ya cargadas; ninguna se escribe en fichero):
 
@@ -20,7 +20,7 @@ Leer "SELECT COUNT(*) AS fichas, COUNT(DISTINCT v.cif) AS cifs, SUM(CASE WHEN c.
 # B · bloqueos activos (D3): proveedores vivos con algún prvblo de la empresa 1 sin fecha de baja
 Leer "SELECT COUNT(DISTINCT b.prvide) AS vivos_bloqueados FROM prvblo b JOIN con c ON c.ide = b.prvide WHERE b.emp = ? AND ISNULL(b.fecbaj, 0) = 0 AND c.tip = ? AND c.emp = ? AND c.fecbaj = 0" @(1, 5, 1)
 # C · la SQL de la búsqueda de design §3, tal cual, con «cera»
-Leer "SELECT TOP (?) v.cif AS cif, MIN(v.raz) AS nombre, COUNT(*) AS fichas FROM prv AS v JOIN con AS c ON c.ide = v.ide WHERE c.tip = ? AND c.emp = ? AND c.fecbaj = ? AND v.cif IS NOT NULL AND LTRIM(RTRIM(v.cif)) <> '' AND (v.raz COLLATE Latin1_General_CI_AI LIKE ? ESCAPE '\' OR REPLACE(REPLACE(UPPER(v.cif), ' ', ''), '-', '') LIKE ? ESCAPE '\') GROUP BY v.cif ORDER BY MIN(v.raz), v.cif" @(51, 5, 1, 0, '%cera%', '%CERA%')
+Leer "SELECT TOP (?) v.cif AS cif, MIN(v.raz) AS nombre, COUNT(*) AS fichas FROM prv AS v JOIN con AS c ON c.ide = v.ide WHERE c.tip = ? AND c.emp = ? AND c.fecbaj = ? AND v.cif IS NOT NULL AND LTRIM(RTRIM(v.cif)) <> '' AND (v.raz COLLATE Latin1_General_CI_AI LIKE ? ESCAPE '!' OR REPLACE(REPLACE(UPPER(v.cif), ' ', ''), '-', '') LIKE ? ESCAPE '!') GROUP BY v.cif ORDER BY MIN(v.raz), v.cif" @(51, 5, 1, 0, '%cera%', '%CERA%')
 ```
 
 ## Bloque A · cliente y endpoint
