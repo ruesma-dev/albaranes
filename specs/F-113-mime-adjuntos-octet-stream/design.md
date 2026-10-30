@@ -148,6 +148,9 @@ el script porque necesita la cadena de la cuenta.
 
 ## 8. Decisiones para la PARADA 1
 
+**PARADA 1 cerrada por el humano el 2026-10-30**: D-1 a D-4 y D-6 a D-8 = (a); D-5 retirada («d5, borralo lo haremos
+a mano»).
+
 - **D-1 · Declarado y firma se contradicen.** (a) *Recomendada*: manda la firma reconocida (R2) y se deja rastro
   (WARNING + `attachment_content_type_declarado`). (b) Manda el declarado si es específico. Descartada: un
   `application/pdf` con bytes JPEG rompe hoy `PdfReader` y manda el correo a 'Errores'.
@@ -161,14 +164,8 @@ el script porque necesita la cadena de la cuenta.
   compartido (`ErrorNoReintentable`) que `retry_policy` levante y `consumidor.py` mande a poison en el primer intento:
   toca todos los consumidores de comun. Se propone como feature nueva (prioridad media): con F-113 la causa de hoy
   desaparece y el coste actual es 5 llamadas fallidas, no datos perdidos.
-- **D-5 · Recuperar los 5 documentos atascados.** (a) *Recomendada*: tras desplegar sv1 y sv2, el humano reenvía el
-  correo original (carpeta 'Procesados') al buzón de albaranes. El reenvío trae otro `message_id` ⇒ otra
-  `correlation_key` (`email:{message_id}:{page_sha256}`, `intake_cola_adapter.py` l.71) ⇒ entran limpios con MIME
-  real. Las 5 filas viejas de `workflow_runs` quedan en `email_received` como huérfanas (no llegaron a sv3: sin
-  duplicados en la plataforma). (b) Reencolar los 5 mensajes de `q-extraccion-poison` a `q-extraccion`: funciona
-  con el fix de sv2 (§5.3) si los blobs de `input/` no los ha purgado ya la lifecycle policy, pero es una escritura en
-  producción: solo con autorización expresa del humano y la hace él. (a) no necesita a nadie más que al humano y no
-  depende de la purga.
+- **D-5 · Recuperar los 5 documentos atascados.** FUERA de F-113 por decisión del humano (2026-10-30, «d5, borralo lo
+  haremos a mano»): los recupera él a mano.
 - **D-6 · Medición.** Script de §6, solo lectura, lo ejecuta el humano o el líder **antes** de desplegar (cuántos
   han caído desde que existe el pipeline de colas) y otra vez a las 24 h del despliegue (debe salir 0 nuevos).
 - **D-7 · Nombre y extensión del blob.** (a) *Recomendada*: la clave sigue siendo `input/{document_id}.pdf`; se

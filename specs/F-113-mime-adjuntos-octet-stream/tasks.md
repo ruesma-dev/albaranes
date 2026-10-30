@@ -10,7 +10,8 @@ Rama `feature/F-113-mime-adjuntos-octet-stream`, worktree `../albaranes-F-113`. 
 - tests sin red ni BBDD.
 
 URGENTE: no espera a F-106 y se fusiona en `dev` antes que ella (D-8). Las tareas MANUAL de producción son de solo
-lectura, salvo el despliegue y el reenvío del correo, que los hace el humano.
+lectura, salvo el despliegue, que lo hace el humano. PARADA 1 cerrada el 2026-10-30
+(D-5 retirada: la recuperación de los 5 documentos la hace el humano a mano, fuera de F-113).
 
 - [ ] T1: `ruesma_comun/mime.py` (`detectar_mime`, `nombre_coherente`, `es_mime_generico`, `MIME_PDF`, `MIME_GENERICO`; tablas de design §4), con sus tests parametrizados de firmas, contradicciones, datos cortos o vacíos y nombres (R1–R5)  |  Verificación: `pytest services/albaranes-comun/tests/test_f113_mime.py`
 - [ ] T2: `normalizar_adjuntos` pasa por `_con_mime_real`, con WARNING sin nombre e identidad si no cambia; test del `image_url` de OpenAI con el SDK simulado y un JPEG declarado `octet-stream` (R7–R10)  |  Verificación: `pytest services/albaranes-comun/tests/test_f113_llm_adjuntos.py services/albaranes-comun -k "llm"`
@@ -22,6 +23,5 @@ lectura, salvo el despliegue y el reenvío del correo, que los hace el humano.
 - [ ] T8: `bash harness/init.sh` en verde (cierre del código, antes de la review)  |  Verificación: `bash harness/init.sh`
 - [ ] T9: MANUAL (líder o humano, solo lectura): el script de T6 contra Azure antes de desplegar, con las `PG_*` de Azure en la consola; anotar el recuento en `progress/impl_F-113.md` (D-6)  |  Verificación: MANUAL (humano) · recuento anotado
 - [ ] T10: MANUAL (humano): desplegar sv1 y después sv2 desde `infra/`: `Set-DeployTag; .\deploy.ps1 -Only sv1`, `.\deploy.ps1 -Only sv2` y `.\check_deploy.ps1` (D-8)  |  Verificación: MANUAL (humano) · los dos con la revisión nueva en `Running`
-- [ ] T11: MANUAL (humano): recuperar los 5 documentos del 2026-10-30 según D-5 y comprobar en sv4 que aparecen los 5 albaranes de FEYMACO de la 0728 (R22)  |  Verificación: MANUAL (humano) · 5 albaranes nuevos en sv4
-- [ ] T12: MANUAL (líder, solo lectura): el script de T6 a las 24 h del despliegue; debe salir 0 casos nuevos (D-6)  |  Verificación: MANUAL (humano) · recuento anotado
-- [ ] T13: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`
+- [ ] T11: MANUAL (líder, solo lectura): el script de T6 a las 24 h del despliegue; debe salir 0 casos nuevos (D-6)  |  Verificación: MANUAL (humano) · recuento anotado
+- [ ] T12: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`

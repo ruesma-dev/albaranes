@@ -79,8 +79,7 @@ R20. El repositorio debe traer `services/albaranes-email/scripts/medir_f113_octe
 `payload_json` de `attachment_content_type` genérico, agrupadas por `current_state` y por día de `started_at_utc`, y
 liste los `document_id` que siguen en `email_received`. Sin secretos ni nombres de fichero en la salida.
 R21. La parte pura del script (la SQL y el resumen de filas) debe probarse sin BBDD; la ejecución es MANUAL.
-R22. La recuperación de los 5 documentos del 2026-10-30 (`06977948`, `14a89788`, `5a5b6559`, `9bdc0c9c`, `02fbe90b`)
-se hace según D-5 tras el despliegue, y se verifica en sv4 que aparecen 5 albaranes nuevos de FEYMACO de la 0728.
+R22. (Retirado en la PARADA 1: la recuperación de los 5 documentos del 2026-10-30 la hace el humano a mano y queda fuera de F-113, D-5.)
 
 ## F. Documentación
 R23. `services/albaranes-comun/README.md` debe registrar la 0.9.1 y `ruesma_comun.mime`; `docs/ARCHITECTURE.md` debe

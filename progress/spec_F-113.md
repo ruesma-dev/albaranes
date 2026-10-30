@@ -23,13 +23,13 @@ Además, el líder ha cambiado la versión de comun de 0.10.0 a 0.9.1 (D-8), por
 | D-2 | Se detectan TIFF y HEIC; HEIC no se convierte |
 | D-3 | No se filtran los adjuntos que no son ni imagen ni PDF |
 | D-4 | Ir a poison sin agotar los intentos queda fuera: feature aparte |
-| D-5 | El humano reenvía el correo |
+| D-5 | RETIRADA: el humano recupera a mano los 5 documentos |
 | D-6 | Medición en solo lectura antes del despliegue y a las 24 h |
 | D-7 | La clave del blob sigue siendo `input/{id}.pdf` |
 | D-8 | Comun 0.9.1, y F-113 entra en `dev` antes que F-106 |
 
 ## Pendiente
 
-- PARADA 1 con el humano.
+- PARADA 1 cerrada el 2026-10-30 (D-1 a D-4 y D-6 a D-8 = a; D-5 retirada).
 - Pasar a `spec_ready` en `chore/alta-F-111-F-112`.
-- Implementar: los subagentes no tienen cuota hasta el 2026-11-01 a las 23:00; si el humano lo pide, lo hace el líder.
+- Implementar (implementer, ya hay créditos).
