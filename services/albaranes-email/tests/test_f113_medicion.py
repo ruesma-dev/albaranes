@@ -192,3 +192,11 @@ def test_f113_r21_main_con_csv(monkeypatch, tmp_path):
     destino = tmp_path / "salida.csv"
     assert medir.main(["--csv", str(destino)]) == 0
     assert destino.read_bytes().startswith(b"\xef\xbb\xbf")
+
+
+def test_f113_r20_la_ayuda_dice_que_mide(capsys):
+    # Mata el superviviente de la campaña (progress/mutacion_F-113.md): la
+    # descripción de --help es la primera línea del docstring, no la vacía.
+    with pytest.raises(SystemExit):
+        medir.main(["--help"])
+    assert "Medición de F-113" in capsys.readouterr().out
