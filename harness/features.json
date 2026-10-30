@@ -1391,7 +1391,7 @@
       "id": "F-114",
       "title": "Elegir proveedor: check «Solo de la obra» (por defecto) o todos los proveedores de Sigrid",
       "description": "ORIGEN: el humano, 2026-10-30, por el documento 097191e9 (obra sin contratos). Hoy el desplegable de proveedor de la ficha (sv4, `/api/sigrid/proveedores?obra=`, `_SQL_PROVEEDORES_POR_OBRA` en `sigrid_lookup_client.py`) solo ofrece proveedores con contrato en la obra (ctr de emp 1); en una obra sin contratos sale vacío. PETICIÓN: junto al desplegable, un check «Solo de la obra», marcado por defecto, que se comporta como ahora; desmarcado, se elige entre TODOS los proveedores dados de alta en Sigrid (tabla `prv`, solo lectura vía sigrid-api `sql/read`). A RESOLVER EN LA SPEC: tamaño de `prv` (medir en solo lectura) y, según eso, lista completa o búsqueda al escribir (nombre o CIF); duplicados por CIF y proveedores de baja; qué pasa aguas abajo al elegir un proveedor sin contrato en la obra (contratos, valoración, alta en Sigrid de sv9 con `sin_contrato`). Si sv9 necesita cambios, se propone aparte. Servicio: sv4. Va DETRÁS de F-113 y antes que el resto de la cola.",
-      "status": "pending",
+      "status": "spec_ready",
       "sdd": true,
       "rigor": "estandar",
       "priority": 1,
@@ -1399,6 +1399,19 @@
         "sv4-front"
       ],
       "branch": "feature/F-114-proveedor-todos-sigrid"
+    },
+    {
+      "id": "F-115",
+      "title": "Al cambiar el proveedor: se reinicia la búsqueda de contrato y la valoración, sin regenerar las líneas",
+      "description": "ORIGEN: el humano, 2026-10-30, al aprobar la PARADA 1 de F-114 (era su D6). PROBLEMA (ya existe hoy, F-114 lo hará más frecuente): si el albarán tenía elegido un contrato del proveedor A y en la ficha (sv4) se cambia el proveedor a B (corrección manual de F-062), el contrato de A sigue seleccionado; la valoración usaría el contrato de A y el alta en Sigrid (sv9) mandaría el contrato de A con el CIF de B (Sigrid lo rechaza: fallo visible, no silencioso). PETICIÓN del humano: «al cambiar proveedor debe reiniciarse el proceso de busqueda de contrato y valoracion pero no la generacion de nuevas lineas». Es decir: al cambiar el proveedor se quita la selección de contrato del proveedor anterior, se vuelven a buscar los contratos del proveedor nuevo y se revalora; las líneas extraídas (y sus ediciones manuales) se conservan, sin volver a extraer (no se relanza IA1/IA2). A RESOLVER EN LA SPEC: qué hace hoy el cambio de proveedor de F-062 (qué cola publica: q-persistencia re-fetch o q-valoracion revalorar) y qué pieza vuelve a buscar contratos (enriquecimiento de sv3) sin regenerar líneas; qué se borra exactamente (contrato elegido, vinculaciones de línea a contrato, valoración previa) y qué se conserva (líneas, ediciones manuales de F-106, partidas/almacén elegidos a mano); qué pasa si el proveedor nuevo no tiene contrato en la obra (valoración sin contrato, como hoy); si el albarán ya está aprobado o con alta en Sigrid, no se permite o se avisa. Servicios previstos: sv4 (y sv3/sv6 si la re-búsqueda de contratos lo exige; se confirma en la spec). Va DETRÁS de F-114.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 1,
+      "servicios": [
+        "sv4-front"
+      ],
+      "branch": "feature/F-115-cambio-proveedor-reinicia-contrato"
     }
   ]
 }
