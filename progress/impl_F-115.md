@@ -12,6 +12,66 @@ regenerar las líneas. Rama `feature/F-115-cambio-proveedor-reinicia-contrato`, 
 - (2) No aprobados valorados: 52; con la última valoración en un contrato distinto de la selección: **0 (0 %)**, por
   debajo del 5 % de D4 ⇒ D4 = (a) sin parar.
 
+## Qué cambió
+
+| Servicio | Fichero | Cambio |
+|---|---|---|
+| comun | `ruesma_comun/contratos/pertenencia.py` (nuevo), `contratos/__init__.py` | `contrato_es_del_albaran` (R1), reexportada |
+| comun | `pyproject.toml`, `ruesma_comun/__init__.py`, `README.md` | **0.11.0** (sobre 0.10.0), fila de tabla y entrada de versión |
+| sv3 | `domain/ports/contrato_merge_repository_port.py`, `infrastructure/database/sqlalchemy_albaran_repository.py` | `get_pertenencia_seleccion`, `clear_selected_contrato` (SQL crudo) |
+| sv3 | `application/services/contrato_enrichment_service.py` | `_retirar_seleccion_ajena_safely` al empezar, antes de `sin_datos`/caché/Sigrid (R2–R5) |
+| sv3 | `application/pipelines/persist_albaran_pipeline.py` | `_trigger_valuation_safely`: `force` y sin contrato ⇒ publica sin contrato aunque no haya importes (R7) |
+| sv4 | `infrastructure/database/review_repository.py` | PUT: solo contratos del albarán, retira origen y nota (R9, R10); detalle filtrado y sin líneas de una selección ajena (R12); `_exigir_valoracion_del_contrato_vigente` en PUT-aprobar y `set_approved` (R13) |
+| sv4 | `domain/models/alta_sigrid_models.py`, `interface_adapters/web/app.py` | `ValoracionDeOtroContratoError` ⇒ 409 (API) o aviso en el listado; aviso de R11 |
+| sv4 | `domain/models/review_models.py`, `application/services/review_service.py`, `application/services/busqueda_contratos.py` | `contrato_retirado` (detalle del PUT y `ResultadoGuardado`), `cambio`, `cambio_de_cabecera`, `aviso_de_guardado` (R11); el rastro compara CIF con `normalizar_cif` de comun (R19) |
+| sv4 | `static/app.js` | `_normCif`, `_normObra`, `avisoCambioCabecera`; `choose` confirma antes de tocar nada (R14, R15) |
+| docs | `docs/ARCHITECTURE.md` | regla 26 nueva; regla 25 con R7 (R21) |
+| azure-apps | `albaranes.md` | párrafo «El contrato elegido es del albarán», commit local `7c6081b` (sin push) |
+
+Sin DDL, sin cambios de mensajes de cola, sv5/sv6/sv9/sv2 sin tocar.
+
+## Decisiones de diseño y desviaciones (justificadas)
+
+1. **`contrato_retirado` viaja en `DocumentDetailPayload`** (campo opcional, solo lo rellena el PUT con
+   `model_copy`), en vez de cambiar el retorno de `update_document_y_transicion`: ese par
+   `(detalle, paso_a_aprobado)` lo desempaquetan 10 ficheros de tests y 2 dobles. `ResultadoGuardado` lo lleva
+   como pide el diseño.
+2. **R11 con dos textos**: «Proveedor cambiado: …» y, si solo cambió la obra (mismo CIF que el rastro),
+   «Obra cambiada: se ha quitado el contrato X y se buscan los contratos del mismo proveedor en la nueva obra;
+   después se vuelve a valorar». Motivo: R15/D2 (el proveedor se conserva); decir «nuevo proveedor» sería falso.
+3. **R19 exigió tocar `estado_busqueda`**: comparaba el CIF solo sin espacios (`b-123` ≠ `B123` ⇒ `desfasada` ⇒
+   relanzaba). Ahora normaliza los dos lados con `normalizar_cif` de comun. Los tests de F-052 siguen en verde.
+4. **Código sin ninguna fila**: el PUT lo descarta como hoy (no se puede saber) y no lo anuncia como retirado.
+   sv3 no lo toca (R2: «no es ajena»).
+5. **sv3 tolera repositorios sin `get_pertenencia_seleccion`** (no-op silencioso, como la canonización del
+   nombre): los dobles de F-052/F-062/F-070 no lo tienen y si no cada test dejaría un `ERROR` en el log.
+6. **R7 lee primero los importes y luego mira `force`** (`importes or force`): `test_f075_r3_…` exige que se
+   lean con `force=True`; así no se relaja.
+7. **R13 usa `ORDER BY v.id DESC LIMIT 1`** (diseño §7). Con `replace_valuation` de sv6 hay una valoración por
+   documento; sv9 la lee con un JOIN sin orden.
+8. **R20 · tests anteriores retocados (sin cambiar ninguna aserción)**:
+   - `test_f106_cuadre.py::test_f106_t2_version_0100`: «== 0.10.0» ⇒ «≥ 0.10.0» (comun 0.11.0), como hicieron
+     F-098 y F-113; la exacta la exige `test_f115_t2_version_0110`.
+   - Fixtures `f053_sv4_bbdd.construir` y `f065_bbdd.construir`: el merge tiene seleccionado el contrato de su
+     valoración (`CT/1`, `CTSU25/0359`); antes la selección era NULL con una valoración de contrato, justo lo
+     que R13 rechaza. Constante `CABECERA` (CIF, obra, contrato) en los dos.
+   - 6 llamadas de «guardar y aprobar» (`test_f053_t19_cerrojo`, `test_f053_t21b_valorado`,
+     `test_f065_f1_cabecera` ×2, `test_f065_f2_pasada2`) mandan `**CABECERA`, como la ficha: el PUT guarda la
+     cabecera entera y sin CIF ni contrato lo quitaba.
+   - `test_f114_js.py`: el arnés saca también `_normCif`, `_normObra`, `avisoCambioCabecera` y define
+     `DOC_DATA = {}` (sin contrato: no pregunta, como hoy).
+   - Ningún test dependía de aceptar un contrato «compartido» de OTRO proveedor (R20).
+9. **`DOC_DATA` no cambia**: ya lleva `selected_contrato_codigo`, `valuation` y `n_filas_manuales`
+   (`document.model_dump()`).
+
+## Fuera de alcance / pendiente
+
+- **T13** (líder, Chrome con sv4 local y Azurite): sin hacer.
+- **T16** (humano): desplegar **sv3 primero y luego sv4** (comun 0.11.0 en las dos imágenes).
+- Fuera por diseño §8: contrato del proveedor nuevo sin líneas (SKIP M1); borrar contratos huérfanos.
+- Junction `.venv` de sv4 en el worktree: quitarla con `cmd /c rmdir` antes de `git worktree remove`.
+- `azure-apps` `7c6081b` local sin push.
+
 ## Fase RED
 
 ### T1 · comun (R1)
