@@ -193,6 +193,6 @@ quita parámetros): no se relanza. La SQL la cubren los 4 tests que la ejecutan 
 **Riesgo de rendimiento: retirado.** La versión 2 recorre `prv`+`con` una vez, como la original; el líder midió
 0,7–1,1 s (T0: 1,2–1,6 s en otro momento).
 
-**`bash harness/init.sh`** tal cual sobre `5c3ce6e`: **exit 0, «ENTORNO LISTO»**. Arnés 1919; sv1 236; sv2 496;
+**`bash harness/init.sh`** tal cual sobre `e80e645` (versión 2): **exit 0, «ENTORNO LISTO»**. Arnés 1919; sv1 236; sv2 496;
 sv3 1576; **sv4 2190 passed** (+4 de la T8); sv5 125; sv6 506 (1 skipped); sv9 1073. `PUERTA COBERTURA`: N/A
 (las líneas cambiadas frente a `dev` son la SQL y la lista de parámetros, sin sentencias nuevas). Tamaño: impl 191/220.
