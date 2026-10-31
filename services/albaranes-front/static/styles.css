@@ -310,6 +310,13 @@ h1 {
 .filters-grid { display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)); gap: 16px; align-items: end; }
 .filters-grid label, .form-grid label { display: flex; flex-direction: column; gap: 8px; font-size: 0.92rem; }
 .filters-grid label > span, .form-grid label > span { color: var(--ink-soft); font-weight: 500; }
+/* F-114: el combo de proveedor va en un div (no label) con rótulo + check
+   «Solo de la obra»; copia el aspecto de ``.form-grid label``. */
+.campo-combo { display: flex; flex-direction: column; gap: 8px; font-size: 0.92rem; }
+.campo-combo-cabecera { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.campo-combo-cabecera > span { color: var(--ink-soft); font-weight: 500; }
+.campo-combo .check-inline { display: inline-flex; flex-direction: row; align-items: center; gap: 6px; color: var(--ink-soft); cursor: pointer; }
+.campo-combo .check-inline input { width: auto; margin: 0; }
 
 input, select, textarea, button { font: inherit; }
 

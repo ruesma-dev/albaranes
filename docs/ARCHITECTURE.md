@@ -365,6 +365,18 @@ anteriores) y `normalizar_adjuntos` lo corrige antes de cualquier IA.
       `manual`. Elegir otro proveedor retira motivo y nota de la corrección
       en la siguiente pasada; los `proveedor_cif_no_casa` de otro CIF
       también caen. `review_required` no baja nunca solo.
+    - **Elegir entre todos los de Sigrid** (F-114, oct 2026): junto al
+      desplegable de sv4, el check «Solo de la obra» (marcado en cada carga,
+      no se recuerda) deja la lista de hoy; desmarcado, el combo busca en
+      `GET /api/sigrid/proveedores/todos?q=` los proveedores **vivos** de
+      Sigrid (`prv` + `con` con `tip = 5`, `emp = 1` y `fecbaj = 0`: la
+      definición con la que sigrid-api resuelve la identidad de un alta sin
+      contrato) por nombre (sin mayúsculas ni acentos) o CIF, mínimo 3
+      caracteres y 50 resultados (`TOP 51` ⇒ «hay más»), uno por CIF con sus
+      fichas vivas («N fichas en Sigrid»: el alta sin contrato puede salir
+      `proveedor_ambiguo`). Sin CIF propios (regla 18). `NO_TOLERA` con
+      `truncated`. Elegir escribe lo mismo que hoy (`proveedor_cif` y nombre,
+      origen intacto); como el CIF existe en `prv`, la red no lo corrige.
 18. **El CIF de Construcciones Ruesma nunca es el proveedor** (F-063, oct
     2026; incidencia de FEYMACO del 2026-10-08). Ruesma es el cliente de
     todos los albaranes y su CIF (A81873903) va impreso en ellos: leído en

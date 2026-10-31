@@ -299,10 +299,18 @@
 
                 <div class="form-grid two-columns">
                     {% if editable %}
-                    <label class="full-width">
-                        <span>Elegir proveedor (con contrato en la obra · Sigrid) — escribe para buscar</span>
+                    {# F-114: div (no label): dentro de un label el check sería su
+                       primer control y un clic en el rótulo lo conmutaría. El
+                       check sale marcado en cada carga (R9, no se recuerda). #}
+                    <div class="full-width campo-combo">
+                        <div class="campo-combo-cabecera">
+                            <span id="proveedor_combo_rotulo">Elegir proveedor (con contrato en la obra · Sigrid) — escribe para buscar</span>
+                            <label class="check-inline"><input type="checkbox" id="proveedor_solo_obra" checked> Solo de la obra</label>
+                        </div>
                         <div class="combo" data-kind="proveedor"
                              data-endpoint="/api/sigrid/proveedores"
+                             data-endpoint-todos="/api/sigrid/proveedores/todos"
+                             data-solo-obra-check="proveedor_solo_obra"
                              data-obra-input="obra_codigo"
                              data-val-input="proveedor_cif"
                              data-nombre-input="proveedor_nombre"
@@ -312,7 +320,7 @@
                                    value="{{ document.proveedor_nombre or '' }}{% if document.proveedor_cif %} — {{ document.proveedor_cif }}{% endif %}">
                             <div class="combo-panel" hidden></div>
                         </div>
-                    </label>
+                    </div>
                     {% endif %}
                     <label>
                         <span>Proveedor</span>

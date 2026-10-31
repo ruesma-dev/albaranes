@@ -2227,6 +2227,30 @@
         return hits / toks.length;
     }
 
+    // F-114: combo de proveedor con «Solo de la obra» desmarcado = búsqueda
+    // en el servidor entre TODOS los proveedores vivos de Sigrid. Funciones
+    // puras y autocontenidas (los tests las sacan una a una con node).
+    // R3: el texto recortado, o null si no llega al mínimo (3, como
+    // MINIMO_BUSQUEDA_PROVEEDOR de sv4); entonces no se llama.
+    function textoBusquedaProveedor(valor) {
+        const t = (valor == null ? "" : String(valor)).trim();
+        return t.length >= 3 ? t : null;
+    }
+    function urlProveedoresTodos(endpoint, texto) {
+        return endpoint + "?q=" + encodeURIComponent(texto);
+    }
+    // R6: un CIF con varias fichas vivas en Sigrid lo dice en la etiqueta.
+    function etiquetaProveedorGlobal(it) {
+        const base = _comboLabel("proveedor", it.cif, it.nombre);
+        return it.fichas > 1 ? base + " · " + it.fichas + " fichas en Sigrid" : base;
+    }
+    // R10: lista de la obra vacía (o sin obra) ⇒ invitar a desmarcar.
+    function mensajeListaObraVacia(error) {
+        const motivo = (error || "Sin proveedores con contrato en la obra")
+            .replace(/\.\s*$/, "");
+        return motivo + ". Desmarca «Solo de la obra» para buscar entre todos los proveedores de Sigrid";
+    }
+
     function initCombo(combo) {
         const input = combo.querySelector(".combo-input");
         const panel = combo.querySelector(".combo-panel");
@@ -2242,6 +2266,21 @@
         let loadedKey = null;  // clave (obra) para la que se cargo
         let loading = false;
         let activeIdx = -1;
+
+        // F-114: solo el combo de proveedor con su check «Solo de la obra».
+        // Marcado (siempre al cargar, R9; no se recuerda) = el combo de hoy;
+        // desmarcado = búsqueda en el servidor entre todos los de Sigrid.
+        const soloObraCheck = (kind === "proveedor" && combo.dataset.soloObraCheck)
+            ? document.getElementById(combo.dataset.soloObraCheck) : null;
+        const endpointTodos = combo.dataset.endpointTodos || "";
+        const cabecera = soloObraCheck && combo.closest(".campo-combo");
+        const rotulo = cabecera ? cabecera.querySelector(".campo-combo-cabecera span") : null;
+        const ROTULO_OBRA = rotulo ? rotulo.textContent : "";
+        const ROTULO_TODOS = "Elegir proveedor (todos los de Sigrid) — escribe al menos 3 letras del nombre o del CIF";
+        let secuencia = 0;       // R4: solo pinta la respuesta de la última petición
+        let temporizador = null; // R4: debounce de 300 ms
+        let masGlobal = false;   // R5
+        function soloObra() { return !soloObraCheck || soloObraCheck.checked; }
 
         function currentObra() {
             if (!obraInputId) return "";
@@ -2260,12 +2299,22 @@
         function render(list) {
             filtered = list;
             if (loading) { msg("Cargando de Sigrid…"); return; }
+            // F-114 R10: la obra no tiene proveedores ⇒ invitar a desmarcar.
+            if (!list.length && soloObraCheck && soloObra() && !items.length) {
+                msg(mensajeListaObraVacia(null)); return;
+            }
             if (!list.length) { msg("Sin coincidencias"); return; }
             panel.innerHTML = "";
             list.forEach(function (it, i) {
                 const d = document.createElement("div");
                 d.className = "combo-item" + (i === activeIdx ? " active" : "");
                 d.textContent = it.label;
+                // F-114 R6 (D2): sv4 solo guarda el CIF; con varias fichas
+                // vivas, sigrid-api no sabrá cuál es en un alta sin contrato.
+                if (it.fichas > 1) {
+                    d.title = "Este CIF tiene " + it.fichas + " fichas en Sigrid: el alta " +
+                        "sin contrato puede salir «proveedor ambiguo»";
+                }
                 // mousedown (no click) para que dispare antes del blur del input
                 d.addEventListener("mousedown", function (e) {
                     e.preventDefault();
@@ -2273,10 +2322,19 @@
                 });
                 panel.appendChild(d);
             });
+            // F-114 R5: la línea final no es elegible (no está en «filtered»).
+            if (!soloObra() && masGlobal) {
+                const m = document.createElement("div");
+                m.className = "combo-msg";
+                m.textContent = "Hay más proveedores: escribe más para afinar";
+                panel.appendChild(m);
+            }
             panel.hidden = false;
         }
         function applyFilter() {
             activeIdx = -1;
+            // F-114 R3: lo que devuelve la búsqueda global no se vuelve a filtrar.
+            if (!soloObra()) { render(items); return; }
             const q = _norm(input.value);
             if (!q) { render(items); return; }
             render(items.filter(function (it) { return it.norm.indexOf(q) !== -1; }));
@@ -2308,6 +2366,7 @@
             if (loading) return;
             if (loadedKey === key && items.length) return;
             loading = true; loadedKey = key;
+            const n = secuencia;
             if (!silent) msg("Cargando de Sigrid…");
             let url = endpoint;
             if (obraInputId) url += "?obra=" + encodeURIComponent(currentObra());
@@ -2315,9 +2374,17 @@
                 const resp = await fetch(url, { headers: { "Accept": "application/json" } });
                 const data = await resp.json();
                 loading = false;
+                // F-114 R8: el check cambió mientras llegaba: no se pinta.
+                if (n !== secuencia) { items = []; loadedKey = null; return; }
                 if (!data || !data.ok) {
                     items = []; loadedKey = null;
-                    if (!silent) msg("⚠ " + ((data && data.error) || "Sigrid no disponible"), "combo-error");
+                    const error = (data && data.error) || "Sigrid no disponible";
+                    // F-114 R10: sin código de obra ⇒ invitar a desmarcar.
+                    if (!silent && soloObraCheck && /Falta el codigo de obra/.test(error)) {
+                        msg(mensajeListaObraVacia(error));
+                    } else if (!silent) {
+                        msg("⚠ " + error, "combo-error");
+                    }
                     return;
                 }
                 items = (data.items || []).map(function (it) {
@@ -2329,12 +2396,71 @@
                 if (!silent) applyFilter();
             } catch (e) {
                 loading = false; items = []; loadedKey = null;
+                if (n !== secuencia) return;
                 if (!silent) msg("⚠ Error de red consultando Sigrid", "combo-error");
             }
         }
 
+        // F-114 R3, R4: búsqueda global con debounce; menos de 3 caracteres
+        // (o la etiqueta del proveedor actual, que es lo que hay al enfocar)
+        // ⇒ aviso sin llamar. Cada llamada invalida las anteriores.
+        function buscarGlobal() {
+            clearTimeout(temporizador);
+            const n = ++secuencia;
+            const texto = input.value === combo.dataset.label
+                ? null : textoBusquedaProveedor(input.value);
+            if (texto === null) {
+                items = []; filtered = []; masGlobal = false;
+                msg("Escribe al menos 3 letras del nombre o del CIF");
+                return;
+            }
+            temporizador = setTimeout(function () { pedirGlobal(texto, n); }, 300);
+        }
+        async function pedirGlobal(texto, n) {
+            if (n !== secuencia) return;
+            msg("Buscando en Sigrid…");
+            let data = null;
+            try {
+                const resp = await fetch(urlProveedoresTodos(endpointTodos, texto),
+                    { headers: { "Accept": "application/json" } });
+                data = await resp.json();
+            } catch (e) {
+                if (n !== secuencia) return;
+                items = []; filtered = []; masGlobal = false;
+                msg("⚠ Error de red consultando Sigrid", "combo-error");   // R11
+                return;
+            }
+            if (n !== secuencia) return;   // R4: respuesta vieja
+            if (!data || !data.ok) {       // R11
+                items = []; filtered = []; masGlobal = false;
+                msg("⚠ " + ((data && data.error) || "Sigrid no disponible"), "combo-error");
+                return;
+            }
+            items = (data.items || []).map(function (it) {
+                const label = etiquetaProveedorGlobal(it);
+                return { val: it.cif || "", nombre: it.nombre || "", label: label,
+                         norm: _norm(label), fichas: it.fichas || 0 };
+            });
+            masGlobal = !!data.mas;
+            activeIdx = -1;
+            render(items);
+        }
+        // F-114 R8: cambiar el check vacía, cierra y deja la etiqueta actual;
+        // no guarda nada ni lo recuerda en el navegador (R9).
+        if (soloObraCheck) {
+            soloObraCheck.addEventListener("change", function () {
+                clearTimeout(temporizador);
+                ++secuencia;
+                items = []; filtered = []; loadedKey = null; masGlobal = false;
+                close();
+                if (rotulo) rotulo.textContent = soloObra() ? ROTULO_OBRA : ROTULO_TODOS;
+                if (combo.dataset.label != null) input.value = combo.dataset.label;
+            });
+        }
+
         input.addEventListener("focus", function () {
             input.select();
+            if (!soloObra()) { buscarGlobal(); return; }
             ensureLoaded();
         });
         input.addEventListener("input", function () {
@@ -2343,6 +2469,7 @@
                 delete combo.dataset.suggested;
                 input.removeAttribute("title");
             }
+            if (!soloObra()) { buscarGlobal(); return; }
             if (items.length || loading) applyFilter();
             else ensureLoaded();
         });
@@ -2363,6 +2490,9 @@
             }
         });
         input.addEventListener("blur", function () {
+            // F-114: al salir de la caja, la búsqueda global pendiente o en
+            // vuelo ya no reabre el panel.
+            if (!soloObra()) { clearTimeout(temporizador); ++secuencia; }
             // retardo para permitir el mousedown de un item
             setTimeout(function () {
                 close();
