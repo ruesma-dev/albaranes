@@ -656,6 +656,28 @@ anteriores) y `normalizar_adjuntos` lo corrige antes de cualquier IA.
       «Deshacer»; 409 en aprobado o con alta bloqueante; una `fila_entera` no lo
       tiene (se quita con «✕»); si la línea calculada ya no existe la fila sigue
       Nueva. El «✕» de una fila con blanca vuelve al revalorar (como antes).
+    - **Fecha y número de la cabecera** (F-108, oct 2026; spec
+      `specs/F-108-fecha-numero-editables/`). sv4 **guarda la fecha en
+      `AAAA-MM-DD`** (lo que sella sv3 y lo único que admite sv9, `_RE_FECHA`)
+      y **la enseña en `dd/mm/aaaa`**. Admite `d/m/aaaa`, `d-m-aaaa`,
+      `d.m.aaaa` (día y mes de 1 o 2 cifras; año de 2 cifras ⇒ `20aa`) y
+      `aaaa-mm-dd`, siempre día antes que mes; un día que no existe
+      (`31/02/2026`) no se admite. La regla es del dominio de sv4
+      (`domain/services/fecha_albaran.py`, estricta: es entrada humana) y la
+      ficha la repite en `parseFechaEs` (contrastadas en test). El PUT
+      normaliza la fecha (vacía ⇒ `NULL`) y recorta el número; una fecha no
+      admitida o un número de más de 128 caracteres es **422 con `detail` de
+      texto** y no cambia nada. La ficha editable tiene un botón
+      **«Calendario»** que abre el selector nativo (`showPicker`; si no existe,
+      el selector visible y con el foco) sin quitar la escritura a mano; al
+      salir del campo reescribe la fecha en `dd/mm/aaaa` o la marca en rojo
+      con el aviso, y «Guardar» / «Guardar y aprobar» con una fecha mala no
+      envían nada. **No se aprueba** (ficha ni listado, 409) sin fecha
+      `AAAA-MM-DD` real o sin número: «No se puede aprobar: falta la fecha del
+      albarán» / «… falta el número de albarán» / «… la fecha del albarán no
+      es válida: ábrelo y corrígela». El listado y las vistas crudas siguen con
+      la fecha tal cual; las fechas guardadas antes en `dd/mm/aaaa` no se
+      migran (se arreglan al guardar la ficha).
 21. **El código de obra es canónico** (F-070, oct 2026). Spec:
     `specs/F-070-obra-con-cero-inicial/`; decisiones en `progress/spec_F-070.md`.
     Regla del humano: «es crucial que añada el 0 inicial si no es VAR ni
