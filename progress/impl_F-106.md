@@ -195,7 +195,6 @@ Las 5 que no cuadran quedan paradas por R16 y R17 al aprobar, como dice la spec 
 
 ## Falta
 
-- Humano: aceptar (o no) los 5 mutantes equivalentes de `progress/mutacion_F-106.md` (nivel `critico`).
 - T22 (líder, Chrome con el pipeline local).
 - T23 (humano): el script R18 contra Azure, solo lectura.
 - T24 (despliegue, lo hace el humano): comun 0.10.0 ⇒ sv6 → sv9 → sv4.
@@ -212,7 +211,7 @@ Las 5 que no cuadran quedan paradas por R16 y R17 al aprobar, como dice la spec 
 | Tests nuevos de T21 | `test_f106_t21_supervivientes.py` (sv4): 16 passed, 3,8 s |
 | Cobertura de las líneas cambiadas | **85,5 %** (657/768, umbral 80 %, nivel `critico`) |
 | Mutación (`progress/mutacion_F-106.md`) | **325** generados y evaluados: 302 muertos, **21 supervivientes**, 2 timeouts, 43 509 s en serie |
-| Supervivientes tras el análisis | 16 muertos por tests nuevos (repetidos a mano); **5 equivalentes** justificados, **pendientes del sí del humano** (nivel `critico`): sv6 `:537` y `:541`, `alta_sigrid.py:167`, `importes.py:306`, `review_repository.py:2307` |
+| Supervivientes tras el análisis | 16 muertos por tests nuevos (repetidos a mano); **5 equivalentes** justificados y **ACEPTADOS por el humano el 2026-10-31 («si»)**: sv6 `:537` y `:541`, `alta_sigrid.py:167`, `importes.py:306`, `review_repository.py:2307` |
 | Mutante 164 interferido (`edicion_manual.py:316`) | repetido a mano: MUERTO (2 failed en comun) |
 | Tiempo de las suites (con `PYTHONPATH`) | raíz 501 s, sv4 431 s, comun 179 s, sv9 64 s (40 s sin `-x`), sv6 37 s |
 

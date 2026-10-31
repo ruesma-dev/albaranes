@@ -61,7 +61,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis (implementer, 2026-10-30)
 
 > Por qué ningún test lo caza: las filas de sv6 cumplen un invariante: `synthetic_modifier` nace siempre con `merge_line_id=None` (`valuation_builder.py` y `residuos_incrementos.py`) y `from_albaran`, con su blanca. Con `or` solo entrarían de más filas `from_albaran` sin blanca, con clave `None`; `por_blanca` solo se consulta y se vacía con `fila["merge_line_id"]` NO nulo, así que esa clave nunca se lee.
-> Decisión: **mutante EQUIVALENTE** (justificado aquí; en nivel `critico` lo acepta el humano).
+> Decisión: **mutante EQUIVALENTE** (justificado aquí; ACEPTADO por el humano el 2026-10-31, «si»).
 
 ### 2. `services/albaran-valoracion-persist/infrastructure/database/sqlalchemy_valuation_repository.py:541` [logico]
 
@@ -71,7 +71,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis (implementer, 2026-10-30)
 
 > Por qué ningún test lo caza: con `or` entran de más en `sinteticas` las filas con blanca, con clave `(None, modifier_source)` porque una fila `from_albaran` no tiene padre. Las búsquedas usan `fila["parent_merge_line_id"]` NO nulo (rama `elif`), así que esa clave nunca se lee. Mismo invariante que el n.º 1.
-> Decisión: **mutante EQUIVALENTE** (justificado aquí; en nivel `critico` lo acepta el humano).
+> Decisión: **mutante EQUIVALENTE** (justificado aquí; ACEPTADO por el humano el 2026-10-31, «si»).
 
 ### 3. `services/albaranes-comun/ruesma_comun/alta_sigrid.py:167` [logico]
 
@@ -81,7 +81,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis (implementer, 2026-10-30)
 
 > Por qué ningún test lo caza: con `and`, si solo falta uno de los dos, `float(None)` dentro del `try` lanza `TypeError` y la función devuelve `None`, igual que la guarda. Mismo resultado para toda entrada.
-> Decisión: **mutante EQUIVALENTE** (justificado aquí; en nivel `critico` lo acepta el humano).
+> Decisión: **mutante EQUIVALENTE** (justificado aquí; ACEPTADO por el humano el 2026-10-31, «si»).
 
 ### 4. `services/albaranes-comun/ruesma_comun/importes.py:306` [logico]
 
@@ -91,7 +91,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis (implementer, 2026-10-30)
 
 > Por qué ningún test lo caza: con `and`, si falta Q o P (pero no los dos) se llama a `importe_de_linea`, que sin Q o sin P devuelve `None`, y la guarda siguiente (`if calculado is None …: return None`) devuelve `None`: lo mismo.
-> Decisión: **mutante EQUIVALENTE** (justificado aquí; en nivel `critico` lo acepta el humano).
+> Decisión: **mutante EQUIVALENTE** (justificado aquí; ACEPTADO por el humano el 2026-10-31, «si»).
 
 ### 5. `services/albaranes-front/domain/models/review_models.py:881` [logico]
 
@@ -181,7 +181,7 @@ Cada superviviente es una línea que ningún test comprueba de verdad, o una mut
 #### Análisis (implementer, 2026-10-30)
 
 > Por qué ningún test lo caza: el importe que se queda por R6 solo llega a `recalcular_fila` (comun, `edicion_manual.py`), que lo vuelve a redondear a 2 decimales (`importe_2 = round(importe_num, 2)`) antes de despejar P y de escribir; `recalculo_de_fila` solo mira qué claves hay en `cambios`, no su valor. Se añadió igualmente `test_f106_t21_importe_de_r6_redondeado_a_centimos` (fija 104,16 y P 2,333333 con Q 48 y dto 7): con el mutante aplicado, **passed**, como corresponde a un equivalente.
-> Decisión: **mutante EQUIVALENTE** (justificado aquí; en nivel `critico` lo acepta el humano).
+> Decisión: **mutante EQUIVALENTE** (justificado aquí; ACEPTADO por el humano el 2026-10-31, «si»).
 
 ### 14. `services/albaranes-front/infrastructure/database/review_repository.py:2515` [logico]
 
@@ -299,5 +299,6 @@ fue la carga de la máquina.
 325 mutantes: 302 muertos por la campaña (el 164, confirmado a mano) + 2 timeouts que, repetidos a mano, mueren +
 **16 supervivientes matados por tests nuevos** (`test_f106_t21_supervivientes.py`) + **5 equivalentes justificados**
 (`sqlalchemy_valuation_repository.py:537` y `:541`, `alta_sigrid.py:167`, `importes.py:306` y
-`review_repository.py:2307`). **0 supervivientes sin análisis**; los 5 equivalentes, en nivel `critico`, esperan la
-aceptación del humano.
+`review_repository.py:2307`). **0 supervivientes sin análisis.**
+
+**Aceptación del humano (2026-10-31)**: los 5 equivalentes, ACEPTADOS. Literal, transmitido por el líder: «si».
