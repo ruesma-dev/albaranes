@@ -191,3 +191,177 @@ def test_f108_r19_collect_payload_usa_fecha_para_enviar():
 
     assert "fecha: fechaParaEnviar()," in fuente
     assert 'getInput("fecha")' not in fuente
+
+
+# =================================================================== #
+# R14 · el botón abre el selector nativo en el día escrito
+# =================================================================== #
+_PICKER = """
+    const abiertos = [];
+    cal.showPicker = function () { abiertos.push(cal.value); };
+"""
+
+
+@con_node
+@pytest.mark.parametrize("escrita, dia", [("28-10-26", "2026-10-28"), ("abc", ""), ("", "")])
+def test_f108_r14_el_boton_abre_el_selector_en_el_dia_escrito(tmp_path, escrita, dia):
+    salida = _correr(tmp_path, f"""
+        wireFechaAlbaran();
+        fecha.value = {json.dumps(escrita)};
+        boton.click();
+        console.log(JSON.stringify({{abiertos: abiertos, visible: cal.classList.contains("visible"),
+                                     valor: fecha.value}}));
+    """, preparacion=_PICKER)
+
+    assert salida == {"abiertos": [dia], "visible": False, "valor": escrita}
+
+
+@con_node
+@pytest.mark.parametrize("picker", ["", "cal.showPicker = function () { throw new Error('NotAllowed'); };"],
+                         ids=["sin_showPicker", "showPicker_falla"])
+def test_f108_r14_sin_show_picker_el_selector_queda_visible_y_con_el_foco(tmp_path, picker):
+    salida = _correr(tmp_path, """
+        wireFechaAlbaran();
+        fecha.value = "5/6/2026";
+        boton.click();
+        console.log(JSON.stringify({visible: cal.classList.contains("visible"),
+                                    foco: document.activeElement === cal, dia: cal.value}));
+    """, preparacion=picker)
+
+    assert salida == {"visible": True, "foco": True, "dia": "2026-06-05"}
+
+
+# =================================================================== #
+# R15 · elegir un día lo escribe en dd/mm/aaaa y quita la marca
+# =================================================================== #
+@con_node
+def test_f108_r15_elegir_un_dia_lo_escribe_y_quita_la_marca(tmp_path):
+    salida = _correr(tmp_path, """
+        wireFechaAlbaran();
+        fecha.focus();
+        teclear(fecha, "31/02/2026");
+        fecha.blur();
+        const antes = marca();
+        cal.classList.add("visible");
+        cal.value = "2026-11-03";
+        cal.dispatchEvent(new Event("change", {bubbles: true}));
+        console.log(JSON.stringify({antes: antes.roja, despues: marca(),
+                                    visible: cal.classList.contains("visible")}));
+    """)
+
+    assert salida["antes"] is True
+    assert salida["despues"] == {"roja": False, "oculto": True, "aviso": "", "valor": "03/11/2026",
+                                 "invalida": None}
+    assert salida["visible"] is False
+
+
+@con_node
+def test_f108_r15_un_change_sin_dia_no_borra_lo_escrito(tmp_path):
+    salida = _correr(tmp_path, """
+        wireFechaAlbaran();
+        fecha.value = "28/10/2026";
+        cal.value = "";
+        cal.dispatchEvent(new Event("change", {bubbles: true}));
+        console.log(JSON.stringify(marca()));
+    """)
+
+    assert salida["valor"] == "28/10/2026"
+
+
+# =================================================================== #
+# R18 · «Guardar» / «Guardar y aprobar» con una fecha mala: nada enviado
+# =================================================================== #
+def _correr_guardar(tmp_path, programa):
+    from test_f077_guardar_y_aprobar_js import _ESCENA as ESCENA_F077
+    from test_f077_guardar_y_aprobar_js import _FUNCIONES as FUNCIONES_F077
+    from test_f077_guardar_y_aprobar_js import AVISO_GET, AVISO_PINTADO
+
+    preparacion = ("const AVISO_PINTADO = " + json.dumps(AVISO_PINTADO) + ";\n"
+                   + "const AVISO_GET = " + json.dumps(AVISO_GET) + ";\n" + ESCENA_F077 + """
+        const fecha = el("input", "", document.body);
+        fecha.id = "fecha";
+        const error = el("small", "error", document.body);
+        error.id = "fecha-error"; error.hidden = true;
+    """)
+    return _ejecutar_dom(tmp_path, FUNCIONES_F077 + _FECHA, preparacion, programa + """
+        console.log(JSON.stringify(Object.assign(estado(), {
+            roja: fecha.classList.contains("campo-no-valido"), foco: document.activeElement === fecha,
+            aviso: error.textContent, oculto: error.hidden})));
+    """)
+
+
+@con_node
+@pytest.mark.parametrize("aprobar", [True, False])
+def test_f108_r18_con_fecha_mala_no_se_envia_nada(tmp_path, aprobar):
+    salida = _correr_guardar(tmp_path, f"""
+        f1.cant.value = "6";
+        fecha.value = " 31/02/2026 ";
+        await guardarCabecera({json.dumps(aprobar)});
+    """)
+
+    assert salida["peticiones"] == []
+    assert salida["alertas"] == [_aviso("31/02/2026")]
+    assert salida["confirmaciones"] == []
+    assert salida["roja"] is True and salida["foco"] is True
+    assert salida["aviso"] == _aviso("31/02/2026") and salida["oculto"] is False
+    assert salida["guardarActivo"] and salida["aprobarActivo"]
+
+
+@con_node
+def test_f108_r18_corregida_se_guarda_con_la_fecha_en_iso(tmp_path):
+    salida = _correr_guardar(tmp_path, """
+        fecha.value = "31/02/2026";
+        await guardarCabecera(false);
+        fecha.value = "28/02/2026";
+        await guardarCabecera(false);
+    """)
+
+    assert len(salida["peticiones"]) == 1
+    metodo, url, cuerpo = salida["peticiones"][0].split(" ", 2)
+    assert metodo == "PUT" and json.loads(cuerpo)["fecha"] == "2026-02-28"
+
+
+@con_node
+def test_f108_r18_vacia_no_para_el_guardado(tmp_path):
+    """Sin fecha se puede guardar (R6); aprobar lo para el servidor (R11)."""
+    salida = _correr_guardar(tmp_path, """
+        fecha.value = "";
+        await guardarCabecera(false);
+    """)
+
+    assert len(salida["peticiones"]) == 1 and salida["alertas"] == []
+    assert json.loads(salida["peticiones"][0].split(" ", 2)[2])["fecha"] is None
+
+
+def test_f108_r18_la_guarda_va_antes_de_desactivar_y_de_guardar_filas():
+    fuente = _funcion_js(_app_js(), "guardarCabecera")
+
+    guarda = fuente.index("fechaEscritaValida()")
+    assert guarda < fuente.index("b.disabled = true")
+    assert guarda < fuente.index("guardarFilasPendientes()")
+
+
+# =================================================================== #
+# R21 · los manejadores nuevos no impiden teclear
+# =================================================================== #
+@con_node
+def test_f108_r21_ninguna_tecla_queda_impedida(tmp_path):
+    teclas = ["Enter", "F7", "F8", "Escape", "1", "/", "Backspace", "Delete", "ArrowLeft", "Tab"]
+    salida = _correr(tmp_path, f"""
+        wireFechaAlbaran();
+        const impedidas = [];
+        [fecha, boton, cal].forEach(function (destino) {{
+            {json.dumps(teclas)}.forEach(function (k) {{
+                if (tecla(destino, k).defaultPrevented) {{ impedidas.push(destino.id + ":" + k); }}
+            }});
+        }});
+        console.log(JSON.stringify(impedidas));
+    """)
+
+    assert salida == []
+
+
+def test_f108_r21_el_codigo_nuevo_no_llama_a_prevent_default():
+    js = _app_js()
+    for nombre in _FECHA:
+        assert "preventDefault" not in _funcion_js(js, nombre), nombre

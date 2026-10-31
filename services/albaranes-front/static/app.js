@@ -2868,6 +2868,9 @@
     // la plantilla si no está valorado).
     async function guardarCabecera(markApproved) {
         if (guardarCabecera.enMarcha) { return; }
+        // F-108 R18: con una fecha no admitida no se envía nada (ni filas ni
+        // cabecera): aviso y foco en el campo.
+        if (!fechaEscritaValida()) { return; }
         guardarCabecera.enMarcha = true;
         const botones = [saveBtn, approveBtn].filter(Boolean);
         const antes = botones.map(function (b) { return b.disabled; });
