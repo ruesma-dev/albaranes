@@ -55,6 +55,7 @@ from infrastructure.graph.token_provider import GraphTokenProvider
 from infrastructure.colas.colas_orchestrator_client import ColasOrchestratorClient
 from infrastructure.colas.colas_refetch_client import ColasRefetchClient
 from infrastructure.sigrid.sigrid_lookup_client import (
+    MINIMO_BUSQUEDA_PROVEEDOR,
     SigridLookupClient,
     opciones_partida,
 )
@@ -547,6 +548,38 @@ def build_app(settings: Settings) -> FastAPI:
             )
         items = [{"cif": p.cif, "nombre": p.nombre} for p in proveedores]
         return JSONResponse({"ok": True, "items": items})
+
+    # (F-114) Búsqueda global: proveedores VIVOS de Sigrid (con.tip 5, emp 1,
+    # fecbaj 0) por nombre o CIF, para el combo con «Solo de la obra»
+    # desmarcado. Mismo patrón de errores que la lista de la obra (R14).
+    @app.get("/api/sigrid/proveedores/todos", include_in_schema=False)
+    def sigrid_proveedores_todos(q: str = Query(default="")) -> JSONResponse:
+        client = app.state.sigrid_lookup_client
+        if client is None:
+            return JSONResponse(
+                {"ok": False, "error": "Sigrid no configurado en el sv4 "
+                 "(faltan SIGRID_API_*).", "items": []}
+            )
+        texto = (q or "").strip()
+        if len(texto) < MINIMO_BUSQUEDA_PROVEEDOR:
+            return JSONResponse(
+                {"ok": False, "items": [], "error": (
+                    f"Escribe al menos {MINIMO_BUSQUEDA_PROVEEDOR} letras "
+                    "del nombre o del CIF."
+                )}
+            )
+        try:
+            busqueda = client.buscar_proveedores(texto=texto)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[sigrid-lookup] proveedores_todos q=%r fallo: %r", texto, exc)
+            return JSONResponse(
+                {"ok": False, "error": f"Error consultando Sigrid: {exc}", "items": []}
+            )
+        items = [
+            {"cif": p.cif, "nombre": p.nombre, "fichas": p.fichas}
+            for p in busqueda.items
+        ]
+        return JSONResponse({"ok": True, "items": items, "mas": busqueda.mas})
 
     @app.get("/api/sigrid/obras", include_in_schema=False)
     def sigrid_obras() -> JSONResponse:
