@@ -166,4 +166,23 @@ E   AssertionError: wireFechaAlbaran
 
 ## Evidencias
 
-INIT_PENDIENTE
+`bash harness/init.sh` (con `PYTHONPATH` a la comun del worktree y
+`ARNES_SIN_CACHE=1`) sobre `67f355b`: **verde, exit 0**. Una primera pasada
+dio KO en la raíz (`test_f039_r2_todo_informe_de_mutacion_figura_en_el_inventario`:
+faltaba la fila de `mutacion_F-108.md` en `progress/inventario_mutacion_F-039.md`);
+añadida la fila (y el recuento: 63) en `67f355b`, la segunda pasada salió verde.
+Después (`2abe295`), `ruff --fix` de orden de imports y 4 avisos (`BLE001`,
+`RUF059`) en los tests nuevos, sin cambiar lo que comprueban: `ruff` limpio en
+los ficheros de F-108 y sus 138 tests en verde.
+
+| Evidencia | Valor real |
+|---|---|
+| Tests ejecutados | raíz 1919 passed; sv1 236, sv2 496, sv3 1608, **sv4 2386 passed** (1 warning), sv5 125, sv6 506 (+1 skipped), sv9 1073, comun 1342; 0 fallos |
+| Tests nuevos de F-108 | 138 (61 dominio, 35 guardado/rutas, 11 ficha, 31 JS con node) |
+| Cobertura de líneas cambiadas | **100,0 %** de 104 líneas (104/104, umbral 80 %, `estandar`) |
+| Mutantes | 20 muestreados de 35 (semilla `20260820`, 4 workers, sobre `372b5a0`): **20 muertos, 0 supervivientes**, 0 timeouts (`progress/mutacion_F-108.md`); ningún superviviente que analizar |
+| Tiempo de la suite | sv4 377,80 s; raíz 462,83 s; campaña de mutación 1559,9 s |
+| Topes | requirements 97/150, design 191/250, impl dentro de 220 |
+
+`ruff` global: 1432 avisos en la pasada verde (deuda previa más los 6 de
+F-108, ya corregidos).
