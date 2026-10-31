@@ -5,6 +5,10 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-106 · Editar una línea recalcula el importe o el precio (cerrada 2026-10-31)
+
+Rigor `critico`. Cantidad, precio o descuento recalculan el importe; el importe despeja el precio; lo editado a mano se conserva al revalorar, al cambiar de obra y al volver a buscar contrato («✋», «Volver a lo calculado»); una fila que no cuadra sale en rojo, no se aprueba y sv9 no la da de alta (`linea_no_cuadra`). comun 0.10.0. Review APPROVED (pasada 2, `progress/review_F-106.md`); mutación de 325 mutantes con 5 equivalentes aceptados por el humano el 31-10 (`progress/mutacion_F-106.md`); T22 en Chrome con el pipeline local en verde y T23 del humano (`progress/pruebas_F-106_T22.md`: 3 altas antiguas descuadradas, se corrigen a mano en Sigrid). Desplegada el 31-10: sv6 `r20261031-1500`, sv9 `r20261031-1503`, sv4 `r20261031-1506`. Detalle en `progress/impl_F-106.md`.
+
 ## F-103 · El alta no hereda la facturación de la plantilla (cerrada 2026-10-28, sin código)
 
 Rigor `critico`, cerrada sin código. La causa (la cabecera del alta se clonaba del último albarán del proveedor y
