@@ -22,6 +22,6 @@ lectura, salvo el despliegue, que lo hace el humano. PARADA 1 cerrada el 2026-10
 - [x] T7: documentación: `docs/ARCHITECTURE.md` (regla de blobs de `input/`) y `azure-apps/albaranes.md`, este último con commit local en ese repo y sin push (R23)  |  Verificación: lectura del reviewer
 - [x] T8: `bash harness/init.sh` en verde (cierre del código, antes de la review)  |  Verificación: `bash harness/init.sh`
 - [x] T9: MANUAL (líder o humano, solo lectura): el script de T6 contra Azure antes de desplegar, con las `PG_*` de Azure en la consola; anotar el recuento en `progress/impl_F-113.md` (D-6)  |  Verificación: MANUAL (humano) · recuento anotado
-- [ ] T10: MANUAL (humano): desplegar sv1 y después sv2 desde `infra/`: `Set-DeployTag; .\deploy.ps1 -Only sv1`, `.\deploy.ps1 -Only sv2` y `.\check_deploy.ps1` (D-8)  |  Verificación: MANUAL (humano) · los dos con la revisión nueva en `Running`
-- [ ] T11: MANUAL (líder, solo lectura): el script de T6 a las 24 h del despliegue; debe salir 0 casos nuevos (D-6)  |  Verificación: MANUAL (humano) · recuento anotado
-- [ ] T12: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`
+- [x] T10: MANUAL (humano): desplegar sv1 y después sv2 desde `infra/`: `Set-DeployTag; .\deploy.ps1 -Only sv1`, `.\deploy.ps1 -Only sv2` y `.\check_deploy.ps1` (D-8)  |  Verificación: MANUAL (humano) · los dos con la revisión nueva en `Running`
+- [x] T11: MANUAL (líder, solo lectura): el script de T6 a las 24 h del despliegue; debe salir 0 casos nuevos (D-6)  |  Verificación: MANUAL (humano) · recuento anotado
+- [x] T12: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`

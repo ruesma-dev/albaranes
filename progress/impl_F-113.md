@@ -166,3 +166,8 @@ GREEN: `16 passed`; con el test de la mutación, `17 passed`.
   fila por informe de mutación. Añadida la de `mutacion_F-113.md` a `progress/inventario_mutacion_F-039.md` (58
   informes), commit `2019480`.
 - Tal cual (sin `PYTHONPATH`): rojo SOLO en sv1 y sv2 por el entorno del worktree (§4), como F-086/F-098.
+
+## T11 · medición a las 24 h (líder, 2026-11-01, solo lectura)
+
+`scratchpad\f113\t9.ps1` (sesión con `default_transaction_read_only=on`): total 6, todas en `email_received` y todas del
+2026-10-30 (las mismas de T9). **0 casos nuevos** desde el despliegue de sv1 y sv2 del 2026-10-31.
