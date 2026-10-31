@@ -132,14 +132,21 @@ Verificación de la tarea: `pytest services/albaranes-front -k "f051 or f065_f1_
 | Evidencia | Valor |
 |---|---|
 | Tests de F-114 | 55 (26 cliente + 9 endpoint + 5 plantilla + 15 JS), todos en verde |
-| Suite de sv4 en `init.sh` | ver §7 |
-| Cobertura de líneas cambiadas | ver §7 (`PUERTA COBERTURA`) |
+| Suite de sv4 en `init.sh` | 2186 passed, 1 warning (antes de F-114: 2131 + el RED) |
+| Cobertura de líneas cambiadas | **100,0 %** de 54 líneas (54/54, umbral 80 %) — `PUERTA COBERTURA` |
 | Mutación (muestreada, 20, semilla 20260820) | 20 evaluados, 19 muertos, 1 superviviente, 0 timeouts, 1.713 s; el superviviente (`include_in_schema`) matado por un test nuevo ⇒ **0 vivos**. Detalle: `progress/mutacion_F-114.md` |
-| Tiempo de la suite | ver §7 |
+| Tiempo de la suite | sv4 419,9 s; F-114 sola: cliente 0,95 s, endpoint ~5 s, plantilla 1,4 s, JS ~13,5 s |
 
 La mutación solo cubre Python (cliente, modelos, endpoint); el JS (`app.js`) no lo muta la herramienta: lo
 cubren los 15 tests con node, con la fase RED de T4 y T5.
 
 ## 7. `bash harness/init.sh` final (T9)
 
-PENDIENTE de ejecutar en el momento de escribir esto; se completa abajo.
+`bash harness/init.sh` **tal cual** (sin `PYTHONPATH` ni `ARNES_SIN_CACHE`) sobre `da1e7c5`: **exit 0, verde**.
+Arnés 1919 passed; sv1 236; sv2 496; sv3 1576; **sv4 2186 passed, 1 warning**; sv5 125; sv6 506 (1 skipped);
+sv9 1073; comun en verde (caché). `PUERTA COBERTURA` 100,0 % (54/54); `PUERTA TAMAÑO` dentro (impl 145/220).
+
+La primera pasada de T9 (sobre `8c0562d`) salió en rojo por **un** test del arnés,
+`test_f039_r2_todo_informe_de_mutacion_figura_en_el_inventario`: `progress/mutacion_F-114.md` no figuraba en
+`progress/inventario_mutacion_F-039.md`. Arreglado añadiendo su fila (veredicto `VÁLIDA`, 60 informes) en
+`da1e7c5`; ese test pasa (`9 passed`) y la segunda pasada, entera, en verde.
