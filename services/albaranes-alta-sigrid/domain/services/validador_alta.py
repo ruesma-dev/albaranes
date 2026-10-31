@@ -27,7 +27,12 @@ Sin motivos, devuelve la :class:`PeticionAlbaran` del modo extendido de
   ``partida`` solo si ``codigo_partida_final`` no está vacío: sin partida =
   almacén (F-051 v4; no existe campo ``almacen``, H5). Sin ``paride`` (H17).
 - ``precio`` = |importe| / |cantidad| a 6 decimales (neto, H14) y la cantidad
-  con el signo del importe: ``cantidad · precio`` = importe.
+  con el signo del importe: ``cantidad · precio`` = importe
+  (``ruesma_comun.alta_sigrid.linea_a_sigrid``, F-106 R2).
+- (F-106 R17) Una línea a registrar que no cuadra (``Q × P × (1 − d)`` ≠
+  importe en más de ``TOLERANCIA_CUADRE_EUR``, con ``Q`` = convertida o, si no
+  hay, la del albarán) da el motivo ``linea_no_cuadra`` ⇒ ``no_admitido``: lo
+  que se ve en la ficha es lo que se da de alta. Sin P, no es comparable.
 """
 from __future__ import annotations
 
@@ -39,9 +44,11 @@ from datetime import date, timedelta
 from ruesma_comun.alta_sigrid import (
     es_linea_a_registrar,
     es_linea_vinculada,
+    linea_a_sigrid,
     producto_efectivo,
     productos_admitidos,
 )
+from ruesma_comun.importes import clasificar_descuento, cuadra_linea, importe_de_linea
 from ruesma_comun.obras import canonizar_codigo_obra
 from ruesma_comun.valoracion import esta_valorado
 
@@ -256,7 +263,38 @@ def _motivos_lineas(datos: DatosAlta, mapeo: Mapping[str, str]) -> list[Motivo]:
                 motivos.append(Motivo("producto_no_admitido", producto, ref))
         if len(_texto(linea.codigo_partida_final)) > MAX_CODIGO:
             motivos.append(Motivo("campo_demasiado_largo", "partida", ref))
+        no_cuadra = _detalle_no_cuadra(linea)
+        if no_cuadra is not None:
+            motivos.append(Motivo("linea_no_cuadra", no_cuadra, ref))
     return motivos
+
+
+def _numero_es(valor: float) -> str:
+    """Número con coma decimal, hasta 6 decimales y sin ceros finales."""
+    texto = f"{valor:.6f}".rstrip("0").rstrip(".")
+    return texto.replace(".", ",")
+
+
+def _detalle_no_cuadra(linea: LineaAlta) -> str | None:
+    """(F-106 R17) «48 × 11,2 × (1 − 7 %) = 499,97 ≠ 104,16» si la línea no
+    cuadra; ``None`` si cuadra o no es comparable."""
+    cantidad = (
+        linea.cantidad_convertida if linea.cantidad_convertida is not None
+        else linea.cantidad_albaran
+    )
+    precio = linea.precio_unitario_final
+    descuento = linea.descuento_albaran_aplicado
+    if cuadra_linea(cantidad, precio, descuento, linea.importe_calculado) is not False:
+        return None
+    calculado = importe_de_linea(
+        cantidad=cantidad, precio_unitario=precio, descuento_pct=descuento,
+    )
+    estado, valor_dto = clasificar_descuento(descuento)
+    factor = f" × (1 − {_numero_es(valor_dto)} %)" if estado == "aplicable" else ""
+    return (
+        f"{_numero_es(float(cantidad))} × {_numero_es(float(precio))}{factor} = "
+        f"{calculado:.2f} ≠ {float(linea.importe_calculado):.2f}"
+    ).replace(".", ",")
 
 
 def _motivos_r39(datos: DatosAlta, hoy: date) -> list[Motivo]:
@@ -288,10 +326,13 @@ def _motivos_r39(datos: DatosAlta, hoy: date) -> list[Motivo]:
 def _linea_peticion(linea: LineaAlta, datos: DatosAlta, config: ConfigAlta) -> LineaPeticion:
     cab = datos.cabecera
     vinculada = es_vinculada(linea, cab.contrato_codigo)
-    cantidad = abs(float(_cantidad(linea, vinculada)))
-    importe = float(linea.importe_calculado)
-    con_signo = -cantidad if importe < 0 else cantidad
-    precio = round(abs(importe) / cantidad, 6)
+    # (F-106 R2) Los motivos ya garantizan cantidad ≠ 0 e importe ≠ 0.
+    con_signo, precio = linea_a_sigrid(  # type: ignore[misc]
+        vinculada=vinculada,
+        cantidad_albaran=linea.cantidad_albaran,
+        cantidad_convertida=linea.cantidad_convertida,
+        importe=linea.importe_calculado,
+    )
     partida = _texto(linea.codigo_partida_final) or None
     if vinculada:
         return LineaPeticion(

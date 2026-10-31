@@ -180,9 +180,13 @@ def _motor_directa(netos):
                 "INSERT INTO albaran_line_valuations (id, valuation_id, merge_line_id, derived_contrato_line_id, "
                 "precio_unitario_final, cantidad_albaran, cantidad_convertida, factor_conversion, "
                 "importe_calculado, importe_source, partida_action, line_kind, descripcion_linea, "
-                "unidad_albaran, unidad_contrato) VALUES (:id, 'v-dir', :m, :der, 5.0, 2.0, 2.0, 1.0, :n, "
+                "unidad_albaran, unidad_contrato) VALUES (:id, 'v-dir', :m, :der, :p, 2.0, 2.0, 1.0, :n, "
                 ":src, 'almacen_sin_partida', 'from_albaran', 'TUBO', 'ml', 'ml')"),
                 {"id": 10 + i, "m": 700 + i, "der": 900 + i, "n": neto,
+                 # F-106 R16 (fixture declarado en R31, humano 2026-10-29): el
+                 # precio de la fila da su importe (2 × P = neto), como lo deja
+                 # sv6 en una directa; antes era 5,0 fijo y la de 5 € no cuadraba.
+                 "p": 5.0 if neto is None else neto / 2,
                  "src": "declared_albaran" if neto is not None else "none"})
         s.commit()
     return motor

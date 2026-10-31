@@ -224,20 +224,22 @@ def test_f053_t25_rm5_equivalentes_2_y_3_orden_de_las_manuales(mutado):
 # #4, #5, #6 · validador_alta.py:247 y :267 · bordes en importe 0
 # =================================================================== #
 _SIGNOS = "        if (cantidad > 0 and importe < 0) or (cantidad < 0 and importe > 0):\n"
-_CON_SIGNO = "    con_signo = -cantidad if importe < 0 else cantidad\n"
 _EQUIVALENTE_4 = _SIGNOS.replace("importe < 0)", "importe <= 0)")
 _EQUIVALENTE_5 = _SIGNOS.replace("importe > 0)", "importe >= 0)")
-_EQUIVALENTE_6 = _CON_SIGNO.replace("importe < 0", "importe <= 0")
+# (F-106 R2) El #6 (``con_signo = -cantidad if importe < 0``, ``<`` -> ``<=``)
+# era de ``_linea_peticion``; esa línea se movió a
+# ``ruesma_comun.alta_sigrid.linea_a_sigrid``. Allí ya no es equivalente (con
+# importe 0 la función se puede llamar y daría la cantidad en negativo) y lo mata
+# ``test_f106_r2_importe_cero_cantidad_en_positivo`` de comun.
 
 
 @pytest.mark.parametrize("original, mutado", [
     (_SIGNOS, _EQUIVALENTE_4),
     (_SIGNOS, _EQUIVALENTE_5),
-    (_CON_SIGNO, _EQUIVALENTE_6),
-], ids=["equivalente_4", "equivalente_5", "equivalente_6"])
+], ids=["equivalente_4", "equivalente_5"])
 def test_f053_t25_rm5_equivalentes_4_5_6_importe_cero(original, mutado):
     fuente = fuente_normalizada(
-        validador_mod, (_SIGNOS, (_EQUIVALENTE_4, _EQUIVALENTE_5)), (_CON_SIGNO, (_EQUIVALENTE_6,)),
+        validador_mod, (_SIGNOS, (_EQUIVALENTE_4, _EQUIVALENTE_5)),
     )
     base = cargar(validador_mod, fuente)
     variante_m = cargar(validador_mod, fuente, (original, mutado))

@@ -64,7 +64,14 @@ composición. sv2, sv3 y sv6 tienen doble entrada: `main.py` (HTTP) y
 **Blobs**: `input/{document_id}.pdf` y, si el mensaje trae contexto,
 `input/{document_id}.correo.json` (los deja sv1; regla 15) y
 `envelopes/{document_id}_{fase}.json` (lo deja sv2). Son efímeros; lo durable
-va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
+va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato). Desde F-113
+el `content_type` de `input/{document_id}.pdf` es el MIME **real** por los bytes
+(`ruesma_comun.mime.detectar_mime`), no el `contentType` que declara Graph, y su
+metadata `filename` lleva una extensión coherente con él; la extensión `.pdf` de
+la clave es solo un nombre (puede ser una foto JPEG). Si el real difiere del
+declarado, el `payload_json` de `workflow_runs` guarda además
+`attachment_content_type_declarado`. sv2 vuelve a detectarlo al leer (blobs
+anteriores) y `normalizar_adjuntos` lo corrige antes de cualquier IA.
 
 ## Semántica de dominio imprescindible
 
@@ -169,6 +176,17 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
     Desde F-075 (regla 25) `ruesma_comun.importes` también suma el **importe
     del albarán** (`importe_albaran`), compara dos importes (`difieren`) y
     controla el pie (`pie_cuadra`).
+    **Cuadrar** (F-106, oct 2026; spec `specs/F-106-precio-al-cambiar-medicion/`;
+    origen AC26/30435 de CECOIS: la fila quedó en Q 48 con el importe leído
+    104,16 y sv9 grabó 48 × 2,17): una fila *cuadra* si
+    `|importe_de_linea(Q, P, d) − I| ≤ TOLERANCIA_CUADRE_EUR` (0,02 €), con
+    `importes.cuadra_linea` (`None` = no comparable: Q, P o I nulos). Es la única
+    regla de cuadre de línea de sv4, sv6 y sv9. Despejar un precio
+    (`importes.unitario_despejado`, 6 decimales) y la regla de editar Q, P, d o I
+    (`edicion_manual.recalcular_fila`) también viven en comun, y lo que sv9 pone en
+    la petición (cantidad con signo y `|I| / |cantidad|` a 6 decimales: la
+    convertida si va vinculada, la del albarán si no) sale SOLO de
+    `alta_sigrid.linea_a_sigrid`, que sv4 enseña como «A Sigrid».
 14. **La familia del albarán la decide IA1; NUNCA una regla determinista**
     (F-043, ago 2026). La clasificación es del **documento** y la devuelve
     IA1 al leerlo, en el bloque `data.clasificacion` —`familia`,
@@ -298,7 +316,8 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       deshacer) escriben partida final NULL + `almacen_elegido` sin tocar
       importes ni la casada: **una fila Sigrid sigue siendo Sigrid** (D4).
       Elegir almacén en una base no arrastra a sus complementarias (D8). Como
-      todo override de sv4, **se pierde al revalorar** (D5; lo arregla F-058).
+      todo lo editado en sv4, **revalorar lo conserva** (F-106 fase B, regla 20;
+      antes se perdía, D5/F-058).
       Fuera de almacén la ficha pinta la partida **final** de la línea, no la
       de su línea de contrato casada, y «Guardar» / «Guardar todas» solo
       envían la partida si el revisor la cambió (vaciarla = almacén; sin
@@ -404,7 +423,7 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       (`QA9999` alquiler de maquinaria, `XA9999` medios auxiliares,
       `MA9999` el resto; `ALTA_SIGRID_PRODUCTO_POR_DEFECTO`), que el
       administrativo cambia en sv4 (`albaran_line_valuations.
-      producto_sigrid`; se pierde al revalorar, F-058).
+      producto_sigrid`; revalorar lo conserva desde F-106, regla 20).
     - **Bloqueo**: con el alta `en_curso`, `incierto` o `registrado`
       (`ruesma_comun.alta_sigrid.ESTADOS_ALTA_BLOQUEANTES`) sv4 rechaza
       desaprobar, guardar, deshacer, borrar, purgar, revalorar, volver a
@@ -462,6 +481,28 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       vaciar); sin cambios no se escribe importe, su origen, descuento ni
       revisión. El importe solo se recalcula si cambia cantidad, precio o
       descuento (editar la descripción no reetiqueta un importe declarado).
+    - **Cambiar la medición recalcula; teclear el importe despeja el precio**
+      (F-106 R5–R12). Q, P o d cambiados ⇒ `I = Q × P × (1 − d)` y
+      `importe_source = 'calculated'`, sea cual sea el origen del importe (antes
+      un `declared_albaran` se quedaba: CECOIS). El PATCH admite `importe`: se
+      guarda a 2 decimales y P = `unitario_despejado(I, Q, d)` (d no cambia); un P
+      despejado distinto es un precio cambiado (Contrato → Nueva, en una Nueva su
+      derivada). `importe` y `precio_unitario` a la vez, o un importe ≠ 0 con Q 0
+      o d 100 %, son 422 sin escribir. `cuadrar` (`importe` | `precio`) es lo que
+      mandan los botones «Recalcular importe» (como cambiar Q) y «Recalcular
+      precio» (como teclear el I actual) de una fila que no cuadra; sobre una que
+      cuadra no escribe nada. El PATCH escribe solo la fila y su derivada, nunca
+      los originales (grises), y recalcula el total. En la ficha, al teclear el
+      importe se repinta P a 6 decimales (y el importe en rojo si no se puede
+      despejar); viaja `importe` si fue lo último tecleado de precio, importe,
+      cantidad y dto, y si no, P solo si cambió (las tres vías de `enviarFila`).
+    - **La ficha enseña si cuadra** (F-106 R13–R15): una fila a registrar que no
+      cuadra va en rojo con la cuenta en el `title` («48 × 11,20 × (1 − 7 %) =
+      499,97 ≠ 104,16») y sus dos botones (desactivados si está bloqueada o
+      aprobada); una fila con blanca cuyo I ya no es el del albarán lleva «≠
+      albarán: 104,16» (informativo); cada fila a registrar lleva «A Sigrid: 48 ×
+      2,17 €» en el `title` del precio, y visible si difiere de P. El precio se
+      pinta con sus decimales, hasta 6, al menos 2.
     - **Q en la unidad del precio**: la ficha enseña y edita Q =
       `cantidad_convertida ?? cantidad_albaran` e `importe = precio × Q × (1 −
       dto/100)`. Al editar Q, la convertida es Q y la del albarán se deriva
@@ -484,7 +525,8 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       pasa a almacén, cambia de producto ni se borra (409 «Línea guardada:
       desbloquéala para editarla») y los masivos se la saltan. «Desbloquear»
       la libera; las dos acciones tienen «Deshacer». Aprobar no exige filas
-      bloqueadas. Revalorar las deja desbloqueadas (F-058).
+      bloqueadas. Revalorar las conserva tal como estaban, bloqueo incluido
+      (F-106 fase B, más abajo; absorbe F-058).
     - **«Guardar» y «Guardar y aprobar» guardan antes las filas** (F-077,
       sustituye al aviso «Hay N líneas con cambios sin guardar» de F-065 R19):
       el PATCH de cada fila con cambios, en orden y con la misma validación de
@@ -502,10 +544,15 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
     - **Aprobar valida**: no se aprueba (ficha ni listado) con filas sin
       cantidad o importe («Líneas sin cantidad o importe: 3, 5», posiciones de
       la tabla de la ficha); si la suma de las filas no cuadra con la de lo
-      leído, la ficha pide confirmación (no bloquea). Revalorar, «Guardar y
+      leído, la ficha pide confirmación (no bloquea). Tampoco se aprueba con
+      filas a registrar (importe ≠ 0) que no cuadran («Líneas que no cuadran
+      (cantidad × precio × (1 − dto) ≠ importe): 3»; F-106 R16): las no
+      comparables no cuentan, el «≠ albarán» no bloquea y una fila en almacén es
+      una fila sin partida más (cuadra o bloquea). Revalorar, «Guardar y
       volver a buscar» o elegir otro contrato piden confirmación si hay filas
-      tocadas a mano (`review_models.es_fila_manual`); también «Solo volver a
-      buscar». «Traer líneas contrato» exige la cantidad de cada línea y crea
+      tocadas a mano (`ruesma_comun.edicion_manual.es_fila_manual`, F-106 R22),
+      ahora con «Revalorar conserva N líneas puestas a mano. ¿Continuar?»; también
+      «Solo volver a buscar». «Traer líneas contrato» exige la cantidad de cada línea y crea
       filas válidas para sv9. El almacén (partida final vacía) nunca impide
       aprobar; una fila sin línea de contrato NI derivada sí («revalora»), porque
       la ficha no la pinta y sv9 la mandaría sin vincular.
@@ -562,6 +609,41 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       vincular con producto genérico. El F7 de antes (duplicar) desapareció.
       La columna «Acciones» de la ficha va fija y pegada a la derecha
       (sticky): sus botones no salen nunca de la vista.
+    - **Revalorar conserva lo editado a mano** (F-106 fase B, R19–R30; D8 = c del
+      humano). Cada fila guarda su **edición** en
+      `albaran_line_valuations.edicion_manual_json` (DDL de sv6, defensiva en sv4):
+      `{"v": 1, "campos": {...}, "calculado": {...}, "fila_entera": bool}`, con los
+      campos puestos a mano y sus columnas (`cantidad`, `precio_unitario` o
+      `importe` —el último—, `descuento`, `codigo_partida`, `unidad`,
+      `descripcion`, `codigo_externo`, `producto_sigrid`, `bloqueada`, `origen`) y
+      la fila de sv6 antes de la primera edición (`calculado`: Q, P, d, I, su
+      origen, partida, unidad, descripción y de dónde salió el precio). Las reglas
+      viven en `ruesma_comun.edicion_manual` (`registrar_edicion`,
+      `aplicar_edicion`, `leer_edicion`, `es_fila_manual`). **sv4 la escribe** en la
+      misma transacción de cada vía que escribe una fila: PATCH (los campos
+      cambiados; el importe con un P despejado; el origen si pasa a Nueva),
+      «Origen ✎», almacén y «almacén a todas» (en el mismo UPDATE), producto
+      Sigrid y bloquear/desbloquear; las filas que crea (Añadir, Traer, «+ a
+      Sigrid», partes de Dividir) nacen `fila_entera`, y Dividir registra la Q
+      nueva de la original. **sv6 la reaplica** en `replace_valuation` (toda
+      revaloración): bloquea la cabecera (`FOR UPDATE`), lee las ediciones de la
+      anterior y las aplica a su pareja (`merge_line_id`, o padre y
+      `modifier_source` en una sintética única) con `recalcular_fila`, guardando
+      en `calculado` lo que acaba de calcular; sin pareja la fila se conserva
+      entera si su blanca existe o es una `fila_entera` sin blanca; si su blanca ya
+      no existe se pierde y la cabecera lleva `ediciones_perdidas:N`. Una legada
+      (sin edición y `es_fila_manual`) cuenta como `fila_entera`. Origen Nueva ⇒
+      se recrea su derivada `manual_override` con su P; vinculada a una línea que
+      no es del contrato nuevo ⇒ Nueva con su P y `front_contrato_cambiado`.
+      Total y contadores salen de las filas finales; un PATCH sobre una fila que
+      la revaloración reemplazó es 409 «La valoración ha cambiado: recarga la
+      ficha». La ficha enseña «✋» con el `title` campo a campo («Cantidad: 48
+      (calculado 10)»; una `fila_entera`, «✋ añadida a mano») y **«Volver a lo
+      calculado»** (`POST .../lines/{vid}/volver-a-calculado`): restaura
+      `calculado`, borra la edición, desbloquea y recalcula el total, con
+      «Deshacer»; 409 en aprobado o con alta bloqueante; una `fila_entera` no lo
+      tiene (se quita con «✕»); si la línea calculada ya no existe la fila sigue
+      Nueva. El «✕» de una fila con blanca vuelve al revalorar (como antes).
 21. **El código de obra es canónico** (F-070, oct 2026). Spec:
     `specs/F-070-obra-con-cero-inicial/`; decisiones en `progress/spec_F-070.md`.
     Regla del humano: «es crucial que añada el 0 inicial si no es VAR ni
@@ -622,9 +704,19 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       vaciado se ve vacío.
     - **Aprobar** (ficha o listado) no deja con filas a registrar sin vincular
       (`es_linea_vinculada`) sin descripción: «Líneas sin descripción: 3, 5».
-    - **sv9 no cambia** ni busca en otras tablas. El producto por defecto sigue
+    - **sv9 no busca en otras tablas**. El producto por defecto sigue
       sin guardarse (regla 19: sv4 y sv9 lo calculan igual). Fuera de F-078: la
       descripción editada de una Contrato vinculada no llega a Sigrid (F-079).
+    - **sv9 solo da de alta lo que cuadra** (F-106 R17): lee también P y d de la
+      fila (`SQL_LINEAS`); si una línea a registrar no cuadra (regla 13), el alta
+      queda `no_admitido` con el motivo `linea_no_cuadra` (detalle con la cuenta y
+      la referencia de la línea) sin llamar a sigrid-api; si cuadran, la petición
+      es la de siempre, con cantidad y precio de `linea_a_sigrid`. Las altas ya
+      grabadas se listan con `scripts/listar_altas_descuadradas_f106.py` (solo
+      lectura; lo lanza el humano, que decide qué hacer con ellas).
+    - **La edición también es de la fila** (F-106 fase B, regla 20): lo puesto a
+      mano vive en `edicion_manual_json` de la propia fila y sv6 lo vuelve a
+      aplicar al revalorar; ninguna otra tabla guarda overrides.
 
 23. **La partida final es un código de la obra** (F-076, oct 2026). Spec:
     `specs/F-076-normalizar-partidas/`; medición y decisiones en
@@ -655,7 +747,7 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       hojas): se valora como antes, WARNING y `partidas_obra_no_disponibles` en la
       cabecera sin revisión. `PARTIDAS_OBRA_NORMALIZAR_ENABLED=false` lo apaga sin
       redesplegar. sv9 no cambia: manda `codigo_partida_final`. Lo existente se
-      corrige revalorando desde sv4 (lo manual se pierde, F-058).
+      corrige revalorando desde sv4 (lo editado a mano se conserva, F-106).
     - **Capítulo y código completo** (F-098, oct 2026; spec
       `specs/F-098-partidas-por-capitulo/`, T0 en `progress/explore_F-098_T0.md`).
       Una partida tiene DOS códigos: el **cod** (`obrparpar.cod`, `99.01.64`), que
@@ -756,7 +848,12 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
       (nunca se supone el tipo de IVA). No bloquea la aprobación.
     - **sv4 enseña una sola cifra**, «Importe»: la del albarán si trae importes
       (rótulo «albarán · sin IVA») y, si no, el valorado (rótulo «contrato»),
-      con la marca ≠ si el valorado se aparta o el pie no cuadra. La misma
+      con la marca ≠ si el valorado se aparta o el pie no cuadra.
+    - **Lo leído manda hasta que el revisor cambia la medición** (F-106): el
+      importe leído de una línea es el de la fila mientras nadie toque Q, P o d;
+      cambiarlos lo recalcula (`calculated`) y la fila enseña «≠ albarán» con el
+      leído, que nunca se modifica (las blancas son de solo lectura). Una fila que
+      no cuadra no se aprueba (regla 20) ni se da de alta (regla 22). La misma
       expresión SQL portable ordena, filtra y suma en la tarjeta «Importe
       pendiente» y en las vistas Obras y Proveedores; una valoración sin
       filas no es un valorado.
@@ -767,7 +864,8 @@ va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
   `psql-albaranes-rs9k2`): sv3 dueño del schema (también del DDL de
   `albaran_altas_sigrid`, F-053); sv4 lectura+escritura de revisión (lee el
   alta, nunca la escribe); sv5 SOLO lectura; sv6 dueño de las 3 tablas de
-  valoración (columna `producto_sigrid`, que escribe sv4) y lee `obra_codigo`
+  valoración (columnas `producto_sigrid` y, desde F-106, `edicion_manual_json`,
+  que escribe sv4) y lee `obra_codigo`
   del merge (F-076, regla 23); sv9 lee merge y
   valoración y escribe SOLO `albaran_altas_sigrid`; sv1 solo `workflow_runs`. Cambios a nivel de servidor afectan a otros
   proyectos: prohibidos desde aquí.

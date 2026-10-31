@@ -311,6 +311,12 @@ class AlbaranLineValuationOrm(Base):
         Boolean, nullable=False, server_default=sa_text("false"),
     )
 
+    # -----------------------------------------------------------------
+    # F-106 · R19 — lo editado a mano (JSON de ``ruesma_comun.edicion_manual``).
+    # NULL = sin edición. sv6 la escribe solo al reaplicarla (R23–R27).
+    # -----------------------------------------------------------------
+    edicion_manual_json: Mapped[str | None] = mapped_column(Text)
+
     valuation: Mapped[AlbaranValuationOrm] = relationship(
         back_populates="lines",
     )

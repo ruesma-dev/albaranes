@@ -42,6 +42,7 @@ from domain.models.review_models import (
     RepartoInvalido,
     SaveResponse,
     TraerLineasBody,
+    ValoracionCambiadaError,
     VIEW_MODE_MERGE,
     normalize_view_mode,
 )
@@ -66,6 +67,7 @@ from infrastructure.sigrid.local_refetch_client import (
 from ruesma_comun.colas import construir_publicador
 from ruesma_comun.colas.arranque import ConfiguracionColasAusenteError
 from ruesma_comun.colas.publicador import PublicadorBestEffort
+from ruesma_comun.edicion_manual import NoDespejable, PrecioEImporte
 from ruesma_comun.sigrid import CachePartidasObra
 
 logger = logging.getLogger(__name__)
@@ -1530,16 +1532,40 @@ def build_app(settings: Settings) -> FastAPI:
     ) -> dict:
         # F-065 R8: solo los campos que vinieron (ausente = no cambia; null =
         # vaciar). R13: «Guardar» de la fila manda ``?bloquear=1``.
-        ok = review_service.update_line_conciliacion(
-            document_id=document_id,
-            valuation_line_id=valuation_line_id,
-            campos=payload.campos(),
-            bloquear=bloquear,
-        )
+        # F-106 R4, R7, R9: ``importe`` y ``cuadrar`` (solo si vino: sin él, la
+        # llamada es la de siempre); sin precio que dé el importe (Q 0 o dto
+        # 100 %), 422 con el texto para el revisor.
+        extra = {} if payload.cuadrar is None else {"cuadrar": payload.cuadrar}
+        try:
+            ok = review_service.update_line_conciliacion(
+                document_id=document_id,
+                valuation_line_id=valuation_line_id,
+                campos=payload.campos(),
+                bloquear=bloquear,
+                **extra,
+            )
+        except (NoDespejable, PrecioEImporte) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         if not ok:
             raise HTTPException(
                 status_code=404,
                 detail="Línea de valoración no encontrada",
+            )
+        return {
+            "ok": True,
+            "document_id": document_id,
+            "valuation_line_id": valuation_line_id,
+        }
+
+    # F-106 R30: «Volver a lo calculado» de una fila editada a mano.
+    @app.post("/api/documents/{document_id}/lines/{valuation_line_id}/volver-a-calculado")
+    def volver_a_calculado_api(document_id: str, valuation_line_id: int) -> dict:
+        if not review_service.volver_a_calculado(
+            document_id=document_id, valuation_line_id=valuation_line_id,
+        ):
+            raise HTTPException(
+                status_code=404,
+                detail="Línea sin edición que deshacer",
             )
         return {
             "ok": True,
@@ -1870,14 +1896,15 @@ def build_app(settings: Settings) -> FastAPI:
     @app.exception_handler(AlbaranAprobadoError)
     @app.exception_handler(LineaBloqueadaError)
     @app.exception_handler(LineasIncompletasError)
+    @app.exception_handler(ValoracionCambiadaError)
     async def alta_sigrid_error_handler(
         request: Request,
         exc: (
             AlbaranBloqueadoError | AlbaranSinValorarError | AlbaranAprobadoError
-            | LineaBloqueadaError | LineasIncompletasError
+            | LineaBloqueadaError | LineasIncompletasError | ValoracionCambiadaError
         ),
     ) -> Response:
-        """F-053 R25/R37 y F-065 R4/R14/R20: nada cambió (el repositorio no
+        """F-053 R25/R37, F-065 R4/R14/R20 y F-106 R28: nada cambió (el repositorio no
         confirmó). En la API, 409 con el aviso; en un formulario, de vuelta a
         la ficha con él."""
         if request.url.path.startswith("/api/"):

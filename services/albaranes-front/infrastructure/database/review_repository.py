@@ -29,7 +29,20 @@ from ruesma_comun.alta_sigrid import (
     es_linea_a_registrar,
     es_linea_vinculada,
 )
-from ruesma_comun.importes import clasificar_descuento, importe_albaran, importe_de_linea
+from ruesma_comun.edicion_manual import (
+    CAMPO_IMPORTE,
+    COLUMNAS_CALCULADO,
+    COLUMNAS_DE_CAMPO,
+    leer_edicion,
+    recalcular_fila,
+    registrar_edicion,
+)
+from ruesma_comun.importes import (
+    clasificar_descuento,
+    cuadra_linea,
+    importe_albaran,
+    importe_de_linea,
+)
 from ruesma_comun.linea_valorada import (
     CamposFila,
     LineaDeLaFila,
@@ -46,8 +59,14 @@ from ruesma_comun.valoracion import esta_valorado
 # la llama el resto de este módulo.
 from domain.models.review_models import (
     AlbaranAprobadoError,
+    ValoracionCambiadaError,
+    texto_edicion,
+    a_sigrid_de_fila,
+    aviso_importe_albaran,
+    cuadre_de_fila,
     aviso_reparto,
     cambia_origen,
+    recalculo_de_fila,
     cantidades_tras_editar,
     cantidades_tras_reapuntar,
     aviso_partida_texto,
@@ -307,6 +326,7 @@ _SQL_FILAS_PARA_APROBAR = text(
     "SELECT lv.id, lv.merge_line_id, lv.parent_merge_line_id, lv.line_kind, "
     "       lv.matched_contrato_line_id, lv.derived_contrato_line_id, "
     "       lv.cantidad_albaran, lv.cantidad_convertida, lv.importe_calculado, "
+    "       lv.precio_unitario_final, lv.descuento_albaran_aplicado, "
     "       lv.review_reasons_json, lv.descripcion_linea, "
     "       cl.sigrid_ide, cl.codigo_contrato AS contrato_linea, "
     "       v.contrato_codigo AS contrato_valoracion "
@@ -356,6 +376,13 @@ def _linea_de_la_fila(fila: Any) -> LineaDeLaFila | None:
         )
     return None
 
+
+#: (F-106 R30) Columnas del origen de una fila: no se restauran si la línea
+#: calculada ya no existe.
+_COLUMNAS_DEL_ORIGEN = (
+    "matched_contrato_line_id", "derived_contrato_line_id",
+    "precio_unitario_source", "precio_unitario_agreement",
+)
 
 #: (F-065 R14) ¿Está guardada (bloqueada) esta fila del documento?
 _SQL_FILA_BLOQUEADA = text(
@@ -492,6 +519,8 @@ class AlbaranReviewRepository:
                 "ALTER TABLE albaran_line_valuations ADD COLUMN IF NOT EXISTS bloqueada "
                 "BOOLEAN NOT NULL DEFAULT FALSE"
             ),
+            # (F-106 R19) Lo editado a mano. La declara sv6; aquí, defensiva.
+            "ALTER TABLE albaran_line_valuations ADD COLUMN IF NOT EXISTS edicion_manual_json TEXT",
             (
                 "ALTER TABLE albaran_contratos_merge "
                 "ADD COLUMN IF NOT EXISTS pdf_sharepoint_relative_path VARCHAR(1024)"
@@ -1363,7 +1392,9 @@ class AlbaranReviewRepository:
                     # ----- edición salmon (jun 2026) -----
                     "       descuento_albaran_aplicado, codigo_externo, "
                     # ----- F-065 R17: fila guardada (bloqueada) -----
-                    "       bloqueada "
+                    "       bloqueada, "
+                    # ----- F-106 R29: lo editado a mano -----
+                    "       edicion_manual_json "
                     "FROM albaran_line_valuations "
                     "WHERE valuation_id = :vid "
                     # from_albaran primero (para poder iterar base, luego
@@ -1483,6 +1514,7 @@ class AlbaranReviewRepository:
                 codigo_externo=row.get("codigo_externo")
                 if hasattr(row, "get") else row["codigo_externo"],
                 bloqueada=bool(row["bloqueada"]),
+                edicion_manual_json=row["edicion_manual_json"],
             )
 
             if line_kind == "synthetic_modifier":
@@ -1599,6 +1631,12 @@ class AlbaranReviewRepository:
                 ).append(vid)
 
         out: dict[int, ConciliacionDisplay] = {}
+        # (F-106 R15) vid -> ¿vinculada? (la Q que mandará sv9).
+        vinculada_by_vid: dict[int, bool] = {}
+
+        vinculo = self._fetch_vinculo_contrato_in_session(
+            session, list(matched_to_vlines.keys())
+        )
 
         # Paso 2: líneas matched (de Sigrid cacheadas) en bloque.
         for row in self._fetch_contrato_lines_in_session(
@@ -1607,6 +1645,14 @@ class AlbaranReviewRepository:
             # Todas las líneas de valoración que casaron con ESTA línea de
             # contrato reciben su propio bloque de conciliación (uno-a-varios).
             for vid in matched_to_vlines.get(row["id"], []):
+                _sigrid_ide, _contrato_linea = vinculo.get(row["id"], (None, None))
+                vinculada_by_vid[vid] = es_linea_vinculada(
+                    matched_contrato_line_id=row["id"],
+                    derived_contrato_line_id=None,
+                    sigrid_ide=_sigrid_ide,
+                    contrato_linea=_contrato_linea,
+                    contrato_valoracion=valuation.contrato_codigo,
+                )
                 # (F-065 R9) La ficha pinta y edita el precio APLICADO (el de
                 # la valoración); el de la línea de contrato va aparte, para el
                 # title y los avisos.
@@ -1706,8 +1752,47 @@ class AlbaranReviewRepository:
             elif str(final).strip() != (conc.codigo_partida or "").strip():
                 conc.codigo_partida = str(final).strip()
                 conc.descripcion_partida = None
+            # (F-106 R14, R15) Si cuadra (y su cuenta) y lo que mandará sv9.
+            AlbaranReviewRepository._marcar_cuadre(
+                conc, _vl, vinculada=vinculada_by_vid.get(vid, False),
+            )
 
         return out
+
+    @staticmethod
+    def _marcar_cuadre(
+        conc: ConciliacionDisplay,
+        vl: LineValuationPayload | None,
+        *,
+        vinculada: bool,
+    ) -> None:
+        """(F-106 R14, R15) Rellena ``cuadra``, ``cuadre_texto`` y el «A Sigrid»
+        de la fila con sus columnas (las mismas que miran aprobar y sv9)."""
+        if vl is None:
+            return
+        # (F-106 R29) «✋» con lo editado campo a campo.
+        edicion = leer_edicion(vl.edicion_manual_json)
+        if edicion is not None:
+            conc.edicion_texto = texto_edicion(edicion)
+            conc.fila_entera = edicion.fila_entera
+        conc.cuadra, conc.cuadre_texto = cuadre_de_fila(
+            cantidad_albaran=vl.cantidad_albaran,
+            cantidad_convertida=vl.cantidad_convertida,
+            precio=vl.precio_unitario_final,
+            descuento=vl.descuento_albaran_aplicado,
+            importe=vl.importe_calculado,
+        )
+        a_sigrid = a_sigrid_de_fila(
+            vinculada=vinculada,
+            cantidad_albaran=vl.cantidad_albaran,
+            cantidad_convertida=vl.cantidad_convertida,
+            precio=vl.precio_unitario_final,
+            importe=vl.importe_calculado,
+        )
+        if a_sigrid is not None:
+            conc.a_sigrid = a_sigrid.texto
+            conc.a_sigrid_difiere = a_sigrid.difiere
+            conc.factor_alta = a_sigrid.factor
 
     @staticmethod
     def _fetch_contrato_lines_in_session(session: Any, ids: list[int]):
@@ -1732,6 +1817,30 @@ class AlbaranReviewRepository:
             return session.execute(
                 text(base_sql + f"WHERE id IN ({placeholders})"), params
             ).mappings().all()
+
+    @staticmethod
+    def _fetch_vinculo_contrato_in_session(
+        session: Any, ids: list[int],
+    ) -> dict[int, tuple[Any, Any]]:
+        """(F-106 R15) ``id -> (sigrid_ide, codigo_contrato)`` de las líneas de
+        contrato casadas, para saber si la fila es vinculada (la Q que manda
+        sv9). Tolera una BBDD sin esas columnas (anterior a F-053): sin ellas,
+        ninguna es vinculada, como en sv9."""
+        if not ids:
+            return {}
+        marcas = ", ".join(f":id_{i}" for i in range(len(ids)))
+        try:
+            filas = session.execute(
+                text(
+                    "SELECT id, sigrid_ide, codigo_contrato "
+                    f"FROM albaran_contrato_lines_merge WHERE id IN ({marcas})"
+                ),
+                {f"id_{i}": v for i, v in enumerate(ids)},
+            ).mappings().all()
+        except Exception:
+            session.rollback()
+            return {}
+        return {int(f["id"]): (f["sigrid_ide"], f["codigo_contrato"]) for f in filas}
 
     @staticmethod
     def _fetch_derived_lines_in_session(session: Any, ids: list[int]):
@@ -1862,6 +1971,8 @@ class AlbaranReviewRepository:
             ).mappings().first()
             if row is None or row["document_id"] != document_id:
                 return False
+            # (F-106 R20) La fila antes de reapuntarla, para su edición.
+            antes_origen = self._fila_edicion_in_session(session, valuation_line_id)
 
             valuation_id = row["valuation_id"]
             cantidad = (
@@ -2030,6 +2141,10 @@ class AlbaranReviewRepository:
 
             self._materializar_fila_in_session(session, valuation_line_id)
             self._recalcular_total_in_session(session, valuation_id)
+            # (F-106 R20) «Origen ✎»: la fila pasa a otra línea o a Nueva.
+            self._registrar_edicion_in_session(
+                session, valuation_line_id, {"origen"}, antes_origen,
+            )
             session.commit()
             return True
 
@@ -2040,6 +2155,7 @@ class AlbaranReviewRepository:
         valuation_line_id: int,
         campos: dict[str, Any] | None = None,
         bloquear: bool = False,
+        cuadrar: str | None = None,
     ) -> bool:
         """Edición de UNA fila (la línea que se dará de alta en Sigrid).
 
@@ -2071,6 +2187,16 @@ class AlbaranReviewRepository:
           fila y la unidad cambiada, sin conversión, también a
           ``unidad_albaran``. No aplica ``fila_a_guardar``: lo vaciado se ve
           vacío (R16).
+        - (F-106 R5–R10, D1) Cantidad, precio o descuento ⇒ se recalcula el
+          importe (``calculated``, sea cual sea su origen). ``importe`` ⇒ se
+          guarda a 2 decimales y se despeja el precio (6 decimales) con la Q y
+          el dto resultantes; el dto se queda. Un precio despejado distinto es
+          un precio cambiado (Contrato → Nueva; en una Nueva, su derivada). Un
+          importe igual al de hoy se descarta salvo que cambie Q o d (entonces
+          manda: el revisor lo volvió a teclear). ``cuadrar`` (botones de una
+          fila que NO cuadra): ``importe`` ⇒ como cambiar Q; ``precio`` ⇒ como
+          teclear el importe actual. Sobre una que cuadra no escribe nada.
+          ``NoDespejable`` (importe ≠ 0 con Q 0 o dto 100 %) antes de escribir.
 
         NO revalora. Devuelve True si la fila es del documento.
         """
@@ -2094,7 +2220,7 @@ class AlbaranReviewRepository:
                     "       lv.codigo_partida_final, lv.descripcion_linea, "
                     "       lv.precio_unitario_final, lv.unidad_contrato, "
                     "       lv.descuento_albaran_aplicado, lv.codigo_externo, "
-                    "       lv.review_reasons_json, "
+                    "       lv.review_reasons_json, lv.importe_calculado, "
                     "       v.document_id, v.contrato_codigo "
                     "FROM albaran_line_valuations lv "
                     "JOIN albaran_valuations v ON v.id = lv.valuation_id "
@@ -2102,8 +2228,13 @@ class AlbaranReviewRepository:
                 ),
                 {"vid": valuation_line_id},
             ).mappings().first()
-            if row is None or row["document_id"] != document_id:
+            if row is None:
+                # (F-106 R28) La revaloración la reemplazó: la ficha está vieja.
+                raise ValoracionCambiadaError(document_id)
+            if row["document_id"] != document_id:
                 return False
+            # (F-106 R20) La fila antes de escribirla, para su edición.
+            antes_edicion = self._fila_edicion_in_session(session, valuation_line_id)
 
             valuation_id = row["valuation_id"]
             matched_id = row["matched_contrato_line_id"]
@@ -2144,6 +2275,7 @@ class AlbaranReviewRepository:
                 "precio_unitario": cur_precio,
                 "descuento": _sanear_descuento(row["descuento_albaran_aplicado"]),
                 "codigo_externo": _txt(row["codigo_externo"]) or None,
+                CAMPO_IMPORTE: row["importe_calculado"],
             }
 
             # ---- solo lo que de verdad cambia (R8) ----
@@ -2154,6 +2286,9 @@ class AlbaranReviewRepository:
                 if campo in ("cantidad", "precio_unitario"):
                     nuevo = valor
                     igual = _mismo_numero(nuevo, actual[campo])
+                elif campo == CAMPO_IMPORTE:
+                    nuevo = round(float(valor), 2)
+                    igual = _mismo_numero(nuevo, actual[campo])
                 elif campo == "descuento":
                     nuevo = _sanear_descuento(valor)
                     igual = _mismo_numero(nuevo, actual[campo])
@@ -2162,6 +2297,24 @@ class AlbaranReviewRepository:
                     igual = nuevo == actual[campo]
                 if not igual:
                     cambios[campo] = nuevo
+            # (F-106 R6) El importe tecleado manda aunque sea el de hoy si
+            # cambian Q o d: si no, se recalcularía y se perdería.
+            if (
+                CAMPO_IMPORTE in cambios_pedidos
+                and CAMPO_IMPORTE not in cambios
+                and {"cantidad", "descuento"} & set(cambios)
+            ):
+                cambios[CAMPO_IMPORTE] = round(float(cambios_pedidos[CAMPO_IMPORTE]), 2)
+
+            # (F-106 R9) Los botones solo actúan sobre una fila que no cuadra.
+            modo = recalculo_de_fila(
+                cambios=cambios,
+                cuadrar=cuadrar,  # type: ignore[arg-type]
+                no_cuadra=cuadra_linea(
+                    q_actual, cur_precio, row["descuento_albaran_aplicado"],
+                    row["importe_calculado"],
+                ) is False,
+            )
 
             # (F-065 H2) El aviso «revisa la cantidad» se va cuando la cantidad
             # se revisa: al cambiarla o al guardar la fila.
@@ -2173,7 +2326,7 @@ class AlbaranReviewRepository:
                 row["review_reasons_json"], MOTIVO_UNIDAD_CAMBIADA, False,
             )
 
-            if not cambios:
+            if not cambios and modo is None:
                 # (R10) Completar la convertida y (R13) bloquear: nada más.
                 session.execute(
                     text(
@@ -2187,6 +2340,9 @@ class AlbaranReviewRepository:
                         + " WHERE id = :vid"
                     ),
                     {"vid": valuation_line_id, "razones": razones},
+                )
+                self._registrar_edicion_in_session(
+                    session, valuation_line_id, {"bloqueada"} if bloquear else set(), antes_edicion,
                 )
                 session.commit()
                 return True
@@ -2205,6 +2361,29 @@ class AlbaranReviewRepository:
                 )
                 if cantidad_convertida is None:
                     cantidad_convertida = cantidad_albaran
+
+            # ---- importe y precio (F-106 D1) ----
+            # Antes de escribir nada: ``NoDespejable`` no deja la fila a medias.
+            importe_nuevo: float | None = None
+            if modo == "precio":
+                precio_despejado, importe_nuevo = recalcular_fila(
+                    cantidad=cantidad_convertida,
+                    precio=nuevo["precio_unitario"],
+                    descuento=nuevo["descuento"],
+                    importe=nuevo[CAMPO_IMPORTE],
+                    editados={CAMPO_IMPORTE},
+                )
+                if not _mismo_numero(precio_despejado, cur_precio):
+                    # (R8) Un precio despejado es un precio cambiado.
+                    cambios["precio_unitario"] = precio_despejado
+                    nuevo["precio_unitario"] = precio_despejado
+            elif modo == "importe":
+                importe_nuevo = _importe_de_linea(
+                    precio_unitario=nuevo["precio_unitario"],
+                    cantidad=cantidad_convertida,
+                    descuento_pct=nuevo["descuento"],
+                )
+
             params: dict[str, Any] = {
                 "vid": valuation_line_id,
                 "ca": cantidad_albaran,
@@ -2236,14 +2415,11 @@ class AlbaranReviewRepository:
                 sets.append("unidad_albaran = :uni")
 
             # ---- importe: solo si cambia lo que entra en él (R11) ----
-            cambia_importe = bool({"cantidad", "precio_unitario", "descuento"} & set(cambios))
+            cambia_importe = modo is not None
+            origen_cambiado = False
             if cambia_importe:
                 params["dto"] = nuevo["descuento"]
-                params["imp"] = _importe_de_linea(
-                    precio_unitario=nuevo["precio_unitario"],
-                    cantidad=cantidad_convertida,
-                    descuento_pct=nuevo["descuento"],
-                )
+                params["imp"] = importe_nuevo
                 sets += [
                     "descuento_albaran_aplicado = :dto",
                     "importe_calculado = :imp",
@@ -2263,6 +2439,7 @@ class AlbaranReviewRepository:
             ):
                 # CONTRATO → NUEVA: derivada manual con los valores
                 # resultantes; se conserva todo lo demás tal cual.
+                origen_cambiado = True
                 params["did"] = session.execute(
                     text(
                         "INSERT INTO contrato_lines_derived ("
@@ -2330,6 +2507,118 @@ class AlbaranReviewRepository:
             )
             if cambia_importe:
                 self._recalcular_total_in_session(session, valuation_id)
+            # (F-106 R20) Lo cambiado; con el precio despejado (botón o importe
+            # tecleado) cuenta el importe; el origen, si pasó a Nueva (R8, R27).
+            editados = {c for c in cambios if c in COLUMNAS_DE_CAMPO}
+            if modo == "precio":
+                editados.add(CAMPO_IMPORTE)
+            elif modo == "importe" and cuadrar == "importe":
+                # «Recalcular importe» es como cambiar Q: queda la Q (sv6 rehará I).
+                editados.add("cantidad")
+            if origen_cambiado:
+                editados.add("origen")
+            if bloquear:
+                editados.add("bloqueada")
+            self._registrar_edicion_in_session(session, valuation_line_id, editados, antes_edicion)
+            session.commit()
+            return True
+
+    #: (F-106 R20) Columnas que lee la edición: las de ``calculado`` y las que
+    #: escribe cada campo.
+    _COLUMNAS_EDICION = tuple(sorted(
+        set(COLUMNAS_CALCULADO) | {c for cs in COLUMNAS_DE_CAMPO.values() for c in cs}
+    ))
+
+    @classmethod
+    def _fila_edicion_in_session(cls, session: Any, valuation_line_id: int) -> dict | None:
+        """(F-106 R20) La fila con lo que mira su edición (y la edición)."""
+        fila = session.execute(
+            text(
+                "SELECT " + ", ".join(cls._COLUMNAS_EDICION) + ", edicion_manual_json "  # noqa: S608
+                "FROM albaran_line_valuations WHERE id = :vid"
+            ),
+            {"vid": int(valuation_line_id)},
+        ).mappings().first()
+        return dict(fila) if fila is not None else None
+
+    @classmethod
+    def _registrar_edicion_in_session(
+        cls,
+        session: Any,
+        valuation_line_id: int,
+        campos: set[str],
+        antes: dict | None,
+        *,
+        fila_entera: bool = False,
+    ) -> None:
+        """(F-106 R20, R21) Fusiona ``campos`` en la edición de la fila, en la
+        misma transacción que la escritura (no confirma). ``antes`` = la fila
+        antes de escribirla: la primera vez es el ``calculado``."""
+        if not campos and not fila_entera:
+            return
+        despues = cls._fila_edicion_in_session(session, valuation_line_id)
+        if despues is None:
+            return
+        session.execute(
+            text("UPDATE albaran_line_valuations SET edicion_manual_json = :e WHERE id = :vid"),
+            {
+                "e": registrar_edicion(
+                    despues["edicion_manual_json"], fila_antes=antes, fila_despues=despues,
+                    campos=campos, fila_entera=fila_entera,
+                ),
+                "vid": int(valuation_line_id),
+            },
+        )
+
+    def volver_a_calculado(self, *, document_id: str, valuation_line_id: int) -> bool:
+        """(F-106 R30) Restaura en la fila lo que calculó sv6 (el ``calculado``
+        de su edición), borra la edición, la desbloquea y recalcula el total.
+        ``False`` si la fila no es del documento, no tiene edición o es una
+        ``fila_entera`` (no hay nada calculado: se quita con «✕»). Si el origen
+        calculado era una línea (de contrato o derivada) que ya no existe, el
+        origen y la fuente del precio se quedan como están (la fila sigue
+        Nueva). 409 en aprobado o con alta bloqueante (``_exigir_editable``;
+        una fila guardada SÍ vuelve: desbloquearla es parte de volver)."""
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            self._exigir_editable(session, document_id)
+            row = session.execute(
+                text(
+                    "SELECT lv.valuation_id, lv.edicion_manual_json, v.document_id "
+                    "FROM albaran_line_valuations lv "
+                    "JOIN albaran_valuations v ON v.id = lv.valuation_id "
+                    "WHERE lv.id = :vid"
+                ),
+                {"vid": int(valuation_line_id)},
+            ).mappings().first()
+            if row is None or row["document_id"] != document_id:
+                return False
+            edicion = leer_edicion(row["edicion_manual_json"])
+            if edicion is None or edicion.fila_entera or not edicion.calculado:
+                return False
+            calculado = {c: v for c, v in edicion.calculado.items() if c in COLUMNAS_CALCULADO}
+            derivada = calculado.get("derived_contrato_line_id")
+            casada = calculado.get("matched_contrato_line_id")
+            if derivada is not None:
+                existe = session.execute(
+                    text("SELECT 1 FROM contrato_lines_derived WHERE id = :i"), {"i": derivada},
+                ).first() is not None
+            elif casada is not None:
+                existe = session.execute(
+                    text("SELECT 1 FROM albaran_contrato_lines_merge WHERE id = :i"), {"i": casada},
+                ).first() is not None
+            else:
+                existe = True
+            if not existe:
+                for columna in _COLUMNAS_DEL_ORIGEN:
+                    calculado.pop(columna, None)
+            sets = [f"{c} = :{c}" for c in calculado]
+            sets += ["edicion_manual_json = NULL", "bloqueada = FALSE"]
+            session.execute(
+                text("UPDATE albaran_line_valuations SET " + ", ".join(sets) + " WHERE id = :vid"),  # noqa: S608
+                {**calculado, "vid": int(valuation_line_id)},
+            )
+            self._recalcular_total_in_session(session, row["valuation_id"])
             session.commit()
             return True
 
@@ -2395,6 +2684,7 @@ class AlbaranReviewRepository:
         with self._session_factory.create_session() as session:
             # F-053 R26 (alta, con el merge bloqueado) y F-065 R4 (aprobado).
             self._exigir_editable(session, document_id)
+            antes_edicion = self._fila_edicion_in_session(session, valuation_line_id)
             tocadas = session.execute(
                 text(
                     "UPDATE albaran_line_valuations SET bloqueada = :b "
@@ -2404,6 +2694,11 @@ class AlbaranReviewRepository:
                 ),
                 {"b": bloqueada, "vid": int(valuation_line_id), "doc": document_id},
             ).all()
+            if tocadas:
+                # (F-106 R20) Desbloquear registra ``bloqueada: false``.
+                self._registrar_edicion_in_session(
+                    session, valuation_line_id, {"bloqueada"}, antes_edicion,
+                )
             session.commit()
             return bool(tocadas)
 
@@ -2430,10 +2725,7 @@ class AlbaranReviewRepository:
         if valuation_line_ids is not None and not valuation_line_ids:
             return []
         self.initialize()
-        sql = (
-            "UPDATE albaran_line_valuations SET "
-            "  codigo_partida_final = NULL, "
-            "  partida_action = :accion "
+        filtro = (
             "WHERE valuation_id = ("
             "  SELECT id FROM albaran_valuations WHERE document_id = :doc"
             ") AND NOT bloqueada"
@@ -2442,13 +2734,16 @@ class AlbaranReviewRepository:
             "accion": ACCION_ALMACEN_ELEGIDO,
             "doc": document_id,
         }
-        if valuation_line_ids is None:
-            sentencia = text(sql + " RETURNING id")
-        else:
-            sentencia = text(sql + " AND id IN :ids RETURNING id").bindparams(
-                bindparam("ids", expanding=True),
-            )
+        if valuation_line_ids is not None:
+            filtro += " AND id IN :ids"
             params["ids"] = [int(i) for i in valuation_line_ids]
+
+        def _sql(texto: str) -> Any:
+            sentencia = text(texto)
+            if "ids" in params:
+                sentencia = sentencia.bindparams(bindparam("ids", expanding=True))
+            return sentencia
+
         with self._session_factory.create_session() as session:
             # F-053 R26 (alta, con el merge bloqueado) y F-065 R4 (aprobado).
             self._exigir_editable(session, document_id)
@@ -2456,7 +2751,43 @@ class AlbaranReviewRepository:
             # se la salta (``NOT bloqueada`` en la sentencia).
             for valuation_line_id in params.get("ids", []):
                 self._exigir_linea_desbloqueada(session, document_id, valuation_line_id)
-            tocadas = [int(r[0]) for r in session.execute(sentencia, params)]
+            # (F-106 R20) La edición de cada fila que se va a tocar (la partida
+            # vacía), calculada antes y escrita en el MISMO UPDATE: sigue siendo
+            # una sola sentencia, todo o nada (R16).
+            ediciones: dict[int, str] = {}
+            for fila in session.execute(
+                _sql(
+                    "SELECT id, " + ", ".join(self._COLUMNAS_EDICION)  # noqa: S608
+                    + ", edicion_manual_json FROM albaran_line_valuations " + filtro
+                ),
+                params,
+            ).mappings():
+                antes = dict(fila)
+                ediciones[int(antes["id"])] = registrar_edicion(
+                    antes["edicion_manual_json"],
+                    fila_antes=antes,
+                    fila_despues={
+                        **antes, "codigo_partida_final": None,
+                        "partida_action": ACCION_ALMACEN_ELEGIDO,
+                    },
+                    campos={"codigo_partida"},
+                )
+            sets = "codigo_partida_final = NULL, partida_action = :accion"
+            if ediciones:
+                casos = " ".join(
+                    f"WHEN {vid} THEN :edicion_{vid}" for vid in sorted(ediciones)
+                )
+                sets += f", edicion_manual_json = CASE id {casos} ELSE edicion_manual_json END"
+                params.update({f"edicion_{vid}": e for vid, e in ediciones.items()})
+            tocadas = [
+                int(r[0]) for r in session.execute(
+                    _sql(
+                        "UPDATE albaran_line_valuations SET " + sets  # noqa: S608
+                        + " " + filtro + " RETURNING id"
+                    ),
+                    params,
+                )
+            ]
             session.commit()
         return sorted(tocadas)
 
@@ -2723,6 +3054,7 @@ class AlbaranReviewRepository:
                 # (al contrato o a la derivada nueva) como en
                 # set_line_conciliacion, con su concepto y su unidad (F-078 R13).
                 fila_id = existing["id"]
+                antes_reapunte = self._fila_edicion_in_session(session, int(fila_id))
                 session.execute(
                     text(
                         "UPDATE albaran_line_valuations SET "
@@ -2752,6 +3084,15 @@ class AlbaranReviewRepository:
 
             # (F-078 R13, R16) La fila nace con lo que se va a ver.
             self._materializar_fila_in_session(session, int(fila_id))
+            # (F-106 R20, R21) Nueva: ``fila_entera``; ya valorada: su origen.
+            if existing is None:
+                self._registrar_edicion_in_session(
+                    session, int(fila_id), set(), None, fila_entera=True,
+                )
+            else:
+                self._registrar_edicion_in_session(
+                    session, int(fila_id), {"origen"}, antes_reapunte,
+                )
             # Recalcular total de la cabecera.
             self._recalcular_total_in_session(session, valuation_id)
             session.commit()
@@ -2870,6 +3211,10 @@ class AlbaranReviewRepository:
                     "WHERE id = :v"
                 ),
                 {"v": valuation_id, "now": now},
+            )
+            # (F-106 R21) La crea sv4: nace ``fila_entera``.
+            self._registrar_edicion_in_session(
+                session, int(new_id), set(), None, fila_entera=True,
             )
             session.commit()
             return int(new_id)
@@ -3006,6 +3351,11 @@ class AlbaranReviewRepository:
                 self._materializar_fila_in_session(session, int(nuevo_id))
                 creadas.append(int(nuevo_id))
 
+            # (F-106 R21) Las crea sv4: nacen ``fila_entera``.
+            for nuevo_id in creadas:
+                self._registrar_edicion_in_session(
+                    session, nuevo_id, set(), None, fila_entera=True,
+                )
             if creadas:
                 self._recalcular_total_in_session(session, valuation_id)
             session.commit()
@@ -3227,6 +3577,7 @@ class AlbaranReviewRepository:
                         ),
                         {"part": primera.codigo_partida, "did": derived_id},
                     )
+            antes_division = self._fila_edicion_in_session(session, valuation_line_id)
             session.execute(
                 text(
                     "UPDATE albaran_line_valuations SET " + ", ".join(sets)
@@ -3236,6 +3587,16 @@ class AlbaranReviewRepository:
             )
             # (F-078 R16) Antes de copiarla: las partes heredan sus unidades.
             self._materializar_fila_in_session(session, valuation_line_id)
+            # (F-106 R21) La original registra su Q nueva (y su partida y su
+            # origen si cambian).
+            editados_division = {"cantidad"}
+            if primera.codigo_partida != partida_actual:
+                editados_division.add("codigo_partida")
+                if "did" in params:
+                    editados_division.add("origen")
+            self._registrar_edicion_in_session(
+                session, valuation_line_id, editados_division, antes_division,
+            )
 
             # ---- partes 2..N: filas «reparto» ----
             copiadas = dict(session.execute(
@@ -3287,6 +3648,10 @@ class AlbaranReviewRepository:
                     valores,
                 ).scalar_one()))
                 self._materializar_fila_in_session(session, creadas[-1])
+                # (F-106 R21) Las partes las crea sv4: ``fila_entera``.
+                self._registrar_edicion_in_session(
+                    session, creadas[-1], set(), None, fila_entera=True,
+                )
 
             self._recalcular_total_in_session(session, row["valuation_id"])
             session.commit()
@@ -3712,6 +4077,7 @@ class AlbaranReviewRepository:
                 derivada_origen=getattr(conc_map.get(f.valuation_line_id), "derived_origen", None),
                 precio_unitario_agreement=f.precio_unitario_agreement,
                 partida_action=f.partida_action,
+                edicion_manual_json=f.edicion_manual_json,
             )
         )
         return DocumentDetailPayload(
@@ -4303,7 +4669,12 @@ class AlbaranReviewRepository:
         la tabla de la ficha no tiene cantidad (Q) o importe: sv9 no la daría
         de alta y se perdería en silencio. Las posiciones son las de la tabla
         (``orden_filas_ficha``), que solo pinta las filas con línea de
-        contrato o derivada."""
+        contrato o derivada.
+
+        (F-106 R16) Tampoco con filas a registrar que no cuadran
+        (``cuadra_linea`` is ``False``): sv9 las dejaría en ``no_admitido``
+        (``linea_no_cuadra``). Las no comparables no cuentan; estar en almacén
+        no es motivo (si no cuadra, sí: sv9 la rechazaría igual)."""
         merge_line_ids = [
             int(r[0]) for r in session.execute(
                 _SQL_BLANCAS_EN_ORDEN, {"doc": document_id},
@@ -4317,6 +4688,7 @@ class AlbaranReviewRepository:
         posiciones: list[int] = []
         unidad_cambiada: list[int] = []
         sin_descripcion: list[int] = []
+        no_cuadran: list[int] = []
         posicion = 0
         huerfanas = 0
         for fila in orden_filas_ficha(merge_line_ids, filas):
@@ -4335,6 +4707,11 @@ class AlbaranReviewRepository:
             )
             if q is None or fila["importe_calculado"] is None:
                 posiciones.append(posicion)
+            if es_linea_a_registrar(fila["importe_calculado"]) and cuadra_linea(
+                q, fila["precio_unitario_final"], fila["descuento_albaran_aplicado"],
+                fila["importe_calculado"],
+            ) is False:
+                no_cuadran.append(posicion)
             # (F-078 R17) Sin vincular, a registrar y sin descripción: sv9 no
             # tendría concepto que mandar (``falta_descripcion``).
             if (
@@ -4352,10 +4729,10 @@ class AlbaranReviewRepository:
             # (CR3) «Origen ✎» cambió la unidad y nadie ha revisado la cantidad.
             if MOTIVO_UNIDAD_CAMBIADA in motivos_de_json(fila["review_reasons_json"]):
                 unidad_cambiada.append(posicion)
-        if posiciones or huerfanas or unidad_cambiada or sin_descripcion:
+        if posiciones or huerfanas or unidad_cambiada or sin_descripcion or no_cuadran:
             raise LineasIncompletasError(
                 document_id, posiciones, huerfanas, unidad_cambiada,
-                sin_descripcion=sin_descripcion,
+                sin_descripcion=sin_descripcion, no_cuadran=no_cuadran,
             )
 
     @staticmethod
@@ -4471,12 +4848,17 @@ class AlbaranReviewRepository:
                 contrato_valoracion=fila["contrato_valoracion"],
             ):
                 return "vinculada"
+            antes_edicion = self._fila_edicion_in_session(session, valuation_line_id)
             session.execute(
                 text(
                     "UPDATE albaran_line_valuations SET producto_sigrid = :p "
                     "WHERE id = :lv"
                 ),
                 {"p": producto, "lv": valuation_line_id},
+            )
+            # (F-106 R20)
+            self._registrar_edicion_in_session(
+                session, valuation_line_id, {"producto_sigrid"}, antes_edicion,
             )
             session.commit()
             return "guardado"
@@ -4871,6 +5253,12 @@ class AlbaranReviewRepository:
                 )
                 # importe: importe declarado vs cantidad x unitario de contrato
                 _conc.agree_importe = _agree_num(line.precio_neto, _exp_imp)
+                # (F-106 R13) el importe del albarán de su blanca y el aviso
+                # «≠ albarán» (las partes de un reparto lo pierden abajo).
+                _conc.importe_albaran = line.precio_neto
+                _conc.aviso_importe = aviso_importe_albaran(
+                    v.importe_calculado if v is not None else None, line.precio_neto,
+                )
 
             base_dl = DisplayLine(
                 line_kind="from_albaran",
@@ -4917,6 +5305,11 @@ class AlbaranReviewRepository:
                     ]
                 ),
             )
+            # (F-106 R13) Las partes de un reparto conservan su aviso (F-065
+            # R35): ni «≠ albarán» ni importe del albarán en la original.
+            if base_dl.parte is not None and _conc is not None:
+                _conc.importe_albaran = None
+                _conc.aviso_importe = None
 
         # Sintéticas huérfanas (parent no encontrado). Raro, pero no
         # podemos silenciarlas sin avisar: las colocamos al final.
