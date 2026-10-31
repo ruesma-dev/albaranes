@@ -156,7 +156,10 @@ def test_f108_r8_numero_recortado_sin_otro_cambio(texto, esperado):
 
 def test_f108_r9_numero_de_129_se_rechaza():
     from domain.models.review_models import NumeroAlbaranNoValidoError
-    from domain.services.fecha_albaran import MAX_NUMERO_ALBARAN, normalizar_numero_albaran
+    from domain.services.fecha_albaran import (
+        MAX_NUMERO_ALBARAN,
+        normalizar_numero_albaran,
+    )
 
     assert MAX_NUMERO_ALBARAN == 128
     with pytest.raises(NumeroAlbaranNoValidoError) as error:

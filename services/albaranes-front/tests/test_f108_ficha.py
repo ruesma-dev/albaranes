@@ -131,10 +131,10 @@ def test_f108_r23_vista_cruda_con_la_fecha_de_la_ia(render_detalle, documento_de
 # El filtro, cableado en build_app (sin él, la ficha real daría 500)
 # =================================================================== #
 def test_f108_r4_build_app_registra_el_filtro(monkeypatch, documento_detalle):
-    from test_f108_guardado import _ServicioFalso, _PublicadorFalso
     from config.settings import Settings
     from fastapi.testclient import TestClient
     from interface_adapters.web import app as modulo_app
+    from test_f108_guardado import _PublicadorFalso, _ServicioFalso
 
     servicio = _ServicioFalso()
     servicio.documento = documento_detalle().model_copy(update={"fecha": "2026-10-09"})

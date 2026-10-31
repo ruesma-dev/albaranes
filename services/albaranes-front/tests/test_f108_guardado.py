@@ -213,7 +213,7 @@ def test_f108_r7_el_put_con_fecha_mala_responde_422_con_texto(portal, escrita):
     cliente, servicio = portal
     try:
         normalizar_fecha_albaran(escrita)
-    except Exception as exc:  # el error real del dominio
+    except ValueError as exc:  # el error real del dominio
         servicio.error = exc
 
     respuesta = cliente.put(f"/api/documents/{DOC}", json={"fecha": escrita})
@@ -229,7 +229,7 @@ def test_f108_r9_el_put_con_numero_largo_responde_422_con_texto(portal):
     cliente, servicio = portal
     try:
         normalizar_numero_albaran("x" * 129)
-    except Exception as exc:
+    except ValueError as exc:
         servicio.error = exc
 
     respuesta = cliente.put(f"/api/documents/{DOC}", json={"numero_albaran": "x" * 129})
@@ -246,7 +246,7 @@ def test_f108_r7_el_payload_no_valida_la_fecha(portal):
     cliente, servicio = portal
     try:
         normalizar_fecha_albaran("31/02/2026")
-    except Exception as exc:
+    except ValueError as exc:
         servicio.error = exc
 
     cliente.put(f"/api/documents/{DOC}", json={"fecha": "31/02/2026"})

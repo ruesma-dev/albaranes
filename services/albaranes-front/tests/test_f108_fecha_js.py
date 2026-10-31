@@ -317,7 +317,7 @@ def test_f108_r18_corregida_se_guarda_con_la_fecha_en_iso(tmp_path):
     """)
 
     assert len(salida["peticiones"]) == 1
-    metodo, url, cuerpo = salida["peticiones"][0].split(" ", 2)
+    metodo, _url, cuerpo = salida["peticiones"][0].split(" ", 2)
     assert metodo == "PUT" and json.loads(cuerpo)["fecha"] == "2026-02-28"
 
 

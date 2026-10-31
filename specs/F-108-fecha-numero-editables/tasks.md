@@ -23,7 +23,7 @@ Rama `feature/F-108-fecha-numero-editables` (desde `dev` `43e87e5`), worktree `.
 
 - [x] T8: Viñeta en la regla 20 de `docs/ARCHITECTURE.md` y apartado en `services/albaranes-front/sv4.md`: sv4 guarda la fecha en `AAAA-MM-DD`, la enseña en `dd/mm/aaaa`, formatos admitidos, 422 con texto, calendario y (si D4 = a) qué impide aprobar (R27). `azure-apps/albaranes.md` no cambia (no cambia lo que sv4 expone ni consume)  |  Verificación: revisión del reviewer contra R27
 - [x] T9: Campaña de mutación muestreada (20, semilla fija) sobre `domain/services/fecha_albaran.py` y lo cambiado del repositorio; supervivientes con test nuevo o justificación en `progress/mutacion_F-108.md`  |  Verificación: `python -m harness.mutacion --feature F-108`
-- [ ] T10: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`
+- [x] T10: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`
 
 ## Bloque E · verificación manual (tras APPROVED)
 
