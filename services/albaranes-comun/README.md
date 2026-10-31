@@ -18,6 +18,7 @@ Resuelve la duplicación con deriva detectada en el análisis de código
 | `ruesma_comun.db.session_factory` | SessionFactory canónico (el de sv3) + `SessionFactoryDesdeEngine` para tests | las 5 copias |
 | `ruesma_comun.llm` *(entrega 2)* | Puerto `LlmVisionClient` (adjunto opcional), `LlmAttachment`, `RetryPolicy`, `LlmCallLogger` y los 3 clientes de visión (Claude con `tool_name` parametrizado, OpenAI, Gemini) | las 2 copias divergentes de sv2/sv5 (merge: base sv2 + fix adjunto-opcional de sv5) |
 | `ruesma_comun.contratos.contexto_linea` *(entrega 2)* | Modelo compartido `ContextoLinea` del envelope | las 4 copias de sv2/sv3/sv5/sv6 |
+| `ruesma_comun.contratos.pertenencia` *(0.11.0, F-115)* | `contrato_es_del_albaran`: el contrato es del albarán si su CIF y su obra coinciden con los del merge (normalizados); fila legada sin un lado no descalifica, albarán sin CIF u obra sí | la aceptación de un contrato «compartido» sin mirar el proveedor (sv4) |
 | `ruesma_comun.sharepoint.GraphSharePointClient` *(entrega 3)* | Núcleo Graph/SharePoint: resolución site/drive (3 modos), carpetas, **subida** y **descarga** (bytes y texto) por path relativo, sharing link | el bloque casi idéntico de sv3 (sube) y sv5 (lee el contrato); sv4 era código muerto |
 | `ruesma_comun.markdown` *(entrega 4)* | Conversión de contratos (PDF/Word) a **Markdown** con markitdown: `a_markdown`, `combinar_a_markdown` (conserva tablas de tarifas; degrada al texto de fallback) | — (capacidad nueva) |
 | `ruesma_comun.sigrid` *(0.7.0, F-052)* | Lectura de sigrid-api sin truncados silenciosos: `PoliticaTruncado`, `SigridRespuestaTruncada`, `comprobar_truncado`, `con_paginacion`, `leer_paginado`, `MAX_FILAS_POR_PETICION` (500.000) y `PAGINA_MAXIMA` (499.999). Sin HTTP ni SQL: la SQL de cada servicio es suya | el `truncated` que nadie miraba en sv3 y sv4 |
@@ -63,6 +64,12 @@ sin cambios de firma. Se reconstruyen sv1 y sv2, en ese orden; sv5 importa
 Q y P = |I| / |Q|) y el módulo nuevo `ruesma_comun.edicion_manual` (lo editado
 a mano en una fila y su reaplicación al revalorar). Compatible: sin cambios de
 firma en lo que ya había. Se reconstruyen sv6 → sv9 → sv4, en ese orden.
+
+**0.11.0** (F-115, 2026-10-31): `ruesma_comun.contratos.contrato_es_del_albaran`
+(¿el contrato es del proveedor y de la obra del albarán?, con `normalizar_cif` y
+`canonizar_codigo_obra`; un lado del contrato vacío no descalifica, uno del
+albarán sí). Función pura nueva, sin cambios de firma en lo que ya había. La
+importan sv3 y sv4: se reconstruyen sv3 → sv4, en ese orden.
 
 ## Instalación en local (PyCharm)
 

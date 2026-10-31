@@ -79,3 +79,13 @@ def test_f115_r1_albaran_sin_cif_o_sin_obra_no_tiene_contratos(albaran_cif, alba
 def test_f115_r1_solo_argumentos_por_nombre():
     with pytest.raises(TypeError):
         contrato_es_del_albaran("B123", "0686", "B123", "0686")  # type: ignore[misc]
+
+
+def test_f115_t2_version_0110():
+    from pathlib import Path
+
+    import ruesma_comun
+
+    assert ruesma_comun.__version__ == "0.11.0"
+    pyproject = (Path(ruesma_comun.__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'version = "0.11.0"' in pyproject
