@@ -2227,6 +2227,30 @@
         return hits / toks.length;
     }
 
+    // F-114: combo de proveedor con «Solo de la obra» desmarcado = búsqueda
+    // en el servidor entre TODOS los proveedores vivos de Sigrid. Funciones
+    // puras y autocontenidas (los tests las sacan una a una con node).
+    // R3: el texto recortado, o null si no llega al mínimo (3, como
+    // MINIMO_BUSQUEDA_PROVEEDOR de sv4); entonces no se llama.
+    function textoBusquedaProveedor(valor) {
+        const t = (valor == null ? "" : String(valor)).trim();
+        return t.length >= 3 ? t : null;
+    }
+    function urlProveedoresTodos(endpoint, texto) {
+        return endpoint + "?q=" + encodeURIComponent(texto);
+    }
+    // R6: un CIF con varias fichas vivas en Sigrid lo dice en la etiqueta.
+    function etiquetaProveedorGlobal(it) {
+        const base = _comboLabel("proveedor", it.cif, it.nombre);
+        return it.fichas > 1 ? base + " · " + it.fichas + " fichas en Sigrid" : base;
+    }
+    // R10: lista de la obra vacía (o sin obra) ⇒ invitar a desmarcar.
+    function mensajeListaObraVacia(error) {
+        const motivo = (error || "Sin proveedores con contrato en la obra")
+            .replace(/\.\s*$/, "");
+        return motivo + ". Desmarca «Solo de la obra» para buscar entre todos los proveedores de Sigrid";
+    }
+
     function initCombo(combo) {
         const input = combo.querySelector(".combo-input");
         const panel = combo.querySelector(".combo-panel");
