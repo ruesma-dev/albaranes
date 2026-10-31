@@ -278,9 +278,11 @@ def test_f113_r6_version_091() -> None:
 
     import ruesma_comun
 
-    assert ruesma_comun.__version__ == "0.9.1"
+    # F-106 sube a 0.10.0 (su test exige la exacta): desde 0.9.1, nunca menos,
+    # como hizo F-098 con el de F-076. Paquete y pyproject, iguales.
+    assert tuple(int(x) for x in ruesma_comun.__version__.split(".")) >= (0, 9, 1)
     pyproject = (Path(ruesma_comun.__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
-    assert 'version = "0.9.1"' in pyproject
+    assert f'version = "{ruesma_comun.__version__}"' in pyproject
 
 
 @pytest.mark.parametrize(

@@ -80,6 +80,8 @@ TEXTOS_MOTIVO_ALTA: dict[str, str] = {
     "cantidad_sin_convertir": "La línea no tiene la cantidad en la unidad del contrato",
     "producto_no_admitido": "Producto de Sigrid no admitido",
     "signo_incoherente": "La cantidad y el importe tienen signos distintos",
+    # F-106 R17: Q × P × (1 − dto) no da el importe de la línea.
+    "linea_no_cuadra": "La línea no cuadra (cantidad × precio × (1 − dto) ≠ importe)",
     "linea_de_otro_contrato": "La línea es de otro contrato",
     # Comparación con la previa (comparador_previa.py).
     "lineas_distintas": "Las líneas no coinciden con lo que devolvió Sigrid",

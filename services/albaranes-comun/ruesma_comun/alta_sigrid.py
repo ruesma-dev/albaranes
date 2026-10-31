@@ -17,6 +17,7 @@ Funciones puras, sin E/S.
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 
@@ -144,6 +145,38 @@ def es_linea_a_registrar(importe_calculado: float | None) -> bool:
     """Línea a registrar (glosario): ``importe_calculado`` no nulo y ≠ 0
     (positivo o negativo). Las demás no van en la petición (R13)."""
     return importe_calculado is not None and abs(float(importe_calculado)) > _EPSILON
+
+
+def linea_a_sigrid(
+    *,
+    vinculada: bool,
+    cantidad_albaran: float | None,
+    cantidad_convertida: float | None,
+    importe: float | None,
+) -> tuple[float, float] | None:
+    """(F-106 R2) Cantidad y precio que sv9 pone en la línea de la petición.
+
+    La cantidad es la convertida si la línea va vinculada (``ctrpro_ide``, en
+    la unidad del contrato) y la del albarán si no, con el signo del importe;
+    el precio, ``|importe| / |cantidad|`` a 6 decimales (neto, H14), de modo
+    que ``cantidad · precio`` = importe. ``None`` sin cantidad (nula o 0) o sin
+    importe legible. Es la ÚNICA definición de «a Sigrid»: sv9 la manda y sv4
+    la enseña (R15). F-095 cambiará solo esta función.
+    """
+    cantidad = cantidad_convertida if vinculada else cantidad_albaran
+    if cantidad is None or importe is None:
+        return None
+    try:
+        cantidad_num = abs(float(cantidad))
+        importe_num = float(importe)
+    except (TypeError, ValueError):
+        return None
+    if not (math.isfinite(cantidad_num) and math.isfinite(importe_num)):
+        return None
+    if cantidad_num <= _EPSILON:
+        return None
+    con_signo = -cantidad_num if importe_num < 0 else cantidad_num
+    return con_signo, round(abs(importe_num) / cantidad_num, 6)
 
 
 def clasificacion_documento(

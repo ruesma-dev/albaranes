@@ -160,6 +160,8 @@ albaranes-review-web/
 | `GET`  | `/api/documents/{id}?view=...`                         | —                                 | `DocumentDetailPayload` completo (campos + líneas + display_lines + contratos + valuation).    |
 | `PUT`  | `/api/documents/{id}`                                  | `MergeDocumentUpdatePayload`      | Guardar cambios. Update in-place de líneas + edición de sintéticas + recálculo de importes.    |
 | `POST` | `/api/documents/{id}/re-fetch-contratos`               | `{}`                              | Re-buscar contratos en el ERP y actualizar BBDD. 503 si SIGRID no está configurado.            |
+| `PATCH`| `/api/documents/{id}/lines/{vid}/conciliacion/campos`  | campos cambiados, `importe`, `cuadrar` | (F-065, F-106 R4–R10) Edita UNA fila: Q, P o d ⇒ recalcula I (`calculated`); `importe` ⇒ despeja P (6 decimales); `cuadrar` = botones «Recalcular importe/precio» de una fila que no cuadra. 422 con precio e importe a la vez o sin divisor; 409 aprobado, fila guardada o fila que una revaloración ya reemplazó («La valoración ha cambiado: recarga la ficha», F-106 R28). Registra la edición de la fila (`edicion_manual_json`, F-106 R20). |
+| `POST` | `/api/documents/{id}/lines/{vid}/volver-a-calculado`   | —                                 | (F-106 R30) Restaura lo que calculó sv6 (`calculado` de la edición), borra la edición, desbloquea y recalcula el total, con «Deshacer». 404 sin edición o en una `fila_entera`; 409 aprobado o con alta bloqueante. |
 | `GET`  | `/api/documents/{id}/alta-sigrid/fase`                 | —                                 | (F-077 R18) `{"fase": "en_curso" \| "sin_respuesta" \| "resultado"}` del panel «Alta en Sigrid»; la ficha la sondea cada 3 s mientras está «en curso». Solo lectura (ni escribe el alta ni publica); 404 sin documento; con `ALTA_SIGRID_DESDE_UTC` vacía, `resultado`. Uso interno del JS de sv4 (fuera del esquema OpenAPI). |
 
 ### 4.3 Detalle del payload `MergeDocumentUpdatePayload`
@@ -448,6 +450,13 @@ albaran_contratos_merge:
 
 CREATE TABLE albaran_contrato_lines_merge (...) IF NOT EXISTS
   + índices
+
+albaran_line_valuations (defensivas: el DDL es de sv6):
+  + bloqueada BOOLEAN NOT NULL DEFAULT FALSE        (F-065)
+  + edicion_manual_json TEXT                        (F-106 R19: lo editado a mano;
+                                                     sv4 la escribe en toda vía que
+                                                     escribe una fila y sv6 la
+                                                     reaplica al revalorar)
 
 CREATE INDEX IF NOT EXISTS:
   ix_albaran_documents_merge_approved

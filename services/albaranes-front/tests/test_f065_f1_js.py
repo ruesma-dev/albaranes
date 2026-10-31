@@ -99,7 +99,8 @@ def test_f065_r8_js_solo_viajan_los_campos_cambiados(tmp_path):
     assert casos["mismo_numero_con_coma"] == {}
     assert casos["mismo_numero_sin_decimales"] == {}
     assert casos["precio"] == {"precio_unitario": 120}
-    assert casos["importe_solo_ajusta_el_precio"] == {}
+    # F-106 R12 (declarado en R31): sin rastro de la última celda, el importe cambiado viaja.
+    assert casos["importe_solo_ajusta_el_precio"] == {"importe": 1000}
     assert casos["descuento_vaciado"] == {}
     assert casos["descuento_puesto"] == {"descuento": 10}
     assert casos["partida_vaciada"] == {"codigo_partida": ""}
@@ -203,7 +204,7 @@ def test_f065_r22_js_aviso_de_revalorar(tmp_path):
         console.log(JSON.stringify([avisoRevalorar(0), avisoRevalorar(2), avisoRevalorar(undefined)]));
     """)
 
-    assert casos == [None, "Revalorar descarta 2 líneas tocadas a mano. ¿Continuar?", None]
+    assert casos == [None, "Revalorar conserva 2 líneas puestas a mano. ¿Continuar?", None]
 
 
 @con_node
@@ -219,7 +220,7 @@ def test_f065_r22_js_confirmar_revalorar(tmp_path):
     """)
 
     assert casos == {"sin": True, "con": False,
-                     "preguntas": ["Revalorar descarta 3 líneas tocadas a mano. ¿Continuar?"]}
+                     "preguntas": ["Revalorar conserva 3 líneas puestas a mano. ¿Continuar?"]}
 
 
 def test_f065_r22_las_tres_vias_de_revalorar_confirman_antes():
