@@ -127,6 +127,7 @@ from domain.models.alta_sigrid_models import (
     AlbaranBloqueadoError,
     AlbaranSinValorarError,
     AltaSigridVista,
+    ValoracionDeOtroContratoError,
 )
 from domain.services.confianza import compute_confianza_pct
 from infrastructure.database.session_factory import SessionFactory
@@ -1077,6 +1078,22 @@ class AlbaranReviewRepository:
                 merge_doc, "selected_contrato_codigo", None
             )
 
+            # (F-115 R12) Solo los contratos del albarán (mismo proveedor y
+            # misma obra, R1): las filas del proveedor o la obra anteriores
+            # siguen en BBDD (D6) pero ni se listan ni se ofrecen.
+            def _del_albaran(filas_contrato):
+                return [
+                    c for c in filas_contrato
+                    if contrato_es_del_albaran(
+                        contrato_cif=c.cif_proveedor,
+                        contrato_obra=c.codigo_obra,
+                        albaran_cif=merge_doc.proveedor_cif,
+                        albaran_obra=merge_doc.obra_codigo,
+                    )
+                ]
+
+            contratos_orm = _del_albaran(contratos_orm)
+
             # Fix (jun 2026): la cabecera de contrato es ÚNICA por
             # ``sigrid_ide`` en ``albaran_contratos_merge`` y su
             # ``document_id`` se sobrescribe con el del ÚLTIMO albarán
@@ -1092,14 +1109,25 @@ class AlbaranReviewRepository:
             # si no hay ninguna cabecera por document_id (no alteramos el
             # caso normal ni el de varios contratos).
             if not contratos_orm and selected_contrato_codigo:
-                contratos_orm = session.scalars(
+                contratos_orm = _del_albaran(session.scalars(
                     select(AlbaranContratoMergeOrm)
                     .where(
                         AlbaranContratoMergeOrm.codigo_contrato
                         == selected_contrato_codigo
                     )
                     .order_by(AlbaranContratoMergeOrm.codigo_contrato.asc())
-                ).all()
+                ).all())
+
+            # (F-115 R12) Las líneas, solo si la selección no es ajena.
+            seleccion_ajena = bool(selected_contrato_codigo) and (
+                self._es_del_albaran_in_session(
+                    session,
+                    document_id=merge_doc.id,
+                    codigo=selected_contrato_codigo,
+                    cif=merge_doc.proveedor_cif,
+                    obra=merge_doc.obra_codigo,
+                ) is False
+            )
 
             # Dedup por codigo_contrato (#1): Sigrid puede tener el mismo
             # contrato con varios ``sigrid_ide`` (se recrea al modificarlo),
@@ -1131,8 +1159,12 @@ class AlbaranReviewRepository:
                     unidad_medida=r.get("unidad_medida"),
                     codigo_producto=r.get("codigo_producto"),
                 )
-                for r in self._fetch_contrato_lines_for_codigo_in_session(
-                    session, selected_contrato_codigo
+                for r in (
+                    []
+                    if seleccion_ajena
+                    else self._fetch_contrato_lines_for_codigo_in_session(
+                        session, selected_contrato_codigo
+                    )
                 )
             ]
             # Dedup de opciones identicas (misma partida+descripcion+precio+
@@ -4498,6 +4530,10 @@ class AlbaranReviewRepository:
             # (F-065 R20) Ni con filas sin cantidad o importe.
             if paso_a_aprobado:
                 self._exigir_lineas_completas(session, document.id)
+                # (F-115 R13) Ni con la valoración de otro contrato.
+                self._exigir_valoracion_del_contrato_vigente(
+                    session, document.id, document.selected_contrato_codigo,
+                )
 
             session.commit()
 
@@ -4790,6 +4826,30 @@ class AlbaranReviewRepository:
             )
 
     @staticmethod
+    def _exigir_valoracion_del_contrato_vigente(
+        session: Any, document_id: str, seleccion: str | None,
+    ) -> None:
+        """(F-115 R13, D4) :class:`ValoracionDeOtroContratoError` si la
+        valoración vigente (``ORDER BY v.id DESC LIMIT 1``) es de un contrato
+        distinto del seleccionado (recortados; vacío = NULL = NULL). Sin
+        valoración no lanza: eso ya lo cubre R37 de F-053."""
+        if not inspect(session.connection()).has_table("albaran_valuations"):
+            return
+        fila = session.execute(
+            text(
+                "SELECT v.contrato_codigo FROM albaran_valuations v "
+                "WHERE v.document_id = :id ORDER BY v.id DESC LIMIT 1"
+            ),
+            {"id": document_id},
+        ).first()
+        if fila is None:
+            return
+        valoracion = (fila[0] or "").strip() or None
+        elegido = (seleccion or "").strip() or None
+        if valoracion != elegido:
+            raise ValoracionDeOtroContratoError(document_id, valoracion, elegido)
+
+    @staticmethod
     def _valorado_in_session(session: Any, document_id: str) -> bool:
         """(F-053 R37, R38) «Valorado» con ``ruesma_comun.valoracion``:
         ``ok`` de sv6 o valoración manual completa. Sin tabla de
@@ -4954,6 +5014,10 @@ class AlbaranReviewRepository:
             # (F-065 R20) Ni con filas sin cantidad o importe.
             if paso_a_aprobado:
                 self._exigir_lineas_completas(session, document_id)
+                # (F-115 R13) Ni con la valoración de otro contrato.
+                self._exigir_valoracion_del_contrato_vigente(
+                    session, document_id, document.selected_contrato_codigo,
+                )
             document.approved = approved
             document.reviewed_at_utc = document.reviewed_at_utc or self._utc_iso()
             document.last_modified_at_utc = self._utc_iso()

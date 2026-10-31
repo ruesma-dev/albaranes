@@ -20,6 +20,7 @@ from domain.models.alta_sigrid_models import AlbaranBloqueadoError
 from domain.models.review_models import MergeDocumentUpdatePayload
 from f053_sv4_bbdd import foto, poner_alta
 from f065_bbdd import (
+    CABECERA,
     DOC,
     construir,
     documento,
@@ -130,7 +131,8 @@ def test_f065_r2_metalfire_seis_siete_y_cinco_tras_guardar_y_aprobar(monkeypatch
     assert repo.update_line_conciliacion(
         document_id=DOC, valuation_line_id=12, campos={"cantidad": 7.0}, bloquear=True)
     nuevas = repo.add_valuation_lines_from_contrato(document_id=DOC, lineas=[(503, 5.0)])
-    _, paso = _guardar(repo, monkeypatch, approved=True, approved_by="ana", lines=BLANCAS)
+    _, paso = _guardar(repo, monkeypatch, approved=True, approved_by="ana", lines=BLANCAS,
+                       **CABECERA)
 
     assert paso is True
     cantidades = {f["id"]: (f["cantidad_albaran"], f["cantidad_convertida"])
@@ -164,7 +166,7 @@ def test_f065_r3_put_aprobando_un_pendiente_guarda_y_aprueba(monkeypatch):
     motor = construir()
 
     _, paso = _guardar(repositorio(motor), monkeypatch, numero_albaran="A-9",
-                       approved=True, approved_by="ana")
+                       approved=True, approved_by="ana", **CABECERA)
 
     assert paso is True
     doc = documento(motor)

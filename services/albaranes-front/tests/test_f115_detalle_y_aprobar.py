@@ -145,6 +145,7 @@ def test_f115_r13_valoracion_sin_contrato_y_sin_seleccion_aprueba():
     motor = construir()
     ejecutar(motor, "UPDATE albaran_valuations SET contrato_codigo = NULL WHERE document_id = :d",
              d=DOC)
+    _seleccionar(motor, None)
     # Sin contrato, las filas necesitan su descripción para aprobarse (F-078 R17).
     ejecutar(motor, "UPDATE albaran_line_valuations SET descripcion_linea = 'PUERTA'")
     assert repositorio(motor).set_approved(document_id=DOC, approved=True, approved_by="ana")
@@ -157,6 +158,7 @@ def test_f115_r13_valoracion_sin_contrato_y_con_seleccion_409():
     _seleccionar(motor, CONTRATO)
     ejecutar(motor, "UPDATE albaran_valuations SET contrato_codigo = '' WHERE document_id = :d",
              d=DOC)
+    ejecutar(motor, "UPDATE albaran_line_valuations SET descripcion_linea = 'PUERTA'")
     with pytest.raises(ValoracionDeOtroContratoError) as error:
         repositorio(motor).set_approved(document_id=DOC, approved=True, approved_by="ana")
     assert error.value.aviso.startswith("La valoración es sin contrato y el albarán tiene")
@@ -167,7 +169,10 @@ def test_f115_r13_guardar_y_aprobar_con_el_mismo_contrato_aprueba():
     _seleccionar(motor, CONTRATO)
     _, paso = repositorio(motor).update_document_y_transicion(
         document_id=DOC,
-        payload=MergeDocumentUpdatePayload(approved=True, selected_contrato_codigo=CONTRATO),
+        payload=MergeDocumentUpdatePayload(
+            approved=True, selected_contrato_codigo=CONTRATO,
+            proveedor_cif="B12345678", obra_codigo="0404",
+        ),
     )
     assert paso is True
 

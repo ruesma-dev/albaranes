@@ -232,6 +232,44 @@ class AlbaranSinValorarError(Exception):
         return AVISO_SIN_VALORAR
 
 
+def aviso_valoracion_de_otro_contrato(
+    contrato_valoracion: str | None, contrato_seleccionado: str | None,
+) -> str:
+    """(F-115 R13) «La valoración es del contrato X y el albarán tiene Y |
+    ningún contrato: espera a que termine la valoración o pulsa Revalorar»."""
+    valoracion = (
+        f"es del contrato {contrato_valoracion}" if contrato_valoracion else "es sin contrato"
+    )
+    albaran = contrato_seleccionado or "ningún contrato"
+    return (
+        f"La valoración {valoracion} y el albarán tiene {albaran}: espera a que "
+        "termine la valoración o pulsa Revalorar"
+    )
+
+
+class ValoracionDeOtroContratoError(Exception):
+    """(F-115 R13, D4) No se aprueba una valoración hecha con un contrato
+    distinto del seleccionado (p. ej. tras cambiar el proveedor, antes de que
+    llegue la revaloración); no se cambia nada."""
+
+    def __init__(
+        self,
+        document_id: str,
+        contrato_valoracion: str | None,
+        contrato_seleccionado: str | None,
+    ) -> None:
+        self.document_id = document_id
+        self.contrato_valoracion = contrato_valoracion
+        self.contrato_seleccionado = contrato_seleccionado
+        super().__init__(self.aviso)
+
+    @property
+    def aviso(self) -> str:
+        return aviso_valoracion_de_otro_contrato(
+            self.contrato_valoracion, self.contrato_seleccionado,
+        )
+
+
 @dataclass(frozen=True)
 class ConfigAltaSigrid:
     """DESDE, Espera y mapeo de productos (los mismos valores que sv9)."""

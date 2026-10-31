@@ -24,7 +24,7 @@ import json
 import re
 
 import pytest
-from f065_bbdd import DOC, construir, ejecutar, fila, repositorio
+from f065_bbdd import CABECERA, DOC, construir, ejecutar, fila, repositorio
 from test_f065_f1_js import _ejecutar, con_node
 
 AVISO_UNIDAD = "front_unidad_cambiada_revisa_cantidad"
@@ -356,7 +356,7 @@ def _aprobar(motor, via, monkeypatch):
         return repo.set_approved(document_id=DOC, approved=True, approved_by="ana")
     monkeypatch.setattr(repo, "get_document_detail", lambda document_id: "detalle")
     return repo.update_document_y_transicion(
-        document_id=DOC, payload=MergeDocumentUpdatePayload(approved=True))[1]
+        document_id=DOC, payload=MergeDocumentUpdatePayload(approved=True, **CABECERA))[1]
 
 
 @pytest.mark.parametrize("via", ["listado", "guardar_y_aprobar"])

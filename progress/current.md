@@ -648,3 +648,9 @@ No bloquea el `done`. Procedimiento (design §10 y `tasks.md` T12):
 6. Los mixtos que están en `Procesados` con el interior perdido **no** se mueven en bloque (re-ingerirían los
    PDF directos con otra `correlation_key`): uno a uno, si el humano lo decide.
 7. Anotar aquí el resultado.
+
+## F-115 · implementer (2026-10-31)
+
+- Hechas T1–T10 (un commit por tarea). T0 la hizo el líder (0 y 0 %). Siguen T11–T12 (JS), T14 (mutación), T15 (docs), T17.
+- Desviaciones (detalle en `progress/impl_F-115.md`): (a) `test_f106_t2_version_0100` pasa a «≥ 0.10.0» (comun 0.11.0), como hicieron F-098 y F-113; (b) R13 obliga a datos coherentes en los fixtures `f053_sv4_bbdd` y `f065_bbdd` (el merge tiene seleccionado el contrato de su valoración) y a que 6 llamadas de «guardar y aprobar» de tests anteriores manden la cabecera (`CABECERA`: CIF, obra y contrato) como hace la ficha; ninguna aserción cambia; (c) aviso de R11 con variante «Obra cambiada…» (R15: el proveedor se conserva).
+- Entorno: *junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`); suites con `PYTHONPATH` a la comun del worktree.
