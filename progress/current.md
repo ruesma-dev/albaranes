@@ -9,7 +9,7 @@
 
 **F-114 · CERRADA (`done`, 2026-10-31).** Check «Solo de la obra» o todos los proveedores de Sigrid. Review APPROVED (pasada 3), T8 en verde, desplegada con el sv4 `r20261031-1506`. Pendiente sin bloqueo: O1 de la review (R10 por el texto del error; propuesta `!currentObra()`).
 
-**F-113 · `blocked` (2026-10-31): review APPROVED (pasada 1, `progress/review_F-113.md`), fusionada en `dev`; espera T10 (humano: desplegar sv1 y luego sv2) y T11 (líder, solo lectura: el script a las 24 h, 0 casos nuevos)** — el MIME real de los adjuntos manda sobre el de Graph (comun 0.9.1). T9 hecha por el líder el 2026-10-31: 6 documentos con MIME genérico, todos del 2026-10-30 (las 5 fotos de FEYMACO de la 0728 y `7ed9c9b5`, 11:01 UTC); se recuperan a mano (D-5 retirada). Informe `progress/impl_F-113.md`, mutación `progress/mutacion_F-113.md`, `azure-apps` `cff9063` local sin push (publicarlo tras T10, O2 de la review). Observaciones sin bloqueo de la review: O3 (ruff `I001`/`RUF059` en tests nuevos), O4 (`content_type` vacío en sv1, hoy imposible). *Junction* `.venv` de sv4 en `../albaranes-F-113`: quitarla con `cmd /c rmdir` antes de `git worktree remove`.
+**F-113 · CERRADA (`done`, 2026-11-01).** Resumen en `history.md`.
 
 **F-106 · CERRADA (`done`, 2026-10-31).** Resumen en `history.md`.
 

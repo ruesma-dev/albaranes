@@ -5,6 +5,10 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-113 · El MIME real del adjunto manda sobre el que declara Graph (cerrada 2026-11-01)
+
+Las fotos de WhatsApp llegaban como `application/octet-stream` y OpenAI las rechazaba. `ruesma_comun.mime` (comun 0.9.1) detecta el tipo por el contenido y corrige nombre y MIME en sv1 y sv2. Review APPROVED (pasada 1, `progress/review_F-113.md`; O3 y O4 sin bloqueo). T9 (30-10): 6 documentos atascados, todos del 2026-10-30, se recuperan a mano. Desplegado el 2026-10-31: sv1 `r20261031-0052`, sv2 `r20261031-0054`. T11 (2026-11-01, solo lectura): 0 casos nuevos; siguen solo los 6 del 30-10. Pendiente del humano: recuperar esos 6 y publicar `azure-apps` `cff9063`.
+
 ## F-115 · Cambiar el proveedor reinicia contrato y valoración, no las líneas (cerrada 2026-10-31)
 
 Una sola regla en comun 0.11.0: el contrato seleccionado tiene que ser del CIF y de la obra del albarán. Se aplica al guardar en sv4, al empezar el enriquecimiento en sv3 y en la ficha; si no cuadra, se retira, se rebusca y se revalora sin regenerar líneas. Al cambiar la obra se conserva el proveedor y cambia el contrato (D2). sv4 pide confirmación antes de cambiar el proveedor y no deja aprobar con una valoración de otro contrato. T0 (producción, solo lectura): 0 casos. Review APPROVED (pasada 1, `progress/review_F-115.md`; O1–O3 sin bloqueo); T13 en Chrome por el líder; desplegado el 2026-10-31: sv3 `r20261031-2046`, sv4 `r20261031-2049`, logs limpios. Pendiente del humano: publicar `azure-apps` `7c6081b`.
