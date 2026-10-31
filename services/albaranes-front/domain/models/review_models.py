@@ -402,6 +402,17 @@ class ProveedorOption(BaseModel):
 
     cif: str | None = None
     nombre: str | None = None
+    #: (F-114 R17) Fichas vivas de ``prv`` con ese CIF; solo la búsqueda
+    #: global lo rellena (la lista de la obra lo deja en ``None``).
+    fichas: int | None = None
+
+
+class BusquedaProveedores(BaseModel):
+    """(F-114 R12, R18) Resultado de la búsqueda global de proveedores vivos
+    de Sigrid: como mucho el límite, y ``mas`` si Sigrid tenía más."""
+
+    items: list[ProveedorOption]
+    mas: bool
 
 
 class ObraOption(BaseModel):

@@ -25,7 +25,7 @@ Leer "SELECT TOP (?) v.cif AS cif, MIN(v.raz) AS nombre, COUNT(*) AS fichas FROM
 
 ## Bloque A · cliente y endpoint
 
-- [ ] T1: `ProveedorOption.fichas` y `BusquedaProveedores` en `review_models.py`; `_patron_like`, constantes, `_SQL_PROVEEDORES_TODOS` y `buscar_proveedores` en `sigrid_lookup_client.py` (design §3); tests de parámetros y SQL (R15), patrones y escape (R16), agrupado y dedupe por CIF normalizado (R17), límite + 1 y `mas` (R18), propios y vacíos fuera (R19), `NO_TOLERA` y log (R20), mínimo sin llamar, y `fetch_proveedores_por_obra` intacto (R21)  |  Verificación: `pytest services/albaranes-front/tests/test_f114_cliente.py -k "f114_r15 or f114_r16 or f114_r17 or f114_r18 or f114_r19 or f114_r20 or f114_r21"`
+- [x] T1: `ProveedorOption.fichas` y `BusquedaProveedores` en `review_models.py`; `_patron_like`, constantes, `_SQL_PROVEEDORES_TODOS` y `buscar_proveedores` en `sigrid_lookup_client.py` (design §3); tests de parámetros y SQL (R15), patrones y escape (R16), agrupado y dedupe por CIF normalizado (R17), límite + 1 y `mas` (R18), propios y vacíos fuera (R19), `NO_TOLERA` y log (R20), mínimo sin llamar, y `fetch_proveedores_por_obra` intacto (R21)  |  Verificación: `pytest services/albaranes-front/tests/test_f114_cliente.py -k "f114_r15 or f114_r16 or f114_r17 or f114_r18 or f114_r19 or f114_r20 or f114_r21"`
 - [ ] T2: Endpoint `GET /api/sigrid/proveedores/todos` en `app.py` (design §3); tests: respuesta `{ok, items:[{cif,nombre,fichas}], mas}` (R12), `q` corto sin llamar al cliente (R13), sin cliente y con excepción ⇒ 200 `ok=false` (R14), `/api/sigrid/proveedores` con la misma respuesta de antes (R21)  |  Verificación: `pytest services/albaranes-front/tests/test_f114_endpoint.py`
 
 ## Bloque B · ficha

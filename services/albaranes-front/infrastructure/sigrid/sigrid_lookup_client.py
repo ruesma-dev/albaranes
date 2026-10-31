@@ -7,6 +7,7 @@ from typing import Any
 
 import httpx
 from ruesma_comun.obras import canonizar_codigo_obra
+from ruesma_comun.proveedores import cifs_propios, es_cif_propio, normalizar_cif
 from ruesma_comun.sigrid import (
     SQL_PARTIDAS_POR_OBRA,
     ListaPartidasObra,
@@ -16,6 +17,7 @@ from ruesma_comun.sigrid import (
 )
 
 from domain.models.review_models import (
+    BusquedaProveedores,
     ContratoOption,
     ObraOption,
     PartidaOption,
@@ -43,6 +45,52 @@ WHERE con_obr.cod = ?
   AND con_ctr.emp = 1
 ORDER BY prv.raz
 """
+
+# (F-114) Búsqueda global de proveedores VIVOS por nombre o CIF. «Vivo» =
+# ficha de ``prv`` cuyo ``con`` tiene ``tip = 5``, ``emp = 1`` y
+# ``fecbaj = 0``: la misma definición con la que sigrid-api resuelve la
+# identidad de un alta sin contrato (``L17_PROVEEDOR_POR_CIF``). TODO va por
+# parámetro (R15). Un proveedor por CIF, con la razón social menor y las
+# fichas vivas con ese CIF (R17). ``prv.raz`` es texto de 128, no ``text``:
+# admite ``MIN`` y ``ORDER BY``. ``ESCAPE '!'``: la barra invertida da error
+# 506 a través de sigrid-api (T0, 2026-10-30).
+_SQL_PROVEEDORES_TODOS = """\
+SELECT TOP (?)
+    v.cif      AS cif,
+    MIN(v.raz) AS nombre,
+    COUNT(*)   AS fichas
+FROM prv AS v
+JOIN con AS c ON c.ide = v.ide
+WHERE c.tip = ? AND c.emp = ? AND c.fecbaj = ?
+  AND v.cif IS NOT NULL AND LTRIM(RTRIM(v.cif)) <> ''
+  AND (v.raz COLLATE Latin1_General_CI_AI LIKE ? ESCAPE '!'
+       OR REPLACE(REPLACE(UPPER(v.cif), ' ', ''), '-', '') LIKE ? ESCAPE '!')
+GROUP BY v.cif
+ORDER BY MIN(v.raz), v.cif
+"""
+
+#: (F-114 D1) Caracteres útiles mínimos del texto y proveedores por respuesta.
+MINIMO_BUSQUEDA_PROVEEDOR = 3
+LIMITE_BUSQUEDA_PROVEEDOR = 50
+#: ``con.tip`` de un proveedor y empresa Construcciones Ruesma (D7).
+TIP_PROVEEDOR = 5
+EMPRESA_RUESMA = 1
+
+#: (F-114 R19, F-063) Los CIF propios nunca se ofrecen como proveedor.
+_CIFS_PROPIOS = cifs_propios(None)
+
+#: Carácter de escape del ``LIKE`` y lo que hay que escapar con él (R16).
+_ESCAPE_LIKE = "!"
+_COMODINES_LIKE = ("!", "%", "_", "[")
+
+
+def _patron_like(texto: str) -> str:
+    """``%texto%`` con ``!``, ``%``, ``_`` y ``[`` como literales (R16)."""
+    escapado = "".join(
+        _ESCAPE_LIKE + c if c in _COMODINES_LIKE else c for c in texto
+    )
+    return f"%{escapado}%"
+
 
 # Lista de obras (codigo + nombre). Mismo join que el obra-client del sv3
 # (obr + con). Sin filtro emp para no excluir obras.
@@ -171,6 +219,66 @@ class SigridLookupClient:
             len(out),
         )
         return out
+
+    def buscar_proveedores(self, *, texto: str) -> BusquedaProveedores:
+        """(F-114) Proveedores vivos de Sigrid cuyo nombre o CIF contienen
+        ``texto``: uno por CIF, ordenados por nombre, como mucho
+        ``LIMITE_BUSQUEDA_PROVEEDOR`` y ``mas`` si había más (R17, R18).
+
+        Nombre sin mayúsculas ni acentos (``COLLATE``) y CIF sin espacios,
+        guiones ni mayúsculas; ``%``, ``_``, ``[`` y ``!`` literales (R16).
+        Fuera los CIF propios y las filas sin CIF (R19). Truncado ⇒
+        ``SigridRespuestaTruncada`` (``NO_TOLERA``, R20). Bajo el mínimo,
+        vacío sin llamar (el endpoint ya corta, R13).
+        """
+        t = (texto or "").strip()
+        if len(t) < MINIMO_BUSQUEDA_PROVEEDOR:
+            return BusquedaProveedores(items=[], mas=False)
+        patron_nombre = _patron_like(t)
+        patron_cif = _patron_like(t.upper().replace(" ", "").replace("-", ""))
+        columns, rows = self._post_sql_read(
+            sql=_SQL_PROVEEDORES_TODOS,
+            parameters=[
+                LIMITE_BUSQUEDA_PROVEEDOR + 1,
+                TIP_PROVEEDOR,
+                EMPRESA_RUESMA,
+                0,
+                patron_nombre,
+                patron_cif,
+            ],
+            label="proveedores_todos",
+            # Como la lista de la obra (F-052 R28): una búsqueda a la que le
+            # falta el bueno es peor que el aviso de error.
+            politica=PoliticaTruncado.NO_TOLERA,
+        )
+        # Dedupe por CIF normalizado: dos grafías del mismo CIF llegan en
+        # grupos distintos del GROUP BY; se suman sus fichas y se conserva
+        # el primero (ya ordenado por nombre).
+        por_cif: dict[str, ProveedorOption] = {}
+        for row in rows:
+            row_map = dict(zip(columns, row))
+            cif = _opt_str(row_map.get("cif"))
+            clave = normalizar_cif(cif)
+            if not clave or es_cif_propio(cif, _CIFS_PROPIOS):
+                continue
+            fichas = int(row_map.get("fichas") or 1)
+            previo = por_cif.get(clave)
+            if previo is None:
+                por_cif[clave] = ProveedorOption(
+                    cif=cif, nombre=_opt_str(row_map.get("nombre")), fichas=fichas,
+                )
+            else:
+                previo.fichas = (previo.fichas or 0) + fichas
+        mas = len(rows) > LIMITE_BUSQUEDA_PROVEEDOR
+        items = list(por_cif.values())[:LIMITE_BUSQUEDA_PROVEEDOR]
+        logger.info(
+            "%s proveedores_todos texto=%r -> %s proveedores mas=%s",
+            _LOG_PREFIX,
+            t,
+            len(items),
+            mas,
+        )
+        return BusquedaProveedores(items=items, mas=mas)
 
     def fetch_obras(self) -> list[ObraOption]:
         columns, rows = self._post_sql_read(
