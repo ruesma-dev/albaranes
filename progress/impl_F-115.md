@@ -53,3 +53,17 @@ FAILED tests/test_f115_disparo_force.py::test_f115_r7_a_force_sin_contrato_sin_i
 2 failed, 13 passed in 1.92s
 ```
 `test_f075_disparo.py` en verde en la misma pasada.
+
+### T7 · sv4, el PUT retira el contrato ajeno (R9–R11, R18, R19)
+
+```
+$ cd services/albaranes-front; PYTHONPATH=<worktree comun> .venv/Scripts/python.exe -m pytest tests/test_f115_guardar_retira_contrato.py -q --tb=line
+E   AssertionError: assert ('CTA/0001', 'auto_multiple') == (None, None)
+E   AssertionError: assert 'CTA/0001' is None
+E   AttributeError: 'DocumentDetailPayload' object has no attribute 'contrato_retirado'
+...test_f115_guardar_retira_contrato.py:172: AssertionError: assert not True      (R19: b-/ES relanzaban)
+E   TypeError: aviso_de_guardado() got an unexpected keyword argument 'contrato_retirado'
+E   AttributeError: 'ResultadoGuardado' object has no attribute 'contrato_retirado'
+17 failed, 6 passed in 1.71s
+```
+Pasan ya: R18 (aprobado y alta bloqueante: 409 sin tocar, como hoy), la fila legada y el R19 con espacios.
