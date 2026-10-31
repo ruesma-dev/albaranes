@@ -175,7 +175,9 @@ def test_f065_r18_guardar_todas_salta_las_filas_sin_cambios_y_avisa_si_no_hay():
 # =================================================================== #
 @con_node
 def test_f065_r1_js_el_put_no_lleva_lineas(tmp_path):
-    cuerpo = _ejecutar(tmp_path, ["collectSelectedContratoCodigo", "collectPayload"], """
+    # F-108 R19: collectPayload manda la fecha por fechaParaEnviar.
+    cuerpo = _ejecutar(tmp_path, ["parseFechaEs", "fechaParaEnviar", "collectSelectedContratoCodigo",
+                                  "collectPayload"], """
         var document = {getElementById: function (id) { return {value: " v-" + id + " "}; }};
         console.log(JSON.stringify(collectPayload(true)));
     """)
