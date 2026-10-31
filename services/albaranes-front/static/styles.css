@@ -1913,3 +1913,41 @@ tr.fila-no-guardada > td { background: var(--danger-soft); box-shadow: inset 0 -
 }
 .salmon-table .parte-reparto { display: block; margin-top: 2px; }
 .salmon-table .aviso-reparto { display: block; margin-top: 2px; }
+
+/* F-108 R12–R17: la fecha del albarán, a mano y con calendario. El texto y el
+   botón van en línea; el selector nativo queda pegado al botón (el calendario
+   se ancla ahí) y oculto con opacidad y tamaño mínimo, NUNCA con display:none:
+   showPicker necesita el control pintado. Si showPicker no existe o falla, se
+   le pone «visible» y se le da el foco (R14). */
+.campo-fecha {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.campo-fecha #fecha { flex: 1 1 auto; min-width: 0; }
+.fecha-calendario {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+.fecha-calendario.visible {
+    position: static;
+    width: auto;
+    height: auto;
+    opacity: 1;
+    pointer-events: auto;
+}
+/* R17: fecha escrita que no se admite, en rojo con el aviso debajo. */
+.campo-no-valido {
+    border-color: var(--danger, #b42318);
+    background: #fdecea;
+    color: var(--danger, #b42318);
+}
+.form-grid small.error { color: var(--danger, #b42318); font-size: 0.85rem; }

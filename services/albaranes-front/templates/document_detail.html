@@ -331,13 +331,29 @@
                         <input type="text" id="proveedor_cif" value="{{ document.proveedor_cif or '' }}" readonly class="locked-field" title="Se cambia con el desplegable «Elegir proveedor» de arriba">
                     </label>
                     <div class="full-width form-subrow cols-3">
+                        {#
+                            F-108 R12–R14, R22: la fecha se ve en dd/mm/aaaa y se guarda
+                            AAAA-MM-DD (el PUT la normaliza). Editable: texto a mano y, al
+                            lado, el botón que abre el selector nativo (oculto sin
+                            display:none para que showPicker funcione). Aprobado: solo
+                            lectura, sin calendario.
+                        #}
                         <label>
                             <span>Fecha</span>
-                            <input type="text" id="fecha" value="{{ document.fecha or '' }}"{% if not editable %} readonly{% endif %}>
+                            {% if editable %}
+                            <span class="campo-fecha">
+                                <input type="text" id="fecha" value="{{ document.fecha | fecha_albaran_ver }}" placeholder="dd/mm/aaaa" autocomplete="off" aria-describedby="fecha-error">
+                                <button type="button" class="btn secondary small js-fecha-calendario" title="Elegir la fecha en el calendario" aria-label="Elegir la fecha en el calendario">Calendario</button>
+                                <input type="date" id="fecha_calendario" class="fecha-calendario" tabindex="-1" aria-hidden="true">
+                            </span>
+                            <small id="fecha-error" class="error js-fecha-error" hidden></small>
+                            {% else %}
+                            <input type="text" id="fecha" value="{{ document.fecha | fecha_albaran_ver }}" readonly>
+                            {% endif %}
                         </label>
                         <label>
                             <span>Número albarán</span>
-                            <input type="text" id="numero_albaran" value="{{ document.numero_albaran or '' }}"{% if not editable %} readonly{% endif %}>
+                            <input type="text" id="numero_albaran" value="{{ document.numero_albaran or '' }}" maxlength="128" autocomplete="off"{% if not editable %} readonly{% endif %}>
                         </label>
                         <label>
                             <span>Forma de pago</span>
