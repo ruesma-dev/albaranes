@@ -64,7 +64,14 @@ composición. sv2, sv3 y sv6 tienen doble entrada: `main.py` (HTTP) y
 **Blobs**: `input/{document_id}.pdf` y, si el mensaje trae contexto,
 `input/{document_id}.correo.json` (los deja sv1; regla 15) y
 `envelopes/{document_id}_{fase}.json` (lo deja sv2). Son efímeros; lo durable
-va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato).
+va a SharePoint (PDF del albarán, JSONs de IA, PDF del contrato). Desde F-113
+el `content_type` de `input/{document_id}.pdf` es el MIME **real** por los bytes
+(`ruesma_comun.mime.detectar_mime`), no el `contentType` que declara Graph, y su
+metadata `filename` lleva una extensión coherente con él; la extensión `.pdf` de
+la clave es solo un nombre (puede ser una foto JPEG). Si el real difiere del
+declarado, el `payload_json` de `workflow_runs` guarda además
+`attachment_content_type_declarado`. sv2 vuelve a detectarlo al leer (blobs
+anteriores) y `normalizar_adjuntos` lo corrige antes de cualquier IA.
 
 ## Semántica de dominio imprescindible
 
