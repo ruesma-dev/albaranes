@@ -128,3 +128,10 @@ def test_f114_r21_la_lista_de_la_obra_no_cambia(portal):
     cuerpo = portal(falso).get("/api/sigrid/proveedores", params={"obra": "0686"}).json()
     assert cuerpo == {"ok": True, "items": [{"cif": "B00000001", "nombre": "ALFA SL"}]}
     assert falso.obras == ["0686"]
+
+
+def test_f114_t7_el_endpoint_va_fuera_del_esquema_openapi(portal):
+    """Superviviente 1 de T7: uso interno del JS, como los demás lookups."""
+    rutas = portal(None).get("/openapi.json").json()["paths"]
+    assert "/api/sigrid/proveedores/todos" not in rutas
+    assert "/api/sigrid/proveedores" not in rutas
