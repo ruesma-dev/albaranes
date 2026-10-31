@@ -19,4 +19,4 @@ Precondición (D5 = a): F-106 y F-114 fusionadas en `dev`, y `dev` fusionado en 
 - [x] T14: Mutación de `pertenencia.py`, `_retirar_seleccion_ajena_safely`, la rama nueva de `_trigger_valuation_safely` y el filtro del PUT; supervivientes analizados en `progress/mutacion_F-115.md`  |  Verificación: informe con 0 supervivientes sin justificar
 - [x] T15: Documentación: `docs/ARCHITECTURE.md` regla 26 y regla 25 (R7); revisar `azure-apps/albaranes.md` y commit local allí si cambia (R21)  |  Verificación: `grep -n "26\. \*\*" docs/ARCHITECTURE.md` y nota en el informe
 - [ ] T16: Despliegue (humano): sv3 primero, luego sv4 (`Set-DeployTag; .\deploy.ps1 -Only sv3` y después `-Only sv4`; `.\check_deploy.ps1`)  |  Verificación: MANUAL (humano)
-- [ ] T17: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh` exit 0
+- [x] T17: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh` exit 0

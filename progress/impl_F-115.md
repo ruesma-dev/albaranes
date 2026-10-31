@@ -146,3 +146,22 @@ $ cd services/albaranes-front; .venv/Scripts/python.exe -m pytest tests/test_f11
 E   ValueError: substring not found        (x18: `function avisoCambioCabecera(` no existe en app.js)
 18 failed in 0.23s
 ```
+
+## Evidencias (medidas el 2026-10-31 sobre `6346d2e`)
+
+`bash harness/init.sh` **tal cual: rojo solo por el entorno del worktree** (sv3 y sv4 importan la comun 0.10.0
+del árbol principal: avisos «importa `ruesma_comun` … fuera de este repositorio» y cobertura 11,9 %). Con
+`PYTHONPATH=C:\Users\pgris\PycharmProjects\albaranes-F-115\services\albaranes-comun` y `ARNES_SIN_CACHE=1`:
+**EXIT 0**.
+
+| Evidencia | Valor real |
+|---|---|
+| Tests (raíz del monorepo) | 1919 passed (280,65 s) |
+| sv3 · sv4 · comun | 1608 passed (30,71 s) · 2248 passed (214,15 s) · 1342 passed (55,95 s) |
+| sv1 · sv2 · sv5 · sv6 · sv9 | 236 · 496 · 125 · 506 (+1 skipped) · 1073 passed |
+| Tests nuevos de F-115 | 7 ficheros: comun 23, sv3 26 + 6, sv4 23 + 14 + 18 + 3 |
+| Cobertura de las líneas cambiadas | **98,5 %** (134/136, umbral 80 %) |
+| Mutación (`--workers 1`, muestreo `estandar`) | 20 mutantes, 19 muertos, **1 superviviente: hueco real, matado** (ver `progress/mutacion_F-115.md`) |
+| Tamaño | requirements 124/150, design 167/250, impl dentro de 220 |
+
+Ningún análisis queda `PENDIENTE`. T13 (Chrome) y T16 (despliegue) siguen abiertas, y no son del implementer.
