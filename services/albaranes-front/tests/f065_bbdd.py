@@ -31,8 +31,10 @@ CONTRATO = "CTSU25/0359"
 
 #: (F-115 R9, R13) La cabecera que manda la ficha al guardar (CIF, obra y
 #: contrato elegido); ver ``f053_sv4_bbdd.CABECERA``.
+#: (F-108 R11) Con su fecha y su número, como la de ``f053_sv4_bbdd``.
 CABECERA = {"proveedor_cif": "B12345678", "obra_codigo": "0404",
-            "selected_contrato_codigo": CONTRATO}
+            "selected_contrato_codigo": CONTRATO, "fecha": "2026-10-08",
+            "numero_albaran": "A-1"}
 
 COLUMNAS = (
     "id", "valuation_id", "merge_line_id", "matched_contrato_line_id",

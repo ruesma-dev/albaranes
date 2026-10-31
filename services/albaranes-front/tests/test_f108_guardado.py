@@ -91,9 +91,9 @@ def test_f108_r7_no_admitida_no_cambia_nada(monkeypatch, escrita):
     antes = foto(motor)
 
     with pytest.raises(FechaAlbaranNoValidaError) as error:
-        _guardar(repositorio(motor), monkeypatch, fecha=escrita, numero_albaran="OTRO",
-                 review_notes="nota nueva", approved=True, approved_by="ana",
-                 **CABECERA)
+        _guardar(repositorio(motor), monkeypatch, review_notes="nota nueva", approved=True,
+                 approved_by="ana",
+                 **{**CABECERA, "fecha": escrita, "numero_albaran": "OTRO"})
 
     assert error.value.aviso == _aviso_fecha(escrita)
     assert foto(motor) == antes
@@ -252,3 +252,136 @@ def test_f108_r7_el_payload_no_valida_la_fecha(portal):
     cliente.put(f"/api/documents/{DOC}", json={"fecha": "31/02/2026"})
 
     assert [p.fecha for p in servicio.guardados] == ["31/02/2026"]
+
+
+# =================================================================== #
+# R11 (D4 = a) · sin fecha válida o sin número no se aprueba
+# =================================================================== #
+_SIN_FECHA = "No se puede aprobar: falta la fecha del albarán"
+_SIN_NUMERO = "No se puede aprobar: falta el número de albarán"
+_FECHA_MALA = "No se puede aprobar: la fecha del albarán no es válida: ábrelo y corrígela"
+
+
+@pytest.mark.parametrize("campos, faltan, aviso", [
+    ({"fecha": None, "numero_albaran": "A-1"}, ["fecha"], _SIN_FECHA),
+    ({"fecha": "  ", "numero_albaran": "A-1"}, ["fecha"], _SIN_FECHA),
+    ({"fecha": "28/10/2026", "numero_albaran": None}, ["numero_albaran"], _SIN_NUMERO),
+    ({"fecha": "28/10/2026", "numero_albaran": "   "}, ["numero_albaran"], _SIN_NUMERO),
+    ({"fecha": None, "numero_albaran": None}, ["fecha", "numero_albaran"],
+     "No se puede aprobar: falta la fecha del albarán; falta el número de albarán"),
+], ids=["sin_fecha", "fecha_espacios", "sin_numero", "numero_espacios", "sin_ninguno"])
+def test_f108_r11_guardar_y_aprobar_sin_cabecera_no_aprueba(monkeypatch, campos, faltan, aviso):
+    from domain.models.review_models import CabeceraIncompletaError
+
+    motor = construir()
+    antes = foto(motor)
+
+    with pytest.raises(CabeceraIncompletaError) as error:
+        _guardar(repositorio(motor), monkeypatch, approved=True, approved_by="ana",
+                 **{**CABECERA, **campos})
+
+    assert error.value.document_id == DOC
+    assert error.value.faltan == faltan
+    assert error.value.aviso == aviso == str(error.value)
+    assert foto(motor) == antes
+
+
+def test_f108_r11_guardar_y_aprobar_con_fecha_dd_mm_la_normaliza_y_aprueba(monkeypatch):
+    motor = construir()
+
+    _, paso = _guardar(repositorio(motor), monkeypatch, approved=True, approved_by="ana",
+                       **{**CABECERA, "fecha": "08/10/2026"})
+
+    assert paso is True
+    cabecera = _cabecera(motor)
+    assert cabecera["fecha"] == "2026-10-08" and cabecera["approved"] in (1, True)
+
+
+def test_f108_r11_guardar_sin_aprobar_sin_fecha_ni_numero_si_guarda(monkeypatch):
+    """R11 solo cuenta al PASAR a aprobado: guardar a medias se puede."""
+    motor = construir()
+
+    _, paso = _guardar(repositorio(motor), monkeypatch,
+                       **{**CABECERA, "fecha": None, "numero_albaran": None})
+
+    assert paso is False
+    assert _cabecera(motor)["fecha"] is None and _cabecera(motor)["numero_albaran"] is None
+
+
+def _poner(motor, **campos):
+    for columna, valor in campos.items():
+        ejecutar(motor, f"UPDATE albaran_documents_merge SET {columna} = :v WHERE id = :d",
+                 v=valor, d=DOC)
+
+
+@pytest.mark.parametrize("campos, faltan, aviso", [
+    ({"fecha": None, "numero_albaran": "A-1"}, ["fecha"], _SIN_FECHA),
+    ({"fecha": "08/10/2026", "numero_albaran": "A-1"}, ["fecha_no_valida"], _FECHA_MALA),
+    ({"fecha": "2026-02-30", "numero_albaran": "A-1"}, ["fecha_no_valida"], _FECHA_MALA),
+    ({"fecha": "2026-10-08", "numero_albaran": None}, ["numero_albaran"], _SIN_NUMERO),
+    ({"fecha": "2026-10-08", "numero_albaran": " "}, ["numero_albaran"], _SIN_NUMERO),
+    ({"fecha": "", "numero_albaran": ""}, ["fecha", "numero_albaran"],
+     "No se puede aprobar: falta la fecha del albarán; falta el número de albarán"),
+], ids=["sin_fecha", "fecha_dd_mm", "fecha_inexistente", "sin_numero", "numero_espacio",
+        "sin_ninguno"])
+def test_f108_r11_aprobar_desde_el_listado_sin_cabecera_no_aprueba(campos, faltan, aviso):
+    from domain.models.review_models import CabeceraIncompletaError
+
+    motor = construir()
+    _poner(motor, **campos)
+    antes = foto(motor)
+
+    with pytest.raises(CabeceraIncompletaError) as error:
+        repositorio(motor).set_approved(document_id=DOC, approved=True, approved_by="ana")
+
+    assert error.value.faltan == faltan
+    assert error.value.aviso == aviso
+    assert foto(motor) == antes
+
+
+def test_f108_r11_aprobar_desde_el_listado_completo_aprueba():
+    motor = construir()
+    _poner(motor, fecha="2026-10-08", numero_albaran="A-1")
+
+    assert repositorio(motor).set_approved(
+        document_id=DOC, approved=True, approved_by="ana") is True
+    assert _cabecera(motor)["approved"] in (1, True)
+
+
+def test_f108_r11_desaprobar_sin_fecha_si_se_puede():
+    motor = construir(aprobado=True)
+    _poner(motor, fecha=None, numero_albaran=None)
+
+    repositorio(motor).set_approved(document_id=DOC, approved=False, approved_by=None)
+
+    assert _cabecera(motor)["approved"] in (0, False)
+
+
+# --- R11 en el portal ------------------------------------------------ #
+def test_f108_r11_el_put_de_aprobar_responde_409_con_el_aviso(portal):
+    from domain.models.review_models import CabeceraIncompletaError
+
+    cliente, servicio = portal
+    servicio.error = CabeceraIncompletaError(DOC, ["fecha"])
+
+    respuesta = cliente.put(f"/api/documents/{DOC}", json={"approved": True})
+
+    assert respuesta.status_code == 409, respuesta.text
+    assert respuesta.json() == {"detail": _SIN_FECHA}
+
+
+def test_f108_r11_aprobar_desde_el_listado_vuelve_con_el_aviso(portal):
+    from urllib.parse import parse_qs, urlsplit
+
+    from domain.models.review_models import CabeceraIncompletaError
+
+    cliente, servicio = portal
+    servicio.error = CabeceraIncompletaError(DOC, ["fecha_no_valida"])
+
+    respuesta = cliente.post(f"/documents/{DOC}/approve",
+                             data={"redirect_query": "estado=pendiente"})
+
+    assert respuesta.status_code == 303, respuesta.text
+    destino = urlsplit(respuesta.headers["location"])
+    assert destino.path == "/documents"
+    assert parse_qs(destino.query) == {"estado": ["pendiente"], "message": [_FECHA_MALA]}

@@ -165,8 +165,8 @@ def test_f065_r3_put_sin_aprobar_sobre_un_aprobado_no_lo_desaprueba(monkeypatch)
 def test_f065_r3_put_aprobando_un_pendiente_guarda_y_aprueba(monkeypatch):
     motor = construir()
 
-    _, paso = _guardar(repositorio(motor), monkeypatch, numero_albaran="A-9",
-                       approved=True, approved_by="ana", **CABECERA)
+    _, paso = _guardar(repositorio(motor), monkeypatch, approved=True, approved_by="ana",
+                       **{**CABECERA, "numero_albaran": "A-9"})
 
     assert paso is True
     doc = documento(motor)

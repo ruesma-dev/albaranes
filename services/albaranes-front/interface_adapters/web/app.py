@@ -834,10 +834,12 @@ def build_app(settings: Settings) -> FastAPI:
             )
         except (
             AlbaranSinValorarError, LineasIncompletasError, ValoracionDeOtroContratoError,
+            CabeceraIncompletaError,
         ) as exc:
-            # F-053 R37, F-065 R20 y F-115 R13: no se aprueba lo no valorado,
-            # ni con filas sin cantidad o importe, ni con la valoración de
-            # otro contrato; nada cambia.
+            # F-053 R37, F-065 R20, F-115 R13 y F-108 R11: no se aprueba lo no
+            # valorado, ni con filas sin cantidad o importe, ni con la
+            # valoración de otro contrato, ni sin fecha válida o sin número;
+            # nada cambia.
             return _redirigir_a_lista(redirect_query, exc.aviso)
         aviso = getattr(resultado, "aviso", None)
         texto = f"Documento aprobado, pero {aviso}" if aviso else "Documento aprobado"
@@ -1944,15 +1946,16 @@ def build_app(settings: Settings) -> FastAPI:
     @app.exception_handler(LineasIncompletasError)
     @app.exception_handler(ValoracionCambiadaError)
     @app.exception_handler(ValoracionDeOtroContratoError)
+    @app.exception_handler(CabeceraIncompletaError)
     async def alta_sigrid_error_handler(
         request: Request,
         exc: (
             AlbaranBloqueadoError | AlbaranSinValorarError | AlbaranAprobadoError
             | LineaBloqueadaError | LineasIncompletasError | ValoracionCambiadaError
-            | ValoracionDeOtroContratoError
+            | ValoracionDeOtroContratoError | CabeceraIncompletaError
         ),
     ) -> Response:
-        """F-053 R25/R37, F-065 R4/R14/R20, F-106 R28 y F-115 R13: nada cambió (el repositorio no
+        """F-053 R25/R37, F-065 R4/R14/R20, F-106 R28, F-115 R13 y F-108 R11: nada cambió (el repositorio no
         confirmó). En la API, 409 con el aviso; en un formulario, de vuelta a
         la ficha con él."""
         if request.url.path.startswith("/api/"):

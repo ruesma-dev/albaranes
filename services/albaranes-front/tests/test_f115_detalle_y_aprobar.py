@@ -172,6 +172,8 @@ def test_f115_r13_guardar_y_aprobar_con_el_mismo_contrato_aprueba():
         payload=MergeDocumentUpdatePayload(
             approved=True, selected_contrato_codigo=CONTRATO,
             proveedor_cif="B12345678", obra_codigo="0404",
+            # (F-108 R11) La ficha manda su fecha y su número.
+            fecha="2026-10-08", numero_albaran="A-1",
         ),
     )
     assert paso is True
