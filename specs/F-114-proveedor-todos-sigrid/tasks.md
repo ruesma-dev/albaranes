@@ -36,7 +36,7 @@ Leer "SELECT TOP (?) v.cif AS cif, MIN(v.raz) AS nombre, COUNT(*) AS fichas FROM
 
 ## Bloque C · documentación, calidad y cierre
 
-- [ ] T6: Viñeta en la regla 17 de `docs/ARCHITECTURE.md`, fila del endpoint en `sv4.md` y viñeta en §8 de `azure-apps/albaranes.md` (commit local en `azure-apps`, sin push) (R23); `git diff --stat` sin ficheros fuera de sv4, `docs/` y `azure-apps` (R22)  |  Verificación: revisión del reviewer contra R22 y R23
+- [x] T6: Viñeta en la regla 17 de `docs/ARCHITECTURE.md`, fila del endpoint en `sv4.md` y viñeta en §8 de `azure-apps/albaranes.md` (commit local en `azure-apps`, sin push) (R23); `git diff --stat` sin ficheros fuera de sv4, `docs/` y `azure-apps` (R22)  |  Verificación: revisión del reviewer contra R22 y R23
 - [ ] T7: Campaña de mutación muestreada sobre `sigrid_lookup_client.py`; supervivientes con test nuevo o justificación en `progress/mutacion_F-114.md`  |  Verificación: `python -m harness.mutacion --feature F-114`
 - [ ] T8: Prueba de navegador con sv4 local y Sigrid de lectura: el documento `097191e9-…` si está en la BBDD a la que apunte sv4 local (si no, otro cualquiera; ver la memoria de entorno), desmarcar, buscar por nombre y por CIF, ver «Hay más» y «N fichas»; elegir NO se hace (guardaría en la BBDD real; solo con autorización del humano)  |  Verificación: MANUAL (líder, Chrome, solo lectura) — resultado en `progress/impl_F-114.md`
 - [ ] T9: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`
