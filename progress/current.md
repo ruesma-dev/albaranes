@@ -1,7 +1,6 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-115 · `blocked` (2026-10-31): review APPROVED (pasada 1, `progress/review_F-115.md`), T13 hecha por el líder; espera T16 (humano: desplegar sv3 y luego sv4, comun 0.11.0) y publicar `azure-apps` `7c6081b`** — al cambiar el proveedor (o la obra, D2) se retira el contrato que no es del albarán, se rebusca y se revalora sin regenerar líneas. Observaciones sin bloqueo de la review: O1–O3. *Junction* `.venv` de sv4 en `../albaranes-F-115`: quitarla con `cmd /c rmdir` antes de `git worktree remove`.
 
 **F-114 · CERRADA (`done`, 2026-10-31).** Check «Solo de la obra» o todos los proveedores de Sigrid. Review APPROVED (pasada 3), T8 en verde, desplegada con el sv4 `r20261031-1506`. Pendiente sin bloqueo: O1 de la review (R10 por el texto del error; propuesta `!currentObra()`).
 

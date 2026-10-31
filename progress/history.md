@@ -5,6 +5,10 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-115 · Cambiar el proveedor reinicia contrato y valoración, no las líneas (cerrada 2026-10-31)
+
+Una sola regla en comun 0.11.0: el contrato seleccionado tiene que ser del CIF y de la obra del albarán. Se aplica al guardar en sv4, al empezar el enriquecimiento en sv3 y en la ficha; si no cuadra, se retira, se rebusca y se revalora sin regenerar líneas. Al cambiar la obra se conserva el proveedor y cambia el contrato (D2). sv4 pide confirmación antes de cambiar el proveedor y no deja aprobar con una valoración de otro contrato. T0 (producción, solo lectura): 0 casos. Review APPROVED (pasada 1, `progress/review_F-115.md`; O1–O3 sin bloqueo); T13 en Chrome por el líder; desplegado el 2026-10-31: sv3 `r20261031-2046`, sv4 `r20261031-2049`, logs limpios. Pendiente del humano: publicar `azure-apps` `7c6081b`.
+
 ## F-106 · Editar una línea recalcula el importe o el precio (cerrada 2026-10-31)
 
 Rigor `critico`. Cantidad, precio o descuento recalculan el importe; el importe despeja el precio; lo editado a mano se conserva al revalorar, al cambiar de obra y al volver a buscar contrato («✋», «Volver a lo calculado»); una fila que no cuadra sale en rojo, no se aprueba y sv9 no la da de alta (`linea_no_cuadra`). comun 0.10.0. Review APPROVED (pasada 2, `progress/review_F-106.md`); mutación de 325 mutantes con 5 equivalentes aceptados por el humano el 31-10 (`progress/mutacion_F-106.md`); T22 en Chrome con el pipeline local en verde y T23 del humano (`progress/pruebas_F-106_T22.md`: 3 altas antiguas descuadradas, se corrigen a mano en Sigrid). Desplegada el 31-10: sv6 `r20261031-1500`, sv9 `r20261031-1503`, sv4 `r20261031-1506`. Detalle en `progress/impl_F-106.md`.
