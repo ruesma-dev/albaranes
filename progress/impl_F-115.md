@@ -165,3 +165,18 @@ del árbol principal: avisos «importa `ruesma_comun` … fuera de este reposito
 | Tamaño | requirements 124/150, design 167/250, impl dentro de 220 |
 
 Ningún análisis queda `PENDIENTE`. T13 (Chrome) y T16 (despliegue) siguen abiertas, y no son del implementer.
+
+## T13 · prueba en navegador (líder, 2026-10-31)
+
+sv4 del worktree en local (comun 0.11.0 del worktree, BBDD local, Azurite; sin sv1, sv2, sv3 ni sv6), Chrome sobre un
+albarán local no aprobado de la obra 0696 con contrato `CTSU25/0317` seleccionado (combo: 2 contratos del proveedor).
+
+- Elegir otro proveedor ⇒ confirmación «Cambiar el proveedor quita el contrato CTSU25/0317 y vuelve a buscar contratos
+  y a valorar. Las líneas leídas se conservan. ¿Continuar?».
+- **Cancelar**: proveedor y contrato quedan como estaban, sin petición al servidor.
+- **Aceptar**: `PUT … 200`, log `contrato CTSU25/0317 retirado al guardar` y búsqueda relanzada (`status=queued`); aviso
+  «Proveedor cambiado: se ha quitado el contrato CTSU25/0317 y se buscan los contratos del nuevo proveedor; después se
+  vuelve a valorar»; campo de contrato vacío; aviso de búsqueda hecha con el CIF anterior; combo con «Sin contrato» y
+  el único contrato del proveedor nuevo en la 0696 (ninguno del anterior); las 8 líneas siguen.
+- **Aprobar** con la valoración aún del contrato anterior ⇒ `PUT … 409 Conflict` (bloqueada). El aviso del 409 sale en un
+  `alert()` que congela la extensión de Chrome; el texto no se pudo leer, el código sí.

@@ -1,7 +1,7 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-115 · `in_progress` (2026-10-31, implementer)** — al cambiar el proveedor (o la obra, D2) se retira el contrato que no es del albarán, se rebusca y se revalora sin regenerar líneas. Spec en `specs/F-115-cambio-proveedor-reinicia-contrato/` (PARADA 1 cerrada el 2026-10-30: D1, D3–D7 = a; D2 = a con R15), rama `feature/F-115-cambio-proveedor-reinicia-contrato`, worktree `../albaranes-F-115`, `dev` (ba3542b) fusionado. Servicios: comun, sv3, sv4. T0 (líder), T13 (líder, Chrome) y T16 (humano) fuera del implementer. Tarea en curso y decisiones: sección «F-115 · implementer» más abajo.
+**F-115 · `blocked` (2026-10-31): review APPROVED (pasada 1, `progress/review_F-115.md`), T13 hecha por el líder; espera T16 (humano: desplegar sv3 y luego sv4, comun 0.11.0) y publicar `azure-apps` `7c6081b`** — al cambiar el proveedor (o la obra, D2) se retira el contrato que no es del albarán, se rebusca y se revalora sin regenerar líneas. Observaciones sin bloqueo de la review: O1–O3. *Junction* `.venv` de sv4 en `../albaranes-F-115`: quitarla con `cmd /c rmdir` antes de `git worktree remove`.
 
 **F-114 · CERRADA (`done`, 2026-10-31).** Check «Solo de la obra» o todos los proveedores de Sigrid. Review APPROVED (pasada 3), T8 en verde, desplegada con el sv4 `r20261031-1506`. Pendiente sin bloqueo: O1 de la review (R10 por el texto del error; propuesta `!currentObra()`).
 
