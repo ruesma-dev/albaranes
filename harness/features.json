@@ -1393,7 +1393,7 @@
       "id": "F-114",
       "title": "Elegir proveedor: check «Solo de la obra» (por defecto) o todos los proveedores de Sigrid",
       "description": "ORIGEN: el humano, 2026-10-30, por el documento 097191e9 (obra sin contratos). Hoy el desplegable de proveedor de la ficha (sv4, `/api/sigrid/proveedores?obra=`, `_SQL_PROVEEDORES_POR_OBRA` en `sigrid_lookup_client.py`) solo ofrece proveedores con contrato en la obra (ctr de emp 1); en una obra sin contratos sale vacío. PETICIÓN: junto al desplegable, un check «Solo de la obra», marcado por defecto, que se comporta como ahora; desmarcado, se elige entre TODOS los proveedores dados de alta en Sigrid (tabla `prv`, solo lectura vía sigrid-api `sql/read`). A RESOLVER EN LA SPEC: tamaño de `prv` (medir en solo lectura) y, según eso, lista completa o búsqueda al escribir (nombre o CIF); duplicados por CIF y proveedores de baja; qué pasa aguas abajo al elegir un proveedor sin contrato en la obra (contratos, valoración, alta en Sigrid de sv9 con `sin_contrato`). Si sv9 necesita cambios, se propone aparte. Servicio: sv4. Va DETRÁS de F-113 y antes que el resto de la cola.",
-      "status": "blocked",
+      "status": "done",
       "sdd": true,
       "rigor": "estandar",
       "priority": 1,
