@@ -25,6 +25,7 @@ from pathlib import Path
 
 import pytest
 from f053_sv4_bbdd import (
+    CABECERA,
     DOC,
     DOC_AJENO,
     construir,
@@ -306,7 +307,8 @@ def test_f053_r2_repositorio_guardar_dice_si_paso_a_aprobado(monkeypatch, antes,
     monkeypatch.setattr(repo, "get_document_detail", lambda document_id: "detalle")
 
     detalle, paso_a_aprobado = repo.update_document_y_transicion(
-        document_id=DOC, payload=MergeDocumentUpdatePayload(approved=aprueba, approved_by="ana"),
+        document_id=DOC,
+        payload=MergeDocumentUpdatePayload(approved=aprueba, approved_by="ana", **CABECERA),
     )
 
     assert detalle == "detalle" and paso_a_aprobado is paso

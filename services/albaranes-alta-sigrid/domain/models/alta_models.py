@@ -164,6 +164,10 @@ class LineaAlta:
     descripcion_merge: str | None
     tipo_familia: str | None
     producto_sigrid: str | None
+    #: (F-106 R17) P (bruto) y d de la fila, para ``linea_no_cuadra``. Nulos =
+    #: no comparable (los datos anteriores a F-106 no los traen).
+    precio_unitario_final: float | None = None
+    descuento_albaran_aplicado: float | None = None
 
     @property
     def referencia_linea(self) -> str:

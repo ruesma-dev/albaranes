@@ -110,6 +110,28 @@ class ContratoMergeRepository(Protocol):
         """
         ...
 
+    def get_pertenencia_seleccion(
+        self,
+        *,
+        document_id: str,
+    ) -> tuple[str | None, list[tuple[str | None, str | None]]]:
+        """(F-115 R2) El contrato seleccionado y los ``(cif_proveedor,
+        codigo_obra)`` de sus filas en ``albaran_contratos_merge``: las del
+        documento; si no hay ninguna, las de ese código en cualquier
+        documento (como el detalle de sv4). Sin selección (o sin documento)
+        ⇒ ``(None, [])``; selección sin ninguna fila ⇒ ``(codigo, [])``.
+        """
+        ...
+
+    def clear_selected_contrato(
+        self,
+        *,
+        document_id: str,
+    ) -> None:
+        """(F-115 R2) Pone a NULL ``selected_contrato_codigo`` y
+        ``selected_contrato_origen`` del merge."""
+        ...
+
     def update_merge_proveedor_nombre(
         self,
         *,

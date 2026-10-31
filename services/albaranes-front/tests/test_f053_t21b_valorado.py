@@ -14,7 +14,7 @@ Repositorio real sobre SQLite y plantillas reales.
 from __future__ import annotations
 
 import pytest
-from f053_sv4_bbdd import DOC, construir, foto, repositorio
+from f053_sv4_bbdd import CABECERA, DOC, construir, foto, repositorio
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -39,7 +39,7 @@ def _guardar_y_aprobar(repo, monkeypatch):
     return repo.update_document_y_transicion(
         document_id=DOC,
         payload=MergeDocumentUpdatePayload(approved=True, approved_by="ana",
-                                           numero_albaran="CAMBIADO"),
+                                           numero_albaran="CAMBIADO", **CABECERA),
     )
 
 

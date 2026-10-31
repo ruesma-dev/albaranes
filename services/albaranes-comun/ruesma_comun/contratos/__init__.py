@@ -15,6 +15,7 @@ from ruesma_comun.contratos.origen_datos import (
     OrigenDatos,
     normalizar_codigo,
 )
+from ruesma_comun.contratos.pertenencia import contrato_es_del_albaran
 
 __all__ = [
     "MOTIVOS_REVISION_ORIGEN",
@@ -24,5 +25,6 @@ __all__ = [
     "ContextoLinea",
     "OrigenCampo",
     "OrigenDatos",
+    "contrato_es_del_albaran",
     "normalizar_codigo",
 ]

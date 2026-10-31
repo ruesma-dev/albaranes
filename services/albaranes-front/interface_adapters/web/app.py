@@ -26,6 +26,7 @@ from config.settings import Settings
 from domain.models.alta_sigrid_models import (
     AlbaranBloqueadoError,
     AlbaranSinValorarError,
+    ValoracionDeOtroContratoError,
 )
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
@@ -42,6 +43,7 @@ from domain.models.review_models import (
     RepartoInvalido,
     SaveResponse,
     TraerLineasBody,
+    ValoracionCambiadaError,
     VIEW_MODE_MERGE,
     normalize_view_mode,
 )
@@ -54,6 +56,7 @@ from infrastructure.graph.token_provider import GraphTokenProvider
 from infrastructure.colas.colas_orchestrator_client import ColasOrchestratorClient
 from infrastructure.colas.colas_refetch_client import ColasRefetchClient
 from infrastructure.sigrid.sigrid_lookup_client import (
+    MINIMO_BUSQUEDA_PROVEEDOR,
     SigridLookupClient,
     opciones_partida,
 )
@@ -66,6 +69,7 @@ from infrastructure.sigrid.local_refetch_client import (
 from ruesma_comun.colas import construir_publicador
 from ruesma_comun.colas.arranque import ConfiguracionColasAusenteError
 from ruesma_comun.colas.publicador import PublicadorBestEffort
+from ruesma_comun.edicion_manual import NoDespejable, PrecioEImporte
 from ruesma_comun.sigrid import CachePartidasObra
 
 logger = logging.getLogger(__name__)
@@ -546,6 +550,38 @@ def build_app(settings: Settings) -> FastAPI:
         items = [{"cif": p.cif, "nombre": p.nombre} for p in proveedores]
         return JSONResponse({"ok": True, "items": items})
 
+    # (F-114) Búsqueda global: proveedores VIVOS de Sigrid (con.tip 5, emp 1,
+    # fecbaj 0) por nombre o CIF, para el combo con «Solo de la obra»
+    # desmarcado. Mismo patrón de errores que la lista de la obra (R14).
+    @app.get("/api/sigrid/proveedores/todos", include_in_schema=False)
+    def sigrid_proveedores_todos(q: str = Query(default="")) -> JSONResponse:
+        client = app.state.sigrid_lookup_client
+        if client is None:
+            return JSONResponse(
+                {"ok": False, "error": "Sigrid no configurado en el sv4 "
+                 "(faltan SIGRID_API_*).", "items": []}
+            )
+        texto = (q or "").strip()
+        if len(texto) < MINIMO_BUSQUEDA_PROVEEDOR:
+            return JSONResponse(
+                {"ok": False, "items": [], "error": (
+                    f"Escribe al menos {MINIMO_BUSQUEDA_PROVEEDOR} letras "
+                    "del nombre o del CIF."
+                )}
+            )
+        try:
+            busqueda = client.buscar_proveedores(texto=texto)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[sigrid-lookup] proveedores_todos q=%r fallo: %r", texto, exc)
+            return JSONResponse(
+                {"ok": False, "error": f"Error consultando Sigrid: {exc}", "items": []}
+            )
+        items = [
+            {"cif": p.cif, "nombre": p.nombre, "fichas": p.fichas}
+            for p in busqueda.items
+        ]
+        return JSONResponse({"ok": True, "items": items, "mas": busqueda.mas})
+
     @app.get("/api/sigrid/obras", include_in_schema=False)
     def sigrid_obras() -> JSONResponse:
         client = app.state.sigrid_lookup_client
@@ -790,9 +826,12 @@ def build_app(settings: Settings) -> FastAPI:
                 # R49: cabecera de Easy Auth > formulario > DEFAULT_REVIEWER.
                 approved_by=_reviewer_from_request(request, approved_by),
             )
-        except (AlbaranSinValorarError, LineasIncompletasError) as exc:
-            # F-053 R37 y F-065 R20: no se aprueba lo no valorado ni con
-            # filas sin cantidad o importe; nada cambia.
+        except (
+            AlbaranSinValorarError, LineasIncompletasError, ValoracionDeOtroContratoError,
+        ) as exc:
+            # F-053 R37, F-065 R20 y F-115 R13: no se aprueba lo no valorado,
+            # ni con filas sin cantidad o importe, ni con la valoración de
+            # otro contrato; nada cambia.
             return _redirigir_a_lista(redirect_query, exc.aviso)
         aviso = getattr(resultado, "aviso", None)
         texto = f"Documento aprobado, pero {aviso}" if aviso else "Documento aprobado"
@@ -1253,8 +1292,11 @@ def build_app(settings: Settings) -> FastAPI:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         detail, busqueda = resultado.detail, resultado.busqueda
 
+        # F-115 R11: si el guardado quitó el contrato (proveedor u obra
+        # cambiados), el aviso lo dice.
         message, buscando = aviso_de_guardado(
             aprobado=detail.approved, busqueda=busqueda,
+            contrato_retirado=resultado.contrato_retirado, cambio=resultado.cambio,
         )
         if resultado.aprobacion.aviso:
             # F-053 R4: aprobado, pero el alta no se pidió.
@@ -1530,16 +1572,40 @@ def build_app(settings: Settings) -> FastAPI:
     ) -> dict:
         # F-065 R8: solo los campos que vinieron (ausente = no cambia; null =
         # vaciar). R13: «Guardar» de la fila manda ``?bloquear=1``.
-        ok = review_service.update_line_conciliacion(
-            document_id=document_id,
-            valuation_line_id=valuation_line_id,
-            campos=payload.campos(),
-            bloquear=bloquear,
-        )
+        # F-106 R4, R7, R9: ``importe`` y ``cuadrar`` (solo si vino: sin él, la
+        # llamada es la de siempre); sin precio que dé el importe (Q 0 o dto
+        # 100 %), 422 con el texto para el revisor.
+        extra = {} if payload.cuadrar is None else {"cuadrar": payload.cuadrar}
+        try:
+            ok = review_service.update_line_conciliacion(
+                document_id=document_id,
+                valuation_line_id=valuation_line_id,
+                campos=payload.campos(),
+                bloquear=bloquear,
+                **extra,
+            )
+        except (NoDespejable, PrecioEImporte) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         if not ok:
             raise HTTPException(
                 status_code=404,
                 detail="Línea de valoración no encontrada",
+            )
+        return {
+            "ok": True,
+            "document_id": document_id,
+            "valuation_line_id": valuation_line_id,
+        }
+
+    # F-106 R30: «Volver a lo calculado» de una fila editada a mano.
+    @app.post("/api/documents/{document_id}/lines/{valuation_line_id}/volver-a-calculado")
+    def volver_a_calculado_api(document_id: str, valuation_line_id: int) -> dict:
+        if not review_service.volver_a_calculado(
+            document_id=document_id, valuation_line_id=valuation_line_id,
+        ):
+            raise HTTPException(
+                status_code=404,
+                detail="Línea sin edición que deshacer",
             )
         return {
             "ok": True,
@@ -1870,14 +1936,17 @@ def build_app(settings: Settings) -> FastAPI:
     @app.exception_handler(AlbaranAprobadoError)
     @app.exception_handler(LineaBloqueadaError)
     @app.exception_handler(LineasIncompletasError)
+    @app.exception_handler(ValoracionCambiadaError)
+    @app.exception_handler(ValoracionDeOtroContratoError)
     async def alta_sigrid_error_handler(
         request: Request,
         exc: (
             AlbaranBloqueadoError | AlbaranSinValorarError | AlbaranAprobadoError
-            | LineaBloqueadaError | LineasIncompletasError
+            | LineaBloqueadaError | LineasIncompletasError | ValoracionCambiadaError
+            | ValoracionDeOtroContratoError
         ),
     ) -> Response:
-        """F-053 R25/R37 y F-065 R4/R14/R20: nada cambió (el repositorio no
+        """F-053 R25/R37, F-065 R4/R14/R20, F-106 R28 y F-115 R13: nada cambió (el repositorio no
         confirmó). En la API, 409 con el aviso; en un formulario, de vuelta a
         la ficha con él."""
         if request.url.path.startswith("/api/"):

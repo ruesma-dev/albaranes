@@ -107,7 +107,8 @@ def claves_en(texto: str) -> list[str]:
     [
         ("GEMINI_MODEL", "gemini-4-argon"),
         ("OPENAI_MODEL", "gpt-6.1-sol"),
-        ("ANTHROPIC_MODEL", "claude-opus-4-8"),
+        # 28-10-2026, orden del humano: Opus 5.5 en todas las apps (ocioso; antes claude-opus-4-8).
+        ("ANTHROPIC_MODEL", "claude-opus-5-5"),
     ],
 )
 def test_f085_r1_modelos_del_paso_1(variable, modelo):
