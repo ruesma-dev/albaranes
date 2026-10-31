@@ -21,3 +21,7 @@ La T22 está escrita con un ejemplo (10 × 11,20); se hizo sobre una fila real d
 
 **Veredicto: VERDE.** Nota: los avisos de `window.confirm` bloquean la extensión de Chrome; en la prueba se aceptaron
 desde la propia página, sobrescribiendo `confirm` para que devolviera «sí» y guardara el texto (el primero lo vio el humano).
+
+## T23 (humano, 2026-10-31, solo lectura contra Azure)
+
+`listar_altas_descuadradas_f106`: 99 altas reales registradas; 3 líneas descuadradas en 3 altas. En las tres Sigrid recibió el importe de la fila con un precio despejado: una es redondeo del precio (0,27 €), otra tiene el importe casi exactamente el doble de Q × P y la tercera es el caso que originó F-106 (cantidad cambiada sin recalcular). **Decisión del humano (D6): no se tocan desde aquí; se corregirán a mano en Sigrid** («no toques ya se corregiran»). El CSV no se versiona (lleva datos de proveedor).
