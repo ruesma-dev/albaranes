@@ -196,3 +196,5 @@ quita parámetros): no se relanza. La SQL la cubren los 4 tests que la ejecutan 
 **`bash harness/init.sh`** tal cual sobre `e80e645` (versión 2): **exit 0, «ENTORNO LISTO»**. Arnés 1919; sv1 236; sv2 496;
 sv3 1576; **sv4 2190 passed** (+4 de la T8); sv5 125; sv6 506 (1 skipped); sv9 1073. `PUERTA COBERTURA`: N/A
 (las líneas cambiadas frente a `dev` son la SQL y la lista de parámetros, sin sentencias nuevas). Tamaño: impl 191/220.
+
+**T8 repetida (líder, 2026-10-31, Chrome, sv4 de la rama sobre `d8dac4b`, solo lectura, sin elegir): VERDE.** El CIF de 2 fichas sale con «· 2 fichas en Sigrid» también buscando por nombre; «Hay más» con 50 por nombre; volver a marcar el check recupera la lista de la obra; ninguna escritura. Tiempos a través de sv4: 0,7–0,8 s en repetición y ~4,5 s en algunas primeras búsquedas (la misma variación que tenía la SQL original en la T0 y en la medición del líder; es de Sigrid, no del HAVING).
