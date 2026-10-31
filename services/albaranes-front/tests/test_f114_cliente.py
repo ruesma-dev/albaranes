@@ -73,6 +73,10 @@ def test_f114_r15_la_sql_lleva_todo_por_parametro(sigrid_api):
     assert "cera" not in sql.lower()
     assert "TOP (?)" in sql
     assert "c.tip = ?" in sql and "c.emp = ?" in sql and "c.fecbaj = ?" in sql
+    # (T8 D2) El texto va en el HAVING: se cuentan todas las fichas vivas del CIF.
+    assert "HAVING MAX(CASE WHEN v.raz" in sql and "THEN 1 ELSE 0 END) = 1" in sql
+    assert sql.index("GROUP BY v.cif") < sql.index("LIKE ?")
+    assert sql.count("?") == 6
     assert sql.count("LIKE ? ESCAPE '!'") == 2
     assert "COLLATE Latin1_General_CI_AI" in sql
     assert "GROUP BY v.cif" in sql
@@ -277,3 +281,109 @@ def test_f114_r21_proveedores_por_obra_intacto(sigrid_api):
     assert [p.model_dump(exclude_none=True) for p in resultado] == [
         {"cif": "B00000001", "nombre": "ALFA SL"}
     ]
+
+
+# ------------------------------------------------------------------ #
+# T8 (fallo del líder, 2026-10-31) · D2: las fichas y el nombre son los
+# de TODAS las fichas vivas del CIF, no solo las que casan con el texto.
+# La SQL se EJECUTA sobre SQLite en memoria con la traducción mínima de
+# T-SQL: ``TOP (?)`` ⇒ ``LIMIT ?`` (su parámetro pasa al final) y sin
+# ``COLLATE Latin1_General_CI_AI`` (el LIKE de SQLite ya ignora mayúsculas
+# ASCII). ``ESCAPE '!'``, ``LTRIM/RTRIM``, ``REPLACE`` y ``UPPER`` existen en
+# SQLite tal cual.
+# ------------------------------------------------------------------ #
+import sqlite3  # noqa: E402
+
+
+def _sqlite_de_sigrid(fichas):
+    """``fichas`` = [(ide, cif, raz, tip, emp, fecbaj)]."""
+    bd = sqlite3.connect(":memory:")
+    bd.execute("CREATE TABLE prv (ide INTEGER, cif TEXT, raz TEXT)")
+    bd.execute("CREATE TABLE con (ide INTEGER, tip INTEGER, emp INTEGER, fecbaj INTEGER)")
+    for ide, cif, raz, tip, emp, fecbaj in fichas:
+        bd.execute("INSERT INTO prv VALUES (?, ?, ?)", (ide, cif, raz))
+        bd.execute("INSERT INTO con VALUES (?, ?, ?, ?)", (ide, tip, emp, fecbaj))
+    return bd
+
+
+class _SigridSqlite:
+    """sigrid-api falsa que EJECUTA la SQL recibida sobre SQLite."""
+
+    def __init__(self, bd):
+        self.bd = bd
+        self.peticiones: list[dict] = []
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        cuerpo = json.loads(request.content)
+        self.peticiones.append(cuerpo)
+        sql, params = cuerpo["sql"], list(cuerpo["parameters"])
+        assert sql.count("TOP (?)") == 1
+        sql = sql.replace("TOP (?)", "").replace(" COLLATE Latin1_General_CI_AI", "")
+        sql = sql.rstrip() + "\nLIMIT ?"
+        params = params[1:] + params[:1]
+        cursor = self.bd.execute(sql, params)
+        columnas = [d[0] for d in cursor.description]
+        filas = [list(f) for f in cursor.fetchall()]
+        return httpx.Response(200, json={
+            "ok": True, "columns": columnas, "rows": filas, "truncated": False,
+        })
+
+
+@pytest.fixture
+def sigrid_sqlite(monkeypatch):
+    def _instalar(fichas):
+        falsa = _SigridSqlite(_sqlite_de_sigrid(fichas))
+        monkeypatch.setattr(
+            modulo.httpx, "HTTPTransport",
+            lambda *a, **k: httpx.MockTransport(falsa),
+        )
+        return falsa
+
+    return _instalar
+
+
+# Un CIF con dos fichas vivas de razón social distinta, una de baja, una de
+# otro tipo de contacto y otra de otra empresa (inventados).
+_FICHAS_D2 = [
+    (1, "B00000001", "ALFA OBRAS SL", 5, 1, 0),
+    (2, "B00000001", "ZETA SUMINISTROS SL", 5, 1, 0),
+    (3, "B00000001", "ALFA ANTIGUA SL", 5, 1, 20200101),  # de baja
+    (4, "B00000001", "ALFA CLIENTE", 3, 1, 0),             # no es proveedor
+    (5, "B00000001", "ALFA OTRA EMPRESA", 5, 2, 0),        # otra empresa
+    (6, "B00000002", "BETA SA", 5, 1, 0),
+]
+
+
+def test_f114_t8_d2_buscar_por_nombre_cuenta_todas_las_fichas_vivas_del_cif(sigrid_sqlite):
+    sigrid_sqlite(_FICHAS_D2)
+    (unico,) = _cliente().buscar_proveedores(texto="alfa").items
+    assert (unico.cif, unico.fichas) == ("B00000001", 2)
+    # El nombre es el menor de TODAS sus fichas vivas, también la que no casa.
+    assert unico.nombre == "ALFA OBRAS SL"
+
+
+def test_f114_t8_d2_nombre_y_cif_dan_lo_mismo(sigrid_sqlite):
+    sigrid_sqlite(_FICHAS_D2)
+    por_nombre = _cliente().buscar_proveedores(texto="zeta").items
+    por_cif = _cliente().buscar_proveedores(texto="b-0000000 1").items
+    assert [(p.cif, p.nombre, p.fichas) for p in por_nombre] == [("B00000001", "ALFA OBRAS SL", 2)]
+    assert [(p.cif, p.nombre, p.fichas) for p in por_cif] == [("B00000001", "ALFA OBRAS SL", 2)]
+
+
+def test_f114_t8_d2_una_ficha_de_baja_o_ajena_no_trae_su_cif(sigrid_sqlite):
+    """Solo casan fichas vivas: «antigua», «cliente» y «otra empresa» no traen B00000001."""
+    sigrid_sqlite(_FICHAS_D2)
+    for texto in ("antigua", "cliente", "otra empresa"):
+        assert _cliente().buscar_proveedores(texto=texto).items == [], texto
+
+
+def test_f114_t8_d2_escape_y_limite_ejecutados(sigrid_sqlite):
+    fichas = [(i, f"B{i:08d}", f"PROV {i:03d}", 5, 1, 0) for i in range(1, 61)]
+    fichas.append((99, "B00000099", "CIEN 50%_! SL", 5, 1, 0))
+    sigrid_sqlite(fichas)
+    resultado = _cliente().buscar_proveedores(texto="prov")
+    assert len(resultado.items) == 50 and resultado.mas is True
+    assert resultado.items[0].nombre == "PROV 001"
+    (literal,) = _cliente().buscar_proveedores(texto="50%_!").items
+    assert literal.cif == "B00000099"
+    assert _cliente().buscar_proveedores(texto="5_%").items == []

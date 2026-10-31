@@ -150,3 +150,51 @@ La primera pasada de T9 (sobre `8c0562d`) salió en rojo por **un** test del arn
 `test_f039_r2_todo_informe_de_mutacion_figura_en_el_inventario`: `progress/mutacion_F-114.md` no figuraba en
 `progress/inventario_mutacion_F-039.md`. Arreglado añadiendo su fila (veredicto `VÁLIDA`, 60 informes) en
 `da1e7c5`; ese test pasa (`9 passed`) y la segunda pasada, entera, en verde.
+
+## 8. T8 (líder, 2026-10-31) y su arreglo
+
+**Resultado de la T8** (Chrome, sv4 local sobre `dev` `1c4b8fb`, solo lectura, sin elegir; la hizo el líder): bien
+el check marcado por defecto, la lista de la obra intacta al volver a marcarlo, el rótulo al desmarcar, 50
+resultados por nombre con «Hay más proveedores…», el aviso con 2 letras, `50%_!` con 200 y «· 2 fichas en
+Sigrid» buscando por CIF; ninguna escritura. **FALLO contra D2**: la SQL filtraba por nombre ANTES del
+`GROUP BY v.cif`, así que `COUNT(*)` y `MIN(v.raz)` solo veían las fichas que casaban: un CIF vivo con 2 fichas
+de razón social distinta salía con `fichas: 2` por CIF y `fichas: 1` (sin aviso) por el nombre de una.
+
+**Arreglo, versión 1** (`3272e04`, tras avanzar la rama a `dev` `1c4b8fb` sin conflictos): subconsulta
+`v.cif IN (SELECT m.cif … fichas vivas que casan)`. Correcta, pero el líder la midió vía sigrid-api (solo
+lectura, mismas 5 búsquedas, mismo momento): **4,5–5,2 s por búsqueda frente a 0,7–1,0 s** de la anterior
+(salvo una búsqueda de 3 caracteres alfanuméricos, ≈4 s con todas las variantes): 5 veces más lenta por tecleo.
+
+**Arreglo, versión 2 (la que queda)** (`4630aad`, propuesta del líder): una sola pasada; el texto pasa del
+`WHERE` al `HAVING MAX(CASE WHEN <nombre LIKE> OR <cif LIKE> THEN 1 ELSE 0 END) = 1`. Se agrupan todas las
+fichas vivas de cada CIF (nombre = la menor, fichas = todas) y sale si alguna casa. Medida por el líder con las
+mismas búsquedas: **0,7–1,1 s**, como la original, y el CIF de 2 fichas sale con 2 buscando por nombre. Se
+conservan `TOP (?)`, orden, `ESCAPE '!'`, `COLLATE`, todo por parámetro y solo lectura; **vuelven los 6
+parámetros de design §3** (`[51, 5, 1, 0, nombre, cif]`): sin desviación de parámetros. Una ficha de baja, de
+otro `tip` o de otra empresa que case NO trae su CIF (el `WHERE` ya las quita antes de agrupar). Único efecto
+visible: el `MIN(raz)` mostrado puede no contener lo escrito (es el de otra ficha viva del mismo CIF).
+
+**Fase RED** — `.venv/Scripts/python -m pytest tests/test_f114_cliente.py -q -p no:cacheprovider -k t8` (tests
+nuevos que EJECUTAN la SQL sobre SQLite en memoria: `TOP (?)` ⇒ `LIMIT ?`, sin `COLLATE`; datos inventados):
+```
+E       AssertionError: assert ('B00000001', 1) == ('B00000001', 2)
+E       AssertionError: assert [('B00000001'...STROS SL', 1)] == [('B00000001'...OBRAS SL', 2)]
+2 failed, 2 passed, 26 deselected in 1.49s
+```
+(pasaban ya: «baja/ajena no trae el CIF» y «escape y límite ejecutados»). Verde con la versión 2: cliente +
+endpoint + F-052, `49 passed`. Comprobado otra vez con la SQL original restaurada a mano: los mismos 2 tests
+caen (`2 failed, 2 passed`); con la del `HAVING`, `4 passed`. `test_f114_r15_la_sql…` fija ahora el `HAVING`,
+que el `LIKE` va después del `GROUP BY` y 6 `?`; ninguna aserción relajada.
+
+**Mutación**: `progress/mutacion_F-114_T8.md` es de la versión 1 (`3272e04`): 1 mutante (el `0` del `fecbaj`
+de la subconsulta), 1 muerto, 446,9 s. La versión 2 no añade líneas ejecutables mutables (solo el literal SQL y
+quita parámetros): no se relanza. La SQL la cubren los 4 tests que la ejecutan sobre SQLite. Inventario: 61.
+
+**Riesgo de rendimiento: retirado.** La versión 2 recorre `prv`+`con` una vez, como la original; el líder midió
+0,7–1,1 s (T0: 1,2–1,6 s en otro momento).
+
+**`bash harness/init.sh`** tal cual sobre `e80e645` (versión 2): **exit 0, «ENTORNO LISTO»**. Arnés 1919; sv1 236; sv2 496;
+sv3 1576; **sv4 2190 passed** (+4 de la T8); sv5 125; sv6 506 (1 skipped); sv9 1073. `PUERTA COBERTURA`: N/A
+(las líneas cambiadas frente a `dev` son la SQL y la lista de parámetros, sin sentencias nuevas). Tamaño: impl 191/220.
+
+**T8 repetida (líder, 2026-10-31, Chrome, sv4 de la rama sobre `d8dac4b`, solo lectura, sin elegir): VERDE.** El CIF de 2 fichas sale con «· 2 fichas en Sigrid» también buscando por nombre; «Hay más» con 50 por nombre; volver a marcar el check recupera la lista de la obra; ninguna escritura. Tiempos a través de sv4: 0,7–0,8 s en repetición y ~4,5 s en algunas primeras búsquedas (la misma variación que tenía la SQL original en la T0 y en la medición del líder; es de Sigrid, no del HAVING).

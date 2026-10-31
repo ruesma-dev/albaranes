@@ -54,6 +54,14 @@ ORDER BY prv.raz
 # fichas vivas con ese CIF (R17). ``prv.raz`` es texto de 128, no ``text``:
 # admite ``MIN`` y ``ORDER BY``. ``ESCAPE '!'``: la barra invertida da error
 # 506 a través de sigrid-api (T0, 2026-10-30).
+#
+# (T8, 2026-10-31, D2) El texto va en el HAVING, no en el WHERE: se agrupan
+# TODAS las fichas vivas de cada CIF (nombre = la menor, fichas = todas) y
+# sale el CIF si ALGUNA casa por nombre o por CIF. Con el filtro en el WHERE,
+# un CIF con dos fichas de razón social distinta salía con ``fichas = 1``
+# buscando por el nombre de una. Una sola pasada sobre ``prv``: la variante
+# con subconsulta ``IN`` daba lo mismo pero tardaba ~5 veces más (medido por
+# el líder vía sigrid-api el 2026-10-31).
 _SQL_PROVEEDORES_TODOS = """\
 SELECT TOP (?)
     v.cif      AS cif,
@@ -63,9 +71,10 @@ FROM prv AS v
 JOIN con AS c ON c.ide = v.ide
 WHERE c.tip = ? AND c.emp = ? AND c.fecbaj = ?
   AND v.cif IS NOT NULL AND LTRIM(RTRIM(v.cif)) <> ''
-  AND (v.raz COLLATE Latin1_General_CI_AI LIKE ? ESCAPE '!'
-       OR REPLACE(REPLACE(UPPER(v.cif), ' ', ''), '-', '') LIKE ? ESCAPE '!')
 GROUP BY v.cif
+HAVING MAX(CASE WHEN v.raz COLLATE Latin1_General_CI_AI LIKE ? ESCAPE '!'
+                  OR REPLACE(REPLACE(UPPER(v.cif), ' ', ''), '-', '') LIKE ? ESCAPE '!'
+                THEN 1 ELSE 0 END) = 1
 ORDER BY MIN(v.raz), v.cif
 """
 
