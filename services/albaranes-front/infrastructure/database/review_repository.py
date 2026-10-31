@@ -130,6 +130,10 @@ from domain.models.alta_sigrid_models import (
     ValoracionDeOtroContratoError,
 )
 from domain.services.confianza import compute_confianza_pct
+from domain.services.fecha_albaran import (
+    normalizar_fecha_albaran,
+    normalizar_numero_albaran,
+)
 from infrastructure.database.session_factory import SessionFactory
 
 logger = logging.getLogger(__name__)
@@ -4449,11 +4453,15 @@ class AlbaranReviewRepository:
             if document is None:
                 raise KeyError(f"Documento no encontrado: {document_id}")
             estaba_aprobado = bool(document.approved)
+            # (F-108 R5–R9) Fecha y número, antes de tocar nada: lo que no se
+            # admite lanza su error y la sesión se cierra sin escribir.
+            fecha = normalizar_fecha_albaran(payload.fecha)
+            numero_albaran = normalizar_numero_albaran(payload.numero_albaran)
 
             document.proveedor_nombre = self._clean_text(payload.proveedor_nombre)
             document.proveedor_cif = self._clean_text(payload.proveedor_cif)
-            document.fecha = self._clean_text(payload.fecha)
-            document.numero_albaran = self._clean_text(payload.numero_albaran)
+            document.fecha = fecha
+            document.numero_albaran = numero_albaran
             document.forma_pago = self._clean_text(payload.forma_pago)
             # F-070 · R12: obra canónica (``686`` ⇒ ``0686``); lo que no
             # encaja, recortado como hoy.
