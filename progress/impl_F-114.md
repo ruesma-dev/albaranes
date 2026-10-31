@@ -150,3 +150,42 @@ La primera pasada de T9 (sobre `8c0562d`) salió en rojo por **un** test del arn
 `test_f039_r2_todo_informe_de_mutacion_figura_en_el_inventario`: `progress/mutacion_F-114.md` no figuraba en
 `progress/inventario_mutacion_F-039.md`. Arreglado añadiendo su fila (veredicto `VÁLIDA`, 60 informes) en
 `da1e7c5`; ese test pasa (`9 passed`) y la segunda pasada, entera, en verde.
+
+## 8. T8 (líder, 2026-10-31) y su arreglo
+
+**Resultado de la T8** (Chrome, sv4 local sobre `dev` `1c4b8fb`, solo lectura, sin elegir; la hizo el líder): bien
+el check marcado por defecto, la lista de la obra intacta al volver a marcarlo, el rótulo al desmarcar, 50
+resultados por nombre con «Hay más proveedores…», el aviso con 2 letras, `50%_!` con 200 y «· 2 fichas en
+Sigrid» buscando por CIF; ninguna escritura. **FALLO contra D2**: la SQL filtraba por nombre ANTES del
+`GROUP BY v.cif`, así que `COUNT(*)` y `MIN(v.raz)` solo veían las fichas que casaban: un CIF vivo con 2 fichas
+de razón social distinta salía con `fichas: 2` por CIF y `fichas: 1` (sin aviso) por el nombre de una.
+
+**Arreglo** (`3272e04`, tras avanzar la rama a `dev` `1c4b8fb` sin conflictos): el texto solo elige los CIF
+(subconsulta `v.cif IN (SELECT m.cif … fichas vivas que casan por nombre o CIF)`); nombre y fichas se calculan
+sobre todas las fichas vivas del CIF. Se conservan `TOP (?)`, orden, `ESCAPE '!'`, `COLLATE`, todo por
+parámetro y solo lectura. Una ficha de baja, de otro `tip` o de otra empresa que case NO trae su CIF (solo
+casan fichas vivas). **Desviación de design §3 / R15**: parámetros `[51, 5, 1, 0, 5, 1, 0, nombre, cif]` (tip,
+emp y fecbaj dos veces); el `MIN(raz)` mostrado puede no contener el texto buscado (es el de otra ficha del CIF).
+
+**Fase RED** — `.venv/Scripts/python -m pytest tests/test_f114_cliente.py -q -p no:cacheprovider -k t8` (tests
+nuevos que EJECUTAN la SQL sobre SQLite en memoria: `TOP (?)` ⇒ `LIMIT ?`, sin `COLLATE`; datos inventados):
+```
+E       AssertionError: assert ('B00000001', 1) == ('B00000001', 2)
+E       AssertionError: assert [('B00000001'...STROS SL', 1)] == [('B00000001'...OBRAS SL', 2)]
+2 failed, 2 passed, 26 deselected in 1.49s
+```
+(pasaban ya: «baja/ajena no trae el CIF» y «escape y límite ejecutados»). Verde tras el arreglo: cliente +
+endpoint + F-052, `49 passed`. Test viejo de F-114 ajustado: `test_f114_r15_la_sql…` (lista de parámetros y
+predicados de `m`) y tres índices `[4:]` ⇒ `[7:]`; ninguna aserción relajada.
+
+**Mutación** del arreglo: `python -m harness.mutacion --feature F-114 --salida progress/mutacion_F-114_T8.md`:
+1 mutante (`0` ⇒ `1` del `fecbaj` de `m`), 1 muerto, 446,9 s (la SQL es un literal: no genera mutantes; la
+cubren los tests sobre SQLite). Inventario de F-039: 61 informes.
+
+**Riesgo de rendimiento (no medido de nuevo, como dijo el líder)**: la T0 midió 1,2–1,6 s con la SQL anterior.
+Ahora `prv`+`con` se recorre dos veces (la subconsulta con `LIKE '%…%'` y el agregado de los CIF elegidos);
+SQL Server lo resuelve como semi-join y el segundo paso va por `cif` sobre como mucho decenas de CIF, así que
+se espera del mismo orden. Si en producción pasara de ~5 s (R-4 de design), opción: `JOIN` a un agregado
+por CIF, o medir con la C de la T0 adaptada.
+
+**`bash harness/init.sh`** tras el arreglo: ver la línea siguiente.
