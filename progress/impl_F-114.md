@@ -188,4 +188,6 @@ SQL Server lo resuelve como semi-join y el segundo paso va por `cif` sobre como 
 se espera del mismo orden. Si en producción pasara de ~5 s (R-4 de design), opción: `JOIN` a un agregado
 por CIF, o medir con la C de la T0 adaptada.
 
-**`bash harness/init.sh`** tras el arreglo: ver la línea siguiente.
+**`bash harness/init.sh`** tal cual sobre `5c3ce6e`: **exit 0, «ENTORNO LISTO»**. Arnés 1919; sv1 236; sv2 496;
+sv3 1576; **sv4 2190 passed** (+4 de la T8); sv5 125; sv6 506 (1 skipped); sv9 1073. `PUERTA COBERTURA`: N/A
+(las líneas cambiadas frente a `dev` son la SQL y la lista de parámetros, sin sentencias nuevas). Tamaño: impl 191/220.
