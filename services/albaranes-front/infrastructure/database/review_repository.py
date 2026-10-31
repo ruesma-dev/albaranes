@@ -86,6 +86,10 @@ from domain.models.review_models import (
     DocumentListItem,
     KNOWN_PROVIDER_VIEWS,
     LineaBloqueadaError,
+    CabeceraIncompletaError,
+    FALTA_FECHA,
+    FALTA_NUMERO,
+    FECHA_NO_VALIDA,
     LineasIncompletasError,
     LineValuationPayload,
     MergeDocumentUpdatePayload,
@@ -130,6 +134,11 @@ from domain.models.alta_sigrid_models import (
     ValoracionDeOtroContratoError,
 )
 from domain.services.confianza import compute_confianza_pct
+from domain.services.fecha_albaran import (
+    es_fecha_guardada_valida,
+    normalizar_fecha_albaran,
+    normalizar_numero_albaran,
+)
 from infrastructure.database.session_factory import SessionFactory
 
 logger = logging.getLogger(__name__)
@@ -4449,11 +4458,15 @@ class AlbaranReviewRepository:
             if document is None:
                 raise KeyError(f"Documento no encontrado: {document_id}")
             estaba_aprobado = bool(document.approved)
+            # (F-108 R5–R9) Fecha y número, antes de tocar nada: lo que no se
+            # admite lanza su error y la sesión se cierra sin escribir.
+            fecha = normalizar_fecha_albaran(payload.fecha)
+            numero_albaran = normalizar_numero_albaran(payload.numero_albaran)
 
             document.proveedor_nombre = self._clean_text(payload.proveedor_nombre)
             document.proveedor_cif = self._clean_text(payload.proveedor_cif)
-            document.fecha = self._clean_text(payload.fecha)
-            document.numero_albaran = self._clean_text(payload.numero_albaran)
+            document.fecha = fecha
+            document.numero_albaran = numero_albaran
             document.forma_pago = self._clean_text(payload.forma_pago)
             # F-070 · R12: obra canónica (``686`` ⇒ ``0686``); lo que no
             # encaja, recortado como hoy.
@@ -4534,6 +4547,9 @@ class AlbaranReviewRepository:
                 self._exigir_valoracion_del_contrato_vigente(
                     session, document.id, document.selected_contrato_codigo,
                 )
+                # (F-108 R11) Ni sin fecha válida o sin número de albarán (lo
+                # último: las líneas y el contrato avisan antes).
+                self._exigir_cabecera_completa(document)
 
             session.commit()
 
@@ -4752,6 +4768,22 @@ class AlbaranReviewRepository:
         ).scalar()
         if bloqueada:
             raise LineaBloqueadaError(document_id, int(valuation_line_id))
+
+    @staticmethod
+    def _exigir_cabecera_completa(document: Any) -> None:
+        """(F-108 R11, D4 = a) :class:`CabeceraIncompletaError` si el albarán
+        no tiene fecha ``AAAA-MM-DD`` real o no tiene número: sv9 lo
+        rechazaría igual (``fecha_ilegible``, ``falta_numero_albaran``)."""
+        faltan: list[str] = []
+        fecha = document.fecha
+        if not (fecha or "").strip():
+            faltan.append(FALTA_FECHA)
+        elif not es_fecha_guardada_valida(fecha):
+            faltan.append(FECHA_NO_VALIDA)
+        if not (document.numero_albaran or "").strip():
+            faltan.append(FALTA_NUMERO)
+        if faltan:
+            raise CabeceraIncompletaError(document.id, faltan)
 
     @staticmethod
     def _exigir_lineas_completas(session: Any, document_id: str) -> None:
@@ -5018,6 +5050,9 @@ class AlbaranReviewRepository:
                 self._exigir_valoracion_del_contrato_vigente(
                     session, document_id, document.selected_contrato_codigo,
                 )
+                # (F-108 R11) Ni sin fecha válida o sin número de albarán (lo
+                # último; el listado no edita la cabecera: no se normaliza).
+                self._exigir_cabecera_completa(document)
             document.approved = approved
             document.reviewed_at_utc = document.reviewed_at_utc or self._utc_iso()
             document.last_modified_at_utc = self._utc_iso()

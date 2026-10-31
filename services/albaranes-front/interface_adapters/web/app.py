@@ -31,15 +31,18 @@ from domain.models.alta_sigrid_models import (
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
     AlbaranAprobadoError,
+    CabeceraIncompletaError,
     ConciliacionEditBody,
     ConciliacionOverridePayload,
     DivisionBody,
     DocumentDetailPayload,
     DocumentListFilters,
+    FechaAlbaranNoValidaError,
     HealthResponse,
     LineaBloqueadaError,
     LineasIncompletasError,
     MergeDocumentUpdatePayload,
+    NumeroAlbaranNoValidoError,
     RepartoInvalido,
     SaveResponse,
     TraerLineasBody,
@@ -48,6 +51,7 @@ from domain.models.review_models import (
     normalize_view_mode,
 )
 from domain.ports.contrato_refetch_port import ContratoRefetchClient
+from domain.services.fecha_albaran import fecha_para_ver
 from domain.ports.orchestrator_port import OrchestratorClient
 from infrastructure.database.review_repository import AlbaranReviewRepository
 from infrastructure.database.session_factory import SessionFactory
@@ -459,6 +463,8 @@ def build_app(settings: Settings) -> FastAPI:
     templates.env.filters["fecha_hora_local"] = _format_fecha_hora_local
     templates.env.filters["fecha_local"] = _format_fecha_local
     templates.env.filters["hora_local"] = _format_hora_local
+    # F-108 R4: la fecha del albarán guardada (AAAA-MM-DD), en dd/mm/aaaa.
+    templates.env.filters["fecha_albaran_ver"] = fecha_para_ver
     templates.env.globals["view_label"] = _view_label
     # Cache-buster para CSS/JS: un valor único por arranque del
     # servicio. Cuando reiniciamos sv4, los navegadores ven una URL
@@ -828,10 +834,12 @@ def build_app(settings: Settings) -> FastAPI:
             )
         except (
             AlbaranSinValorarError, LineasIncompletasError, ValoracionDeOtroContratoError,
+            CabeceraIncompletaError,
         ) as exc:
-            # F-053 R37, F-065 R20 y F-115 R13: no se aprueba lo no valorado,
-            # ni con filas sin cantidad o importe, ni con la valoración de
-            # otro contrato; nada cambia.
+            # F-053 R37, F-065 R20, F-115 R13 y F-108 R11: no se aprueba lo no
+            # valorado, ni con filas sin cantidad o importe, ni con la
+            # valoración de otro contrato, ni sin fecha válida o sin número;
+            # nada cambia.
             return _redirigir_a_lista(redirect_query, exc.aviso)
         aviso = getattr(resultado, "aviso", None)
         texto = f"Documento aprobado, pero {aviso}" if aviso else "Documento aprobado"
@@ -1938,20 +1946,31 @@ def build_app(settings: Settings) -> FastAPI:
     @app.exception_handler(LineasIncompletasError)
     @app.exception_handler(ValoracionCambiadaError)
     @app.exception_handler(ValoracionDeOtroContratoError)
+    @app.exception_handler(CabeceraIncompletaError)
     async def alta_sigrid_error_handler(
         request: Request,
         exc: (
             AlbaranBloqueadoError | AlbaranSinValorarError | AlbaranAprobadoError
             | LineaBloqueadaError | LineasIncompletasError | ValoracionCambiadaError
-            | ValoracionDeOtroContratoError
+            | ValoracionDeOtroContratoError | CabeceraIncompletaError
         ),
     ) -> Response:
-        """F-053 R25/R37, F-065 R4/R14/R20, F-106 R28 y F-115 R13: nada cambió (el repositorio no
+        """F-053 R25/R37, F-065 R4/R14/R20, F-106 R28, F-115 R13 y F-108 R11: nada cambió (el repositorio no
         confirmó). En la API, 409 con el aviso; en un formulario, de vuelta a
         la ficha con él."""
         if request.url.path.startswith("/api/"):
             return JSONResponse(status_code=409, content={"detail": exc.aviso})
         return _a_la_ficha(exc.document_id, exc.aviso)
+
+    @app.exception_handler(FechaAlbaranNoValidaError)
+    @app.exception_handler(NumeroAlbaranNoValidoError)
+    async def cabecera_no_valida_handler(
+        _: Request, exc: FechaAlbaranNoValidaError | NumeroAlbaranNoValidoError,
+    ) -> JSONResponse:
+        """F-108 R7, R9: fecha no admitida o número demasiado largo; nada
+        cambió. 422 con el aviso como TEXTO (las vías del PUT de la ficha
+        enseñan ``detail`` tal cual; una lista saldría «[object Object]»)."""
+        return JSONResponse(status_code=422, content={"detail": exc.aviso})
 
     @app.exception_handler(RequestValidationError)
     async def validacion_handler(_: Request, exc: RequestValidationError) -> JSONResponse:

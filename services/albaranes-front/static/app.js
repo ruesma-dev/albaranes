@@ -2612,6 +2612,138 @@
         return value || null;
     }
 
+    // --------------------------------------------------------------- //
+    // F-108 · la fecha del albarán: se escribe a mano (dd/mm/aaaa y los
+    // demás formatos admitidos) o se elige en el calendario; se guarda
+    // AAAA-MM-DD. Misma regla que domain/services/fecha_albaran.py (R20).
+    // --------------------------------------------------------------- //
+
+    // R3: el aviso de una fecha no admitida (el mismo texto que el servidor).
+    function avisoFechaNoValida(texto) {
+        return "Fecha del albarán no válida: «" + texto + "». Escríbela como dd/mm/aaaa "
+            + "(p. ej. 28/10/2026) o elígela en el calendario.";
+    }
+
+    // R1–R3, R20: "AAAA-MM-DD" si se admite, "" si está vacía y null si no
+    // se admite (formato o día que no existe). Día antes que mes; año de 2
+    // cifras ⇒ 20aa. Sin Date (año 0–99 y zona horaria).
+    function parseFechaEs(texto) {
+        const limpio = String(texto === null || texto === undefined ? "" : texto).trim();
+        if (!limpio) { return ""; }
+        let ano, mes, dia;
+        let r = /^(\d{4})-(\d{2})-(\d{2})$/.exec(limpio);
+        if (r) {
+            ano = Number(r[1]); mes = Number(r[2]); dia = Number(r[3]);
+        } else {
+            r = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2}|\d{4})$/.exec(limpio);
+            if (!r) { return null; }
+            dia = Number(r[1]); mes = Number(r[2]); ano = Number(r[3]);
+            if (r[3].length === 2) { ano += 2000; }
+        }
+        if (ano < 1 || mes < 1 || mes > 12 || dia < 1) { return null; }
+        const bisiesto = (ano % 4 === 0 && ano % 100 !== 0) || ano % 400 === 0;
+        const dias = [31, bisiesto ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1];
+        if (dia > dias) { return null; }
+        return String(ano).padStart(4, "0") + "-" + String(mes).padStart(2, "0") + "-"
+            + String(dia).padStart(2, "0");
+    }
+
+    // R4: "AAAA-MM-DD" ⇒ "dd/mm/aaaa".
+    function fechaParaVer(iso) {
+        const p = String(iso || "").split("-");
+        return p.length === 3 ? p[2] + "/" + p[1] + "/" + p[0] : String(iso || "");
+    }
+
+    // R19: lo que viaja en el PUT: ISO si se admite, null si está vacía y lo
+    // escrito (recortado) si no se admite: el servidor responde el 422 (R7).
+    function fechaParaEnviar() {
+        const campo = document.getElementById("fecha");
+        if (!campo) { return null; }
+        const iso = parseFechaEs(campo.value);
+        if (iso === null) { return (campo.value || "").trim(); }
+        return iso || null;
+    }
+
+    // R17: en rojo, con el aviso debajo; lo escrito no se toca.
+    function marcarFechaNoValida(texto) {
+        const campo = document.getElementById("fecha");
+        const error = document.getElementById("fecha-error");
+        if (campo) {
+            campo.classList.add("campo-no-valido");
+            campo.setAttribute("aria-invalid", "true");
+        }
+        if (error) {
+            error.textContent = avisoFechaNoValida(texto);
+            error.hidden = false;
+        }
+    }
+
+    function limpiarMarcaFecha() {
+        const campo = document.getElementById("fecha");
+        const error = document.getElementById("fecha-error");
+        if (campo) {
+            campo.classList.remove("campo-no-valido");
+            campo.removeAttribute("aria-invalid");
+        }
+        if (error) {
+            error.textContent = "";
+            error.hidden = true;
+        }
+    }
+
+    // R18: la guarda de «Guardar» y «Guardar y aprobar»: con una fecha no
+    // admitida, marca, avisa, deja el foco en el campo y dice que no.
+    function fechaEscritaValida() {
+        const campo = document.getElementById("fecha");
+        if (!campo || campo.readOnly) { return true; }
+        if (parseFechaEs(campo.value) !== null) { return true; }
+        const texto = (campo.value || "").trim();
+        marcarFechaNoValida(texto);
+        window.alert(avisoFechaNoValida(texto));
+        campo.focus();
+        return false;
+    }
+
+    // R14–R17, R21: al salir del campo, dd/mm/aaaa o la marca; al teclear,
+    // se quita la marca; el botón abre el selector nativo en el día escrito
+    // (sin showPicker, o si falla, lo deja visible y con el foco) y elegir un
+    // día lo escribe. Ninguno toca el teclado (sin preventDefault). Sin el
+    // botón o el selector (ficha aprobada) no hace nada.
+    function wireFechaAlbaran() {
+        const campo = document.getElementById("fecha");
+        const cal = document.getElementById("fecha_calendario");
+        const boton = document.querySelector(".js-fecha-calendario");
+        if (!campo || !cal || !boton) { return; }
+        campo.addEventListener("blur", function () {
+            const iso = parseFechaEs(campo.value);
+            if (iso === null) {
+                marcarFechaNoValida((campo.value || "").trim());
+                return;
+            }
+            limpiarMarcaFecha();
+            campo.value = iso ? fechaParaVer(iso) : "";
+        });
+        campo.addEventListener("input", limpiarMarcaFecha);
+        boton.addEventListener("click", function () {
+            cal.value = parseFechaEs(campo.value) || "";
+            try {
+                if (typeof cal.showPicker !== "function") { throw new Error("sin showPicker"); }
+                cal.showPicker();
+            } catch (_) {
+                cal.classList.add("visible");
+                cal.focus();
+            }
+        });
+        cal.addEventListener("change", function () {
+            if (!cal.value) { return; }
+            campo.value = fechaParaVer(cal.value);
+            limpiarMarcaFecha();
+            cal.classList.remove("visible");
+        });
+    }
+
+    wireFechaAlbaran();
+
     function collectSelectedContratoCodigo() {
         const el = document.getElementById("selected_contrato_codigo");
         if (!el) return null;
@@ -2631,7 +2763,8 @@
         return {
             proveedor_nombre: getInput("proveedor_nombre"),
             proveedor_cif: getInput("proveedor_cif"),
-            fecha: getInput("fecha"),
+            // F-108 R19: ISO, null o lo escrito (el servidor dice el 422).
+            fecha: fechaParaEnviar(),
             numero_albaran: getInput("numero_albaran"),
             forma_pago: getInput("forma_pago"),
             obra_codigo: getInput("obra_codigo"),
@@ -2735,6 +2868,9 @@
     // la plantilla si no está valorado).
     async function guardarCabecera(markApproved) {
         if (guardarCabecera.enMarcha) { return; }
+        // F-108 R18: con una fecha no admitida no se envía nada (ni filas ni
+        // cabecera): aviso y foco en el campo.
+        if (!fechaEscritaValida()) { return; }
         guardarCabecera.enMarcha = true;
         const botones = [saveBtn, approveBtn].filter(Boolean);
         const antes = botones.map(function (b) { return b.disabled; });

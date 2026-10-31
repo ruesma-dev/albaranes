@@ -31,7 +31,10 @@ _FUNCIONES = ["parseNumEs", "numerosIguales", "partidaParaEnviar", "_camposCambi
               "codigoParaEnviar", "marcarPartida", "partidasMalas", "filasConCambios", "motivoDeRespuesta", "enviarFila",
               "consolidarFila", "marcarFilaNoGuardada", "limpiarFilasNoGuardadas", "guardarFilasPendientes",
               "avisoSumaVigente", "collectSelectedContratoCodigo", "collectPayload", "sendSave",
-              "guardarCabecera"]
+              "guardarCabecera",
+              # F-108: la fecha que manda collectPayload y la guarda de guardarCabecera.
+              "parseFechaEs", "fechaParaEnviar", "avisoFechaNoValida", "marcarFechaNoValida",
+              "fechaEscritaValida"]
 
 AVISO_PINTADO = "La suma de las líneas (100,00 €) no cuadra con la del albarán (90,00 €). ¿Aprobar igualmente?"
 AVISO_GET = "La suma de las líneas (80,00 €) no cuadra con la del albarán (90,00 €). ¿Aprobar igualmente?"

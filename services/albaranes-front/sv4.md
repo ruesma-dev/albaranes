@@ -596,6 +596,33 @@ DEFAULT_REVIEWER="Equipo Ruesma"
 8. Re-fetch del detalle completo y devuelve SaveResponse con redirect_url.
 ```
 
+### 11.0 Fecha y número de albarán (F-108)
+
+- **Se guarda `AAAA-MM-DD`, se ve `dd/mm/aaaa`.** El PUT pasa `fecha` por
+  `normalizar_fecha_albaran` (`domain/services/fecha_albaran.py`) y
+  `numero_albaran` por `normalizar_numero_albaran` (recortado, sin otro
+  cambio), antes de tocar nada. La plantilla enseña la guardada con el filtro
+  Jinja `fecha_albaran_ver` (si no se entiende, tal cual, para que se vea y se
+  corrija).
+- **Formatos admitidos**: `d/m/aaaa`, `d-m-aaaa`, `d.m.aaaa` (día y mes de 1 o
+  2 cifras; año de 2 cifras ⇒ `20aa`) y `aaaa-mm-dd`; espacios alrededor
+  ignorados; siempre día antes que mes. Vacía ⇒ `NULL`.
+- **Errores (422, `detail` texto, nada cambia)**: «Fecha del albarán no
+  válida: «…». Escríbela como dd/mm/aaaa (p. ej. 28/10/2026) o elígela en el
+  calendario.» y «El número de albarán no puede pasar de 128 caracteres». Un
+  aprobado da antes su 409 de aprobado.
+- **Aprobar** (ficha y listado): sin fecha `AAAA-MM-DD` real o sin número, 409
+  / vuelta a la lista con «No se puede aprobar: falta la fecha del albarán»,
+  «… falta el número de albarán» o «… la fecha del albarán no es válida:
+  ábrelo y corrígela» (lo último, tras las comprobaciones de líneas y
+  contrato).
+- **Ficha** (`app.js`: `parseFechaEs`, `wireFechaAlbaran`, guarda en
+  `guardarCabecera`): botón «Calendario» junto a `#fecha` que abre el
+  `input type=date` oculto (`#fecha_calendario`, con `showPicker`; si no hay,
+  visible y con el foco); al salir del campo, `dd/mm/aaaa` o en rojo con el
+  aviso; con una fecha mala, «Guardar» y «Guardar y aprobar» no envían nada.
+  El listado (`/documents`) y las vistas crudas no cambian.
+
 ### 11.1 Por qué UPDATE in-place y no DELETE+INSERT (decisión muy importante)
 
 ```python

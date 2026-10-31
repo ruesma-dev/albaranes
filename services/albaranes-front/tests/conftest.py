@@ -191,6 +191,10 @@ def render_detalle():
     entorno.filters["fecha_hora_local"] = lambda valor: str(valor or "—")
     entorno.filters["fecha_local"] = lambda valor: str(valor or "—")
     entorno.filters["hora_local"] = lambda valor: str(valor or "—")
+    # F-108 R4: el filtro real (dominio puro), como lo registra build_app.
+    from domain.services.fecha_albaran import fecha_para_ver
+
+    entorno.filters["fecha_albaran_ver"] = fecha_para_ver
     entorno.globals["view_label"] = str
     entorno.globals["asset_version"] = "test"
 

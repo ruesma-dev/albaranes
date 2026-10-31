@@ -39,7 +39,7 @@ def _guardar_y_aprobar(repo, monkeypatch):
     return repo.update_document_y_transicion(
         document_id=DOC,
         payload=MergeDocumentUpdatePayload(approved=True, approved_by="ana",
-                                           numero_albaran="CAMBIADO", **CABECERA),
+                                           **{**CABECERA, "numero_albaran": "CAMBIADO"}),
     )
 
 
