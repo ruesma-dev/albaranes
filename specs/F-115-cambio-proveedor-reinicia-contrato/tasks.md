@@ -16,7 +16,7 @@ Precondición (D5 = a): F-106 y F-114 fusionadas en `dev`, y `dev` fusionado en 
 - [x] T11: Tests RED de JS `test_f115_js_confirmacion.py` (`avisoCambioCabecera`, restaurar al cancelar; R14, R15)  |  Verificación: en rojo
 - [x] T12: `app.js`: `avisoCambioCabecera` y `choose` con confirmación; `DOC_DATA` con lo que necesite (R14, R15)  |  Verificación: T11 y `pytest services/albaranes-front/tests` en verde (R20)
 - [ ] T13: Prueba en navegador con sv4 local (líder, Chrome; colas en Azurite): albarán con contrato ⇒ elegir otro proveedor ⇒ confirmación, contrato retirado, aviso, combo de contratos sin los del anterior; cancelar deja todo igual  |  Verificación: MANUAL (líder), capturas o notas en `progress/impl_F-115.md`
-- [ ] T14: Mutación de `pertenencia.py`, `_retirar_seleccion_ajena_safely`, la rama nueva de `_trigger_valuation_safely` y el filtro del PUT; supervivientes analizados en `progress/mutacion_F-115.md`  |  Verificación: informe con 0 supervivientes sin justificar
+- [x] T14: Mutación de `pertenencia.py`, `_retirar_seleccion_ajena_safely`, la rama nueva de `_trigger_valuation_safely` y el filtro del PUT; supervivientes analizados en `progress/mutacion_F-115.md`  |  Verificación: informe con 0 supervivientes sin justificar
 - [ ] T15: Documentación: `docs/ARCHITECTURE.md` regla 26 y regla 25 (R7); revisar `azure-apps/albaranes.md` y commit local allí si cambia (R21)  |  Verificación: `grep -n "26\. \*\*" docs/ARCHITECTURE.md` y nota en el informe
 - [ ] T16: Despliegue (humano): sv3 primero, luego sv4 (`Set-DeployTag; .\deploy.ps1 -Only sv3` y después `-Only sv4`; `.\check_deploy.ps1`)  |  Verificación: MANUAL (humano)
 - [ ] T17: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh` exit 0
