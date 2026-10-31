@@ -6,7 +6,7 @@ Precondición (D5 = a): F-106 y F-114 fusionadas en `dev`, y `dev` fusionado en 
 - [x] T1: Tests RED de comun `test_f115_pertenencia.py` (R1)  |  Verificación: `pytest services/albaranes-comun/tests/test_f115_pertenencia.py` en rojo por importación
 - [x] T2: `ruesma_comun/contratos/pertenencia.py`, reexport y versión menor +1 (R1)  |  Verificación: T1 en verde y `pytest services/albaranes-comun/tests`
 - [x] T3: Tests RED de sv3 `test_f115_seleccion_ajena.py` (R2–R6, R8; casos a–f de R22)  |  Verificación: `pytest services/albaranes-persistencia/tests/test_f115_seleccion_ajena.py` en rojo
-- [ ] T4: sv3 puerto y repositorio (`get_pertenencia_seleccion`, `clear_selected_contrato`) y `_retirar_seleccion_ajena_safely` en el enriquecimiento (R2–R6)  |  Verificación: T3 en verde
+- [x] T4: sv3 puerto y repositorio (`get_pertenencia_seleccion`, `clear_selected_contrato`) y `_retirar_seleccion_ajena_safely` en el enriquecimiento (R2–R6)  |  Verificación: T3 en verde
 - [ ] T5: Tests RED de sv3 `test_f115_disparo_force.py` (R7)  |  Verificación: en rojo; `test_f075_disparo.py` sigue en verde
 - [ ] T6: `_trigger_valuation_safely` con `force` y sin selección publica sin contrato (R7)  |  Verificación: T5 y `pytest services/albaranes-persistencia/tests` en verde (R20)
 - [ ] T7: Tests RED de sv4 `test_f115_guardar_retira_contrato.py` (R9–R11, R18, R19; casos g, i)  |  Verificación: en rojo

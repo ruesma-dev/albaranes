@@ -434,3 +434,15 @@ def test_f115_r8_reenrich_no_toca_lineas_ni_blobs_ni_extraccion():
                    for n in usados), usados
     assert "clear_selected_contrato" in usados
     assert trigger.llamadas == [(None, True)]
+
+
+def test_f115_r5_repositorio_anterior_sin_el_metodo_es_no_op_sin_errores(caplog):
+    """Mocks y repositorios anteriores a F-115: ni excepción ni ERROR."""
+    class _RepoViejo(_RepoMem):
+        get_pertenencia_seleccion = None  # type: ignore[assignment]
+
+    repo = _RepoViejo()
+    with caplog.at_level(logging.ERROR):
+        assert _enriquecer(repo, _Cliente([])) == 0
+    assert repo.seleccion == "CTA/0001"
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
