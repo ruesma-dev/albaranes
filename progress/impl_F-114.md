@@ -160,12 +160,19 @@ Sigrid» buscando por CIF; ninguna escritura. **FALLO contra D2**: la SQL filtra
 `GROUP BY v.cif`, así que `COUNT(*)` y `MIN(v.raz)` solo veían las fichas que casaban: un CIF vivo con 2 fichas
 de razón social distinta salía con `fichas: 2` por CIF y `fichas: 1` (sin aviso) por el nombre de una.
 
-**Arreglo** (`3272e04`, tras avanzar la rama a `dev` `1c4b8fb` sin conflictos): el texto solo elige los CIF
-(subconsulta `v.cif IN (SELECT m.cif … fichas vivas que casan por nombre o CIF)`); nombre y fichas se calculan
-sobre todas las fichas vivas del CIF. Se conservan `TOP (?)`, orden, `ESCAPE '!'`, `COLLATE`, todo por
-parámetro y solo lectura. Una ficha de baja, de otro `tip` o de otra empresa que case NO trae su CIF (solo
-casan fichas vivas). **Desviación de design §3 / R15**: parámetros `[51, 5, 1, 0, 5, 1, 0, nombre, cif]` (tip,
-emp y fecbaj dos veces); el `MIN(raz)` mostrado puede no contener el texto buscado (es el de otra ficha del CIF).
+**Arreglo, versión 1** (`3272e04`, tras avanzar la rama a `dev` `1c4b8fb` sin conflictos): subconsulta
+`v.cif IN (SELECT m.cif … fichas vivas que casan)`. Correcta, pero el líder la midió vía sigrid-api (solo
+lectura, mismas 5 búsquedas, mismo momento): **4,5–5,2 s por búsqueda frente a 0,7–1,0 s** de la anterior
+(salvo una búsqueda de 3 caracteres alfanuméricos, ≈4 s con todas las variantes): 5 veces más lenta por tecleo.
+
+**Arreglo, versión 2 (la que queda)** (`4630aad`, propuesta del líder): una sola pasada; el texto pasa del
+`WHERE` al `HAVING MAX(CASE WHEN <nombre LIKE> OR <cif LIKE> THEN 1 ELSE 0 END) = 1`. Se agrupan todas las
+fichas vivas de cada CIF (nombre = la menor, fichas = todas) y sale si alguna casa. Medida por el líder con las
+mismas búsquedas: **0,7–1,1 s**, como la original, y el CIF de 2 fichas sale con 2 buscando por nombre. Se
+conservan `TOP (?)`, orden, `ESCAPE '!'`, `COLLATE`, todo por parámetro y solo lectura; **vuelven los 6
+parámetros de design §3** (`[51, 5, 1, 0, nombre, cif]`): sin desviación de parámetros. Una ficha de baja, de
+otro `tip` o de otra empresa que case NO trae su CIF (el `WHERE` ya las quita antes de agrupar). Único efecto
+visible: el `MIN(raz)` mostrado puede no contener lo escrito (es el de otra ficha viva del mismo CIF).
 
 **Fase RED** — `.venv/Scripts/python -m pytest tests/test_f114_cliente.py -q -p no:cacheprovider -k t8` (tests
 nuevos que EJECUTAN la SQL sobre SQLite en memoria: `TOP (?)` ⇒ `LIMIT ?`, sin `COLLATE`; datos inventados):
@@ -174,19 +181,17 @@ E       AssertionError: assert ('B00000001', 1) == ('B00000001', 2)
 E       AssertionError: assert [('B00000001'...STROS SL', 1)] == [('B00000001'...OBRAS SL', 2)]
 2 failed, 2 passed, 26 deselected in 1.49s
 ```
-(pasaban ya: «baja/ajena no trae el CIF» y «escape y límite ejecutados»). Verde tras el arreglo: cliente +
-endpoint + F-052, `49 passed`. Test viejo de F-114 ajustado: `test_f114_r15_la_sql…` (lista de parámetros y
-predicados de `m`) y tres índices `[4:]` ⇒ `[7:]`; ninguna aserción relajada.
+(pasaban ya: «baja/ajena no trae el CIF» y «escape y límite ejecutados»). Verde con la versión 2: cliente +
+endpoint + F-052, `49 passed`. Comprobado otra vez con la SQL original restaurada a mano: los mismos 2 tests
+caen (`2 failed, 2 passed`); con la del `HAVING`, `4 passed`. `test_f114_r15_la_sql…` fija ahora el `HAVING`,
+que el `LIKE` va después del `GROUP BY` y 6 `?`; ninguna aserción relajada.
 
-**Mutación** del arreglo: `python -m harness.mutacion --feature F-114 --salida progress/mutacion_F-114_T8.md`:
-1 mutante (`0` ⇒ `1` del `fecbaj` de `m`), 1 muerto, 446,9 s (la SQL es un literal: no genera mutantes; la
-cubren los tests sobre SQLite). Inventario de F-039: 61 informes.
+**Mutación**: `progress/mutacion_F-114_T8.md` es de la versión 1 (`3272e04`): 1 mutante (el `0` del `fecbaj`
+de la subconsulta), 1 muerto, 446,9 s. La versión 2 no añade líneas ejecutables mutables (solo el literal SQL y
+quita parámetros): no se relanza. La SQL la cubren los 4 tests que la ejecutan sobre SQLite. Inventario: 61.
 
-**Riesgo de rendimiento (no medido de nuevo, como dijo el líder)**: la T0 midió 1,2–1,6 s con la SQL anterior.
-Ahora `prv`+`con` se recorre dos veces (la subconsulta con `LIKE '%…%'` y el agregado de los CIF elegidos);
-SQL Server lo resuelve como semi-join y el segundo paso va por `cif` sobre como mucho decenas de CIF, así que
-se espera del mismo orden. Si en producción pasara de ~5 s (R-4 de design), opción: `JOIN` a un agregado
-por CIF, o medir con la C de la T0 adaptada.
+**Riesgo de rendimiento: retirado.** La versión 2 recorre `prv`+`con` una vez, como la original; el líder midió
+0,7–1,1 s (T0: 1,2–1,6 s en otro momento).
 
 **`bash harness/init.sh`** tal cual sobre `5c3ce6e`: **exit 0, «ENTORNO LISTO»**. Arnés 1919; sv1 236; sv2 496;
 sv3 1576; **sv4 2190 passed** (+4 de la T8); sv5 125; sv6 506 (1 skipped); sv9 1073. `PUERTA COBERTURA`: N/A
