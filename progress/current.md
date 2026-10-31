@@ -1,7 +1,11 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-108 · `in_progress` (implementer, 2026-10-31)** — fecha y número de albarán editables con calendario. Spec en `specs/F-108-fecha-numero-editables/`, rama `feature/F-108-fecha-numero-editables` (worktree `../albaranes-F-108`). Solo sv4. **PARADA 1 cerrada por el humano el 2026-10-28 («Todo a»): D1–D7 = (a).** `dev` fusionado en la rama el 2026-10-31 (F-106, F-113, F-114, F-115). Tarea en curso: T1.
+**F-108 · `in_progress` (implementer, 2026-10-31)** — fecha y número de albarán editables con calendario. Spec en `specs/F-108-fecha-numero-editables/`, rama `feature/F-108-fecha-numero-editables` (worktree `../albaranes-F-108`). Solo sv4. **PARADA 1 cerrada por el humano el 2026-10-28 («Todo a»): D1–D7 = (a).** `dev` fusionado en la rama el 2026-10-31 (F-106, F-113, F-114, F-115).
+
+- **Implementer (2026-10-31), hecho:** T1–T10 (un commit por tarea). Informe `progress/impl_F-108.md`, mutación `progress/mutacion_F-108.md`. Pendientes MANUAL: M1 (líder, Chrome/Edge con sv4 local), M-D (humano, despliegue de sv4 sola), M2 (líder, solo lectura en producción), M3 (humano, las 2 fechas `dd/mm/aaaa`), T11.
+- **Desviaciones justificadas** (detalle en el informe §3): (1) R11 se comprueba lo ÚLTIMO al pasar a aprobado (tras líneas y contrato), para que los avisos de F-065/F-078/F-106/F-115 sigan saliendo igual; (2) los fixtures compartidos `f053_sv4_bbdd` y `f065_bbdd` ganan fecha y número, y 3 tests ajustan su payload (ninguna aserción relajada); (3) tres tests de JS viejos añaden las funciones nuevas a su lista de funciones extraídas; (4) la `<dd>` de solo lectura que cita design §3 es la de las vistas crudas: sigue sin filtro (R23, §4.4).
+- **Entorno del worktree:** suites con `PYTHONPATH=C:\Users\pgris\PycharmProjects\albaranes-F-108\services\albaranes-comun` y `ARNES_SIN_CACHE=1`. *Junction* `.venv` de sv4 creada (a la del árbol principal): quitarla con `cmd /c rmdir` antes de `git worktree remove`.
 
 **F-114 · CERRADA (`done`, 2026-10-31).** Check «Solo de la obra» o todos los proveedores de Sigrid. Review APPROVED (pasada 3), T8 en verde, desplegada con el sv4 `r20261031-1506`. Pendiente sin bloqueo: O1 de la review (R10 por el texto del error; propuesta `!currentObra()`).
 
