@@ -42,3 +42,14 @@ FAILED tests/test_f115_seleccion_ajena.py::test_f115_r5_fallo_al_leer_la_pertene
 ```
 Los 6 que pasan son los casos que NO deben retirar (e, f, sin filas, sin selección, apagado, fila del albarán):
 fijan que la regla nueva no se pasa de frenada.
+
+### T5 · sv3, disparo con `force` (R7)
+
+```
+$ cd services/albaranes-persistencia; PYTHONPATH=<worktree comun> python -m pytest tests/test_f115_disparo_force.py tests/test_f075_disparo.py -q --tb=line
+...test_f115_disparo_force.py:51: AssertionError: assert [] == [('doc-f115-d..., None, True)]
+FAILED tests/test_f115_disparo_force.py::test_f115_r7_a_force_sin_contrato_sin_importes_publica_sin_contrato[sin_lineas]
+FAILED tests/test_f115_disparo_force.py::test_f115_r7_a_force_sin_contrato_sin_importes_publica_sin_contrato[sin_importes]
+2 failed, 13 passed in 1.92s
+```
+`test_f075_disparo.py` en verde en la misma pasada.
