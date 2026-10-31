@@ -1288,8 +1288,11 @@ def build_app(settings: Settings) -> FastAPI:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         detail, busqueda = resultado.detail, resultado.busqueda
 
+        # F-115 R11: si el guardado quitó el contrato (proveedor u obra
+        # cambiados), el aviso lo dice.
         message, buscando = aviso_de_guardado(
             aprobado=detail.approved, busqueda=busqueda,
+            contrato_retirado=resultado.contrato_retirado, cambio=resultado.cambio,
         )
         if resultado.aprobacion.aviso:
             # F-053 R4: aprobado, pero el alta no se pidió.

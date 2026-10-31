@@ -50,6 +50,7 @@ from ruesma_comun.linea_valorada import (
     fila_a_guardar,
     sin_conversion,
 )
+from ruesma_comun.contratos import contrato_es_del_albaran
 from ruesma_comun.obras import canonizar_codigo_obra
 from ruesma_comun.valoracion import esta_valorado
 
@@ -4433,36 +4434,36 @@ class AlbaranReviewRepository:
             document.reviewed_at_utc = self._utc_iso()
             document.last_modified_at_utc = self._utc_iso()
 
+            # (F-115 R9, R10) El contrato propuesto solo se acepta si es del
+            # albaran con el CIF y la obra de ESTE guardado. Antes se aceptaba
+            # cualquier codigo que existiera en ``albaran_contratos_merge``
+            # («contrato compartido»), aunque fuera de otro proveedor: al
+            # cambiar el proveedor, el contrato del anterior se quedaba.
             proposed_codigo = self._clean_text(payload.selected_contrato_codigo)
+            contrato_retirado: str | None = None
             if proposed_codigo is not None:
-                existing_codes = set(
-                    session.scalars(
-                        select(AlbaranContratoMergeOrm.codigo_contrato).where(
-                            AlbaranContratoMergeOrm.document_id == document.id
-                        )
-                    ).all()
+                es_del = self._es_del_albaran_in_session(
+                    session,
+                    document_id=document.id,
+                    codigo=proposed_codigo,
+                    cif=document.proveedor_cif,
+                    obra=document.obra_codigo,
                 )
-                if proposed_codigo not in existing_codes:
-                    # Contrato COMPARTIDO: la cabecera de contrato es unica
-                    # por sigrid_ide y su document_id se sobrescribe con el
-                    # del ULTIMO albaran enriquecido (UPSERT en sv3). Un
-                    # albaran que comparte el mismo contrato no es "dueno" de
-                    # la fila, asi que el filtro por document_id no lo
-                    # encuentra y antes borrabamos la seleccion a None -> el
-                    # boton Valorar daba 409 "no tiene contrato seleccionado".
-                    # Aceptamos el codigo si existe como contrato en
-                    # albaran_contratos_merge (misma recuperacion por codigo
-                    # que el detalle).
-                    shared = session.scalar(
-                        select(AlbaranContratoMergeOrm.codigo_contrato)
-                        .where(
-                            AlbaranContratoMergeOrm.codigo_contrato
-                            == proposed_codigo
-                        )
-                        .limit(1)
+                if es_del is None:
+                    # Sin ninguna fila de ese codigo: como hoy, se descarta.
+                    proposed_codigo = None
+                elif es_del is False:
+                    contrato_retirado = proposed_codigo
+                    proposed_codigo = None
+                    document.selected_contrato_origen = None
+                    document.review_notes = self._sin_nota_auto_seleccion(
+                        document.review_notes, contrato_retirado,
                     )
-                    if shared is None:
-                        proposed_codigo = None
+                    logger.info(
+                        "[revision] documento %s: contrato %s retirado al guardar "
+                        "(no es del proveedor ni de la obra guardados).",
+                        document.id, contrato_retirado,
+                    )
             document.selected_contrato_codigo = proposed_codigo
 
             # (F-065 R3) El PUT nunca desaprueba: sin ``approved`` deja la
@@ -4503,7 +4504,60 @@ class AlbaranReviewRepository:
         detail = self.get_document_detail(document_id)
         if detail is None:
             raise KeyError(f"Documento no encontrado tras guardar: {document_id}")
+        if contrato_retirado is not None:
+            detail = detail.model_copy(update={"contrato_retirado": contrato_retirado})
         return detail, paso_a_aprobado
+
+    @staticmethod
+    def _es_del_albaran_in_session(
+        session: Any,
+        *,
+        document_id: str,
+        codigo: str,
+        cif: str | None,
+        obra: str | None,
+    ) -> bool | None:
+        """(F-115 R1, R9) ¿El contrato ``codigo`` es del albaran con ese CIF
+        y esa obra? Mira las filas del documento; si no hay, las de ese
+        codigo en cualquier documento (contrato compartido, como el detalle).
+        ``None`` si no hay ninguna fila: no se puede saber."""
+        filas = session.execute(
+            select(
+                AlbaranContratoMergeOrm.cif_proveedor,
+                AlbaranContratoMergeOrm.codigo_obra,
+            ).where(
+                AlbaranContratoMergeOrm.document_id == document_id,
+                AlbaranContratoMergeOrm.codigo_contrato == codigo,
+            )
+        ).all()
+        if not filas:
+            filas = session.execute(
+                select(
+                    AlbaranContratoMergeOrm.cif_proveedor,
+                    AlbaranContratoMergeOrm.codigo_obra,
+                )
+                .where(AlbaranContratoMergeOrm.codigo_contrato == codigo)
+                .limit(20)
+            ).all()
+        if not filas:
+            return None
+        return any(
+            contrato_es_del_albaran(
+                contrato_cif=fila_cif, contrato_obra=fila_obra,
+                albaran_cif=cif, albaran_obra=obra,
+            )
+            for fila_cif, fila_obra in filas
+        )
+
+    @staticmethod
+    def _sin_nota_auto_seleccion(notas: str | None, codigo: str) -> str | None:
+        """(F-115 R10) Las notas sin la línea ``[AVISO] Contrato <codigo>
+        elegido AUTOMATICAMENTE…`` de ese código; las demás, tal cual."""
+        if not notas:
+            return notas
+        prefijo = f"[AVISO] Contrato {codigo} elegido"
+        lineas = [ln for ln in notas.splitlines() if not ln.strip().startswith(prefijo)]
+        return "\n".join(lineas).strip() or None
 
     @staticmethod
     def _cif_normalizado(cif: str | None) -> str:

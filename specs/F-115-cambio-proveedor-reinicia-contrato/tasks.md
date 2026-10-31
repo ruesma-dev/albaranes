@@ -10,7 +10,7 @@ Precondición (D5 = a): F-106 y F-114 fusionadas en `dev`, y `dev` fusionado en 
 - [x] T5: Tests RED de sv3 `test_f115_disparo_force.py` (R7)  |  Verificación: en rojo; `test_f075_disparo.py` sigue en verde
 - [x] T6: `_trigger_valuation_safely` con `force` y sin selección publica sin contrato (R7)  |  Verificación: T5 y `pytest services/albaranes-persistencia/tests` en verde (R20)
 - [x] T7: Tests RED de sv4 `test_f115_guardar_retira_contrato.py` (R9–R11, R18, R19; casos g, i)  |  Verificación: en rojo
-- [ ] T8: sv4 PUT: acepta solo contratos del albarán, retira origen y nota, `contrato_retirado` y aviso de R11 (R9–R11)  |  Verificación: T7 en verde
+- [x] T8: sv4 PUT: acepta solo contratos del albarán, retira origen y nota, `contrato_retirado` y aviso de R11 (R9–R11)  |  Verificación: T7 en verde
 - [ ] T9: Tests RED de sv4 `test_f115_detalle_y_aprobar.py` (R12, R13; caso h)  |  Verificación: en rojo
 - [ ] T10: sv4 detalle filtrado, `ValoracionDeOtroContratoError` en PUT-aprobar y `set_approved`, 409 en `app.py` (R12, R13)  |  Verificación: T9 en verde
 - [ ] T11: Tests RED de JS `test_f115_js_confirmacion.py` (`avisoCambioCabecera`, restaurar al cancelar; R14, R15)  |  Verificación: en rojo
