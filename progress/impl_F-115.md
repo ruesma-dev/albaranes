@@ -67,3 +67,14 @@ E   AttributeError: 'ResultadoGuardado' object has no attribute 'contrato_retira
 17 failed, 6 passed in 1.71s
 ```
 Pasan ya: R18 (aprobado y alta bloqueante: 409 sin tocar, como hoy), la fila legada y el R19 con espacios.
+
+### T9 · sv4, detalle filtrado y aprobar con otro contrato (R12, R13)
+
+```
+$ cd services/albaranes-front; PYTHONPATH=<worktree comun> .venv/Scripts/python.exe -m pytest tests/test_f115_detalle_y_aprobar.py -q --tb=line
+E   AssertionError: assert ['CTA/0001', ...', 'CTX/0700'] == ['CTSU25/0359']
+E   AssertionError: assert [ContratoLine...producto='X')] == []
+E   AssertionError: assert [ContratoPayl...web_url=None)] == []
+E   ImportError: cannot import name 'ValoracionDeOtroContratoError' from 'domain.models.alta_sigrid_models'
+(... 9 failed, 5 passed)
+```
