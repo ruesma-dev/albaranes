@@ -32,7 +32,7 @@ Leer "SELECT TOP (?) v.cif AS cif, MIN(v.raz) AS nombre, COUNT(*) AS fichas FROM
 
 - [x] T3: Plantilla y CSS (design §4): `div.campo-combo` con el check `#proveedor_solo_obra` marcado, `data-solo-obra-check` y `data-endpoint-todos`, nada en solo lectura; tests sobre el texto de plantilla y CSS (R1, R9: `checked` en el HTML)  |  Verificación: `pytest services/albaranes-front/tests/test_f114_plantilla.py`
 - [x] T4: Funciones puras de `app.js` (`textoBusquedaProveedor`, `urlProveedoresTodos`, `etiquetaProveedorGlobal`, `mensajeListaObraVacia`) y tests con node (R3 mínimo, R6 etiqueta y fichas, R10 mensaje)  |  Verificación: `pytest services/albaranes-front/tests/test_f114_js.py -k "f114_r3 or f114_r6 or f114_r10"`
-- [ ] T5: Modo global en `initCombo` (design §5): debounce 300 ms y secuencia (R4), «Hay más» (R5), `title` de varias fichas (R6), `choose` sin cambios (R7), `change` del check (R8), sin `localStorage` (R9), mensaje de lista vacía o sin obra (R10), errores (R11), modo marcado idéntico (R2); tests con `dom_falso.js` y `fetch` falso  |  Verificación: `pytest services/albaranes-front/tests/test_f114_js.py` y `pytest services/albaranes-front -k "f051 or f065_f1_js or f065_f3bis"`
+- [x] T5: Modo global en `initCombo` (design §5): debounce 300 ms y secuencia (R4), «Hay más» (R5), `title` de varias fichas (R6), `choose` sin cambios (R7), `change` del check (R8), sin `localStorage` (R9), mensaje de lista vacía o sin obra (R10), errores (R11), modo marcado idéntico (R2); tests con `dom_falso.js` y `fetch` falso  |  Verificación: `pytest services/albaranes-front/tests/test_f114_js.py` y `pytest services/albaranes-front -k "f051 or f065_f1_js or f065_f3bis"`
 
 ## Bloque C · documentación, calidad y cierre
 
