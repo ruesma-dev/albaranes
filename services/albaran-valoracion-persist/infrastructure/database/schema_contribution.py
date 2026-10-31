@@ -273,6 +273,13 @@ _DDL_STATEMENTS: Tuple[Tuple[str, str], ...] = (
     ("ALTER albaran_line_valuations.bloqueada",
      "ALTER TABLE albaran_line_valuations "
      "ADD COLUMN IF NOT EXISTS bloqueada BOOLEAN NOT NULL DEFAULT FALSE"),
+    # F-106 · R19 — lo editado a mano en sv4 (``ruesma_comun.edicion_manual``):
+    # campos puestos, lo que calculó sv6 y si la fila la creó sv4. La escribe
+    # sv4 en cada vía que toca una fila; sv6 solo al reaplicarla al revalorar
+    # (``replace_valuation``). NULL = sin edición. Lectores: sv4 y sv6.
+    ("ALTER albaran_line_valuations.edicion_manual_json",
+     "ALTER TABLE albaran_line_valuations "
+     "ADD COLUMN IF NOT EXISTS edicion_manual_json TEXT"),
 )
 
 

@@ -273,3 +273,41 @@ def unitario_despejado(
     if divisor == 0.0:
         return None
     return round(importe_num / divisor, 6)
+
+
+# --------------------------------------------------------------------------- #
+# F-106 · La línea cuadra
+# --------------------------------------------------------------------------- #
+
+#: (F-106 R1, D5) Tolerancia, en euros, para que una línea «cuadre»: el importe
+#: impreso es ``Q × P × (1 − d)`` redondeado a céntimos (±0,005), a menudo con
+#: el descuento redondeado aparte (otro ±0,005), y el precio impreso con k
+#: decimales añade un poco más. Única constante de cuadre de línea de sv4, sv6
+#: y sv9.
+TOLERANCIA_CUADRE_EUR = 0.02
+
+
+def cuadra_linea(
+    cantidad: object,
+    precio: object,
+    descuento: object,
+    importe: object,
+    tolerancia: float = TOLERANCIA_CUADRE_EUR,
+) -> bool | None:
+    """(F-106 R1) ¿``|importe_de_linea(Q, P, d) − I| ≤ tolerancia``?
+
+    ``None`` (no comparable) si Q, P o I faltan o no son números finitos.
+    Un descuento inválido no descuenta, como en ``importe_de_linea``. Nunca
+    lanza: lo usan sv4 al pintar y al aprobar, sv6 y sv9 sobre datos leídos.
+    """
+    cantidad_num = _numero_finito(cantidad)
+    precio_num = _numero_finito(precio)
+    importe_num = _numero_finito(importe)
+    if cantidad_num is None or precio_num is None or importe_num is None:
+        return None
+    calculado = importe_de_linea(
+        cantidad=cantidad_num, precio_unitario=precio_num, descuento_pct=descuento,
+    )
+    if calculado is None or not math.isfinite(calculado):
+        return None
+    return round(abs(calculado - importe_num), 2) <= tolerancia

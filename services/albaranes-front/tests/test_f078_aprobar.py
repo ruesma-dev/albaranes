@@ -139,8 +139,12 @@ def test_f078_r17_junto_a_las_de_f065_y_desde_guardar_y_aprobar(monkeypatch):
             "INSERT INTO contrato_lines_derived (id, created_by_valuation_id, "
             "descripcion_linea, unidad_medida, precio_unitario, origen) VALUES "
             "(639, 'f065-val-1', 'CARGA INCOMPLETA', 'M3', 12.5, 'manual_override')"))
+        # F-106 R16 (fixture declarado en R31, humano 2026-10-29): P 12,5, el
+        # de su derivada, para que cuadre (1 × 12,5); antes tomaba el 115 por
+        # defecto de ``linea()`` y la fila no cuadraba.
         linea(s, id=386, line_kind="manual", derived_contrato_line_id=639,
-              importe_calculado=12.5, codigo_partida_final=None)
+              precio_unitario_final=12.5, importe_calculado=12.5,
+              codigo_partida_final=None)
         s.commit()
     repo = repositorio(motor)
     monkeypatch.setattr(repo, "get_document_detail", lambda document_id: "detalle")

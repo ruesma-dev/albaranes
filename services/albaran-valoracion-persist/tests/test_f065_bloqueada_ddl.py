@@ -52,7 +52,9 @@ def test_f065_r17_el_replace_no_escribe_bloqueada():
         SqlAlchemyValuationRepository,
     )
 
-    assert "bloqueada" not in inspect.getsource(SqlAlchemyValuationRepository)
+    # F-106 R27 (declarado en R31): el replace lee ``bloqueada`` para conservar
+    # las filas legadas; las filas nuevas de sv6 siguen sin nombrarla.
+    assert "bloqueada" not in inspect.getsource(SqlAlchemyValuationRepository._build_line_orm)
 
 
 def test_f065_r17_la_fila_nueva_del_replace_no_trae_valor_de_bloqueada():

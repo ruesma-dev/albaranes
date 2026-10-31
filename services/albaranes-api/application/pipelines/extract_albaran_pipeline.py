@@ -31,6 +31,7 @@ from application.services.albaran_extraction_service import (
     ProviderExtractionResult,
 )
 from domain.models.llm_attachment import LlmAttachment
+from ruesma_comun.mime import detectar_mime, nombre_coherente
 
 if TYPE_CHECKING:
     from ruesma_comun.correo import ContextoCorreo
@@ -209,6 +210,12 @@ class ExtractAlbaranPipeline:
         file_bytes: bytes,
     ) -> list[LlmAttachment]:
         filename = filename or "document.bin"
+        # F-113 (R17-R19): los blobs de input/ anteriores al fix de sv1 traen
+        # el MIME de Graph (application/octet-stream en fotos de WhatsApp).
+        # Manda el MIME real por los bytes, y el nombre se hace coherente con
+        # él para que la rama PDF/imagen de abajo decida bien.
+        mime_type = detectar_mime(file_bytes, declarado=mime_type, nombre=filename)
+        filename = nombre_coherente(filename, mime_type)
         is_pdf = (
             mime_type == "application/pdf"
             or filename.lower().endswith(".pdf")
