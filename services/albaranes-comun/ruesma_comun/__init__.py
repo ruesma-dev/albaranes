@@ -4,4 +4,4 @@
 Infraestructura y contratos compartidos por los microservicios del
 sistema de albaranes. AQUÍ NO VIVE LÓGICA DE DOMINIO de ningún servicio.
 """
-__version__ = "0.10.0"
+__version__ = "0.11.0"

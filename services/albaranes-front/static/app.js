@@ -2251,6 +2251,40 @@
         return motivo + ". Desmarca «Solo de la obra» para buscar entre todos los proveedores de Sigrid";
     }
 
+    // F-115 R14, R15, R19: cambiar el proveedor (o la obra) quita el contrato
+    // y vuelve a buscar y a valorar; antes del auto-guardado se pide
+    // confirmación. Funciones puras (los tests las sacan una a una con node).
+    // CIF comparable como ``normalizar_cif`` de comun: mayúsculas, solo
+    // [A-Z0-9] y sin el prefijo ES de país (11 caracteres).
+    function _normCif(v) {
+        let t = String(v == null ? "" : v).toUpperCase().replace(/[^0-9A-Z]/g, "");
+        if (t.length === 11 && t.indexOf("ES") === 0) { t = t.slice(2); }
+        return t;
+    }
+    // Obra comparable como ``canonizar_codigo_obra``: 3 dígitos ⇒ 0 delante.
+    function _normObra(v) {
+        const t = String(v == null ? "" : v).trim().toUpperCase();
+        return /^[0-9]{3}$/.test(t) ? "0" + t : t;
+    }
+    // El texto de la confirmación, o null si no hay que preguntar: mismo
+    // valor normalizado, o el albarán no tiene contrato ni valoración.
+    function avisoCambioCabecera(kind, previo, nuevo, doc) {
+        const norm = kind === "obra" ? _normObra : _normCif;
+        if (norm(previo) === norm(nuevo)) { return null; }
+        const d = doc || {};
+        const codigo = d.selected_contrato_codigo || "";
+        if (!codigo && !d.valuation) { return null; }
+        const n = Number(d.n_filas_manuales) || 0;
+        const manuales = n > 0 ? (n === 1 ? " y 1 puesta a mano" : " y " + n + " puestas a mano") : "";
+        const quita = codigo ? " quita el contrato " + codigo + " y" : "";
+        const busca = kind === "obra"
+            ? " vuelve a buscar los contratos del mismo proveedor en la nueva obra y a valorar."
+            : " vuelve a buscar contratos y a valorar.";
+        const sujeto = kind === "obra" ? "Cambiar la obra" : "Cambiar el proveedor";
+        return sujeto + quita + busca + " Las líneas leídas se conservan" + manuales +
+            ". ¿Continuar?";
+    }
+
     function initCombo(combo) {
         const input = combo.querySelector(".combo-input");
         const panel = combo.querySelector(".combo-panel");
@@ -2342,6 +2376,14 @@
         function choose(it) {
             const vEl = document.getElementById(valInputId);
             const nEl = document.getElementById(nombreInputId);
+            // F-115 R14, R15: confirmar antes de tocar nada; al cancelar, el
+            // combo vuelve al valor anterior y no se guarda.
+            const aviso = avisoCambioCabecera(kind, vEl ? vEl.value : "", it.val, DOC_DATA);
+            if (aviso && !window.confirm(aviso)) {
+                input.value = combo.dataset.label || "";
+                close();
+                return;
+            }
             if (vEl) vEl.value = it.val || "";
             if (nEl) nEl.value = it.nombre || "";
             // FIX (jun 2026): al cambiar de OBRA, la dirección que hay en

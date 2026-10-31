@@ -1950,6 +1950,9 @@ class DocumentDetailPayload(BaseModel):
     proveedores_disponibles: list[ProveedorOption] = Field(default_factory=list)
     obras_disponibles: list[ObraOption] = Field(default_factory=list)
     selected_contrato_codigo: str | None = None
+    # (F-115 R9, R11) Solo en la respuesta del PUT de cabecera: el contrato
+    # que ese guardado quitó por no ser del proveedor y la obra guardados.
+    contrato_retirado: str | None = None
     # NUEVO — None mientras no exista valoración en BBDD.
     valuation: ValuationPayload | None = None
     # F-052 R27 — con qué se buscaron los contratos y si sigue valiendo

@@ -16,6 +16,7 @@ from ruesma_comun.alta_sigrid import (
 from ruesma_comun.sigrid import ListaPartidasObra
 
 from application.services.busqueda_contratos import (
+    cambio_de_cabecera,
     debe_relanzar_busqueda,
     hay_datos_para_buscar,
 )
@@ -76,6 +77,10 @@ class ResultadoGuardado:
     detail: DocumentDetailPayload
     busqueda: ContratoRefetchOutcome | None
     aprobacion: ResultadoAprobacion
+    # (F-115 R11) El contrato que el guardado quitó por no ser del proveedor
+    # y la obra guardados, y qué cambió (``proveedor`` u ``obra``).
+    contrato_retirado: str | None = None
+    cambio: str | None = None
 
 
 @dataclass(frozen=True)
@@ -264,7 +269,15 @@ class ReviewService:
             document_id=document_id, payload=payload, detail=detail,
             refetch_client=refetch_client,
         )
-        return ResultadoGuardado(detail=detail, busqueda=busqueda, aprobacion=aprobacion)
+        retirado = getattr(detail, "contrato_retirado", None)
+        return ResultadoGuardado(
+            detail=detail, busqueda=busqueda, aprobacion=aprobacion,
+            contrato_retirado=retirado,
+            cambio=(
+                cambio_de_cabecera(detail.proveedor_cif, detail.busqueda_contratos)
+                if retirado else None
+            ),
+        )
 
     def save_document_y_buscar_si_cambia(
         self,

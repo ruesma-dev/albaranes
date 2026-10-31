@@ -26,6 +26,7 @@ from config.settings import Settings
 from domain.models.alta_sigrid_models import (
     AlbaranBloqueadoError,
     AlbaranSinValorarError,
+    ValoracionDeOtroContratoError,
 )
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
@@ -825,9 +826,12 @@ def build_app(settings: Settings) -> FastAPI:
                 # R49: cabecera de Easy Auth > formulario > DEFAULT_REVIEWER.
                 approved_by=_reviewer_from_request(request, approved_by),
             )
-        except (AlbaranSinValorarError, LineasIncompletasError) as exc:
-            # F-053 R37 y F-065 R20: no se aprueba lo no valorado ni con
-            # filas sin cantidad o importe; nada cambia.
+        except (
+            AlbaranSinValorarError, LineasIncompletasError, ValoracionDeOtroContratoError,
+        ) as exc:
+            # F-053 R37, F-065 R20 y F-115 R13: no se aprueba lo no valorado,
+            # ni con filas sin cantidad o importe, ni con la valoración de
+            # otro contrato; nada cambia.
             return _redirigir_a_lista(redirect_query, exc.aviso)
         aviso = getattr(resultado, "aviso", None)
         texto = f"Documento aprobado, pero {aviso}" if aviso else "Documento aprobado"
@@ -1288,8 +1292,11 @@ def build_app(settings: Settings) -> FastAPI:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         detail, busqueda = resultado.detail, resultado.busqueda
 
+        # F-115 R11: si el guardado quitó el contrato (proveedor u obra
+        # cambiados), el aviso lo dice.
         message, buscando = aviso_de_guardado(
             aprobado=detail.approved, busqueda=busqueda,
+            contrato_retirado=resultado.contrato_retirado, cambio=resultado.cambio,
         )
         if resultado.aprobacion.aviso:
             # F-053 R4: aprobado, pero el alta no se pidió.
@@ -1930,14 +1937,16 @@ def build_app(settings: Settings) -> FastAPI:
     @app.exception_handler(LineaBloqueadaError)
     @app.exception_handler(LineasIncompletasError)
     @app.exception_handler(ValoracionCambiadaError)
+    @app.exception_handler(ValoracionDeOtroContratoError)
     async def alta_sigrid_error_handler(
         request: Request,
         exc: (
             AlbaranBloqueadoError | AlbaranSinValorarError | AlbaranAprobadoError
             | LineaBloqueadaError | LineasIncompletasError | ValoracionCambiadaError
+            | ValoracionDeOtroContratoError
         ),
     ) -> Response:
-        """F-053 R25/R37, F-065 R4/R14/R20 y F-106 R28: nada cambió (el repositorio no
+        """F-053 R25/R37, F-065 R4/R14/R20, F-106 R28 y F-115 R13: nada cambió (el repositorio no
         confirmó). En la API, 409 con el aviso; en un formulario, de vuelta a
         la ficha con él."""
         if request.url.path.startswith("/api/"):

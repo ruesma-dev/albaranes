@@ -3,19 +3,18 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **112 features**, 81 abiertas (1 en curso, 10 con la spec lista, 12 bloqueadas y 58 en backlog) y 31 terminadas.
+Resumen: **112 features**, 80 abiertas (1 en curso, 9 con la spec lista, 12 bloqueadas y 58 en backlog) y 32 terminadas.
 
 ## En curso
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
-| F-114 | Elegir proveedor: check «Solo de la obra» (por defecto) o todos los proveedores de Sigrid | 1 | estandar | `feature/F-114-proveedor-todos-sigrid` |
+| F-115 | Al cambiar el proveedor: se reinicia la búsqueda de contrato y la valoración, sin regenerar las líneas | 1 | estandar | `feature/F-115-cambio-proveedor-reinicia-contrato` |
 
 ## Spec lista
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
-| F-115 | Al cambiar el proveedor: se reinicia la búsqueda de contrato y la valoración, sin regenerar las líneas | 1 | estandar | `feature/F-115-cambio-proveedor-reinicia-contrato` |
 | F-108 | Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha | 2 | estandar | `feature/F-108-fecha-numero-editables` |
 | F-110 | El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS) | 2 | critico | `feature/F-110-descuento-linea-sigrid` |
 | F-111 | Residuos: contenedores de 3, 6 o 9 m³ con el precio general del contrato, y partida del capítulo de gestión de residuos en vez de almacén | 2 | critico | `feature/F-111-residuos-contenedores-y-partida` |
@@ -125,6 +124,7 @@ Resumen: **112 features**, 81 abiertas (1 en curso, 10 con la spec lista, 12 blo
 | F-072 | Arnés: la caché de suites de init.sh tiene en cuenta las dependencias de cada servicio | 1 | critico |
 | F-078 | La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia | 1 | critico |
 | F-080 | Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados | 1 | critico |
+| F-114 | Elegir proveedor: check «Solo de la obra» (por defecto) o todos los proveedores de Sigrid | 1 | estandar |
 | F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
 | F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
 | F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | estandar |
@@ -156,15 +156,9 @@ estado **bloqueada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feat
 
 ORIGEN: el humano, 2026-10-30. Llega un correo de la obra 0728 a las 11:01 con 5 albaranes de FEYMACO en foto (adjuntos «WhatsApp Image 2026-10-30 at 09.39.xx.jpeg»). Sale como procesado en el buzón, pero no aparece en la plataforma. DIAGNÓSTICO del líder (solo lectura: workflow_runs y logs de ca-sv2-extraccion): Graph entrega los adjuntos con contentType `application/octet-stream`. sv1 guarda ese MIME tal cual (y el blob con extensión .pdf). IA1 (Gemini) los lee, pero IA2 (OpenAI Responses) devuelve 400 «Expected a base64-encoded data URL with an image MIME type … got unsupported MIME type 'application/octet-stream'». El error es NO retryable, así que los 5 mensajes de q-extraccion agotan los 5 intentos y acaban en poison. PROPUESTA del líder, aceptada por el humano para spec: (1) sv1 detecta el MIME real por la firma de bytes (JPEG, PNG, WebP, PDF; y por la extensión si hace falta) cuando Graph dice octet-stream o un tipo genérico; (2) defensa en profundidad en comun: el cliente de OpenAI (y el de Gemini si aplica) normaliza el MIME de la imagen con la misma función compartida antes de construir el data URL; (3) tests con una imagen declarada octet-stream. A RESOLVER EN LA SPEC: dónde vive la función de detección (comun); qué hacer con un adjunto que no es ni imagen ni PDF; nombre y extensión del blob de entrada; cómo se recuperan los 5 documentos atascados (reenviar el correo frente a reencolar los mensajes de poison, que es una escritura en producción y la autoriza el humano); medir en producción (solo lectura) cuántos documentos han caído por esto. Despliegue: comun → sv1 → sv2, lo lanza el humano. URGENTE: va antes que el resto de la cola.
 
-### F-114 · Elegir proveedor: check «Solo de la obra» (por defecto) o todos los proveedores de Sigrid
-
-estado **en curso** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-114-proveedor-todos-sigrid`
-
-ORIGEN: el humano, 2026-10-30, por el documento 097191e9 (obra sin contratos). Hoy el desplegable de proveedor de la ficha (sv4, `/api/sigrid/proveedores?obra=`, `_SQL_PROVEEDORES_POR_OBRA` en `sigrid_lookup_client.py`) solo ofrece proveedores con contrato en la obra (ctr de emp 1); en una obra sin contratos sale vacío. PETICIÓN: junto al desplegable, un check «Solo de la obra», marcado por defecto, que se comporta como ahora; desmarcado, se elige entre TODOS los proveedores dados de alta en Sigrid (tabla `prv`, solo lectura vía sigrid-api `sql/read`). A RESOLVER EN LA SPEC: tamaño de `prv` (medir en solo lectura) y, según eso, lista completa o búsqueda al escribir (nombre o CIF); duplicados por CIF y proveedores de baja; qué pasa aguas abajo al elegir un proveedor sin contrato en la obra (contratos, valoración, alta en Sigrid de sv9 con `sin_contrato`). Si sv9 necesita cambios, se propone aparte. Servicio: sv4. Va DETRÁS de F-113 y antes que el resto de la cola.
-
 ### F-115 · Al cambiar el proveedor: se reinicia la búsqueda de contrato y la valoración, sin regenerar las líneas
 
-estado **spec lista** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-115-cambio-proveedor-reinicia-contrato`
+estado **en curso** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-115-cambio-proveedor-reinicia-contrato`
 
 ORIGEN: el humano, 2026-10-30, al aprobar la PARADA 1 de F-114 (era su D6). PROBLEMA (ya existe hoy, F-114 lo hará más frecuente): si el albarán tenía elegido un contrato del proveedor A y en la ficha (sv4) se cambia el proveedor a B (corrección manual de F-062), el contrato de A sigue seleccionado; la valoración usaría el contrato de A y el alta en Sigrid (sv9) mandaría el contrato de A con el CIF de B (Sigrid lo rechaza: fallo visible, no silencioso). PETICIÓN del humano: «al cambiar proveedor debe reiniciarse el proceso de busqueda de contrato y valoracion pero no la generacion de nuevas lineas». Es decir: al cambiar el proveedor se quita la selección de contrato del proveedor anterior, se vuelven a buscar los contratos del proveedor nuevo y se revalora; las líneas extraídas (y sus ediciones manuales) se conservan, sin volver a extraer (no se relanza IA1/IA2). A RESOLVER EN LA SPEC: qué hace hoy el cambio de proveedor de F-062 (qué cola publica: q-persistencia re-fetch o q-valoracion revalorar) y qué pieza vuelve a buscar contratos (enriquecimiento de sv3) sin regenerar líneas; qué se borra exactamente (contrato elegido, vinculaciones de línea a contrato, valoración previa) y qué se conserva (líneas, ediciones manuales de F-106, partidas/almacén elegidos a mano); qué pasa si el proveedor nuevo no tiene contrato en la obra (valoración sin contrato, como hoy); si el albarán ya está aprobado o con alta en Sigrid, no se permite o se avisa. Servicios previstos: sv4 (y sv3/sv6 si la re-búsqueda de contratos lo exige; se confirma en la spec). Va DETRÁS de F-114.
 
@@ -1098,6 +1092,12 @@ PROPUESTA: tras un empate por nombre, la deducción por familia solo puede elegi
 ALCANCE: services/albaranes-persistencia (header_resolver_service). RELACIONADAS: F-073 (P6, R10, R11), F-062.
 
 SPEC (specs/F-080-empate-solo-entre-empatados/, 2026-10-18): tras un empate por nombre, el ganador del paso por puntos de hoy (sobre toda la obra, mínimo 3 y margen 2, sin cambios) solo se acepta si es uno de los empatados (clave de CIF normalizada); si gana un ajeno, revisión con proveedor_nombre_ambiguo y la nota de R11 de F-073, y una línea de log. Prototipo: H4 pasa a revisión y la suite de sv3 sigue en 1496 passed sin cambiar expectativas. Sin DDL, sin comun, sin tocar similitud_proveedor.py. PREGUNTAS P1–P3 para la PARADA 1 (design §2): P1 contra quién compite el empatado (recomendada (b), la carrera de hoy con el ganador empatado, frente a (a) carrera solo entre empatados); P2 quiénes son los empatados (los de EleccionPorNombre.empatados); P3 si la familia deja empatados igualados arriba (R11 sin cambios).
+
+### F-114 · Elegir proveedor: check «Solo de la obra» (por defecto) o todos los proveedores de Sigrid
+
+estado **terminada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-114-proveedor-todos-sigrid`
+
+ORIGEN: el humano, 2026-10-30, por el documento 097191e9 (obra sin contratos). Hoy el desplegable de proveedor de la ficha (sv4, `/api/sigrid/proveedores?obra=`, `_SQL_PROVEEDORES_POR_OBRA` en `sigrid_lookup_client.py`) solo ofrece proveedores con contrato en la obra (ctr de emp 1); en una obra sin contratos sale vacío. PETICIÓN: junto al desplegable, un check «Solo de la obra», marcado por defecto, que se comporta como ahora; desmarcado, se elige entre TODOS los proveedores dados de alta en Sigrid (tabla `prv`, solo lectura vía sigrid-api `sql/read`). A RESOLVER EN LA SPEC: tamaño de `prv` (medir en solo lectura) y, según eso, lista completa o búsqueda al escribir (nombre o CIF); duplicados por CIF y proveedores de baja; qué pasa aguas abajo al elegir un proveedor sin contrato en la obra (contratos, valoración, alta en Sigrid de sv9 con `sin_contrato`). Si sv9 necesita cambios, se propone aparte. Servicio: sv4. Va DETRÁS de F-113 y antes que el resto de la cola.
 
 ### F-011 · Evals de IA con ground truth y puerta en el arnés
 

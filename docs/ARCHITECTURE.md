@@ -833,6 +833,9 @@ anteriores) y `normalizar_adjuntos` lo corrige antes de cualquier IA.
     - **Sin contrato y con importes ⇒ valoración directa.** sv3 publica
       `q-valoracion` con `codigo_contrato` nulo solo si **no hay contrato
       seleccionado** (con contrato seleccionado sin líneas, nada, como antes);
+      con el re-fetch de sv4 (`force`) y sin contrato se publica **aunque no
+      haya importes** (F-115 R7, regla 26), para que sv6 sustituya la
+      valoración anterior (`no_contract` si no los trae);
       el sobre `no_contract` de sv5 lleva `precio_neto_albaran` y
       `descuento_albaran`; sv6 (`ValoracionDirectaBuilder`) guarda una cabecera
       `no_contract` con `prompt_key` y motivo `valoracion_directa_albaran` y una
@@ -869,6 +872,35 @@ anteriores) y `normalizar_adjuntos` lo corrige antes de cualquier IA.
       expresión SQL portable ordena, filtra y suma en la tarjeta «Importe
       pendiente» y en las vistas Obras y Proveedores; una valoración sin
       filas no es un valorado.
+
+26. **Cambiar el proveedor o la obra reinicia contrato y valoración** (F-115,
+    oct 2026; regla del humano: «al cambiar proveedor debe reiniciarse el
+    proceso de busqueda de contrato y valoracion pero no la generacion de
+    nuevas lineas»). Spec: `specs/F-115-cambio-proveedor-reinicia-contrato/`.
+    - **El contrato elegido es del albarán**: sus filas de
+      `albaran_contratos_merge` tienen el CIF y la obra del merge, comparados con
+      `ruesma_comun.contratos.contrato_es_del_albaran` (`normalizar_cif` y
+      `canonizar_codigo_obra`; una fila legada sin CIF u obra no descalifica, un
+      albarán sin CIF u obra no tiene contratos). Sin ninguna fila de ese código
+      no se sabe y no se toca.
+    - **Dónde se quita** (D1): sv4 al guardar la cabecera (el PUT solo acepta un
+      contrato del albarán con el CIF y la obra de ese PUT; si no, NULL, origen
+      NULL y fuera la nota «[AVISO] Contrato X elegido AUTOMATICAMENTE…», y el
+      aviso dice «Proveedor cambiado: …» u «Obra cambiada: …») y sv3 al empezar
+      cada enriquecimiento de contratos (también si faltan datos o Sigrid falla).
+      Al cambiar la obra se conserva el proveedor y se buscan sus contratos en
+      la obra nueva (D2).
+    - **Se rebusca y se revalora, sin regenerar líneas**: el guardado relanza la
+      búsqueda (F-052 D4-A, `force`); `reenrich_by_merge_id` no toca
+      `albaran_lines_merge` ni llama a IA1/IA2; con `force` y sin contrato se
+      revalora sin contrato (regla 25) y sv6 conserva lo editado a mano (F-106).
+    - **Las filas del proveedor anterior no se borran** (D6): sv4 las oculta del
+      bloque y del desplegable, y no carga líneas de una selección ajena.
+    - **La ficha pregunta** antes del auto-guardado del combo si hay contrato o
+      valoración (D3), y **no se aprueba** (ficha ni listado) si
+      `albaran_valuations.contrato_codigo` no es el seleccionado (409, D4).
+    - Aprobado o con alta bloqueante, el cambio se rechaza como siempre
+      (F-065 R4, F-053 R25/R26).
 
 ## Acceso a datos y sistemas externos
 
