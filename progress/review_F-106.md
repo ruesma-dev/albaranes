@@ -1,10 +1,10 @@
 <!-- progress/review_F-106.md -->
-Revisión completa (pasada 1) · rama `feature/F-106-precio-al-cambiar-medicion` en `a7e86b2` (dev `c858fa6` fusionado en `76e91e1`)
+Revisión incremental desde 058b594 (pasada 2) · delta `680b074`; pasada 1 completa sobre `a7e86b2` (abajo)
 
 # F-106 · review del reviewer
 
-- **Veredicto: CHANGES_REQUESTED.** Un único cambio, de estado y no de código: T21 sigue `[ ]` en
-  `tasks.md` aunque está hecha. Todo lo demás está verificado abajo; la pasada 2 solo tiene que mirar ese delta.
+- **Veredicto pasada 2: APPROVED.** Delta = 1 línea de `tasks.md` (T21 `[ ]` → `[x]`), sin código: init.sh y
+  suites NO reejecutados (indicación del líder; valen los de la pasada 1). Pasada 1: CHANGES_REQUESTED solo por eso.
 - **Nivel de rigor:** `critico` (declarado): fase RED, cobertura ≥ 80 %, mutación sin pendientes y RM5.
 
 ## init.sh y suites (ejecutadas por el reviewer, 2026-10-31)
@@ -56,7 +56,7 @@ Con la comun 0.10.0 instalada (tras fusionar) resuelve: no es defecto de código
 | C4 bis RM6 | [x] | `0babedb` solo añade tests; no se quitó ninguna guarda |
 | C4 bis supervivientes analizados (21/21, ninguno `PENDIENTE`) · «Evidencias» completa | [x] | |
 | C4 ter | N/A | La puerta dice que F-106 no toca rutas sensibles |
-| **C5 tasks.md** | **[ ]** | **T21 sigue `[ ]` aunque está hecha (commits `eb579da`…`0babedb`).** T22–T24 son manuales y fuera de esta review; T25 es el cierre con el reviewer. Esas cuatro son N/A justificado |
+| C5 tasks.md | [x] | Pasada 2: T21 `[x]` (`680b074`). T22–T24 manuales, fuera de esta review, y T25 (cierre con init.sh en el árbol principal, O1): N/A justificado |
 | C5 commits `F-106 T0`…`T21` · sin temporales (`git status` limpio; *junction* `.venv` intacta) | [x] | |
 | C5 features.json | [x] | `in_progress`, servicios ampliados (comun, sv6). F-058, anotada como absorbida |
 
@@ -126,8 +126,7 @@ R33 = documentación (C3). R31: los tests anteriores tocados son los declarados 
 
 ## Cambios requeridos
 
-1. `specs/F-106-precio-al-cambiar-medicion/tasks.md:34`: marcar **T21** `[x]` (campaña, análisis, `0babedb` y
-   aceptación `ab48231` hechos; `current.md` ya la da por cerrada). Pasada 2: incremental, `init.sh` completo.
+Ninguno. El de la pasada 1 (T21 `[x]` en `tasks.md:34`) está hecho en `680b074` y verificado con `git diff`.
 
 ## Observaciones (no bloquean)
 
