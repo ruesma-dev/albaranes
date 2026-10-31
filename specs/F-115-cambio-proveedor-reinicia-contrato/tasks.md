@@ -13,7 +13,7 @@ Precondición (D5 = a): F-106 y F-114 fusionadas en `dev`, y `dev` fusionado en 
 - [x] T8: sv4 PUT: acepta solo contratos del albarán, retira origen y nota, `contrato_retirado` y aviso de R11 (R9–R11)  |  Verificación: T7 en verde
 - [x] T9: Tests RED de sv4 `test_f115_detalle_y_aprobar.py` (R12, R13; caso h)  |  Verificación: en rojo
 - [x] T10: sv4 detalle filtrado, `ValoracionDeOtroContratoError` en PUT-aprobar y `set_approved`, 409 en `app.py` (R12, R13)  |  Verificación: T9 en verde
-- [ ] T11: Tests RED de JS `test_f115_js_confirmacion.py` (`avisoCambioCabecera`, restaurar al cancelar; R14, R15)  |  Verificación: en rojo
+- [x] T11: Tests RED de JS `test_f115_js_confirmacion.py` (`avisoCambioCabecera`, restaurar al cancelar; R14, R15)  |  Verificación: en rojo
 - [ ] T12: `app.js`: `avisoCambioCabecera` y `choose` con confirmación; `DOC_DATA` con lo que necesite (R14, R15)  |  Verificación: T11 y `pytest services/albaranes-front/tests` en verde (R20)
 - [ ] T13: Prueba en navegador con sv4 local (líder, Chrome; colas en Azurite): albarán con contrato ⇒ elegir otro proveedor ⇒ confirmación, contrato retirado, aviso, combo de contratos sin los del anterior; cancelar deja todo igual  |  Verificación: MANUAL (líder), capturas o notas en `progress/impl_F-115.md`
 - [ ] T14: Mutación de `pertenencia.py`, `_retirar_seleccion_ajena_safely`, la rama nueva de `_trigger_valuation_safely` y el filtro del PUT; supervivientes analizados en `progress/mutacion_F-115.md`  |  Verificación: informe con 0 supervivientes sin justificar

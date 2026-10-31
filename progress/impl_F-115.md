@@ -78,3 +78,11 @@ E   AssertionError: assert [ContratoPayl...web_url=None)] == []
 E   ImportError: cannot import name 'ValoracionDeOtroContratoError' from 'domain.models.alta_sigrid_models'
 (... 9 failed, 5 passed)
 ```
+
+### T11 · JS de la ficha, confirmación (R14, R15)
+
+```
+$ cd services/albaranes-front; .venv/Scripts/python.exe -m pytest tests/test_f115_js_confirmacion.py -q --tb=line
+E   ValueError: substring not found        (x18: `function avisoCambioCabecera(` no existe en app.js)
+18 failed in 0.23s
+```
