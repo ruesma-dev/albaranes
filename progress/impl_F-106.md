@@ -39,13 +39,13 @@ Declarados en R31:
 - Los fixtures de `test_f075_r9…` y `test_f078_r17…` (R16).
 - `test_f065_r9_plantilla…` (`value="120.00"`, R15).
 - `test_f065_bloqueada_ddl.py::test_f065_r17…` (R27).
+- Al fusionar `dev` (c858fa6): `test_f113_r6_version_091` de comun pasa a «desde 0.9.1» (la 0.10.0 de F-106).
 
 Sin tocar ninguna aserción, solo el esquema de los fixtures para que tengan las columnas de producción:
-- `tests/conftest.py` y `tests/f053_sv4_bbdd.py` de sv4 llevan `edicion_manual_json`.
-- `conftest.py` lleva `producto_sigrid`. La columna existe en producción desde F-053 y la lectura de la edición la nombra.
+- sv4: `tests/conftest.py` y `tests/f053_sv4_bbdd.py` llevan `edicion_manual_json`; `conftest.py`, `producto_sigrid` (existe
+  en producción desde F-053 y la lectura de la edición la nombra).
 
-`test_f051_r16_todas_en_un_unico_update` no cambia: almacén escribe la edición en el MISMO UPDATE (CASE por id), así
-que sigue siendo una sola sentencia.
+`test_f051_r16_todas_en_un_unico_update` no cambia: almacén escribe la edición en el MISMO UPDATE (CASE por id).
 
 ## Decisiones de diseño (y desviaciones, justificadas)
 
@@ -180,6 +180,7 @@ fusionar en `dev`.
   (sv9 `test_f069_t15_script_arranca…`); el resto en verde. Raíz 1919, sv1 205, sv2 485, sv3 1576, sv4 2131, sv5 125,
   sv6 506 (+1 skipped), comun 1191 (+3 skipped). `PUERTA COBERTURA` 85,5 % (657/768), `PUERTA TAMAÑO` en verde.
   `init.sh` corre con `-x`, así que sv9 paró en ese test (903 passed); sv9 entera sin `-x`: **1 failed (ese), 1072 passed**.
+- **Tras fusionar `dev` (2026-10-31, `76e91e1`)**, igual: solo ese KO; comun 1316 (+3 skipped), sv1 236, sv2 496; resto igual.
 
 ## T0 · cuántas líneas pendientes no cuadran (2026-10-28, solo lectura)
 
