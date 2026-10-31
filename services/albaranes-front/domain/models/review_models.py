@@ -679,6 +679,62 @@ class LineasIncompletasError(Exception):
         return ". ".join(partes)
 
 
+class FechaAlbaranNoValidaError(ValueError):
+    """(F-108 R3, R7) La fecha escrita no está en un formato admitido o no
+    existe: no se guarda nada (422 con el aviso como texto). ``texto`` es lo
+    escrito, recortado. El aviso lo arma ``domain.services.fecha_albaran``."""
+
+    def __init__(self, texto: str, aviso: str) -> None:
+        self.texto = texto
+        self._aviso = aviso
+        super().__init__(aviso)
+
+    @property
+    def aviso(self) -> str:
+        return self._aviso
+
+
+class NumeroAlbaranNoValidoError(ValueError):
+    """(F-108 R9) El número de albarán no cabe en la columna: no se guarda
+    nada (422 con el aviso como texto)."""
+
+    def __init__(self, aviso: str) -> None:
+        self._aviso = aviso
+        super().__init__(aviso)
+
+    @property
+    def aviso(self) -> str:
+        return self._aviso
+
+
+#: (F-108 R11) Lo que falta en la cabecera para aprobar, en el orden del aviso.
+FALTA_FECHA = "fecha"
+FECHA_NO_VALIDA = "fecha_no_valida"
+FALTA_NUMERO = "numero_albaran"
+
+_TEXTO_FALTA = {
+    FALTA_FECHA: "falta la fecha del albarán",
+    FECHA_NO_VALIDA: "la fecha del albarán no es válida: ábrelo y corrígela",
+    FALTA_NUMERO: "falta el número de albarán",
+}
+
+
+class CabeceraIncompletaError(Exception):
+    """(F-108 R11, D4 = a) Sin fecha válida o sin número de albarán no se
+    aprueba (ficha y listado): sv9 lo rechazaría igual (``fecha_ilegible``,
+    ``falta_numero_albaran``) y así el aviso llega antes. ``faltan``:
+    :data:`FALTA_FECHA` o :data:`FECHA_NO_VALIDA`, y :data:`FALTA_NUMERO`."""
+
+    def __init__(self, document_id: str, faltan: list[str]) -> None:
+        self.document_id = document_id
+        self.faltan = list(faltan)
+        super().__init__(self.aviso)
+
+    @property
+    def aviso(self) -> str:
+        return "No se puede aprobar: " + "; ".join(_TEXTO_FALTA[f] for f in self.faltan)
+
+
 def cantidades_tras_editar(
     *,
     q_nueva: float | None,

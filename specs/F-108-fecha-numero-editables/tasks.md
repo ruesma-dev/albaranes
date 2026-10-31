@@ -5,7 +5,7 @@ Rama `feature/F-108-fecha-numero-editables` (desde `dev` `43e87e5`), worktree `.
 
 ## Bloque A · dominio
 
-- [ ] T1: RED de `test_f108_fecha_albaran.py` con la tabla `CASOS` (R1–R4) y el contraste con `_RE_FECHA` leído de la fuente de sv9 (R10); luego `domain/services/fecha_albaran.py` (design §4.1) y los tres errores en `review_models.py` (§4.2) hasta verde  |  Verificación: `pytest services/albaranes-front -k "f108_r1 or f108_r2 or f108_r3 or f108_r4 or f108_r10"`
+- [x] T1: RED de `test_f108_fecha_albaran.py` con la tabla `CASOS` (R1–R4) y el contraste con `_RE_FECHA` leído de la fuente de sv9 (R10); luego `domain/services/fecha_albaran.py` (design §4.1) y los tres errores en `review_models.py` (§4.2) hasta verde  |  Verificación: `pytest services/albaranes-front -k "f108_r1 or f108_r2 or f108_r3 or f108_r4 or f108_r10"`
 
 ## Bloque B · servidor
 
