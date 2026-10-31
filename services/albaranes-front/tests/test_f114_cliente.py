@@ -67,12 +67,16 @@ def test_f114_r15_la_sql_lleva_todo_por_parametro(sigrid_api):
     _cliente().buscar_proveedores(texto="cera")
     (peticion,) = falsa.peticiones
     assert peticion["sql"] == modulo._SQL_PROVEEDORES_TODOS
-    assert peticion["parameters"] == [51, 5, 1, 0, "%cera%", "%CERA%"]
+    # (T8 D2) tip/emp/fecbaj dos veces: fichas contadas y fichas que casan.
+    assert peticion["parameters"] == [51, 5, 1, 0, 5, 1, 0, "%cera%", "%CERA%"]
     sql = modulo._SQL_PROVEEDORES_TODOS
     # Ningún valor concatenado: el texto no aparece y TOP va por parámetro.
     assert "cera" not in sql.lower()
     assert "TOP (?)" in sql
     assert "c.tip = ?" in sql and "c.emp = ?" in sql and "c.fecbaj = ?" in sql
+    assert "mc.tip = ?" in sql and "mc.emp = ?" in sql and "mc.fecbaj = ?" in sql
+    assert "v.cif IN (" in sql
+    assert sql.count("?") == 9
     assert sql.count("LIKE ? ESCAPE '!'") == 2
     assert "COLLATE Latin1_General_CI_AI" in sql
     assert "GROUP BY v.cif" in sql
@@ -107,7 +111,7 @@ def test_f114_r16_patron_like_escapa_comodines(texto, patron):
 def test_f114_r16_cif_sin_espacios_ni_guiones_y_en_mayusculas(sigrid_api):
     falsa = sigrid_api()
     _cliente().buscar_proveedores(texto="  b-12 34 x  ")
-    patron_nombre, patron_cif = falsa.peticiones[0]["parameters"][4:]
+    patron_nombre, patron_cif = falsa.peticiones[0]["parameters"][7:]
     assert patron_nombre == "%b-12 34 x%"
     assert patron_cif == "%B1234X%"
 
@@ -115,7 +119,7 @@ def test_f114_r16_cif_sin_espacios_ni_guiones_y_en_mayusculas(sigrid_api):
 def test_f114_r16_comodines_del_texto_escapados_en_ambos_patrones(sigrid_api):
     falsa = sigrid_api()
     _cliente().buscar_proveedores(texto="a_b%")
-    assert falsa.peticiones[0]["parameters"][4:] == ["%a!_b!%%", "%A!_B!%%"]
+    assert falsa.peticiones[0]["parameters"][7:] == ["%a!_b!%%", "%A!_B!%%"]
 
 
 # ------------------------------------------------------------------ #
@@ -244,7 +248,7 @@ def test_f114_r13_bajo_el_minimo_no_llama(sigrid_api, texto):
 def test_f114_r13_justo_el_minimo_llama(sigrid_api):
     falsa = sigrid_api()
     _cliente().buscar_proveedores(texto=" abc ")
-    assert falsa.peticiones[0]["parameters"][4] == "%abc%"
+    assert falsa.peticiones[0]["parameters"][7] == "%abc%"
 
 
 # ------------------------------------------------------------------ #
@@ -277,3 +281,109 @@ def test_f114_r21_proveedores_por_obra_intacto(sigrid_api):
     assert [p.model_dump(exclude_none=True) for p in resultado] == [
         {"cif": "B00000001", "nombre": "ALFA SL"}
     ]
+
+
+# ------------------------------------------------------------------ #
+# T8 (fallo del líder, 2026-10-31) · D2: las fichas y el nombre son los
+# de TODAS las fichas vivas del CIF, no solo las que casan con el texto.
+# La SQL se EJECUTA sobre SQLite en memoria con la traducción mínima de
+# T-SQL: ``TOP (?)`` ⇒ ``LIMIT ?`` (su parámetro pasa al final) y sin
+# ``COLLATE Latin1_General_CI_AI`` (el LIKE de SQLite ya ignora mayúsculas
+# ASCII). ``ESCAPE '!'``, ``LTRIM/RTRIM``, ``REPLACE`` y ``UPPER`` existen en
+# SQLite tal cual.
+# ------------------------------------------------------------------ #
+import sqlite3  # noqa: E402
+
+
+def _sqlite_de_sigrid(fichas):
+    """``fichas`` = [(ide, cif, raz, tip, emp, fecbaj)]."""
+    bd = sqlite3.connect(":memory:")
+    bd.execute("CREATE TABLE prv (ide INTEGER, cif TEXT, raz TEXT)")
+    bd.execute("CREATE TABLE con (ide INTEGER, tip INTEGER, emp INTEGER, fecbaj INTEGER)")
+    for ide, cif, raz, tip, emp, fecbaj in fichas:
+        bd.execute("INSERT INTO prv VALUES (?, ?, ?)", (ide, cif, raz))
+        bd.execute("INSERT INTO con VALUES (?, ?, ?, ?)", (ide, tip, emp, fecbaj))
+    return bd
+
+
+class _SigridSqlite:
+    """sigrid-api falsa que EJECUTA la SQL recibida sobre SQLite."""
+
+    def __init__(self, bd):
+        self.bd = bd
+        self.peticiones: list[dict] = []
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        cuerpo = json.loads(request.content)
+        self.peticiones.append(cuerpo)
+        sql, params = cuerpo["sql"], list(cuerpo["parameters"])
+        assert sql.count("TOP (?)") == 1
+        sql = sql.replace("TOP (?)", "").replace(" COLLATE Latin1_General_CI_AI", "")
+        sql = sql.rstrip() + "\nLIMIT ?"
+        params = params[1:] + params[:1]
+        cursor = self.bd.execute(sql, params)
+        columnas = [d[0] for d in cursor.description]
+        filas = [list(f) for f in cursor.fetchall()]
+        return httpx.Response(200, json={
+            "ok": True, "columns": columnas, "rows": filas, "truncated": False,
+        })
+
+
+@pytest.fixture
+def sigrid_sqlite(monkeypatch):
+    def _instalar(fichas):
+        falsa = _SigridSqlite(_sqlite_de_sigrid(fichas))
+        monkeypatch.setattr(
+            modulo.httpx, "HTTPTransport",
+            lambda *a, **k: httpx.MockTransport(falsa),
+        )
+        return falsa
+
+    return _instalar
+
+
+# Un CIF con dos fichas vivas de razón social distinta, una de baja, una de
+# otro tipo de contacto y otra de otra empresa (inventados).
+_FICHAS_D2 = [
+    (1, "B00000001", "ALFA OBRAS SL", 5, 1, 0),
+    (2, "B00000001", "ZETA SUMINISTROS SL", 5, 1, 0),
+    (3, "B00000001", "ALFA ANTIGUA SL", 5, 1, 20200101),  # de baja
+    (4, "B00000001", "ALFA CLIENTE", 3, 1, 0),             # no es proveedor
+    (5, "B00000001", "ALFA OTRA EMPRESA", 5, 2, 0),        # otra empresa
+    (6, "B00000002", "BETA SA", 5, 1, 0),
+]
+
+
+def test_f114_t8_d2_buscar_por_nombre_cuenta_todas_las_fichas_vivas_del_cif(sigrid_sqlite):
+    sigrid_sqlite(_FICHAS_D2)
+    (unico,) = _cliente().buscar_proveedores(texto="alfa").items
+    assert (unico.cif, unico.fichas) == ("B00000001", 2)
+    # El nombre es el menor de TODAS sus fichas vivas, también la que no casa.
+    assert unico.nombre == "ALFA OBRAS SL"
+
+
+def test_f114_t8_d2_nombre_y_cif_dan_lo_mismo(sigrid_sqlite):
+    sigrid_sqlite(_FICHAS_D2)
+    por_nombre = _cliente().buscar_proveedores(texto="zeta").items
+    por_cif = _cliente().buscar_proveedores(texto="b-0000000 1").items
+    assert [(p.cif, p.nombre, p.fichas) for p in por_nombre] == [("B00000001", "ALFA OBRAS SL", 2)]
+    assert [(p.cif, p.nombre, p.fichas) for p in por_cif] == [("B00000001", "ALFA OBRAS SL", 2)]
+
+
+def test_f114_t8_d2_una_ficha_de_baja_o_ajena_no_trae_su_cif(sigrid_sqlite):
+    """Solo casan fichas vivas: «antigua», «cliente» y «otra empresa» no traen B00000001."""
+    sigrid_sqlite(_FICHAS_D2)
+    for texto in ("antigua", "cliente", "otra empresa"):
+        assert _cliente().buscar_proveedores(texto=texto).items == [], texto
+
+
+def test_f114_t8_d2_escape_y_limite_ejecutados(sigrid_sqlite):
+    fichas = [(i, f"B{i:08d}", f"PROV {i:03d}", 5, 1, 0) for i in range(1, 61)]
+    fichas.append((99, "B00000099", "CIEN 50%_! SL", 5, 1, 0))
+    sigrid_sqlite(fichas)
+    resultado = _cliente().buscar_proveedores(texto="prov")
+    assert len(resultado.items) == 50 and resultado.mas is True
+    assert resultado.items[0].nombre == "PROV 001"
+    (literal,) = _cliente().buscar_proveedores(texto="50%_!").items
+    assert literal.cif == "B00000099"
+    assert _cliente().buscar_proveedores(texto="5_%").items == []

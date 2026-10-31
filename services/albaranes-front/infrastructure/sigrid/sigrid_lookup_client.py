@@ -54,6 +54,12 @@ ORDER BY prv.raz
 # fichas vivas con ese CIF (R17). ``prv.raz`` es texto de 128, no ``text``:
 # admite ``MIN`` y ``ORDER BY``. ``ESCAPE '!'``: la barra invertida da error
 # 506 a través de sigrid-api (T0, 2026-10-30).
+#
+# (T8, 2026-10-31, D2) El texto SOLO elige qué CIF salen (subconsulta ``m``:
+# alguna ficha viva suya casa por nombre o por CIF); el nombre y las fichas
+# se calculan sobre TODAS las fichas vivas de ese CIF (``v``). Antes el
+# filtro iba antes del GROUP BY y un CIF con dos fichas de razón social
+# distinta salía con ``fichas = 1`` buscando por el nombre de una de ellas.
 _SQL_PROVEEDORES_TODOS = """\
 SELECT TOP (?)
     v.cif      AS cif,
@@ -62,9 +68,15 @@ SELECT TOP (?)
 FROM prv AS v
 JOIN con AS c ON c.ide = v.ide
 WHERE c.tip = ? AND c.emp = ? AND c.fecbaj = ?
-  AND v.cif IS NOT NULL AND LTRIM(RTRIM(v.cif)) <> ''
-  AND (v.raz COLLATE Latin1_General_CI_AI LIKE ? ESCAPE '!'
-       OR REPLACE(REPLACE(UPPER(v.cif), ' ', ''), '-', '') LIKE ? ESCAPE '!')
+  AND v.cif IN (
+      SELECT m.cif
+      FROM prv AS m
+      JOIN con AS mc ON mc.ide = m.ide
+      WHERE mc.tip = ? AND mc.emp = ? AND mc.fecbaj = ?
+        AND m.cif IS NOT NULL AND LTRIM(RTRIM(m.cif)) <> ''
+        AND (m.raz COLLATE Latin1_General_CI_AI LIKE ? ESCAPE '!'
+             OR REPLACE(REPLACE(UPPER(m.cif), ' ', ''), '-', '') LIKE ? ESCAPE '!')
+  )
 GROUP BY v.cif
 ORDER BY MIN(v.raz), v.cif
 """
@@ -238,8 +250,13 @@ class SigridLookupClient:
         patron_cif = _patron_like(t.upper().replace(" ", "").replace("-", ""))
         columns, rows = self._post_sql_read(
             sql=_SQL_PROVEEDORES_TODOS,
+            # Vivo dos veces: en las fichas que se cuentan (``v``) y en las
+            # que casan con el texto (``m``, T8 D2).
             parameters=[
                 LIMITE_BUSQUEDA_PROVEEDOR + 1,
+                TIP_PROVEEDOR,
+                EMPRESA_RUESMA,
+                0,
                 TIP_PROVEEDOR,
                 EMPRESA_RUESMA,
                 0,
