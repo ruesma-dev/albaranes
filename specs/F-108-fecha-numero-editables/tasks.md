@@ -27,7 +27,7 @@ Rama `feature/F-108-fecha-numero-editables` (desde `dev` `43e87e5`), worktree `.
 
 ## Bloque E · verificación manual (tras APPROVED)
 
-- [ ] M1: Navegador sobre sv4 local con BBDD local: guion de design §7 M1 en Chrome y Edge, con el `SELECT` de la fecha guardada (R12–R19, R21, R22, R28)  |  Verificación: MANUAL (líder) — design §7 M1
+- [x] M1: Navegador sobre sv4 local con BBDD local: guion de design §7 M1 en Chrome y Edge, con el `SELECT` de la fecha guardada (R12–R19, R21, R22, R28)  |  Verificación: MANUAL (líder) — design §7 M1
 - [ ] M-D: Despliegue de sv4 sola  |  Verificación: MANUAL (humano) — `Set-DeployTag; .\deploy.ps1 -Only sv4` desde `infra/` y arranque limpio en los logs
 - [ ] M2: Producción tras el despliegue, solo lectura, sin pulsar Guardar, Aprobar ni Valorar: ficha `ec291d76…` con `09/10/2026` y el calendario abriéndose (R28)  |  Verificación: MANUAL (líder, solo lectura) — design §7 M2
 - [ ] M3: Las 2 fechas guardadas en `dd/mm/aaaa` (`ae044452…`, `6ae1d618…`) según D5  |  Verificación: MANUAL (humano) — design §7 M3

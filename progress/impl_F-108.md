@@ -186,3 +186,18 @@ los ficheros de F-108 y sus 138 tests en verde.
 
 `ruff` global: 1432 avisos en la pasada verde (deuda previa más los 6 de
 F-108, ya corregidos).
+
+## M1 · navegador (líder, 2026-11-01)
+
+sv4 del worktree en local (BBDD local, Azurite), Chrome, albarán local pendiente `cfd43549…` y uno aprobado `385ce560…`:
+
+- La ficha enseña `11/06/2024` (guardada `2024-06-11`); fecha y número admiten escritura; botón «Calendario».
+- `28-10-26` + Tab ⇒ `28/10/2026`.
+- `31/02/2026`: F7, F8, Enter y Escape con el foco en el campo no hacen nada (foco y texto intactos, sin envío); Tab ⇒
+  campo en rojo con aviso; «Guardar» ⇒ aviso «Fecha del albarán no válida: «31/02/2026». Escríbela como dd/mm/aaaa
+  (p. ej. 28/10/2026) o elígela en el calendario.» y 0 `PUT` en el log de sv4.
+- «Calendario» con `15/10/2026` escrito: el selector se abre en `2026-10-15`; elegir el 20 escribe `20/10/2026` (el
+  selector nativo no sale en las capturas de la extensión: la elección se simuló sobre el `input type=date`).
+- «Guardar» ⇒ la ficha recarga con `20/10/2026`; en BBDD local `fecha = '2026-10-20'`.
+- Aprobado: fecha y número `readonly`, sin botón de calendario.
+- **Edge no probado** (la extensión solo maneja Chrome): queda para el humano junto con M2.
