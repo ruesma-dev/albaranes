@@ -75,9 +75,11 @@ def test_f114_r10_mensaje_lista_de_la_obra_vacia(tmp_path):
 # =================================================================== #
 # T5 · initCombo en modo global (DOM falso)
 # =================================================================== #
+# F-115 R14: ``choose`` pide confirmación con ``avisoCambioCabecera`` sobre
+# ``DOC_DATA`` (aquí sin contrato ni valoración: no pregunta, como hoy).
 _COMBO = ["_norm", "_comboLabel", "_matchScore", "textoBusquedaProveedor",
           "urlProveedoresTodos", "etiquetaProveedorGlobal", "mensajeListaObraVacia",
-          "initCombo"]
+          "_normCif", "_normObra", "avisoCambioCabecera", "initCombo"]
 
 _ROTULO_OBRA = "Elegir proveedor (con contrato en la obra · Sigrid) — escribe para buscar"
 _ROTULO_TODOS = ("Elegir proveedor (todos los de Sigrid) — escribe al menos 3 letras "
@@ -148,6 +150,7 @@ _FICHA = """
     const ALFA = {cif: "B00000001", nombre: "ALFA SL", fichas: 1};
     const BETA = {cif: "B00000002", nombre: "BETA SA", fichas: 3};
     async function buscar(texto) { teclear(caja, texto); pasar(); await tiempo(); }
+    const DOC_DATA = {};
 """
 
 
