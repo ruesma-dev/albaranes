@@ -1,5 +1,24 @@
 # progress/review_F-114.md
 
+Revisión incremental desde ec80bbf (pasada 3) — delta `ec80bbf..0716fc6` (1 commit del líder, sin código).
+
+- **Veredicto (vigente):** APPROVED
+- **Nivel de rigor:** `estandar` (declarado). Las puertas se validaron en las pasadas 1 y 2 y el delta no las toca.
+- **Delta:** `tasks.md` l.41 con T8 `[x]`; `harness/features.json` con F-114 de `blocked` a `in_progress` (la
+  única `in_progress`); 2 líneas al final de `impl_F-114.md` §8 con la T8 repetida en Chrome sobre `d8dac4b` (verde:
+  «2 fichas» también por nombre, «Hay más», el check recupera la lista de la obra, sin escrituras). Commit
+  `F-114 T8: …` con el trailer. Los cambios requeridos 1 y 2 de la pasada 2 están **hechos**.
+- **`bash harness/init.sh`** tal cual sobre `0716fc6`. Lo exige el protocolo en cada pasada, y además el cambio de
+  estado reactiva la puerta de rutas sensibles. Resultado: **exit 0, «ENTORNO LISTO»**. Arnés 1919; sv1 236; sv2 496;
+  sv3 1576; sv4 2190 (1 warning); sv5 125; sv6 506 (1 skipped); sv9 1073. COBERTURA N/A con motivo; RUTAS
+  SENSIBLES N/A («F-114 no toca ninguna ruta sensible declarada»); TAMAÑO dentro (impl 200/220). init.sh regeneró
+  `BACKLOG.md` (F-114 «en curso»): va en este mismo commit.
+- **C5** `[x]` T0–T9 `[x]` con sus commits; `[x]` `features.json` refleja el estado real; `[x]` árbol limpio.
+  El resto de checkpoints sigue como en la pasada 2 (§3 más abajo). O1–O3 siguen abiertas y no bloquean.
+- **Pendiente fuera de la review:** el despliegue de sv4 (humano) y publicar `azure-apps` `7109c68`.
+
+---
+
 Revisión incremental desde 1c4b8fb (pasada 2) — delta `1c4b8fb..d8dac4b` (7 commits: `3272e04` … `d8dac4b`).
 
 - **Veredicto:** CHANGES_REQUESTED (solo contabilidad del arnés: el código queda aprobado; ver §4)
