@@ -67,16 +67,16 @@ def test_f114_r15_la_sql_lleva_todo_por_parametro(sigrid_api):
     _cliente().buscar_proveedores(texto="cera")
     (peticion,) = falsa.peticiones
     assert peticion["sql"] == modulo._SQL_PROVEEDORES_TODOS
-    # (T8 D2) tip/emp/fecbaj dos veces: fichas contadas y fichas que casan.
-    assert peticion["parameters"] == [51, 5, 1, 0, 5, 1, 0, "%cera%", "%CERA%"]
+    assert peticion["parameters"] == [51, 5, 1, 0, "%cera%", "%CERA%"]
     sql = modulo._SQL_PROVEEDORES_TODOS
     # Ningún valor concatenado: el texto no aparece y TOP va por parámetro.
     assert "cera" not in sql.lower()
     assert "TOP (?)" in sql
     assert "c.tip = ?" in sql and "c.emp = ?" in sql and "c.fecbaj = ?" in sql
-    assert "mc.tip = ?" in sql and "mc.emp = ?" in sql and "mc.fecbaj = ?" in sql
-    assert "v.cif IN (" in sql
-    assert sql.count("?") == 9
+    # (T8 D2) El texto va en el HAVING: se cuentan todas las fichas vivas del CIF.
+    assert "HAVING MAX(CASE WHEN v.raz" in sql and "THEN 1 ELSE 0 END) = 1" in sql
+    assert sql.index("GROUP BY v.cif") < sql.index("LIKE ?")
+    assert sql.count("?") == 6
     assert sql.count("LIKE ? ESCAPE '!'") == 2
     assert "COLLATE Latin1_General_CI_AI" in sql
     assert "GROUP BY v.cif" in sql
@@ -111,7 +111,7 @@ def test_f114_r16_patron_like_escapa_comodines(texto, patron):
 def test_f114_r16_cif_sin_espacios_ni_guiones_y_en_mayusculas(sigrid_api):
     falsa = sigrid_api()
     _cliente().buscar_proveedores(texto="  b-12 34 x  ")
-    patron_nombre, patron_cif = falsa.peticiones[0]["parameters"][7:]
+    patron_nombre, patron_cif = falsa.peticiones[0]["parameters"][4:]
     assert patron_nombre == "%b-12 34 x%"
     assert patron_cif == "%B1234X%"
 
@@ -119,7 +119,7 @@ def test_f114_r16_cif_sin_espacios_ni_guiones_y_en_mayusculas(sigrid_api):
 def test_f114_r16_comodines_del_texto_escapados_en_ambos_patrones(sigrid_api):
     falsa = sigrid_api()
     _cliente().buscar_proveedores(texto="a_b%")
-    assert falsa.peticiones[0]["parameters"][7:] == ["%a!_b!%%", "%A!_B!%%"]
+    assert falsa.peticiones[0]["parameters"][4:] == ["%a!_b!%%", "%A!_B!%%"]
 
 
 # ------------------------------------------------------------------ #
@@ -248,7 +248,7 @@ def test_f114_r13_bajo_el_minimo_no_llama(sigrid_api, texto):
 def test_f114_r13_justo_el_minimo_llama(sigrid_api):
     falsa = sigrid_api()
     _cliente().buscar_proveedores(texto=" abc ")
-    assert falsa.peticiones[0]["parameters"][7] == "%abc%"
+    assert falsa.peticiones[0]["parameters"][4] == "%abc%"
 
 
 # ------------------------------------------------------------------ #

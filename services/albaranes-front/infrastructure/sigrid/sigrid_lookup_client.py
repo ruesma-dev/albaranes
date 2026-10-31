@@ -55,11 +55,13 @@ ORDER BY prv.raz
 # admite ``MIN`` y ``ORDER BY``. ``ESCAPE '!'``: la barra invertida da error
 # 506 a través de sigrid-api (T0, 2026-10-30).
 #
-# (T8, 2026-10-31, D2) El texto SOLO elige qué CIF salen (subconsulta ``m``:
-# alguna ficha viva suya casa por nombre o por CIF); el nombre y las fichas
-# se calculan sobre TODAS las fichas vivas de ese CIF (``v``). Antes el
-# filtro iba antes del GROUP BY y un CIF con dos fichas de razón social
-# distinta salía con ``fichas = 1`` buscando por el nombre de una de ellas.
+# (T8, 2026-10-31, D2) El texto va en el HAVING, no en el WHERE: se agrupan
+# TODAS las fichas vivas de cada CIF (nombre = la menor, fichas = todas) y
+# sale el CIF si ALGUNA casa por nombre o por CIF. Con el filtro en el WHERE,
+# un CIF con dos fichas de razón social distinta salía con ``fichas = 1``
+# buscando por el nombre de una. Una sola pasada sobre ``prv``: la variante
+# con subconsulta ``IN`` daba lo mismo pero tardaba ~5 veces más (medido por
+# el líder vía sigrid-api el 2026-10-31).
 _SQL_PROVEEDORES_TODOS = """\
 SELECT TOP (?)
     v.cif      AS cif,
@@ -68,16 +70,11 @@ SELECT TOP (?)
 FROM prv AS v
 JOIN con AS c ON c.ide = v.ide
 WHERE c.tip = ? AND c.emp = ? AND c.fecbaj = ?
-  AND v.cif IN (
-      SELECT m.cif
-      FROM prv AS m
-      JOIN con AS mc ON mc.ide = m.ide
-      WHERE mc.tip = ? AND mc.emp = ? AND mc.fecbaj = ?
-        AND m.cif IS NOT NULL AND LTRIM(RTRIM(m.cif)) <> ''
-        AND (m.raz COLLATE Latin1_General_CI_AI LIKE ? ESCAPE '!'
-             OR REPLACE(REPLACE(UPPER(m.cif), ' ', ''), '-', '') LIKE ? ESCAPE '!')
-  )
+  AND v.cif IS NOT NULL AND LTRIM(RTRIM(v.cif)) <> ''
 GROUP BY v.cif
+HAVING MAX(CASE WHEN v.raz COLLATE Latin1_General_CI_AI LIKE ? ESCAPE '!'
+                  OR REPLACE(REPLACE(UPPER(v.cif), ' ', ''), '-', '') LIKE ? ESCAPE '!'
+                THEN 1 ELSE 0 END) = 1
 ORDER BY MIN(v.raz), v.cif
 """
 
@@ -250,13 +247,8 @@ class SigridLookupClient:
         patron_cif = _patron_like(t.upper().replace(" ", "").replace("-", ""))
         columns, rows = self._post_sql_read(
             sql=_SQL_PROVEEDORES_TODOS,
-            # Vivo dos veces: en las fichas que se cuentan (``v``) y en las
-            # que casan con el texto (``m``, T8 D2).
             parameters=[
                 LIMITE_BUSQUEDA_PROVEEDOR + 1,
-                TIP_PROVEEDOR,
-                EMPRESA_RUESMA,
-                0,
                 TIP_PROVEEDOR,
                 EMPRESA_RUESMA,
                 0,
