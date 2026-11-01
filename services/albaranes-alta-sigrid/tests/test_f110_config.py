@@ -113,5 +113,6 @@ def test_f110_r20_env_example_la_documenta_sin_valor():
     texto = (RAIZ_SV9 / ".env.example").read_text(encoding="utf-8")
     lineas = [l for l in texto.splitlines() if l.startswith(f"{VARIABLE}=")]
     assert lineas == [f"{VARIABLE}="]
-    anterior = texto[:texto.index(f"{VARIABLE}=")].splitlines()[-1]
-    assert anterior.startswith("#") and "true" in anterior
+    comentario = texto[:texto.index(f"{VARIABLE}=")].splitlines()[-2:]
+    assert all(l.startswith("#") for l in comentario)
+    assert "true" in " ".join(comentario) and "sv4" in " ".join(comentario)

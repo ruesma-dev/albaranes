@@ -88,9 +88,11 @@ _EPSILON = 1e-9
 class ConfigAlta:
     """Lo que el validador toma de la configuración (design §3). Ni el ``usu``
     (v8, R47) ni el ``empide`` (F-069 R9–R12): son por documento y llegan como
-    argumento."""
+    argumento. ``enviar_dto`` es la guarda de F-110 (``ALTA_SIGRID_ENVIAR_DTO``):
+    apagada, la petición es la de F-106."""
 
     mapeo: Mapping[str, str]
+    enviar_dto: bool = False
 
 
 def normalizar_cif(cif: str | None) -> str:
