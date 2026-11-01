@@ -3,6 +3,8 @@
 
 **F-110 · `in_progress` (implementer, 2026-11-01).** Rama `feature/F-110-descuento-linea-sigrid`, worktree `../albaranes-F-110`, con `dev` fusionado (`ee32a55`, 169 commits: F-106, F-108, F-113–F-116; comun 0.11.0). Tarea en curso y decisiones: `progress/impl_F-110.md`. Entorno: `PYTHONPATH=C:\Users\pgris\PycharmProjects\albaranes-F-110\services\albaranes-comun`, `ARNES_SIN_CACHE=1`; *junction* `.venv` de sv4 al árbol principal (quitarla con `cmd /c rmdir` antes de `git worktree remove`). `ALTA_SIGRID_ENVIAR_DTO` nace apagada.
 
+- **Implementer, hecho (2026-11-01):** T0, T2–T16, T19, T23 (un commit por tarea; último `1b11ab4`). Mutación completa `progress/mutacion_F-110.md` (108 mutantes; 15 supervivientes cubiertos con tests nuevos, 3 equivalentes). init.sh verde. Pendientes MANUAL: T1, T17, T18 (incluye el aviso 2), T20, T21 (humano), T22. Siguiente paso: reviewer.
+
 **F-108 · CERRADA (`done`, 2026-11-01).** Resumen en `history.md`.
 
 - **Implementer (2026-10-31), hecho:** T1–T10 (un commit por tarea). Informe `progress/impl_F-108.md`, mutación `progress/mutacion_F-108.md`. Pendientes MANUAL: M1 (líder, Chrome/Edge con sv4 local), M-D (humano, despliegue de sv4 sola), M2 (líder, solo lectura en producción), M3 (humano, las 2 fechas `dd/mm/aaaa`), T11.
