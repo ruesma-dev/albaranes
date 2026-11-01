@@ -150,3 +150,7 @@ FAILED tests/test_f110_avisos_v84.py::test_f110_r13_texto_de_los_avisos_v84[prec
 ```
 Tras T19: `54 passed` (con F-104 y F-077). Sin códigos nuevos de error: un `dto` mal formado es 400 sin código ⇒
 `error` (H25), así que `CODIGOS_LINEA` no cambia.
+
+**T15 · documentación** — `docs/ARCHITECTURE.md` regla 19 (viñeta «Precio y descuento a Sigrid (F-110)»), `sv9.md`
+(sección «Descuento por línea», «Llaves» y «Reglas») y `azure-apps/albaranes.md` §10 (commit local `3b09da9` en
+`azure-apps`, sin push). `azure-apps/sigrid_api.md` no se toca.

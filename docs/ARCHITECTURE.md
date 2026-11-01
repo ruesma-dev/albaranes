@@ -462,6 +462,25 @@ anteriores) y `normalizar_adjuntos` lo corrige antes de cualquier IA.
     - **Las reglas compartidas viven en comun** (`ruesma_comun.alta_sigrid`):
       DESDE, Espera, «vinculada», «línea a registrar», producto efectivo y
       estados; sv4 y sv9 deciden con las mismas funciones.
+    - **Precio y descuento a Sigrid (F-110, nov 2026; spec
+      `specs/F-110-descuento-linea-sigrid/`)**. Guarda
+      `ALTA_SIGRID_ENVIAR_DTO` (solo el literal `true`; apagada por defecto; MISMO
+      valor en sv4 y sv9 por `AltaSigridEnvComun`; la enciende el humano tras
+      desplegar). Apagada, todo como F-106: precio neto `|I| / |Q|` sin `dto`.
+      Encendida, cada línea con descuento aplicable (0 < d ≤ 100) va con
+      `dto = round(d, 2)` y el precio **bruto**: P a 6 decimales si
+      `Q × P × (1 − dto)` da el importe al céntimo; si no, el despejado
+      `I / (Q × (1 − dto))` (`ruesma_comun.alta_sigrid.linea_a_sigrid`, única
+      definición para sv9, la ficha de sv4 y su JS). Las vinculadas, igual (sv9
+      no valida el `dto` contra el `ctrpro`: lo hace sigrid-api con avisos
+      informativos `precio_distinto_del_contrato` / `dto_distinto_del_contrato`).
+      Si la línea con `dto` no cuadra a Sigrid o el precio no se despeja (100 %),
+      `linea_no_cuadra` «a Sigrid: …» ⇒ `no_admitido` sin llamar a sigrid-api; si
+      la previa no devuelve el `dto` pedido (± 0,005), `dto_distinto` ⇒ `revisar`.
+      El `dto` solo lo aplica el **modo extendido** de `sigrid/albaran` (contrato
+      v8.4, F-018 de sigrid-api): el clásico y `albaran-directo` lo ignoran sin
+      error, y sv9 nunca los usa. La ficha enseña «A Sigrid: 12 × 0,645 € −7 %» y
+      el panel la columna «Dto %».
     - **El panel de la ficha** (F-077, spec `specs/F-077-guardar-y-aprobar/`)
       tiene tres fases (`domain/services/alta_sigrid.fase_alta`): «Alta en
       curso…» solo mientras sv9 procesa la aprobación vigente (sin fila, fila de
