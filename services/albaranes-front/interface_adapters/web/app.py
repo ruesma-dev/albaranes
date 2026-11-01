@@ -280,7 +280,8 @@ def build_app(settings: Settings) -> FastAPI:
         target_database_name=settings.pg_db,
         auto_create_database=settings.auto_create_database,
     )
-    repository = AlbaranReviewRepository(session_factory)
+    # F-110 R14, R15: la guarda del dto para el «A Sigrid» de la ficha.
+    repository = AlbaranReviewRepository(session_factory, settings.enviar_dto)
 
     app = FastAPI(
         title=settings.app_title,

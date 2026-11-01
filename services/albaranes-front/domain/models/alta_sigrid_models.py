@@ -279,6 +279,8 @@ class ConfigAltaSigrid:
     mapeo: Mapping[str, str] = field(
         default_factory=lambda: dict(MAPEO_PRODUCTO_POR_DEFECTO),
     )
+    #: F-110 R14: la guarda ``ALTA_SIGRID_ENVIAR_DTO`` (apagada por defecto).
+    enviar_dto: bool = False
 
     @property
     def activa(self) -> bool:

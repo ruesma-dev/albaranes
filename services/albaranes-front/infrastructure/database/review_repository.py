@@ -428,9 +428,13 @@ def _partida_del_contrato(conc: ConciliacionDisplay) -> str | None:
 
 
 class AlbaranReviewRepository:
-    def __init__(self, session_factory: SessionFactory) -> None:
+    def __init__(self, session_factory: SessionFactory, enviar_dto: bool = False) -> None:
         self._session_factory = session_factory
         self._initialized = False
+        # F-110 R15: la guarda ``ALTA_SIGRID_ENVIAR_DTO`` (la misma de sv9) para
+        # el «A Sigrid» de la ficha. Posicional: los tests sustituyen la clase
+        # por una ``lambda *_``.
+        self._enviar_dto = bool(enviar_dto)
 
     def initialize(self) -> bool:
         """Inicialización idempotente y robusta.
@@ -1797,6 +1801,7 @@ class AlbaranReviewRepository:
             # (F-106 R14, R15) Si cuadra (y su cuenta) y lo que mandará sv9.
             AlbaranReviewRepository._marcar_cuadre(
                 conc, _vl, vinculada=vinculada_by_vid.get(vid, False),
+                con_descuento=self._enviar_dto,
             )
 
         return out
@@ -1807,9 +1812,11 @@ class AlbaranReviewRepository:
         vl: LineValuationPayload | None,
         *,
         vinculada: bool,
+        con_descuento: bool = False,
     ) -> None:
         """(F-106 R14, R15) Rellena ``cuadra``, ``cuadre_texto`` y el «A Sigrid»
-        de la fila con sus columnas (las mismas que miran aprobar y sv9)."""
+        de la fila con sus columnas (las mismas que miran aprobar y sv9); con
+        ``con_descuento`` (F-110), el «A Sigrid» lleva el bruto y el ``dto``."""
         if vl is None:
             return
         # (F-106 R29) «✋» con lo editado campo a campo.
@@ -1830,6 +1837,8 @@ class AlbaranReviewRepository:
             cantidad_convertida=vl.cantidad_convertida,
             precio=vl.precio_unitario_final,
             importe=vl.importe_calculado,
+            descuento=vl.descuento_albaran_aplicado,
+            con_descuento=con_descuento,
         )
         if a_sigrid is not None:
             conc.a_sigrid = a_sigrid.texto
@@ -4123,6 +4132,7 @@ class AlbaranReviewRepository:
             )
         )
         return DocumentDetailPayload(
+            alta_enviar_dto=self._enviar_dto,
             id=merge_doc.id,
             view_mode=VIEW_MODE_MERGE,
             available_views=available_views,

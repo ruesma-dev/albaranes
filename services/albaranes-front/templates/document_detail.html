@@ -892,6 +892,8 @@
                                                    {%- if c.a_sigrid %}{% set _ = _titulo_precio.append(c.a_sigrid) %}{% endif %}
                                                    {%- if _titulo_precio %} title="{{ _titulo_precio | join('\n') }}"{% endif %}
                                                    {%- if c.factor_alta is not none %} data-factor-alta="{{ c.factor_alta }}"{% endif %}
+                                                   {#- F-110 R16: la guarda del dto, para que el JS repinte «A Sigrid» igual que comun. #}
+                                                   {%- if document.alta_enviar_dto %} data-alta-dto="1"{% endif %}
                                                    value="{{ c.unitario_input }}" placeholder="—">
                                         {% elif c.agree_unitario == false %}
                                             <span class="concilia-price-warn"{% if c.a_sigrid %} title="{{ c.a_sigrid }}"{% endif %}><span class="concilia-icon" aria-hidden="true">⚠</span> {{ c.unitario_es }}</span>
