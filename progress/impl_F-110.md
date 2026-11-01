@@ -29,3 +29,18 @@ Rama `feature/F-110-descuento-linea-sigrid` (worktree `../albaranes-F-110`). Rig
    Design §11 R-4 prevé este ajuste («se ajusta el diseño sin cambiar R»).
 2. **`dto` que redondea a 0** (p. ej. d = 0,004): va como hoy, sin `dto` (caso `l_redondea_a_cero`). El contrato v8.4
    trata `dto` 0 como «sin descuento» y design §4 dice que albaranes nunca manda 0.
+3. **`test_f115_t2_version_0110`** pasa de «== 0.11.0» a «≥ 0.11.0 y pyproject igual» (lo mismo que hicieron F-098,
+   F-106 y F-113 con el suyo); la exacta 0.12.0 la fija `test_f110_t3_version_0120`.
+
+## Fase RED (trazas reales)
+
+**T2 · comun** — `python -m pytest tests/test_f110_linea_a_sigrid.py -q --tb=short` (desde `services/albaranes-comun`):
+
+```
+tests\test_f110_linea_a_sigrid.py:26: in <module>
+    from ruesma_comun.alta_sigrid import (
+E   ImportError: cannot import name 'LITERAL_ENVIAR_DTO' from 'ruesma_comun.alta_sigrid'
+ERROR tests/test_f110_linea_a_sigrid.py
+1 error in 1.16s
+```
+Tras T3: `58 passed in 0.95s`; suite de comun `1401 passed` (F-106 sin tocar aserciones).

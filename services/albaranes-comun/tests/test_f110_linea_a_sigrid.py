@@ -251,3 +251,12 @@ def test_f110_r5_enviar_dto_activo(valor, activo):
 def test_f110_r1_unica_definicion_en_comun():
     assert alta_sigrid.linea_a_sigrid is linea_a_sigrid
     assert alta_sigrid.LineaASigrid is LineaASigrid
+
+
+# ------------------------------------------------------------------ versión
+def test_f110_t3_version_0120():
+    import ruesma_comun
+
+    assert ruesma_comun.__version__ == "0.12.0"
+    pyproject = (Path(ruesma_comun.__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'version = "0.12.0"' in pyproject
