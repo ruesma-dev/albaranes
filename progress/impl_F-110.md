@@ -57,3 +57,17 @@ FAILED tests/test_f110_config.py::test_f110_r5_log_dice_encendida - ValueErro...
 FAILED tests/test_f110_infra.py::test_f110_r20_vars_versiona_la_guarda_apagada
 20 failed, 20 passed in 3.07s
 ```
+
+**T6 · sv9 petición** — `python -m pytest tests/test_f110_peticion.py -q --tb=line`, extracto:
+
+```
+test_f110_peticion.py:212: AssertionError: assert <EstadoAlta.ERROR: 'error'> is <EstadoAlta.NO_ADMITIDO: 'no_admitido'>
+test_f110_peticion.py:229: AttributeError: 'LineaPeticion' object has no attribute 'dto'
+test_f110_peticion.py:278: KeyError: 'dto'
+FAILED tests/test_f110_peticion.py::test_f110_r7_cecois_bruto_y_dto_tras_el_precio
+FAILED tests/test_f110_peticion.py::test_f110_r8_r22f_no_cuadra_a_sigrid - As...
+FAILED tests/test_f110_peticion.py::test_f110_r9_r22d_vinculada_feymaco_con_dto
+FAILED tests/test_f110_peticion.py::test_f110_aviso1_el_dto_solo_va_por_el_modo_extendido
+15 failed, 12 passed in 1.15s
+```
+(Los 12 que pasan en RED son los de R6, la guarda apagada y las claves del modo extendido: fijan lo de hoy.)
