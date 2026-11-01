@@ -90,3 +90,14 @@ FAILED tests/test_f110_previa.py::test_f110_r11_en_el_servicio_va_a_revisar_sin_
 **T9 · regresión sv9** — `python -m pytest -q` en sv9: `1162 passed` sin tocar aserciones de F-053…F-106. Un test de
 F-069 lanza un script en un subproceso sin `PYTHONPATH` (usa la comun 0.11 del árbol principal): `LineaASigrid` se
 importa solo bajo `TYPE_CHECKING` en `validador_alta.py`, así el módulo no exige el nombre al importarse.
+
+**T10 · sv4 ficha** — `.venv/Scripts/python.exe -m pytest tests/test_f110_ficha.py -q --tb=line` (desde sv4), extracto:
+
+```
+test_f110_ficha.py:170: TypeError: AlbaranReviewRepository.__init__() takes 2 positional arguments but 3 were given
+test_f110_ficha.py:223: assert ('data-alta-dto="1"' in '<input type="text" ... data-factor-alta="1.0" value="120.00" placeholder="—">') is True
+FAILED tests/test_f110_ficha.py::test_f110_r14_apagada_por_defecto - Attribut...
+FAILED tests/test_f110_ficha.py::test_f110_r15_cecois_con_la_guarda - TypeErr...
+FAILED tests/test_f110_ficha.py::test_f110_r15_repositorio_con_la_guarda - Ty...
+24 failed, 2 passed in 3.83s
+```
