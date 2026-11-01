@@ -137,5 +137,4 @@ Ninguno.
 - **O2.** El rigor `critico` exige que el humano acepte los 3 equivalentes (6, 15 y 16). Yo los doy por buenos; lo
   traslada el líder.
 - **O3.** sv9 compara el `dto` con `Decimal` y el panel de sv4 redondea a 6: solo divergen con 7 o más decimales.
-- **O4.** JS (`Math.round`) y Python (`round`) pueden diferir en empates a medio céntimo; ninguno en la tabla (como F-106).
-- **O5.** Antes de `git worktree remove`, quitar la *junction* `.venv` de sv4 con `cmd /c rmdir`.
+- **O4.** JS (`Math.round`) y Python (`round`) pueden diferir en empates a medio céntimo; ninguno en la tabla (como F-106). **O5.** Quitar la *junction* `.venv` de sv4 (`cmd /c rmdir`) antes de `git worktree remove`.
