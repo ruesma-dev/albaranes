@@ -65,6 +65,7 @@ from ruesma_comun.correo import (
     ContextoCorreo,
     construir_contexto_correo,
 )
+from ruesma_comun.mime import detectar_mime, nombre_coherente, normalizar_mime
 
 logger = logging.getLogger(__name__)
 
@@ -490,7 +491,36 @@ class PollingPipeline:
 
         ``ok`` si TODAS sus páginas se aceptaron; ``paginas_aceptadas``
         cuenta las aceptadas, nuevas o duplicadas (DA7).
+
+        F-113: antes de trocear se calcula el MIME REAL por los bytes (Graph
+        declara ``application/octet-stream`` en fotos de WhatsApp) y un nombre
+        coherente con él; troceo, meta e intake usan los dos (R11). Si el MIME
+        real difiere del declarado, el meta lleva además
+        ``attachment_content_type_declarado`` (R14); si coincide, el
+        declarado sigue tal cual y el meta no cambia (R15). Los WARNING
+        llevan ids y tipos, nunca el nombre (R36 de F-048).
         """
+        real = detectar_mime(file_bytes, declarado=content_type, nombre=nombre)
+        nombre_real = nombre_coherente(nombre, real)
+        if real != normalizar_mime(content_type):
+            logger.warning(
+                "msg=%s att=%s mime corregido declarado=%s real=%s",
+                msg.id,
+                att_id,
+                content_type,
+                real,
+            )
+            extra_meta = {**(extra_meta or {}), "attachment_content_type_declarado": content_type}
+            content_type = real
+        if nombre_real != nombre:
+            logger.warning(
+                "msg=%s att=%s nombre corregido a la extension de %s",
+                msg.id,
+                att_id,
+                real,
+            )
+            nombre = nombre_real
+
         attachment_sha256 = hashlib.sha256(file_bytes).hexdigest()
 
         # Splitting de PDF: si el adjunto es PDF multi-página, devuelve

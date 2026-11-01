@@ -299,10 +299,18 @@
 
                 <div class="form-grid two-columns">
                     {% if editable %}
-                    <label class="full-width">
-                        <span>Elegir proveedor (con contrato en la obra · Sigrid) — escribe para buscar</span>
+                    {# F-114: div (no label): dentro de un label el check sería su
+                       primer control y un clic en el rótulo lo conmutaría. El
+                       check sale marcado en cada carga (R9, no se recuerda). #}
+                    <div class="full-width campo-combo">
+                        <div class="campo-combo-cabecera">
+                            <span id="proveedor_combo_rotulo">Elegir proveedor (con contrato en la obra · Sigrid) — escribe para buscar</span>
+                            <label class="check-inline"><input type="checkbox" id="proveedor_solo_obra" checked> Solo de la obra</label>
+                        </div>
                         <div class="combo" data-kind="proveedor"
                              data-endpoint="/api/sigrid/proveedores"
+                             data-endpoint-todos="/api/sigrid/proveedores/todos"
+                             data-solo-obra-check="proveedor_solo_obra"
                              data-obra-input="obra_codigo"
                              data-val-input="proveedor_cif"
                              data-nombre-input="proveedor_nombre"
@@ -312,7 +320,7 @@
                                    value="{{ document.proveedor_nombre or '' }}{% if document.proveedor_cif %} — {{ document.proveedor_cif }}{% endif %}">
                             <div class="combo-panel" hidden></div>
                         </div>
-                    </label>
+                    </div>
                     {% endif %}
                     <label>
                         <span>Proveedor</span>
@@ -323,13 +331,29 @@
                         <input type="text" id="proveedor_cif" value="{{ document.proveedor_cif or '' }}" readonly class="locked-field" title="Se cambia con el desplegable «Elegir proveedor» de arriba">
                     </label>
                     <div class="full-width form-subrow cols-3">
+                        {#
+                            F-108 R12–R14, R22: la fecha se ve en dd/mm/aaaa y se guarda
+                            AAAA-MM-DD (el PUT la normaliza). Editable: texto a mano y, al
+                            lado, el botón que abre el selector nativo (oculto sin
+                            display:none para que showPicker funcione). Aprobado: solo
+                            lectura, sin calendario.
+                        #}
                         <label>
                             <span>Fecha</span>
-                            <input type="text" id="fecha" value="{{ document.fecha or '' }}"{% if not editable %} readonly{% endif %}>
+                            {% if editable %}
+                            <span class="campo-fecha">
+                                <input type="text" id="fecha" value="{{ document.fecha | fecha_albaran_ver }}" placeholder="dd/mm/aaaa" autocomplete="off" aria-describedby="fecha-error">
+                                <button type="button" class="btn secondary small js-fecha-calendario" title="Elegir la fecha en el calendario" aria-label="Elegir la fecha en el calendario">Calendario</button>
+                                <input type="date" id="fecha_calendario" class="fecha-calendario" tabindex="-1" aria-hidden="true">
+                            </span>
+                            <small id="fecha-error" class="error js-fecha-error" hidden></small>
+                            {% else %}
+                            <input type="text" id="fecha" value="{{ document.fecha | fecha_albaran_ver }}" readonly>
+                            {% endif %}
                         </label>
                         <label>
                             <span>Número albarán</span>
-                            <input type="text" id="numero_albaran" value="{{ document.numero_albaran or '' }}"{% if not editable %} readonly{% endif %}>
+                            <input type="text" id="numero_albaran" value="{{ document.numero_albaran or '' }}" maxlength="128" autocomplete="off"{% if not editable %} readonly{% endif %}>
                         </label>
                         <label>
                             <span>Forma de pago</span>
@@ -760,8 +784,9 @@
                                 {% set bloqueada = v.bloqueada if v else false %}
                                 {% set cedit = editable and dline.valuation_line_id is not none and not bloqueada %}
                                 {% set razones = v.review_reasons if v else [] %}
-                                <tr class="conciliacion-row salmon-row concilia-{{ c.kind }}{% if cedit %} concilia-editable{% endif %}"
-                                    data-line-kind="{{ dline.line_kind }}"{% if bloqueada %} data-bloqueada="1"{% endif %}
+                                {# F-106 R14: la fila que no cuadra, en rojo (``cuadra`` None = no comparable). #}
+                                <tr class="conciliacion-row salmon-row concilia-{{ c.kind }}{% if cedit %} concilia-editable{% endif %}{% if c.cuadra == false %} fila-no-cuadra{% endif %}"
+                                    data-line-kind="{{ dline.line_kind }}"{% if bloqueada %} data-bloqueada="1"{% endif %}{% if c.cuadra is not none %} data-cuadra="{{ '1' if c.cuadra else '0' }}"{% endif %}
                                     data-for-line-id="{{ dline.merge_line_id if dline.merge_line_id is not none else '' }}"
                                     data-for-valuation-line-id="{{ dline.valuation_line_id if dline.valuation_line_id is not none else '' }}">
                                     {# Origen — SOLO badge Contrato/Nueva (F-065 R24; antes «Sigrid»). El ✎ abre/cierra el selector de línea de contrato (oculto por defecto). #}
@@ -860,14 +885,21 @@
                                         {% if cedit %}
                                             <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit{% if c.agree_unitario == true %} cedit-ok{% elif c.agree_unitario == false %} cedit-warn{% endif %}"
                                                    data-field="precio_unitario" data-identity="1" data-numeric="1"
-                                                   {#- F-065 R9: el precio APLICADO; el del contrato, en el title. #}
-                                                   {%- if c.kind == 'assigned' and c.unitario_contrato is not none %} title="Precio del contrato: {{ '%.4f'|format(c.unitario_contrato) }} €"{% endif %}
-                                                   value="{{ '%.4f'|format(c.unitario) if c.unitario is not none else '' }}" placeholder="—">
+                                                   {#- F-065 R9: el precio APLICADO; el del contrato, en el title.
+                                                       F-106 R15: hasta 6 decimales y «A Sigrid» también en el title. #}
+                                                   {%- set _titulo_precio = [] %}
+                                                   {%- if c.kind == 'assigned' and c.unitario_contrato is not none %}{% set _ = _titulo_precio.append('Precio del contrato: ' ~ ('%.4f'|format(c.unitario_contrato)) ~ ' €') %}{% endif %}
+                                                   {%- if c.a_sigrid %}{% set _ = _titulo_precio.append(c.a_sigrid) %}{% endif %}
+                                                   {%- if _titulo_precio %} title="{{ _titulo_precio | join('\n') }}"{% endif %}
+                                                   {%- if c.factor_alta is not none %} data-factor-alta="{{ c.factor_alta }}"{% endif %}
+                                                   value="{{ c.unitario_input }}" placeholder="—">
                                         {% elif c.agree_unitario == false %}
-                                            <span class="concilia-price-warn"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ c.unitario | importe_eur }}</span>
+                                            <span class="concilia-price-warn"{% if c.a_sigrid %} title="{{ c.a_sigrid }}"{% endif %}><span class="concilia-icon" aria-hidden="true">⚠</span> {{ c.unitario_es }}</span>
                                         {% else %}
-                                            <span class="concilia-val">{{ c.unitario | importe_eur if c.unitario is not none else '—' }}</span>
+                                            <span class="concilia-val"{% if c.a_sigrid %} title="{{ c.a_sigrid }}"{% endif %}>{{ c.unitario_es }}</span>
                                         {% endif %}
+                                        {# F-106 R15: visible solo si el precio a Sigrid no es P (el JS lo repinta). #}
+                                        {% if c.a_sigrid %}<span class="a-sigrid js-a-sigrid"{% if not c.a_sigrid_difiere %} hidden{% endif %}>{{ c.a_sigrid }}</span>{% endif %}
                                     </td>
                                     {# Importe — editable: importe = cantidad × precio × (1 − dto%).
 
@@ -885,15 +917,24 @@
                                     <td class="concilia-td td-num" data-col="importe" data-sort-value="{{ _imp if _imp is not none else '' }}">
                                         {% if _imp is not none %}
                                             {% if cedit %}
-                                                <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit" data-field="importe" data-numeric="1" value="{{ '%.2f'|format(_imp) }}" placeholder="—">
+                                                <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit" data-field="importe" data-numeric="1"{% if c.importe_albaran is not none %} data-importe-albaran="{{ c.importe_albaran }}"{% endif %} value="{{ '%.2f'|format(_imp) }}" placeholder="—">
                                             {% elif c.agree_importe == false %}
                                                 <span class="concilia-price-warn"><span class="concilia-icon" aria-hidden="true">⚠</span> {{ _imp | importe_eur }}</span>
                                             {% else %}
                                                 <span class="concilia-val">{{ _imp | importe_eur }}</span>
                                             {% endif %}
                                         {% elif cedit %}
-                                            <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit" data-field="importe" data-numeric="1" value="" placeholder="—">
+                                            <input type="text" inputmode="decimal" class="cell-input cell-num js-cedit" data-field="importe" data-numeric="1"{% if c.importe_albaran is not none %} data-importe-albaran="{{ c.importe_albaran }}"{% endif %} value="" placeholder="—">
                                         {% else %}<span class="concilia-val">—</span>{% endif %}
+                                        {# F-106 R13: «≠ albarán», informativo; el hueco oculto existe para que el JS lo repinte. #}
+                                        {% if c.importe_albaran is not none %}<span class="aviso-importe js-aviso-importe" title="El importe ya no es el del albarán ({{ '%.2f'|format(c.importe_albaran) | replace('.', ',') }} €)"{% if not c.aviso_importe %} hidden{% endif %}>{{ c.aviso_importe or '' }}</span>{% endif %}
+                                        {# F-106 R14: la cuenta en el title y los dos botones (desactivados si bloqueada o aprobado). #}
+                                        {% if c.cuadra == false %}
+                                        <div class="fila-cuadre" title="{{ c.cuadre_texto }}">
+                                            <button type="button" class="btn btn-xs js-cuadrar" data-cuadrar="importe"{% if not cedit %} disabled{% endif %}>Recalcular importe</button>
+                                            <button type="button" class="btn btn-xs js-cuadrar" data-cuadrar="precio"{% if not cedit %} disabled{% endif %}>Recalcular precio</button>
+                                        </div>
+                                        {% endif %}
                                     </td>
                                     {# Descuento — campo propio de sv4 (no existe en Sigrid). #}
                                     <td class="concilia-td td-num" data-col="descuento" data-sort-value="{{ c.descuento if c.descuento is not none else '' }}">
@@ -937,6 +978,17 @@
                                             {% endif %}
                                         {% elif editable and bloqueada %}
                                             <button type="button" class="btn small secondary js-desbloquear" data-valuation-line-id="{{ dline.valuation_line_id }}" title="Línea guardada: desbloquéala para editarla">Desbloquear</button>
+                                        {% endif %}
+                                        {# F-106 R29, R30: «✋» = editada a mano (revalorar la conserva); una creada por sv4 no tiene nada calculado a lo que volver (✕). #}
+                                        {% if c and c.edicion_texto %}
+                                            {% if c.fila_entera %}
+                                            <span class="edicion-manual js-edicion-manual" title="Línea añadida a mano: revalorar la conserva">{{ c.edicion_texto }}</span>
+                                            {% else %}
+                                            <span class="edicion-manual js-edicion-manual" title="{{ c.edicion_texto }}">✋</span>
+                                            {% if editable %}
+                                            <button type="button" class="btn small secondary js-volver-calculado" data-valuation-line-id="{{ dline.valuation_line_id }}" title="Deshacer lo editado a mano y volver a lo que calculó la valoración">Volver a lo calculado</button>
+                                            {% endif %}
+                                            {% endif %}
                                         {% endif %}
                                     </td>
                                 </tr>

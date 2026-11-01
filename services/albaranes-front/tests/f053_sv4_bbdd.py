@@ -59,7 +59,8 @@ _VALORACION = (
         modifier_source VARCHAR(32), modifier_reason TEXT, descripcion_linea TEXT,
         review_required BOOLEAN NOT NULL DEFAULT 0, review_reasons_json TEXT,
         producto_sigrid VARCHAR(24), created_at_utc VARCHAR(64),
-        bloqueada BOOLEAN NOT NULL DEFAULT 0
+        bloqueada BOOLEAN NOT NULL DEFAULT 0,
+        edicion_manual_json TEXT
     )
     """,
     """
@@ -96,6 +97,16 @@ CREATE TABLE albaran_altas_sigrid (
 """
 
 
+#: (F-115 R9, R13) La cabecera que manda la ficha al guardar: el CIF, la obra
+#: y el contrato elegido. Sin ellos el PUT guarda la cabecera vacía y quita el
+#: contrato, y aprobar con la valoración de CT/1 sería un 409.
+#: (F-108 R11) Con su fecha y su número: el PUT los guarda (y sin ellos no
+#: se aprueba).
+CABECERA = {"proveedor_cif": "B12345678", "obra_codigo": "0404",
+            "selected_contrato_codigo": "CT/1", "fecha": "2026-10-08",
+            "numero_albaran": "A-1"}
+
+
 class Fabrica:
     """``SessionFactory`` mínima sobre un motor SQLite (una conexión)."""
 
@@ -113,6 +124,8 @@ def _merge(sesion: Session, document_id: str, **campos: Any) -> None:
         "prompt_key": "p", "schema_name": "s", "model_name": "m",
         "raw_extraction_json": "{}", "created_at_utc": "2026-10-08T08:00:00+00:00",
         "approved": False, "is_active": True, "numero_albaran": "A-1",
+        # (F-108 R11) Sin fecha AAAA-MM-DD no se aprueba.
+        "fecha": "2026-10-08",
         "proveedor_cif": "B12345678", "obra_codigo": "0404", "tipologia": "generico",
         "tipologia_mixta": False,
     }
@@ -153,9 +166,12 @@ def construir(*, con_altas: bool = True, status: str = "ok", aprobado: bool = Fa
             s.execute(text(sentencia))
         if con_altas:
             s.execute(text(DDL_ALTAS))
+        # (F-115 R13) La valoración es del contrato CT/1: el albarán lo tiene
+        # seleccionado (datos coherentes; aprobar con otro contrato es un 409).
         _merge(s, DOC, approved=aprobado,
-               approved_at_utc="2026-10-08T09:00:00+00:00" if aprobado else None)
-        _merge(s, DOC_AJENO)
+               approved_at_utc="2026-10-08T09:00:00+00:00" if aprobado else None,
+               selected_contrato_codigo="CT/1")
+        _merge(s, DOC_AJENO, selected_contrato_codigo="CT/1")
         s.execute(text(
             "INSERT INTO albaran_contratos_merge (id, document_id, codigo_contrato, fetched_at_utc) "
             "VALUES (1, :d, 'CT/1', 't')"), {"d": DOC})

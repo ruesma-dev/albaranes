@@ -1,6 +1,20 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-108 · CERRADA (`done`, 2026-11-01).** Resumen en `history.md`.
+
+- **Implementer (2026-10-31), hecho:** T1–T10 (un commit por tarea). Informe `progress/impl_F-108.md`, mutación `progress/mutacion_F-108.md`. Pendientes MANUAL: M1 (líder, Chrome/Edge con sv4 local), M-D (humano, despliegue de sv4 sola), M2 (líder, solo lectura en producción), M3 (humano, las 2 fechas `dd/mm/aaaa`), T11.
+- **Desviaciones justificadas** (detalle en el informe §3): (1) R11 se comprueba lo ÚLTIMO al pasar a aprobado (tras líneas y contrato), para que los avisos de F-065/F-078/F-106/F-115 sigan saliendo igual; (2) los fixtures compartidos `f053_sv4_bbdd` y `f065_bbdd` ganan fecha y número, y 3 tests ajustan su payload (ninguna aserción relajada); (3) tres tests de JS viejos añaden las funciones nuevas a su lista de funciones extraídas; (4) la `<dd>` de solo lectura que cita design §3 es la de las vistas crudas: sigue sin filtro (R23, §4.4).
+- **Entorno del worktree:** suites con `PYTHONPATH=C:\Users\pgris\PycharmProjects\albaranes-F-108\services\albaranes-comun` y `ARNES_SIN_CACHE=1`. *Junction* `.venv` de sv4 creada (a la del árbol principal): quitarla con `cmd /c rmdir` antes de `git worktree remove`.
+
+**F-114 · CERRADA (`done`, 2026-10-31).** Check «Solo de la obra» o todos los proveedores de Sigrid. Review APPROVED (pasada 3), T8 en verde, desplegada con el sv4 `r20261031-1506`. Pendiente sin bloqueo: O1 de la review (R10 por el texto del error; propuesta `!currentObra()`).
+
+**F-113 · CERRADA (`done`, 2026-11-01).** Resumen en `history.md`.
+
+**F-106 · CERRADA (`done`, 2026-10-31).** Resumen en `history.md`.
+
+**F-100 · `blocked` (2026-10-28): parte A (T1–T7, banco VAL) con review APPROVED** (`progress/review_F-100.md` en su rama, pasada 1). Espera a F-106 en `dev` para la medición ANTES (T8–T11; T10 y T11 de pago, las lanza el humano). Antes de T11: (O1) que el humano acepte los 6 mutantes equivalentes; (O2) corregir la fila «valoración» de `evals/README.md:257` (mide importe, precio y su fuente, no la cantidad); (O3) fusionar `dev` antes de T11, nunca entre T11 y T21; (O4) decidir si el banco normaliza las partidas como producción (F-076) antes de IA4.
+
 **F-086 · `blocked` (2026-10-25): parte A (código) con review APPROVED (`progress/review_F-086.md`), fusionada en `dev`; espera a F-100 en `dev` (D1 = a) para B y C.** Pendientes, con su comando exacto en design §6: T9/M1 (humano: desplegar sv5 con A sin cambiar variables; puede ir con la T10 de F-085), T10/M2 (humano, de pago: medición de IA3 con `--repeticiones 3`, tras F-100), T11/M3 (veredicto con el criterio de D2 y coste mensual), T12 (`$ANTHROPIC_MODEL_SV5` en `create_capps.ps1`, D5), T13/M4–M5 (variables de sv5 en Azure y verificación en el log; M6 vuelta atrás), T14 (cierre). Antes de `git worktree remove`: quitar la *junction* `.venv` de sv4 con `cmd /c rmdir` — Opus 5.5 en IA3. Spec en `specs/F-086-opus-ia3/`, rama `feature/F-086-opus-ia3`, worktree `../albaranes-F-086`. Rigor `critico`. **PARADA 1 cerrada por el humano el 2026-10-24 («ok a f86»): D1–D6 = (a)** (design §9). Alcance de esta pasada: solo A (T1–T8); B (medición de pago) y C (producción) esperan a F-100 en `dev` (D1): tras APPROVED de A, F-086 queda `blocked`.
 
 - **Implementer (2026-10-25), hecho:** T1–T7 de la parte A (un commit por tarea) y T8 salvo la review: informe `progress/impl_F-086.md`, mutación `progress/mutacion_F-086.md` (4/4 de la herramienta + 24/24 a mano, 0 supervivientes), `azure-apps` `b9b6564` local sin push. Lista para la review de A.
@@ -21,10 +35,8 @@
 - **Alcance de esta pasada: T1–T7.** M1, M-D, M2 y T8–T9 dependen del despliegue de la F-015 de sigrid-api: M1/M2 las hace el líder, el despliegue el humano. Tras APPROVED de T1–T7, F-104 queda `blocked` («espera al despliegue de F-015 de sigrid-api») hasta M2 en verde y T8.
 - **T1–T7 hechas (implementer, 2026-10-24)**, `init.sh` en verde; review APPROVED en la pasada 2 (`progress/review_F-104.md`). Informe `progress/impl_F-104.md`, mutación `progress/mutacion_F-104.md`, `azure-apps` `8f6f243` local sin push.
 - **T8 y T9 hechas (implementer, 2026-10-27/28)** en la rama, commits locales: `proveedor_sin_albaran_previo` fuera de `CODIGOS_CABECERA` (va a `error`, H25), texto de sv4 intacto, `sv9.md` y `azure-apps` `ac1f414` (sin push). Mutación de `clasificador.py` entero: 13/13 muertos, 0 supervivientes (`progress/mutacion_F-104.md` § T8). `dev` (`7af0762`) fusionado sin conflictos. `bash harness/init.sh` tal cual en el worktree: verde, exit 0 (sv9 1027, sv4 1933 passed). Lista para la review de T8–T9; F-104 sigue `blocked` en `features.json`.
-- **Para F-103, al retomarla**: su D6 / R11–R14 / T7 (Bloque C) quedan absorbidos por F-104 y hay que quitarlos de su spec.
 - **Despliegue**: sv9 y sv4, desde `infra/`: `Set-DeployTag; .\deploy.ps1 -Only sv9,sv4`, antes o a la vez que la F-015 de sigrid-api; lo lanza el humano. M1 (antes) y M2/M3 (después de F-015) son de solo lectura, del líder.
 
-**F-103 · `blocked` (2026-10-24, decisión del humano): parada hasta que sigrid-api termine su F-015 v2** — **2026-10-24 tarde: sigrid-api desplegó F-015 (`60db955`, 18:21:18 UTC) y el humano decidió que NO hace falta limpiar las altas ya escritas** (comunicado a sigrid-api; su R30 no se ejecuta). Al retomarla, F-103 se reduce a verificar en solo lectura las altas nuevas (sin facturación ni fechas heredadas) y, si se quiere, el detector; sin petición ni limpieza, donde estas decisiones ya están tomadas y en implementación. Spec v1 en la rama `feature/F-103-alta-sin-facturacion-heredada` (worktree `../albaranes-F-103`, `563d264`, *junction* `.venv` de sv4), sin PARADA 1: D1–D7 en su `design.md` §8 quedan sin decidir aquí. El borrador `progress/propuestas_a_sigrid_api_F-103.md` (en esa rama) NO se envía. Al retomarla: quitar §3.d (E5 decidido: no se corrige el `empide`), corregir 68/46 (mismo universo; el 68 incluye las altas del 24-10), y que F-069 ya está desplegada hace imprescindible no filtrar la limpieza por `empide = 2425207` (§3.b).
 
 **F-084 · CERRADA (`done`, 2026-10-23).** El banco de evals valora de verdad. Review APROBADA en la pasada 3; línea base de R28 del 23,5 % aceptada por el humano (D5). Resumen en `history.md`; detalle en `progress/impl_F-084.md`, `progress/impl_F-084_T14.md` y `progress/review_F-084.md`. Pendiente anotado: afirmar `rol_linea` en las 28 líneas sintéticas `?` del libro IA3 (tarea de datos del banco).
 
@@ -640,3 +652,9 @@ No bloquea el `done`. Procedimiento (design §10 y `tasks.md` T12):
 6. Los mixtos que están en `Procesados` con el interior perdido **no** se mueven en bloque (re-ingerirían los
    PDF directos con otra `correlation_key`): uno a uno, si el humano lo decide.
 7. Anotar aquí el resultado.
+
+## F-115 · implementer (2026-10-31)
+
+- Hechas T1–T10 (un commit por tarea). T0 la hizo el líder (0 y 0 %). Siguen T11–T12 (JS), T14 (mutación), T15 (docs), T17.
+- Desviaciones (detalle en `progress/impl_F-115.md`): (a) `test_f106_t2_version_0100` pasa a «≥ 0.10.0» (comun 0.11.0), como hicieron F-098 y F-113; (b) R13 obliga a datos coherentes en los fixtures `f053_sv4_bbdd` y `f065_bbdd` (el merge tiene seleccionado el contrato de su valoración) y a que 6 llamadas de «guardar y aprobar» de tests anteriores manden la cabecera (`CABECERA`: CIF, obra y contrato) como hace la ficha; ninguna aserción cambia; (c) aviso de R11 con variante «Obra cambiada…» (R15: el proveedor se conserva).
+- Entorno: *junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`); suites con `PYTHONPATH` a la comun del worktree.

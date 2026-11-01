@@ -86,6 +86,19 @@ Spec: `specs/F-104-codigos-contrato-v83/`. Contrato v8.3 §3.2–§3.3 (`871cc0c
   2026-10-27), tras verificar con la F-015 de sigrid-api desplegada que ya no llega (M2). Si llegase, va a `error`
   como cualquier código desconocido (H25). sv4 conserva su texto (altas antiguas).
 
+## Líneas que no cuadran (F-106)
+
+Spec: `specs/F-106-precio-al-cambiar-medicion/` (R17, R18; regla 22 de `docs/ARCHITECTURE.md`).
+
+- `SQL_LINEAS` lee también P (`precio_unitario_final`) y d (`descuento_albaran_aplicado`) de la fila. Si una
+  línea a registrar no cuadra (`ruesma_comun.importes.cuadra_linea`: `|Q × P × (1 − d) − I| > 0,02 €`), el alta
+  queda `no_admitido` con el motivo `linea_no_cuadra` (detalle «48 × 11,2 × (1 − 7 %) = 499,97 ≠ 104,16» y la
+  referencia de la línea), **sin llamar a sigrid-api**. sv4 ya no deja aprobarla; esto es la red de seguridad.
+- Si cuadran, la petición es la de siempre: cantidad y precio de `ruesma_comun.alta_sigrid.linea_a_sigrid`.
+- Las altas reales `registrado` ya grabadas con una línea que no cuadra o con precio enviado ≠ P × (1 − d) se listan
+  con `scripts/listar_altas_descuadradas_f106.py` (solo `SELECT`, conexión de solo lectura, CSV UTF-8 con BOM y
+  `;`; `PG_*` de la consola; lo lanza el humano, que decide qué hacer con las listadas).
+
 ## Llaves (design §7)
 
 | Variable | Defecto | Nota |

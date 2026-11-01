@@ -75,8 +75,8 @@
 
     // Datos completos del documento (JSON incrustado). F-065 R1: el PUT de la
     // cabecera ya NO reenvía las blancas (el backend ignora las líneas); de
-    // aquí se lee, p. ej., cuántas filas tocadas a mano descartaría
-    // revalorar (n_filas_manuales, R22).
+    // aquí se lee, p. ej., cuántas filas tocadas a mano conservará
+    // revalorar (n_filas_manuales, R22; F-106 R30).
     let DOC_DATA = {};
     try { DOC_DATA = JSON.parse(dataTag.textContent) || {}; } catch (_) { DOC_DATA = {}; }
     window.__documentData = DOC_DATA;
@@ -1178,11 +1178,15 @@
     // SOLO los campos que el administrativo cambió respecto a lo que pintó la
     // ficha (números comparados como números: «115,0» = «115.0000»). Un
     // campo que no viene no cambia; uno vaciado viaja como null (la partida,
-    // como "" = almacén). El importe no viaja: al teclearlo se ajusta el
-    // precio (que sí viaja si cambió). Lo usan «Guardar» y «Guardar todas».
+    // como "" = almacén). F-106 R12: el importe viaja (y el precio no) si,
+    // de precio, importe, cantidad y dto, lo último tecleado fue el importe
+    // (``tr.dataset.ultimoCampo``; sin rastro, si el importe cambió); si no, el
+    // precio solo si cambió y nunca el importe. Lo usan las tres vías de
+    // ``enviarFila``: «Guardar», «Guardar todas» y el guardado previo de la
+    // cabecera.
     function _camposCambiados(tr, items) {
         const CAMPOS = ["codigo_partida", "descripcion", "cantidad", "unidad",
-                        "precio_unitario", "descuento", "codigo_externo"];
+                        "precio_unitario", "importe", "descuento", "codigo_externo"];
         const body = {};
         tr.querySelectorAll(".js-cedit").forEach(function (inp) {
             const field = inp.dataset.field;
@@ -1202,6 +1206,12 @@
                 }
             }
         });
+        const ultimo = (tr.dataset && tr.dataset.ultimoCampo) || null;
+        if ("importe" in body && (ultimo === "importe" || ultimo === null)) {
+            delete body.precio_unitario;
+        } else {
+            delete body.importe;
+        }
         return body;
     }
 
@@ -1286,9 +1296,10 @@
     // F-065 R22: revalorar (o cambiar de contrato) descarta lo hecho a mano.
     function avisoRevalorar(n) {
         if (!n) { return null; }
+        // F-106 R30: revalorar ya no descarta lo editado a mano, lo conserva.
         return n === 1
-            ? "Revalorar descarta 1 línea tocada a mano. ¿Continuar?"
-            : "Revalorar descarta " + n + " líneas tocadas a mano. ¿Continuar?";
+            ? "Revalorar conserva 1 línea puesta a mano. ¿Continuar?"
+            : "Revalorar conserva " + n + " líneas puestas a mano. ¿Continuar?";
     }
 
     // F-075 R10: sin contrato solo se valora si el albarán trae importes
@@ -1322,6 +1333,135 @@
         return Math.round(cant * pu * (1 - (dto || 0) / 100) * 100) / 100;
     }
 
+    // F-106 R11: el precio que despeja el backend (``unitario_despejado`` de
+    // comun), importe / (Q × (1 − dto)) a 6 decimales; null sin divisor.
+    function precioDespejado(imp, cant, dto) {
+        if (imp === null || cant === null) { return null; }
+        const divisor = cant * (1 - (dto || 0) / 100);
+        if (divisor === 0) { return null; }
+        return Math.round((imp / divisor) * 1e6) / 1e6;
+    }
+
+    // F-106 R15: lo que mandará sv9 (``linea_a_sigrid`` de comun): la cantidad
+    // a Sigrid es Q × |factor| (el del servidor: cantidad a Sigrid / Q) con el
+    // signo del importe, y el precio |I| / |cantidad| a 6 decimales. null si la
+    // fila no es a registrar (importe vacío o 0) o no hay cantidad.
+    function precioASigrid(cant, imp, factor) {
+        if (cant === null || imp === null || imp === 0 || factor === null || isNaN(factor)) { return null; }
+        const q = Math.abs(cant * factor);
+        if (q <= 1e-9) { return null; }
+        return { cantidad: imp < 0 ? -q : q, precio: Math.round((Math.abs(imp) / q) * 1e6) / 1e6 };
+    }
+
+    // F-106 R15: el precio como lo pinta la plantilla (``precio_es``): hasta 6
+    // decimales, sin ceros finales y al menos 2, en formato español.
+    function precioEs(v) {
+        const partes = (Math.round(v * 1e6) / 1e6).toFixed(6).split(".");
+        let dec = partes[1].replace(/0+$/, "");
+        while (dec.length < 2) { dec += "0"; }
+        const signo = partes[0].charAt(0) === "-" ? "-" : "";
+        const entero = partes[0].replace("-", "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return signo + entero + "," + dec;
+    }
+
+    // F-106 R14, R15: una cantidad sin ceros de más («48», «2,5»).
+    function cantidadEs(v) {
+        return String(Math.round(v * 1e6) / 1e6).replace(".", ",");
+    }
+
+    // F-106 R13: un importe a 2 decimales en formato español («1.234,50»).
+    function importeEs(v) {
+        const partes = (Math.round(v * 100) / 100).toFixed(2).split(".");
+        const signo = partes[0].charAt(0) === "-" ? "-" : "";
+        const entero = partes[0].replace("-", "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return signo + entero + "," + partes[1];
+    }
+
+    // F-106 R15: «A Sigrid: 48 × 2,17 €».
+    function textoASigrid(a) {
+        return "A Sigrid: " + cantidadEs(a.cantidad) + " × " + precioEs(a.precio) + " €";
+    }
+
+    // F-106 R13: «≠ albarán: 104,16» si el importe ya no es el del albarán
+    // (``importes.difieren``: 0,01 € o más); null si es el mismo o falta alguno.
+    function avisoImporte(imp, albaran) {
+        if (imp === null || albaran === null || isNaN(albaran)) { return null; }
+        if (Math.round(Math.abs(imp - albaran) * 100) / 100 < 0.01) { return null; }
+        return "\u2260 albar\u00e1n: " + importeEs(albaran);
+    }
+
+    // F-106 R11: el importe que no deja despejar el precio, en rojo y con el
+    // texto del 422 de R7 (``MENSAJE_NO_DESPEJABLE`` de comun).
+    function marcarNoDespejable(inp, mal) {
+        if (!inp) { return; }
+        inp.classList.toggle("importe-no-despejable", mal);
+        if (mal) {
+            inp.title = "No se puede calcular el precio con cantidad 0 o descuento del 100 %: cambia la cantidad, el descuento o el precio";
+            inp.setAttribute("aria-invalid", "true");
+        } else {
+            inp.title = "";
+            inp.removeAttribute("aria-invalid");
+        }
+    }
+
+    // F-106 R14: el cuerpo de «Recalcular importe» / «Recalcular precio».
+    function cuerpoCuadrar(modo) {
+        return { cuadrar: modo };
+    }
+
+    // F-106 R14: los botones de una fila que no cuadra mandan ``cuadrar`` por
+    // la única petición de fila (``enviarFila``: guardar = bloquear) y recargan.
+    // Desactivados en la plantilla si la fila está bloqueada o el albarán
+    // aprobado.
+    function wireCuadrar() {
+        linesBody.querySelectorAll(".js-cuadrar").forEach(function (btn) {
+            btn.addEventListener("click", async function () {
+                const tr = btn.closest("tr");
+                const vid = tr ? (tr.dataset.forValuationLineId || "").trim() : "";
+                if (!vid || btn.disabled) { return; }
+                btn.disabled = true;
+                const motivo = await enviarFila(vid, cuerpoCuadrar(btn.dataset.cuadrar));
+                if (motivo === null) {
+                    window.location.reload();
+                    return;
+                }
+                window.alert("Error al recalcular la línea: " + motivo);
+                btn.disabled = false;
+            });
+        });
+    }
+
+    // F-106 R30: «Volver a lo calculado» de una fila editada a mano (con su
+    // «Deshacer»): la fila vuelve a lo que calculó la valoración.
+    function wireVolverACalculado() {
+        linesBody.querySelectorAll(".js-volver-calculado").forEach(function (btn) {
+            btn.addEventListener("click", async function () {
+                const vid = (btn.dataset.valuationLineId || "").trim();
+                if (!vid || btn.disabled) { return; }
+                btn.disabled = true;
+                try {
+                    const resp = await fetch(
+                        `/api/documents/${documentId}/lines/${vid}/volver-a-calculado`,
+                        { method: "POST" }
+                    );
+                    if (resp.ok) {
+                        window.location.reload();
+                        return;
+                    }
+                    let msg = "No se pudo volver a lo calculado.";
+                    try {
+                        const j = await resp.json();
+                        if (j && j.detail) msg = j.detail;
+                    } catch (e) { /* sin cuerpo JSON */ }
+                    window.alert(msg);
+                } catch (e) {
+                    window.alert("Error de red volviendo a lo calculado.");
+                }
+                btn.disabled = false;
+            });
+        });
+    }
+
     // F-065 R23: las líneas a traer con su cantidad (obligatoria, ≠ 0), o
     // null si falta alguna (entonces «Incorporar» no se habilita).
     function lineasATraer(seleccion) {
@@ -1336,46 +1476,71 @@
     }
 
     function wireConciliaEdit() {
+        // F-065 R12, F-106 R11, R13, R15: repinta la fila al teclear ``campo``
+        // (dentro de wireConciliaEdit, su único llamador).
+        // Cantidad, precio o dto ⇒ importe = Q × P × (1 − dto). Importe ⇒ P
+        // despejado a 6 decimales y el dto se queda; sin divisor e importe ≠ 0, no
+        // se repinta y el importe se marca en rojo. Después, «≠ albarán» y «A
+        // Sigrid» con lo que quede en la fila.
+        function syncImporteUnitario(tr, campo) {
+            const cantEl = tr.querySelector('[data-field="cantidad"]');
+            const puEl = tr.querySelector('[data-field="precio_unitario"]');
+            const dtoEl = tr.querySelector('[data-field="descuento"]');
+            const impEl = tr.querySelector('[data-field="importe"]');
+            const cant = cantEl ? parseNumEs(cantEl.value) : null;
+            const dto = dtoEl ? parseNumEs(dtoEl.value) : null;
+            if (campo === "importe") {
+                if (!puEl || !impEl) { return; }
+                const imp = parseNumEs(impEl.value);
+                const pu = precioDespejado(imp, cant, dto);
+                marcarNoDespejable(impEl, pu === null && imp !== null && imp !== 0);
+                if (pu !== null) { puEl.value = String(pu); }
+            } else if (campo === "cantidad" || campo === "precio_unitario" || campo === "descuento") {
+                if (!impEl) { return; }
+                const importe = importeDeFila(cant, puEl ? parseNumEs(puEl.value) : null, dto);
+                impEl.value = importe === null ? "" : String(importe);
+                marcarNoDespejable(impEl, false);
+            }
+            const imp = impEl ? parseNumEs(impEl.value) : null;
+            const aviso = tr.querySelector(".js-aviso-importe");
+            if (aviso && impEl && impEl.dataset.importeAlbaran !== undefined) {
+                const texto = avisoImporte(imp, parseFloat(impEl.dataset.importeAlbaran));
+                aviso.textContent = texto || "";
+                aviso.hidden = !texto;
+            }
+            const sigrid = tr.querySelector(".js-a-sigrid");
+            if (puEl && puEl.dataset.factorAlta !== undefined) {
+                const a = precioASigrid(cant, imp, parseFloat(puEl.dataset.factorAlta));
+                const texto = a ? textoASigrid(a) : null;
+                const lineas = String(puEl.title || "").split("\n").filter(function (l) {
+                    return l && l.indexOf("A Sigrid:") !== 0;
+                });
+                if (texto) { lineas.push(texto); }
+                puEl.title = lineas.join("\n");
+                if (sigrid) {
+                    const pu = parseNumEs(puEl.value);
+                    if (texto) { sigrid.textContent = texto; }
+                    sigrid.hidden = !a || (pu !== null && Math.abs(a.precio - pu) <= 1e-6);
+                }
+            }
+        }
+
         linesBody.querySelectorAll("tr.concilia-editable").forEach(function (tr) {
             const inputs = tr.querySelectorAll(".js-cedit");
             const saveBtn = tr.querySelector(".js-cedit-save");
             if (!inputs.length || !saveBtn) return;
 
-            // Sincroniza importe <-> precio unitario, igual que la fila
-            // blanca del PDF, pero metiendo el descuento (%) en la ecuación:
-            //   importe = cantidad × precio × (1 − dto/100)
-            //   precio  = importe / (cantidad × (1 − dto/100))
-            // 'campo' es el data-field que el usuario acaba de tocar.
-            function syncImporteUnitario(campo) {
-                const cantEl = tr.querySelector('[data-field="cantidad"]');
-                const puEl = tr.querySelector('[data-field="precio_unitario"]');
-                const dtoEl = tr.querySelector('[data-field="descuento"]');
-                const impEl = tr.querySelector('[data-field="importe"]');
-                const cant = cantEl ? parseNumEs(cantEl.value) : null;
-                const dto = dtoEl ? parseNumEs(dtoEl.value) : null;
-                const factor = 1 - (dto || 0) / 100;
-                if (campo === "importe") {
-                    // Cambió el importe -> ajustamos el precio unitario.
-                    if (!puEl || !impEl) return;
-                    const imp = parseNumEs(impEl.value);
-                    if (cant !== null && cant !== 0 && factor !== 0 && imp !== null) {
-                        puEl.value = String(Math.round((imp / (cant * factor)) * 10000) / 10000);
-                    }
-                } else {
-                    // Cambió cantidad / precio / descuento -> recomputamos importe.
-                    if (!impEl) return;
-                    const pu = puEl ? parseNumEs(puEl.value) : null;
-                    const importe = importeDeFila(cant, pu, dto);
-                    impEl.value = importe === null ? "" : String(importe);
-                }
-            }
-
             inputs.forEach(function (inp) {
                 inp.addEventListener("input", function () {
                     inp.classList.toggle("cedit-dirty", inp.value !== inp.defaultValue);
+                    // F-106 R12: la última de precio, importe, cantidad y dto
+                    // que se tecleó decide si viaja el importe o el precio.
+                    if (["precio_unitario", "importe", "cantidad", "descuento"].indexOf(inp.dataset.field) !== -1) {
+                        tr.dataset.ultimoCampo = inp.dataset.field;
+                    }
                     // El botón "Guardar" de la fila está SIEMPRE visible; aquí
-                    // sincronizamos importe<->unitario y el feedback visual.
-                    syncImporteUnitario(inp.dataset.field);
+                    // se repinta la fila (importe <-> precio, avisos).
+                    syncImporteUnitario(tr, inp.dataset.field);
                 });
                 // Enter guarda directamente.
                 inp.addEventListener("keydown", function (e) {
@@ -1419,6 +1584,8 @@
     // concepto es texto (reapuntar es solo «Origen ✎»).
     wirePartidaCombos();
     wireConciliaEdit();
+    wireCuadrar();
+    wireVolverACalculado();
 
     // ------------------------------------------------------------------ //
     // «Dividir» (F-065 R29 v3): el botón de la fila o F7 abren una ventana con
@@ -2060,6 +2227,64 @@
         return hits / toks.length;
     }
 
+    // F-114: combo de proveedor con «Solo de la obra» desmarcado = búsqueda
+    // en el servidor entre TODOS los proveedores vivos de Sigrid. Funciones
+    // puras y autocontenidas (los tests las sacan una a una con node).
+    // R3: el texto recortado, o null si no llega al mínimo (3, como
+    // MINIMO_BUSQUEDA_PROVEEDOR de sv4); entonces no se llama.
+    function textoBusquedaProveedor(valor) {
+        const t = (valor == null ? "" : String(valor)).trim();
+        return t.length >= 3 ? t : null;
+    }
+    function urlProveedoresTodos(endpoint, texto) {
+        return endpoint + "?q=" + encodeURIComponent(texto);
+    }
+    // R6: un CIF con varias fichas vivas en Sigrid lo dice en la etiqueta.
+    function etiquetaProveedorGlobal(it) {
+        const base = _comboLabel("proveedor", it.cif, it.nombre);
+        return it.fichas > 1 ? base + " · " + it.fichas + " fichas en Sigrid" : base;
+    }
+    // R10: lista de la obra vacía (o sin obra) ⇒ invitar a desmarcar.
+    function mensajeListaObraVacia(error) {
+        const motivo = (error || "Sin proveedores con contrato en la obra")
+            .replace(/\.\s*$/, "");
+        return motivo + ". Desmarca «Solo de la obra» para buscar entre todos los proveedores de Sigrid";
+    }
+
+    // F-115 R14, R15, R19: cambiar el proveedor (o la obra) quita el contrato
+    // y vuelve a buscar y a valorar; antes del auto-guardado se pide
+    // confirmación. Funciones puras (los tests las sacan una a una con node).
+    // CIF comparable como ``normalizar_cif`` de comun: mayúsculas, solo
+    // [A-Z0-9] y sin el prefijo ES de país (11 caracteres).
+    function _normCif(v) {
+        let t = String(v == null ? "" : v).toUpperCase().replace(/[^0-9A-Z]/g, "");
+        if (t.length === 11 && t.indexOf("ES") === 0) { t = t.slice(2); }
+        return t;
+    }
+    // Obra comparable como ``canonizar_codigo_obra``: 3 dígitos ⇒ 0 delante.
+    function _normObra(v) {
+        const t = String(v == null ? "" : v).trim().toUpperCase();
+        return /^[0-9]{3}$/.test(t) ? "0" + t : t;
+    }
+    // El texto de la confirmación, o null si no hay que preguntar: mismo
+    // valor normalizado, o el albarán no tiene contrato ni valoración.
+    function avisoCambioCabecera(kind, previo, nuevo, doc) {
+        const norm = kind === "obra" ? _normObra : _normCif;
+        if (norm(previo) === norm(nuevo)) { return null; }
+        const d = doc || {};
+        const codigo = d.selected_contrato_codigo || "";
+        if (!codigo && !d.valuation) { return null; }
+        const n = Number(d.n_filas_manuales) || 0;
+        const manuales = n > 0 ? (n === 1 ? " y 1 puesta a mano" : " y " + n + " puestas a mano") : "";
+        const quita = codigo ? " quita el contrato " + codigo + " y" : "";
+        const busca = kind === "obra"
+            ? " vuelve a buscar los contratos del mismo proveedor en la nueva obra y a valorar."
+            : " vuelve a buscar contratos y a valorar.";
+        const sujeto = kind === "obra" ? "Cambiar la obra" : "Cambiar el proveedor";
+        return sujeto + quita + busca + " Las líneas leídas se conservan" + manuales +
+            ". ¿Continuar?";
+    }
+
     function initCombo(combo) {
         const input = combo.querySelector(".combo-input");
         const panel = combo.querySelector(".combo-panel");
@@ -2075,6 +2300,21 @@
         let loadedKey = null;  // clave (obra) para la que se cargo
         let loading = false;
         let activeIdx = -1;
+
+        // F-114: solo el combo de proveedor con su check «Solo de la obra».
+        // Marcado (siempre al cargar, R9; no se recuerda) = el combo de hoy;
+        // desmarcado = búsqueda en el servidor entre todos los de Sigrid.
+        const soloObraCheck = (kind === "proveedor" && combo.dataset.soloObraCheck)
+            ? document.getElementById(combo.dataset.soloObraCheck) : null;
+        const endpointTodos = combo.dataset.endpointTodos || "";
+        const cabecera = soloObraCheck && combo.closest(".campo-combo");
+        const rotulo = cabecera ? cabecera.querySelector(".campo-combo-cabecera span") : null;
+        const ROTULO_OBRA = rotulo ? rotulo.textContent : "";
+        const ROTULO_TODOS = "Elegir proveedor (todos los de Sigrid) — escribe al menos 3 letras del nombre o del CIF";
+        let secuencia = 0;       // R4: solo pinta la respuesta de la última petición
+        let temporizador = null; // R4: debounce de 300 ms
+        let masGlobal = false;   // R5
+        function soloObra() { return !soloObraCheck || soloObraCheck.checked; }
 
         function currentObra() {
             if (!obraInputId) return "";
@@ -2093,12 +2333,22 @@
         function render(list) {
             filtered = list;
             if (loading) { msg("Cargando de Sigrid…"); return; }
+            // F-114 R10: la obra no tiene proveedores ⇒ invitar a desmarcar.
+            if (!list.length && soloObraCheck && soloObra() && !items.length) {
+                msg(mensajeListaObraVacia(null)); return;
+            }
             if (!list.length) { msg("Sin coincidencias"); return; }
             panel.innerHTML = "";
             list.forEach(function (it, i) {
                 const d = document.createElement("div");
                 d.className = "combo-item" + (i === activeIdx ? " active" : "");
                 d.textContent = it.label;
+                // F-114 R6 (D2): sv4 solo guarda el CIF; con varias fichas
+                // vivas, sigrid-api no sabrá cuál es en un alta sin contrato.
+                if (it.fichas > 1) {
+                    d.title = "Este CIF tiene " + it.fichas + " fichas en Sigrid: el alta " +
+                        "sin contrato puede salir «proveedor ambiguo»";
+                }
                 // mousedown (no click) para que dispare antes del blur del input
                 d.addEventListener("mousedown", function (e) {
                     e.preventDefault();
@@ -2106,10 +2356,19 @@
                 });
                 panel.appendChild(d);
             });
+            // F-114 R5: la línea final no es elegible (no está en «filtered»).
+            if (!soloObra() && masGlobal) {
+                const m = document.createElement("div");
+                m.className = "combo-msg";
+                m.textContent = "Hay más proveedores: escribe más para afinar";
+                panel.appendChild(m);
+            }
             panel.hidden = false;
         }
         function applyFilter() {
             activeIdx = -1;
+            // F-114 R3: lo que devuelve la búsqueda global no se vuelve a filtrar.
+            if (!soloObra()) { render(items); return; }
             const q = _norm(input.value);
             if (!q) { render(items); return; }
             render(items.filter(function (it) { return it.norm.indexOf(q) !== -1; }));
@@ -2117,6 +2376,14 @@
         function choose(it) {
             const vEl = document.getElementById(valInputId);
             const nEl = document.getElementById(nombreInputId);
+            // F-115 R14, R15: confirmar antes de tocar nada; al cancelar, el
+            // combo vuelve al valor anterior y no se guarda.
+            const aviso = avisoCambioCabecera(kind, vEl ? vEl.value : "", it.val, DOC_DATA);
+            if (aviso && !window.confirm(aviso)) {
+                input.value = combo.dataset.label || "";
+                close();
+                return;
+            }
             if (vEl) vEl.value = it.val || "";
             if (nEl) nEl.value = it.nombre || "";
             // FIX (jun 2026): al cambiar de OBRA, la dirección que hay en
@@ -2141,6 +2408,7 @@
             if (loading) return;
             if (loadedKey === key && items.length) return;
             loading = true; loadedKey = key;
+            const n = secuencia;
             if (!silent) msg("Cargando de Sigrid…");
             let url = endpoint;
             if (obraInputId) url += "?obra=" + encodeURIComponent(currentObra());
@@ -2148,9 +2416,17 @@
                 const resp = await fetch(url, { headers: { "Accept": "application/json" } });
                 const data = await resp.json();
                 loading = false;
+                // F-114 R8: el check cambió mientras llegaba: no se pinta.
+                if (n !== secuencia) { items = []; loadedKey = null; return; }
                 if (!data || !data.ok) {
                     items = []; loadedKey = null;
-                    if (!silent) msg("⚠ " + ((data && data.error) || "Sigrid no disponible"), "combo-error");
+                    const error = (data && data.error) || "Sigrid no disponible";
+                    // F-114 R10: sin código de obra ⇒ invitar a desmarcar.
+                    if (!silent && soloObraCheck && /Falta el codigo de obra/.test(error)) {
+                        msg(mensajeListaObraVacia(error));
+                    } else if (!silent) {
+                        msg("⚠ " + error, "combo-error");
+                    }
                     return;
                 }
                 items = (data.items || []).map(function (it) {
@@ -2162,12 +2438,71 @@
                 if (!silent) applyFilter();
             } catch (e) {
                 loading = false; items = []; loadedKey = null;
+                if (n !== secuencia) return;
                 if (!silent) msg("⚠ Error de red consultando Sigrid", "combo-error");
             }
         }
 
+        // F-114 R3, R4: búsqueda global con debounce; menos de 3 caracteres
+        // (o la etiqueta del proveedor actual, que es lo que hay al enfocar)
+        // ⇒ aviso sin llamar. Cada llamada invalida las anteriores.
+        function buscarGlobal() {
+            clearTimeout(temporizador);
+            const n = ++secuencia;
+            const texto = input.value === combo.dataset.label
+                ? null : textoBusquedaProveedor(input.value);
+            if (texto === null) {
+                items = []; filtered = []; masGlobal = false;
+                msg("Escribe al menos 3 letras del nombre o del CIF");
+                return;
+            }
+            temporizador = setTimeout(function () { pedirGlobal(texto, n); }, 300);
+        }
+        async function pedirGlobal(texto, n) {
+            if (n !== secuencia) return;
+            msg("Buscando en Sigrid…");
+            let data = null;
+            try {
+                const resp = await fetch(urlProveedoresTodos(endpointTodos, texto),
+                    { headers: { "Accept": "application/json" } });
+                data = await resp.json();
+            } catch (e) {
+                if (n !== secuencia) return;
+                items = []; filtered = []; masGlobal = false;
+                msg("⚠ Error de red consultando Sigrid", "combo-error");   // R11
+                return;
+            }
+            if (n !== secuencia) return;   // R4: respuesta vieja
+            if (!data || !data.ok) {       // R11
+                items = []; filtered = []; masGlobal = false;
+                msg("⚠ " + ((data && data.error) || "Sigrid no disponible"), "combo-error");
+                return;
+            }
+            items = (data.items || []).map(function (it) {
+                const label = etiquetaProveedorGlobal(it);
+                return { val: it.cif || "", nombre: it.nombre || "", label: label,
+                         norm: _norm(label), fichas: it.fichas || 0 };
+            });
+            masGlobal = !!data.mas;
+            activeIdx = -1;
+            render(items);
+        }
+        // F-114 R8: cambiar el check vacía, cierra y deja la etiqueta actual;
+        // no guarda nada ni lo recuerda en el navegador (R9).
+        if (soloObraCheck) {
+            soloObraCheck.addEventListener("change", function () {
+                clearTimeout(temporizador);
+                ++secuencia;
+                items = []; filtered = []; loadedKey = null; masGlobal = false;
+                close();
+                if (rotulo) rotulo.textContent = soloObra() ? ROTULO_OBRA : ROTULO_TODOS;
+                if (combo.dataset.label != null) input.value = combo.dataset.label;
+            });
+        }
+
         input.addEventListener("focus", function () {
             input.select();
+            if (!soloObra()) { buscarGlobal(); return; }
             ensureLoaded();
         });
         input.addEventListener("input", function () {
@@ -2176,6 +2511,7 @@
                 delete combo.dataset.suggested;
                 input.removeAttribute("title");
             }
+            if (!soloObra()) { buscarGlobal(); return; }
             if (items.length || loading) applyFilter();
             else ensureLoaded();
         });
@@ -2196,6 +2532,9 @@
             }
         });
         input.addEventListener("blur", function () {
+            // F-114: al salir de la caja, la búsqueda global pendiente o en
+            // vuelo ya no reabre el panel.
+            if (!soloObra()) { clearTimeout(temporizador); ++secuencia; }
             // retardo para permitir el mousedown de un item
             setTimeout(function () {
                 close();
@@ -2273,6 +2612,138 @@
         return value || null;
     }
 
+    // --------------------------------------------------------------- //
+    // F-108 · la fecha del albarán: se escribe a mano (dd/mm/aaaa y los
+    // demás formatos admitidos) o se elige en el calendario; se guarda
+    // AAAA-MM-DD. Misma regla que domain/services/fecha_albaran.py (R20).
+    // --------------------------------------------------------------- //
+
+    // R3: el aviso de una fecha no admitida (el mismo texto que el servidor).
+    function avisoFechaNoValida(texto) {
+        return "Fecha del albarán no válida: «" + texto + "». Escríbela como dd/mm/aaaa "
+            + "(p. ej. 28/10/2026) o elígela en el calendario.";
+    }
+
+    // R1–R3, R20: "AAAA-MM-DD" si se admite, "" si está vacía y null si no
+    // se admite (formato o día que no existe). Día antes que mes; año de 2
+    // cifras ⇒ 20aa. Sin Date (año 0–99 y zona horaria).
+    function parseFechaEs(texto) {
+        const limpio = String(texto === null || texto === undefined ? "" : texto).trim();
+        if (!limpio) { return ""; }
+        let ano, mes, dia;
+        let r = /^(\d{4})-(\d{2})-(\d{2})$/.exec(limpio);
+        if (r) {
+            ano = Number(r[1]); mes = Number(r[2]); dia = Number(r[3]);
+        } else {
+            r = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2}|\d{4})$/.exec(limpio);
+            if (!r) { return null; }
+            dia = Number(r[1]); mes = Number(r[2]); ano = Number(r[3]);
+            if (r[3].length === 2) { ano += 2000; }
+        }
+        if (ano < 1 || mes < 1 || mes > 12 || dia < 1) { return null; }
+        const bisiesto = (ano % 4 === 0 && ano % 100 !== 0) || ano % 400 === 0;
+        const dias = [31, bisiesto ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1];
+        if (dia > dias) { return null; }
+        return String(ano).padStart(4, "0") + "-" + String(mes).padStart(2, "0") + "-"
+            + String(dia).padStart(2, "0");
+    }
+
+    // R4: "AAAA-MM-DD" ⇒ "dd/mm/aaaa".
+    function fechaParaVer(iso) {
+        const p = String(iso || "").split("-");
+        return p.length === 3 ? p[2] + "/" + p[1] + "/" + p[0] : String(iso || "");
+    }
+
+    // R19: lo que viaja en el PUT: ISO si se admite, null si está vacía y lo
+    // escrito (recortado) si no se admite: el servidor responde el 422 (R7).
+    function fechaParaEnviar() {
+        const campo = document.getElementById("fecha");
+        if (!campo) { return null; }
+        const iso = parseFechaEs(campo.value);
+        if (iso === null) { return (campo.value || "").trim(); }
+        return iso || null;
+    }
+
+    // R17: en rojo, con el aviso debajo; lo escrito no se toca.
+    function marcarFechaNoValida(texto) {
+        const campo = document.getElementById("fecha");
+        const error = document.getElementById("fecha-error");
+        if (campo) {
+            campo.classList.add("campo-no-valido");
+            campo.setAttribute("aria-invalid", "true");
+        }
+        if (error) {
+            error.textContent = avisoFechaNoValida(texto);
+            error.hidden = false;
+        }
+    }
+
+    function limpiarMarcaFecha() {
+        const campo = document.getElementById("fecha");
+        const error = document.getElementById("fecha-error");
+        if (campo) {
+            campo.classList.remove("campo-no-valido");
+            campo.removeAttribute("aria-invalid");
+        }
+        if (error) {
+            error.textContent = "";
+            error.hidden = true;
+        }
+    }
+
+    // R18: la guarda de «Guardar» y «Guardar y aprobar»: con una fecha no
+    // admitida, marca, avisa, deja el foco en el campo y dice que no.
+    function fechaEscritaValida() {
+        const campo = document.getElementById("fecha");
+        if (!campo || campo.readOnly) { return true; }
+        if (parseFechaEs(campo.value) !== null) { return true; }
+        const texto = (campo.value || "").trim();
+        marcarFechaNoValida(texto);
+        window.alert(avisoFechaNoValida(texto));
+        campo.focus();
+        return false;
+    }
+
+    // R14–R17, R21: al salir del campo, dd/mm/aaaa o la marca; al teclear,
+    // se quita la marca; el botón abre el selector nativo en el día escrito
+    // (sin showPicker, o si falla, lo deja visible y con el foco) y elegir un
+    // día lo escribe. Ninguno toca el teclado (sin preventDefault). Sin el
+    // botón o el selector (ficha aprobada) no hace nada.
+    function wireFechaAlbaran() {
+        const campo = document.getElementById("fecha");
+        const cal = document.getElementById("fecha_calendario");
+        const boton = document.querySelector(".js-fecha-calendario");
+        if (!campo || !cal || !boton) { return; }
+        campo.addEventListener("blur", function () {
+            const iso = parseFechaEs(campo.value);
+            if (iso === null) {
+                marcarFechaNoValida((campo.value || "").trim());
+                return;
+            }
+            limpiarMarcaFecha();
+            campo.value = iso ? fechaParaVer(iso) : "";
+        });
+        campo.addEventListener("input", limpiarMarcaFecha);
+        boton.addEventListener("click", function () {
+            cal.value = parseFechaEs(campo.value) || "";
+            try {
+                if (typeof cal.showPicker !== "function") { throw new Error("sin showPicker"); }
+                cal.showPicker();
+            } catch (_) {
+                cal.classList.add("visible");
+                cal.focus();
+            }
+        });
+        cal.addEventListener("change", function () {
+            if (!cal.value) { return; }
+            campo.value = fechaParaVer(cal.value);
+            limpiarMarcaFecha();
+            cal.classList.remove("visible");
+        });
+    }
+
+    wireFechaAlbaran();
+
     function collectSelectedContratoCodigo() {
         const el = document.getElementById("selected_contrato_codigo");
         if (!el) return null;
@@ -2292,7 +2763,8 @@
         return {
             proveedor_nombre: getInput("proveedor_nombre"),
             proveedor_cif: getInput("proveedor_cif"),
-            fecha: getInput("fecha"),
+            // F-108 R19: ISO, null o lo escrito (el servidor dice el 422).
+            fecha: fechaParaEnviar(),
             numero_albaran: getInput("numero_albaran"),
             forma_pago: getInput("forma_pago"),
             obra_codigo: getInput("obra_codigo"),
@@ -2396,6 +2868,9 @@
     // la plantilla si no está valorado).
     async function guardarCabecera(markApproved) {
         if (guardarCabecera.enMarcha) { return; }
+        // F-108 R18: con una fecha no admitida no se envía nada (ni filas ni
+        // cabecera): aviso y foco en el campo.
+        if (!fechaEscritaValida()) { return; }
         guardarCabecera.enMarcha = true;
         const botones = [saveBtn, approveBtn].filter(Boolean);
         const antes = botones.map(function (b) { return b.disabled; });

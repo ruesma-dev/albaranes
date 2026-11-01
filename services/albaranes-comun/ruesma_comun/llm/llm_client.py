@@ -33,12 +33,42 @@ limpia y nativa.
 """
 from __future__ import annotations
 
+import dataclasses
+import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Sequence, Type
 
 from pydantic import BaseModel
 
 from ruesma_comun.llm.llm_attachment import LlmAttachment
+from ruesma_comun.mime import MIME_PDF, detectar_mime
+
+logger = logging.getLogger(__name__)
+
+
+def _con_mime_real(att: LlmAttachment) -> LlmAttachment:
+    """El adjunto con su MIME real (F-113, R7–R9).
+
+    Si el declarado ya es el real, el MISMO objeto. Si no, una copia con el
+    MIME real y ``kind`` coherente (``pdf``/``image``; otro MIME conserva el
+    ``kind``). El WARNING lleva declarado y real, nunca el nombre ni bytes.
+    """
+    real = detectar_mime(att.data, declarado=att.mime_type, nombre=att.filename)
+    if real == att.mime_type:
+        return att
+    if real == MIME_PDF:
+        kind = "pdf"
+    elif real.startswith("image/"):
+        kind = "image"
+    else:
+        kind = att.kind
+    logger.warning(
+        "[llm] mime corregido declarado=%s real=%s kind=%s",
+        att.mime_type,
+        real,
+        kind,
+    )
+    return dataclasses.replace(att, mime_type=real, kind=kind)
 
 
 def normalizar_adjuntos(
@@ -50,10 +80,15 @@ def normalizar_adjuntos(
     ``attachments`` manda si viene informado; si no, ``attachment``;
     si nada, lista vacía (modo texto puro). Utilidad compartida por
     todas las implementaciones del port.
+
+    Cada adjunto sale con su MIME real (F-113): así lo heredan todos los
+    clientes de IA sin tocar sus bloques.
     """
     if attachments:
-        return [a for a in attachments if a is not None]
-    return [attachment] if attachment is not None else []
+        efectivos = [a for a in attachments if a is not None]
+    else:
+        efectivos = [attachment] if attachment is not None else []
+    return [_con_mime_real(a) for a in efectivos]
 
 
 class LlmVisionClient(ABC):

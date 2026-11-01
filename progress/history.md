@@ -5,6 +5,33 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-108 · Fecha y número de albarán editables con calendario (cerrada 2026-11-01)
+
+Solo sv4. La fecha se ve `dd/mm/aaaa`, se guarda `AAAA-MM-DD` y admite varios formatos al escribirla; botón «Calendario»; fecha imposible ⇒ rojo, aviso y no se guarda; no se aprueba sin fecha ni número (R11). Review APPROVED (pasada 1, `progress/review_F-108.md`). M1 en Chrome (líder); desplegado el 2026-11-01, sv4 `r20261101-0929`; M2 en producción en solo lectura (líder); Edge y M3 confirmados por el humano. Petición nueva del humano al cerrar: que fecha y número se guarden solos, sin pulsar Guardar (feature aparte).
+
+## F-113 · El MIME real del adjunto manda sobre el que declara Graph (cerrada 2026-11-01)
+
+Las fotos de WhatsApp llegaban como `application/octet-stream` y OpenAI las rechazaba. `ruesma_comun.mime` (comun 0.9.1) detecta el tipo por el contenido y corrige nombre y MIME en sv1 y sv2. Review APPROVED (pasada 1, `progress/review_F-113.md`; O3 y O4 sin bloqueo). T9 (30-10): 6 documentos atascados, todos del 2026-10-30, se recuperan a mano. Desplegado el 2026-10-31: sv1 `r20261031-0052`, sv2 `r20261031-0054`. T11 (2026-11-01, solo lectura): 0 casos nuevos; siguen solo los 6 del 30-10. Pendiente del humano: recuperar esos 6 y publicar `azure-apps` `cff9063`.
+
+## F-115 · Cambiar el proveedor reinicia contrato y valoración, no las líneas (cerrada 2026-10-31)
+
+Una sola regla en comun 0.11.0: el contrato seleccionado tiene que ser del CIF y de la obra del albarán. Se aplica al guardar en sv4, al empezar el enriquecimiento en sv3 y en la ficha; si no cuadra, se retira, se rebusca y se revalora sin regenerar líneas. Al cambiar la obra se conserva el proveedor y cambia el contrato (D2). sv4 pide confirmación antes de cambiar el proveedor y no deja aprobar con una valoración de otro contrato. T0 (producción, solo lectura): 0 casos. Review APPROVED (pasada 1, `progress/review_F-115.md`; O1–O3 sin bloqueo); T13 en Chrome por el líder; desplegado el 2026-10-31: sv3 `r20261031-2046`, sv4 `r20261031-2049`, logs limpios. Pendiente del humano: publicar `azure-apps` `7c6081b`.
+
+## F-106 · Editar una línea recalcula el importe o el precio (cerrada 2026-10-31)
+
+Rigor `critico`. Cantidad, precio o descuento recalculan el importe; el importe despeja el precio; lo editado a mano se conserva al revalorar, al cambiar de obra y al volver a buscar contrato («✋», «Volver a lo calculado»); una fila que no cuadra sale en rojo, no se aprueba y sv9 no la da de alta (`linea_no_cuadra`). comun 0.10.0. Review APPROVED (pasada 2, `progress/review_F-106.md`); mutación de 325 mutantes con 5 equivalentes aceptados por el humano el 31-10 (`progress/mutacion_F-106.md`); T22 en Chrome con el pipeline local en verde y T23 del humano (`progress/pruebas_F-106_T22.md`: 3 altas antiguas descuadradas, se corrigen a mano en Sigrid). Desplegada el 31-10: sv6 `r20261031-1500`, sv9 `r20261031-1503`, sv4 `r20261031-1506`. Detalle en `progress/impl_F-106.md`.
+
+## F-103 · El alta no hereda la facturación de la plantilla (cerrada 2026-10-28, sin código)
+
+Rigor `critico`, cerrada sin código. La causa (la cabecera del alta se clonaba del último albarán del proveedor y
+arrastraba facturación y fechas) la quitó sigrid-api en el origen con su F-015 (cabecera por lista blanca, desplegada
+el 2026-10-24 18:21:18 UTC, `60db955`). El humano decidió el 24-10 no limpiar las altas ya escritas y el 28-10 («todo
+a») dejar fuera el detector y que sv9 mande campos de cabecera explícitos. Verificación en solo lectura del líder
+(`progress/verif_F-103.md`): 17 altas escritas desde F-015 sin `idefac`, `fecent`, `feclim`, `cocide` ni `dcarec`;
+las cinco con `fecfac` las facturaron usuarios a mano después del alta (`dbo.log`, `ope` 5/30). Review APROBADA en la
+pasada 2 (`progress/review_F-103.md`). La spec v1 (rama `feature/F-103-alta-sin-facturacion-heredada`, `563d264`) no
+se fusiona; su Bloque C lo absorbió F-104.
+
 ## F-069 · Usuario y empleado de Sigrid de quien aprueba (cerrada 2026-10-26)
 
 Rama `feature/F-069-usuario-empleado-sigrid`, rigor `critico`, sv9, sv4 e infra. El alta en Sigrid lleva el `usu` y el

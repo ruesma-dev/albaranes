@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import math
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from urllib.parse import quote
@@ -14,6 +15,7 @@ from pydantic import (
     ValidationError,
     computed_field,
     field_validator,
+    model_validator,
 )
 
 from ruesma_comun.contratos import (
@@ -31,12 +33,22 @@ from ruesma_comun.contratos.origen_datos import (
     MOTIVO_CORREO_FUERA_DE_LISTA,
     normalizar_codigo,
 )
+from ruesma_comun.alta_sigrid import es_linea_a_registrar, linea_a_sigrid
 from ruesma_comun.importes import (
     ImporteAlbaran,
+    clasificar_descuento,
+    cuadra_linea,
     difieren,
     importe_albaran,
     importe_de_linea,
     referencia_pie,
+)
+from ruesma_comun.edicion_manual import (
+    CAMPO_IMPORTE,
+    CAMPOS_QUE_MUEVEN_EL_IMPORTE,
+    MENSAJE_PRECIO_E_IMPORTE,
+    EdicionManual,
+    es_fila_manual,
 )
 from ruesma_comun.sigrid import normalizar_partida
 from ruesma_comun.valoracion import esta_valorado
@@ -47,7 +59,6 @@ from domain.models.alta_sigrid_models import (
     ProductoOpcion,
     etiqueta_estado_alta,
 )
-from domain.services.almacen import ACCION_ALMACEN_ELEGIDO
 
 VIEW_MODE_MERGE = "merge"
 KNOWN_PROVIDER_VIEWS = ("openai", "gemini", "claude")
@@ -391,6 +402,17 @@ class ProveedorOption(BaseModel):
 
     cif: str | None = None
     nombre: str | None = None
+    #: (F-114 R17) Fichas vivas de ``prv`` con ese CIF; solo la búsqueda
+    #: global lo rellena (la lista de la obra lo deja en ``None``).
+    fichas: int | None = None
+
+
+class BusquedaProveedores(BaseModel):
+    """(F-114 R12, R18) Resultado de la búsqueda global de proveedores vivos
+    de Sigrid: como mucho el límite, y ``mas`` si Sigrid tenía más."""
+
+    items: list[ProveedorOption]
+    mas: bool
 
 
 class ObraOption(BaseModel):
@@ -555,6 +577,24 @@ class AlbaranAprobadoError(Exception):
         return AVISO_ALBARAN_APROBADO
 
 
+#: (F-106 R28) Aviso de un PATCH sobre una fila que una revaloración ya
+#: reemplazó.
+AVISO_VALORACION_CAMBIADA = "La valoración ha cambiado: recarga la ficha"
+
+
+class ValoracionCambiadaError(Exception):
+    """(F-106 R28) La fila ya no existe: la valoración se rehízo mientras la
+    ficha estaba abierta (409)."""
+
+    def __init__(self, document_id: str) -> None:
+        self.document_id = document_id
+        super().__init__(AVISO_VALORACION_CAMBIADA)
+
+    @property
+    def aviso(self) -> str:
+        return AVISO_VALORACION_CAMBIADA
+
+
 class LineaBloqueadaError(Exception):
     """(R14) La fila está guardada (bloqueada): no se toca hasta desbloquearla."""
 
@@ -585,7 +625,12 @@ class LineasIncompletasError(Exception):
 
     ``sin_descripcion`` (F-078 R17): posiciones de las filas a registrar SIN
     vincular sin descripción. sv9 no tendría concepto que mandar
-    (``falta_descripcion``): no se aprueba hasta escribirla."""
+    (``falta_descripcion``): no se aprueba hasta escribirla.
+
+    ``no_cuadran`` (F-106 R16): posiciones de las filas a registrar que no
+    cuadran (``Q × P × (1 − d)`` ≠ importe en más de 0,02 €). sv9 las dejaría
+    en ``no_admitido`` (``linea_no_cuadra``): no se aprueba hasta cuadrarlas.
+    Las no comparables no cuentan."""
 
     def __init__(
         self,
@@ -595,12 +640,14 @@ class LineasIncompletasError(Exception):
         unidad_cambiada: list[int] | None = None,
         *,
         sin_descripcion: list[int] | None = None,
+        no_cuadran: list[int] | None = None,
     ) -> None:
         self.document_id = document_id
         self.posiciones = list(posiciones)
         self.huerfanas = huerfanas
         self.unidad_cambiada = list(unidad_cambiada or [])
         self.sin_descripcion = list(sin_descripcion or [])
+        self.no_cuadran = list(no_cuadran or [])
         super().__init__(self.aviso)
 
     @property
@@ -614,6 +661,11 @@ class LineasIncompletasError(Exception):
             partes.append("Líneas sin descripción: " + ", ".join(
                 str(posicion) for posicion in self.sin_descripcion
             ))
+        if self.no_cuadran:
+            partes.append(
+                "Líneas que no cuadran (cantidad × precio × (1 − dto) ≠ importe): "
+                + ", ".join(str(posicion) for posicion in self.no_cuadran)
+            )
         if self.unidad_cambiada:
             partes.append("Líneas con la unidad cambiada: revisa la cantidad: " + ", ".join(
                 str(posicion) for posicion in self.unidad_cambiada
@@ -625,6 +677,62 @@ class LineasIncompletasError(Exception):
                 "que la ficha no enseña: revalora el albarán"
             )
         return ". ".join(partes)
+
+
+class FechaAlbaranNoValidaError(ValueError):
+    """(F-108 R3, R7) La fecha escrita no está en un formato admitido o no
+    existe: no se guarda nada (422 con el aviso como texto). ``texto`` es lo
+    escrito, recortado. El aviso lo arma ``domain.services.fecha_albaran``."""
+
+    def __init__(self, texto: str, aviso: str) -> None:
+        self.texto = texto
+        self._aviso = aviso
+        super().__init__(aviso)
+
+    @property
+    def aviso(self) -> str:
+        return self._aviso
+
+
+class NumeroAlbaranNoValidoError(ValueError):
+    """(F-108 R9) El número de albarán no cabe en la columna: no se guarda
+    nada (422 con el aviso como texto)."""
+
+    def __init__(self, aviso: str) -> None:
+        self._aviso = aviso
+        super().__init__(aviso)
+
+    @property
+    def aviso(self) -> str:
+        return self._aviso
+
+
+#: (F-108 R11) Lo que falta en la cabecera para aprobar, en el orden del aviso.
+FALTA_FECHA = "fecha"
+FECHA_NO_VALIDA = "fecha_no_valida"
+FALTA_NUMERO = "numero_albaran"
+
+_TEXTO_FALTA = {
+    FALTA_FECHA: "falta la fecha del albarán",
+    FECHA_NO_VALIDA: "la fecha del albarán no es válida: ábrelo y corrígela",
+    FALTA_NUMERO: "falta el número de albarán",
+}
+
+
+class CabeceraIncompletaError(Exception):
+    """(F-108 R11, D4 = a) Sin fecha válida o sin número de albarán no se
+    aprueba (ficha y listado): sv9 lo rechazaría igual (``fecha_ilegible``,
+    ``falta_numero_albaran``) y así el aviso llega antes. ``faltan``:
+    :data:`FALTA_FECHA` o :data:`FECHA_NO_VALIDA`, y :data:`FALTA_NUMERO`."""
+
+    def __init__(self, document_id: str, faltan: list[str]) -> None:
+        self.document_id = document_id
+        self.faltan = list(faltan)
+        super().__init__(self.aviso)
+
+    @property
+    def aviso(self) -> str:
+        return "No se puede aprobar: " + "; ".join(_TEXTO_FALTA[f] for f in self.faltan)
 
 
 def cantidades_tras_editar(
@@ -687,6 +795,237 @@ def cambia_origen(
     )
 
 
+#: (F-106 R4, R9) Botones de una fila que no cuadra: qué se recalcula.
+ModoCuadrar = Literal["importe", "precio"]
+
+
+def recalculo_de_fila(
+    *,
+    cambios: dict[str, Any],
+    cuadrar: ModoCuadrar | None,
+    no_cuadra: bool | None,
+) -> ModoCuadrar | None:
+    """(F-106 R5, R6, R9; tabla de design §4) Qué recalcula el PATCH.
+
+    ``cambios`` son SOLO los campos que de verdad cambian. Devuelve:
+
+    - ``"precio"`` si cambió el importe (se despeja P; el dto se queda);
+    - ``"importe"`` si cambió la cantidad, el precio o el descuento;
+    - sin nada de eso, el ``cuadrar`` pedido, pero solo sobre una fila que no
+      cuadra (``no_cuadra is True``): sobre una que cuadra o no comparable no se
+      escribe lo valorado (F-065 R8);
+    - ``None``: no se toca ni el importe ni el precio.
+
+    Lo tecleado manda sobre el botón.
+    """
+    if CAMPO_IMPORTE in cambios:
+        return "precio"
+    if CAMPOS_QUE_MUEVEN_EL_IMPORTE & set(cambios):
+        return "importe"
+    if cuadrar is not None and no_cuadra is True:
+        return cuadrar
+    return None
+
+
+#: (F-106 R15) Decimales con los que se guarda y se pinta un precio.
+DECIMALES_PRECIO = 6
+
+#: (F-106 R15) Diferencia a partir de la cual el precio a Sigrid es otro.
+TOLERANCIA_PRECIO_SIGRID = 1e-6
+
+
+def _finito(valor: object) -> float | None:
+    try:
+        numero = float(valor)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return numero if math.isfinite(numero) else None
+
+
+def _con_miles(entero: str) -> str:
+    signo, cifras = ("-", entero[1:]) if entero.startswith("-") else ("", entero)
+    return signo + f"{int(cifras):,}".replace(",", ".")
+
+
+def precio_input(valor: object) -> str:
+    """(F-106 R15) El precio para el ``value`` de la celda: hasta 6 decimales,
+    sin ceros finales y al menos 2, con punto y sin miles («2.333333»,
+    «120.00»). Vacío si no hay precio."""
+    numero = _finito(valor)
+    if numero is None:
+        return ""
+    entero, _, decimales = f"{numero:.{DECIMALES_PRECIO}f}".partition(".")
+    if entero == "-0" and not decimales.strip("0"):
+        entero = "0"
+    return f"{entero}.{decimales.rstrip('0').ljust(2, '0')}"
+
+
+def precio_es(valor: object) -> str:
+    """(F-106 R15) El precio que se lee: como :func:`precio_input`, en formato
+    español («1.234,50», «2,333333»). «—» si no hay precio."""
+    texto = precio_input(valor)
+    if not texto:
+        return "—"
+    entero, _, decimales = texto.partition(".")
+    return f"{_con_miles(entero)},{decimales}"
+
+
+def _importe_es(valor: float) -> str:
+    entero, _, decimales = f"{round(valor, 2):.2f}".partition(".")
+    return f"{_con_miles(entero)},{decimales}"
+
+
+def _numero_corto(valor: float) -> str:
+    """Una cantidad o un % sin ceros de más: «48», «2,5», «12,5»."""
+    texto = f"{valor:.{DECIMALES_PRECIO}f}".rstrip("0").rstrip(".")
+    return "0" if texto == "-0" else texto.replace(".", ",")
+
+
+def texto_cuadre(*, cantidad: float, precio: float, descuento: object, importe: float) -> str:
+    """(F-106 R14) La cuenta de una fila que no cuadra, para su ``title``:
+    «48 × 11,20 × (1 − 7 %) = 499,97 ≠ 104,16». Sin descuento aplicable, sin el
+    factor. Solo para filas comparables (las de ``cuadra_linea`` no nulo)."""
+    estado, valor_dto = clasificar_descuento(descuento)
+    factor = f" × (1 − {_numero_corto(valor_dto)} %)" if estado == "aplicable" else ""
+    calculado = importe_de_linea(cantidad=cantidad, precio_unitario=precio, descuento_pct=descuento) or 0.0
+    return (
+        f"{_numero_corto(cantidad)} × {precio_es(precio)}{factor} = "
+        f"{_importe_es(calculado)} ≠ {_importe_es(importe)}"
+    )
+
+
+#: (F-106 R29) Texto de la marca de una fila creada por sv4.
+TEXTO_FILA_ENTERA = "✋ añadida a mano"
+
+#: (F-106 R29) Etiqueta de cada campo de la edición, en su orden.
+_ETIQUETAS_EDICION = {
+    "cantidad": "Cantidad", "precio_unitario": "Precio", "importe": "Importe",
+    "descuento": "Descuento", "codigo_partida": "Partida", "unidad": "Unidad",
+    "descripcion": "Descripción", "codigo_externo": "Código externo",
+    "producto_sigrid": "Producto Sigrid",
+}
+
+
+def _valor_edicion(campo: str, valores: dict[str, Any]) -> str:
+    """El valor de ``campo`` en una edición (o en su ``calculado``)."""
+    def _num(v: object, formato) -> str:
+        numero = _finito(v)
+        return "—" if numero is None else formato(numero)
+
+    if campo == "cantidad":
+        q = valores.get("cantidad_convertida")
+        return _num(q if q is not None else valores.get("cantidad_albaran"), _numero_corto)
+    if campo == "precio_unitario":
+        return precio_es(valores.get("precio_unitario_final"))
+    if campo == "importe":
+        return _num(valores.get("importe_calculado"), _importe_es)
+    if campo == "descuento":
+        return _num(valores.get("descuento_albaran_aplicado"), _numero_corto)
+    if campo == "codigo_partida":
+        partida = (valores.get("codigo_partida_final") or "").strip()
+        return partida or "almacén"
+    columna = {"unidad": "unidad_contrato", "descripcion": "descripcion_linea"}.get(campo, campo)
+    return (str(valores.get(columna) or "")).strip() or "—"
+
+
+def texto_edicion(edicion: EdicionManual) -> str:
+    """(F-106 R29) El ``title`` de «✋»: lo editado campo a campo, con lo que
+    calculó sv6 («Cantidad: 48 (calculado 10)»), una línea por campo; «Guardada»
+    o «Desbloqueada» y el origen («Origen: Nueva», «Origen: línea 501»). Una
+    ``fila_entera``: «✋ añadida a mano»."""
+    if edicion.fila_entera:
+        return TEXTO_FILA_ENTERA
+    lineas: list[str] = []
+    for campo, valores in edicion.campos.items():
+        if campo == "bloqueada":
+            lineas.append("Guardada" if (valores or {}).get("bloqueada") else "Desbloqueada")
+        elif campo == "origen":
+            origen = valores or {}
+            lineas.append(
+                "Origen: Nueva" if origen.get("tipo") != "contrato"
+                else f"Origen: línea {origen.get('linea')}"
+            )
+        elif campo in _ETIQUETAS_EDICION and isinstance(valores, dict):
+            lineas.append(
+                f"{_ETIQUETAS_EDICION[campo]}: {_valor_edicion(campo, valores)} "
+                f"(calculado {_valor_edicion(campo, edicion.calculado)})"
+            )
+    return "\n".join(lineas)
+
+
+def aviso_importe_albaran(importe: float | None, importe_del_albaran: float | None) -> str | None:
+    """(F-106 R13) «≠ albarán: 104,16» si el importe de la fila ya no es el del
+    albarán (``importes.difieren``, 0,01 €); ``None`` si es el mismo o falta
+    alguno. Informativo: no bloquea."""
+    if not difieren(importe, importe_del_albaran):
+        return None
+    return f"≠ albarán: {_importe_es(float(importe_del_albaran))}"  # type: ignore[arg-type]
+
+
+@dataclass(frozen=True)
+class ASigrid:
+    """(F-106 R15) Lo que sv9 mandará de la fila: ``texto`` («A Sigrid: 48 ×
+    2,17 €»), si su precio ``difiere`` del P de la ficha y ``factor`` = cantidad a
+    Sigrid / Q de la ficha (para que el JS lo repinte al teclear)."""
+
+    texto: str
+    difiere: bool
+    factor: float | None
+
+
+def a_sigrid_de_fila(
+    *,
+    vinculada: bool,
+    cantidad_albaran: float | None,
+    cantidad_convertida: float | None,
+    precio: float | None,
+    importe: float | None,
+) -> ASigrid | None:
+    """(F-106 R15) La línea que mandará sv9 (``linea_a_sigrid`` de comun, la
+    misma función) de una fila a registrar; ``None`` si no lo es o no hay
+    línea (sin cantidad)."""
+    if not es_linea_a_registrar(importe):
+        return None
+    linea = linea_a_sigrid(
+        vinculada=vinculada, cantidad_albaran=cantidad_albaran,
+        cantidad_convertida=cantidad_convertida, importe=importe,
+    )
+    if linea is None:
+        return None
+    cantidad, precio_sigrid = linea
+    q_ficha = _finito(cantidad_convertida if cantidad_convertida is not None else cantidad_albaran)
+    p_ficha = _finito(precio)
+    return ASigrid(
+        texto=f"A Sigrid: {_numero_corto(cantidad)} × {precio_es(precio_sigrid)} €",
+        difiere=p_ficha is None or abs(precio_sigrid - p_ficha) > TOLERANCIA_PRECIO_SIGRID,
+        factor=cantidad / q_ficha if q_ficha else None,
+    )
+
+
+def cuadre_de_fila(
+    *,
+    cantidad_albaran: float | None,
+    cantidad_convertida: float | None,
+    precio: float | None,
+    descuento: object,
+    importe: float | None,
+) -> tuple[bool | None, str | None]:
+    """(F-106 R14) ``(cuadra, cuenta)`` de una fila de la ficha, con la Q de la
+    ficha (convertida o, sin ella, la del albarán). Solo las filas a registrar se
+    comparan (como al aprobar, R16): las demás, ``(None, None)``. La cuenta, solo
+    si no cuadra."""
+    if not es_linea_a_registrar(importe):
+        return None, None
+    cantidad = cantidad_convertida if cantidad_convertida is not None else cantidad_albaran
+    cuadra = cuadra_linea(cantidad, precio, descuento, importe)
+    if cuadra is not False:
+        return cuadra, None
+    return False, texto_cuadre(
+        cantidad=float(cantidad), precio=float(precio),  # type: ignore[arg-type]
+        descuento=descuento, importe=float(importe),  # type: ignore[arg-type]
+    )
+
+
 #: (F-065 H2) «Origen ✎» llevó la fila a una línea de contrato de OTRA unidad y
 #: sv4 no sabe convertir la cantidad: se deja, sin bloquear, y se avisa.
 MOTIVO_UNIDAD_CAMBIADA = "front_unidad_cambiada_revisa_cantidad"
@@ -733,24 +1072,8 @@ def motivos_con(valor: Any, motivo: str, presente: bool) -> str:
     return json.dumps(motivos, ensure_ascii=False)
 
 
-def es_fila_manual(
-    *,
-    line_kind: str | None,
-    bloqueada: bool,
-    derivada_origen: str | None,
-    precio_unitario_agreement: str | None,
-    partida_action: str | None,
-) -> bool:
-    """(R22) ¿La tocó el administrativo? (definición de requirements): línea
-    ``manual`` o ``reparto``, bloqueada, con derivada ``manual_override``,
-    con precio fijado a mano o con el almacén elegido. Revalorar la descarta."""
-    return (
-        line_kind in ("manual", "reparto")
-        or bool(bloqueada)
-        or derivada_origen == "manual_override"
-        or precio_unitario_agreement == "manual"
-        or partida_action == ACCION_ALMACEN_ELEGIDO
-    )
+# (F-106 R22) ``es_fila_manual`` vive en comun (``ruesma_comun.edicion_manual``,
+# importada arriba): la usan sv4 (aviso de revalorar) y sv6 (las legadas, R27).
 
 
 def orden_filas_ficha(
@@ -1103,11 +1426,34 @@ class ConciliacionEditBody(BaseModel):
     precio_unitario: float | None = None
     descuento: float | None = None
     codigo_externo: str | None = None
+    #: (F-106 R4, R6) El importe tecleado: se guarda y se despeja el precio.
+    importe: float | None = None
+    #: (F-106 R4, R9) Botón de una fila que no cuadra. No es un campo de la fila.
+    cuadrar: ModoCuadrar | None = None
 
-    @field_validator("cantidad", "precio_unitario", "descuento", mode="before")
+    @field_validator("cantidad", "precio_unitario", "descuento", "importe", mode="before")
     @classmethod
     def _numero(cls, valor: object) -> object:
         return _numero_es(valor)
+
+    @field_validator("cuadrar", mode="before")
+    @classmethod
+    def _cuadrar(cls, valor: object) -> object:
+        # Presente a ``null`` (o vacío) no es «sin botón»: es un valor inválido.
+        if valor is None:
+            raise ValueError("cuadrar debe ser 'importe' o 'precio'")
+        return valor
+
+    @model_validator(mode="after")
+    def _importe(self) -> ConciliacionEditBody:
+        """(F-106 R4, R7) Un importe presente no puede quedar vacío; con el
+        precio a la vez, 422 (uno de los dos manda)."""
+        if "importe" in self.model_fields_set:
+            if self.importe is None:
+                raise ValueError("El importe no puede quedar vacío")
+            if "precio_unitario" in self.model_fields_set:
+                raise ValueError(MENSAJE_PRECIO_E_IMPORTE)
+        return self
 
     @field_validator(
         "codigo_partida", "descripcion", "unidad", "codigo_externo", mode="before",
@@ -1121,7 +1467,11 @@ class ConciliacionEditBody(BaseModel):
     def campos(self) -> dict[str, Any]:
         """Los campos que vinieron en el cuerpo, con su valor (``None`` =
         vaciar)."""
-        return {nombre: getattr(self, nombre) for nombre in sorted(self.model_fields_set)}
+        return {
+            nombre: getattr(self, nombre)
+            for nombre in sorted(self.model_fields_set)
+            if nombre != "cuadrar"
+        }
 
 
 # ====================================================================== #
@@ -1181,6 +1531,8 @@ class LineValuationPayload(BaseModel):
     partida_action: str | None = None
     # ---- F-065 R13–R17: el administrativo la guardó (guardar = bloquear) ----
     bloqueada: bool = False
+    # ---- F-106 R19–R30: lo editado a mano (JSON de comun, o None) ----
+    edicion_manual_json: str | None = None
 
     match_confidence_pct: float | None = None
     match_method: str | None = None
@@ -1364,6 +1716,33 @@ class ConciliacionDisplay(BaseModel):
     # propia de sv4) y el revisor puede editarlos en la fila salmon.
     descuento: float | None = None
     codigo_externo: str | None = None
+
+    # (F-106 R13–R15) Lo calcula el repositorio: si la fila cuadra (``None`` =
+    # no comparable o no es a registrar) y su cuenta si no; el importe de su
+    # blanca (solo filas con blanca que no son parte de un reparto) y el aviso
+    # «≠ albarán»; lo que mandará sv9 («A Sigrid: …»), si difiere de P y el
+    # factor cantidad a Sigrid / Q para el JS.
+    cuadra: bool | None = None
+    cuadre_texto: str | None = None
+    importe_albaran: float | None = None
+    aviso_importe: str | None = None
+    a_sigrid: str | None = None
+    a_sigrid_difiere: bool = False
+    factor_alta: float | None = None
+    # ---- F-106 R29–R30: «✋» (``title`` campo a campo) y si la creó sv4 ----
+    edicion_texto: str | None = None
+    fila_entera: bool = False
+
+    @property
+    def unitario_input(self) -> str:
+        """(F-106 R15) El precio aplicado para el ``value`` de la celda."""
+        return precio_input(self.unitario)
+
+    @property
+    def unitario_es(self) -> str:
+        """(F-106 R15) El precio aplicado en solo lectura, con «€»."""
+        texto = precio_es(self.unitario)
+        return texto if self.unitario is None else f"{texto} €"
 
     # (F-051 R10, R11) 'partida' | 'almacen' segun la partida FINAL de la
     # valoracion (vacia = almacen, sin mirar partida_action). En almacen,
@@ -1627,6 +2006,9 @@ class DocumentDetailPayload(BaseModel):
     proveedores_disponibles: list[ProveedorOption] = Field(default_factory=list)
     obras_disponibles: list[ObraOption] = Field(default_factory=list)
     selected_contrato_codigo: str | None = None
+    # (F-115 R9, R11) Solo en la respuesta del PUT de cabecera: el contrato
+    # que ese guardado quitó por no ser del proveedor y la obra guardados.
+    contrato_retirado: str | None = None
     # NUEVO — None mientras no exista valoración en BBDD.
     valuation: ValuationPayload | None = None
     # F-052 R27 — con qué se buscaron los contratos y si sigue valiendo
@@ -1636,8 +2018,8 @@ class DocumentDetailPayload(BaseModel):
     # F-053 — alta en Sigrid (R29-R30) y producto de cada línea (R40). Lo
     # rellena el servicio en la vista merge SOLO con DESDE puesta (R3).
     # F-065 R21: suma de importes de las filas y de lo leído en las blancas
-    # (None si no hay ninguno); R22: filas tocadas a mano (revalorar las
-    # descarta). Los rellena el repositorio en el detalle del merge.
+    # (None si no hay ninguno); R22: filas tocadas a mano (F-106 R30:
+    # revalorar las conserva). Los rellena el repositorio en el detalle del merge.
     suma_filas: float | None = None
     suma_leida: float | None = None
     n_filas_manuales: int = 0

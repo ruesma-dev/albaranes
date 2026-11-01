@@ -160,6 +160,9 @@ albaranes-review-web/
 | `GET`  | `/api/documents/{id}?view=...`                         | —                                 | `DocumentDetailPayload` completo (campos + líneas + display_lines + contratos + valuation).    |
 | `PUT`  | `/api/documents/{id}`                                  | `MergeDocumentUpdatePayload`      | Guardar cambios. Update in-place de líneas + edición de sintéticas + recálculo de importes.    |
 | `POST` | `/api/documents/{id}/re-fetch-contratos`               | `{}`                              | Re-buscar contratos en el ERP y actualizar BBDD. 503 si SIGRID no está configurado.            |
+| `PATCH`| `/api/documents/{id}/lines/{vid}/conciliacion/campos`  | campos cambiados, `importe`, `cuadrar` | (F-065, F-106 R4–R10) Edita UNA fila: Q, P o d ⇒ recalcula I (`calculated`); `importe` ⇒ despeja P (6 decimales); `cuadrar` = botones «Recalcular importe/precio» de una fila que no cuadra. 422 con precio e importe a la vez o sin divisor; 409 aprobado, fila guardada o fila que una revaloración ya reemplazó («La valoración ha cambiado: recarga la ficha», F-106 R28). Registra la edición de la fila (`edicion_manual_json`, F-106 R20). |
+| `POST` | `/api/documents/{id}/lines/{vid}/volver-a-calculado`   | —                                 | (F-106 R30) Restaura lo que calculó sv6 (`calculado` de la edición), borra la edición, desbloquea y recalcula el total, con «Deshacer». 404 sin edición o en una `fila_entera`; 409 aprobado o con alta bloqueante. |
+| `GET`  | `/api/sigrid/proveedores/todos?q=`                     | —                                 | (F-114) Búsqueda global del combo de proveedor con «Solo de la obra» desmarcado: `{ok, items:[{cif, nombre, fichas}], mas}` con los proveedores vivos de Sigrid (`con.tip 5`, `emp 1`, `fecbaj 0`) cuyo nombre o CIF contienen `q`; mínimo 3 caracteres (si no, `ok=false` sin llamar), 50 resultados, sin CIF propios, `NO_TOLERA`. Sin Sigrid o con error, 200 `ok=false` como `/api/sigrid/proveedores`. Solo lectura, fuera del esquema OpenAPI. |
 | `GET`  | `/api/documents/{id}/alta-sigrid/fase`                 | —                                 | (F-077 R18) `{"fase": "en_curso" \| "sin_respuesta" \| "resultado"}` del panel «Alta en Sigrid»; la ficha la sondea cada 3 s mientras está «en curso». Solo lectura (ni escribe el alta ni publica); 404 sin documento; con `ALTA_SIGRID_DESDE_UTC` vacía, `resultado`. Uso interno del JS de sv4 (fuera del esquema OpenAPI). |
 
 ### 4.3 Detalle del payload `MergeDocumentUpdatePayload`
@@ -449,6 +452,13 @@ albaran_contratos_merge:
 CREATE TABLE albaran_contrato_lines_merge (...) IF NOT EXISTS
   + índices
 
+albaran_line_valuations (defensivas: el DDL es de sv6):
+  + bloqueada BOOLEAN NOT NULL DEFAULT FALSE        (F-065)
+  + edicion_manual_json TEXT                        (F-106 R19: lo editado a mano;
+                                                     sv4 la escribe en toda vía que
+                                                     escribe una fila y sv6 la
+                                                     reaplica al revalorar)
+
 CREATE INDEX IF NOT EXISTS:
   ix_albaran_documents_merge_approved
   ix_albaran_documents_merge_conf_calc
@@ -585,6 +595,33 @@ DEFAULT_REVIEWER="Equipo Ruesma"
 
 8. Re-fetch del detalle completo y devuelve SaveResponse con redirect_url.
 ```
+
+### 11.0 Fecha y número de albarán (F-108)
+
+- **Se guarda `AAAA-MM-DD`, se ve `dd/mm/aaaa`.** El PUT pasa `fecha` por
+  `normalizar_fecha_albaran` (`domain/services/fecha_albaran.py`) y
+  `numero_albaran` por `normalizar_numero_albaran` (recortado, sin otro
+  cambio), antes de tocar nada. La plantilla enseña la guardada con el filtro
+  Jinja `fecha_albaran_ver` (si no se entiende, tal cual, para que se vea y se
+  corrija).
+- **Formatos admitidos**: `d/m/aaaa`, `d-m-aaaa`, `d.m.aaaa` (día y mes de 1 o
+  2 cifras; año de 2 cifras ⇒ `20aa`) y `aaaa-mm-dd`; espacios alrededor
+  ignorados; siempre día antes que mes. Vacía ⇒ `NULL`.
+- **Errores (422, `detail` texto, nada cambia)**: «Fecha del albarán no
+  válida: «…». Escríbela como dd/mm/aaaa (p. ej. 28/10/2026) o elígela en el
+  calendario.» y «El número de albarán no puede pasar de 128 caracteres». Un
+  aprobado da antes su 409 de aprobado.
+- **Aprobar** (ficha y listado): sin fecha `AAAA-MM-DD` real o sin número, 409
+  / vuelta a la lista con «No se puede aprobar: falta la fecha del albarán»,
+  «… falta el número de albarán» o «… la fecha del albarán no es válida:
+  ábrelo y corrígela» (lo último, tras las comprobaciones de líneas y
+  contrato).
+- **Ficha** (`app.js`: `parseFechaEs`, `wireFechaAlbaran`, guarda en
+  `guardarCabecera`): botón «Calendario» junto a `#fecha` que abre el
+  `input type=date` oculto (`#fecha_calendario`, con `showPicker`; si no hay,
+  visible y con el foco); al salir del campo, `dd/mm/aaaa` o en rojo con el
+  aviso; con una fecha mala, «Guardar» y «Guardar y aprobar» no envían nada.
+  El listado (`/documents`) y las vistas crudas no cambian.
 
 ### 11.1 Por qué UPDATE in-place y no DELETE+INSERT (decisión muy importante)
 

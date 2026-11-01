@@ -993,7 +993,10 @@ def test_f065_r27v5_guardar_y_aprobar_marca_la_partida_mala(tmp_path):
     # las filas, y con una partida mala no envía nada (ni PATCH ni PUT).
     casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR + [
         "marcarFilaNoGuardada", "limpiarFilasNoGuardadas", "guardarFilasPendientes", "avisoSumaVigente",
-        "guardarCabecera"], _fila_guardar() + """
+        "guardarCabecera",
+        # F-108 R18: la guarda de la fecha (sin #fecha, no para nada).
+        "parseFechaEs", "avisoFechaNoValida", "marcarFechaNoValida", "fechaEscritaValida"],
+        _fila_guardar() + """
         var approveBtn = null;
         var saveBtn = null;
         let guardados = 0;
