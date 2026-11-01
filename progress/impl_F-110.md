@@ -86,3 +86,7 @@ FAILED tests/test_f110_previa.py::test_f110_r11_en_el_servicio_va_a_revisar_sin_
 ```
 (Sin `dto_distinto`, la previa sin `dto` pasaba y el servicio seguía a grabar.) Tras T8, con `test_f053_comparador.py`:
 `52 passed`.
+
+**T9 · regresión sv9** — `python -m pytest -q` en sv9: `1162 passed` sin tocar aserciones de F-053…F-106. Un test de
+F-069 lanza un script en un subproceso sin `PYTHONPATH` (usa la comun 0.11 del árbol principal): `LineaASigrid` se
+importa solo bajo `TYPE_CHECKING` en `validador_alta.py`, así el módulo no exige el nombre al importarse.

@@ -49,9 +49,9 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, timedelta
+from typing import TYPE_CHECKING
 
 from ruesma_comun.alta_sigrid import (
-    LineaASigrid,
     es_linea_a_registrar,
     es_linea_vinculada,
     linea_a_sigrid,
@@ -71,6 +71,9 @@ from domain.models.alta_models import (
     Motivo,
     PeticionAlbaran,
 )
+
+if TYPE_CHECKING:  # solo la anotación: el módulo no exige el nombre al importarse
+    from ruesma_comun.alta_sigrid import LineaASigrid
 
 #: Longitudes máximas (contrato §2.1-§2.2; H6).
 MAX_CODIGO = 24          # obra, CIF, contrato, partida
