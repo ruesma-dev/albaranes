@@ -199,10 +199,14 @@ en `progress/inventario_mutacion_F-039.md` (la pedía `test_f039_r2…`).
 
 | Evidencia | Valor real |
 |---|---|
-| Tests (init.sh, `ARNES_SIN_CACHE=1`) | raíz 419 · sv1 236 · sv2 496 · sv3 1608 · sv4 2447 · sv5 125 · sv6 506 (+1 skip) · sv9 1186 · comun 1406, todos verdes |
+| Tests (init.sh, `ARNES_SIN_CACHE=1`) | raíz 1919 · sv1 236 · sv2 496 · sv3 1608 · sv4 2447 · sv5 125 · sv6 506 (+1 skip) · sv9 1186 · comun 1406: 9925, verdes |
 | Tests nuevos de F-110 | comun 64 · sv9 113 (config, infra, petición, previa, script) · sv4 61 (ficha, JS, panel, avisos) |
 | Cobertura de líneas cambiadas | `PUERTA COBERTURA: 98.3% de 174 líneas cambiadas cubiertas (171/174, umbral 80%, nivel critico)` |
 | Mutación (completa, sin tope) | 108 generados · 90 muertos · 18 supervivientes ⇒ 15 matados después con tests nuevos, 3 equivalentes |
-| Tiempo de la suite | sv4 322,6 s · comun 66,2 s · sv9 52,7 s · raíz 91,5 s (el resto < 37 s) |
+| Tiempo de la suite | raíz 286,7 s · sv4 238,3 s · comun 53,3 s · sv9 43,6 s (el resto < 29 s) |
 | Tiempo de la campaña | 4145,6 s (38,4 s por mutante) |
-| `PUERTA TAMAÑO` | requirements 116/150 · design 189/250 · impl dentro de 220 |
+| `PUERTA TAMAÑO` | requirements 116/150 · design 189/250 · impl 208/220 |
+
+**T23 · `bash harness/init.sh`** (`PYTHONPATH` a la comun del worktree y `ARNES_SIN_CACHE=1`, sobre `d789d5e`):
+`ENTORNO LISTO. Puedes trabajar.` La primera pasada dio KO en la raíz por `test_f039_r2…` (faltaba la fila de F-110 en
+el inventario de mutación); con la fila añadida, verde.
