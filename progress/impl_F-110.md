@@ -113,3 +113,14 @@ test_f051_almacen_front.py:1239: ValueError: substring not found      (dtoDifier
 17 failed in 4.11s
 ```
 Tras T11: `34 passed` (`test_f110_js.py` y `test_f106_js.py`, este sin tocar).
+
+**T12 · sv4 panel** — `.venv/Scripts/python.exe -m pytest tests/test_f110_panel.py -q --tb=line`, extracto:
+
+```
+test_f110_panel.py:98: ValueError: 'Dto %' is not in list
+test_f110_panel.py:103: KeyError: 'dto_distinto'
+FAILED tests/test_f110_panel.py::test_f110_r17_lineas_con_dto_pedido_y_de_sigrid
+12 failed in 1.56s
+```
+Además `test_f077_r27_todo_codigo_de_sv9_tiene_texto` (F-077, lee las fuentes de sv9) ya fallaba tras T8:
+`assert ['dto_distinto'] == []`.
