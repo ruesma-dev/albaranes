@@ -28,11 +28,20 @@ Sin motivos, devuelve la :class:`PeticionAlbaran` del modo extendido de
   almacén (F-051 v4; no existe campo ``almacen``, H5). Sin ``paride`` (H17).
 - ``precio`` = |importe| / |cantidad| a 6 decimales (neto, H14) y la cantidad
   con el signo del importe: ``cantidad · precio`` = importe
-  (``ruesma_comun.alta_sigrid.linea_a_sigrid``, F-106 R2).
+  (``ruesma_comun.alta_sigrid.linea_a_sigrid``, F-106 R2), salvo con ``dto``
+  (F-110, abajo).
 - (F-106 R17) Una línea a registrar que no cuadra (``Q × P × (1 − d)`` ≠
   importe en más de ``TOLERANCIA_CUADRE_EUR``, con ``Q`` = convertida o, si no
   hay, la del albarán) da el motivo ``linea_no_cuadra`` ⇒ ``no_admitido``: lo
   que se ve en la ficha es lo que se da de alta. Sin P, no es comparable.
+- (F-110) Con la guarda ``ALTA_SIGRID_ENVIAR_DTO`` encendida
+  (``ConfigAlta.enviar_dto``), las líneas con descuento aplicable llevan ``dto``
+  (``round(d, 2)``) y el precio BRUTO de ``linea_a_sigrid`` (P si da el importe
+  al céntimo; si no, el despejado). Si esa línea no cuadra a Sigrid
+  (``cuadra_linea(|Q|, precio, dto, |I|)``) o el precio no se despeja, motivo
+  ``linea_no_cuadra`` «a Sigrid: …» (R8), detrás del de F-106 y sin repetirlo.
+  Apagada, la petición es la de F-106. El ``dto`` solo existe en el modo
+  extendido de sigrid-api: el clásico y ``albaran-directo`` lo ignoran.
 """
 from __future__ import annotations
 
@@ -42,6 +51,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from ruesma_comun.alta_sigrid import (
+    LineaASigrid,
     es_linea_a_registrar,
     es_linea_vinculada,
     linea_a_sigrid,
@@ -239,8 +249,9 @@ def _motivos_cabecera(datos: DatosAlta) -> list[Motivo]:
     return motivos
 
 
-def _motivos_lineas(datos: DatosAlta, mapeo: Mapping[str, str]) -> list[Motivo]:
+def _motivos_lineas(datos: DatosAlta, config: ConfigAlta) -> list[Motivo]:
     cab = datos.cabecera
+    mapeo = config.mapeo
     admitidos = productos_admitidos(mapeo)
     lineas = lineas_a_registrar(datos)
     if not lineas:
@@ -266,6 +277,9 @@ def _motivos_lineas(datos: DatosAlta, mapeo: Mapping[str, str]) -> list[Motivo]:
         if len(_texto(linea.codigo_partida_final)) > MAX_CODIGO:
             motivos.append(Motivo("campo_demasiado_largo", "partida", ref))
         no_cuadra = _detalle_no_cuadra(linea)
+        cantidad_valida = cantidad is not None and abs(cantidad) > _EPSILON
+        if no_cuadra is None and config.enviar_dto and cantidad_valida:
+            no_cuadra = _detalle_no_cuadra_a_sigrid(linea, vinculada)
         if no_cuadra is not None:
             motivos.append(Motivo("linea_no_cuadra", no_cuadra, ref))
     return motivos
@@ -299,6 +313,48 @@ def _detalle_no_cuadra(linea: LineaAlta) -> str | None:
     ).replace(".", ",")
 
 
+def _a_sigrid(linea: LineaAlta, vinculada: bool, enviar_dto: bool) -> LineaASigrid | None:
+    """La línea a Sigrid de comun con la guarda de F-110."""
+    return linea_a_sigrid(
+        vinculada=vinculada,
+        cantidad_albaran=linea.cantidad_albaran,
+        cantidad_convertida=linea.cantidad_convertida,
+        importe=linea.importe_calculado,
+        precio=linea.precio_unitario_final,
+        descuento=linea.descuento_albaran_aplicado,
+        con_descuento=enviar_dto,
+    )
+
+
+def _detalle_no_cuadra_a_sigrid(linea: LineaAlta, vinculada: bool) -> str | None:
+    """(F-110 R8) «a Sigrid: 100000 × 0,132712 × (1 − 7 %) = 12342,22 ≠
+    12342,17» si la línea va con ``dto`` y no cuadra a Sigrid, o el motivo si
+    el precio no se puede despejar; ``None`` si va sin ``dto`` o cuadra."""
+    estado, valor = clasificar_descuento(linea.descuento_albaran_aplicado)
+    if estado != "aplicable":
+        return None
+    a_sigrid = _a_sigrid(linea, vinculada, True)
+    if a_sigrid is None:
+        return (
+            "a Sigrid: el precio no se puede despejar con un dto del "
+            f"{_numero_es(round(valor, 2))} %"
+        )
+    if a_sigrid.dto is None:
+        return None
+    cantidad = abs(a_sigrid.cantidad)
+    importe = abs(float(linea.importe_calculado))  # type: ignore[arg-type]
+    if cuadra_linea(cantidad, a_sigrid.precio, a_sigrid.dto, importe) is True:
+        return None
+    calculado = importe_de_linea(
+        cantidad=cantidad, precio_unitario=a_sigrid.precio, descuento_pct=a_sigrid.dto,
+    )
+    return (
+        f"a Sigrid: {_numero_es(cantidad)} × {_numero_es(a_sigrid.precio)} × "
+        f"(1 − {_numero_es(a_sigrid.dto)} %) = "
+        f"{calculado:.2f} ≠ {importe:.2f}".replace(".", ",")
+    )
+
+
 def _motivos_r39(datos: DatosAlta, hoy: date) -> list[Motivo]:
     cab = datos.cabecera
     motivos: list[Motivo] = []
@@ -328,13 +384,10 @@ def _motivos_r39(datos: DatosAlta, hoy: date) -> list[Motivo]:
 def _linea_peticion(linea: LineaAlta, datos: DatosAlta, config: ConfigAlta) -> LineaPeticion:
     cab = datos.cabecera
     vinculada = es_vinculada(linea, cab.contrato_codigo)
-    # (F-106 R2) Los motivos ya garantizan cantidad ≠ 0 e importe ≠ 0.
-    con_signo, precio = linea_a_sigrid(  # type: ignore[misc]
-        vinculada=vinculada,
-        cantidad_albaran=linea.cantidad_albaran,
-        cantidad_convertida=linea.cantidad_convertida,
-        importe=linea.importe_calculado,
-    )
+    # (F-106 R2, F-110 R7) Los motivos ya garantizan cantidad ≠ 0, importe ≠ 0
+    # y, con ``dto``, un precio despejable (R8).
+    a_sigrid = _a_sigrid(linea, vinculada, config.enviar_dto)
+    con_signo, precio, dto = a_sigrid.cantidad, a_sigrid.precio, a_sigrid.dto  # type: ignore[union-attr]
     partida = _texto(linea.codigo_partida_final) or None
     if vinculada:
         return LineaPeticion(
@@ -342,6 +395,7 @@ def _linea_peticion(linea: LineaAlta, datos: DatosAlta, config: ConfigAlta) -> L
             ctrpro_ide=linea.ctrpro_ide,
             cantidad=con_signo,
             precio=precio,
+            dto=dto,
             partida=partida,
         )
     return LineaPeticion(
@@ -353,6 +407,7 @@ def _linea_peticion(linea: LineaAlta, datos: DatosAlta, config: ConfigAlta) -> L
         unidad=_texto(linea.unidad_albaran)[:MAX_UNIDAD] or None,
         cantidad=con_signo,
         precio=precio,
+        dto=dto,
         partida=partida,
     )
 
@@ -363,7 +418,7 @@ def validar_y_construir(
     """Motivos de R10 (o, si no hay, de R39) o la petición de R12, con ``usu``
     (el login ya resuelto, R47) y ``empide`` (el empleado ya resuelto, F-069;
     nulo = el defecto de sigrid-api)."""
-    motivos = _motivos_cabecera(datos) + _motivos_lineas(datos, config.mapeo)
+    motivos = _motivos_cabecera(datos) + _motivos_lineas(datos, config)
     if motivos:
         return motivos
     motivos = _motivos_r39(datos, hoy)

@@ -71,3 +71,5 @@ FAILED tests/test_f110_peticion.py::test_f110_aviso1_el_dto_solo_va_por_el_modo_
 15 failed, 12 passed in 1.15s
 ```
 (Los 12 que pasan en RED son los de R6, la guarda apagada y las claves del modo extendido: fijan lo de hoy.)
+Tras T7: `27 passed`. Un caso del RED se corrigió (no el código): la vinculada con conversión llevaba P en la unidad
+del albarán y F-106 R17 (que compara con la convertida) la paraba; P va en la unidad del contrato (25,0).

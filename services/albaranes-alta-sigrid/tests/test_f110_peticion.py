@@ -147,10 +147,10 @@ def test_f110_r9_r22d_vinculada_feymaco_con_dto():
     }
 
 
-def test_f110_r9_vinculada_con_conversion_despeja_con_la_convertida():
+def test_f110_r9_vinculada_con_conversion_usa_la_convertida():
     linea = _linea(vinculada(
         3, cantidad_albaran=48.0, cantidad_convertida=4.0, importe_calculado=93.0,
-        precio_unitario_final=2.083333, descuento_albaran_aplicado=7.0,
+        precio_unitario_final=25.0, descuento_albaran_aplicado=7.0,
     ))
     assert (linea["cantidad"], linea["precio"], linea["dto"]) == (4.0, 25.0, 7.0)
 
