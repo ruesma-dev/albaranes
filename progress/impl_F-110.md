@@ -102,3 +102,13 @@ FAILED tests/test_f110_ficha.py::test_f110_r15_repositorio_con_la_guarda - Ty...
 24 failed, 2 passed in 3.83s
 ```
 Tras T10: `86 passed` (`test_f110_ficha.py` con los de ficha de F-106).
+
+**T11 · sv4 JS** — `.venv/Scripts/python.exe -m pytest tests/test_f110_js.py -q --tb=short`, extracto:
+
+```
+E   AssertionError: a_cecois
+E   assert (12, 0.6, None) == (12, 0.645, 7)
+E     At index 0 diff: 'A Sigrid: 12 × 0,645 €' != 'A Sigrid: 12 × 0,645 € −7 %'
+test_f051_almacen_front.py:1239: ValueError: substring not found      (dtoDifiere aún no existe en app.js)
+17 failed in 4.11s
+```
