@@ -3,13 +3,11 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **112 features**, 78 abiertas (1 en curso, 8 con la spec lista, 11 bloqueadas y 58 en backlog) y 34 terminadas.
+Resumen: **113 features**, 77 abiertas (0 en curso, 8 con la spec lista, 10 bloqueadas y 59 en backlog) y 36 terminadas.
 
 ## En curso
 
-| # | Feature | Prioridad | Rigor | Rama |
-|---|---|---|---|---|
-| F-108 | Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha | 2 | estandar | `feature/F-108-fecha-numero-editables` |
+_Ninguna feature en curso._
 
 ## Spec lista
 
@@ -28,7 +26,6 @@ Resumen: **112 features**, 78 abiertas (1 en curso, 8 con la spec lista, 11 bloq
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
-| F-113 | Fotos reenviadas con MIME application/octet-stream: IA2 (OpenAI) las rechaza y no llegan a la plataforma | 1 | estandar | `feature/F-113-mime-adjuntos-octet-stream` |
 | F-104 | sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos | 3 | critico | `feature/F-104-codigos-contrato-v83` |
 | F-098 | Selector de partidas como el de partes (preselección por capítulo de primer nivel CD/CI/CP/…) y partida con su código completo (CD.99.01.64) aunque en Sigrid la hoja sea «99.01.64» | 5 | critico | `feature/F-098-partidas-por-capitulo` |
 | F-086 | Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol | 6 | critico | `feature/F-086-opus-ia3` |
@@ -44,6 +41,7 @@ Resumen: **112 features**, 78 abiertas (1 en curso, 8 con la spec lista, 11 bloq
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
+| F-116 | Guardado automático de la ficha al salir de cada campo, sin bloquear la línea | 1 | estandar | `feature/F-116-guardado-automatico-ficha` |
 | F-095 | Alta en Sigrid con el precio BRUTO y el % de descuento en su columna, no con el precio neto | 8 | critico |  |
 | F-105 | Traer a IA3 todos los documentos de contrato (PDF y anexos) de cada contrato, no solo el de gra_rep_ide | 9 | critico |  |
 | F-090 | Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692) | 10 | critico |  |
@@ -123,6 +121,7 @@ Resumen: **112 features**, 78 abiertas (1 en curso, 8 con la spec lista, 11 bloq
 | F-078 | La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia | 1 | critico |
 | F-080 | Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados | 1 | critico |
 | F-106 | Al cambiar la medición de una línea en la ficha, el precio unitario se recalcula y se ve coherente con el importe (cantidad × precio × (1 − dto) = importe) antes de aprobar y de volcar a Sigrid | 1 | critico |
+| F-113 | Fotos reenviadas con MIME application/octet-stream: IA2 (OpenAI) las rechaza y no llegan a la plataforma | 1 | estandar |
 | F-114 | Elegir proveedor: check «Solo de la obra» (por defecto) o todos los proveedores de Sigrid | 1 | estandar |
 | F-115 | Al cambiar el proveedor: se reinicia la búsqueda de contrato y la valoración, sin regenerar las líneas | 1 | estandar |
 | F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
@@ -134,6 +133,7 @@ Resumen: **112 features**, 78 abiertas (1 en curso, 8 con la spec lista, 11 bloq
 | F-051 | Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas» | 2 | critico |
 | F-069 | Lista de equivalencias usuario de la app ↔ usuario Y EMPLEADO de Sigrid para el alta (sv9): usu y empide de quien aprueba | 2 | critico |
 | F-084 | El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None») | 2 | critico |
+| F-108 | Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha | 2 | estandar |
 | F-012 | Campaña de mutación en paralelo | 3 | estandar |
 | F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | estandar |
 | F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
@@ -144,17 +144,11 @@ Resumen: **112 features**, 78 abiertas (1 en curso, 8 con la spec lista, 11 bloq
 
 ## Detalle
 
-### F-113 · Fotos reenviadas con MIME application/octet-stream: IA2 (OpenAI) las rechaza y no llegan a la plataforma
+### F-116 · Guardado automático de la ficha al salir de cada campo, sin bloquear la línea
 
-estado **bloqueada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-113-mime-adjuntos-octet-stream`
+estado **pendiente** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-116-guardado-automatico-ficha`
 
-ORIGEN: el humano, 2026-10-30. Llega un correo de la obra 0728 a las 11:01 con 5 albaranes de FEYMACO en foto (adjuntos «WhatsApp Image 2026-10-30 at 09.39.xx.jpeg»). Sale como procesado en el buzón, pero no aparece en la plataforma. DIAGNÓSTICO del líder (solo lectura: workflow_runs y logs de ca-sv2-extraccion): Graph entrega los adjuntos con contentType `application/octet-stream`. sv1 guarda ese MIME tal cual (y el blob con extensión .pdf). IA1 (Gemini) los lee, pero IA2 (OpenAI Responses) devuelve 400 «Expected a base64-encoded data URL with an image MIME type … got unsupported MIME type 'application/octet-stream'». El error es NO retryable, así que los 5 mensajes de q-extraccion agotan los 5 intentos y acaban en poison. PROPUESTA del líder, aceptada por el humano para spec: (1) sv1 detecta el MIME real por la firma de bytes (JPEG, PNG, WebP, PDF; y por la extensión si hace falta) cuando Graph dice octet-stream o un tipo genérico; (2) defensa en profundidad en comun: el cliente de OpenAI (y el de Gemini si aplica) normaliza el MIME de la imagen con la misma función compartida antes de construir el data URL; (3) tests con una imagen declarada octet-stream. A RESOLVER EN LA SPEC: dónde vive la función de detección (comun); qué hacer con un adjunto que no es ni imagen ni PDF; nombre y extensión del blob de entrada; cómo se recuperan los 5 documentos atascados (reenviar el correo frente a reencolar los mensajes de poison, que es una escritura en producción y la autoriza el humano); medir en producción (solo lectura) cuántos documentos han caído por esto. Despliegue: comun → sv1 → sv2, lo lanza el humano. URGENTE: va antes que el resto de la cola.
-
-### F-108 · Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha
-
-estado **en curso** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-108-fecha-numero-editables`
-
-ORIGEN: el humano, 2026-10-28: «los campos de fecha, numero de albaran tiene que poder editarse con normalidad (fecha con un desplegable de calendario como adicional)». HOY (leído por el líder): en `document_detail.html` los dos son `input type=text` editables salvo con el documento no editable (aprobado / dado de alta); no se ve en el código nada que bloquee el teclado. A RESOLVER EN LA SPEC: el síntoma exacto (preguntado al humano: no deja escribir / se pierde al guardar / formato de la fecha) reproduciéndolo en solo lectura; cómo se guardan y validan (`fecha` en el PUT de la ficha, formato ISO frente a dd/mm/aaaa) y su efecto en sv9 (`fecha_albaran` AAAAMMDD, `fecha_no_plausible`); calendario adicional sin perder la escritura a mano (botón junto al campo de texto que abre el selector de fecha del navegador).
+ORIGEN: el humano, 2026-11-01, al cerrar F-108: «al escribir la fecha sea de la forma que sea, deberia guardarse solo sin darle a guardar, igual con numero de albaran»; después lo amplía: «en general, quiero que todos los campos se guarden automaticamente», y precisa: «no quites guardar. ese boton ademas bloquea la linea. lo que quiero simplemente es que al salir de cada celda guarde lo escrito, pero no que bloquee. son 2 comportamientos independientes. los botones de guardar y guardar todos siguen igual». ALCANCE (solo sv4): (1) cabecera editable (fecha, número de albarán, forma de pago, notas de revisión y cualquier otro campo de texto de la cabecera que hoy solo se guarde con «Guardar»): al salir del campo, si el valor es válido y ha cambiado, se guarda solo, sin recargar la página, con una marca discreta de guardado; endpoint propio si hace falta (no tiene por qué ser el mismo que el de las líneas). Fecha no válida: no se guarda, rojo y aviso (F-108). (2) líneas: al salir de CADA celda editada se guarda lo escrito (con el recálculo de F-106), SIN bloquear la línea: el bloqueo es otro comportamiento, independiente, que sigue haciéndose solo con los botones. Partida fuera de la lista: no se guarda, rojo (como hoy). (3) Sin cambios: botones «Guardar» de cada fila, «Guardar todas» y «Guardar» general siguen igual (y siguen bloqueando lo que bloquean hoy); proveedor, obra y contrato ya se guardan solos. «Guardar y aprobar» espera a los guardados en curso. A RESOLVER EN LA SPEC: qué es exactamente «bloquear» hoy (`?bloquear=1` de `conciliacion/campos`, marca «✋» y `edicion_manual_json` de F-106) y si un guardado sin bloqueo conserva o no la edición al revalorar; qué campos de cabecera existen y cuáles ya se guardan solos; carreras entre guardado automático, botones y aprobar; «Deshacer» con el guardado automático. FUERA: dos pestañas editando el mismo albarán; el listado.
 
 ### F-110 · El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS)
 
@@ -1087,6 +1081,12 @@ estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `featu
 
 ORIGEN: correo de Óscar Domingo (obra 0692), reenviado por el humano el 2026-10-26: «Este albarán de Cecois ha volcado mal el precio, está ok en la IA y mal en el Sigrid; no, lo que ha hecho es que cuando he cambiado la medición al volcarlo lo ha cuadrado para que se cuadre con el importe del albarán». El humano: «esa ficha ponla con prioridad altísima». VERIFICADO (solo lectura, 2026-10-26) en AC26/30435 (CECOIS A 26017815, con_ide 2859417): la IA leyó 11,20 −7 % e importe 104,16 (≈ 10 unidades); el revisor cambió la cantidad a 48; la ficha siguió mostrando precio 11,20 y dto 7 % con 48 unidades e importe 104,16 (incoherente: 48 × 11,20 × 0,93 = 499,97); sv9 manda precio = |importe| / |cantidad| (`services/albaranes-alta-sigrid/domain/services/validador_alta.py:294`) = 2,17, y Sigrid grabó 48 × 2,17 = 104,16. El importe en Sigrid es correcto; el precio es el neto por la nueva unidad, pero el revisor no lo vio antes de aprobar y en la ficha queda otro. A DECIDIR EN LA SPEC: al cambiar la cantidad, qué se conserva (el importe del albarán, recalculando el precio y manteniendo el dto; o el precio, recalculando el importe), si se pregunta al revisor o se avisa; qué precio se muestra y cuál se persiste (sv4 escribe el merge; ¿revalorar con sv6?); el mismo caso al cambiar el precio o el dto; tolerancia de redondeo; que lo que ve el revisor sea exactamente lo que sv9 mandará (precio, y con F-095 bruto + dto). RELACIONADAS: F-095 (bruto + % de descuento a Sigrid), F-019 (el importe del albarán manda), F-065 (líneas editadas en la ficha), F-053 (alta).
 
+### F-113 · Fotos reenviadas con MIME application/octet-stream: IA2 (OpenAI) las rechaza y no llegan a la plataforma
+
+estado **terminada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-113-mime-adjuntos-octet-stream`
+
+ORIGEN: el humano, 2026-10-30. Llega un correo de la obra 0728 a las 11:01 con 5 albaranes de FEYMACO en foto (adjuntos «WhatsApp Image 2026-10-30 at 09.39.xx.jpeg»). Sale como procesado en el buzón, pero no aparece en la plataforma. DIAGNÓSTICO del líder (solo lectura: workflow_runs y logs de ca-sv2-extraccion): Graph entrega los adjuntos con contentType `application/octet-stream`. sv1 guarda ese MIME tal cual (y el blob con extensión .pdf). IA1 (Gemini) los lee, pero IA2 (OpenAI Responses) devuelve 400 «Expected a base64-encoded data URL with an image MIME type … got unsupported MIME type 'application/octet-stream'». El error es NO retryable, así que los 5 mensajes de q-extraccion agotan los 5 intentos y acaban en poison. PROPUESTA del líder, aceptada por el humano para spec: (1) sv1 detecta el MIME real por la firma de bytes (JPEG, PNG, WebP, PDF; y por la extensión si hace falta) cuando Graph dice octet-stream o un tipo genérico; (2) defensa en profundidad en comun: el cliente de OpenAI (y el de Gemini si aplica) normaliza el MIME de la imagen con la misma función compartida antes de construir el data URL; (3) tests con una imagen declarada octet-stream. A RESOLVER EN LA SPEC: dónde vive la función de detección (comun); qué hacer con un adjunto que no es ni imagen ni PDF; nombre y extensión del blob de entrada; cómo se recuperan los 5 documentos atascados (reenviar el correo frente a reencolar los mensajes de poison, que es una escritura en producción y la autoriza el humano); medir en producción (solo lectura) cuántos documentos han caído por esto. Despliegue: comun → sv1 → sv2, lo lanza el humano. URGENTE: va antes que el resto de la cola.
+
 ### F-114 · Elegir proveedor: check «Solo de la obra» (por defecto) o todos los proveedores de Sigrid
 
 estado **terminada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-114-proveedor-todos-sigrid`
@@ -1229,6 +1229,12 @@ OBJETIVO: diagnosticar por qué (fixtures de inputs/contrato, adaptador evals/pr
 NECESARIO PARA: elegir el modelo de IA3/IA4 (F-083, F-085: Opus 5.5 en IA3, GPT-6.1 Sol en IA4). RELACIONADAS: F-047 (ciclo completo), F-083.
 
 SPEC (2026-10-20, specs/F-084-banco-valoracion/, PARADA 1 resuelta, design §11): DIAGNÓSTICO sin llamadas de pago: 52 de los 59 fixtures de INPUTS no tienen líneas de contrato (F-045 las dejó fuera a propósito); el determinista da 390 «obtenido None» de 401 fallos de IA3; el LLM recibe lineas_contrato vacías. El adaptador de sv5 no pasaba descuento ni precio neto (FER-001 32,35 en vez de 19,41), ni clasificación (los RES con valuation_es), ni categoría de unidad ni fecha. sv5 y sv6 NO tienen el fallo y no se tocan. ARREGLO: evals/contratos.py con dos subcomandos lanzados por el humano, solo lectura: `lineas` (sigrid-api → libro INPUTS, copia de seguridad, sin tocar los 7 RES) y `documentos` (cabecera y documento del contrato que sv3 ya guardó, con la SQL y el descargador de sv5: MD si hay, si no PDF, cacheado en evals/inputs/contratos/ sin versionar, índice versionado sin contenido); contexto de valoración fiel (descuento, importe derivado, clasificación desde la tipología, UnitCategoryPrefilter, fecha, documento en la misma llamada de IA3); runner: OMITIDO sin líneas de contrato (R18), OMITIDO sin el documento local solo con LLM y en el comparador (R33), sin sv2 si no se piden IA1/IA2, proveedor y modelo por defecto de producción (referencia IA3 de evals/precios_modelos.json, hoy openai gpt-6.1-sol) y modelo en el informe; SIN estímulo por precio ni emparejamiento en el banco: el determinista declara que no mide el emparejamiento. LÍNEA BASE: MANUAL (T14) con el modelo de producción, gpt-6.1-sol (pendiente de confirmación del humano), válida con 0 ERROR y «obtenido None» ≤ 20 % de los fallos de IA3. servicios = evals.
+
+### F-108 · Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha
+
+estado **terminada** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-108-fecha-numero-editables`
+
+ORIGEN: el humano, 2026-10-28: «los campos de fecha, numero de albaran tiene que poder editarse con normalidad (fecha con un desplegable de calendario como adicional)». HOY (leído por el líder): en `document_detail.html` los dos son `input type=text` editables salvo con el documento no editable (aprobado / dado de alta); no se ve en el código nada que bloquee el teclado. A RESOLVER EN LA SPEC: el síntoma exacto (preguntado al humano: no deja escribir / se pierde al guardar / formato de la fecha) reproduciéndolo en solo lectura; cómo se guardan y validan (`fecha` en el PUT de la ficha, formato ISO frente a dd/mm/aaaa) y su efecto en sv9 (`fecha_albaran` AAAAMMDD, `fecha_no_plausible`); calendario adicional sin perder la escritura a mano (botón junto al campo de texto que abre el selector de fecha del navegador).
 
 ### F-012 · Campaña de mutación en paralelo
 
