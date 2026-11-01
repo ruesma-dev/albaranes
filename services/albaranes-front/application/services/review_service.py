@@ -279,6 +279,41 @@ class ReviewService:
             ),
         )
 
+    #: (F-116 R6) Etiquetas del deshacer, en el orden de la ficha.
+    ETIQUETAS_CABECERA = {
+        "fecha": "Fecha", "numero_albaran": "Número",
+        "forma_pago": "Forma de pago", "review_notes": "Notas",
+    }
+
+    def editar_cabecera(
+        self, *, document_id: str, campos: dict[str, str | None],
+    ) -> dict[str, str | None]:
+        """(F-116 R1, R6) Autoguardado de la cabecera: guarda solo ``campos``
+        (ver ``update_cabecera_campos``) y deja una entrada de deshacer
+        «Editar cabecera · {campos}» que devuelve la cabecera a como estaba.
+        Sin campos no escribe ni registra nada."""
+        if not campos:
+            return {}
+        snap = self._repository.snapshot_row(
+            table="albaran_documents_merge", row_id=document_id,
+        )
+        guardado = self._repository.update_cabecera_campos(
+            document_id=document_id, campos=campos,
+        )
+        nombres = ", ".join(
+            etiqueta for campo, etiqueta in self.ETIQUETAS_CABECERA.items() if campo in campos
+        )
+        self._repository.record_undo(
+            document_id=document_id,
+            action="cabecera",
+            description=(
+                f"Editar cabecera · {nombres} "
+                f"({self._repository.doc_label(document_id=document_id)})"
+            ),
+            restore=[snap],
+        )
+        return guardado
+
     def save_document_y_buscar_si_cambia(
         self,
         *,

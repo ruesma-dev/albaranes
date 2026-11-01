@@ -338,8 +338,21 @@ def _portal(monkeypatch, motor):
 URL = f"/api/documents/{DOC}/cabecera"
 
 
-def test_f116_r1_ruta_responde_lo_guardado(monkeypatch):
-    motor = construir()
+@pytest.fixture
+def construir_compartido(monkeypatch):
+    """``construir`` con UNA conexión para todos los hilos: el ``TestClient``
+    ejecuta la ruta en otro hilo y un SQLite en memoria es por conexión."""
+    import f065_bbdd
+    from sqlalchemy import create_engine
+    from sqlalchemy.pool import StaticPool
+
+    monkeypatch.setattr(f065_bbdd, "create_engine", lambda url: create_engine(
+        url, poolclass=StaticPool, connect_args={"check_same_thread": False}))
+    return construir
+
+
+def test_f116_r1_ruta_responde_lo_guardado(monkeypatch, construir_compartido):
+    motor = construir_compartido()
 
     r = _portal(monkeypatch, motor).patch(URL, json={"fecha": "28-10-26"})
 
@@ -349,8 +362,8 @@ def test_f116_r1_ruta_responde_lo_guardado(monkeypatch):
     assert [e["action"] for e in _undo(motor)] == ["cabecera"]
 
 
-def test_f116_r1_ruta_null_vacia(monkeypatch):
-    motor = construir()
+def test_f116_r1_ruta_null_vacia(monkeypatch, construir_compartido):
+    motor = construir_compartido()
 
     r = _portal(monkeypatch, motor).patch(URL, json={"numero_albaran": None})
 
@@ -363,8 +376,9 @@ def test_f116_r1_ruta_null_vacia(monkeypatch):
     ({"fecha": "31/02/2026"}, _aviso_fecha("31/02/2026")),
     ({"numero_albaran": "x" * 129}, AVISO_NUMERO),
 ], ids=["fecha", "numero"])
-def test_f116_r3_ruta_422_con_texto_sin_cambiar_nada(monkeypatch, cuerpo, aviso):
-    motor = construir()
+def test_f116_r3_ruta_422_con_texto_sin_cambiar_nada(monkeypatch, construir_compartido,
+                                                     cuerpo, aviso):
+    motor = construir_compartido()
     antes = foto(motor)
 
     r = _portal(monkeypatch, motor).patch(URL, json=cuerpo)
@@ -374,8 +388,8 @@ def test_f116_r3_ruta_422_con_texto_sin_cambiar_nada(monkeypatch, cuerpo, aviso)
     assert foto(motor) == antes
 
 
-def test_f116_r4_ruta_aprobado_409(monkeypatch):
-    motor = construir(aprobado=True)
+def test_f116_r4_ruta_aprobado_409(monkeypatch, construir_compartido):
+    motor = construir_compartido(aprobado=True)
     antes = foto(motor)
 
     r = _portal(monkeypatch, motor).patch(URL, json={"review_notes": "x"})
@@ -385,8 +399,8 @@ def test_f116_r4_ruta_aprobado_409(monkeypatch):
     assert foto(motor) == antes
 
 
-def test_f116_r4_ruta_alta_bloqueante_409(monkeypatch):
-    motor = construir(con_altas=True)
+def test_f116_r4_ruta_alta_bloqueante_409(monkeypatch, construir_compartido):
+    motor = construir_compartido(con_altas=True)
     poner_alta(motor, "registrado", document_id=DOC)
     antes = foto(motor)
 
@@ -396,8 +410,8 @@ def test_f116_r4_ruta_alta_bloqueante_409(monkeypatch):
     assert foto(motor) == antes
 
 
-def test_f116_r4_ruta_no_existe_404(monkeypatch):
-    motor = construir()
+def test_f116_r4_ruta_no_existe_404(monkeypatch, construir_compartido):
+    motor = construir_compartido()
 
     r = _portal(monkeypatch, motor).patch("/api/documents/no-existe/cabecera",
                                           json={"review_notes": "x"})
@@ -405,8 +419,8 @@ def test_f116_r4_ruta_no_existe_404(monkeypatch):
     assert r.status_code == 404, r.text
 
 
-def test_f116_r5_ruta_campo_extra_422_sin_cambiar_nada(monkeypatch):
-    motor = construir()
+def test_f116_r5_ruta_campo_extra_422_sin_cambiar_nada(monkeypatch, construir_compartido):
+    motor = construir_compartido()
     antes = foto(motor)
 
     r = _portal(monkeypatch, motor).patch(URL, json={"review_notes": "x",
@@ -416,8 +430,8 @@ def test_f116_r5_ruta_campo_extra_422_sin_cambiar_nada(monkeypatch):
     assert foto(motor) == antes
 
 
-def test_f116_r5_ruta_cuerpo_vacio_200_sin_escribir(monkeypatch):
-    motor = construir()
+def test_f116_r5_ruta_cuerpo_vacio_200_sin_escribir(monkeypatch, construir_compartido):
+    motor = construir_compartido()
     antes = foto(motor)
 
     r = _portal(monkeypatch, motor).patch(URL, json={})
