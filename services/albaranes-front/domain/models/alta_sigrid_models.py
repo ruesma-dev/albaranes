@@ -141,6 +141,10 @@ TEXTOS_MOTIVO_ALTA: dict[str, str] = {
     # el panel los pinta en «Avisos de Sigrid» con su mensaje (F-104 R8).
     "retencion_del_contrato": "Sigrid aplicó la retención del contrato",
     "cabecera_sin_dato": "Sigrid dejó vacío algún dato de pago de la cabecera",
+    # Avisos de línea del contrato v8.4 (F-018 de sigrid-api; F-110 T19): una
+    # vinculada con dto se escribe como se pide; informativos, no bloquean.
+    "precio_distinto_del_contrato": "Sigrid avisa: el precio no es el del contrato",
+    "dto_distinto_del_contrato": "Sigrid avisa: el descuento no es el del contrato",
     # Tipo de fallo sin código ni HTTP (TipoFallo, alta_models.py).
     "rechazo": "Sigrid rechazó el alta",
     "autorizacion": "sigrid-api no autorizó la petición",

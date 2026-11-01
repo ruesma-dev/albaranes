@@ -138,3 +138,15 @@ FAILED tests/test_f110_script.py::test_f110_r19_csv_con_las_columnas_nuevas_al_f
 15 failed, 2 passed in 0.91s
 ```
 Tras T14: `46 passed` (`test_f110_script.py` y `test_f106_script.py`, este sin tocar; solo `SELECT`).
+
+**T19 · avisos v8.4** (hecha contra el contrato publicado, por indicación del líder del 2026-11-01: F-018 desplegada) —
+`.venv/Scripts/python.exe -m pytest tests/test_f110_avisos_v84.py -q --tb=line`:
+
+```
+test_f110_avisos_v84.py:39: AssertionError: assert [{'codigo': '..._linea': '9'}] == [{'codigo': '..._linea': '9'}]
+FAILED tests/test_f110_avisos_v84.py::test_f110_r13_texto_de_los_avisos_v84[dto_distinto_del_contrato-...]
+FAILED tests/test_f110_avisos_v84.py::test_f110_r13_texto_de_los_avisos_v84[precio_distinto_del_contrato-...]
+3 failed, 1 passed in 0.78s
+```
+Tras T19: `54 passed` (con F-104 y F-077). Sin códigos nuevos de error: un `dto` mal formado es 400 sin código ⇒
+`error` (H25), así que `CODIGOS_LINEA` no cambia.
