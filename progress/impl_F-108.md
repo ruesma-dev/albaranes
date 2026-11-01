@@ -201,3 +201,11 @@ sv4 del worktree en local (BBDD local, Azurite), Chrome, albarán local pendient
 - «Guardar» ⇒ la ficha recarga con `20/10/2026`; en BBDD local `fecha = '2026-10-20'`.
 - Aprobado: fecha y número `readonly`, sin botón de calendario.
 - **Edge no probado** (la extensión solo maneja Chrome): queda para el humano junto con M2.
+
+## M-D y M2 · producción (2026-11-01)
+
+- M-D (humano): sv4 `r20261101-0929`, `check_deploy` en orden, arranque limpio en los logs.
+- M2 (líder, solo lectura, sin Guardar, Aprobar ni Valorar): `ec291d76…` enseña `09/10/2026` (guardada `2026-10-09`);
+  ya está **aprobada**, así que sale en solo lectura y sin calendario, como manda R22. La parte editable se comprobó en un
+  pendiente de la bandeja (`c7ca52cc…`): campo editable, botón «Calendario» que abre el selector y 0 peticiones `/api/` al
+  cerrarlo; pestaña cerrada sin guardar.
