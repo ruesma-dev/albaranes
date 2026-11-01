@@ -125,3 +125,6 @@ FAILED tests/test_f110_panel.py::test_f110_r17_lineas_con_dto_pedido_y_de_sigrid
 Además `test_f077_r27_todo_codigo_de_sv9_tiene_texto` (F-077, lee las fuentes de sv9) ya fallaba tras T8:
 `assert ['dto_distinto'] == []`.
 Tras T12: `122 passed` (`test_f110_panel.py`, `test_f077_motivos_alta.py`, `test_f104_textos_avisos.py`, `test_f053_t21_panel.py`).
+
+**T13 · regresión sv4** — `.venv/Scripts/python.exe -m pytest -q` en sv4: `2441 passed in 226.63s`, sin tocar
+aserciones de tests anteriores.
