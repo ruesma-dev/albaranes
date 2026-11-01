@@ -212,6 +212,8 @@ se esperaría a sí misma). Un fallo de una tarea no rompe la cadena (`then(t, t
 - **D8 · Aviso de un fallo.** (a, recomendada) Sin `alert`: marca en el campo o la fila y `#autoguardado-estado`;
   los botones reintentan y avisan como hoy. (b) `alert` en cada fallo (interrumpe al tabular).
 
+**PARADA 1 cerrada por el humano el 2026-11-01 («ok»): D1–D8 = (a).**
+
 ## 9. Riesgos
 - Envolver `window.fetch` afecta a todo `app.js` en la ficha: si una vía escribiera con un método en minúsculas
   o sin `method`, se compara en mayúsculas y sin `method` es GET. El listado no carga el bloque de la ficha.
