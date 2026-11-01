@@ -137,3 +137,4 @@ FAILED tests/test_f110_script.py::test_f110_r19_sin_dto_como_f106 - Attribute...
 FAILED tests/test_f110_script.py::test_f110_r19_csv_con_las_columnas_nuevas_al_final
 15 failed, 2 passed in 0.91s
 ```
+Tras T14: `46 passed` (`test_f110_script.py` y `test_f106_script.py`, este sin tocar; solo `SELECT`).
