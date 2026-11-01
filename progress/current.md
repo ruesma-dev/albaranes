@@ -1,6 +1,12 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-116 · spec v1 escrita (spec-author, 2026-11-01), espera PARADA 1.** Guardado automático de la ficha al salir de cada campo, sin bloquear. Spec en `specs/F-116-guardado-automatico-ficha/` (rama `feature/F-116-guardado-automatico-ficha`, worktree `../albaranes-F-116`). Solo sv4 (sv6, como mucho un test). Sin DDL.
+
+- **Respuestas leídas en código (design §1):** «bloquear» = `bloqueada = TRUE` + quitar el aviso «revisa la cantidad» + `bloqueada` en la edición; el PATCH de fila sin `?bloquear=1` ya existe, escribe `edicion_manual_json` y su deshacer, y sv6 reaplica toda fila con edición, bloqueada o no ⇒ **un autoguardado sí sobrevive a revalorar** y enseña «✋» al recargar. Campos de cabecera escritos a mano: fecha, número, forma de pago y notas (proveedor/CIF/obra son `readonly` y sus combos ya guardan solos).
+- **Decisiones para el humano (design §8), todas con (a) recomendada:** D1 endpoint propio `PATCH /api/documents/{id}/cabecera` (el PUT entero pisaría lo que sv3 escribe después, p. ej. el contrato auto-seleccionado); D2 «Guardar todas»/«Guardar»/«Guardar y aprobar» bloquean también las filas autoguardadas en esta carga (si no, casi nunca bloquearían nada); D3 una cola única en serie para toda escritura de la ficha (envolviendo `fetch`); D4 sin repintar ✋/total hasta recargar; D5 partida no válida ⇒ nada de esa fila; D6 aviso al salir solo con guardados en vuelo; D7 una entrada de «Deshacer» por autoguardado; D8 fallos sin `alert`, con marca.
+- **Tests viejos que cambian (R30):** `test_f077_r12_una_sola_peticion_patch_de_fila` y `test_f106_r12_las_tres_vias...` (3 ⇒ 4).
+
 **F-108 · CERRADA (`done`, 2026-11-01).** Resumen en `history.md`.
 
 - **Implementer (2026-10-31), hecho:** T1–T10 (un commit por tarea). Informe `progress/impl_F-108.md`, mutación `progress/mutacion_F-108.md`. Pendientes MANUAL: M1 (líder, Chrome/Edge con sv4 local), M-D (humano, despliegue de sv4 sola), M2 (líder, solo lectura en producción), M3 (humano, las 2 fechas `dd/mm/aaaa`), T11.
